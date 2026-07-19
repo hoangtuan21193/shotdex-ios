@@ -19,7 +19,7 @@ Không phải app chỉnh sửa ảnh. Trọng tâm: duyệt ảnh, đọc metad
 
 ## 2. Nền tảng và công nghệ
 
-- **SwiftUI** làm UI framework (UIKit chỉ khi cần: zoom viewer)
+- **SwiftUI** làm UI framework (UIKit khi cần perf/paging: grid `UICollectionView`, zoom viewer, detail pager `UIPageViewController`)
 - **PhotoKit** cho photo library: `PHPhotoLibrary`, `PHAsset`, `PHCachingImageManager`, `PHPhotoLibraryChangeObserver`
 - **ImageIO** đọc EXIF: `CGImageSourceCopyPropertiesAtIndex`, không decode ảnh
 - **GRDB.swift** (SQLite) cho database — SQL aggregate cho filter và statistics
@@ -274,10 +274,11 @@ Yêu cầu hiệu năng:
 
 ### 7.2 Photo Detail
 
-- Fullscreen, swipe ngang chuyển ảnh trước/sau (`TabView(.page)`, **windowed**: chỉ materialize trang hiện tại ±2 — `PhotoBrowsingSource` là protocol index-based (`photoCount`/`photoId(at:)`/`metadata(for:)`/`asset(for:)`) nên pager không bao giờ ôm cả mảng metadata; Library fetch full `PhotoMetadata` on-demand từ DB theo assetId, Albums/On This Day trả từ mảng in-memory)
-- Pinch-to-zoom + double-tap zoom (`UIScrollView` representable) cho ảnh
+- Fullscreen, swipe ngang chuyển ảnh trước/sau — **`UIPageViewController`** (`PhotoPager: UIViewControllerRepresentable`, transition `.scroll`) chứ KHÔNG dùng `TabView(.page)`: TabView dựng mọi page eager nên trước đây phải windowed ±2, mỗi lần đổi index lại remount page giữa lúc vuốt → giật/kẹt (cùng lý do grid bỏ SwiftUI qua UICollectionView). PageViewController dựng page **lazy** qua data source (`viewControllerBefore/After` → `PhotoPageHost` nhớ `index`), library cỡ nào cũng rẻ, paging native. `PhotoBrowsingSource` vẫn là protocol index-based (`photoCount`/`photoId(at:)`/`metadata(for:)`/`asset(for:)`) nên pager không ôm cả mảng metadata; Library fetch full `PhotoMetadata` on-demand từ DB theo assetId, Albums/On This Day trả từ mảng in-memory. `didFinishAnimating` ghi index về binding + `loadNextPageIfNeeded`
+- Pinch-to-zoom + double-tap zoom (`UIScrollView` representable) cho ảnh; `ZoomableImageView.onZoomChange` báo zoom scale lên pager để **tắt swipe-down-dismiss khi đang zoom** (vuốt lúc đó pan ảnh)
 - **Video**: `PhotoDetailPage` branch theo `asset.mediaType` — video dùng `VideoPlayer` (AVKit) với `AVPlayer` dựng từ `PHImageManager.requestPlayerItem(forVideo:)` (`isNetworkAccessAllowed = true`, phát được cả video iCloud), pause khi rời trang; ảnh vẫn đi đường `ZoomableImageView`
-- Swipe-down-to-dismiss (ngưỡng velocity/khoảng cách, animation thu nhỏ)
+- **Ảnh full-size qua `requestDetailImage`** (`.opportunistic`, `isNetworkAccessAllowed = true`): hiện preview degraded trước rồi stream bản full từ iCloud. Trong lúc bản full còn tải hiện **badge iCloud** (`icloud.and.arrow.down` + % từ `progressHandler`); ảnh full tới (`PHImageResultIsDegradedKey == false`) thì badge tắt
+- Swipe-down-to-dismiss (ngưỡng velocity/khoảng cách, animation thu nhỏ) — `UIPanGestureRecognizer` trên view của pager, delegate chỉ cho begin khi **vuốt xuống dọc** (`velocity.y > 0 && |vy| > |vx|`) và **chưa zoom** nên vuốt ngang vẫn thuộc paging, `shouldRecognizeSimultaneouslyWith = false`
 - **Chrome tách trên/dưới**: chỉ nút X (Close) ở góc trên trái; các nút hành động (Favorite / Share / Info) nằm ở **bottom bar** dưới info panel
 - Share qua `UIActivityViewController`: ảnh share image data, video share URL từ `AVURLAsset` (`requestAVAsset(forVideo:)`); file chưa tải về máy (iCloud) → alert "Unable to Share"
 - Favorite qua `PHAssetChangeRequest` (PhotoKit thật)

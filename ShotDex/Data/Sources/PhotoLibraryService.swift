@@ -163,6 +163,36 @@ final class PhotoLibraryService: NSObject {
         imageManager.cancelImageRequest(requestId)
     }
 
+    /// Full-screen image for the detail viewer. `.opportunistic` delivers a
+    /// degraded preview first, then the full asset; `progress` reports the
+    /// iCloud download 0…1 (only fires for assets that must stream). The
+    /// completion Bool is `PHImageResultIsDegradedKey` — `false` means the
+    /// final full-resolution image arrived, so callers can drop the
+    /// downloading indicator.
+    func requestDetailImage(
+        for asset: PHAsset,
+        targetSize: CGSize,
+        progress: @escaping (Double) -> Void,
+        completion: @escaping (UIImage?, Bool) -> Void
+    ) -> PHImageRequestID {
+        let options = PHImageRequestOptions()
+        options.deliveryMode = .opportunistic
+        options.resizeMode = .fast
+        options.isNetworkAccessAllowed = true
+        options.progressHandler = { value, _, _, _ in
+            Task { @MainActor in progress(value) }
+        }
+        return imageManager.requestImage(
+            for: asset,
+            targetSize: targetSize,
+            contentMode: .aspectFit,
+            options: options
+        ) { image, info in
+            let degraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+            completion(image, degraded)
+        }
+    }
+
     /// Prefetch thumbnails for assets about to scroll on screen
     /// (UICollectionViewDataSourcePrefetching). Must use the same options as
     /// `requestThumbnail` so the cache actually hits.

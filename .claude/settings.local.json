@@ -15,7 +15,8 @@
       "Read(//private/tmp/**)",
       "Bash(sips -c 1 1 --cropOffset 5 5 /Users/hoangtuan/Project/shotdex-ios/ShotDex/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png --out corner.png)",
       "Bash(xxd -s 41 -l 20 corner.png)",
-      "Bash(python3 -)"
+      "Bash(python3 -)",
+      "Bash(rtk git *)"
     ]
   }
 }

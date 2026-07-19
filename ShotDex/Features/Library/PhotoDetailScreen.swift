@@ -46,26 +46,30 @@ struct PhotoDetailScreen: View {
     /// Resolved PHAsset of the current page — feeds the raw-metadata sheet.
     @State private var currentAsset: PHAsset?
 
-    /// Pages actually materialized: current ±2 (absorbs fast swipes). The
-    /// source may hold the whole library, and a paged TabView over a full
-    /// ForEach is O(n) per body evaluation.
-    private var pageWindow: Range<Int> {
-        let lower = max(0, currentIndex - 2)
-        let upper = min(controller.photoCount, currentIndex + 3)
-        return lower..<max(lower, upper)
-    }
-
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            TabView(selection: $currentIndex) {
-                ForEach(pageWindow, id: \.self) { index in
-                    PhotoDetailPage(source: controller, index: index)
-                        .tag(index)
+            // UIKit UIPageViewController — pages are created lazily via its
+            // data source, so a library of any size stays cheap and paging is
+            // native (a windowed SwiftUI `TabView(.page)` remounted pages on
+            // every index change and stuttered/stuck mid-swipe).
+            PhotoPager(
+                source: controller,
+                photoLibrary: photoLibrary,
+                currentIndex: $currentIndex,
+                onDragProgress: { translationY in
+                    dragOffset = CGSize(width: 0, height: max(0, translationY))
+                },
+                onDragEnded: { shouldDismiss in
+                    if shouldDismiss {
+                        dismiss()
+                    } else {
+                        withAnimation(.spring(duration: 0.3)) { dragOffset = .zero }
+                    }
                 }
-            }
-            .tabViewStyle(.page(indexDisplayMode: .never))
+            )
+            .ignoresSafeArea()
 
             VStack {
                 topBar
@@ -78,7 +82,6 @@ struct PhotoDetailScreen: View {
         }
         .offset(y: max(0, dragOffset.height))
         .scaleEffect(dismissScale)
-        .simultaneousGesture(dismissDrag)
         .statusBarHidden()
         .sheet(isPresented: $isMetadataPresented) {
             MetadataPanel(asset: currentAsset)
@@ -209,27 +212,6 @@ struct PhotoDetailScreen: View {
         return 1 - progress * 0.15
     }
 
-    private var dismissDrag: some Gesture {
-        DragGesture(minimumDistance: 20)
-            .onChanged { value in
-                // Only vertical, downward drags participate.
-                if abs(value.translation.height) > abs(value.translation.width), value.translation.height > 0 {
-                    dragOffset = value.translation
-                }
-            }
-            .onEnded { value in
-                let shouldDismiss = value.translation.height > 140
-                    || value.predictedEndTranslation.height > 400
-                if shouldDismiss {
-                    dismiss()
-                } else {
-                    withAnimation(.spring(duration: 0.3)) {
-                        dragOffset = .zero
-                    }
-                }
-            }
-    }
-
     // MARK: Actions
 
     private func toggleFavorite(_ metadata: PhotoMetadata) {
@@ -327,15 +309,22 @@ struct PhotoDetailScreen: View {
 /// videos. Resolves its own asset from the source on appear and keeps it in
 /// `@State`, so the parent's per-frame body evaluations (dismiss drag) never
 /// re-fetch anything.
-private struct PhotoDetailPage: View {
+struct PhotoDetailPage: View {
     @Environment(PhotoLibraryService.self) private var photoLibrary
 
     let source: any PhotoBrowsingSource
     let index: Int
+    /// Bubbled up by the pager so it can suppress swipe-down-dismiss while
+    /// the image is zoomed in.
+    var onZoomChange: ((CGFloat) -> Void)?
 
     @State private var image: UIImage?
     @State private var player: AVPlayer?
     @State private var isVideo = false
+    /// A degraded preview is showing while the full-resolution asset still
+    /// streams from iCloud — drives the download badge.
+    @State private var isFetchingFullImage = false
+    @State private var downloadProgress: Double = 0
 
     var body: some View {
         Group {
@@ -346,14 +335,42 @@ private struct PhotoDetailPage: View {
                     ProgressView().tint(.white)
                 }
             } else if let image {
-                ZoomableImageView(image: image)
+                ZoomableImageView(image: image, onZoomChange: onZoomChange)
             } else {
                 ProgressView().tint(.white)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(alignment: .top) {
+            if isFetchingFullImage {
+                downloadBadge
+                    .padding(.top, 60)
+            }
+        }
         .onAppear { load() }
         .onDisappear { player?.pause() }
+    }
+
+    /// iCloud download indicator: shown while only a degraded preview is on
+    /// screen and the full image is still streaming.
+    private var downloadBadge: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "icloud.and.arrow.down")
+                .font(.caption.weight(.semibold))
+            if downloadProgress > 0, downloadProgress < 1 {
+                Text("\(Int(downloadProgress * 100))%")
+                    .font(.caption.weight(.medium).monospacedDigit())
+            } else {
+                ProgressView()
+                    .controlSize(.mini)
+                    .tint(.white)
+            }
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(.ultraThinMaterial, in: Capsule())
+        .transition(.opacity)
     }
 
     private func load() {
@@ -375,9 +392,19 @@ private struct PhotoDetailPage: View {
             width: UIScreen.main.bounds.width * scale,
             height: UIScreen.main.bounds.height * scale
         )
-        _ = photoLibrary.requestThumbnail(for: asset, targetSize: targetSize) { result in
+        isFetchingFullImage = true
+        _ = photoLibrary.requestDetailImage(
+            for: asset,
+            targetSize: targetSize,
+            progress: { value in downloadProgress = value }
+        ) { result, isDegraded in
             if let result {
                 image = result
+            }
+            // Full-resolution frame arrived (or the request produced no more
+            // callbacks) — drop the badge.
+            if !isDegraded {
+                withAnimation(.easeOut(duration: 0.2)) { isFetchingFullImage = false }
             }
         }
     }
@@ -393,5 +420,168 @@ private struct PhotoDetailPage: View {
                 player = AVPlayer(playerItem: item)
             }
         }
+    }
+}
+
+// MARK: - UIKit pager
+
+/// Horizontal photo pager backed by `UIPageViewController`. Pages are built
+/// on demand through its data source, so the source may hold the whole
+/// library without materializing every page. Also owns a downward
+/// pan-to-dismiss recognizer that yields to horizontal paging and to a
+/// zoomed-in image.
+private struct PhotoPager: UIViewControllerRepresentable {
+    let source: any PhotoBrowsingSource
+    let photoLibrary: PhotoLibraryService
+    @Binding var currentIndex: Int
+    let onDragProgress: (CGFloat) -> Void
+    let onDragEnded: (Bool) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeUIViewController(context: Context) -> UIPageViewController {
+        let pager = UIPageViewController(
+            transitionStyle: .scroll,
+            navigationOrientation: .horizontal,
+            options: [.interPageSpacing: 20]
+        )
+        pager.dataSource = context.coordinator
+        pager.delegate = context.coordinator
+        pager.view.backgroundColor = .clear
+        if let initial = context.coordinator.makePage(at: currentIndex) {
+            pager.setViewControllers([initial], direction: .forward, animated: false)
+        }
+        context.coordinator.installDismissPan(on: pager)
+        return pager
+    }
+
+    func updateUIViewController(_ pager: UIPageViewController, context: Context) {
+        context.coordinator.parent = self
+        context.coordinator.syncIfNeeded(pager, to: currentIndex)
+    }
+
+    final class Coordinator: NSObject, UIPageViewControllerDataSource,
+        UIPageViewControllerDelegate, UIGestureRecognizerDelegate {
+        var parent: PhotoPager
+        /// Zoom scale of the page currently on screen — dismiss is disabled
+        /// while zoomed so panning moves the image instead.
+        private var currentZoom: CGFloat = 1
+
+        init(_ parent: PhotoPager) {
+            self.parent = parent
+        }
+
+        /// Builds a page for `index`, or nil when out of range (stops paging
+        /// at the library ends).
+        func makePage(at index: Int) -> PhotoPageHost? {
+            guard index >= 0, index < parent.source.photoCount else { return nil }
+            let page = PhotoDetailPage(
+                source: parent.source,
+                index: index,
+                onZoomChange: { [weak self] scale in self?.currentZoom = scale }
+            )
+            .environment(parent.photoLibrary)
+            let host = PhotoPageHost(index: index, rootView: AnyView(page))
+            host.view.backgroundColor = .clear
+            return host
+        }
+
+        // MARK: Data source
+
+        func pageViewController(
+            _ pageViewController: UIPageViewController,
+            viewControllerBefore viewController: UIViewController
+        ) -> UIViewController? {
+            guard let host = viewController as? PhotoPageHost else { return nil }
+            return makePage(at: host.index - 1)
+        }
+
+        func pageViewController(
+            _ pageViewController: UIPageViewController,
+            viewControllerAfter viewController: UIViewController
+        ) -> UIViewController? {
+            guard let host = viewController as? PhotoPageHost else { return nil }
+            return makePage(at: host.index + 1)
+        }
+
+        // MARK: Delegate
+
+        func pageViewController(
+            _ pageViewController: UIPageViewController,
+            didFinishAnimating finished: Bool,
+            previousViewControllers: [UIViewController],
+            transitionCompleted completed: Bool
+        ) {
+            guard completed,
+                  let host = pageViewController.viewControllers?.first as? PhotoPageHost
+            else { return }
+            currentZoom = 1
+            parent.currentIndex = host.index
+            parent.source.loadNextPageIfNeeded(currentIndex: host.index)
+        }
+
+        /// Re-seats the pager when `currentIndex` is driven from outside (the
+        /// binding no longer matches the displayed page).
+        func syncIfNeeded(_ pager: UIPageViewController, to index: Int) {
+            let shown = (pager.viewControllers?.first as? PhotoPageHost)?.index
+            guard shown != index, let page = makePage(at: index) else { return }
+            let direction: UIPageViewController.NavigationDirection =
+                (shown ?? index) <= index ? .forward : .reverse
+            currentZoom = 1
+            pager.setViewControllers([page], direction: direction, animated: false)
+        }
+
+        // MARK: Dismiss pan
+
+        func installDismissPan(on pager: UIPageViewController) {
+            let pan = UIPanGestureRecognizer(target: self, action: #selector(handleDismissPan(_:)))
+            pan.delegate = self
+            pager.view.addGestureRecognizer(pan)
+        }
+
+        @objc private func handleDismissPan(_ gesture: UIPanGestureRecognizer) {
+            let translation = gesture.translation(in: gesture.view)
+            switch gesture.state {
+            case .changed:
+                parent.onDragProgress(max(0, translation.y))
+            case .ended, .cancelled:
+                let velocity = gesture.velocity(in: gesture.view)
+                parent.onDragEnded(translation.y > 140 || velocity.y > 900)
+            default:
+                break
+            }
+        }
+
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            guard let pan = gestureRecognizer as? UIPanGestureRecognizer else { return true }
+            guard currentZoom <= 1.01 else { return false }
+            let velocity = pan.velocity(in: pan.view)
+            // Downward, vertical-dominant only — horizontal swipes stay with
+            // the page view's own paging pan.
+            return velocity.y > 0 && abs(velocity.y) > abs(velocity.x)
+        }
+
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
+            false
+        }
+    }
+}
+
+/// Hosting controller that remembers its page index so the pager's data
+/// source can walk to neighbours.
+private final class PhotoPageHost: UIHostingController<AnyView> {
+    let index: Int
+
+    init(index: Int, rootView: AnyView) {
+        self.index = index
+        super.init(rootView: rootView)
+    }
+
+    @available(*, unavailable)
+    @MainActor required dynamic init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
     }
 }

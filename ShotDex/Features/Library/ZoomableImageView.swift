@@ -8,6 +8,9 @@ struct ZoomableImageView: UIViewRepresentable {
     let image: UIImage
     var sync: CompareScrollSync?
     var paneIndex: Int = 0
+    /// Reports the current zoom scale on every zoom change — lets a host
+    /// (the detail pager) disable swipe-down-dismiss while zoomed in.
+    var onZoomChange: ((CGFloat) -> Void)?
 
     func makeUIView(context: Context) -> UIScrollView {
         let scrollView = UIScrollView()
@@ -33,6 +36,7 @@ struct ZoomableImageView: UIViewRepresentable {
         ])
         context.coordinator.imageView = imageView
         context.coordinator.sync = sync
+        context.coordinator.onZoomChange = onZoomChange
         sync?.register(scrollView, at: paneIndex)
 
         let doubleTap = UITapGestureRecognizer(
@@ -47,6 +51,7 @@ struct ZoomableImageView: UIViewRepresentable {
 
     func updateUIView(_ scrollView: UIScrollView, context: Context) {
         context.coordinator.imageView?.image = image
+        context.coordinator.onZoomChange = onZoomChange
     }
 
     func makeCoordinator() -> Coordinator {
@@ -56,6 +61,7 @@ struct ZoomableImageView: UIViewRepresentable {
     final class Coordinator: NSObject, UIScrollViewDelegate {
         weak var imageView: UIImageView?
         var sync: CompareScrollSync?
+        var onZoomChange: ((CGFloat) -> Void)?
 
         func viewForZooming(in scrollView: UIScrollView) -> UIView? {
             imageView
@@ -63,6 +69,11 @@ struct ZoomableImageView: UIViewRepresentable {
 
         func scrollViewDidZoom(_ scrollView: UIScrollView) {
             sync?.mirror(from: scrollView)
+            onZoomChange?(scrollView.zoomScale)
+        }
+
+        func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
+            onZoomChange?(scale)
         }
 
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
