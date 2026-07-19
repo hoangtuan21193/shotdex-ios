@@ -1,0 +1,259 @@
+import Foundation
+import Photos
+import SwiftUI
+
+/// One row in the Albums grid.
+struct AlbumItem: Identifiable {
+    enum Kind {
+        case allPhotos
+        case collection(PHAssetCollection)
+    }
+
+    var id: String
+    var title: String
+    var count: Int
+    var kind: Kind
+    var coverAsset: PHAsset?
+    /// System-provided collection (Recents, Favorites, …) vs user album.
+    var isSmart = false
+}
+
+/// Loads the album list: "Recents" (all photos), system smart albums,
+/// then user albums.
+@MainActor
+@Observable
+final class AlbumsController {
+    private(set) var albums: [AlbumItem] = []
+    private(set) var isLoading = false
+
+    /// Summary for the "On This Day" hero card (today's date, previous years).
+    private(set) var onThisDayCount = 0
+    private(set) var onThisDayCover: PHAsset?
+
+    var smartAlbums: [AlbumItem] { albums.filter(\.isSmart) }
+    var userAlbums: [AlbumItem] { albums.filter { !$0.isSmart } }
+
+    /// Collections and counts fetched off the main thread; PHAsset fetches
+    /// are thread-safe but expensive on large libraries.
+    private struct Snapshot: @unchecked Sendable {
+        var albums: [AlbumItem]
+        var onThisDayCount: Int
+        var onThisDayCover: PHAsset?
+    }
+
+    func load() {
+        guard !isLoading else { return }
+        isLoading = true
+        Task {
+            let snapshot = await Task.detached(priority: .userInitiated) {
+                Self.loadSnapshot()
+            }.value
+            albums = snapshot.albums
+            onThisDayCount = snapshot.onThisDayCount
+            onThisDayCover = snapshot.onThisDayCover
+            isLoading = false
+        }
+    }
+
+    private nonisolated static func loadSnapshot() -> Snapshot {
+        var result: [AlbumItem] = []
+
+        let imageOptions = PHFetchOptions()
+        imageOptions.predicate = PhotoLibraryService.browsableMediaPredicate
+        imageOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+
+        let onThisDay = OnThisDayController.fetchAssets(for: .now)
+
+        let allPhotos = PHAsset.fetchAssets(with: imageOptions)
+        result.append(AlbumItem(
+            id: "all-photos",
+            title: "Recents",
+            count: allPhotos.count,
+            kind: .allPhotos,
+            coverAsset: allPhotos.firstObject,
+            isSmart: true
+        ))
+
+        let smartSubtypes: [PHAssetCollectionSubtype] = [
+            .smartAlbumRecentlyAdded,
+            .smartAlbumFavorites,
+            .smartAlbumScreenshots,
+        ]
+        for subtype in smartSubtypes {
+            let collections = PHAssetCollection.fetchAssetCollections(
+                with: .smartAlbum, subtype: subtype, options: nil
+            )
+            collections.enumerateObjects { collection, _, _ in
+                if var item = Self.item(for: collection, imageOptions: imageOptions) {
+                    item.isSmart = true
+                    result.append(item)
+                }
+            }
+        }
+
+        let userAlbums = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .any, options: nil)
+        userAlbums.enumerateObjects { collection, _, _ in
+            if let item = Self.item(for: collection, imageOptions: imageOptions) {
+                result.append(item)
+            }
+        }
+
+        return Snapshot(
+            albums: result,
+            onThisDayCount: onThisDay.count,
+            onThisDayCover: onThisDay.firstObject
+        )
+    }
+
+    private nonisolated static func item(for collection: PHAssetCollection, imageOptions: PHFetchOptions) -> AlbumItem? {
+        let assets = PHAsset.fetchAssets(in: collection, options: imageOptions)
+        guard assets.count > 0 else { return nil }
+        return AlbumItem(
+            id: collection.localIdentifier,
+            title: collection.localizedTitle ?? "Album",
+            count: assets.count,
+            kind: .collection(collection),
+            coverAsset: assets.firstObject
+        )
+    }
+}
+
+/// Pages one album's photos, joining PHAssets with their indexed metadata.
+@MainActor
+@Observable
+final class AlbumDetailController: PhotoBrowsingSource {
+    static let pageSize = 120
+
+    private let metadataDAO: MetadataDAO
+    private let database: AppDatabase
+    private let photoLibrary: PhotoLibraryService
+    private let fetchResult: PHFetchResult<PHAsset>
+
+    private(set) var photos: [PhotoMetadata] = []
+    private(set) var assetsById: [String: PHAsset] = [:]
+    private(set) var hasMorePages = true
+    /// Ids of the tail of `photos`; O(1) membership test replaces the
+    /// per-tile-appear `firstIndex` scan that lagged scrolling on big grids.
+    private var pageTriggerIds: Set<String> = []
+
+    /// Paging cursor into the immutable `fetchResult` snapshot. Tracked
+    /// separately from `photos.count` because deletions prune `photos`
+    /// without shifting the snapshot's indexes.
+    private var nextFetchIndex = 0
+    /// Deleted asset ids that may still sit in the `fetchResult` snapshot;
+    /// skipped when later pages reach them.
+    private var deletedIds: Set<String> = []
+
+    init(album: AlbumItem, dependencies: AppDependencies) {
+        self.metadataDAO = dependencies.metadataDAO
+        self.database = dependencies.database
+        self.photoLibrary = dependencies.photoLibrary
+
+        let options = PHFetchOptions()
+        options.predicate = PhotoLibraryService.browsableMediaPredicate
+        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        switch album.kind {
+        case .allPhotos:
+            self.fetchResult = PHAsset.fetchAssets(with: options)
+        case .collection(let collection):
+            self.fetchResult = PHAsset.fetchAssets(in: collection, options: options)
+        }
+    }
+
+    var totalCount: Int { fetchResult.count }
+
+    func loadNextPage() {
+        guard hasMorePages else { return }
+        let start = nextFetchIndex
+        let end = min(start + Self.pageSize, fetchResult.count)
+        guard start < end else {
+            hasMorePages = false
+            return
+        }
+
+        var pageAssets: [PHAsset] = []
+        pageAssets.reserveCapacity(end - start)
+        for index in start..<end {
+            let asset = fetchResult.object(at: index)
+            guard !deletedIds.contains(asset.localIdentifier) else { continue }
+            pageAssets.append(asset)
+        }
+        nextFetchIndex = end
+
+        let ids = pageAssets.map(\.localIdentifier)
+        let indexed = (try? fetchMetadata(ids: ids)) ?? [:]
+
+        for asset in pageAssets {
+            assetsById[asset.localIdentifier] = asset
+            if let metadata = indexed[asset.localIdentifier] {
+                photos.append(metadata)
+            } else {
+                // Asset not indexed yet — show it with PhotoKit facts only.
+                photos.append(.placeholder(for: asset))
+            }
+        }
+        hasMorePages = nextFetchIndex < fetchResult.count
+        pageTriggerIds = Set(photos.suffix(30).map(\.assetId))
+    }
+
+    func loadNextPageIfNeeded(currentItem: PhotoMetadata) {
+        guard pageTriggerIds.contains(currentItem.assetId) else { return }
+        loadNextPage()
+    }
+
+    // MARK: PhotoBrowsingSource
+
+    var photoCount: Int { photos.count }
+
+    func photoId(at index: Int) -> String? {
+        photos.indices.contains(index) ? photos[index].assetId : nil
+    }
+
+    func metadata(for assetId: String) -> PhotoMetadata? {
+        photos.first { $0.assetId == assetId }
+    }
+
+    func asset(for assetId: String) -> PHAsset? {
+        assetsById[assetId]
+    }
+
+    /// Pager variant of the paging trigger: top up when the viewer nears
+    /// the end of the loaded pages.
+    func loadNextPageIfNeeded(currentIndex: Int) {
+        guard currentIndex >= photos.count - 30 else { return }
+        loadNextPage()
+    }
+
+    /// Deletes the given assets via PhotoKit (system shows its own confirm
+    /// dialog), then syncs the local index and in-memory state.
+    /// Throws `PHPhotosError.userCancelled` if the user cancels.
+    func deleteAssets(ids: Set<String>) async throws {
+        let assets = ids.compactMap { assetsById[$0] }
+        guard !assets.isEmpty else { return }
+        try await photoLibrary.deleteAssets(assets)
+        // PhotoKit is the source of truth; prune the DB rows right away so
+        // the grid doesn't show stale entries until the next index run.
+        try? metadataDAO.deleteAssets(ids: Array(ids))
+        deletedIds.formUnion(ids)
+        photos.removeAll { ids.contains($0.assetId) }
+        pageTriggerIds = Set(photos.suffix(30).map(\.assetId))
+        for id in ids {
+            assetsById.removeValue(forKey: id)
+        }
+    }
+
+    func syncFavorite(assetId: String, isFavorite: Bool) {
+        try? metadataDAO.updateFavorite(assetId: assetId, isFavorite: isFavorite)
+        if let index = photos.firstIndex(where: { $0.assetId == assetId }) {
+            photos[index].isFavorite = isFavorite
+        }
+    }
+
+    private func fetchMetadata(ids: [String]) throws -> [String: PhotoMetadata] {
+        guard !ids.isEmpty else { return [:] }
+        let rows = try database.reader.read { db in
+            try PhotoMetadata.fetchAll(db, keys: ids)
+        }
+        return Dictionary(uniqueKeysWithValues: rows.map { ($0.assetId, $0) })
+    }
+}
