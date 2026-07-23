@@ -23,7 +23,6 @@ struct SmartAlbumDetailScreen: View {
     @State private var isDeleting = false
     @State private var isPreparingShare = false
     @State private var deleteErrorMessage: String?
-    @State private var selectionBarHeight: CGFloat = 96
 
     @AppStorage(SettingsKeys.gridColumns) private var storedColumns = 3
 
@@ -42,19 +41,19 @@ struct SmartAlbumDetailScreen: View {
         .toolbar { toolbarContent }
         .toolbar(isSelecting ? .hidden : .automatic, for: .tabBar)
         .onChange(of: isSelecting) { navigation.hidesTabBar = isSelecting }
-        .onDisappear { navigation.hidesTabBar = false }
+        .onChange(of: selectionSnapshot) {
+            navigation.selectionBar = isSelecting ? makeSelectionConfig() : nil
+        }
+        .onDisappear {
+            navigation.hidesTabBar = false
+            if isSelecting { navigation.selectionBar = nil }
+        }
         .safeAreaInset(edge: .top) {
             if !album.query.isEmpty {
                 SmartAlbumConditionsBar(
                     query: album.query,
                     matchCount: controller?.matchCount ?? 0
                 )
-            }
-        }
-        .overlay(alignment: .bottom) {
-            if isSelecting {
-                selectionTray
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .task {
@@ -105,7 +104,7 @@ struct SmartAlbumDetailScreen: View {
             ),
             isSelecting: isSelecting,
             selectedIds: selectedIds,
-            bottomInset: isSelecting ? selectionBarHeight : bottomChromeInset,
+            bottomInset: isSelecting ? navigation.selectionBarHeight : bottomChromeInset,
             photoLibrary: photoLibrary,
             onTap: { _, item in
                 if isSelecting {
@@ -200,20 +199,26 @@ struct SmartAlbumDetailScreen: View {
 
     // MARK: Tray & toolbar
 
-    @ViewBuilder
-    private var selectionTray: some View {
-        if let controller {
-            SelectionBottomBar(
-                selectionCount: selectedIds.count,
-                thumbnailIds: selectedIds,
-                photoLibrary: photoLibrary,
-                onCompare: { isComparePresented = true },
-                onDelete: { deleteSelected(controller) },
-                onDeselect: { toggleSelection(of: $0) },
-                isDeleting: isDeleting
-            )
-            .measureHeight(into: $selectionBarHeight)
-        }
+    private struct SelectionSnapshot: Equatable {
+        var isSelecting: Bool
+        var ids: [String]
+        var isDeleting: Bool
+    }
+    private var selectionSnapshot: SelectionSnapshot {
+        SelectionSnapshot(isSelecting: isSelecting, ids: selectedIds, isDeleting: isDeleting)
+    }
+
+    private func makeSelectionConfig() -> SelectionBarConfig? {
+        guard let controller else { return nil }
+        return SelectionBarConfig(
+            selectionCount: selectedIds.count,
+            thumbnailIds: selectedIds,
+            photoLibrary: photoLibrary,
+            onCompare: { isComparePresented = true },
+            onDelete: { deleteSelected(controller) },
+            onDeselect: { toggleSelection(of: $0) },
+            isDeleting: isDeleting
+        )
     }
 
     private var bottomChromeInset: CGFloat {

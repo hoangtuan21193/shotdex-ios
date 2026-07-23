@@ -30,9 +30,6 @@ struct LibraryScreen: View {
     @State private var isDeleting = false
     @State private var isPreparingShare = false
     @State private var deleteErrorMessage: String?
-    /// Measured height of the selection bar; the grid insets by it while
-    /// selecting so bottom rows can be scrolled clear of the bar.
-    @State private var selectionBarHeight: CGFloat = 96
     /// Index indicator: a compact chip in the top-leading toolbar (right of
     /// the Settings gear); tapping presents the detail popover. This drives
     /// the popover's presentation.
@@ -69,7 +66,16 @@ struct LibraryScreen: View {
         // Select mode replaces the tab bar with the full-width selection bar.
         .toolbar(isSelecting ? .hidden : .automatic, for: .tabBar)
         .onChange(of: isSelecting) { navigation.hidesTabBar = isSelecting }
-        .onDisappear { navigation.hidesTabBar = false }
+        // Publish the selection to the scaffold, which hosts the bar in the tab
+        // bar's slot. Republished on any selection change so counts/thumbnails
+        // stay live.
+        .onChange(of: selectionSnapshot) {
+            navigation.selectionBar = isSelecting ? makeSelectionConfig() : nil
+        }
+        .onDisappear {
+            navigation.hidesTabBar = false
+            if isSelecting { navigation.selectionBar = nil }
+        }
         // Inline (not the default large-title) mode: keeps the bar a thin
         // translucent strip the grid scrolls under, instead of a tall empty
         // band. Matches Album Detail.
@@ -235,12 +241,6 @@ struct LibraryScreen: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
-        .overlay(alignment: .bottom) {
-            if isSelecting {
-                selectionTray(controller)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-        }
         // Reset the expanded state once no index status is active, so a later
         // run doesn't reopen the dropdown.
         .onChange(of: controller.isIndexing || controller.indexStreamingPaused || controller.indexAutoRetryDate != nil) { _, active in
@@ -292,10 +292,22 @@ struct LibraryScreen: View {
         }
     }
 
-    /// Full-width bottom bar while picking photos: Share, Compare (2–4),
-    /// Delete, plus a thumbnail preview of the selection.
-    private func selectionTray(_ controller: LibraryController) -> some View {
-        SelectionBottomBar(
+    /// Equatable digest of the selection so a single `.onChange` republishes the
+    /// scaffold-hosted bar whenever anything it shows changes.
+    private struct SelectionSnapshot: Equatable {
+        var isSelecting: Bool
+        var ids: [String]
+        var isDeleting: Bool
+    }
+    private var selectionSnapshot: SelectionSnapshot {
+        SelectionSnapshot(isSelecting: isSelecting, ids: selectedIds, isDeleting: isDeleting)
+    }
+
+    /// Config the scaffold renders as the bottom bar (Share lives in the toolbar;
+    /// here it's Compare (2–4) + Delete + the selection thumbnail preview).
+    private func makeSelectionConfig() -> SelectionBarConfig? {
+        guard let controller else { return nil }
+        return SelectionBarConfig(
             selectionCount: selectedIds.count,
             thumbnailIds: selectedIds,
             photoLibrary: photoLibrary,
@@ -304,7 +316,6 @@ struct LibraryScreen: View {
             onDeselect: { toggleSelection(of: $0) },
             isDeleting: isDeleting
         )
-        .measureHeight(into: $selectionBarHeight)
     }
 
     private func photoGrid(_ controller: LibraryController) -> some View {
@@ -322,7 +333,7 @@ struct LibraryScreen: View {
             ),
             isSelecting: isSelecting,
             selectedIds: selectedIds,
-            bottomInset: isSelecting ? selectionBarHeight : bottomChromeInset,
+            bottomInset: isSelecting ? navigation.selectionBarHeight : bottomChromeInset,
             photoLibrary: photoLibrary,
             onTap: { _, item in
                 if isIndexPanelExpanded { setIndexPanelExpanded(false) }

@@ -9,6 +9,9 @@ struct HomeTabScaffold: View {
     @State private var navigation = AppNavigation()
     @State private var isSearchPresented = false
     @State private var libraryController: LibraryController?
+    /// Measured height of the hosted selection bar, mirrored one-way into
+    /// `navigation.selectionBarHeight` for the active screen's grid inset.
+    @State private var hostedSelectionBarHeight: CGFloat = 96
 
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(\.scenePhase) private var scenePhase
@@ -79,6 +82,31 @@ struct HomeTabScaffold: View {
             }
         }
         .tabBarMinimizeBehavior(.onScrollDown)
+        // Host the selection bar in the tab bar's slot. The native tab bar hides
+        // itself (each screen's `.toolbar(.hidden, for: .tabBar)` while selecting)
+        // and the bar fades in here. Best-effort in-place crossfade: the system
+        // animates its own tab-bar dismissal on its own curve, so the two can't
+        // fully share one transaction the way the pre-26 custom bar does.
+        .overlay(alignment: .bottom) {
+            if let config = navigation.selectionBar {
+                ZStack(alignment: .bottom) {
+                    BottomScrim()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                        .ignoresSafeArea()
+                        .allowsHitTesting(false)
+                    SelectionBottomBar(config)
+                        .padding(.bottom, 8)
+                        .measureHeight(into: $hostedSelectionBarHeight)
+                }
+                .transition(.opacity)
+            }
+        }
+        .animation(.snappy(duration: 0.25), value: navigation.selectionBar != nil)
+        .onChange(of: hostedSelectionBarHeight) { _, height in
+            if abs(navigation.selectionBarHeight - height) > 0.5 {
+                navigation.selectionBarHeight = height
+            }
+        }
         .settingsDrawer(isOpen: $navigation.isSettingsDrawerOpen, libraryController: libraryController)
         .keepScreenAwakeWhileIndexing(libraryController: libraryController)
         .environment(navigation)
@@ -102,7 +130,27 @@ struct HomeTabScaffold: View {
         ZStack(alignment: .bottom) {
             tabContent
 
-            if !navigation.hidesTabBar {
+            // Subtle dark backdrop behind the selection bar, anchored to the real
+            // screen bottom (full-bleed) so text/pills read over bright photos.
+            if navigation.selectionBar != nil {
+                BottomScrim()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+            }
+
+            // Selection bar and tab bar share this one slot (both pinned to the
+            // bottom with the same 8pt inset) and crossfade in place — distinct
+            // `.id`s so SwiftUI treats the swap as insert/remove (a crossfade)
+            // rather than a single mutating view.
+            if let config = navigation.selectionBar {
+                SelectionBottomBar(config)
+                    .padding(.bottom, 8)
+                    .measureHeight(into: $hostedSelectionBarHeight)
+                    .transition(.opacity)
+                    .id("selection-bar")
+            } else {
                 LiquidGlassTabBar(
                     selection: $navigation.selectedTab,
                     onReselect: { tab in
@@ -116,10 +164,16 @@ struct HomeTabScaffold: View {
                     }
                 )
                 .padding(.bottom, 8)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .transition(.opacity)
+                .id("tab-bar")
             }
         }
-        .animation(.snappy(duration: 0.25), value: navigation.hidesTabBar)
+        .animation(.snappy(duration: 0.25), value: navigation.selectionBar != nil)
+        .onChange(of: hostedSelectionBarHeight) { _, height in
+            if abs(navigation.selectionBarHeight - height) > 0.5 {
+                navigation.selectionBarHeight = height
+            }
+        }
         .settingsDrawer(isOpen: $navigation.isSettingsDrawerOpen, libraryController: libraryController)
         .keepScreenAwakeWhileIndexing(libraryController: libraryController)
         .environment(navigation)

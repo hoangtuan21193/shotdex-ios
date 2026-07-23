@@ -1,19 +1,20 @@
 import Photos
 import SwiftUI
 
-/// Floating bottom controls shown during multi-select, in place of the tab bar
-/// (which the screen hides while selecting). Three Liquid-Glass pieces plus the
-/// count: a Compare chip always pinned left (greyed outside its 2–4 range), the
-/// photo panel beside it, and a round Delete button (right), the selection count
-/// on its own line below. Share lives in the top-bar leading slot.
+/// Multi-select controls shaped like the app's tab bar (see `LiquidGlassTabBar`)
+/// and hosted by the scaffold in the tab bar's own slot, so entering select reads
+/// as the tab bar transformed. Three pieces, mirroring `HStack { pill; circle }`:
+/// a leading Compare pill (always shown, greyed outside its 2–4 range), the centre
+/// pill holding the thumbnails (where the tab pill sits), and a round Delete button
+/// in the search circle's slot, with the selection count on a line below the whole
+/// cluster. Share lives in the top-bar leading slot.
 ///
 /// Thumbnails: up to `CompareScreen.maxPhotoCount` (4) fixed slots — filled in
-/// pick order, dashed empty slot otherwise. Past 4 the panel keeps the same
-/// four-slot-wide window (Compare gone — it only ever applies to 2–4 photos)
-/// but becomes a horizontal scroll of every selection, so the 5th photo already
-/// overflows and it scrolls to the newest pick on each add. The panel is a pill
-/// with circular slots nested concentrically inside. Tap a filled slot to
-/// deselect it.
+/// pick order, dashed empty slot otherwise. Past 4 the pill keeps the same
+/// four-slot-wide window but becomes a horizontal scroll of every selection
+/// (`.defaultScrollAnchor(.trailing)` parks it at the newest pick). The pill is
+/// fully rounded with circular slots nested concentrically inside. Tap a filled
+/// slot to deselect it.
 struct SelectionBottomBar: View {
     let selectionCount: Int
     /// Selected asset ids in pick order (drives the thumbnail preview).
@@ -34,9 +35,8 @@ struct SelectionBottomBar: View {
     private var compareEnabled: Bool { compareRange.contains(selectionCount) }
     private var isOverflowing: Bool { selectionCount > CompareScreen.maxPhotoCount }
     private var canCompare: Bool { onCompare != nil }
-    /// Count line under the panel. When Compare is available and we're still in
-    /// its range, spell out the 4-photo cap so the limit is discoverable; once
-    /// the selection has passed 4 (Compare is gone) just show the running count.
+    /// Count line above the pill. When Compare is available and still in range,
+    /// spell out the 4-photo cap; once past 4 just show the running count.
     private var countText: String {
         guard canCompare else {
             return selectionCount == 0 ? "Select Photos" : "\(selectionCount) selected"
@@ -51,34 +51,27 @@ struct SelectionBottomBar: View {
     }
 
     var body: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 16) {
+        // Mirror the tab bar's shape (LiquidGlassTabBar): a row of pills plus a
+        // trailing round button, so the selection UI reads as the tab bar
+        // transformed. Compare is the leading pill, the thumbnails + count sit in
+        // the centre pill (where the tab pill is), and Delete is the round button
+        // in the search circle's slot.
+        VStack(spacing: 6) {
+            HStack(spacing: 12) {
                 if let onCompare {
-                    // Compare pinned at the leading edge, always present: its gap
-                    // to the screen edge (the bar's 16pt padding) equals its 16pt
-                    // spacing to the panel, so its margins read symmetric. It
-                    // greys out outside 2–4 rather than moving.
                     compareChip(onCompare)
-                } else {
-                    // No Compare feature (e.g. On This Day) → center the panel.
-                    Spacer(minLength: 0)
                 }
-                // Panel keeps its intrinsic width (a fixed 4-slot window even
-                // when overflowing) so adding a 5th photo overflows the strip
-                // immediately and it scrolls on every pick.
-                photoPanel
-                Spacer(minLength: 0)
+                middlePill
                 deleteButton
             }
             Text(countText)
                 .font(.footnote.weight(.medium))
                 .monospacedDigit()
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.white)
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 4)
         .frame(maxWidth: .infinity)
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
         .animation(.snappy(duration: 0.2), value: selectionCount)
     }
 
@@ -112,8 +105,10 @@ struct SelectionBottomBar: View {
         .accessibilityLabel("Compare")
     }
 
-    private var photoPanel: some View {
-        // Fully-rounded pill; the slots inside share a concentric corner.
+    /// The centre pill: the selected-photo thumbnails. Fully-rounded pill; the
+    /// slots inside share a concentric corner. The count label rides above the
+    /// whole cluster (see `body`), not inside the pill.
+    private var middlePill: some View {
         GlassPanel(cornerRadius: selectionPanelCorner) {
             SelectionThumbnailStrip(
                 ids: thumbnailIds,
@@ -123,6 +118,38 @@ struct SelectionBottomBar: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
         }
+    }
+}
+
+/// A subtle darkening backdrop that fades in toward the bottom edge so overlaid
+/// text/controls stay readable over photos. Just a black gradient (no blur) —
+/// anchor it to the screen bottom (`ignoresSafeArea`) so it reaches the real edge.
+struct BottomScrim: View {
+    var height: CGFloat = 220
+
+    var body: some View {
+        LinearGradient(
+            colors: [.clear, .black.opacity(0.48)],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .frame(maxWidth: .infinity)
+        .frame(height: height)
+    }
+}
+
+extension SelectionBottomBar {
+    /// Build from the scaffold-hosted config (see `AppNavigation.selectionBar`).
+    init(_ config: SelectionBarConfig) {
+        self.init(
+            selectionCount: config.selectionCount,
+            thumbnailIds: config.thumbnailIds,
+            photoLibrary: config.photoLibrary,
+            onCompare: config.onCompare,
+            onDelete: config.onDelete,
+            onDeselect: config.onDeselect,
+            isDeleting: config.isDeleting
+        )
     }
 }
 

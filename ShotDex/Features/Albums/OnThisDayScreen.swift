@@ -21,7 +21,6 @@ struct OnThisDayScreen: View {
     @State private var isDeleting = false
     @State private var isPreparingShare = false
     @State private var deleteErrorMessage: String?
-    @State private var selectionBarHeight: CGFloat = 96
     /// Measured once so tiles size their thumbnails without a per-cell
     /// GeometryReader. Fixed 3-column grid, 2pt gaps.
     @State private var containerWidth: CGFloat = 0
@@ -64,12 +63,12 @@ struct OnThisDayScreen: View {
         .toolbar { toolbarContent }
         .toolbar(isSelecting ? .hidden : .automatic, for: .tabBar)
         .onChange(of: isSelecting) { navigation.hidesTabBar = isSelecting }
-        .onDisappear { navigation.hidesTabBar = false }
-        .overlay(alignment: .bottom) {
-            if isSelecting {
-                deleteTray
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
+        .onChange(of: selectionSnapshot) {
+            navigation.selectionBar = isSelecting ? makeSelectionConfig() : nil
+        }
+        .onDisappear {
+            navigation.hidesTabBar = false
+            if isSelecting { navigation.selectionBar = nil }
         }
         .task {
             if controller == nil {
@@ -216,8 +215,20 @@ struct OnThisDayScreen: View {
         swipeBaselineIds = []
     }
 
-    private var deleteTray: some View {
-        SelectionBottomBar(
+    /// Selection is a `Set` here; normalize to an array for the snapshot and the
+    /// config's thumbnail preview (order isn't meaningful — Compare is disabled).
+    private struct SelectionSnapshot: Equatable {
+        var isSelecting: Bool
+        var ids: [String]
+        var isDeleting: Bool
+    }
+    private var selectionSnapshot: SelectionSnapshot {
+        SelectionSnapshot(isSelecting: isSelecting, ids: Array(selectedIds), isDeleting: isDeleting)
+    }
+
+    /// Delete-only config (no Compare) for the scaffold-hosted bar.
+    private func makeSelectionConfig() -> SelectionBarConfig {
+        SelectionBarConfig(
             selectionCount: selectedIds.count,
             thumbnailIds: Array(selectedIds),
             photoLibrary: photoLibrary,
@@ -226,7 +237,6 @@ struct OnThisDayScreen: View {
             onDeselect: { selectedIds.remove($0) },
             isDeleting: isDeleting
         )
-        .measureHeight(into: $selectionBarHeight)
     }
 
     private func shareSelected() {
@@ -258,7 +268,7 @@ struct OnThisDayScreen: View {
     }
 
     private var bottomSpacerHeight: CGFloat {
-        if isSelecting { return selectionBarHeight }
+        if isSelecting { return navigation.selectionBarHeight }
         if #unavailable(iOS 26.0) { return 90 }
         return 0
     }

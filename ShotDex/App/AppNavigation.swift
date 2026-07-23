@@ -11,11 +11,24 @@ final class AppNavigation {
     /// Whether the left slide-in settings drawer is showing.
     var isSettingsDrawerOpen = false
 
-    /// Set while a screen is in photo multi-select mode: hides the tab bar so
-    /// the full-width selection bar can take its place. The iOS 26 native tab
-    /// bar is hidden per-screen via `.toolbar(.hidden, for: .tabBar)`; this flag
-    /// drives the pre-26 custom `LiquidGlassTabBar`.
+    /// Set while a screen is in photo multi-select mode. The iOS 26 native tab
+    /// bar is hidden per-screen via `.toolbar(.hidden, for: .tabBar)`.
+    /// Legacy: the pre-26 scaffold used to gate its custom tab bar on this, but
+    /// it now swaps to the selection bar on `selectionBar != nil` instead. Kept
+    /// as a harmless signal; screens still set it.
     var hidesTabBar = false
+
+    /// Published by the screen currently in multi-select so the root scaffold
+    /// can host the selection bar in the tab bar's own slot — the tab bar and
+    /// the selection bar crossfade in place (one animation) instead of living in
+    /// two different containers. `nil` when nothing is selecting.
+    var selectionBar: SelectionBarConfig?
+
+    /// Height of the scaffold-hosted selection bar, mirrored one-way from the
+    /// scaffold (which measures it) so the active screen's grid can inset its
+    /// bottom rows. The default keeps the first frame from clipping before the
+    /// measurement lands.
+    var selectionBarHeight: CGFloat = 96
 
     /// Set by Statistics drill-downs; consumed by the Library controller owner.
     var pendingLibraryFilter: FilterCriteria?
