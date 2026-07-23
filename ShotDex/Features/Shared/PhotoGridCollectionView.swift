@@ -90,6 +90,11 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
     }
 
     func updateUIView(_ collectionView: UICollectionView, context: Context) {
+        // Re-apply on change: the bottom inset grows in select mode (to clear
+        // the full-width selection bar) and shrinks back on exit.
+        if collectionView.contentInset.bottom != bottomInset {
+            collectionView.contentInset.bottom = bottomInset
+        }
         context.coordinator.apply(self, isInitial: false)
     }
 

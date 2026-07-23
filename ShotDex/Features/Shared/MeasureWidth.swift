@@ -16,4 +16,19 @@ extension View {
             }
         )
     }
+
+    /// Reports this view's height into `height` via a background GeometryReader.
+    /// The selection bar uses this so the grid can inset by the bar's measured
+    /// height. (Avoids `onGeometryChange`, which is iOS 18+.)
+    func measureHeight(into height: Binding<CGFloat>) -> some View {
+        background(
+            GeometryReader { geo in
+                Color.clear
+                    .onAppear { height.wrappedValue = geo.size.height }
+                    .onChange(of: geo.size.height) { _, newValue in
+                        height.wrappedValue = newValue
+                    }
+            }
+        )
+    }
 }

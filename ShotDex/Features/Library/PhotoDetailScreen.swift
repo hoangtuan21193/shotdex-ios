@@ -484,17 +484,7 @@ struct PhotoDetailScreen: View {
     }
 
     private func presentShareSheet(items: [Any], filename: String?) {
-        guard let scene = UIApplication.shared.connectedScenes
-            .compactMap({ $0 as? UIWindowScene })
-            .first(where: { $0.activationState == .foregroundActive }),
-            let root = scene.keyWindow?.rootViewController
-        else { return }
-        var presenter = root
-        while let presented = presenter.presentedViewController {
-            presenter = presented
-        }
-        let activity = UIActivityViewController(activityItems: items, applicationActivities: nil)
-        presenter.present(activity, animated: true)
+        PhotoShareSheet.present(items: items)
     }
 
     private func updateFilename(assetId: String) {

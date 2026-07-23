@@ -11,6 +11,12 @@ final class AppNavigation {
     /// Whether the left slide-in settings drawer is showing.
     var isSettingsDrawerOpen = false
 
+    /// Set while a screen is in photo multi-select mode: hides the tab bar so
+    /// the full-width selection bar can take its place. The iOS 26 native tab
+    /// bar is hidden per-screen via `.toolbar(.hidden, for: .tabBar)`; this flag
+    /// drives the pre-26 custom `LiquidGlassTabBar`.
+    var hidesTabBar = false
+
     /// Set by Statistics drill-downs; consumed by the Library controller owner.
     var pendingLibraryFilter: FilterCriteria?
 

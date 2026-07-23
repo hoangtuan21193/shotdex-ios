@@ -12,6 +12,7 @@ final class AppDependencies {
     let smartAlbumDAO: SmartAlbumDAO
     let statChartDAO: StatChartDAO
     let photoLibrary: PhotoLibraryService
+    let importService: ImportService
     let indexPipeline: IndexPipeline
     let backgroundIndex: BackgroundIndexService
     let networkStatus: NetworkStatusService
@@ -35,6 +36,7 @@ final class AppDependencies {
         self.smartAlbumDAO = SmartAlbumDAO(database: database)
         self.statChartDAO = StatChartDAO(database: database)
         self.photoLibrary = photoLibrary
+        self.importService = ImportService(photoLibrary: photoLibrary, metadataDAO: metadataDAO)
         self.indexPipeline = indexPipeline
         self.backgroundIndex = BackgroundIndexService(pipeline: indexPipeline, metadataDAO: metadataDAO)
         self.networkStatus = NetworkStatusService()

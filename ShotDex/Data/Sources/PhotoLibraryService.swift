@@ -26,6 +26,12 @@ enum PhotoAuthorizationState: Equatable, Sendable {
     var canReadLibrary: Bool { self == .authorized || self == .limited }
 }
 
+/// Errors surfaced while importing external files into the photo library.
+enum PhotoImportError: Error {
+    /// PhotoKit reported success but produced no asset placeholder.
+    case creationFailed
+}
+
 /// Wraps PhotoKit: authorization, asset fetching, thumbnails, favorites,
 /// and library change observation. Nothing above this layer touches Photos.
 @MainActor
@@ -291,6 +297,31 @@ final class PhotoLibraryService: NSObject {
         try await PHPhotoLibrary.shared().performChanges {
             PHAssetChangeRequest.deleteAssets(assets as NSArray)
         }
+    }
+
+    // MARK: Import
+
+    /// Copies a file (e.g. one read off an SD card / USB volume) into the photo
+    /// library as a brand-new asset, returning its local identifier. `isVideo`
+    /// picks the PhotoKit resource type (`.video` vs `.photo`). The source file
+    /// is left untouched (`shouldMoveFile = false`) — the card is treated as
+    /// read-only. Requires `.readWrite` authorization (already requested at
+    /// launch). The new asset triggers `photoLibraryDidChange`, so the normal
+    /// `IndexPipeline` picks it up without an explicit index call.
+    func importFile(at url: URL, isVideo: Bool) async throws -> String {
+        var placeholderId: String?
+        try await PHPhotoLibrary.shared().performChanges {
+            let request = PHAssetCreationRequest.forAsset()
+            let options = PHAssetResourceCreationOptions()
+            options.shouldMoveFile = false
+            // Preserve the card's filename so file-type (RAW/JPG) classification
+            // and the detail viewer show the original name.
+            options.originalFilename = url.lastPathComponent
+            request.addResource(with: isVideo ? .video : .photo, fileURL: url, options: options)
+            placeholderId = request.placeholderForCreatedAsset?.localIdentifier
+        }
+        guard let placeholderId else { throw PhotoImportError.creationFailed }
+        return placeholderId
     }
 
     // MARK: Change observation

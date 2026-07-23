@@ -6,16 +6,26 @@ struct GlassPanel<Content: View>: View {
     @ViewBuilder var content: Content
 
     var body: some View {
-        content
-            .background(
-                .ultraThinMaterial,
-                in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(Color(.separator).opacity(0.3), lineWidth: 0.5)
-            )
-            .shadow(color: .black.opacity(0.12), radius: 12, y: 4)
+        if #available(iOS 26.0, *) {
+            // Real Liquid Glass — no manual stroke/shadow, the effect supplies
+            // its own edge and depth.
+            content
+                .glassEffect(
+                    .regular,
+                    in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                )
+        } else {
+            content
+                .background(
+                    .ultraThinMaterial,
+                    in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(Color(.separator).opacity(0.3), lineWidth: 0.5)
+                )
+                .shadow(color: .black.opacity(0.12), radius: 12, y: 4)
+        }
     }
 }
 

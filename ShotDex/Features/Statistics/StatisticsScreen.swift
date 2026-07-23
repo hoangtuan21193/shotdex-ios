@@ -58,6 +58,7 @@ struct StatisticsScreen: View {
                         withAnimation { editMode = editMode.isEditing ? .inactive : .active }
                     } label: {
                         Image(systemName: editMode.isEditing ? "checkmark" : "arrow.up.arrow.down")
+                            .font(.callout)
                     }
                     .accessibilityLabel(editMode.isEditing ? "Done" : "Reorder charts")
                 }
@@ -115,8 +116,12 @@ struct StatisticsScreen: View {
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    // Empty trailing swipe suppresses the synthesized swipe-to-delete;
+                    // onDelete still drives the edit-mode red minus button.
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {}
                 }
                 .onMove { controller.moveCharts(from: $0, to: $1) }
+                .onDelete { controller.deleteCharts(at: $0) }
             }
 
             // Space for the floating chrome (custom bar, pre-iOS 26).

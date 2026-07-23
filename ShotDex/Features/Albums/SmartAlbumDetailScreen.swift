@@ -9,6 +9,7 @@ import SwiftUI
 struct SmartAlbumDetailScreen: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(PhotoLibraryService.self) private var photoLibrary
+    @Environment(AppNavigation.self) private var navigation
 
     let album: SmartAlbum
 
@@ -20,7 +21,9 @@ struct SmartAlbumDetailScreen: View {
     @State private var isComparePresented = false
     @State private var swipeBaseline: [String] = []
     @State private var isDeleting = false
+    @State private var isPreparingShare = false
     @State private var deleteErrorMessage: String?
+    @State private var selectionBarHeight: CGFloat = 96
 
     @AppStorage(SettingsKeys.gridColumns) private var storedColumns = 3
 
@@ -37,6 +40,9 @@ struct SmartAlbumDetailScreen: View {
         .navigationTitle(album.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
+        .toolbar(isSelecting ? .hidden : .automatic, for: .tabBar)
+        .onChange(of: isSelecting) { navigation.hidesTabBar = isSelecting }
+        .onDisappear { navigation.hidesTabBar = false }
         .safeAreaInset(edge: .top) {
             if !album.query.isEmpty {
                 SmartAlbumConditionsBar(
@@ -99,7 +105,7 @@ struct SmartAlbumDetailScreen: View {
             ),
             isSelecting: isSelecting,
             selectedIds: selectedIds,
-            bottomInset: bottomChromeInset,
+            bottomInset: isSelecting ? selectionBarHeight : bottomChromeInset,
             photoLibrary: photoLibrary,
             onTap: { _, item in
                 if isSelecting {
@@ -164,6 +170,17 @@ struct SmartAlbumDetailScreen: View {
         return photos.count >= 2 ? photos : nil
     }
 
+    private func shareSelected(_ controller: SmartAlbumDetailController) {
+        guard !selectedIds.isEmpty, !isPreparingShare else { return }
+        let assets = selectedIds.compactMap { controller.asset(for: $0) }
+        isPreparingShare = true
+        Task {
+            let items = await PhotoShareSheet.gather(assets: assets)
+            isPreparingShare = false
+            PhotoShareSheet.present(items: items)
+        }
+    }
+
     private func deleteSelected(_ controller: SmartAlbumDetailController) {
         guard !selectedIds.isEmpty else { return }
         let ids = Set(selectedIds)
@@ -186,14 +203,16 @@ struct SmartAlbumDetailScreen: View {
     @ViewBuilder
     private var selectionTray: some View {
         if let controller {
-            SelectionActionsTray(
+            SelectionBottomBar(
                 selectionCount: selectedIds.count,
+                thumbnailIds: selectedIds,
+                photoLibrary: photoLibrary,
                 onCompare: { isComparePresented = true },
                 onDelete: { deleteSelected(controller) },
+                onDeselect: { toggleSelection(of: $0) },
                 isDeleting: isDeleting
             )
-            .padding(.horizontal)
-            .padding(.bottom, bottomChromeInset)
+            .measureHeight(into: $selectionBarHeight)
         }
     }
 
@@ -201,8 +220,28 @@ struct SmartAlbumDetailScreen: View {
         if #available(iOS 26.0, *) { 8 } else { 100 }
     }
 
+    @ViewBuilder
+    private var shareToolbarButton: some View {
+        Button {
+            if let controller { shareSelected(controller) }
+        } label: {
+            if isPreparingShare {
+                ProgressView()
+            } else {
+                Image(systemName: "square.and.arrow.up")
+            }
+        }
+        .disabled(selectedIds.isEmpty || isPreparingShare)
+        .accessibilityLabel("Share")
+    }
+
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            if isSelecting {
+                shareToolbarButton
+            }
+        }
         ToolbarItem(placement: .topBarTrailing) {
             if controller?.items.isEmpty == false {
                 Button {

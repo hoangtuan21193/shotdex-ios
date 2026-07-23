@@ -7,6 +7,7 @@ import SwiftUI
 struct OnThisDayScreen: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(PhotoLibraryService.self) private var photoLibrary
+    @Environment(AppNavigation.self) private var navigation
 
     @State private var controller: OnThisDayController?
     @State private var viewerTarget: PhotoViewerTarget?
@@ -18,7 +19,9 @@ struct OnThisDayScreen: View {
     @State private var swipeBaselineIds: Set<String> = []
     @State private var isSwipeDragActive = false
     @State private var isDeleting = false
+    @State private var isPreparingShare = false
     @State private var deleteErrorMessage: String?
+    @State private var selectionBarHeight: CGFloat = 96
     /// Measured once so tiles size their thumbnails without a per-cell
     /// GeometryReader. Fixed 3-column grid, 2pt gaps.
     @State private var containerWidth: CGFloat = 0
@@ -45,9 +48,10 @@ struct OnThisDayScreen: View {
                 } else {
                     sectionedGrid(controller)
                 }
-                if #unavailable(iOS 26.0) {
-                    Color.clear.frame(height: 90)
-                }
+                // Bottom clearance: the floating chrome (pre-26 tab bar) or, while
+                // selecting, the full-width selection bar — so the last row can
+                // be scrolled clear of it.
+                Color.clear.frame(height: bottomSpacerHeight)
             } else {
                 ProgressView()
                     .padding(.top, 80)
@@ -58,6 +62,9 @@ struct OnThisDayScreen: View {
         .navigationTitle(dateTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
+        .toolbar(isSelecting ? .hidden : .automatic, for: .tabBar)
+        .onChange(of: isSelecting) { navigation.hidesTabBar = isSelecting }
+        .onDisappear { navigation.hidesTabBar = false }
         .overlay(alignment: .bottom) {
             if isSelecting {
                 deleteTray
@@ -210,14 +217,27 @@ struct OnThisDayScreen: View {
     }
 
     private var deleteTray: some View {
-        SelectionActionsTray(
+        SelectionBottomBar(
             selectionCount: selectedIds.count,
+            thumbnailIds: Array(selectedIds),
+            photoLibrary: photoLibrary,
             onCompare: nil,
             onDelete: deleteSelected,
+            onDeselect: { selectedIds.remove($0) },
             isDeleting: isDeleting
         )
-        .padding(.horizontal)
-        .padding(.bottom, bottomChromeInset)
+        .measureHeight(into: $selectionBarHeight)
+    }
+
+    private func shareSelected() {
+        guard let controller, !selectedIds.isEmpty, !isPreparingShare else { return }
+        let assets = selectedIds.compactMap { controller.assetsById[$0] }
+        isPreparingShare = true
+        Task {
+            let items = await PhotoShareSheet.gather(assets: assets)
+            isPreparingShare = false
+            PhotoShareSheet.present(items: items)
+        }
     }
 
     private func deleteSelected() {
@@ -237,8 +257,10 @@ struct OnThisDayScreen: View {
         }
     }
 
-    private var bottomChromeInset: CGFloat {
-        if #available(iOS 26.0, *) { 8 } else { 100 }
+    private var bottomSpacerHeight: CGFloat {
+        if isSelecting { return selectionBarHeight }
+        if #unavailable(iOS 26.0) { return 90 }
+        return 0
     }
 
     // MARK: Date picker
@@ -279,15 +301,35 @@ struct OnThisDayScreen: View {
 
     // MARK: Toolbar
 
+    @ViewBuilder
+    private var shareToolbarButton: some View {
+        Button(action: shareSelected) {
+            if isPreparingShare {
+                ProgressView()
+            } else {
+                Image(systemName: "square.and.arrow.up")
+            }
+        }
+        .disabled(selectedIds.isEmpty || isPreparingShare)
+        .accessibilityLabel("Share")
+    }
+
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            Button {
-                isDatePickerPresented = true
-            } label: {
-                Image(systemName: "calendar")
+        ToolbarItem(placement: .topBarLeading) {
+            if isSelecting {
+                shareToolbarButton
             }
-            .accessibilityLabel("Change date")
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+            if !isSelecting {
+                Button {
+                    isDatePickerPresented = true
+                } label: {
+                    Image(systemName: "calendar")
+                }
+                .accessibilityLabel("Change date")
+            }
         }
         ToolbarItem(placement: .topBarTrailing) {
             if controller?.photos.isEmpty == false {

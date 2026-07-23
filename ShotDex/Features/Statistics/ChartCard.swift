@@ -110,6 +110,7 @@ struct ChartContentView: View {
                 .cornerRadius(3)
             }
             .chartForegroundStyleScale(range: ChartPalette.colors)
+            .chartLegend(.hidden)
             .frame(height: 220)
             .padding(.vertical, 4)
             .accessibilityLabel("\(widget.title) donut chart")
@@ -139,9 +140,14 @@ struct ChartContentView: View {
 
     @ViewBuilder
     private var drillRows: some View {
-        ForEach(known) { datum in
+        ForEach(Array(known.enumerated()), id: \.element.id) { index, datum in
             drillButton(key: datum.drillKey) {
                 HStack {
+                    if widget.kind == .donut {
+                        Circle()
+                            .fill(ChartPalette.colors[index % ChartPalette.colors.count])
+                            .frame(width: 10, height: 10)
+                    }
                     Text(datum.label)
                         .foregroundStyle(Color(.label))
                         .lineLimit(1)

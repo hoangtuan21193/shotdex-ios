@@ -10,7 +10,7 @@ struct LibraryScreen: View {
     /// Owned by HomeTabScaffold so the search sheet shares the same state.
     let controller: LibraryController?
 
-    @State private var isFilterPresented = false
+    @State private var isImportPresented = false
     @State private var isAdvancedSearchPresented = false
     /// Persisted density (column count), shared with Album Detail.
     @AppStorage(SettingsKeys.gridColumns) private var storedColumns = 3
@@ -28,7 +28,11 @@ struct LibraryScreen: View {
     /// the newest photos.
     @State private var retapResetCount = 0
     @State private var isDeleting = false
+    @State private var isPreparingShare = false
     @State private var deleteErrorMessage: String?
+    /// Measured height of the selection bar; the grid insets by it while
+    /// selecting so bottom rows can be scrolled clear of the bar.
+    @State private var selectionBarHeight: CGFloat = 96
     /// Index indicator: a compact chip in the top-leading toolbar (right of
     /// the Settings gear); tapping presents the detail popover. This drives
     /// the popover's presentation.
@@ -62,6 +66,10 @@ struct LibraryScreen: View {
             }
         }
         .toolbar { toolbarContent }
+        // Select mode replaces the tab bar with the full-width selection bar.
+        .toolbar(isSelecting ? .hidden : .automatic, for: .tabBar)
+        .onChange(of: isSelecting) { navigation.hidesTabBar = isSelecting }
+        .onDisappear { navigation.hidesTabBar = false }
         // Inline (not the default large-title) mode: keeps the bar a thin
         // translucent strip the grid scrolls under, instead of a tall empty
         // band. Matches Album Detail.
@@ -82,20 +90,8 @@ struct LibraryScreen: View {
             // present over the iOS 26 search-role tab); open it on Library.
             isAdvancedSearchPresented = true
         }
-        .sheet(isPresented: $isFilterPresented) {
-            if let controller {
-                FilterSheet(
-                    criteria: Binding(
-                        get: { controller.criteria },
-                        set: { controller.criteria = $0 }
-                    ),
-                    availableBrands: controller.availableBrands,
-                    availableBodies: controller.availableBodies,
-                    availableLenses: controller.availableLenses
-                )
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
-            }
+        .fullScreenCover(isPresented: $isImportPresented) {
+            ImportScreen(service: dependencies.importService)
         }
         .sheet(isPresented: $isAdvancedSearchPresented) {
             if let controller {
@@ -168,6 +164,20 @@ struct LibraryScreen: View {
             } catch {
                 deleteErrorMessage = error.localizedDescription
             }
+        }
+    }
+
+    /// Gathers the selected assets (downloading iCloud-only originals) and
+    /// presents a single system share sheet.
+    private func shareSelected() {
+        guard !selectedIds.isEmpty, !isPreparingShare else { return }
+        let ids = selectedIds
+        isPreparingShare = true
+        Task {
+            let assets = PhotoLibraryService.fetchAssets(ids: ids)
+            let items = await PhotoShareSheet.gather(assets: assets)
+            isPreparingShare = false
+            PhotoShareSheet.present(items: items)
         }
     }
 
@@ -282,16 +292,19 @@ struct LibraryScreen: View {
         }
     }
 
-    /// Floating tray while picking photos: Compare (2–4) + Delete.
+    /// Full-width bottom bar while picking photos: Share, Compare (2–4),
+    /// Delete, plus a thumbnail preview of the selection.
     private func selectionTray(_ controller: LibraryController) -> some View {
-        SelectionActionsTray(
+        SelectionBottomBar(
             selectionCount: selectedIds.count,
+            thumbnailIds: selectedIds,
+            photoLibrary: photoLibrary,
             onCompare: { isComparePresented = true },
             onDelete: { deleteSelected(controller) },
+            onDeselect: { toggleSelection(of: $0) },
             isDeleting: isDeleting
         )
-        .padding(.horizontal)
-        .padding(.bottom, bottomChromeInset)
+        .measureHeight(into: $selectionBarHeight)
     }
 
     private func photoGrid(_ controller: LibraryController) -> some View {
@@ -309,7 +322,7 @@ struct LibraryScreen: View {
             ),
             isSelecting: isSelecting,
             selectedIds: selectedIds,
-            bottomInset: bottomChromeInset,
+            bottomInset: isSelecting ? selectionBarHeight : bottomChromeInset,
             photoLibrary: photoLibrary,
             onTap: { _, item in
                 if isIndexPanelExpanded { setIndexPanelExpanded(false) }
@@ -652,12 +665,34 @@ struct LibraryScreen: View {
 
     // MARK: Toolbar
 
+    /// Share button for the top-bar leading slot during select mode; a spinner
+    /// replaces the glyph while the assets are being gathered.
+    @ViewBuilder
+    private var shareToolbarButton: some View {
+        Button {
+            shareSelected()
+        } label: {
+            if isPreparingShare {
+                ProgressView()
+            } else {
+                Image(systemName: "square.and.arrow.up")
+            }
+        }
+        .disabled(selectedIds.isEmpty || isPreparingShare)
+        .accessibilityLabel("Share")
+    }
+
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         // Separate items so each button gets its own Liquid Glass circle
-        // on iOS 26 instead of sharing one capsule.
+        // on iOS 26 instead of sharing one capsule. In select mode the leading
+        // slot shows Share in place of the Settings gear.
         ToolbarItem(placement: .topBarLeading) {
-            SettingsDrawerButton()
+            if isSelecting {
+                shareToolbarButton
+            } else {
+                SettingsDrawerButton()
+            }
         }
         // Break the shared Liquid Glass container so the indexing chip reads as
         // its own control, not part of the Settings gear's tap target.
@@ -686,20 +721,7 @@ struct LibraryScreen: View {
             }
         }
         ToolbarItem(placement: .topBarTrailing) {
-            if let controller {
-                Button {
-                    controller.refreshFilterOptions()
-                    isFilterPresented = true
-                } label: {
-                    Image(systemName: controller.criteria.isEmpty
-                        ? "line.3.horizontal.decrease.circle"
-                        : "line.3.horizontal.decrease.circle.fill")
-                }
-                .accessibilityLabel("Filters")
-            }
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-            if let controller {
+            if let controller, !isSelecting {
                 Menu {
                     Picker("Sort", selection: Binding(
                         get: { controller.sort },
@@ -713,6 +735,19 @@ struct LibraryScreen: View {
                     Image(systemName: "arrow.up.arrow.down.circle")
                 }
                 .accessibilityLabel("Sort")
+            }
+        }
+        // Import from an external card/drive — rightmost trailing item, so it
+        // sits in the top-right corner. Replaces the old quick-filter button
+        // (Advanced Search covers ad-hoc filtering now).
+        ToolbarItem(placement: .topBarTrailing) {
+            if !isSelecting {
+                Button {
+                    isImportPresented = true
+                } label: {
+                    Image(systemName: "square.and.arrow.down")
+                }
+                .accessibilityLabel("Import photos")
             }
         }
     }

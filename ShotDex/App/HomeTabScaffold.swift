@@ -102,20 +102,24 @@ struct HomeTabScaffold: View {
         ZStack(alignment: .bottom) {
             tabContent
 
-            LiquidGlassTabBar(
-                selection: $navigation.selectedTab,
-                onReselect: { tab in
-                    if tab == .library {
-                        navigation.retapLibrary()
+            if !navigation.hidesTabBar {
+                LiquidGlassTabBar(
+                    selection: $navigation.selectedTab,
+                    onReselect: { tab in
+                        if tab == .library {
+                            navigation.retapLibrary()
+                        }
+                    },
+                    onSearchTap: {
+                        navigation.selectedTab = .library
+                        isSearchPresented = true
                     }
-                },
-                onSearchTap: {
-                    navigation.selectedTab = .library
-                    isSearchPresented = true
-                }
-            )
-            .padding(.bottom, 8)
+                )
+                .padding(.bottom, 8)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
+        .animation(.snappy(duration: 0.25), value: navigation.hidesTabBar)
         .settingsDrawer(isOpen: $navigation.isSettingsDrawerOpen, libraryController: libraryController)
         .keepScreenAwakeWhileIndexing(libraryController: libraryController)
         .environment(navigation)
