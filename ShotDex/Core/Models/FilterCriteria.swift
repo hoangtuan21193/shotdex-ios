@@ -1,7 +1,7 @@
 import Foundation
 
 /// A closed numeric range filter. Either bound may be open-ended.
-struct NumericRangeFilter: Equatable, Sendable {
+struct NumericRangeFilter: Equatable, Codable, Sendable {
     var lowerBound: Double?
     var upperBound: Double?
 
@@ -109,11 +109,21 @@ enum ApertureQuickGroup: String, CaseIterable, Identifiable, Sendable {
 
 /// Combined filter state for the Library screen. All conditions are ANDed;
 /// values inside a multi-select set are ORed.
-struct FilterCriteria: Equatable, Sendable {
+struct FilterCriteria: Equatable, Codable, Sendable {
+    /// Exact multi-select sets (Library filter sheet): `IN (…)` on normalized
+    /// columns.
     var cameraBrands: Set<String> = []
     var cameraBodies: Set<String> = []
     var lenses: Set<String> = []
     var sensorFormats: Set<SensorFormat> = []
+
+    /// Free-typed contains-terms (smart albums): each matches `LIKE %term%`
+    /// on the normalized + raw column, terms within a field ORed. Lets an
+    /// album reference a value not yet indexed (e.g. "R6") so future photos
+    /// join automatically.
+    var cameraBrandTerms: [String] = []
+    var cameraBodyTerms: [String] = []
+    var lensTerms: [String] = []
 
     var isoRange = NumericRangeFilter()
     var shutterRange = NumericRangeFilter()
@@ -131,6 +141,9 @@ struct FilterCriteria: Equatable, Sendable {
             && cameraBodies.isEmpty
             && lenses.isEmpty
             && sensorFormats.isEmpty
+            && cameraBrandTerms.isEmpty
+            && cameraBodyTerms.isEmpty
+            && lensTerms.isEmpty
             && isoRange.isEmpty
             && shutterRange.isEmpty
             && apertureRange.isEmpty
@@ -145,6 +158,9 @@ struct FilterCriteria: Equatable, Sendable {
         if !cameraBodies.isEmpty { count += 1 }
         if !lenses.isEmpty { count += 1 }
         if !sensorFormats.isEmpty { count += 1 }
+        if !cameraBrandTerms.isEmpty { count += 1 }
+        if !cameraBodyTerms.isEmpty { count += 1 }
+        if !lensTerms.isEmpty { count += 1 }
         if !isoRange.isEmpty { count += 1 }
         if !shutterRange.isEmpty { count += 1 }
         if !apertureRange.isEmpty { count += 1 }
@@ -155,4 +171,35 @@ struct FilterCriteria: Equatable, Sendable {
     }
 
     static let empty = FilterCriteria()
+
+    init() {}
+
+    // MARK: Codable
+
+    private enum CodingKeys: String, CodingKey {
+        case cameraBrands, cameraBodies, lenses, sensorFormats
+        case cameraBrandTerms, cameraBodyTerms, lensTerms
+        case isoRange, shutterRange, apertureRange, focalRange, focalLengthMode
+        case favoritesOnly, searchText
+    }
+
+    /// Tolerant decode: every key is optional-with-default so stored albums
+    /// survive future field additions (JSON persisted in `smart_albums`).
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        cameraBrands = try c.decodeIfPresent(Set<String>.self, forKey: .cameraBrands) ?? []
+        cameraBodies = try c.decodeIfPresent(Set<String>.self, forKey: .cameraBodies) ?? []
+        lenses = try c.decodeIfPresent(Set<String>.self, forKey: .lenses) ?? []
+        sensorFormats = try c.decodeIfPresent(Set<SensorFormat>.self, forKey: .sensorFormats) ?? []
+        cameraBrandTerms = try c.decodeIfPresent([String].self, forKey: .cameraBrandTerms) ?? []
+        cameraBodyTerms = try c.decodeIfPresent([String].self, forKey: .cameraBodyTerms) ?? []
+        lensTerms = try c.decodeIfPresent([String].self, forKey: .lensTerms) ?? []
+        isoRange = try c.decodeIfPresent(NumericRangeFilter.self, forKey: .isoRange) ?? NumericRangeFilter()
+        shutterRange = try c.decodeIfPresent(NumericRangeFilter.self, forKey: .shutterRange) ?? NumericRangeFilter()
+        apertureRange = try c.decodeIfPresent(NumericRangeFilter.self, forKey: .apertureRange) ?? NumericRangeFilter()
+        focalRange = try c.decodeIfPresent(NumericRangeFilter.self, forKey: .focalRange) ?? NumericRangeFilter()
+        focalLengthMode = try c.decodeIfPresent(FocalLengthMode.self, forKey: .focalLengthMode) ?? .actual
+        favoritesOnly = try c.decodeIfPresent(Bool.self, forKey: .favoritesOnly) ?? false
+        searchText = try c.decodeIfPresent(String.self, forKey: .searchText)
+    }
 }

@@ -20,8 +20,20 @@ final class AppNavigation {
     /// tab switches set `selectedTab` directly and never bump this.
     private(set) var libraryRetapToken = 0
 
+    /// Bumped when the user chooses Advanced Search; the Library screen opens
+    /// the advanced-search sheet. Monotonic for reliable `.onChange`. Routed
+    /// through the Library tab because a sheet cannot be presented over the
+    /// iOS 26 `.search`-role tab (SwiftUI suppresses it).
+    private(set) var advancedSearchToken = 0
+
     func retapLibrary() {
         libraryRetapToken &+= 1
+    }
+
+    /// Switch to Library and open advanced search there.
+    func openAdvancedSearch() {
+        advancedSearchToken &+= 1
+        selectedTab = .library
     }
 
     func openLibrary(with criteria: FilterCriteria) {

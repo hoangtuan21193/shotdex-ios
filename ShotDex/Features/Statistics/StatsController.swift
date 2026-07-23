@@ -1,95 +1,125 @@
 import Foundation
-import SwiftUI
 
-/// Loads all Statistics aggregates for the selected date scope.
+/// Owns the Statistics dashboard: the user's chart widgets, their computed
+/// data (each chart scoped by its own date range), and the edit operations
+/// that persist changes. All aggregate queries run off the main thread.
 @MainActor
 @Observable
 final class StatsController {
     private let statsDAO: StatsDAO
+    private let statChartDAO: StatChartDAO
 
-    var scope: StatsDateScope = .allTime {
-        didSet { if scope != oldValue { load() } }
-    }
-
-    private(set) var summary: StatsSummary = .empty
-    private(set) var cameraUsage: [UsageCount] = []
-    private(set) var lensUsage: [UsageCount] = []
-    private(set) var sensorFormatUsage: [UsageCount] = []
-    /// Photos missing the field, split out of the lists above — shown only
-    /// as a section footnote, not as an "Unknown" row/slice.
-    private(set) var cameraUnknownCount = 0
-    private(set) var lensUnknownCount = 0
-    private(set) var sensorUnknownCount = 0
-    private(set) var focalHistogramActual: [HistogramBucket] = []
-    private(set) var focalHistogramEquivalent: [HistogramBucket] = []
-    private(set) var isoHistogram: [HistogramBucket] = []
-    private(set) var isoStats: (mostCommon: Double?, average: Double?, median: Double?) = (nil, nil, nil)
-    private(set) var apertureHistogram: [HistogramBucket] = []
-    private(set) var apertureMostCommon: Double?
-    private(set) var shutterHistogram: [HistogramBucket] = []
-    private(set) var shutterMostCommon: Double?
-    private(set) var slowShutterShare: Double?
-    private(set) var cameraTrend: [StatsDAO.MonthlyCount] = []
-    /// Photos without a capture date — excluded from every non-all-time scope.
-    private(set) var undatedCount = 0
-    /// Oldest capture date in the index — bounds the custom range picker.
+    /// The dashboard's charts, in display order.
+    private(set) var charts: [ChartWidget] = []
+    /// Computed points per chart id (empty until first load completes).
+    private(set) var results: [String: [ChartDatum]] = [:]
+    /// Total indexed items (all time) — drives the "no indexed photos" empty
+    /// state; the dashboard has no global scope, so this is unscoped.
+    private(set) var totalPhotos = 0
+    /// Oldest capture date in the index — bounds each chart's custom range picker.
     private(set) var earliestDate: Date?
     private(set) var isLoading = false
+    /// True once the initial load (charts + data) has finished at least once.
+    private(set) var hasLoaded = false
 
     init(dependencies: AppDependencies) {
         self.statsDAO = dependencies.statsDAO
+        self.statChartDAO = dependencies.statChartDAO
     }
 
+    /// Loads the chart list (seeding defaults on first ever run) and then every
+    /// chart's data, each within its own scope.
     func load() {
-        isLoading = true
-        defer { isLoading = false }
-
-        summary = (try? statsDAO.summary(scope: scope)) ?? .empty
-        (cameraUsage, cameraUnknownCount) = Self.splitUnknown((try? statsDAO.cameraUsage(scope: scope)) ?? [])
-        (lensUsage, lensUnknownCount) = Self.splitUnknown((try? statsDAO.lensUsage(scope: scope)) ?? [])
-        (sensorFormatUsage, sensorUnknownCount) = Self.splitUnknown((try? statsDAO.sensorFormatUsage(scope: scope)) ?? [])
-        focalHistogramActual = (try? statsDAO.focalLengthHistogram(equivalent: false, scope: scope)) ?? []
-        focalHistogramEquivalent = (try? statsDAO.focalLengthHistogram(equivalent: true, scope: scope)) ?? []
-
-        isoHistogram = (try? statsDAO.rangeHistogram(
-            column: "iso",
-            groups: ISOQuickGroup.allCases.map { ($0.rawValue, $0.range) },
-            scope: scope
-        )) ?? []
-        isoStats = (try? statsDAO.valueStats(column: "iso", scope: scope)) ?? (nil, nil, nil)
-
-        apertureHistogram = (try? statsDAO.rangeHistogram(
-            column: "aperture",
-            groups: ApertureQuickGroup.allCases.map { ($0.rawValue, $0.range) },
-            scope: scope
-        )) ?? []
-        apertureMostCommon = (try? statsDAO.valueStats(column: "aperture", scope: scope))?.mostCommon
-
-        shutterHistogram = (try? statsDAO.rangeHistogram(
-            column: "shutterSpeedSeconds",
-            groups: ShutterQuickGroup.allCases.map { ($0.rawValue, $0.range) },
-            scope: scope
-        )) ?? []
-        shutterMostCommon = (try? statsDAO.valueStats(column: "shutterSpeedSeconds", scope: scope))?.mostCommon
-        slowShutterShare = try? statsDAO.slowShutterShare(scope: scope)
-
-        cameraTrend = (try? statsDAO.cameraMonthlyTrend(topBodies: 3, scope: scope)) ?? []
-        undatedCount = (try? statsDAO.undatedCount()) ?? 0
-        earliestDate = try? statsDAO.earliestCreationDate()
+        reload(reloadCharts: true)
     }
 
-    /// The DAO appends a synthetic "Unknown" bucket for photos missing the
-    /// field; pull it out so the UI can show the count as a footnote instead.
-    private static func splitUnknown(_ usage: [UsageCount]) -> ([UsageCount], Int) {
-        var known: [UsageCount] = []
-        var unknownCount = 0
-        for entry in usage {
-            if entry.isUnknown {
-                unknownCount += entry.count
+    private func reload(reloadCharts: Bool) {
+        isLoading = true
+        let statsDAO = self.statsDAO
+        let chartDAO = self.statChartDAO
+        let knownCharts = self.charts
+        let seeded = UserDefaults.standard.bool(forKey: SettingsKeys.didSeedStatCharts)
+
+        Task.detached(priority: .userInitiated) { [weak self] in
+            // Resolve the widget list.
+            var didSeed = false
+            let charts: [ChartWidget]
+            if reloadCharts {
+                if seeded {
+                    charts = ((try? chartDAO.fetchAllOrdered()) ?? []).map(\.widget)
+                } else {
+                    // First run: seed the defaults, remember we did so.
+                    charts = ((try? chartDAO.seedDefaultsIfEmpty()) ?? []).map(\.widget)
+                    didSeed = true
+                }
             } else {
-                known.append(entry)
+                charts = knownCharts
             }
+
+            // Aggregate every chart within its own scope.
+            var results: [String: [ChartDatum]] = [:]
+            for widget in charts {
+                results[widget.id] = (try? statsDAO.chartData(for: widget, scope: widget.scope)) ?? []
+            }
+            let total = (try? statsDAO.totalPhotos(scope: .allTime)) ?? 0
+            let earliest = try? statsDAO.earliestCreationDate()
+
+            await self?.apply(
+                charts: charts, results: results, total: total,
+                earliest: earliest, didSeed: didSeed
+            )
         }
-        return (known, unknownCount)
+    }
+
+    private func apply(
+        charts: [ChartWidget],
+        results: [String: [ChartDatum]],
+        total: Int,
+        earliest: Date?,
+        didSeed: Bool
+    ) {
+        self.charts = charts
+        self.results = results
+        self.totalPhotos = total
+        self.earliestDate = earliest
+        if didSeed { UserDefaults.standard.set(true, forKey: SettingsKeys.didSeedStatCharts) }
+        self.isLoading = false
+        self.hasLoaded = true
+    }
+
+    // MARK: Editing
+
+    /// Appends a new chart at the end and reloads its data.
+    func addChart(_ widget: ChartWidget) {
+        try? statChartDAO.upsert(StatChart(widget: widget, position: charts.count))
+        reload(reloadCharts: true)
+    }
+
+    /// Replaces an existing chart in place (keeping its position) and reloads.
+    func updateChart(_ widget: ChartWidget) {
+        let position = charts.firstIndex { $0.id == widget.id } ?? charts.count
+        try? statChartDAO.upsert(StatChart(widget: widget, position: position))
+        reload(reloadCharts: true)
+    }
+
+    func deleteChart(id: String) {
+        try? statChartDAO.delete(id: id)
+        results[id] = nil
+        charts.removeAll { $0.id == id }
+        try? statChartDAO.updatePositions(charts.map(\.id))
+    }
+
+    func deleteCharts(at offsets: IndexSet) {
+        let ids = offsets.map { charts[$0].id }
+        for id in ids { try? statChartDAO.delete(id: id) }
+        charts.remove(atOffsets: offsets)
+        for id in ids { results[id] = nil }
+        try? statChartDAO.updatePositions(charts.map(\.id))
+    }
+
+    /// Reorders charts in place and persists the new positions.
+    func moveCharts(from offsets: IndexSet, to destination: Int) {
+        charts.move(fromOffsets: offsets, toOffset: destination)
+        try? statChartDAO.updatePositions(charts.map(\.id))
     }
 }

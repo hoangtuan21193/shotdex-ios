@@ -11,7 +11,7 @@ struct AlbumDetailScreen: View {
     let album: AlbumItem
 
     @State private var controller: AlbumDetailController?
-    @State private var selectedPhotoIndex: Int?
+    @State private var viewerTarget: PhotoViewerTarget?
 
     /// Multi-select: uncapped asset ids, kept in pick order (Compare panes
     /// follow it).
@@ -51,12 +51,9 @@ struct AlbumDetailScreen: View {
                 controller = newController
             }
         }
-        .fullScreenCover(isPresented: Binding(
-            get: { selectedPhotoIndex != nil },
-            set: { if !$0 { selectedPhotoIndex = nil } }
-        )) {
-            if let controller, let index = selectedPhotoIndex {
-                PhotoDetailScreen(controller: controller, currentIndex: index)
+        .fullScreenCover(item: $viewerTarget) { target in
+            if let controller {
+                PhotoDetailScreen(controller: controller, currentIndex: target.startIndex)
             }
         }
         .fullScreenCover(isPresented: $isComparePresented, onDismiss: stopSelecting) {
@@ -91,6 +88,7 @@ struct AlbumDetailScreen: View {
             // Constant: album content is only ever appended (paging) or
             // pruned (delete) — count changes reload without re-anchoring.
             contentVersion: 0,
+            contentRefreshVersion: 0,
             jumpToNewestToken: 0,
             columnCount: Binding(
                 get: { GridDensity.clamped(storedColumns) },
@@ -100,11 +98,11 @@ struct AlbumDetailScreen: View {
             selectedIds: selectedIds,
             bottomInset: bottomChromeInset,
             photoLibrary: photoLibrary,
-            onTap: { index, metadata in
+            onTap: { _, metadata in
                 if isSelecting {
                     toggleSelection(of: metadata.assetId)
-                } else {
-                    selectedPhotoIndex = index
+                } else if let index = controller.index(of: metadata.assetId) {
+                    viewerTarget = PhotoViewerTarget(id: metadata.assetId, startIndex: index)
                 }
             },
             onLongPress: { metadata in
@@ -160,10 +158,11 @@ struct AlbumDetailScreen: View {
     /// Compare panes follow the pick order of the selection.
     private func comparePhotos(_ controller: AlbumDetailController) -> [ComparePhoto]? {
         guard (2...CompareScreen.maxPhotoCount).contains(selectedIds.count) else { return nil }
-        let photos = selectedIds.compactMap { id in
-            controller.metadata(for: id).map {
-                ComparePhoto(metadata: $0, asset: controller.assetsById[id])
-            }
+        // Videos have no metadata row (index is image-only) — require the
+        // asset instead, and let the caption go missing.
+        let photos = selectedIds.compactMap { id -> ComparePhoto? in
+            guard let asset = controller.assetsById[id] else { return nil }
+            return ComparePhoto(metadata: controller.metadata(for: id), asset: asset)
         }
         return photos.count >= 2 ? photos : nil
     }

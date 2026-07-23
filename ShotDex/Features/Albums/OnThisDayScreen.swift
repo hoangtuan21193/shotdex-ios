@@ -9,7 +9,7 @@ struct OnThisDayScreen: View {
     @Environment(PhotoLibraryService.self) private var photoLibrary
 
     @State private var controller: OnThisDayController?
-    @State private var selectedPhotoIndex: Int?
+    @State private var viewerTarget: PhotoViewerTarget?
     @State private var isDatePickerPresented = false
 
     /// Delete selection: asset ids, no count cap (unlike Compare).
@@ -80,12 +80,9 @@ struct OnThisDayScreen: View {
         .sheet(isPresented: $isDatePickerPresented) {
             datePickerSheet
         }
-        .fullScreenCover(isPresented: Binding(
-            get: { selectedPhotoIndex != nil },
-            set: { if !$0 { selectedPhotoIndex = nil } }
-        )) {
-            if let controller, let index = selectedPhotoIndex {
-                PhotoDetailScreen(controller: controller, currentIndex: index)
+        .fullScreenCover(item: $viewerTarget) { target in
+            if let controller {
+                PhotoDetailScreen(controller: controller, currentIndex: target.startIndex)
             }
         }
         .alert(
@@ -118,7 +115,7 @@ struct OnThisDayScreen: View {
                     LazyVGrid(columns: columns, spacing: 2) {
                         ForEach(section.range, id: \.self) { index in
                             let metadata = controller.photos[index]
-                            gridTile(metadata, index: index, controller: controller)
+                            gridTile(metadata, controller: controller)
                         }
                     }
                 }
@@ -148,7 +145,6 @@ struct OnThisDayScreen: View {
 
     private func gridTile(
         _ metadata: PhotoMetadata,
-        index: Int,
         controller: OnThisDayController
     ) -> some View {
         PhotoGridTile(
@@ -170,8 +166,8 @@ struct OnThisDayScreen: View {
         .onTapGesture {
             if isSelecting {
                 toggleSelection(of: metadata)
-            } else {
-                selectedPhotoIndex = index
+            } else if let index = controller.index(of: metadata.assetId) {
+                viewerTarget = PhotoViewerTarget(id: metadata.assetId, startIndex: index)
             }
         }
         .onLongPressGesture(minimumDuration: 0.35) {

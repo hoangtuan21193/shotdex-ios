@@ -40,7 +40,54 @@ actor IndexPipeline {
     static let batchSize = 200
     /// EXIF reads within a batch run concurrently — indexing time is
     /// dominated by per-asset PhotoKit round-trips, not CPU.
-    static let readConcurrency = 16
+    static let readConcurrency = 12
+
+    /// Target reader fan-out from thermal state + Low Power Mode. A long
+    /// EXIF pass (12-way PhotoKit XPC + ImageIO) can heat the device;
+    /// stepping the fan-out down per thermal level trades speed for
+    /// temperature instead of letting the run drive the device to critical.
+    /// Low Power Mode caps the fan-out at the `.fair` level; thermal backoff
+    /// still lowers it further. Re-sampled at every read completion, so the
+    /// fan-out shrinks/grows mid-batch — in-flight reads are never killed,
+    /// they just aren't replaced while over target.
+    static func readConcurrency(thermal: ProcessInfo.ThermalState, lowPowerMode: Bool) -> Int {
+        let thermalTarget: Int
+        switch thermal {
+        case .nominal: thermalTarget = readConcurrency
+        case .fair: thermalTarget = readConcurrency / 2
+        case .serious: thermalTarget = readConcurrency / 4
+        case .critical: thermalTarget = 2
+        @unknown default: thermalTarget = readConcurrency / 4
+        }
+        let capped = lowPowerMode ? min(thermalTarget, readConcurrency / 2) : thermalTarget
+        return max(capped, 1)
+    }
+
+    /// Breather between EXIF batches so the SoC duty-cycles instead of
+    /// running flat-out. Low Power Mode forces a minimum pause even when
+    /// thermally nominal. Skipped before the first batch of a run.
+    static func interBatchPause(thermal: ProcessInfo.ThermalState, lowPowerMode: Bool) -> Duration {
+        let thermalPause: Duration
+        switch thermal {
+        case .nominal: thermalPause = .zero
+        case .fair: thermalPause = .seconds(3)
+        case .serious, .critical: thermalPause = .seconds(10)
+        @unknown default: thermalPause = .seconds(10)
+        }
+        return lowPowerMode ? max(thermalPause, .seconds(3)) : thermalPause
+    }
+
+    /// How many new reads to spawn at a refill opportunity. Over target →
+    /// zero (fan-out decays as in-flight reads drain); under target → the
+    /// gap, clamped to what's left. Always ≥ 1 when nothing is in flight
+    /// and work remains, so the task group's drain loop can never starve
+    /// and the batch's contiguous-prefix/cursor invariant holds.
+    static func refillCount(inFlight: Int, target: Int, remaining: Int) -> Int {
+        guard remaining > 0 else { return 0 }
+        let gap = max(0, target - inFlight)
+        if gap == 0 && inFlight == 0 { return 1 }
+        return min(gap, remaining)
+    }
     /// Fast-pass rows per transaction; no EXIF is read, so batches can be
     /// much larger than EXIF batches.
     static let fastPassBatchSize = 1000
@@ -51,19 +98,131 @@ actor IndexPipeline {
     private let metadataDAO: MetadataDAO
     private let exifService: ExifService
     private let sensorDatabaseService: SensorDatabaseService
+    /// Interactive-demand signal from the fullscreen viewer; the EXIF pass
+    /// stops spawning reads while it is held. nil (tests) never pauses.
+    private let interactionGate: IndexInteractionGate?
+    /// Injected so tests can drive thermal/power transitions; production
+    /// defaults read ProcessInfo. Sampled at read completions and batch
+    /// boundaries — no notification observers needed.
+    private let thermalState: @Sendable () -> ProcessInfo.ThermalState
+    private let isLowPowerMode: @Sendable () -> Bool
 
     private var isCancelled = false
     private var isRunning = false
 
     init(metadataDAO: MetadataDAO, exifService: ExifService = ExifService(),
-         sensorDatabaseService: SensorDatabaseService = SensorDatabaseService()) {
+         sensorDatabaseService: SensorDatabaseService = SensorDatabaseService(),
+         interactionGate: IndexInteractionGate? = nil,
+         thermalState: @escaping @Sendable () -> ProcessInfo.ThermalState = { ProcessInfo.processInfo.thermalState },
+         isLowPowerMode: @escaping @Sendable () -> Bool = { ProcessInfo.processInfo.isLowPowerModeEnabled }) {
         self.metadataDAO = metadataDAO
         self.exifService = exifService
         self.sensorDatabaseService = sensorDatabaseService
+        self.interactionGate = interactionGate
+        self.thermalState = thermalState
+        self.isLowPowerMode = isLowPowerMode
     }
 
     func cancel() {
         isCancelled = true
+    }
+
+    /// Suspends while an interactive photo load holds the gate — the tapped
+    /// photo's iCloud download gets the bandwidth. In-flight reads drain on
+    /// their own (header early-stop / 8 s stall watchdog); no new PhotoKit
+    /// requests start. The actor stays free while sleeping, so `cancel()`
+    /// still lands mid-pause and exits the wait within one poll tick.
+    private func waitWhileInteractionPaused() async {
+        guard let interactionGate, interactionGate.shouldPauseIndexing else { return }
+        Self.logger.log("EXIF pass paused: interactive photo load in progress")
+        let signpostState = Self.signposter.beginInterval("interactivePause")
+        defer { Self.signposter.endInterval("interactivePause", signpostState) }
+        while !isCancelled && interactionGate.shouldPauseIndexing {
+            try? await Task.sleep(for: .milliseconds(250))
+        }
+        Self.logger.log("EXIF pass resumed")
+    }
+
+    /// Suspends while the device is thermally critical — no new reads spawn
+    /// until it cools to serious or better (reduced concurrency then takes
+    /// over). Same shape as `waitWhileInteractionPaused`: the actor stays
+    /// free while sleeping, so `cancel()` lands within one poll tick.
+    private func waitWhileThermalCritical() async {
+        guard thermalState() == .critical else { return }
+        Self.logger.log("EXIF pass paused: device thermally critical")
+        let signpostState = Self.signposter.beginInterval("thermalPause")
+        defer { Self.signposter.endInterval("thermalPause", signpostState) }
+        while !isCancelled && thermalState() == .critical {
+            try? await Task.sleep(for: .seconds(1))
+        }
+        Self.logger.log("EXIF pass resumed after thermal pause")
+    }
+
+    /// Duty-cycle sleep between EXIF batches, scaled by thermal/power state
+    /// (`interBatchPause`). Same shape as the other waits: 250 ms ticks with
+    /// the actor free, so `cancel()` lands within one tick. State is
+    /// re-sampled per call, never latched.
+    private func pauseBetweenBatches() async {
+        let pause = Self.interBatchPause(thermal: thermalState(), lowPowerMode: isLowPowerMode())
+        guard pause > .zero else { return }
+        let signpostState = Self.signposter.beginInterval("batchBreather")
+        defer { Self.signposter.endInterval("batchBreather", signpostState) }
+        let clock = ContinuousClock()
+        let deadline = clock.now + pause
+        while !isCancelled && clock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(250))
+        }
+    }
+
+    /// Builds a composer from the current sensor database + custom mappings.
+    private func makeComposer() -> MetadataComposer {
+        MetadataComposer(
+            sensorLookup: SensorLookup(
+                records: (try? sensorDatabaseService.loadRecords()) ?? [],
+                customMappings: (try? metadataDAO.customMappings()) ?? []
+            )
+        )
+    }
+
+    /// Reads and persists EXIF for **one** asset, allowing iCloud streaming —
+    /// called by the detail viewer once a full image has downloaded so a
+    /// previously `pendingICloud`/`error`/placeholder photo fills in and never
+    /// needs re-downloading. Independent of `run()` (no `isRunning` gate, GRDB
+    /// serializes the write) and it never advances the resume cursor.
+    ///
+    /// Returns the fresh row, or nil when the row is already complete
+    /// (`indexed`/`noExif` — left untouched), the asset is missing, or the read
+    /// still couldn't reach the original (leaves the existing status as-is).
+    func indexSingle(assetId: String) async -> PhotoMetadata? {
+        if let state = try? metadataDAO.assetState(assetId: assetId),
+           let status = ExifStatus(rawValue: state.exifStatus),
+           status == .indexed || status == .noExif {
+            return nil
+        }
+        guard let asset = PhotoLibraryService.fetchAssets(ids: [assetId]).first else { return nil }
+        let composer = makeComposer()
+        let resources = PHAssetResource.assetResources(for: asset)
+        let resource = ExifService.photoResource(among: resources)
+        // Facts (size/filename) fall back to any resource so videos — which
+        // have no photo resource — still record them.
+        let factsResource = resource ?? resources.first
+        let fileSize = (factsResource?.value(forKey: "fileSize") as? NSNumber)?.intValue
+        let info = Self.assetInfo(for: asset, fileSize: fileSize, originalFilename: factsResource?.originalFilename)
+
+        let record: PhotoMetadata
+        if Self.shouldSkipExifRead(mediaType: asset.mediaType.rawValue, mediaSubtypes: asset.mediaSubtypes) {
+            record = composer.compose(asset: info, exif: .empty, exifStatus: .indexed)   // → noExif
+        } else {
+            switch await exifService.readExif(for: asset, resource: resource, allowNetwork: true) {
+            case .success(let exif):
+                record = composer.compose(asset: info, exif: exif, exifStatus: .indexed)
+            case .pendingICloud, .failure:
+                // Still unreadable — don't clobber the existing row.
+                return nil
+            }
+        }
+        try? metadataDAO.upsert(record)
+        return record
     }
 
     /// Whether a run is currently in flight (used by background scheduling).
@@ -72,13 +231,17 @@ actor IndexPipeline {
     /// Decides whether an asset must be (re-)read. Pure — unit-tested.
     /// Incomplete reads (`error`, `pendingRead`, and `pendingICloud` when the
     /// network may be used) are re-enqueued even when the asset is unchanged.
+    /// A row written by an older indexer build (`indexerVersion` below the
+    /// current) is also re-read so newly-indexed fields backfill onto it.
     static func needsReindex(
         existing: IndexedAssetState?,
         currentModificationDate: Int?,
-        allowNetworkRetry: Bool
+        allowNetworkRetry: Bool,
+        currentIndexerVersion: Int = PhotoMetadata.currentIndexerVersion
     ) -> Bool {
         guard let existing else { return true }
         if existing.modificationDate != currentModificationDate { return true }
+        if existing.indexerVersion < currentIndexerVersion { return true }
         switch ExifStatus(rawValue: existing.exifStatus) {
         case .indexed, .noExif: return false
         case .pendingRead: return true
@@ -87,10 +250,16 @@ actor IndexPipeline {
         }
     }
 
-    /// Screenshots never carry camera EXIF — their file read is skipped and
-    /// the row goes straight to `noExif`. Pure — unit-tested.
-    static func shouldSkipExifRead(mediaSubtypes: PHAssetMediaSubtype) -> Bool {
-        mediaSubtypes.contains(.photoScreenshot)
+    /// Assets whose file read is skipped and whose row goes straight to
+    /// `noExif`: screenshots (never carry camera EXIF) and videos (indexed for
+    /// browsing + counts, but ImageIO can't read them as photos). Pure —
+    /// unit-tested.
+    static func shouldSkipExifRead(
+        mediaType: Int,
+        mediaSubtypes: PHAssetMediaSubtype
+    ) -> Bool {
+        mediaType == PHAssetMediaType.video.rawValue
+            || mediaSubtypes.contains(.photoScreenshot)
     }
 
     /// Runs a full or incremental pass over the library.
@@ -122,12 +291,7 @@ actor IndexPipeline {
         let runStart = clock.now
         let timings = OSAllocatedUnfairLock(initialState: StageTotals())
 
-        let composer = MetadataComposer(
-            sensorLookup: SensorLookup(
-                records: (try? sensorDatabaseService.loadRecords()) ?? [],
-                customMappings: (try? metadataDAO.customMappings()) ?? []
-            )
-        )
+        let composer = makeComposer()
 
         // Rows already present — the fast pass must never overwrite them
         // (a full reindex still keeps old EXIF visible until re-read).
@@ -138,7 +302,7 @@ actor IndexPipeline {
         let fetchOptions = PHFetchOptions()
         // Newest first: recently shot photos get their metadata soonest.
         fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-        fetchOptions.predicate = NSPredicate(format: "mediaType = %d", PHAssetMediaType.image.rawValue)
+        fetchOptions.predicate = PhotoLibraryService.browsableMediaPredicate
         let fetchResult = PHAsset.fetchAssets(with: fetchOptions)
 
         let total = fetchResult.count
@@ -164,7 +328,13 @@ actor IndexPipeline {
         var batch: [PHAsset] = []
         batch.reserveCapacity(Self.batchSize)
 
+        var firstBatch = true
         func runBatch(_ assets: [PHAsset]) async throws {
+            // No breather before the first batch: a cool device starts
+            // instantly and short incremental runs feel unchanged.
+            if !firstBatch { await pauseBetweenBatches() }
+            firstBatch = false
+            await waitWhileInteractionPaused()
             let base = baseline + newlyDone
             let done = try await processBatch(assets, composer: composer, allowNetwork: allowNetwork(), timings: timings, summary: &summary) { done, item in
                 onProgress(IndexProgress(processed: base + done, total: total, activeItems: item))
@@ -256,12 +426,7 @@ actor IndexPipeline {
         let runStart = clock.now
         let timings = OSAllocatedUnfairLock(initialState: StageTotals())
 
-        let composer = MetadataComposer(
-            sensorLookup: SensorLookup(
-                records: (try? sensorDatabaseService.loadRecords()) ?? [],
-                customMappings: (try? metadataDAO.customMappings()) ?? []
-            )
-        )
+        let composer = makeComposer()
         let ids = try metadataDAO.retryableAssetIds()
         var summary = IndexRunSummary(indexed: 0, skipped: 0, pendingICloud: 0, failed: 0, deleted: 0, wasCancelled: false)
         let assets = PhotoLibraryService.fetchAssets(ids: ids)
@@ -270,14 +435,18 @@ actor IndexPipeline {
         // the count climbs from what's already done toward the library total,
         // never the "1 of 97 retryable" view.
         let fetchOptions = PHFetchOptions()
-        fetchOptions.predicate = NSPredicate(format: "mediaType = %d", PHAssetMediaType.image.rawValue)
+        fetchOptions.predicate = PhotoLibraryService.browsableMediaPredicate
         let total = PHAsset.fetchAssets(with: fetchOptions).count
         let baseline = (try? metadataDAO.completedCount()) ?? 0
         var newlyDone = 0
         onProgress(IndexProgress(processed: baseline, total: total))
 
+        var firstBatch = true
         for chunk in stride(from: 0, to: assets.count, by: Self.batchSize) {
             if isCancelled { break }
+            if !firstBatch { await pauseBetweenBatches() }
+            firstBatch = false
+            await waitWhileInteractionPaused()
             let batch = Array(assets[chunk..<min(chunk + Self.batchSize, assets.count)])
             let base = baseline + newlyDone
             let done = try await processBatch(batch, composer: composer, allowNetwork: true, timings: timings, summary: &summary) { done, item in
@@ -391,17 +560,22 @@ actor IndexPipeline {
                 var mark = clock.now
 
                 // One XPC round-trip per asset: the resource list feeds the
-                // EXIF streaming read (and the original filename). File size is
-                // NOT read here — `resource.fileSize` KVC loads the asset's
-                // original-metadata property set, which for iCloud-only assets
-                // is fetched on demand ON THE MAIN QUEUE, stalling the whole
-                // pipeline. Size is fetched lazily in the photo detail view.
+                // EXIF streaming read (and the original filename). `fileSize`
+                // is read here off the pipeline actor (never the main queue),
+                // persisting it so the grid can badge it without a per-cell
+                // KVC read at scroll time. For iCloud-only assets this KVC can
+                // still fault in the original-metadata set, but the full read
+                // already streams from the file, so the cost is amortized.
                 let resources = PHAssetResource.assetResources(for: asset)
                 let resource = ExifService.photoResource(among: resources)
-                let info = Self.assetInfo(for: asset, fileSize: nil, originalFilename: resource?.originalFilename)
+                // Facts (size/filename) fall back to any resource so videos —
+                // which have no photo resource — still record them.
+                let factsResource = resource ?? resources.first
+                let fileSize = (factsResource?.value(forKey: "fileSize") as? NSNumber)?.intValue
+                let info = Self.assetInfo(for: asset, fileSize: fileSize, originalFilename: factsResource?.originalFilename)
                 let resourcesTime = clock.now - mark
 
-                if let onAssetProcessed, let filename = resource?.originalFilename {
+                if let onAssetProcessed, let filename = factsResource?.originalFilename {
                     let payload = progressState.withLock { state -> (Int, [String])? in
                         state.active.append(filename)
                         guard progressClock.now - state.lastEmit >= .milliseconds(200) else { return nil }
@@ -414,7 +588,7 @@ actor IndexPipeline {
                 var exifTime = Duration.zero
                 var didReadExif = false
                 let exifResult: ExifReadResult
-                if Self.shouldSkipExifRead(mediaSubtypes: asset.mediaSubtypes) {
+                if Self.shouldSkipExifRead(mediaType: asset.mediaType.rawValue, mediaSubtypes: asset.mediaSubtypes) {
                     // Composer turns indexed + empty EXIF into `noExif`.
                     exifResult = .success(.empty)
                 } else {
@@ -428,7 +602,7 @@ actor IndexPipeline {
                 }
 
                 mark = clock.now
-                let filename = resource?.originalFilename
+                let filename = factsResource?.originalFilename
                 let item: BatchItem
                 switch exifResult {
                 case .success(let exif):
@@ -459,15 +633,25 @@ actor IndexPipeline {
                 return item
             }
 
+            await waitWhileInteractionPaused()
+            await waitWhileThermalCritical()
+            // Target fan-out is re-sampled at every read completion below, so
+            // a device that heats mid-batch stops replacing finished reads
+            // (fan-out decays to the new target) and ramps back up on cooling
+            // — no in-flight read is ever killed.
             var nextIndex = 0
-            while nextIndex < min(Self.readConcurrency, assets.count) {
+            var inFlight = 0
+            let seedTarget = Self.readConcurrency(thermal: thermalState(), lowPowerMode: isLowPowerMode())
+            while nextIndex < min(seedTarget, assets.count) {
                 let index = nextIndex
                 let asset = assets[index]
                 group.addTask { await read(index, asset) }
                 nextIndex += 1
+                inFlight += 1
             }
 
             for await item in group {
+                inFlight -= 1
                 results[item.index] = item.record
                 switch item.outcome {
                 case .indexed: summary.indexed += 1
@@ -496,10 +680,24 @@ actor IndexPipeline {
                     if let payload { onAssetProcessed(payload.0, payload.1) }
                 }
                 if !isCancelled && nextIndex < assets.count {
-                    let index = nextIndex
-                    let asset = assets[index]
-                    group.addTask { await read(index, asset) }
-                    nextIndex += 1
+                    // Pausing here also stops consuming results — fine:
+                    // in-flight reads finish and buffer inside the group,
+                    // then the loop drains them and refills on resume.
+                    await waitWhileInteractionPaused()
+                    await waitWhileThermalCritical()
+                    guard !isCancelled else { continue }
+                    let target = Self.readConcurrency(thermal: thermalState(), lowPowerMode: isLowPowerMode())
+                    var toSpawn = Self.refillCount(
+                        inFlight: inFlight, target: target, remaining: assets.count - nextIndex
+                    )
+                    while toSpawn > 0 {
+                        let index = nextIndex
+                        let asset = assets[index]
+                        group.addTask { await read(index, asset) }
+                        nextIndex += 1
+                        inFlight += 1
+                        toSpawn -= 1
+                    }
                 }
             }
         }
@@ -568,7 +766,9 @@ actor IndexPipeline {
             + ", exif \(avgMs(timings.exif, timings.exifReads))"
             + ", compose \(avgMs(timings.compose, timings.assets))"
             + ", dbWrite \(avgMs(timings.dbWrite, timings.assets))"
-        logger.info("\(line, privacy: .public)")
+        // On the health category so a run's boundary lines, stalls, breaker
+        // events, and 10 s snapshots read as one stream.
+        IndexTrafficMonitor.healthLogger.info("\(line, privacy: .public)")
     }
 
     private static func seconds(_ duration: Duration) -> Double {

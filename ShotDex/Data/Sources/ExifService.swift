@@ -18,6 +18,18 @@ enum ExifReadResult: Sendable {
 struct ExifService: Sendable {
     private static let logger = Logger(subsystem: "com.hoangtuan.shotdex", category: "exif")
 
+    /// Caps concurrent iCloud streaming reads below the pipeline's total
+    /// fan-out (12 readers). That many parallel network streams divide the bandwidth
+    /// until individual reads starve through their 8 s stall window — false
+    /// stalls that feed (and eventually trip) the circuit breaker even on a
+    /// healthy link. Four streams keep the pipe full without starving any one
+    /// read, and — as important — halve the request+cancel churn against
+    /// cloudphotod: sustained bursts of cancelled downloads wedge the daemon
+    /// into serving zero bytes until it gets a rest (observed on device).
+    /// Static so the cap holds process-wide, covering the pipeline and the
+    /// detail viewer's `indexSingle` alike. Local reads are not limited.
+    private static let networkStreamLimiter = AsyncLimiter(limit: 4)
+
     /// Receives the size of every chunk streamed from iCloud, feeding the
     /// indexing UI's downloaded-bytes / speed display. Disk reads don't count.
     var trafficMonitor: IndexTrafficMonitor? = nil
@@ -38,48 +50,65 @@ struct ExifService: Sendable {
         guard let resource else { return .failure }
 
         func networkAttempt() async -> ExifReadResult {
-            guard allowNetwork else {
-                Self.logger.debug("read \(resource.originalFilename, privacy: .public): iCloud-only, network disallowed -> pendingICloud")
-                return .pendingICloud
-            }
-            // Circuit breaker: once the network has stalled out too many times
-            // this run (iCloud can't serve originals), stop even trying —
-            // return pendingICloud instantly instead of burning a stall window
-            // per asset. The manual "Re-index Incomplete" / background task
-            // retries later with a fresh (un-tripped) monitor.
+            guard allowNetwork else { return .pendingICloud }
+            // Circuit breaker: once the network has stalled out too many
+            // times (iCloud can't serve originals, or the link died), stop
+            // even trying — return pendingICloud instantly instead of burning
+            // a stall window per asset. Half-open: after the cooldown the
+            // check passes again and reads probe the network on their own.
             if trafficMonitor?.isNetworkTripped == true {
                 return .pendingICloud
             }
-            Self.logger.debug("read \(resource.originalFilename, privacy: .public): streaming from iCloud")
-            let before = trafficMonitor?.totalBytes ?? 0
-            let clock = ContinuousClock()
-            let start = clock.now
-            // 8 s *stall* window (no-progress), not an absolute cap: a real
-            // download delivers the small metadata header well within one
-            // window, while an unreachable original bails after ~8 s instead
-            // of 30 s.
-            let result = await streamExif(resource: resource, useNetwork: true, timeout: .seconds(8))
-            let elapsedMs = Int((clock.now - start) / .milliseconds(1))
-            let bytes = (trafficMonitor?.totalBytes ?? 0) - before
-            if bytes > 0 { trafficMonitor?.recordNetworkProgress() }
-            switch result {
-            case .success(let exif):
-                Self.logger.debug("read \(resource.originalFilename, privacy: .public): iCloud success, \(bytes) B in \(elapsedMs) ms")
-                return .success(exif)
-            case .needsNetwork:
-                // Zero-byte stall feeds the breaker; a partial-then-dropped
-                // transfer already reset it via `recordNetworkProgress`.
-                if bytes == 0, trafficMonitor?.recordNetworkStall() == true {
-                    Self.logger.log("iCloud circuit breaker tripped after \(IndexTrafficMonitor.stallTripThreshold) zero-byte stalls — deferring remaining iCloud reads to pendingICloud this run")
+            // Queue for a streaming slot, then re-check the breaker: it may
+            // have tripped while this read waited behind the other streams.
+            return await Self.networkStreamLimiter.withPermit {
+                if trafficMonitor?.isNetworkTripped == true {
+                    return .pendingICloud
                 }
-                Self.logger.debug("read \(resource.originalFilename, privacy: .public): iCloud needsNetwork (timeout/stall), \(bytes) B in \(elapsedMs) ms -> pendingICloud")
-                return .pendingICloud
-            case .overBudget:
-                Self.logger.debug("read \(resource.originalFilename, privacy: .public): iCloud overBudget, \(bytes) B in \(elapsedMs) ms -> pendingICloud")
-                return .pendingICloud
-            case .failure:
-                Self.logger.debug("read \(resource.originalFilename, privacy: .public): iCloud failure, \(bytes) B in \(elapsedMs) ms")
-                return .failure
+                // Post-stall breather: sleeping *while holding the permit* is
+                // deliberate — it throttles the whole network lane, giving
+                // cloudphotod room to drain before the next request lands.
+                while let rest = trafficMonitor?.networkRestRemaining {
+                    try? await Task.sleep(for: rest)
+                }
+                // Final gate: the window may have tripped while this read
+                // slept, and at half-open only one read wins the probe slot —
+                // the rest skip instead of burning a stall window each.
+                if trafficMonitor?.shouldSkipNetworkRead() == true {
+                    return .pendingICloud
+                }
+                trafficMonitor?.beginNetworkRead()
+                defer { trafficMonitor?.endNetworkRead() }
+                let before = trafficMonitor?.totalBytes ?? 0
+                let clock = ContinuousClock()
+                let start = clock.now
+                // 8 s *stall* window (no-progress), not an absolute cap: a real
+                // download delivers the small metadata header well within one
+                // window, while an unreachable original bails after ~8 s instead
+                // of 30 s.
+                let result = await streamExif(resource: resource, useNetwork: true, timeout: .seconds(8))
+                let elapsedMs = Int((clock.now - start) / .milliseconds(1))
+                let bytes = (trafficMonitor?.totalBytes ?? 0) - before
+                if bytes > 0 { trafficMonitor?.recordNetworkProgress() }
+                switch result {
+                case .success(let exif):
+                    return .success(exif)
+                case .needsNetwork:
+                    // Zero-byte stall feeds the breaker (which logs stall and
+                    // trip events itself); a partial-then-dropped transfer
+                    // already reset it via `recordNetworkProgress`.
+                    if bytes == 0 {
+                        trafficMonitor?.recordNetworkStall(
+                            filename: resource.originalFilename, elapsedMs: elapsedMs
+                        )
+                    }
+                    return .pendingICloud
+                case .overBudget:
+                    return .pendingICloud
+                case .failure:
+                    Self.logger.log("read \(resource.originalFilename, privacy: .public): iCloud read failed, \(bytes) B in \(elapsedMs) ms")
+                    return .failure
+                }
             }
         }
 
@@ -198,7 +227,7 @@ struct ExifService: Sendable {
 
         return await withCheckedContinuation { continuation in
             let state = OSAllocatedUnfairLock(initialState: StreamState())
-            // With 16 concurrent reads over a large library, un-cancelled
+            // With a dozen concurrent reads over a large library, un-cancelled
             // timeout tasks would pile up by the thousands — cancel on resume.
             let timeoutTask = OSAllocatedUnfairLock<Task<Void, Never>?>(initialState: nil)
 
@@ -254,6 +283,12 @@ struct ExifService: Sendable {
                 timeoutTask.withLock { $0?.cancel() }
                 if let error {
                     if useNetwork {
+                        // Surface the error identity on the health stream: a
+                        // wedged cloudphotod usually *hangs* (stall watchdog
+                        // fires, no error), so an actual returned error — e.g.
+                        // com.apple.accounts Code=7 — is diagnostic gold.
+                        let nsError = error as NSError
+                        IndexTrafficMonitor.healthLogger.log("iCloud read error: \(resource.originalFilename, privacy: .public) — \(nsError.domain, privacy: .public) code \(nsError.code)")
                         // Network hiccup or user-cancelled download — retryable.
                         continuation.resume(returning: .needsNetwork)
                     } else {

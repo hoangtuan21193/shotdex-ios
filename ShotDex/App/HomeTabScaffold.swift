@@ -67,9 +67,11 @@ struct HomeTabScaffold: View {
             Tab(value: .search, role: .search) {
                 NavigationStack {
                     if let libraryController {
-                        SearchTab(controller: libraryController) {
-                            navigation.selectedTab = .library
-                        }
+                        SearchTab(
+                            controller: libraryController,
+                            onApply: { navigation.selectedTab = .library },
+                            onAdvanced: { navigation.openAdvancedSearch() }
+                        )
                     } else {
                         ProgressView()
                     }
@@ -78,6 +80,7 @@ struct HomeTabScaffold: View {
         }
         .tabBarMinimizeBehavior(.onScrollDown)
         .settingsDrawer(isOpen: $navigation.isSettingsDrawerOpen, libraryController: libraryController)
+        .keepScreenAwakeWhileIndexing(libraryController: libraryController)
         .environment(navigation)
         .task {
             if libraryController == nil {
@@ -114,6 +117,7 @@ struct HomeTabScaffold: View {
             .padding(.bottom, 8)
         }
         .settingsDrawer(isOpen: $navigation.isSettingsDrawerOpen, libraryController: libraryController)
+        .keepScreenAwakeWhileIndexing(libraryController: libraryController)
         .environment(navigation)
         .task {
             if libraryController == nil {
@@ -131,9 +135,12 @@ struct HomeTabScaffold: View {
         }
         .sheet(isPresented: $isSearchPresented) {
             if let libraryController {
-                SearchSheet(controller: libraryController)
-                    .presentationDetents([.large])
-                    .presentationDragIndicator(.visible)
+                SearchSheet(controller: libraryController) {
+                    isSearchPresented = false
+                    navigation.openAdvancedSearch()
+                }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
             }
         }
     }
@@ -160,6 +167,69 @@ struct HomeTabScaffold: View {
     }
 }
 
+/// Keeps the screen awake — and auto-dims on idle — while indexing runs, gated
+/// on the `index.keepScreenAwake` setting. Mounts an invisible touch probe only
+/// when active so it never interferes otherwise.
+private struct KeepScreenAwakeModifier: ViewModifier {
+    let libraryController: LibraryController?
+
+    @AppStorage(SettingsKeys.keepScreenAwake) private var keepScreenAwake = false
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var controller = ScreenAwakeController()
+
+    private var isIndexing: Bool {
+        libraryController?.isIndexing == true
+    }
+    private var isLowPowerMode: Bool {
+        libraryController?.isLowPowerMode == true
+    }
+    private var isManualRun: Bool {
+        libraryController?.isManualIndexRun == true
+    }
+    /// In Low Power Mode only a manually started run keeps the screen awake;
+    /// automatic runs let the display sleep normally.
+    private var isActive: Bool {
+        keepScreenAwake && isIndexing && (!isLowPowerMode || isManualRun)
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .overlay {
+                if isActive {
+                    // Passive, non-blocking probe that resets the idle timer
+                    // on any touch. The dim visuals live in a top-level window
+                    // (see ScreenAwakeController), so nothing is drawn here.
+                    IdleActivityDetector { controller.registerActivity() }
+                        .allowsHitTesting(false)
+                }
+            }
+            .onChange(of: keepScreenAwake) { sync() }
+            .onChange(of: isIndexing) { sync() }
+            .onChange(of: isLowPowerMode) { sync() }
+            .onChange(of: isManualRun) { sync() }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active {
+                    sync()
+                } else {
+                    controller.handleBackground()
+                }
+            }
+    }
+
+    private func sync() {
+        controller.libraryController = libraryController
+        controller.update(enabled: isActive, indexing: isIndexing)
+    }
+}
+
+extension View {
+    /// Keep the display awake and auto-dim on idle while `libraryController` is
+    /// indexing, honoring the user's `index.keepScreenAwake` setting.
+    func keepScreenAwakeWhileIndexing(libraryController: LibraryController?) -> some View {
+        modifier(KeepScreenAwakeModifier(libraryController: libraryController))
+    }
+}
+
 /// iOS 26 search tab content: the `.search`-role tab anchors the search
 /// field to the bottom edge (Music-app style). Applying a query jumps to
 /// the Library tab with the search criteria set.
@@ -167,11 +237,22 @@ struct HomeTabScaffold: View {
 struct SearchTab: View {
     let controller: LibraryController
     var onApply: () -> Void
+    /// Opens the advanced-search sheet. Presented by the scaffold (not here):
+    /// a `.sheet` attached inside a `.search`-role tab's searchable scope is
+    /// swallowed and never appears.
+    var onAdvanced: () -> Void
 
     @State private var query = ""
 
     var body: some View {
         List {
+            Section {
+                Button {
+                    onAdvanced()
+                } label: {
+                    Label("Advanced Search", systemImage: "slider.horizontal.3")
+                }
+            }
             if query.isEmpty {
                 Section {
                     Text("Search by filename, camera, lens, focal length, ISO, aperture or shutter speed.")
@@ -221,11 +302,20 @@ struct SearchSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     let controller: LibraryController
+    /// Dismisses this sheet and opens advanced search on the Library tab.
+    var onAdvanced: () -> Void
     @State private var query = ""
 
     var body: some View {
         NavigationStack {
             List {
+                Section {
+                    Button {
+                        onAdvanced()
+                    } label: {
+                        Label("Advanced Search", systemImage: "slider.horizontal.3")
+                    }
+                }
                 if query.isEmpty {
                     Section {
                         Text("Search by filename, camera, lens, focal length, ISO, aperture or shutter speed.")

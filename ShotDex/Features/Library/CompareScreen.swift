@@ -1,10 +1,13 @@
+import AVKit
 import Photos
 import SwiftUI
 import UIKit
 
-/// One photo entering the compare screen.
+/// One photo entering the compare screen. Metadata is optional because
+/// videos aren't indexed into the metadata table — they compare fine,
+/// just without an EXIF caption.
 struct ComparePhoto {
-    let metadata: PhotoMetadata
+    let metadata: PhotoMetadata?
     let asset: PHAsset?
 }
 
@@ -68,6 +71,104 @@ final class CompareScrollSync {
             x: source.contentOffset.x / sw * target.contentSize.width,
             y: source.contentOffset.y / sh * target.contentSize.height
         )
+    }
+}
+
+/// UIScrollView-backed zoomable video pane: pinch-to-zoom + double-tap zoom
+/// over an `AVPlayerLayer`, participating in the same `CompareScrollSync`
+/// group as image panes so zoom/pan mirror across mixed selections.
+private struct ZoomableVideoView: UIViewRepresentable {
+    let player: AVPlayer
+    let sync: CompareScrollSync
+    let paneIndex: Int
+
+    func makeUIView(context: Context) -> UIScrollView {
+        let scrollView = UIScrollView()
+        scrollView.delegate = context.coordinator
+        scrollView.minimumZoomScale = 1
+        scrollView.maximumZoomScale = 5
+        scrollView.showsVerticalScrollIndicator = false
+        scrollView.showsHorizontalScrollIndicator = false
+        scrollView.bouncesZoom = true
+        scrollView.contentInsetAdjustmentBehavior = .never
+
+        let playerView = PlayerContainerView()
+        playerView.playerLayer.player = player
+        playerView.playerLayer.videoGravity = .resizeAspect
+        playerView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.addSubview(playerView)
+        NSLayoutConstraint.activate([
+            playerView.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
+            playerView.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
+            playerView.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
+            playerView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
+            playerView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
+            playerView.heightAnchor.constraint(equalTo: scrollView.frameLayoutGuide.heightAnchor),
+        ])
+        context.coordinator.playerView = playerView
+        context.coordinator.sync = sync
+        sync.register(scrollView, at: paneIndex)
+
+        let doubleTap = UITapGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleDoubleTap(_:))
+        )
+        doubleTap.numberOfTapsRequired = 2
+        scrollView.addGestureRecognizer(doubleTap)
+
+        return scrollView
+    }
+
+    func updateUIView(_ scrollView: UIScrollView, context: Context) {
+        context.coordinator.playerView?.playerLayer.player = player
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    /// UIView whose backing layer is the `AVPlayerLayer`, so the video
+    /// resizes with the zooming content view for free.
+    final class PlayerContainerView: UIView {
+        override static var layerClass: AnyClass { AVPlayerLayer.self }
+        var playerLayer: AVPlayerLayer { layer as! AVPlayerLayer }
+    }
+
+    final class Coordinator: NSObject, UIScrollViewDelegate {
+        weak var playerView: PlayerContainerView?
+        var sync: CompareScrollSync?
+
+        func viewForZooming(in scrollView: UIScrollView) -> UIView? {
+            playerView
+        }
+
+        func scrollViewDidZoom(_ scrollView: UIScrollView) {
+            sync?.mirror(from: scrollView)
+        }
+
+        func scrollViewDidScroll(_ scrollView: UIScrollView) {
+            sync?.mirror(from: scrollView)
+        }
+
+        @objc func handleDoubleTap(_ gesture: UITapGestureRecognizer) {
+            guard let scrollView = gesture.view as? UIScrollView else { return }
+            if scrollView.zoomScale > scrollView.minimumZoomScale {
+                scrollView.setZoomScale(scrollView.minimumZoomScale, animated: true)
+            } else {
+                let point = gesture.location(in: playerView)
+                let size = CGSize(
+                    width: scrollView.bounds.width / 2.5,
+                    height: scrollView.bounds.height / 2.5
+                )
+                let rect = CGRect(
+                    x: point.x - size.width / 2,
+                    y: point.y - size.height / 2,
+                    width: size.width,
+                    height: size.height
+                )
+                scrollView.zoom(to: rect, animated: true)
+            }
+        }
     }
 }
 
@@ -139,16 +240,18 @@ struct CompareScreen: View {
             Spacer()
             syncToggle(
                 isOn: $isZoomSynced,
+                title: "Zoom",
                 systemImage: "plus.magnifyingglass",
-                label: "Sync zoom"
+                hint: "Zoom all panes together"
             ) {
                 sync.isZoomSyncEnabled = isZoomSynced
                 if isZoomSynced { sync.resyncZoom(to: 0) }
             }
             syncToggle(
                 isOn: $isPanSynced,
+                title: "Move",
                 systemImage: "arrow.up.and.down.and.arrow.left.and.right",
-                label: "Sync position"
+                hint: "Move all panes together"
             ) {
                 sync.isPanSyncEnabled = isPanSynced
                 if isPanSynced { sync.resyncPan(to: 0) }
@@ -158,36 +261,42 @@ struct CompareScreen: View {
         .padding(.top, 8)
     }
 
-    /// Glass toggle button: accent-tinted when the sync is active.
+    /// Filter-chip toggle over the black backdrop: icon + short word,
+    /// ON = solid accent capsule + white text (that gesture mirrors across
+    /// panes), OFF = dim glass capsule (each pane independent).
     private func syncToggle(
         isOn: Binding<Bool>,
+        title: String,
         systemImage: String,
-        label: String,
+        hint: String,
         onChange: @escaping () -> Void
     ) -> some View {
         Button {
             isOn.wrappedValue.toggle()
             onChange()
         } label: {
-            Image(systemName: systemImage)
-                .font(.system(size: 18, weight: .medium))
-                .foregroundStyle(isOn.wrappedValue ? Color.accentColor : Color(.label))
-                .frame(width: 52, height: 52)
-                .background(.ultraThinMaterial, in: Circle())
+            Label(title, systemImage: systemImage)
+                .labelStyle(.titleAndIcon)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .frame(height: 44)
+                .background {
+                    if isOn.wrappedValue {
+                        Capsule().fill(Color.accentColor)
+                    } else {
+                        Capsule().fill(.ultraThinMaterial)
+                    }
+                }
                 .overlay(
-                    Circle()
-                        .strokeBorder(
-                            isOn.wrappedValue
-                                ? Color.accentColor.opacity(0.6)
-                                : Color(.separator).opacity(0.3),
-                            lineWidth: isOn.wrappedValue ? 1.5 : 0.5
-                        )
+                    Capsule()
+                        .strokeBorder(Color.white.opacity(isOn.wrappedValue ? 0.2 : 0.15), lineWidth: 0.5)
                 )
                 .shadow(color: .black.opacity(0.12), radius: 12, y: 4)
-                .contentShape(Circle())
+                .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(label)
+        .accessibilityLabel(hint)
         .accessibilityAddTraits(isOn.wrappedValue ? .isSelected : [])
     }
 }
@@ -204,10 +313,22 @@ private struct ComparePane: View {
     let isCompact: Bool
 
     @State private var image: UIImage?
+    @State private var player: AVPlayer?
+    @State private var isVideo = false
+    @State private var isPlaying = false
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            if let image {
+            if isVideo {
+                if let player {
+                    // Same zoom/pan scroll view as image panes, wrapping an
+                    // AVPlayerLayer — video participates in sync like a photo.
+                    ZoomableVideoView(player: player, sync: sync, paneIndex: paneIndex)
+                } else {
+                    ProgressView()
+                        .tint(.white)
+                }
+            } else if let image {
                 ZoomableImageView(image: image, sync: sync, paneIndex: paneIndex)
             } else {
                 ProgressView()
@@ -223,28 +344,105 @@ private struct ComparePane: View {
                     .padding(8)
             }
         }
+        .overlay(alignment: .bottomTrailing) {
+            if isVideo, player != nil {
+                playPauseButton
+            }
+        }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
-        .onAppear(perform: loadImage)
+        .onAppear(perform: load)
+        .onDisappear { player?.pause() }
+        // Rewind and show the play icon again when the clip finishes.
+        .onReceive(NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime)) { note in
+            guard let item = note.object as? AVPlayerItem, item === player?.currentItem else { return }
+            player?.seek(to: .zero)
+            isPlaying = false
+        }
+    }
+
+    /// Small glass play/pause control — the zoomable wrapper replaces the
+    /// native AVKit transport, so the pane needs its own toggle.
+    private var playPauseButton: some View {
+        Button {
+            guard let player else { return }
+            if isPlaying {
+                player.pause()
+            } else {
+                player.play()
+            }
+            isPlaying.toggle()
+        } label: {
+            Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 40, height: 40)
+                .background(.ultraThinMaterial, in: Circle())
+                .overlay(
+                    Circle()
+                        .strokeBorder(Color.white.opacity(0.25), lineWidth: 0.5)
+                )
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(isPlaying ? "Pause" : "Play")
+        .padding(8)
     }
 
     private var caption: String? {
-        FormatUtils.metadataLine([
-            isCompact ? nil : photo.metadata.normalizedCameraModel,
-            photo.metadata.focalLength.flatMap(FormatUtils.focalLength),
-            photo.metadata.aperture.flatMap(FormatUtils.aperture),
-            photo.metadata.iso.flatMap(FormatUtils.iso),
+        guard let metadata = photo.metadata else { return nil }
+        return FormatUtils.metadataLine([
+            isCompact ? nil : metadata.normalizedCameraModel,
+            metadata.focalLength.flatMap(FormatUtils.focalLength),
+            metadata.aperture.flatMap(FormatUtils.aperture),
+            metadata.iso.flatMap(FormatUtils.iso),
         ])
     }
 
-    private func loadImage() {
-        guard image == nil, let asset = photo.asset else { return }
+    private func load() {
+        guard let asset = photo.asset else { return }
+        if asset.mediaType == .video {
+            isVideo = true
+            loadVideo(asset)
+        } else {
+            loadImage(asset)
+        }
+    }
+
+    /// Manual playback, muted by default so side-by-side panes don't clash audio.
+    private func loadVideo(_ asset: PHAsset) {
+        guard player == nil else { return }
+        let options = PHVideoRequestOptions()
+        options.isNetworkAccessAllowed = true
+        options.deliveryMode = .automatic
+        PHImageManager.default().requestPlayerItem(forVideo: asset, options: options) { item, _ in
+            guard let item else { return }
+            Task { @MainActor in
+                let avPlayer = AVPlayer(playerItem: item)
+                avPlayer.isMuted = true
+                player = avPlayer
+            }
+        }
+    }
+
+    private func loadImage(_ asset: PHAsset) {
+        guard image == nil else { return }
         let scale = UIScreen.main.scale
         let targetSize = CGSize(
             width: UIScreen.main.bounds.width * scale,
             height: UIScreen.main.bounds.height * scale
         )
-        _ = photoLibrary.requestThumbnail(for: asset, targetSize: targetSize) { result in
+        // Compare loads the screen-sized derivative eagerly on open
+        // (`allowNetwork: true`) so every pane shows its photo immediately —
+        // iCloud serves a screen-sized rendition (fast), not the multi-MB
+        // original. `.opportunistic` paints a local preview first so panes
+        // aren't blank while the derivatives stream.
+        _ = photoLibrary.requestDetailImage(
+            for: asset,
+            targetSize: targetSize,
+            allowNetwork: true,
+            progress: { _ in }
+        ) { result, _ in
             if let result {
                 image = result
             }

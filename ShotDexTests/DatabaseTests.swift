@@ -158,10 +158,10 @@ struct DatabaseTests {
             makeRecord(assetId: "a3", iso: nil, creation: 300),
         ], cursorAssetId: nil)
 
-        let newest = try await queryDAO.gridItems(matching: .empty, sort: .dateTakenNewest)
+        let newest = try await queryDAO.gridItems(matching: FilterCriteria.empty, sort: .dateTakenNewest)
         #expect(newest.map(\.assetId) == ["a3", "a2", "a1"])
 
-        let isoHigh = try await queryDAO.gridItems(matching: .empty, sort: .isoDescending)
+        let isoHigh = try await queryDAO.gridItems(matching: FilterCriteria.empty, sort: .isoDescending)
         #expect(isoHigh.map(\.assetId) == ["a2", "a1", "a3"])
     }
 
@@ -301,16 +301,16 @@ struct DatabaseTests {
         try metadataDAO.saveBatch(records, cursorAssetId: nil)
 
         for sort in SortOption.allCases {
-            let rows = try await queryDAO.gridItems(matching: .empty, sort: sort)
+            let rows = try await queryDAO.gridItems(matching: FilterCriteria.empty, sort: sort)
             let seen = rows.map(\.assetId)
             #expect(seen.count == 13, "sort \(sort) dropped rows")
             #expect(Set(seen).count == 13, "sort \(sort) returned duplicates")
             // Deterministic: same query, same order.
-            let again = try await queryDAO.gridItems(matching: .empty, sort: sort)
+            let again = try await queryDAO.gridItems(matching: FilterCriteria.empty, sort: sort)
             #expect(again.map(\.assetId) == seen, "sort \(sort) order unstable")
         }
         // NULLS LAST: undated rows always trail on date sorts.
-        let newest = try await queryDAO.gridItems(matching: .empty, sort: .dateTakenNewest)
+        let newest = try await queryDAO.gridItems(matching: FilterCriteria.empty, sort: .dateTakenNewest)
         #expect(Set(newest.suffix(3).map(\.assetId)) == ["null1", "null2", "null3"])
     }
 
@@ -322,7 +322,7 @@ struct DatabaseTests {
             makeRecord(assetId: "a1", iso: 3200, aperture: 2.8, shutter: 0.002, focal: 85, equivalent: 85, creation: 1_700_000_000),
         ], cursorAssetId: nil)
 
-        let rows = try await queryDAO.gridItems(matching: .empty, sort: .default)
+        let rows = try await queryDAO.gridItems(matching: FilterCriteria.empty, sort: .default)
         let item = try #require(rows.first)
         #expect(item.assetId == "a1")
         #expect(item.creationDate == 1_700_000_000)
@@ -331,7 +331,7 @@ struct DatabaseTests {
         #expect(item.shutterSpeedDisplay == FormatUtils.shutterSpeed(0.002))
         #expect(item.focalLength == 85)
         #expect(item.equivalentFocalLength == 85)
-        let total = try queryDAO.count(matching: .empty)
+        let total = try queryDAO.count(matching: FilterCriteria.empty)
         #expect(rows.count == total)
     }
 
@@ -350,6 +350,33 @@ struct DatabaseTests {
         let batch = try queryDAO.metadata(assetIds: ["a1", "a2", "missing"])
         #expect(Set(batch.keys) == ["a1", "a2"])
         #expect(try queryDAO.metadata(assetIds: []).isEmpty)
+    }
+
+    /// The lazy badge fill re-reads a tile's row on display: a fast-pass
+    /// `pendingRead` row must come back non-final (no caching), and the
+    /// upsert to `indexed` must be what the next read sees.
+    @Test func metadataByIdSeesPendingToIndexedUpgrade() throws {
+        let database = try AppDatabase.makeEmpty()
+        let metadataDAO = MetadataDAO(database: database)
+        let queryDAO = LibraryQueryDAO(database: database)
+
+        try metadataDAO.saveBatch(
+            [makeRecord(assetId: "a1", status: .pendingRead)], cursorAssetId: nil
+        )
+        let pending = try queryDAO.metadata(assetId: "a1")
+        #expect(pending?.resolvedExifStatus == .pendingRead)
+        #expect(GridBadgeCache.entry(for: pending) == nil)
+
+        try metadataDAO.saveBatch(
+            [makeRecord(assetId: "a1", iso: 800, status: .indexed)], cursorAssetId: nil
+        )
+        let upgraded = try queryDAO.metadata(assetId: "a1")
+        #expect(upgraded?.resolvedExifStatus == .indexed)
+        guard case .badge(let item)? = GridBadgeCache.entry(for: upgraded) else {
+            Issue.record("expected .badge after upgrade")
+            return
+        }
+        #expect(item.iso == 800)
     }
 
     @Test func everySortOrderEndsWithUniqueTiebreaker() {
@@ -387,5 +414,48 @@ struct DatabaseTests {
         #expect(try dao.customMappings().count == 1)
         try dao.deleteAllCustomMappings()
         #expect(try dao.customMappings().isEmpty)
+    }
+
+    // MARK: Smart album persistence + rule queries
+
+    @Test func smartAlbumRulesSurvivePersistence() throws {
+        let database = try AppDatabase.makeEmpty()
+        let dao = SmartAlbumDAO(database: database)
+
+        let query = SmartAlbumQuery(matchMode: .any, rules: [
+            SmartAlbumRule(field: .cameraBody, op: .contains, text: "R6"),
+            SmartAlbumRule(field: .iso, op: .greaterThan, number: 1600),
+        ])
+        // Pure Codable round-trip (no GRDB) to isolate init(from:).
+        let data = try JSONEncoder().encode(query)
+        let back = try JSONDecoder().decode(SmartAlbumQuery.self, from: data)
+        #expect(back.matchMode == .any)
+        #expect(back.rules.count == 2)
+
+        try dao.upsert(SmartAlbum(id: "s1", name: "Test", query: query, createdAt: 1))
+
+        let loaded = try #require(try dao.fetchAllOrdered().first)
+        #expect(loaded.query.matchMode == .any)
+        #expect(loaded.query.rules.count == 2)
+        #expect(loaded.query.rules.first?.text == "R6")
+        #expect(loaded.query.rules.last?.number == 1600)
+    }
+
+    @Test func smartAlbumQueryFiltersNotFullLibrary() async throws {
+        let database = try AppDatabase.makeEmpty()
+        let metadataDAO = MetadataDAO(database: database)
+        let queryDAO = LibraryQueryDAO(database: database)
+        try metadataDAO.saveBatch([
+            makeRecord(assetId: "a1", camera: "EOS R6", brand: "Canon", iso: 100),
+            makeRecord(assetId: "a2", camera: "EOS R6", brand: "Canon", iso: 3200),
+            makeRecord(assetId: "a3", camera: "A6700", brand: "Sony", iso: 3200),
+        ], cursorAssetId: nil)
+
+        let query = SmartAlbumQuery(matchMode: .all, rules: [
+            SmartAlbumRule(field: .cameraBody, op: .contains, text: "R6"),
+        ])
+        #expect(try queryDAO.count(matching: query) == 2)
+        let items = try await queryDAO.gridItems(matching: query, sort: .default)
+        #expect(items.map(\.assetId).sorted() == ["a1", "a2"])
     }
 }

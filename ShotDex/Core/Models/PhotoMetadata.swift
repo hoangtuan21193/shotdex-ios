@@ -54,8 +54,19 @@ struct PhotoMetadata: Codable, Equatable, Identifiable, Sendable {
     var isFavorite: Bool
     var indexedAt: Int
     var exifStatus: String
+    /// Build of the indexer that wrote this row (`currentIndexerVersion` at
+    /// write time). Rows with a lower version are stale — the incremental
+    /// diff re-reads them so fields added in a newer build backfill onto
+    /// already-indexed photos. Defaults to current, so every freshly-composed
+    /// row is stamped without every call site passing it.
+    var indexerVersion: Int = PhotoMetadata.currentIndexerVersion
 
     var id: String { assetId }
+
+    /// Bump whenever a new build extracts data that older rows lack (a new
+    /// EXIF/PHAsset field, a changed normalizer). Legacy rows: 0 = pre-index
+    /// (migration default), 1 = original v1 schema, 2 = adds `fileSize`.
+    static let currentIndexerVersion = 2
 
     var megapixels: Double? {
         guard let width, let height, width > 0, height > 0 else { return nil }

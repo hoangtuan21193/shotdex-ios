@@ -8,18 +8,21 @@ struct LibraryQueryDAO: Sendable {
     /// The whole filtered library as slim grid rows, in display sort order.
     /// No paging — the grid virtualizes rendering over the full list.
     /// Async so the (potentially 100k-row) decode runs on GRDB's reader
-    /// pool, not the main thread.
+    /// pool, not the main thread. `limit` serves the Library first-paint
+    /// slice; nil (the default) returns everything.
     func gridItems(
         matching criteria: FilterCriteria,
-        sort: SortOption
+        sort: SortOption,
+        limit: Int? = nil
     ) async throws -> [LibraryGridItem] {
         let (whereSQL, arguments) = Self.whereClause(for: criteria)
         let sql = """
             SELECT assetId, creationDate, iso, aperture, shutterSpeedDisplay,
-                   focalLength, equivalentFocalLength
+                   focalLength, equivalentFocalLength, width, height, fileSize
             FROM photo_metadata
             \(whereSQL)
             ORDER BY \(Self.orderClause(for: sort))
+            \(limit.map { "LIMIT \($0)" } ?? "")
             """
         return try await database.reader.read { db in
             try LibraryGridItem.fetchAll(db, sql: sql, arguments: arguments)
@@ -45,6 +48,39 @@ struct LibraryQueryDAO: Sendable {
     /// Number of photos matching the criteria (for the filter chips bar).
     func count(matching criteria: FilterCriteria) throws -> Int {
         let (whereSQL, arguments) = Self.whereClause(for: criteria)
+        let sql = "SELECT COUNT(*) FROM photo_metadata \(whereSQL)"
+        return try database.reader.read { db in
+            try Int.fetchOne(db, sql: sql, arguments: arguments) ?? 0
+        }
+    }
+
+    // MARK: Smart-album rule queries
+
+    /// Grid rows for a smart album's saved rule query (see `gridItems(matching
+    /// criteria:)` — same SELECT, but the WHERE is compiled from rules with the
+    /// album's `all`/`any` match mode).
+    func gridItems(
+        matching query: SmartAlbumQuery,
+        sort: SortOption,
+        limit: Int? = nil
+    ) async throws -> [LibraryGridItem] {
+        let (whereSQL, arguments) = Self.whereClause(for: query)
+        let sql = """
+            SELECT assetId, creationDate, iso, aperture, shutterSpeedDisplay,
+                   focalLength, equivalentFocalLength, width, height, fileSize
+            FROM photo_metadata
+            \(whereSQL)
+            ORDER BY \(Self.orderClause(for: sort))
+            \(limit.map { "LIMIT \($0)" } ?? "")
+            """
+        return try await database.reader.read { db in
+            try LibraryGridItem.fetchAll(db, sql: sql, arguments: arguments)
+        }
+    }
+
+    /// Number of photos matching a smart album's rule query.
+    func count(matching query: SmartAlbumQuery) throws -> Int {
+        let (whereSQL, arguments) = Self.whereClause(for: query)
         let sql = "SELECT COUNT(*) FROM photo_metadata \(whereSQL)"
         return try database.reader.read { db in
             try Int.fetchOne(db, sql: sql, arguments: arguments) ?? 0
@@ -103,10 +139,31 @@ struct LibraryQueryDAO: Sendable {
             }
         }
 
+        // Free-typed contains-terms (smart albums): `LIKE %term%` across the
+        // given columns, all terms ORed so any match includes the row.
+        func addContains(_ terms: [String], columns: [String]) {
+            let cleaned = terms
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+            guard !cleaned.isEmpty else { return }
+            var ors: [String] = []
+            for term in cleaned {
+                for column in columns {
+                    ors.append("\(column) LIKE ? COLLATE NOCASE")
+                    values.append("%\(term)%")
+                }
+            }
+            conditions.append("(" + ors.joined(separator: " OR ") + ")")
+        }
+
         addSet(criteria.cameraBrands, column: "normalizedCameraManufacturer")
         addSet(criteria.cameraBodies, column: "normalizedCameraModel")
         addSet(criteria.lenses, column: "normalizedLensModel")
         addSet(Set(criteria.sensorFormats.map(\.rawValue)), column: "sensorFormat")
+
+        addContains(criteria.cameraBrandTerms, columns: ["normalizedCameraManufacturer", "cameraManufacturer"])
+        addContains(criteria.cameraBodyTerms, columns: ["normalizedCameraModel", "cameraModel"])
+        addContains(criteria.lensTerms, columns: ["normalizedLensModel", "lensModel"])
 
         addRange(criteria.isoRange, column: "iso")
         addRange(criteria.shutterRange, column: "shutterSpeedSeconds")
@@ -174,6 +231,12 @@ struct LibraryQueryDAO: Sendable {
 
         let sql = conditions.isEmpty ? "" : "WHERE " + conditions.joined(separator: " AND ")
         return (sql, StatementArguments(values))
+    }
+
+    /// Compiles a smart album's rule query into a WHERE clause. Delegates to
+    /// the shared `SmartAlbumSQLCompiler` (also used by `StatsDAO`).
+    static func whereClause(for query: SmartAlbumQuery) -> (sql: String, arguments: StatementArguments) {
+        SmartAlbumSQLCompiler.whereClause(for: query)
     }
 
     /// Every clause ends with the `assetId` primary key so the ordering is

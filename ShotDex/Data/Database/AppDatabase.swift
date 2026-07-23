@@ -105,6 +105,39 @@ final class AppDatabase: Sendable {
             }
         }
 
+        // Records which build of the indexer wrote each row (see
+        // `PhotoMetadata.currentIndexerVersion`). Existing rows default to 0,
+        // so bumping the current version re-reads them on the next incremental
+        // run — the mechanism for backfilling any newly-indexed field onto
+        // already-indexed photos without a full re-index.
+        migrator.registerMigration("v2-indexerVersion") { db in
+            try db.alter(table: "photo_metadata") { t in
+                t.add(column: "indexerVersion", .integer).notNull().defaults(to: 0)
+            }
+        }
+
+        // User-created smart albums: named saved filters. `criteria` holds a
+        // JSON-encoded `FilterCriteria` (GRDB serializes the nested Codable).
+        migrator.registerMigration("v3-smartAlbums") { db in
+            try db.create(table: "smart_albums") { t in
+                t.primaryKey("id", .text)
+                t.column("name", .text).notNull()
+                t.column("criteria", .text).notNull()
+                t.column("createdAt", .integer).notNull()
+            }
+        }
+
+        // Dashboard chart widgets for the Statistics screen. `config` holds a
+        // JSON-encoded `ChartWidget` string (like `smart_albums.criteria`);
+        // `position` is the display order. Seeded with defaults on first use.
+        migrator.registerMigration("v4-statCharts") { db in
+            try db.create(table: "stat_charts") { t in
+                t.primaryKey("id", .text)
+                t.column("config", .text).notNull()
+                t.column("position", .integer).notNull()
+            }
+        }
+
         return migrator
     }
 }

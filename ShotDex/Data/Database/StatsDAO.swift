@@ -293,3 +293,372 @@ struct StatsDAO: Sendable {
         }
     }
 }
+
+// MARK: - Dashboard chart aggregation
+
+extension StatsDAO {
+    /// Runs a dashboard chart widget's query and returns its plotted points.
+    /// Dispatches on `kind`; all column names come from closed enums on
+    /// `ChartDimension` / `MetricField` (never user text), and only bound
+    /// values originate from user input, so the string-built SQL is injection
+    /// free. The date `scope` ANDs on top of the widget's own `filter`.
+    func chartData(for widget: ChartWidget, scope: StatsDateScope) throws -> [ChartDatum] {
+        switch widget.kind {
+        case .kpi:
+            if let dimension = widget.dimension {
+                // Top group by count — "Most used X". Binned/temporal data isn't
+                // value-sorted, so pick the max rather than the first row.
+                let grouped = try groupedData(
+                    dimension: dimension,
+                    metric: .photoCount,
+                    filter: widget.filter,
+                    scope: scope,
+                    topN: 0,
+                    includeUnknown: false
+                )
+                guard let top = grouped.filter({ !$0.isUnknown }).max(by: { $0.value < $1.value }) else {
+                    return []
+                }
+                return [top]
+            }
+            guard let value = try scalar(metric: widget.metric, filter: widget.filter, scope: scope) else {
+                return []
+            }
+            return [ChartDatum(label: widget.metric.displayName, value: value)]
+
+        case .line:
+            return try temporalData(
+                dimension: widget.dimension ?? .dateMonth,
+                metric: widget.metric,
+                seriesSplit: widget.seriesSplit,
+                filter: widget.filter,
+                scope: scope,
+                topSeries: widget.topN
+            )
+
+        case .bar, .donut:
+            guard let dimension = widget.dimension else { return [] }
+            return try groupedData(
+                dimension: dimension,
+                metric: widget.metric,
+                filter: widget.filter,
+                scope: scope,
+                topN: widget.topN,
+                includeUnknown: widget.metric.aggregation == .count
+            )
+        }
+    }
+
+    // MARK: Dispatch by axis kind
+
+    private func groupedData(
+        dimension: ChartDimension,
+        metric: ChartMetric,
+        filter: SmartAlbumQuery,
+        scope: StatsDateScope,
+        topN: Int,
+        includeUnknown: Bool
+    ) throws -> [ChartDatum] {
+        switch dimension.axisKind {
+        case .categorical:
+            return try categoricalData(
+                dimension: dimension, metric: metric, filter: filter,
+                scope: scope, topN: topN, includeUnknown: includeUnknown
+            )
+        case .binned:
+            return try binnedData(dimension: dimension, metric: metric, filter: filter, scope: scope)
+        case .temporal:
+            return try temporalData(
+                dimension: dimension, metric: metric, seriesSplit: nil,
+                filter: filter, scope: scope, topSeries: 0
+            )
+        }
+    }
+
+    // MARK: Filter + scope helpers
+
+    /// The widget filter and date scope as ANDable conditions + bound values
+    /// (no `WHERE`, no leading keyword). Column names inside come only from the
+    /// closed-enum rule compiler; values are parameters.
+    private func filterAndScope(
+        _ filter: SmartAlbumQuery,
+        _ scope: StatsDateScope
+    ) -> (conditions: [String], values: [DatabaseValueConvertible]) {
+        var conditions: [String] = []
+        var values: [DatabaseValueConvertible] = []
+        let (filterSQL, filterValues) = SmartAlbumSQLCompiler.predicate(for: filter)
+        if !filterSQL.isEmpty {
+            conditions.append(filterSQL)
+            values.append(contentsOf: filterValues)
+        }
+        let (scopeSQL, scopeArgs) = scopeClause(scope)
+        if !scopeSQL.isEmpty {
+            conditions.append(scopeSQL)
+            values.append(contentsOf: scopeArgs)
+        }
+        return (conditions, values)
+    }
+
+    private static func whereSQL(_ conditions: [String]) -> String {
+        conditions.isEmpty ? "" : "WHERE " + conditions.joined(separator: " AND ")
+    }
+
+    /// Reads a group key as a String regardless of column affinity — text
+    /// dimensions arrive as strings, `favorite` as an integer 0/1.
+    private static func stringKey(_ value: DatabaseValue) -> String {
+        if let string = String.fromDatabaseValue(value) { return string }
+        if let int = Int64.fromDatabaseValue(value) { return String(int) }
+        if let double = Double.fromDatabaseValue(value) { return String(double) }
+        return ""
+    }
+
+    private func countRows(conditions: [String], values: [DatabaseValueConvertible]) throws -> Int {
+        let sql = "SELECT COUNT(*) FROM photo_metadata \(Self.whereSQL(conditions))"
+        return try database.reader.read { db in
+            try Int.fetchOne(db, sql: sql, arguments: StatementArguments(values)) ?? 0
+        }
+    }
+
+    /// SQL aggregate expression for a metric, plus a NOT-NULL guard (nil for
+    /// plain counting). `.median` never reaches here for grouped charts.
+    private func metricExpression(_ metric: ChartMetric) -> (expr: String, notNull: String?) {
+        guard let field = metric.field, metric.aggregation != .count else {
+            return ("COUNT(*)", nil)
+        }
+        return (metric.aggregation.sql(columnExpression: field.columnExpression), field.notNullClause)
+    }
+
+    // MARK: Categorical
+
+    private func categoricalData(
+        dimension: ChartDimension,
+        metric: ChartMetric,
+        filter: SmartAlbumQuery,
+        scope: StatsDateScope,
+        topN: Int,
+        includeUnknown: Bool
+    ) throws -> [ChartDatum] {
+        let column = dimension.groupColumn
+        let isCount = metric.field == nil || metric.aggregation == .count
+        let (aggExpr, aggNotNull) = metricExpression(metric)
+
+        var (conditions, values) = filterAndScope(filter, scope)
+        // `favorite` is an integer flag (never NULL / empty); text categoricals
+        // exclude NULL/blank so they don't form a spurious "" bucket.
+        if dimension != .favorite {
+            conditions.insert("\(column) IS NOT NULL AND \(column) != ''", at: 0)
+        }
+        if let aggNotNull { conditions.append(aggNotNull) }
+
+        let limitSQL = topN > 0 ? "LIMIT \(topN)" : ""
+        let sql = """
+            SELECT \(column) AS key, \(aggExpr) AS value
+            FROM photo_metadata
+            \(Self.whereSQL(conditions))
+            GROUP BY \(column)
+            ORDER BY value DESC
+            \(limitSQL)
+            """
+        var data = try database.reader.read { db in
+            try Row.fetchAll(db, sql: sql, arguments: StatementArguments(values)).map { row -> ChartDatum in
+                let key = Self.stringKey(row["key"])
+                let value: Double = row["value"] ?? 0
+                return ChartDatum(
+                    label: dimension.label(forKey: key),
+                    value: value,
+                    drillKey: key
+                )
+            }
+        }
+
+        // Synthetic "Unknown" bucket — counted directly from NULL/blank rows so
+        // it's correct even when `topN` truncates the known buckets. Only for
+        // counts of a text dimension.
+        if includeUnknown, isCount, dimension != .favorite {
+            var (unknownConditions, unknownValues) = filterAndScope(filter, scope)
+            unknownConditions.insert("(\(column) IS NULL OR \(column) = '')", at: 0)
+            let unknown = try countRows(conditions: unknownConditions, values: unknownValues)
+            if unknown > 0 {
+                data.append(ChartDatum(
+                    label: "Unknown", value: Double(unknown), drillKey: nil, isUnknown: true
+                ))
+            }
+        }
+        return data
+    }
+
+    // MARK: Binned numeric
+
+    /// Bins numeric rows in Swift (same approach as `rangeHistogram`) so a
+    /// single fetch serves both counts and per-bucket aggregates.
+    private func binnedData(
+        dimension: ChartDimension,
+        metric: ChartMetric,
+        filter: SmartAlbumQuery,
+        scope: StatsDateScope
+    ) throws -> [ChartDatum] {
+        guard let bins = dimension.bins else { return [] }
+        let column = dimension.groupColumn
+        let isCount = metric.field == nil || metric.aggregation == .count
+
+        var (conditions, values) = filterAndScope(filter, scope)
+        conditions.insert("\(column) IS NOT NULL", at: 0)
+        let metricField = isCount ? nil : metric.field
+        if let metricField { conditions.append(metricField.notNullClause) }
+
+        let metricSelect = metricField.map { ", \($0.columnExpression) AS m" } ?? ""
+        let sql = """
+            SELECT \(column) AS dim\(metricSelect)
+            FROM photo_metadata
+            \(Self.whereSQL(conditions))
+            """
+        let pairs: [(dim: Double, m: Double?)] = try database.reader.read { db in
+            try Row.fetchAll(db, sql: sql, arguments: StatementArguments(values)).map { row in
+                (dim: row["dim"] ?? 0, m: metricField != nil ? row["m"] : nil)
+            }
+        }
+
+        return bins.map { bin in
+            let inBin = pairs.filter { bin.range.contains($0.dim) }
+            let value: Double
+            if isCount {
+                value = Double(inBin.count)
+            } else {
+                let ms = inBin.compactMap(\.m)
+                value = Self.reduce(ms, using: metric.aggregation)
+            }
+            return ChartDatum(label: bin.label, value: value, drillKey: bin.label)
+        }
+    }
+
+    private static func reduce(_ values: [Double], using aggregation: MetricAggregation) -> Double {
+        guard !values.isEmpty else { return 0 }
+        switch aggregation {
+        case .count: return Double(values.count)
+        case .sum: return values.reduce(0, +)
+        case .average: return values.reduce(0, +) / Double(values.count)
+        case .min: return values.min() ?? 0
+        case .max: return values.max() ?? 0
+        case .median:
+            let sorted = values.sorted()
+            return sorted[sorted.count / 2]
+        }
+    }
+
+    // MARK: Temporal (line)
+
+    private func temporalData(
+        dimension: ChartDimension,
+        metric: ChartMetric,
+        seriesSplit: ChartDimension?,
+        filter: SmartAlbumQuery,
+        scope: StatsDateScope,
+        topSeries: Int
+    ) throws -> [ChartDatum] {
+        let fmt = dimension.strftimeFormat ?? "%Y-%m"
+        let (aggExpr, aggNotNull) = metricExpression(metric)
+
+        var conditions = ["creationDate IS NOT NULL"]
+        var values: [DatabaseValueConvertible] = []
+        if let aggNotNull { conditions.append(aggNotNull) }
+
+        // Optional split into one series per top-N value of a categorical dim.
+        var seriesColumn: String?
+        if let split = seriesSplit, split.axisKind == .categorical {
+            let keys = try topCategoryKeys(
+                column: split.groupColumn, filter: filter, scope: scope,
+                limit: max(1, topSeries)
+            )
+            guard !keys.isEmpty else { return [] }
+            seriesColumn = split.groupColumn
+            let placeholders = Array(repeating: "?", count: keys.count).joined(separator: ", ")
+            conditions.append("\(split.groupColumn) IN (\(placeholders))")
+            values.append(contentsOf: keys)
+        }
+
+        let (fsConditions, fsValues) = filterAndScope(filter, scope)
+        conditions.append(contentsOf: fsConditions)
+        values.append(contentsOf: fsValues)
+
+        let seriesSelect = seriesColumn.map { ", \($0) AS series" } ?? ""
+        let seriesGroup = seriesColumn.map { ", \($0)" } ?? ""
+        let sql = """
+            SELECT strftime('\(fmt)', creationDate, 'unixepoch') AS period\(seriesSelect),
+                   \(aggExpr) AS value
+            FROM photo_metadata
+            \(Self.whereSQL(conditions))
+            GROUP BY period\(seriesGroup)
+            ORDER BY period
+            """
+        return try database.reader.read { db in
+            try Row.fetchAll(db, sql: sql, arguments: StatementArguments(values)).map { row in
+                ChartDatum(
+                    label: row["period"],
+                    value: row["value"] ?? 0,
+                    drillKey: nil,
+                    series: seriesColumn != nil ? Self.stringKey(row["series"]) : nil
+                )
+            }
+        }
+    }
+
+    /// Top-N distinct values of a categorical column by photo count, within the
+    /// filter + scope — the series shown on a split line chart.
+    private func topCategoryKeys(
+        column: String,
+        filter: SmartAlbumQuery,
+        scope: StatsDateScope,
+        limit: Int
+    ) throws -> [String] {
+        var (conditions, values) = filterAndScope(filter, scope)
+        conditions.insert("\(column) IS NOT NULL AND \(column) != ''", at: 0)
+        let sql = """
+            SELECT \(column) AS key, COUNT(*) AS c
+            FROM photo_metadata
+            \(Self.whereSQL(conditions))
+            GROUP BY \(column)
+            ORDER BY c DESC
+            LIMIT \(limit)
+            """
+        return try database.reader.read { db in
+            try Row.fetchAll(db, sql: sql, arguments: StatementArguments(values)).map { Self.stringKey($0["key"]) }
+        }
+    }
+
+    // MARK: Scalar (KPI without a dimension)
+
+    private func scalar(
+        metric: ChartMetric,
+        filter: SmartAlbumQuery,
+        scope: StatsDateScope
+    ) throws -> Double? {
+        var (conditions, values) = filterAndScope(filter, scope)
+
+        // Count of rows — no field needed.
+        if metric.field == nil || metric.aggregation == .count {
+            return Double(try countRows(conditions: conditions, values: values))
+        }
+        guard let field = metric.field else { return nil }
+        conditions.append(field.notNullClause)
+        let args: StatementArguments = StatementArguments(values)
+
+        if metric.aggregation == .median {
+            let count = try countRows(conditions: conditions, values: values)
+            guard count > 0 else { return nil }
+            let sql = """
+                SELECT \(field.columnExpression) FROM photo_metadata
+                \(Self.whereSQL(conditions))
+                ORDER BY \(field.columnExpression) LIMIT 1 OFFSET \(count / 2)
+                """
+            return try database.reader.read { db in
+                try Double.fetchOne(db, sql: sql, arguments: args)
+            }
+        }
+
+        let expr = metric.aggregation.sql(columnExpression: field.columnExpression)
+        let sql = "SELECT \(expr) FROM photo_metadata \(Self.whereSQL(conditions))"
+        return try database.reader.read { db in
+            try Double.fetchOne(db, sql: sql, arguments: args)
+        }
+    }
+}

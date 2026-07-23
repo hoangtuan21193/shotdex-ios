@@ -41,6 +41,11 @@ final class PhotoLibraryService: NSObject {
     private let imageManager = PHCachingImageManager()
     @ObservationIgnored
     private var isObservingChanges = false
+    /// Trailing-edge debounce for `libraryChangeToken`: iCloud downloads
+    /// during an index run fire `photoLibraryDidChange` per asset; bumping
+    /// the token each time would trigger a full-library reload per photo.
+    @ObservationIgnored
+    private var pendingChangeTokenBump: Task<Void, Never>?
     @ObservationIgnored
     private(set) var allPhotosFetchResult: PHFetchResult<PHAsset>?
 
@@ -98,10 +103,12 @@ final class PhotoLibraryService: NSObject {
 
     // MARK: Fetching
 
-    /// Predicate for media shown in the browsing surfaces (Library grid,
-    /// Albums, On This Day, detail viewer): photos **and** videos. The EXIF
-    /// index pass and Statistics stay photo-only (see `IndexPipeline`), so
-    /// videos appear in the grid via PhotoKit but never skew gear stats.
+    /// Predicate for media the app handles everywhere — browsing surfaces
+    /// (Library grid, Albums, On This Day, detail viewer) **and** the index:
+    /// photos **and** videos. Videos are indexed as rows with no EXIF (the
+    /// EXIF pass skips them, see `IndexPipeline.shouldSkipExifRead`), so they
+    /// count toward totals and appear in the grid but carry no gear metadata —
+    /// gear charts fold them into their "Unknown" bucket.
     nonisolated static var browsableMediaPredicate: NSPredicate {
         NSPredicate(
             format: "mediaType = %d OR mediaType = %d",
@@ -172,13 +179,18 @@ final class PhotoLibraryService: NSObject {
     func requestDetailImage(
         for asset: PHAsset,
         targetSize: CGSize,
+        allowNetwork: Bool = true,
         progress: @escaping (Double) -> Void,
         completion: @escaping (UIImage?, Bool) -> Void
     ) -> PHImageRequestID {
         let options = PHImageRequestOptions()
         options.deliveryMode = .opportunistic
         options.resizeMode = .fast
-        options.isNetworkAccessAllowed = true
+        // A screen-sized `targetSize` (network on) streams only iCloud's
+        // screen-sized derivative — fast. Pass `PHImageManagerMaximumSize` to
+        // pull the multi-MB original (zoom-to-pixel-peep). `allowNetwork: false`
+        // restricts to local renditions.
+        options.isNetworkAccessAllowed = allowNetwork
         options.progressHandler = { value, _, _, _ in
             Task { @MainActor in progress(value) }
         }
@@ -190,6 +202,31 @@ final class PhotoLibraryService: NSObject {
         ) { image, info in
             let degraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
             completion(image, degraded)
+        }
+    }
+
+    /// Sharpest LOCAL rendition, no network — the device-sized derivative
+    /// "Optimize iPhone Storage" keeps on disk, exactly what the Photos app
+    /// shows full-screen even offline. `requestImage` works off renditions,
+    /// so `.highQualityFormat` returns the best on-device version (NOT nil like
+    /// `requestImageDataAndOrientation`, which reads the original file — absent
+    /// for offloaded assets). Network off → a single non-degraded delivery.
+    func requestBestLocalImage(
+        for asset: PHAsset,
+        targetSize: CGSize,
+        completion: @escaping (UIImage?) -> Void
+    ) -> PHImageRequestID {
+        let options = PHImageRequestOptions()
+        options.isNetworkAccessAllowed = false
+        options.deliveryMode = .highQualityFormat
+        options.resizeMode = .exact
+        return imageManager.requestImage(
+            for: asset,
+            targetSize: targetSize,
+            contentMode: .aspectFit,
+            options: options
+        ) { image, _ in
+            completion(image)
         }
     }
 
@@ -272,7 +309,15 @@ extension PhotoLibraryService: PHPhotoLibraryChangeObserver {
                let details = changeInstance.changeDetails(for: current) {
                 self.allPhotosFetchResult = details.fetchResultAfterChanges
             }
-            self.libraryChangeToken += 1
+            // The fetch result above stays current on every change; only the
+            // token consumers (full-screen reloads) are debounced to ≤1/s.
+            guard self.pendingChangeTokenBump == nil else { return }
+            self.pendingChangeTokenBump = Task { @MainActor in
+                defer { self.pendingChangeTokenBump = nil }
+                try? await Task.sleep(for: .seconds(1))
+                guard !Task.isCancelled else { return }
+                self.libraryChangeToken += 1
+            }
         }
     }
 }

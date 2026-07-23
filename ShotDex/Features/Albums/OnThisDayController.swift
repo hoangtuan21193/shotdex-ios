@@ -22,6 +22,7 @@ final class OnThisDayController: PhotoBrowsingSource {
     private let metadataDAO: MetadataDAO
     private let database: AppDatabase
     private let photoLibrary: PhotoLibraryService
+    private let indexPipeline: IndexPipeline
     private let calendar = Calendar.current
 
     /// The date whose month/day is matched. Changing it reloads.
@@ -49,6 +50,7 @@ final class OnThisDayController: PhotoBrowsingSource {
         self.metadataDAO = dependencies.metadataDAO
         self.database = dependencies.database
         self.photoLibrary = dependencies.photoLibrary
+        self.indexPipeline = dependencies.indexPipeline
         self.selectedDate = selectedDate
     }
 
@@ -182,12 +184,20 @@ final class OnThisDayController: PhotoBrowsingSource {
         rebuildSections()
     }
 
+    func deleteAsset(id: String) async throws {
+        try await deleteAssets(ids: [id])
+    }
+
     // MARK: PhotoBrowsingSource
 
     var photoCount: Int { photos.count }
 
     func photoId(at index: Int) -> String? {
         photos.indices.contains(index) ? photos[index].assetId : nil
+    }
+
+    func index(of assetId: String) -> Int? {
+        photos.firstIndex { $0.assetId == assetId }
     }
 
     func metadata(for assetId: String) -> PhotoMetadata? {
@@ -206,6 +216,14 @@ final class OnThisDayController: PhotoBrowsingSource {
         if let index = photos.firstIndex(where: { $0.assetId == assetId }) {
             photos[index].isFavorite = isFavorite
         }
+    }
+
+    func refreshMetadataAfterDownload(assetId: String) async -> PhotoMetadata? {
+        guard let updated = await indexPipeline.indexSingle(assetId: assetId) else { return nil }
+        if let index = photos.firstIndex(where: { $0.assetId == assetId }) {
+            photos[index] = updated
+        }
+        return updated
     }
 
     private nonisolated static func fetchMetadata(

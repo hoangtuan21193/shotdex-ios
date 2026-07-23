@@ -11,9 +11,10 @@ struct LibraryScreen: View {
     let controller: LibraryController?
 
     @State private var isFilterPresented = false
+    @State private var isAdvancedSearchPresented = false
     /// Persisted density (column count), shared with Album Detail.
     @AppStorage(SettingsKeys.gridColumns) private var storedColumns = 3
-    @State private var selectedPhotoIndex: Int?
+    @State private var viewerTarget: PhotoViewerTarget?
 
     /// Multi-select mode: uncapped selection of asset ids kept in pick
     /// order (Compare panes follow it); ids survive grid reloads.
@@ -28,8 +29,9 @@ struct LibraryScreen: View {
     @State private var retapResetCount = 0
     @State private var isDeleting = false
     @State private var deleteErrorMessage: String?
-    /// Index indicator: compact chip by default (top-trailing), tap to
-    /// expand into the full detail card; tapping the grid collapses it.
+    /// Index indicator: a compact chip in the top-leading toolbar (right of
+    /// the Settings gear); tapping presents the detail popover. This drives
+    /// the popover's presentation.
     @State private var isIndexPanelExpanded = false
 
     var body: some View {
@@ -60,6 +62,10 @@ struct LibraryScreen: View {
             }
         }
         .toolbar { toolbarContent }
+        // Inline (not the default large-title) mode: keeps the bar a thin
+        // translucent strip the grid scrolls under, instead of a tall empty
+        // band. Matches Album Detail.
+        .navigationBarTitleDisplayMode(.inline)
         .task(id: "\(photoLibrary.authorizationState.canReadLibrary)-\(controller != nil)") {
             guard photoLibrary.authorizationState.canReadLibrary, let controller else { return }
             controller.reload()
@@ -67,10 +73,14 @@ struct LibraryScreen: View {
             controller.startIndexing()
         }
         .onChange(of: photoLibrary.libraryChangeToken) {
-            // Reload first so PhotoKit-new photos appear immediately (fast
-            // path), not only after the index run finishes; then index them.
-            controller?.reload()
-            controller?.startIndexing()
+            // Reload-then-index outside a run; coalesced into the end-of-run
+            // reload while indexing (see LibraryController.handleLibraryChange).
+            controller?.handleLibraryChange()
+        }
+        .onChange(of: navigation.advancedSearchToken) {
+            // Advanced search is routed here from the search tab (a sheet can't
+            // present over the iOS 26 search-role tab); open it on Library.
+            isAdvancedSearchPresented = true
         }
         .sheet(isPresented: $isFilterPresented) {
             if let controller {
@@ -87,12 +97,16 @@ struct LibraryScreen: View {
                 .presentationDragIndicator(.visible)
             }
         }
-        .fullScreenCover(isPresented: Binding(
-            get: { selectedPhotoIndex != nil },
-            set: { if !$0 { selectedPhotoIndex = nil } }
-        )) {
-            if let controller, let index = selectedPhotoIndex {
-                PhotoDetailScreen(controller: controller, currentIndex: index)
+        .sheet(isPresented: $isAdvancedSearchPresented) {
+            if let controller {
+                AdvancedSearchSheet(controller: controller, dependencies: dependencies) {}
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+            }
+        }
+        .fullScreenCover(item: $viewerTarget) { target in
+            if let controller {
+                PhotoDetailScreen(controller: controller, currentIndex: target.startIndex)
             }
         }
         .fullScreenCover(isPresented: $isComparePresented, onDismiss: stopSelecting) {
@@ -175,8 +189,11 @@ struct LibraryScreen: View {
         let metadataById = (try? dependencies.libraryQueryDAO.metadata(assetIds: selectedIds)) ?? [:]
         let assets = PhotoLibraryService.fetchAssets(ids: selectedIds)
         let assetById = Dictionary(uniqueKeysWithValues: assets.map { ($0.localIdentifier, $0) })
-        let photos = selectedIds.compactMap { id in
-            metadataById[id].map { ComparePhoto(metadata: $0, asset: assetById[id]) }
+        // Videos have no metadata row (index is image-only) — require the
+        // asset instead, and let the caption go missing.
+        let photos = selectedIds.compactMap { id -> ComparePhoto? in
+            guard let asset = assetById[id] else { return nil }
+            return ComparePhoto(metadata: metadataById[id], asset: asset)
         }
         return photos.count >= 2 ? photos : nil
     }
@@ -185,6 +202,59 @@ struct LibraryScreen: View {
 
     @ViewBuilder
     private func gridContent(_ controller: LibraryController) -> some View {
+        gridBody(controller)
+            // Banner + chips ride in the top safe-area inset (not a VStack)
+            // so the grid stays the root scroll view: photos scroll under the
+            // translucent nav bar chrome edge-to-edge, matching Album Detail.
+            .safeAreaInset(edge: .top, spacing: 0) {
+                topAccessories(controller)
+            }
+            .onChange(of: navigation.libraryRetapToken) {
+            retapResetCount += 1
+        }
+        // Index-detail dropdown: opened from the toolbar chip, drops into the
+        // grid's top safe area (just below the nav bar, clear of the toolbar
+        // buttons). Full-width, single GlassPanel material.
+        .overlay(alignment: .top) {
+            if isIndexPanelExpanded,
+               controller.isIndexing || controller.indexStreamingPaused || controller.indexAutoRetryDate != nil,
+               !isSelecting {
+                indexDetailPanel(controller)
+                    .padding(.horizontal, 12)
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if isSelecting {
+                selectionTray(controller)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        // Reset the expanded state once no index status is active, so a later
+        // run doesn't reopen the dropdown.
+        .onChange(of: controller.isIndexing || controller.indexStreamingPaused || controller.indexAutoRetryDate != nil) { _, active in
+            if !active { isIndexPanelExpanded = false }
+        }
+    }
+
+    @ViewBuilder
+    private func gridBody(_ controller: LibraryController) -> some View {
+        if controller.items.isEmpty {
+            ScrollView {
+                emptyState(controller)
+                    .padding(.top, 80)
+            }
+        } else {
+            photoGrid(controller)
+        }
+    }
+
+    /// Limited-access banner + active filter chips, pinned in the top safe
+    /// area above the scrolling grid. Empty (zero height, no inset) when
+    /// neither applies.
+    @ViewBuilder
+    private func topAccessories(_ controller: LibraryController) -> some View {
         VStack(spacing: 0) {
             if photoLibrary.authorizationState == .limited {
                 LimitedAccessBanner {
@@ -193,7 +263,14 @@ struct LibraryScreen: View {
                 .padding(.top, 4)
             }
 
-            if !controller.criteria.isEmpty {
+            if let advancedQuery = controller.advancedQuery, !advancedQuery.isEmpty {
+                AdvancedSearchBar(
+                    query: advancedQuery,
+                    matchCount: controller.matchCount,
+                    onEdit: { isAdvancedSearchPresented = true },
+                    onClear: { controller.advancedQuery = nil }
+                )
+            } else if !controller.criteria.isEmpty {
                 FilterChipsBar(
                     criteria: Binding(
                         get: { controller.criteria },
@@ -201,35 +278,6 @@ struct LibraryScreen: View {
                     ),
                     matchCount: controller.matchCount
                 )
-            }
-
-            if controller.items.isEmpty {
-                ScrollView {
-                    emptyState(controller)
-                        .padding(.top, 80)
-                }
-            } else {
-                photoGrid(controller)
-            }
-        }
-        .onChange(of: navigation.libraryRetapToken) {
-            retapResetCount += 1
-        }
-        // Indexing indicator floats at the top-trailing corner, on the same
-        // row as the pinned date-section header chip on the left (matching its
-        // 4pt top inset) — out of the way of the newest photos at the bottom.
-        .overlay(alignment: .topTrailing) {
-            if controller.isIndexing, !isSelecting {
-                indexIndicator(controller)
-                    .padding(.horizontal, 8)
-                    .padding(.top, 4)
-                    .onDisappear { isIndexPanelExpanded = false }
-            }
-        }
-        .overlay(alignment: .bottom) {
-            if isSelecting {
-                selectionTray(controller)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
     }
@@ -253,6 +301,7 @@ struct LibraryScreen: View {
             isDateSectioned: controller.sort.isDateSort,
             anchorsBottom: true,
             contentVersion: controller.contentGeneration,
+            contentRefreshVersion: controller.contentRefreshGeneration,
             jumpToNewestToken: retapResetCount,
             columnCount: Binding(
                 get: { GridDensity.clamped(storedColumns) },
@@ -262,12 +311,12 @@ struct LibraryScreen: View {
             selectedIds: selectedIds,
             bottomInset: bottomChromeInset,
             photoLibrary: photoLibrary,
-            onTap: { index, item in
+            onTap: { _, item in
                 if isIndexPanelExpanded { setIndexPanelExpanded(false) }
                 if isSelecting {
                     toggleSelection(of: item.assetId)
-                } else {
-                    selectedPhotoIndex = index
+                } else if let index = controller.index(of: item.assetId) {
+                    viewerTarget = PhotoViewerTarget(id: item.assetId, startIndex: index)
                 }
             },
             onLongPress: { item in
@@ -280,15 +329,53 @@ struct LibraryScreen: View {
             onNearEnd: {},
             onUserScroll: {
                 if isIndexPanelExpanded { setIndexPanelExpanded(false) }
+            },
+            lazyMetadataProvider: { assetId in
+                await controller.lazyBadgeItem(assetId: assetId)
             }
         )
-        .ignoresSafeArea(edges: .bottom)
+        // Fill behind the top nav bar too (not just bottom): the collection
+        // view's automatic content-inset adjustment + anchor() position items
+        // below the bar, so photos scroll under the translucent chrome instead
+        // of leaving a black band behind the buttons.
+        .ignoresSafeArea()
         .sensoryFeedback(.selection, trigger: selectedIds.count)
     }
 
     @ViewBuilder
     private func emptyState(_ controller: LibraryController) -> some View {
-        if controller.isIndexing {
+        if let retryAt = controller.indexAutoRetryDate {
+            VStack(spacing: 12) {
+                Image(systemName: "icloud.slash")
+                    .font(.largeTitle)
+                    .foregroundStyle(.secondary)
+                Text("iCloud isn't responding")
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                HStack(spacing: 4) {
+                    Text("Retrying automatically in")
+                    Text(timerInterval: Date.now...max(Date.now, retryAt), countsDown: true)
+                        .monospacedDigit()
+                }
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                Text("\(controller.pendingICloudCount) photos are waiting. Indexing keeps retrying on its own — cellular or a different network usually helps too.")
+                    .font(.footnote)
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+                HStack(spacing: 12) {
+                    Button("Retry Now") {
+                        controller.retryIncompleteNow()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    Button("Use Cellular") {
+                        controller.enableCellularAndResume()
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+        } else if controller.isIndexing {
             VStack(spacing: 12) {
                 if let progress = controller.indexProgress, progress.total > 0 {
                     ProgressView(value: progress.fraction)
@@ -312,16 +399,34 @@ struct LibraryScreen: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
             }
+        } else if controller.indexStreamingPaused {
+            VStack(spacing: 12) {
+                Image(systemName: "wifi.slash")
+                    .font(.largeTitle)
+                    .foregroundStyle(.secondary)
+                Text("Indexing paused — waiting for Wi-Fi")
+                    .foregroundStyle(.secondary)
+                Text("\(controller.pendingICloudCount) photos in iCloud will finish indexing once you're on Wi-Fi. Local metadata was read without using cellular data.")
+                    .font(.footnote)
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+                Button("Use Cellular") {
+                    controller.enableCellularAndResume()
+                }
+                .buttonStyle(.borderedProminent)
+            }
         } else if controller.isLoading {
             // The full-library query is async — don't flash "No Photos"
             // while the first load is in flight.
             ProgressView()
-        } else if !controller.criteria.isEmpty {
+        } else if controller.hasActiveQuery {
             ContentUnavailableView {
                 Label("No photos match these filters.", systemImage: "camera.filters")
             } actions: {
                 Button("Clear Filters") {
                     controller.criteria = .empty
+                    controller.advancedQuery = nil
                 }
                 .buttonStyle(.borderedProminent)
             }
@@ -338,48 +443,139 @@ struct LibraryScreen: View {
     /// start, and long skip-scans of an incremental pass) — the panel must
     /// still be visible then, matching the Settings row.
     ///
-    /// Compact by default; a tap expands it in place to show the file
-    /// currently being read plus the metadata explainer, and any tap
-    /// (screen-wide catcher in the overlay) collapses it again.
-    @ViewBuilder
-    private func indexIndicator(_ controller: LibraryController) -> some View {
-        if isIndexPanelExpanded {
-            expandedIndexCard(controller)
-        } else {
-            collapsedIndexChip(controller)
-        }
-    }
-
-    /// Default state: a compact glass capsule — spinner + "Indexing" + the
-    /// percent. Tap expands to the full detail card.
-    private func collapsedIndexChip(_ controller: LibraryController) -> some View {
+    /// Compact chip living in the top-leading toolbar, right of the Settings
+    /// gear; a tap opens the detail popover (progress / paused / retry).
+    private func indexChipButton(_ controller: LibraryController) -> some View {
         Button {
-            setIndexPanelExpanded(true)
+            setIndexPanelExpanded(!isIndexPanelExpanded)
         } label: {
-            HStack(spacing: 6) {
-                ProgressView()
-                    .controlSize(.small)
-                if let progress = controller.indexProgress, progress.total > 0 {
-                    Text("Indexing \(progress.percent)%")
-                        .font(.caption.weight(.medium).monospacedDigit())
-                } else {
-                    Text("Indexing")
-                        .font(.caption.weight(.medium))
-                }
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(.ultraThinMaterial, in: Capsule())
-            .overlay(
-                Capsule()
-                    .strokeBorder(Color(.separator).opacity(0.3), lineWidth: 0.5)
-            )
+            chipLabel(controller)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(
             controller.indexProgress.map { "Indexing, \($0.percent) percent" } ?? "Indexing"
         )
-        .accessibilityHint("Double tap to show indexing details")
+        .accessibilityHint("Shows indexing details")
+    }
+
+    @ViewBuilder
+    private func chipLabel(_ controller: LibraryController) -> some View {
+        let content = HStack(spacing: 6) {
+            ProgressView()
+                .controlSize(.small)
+            if let progress = controller.indexProgress, progress.total > 0 {
+                Text("Indexing \(progress.percent)%")
+                    .font(.caption.weight(.medium).monospacedDigit())
+            } else {
+                Text("Indexing")
+                    .font(.caption.weight(.medium))
+            }
+        }
+        // Toolbar otherwise truncates the label; take intrinsic width so the
+        // full "Indexing NN%" always shows.
+        .fixedSize(horizontal: true, vertical: false)
+
+        if #available(iOS 26.0, *) {
+            // Native toolbar supplies the Liquid Glass capsule + insets;
+            // ToolbarSpacer already separates it from the gear.
+            content
+                .padding(.horizontal, 8)
+        } else {
+            // Pre-26 toolbar buttons are bare — give the chip its own capsule
+            // so it reads as a distinct control with breathing room.
+            content
+                .padding(.horizontal, 14)
+                .padding(.vertical, 6)
+                .background(.ultraThinMaterial, in: Capsule())
+                .overlay(
+                    Capsule()
+                        .strokeBorder(Color(.separator).opacity(0.3), lineWidth: 0.5)
+                )
+        }
+    }
+
+    /// Detail dropdown shown under the toolbar: live progress while indexing,
+    /// the countdown card when iCloud isn't responding, or the Wi-Fi-paused
+    /// card. One `GlassPanel` material — no nested popover container.
+    @ViewBuilder
+    private func indexDetailPanel(_ controller: LibraryController) -> some View {
+        if controller.isIndexing {
+            expandedIndexCard(controller)
+        } else if let retryAt = controller.indexAutoRetryDate {
+            // Between runs: iCloud couldn't serve, the next automatic
+            // attempt is counting down. Indexing never sits dead.
+            autoRetryCard(controller, retryAt: retryAt)
+        } else {
+            // Not actively indexing, but iCloud-only photos are waiting on
+            // a Wi-Fi connection (metered cellular, not opted in).
+            pausedIndexCard(controller)
+        }
+    }
+
+    /// iCloud-not-responding card shown while the automatic retry counts
+    /// down: live countdown, skip-the-wait retry, and the cellular shortcut.
+    private func autoRetryCard(_ controller: LibraryController, retryAt: Date) -> some View {
+        GlassPanel {
+            VStack(alignment: .leading, spacing: 6) {
+                Label("iCloud not responding", systemImage: "icloud.slash")
+                    .font(.caption.weight(.medium))
+                HStack(spacing: 4) {
+                    Text("Retrying in")
+                    Text(timerInterval: Date.now...max(Date.now, retryAt), countsDown: true)
+                        .monospacedDigit()
+                }
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                if controller.pendingICloudCount > 0 {
+                    Text("\(controller.pendingICloudCount) photos still waiting for iCloud.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                HStack(spacing: 12) {
+                    Button("Retry Now") {
+                        controller.retryIncompleteNow()
+                    }
+                    .font(.caption.weight(.medium))
+                    Button("Use Cellular") {
+                        controller.enableCellularAndResume()
+                    }
+                    .font(.caption.weight(.medium))
+                }
+            }
+            .padding(12)
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("iCloud not responding, retrying automatically")
+    }
+
+    /// Persistent "waiting for Wi-Fi" card: no spinner (nothing is streaming),
+    /// with a shortcut to opt into cellular and resume now.
+    private func pausedIndexCard(_ controller: LibraryController) -> some View {
+        GlassPanel {
+            VStack(alignment: .leading, spacing: 6) {
+                Label(
+                    "Indexing paused — waiting for Wi-Fi",
+                    systemImage: "wifi.slash"
+                )
+                .font(.caption.weight(.medium))
+                if controller.pendingICloudCount > 0 {
+                    Text("\(controller.pendingICloudCount) photos in iCloud left to read.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Button("Use Cellular") {
+                    controller.enableCellularAndResume()
+                }
+                .font(.caption.weight(.medium))
+            }
+            .padding(12)
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Indexing paused, waiting for Wi-Fi")
     }
 
     /// Expanded state (on tap): full progress, network status, the files
@@ -403,8 +599,21 @@ struct LibraryScreen: View {
                         .foregroundStyle(.secondary)
                 }
                 ProgressView(value: progress?.fraction ?? 0)
+                if let throughput = controller.indexThroughput {
+                    Text(throughput.remainingText.map { "\(throughput.rateText) · \($0)" } ?? throughput.rateText)
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
                 if let network = controller.indexNetworkStatus {
                     Text(network.displayLine)
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                if let diagnostics = controller.indexDiagnostics {
+                    Text(diagnostics.thermalLine)
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                    Text(diagnostics.iCloudLine)
                         .font(.caption2.monospacedDigit())
                         .foregroundStyle(.secondary)
                 }
@@ -419,7 +628,7 @@ struct LibraryScreen: View {
             }
             .padding(12)
         }
-        .frame(maxWidth: 300)
+        .frame(maxWidth: .infinity)
         .contentShape(Rectangle())
         .onTapGesture { setIndexPanelExpanded(false) }
         .accessibilityElement(children: .combine)
@@ -449,6 +658,18 @@ struct LibraryScreen: View {
         // on iOS 26 instead of sharing one capsule.
         ToolbarItem(placement: .topBarLeading) {
             SettingsDrawerButton()
+        }
+        // Break the shared Liquid Glass container so the indexing chip reads as
+        // its own control, not part of the Settings gear's tap target.
+        if #available(iOS 26.0, *) {
+            ToolbarSpacer(.fixed, placement: .topBarLeading)
+        }
+        ToolbarItem(placement: .topBarLeading) {
+            if let controller,
+               controller.isIndexing || controller.indexStreamingPaused || controller.indexAutoRetryDate != nil,
+               !isSelecting {
+                indexChipButton(controller)
+            }
         }
         ToolbarItem(placement: .topBarTrailing) {
             if controller != nil {

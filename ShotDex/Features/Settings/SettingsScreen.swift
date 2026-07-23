@@ -13,9 +13,11 @@ struct SettingsScreen: View {
     @AppStorage("display.showAperture") private var showAperture = true
     @AppStorage("display.showShutter") private var showShutter = false
     @AppStorage("display.showFocal") private var showFocal = true
+    @AppStorage("display.showMegapixels") private var showMegapixels = false
+    @AppStorage("display.showFileSize") private var showFileSize = false
     @AppStorage("display.focalStyleEquivalent") private var focalStyleEquivalent = false
-    @AppStorage("stats.focalEquivalent") private var statsFocalEquivalent = false
     @AppStorage(SettingsKeys.allowCellularIndexing) private var allowCellularIndexing = false
+    @AppStorage(SettingsKeys.keepScreenAwake) private var keepScreenAwake = false
 
     @State private var indexedCount = 0
     @State private var incompleteCount = 0
@@ -28,7 +30,6 @@ struct SettingsScreen: View {
             photoLibrarySection
             displaySection
             cameraDatabaseSection
-            statisticsSection
             privacySection
         }
         .listStyle(.insetGrouped)
@@ -109,21 +110,22 @@ struct SettingsScreen: View {
                     }
                 } else if photoLibrary.authorizationState.canReadLibrary {
                     Button("Re-index Library") {
-                        controller.startIndexing(fullReindex: true)
+                        controller.startIndexing(fullReindex: true, manual: true)
                     }
                     if incompleteCount > 0 {
                         Button("Re-index Incomplete Photos (\(incompleteCount))") {
-                            controller.startReindexIncomplete()
+                            controller.startReindexIncomplete(manual: true)
                         }
                     }
                 }
             }
 
             Toggle("Use Cellular Data for Indexing", isOn: $allowCellularIndexing)
+            Toggle("Keep Screen Awake While Indexing", isOn: $keepScreenAwake)
         } header: {
             Text("Photo Library")
         } footer: {
-            Text("When originals live in iCloud, ShotDex streams only the first few hundred kilobytes of each photo to read its camera metadata — nothing is stored on this device. Wi-Fi is always allowed.")
+            Text("When originals live in iCloud, ShotDex streams only the first few hundred kilobytes of each photo to read its camera metadata — nothing is stored on this device. Wi-Fi is always allowed.\n\nKeep Screen Awake stops the display from sleeping while indexing runs; after 1 minute without a touch the screen dims to save battery, and tapping the screen brings it back.\n\nIn Low Power Mode, automatic indexing pauses and the screen is left to sleep; you can still start indexing by hand, and it resumes automatically when you plug in a charger.")
         }
     }
 
@@ -139,10 +141,12 @@ struct SettingsScreen: View {
                 Text("Actual").tag(false)
                 Text("FF Equivalent").tag(true)
             }
+            Toggle("Megapixels", isOn: $showMegapixels)
+            Toggle("File Size", isOn: $showFileSize)
         } header: {
             Text("Thumbnail Metadata")
         } footer: {
-            Text("Pinch the photo grid to change how many columns are shown.")
+            Text("Pinch the photo grid to change how many columns are shown.\n\nFile Size is recorded while indexing — photos indexed before this option existed fill it in automatically the next time indexing runs.")
         }
     }
 
@@ -156,14 +160,6 @@ struct SettingsScreen: View {
             Button("Reset Custom Mappings", role: .destructive) {
                 isResetMappingsConfirmationPresented = true
             }
-        }
-    }
-
-    // MARK: Statistics
-
-    private var statisticsSection: some View {
-        Section("Statistics") {
-            Toggle("Focal Lengths as FF Equivalent", isOn: $statsFocalEquivalent)
         }
     }
 

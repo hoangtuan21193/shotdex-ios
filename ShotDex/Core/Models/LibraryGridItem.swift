@@ -13,6 +13,10 @@ protocol PhotoGridDisplayable {
     var shutterSpeedDisplay: String? { get }
     var focalLength: Double? { get }
     var equivalentFocalLength: Double? { get }
+    /// Sensor resolution in megapixels (from stored pixel dimensions), nil
+    /// when unknown. File size in bytes, nil until the EXIF pass fills it.
+    var megapixels: Double? { get }
+    var fileSize: Int? { get }
 }
 
 /// Slim projection of one `photo_metadata` row: exactly what the Library
@@ -27,11 +31,19 @@ struct LibraryGridItem: Codable, Equatable, Identifiable, Sendable, FetchableRec
     var shutterSpeedDisplay: String?
     var focalLength: Double?
     var equivalentFocalLength: Double?
+    var width: Int?
+    var height: Int?
+    var fileSize: Int?
 
     var id: String { assetId }
 
     var creationDateValue: Date? {
         creationDate.map { Date(timeIntervalSince1970: TimeInterval($0)) }
+    }
+
+    var megapixels: Double? {
+        guard let width, let height, width > 0, height > 0 else { return nil }
+        return Double(width * height) / 1_000_000
     }
 }
 

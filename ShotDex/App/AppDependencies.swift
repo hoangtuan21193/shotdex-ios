@@ -9,28 +9,38 @@ final class AppDependencies {
     let metadataDAO: MetadataDAO
     let libraryQueryDAO: LibraryQueryDAO
     let statsDAO: StatsDAO
+    let smartAlbumDAO: SmartAlbumDAO
+    let statChartDAO: StatChartDAO
     let photoLibrary: PhotoLibraryService
     let indexPipeline: IndexPipeline
     let backgroundIndex: BackgroundIndexService
     let networkStatus: NetworkStatusService
+    let powerStatus: PowerStatusService
     let indexTraffic: IndexTrafficMonitor
+    let indexInteractionGate: IndexInteractionGate
 
     init(database: AppDatabase, photoLibrary: PhotoLibraryService) {
         let metadataDAO = MetadataDAO(database: database)
         let indexTraffic = IndexTrafficMonitor()
+        let indexInteractionGate = IndexInteractionGate()
         let indexPipeline = IndexPipeline(
             metadataDAO: MetadataDAO(database: database),
-            exifService: ExifService(trafficMonitor: indexTraffic)
+            exifService: ExifService(trafficMonitor: indexTraffic),
+            interactionGate: indexInteractionGate
         )
         self.database = database
         self.metadataDAO = metadataDAO
         self.libraryQueryDAO = LibraryQueryDAO(database: database)
         self.statsDAO = StatsDAO(database: database)
+        self.smartAlbumDAO = SmartAlbumDAO(database: database)
+        self.statChartDAO = StatChartDAO(database: database)
         self.photoLibrary = photoLibrary
         self.indexPipeline = indexPipeline
         self.backgroundIndex = BackgroundIndexService(pipeline: indexPipeline, metadataDAO: metadataDAO)
         self.networkStatus = NetworkStatusService()
+        self.powerStatus = PowerStatusService()
         self.indexTraffic = indexTraffic
+        self.indexInteractionGate = indexInteractionGate
     }
 
     /// Re-resolves cameras indexed as Unknown against the bundled sensor

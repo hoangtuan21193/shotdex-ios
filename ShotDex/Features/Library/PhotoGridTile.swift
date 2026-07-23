@@ -19,6 +19,8 @@ struct PhotoGridTile<Item: PhotoGridDisplayable>: View {
     @AppStorage("display.showAperture") private var showAperture = true
     @AppStorage("display.showShutter") private var showShutter = false
     @AppStorage("display.showFocal") private var showFocal = true
+    @AppStorage("display.showMegapixels") private var showMegapixels = false
+    @AppStorage("display.showFileSize") private var showFileSize = false
     @AppStorage("display.focalStyleEquivalent") private var focalStyleEquivalent = false
 
     /// Cells narrower than this hide the metadata line (dense column counts).
@@ -114,6 +116,8 @@ struct PhotoGridTile<Item: PhotoGridDisplayable>: View {
             showFocal ? focalValue.flatMap(FormatUtils.focalLength) : nil,
             showAperture ? item.aperture.flatMap(FormatUtils.aperture) : nil,
             showShutter ? item.shutterSpeedDisplay : nil,
+            showMegapixels ? item.megapixels.flatMap(FormatUtils.megapixels) : nil,
+            showFileSize ? item.fileSize.flatMap(FormatUtils.fileSize) : nil,
         ])
     }
 

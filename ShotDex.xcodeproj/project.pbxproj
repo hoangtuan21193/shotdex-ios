@@ -20,7 +20,22 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		0E765CBA3010E674001A134A /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		0E765CA13010E673001A134A /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		0E765CA33010E673001A134A /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		AA0000052D00000100000001 /* ShotDex.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShotDex.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000212D00000100000001 /* ShotDexTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ShotDexTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -70,11 +85,21 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0E765CA03010E673001A134A /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				0E765CA13010E673001A134A /* WidgetKit.framework */,
+				0E765CA33010E673001A134A /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		AA0000032D00000100000001 = {
 			isa = PBXGroup;
 			children = (
 				AA0000012D00000100000001 /* ShotDex */,
 				AA0000222D00000100000001 /* ShotDexTests */,
+				0E765CA03010E673001A134A /* Frameworks */,
 				AA0000042D00000100000001 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -98,6 +123,7 @@
 				AA0000082D00000100000001 /* Sources */,
 				AA0000022D00000100000001 /* Frameworks */,
 				AA0000092D00000100000001 /* Resources */,
+				0E765CBA3010E674001A134A /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
@@ -144,7 +170,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2600;
+				LastSwiftUpdateCheck = 2660;
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
 					AA0000062D00000100000001 = {

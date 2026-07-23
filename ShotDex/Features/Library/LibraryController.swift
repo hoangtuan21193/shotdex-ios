@@ -3,12 +3,42 @@ import Photos
 import SwiftUI
 import os
 
+/// Index speed and ETA, derived from progress samples over the current run.
+struct IndexThroughput: Equatable {
+    /// Photos processed per minute, averaged over the run so far.
+    let photosPerMinute: Double
+    /// Estimated time until the run finishes; nil until estimable.
+    let remaining: Duration?
+
+    var rateText: String {
+        "\(Int(photosPerMinute.rounded())) photos/min"
+    }
+
+    var remainingText: String? {
+        remaining.map(Self.format)
+    }
+
+    /// e.g. "2 hours remaining", "1 hr 20 min remaining", "45 min remaining".
+    static func format(_ duration: Duration) -> String {
+        let total = Int(duration.components.seconds)
+        if total < 60 { return "less than a minute remaining" }
+        let hours = total / 3600
+        let minutes = (total % 3600) / 60
+        if hours >= 1 {
+            if minutes == 0 {
+                return "\(hours) hour\(hours == 1 ? "" : "s") remaining"
+            }
+            return "\(hours) hr \(minutes) min remaining"
+        }
+        return "\(minutes) min remaining"
+    }
+}
+
 /// Presentation state for the Library tab: the whole filtered/sorted
 /// library as slim grid rows, plus index pipeline coordination.
 @MainActor
 @Observable
 final class LibraryController {
-    private static let logger = Logger(subsystem: "com.hoangtuan.shotdex", category: "index-net")
 
     private let queryDAO: LibraryQueryDAO
     private let metadataDAO: MetadataDAO
@@ -16,6 +46,7 @@ final class LibraryController {
     private let backgroundIndex: BackgroundIndexService
     private let photoLibrary: PhotoLibraryService
     private let networkStatus: NetworkStatusService
+    private let powerStatus: PowerStatusService
     private let indexTraffic: IndexTrafficMonitor
 
     /// The whole filtered library as slim rows, in bottom-anchored display
@@ -28,6 +59,11 @@ final class LibraryController {
     /// `defaultScrollAnchor(.bottom)` re-applies without a long-distance
     /// `scrollTo` (which would materialize thousands of lazy tiles).
     private(set) var contentGeneration = 0
+    /// Bumped when a reload produces the SAME ordered asset list but refreshed
+    /// per-tile data (an index run filling in exposure overlays). The grid
+    /// re-renders visible cells in place — it must NOT re-anchor, so the user's
+    /// scroll position survives an index run finishing or being cancelled.
+    private(set) var contentRefreshGeneration = 0
     private(set) var isLoading = false
     private(set) var loadError: String?
 
@@ -49,15 +85,62 @@ final class LibraryController {
         }
     )
     @ObservationIgnored private var memoryWarningObserver: NSObjectProtocol?
+    /// Lazy badge lookups for tiles indexed mid-run (see `lazyBadgeItem`).
+    @ObservationIgnored private let badgeCache = GridBadgeCache()
 
     private(set) var isIndexing = false
+    /// Whether the system is in Low Power Mode. Drives keep-awake suppression
+    /// and the automatic-indexing guard.
+    private(set) var isLowPowerMode = false
+    /// True while the current run was started by an explicit user action
+    /// (Settings re-index / retry). Automatic runs (library change, resume,
+    /// charger auto-start) leave it false. In Low Power Mode only a manual run
+    /// keeps the screen awake.
+    private(set) var isManualIndexRun = false
+    /// Previous charging state, so `handlePowerChange` can detect the
+    /// unplugged→charging transition that auto-resumes indexing in LPM.
+    @ObservationIgnored private var wasCharging = false
+    /// A PhotoKit change arrived mid-run. Reloading then would cost a full
+    /// library re-fetch per change (the index run itself generates changes
+    /// while streaming iCloud originals), so the change is coalesced into
+    /// the end-of-run reload plus one follow-up incremental run.
+    @ObservationIgnored private var pendingLibraryChange = false
     private(set) var indexProgress: IndexProgress?
+    /// Speed (photos/min) and ETA for the current run; nil until estimable.
+    private(set) var indexThroughput: IndexThroughput?
     /// Sampled once a second while indexing: connection type, bytes streamed
     /// from iCloud this run, and the download speed derived from the delta.
     private(set) var indexNetworkStatus: IndexNetworkStatus?
+    /// Thermal + iCloud read diagnostics, sampled once a second while a run
+    /// is active (same tick as `indexNetworkStatus`).
+    private(set) var indexDiagnostics: IndexDiagnostics?
+
+    /// Run-relative baseline for throughput: when the first sample of this run
+    /// arrived and how many photos were already processed then.
+    @ObservationIgnored private var indexRunStart: ContinuousClock.Instant?
+    @ObservationIgnored private var indexRunStartProcessed = 0
 
     var criteria: FilterCriteria = .empty {
-        didSet { if criteria != oldValue { reload() } }
+        didSet {
+            guard criteria != oldValue else { return }
+            // Normal search/filter and advanced search are mutually exclusive:
+            // activating one clears the other so the grid has a single source.
+            if !criteria.isEmpty, advancedQuery != nil { advancedQuery = nil }
+            reload()
+        }
+    }
+    /// Advanced search: a smart-album-style rule query driving the grid instead
+    /// of `criteria`. Non-nil (with valid rules) means advanced search is active.
+    var advancedQuery: SmartAlbumQuery? {
+        didSet {
+            guard advancedQuery != oldValue else { return }
+            if advancedQuery != nil, !criteria.isEmpty { criteria = .empty }
+            reload()
+        }
+    }
+    /// Any filter, search, or advanced query is narrowing the grid.
+    var hasActiveQuery: Bool {
+        !criteria.isEmpty || (advancedQuery?.isEmpty == false)
     }
     var sort: SortOption = .default {
         didSet { if sort != oldValue { reload() } }
@@ -75,7 +158,10 @@ final class LibraryController {
         self.backgroundIndex = dependencies.backgroundIndex
         self.photoLibrary = dependencies.photoLibrary
         self.networkStatus = dependencies.networkStatus
+        self.powerStatus = dependencies.powerStatus
         self.indexTraffic = dependencies.indexTraffic
+        self.isLowPowerMode = dependencies.powerStatus.isLowPowerMode
+        self.wasCharging = dependencies.powerStatus.isCharging
         // Under memory pressure the PHAsset chunks are the one cache we
         // hold; visible tiles re-fetch their chunk on the next request.
         memoryWarningObserver = NotificationCenter.default.addObserver(
@@ -87,50 +173,108 @@ final class LibraryController {
                 self?.assetCache.removeAll()
             }
         }
+        // Pause/resume iCloud streaming as the network path flips between
+        // Wi-Fi and (unpermitted) cellular.
+        networkStatus.setPathChangeHandler { [weak self] _, _ in
+            Task { @MainActor in self?.handleNetworkChange() }
+        }
+        // Low Power Mode stops automatic indexing; a charger auto-resumes it.
+        powerStatus.setPowerChangeHandler { [weak self] lowPower, charging in
+            Task { @MainActor in self?.handlePowerChange(lowPower: lowPower, charging: charging) }
+        }
     }
 
     deinit {
         if let memoryWarningObserver {
             NotificationCenter.default.removeObserver(memoryWarningObserver)
         }
+        networkStatus.setPathChangeHandler(nil)
+        powerStatus.setPowerChangeHandler(nil)
     }
 
     // MARK: Loading
+
+    /// Newest slice shown at first paint on the PhotoKit fast path, before
+    /// the full-library enumeration lands. Covers the visible grid plus a
+    /// few screens of scroll headroom at the densest column setting.
+    private static let firstPaintLimit = 600
 
     func reload() {
         loadTask?.cancel()
         loadError = nil
         isLoading = true
         let criteria = self.criteria
+        let advancedQuery = self.advancedQuery
         let sort = self.sort
         let queryDAO = self.queryDAO
-        // Fast path (no metadata filter + a date sort): drive the grid from
-        // PhotoKit directly so the whole library shows instantly, like the
+        // Fast path (no metadata filter/search + a date sort): drive the grid
+        // from PhotoKit directly so the whole library shows instantly, like the
         // system Photos app, instead of waiting on the EXIF index. Any active
-        // filter or metric sort falls back to the DB query.
-        let usePhotoKit = criteria.isEmpty && sort.isDateSort
+        // filter, advanced query, or metric sort falls back to the DB query.
+        let usePhotoKit = criteria.isEmpty && advancedQuery == nil && sort.isDateSort
         loadTask = Task { [weak self] in
             do {
-                let rows = usePhotoKit
-                    ? try await Self.photoKitGridItems(sort: sort, queryDAO: queryDAO)
-                    : try await queryDAO.gridItems(matching: criteria, sort: sort)
-                guard let self, !Task.isCancelled else { return }
-                // Reversed for the bottom-anchored grid; reversing in Swift
-                // (not SQL) keeps NULLS LAST semantics = "No Date" at top.
-                // `rows` is in sort order (newest-first for .dateTakenNewest)
-                // from both paths, so the reverse is identical either way.
-                self.items = Array(rows.reversed())
-                self.assetCache.setIds(self.items.map(\.assetId))
-                self.contentGeneration &+= 1
-                self.isLoading = false
+                if usePhotoKit {
+                    // Two phases: a capped fetch paints the grid immediately
+                    // (enumerating a large library takes seconds), then the
+                    // full enumeration replaces it. The grid re-anchors to
+                    // the bottom on the swap, where the slice's photos are —
+                    // visually seamless for a user still at the newest end.
+                    let slice = try await Self.photoKitGridItems(
+                        sort: sort, queryDAO: queryDAO, limit: Self.firstPaintLimit
+                    )
+                    guard let self, !Task.isCancelled else { return }
+                    self.applyLoadedRows(slice)
+                    let all = try await Self.photoKitGridItems(sort: sort, queryDAO: queryDAO)
+                    guard !Task.isCancelled else { return }
+                    self.applyLoadedRows(all)
+                } else if let advancedQuery, !advancedQuery.isEmpty {
+                    let rows = try await queryDAO.gridItems(matching: advancedQuery, sort: sort)
+                    guard let self, !Task.isCancelled else { return }
+                    self.applyLoadedRows(rows)
+                } else {
+                    let rows = try await queryDAO.gridItems(matching: criteria, sort: sort)
+                    guard let self, !Task.isCancelled else { return }
+                    self.applyLoadedRows(rows)
+                }
             } catch is CancellationError {
                 return
             } catch {
                 guard let self, !Task.isCancelled else { return }
-                self.loadError = "Couldn't load photos."
+                // A failure after the first slice painted keeps the slice on
+                // screen; the error banner is for a grid with nothing to show.
+                if self.items.isEmpty {
+                    self.loadError = "Couldn't load photos."
+                }
                 self.isLoading = false
             }
         }
+    }
+
+    /// Publishes freshly loaded rows to the grid, choosing between an
+    /// in-place refresh and a full content replacement.
+    private func applyLoadedRows(_ rows: [LibraryGridItem]) {
+        // Reversed for the bottom-anchored grid; reversing in Swift
+        // (not SQL) keeps NULLS LAST semantics = "No Date" at top.
+        // `rows` is in sort order (newest-first for .dateTakenNewest)
+        // from both paths, so the reverse is identical either way.
+        let reversed = Array(rows.reversed())
+        // Same ordered list = tiles only need their overlay refreshed
+        // (typical after an index run): re-render in place, keep the
+        // scroll spot. A changed list (filter/sort/library edit) is a
+        // real content replacement and re-anchors to newest.
+        let sameList = reversed.count == items.count
+            && zip(reversed, items).allSatisfy { $0.assetId == $1.assetId }
+        // Every row was just re-fetched — cached lazy-badge answers are stale.
+        badgeCache.removeAll()
+        items = reversed
+        assetCache.setIds(items.map(\.assetId))
+        if sameList {
+            contentRefreshGeneration &+= 1
+        } else {
+            contentGeneration &+= 1
+        }
+        isLoading = false
     }
 
     /// The whole library as grid rows sourced from PhotoKit, in `sort` order.
@@ -138,13 +282,17 @@ final class LibraryController {
     /// overlay shows) and a PhotoKit-only placeholder otherwise — so photos
     /// appear before, and regardless of, the EXIF index. The PHFetchResult
     /// enumeration runs off the main thread (it materializes every asset).
+    /// `limit` caps both fetches to the sort's newest/oldest slice for the
+    /// first-paint phase; the capped DB read can miss overlays for assets
+    /// indexed out of date order — the full phase corrects them.
     private static func photoKitGridItems(
         sort: SortOption,
-        queryDAO: LibraryQueryDAO
+        queryDAO: LibraryQueryDAO,
+        limit: Int? = nil
     ) async throws -> [LibraryGridItem] {
         // Indexed rows keyed by id, for the exposure overlay. `.empty` +
         // matching sort reuses the existing query untouched.
-        let indexed = try await queryDAO.gridItems(matching: .empty, sort: sort)
+        let indexed = try await queryDAO.gridItems(matching: FilterCriteria.empty, sort: sort, limit: limit)
         var byId: [String: LibraryGridItem] = [:]
         byId.reserveCapacity(indexed.count)
         for row in indexed { byId[row.assetId] = row }
@@ -154,6 +302,7 @@ final class LibraryController {
             let options = PHFetchOptions()
             options.predicate = PhotoLibraryService.browsableMediaPredicate
             options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: ascending)]
+            if let limit { options.fetchLimit = limit }
             let fetch = PHAsset.fetchAssets(with: options)
             var items: [LibraryGridItem] = []
             items.reserveCapacity(fetch.count)
@@ -172,9 +321,23 @@ final class LibraryController {
     }
 
     func refreshFilterOptions() {
-        availableBrands = (try? queryDAO.distinctCameraBrands()) ?? []
-        availableBodies = (try? queryDAO.distinctCameraBodies()) ?? []
-        availableLenses = (try? queryDAO.distinctLenses()) ?? []
+        // Off the main thread: called at launch alongside the initial
+        // reload, and the three DISTINCT scans would otherwise block first
+        // paint.
+        let queryDAO = self.queryDAO
+        Task { [weak self] in
+            let (brands, bodies, lenses) = await Task.detached(priority: .utility) {
+                (
+                    (try? queryDAO.distinctCameraBrands()) ?? [],
+                    (try? queryDAO.distinctCameraBodies()) ?? [],
+                    (try? queryDAO.distinctLenses()) ?? []
+                )
+            }.value
+            guard let self else { return }
+            self.availableBrands = brands
+            self.availableBodies = bodies
+            self.availableLenses = lenses
+        }
     }
 
     /// Autosuggest source for search: known camera + lens names.
@@ -199,20 +362,52 @@ final class LibraryController {
         }
     }
 
-    func startIndexing(fullReindex: Bool = false) {
+    /// Entry point for PhotoKit library-change notifications. Outside a run,
+    /// behaves like the old inline handler (reload so new photos appear on
+    /// the fast path, then index them). Mid-run, defers to the end-of-run
+    /// reload: streaming iCloud originals fires a change per downloaded
+    /// asset, and reloading the whole grid per photo is what made the grid
+    /// flicker and the device heat up.
+    func handleLibraryChange() {
+        guard !isIndexing else {
+            pendingLibraryChange = true
+            return
+        }
+        reload()
+        startIndexing()
+    }
+
+    func startIndexing(fullReindex: Bool = false, manual: Bool = false) {
         guard !isIndexing else { return }
+        // No automatic indexing in Low Power Mode. The user can still start it
+        // by hand (`manual`), and a charger connecting resumes it through
+        // `resumeIndexingForCharger` (which drives `runPipeline` directly).
+        guard manual || !isLowPowerMode else { return }
         let allowNetwork = allowNetworkForIndexing
-        runPipeline(allowsNetwork: allowNetwork) { pipeline, onProgress in
+        runPipeline(allowsNetwork: allowNetwork, manual: manual) { pipeline, onProgress in
             try await pipeline.run(fullReindex: fullReindex, allowNetwork: allowNetwork, onProgress: onProgress)
         }
     }
 
     /// Re-reads only the assets stuck at `pendingICloud`/`error`
     /// (Settings → Re-index Incomplete Photos). Always uses the network.
-    func startReindexIncomplete() {
+    func startReindexIncomplete(manual: Bool = false) {
         guard !isIndexing else { return }
-        runPipeline(allowsNetwork: { true }) { pipeline, onProgress in
+        guard manual || !isLowPowerMode else { return }
+        runPipeline(allowsNetwork: { true }, manual: manual) { pipeline, onProgress in
             try await pipeline.reindexIncomplete(onProgress: onProgress)
+        }
+    }
+
+    /// A charger connected while in Low Power Mode — the one automatic resume
+    /// allowed there. Runs an incremental pass without keeping the screen awake
+    /// (`manual: false`), bypassing the LPM start-guard by driving the pipeline
+    /// directly.
+    private func resumeIndexingForCharger() {
+        guard !isIndexing else { return }
+        let allowNetwork = allowNetworkForIndexing
+        runPipeline(allowsNetwork: allowNetwork, manual: false) { pipeline, onProgress in
+            try await pipeline.run(fullReindex: false, allowNetwork: allowNetwork, onProgress: onProgress)
         }
     }
 
@@ -220,35 +415,69 @@ final class LibraryController {
     /// line can show speed/total (even at zero) whenever streaming is possible.
     private func runPipeline(
         allowsNetwork: @escaping @Sendable () -> Bool,
+        manual: Bool,
         _ operation: @escaping @Sendable (IndexPipeline, @escaping @Sendable (IndexProgress) -> Void) async throws -> IndexRunSummary
     ) {
         isIndexing = true
+        isManualIndexRun = manual
+        pendingLibraryChange = false
         indexProgress = nil
-        indexTraffic.reset()
-        Self.logger.log(
-            "index run start: connection \(self.networkStatus.connectionType.displayName, privacy: .public), expensivePath \(self.networkStatus.isExpensivePath), allowCellularSetting \(UserDefaults.standard.bool(forKey: SettingsKeys.allowCellularIndexing)), allowNetwork \(allowsNetwork())"
-        )
-        indexNetworkStatus = IndexNetworkStatus(
-            connection: networkStatus.connectionType,
-            bytesDownloaded: 0,
-            bytesPerSecond: nil,
-            allowsNetwork: allowsNetwork()
-        )
-        let samplingTask = startNetworkSampling(allowsNetwork: allowsNetwork)
-        // Keeps the run alive through a brief trip to the background;
-        // on expiry it cancels cleanly and hands off to the BGProcessingTask.
-        backgroundIndex.beginRunAssertion()
+        indexThroughput = nil
+        indexRunStart = nil
+        cancelScheduledAutoRetry()
         let pipeline = self.pipeline
-        Task {
+        let networkStatus = self.networkStatus
+        // .utility: parse/compose/DB writes and PhotoKit XPC servicing must
+        // not compete with interactive image loads at UI priority.
+        Task(priority: .utility) {
+            // Resolve the real network path before showing status, so the
+            // indicator reflects Wi-Fi/cellular from the first frame rather
+            // than `NWPathMonitor`'s metered-until-first-update default.
+            await networkStatus.awaitInitialPath()
+            self.indexTraffic.reset()
+            IndexTrafficMonitor.healthLogger.log(
+                "run start: connection \(networkStatus.connectionType.displayName, privacy: .public), expensivePath \(networkStatus.isExpensivePath), allowCellularSetting \(UserDefaults.standard.bool(forKey: SettingsKeys.allowCellularIndexing)), allowNetwork \(allowsNetwork())"
+            )
+            self.indexNetworkStatus = IndexNetworkStatus(
+                connection: networkStatus.connectionType,
+                bytesDownloaded: 0,
+                bytesPerSecond: nil,
+                allowsNetwork: allowsNetwork()
+            )
+            self.refreshPausedState()
+            let samplingTask = self.startNetworkSampling(allowsNetwork: allowsNetwork)
+            // Keeps the run alive through a brief trip to the background;
+            // on expiry it cancels cleanly and hands off to the BGProcessingTask.
+            self.backgroundIndex.beginRunAssertion()
             defer {
                 samplingTask.cancel()
                 self.isIndexing = false
+                self.isManualIndexRun = false
                 self.indexProgress = nil
+                self.indexThroughput = nil
                 self.indexNetworkStatus = nil
+                self.indexDiagnostics = nil
                 self.backgroundIndex.endRunAssertion()
+                // One-tap Retry: the cancelled run has now stopped (isIndexing
+                // cleared above), so a fresh incomplete pass can start. Next
+                // tick, so this Task fully unwinds first.
+                if self.pendingRetryAfterCancel {
+                    self.pendingRetryAfterCancel = false
+                    // User-initiated retry — allowed even in Low Power Mode.
+                    Task { @MainActor in self.startReindexIncomplete(manual: true) }
+                } else if self.pendingLibraryChange {
+                    // A library change arrived mid-run (deferred by
+                    // handleLibraryChange). The end-of-run reload below has
+                    // already re-fetched the grid; one incremental run picks
+                    // up whatever the change added. Next tick, so this Task
+                    // fully unwinds first.
+                    self.pendingLibraryChange = false
+                    Task { @MainActor in self.startIndexing() }
+                }
             }
+            var summary: IndexRunSummary?
             do {
-                _ = try await operation(pipeline) { progress in
+                summary = try await operation(pipeline) { progress in
                     Task { @MainActor in
                         self.indexProgress = progress
                     }
@@ -258,6 +487,172 @@ final class LibraryController {
             }
             self.reload()
             self.refreshFilterOptions()
+            // A local-only run leaves iCloud-only photos pending; surface a
+            // persistent "waiting for Wi-Fi" state when they can't stream now.
+            self.refreshPausedState()
+            self.scheduleAutoRetryIfNeeded(after: summary)
+        }
+    }
+
+    /// Averages photos-per-minute over the run and projects the remaining time.
+    /// Baselined on the first sample so a resumed/incremental run measures only
+    /// its own work, not the skipped-scan head start. Called once a second from
+    /// `startNetworkSampling` (a reliable observed-property tick), not from the
+    /// pipeline callback.
+    private func updateThroughput() {
+        guard let progress = indexProgress, progress.total > 0 else { return }
+        let now = ContinuousClock.now
+        guard let start = indexRunStart else {
+            indexRunStart = now
+            indexRunStartProcessed = progress.processed
+            return
+        }
+        let doneThisRun = progress.processed - indexRunStartProcessed
+        let elapsed = start.duration(to: now)
+        let elapsedSeconds =
+            Double(elapsed.components.seconds)
+            + Double(elapsed.components.attoseconds) / 1e18
+        guard doneThisRun > 0, elapsedSeconds >= 1 else { return }
+        let perSecond = Double(doneThisRun) / elapsedSeconds
+        let remainingCount = max(0, progress.total - progress.processed)
+        let remaining: Duration? =
+            perSecond > 0 ? .seconds(Double(remainingCount) / perSecond) : nil
+        indexThroughput = IndexThroughput(
+            photosPerMinute: perSecond * 60,
+            remaining: remaining
+        )
+    }
+
+    // MARK: Cellular pause
+
+    /// True when iCloud-only photos remain unread and can't stream: on a
+    /// metered cellular path the user hasn't opted into. Local metadata reads
+    /// still complete (they cost no data), so this only gates iCloud streaming.
+    /// Drives a persistent "Indexing paused — waiting for Wi-Fi" indicator.
+    private(set) var indexStreamingPaused = false
+    /// Count of `pendingICloud`/`error` rows awaiting an iCloud read.
+    private(set) var pendingICloudCount = 0
+
+    // MARK: Auto-retry
+    //
+    // A run can end with photos still `pendingICloud` on an allowed network
+    // (iCloud auth dead — accountsd Code=7 — or a Wi-Fi that can't serve
+    // originals). Indexing must never sit dead in that state: the controller
+    // schedules an automatic `reindexIncomplete` every 30 s, and the UI shows
+    // a small "retrying in Ns" card instead of the old dead-end
+    // "iCloud not downloading over Wi-Fi" banner. A fixed interval, no
+    // backoff — a failed attempt is cheap (the breaker trips within ~12
+    // reads), and picking iCloud up seconds after it recovers matters more.
+
+    static let autoRetryDelay: Duration = .seconds(30)
+
+    /// When the next automatic retry fires — drives the countdown card.
+    /// nil when no retry is scheduled.
+    private(set) var indexAutoRetryDate: Date?
+    @ObservationIgnored private var autoRetryTask: Task<Void, Never>?
+
+    /// Called at the end of every uncancelled run. Schedules a follow-up
+    /// incomplete pass when iCloud work remains and the network is allowed.
+    private func scheduleAutoRetryIfNeeded(after summary: IndexRunSummary?) {
+        guard let summary, !summary.wasCancelled else { return }
+        guard pendingICloudCount > 0 else { return }
+        // Metered cellular without opt-in: the paused card owns this state.
+        guard allowNetworkForIndexing() else { return }
+        IndexTrafficMonitor.healthLogger.log("auto-retry scheduled in \(Int(Self.autoRetryDelay.components.seconds))s — \(self.pendingICloudCount) photos still pending iCloud")
+        armAutoRetry(after: Self.autoRetryDelay)
+    }
+
+    private func armAutoRetry(after delay: Duration) {
+        indexAutoRetryDate = Date().addingTimeInterval(TimeInterval(delay.components.seconds))
+        autoRetryTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled, let self else { return }
+            self.indexAutoRetryDate = nil
+            // A run in flight reschedules on its own when it ends.
+            guard !self.isIndexing else { return }
+            // Network became disallowed mid-countdown (left Wi-Fi, no
+            // cellular opt-in): keep the loop armed instead of dying —
+            // `startReindexIncomplete` always streams, so firing it here
+            // would burn cellular data against the user's setting.
+            guard self.allowNetworkForIndexing() else {
+                self.armAutoRetry(after: delay)
+                return
+            }
+            self.startReindexIncomplete()
+        }
+    }
+
+    private func cancelScheduledAutoRetry() {
+        autoRetryTask?.cancel()
+        autoRetryTask = nil
+        indexAutoRetryDate = nil
+    }
+
+    /// Recomputes `pendingICloudCount`/`indexStreamingPaused` from the DB and
+    /// the current network path. Cheap query; called at run edges and on path
+    /// changes (both rare).
+    func refreshPausedState() {
+        pendingICloudCount = (try? metadataDAO.retryableAssetIds().count) ?? 0
+        indexStreamingPaused = networkStatus.isExpensivePath
+            && !UserDefaults.standard.bool(forKey: SettingsKeys.allowCellularIndexing)
+            && pendingICloudCount > 0
+    }
+
+    /// Invoked (on the main actor) whenever the network path changes. Refreshes
+    /// the paused state and, once back on an allowed path with iCloud work
+    /// still pending, resumes streaming exactly those rows.
+    private func handleNetworkChange() {
+        let wasPaused = indexStreamingPaused
+        // A path change while an auto-retry is counting down is exactly the
+        // signal that iCloud might serve now (different Wi-Fi, cellular) —
+        // skip the wait and retry immediately.
+        let retryWasScheduled = indexAutoRetryDate != nil
+        refreshPausedState()
+        // Resume on a genuine paused → allowed transition, or a path change
+        // during a retry countdown — but not on the plain first path update
+        // of a healthy launch run (guarded below), so the launch index run
+        // (a full incremental diff, not just the incomplete rows) isn't
+        // pre-empted by an eager reindex.
+        if (wasPaused || retryWasScheduled), !indexStreamingPaused, pendingICloudCount > 0,
+           !isIndexing, allowNetworkForIndexing() {
+            cancelScheduledAutoRetry()
+            startReindexIncomplete()
+        }
+    }
+
+    /// Set while cancelling a stalled run so the completion can immediately
+    /// kick off a fresh `reindexIncomplete` (a one-tap "Retry").
+    @ObservationIgnored private var pendingRetryAfterCancel = false
+
+    /// "Retry Now" action from the auto-retry card: skips the countdown and
+    /// tries the incomplete iCloud reads again *now*. If a (futile) run is
+    /// still walking, cancel it first and resume once it has stopped — the
+    /// `isIndexing` guard would otherwise swallow the retry.
+    func retryIncompleteNow() {
+        cancelScheduledAutoRetry()
+        if isIndexing {
+            pendingRetryAfterCancel = true
+            cancelIndexing()
+        } else {
+            startReindexIncomplete(manual: true)
+        }
+    }
+
+    /// "Use Cellular" action from the paused/stalled indicator: opts into
+    /// cellular indexing. A futile Wi-Fi run in flight is cancelled so the
+    /// cellular retry (on the next path change, or manual Retry) isn't blocked
+    /// by the `isIndexing` guard; when nothing is running it resumes now.
+    func enableCellularAndResume() {
+        UserDefaults.standard.set(true, forKey: SettingsKeys.allowCellularIndexing)
+        if isIndexing {
+            // Don't restart here — isIndexing is still true (cancel is async);
+            // the resume happens when the user reaches cellular (handleNetwork
+            // change) or taps Retry once the run has stopped.
+            cancelIndexing()
+        }
+        refreshPausedState()
+        if pendingICloudCount > 0, !isIndexing {
+            startReindexIncomplete(manual: true)
         }
     }
 
@@ -268,8 +663,10 @@ final class LibraryController {
         let indexTraffic = self.indexTraffic
         return Task {
             var previousBytes: Int64 = 0
+            var tick = 0
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(1))
+                tick += 1
                 guard !Task.isCancelled else { break }
                 let total = indexTraffic.totalBytes
                 let speed = max(0, total - previousBytes)
@@ -279,9 +676,28 @@ final class LibraryController {
                     bytesPerSecond: speed,
                     allowsNetwork: allowsNetwork()
                 )
-                Self.logger.debug(
-                    "net sample: \(networkStatus.connectionType.displayName, privacy: .public), allowNetwork \(allowsNetwork()), downloaded \(total) B, speed \(speed) B/s"
+                let thermalState = ProcessInfo.processInfo.thermalState
+                let lowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
+                self.indexDiagnostics = IndexDiagnostics(
+                    thermalState: thermalState,
+                    readConcurrency: IndexPipeline.readConcurrency(thermal: thermalState, lowPowerMode: lowPowerMode),
+                    lowPowerMode: lowPowerMode,
+                    networkReadsStarted: indexTraffic.networkReadsStarted,
+                    networkReadsInFlight: indexTraffic.networkReadsInFlight,
+                    stallCount: indexTraffic.stallCount,
+                    breakerCooldownRemaining: indexTraffic.breakerCooldownRemaining
                 )
+                self.updateThroughput()
+                // Health snapshot every 10 s — one line correlating progress,
+                // traffic, breaker, and thermal state, on the same category
+                // as the monitor's stall/trip events. Replaces the old
+                // per-second "net sample" debug spam.
+                if tick % 10 == 0, let diagnostics = self.indexDiagnostics {
+                    let progress = self.indexProgress.map { "\($0.processed)/\($0.total)" } ?? "-"
+                    IndexTrafficMonitor.healthLogger.log(
+                        "health: \(progress, privacy: .public) · \(networkStatus.connectionType.displayName, privacy: .public) \(speed) B/s, total \(total) B · \(diagnostics.iCloudLine, privacy: .public) · \(diagnostics.thermalLine, privacy: .public) · allowNetwork \(allowsNetwork())"
+                    )
+                }
                 previousBytes = total
             }
         }
@@ -290,6 +706,22 @@ final class LibraryController {
     func cancelIndexing() {
         let pipeline = self.pipeline
         Task { await pipeline.cancel() }
+    }
+
+    /// Reacts to Low Power Mode / charging changes (from `PowerStatusService`):
+    /// entering LPM stops any running index; connecting a charger while in LPM
+    /// auto-resumes it. The user may always start indexing by hand in LPM.
+    private func handlePowerChange(lowPower: Bool, charging: Bool) {
+        let enteredLowPower = lowPower && !isLowPowerMode
+        let pluggedIn = charging && !wasCharging
+        isLowPowerMode = lowPower
+        wasCharging = charging
+
+        if enteredLowPower, isIndexing {
+            cancelIndexing()
+        } else if pluggedIn, lowPower, !isIndexing {
+            resumeIndexingForCharger()
+        }
     }
 
     // MARK: Deletion
@@ -328,6 +760,31 @@ extension LibraryController: PhotoBrowsingSource {
         items.indices.contains(index) ? items[index].assetId : nil
     }
 
+    func index(of assetId: String) -> Int? {
+        items.firstIndex { $0.assetId == assetId }
+    }
+
+    func deleteAsset(id: String) async throws {
+        try await deleteAssets(ids: [id])
+    }
+
+    /// Badge fields for one tile, fetched on display (grid cells call this
+    /// while an index run fills the DB, instead of the whole grid reloading
+    /// per indexed photo). Final answers are cached; rows still pending are
+    /// retried on the next display. Returns nil when there is nothing (yet)
+    /// to show.
+    func lazyBadgeItem(assetId: String) async -> LibraryGridItem? {
+        if let cached = badgeCache.cached(assetId) {
+            if case .badge(let item) = cached { return item }
+            return nil
+        }
+        let queryDAO = self.queryDAO
+        let row = await Task.detached(priority: .utility) {
+            (try? queryDAO.metadata(assetId: assetId)) ?? nil
+        }.value
+        return badgeCache.record(row, assetId: assetId)
+    }
+
     func metadata(for assetId: String) -> PhotoMetadata? {
         if let row = (try? queryDAO.metadata(assetId: assetId)) ?? nil {
             return row
@@ -345,4 +802,9 @@ extension LibraryController: PhotoBrowsingSource {
 
     /// Whole library is loaded as slim rows — nothing to page.
     func loadNextPageIfNeeded(currentIndex: Int) {}
+
+    func refreshMetadataAfterDownload(assetId: String) async -> PhotoMetadata? {
+        // Persisted to the DB; `metadata(for:)` re-reads it on the next refresh.
+        await pipeline.indexSingle(assetId: assetId)
+    }
 }

@@ -29,9 +29,10 @@ extension PhotoMetadata {
 }
 
 extension LibraryGridItem {
-    /// Slim grid row for an asset that has not been indexed yet — identity
-    /// and creation date (for section headers) only; the exposure fields are
-    /// nil, so the tile renders thumbnail-only until the index pass fills them.
+    /// Slim grid row for an asset that has not been indexed yet — identity,
+    /// creation date (for section headers) and pixel dimensions (cheap on
+    /// `PHAsset`, so the megapixels badge works pre-index); exposure fields
+    /// and file size are nil until the index pass fills them.
     init(asset: PHAsset) {
         self.init(
             assetId: asset.localIdentifier,
@@ -40,7 +41,10 @@ extension LibraryGridItem {
             aperture: nil,
             shutterSpeedDisplay: nil,
             focalLength: nil,
-            equivalentFocalLength: nil
+            equivalentFocalLength: nil,
+            width: asset.pixelWidth > 0 ? asset.pixelWidth : nil,
+            height: asset.pixelHeight > 0 ? asset.pixelHeight : nil,
+            fileSize: nil
         )
     }
 }

@@ -16,22 +16,44 @@ struct AlbumItem: Identifiable {
     var coverAsset: PHAsset?
     /// System-provided collection (Recents, Favorites, …) vs user album.
     var isSmart = false
+    /// iCloud Shared Album (`PHAssetCollectionSubtype.albumCloudShared`).
+    var isShared = false
 }
 
-/// Loads the album list: "Recents" (all photos), system smart albums,
-/// then user albums.
+/// One user-created smart album, resolved for display: the saved album plus
+/// its live match count and cover from `LibraryQueryDAO`. PHAsset is not
+/// Sendable but PhotoKit fetches are thread-safe, so this crosses the
+/// off-main load boundary as `@unchecked Sendable` (mirrors `Snapshot`).
+struct SmartAlbumChipModel: Identifiable, @unchecked Sendable {
+    let album: SmartAlbum
+    let count: Int
+    let coverAsset: PHAsset?
+
+    var id: String { album.id }
+}
+
+/// Loads the album list: system smart albums, user albums, shared albums,
+/// plus user-created smart albums (saved filters).
 @MainActor
 @Observable
 final class AlbumsController {
     private(set) var albums: [AlbumItem] = []
     private(set) var isLoading = false
 
+    /// Injected by the screen before the first `load()`; enables the
+    /// smart-album (saved-filter) section, which needs the DB DAOs.
+    var dependencies: AppDependencies?
+
     /// Summary for the "On This Day" hero card (today's date, previous years).
     private(set) var onThisDayCount = 0
     private(set) var onThisDayCover: PHAsset?
 
+    /// User-created smart albums (saved filters), newest first.
+    private(set) var smartQueryAlbums: [SmartAlbumChipModel] = []
+
     var smartAlbums: [AlbumItem] { albums.filter(\.isSmart) }
-    var userAlbums: [AlbumItem] { albums.filter { !$0.isSmart } }
+    var userAlbums: [AlbumItem] { albums.filter { !$0.isSmart && !$0.isShared } }
+    var sharedAlbums: [AlbumItem] { albums.filter { !$0.isSmart && $0.isShared } }
 
     /// Collections and counts fetched off the main thread; PHAsset fetches
     /// are thread-safe but expensive on large libraries.
@@ -44,6 +66,7 @@ final class AlbumsController {
     func load() {
         guard !isLoading else { return }
         isLoading = true
+        let deps = dependencies
         Task {
             let snapshot = await Task.detached(priority: .userInitiated) {
                 Self.loadSnapshot()
@@ -51,8 +74,42 @@ final class AlbumsController {
             albums = snapshot.albums
             onThisDayCount = snapshot.onThisDayCount
             onThisDayCover = snapshot.onThisDayCover
+            if let deps {
+                smartQueryAlbums = await Self.loadSmartAlbums(
+                    smartAlbumDAO: deps.smartAlbumDAO,
+                    libraryQueryDAO: deps.libraryQueryDAO
+                )
+            }
             isLoading = false
         }
+    }
+
+    /// Deletes a user-created smart album and reloads.
+    func deleteSmartAlbum(id: String) {
+        try? dependencies?.smartAlbumDAO.delete(id: id)
+        load()
+    }
+
+    /// Resolves each saved smart album's live count and cover off the main
+    /// thread. `count` is a blocking reader read; `gridItems` runs on GRDB's
+    /// reader pool.
+    private nonisolated static func loadSmartAlbums(
+        smartAlbumDAO: SmartAlbumDAO,
+        libraryQueryDAO: LibraryQueryDAO
+    ) async -> [SmartAlbumChipModel] {
+        guard let albums = try? smartAlbumDAO.fetchAllOrdered() else { return [] }
+        var models: [SmartAlbumChipModel] = []
+        for album in albums {
+            let count = (try? libraryQueryDAO.count(matching: album.query)) ?? 0
+            var cover: PHAsset?
+            if let firstId = try? await libraryQueryDAO
+                .gridItems(matching: album.query, sort: .default, limit: 1)
+                .first?.assetId {
+                cover = PhotoLibraryService.fetchAssets(ids: [firstId]).first
+            }
+            models.append(SmartAlbumChipModel(album: album, count: count, coverAsset: cover))
+        }
+        return models
     }
 
     private nonisolated static func loadSnapshot() -> Snapshot {
@@ -63,16 +120,6 @@ final class AlbumsController {
         imageOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
 
         let onThisDay = OnThisDayController.fetchAssets(for: .now)
-
-        let allPhotos = PHAsset.fetchAssets(with: imageOptions)
-        result.append(AlbumItem(
-            id: "all-photos",
-            title: "Recents",
-            count: allPhotos.count,
-            kind: .allPhotos,
-            coverAsset: allPhotos.firstObject,
-            isSmart: true
-        ))
 
         let smartSubtypes: [PHAssetCollectionSubtype] = [
             .smartAlbumRecentlyAdded,
@@ -113,7 +160,8 @@ final class AlbumsController {
             title: collection.localizedTitle ?? "Album",
             count: assets.count,
             kind: .collection(collection),
-            coverAsset: assets.firstObject
+            coverAsset: assets.firstObject,
+            isShared: collection.assetCollectionSubtype == .albumCloudShared
         )
     }
 }
@@ -127,6 +175,7 @@ final class AlbumDetailController: PhotoBrowsingSource {
     private let metadataDAO: MetadataDAO
     private let database: AppDatabase
     private let photoLibrary: PhotoLibraryService
+    private let indexPipeline: IndexPipeline
     private let fetchResult: PHFetchResult<PHAsset>
 
     private(set) var photos: [PhotoMetadata] = []
@@ -148,6 +197,7 @@ final class AlbumDetailController: PhotoBrowsingSource {
         self.metadataDAO = dependencies.metadataDAO
         self.database = dependencies.database
         self.photoLibrary = dependencies.photoLibrary
+        self.indexPipeline = dependencies.indexPipeline
 
         let options = PHFetchOptions()
         options.predicate = PhotoLibraryService.browsableMediaPredicate
@@ -209,6 +259,10 @@ final class AlbumDetailController: PhotoBrowsingSource {
         photos.indices.contains(index) ? photos[index].assetId : nil
     }
 
+    func index(of assetId: String) -> Int? {
+        photos.firstIndex { $0.assetId == assetId }
+    }
+
     func metadata(for assetId: String) -> PhotoMetadata? {
         photos.first { $0.assetId == assetId }
     }
@@ -242,11 +296,24 @@ final class AlbumDetailController: PhotoBrowsingSource {
         }
     }
 
+    func deleteAsset(id: String) async throws {
+        try await deleteAssets(ids: [id])
+    }
+
     func syncFavorite(assetId: String, isFavorite: Bool) {
         try? metadataDAO.updateFavorite(assetId: assetId, isFavorite: isFavorite)
         if let index = photos.firstIndex(where: { $0.assetId == assetId }) {
             photos[index].isFavorite = isFavorite
         }
+    }
+
+    func refreshMetadataAfterDownload(assetId: String) async -> PhotoMetadata? {
+        guard let updated = await indexPipeline.indexSingle(assetId: assetId) else { return nil }
+        // Keep the in-memory page (this source serves metadata from `photos`).
+        if let index = photos.firstIndex(where: { $0.assetId == assetId }) {
+            photos[index] = updated
+        }
+        return updated
     }
 
     private func fetchMetadata(ids: [String]) throws -> [String: PhotoMetadata] {

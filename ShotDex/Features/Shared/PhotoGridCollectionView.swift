@@ -32,6 +32,10 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
     /// triggers reload + re-anchor. Count-only growth (album paging)
     /// reloads without re-anchoring.
     let contentVersion: Int
+    /// Bumped when the same ordered list needs its visible tiles re-rendered
+    /// (index run filled overlays) — reloads cells in place, never re-anchors,
+    /// so the scroll position is preserved.
+    let contentRefreshVersion: Int
     /// Bumped on Library-tab retap: scroll back to the newest photos.
     let jumpToNewestToken: Int
     @Binding var columnCount: Int
@@ -47,6 +51,11 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
     let onNearEnd: () -> Void
     /// Fired on any user-initiated scroll (Library collapses the index panel).
     let onUserScroll: () -> Void
+    /// Optional on-display badge lookup: a cell whose item carries no
+    /// exposure fields asks for a fresh row when it becomes visible, so
+    /// tiles indexed mid-run fill in lazily instead of the whole grid
+    /// reloading per indexed photo. Nil (Album Detail) disables the lookup.
+    var lazyMetadataProvider: ((String) async -> (any PhotoGridDisplayable)?)? = nil
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -100,7 +109,12 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         /// full-range section when not date-sectioned.
         private var sections: [PhotoGridSection] = []
         private var appliedContentVersion: Int?
-        private var appliedCount = 0
+        private var appliedContentRefreshVersion: Int?
+        /// Ordered asset ids last handed to the collection view. Drives the
+        /// reload decision: any change to the list (not just its count) forces
+        /// a full `reloadData`, so the rendered cells never lag the snapshot
+        /// `didSelectItemAt` taps against.
+        private var appliedIds: [String] = []
         private var appliedColumns = 0
         private var appliedJumpToken: Int?
         private var appliedSelecting = false
@@ -118,8 +132,36 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         private var swipeActivation = SwipeSelectionEngine.Activation.undecided
         private var swipeStartId: String?
 
+        /// Settings display toggles, read once per change instead of five
+        /// UserDefaults lookups per cell per (re)configure. Refreshing on the
+        /// defaults notification also makes Settings toggles apply live.
+        private var displayOptions = GridMetadataDisplayOptions.load()
+        private var defaultsObserver: NSObjectProtocol?
+
         init(_ parent: PhotoGridCollectionView) {
             self.parent = parent
+            super.init()
+            defaultsObserver = NotificationCenter.default.addObserver(
+                forName: UserDefaults.didChangeNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    let fresh = GridMetadataDisplayOptions.load()
+                    guard fresh != self.displayOptions else { return }
+                    self.displayOptions = fresh
+                    if let collectionView = self.collectionView {
+                        self.reconfigureVisibleCells(collectionView)
+                    }
+                }
+            }
+        }
+
+        deinit {
+            if let defaultsObserver {
+                NotificationCenter.default.removeObserver(defaultsObserver)
+            }
         }
 
         // MARK: Input diffing
@@ -129,7 +171,8 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             guard let collectionView else { return }
 
             let contentReplaced = newParent.contentVersion != appliedContentVersion
-            let countChanged = newParent.photos.count != appliedCount
+            let newIds = newParent.photos.map(\.assetId)
+            let listChanged = newIds != appliedIds
             let columnsChanged = newParent.columnCount != appliedColumns
 
             if columnsChanged, !isInitial, transitionLayout == nil {
@@ -142,7 +185,9 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             }
             appliedColumns = newParent.columnCount
 
-            if contentReplaced || countChanged || isInitial {
+            let refreshed = appliedContentRefreshVersion != nil
+                && newParent.contentRefreshVersion != appliedContentRefreshVersion
+            if contentReplaced || listChanged || isInitial {
                 rebuildSections()
                 collectionView.reloadData()
                 if contentReplaced || isInitial {
@@ -150,8 +195,14 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                     anchor(collectionView)
                 }
                 appliedContentVersion = newParent.contentVersion
-                appliedCount = newParent.photos.count
+                appliedIds = newIds
+            } else if refreshed {
+                // Same list, overlays changed — re-render visible tiles in
+                // place. No reloadData/anchor, so the scroll spot is kept.
+                rebuildSections()
+                reconfigureVisibleCells(collectionView)
             }
+            appliedContentRefreshVersion = newParent.contentRefreshVersion
 
             if let token = appliedJumpToken, token != newParent.jumpToNewestToken {
                 anchor(collectionView)
@@ -339,7 +390,9 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 targetSize: thumbnailTargetSize,
                 isSelecting: parent.isSelecting,
                 isSelected: parent.selectedIds.contains(item.assetId),
-                photoLibrary: parent.photoLibrary
+                photoLibrary: parent.photoLibrary,
+                displayOptions: displayOptions,
+                lazyMetadataProvider: parent.lazyMetadataProvider
             )
         }
 
@@ -708,6 +761,10 @@ final class PhotoGridCell: UICollectionViewCell {
     private var requestedAssetId: String?
     private var lastRequestedPixelWidth: CGFloat = 0
     private weak var photoLibrary: PhotoLibraryService?
+    /// Identity + in-flight lookup of the lazy badge fill: the fetch result
+    /// only applies while the cell still shows the asset it was started for.
+    private var configuredAssetId: String?
+    private var badgeFetchTask: Task<Void, Never>?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -783,6 +840,9 @@ final class PhotoGridCell: UICollectionViewCell {
         imageView.image = nil
         requestedAssetId = nil
         lastRequestedPixelWidth = 0
+        badgeFetchTask?.cancel()
+        badgeFetchTask = nil
+        configuredAssetId = nil
     }
 
     func configure(
@@ -792,14 +852,31 @@ final class PhotoGridCell: UICollectionViewCell {
         targetSize: CGSize,
         isSelecting: Bool,
         isSelected: Bool,
-        photoLibrary: PhotoLibraryService
+        photoLibrary: PhotoLibraryService,
+        displayOptions: GridMetadataDisplayOptions,
+        lazyMetadataProvider: ((String) async -> (any PhotoGridDisplayable)?)? = nil
     ) {
         self.photoLibrary = photoLibrary
+        configuredAssetId = item.assetId
+        badgeFetchTask?.cancel()
+        badgeFetchTask = nil
 
-        let line = cellWidth >= Self.metadataMinCellWidth ? Self.metadataLine(for: item) : nil
-        metadataLabel.text = line
-        metadataLabel.isHidden = line == nil
-        gradient.isHidden = line == nil
+        let showsBadge = cellWidth >= Self.metadataMinCellWidth
+        let line = showsBadge ? Self.metadataLine(for: item, options: displayOptions) : nil
+        applyBadge(line: line)
+
+        // Item carries no exposure fields at all — typically a tile the
+        // index run hasn't reached (or has filled since this list loaded).
+        // Ask for a fresh row and update just this cell when it arrives.
+        if showsBadge, let lazyMetadataProvider, Self.hasNoBadgeData(item) {
+            let assetId = item.assetId
+            badgeFetchTask = Task { [weak self] in
+                guard let fetched = await lazyMetadataProvider(assetId) else { return }
+                guard let self, !Task.isCancelled,
+                      self.configuredAssetId == assetId else { return }
+                self.applyBadge(line: Self.metadataLine(for: fetched, options: displayOptions))
+            }
+        }
 
         if let asset, asset.mediaType == .video {
             videoBadge.text = asset.duration > 0
@@ -818,7 +895,14 @@ final class PhotoGridCell: UICollectionViewCell {
 
         requestThumbnail(asset: asset, targetSize: targetSize)
         setNeedsLayout()
+    }
 
+    /// Single write point for the metadata overlay (sync configure and the
+    /// async lazy fill), so label, gradient, and accessibility stay in step.
+    private func applyBadge(line: String?) {
+        metadataLabel.text = line
+        metadataLabel.isHidden = line == nil
+        gradient.isHidden = line == nil
         isAccessibilityElement = true
         accessibilityLabel = line.map { "Photo, \($0)" } ?? "Photo"
     }
@@ -858,27 +942,57 @@ final class PhotoGridCell: UICollectionViewCell {
     }
 
     /// Only real values — never placeholders like `ISO -- · --mm`.
-    /// Display toggles read straight from UserDefaults (same keys as the
-    /// Settings screen's @AppStorage).
-    private static func metadataLine(for item: some PhotoGridDisplayable) -> String? {
-        let defaults = UserDefaults.standard
-        func flag(_ key: String, default defaultValue: Bool) -> Bool {
-            defaults.object(forKey: key) as? Bool ?? defaultValue
-        }
-        let showISO = flag("display.showISO", default: true)
-        let showAperture = flag("display.showAperture", default: true)
-        let showShutter = flag("display.showShutter", default: false)
-        let showFocal = flag("display.showFocal", default: true)
-        let equivalent = flag("display.focalStyleEquivalent", default: false)
-
-        let focalValue = equivalent
+    private static func metadataLine(
+        for item: some PhotoGridDisplayable, options: GridMetadataDisplayOptions
+    ) -> String? {
+        let focalValue = options.focalStyleEquivalent
             ? (item.equivalentFocalLength ?? item.focalLength)
             : item.focalLength
         return FormatUtils.metadataLine([
-            showISO ? item.iso.flatMap(FormatUtils.iso) : nil,
-            showFocal ? focalValue.flatMap(FormatUtils.focalLength) : nil,
-            showAperture ? item.aperture.flatMap(FormatUtils.aperture) : nil,
-            showShutter ? item.shutterSpeedDisplay : nil,
+            options.showISO ? item.iso.flatMap(FormatUtils.iso) : nil,
+            options.showFocal ? focalValue.flatMap(FormatUtils.focalLength) : nil,
+            options.showAperture ? item.aperture.flatMap(FormatUtils.aperture) : nil,
+            options.showShutter ? item.shutterSpeedDisplay : nil,
+            options.showMegapixels ? item.megapixels.flatMap(FormatUtils.megapixels) : nil,
+            options.showFileSize ? item.fileSize.flatMap(FormatUtils.fileSize) : nil,
         ])
+    }
+
+    /// True when the item carries none of the overlay's exposure fields —
+    /// the trigger for the lazy on-display lookup. A data check, not a
+    /// formatted-line check: display toggles hiding all fields must not
+    /// cause fetches for rows that are already filled.
+    private static func hasNoBadgeData(_ item: some PhotoGridDisplayable) -> Bool {
+        item.iso == nil && item.aperture == nil && item.shutterSpeedDisplay == nil
+            && item.focalLength == nil && item.equivalentFocalLength == nil
+    }
+}
+
+/// Snapshot of the Settings display toggles for the tile overlay (same
+/// UserDefaults keys as the Settings screen's @AppStorage). Loaded once and
+/// refreshed on the defaults-change notification instead of five defaults
+/// reads per cell configure.
+struct GridMetadataDisplayOptions: Equatable {
+    var showISO: Bool
+    var showAperture: Bool
+    var showShutter: Bool
+    var showFocal: Bool
+    var showMegapixels: Bool
+    var showFileSize: Bool
+    var focalStyleEquivalent: Bool
+
+    static func load(from defaults: UserDefaults = .standard) -> GridMetadataDisplayOptions {
+        func flag(_ key: String, default defaultValue: Bool) -> Bool {
+            defaults.object(forKey: key) as? Bool ?? defaultValue
+        }
+        return GridMetadataDisplayOptions(
+            showISO: flag("display.showISO", default: true),
+            showAperture: flag("display.showAperture", default: true),
+            showShutter: flag("display.showShutter", default: false),
+            showFocal: flag("display.showFocal", default: true),
+            showMegapixels: flag("display.showMegapixels", default: false),
+            showFileSize: flag("display.showFileSize", default: false),
+            focalStyleEquivalent: flag("display.focalStyleEquivalent", default: false)
+        )
     }
 }

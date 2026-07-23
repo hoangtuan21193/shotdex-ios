@@ -1,7 +1,9 @@
 import Foundation
 
-/// Time scope for the Statistics screen.
-enum StatsDateScope: Hashable, Sendable {
+/// Time scope for a chart. Each dashboard widget carries its own scope
+/// (persisted inside its config), so `Codable` — the sole payload is a
+/// `ClosedRange<Int>`, which the standard library already encodes.
+enum StatsDateScope: Codable, Hashable, Sendable {
     case allTime
     case thisYear
     case thisMonth
@@ -47,6 +49,24 @@ enum StatsDateScope: Hashable, Sendable {
         ) ?? days.upperBound
         return .custom(Int(start.timeIntervalSince1970)...Int(endOfDay.timeIntervalSince1970))
     }
+}
+
+/// One point of a dashboard chart's result: an X-axis label, a Y-axis value,
+/// and (when applicable) a raw key for drill-down and a series name for
+/// multi-line charts. Produced by `StatsDAO.aggregate`.
+struct ChartDatum: Equatable, Identifiable, Sendable {
+    /// X-axis label (bucket name, group value, or time period).
+    var label: String
+    /// Y-axis value (count, or the aggregate — file size in bytes, etc.).
+    var value: Double
+    /// Raw group key for drill-down to a filtered Library (nil = not drillable).
+    var drillKey: String?
+    /// Series name for `.line` charts split by a second dimension (nil = single).
+    var series: String?
+    /// True for the synthetic "Unknown" bucket (missing metadata).
+    var isUnknown: Bool = false
+
+    var id: String { "\(series ?? "")|\(label)" }
 }
 
 /// A generic "name + count + share" row used by camera/lens/format usage stats.

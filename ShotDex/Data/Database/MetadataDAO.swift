@@ -6,6 +6,10 @@ import GRDB
 struct IndexedAssetState: Equatable, Sendable {
     var modificationDate: Int?
     var exifStatus: String
+    /// Build that wrote the row; a value below `currentIndexerVersion` marks
+    /// the row stale so it is re-read even when unchanged. Defaults to current
+    /// so tests and callers that don't care about staleness stay terse.
+    var indexerVersion: Int = PhotoMetadata.currentIndexerVersion
 }
 
 /// Writes indexed metadata and manages the index cursor.
@@ -24,6 +28,32 @@ struct MetadataDAO: Sendable {
             state.cursorAssetId = cursorAssetId
             state.lastIndexedAt = Int(Date().timeIntervalSince1970)
             try state.upsert(db)
+        }
+    }
+
+    /// Upserts a single row **without touching the resume cursor** — used by
+    /// the detail viewer to fill in an incomplete row after an iCloud download,
+    /// so it must not disturb the batch pipeline's cursor/last-indexed state.
+    func upsert(_ record: PhotoMetadata) throws {
+        try database.writer.write { db in
+            try record.upsert(db)
+        }
+    }
+
+    /// The stored diff snapshot for one asset (nil when there's no row yet).
+    func assetState(assetId: String) throws -> IndexedAssetState? {
+        try database.reader.read { db in
+            try Row.fetchOne(
+                db,
+                sql: "SELECT modificationDate, exifStatus, indexerVersion FROM photo_metadata WHERE assetId = ?",
+                arguments: [assetId]
+            ).map {
+                IndexedAssetState(
+                    modificationDate: $0["modificationDate"],
+                    exifStatus: $0["exifStatus"],
+                    indexerVersion: $0["indexerVersion"]
+                )
+            }
         }
     }
 
@@ -108,14 +138,15 @@ struct MetadataDAO: Sendable {
         try database.reader.read { db in
             let rows = try Row.fetchAll(
                 db,
-                sql: "SELECT assetId, modificationDate, exifStatus FROM photo_metadata"
+                sql: "SELECT assetId, modificationDate, exifStatus, indexerVersion FROM photo_metadata"
             )
             var result: [String: IndexedAssetState] = [:]
             result.reserveCapacity(rows.count)
             for row in rows {
                 result[row["assetId"]] = IndexedAssetState(
                     modificationDate: row["modificationDate"],
-                    exifStatus: row["exifStatus"]
+                    exifStatus: row["exifStatus"],
+                    indexerVersion: row["indexerVersion"]
                 )
             }
             return result

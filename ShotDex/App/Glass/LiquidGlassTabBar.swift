@@ -15,7 +15,7 @@ enum AppTab: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .library: "Library"
-        case .albums: "Albums"
+        case .albums: "Collections"
         case .statistics: "Statistics"
         case .search: "Search"
         }

@@ -1,11 +1,15 @@
 import Photos
 import SwiftUI
 
-/// Albums tab: 2-column grid of Recents, smart albums, and user albums.
+/// Collections tab: On This Day hero, then horizontally-scrolling chip
+/// grids (up to 3 rows) for smart albums, My Albums, and Shared Albums.
 struct AlbumsScreen: View {
     @Environment(PhotoLibraryService.self) private var photoLibrary
+    @Environment(AppDependencies.self) private var dependencies
 
     @State private var controller = AlbumsController()
+    @State private var isCreatingSmartAlbum = false
+    @State private var editingSmartAlbum: SmartAlbum?
 
     var body: some View {
         Group {
@@ -23,9 +27,20 @@ struct AlbumsScreen: View {
             ToolbarItem(placement: .topBarLeading) {
                 SettingsDrawerButton()
             }
+            // Separate item so the "+" gets its own Liquid Glass circle on
+            // iOS 26 instead of sharing the settings button's capsule.
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    isCreatingSmartAlbum = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel("New Smart Album")
+            }
         }
         .task(id: photoLibrary.libraryChangeToken) {
             guard photoLibrary.authorizationState.canReadLibrary else { return }
+            controller.dependencies = dependencies
             controller.load()
         }
         .navigationDestination(for: AlbumItem.ID.self) { albumId in
@@ -35,6 +50,21 @@ struct AlbumsScreen: View {
         }
         .navigationDestination(for: OnThisDayRoute.self) { _ in
             OnThisDayScreen()
+        }
+        .navigationDestination(for: SmartAlbumRoute.self) { route in
+            if let model = controller.smartQueryAlbums.first(where: { $0.album.id == route.id }) {
+                SmartAlbumDetailScreen(album: model.album)
+            }
+        }
+        .sheet(isPresented: $isCreatingSmartAlbum) {
+            SmartAlbumEditorSheet(existing: nil, dependencies: dependencies) {
+                controller.load()
+            }
+        }
+        .sheet(item: $editingSmartAlbum) { album in
+            SmartAlbumEditorSheet(existing: album, dependencies: dependencies) {
+                controller.load()
+            }
         }
     }
 
@@ -57,12 +87,16 @@ struct AlbumsScreen: View {
                 .buttonStyle(.plain)
                 .padding(.horizontal)
 
-                if !controller.smartAlbums.isEmpty {
-                    smartAlbumsRow
+                if !(controller.smartQueryAlbums.isEmpty && controller.smartAlbums.isEmpty) {
+                    smartAlbumsSection()
                 }
 
                 if !controller.userAlbums.isEmpty {
-                    myAlbumsSection
+                    albumChipSection(title: "My Albums", albums: controller.userAlbums)
+                }
+
+                if !controller.sharedAlbums.isEmpty {
+                    albumChipSection(title: "Shared Albums", albums: controller.sharedAlbums)
                 }
 
                 if #unavailable(iOS 26.0) {
@@ -72,42 +106,230 @@ struct AlbumsScreen: View {
         }
     }
 
-    /// Horizontal carousel of system collections, like the pinned
-    /// collections row in the iOS 26 Photos app.
-    private var smartAlbumsRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            LazyHStack(alignment: .top, spacing: 14) {
-                ForEach(controller.smartAlbums) { album in
-                    NavigationLink(value: album.id) {
-                        AlbumCard(album: album, side: 172)
-                    }
-                    .buttonStyle(.plain)
-                }
+    /// Optional header + horizontal-scrolling grid of uniform album chips
+    /// (cover thumbnail + name + count). Fills up to 3 rows column-major
+    /// before scrolling right, like the iOS Photos pinned-collections grid.
+    /// Used for smart albums (no header), "My Albums", and "Shared Albums".
+    private func albumChipSection(title: String?, albums: [AlbumItem]) -> some View {
+        // Grow rows only as albums accumulate (~3 per column), capped at 3,
+        // so a handful of albums stays 1–2 rows tall instead of a stubby
+        // 3-row block.
+        let rowCount = max(1, min(3, (albums.count + 2) / 3))
+        let rows = Array(
+            repeating: GridItem(.fixed(AlbumChip.height), spacing: 10),
+            count: rowCount
+        )
+        return VStack(alignment: .leading, spacing: 12) {
+            if let title {
+                Text(title)
+                    .font(.title2.bold())
+                    .padding(.horizontal)
             }
-            .padding(.horizontal)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHGrid(rows: rows, spacing: 10) {
+                    ForEach(albums) { album in
+                        NavigationLink(value: album.id) {
+                            AlbumChip(album: album)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal)
+            }
+            .scrollClipDisabled()
         }
-        .scrollClipDisabled()
     }
 
-    /// "My Albums" header + 2-column grid, Photos-app style.
-    private var myAlbumsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("My Albums")
+    /// "Smart Albums" section: user-created smart albums (saved filters) first,
+    /// then the Apple system smart albums, in one chip grid under a shared
+    /// header. User chips push a `SmartAlbumDetailScreen` (staying in this tab)
+    /// and offer Edit / Delete via context menu; system chips push the normal
+    /// `AlbumDetailScreen`.
+    private func smartAlbumsSection() -> some View {
+        let total = controller.smartQueryAlbums.count + controller.smartAlbums.count
+        let rowCount = max(1, min(3, (total + 2) / 3))
+        let rows = Array(
+            repeating: GridItem(.fixed(AlbumChip.height), spacing: 10),
+            count: rowCount
+        )
+        return VStack(alignment: .leading, spacing: 12) {
+            Text("Smart Albums")
                 .font(.title2.bold())
                 .padding(.horizontal)
 
-            LazyVGrid(
-                columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)],
-                spacing: 20
-            ) {
-                ForEach(controller.userAlbums) { album in
-                    NavigationLink(value: album.id) {
-                        AlbumCard(album: album)
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHGrid(rows: rows, spacing: 10) {
+                    ForEach(controller.smartQueryAlbums) { model in
+                        NavigationLink(value: SmartAlbumRoute(id: model.album.id)) {
+                            SmartAlbumChip(model: model)
+                        }
+                        .buttonStyle(.plain)
+                        .contextMenu {
+                            Button {
+                                editingSmartAlbum = model.album
+                            } label: {
+                                Label("Edit", systemImage: "pencil")
+                            }
+                            Button(role: .destructive) {
+                                controller.deleteSmartAlbum(id: model.album.id)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
                     }
-                    .buttonStyle(.plain)
+
+                    ForEach(controller.smartAlbums) { album in
+                        NavigationLink(value: album.id) {
+                            AlbumChip(album: album)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
+                .padding(.horizontal)
             }
-            .padding(.horizontal)
+            .scrollClipDisabled()
+        }
+    }
+}
+
+/// Navigation value for a user-created smart album's detail screen. Distinct
+/// type from `AlbumItem.ID` (also `String`) so it routes to
+/// `SmartAlbumDetailScreen` rather than the existing `AlbumItem.ID` destination.
+struct SmartAlbumRoute: Hashable {
+    let id: String
+}
+
+/// Fixed-size chip: small square cover thumbnail on the left, album title
+/// and photo count on the right. Styled after the iOS Photos media-type
+/// rows but laid out as a horizontally scrolling chip.
+struct AlbumChip: View {
+    @Environment(PhotoLibraryService.self) private var photoLibrary
+
+    let album: AlbumItem
+
+    @State private var cover: UIImage?
+
+    /// Fixed outer height so grid rows align.
+    static let height: CGFloat = 60
+
+    private let thumbSide: CGFloat = 44
+    private let chipWidth: CGFloat = 190
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Color(.tertiarySystemBackground)
+                .frame(width: thumbSide, height: thumbSide)
+                .overlay {
+                    if let cover {
+                        Image(uiImage: cover)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        Image(systemName: "photo.on.rectangle")
+                            .font(.body)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(album.title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color(.label))
+                    .lineLimit(1)
+                Text("\(album.count)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(8)
+        .frame(width: chipWidth, height: Self.height, alignment: .leading)
+        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .onAppear(perform: loadCover)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(album.title), \(album.count) photos")
+    }
+
+    private func loadCover() {
+        guard cover == nil, let asset = album.coverAsset else { return }
+        let scale = UIScreen.main.scale
+        _ = photoLibrary.requestThumbnail(
+            for: asset,
+            targetSize: CGSize(width: thumbSide * scale, height: thumbSide * scale),
+            allowNetwork: false
+        ) { image in
+            if let image {
+                cover = image
+            }
+        }
+    }
+}
+
+/// Chip for a user-created smart album (saved filter): cover thumbnail of the
+/// first matching photo (funnel glyph when empty), the album name, and its
+/// live match count. Same footprint as `AlbumChip` so the two chip grids line
+/// up.
+struct SmartAlbumChip: View {
+    @Environment(PhotoLibraryService.self) private var photoLibrary
+
+    let model: SmartAlbumChipModel
+
+    @State private var cover: UIImage?
+
+    private let thumbSide: CGFloat = 44
+    private let chipWidth: CGFloat = 190
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Color(.tertiarySystemBackground)
+                .frame(width: thumbSide, height: thumbSide)
+                .overlay {
+                    if let cover {
+                        Image(uiImage: cover)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        Image(systemName: "line.3.horizontal.decrease.circle")
+                            .font(.body)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(model.album.name)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color(.label))
+                    .lineLimit(1)
+                Text("\(model.count)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(8)
+        .frame(width: chipWidth, height: AlbumChip.height, alignment: .leading)
+        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .onAppear(perform: loadCover)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(model.album.name), \(model.count) photos")
+    }
+
+    private func loadCover() {
+        guard cover == nil, let asset = model.coverAsset else { return }
+        let scale = UIScreen.main.scale
+        _ = photoLibrary.requestThumbnail(
+            for: asset,
+            targetSize: CGSize(width: thumbSide * scale, height: thumbSide * scale),
+            allowNetwork: false
+        ) { image in
+            if let image {
+                cover = image
+            }
         }
     }
 }
@@ -175,66 +397,8 @@ struct OnThisDayCard: View {
         let scale = UIScreen.main.scale
         _ = photoLibrary.requestThumbnail(
             for: asset,
-            targetSize: CGSize(width: 500 * scale, height: 250 * scale)
-        ) { image in
-            if let image {
-                cover = image
-            }
-        }
-    }
-}
-
-/// Cover thumbnail + title + photo count, styled after the iOS 26
-/// Photos app album cards: large continuous corner radius, semibold title.
-struct AlbumCard: View {
-    @Environment(PhotoLibraryService.self) private var photoLibrary
-
-    let album: AlbumItem
-    /// Fixed square side for carousel use; nil fills the grid column.
-    var side: CGFloat?
-
-    @State private var cover: UIImage?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Color(.secondarySystemBackground)
-                .aspectRatio(1, contentMode: .fit)
-                .frame(width: side, height: side)
-                .overlay {
-                    if let cover {
-                        Image(uiImage: cover)
-                            .resizable()
-                            .scaledToFill()
-                    } else {
-                        Image(systemName: "photo.on.rectangle")
-                            .font(.title2)
-                            .foregroundStyle(.tertiary)
-                    }
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text(album.title)
-                    .font(.callout.weight(.semibold))
-                    .foregroundStyle(Color(.label))
-                    .lineLimit(1)
-                Text("\(album.count)")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .frame(width: side, alignment: .leading)
-        .onAppear(perform: loadCover)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(album.title), \(album.count) photos")
-    }
-
-    private func loadCover() {
-        guard cover == nil, let asset = album.coverAsset else { return }
-        let scale = UIScreen.main.scale
-        _ = photoLibrary.requestThumbnail(
-            for: asset,
-            targetSize: CGSize(width: 300 * scale, height: 300 * scale)
+            targetSize: CGSize(width: 500 * scale, height: 250 * scale),
+            allowNetwork: false
         ) { image in
             if let image {
                 cover = image

@@ -5,6 +5,9 @@ import SwiftUI
 struct FilterChipsBar: View {
     @Binding var criteria: FilterCriteria
     let matchCount: Int
+    /// Read-only header (smart-album detail): show conditions but hide the
+    /// Clear All button and disable tap-to-remove.
+    var readOnly = false
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -17,10 +20,12 @@ struct FilterChipsBar: View {
                     chipView(chip)
                 }
 
-                Button("Clear All") {
-                    criteria = .empty
+                if !readOnly {
+                    Button("Clear All") {
+                        criteria = .empty
+                    }
+                    .font(.footnote.weight(.medium))
                 }
-                .font(.footnote.weight(.medium))
             }
             .padding(.horizontal)
             .padding(.vertical, 6)
@@ -37,23 +42,26 @@ struct FilterChipsBar: View {
         HStack(spacing: 4) {
             Text(chip.label)
                 .lineLimit(1)
-            Image(systemName: "xmark.circle.fill")
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
+            if !readOnly {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
         }
         .font(.footnote)
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
         .background(Color(.secondarySystemBackground), in: Capsule())
         .onTapGesture {
+            guard !readOnly else { return }
             var updated = criteria
             chip.clear(&updated)
             criteria = updated
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Filter: \(chip.label)")
-        .accessibilityHint("Double tap to remove")
-        .accessibilityAddTraits(.isButton)
+        .accessibilityHint(readOnly ? "" : "Double tap to remove")
+        .accessibilityAddTraits(readOnly ? [] : .isButton)
     }
 
     private var chips: [Chip] {
@@ -69,6 +77,17 @@ struct FilterChipsBar: View {
         }
         for format in criteria.sensorFormats.sorted(by: { $0.rawValue < $1.rawValue }) {
             result.append(Chip(label: format.displayName) { $0.sensorFormats.remove(format) })
+        }
+        // Free-typed contains-terms (from smart albums): show so the applied
+        // LIKE conditions are visible and individually removable.
+        for term in criteria.cameraBrandTerms {
+            result.append(Chip(label: "Brand: \(term)") { $0.cameraBrandTerms.removeAll { $0 == term } })
+        }
+        for term in criteria.cameraBodyTerms {
+            result.append(Chip(label: "Camera: \(term)") { $0.cameraBodyTerms.removeAll { $0 == term } })
+        }
+        for term in criteria.lensTerms {
+            result.append(Chip(label: "Lens: \(term)") { $0.lensTerms.removeAll { $0 == term } })
         }
         if !criteria.isoRange.isEmpty {
             result.append(Chip(label: rangeLabel("ISO", criteria.isoRange, format: { String(Int($0)) })) {
