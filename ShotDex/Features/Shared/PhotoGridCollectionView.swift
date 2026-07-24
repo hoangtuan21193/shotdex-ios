@@ -132,7 +132,16 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         /// Local-only, screen-sized detail renditions for cells currently on
         /// screen. Preheating before the tap avoids enlarging a grid thumbnail
         /// while the detail viewer waits for its first usable image.
-        private var detailPreheatedByIndexPath: [IndexPath: PHAsset] = [:]
+        private final class DetailPreheatEntry {
+            let asset: PHAsset
+            var requestId: PHImageRequestID?
+            var warmTask: Task<Void, Never>?
+
+            init(asset: PHAsset) {
+                self.asset = asset
+            }
+        }
+        private var detailPreheatedByIndexPath: [IndexPath: DetailPreheatEntry] = [:]
         private let maximumDetailPreheatCount = 18
 
         // Pinch state
@@ -502,9 +511,10 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             forItemAt indexPath: IndexPath
         ) {
             guard let flatIndex = flatIndex(for: indexPath) else { return }
-            if let oldAsset = detailPreheatedByIndexPath.removeValue(forKey: indexPath) {
+            if let oldEntry = detailPreheatedByIndexPath.removeValue(forKey: indexPath) {
+                cancelDecodedDetailPreheat(oldEntry)
                 parent.photoLibrary.stopCachingDetailImages(
-                    for: [oldAsset],
+                    for: [oldEntry.asset],
                     targetSize: detailTargetSize
                 )
             }
@@ -512,11 +522,15 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             if let asset = parent.assetProvider(flatIndex, item),
                asset.mediaType == .image,
                detailPreheatedByIndexPath.count < maximumDetailPreheatCount {
-                detailPreheatedByIndexPath[indexPath] = asset
                 parent.photoLibrary.startCachingDetailImages(
                     for: [asset],
                     targetSize: detailTargetSize
                 )
+                let entry = DetailPreheatEntry(asset: asset)
+                detailPreheatedByIndexPath[indexPath] = entry
+                // Let fast-scrolling cells leave before starting a screen-sized
+                // decode. Stable visible cells warm the shared decoded cache.
+                scheduleDecodedDetailPreheat(entry, at: indexPath, delay: .milliseconds(180))
             }
             if flatIndex >= parent.photos.count - 30 {
                 parent.onNearEnd()
@@ -528,26 +542,81 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             didEndDisplaying cell: UICollectionViewCell,
             forItemAt indexPath: IndexPath
         ) {
-            guard let asset = detailPreheatedByIndexPath.removeValue(forKey: indexPath) else {
+            guard let entry = detailPreheatedByIndexPath.removeValue(forKey: indexPath) else {
                 return
             }
+            cancelDecodedDetailPreheat(entry)
             parent.photoLibrary.stopCachingDetailImages(
-                for: [asset],
+                for: [entry.asset],
                 targetSize: detailTargetSize
             )
         }
 
         func stopAllDetailPreheating() {
-            let assets = Array(detailPreheatedByIndexPath.values)
+            let entries = Array(detailPreheatedByIndexPath.values)
             detailPreheatedByIndexPath.removeAll()
+            for entry in entries {
+                cancelDecodedDetailPreheat(entry)
+            }
             parent.photoLibrary.stopCachingDetailImages(
-                for: assets,
+                for: entries.map(\.asset),
                 targetSize: detailTargetSize
             )
         }
 
         func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+            for entry in detailPreheatedByIndexPath.values {
+                cancelDecodedDetailPreheat(entry)
+            }
             parent.onUserScroll()
+        }
+
+        func scrollViewDidEndDragging(
+            _ scrollView: UIScrollView,
+            willDecelerate decelerate: Bool
+        ) {
+            if !decelerate { warmVisibleDetailProxies() }
+        }
+
+        func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+            warmVisibleDetailProxies()
+        }
+
+        private func warmVisibleDetailProxies() {
+            for (indexPath, entry) in detailPreheatedByIndexPath {
+                scheduleDecodedDetailPreheat(entry, at: indexPath, delay: .zero)
+            }
+        }
+
+        private func scheduleDecodedDetailPreheat(
+            _ entry: DetailPreheatEntry,
+            at indexPath: IndexPath,
+            delay: Duration
+        ) {
+            guard entry.requestId == nil, entry.warmTask == nil else { return }
+            entry.warmTask = Task { @MainActor [weak self, weak entry] in
+                if delay != .zero {
+                    try? await Task.sleep(for: delay)
+                }
+                guard !Task.isCancelled, let self, let entry,
+                      self.detailPreheatedByIndexPath[indexPath] === entry
+                else { return }
+                entry.warmTask = nil
+                entry.requestId = self.parent.photoLibrary.requestBestLocalImage(
+                    for: entry.asset,
+                    targetSize: self.detailTargetSize,
+                    contentMode: .aspectFit
+                ) { _ in }
+            }
+        }
+
+        private func cancelDecodedDetailPreheat(_ entry: DetailPreheatEntry) {
+            entry.warmTask?.cancel()
+            entry.warmTask = nil
+            if let requestId = entry.requestId {
+                parent.photoLibrary.cancelThumbnailRequest(requestId)
+            }
+            entry.requestId = nil
         }
 
         // MARK: Prefetching

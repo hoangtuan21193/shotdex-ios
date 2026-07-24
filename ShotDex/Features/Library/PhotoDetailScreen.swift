@@ -631,6 +631,10 @@ struct PhotoDetailPage: View {
     @State private var localOriginalRequestId: PHImageRequestID?
     @State private var didRequestLocalBest = false
     @State private var didRetryDisplayDerivative = false
+    /// Avoids a spinner flash while a preheated/local display proxy resolves.
+    /// A genuinely unavailable image still gets feedback after a short grace.
+    @State private var showLoadingIndicator = false
+    @State private var loadingIndicatorTask: Task<Void, Never>?
 
     var body: some View {
         Group {
@@ -650,7 +654,12 @@ struct PhotoDetailPage: View {
                     onZoomChange: handleZoom
                 )
             } else {
-                ProgressView().tint(.white)
+                ZStack {
+                    Color.black
+                    if showLoadingIndicator {
+                        ProgressView().tint(.white)
+                    }
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -669,6 +678,8 @@ struct PhotoDetailPage: View {
         }
         .onDisappear {
             player?.pause()
+            loadingIndicatorTask?.cancel()
+            loadingIndicatorTask = nil
             if let localPreviewRequestId {
                 photoLibrary.cancelThumbnailRequest(localPreviewRequestId)
             }
@@ -701,6 +712,7 @@ struct PhotoDetailPage: View {
             isVideo = true
             loadVideo(asset)
         } else {
+            scheduleLoadingIndicator()
             loadDisplayImage(asset)
             // Fill EXIF for incomplete rows now — independent of the image
             // download (streams only the ~KB metadata header).
@@ -731,7 +743,7 @@ struct PhotoDetailPage: View {
             contentMode: .aspectFit,
             allowNetwork: false
         ) { result in
-            if let result, hasDisplayResolution(result, for: asset) {
+            if let result, hasUsableDisplayProxy(result, for: asset) {
                 promoteImage(result, to: .local)
             }
             startDisplayUpgradeWhenReady()
@@ -754,7 +766,7 @@ struct PhotoDetailPage: View {
             contentMode: .aspectFit
         ) { result in
             localBestRequestId = nil
-            if let result, hasDisplayResolution(result, for: asset) {
+            if let result, hasUsableDisplayProxy(result, for: asset) {
                 promoteImage(result, to: .local)
             }
             startDisplayUpgradeWhenReady()
@@ -771,7 +783,7 @@ struct PhotoDetailPage: View {
             targetSize: targetSize
         ) { result in
             localOriginalRequestId = nil
-            if let result, hasDisplayResolution(result, for: asset) {
+            if let result, hasUsableDisplayProxy(result, for: asset) {
                 promoteImage(result, to: .localOriginal)
             }
         }
@@ -805,8 +817,12 @@ struct PhotoDetailPage: View {
             guard loadState.isActive, !didRequestFullResolution else { return }
             if !isDegraded {
                 let isSharp = result.map { hasDisplayResolution($0, for: asset) } ?? false
-                if let result, isSharp {
-                    promoteImage(result, to: .displayFinal)
+                if let result {
+                    if isSharp {
+                        promoteImage(result, to: .displayFinal)
+                    } else if hasUsableDisplayProxy(result, for: asset) {
+                        promoteImage(result, to: .local)
+                    }
                 }
                 if isSharp {
                     cancelLocalImageRequests()
@@ -849,8 +865,12 @@ struct PhotoDetailPage: View {
             guard loadState.isActive, !didRequestFullResolution else { return }
             if !isDegraded {
                 let isSharp = result.map { hasDisplayResolution($0, for: asset) } ?? false
-                if let result, isSharp {
-                    promoteImage(result, to: .displayFinal)
+                if let result {
+                    if isSharp {
+                        promoteImage(result, to: .displayFinal)
+                    } else if hasUsableDisplayProxy(result, for: asset) {
+                        promoteImage(result, to: .local)
+                    }
                 }
                 if isSharp {
                     cancelLocalImageRequests()
@@ -864,9 +884,21 @@ struct PhotoDetailPage: View {
     /// Uses actual rendered pixel dimensions, not PhotoKit's degraded flag.
     /// Compare sorted axes so EXIF orientation cannot swap the verdict.
     private func hasDisplayResolution(_ candidate: UIImage, for asset: PHAsset) -> Bool {
+        displayResolutionRatio(candidate, for: asset) >= 0.9
+    }
+
+    /// A device-local Photos rendition around 1024 px is visually sound as an
+    /// immediate full-screen proxy on a ~1290 px display. Reject the much
+    /// smaller grid thumbnail, but do not show a spinner merely because a good
+    /// local proxy is a little below the final target.
+    private func hasUsableDisplayProxy(_ candidate: UIImage, for asset: PHAsset) -> Bool {
+        displayResolutionRatio(candidate, for: asset) >= 0.65
+    }
+
+    private func displayResolutionRatio(_ candidate: UIImage, for asset: PHAsset) -> CGFloat {
         let sourceWidth = CGFloat(asset.pixelWidth)
         let sourceHeight = CGFloat(asset.pixelHeight)
-        guard sourceWidth > 0, sourceHeight > 0 else { return true }
+        guard sourceWidth > 0, sourceHeight > 0 else { return 1 }
         let fitScale = min(
             1,
             min(targetSize.width / sourceWidth, targetSize.height / sourceHeight)
@@ -879,8 +911,8 @@ struct PhotoDetailPage: View {
             candidate.size.width * candidate.scale,
             candidate.size.height * candidate.scale,
         ].sorted()
-        return actual[0] >= expected[0] * 0.9
-            && actual[1] >= expected[1] * 0.9
+        guard expected[0] > 0, expected[1] > 0 else { return 1 }
+        return min(actual[0] / expected[0], actual[1] / expected[1])
     }
 
     private func cancelDisplayUpgrade() {
@@ -937,6 +969,20 @@ struct PhotoDetailPage: View {
         }
         image = candidate
         imageQuality = quality
+        showLoadingIndicator = false
+        loadingIndicatorTask?.cancel()
+        loadingIndicatorTask = nil
+    }
+
+    private func scheduleLoadingIndicator() {
+        guard image == nil, loadingIndicatorTask == nil else { return }
+        showLoadingIndicator = false
+        loadingIndicatorTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(350))
+            guard !Task.isCancelled, image == nil else { return }
+            showLoadingIndicator = true
+            loadingIndicatorTask = nil
+        }
     }
 
     private func cancelLocalImageRequests() {
