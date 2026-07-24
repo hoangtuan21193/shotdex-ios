@@ -63,14 +63,20 @@ struct LibraryScreen: View {
             }
         }
         .toolbar { toolbarContent }
-        // Select mode replaces the tab bar with the full-width selection bar.
-        .toolbar(isSelecting ? .hidden : .automatic, for: .tabBar)
+        // Select mode keeps the native tab bar visible: on iOS 26 the selection
+        // controls live in the tab-bar bottom accessory (expanded → inline on
+        // scroll); pre-26 the selection bar takes over a root `.safeAreaInset`.
         .onChange(of: isSelecting) { navigation.hidesTabBar = isSelecting }
         // Publish the selection to the scaffold, which hosts the bar in the tab
         // bar's slot. Republished on any selection change so counts/thumbnails
         // stay live.
         .onChange(of: selectionSnapshot) {
             navigation.selectionBar = isSelecting ? makeSelectionConfig() : nil
+        }
+        // Re-publish on reappear: switching tabs clears the bar in onDisappear,
+        // but selectionSnapshot is unchanged on return so onChange never re-fires.
+        .onAppear {
+            if isSelecting { navigation.selectionBar = makeSelectionConfig() }
         }
         .onDisappear {
             navigation.hidesTabBar = false
@@ -333,7 +339,7 @@ struct LibraryScreen: View {
             ),
             isSelecting: isSelecting,
             selectedIds: selectedIds,
-            bottomInset: isSelecting ? navigation.selectionBarHeight : bottomChromeInset,
+            bottomInset: isSelecting ? navigation.selectionGridInset : bottomChromeInset,
             photoLibrary: photoLibrary,
             onTap: { _, item in
                 if isIndexPanelExpanded { setIndexPanelExpanded(false) }

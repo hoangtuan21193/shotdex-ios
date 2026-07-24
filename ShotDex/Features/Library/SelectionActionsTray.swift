@@ -1,123 +1,218 @@
 import Photos
 import SwiftUI
 
-/// Multi-select controls shaped like the app's tab bar (see `LiquidGlassTabBar`)
-/// and hosted by the scaffold in the tab bar's own slot, so entering select reads
-/// as the tab bar transformed. Three pieces, mirroring `HStack { pill; circle }`:
-/// a leading Compare pill (always shown, greyed outside its 2–4 range), the centre
-/// pill holding the thumbnails (where the tab pill sits), and a round Delete button
-/// in the search circle's slot, with the selection count on a line below the whole
-/// cluster. Share lives in the top-bar leading slot.
+/// Multi-select bottom controls, composed from small pieces so both platform
+/// tiers can host them: the iOS 26 system `.tabViewBottomAccessory`
+/// (`SelectionAccessory`, placement-aware) and the pre-26 `.safeAreaInset`
+/// (`SelectionBottomBar`). The row mirrors the reference layout —
+/// `[ Compare | thumbnails | Delete ]` — with the selection count above it.
 ///
-/// Thumbnails: up to `CompareScreen.maxPhotoCount` (4) fixed slots — filled in
-/// pick order, dashed empty slot otherwise. Past 4 the pill keeps the same
-/// four-slot-wide window but becomes a horizontal scroll of every selection
-/// (`.defaultScrollAnchor(.trailing)` parks it at the newest pick). The pill is
-/// fully rounded with circular slots nested concentrically inside. Tap a filled
-/// slot to deselect it.
-struct SelectionBottomBar: View {
-    let selectionCount: Int
-    /// Selected asset ids in pick order (drives the thumbnail preview).
-    let thumbnailIds: [String]
-    let photoLibrary: PhotoLibraryService
-    /// nil hides Compare entirely (e.g. On This Day is delete-only).
-    let onCompare: (() -> Void)?
-    let onDelete: () -> Void
-    /// Tapping a thumbnail slot removes that id from the selection.
-    let onDeselect: (String) -> Void
-    let isDeleting: Bool
+/// Compare is a leading pill, greyed outside its usable range
+/// (`2...CompareScreen.maxPhotoCount`); the centre holds up to
+/// `CompareScreen.maxPhotoCount` thumbnail slots (dashed placeholders when
+/// unfilled, a trailing-anchored horizontal scroll past the max); Delete is a
+/// destructive round button. Share lives in the top-bar leading slot.
 
-    private var compareRange: ClosedRange<Int> { 2...CompareScreen.maxPhotoCount }
-    /// Compare is always visible on the left (when the feature exists at all);
-    /// it's only *enabled* in its usable range (2–4). Outside that it stays put
-    /// but greys out, so the 2–4 requirement is legible rather than a chip that
-    /// appears and disappears.
-    private var compareEnabled: Bool { compareRange.contains(selectionCount) }
-    private var isOverflowing: Bool { selectionCount > CompareScreen.maxPhotoCount }
-    private var canCompare: Bool { onCompare != nil }
-    /// Count line above the pill. When Compare is available and still in range,
-    /// spell out the 4-photo cap; once past 4 just show the running count.
-    private var countText: String {
-        guard canCompare else {
-            return selectionCount == 0 ? "Select Photos" : "\(selectionCount) selected"
-        }
-        if selectionCount == 0 {
-            return "Select up to 4 to compare"
-        }
-        if isOverflowing {
-            return "\(selectionCount) selected"
-        }
-        return "\(selectionCount) selected · up to 4 to compare"
-    }
+/// Shared Compare-enablement rule. Selection itself is uncapped; Compare is only
+/// *enabled* in `2...CompareScreen.maxPhotoCount` and greys out otherwise (below
+/// 2 or above the max) so the requirement stays legible.
+private func compareEnabled(for count: Int) -> Bool {
+    (2...CompareScreen.maxPhotoCount).contains(count)
+}
+
+/// Leading Compare label. `config.onCompare == nil` hides it entirely (e.g. On
+/// This Day is delete-only). Bare text — no chip; it rides the shared accessory
+/// glass. Label pinned to its intrinsic size with a high layout priority so it
+/// never clips behind the centre thumbnails.
+struct SelectionCompareControl: View {
+    let config: SelectionBarConfig
 
     var body: some View {
-        // Mirror the tab bar's shape (LiquidGlassTabBar): a row of pills plus a
-        // trailing round button, so the selection UI reads as the tab bar
-        // transformed. Compare is the leading pill, the thumbnails + count sit in
-        // the centre pill (where the tab pill is), and Delete is the round button
-        // in the search circle's slot.
-        VStack(spacing: 6) {
-            HStack(spacing: 12) {
-                if let onCompare {
-                    compareChip(onCompare)
-                }
-                middlePill
-                deleteButton
-            }
-            Text(countText)
-                .font(.footnote.weight(.medium))
-                .monospacedDigit()
-                .foregroundStyle(.white)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 20)
-        .padding(.top, 12)
-        .animation(.snappy(duration: 0.2), value: selectionCount)
-    }
-
-    private var deleteButton: some View {
-        GlassIconButton(
-            systemImage: "trash",
-            accessibilityLabel: "Delete",
-            tint: .red,
-            isEnabled: selectionCount > 0 && !isDeleting,
-            action: onDelete
-        )
-    }
-
-    /// Standalone Liquid-Glass "Compare" pill, left of the photo panel. Fully
-    /// rounded (capsule), matching the toolbar indexing chip. Always visible;
-    /// disabled (greyed) outside its 2–4 range so the requirement stays legible.
-    private func compareChip(_ action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            GlassPanel(cornerRadius: 100) {
+        if let onCompare = config.onCompare {
+            Button(action: onCompare) {
                 Text("Compare")
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
                     .fixedSize()
-                    .foregroundStyle(compareEnabled ? .primary : .tertiary)
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 16)
+                    .foregroundStyle(compareEnabled(for: config.selectionCount) ? Color.accentColor : Color(.tertiaryLabel))
+                    .padding(.horizontal, 12)
+                    .frame(height: 44)
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .disabled(!compareEnabled(for: config.selectionCount))
+            .accessibilityLabel("Compare")
+            .layoutPriority(1)
+        }
+    }
+}
+
+/// The centre thumbnail slots. `styled` wraps them in the `GlassPanel` pill for
+/// the pre-26 bar; the iOS 26 accessory passes `styled: false` and lets the
+/// system supply the glass.
+struct SelectionSlots: View {
+    let config: SelectionBarConfig
+    var styled: Bool
+
+    var body: some View {
+        let strip = SelectionThumbnailStrip(
+            ids: config.thumbnailIds,
+            photoLibrary: config.photoLibrary,
+            onDeselect: config.onDeselect
+        )
+        if styled {
+            GlassPanel(cornerRadius: selectionPanelCorner) {
+                strip
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+            }
+        } else {
+            strip
+        }
+    }
+}
+
+/// Trailing destructive Delete button (replaces Search during selection). Bare
+/// trash glyph — no chip; it rides the shared accessory glass.
+struct SelectionDeleteControl: View {
+    let config: SelectionBarConfig
+
+    private var isEnabled: Bool { config.selectionCount > 0 && !config.isDeleting }
+
+    var body: some View {
+        Button(action: config.onDelete) {
+            Image(systemName: "trash")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(isEnabled ? Color.red : Color(.tertiaryLabel))
+                .frame(width: 44, height: 44)
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .disabled(!compareEnabled)
-        .accessibilityLabel("Compare")
+        .disabled(!isEnabled)
+        .accessibilityLabel("Delete")
+        .layoutPriority(1)
+    }
+}
+
+/// The selection count caption. Empty when nothing is selected (the bar stays,
+/// only the caption drops). When Compare is available and still in range it
+/// spells out the cap; past the max it shows just the running count.
+struct SelectionCountCaption: View {
+    let config: SelectionBarConfig
+
+    private var canCompare: Bool { config.onCompare != nil }
+    private var isOverflowing: Bool { config.selectionCount > CompareScreen.maxPhotoCount }
+    private var countText: String {
+        let n = config.selectionCount
+        guard canCompare, !isOverflowing else { return "\(n) selected" }
+        return "\(n) selected · up to \(CompareScreen.maxPhotoCount) to compare"
     }
 
-    /// The centre pill: the selected-photo thumbnails. Fully-rounded pill; the
-    /// slots inside share a concentric corner. The count label rides above the
-    /// whole cluster (see `body`), not inside the pill.
-    private var middlePill: some View {
-        GlassPanel(cornerRadius: selectionPanelCorner) {
-            SelectionThumbnailStrip(
-                ids: thumbnailIds,
-                photoLibrary: photoLibrary,
-                onDeselect: onDeselect
-            )
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+    var body: some View {
+        if config.selectionCount > 0 {
+            // Colour is set by the host (secondary in the iOS 26 accessory, white
+            // over the pre-26 scrim) — don't pin it here or it would win over the
+            // host's tint.
+            Text(countText)
+                .font(.footnote.weight(.medium))
+                .monospacedDigit()
+                .lineLimit(1)
         }
+    }
+}
+
+/// The controls row shared by both tiers: `[ Compare | thumbnails | Delete ]`.
+/// `slotsStyled: true` for the custom pre-26 bar; `false` inside the system
+/// accessory. The centre slots take the remaining width; Compare and Delete keep
+/// their intrinsic size via `layoutPriority` so neither clips on narrow devices.
+struct SelectionBarRow: View {
+    let config: SelectionBarConfig
+    var slotsStyled: Bool
+
+    init(_ config: SelectionBarConfig, slotsStyled: Bool) {
+        self.config = config
+        self.slotsStyled = slotsStyled
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            SelectionCompareControl(config: config)
+            SelectionSlots(config: config, styled: slotsStyled)
+            SelectionDeleteControl(config: config)
+        }
+    }
+}
+
+/// iOS 26 bottom-accessory content: just the `[ Compare | thumbnails | Delete ]`
+/// controls row (bare controls on the system glass). The count caption is NOT
+/// here — the scaffold floats it above the accessory band (see
+/// `SelectionCountBanner`). Takes a non-optional config (the scaffold unwraps
+/// `navigation.selectionBar`).
+@available(iOS 26.0, *)
+struct SelectionAccessory: View {
+    let config: SelectionBarConfig
+
+    init(_ config: SelectionBarConfig) { self.config = config }
+
+    var body: some View {
+        SelectionBarRow(config, slotsStyled: false)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 4)
+    }
+}
+
+/// Pre-iOS 26 selection bar (hosted via the scaffold's `.safeAreaInset`): the
+/// count caption floats above a single glass band holding the bare
+/// `[ Compare | thumbnails | Delete ]` row — mirroring the iOS 26 accessory
+/// (one glass surface, no per-control chips; count sits outside/above it).
+struct SelectionBottomBar: View {
+    let config: SelectionBarConfig
+
+    init(_ config: SelectionBarConfig) { self.config = config }
+
+    var body: some View {
+        VStack(spacing: 6) {
+            SelectionCountCaption(config: config)
+                .foregroundStyle(.white)
+            GlassPanel(cornerRadius: 30) {
+                SelectionBarRow(config, slotsStyled: false)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .animation(.snappy(duration: 0.2), value: config.selectionCount)
+    }
+}
+
+/// The count caption as a free-floating label the scaffold overlays *above* the
+/// iOS 26 tab-bar accessory band (over the grid, no chip). The system exposes no
+/// frame for the accessory, so its clearance is a tuned constant
+/// (`accessoryClearance`) — nudge it if the tab bar / accessory metrics change.
+/// A soft shadow keeps the plain text legible over bright photos.
+@available(iOS 26.0, *)
+struct SelectionCountBanner: View {
+    let config: SelectionBarConfig
+
+    /// Height of the tab bar + selection accessory + a small gap, measured from
+    /// the bottom safe-area edge (where a `.bottom` overlay anchors).
+    private let accessoryClearance: CGFloat = 118
+
+    var body: some View {
+        SelectionCountCaption(config: config)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 7)
+            .background {
+                Capsule()
+                    .fill(.black.opacity(0.28))
+                    .background(.ultraThinMaterial, in: Capsule())
+            }
+            .shadow(color: .black.opacity(0.25), radius: 4, y: 1)
+            .padding(.bottom, accessoryClearance)
+            .allowsHitTesting(false)
     }
 }
 
@@ -138,34 +233,18 @@ struct BottomScrim: View {
     }
 }
 
-extension SelectionBottomBar {
-    /// Build from the scaffold-hosted config (see `AppNavigation.selectionBar`).
-    init(_ config: SelectionBarConfig) {
-        self.init(
-            selectionCount: config.selectionCount,
-            thumbnailIds: config.thumbnailIds,
-            photoLibrary: config.photoLibrary,
-            onCompare: config.onCompare,
-            onDelete: config.onDelete,
-            onDeselect: config.onDeselect,
-            isDeleting: config.isDeleting
-        )
-    }
-}
-
 /// The photo panel is a pill: its corner is half its height (a 36pt thumbnail
 /// plus 8pt vertical padding top and bottom = 52pt tall → 26pt corner).
 private let selectionPanelCorner: CGFloat = 26
-/// Slots (filled thumbnail + empty placeholder) are inset from the pill by its
-/// 8pt vertical padding, so a corner of 26 − 8 = 18 keeps them concentric with
-/// the pill — and since a 36pt slot's half-side is also 18, they read as circles
-/// nested inside the capsule.
-private let selectionSlotCorner: CGFloat = 18
+/// Slots (filled thumbnail + empty placeholder) read as near-square rounded
+/// rectangles — a small corner on the 36pt slot, not the half-side that would
+/// round them into circles. The panel stays a pill (`selectionPanelCorner`).
+private let selectionSlotCorner: CGFloat = 6
 
 /// The thumbnail preview inside the photo panel: four fixed slots for a
 /// selection of up to four, or a horizontal scroll of every selected thumbnail
 /// beyond that.
-private struct SelectionThumbnailStrip: View {
+struct SelectionThumbnailStrip: View {
     let ids: [String]
     let photoLibrary: PhotoLibraryService
     let onDeselect: (String) -> Void
@@ -323,13 +402,24 @@ struct SelectionBadge: View {
 
 #Preview {
     let dependencies = AppDependencies.preview()
+    func config(_ count: Int, _ ids: [String], compare: Bool) -> SelectionBarConfig {
+        SelectionBarConfig(
+            selectionCount: count,
+            thumbnailIds: ids,
+            photoLibrary: dependencies.photoLibrary,
+            onCompare: compare ? {} : nil,
+            onDelete: {},
+            onDeselect: { _ in },
+            isDeleting: false
+        )
+    }
     return ZStack(alignment: .bottom) {
         LinearGradient(colors: [.teal, .indigo], startPoint: .top, endPoint: .bottom)
             .ignoresSafeArea()
         VStack(spacing: 24) {
-            SelectionBottomBar(selectionCount: 0, thumbnailIds: [], photoLibrary: dependencies.photoLibrary, onCompare: {}, onDelete: {}, onDeselect: { _ in }, isDeleting: false)
-            SelectionBottomBar(selectionCount: 3, thumbnailIds: ["a", "b", "c"], photoLibrary: dependencies.photoLibrary, onCompare: {}, onDelete: {}, onDeselect: { _ in }, isDeleting: false)
-            SelectionBottomBar(selectionCount: 7, thumbnailIds: ["a", "b", "c", "d", "e", "f", "g"], photoLibrary: dependencies.photoLibrary, onCompare: nil, onDelete: {}, onDeselect: { _ in }, isDeleting: false)
+            SelectionBottomBar(config(0, [], compare: true))
+            SelectionBottomBar(config(3, ["a", "b", "c"], compare: true))
+            SelectionBottomBar(config(7, ["a", "b", "c", "d", "e", "f", "g"], compare: false))
         }
     }
     .environment(dependencies.photoLibrary)

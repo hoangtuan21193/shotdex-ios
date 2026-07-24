@@ -61,6 +61,13 @@ struct PhotoMetadata: Codable, Equatable, Identifiable, Sendable {
     /// row is stamped without every call site passing it.
     var indexerVersion: Int = PhotoMetadata.currentIndexerVersion
 
+    /// Consecutive failed EXIF reads (`exifStatus == .error`). Incremented each
+    /// time a read fails; at `IndexPipeline.maxReadAttempts` the row is written
+    /// as `noExif` instead so an unreadable original stops retrying forever.
+    /// Any non-error write leaves it at its default 0 (a recovered read resets
+    /// the counter). See migration `v5-readAttempts`.
+    var readAttempts: Int = 0
+
     var id: String { assetId }
 
     /// Bump whenever a new build extracts data that older rows lack (a new

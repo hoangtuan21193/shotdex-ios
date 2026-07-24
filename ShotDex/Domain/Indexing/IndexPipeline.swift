@@ -38,6 +38,13 @@ struct IndexRunSummary: Equatable, Sendable {
 /// by modificationDate, and pendingICloud re-runs.
 actor IndexPipeline {
     static let batchSize = 200
+    /// After this many consecutive failed reads a row is written as `noExif`
+    /// instead of `error`, so an unreadable original (corrupt/truncated file,
+    /// or one PhotoKit won't serve) stops being re-enqueued on every run and
+    /// simply appears in the library without camera metadata. Only `error`
+    /// counts toward this; `pendingICloud` retries indefinitely (a genuine
+    /// cloud original that just hasn't downloaded yet).
+    static let maxReadAttempts = 5
     /// EXIF reads within a batch run concurrently — indexing time is
     /// dominated by per-asset PhotoKit round-trips, not CPU.
     static let readConcurrency = 12
@@ -216,8 +223,14 @@ actor IndexPipeline {
             switch await exifService.readExif(for: asset, resource: resource, allowNetwork: true) {
             case .success(let exif):
                 record = composer.compose(asset: info, exif: exif, exifStatus: .indexed)
+            case .unreadable:
+                // Viewer downloaded the full image but ImageIO can't parse it —
+                // deterministically no readable EXIF. Resolve the row to
+                // `noExif` (indexed + empty EXIF) so it stops being pending.
+                record = composer.compose(asset: info, exif: .empty, exifStatus: .indexed)
             case .pendingICloud, .failure:
-                // Still unreadable — don't clobber the existing row.
+                // Couldn't obtain the bytes (still in iCloud / network failed /
+                // hard error) — don't clobber the existing row; retry later.
                 return nil
             }
         }
@@ -554,6 +567,7 @@ actor IndexPipeline {
 
         await withTaskGroup(of: BatchItem.self) { group in
             let exifService = self.exifService
+            let metadataDAO = self.metadataDAO
 
             @Sendable func read(_ index: Int, _ asset: PHAsset) async -> BatchItem {
                 let clock = ContinuousClock()
@@ -611,15 +625,50 @@ actor IndexPipeline {
                                      outcome: .indexed,
                                      filename: filename)
                 case .pendingICloud:
+                    // Couldn't download (in iCloud, or the network failed).
+                    // ALWAYS retryable — a flaky link must never end with a
+                    // photo wrongly marked no-metadata. No attempt counting.
                     item = BatchItem(index: index,
                                      record: composer.compose(asset: info, exif: .empty, exifStatus: .pendingICloud),
                                      outcome: .pendingICloud,
                                      filename: filename)
-                case .failure:
-                    item = BatchItem(index: index,
-                                     record: composer.compose(asset: info, exif: .empty, exifStatus: .error),
-                                     outcome: .failed,
-                                     filename: filename)
+                case .unreadable, .failure:
+                    // Both are deterministic, NON-network failures: `.unreadable`
+                    // = bytes obtained (local file present, or iCloud download
+                    // completed) but unparseable; `.failure` = a hard local read
+                    // error / no resource. Network transport problems never land
+                    // here — they return `pendingICloud`. So count attempts and,
+                    // once the cap is hit, give up: write `noExif` (composer maps
+                    // indexed + empty EXIF → noExif) so the photo shows with no
+                    // camera data and drops out of the retry set. A flaky link
+                    // can never reach this path, so it can never wrongly mark a
+                    // downloadable photo as no-metadata.
+                    let attempts = ((try? metadataDAO.readAttempts(assetId: asset.localIdentifier)) ?? 0) + 1
+                    if attempts >= Self.maxReadAttempts {
+                        item = BatchItem(index: index,
+                                         record: composer.compose(asset: info, exif: .empty, exifStatus: .indexed),
+                                         outcome: .indexed,
+                                         filename: filename)
+                    } else {
+                        var record = composer.compose(asset: info, exif: .empty, exifStatus: .error)
+                        record.readAttempts = attempts
+                        item = BatchItem(index: index, record: record, outcome: .failed, filename: filename)
+                    }
+                }
+                // Trace stuck assets: on a resumed run only the still-incomplete
+                // rows reach here, so logging every non-indexed outcome with its
+                // assetId (the key that maps back to a Photos asset) and filename
+                // pinpoints the handful that keep retrying, alongside the
+                // per-branch reason ExifService already logged.
+                if item.outcome != .indexed {
+                    Self.logger.log("asset \(asset.localIdentifier, privacy: .public) [\(filename ?? "?", privacy: .public)] outcome=\(String(describing: item.outcome), privacy: .public) allowNetwork=\(allowNetwork)")
+                } else {
+                    switch exifResult {
+                    case .unreadable, .failure:
+                        Self.logger.log("asset \(asset.localIdentifier, privacy: .public) [\(filename ?? "?", privacy: .public)] unreadable local original after \(Self.maxReadAttempts) attempts — marked noExif")
+                    default:
+                        break
+                    }
                 }
                 let composeTime = clock.now - mark
 

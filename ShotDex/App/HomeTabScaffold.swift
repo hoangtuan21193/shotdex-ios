@@ -9,9 +9,6 @@ struct HomeTabScaffold: View {
     @State private var navigation = AppNavigation()
     @State private var isSearchPresented = false
     @State private var libraryController: LibraryController?
-    /// Measured height of the hosted selection bar, mirrored one-way into
-    /// `navigation.selectionBarHeight` for the active screen's grid inset.
-    @State private var hostedSelectionBarHeight: CGFloat = 96
 
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(\.scenePhase) private var scenePhase
@@ -81,32 +78,19 @@ struct HomeTabScaffold: View {
                 }
             }
         }
-        .tabBarMinimizeBehavior(.onScrollDown)
-        // Host the selection bar in the tab bar's slot. The native tab bar hides
-        // itself (each screen's `.toolbar(.hidden, for: .tabBar)` while selecting)
-        // and the bar fades in here. Best-effort in-place crossfade: the system
-        // animates its own tab-bar dismissal on its own curve, so the two can't
-        // fully share one transaction the way the pre-26 custom bar does.
+        .tabBarMinimizeBehavior(.never)
+        // Host the selection controls in the native bottom accessory (the tab bar
+        // stays visible and unchanged; it minimizes on scroll and the accessory
+        // follows it from expanded to inline placement). See SelectionAccessory.
+        .modifier(SelectionBottomAccessory(config: navigation.selectionBar))
+        // The selection count floats above the accessory band (out of the glass).
         .overlay(alignment: .bottom) {
             if let config = navigation.selectionBar {
-                ZStack(alignment: .bottom) {
-                    BottomScrim()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                        .ignoresSafeArea()
-                        .allowsHitTesting(false)
-                    SelectionBottomBar(config)
-                        .padding(.bottom, 8)
-                        .measureHeight(into: $hostedSelectionBarHeight)
-                }
-                .transition(.opacity)
+                SelectionCountBanner(config: config)
+                    .transition(.opacity)
             }
         }
         .animation(.snappy(duration: 0.25), value: navigation.selectionBar != nil)
-        .onChange(of: hostedSelectionBarHeight) { _, height in
-            if abs(navigation.selectionBarHeight - height) > 0.5 {
-                navigation.selectionBarHeight = height
-            }
-        }
         .settingsDrawer(isOpen: $navigation.isSettingsDrawerOpen, libraryController: libraryController)
         .keepScreenAwakeWhileIndexing(libraryController: libraryController)
         .environment(navigation)
@@ -127,80 +111,75 @@ struct HomeTabScaffold: View {
     }
 
     private var mainScaffold: some View {
-        ZStack(alignment: .bottom) {
-            tabContent
-
-            // Subtle dark backdrop behind the selection bar, anchored to the real
-            // screen bottom (full-bleed) so text/pills read over bright photos.
-            if navigation.selectionBar != nil {
-                BottomScrim()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                    .ignoresSafeArea()
-                    .allowsHitTesting(false)
-                    .transition(.opacity)
-            }
-
-            // Selection bar and tab bar share this one slot (both pinned to the
-            // bottom with the same 8pt inset) and crossfade in place — distinct
-            // `.id`s so SwiftUI treats the swap as insert/remove (a crossfade)
-            // rather than a single mutating view.
-            if let config = navigation.selectionBar {
-                SelectionBottomBar(config)
-                    .padding(.bottom, 8)
-                    .measureHeight(into: $hostedSelectionBarHeight)
-                    .transition(.opacity)
-                    .id("selection-bar")
-            } else {
-                LiquidGlassTabBar(
-                    selection: $navigation.selectedTab,
-                    onReselect: { tab in
-                        if tab == .library {
-                            navigation.retapLibrary()
+        // Pre-26 has no native tab bar. The custom floating tab bar stays a
+        // bottom overlay (its clearance handled by each grid's `bottomChromeInset`,
+        // unchanged). During selection it hides and the selection bar takes over a
+        // root-level `.safeAreaInset` — real safe area, so grids auto-clear it and
+        // only add a small selection pad. One static layout matching the iOS 26
+        // expanded form; no inline emulation.
+        tabContent
+            .overlay(alignment: .bottom) {
+                if navigation.selectionBar == nil {
+                    LiquidGlassTabBar(
+                        selection: $navigation.selectedTab,
+                        onReselect: { tab in
+                            if tab == .library {
+                                navigation.retapLibrary()
+                            }
+                        },
+                        onSearchTap: {
+                            navigation.selectedTab = .library
+                            isSearchPresented = true
                         }
-                    },
-                    onSearchTap: {
-                        navigation.selectedTab = .library
-                        isSearchPresented = true
-                    }
-                )
-                .padding(.bottom, 8)
-                .transition(.opacity)
-                .id("tab-bar")
-            }
-        }
-        .animation(.snappy(duration: 0.25), value: navigation.selectionBar != nil)
-        .onChange(of: hostedSelectionBarHeight) { _, height in
-            if abs(navigation.selectionBarHeight - height) > 0.5 {
-                navigation.selectionBarHeight = height
-            }
-        }
-        .settingsDrawer(isOpen: $navigation.isSettingsDrawerOpen, libraryController: libraryController)
-        .keepScreenAwakeWhileIndexing(libraryController: libraryController)
-        .environment(navigation)
-        .task {
-            if libraryController == nil {
-                libraryController = LibraryController(dependencies: dependencies)
-            }
-            autoIndex()
-        }
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active { autoIndex() }
-        }
-        .onChange(of: navigation.pendingLibraryFilter) { _, pending in
-            guard let pending else { return }
-            libraryController?.criteria = pending
-            navigation.pendingLibraryFilter = nil
-        }
-        .sheet(isPresented: $isSearchPresented) {
-            if let libraryController {
-                SearchSheet(controller: libraryController) {
-                    isSearchPresented = false
-                    navigation.openAdvancedSearch()
+                    )
+                    .padding(.bottom, 8)
+                    .transition(.opacity)
+                } else {
+                    // Scrim lives here (root overlay) — not as the bar's own
+                    // background — so it ignores the safe area and paints all the
+                    // way to the physical bottom edge, covering the home-indicator
+                    // strip below the bar (else that strip renders white pre-26).
+                    BottomScrim()
+                        .ignoresSafeArea()
+                        .allowsHitTesting(false)
+                        .transition(.opacity)
                 }
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
             }
-        }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if let config = navigation.selectionBar {
+                    SelectionBottomBar(config)
+                        .padding(.bottom, 8)
+                        .transition(.opacity)
+                }
+            }
+            .animation(.snappy(duration: 0.25), value: navigation.selectionBar != nil)
+            .settingsDrawer(isOpen: $navigation.isSettingsDrawerOpen, libraryController: libraryController)
+            .keepScreenAwakeWhileIndexing(libraryController: libraryController)
+            .environment(navigation)
+            .task {
+                if libraryController == nil {
+                    libraryController = LibraryController(dependencies: dependencies)
+                }
+                autoIndex()
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { autoIndex() }
+            }
+            .onChange(of: navigation.pendingLibraryFilter) { _, pending in
+                guard let pending else { return }
+                libraryController?.criteria = pending
+                navigation.pendingLibraryFilter = nil
+            }
+            .sheet(isPresented: $isSearchPresented) {
+                if let libraryController {
+                    SearchSheet(controller: libraryController) {
+                        isSearchPresented = false
+                        navigation.openAdvancedSearch()
+                    }
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+                }
+            }
     }
 
     private var tabContent: some View {
@@ -285,6 +264,28 @@ extension View {
     /// indexing, honoring the user's `index.keepScreenAwake` setting.
     func keepScreenAwakeWhileIndexing(libraryController: LibraryController?) -> some View {
         modifier(KeepScreenAwakeModifier(libraryController: libraryController))
+    }
+}
+
+/// Hosts the multi-select controls in the iOS 26 tab-bar bottom accessory. The
+/// accessory content is always supplied (stable identity) and toggled via
+/// `isEnabled:` — the intended API for showing/hiding it without leaving an empty
+/// accessory band. `isEnabled:` is iOS 26.1+; on 26.0 it falls back to
+/// conditional content.
+@available(iOS 26.0, *)
+private struct SelectionBottomAccessory: ViewModifier {
+    let config: SelectionBarConfig?
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.1, *) {
+            content.tabViewBottomAccessory(isEnabled: config != nil) {
+                if let config { SelectionAccessory(config) }
+            }
+        } else {
+            content.tabViewBottomAccessory {
+                if let config { SelectionAccessory(config) }
+            }
+        }
     }
 }
 

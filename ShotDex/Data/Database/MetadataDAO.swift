@@ -120,6 +120,21 @@ struct MetadataDAO: Sendable {
         }
     }
 
+    /// Count of rows genuinely waiting on an iCloud/network read
+    /// (`pendingICloud` only — **not** `error`). Drives the network-specific
+    /// "iCloud not responding" auto-retry + card: local `error` rows are
+    /// deterministic non-network failures handled by the give-up cap, so they
+    /// must not trigger the iCloud UI.
+    func pendingICloudReadCount() throws -> Int {
+        try database.reader.read { db in
+            try Int.fetchOne(
+                db,
+                sql: "SELECT COUNT(*) FROM photo_metadata WHERE exifStatus = ?",
+                arguments: [ExifStatus.pendingICloud.rawValue]
+            ) ?? 0
+        }
+    }
+
     /// Assets whose EXIF read is incomplete (in iCloud or failed), for the
     /// Settings re-index action and its counter.
     func retryableAssetIds() throws -> [String] {
@@ -129,6 +144,19 @@ struct MetadataDAO: Sendable {
                 sql: "SELECT assetId FROM photo_metadata WHERE exifStatus IN (?, ?)",
                 arguments: [ExifStatus.pendingICloud.rawValue, ExifStatus.error.rawValue]
             )
+        }
+    }
+
+    /// Failed-read counter for one asset (0 when there's no row yet). Read by
+    /// the pipeline before writing an `error` row so the count climbs across
+    /// runs toward `IndexPipeline.maxReadAttempts`.
+    func readAttempts(assetId: String) throws -> Int {
+        try database.reader.read { db in
+            try Int.fetchOne(
+                db,
+                sql: "SELECT readAttempts FROM photo_metadata WHERE assetId = ?",
+                arguments: [assetId]
+            ) ?? 0
         }
     }
 

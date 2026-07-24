@@ -138,6 +138,18 @@ final class AppDatabase: Sendable {
             }
         }
 
+        // Counts consecutive failed EXIF reads (`exifStatus = error`) for a
+        // row. After `IndexPipeline.maxReadAttempts` genuine failures the row
+        // is downgraded to `noExif` — an unreadable original (corrupt/truncated
+        // file, or one PhotoKit refuses to serve) stops being re-enqueued every
+        // run and simply shows in the library without camera metadata. Reset to
+        // 0 whenever a row is written with any non-error status.
+        migrator.registerMigration("v5-readAttempts") { db in
+            try db.alter(table: "photo_metadata") { t in
+                t.add(column: "readAttempts", .integer).notNull().defaults(to: 0)
+            }
+        }
+
         return migrator
     }
 }

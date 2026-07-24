@@ -24,11 +24,26 @@ final class AppNavigation {
     /// two different containers. `nil` when nothing is selecting.
     var selectionBar: SelectionBarConfig?
 
-    /// Height of the scaffold-hosted selection bar, mirrored one-way from the
-    /// scaffold (which measures it) so the active screen's grid can inset its
-    /// bottom rows. The default keeps the first frame from clipping before the
-    /// measurement lands.
-    var selectionBarHeight: CGFloat = 96
+    /// Extra bottom padding a grid adds to its content while selecting. The
+    /// selection chrome is system-managed safe area on both tiers (iOS 26 tab-bar
+    /// bottom accessory; pre-26 root `.safeAreaInset`), which the collection view
+    /// already clears via automatic content-inset adjustment — so this is only a
+    /// small breathing pad on top, not the full bar height.
+    var selectionBarHeight: CGFloat = 12
+
+    /// Bottom inset a grid adds to its content while selecting. On iOS 26 the
+    /// count caption floats *over* the grid, above the tab-bar accessory and
+    /// outside the safe area the collection view auto-clears — so the last row
+    /// scrolls up under it. Extra clearance keeps that row visible and tappable.
+    /// Pre-26 the caption lives inside the `.safeAreaInset` bar (already
+    /// auto-cleared), so only the breathing pad is needed.
+    var selectionGridInset: CGFloat {
+        if #available(iOS 26.0, *) {
+            selectionBarHeight + 46
+        } else {
+            selectionBarHeight
+        }
+    }
 
     /// Set by Statistics drill-downs; consumed by the Library controller owner.
     var pendingLibraryFilter: FilterCriteria?

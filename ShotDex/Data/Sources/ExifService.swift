@@ -6,8 +6,25 @@ import os
 /// Outcome of trying to read EXIF for one asset.
 enum ExifReadResult: Sendable {
     case success(RawExif)
-    /// The original is in iCloud and couldn't be read (yet) — retryable.
+    /// The original is in iCloud and couldn't be read (yet), or the network
+    /// failed / stalled before the bytes arrived — **retryable, indefinitely**.
+    /// This is the "couldn't download" case: never counts as a permanent
+    /// failure, so a flaky link never ends with a photo wrongly marked
+    /// no-metadata. It resolves once the file downloads.
     case pendingICloud
+    /// The bytes **were obtained** (local file present, or the iCloud download
+    /// completed) but ImageIO could not parse EXIF/TIFF from them — a genuinely
+    /// unreadable original (corrupt / truncated / unsupported). Deterministic,
+    /// so after a few attempts the row is treated as having no EXIF. Distinct
+    /// from `pendingICloud`: "downloaded but unreadable", not "couldn't
+    /// download".
+    case unreadable
+    /// Could not obtain the bytes for a **non-network** reason: no photo
+    /// resource, or a hard local read error (a local original PhotoKit can't
+    /// serve). Guaranteed local — network transport failures return
+    /// `pendingICloud`, never this — so, like `unreadable`, it counts toward
+    /// the give-up cap: a permanently unreadable local original eventually
+    /// resolves to no-EXIF instead of retrying every run forever.
     case failure
 }
 
@@ -47,22 +64,35 @@ struct ExifService: Sendable {
     /// Local-first: stream from disk (no network); if the original is
     /// iCloud-only and `allowNetwork`, stream the file header from iCloud.
     func readExif(for asset: PHAsset, resource: PHAssetResource?, allowNetwork: Bool) async -> ExifReadResult {
-        guard let resource else { return .failure }
+        guard let resource else {
+            Self.logger.info("readExif \(asset.localIdentifier, privacy: .public): no photo resource — failure")
+            return .failure
+        }
+        // Per-asset decision trace. A resumed run only reaches this read for
+        // the still-incomplete rows (needsReindex skips everything done), so
+        // this stays quiet — it lights up exactly for the assets that keep
+        // getting stuck, showing which branch bails and why.
+        let name = resource.originalFilename
 
         func networkAttempt() async -> ExifReadResult {
-            guard allowNetwork else { return .pendingICloud }
+            guard allowNetwork else {
+                Self.logger.info("readExif \(name, privacy: .public): network disallowed — pendingICloud")
+                return .pendingICloud
+            }
             // Circuit breaker: once the network has stalled out too many
             // times (iCloud can't serve originals, or the link died), stop
             // even trying — return pendingICloud instantly instead of burning
             // a stall window per asset. Half-open: after the cooldown the
             // check passes again and reads probe the network on their own.
             if trafficMonitor?.isNetworkTripped == true {
+                Self.logger.info("readExif \(name, privacy: .public): circuit breaker tripped — pendingICloud")
                 return .pendingICloud
             }
             // Queue for a streaming slot, then re-check the breaker: it may
             // have tripped while this read waited behind the other streams.
             return await Self.networkStreamLimiter.withPermit {
                 if trafficMonitor?.isNetworkTripped == true {
+                    Self.logger.info("readExif \(name, privacy: .public): breaker tripped while queued — pendingICloud")
                     return .pendingICloud
                 }
                 // Post-stall breather: sleeping *while holding the permit* is
@@ -75,8 +105,10 @@ struct ExifService: Sendable {
                 // slept, and at half-open only one read wins the probe slot —
                 // the rest skip instead of burning a stall window each.
                 if trafficMonitor?.shouldSkipNetworkRead() == true {
+                    Self.logger.info("readExif \(name, privacy: .public): half-open probe lost — pendingICloud")
                     return .pendingICloud
                 }
+                Self.logger.info("readExif \(name, privacy: .public): starting 8s network stream")
                 trafficMonitor?.beginNetworkRead()
                 defer { trafficMonitor?.endNetworkRead() }
                 let before = trafficMonitor?.totalBytes ?? 0
@@ -92,11 +124,13 @@ struct ExifService: Sendable {
                 if bytes > 0 { trafficMonitor?.recordNetworkProgress() }
                 switch result {
                 case .success(let exif):
+                    Self.logger.info("readExif \(name, privacy: .public): network stream success, \(bytes) B in \(elapsedMs) ms")
                     return .success(exif)
                 case .needsNetwork:
                     // Zero-byte stall feeds the breaker (which logs stall and
                     // trip events itself); a partial-then-dropped transfer
                     // already reset it via `recordNetworkProgress`.
+                    Self.logger.info("readExif \(name, privacy: .public): network needsNetwork (\(bytes) B in \(elapsedMs) ms, stall=\(bytes == 0)) — pendingICloud")
                     if bytes == 0 {
                         trafficMonitor?.recordNetworkStall(
                             filename: resource.originalFilename, elapsedMs: elapsedMs
@@ -104,10 +138,22 @@ struct ExifService: Sendable {
                     }
                     return .pendingICloud
                 case .overBudget:
+                    Self.logger.info("readExif \(name, privacy: .public): network overBudget (\(bytes) B, metadata past stream budget) — pendingICloud")
                     return .pendingICloud
+                case .unreadable:
+                    // Download completed but the bytes don't parse — genuinely
+                    // unreadable, NOT a network problem. This is the only iCloud
+                    // path that may lead to noExif.
+                    Self.logger.log("read \(resource.originalFilename, privacy: .public): downloaded \(bytes) B but unparseable — unreadable")
+                    return .unreadable
                 case .failure:
-                    Self.logger.log("read \(resource.originalFilename, privacy: .public): iCloud read failed, \(bytes) B in \(elapsedMs) ms")
-                    return .failure
+                    // Now unreachable on the network path (a completion error
+                    // maps to `.needsNetwork`, a completed-but-unparseable read
+                    // to `.unreadable`). Kept defensive: treat any unexpected
+                    // network failure as retryable, never a permanent give-up —
+                    // so `.failure` at the top level is guaranteed non-network.
+                    Self.logger.log("read \(resource.originalFilename, privacy: .public): unexpected iCloud read failure, \(bytes) B in \(elapsedMs) ms — pendingICloud")
+                    return .pendingICloud
                 }
             }
         }
@@ -122,11 +168,19 @@ struct ExifService: Sendable {
         func localDerivativeThenNetwork() async -> ExifReadResult {
             let local = await readExifFromLocalDerivative(for: asset)
             switch local {
-            case .success, .failure:
+            case .success:
+                Self.logger.info("readExif \(name, privacy: .public): resolved via local derivative")
+                return local
+            case .unreadable:
+                Self.logger.info("readExif \(name, privacy: .public): local derivative bytes unparseable — unreadable")
+                return local
+            case .failure:
+                Self.logger.info("readExif \(name, privacy: .public): local derivative failed — failure")
                 return local
             case .pendingICloud:
                 // No usable local derivative (never opened / freshly synced) —
                 // the original genuinely has to come from iCloud.
+                Self.logger.info("readExif \(name, privacy: .public): no local derivative, going to network (allowNetwork=\(allowNetwork))")
                 return await networkAttempt()
             }
         }
@@ -134,18 +188,27 @@ struct ExifService: Sendable {
         switch await streamExif(resource: resource, useNetwork: false, timeout: .seconds(10)) {
         case .success(let exif):
             return .success(exif)
+        case .unreadable:
+            // Full local buffer arrived (no error) but doesn't parse — a broken
+            // local original. Trustworthy: an offloaded original would error or
+            // deliver nothing, not a complete unparseable buffer.
+            Self.logger.info("readExif \(name, privacy: .public): local bytes unparseable — unreadable")
+            return .unreadable
         case .failure:
             // iCloud-offloaded originals don't reliably fail the local read
             // with `.networkAccessRequired` — the error domain varies across
             // Photos versions — so every local failure gets one derivative-then-
             // network retry. A genuinely broken local file fails there too.
+            Self.logger.info("readExif \(name, privacy: .public): local stream failed — derivative+network fallback")
             return await localDerivativeThenNetwork()
         case .overBudget:
             // Metadata sits beyond the streaming budget (rare container
             // layout, e.g. media data before the meta box). The file is
             // local — fall back to a file-URL read that can seek anywhere.
+            Self.logger.info("readExif \(name, privacy: .public): local stream over budget — editing-input fallback")
             return await readExifViaEditingInput(for: asset)
         case .needsNetwork:
+            Self.logger.info("readExif \(name, privacy: .public): local stream needsNetwork — derivative+network fallback")
             return await localDerivativeThenNetwork()
         }
     }
@@ -180,10 +243,15 @@ struct ExifService: Sendable {
                 guard resumed.claim() else { return }
                 timeoutTask.withLock { $0?.cancel() }
                 let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
-                if let data,
-                   let source = CGImageSourceCreateWithData(data as CFData, sourceOptions),
-                   let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, sourceOptions) as? [CFString: Any] {
-                    continuation.resume(returning: .success(Self.parse(properties: properties)))
+                if let data {
+                    // Got rendition bytes. If ImageIO can't parse them the
+                    // original is unreadable (not a download problem).
+                    if let source = CGImageSourceCreateWithData(data as CFData, sourceOptions),
+                       let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, sourceOptions) as? [CFString: Any] {
+                        continuation.resume(returning: .success(Self.parse(properties: properties)))
+                    } else {
+                        continuation.resume(returning: .unreadable)
+                    }
                     return
                 }
                 // No local rendition → the caller must go to the network.
@@ -207,6 +275,10 @@ struct ExifService: Sendable {
         case needsNetwork
         /// Metadata not found within `maxBytes`.
         case overBudget
+        /// The full buffer arrived (no error) but ImageIO could not parse it —
+        /// an unreadable original, not a transport problem.
+        case unreadable
+        /// Hard error obtaining the bytes for a non-network reason.
         case failure
     }
 
@@ -265,6 +337,18 @@ struct ExifService: Sendable {
                     }
                     if s.buffer.count >= maxBytes {
                         s.resumed = true
+                        // Local reads skip the per-chunk incremental parse
+                        // above (HEIC decode spam), so a local original larger
+                        // than the streaming budget reaches the cap unparsed.
+                        // JPEG and most containers carry the metadata block at
+                        // the front — well inside the buffer — so try one parse
+                        // of the accumulated prefix before giving up. Recovers a
+                        // big local original here instead of dropping to the
+                        // slower editing-input fallback (which can itself fail,
+                        // e.g. PHPhotosError 3164).
+                        if !useNetwork, let properties = Self.metadataProperties(fromPartial: s.buffer) {
+                            return .success(Self.parse(properties: properties))
+                        }
                         return .overBudget
                     }
                     return nil
@@ -306,7 +390,9 @@ struct ExifService: Sendable {
                    let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, sourceOptions) as? [CFString: Any] {
                     continuation.resume(returning: .success(Self.parse(properties: properties)))
                 } else {
-                    continuation.resume(returning: .failure)
+                    // Bytes fully arrived (no error) but unparseable — the
+                    // original is unreadable, not a transport failure.
+                    continuation.resume(returning: .unreadable)
                 }
             }
 
@@ -420,7 +506,9 @@ struct ExifService: Sendable {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, sourceOptions),
               let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, sourceOptions) as? [CFString: Any]
         else {
-            return .failure
+            // The file URL resolved but ImageIO can't parse it — the original
+            // is unreadable, not a download problem.
+            return .unreadable
         }
         return .success(parse(properties: properties))
     }

@@ -530,7 +530,11 @@ final class LibraryController {
     /// still complete (they cost no data), so this only gates iCloud streaming.
     /// Drives a persistent "Indexing paused — waiting for Wi-Fi" indicator.
     private(set) var indexStreamingPaused = false
-    /// Count of `pendingICloud`/`error` rows awaiting an iCloud read.
+    /// Count of `pendingICloud` rows genuinely awaiting an iCloud/network read
+    /// — **excludes** `error`. Local `error` rows (unreadable/hard-fail) are
+    /// non-network and converge to `noExif` via the give-up cap on incremental
+    /// runs, so they must not drive the "iCloud not responding" auto-retry/card
+    /// (doing so popped that dialog for corrupt *local* files).
     private(set) var pendingICloudCount = 0
 
     // MARK: Auto-retry
@@ -592,7 +596,7 @@ final class LibraryController {
     /// the current network path. Cheap query; called at run edges and on path
     /// changes (both rare).
     func refreshPausedState() {
-        pendingICloudCount = (try? metadataDAO.retryableAssetIds().count) ?? 0
+        pendingICloudCount = (try? metadataDAO.pendingICloudReadCount()) ?? 0
         indexStreamingPaused = networkStatus.isExpensivePath
             && !UserDefaults.standard.bool(forKey: SettingsKeys.allowCellularIndexing)
             && pendingICloudCount > 0

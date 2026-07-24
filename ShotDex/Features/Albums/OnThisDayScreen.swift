@@ -15,6 +15,7 @@ struct OnThisDayScreen: View {
 
     /// Delete selection: asset ids, no count cap (unlike Compare).
     @State private var isSelecting = false
+    @State private var isComparePresented = false
     @State private var selectedIds: Set<String> = []
     @State private var swipeBaselineIds: Set<String> = []
     @State private var isSwipeDragActive = false
@@ -61,10 +62,12 @@ struct OnThisDayScreen: View {
         .navigationTitle(dateTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
-        .toolbar(isSelecting ? .hidden : .automatic, for: .tabBar)
         .onChange(of: isSelecting) { navigation.hidesTabBar = isSelecting }
         .onChange(of: selectionSnapshot) {
             navigation.selectionBar = isSelecting ? makeSelectionConfig() : nil
+        }
+        .onAppear {
+            if isSelecting { navigation.selectionBar = makeSelectionConfig() }
         }
         .onDisappear {
             navigation.hidesTabBar = false
@@ -89,6 +92,11 @@ struct OnThisDayScreen: View {
         .fullScreenCover(item: $viewerTarget) { target in
             if let controller {
                 PhotoDetailScreen(controller: controller, currentIndex: target.startIndex)
+            }
+        }
+        .fullScreenCover(isPresented: $isComparePresented, onDismiss: stopSelecting) {
+            if let photos = comparePhotos() {
+                CompareScreen(photos: photos)
             }
         }
         .alert(
@@ -215,8 +223,8 @@ struct OnThisDayScreen: View {
         swipeBaselineIds = []
     }
 
-    /// Selection is a `Set` here; normalize to an array for the snapshot and the
-    /// config's thumbnail preview (order isn't meaningful — Compare is disabled).
+    /// Selection is a `Set` here; normalize to an array for the snapshot (display
+    /// order is applied separately in `orderedSelection`).
     private struct SelectionSnapshot: Equatable {
         var isSelecting: Bool
         var ids: [String]
@@ -226,17 +234,38 @@ struct OnThisDayScreen: View {
         SelectionSnapshot(isSelecting: isSelecting, ids: Array(selectedIds), isDeleting: isDeleting)
     }
 
-    /// Delete-only config (no Compare) for the scaffold-hosted bar.
+    /// Config the scaffold renders as the bottom bar — same as the other albums:
+    /// Compare (2–4) + Delete + thumbnail preview. Selection is a `Set`, so the
+    /// preview and Compare panes follow `controller.photos` order (see
+    /// `orderedSelection`) rather than an arbitrary set iteration.
     private func makeSelectionConfig() -> SelectionBarConfig {
         SelectionBarConfig(
             selectionCount: selectedIds.count,
-            thumbnailIds: Array(selectedIds),
+            thumbnailIds: orderedSelection,
             photoLibrary: photoLibrary,
-            onCompare: nil,
+            onCompare: { isComparePresented = true },
             onDelete: deleteSelected,
             onDeselect: { selectedIds.remove($0) },
             isDeleting: isDeleting
         )
+    }
+
+    /// Selected ids in display order (the grid's chronological order), since the
+    /// backing store is an unordered `Set`.
+    private var orderedSelection: [String] {
+        guard let controller else { return Array(selectedIds) }
+        return controller.photos.map(\.assetId).filter(selectedIds.contains)
+    }
+
+    /// Compare panes follow the display order of the selection.
+    private func comparePhotos() -> [ComparePhoto]? {
+        guard let controller,
+              (2...CompareScreen.maxPhotoCount).contains(selectedIds.count) else { return nil }
+        let photos = orderedSelection.compactMap { id -> ComparePhoto? in
+            guard let asset = controller.assetsById[id] else { return nil }
+            return ComparePhoto(metadata: controller.metadata(for: id), asset: asset)
+        }
+        return photos.count >= 2 ? photos : nil
     }
 
     private func shareSelected() {
@@ -268,7 +297,7 @@ struct OnThisDayScreen: View {
     }
 
     private var bottomSpacerHeight: CGFloat {
-        if isSelecting { return navigation.selectionBarHeight }
+        if isSelecting { return navigation.selectionGridInset }
         if #unavailable(iOS 26.0) { return 90 }
         return 0
     }

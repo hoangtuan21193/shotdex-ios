@@ -40,10 +40,12 @@ struct AlbumDetailScreen: View {
         .navigationTitle(album.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
-        .toolbar(isSelecting ? .hidden : .automatic, for: .tabBar)
         .onChange(of: isSelecting) { navigation.hidesTabBar = isSelecting }
         .onChange(of: selectionSnapshot) {
             navigation.selectionBar = isSelecting ? makeSelectionConfig() : nil
+        }
+        .onAppear {
+            if isSelecting { navigation.selectionBar = makeSelectionConfig() }
         }
         .onDisappear {
             navigation.hidesTabBar = false
@@ -101,7 +103,7 @@ struct AlbumDetailScreen: View {
             ),
             isSelecting: isSelecting,
             selectedIds: selectedIds,
-            bottomInset: isSelecting ? navigation.selectionBarHeight : bottomChromeInset,
+            bottomInset: isSelecting ? navigation.selectionGridInset : bottomChromeInset,
             photoLibrary: photoLibrary,
             onTap: { _, metadata in
                 if isSelecting {
