@@ -8,6 +8,7 @@ final class AppDependencies {
     let database: AppDatabase
     let metadataDAO: MetadataDAO
     let libraryQueryDAO: LibraryQueryDAO
+    let filterSuggestions: FilterSuggestionRepository
     let statsDAO: StatsDAO
     let smartAlbumDAO: SmartAlbumDAO
     let statChartDAO: StatChartDAO
@@ -31,7 +32,9 @@ final class AppDependencies {
         )
         self.database = database
         self.metadataDAO = metadataDAO
-        self.libraryQueryDAO = LibraryQueryDAO(database: database)
+        let libraryQueryDAO = LibraryQueryDAO(database: database)
+        self.libraryQueryDAO = libraryQueryDAO
+        self.filterSuggestions = FilterSuggestionRepository(queryDAO: libraryQueryDAO)
         self.statsDAO = StatsDAO(database: database)
         self.smartAlbumDAO = SmartAlbumDAO(database: database)
         self.statChartDAO = StatChartDAO(database: database)

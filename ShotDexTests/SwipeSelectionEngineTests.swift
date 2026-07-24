@@ -21,14 +21,19 @@ struct SwipeSelectionEngineTests {
         #expect(result == .scroll)
     }
 
-    @Test func perfectDiagonalPrefersSelect() {
+    @Test func perfectDiagonalPrefersScroll() {
         let result = SwipeSelectionEngine.activation(translation: CGSize(width: 10, height: 10))
-        #expect(result == .select)
+        #expect(result == .scroll)
     }
 
     @Test func leftwardDragAlsoSelects() {
         let result = SwipeSelectionEngine.activation(translation: CGSize(width: -12, height: 0))
         #expect(result == .select)
+    }
+
+    @Test func barelyHorizontalDiagonalStillScrolls() {
+        let result = SwipeSelectionEngine.activation(translation: CGSize(width: 11, height: 10))
+        #expect(result == .scroll)
     }
 
     // MARK: Range
@@ -72,5 +77,41 @@ struct SwipeSelectionEngineTests {
 
     @Test func pointOutsideAllFramesMisses() {
         #expect(SwipeSelectionEngine.tileId(at: CGPoint(x: 500, y: 500), frames: frames) == nil)
+    }
+
+    // MARK: Edge auto-scroll
+
+    private let visibleBounds = CGRect(x: 0, y: 100, width: 320, height: 600)
+
+    @Test func middleOfViewportDoesNotAutoScroll() {
+        #expect(
+            SwipeSelectionEngine.autoScrollDelta(
+                locationY: 400, visibleBounds: visibleBounds
+            ) == 0
+        )
+    }
+
+    @Test func topEdgeScrollsUpAndBottomEdgeScrollsDown() {
+        #expect(
+            SwipeSelectionEngine.autoScrollDelta(
+                locationY: 100, visibleBounds: visibleBounds
+            ) == -14
+        )
+        #expect(
+            SwipeSelectionEngine.autoScrollDelta(
+                locationY: 700, visibleBounds: visibleBounds
+            ) == 14
+        )
+    }
+
+    @Test func edgeAutoScrollAcceleratesTowardPhysicalEdge() {
+        let inner = SwipeSelectionEngine.autoScrollDelta(
+            locationY: 150, visibleBounds: visibleBounds
+        )
+        let outer = SwipeSelectionEngine.autoScrollDelta(
+            locationY: 115, visibleBounds: visibleBounds
+        )
+        #expect(inner < 0)
+        #expect(outer < inner)
     }
 }

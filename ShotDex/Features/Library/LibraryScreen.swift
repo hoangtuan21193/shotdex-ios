@@ -90,7 +90,8 @@ struct LibraryScreen: View {
             guard photoLibrary.authorizationState.canReadLibrary, let controller else { return }
             controller.reload()
             controller.refreshFilterOptions()
-            controller.startIndexing()
+            // HomeTabScaffold owns auto-index scheduling so first paint gets a
+            // short head start and indexing remains independent of lazy tabs.
         }
         .onChange(of: photoLibrary.libraryChangeToken) {
             // Reload-then-index outside a run; coalesced into the end-of-run
@@ -150,13 +151,15 @@ struct LibraryScreen: View {
         case .began:
             swipeBaseline = selectedIds
         case .changed(let rangeIds, let select):
+            let updated: [String]
             if select {
                 let existing = Set(swipeBaseline)
-                selectedIds = swipeBaseline + rangeIds.filter { !existing.contains($0) }
+                updated = swipeBaseline + rangeIds.filter { !existing.contains($0) }
             } else {
                 let range = Set(rangeIds)
-                selectedIds = swipeBaseline.filter { !range.contains($0) }
+                updated = swipeBaseline.filter { !range.contains($0) }
             }
+            if updated != selectedIds { selectedIds = updated }
         case .ended:
             swipeBaseline = []
         }
@@ -732,7 +735,7 @@ struct LibraryScreen: View {
                         isSelecting = true
                     }
                 } label: {
-                    Image(systemName: isSelecting ? "checkmark.circle.fill" : "checkmark.circle")
+                    Image(systemName: isSelecting ? "xmark.circle.fill" : "checkmark.circle")
                 }
                 .accessibilityLabel(isSelecting ? "Cancel selection" : "Select photos")
             }

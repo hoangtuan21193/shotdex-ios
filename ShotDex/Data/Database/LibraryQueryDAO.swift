@@ -87,6 +87,17 @@ struct LibraryQueryDAO: Sendable {
         }
     }
 
+    /// Async live-count variant for rule-builder typing. GRDB performs the
+    /// decode/read on its reader pool, and the surrounding Swift task can be
+    /// cancelled/debounced without blocking the main actor.
+    func countAsync(matching query: SmartAlbumQuery) async throws -> Int {
+        let (whereSQL, arguments) = Self.whereClause(for: query)
+        let sql = "SELECT COUNT(*) FROM photo_metadata \(whereSQL)"
+        return try await database.reader.read { db in
+            try Int.fetchOne(db, sql: sql, arguments: arguments) ?? 0
+        }
+    }
+
     /// Distinct normalized camera manufacturers, for the filter sheet.
     func distinctCameraBrands() throws -> [String] {
         try distinctValues(column: "normalizedCameraManufacturer")

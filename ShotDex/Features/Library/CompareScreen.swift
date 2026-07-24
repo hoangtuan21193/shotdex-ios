@@ -432,18 +432,27 @@ private struct ComparePane: View {
             width: UIScreen.main.bounds.width * scale,
             height: UIScreen.main.bounds.height * scale
         )
-        // Compare loads the screen-sized derivative eagerly on open
-        // (`allowNetwork: true`) so every pane shows its photo immediately —
-        // iCloud serves a screen-sized rendition (fast), not the multi-MB
-        // original. `.opportunistic` paints a local preview first so panes
-        // aren't blank while the derivatives stream.
+        // Paint the best local rendition first, then replace it with the exact
+        // high-quality screen-sized derivative. The latter is cached by the
+        // shared service, so revisiting the same comparison is immediate.
+        _ = photoLibrary.requestBestLocalImage(
+            for: asset,
+            targetSize: targetSize
+        ) { result in
+            guard let result else { return }
+            let currentPixels = (image?.size.width ?? 0) * (image?.scale ?? 1)
+            let resultPixels = result.size.width * result.scale
+            if resultPixels > currentPixels {
+                image = result
+            }
+        }
         _ = photoLibrary.requestDetailImage(
             for: asset,
             targetSize: targetSize,
             allowNetwork: true,
             progress: { _ in }
-        ) { result, _ in
-            if let result {
+        ) { result, isDegraded in
+            if let result, !isDegraded {
                 image = result
             }
         }

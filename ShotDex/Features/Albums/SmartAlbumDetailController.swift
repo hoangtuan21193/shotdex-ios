@@ -21,22 +21,16 @@ final class SmartAlbumDetailController {
     /// Bumped when the content is replaced (initial load, delete) so the grid
     /// re-anchors.
     private(set) var contentGeneration = 0
+    /// Bumped when an async PHAsset chunk becomes available; visible cells
+    /// reconfigure in place without rebuilding/re-anchoring the grid.
+    private(set) var contentRefreshGeneration = 0
     private(set) var isLoading = false
 
     var matchCount: Int { items.count }
 
-    /// Bounded PHAsset resolution for grid tiles (same policy as Library).
-    @ObservationIgnored private lazy var assetCache = ChunkedLookupCache<PHAsset>(
-        chunkSize: 400,
-        maxChunks: 5,
-        fetch: { ids in
-            var byId: [String: PHAsset] = [:]
-            for asset in PhotoLibraryService.fetchAssets(ids: ids) {
-                byId[asset.localIdentifier] = asset
-            }
-            return byId
-        }
-    )
+    /// Bounded, non-blocking PHAsset resolution for grid tiles (same policy as
+    /// Library). Cache misses paint placeholders while the chunk resolves.
+    @ObservationIgnored private let assetCache: AsyncChunkedLookupCache<PHAsset>
 
     init(album: SmartAlbum, dependencies: AppDependencies) {
         self.queryDAO = dependencies.libraryQueryDAO
@@ -44,6 +38,21 @@ final class SmartAlbumDetailController {
         self.photoLibrary = dependencies.photoLibrary
         self.pipeline = dependencies.indexPipeline
         self.query = album.query
+        let assetCache = AsyncChunkedLookupCache<PHAsset>(
+            chunkSize: 120,
+            maxChunks: 6,
+            fetch: { ids in
+                var byId: [String: PHAsset] = [:]
+                for asset in PhotoLibraryService.fetchAssets(ids: ids) {
+                    byId[asset.localIdentifier] = asset
+                }
+                return byId
+            }
+        )
+        self.assetCache = assetCache
+        assetCache.onChunkLoaded = { [weak self] in
+            self?.contentRefreshGeneration &+= 1
+        }
     }
 
     func load() async {
@@ -55,7 +64,7 @@ final class SmartAlbumDetailController {
         contentGeneration &+= 1
     }
 
-    /// PHAsset for the tile at a flat grid index, via the bounded chunk cache.
+    /// Returns immediately; a miss starts an off-main chunk lookup.
     func asset(atFlatIndex index: Int) -> PHAsset? {
         assetCache.value(at: index)
     }

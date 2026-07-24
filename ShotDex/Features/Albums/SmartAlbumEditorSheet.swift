@@ -93,39 +93,46 @@ struct SmartAlbumEditorSheet: View {
                 }
             }
         }
-        .onAppear(perform: prepare)
-        .onChange(of: query) { _, _ in recomputeCount() }
+        .task { await prepare() }
+        .task(id: query) { await recomputeCount(for: query) }
     }
 
     /// Loads autocomplete suggestion sources and the initial match count.
-    private func prepare() {
-        let dao = dependencies.libraryQueryDAO
-        availableBrands = (try? dao.distinctCameraBrands()) ?? []
-        availableBodies = (try? dao.distinctCameraBodies()) ?? []
-        availableLenses = (try? dao.distinctLenses()) ?? []
+    @MainActor
+    private func prepare() async {
+        let suggestionRepository = dependencies.filterSuggestions
+        let smartAlbumDAO = dependencies.smartAlbumDAO
+        async let suggestionLoad = suggestionRepository.load()
+        let all = await Task.detached(priority: .utility) {
+            (try? smartAlbumDAO.fetchAllOrdered()) ?? []
+        }.value
+        let catalog = await suggestionLoad
+        guard !Task.isCancelled else { return }
+        availableBrands = catalog.brands
+        availableBodies = catalog.bodies
+        availableLenses = catalog.lenses
         // Names of every *other* album, so renaming to an existing name is
         // blocked while keeping this album's own name valid when editing.
-        let all = (try? dependencies.smartAlbumDAO.fetchAllOrdered()) ?? []
         takenNames = Set(
             all.filter { $0.id != existing?.id }
                 .map { $0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
         )
-        recomputeCount()
     }
 
     /// Recomputes the live match count off the main thread; a `COUNT(*)` over
     /// the compiled rules. Skips work when there is no valid condition yet.
-    private func recomputeCount() {
-        guard !query.isEmpty else {
+    @MainActor
+    private func recomputeCount(for snapshot: SmartAlbumQuery) async {
+        guard !snapshot.isEmpty else {
             matchCount = nil
             return
         }
-        let snapshot = query
         let dao = dependencies.libraryQueryDAO
-        Task.detached(priority: .userInitiated) {
-            let count = (try? dao.count(matching: snapshot)) ?? 0
-            await MainActor.run { matchCount = count }
-        }
+        try? await Task.sleep(for: .milliseconds(300))
+        guard !Task.isCancelled else { return }
+        let count = (try? await dao.countAsync(matching: snapshot)) ?? 0
+        guard !Task.isCancelled, query == snapshot else { return }
+        matchCount = count
     }
 
     private func save() {

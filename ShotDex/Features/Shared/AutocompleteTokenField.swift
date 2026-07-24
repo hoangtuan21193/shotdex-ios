@@ -33,10 +33,15 @@ struct AutocompleteTokenField: View {
     /// tokens (mirrors `LibraryController.suggestions(for:)`).
     private var filteredSuggestions: [String] {
         guard !trimmedDraft.isEmpty else { return [] }
-        return suggestions
-            .filter { $0.localizedCaseInsensitiveContains(trimmedDraft) && !tokens.contains($0) }
-            .prefix(8)
-            .map { $0 }
+        let tokenSet = Set(tokens)
+        var result: [String] = []
+        result.reserveCapacity(8)
+        for value in suggestions
+        where value.localizedCaseInsensitiveContains(trimmedDraft) && !tokenSet.contains(value) {
+            result.append(value)
+            if result.count == 8 { break }
+        }
+        return result
     }
 
     var body: some View {

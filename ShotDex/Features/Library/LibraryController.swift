@@ -41,6 +41,7 @@ struct IndexThroughput: Equatable {
 final class LibraryController {
 
     private let queryDAO: LibraryQueryDAO
+    private let filterSuggestions: FilterSuggestionRepository
     private let metadataDAO: MetadataDAO
     private let pipeline: IndexPipeline
     private let backgroundIndex: BackgroundIndexService
@@ -70,20 +71,11 @@ final class LibraryController {
     var matchCount: Int { items.count }
 
     @ObservationIgnored private var loadTask: Task<Void, Never>?
-    /// Bounded PHAsset resolution for grid tiles: chunks of ids around the
-    /// requested index, ≤5 chunks LRU (~2000 assets ceiling) — replaces the
-    /// unbounded assets-by-id dictionary that grew with every page.
-    @ObservationIgnored private lazy var assetCache = ChunkedLookupCache<PHAsset>(
-        chunkSize: 400,
-        maxChunks: 5,
-        fetch: { ids in
-            var byId: [String: PHAsset] = [:]
-            for asset in PhotoLibraryService.fetchAssets(ids: ids) {
-                byId[asset.localIdentifier] = asset
-            }
-            return byId
-        }
-    )
+    /// Bounded, non-blocking PHAsset resolution for grid tiles. A miss returns
+    /// nil immediately, resolves the surrounding chunk off-main, then bumps
+    /// `contentRefreshGeneration` so visible cells pick it up. This keeps
+    /// PhotoKit fetches out of collection-view data-source/prefetch callbacks.
+    @ObservationIgnored private let assetCache: AsyncChunkedLookupCache<PHAsset>
     @ObservationIgnored private var memoryWarningObserver: NSObjectProtocol?
     /// Lazy badge lookups for tiles indexed mid-run (see `lazyBadgeItem`).
     @ObservationIgnored private let badgeCache = GridBadgeCache()
@@ -153,6 +145,7 @@ final class LibraryController {
 
     init(dependencies: AppDependencies) {
         self.queryDAO = dependencies.libraryQueryDAO
+        self.filterSuggestions = dependencies.filterSuggestions
         self.metadataDAO = dependencies.metadataDAO
         self.pipeline = dependencies.indexPipeline
         self.backgroundIndex = dependencies.backgroundIndex
@@ -162,6 +155,21 @@ final class LibraryController {
         self.indexTraffic = dependencies.indexTraffic
         self.isLowPowerMode = dependencies.powerStatus.isLowPowerMode
         self.wasCharging = dependencies.powerStatus.isCharging
+        let assetCache = AsyncChunkedLookupCache<PHAsset>(
+            chunkSize: 120,
+            maxChunks: 6,
+            fetch: { ids in
+                var byId: [String: PHAsset] = [:]
+                for asset in PhotoLibraryService.fetchAssets(ids: ids) {
+                    byId[asset.localIdentifier] = asset
+                }
+                return byId
+            }
+        )
+        self.assetCache = assetCache
+        assetCache.onChunkLoaded = { [weak self] in
+            self?.contentRefreshGeneration &+= 1
+        }
         // Under memory pressure the PHAsset chunks are the one cache we
         // hold; visible tiles re-fetch their chunk on the next request.
         memoryWarningObserver = NotificationCenter.default.addObserver(
@@ -313,38 +321,38 @@ final class LibraryController {
         }.value
     }
 
-    /// PHAsset for the tile at a flat grid index, via the bounded chunk
-    /// cache. Nil while out of range (content just changed) or when the
-    /// asset vanished from the photo library.
+    /// PHAsset for the tile at a flat grid index. A cache miss schedules an
+    /// off-main chunk lookup and returns nil, so the cell paints a placeholder
+    /// instead of blocking the scroll callback.
     func asset(atFlatIndex index: Int) -> PHAsset? {
         assetCache.value(at: index)
     }
 
-    func refreshFilterOptions() {
-        // Off the main thread: called at launch alongside the initial
-        // reload, and the three DISTINCT scans would otherwise block first
-        // paint.
-        let queryDAO = self.queryDAO
+    func refreshFilterOptions(force: Bool = false) {
+        // Shared actor cache: the three DISTINCT scans never block first paint
+        // and repeated search/sheet presentations reuse the same catalog.
+        let filterSuggestions = self.filterSuggestions
         Task { [weak self] in
-            let (brands, bodies, lenses) = await Task.detached(priority: .utility) {
-                (
-                    (try? queryDAO.distinctCameraBrands()) ?? [],
-                    (try? queryDAO.distinctCameraBodies()) ?? [],
-                    (try? queryDAO.distinctLenses()) ?? []
-                )
-            }.value
-            guard let self else { return }
-            self.availableBrands = brands
-            self.availableBodies = bodies
-            self.availableLenses = lenses
+            let catalog = await filterSuggestions.load(forceRefresh: force)
+            guard let self, !Task.isCancelled else { return }
+            self.availableBrands = catalog.brands
+            self.availableBodies = catalog.bodies
+            self.availableLenses = catalog.lenses
         }
     }
 
     /// Autosuggest source for search: known camera + lens names.
     func suggestions(for query: String) -> [String] {
         guard !query.isEmpty else { return [] }
-        let all = availableBodies + availableLenses + availableBrands
-        return all.filter { $0.localizedCaseInsensitiveContains(query) }.prefix(8).map { $0 }
+        var result: [String] = []
+        result.reserveCapacity(8)
+        for values in [availableBodies, availableLenses, availableBrands] {
+            for value in values where value.localizedCaseInsensitiveContains(query) {
+                result.append(value)
+                if result.count == 8 { return result }
+            }
+        }
+        return result
     }
 
     // MARK: Indexing
@@ -486,7 +494,7 @@ final class LibraryController {
                 self.loadError = "Indexing failed."
             }
             self.reload()
-            self.refreshFilterOptions()
+            self.refreshFilterOptions(force: true)
             // A local-only run leaves iCloud-only photos pending; surface a
             // persistent "waiting for Wi-Fi" state when they can't stream now.
             self.refreshPausedState()

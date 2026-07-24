@@ -1,4 +1,5 @@
 import Foundation
+import ImageIO
 import Photos
 import PhotosUI
 import UIKit
@@ -45,6 +46,17 @@ final class PhotoLibraryService: NSObject {
 
     @ObservationIgnored
     private let imageManager = PHCachingImageManager()
+    /// Final, screen-sized detail renditions. PhotoKit's own cache is useful
+    /// while a request is active, but does not guarantee that reopening a page
+    /// gets the exact final callback immediately. Keep a small decoded-image
+    /// cache so revisits and pager neighbours paint sharp on their first frame.
+    @ObservationIgnored
+    private let detailImageCache: NSCache<NSString, UIImage> = {
+        let cache = NSCache<NSString, UIImage>()
+        cache.countLimit = 12
+        cache.totalCostLimit = 160 * 1_024 * 1_024
+        return cache
+    }()
     @ObservationIgnored
     private var isObservingChanges = false
     /// Trailing-edge debounce for `libraryChangeToken`: iCloud downloads
@@ -155,20 +167,27 @@ final class PhotoLibraryService: NSObject {
     func requestThumbnail(
         for asset: PHAsset,
         targetSize: CGSize,
+        contentMode: PHImageContentMode = .aspectFill,
         allowNetwork: Bool = true,
         completion: @escaping (UIImage?) -> Void
     ) -> PHImageRequestID {
         let options = PHImageRequestOptions()
         options.deliveryMode = .opportunistic
-        options.resizeMode = .fast
+        // Opportunistic still paints a cheap preview first; `.exact` requires
+        // the final callback to match the physical cell size instead of
+        // allowing PhotoKit to stop at a visibly softer nearby rendition.
+        options.resizeMode = .exact
         options.isNetworkAccessAllowed = allowNetwork
         return imageManager.requestImage(
             for: asset,
             targetSize: targetSize,
-            contentMode: .aspectFill,
+            contentMode: contentMode,
             options: options
         ) { image, _ in
-            completion(image)
+            // Opportunistic PhotoKit callbacks may fire before requestImage
+            // returns. Always defer state delivery so callers can first store
+            // the returned request ID and cancellation remains correct.
+            Task { @MainActor in completion(image) }
         }
     }
 
@@ -176,12 +195,16 @@ final class PhotoLibraryService: NSObject {
         imageManager.cancelImageRequest(requestId)
     }
 
-    /// Full-screen image for the detail viewer. `.opportunistic` delivers a
-    /// degraded preview first, then the full asset; `progress` reports the
-    /// iCloud download 0…1 (only fires for assets that must stream). The
-    /// completion Bool is `PHImageResultIsDegradedKey` — `false` means the
-    /// final full-resolution image arrived, so callers can drop the
-    /// downloading indicator.
+    /// Full-screen image for the detail viewer. Preview delivery also has a
+    /// separate local-only request (`requestBestLocalImage`); this opportunistic
+    /// request may return an immediate degraded rendition and then the exact
+    /// final. Callers must use the degraded flag to promote only the final.
+    /// Final screen-sized renditions are retained in a small decoded cache;
+    /// full-original requests are not.
+    ///
+    /// `progress` reports iCloud download 0…1. The completion Bool remains the
+    /// PhotoKit degraded flag lets callers distinguish the temporary and final
+    /// callbacks.
     func requestDetailImage(
         for asset: PHAsset,
         targetSize: CGSize,
@@ -189,9 +212,26 @@ final class PhotoLibraryService: NSObject {
         progress: @escaping (Double) -> Void,
         completion: @escaping (UIImage?, Bool) -> Void
     ) -> PHImageRequestID {
+        let cacheKey = detailCacheKey(
+            for: asset,
+            targetSize: targetSize,
+            contentMode: .aspectFit,
+            tier: .displayFinal
+        )
+        if let cacheKey, let cached = detailImageCache.object(forKey: cacheKey) {
+            // Keep the completion asynchronous like PhotoKit. This also lets
+            // the caller store PHInvalidImageRequestID before clearing it.
+            Task { @MainActor in completion(cached, false) }
+            return PHInvalidImageRequestID
+        }
+
         let options = PHImageRequestOptions()
+        // The proven detail path is opportunistic: PhotoKit can return an
+        // already-local display rendition immediately, then the exact final
+        // callback. The page's quality tiers prevent that early result from
+        // ever overwriting the final one.
         options.deliveryMode = .opportunistic
-        options.resizeMode = .fast
+        options.resizeMode = .exact
         // A screen-sized `targetSize` (network on) streams only iCloud's
         // screen-sized derivative — fast. Pass `PHImageManagerMaximumSize` to
         // pull the multi-MB original (zoom-to-pixel-peep). `allowNetwork: false`
@@ -207,8 +247,43 @@ final class PhotoLibraryService: NSObject {
             options: options
         ) { image, info in
             let degraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
-            completion(image, degraded)
+            let hasDisplayPixels = image.map {
+                Self.hasDisplayResolution($0, for: asset, targetSize: targetSize)
+            } ?? false
+            if let image, !degraded, hasDisplayPixels, let cacheKey {
+                let pixelWidth = Int(image.size.width * image.scale)
+                let pixelHeight = Int(image.size.height * image.scale)
+                self.detailImageCache.setObject(
+                    image,
+                    forKey: cacheKey,
+                    cost: pixelWidth * pixelHeight * 4
+                )
+            }
+            Task { @MainActor in completion(image, degraded) }
         }
+    }
+
+    /// Preheats local screen-sized renditions for the visible detail page and
+    /// its immediate pager neighbours. Network remains disabled: swiping must
+    /// not silently download several iCloud originals.
+    func startCachingDetailImages(for assets: [PHAsset], targetSize: CGSize) {
+        guard !assets.isEmpty else { return }
+        imageManager.startCachingImages(
+            for: assets,
+            targetSize: targetSize,
+            contentMode: .aspectFit,
+            options: Self.detailCachingOptions
+        )
+    }
+
+    func stopCachingDetailImages(for assets: [PHAsset], targetSize: CGSize) {
+        guard !assets.isEmpty else { return }
+        imageManager.stopCachingImages(
+            for: assets,
+            targetSize: targetSize,
+            contentMode: .aspectFit,
+            options: Self.detailCachingOptions
+        )
     }
 
     /// Sharpest LOCAL rendition, no network — the device-sized derivative
@@ -220,8 +295,19 @@ final class PhotoLibraryService: NSObject {
     func requestBestLocalImage(
         for asset: PHAsset,
         targetSize: CGSize,
+        contentMode: PHImageContentMode = .aspectFit,
         completion: @escaping (UIImage?) -> Void
     ) -> PHImageRequestID {
+        let cacheKey = detailCacheKey(
+            for: asset,
+            targetSize: targetSize,
+            contentMode: contentMode,
+            tier: .local
+        )
+        if let cacheKey, let cached = detailImageCache.object(forKey: cacheKey) {
+            Task { @MainActor in completion(cached) }
+            return PHInvalidImageRequestID
+        }
         let options = PHImageRequestOptions()
         options.isNetworkAccessAllowed = false
         options.deliveryMode = .highQualityFormat
@@ -229,10 +315,69 @@ final class PhotoLibraryService: NSObject {
         return imageManager.requestImage(
             for: asset,
             targetSize: targetSize,
-            contentMode: .aspectFit,
+            contentMode: contentMode,
             options: options
-        ) { image, _ in
-            completion(image)
+        ) { image, info in
+            let degraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+            if let image, !degraded, let cacheKey {
+                let pixelWidth = Int(image.size.width * image.scale)
+                let pixelHeight = Int(image.size.height * image.scale)
+                self.detailImageCache.setObject(
+                    image,
+                    forKey: cacheKey,
+                    cost: pixelWidth * pixelHeight * 4
+                )
+            }
+            Task { @MainActor in completion(image) }
+        }
+    }
+
+    /// Reads the actual current-version image bytes only when they already
+    /// exist on this device, then downsamples with ImageIO to the display
+    /// target. Unlike `requestImage`, this path cannot confuse a locally cached
+    /// grid rendition with the local original. Network stays disabled.
+    func requestLocalOriginalScreenImage(
+        for asset: PHAsset,
+        targetSize: CGSize,
+        completion: @escaping (UIImage?) -> Void
+    ) -> PHImageRequestID {
+        let cacheKey = detailCacheKey(
+            for: asset,
+            targetSize: targetSize,
+            contentMode: .aspectFit,
+            tier: .localOriginal
+        )
+        if let cacheKey, let cached = detailImageCache.object(forKey: cacheKey) {
+            Task { @MainActor in completion(cached) }
+            return PHInvalidImageRequestID
+        }
+
+        let options = PHImageRequestOptions()
+        options.isNetworkAccessAllowed = false
+        options.deliveryMode = .highQualityFormat
+        options.version = .current
+        let maxPixel = Self.aspectFitMaxPixel(for: asset, targetSize: targetSize)
+
+        return imageManager.requestImageDataAndOrientation(
+            for: asset,
+            options: options
+        ) { data, _, _, _ in
+            guard let data,
+                  let image = Self.downsampleImageData(data, maxPixel: maxPixel)
+            else {
+                Task { @MainActor in completion(nil) }
+                return
+            }
+            if let cacheKey {
+                let pixelWidth = image.cgImage?.width ?? Int(image.size.width * image.scale)
+                let pixelHeight = image.cgImage?.height ?? Int(image.size.height * image.scale)
+                self.detailImageCache.setObject(
+                    image,
+                    forKey: cacheKey,
+                    cost: pixelWidth * pixelHeight * 4
+                )
+            }
+            Task { @MainActor in completion(image) }
         }
     }
 
@@ -266,14 +411,110 @@ final class PhotoLibraryService: NSObject {
         imageManager.stopCachingImagesForAllAssets()
     }
 
-    /// Matches `requestThumbnail`'s options (minus `.opportunistic`, which is
-    /// invalid for caching): fast resize, local-only.
+    /// Matches `requestThumbnail`'s sizing options (minus `.opportunistic`,
+    /// which is invalid for caching): exact resize, local-only.
     private static var cachingOptions: PHImageRequestOptions {
         let options = PHImageRequestOptions()
         options.deliveryMode = .highQualityFormat
-        options.resizeMode = .fast
+        options.resizeMode = .exact
         options.isNetworkAccessAllowed = false
         return options
+    }
+
+    private static var detailCachingOptions: PHImageRequestOptions {
+        let options = PHImageRequestOptions()
+        options.deliveryMode = .highQualityFormat
+        options.resizeMode = .exact
+        options.isNetworkAccessAllowed = false
+        return options
+    }
+
+    /// A local rendition may report non-degraded even when it is only the best
+    /// low-resolution file currently on device. It must never satisfy a later
+    /// network-final lookup at the same target size.
+    private enum DetailCacheTier: String {
+        case local
+        case localOriginal
+        case displayFinal
+    }
+
+    /// Full originals can be tens or hundreds of MB decoded, so only finite
+    /// display-sized requests participate in the decoded cache.
+    private func detailCacheKey(
+        for asset: PHAsset,
+        targetSize: CGSize,
+        contentMode: PHImageContentMode,
+        tier: DetailCacheTier
+    ) -> NSString? {
+        guard targetSize.width.isFinite, targetSize.height.isFinite,
+              targetSize.width < 100_000, targetSize.height < 100_000
+        else { return nil }
+        let width = Int(targetSize.width.rounded(.up))
+        let height = Int(targetSize.height.rounded(.up))
+        let mode = contentMode == .aspectFill ? "fill" : "fit"
+        return "\(asset.localIdentifier)|\(width)x\(height)|\(mode)|\(tier.rawValue)" as NSString
+    }
+
+    private nonisolated static func aspectFitMaxPixel(
+        for asset: PHAsset,
+        targetSize: CGSize
+    ) -> CGFloat {
+        let sourceWidth = CGFloat(asset.pixelWidth)
+        let sourceHeight = CGFloat(asset.pixelHeight)
+        guard sourceWidth > 0, sourceHeight > 0,
+              targetSize.width > 0, targetSize.height > 0
+        else { return max(targetSize.width, targetSize.height) }
+        let scale = min(
+            1,
+            min(targetSize.width / sourceWidth, targetSize.height / sourceHeight)
+        )
+        return ceil(max(sourceWidth * scale, sourceHeight * scale))
+    }
+
+    private nonisolated static func downsampleImageData(
+        _ data: Data,
+        maxPixel: CGFloat
+    ) -> UIImage? {
+        let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
+        guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions) else {
+            return nil
+        }
+        let thumbnailOptions: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: max(1, maxPixel),
+        ]
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(
+            source,
+            0,
+            thumbnailOptions as CFDictionary
+        ) else { return nil }
+        return UIImage(cgImage: cgImage)
+    }
+
+    private nonisolated static func hasDisplayResolution(
+        _ image: UIImage,
+        for asset: PHAsset,
+        targetSize: CGSize
+    ) -> Bool {
+        let sourceWidth = CGFloat(asset.pixelWidth)
+        let sourceHeight = CGFloat(asset.pixelHeight)
+        guard sourceWidth > 0, sourceHeight > 0 else { return true }
+        let fitScale = min(
+            1,
+            min(targetSize.width / sourceWidth, targetSize.height / sourceHeight)
+        )
+        let expected = [
+            sourceWidth * fitScale,
+            sourceHeight * fitScale,
+        ].sorted()
+        let actual = [
+            image.size.width * image.scale,
+            image.size.height * image.scale,
+        ].sorted()
+        return actual[0] >= expected[0] * 0.9
+            && actual[1] >= expected[1] * 0.9
     }
 
     // MARK: Favorites

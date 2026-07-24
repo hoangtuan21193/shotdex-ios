@@ -455,7 +455,32 @@ struct DatabaseTests {
             SmartAlbumRule(field: .cameraBody, op: .contains, text: "R6"),
         ])
         #expect(try queryDAO.count(matching: query) == 2)
+        #expect(try await queryDAO.countAsync(matching: query) == 2)
         let items = try await queryDAO.gridItems(matching: query, sort: .default)
         #expect(items.map(\.assetId).sorted() == ["a1", "a2"])
+    }
+
+    @Test func filterSuggestionRepositoryCachesUntilForcedRefresh() async throws {
+        let database = try AppDatabase.makeEmpty()
+        let metadataDAO = MetadataDAO(database: database)
+        let queryDAO = LibraryQueryDAO(database: database)
+        let repository = FilterSuggestionRepository(queryDAO: queryDAO)
+
+        try metadataDAO.saveBatch([
+            makeRecord(assetId: "a1", camera: "EOS R6", brand: "Canon", iso: 100),
+        ], cursorAssetId: nil)
+        let first = await repository.load()
+        #expect(first.brands == ["Canon"])
+        #expect(first.bodies == ["EOS R6"])
+
+        try metadataDAO.saveBatch([
+            makeRecord(assetId: "a2", camera: "A6700", brand: "Sony", iso: 100),
+        ], cursorAssetId: nil)
+        let cached = await repository.load()
+        #expect(cached.brands == ["Canon"])
+
+        let refreshed = await repository.load(forceRefresh: true)
+        #expect(refreshed.brands == ["Canon", "Sony"])
+        #expect(refreshed.bodies == ["A6700", "EOS R6"])
     }
 }

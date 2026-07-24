@@ -301,11 +301,14 @@ struct SmartAlbumRuleRow: View {
         let all = suggestions
         guard !all.isEmpty else { return [] }
         let query = rule.text.trimmingCharacters(in: .whitespaces).lowercased()
-        let filtered = query.isEmpty ? all : all.filter { $0.lowercased().contains(query) }
-        return Array(
-            filtered
-                .filter { $0.caseInsensitiveCompare(rule.text) != .orderedSame }
-                .prefix(12)
-        )
+        var result: [String] = []
+        result.reserveCapacity(12)
+        for value in all {
+            guard query.isEmpty || value.lowercased().contains(query) else { continue }
+            guard value.caseInsensitiveCompare(rule.text) != .orderedSame else { continue }
+            result.append(value)
+            if result.count == 12 { break }
+        }
+        return result
     }
 }

@@ -98,7 +98,7 @@ struct SmartAlbumDetailScreen: View {
             isDateSectioned: true,
             anchorsBottom: false,
             contentVersion: controller.contentGeneration,
-            contentRefreshVersion: 0,
+            contentRefreshVersion: controller.contentRefreshGeneration,
             jumpToNewestToken: 0,
             columnCount: Binding(
                 get: { GridDensity.clamped(storedColumns) },
@@ -143,13 +143,15 @@ struct SmartAlbumDetailScreen: View {
         case .began:
             swipeBaseline = selectedIds
         case .changed(let rangeIds, let select):
+            let updated: [String]
             if select {
                 let existing = Set(swipeBaseline)
-                selectedIds = swipeBaseline + rangeIds.filter { !existing.contains($0) }
+                updated = swipeBaseline + rangeIds.filter { !existing.contains($0) }
             } else {
                 let range = Set(rangeIds)
-                selectedIds = swipeBaseline.filter { !range.contains($0) }
+                updated = swipeBaseline.filter { !range.contains($0) }
             }
+            if updated != selectedIds { selectedIds = updated }
         case .ended:
             swipeBaseline = []
         }

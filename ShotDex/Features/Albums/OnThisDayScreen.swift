@@ -209,9 +209,10 @@ struct OnThisDayScreen: View {
             swipeBaselineIds = selectedIds
         case .changed(let rangeIds, let select):
             let ids = Set(rangeIds)
-            selectedIds = select
+            let updated = select
                 ? swipeBaselineIds.union(ids)
                 : swipeBaselineIds.subtracting(ids)
+            if updated != selectedIds { selectedIds = updated }
         case .ended:
             swipeBaselineIds = []
         }

@@ -81,9 +81,8 @@ struct AdvancedSearchSheet: View {
         }
         .onAppear {
             controller.refreshFilterOptions()
-            recomputeCount()
         }
-        .onChange(of: query) { _, _ in recomputeCount() }
+        .task(id: query) { await recomputeCount(for: query) }
     }
 
     private func apply() {
@@ -94,17 +93,22 @@ struct AdvancedSearchSheet: View {
     }
 
     /// Live match count off the main thread; skipped when no rule compiles.
-    private func recomputeCount() {
-        guard !query.isEmpty else {
+    @MainActor
+    private func recomputeCount(for snapshot: SmartAlbumQuery) async {
+        let cleanedSnapshot = SmartAlbumQuery(
+            matchMode: snapshot.matchMode,
+            rules: snapshot.validRules
+        )
+        guard !cleanedSnapshot.isEmpty else {
             matchCount = nil
             return
         }
-        let snapshot = cleaned
         let dao = dependencies.libraryQueryDAO
-        Task.detached(priority: .userInitiated) {
-            let count = (try? dao.count(matching: snapshot)) ?? 0
-            await MainActor.run { matchCount = count }
-        }
+        try? await Task.sleep(for: .milliseconds(300))
+        guard !Task.isCancelled else { return }
+        let count = (try? await dao.countAsync(matching: cleanedSnapshot)) ?? 0
+        guard !Task.isCancelled, query == snapshot else { return }
+        matchCount = count
     }
 }
 

@@ -9,6 +9,12 @@ struct HomeTabScaffold: View {
     @State private var navigation = AppNavigation()
     @State private var isSearchPresented = false
     @State private var libraryController: LibraryController?
+    /// Pre-iOS 26 keeps a custom ZStack so visited tabs preserve navigation
+    /// state, but mounts each tab only on first selection. Hidden, never-visited
+    /// Albums/Statistics screens therefore do no PhotoKit/aggregate work during
+    /// Library first paint.
+    @State private var mountedLegacyTabs: Set<AppTab> = [.library]
+    @State private var hasPassedInitialIndexDelay = false
 
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(\.scenePhase) private var scenePhase
@@ -46,6 +52,20 @@ struct HomeTabScaffold: View {
             set: { newValue in
                 if newValue == .library, navigation.selectedTab == .library {
                     navigation.retapLibrary()
+                }
+                navigation.selectedTab = newValue
+            }
+        )
+    }
+
+    /// Mounts a legacy tab before publishing the selection, avoiding a blank
+    /// intermediate frame on its first tap.
+    private var legacyTabSelection: Binding<AppTab> {
+        Binding(
+            get: { navigation.selectedTab },
+            set: { newValue in
+                if newValue != .search {
+                    mountedLegacyTabs.insert(newValue)
                 }
                 navigation.selectedTab = newValue
             }
@@ -98,10 +118,15 @@ struct HomeTabScaffold: View {
             if libraryController == nil {
                 libraryController = LibraryController(dependencies: dependencies)
             }
-            autoIndex()
+            // Let the Library publish its first interactive frame before the
+            // full PhotoKit/index reconciliation starts competing for I/O.
+            try? await Task.sleep(for: .milliseconds(500))
+            guard !Task.isCancelled else { return }
+            hasPassedInitialIndexDelay = true
+            if scenePhase == .active { autoIndex() }
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { autoIndex() }
+            if phase == .active, hasPassedInitialIndexDelay { autoIndex() }
         }
         .onChange(of: navigation.pendingLibraryFilter) { _, pending in
             guard let pending else { return }
@@ -121,7 +146,7 @@ struct HomeTabScaffold: View {
             .overlay(alignment: .bottom) {
                 if navigation.selectionBar == nil {
                     LiquidGlassTabBar(
-                        selection: $navigation.selectedTab,
+                        selection: legacyTabSelection,
                         onReselect: { tab in
                             if tab == .library {
                                 navigation.retapLibrary()
@@ -160,15 +185,24 @@ struct HomeTabScaffold: View {
                 if libraryController == nil {
                     libraryController = LibraryController(dependencies: dependencies)
                 }
-                autoIndex()
+                // Let the Library publish its first interactive frame before
+                // the full PhotoKit/index reconciliation starts competing.
+                try? await Task.sleep(for: .milliseconds(500))
+                guard !Task.isCancelled else { return }
+                hasPassedInitialIndexDelay = true
+                if scenePhase == .active { autoIndex() }
             }
             .onChange(of: scenePhase) { _, phase in
-                if phase == .active { autoIndex() }
+                if phase == .active, hasPassedInitialIndexDelay { autoIndex() }
             }
             .onChange(of: navigation.pendingLibraryFilter) { _, pending in
                 guard let pending else { return }
                 libraryController?.criteria = pending
                 navigation.pendingLibraryFilter = nil
+            }
+            .onChange(of: navigation.selectedTab) { _, tab in
+                guard tab != .search else { return }
+                mountedLegacyTabs.insert(tab)
             }
             .sheet(isPresented: $isSearchPresented) {
                 if let libraryController {
@@ -184,9 +218,15 @@ struct HomeTabScaffold: View {
 
     private var tabContent: some View {
         ZStack {
-            tabStack(.library) { LibraryScreen(controller: libraryController) }
-            tabStack(.albums) { AlbumsScreen() }
-            tabStack(.statistics) { StatisticsScreen() }
+            if mountedLegacyTabs.contains(.library) {
+                tabStack(.library) { LibraryScreen(controller: libraryController) }
+            }
+            if mountedLegacyTabs.contains(.albums) {
+                tabStack(.albums) { AlbumsScreen() }
+            }
+            if mountedLegacyTabs.contains(.statistics) {
+                tabStack(.statistics) { StatisticsScreen() }
+            }
         }
     }
 

@@ -90,11 +90,9 @@ struct PhotoDetailScreen: View {
     /// badge so the user doesn't stare at an endless spinner.
     @State private var downloadStalled = false
     @State private var stallWatchTask: Task<Void, Never>?
-    /// Latest (progress, downloading) reported per page index. Pages preload
-    /// off-screen and report BEFORE they become current, so the visible ring
-    /// reads the current index out of here — otherwise a swiped-to page whose
-    /// download already stalled would show no ring/stall at all (its one report
-    /// fired while it wasn't current). Pruned to a small window around current.
+    /// Latest explicit full-original download state per page index. Local-only
+    /// paging reports false to clear stale state; zoom downloads are isolated
+    /// by index so their ring never leaks onto the next page.
     @State private var pageDownload: [Int: (progress: Double, downloading: Bool)] = [:]
 
     /// No-progress window before a download is declared stalled.
@@ -129,11 +127,12 @@ struct PhotoDetailScreen: View {
                 },
                 onSwipeUp: { isMetadataPresented = true },
                 onDownloadStateChange: { index, progress, downloading in
-                    // An active iCloud stream keeps extending the indexing
-                    // pause, so long downloads never lose the bandwidth.
-                    dependencies.indexInteractionGate.touch()
-                    // Record every page (incl. off-screen preloads); the ring
-                    // reflects whichever page is current.
+                    // Only an explicit zoom/original stream needs to extend the
+                    // indexing pause. Local paging reports false merely to
+                    // clear stale state for that page.
+                    if downloading {
+                        dependencies.indexInteractionGate.touch()
+                    }
                     recordDownloadState(index: index, progress: progress, downloading: downloading)
                 },
                 onMetadataRefresh: { index in
@@ -565,11 +564,34 @@ private struct ICloudDownloadRing: View {
 /// videos. Resolves its own asset from the source on appear and keeps it in
 /// `@State`, so the parent's per-frame body evaluations (dismiss drag) never
 /// re-fetch anything.
+/// Per-host visibility signal. UIPageViewController may construct/load neighbour
+/// pages before they are visible; only the active host may start a network
+/// screen-derivative request.
+@MainActor
+@Observable
+final class DetailPageLoadState {
+    var isActive = false
+}
+
 struct PhotoDetailPage: View {
+    /// Image callbacks can finish out of order. Their quality must only move
+    /// upward: PhotoKit may upscale a soft local rendition to the requested
+    /// pixel dimensions, so comparing UIImage width/height cannot tell whether
+    /// it is sharper than a network-final rendition.
+    private enum ImageQuality: Int {
+        case none
+        case thumbnail
+        case local
+        case localOriginal
+        case displayFinal
+        case original
+    }
+
     @Environment(PhotoLibraryService.self) private var photoLibrary
 
     let source: any PhotoBrowsingSource
     let index: Int
+    let loadState: DetailPageLoadState
     /// Bottom room reserved on a video so its native transport controls render
     /// above the info panel instead of behind it. 0 for photos (full-bleed zoom).
     var videoBottomInset: CGFloat = 0
@@ -585,24 +607,30 @@ struct PhotoDetailPage: View {
     var onMetadataRefresh: ((Int) -> Void)?
 
     @State private var image: UIImage?
+    @State private var imageQuality: ImageQuality = .none
     @State private var player: AVPlayer?
     @State private var isVideo = false
     @State private var asset: PHAsset?
     /// Set once the full-resolution original request has been fired (first
     /// zoom-in), so a later zoom doesn't kick off a second download.
     @State private var didRequestFullResolution = false
-    /// In-flight screen-sized display request — cancelled when the page scrolls
-    /// away so preloaded neighbours don't keep downloading and starve the
-    /// visible page's download of bandwidth.
-    @State private var requestId: PHImageRequestID?
+    /// Fast local preview request. Network is always disabled; it bridges the
+    /// few milliseconds until the exact best-local rendition arrives.
+    @State private var localPreviewRequestId: PHImageRequestID?
+    /// High-quality screen-sized derivative. Only the active page owns one;
+    /// neighbours stay local-only until paging completes.
+    @State private var displayRequestId: PHImageRequestID?
     /// In-flight full-original request (zoom-to-pixel-peep) — cancelled with the
     /// page too; it pulls the multi-MB original so leaving mid-download must not
     /// keep it running.
     @State private var fullResRequestId: PHImageRequestID?
-    /// In-flight best-local-rendition request (sharp placeholder while the
-    /// iCloud derivative streams) — fired once per page, cancelled with it.
+    /// In-flight exact best-local-rendition request, fired once per page.
     @State private var localBestRequestId: PHImageRequestID?
+    /// Actual current-version bytes, read only when already on device and
+    /// downsampled to screen size with ImageIO.
+    @State private var localOriginalRequestId: PHImageRequestID?
     @State private var didRequestLocalBest = false
+    @State private var didRetryDisplayDerivative = false
 
     var body: some View {
         Group {
@@ -616,17 +644,36 @@ struct PhotoDetailPage: View {
                     ProgressView().tint(.white)
                 }
             } else if let image {
-                ZoomableImageView(image: image, onZoomChange: handleZoom)
+                ZoomableImageView(
+                    image: image,
+                    onZoomStart: loadFullResolution,
+                    onZoomChange: handleZoom
+                )
             } else {
                 ProgressView().tint(.white)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // This page is hosted inside its own UIHostingController. Ignoring the
+        // safe area only on the outer pager does not propagate into that host,
+        // which previously left permanent black status/home-indicator bands
+        // even after the image was zoomed.
+        .ignoresSafeArea()
         .onAppear { load() }
+        .onChange(of: loadState.isActive) { _, active in
+            if active {
+                startDisplayUpgradeWhenReady()
+            } else {
+                cancelDisplayUpgrade()
+            }
+        }
         .onDisappear {
             player?.pause()
-            if let requestId {
-                photoLibrary.cancelThumbnailRequest(requestId)
+            if let localPreviewRequestId {
+                photoLibrary.cancelThumbnailRequest(localPreviewRequestId)
+            }
+            if let displayRequestId {
+                photoLibrary.cancelThumbnailRequest(displayRequestId)
             }
             if let fullResRequestId {
                 photoLibrary.cancelThumbnailRequest(fullResRequestId)
@@ -634,9 +681,14 @@ struct PhotoDetailPage: View {
             if let localBestRequestId {
                 photoLibrary.cancelThumbnailRequest(localBestRequestId)
             }
-            requestId = nil
+            if let localOriginalRequestId {
+                photoLibrary.cancelThumbnailRequest(localOriginalRequestId)
+            }
+            localPreviewRequestId = nil
+            displayRequestId = nil
             fullResRequestId = nil
             localBestRequestId = nil
+            localOriginalRequestId = nil
         }
     }
 
@@ -664,54 +716,179 @@ struct PhotoDetailPage: View {
         )
     }
 
-    /// The viewable image: a screen-sized derivative (`allowNetwork: true`).
-    /// iCloud serves a screen-sized rendition here — a few hundred KB, fast —
-    /// NOT the multi-MB original (that only downloads on zoom / share). This is
-    /// how Photos loads a sharp full-screen image quickly even when the original
-    /// is offloaded. `.opportunistic` paints a local low-res placeholder first,
-    /// then swaps in the sharp derivative; the ring shows while it streams.
+    /// Paging is local-only: paint a cached thumbnail immediately, then replace
+    /// it with the exact best-local screen rendition. No iCloud image request
+    /// starts just because the user swiped. The full original remains deferred
+    /// until an explicit zoom/share action.
     private func loadDisplayImage(_ asset: PHAsset) {
         guard image == nil else { return }
-        // 1. Sharp local rendition immediately, independent of the network
-        //    callback — the main image whenever iCloud is slow/unreachable.
-        //    (The `.opportunistic` degraded delivery is just the blurry cached
-        //    grid thumbnail, and it may never arrive when the daemon is stuck.)
-        loadLocalBest(asset)
-        // 2. Mark downloading up front so the ring + stall watch arm even if no
-        //    network callback ever fires; a local-only asset clears it below.
-        onDownloadStateChange?(index, 0, true)
-        // 3. Screen-sized iCloud derivative — upgrades the image when it lands.
-        requestId = photoLibrary.requestDetailImage(
+        onDownloadStateChange?(index, 0, false)
+        // The cheap local derivative normally hits the grid/PhotoKit cache and
+        // prevents a blank frame while the exact local rendition resolves.
+        localPreviewRequestId = photoLibrary.requestThumbnail(
             for: asset,
             targetSize: targetSize,
-            allowNetwork: true,
-            progress: { value in onDownloadStateChange?(index, value, true) }
-        ) { result, isDegraded in
-            if let result { image = result }
-            if isDegraded {
-                onDownloadStateChange?(index, 0, true)
-            } else {
-                onDownloadStateChange?(index, 1, false)
-                requestId = nil
+            contentMode: .aspectFit,
+            allowNetwork: false
+        ) { result in
+            if let result, hasDisplayResolution(result, for: asset) {
+                promoteImage(result, to: .local)
+            }
+            startDisplayUpgradeWhenReady()
+        }
+        // Exact screen-sized local rendition. PhotoLibraryService also stores
+        // the decoded final so swiping back is immediate.
+        loadLocalBest(asset)
+        loadLocalOriginal(asset)
+        startDisplayUpgradeWhenReady()
+    }
+
+    /// Sharp no-network display image: the device-sized rendition "Optimize
+    /// iPhone Storage" keeps locally. Never downgrades the fast preview.
+    private func loadLocalBest(_ asset: PHAsset) {
+        guard !didRequestLocalBest else { return }
+        didRequestLocalBest = true
+        localBestRequestId = photoLibrary.requestBestLocalImage(
+            for: asset,
+            targetSize: targetSize,
+            contentMode: .aspectFit
+        ) { result in
+            localBestRequestId = nil
+            if let result, hasDisplayResolution(result, for: asset) {
+                promoteImage(result, to: .local)
+            }
+            startDisplayUpgradeWhenReady()
+        }
+    }
+
+    /// Guaranteed sharp local path: succeeds only when the current-version
+    /// source bytes are already on device, then ImageIO downsamples them to the
+    /// display target. An iCloud-only original returns nil without downloading.
+    private func loadLocalOriginal(_ asset: PHAsset) {
+        guard localOriginalRequestId == nil else { return }
+        localOriginalRequestId = photoLibrary.requestLocalOriginalScreenImage(
+            for: asset,
+            targetSize: targetSize
+        ) { result in
+            localOriginalRequestId = nil
+            if let result, hasDisplayResolution(result, for: asset) {
+                promoteImage(result, to: .localOriginal)
             }
         }
     }
 
-    /// Sharp no-network placeholder: the device-sized rendition "Optimize
-    /// iPhone Storage" keeps locally. Applied only while the network final is
-    /// still pending and only when it beats the current image's resolution —
-    /// never downgrades.
-    private func loadLocalBest(_ asset: PHAsset) {
-        guard !didRequestLocalBest else { return }
-        didRequestLocalBest = true
-        localBestRequestId = photoLibrary.requestBestLocalImage(for: asset, targetSize: targetSize) { result in
-            localBestRequestId = nil
-            guard let result, requestId != nil else { return }
-            let currentPixelWidth = (image?.size.width ?? 0) * (image?.scale ?? 1)
-            if result.size.width * result.scale > currentPixelWidth {
-                image = result
+    /// Starts the screen-sized upgrade immediately and only for the page
+    /// UIPageViewController marked active. Local preview/best-local requests
+    /// run in parallel, so an offloaded asset cannot leave the viewer stuck on
+    /// its grid thumbnail while a local high-quality request waits or returns
+    /// nil.
+    private func startDisplayUpgradeWhenReady() {
+        guard loadState.isActive, displayRequestId == nil, let asset else { return }
+        startDisplayUpgrade(for: asset)
+    }
+
+    private func startDisplayUpgrade(for asset: PHAsset) {
+        guard loadState.isActive, displayRequestId == nil else { return }
+        displayRequestId = photoLibrary.requestDetailImage(
+            for: asset,
+            targetSize: targetSize,
+            allowNetwork: true,
+            progress: { value in
+                // The local image remains visible. Show network progress only
+                // after bytes actually move, never an indeterminate spinner on
+                // every page swipe.
+                if loadState.isActive, !didRequestFullResolution, value > 0 {
+                    onDownloadStateChange?(index, value, true)
+                }
+            }
+        ) { result, isDegraded in
+            guard loadState.isActive, !didRequestFullResolution else { return }
+            if !isDegraded {
+                let isSharp = result.map { hasDisplayResolution($0, for: asset) } ?? false
+                if let result, isSharp {
+                    promoteImage(result, to: .displayFinal)
+                }
+                if isSharp {
+                    cancelLocalImageRequests()
+                } else if !didRetryDisplayDerivative {
+                    // Some PhotoKit versions can finish a target-sized request
+                    // with a soft local rendition. Retry a larger derivative
+                    // before ever considering the multi-megabyte original.
+                    didRetryDisplayDerivative = true
+                    displayRequestId = nil
+                    startDisplayUpgrade(
+                        for: asset,
+                        requestTargetSize: CGSize(
+                            width: targetSize.width * 2,
+                            height: targetSize.height * 2
+                        )
+                    )
+                    return
+                }
+                onDownloadStateChange?(index, 1, false)
+                displayRequestId = nil
             }
         }
+    }
+
+    private func startDisplayUpgrade(
+        for asset: PHAsset,
+        requestTargetSize: CGSize
+    ) {
+        guard loadState.isActive, displayRequestId == nil else { return }
+        displayRequestId = photoLibrary.requestDetailImage(
+            for: asset,
+            targetSize: requestTargetSize,
+            allowNetwork: true,
+            progress: { value in
+                if loadState.isActive, !didRequestFullResolution, value > 0 {
+                    onDownloadStateChange?(index, value, true)
+                }
+            }
+        ) { result, isDegraded in
+            guard loadState.isActive, !didRequestFullResolution else { return }
+            if !isDegraded {
+                let isSharp = result.map { hasDisplayResolution($0, for: asset) } ?? false
+                if let result, isSharp {
+                    promoteImage(result, to: .displayFinal)
+                }
+                if isSharp {
+                    cancelLocalImageRequests()
+                }
+                onDownloadStateChange?(index, 1, false)
+                displayRequestId = nil
+            }
+        }
+    }
+
+    /// Uses actual rendered pixel dimensions, not PhotoKit's degraded flag.
+    /// Compare sorted axes so EXIF orientation cannot swap the verdict.
+    private func hasDisplayResolution(_ candidate: UIImage, for asset: PHAsset) -> Bool {
+        let sourceWidth = CGFloat(asset.pixelWidth)
+        let sourceHeight = CGFloat(asset.pixelHeight)
+        guard sourceWidth > 0, sourceHeight > 0 else { return true }
+        let fitScale = min(
+            1,
+            min(targetSize.width / sourceWidth, targetSize.height / sourceHeight)
+        )
+        let expected = [
+            sourceWidth * fitScale,
+            sourceHeight * fitScale,
+        ].sorted()
+        let actual = [
+            candidate.size.width * candidate.scale,
+            candidate.size.height * candidate.scale,
+        ].sorted()
+        return actual[0] >= expected[0] * 0.9
+            && actual[1] >= expected[1] * 0.9
+    }
+
+    private func cancelDisplayUpgrade() {
+        if let displayRequestId {
+            photoLibrary.cancelThumbnailRequest(displayRequestId)
+        }
+        displayRequestId = nil
+        onDownloadStateChange?(index, 0, false)
     }
 
     /// Upgrades to the full original (`PHImageManagerMaximumSize`) for
@@ -720,20 +897,61 @@ struct PhotoDetailPage: View {
     private func loadFullResolution() {
         guard !didRequestFullResolution, let asset else { return }
         didRequestFullResolution = true
+        // The original supersedes the screen derivative. Cancel it so a late
+        // smaller result cannot overwrite the full-resolution image.
+        cancelDisplayUpgrade()
         fullResRequestId = photoLibrary.requestDetailImage(
             for: asset,
             targetSize: PHImageManagerMaximumSize,
             allowNetwork: true,
-            progress: { value in onDownloadStateChange?(index, value, true) }
+            progress: { value in
+                guard loadState.isActive else { return }
+                onDownloadStateChange?(index, value, true)
+            }
         ) { result, isDegraded in
-            if let result { image = result }
+            guard loadState.isActive else { return }
+            if let result, !isDegraded {
+                promoteImage(result, to: .original)
+            }
             if isDegraded {
                 onDownloadStateChange?(index, 0, true)
             } else {
+                cancelLocalImageRequests()
                 onDownloadStateChange?(index, 1, false)
                 fullResRequestId = nil
             }
         }
+    }
+
+    /// Applies an image only when it upgrades the source-quality tier. Within
+    /// one tier, a larger decoded result may replace a smaller opportunistic
+    /// callback. Lower tiers can never overwrite display-final/original even
+    /// if PhotoKit reports larger (upscaled) pixel dimensions.
+    private func promoteImage(_ candidate: UIImage, to quality: ImageQuality) {
+        guard quality.rawValue >= imageQuality.rawValue else { return }
+        if quality == imageQuality, let image {
+            let currentPixels = image.size.width * image.scale * image.size.height * image.scale
+            let candidatePixels =
+                candidate.size.width * candidate.scale * candidate.size.height * candidate.scale
+            guard candidatePixels > currentPixels else { return }
+        }
+        image = candidate
+        imageQuality = quality
+    }
+
+    private func cancelLocalImageRequests() {
+        if let localPreviewRequestId {
+            photoLibrary.cancelThumbnailRequest(localPreviewRequestId)
+        }
+        if let localBestRequestId {
+            photoLibrary.cancelThumbnailRequest(localBestRequestId)
+        }
+        if let localOriginalRequestId {
+            photoLibrary.cancelThumbnailRequest(localOriginalRequestId)
+        }
+        localPreviewRequestId = nil
+        localBestRequestId = nil
+        localOriginalRequestId = nil
     }
 
     /// Forwards the zoom scale to the pager (to suppress swipe-down-dismiss) and
@@ -794,8 +1012,13 @@ private struct PhotoPager: UIViewControllerRepresentable {
         pager.delegate = context.coordinator
         pager.view.backgroundColor = .clear
         if let initial = context.coordinator.makePage(at: currentIndex) {
+            // setViewControllers can synchronously trigger the hosted SwiftUI
+            // page's onAppear. Mark it active first so that first appearance
+            // cannot miss the screen-sized request and remain on a thumbnail.
+            initial.loadState.isActive = true
             pager.setViewControllers([initial], direction: .forward, animated: false)
         }
+        context.coordinator.preheatDetailImages(around: currentIndex)
         context.coordinator.installGestures(on: pager)
         return pager
     }
@@ -818,6 +1041,10 @@ private struct PhotoPager: UIViewControllerRepresentable {
         /// Last reseat token acted on — starts at 0 to match the initial
         /// `reseatToken`, so the first update never forces a rebuild.
         private var appliedReseatToken = 0
+        /// Local screen-sized PhotoKit preheat window. Three assets is enough
+        /// for the current page plus both swipe directions without creating a
+        /// second hidden download queue.
+        private var preheatedAssets: [PHAsset] = []
 
         init(_ parent: PhotoPager) {
             self.parent = parent
@@ -827,9 +1054,11 @@ private struct PhotoPager: UIViewControllerRepresentable {
         /// at the library ends).
         func makePage(at index: Int) -> PhotoPageHost? {
             guard index >= 0, index < parent.source.photoCount else { return nil }
+            let loadState = DetailPageLoadState()
             let page = PhotoDetailPage(
                 source: parent.source,
                 index: index,
+                loadState: loadState,
                 videoBottomInset: parent.videoBottomInset,
                 onZoomChange: { [weak self] scale in
                     self?.currentZoom = scale
@@ -845,7 +1074,12 @@ private struct PhotoPager: UIViewControllerRepresentable {
             .environment(parent.photoLibrary)
             let isVideo = parent.source.photoId(at: index)
                 .flatMap { parent.source.asset(for: $0) }?.mediaType == .video
-            let host = PhotoPageHost(index: index, isVideo: isVideo, rootView: AnyView(page))
+            let host = PhotoPageHost(
+                index: index,
+                isVideo: isVideo,
+                loadState: loadState,
+                rootView: AnyView(page)
+            )
             host.view.backgroundColor = .clear
             return host
         }
@@ -860,6 +1094,8 @@ private struct PhotoPager: UIViewControllerRepresentable {
                   host.isVideo,
                   let rebuilt = makePage(at: host.index)
             else { return }
+            host.loadState.isActive = false
+            rebuilt.loadState.isActive = true
             pager.setViewControllers([rebuilt], direction: .forward, animated: false)
         }
 
@@ -892,9 +1128,14 @@ private struct PhotoPager: UIViewControllerRepresentable {
             guard completed,
                   let host = pageViewController.viewControllers?.first as? PhotoPageHost
             else { return }
+            for previous in previousViewControllers {
+                (previous as? PhotoPageHost)?.loadState.isActive = false
+            }
+            host.loadState.isActive = true
             currentZoom = 1
             parent.currentIndex = host.index
             parent.source.loadNextPageIfNeeded(currentIndex: host.index)
+            preheatDetailImages(around: host.index)
         }
 
         /// Forces a rebuild of the current page after an in-viewer deletion.
@@ -905,8 +1146,12 @@ private struct PhotoPager: UIViewControllerRepresentable {
             guard token != appliedReseatToken else { return }
             appliedReseatToken = token
             guard let page = makePage(at: index) else { return }
+            let previous = pager.viewControllers?.compactMap { $0 as? PhotoPageHost } ?? []
+            previous.forEach { $0.loadState.isActive = false }
             currentZoom = 1
+            page.loadState.isActive = true
             pager.setViewControllers([page], direction: .forward, animated: false)
+            preheatDetailImages(around: index)
         }
 
         /// Re-seats the pager when `currentIndex` is driven from outside (the
@@ -916,8 +1161,38 @@ private struct PhotoPager: UIViewControllerRepresentable {
             guard shown != index, let page = makePage(at: index) else { return }
             let direction: UIPageViewController.NavigationDirection =
                 (shown ?? index) <= index ? .forward : .reverse
+            let previous = pager.viewControllers?.compactMap { $0 as? PhotoPageHost } ?? []
+            previous.forEach { $0.loadState.isActive = false }
             currentZoom = 1
+            page.loadState.isActive = true
             pager.setViewControllers([page], direction: direction, animated: false)
+            preheatDetailImages(around: index)
+        }
+
+        func preheatDetailImages(around index: Int) {
+            let targetSize = CGSize(
+                width: UIScreen.main.bounds.width * UIScreen.main.scale,
+                height: UIScreen.main.bounds.height * UIScreen.main.scale
+            )
+            let newAssets = ((index - 1)...(index + 1)).compactMap { candidate -> PHAsset? in
+                guard candidate >= 0, candidate < parent.source.photoCount,
+                      let id = parent.source.photoId(at: candidate),
+                      let asset = parent.source.asset(for: id),
+                      asset.mediaType == .image
+                else { return nil }
+                return asset
+            }
+            if !preheatedAssets.isEmpty {
+                parent.photoLibrary.stopCachingDetailImages(
+                    for: preheatedAssets,
+                    targetSize: targetSize
+                )
+            }
+            preheatedAssets = newAssets
+            parent.photoLibrary.startCachingDetailImages(
+                for: newAssets,
+                targetSize: targetSize
+            )
         }
 
         // MARK: Gestures
@@ -980,10 +1255,17 @@ private struct PhotoPager: UIViewControllerRepresentable {
 private final class PhotoPageHost: UIHostingController<AnyView> {
     let index: Int
     let isVideo: Bool
+    let loadState: DetailPageLoadState
 
-    init(index: Int, isVideo: Bool, rootView: AnyView) {
+    init(
+        index: Int,
+        isVideo: Bool,
+        loadState: DetailPageLoadState,
+        rootView: AnyView
+    ) {
         self.index = index
         self.isVideo = isVideo
+        self.loadState = loadState
         super.init(rootView: rootView)
     }
 

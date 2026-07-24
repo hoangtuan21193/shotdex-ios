@@ -98,6 +98,10 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         context.coordinator.apply(self, isInitial: false)
     }
 
+    static func dismantleUIView(_ uiView: UICollectionView, coordinator: Coordinator) {
+        coordinator.stopAllDetailPreheating()
+    }
+
     // MARK: Coordinator
 
     @MainActor
@@ -115,15 +119,21 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         private var sections: [PhotoGridSection] = []
         private var appliedContentVersion: Int?
         private var appliedContentRefreshVersion: Int?
-        /// Ordered asset ids last handed to the collection view. Drives the
-        /// reload decision: any change to the list (not just its count) forces
-        /// a full `reloadData`, so the rendered cells never lag the snapshot
-        /// `didSelectItemAt` taps against.
-        private var appliedIds: [String] = []
+        /// List owners bump `contentVersion` for same-count identity/order
+        /// changes. Album paging uses a stable version but changes count, so the
+        /// coordinator only needs this scalar — never an O(n) id snapshot.
+        private var appliedPhotoCount = 0
         private var appliedColumns = 0
         private var appliedJumpToken: Int?
         private var appliedSelecting = false
-        private var appliedSelectedIds: [String] = []
+        /// Membership snapshot for O(1) cell configuration. Selection order is
+        /// owned by the screen/bottom tray; the grid only needs membership.
+        private var appliedSelectedIds: Set<String> = []
+        /// Local-only, screen-sized detail renditions for cells currently on
+        /// screen. Preheating before the tap avoids enlarging a grid thumbnail
+        /// while the detail viewer waits for its first usable image.
+        private var detailPreheatedByIndexPath: [IndexPath: PHAsset] = [:]
+        private let maximumDetailPreheatCount = 18
 
         // Pinch state
         private var transitionLayout: UICollectionViewTransitionLayout?
@@ -135,7 +145,15 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
 
         // Swipe-select state
         private var swipeActivation = SwipeSelectionEngine.Activation.undecided
-        private var swipeStartId: String?
+        /// Frozen once per gesture. Recomputing from the live selection would
+        /// flip select→deselect after the first callback and make badges blink.
+        private var swipeShouldSelect: Bool?
+        private var swipeStartFlatIndex: Int?
+        private var swipeLastFlatIndex: Int?
+        /// Physical finger location in the window. Converted back into the
+        /// collection's moving content coordinates on every auto-scroll frame.
+        private var swipeWindowLocation: CGPoint?
+        private var swipeAutoScrollDriver: GridDisplayLinkDriver?
 
         /// Settings display toggles, read once per change instead of five
         /// UserDefaults lookups per cell per (re)configure. Refreshing on the
@@ -164,6 +182,13 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         }
 
         deinit {
+            // Swift treats deinit as nonisolated even on an @MainActor UIKit
+            // coordinator. UIViewRepresentable creates/destroys this object on
+            // the main actor, so assert that isolation for display-link cleanup
+            // instead of leaking an interrupted auto-scroll driver.
+            MainActor.assumeIsolated {
+                swipeAutoScrollDriver?.invalidate()
+            }
             if let defaultsObserver {
                 NotificationCenter.default.removeObserver(defaultsObserver)
             }
@@ -176,8 +201,13 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             guard let collectionView else { return }
 
             let contentReplaced = newParent.contentVersion != appliedContentVersion
-            let newIds = newParent.photos.map(\.assetId)
-            let listChanged = newIds != appliedIds
+            let previousSelectedIds = appliedSelectedIds
+            let newSelectedIds = Set(newParent.selectedIds)
+            appliedSelectedIds = newSelectedIds
+            // List owners make same-count identity/order changes explicit via
+            // contentVersion; album paging/deletion changes count. This avoids
+            // materializing every asset id on all SwiftUI update paths.
+            let listChanged = newParent.photos.count != appliedPhotoCount
             let columnsChanged = newParent.columnCount != appliedColumns
 
             if columnsChanged, !isInitial, transitionLayout == nil {
@@ -200,11 +230,10 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                     anchor(collectionView)
                 }
                 appliedContentVersion = newParent.contentVersion
-                appliedIds = newIds
+                appliedPhotoCount = newParent.photos.count
             } else if refreshed {
                 // Same list, overlays changed — re-render visible tiles in
                 // place. No reloadData/anchor, so the scroll spot is kept.
-                rebuildSections()
                 reconfigureVisibleCells(collectionView)
             }
             appliedContentRefreshVersion = newParent.contentRefreshVersion
@@ -214,14 +243,23 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             }
             appliedJumpToken = newParent.jumpToNewestToken
 
-            if newParent.isSelecting != appliedSelecting
-                || newParent.selectedIds != appliedSelectedIds {
+            let selectionModeChanged = newParent.isSelecting != appliedSelecting
+            let changedSelectionIds = previousSelectedIds.symmetricDifference(newSelectedIds)
+            if selectionModeChanged || !changedSelectionIds.isEmpty {
                 appliedSelecting = newParent.isSelecting
-                appliedSelectedIds = newParent.selectedIds
-                reconfigureVisibleCells(collectionView)
+                updateVisibleSelection(
+                    collectionView,
+                    changedIds: selectionModeChanged ? nil : changedSelectionIds
+                )
             }
-            pinchRecognizer?.isEnabled = !newParent.isSelecting
+            // Pinch remains available in selection mode. It uses two touches
+            // while swipe-select is capped at one, so selected ids can stay
+            // intact while the user changes density.
+            pinchRecognizer?.isEnabled = true
             swipeRecognizer?.isEnabled = newParent.isSelecting
+            if !newParent.isSelecting, swipeActivation == .select {
+                finishActiveSwipeSelection()
+            }
         }
 
         /// Called by `GridCollectionView` the first time it lays out with
@@ -254,6 +292,26 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                       let flatIndex = flatIndex(for: indexPath)
                 else { continue }
                 configure(cell, at: flatIndex)
+            }
+        }
+
+        /// Updates only checkmark/border state. Re-running full `configure`
+        /// during every swipe step cancels badge work and rewrites image-view
+        /// state for all visible cells, which presents as thumbnail flicker.
+        private func updateVisibleSelection(
+            _ collectionView: UICollectionView,
+            changedIds: Set<String>?
+        ) {
+            for indexPath in collectionView.indexPathsForVisibleItems {
+                guard let cell = collectionView.cellForItem(at: indexPath) as? PhotoGridCell,
+                      let flatIndex = flatIndex(for: indexPath)
+                else { continue }
+                let assetId = parent.photos[flatIndex].assetId
+                guard changedIds?.contains(assetId) ?? true else { continue }
+                cell.updateSelection(
+                    isSelecting: parent.isSelecting,
+                    isSelected: appliedSelectedIds.contains(assetId)
+                )
             }
         }
 
@@ -354,11 +412,20 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         }
 
         private var thumbnailTargetSize: CGSize {
-            // 2x is indistinguishable at grid-cell size; 3x devices would pay
-            // 2.25x the decode/memory cost for nothing.
-            let scale = min(UIScreen.main.scale, 2)
+            // Match the physical display scale. Capping a 3x phone at 2x saved
+            // decode memory but left one- and two-column thumbnails visibly
+            // soft compared with Photos.
+            let scale = UIScreen.main.scale
             let side = cellPointWidth * scale
             return CGSize(width: side, height: side)
+        }
+
+        private var detailTargetSize: CGSize {
+            let scale = UIScreen.main.scale
+            return CGSize(
+                width: UIScreen.main.bounds.width * scale,
+                height: UIScreen.main.bounds.height * scale
+            )
         }
 
         // MARK: UICollectionViewDataSource
@@ -394,7 +461,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 cellWidth: cellPointWidth,
                 targetSize: thumbnailTargetSize,
                 isSelecting: parent.isSelecting,
-                isSelected: parent.selectedIds.contains(item.assetId),
+                isSelected: appliedSelectedIds.contains(item.assetId),
                 photoLibrary: parent.photoLibrary,
                 displayOptions: displayOptions,
                 lazyMetadataProvider: parent.lazyMetadataProvider
@@ -435,9 +502,48 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             forItemAt indexPath: IndexPath
         ) {
             guard let flatIndex = flatIndex(for: indexPath) else { return }
+            if let oldAsset = detailPreheatedByIndexPath.removeValue(forKey: indexPath) {
+                parent.photoLibrary.stopCachingDetailImages(
+                    for: [oldAsset],
+                    targetSize: detailTargetSize
+                )
+            }
+            let item = parent.photos[flatIndex]
+            if let asset = parent.assetProvider(flatIndex, item),
+               asset.mediaType == .image,
+               detailPreheatedByIndexPath.count < maximumDetailPreheatCount {
+                detailPreheatedByIndexPath[indexPath] = asset
+                parent.photoLibrary.startCachingDetailImages(
+                    for: [asset],
+                    targetSize: detailTargetSize
+                )
+            }
             if flatIndex >= parent.photos.count - 30 {
                 parent.onNearEnd()
             }
+        }
+
+        func collectionView(
+            _ collectionView: UICollectionView,
+            didEndDisplaying cell: UICollectionViewCell,
+            forItemAt indexPath: IndexPath
+        ) {
+            guard let asset = detailPreheatedByIndexPath.removeValue(forKey: indexPath) else {
+                return
+            }
+            parent.photoLibrary.stopCachingDetailImages(
+                for: [asset],
+                targetSize: detailTargetSize
+            )
+        }
+
+        func stopAllDetailPreheating() {
+            let assets = Array(detailPreheatedByIndexPath.values)
+            detailPreheatedByIndexPath.removeAll()
+            parent.photoLibrary.stopCachingDetailImages(
+                for: assets,
+                targetSize: detailTargetSize
+            )
         }
 
         func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
@@ -457,9 +563,10 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         func collectionView(
             _ collectionView: UICollectionView, cancelPrefetchingForItemsAt indexPaths: [IndexPath]
         ) {
-            parent.photoLibrary.stopCachingThumbnails(
-                for: assets(at: indexPaths), targetSize: thumbnailTargetSize
-            )
+            // Do not resolve PHAssets merely to cancel prefetch: an async cache
+            // miss here would start work for cells that are moving away. The
+            // bounded PHCachingImageManager/cache naturally evicts these small
+            // local thumbnails.
         }
 
         private func assets(at indexPaths: [IndexPath]) -> [PHAsset] {
@@ -500,7 +607,10 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             _ gestureRecognizer: UIGestureRecognizer,
             shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
         ) -> Bool {
-            gestureRecognizer === swipeRecognizer
+            let isSwipePinchPair =
+                (gestureRecognizer === swipeRecognizer && other === pinchRecognizer)
+                || (gestureRecognizer === pinchRecognizer && other === swipeRecognizer)
+            return gestureRecognizer === swipeRecognizer || isSwipePinchPair
         }
 
         @objc private func handleLongPress(_ recognizer: UILongPressGestureRecognizer) {
@@ -525,6 +635,10 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             guard collectionView != nil else { return }
             switch recognizer.state {
             case .began:
+                // A second finger may turn an in-progress one-finger selection
+                // into a pinch. Close the selection gesture exactly once; the
+                // selected ids remain untouched.
+                finishActiveSwipeSelection()
                 transitionBaselineScale = recognizer.scale
             case .changed:
                 // While the previous segment's finish/cancel animation is
@@ -648,7 +762,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             switch recognizer.state {
             case .began:
                 swipeActivation = .undecided
-                swipeStartId = nil
+                resetSwipeState(keepingScrollEnabled: true)
             case .changed:
                 let translation = recognizer.translation(in: collectionView)
                 if swipeActivation == .undecided {
@@ -656,38 +770,155 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                         translation: CGSize(width: translation.x, height: translation.y)
                     )
                     if swipeActivation == .select {
+                        // Recover the touch-down point rather than using the
+                        // location after UIKit's pan threshold. A fast swipe
+                        // can cross a whole tile before `.began`.
+                        let location = recognizer.location(in: collectionView)
+                        let startPoint = CGPoint(
+                            x: location.x - translation.x,
+                            y: location.y - translation.y
+                        )
+                        guard let startPath = collectionView.indexPathForItem(at: startPoint),
+                              let startIndex = flatIndex(for: startPath)
+                        else {
+                            swipeActivation = .scroll
+                            return
+                        }
+                        swipeStartFlatIndex = startIndex
+                        swipeShouldSelect = !appliedSelectedIds.contains(
+                            parent.photos[startIndex].assetId
+                        )
                         collectionView.isScrollEnabled = false
                         parent.onSwipeEvent(.began)
+                        updateSwipeRange(at: startPoint)
+                        startSwipeAutoScroll()
                     }
                 }
                 guard swipeActivation == .select else { return }
-                let location = recognizer.location(in: collectionView)
-                guard let indexPath = collectionView.indexPathForItem(at: location),
-                      let flatIndex = flatIndex(for: indexPath)
-                else { return }
-                let currentId = parent.photos[flatIndex].assetId
-                if swipeStartId == nil {
-                    swipeStartId = currentId
-                }
-                guard let startId = swipeStartId,
-                      let startIndex = parent.photos.firstIndex(where: { $0.assetId == startId })
-                else { return }
-                let range = min(startIndex, flatIndex)...max(startIndex, flatIndex)
-                let rangeIds = parent.photos[range].map(\.assetId)
-                // Starting on an already-selected tile deselects the range.
-                let select = !parent.selectedIds.contains(startId)
-                parent.onSwipeEvent(.changed(rangeIds: rangeIds, select: select))
+                swipeWindowLocation = recognizer.location(in: collectionView.window)
+                updateSwipeRange(at: recognizer.location(in: collectionView))
             case .ended, .cancelled, .failed:
-                if swipeActivation == .select {
-                    parent.onSwipeEvent(.ended)
-                    collectionView.isScrollEnabled = true
-                }
-                swipeActivation = .undecided
-                swipeStartId = nil
+                finishActiveSwipeSelection()
             default:
                 break
             }
         }
+
+        private func updateSwipeRange(at location: CGPoint) {
+            guard let collectionView,
+                  let startIndex = swipeStartFlatIndex,
+                  let shouldSelect = swipeShouldSelect,
+                  let indexPath = collectionView.indexPathForItem(at: location),
+                  let currentIndex = flatIndex(for: indexPath),
+                  currentIndex != swipeLastFlatIndex
+            else { return }
+            swipeLastFlatIndex = currentIndex
+            let range = min(startIndex, currentIndex)...max(startIndex, currentIndex)
+            parent.onSwipeEvent(
+                .changed(
+                    rangeIds: parent.photos[range].map(\.assetId),
+                    select: shouldSelect
+                )
+            )
+        }
+
+        private func startSwipeAutoScroll() {
+            guard swipeAutoScrollDriver == nil else { return }
+            let driver = GridDisplayLinkDriver { [weak self] in
+                self?.handleSwipeAutoScrollFrame()
+            }
+            driver.start()
+            swipeAutoScrollDriver = driver
+        }
+
+        private func handleSwipeAutoScrollFrame() {
+            guard swipeActivation == .select,
+                  let collectionView,
+                  let window = collectionView.window,
+                  let windowLocation = swipeWindowLocation
+            else { return }
+            let location = collectionView.convert(windowLocation, from: window)
+            let delta = SwipeSelectionEngine.autoScrollDelta(
+                locationY: location.y,
+                visibleBounds: collectionView.bounds
+            )
+            guard delta != 0 else { return }
+            let minimumY = -collectionView.adjustedContentInset.top
+            let maximumY = max(
+                minimumY,
+                collectionView.collectionViewLayout.collectionViewContentSize.height
+                    - collectionView.bounds.height
+                    + collectionView.adjustedContentInset.bottom
+            )
+            let nextY = min(max(collectionView.contentOffset.y + delta, minimumY), maximumY)
+            guard nextY != collectionView.contentOffset.y else { return }
+            collectionView.setContentOffset(
+                CGPoint(x: collectionView.contentOffset.x, y: nextY),
+                animated: false
+            )
+            // Scrolling changes which tile sits under a stationary finger.
+            updateSwipeRange(at: collectionView.convert(windowLocation, from: window))
+        }
+
+        private func resetSwipeState(keepingScrollEnabled: Bool) {
+            swipeAutoScrollDriver?.invalidate()
+            swipeAutoScrollDriver = nil
+            swipeShouldSelect = nil
+            swipeStartFlatIndex = nil
+            swipeLastFlatIndex = nil
+            swipeWindowLocation = nil
+            if !keepingScrollEnabled {
+                collectionView?.isScrollEnabled = true
+            }
+        }
+
+        /// Ends only the gesture lifecycle, never the selection itself. Used
+        /// both on touch-up and when a second finger promotes swipe to pinch.
+        private func finishActiveSwipeSelection() {
+            if swipeActivation == .select {
+                parent.onSwipeEvent(.ended)
+            }
+            swipeActivation = .undecided
+            resetSwipeState(keepingScrollEnabled: false)
+        }
+    }
+}
+
+/// CADisplayLink retains its target. This small driver owns the link while its
+/// callback captures the grid coordinator weakly, preventing an interrupted
+/// selection gesture from keeping the whole collection view alive.
+@MainActor
+private final class GridDisplayLinkDriver {
+    private let onFrame: @MainActor () -> Void
+    private var displayLink: CADisplayLink?
+
+    init(onFrame: @escaping @MainActor () -> Void) {
+        self.onFrame = onFrame
+    }
+
+    func start() {
+        guard displayLink == nil else { return }
+        let link = CADisplayLink(target: self, selector: #selector(tick))
+        link.preferredFrameRateRange = CAFrameRateRange(
+            minimum: 30,
+            maximum: 60,
+            preferred: 60
+        )
+        link.add(to: .main, forMode: .common)
+        displayLink = link
+    }
+
+    func invalidate() {
+        displayLink?.invalidate()
+        displayLink = nil
+    }
+
+    deinit {
+        displayLink?.invalidate()
+    }
+
+    @objc private func tick() {
+        onFrame()
     }
 }
 
@@ -891,15 +1122,21 @@ final class PhotoGridCell: UICollectionViewCell {
             videoBadge.isHidden = true
         }
 
+        updateSelection(isSelecting: isSelecting, isSelected: isSelected)
+
+        requestThumbnail(asset: asset, targetSize: targetSize)
+        setNeedsLayout()
+    }
+
+    /// Lightweight swipe-select update. Deliberately leaves the thumbnail,
+    /// metadata task and video badge untouched.
+    func updateSelection(isSelecting: Bool, isSelected: Bool) {
         selectionBorder.isHidden = !(isSelecting && isSelected)
         selectionBadge.isHidden = !isSelecting
         selectionBadge.image = UIImage(
             systemName: isSelected ? "checkmark.circle.fill" : "circle"
         )
         selectionBadge.tintColor = isSelected ? .tintColor : .white
-
-        requestThumbnail(asset: asset, targetSize: targetSize)
-        setNeedsLayout()
     }
 
     /// Single write point for the metadata overlay (sync configure and the

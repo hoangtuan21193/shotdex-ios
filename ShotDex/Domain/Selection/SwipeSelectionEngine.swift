@@ -17,12 +17,18 @@ enum SwipeSelectionEngine {
     }
 
     /// Decides select-vs-scroll once the translation exceeds `threshold`.
-    /// Ties go to `select` so a perfect diagonal still picks photos.
-    static func activation(translation: CGSize, threshold: CGFloat = 8) -> Activation {
+    /// Horizontal movement must win clearly; diagonal/vertical movement stays
+    /// with scrolling so entering selection mode does not make ordinary
+    /// one-finger navigation accidentally toggle photos.
+    static func activation(
+        translation: CGSize,
+        threshold: CGFloat = 8,
+        horizontalDominance: CGFloat = 1.15
+    ) -> Activation {
         let dx = abs(translation.width)
         let dy = abs(translation.height)
         guard max(dx, dy) >= threshold else { return .undecided }
-        return dx >= dy ? .select : .scroll
+        return dx > dy * horizontalDominance ? .select : .scroll
     }
 
     /// Ids in the grid-order range between `startId` and `currentId`,
@@ -38,5 +44,28 @@ enum SwipeSelectionEngine {
     /// Id of the tile whose frame contains `point`, nil in gaps/headers.
     static func tileId(at point: CGPoint, frames: [String: CGRect]) -> String? {
         frames.first { $0.value.contains(point) }?.key
+    }
+
+    /// Per-display-frame auto-scroll step while an active selection drag sits
+    /// inside the top/bottom edge band. Quadratic acceleration keeps the inner
+    /// edge controllable and the physical edge fast enough for large ranges.
+    static func autoScrollDelta(
+        locationY: CGFloat,
+        visibleBounds: CGRect,
+        edgeInset: CGFloat = 72,
+        maximumStep: CGFloat = 14
+    ) -> CGFloat {
+        guard edgeInset > 0, maximumStep > 0, !visibleBounds.isEmpty else { return 0 }
+        let topDistance = locationY - visibleBounds.minY
+        if topDistance < edgeInset {
+            let progress = min(max(1 - topDistance / edgeInset, 0), 1)
+            return -maximumStep * progress * progress
+        }
+        let bottomDistance = visibleBounds.maxY - locationY
+        if bottomDistance < edgeInset {
+            let progress = min(max(1 - bottomDistance / edgeInset, 0), 1)
+            return maximumStep * progress * progress
+        }
+        return 0
     }
 }
