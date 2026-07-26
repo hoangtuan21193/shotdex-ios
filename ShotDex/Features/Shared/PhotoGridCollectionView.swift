@@ -139,7 +139,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         private var appliedJumpToken: Int?
         private var appliedSelecting = false
         /// Membership snapshot for O(1) cell configuration. Selection order is
-        /// owned by the screen/bottom tray; the grid only needs membership.
+        /// owned by the screen/selection bar; the grid only needs membership.
         private var appliedSelectedIds: Set<String> = []
         /// Local-only, screen-sized detail renditions for cells currently on
         /// screen. Preheating before the tap avoids enlarging a grid thumbnail

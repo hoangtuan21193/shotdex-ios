@@ -6,7 +6,7 @@ import Foundation
 /// the exact same result the Library/Statistics would once the photo is indexed.
 ///
 /// Any change to the SQL compiler's semantics must be mirrored here, and vice
-/// versa — `SmartAlbumMatcherTests` pins the two together.
+/// versa — `SmartAlbumQueryMatchingTests` pins the two together.
 extension SmartAlbumQuery {
     /// Whether `metadata` satisfies this query. An empty query (no compilable
     /// rule) matches everything, matching the compiler's "no predicate" case.

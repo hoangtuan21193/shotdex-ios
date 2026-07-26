@@ -204,7 +204,7 @@ struct AlbumDetailScreen: View {
         }
     }
 
-    // MARK: Tray & toolbar
+    // MARK: Selection bar & toolbar
 
     private struct SelectionSnapshot: Equatable {
         var isSelecting: Bool

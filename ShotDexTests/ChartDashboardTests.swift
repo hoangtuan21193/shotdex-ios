@@ -304,9 +304,9 @@ struct ChartDashboardTests {
         #expect(ChartMetric(aggregation: .count, field: .iso).isValid == false)
     }
 
-    // MARK: Injection guard — columns come only from a fixed whitelist
+    // MARK: Injection guard — columns come only from a fixed allowlist
 
-    @Test func dimensionColumnsAreWhitelisted() {
+    @Test func dimensionColumnsAreAllowlisted() {
         let allowed: Set<String> = [
             "normalizedCameraModel", "normalizedCameraManufacturer", "normalizedLensModel",
             "sensorFormat", "isFavorite", "iso", "aperture", "shutterSpeedSeconds",
@@ -317,7 +317,7 @@ struct ChartDashboardTests {
         }
     }
 
-    @Test func metricExpressionsAreWhitelisted() {
+    @Test func metricExpressionsAreAllowlisted() {
         let allowed: Set<String> = [
             "iso", "aperture", "shutterSpeedSeconds", "focalLength",
             "equivalentFocalLength", "fileSize", "(width * 1.0 * height) / 1000000.0",

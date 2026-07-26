@@ -5,7 +5,7 @@ import Testing
 /// Pins the in-memory `SmartAlbumQuery.matches(_:)` (used by the importer to
 /// filter not-yet-indexed files) to the same semantics `SmartAlbumSQLCompiler`
 /// produces for indexed rows.
-struct SmartAlbumMatcherTests {
+struct SmartAlbumQueryMatchingTests {
     /// Composes a realistic row the same way the index pipeline / importer do.
     private func row(
         filename: String? = nil,

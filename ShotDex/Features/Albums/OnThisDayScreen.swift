@@ -15,7 +15,7 @@ struct OnThisDayScreen: View {
     @State private var isDatePickerPresented = false
 
     /// Delete selection: asset ids in pick order, no count cap (unlike
-    /// Compare), so Compare panes and the bottom tray follow the taps.
+    /// Compare), so Compare panes and the selection bar follow the taps.
     @State private var isSelecting = false
     @State private var isComparePresented = false
     @State private var selectedIds: [String] = []
