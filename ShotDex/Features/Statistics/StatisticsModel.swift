@@ -38,11 +38,11 @@ final class StatisticsModel {
         let statisticsQueries = self.statisticsQueries
         let chartStore = self.chartStore
         let knownCharts = self.charts
-        let seeded = UserDefaults.standard.bool(forKey: SettingsKeys.didSeedStatCharts)
+        let seeded = UserDefaults.standard.bool(forKey: SettingsKeys.hasSeededStatCharts)
 
         Task.detached(priority: .userInitiated) { [weak self] in
             // Resolve the spec list.
-            var didSeed = false
+            var hasSeeded = false
             let charts: [ChartSpec]
             if reloadCharts {
                 if seeded {
@@ -50,7 +50,7 @@ final class StatisticsModel {
                 } else {
                     // First run: seed the defaults, remember we did so.
                     charts = ((try? chartStore.seedDefaultsIfEmpty()) ?? []).map(\.spec)
-                    didSeed = true
+                    hasSeeded = true
                 }
             } else {
                 charts = knownCharts
@@ -66,7 +66,7 @@ final class StatisticsModel {
 
             await self?.apply(
                 charts: charts, results: results, total: total,
-                earliest: earliest, didSeed: didSeed
+                earliest: earliest, hasSeeded: hasSeeded
             )
         }
     }
@@ -76,13 +76,13 @@ final class StatisticsModel {
         results: [String: [ChartDatum]],
         total: Int,
         earliest: Date?,
-        didSeed: Bool
+        hasSeeded: Bool
     ) {
         self.charts = charts
         self.results = results
         self.totalPhotos = total
         self.earliestDate = earliest
-        if didSeed { UserDefaults.standard.set(true, forKey: SettingsKeys.didSeedStatCharts) }
+        if hasSeeded { UserDefaults.standard.set(true, forKey: SettingsKeys.hasSeededStatCharts) }
         self.isLoading = false
         self.hasLoaded = true
     }

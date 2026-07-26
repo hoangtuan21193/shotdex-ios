@@ -600,7 +600,7 @@ actor IndexPipeline {
                 }
 
                 var exifTime = Duration.zero
-                var didReadExif = false
+                var hasReadExif = false
                 let exifResult: ExifReadResult
                 if Self.shouldSkipExifRead(mediaType: asset.mediaType.rawValue, mediaSubtypes: asset.mediaSubtypes) {
                     // Composer turns indexed + empty EXIF into `noExif`.
@@ -612,7 +612,7 @@ actor IndexPipeline {
                     exifResult = await exifReader.readExif(for: asset, resource: resource, allowNetwork: allowNetwork)
                     Self.signposter.endInterval("exifRead", signpostState)
                     exifTime = clock.now - mark
-                    didReadExif = true
+                    hasReadExif = true
                 }
 
                 mark = clock.now
@@ -677,7 +677,7 @@ actor IndexPipeline {
                     $0.exif += exifTime
                     $0.compose += composeTime
                     $0.assets += 1
-                    if didReadExif { $0.exifReads += 1 }
+                    if hasReadExif { $0.exifReads += 1 }
                 }
                 return item
             }

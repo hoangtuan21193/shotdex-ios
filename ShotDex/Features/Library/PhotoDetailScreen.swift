@@ -841,10 +841,10 @@ private struct DetailVideoPlayer: View {
     /// Whether the opening autoplay window is over. Opening a clip is for watching
     /// it, not for looking at buttons, so during that first window only the bottom
     /// panel appears. Resets per page — this view is rebuilt for each one.
-    @State private var didLeaveOpeningAutoplay = false
+    @State private var hasLeftOpeningAutoplay = false
     /// The user just pressed ▶ on the centre cluster, so chrome has to go away the
     /// moment playback actually starts.
-    @State private var didRequestHideOnPlay = false
+    @State private var hasRequestedHideOnPlay = false
 
     var body: some View {
         GeometryReader { proxy in
@@ -927,20 +927,20 @@ private struct DetailVideoPlayer: View {
         }
         .onChange(of: isChromeVisible) { _, visible in
             if !visible {
-                didLeaveOpeningAutoplay = true
+                hasLeftOpeningAutoplay = true
             }
         }
         .onChange(of: model.isPlaying) { _, playing in
             if !playing {
-                didLeaveOpeningAutoplay = true
+                hasLeftOpeningAutoplay = true
             }
             onPlaybackChange(playing)
             // Pressing ▶ has to clear the screen at once — the button must not sit
             // under the finger for another 3 s. Reuse the host's toggle path: the
             // call above already set its `isCurrentVideoPlaying` synchronously, so
             // the toggle resolves to *hide* rather than show.
-            if playing, didRequestHideOnPlay {
-                didRequestHideOnPlay = false
+            if playing, hasRequestedHideOnPlay {
+                hasRequestedHideOnPlay = false
                 onContentTap()
             }
         }
@@ -964,7 +964,7 @@ private struct DetailVideoPlayer: View {
     /// tap during playback raised only the panel while the centre cluster stayed
     /// hidden — nothing to press.
     ///
-    /// `didLeaveOpeningAutoplay || !isPlaying` are two opposite exceptions: during
+    /// `hasLeftOpeningAutoplay || !isPlaying` are two opposite exceptions: during
     /// the opening autoplay window (playing, chrome up, flag not yet set) the
     /// middle of the frame stays clear, while a `.ready` clip that is *not*
     /// playing must show the cluster even before the flag is set — otherwise a clip
@@ -979,7 +979,7 @@ private struct DetailVideoPlayer: View {
             && isChromeVisible
             && model.player != nil
             && model.phase.isReady
-            && (didLeaveOpeningAutoplay || !model.isPlaying)
+            && (hasLeftOpeningAutoplay || !model.isPlaying)
             && !isContentZoomed
             && !model.isSavingFrame
             && model.frameSaveOutcome == nil
@@ -1011,7 +1011,7 @@ private struct DetailVideoPlayer: View {
             ) {
                 onInteraction()
                 if !model.isPlaying {
-                    didRequestHideOnPlay = true
+                    hasRequestedHideOnPlay = true
                 }
                 model.togglePlayPause()
             }
@@ -1099,7 +1099,7 @@ private struct DetailVideoPlayer: View {
             // Deliberately a second play/pause, duplicating the centre cluster:
             // the cluster steps aside while the video is zoomed, and this row is
             // the one place still on screen then. It does *not* set
-            // `didRequestHideOnPlay` — the finger here is not covering the picture,
+            // `hasRequestedHideOnPlay` — the finger here is not covering the picture,
             // and hiding the panel would pull the scrubber out from under it.
             transportButton(
                 systemImage: model.isPlaying ? "pause.fill" : "play.fill",
