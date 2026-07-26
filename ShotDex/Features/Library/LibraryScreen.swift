@@ -7,7 +7,7 @@ struct LibraryScreen: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(AppNavigation.self) private var navigation
 
-    /// Owned by HomeTabScaffold so the search sheet shares the same state.
+    /// Owned by RootTabView so the search sheet shares the same state.
     let controller: LibraryController?
 
     @State private var isAdvancedSearchPresented = false
@@ -29,7 +29,7 @@ struct LibraryScreen: View {
     @State private var isDeleting = false
     @State private var isPreparingShare = false
     @State private var deleteErrorMessage: String?
-    /// Index indicator: a compact chip in the top-leading toolbar (right of
+    /// Index indicator: a compact token in the top-leading toolbar (right of
     /// the Settings gear); tapping presents the detail popover. This drives
     /// the popover's presentation.
     @State private var isIndexPanelExpanded = false
@@ -66,16 +66,16 @@ struct LibraryScreen: View {
         // controls live in the tab-bar bottom accessory (expanded → inline on
         // scroll); pre-26 the selection bar takes over a root `.safeAreaInset`.
         .onChange(of: isSelecting) { navigation.hidesTabBar = isSelecting }
-        // Publish the selection to the scaffold, which hosts the bar in the tab
+        // Publish the selection to the root tab view, which hosts the bar in the tab
         // bar's slot. Republished on any selection change so counts/thumbnails
         // stay live.
         .onChange(of: selectionSnapshot) {
-            navigation.selectionBar = isSelecting ? makeSelectionConfig() : nil
+            navigation.selectionBar = isSelecting ? selectionBarModel() : nil
         }
         // Re-publish on reappear: switching tabs clears the bar in onDisappear,
         // but selectionSnapshot is unchanged on return so onChange never re-fires.
         .onAppear {
-            if isSelecting { navigation.selectionBar = makeSelectionConfig() }
+            if isSelecting { navigation.selectionBar = selectionBarModel() }
         }
         .onDisappear {
             navigation.hidesTabBar = false
@@ -92,7 +92,7 @@ struct LibraryScreen: View {
             // never restarts the two-phase load or re-anchors the grid.
             controller.loadIfNeeded()
             controller.refreshFilterOptions()
-            // HomeTabScaffold owns auto-index scheduling so first paint gets a
+            // RootTabView owns auto-index scheduling so first paint gets a
             // short head start and indexing remains independent of lazy tabs.
         }
         .onChange(of: photoLibrary.assetChangeToken) {
@@ -230,7 +230,7 @@ struct LibraryScreen: View {
     @ViewBuilder
     private func gridContent(_ controller: LibraryController) -> some View {
         gridBody(controller)
-            // Banner + chips ride in the top safe-area inset (not a VStack)
+            // Banner + tokens ride in the top safe-area inset (not a VStack)
             // so the grid stays the root scroll view: photos scroll under the
             // translucent nav bar chrome edge-to-edge, matching Album Detail.
             .safeAreaInset(edge: .top, spacing: 0) {
@@ -239,7 +239,7 @@ struct LibraryScreen: View {
             .onChange(of: navigation.libraryRetapToken) {
             retapResetCount += 1
         }
-        // Index-detail dropdown: opened from the toolbar chip, drops into the
+        // Index-detail dropdown: opened from the toolbar token, drops into the
         // grid's top safe area (just below the nav bar, clear of the toolbar
         // buttons). Full-width, single GlassPanel material.
         .overlay(alignment: .top) {
@@ -271,7 +271,7 @@ struct LibraryScreen: View {
         }
     }
 
-    /// Limited-access banner + active filter chips, pinned in the top safe
+    /// Limited-access banner + active filter tokens, pinned in the top safe
     /// area above the scrolling grid. Empty (zero height, no inset) when
     /// neither applies.
     @ViewBuilder
@@ -292,7 +292,7 @@ struct LibraryScreen: View {
                     onClear: { controller.advancedQuery = nil }
                 )
             } else if !controller.criteria.isEmpty {
-                FilterChipsBar(
+                FilterTokenBar(
                     criteria: Binding(
                         get: { controller.criteria },
                         set: { controller.criteria = $0 }
@@ -304,7 +304,7 @@ struct LibraryScreen: View {
     }
 
     /// Equatable digest of the selection so a single `.onChange` republishes the
-    /// scaffold-hosted bar whenever anything it shows changes.
+    /// root-hosted bar whenever anything it shows changes.
     private struct SelectionSnapshot: Equatable {
         var isSelecting: Bool
         var ids: [String]
@@ -314,11 +314,11 @@ struct LibraryScreen: View {
         SelectionSnapshot(isSelecting: isSelecting, ids: selectedIds, isDeleting: isDeleting)
     }
 
-    /// Config the scaffold renders as the bottom bar (Share lives in the toolbar;
+    /// The selection-bar model the root tab view renders (Share lives in the toolbar;
     /// here it's Compare (2–4) + Delete + the selection thumbnail preview).
-    private func makeSelectionConfig() -> SelectionBarConfig? {
+    private func selectionBarModel() -> SelectionBarModel? {
         guard let controller else { return nil }
-        return SelectionBarConfig(
+        return SelectionBarModel(
             selectionCount: selectedIds.count,
             thumbnailIds: selectedIds,
             photoLibrary: photoLibrary,
@@ -478,13 +478,13 @@ struct LibraryScreen: View {
     /// start, and long skip-scans of an incremental pass) — the panel must
     /// still be visible then, matching the Settings row.
     ///
-    /// Compact chip living in the top-leading toolbar, right of the Settings
+    /// Compact status token living in the top-leading toolbar, right of the Settings
     /// gear; a tap opens the detail popover (progress / paused / retry).
-    private func indexChipButton(_ controller: LibraryController) -> some View {
+    private func indexStatusButton(_ controller: LibraryController) -> some View {
         Button {
             setIndexPanelExpanded(!isIndexPanelExpanded)
         } label: {
-            chipLabel(controller)
+            indexStatusLabel(controller)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(
@@ -494,7 +494,7 @@ struct LibraryScreen: View {
     }
 
     @ViewBuilder
-    private func chipLabel(_ controller: LibraryController) -> some View {
+    private func indexStatusLabel(_ controller: LibraryController) -> some View {
         let content = HStack(spacing: 6) {
             ProgressView()
                 .controlSize(.small)
@@ -516,7 +516,7 @@ struct LibraryScreen: View {
             content
                 .padding(.horizontal, 8)
         } else {
-            // Pre-26 toolbar buttons are bare — give the chip its own capsule
+            // Pre-26 toolbar buttons are bare — give the token its own capsule
             // so it reads as a distinct control with breathing room.
             content
                 .padding(.horizontal, 14)
@@ -615,7 +615,7 @@ struct LibraryScreen: View {
 
     /// Expanded state (on tap): full progress, network status, the files
     /// being read, the metadata explainer, and Cancel. Anchored top-right,
-    /// width-capped; tapping it or the grid collapses back to the chip.
+    /// width-capped; tapping it or the grid collapses back to the token.
     private func expandedIndexCard(_ controller: LibraryController) -> some View {
         let progress = controller.indexProgress
         return GlassPanel {
@@ -713,10 +713,10 @@ struct LibraryScreen: View {
             if isSelecting {
                 shareToolbarButton
             } else {
-                SettingsDrawerButton()
+                SettingsButton()
             }
         }
-        // Break the shared Liquid Glass container so the indexing chip reads as
+        // Break the shared Liquid Glass container so the indexing token reads as
         // its own control, not part of the Settings gear's tap target.
         if #available(iOS 26.0, *) {
             ToolbarSpacer(.fixed, placement: .topBarLeading)
@@ -725,7 +725,7 @@ struct LibraryScreen: View {
             if let controller,
                controller.isIndexing || controller.indexStreamingPaused || controller.indexAutoRetryDate != nil,
                !isSelecting {
-                indexChipButton(controller)
+                indexStatusButton(controller)
             }
         }
         ToolbarItem(placement: .topBarTrailing) {

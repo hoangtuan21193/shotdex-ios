@@ -44,10 +44,10 @@ struct OnThisDayScreen: View {
         .toolbar { toolbarContent }
         .onChange(of: isSelecting) { navigation.hidesTabBar = isSelecting }
         .onChange(of: selectionSnapshot) {
-            navigation.selectionBar = isSelecting ? makeSelectionConfig() : nil
+            navigation.selectionBar = isSelecting ? selectionBarModel() : nil
         }
         .onAppear {
-            if isSelecting { navigation.selectionBar = makeSelectionConfig() }
+            if isSelecting { navigation.selectionBar = selectionBarModel() }
         }
         .onDisappear {
             navigation.hidesTabBar = false
@@ -201,10 +201,10 @@ struct OnThisDayScreen: View {
         SelectionSnapshot(isSelecting: isSelecting, ids: selectedIds, isDeleting: isDeleting)
     }
 
-    /// Config the scaffold renders as the bottom bar — same as the other
+    /// The selection-bar model the root tab view renders — same as the other
     /// albums: Compare (2–4) + Delete + thumbnail preview, all in pick order.
-    private func makeSelectionConfig() -> SelectionBarConfig {
-        SelectionBarConfig(
+    private func selectionBarModel() -> SelectionBarModel {
+        SelectionBarModel(
             selectionCount: selectedIds.count,
             thumbnailIds: selectedIds,
             photoLibrary: photoLibrary,

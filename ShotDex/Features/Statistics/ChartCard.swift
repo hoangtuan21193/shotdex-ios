@@ -23,11 +23,11 @@ enum ChartValueFormatter {
     }
 }
 
-/// The chart body for a widget (no surrounding `Section`), reused by both the
+/// The chart body for a spec (no surrounding `Section`), reused by both the
 /// dashboard card and the editor's live preview. Tapping a categorical/binned
 /// row drills into a filtered Library via `onDrill` (nil disables drilling).
 struct ChartContentView: View {
-    let widget: ChartWidget
+    let spec: ChartSpec
     let data: [ChartDatum]
     var isLoading: Bool = false
     var onDrill: ((FilterCriteria) -> Void)?
@@ -38,11 +38,11 @@ struct ChartContentView: View {
     var body: some View {
         if isLoading && data.isEmpty {
             ProgressView().frame(maxWidth: .infinity)
-        } else if known.isEmpty && widget.kind != .kpi {
+        } else if known.isEmpty && spec.kind != .kpi {
             Text("No data for this range.")
                 .foregroundStyle(.secondary)
         } else {
-            switch widget.kind {
+            switch spec.kind {
             case .kpi: kpiBody
             case .bar: barBody
             case .donut: donutBody
@@ -56,13 +56,13 @@ struct ChartContentView: View {
     @ViewBuilder
     private var kpiBody: some View {
         if let datum = known.first {
-            let value = ChartValueFormatter.string(datum.value, metric: widget.metric)
+            let value = ChartValueFormatter.string(datum.value, metric: spec.metric)
             drillButton(key: datum.drillKey) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(value)
                         .font(.system(.largeTitle, design: .rounded).weight(.semibold))
                         .foregroundStyle(Color(.label))
-                    if widget.dimension != nil {
+                    if spec.dimension != nil {
                         Text(datum.label)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
@@ -90,7 +90,7 @@ struct ChartContentView: View {
             .chartYAxis(.hidden)
             .frame(height: CGFloat(known.count) * 28 + 20)
             .padding(.vertical, 4)
-            .accessibilityLabel("\(widget.title) bar chart")
+            .accessibilityLabel("\(spec.title) bar chart")
 
             drillRows
         }
@@ -113,7 +113,7 @@ struct ChartContentView: View {
             .chartLegend(.hidden)
             .frame(height: 220)
             .padding(.vertical, 4)
-            .accessibilityLabel("\(widget.title) donut chart")
+            .accessibilityLabel("\(spec.title) donut chart")
 
             drillRows
         }
@@ -127,13 +127,13 @@ struct ChartContentView: View {
                 x: .value("Period", datum.label),
                 y: .value("Value", datum.value)
             )
-            .foregroundStyle(by: .value("Series", datum.series ?? widget.title))
+            .foregroundStyle(by: .value("Series", datum.series ?? spec.title))
         }
         .chartForegroundStyleScale(range: ChartPalette.colors)
         .chartLegend(known.contains { $0.series != nil } ? .visible : .hidden)
         .frame(height: 200)
         .padding(.vertical, 4)
-        .accessibilityLabel("\(widget.title) line chart")
+        .accessibilityLabel("\(spec.title) line chart")
     }
 
     // MARK: Drill helpers (bar / donut rows)
@@ -143,7 +143,7 @@ struct ChartContentView: View {
         ForEach(Array(known.enumerated()), id: \.element.id) { index, datum in
             drillButton(key: datum.drillKey) {
                 HStack {
-                    if widget.kind == .donut {
+                    if spec.kind == .donut {
                         Circle()
                             .fill(ChartPalette.colors[index % ChartPalette.colors.count])
                             .frame(width: 10, height: 10)
@@ -152,9 +152,9 @@ struct ChartContentView: View {
                         .foregroundStyle(Color(.label))
                         .lineLimit(1)
                     Spacer()
-                    Text(ChartValueFormatter.string(datum.value, metric: widget.metric))
+                    Text(ChartValueFormatter.string(datum.value, metric: spec.metric))
                         .foregroundStyle(.secondary)
-                    if widget.metric.aggregation == .count, knownTotal > 0 {
+                    if spec.metric.aggregation == .count, knownTotal > 0 {
                         Text(String(format: "%.0f%%", datum.value / knownTotal * 100))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
@@ -169,7 +169,7 @@ struct ChartContentView: View {
     /// filter; otherwise renders it plainly (temporal buckets, "Unknown").
     @ViewBuilder
     private func drillButton<Content: View>(key: String?, @ViewBuilder content: () -> Content) -> some View {
-        let criteria = key.flatMap { widget.dimension?.drillCriteria(key: $0) }
+        let criteria = key.flatMap { spec.dimension?.drillCriteria(key: $0) }
         if let criteria, let onDrill {
             Button { onDrill(criteria) } label: { content() }
                 .buttonStyle(.plain)
@@ -183,7 +183,7 @@ struct ChartContentView: View {
 /// body, and an "Unknown" footnote when metadata is missing. A row (not a
 /// Section) so the parent `ForEach` can drag-reorder and swipe-delete it.
 struct ChartCard: View {
-    let widget: ChartWidget
+    let spec: ChartSpec
     let data: [ChartDatum]
     let isLoading: Bool
     var onEdit: () -> Void
@@ -196,7 +196,7 @@ struct ChartCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             header
-            ChartContentView(widget: widget, data: data, isLoading: isLoading, onDrill: onDrill)
+            ChartContentView(spec: spec, data: data, isLoading: isLoading, onDrill: onDrill)
             if unknownCount > 0 {
                 Text("\(unknownCount) photos without this info.")
                     .font(.footnote)
@@ -211,10 +211,10 @@ struct ChartCard: View {
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(widget.title)
+                Text(spec.title)
                     .font(.headline)
                     .foregroundStyle(Color(.label))
-                Text(widget.scope.title)
+                Text(spec.scope.title)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -228,7 +228,7 @@ struct ChartCard: View {
                     .font(.title3)
                     .foregroundStyle(.secondary)
             }
-            .accessibilityLabel("\(widget.title) options")
+            .accessibilityLabel("\(spec.title) options")
         }
     }
 }

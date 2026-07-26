@@ -1,6 +1,6 @@
 import Foundation
 
-/// Time scope for a chart. Each dashboard widget carries its own scope
+/// Time scope for a chart. Each dashboard chart carries its own scope
 /// (persisted inside its config), so `Codable` — the sole payload is a
 /// `ClosedRange<Int>`, which the standard library already encodes.
 enum StatsDateScope: Codable, Hashable, Sendable {

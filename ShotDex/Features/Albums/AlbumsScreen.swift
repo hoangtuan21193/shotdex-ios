@@ -1,7 +1,7 @@
 import Photos
 import SwiftUI
 
-/// Collections tab: On This Day hero, then horizontally-scrolling chip
+/// Collections tab: On This Day hero, then horizontally-scrolling token
 /// grids (up to 3 rows) for smart albums, My Albums, and Shared Albums.
 struct AlbumsScreen: View {
     @Environment(PhotoLibraryService.self) private var photoLibrary
@@ -25,7 +25,7 @@ struct AlbumsScreen: View {
         }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                SettingsDrawerButton()
+                SettingsButton()
             }
             // Separate item so the "+" gets its own Liquid Glass circle on
             // iOS 26 instead of sharing the settings button's capsule.
@@ -48,10 +48,10 @@ struct AlbumsScreen: View {
                 AlbumDetailScreen(album: album)
             }
         }
-        .navigationDestination(for: OnThisDayRoute.self) { _ in
+        .navigationDestination(for: OnThisDayDestination.self) { _ in
             OnThisDayScreen()
         }
-        .navigationDestination(for: SmartAlbumRoute.self) { route in
+        .navigationDestination(for: SmartAlbumDestination.self) { route in
             if let model = controller.smartQueryAlbums.first(where: { $0.album.id == route.id }) {
                 SmartAlbumDetailScreen(album: model.album)
             }
@@ -78,7 +78,7 @@ struct AlbumsScreen: View {
                     .padding(.top, 4)
                 }
 
-                NavigationLink(value: OnThisDayRoute()) {
+                NavigationLink(value: OnThisDayDestination()) {
                     OnThisDayCard(
                         count: controller.onThisDayCount,
                         coverAsset: controller.onThisDayCover
@@ -92,11 +92,11 @@ struct AlbumsScreen: View {
                 }
 
                 if !controller.userAlbums.isEmpty {
-                    albumChipSection(title: "My Albums", albums: controller.userAlbums)
+                    albumTokenSection(title: "My Albums", albums: controller.userAlbums)
                 }
 
                 if !controller.sharedAlbums.isEmpty {
-                    albumChipSection(title: "Shared Albums", albums: controller.sharedAlbums)
+                    albumTokenSection(title: "Shared Albums", albums: controller.sharedAlbums)
                 }
 
                 if #unavailable(iOS 26.0) {
@@ -106,17 +106,17 @@ struct AlbumsScreen: View {
         }
     }
 
-    /// Optional header + horizontal-scrolling grid of uniform album chips
+    /// Optional header + horizontal-scrolling grid of uniform album tokens
     /// (cover thumbnail + name + count). Fills up to 3 rows column-major
     /// before scrolling right, like the iOS Photos pinned-collections grid.
     /// Used for smart albums (no header), "My Albums", and "Shared Albums".
-    private func albumChipSection(title: String?, albums: [AlbumItem]) -> some View {
+    private func albumTokenSection(title: String?, albums: [AlbumItem]) -> some View {
         // Grow rows only as albums accumulate (~3 per column), capped at 3,
         // so a handful of albums stays 1–2 rows tall instead of a stubby
         // 3-row block.
         let rowCount = max(1, min(3, (albums.count + 2) / 3))
         let rows = Array(
-            repeating: GridItem(.fixed(AlbumChip.height), spacing: 10),
+            repeating: GridItem(.fixed(AlbumToken.height), spacing: 10),
             count: rowCount
         )
         return VStack(alignment: .leading, spacing: 12) {
@@ -130,7 +130,7 @@ struct AlbumsScreen: View {
                 LazyHGrid(rows: rows, spacing: 10) {
                     ForEach(albums) { album in
                         NavigationLink(value: album.id) {
-                            AlbumChip(album: album)
+                            AlbumToken(album: album)
                         }
                         .buttonStyle(.plain)
                     }
@@ -142,15 +142,15 @@ struct AlbumsScreen: View {
     }
 
     /// "Smart Albums" section: user-created smart albums (saved filters) first,
-    /// then the Apple system smart albums, in one chip grid under a shared
-    /// header. User chips push a `SmartAlbumDetailScreen` (staying in this tab)
-    /// and offer Edit / Delete via context menu; system chips push the normal
+    /// then the Apple system smart albums, in one token grid under a shared
+    /// header. User tokens push a `SmartAlbumDetailScreen` (staying in this tab)
+    /// and offer Edit / Delete via context menu; system tokens push the normal
     /// `AlbumDetailScreen`.
     private func smartAlbumsSection() -> some View {
         let total = controller.smartQueryAlbums.count + controller.smartAlbums.count
         let rowCount = max(1, min(3, (total + 2) / 3))
         let rows = Array(
-            repeating: GridItem(.fixed(AlbumChip.height), spacing: 10),
+            repeating: GridItem(.fixed(AlbumToken.height), spacing: 10),
             count: rowCount
         )
         return VStack(alignment: .leading, spacing: 12) {
@@ -161,8 +161,8 @@ struct AlbumsScreen: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHGrid(rows: rows, spacing: 10) {
                     ForEach(controller.smartQueryAlbums) { model in
-                        NavigationLink(value: SmartAlbumRoute(id: model.album.id)) {
-                            SmartAlbumChip(model: model)
+                        NavigationLink(value: SmartAlbumDestination(id: model.album.id)) {
+                            SmartAlbumToken(model: model)
                         }
                         .buttonStyle(.plain)
                         .contextMenu {
@@ -181,7 +181,7 @@ struct AlbumsScreen: View {
 
                     ForEach(controller.smartAlbums) { album in
                         NavigationLink(value: album.id) {
-                            AlbumChip(album: album)
+                            AlbumToken(album: album)
                         }
                         .buttonStyle(.plain)
                     }
@@ -196,14 +196,14 @@ struct AlbumsScreen: View {
 /// Navigation value for a user-created smart album's detail screen. Distinct
 /// type from `AlbumItem.ID` (also `String`) so it routes to
 /// `SmartAlbumDetailScreen` rather than the existing `AlbumItem.ID` destination.
-struct SmartAlbumRoute: Hashable {
+struct SmartAlbumDestination: Hashable {
     let id: String
 }
 
-/// Fixed-size chip: small square cover thumbnail on the left, album title
+/// Fixed-size token: small square cover thumbnail on the left, album title
 /// and photo count on the right. Styled after the iOS Photos media-type
-/// rows but laid out as a horizontally scrolling chip.
-struct AlbumChip: View {
+/// rows but laid out as a horizontally scrolling token.
+struct AlbumToken: View {
     @Environment(PhotoLibraryService.self) private var photoLibrary
 
     let album: AlbumItem
@@ -214,7 +214,7 @@ struct AlbumChip: View {
     static let height: CGFloat = 60
 
     private let thumbSide: CGFloat = 44
-    private let chipWidth: CGFloat = 190
+    private let tokenWidth: CGFloat = 190
 
     var body: some View {
         HStack(spacing: 10) {
@@ -246,7 +246,7 @@ struct AlbumChip: View {
             Spacer(minLength: 0)
         }
         .padding(8)
-        .frame(width: chipWidth, height: Self.height, alignment: .leading)
+        .frame(width: tokenWidth, height: Self.height, alignment: .leading)
         .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .onAppear(perform: loadCover)
         .accessibilityElement(children: .ignore)
@@ -268,19 +268,19 @@ struct AlbumChip: View {
     }
 }
 
-/// Chip for a user-created smart album (saved filter): cover thumbnail of the
+/// FilterToken for a user-created smart album (saved filter): cover thumbnail of the
 /// first matching photo (funnel glyph when empty), the album name, and its
-/// live match count. Same footprint as `AlbumChip` so the two chip grids line
+/// live match count. Same footprint as `AlbumToken` so the two token grids line
 /// up.
-struct SmartAlbumChip: View {
+struct SmartAlbumToken: View {
     @Environment(PhotoLibraryService.self) private var photoLibrary
 
-    let model: SmartAlbumChipModel
+    let model: SmartAlbumTokenItem
 
     @State private var cover: UIImage?
 
     private let thumbSide: CGFloat = 44
-    private let chipWidth: CGFloat = 190
+    private let tokenWidth: CGFloat = 190
 
     var body: some View {
         HStack(spacing: 10) {
@@ -312,7 +312,7 @@ struct SmartAlbumChip: View {
             Spacer(minLength: 0)
         }
         .padding(8)
-        .frame(width: chipWidth, height: AlbumChip.height, alignment: .leading)
+        .frame(width: tokenWidth, height: AlbumToken.height, alignment: .leading)
         .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .onAppear(perform: loadCover)
         .accessibilityElement(children: .ignore)

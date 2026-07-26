@@ -45,7 +45,7 @@ struct LibraryQueryDAO: Sendable {
         return Dictionary(uniqueKeysWithValues: rows.map { ($0.assetId, $0) })
     }
 
-    /// Number of photos matching the criteria (for the filter chips bar).
+    /// Number of photos matching the criteria (for the filter tokens bar).
     func count(matching criteria: FilterCriteria) throws -> Int {
         let (whereSQL, arguments) = Self.whereClause(for: criteria)
         let sql = "SELECT COUNT(*) FROM photo_metadata \(whereSQL)"

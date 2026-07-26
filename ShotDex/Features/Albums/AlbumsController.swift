@@ -24,7 +24,7 @@ struct AlbumItem: Identifiable {
 /// its live match count and cover from `LibraryQueryDAO`. PHAsset is not
 /// Sendable but PhotoKit fetches are thread-safe, so this crosses the
 /// off-main load boundary as `@unchecked Sendable` (mirrors `Snapshot`).
-struct SmartAlbumChipModel: Identifiable, @unchecked Sendable {
+struct SmartAlbumTokenItem: Identifiable, @unchecked Sendable {
     let album: SmartAlbum
     let count: Int
     let coverAsset: PHAsset?
@@ -49,7 +49,7 @@ final class AlbumsController {
     private(set) var onThisDayCover: PHAsset?
 
     /// User-created smart albums (saved filters), newest first.
-    private(set) var smartQueryAlbums: [SmartAlbumChipModel] = []
+    private(set) var smartQueryAlbums: [SmartAlbumTokenItem] = []
 
     var smartAlbums: [AlbumItem] { albums.filter(\.isSmart) }
     var userAlbums: [AlbumItem] { albums.filter { !$0.isSmart && !$0.isShared } }
@@ -127,9 +127,9 @@ final class AlbumsController {
     private nonisolated static func loadSmartAlbums(
         smartAlbumDAO: SmartAlbumDAO,
         libraryQueryDAO: LibraryQueryDAO
-    ) async -> [SmartAlbumChipModel] {
+    ) async -> [SmartAlbumTokenItem] {
         guard let albums = try? smartAlbumDAO.fetchAllOrdered() else { return [] }
-        var models: [SmartAlbumChipModel] = []
+        var models: [SmartAlbumTokenItem] = []
         for album in albums {
             let count = (try? libraryQueryDAO.count(matching: album.query)) ?? 0
             var cover: PHAsset?
@@ -138,7 +138,7 @@ final class AlbumsController {
                 .first?.assetId {
                 cover = PhotoLibraryService.fetchAssets(ids: [firstId]).first
             }
-            models.append(SmartAlbumChipModel(album: album, count: count, coverAsset: cover))
+            models.append(SmartAlbumTokenItem(album: album, count: count, coverAsset: cover))
         }
         return models
     }

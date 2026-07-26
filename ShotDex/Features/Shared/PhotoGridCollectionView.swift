@@ -1235,7 +1235,7 @@ private final class GridCollectionView: UICollectionView {
 
 // MARK: - Section header
 
-/// Pinned section header: a compact glass capsule chip, legible over
+/// Pinned section header: a compact glass capsule token, legible over
 /// scrolling photos without covering the full row width. Hosted in the
 /// collection view's supplementary views via UIHostingConfiguration.
 struct GridSectionHeader: View {

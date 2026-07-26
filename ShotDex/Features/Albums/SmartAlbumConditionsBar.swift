@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Read-only header shown atop a smart album's detail grid: the live match
 /// count, the match mode when there is more than one rule, and each condition
-/// rendered as a chip. The editable counterpart is `SmartAlbumRuleRow`.
+/// rendered as a token. The editable counterpart is `SmartAlbumRuleRow`.
 struct SmartAlbumConditionsBar: View {
     let query: SmartAlbumQuery
     let matchCount: Int
@@ -51,7 +51,7 @@ extension SmartAlbumRule {
         return formatter
     }()
 
-    /// Human-readable one-line description used by the read-only chips.
+    /// Human-readable one-line description used by the read-only tokens.
     var displaySummary: String {
         if field.kind == .favorite {
             return boolValue ? "Favorite" : "Not favorite"

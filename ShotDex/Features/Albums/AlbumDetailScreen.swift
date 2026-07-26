@@ -42,10 +42,10 @@ struct AlbumDetailScreen: View {
         .toolbar { toolbarContent }
         .onChange(of: isSelecting) { navigation.hidesTabBar = isSelecting }
         .onChange(of: selectionSnapshot) {
-            navigation.selectionBar = isSelecting ? makeSelectionConfig() : nil
+            navigation.selectionBar = isSelecting ? selectionBarModel() : nil
         }
         .onAppear {
-            if isSelecting { navigation.selectionBar = makeSelectionConfig() }
+            if isSelecting { navigation.selectionBar = selectionBarModel() }
         }
         .onDisappear {
             navigation.hidesTabBar = false
@@ -215,11 +215,11 @@ struct AlbumDetailScreen: View {
         SelectionSnapshot(isSelecting: isSelecting, ids: selectedIds, isDeleting: isDeleting)
     }
 
-    /// Config the scaffold renders as the bottom bar (Compare 2–4 + Delete +
+    /// The selection-bar model the root tab view renders (Compare 2–4 + Delete +
     /// thumbnail preview; Share is in the toolbar).
-    private func makeSelectionConfig() -> SelectionBarConfig? {
+    private func selectionBarModel() -> SelectionBarModel? {
         guard let controller else { return nil }
-        return SelectionBarConfig(
+        return SelectionBarModel(
             selectionCount: selectedIds.count,
             thumbnailIds: selectedIds,
             photoLibrary: photoLibrary,

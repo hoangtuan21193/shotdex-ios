@@ -3,7 +3,7 @@ import Photos
 import SwiftUI
 
 /// Navigation destination value for the On This Day screen.
-struct OnThisDayRoute: Hashable {}
+struct OnThisDayDestination: Hashable {}
 
 /// One year's group of photos: a contiguous index range into the flat
 /// `photos` array, so a tile tap maps straight to the pager index.

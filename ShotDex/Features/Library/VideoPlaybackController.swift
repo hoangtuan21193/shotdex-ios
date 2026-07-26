@@ -49,7 +49,7 @@ final class VideoPlaybackController {
     /// photo download does.
     private static let readinessTimeout: Duration = .seconds(15)
     /// Relative seek applied by the centre skip buttons and by a double-tap on
-    /// either half of the surface.
+    /// either half of the video.
     static let skipInterval: Double = 10
 
     // MARK: Observable state

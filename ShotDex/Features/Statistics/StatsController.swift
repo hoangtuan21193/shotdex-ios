@@ -1,6 +1,6 @@
 import Foundation
 
-/// Owns the Statistics dashboard: the user's chart widgets, their computed
+/// Owns the Statistics dashboard: the user's chart specs, their computed
 /// data (each chart scoped by its own date range), and the edit operations
 /// that persist changes. All aggregate queries run off the main thread.
 @MainActor
@@ -10,7 +10,7 @@ final class StatsController {
     private let statChartDAO: StatChartDAO
 
     /// The dashboard's charts, in display order.
-    private(set) var charts: [ChartWidget] = []
+    private(set) var charts: [ChartSpec] = []
     /// Computed points per chart id (empty until first load completes).
     private(set) var results: [String: [ChartDatum]] = [:]
     /// Total indexed items (all time) — drives the "no indexed photos" empty
@@ -41,15 +41,15 @@ final class StatsController {
         let seeded = UserDefaults.standard.bool(forKey: SettingsKeys.didSeedStatCharts)
 
         Task.detached(priority: .userInitiated) { [weak self] in
-            // Resolve the widget list.
+            // Resolve the spec list.
             var didSeed = false
-            let charts: [ChartWidget]
+            let charts: [ChartSpec]
             if reloadCharts {
                 if seeded {
-                    charts = ((try? chartDAO.fetchAllOrdered()) ?? []).map(\.widget)
+                    charts = ((try? chartDAO.fetchAllOrdered()) ?? []).map(\.spec)
                 } else {
                     // First run: seed the defaults, remember we did so.
-                    charts = ((try? chartDAO.seedDefaultsIfEmpty()) ?? []).map(\.widget)
+                    charts = ((try? chartDAO.seedDefaultsIfEmpty()) ?? []).map(\.spec)
                     didSeed = true
                 }
             } else {
@@ -58,8 +58,8 @@ final class StatsController {
 
             // Aggregate every chart within its own scope.
             var results: [String: [ChartDatum]] = [:]
-            for widget in charts {
-                results[widget.id] = (try? statsDAO.chartData(for: widget, scope: widget.scope)) ?? []
+            for spec in charts {
+                results[spec.id] = (try? statsDAO.chartData(for: spec, scope: spec.scope)) ?? []
             }
             let total = (try? statsDAO.totalPhotos(scope: .allTime)) ?? 0
             let earliest = try? statsDAO.earliestCreationDate()
@@ -72,7 +72,7 @@ final class StatsController {
     }
 
     private func apply(
-        charts: [ChartWidget],
+        charts: [ChartSpec],
         results: [String: [ChartDatum]],
         total: Int,
         earliest: Date?,
@@ -90,15 +90,15 @@ final class StatsController {
     // MARK: Editing
 
     /// Appends a new chart at the end and reloads its data.
-    func addChart(_ widget: ChartWidget) {
-        try? statChartDAO.upsert(StatChart(widget: widget, position: charts.count))
+    func addChart(_ spec: ChartSpec) {
+        try? statChartDAO.upsert(StatChart(spec: spec, position: charts.count))
         reload(reloadCharts: true)
     }
 
     /// Replaces an existing chart in place (keeping its position) and reloads.
-    func updateChart(_ widget: ChartWidget) {
-        let position = charts.firstIndex { $0.id == widget.id } ?? charts.count
-        try? statChartDAO.upsert(StatChart(widget: widget, position: position))
+    func updateChart(_ spec: ChartSpec) {
+        let position = charts.firstIndex { $0.id == spec.id } ?? charts.count
+        try? statChartDAO.upsert(StatChart(spec: spec, position: position))
         reload(reloadCharts: true)
     }
 

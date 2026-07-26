@@ -4,14 +4,14 @@ import SwiftUI
 /// dimension (group-by), a Y-axis metric (aggregation), and optional
 /// conditions — the same rule builder as smart albums (`RuleBuilderSections`).
 /// A live preview renders the chart as configured. Saving hands a fully-formed
-/// `ChartWidget` back to the caller (which persists via `StatsController`).
+/// `ChartSpec` back to the caller (which persists via `StatsController`).
 struct ChartEditorSheet: View {
-    /// Non-nil when editing (reuses the widget's id).
-    var existing: ChartWidget?
+    /// Non-nil when editing (reuses the spec's id).
+    var existing: ChartSpec?
     let dependencies: AppDependencies
     /// Oldest capture date in the index — bounds the custom range picker.
     let earliestDate: Date?
-    var onSave: (ChartWidget) -> Void
+    var onSave: (ChartSpec) -> Void
 
     @Environment(\.dismiss) private var dismiss
 
@@ -26,8 +26,8 @@ struct ChartEditorSheet: View {
     /// This chart's own date range.
     @State private var scope: StatsDateScope
 
-    /// Stable id so the preview and the saved widget agree while editing.
-    @State private var widgetID: String
+    /// Stable id so the preview and the saved spec agree while editing.
+    @State private var specID: String
 
     @State private var availableBrands: [String] = []
     @State private var availableBodies: [String] = []
@@ -37,17 +37,17 @@ struct ChartEditorSheet: View {
     @State private var isRangePickerPresented = false
 
     init(
-        existing: ChartWidget?,
+        existing: ChartSpec?,
         dependencies: AppDependencies,
         earliestDate: Date?,
-        onSave: @escaping (ChartWidget) -> Void
+        onSave: @escaping (ChartSpec) -> Void
     ) {
         self.existing = existing
         self.dependencies = dependencies
         self.earliestDate = earliestDate
         self.onSave = onSave
 
-        let seed = existing ?? ChartWidget(title: "", kind: .bar, dimension: .cameraBody)
+        let seed = existing ?? ChartSpec(title: "", kind: .bar, dimension: .cameraBody)
         _title = State(initialValue: seed.title)
         _kind = State(initialValue: seed.kind)
         _dimension = State(initialValue: seed.dimension)
@@ -57,7 +57,7 @@ struct ChartEditorSheet: View {
         _topN = State(initialValue: seed.topN)
         _filter = State(initialValue: seed.filter)
         _scope = State(initialValue: seed.scope)
-        _widgetID = State(initialValue: existing?.id ?? UUID().uuidString)
+        _specID = State(initialValue: existing?.id ?? UUID().uuidString)
     }
 
     // MARK: Derived
@@ -70,10 +70,10 @@ struct ChartEditorSheet: View {
         ChartMetric(aggregation: aggregation, field: aggregation == .count ? nil : field)
     }
 
-    /// The widget as currently configured (validated rules only).
-    private var draft: ChartWidget {
-        ChartWidget(
-            id: widgetID,
+    /// The spec as currently configured (validated rules only).
+    private var draft: ChartSpec {
+        ChartSpec(
+            id: specID,
             title: trimmedTitle.isEmpty ? defaultTitle : trimmedTitle,
             kind: kind,
             dimension: kind.requiresDimension ? dimension : dimension,
@@ -282,7 +282,7 @@ struct ChartEditorSheet: View {
     private var previewSection: some View {
         Section {
             if canSave {
-                ChartContentView(widget: draft, data: previewData, isLoading: previewLoading, onDrill: nil)
+                ChartContentView(spec: draft, data: previewData, isLoading: previewLoading, onDrill: nil)
             } else {
                 Text("Finish configuring the chart to see a preview.")
                     .foregroundStyle(.secondary)
@@ -321,12 +321,12 @@ struct ChartEditorSheet: View {
             previewData = []
             return
         }
-        let widget = draft
+        let spec = draft
         let dao = dependencies.statsDAO
         let scope = self.scope
         previewLoading = true
         Task.detached(priority: .userInitiated) {
-            let data = (try? dao.chartData(for: widget, scope: scope)) ?? []
+            let data = (try? dao.chartData(for: spec, scope: scope)) ?? []
             await MainActor.run {
                 previewData = data
                 previewLoading = false

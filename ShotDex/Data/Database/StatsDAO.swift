@@ -297,21 +297,21 @@ struct StatsDAO: Sendable {
 // MARK: - Dashboard chart aggregation
 
 extension StatsDAO {
-    /// Runs a dashboard chart widget's query and returns its plotted points.
+    /// Runs a dashboard chart spec's query and returns its plotted points.
     /// Dispatches on `kind`; all column names come from closed enums on
     /// `ChartDimension` / `MetricField` (never user text), and only bound
     /// values originate from user input, so the string-built SQL is injection
-    /// free. The date `scope` ANDs on top of the widget's own `filter`.
-    func chartData(for widget: ChartWidget, scope: StatsDateScope) throws -> [ChartDatum] {
-        switch widget.kind {
+    /// free. The date `scope` ANDs on top of the spec's own `filter`.
+    func chartData(for spec: ChartSpec, scope: StatsDateScope) throws -> [ChartDatum] {
+        switch spec.kind {
         case .kpi:
-            if let dimension = widget.dimension {
+            if let dimension = spec.dimension {
                 // Top group by count — "Most used X". Binned/temporal data isn't
                 // value-sorted, so pick the max rather than the first row.
                 let grouped = try groupedData(
                     dimension: dimension,
                     metric: .photoCount,
-                    filter: widget.filter,
+                    filter: spec.filter,
                     scope: scope,
                     topN: 0,
                     includeUnknown: false
@@ -321,30 +321,30 @@ extension StatsDAO {
                 }
                 return [top]
             }
-            guard let value = try scalar(metric: widget.metric, filter: widget.filter, scope: scope) else {
+            guard let value = try scalar(metric: spec.metric, filter: spec.filter, scope: scope) else {
                 return []
             }
-            return [ChartDatum(label: widget.metric.displayName, value: value)]
+            return [ChartDatum(label: spec.metric.displayName, value: value)]
 
         case .line:
             return try temporalData(
-                dimension: widget.dimension ?? .dateMonth,
-                metric: widget.metric,
-                seriesSplit: widget.seriesSplit,
-                filter: widget.filter,
+                dimension: spec.dimension ?? .dateMonth,
+                metric: spec.metric,
+                seriesSplit: spec.seriesSplit,
+                filter: spec.filter,
                 scope: scope,
-                topSeries: widget.topN
+                topSeries: spec.topN
             )
 
         case .bar, .donut:
-            guard let dimension = widget.dimension else { return [] }
+            guard let dimension = spec.dimension else { return [] }
             return try groupedData(
                 dimension: dimension,
-                metric: widget.metric,
-                filter: widget.filter,
+                metric: spec.metric,
+                filter: spec.filter,
                 scope: scope,
-                topN: widget.topN,
-                includeUnknown: widget.metric.aggregation == .count
+                topN: spec.topN,
+                includeUnknown: spec.metric.aggregation == .count
             )
         }
     }
@@ -377,7 +377,7 @@ extension StatsDAO {
 
     // MARK: Filter + scope helpers
 
-    /// The widget filter and date scope as ANDable conditions + bound values
+    /// The spec filter and date scope as ANDable conditions + bound values
     /// (no `WHERE`, no leading keyword). Column names inside come only from the
     /// closed-enum rule compiler; values are parameters.
     private func filterAndScope(

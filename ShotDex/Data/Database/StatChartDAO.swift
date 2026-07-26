@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
 
-/// Reads and writes the Statistics dashboard's chart widgets (`stat_charts`).
+/// Reads and writes the Statistics dashboard's chart specs (`stat_charts`).
 struct StatChartDAO: Sendable {
     let database: AppDatabase
 
@@ -12,7 +12,7 @@ struct StatChartDAO: Sendable {
         }
     }
 
-    /// Inserts or updates a chart (keyed by widget id).
+    /// Inserts or updates a chart (keyed by spec id).
     func upsert(_ chart: StatChart) throws {
         try database.writer.write { db in
             try chart.upsert(db)
@@ -46,8 +46,8 @@ struct StatChartDAO: Sendable {
     func seedDefaultsIfEmpty() throws -> [StatChart] {
         try database.writer.write { db in
             if try StatChart.fetchCount(db) == 0 {
-                for (index, widget) in ChartWidget.defaultWidgets().enumerated() {
-                    try StatChart(widget: widget, position: index).insert(db)
+                for (index, spec) in ChartSpec.defaultSpecs().enumerated() {
+                    try StatChart(spec: spec, position: index).insert(db)
                 }
             }
             return try StatChart.order(Column("position")).fetchAll(db)

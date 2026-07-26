@@ -113,8 +113,8 @@ struct AdvancedSearchSheet: View {
 }
 
 /// Active-advanced-query header for the Library grid: the match count and each
-/// condition as a chip, with Edit (reopen the builder) and Clear actions. The
-/// advanced-search counterpart to `FilterChipsBar`.
+/// condition as a token, with Edit (reopen the builder) and Clear actions. The
+/// advanced-search counterpart to `FilterTokenBar`.
 struct AdvancedSearchBar: View {
     let query: SmartAlbumQuery
     let matchCount: Int

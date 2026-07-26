@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Statistics tab: a customizable dashboard of chart widgets. Charts are
+/// Statistics tab: a customizable dashboard of charts. Charts are
 /// user-defined (type + X-axis dimension + Y-axis metric + condition filter),
 /// reorderable and editable; a first-run install is seeded with defaults.
 struct StatisticsScreen: View {
@@ -15,19 +15,19 @@ struct StatisticsScreen: View {
     /// Which editor to present: a brand-new chart or an existing one.
     private enum EditorTarget: Identifiable {
         case new
-        case edit(ChartWidget)
+        case edit(ChartSpec)
 
         var id: String {
             switch self {
             case .new: "new"
-            case .edit(let widget): widget.id
+            case .edit(let spec): spec.id
             }
         }
 
-        var existing: ChartWidget? {
+        var existing: ChartSpec? {
             switch self {
             case .new: nil
-            case .edit(let widget): widget
+            case .edit(let spec): spec
             }
         }
     }
@@ -42,7 +42,7 @@ struct StatisticsScreen: View {
         }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                SettingsDrawerButton()
+                SettingsButton()
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -71,10 +71,10 @@ struct StatisticsScreen: View {
                     existing: target.existing,
                     dependencies: dependencies,
                     earliestDate: controller.earliestDate
-                ) { widget in
+                ) { spec in
                     switch target {
-                    case .new: controller.addChart(widget)
-                    case .edit: controller.updateChart(widget)
+                    case .new: controller.addChart(spec)
+                    case .edit: controller.updateChart(spec)
                     }
                 }
             }
@@ -103,14 +103,14 @@ struct StatisticsScreen: View {
                     message: "Tap + to add a chart to your dashboard."
                 )
             } else {
-                ForEach(controller.charts) { widget in
+                ForEach(controller.charts) { spec in
                     ChartCard(
-                        widget: widget,
-                        data: controller.results[widget.id] ?? [],
+                        spec: spec,
+                        data: controller.results[spec.id] ?? [],
                         isLoading: controller.isLoading,
-                        onEdit: { editorTarget = .edit(widget) },
-                        onDuplicate: { controller.addChart(duplicate(of: widget)) },
-                        onDelete: { controller.deleteChart(id: widget.id) },
+                        onEdit: { editorTarget = .edit(spec) },
+                        onDuplicate: { controller.addChart(duplicate(of: spec)) },
+                        onDelete: { controller.deleteChart(id: spec.id) },
                         onDrill: { navigation.openLibrary(with: $0) }
                     )
                     .listRowSeparator(.hidden)
@@ -142,18 +142,18 @@ struct StatisticsScreen: View {
             .listRowSeparator(.hidden)
     }
 
-    /// A copy of a widget with a fresh id and a "Copy" suffix.
-    private func duplicate(of widget: ChartWidget) -> ChartWidget {
-        ChartWidget(
+    /// A copy of a spec with a fresh id and a "Copy" suffix.
+    private func duplicate(of spec: ChartSpec) -> ChartSpec {
+        ChartSpec(
             id: UUID().uuidString,
-            title: "\(widget.title) Copy",
-            kind: widget.kind,
-            dimension: widget.dimension,
-            metric: widget.metric,
-            filter: widget.filter,
-            seriesSplit: widget.seriesSplit,
-            topN: widget.topN,
-            scope: widget.scope
+            title: "\(spec.title) Copy",
+            kind: spec.kind,
+            dimension: spec.dimension,
+            metric: spec.metric,
+            filter: spec.filter,
+            seriesSplit: spec.seriesSplit,
+            topN: spec.topN,
+            scope: spec.scope
         )
     }
 }
