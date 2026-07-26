@@ -1,6 +1,6 @@
 import Foundation
 
-/// UserDefaults keys shared between Settings UI and controllers.
+/// UserDefaults keys shared between the Settings UI and the feature models.
 enum SettingsKeys {
     /// Allow streaming EXIF from iCloud over cellular/expensive paths during
     /// automatic index runs. Wi-Fi is always allowed. Defaults to false.

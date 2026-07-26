@@ -45,7 +45,7 @@ final class AppNavigation {
         }
     }
 
-    /// Set by Statistics drill-downs; consumed by the Library controller owner.
+    /// Set by Statistics drill-downs; consumed by the Library model owner.
     var pendingLibraryFilter: FilterCriteria?
 
     /// Bumped when the user taps the Library tab while it's already selected;

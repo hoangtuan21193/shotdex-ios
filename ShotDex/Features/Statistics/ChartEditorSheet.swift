@@ -4,7 +4,7 @@ import SwiftUI
 /// dimension (group-by), a Y-axis metric (aggregation), and optional
 /// conditions — the same rule builder as smart albums (`RuleBuilderSections`).
 /// A live preview renders the chart as configured. Saving hands a fully-formed
-/// `ChartSpec` back to the caller (which persists via `StatsController`).
+/// `ChartSpec` back to the caller (which persists via `StatisticsModel`).
 struct ChartEditorSheet: View {
     /// Non-nil when editing (reuses the spec's id).
     var existing: ChartSpec?

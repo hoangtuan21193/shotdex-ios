@@ -4,7 +4,7 @@ import SwiftUI
 /// Grid of the photos matching a smart album's saved criteria, with the
 /// conditions shown as read-only tokens at the top. Structurally a sibling of
 /// `AlbumDetailScreen` (same viewer / multi-select / compare / delete), but
-/// driven by a `SmartAlbumDetailController` (criteria query) instead of a
+/// driven by a `SmartAlbumDetailModel` (criteria query) instead of a
 /// PhotoKit collection.
 struct SmartAlbumDetailScreen: View {
     @Environment(AppDependencies.self) private var dependencies
@@ -13,7 +13,7 @@ struct SmartAlbumDetailScreen: View {
 
     let album: SmartAlbum
 
-    @State private var controller: SmartAlbumDetailController?
+    @State private var model: SmartAlbumDetailModel?
     @State private var viewerTarget: PhotoViewerTarget?
 
     @State private var isSelecting = false
@@ -28,8 +28,8 @@ struct SmartAlbumDetailScreen: View {
 
     var body: some View {
         Group {
-            if let controller {
-                photoGrid(controller)
+            if let model {
+                photoGrid(model)
             } else {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -54,24 +54,24 @@ struct SmartAlbumDetailScreen: View {
             if !album.query.isEmpty {
                 SmartAlbumConditionsBar(
                     query: album.query,
-                    matchCount: controller?.matchCount ?? 0
+                    matchCount: model?.matchCount ?? 0
                 )
             }
         }
         .task {
-            if controller == nil {
-                let newController = SmartAlbumDetailController(album: album, dependencies: dependencies)
-                await newController.load()
-                controller = newController
+            if model == nil {
+                let newModel = SmartAlbumDetailModel(album: album, dependencies: dependencies)
+                await newModel.load()
+                model = newModel
             }
         }
         .fullScreenCover(item: $viewerTarget) { target in
-            if let controller {
-                PhotoDetailScreen(controller: controller, currentIndex: target.startIndex)
+            if let model {
+                PhotoDetailScreen(model: model, currentIndex: target.startIndex)
             }
         }
         .fullScreenCover(isPresented: $isComparePresented, onDismiss: stopSelecting) {
-            if let controller, let photos = comparePhotos(controller) {
+            if let model, let photos = comparePhotos(model) {
                 CompareScreen(photos: photos)
             }
         }
@@ -91,14 +91,14 @@ struct SmartAlbumDetailScreen: View {
 
     // MARK: Grid
 
-    private func photoGrid(_ controller: SmartAlbumDetailController) -> some View {
+    private func photoGrid(_ model: SmartAlbumDetailModel) -> some View {
         PhotoGridCollectionView(
-            photos: controller.items,
-            assetProvider: { index, _ in controller.asset(atFlatIndex: index) },
+            photos: model.items,
+            assetProvider: { index, _ in model.asset(atFlatIndex: index) },
             sectionMode: .dates,
             anchorsBottom: false,
-            contentVersion: controller.contentGeneration,
-            contentRefreshVersion: controller.contentRefreshGeneration,
+            contentVersion: model.contentGeneration,
+            contentRefreshVersion: model.contentRefreshGeneration,
             jumpToNewestToken: 0,
             columnCount: Binding(
                 get: { GridDensity.clamped(storedColumns) },
@@ -111,7 +111,7 @@ struct SmartAlbumDetailScreen: View {
             onTap: { _, item in
                 if isSelecting {
                     toggleSelection(of: item.assetId)
-                } else if let index = controller.index(of: item.assetId) {
+                } else if let index = model.index(of: item.assetId) {
                     viewerTarget = PhotoViewerTarget(id: item.assetId, startIndex: index)
                 }
             },
@@ -164,18 +164,18 @@ struct SmartAlbumDetailScreen: View {
     }
 
     /// Compare panes follow the pick order of the selection.
-    private func comparePhotos(_ controller: SmartAlbumDetailController) -> [ComparePhoto]? {
+    private func comparePhotos(_ model: SmartAlbumDetailModel) -> [ComparePhoto]? {
         guard (2...CompareScreen.maxPhotoCount).contains(selectedIds.count) else { return nil }
         let photos = selectedIds.compactMap { id -> ComparePhoto? in
-            guard let asset = controller.asset(for: id) else { return nil }
-            return ComparePhoto(metadata: controller.metadata(for: id), asset: asset)
+            guard let asset = model.asset(for: id) else { return nil }
+            return ComparePhoto(metadata: model.metadata(for: id), asset: asset)
         }
         return photos.count >= 2 ? photos : nil
     }
 
-    private func shareSelected(_ controller: SmartAlbumDetailController) {
+    private func shareSelected(_ model: SmartAlbumDetailModel) {
         guard !selectedIds.isEmpty, !isPreparingShare else { return }
-        let assets = selectedIds.compactMap { controller.asset(for: $0) }
+        let assets = selectedIds.compactMap { model.asset(for: $0) }
         isPreparingShare = true
         Task {
             let items = await PhotoShareSheet.gather(assets: assets)
@@ -184,14 +184,14 @@ struct SmartAlbumDetailScreen: View {
         }
     }
 
-    private func deleteSelected(_ controller: SmartAlbumDetailController) {
+    private func deleteSelected(_ model: SmartAlbumDetailModel) {
         guard !selectedIds.isEmpty else { return }
         let ids = Set(selectedIds)
         isDeleting = true
         Task {
             defer { isDeleting = false }
             do {
-                try await controller.deleteAssets(ids: ids)
+                try await model.deleteAssets(ids: ids)
                 withAnimation { stopSelecting() }
             } catch let error as PHPhotosError where error.code == .userCancelled {
                 // User dismissed the system confirm — keep the selection.
@@ -213,13 +213,13 @@ struct SmartAlbumDetailScreen: View {
     }
 
     private func selectionBarModel() -> SelectionBarModel? {
-        guard let controller else { return nil }
+        guard let model else { return nil }
         return SelectionBarModel(
             selectionCount: selectedIds.count,
             thumbnailIds: selectedIds,
             photoLibrary: photoLibrary,
             onCompare: { isComparePresented = true },
-            onDelete: { deleteSelected(controller) },
+            onDelete: { deleteSelected(model) },
             onDeselect: { toggleSelection(of: $0) },
             isDeleting: isDeleting
         )
@@ -232,7 +232,7 @@ struct SmartAlbumDetailScreen: View {
     @ViewBuilder
     private var shareToolbarButton: some View {
         Button {
-            if let controller { shareSelected(controller) }
+            if let model { shareSelected(model) }
         } label: {
             if isPreparingShare {
                 ProgressView()
@@ -252,7 +252,7 @@ struct SmartAlbumDetailScreen: View {
             }
         }
         ToolbarItem(placement: .topBarTrailing) {
-            if controller?.items.isEmpty == false {
+            if model?.items.isEmpty == false {
                 Button {
                     if isSelecting {
                         stopSelecting()

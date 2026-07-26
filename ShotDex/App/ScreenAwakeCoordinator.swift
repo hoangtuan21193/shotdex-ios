@@ -14,7 +14,7 @@ import UIKit
 /// black overlay alone keeps the panel dark (on OLED, black pixels are off).
 @MainActor
 @Observable
-final class ScreenAwakeController {
+final class ScreenAwakeCoordinator {
     /// Idle time with no user touch before the screen dims. iOS exposes no API
     /// for the system Auto-Lock value, so this is a fixed 1-minute stand-in.
     static let idleDimDelay: Duration = .seconds(60)
@@ -24,7 +24,7 @@ final class ScreenAwakeController {
 
     /// Source of index progress/throughput for the dim overlay. Weak — owned by
     /// the root tab view for the whole session.
-    weak var libraryController: LibraryController?
+    weak var libraryModel: LibraryModel?
 
     private var isEnabled = false
     private var isIndexing = false
@@ -101,7 +101,7 @@ final class ScreenAwakeController {
         window.backgroundColor = .clear
         let host = UIHostingController(
             rootView: DimOverlayView(
-                library: libraryController,
+                library: libraryModel,
                 onWake: { [weak self] in self?.registerActivity() }
             )
         )
@@ -130,7 +130,7 @@ final class ScreenAwakeController {
 /// Root of the dim overlay window: black fill + faint live progress, and a
 /// touch-to-wake gesture that swallows the tap so it never reaches the app.
 private struct DimOverlayView: View {
-    let library: LibraryController?
+    let library: LibraryModel?
     let onWake: () -> Void
 
     var body: some View {
@@ -223,7 +223,7 @@ private struct DimmedIndexProgress: View {
 }
 
 /// Invisible probe that observes every touch on the window without consuming or
-/// delaying it, reporting activity so `ScreenAwakeController` can reset its idle
+/// delaying it, reporting activity so `ScreenAwakeCoordinator` can reset its idle
 /// timer. Standard app-wide inactivity detection — no `AppDelegate` needed.
 struct IdleActivityReporterView: UIViewRepresentable {
     let onActivity: () -> Void

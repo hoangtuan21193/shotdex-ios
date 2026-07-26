@@ -52,7 +52,7 @@ struct PhotoDetailScreen: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    let controller: any PhotoBrowsingSource
+    let model: any PhotoBrowsingSource
     @State var currentIndex: Int
 
     /// Bumped after an in-viewer deletion prunes the source; forces the pager
@@ -128,7 +128,7 @@ struct PhotoDetailScreen: View {
             // native (a windowed SwiftUI `TabView(.page)` remounted pages on
             // every index change and stuttered/stuck mid-swipe).
             PhotoPager(
-                source: controller,
+                source: model,
                 photoLibrary: photoLibrary,
                 currentIndex: $currentIndex,
                 reseatToken: reseatToken,
@@ -245,7 +245,7 @@ struct PhotoDetailScreen: View {
         }
         .onChange(of: currentIndex) { _, newIndex in
             dependencies.indexInteractionGate.touch()
-            controller.loadNextPageIfNeeded(currentIndex: newIndex)
+            model.loadNextPageIfNeeded(currentIndex: newIndex)
             refreshCurrentPhoto()
         }
         .onAppear {
@@ -303,13 +303,13 @@ struct PhotoDetailScreen: View {
         stallWatchTask?.cancel()
         stallWatchTask = nil
         applyCurrentDownloadState()
-        guard let assetId = controller.photoId(at: currentIndex) else {
+        guard let assetId = model.photoId(at: currentIndex) else {
             currentMetadata = nil
             currentFilename = nil
             return
         }
-        currentMetadata = controller.metadata(for: assetId)
-        currentAsset = controller.asset(for: assetId)
+        currentMetadata = model.metadata(for: assetId)
+        currentAsset = model.asset(for: assetId)
         updateFilename(assetId: assetId)
     }
 
@@ -338,11 +338,11 @@ struct PhotoDetailScreen: View {
     /// indexed, and applies the refreshed row only if the user hasn't paged away.
     private func refreshRowMetadata(index: Int) {
         guard currentMetadata?.resolvedExifStatus != .indexed,
-              let assetId = controller.photoId(at: index)
+              let assetId = model.photoId(at: index)
         else { return }
         Task {
-            guard let updated = await controller.refreshMetadataAfterDownload(assetId: assetId) else { return }
-            guard controller.photoId(at: currentIndex) == assetId else { return }
+            guard let updated = await model.refreshMetadataAfterDownload(assetId: assetId) else { return }
+            guard model.photoId(at: currentIndex) == assetId else { return }
             currentMetadata = updated
         }
     }
@@ -593,12 +593,12 @@ struct PhotoDetailScreen: View {
     // MARK: Actions
 
     private func toggleFavorite(_ metadata: PhotoMetadata) {
-        guard let asset = controller.asset(for: metadata.assetId) else { return }
+        guard let asset = model.asset(for: metadata.assetId) else { return }
         let newValue = !metadata.isFavorite
         Task {
             do {
                 try await photoLibrary.setFavorite(newValue, for: asset)
-                controller.syncFavorite(assetId: metadata.assetId, isFavorite: newValue)
+                model.syncFavorite(assetId: metadata.assetId, isFavorite: newValue)
                 currentMetadata?.isFavorite = newValue
             } catch {
                 // PhotoKit change failed (e.g. user denied) — leave state as is.
@@ -611,16 +611,16 @@ struct PhotoDetailScreen: View {
     /// same (clamped) index — showing the next photo, iOS-Photos style — or the
     /// viewer dismisses when the album empties.
     private func deleteCurrentPhoto() {
-        guard let assetId = controller.photoId(at: currentIndex) else { return }
+        guard let assetId = model.photoId(at: currentIndex) else { return }
         Task {
             do {
-                try await controller.deleteAsset(id: assetId)
+                try await model.deleteAsset(id: assetId)
             } catch {
                 // User cancelled the system confirm, or the change failed —
                 // leave the viewer as is.
                 return
             }
-            let count = controller.photoCount
+            let count = model.photoCount
             guard count > 0 else {
                 dismiss()
                 return
@@ -632,7 +632,7 @@ struct PhotoDetailScreen: View {
     }
 
     private func share(_ metadata: PhotoMetadata) {
-        guard let asset = controller.asset(for: metadata.assetId) else {
+        guard let asset = model.asset(for: metadata.assetId) else {
             isShareUnavailable = true
             return
         }
@@ -683,7 +683,7 @@ struct PhotoDetailScreen: View {
         let needsFilename = currentFilename == nil
         let needsFileSize = currentFileSize == nil
         guard needsFilename || needsFileSize else { return }
-        guard let asset = controller.asset(for: assetId) else { return }
+        guard let asset = model.asset(for: assetId) else { return }
         // The filename is cheap, but reading `fileSize` (KVC) can trigger an
         // on-demand iCloud metadata fetch — resolve both off the main thread
         // only when the indexed row is missing a value, and apply only if the
@@ -697,7 +697,7 @@ struct PhotoDetailScreen: View {
                 }
                 : nil
             await MainActor.run {
-                guard controller.photoId(at: currentIndex) == assetId else { return }
+                guard model.photoId(at: currentIndex) == assetId else { return }
                 if currentFilename == nil {
                     currentFilename = filename
                 }
@@ -812,7 +812,7 @@ private struct VideoFullscreenLayout: ViewModifier {
 private struct DetailVideoPlayer: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    let controller: VideoPlaybackController
+    let model: VideoPlaybackModel
     let isActive: Bool
     let bottomInset: CGFloat
     let fullscreenEdgeInset: CGFloat
@@ -849,9 +849,9 @@ private struct DetailVideoPlayer: View {
     var body: some View {
         GeometryReader { proxy in
             ZStack {
-                if let player = controller.player {
+                if let player = model.player {
                     ZoomableVideoView(
-                        controller: controller,
+                        model: model,
                         player: player,
                         // Fullscreen re-lays-out the video view; a zoom carried
                         // across would frame the wrong region.
@@ -878,7 +878,7 @@ private struct DetailVideoPlayer: View {
                 // play must not have transport sitting on top of the reason.
                 //
                 // Opacity rather than `if` + transition: visibility is derived
-                // from `controller.isPlaying`, which changes outside any
+                // from `model.isPlaying`, which changes outside any
                 // `withAnimation`, so an insert/remove transition would pop.
                 centerTransport
                     .opacity(isCenterTransportVisible ? 1 : 0)
@@ -892,7 +892,7 @@ private struct DetailVideoPlayer: View {
 
                 statusOverlay
 
-                if isActive && isChromeVisible, controller.player != nil {
+                if isActive && isChromeVisible, model.player != nil {
                     VStack(spacing: 0) {
                         Spacer()
                         transport
@@ -914,15 +914,15 @@ private struct DetailVideoPlayer: View {
         }
         .onAppear {
             if isActive {
-                controller.play()
+                model.play()
             }
-            syncBufferingIndicator(for: controller.phase)
+            syncBufferingIndicator(for: model.phase)
         }
         .onChange(of: isActive) { _, active in
             if active {
-                controller.play()
+                model.play()
             } else {
-                controller.pause()
+                model.pause()
             }
         }
         .onChange(of: isChromeVisible) { _, visible in
@@ -930,7 +930,7 @@ private struct DetailVideoPlayer: View {
                 didLeaveOpeningAutoplay = true
             }
         }
-        .onChange(of: controller.isPlaying) { _, playing in
+        .onChange(of: model.isPlaying) { _, playing in
             if !playing {
                 didLeaveOpeningAutoplay = true
             }
@@ -944,14 +944,14 @@ private struct DetailVideoPlayer: View {
                 onContentTap()
             }
         }
-        .onChange(of: controller.phase) { _, phase in
+        .onChange(of: model.phase) { _, phase in
             syncBufferingIndicator(for: phase)
         }
-        .onChange(of: controller.frameSaveOutcome) { _, outcome in
+        .onChange(of: model.frameSaveOutcome) { _, outcome in
             scheduleFrameSaveDismissal(outcome)
         }
         .onDisappear {
-            controller.pause()
+            model.pause()
             bufferingIndicatorTask?.cancel()
             frameSaveTask?.cancel()
         }
@@ -977,12 +977,12 @@ private struct DetailVideoPlayer: View {
     private var isCenterTransportVisible: Bool {
         isActive
             && isChromeVisible
-            && controller.player != nil
-            && controller.phase.isReady
-            && (didLeaveOpeningAutoplay || !controller.isPlaying)
+            && model.player != nil
+            && model.phase.isReady
+            && (didLeaveOpeningAutoplay || !model.isPlaying)
             && !isContentZoomed
-            && !controller.isSavingFrame
-            && controller.frameSaveOutcome == nil
+            && !model.isSavingFrame
+            && model.frameSaveOutcome == nil
     }
 
     /// The primary controls sit over the middle of the picture, Photos-style,
@@ -1003,17 +1003,17 @@ private struct DetailVideoPlayer: View {
             }
 
             centerButton(
-                systemImage: controller.isPlaying ? "pause.fill" : "play.fill",
-                accessibilityLabel: controller.isPlaying ? "Pause" : "Play",
+                systemImage: model.isPlaying ? "pause.fill" : "play.fill",
+                accessibilityLabel: model.isPlaying ? "Pause" : "Play",
                 diameter: 68,
                 glyphSize: 30,
                 pulse: nil
             ) {
                 onInteraction()
-                if !controller.isPlaying {
+                if !model.isPlaying {
                     didRequestHideOnPlay = true
                 }
-                controller.togglePlayPause()
+                model.togglePlayPause()
             }
 
             centerButton(
@@ -1068,9 +1068,9 @@ private struct DetailVideoPlayer: View {
     /// produce identical state — including the bounce.
     private func handleSkip(isLeading: Bool) {
         onInteraction()
-        controller.skip(by: isLeading
-            ? -VideoPlaybackController.skipInterval
-            : VideoPlaybackController.skipInterval)
+        model.skip(by: isLeading
+            ? -VideoPlaybackModel.skipInterval
+            : VideoPlaybackModel.skipInterval)
         if isLeading {
             skipBackPulse += 1
         } else {
@@ -1102,21 +1102,21 @@ private struct DetailVideoPlayer: View {
             // `didRequestHideOnPlay` — the finger here is not covering the picture,
             // and hiding the panel would pull the scrubber out from under it.
             transportButton(
-                systemImage: controller.isPlaying ? "pause.fill" : "play.fill",
-                accessibilityLabel: controller.isPlaying ? "Pause" : "Play"
+                systemImage: model.isPlaying ? "pause.fill" : "play.fill",
+                accessibilityLabel: model.isPlaying ? "Pause" : "Play"
             ) {
                 onInteraction()
-                controller.togglePlayPause()
+                model.togglePlayPause()
             }
 
-            timeLabel(FormatUtils.duration(controller.displayTime))
+            timeLabel(FormatUtils.duration(model.displayTime))
 
             Slider(
                 value: Binding(
-                    get: { controller.displayTime },
-                    set: { controller.updateScrub($0) }
+                    get: { model.displayTime },
+                    set: { model.updateScrub($0) }
                 ),
-                in: 0...controller.timelineUpperBound,
+                in: 0...model.timelineUpperBound,
                 onEditingChanged: scrub
             )
             .tint(.white)
@@ -1139,13 +1139,13 @@ private struct DetailVideoPlayer: View {
             Spacer(minLength: 0)
 
             transportButton(
-                systemImage: controller.isMuted
+                systemImage: model.isMuted
                     ? "speaker.slash.fill"
                     : "speaker.wave.2.fill",
-                accessibilityLabel: controller.isMuted ? "Unmute" : "Mute"
+                accessibilityLabel: model.isMuted ? "Unmute" : "Mute"
             ) {
                 onInteraction()
-                controller.setMuted(!controller.isMuted)
+                model.setMuted(!model.isMuted)
             }
 
             Spacer(minLength: 0)
@@ -1165,9 +1165,9 @@ private struct DetailVideoPlayer: View {
                 accessibilityLabel: "Save Frame to Photos"
             ) {
                 onInteraction()
-                controller.saveCurrentFrame()
+                model.saveCurrentFrame()
             }
-            .disabled(controller.isSavingFrame)
+            .disabled(model.isSavingFrame)
 
             Spacer(minLength: 0)
 
@@ -1198,13 +1198,13 @@ private struct DetailVideoPlayer: View {
     private var loopButton: some View {
         Button {
             onInteraction()
-            controller.setLooping(!controller.isLooping)
+            model.setLooping(!model.isLooping)
         } label: {
             Image(systemName: "repeat")
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(.white)
                 .overlay {
-                    if !controller.isLooping {
+                    if !model.isLooping {
                         ZStack {
                             Capsule()
                                 .fill(.black.opacity(0.65))
@@ -1223,34 +1223,34 @@ private struct DetailVideoPlayer: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Loop")
-        .accessibilityValue(controller.isLooping ? "On" : "Off")
+        .accessibilityValue(model.isLooping ? "On" : "Off")
     }
 
     private var rateMenu: some View {
         Menu {
             Picker("Playback Speed", selection: rateSelection) {
-                ForEach(VideoPlaybackController.supportedRates, id: \.self) { value in
+                ForEach(VideoPlaybackModel.supportedRates, id: \.self) { value in
                     Text(Self.rateLabel(value)).tag(value)
                 }
             }
         } label: {
-            Text(Self.rateLabel(controller.rate))
+            Text(Self.rateLabel(model.rate))
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(width: 44, height: 44)
                 .contentShape(Rectangle())
         }
         .accessibilityLabel("Playback speed")
-        .accessibilityValue(Self.rateLabel(controller.rate))
+        .accessibilityValue(Self.rateLabel(model.rate))
         .simultaneousGesture(TapGesture().onEnded { onInteraction() })
     }
 
     private var rateSelection: Binding<Double> {
         Binding(
-            get: { controller.rate },
+            get: { model.rate },
             set: { newValue in
                 onInteraction()
-                controller.setRate(newValue)
+                model.setRate(newValue)
             }
         )
     }
@@ -1271,8 +1271,8 @@ private struct DetailVideoPlayer: View {
     /// worse than none.
     private var remainingLabel: String {
         guard let remaining = VideoTransportMath.remainingSeconds(
-            current: controller.displayTime,
-            duration: controller.duration
+            current: model.displayTime,
+            duration: model.duration
         ) else { return "--:--" }
         return "-" + FormatUtils.duration(remaining)
     }
@@ -1289,7 +1289,7 @@ private struct DetailVideoPlayer: View {
     /// that cannot play must say so even after the transport has faded out.
     @ViewBuilder
     private var statusOverlay: some View {
-        switch controller.phase {
+        switch model.phase {
         case .downloading(let progress):
             VStack(spacing: 10) {
                 ICloudDownloadRing(progress: progress)
@@ -1320,7 +1320,7 @@ private struct DetailVideoPlayer: View {
                     .foregroundStyle(.white)
                 Button {
                     onInteraction()
-                    controller.retry()
+                    model.retry()
                 } label: {
                     Text("Retry")
                         .font(.subheadline.weight(.semibold))
@@ -1342,9 +1342,9 @@ private struct DetailVideoPlayer: View {
             .transition(.opacity)
 
         case .idle, .ready:
-            if let outcome = controller.frameSaveOutcome {
+            if let outcome = model.frameSaveOutcome {
                 frameSaveBadge(outcome)
-            } else if controller.isSavingFrame {
+            } else if model.isSavingFrame {
                 frameSaveBadge(nil)
             }
         }
@@ -1389,9 +1389,9 @@ private struct DetailVideoPlayer: View {
     ///
     /// Paused, the tap falls through to the chrome toggle as before.
     private func handleSingleTap() {
-        if controller.isPlaying {
+        if model.isPlaying {
             onInteraction()
-            controller.pause()
+            model.pause()
         } else {
             onContentTap()
         }
@@ -1424,7 +1424,7 @@ private struct DetailVideoPlayer: View {
         }
         bufferingIndicatorTask = Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(350))
-            guard !Task.isCancelled, controller.phase == .buffering else { return }
+            guard !Task.isCancelled, model.phase == .buffering else { return }
             showBufferingIndicator = true
         }
     }
@@ -1435,16 +1435,16 @@ private struct DetailVideoPlayer: View {
         frameSaveTask = Task { @MainActor in
             try? await Task.sleep(for: .seconds(outcome == .saved ? 1.4 : 2.6))
             guard !Task.isCancelled else { return }
-            controller.clearFrameSaveOutcome()
+            model.clearFrameSaveOutcome()
         }
     }
 
     private var progressAccessibilityValue: String {
-        let total = controller.duration
+        let total = model.duration
         guard total.isFinite, total > 0 else {
-            return FormatUtils.duration(controller.displayTime)
+            return FormatUtils.duration(model.displayTime)
         }
-        return "\(FormatUtils.duration(controller.displayTime)) of \(FormatUtils.duration(total))"
+        return "\(FormatUtils.duration(model.displayTime)) of \(FormatUtils.duration(total))"
     }
 
     private func transportButton(
@@ -1466,9 +1466,9 @@ private struct DetailVideoPlayer: View {
     private func scrub(_ editing: Bool) {
         onInteraction()
         if editing {
-            controller.beginScrub()
+            model.beginScrub()
         } else {
-            controller.endScrub()
+            model.endScrub()
         }
     }
 }
@@ -1530,7 +1530,7 @@ struct PhotoDetailPage: View {
     @State private var imageQuality: ImageQuality = .none
     /// Owns the player, its readiness state machine and the PhotoKit video
     /// request. Created per page identity, torn down on disappear.
-    @State private var videoController = VideoPlaybackController()
+    @State private var videoModel = VideoPlaybackModel()
     @State private var isVideo = false
     @State private var asset: PHAsset?
     /// Set once the full-resolution original request has been fired (first
@@ -1562,10 +1562,10 @@ struct PhotoDetailPage: View {
         Group {
             if isVideo {
                 // Rendered for every phase, not only once a player exists: the
-                // controller owns the downloading / buffering / failed states,
+                // model owns the downloading / buffering / failed states,
                 // which is what replaced the old permanently-black screen.
                 DetailVideoPlayer(
-                    controller: videoController,
+                    model: videoModel,
                     isActive: loadState.isActive,
                     bottomInset: loadState.videoBottomInset,
                     fullscreenEdgeInset: loadState.videoFullscreenEdgeInset,
@@ -1607,18 +1607,18 @@ struct PhotoDetailPage: View {
                 if isVideo {
                     // Neighbour pages exist but were never allowed to request
                     // their clip; this is where the visible one starts.
-                    videoController.load()
-                    videoController.play()
+                    videoModel.load()
+                    videoModel.play()
                 } else {
                     startDisplayUpgradeWhenReady()
                 }
             } else {
-                videoController.pause()
+                videoModel.pause()
                 cancelDisplayUpgrade()
             }
         }
         .onDisappear {
-            videoController.tearDown()
+            videoModel.tearDown()
             loadingIndicatorTask?.cancel()
             loadingIndicatorTask = nil
             if let localPreviewRequestId {
@@ -1651,7 +1651,7 @@ struct PhotoDetailPage: View {
         self.asset = asset
         if asset.mediaType == .video {
             isVideo = true
-            videoController.configure(
+            videoModel.configure(
                 asset: asset,
                 photoLibrary: photoLibrary
             ) { progress, isDownloading in
@@ -1663,7 +1663,7 @@ struct PhotoDetailPage: View {
             // of the endless spinner. The initial page is already marked active
             // before `setViewControllers`, so it does start here.
             if loadState.isActive {
-                videoController.load()
+                videoModel.load()
             }
         } else {
             scheduleLoadingIndicator()
@@ -2280,7 +2280,7 @@ private struct PhotoPager: UIViewControllerRepresentable {
     }
 }
 
-/// Hosting controller that remembers its page index so the pager's data
+/// Hosting model that remembers its page index so the pager's data
 /// source can walk to neighbours.
 private final class PhotoPageHost: UIHostingController<AnyView> {
     let index: Int

@@ -3,12 +3,12 @@ import SwiftUI
 
 /// Backs the smart-album detail grid. The album's photos are the result of
 /// replaying its saved `FilterCriteria` through `LibraryQueryDAO` — so this
-/// mirrors `LibraryController` (query-driven, whole set loaded once) rather
-/// than `AlbumDetailController` (paged over a `PHFetchResult`). Trimmed: no
+/// mirrors `LibraryModel` (query-driven, whole set loaded once) rather
+/// than `AlbumDetailModel` (paged over a `PHFetchResult`). Trimmed: no
 /// index pipeline UI, no PhotoKit fast path, no auto-retry.
 @MainActor
 @Observable
-final class SmartAlbumDetailController {
+final class SmartAlbumDetailModel {
     private let queryDAO: LibraryQueryDAO
     private let metadataDAO: MetadataDAO
     private let photoLibrary: PhotoLibraryService
@@ -86,7 +86,7 @@ final class SmartAlbumDetailController {
 
 // MARK: PhotoBrowsingSource
 
-extension SmartAlbumDetailController: PhotoBrowsingSource {
+extension SmartAlbumDetailModel: PhotoBrowsingSource {
     var photoCount: Int { items.count }
 
     func photoId(at index: Int) -> String? {

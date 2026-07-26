@@ -3,10 +3,10 @@ import SwiftUI
 /// Advanced search for the Library: the same rule builder used to create a
 /// smart album (`RuleBuilderSections`), but applied as a transient query over
 /// the grid instead of a saved album. Applying sets
-/// `LibraryController.advancedQuery` (mutually exclusive with the normal
+/// `LibraryModel.advancedQuery` (mutually exclusive with the normal
 /// search/filter); "Save as Smart Album" hands the same rules to the editor.
 struct AdvancedSearchSheet: View {
-    let controller: LibraryController
+    let model: LibraryModel
     let dependencies: AppDependencies
     /// Called after applying so the caller can switch to the Library tab.
     var onApply: () -> Void
@@ -17,13 +17,13 @@ struct AdvancedSearchSheet: View {
     @State private var matchCount: Int?
     @State private var isSaveAsAlbumPresented = false
 
-    init(controller: LibraryController, dependencies: AppDependencies, onApply: @escaping () -> Void) {
-        self.controller = controller
+    init(model: LibraryModel, dependencies: AppDependencies, onApply: @escaping () -> Void) {
+        self.model = model
         self.dependencies = dependencies
         self.onApply = onApply
         // Resume the active advanced query if there is one, else open on a
         // single blank condition to fill (matching the album editor).
-        var initial = controller.advancedQuery ?? .empty
+        var initial = model.advancedQuery ?? .empty
         if initial.rules.isEmpty {
             initial.rules = [SmartAlbumRule()]
         }
@@ -42,9 +42,9 @@ struct AdvancedSearchSheet: View {
             List {
                 RuleBuilderSections(
                     query: $query,
-                    brands: controller.availableBrands,
-                    bodies: controller.availableBodies,
-                    lenses: controller.availableLenses,
+                    brands: model.availableBrands,
+                    bodies: model.availableBodies,
+                    lenses: model.availableLenses,
                     matchCount: matchCount
                 )
 
@@ -80,14 +80,14 @@ struct AdvancedSearchSheet: View {
             }
         }
         .onAppear {
-            controller.refreshFilterOptions()
+            model.refreshFilterOptions()
         }
         .task(id: query) { await recomputeCount(for: query) }
     }
 
     private func apply() {
         guard canApply else { return }
-        controller.advancedQuery = cleaned
+        model.advancedQuery = cleaned
         onApply()
         dismiss()
     }

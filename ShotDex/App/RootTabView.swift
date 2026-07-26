@@ -8,7 +8,7 @@ struct RootTabView: View {
 
     @State private var navigation = AppNavigation()
     @State private var isSearchPresented = false
-    @State private var libraryController: LibraryController?
+    @State private var libraryModel: LibraryModel?
     /// Pre-iOS 26 keeps a custom ZStack so visited tabs preserve navigation
     /// state, but mounts each tab only on first selection. Hidden, never-visited
     /// Albums/Statistics screens therefore do no PhotoKit/aggregate work during
@@ -26,7 +26,7 @@ struct RootTabView: View {
     /// trigger indexing. Idempotent: `startIndexing` guards on `isIndexing`.
     private func autoIndex() {
         guard photoLibrary.authorizationState.canReadLibrary else { return }
-        libraryController?.startIndexing()
+        libraryModel?.startIndexing()
     }
 
     /// Albums is mounted lazily, but its hero should already be sharp when the
@@ -40,7 +40,7 @@ struct RootTabView: View {
         Task {
             try? await Task.sleep(for: .milliseconds(250))
             guard !Task.isCancelled else { return }
-            await AlbumsController.preheatOnThisDayCover(using: photoLibrary)
+            await AlbumsModel.preheatOnThisDayCover(using: photoLibrary)
         }
     }
 
@@ -92,7 +92,7 @@ struct RootTabView: View {
     private var nativeTabView: some View {
         TabView(selection: tabSelection) {
             Tab(AppTab.library.title, systemImage: AppTab.library.systemImage, value: .library) {
-                NavigationStack { LibraryScreen(controller: libraryController) }
+                NavigationStack { LibraryScreen(model: libraryModel) }
             }
             Tab(AppTab.albums.title, systemImage: AppTab.albums.systemImage, value: .albums) {
                 NavigationStack { AlbumsScreen() }
@@ -102,9 +102,9 @@ struct RootTabView: View {
             }
             Tab(value: .search, role: .search) {
                 NavigationStack {
-                    if let libraryController {
+                    if let libraryModel {
                         SearchTab(
-                            controller: libraryController,
+                            model: libraryModel,
                             onApply: { navigation.selectedTab = .library },
                             onAdvanced: { navigation.openAdvancedSearch() }
                         )
@@ -127,12 +127,12 @@ struct RootTabView: View {
             }
         }
         .animation(.snappy(duration: 0.25), value: navigation.selectionBar != nil)
-        .settingsSheet(isPresented: $navigation.isSettingsSheetPresented, libraryController: libraryController)
-        .keepScreenAwakeWhileIndexing(libraryController: libraryController)
+        .settingsSheet(isPresented: $navigation.isSettingsSheetPresented, libraryModel: libraryModel)
+        .keepScreenAwakeWhileIndexing(libraryModel: libraryModel)
         .environment(navigation)
         .task {
-            if libraryController == nil {
-                libraryController = LibraryController(dependencies: dependencies)
+            if libraryModel == nil {
+                libraryModel = LibraryModel(dependencies: dependencies)
             }
             preheatAlbumCoverIfNeeded()
             // Let the Library publish its first interactive frame before the
@@ -147,7 +147,7 @@ struct RootTabView: View {
         }
         .onChange(of: navigation.pendingLibraryFilter) { _, pending in
             guard let pending else { return }
-            libraryController?.criteria = pending
+            libraryModel?.criteria = pending
             navigation.pendingLibraryFilter = nil
         }
     }
@@ -195,12 +195,12 @@ struct RootTabView: View {
                 }
             }
             .animation(.snappy(duration: 0.25), value: navigation.selectionBar != nil)
-            .settingsSheet(isPresented: $navigation.isSettingsSheetPresented, libraryController: libraryController)
-            .keepScreenAwakeWhileIndexing(libraryController: libraryController)
+            .settingsSheet(isPresented: $navigation.isSettingsSheetPresented, libraryModel: libraryModel)
+            .keepScreenAwakeWhileIndexing(libraryModel: libraryModel)
             .environment(navigation)
             .task {
-                if libraryController == nil {
-                    libraryController = LibraryController(dependencies: dependencies)
+                if libraryModel == nil {
+                    libraryModel = LibraryModel(dependencies: dependencies)
                 }
                 preheatAlbumCoverIfNeeded()
                 // Let the Library publish its first interactive frame before
@@ -215,7 +215,7 @@ struct RootTabView: View {
             }
             .onChange(of: navigation.pendingLibraryFilter) { _, pending in
                 guard let pending else { return }
-                libraryController?.criteria = pending
+                libraryModel?.criteria = pending
                 navigation.pendingLibraryFilter = nil
             }
             .onChange(of: navigation.selectedTab) { _, tab in
@@ -223,8 +223,8 @@ struct RootTabView: View {
                 mountedLegacyTabs.insert(tab)
             }
             .sheet(isPresented: $isSearchPresented) {
-                if let libraryController {
-                    SearchSheet(controller: libraryController) {
+                if let libraryModel {
+                    SearchSheet(model: libraryModel) {
                         isSearchPresented = false
                         navigation.openAdvancedSearch()
                     }
@@ -237,7 +237,7 @@ struct RootTabView: View {
     private var tabContent: some View {
         ZStack {
             if mountedLegacyTabs.contains(.library) {
-                tabStack(.library) { LibraryScreen(controller: libraryController) }
+                tabStack(.library) { LibraryScreen(model: libraryModel) }
             }
             if mountedLegacyTabs.contains(.albums) {
                 tabStack(.albums) { AlbumsScreen() }
@@ -266,20 +266,20 @@ struct RootTabView: View {
 /// on the `index.keepScreenAwake` setting. Mounts an invisible touch probe only
 /// when active so it never interferes otherwise.
 private struct KeepScreenAwakeModifier: ViewModifier {
-    let libraryController: LibraryController?
+    let libraryModel: LibraryModel?
 
     @AppStorage(SettingsKeys.keepScreenAwake) private var keepScreenAwake = false
     @Environment(\.scenePhase) private var scenePhase
-    @State private var controller = ScreenAwakeController()
+    @State private var model = ScreenAwakeCoordinator()
 
     private var isIndexing: Bool {
-        libraryController?.isIndexing == true
+        libraryModel?.isIndexing == true
     }
     private var isLowPowerMode: Bool {
-        libraryController?.isLowPowerMode == true
+        libraryModel?.isLowPowerMode == true
     }
     private var isManualRun: Bool {
-        libraryController?.isManualIndexRun == true
+        libraryModel?.isManualIndexRun == true
     }
     /// In Low Power Mode only a manually started run keeps the screen awake;
     /// automatic runs let the display sleep normally.
@@ -293,8 +293,8 @@ private struct KeepScreenAwakeModifier: ViewModifier {
                 if isActive {
                     // Passive, non-blocking probe that resets the idle timer
                     // on any touch. The dim visuals live in a top-level window
-                    // (see ScreenAwakeController), so nothing is drawn here.
-                    IdleActivityReporterView { controller.registerActivity() }
+                    // (see ScreenAwakeCoordinator), so nothing is drawn here.
+                    IdleActivityReporterView { model.registerActivity() }
                         .allowsHitTesting(false)
                 }
             }
@@ -306,22 +306,22 @@ private struct KeepScreenAwakeModifier: ViewModifier {
                 if phase == .active {
                     sync()
                 } else {
-                    controller.handleBackground()
+                    model.handleBackground()
                 }
             }
     }
 
     private func sync() {
-        controller.libraryController = libraryController
-        controller.update(enabled: isActive, indexing: isIndexing)
+        model.libraryModel = libraryModel
+        model.update(enabled: isActive, indexing: isIndexing)
     }
 }
 
 extension View {
-    /// Keep the display awake and auto-dim on idle while `libraryController` is
+    /// Keep the display awake and auto-dim on idle while `libraryModel` is
     /// indexing, honoring the user's `index.keepScreenAwake` setting.
-    func keepScreenAwakeWhileIndexing(libraryController: LibraryController?) -> some View {
-        modifier(KeepScreenAwakeModifier(libraryController: libraryController))
+    func keepScreenAwakeWhileIndexing(libraryModel: LibraryModel?) -> some View {
+        modifier(KeepScreenAwakeModifier(libraryModel: libraryModel))
     }
 }
 
@@ -352,7 +352,7 @@ private struct SelectionBottomAccessory: ViewModifier {
 /// the Library tab with the search criteria set.
 @available(iOS 26.0, *)
 struct SearchTab: View {
-    let controller: LibraryController
+    let model: LibraryModel
     var onApply: () -> Void
     /// Opens the advanced-search sheet. Presented by the root tab view (not here):
     /// a `.sheet` attached inside a `.search`-role tab's searchable scope is
@@ -385,7 +385,7 @@ struct SearchTab: View {
                     } label: {
                         Label("Search for “\(query)”", systemImage: "magnifyingglass")
                     }
-                    ForEach(controller.suggestions(for: query), id: \.self) { suggestion in
+                    ForEach(model.suggestions(for: query), id: \.self) { suggestion in
                         Button {
                             apply(suggestion)
                         } label: {
@@ -401,14 +401,14 @@ struct SearchTab: View {
         .onSubmit(of: .search) { apply(query) }
         .navigationTitle("Search")
         .onAppear {
-            query = controller.criteria.searchText ?? ""
-            controller.refreshFilterOptions()
+            query = model.criteria.searchText ?? ""
+            model.refreshFilterOptions()
         }
     }
 
     private func apply(_ text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        controller.criteria.searchText = trimmed.isEmpty ? nil : trimmed
+        model.criteria.searchText = trimmed.isEmpty ? nil : trimmed
         onApply()
     }
 }
@@ -418,7 +418,7 @@ struct SearchTab: View {
 struct SearchSheet: View {
     @Environment(\.dismiss) private var dismiss
 
-    let controller: LibraryController
+    let model: LibraryModel
     /// Dismisses this sheet and opens advanced search on the Library tab.
     var onAdvanced: () -> Void
     @State private var query = ""
@@ -448,7 +448,7 @@ struct SearchSheet: View {
                         } label: {
                             Label("Search for “\(query)”", systemImage: "magnifyingglass")
                         }
-                        ForEach(controller.suggestions(for: query), id: \.self) { suggestion in
+                        ForEach(model.suggestions(for: query), id: \.self) { suggestion in
                             Button {
                                 apply(suggestion)
                             } label: {
@@ -471,14 +471,14 @@ struct SearchSheet: View {
             }
         }
         .onAppear {
-            query = controller.criteria.searchText ?? ""
-            controller.refreshFilterOptions()
+            query = model.criteria.searchText ?? ""
+            model.refreshFilterOptions()
         }
     }
 
     private func apply(_ text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        controller.criteria.searchText = trimmed.isEmpty ? nil : trimmed
+        model.criteria.searchText = trimmed.isEmpty ? nil : trimmed
         dismiss()
     }
 }

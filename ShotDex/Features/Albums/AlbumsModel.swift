@@ -36,7 +36,7 @@ struct SmartAlbumTokenItem: Identifiable, @unchecked Sendable {
 /// plus user-created smart albums (saved filters).
 @MainActor
 @Observable
-final class AlbumsController {
+final class AlbumsModel {
     private(set) var albums: [AlbumItem] = []
     private(set) var isLoading = false
 
@@ -83,7 +83,7 @@ final class AlbumsController {
     static func preheatOnThisDayCover(using photoLibrary: PhotoLibraryService) async {
         let snapshot = await Task.detached(priority: .utility) {
             CoverSnapshot(
-                asset: OnThisDayController.fetchAssets(for: .now).firstObject
+                asset: OnThisDayModel.fetchAssets(for: .now).firstObject
             )
         }.value
         guard let asset = snapshot.asset else { return }
@@ -150,7 +150,7 @@ final class AlbumsController {
         imageOptions.predicate = PhotoLibraryService.browsableMediaPredicate
         imageOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
 
-        let onThisDay = OnThisDayController.fetchAssets(for: .now)
+        let onThisDay = OnThisDayModel.fetchAssets(for: .now)
 
         let smartSubtypes: [PHAssetCollectionSubtype] = [
             .smartAlbumRecentlyAdded,
@@ -200,7 +200,7 @@ final class AlbumsController {
 /// Pages one album's photos, joining PHAssets with their indexed metadata.
 @MainActor
 @Observable
-final class AlbumDetailController: PhotoBrowsingSource {
+final class AlbumDetailModel: PhotoBrowsingSource {
     static let pageSize = 120
 
     private let metadataDAO: MetadataDAO

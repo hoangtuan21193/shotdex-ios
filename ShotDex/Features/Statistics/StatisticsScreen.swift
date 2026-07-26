@@ -8,7 +8,7 @@ struct StatisticsScreen: View {
     @Environment(AppNavigation.self) private var navigation
     @Environment(PhotoLibraryService.self) private var photoLibrary
 
-    @State private var controller: StatsController?
+    @State private var model: StatisticsModel?
     @State private var editMode: EditMode = .inactive
     @State private var editorTarget: EditorTarget?
 
@@ -34,8 +34,8 @@ struct StatisticsScreen: View {
 
     var body: some View {
         Group {
-            if let controller {
-                content(controller)
+            if let model {
+                content(model)
             } else {
                 ProgressView()
             }
@@ -53,7 +53,7 @@ struct StatisticsScreen: View {
                 .accessibilityLabel("Add chart")
             }
             ToolbarItem(placement: .topBarTrailing) {
-                if !(controller?.charts.isEmpty ?? true) {
+                if !(model?.charts.isEmpty ?? true) {
                     Button {
                         withAnimation { editMode = editMode.isEditing ? .inactive : .active }
                     } label: {
@@ -66,51 +66,51 @@ struct StatisticsScreen: View {
         }
         .environment(\.editMode, $editMode)
         .sheet(item: $editorTarget) { target in
-            if let controller {
+            if let model {
                 ChartEditorSheet(
                     existing: target.existing,
                     dependencies: dependencies,
-                    earliestDate: controller.earliestDate
+                    earliestDate: model.earliestDate
                 ) { spec in
                     switch target {
-                    case .new: controller.addChart(spec)
-                    case .edit: controller.updateChart(spec)
+                    case .new: model.addChart(spec)
+                    case .edit: model.updateChart(spec)
                     }
                 }
             }
         }
         .task {
-            if controller == nil {
-                controller = StatsController(dependencies: dependencies)
+            if model == nil {
+                model = StatisticsModel(dependencies: dependencies)
             }
-            controller?.load()
+            model?.load()
         }
     }
 
     @ViewBuilder
-    private func content(_ controller: StatsController) -> some View {
+    private func content(_ model: StatisticsModel) -> some View {
         List {
-            if controller.hasLoaded && controller.totalPhotos == 0 {
+            if model.hasLoaded && model.totalPhotos == 0 {
                 unavailable(
                     "No Indexed Photos",
                     icon: "chart.bar.xaxis",
                     message: "Statistics appear after your library has been indexed."
                 )
-            } else if controller.hasLoaded && controller.charts.isEmpty {
+            } else if model.hasLoaded && model.charts.isEmpty {
                 unavailable(
                     "No Charts",
                     icon: "chart.bar.doc.horizontal",
                     message: "Tap + to add a chart to your dashboard."
                 )
             } else {
-                ForEach(controller.charts) { spec in
+                ForEach(model.charts) { spec in
                     ChartCard(
                         spec: spec,
-                        data: controller.results[spec.id] ?? [],
-                        isLoading: controller.isLoading,
+                        data: model.results[spec.id] ?? [],
+                        isLoading: model.isLoading,
                         onEdit: { editorTarget = .edit(spec) },
-                        onDuplicate: { controller.addChart(duplicate(of: spec)) },
-                        onDelete: { controller.deleteChart(id: spec.id) },
+                        onDuplicate: { model.addChart(duplicate(of: spec)) },
+                        onDelete: { model.deleteChart(id: spec.id) },
                         onDrill: { navigation.openLibrary(with: $0) }
                     )
                     .listRowSeparator(.hidden)
@@ -120,8 +120,8 @@ struct StatisticsScreen: View {
                     // onDelete still drives the edit-mode red minus button.
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {}
                 }
-                .onMove { controller.moveCharts(from: $0, to: $1) }
-                .onDelete { controller.deleteCharts(at: $0) }
+                .onMove { model.moveCharts(from: $0, to: $1) }
+                .onDelete { model.deleteCharts(at: $0) }
             }
 
             // Space for the floating chrome (custom bar, pre-iOS 26).

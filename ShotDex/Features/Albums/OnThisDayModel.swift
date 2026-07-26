@@ -18,7 +18,7 @@ struct OnThisDayYearSection: Identifiable {
 /// deleting assets from the library.
 @MainActor
 @Observable
-final class OnThisDayController: PhotoBrowsingSource {
+final class OnThisDayModel: PhotoBrowsingSource {
     private let metadataDAO: MetadataDAO
     private let database: AppDatabase
     private let photoLibrary: PhotoLibraryService

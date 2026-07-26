@@ -6,7 +6,7 @@ import Foundation
 /// lives in `ImportService`; this only orchestrates and publishes state.
 @MainActor
 @Observable
-final class ImportController {
+final class ImportModel {
     enum Phase: Equatable {
         case pickFolder     // no folder chosen yet
         case scanning       // enumerating files

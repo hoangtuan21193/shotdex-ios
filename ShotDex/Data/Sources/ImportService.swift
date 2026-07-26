@@ -14,7 +14,7 @@ enum ImportScanError: Error {
 /// and imports the chosen ones into the photo library. All heavy work
 /// (enumeration, thumbnailing, EXIF) is `nonisolated` so it runs off the main
 /// actor; only the composer build and the PhotoKit write hop back to the main
-/// actor. Holds no UI state — `ImportController` owns that.
+/// actor. Holds no UI state — `ImportModel` owns that.
 @MainActor
 final class ImportService {
     private let photoLibrary: PhotoLibraryService

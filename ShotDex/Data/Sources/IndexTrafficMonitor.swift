@@ -7,7 +7,7 @@ import os
 final class IndexTrafficMonitor: Sendable {
     /// Central log stream for iCloud-read health during an index run: every
     /// stall, breaker trip/close, and the periodic health snapshot (logged by
-    /// `LibraryController`'s sampler) share this category, so
+    /// `LibraryModel`'s sampler) share this category, so
     /// `log stream --predicate 'category == "index-health"'` tells the whole
     /// story of a degrading run in one place.
     static let healthLogger = Logger(subsystem: "com.hoangtuan.shotdex", category: "index-health")

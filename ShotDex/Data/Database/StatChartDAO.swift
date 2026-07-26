@@ -39,7 +39,7 @@ struct StatChartDAO: Sendable {
 
     /// Seeds the default dashboard when the table is empty, then returns the
     /// stored charts in order. Callers gate the *first-run* decision with a
-    /// persisted flag (see `StatsController`) so a board a user deliberately
+    /// persisted flag (see `StatisticsModel`) so a board a user deliberately
     /// cleared isn't re-seeded; the empty-check here is just a double-insert
     /// guard.
     @discardableResult

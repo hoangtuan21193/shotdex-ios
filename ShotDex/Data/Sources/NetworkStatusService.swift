@@ -37,7 +37,7 @@ final class NetworkStatusService: Sendable {
     private let initialPath = OSAllocatedUnfairLock<
         (resolved: Bool, waiters: [CheckedContinuation<Void, Never>])
     >(initialState: (false, []))
-    /// Optional observer (the indexing controller) notified on every path
+    /// Optional observer (the library model) notified on every path
     /// change with `(connectionType, isExpensive)`, so it can pause/resume.
     private let observer = OSAllocatedUnfairLock<
         (@Sendable (NetworkConnectionType, Bool) -> Void)?
@@ -82,7 +82,7 @@ final class NetworkStatusService: Sendable {
         }
     }
 
-    /// Registers the single path-change observer (the indexing controller).
+    /// Registers the single path-change observer (the library model).
     /// Replaces any previous handler.
     func setPathChangeHandler(_ handler: (@Sendable (NetworkConnectionType, Bool) -> Void)?) {
         observer.withLock { $0 = handler }

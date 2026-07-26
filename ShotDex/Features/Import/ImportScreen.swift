@@ -10,7 +10,7 @@ import UniformTypeIdentifiers
 struct ImportScreen: View {
     @Environment(\.dismiss) private var dismiss
 
-    @State private var controller: ImportController
+    @State private var model: ImportModel
     @State private var isFolderPickerPresented = false
     @State private var isFilterPresented = false
     @AppStorage(SettingsKeys.gridColumns) private var storedColumns = 3
@@ -19,7 +19,7 @@ struct ImportScreen: View {
 
     init(service: ImportService) {
         self.service = service
-        _controller = State(initialValue: ImportController(service: service))
+        _model = State(initialValue: ImportModel(service: service))
     }
 
     var body: some View {
@@ -34,24 +34,24 @@ struct ImportScreen: View {
                     allowsMultipleSelection: false
                 ) { result in
                     if case .success(let urls) = result, let url = urls.first {
-                        controller.startFolder(url)
+                        model.startFolder(url)
                     }
                 }
                 .sheet(isPresented: $isFilterPresented) {
-                    ImportFilterSheet(controller: controller)
+                    ImportFilterSheet(model: model)
                         .presentationDetents([.medium, .large])
                         .presentationDragIndicator(.visible)
                 }
         }
-        .interactiveDismissDisabled(controller.phase == .importing)
-        .onDisappear { controller.teardown() }
+        .interactiveDismissDisabled(model.phase == .importing)
+        .onDisappear { model.teardown() }
     }
 
     // MARK: Phases
 
     @ViewBuilder
     private var content: some View {
-        switch controller.phase {
+        switch model.phase {
         case .pickFolder: pickFolderState
         case .scanning: scanningState
         case .browsing: browsingState
@@ -71,7 +71,7 @@ struct ImportScreen: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-            if let scanError = controller.scanError {
+            if let scanError = model.scanError {
                 Text(scanError)
                     .font(.footnote)
                     .foregroundStyle(.red)
@@ -94,7 +94,7 @@ struct ImportScreen: View {
     private var scanningState: some View {
         VStack(spacing: 12) {
             ProgressView()
-            Text("Scanning \(controller.folderName ?? "folder")…")
+            Text("Scanning \(model.folderName ?? "folder")…")
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -110,10 +110,10 @@ struct ImportScreen: View {
 
     private var importingState: some View {
         VStack(spacing: 16) {
-            ProgressView(value: Double(controller.importDone), total: Double(max(controller.importTotal, 1)))
+            ProgressView(value: Double(model.importDone), total: Double(max(model.importTotal, 1)))
                 .progressViewStyle(.linear)
                 .frame(maxWidth: 260)
-            Text("Importing \(controller.importDone) of \(controller.importTotal)…")
+            Text("Importing \(model.importDone) of \(model.importTotal)…")
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -122,13 +122,13 @@ struct ImportScreen: View {
 
     private var doneState: some View {
         VStack(spacing: 16) {
-            Image(systemName: controller.importFailures.isEmpty ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+            Image(systemName: model.importFailures.isEmpty ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                 .font(.system(size: 48))
-                .foregroundStyle(controller.importFailures.isEmpty ? .green : .orange)
-            Text("Imported ^[\(controller.importedCount) item](inflect: true)")
+                .foregroundStyle(model.importFailures.isEmpty ? .green : .orange)
+            Text("Imported ^[\(model.importedCount) item](inflect: true)")
                 .font(.title3.weight(.semibold))
-            if !controller.importFailures.isEmpty {
-                Text("^[\(controller.importFailures.count) file](inflect: true) couldn't be imported.")
+            if !model.importFailures.isEmpty {
+                Text("^[\(model.importFailures.count) file](inflect: true) couldn't be imported.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -149,28 +149,28 @@ struct ImportScreen: View {
 
     private var statusBar: some View {
         HStack(spacing: 12) {
-            Text("^[\(controller.visibleCandidates.count) item](inflect: true)")
+            Text("^[\(model.visibleCandidates.count) item](inflect: true)")
                 .font(.footnote.weight(.medium))
-            if controller.hideRaw && controller.rawCount > 0 {
-                Text("\(controller.rawCount) RAW hidden")
+            if model.hideRaw && model.rawCount > 0 {
+                Text("\(model.rawCount) RAW hidden")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            if !controller.isExifScanComplete {
+            if !model.isExifScanComplete {
                 HStack(spacing: 5) {
                     ProgressView().controlSize(.mini)
-                    Text("reading metadata \(controller.exifScanned)/\(controller.candidates.count)")
+                    Text("reading metadata \(model.exifScanned)/\(model.candidates.count)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
             Spacer()
-            Button(controller.importableCount == controller.visibleCandidates.count && !controller.visibleCandidates.isEmpty
+            Button(model.importableCount == model.visibleCandidates.count && !model.visibleCandidates.isEmpty
                    ? "Deselect All" : "Select All") {
-                if controller.importableCount == controller.visibleCandidates.count {
-                    controller.clearSelection()
+                if model.importableCount == model.visibleCandidates.count {
+                    model.clearSelection()
                 } else {
-                    controller.selectAllVisible()
+                    model.selectAllVisible()
                 }
             }
             .font(.footnote.weight(.medium))
@@ -190,19 +190,19 @@ struct ImportScreen: View {
                     columns: Array(repeating: GridItem(.flexible(), spacing: spacing), count: columns),
                     spacing: spacing
                 ) {
-                    ForEach(controller.visibleCandidates) { candidate in
+                    ForEach(model.visibleCandidates) { candidate in
                         ImportGridTile(
                             candidate: candidate,
                             service: service,
                             cellWidth: cellWidth,
-                            isSelected: controller.isSelected(candidate.id)
+                            isSelected: model.isSelected(candidate.id)
                         )
-                        .onTapGesture { controller.toggle(candidate.id) }
+                        .onTapGesture { model.toggle(candidate.id) }
                     }
                 }
             }
             .overlay {
-                if controller.visibleCandidates.isEmpty {
+                if model.visibleCandidates.isEmpty {
                     ContentUnavailableView(
                         "No Photos Match",
                         systemImage: "line.3.horizontal.decrease.circle",
@@ -216,16 +216,16 @@ struct ImportScreen: View {
     private var importBar: some View {
         HStack {
             Button {
-                controller.startImport()
+                model.startImport()
             } label: {
-                Text(controller.importableCount > 0
-                     ? "Import ^[\(controller.importableCount) item](inflect: true)"
+                Text(model.importableCount > 0
+                     ? "Import ^[\(model.importableCount) item](inflect: true)"
                      : "Select items to import")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .disabled(controller.importableCount == 0)
+            .disabled(model.importableCount == 0)
         }
         .padding()
         .background(.bar)
@@ -236,12 +236,12 @@ struct ImportScreen: View {
         ToolbarItem(placement: .cancellationAction) {
             Button("Cancel") { dismiss() }
         }
-        if controller.phase == .browsing {
+        if model.phase == .browsing {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     isFilterPresented = true
                 } label: {
-                    Image(systemName: controller.query.isEmpty && controller.hideRaw
+                    Image(systemName: model.query.isEmpty && model.hideRaw
                         ? "line.3.horizontal.decrease.circle"
                         : "line.3.horizontal.decrease.circle.fill")
                 }
@@ -339,23 +339,23 @@ private struct ImportGridTile: View {
 /// evaluated in-memory against the scanned candidates. Camera/lens/ISO rules
 /// only resolve once the background EXIF scan finishes.
 private struct ImportFilterSheet: View {
-    @Bindable var controller: ImportController
+    @Bindable var model: ImportModel
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
             List {
                 Section {
-                    Toggle("Hide RAW files", isOn: $controller.hideRaw)
+                    Toggle("Hide RAW files", isOn: $model.hideRaw)
                 } footer: {
                     Text("RAW and DNG are hidden by default; JPEG, HEIC and videos import.")
                 }
 
-                if !controller.isExifScanComplete {
+                if !model.isExifScanComplete {
                     Section {
                         HStack(spacing: 8) {
                             ProgressView().controlSize(.small)
-                            Text("Reading metadata \(controller.exifScanned)/\(controller.candidates.count)")
+                            Text("Reading metadata \(model.exifScanned)/\(model.candidates.count)")
                                 .foregroundStyle(.secondary)
                         }
                     } footer: {
@@ -364,11 +364,11 @@ private struct ImportFilterSheet: View {
                 }
 
                 RuleBuilderSections(
-                    query: $controller.query,
-                    brands: controller.availableBrands,
-                    bodies: controller.availableBodies,
-                    lenses: controller.availableLenses,
-                    matchCount: controller.visibleCandidates.count
+                    query: $model.query,
+                    brands: model.availableBrands,
+                    bodies: model.availableBodies,
+                    lenses: model.availableLenses,
+                    matchCount: model.visibleCandidates.count
                 )
             }
             .listStyle(.insetGrouped)

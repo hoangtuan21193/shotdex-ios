@@ -13,7 +13,7 @@ final class PowerStatusService: Sendable {
 
     private let lowPower = OSAllocatedUnfairLock(initialState: false)
     private let charging = OSAllocatedUnfairLock(initialState: false)
-    /// Optional observer (the indexing controller) notified on every power
+    /// Optional observer (the library model) notified on every power
     /// change with `(isLowPowerMode, isCharging)`.
     private let observer = OSAllocatedUnfairLock<
         (@Sendable (Bool, Bool) -> Void)?
@@ -44,7 +44,7 @@ final class PowerStatusService: Sendable {
         tokens.withLock { $0 = [powerToken, batteryToken] }
     }
 
-    /// Registers the single power-change observer (the indexing controller).
+    /// Registers the single power-change observer (the library model).
     /// Replaces any previous handler.
     func setPowerChangeHandler(_ handler: (@Sendable (Bool, Bool) -> Void)?) {
         observer.withLock { $0 = handler }
