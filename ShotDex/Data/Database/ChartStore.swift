@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 
 /// Reads and writes the Statistics dashboard's chart specs (`stat_charts`).
-struct StatChartDAO: Sendable {
+struct ChartStore: Sendable {
     let database: AppDatabase
 
     /// All charts in display order.

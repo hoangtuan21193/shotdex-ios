@@ -6,8 +6,8 @@ import Foundation
 @MainActor
 @Observable
 final class StatisticsModel {
-    private let statsDAO: StatsDAO
-    private let statChartDAO: StatChartDAO
+    private let statisticsQueries: StatisticsQueries
+    private let chartStore: ChartStore
 
     /// The dashboard's charts, in display order.
     private(set) var charts: [ChartSpec] = []
@@ -23,8 +23,8 @@ final class StatisticsModel {
     private(set) var hasLoaded = false
 
     init(dependencies: AppDependencies) {
-        self.statsDAO = dependencies.statsDAO
-        self.statChartDAO = dependencies.statChartDAO
+        self.statisticsQueries = dependencies.statisticsQueries
+        self.chartStore = dependencies.chartStore
     }
 
     /// Loads the chart list (seeding defaults on first ever run) and then every
@@ -35,8 +35,8 @@ final class StatisticsModel {
 
     private func reload(reloadCharts: Bool) {
         isLoading = true
-        let statsDAO = self.statsDAO
-        let chartDAO = self.statChartDAO
+        let statisticsQueries = self.statisticsQueries
+        let chartStore = self.chartStore
         let knownCharts = self.charts
         let seeded = UserDefaults.standard.bool(forKey: SettingsKeys.didSeedStatCharts)
 
@@ -46,10 +46,10 @@ final class StatisticsModel {
             let charts: [ChartSpec]
             if reloadCharts {
                 if seeded {
-                    charts = ((try? chartDAO.fetchAllOrdered()) ?? []).map(\.spec)
+                    charts = ((try? chartStore.fetchAllOrdered()) ?? []).map(\.spec)
                 } else {
                     // First run: seed the defaults, remember we did so.
-                    charts = ((try? chartDAO.seedDefaultsIfEmpty()) ?? []).map(\.spec)
+                    charts = ((try? chartStore.seedDefaultsIfEmpty()) ?? []).map(\.spec)
                     didSeed = true
                 }
             } else {
@@ -59,10 +59,10 @@ final class StatisticsModel {
             // Aggregate every chart within its own scope.
             var results: [String: [ChartDatum]] = [:]
             for spec in charts {
-                results[spec.id] = (try? statsDAO.chartData(for: spec, scope: spec.scope)) ?? []
+                results[spec.id] = (try? statisticsQueries.chartData(for: spec, scope: spec.scope)) ?? []
             }
-            let total = (try? statsDAO.totalPhotos(scope: .allTime)) ?? 0
-            let earliest = try? statsDAO.earliestCreationDate()
+            let total = (try? statisticsQueries.totalPhotos(scope: .allTime)) ?? 0
+            let earliest = try? statisticsQueries.earliestCreationDate()
 
             await self?.apply(
                 charts: charts, results: results, total: total,
@@ -91,35 +91,35 @@ final class StatisticsModel {
 
     /// Appends a new chart at the end and reloads its data.
     func addChart(_ spec: ChartSpec) {
-        try? statChartDAO.upsert(StatChart(spec: spec, position: charts.count))
+        try? chartStore.upsert(StatChart(spec: spec, position: charts.count))
         reload(reloadCharts: true)
     }
 
     /// Replaces an existing chart in place (keeping its position) and reloads.
     func updateChart(_ spec: ChartSpec) {
         let position = charts.firstIndex { $0.id == spec.id } ?? charts.count
-        try? statChartDAO.upsert(StatChart(spec: spec, position: position))
+        try? chartStore.upsert(StatChart(spec: spec, position: position))
         reload(reloadCharts: true)
     }
 
     func deleteChart(id: String) {
-        try? statChartDAO.delete(id: id)
+        try? chartStore.delete(id: id)
         results[id] = nil
         charts.removeAll { $0.id == id }
-        try? statChartDAO.updatePositions(charts.map(\.id))
+        try? chartStore.updatePositions(charts.map(\.id))
     }
 
     func deleteCharts(at offsets: IndexSet) {
         let ids = offsets.map { charts[$0].id }
-        for id in ids { try? statChartDAO.delete(id: id) }
+        for id in ids { try? chartStore.delete(id: id) }
         charts.remove(atOffsets: offsets)
         for id in ids { results[id] = nil }
-        try? statChartDAO.updatePositions(charts.map(\.id))
+        try? chartStore.updatePositions(charts.map(\.id))
     }
 
     /// Reorders charts in place and persists the new positions.
     func moveCharts(from offsets: IndexSet, to destination: Int) {
         charts.move(fromOffsets: offsets, toOffset: destination)
-        try? statChartDAO.updatePositions(charts.map(\.id))
+        try? chartStore.updatePositions(charts.map(\.id))
     }
 }

@@ -42,7 +42,7 @@ struct CameraDatabaseScreen: View {
     }
 
     private func refresh() {
-        unknownModels = (try? dependencies.metadataDAO.unknownCameraModels()) ?? []
+        unknownModels = (try? dependencies.metadataStore.unknownCameraModels()) ?? []
     }
 }
 
@@ -107,7 +107,7 @@ struct SensorMappingScreen: View {
             sensorFormat: selectedFormat.rawValue,
             cropFactor: selectedFormat.typicalCropFactor
         )
-        try? dependencies.metadataDAO.applyCustomMapping(mapping)
+        try? dependencies.metadataStore.applyCustomMapping(mapping)
         onSaved()
         dismiss()
     }

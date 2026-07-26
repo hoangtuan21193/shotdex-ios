@@ -1,7 +1,7 @@
 import Foundation
 import os
 
-/// Counts bytes streamed from iCloud during an index run. `ExifService`
+/// Counts bytes streamed from iCloud during an index run. `ExifReader`
 /// reports every received chunk; the indexing UI polls the total once a
 /// second to derive a download speed.
 final class IndexTrafficMonitor: Sendable {

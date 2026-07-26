@@ -13,7 +13,7 @@ struct IndexedAssetState: Equatable, Sendable {
 }
 
 /// Writes indexed metadata and manages the index cursor.
-struct MetadataDAO: Sendable {
+struct MetadataStore: Sendable {
     let database: AppDatabase
 
     // MARK: Batch writes

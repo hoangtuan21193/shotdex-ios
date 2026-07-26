@@ -102,9 +102,9 @@ actor IndexPipeline {
     private static let logger = Logger(subsystem: "com.hoangtuan.shotdex", category: "index")
     private static let signposter = OSSignposter(subsystem: "com.hoangtuan.shotdex", category: "index")
 
-    private let metadataDAO: MetadataDAO
-    private let exifService: ExifService
-    private let sensorDatabaseService: SensorDatabaseService
+    private let metadataStore: MetadataStore
+    private let exifReader: ExifReader
+    private let sensorDatabaseLoader: SensorDatabaseLoader
     /// Interactive-demand signal from the fullscreen viewer; the EXIF pass
     /// stops spawning reads while it is held. nil (tests) never pauses.
     private let interactionGate: IndexInteractionGate?
@@ -117,14 +117,14 @@ actor IndexPipeline {
     private var isCancelled = false
     private var isRunning = false
 
-    init(metadataDAO: MetadataDAO, exifService: ExifService = ExifService(),
-         sensorDatabaseService: SensorDatabaseService = SensorDatabaseService(),
+    init(metadataStore: MetadataStore, exifReader: ExifReader = ExifReader(),
+         sensorDatabaseLoader: SensorDatabaseLoader = SensorDatabaseLoader(),
          interactionGate: IndexInteractionGate? = nil,
          thermalState: @escaping @Sendable () -> ProcessInfo.ThermalState = { ProcessInfo.processInfo.thermalState },
          isLowPowerMode: @escaping @Sendable () -> Bool = { ProcessInfo.processInfo.isLowPowerModeEnabled }) {
-        self.metadataDAO = metadataDAO
-        self.exifService = exifService
-        self.sensorDatabaseService = sensorDatabaseService
+        self.metadataStore = metadataStore
+        self.exifReader = exifReader
+        self.sensorDatabaseLoader = sensorDatabaseLoader
         self.interactionGate = interactionGate
         self.thermalState = thermalState
         self.isLowPowerMode = isLowPowerMode
@@ -185,8 +185,8 @@ actor IndexPipeline {
     private func makeComposer() -> MetadataComposer {
         MetadataComposer(
             sensorLookup: SensorLookup(
-                records: (try? sensorDatabaseService.loadRecords()) ?? [],
-                customMappings: (try? metadataDAO.customMappings()) ?? []
+                records: (try? sensorDatabaseLoader.loadRecords()) ?? [],
+                customMappings: (try? metadataStore.customMappings()) ?? []
             )
         )
     }
@@ -201,7 +201,7 @@ actor IndexPipeline {
     /// (`indexed`/`noExif` — left untouched), the asset is missing, or the read
     /// still couldn't reach the original (leaves the existing status as-is).
     func indexSingle(assetId: String) async -> PhotoMetadata? {
-        if let state = try? metadataDAO.assetState(assetId: assetId),
+        if let state = try? metadataStore.assetState(assetId: assetId),
            let status = ExifStatus(rawValue: state.exifStatus),
            status == .indexed || status == .noExif {
             return nil
@@ -209,7 +209,7 @@ actor IndexPipeline {
         guard let asset = PhotoLibraryService.fetchAssets(ids: [assetId]).first else { return nil }
         let composer = makeComposer()
         let resources = PHAssetResource.assetResources(for: asset)
-        let resource = ExifService.photoResource(among: resources)
+        let resource = ExifReader.photoResource(among: resources)
         // Facts (size/filename) fall back to any resource so videos — which
         // have no photo resource — still record them.
         let factsResource = resource ?? resources.first
@@ -220,7 +220,7 @@ actor IndexPipeline {
         if Self.shouldSkipExifRead(mediaType: asset.mediaType.rawValue, mediaSubtypes: asset.mediaSubtypes) {
             record = composer.compose(asset: info, exif: .empty, exifStatus: .indexed)   // → noExif
         } else {
-            switch await exifService.readExif(for: asset, resource: resource, allowNetwork: true) {
+            switch await exifReader.readExif(for: asset, resource: resource, allowNetwork: true) {
             case .success(let exif):
                 record = composer.compose(asset: info, exif: exif, exifStatus: .indexed)
             case .unreadable:
@@ -234,7 +234,7 @@ actor IndexPipeline {
                 return nil
             }
         }
-        try? metadataDAO.upsert(record)
+        try? metadataStore.upsert(record)
         return record
     }
 
@@ -308,7 +308,7 @@ actor IndexPipeline {
 
         // Rows already present — the fast pass must never overwrite them
         // (a full reindex still keeps old EXIF visible until re-read).
-        let existingStates = try metadataDAO.indexedAssetStates()
+        let existingStates = try metadataStore.indexedAssetStates()
         // Diff snapshot for the EXIF pass; fullReindex re-reads everything.
         let existing = fullReindex ? [:] : existingStates
 
@@ -333,7 +333,7 @@ actor IndexPipeline {
         // of restarting at zero. `fullReindex` re-reads everything, so it
         // starts from zero. Emitted once up front so the panel shows the true
         // starting point immediately (no jump, no apparent backward step).
-        var baseline = fullReindex ? 0 : (try? metadataDAO.completedCount()) ?? 0
+        var baseline = fullReindex ? 0 : (try? metadataStore.completedCount()) ?? 0
         var newlyDone = 0
         onProgress(IndexProgress(processed: baseline, total: total))
 
@@ -401,20 +401,20 @@ actor IndexPipeline {
         if !isCancelled && !fullReindex {
             let deletedIds = existing.keys.filter { !seenAssetIds.contains($0) }
             if !deletedIds.isEmpty {
-                try metadataDAO.deleteAssets(ids: deletedIds)
+                try metadataStore.deleteAssets(ids: deletedIds)
                 summary.deleted = deletedIds.count
             }
         }
 
         summary.wasCancelled = isCancelled
 
-        var state = try metadataDAO.indexState()
+        var state = try metadataStore.indexState()
         state.lastIndexedAt = Int(Date().timeIntervalSince1970)
         if !isCancelled {
             state.cursorAssetId = nil
             state.lastFullIndexAt = Int(Date().timeIntervalSince1970)
         }
-        try metadataDAO.saveIndexState(state)
+        try metadataStore.saveIndexState(state)
 
         onProgress(IndexProgress(processed: baseline + newlyDone, total: total))
         Self.logSummary("run", summary: summary, elapsed: clock.now - runStart, timings: timings.withLock { $0 })
@@ -440,7 +440,7 @@ actor IndexPipeline {
         let timings = OSAllocatedUnfairLock(initialState: StageTotals())
 
         let composer = makeComposer()
-        let ids = try metadataDAO.retryableAssetIds()
+        let ids = try metadataStore.retryableAssetIds()
         var summary = IndexRunSummary(indexed: 0, skipped: 0, pendingICloud: 0, failed: 0, deleted: 0, wasCancelled: false)
         let assets = PhotoLibraryService.fetchAssets(ids: ids)
 
@@ -450,7 +450,7 @@ actor IndexPipeline {
         let fetchOptions = PHFetchOptions()
         fetchOptions.predicate = PhotoLibraryService.browsableMediaPredicate
         let total = PHAsset.fetchAssets(with: fetchOptions).count
-        let baseline = (try? metadataDAO.completedCount()) ?? 0
+        let baseline = (try? metadataStore.completedCount()) ?? 0
         var newlyDone = 0
         onProgress(IndexProgress(processed: baseline, total: total))
 
@@ -501,13 +501,13 @@ actor IndexPipeline {
                 exifStatus: .pendingRead
             ))
             if rows.count == Self.fastPassBatchSize {
-                try metadataDAO.saveBatch(rows, cursorAssetId: nil)
+                try metadataStore.saveBatch(rows, cursorAssetId: nil)
                 written += rows.count
                 rows.removeAll(keepingCapacity: true)
             }
         }
         if !rows.isEmpty {
-            try metadataDAO.saveBatch(rows, cursorAssetId: nil)
+            try metadataStore.saveBatch(rows, cursorAssetId: nil)
             written += rows.count
         }
         if written > 0 {
@@ -566,8 +566,8 @@ actor IndexPipeline {
         )
 
         await withTaskGroup(of: BatchItem.self) { group in
-            let exifService = self.exifService
-            let metadataDAO = self.metadataDAO
+            let exifReader = self.exifReader
+            let metadataStore = self.metadataStore
 
             @Sendable func read(_ index: Int, _ asset: PHAsset) async -> BatchItem {
                 let clock = ContinuousClock()
@@ -581,7 +581,7 @@ actor IndexPipeline {
                 // still fault in the original-metadata set, but the full read
                 // already streams from the file, so the cost is amortized.
                 let resources = PHAssetResource.assetResources(for: asset)
-                let resource = ExifService.photoResource(among: resources)
+                let resource = ExifReader.photoResource(among: resources)
                 // Facts (size/filename) fall back to any resource so videos —
                 // which have no photo resource — still record them.
                 let factsResource = resource ?? resources.first
@@ -609,7 +609,7 @@ actor IndexPipeline {
                     mark = clock.now
                     let signpostId = Self.signposter.makeSignpostID()
                     let signpostState = Self.signposter.beginInterval("exifRead", id: signpostId)
-                    exifResult = await exifService.readExif(for: asset, resource: resource, allowNetwork: allowNetwork)
+                    exifResult = await exifReader.readExif(for: asset, resource: resource, allowNetwork: allowNetwork)
                     Self.signposter.endInterval("exifRead", signpostState)
                     exifTime = clock.now - mark
                     didReadExif = true
@@ -643,7 +643,7 @@ actor IndexPipeline {
                     // camera data and drops out of the retry set. A flaky link
                     // can never reach this path, so it can never wrongly mark a
                     // downloadable photo as no-metadata.
-                    let attempts = ((try? metadataDAO.readAttempts(assetId: asset.localIdentifier)) ?? 0) + 1
+                    let attempts = ((try? metadataStore.readAttempts(assetId: asset.localIdentifier)) ?? 0) + 1
                     if attempts >= Self.maxReadAttempts {
                         item = BatchItem(index: index,
                                          record: composer.compose(asset: info, exif: .empty, exifStatus: .indexed),
@@ -659,7 +659,7 @@ actor IndexPipeline {
                 // rows reach here, so logging every non-indexed outcome with its
                 // assetId (the key that maps back to a Photos asset) and filename
                 // pinpoints the handful that keep retrying, alongside the
-                // per-branch reason ExifService already logged.
+                // per-branch reason ExifReader already logged.
                 if item.outcome != .indexed {
                     Self.logger.log("asset \(asset.localIdentifier, privacy: .public) [\(filename ?? "?", privacy: .public)] outcome=\(String(describing: item.outcome), privacy: .public) allowNetwork=\(allowNetwork)")
                 } else {
@@ -765,7 +765,7 @@ actor IndexPipeline {
         let clock = ContinuousClock()
         let mark = clock.now
         let signpostState = Self.signposter.beginInterval("dbWrite")
-        try metadataDAO.saveBatch(records, cursorAssetId: records.last?.assetId)
+        try metadataStore.saveBatch(records, cursorAssetId: records.last?.assetId)
         Self.signposter.endInterval("dbWrite", signpostState)
         timings.withLock { $0.dbWrite += clock.now - mark }
         return doneCount

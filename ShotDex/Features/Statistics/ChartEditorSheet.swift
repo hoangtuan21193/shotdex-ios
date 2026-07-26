@@ -309,10 +309,10 @@ struct ChartEditorSheet: View {
     }
 
     private func prepare() {
-        let dao = dependencies.libraryQueryDAO
-        availableBrands = (try? dao.distinctCameraBrands()) ?? []
-        availableBodies = (try? dao.distinctCameraBodies()) ?? []
-        availableLenses = (try? dao.distinctLenses()) ?? []
+        let queries = dependencies.libraryQueries
+        availableBrands = (try? queries.distinctCameraBrands()) ?? []
+        availableBodies = (try? queries.distinctCameraBodies()) ?? []
+        availableLenses = (try? queries.distinctLenses()) ?? []
         runPreview()
     }
 
@@ -322,11 +322,11 @@ struct ChartEditorSheet: View {
             return
         }
         let spec = draft
-        let dao = dependencies.statsDAO
+        let queries = dependencies.statisticsQueries
         let scope = self.scope
         previewLoading = true
         Task.detached(priority: .userInitiated) {
-            let data = (try? dao.chartData(for: spec, scope: scope)) ?? []
+            let data = (try? queries.chartData(for: spec, scope: scope)) ?? []
             await MainActor.run {
                 previewData = data
                 previewLoading = false

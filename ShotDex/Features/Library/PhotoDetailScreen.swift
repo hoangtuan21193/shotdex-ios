@@ -15,7 +15,7 @@ protocol PhotoBrowsingSource: AnyObject {
     /// (not a captured position) so a deletion that shifts the array can't
     /// desync the opened page.
     func index(of assetId: String) -> Int?
-    /// Full row for the chrome/metadata panel (Library: DAO by primary key;
+    /// Full row for the chrome/metadata panel (Library: a DB lookup by primary key;
     /// Albums/On This Day: in-memory array).
     func metadata(for assetId: String) -> PhotoMetadata?
     func asset(for assetId: String) -> PHAsset?
@@ -692,7 +692,7 @@ struct PhotoDetailScreen: View {
             let resources = PHAssetResource.assetResources(for: asset)
             let filename = needsFilename ? resources.first?.originalFilename : nil
             let size: Int? = needsFileSize
-                ? ExifService.photoResource(among: resources).flatMap {
+                ? ExifReader.photoResource(among: resources).flatMap {
                     ($0.value(forKey: "fileSize") as? NSNumber)?.intValue
                 }
                 : nil
@@ -1109,7 +1109,7 @@ private struct DetailVideoPlayer: View {
                 model.togglePlayPause()
             }
 
-            timeLabel(FormatUtils.duration(model.displayTime))
+            timeLabel(MetadataFormatter.duration(model.displayTime))
 
             Slider(
                 value: Binding(
@@ -1274,7 +1274,7 @@ private struct DetailVideoPlayer: View {
             current: model.displayTime,
             duration: model.duration
         ) else { return "--:--" }
-        return "-" + FormatUtils.duration(remaining)
+        return "-" + MetadataFormatter.duration(remaining)
     }
 
     private static func rateLabel(_ value: Double) -> String {
@@ -1442,9 +1442,9 @@ private struct DetailVideoPlayer: View {
     private var progressAccessibilityValue: String {
         let total = model.duration
         guard total.isFinite, total > 0 else {
-            return FormatUtils.duration(model.displayTime)
+            return MetadataFormatter.duration(model.displayTime)
         }
-        return "\(FormatUtils.duration(model.displayTime)) of \(FormatUtils.duration(total))"
+        return "\(MetadataFormatter.duration(model.displayTime)) of \(MetadataFormatter.duration(total))"
     }
 
     private func transportButton(

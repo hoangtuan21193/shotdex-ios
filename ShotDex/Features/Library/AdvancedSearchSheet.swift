@@ -103,10 +103,10 @@ struct AdvancedSearchSheet: View {
             matchCount = nil
             return
         }
-        let dao = dependencies.libraryQueryDAO
+        let queries = dependencies.libraryQueries
         try? await Task.sleep(for: .milliseconds(300))
         guard !Task.isCancelled else { return }
-        let count = (try? await dao.countAsync(matching: cleanedSnapshot)) ?? 0
+        let count = (try? await queries.countAsync(matching: cleanedSnapshot)) ?? 0
         guard !Task.isCancelled, query == snapshot else { return }
         matchCount = count
     }

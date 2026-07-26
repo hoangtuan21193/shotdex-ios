@@ -6,44 +6,44 @@ import SwiftUI
 @Observable
 final class AppDependencies {
     let database: AppDatabase
-    let metadataDAO: MetadataDAO
-    let libraryQueryDAO: LibraryQueryDAO
-    let filterSuggestions: FilterSuggestionRepository
-    let statsDAO: StatsDAO
-    let smartAlbumDAO: SmartAlbumDAO
-    let statChartDAO: StatChartDAO
+    let metadataStore: MetadataStore
+    let libraryQueries: LibraryQueries
+    let filterSuggestions: FilterSuggestionCache
+    let statisticsQueries: StatisticsQueries
+    let smartAlbumStore: SmartAlbumStore
+    let chartStore: ChartStore
     let photoLibrary: PhotoLibraryService
     let importService: ImportService
     let indexPipeline: IndexPipeline
     let backgroundIndex: BackgroundIndexService
-    let networkStatus: NetworkStatusService
-    let powerStatus: PowerStatusService
+    let networkStatus: NetworkMonitor
+    let powerStatus: PowerMonitor
     let indexTraffic: IndexTrafficMonitor
     let indexInteractionGate: IndexInteractionGate
 
     init(database: AppDatabase, photoLibrary: PhotoLibraryService) {
-        let metadataDAO = MetadataDAO(database: database)
+        let metadataStore = MetadataStore(database: database)
         let indexTraffic = IndexTrafficMonitor()
         let indexInteractionGate = IndexInteractionGate()
         let indexPipeline = IndexPipeline(
-            metadataDAO: MetadataDAO(database: database),
-            exifService: ExifService(trafficMonitor: indexTraffic),
+            metadataStore: MetadataStore(database: database),
+            exifReader: ExifReader(trafficMonitor: indexTraffic),
             interactionGate: indexInteractionGate
         )
         self.database = database
-        self.metadataDAO = metadataDAO
-        let libraryQueryDAO = LibraryQueryDAO(database: database)
-        self.libraryQueryDAO = libraryQueryDAO
-        self.filterSuggestions = FilterSuggestionRepository(queryDAO: libraryQueryDAO)
-        self.statsDAO = StatsDAO(database: database)
-        self.smartAlbumDAO = SmartAlbumDAO(database: database)
-        self.statChartDAO = StatChartDAO(database: database)
+        self.metadataStore = metadataStore
+        let libraryQueries = LibraryQueries(database: database)
+        self.libraryQueries = libraryQueries
+        self.filterSuggestions = FilterSuggestionCache(libraryQueries: libraryQueries)
+        self.statisticsQueries = StatisticsQueries(database: database)
+        self.smartAlbumStore = SmartAlbumStore(database: database)
+        self.chartStore = ChartStore(database: database)
         self.photoLibrary = photoLibrary
-        self.importService = ImportService(photoLibrary: photoLibrary, metadataDAO: metadataDAO)
+        self.importService = ImportService(photoLibrary: photoLibrary, metadataStore: metadataStore)
         self.indexPipeline = indexPipeline
-        self.backgroundIndex = BackgroundIndexService(pipeline: indexPipeline, metadataDAO: metadataDAO)
-        self.networkStatus = NetworkStatusService()
-        self.powerStatus = PowerStatusService()
+        self.backgroundIndex = BackgroundIndexService(pipeline: indexPipeline, metadataStore: metadataStore)
+        self.networkStatus = NetworkMonitor()
+        self.powerStatus = PowerMonitor()
         self.indexTraffic = indexTraffic
         self.indexInteractionGate = indexInteractionGate
     }
@@ -52,11 +52,11 @@ final class AppDependencies {
     /// database — an app update that ships new records fixes already-indexed
     /// photos without a reindex. Cheap: touches only still-unknown models.
     func resolveNewlyKnownCameras() {
-        let dao = metadataDAO
+        let store = metadataStore
         Task.detached(priority: .utility) {
-            guard let records = try? SensorDatabaseService().loadRecords() else { return }
-            let mappings = (try? dao.customMappings()) ?? []
-            try? dao.resolveUnknownCameras(using: SensorLookup(records: records, customMappings: mappings))
+            guard let records = try? SensorDatabaseLoader().loadRecords() else { return }
+            let mappings = (try? store.customMappings()) ?? []
+            try? store.resolveUnknownCameras(using: SensorLookup(records: records, customMappings: mappings))
         }
     }
 

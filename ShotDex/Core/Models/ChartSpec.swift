@@ -1,7 +1,7 @@
 import Foundation
 
 /// A user-configured chart on the Statistics dashboard. Persisted as JSON in
-/// the `stat_charts.config` column (see `StatChart` / `StatChartDAO`). Every
+/// the `stat_charts.config` column (see `StatChart` / `ChartStore`). Every
 /// spec is: a chart *kind*, an X-axis *dimension* (group-by), a Y-axis
 /// *metric* (aggregation), and an optional *filter* (the same rule query as
 /// smart albums) restricting which photos count. The dashboard's date scope
@@ -150,7 +150,7 @@ enum ChartAxisKind: Sendable {
 
 /// A photo attribute the X-axis groups by. Each case maps to a **hardcoded**
 /// SQL column/expression (`groupColumn`) — the value is never taken from user
-/// text, so it is safe to interpolate into SQL (StatsDAO builds SQL by string).
+/// text, so it is safe to interpolate into SQL (StatisticsQueries builds SQL by string).
 enum ChartDimension: String, Codable, CaseIterable, Identifiable, Sendable {
     // Categorical
     case cameraBody

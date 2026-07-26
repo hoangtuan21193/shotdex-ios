@@ -1,15 +1,15 @@
 import Foundation
 
 /// In-memory evaluation of a `SmartAlbumQuery` against a single `PhotoMetadata`
-/// row. Mirrors `SmartAlbumSQLCompiler` clause-for-clause so filtering a not-
+/// row. Mirrors `SmartAlbumSQLBuilder` clause-for-clause so filtering a not-
 /// yet-indexed import candidate (which has no DB row to run SQL against) gives
 /// the exact same result the Library/Statistics would once the photo is indexed.
 ///
-/// Any change to the SQL compiler's semantics must be mirrored here, and vice
+/// Any change to the SQL builder's semantics must be mirrored here, and vice
 /// versa — `SmartAlbumQueryMatchingTests` pins the two together.
 extension SmartAlbumQuery {
     /// Whether `metadata` satisfies this query. An empty query (no compilable
-    /// rule) matches everything, matching the compiler's "no predicate" case.
+    /// rule) matches everything, matching the builder's "no predicate" case.
     func matches(_ metadata: PhotoMetadata) -> Bool {
         let rules = validRules
         guard !rules.isEmpty else { return true }
@@ -34,7 +34,7 @@ extension SmartAlbumQuery {
         }
     }
 
-    // MARK: Text (mirrors SmartAlbumSQLCompiler.textClause)
+    // MARK: Text (mirrors SmartAlbumSQLBuilder.textClause)
 
     private static func textValues(_ field: RuleField, _ m: PhotoMetadata) -> [String?] {
         switch field {

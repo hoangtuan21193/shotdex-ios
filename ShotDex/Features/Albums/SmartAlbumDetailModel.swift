@@ -2,15 +2,15 @@ import Photos
 import SwiftUI
 
 /// Backs the smart-album detail grid. The album's photos are the result of
-/// replaying its saved `FilterCriteria` through `LibraryQueryDAO` — so this
+/// replaying its saved `FilterCriteria` through `LibraryQueries` — so this
 /// mirrors `LibraryModel` (query-driven, whole set loaded once) rather
 /// than `AlbumDetailModel` (paged over a `PHFetchResult`). Trimmed: no
 /// index pipeline UI, no PhotoKit fast path, no auto-retry.
 @MainActor
 @Observable
 final class SmartAlbumDetailModel {
-    private let queryDAO: LibraryQueryDAO
-    private let metadataDAO: MetadataDAO
+    private let libraryQueries: LibraryQueries
+    private let metadataStore: MetadataStore
     private let photoLibrary: PhotoLibraryService
     private let pipeline: IndexPipeline
     private let query: SmartAlbumQuery
@@ -33,8 +33,8 @@ final class SmartAlbumDetailModel {
     @ObservationIgnored private let assetCache: AsyncChunkedLookupCache<PHAsset>
 
     init(album: SmartAlbum, dependencies: AppDependencies) {
-        self.queryDAO = dependencies.libraryQueryDAO
-        self.metadataDAO = dependencies.metadataDAO
+        self.libraryQueries = dependencies.libraryQueries
+        self.metadataStore = dependencies.metadataStore
         self.photoLibrary = dependencies.photoLibrary
         self.pipeline = dependencies.indexPipeline
         self.query = album.query
@@ -58,7 +58,7 @@ final class SmartAlbumDetailModel {
     func load() async {
         isLoading = true
         defer { isLoading = false }
-        let rows = (try? await queryDAO.gridItems(matching: query, sort: .default)) ?? []
+        let rows = (try? await libraryQueries.gridItems(matching: query, sort: .default)) ?? []
         items = rows
         assetCache.setIds(items.map(\.assetId))
         contentGeneration &+= 1
@@ -77,7 +77,7 @@ final class SmartAlbumDetailModel {
         let assets = PhotoLibraryService.fetchAssets(ids: Array(ids))
         guard !assets.isEmpty else { return }
         try await photoLibrary.deleteAssets(assets)
-        try? metadataDAO.deleteAssets(ids: Array(ids))
+        try? metadataStore.deleteAssets(ids: Array(ids))
         items.removeAll { ids.contains($0.assetId) }
         assetCache.setIds(items.map(\.assetId))
         contentGeneration &+= 1
@@ -98,7 +98,7 @@ extension SmartAlbumDetailModel: PhotoBrowsingSource {
     }
 
     func metadata(for assetId: String) -> PhotoMetadata? {
-        if let row = (try? queryDAO.metadata(assetId: assetId)) ?? nil {
+        if let row = (try? libraryQueries.metadata(assetId: assetId)) ?? nil {
             return row
         }
         return PhotoLibraryService.fetchAssets(ids: [assetId]).first
@@ -113,7 +113,7 @@ extension SmartAlbumDetailModel: PhotoBrowsingSource {
     func loadNextPageIfNeeded(currentIndex: Int) {}
 
     func syncFavorite(assetId: String, isFavorite: Bool) {
-        try? metadataDAO.updateFavorite(assetId: assetId, isFavorite: isFavorite)
+        try? metadataStore.updateFavorite(assetId: assetId, isFavorite: isFavorite)
     }
 
     func deleteAsset(id: String) async throws {

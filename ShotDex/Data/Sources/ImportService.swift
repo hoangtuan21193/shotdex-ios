@@ -18,12 +18,12 @@ enum ImportScanError: Error {
 @MainActor
 final class ImportService {
     private let photoLibrary: PhotoLibraryService
-    private let metadataDAO: MetadataDAO
-    private let sensorDatabase: SensorDatabaseService
+    private let metadataStore: MetadataStore
+    private let sensorDatabase: SensorDatabaseLoader
 
-    init(photoLibrary: PhotoLibraryService, metadataDAO: MetadataDAO, sensorDatabase: SensorDatabaseService = SensorDatabaseService()) {
+    init(photoLibrary: PhotoLibraryService, metadataStore: MetadataStore, sensorDatabase: SensorDatabaseLoader = SensorDatabaseLoader()) {
         self.photoLibrary = photoLibrary
-        self.metadataDAO = metadataDAO
+        self.metadataStore = metadataStore
         self.sensorDatabase = sensorDatabase
     }
 
@@ -32,7 +32,7 @@ final class ImportService {
     /// it will carry once indexed. Cheap; called once per scan.
     func makeComposer() -> MetadataComposer {
         let records = (try? sensorDatabase.loadRecords()) ?? []
-        let mappings = (try? metadataDAO.customMappings()) ?? []
+        let mappings = (try? metadataStore.customMappings()) ?? []
         return MetadataComposer(sensorLookup: SensorLookup(records: records, customMappings: mappings))
     }
 
@@ -90,7 +90,7 @@ final class ImportService {
             )
         case .image:
             let exif: RawExif = {
-                if case .success(let raw) = ExifService.readExif(fromImageAt: candidate.url) { return raw }
+                if case .success(let raw) = ExifReader.readExif(fromImageAt: candidate.url) { return raw }
                 return .empty
             }()
             return composer.compose(

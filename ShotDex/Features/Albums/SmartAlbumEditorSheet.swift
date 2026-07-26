@@ -4,7 +4,7 @@ import SwiftUI
 /// name, a match mode (all / any), and a list of conditions grown one at a
 /// time. Each condition picks a field, an operator (contains / is / greater
 /// than / …), and a value. Saving persists a `SmartAlbum` (JSON-encoded
-/// `SmartAlbumQuery`) via `SmartAlbumDAO`.
+/// `SmartAlbumQuery`) via `SmartAlbumStore`.
 struct SmartAlbumEditorSheet: View {
     /// Non-nil when editing an existing album (reuses its id + createdAt).
     var existing: SmartAlbum?
@@ -100,11 +100,11 @@ struct SmartAlbumEditorSheet: View {
     /// Loads autocomplete suggestion sources and the initial match count.
     @MainActor
     private func prepare() async {
-        let suggestionRepository = dependencies.filterSuggestions
-        let smartAlbumDAO = dependencies.smartAlbumDAO
-        async let suggestionLoad = suggestionRepository.load()
+        let suggestionCache = dependencies.filterSuggestions
+        let smartAlbumStore = dependencies.smartAlbumStore
+        async let suggestionLoad = suggestionCache.load()
         let all = await Task.detached(priority: .utility) {
-            (try? smartAlbumDAO.fetchAllOrdered()) ?? []
+            (try? smartAlbumStore.fetchAllOrdered()) ?? []
         }.value
         let catalog = await suggestionLoad
         guard !Task.isCancelled else { return }
@@ -127,10 +127,10 @@ struct SmartAlbumEditorSheet: View {
             matchCount = nil
             return
         }
-        let dao = dependencies.libraryQueryDAO
+        let queries = dependencies.libraryQueries
         try? await Task.sleep(for: .milliseconds(300))
         guard !Task.isCancelled else { return }
-        let count = (try? await dao.countAsync(matching: snapshot)) ?? 0
+        let count = (try? await queries.countAsync(matching: snapshot)) ?? 0
         guard !Task.isCancelled, query == snapshot else { return }
         matchCount = count
     }
@@ -145,7 +145,7 @@ struct SmartAlbumEditorSheet: View {
             query: cleaned,
             createdAt: existing?.createdAt ?? Int(Date().timeIntervalSince1970)
         )
-        try? dependencies.smartAlbumDAO.upsert(album)
+        try? dependencies.smartAlbumStore.upsert(album)
         onSaved()
         dismiss()
     }

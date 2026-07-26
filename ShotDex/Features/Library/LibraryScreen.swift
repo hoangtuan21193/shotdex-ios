@@ -213,7 +213,7 @@ struct LibraryScreen: View {
     /// mid-selection just drops out.
     private func comparePhotos(_ model: LibraryModel) -> [ComparePhoto]? {
         guard (2...CompareScreen.maxPhotoCount).contains(selectedIds.count) else { return nil }
-        let metadataById = (try? dependencies.libraryQueryDAO.metadata(assetIds: selectedIds)) ?? [:]
+        let metadataById = (try? dependencies.libraryQueries.metadata(assetIds: selectedIds)) ?? [:]
         let assets = PhotoLibraryService.fetchAssets(ids: selectedIds)
         let assetById = Dictionary(uniqueKeysWithValues: assets.map { ($0.localIdentifier, $0) })
         // Videos have no metadata row (index is image-only) — require the

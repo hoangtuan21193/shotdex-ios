@@ -1,7 +1,7 @@
 import Foundation
 
 /// Loads the bundled `sensor_database.json`.
-struct SensorDatabaseService: Sendable {
+struct SensorDatabaseLoader: Sendable {
     struct SensorDatabaseFile: Codable {
         var version: Int
         var cameras: [SensorCameraRecord]

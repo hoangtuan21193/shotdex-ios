@@ -16,7 +16,7 @@ enum StatsDateScope: Codable, Hashable, Sendable {
         case .thisYear: String(localized: "This Year")
         case .thisMonth: String(localized: "This Month")
         case .custom(let range):
-            FormatUtils.dateRange(
+            MetadataFormatter.dateRange(
                 Date(timeIntervalSince1970: TimeInterval(range.lowerBound)),
                 Date(timeIntervalSince1970: TimeInterval(range.upperBound))
             )
@@ -53,7 +53,7 @@ enum StatsDateScope: Codable, Hashable, Sendable {
 
 /// One point of a dashboard chart's result: an X-axis label, a Y-axis value,
 /// and (when applicable) a raw key for drill-down and a series name for
-/// multi-line charts. Produced by `StatsDAO.aggregate`.
+/// multi-line charts. Produced by `StatisticsQueries.aggregate`.
 struct ChartDatum: Equatable, Identifiable, Sendable {
     /// X-axis label (bucket name, group value, or time period).
     var label: String

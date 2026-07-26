@@ -11,12 +11,12 @@ struct FilterSuggestionCatalog: Sendable {
     static let empty = FilterSuggestionCatalog(brands: [], bodies: [], lenses: [])
 }
 
-actor FilterSuggestionRepository {
-    private let queryDAO: LibraryQueryDAO
+actor FilterSuggestionCache {
+    private let libraryQueries: LibraryQueries
     private var cached: FilterSuggestionCatalog?
 
-    init(queryDAO: LibraryQueryDAO) {
-        self.queryDAO = queryDAO
+    init(libraryQueries: LibraryQueries) {
+        self.libraryQueries = libraryQueries
     }
 
     func load(forceRefresh: Bool = false) -> FilterSuggestionCatalog {
@@ -24,9 +24,9 @@ actor FilterSuggestionRepository {
             return cached
         }
         let catalog = FilterSuggestionCatalog(
-            brands: (try? queryDAO.distinctCameraBrands()) ?? [],
-            bodies: (try? queryDAO.distinctCameraBodies()) ?? [],
-            lenses: (try? queryDAO.distinctLenses()) ?? []
+            brands: (try? libraryQueries.distinctCameraBrands()) ?? [],
+            bodies: (try? libraryQueries.distinctCameraBodies()) ?? [],
+            lenses: (try? libraryQueries.distinctLenses()) ?? []
         )
         cached = catalog
         return catalog

@@ -165,7 +165,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         private var isSettling = false
 
         // Swipe-select state
-        private var swipeActivation = SwipeSelectionEngine.Activation.undecided
+        private var swipeActivation = SwipeSelection.Activation.undecided
         /// Frozen once per gesture. Recomputing from the live selection would
         /// flip select→deselect after the first callback and make badges blink.
         private var swipeShouldSelect: Bool?
@@ -492,8 +492,8 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 return String(localized: "No Date")
             case .date(let date):
                 return granularity == .day
-                    ? FormatUtils.dayHeader(date)
-                    : FormatUtils.monthHeader(date)
+                    ? MetadataFormatter.dayHeader(date)
+                    : MetadataFormatter.monthHeader(date)
             }
         }
 
@@ -1027,7 +1027,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             case .changed:
                 let translation = recognizer.translation(in: collectionView)
                 if swipeActivation == .undecided {
-                    swipeActivation = SwipeSelectionEngine.activation(
+                    swipeActivation = SwipeSelection.activation(
                         translation: CGSize(width: translation.x, height: translation.y)
                     )
                     if swipeActivation == .select {
@@ -1099,7 +1099,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                   let windowLocation = swipeWindowLocation
             else { return }
             let location = collectionView.convert(windowLocation, from: window)
-            let delta = SwipeSelectionEngine.autoScrollDelta(
+            let delta = SwipeSelection.autoScrollDelta(
                 locationY: location.y,
                 visibleBounds: collectionView.bounds
             )
@@ -1399,7 +1399,7 @@ final class PhotoGridCell: UICollectionViewCell {
 
         if let asset, asset.mediaType == .video {
             videoBadge.text = asset.duration > 0
-                ? "▶ \(FormatUtils.duration(asset.duration))" : "▶"
+                ? "▶ \(MetadataFormatter.duration(asset.duration))" : "▶"
             videoBadge.isHidden = false
         } else {
             videoBadge.isHidden = true
@@ -1479,13 +1479,13 @@ final class PhotoGridCell: UICollectionViewCell {
         let focalValue = options.focalStyleEquivalent
             ? (item.equivalentFocalLength ?? item.focalLength)
             : item.focalLength
-        return FormatUtils.metadataLine([
-            options.showISO ? item.iso.flatMap(FormatUtils.iso) : nil,
-            options.showFocal ? focalValue.flatMap(FormatUtils.focalLength) : nil,
-            options.showAperture ? item.aperture.flatMap(FormatUtils.aperture) : nil,
+        return MetadataFormatter.metadataLine([
+            options.showISO ? item.iso.flatMap(MetadataFormatter.iso) : nil,
+            options.showFocal ? focalValue.flatMap(MetadataFormatter.focalLength) : nil,
+            options.showAperture ? item.aperture.flatMap(MetadataFormatter.aperture) : nil,
             options.showShutter ? item.shutterSpeedDisplay : nil,
-            options.showMegapixels ? item.megapixels.flatMap(FormatUtils.megapixels) : nil,
-            options.showFileSize ? item.fileSize.flatMap(FormatUtils.fileSize) : nil,
+            options.showMegapixels ? item.megapixels.flatMap(MetadataFormatter.megapixels) : nil,
+            options.showFileSize ? item.fileSize.flatMap(MetadataFormatter.fileSize) : nil,
         ])
     }
 

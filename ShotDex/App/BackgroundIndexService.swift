@@ -20,12 +20,12 @@ final class BackgroundIndexService {
     static let taskIdentifier = "com.hoangtuan.shotdex.index"
 
     private let pipeline: IndexPipeline
-    private let metadataDAO: MetadataDAO
+    private let metadataStore: MetadataStore
     private var assertionId: UIBackgroundTaskIdentifier = .invalid
 
-    init(pipeline: IndexPipeline, metadataDAO: MetadataDAO) {
+    init(pipeline: IndexPipeline, metadataStore: MetadataStore) {
         self.pipeline = pipeline
-        self.metadataDAO = metadataDAO
+        self.metadataStore = metadataStore
     }
 
     // MARK: BGProcessingTask
@@ -70,11 +70,11 @@ final class BackgroundIndexService {
     /// left behind by a cancelled/expired one.
     func scheduleContinuationIfNeeded() {
         let pipeline = self.pipeline
-        let metadataDAO = self.metadataDAO
+        let metadataStore = self.metadataStore
         Task {
             if await pipeline.isActive {
                 Self.schedule()
-            } else if (try? metadataDAO.indexState())?.cursorAssetId != nil {
+            } else if (try? metadataStore.indexState())?.cursorAssetId != nil {
                 Self.schedule()
             }
         }

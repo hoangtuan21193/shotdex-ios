@@ -48,7 +48,7 @@ struct SettingsScreen: View {
             titleVisibility: .visible
         ) {
             Button("Clear Index", role: .destructive) {
-                try? dependencies.metadataDAO.deleteAll()
+                try? dependencies.metadataStore.deleteAll()
                 libraryModel?.reload()
                 refreshIndexInfo()
             }
@@ -59,7 +59,7 @@ struct SettingsScreen: View {
             titleVisibility: .visible
         ) {
             Button("Reset Mappings", role: .destructive) {
-                try? dependencies.metadataDAO.deleteAllCustomMappings()
+                try? dependencies.metadataStore.deleteAllCustomMappings()
             }
         }
     }
@@ -203,9 +203,9 @@ struct SettingsScreen: View {
     }
 
     private func refreshIndexInfo() {
-        indexedCount = (try? dependencies.metadataDAO.indexedCount()) ?? 0
-        incompleteCount = (try? dependencies.metadataDAO.retryableAssetIds().count) ?? 0
-        let state = try? dependencies.metadataDAO.indexState()
+        indexedCount = (try? dependencies.metadataStore.indexedCount()) ?? 0
+        incompleteCount = (try? dependencies.metadataStore.retryableAssetIds().count) ?? 0
+        let state = try? dependencies.metadataStore.indexState()
         lastIndexedAt = state?.lastIndexedAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
     }
 

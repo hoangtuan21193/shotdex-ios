@@ -32,7 +32,7 @@ enum ExifReadResult: Sendable {
 /// Every read *streams* the original — from disk for local files, from the
 /// network for iCloud-only originals — and stops as soon as the leading bytes
 /// holding the metadata sections have been parsed. Nothing is written to disk.
-struct ExifService: Sendable {
+struct ExifReader: Sendable {
     private static let logger = Logger(subsystem: "com.hoangtuan.shotdex", category: "exif")
 
     /// Caps concurrent iCloud streaming reads below the pipeline's total

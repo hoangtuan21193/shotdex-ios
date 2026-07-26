@@ -6,9 +6,9 @@ import os
 /// charging: LPM stops automatic indexing (the user may still start it by hand),
 /// and plugging in a charger while in LPM resumes it.
 ///
-/// Mirrors `NetworkStatusService`: plain `Sendable`, lock-guarded state, a single
+/// Mirrors `NetworkMonitor`: plain `Sendable`, lock-guarded state, a single
 /// observer handler, notification observers torn down in `deinit`.
-final class PowerStatusService: Sendable {
+final class PowerMonitor: Sendable {
     private static let logger = Logger(subsystem: "com.hoangtuan.shotdex", category: "power")
 
     private let lowPower = OSAllocatedUnfairLock(initialState: false)

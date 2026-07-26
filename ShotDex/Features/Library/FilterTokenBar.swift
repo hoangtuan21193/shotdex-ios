@@ -96,14 +96,14 @@ struct FilterTokenBar: View {
         }
         if !criteria.shutterRange.isEmpty {
             result.append(FilterToken(label: rangeLabel("Shutter", criteria.shutterRange, format: {
-                FormatUtils.shutterSpeed($0) ?? String($0)
+                MetadataFormatter.shutterSpeed($0) ?? String($0)
             })) {
                 $0.shutterRange = NumericRangeFilter()
             })
         }
         if !criteria.apertureRange.isEmpty {
             result.append(FilterToken(label: rangeLabel("Aperture", criteria.apertureRange, format: {
-                FormatUtils.aperture($0) ?? String($0)
+                MetadataFormatter.aperture($0) ?? String($0)
             })) {
                 $0.apertureRange = NumericRangeFilter()
             })
@@ -111,7 +111,7 @@ struct FilterTokenBar: View {
         if !criteria.focalRange.isEmpty {
             let prefix = criteria.focalLengthMode == .equivalent ? "FF Eq." : "Focal"
             result.append(FilterToken(label: rangeLabel(prefix, criteria.focalRange, format: {
-                FormatUtils.focalLength($0) ?? String($0)
+                MetadataFormatter.focalLength($0) ?? String($0)
             })) {
                 $0.focalRange = NumericRangeFilter()
             })

@@ -3,7 +3,7 @@ import GRDB
 
 /// Aggregate queries for the Statistics screen. All grouping and bucketing
 /// happens in SQLite — Swift only shapes the results.
-struct StatsDAO: Sendable {
+struct StatisticsQueries: Sendable {
     let database: AppDatabase
 
     private func scopeClause(_ scope: StatsDateScope) -> (sql: String, arguments: [DatabaseValueConvertible]) {
@@ -296,7 +296,7 @@ struct StatsDAO: Sendable {
 
 // MARK: - Dashboard chart aggregation
 
-extension StatsDAO {
+extension StatisticsQueries {
     /// Runs a dashboard chart spec's query and returns its plotted points.
     /// Dispatches on `kind`; all column names come from closed enums on
     /// `ChartDimension` / `MetricField` (never user text), and only bound
@@ -379,14 +379,14 @@ extension StatsDAO {
 
     /// The spec filter and date scope as ANDable conditions + bound values
     /// (no `WHERE`, no leading keyword). Column names inside come only from the
-    /// closed-enum rule compiler; values are parameters.
+    /// closed-enum rule builder; values are parameters.
     private func filterAndScope(
         _ filter: SmartAlbumQuery,
         _ scope: StatsDateScope
     ) -> (conditions: [String], values: [DatabaseValueConvertible]) {
         var conditions: [String] = []
         var values: [DatabaseValueConvertible] = []
-        let (filterSQL, filterValues) = SmartAlbumSQLCompiler.predicate(for: filter)
+        let (filterSQL, filterValues) = SmartAlbumSQLBuilder.predicate(for: filter)
         if !filterSQL.isEmpty {
             conditions.append(filterSQL)
             values.append(contentsOf: filterValues)

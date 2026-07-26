@@ -2,11 +2,11 @@ import Foundation
 import Testing
 @testable import ShotDex
 
-struct SensorDatabaseServiceTests {
+struct SensorDatabaseLoaderTests {
 
     @Test func loadsBundledDatabase() throws {
         // The JSON ships in the app bundle, which is the test host.
-        let records = try SensorDatabaseService().loadRecords(bundle: Bundle(for: AppDatabase.self))
+        let records = try SensorDatabaseLoader().loadRecords(bundle: Bundle(for: AppDatabase.self))
         #expect(!records.isEmpty)
 
         let lookup = SensorLookup(records: records)
@@ -19,7 +19,7 @@ struct SensorDatabaseServiceTests {
     }
 
     @Test func coversPhonesAndLegacyCameras() throws {
-        let records = try SensorDatabaseService().loadRecords(bundle: Bundle(for: AppDatabase.self))
+        let records = try SensorDatabaseLoader().loadRecords(bundle: Bundle(for: AppDatabase.self))
         let lookup = SensorLookup(records: records)
         // Canon EXIF short forms for Mark II R bodies.
         #expect(lookup.lookup(normalizedModel: "EOS R5m2").sensorFormat == .fullFrame)
@@ -41,7 +41,7 @@ struct SensorDatabaseServiceTests {
     }
 
     @Test func allRecordsHaveValidFormats() throws {
-        let records = try SensorDatabaseService().loadRecords(bundle: Bundle(for: AppDatabase.self))
+        let records = try SensorDatabaseLoader().loadRecords(bundle: Bundle(for: AppDatabase.self))
         for record in records {
             #expect(SensorFormat(rawValue: record.sensorFormat) != nil, "Invalid format: \(record.sensorFormat) for \(record.model)")
             #expect(record.cropFactor > 0)

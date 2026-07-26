@@ -86,7 +86,7 @@ struct DateRangePickerSheet: View {
     private var selectionSummary: some View {
         Group {
             if let startDay {
-                Text(FormatUtils.dateRange(startDay, endDay ?? startDay))
+                Text(MetadataFormatter.dateRange(startDay, endDay ?? startDay))
             } else {
                 Text("Select a start date")
                     .foregroundStyle(.secondary)
@@ -120,7 +120,7 @@ struct DateRangePickerSheet: View {
     @ViewBuilder
     private func monthView(_ month: Date) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(FormatUtils.monthHeader(month))
+            Text(MetadataFormatter.monthHeader(month))
                 .font(.headline)
 
             let days = daysInMonth(month)

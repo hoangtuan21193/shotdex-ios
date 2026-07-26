@@ -2,37 +2,37 @@ import CoreGraphics
 import Testing
 @testable import ShotDex
 
-struct SwipeSelectionEngineTests {
+struct SwipeSelectionTests {
 
     // MARK: Activation
 
     @Test func belowThresholdStaysUndecided() {
-        let result = SwipeSelectionEngine.activation(translation: CGSize(width: 5, height: 5))
+        let result = SwipeSelection.activation(translation: CGSize(width: 5, height: 5))
         #expect(result == .undecided)
     }
 
     @Test func horizontalDragActivatesSelect() {
-        let result = SwipeSelectionEngine.activation(translation: CGSize(width: 12, height: 3))
+        let result = SwipeSelection.activation(translation: CGSize(width: 12, height: 3))
         #expect(result == .select)
     }
 
     @Test func verticalDragActivatesScroll() {
-        let result = SwipeSelectionEngine.activation(translation: CGSize(width: 3, height: -12))
+        let result = SwipeSelection.activation(translation: CGSize(width: 3, height: -12))
         #expect(result == .scroll)
     }
 
     @Test func perfectDiagonalPrefersScroll() {
-        let result = SwipeSelectionEngine.activation(translation: CGSize(width: 10, height: 10))
+        let result = SwipeSelection.activation(translation: CGSize(width: 10, height: 10))
         #expect(result == .scroll)
     }
 
     @Test func leftwardDragAlsoSelects() {
-        let result = SwipeSelectionEngine.activation(translation: CGSize(width: -12, height: 0))
+        let result = SwipeSelection.activation(translation: CGSize(width: -12, height: 0))
         #expect(result == .select)
     }
 
     @Test func barelyHorizontalDiagonalStillScrolls() {
-        let result = SwipeSelectionEngine.activation(translation: CGSize(width: 11, height: 10))
+        let result = SwipeSelection.activation(translation: CGSize(width: 11, height: 10))
         #expect(result == .scroll)
     }
 
@@ -42,7 +42,7 @@ struct SwipeSelectionEngineTests {
 
     @Test func middleOfViewportDoesNotAutoScroll() {
         #expect(
-            SwipeSelectionEngine.autoScrollDelta(
+            SwipeSelection.autoScrollDelta(
                 locationY: 400, visibleBounds: visibleBounds
             ) == 0
         )
@@ -50,22 +50,22 @@ struct SwipeSelectionEngineTests {
 
     @Test func topEdgeScrollsUpAndBottomEdgeScrollsDown() {
         #expect(
-            SwipeSelectionEngine.autoScrollDelta(
+            SwipeSelection.autoScrollDelta(
                 locationY: 100, visibleBounds: visibleBounds
             ) == -14
         )
         #expect(
-            SwipeSelectionEngine.autoScrollDelta(
+            SwipeSelection.autoScrollDelta(
                 locationY: 700, visibleBounds: visibleBounds
             ) == 14
         )
     }
 
     @Test func edgeAutoScrollAcceleratesTowardPhysicalEdge() {
-        let inner = SwipeSelectionEngine.autoScrollDelta(
+        let inner = SwipeSelection.autoScrollDelta(
             locationY: 150, visibleBounds: visibleBounds
         )
-        let outer = SwipeSelectionEngine.autoScrollDelta(
+        let outer = SwipeSelection.autoScrollDelta(
             locationY: 115, visibleBounds: visibleBounds
         )
         #expect(inner < 0)

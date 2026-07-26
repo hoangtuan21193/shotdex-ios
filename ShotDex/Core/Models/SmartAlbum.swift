@@ -5,7 +5,7 @@ import GRDB
 /// system smart albums (Favorites, Screenshots…) surfaced by PhotoKit, this is
 /// an app-level saved filter — PhotoKit cannot create custom-predicate smart
 /// albums. Its photos are resolved by replaying `query` through
-/// `LibraryQueryDAO`.
+/// `LibraryQueries`.
 struct SmartAlbum: Codable, Identifiable, Equatable, Sendable {
     var id: String
     var name: String

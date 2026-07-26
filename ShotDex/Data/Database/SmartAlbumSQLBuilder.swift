@@ -2,13 +2,13 @@ import Foundation
 import GRDB
 
 /// Compiles a `SmartAlbumQuery` (match mode + rules) into a SQL predicate over
-/// `photo_metadata`. Shared by `LibraryQueryDAO` (smart-album grid/count) and
-/// `StatsDAO` (chart filters) so the two stay in exact sync.
+/// `photo_metadata`. Shared by `LibraryQueries` (smart-album grid/count) and
+/// `StatisticsQueries` (chart filters) so the two stay in exact sync.
 ///
 /// All column names come from closed `switch`es keyed by `RuleField` — never
 /// from user text — so string-built SQL here carries no injection surface.
 /// Only bound values (`?` placeholders) originate from user input.
-enum SmartAlbumSQLCompiler {
+enum SmartAlbumSQLBuilder {
     /// The rules joined by `AND` (match all) / `OR` (match any), **without** a
     /// leading `WHERE`. An `.any` join with more than one clause is wrapped in
     /// parentheses so an outer `AND` (date scope, NOT-NULL guards) can't bind
