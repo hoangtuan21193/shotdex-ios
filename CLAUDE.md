@@ -28,13 +28,15 @@ Run in simulator: build, then `xcrun simctl install <udid> <path/to/ShotDex.app>
 
 Layered, composition root at `ShotDex/App/AppDependencies.swift` — built once in `ShotDexApp`, injected via SwiftUI environment (`@Observable` + `.environment`). No singletons except `AppDatabase.makeShared()`.
 
-**Data flow:** PhotoKit assets → `IndexPipeline` (actor, batches of 200) reads EXIF via `ExifService` (ImageIO, no image decode) → `MetadataComposer` normalizes (camera/lens names, sensor lookup) → GRDB SQLite rows → DAOs serve UI queries.
+**Data flow:** PhotoKit assets → `IndexPipeline` (actor, batches of 200) reads EXIF via `ExifReader` (ImageIO, no image decode) → `MetadataComposer` normalizes (camera/lens names, sensor lookup) → GRDB SQLite rows → the store/query types serve UI queries.
 
-- `ShotDex/Data/Database/` — `AppDatabase` (GRDB setup/migrations) plus three DAOs: `MetadataDAO` (index writes, cursor persistence), `LibraryQueryDAO` (filtered/sorted grid queries — whole library as slim `LibraryGridItem` rows, full rows by id on demand), `StatsDAO` (SQL aggregates for statistics; GROUP BY/histograms done in SQL, not Swift — this is why GRDB over SwiftData).
-- `ShotDex/Data/Sources/` — `PhotoLibraryService` (`@Observable`, PhotoKit auth + change observation + image caching), `ExifService`, `SensorDatabaseService` (loads bundled `Resources/sensor_database.json` of camera→sensor-format records).
+- `ShotDex/Data/Database/` — `AppDatabase` (GRDB setup/migrations) plus: `MetadataStore` (index writes, cursor persistence), `LibraryQueries` (filtered/sorted grid queries — whole library as slim `LibraryGridItem` rows, full rows by id on demand), `StatisticsQueries` (SQL aggregates for statistics; GROUP BY/histograms done in SQL, not Swift — this is why GRDB over SwiftData), `SmartAlbumStore`, `ChartStore`, `FilterSuggestionCache`.
+- `ShotDex/Data/Sources/` — `PhotoLibraryService` (`@Observable`, PhotoKit auth + change observation + image caching), `ExifReader`, `SensorDatabaseLoader` (loads bundled `Resources/sensor_database.json` of camera→sensor-format records).
 - `ShotDex/Domain/` — pure logic, all unit-tested: normalizers (`CameraNormalizer`, `LensNormalizer`), `SearchParser` (query DSL: "Canon R6 85mm ISO 3200"), `EquivalentFocalLength`/`SensorLookup` (full-frame equivalence), `IndexPipeline` (supports cancel, resume via persisted cursor, incremental diff by modificationDate).
-- `ShotDex/Features/` — one folder per screen; each has a `*Controller` (`@Observable`, owns query state) + views. `LibraryController` is owned by `HomeTabScaffold` (not `LibraryScreen`) so the search tab/sheet shares its state.
-- `ShotDex/App/` — `HomeTabScaffold` (root; native `TabView` with `Tab(role: .search)` on iOS 26, custom `LiquidGlassTabBar` ZStack scaffold pre-26), `AppNavigation` (cross-tab state, e.g. Statistics drill-down → Library filter via `pendingLibraryFilter`).
+- `ShotDex/Features/` — one folder per screen; each has a `*Model` (`@Observable`, owns query state) + views. `LibraryModel` is owned by `RootTabView` (not `LibraryScreen`) so the search tab/sheet shares its state.
+- `ShotDex/App/` — `RootTabView` (root; native `TabView` with `Tab(role: .search)` on iOS 26, custom `LiquidGlassTabBar` ZStack pre-26), `AppNavigation` (cross-tab state, e.g. Statistics drill-down → Library filter via `pendingLibraryFilter`).
+
+**Naming.** The codebase was migrated from Flutter, so no Flutter/Material vocabulary: no `Scaffold`, `Widget`, `Drawer`, `Chip`, `Surface`, `Route`, and no `*Controller` for an `@Observable` state holder (that means `UIViewController` on iOS — use `*Model`). Data-layer types are `*Store` when they read *and* write and `*Queries` when read-only — not `DAO` or `Repository`. Otherwise follow the Swift API Design Guidelines: Bools read as assertions (`showsISO`, not `showISO`), `has*` not `did*` for latch flags, no `set*` methods shadowing a property, no abbreviations.
 
 **iOS 26 vs earlier:** every screen that padded content for the old floating chrome wraps those spacers in `if #unavailable(iOS 26.0)`. When touching tab/search/toolbar UI, keep both paths working.
 

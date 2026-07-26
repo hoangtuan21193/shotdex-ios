@@ -17,5 +17,5 @@ enum SettingsKeys {
 
     /// Set once the Statistics dashboard has seeded its default charts, so a
     /// board a user deliberately cleared isn't re-seeded on next launch.
-    static let didSeedStatCharts = "stats.didSeedCharts"
+    static let hasSeededStatCharts = "stats.didSeedCharts"
 }
