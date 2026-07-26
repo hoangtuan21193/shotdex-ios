@@ -59,9 +59,28 @@ final class VideoPlaybackModel {
     private(set) var currentTime: Double = 0
     private(set) var duration: Double = 0
     private(set) var isPlaying = false
-    private(set) var isMuted: Bool
-    private(set) var rate: Double
-    private(set) var isLooping: Bool
+    /// Muting also decides whether the app claims the shared audio session:
+    /// browsing muted must not interrupt whatever is already playing.
+    var isMuted: Bool {
+        didSet {
+            player?.isMuted = isMuted
+            UserDefaults.standard.set(isMuted, forKey: Defaults.startsMuted)
+            isMuted ? releaseAudioSession() : claimAudioSession()
+        }
+    }
+    var rate: Double {
+        didSet {
+            UserDefaults.standard.set(rate, forKey: Defaults.rate)
+            player?.defaultRate = Float(rate)
+            applyRate()
+        }
+    }
+    var isLooping: Bool {
+        didSet {
+            UserDefaults.standard.set(isLooping, forKey: Defaults.loop)
+            player?.actionAtItemEnd = isLooping ? .none : .pause
+        }
+    }
     /// Nominal frame rate of the video track, for the exported frame's filename.
     private(set) var frameRate: Double = VideoTransportMath.fallbackFrameRate
     private(set) var isScrubbing = false
@@ -112,7 +131,7 @@ final class VideoPlaybackModel {
     /// Set once the video track is known to exist. An audio-only `.mov` never
     /// reports `isReadyForDisplay`, so it must not be gated on the layer.
     @ObservationIgnored private var hasVideoTrack = true
-    @ObservationIgnored private var didActivateAudioSession = false
+    @ObservationIgnored private var hasActivatedAudioSession = false
     /// Newest requested position, waiting for the in-flight seek to land. Only
     /// ever one seek is outstanding; a target that arrives mid-flight replaces
     /// any earlier one, so a fast drag never queues a backlog of seeks.
@@ -517,32 +536,6 @@ final class VideoPlaybackModel {
         isPlaying ? pause() : play()
     }
 
-    func setMuted(_ muted: Bool) {
-        isMuted = muted
-        player?.isMuted = muted
-        UserDefaults.standard.set(muted, forKey: Defaults.startsMuted)
-        // The audio session is only claimed once the user actually wants sound:
-        // browsing muted must not interrupt whatever is already playing.
-        if muted {
-            releaseAudioSession()
-        } else {
-            claimAudioSession()
-        }
-    }
-
-    func setRate(_ newRate: Double) {
-        rate = newRate
-        UserDefaults.standard.set(newRate, forKey: Defaults.rate)
-        player?.defaultRate = Float(newRate)
-        applyRate()
-    }
-
-    func setLooping(_ looping: Bool) {
-        isLooping = looping
-        UserDefaults.standard.set(looping, forKey: Defaults.loop)
-        player?.actionAtItemEnd = looping ? .none : .pause
-    }
-
     /// `defaultRate` alone is not enough — an in-flight `play()` keeps the old
     /// rate until it is written directly.
     private func applyRate() {
@@ -719,14 +712,14 @@ final class VideoPlaybackModel {
     // MARK: Audio session
 
     private func claimAudioSession() {
-        guard !didActivateAudioSession else { return }
-        didActivateAudioSession = true
+        guard !hasActivatedAudioSession else { return }
+        hasActivatedAudioSession = true
         VideoAudioSession.activate()
     }
 
     private func releaseAudioSession() {
-        guard didActivateAudioSession else { return }
-        didActivateAudioSession = false
+        guard hasActivatedAudioSession else { return }
+        hasActivatedAudioSession = false
         VideoAudioSession.deactivate()
     }
 }

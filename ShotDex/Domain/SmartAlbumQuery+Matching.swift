@@ -19,29 +19,29 @@ extension SmartAlbumQuery {
         }
     }
 
-    private static func matches(rule: SmartAlbumRule, _ m: PhotoMetadata) -> Bool {
+    private static func matches(rule: SmartAlbumRule, _ metadata: PhotoMetadata) -> Bool {
         switch rule.field.kind {
         case .text:
-            return textMatch(rule.op, term: rule.text, values: textValues(rule.field, m))
+            return textMatch(rule.op, term: rule.text, values: textValues(rule.field, metadata))
         case .choice:
-            return choiceMatch(rule, m)
+            return choiceMatch(rule, metadata)
         case .number:
-            return numberMatch(rule, m)
+            return numberMatch(rule, metadata)
         case .date:
-            return dateMatch(rule, m)
+            return dateMatch(rule, metadata)
         case .favorite:
-            return m.isFavorite == rule.boolValue
+            return metadata.isFavorite == rule.boolValue
         }
     }
 
     // MARK: Text (mirrors SmartAlbumSQLBuilder.textClause)
 
-    private static func textValues(_ field: RuleField, _ m: PhotoMetadata) -> [String?] {
+    private static func textValues(_ field: RuleField, _ metadata: PhotoMetadata) -> [String?] {
         switch field {
-        case .cameraBrand: [m.normalizedCameraManufacturer, m.cameraManufacturer]
-        case .cameraBody: [m.normalizedCameraModel, m.cameraModel]
-        case .lens: [m.normalizedLensModel, m.lensModel]
-        case .filename: [m.originalFilename]
+        case .cameraBrand: [metadata.normalizedCameraManufacturer, metadata.cameraManufacturer]
+        case .cameraBody: [metadata.normalizedCameraModel, metadata.cameraModel]
+        case .lens: [metadata.normalizedLensModel, metadata.lensModel]
+        case .filename: [metadata.originalFilename]
         default: []
         }
     }
@@ -67,17 +67,17 @@ extension SmartAlbumQuery {
 
     // MARK: Choice (sensor format / file type)
 
-    private static func choiceMatch(_ rule: SmartAlbumRule, _ m: PhotoMetadata) -> Bool {
+    private static func choiceMatch(_ rule: SmartAlbumRule, _ metadata: PhotoMetadata) -> Bool {
         switch rule.field {
         case .sensorFormat:
             switch rule.op {
-            case .isExactly: return m.sensorFormat == rule.text
-            case .isNot: return (m.sensorFormat ?? "") != rule.text
+            case .isExactly: return metadata.sensorFormat == rule.text
+            case .isNot: return (metadata.sensorFormat ?? "") != rule.text
             default: return false
             }
         case .fileType:
             guard let type = PhotoFileType(rawValue: rule.text) else { return false }
-            let name = (m.originalFilename ?? "").lowercased()
+            let name = (metadata.originalFilename ?? "").lowercased()
             // Mirrors `originalFilename LIKE '%.ext'` — suffix match on extension.
             let hit = type.extensions.contains { name.hasSuffix(".\($0)") }
             switch rule.op {
@@ -92,8 +92,8 @@ extension SmartAlbumQuery {
 
     // MARK: Number (iso / aperture / shutter / focal)
 
-    private static func numberMatch(_ rule: SmartAlbumRule, _ m: PhotoMetadata) -> Bool {
-        guard let target = rule.number, let value = numberValue(rule.field, focalMode: rule.focalMode, m) else {
+    private static func numberMatch(_ rule: SmartAlbumRule, _ metadata: PhotoMetadata) -> Bool {
+        guard let target = rule.number, let value = numberValue(rule.field, focalMode: rule.focalMode, metadata) else {
             return false
         }
         switch rule.op {
@@ -108,20 +108,20 @@ extension SmartAlbumQuery {
         }
     }
 
-    private static func numberValue(_ field: RuleField, focalMode: FocalLengthMode, _ m: PhotoMetadata) -> Double? {
+    private static func numberValue(_ field: RuleField, focalMode: FocalLengthMode, _ metadata: PhotoMetadata) -> Double? {
         switch field {
-        case .iso: m.iso.map(Double.init)
-        case .aperture: m.aperture
-        case .shutter: m.shutterSpeedSeconds
-        case .focalLength: focalMode == .equivalent ? m.equivalentFocalLength : m.focalLength
+        case .iso: metadata.iso.map(Double.init)
+        case .aperture: metadata.aperture
+        case .shutter: metadata.shutterSpeedSeconds
+        case .focalLength: focalMode == .equivalent ? metadata.equivalentFocalLength : metadata.focalLength
         default: nil
         }
     }
 
     // MARK: Date (creationDate epoch seconds)
 
-    private static func dateMatch(_ rule: SmartAlbumRule, _ m: PhotoMetadata) -> Bool {
-        guard let epoch = m.creationDate.map(Double.init) else { return false }
+    private static func dateMatch(_ rule: SmartAlbumRule, _ metadata: PhotoMetadata) -> Bool {
+        guard let epoch = metadata.creationDate.map(Double.init) else { return false }
         switch rule.op {
         case .on:
             guard let day = rule.number else { return false }

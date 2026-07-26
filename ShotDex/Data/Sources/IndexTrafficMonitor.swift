@@ -181,9 +181,9 @@ final class IndexTrafficMonitor: Sendable {
     /// `stallTripCount` of the last `stallTripThreshold` reads stalled; a
     /// stalled half-open probe re-trips for another cooldown.
     /// Returns `true` only on calls that (re-)trip it.
-    /// `filename`/`elapsedMs` are for the health log only.
+    /// `filename`/`elapsedMilliseconds` are for the health log only.
     @discardableResult
-    func recordNetworkStall(filename: String? = nil, elapsedMs: Int? = nil) -> Bool {
+    func recordNetworkStall(filename: String? = nil, elapsedMilliseconds: Int? = nil) -> Bool {
         enum Outcome {
             case counted(inWindow: Int, windowSize: Int), lateDuringCooldown
             case tripped, reTripped(trips: Int)
@@ -213,7 +213,7 @@ final class IndexTrafficMonitor: Sendable {
             return (.counted(inWindow: state.window.count(where: { $0 }), windowSize: state.window.count), state.totalStalls)
         }
         let file = filename ?? "?"
-        let ms = elapsedMs.map(String.init) ?? "?"
+        let ms = elapsedMilliseconds.map(String.init) ?? "?"
         switch outcome {
         case .counted(let inWindow, let windowSize):
             Self.healthLogger.log("stall #\(totalStalls) (\(inWindow)/\(windowSize) in window): \(file, privacy: .public), 0 B in \(ms, privacy: .public) ms — resting new reads")
@@ -271,13 +271,13 @@ struct IndexNetworkStatus: Equatable, Sendable {
     var bytesPerSecond: Int64?
     /// Whether this run may stream from iCloud at all. Kept for callers/tests;
     /// the display always shows speed + total now (see `displayLine`).
-    var allowsNetwork: Bool = false
+    var isNetworkAllowed: Bool = false
 
     /// True when iCloud streaming is held back because we're on a metered
     /// cellular path the user hasn't opted into — local metadata reads still
     /// proceed (they cost no data), but iCloud-only photos wait for Wi-Fi.
-    var streamingPaused: Bool {
-        !allowsNetwork && connection == .cellular
+    var isStreamingPaused: Bool {
+        !isNetworkAllowed && connection == .cellular
     }
 
     /// `Wi-Fi · 1.2 MB/s · 45 MB`. Speed and downloaded total are dropped
@@ -285,7 +285,7 @@ struct IndexNetworkStatus: Equatable, Sendable {
     /// only once real iCloud traffic starts. On an unpermitted cellular path
     /// it reads `Cellular · Paused — Wi-Fi needed`.
     var displayLine: String {
-        if streamingPaused {
+        if isStreamingPaused {
             return "\(connection.displayName) · " + String(localized: "Paused — Wi-Fi needed")
         }
         var parts = [connection.displayName]
@@ -303,7 +303,7 @@ struct IndexNetworkStatus: Equatable, Sendable {
     /// always-present network readout is wanted rather than one that appears
     /// only once traffic starts.
     var detailedLine: String {
-        if streamingPaused {
+        if isStreamingPaused {
             return "\(connection.displayName) · " + String(localized: "Paused — Wi-Fi needed")
         }
         return [
@@ -336,7 +336,7 @@ struct IndexDiagnostics: Equatable, Sendable {
     var readConcurrency: Int
     /// Low Power Mode caps the fan-out; surfaced so the displayed reader
     /// count is explainable.
-    var lowPowerMode: Bool
+    var isLowPowerMode: Bool
     var networkReadsStarted: Int
     var networkReadsInFlight: Int
     /// Zero-byte stalls this run.
@@ -348,7 +348,7 @@ struct IndexDiagnostics: Equatable, Sendable {
     /// Low Power Mode is on.
     var thermalLine: String {
         var line = "Thermal: \(thermalState.displayName) · \(readConcurrency) readers"
-        if lowPowerMode {
+        if isLowPowerMode {
             line += " · Low Power"
         }
         return line

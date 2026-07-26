@@ -83,26 +83,26 @@ struct GridBadgeCacheTests {
         let cache = GridBadgeCache()
         let item = cache.record(makeRow(status: .indexed), assetId: "a1")
         #expect(item?.iso == 200)
-        guard case .badge(let cached)? = cache.cached("a1") else {
+        guard case .badge(let cached)? = cache.cachedEntry(for: "a1") else {
             Issue.record("expected cached .badge")
             return
         }
         #expect(cached.iso == 200)
 
         cache.record(nil, assetId: "a2")
-        #expect(cache.cached("a2") == .noBadge)
+        #expect(cache.cachedEntry(for: "a2") == .noBadge)
     }
 
     @Test func recordSkipsPendingSoNextDisplayRetries() {
         let cache = GridBadgeCache()
         let item = cache.record(makeRow(iso: nil, status: .pendingRead), assetId: "a1")
         #expect(item == nil)
-        #expect(cache.cached("a1") == nil)
+        #expect(cache.cachedEntry(for: "a1") == nil)
 
         // The row upgraded — the retry now caches the badge.
         let upgraded = cache.record(makeRow(status: .indexed), assetId: "a1")
         #expect(upgraded?.iso == 200)
-        #expect(cache.cached("a1") != nil)
+        #expect(cache.cachedEntry(for: "a1") != nil)
     }
 
     @Test func removeAllInvalidatesEntries() {
@@ -110,7 +110,7 @@ struct GridBadgeCacheTests {
         cache.record(makeRow(status: .indexed), assetId: "a1")
         cache.record(nil, assetId: "a2")
         cache.removeAll()
-        #expect(cache.cached("a1") == nil)
-        #expect(cache.cached("a2") == nil)
+        #expect(cache.cachedEntry(for: "a1") == nil)
+        #expect(cache.cachedEntry(for: "a2") == nil)
     }
 }

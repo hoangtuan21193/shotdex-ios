@@ -2,11 +2,11 @@ import SwiftUI
 import UIKit
 
 /// UIScrollView-backed zoomable image: pinch-to-zoom + double-tap zoom.
-/// Optionally participates in a `CompareScrollSync` group so zoom and pan
+/// Optionally participates in a `CompareScrollSynchronizer` group so zoom and pan
 /// mirror across panes (compare screen).
 struct ZoomableImageView: UIViewRepresentable {
     let image: UIImage
-    var sync: CompareScrollSync?
+    var sync: CompareScrollSynchronizer?
     var paneIndex: Int = 0
     /// Fires at the beginning of a user pinch, before the first scale update.
     /// Detail uses it to start the full-original request reliably.
@@ -68,7 +68,7 @@ struct ZoomableImageView: UIViewRepresentable {
 
     final class Coordinator: NSObject, UIScrollViewDelegate {
         weak var imageView: UIImageView?
-        var sync: CompareScrollSync?
+        var sync: CompareScrollSynchronizer?
         var onZoomStart: (() -> Void)?
         var onZoomChange: ((CGFloat) -> Void)?
 

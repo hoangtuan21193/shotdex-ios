@@ -33,7 +33,7 @@ struct ChartEditorSheet: View {
     @State private var availableBodies: [String] = []
     @State private var availableLenses: [String] = []
     @State private var previewData: [ChartDatum] = []
-    @State private var previewLoading = false
+    @State private var isPreviewLoading = false
     @State private var isRangePickerPresented = false
 
     init(
@@ -282,7 +282,7 @@ struct ChartEditorSheet: View {
     private var previewSection: some View {
         Section {
             if canSave {
-                ChartContentView(spec: draft, data: previewData, isLoading: previewLoading, onDrill: nil)
+                ChartContentView(spec: draft, data: previewData, isLoading: isPreviewLoading, onDrill: nil)
             } else {
                 Text("Finish configuring the chart to see a preview.")
                     .foregroundStyle(.secondary)
@@ -324,12 +324,12 @@ struct ChartEditorSheet: View {
         let spec = draft
         let queries = dependencies.statisticsQueries
         let scope = self.scope
-        previewLoading = true
+        isPreviewLoading = true
         Task.detached(priority: .userInitiated) {
             let data = (try? queries.chartData(for: spec, scope: scope)) ?? []
             await MainActor.run {
                 previewData = data
-                previewLoading = false
+                isPreviewLoading = false
             }
         }
     }

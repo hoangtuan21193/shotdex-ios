@@ -119,21 +119,21 @@ struct ExifReader: Sendable {
                 // window, while an unreachable original bails after ~8 s instead
                 // of 30 s.
                 let result = await streamExif(resource: resource, useNetwork: true, timeout: .seconds(8))
-                let elapsedMs = Int((clock.now - start) / .milliseconds(1))
+                let elapsedMilliseconds = Int((clock.now - start) / .milliseconds(1))
                 let bytes = (trafficMonitor?.totalBytes ?? 0) - before
                 if bytes > 0 { trafficMonitor?.recordNetworkProgress() }
                 switch result {
                 case .success(let exif):
-                    Self.logger.info("readExif \(name, privacy: .public): network stream success, \(bytes) B in \(elapsedMs) ms")
+                    Self.logger.info("readExif \(name, privacy: .public): network stream success, \(bytes) B in \(elapsedMilliseconds) ms")
                     return .success(exif)
                 case .needsNetwork:
                     // Zero-byte stall feeds the breaker (which logs stall and
                     // trip events itself); a partial-then-dropped transfer
                     // already reset it via `recordNetworkProgress`.
-                    Self.logger.info("readExif \(name, privacy: .public): network needsNetwork (\(bytes) B in \(elapsedMs) ms, stall=\(bytes == 0)) — pendingICloud")
+                    Self.logger.info("readExif \(name, privacy: .public): network needsNetwork (\(bytes) B in \(elapsedMilliseconds) ms, stall=\(bytes == 0)) — pendingICloud")
                     if bytes == 0 {
                         trafficMonitor?.recordNetworkStall(
-                            filename: resource.originalFilename, elapsedMs: elapsedMs
+                            filename: resource.originalFilename, elapsedMilliseconds: elapsedMilliseconds
                         )
                     }
                     return .pendingICloud
@@ -152,7 +152,7 @@ struct ExifReader: Sendable {
                     // to `.unreadable`). Kept defensive: treat any unexpected
                     // network failure as retryable, never a permanent give-up —
                     // so `.failure` at the top level is guaranteed non-network.
-                    Self.logger.log("read \(resource.originalFilename, privacy: .public): unexpected iCloud read failure, \(bytes) B in \(elapsedMs) ms — pendingICloud")
+                    Self.logger.log("read \(resource.originalFilename, privacy: .public): unexpected iCloud read failure, \(bytes) B in \(elapsedMilliseconds) ms — pendingICloud")
                     return .pendingICloud
                 }
             }

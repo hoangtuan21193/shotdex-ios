@@ -18,7 +18,7 @@ struct ChunkedLookupCacheTests {
                 Int(id.dropFirst(2)).map { (id, $0) }
             })
         }
-        cache.setIds((0..<count).map { "id\($0)" })
+        cache.replaceKeys((0..<count).map { "id\($0)" })
         return cache
     }
 
@@ -46,7 +46,7 @@ struct ChunkedLookupCacheTests {
 
     @Test func missingIdInFetchResultReturnsNil() {
         let cache = ChunkedLookupCache<Int>(chunkSize: 2, maxChunks: 2) { _ in [:] }
-        cache.setIds(["a", "b"])
+        cache.replaceKeys(["a", "b"])
         #expect(cache.value(at: 0) == nil)
     }
 
@@ -72,7 +72,7 @@ struct ChunkedLookupCacheTests {
         _ = cache.value(at: 0)
         #expect(fetches == 1)
 
-        cache.setIds(["id0", "id1"])
+        cache.replaceKeys(["id0", "id1"])
         _ = cache.value(at: 0)
         #expect(fetches == 2)
         // New list is shorter — old indexes are out of range.

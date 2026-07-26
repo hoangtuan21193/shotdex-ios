@@ -67,7 +67,7 @@ struct RootTabView: View {
             get: { navigation.selectedTab },
             set: { newValue in
                 if newValue == .library, navigation.selectedTab == .library {
-                    navigation.retapLibrary()
+                    navigation.resetLibraryToRoot()
                 }
                 navigation.selectedTab = newValue
             }
@@ -166,7 +166,7 @@ struct RootTabView: View {
                         selection: legacyTabSelection,
                         onReselect: { tab in
                             if tab == .library {
-                                navigation.retapLibrary()
+                                navigation.resetLibraryToRoot()
                             }
                         },
                         onSearchTap: {

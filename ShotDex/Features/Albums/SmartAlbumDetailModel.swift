@@ -60,7 +60,7 @@ final class SmartAlbumDetailModel {
         defer { isLoading = false }
         let rows = (try? await libraryQueries.gridItems(matching: query, sort: .default)) ?? []
         items = rows
-        assetCache.setIds(items.map(\.assetId))
+        assetCache.replaceKeys(items.map(\.assetId))
         contentGeneration &+= 1
     }
 
@@ -79,7 +79,7 @@ final class SmartAlbumDetailModel {
         try await photoLibrary.deleteAssets(assets)
         try? metadataStore.deleteAssets(ids: Array(ids))
         items.removeAll { ids.contains($0.assetId) }
-        assetCache.setIds(items.map(\.assetId))
+        assetCache.replaceKeys(items.map(\.assetId))
         contentGeneration &+= 1
     }
 }

@@ -12,49 +12,49 @@ struct IndexThermalPolicyTests {
     // MARK: Fan-out
 
     @Test func nominalUsesFullConcurrency() {
-        #expect(IndexPipeline.readConcurrency(thermal: .nominal, lowPowerMode: false) == IndexPipeline.readConcurrency)
+        #expect(IndexPipeline.readConcurrency(thermal: .nominal, isLowPowerMode: false) == IndexPipeline.readConcurrency)
     }
 
     @Test func thermalLadderStepsDown() {
-        #expect(IndexPipeline.readConcurrency(thermal: .nominal, lowPowerMode: false) == 12)
-        #expect(IndexPipeline.readConcurrency(thermal: .fair, lowPowerMode: false) == 6)
-        #expect(IndexPipeline.readConcurrency(thermal: .serious, lowPowerMode: false) == 3)
-        #expect(IndexPipeline.readConcurrency(thermal: .critical, lowPowerMode: false) == 2)
+        #expect(IndexPipeline.readConcurrency(thermal: .nominal, isLowPowerMode: false) == 12)
+        #expect(IndexPipeline.readConcurrency(thermal: .fair, isLowPowerMode: false) == 6)
+        #expect(IndexPipeline.readConcurrency(thermal: .serious, isLowPowerMode: false) == 3)
+        #expect(IndexPipeline.readConcurrency(thermal: .critical, isLowPowerMode: false) == 2)
     }
 
     @Test func lowPowerModeCapsAtFairLevel() {
         // LPM caps at the fair level; deeper thermal backoff still wins.
-        #expect(IndexPipeline.readConcurrency(thermal: .nominal, lowPowerMode: true) == 6)
-        #expect(IndexPipeline.readConcurrency(thermal: .fair, lowPowerMode: true) == 6)
-        #expect(IndexPipeline.readConcurrency(thermal: .serious, lowPowerMode: true) == 3)
-        #expect(IndexPipeline.readConcurrency(thermal: .critical, lowPowerMode: true) == 2)
+        #expect(IndexPipeline.readConcurrency(thermal: .nominal, isLowPowerMode: true) == 6)
+        #expect(IndexPipeline.readConcurrency(thermal: .fair, isLowPowerMode: true) == 6)
+        #expect(IndexPipeline.readConcurrency(thermal: .serious, isLowPowerMode: true) == 3)
+        #expect(IndexPipeline.readConcurrency(thermal: .critical, isLowPowerMode: true) == 2)
     }
 
     @Test func concurrencyNeverDropsToZero() {
         for state in allStates {
-            #expect(IndexPipeline.readConcurrency(thermal: state, lowPowerMode: false) >= 1)
-            #expect(IndexPipeline.readConcurrency(thermal: state, lowPowerMode: true) >= 1)
+            #expect(IndexPipeline.readConcurrency(thermal: state, isLowPowerMode: false) >= 1)
+            #expect(IndexPipeline.readConcurrency(thermal: state, isLowPowerMode: true) >= 1)
         }
     }
 
     // MARK: Inter-batch breather
 
     @Test func nominalHasNoPause() {
-        #expect(IndexPipeline.interBatchPause(thermal: .nominal, lowPowerMode: false) == .zero)
+        #expect(IndexPipeline.interBatchPause(thermal: .nominal, isLowPowerMode: false) == .zero)
     }
 
     @Test func pauseGrowsWithThermalState() {
-        #expect(IndexPipeline.interBatchPause(thermal: .fair, lowPowerMode: false) == .seconds(3))
-        #expect(IndexPipeline.interBatchPause(thermal: .serious, lowPowerMode: false) == .seconds(10))
-        #expect(IndexPipeline.interBatchPause(thermal: .critical, lowPowerMode: false) == .seconds(10))
+        #expect(IndexPipeline.interBatchPause(thermal: .fair, isLowPowerMode: false) == .seconds(3))
+        #expect(IndexPipeline.interBatchPause(thermal: .serious, isLowPowerMode: false) == .seconds(10))
+        #expect(IndexPipeline.interBatchPause(thermal: .critical, isLowPowerMode: false) == .seconds(10))
     }
 
     @Test func lowPowerModeForcesMinimumPause() {
         for state in allStates {
-            #expect(IndexPipeline.interBatchPause(thermal: state, lowPowerMode: true) >= .seconds(3))
+            #expect(IndexPipeline.interBatchPause(thermal: state, isLowPowerMode: true) >= .seconds(3))
         }
         // The thermal pause still wins when it is longer than the LPM floor.
-        #expect(IndexPipeline.interBatchPause(thermal: .serious, lowPowerMode: true) == .seconds(10))
+        #expect(IndexPipeline.interBatchPause(thermal: .serious, isLowPowerMode: true) == .seconds(10))
     }
 
     // MARK: Refill decision

@@ -74,7 +74,7 @@ final class ImportModel {
 
     // MARK: Folder scan
 
-    func startFolder(_ url: URL) {
+    func scanFolder(at url: URL) {
         exifTask?.cancel()
         // Release any previously-scoped folder before scoping the new one.
         releaseScopedAccess()

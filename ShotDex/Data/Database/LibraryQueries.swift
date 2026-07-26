@@ -78,19 +78,10 @@ struct LibraryQueries: Sendable {
         }
     }
 
-    /// Number of photos matching a smart album's rule query.
-    func count(matching query: SmartAlbumQuery) throws -> Int {
-        let (whereSQL, arguments) = Self.whereClause(for: query)
-        let sql = "SELECT COUNT(*) FROM photo_metadata \(whereSQL)"
-        return try database.reader.read { db in
-            try Int.fetchOne(db, sql: sql, arguments: arguments) ?? 0
-        }
-    }
-
-    /// Async live-count variant for rule-builder typing. GRDB performs the
-    /// decode/read on its reader pool, and the surrounding Swift task can be
+    /// Number of photos matching a smart album's rule query. GRDB performs the
+    /// decode/read on its reader pool, so the surrounding Swift task can be
     /// cancelled/debounced without blocking the main actor.
-    func countAsync(matching query: SmartAlbumQuery) async throws -> Int {
+    func count(matching query: SmartAlbumQuery) async throws -> Int {
         let (whereSQL, arguments) = Self.whereClause(for: query)
         let sql = "SELECT COUNT(*) FROM photo_metadata \(whereSQL)"
         return try await database.reader.read { db in

@@ -57,7 +57,7 @@ actor IndexPipeline {
     /// still lowers it further. Re-sampled at every read completion, so the
     /// fan-out shrinks/grows mid-batch — in-flight reads are never killed,
     /// they just aren't replaced while over target.
-    static func readConcurrency(thermal: ProcessInfo.ThermalState, lowPowerMode: Bool) -> Int {
+    static func readConcurrency(thermal: ProcessInfo.ThermalState, isLowPowerMode: Bool) -> Int {
         let thermalTarget: Int
         switch thermal {
         case .nominal: thermalTarget = readConcurrency
@@ -66,14 +66,14 @@ actor IndexPipeline {
         case .critical: thermalTarget = 2
         @unknown default: thermalTarget = readConcurrency / 4
         }
-        let capped = lowPowerMode ? min(thermalTarget, readConcurrency / 2) : thermalTarget
+        let capped = isLowPowerMode ? min(thermalTarget, readConcurrency / 2) : thermalTarget
         return max(capped, 1)
     }
 
     /// Breather between EXIF batches so the SoC duty-cycles instead of
     /// running flat-out. Low Power Mode forces a minimum pause even when
     /// thermally nominal. Skipped before the first batch of a run.
-    static func interBatchPause(thermal: ProcessInfo.ThermalState, lowPowerMode: Bool) -> Duration {
+    static func interBatchPause(thermal: ProcessInfo.ThermalState, isLowPowerMode: Bool) -> Duration {
         let thermalPause: Duration
         switch thermal {
         case .nominal: thermalPause = .zero
@@ -81,7 +81,7 @@ actor IndexPipeline {
         case .serious, .critical: thermalPause = .seconds(10)
         @unknown default: thermalPause = .seconds(10)
         }
-        return lowPowerMode ? max(thermalPause, .seconds(3)) : thermalPause
+        return isLowPowerMode ? max(thermalPause, .seconds(3)) : thermalPause
     }
 
     /// How many new reads to spawn at a refill opportunity. Over target →
@@ -170,7 +170,7 @@ actor IndexPipeline {
     /// the actor free, so `cancel()` lands within one tick. State is
     /// re-sampled per call, never latched.
     private func pauseBetweenBatches() async {
-        let pause = Self.interBatchPause(thermal: thermalState(), lowPowerMode: isLowPowerMode())
+        let pause = Self.interBatchPause(thermal: thermalState(), isLowPowerMode: isLowPowerMode())
         guard pause > .zero else { return }
         let signpostState = Self.signposter.beginInterval("batchBreather")
         defer { Self.signposter.endInterval("batchBreather", signpostState) }
@@ -690,7 +690,7 @@ actor IndexPipeline {
             // — no in-flight read is ever killed.
             var nextIndex = 0
             var inFlight = 0
-            let seedTarget = Self.readConcurrency(thermal: thermalState(), lowPowerMode: isLowPowerMode())
+            let seedTarget = Self.readConcurrency(thermal: thermalState(), isLowPowerMode: isLowPowerMode())
             while nextIndex < min(seedTarget, assets.count) {
                 let index = nextIndex
                 let asset = assets[index]
@@ -735,7 +735,7 @@ actor IndexPipeline {
                     await waitWhileInteractionPaused()
                     await waitWhileThermalCritical()
                     guard !isCancelled else { continue }
-                    let target = Self.readConcurrency(thermal: thermalState(), lowPowerMode: isLowPowerMode())
+                    let target = Self.readConcurrency(thermal: thermalState(), isLowPowerMode: isLowPowerMode())
                     var toSpawn = Self.refillCount(
                         inFlight: inFlight, target: target, remaining: assets.count - nextIndex
                     )
@@ -811,10 +811,10 @@ actor IndexPipeline {
             + "pendingICloud \(summary.pendingICloud), failed \(summary.failed), deleted \(summary.deleted)"
             + (summary.wasCancelled ? " (cancelled)" : "")
             + String(format: " in %.1fs — %.1f assets/s", elapsedSeconds, Double(read) / elapsedSeconds)
-            + "; avg ms/asset — resources \(avgMs(timings.resources, timings.assets))"
-            + ", exif \(avgMs(timings.exif, timings.exifReads))"
-            + ", compose \(avgMs(timings.compose, timings.assets))"
-            + ", dbWrite \(avgMs(timings.dbWrite, timings.assets))"
+            + "; avg ms/asset — resources \(averageMilliseconds(timings.resources, over: timings.assets))"
+            + ", exif \(averageMilliseconds(timings.exif, over: timings.exifReads))"
+            + ", compose \(averageMilliseconds(timings.compose, over: timings.assets))"
+            + ", dbWrite \(averageMilliseconds(timings.dbWrite, over: timings.assets))"
         // On the health category so a run's boundary lines, stalls, breaker
         // events, and 10 s snapshots read as one stream.
         IndexTrafficMonitor.healthLogger.info("\(line, privacy: .public)")
@@ -824,7 +824,7 @@ actor IndexPipeline {
         Double(duration.components.seconds) + Double(duration.components.attoseconds) * 1e-18
     }
 
-    private static func avgMs(_ total: Duration, _ count: Int) -> String {
+    private static func averageMilliseconds(_ total: Duration, over count: Int) -> String {
         guard count > 0 else { return "–" }
         return String(format: "%.1f", seconds(total) * 1000 / Double(count))
     }

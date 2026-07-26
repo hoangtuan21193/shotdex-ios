@@ -34,7 +34,7 @@ struct ImportScreen: View {
                     allowsMultipleSelection: false
                 ) { result in
                     if case .success(let urls) = result, let url = urls.first {
-                        model.startFolder(url)
+                        model.scanFolder(at: url)
                     }
                 }
                 .sheet(isPresented: $isFilterPresented) {
@@ -325,11 +325,11 @@ private struct ImportGridTile: View {
 
     private func loadThumbnail() async {
         guard cellWidth > 0, image == nil else { return }
-        let maxPixel = cellWidth * min(UIScreen.main.scale, 2)
+        let maxPixelSize = cellWidth * min(UIScreen.main.scale, 2)
         let candidate = self.candidate
         let service = self.service
         let result = await Task.detached(priority: .utility) {
-            service.thumbnail(for: candidate, maxPixel: maxPixel)
+            service.thumbnail(for: candidate, maxPixelSize: maxPixelSize)
         }.value
         if let result { image = result }
     }

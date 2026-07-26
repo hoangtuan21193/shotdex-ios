@@ -9,13 +9,13 @@ struct SettingsScreen: View {
 
     let libraryModel: LibraryModel?
 
-    @AppStorage("display.showISO") private var showISO = true
-    @AppStorage("display.showAperture") private var showAperture = true
-    @AppStorage("display.showShutter") private var showShutter = false
-    @AppStorage("display.showFocal") private var showFocal = true
-    @AppStorage("display.showMegapixels") private var showMegapixels = false
-    @AppStorage("display.showFileSize") private var showFileSize = false
-    @AppStorage("display.focalStyleEquivalent") private var focalStyleEquivalent = false
+    @AppStorage("display.showISO") private var showsISO = true
+    @AppStorage("display.showAperture") private var showsAperture = true
+    @AppStorage("display.showShutter") private var showsShutter = false
+    @AppStorage("display.showFocal") private var showsFocal = true
+    @AppStorage("display.showMegapixels") private var showsMegapixels = false
+    @AppStorage("display.showFileSize") private var showsFileSize = false
+    @AppStorage("display.focalStyleEquivalent") private var showsEquivalentFocalLength = false
     @AppStorage(SettingsKeys.allowCellularIndexing) private var allowCellularIndexing = false
     @AppStorage(SettingsKeys.keepScreenAwake) private var keepScreenAwake = false
 
@@ -118,7 +118,7 @@ struct SettingsScreen: View {
                     }
                     if incompleteCount > 0 {
                         Button("Re-index Incomplete Photos (\(incompleteCount))") {
-                            model.startReindexIncomplete(manual: true)
+                            model.reindexIncompleteAssets(manual: true)
                         }
                     }
                 }
@@ -145,16 +145,16 @@ struct SettingsScreen: View {
 
     private var displaySection: some View {
         Section {
-            Toggle("ISO", isOn: $showISO)
-            Toggle("Aperture", isOn: $showAperture)
-            Toggle("Shutter Speed", isOn: $showShutter)
-            Toggle("Focal Length", isOn: $showFocal)
-            Picker("Focal Length Style", selection: $focalStyleEquivalent) {
+            Toggle("ISO", isOn: $showsISO)
+            Toggle("Aperture", isOn: $showsAperture)
+            Toggle("Shutter Speed", isOn: $showsShutter)
+            Toggle("Focal Length", isOn: $showsFocal)
+            Picker("Focal Length Style", selection: $showsEquivalentFocalLength) {
                 Text("Actual").tag(false)
                 Text("FF Equivalent").tag(true)
             }
-            Toggle("Megapixels", isOn: $showMegapixels)
-            Toggle("File Size", isOn: $showFileSize)
+            Toggle("Megapixels", isOn: $showsMegapixels)
+            Toggle("File Size", isOn: $showsFileSize)
         } header: {
             Text("Thumbnail Metadata")
         } footer: {

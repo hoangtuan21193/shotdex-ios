@@ -168,7 +168,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         private var swipeActivation = SwipeSelection.Activation.undecided
         /// Frozen once per gesture. Recomputing from the live selection would
         /// flip select→deselect after the first callback and make badges blink.
-        private var swipeShouldSelect: Bool?
+        private var shouldSelectOnSwipe: Bool?
         private var swipeStartFlatIndex: Int?
         private var swipeLastFlatIndex: Int?
         /// Physical finger location in the window. Converted back into the
@@ -854,7 +854,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 // so up/down drags select instead of scrolling.
                 swipeActivation = .select
                 swipeStartFlatIndex = flatIndex
-                swipeShouldSelect = true
+                shouldSelectOnSwipe = true
                 swipeLastFlatIndex = nil
                 collectionView.isScrollEnabled = false
                 let location = recognizer.location(in: collectionView)
@@ -1046,7 +1046,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                             return
                         }
                         swipeStartFlatIndex = startIndex
-                        swipeShouldSelect = !appliedSelectedIds.contains(
+                        shouldSelectOnSwipe = !appliedSelectedIds.contains(
                             parent.photos[startIndex].assetId
                         )
                         collectionView.isScrollEnabled = false
@@ -1068,7 +1068,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         private func updateSwipeRange(at location: CGPoint) {
             guard let collectionView,
                   let startIndex = swipeStartFlatIndex,
-                  let shouldSelect = swipeShouldSelect,
+                  let shouldSelect = shouldSelectOnSwipe,
                   let indexPath = collectionView.indexPathForItem(at: location),
                   let currentIndex = flatIndex(for: indexPath),
                   currentIndex != swipeLastFlatIndex
@@ -1124,7 +1124,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         private func resetSwipeState(keepingScrollEnabled: Bool) {
             swipeAutoScrollDriver?.invalidate()
             swipeAutoScrollDriver = nil
-            swipeShouldSelect = nil
+            shouldSelectOnSwipe = nil
             swipeStartFlatIndex = nil
             swipeLastFlatIndex = nil
             swipeWindowLocation = nil
@@ -1476,16 +1476,16 @@ final class PhotoGridCell: UICollectionViewCell {
     private static func metadataLine(
         for item: some PhotoGridDisplayable, options: GridMetadataDisplayOptions
     ) -> String? {
-        let focalValue = options.focalStyleEquivalent
+        let focalValue = options.showsEquivalentFocalLength
             ? (item.equivalentFocalLength ?? item.focalLength)
             : item.focalLength
         return MetadataFormatter.metadataLine([
-            options.showISO ? item.iso.flatMap(MetadataFormatter.iso) : nil,
-            options.showFocal ? focalValue.flatMap(MetadataFormatter.focalLength) : nil,
-            options.showAperture ? item.aperture.flatMap(MetadataFormatter.aperture) : nil,
-            options.showShutter ? item.shutterSpeedDisplay : nil,
-            options.showMegapixels ? item.megapixels.flatMap(MetadataFormatter.megapixels) : nil,
-            options.showFileSize ? item.fileSize.flatMap(MetadataFormatter.fileSize) : nil,
+            options.showsISO ? item.iso.flatMap(MetadataFormatter.iso) : nil,
+            options.showsFocal ? focalValue.flatMap(MetadataFormatter.focalLength) : nil,
+            options.showsAperture ? item.aperture.flatMap(MetadataFormatter.aperture) : nil,
+            options.showsShutter ? item.shutterSpeedDisplay : nil,
+            options.showsMegapixels ? item.megapixels.flatMap(MetadataFormatter.megapixels) : nil,
+            options.showsFileSize ? item.fileSize.flatMap(MetadataFormatter.fileSize) : nil,
         ])
     }
 
@@ -1504,26 +1504,26 @@ final class PhotoGridCell: UICollectionViewCell {
 /// refreshed on the defaults-change notification instead of five defaults
 /// reads per cell configure.
 struct GridMetadataDisplayOptions: Equatable {
-    var showISO: Bool
-    var showAperture: Bool
-    var showShutter: Bool
-    var showFocal: Bool
-    var showMegapixels: Bool
-    var showFileSize: Bool
-    var focalStyleEquivalent: Bool
+    var showsISO: Bool
+    var showsAperture: Bool
+    var showsShutter: Bool
+    var showsFocal: Bool
+    var showsMegapixels: Bool
+    var showsFileSize: Bool
+    var showsEquivalentFocalLength: Bool
 
     static func load(from defaults: UserDefaults = .standard) -> GridMetadataDisplayOptions {
         func flag(_ key: String, default defaultValue: Bool) -> Bool {
             defaults.object(forKey: key) as? Bool ?? defaultValue
         }
         return GridMetadataDisplayOptions(
-            showISO: flag("display.showISO", default: true),
-            showAperture: flag("display.showAperture", default: true),
-            showShutter: flag("display.showShutter", default: false),
-            showFocal: flag("display.showFocal", default: true),
-            showMegapixels: flag("display.showMegapixels", default: false),
-            showFileSize: flag("display.showFileSize", default: false),
-            focalStyleEquivalent: flag("display.focalStyleEquivalent", default: false)
+            showsISO: flag("display.showISO", default: true),
+            showsAperture: flag("display.showAperture", default: true),
+            showsShutter: flag("display.showShutter", default: false),
+            showsFocal: flag("display.showFocal", default: true),
+            showsMegapixels: flag("display.showMegapixels", default: false),
+            showsFileSize: flag("display.showFileSize", default: false),
+            showsEquivalentFocalLength: flag("display.focalStyleEquivalent", default: false)
         )
     }
 }
