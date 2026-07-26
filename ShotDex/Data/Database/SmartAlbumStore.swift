@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 
 /// Reads and writes user-created smart albums (saved `FilterCriteria`).
-struct SmartAlbumDAO: Sendable {
+struct SmartAlbumStore: Sendable {
     let database: AppDatabase
 
     /// All smart albums, newest first.

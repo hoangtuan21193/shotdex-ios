@@ -40,14 +40,14 @@ struct IndexThroughput: Equatable {
 @Observable
 final class LibraryModel {
 
-    private let queryDAO: LibraryQueryDAO
-    private let filterSuggestions: FilterSuggestionRepository
-    private let metadataDAO: MetadataDAO
+    private let libraryQueries: LibraryQueries
+    private let filterSuggestions: FilterSuggestionCache
+    private let metadataStore: MetadataStore
     private let pipeline: IndexPipeline
     private let backgroundIndex: BackgroundIndexService
     private let photoLibrary: PhotoLibraryService
-    private let networkStatus: NetworkStatusService
-    private let powerStatus: PowerStatusService
+    private let networkStatus: NetworkMonitor
+    private let powerStatus: PowerMonitor
     private let indexTraffic: IndexTrafficMonitor
 
     /// The whole filtered library as slim rows, in bottom-anchored display
@@ -148,9 +148,9 @@ final class LibraryModel {
     private(set) var availableLenses: [String] = []
 
     init(dependencies: AppDependencies) {
-        self.queryDAO = dependencies.libraryQueryDAO
+        self.libraryQueries = dependencies.libraryQueries
         self.filterSuggestions = dependencies.filterSuggestions
-        self.metadataDAO = dependencies.metadataDAO
+        self.metadataStore = dependencies.metadataStore
         self.pipeline = dependencies.indexPipeline
         self.backgroundIndex = dependencies.backgroundIndex
         self.photoLibrary = dependencies.photoLibrary
@@ -224,7 +224,7 @@ final class LibraryModel {
         let criteria = self.criteria
         let advancedQuery = self.advancedQuery
         let sort = self.sort
-        let queryDAO = self.queryDAO
+        let libraryQueries = self.libraryQueries
         // Fast path (no metadata filter/search + a date sort): drive the grid
         // from PhotoKit directly so the whole library shows instantly, like the
         // system Photos app, instead of waiting on the EXIF index. Any active
@@ -241,20 +241,20 @@ final class LibraryModel {
                 if usePhotoKit {
                     if useFirstPaintSlice {
                         let slice = try await Self.photoKitGridItems(
-                            sort: sort, queryDAO: queryDAO, limit: Self.firstPaintLimit
+                            sort: sort, libraryQueries: libraryQueries, limit: Self.firstPaintLimit
                         )
                         guard let self, !Task.isCancelled else { return }
                         self.applyLoadedRows(slice)
                     }
-                    let all = try await Self.photoKitGridItems(sort: sort, queryDAO: queryDAO)
+                    let all = try await Self.photoKitGridItems(sort: sort, libraryQueries: libraryQueries)
                     guard let self, !Task.isCancelled else { return }
                     self.applyLoadedRows(all)
                 } else if let advancedQuery, !advancedQuery.isEmpty {
-                    let rows = try await queryDAO.gridItems(matching: advancedQuery, sort: sort)
+                    let rows = try await libraryQueries.gridItems(matching: advancedQuery, sort: sort)
                     guard let self, !Task.isCancelled else { return }
                     self.applyLoadedRows(rows)
                 } else {
-                    let rows = try await queryDAO.gridItems(matching: criteria, sort: sort)
+                    let rows = try await libraryQueries.gridItems(matching: criteria, sort: sort)
                     guard let self, !Task.isCancelled else { return }
                     self.applyLoadedRows(rows)
                 }
@@ -314,12 +314,12 @@ final class LibraryModel {
     /// indexed out of date order — the full phase corrects them.
     private static func photoKitGridItems(
         sort: SortOption,
-        queryDAO: LibraryQueryDAO,
+        libraryQueries: LibraryQueries,
         limit: Int? = nil
     ) async throws -> [LibraryGridItem] {
         // Indexed rows keyed by id, for the exposure overlay. `.empty` +
         // matching sort reuses the existing query untouched.
-        let indexed = try await queryDAO.gridItems(matching: FilterCriteria.empty, sort: sort, limit: limit)
+        let indexed = try await libraryQueries.gridItems(matching: FilterCriteria.empty, sort: sort, limit: limit)
         var byId: [String: LibraryGridItem] = [:]
         byId.reserveCapacity(indexed.count)
         for row in indexed { byId[row.assetId] = row }
@@ -623,7 +623,7 @@ final class LibraryModel {
     /// the current network path. Cheap query; called at run edges and on path
     /// changes (both rare).
     func refreshPausedState() {
-        pendingICloudCount = (try? metadataDAO.pendingICloudReadCount()) ?? 0
+        pendingICloudCount = (try? metadataStore.pendingICloudReadCount()) ?? 0
         indexStreamingPaused = networkStatus.isExpensivePath
             && !UserDefaults.standard.bool(forKey: SettingsKeys.allowCellularIndexing)
             && pendingICloudCount > 0
@@ -739,7 +739,7 @@ final class LibraryModel {
         Task { await pipeline.cancel() }
     }
 
-    /// Reacts to Low Power Mode / charging changes (from `PowerStatusService`):
+    /// Reacts to Low Power Mode / charging changes (from `PowerMonitor`):
     /// entering LPM stops any running index; connecting a charger while in LPM
     /// auto-resumes it. The user may always start indexing by hand in LPM.
     private func handlePowerChange(lowPower: Bool, charging: Bool) {
@@ -766,7 +766,7 @@ final class LibraryModel {
         try await photoLibrary.deleteAssets(assets)
         // PhotoKit is the source of truth; prune the DB rows right away so
         // the grid doesn't show stale entries until the next index run.
-        try? metadataDAO.deleteAssets(ids: Array(ids))
+        try? metadataStore.deleteAssets(ids: Array(ids))
         items.removeAll { ids.contains($0.assetId) }
         // Indexes shifted; rebuild the id list (drops cached chunks). No
         // contentGeneration bump — the user should keep their scroll spot.
@@ -778,7 +778,7 @@ final class LibraryModel {
     /// DB only — slim grid rows carry no favorite flag (the grid never
     /// rendered it; favorites filtering is query-side).
     func syncFavorite(assetId: String, isFavorite: Bool) {
-        try? metadataDAO.updateFavorite(assetId: assetId, isFavorite: isFavorite)
+        try? metadataStore.updateFavorite(assetId: assetId, isFavorite: isFavorite)
     }
 }
 
@@ -809,15 +809,15 @@ extension LibraryModel: PhotoBrowsingSource {
             if case .badge(let item) = cached { return item }
             return nil
         }
-        let queryDAO = self.queryDAO
+        let libraryQueries = self.libraryQueries
         let row = await Task.detached(priority: .utility) {
-            (try? queryDAO.metadata(assetId: assetId)) ?? nil
+            (try? libraryQueries.metadata(assetId: assetId)) ?? nil
         }.value
         return badgeCache.record(row, assetId: assetId)
     }
 
     func metadata(for assetId: String) -> PhotoMetadata? {
-        if let row = (try? queryDAO.metadata(assetId: assetId)) ?? nil {
+        if let row = (try? libraryQueries.metadata(assetId: assetId)) ?? nil {
             return row
         }
         // Not indexed yet (PhotoKit fast path): synthesize PhotoKit-only

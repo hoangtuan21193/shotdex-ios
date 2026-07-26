@@ -1,7 +1,7 @@
 import Foundation
 
 /// Pure formatting helpers for exposure values. No framework dependencies.
-enum FormatUtils {
+enum MetadataFormatter {
 
     /// `1/500s` for sub-second exposures, `2s` / `2.5s` for long exposures.
     static func shutterSpeed(_ seconds: Double) -> String? {

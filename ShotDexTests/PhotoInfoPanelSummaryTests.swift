@@ -42,7 +42,7 @@ struct PhotoInfoPanelSummaryTests {
             iso: 3200,
             aperture: 7.1,
             shutterSpeedSeconds: 1.0 / 1000,
-            shutterSpeedDisplay: FormatUtils.shutterSpeed(1.0 / 1000),
+            shutterSpeedDisplay: MetadataFormatter.shutterSpeed(1.0 / 1000),
             focalLength: 400,
             focalLengthIn35mm: nil,
             calculatedEquivalentFocalLength: nil,

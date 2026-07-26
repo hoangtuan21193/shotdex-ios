@@ -21,7 +21,7 @@ struct AlbumItem: Identifiable {
 }
 
 /// One user-created smart album, resolved for display: the saved album plus
-/// its live match count and cover from `LibraryQueryDAO`. PHAsset is not
+/// its live match count and cover from `LibraryQueries`. PHAsset is not
 /// Sendable but PhotoKit fetches are thread-safe, so this crosses the
 /// off-main load boundary as `@unchecked Sendable` (mirrors `Snapshot`).
 struct SmartAlbumTokenItem: Identifiable, @unchecked Sendable {
@@ -41,7 +41,7 @@ final class AlbumsModel {
     private(set) var isLoading = false
 
     /// Injected by the screen before the first `load()`; enables the
-    /// smart-album (saved-filter) section, which needs the DB DAOs.
+    /// smart-album (saved-filter) section, which needs the DB queries.
     var dependencies: AppDependencies?
 
     /// Summary for the "On This Day" hero card (today's date, previous years).
@@ -107,8 +107,8 @@ final class AlbumsModel {
             onThisDayCover = snapshot.onThisDayCover
             if let deps {
                 smartQueryAlbums = await Self.loadSmartAlbums(
-                    smartAlbumDAO: deps.smartAlbumDAO,
-                    libraryQueryDAO: deps.libraryQueryDAO
+                    smartAlbumStore: deps.smartAlbumStore,
+                    libraryQueries: deps.libraryQueries
                 )
             }
             isLoading = false
@@ -117,7 +117,7 @@ final class AlbumsModel {
 
     /// Deletes a user-created smart album and reloads.
     func deleteSmartAlbum(id: String) {
-        try? dependencies?.smartAlbumDAO.delete(id: id)
+        try? dependencies?.smartAlbumStore.delete(id: id)
         load()
     }
 
@@ -125,15 +125,15 @@ final class AlbumsModel {
     /// thread. `count` is a blocking reader read; `gridItems` runs on GRDB's
     /// reader pool.
     private nonisolated static func loadSmartAlbums(
-        smartAlbumDAO: SmartAlbumDAO,
-        libraryQueryDAO: LibraryQueryDAO
+        smartAlbumStore: SmartAlbumStore,
+        libraryQueries: LibraryQueries
     ) async -> [SmartAlbumTokenItem] {
-        guard let albums = try? smartAlbumDAO.fetchAllOrdered() else { return [] }
+        guard let albums = try? smartAlbumStore.fetchAllOrdered() else { return [] }
         var models: [SmartAlbumTokenItem] = []
         for album in albums {
-            let count = (try? libraryQueryDAO.count(matching: album.query)) ?? 0
+            let count = (try? libraryQueries.count(matching: album.query)) ?? 0
             var cover: PHAsset?
-            if let firstId = try? await libraryQueryDAO
+            if let firstId = try? await libraryQueries
                 .gridItems(matching: album.query, sort: .default, limit: 1)
                 .first?.assetId {
                 cover = PhotoLibraryService.fetchAssets(ids: [firstId]).first
@@ -203,7 +203,7 @@ final class AlbumsModel {
 final class AlbumDetailModel: PhotoBrowsingSource {
     static let pageSize = 120
 
-    private let metadataDAO: MetadataDAO
+    private let metadataStore: MetadataStore
     private let database: AppDatabase
     private let photoLibrary: PhotoLibraryService
     private let indexPipeline: IndexPipeline
@@ -225,7 +225,7 @@ final class AlbumDetailModel: PhotoBrowsingSource {
     private var deletedIds: Set<String> = []
 
     init(album: AlbumItem, dependencies: AppDependencies) {
-        self.metadataDAO = dependencies.metadataDAO
+        self.metadataStore = dependencies.metadataStore
         self.database = dependencies.database
         self.photoLibrary = dependencies.photoLibrary
         self.indexPipeline = dependencies.indexPipeline
@@ -318,7 +318,7 @@ final class AlbumDetailModel: PhotoBrowsingSource {
         try await photoLibrary.deleteAssets(assets)
         // PhotoKit is the source of truth; prune the DB rows right away so
         // the grid doesn't show stale entries until the next index run.
-        try? metadataDAO.deleteAssets(ids: Array(ids))
+        try? metadataStore.deleteAssets(ids: Array(ids))
         deletedIds.formUnion(ids)
         photos.removeAll { ids.contains($0.assetId) }
         pageTriggerIds = Set(photos.suffix(30).map(\.assetId))
@@ -332,7 +332,7 @@ final class AlbumDetailModel: PhotoBrowsingSource {
     }
 
     func syncFavorite(assetId: String, isFavorite: Bool) {
-        try? metadataDAO.updateFavorite(assetId: assetId, isFavorite: isFavorite)
+        try? metadataStore.updateFavorite(assetId: assetId, isFavorite: isFavorite)
         if let index = photos.firstIndex(where: { $0.assetId == assetId }) {
             photos[index].isFavorite = isFavorite
         }

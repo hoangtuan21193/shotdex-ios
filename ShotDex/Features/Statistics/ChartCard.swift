@@ -10,11 +10,11 @@ enum ChartValueFormatter {
         }
         switch field {
         case .iso: return "ISO \(Int(value.rounded()))"
-        case .aperture: return FormatUtils.aperture(value) ?? Self.plain(value)
-        case .shutter: return FormatUtils.shutterSpeed(value) ?? Self.plain(value)
-        case .focalLength, .equivalentFocalLength: return FormatUtils.focalLength(value) ?? Self.plain(value)
-        case .fileSize: return FormatUtils.fileSize(Int(value.rounded())) ?? Self.plain(value)
-        case .megapixels: return FormatUtils.megapixels(value) ?? Self.plain(value)
+        case .aperture: return MetadataFormatter.aperture(value) ?? Self.plain(value)
+        case .shutter: return MetadataFormatter.shutterSpeed(value) ?? Self.plain(value)
+        case .focalLength, .equivalentFocalLength: return MetadataFormatter.focalLength(value) ?? Self.plain(value)
+        case .fileSize: return MetadataFormatter.fileSize(Int(value.rounded())) ?? Self.plain(value)
+        case .megapixels: return MetadataFormatter.megapixels(value) ?? Self.plain(value)
         }
     }
 

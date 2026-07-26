@@ -15,7 +15,7 @@ enum SwipeSelectEvent {
 /// A selection drag toggles the contiguous grid-order range between the tile
 /// where the drag started and the tile currently under the finger. The range is
 /// index-based, so cells recycled offscreen are still covered.
-enum SwipeSelectionEngine {
+enum SwipeSelection {
 
     /// Direction lock decided from the first few points of a drag:
     /// mostly-horizontal drags select, mostly-vertical drags scroll.

@@ -36,7 +36,7 @@ struct DatabaseTests {
             iso: iso,
             aperture: aperture,
             shutterSpeedSeconds: shutter,
-            shutterSpeedDisplay: shutter.flatMap(FormatUtils.shutterSpeed),
+            shutterSpeedDisplay: shutter.flatMap(MetadataFormatter.shutterSpeed),
             focalLength: focal,
             focalLengthIn35mm: nil,
             calculatedEquivalentFocalLength: equivalent,
@@ -56,40 +56,40 @@ struct DatabaseTests {
 
     @Test func migrationCreatesSchema() throws {
         let database = try AppDatabase.makeEmpty()
-        let dao = MetadataDAO(database: database)
-        #expect(try dao.indexedCount() == 0)
-        #expect(try dao.indexState() == .initial)
+        let store = MetadataStore(database: database)
+        #expect(try store.indexedCount() == 0)
+        #expect(try store.indexState() == .initial)
     }
 
     @Test func batchSaveAndCursor() throws {
         let database = try AppDatabase.makeEmpty()
-        let dao = MetadataDAO(database: database)
+        let store = MetadataStore(database: database)
         let records = (1...5).map { makeRecord(assetId: "a\($0)") }
-        try dao.saveBatch(records, cursorAssetId: "a5")
-        #expect(try dao.indexedCount() == 5)
-        #expect(try dao.indexState().cursorAssetId == "a5")
+        try store.saveBatch(records, cursorAssetId: "a5")
+        #expect(try store.indexedCount() == 5)
+        #expect(try store.indexState().cursorAssetId == "a5")
 
         // Upsert same batch — no duplicates.
-        try dao.saveBatch(records, cursorAssetId: "a5")
-        #expect(try dao.indexedCount() == 5)
+        try store.saveBatch(records, cursorAssetId: "a5")
+        #expect(try store.indexedCount() == 5)
     }
 
     @Test func deleteAssetsAndClearAll() throws {
         let database = try AppDatabase.makeEmpty()
-        let dao = MetadataDAO(database: database)
-        try dao.saveBatch((1...3).map { makeRecord(assetId: "a\($0)") }, cursorAssetId: nil)
-        try dao.deleteAssets(ids: ["a1", "a2"])
-        #expect(try dao.indexedCount() == 1)
-        try dao.deleteAll()
-        #expect(try dao.indexedCount() == 0)
-        #expect(try dao.indexState().cursorAssetId == nil)
+        let store = MetadataStore(database: database)
+        try store.saveBatch((1...3).map { makeRecord(assetId: "a\($0)") }, cursorAssetId: nil)
+        try store.deleteAssets(ids: ["a1", "a2"])
+        #expect(try store.indexedCount() == 1)
+        try store.deleteAll()
+        #expect(try store.indexedCount() == 0)
+        #expect(try store.indexState().cursorAssetId == nil)
     }
 
     @Test func filterByCameraAndISORange() async throws {
         let database = try AppDatabase.makeEmpty()
-        let metadataDAO = MetadataDAO(database: database)
-        let queryDAO = LibraryQueryDAO(database: database)
-        try metadataDAO.saveBatch([
+        let metadataStore = MetadataStore(database: database)
+        let libraryQueries = LibraryQueries(database: database)
+        try metadataStore.saveBatch([
             makeRecord(assetId: "a1", camera: "EOS R6", brand: "Canon", iso: 100),
             makeRecord(assetId: "a2", camera: "EOS R6", brand: "Canon", iso: 3200),
             makeRecord(assetId: "a3", camera: "A6700", brand: "Sony", iso: 3200),
@@ -97,35 +97,35 @@ struct DatabaseTests {
 
         var criteria = FilterCriteria()
         criteria.cameraBodies = ["EOS R6"]
-        #expect(try queryDAO.count(matching: criteria) == 2)
+        #expect(try libraryQueries.count(matching: criteria) == 2)
 
         criteria.isoRange = NumericRangeFilter(lowerBound: 1601, upperBound: 6400)
-        let matches = try await queryDAO.gridItems(matching: criteria, sort: .default)
+        let matches = try await libraryQueries.gridItems(matching: criteria, sort: .default)
         #expect(matches.map(\.assetId) == ["a2"])
     }
 
     @Test func searchTextMatchesCameraAndLens() throws {
         let database = try AppDatabase.makeEmpty()
-        let metadataDAO = MetadataDAO(database: database)
-        let queryDAO = LibraryQueryDAO(database: database)
-        try metadataDAO.saveBatch([
+        let metadataStore = MetadataStore(database: database)
+        let libraryQueries = LibraryQueries(database: database)
+        try metadataStore.saveBatch([
             makeRecord(assetId: "a1", camera: "EOS R6", lens: "RF 100-500mm F4.5-7.1 L IS USM"),
             makeRecord(assetId: "a2", camera: "A6700", lens: "FE 24-70mm F2.8 GM"),
         ], cursorAssetId: nil)
 
         var criteria = FilterCriteria()
         criteria.searchText = "100-500"
-        #expect(try queryDAO.count(matching: criteria) == 1)
+        #expect(try libraryQueries.count(matching: criteria) == 1)
 
         criteria.searchText = "r6"
-        #expect(try queryDAO.count(matching: criteria) == 1)
+        #expect(try libraryQueries.count(matching: criteria) == 1)
     }
 
     @Test func searchTextMatchesFilename() throws {
         let database = try AppDatabase.makeEmpty()
-        let metadataDAO = MetadataDAO(database: database)
-        let queryDAO = LibraryQueryDAO(database: database)
-        try metadataDAO.saveBatch([
+        let metadataStore = MetadataStore(database: database)
+        let libraryQueries = LibraryQueries(database: database)
+        try metadataStore.saveBatch([
             makeRecord(assetId: "a1", camera: "EOS R6", filename: "IMG_1234.HEIC"),
             makeRecord(assetId: "a2", camera: "A6700", filename: "DSC05000.ARW"),
             makeRecord(assetId: "a3", camera: "X-T5", filename: nil),
@@ -134,111 +134,111 @@ struct DatabaseTests {
         var criteria = FilterCriteria()
         // Free-text term (has letters) matches filename case-insensitively.
         criteria.searchText = "img_1234"
-        #expect(try queryDAO.count(matching: criteria) == 1)
+        #expect(try libraryQueries.count(matching: criteria) == 1)
 
         criteria.searchText = "DSC0"
-        #expect(try queryDAO.count(matching: criteria) == 1)
+        #expect(try libraryQueries.count(matching: criteria) == 1)
 
         // Bare numeric fragment also matches a filename.
         criteria.searchText = "5000"
-        #expect(try queryDAO.count(matching: criteria) == 1)
+        #expect(try libraryQueries.count(matching: criteria) == 1)
 
         // Row with nil filename is never matched by a filename query.
         criteria.searchText = "nonexistent"
-        #expect(try queryDAO.count(matching: criteria) == 0)
+        #expect(try libraryQueries.count(matching: criteria) == 0)
     }
 
     @Test func sortOrders() async throws {
         let database = try AppDatabase.makeEmpty()
-        let metadataDAO = MetadataDAO(database: database)
-        let queryDAO = LibraryQueryDAO(database: database)
-        try metadataDAO.saveBatch([
+        let metadataStore = MetadataStore(database: database)
+        let libraryQueries = LibraryQueries(database: database)
+        try metadataStore.saveBatch([
             makeRecord(assetId: "a1", iso: 100, creation: 100),
             makeRecord(assetId: "a2", iso: 3200, creation: 200),
             makeRecord(assetId: "a3", iso: nil, creation: 300),
         ], cursorAssetId: nil)
 
-        let newest = try await queryDAO.gridItems(matching: FilterCriteria.empty, sort: .dateTakenNewest)
+        let newest = try await libraryQueries.gridItems(matching: FilterCriteria.empty, sort: .dateTakenNewest)
         #expect(newest.map(\.assetId) == ["a3", "a2", "a1"])
 
-        let isoHigh = try await queryDAO.gridItems(matching: FilterCriteria.empty, sort: .isoDescending)
+        let isoHigh = try await libraryQueries.gridItems(matching: FilterCriteria.empty, sort: .isoDescending)
         #expect(isoHigh.map(\.assetId) == ["a2", "a1", "a3"])
     }
 
     @Test func distinctValueLists() throws {
         let database = try AppDatabase.makeEmpty()
-        let metadataDAO = MetadataDAO(database: database)
-        let queryDAO = LibraryQueryDAO(database: database)
-        try metadataDAO.saveBatch([
+        let metadataStore = MetadataStore(database: database)
+        let libraryQueries = LibraryQueries(database: database)
+        try metadataStore.saveBatch([
             makeRecord(assetId: "a1", camera: "EOS R6", brand: "Canon", lens: "RF 50mm F1.8 STM"),
             makeRecord(assetId: "a2", camera: "EOS R6", brand: "Canon", lens: "RF 50mm F1.8 STM"),
             makeRecord(assetId: "a3", camera: "A6700", brand: "Sony"),
         ], cursorAssetId: nil)
 
-        #expect(try queryDAO.distinctCameraBrands() == ["Canon", "Sony"])
-        #expect(try queryDAO.distinctCameraBodies() == ["A6700", "EOS R6"])
-        #expect(try queryDAO.distinctLenses() == ["RF 50mm F1.8 STM"])
+        #expect(try libraryQueries.distinctCameraBrands() == ["Canon", "Sony"])
+        #expect(try libraryQueries.distinctCameraBodies() == ["A6700", "EOS R6"])
+        #expect(try libraryQueries.distinctLenses() == ["RF 50mm F1.8 STM"])
     }
 
     @Test func statsAggregates() throws {
         let database = try AppDatabase.makeEmpty()
-        let metadataDAO = MetadataDAO(database: database)
-        let statsDAO = StatsDAO(database: database)
-        try metadataDAO.saveBatch([
+        let metadataStore = MetadataStore(database: database)
+        let statisticsQueries = StatisticsQueries(database: database)
+        try metadataStore.saveBatch([
             makeRecord(assetId: "a1", camera: "EOS R6", lens: "RF 50mm", focal: 50, equivalent: 50, format: "Full Frame"),
             makeRecord(assetId: "a2", camera: "EOS R6", lens: "RF 50mm", focal: 50, equivalent: 50, format: "Full Frame"),
             makeRecord(assetId: "a3", camera: "OM-1", lens: "12-40mm", focal: 25, equivalent: 50, format: "Micro Four Thirds"),
         ], cursorAssetId: nil)
 
-        #expect(try statsDAO.totalPhotos(scope: .allTime) == 3)
+        #expect(try statisticsQueries.totalPhotos(scope: .allTime) == 3)
 
-        let cameras = try statsDAO.cameraUsage(scope: .allTime)
+        let cameras = try statisticsQueries.cameraUsage(scope: .allTime)
         #expect(cameras.first?.name == "EOS R6")
         #expect(cameras.first?.count == 2)
         #expect(cameras.first.map { abs($0.percentage - 66.66) < 1 } == true)
 
-        let summary = try statsDAO.summary(scope: .allTime)
+        let summary = try statisticsQueries.summary(scope: .allTime)
         #expect(summary.totalPhotos == 3)
         #expect(summary.mostUsedCamera == "EOS R6")
         #expect(summary.mostUsedFocalLength == 50)
         #expect(summary.mostUsedSensorFormat == .fullFrame)
 
-        let histogram = try statsDAO.focalLengthHistogram(equivalent: true, scope: .allTime)
+        let histogram = try statisticsQueries.focalLengthHistogram(equivalent: true, scope: .allTime)
         let bucket50 = histogram.first { $0.label == "50–69" }
         #expect(bucket50?.count == 3)
     }
 
     @Test func indexedAssetStatesAndRetryableIds() throws {
         let database = try AppDatabase.makeEmpty()
-        let dao = MetadataDAO(database: database)
-        try dao.saveBatch([
+        let store = MetadataStore(database: database)
+        try store.saveBatch([
             makeRecord(assetId: "a1", status: .indexed),
             makeRecord(assetId: "a2", status: .pendingICloud),
             makeRecord(assetId: "a3", status: .error),
             makeRecord(assetId: "a4", status: .noExif),
         ], cursorAssetId: nil)
 
-        let states = try dao.indexedAssetStates()
+        let states = try store.indexedAssetStates()
         #expect(states.count == 4)
         #expect(states["a2"] == IndexedAssetState(
             modificationDate: 1_700_000_000,
             exifStatus: ExifStatus.pendingICloud.rawValue
         ))
-        #expect(Set(try dao.retryableAssetIds()) == ["a2", "a3"])
+        #expect(Set(try store.retryableAssetIds()) == ["a2", "a3"])
     }
 
     @Test func usageIncludesUnknownBucketWithFullScopePercentages() throws {
         let database = try AppDatabase.makeEmpty()
-        let metadataDAO = MetadataDAO(database: database)
-        let statsDAO = StatsDAO(database: database)
-        try metadataDAO.saveBatch([
+        let metadataStore = MetadataStore(database: database)
+        let statisticsQueries = StatisticsQueries(database: database)
+        try metadataStore.saveBatch([
             makeRecord(assetId: "a1", camera: "EOS R6"),
             makeRecord(assetId: "a2", camera: "EOS R6"),
             makeRecord(assetId: "a3", camera: nil, status: .pendingICloud),
             makeRecord(assetId: "a4", camera: ""),
         ], cursorAssetId: nil)
 
-        let cameras = try statsDAO.cameraUsage(scope: .allTime)
+        let cameras = try statisticsQueries.cameraUsage(scope: .allTime)
         // NULL and empty-string cameras fold into one Unknown bucket.
         let unknown = cameras.first { $0.isUnknown }
         #expect(unknown?.name == "Unknown")
@@ -247,24 +247,24 @@ struct DatabaseTests {
         #expect(cameras.reduce(0) { $0 + $1.count } == 4)
         #expect(abs(cameras.reduce(0.0) { $0 + $1.percentage } - 100) < 0.01)
         // Percentages are shares of ALL photos even with a LIMIT.
-        let top = try statsDAO.usage(groupedBy: "normalizedCameraModel", scope: .allTime, limit: 1)
+        let top = try statisticsQueries.usage(groupedBy: "normalizedCameraModel", scope: .allTime, limit: 1)
         #expect(top.first?.percentage == 50)
         // Most Used Camera never reports the Unknown bucket.
-        let summary = try statsDAO.summary(scope: .allTime)
+        let summary = try statisticsQueries.summary(scope: .allTime)
         #expect(summary.mostUsedCamera == "EOS R6")
     }
 
     @Test func sensorFormatUsageMergesNullIntoUnknown() throws {
         let database = try AppDatabase.makeEmpty()
-        let metadataDAO = MetadataDAO(database: database)
-        let statsDAO = StatsDAO(database: database)
-        try metadataDAO.saveBatch([
+        let metadataStore = MetadataStore(database: database)
+        let statisticsQueries = StatisticsQueries(database: database)
+        try metadataStore.saveBatch([
             makeRecord(assetId: "a1", format: "Full Frame"),
             makeRecord(assetId: "a2", format: SensorFormat.unknown.rawValue),
             makeRecord(assetId: "a3", format: nil, status: .pendingICloud),
         ], cursorAssetId: nil)
 
-        let formats = try statsDAO.sensorFormatUsage(scope: .allTime)
+        let formats = try statisticsQueries.sensorFormatUsage(scope: .allTime)
         #expect(formats.count == 2)
         let unknown = formats.first { $0.isUnknown }
         #expect(unknown?.name == SensorFormat.unknown.rawValue)
@@ -274,82 +274,82 @@ struct DatabaseTests {
 
     @Test func undatedPhotosCountedAndExcludedFromScopedStats() throws {
         let database = try AppDatabase.makeEmpty()
-        let metadataDAO = MetadataDAO(database: database)
-        let statsDAO = StatsDAO(database: database)
+        let metadataStore = MetadataStore(database: database)
+        let statisticsQueries = StatisticsQueries(database: database)
         let now = Int(Date().timeIntervalSince1970)
-        try metadataDAO.saveBatch([
+        try metadataStore.saveBatch([
             makeRecord(assetId: "a1", creation: now - 60),
             makeRecord(assetId: "a2", creation: nil),
             makeRecord(assetId: "a3", creation: nil),
         ], cursorAssetId: nil)
 
-        #expect(try statsDAO.undatedCount() == 2)
-        #expect(try statsDAO.totalPhotos(scope: .allTime) == 3)
+        #expect(try statisticsQueries.undatedCount() == 2)
+        #expect(try statisticsQueries.totalPhotos(scope: .allTime) == 3)
         // NULL creationDate never matches a BETWEEN scope.
-        #expect(try statsDAO.totalPhotos(scope: .custom((now - 3600)...now)) == 1)
+        #expect(try statisticsQueries.totalPhotos(scope: .custom((now - 3600)...now)) == 1)
     }
 
     @Test func gridItemsCompleteAndDeterministicWithTiedAndNullDates() async throws {
         let database = try AppDatabase.makeEmpty()
-        let metadataDAO = MetadataDAO(database: database)
-        let queryDAO = LibraryQueryDAO(database: database)
+        let metadataStore = MetadataStore(database: database)
+        let libraryQueries = LibraryQueries(database: database)
         // 10 rows sharing one creationDate + 3 rows without a date: ties
         // would make the display order nondeterministic without the
         // assetId tiebreaker.
         var records = (1...10).map { makeRecord(assetId: "tied\($0)", creation: 500) }
         records += (1...3).map { makeRecord(assetId: "null\($0)", creation: nil) }
-        try metadataDAO.saveBatch(records, cursorAssetId: nil)
+        try metadataStore.saveBatch(records, cursorAssetId: nil)
 
         for sort in SortOption.allCases {
-            let rows = try await queryDAO.gridItems(matching: FilterCriteria.empty, sort: sort)
+            let rows = try await libraryQueries.gridItems(matching: FilterCriteria.empty, sort: sort)
             let seen = rows.map(\.assetId)
             #expect(seen.count == 13, "sort \(sort) dropped rows")
             #expect(Set(seen).count == 13, "sort \(sort) returned duplicates")
             // Deterministic: same query, same order.
-            let again = try await queryDAO.gridItems(matching: FilterCriteria.empty, sort: sort)
+            let again = try await libraryQueries.gridItems(matching: FilterCriteria.empty, sort: sort)
             #expect(again.map(\.assetId) == seen, "sort \(sort) order unstable")
         }
         // NULLS LAST: undated rows always trail on date sorts.
-        let newest = try await queryDAO.gridItems(matching: FilterCriteria.empty, sort: .dateTakenNewest)
+        let newest = try await libraryQueries.gridItems(matching: FilterCriteria.empty, sort: .dateTakenNewest)
         #expect(Set(newest.suffix(3).map(\.assetId)) == ["null1", "null2", "null3"])
     }
 
     @Test func gridItemsProjectionRoundTrip() async throws {
         let database = try AppDatabase.makeEmpty()
-        let metadataDAO = MetadataDAO(database: database)
-        let queryDAO = LibraryQueryDAO(database: database)
-        try metadataDAO.saveBatch([
+        let metadataStore = MetadataStore(database: database)
+        let libraryQueries = LibraryQueries(database: database)
+        try metadataStore.saveBatch([
             makeRecord(assetId: "a1", iso: 3200, aperture: 2.8, shutter: 0.002, focal: 85, equivalent: 85, creation: 1_700_000_000),
         ], cursorAssetId: nil)
 
-        let rows = try await queryDAO.gridItems(matching: FilterCriteria.empty, sort: .default)
+        let rows = try await libraryQueries.gridItems(matching: FilterCriteria.empty, sort: .default)
         let item = try #require(rows.first)
         #expect(item.assetId == "a1")
         #expect(item.creationDate == 1_700_000_000)
         #expect(item.iso == 3200)
         #expect(item.aperture == 2.8)
-        #expect(item.shutterSpeedDisplay == FormatUtils.shutterSpeed(0.002))
+        #expect(item.shutterSpeedDisplay == MetadataFormatter.shutterSpeed(0.002))
         #expect(item.focalLength == 85)
         #expect(item.equivalentFocalLength == 85)
-        let total = try queryDAO.count(matching: FilterCriteria.empty)
+        let total = try libraryQueries.count(matching: FilterCriteria.empty)
         #expect(rows.count == total)
     }
 
     @Test func metadataByIdAndBatch() throws {
         let database = try AppDatabase.makeEmpty()
-        let metadataDAO = MetadataDAO(database: database)
-        let queryDAO = LibraryQueryDAO(database: database)
-        try metadataDAO.saveBatch([
+        let metadataStore = MetadataStore(database: database)
+        let libraryQueries = LibraryQueries(database: database)
+        try metadataStore.saveBatch([
             makeRecord(assetId: "a1", camera: "EOS R6"),
             makeRecord(assetId: "a2", camera: "A6700"),
         ], cursorAssetId: nil)
 
-        #expect(try queryDAO.metadata(assetId: "a1")?.normalizedCameraModel == "EOS R6")
-        #expect(try queryDAO.metadata(assetId: "missing") == nil)
+        #expect(try libraryQueries.metadata(assetId: "a1")?.normalizedCameraModel == "EOS R6")
+        #expect(try libraryQueries.metadata(assetId: "missing") == nil)
 
-        let batch = try queryDAO.metadata(assetIds: ["a1", "a2", "missing"])
+        let batch = try libraryQueries.metadata(assetIds: ["a1", "a2", "missing"])
         #expect(Set(batch.keys) == ["a1", "a2"])
-        #expect(try queryDAO.metadata(assetIds: []).isEmpty)
+        #expect(try libraryQueries.metadata(assetIds: []).isEmpty)
     }
 
     /// The lazy badge fill re-reads a tile's row on display: a fast-pass
@@ -357,20 +357,20 @@ struct DatabaseTests {
     /// upsert to `indexed` must be what the next read sees.
     @Test func metadataByIdSeesPendingToIndexedUpgrade() throws {
         let database = try AppDatabase.makeEmpty()
-        let metadataDAO = MetadataDAO(database: database)
-        let queryDAO = LibraryQueryDAO(database: database)
+        let metadataStore = MetadataStore(database: database)
+        let libraryQueries = LibraryQueries(database: database)
 
-        try metadataDAO.saveBatch(
+        try metadataStore.saveBatch(
             [makeRecord(assetId: "a1", status: .pendingRead)], cursorAssetId: nil
         )
-        let pending = try queryDAO.metadata(assetId: "a1")
+        let pending = try libraryQueries.metadata(assetId: "a1")
         #expect(pending?.resolvedExifStatus == .pendingRead)
         #expect(GridBadgeCache.entry(for: pending) == nil)
 
-        try metadataDAO.saveBatch(
+        try metadataStore.saveBatch(
             [makeRecord(assetId: "a1", iso: 800, status: .indexed)], cursorAssetId: nil
         )
-        let upgraded = try queryDAO.metadata(assetId: "a1")
+        let upgraded = try libraryQueries.metadata(assetId: "a1")
         #expect(upgraded?.resolvedExifStatus == .indexed)
         guard case .badge(let item)? = GridBadgeCache.entry(for: upgraded) else {
             Issue.record("expected .badge after upgrade")
@@ -381,14 +381,14 @@ struct DatabaseTests {
 
     @Test func everySortOrderEndsWithUniqueTiebreaker() {
         for sort in SortOption.allCases {
-            #expect(LibraryQueryDAO.orderClause(for: sort).hasSuffix("assetId ASC"))
+            #expect(LibraryQueries.orderClause(for: sort).hasSuffix("assetId ASC"))
         }
     }
 
     @Test func resolveUnknownCamerasRewritesOnlyCoveredModels() throws {
         let database = try AppDatabase.makeEmpty()
-        let dao = MetadataDAO(database: database)
-        try dao.saveBatch([
+        let store = MetadataStore(database: database)
+        try store.saveBatch([
             makeRecord(assetId: "a1", camera: "ILCE-7M2", focal: 50, format: SensorFormat.unknown.rawValue),
             makeRecord(assetId: "a2", camera: "Mystery Cam", format: SensorFormat.unknown.rawValue),
         ], cursorAssetId: nil)
@@ -396,31 +396,31 @@ struct DatabaseTests {
         let lookup = SensorLookup(records: [
             SensorCameraRecord(manufacturer: "Sony", model: "A7 II", sensorFormat: "Full Frame", cropFactor: 1.0, aliases: ["ILCE-7M2"])
         ])
-        #expect(try dao.resolveUnknownCameras(using: lookup) == 1)
-        #expect(try dao.unknownCameraModels() == ["Mystery Cam"])
+        #expect(try store.resolveUnknownCameras(using: lookup) == 1)
+        #expect(try store.unknownCameraModels() == ["Mystery Cam"])
 
-        let resolved = try LibraryQueryDAO(database: database).metadata(assetId: "a1")
+        let resolved = try LibraryQueries(database: database).metadata(assetId: "a1")
         #expect(resolved?.sensorFormat == "Full Frame")
         #expect(resolved?.cropFactor == 1.0)
         #expect(resolved?.equivalentFocalLength == 50)
         // A second pass finds nothing left to do.
-        #expect(try dao.resolveUnknownCameras(using: lookup) == 0)
+        #expect(try store.resolveUnknownCameras(using: lookup) == 0)
     }
 
     @Test func customMappingRoundTrip() throws {
         let database = try AppDatabase.makeEmpty()
-        let dao = MetadataDAO(database: database)
-        try dao.saveCustomMapping(CustomCameraMapping(normalizedCameraModel: "Cam X", sensorFormat: "APS-C", cropFactor: 1.5))
-        #expect(try dao.customMappings().count == 1)
-        try dao.deleteAllCustomMappings()
-        #expect(try dao.customMappings().isEmpty)
+        let store = MetadataStore(database: database)
+        try store.saveCustomMapping(CustomCameraMapping(normalizedCameraModel: "Cam X", sensorFormat: "APS-C", cropFactor: 1.5))
+        #expect(try store.customMappings().count == 1)
+        try store.deleteAllCustomMappings()
+        #expect(try store.customMappings().isEmpty)
     }
 
     // MARK: Smart album persistence + rule queries
 
     @Test func smartAlbumRulesSurvivePersistence() throws {
         let database = try AppDatabase.makeEmpty()
-        let dao = SmartAlbumDAO(database: database)
+        let store = SmartAlbumStore(database: database)
 
         let query = SmartAlbumQuery(matchMode: .any, rules: [
             SmartAlbumRule(field: .cameraBody, op: .contains, text: "R6"),
@@ -432,9 +432,9 @@ struct DatabaseTests {
         #expect(back.matchMode == .any)
         #expect(back.rules.count == 2)
 
-        try dao.upsert(SmartAlbum(id: "s1", name: "Test", query: query, createdAt: 1))
+        try store.upsert(SmartAlbum(id: "s1", name: "Test", query: query, createdAt: 1))
 
-        let loaded = try #require(try dao.fetchAllOrdered().first)
+        let loaded = try #require(try store.fetchAllOrdered().first)
         #expect(loaded.query.matchMode == .any)
         #expect(loaded.query.rules.count == 2)
         #expect(loaded.query.rules.first?.text == "R6")
@@ -443,9 +443,9 @@ struct DatabaseTests {
 
     @Test func smartAlbumQueryFiltersNotFullLibrary() async throws {
         let database = try AppDatabase.makeEmpty()
-        let metadataDAO = MetadataDAO(database: database)
-        let queryDAO = LibraryQueryDAO(database: database)
-        try metadataDAO.saveBatch([
+        let metadataStore = MetadataStore(database: database)
+        let libraryQueries = LibraryQueries(database: database)
+        try metadataStore.saveBatch([
             makeRecord(assetId: "a1", camera: "EOS R6", brand: "Canon", iso: 100),
             makeRecord(assetId: "a2", camera: "EOS R6", brand: "Canon", iso: 3200),
             makeRecord(assetId: "a3", camera: "A6700", brand: "Sony", iso: 3200),
@@ -454,26 +454,26 @@ struct DatabaseTests {
         let query = SmartAlbumQuery(matchMode: .all, rules: [
             SmartAlbumRule(field: .cameraBody, op: .contains, text: "R6"),
         ])
-        #expect(try queryDAO.count(matching: query) == 2)
-        #expect(try await queryDAO.countAsync(matching: query) == 2)
-        let items = try await queryDAO.gridItems(matching: query, sort: .default)
+        #expect(try libraryQueries.count(matching: query) == 2)
+        #expect(try await libraryQueries.countAsync(matching: query) == 2)
+        let items = try await libraryQueries.gridItems(matching: query, sort: .default)
         #expect(items.map(\.assetId).sorted() == ["a1", "a2"])
     }
 
     @Test func filterSuggestionRepositoryCachesUntilForcedRefresh() async throws {
         let database = try AppDatabase.makeEmpty()
-        let metadataDAO = MetadataDAO(database: database)
-        let queryDAO = LibraryQueryDAO(database: database)
-        let repository = FilterSuggestionRepository(queryDAO: queryDAO)
+        let metadataStore = MetadataStore(database: database)
+        let libraryQueries = LibraryQueries(database: database)
+        let repository = FilterSuggestionCache(libraryQueries: libraryQueries)
 
-        try metadataDAO.saveBatch([
+        try metadataStore.saveBatch([
             makeRecord(assetId: "a1", camera: "EOS R6", brand: "Canon", iso: 100),
         ], cursorAssetId: nil)
         let first = await repository.load()
         #expect(first.brands == ["Canon"])
         #expect(first.bodies == ["EOS R6"])
 
-        try metadataDAO.saveBatch([
+        try metadataStore.saveBatch([
             makeRecord(assetId: "a2", camera: "A6700", brand: "Sony", iso: 100),
         ], cursorAssetId: nil)
         let cached = await repository.load()

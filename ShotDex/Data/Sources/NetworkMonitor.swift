@@ -24,7 +24,7 @@ enum NetworkConnectionType: Sendable, Equatable {
 
 /// Watches the network path so index runs can decide whether streaming EXIF
 /// from iCloud is acceptable: Wi-Fi always, cellular only if the user opted in.
-final class NetworkStatusService: Sendable {
+final class NetworkMonitor: Sendable {
     private static let logger = Logger(subsystem: "com.hoangtuan.shotdex", category: "network")
 
     private let monitor = NWPathMonitor()

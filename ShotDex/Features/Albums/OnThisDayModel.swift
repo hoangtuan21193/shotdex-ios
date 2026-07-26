@@ -19,7 +19,7 @@ struct OnThisDayYearSection: Identifiable {
 @MainActor
 @Observable
 final class OnThisDayModel: PhotoBrowsingSource {
-    private let metadataDAO: MetadataDAO
+    private let metadataStore: MetadataStore
     private let database: AppDatabase
     private let photoLibrary: PhotoLibraryService
     private let indexPipeline: IndexPipeline
@@ -68,7 +68,7 @@ final class OnThisDayModel: PhotoBrowsingSource {
     }
 
     init(dependencies: AppDependencies, selectedDate: Date = .now) {
-        self.metadataDAO = dependencies.metadataDAO
+        self.metadataStore = dependencies.metadataStore
         self.database = dependencies.database
         self.photoLibrary = dependencies.photoLibrary
         self.indexPipeline = dependencies.indexPipeline
@@ -198,7 +198,7 @@ final class OnThisDayModel: PhotoBrowsingSource {
         try await photoLibrary.deleteAssets(assets)
         // PhotoKit is the source of truth; prune the DB rows right away so
         // the Library grid doesn't show stale entries until the next index run.
-        try? metadataDAO.deleteAssets(ids: Array(ids))
+        try? metadataStore.deleteAssets(ids: Array(ids))
         photos.removeAll { ids.contains($0.assetId) }
         for id in ids {
             assetsById.removeValue(forKey: id)
@@ -235,7 +235,7 @@ final class OnThisDayModel: PhotoBrowsingSource {
     func loadNextPageIfNeeded(currentIndex: Int) {}
 
     func syncFavorite(assetId: String, isFavorite: Bool) {
-        try? metadataDAO.updateFavorite(assetId: assetId, isFavorite: isFavorite)
+        try? metadataStore.updateFavorite(assetId: assetId, isFavorite: isFavorite)
         if let index = photos.firstIndex(where: { $0.assetId == assetId }) {
             photos[index].isFavorite = isFavorite
             contentRefreshGeneration &+= 1

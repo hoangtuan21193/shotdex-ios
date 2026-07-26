@@ -35,7 +35,7 @@ struct ChartDashboardTests {
             iso: iso,
             aperture: aperture,
             shutterSpeedSeconds: shutter,
-            shutterSpeedDisplay: shutter.flatMap(FormatUtils.shutterSpeed),
+            shutterSpeedDisplay: shutter.flatMap(MetadataFormatter.shutterSpeed),
             focalLength: focal,
             focalLengthIn35mm: nil,
             calculatedEquivalentFocalLength: equivalent,
@@ -57,7 +57,7 @@ struct ChartDashboardTests {
 
     @Test func statChartConfigRoundTrips() throws {
         let database = try AppDatabase.makeEmpty()
-        let dao = StatChartDAO(database: database)
+        let store = ChartStore(database: database)
         let spec = ChartSpec(
             id: "c1",
             title: "Avg ISO by Camera",
@@ -70,9 +70,9 @@ struct ChartDashboardTests {
             topN: 5,
             scope: .custom(1_600_000_000...1_600_086_399)
         )
-        try dao.upsert(StatChart(spec: spec, position: 0))
+        try store.upsert(StatChart(spec: spec, position: 0))
 
-        let loaded = try #require(try dao.fetchAllOrdered().first)
+        let loaded = try #require(try store.fetchAllOrdered().first)
         #expect(loaded.spec.title == "Avg ISO by Camera")
         #expect(loaded.spec.kind == .bar)
         #expect(loaded.spec.dimension == .cameraBody)
@@ -98,25 +98,25 @@ struct ChartDashboardTests {
 
     @Test func seedDefaultsOnlyWhenEmpty() throws {
         let database = try AppDatabase.makeEmpty()
-        let dao = StatChartDAO(database: database)
+        let store = ChartStore(database: database)
 
-        let seeded = try dao.seedDefaultsIfEmpty()
+        let seeded = try store.seedDefaultsIfEmpty()
         #expect(seeded.count == ChartSpec.defaultSpecs().count)
         #expect(!seeded.isEmpty)
 
         // Second call is a no-op (does not double up).
-        let again = try dao.seedDefaultsIfEmpty()
+        let again = try store.seedDefaultsIfEmpty()
         #expect(again.count == seeded.count)
     }
 
     @Test func reorderPersistsPositions() throws {
         let database = try AppDatabase.makeEmpty()
-        let dao = StatChartDAO(database: database)
-        let seeded = try dao.seedDefaultsIfEmpty()
+        let store = ChartStore(database: database)
+        let seeded = try store.seedDefaultsIfEmpty()
         let reversed = seeded.map(\.id).reversed().map { $0 }
 
-        try dao.updatePositions(reversed)
-        let after = try dao.fetchAllOrdered().map(\.id)
+        try store.updatePositions(reversed)
+        let after = try store.fetchAllOrdered().map(\.id)
         #expect(after == reversed)
     }
 
@@ -124,16 +124,16 @@ struct ChartDashboardTests {
 
     @Test func categoricalCountWithShares() throws {
         let database = try AppDatabase.makeEmpty()
-        let metadataDAO = MetadataDAO(database: database)
-        let statsDAO = StatsDAO(database: database)
-        try metadataDAO.saveBatch([
+        let metadataStore = MetadataStore(database: database)
+        let statisticsQueries = StatisticsQueries(database: database)
+        try metadataStore.saveBatch([
             makeRecord(assetId: "a1", camera: "EOS R6"),
             makeRecord(assetId: "a2", camera: "EOS R6"),
             makeRecord(assetId: "a3", camera: "A6700"),
         ], cursorAssetId: nil)
 
         let spec = ChartSpec(title: "Cameras", kind: .bar, dimension: .cameraBody)
-        let data = try statsDAO.chartData(for: spec, scope: .allTime)
+        let data = try statisticsQueries.chartData(for: spec, scope: .allTime)
         #expect(data.first?.label == "EOS R6")
         #expect(data.first?.value == 2)
         #expect(data.first?.drillKey == "EOS R6")
@@ -141,16 +141,16 @@ struct ChartDashboardTests {
 
     @Test func categoricalUnknownBucketForCounts() throws {
         let database = try AppDatabase.makeEmpty()
-        let metadataDAO = MetadataDAO(database: database)
-        let statsDAO = StatsDAO(database: database)
-        try metadataDAO.saveBatch([
+        let metadataStore = MetadataStore(database: database)
+        let statisticsQueries = StatisticsQueries(database: database)
+        try metadataStore.saveBatch([
             makeRecord(assetId: "a1", camera: "EOS R6"),
             makeRecord(assetId: "a2", camera: nil),
             makeRecord(assetId: "a3", camera: ""),
         ], cursorAssetId: nil)
 
         let spec = ChartSpec(title: "Cameras", kind: .bar, dimension: .cameraBody)
-        let data = try statsDAO.chartData(for: spec, scope: .allTime)
+        let data = try statisticsQueries.chartData(for: spec, scope: .allTime)
         let unknown = data.first { $0.isUnknown }
         #expect(unknown?.value == 2)
         #expect(unknown?.drillKey == nil)
@@ -158,9 +158,9 @@ struct ChartDashboardTests {
 
     @Test func categoricalAverageMetric() throws {
         let database = try AppDatabase.makeEmpty()
-        let metadataDAO = MetadataDAO(database: database)
-        let statsDAO = StatsDAO(database: database)
-        try metadataDAO.saveBatch([
+        let metadataStore = MetadataStore(database: database)
+        let statisticsQueries = StatisticsQueries(database: database)
+        try metadataStore.saveBatch([
             makeRecord(assetId: "a1", camera: "EOS R6", iso: 100),
             makeRecord(assetId: "a2", camera: "EOS R6", iso: 200),
             makeRecord(assetId: "a3", camera: "A6700", iso: 800),
@@ -170,7 +170,7 @@ struct ChartDashboardTests {
             title: "Avg ISO", kind: .bar, dimension: .cameraBody,
             metric: ChartMetric(aggregation: .average, field: .iso)
         )
-        let data = try statsDAO.chartData(for: spec, scope: .allTime)
+        let data = try statisticsQueries.chartData(for: spec, scope: .allTime)
         // Sorted by value DESC: A6700 (800) then EOS R6 (150).
         #expect(data.first?.label == "A6700")
         #expect(data.first?.value == 800)
@@ -183,16 +183,16 @@ struct ChartDashboardTests {
 
     @Test func binnedIsoHistogram() throws {
         let database = try AppDatabase.makeEmpty()
-        let metadataDAO = MetadataDAO(database: database)
-        let statsDAO = StatsDAO(database: database)
-        try metadataDAO.saveBatch([
+        let metadataStore = MetadataStore(database: database)
+        let statisticsQueries = StatisticsQueries(database: database)
+        try metadataStore.saveBatch([
             makeRecord(assetId: "a1", iso: 100),
             makeRecord(assetId: "a2", iso: 3200),
             makeRecord(assetId: "a3", iso: 3200),
         ], cursorAssetId: nil)
 
         let spec = ChartSpec(title: "ISO", kind: .bar, dimension: .iso)
-        let data = try statsDAO.chartData(for: spec, scope: .allTime)
+        let data = try statisticsQueries.chartData(for: spec, scope: .allTime)
         #expect(data.first { $0.label == "≤ 100" }?.value == 1)
         #expect(data.first { $0.label == "1601–6400" }?.value == 2)
         // Every bin is present, labels double as drill keys.
@@ -204,9 +204,9 @@ struct ChartDashboardTests {
 
     @Test func temporalLineSplitBySeries() throws {
         let database = try AppDatabase.makeEmpty()
-        let metadataDAO = MetadataDAO(database: database)
-        let statsDAO = StatsDAO(database: database)
-        try metadataDAO.saveBatch([
+        let metadataStore = MetadataStore(database: database)
+        let statisticsQueries = StatisticsQueries(database: database)
+        try metadataStore.saveBatch([
             makeRecord(assetId: "a1", camera: "EOS R6", creation: 1_700_000_000),
             makeRecord(assetId: "a2", camera: "EOS R6", creation: 1_700_000_000),
             makeRecord(assetId: "a3", camera: "A6700", creation: 1_700_000_000),
@@ -216,7 +216,7 @@ struct ChartDashboardTests {
             title: "Trend", kind: .line, dimension: .dateMonth,
             metric: .photoCount, seriesSplit: .cameraBody, topN: 3
         )
-        let data = try statsDAO.chartData(for: spec, scope: .allTime)
+        let data = try statisticsQueries.chartData(for: spec, scope: .allTime)
         #expect(!data.isEmpty)
         #expect(data.allSatisfy { $0.series != nil })
         #expect(Set(data.map { $0.series }) == ["EOS R6", "A6700"])
@@ -227,36 +227,36 @@ struct ChartDashboardTests {
 
     @Test func kpiScalarCountAndMedian() throws {
         let database = try AppDatabase.makeEmpty()
-        let metadataDAO = MetadataDAO(database: database)
-        let statsDAO = StatsDAO(database: database)
-        try metadataDAO.saveBatch([
+        let metadataStore = MetadataStore(database: database)
+        let statisticsQueries = StatisticsQueries(database: database)
+        try metadataStore.saveBatch([
             makeRecord(assetId: "a1", iso: 100),
             makeRecord(assetId: "a2", iso: 200),
             makeRecord(assetId: "a3", iso: 300),
         ], cursorAssetId: nil)
 
         let total = ChartSpec(title: "Total", kind: .kpi, dimension: nil, metric: .photoCount)
-        #expect(try statsDAO.chartData(for: total, scope: .allTime).first?.value == 3)
+        #expect(try statisticsQueries.chartData(for: total, scope: .allTime).first?.value == 3)
 
         let median = ChartSpec(
             title: "Median ISO", kind: .kpi, dimension: nil,
             metric: ChartMetric(aggregation: .median, field: .iso)
         )
-        #expect(try statsDAO.chartData(for: median, scope: .allTime).first?.value == 200)
+        #expect(try statisticsQueries.chartData(for: median, scope: .allTime).first?.value == 200)
     }
 
     @Test func kpiTopGroup() throws {
         let database = try AppDatabase.makeEmpty()
-        let metadataDAO = MetadataDAO(database: database)
-        let statsDAO = StatsDAO(database: database)
-        try metadataDAO.saveBatch([
+        let metadataStore = MetadataStore(database: database)
+        let statisticsQueries = StatisticsQueries(database: database)
+        try metadataStore.saveBatch([
             makeRecord(assetId: "a1", camera: "EOS R6"),
             makeRecord(assetId: "a2", camera: "EOS R6"),
             makeRecord(assetId: "a3", camera: "A6700"),
         ], cursorAssetId: nil)
 
         let spec = ChartSpec(title: "Top Camera", kind: .kpi, dimension: .cameraBody, metric: .photoCount)
-        let data = try statsDAO.chartData(for: spec, scope: .allTime)
+        let data = try statisticsQueries.chartData(for: spec, scope: .allTime)
         #expect(data.count == 1)
         #expect(data.first?.label == "EOS R6")
         #expect(data.first?.value == 2)
@@ -266,9 +266,9 @@ struct ChartDashboardTests {
 
     @Test func specFilterRestrictsPopulation() throws {
         let database = try AppDatabase.makeEmpty()
-        let metadataDAO = MetadataDAO(database: database)
-        let statsDAO = StatsDAO(database: database)
-        try metadataDAO.saveBatch([
+        let metadataStore = MetadataStore(database: database)
+        let statisticsQueries = StatisticsQueries(database: database)
+        try metadataStore.saveBatch([
             makeRecord(assetId: "a1", camera: "EOS R6", favorite: true),
             makeRecord(assetId: "a2", camera: "EOS R6", favorite: false),
             makeRecord(assetId: "a3", camera: "A6700", favorite: true),
@@ -280,7 +280,7 @@ struct ChartDashboardTests {
                 SmartAlbumRule(field: .favorite, boolValue: true),
             ])
         )
-        let data = try statsDAO.chartData(for: spec, scope: .allTime).filter { !$0.isUnknown }
+        let data = try statisticsQueries.chartData(for: spec, scope: .allTime).filter { !$0.isUnknown }
         #expect(data.reduce(0) { $0 + $1.value } == 2)
         #expect(data.first { $0.label == "EOS R6" }?.value == 1)
     }

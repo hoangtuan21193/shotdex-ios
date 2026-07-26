@@ -145,7 +145,7 @@ struct MetadataPanel: View {
 
     private func load() async {
         let initialReport = asset.flatMap {
-            AssetMetadataDump.indexedReport(for: $0, metadata: indexedMetadata)
+            AssetMetadataReader.indexedReport(for: $0, metadata: indexedMetadata)
         }
         report = initialReport
         isLoading = initialReport == nil
@@ -158,7 +158,7 @@ struct MetadataPanel: View {
         }
 
         let assetID = asset.localIdentifier
-        let loaded = await AssetMetadataDump.load(
+        let loaded = await AssetMetadataReader.load(
             for: asset,
             indexedMetadata: indexedMetadata
         )
@@ -173,9 +173,9 @@ struct MetadataPanel: View {
         case .unavailable(let message):
             shutterCountState = .unavailable(message)
         case .readable:
-            let note = AssetMetadataDump.shutterCountNote(for: loaded.shutterCountContext)
+            let note = AssetMetadataReader.shutterCountNote(for: loaded.shutterCountContext)
             shutterCountState = .loading(note)
-            let count = await AssetMetadataDump.loadShutterCount(
+            let count = await AssetMetadataReader.loadShutterCount(
                 for: asset,
                 context: loaded.shutterCountContext
             )
@@ -211,7 +211,7 @@ struct MetadataPanel: View {
 /// information. Accessibility text sizes fall back to one column so values are
 /// never truncated just to preserve density.
 private struct CompactMetadataGrid: View {
-    let rows: [MetadataDumpRow]
+    let rows: [MetadataReportRow]
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -530,7 +530,7 @@ private final class PhotoLocationResolver {
 }
 
 private struct RawMetadataView: View {
-    let sections: [MetadataDumpSection]
+    let sections: [MetadataReportSection]
 
     var body: some View {
         List {

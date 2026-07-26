@@ -391,11 +391,11 @@ private struct ComparePane: View {
 
     private var caption: String? {
         guard let metadata = photo.metadata else { return nil }
-        return FormatUtils.metadataLine([
+        return MetadataFormatter.metadataLine([
             isCompact ? nil : metadata.normalizedCameraModel,
-            metadata.focalLength.flatMap(FormatUtils.focalLength),
-            metadata.aperture.flatMap(FormatUtils.aperture),
-            metadata.iso.flatMap(FormatUtils.iso),
+            metadata.focalLength.flatMap(MetadataFormatter.focalLength),
+            metadata.aperture.flatMap(MetadataFormatter.aperture),
+            metadata.iso.flatMap(MetadataFormatter.iso),
         ])
     }
 

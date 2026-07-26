@@ -94,7 +94,7 @@ struct MetadataComposer: Sendable {
             iso: exif.iso,
             aperture: exif.fNumber,
             shutterSpeedSeconds: exif.exposureTimeSeconds,
-            shutterSpeedDisplay: exif.exposureTimeSeconds.flatMap(FormatUtils.shutterSpeed),
+            shutterSpeedDisplay: exif.exposureTimeSeconds.flatMap(MetadataFormatter.shutterSpeed),
             focalLength: exif.focalLength,
             focalLengthIn35mm: exif.focalLengthIn35mm,
             calculatedEquivalentFocalLength: calculated,

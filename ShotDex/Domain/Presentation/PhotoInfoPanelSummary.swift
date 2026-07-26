@@ -49,14 +49,14 @@ struct PhotoInfoPanelSummary: Equatable {
         let camera = metadata.normalizedCameraModel
         let lensFull = metadata.normalizedLensModel
 
-        let exposure = FormatUtils.tokenLine([
-            metadata.focalLength.flatMap(FormatUtils.focalLength),
-            metadata.aperture.flatMap(FormatUtils.aperture),
-            metadata.shutterSpeedSeconds.flatMap(FormatUtils.shutterSpeedCompact)
+        let exposure = MetadataFormatter.tokenLine([
+            metadata.focalLength.flatMap(MetadataFormatter.focalLength),
+            metadata.aperture.flatMap(MetadataFormatter.aperture),
+            metadata.shutterSpeedSeconds.flatMap(MetadataFormatter.shutterSpeedCompact)
                 ?? metadata.shutterSpeedDisplay,
-            metadata.iso.flatMap(FormatUtils.iso),
+            metadata.iso.flatMap(MetadataFormatter.iso),
         ])
-        let size = fileSize.flatMap(FormatUtils.fileSize)
+        let size = fileSize.flatMap(MetadataFormatter.fileSize)
 
         // Line 1: date/time alone, or the filename when the asset has no date.
         let titleLine = dateText(
@@ -67,14 +67,14 @@ struct PhotoInfoPanelSummary: Equatable {
         ) ?? fallbackTitle ?? String(localized: "Photo")
 
         // Line 2: camera + exposure + size, else exposure + size (never dropped).
-        let detailFallback = FormatUtils.metadataLine([exposure, size])
+        let detailFallback = MetadataFormatter.metadataLine([exposure, size])
         let detailLine = firstThatFits(
-            [FormatUtils.metadataLine([camera, exposure, size]), detailFallback],
+            [MetadataFormatter.metadataLine([camera, exposure, size]), detailFallback],
             budget: availableWidth / scaleTolerance,
             measure: measureDetail
         ) ?? detailFallback
 
-        let accessibilityText = FormatUtils.metadataLine([
+        let accessibilityText = MetadataFormatter.metadataLine([
             titleLine,
             camera,
             lensFull,

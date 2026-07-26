@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 
 /// Read-side queries for the Library grid: filter, search, sort.
-struct LibraryQueryDAO: Sendable {
+struct LibraryQueries: Sendable {
     let database: AppDatabase
 
     /// The whole filtered library as slim grid rows, in display sort order.
@@ -245,9 +245,9 @@ struct LibraryQueryDAO: Sendable {
     }
 
     /// Compiles a smart album's rule query into a WHERE clause. Delegates to
-    /// the shared `SmartAlbumSQLCompiler` (also used by `StatsDAO`).
+    /// the shared `SmartAlbumSQLBuilder` (also used by `StatisticsQueries`).
     static func whereClause(for query: SmartAlbumQuery) -> (sql: String, arguments: StatementArguments) {
-        SmartAlbumSQLCompiler.whereClause(for: query)
+        SmartAlbumSQLBuilder.whereClause(for: query)
     }
 
     /// Every clause ends with the `assetId` primary key so the ordering is
