@@ -68,10 +68,11 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             frame: .zero,
             collectionViewLayout: coordinator.makeLayout(columns: columnCount)
         )
-        // SwiftUI sizes the representable after creation — the bottom anchor
-        // can only be applied once real bounds exist.
-        collectionView.onFirstLayout = { [weak coordinator] in
-            coordinator?.anchorAfterFirstLayout()
+        // SwiftUI sizes the representable after creation, and UIKit settles the
+        // safe area later still — the opening anchor re-applies until the user
+        // takes over the scroll position.
+        collectionView.onAnchorNeeded = { [weak coordinator] in
+            coordinator?.anchorIfNeeded()
         }
         collectionView.backgroundColor = .systemBackground
         collectionView.contentInset.bottom = bottomInset
@@ -306,28 +307,38 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             }
         }
 
-        /// Called by `GridCollectionView` the first time it lays out with
-        /// real bounds — the anchor computed in `makeUIView` ran against a
-        /// zero frame and would leave the grid at the top.
-        func anchorAfterFirstLayout() {
+        /// Called by `GridCollectionView` on every layout/inset change until the
+        /// user first touches the grid: the anchor computed in `makeUIView` ran
+        /// against a zero frame and a zero safe area, so it needs re-applying as
+        /// the real bounds and insets arrive.
+        func anchorIfNeeded() {
             guard let collectionView else { return }
             collectionView.layoutIfNeeded()
             anchor(collectionView)
         }
 
+        /// The user owns the scroll position from their first touch on. Stops
+        /// the opening anchor from re-firing on a later inset change — entering
+        /// selection mode grows the bottom inset, which would otherwise yank a
+        /// user reading mid-grid down to the newest photos.
+        private func endAnchorTracking() {
+            (collectionView as? GridCollectionView)?.needsAnchor = false
+        }
+
         private func anchor(_ collectionView: UICollectionView) {
-            guard parent.anchorsBottom else {
-                collectionView.setContentOffset(
-                    CGPoint(x: 0, y: -collectionView.adjustedContentInset.top), animated: false
-                )
-                return
+            let target: CGFloat
+            if parent.anchorsBottom {
+                let bottom = collectionView.collectionViewLayout.collectionViewContentSize.height
+                    - collectionView.bounds.height + collectionView.adjustedContentInset.bottom
+                target = max(bottom, -collectionView.adjustedContentInset.top)
+            } else {
+                target = -collectionView.adjustedContentInset.top
             }
-            let bottom = collectionView.collectionViewLayout.collectionViewContentSize.height
-                - collectionView.bounds.height + collectionView.adjustedContentInset.bottom
-            collectionView.setContentOffset(
-                CGPoint(x: 0, y: max(bottom, -collectionView.adjustedContentInset.top)),
-                animated: false
-            )
+            // Only move when it actually differs: `setContentOffset` triggers
+            // another layout pass, which asks for the anchor again while
+            // `needsAnchor` is still set — this is what breaks the loop.
+            guard abs(collectionView.contentOffset.y - target) > 0.5 else { return }
+            collectionView.setContentOffset(CGPoint(x: 0, y: target), animated: false)
         }
 
         /// A scroll position expressed as a photo id plus that tile's offset
@@ -694,6 +705,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         }
 
         func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+            endAnchorTracking()
             for entry in detailPreheatedByIndexPath.values {
                 cancelDecodedDetailPreheat(entry)
             }
@@ -824,6 +836,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             guard let collectionView else { return }
             switch recognizer.state {
             case .began:
+                endAnchorTracking()
                 guard let indexPath = collectionView.indexPathForItem(
                           at: recognizer.location(in: collectionView)
                       ),
@@ -876,6 +889,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             guard collectionView != nil else { return }
             switch recognizer.state {
             case .began:
+                endAnchorTracking()
                 // A second finger may turn an in-progress one-finger selection
                 // into a pinch. Close the selection gesture exactly once; the
                 // selected ids remain untouched.
@@ -1181,18 +1195,41 @@ private final class GridFlowLayout: UICollectionViewFlowLayout {
 
 // MARK: - Collection view subclass
 
-/// Fires a one-shot callback on the first layout pass with real bounds —
-/// the representable is created with a zero frame, so the initial bottom
-/// anchor must wait until SwiftUI has sized the view.
+/// Asks the coordinator to (re-)apply the opening anchor on every layout,
+/// safe-area and adjusted-inset change until the user first touches the grid.
+///
+/// One shot is not enough: the representable is created with a zero frame,
+/// and even at the first pass with real bounds UIKit has not necessarily
+/// propagated the window safe area yet. The screens `.ignoresSafeArea()` and
+/// let automatic content-inset adjustment clear the tab bar, so anchoring
+/// against a not-yet-settled `adjustedContentInset` put the newest row behind
+/// the tab bar — and the next unrelated `anchor()` (the full-library phase
+/// replacing the first-paint slice) then shifted the whole grid by that
+/// amount, which read as the grid re-flowing seconds after launch.
 private final class GridCollectionView: UICollectionView {
-    var onFirstLayout: (() -> Void)?
+    var onAnchorNeeded: (() -> Void)?
+    /// Cleared by the coordinator on the first user interaction — from then on
+    /// the scroll position belongs to the user, not to the anchor.
+    var needsAnchor = true
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        if bounds.height > 0, let callback = onFirstLayout {
-            onFirstLayout = nil
-            callback()
-        }
+        requestAnchor()
+    }
+
+    override func safeAreaInsetsDidChange() {
+        super.safeAreaInsetsDidChange()
+        requestAnchor()
+    }
+
+    override func adjustedContentInsetDidChange() {
+        super.adjustedContentInsetDidChange()
+        requestAnchor()
+    }
+
+    private func requestAnchor() {
+        guard needsAnchor, bounds.height > 0 else { return }
+        onAnchorNeeded?()
     }
 }
 
