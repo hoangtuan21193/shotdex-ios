@@ -72,7 +72,7 @@ enum MakerNoteParser {
                   let entry = ifd[0x00A7],
                   let value = embedded.longValue(entry, offsetBase: embeddedBase)
             else { return nil }
-            return sane(value)
+            return plausibleShutterCount(value)
         }
         // Type-1: parse an IFD directly at the MakerNote start against the outer
         // TIFF base.
@@ -80,7 +80,7 @@ enum MakerNoteParser {
               let entry = ifd[0x00A7],
               let value = tiffHeader.longValue(entry, offsetBase: tiffBase)
         else { return nil }
-        return sane(value)
+        return plausibleShutterCount(value)
     }
 
     /// Sony hides the count in tag `0x9050`, whose bytes are enciphered with a
@@ -113,7 +113,7 @@ enum MakerNoteParser {
             let plain = decode[Int(enciphered)]
             value |= UInt32(plain) << (8 * i)   // little-endian int32u
         }
-        return sane(Int(value))
+        return plausibleShutterCount(Int(value))
     }
 
     /// Fujifilm MakerNote: `"FUJIFILM"` + a 4-byte little-endian offset (relative
@@ -121,16 +121,16 @@ enum MakerNoteParser {
     /// carries an image counter. Best-effort.
     private static func fujiCount(bytes: [UInt8], makerStart: Int) -> Int? {
         guard matches(bytes, at: makerStart, ascii: "FUJIFILM"), bytes.count > makerStart + 12 else { return nil }
-        let ifdOffset = readU32(bytes, at: makerStart + 8, littleEndian: true)
+        let ifdOffset = readUInt32(bytes, at: makerStart + 8, isLittleEndian: true)
         guard let ifdOffset else { return nil }
         let ifdAbs = makerStart + Int(ifdOffset)
         // Fuji notes are self-contained: offsets relative to the note start.
-        guard let reader = TIFFReader(bytes: bytes, base: makerStart, littleEndian: true, firstIFDOffset: Int(ifdOffset)),
+        guard let reader = TIFFReader(bytes: bytes, base: makerStart, isLittleEndian: true, firstIFDOffset: Int(ifdOffset)),
               let ifd = reader.ifd(atAbsolute: ifdAbs, offsetBase: makerStart),
               let entry = ifd[0x1438],
               let value = reader.longValue(entry, offsetBase: makerStart)
         else { return nil }
-        return sane(value)
+        return plausibleShutterCount(value)
     }
 
     // MARK: - Sony cipher / offsets
@@ -173,7 +173,7 @@ enum MakerNoteParser {
     // MARK: - Helpers
 
     /// A shutter count outside this range is almost certainly a mis-parse.
-    private static func sane(_ value: Int) -> Int? {
+    private static func plausibleShutterCount(_ value: Int) -> Int? {
         (value > 0 && value < 50_000_000) ? value : nil
     }
 
@@ -205,7 +205,7 @@ enum MakerNoteParser {
         // RAF offset directory: magic (16) + version/id/camera (44) +
         // directory version/reserved (24), then big-endian JPEG offset at 84.
         if matches(bytes, at: 0, ascii: "FUJIFILMCCD-RAW"),
-           let jpegOffset = readU32(bytes, at: 84, littleEndian: false) {
+           let jpegOffset = readUInt32(bytes, at: 84, isLittleEndian: false) {
             return jpegTIFFBase(in: bytes, jpegStart: Int(jpegOffset))
         }
         return nil
@@ -232,10 +232,10 @@ enum MakerNoteParser {
         return nil
     }
 
-    fileprivate static func readU32(_ bytes: [UInt8], at offset: Int, littleEndian: Bool) -> UInt32? {
+    fileprivate static func readUInt32(_ bytes: [UInt8], at offset: Int, isLittleEndian: Bool) -> UInt32? {
         guard offset >= 0, offset + 4 <= bytes.count else { return nil }
         let b = (0..<4).map { UInt32(bytes[offset + $0]) }
-        return littleEndian
+        return isLittleEndian
             ? b[0] | b[1] << 8 | b[2] << 16 | b[3] << 24
             : b[3] | b[2] << 8 | b[1] << 16 | b[0] << 24
     }
@@ -256,34 +256,34 @@ struct IFDEntry {
 struct TIFFReader {
     let bytes: [UInt8]
     let base: Int
-    let littleEndian: Bool
+    let isLittleEndian: Bool
     let firstIFDOffset: Int
 
     /// Parses the TIFF header at `base` (byte order + first-IFD offset).
     init?(bytes: [UInt8], base: Int) {
         guard base >= 0, base + 8 <= bytes.count else { return nil }
-        let little: Bool
+        let isLittleEndian: Bool
         if bytes[base] == 0x49, bytes[base + 1] == 0x49 {
-            little = true
+            isLittleEndian = true
         } else if bytes[base] == 0x4D, bytes[base + 1] == 0x4D {
-            little = false
+            isLittleEndian = false
         } else {
             return nil
         }
-        guard let ifdOffset = MakerNoteParser.readU32(bytes, at: base + 4, littleEndian: little) else { return nil }
+        guard let ifdOffset = MakerNoteParser.readUInt32(bytes, at: base + 4, isLittleEndian: isLittleEndian) else { return nil }
         self.bytes = bytes
         self.base = base
-        self.littleEndian = little
+        self.isLittleEndian = isLittleEndian
         self.firstIFDOffset = Int(ifdOffset)
     }
 
     /// Builds a reader with an explicit byte order / first-IFD offset (for
     /// self-contained vendor notes like Fuji that carry no TIFF header).
-    init?(bytes: [UInt8], base: Int, littleEndian: Bool, firstIFDOffset: Int) {
+    init?(bytes: [UInt8], base: Int, isLittleEndian: Bool, firstIFDOffset: Int) {
         guard base >= 0, base <= bytes.count else { return nil }
         self.bytes = bytes
         self.base = base
-        self.littleEndian = littleEndian
+        self.isLittleEndian = isLittleEndian
         self.firstIFDOffset = firstIFDOffset
     }
 
@@ -291,16 +291,16 @@ struct TIFFReader {
     /// its stored value pointers resolve against. Returns tag → entry.
     func ifd(atAbsolute ifdAbs: Int, offsetBase: Int) -> [Int: IFDEntry]? {
         guard ifdAbs >= 0, ifdAbs + 2 <= bytes.count else { return nil }
-        guard let count = u16(ifdAbs) else { return nil }
+        guard let count = readUInt16(at: ifdAbs) else { return nil }
         let entriesStart = ifdAbs + 2
         guard entriesStart + count * 12 <= bytes.count else { return nil }
         var result: [Int: IFDEntry] = [:]
         result.reserveCapacity(count)
         for index in 0..<count {
             let entryStart = entriesStart + index * 12
-            guard let tag = u16(entryStart),
-                  let type = u16(entryStart + 2),
-                  let rawCount = MakerNoteParser.readU32(bytes, at: entryStart + 4, littleEndian: littleEndian)
+            guard let tag = readUInt16(at: entryStart),
+                  let type = readUInt16(at: entryStart + 2),
+                  let rawCount = MakerNoteParser.readUInt32(bytes, at: entryStart + 4, isLittleEndian: isLittleEndian)
             else { continue }
             result[tag] = IFDEntry(type: type, count: Int(rawCount), valueFieldOffset: entryStart + 8)
         }
@@ -314,7 +314,7 @@ struct TIFFReader {
         if size <= 4 {
             return entry.valueFieldOffset
         }
-        guard let pointer = MakerNoteParser.readU32(bytes, at: entry.valueFieldOffset, littleEndian: littleEndian) else {
+        guard let pointer = MakerNoteParser.readUInt32(bytes, at: entry.valueFieldOffset, isLittleEndian: isLittleEndian) else {
             return -1
         }
         return offsetBase + Int(pointer)
@@ -326,17 +326,17 @@ struct TIFFReader {
         guard start >= 0 else { return nil }
         switch entry.type {
         case 3:  // SHORT
-            return u16(start)
+            return readUInt16(at: start)
         case 4:  // LONG
-            return MakerNoteParser.readU32(bytes, at: start, littleEndian: littleEndian).map(Int.init)
+            return MakerNoteParser.readUInt32(bytes, at: start, isLittleEndian: isLittleEndian).map(Int.init)
         default:
-            return MakerNoteParser.readU32(bytes, at: start, littleEndian: littleEndian).map(Int.init)
+            return MakerNoteParser.readUInt32(bytes, at: start, isLittleEndian: isLittleEndian).map(Int.init)
         }
     }
 
-    func u16(_ offset: Int) -> Int? {
+    func readUInt16(at offset: Int) -> Int? {
         guard offset >= 0, offset + 2 <= bytes.count else { return nil }
-        return littleEndian
+        return isLittleEndian
             ? Int(bytes[offset]) | Int(bytes[offset + 1]) << 8
             : Int(bytes[offset + 1]) | Int(bytes[offset]) << 8
     }

@@ -104,7 +104,7 @@ struct PhotoDetailScreen: View {
     /// True once a download has shown zero progress for a full stall window —
     /// iCloud isn't serving (device-level issue); the ring flips to a warning
     /// badge so the user doesn't stare at an endless spinner.
-    @State private var downloadStalled = false
+    @State private var isDownloadStalled = false
     @State private var stallWatchTask: Task<Void, Never>?
     /// Latest explicit full-original download state per page index. Local-only
     /// paging reports false to clear stale state; zoom downloads are isolated
@@ -152,7 +152,7 @@ struct PhotoDetailScreen: View {
                     guard index == currentIndex else { return }
                     handleVideoPlaybackChange(playing)
                 },
-                onVideoInteraction: showVideoChromeAndScheduleHide,
+                onVideoInteraction: showVideoChrome,
                 onVideoTap: toggleVideoChrome,
                 onDragProgress: { translationY in
                     dragOffset = CGSize(width: 0, height: max(0, translationY))
@@ -265,7 +265,7 @@ struct PhotoDetailScreen: View {
     }
 
     /// Arms a one-shot watch while a download reports zero progress; a full
-    /// `stallWindow` without a byte flips `downloadStalled`. Any progress,
+    /// `stallWindow` without a byte flips `isDownloadStalled`. Any progress,
     /// completion, or page change disarms it.
     private func updateStallWatch(progress: Double, downloading: Bool) {
         if downloading && progress == 0 {
@@ -274,14 +274,14 @@ struct PhotoDetailScreen: View {
                 try? await Task.sleep(for: Self.stallWindow)
                 guard !Task.isCancelled else { return }
                 if isDownloading && downloadProgress == 0 {
-                    withAnimation(.easeInOut(duration: 0.2)) { downloadStalled = true }
+                    withAnimation(.easeInOut(duration: 0.2)) { isDownloadStalled = true }
                 }
             }
         } else {
             stallWatchTask?.cancel()
             stallWatchTask = nil
-            if downloadStalled {
-                withAnimation(.easeInOut(duration: 0.2)) { downloadStalled = false }
+            if isDownloadStalled {
+                withAnimation(.easeInOut(duration: 0.2)) { isDownloadStalled = false }
             }
         }
     }
@@ -291,7 +291,7 @@ struct PhotoDetailScreen: View {
         // Reset the displayed ring, then re-apply the now-current page's state
         // — a swiped-to page reported its download BEFORE it became current
         // (off-screen preload), so its progress/stall lives in `pageDownload`.
-        downloadStalled = false
+        isDownloadStalled = false
         // The pager resets its own zoom on a page change but doesn't report it;
         // clear the chrome-hiding flag so a new page always shows the chrome.
         isZoomed = false
@@ -373,12 +373,12 @@ struct PhotoDetailScreen: View {
                     systemImage: "square.and.arrow.up",
                     accessibilityLabel: "Share"
                 ) {
-                    showVideoChromeAndScheduleHide()
+                    showVideoChrome()
                     share(metadata)
                 }
                 Spacer()
                 GlassIconButton(systemImage: "trash", accessibilityLabel: "Delete") {
-                    showVideoChromeAndScheduleHide()
+                    showVideoChrome()
                     deleteCurrentPhoto()
                 }
             }
@@ -389,14 +389,14 @@ struct PhotoDetailScreen: View {
                         systemImage: metadata.isFavorite ? "heart.fill" : "heart",
                         accessibilityLabel: metadata.isFavorite ? "Unfavorite" : "Favorite"
                     ) {
-                        showVideoChromeAndScheduleHide()
+                        showVideoChrome()
                         toggleFavorite(metadata)
                     }
                     actionBarCenterButton(
                         systemImage: "info.circle",
                         accessibilityLabel: "Info"
                     ) {
-                        showVideoChromeAndScheduleHide()
+                        showVideoChrome()
                         isMetadataPresented = true
                     }
                 }
@@ -429,7 +429,7 @@ struct PhotoDetailScreen: View {
         guard isCurrentVideo else { return }
         isCurrentVideoPlaying = playing
         if playing {
-            showVideoChromeAndScheduleHide()
+            showVideoChrome()
         } else {
             videoChromeHideTask?.cancel()
             videoChromeHideTask = nil
@@ -437,7 +437,7 @@ struct PhotoDetailScreen: View {
         }
     }
 
-    private func showVideoChromeAndScheduleHide() {
+    private func showVideoChrome() {
         guard isCurrentVideo else { return }
         videoChromeHideTask?.cancel()
         videoChromeHideTask = nil
@@ -459,7 +459,7 @@ struct PhotoDetailScreen: View {
             videoChromeHideTask = nil
             setVideoChromeVisible(false)
         } else {
-            showVideoChromeAndScheduleHide()
+            showVideoChrome()
         }
     }
 
@@ -501,7 +501,7 @@ struct PhotoDetailScreen: View {
                                 .background(Color(.systemFill), in: RoundedRectangle(cornerRadius: 4))
                         }
                         Spacer()
-                        if downloadStalled {
+                        if isDownloadStalled {
                             Image(systemName: "exclamationmark.icloud")
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundStyle(.orange)
@@ -539,7 +539,7 @@ struct PhotoDetailScreen: View {
     }
 
     private func panelSummary(_ metadata: PhotoMetadata) -> PhotoInfoPanelSummary {
-        PhotoInfoPanelSummary.make(
+        PhotoInfoPanelSummary(
             metadata: metadata,
             fileSize: currentFileSize ?? metadata.fileSize,
             fallbackTitle: currentFilename,
@@ -553,7 +553,7 @@ struct PhotoDetailScreen: View {
     private func accessibilityPanelLabel(_ summary: PhotoInfoPanelSummary) -> String {
         var parts = [summary.accessibilityText]
         if let badge = formatBadge { parts.append(badge) }
-        if downloadStalled {
+        if isDownloadStalled {
             parts.append(String(localized: "iCloud download stalled"))
         } else if isDownloading {
             parts.append(String(localized: "Downloading from iCloud"))
@@ -1145,7 +1145,7 @@ private struct DetailVideoPlayer: View {
                 accessibilityLabel: model.isMuted ? "Unmute" : "Mute"
             ) {
                 onInteraction()
-                model.setMuted(!model.isMuted)
+                model.isMuted.toggle()
             }
 
             Spacer(minLength: 0)
@@ -1198,7 +1198,7 @@ private struct DetailVideoPlayer: View {
     private var loopButton: some View {
         Button {
             onInteraction()
-            model.setLooping(!model.isLooping)
+            model.isLooping.toggle()
         } label: {
             Image(systemName: "repeat")
                 .font(.system(size: 17, weight: .semibold))
@@ -1250,7 +1250,7 @@ private struct DetailVideoPlayer: View {
             get: { model.rate },
             set: { newValue in
                 onInteraction()
-                model.setRate(newValue)
+                model.rate = newValue
             }
         )
     }
@@ -1535,7 +1535,7 @@ struct PhotoDetailPage: View {
     @State private var asset: PHAsset?
     /// Set once the full-resolution original request has been fired (first
     /// zoom-in), so a later zoom doesn't kick off a second download.
-    @State private var didRequestFullResolution = false
+    @State private var hasRequestedFullResolution = false
     /// Fast local preview request. Network is always disabled; it bridges the
     /// few milliseconds until the exact best-local rendition arrives.
     @State private var localPreviewRequestId: PHImageRequestID?
@@ -1551,8 +1551,8 @@ struct PhotoDetailPage: View {
     /// Actual current-version bytes, read only when already on device and
     /// downsampled to screen size with ImageIO.
     @State private var localOriginalRequestId: PHImageRequestID?
-    @State private var didRequestLocalBest = false
-    @State private var didRetryDisplayDerivative = false
+    @State private var hasRequestedLocalBest = false
+    @State private var hasRetriedDisplayDerivative = false
     /// Avoids a spinner flash while a preheated/local display proxy resolves.
     /// A genuinely unavailable image still gets feedback after a short grace.
     @State private var showLoadingIndicator = false
@@ -1715,8 +1715,8 @@ struct PhotoDetailPage: View {
     /// Sharp no-network display image: the device-sized rendition "Optimize
     /// iPhone Storage" keeps locally. Never downgrades the fast preview.
     private func loadLocalBest(_ asset: PHAsset) {
-        guard !didRequestLocalBest else { return }
-        didRequestLocalBest = true
+        guard !hasRequestedLocalBest else { return }
+        hasRequestedLocalBest = true
         localBestRequestId = photoLibrary.requestBestLocalImage(
             for: asset,
             targetSize: targetSize,
@@ -1766,12 +1766,12 @@ struct PhotoDetailPage: View {
                 // The local image remains visible. Show network progress only
                 // after bytes actually move, never an indeterminate spinner on
                 // every page swipe.
-                if loadState.isActive, !didRequestFullResolution, value > 0 {
+                if loadState.isActive, !hasRequestedFullResolution, value > 0 {
                     onDownloadStateChange?(index, value, true)
                 }
             }
         ) { result, isDegraded in
-            guard loadState.isActive, !didRequestFullResolution else { return }
+            guard loadState.isActive, !hasRequestedFullResolution else { return }
             if !isDegraded {
                 let isSharp = result.map { hasDisplayResolution($0, for: asset) } ?? false
                 if let result {
@@ -1783,11 +1783,11 @@ struct PhotoDetailPage: View {
                 }
                 if isSharp {
                     cancelLocalImageRequests()
-                } else if !didRetryDisplayDerivative {
+                } else if !hasRetriedDisplayDerivative {
                     // Some PhotoKit versions can finish a target-sized request
                     // with a soft local rendition. Retry a larger derivative
                     // before ever considering the multi-megabyte original.
-                    didRetryDisplayDerivative = true
+                    hasRetriedDisplayDerivative = true
                     displayRequestId = nil
                     startDisplayUpgrade(
                         for: asset,
@@ -1814,12 +1814,12 @@ struct PhotoDetailPage: View {
             targetSize: requestTargetSize,
             allowNetwork: true,
             progress: { value in
-                if loadState.isActive, !didRequestFullResolution, value > 0 {
+                if loadState.isActive, !hasRequestedFullResolution, value > 0 {
                     onDownloadStateChange?(index, value, true)
                 }
             }
         ) { result, isDegraded in
-            guard loadState.isActive, !didRequestFullResolution else { return }
+            guard loadState.isActive, !hasRequestedFullResolution else { return }
             if !isDegraded {
                 let isSharp = result.map { hasDisplayResolution($0, for: asset) } ?? false
                 if let result {
@@ -1884,8 +1884,8 @@ struct PhotoDetailPage: View {
     /// pixel-peeping when the user zooms in. Pulls the multi-MB original from
     /// iCloud (ring shows). Idempotent — only the first zoom downloads.
     private func loadFullResolution() {
-        guard !didRequestFullResolution, let asset else { return }
-        didRequestFullResolution = true
+        guard !hasRequestedFullResolution, let asset else { return }
+        hasRequestedFullResolution = true
         // The original supersedes the screen derivative. Cancel it so a late
         // smaller result cannot overwrite the full-resolution image.
         cancelDisplayUpgrade()

@@ -100,8 +100,8 @@ struct LibraryScreen: View {
             // cache renditions, and reacting to those would reload the grid and
             // start an index run every time Detail closes.
             // Reload-then-index outside a run; coalesced into the end-of-run
-            // reload while indexing (see LibraryModel.handleLibraryChange).
-            model?.handleLibraryChange()
+            // reload while indexing (see LibraryModel.libraryDidChange).
+            model?.libraryDidChange()
         }
         .onChange(of: navigation.advancedSearchToken) {
             // Advanced search is routed here from the search tab (a sheet can't
@@ -244,7 +244,7 @@ struct LibraryScreen: View {
         // buttons). Full-width, single GlassPanel material.
         .overlay(alignment: .top) {
             if isIndexPanelExpanded,
-               model.isIndexing || model.indexStreamingPaused || model.indexAutoRetryDate != nil,
+               model.isIndexing || model.isIndexStreamingPaused || model.indexAutoRetryDate != nil,
                !isSelecting {
                 indexDetailPanel(model)
                     .padding(.horizontal, 12)
@@ -254,7 +254,7 @@ struct LibraryScreen: View {
         }
         // Reset the expanded state once no index status is active, so a later
         // run doesn't reopen the dropdown.
-        .onChange(of: model.isIndexing || model.indexStreamingPaused || model.indexAutoRetryDate != nil) { _, active in
+        .onChange(of: model.isIndexing || model.isIndexStreamingPaused || model.indexAutoRetryDate != nil) { _, active in
             if !active { isIndexPanelExpanded = false }
         }
     }
@@ -401,11 +401,11 @@ struct LibraryScreen: View {
                     .padding(.horizontal, 32)
                 HStack(spacing: 12) {
                     Button("Retry Now") {
-                        model.retryIncompleteNow()
+                        model.retryIncompleteAssets()
                     }
                     .buttonStyle(.borderedProminent)
                     Button("Use Cellular") {
-                        model.enableCellularAndResume()
+                        model.resumeIndexingOverCellular()
                     }
                     .buttonStyle(.bordered)
                 }
@@ -434,7 +434,7 @@ struct LibraryScreen: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
             }
-        } else if model.indexStreamingPaused {
+        } else if model.isIndexStreamingPaused {
             VStack(spacing: 12) {
                 Image(systemName: "wifi.slash")
                     .font(.largeTitle)
@@ -447,7 +447,7 @@ struct LibraryScreen: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
                 Button("Use Cellular") {
-                    model.enableCellularAndResume()
+                    model.resumeIndexingOverCellular()
                 }
                 .buttonStyle(.borderedProminent)
             }
@@ -569,11 +569,11 @@ struct LibraryScreen: View {
                 }
                 HStack(spacing: 12) {
                     Button("Retry Now") {
-                        model.retryIncompleteNow()
+                        model.retryIncompleteAssets()
                     }
                     .font(.caption.weight(.medium))
                     Button("Use Cellular") {
-                        model.enableCellularAndResume()
+                        model.resumeIndexingOverCellular()
                     }
                     .font(.caption.weight(.medium))
                 }
@@ -602,7 +602,7 @@ struct LibraryScreen: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Button("Use Cellular") {
-                    model.enableCellularAndResume()
+                    model.resumeIndexingOverCellular()
                 }
                 .font(.caption.weight(.medium))
             }
@@ -723,7 +723,7 @@ struct LibraryScreen: View {
         }
         ToolbarItem(placement: .topBarLeading) {
             if let model,
-               model.isIndexing || model.indexStreamingPaused || model.indexAutoRetryDate != nil,
+               model.isIndexing || model.isIndexStreamingPaused || model.indexAutoRetryDate != nil,
                !isSelecting {
                 indexStatusButton(model)
             }

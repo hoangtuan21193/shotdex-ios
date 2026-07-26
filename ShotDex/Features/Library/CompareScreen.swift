@@ -14,7 +14,7 @@ struct ComparePhoto {
 /// Mirrors zoom and pan across the compare panes' scroll views (2–4 panes).
 /// Zoom sync and pan sync toggle independently (Lightroom-style).
 @MainActor
-final class CompareScrollSync {
+final class CompareScrollSynchronizer {
     var isZoomSyncEnabled = true
     var isPanSyncEnabled = true
 
@@ -75,11 +75,11 @@ final class CompareScrollSync {
 }
 
 /// UIScrollView-backed zoomable video pane: pinch-to-zoom + double-tap zoom
-/// over an `AVPlayerLayer`, participating in the same `CompareScrollSync`
+/// over an `AVPlayerLayer`, participating in the same `CompareScrollSynchronizer`
 /// group as image panes so zoom/pan mirror across mixed selections.
 private struct CompareVideoPaneView: UIViewRepresentable {
     let player: AVPlayer
-    let sync: CompareScrollSync
+    let sync: CompareScrollSynchronizer
     let paneIndex: Int
 
     func makeUIView(context: Context) -> UIScrollView {
@@ -136,7 +136,7 @@ private struct CompareVideoPaneView: UIViewRepresentable {
 
     final class Coordinator: NSObject, UIScrollViewDelegate {
         weak var playerView: PlayerContainerView?
-        var sync: CompareScrollSync?
+        var sync: CompareScrollSynchronizer?
 
         func viewForZooming(in scrollView: UIScrollView) -> UIView? {
             playerView
@@ -183,7 +183,7 @@ struct CompareScreen: View {
     /// 2–4 photos, in selection order.
     let photos: [ComparePhoto]
 
-    @State private var sync = CompareScrollSync()
+    @State private var sync = CompareScrollSynchronizer()
     @State private var isZoomSynced = true
     @State private var isPanSynced = true
 
@@ -307,7 +307,7 @@ private struct ComparePane: View {
     @Environment(PhotoLibraryService.self) private var photoLibrary
 
     let photo: ComparePhoto
-    let sync: CompareScrollSync
+    let sync: CompareScrollSynchronizer
     let paneIndex: Int
     /// Quarter-screen panes (2x2 grid) drop the camera model from the caption.
     let isCompact: Bool

@@ -40,7 +40,7 @@ final class AsyncChunkedLookupCache<Value> {
     /// Replaces the ordered id list and invalidates every cached/in-flight
     /// chunk. Detached fetches that already started may finish, but their
     /// generation no longer matches and their result is ignored.
-    func setIds(_ ids: [String]) {
+    func replaceKeys(_ ids: [String]) {
         generation &+= 1
         self.ids = ids
         removeAll()

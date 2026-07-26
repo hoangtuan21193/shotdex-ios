@@ -36,7 +36,7 @@ struct PhotoInfoPanelSummary: Equatable {
     ///   - measureDetail: width of a string at line 2's font (`caption2`),
     ///     injected so this stays testable without UIKit. Line 1 needs no
     ///     measure — the relative-day/time text has nothing left to drop.
-    static func make(
+    init(
         metadata: PhotoMetadata,
         fileSize: Int?,
         fallbackTitle: String?,
@@ -45,7 +45,7 @@ struct PhotoInfoPanelSummary: Equatable {
         locale: Locale = .current,
         availableWidth: Double,
         measureDetail: (String) -> Double
-    ) -> PhotoInfoPanelSummary {
+    ) {
         let camera = metadata.normalizedCameraModel
         let lensFull = metadata.normalizedLensModel
 
@@ -59,7 +59,7 @@ struct PhotoInfoPanelSummary: Equatable {
         let size = fileSize.flatMap(MetadataFormatter.fileSize)
 
         // Line 1: date/time alone, or the filename when the asset has no date.
-        let titleLine = dateText(
+        let titleLine = Self.dateText(
             metadata.creationDateValue,
             calendar: calendar,
             now: now,
@@ -68,9 +68,9 @@ struct PhotoInfoPanelSummary: Equatable {
 
         // Line 2: camera + exposure + size, else exposure + size (never dropped).
         let detailFallback = MetadataFormatter.metadataLine([exposure, size])
-        let detailLine = firstThatFits(
+        let detailLine = Self.firstThatFits(
             [MetadataFormatter.metadataLine([camera, exposure, size]), detailFallback],
-            budget: availableWidth / scaleTolerance,
+            budget: availableWidth / Self.scaleTolerance,
             measure: measureDetail
         ) ?? detailFallback
 
@@ -82,11 +82,9 @@ struct PhotoInfoPanelSummary: Equatable {
             size,
         ]) ?? titleLine
 
-        return PhotoInfoPanelSummary(
-            titleLine: titleLine,
-            detailLine: detailLine,
-            accessibilityText: accessibilityText
-        )
+        self.titleLine = titleLine
+        self.detailLine = detailLine
+        self.accessibilityText = accessibilityText
     }
 
     /// Richest candidate whose measured width fits. An unmeasured panel

@@ -103,34 +103,34 @@ final class ImportService {
 
     /// A grid thumbnail for a candidate — ImageIO for stills, an
     /// `AVAssetImageGenerator` poster frame for videos.
-    nonisolated func thumbnail(for candidate: ImportCandidate, maxPixel: CGFloat) -> UIImage? {
+    nonisolated func thumbnail(for candidate: ImportCandidate, maxPixelSize: CGFloat) -> UIImage? {
         switch candidate.kind {
-        case .image: return imageThumbnail(for: candidate.url, maxPixel: maxPixel)
-        case .video: return videoThumbnail(for: candidate.url, maxPixel: maxPixel)
+        case .image: return imageThumbnail(for: candidate.url, maxPixelSize: maxPixelSize)
+        case .video: return videoThumbnail(for: candidate.url, maxPixelSize: maxPixelSize)
         }
     }
 
     /// Straight ImageIO thumbnail (no full decode). RAW files may yield nil on
     /// devices without a matching codec — the caller shows a placeholder.
-    private nonisolated func imageThumbnail(for url: URL, maxPixel: CGFloat) -> UIImage? {
+    private nonisolated func imageThumbnail(for url: URL, maxPixelSize: CGFloat) -> UIImage? {
         let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
         guard let source = CGImageSourceCreateWithURL(url as CFURL, sourceOptions) else { return nil }
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageIfAbsent: true,
             kCGImageSourceCreateThumbnailWithTransform: true,
             kCGImageSourceShouldCacheImmediately: true,
-            kCGImageSourceThumbnailMaxPixelSize: maxPixel,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
         ]
         guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
         return UIImage(cgImage: cgImage)
     }
 
     /// First-frame poster for a video via AVFoundation.
-    private nonisolated func videoThumbnail(for url: URL, maxPixel: CGFloat) -> UIImage? {
+    private nonisolated func videoThumbnail(for url: URL, maxPixelSize: CGFloat) -> UIImage? {
         let asset = AVURLAsset(url: url)
         let generator = AVAssetImageGenerator(asset: asset)
         generator.appliesPreferredTrackTransform = true
-        generator.maximumSize = CGSize(width: maxPixel, height: maxPixel)
+        generator.maximumSize = CGSize(width: maxPixelSize, height: maxPixelSize)
         let time = CMTime(seconds: 0, preferredTimescale: 600)
         guard let cgImage = try? generator.copyCGImage(at: time, actualTime: nil) else { return nil }
         return UIImage(cgImage: cgImage)

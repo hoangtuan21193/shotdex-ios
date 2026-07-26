@@ -58,8 +58,8 @@ extension PhotoFileType {
     /// Classifies a lowercased filename extension to its type. Order matters:
     /// specific image types first, `.dng` before the generic `.raw` bag (which
     /// also lists `dng`), so a `.dng` file reports as DNG rather than RAW.
-    static func classify(extension ext: String) -> PhotoFileType? {
-        let lower = ext.lowercased()
+    static func classify(extension fileExtension: String) -> PhotoFileType? {
+        let lower = fileExtension.lowercased()
         let order: [PhotoFileType] = [.jpeg, .heic, .png, .tiff, .gif, .dng, .raw]
         return order.first { $0.extensions.contains(lower) }
     }

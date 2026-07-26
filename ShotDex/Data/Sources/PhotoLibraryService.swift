@@ -465,14 +465,14 @@ final class PhotoLibraryService: NSObject {
         options.isNetworkAccessAllowed = false
         options.deliveryMode = .highQualityFormat
         options.version = .current
-        let maxPixel = Self.aspectFitMaxPixel(for: asset, targetSize: targetSize)
+        let maxPixelSize = Self.aspectFitMaxPixel(for: asset, targetSize: targetSize)
 
         return imageManager.requestImageDataAndOrientation(
             for: asset,
             options: options
         ) { data, _, _, _ in
             guard let data,
-                  let image = Self.downsampleImageData(data, maxPixel: maxPixel)
+                  let image = Self.downsampleImageData(data, maxPixelSize: maxPixelSize)
             else {
                 Task { @MainActor in completion(nil) }
                 return
@@ -582,7 +582,7 @@ final class PhotoLibraryService: NSObject {
 
     private nonisolated static func downsampleImageData(
         _ data: Data,
-        maxPixel: CGFloat
+        maxPixelSize: CGFloat
     ) -> UIImage? {
         let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
         guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions) else {
@@ -592,7 +592,7 @@ final class PhotoLibraryService: NSObject {
             kCGImageSourceCreateThumbnailFromImageAlways: true,
             kCGImageSourceCreateThumbnailWithTransform: true,
             kCGImageSourceShouldCacheImmediately: true,
-            kCGImageSourceThumbnailMaxPixelSize: max(1, maxPixel),
+            kCGImageSourceThumbnailMaxPixelSize: max(1, maxPixelSize),
         ]
         guard let cgImage = CGImageSourceCreateThumbnailAtIndex(
             source,

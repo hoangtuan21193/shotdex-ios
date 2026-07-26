@@ -294,7 +294,7 @@ final class LibraryModel {
         // would return nil for every visible tile and each one would blank
         // and re-resolve — thumbnail flicker on an index-finish refresh.
         if !sameList {
-            assetCache.setIds(items.map(\.assetId))
+            assetCache.replaceKeys(items.map(\.assetId))
         }
         if sameList {
             contentRefreshGeneration &+= 1
@@ -395,7 +395,7 @@ final class LibraryModel {
     /// reload: streaming iCloud originals fires a change per downloaded
     /// asset, and reloading the whole grid per photo is what made the grid
     /// flicker and the device heat up.
-    func handleLibraryChange() {
+    func libraryDidChange() {
         guard !isIndexing else {
             pendingLibraryChange = true
             return
@@ -418,7 +418,7 @@ final class LibraryModel {
 
     /// Re-reads only the assets stuck at `pendingICloud`/`error`
     /// (Settings → Re-index Incomplete Photos). Always uses the network.
-    func startReindexIncomplete(manual: Bool = false) {
+    func reindexIncompleteAssets(manual: Bool = false) {
         guard !isIndexing else { return }
         guard manual || !isLowPowerMode else { return }
         runPipeline(allowsNetwork: { true }, manual: manual) { pipeline, onProgress in
@@ -469,7 +469,7 @@ final class LibraryModel {
                 connection: networkStatus.connectionType,
                 bytesDownloaded: 0,
                 bytesPerSecond: nil,
-                allowsNetwork: allowsNetwork()
+                isNetworkAllowed: allowsNetwork()
             )
             self.refreshPausedState()
             let samplingTask = self.startNetworkSampling(allowsNetwork: allowsNetwork)
@@ -491,10 +491,10 @@ final class LibraryModel {
                 if self.pendingRetryAfterCancel {
                     self.pendingRetryAfterCancel = false
                     // User-initiated retry — allowed even in Low Power Mode.
-                    Task { @MainActor in self.startReindexIncomplete(manual: true) }
+                    Task { @MainActor in self.reindexIncompleteAssets(manual: true) }
                 } else if self.pendingLibraryChange {
                     // A library change arrived mid-run (deferred by
-                    // handleLibraryChange). The end-of-run reload below has
+                    // libraryDidChange). The end-of-run reload below has
                     // already re-fetched the grid; one incremental run picks
                     // up whatever the change added. Next tick, so this Task
                     // fully unwinds first.
@@ -556,7 +556,7 @@ final class LibraryModel {
     /// metered cellular path the user hasn't opted into. Local metadata reads
     /// still complete (they cost no data), so this only gates iCloud streaming.
     /// Drives a persistent "Indexing paused — waiting for Wi-Fi" indicator.
-    private(set) var indexStreamingPaused = false
+    private(set) var isIndexStreamingPaused = false
     /// Count of `pendingICloud` rows genuinely awaiting an iCloud/network read
     /// — **excludes** `error`. Local `error` rows (unreadable/hard-fail) are
     /// non-network and converge to `noExif` via the give-up cap on incremental
@@ -603,13 +603,13 @@ final class LibraryModel {
             guard !self.isIndexing else { return }
             // Network became disallowed mid-countdown (left Wi-Fi, no
             // cellular opt-in): keep the loop armed instead of dying —
-            // `startReindexIncomplete` always streams, so firing it here
+            // `reindexIncompleteAssets` always streams, so firing it here
             // would burn cellular data against the user's setting.
             guard self.allowNetworkForIndexing() else {
                 self.armAutoRetry(after: delay)
                 return
             }
-            self.startReindexIncomplete()
+            self.reindexIncompleteAssets()
         }
     }
 
@@ -619,12 +619,12 @@ final class LibraryModel {
         indexAutoRetryDate = nil
     }
 
-    /// Recomputes `pendingICloudCount`/`indexStreamingPaused` from the DB and
+    /// Recomputes `pendingICloudCount`/`isIndexStreamingPaused` from the DB and
     /// the current network path. Cheap query; called at run edges and on path
     /// changes (both rare).
     func refreshPausedState() {
         pendingICloudCount = (try? metadataStore.pendingICloudReadCount()) ?? 0
-        indexStreamingPaused = networkStatus.isExpensivePath
+        isIndexStreamingPaused = networkStatus.isExpensivePath
             && !UserDefaults.standard.bool(forKey: SettingsKeys.allowCellularIndexing)
             && pendingICloudCount > 0
     }
@@ -633,7 +633,7 @@ final class LibraryModel {
     /// the paused state and, once back on an allowed path with iCloud work
     /// still pending, resumes streaming exactly those rows.
     private func handleNetworkChange() {
-        let wasPaused = indexStreamingPaused
+        let wasPaused = isIndexStreamingPaused
         // A path change while an auto-retry is counting down is exactly the
         // signal that iCloud might serve now (different Wi-Fi, cellular) —
         // skip the wait and retry immediately.
@@ -644,10 +644,10 @@ final class LibraryModel {
         // of a healthy launch run (guarded below), so the launch index run
         // (a full incremental diff, not just the incomplete rows) isn't
         // pre-empted by an eager reindex.
-        if (wasPaused || retryWasScheduled), !indexStreamingPaused, pendingICloudCount > 0,
+        if (wasPaused || retryWasScheduled), !isIndexStreamingPaused, pendingICloudCount > 0,
            !isIndexing, allowNetworkForIndexing() {
             cancelScheduledAutoRetry()
-            startReindexIncomplete()
+            reindexIncompleteAssets()
         }
     }
 
@@ -659,13 +659,13 @@ final class LibraryModel {
     /// tries the incomplete iCloud reads again *now*. If a (futile) run is
     /// still walking, cancel it first and resume once it has stopped — the
     /// `isIndexing` guard would otherwise swallow the retry.
-    func retryIncompleteNow() {
+    func retryIncompleteAssets() {
         cancelScheduledAutoRetry()
         if isIndexing {
             pendingRetryAfterCancel = true
             cancelIndexing()
         } else {
-            startReindexIncomplete(manual: true)
+            reindexIncompleteAssets(manual: true)
         }
     }
 
@@ -673,7 +673,7 @@ final class LibraryModel {
     /// cellular indexing. A futile Wi-Fi run in flight is cancelled so the
     /// cellular retry (on the next path change, or manual Retry) isn't blocked
     /// by the `isIndexing` guard; when nothing is running it resumes now.
-    func enableCellularAndResume() {
+    func resumeIndexingOverCellular() {
         UserDefaults.standard.set(true, forKey: SettingsKeys.allowCellularIndexing)
         if isIndexing {
             // Don't restart here — isIndexing is still true (cancel is async);
@@ -683,7 +683,7 @@ final class LibraryModel {
         }
         refreshPausedState()
         if pendingICloudCount > 0, !isIndexing {
-            startReindexIncomplete(manual: true)
+            reindexIncompleteAssets(manual: true)
         }
     }
 
@@ -705,14 +705,14 @@ final class LibraryModel {
                     connection: networkStatus.connectionType,
                     bytesDownloaded: total,
                     bytesPerSecond: speed,
-                    allowsNetwork: allowsNetwork()
+                    isNetworkAllowed: allowsNetwork()
                 )
                 let thermalState = ProcessInfo.processInfo.thermalState
-                let lowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
+                let isLowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
                 self.indexDiagnostics = IndexDiagnostics(
                     thermalState: thermalState,
-                    readConcurrency: IndexPipeline.readConcurrency(thermal: thermalState, lowPowerMode: lowPowerMode),
-                    lowPowerMode: lowPowerMode,
+                    readConcurrency: IndexPipeline.readConcurrency(thermal: thermalState, isLowPowerMode: isLowPowerMode),
+                    isLowPowerMode: isLowPowerMode,
                     networkReadsStarted: indexTraffic.networkReadsStarted,
                     networkReadsInFlight: indexTraffic.networkReadsInFlight,
                     stallCount: indexTraffic.stallCount,
@@ -770,7 +770,7 @@ final class LibraryModel {
         items.removeAll { ids.contains($0.assetId) }
         // Indexes shifted; rebuild the id list (drops cached chunks). No
         // contentGeneration bump — the user should keep their scroll spot.
-        assetCache.setIds(items.map(\.assetId))
+        assetCache.replaceKeys(items.map(\.assetId))
     }
 
     // MARK: Favorites
@@ -805,7 +805,7 @@ extension LibraryModel: PhotoBrowsingSource {
     /// retried on the next display. Returns nil when there is nothing (yet)
     /// to show.
     func lazyBadgeItem(assetId: String) async -> LibraryGridItem? {
-        if let cached = badgeCache.cached(assetId) {
+        if let cached = badgeCache.cachedEntry(for: assetId) {
             if case .badge(let item) = cached { return item }
             return nil
         }

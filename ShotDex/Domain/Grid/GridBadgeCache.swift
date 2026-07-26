@@ -51,7 +51,7 @@ final class GridBadgeCache {
         }
     }
 
-    func cached(_ assetId: String) -> LookupResult? {
+    func cachedEntry(for assetId: String) -> LookupResult? {
         entries[assetId]
     }
 

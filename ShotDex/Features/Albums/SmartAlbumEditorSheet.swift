@@ -130,7 +130,7 @@ struct SmartAlbumEditorSheet: View {
         let queries = dependencies.libraryQueries
         try? await Task.sleep(for: .milliseconds(300))
         guard !Task.isCancelled else { return }
-        let count = (try? await queries.countAsync(matching: snapshot)) ?? 0
+        let count = (try? await queries.count(matching: snapshot)) ?? 0
         guard !Task.isCancelled, query == snapshot else { return }
         matchCount = count
     }

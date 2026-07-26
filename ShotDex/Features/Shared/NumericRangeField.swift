@@ -80,10 +80,10 @@ extension NumericFieldKind {
             if trimmed.contains("/") {
                 let parts = trimmed.split(separator: "/")
                 guard parts.count == 2,
-                      let num = Double(parts[0]),
-                      let den = Double(parts[1]), den != 0
+                      let numerator = Double(parts[0]),
+                      let denominator = Double(parts[1]), denominator != 0
                 else { return nil }
-                return num / den
+                return numerator / denominator
             }
             return Double(trimmed)
         }

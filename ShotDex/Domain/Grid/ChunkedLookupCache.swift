@@ -29,7 +29,7 @@ final class ChunkedLookupCache<Value> {
 
     /// Replaces the id list (content reload); drops every cached chunk —
     /// indexes into the old ordering are meaningless against the new one.
-    func setIds(_ ids: [String]) {
+    func replaceKeys(_ ids: [String]) {
         self.ids = ids
         removeAll()
     }

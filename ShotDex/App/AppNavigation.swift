@@ -60,7 +60,7 @@ final class AppNavigation {
     /// iOS 26 `.search`-role tab (SwiftUI suppresses it).
     private(set) var advancedSearchToken = 0
 
-    func retapLibrary() {
+    func resetLibraryToRoot() {
         libraryRetapToken &+= 1
     }
 

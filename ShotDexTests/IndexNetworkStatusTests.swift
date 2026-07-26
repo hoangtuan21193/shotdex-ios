@@ -10,9 +10,9 @@ struct IndexNetworkStatusTests {
             connection: .cellular,
             bytesDownloaded: 0,
             bytesPerSecond: nil,
-            allowsNetwork: false
+            isNetworkAllowed: false
         )
-        #expect(status.streamingPaused)
+        #expect(status.isStreamingPaused)
         #expect(status.displayLine == "Cellular · Paused — Wi-Fi needed")
     }
 
@@ -21,9 +21,9 @@ struct IndexNetworkStatusTests {
             connection: .cellular,
             bytesDownloaded: 0,
             bytesPerSecond: nil,
-            allowsNetwork: true
+            isNetworkAllowed: true
         )
-        #expect(!status.streamingPaused)
+        #expect(!status.isStreamingPaused)
         #expect(!status.displayLine.contains("Paused"))
     }
 
@@ -32,10 +32,10 @@ struct IndexNetworkStatusTests {
             connection: .wifi,
             bytesDownloaded: 0,
             bytesPerSecond: nil,
-            allowsNetwork: false
+            isNetworkAllowed: false
         )
         // Only a metered cellular path pauses; Wi-Fi never does.
-        #expect(!status.streamingPaused)
+        #expect(!status.isStreamingPaused)
         #expect(status.displayLine == "Wi-Fi")
     }
 
@@ -44,9 +44,9 @@ struct IndexNetworkStatusTests {
             connection: .wifi,
             bytesDownloaded: 2_000_000,
             bytesPerSecond: 1_000_000,
-            allowsNetwork: true
+            isNetworkAllowed: true
         )
-        #expect(!status.streamingPaused)
+        #expect(!status.isStreamingPaused)
         // Connection name, then speed, then total — separated by " · ".
         let parts = status.displayLine.components(separatedBy: " · ")
         #expect(parts.count == 3)
@@ -216,12 +216,12 @@ struct IndexDiagnosticsTests {
 
     private func make(
         started: Int = 132, inFlight: Int = 4, stalls: Int = 0,
-        cooldown: Duration? = nil, lowPowerMode: Bool = false
+        cooldown: Duration? = nil, isLowPowerMode: Bool = false
     ) -> IndexDiagnostics {
         IndexDiagnostics(
             thermalState: .fair,
             readConcurrency: 6,
-            lowPowerMode: lowPowerMode,
+            isLowPowerMode: isLowPowerMode,
             networkReadsStarted: started,
             networkReadsInFlight: inFlight,
             stallCount: stalls,
@@ -234,7 +234,7 @@ struct IndexDiagnosticsTests {
     }
 
     @Test func thermalLineAppendsLowPower() {
-        #expect(make(lowPowerMode: true).thermalLine == "Thermal: Fair · 6 readers · Low Power")
+        #expect(make(isLowPowerMode: true).thermalLine == "Thermal: Fair · 6 readers · Low Power")
     }
 
     @Test func iCloudLineShowsCounts() {

@@ -122,8 +122,7 @@ final class AlbumsModel {
     }
 
     /// Resolves each saved smart album's live count and cover off the main
-    /// thread. `count` is a blocking reader read; `gridItems` runs on GRDB's
-    /// reader pool.
+    /// thread. Both `count` and `gridItems` run on GRDB's reader pool.
     private nonisolated static func loadSmartAlbums(
         smartAlbumStore: SmartAlbumStore,
         libraryQueries: LibraryQueries
@@ -131,7 +130,7 @@ final class AlbumsModel {
         guard let albums = try? smartAlbumStore.fetchAllOrdered() else { return [] }
         var models: [SmartAlbumTokenItem] = []
         for album in albums {
-            let count = (try? libraryQueries.count(matching: album.query)) ?? 0
+            let count = (try? await libraryQueries.count(matching: album.query)) ?? 0
             var cover: PHAsset?
             if let firstId = try? await libraryQueries
                 .gridItems(matching: album.query, sort: .default, limit: 1)

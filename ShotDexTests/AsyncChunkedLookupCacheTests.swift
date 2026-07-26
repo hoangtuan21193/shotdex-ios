@@ -15,7 +15,7 @@ struct AsyncChunkedLookupCacheTests {
             }
             return Dictionary(uniqueKeysWithValues: ids.map { ($0, Int($0.dropFirst(2))!) })
         }
-        cache.setIds((0..<6).map { "id\($0)" })
+        cache.replaceKeys((0..<6).map { "id\($0)" })
 
         #expect(cache.value(at: 1) == nil)
         let resolved = await waitForValue { cache.value(at: 1) }
@@ -34,9 +34,9 @@ struct AsyncChunkedLookupCacheTests {
             return Dictionary(uniqueKeysWithValues: ids.map { ($0, $0) })
         }
 
-        cache.setIds(["old"])
+        cache.replaceKeys(["old"])
         #expect(cache.value(at: 0) == nil)
-        cache.setIds(["new"])
+        cache.replaceKeys(["new"])
         #expect(cache.value(at: 0) == nil)
 
         let resolved = await waitForValue { cache.value(at: 0) }

@@ -454,8 +454,7 @@ struct DatabaseTests {
         let query = SmartAlbumQuery(matchMode: .all, rules: [
             SmartAlbumRule(field: .cameraBody, op: .contains, text: "R6"),
         ])
-        #expect(try libraryQueries.count(matching: query) == 2)
-        #expect(try await libraryQueries.countAsync(matching: query) == 2)
+        #expect(try await libraryQueries.count(matching: query) == 2)
         let items = try await libraryQueries.gridItems(matching: query, sort: .default)
         #expect(items.map(\.assetId).sorted() == ["a1", "a2"])
     }

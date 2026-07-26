@@ -103,9 +103,9 @@ struct SelectionCountCaption: View {
     private var canCompare: Bool { model.onCompare != nil }
     private var isOverflowing: Bool { model.selectionCount > CompareScreen.maxPhotoCount }
     private var countText: String {
-        let n = model.selectionCount
-        guard canCompare, !isOverflowing else { return "\(n) selected" }
-        return "\(n) selected · up to \(CompareScreen.maxPhotoCount) to compare"
+        let count = model.selectionCount
+        guard canCompare, !isOverflowing else { return "\(count) selected" }
+        return "\(count) selected · up to \(CompareScreen.maxPhotoCount) to compare"
     }
 
     var body: some View {

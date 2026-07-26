@@ -65,7 +65,7 @@ struct PhotoInfoPanelSummaryTests {
         width: Double,
         now: Date = Self.shotDate
     ) -> PhotoInfoPanelSummary {
-        PhotoInfoPanelSummary.make(
+        PhotoInfoPanelSummary(
             metadata: metadata,
             fileSize: metadata.fileSize,
             fallbackTitle: "IMG_0001.CR3",
