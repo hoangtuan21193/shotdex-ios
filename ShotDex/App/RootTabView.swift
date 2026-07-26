@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// Root scaffold: a ZStack holding one NavigationStack per tab plus the
+/// Root container: a ZStack holding one NavigationStack per tab plus the
 /// floating glass chrome. Tabs stay alive (and keep their navigation state)
 /// when switching, like the system TabView.
-struct HomeTabScaffold: View {
+struct RootTabView: View {
     @Environment(AppDependencies.self) private var dependencies
 
     @State private var navigation = AppNavigation()
@@ -48,9 +48,9 @@ struct HomeTabScaffold: View {
         if photoLibrary.authorizationState == .notDetermined {
             OnboardingScreen()
         } else if #available(iOS 26.0, *) {
-            nativeScaffold
+            nativeTabView
         } else {
-            mainScaffold
+            legacyTabView
         }
     }
 
@@ -89,7 +89,7 @@ struct HomeTabScaffold: View {
     }
 
     @available(iOS 26.0, *)
-    private var nativeScaffold: some View {
+    private var nativeTabView: some View {
         TabView(selection: tabSelection) {
             Tab(AppTab.library.title, systemImage: AppTab.library.systemImage, value: .library) {
                 NavigationStack { LibraryScreen(controller: libraryController) }
@@ -118,16 +118,16 @@ struct HomeTabScaffold: View {
         // Host the selection controls in the native bottom accessory (the tab bar
         // stays visible and unchanged; it minimizes on scroll and the accessory
         // follows it from expanded to inline placement). See SelectionAccessory.
-        .modifier(SelectionBottomAccessory(config: navigation.selectionBar))
+        .modifier(SelectionBottomAccessory(model: navigation.selectionBar))
         // The selection count floats above the accessory band (out of the glass).
         .overlay(alignment: .bottom) {
-            if let config = navigation.selectionBar {
-                SelectionCountBanner(config: config)
+            if let model = navigation.selectionBar {
+                SelectionCountBanner(model: model)
                     .transition(.opacity)
             }
         }
         .animation(.snappy(duration: 0.25), value: navigation.selectionBar != nil)
-        .settingsDrawer(isOpen: $navigation.isSettingsDrawerOpen, libraryController: libraryController)
+        .settingsSheet(isPresented: $navigation.isSettingsSheetPresented, libraryController: libraryController)
         .keepScreenAwakeWhileIndexing(libraryController: libraryController)
         .environment(navigation)
         .task {
@@ -152,7 +152,7 @@ struct HomeTabScaffold: View {
         }
     }
 
-    private var mainScaffold: some View {
+    private var legacyTabView: some View {
         // Pre-26 has no native tab bar. The custom floating tab bar stays a
         // bottom overlay (its clearance handled by each grid's `bottomChromeInset`,
         // unchanged). During selection it hides and the selection bar takes over a
@@ -188,14 +188,14 @@ struct HomeTabScaffold: View {
                 }
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                if let config = navigation.selectionBar {
-                    SelectionBottomBar(config)
+                if let model = navigation.selectionBar {
+                    SelectionBottomBar(model)
                         .padding(.bottom, 8)
                         .transition(.opacity)
                 }
             }
             .animation(.snappy(duration: 0.25), value: navigation.selectionBar != nil)
-            .settingsDrawer(isOpen: $navigation.isSettingsDrawerOpen, libraryController: libraryController)
+            .settingsSheet(isPresented: $navigation.isSettingsSheetPresented, libraryController: libraryController)
             .keepScreenAwakeWhileIndexing(libraryController: libraryController)
             .environment(navigation)
             .task {
@@ -294,7 +294,7 @@ private struct KeepScreenAwakeModifier: ViewModifier {
                     // Passive, non-blocking probe that resets the idle timer
                     // on any touch. The dim visuals live in a top-level window
                     // (see ScreenAwakeController), so nothing is drawn here.
-                    IdleActivityDetector { controller.registerActivity() }
+                    IdleActivityReporterView { controller.registerActivity() }
                         .allowsHitTesting(false)
                 }
             }
@@ -332,16 +332,16 @@ extension View {
 /// conditional content.
 @available(iOS 26.0, *)
 private struct SelectionBottomAccessory: ViewModifier {
-    let config: SelectionBarConfig?
+    let model: SelectionBarModel?
 
     func body(content: Content) -> some View {
         if #available(iOS 26.1, *) {
-            content.tabViewBottomAccessory(isEnabled: config != nil) {
-                if let config { SelectionAccessory(config) }
+            content.tabViewBottomAccessory(isEnabled: model != nil) {
+                if let model { SelectionAccessory(model) }
             }
         } else {
             content.tabViewBottomAccessory {
-                if let config { SelectionAccessory(config) }
+                if let model { SelectionAccessory(model) }
             }
         }
     }
@@ -354,7 +354,7 @@ private struct SelectionBottomAccessory: ViewModifier {
 struct SearchTab: View {
     let controller: LibraryController
     var onApply: () -> Void
-    /// Opens the advanced-search sheet. Presented by the scaffold (not here):
+    /// Opens the advanced-search sheet. Presented by the root tab view (not here):
     /// a `.sheet` attached inside a `.search`-role tab's searchable scope is
     /// swallowed and never appears.
     var onAdvanced: () -> Void
@@ -484,7 +484,7 @@ struct SearchSheet: View {
 }
 
 #Preview {
-    HomeTabScaffold()
+    RootTabView()
         .environment(AppDependencies.preview())
         .environment(AppDependencies.preview().photoLibrary)
 }

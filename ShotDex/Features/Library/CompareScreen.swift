@@ -77,7 +77,7 @@ final class CompareScrollSync {
 /// UIScrollView-backed zoomable video pane: pinch-to-zoom + double-tap zoom
 /// over an `AVPlayerLayer`, participating in the same `CompareScrollSync`
 /// group as image panes so zoom/pan mirror across mixed selections.
-private struct ZoomableVideoView: UIViewRepresentable {
+private struct CompareVideoPaneView: UIViewRepresentable {
     let player: AVPlayer
     let sync: CompareScrollSync
     let paneIndex: Int
@@ -261,7 +261,7 @@ struct CompareScreen: View {
         .padding(.top, 8)
     }
 
-    /// Filter-chip toggle over the black backdrop: icon + short word,
+    /// Filter-token toggle over the black backdrop: icon + short word,
     /// ON = solid accent capsule + white text (that gesture mirrors across
     /// panes), OFF = dim glass capsule (each pane independent).
     private func syncToggle(
@@ -323,7 +323,7 @@ private struct ComparePane: View {
                 if let player {
                     // Same zoom/pan scroll view as image panes, wrapping an
                     // AVPlayerLayer — video participates in sync like a photo.
-                    ZoomableVideoView(player: player, sync: sync, paneIndex: paneIndex)
+                    CompareVideoPaneView(player: player, sync: sync, paneIndex: paneIndex)
                 } else {
                     ProgressView()
                         .tint(.white)

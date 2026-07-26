@@ -20,27 +20,27 @@ private func compareEnabled(for count: Int) -> Bool {
     (2...CompareScreen.maxPhotoCount).contains(count)
 }
 
-/// Leading Compare label. `config.onCompare == nil` hides it entirely (e.g. On
-/// This Day is delete-only). Bare text — no chip; it rides the shared accessory
+/// Leading Compare label. `model.onCompare == nil` hides it entirely (e.g. On
+/// This Day is delete-only). Bare text — no token; it rides the shared accessory
 /// glass. Label pinned to its intrinsic size with a high layout priority so it
 /// never clips behind the centre thumbnails.
 struct SelectionCompareControl: View {
-    let config: SelectionBarConfig
+    let model: SelectionBarModel
 
     var body: some View {
-        if let onCompare = config.onCompare {
+        if let onCompare = model.onCompare {
             Button(action: onCompare) {
                 Text("Compare")
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
                     .fixedSize()
-                    .foregroundStyle(compareEnabled(for: config.selectionCount) ? Color.accentColor : Color(.tertiaryLabel))
+                    .foregroundStyle(compareEnabled(for: model.selectionCount) ? Color.accentColor : Color(.tertiaryLabel))
                     .padding(.horizontal, 12)
                     .frame(height: 44)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .disabled(!compareEnabled(for: config.selectionCount))
+            .disabled(!compareEnabled(for: model.selectionCount))
             .accessibilityLabel("Compare")
             .layoutPriority(1)
         }
@@ -51,14 +51,14 @@ struct SelectionCompareControl: View {
 /// the pre-26 bar; the iOS 26 accessory passes `styled: false` and lets the
 /// system supply the glass.
 struct SelectionSlots: View {
-    let config: SelectionBarConfig
+    let model: SelectionBarModel
     var styled: Bool
 
     var body: some View {
         let strip = SelectionThumbnailStrip(
-            ids: config.thumbnailIds,
-            photoLibrary: config.photoLibrary,
-            onDeselect: config.onDeselect
+            ids: model.thumbnailIds,
+            photoLibrary: model.photoLibrary,
+            onDeselect: model.onDeselect
         )
         if styled {
             GlassPanel(cornerRadius: selectionPanelCorner) {
@@ -73,14 +73,14 @@ struct SelectionSlots: View {
 }
 
 /// Trailing destructive Delete button (replaces Search during selection). Bare
-/// trash glyph — no chip; it rides the shared accessory glass.
+/// trash glyph — no token; it rides the shared accessory glass.
 struct SelectionDeleteControl: View {
-    let config: SelectionBarConfig
+    let model: SelectionBarModel
 
-    private var isEnabled: Bool { config.selectionCount > 0 && !config.isDeleting }
+    private var isEnabled: Bool { model.selectionCount > 0 && !model.isDeleting }
 
     var body: some View {
-        Button(action: config.onDelete) {
+        Button(action: model.onDelete) {
             Image(systemName: "trash")
                 .font(.system(size: 18, weight: .medium))
                 .foregroundStyle(isEnabled ? Color.red : Color(.tertiaryLabel))
@@ -98,18 +98,18 @@ struct SelectionDeleteControl: View {
 /// only the caption drops). When Compare is available and still in range it
 /// spells out the cap; past the max it shows just the running count.
 struct SelectionCountCaption: View {
-    let config: SelectionBarConfig
+    let model: SelectionBarModel
 
-    private var canCompare: Bool { config.onCompare != nil }
-    private var isOverflowing: Bool { config.selectionCount > CompareScreen.maxPhotoCount }
+    private var canCompare: Bool { model.onCompare != nil }
+    private var isOverflowing: Bool { model.selectionCount > CompareScreen.maxPhotoCount }
     private var countText: String {
-        let n = config.selectionCount
+        let n = model.selectionCount
         guard canCompare, !isOverflowing else { return "\(n) selected" }
         return "\(n) selected · up to \(CompareScreen.maxPhotoCount) to compare"
     }
 
     var body: some View {
-        if config.selectionCount > 0 {
+        if model.selectionCount > 0 {
             // Colour is set by the host (secondary in the iOS 26 accessory, white
             // over the pre-26 scrim) — don't pin it here or it would win over the
             // host's tint.
@@ -126,56 +126,56 @@ struct SelectionCountCaption: View {
 /// accessory. The centre slots take the remaining width; Compare and Delete keep
 /// their intrinsic size via `layoutPriority` so neither clips on narrow devices.
 struct SelectionBarRow: View {
-    let config: SelectionBarConfig
+    let model: SelectionBarModel
     var slotsStyled: Bool
 
-    init(_ config: SelectionBarConfig, slotsStyled: Bool) {
-        self.config = config
+    init(_ model: SelectionBarModel, slotsStyled: Bool) {
+        self.model = model
         self.slotsStyled = slotsStyled
     }
 
     var body: some View {
         HStack(spacing: 12) {
-            SelectionCompareControl(config: config)
-            SelectionSlots(config: config, styled: slotsStyled)
-            SelectionDeleteControl(config: config)
+            SelectionCompareControl(model: model)
+            SelectionSlots(model: model, styled: slotsStyled)
+            SelectionDeleteControl(model: model)
         }
     }
 }
 
 /// iOS 26 bottom-accessory content: just the `[ Compare | thumbnails | Delete ]`
 /// controls row (bare controls on the system glass). The count caption is NOT
-/// here — the scaffold floats it above the accessory band (see
-/// `SelectionCountBanner`). Takes a non-optional config (the scaffold unwraps
+/// here — the root tab view floats it above the accessory band (see
+/// `SelectionCountBanner`). Takes a non-optional model (the root tab view unwraps
 /// `navigation.selectionBar`).
 @available(iOS 26.0, *)
 struct SelectionAccessory: View {
-    let config: SelectionBarConfig
+    let model: SelectionBarModel
 
-    init(_ config: SelectionBarConfig) { self.config = config }
+    init(_ model: SelectionBarModel) { self.model = model }
 
     var body: some View {
-        SelectionBarRow(config, slotsStyled: false)
+        SelectionBarRow(model, slotsStyled: false)
             .padding(.horizontal, 12)
             .padding(.vertical, 4)
     }
 }
 
-/// Pre-iOS 26 selection bar (hosted via the scaffold's `.safeAreaInset`): the
+/// Pre-iOS 26 selection bar (hosted via the root tab view's `.safeAreaInset`): the
 /// count caption floats above a single glass band holding the bare
 /// `[ Compare | thumbnails | Delete ]` row — mirroring the iOS 26 accessory
-/// (one glass surface, no per-control chips; count sits outside/above it).
+/// (one glass surface, no per-control tokens; count sits outside/above it).
 struct SelectionBottomBar: View {
-    let config: SelectionBarConfig
+    let model: SelectionBarModel
 
-    init(_ config: SelectionBarConfig) { self.config = config }
+    init(_ model: SelectionBarModel) { self.model = model }
 
     var body: some View {
         VStack(spacing: 6) {
-            SelectionCountCaption(config: config)
+            SelectionCountCaption(model: model)
                 .foregroundStyle(.white)
             GlassPanel(cornerRadius: 30) {
-                SelectionBarRow(config, slotsStyled: false)
+                SelectionBarRow(model, slotsStyled: false)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
             }
@@ -183,25 +183,25 @@ struct SelectionBottomBar: View {
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 20)
         .padding(.top, 12)
-        .animation(.snappy(duration: 0.2), value: config.selectionCount)
+        .animation(.snappy(duration: 0.2), value: model.selectionCount)
     }
 }
 
-/// The count caption as a free-floating label the scaffold overlays *above* the
-/// iOS 26 tab-bar accessory band (over the grid, no chip). The system exposes no
+/// The count caption as a free-floating label the root tab view overlays *above* the
+/// iOS 26 tab-bar accessory band (over the grid, no token). The system exposes no
 /// frame for the accessory, so its clearance is a tuned constant
 /// (`accessoryClearance`) — nudge it if the tab bar / accessory metrics change.
 /// A soft shadow keeps the plain text legible over bright photos.
 @available(iOS 26.0, *)
 struct SelectionCountBanner: View {
-    let config: SelectionBarConfig
+    let model: SelectionBarModel
 
     /// Height of the tab bar + selection accessory + a small gap, measured from
     /// the bottom safe-area edge (where a `.bottom` overlay anchors).
     private let accessoryClearance: CGFloat = 118
 
     var body: some View {
-        SelectionCountCaption(config: config)
+        SelectionCountCaption(model: model)
             .foregroundStyle(.white)
             .padding(.horizontal, 14)
             .padding(.vertical, 7)
@@ -389,8 +389,8 @@ private struct SelectionThumbnail: View {
 
 #Preview {
     let dependencies = AppDependencies.preview()
-    func config(_ count: Int, _ ids: [String], compare: Bool) -> SelectionBarConfig {
-        SelectionBarConfig(
+    func model(_ count: Int, _ ids: [String], compare: Bool) -> SelectionBarModel {
+        SelectionBarModel(
             selectionCount: count,
             thumbnailIds: ids,
             photoLibrary: dependencies.photoLibrary,
@@ -404,9 +404,9 @@ private struct SelectionThumbnail: View {
         LinearGradient(colors: [.teal, .indigo], startPoint: .top, endPoint: .bottom)
             .ignoresSafeArea()
         VStack(spacing: 24) {
-            SelectionBottomBar(config(0, [], compare: true))
-            SelectionBottomBar(config(3, ["a", "b", "c"], compare: true))
-            SelectionBottomBar(config(7, ["a", "b", "c", "d", "e", "f", "g"], compare: false))
+            SelectionBottomBar(model(0, [], compare: true))
+            SelectionBottomBar(model(3, ["a", "b", "c"], compare: true))
+            SelectionBottomBar(model(7, ["a", "b", "c", "d", "e", "f", "g"], compare: false))
         }
     }
     .environment(dependencies.photoLibrary)

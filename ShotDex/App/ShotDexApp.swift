@@ -15,7 +15,7 @@ struct ShotDexApp: App {
 
     var body: some Scene {
         WindowGroup {
-            HomeTabScaffold()
+            RootTabView()
                 .environment(dependencies)
                 .environment(dependencies.photoLibrary)
                 .onChange(of: scenePhase) { _, phase in

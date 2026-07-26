@@ -2,11 +2,11 @@ import Foundation
 
 /// A user-configured chart on the Statistics dashboard. Persisted as JSON in
 /// the `stat_charts.config` column (see `StatChart` / `StatChartDAO`). Every
-/// widget is: a chart *kind*, an X-axis *dimension* (group-by), a Y-axis
+/// spec is: a chart *kind*, an X-axis *dimension* (group-by), a Y-axis
 /// *metric* (aggregation), and an optional *filter* (the same rule query as
 /// smart albums) restricting which photos count. The dashboard's date scope
 /// applies on top of `filter`.
-struct ChartWidget: Codable, Identifiable, Equatable, Sendable {
+struct ChartSpec: Codable, Identifiable, Equatable, Sendable {
     var id: String
     var title: String
     var kind: ChartKind
@@ -22,7 +22,7 @@ struct ChartWidget: Codable, Identifiable, Equatable, Sendable {
     var seriesSplit: ChartDimension?
     /// Max categorical/binned buckets to show (bar/donut). Ignored elsewhere.
     var topN: Int
-    /// This chart's own date range. Each widget scopes independently — there
+    /// This chart's own date range. Each spec scopes independently — there
     /// is no global dashboard scope.
     var scope: StatsDateScope
 
@@ -70,10 +70,10 @@ struct ChartWidget: Codable, Identifiable, Equatable, Sendable {
     /// Seeded once when the `stat_charts` table is empty, so a fresh install
     /// opens on a small useful dashboard the user can build on: the most-used
     /// camera and the total item count (photos + videos).
-    static func defaultWidgets() -> [ChartWidget] {
+    static func defaultSpecs() -> [ChartSpec] {
         [
-            ChartWidget(title: "Top Camera", kind: .bar, dimension: .cameraBody, topN: 5),
-            ChartWidget(title: "Total Photos & Videos", kind: .kpi, dimension: nil, metric: .photoCount),
+            ChartSpec(title: "Top Camera", kind: .bar, dimension: .cameraBody, topN: 5),
+            ChartSpec(title: "Total Photos & Videos", kind: .kpi, dimension: nil, metric: .photoCount),
         ]
     }
 }

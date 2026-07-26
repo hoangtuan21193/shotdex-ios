@@ -2,7 +2,7 @@ import Photos
 import SwiftUI
 
 /// Grid of the photos matching a smart album's saved criteria, with the
-/// conditions shown as read-only chips at the top. Structurally a sibling of
+/// conditions shown as read-only tokens at the top. Structurally a sibling of
 /// `AlbumDetailScreen` (same viewer / multi-select / compare / delete), but
 /// driven by a `SmartAlbumDetailController` (criteria query) instead of a
 /// PhotoKit collection.
@@ -41,10 +41,10 @@ struct SmartAlbumDetailScreen: View {
         .toolbar { toolbarContent }
         .onChange(of: isSelecting) { navigation.hidesTabBar = isSelecting }
         .onChange(of: selectionSnapshot) {
-            navigation.selectionBar = isSelecting ? makeSelectionConfig() : nil
+            navigation.selectionBar = isSelecting ? selectionBarModel() : nil
         }
         .onAppear {
-            if isSelecting { navigation.selectionBar = makeSelectionConfig() }
+            if isSelecting { navigation.selectionBar = selectionBarModel() }
         }
         .onDisappear {
             navigation.hidesTabBar = false
@@ -212,9 +212,9 @@ struct SmartAlbumDetailScreen: View {
         SelectionSnapshot(isSelecting: isSelecting, ids: selectedIds, isDeleting: isDeleting)
     }
 
-    private func makeSelectionConfig() -> SelectionBarConfig? {
+    private func selectionBarModel() -> SelectionBarModel? {
         guard let controller else { return nil }
-        return SelectionBarConfig(
+        return SelectionBarModel(
             selectionCount: selectedIds.count,
             thumbnailIds: selectedIds,
             photoLibrary: photoLibrary,

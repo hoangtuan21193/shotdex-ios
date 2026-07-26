@@ -23,7 +23,7 @@ final class ScreenAwakeController {
     private(set) var isDimmed = false
 
     /// Source of index progress/throughput for the dim overlay. Weak — owned by
-    /// the scaffold for the whole session.
+    /// the root tab view for the whole session.
     weak var libraryController: LibraryController?
 
     private var isEnabled = false
@@ -31,7 +31,7 @@ final class ScreenAwakeController {
     private var dimTask: Task<Void, Never>?
     /// Hosts the dim visuals in a top-level window so they sit above everything
     /// — tab UI, sheets, and the photo-detail `fullScreenCover` (a SwiftUI
-    /// `.overlay` on the scaffold would be hidden behind that cover).
+    /// `.overlay` on the root tab view would be hidden behind that cover).
     private var overlayWindow: UIWindow?
 
     private var isActive: Bool { isEnabled && isIndexing }
@@ -225,7 +225,7 @@ private struct DimmedIndexProgress: View {
 /// Invisible probe that observes every touch on the window without consuming or
 /// delaying it, reporting activity so `ScreenAwakeController` can reset its idle
 /// timer. Standard app-wide inactivity detection — no `AppDelegate` needed.
-struct IdleActivityDetector: UIViewRepresentable {
+struct IdleActivityReporterView: UIViewRepresentable {
     let onActivity: () -> Void
 
     func makeCoordinator() -> Coordinator {

@@ -35,7 +35,7 @@ struct SmartAlbumRuleRow: View {
                 Button(field.displayName) { selectField(field) }
             }
         } label: {
-            menuChip(rule.field.displayName, emphasized: true)
+            menuToken(rule.field.displayName, emphasized: true)
         }
     }
 
@@ -45,7 +45,7 @@ struct SmartAlbumRuleRow: View {
                 Button(op.displayName) { rule.op = op }
             }
         } label: {
-            menuChip(rule.op.displayName, emphasized: false)
+            menuToken(rule.op.displayName, emphasized: false)
         }
     }
 
@@ -61,7 +61,7 @@ struct SmartAlbumRuleRow: View {
         .accessibilityLabel("Delete condition")
     }
 
-    private func menuChip(_ text: String, emphasized: Bool) -> some View {
+    private func menuToken(_ text: String, emphasized: Bool) -> some View {
         HStack(spacing: 4) {
             Text(text)
                 .fontWeight(emphasized ? .semibold : .regular)
@@ -109,7 +109,7 @@ struct SmartAlbumRuleRow: View {
     }
 
     /// Free-typed value with inline autocomplete: matching indexed values show
-    /// as tappable chips beneath the field (no dropdown button).
+    /// as tappable tokens beneath the field (no dropdown button).
     private var textEditor: some View {
         VStack(alignment: .leading, spacing: 6) {
             TextField("Value", text: $rule.text)

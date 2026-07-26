@@ -127,8 +127,8 @@ final class AppDatabase: Sendable {
             }
         }
 
-        // Dashboard chart widgets for the Statistics screen. `config` holds a
-        // JSON-encoded `ChartWidget` string (like `smart_albums.criteria`);
+        // Dashboard chart specs for the Statistics screen. `config` holds a
+        // JSON-encoded `ChartSpec` string (like `smart_albums.criteria`);
         // `position` is the display order. Seeded with defaults on first use.
         migrator.registerMigration("v4-statCharts") { db in
             try db.create(table: "stat_charts") { t in

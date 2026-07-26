@@ -14,11 +14,11 @@ import UIKit
 /// Also the only place that can answer "does this layer actually have a frame
 /// yet" — `isReadyForDisplay` is reported to the controller, which needs it to
 /// tell a buffering clip apart from a black screen that will never resolve.
-struct ZoomableVideoSurface: UIViewRepresentable {
+struct ZoomableVideoView: UIViewRepresentable {
     let controller: VideoPlaybackController
     let player: AVPlayer
     /// Changing this snaps zoom back to fit. Entering or leaving immersive
-    /// fullscreen re-lays-out the surface, so a zoom left over from the previous
+    /// fullscreen re-lays-out the view, so a zoom left over from the previous
     /// geometry would be pointing at the wrong part of the frame.
     let resetToken: Int
     /// Normalized scale (1 = fit). Feeds the same host state the image path
@@ -28,7 +28,7 @@ struct ZoomableVideoSurface: UIViewRepresentable {
     /// Location-independent: the caller pauses on any tap while playing, and
     /// toggles chrome otherwise.
     let onSingleTap: () -> Void
-    /// Tap location plus the surface's own size, in the scroll view's coordinates.
+    /// Tap location plus the view's own size, in the scroll view's coordinates.
     /// The caller maps halves to ∓10 s — including the rotated fullscreen case,
     /// which is why the size travels with the point.
     let onDoubleTap: (CGPoint, CGSize) -> Void
@@ -125,10 +125,10 @@ struct ZoomableVideoSurface: UIViewRepresentable {
         private var onSingleTap: (() -> Void)?
         private var onDoubleTap: ((CGPoint, CGSize) -> Void)?
 
-        func apply(_ surface: ZoomableVideoSurface) {
-            onZoomChange = surface.onZoomChange
-            onSingleTap = surface.onSingleTap
-            onDoubleTap = surface.onDoubleTap
+        func apply(_ view: ZoomableVideoView) {
+            onZoomChange = view.onZoomChange
+            onSingleTap = view.onSingleTap
+            onDoubleTap = view.onDoubleTap
         }
 
         func observe(_ layer: AVPlayerLayer, controller: VideoPlaybackController) {

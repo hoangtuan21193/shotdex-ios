@@ -153,7 +153,7 @@ struct PhotoDetailScreen: View {
                     handleVideoPlaybackChange(playing)
                 },
                 onVideoInteraction: showVideoChromeAndScheduleHide,
-                onVideoSurfaceTap: toggleVideoChromeFromSurface,
+                onVideoTap: toggleVideoChrome,
                 onDragProgress: { translationY in
                     dragOffset = CGSize(width: 0, height: max(0, translationY))
                 },
@@ -451,7 +451,7 @@ struct PhotoDetailScreen: View {
         }
     }
 
-    private func toggleVideoChromeFromSurface() {
+    private func toggleVideoChrome() {
         guard isCurrentVideo else { return }
         if isVideoChromeVisible {
             guard isCurrentVideoPlaying else { return }
@@ -806,7 +806,7 @@ private struct VideoFullscreenLayout: ViewModifier {
     }
 }
 
-/// Photos-style video surface and bottom transport. The controls intentionally
+/// Photos-style video view and bottom transport. The controls intentionally
 /// live only at the bottom: the viewer's Close + info chrome owns the top row,
 /// so mute and AirPlay can never be covered by it.
 private struct DetailVideoPlayer: View {
@@ -821,7 +821,7 @@ private struct DetailVideoPlayer: View {
     let onFullscreenChange: (Bool) -> Void
     let onPlaybackChange: (Bool) -> Void
     let onInteraction: () -> Void
-    let onSurfaceTap: () -> Void
+    let onContentTap: () -> Void
     let onZoomChange: (CGFloat) -> Void
 
     /// Bumped on every ±10 s seek so the matching centre button re-runs its
@@ -835,9 +835,9 @@ private struct DetailVideoPlayer: View {
     @State private var showBufferingIndicator = false
     @State private var bufferingIndicatorTask: Task<Void, Never>?
     @State private var frameSaveTask: Task<Void, Never>?
-    /// Mirrored from the surface's own zoom so the centre cluster can get out of
+    /// Mirrored from the video view own zoom so the centre cluster can get out of
     /// the way. The host's `isZoomed` only drives the viewer chrome, not this.
-    @State private var isSurfaceZoomed = false
+    @State private var isContentZoomed = false
     /// Whether the opening autoplay window is over. Opening a clip is for watching
     /// it, not for looking at buttons, so during that first window only the bottom
     /// panel appears. Resets per page — this view is rebuilt for each one.
@@ -850,21 +850,21 @@ private struct DetailVideoPlayer: View {
         GeometryReader { proxy in
             ZStack {
                 if let player = controller.player {
-                    ZoomableVideoSurface(
+                    ZoomableVideoView(
                         controller: controller,
                         player: player,
-                        // Fullscreen re-lays-out the surface; a zoom carried
+                        // Fullscreen re-lays-out the video view; a zoom carried
                         // across would frame the wrong region.
                         resetToken: isFullscreen ? 1 : 0,
                         onZoomChange: { scale in
-                            isSurfaceZoomed = scale > 1.01
+                            isContentZoomed = scale > 1.01
                             onZoomChange(scale)
                         },
                         onSingleTap: handleSingleTap,
                         onDoubleTap: { location, size in
                             handleDoubleTap(
                                 at: location,
-                                surfaceSize: size,
+                                contentSize: size,
                                 containerSize: proxy.size
                             )
                         }
@@ -941,7 +941,7 @@ private struct DetailVideoPlayer: View {
             // the toggle resolves to *hide* rather than show.
             if playing, didRequestHideOnPlay {
                 didRequestHideOnPlay = false
-                onSurfaceTap()
+                onContentTap()
             }
         }
         .onChange(of: controller.phase) { _, phase in
@@ -972,7 +972,7 @@ private struct DetailVideoPlayer: View {
     ///
     /// Still hidden on its own whenever something else owns the middle of the
     /// frame: the phase overlays, the transient frame-save badge, and a zoomed
-    /// surface — three 56–68 pt circles sit exactly where the inner pan gesture is
+    /// video — three 56–68 pt circles sit exactly where the inner pan gesture is
     /// needed.
     private var isCenterTransportVisible: Bool {
         isActive
@@ -980,7 +980,7 @@ private struct DetailVideoPlayer: View {
             && controller.player != nil
             && controller.phase.isReady
             && (didLeaveOpeningAutoplay || !controller.isPlaying)
-            && !isSurfaceZoomed
+            && !isContentZoomed
             && !controller.isSavingFrame
             && controller.frameSaveOutcome == nil
     }
@@ -989,7 +989,7 @@ private struct DetailVideoPlayer: View {
     /// because that is where the thumb already is — a 44 pt play button wedged
     /// between the panel edge and the elapsed label was both small and covered by
     /// the hand reaching for it. Dimmed circles rather than a `GlassPanel`: this
-    /// floats directly on the video, not on a surface.
+    /// floats directly on the video, not on a panel.
     private var centerTransport: some View {
         HStack(spacing: 28) {
             centerButton(
@@ -1097,7 +1097,7 @@ private struct DetailVideoPlayer: View {
     private var timelineRow: some View {
         HStack(spacing: 4) {
             // Deliberately a second play/pause, duplicating the centre cluster:
-            // the cluster steps aside while the surface is zoomed, and this row is
+            // the cluster steps aside while the video is zoomed, and this row is
             // the one place still on screen then. It does *not* set
             // `didRequestHideOnPlay` — the finger here is not covering the picture,
             // and hiding the panel would pull the scrubber out from under it.
@@ -1285,7 +1285,7 @@ private struct DetailVideoPlayer: View {
 
     // MARK: Status overlay
 
-    /// Always on top of the surface, independent of chrome visibility: a clip
+    /// Always on top of the video, independent of chrome visibility: a clip
     /// that cannot play must say so even after the transport has faded out.
     @ViewBuilder
     private var statusOverlay: some View {
@@ -1380,7 +1380,7 @@ private struct DetailVideoPlayer: View {
         .transition(.opacity)
     }
 
-    // MARK: Surface taps
+    // MARK: Content taps
 
     /// While the clip runs, a tap anywhere pauses — and pausing pins chrome open,
     /// so that same tap is also how the whole control set comes back. The previous
@@ -1393,24 +1393,24 @@ private struct DetailVideoPlayer: View {
             onInteraction()
             controller.pause()
         } else {
-            onSurfaceTap()
+            onContentTap()
         }
     }
 
     private func handleDoubleTap(
         at location: CGPoint,
-        surfaceSize: CGSize,
+        contentSize: CGSize,
         containerSize: CGSize
     ) {
-        // In immersive fullscreen the surface is rotated 90° inside its own
+        // In immersive fullscreen the video view is rotated 90° inside its own
         // bounds (`VideoFullscreenLayout`), so the tap arrives in pre-rotation
-        // coordinates: the screen's left/right halves are the surface's
+        // coordinates: the screen's left/right halves are the video view's
         // *vertical* axis. Whether that rotation happened is a property of the
-        // container, but the midpoint to compare against belongs to the surface.
+        // container, but the midpoint to compare against belongs to the video view.
         let isRotated = isFullscreen && containerSize.height > containerSize.width
         let isLeading = isRotated
-            ? location.y > surfaceSize.height / 2
-            : location.x < surfaceSize.width / 2
+            ? location.y > contentSize.height / 2
+            : location.x < contentSize.width / 2
         handleSkip(isLeading: isLeading)
     }
 
@@ -1524,7 +1524,7 @@ struct PhotoDetailPage: View {
     /// Keeps outer viewer chrome synchronized with the active player's state.
     var onVideoPlaybackChange: ((Bool) -> Void)?
     var onVideoInteraction: (() -> Void)?
-    var onVideoSurfaceTap: (() -> Void)?
+    var onVideoTap: (() -> Void)?
 
     @State private var image: UIImage?
     @State private var imageQuality: ImageQuality = .none
@@ -1574,7 +1574,7 @@ struct PhotoDetailPage: View {
                     onFullscreenChange: { onVideoFullscreenChange?($0) },
                     onPlaybackChange: { onVideoPlaybackChange?($0) },
                     onInteraction: { onVideoInteraction?() },
-                    onSurfaceTap: { onVideoSurfaceTap?() },
+                    onContentTap: { onVideoTap?() },
                     // Same channel the image path uses, so suppressing
                     // swipe-to-dismiss / swipe-up-for-metadata while zoomed
                     // needs no video-specific plumbing.
@@ -1991,7 +1991,7 @@ private struct PhotoPager: UIViewControllerRepresentable {
     let onVideoFullscreenChange: (Bool) -> Void
     let onVideoPlaybackChange: (Int, Bool) -> Void
     let onVideoInteraction: () -> Void
-    let onVideoSurfaceTap: () -> Void
+    let onVideoTap: () -> Void
     let onDragProgress: (CGFloat) -> Void
     let onDragEnded: (Bool) -> Void
     /// Zoom scale of the current page — drives chrome hide-on-zoom.
@@ -2083,8 +2083,8 @@ private struct PhotoPager: UIViewControllerRepresentable {
                 onVideoInteraction: { [weak self] in
                     self?.parent.onVideoInteraction()
                 },
-                onVideoSurfaceTap: { [weak self] in
-                    self?.parent.onVideoSurfaceTap()
+                onVideoTap: { [weak self] in
+                    self?.parent.onVideoTap()
                 }
             )
             .environment(parent.photoLibrary)

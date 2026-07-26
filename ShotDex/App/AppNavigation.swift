@@ -8,21 +8,21 @@ import SwiftUI
 final class AppNavigation {
     var selectedTab: AppTab = .library
 
-    /// Whether the left slide-in settings drawer is showing.
-    var isSettingsDrawerOpen = false
+    /// Whether the Settings sheet is showing.
+    var isSettingsSheetPresented = false
 
     /// Set while a screen is in photo multi-select mode. The iOS 26 native tab
     /// bar is hidden per-screen via `.toolbar(.hidden, for: .tabBar)`.
-    /// Legacy: the pre-26 scaffold used to gate its custom tab bar on this, but
+    /// Legacy: the pre-26 tab chrome used to gate its custom tab bar on this, but
     /// it now swaps to the selection bar on `selectionBar != nil` instead. Kept
     /// as a harmless signal; screens still set it.
     var hidesTabBar = false
 
-    /// Published by the screen currently in multi-select so the root scaffold
+    /// Published by the screen currently in multi-select so the root tab view
     /// can host the selection bar in the tab bar's own slot — the tab bar and
     /// the selection bar crossfade in place (one animation) instead of living in
     /// two different containers. `nil` when nothing is selecting.
-    var selectionBar: SelectionBarConfig?
+    var selectionBar: SelectionBarModel?
 
     /// Extra bottom padding a grid adds to its content while selecting. The
     /// selection chrome is system-managed safe area on both tiers (iOS 26 tab-bar

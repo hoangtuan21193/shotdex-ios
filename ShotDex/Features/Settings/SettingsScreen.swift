@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Settings content, hosted in the left slide-in drawer: photo library /
+/// Settings content, hosted in a bottom sheet: photo library /
 /// index controls, display options, camera database, statistics options,
 /// privacy.
 struct SettingsScreen: View {

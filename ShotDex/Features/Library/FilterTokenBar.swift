@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// Horizontal chips describing the active filter conditions, with the
+/// Horizontal tokens describing the active filter conditions, with the
 /// match count and a Clear All button.
-struct FilterChipsBar: View {
+struct FilterTokenBar: View {
     @Binding var criteria: FilterCriteria
     let matchCount: Int
     /// Read-only header (smart-album detail): show conditions but hide the
@@ -16,8 +16,8 @@ struct FilterChipsBar: View {
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(.secondary)
 
-                ForEach(chips, id: \.label) { chip in
-                    chipView(chip)
+                ForEach(tokens, id: \.label) { token in
+                    tokenView(token)
                 }
 
                 if !readOnly {
@@ -33,14 +33,14 @@ struct FilterChipsBar: View {
         .background(Color(.systemBackground))
     }
 
-    private struct Chip {
+    private struct FilterToken {
         var label: String
         var clear: (inout FilterCriteria) -> Void
     }
 
-    private func chipView(_ chip: Chip) -> some View {
+    private func tokenView(_ token: FilterToken) -> some View {
         HStack(spacing: 4) {
-            Text(chip.label)
+            Text(token.label)
                 .lineLimit(1)
             if !readOnly {
                 Image(systemName: "xmark.circle.fill")
@@ -55,54 +55,54 @@ struct FilterChipsBar: View {
         .onTapGesture {
             guard !readOnly else { return }
             var updated = criteria
-            chip.clear(&updated)
+            token.clear(&updated)
             criteria = updated
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Filter: \(chip.label)")
+        .accessibilityLabel("Filter: \(token.label)")
         .accessibilityHint(readOnly ? "" : "Double tap to remove")
         .accessibilityAddTraits(readOnly ? [] : .isButton)
     }
 
-    private var chips: [Chip] {
-        var result: [Chip] = []
+    private var tokens: [FilterToken] {
+        var result: [FilterToken] = []
         for brand in criteria.cameraBrands.sorted() {
-            result.append(Chip(label: brand) { $0.cameraBrands.remove(brand) })
+            result.append(FilterToken(label: brand) { $0.cameraBrands.remove(brand) })
         }
         for body in criteria.cameraBodies.sorted() {
-            result.append(Chip(label: body) { $0.cameraBodies.remove(body) })
+            result.append(FilterToken(label: body) { $0.cameraBodies.remove(body) })
         }
         for lens in criteria.lenses.sorted() {
-            result.append(Chip(label: lens) { $0.lenses.remove(lens) })
+            result.append(FilterToken(label: lens) { $0.lenses.remove(lens) })
         }
         for format in criteria.sensorFormats.sorted(by: { $0.rawValue < $1.rawValue }) {
-            result.append(Chip(label: format.displayName) { $0.sensorFormats.remove(format) })
+            result.append(FilterToken(label: format.displayName) { $0.sensorFormats.remove(format) })
         }
         // Free-typed contains-terms (from smart albums): show so the applied
         // LIKE conditions are visible and individually removable.
         for term in criteria.cameraBrandTerms {
-            result.append(Chip(label: "Brand: \(term)") { $0.cameraBrandTerms.removeAll { $0 == term } })
+            result.append(FilterToken(label: "Brand: \(term)") { $0.cameraBrandTerms.removeAll { $0 == term } })
         }
         for term in criteria.cameraBodyTerms {
-            result.append(Chip(label: "Camera: \(term)") { $0.cameraBodyTerms.removeAll { $0 == term } })
+            result.append(FilterToken(label: "Camera: \(term)") { $0.cameraBodyTerms.removeAll { $0 == term } })
         }
         for term in criteria.lensTerms {
-            result.append(Chip(label: "Lens: \(term)") { $0.lensTerms.removeAll { $0 == term } })
+            result.append(FilterToken(label: "Lens: \(term)") { $0.lensTerms.removeAll { $0 == term } })
         }
         if !criteria.isoRange.isEmpty {
-            result.append(Chip(label: rangeLabel("ISO", criteria.isoRange, format: { String(Int($0)) })) {
+            result.append(FilterToken(label: rangeLabel("ISO", criteria.isoRange, format: { String(Int($0)) })) {
                 $0.isoRange = NumericRangeFilter()
             })
         }
         if !criteria.shutterRange.isEmpty {
-            result.append(Chip(label: rangeLabel("Shutter", criteria.shutterRange, format: {
+            result.append(FilterToken(label: rangeLabel("Shutter", criteria.shutterRange, format: {
                 FormatUtils.shutterSpeed($0) ?? String($0)
             })) {
                 $0.shutterRange = NumericRangeFilter()
             })
         }
         if !criteria.apertureRange.isEmpty {
-            result.append(Chip(label: rangeLabel("Aperture", criteria.apertureRange, format: {
+            result.append(FilterToken(label: rangeLabel("Aperture", criteria.apertureRange, format: {
                 FormatUtils.aperture($0) ?? String($0)
             })) {
                 $0.apertureRange = NumericRangeFilter()
@@ -110,14 +110,14 @@ struct FilterChipsBar: View {
         }
         if !criteria.focalRange.isEmpty {
             let prefix = criteria.focalLengthMode == .equivalent ? "FF Eq." : "Focal"
-            result.append(Chip(label: rangeLabel(prefix, criteria.focalRange, format: {
+            result.append(FilterToken(label: rangeLabel(prefix, criteria.focalRange, format: {
                 FormatUtils.focalLength($0) ?? String($0)
             })) {
                 $0.focalRange = NumericRangeFilter()
             })
         }
         if let text = criteria.searchText, !text.isEmpty {
-            result.append(Chip(label: "“\(text)”") { $0.searchText = nil })
+            result.append(FilterToken(label: "“\(text)”") { $0.searchText = nil })
         }
         return result
     }
