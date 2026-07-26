@@ -4,6 +4,28 @@ import Testing
 
 struct VideoTransportMathTests {
 
+    // MARK: clamped
+
+    @Test func clampedKeepsPositionInsideClip() {
+        #expect(VideoTransportMath.clamped(seconds: 12, duration: 60) == 12)
+        #expect(VideoTransportMath.clamped(seconds: -3, duration: 60) == 0)
+        #expect(VideoTransportMath.clamped(seconds: 90, duration: 60) == 60)
+    }
+
+    /// Every scrub/seek target passes through here, and an unresolved iCloud
+    /// duration must not pin the position to 0 — that would make the scrubber
+    /// unusable until AVFoundation catches up.
+    @Test func clampedWithUnresolvedDurationEnforcesOnlyLowerBound() {
+        #expect(VideoTransportMath.clamped(seconds: 90, duration: .nan) == 90)
+        #expect(VideoTransportMath.clamped(seconds: 90, duration: 0) == 90)
+        #expect(VideoTransportMath.clamped(seconds: -1, duration: .nan) == 0)
+    }
+
+    @Test func clampedRejectsNonFinitePosition() {
+        #expect(VideoTransportMath.clamped(seconds: .nan, duration: 60) == 0)
+        #expect(VideoTransportMath.clamped(seconds: .infinity, duration: 60) == 0)
+    }
+
     // MARK: seekTarget
 
     @Test func seekForwardInsideClip() {
@@ -28,66 +50,6 @@ struct VideoTransportMathTests {
 
     @Test func seekFromNonFiniteCurrentStartsAtZero() {
         #expect(VideoTransportMath.seekTarget(current: .nan, duration: 60, delta: 10) == 10)
-    }
-
-    // MARK: frameStepTarget
-
-    @Test func frameStepForwardUsesTrackFrameRate() {
-        let target = VideoTransportMath.frameStepTarget(
-            current: 1,
-            frameRate: 50,
-            direction: 1,
-            duration: 60
-        )
-        #expect(abs(target - 1.02) < 0.0001)
-    }
-
-    @Test func frameStepHandlesFractionalRates() {
-        let ntsc = VideoTransportMath.frameStepTarget(
-            current: 0,
-            frameRate: 23.976,
-            direction: 1,
-            duration: 60
-        )
-        #expect(abs(ntsc - 1 / 23.976) < 0.000001)
-
-        let fast = VideoTransportMath.frameStepTarget(
-            current: 0,
-            frameRate: 59.94,
-            direction: 1,
-            duration: 60
-        )
-        #expect(abs(fast - 1 / 59.94) < 0.000001)
-    }
-
-    @Test func frameStepFallsBackWhenTrackHasNoRate() {
-        let target = VideoTransportMath.frameStepTarget(
-            current: 0,
-            frameRate: 0,
-            direction: 1,
-            duration: 60
-        )
-        #expect(abs(target - 1 / VideoTransportMath.fallbackFrameRate) < 0.000001)
-    }
-
-    @Test func frameStepBackAtStartStaysAtZero() {
-        let target = VideoTransportMath.frameStepTarget(
-            current: 0,
-            frameRate: 30,
-            direction: -1,
-            duration: 60
-        )
-        #expect(target == 0)
-    }
-
-    @Test func frameStepForwardAtEndStaysAtDuration() {
-        let target = VideoTransportMath.frameStepTarget(
-            current: 60,
-            frameRate: 30,
-            direction: 1,
-            duration: 60
-        )
-        #expect(target == 60)
     }
 
     // MARK: timelineUpperBound

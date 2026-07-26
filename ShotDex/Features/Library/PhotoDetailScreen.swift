@@ -117,7 +117,7 @@ struct PhotoDetailScreen: View {
     /// transport one spacing tier above that visual bloom.
     private static let videoActionBarClearance: CGFloat = 40
     private static let estimatedActionBarHeight: CGFloat = 64
-    private static let videoChromeIdleDelay: Duration = .seconds(5)
+    private static let videoChromeIdleDelay: Duration = .seconds(3)
 
     var body: some View {
         ZStack {
@@ -769,58 +769,6 @@ private struct ICloudDownloadRing: View {
     }
 }
 
-/// Full-bleed video rendering without AVKit's automatically positioned chrome.
-///
-/// Also the only place that can answer "does this layer actually have a frame
-/// yet" — `isReadyForDisplay` is reported to the controller, which needs it to
-/// tell a buffering clip apart from a black screen that will never resolve.
-private struct VideoPlayerSurface: UIViewRepresentable {
-    let controller: VideoPlaybackController
-    let player: AVPlayer
-
-    func makeUIView(context: Context) -> PlayerView {
-        let view = PlayerView()
-        view.backgroundColor = .black
-        view.playerLayer.videoGravity = .resizeAspect
-        view.playerLayer.player = player
-        context.coordinator.observe(view.playerLayer, controller: controller)
-        return view
-    }
-
-    func updateUIView(_ view: PlayerView, context: Context) {
-        // Only reassign when it genuinely changed. SwiftUI re-runs this on every
-        // chrome/inset change, and detaching then re-attaching the same player
-        // drops the displayed frame — a black flash for no reason.
-        guard view.playerLayer.player !== player else { return }
-        view.playerLayer.player = player
-        context.coordinator.observe(view.playerLayer, controller: controller)
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator() }
-
-    final class Coordinator {
-        private var observation: NSKeyValueObservation?
-
-        func observe(_ layer: AVPlayerLayer, controller: VideoPlaybackController) {
-            observation?.invalidate()
-            observation = layer.observe(
-                \.isReadyForDisplay,
-                options: [.initial, .new]
-            ) { _, change in
-                guard let ready = change.newValue else { return }
-                Task { @MainActor in controller.noteReadyForDisplay(ready) }
-            }
-        }
-
-        deinit { observation?.invalidate() }
-    }
-
-    final class PlayerView: UIView {
-        override static var layerClass: AnyClass { AVPlayerLayer.self }
-        var playerLayer: AVPlayerLayer { layer as! AVPlayerLayer }
-    }
-}
-
 /// The system route picker keeps AirPlay / external-screen behavior native
 /// while allowing the rest of the transport to use a Photos-style layout.
 private struct VideoRoutePicker: UIViewRepresentable {
@@ -874,64 +822,75 @@ private struct DetailVideoPlayer: View {
     let onPlaybackChange: (Bool) -> Void
     let onInteraction: () -> Void
     let onSurfaceTap: () -> Void
+    let onZoomChange: (CGFloat) -> Void
 
-    /// Transient double-tap acknowledgement. Identified by a token so two skips
-    /// in the same direction restart the animation instead of merging.
-    private struct SeekFeedback: Equatable {
-        enum Kind { case skipBack, skipForward, frameBack, frameForward }
-        let token: Int
-        let kind: Kind
-
-        var isLeading: Bool { kind == .skipBack || kind == .frameBack }
-
-        var systemImage: String {
-            switch kind {
-            case .skipBack: return "gobackward.10"
-            case .skipForward: return "goforward.10"
-            case .frameBack: return "backward.frame.fill"
-            case .frameForward: return "forward.frame.fill"
-            }
-        }
-
-        var caption: String {
-            switch kind {
-            case .skipBack, .skipForward: return "10s"
-            case .frameBack, .frameForward: return "1 frame"
-            }
-        }
-
-    }
-
-    @State private var seekFeedback: SeekFeedback?
-    @State private var seekFeedbackToken = 0
-    @State private var seekFeedbackTask: Task<Void, Never>?
+    /// Bumped on every ±10 s seek so the matching centre button re-runs its
+    /// bounce. A plain counter rather than a timed overlay: `symbolEffect`
+    /// restarts on each new value, which is what makes rapid taps read as
+    /// separate skips.
+    @State private var skipBackPulse = 0
+    @State private var skipForwardPulse = 0
     /// Delays the spinner so a locally cached clip never flashes one — same
     /// grace the image path uses.
     @State private var showBufferingIndicator = false
     @State private var bufferingIndicatorTask: Task<Void, Never>?
     @State private var frameSaveTask: Task<Void, Never>?
+    /// Mirrored from the surface's own zoom so the centre cluster can get out of
+    /// the way. The host's `isZoomed` only drives the viewer chrome, not this.
+    @State private var isSurfaceZoomed = false
+    /// Whether the opening autoplay window is over. Opening a clip is for watching
+    /// it, not for looking at buttons, so during that first window only the bottom
+    /// panel appears. Resets per page — this view is rebuilt for each one.
+    @State private var didLeaveOpeningAutoplay = false
+    /// The user just pressed ▶ on the centre cluster, so chrome has to go away the
+    /// moment playback actually starts.
+    @State private var didRequestHideOnPlay = false
 
     var body: some View {
         GeometryReader { proxy in
             ZStack {
                 if let player = controller.player {
-                    VideoPlayerSurface(controller: controller, player: player)
-                        .contentShape(Rectangle())
-                        // The double-tap handler must be attached first: SwiftUI
-                        // resolves the higher tap count before the single tap.
-                        .onTapGesture(count: 2, coordinateSpace: .local) { location in
-                            handleDoubleTap(at: location, containerSize: proxy.size)
+                    ZoomableVideoSurface(
+                        controller: controller,
+                        player: player,
+                        // Fullscreen re-lays-out the surface; a zoom carried
+                        // across would frame the wrong region.
+                        resetToken: isFullscreen ? 1 : 0,
+                        onZoomChange: { scale in
+                            isSurfaceZoomed = scale > 1.01
+                            onZoomChange(scale)
+                        },
+                        onSingleTap: handleSingleTap,
+                        onDoubleTap: { location, size in
+                            handleDoubleTap(
+                                at: location,
+                                surfaceSize: size,
+                                containerSize: proxy.size
+                            )
                         }
-                        .onTapGesture(perform: onSurfaceTap)
+                    )
                 } else {
                     Color.black
                 }
 
-                statusOverlay
+                // Below `statusOverlay`: the spinner, the iCloud ring and the
+                // failure card all share this centre, and a clip that cannot
+                // play must not have transport sitting on top of the reason.
+                //
+                // Opacity rather than `if` + transition: visibility is derived
+                // from `controller.isPlaying`, which changes outside any
+                // `withAnimation`, so an insert/remove transition would pop.
+                centerTransport
+                    .opacity(isCenterTransportVisible ? 1 : 0)
+                    // Invisible must also mean untappable, otherwise the play
+                    // button swallows the tap that is supposed to pause.
+                    .allowsHitTesting(isCenterTransportVisible)
+                    .animation(
+                        reduceMotion ? nil : .easeInOut(duration: 0.18),
+                        value: isCenterTransportVisible
+                    )
 
-                if let seekFeedback {
-                    seekFeedbackOverlay(seekFeedback)
-                }
+                statusOverlay
 
                 if isActive && isChromeVisible, controller.player != nil {
                     VStack(spacing: 0) {
@@ -966,8 +925,24 @@ private struct DetailVideoPlayer: View {
                 controller.pause()
             }
         }
+        .onChange(of: isChromeVisible) { _, visible in
+            if !visible {
+                didLeaveOpeningAutoplay = true
+            }
+        }
         .onChange(of: controller.isPlaying) { _, playing in
+            if !playing {
+                didLeaveOpeningAutoplay = true
+            }
             onPlaybackChange(playing)
+            // Pressing ▶ has to clear the screen at once — the button must not sit
+            // under the finger for another 3 s. Reuse the host's toggle path: the
+            // call above already set its `isCurrentVideoPlaying` synchronously, so
+            // the toggle resolves to *hide* rather than show.
+            if playing, didRequestHideOnPlay {
+                didRequestHideOnPlay = false
+                onSurfaceTap()
+            }
         }
         .onChange(of: controller.phase) { _, phase in
             syncBufferingIndicator(for: phase)
@@ -977,16 +952,137 @@ private struct DetailVideoPlayer: View {
         }
         .onDisappear {
             controller.pause()
-            seekFeedbackTask?.cancel()
             bufferingIndicatorTask?.cancel()
             frameSaveTask?.cancel()
         }
     }
 
-    /// Two rows in one glass panel: the timeline with its elapsed/remaining
-    /// labels, then the controls. Splitting them is what makes room for the time
-    /// labels at all — an eight-control single row cannot hold 44 pt targets on
-    /// a 393 pt phone.
+    // MARK: Centre transport
+
+    /// One control set with the bottom panel: panel shown means this is shown,
+    /// panel hidden means this is hidden. Gating on `!isPlaying` instead meant a
+    /// tap during playback raised only the panel while the centre cluster stayed
+    /// hidden — nothing to press.
+    ///
+    /// `didLeaveOpeningAutoplay || !isPlaying` are two opposite exceptions: during
+    /// the opening autoplay window (playing, chrome up, flag not yet set) the
+    /// middle of the frame stays clear, while a `.ready` clip that is *not*
+    /// playing must show the cluster even before the flag is set — otherwise a clip
+    /// that failed to autoplay would have no play button at all.
+    ///
+    /// Still hidden on its own whenever something else owns the middle of the
+    /// frame: the phase overlays, the transient frame-save badge, and a zoomed
+    /// surface — three 56–68 pt circles sit exactly where the inner pan gesture is
+    /// needed.
+    private var isCenterTransportVisible: Bool {
+        isActive
+            && isChromeVisible
+            && controller.player != nil
+            && controller.phase.isReady
+            && (didLeaveOpeningAutoplay || !controller.isPlaying)
+            && !isSurfaceZoomed
+            && !controller.isSavingFrame
+            && controller.frameSaveOutcome == nil
+    }
+
+    /// The primary controls sit over the middle of the picture, Photos-style,
+    /// because that is where the thumb already is — a 44 pt play button wedged
+    /// between the panel edge and the elapsed label was both small and covered by
+    /// the hand reaching for it. Dimmed circles rather than a `GlassPanel`: this
+    /// floats directly on the video, not on a surface.
+    private var centerTransport: some View {
+        HStack(spacing: 28) {
+            centerButton(
+                systemImage: "gobackward.10",
+                accessibilityLabel: "Skip back 10 seconds",
+                diameter: 56,
+                glyphSize: 22,
+                pulse: skipBackPulse
+            ) {
+                handleSkip(isLeading: true)
+            }
+
+            centerButton(
+                systemImage: controller.isPlaying ? "pause.fill" : "play.fill",
+                accessibilityLabel: controller.isPlaying ? "Pause" : "Play",
+                diameter: 68,
+                glyphSize: 30,
+                pulse: nil
+            ) {
+                onInteraction()
+                if !controller.isPlaying {
+                    didRequestHideOnPlay = true
+                }
+                controller.togglePlayPause()
+            }
+
+            centerButton(
+                systemImage: "goforward.10",
+                accessibilityLabel: "Skip forward 10 seconds",
+                diameter: 56,
+                glyphSize: 22,
+                pulse: skipForwardPulse
+            ) {
+                handleSkip(isLeading: false)
+            }
+        }
+    }
+
+    private func centerButton(
+        systemImage: String,
+        accessibilityLabel: String,
+        diameter: CGFloat,
+        glyphSize: CGFloat,
+        pulse: Int?,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            ZStack {
+                Circle().fill(.black.opacity(0.28))
+                centerGlyph(systemImage, size: glyphSize, pulse: pulse)
+            }
+            .frame(width: diameter, height: diameter)
+            .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    @ViewBuilder
+    private func centerGlyph(
+        _ systemImage: String,
+        size: CGFloat,
+        pulse: Int?
+    ) -> some View {
+        let glyph = Image(systemName: systemImage)
+            .font(.system(size: size, weight: .semibold))
+            .foregroundStyle(.white.opacity(0.92))
+        if let pulse, !reduceMotion {
+            glyph.symbolEffect(.bounce, options: .nonRepeating.speed(1.6), value: pulse)
+        } else {
+            glyph
+        }
+    }
+
+    /// Single entry point for ±10 s, so the centre buttons and the double-tap
+    /// produce identical state — including the bounce.
+    private func handleSkip(isLeading: Bool) {
+        onInteraction()
+        controller.skip(by: isLeading
+            ? -VideoPlaybackController.skipInterval
+            : VideoPlaybackController.skipInterval)
+        if isLeading {
+            skipBackPulse += 1
+        } else {
+            skipForwardPulse += 1
+        }
+    }
+
+    /// Two rows in one glass panel: play/pause + scrubber, then six secondary
+    /// controls spread across the full width. Moving the *primary* play/pause out
+    /// to `centerTransport` is what left room for loop and save-frame to become
+    /// permanent buttons instead of entries in an `ellipsis` menu, where a toggle
+    /// could not show its own state.
     private var transport: some View {
         GlassPanel(cornerRadius: 28) {
             VStack(spacing: 0) {
@@ -999,7 +1095,20 @@ private struct DetailVideoPlayer: View {
     }
 
     private var timelineRow: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 4) {
+            // Deliberately a second play/pause, duplicating the centre cluster:
+            // the cluster steps aside while the surface is zoomed, and this row is
+            // the one place still on screen then. It does *not* set
+            // `didRequestHideOnPlay` — the finger here is not covering the picture,
+            // and hiding the panel would pull the scrubber out from under it.
+            transportButton(
+                systemImage: controller.isPlaying ? "pause.fill" : "play.fill",
+                accessibilityLabel: controller.isPlaying ? "Pause" : "Play"
+            ) {
+                onInteraction()
+                controller.togglePlayPause()
+            }
+
             timeLabel(FormatUtils.duration(controller.displayTime))
 
             Slider(
@@ -1016,21 +1125,18 @@ private struct DetailVideoPlayer: View {
 
             timeLabel(remainingLabel)
         }
-        .padding(.horizontal, 4)
-        .frame(height: 32)
+        .frame(height: 44)
     }
 
+    /// `Spacer`s rather than fixed spacing: six 44 pt targets spread evenly
+    /// across whatever width the panel has. The narrowest case (375 pt phone,
+    /// minus the viewer's and the panel's padding) still leaves ~55 pt to
+    /// distribute, so nothing gets squeezed.
     private var controlsRow: some View {
         HStack(spacing: 0) {
             rateMenu
 
-            transportButton(
-                systemImage: controller.isPlaying ? "pause.fill" : "play.fill",
-                accessibilityLabel: controller.isPlaying ? "Pause" : "Play"
-            ) {
-                onInteraction()
-                controller.togglePlayPause()
-            }
+            Spacer(minLength: 0)
 
             transportButton(
                 systemImage: controller.isMuted
@@ -1042,11 +1148,28 @@ private struct DetailVideoPlayer: View {
                 controller.setMuted(!controller.isMuted)
             }
 
+            Spacer(minLength: 0)
+
             VideoRoutePicker()
                 .frame(width: 44, height: 44)
                 .contentShape(Rectangle())
 
-            moreMenu
+            Spacer(minLength: 0)
+
+            loopButton
+
+            Spacer(minLength: 0)
+
+            transportButton(
+                systemImage: "camera.viewfinder",
+                accessibilityLabel: "Save Frame to Photos"
+            ) {
+                onInteraction()
+                controller.saveCurrentFrame()
+            }
+            .disabled(controller.isSavingFrame)
+
+            Spacer(minLength: 0)
 
             transportButton(
                 systemImage: isFullscreen
@@ -1060,7 +1183,47 @@ private struct DetailVideoPlayer: View {
                 onFullscreenChange(!isFullscreen)
             }
         }
+        .padding(.horizontal, 4)
         .frame(height: 44)
+    }
+
+    /// Two distinct glyphs, both plain white, rather than one glyph plus a
+    /// highlight: on a bright frame a background disc or an opacity shift does not
+    /// read as on-vs-off.
+    ///
+    /// The slash is drawn by hand because SF Symbols has no `repeat.slash` — and
+    /// with no such symbol, `.symbolVariant(.slash)` is a no-op. The dark capsule
+    /// underneath is the knockout Apple's own `.slash` variants use; without it
+    /// the white bar disappears wherever it crosses the glyph's own strokes.
+    private var loopButton: some View {
+        Button {
+            onInteraction()
+            controller.setLooping(!controller.isLooping)
+        } label: {
+            Image(systemName: "repeat")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(.white)
+                .overlay {
+                    if !controller.isLooping {
+                        ZStack {
+                            Capsule()
+                                .fill(.black.opacity(0.65))
+                                .frame(width: 5, height: 26)
+                            Capsule()
+                                .fill(.white)
+                                .frame(width: 2, height: 26)
+                        }
+                        // Lower-left to upper-right, matching `speaker.slash`
+                        // and the rest of the family.
+                        .rotationEffect(.degrees(45))
+                    }
+                }
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Loop")
+        .accessibilityValue(controller.isLooping ? "On" : "Off")
     }
 
     private var rateMenu: some View {
@@ -1082,52 +1245,6 @@ private struct DetailVideoPlayer: View {
         .simultaneousGesture(TapGesture().onEnded { onInteraction() })
     }
 
-    /// Everything that does not earn a permanent 44 pt slot. Frame stepping also
-    /// lives on the paused double-tap; the menu entries are what make it
-    /// discoverable.
-    private var moreMenu: some View {
-        Menu {
-            Toggle(isOn: loopSelection) {
-                Label("Loop", systemImage: "repeat")
-            }
-
-            Section {
-                Button {
-                    onInteraction()
-                    controller.stepFrame(-1)
-                    showSeekFeedback(.frameBack)
-                } label: {
-                    Label("Previous Frame", systemImage: "backward.frame")
-                }
-                Button {
-                    onInteraction()
-                    controller.stepFrame(1)
-                    showSeekFeedback(.frameForward)
-                } label: {
-                    Label("Next Frame", systemImage: "forward.frame")
-                }
-            }
-
-            Section {
-                Button {
-                    onInteraction()
-                    controller.saveCurrentFrame()
-                } label: {
-                    Label("Save Frame to Photos", systemImage: "square.and.arrow.down")
-                }
-                .disabled(controller.isSavingFrame)
-            }
-        } label: {
-            Image(systemName: "ellipsis")
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 44, height: 44)
-                .contentShape(Rectangle())
-        }
-        .accessibilityLabel("More playback options")
-        .simultaneousGesture(TapGesture().onEnded { onInteraction() })
-    }
-
     private var rateSelection: Binding<Double> {
         Binding(
             get: { controller.rate },
@@ -1138,23 +1255,15 @@ private struct DetailVideoPlayer: View {
         )
     }
 
-    private var loopSelection: Binding<Bool> {
-        Binding(
-            get: { controller.isLooping },
-            set: { newValue in
-                onInteraction()
-                controller.setLooping(newValue)
-            }
-        )
-    }
-
     private func timeLabel(_ text: String) -> some View {
         Text(text)
             .font(.caption.monospacedDigit())
             .foregroundStyle(.white)
             // Fixed width so the scrubber does not shift when the digit count
-            // changes (0:09 → 0:10, or crossing a minute).
-            .frame(width: 46)
+            // changes (0:09 → 0:10, or crossing a minute). Wide enough for
+            // "-12:34" — play/pause shares this row, so the slider cannot spare
+            // any more.
+            .frame(width: 44)
     }
 
     /// Photos-style trailing label: time left, not total length. Blank until
@@ -1271,68 +1380,38 @@ private struct DetailVideoPlayer: View {
         .transition(.opacity)
     }
 
-    // MARK: Double-tap seek
+    // MARK: Surface taps
 
-    private func handleDoubleTap(at location: CGPoint, containerSize: CGSize) {
-        onInteraction()
+    /// While the clip runs, a tap anywhere pauses — and pausing pins chrome open,
+    /// so that same tap is also how the whole control set comes back. The previous
+    /// version only accepted a 160 pt box in the middle, an invisible boundary:
+    /// tap outside it and nothing happened, with no way to know why.
+    ///
+    /// Paused, the tap falls through to the chrome toggle as before.
+    private func handleSingleTap() {
+        if controller.isPlaying {
+            onInteraction()
+            controller.pause()
+        } else {
+            onSurfaceTap()
+        }
+    }
+
+    private func handleDoubleTap(
+        at location: CGPoint,
+        surfaceSize: CGSize,
+        containerSize: CGSize
+    ) {
         // In immersive fullscreen the surface is rotated 90° inside its own
         // bounds (`VideoFullscreenLayout`), so the tap arrives in pre-rotation
-        // local coordinates: the screen's left/right halves are the local
-        // *vertical* axis, and the local height is the container's width.
+        // coordinates: the screen's left/right halves are the surface's
+        // *vertical* axis. Whether that rotation happened is a property of the
+        // container, but the midpoint to compare against belongs to the surface.
         let isRotated = isFullscreen && containerSize.height > containerSize.width
         let isLeading = isRotated
-            ? location.y > containerSize.width / 2
-            : location.x < containerSize.width / 2
-        // Paused means the user is inspecting a specific moment; a 10 s jump is
-        // useless there, a single frame is exactly what they want.
-        if controller.isPlaying {
-            controller.skip(by: isLeading
-                ? -VideoPlaybackController.skipInterval
-                : VideoPlaybackController.skipInterval)
-            showSeekFeedback(isLeading ? .skipBack : .skipForward)
-        } else {
-            controller.stepFrame(isLeading ? -1 : 1)
-            showSeekFeedback(isLeading ? .frameBack : .frameForward)
-        }
-    }
-
-    private func showSeekFeedback(_ kind: SeekFeedback.Kind) {
-        seekFeedbackToken += 1
-        let feedback = SeekFeedback(token: seekFeedbackToken, kind: kind)
-        if reduceMotion {
-            seekFeedback = feedback
-        } else {
-            withAnimation(.easeOut(duration: 0.12)) { seekFeedback = feedback }
-        }
-        seekFeedbackTask?.cancel()
-        seekFeedbackTask = Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(550))
-            guard !Task.isCancelled, seekFeedback?.token == feedback.token else { return }
-            if reduceMotion {
-                seekFeedback = nil
-            } else {
-                withAnimation(.easeOut(duration: 0.25)) { seekFeedback = nil }
-            }
-        }
-    }
-
-    private func seekFeedbackOverlay(_ feedback: SeekFeedback) -> some View {
-        HStack(spacing: 0) {
-            if !feedback.isLeading { Spacer() }
-            VStack(spacing: 6) {
-                Image(systemName: feedback.systemImage)
-                    .font(.system(size: 30, weight: .semibold))
-                Text(feedback.caption)
-                    .font(.caption.weight(.semibold))
-            }
-            .foregroundStyle(.white)
-            .padding(24)
-            .background(Circle().fill(.black.opacity(0.4)))
-            .padding(.horizontal, 36)
-            if feedback.isLeading { Spacer() }
-        }
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
+            ? location.y > surfaceSize.height / 2
+            : location.x < surfaceSize.width / 2
+        handleSkip(isLeading: isLeading)
     }
 
     // MARK: Overlay timing
@@ -1495,7 +1574,11 @@ struct PhotoDetailPage: View {
                     onFullscreenChange: { onVideoFullscreenChange?($0) },
                     onPlaybackChange: { onVideoPlaybackChange?($0) },
                     onInteraction: { onVideoInteraction?() },
-                    onSurfaceTap: { onVideoSurfaceTap?() }
+                    onSurfaceTap: { onVideoSurfaceTap?() },
+                    // Same channel the image path uses, so suppressing
+                    // swipe-to-dismiss / swipe-up-for-metadata while zoomed
+                    // needs no video-specific plumbing.
+                    onZoomChange: handleZoom
                 )
             } else if let image {
                 ZoomableImageView(
@@ -1878,7 +1961,9 @@ struct PhotoDetailPage: View {
     /// upgrades to the full original on the first zoom-in.
     private func handleZoom(_ scale: CGFloat) {
         onZoomChange?(scale)
-        if scale > 1.01 { loadFullResolution() }
+        // Videos have nothing to upgrade to, and an image request here would
+        // fight the player's own iCloud progress for the info-panel ring.
+        if scale > 1.01, !isVideo { loadFullResolution() }
     }
 
 }

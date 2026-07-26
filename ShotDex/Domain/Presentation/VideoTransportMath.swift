@@ -1,7 +1,7 @@
 import Foundation
 
-/// Pure arithmetic behind the video transport: seek clamping, frame stepping,
-/// slider range, and exported-frame filenames.
+/// Pure arithmetic behind the video transport: seek clamping, slider range, and
+/// exported-frame filenames.
 ///
 /// Why this is a type and not inline view code: the viewer has no UI tests, and
 /// every one of these values has an edge case that produced a real bug —
@@ -10,37 +10,25 @@ import Foundation
 /// and the transport must never hand `Slider` a value outside its own range or
 /// `AVPlayer` a negative time. Keeping it here makes all of that testable.
 enum VideoTransportMath {
-    /// Frame rate assumed when the video track has not resolved one yet.
+    /// Frame rate assumed when the video track has not resolved one yet. Only
+    /// the exported frame's filename depends on it.
     static let fallbackFrameRate: Double = 30
 
-    /// Result of a relative seek (double-tap ±10 s), clamped into the clip.
+    /// An absolute position brought inside the clip.
     ///
     /// A non-finite or non-positive `duration` means AVFoundation has not
     /// resolved it yet; the clip length is then unknown, so only the lower
     /// bound can be enforced.
-    static func seekTarget(current: Double, duration: Double, delta: Double) -> Double {
-        let start = current.isFinite ? current : 0
-        let target = start + delta
-        guard target > 0 else { return 0 }
-        guard duration.isFinite, duration > 0 else { return target }
-        return min(target, duration)
+    static func clamped(seconds: Double, duration: Double) -> Double {
+        guard seconds.isFinite, seconds > 0 else { return 0 }
+        guard duration.isFinite, duration > 0 else { return seconds }
+        return min(seconds, duration)
     }
 
-    /// One frame forward (`direction > 0`) or back, in seconds.
-    ///
-    /// Stepping is deliberately expressed as a *time* rather than a frame index:
-    /// the caller seeks with zero tolerance, and a frame-index round trip would
-    /// need the exact timescale, which varies per clip (and is fractional for
-    /// 23.976 / 59.94 material).
-    static func frameStepTarget(
-        current: Double,
-        frameRate: Double,
-        direction: Int,
-        duration: Double
-    ) -> Double {
-        let rate = frameRate.isFinite && frameRate > 0 ? frameRate : fallbackFrameRate
-        let step = (direction >= 0 ? 1.0 : -1.0) / rate
-        return seekTarget(current: current, duration: duration, delta: step)
+    /// Result of a relative seek (double-tap ±10 s), clamped into the clip.
+    static func seekTarget(current: Double, duration: Double, delta: Double) -> Double {
+        let start = current.isFinite ? current : 0
+        return clamped(seconds: start + delta, duration: duration)
     }
 
     /// Upper bound for the scrubber's range.

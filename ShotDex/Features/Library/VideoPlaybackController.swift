@@ -31,7 +31,7 @@ enum VideoFrameSaveOutcome: Equatable {
 
 /// Owns one video page's `AVPlayer` and everything around it: the PhotoKit
 /// request, readiness/failure classification, the transport's derived state,
-/// and the extra transport actions (rate, loop, frame step, frame export).
+/// and the extra transport actions (rate, loop, frame export).
 ///
 /// Why a controller and not `@State` in the page view: the state machine needs
 /// KVO observers, a notification observer, a periodic time observer, a stall
@@ -48,7 +48,8 @@ final class VideoPlaybackController {
     /// video that never becomes playable reports in at the same point a stuck
     /// photo download does.
     private static let readinessTimeout: Duration = .seconds(15)
-    /// Relative seek applied by a double-tap on either half of the surface.
+    /// Relative seek applied by the centre skip buttons and by a double-tap on
+    /// either half of the surface.
     static let skipInterval: Double = 10
 
     // MARK: Observable state
@@ -61,7 +62,7 @@ final class VideoPlaybackController {
     private(set) var isMuted: Bool
     private(set) var rate: Double
     private(set) var isLooping: Bool
-    /// Nominal frame rate of the video track, for single-frame stepping.
+    /// Nominal frame rate of the video track, for the exported frame's filename.
     private(set) var frameRate: Double = VideoTransportMath.fallbackFrameRate
     private(set) var isScrubbing = false
     private(set) var scrubTime: Double = 0
@@ -79,6 +80,12 @@ final class VideoPlaybackController {
     }
 
     var displayTime: Double { isScrubbing ? scrubTime : currentTime }
+
+    /// True from the first seek request until the last one lands. While it holds,
+    /// the periodic clock must not write `currentTime`: the decoder is still
+    /// reporting the *pre-seek* position, and letting it through is exactly what
+    /// made the scrubber jump backwards and then forwards again on every skip.
+    private var isSeekSettling: Bool { isSeekInFlight || pendingSeek != nil }
 
     // MARK: Dependencies / plumbing
 
@@ -106,6 +113,14 @@ final class VideoPlaybackController {
     /// reports `isReadyForDisplay`, so it must not be gated on the layer.
     @ObservationIgnored private var hasVideoTrack = true
     @ObservationIgnored private var didActivateAudioSession = false
+    /// Newest requested position, waiting for the in-flight seek to land. Only
+    /// ever one seek is outstanding; a target that arrives mid-flight replaces
+    /// any earlier one, so a fast drag never queues a backlog of seeks.
+    @ObservationIgnored private var pendingSeek: (seconds: Double, tolerance: CMTime)?
+    @ObservationIgnored private var isSeekInFlight = false
+    /// Restored after a scrub. Dragging pauses playback (as Photos does) so
+    /// preview seeks and the decoder are not fighting for the same clock.
+    @ObservationIgnored private var wasPlayingBeforeScrub = false
     /// A `play()` that arrived before the item did. Video pages autoplay like
     /// Photos, and the request usually finishes *after* the page appears, so the
     /// intent has to be remembered rather than dropped.
@@ -122,13 +137,32 @@ final class VideoPlaybackController {
     init(defaults: UserDefaults = .standard) {
         let storedRate = defaults.double(forKey: Defaults.rate)
         rate = Self.supportedRates.contains(storedRate) ? storedRate : 1
-        isLooping = defaults.bool(forKey: Defaults.loop)
+        // `bool(forKey:)` cannot tell "never chosen" from "switched off", and the
+        // default has to be looping — a clip that stops dead at the last frame
+        // reads as the viewer having broken.
+        isLooping = defaults.object(forKey: Defaults.loop) as? Bool ?? true
         // Photos-style: video pages start muted, and the choice sticks for the
         // rest of the session's browsing.
         isMuted = defaults.object(forKey: Defaults.startsMuted) as? Bool ?? true
     }
 
     static let supportedRates: [Double] = [0.5, 1, 1.5, 2]
+
+    /// Seek accuracy per gesture. Precision is not free — zero tolerance forces
+    /// a decode from the preceding keyframe — so each gesture asks for only as
+    /// much as it needs.
+    private enum Tolerance {
+        /// Double-tap ±10 s: a sample-accurate landing would make the gesture
+        /// feel sticky, and nobody can tell 10.0 s from 10.05 s.
+        static let skip = CMTime(seconds: 0.1, preferredTimescale: 600)
+        /// While dragging the scrubber: loose enough to land on a nearby
+        /// keyframe, which is what keeps the preview moving with the finger on
+        /// long-GOP 4K material. The exact frame is delivered on release.
+        static let preview = CMTime(seconds: 0.5, preferredTimescale: 600)
+        /// Scrub release and the rewind at end-time: must land on the requested
+        /// frame.
+        static let exact = CMTime.zero
+    }
 
     // MARK: Lifecycle
 
@@ -205,6 +239,9 @@ final class VideoPlaybackController {
         frameSaveOutcome = nil
         isSavingFrame = false
         autoplayPending = false
+        pendingSeek = nil
+        isSeekInFlight = false
+        wasPlayingBeforeScrub = false
         phase = .idle
         onDownloadProgress?(0, false)
     }
@@ -350,8 +387,10 @@ final class VideoPlaybackController {
 
     private func handleBufferEmpty(_ value: Bool?) {
         // A mid-playback stall: keep the last frame but put the spinner back so
-        // the pause never reads as a frozen app.
-        guard value == true, phase.isReady else { return }
+        // the pause never reads as a frozen app. Seeking empties the buffer as a
+        // matter of course, though — without the seek guards every drag of the
+        // scrubber would strobe the spinner.
+        guard value == true, phase.isReady, !isScrubbing, !isSeekSettling else { return }
         phase = .buffering
     }
 
@@ -384,18 +423,16 @@ final class VideoPlaybackController {
         }
     }
 
+    /// Rewinds through the coalescing path, not `player.seek` directly — a bare
+    /// seek here let the periodic clock report the clip's end for a tick, which
+    /// flashed the scrubber back to full on every loop.
     private func handlePlayedToEnd() {
         guard let player else { return }
+        seek(to: 0, tolerance: Tolerance.exact)
         if isLooping {
-            player.seek(to: .zero)
-            currentTime = 0
-            scrubTime = 0
             player.play()
             applyRate()
         } else {
-            player.seek(to: .zero)
-            currentTime = 0
-            scrubTime = 0
             isPlaying = false
         }
     }
@@ -410,7 +447,7 @@ final class VideoPlaybackController {
             MainActor.assumeIsolated {
                 guard let self else { return }
                 let seconds = CMTimeGetSeconds(time)
-                if seconds.isFinite, !self.isScrubbing {
+                if seconds.isFinite, !self.isScrubbing, !self.isSeekSettling {
                     self.currentTime = max(0, seconds)
                 }
                 if let item = self.player?.currentItem {
@@ -516,50 +553,78 @@ final class VideoPlaybackController {
     func beginScrub() {
         scrubTime = currentTime
         isScrubbing = true
+        wasPlayingBeforeScrub = isPlaying
+        pause()
     }
 
     func endScrub() {
-        seek(to: scrubTime, precise: true)
         isScrubbing = false
+        seek(to: scrubTime, tolerance: Tolerance.exact)
+        if wasPlayingBeforeScrub {
+            play()
+        }
+        wasPlayingBeforeScrub = false
     }
 
+    /// Drives the preview: the frame under the thumb has to be the frame on
+    /// screen, otherwise the user is dragging blind. Coalesced, so drag events
+    /// arriving faster than the decoder can serve them never pile up.
     func updateScrub(_ value: Double) {
         scrubTime = value
+        seek(to: value, tolerance: Tolerance.preview)
     }
 
-    /// Double-tap ±10 s. Tolerance is loose on purpose: a sample-accurate seek
-    /// re-decodes from the previous keyframe and makes the gesture feel sticky.
+    /// ±10 s, from the centre buttons or a double-tap. Repeated taps accumulate
+    /// for free: `seek` writes the
+    /// optimistic position immediately and the clock stays suppressed, so
+    /// `displayTime` is already the last requested target.
     func skip(by delta: Double) {
         let target = VideoTransportMath.seekTarget(
             current: displayTime,
             duration: duration,
             delta: delta
         )
-        seek(to: target, precise: false)
+        seek(to: target, tolerance: Tolerance.skip)
     }
 
-    /// One frame in `direction`. Zero tolerance is required here, otherwise the
-    /// seek lands back on the frame it started from.
-    func stepFrame(_ direction: Int) {
-        let target = VideoTransportMath.frameStepTarget(
-            current: displayTime,
-            frameRate: frameRate,
-            direction: direction,
-            duration: duration
-        )
-        pause()
-        seek(to: target, precise: true)
+    /// Records the requested position, publishes it immediately, and hands the
+    /// actual seek to `dispatchPendingSeek`. The optimistic write is what makes
+    /// the scrubber track the gesture instead of the decoder.
+    private func seek(to seconds: Double, tolerance: CMTime) {
+        guard player != nil else { return }
+        let target = VideoTransportMath.clamped(seconds: seconds, duration: duration)
+        currentTime = target
+        scrubTime = target
+        pendingSeek = (target, tolerance)
+        dispatchPendingSeek()
     }
 
-    private func seek(to seconds: Double, precise: Bool) {
-        guard let player else { return }
-        let time = CMTime(seconds: seconds, preferredTimescale: 600)
-        let tolerance: CMTime = precise
-            ? .zero
-            : CMTime(seconds: 0.1, preferredTimescale: 600)
-        player.seek(to: time, toleranceBefore: tolerance, toleranceAfter: tolerance)
-        currentTime = seconds
-        scrubTime = seconds
+    private func dispatchPendingSeek() {
+        guard !isSeekInFlight, let player, let request = pendingSeek else { return }
+        pendingSeek = nil
+        isSeekInFlight = true
+        player.seek(
+            to: CMTime(seconds: request.seconds, preferredTimescale: 600),
+            toleranceBefore: request.tolerance,
+            toleranceAfter: request.tolerance
+        ) { [weak self] finished in
+            // The completion handler arrives on an arbitrary queue; only the
+            // Bool crosses over.
+            Task { @MainActor in self?.finishSeek(finished) }
+        }
+    }
+
+    private func finishSeek(_ finished: Bool) {
+        isSeekInFlight = false
+        // A newer target arrived while this one was in flight (fast drag, or
+        // repeated taps): serve the newest and keep the clock suppressed.
+        guard pendingSeek == nil else {
+            dispatchPendingSeek()
+            return
+        }
+        // `finished == false` with nothing queued means AVFoundation abandoned
+        // the seek on its own; releasing the clock lets it re-sync to reality.
+        _ = finished
     }
 
     // MARK: Frame export
