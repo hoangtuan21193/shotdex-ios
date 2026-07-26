@@ -1,7 +1,7 @@
 import Photos
 import SwiftUI
 
-/// Paginated grid of one album, reusing PhotoGridTile. Tapping opens the
+/// Paginated grid of one album, on the shared UIKit grid. Tapping opens the
 /// fullscreen viewer; multi-select (tap, long-press or swipe) offers
 /// Compare (2–4 photos) and Delete.
 struct AlbumDetailScreen: View {
@@ -90,7 +90,7 @@ struct AlbumDetailScreen: View {
             assetProvider: { _, item in controller.assetsById[item.assetId] },
             // Album fetch is hard-sorted by creationDate, so date headers
             // always apply here.
-            isDateSectioned: true,
+            sectionMode: .dates,
             anchorsBottom: false,
             // Constant: album content is only ever appended (paging) or
             // pruned (delete) — count changes reload without re-anchoring.

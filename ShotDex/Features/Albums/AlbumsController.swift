@@ -63,6 +63,37 @@ final class AlbumsController {
         var onThisDayCover: PHAsset?
     }
 
+    private struct CoverSnapshot: @unchecked Sendable {
+        var asset: PHAsset?
+    }
+
+    /// Physical-pixel target for the full-width hero. Using the native display
+    /// scale avoids the soft 1x rendition that is visible on 2x/3x screens.
+    static var onThisDayCoverTargetSize: CGSize {
+        let scale = UIScreen.main.scale
+        return CGSize(
+            width: UIScreen.main.bounds.width * scale,
+            height: 150 * scale
+        )
+    }
+
+    /// Warms the On This Day hero independently of the lazily mounted Albums
+    /// tab. Fetching the matching asset stays off-main; PhotoKit then prepares
+    /// the exact display-sized rendition and PhotoLibraryService retains it.
+    static func preheatOnThisDayCover(using photoLibrary: PhotoLibraryService) async {
+        let snapshot = await Task.detached(priority: .utility) {
+            CoverSnapshot(
+                asset: OnThisDayController.fetchAssets(for: .now).firstObject
+            )
+        }.value
+        guard let asset = snapshot.asset else { return }
+        _ = photoLibrary.requestAlbumCover(
+            for: asset,
+            targetSize: onThisDayCoverTargetSize,
+            allowNetwork: true
+        ) { _ in }
+    }
+
     func load() {
         guard !isLoading else { return }
         isLoading = true

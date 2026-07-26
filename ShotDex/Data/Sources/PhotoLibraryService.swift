@@ -1,3 +1,4 @@
+import AVFoundation
 import Foundation
 import ImageIO
 import Photos
@@ -33,6 +34,20 @@ enum PhotoImportError: Error {
     case creationFailed
 }
 
+/// Failures reading a video asset for playback.
+enum PhotoVideoError: LocalizedError {
+    /// PhotoKit returned neither a player item nor an error — the clip has no
+    /// playable version available (typically an iCloud item it will not serve).
+    case unavailable
+
+    var errorDescription: String? {
+        switch self {
+        case .unavailable:
+            return "This video isn’t available on this device."
+        }
+    }
+}
+
 /// Wraps PhotoKit: authorization, asset fetching, thumbnails, favorites,
 /// and library change observation. Nothing above this layer touches Photos.
 @MainActor
@@ -41,8 +56,15 @@ final class PhotoLibraryService: NSObject {
     private static let logger = Logger(subsystem: "com.hoangtuan.shotdex", category: "photoauth")
 
     private(set) var authorizationState: PhotoAuthorizationState
-    /// Bumped on every library change so views can re-fetch.
+    /// Bumped on every library change — including content-only ones (a rendition
+    /// downloaded, a favorite toggled). For consumers whose data can change
+    /// without the asset list changing: album lists and their counts.
     private(set) var libraryChangeToken = 0
+    /// Bumped only when the browsable asset list itself changed: insertions,
+    /// removals, or moves. The Library grid and the index pipeline observe this
+    /// one, so viewing a photo (which makes PhotoKit cache renditions) never
+    /// triggers a full-library reload or a fresh index pass.
+    private(set) var assetChangeToken = 0
 
     @ObservationIgnored
     private let imageManager = PHCachingImageManager()
@@ -57,13 +79,31 @@ final class PhotoLibraryService: NSObject {
         cache.totalCostLimit = 160 * 1_024 * 1_024
         return cache
     }()
+    /// Final, display-sized album hero covers. This is deliberately separate
+    /// from grid/detail caches: scrolling or paging must not evict the
+    /// On This Day cover that was warmed during app launch.
+    @ObservationIgnored
+    private let albumCoverImageCache: NSCache<NSString, UIImage> = {
+        let cache = NSCache<NSString, UIImage>()
+        cache.countLimit = 8
+        cache.totalCostLimit = 48 * 1_024 * 1_024
+        return cache
+    }()
     @ObservationIgnored
     private var isObservingChanges = false
-    /// Trailing-edge debounce for `libraryChangeToken`: iCloud downloads
-    /// during an index run fire `photoLibraryDidChange` per asset; bumping
-    /// the token each time would trigger a full-library reload per photo.
+    /// Trailing-edge debounce shared by both tokens: iCloud downloads during an
+    /// index run fire `photoLibraryDidChange` per asset; bumping a token each
+    /// time would trigger a full-library reload per photo.
     @ObservationIgnored
     private var pendingChangeTokenBump: Task<Void, Never>?
+    /// Set when any notification coalesced into the pending debounce window was
+    /// a structural change, so a content-only change arriving afterwards can't
+    /// swallow the `assetChangeToken` bump.
+    @ObservationIgnored
+    private var pendingStructuralChange = false
+    /// Baseline for classifying changes as structural vs content-only. Must be
+    /// seeded before the first notification arrives (see `startObservingChanges`)
+    /// — without it every change looks structural.
     @ObservationIgnored
     private(set) var allPhotosFetchResult: PHFetchResult<PHAsset>?
 
@@ -193,6 +233,75 @@ final class PhotoLibraryService: NSObject {
 
     func cancelThumbnailRequest(_ requestId: PHImageRequestID) {
         imageManager.cancelImageRequest(requestId)
+    }
+
+    /// Requests a display-sized album hero. Opportunistic delivery lets the
+    /// card paint any on-device preview immediately, then replaces it with the
+    /// exact rendition. The final image is retained in a dedicated decoded
+    /// cache so a launch-time preheat survives unrelated grid/detail traffic.
+    func requestAlbumCover(
+        for asset: PHAsset,
+        targetSize: CGSize,
+        allowNetwork: Bool = true,
+        completion: @escaping (UIImage?) -> Void
+    ) -> PHImageRequestID {
+        let cacheKey = albumCoverCacheKey(for: asset, targetSize: targetSize)
+        if let cached = albumCoverImageCache.object(forKey: cacheKey) {
+            Task { @MainActor in completion(cached) }
+            return PHInvalidImageRequestID
+        }
+
+        let options = PHImageRequestOptions()
+        options.deliveryMode = .opportunistic
+        options.resizeMode = .exact
+        options.isNetworkAccessAllowed = allowNetwork
+
+        return imageManager.requestImage(
+            for: asset,
+            targetSize: targetSize,
+            contentMode: .aspectFill,
+            options: options
+        ) { image, info in
+            let degraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+            if let image,
+               !degraded,
+               Self.hasAlbumCoverResolution(image, for: asset, targetSize: targetSize) {
+                let pixelWidth = image.cgImage?.width ?? Int(image.size.width * image.scale)
+                let pixelHeight = image.cgImage?.height ?? Int(image.size.height * image.scale)
+                self.albumCoverImageCache.setObject(
+                    image,
+                    forKey: cacheKey,
+                    cost: pixelWidth * pixelHeight * 4
+                )
+            }
+            Task { @MainActor in completion(image) }
+        }
+    }
+
+    private func albumCoverCacheKey(for asset: PHAsset, targetSize: CGSize) -> NSString {
+        let width = Int(targetSize.width.rounded(.up))
+        let height = Int(targetSize.height.rounded(.up))
+        return "\(asset.localIdentifier)|\(width)x\(height)|album-cover" as NSString
+    }
+
+    /// PhotoKit may label the best currently-local proxy as non-degraded even
+    /// when it is smaller than the requested hero. It can still be displayed
+    /// as a temporary fallback, but must not poison the sharp-cover cache.
+    private nonisolated static func hasAlbumCoverResolution(
+        _ image: UIImage,
+        for asset: PHAsset,
+        targetSize: CGSize
+    ) -> Bool {
+        let actual = [
+            CGFloat(image.cgImage?.width ?? Int(image.size.width * image.scale)),
+            CGFloat(image.cgImage?.height ?? Int(image.size.height * image.scale)),
+        ].sorted()
+        let expected = [
+            min(CGFloat(asset.pixelWidth), targetSize.width),
+            min(CGFloat(asset.pixelHeight), targetSize.height),
+        ].sorted()
+        return actual[0] >= expected[0] * 0.9
+            && actual[1] >= expected[1] * 0.9
     }
 
     /// Full-screen image for the detail viewer. Preview delivery also has a
@@ -517,6 +626,61 @@ final class PhotoLibraryService: NSObject {
             && actual[1] >= expected[1] * 0.9
     }
 
+    // MARK: Video
+
+    /// `AVPlayerItem` for the detail viewer's video pages.
+    ///
+    /// Deliberately a `Result` rather than an optional: PhotoKit returns `nil`
+    /// for a cancelled request, a genuine failure, and an iCloud item it cannot
+    /// serve, and the viewer must distinguish them — the earlier optional-based
+    /// call site silently dropped every one of those, leaving the page on a
+    /// spinner forever. `progress` reports the iCloud download 0…1 so the page
+    /// can show the same determinate ring the image path uses.
+    ///
+    /// Cancelled requests report nothing at all; the caller has already torn
+    /// its state down by then.
+    func requestPlayerItem(
+        for asset: PHAsset,
+        progress: @escaping (Double) -> Void,
+        completion: @escaping (Result<AVPlayerItem, Error>) -> Void
+    ) -> PHImageRequestID {
+        let options = PHVideoRequestOptions()
+        // Videos can only come from iCloud as a whole file, so unlike the image
+        // path there is no cheap local derivative to fall back to: network must
+        // be allowed or an offloaded clip is simply unplayable.
+        options.isNetworkAccessAllowed = true
+        options.deliveryMode = .automatic
+        options.version = .current
+        options.progressHandler = { value, _, _, _ in
+            Task { @MainActor in progress(value) }
+        }
+        return imageManager.requestPlayerItem(
+            forVideo: asset,
+            options: options
+        ) { item, info in
+            let cancelled = (info?[PHImageCancelledKey] as? Bool) ?? false
+            guard !cancelled else { return }
+            let error = info?[PHImageErrorKey] as? Error
+            // Hop to the main actor like every other request here, so a
+            // synchronous PhotoKit callback cannot beat the caller storing the
+            // request id it would need in order to cancel.
+            Task { @MainActor in
+                if let item {
+                    completion(.success(item))
+                } else {
+                    completion(.failure(error ?? PhotoVideoError.unavailable))
+                }
+            }
+        }
+    }
+
+    /// Cancels an in-flight `requestPlayerItem`. Same underlying request table
+    /// as the image requests, hence the shared cancel call.
+    func cancelVideoRequest(_ requestId: PHImageRequestID) {
+        guard requestId != PHInvalidImageRequestID else { return }
+        imageManager.cancelImageRequest(requestId)
+    }
+
     // MARK: Favorites
 
     /// Toggles the PhotoKit favorite flag. PhotoKit is the source of truth;
@@ -565,31 +729,82 @@ final class PhotoLibraryService: NSObject {
         return placeholderId
     }
 
+    /// Saves already-encoded image bytes as a new library asset — used by the
+    /// video viewer's "Save Frame to Photos". Data rather than a file URL so no
+    /// temporary file has to be written and cleaned up. Requires `.readWrite`
+    /// authorization (requested at launch), and the new asset reaches the index
+    /// through the normal `photoLibraryDidChange` path.
+    func saveImage(_ data: Data, filename: String) async throws -> String {
+        var placeholderId: String?
+        try await PHPhotoLibrary.shared().performChanges {
+            let request = PHAssetCreationRequest.forAsset()
+            let options = PHAssetResourceCreationOptions()
+            options.originalFilename = filename
+            request.addResource(with: .photo, data: data, options: options)
+            placeholderId = request.placeholderForCreatedAsset?.localIdentifier
+        }
+        guard let placeholderId else { throw PhotoImportError.creationFailed }
+        return placeholderId
+    }
+
     // MARK: Change observation
 
     private func startObservingChanges() {
         guard !isObservingChanges else { return }
         PHPhotoLibrary.shared().register(self)
         isObservingChanges = true
+        // Seed the classification baseline here, not only after an
+        // authorization request: on every launch after the first, `init`
+        // starts observation with no prior fetch result, and without one
+        // `photoLibraryDidChange` has to treat every change as structural.
+        // Cheap — `PHFetchResult` is lazy, nothing is materialized.
+        refreshAllPhotos()
     }
 }
 
 extension PhotoLibraryService: PHPhotoLibraryChangeObserver {
     nonisolated func photoLibraryDidChange(_ changeInstance: PHChange) {
         Task { @MainActor in
-            if let current = self.allPhotosFetchResult,
-               let details = changeInstance.changeDetails(for: current) {
-                self.allPhotosFetchResult = details.fetchResultAfterChanges
-            }
-            // The fetch result above stays current on every change; only the
-            // token consumers (full-screen reloads) are debounced to ≤1/s.
+            self.pendingStructuralChange =
+                self.pendingStructuralChange || self.isStructural(changeInstance)
+            // Both tokens share one trailing-edge debounce: iCloud downloads
+            // during an index run fire a change per asset, and a full-library
+            // reload per photo is what made the grid flicker and the device
+            // heat up. Consumers see ≤1 bump/s.
             guard self.pendingChangeTokenBump == nil else { return }
             self.pendingChangeTokenBump = Task { @MainActor in
-                defer { self.pendingChangeTokenBump = nil }
+                defer {
+                    self.pendingChangeTokenBump = nil
+                    self.pendingStructuralChange = false
+                }
                 try? await Task.sleep(for: .seconds(1))
                 guard !Task.isCancelled else { return }
                 self.libraryChangeToken += 1
+                // PhotoKit also reports content-only changes when an
+                // iCloud/local rendition is downloaded or cached, or a
+                // favorite is toggled. Those must not reload the grid or
+                // launch a fresh index pass after closing Detail.
+                if self.pendingStructuralChange {
+                    self.assetChangeToken += 1
+                }
             }
         }
+    }
+
+    /// Whether a change altered browsable asset membership or order, as opposed
+    /// to only the contents of assets that were already there. Also advances
+    /// the `allPhotosFetchResult` baseline.
+    private func isStructural(_ changeInstance: PHChange) -> Bool {
+        // No baseline (authorization not yet granted when observation started):
+        // can't classify, so assume the list moved.
+        guard let current = allPhotosFetchResult else { return true }
+        // Nil details = this change didn't touch the all-photos fetch result.
+        guard let details = changeInstance.changeDetails(for: current) else { return false }
+        allPhotosFetchResult = details.fetchResultAfterChanges
+        // PhotoKit couldn't compute a diff — treat as "reload everything".
+        guard details.hasIncrementalChanges else { return true }
+        return details.insertedIndexes?.isEmpty == false
+            || details.removedIndexes?.isEmpty == false
+            || details.hasMoves
     }
 }

@@ -49,6 +49,8 @@ struct PhotoDetailScreen: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(AppDependencies.self) private var dependencies
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let controller: any PhotoBrowsingSource
     @State var currentIndex: Int
@@ -60,12 +62,26 @@ struct PhotoDetailScreen: View {
     /// True while the current image is pinch/double-tap zoomed in — hides all
     /// chrome (top bar, action buttons, info panel) so nothing overlaps the photo.
     @State private var isZoomed = false
-    /// Measured height of the bottom info panel. Fed to the pager so a video's
-    /// native transport controls get bottom room and render ABOVE the panel.
+    /// Portrait immersive playback: hides viewer chrome without requesting an
+    /// interface rotation.
+    @State private var isVideoFullscreen = false
+    /// Shared visibility for every video overlay: transport, top info and bottom
+    /// actions disappear together after idle playback.
+    @State private var isVideoChromeVisible = true
+    @State private var isCurrentVideoPlaying = false
+    @State private var videoChromeHideTask: Task<Void, Never>?
+    /// Measured height of the bottom action bar. Fed to the pager so a video's
+    /// custom transport renders above the bar.
     @State private var bottomChromeHeight: CGFloat = 0
     /// Bottom safe-area inset (home indicator). The panel lives inside the safe
     /// area, so the video inset must clear this gap too, not just the panel.
     @State private var safeAreaBottom: CGFloat = 0
+    @State private var safeAreaTop: CGFloat = 0
+    /// Measured width of the info panel's content frame. The summary lines are
+    /// fitted to it, so the panel never truncates a value mid-word. Measured
+    /// once via `measureWidth` rather than a per-frame GeometryReader — the
+    /// dismiss drag re-evaluates this body every frame.
+    @State private var panelContentWidth: CGFloat = 0
     @State private var isShareUnavailable = false
     @State private var shareItems: [Any]?
     @State private var dragOffset: CGSize = .zero
@@ -97,6 +113,11 @@ struct PhotoDetailScreen: View {
 
     /// No-progress window before a download is declared stalled.
     private static let stallWindow: Duration = .seconds(15)
+    /// Glass buttons can render beyond their 52 pt layout bounds. Keep the
+    /// transport one spacing tier above that visual bloom.
+    private static let videoActionBarClearance: CGFloat = 40
+    private static let estimatedActionBarHeight: CGFloat = 64
+    private static let videoChromeIdleDelay: Duration = .seconds(5)
 
     var body: some View {
         ZStack {
@@ -111,7 +132,28 @@ struct PhotoDetailScreen: View {
                 photoLibrary: photoLibrary,
                 currentIndex: $currentIndex,
                 reseatToken: reseatToken,
-                videoBottomInset: bottomChromeHeight > 0 ? bottomChromeHeight + safeAreaBottom : 0,
+                videoBottomInset:
+                    max(bottomChromeHeight, Self.estimatedActionBarHeight)
+                    + safeAreaBottom
+                    + Self.videoActionBarClearance,
+                videoFullscreenEdgeInset: max(24, max(safeAreaTop, safeAreaBottom)),
+                isVideoFullscreen: isVideoFullscreen,
+                isVideoChromeVisible: isVideoChromeVisible,
+                onVideoFullscreenChange: { fullscreen in
+                    if reduceMotion {
+                        isVideoFullscreen = fullscreen
+                    } else {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            isVideoFullscreen = fullscreen
+                        }
+                    }
+                },
+                onVideoPlaybackChange: { index, playing in
+                    guard index == currentIndex else { return }
+                    handleVideoPlaybackChange(playing)
+                },
+                onVideoInteraction: showVideoChromeAndScheduleHide,
+                onVideoSurfaceTap: toggleVideoChromeFromSurface,
                 onDragProgress: { translationY in
                     dragOffset = CGSize(width: 0, height: max(0, translationY))
                 },
@@ -142,7 +184,7 @@ struct PhotoDetailScreen: View {
             )
             .ignoresSafeArea()
 
-            if !isZoomed {
+            if showsViewerChrome {
                 VStack(spacing: 8) {
                     HStack(alignment: .top, spacing: 8) {
                         GlassIconButton(systemImage: "xmark", accessibilityLabel: "Close") {
@@ -175,17 +217,24 @@ struct PhotoDetailScreen: View {
             // covers — how we read the home-indicator gap without disturbing the
             // safe-area-respecting chrome above.
             GeometryReader { proxy in
-                Color.clear.preference(key: SafeAreaBottomKey.self, value: proxy.safeAreaInsets.bottom)
+                Color.clear
+                    .preference(key: SafeAreaBottomKey.self, value: proxy.safeAreaInsets.bottom)
+                    .preference(key: SafeAreaTopKey.self, value: proxy.safeAreaInsets.top)
             }
             .ignoresSafeArea()
         )
         .onPreferenceChange(SafeAreaBottomKey.self) { safeAreaBottom = $0 }
+        .onPreferenceChange(SafeAreaTopKey.self) { safeAreaTop = $0 }
         .onPreferenceChange(ChromeHeightKey.self) { bottomChromeHeight = $0 }
         .offset(y: max(0, dragOffset.height))
         .scaleEffect(dismissScale)
         .preferredColorScheme(.dark)
+        .statusBarHidden(shouldHideStatusBar)
         .sheet(isPresented: $isMetadataPresented) {
-            MetadataPanel(asset: currentAsset)
+            MetadataPanel(
+                asset: currentAsset,
+                indexedMetadata: currentMetadata
+            )
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
@@ -210,6 +259,8 @@ struct PhotoDetailScreen: View {
             dependencies.indexInteractionGate.endInteraction()
             stallWatchTask?.cancel()
             stallWatchTask = nil
+            videoChromeHideTask?.cancel()
+            videoChromeHideTask = nil
         }
     }
 
@@ -244,6 +295,11 @@ struct PhotoDetailScreen: View {
         // The pager resets its own zoom on a page change but doesn't report it;
         // clear the chrome-hiding flag so a new page always shows the chrome.
         isZoomed = false
+        isVideoFullscreen = false
+        isVideoChromeVisible = true
+        isCurrentVideoPlaying = false
+        videoChromeHideTask?.cancel()
+        videoChromeHideTask = nil
         stallWatchTask?.cancel()
         stallWatchTask = nil
         applyCurrentDownloadState()
@@ -293,92 +349,227 @@ struct PhotoDetailScreen: View {
 
     // MARK: Chrome
 
-    /// Favorite / Share / Info / Delete, centered along the bottom. Its height
-    /// is measured (`ChromeHeightKey`) and fed to a video as a bottom inset so
-    /// the transport controls render above the bar.
+    private var isCurrentVideo: Bool {
+        currentAsset?.mediaType == .video
+    }
+
+    private var showsViewerChrome: Bool {
+        !isZoomed
+            && !isVideoFullscreen
+            && (!isCurrentVideo || isVideoChromeVisible)
+    }
+
+    private var shouldHideStatusBar: Bool {
+        isVideoFullscreen || (isCurrentVideo && !isVideoChromeVisible)
+    }
+
+    /// Photos-style three-zone action row: Share is isolated at the leading
+    /// edge, Delete at the trailing edge, and non-destructive actions share one
+    /// centered glass capsule. The exact center stays fixed on every width.
     private func actionBar(_ metadata: PhotoMetadata) -> some View {
-        HStack(spacing: 28) {
-            GlassIconButton(
-                systemImage: metadata.isFavorite ? "heart.fill" : "heart",
-                accessibilityLabel: metadata.isFavorite ? "Unfavorite" : "Favorite"
-            ) {
-                toggleFavorite(metadata)
+        ZStack {
+            HStack {
+                GlassIconButton(
+                    systemImage: "square.and.arrow.up",
+                    accessibilityLabel: "Share"
+                ) {
+                    showVideoChromeAndScheduleHide()
+                    share(metadata)
+                }
+                Spacer()
+                GlassIconButton(systemImage: "trash", accessibilityLabel: "Delete") {
+                    showVideoChromeAndScheduleHide()
+                    deleteCurrentPhoto()
+                }
             }
-            GlassIconButton(systemImage: "square.and.arrow.up", accessibilityLabel: "Share") {
-                share(metadata)
-            }
-            GlassIconButton(systemImage: "info.circle", accessibilityLabel: "Info") {
-                isMetadataPresented = true
-            }
-            GlassIconButton(systemImage: "trash", accessibilityLabel: "Delete") {
-                deleteCurrentPhoto()
+
+            GlassPanel(cornerRadius: 28) {
+                HStack(spacing: 8) {
+                    actionBarCenterButton(
+                        systemImage: metadata.isFavorite ? "heart.fill" : "heart",
+                        accessibilityLabel: metadata.isFavorite ? "Unfavorite" : "Favorite"
+                    ) {
+                        showVideoChromeAndScheduleHide()
+                        toggleFavorite(metadata)
+                    }
+                    actionBarCenterButton(
+                        systemImage: "info.circle",
+                        accessibilityLabel: "Info"
+                    ) {
+                        showVideoChromeAndScheduleHide()
+                        isMetadataPresented = true
+                    }
+                }
+                .padding(.horizontal, 8)
+                .frame(height: 56)
             }
         }
-        .padding(.horizontal)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 20)
         .padding(.bottom, 12)
     }
 
-    private func infoPanel(_ metadata: PhotoMetadata) -> some View {
-        GlassPanel {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
-                    if let date = metadata.creationDateValue {
-                        Text(date.formatted(.dateTime.day().month().year().hour().minute()))
-                            .font(.footnote.weight(.semibold))
-                            .lineLimit(1)
-                    }
-                    if let badge = formatBadge {
-                        Text(badge)
-                            .font(.caption2.weight(.bold))
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .background(Color(.systemFill), in: RoundedRectangle(cornerRadius: 4))
-                    }
-                    Spacer()
-                    if downloadStalled {
-                        Image(systemName: "exclamationmark.icloud")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.orange)
-                            .transition(.scale.combined(with: .opacity))
-                            .accessibilityLabel("iCloud download stalled")
-                    } else if isDownloading {
-                        // iOS-style "downloading from iCloud" ring around a cloud
-                        // glyph, top-right of the info panel.
-                        ICloudDownloadRing(progress: downloadProgress)
-                            .transition(.scale.combined(with: .opacity))
-                            .accessibilityLabel("Downloading from iCloud")
-                    }
-                }
-                if let gear = FormatUtils.metadataLine([
-                    metadata.normalizedCameraModel,
-                    metadata.normalizedLensModel,
-                ]) {
-                    Text(gear)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-                if let exposure = FormatUtils.metadataLine([
-                    metadata.iso.flatMap(FormatUtils.iso),
-                    metadata.focalLength.flatMap(FormatUtils.focalLength),
-                    metadata.aperture.flatMap(FormatUtils.aperture),
-                    metadata.shutterSpeedDisplay,
-                    currentFileSize.flatMap(FormatUtils.fileSize),
-                ]) {
-                    Text(exposure)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-                if downloadStalled {
-                    Text("iCloud isn't responding — check iCloud Photos in Settings or the Photos app.")
-                        .font(.caption2)
-                        .foregroundStyle(.orange)
-                }
-            }
-            .padding(12)
+    private func actionBarCenterButton(
+        systemImage: String,
+        accessibilityLabel: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 20, weight: .medium))
+                .foregroundStyle(.white)
+                .frame(width: 48, height: 48)
+                .contentShape(Rectangle())
         }
-        .onTapGesture { isMetadataPresented = true }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private func handleVideoPlaybackChange(_ playing: Bool) {
+        guard isCurrentVideo else { return }
+        isCurrentVideoPlaying = playing
+        if playing {
+            showVideoChromeAndScheduleHide()
+        } else {
+            videoChromeHideTask?.cancel()
+            videoChromeHideTask = nil
+            setVideoChromeVisible(true)
+        }
+    }
+
+    private func showVideoChromeAndScheduleHide() {
+        guard isCurrentVideo else { return }
+        videoChromeHideTask?.cancel()
+        videoChromeHideTask = nil
+        setVideoChromeVisible(true)
+        guard isCurrentVideoPlaying else { return }
+        videoChromeHideTask = Task { @MainActor in
+            try? await Task.sleep(for: Self.videoChromeIdleDelay)
+            guard !Task.isCancelled, isCurrentVideo, isCurrentVideoPlaying else { return }
+            setVideoChromeVisible(false)
+            videoChromeHideTask = nil
+        }
+    }
+
+    private func toggleVideoChromeFromSurface() {
+        guard isCurrentVideo else { return }
+        if isVideoChromeVisible {
+            guard isCurrentVideoPlaying else { return }
+            videoChromeHideTask?.cancel()
+            videoChromeHideTask = nil
+            setVideoChromeVisible(false)
+        } else {
+            showVideoChromeAndScheduleHide()
+        }
+    }
+
+    private func setVideoChromeVisible(_ visible: Bool) {
+        if reduceMotion {
+            isVideoChromeVisible = visible
+        } else {
+            withAnimation(.easeInOut(duration: visible ? 0.2 : 0.15)) {
+                isVideoChromeVisible = visible
+            }
+        }
+    }
+
+    /// Top-left chrome panel: capture date/time on line 1, camera + exposure on
+    /// line 2, fitted to the width left over beside the Close button.
+    /// `PhotoInfoPanelSummary` owns which fields survive that width — see its
+    /// doc comment for why the old single `metadataLine` truncated the exposure
+    /// values away.
+    private func infoPanel(_ metadata: PhotoMetadata) -> some View {
+        let summary = panelSummary(metadata)
+        // A Button, not `onTapGesture`: the panel is the second way into the
+        // Photo Info sheet and has to be reachable by VoiceOver/Switch Control.
+        return Button {
+            isMetadataPresented = true
+        } label: {
+            GlassPanel(cornerRadius: 18) {
+                VStack(alignment: .leading, spacing: 1) {
+                    HStack(spacing: 8) {
+                        Text(summary.titleLine)
+                            .font(.caption.weight(.semibold))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .minimumScaleFactor(0.92)
+                        if let badge = formatBadge {
+                            Text(badge)
+                                .font(.caption2.weight(.bold))
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1)
+                                .background(Color(.systemFill), in: RoundedRectangle(cornerRadius: 4))
+                        }
+                        Spacer()
+                        if downloadStalled {
+                            Image(systemName: "exclamationmark.icloud")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.orange)
+                                .transition(.scale.combined(with: .opacity))
+                        } else if isDownloading {
+                            // iOS-style "downloading from iCloud" ring around a cloud
+                            // glyph, top-right of the info panel.
+                            ICloudDownloadRing(progress: downloadProgress)
+                                .transition(.scale.combined(with: .opacity))
+                        }
+                    }
+                    // Accessibility Dynamic Type can't fit a second line inside
+                    // the 52 pt panel without truncating mid-value; the full data
+                    // is one tap away in the sheet, so the line is dropped.
+                    if !dynamicTypeSize.isAccessibilitySize, let detail = summary.detailLine {
+                        Text(detail)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .minimumScaleFactor(0.92)
+                    }
+                }
+                .padding(.horizontal, 12)
+                .frame(maxWidth: .infinity, minHeight: 52, maxHeight: 52, alignment: .leading)
+                .measureWidth(into: $panelContentWidth)
+            }
+        }
+        .buttonStyle(.plain)
+        // One element that announces every field, including the ones the
+        // measured width dropped from the visible lines.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityPanelLabel(summary))
+        .accessibilityHint("Shows all photo info")
+    }
+
+    private func panelSummary(_ metadata: PhotoMetadata) -> PhotoInfoPanelSummary {
+        PhotoInfoPanelSummary.make(
+            metadata: metadata,
+            fileSize: currentFileSize ?? metadata.fileSize,
+            fallbackTitle: currentFilename,
+            availableWidth: Double(max(0, panelContentWidth - Self.panelTextInsets)),
+            measureDetail: { Self.width(of: $0, style: .caption2) }
+        )
+    }
+
+    /// Announces every field even when the visible lines dropped some, plus
+    /// whatever the trailing badge and glyph are saying visually.
+    private func accessibilityPanelLabel(_ summary: PhotoInfoPanelSummary) -> String {
+        var parts = [summary.accessibilityText]
+        if let badge = formatBadge { parts.append(badge) }
+        if downloadStalled {
+            parts.append(String(localized: "iCloud download stalled"))
+        } else if isDownloading {
+            parts.append(String(localized: "Downloading from iCloud"))
+        }
+        return parts.joined(separator: ", ")
+    }
+
+    /// Horizontal padding inside the panel, subtracted from the measured frame.
+    private static let panelTextInsets: CGFloat = 24
+
+    /// Text width at the current Dynamic Type size. `preferredFont` already
+    /// tracks the user's size, so the fit follows Dynamic Type without the
+    /// summary having to know about it.
+    private static func width(of text: String, style: UIFont.TextStyle) -> Double {
+        let font = UIFont.preferredFont(forTextStyle: style)
+        return (text as NSString).size(withAttributes: [.font: font]).width
     }
 
     private var formatBadge: String? {
@@ -487,27 +678,38 @@ struct PhotoDetailScreen: View {
     }
 
     private func updateFilename(assetId: String) {
-        currentFilename = nil
-        currentFileSize = nil
+        currentFilename = currentMetadata?.originalFilename
+        currentFileSize = currentMetadata?.fileSize
+        let needsFilename = currentFilename == nil
+        let needsFileSize = currentFileSize == nil
+        guard needsFilename || needsFileSize else { return }
         guard let asset = controller.asset(for: assetId) else { return }
         // The filename is cheap, but reading `fileSize` (KVC) can trigger an
         // on-demand iCloud metadata fetch — resolve both off the main thread
-        // and apply only if the user hasn't paged away in the meantime.
+        // only when the indexed row is missing a value, and apply only if the
+        // user hasn't paged away in the meantime.
         Task.detached(priority: .userInitiated) {
             let resources = PHAssetResource.assetResources(for: asset)
-            let filename = resources.first?.originalFilename
-            let resource = ExifService.photoResource(among: resources)
-            let size = (resource?.value(forKey: "fileSize") as? NSNumber)?.intValue
+            let filename = needsFilename ? resources.first?.originalFilename : nil
+            let size: Int? = needsFileSize
+                ? ExifService.photoResource(among: resources).flatMap {
+                    ($0.value(forKey: "fileSize") as? NSNumber)?.intValue
+                }
+                : nil
             await MainActor.run {
                 guard controller.photoId(at: currentIndex) == assetId else { return }
-                currentFilename = filename
-                currentFileSize = size
+                if currentFilename == nil {
+                    currentFilename = filename
+                }
+                if currentFileSize == nil {
+                    currentFileSize = size
+                }
             }
         }
     }
 }
 
-/// Reports the bottom info panel's measured height up to `PhotoDetailScreen`,
+/// Reports the bottom action bar's measured height up to `PhotoDetailScreen`,
 /// which forwards it to the pager as a video's bottom inset.
 private struct ChromeHeightKey: PreferenceKey {
     static var defaultValue: CGFloat = 0
@@ -518,6 +720,13 @@ private struct ChromeHeightKey: PreferenceKey {
 
 /// Bottom safe-area inset, read via an ignore-safe-area GeometryReader.
 private struct SafeAreaBottomKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+private struct SafeAreaTopKey: PreferenceKey {
     static var defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = max(value, nextValue())
@@ -560,10 +769,631 @@ private struct ICloudDownloadRing: View {
     }
 }
 
-/// One page of the detail pager: the zoomable full image, or an AVPlayer for
-/// videos. Resolves its own asset from the source on appear and keeps it in
-/// `@State`, so the parent's per-frame body evaluations (dismiss drag) never
-/// re-fetch anything.
+/// Full-bleed video rendering without AVKit's automatically positioned chrome.
+///
+/// Also the only place that can answer "does this layer actually have a frame
+/// yet" — `isReadyForDisplay` is reported to the controller, which needs it to
+/// tell a buffering clip apart from a black screen that will never resolve.
+private struct VideoPlayerSurface: UIViewRepresentable {
+    let controller: VideoPlaybackController
+    let player: AVPlayer
+
+    func makeUIView(context: Context) -> PlayerView {
+        let view = PlayerView()
+        view.backgroundColor = .black
+        view.playerLayer.videoGravity = .resizeAspect
+        view.playerLayer.player = player
+        context.coordinator.observe(view.playerLayer, controller: controller)
+        return view
+    }
+
+    func updateUIView(_ view: PlayerView, context: Context) {
+        // Only reassign when it genuinely changed. SwiftUI re-runs this on every
+        // chrome/inset change, and detaching then re-attaching the same player
+        // drops the displayed frame — a black flash for no reason.
+        guard view.playerLayer.player !== player else { return }
+        view.playerLayer.player = player
+        context.coordinator.observe(view.playerLayer, controller: controller)
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    final class Coordinator {
+        private var observation: NSKeyValueObservation?
+
+        func observe(_ layer: AVPlayerLayer, controller: VideoPlaybackController) {
+            observation?.invalidate()
+            observation = layer.observe(
+                \.isReadyForDisplay,
+                options: [.initial, .new]
+            ) { _, change in
+                guard let ready = change.newValue else { return }
+                Task { @MainActor in controller.noteReadyForDisplay(ready) }
+            }
+        }
+
+        deinit { observation?.invalidate() }
+    }
+
+    final class PlayerView: UIView {
+        override static var layerClass: AnyClass { AVPlayerLayer.self }
+        var playerLayer: AVPlayerLayer { layer as! AVPlayerLayer }
+    }
+}
+
+/// The system route picker keeps AirPlay / external-screen behavior native
+/// while allowing the rest of the transport to use a Photos-style layout.
+private struct VideoRoutePicker: UIViewRepresentable {
+    func makeUIView(context: Context) -> AVRoutePickerView {
+        let picker = AVRoutePickerView()
+        picker.activeTintColor = .white
+        picker.tintColor = .white
+        picker.prioritizesVideoDevices = true
+        picker.accessibilityLabel = "AirPlay"
+        return picker
+    }
+
+    func updateUIView(_ picker: AVRoutePickerView, context: Context) {
+        picker.activeTintColor = .white
+        picker.tintColor = .white
+    }
+}
+
+/// YouTube-style fullscreen while the app remains portrait-only. The player
+/// content rotates inside its own bounds, so Rotation Lock never participates.
+private struct VideoFullscreenLayout: ViewModifier {
+    let isFullscreen: Bool
+    let containerSize: CGSize
+
+    func body(content: Content) -> some View {
+        if isFullscreen, containerSize.height > containerSize.width {
+            content
+                .frame(width: containerSize.height, height: containerSize.width)
+                .rotationEffect(.degrees(90))
+                .position(x: containerSize.width / 2, y: containerSize.height / 2)
+        } else {
+            content
+                .frame(width: containerSize.width, height: containerSize.height)
+        }
+    }
+}
+
+/// Photos-style video surface and bottom transport. The controls intentionally
+/// live only at the bottom: the viewer's Close + info chrome owns the top row,
+/// so mute and AirPlay can never be covered by it.
+private struct DetailVideoPlayer: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    let controller: VideoPlaybackController
+    let isActive: Bool
+    let bottomInset: CGFloat
+    let fullscreenEdgeInset: CGFloat
+    let isFullscreen: Bool
+    let isChromeVisible: Bool
+    let onFullscreenChange: (Bool) -> Void
+    let onPlaybackChange: (Bool) -> Void
+    let onInteraction: () -> Void
+    let onSurfaceTap: () -> Void
+
+    /// Transient double-tap acknowledgement. Identified by a token so two skips
+    /// in the same direction restart the animation instead of merging.
+    private struct SeekFeedback: Equatable {
+        enum Kind { case skipBack, skipForward, frameBack, frameForward }
+        let token: Int
+        let kind: Kind
+
+        var isLeading: Bool { kind == .skipBack || kind == .frameBack }
+
+        var systemImage: String {
+            switch kind {
+            case .skipBack: return "gobackward.10"
+            case .skipForward: return "goforward.10"
+            case .frameBack: return "backward.frame.fill"
+            case .frameForward: return "forward.frame.fill"
+            }
+        }
+
+        var caption: String {
+            switch kind {
+            case .skipBack, .skipForward: return "10s"
+            case .frameBack, .frameForward: return "1 frame"
+            }
+        }
+
+    }
+
+    @State private var seekFeedback: SeekFeedback?
+    @State private var seekFeedbackToken = 0
+    @State private var seekFeedbackTask: Task<Void, Never>?
+    /// Delays the spinner so a locally cached clip never flashes one — same
+    /// grace the image path uses.
+    @State private var showBufferingIndicator = false
+    @State private var bufferingIndicatorTask: Task<Void, Never>?
+    @State private var frameSaveTask: Task<Void, Never>?
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack {
+                if let player = controller.player {
+                    VideoPlayerSurface(controller: controller, player: player)
+                        .contentShape(Rectangle())
+                        // The double-tap handler must be attached first: SwiftUI
+                        // resolves the higher tap count before the single tap.
+                        .onTapGesture(count: 2, coordinateSpace: .local) { location in
+                            handleDoubleTap(at: location, containerSize: proxy.size)
+                        }
+                        .onTapGesture(perform: onSurfaceTap)
+                } else {
+                    Color.black
+                }
+
+                statusOverlay
+
+                if let seekFeedback {
+                    seekFeedbackOverlay(seekFeedback)
+                }
+
+                if isActive && isChromeVisible, controller.player != nil {
+                    VStack(spacing: 0) {
+                        Spacer()
+                        transport
+                    }
+                    .padding(
+                        .horizontal,
+                        isFullscreen ? fullscreenEdgeInset + 8 : 16
+                    )
+                    .padding(.bottom, isFullscreen ? 16 : bottomInset + 8)
+                    .transition(.opacity)
+                }
+            }
+            .modifier(
+                VideoFullscreenLayout(
+                    isFullscreen: isFullscreen,
+                    containerSize: proxy.size
+                )
+            )
+        }
+        .onAppear {
+            if isActive {
+                controller.play()
+            }
+            syncBufferingIndicator(for: controller.phase)
+        }
+        .onChange(of: isActive) { _, active in
+            if active {
+                controller.play()
+            } else {
+                controller.pause()
+            }
+        }
+        .onChange(of: controller.isPlaying) { _, playing in
+            onPlaybackChange(playing)
+        }
+        .onChange(of: controller.phase) { _, phase in
+            syncBufferingIndicator(for: phase)
+        }
+        .onChange(of: controller.frameSaveOutcome) { _, outcome in
+            scheduleFrameSaveDismissal(outcome)
+        }
+        .onDisappear {
+            controller.pause()
+            seekFeedbackTask?.cancel()
+            bufferingIndicatorTask?.cancel()
+            frameSaveTask?.cancel()
+        }
+    }
+
+    /// Two rows in one glass panel: the timeline with its elapsed/remaining
+    /// labels, then the controls. Splitting them is what makes room for the time
+    /// labels at all — an eight-control single row cannot hold 44 pt targets on
+    /// a 393 pt phone.
+    private var transport: some View {
+        GlassPanel(cornerRadius: 28) {
+            VStack(spacing: 0) {
+                timelineRow
+                controlsRow
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+        }
+    }
+
+    private var timelineRow: some View {
+        HStack(spacing: 8) {
+            timeLabel(FormatUtils.duration(controller.displayTime))
+
+            Slider(
+                value: Binding(
+                    get: { controller.displayTime },
+                    set: { controller.updateScrub($0) }
+                ),
+                in: 0...controller.timelineUpperBound,
+                onEditingChanged: scrub
+            )
+            .tint(.white)
+            .accessibilityLabel("Video progress")
+            .accessibilityValue(progressAccessibilityValue)
+
+            timeLabel(remainingLabel)
+        }
+        .padding(.horizontal, 4)
+        .frame(height: 32)
+    }
+
+    private var controlsRow: some View {
+        HStack(spacing: 0) {
+            rateMenu
+
+            transportButton(
+                systemImage: controller.isPlaying ? "pause.fill" : "play.fill",
+                accessibilityLabel: controller.isPlaying ? "Pause" : "Play"
+            ) {
+                onInteraction()
+                controller.togglePlayPause()
+            }
+
+            transportButton(
+                systemImage: controller.isMuted
+                    ? "speaker.slash.fill"
+                    : "speaker.wave.2.fill",
+                accessibilityLabel: controller.isMuted ? "Unmute" : "Mute"
+            ) {
+                onInteraction()
+                controller.setMuted(!controller.isMuted)
+            }
+
+            VideoRoutePicker()
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+
+            moreMenu
+
+            transportButton(
+                systemImage: isFullscreen
+                    ? "arrow.down.right.and.arrow.up.left"
+                    : "arrow.up.left.and.arrow.down.right",
+                accessibilityLabel: isFullscreen
+                    ? "Exit full screen"
+                    : "Enter full screen"
+            ) {
+                onInteraction()
+                onFullscreenChange(!isFullscreen)
+            }
+        }
+        .frame(height: 44)
+    }
+
+    private var rateMenu: some View {
+        Menu {
+            Picker("Playback Speed", selection: rateSelection) {
+                ForEach(VideoPlaybackController.supportedRates, id: \.self) { value in
+                    Text(Self.rateLabel(value)).tag(value)
+                }
+            }
+        } label: {
+            Text(Self.rateLabel(controller.rate))
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel("Playback speed")
+        .accessibilityValue(Self.rateLabel(controller.rate))
+        .simultaneousGesture(TapGesture().onEnded { onInteraction() })
+    }
+
+    /// Everything that does not earn a permanent 44 pt slot. Frame stepping also
+    /// lives on the paused double-tap; the menu entries are what make it
+    /// discoverable.
+    private var moreMenu: some View {
+        Menu {
+            Toggle(isOn: loopSelection) {
+                Label("Loop", systemImage: "repeat")
+            }
+
+            Section {
+                Button {
+                    onInteraction()
+                    controller.stepFrame(-1)
+                    showSeekFeedback(.frameBack)
+                } label: {
+                    Label("Previous Frame", systemImage: "backward.frame")
+                }
+                Button {
+                    onInteraction()
+                    controller.stepFrame(1)
+                    showSeekFeedback(.frameForward)
+                } label: {
+                    Label("Next Frame", systemImage: "forward.frame")
+                }
+            }
+
+            Section {
+                Button {
+                    onInteraction()
+                    controller.saveCurrentFrame()
+                } label: {
+                    Label("Save Frame to Photos", systemImage: "square.and.arrow.down")
+                }
+                .disabled(controller.isSavingFrame)
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel("More playback options")
+        .simultaneousGesture(TapGesture().onEnded { onInteraction() })
+    }
+
+    private var rateSelection: Binding<Double> {
+        Binding(
+            get: { controller.rate },
+            set: { newValue in
+                onInteraction()
+                controller.setRate(newValue)
+            }
+        )
+    }
+
+    private var loopSelection: Binding<Bool> {
+        Binding(
+            get: { controller.isLooping },
+            set: { newValue in
+                onInteraction()
+                controller.setLooping(newValue)
+            }
+        )
+    }
+
+    private func timeLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.caption.monospacedDigit())
+            .foregroundStyle(.white)
+            // Fixed width so the scrubber does not shift when the digit count
+            // changes (0:09 → 0:10, or crossing a minute).
+            .frame(width: 46)
+    }
+
+    /// Photos-style trailing label: time left, not total length. Blank until
+    /// AVFoundation resolves an iCloud item's duration — a wrong number there is
+    /// worse than none.
+    private var remainingLabel: String {
+        guard let remaining = VideoTransportMath.remainingSeconds(
+            current: controller.displayTime,
+            duration: controller.duration
+        ) else { return "--:--" }
+        return "-" + FormatUtils.duration(remaining)
+    }
+
+    private static func rateLabel(_ value: Double) -> String {
+        value == value.rounded()
+            ? String(format: "%.0f×", value)
+            : String(format: "%.1f×", value)
+    }
+
+    // MARK: Status overlay
+
+    /// Always on top of the surface, independent of chrome visibility: a clip
+    /// that cannot play must say so even after the transport has faded out.
+    @ViewBuilder
+    private var statusOverlay: some View {
+        switch controller.phase {
+        case .downloading(let progress):
+            VStack(spacing: 10) {
+                ICloudDownloadRing(progress: progress)
+                    .scaleEffect(1.6)
+                    .tint(.white)
+                Text("Downloading from iCloud")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.85))
+            }
+            .padding(20)
+            .transition(.opacity)
+
+        case .buffering:
+            if showBufferingIndicator {
+                ProgressView()
+                    .tint(.white)
+                    .transition(.opacity)
+            }
+
+        case .failed(let message):
+            VStack(spacing: 12) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 28))
+                    .foregroundStyle(.white)
+                Text(message)
+                    .font(.footnote)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.white)
+                Button {
+                    onInteraction()
+                    controller.retry()
+                } label: {
+                    Text("Retry")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 20)
+                        .frame(height: 44)
+                }
+                .buttonStyle(.plain)
+                .background(
+                    Capsule().fill(.white.opacity(0.18))
+                )
+            }
+            .padding(24)
+            .frame(maxWidth: 300)
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(.black.opacity(0.55))
+            )
+            .transition(.opacity)
+
+        case .idle, .ready:
+            if let outcome = controller.frameSaveOutcome {
+                frameSaveBadge(outcome)
+            } else if controller.isSavingFrame {
+                frameSaveBadge(nil)
+            }
+        }
+    }
+
+    private func frameSaveBadge(_ outcome: VideoFrameSaveOutcome?) -> some View {
+        VStack(spacing: 8) {
+            switch outcome {
+            case .saved:
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 26))
+                Text("Frame Saved")
+                    .font(.footnote.weight(.semibold))
+            case .failed(let message):
+                Image(systemName: "exclamationmark.circle.fill")
+                    .font(.system(size: 26))
+                Text(message)
+                    .font(.footnote)
+                    .multilineTextAlignment(.center)
+            case nil:
+                ProgressView()
+                    .tint(.white)
+                Text("Saving Frame…")
+                    .font(.footnote)
+            }
+        }
+        .foregroundStyle(.white)
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(.black.opacity(0.55))
+        )
+        .transition(.opacity)
+    }
+
+    // MARK: Double-tap seek
+
+    private func handleDoubleTap(at location: CGPoint, containerSize: CGSize) {
+        onInteraction()
+        // In immersive fullscreen the surface is rotated 90° inside its own
+        // bounds (`VideoFullscreenLayout`), so the tap arrives in pre-rotation
+        // local coordinates: the screen's left/right halves are the local
+        // *vertical* axis, and the local height is the container's width.
+        let isRotated = isFullscreen && containerSize.height > containerSize.width
+        let isLeading = isRotated
+            ? location.y > containerSize.width / 2
+            : location.x < containerSize.width / 2
+        // Paused means the user is inspecting a specific moment; a 10 s jump is
+        // useless there, a single frame is exactly what they want.
+        if controller.isPlaying {
+            controller.skip(by: isLeading
+                ? -VideoPlaybackController.skipInterval
+                : VideoPlaybackController.skipInterval)
+            showSeekFeedback(isLeading ? .skipBack : .skipForward)
+        } else {
+            controller.stepFrame(isLeading ? -1 : 1)
+            showSeekFeedback(isLeading ? .frameBack : .frameForward)
+        }
+    }
+
+    private func showSeekFeedback(_ kind: SeekFeedback.Kind) {
+        seekFeedbackToken += 1
+        let feedback = SeekFeedback(token: seekFeedbackToken, kind: kind)
+        if reduceMotion {
+            seekFeedback = feedback
+        } else {
+            withAnimation(.easeOut(duration: 0.12)) { seekFeedback = feedback }
+        }
+        seekFeedbackTask?.cancel()
+        seekFeedbackTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(550))
+            guard !Task.isCancelled, seekFeedback?.token == feedback.token else { return }
+            if reduceMotion {
+                seekFeedback = nil
+            } else {
+                withAnimation(.easeOut(duration: 0.25)) { seekFeedback = nil }
+            }
+        }
+    }
+
+    private func seekFeedbackOverlay(_ feedback: SeekFeedback) -> some View {
+        HStack(spacing: 0) {
+            if !feedback.isLeading { Spacer() }
+            VStack(spacing: 6) {
+                Image(systemName: feedback.systemImage)
+                    .font(.system(size: 30, weight: .semibold))
+                Text(feedback.caption)
+                    .font(.caption.weight(.semibold))
+            }
+            .foregroundStyle(.white)
+            .padding(24)
+            .background(Circle().fill(.black.opacity(0.4)))
+            .padding(.horizontal, 36)
+            if feedback.isLeading { Spacer() }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    // MARK: Overlay timing
+
+    private func syncBufferingIndicator(for phase: VideoPlaybackPhase) {
+        bufferingIndicatorTask?.cancel()
+        guard phase == .buffering else {
+            showBufferingIndicator = false
+            return
+        }
+        bufferingIndicatorTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(350))
+            guard !Task.isCancelled, controller.phase == .buffering else { return }
+            showBufferingIndicator = true
+        }
+    }
+
+    private func scheduleFrameSaveDismissal(_ outcome: VideoFrameSaveOutcome?) {
+        frameSaveTask?.cancel()
+        guard outcome != nil else { return }
+        frameSaveTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(outcome == .saved ? 1.4 : 2.6))
+            guard !Task.isCancelled else { return }
+            controller.clearFrameSaveOutcome()
+        }
+    }
+
+    private var progressAccessibilityValue: String {
+        let total = controller.duration
+        guard total.isFinite, total > 0 else {
+            return FormatUtils.duration(controller.displayTime)
+        }
+        return "\(FormatUtils.duration(controller.displayTime)) of \(FormatUtils.duration(total))"
+    }
+
+    private func transportButton(
+        systemImage: String,
+        accessibilityLabel: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private func scrub(_ editing: Bool) {
+        onInteraction()
+        if editing {
+            controller.beginScrub()
+        } else {
+            controller.endScrub()
+        }
+    }
+}
+
 /// Per-host visibility signal. UIPageViewController may construct/load neighbour
 /// pages before they are visible; only the active host may start a network
 /// screen-derivative request.
@@ -571,8 +1401,16 @@ private struct ICloudDownloadRing: View {
 @Observable
 final class DetailPageLoadState {
     var isActive = false
+    var videoBottomInset: CGFloat = 0
+    var videoFullscreenEdgeInset: CGFloat = 0
+    var isVideoFullscreen = false
+    var isVideoChromeVisible = true
 }
 
+/// One page of the detail pager: the zoomable full image, or an AVPlayer for
+/// videos. Resolves its own asset from the source on appear and keeps it in
+/// `@State`, so the parent's per-frame body evaluations (dismiss drag) never
+/// re-fetch anything.
 struct PhotoDetailPage: View {
     /// Image callbacks can finish out of order. Their quality must only move
     /// upward: PhotoKit may upscale a soft local rendition to the requested
@@ -592,9 +1430,6 @@ struct PhotoDetailPage: View {
     let source: any PhotoBrowsingSource
     let index: Int
     let loadState: DetailPageLoadState
-    /// Bottom room reserved on a video so its native transport controls render
-    /// above the info panel instead of behind it. 0 for photos (full-bleed zoom).
-    var videoBottomInset: CGFloat = 0
     /// Bubbled up by the pager so it can suppress swipe-down-dismiss while
     /// the image is zoomed in.
     var onZoomChange: ((CGFloat) -> Void)?
@@ -605,10 +1440,18 @@ struct PhotoDetailPage: View {
     /// from the (deferred) full-resolution image download — the metadata read is
     /// a cheap ~KB header stream, must not wait on a multi-MB original.
     var onMetadataRefresh: ((Int) -> Void)?
+    /// Toggles portrait immersive playback without changing orientation.
+    var onVideoFullscreenChange: ((Bool) -> Void)?
+    /// Keeps outer viewer chrome synchronized with the active player's state.
+    var onVideoPlaybackChange: ((Bool) -> Void)?
+    var onVideoInteraction: (() -> Void)?
+    var onVideoSurfaceTap: (() -> Void)?
 
     @State private var image: UIImage?
     @State private var imageQuality: ImageQuality = .none
-    @State private var player: AVPlayer?
+    /// Owns the player, its readiness state machine and the PhotoKit video
+    /// request. Created per page identity, torn down on disappear.
+    @State private var videoController = VideoPlaybackController()
     @State private var isVideo = false
     @State private var asset: PHAsset?
     /// Set once the full-resolution original request has been fired (first
@@ -639,14 +1482,21 @@ struct PhotoDetailPage: View {
     var body: some View {
         Group {
             if isVideo {
-                if let player {
-                    // Native AVKit transport (play / scrubber / mute / AirPlay).
-                    // Bottom inset keeps its control bar above the info panel.
-                    VideoPlayer(player: player)
-                        .padding(.bottom, videoBottomInset)
-                } else {
-                    ProgressView().tint(.white)
-                }
+                // Rendered for every phase, not only once a player exists: the
+                // controller owns the downloading / buffering / failed states,
+                // which is what replaced the old permanently-black screen.
+                DetailVideoPlayer(
+                    controller: videoController,
+                    isActive: loadState.isActive,
+                    bottomInset: loadState.videoBottomInset,
+                    fullscreenEdgeInset: loadState.videoFullscreenEdgeInset,
+                    isFullscreen: loadState.isVideoFullscreen,
+                    isChromeVisible: loadState.isVideoChromeVisible,
+                    onFullscreenChange: { onVideoFullscreenChange?($0) },
+                    onPlaybackChange: { onVideoPlaybackChange?($0) },
+                    onInteraction: { onVideoInteraction?() },
+                    onSurfaceTap: { onVideoSurfaceTap?() }
+                )
             } else if let image {
                 ZoomableImageView(
                     image: image,
@@ -671,13 +1521,21 @@ struct PhotoDetailPage: View {
         .onAppear { load() }
         .onChange(of: loadState.isActive) { _, active in
             if active {
-                startDisplayUpgradeWhenReady()
+                if isVideo {
+                    // Neighbour pages exist but were never allowed to request
+                    // their clip; this is where the visible one starts.
+                    videoController.load()
+                    videoController.play()
+                } else {
+                    startDisplayUpgradeWhenReady()
+                }
             } else {
+                videoController.pause()
                 cancelDisplayUpgrade()
             }
         }
         .onDisappear {
-            player?.pause()
+            videoController.tearDown()
             loadingIndicatorTask?.cancel()
             loadingIndicatorTask = nil
             if let localPreviewRequestId {
@@ -710,7 +1568,20 @@ struct PhotoDetailPage: View {
         self.asset = asset
         if asset.mediaType == .video {
             isVideo = true
-            loadVideo(asset)
+            videoController.configure(
+                asset: asset,
+                photoLibrary: photoLibrary
+            ) { progress, isDownloading in
+                onDownloadStateChange?(index, progress, isDownloading)
+            }
+            // Only the visible page may pull a video. `UIPageViewController`
+            // builds neighbours eagerly, and three concurrent whole-clip iCloud
+            // downloads starved the one actually on screen — one of the causes
+            // of the endless spinner. The initial page is already marked active
+            // before `setViewControllers`, so it does start here.
+            if loadState.isActive {
+                videoController.load()
+            }
         } else {
             scheduleLoadingIndicator()
             loadDisplayImage(asset)
@@ -743,8 +1614,11 @@ struct PhotoDetailPage: View {
             contentMode: .aspectFit,
             allowNetwork: false
         ) { result in
-            if let result, hasUsableDisplayProxy(result, for: asset) {
-                promoteImage(result, to: .local)
+            // Photos-style offline fallback: even a small local rendition is
+            // preferable to a black screen and an endless spinner. It remains
+            // the lowest tier, so any better local/display image replaces it.
+            if let result {
+                promoteImage(result, to: .thumbnail)
             }
             startDisplayUpgradeWhenReady()
         }
@@ -766,7 +1640,7 @@ struct PhotoDetailPage: View {
             contentMode: .aspectFit
         ) { result in
             localBestRequestId = nil
-            if let result, hasUsableDisplayProxy(result, for: asset) {
+            if let result {
                 promoteImage(result, to: .local)
             }
             startDisplayUpgradeWhenReady()
@@ -783,7 +1657,7 @@ struct PhotoDetailPage: View {
             targetSize: targetSize
         ) { result in
             localOriginalRequestId = nil
-            if let result, hasUsableDisplayProxy(result, for: asset) {
+            if let result {
                 promoteImage(result, to: .localOriginal)
             }
         }
@@ -1007,18 +1881,6 @@ struct PhotoDetailPage: View {
         if scale > 1.01 { loadFullResolution() }
     }
 
-    private func loadVideo(_ asset: PHAsset) {
-        guard player == nil else { return }
-        let options = PHVideoRequestOptions()
-        options.isNetworkAccessAllowed = true
-        options.deliveryMode = .automatic
-        PHImageManager.default().requestPlayerItem(forVideo: asset, options: options) { item, _ in
-            guard let item else { return }
-            Task { @MainActor in
-                player = AVPlayer(playerItem: item)
-            }
-        }
-    }
 }
 
 // MARK: - UIKit pager
@@ -1035,8 +1897,16 @@ private struct PhotoPager: UIViewControllerRepresentable {
     /// Rebuild trigger: when this changes the current page is re-seated even if
     /// `currentIndex` is unchanged (after an in-viewer deletion shifts content).
     let reseatToken: Int
-    /// Bottom room reserved on video pages (action-bar height).
+    /// Bottom room reserved on video pages (action bar + home-indicator inset).
     let videoBottomInset: CGFloat
+    /// Largest portrait safe-area edge, used after the player rotates in place.
+    let videoFullscreenEdgeInset: CGFloat
+    let isVideoFullscreen: Bool
+    let isVideoChromeVisible: Bool
+    let onVideoFullscreenChange: (Bool) -> Void
+    let onVideoPlaybackChange: (Int, Bool) -> Void
+    let onVideoInteraction: () -> Void
+    let onVideoSurfaceTap: () -> Void
     let onDragProgress: (CGFloat) -> Void
     let onDragEnded: (Bool) -> Void
     /// Zoom scale of the current page — drives chrome hide-on-zoom.
@@ -1057,6 +1927,7 @@ private struct PhotoPager: UIViewControllerRepresentable {
         pager.dataSource = context.coordinator
         pager.delegate = context.coordinator
         pager.view.backgroundColor = .clear
+        context.coordinator.pager = pager
         if let initial = context.coordinator.makePage(at: currentIndex) {
             // setViewControllers can synchronously trigger the hosted SwiftUI
             // page's onAppear. Mark it active first so that first appearance
@@ -1073,17 +1944,16 @@ private struct PhotoPager: UIViewControllerRepresentable {
         context.coordinator.parent = self
         context.coordinator.reseatIfNeeded(pager, token: reseatToken, to: currentIndex)
         context.coordinator.syncIfNeeded(pager, to: currentIndex)
-        context.coordinator.applyVideoInsetIfNeeded(pager)
+        context.coordinator.applyVideoChromeState(pager)
     }
 
     final class Coordinator: NSObject, UIPageViewControllerDataSource,
         UIPageViewControllerDelegate, UIGestureRecognizerDelegate {
         var parent: PhotoPager
+        weak var pager: UIPageViewController?
         /// Zoom scale of the page currently on screen — dismiss is disabled
         /// while zoomed so panning moves the image instead.
         private var currentZoom: CGFloat = 1
-        /// Video bottom inset last pushed into the displayed page.
-        private var appliedVideoInset: CGFloat = 0
         /// Last reseat token acted on — starts at 0 to match the initial
         /// `reseatToken`, so the first update never forces a rebuild.
         private var appliedReseatToken = 0
@@ -1101,11 +1971,14 @@ private struct PhotoPager: UIViewControllerRepresentable {
         func makePage(at index: Int) -> PhotoPageHost? {
             guard index >= 0, index < parent.source.photoCount else { return nil }
             let loadState = DetailPageLoadState()
+            loadState.videoBottomInset = parent.videoBottomInset
+            loadState.videoFullscreenEdgeInset = parent.videoFullscreenEdgeInset
+            loadState.isVideoFullscreen = parent.isVideoFullscreen
+            loadState.isVideoChromeVisible = parent.isVideoChromeVisible
             let page = PhotoDetailPage(
                 source: parent.source,
                 index: index,
                 loadState: loadState,
-                videoBottomInset: parent.videoBottomInset,
                 onZoomChange: { [weak self] scale in
                     self?.currentZoom = scale
                     self?.parent.onZoomChange(scale)
@@ -1115,6 +1988,18 @@ private struct PhotoPager: UIViewControllerRepresentable {
                 },
                 onMetadataRefresh: { [weak self] idx in
                     self?.parent.onMetadataRefresh(idx)
+                },
+                onVideoFullscreenChange: { [weak self] fullscreen in
+                    self?.parent.onVideoFullscreenChange(fullscreen)
+                },
+                onVideoPlaybackChange: { [weak self] playing in
+                    self?.parent.onVideoPlaybackChange(index, playing)
+                },
+                onVideoInteraction: { [weak self] in
+                    self?.parent.onVideoInteraction()
+                },
+                onVideoSurfaceTap: { [weak self] in
+                    self?.parent.onVideoSurfaceTap()
                 }
             )
             .environment(parent.photoLibrary)
@@ -1130,19 +2015,29 @@ private struct PhotoPager: UIViewControllerRepresentable {
             return host
         }
 
-        /// The panel height is 0 until the chrome lays out, so a video page
-        /// first built with inset 0 would sit behind the panel. Rebuild just the
-        /// current page (only when it's a video) once the real inset lands.
-        func applyVideoInsetIfNeeded(_ pager: UIPageViewController) {
-            guard parent.videoBottomInset != appliedVideoInset else { return }
-            appliedVideoInset = parent.videoBottomInset
+        /// Pushes chrome measurements and fullscreen mode into the existing page
+        /// so entering immersive playback never rebuilds or rewinds its player.
+        func applyVideoChromeState(_ pager: UIPageViewController) {
             guard let host = pager.viewControllers?.first as? PhotoPageHost,
-                  host.isVideo,
-                  let rebuilt = makePage(at: host.index)
+                  host.isVideo
             else { return }
-            host.loadState.isActive = false
-            rebuilt.loadState.isActive = true
-            pager.setViewControllers([rebuilt], direction: .forward, animated: false)
+            host.loadState.videoBottomInset = parent.videoBottomInset
+            host.loadState.videoFullscreenEdgeInset = parent.videoFullscreenEdgeInset
+            host.loadState.isVideoFullscreen = parent.isVideoFullscreen
+            host.loadState.isVideoChromeVisible = parent.isVideoChromeVisible
+
+            updatePageScrollEnabled()
+        }
+
+        /// Immersive fullscreen locks paging: a swipe there belongs to the
+        /// player, not to the library.
+        private func updatePageScrollEnabled() {
+            guard let pager else { return }
+            let isEnabled = !parent.isVideoFullscreen
+            // The UIPageViewController paging scroll view is a direct child.
+            for scrollView in pager.view.subviews.compactMap({ $0 as? UIScrollView }) {
+                scrollView.isScrollEnabled = isEnabled
+            }
         }
 
         // MARK: Data source
@@ -1177,6 +2072,7 @@ private struct PhotoPager: UIViewControllerRepresentable {
             for previous in previousViewControllers {
                 (previous as? PhotoPageHost)?.loadState.isActive = false
             }
+            updatePageScrollEnabled()
             host.loadState.isActive = true
             currentZoom = 1
             parent.currentIndex = host.index
@@ -1197,6 +2093,7 @@ private struct PhotoPager: UIViewControllerRepresentable {
             currentZoom = 1
             page.loadState.isActive = true
             pager.setViewControllers([page], direction: .forward, animated: false)
+            updatePageScrollEnabled()
             preheatDetailImages(around: index)
         }
 
@@ -1212,6 +2109,7 @@ private struct PhotoPager: UIViewControllerRepresentable {
             currentZoom = 1
             page.loadState.isActive = true
             pager.setViewControllers([page], direction: direction, animated: false)
+            updatePageScrollEnabled()
             preheatDetailImages(around: index)
         }
 
@@ -1274,6 +2172,7 @@ private struct PhotoPager: UIViewControllerRepresentable {
         }
 
         func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            guard !parent.isVideoFullscreen else { return false }
             // Swipe-up (open metadata) only when not zoomed — a zoomed pan
             // still moves the image.
             if gestureRecognizer is UISwipeGestureRecognizer {

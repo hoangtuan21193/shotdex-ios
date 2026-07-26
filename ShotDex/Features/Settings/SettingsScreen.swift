@@ -24,6 +24,7 @@ struct SettingsScreen: View {
     @State private var lastIndexedAt: Date?
     @State private var isClearIndexConfirmationPresented = false
     @State private var isResetMappingsConfirmationPresented = false
+    @State private var isImportPresented = false
 
     var body: some View {
         List {
@@ -35,6 +36,9 @@ struct SettingsScreen: View {
         .listStyle(.insetGrouped)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
+        .fullScreenCover(isPresented: $isImportPresented) {
+            ImportScreen(service: dependencies.importService)
+        }
         .task(id: libraryController?.isIndexing) {
             refreshIndexInfo()
         }
@@ -117,6 +121,14 @@ struct SettingsScreen: View {
                             controller.startReindexIncomplete(manual: true)
                         }
                     }
+                }
+            }
+
+            if photoLibrary.authorizationState.canReadLibrary {
+                Button {
+                    isImportPresented = true
+                } label: {
+                    Label("Import Photos", systemImage: "square.and.arrow.down")
                 }
             }
 

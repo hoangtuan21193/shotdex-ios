@@ -380,7 +380,11 @@ struct OnThisDayCard: View {
                     .padding(14)
             }
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .onAppear(perform: loadCover)
+            // `coverAsset` is filled asynchronously by AlbumsController, so
+            // onAppear alone can miss it when this card appears first.
+            .task(id: coverAsset?.localIdentifier) {
+                loadCover()
+            }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("On This Day, \(count) photos from previous years")
     }
@@ -393,14 +397,15 @@ struct OnThisDayCard: View {
     }
 
     private func loadCover() {
-        guard cover == nil, let asset = coverAsset else { return }
-        let scale = UIScreen.main.scale
-        _ = photoLibrary.requestThumbnail(
+        cover = nil
+        guard let asset = coverAsset else { return }
+        let requestedAssetID = asset.localIdentifier
+        _ = photoLibrary.requestAlbumCover(
             for: asset,
-            targetSize: CGSize(width: 500 * scale, height: 250 * scale),
-            allowNetwork: false
+            targetSize: AlbumsController.onThisDayCoverTargetSize,
+            allowNetwork: true
         ) { image in
-            if let image {
+            if requestedAssetID == coverAsset?.localIdentifier, let image {
                 cover = image
             }
         }

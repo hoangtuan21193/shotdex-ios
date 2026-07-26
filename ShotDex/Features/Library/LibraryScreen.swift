@@ -10,7 +10,6 @@ struct LibraryScreen: View {
     /// Owned by HomeTabScaffold so the search sheet shares the same state.
     let controller: LibraryController?
 
-    @State private var isImportPresented = false
     @State private var isAdvancedSearchPresented = false
     /// Persisted density (column count), shared with Album Detail.
     @AppStorage(SettingsKeys.gridColumns) private var storedColumns = 3
@@ -88,12 +87,18 @@ struct LibraryScreen: View {
         .navigationBarTitleDisplayMode(.inline)
         .task(id: "\(photoLibrary.authorizationState.canReadLibrary)-\(controller != nil)") {
             guard photoLibrary.authorizationState.canReadLibrary, let controller else { return }
-            controller.reload()
+            // Full-screen covers can cause this task to re-enter on dismissal.
+            // The controller owns the one-shot guard so returning from Detail
+            // never restarts the two-phase load or re-anchors the grid.
+            controller.loadIfNeeded()
             controller.refreshFilterOptions()
             // HomeTabScaffold owns auto-index scheduling so first paint gets a
             // short head start and indexing remains independent of lazy tabs.
         }
-        .onChange(of: photoLibrary.libraryChangeToken) {
+        .onChange(of: photoLibrary.assetChangeToken) {
+            // Structural token only: viewing photos in Detail makes PhotoKit
+            // cache renditions, and reacting to those would reload the grid and
+            // start an index run every time Detail closes.
             // Reload-then-index outside a run; coalesced into the end-of-run
             // reload while indexing (see LibraryController.handleLibraryChange).
             controller?.handleLibraryChange()
@@ -102,9 +107,6 @@ struct LibraryScreen: View {
             // Advanced search is routed here from the search tab (a sheet can't
             // present over the iOS 26 search-role tab); open it on Library.
             isAdvancedSearchPresented = true
-        }
-        .fullScreenCover(isPresented: $isImportPresented) {
-            ImportScreen(service: dependencies.importService)
         }
         .sheet(isPresented: $isAdvancedSearchPresented) {
             if let controller {
@@ -331,7 +333,7 @@ struct LibraryScreen: View {
         PhotoGridCollectionView(
             photos: controller.items,
             assetProvider: { index, _ in controller.asset(atFlatIndex: index) },
-            isDateSectioned: controller.sort.isDateSort,
+            sectionMode: controller.sort.isDateSort ? .dates : .flat,
             anchorsBottom: true,
             contentVersion: controller.contentGeneration,
             contentRefreshVersion: controller.contentRefreshGeneration,
@@ -755,19 +757,6 @@ struct LibraryScreen: View {
                     Image(systemName: "arrow.up.arrow.down.circle")
                 }
                 .accessibilityLabel("Sort")
-            }
-        }
-        // Import from an external card/drive — rightmost trailing item, so it
-        // sits in the top-right corner. Replaces the old quick-filter button
-        // (Advanced Search covers ad-hoc filtering now).
-        ToolbarItem(placement: .topBarTrailing) {
-            if !isSelecting {
-                Button {
-                    isImportPresented = true
-                } label: {
-                    Image(systemName: "square.and.arrow.down")
-                }
-                .accessibilityLabel("Import photos")
             }
         }
     }

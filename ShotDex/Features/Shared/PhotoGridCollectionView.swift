@@ -2,7 +2,7 @@ import Photos
 import SwiftUI
 import UIKit
 
-/// UIKit-backed photo grid shared by Library and Album Detail — the SwiftUI
+/// UIKit-backed photo grid shared by every photo grid in the app — the SwiftUI
 /// lazy grid could not survive this feature set at whole-library scale
 /// (100k+ items): bottom-anchoring forced a full content-height estimate
 /// (long black launch, tiles not rendering until first touch) and any column
@@ -24,8 +24,9 @@ import UIKit
 struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable {
     let photos: [Item]
     let assetProvider: (_ flatIndex: Int, _ item: Item) -> PHAsset?
-    /// False renders one flat grid without date headers (non-date sorts).
-    let isDateSectioned: Bool
+    /// Sectioning + header contract: grid-grouped by date, one flat headerless
+    /// section (non-date sorts), or screen-supplied groups.
+    let sectionMode: PhotoGridSectionMode
     /// Library opens at the newest photos (bottom); albums open at the top.
     let anchorsBottom: Bool
     /// Bumped when the content is *replaced* (filter/sort/index run) —
@@ -114,9 +115,19 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         var parent: PhotoGridCollectionView
         weak var collectionView: UICollectionView?
 
-        /// Sections currently driving the layout/data source. One synthetic
-        /// full-range section when not date-sectioned.
-        private var sections: [PhotoGridSection] = []
+        /// Sections currently driving the layout/data source, header text
+        /// already resolved. One titleless full-range section when flat.
+        private var sections: [ResolvedSection] = []
+        /// Last screen-supplied sections, so a section-only change is detected
+        /// without the screen having to bump `contentVersion`.
+        private var appliedCustomSections: [PhotoGridCustomSection] = []
+
+        /// A section as the data source sees it. `title == nil` means the
+        /// section draws no header.
+        private struct ResolvedSection: Equatable {
+            let range: Range<Int>
+            let title: String?
+        }
         private var appliedContentVersion: Int?
         private var appliedContentRefreshVersion: Int?
         /// List owners bump `contentVersion` for same-count identity/order
@@ -163,6 +174,9 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         /// collection's moving content coordinates on every auto-scroll frame.
         private var swipeWindowLocation: CGPoint?
         private var swipeAutoScrollDriver: GridDisplayLinkDriver?
+        /// True while the long press that *entered* selection mode is still
+        /// down and driving the range itself (see handleLongPress).
+        private var isLongPressDragActive = false
 
         /// Settings display toggles, read once per change instead of five
         /// UserDefaults lookups per cell per (re)configure. Refreshing on the
@@ -206,10 +220,21 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         // MARK: Input diffing
 
         func apply(_ newParent: PhotoGridCollectionView, isInitial: Bool) {
-            parent = newParent
-            guard let collectionView else { return }
+            guard let collectionView else {
+                parent = newParent
+                return
+            }
 
             let contentReplaced = newParent.contentVersion != appliedContentVersion
+            // A replacement while the user is reading mid-grid (a photo imported
+            // or deleted elsewhere) must not teleport them to the anchor end —
+            // keep the tile they were looking at. Captured before `parent` and
+            // the sections are swapped, so ids and frames are the on-screen ones.
+            let preservedScroll = contentReplaced && !isInitial
+                ? preservableScroll(collectionView)
+                : nil
+
+            parent = newParent
             let previousSelectedIds = appliedSelectedIds
             let newSelectedIds = Set(newParent.selectedIds)
             appliedSelectedIds = newSelectedIds
@@ -231,12 +256,22 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
 
             let refreshed = appliedContentRefreshVersion != nil
                 && newParent.contentRefreshVersion != appliedContentRefreshVersion
-            if contentReplaced || listChanged || isInitial {
+            // Screen-supplied sections can change while the photo count and
+            // contentVersion stay put (a delete that empties one year). One
+            // entry per group, so comparing them per update is cheap.
+            let newCustomSections = newParent.sectionMode.customSections
+            let sectionsChanged = newCustomSections != appliedCustomSections
+            appliedCustomSections = newCustomSections
+            // Re-anchoring stays gated on `contentReplaced` — a section-only
+            // change must reload in place, not jump the scroll position.
+            if contentReplaced || listChanged || sectionsChanged || isInitial {
                 rebuildSections()
                 collectionView.reloadData()
                 if contentReplaced || isInitial {
                     collectionView.layoutIfNeeded()
-                    anchor(collectionView)
+                    let restored = preservedScroll
+                        .map { restoreScroll($0, in: collectionView) } ?? false
+                    if !restored { anchor(collectionView) }
                 }
                 appliedContentVersion = newParent.contentVersion
                 appliedPhotoCount = newParent.photos.count
@@ -295,6 +330,70 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             )
         }
 
+        /// A scroll position expressed as a photo id plus that tile's offset
+        /// relative to the top of the viewport, so it survives a `reloadData`
+        /// even when the list shifted (photos added or removed at either end).
+        private struct PreservedScroll {
+            let assetId: String
+            let offsetFromTileTop: CGFloat
+        }
+
+        /// The spot to restore after a content replacement, or nil when the grid
+        /// should re-anchor instead: nothing visible to key off, or the user was
+        /// already parked at the end the grid anchors to — that's where newly
+        /// added photos land, and staying there is what they expect.
+        private func preservableScroll(_ collectionView: UICollectionView) -> PreservedScroll? {
+            guard !isNearAnchorEnd(collectionView) else { return nil }
+            let layout = collectionView.collectionViewLayout
+            for indexPath in collectionView.indexPathsForVisibleItems.sorted() {
+                guard let flatIndex = flatIndex(for: indexPath),
+                      let frame = layout.layoutAttributesForItem(at: indexPath)?.frame
+                else { continue }
+                return PreservedScroll(
+                    assetId: parent.photos[flatIndex].assetId,
+                    offsetFromTileTop: collectionView.contentOffset.y - frame.minY
+                )
+            }
+            return nil
+        }
+
+        /// False when the anchor photo is gone from the new list (it was the
+        /// deleted one) — the caller then falls back to the end anchor.
+        private func restoreScroll(
+            _ preserved: PreservedScroll, in collectionView: UICollectionView
+        ) -> Bool {
+            guard let flatIndex = parent.photos.firstIndex(
+                where: { $0.assetId == preserved.assetId }
+            ),
+                let indexPath = indexPath(forFlatIndex: flatIndex),
+                let frame = collectionView.collectionViewLayout
+                    .layoutAttributesForItem(at: indexPath)?.frame
+            else { return false }
+            let minimum = -collectionView.adjustedContentInset.top
+            let maximum = max(
+                minimum,
+                collectionView.collectionViewLayout.collectionViewContentSize.height
+                    - collectionView.bounds.height + collectionView.adjustedContentInset.bottom
+            )
+            let target = min(max(frame.minY + preserved.offsetFromTileTop, minimum), maximum)
+            collectionView.setContentOffset(CGPoint(x: 0, y: target), animated: false)
+            return true
+        }
+
+        /// Within one screen height of the end the grid anchors to (bottom for
+        /// Library, top for albums).
+        private func isNearAnchorEnd(_ collectionView: UICollectionView) -> Bool {
+            let height = collectionView.bounds.height
+            guard height > 0 else { return true }
+            guard parent.anchorsBottom else {
+                return collectionView.contentOffset.y
+                    + collectionView.adjustedContentInset.top <= height
+            }
+            let bottom = collectionView.collectionViewLayout.collectionViewContentSize.height
+                - height + collectionView.adjustedContentInset.bottom
+            return bottom - collectionView.contentOffset.y <= height
+        }
+
         private func reconfigureVisibleCells(_ collectionView: UICollectionView) {
             for indexPath in collectionView.indexPathsForVisibleItems {
                 guard let cell = collectionView.cellForItem(at: indexPath) as? PhotoGridCell,
@@ -327,16 +426,37 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         // MARK: Sections
 
         private func rebuildSections() {
-            guard parent.isDateSectioned, !parent.photos.isEmpty else {
-                sections = parent.photos.isEmpty
-                    ? []
-                    : [PhotoGridSection(kind: .undated, range: 0..<parent.photos.count)]
+            guard !parent.photos.isEmpty else {
+                sections = []
                 return
             }
-            sections = PhotoGridSectionBuilder.sections(
-                creationDates: parent.photos.map(\.creationDateValue),
-                granularity: GridDensity.granularity(forColumns: parent.columnCount)
-            )
+            switch parent.sectionMode {
+            case .flat:
+                sections = [ResolvedSection(range: 0..<parent.photos.count, title: nil)]
+            case .dates:
+                let granularity = GridDensity.granularity(forColumns: parent.columnCount)
+                sections = PhotoGridSectionBuilder.sections(
+                    creationDates: parent.photos.map(\.creationDateValue),
+                    granularity: granularity
+                ).map {
+                    ResolvedSection(
+                        range: $0.range,
+                        title: Self.dateTitle(for: $0.kind, granularity: granularity)
+                    )
+                }
+            case .custom(let supplied):
+                // The screen's sections and its photos arrive in the same
+                // SwiftUI update, but clamp anyway: a momentarily stale pair
+                // must degrade to fewer tiles, never to an item count that
+                // indexes past the array.
+                sections = supplied.compactMap { section in
+                    let upper = min(section.range.upperBound, parent.photos.count)
+                    guard section.range.lowerBound < upper else { return nil }
+                    return ResolvedSection(
+                        range: section.range.lowerBound..<upper, title: section.title
+                    )
+                }
+            }
         }
 
         private func flatIndex(for indexPath: IndexPath) -> Int? {
@@ -345,13 +465,21 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             return parent.photos.indices.contains(flat) ? flat : nil
         }
 
-        private func headerTitle(for section: PhotoGridSection) -> String? {
-            guard parent.isDateSectioned else { return nil }
-            switch section.kind {
+        private func indexPath(forFlatIndex flatIndex: Int) -> IndexPath? {
+            guard let section = sections.firstIndex(where: { $0.range.contains(flatIndex) })
+            else { return nil }
+            return IndexPath(
+                item: flatIndex - sections[section].range.lowerBound, section: section
+            )
+        }
+
+        private static func dateTitle(
+            for kind: PhotoGridSection.Kind, granularity: PhotoGridDateGranularity
+        ) -> String {
+            switch kind {
             case .undated:
                 return String(localized: "No Date")
             case .date(let date):
-                let granularity = GridDensity.granularity(forColumns: parent.columnCount)
                 return granularity == .day
                     ? FormatUtils.dayHeader(date)
                     : FormatUtils.monthHeader(date)
@@ -372,7 +500,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             layout.columns = GridDensity.clamped(columns)
             layout.minimumInteritemSpacing = 2
             layout.minimumLineSpacing = 2
-            layout.sectionHeadersPinToVisibleBounds = parent.isDateSectioned
+            layout.sectionHeadersPinToVisibleBounds = parent.sectionMode.hasHeaders
             return layout
         }
 
@@ -395,9 +523,10 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             layout collectionViewLayout: UICollectionViewLayout,
             referenceSizeForHeaderInSection section: Int
         ) -> CGSize {
-            parent.isDateSectioned
-                ? CGSize(width: collectionView.bounds.width, height: 32)
-                : .zero
+            guard sections.indices.contains(section),
+                  let title = sections[section].title, !title.isEmpty
+            else { return .zero }
+            return CGSize(width: collectionView.bounds.width, height: 32)
         }
 
         /// Square cell side for a column count, floored to pixel precision so
@@ -486,7 +615,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 ofKind: kind, withReuseIdentifier: Self.headerReuseId, for: indexPath
             ) as! UICollectionViewCell
             let title = sections.indices.contains(indexPath.section)
-                ? headerTitle(for: sections[indexPath.section]) ?? ""
+                ? sections[indexPath.section].title ?? ""
                 : ""
             view.contentConfiguration = UIHostingConfiguration {
                 GridSectionHeader(title: title)
@@ -682,15 +811,58 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             return gestureRecognizer === swipeRecognizer || isSwipePinchPair
         }
 
+        /// Long press enters selection mode *and*, without lifting, keeps
+        /// driving the range under the finger.
+        ///
+        /// The swipe pan cannot do the drag part: it is only enabled once
+        /// SwiftUI has re-applied with `isSelecting == true` (see `apply`), by
+        /// which time this touch is already in flight — and UIKit never hands
+        /// an in-flight touch to a recognizer enabled mid-sequence, so no
+        /// `.began` would ever arrive. So the long press seeds the same
+        /// swipe-select state machine and feeds it from its own `.changed`.
         @objc private func handleLongPress(_ recognizer: UILongPressGestureRecognizer) {
-            guard recognizer.state == .began,
-                  let collectionView,
-                  let indexPath = collectionView.indexPathForItem(
-                      at: recognizer.location(in: collectionView)
-                  ),
-                  let flatIndex = flatIndex(for: indexPath)
-            else { return }
-            parent.onLongPress(parent.photos[flatIndex])
+            guard let collectionView else { return }
+            switch recognizer.state {
+            case .began:
+                guard let indexPath = collectionView.indexPathForItem(
+                          at: recognizer.location(in: collectionView)
+                      ),
+                      let flatIndex = flatIndex(for: indexPath)
+                else { return }
+                // Only the press that *enters* selection mode takes over the
+                // drag. Already selecting means the pan recognizer is live and
+                // owns direction locking — hijacking a resting finger there
+                // would turn ordinary vertical scrolling into a selection.
+                let entersSelection = !parent.isSelecting
+                parent.onLongPress(parent.photos[flatIndex])
+                guard entersSelection else { return }
+                isLongPressDragActive = true
+                // No direction lock: the 0.35s hold already expressed intent,
+                // so up/down drags select instead of scrolling.
+                swipeActivation = .select
+                swipeStartFlatIndex = flatIndex
+                swipeShouldSelect = true
+                swipeLastFlatIndex = nil
+                collectionView.isScrollEnabled = false
+                let location = recognizer.location(in: collectionView)
+                swipeWindowLocation = collectionView.window.map {
+                    collectionView.convert(location, to: $0)
+                }
+                parent.onSwipeEvent(.began)
+                updateSwipeRange(at: location)
+                startSwipeAutoScroll()
+            case .changed:
+                guard isLongPressDragActive else { return }
+                swipeWindowLocation = collectionView.window.map {
+                    recognizer.location(in: $0)
+                }
+                updateSwipeRange(at: recognizer.location(in: collectionView))
+            case .ended, .cancelled, .failed:
+                guard isLongPressDragActive else { return }
+                finishActiveSwipeSelection()
+            default:
+                break
+            }
         }
 
         // MARK: Pinch density (interactive layout transition)
@@ -811,10 +983,14 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 appliedColumns = newColumns
                 parent.columnCount = newColumns
                 // Granularity may have flipped (day <-> month at 3/4) —
-                // regroup and reload so headers and item counts match.
-                let before = sections.count
+                // regroup and reload so headers and item counts match. A flip
+                // that keeps the section count still changes the header text,
+                // so compare the resolved sections, not just how many.
+                // Screen-supplied sections resolve identically here, so they
+                // are never re-grouped by a pinch.
+                let before = sections
                 rebuildSections()
-                if sections.count != before {
+                if sections != before {
                     collectionView.reloadData()
                 }
                 // Sharper thumbnails for the new cell size.
@@ -827,7 +1003,9 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         // MARK: Swipe-select
 
         @objc private func handleSwipeSelect(_ recognizer: UIPanGestureRecognizer) {
-            guard let collectionView else { return }
+            // The long press that opened selection mode is still down and owns
+            // the range; a pan enabled mid-touch must not drive it too.
+            guard !isLongPressDragActive, let collectionView else { return }
             switch recognizer.state {
             case .began:
                 swipeActivation = .undecided
@@ -947,6 +1125,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             if swipeActivation == .select {
                 parent.onSwipeEvent(.ended)
             }
+            isLongPressDragActive = false
             swipeActivation = .undecided
             resetSwipeState(keepingScrollEnabled: false)
         }
@@ -1019,10 +1198,9 @@ private final class GridCollectionView: UICollectionView {
 
 // MARK: - Section header
 
-/// Pinned date header: a compact glass capsule chip, legible over
+/// Pinned section header: a compact glass capsule chip, legible over
 /// scrolling photos without covering the full row width. Hosted in the
-/// collection view's supplementary views via UIHostingConfiguration;
-/// On This Day renders its own headers.
+/// collection view's supplementary views via UIHostingConfiguration.
 struct GridSectionHeader: View {
     let title: String
 
@@ -1048,7 +1226,6 @@ struct GridSectionHeader: View {
 
 /// One square grid cell, pure UIKit for scroll performance: thumbnail +
 /// bottom metadata line over a gradient + video badge + selection UI.
-/// Mirrors the SwiftUI `PhotoGridTile` (which On This Day still uses).
 final class PhotoGridCell: UICollectionViewCell {
     static var reuseId: String { "PhotoGridCell" }
 
@@ -1225,6 +1402,12 @@ final class PhotoGridCell: UICollectionViewCell {
         guard let asset, let photoLibrary else {
             cancelRequest()
             imageView.image = nil
+            // Clear the request identity too: the asset is only missing because
+            // its chunk is still resolving, and leaving the id set would make
+            // the re-configure that follows look like "same asset, nothing to
+            // do" — the tile would stay grey until it was reused.
+            requestedAssetId = nil
+            lastRequestedPixelWidth = 0
             return
         }
         let assetChanged = asset.localIdentifier != requestedAssetId

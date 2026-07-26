@@ -95,7 +95,7 @@ struct SmartAlbumDetailScreen: View {
         PhotoGridCollectionView(
             photos: controller.items,
             assetProvider: { index, _ in controller.asset(atFlatIndex: index) },
-            isDateSectioned: true,
+            sectionMode: .dates,
             anchorsBottom: false,
             contentVersion: controller.contentGeneration,
             contentRefreshVersion: controller.contentRefreshGeneration,

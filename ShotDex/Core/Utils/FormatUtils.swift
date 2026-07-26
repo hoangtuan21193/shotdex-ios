@@ -17,6 +17,17 @@ enum FormatUtils {
         return "1/\(Int(denominator))s"
     }
 
+    /// Chrome-width variant of `shutterSpeed`: `1/500` without the trailing
+    /// `s` for sub-second exposures (inside an exposure group the fraction
+    /// already reads as a shutter speed), but `2s` / `2.5s` kept for
+    /// whole/decimal seconds where the unit is what separates it from an
+    /// aperture or ISO value.
+    static func shutterSpeedCompact(_ seconds: Double) -> String? {
+        guard let full = shutterSpeed(seconds) else { return nil }
+        guard full.hasPrefix("1/") else { return full }
+        return String(full.dropLast())
+    }
+
     /// `f/1.8`, `f/11`.
     static func aperture(_ value: Double) -> String? {
         guard value > 0, value.isFinite else { return nil }
@@ -69,6 +80,16 @@ enum FormatUtils {
         let parts = fragments.compactMap { $0 }
         guard !parts.isEmpty else { return nil }
         return parts.joined(separator: " · ")
+    }
+
+    /// Joins non-nil fragments with a single space — the tight grouping used
+    /// inside one logical group (`400mm f/7.1 1/1000 ISO 3200`), where ` · `
+    /// between every value would spend width without adding meaning. Groups
+    /// themselves are still joined by `metadataLine`.
+    static func tokenLine(_ fragments: [String?]) -> String? {
+        let parts = fragments.compactMap { $0 }
+        guard !parts.isEmpty else { return nil }
+        return parts.joined(separator: " ")
     }
 
     /// Grid day-section header: "Today" / "Yesterday", else "19 July 2026".

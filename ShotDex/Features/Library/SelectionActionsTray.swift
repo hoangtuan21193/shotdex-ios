@@ -387,19 +387,6 @@ private struct SelectionThumbnail: View {
     }
 }
 
-/// Checkmark badge on a grid tile during multi-select.
-struct SelectionBadge: View {
-    let isSelected: Bool
-
-    var body: some View {
-        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-            .font(.system(size: 22))
-            .foregroundStyle(isSelected ? Color.accentColor : .white)
-            .background(Circle().fill(isSelected ? .white : .black.opacity(0.35)))
-            .padding(6)
-    }
-}
-
 #Preview {
     let dependencies = AppDependencies.preview()
     func config(_ count: Int, _ ids: [String], compare: Bool) -> SelectionBarConfig {

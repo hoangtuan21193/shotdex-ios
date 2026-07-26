@@ -252,7 +252,7 @@ struct ImportScreen: View {
 }
 
 /// One square cell in the import grid: a file-URL thumbnail (ImageIO) with a
-/// selection check and a RAW badge. Unlike `PhotoGridTile` these images come
+/// selection check and a RAW badge. Unlike `PhotoGridCell` these images come
 /// from files on the card, not PHAssets, so thumbnails are decoded directly.
 private struct ImportGridTile: View {
     let candidate: ImportCandidate

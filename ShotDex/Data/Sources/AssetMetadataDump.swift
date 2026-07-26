@@ -1,4 +1,5 @@
 import AVFoundation
+import CoreLocation
 import CoreMedia
 import Foundation
 import ImageIO
@@ -20,27 +21,141 @@ struct MetadataDumpSection: Identifiable, Sendable {
     var id: String { title }
 }
 
-/// Reads the *complete* raw metadata of an asset on demand for the info
-/// sheet — every ImageIO property for photos, every AVAsset/track fact for
-/// videos, plus the PHAsset and resource facts. This is deliberately
-/// exhaustive (not the curated index), so it reads live and may be slow /
-/// touch iCloud; callers load it asynchronously.
+/// Camera context used to decide whether reading an original file for shutter
+/// count is useful. Unsupported vendors stay visible in the UI with an honest
+/// explanation instead of silently omitting the row.
+struct ShutterCountContext: Sendable {
+    enum Capability: Sendable {
+        case readable
+        case unavailable(String)
+        case notApplicable
+    }
+
+    let make: String?
+    let model: String?
+    let capability: Capability
+}
+
+/// One metadata read produces both a photographer-focused summary and the
+/// exhaustive dump behind "Show All Raw Metadata". Building both from the same
+/// ImageIO property dictionary avoids downloading/parsing the asset twice.
+struct AssetMetadataReport: Sendable {
+    let usefulSections: [MetadataDumpSection]
+    let rawSections: [MetadataDumpSection]
+    let shutterCountContext: ShutterCountContext
+    let location: AssetLocation?
+}
+
+/// Value-only location snapshot safe to pass from the metadata reader into
+/// SwiftUI without retaining a PhotoKit/Core Location reference type.
+struct AssetLocation: Sendable, Equatable {
+    let latitude: Double
+    let longitude: Double
+    let altitude: Double?
+
+    init(latitude: Double, longitude: Double, altitude: Double? = nil) {
+        self.latitude = latitude
+        self.longitude = longitude
+        self.altitude = altitude
+    }
+
+    init(_ location: CLLocation) {
+        latitude = location.coordinate.latitude
+        longitude = location.coordinate.longitude
+        altitude = location.altitude
+    }
+}
+
+private struct OriginalMetadataReadState {
+    var buffer = Data()
+    var finished = false
+    var requestID: PHAssetResourceDataRequestID?
+}
+
+/// Reads metadata live on demand. The default sheet consumes only
+/// `usefulSections`; raw ImageIO/PhotoKit values remain available separately.
 enum AssetMetadataDump {
-    static func load(for asset: PHAsset) async -> [MetadataDumpSection] {
+    /// Builds the first frame entirely from the indexed database row plus
+    /// cheap PHAsset facts. The sheet can render this synchronously while the
+    /// richer ImageIO/raw report is read in the background.
+    static func indexedReport(
+        for asset: PHAsset,
+        metadata: PhotoMetadata?
+    ) -> AssetMetadataReport? {
+        guard let metadata else { return nil }
+        let location = resolvedLocation(asset: asset, metadata: metadata)
+        let useful = indexedUsefulSections(
+            asset: asset,
+            metadata: metadata,
+            location: location
+        )
+        let context = shutterCountContext(
+            mediaType: asset.mediaType,
+            make: metadata.cameraManufacturer,
+            model: metadata.cameraModel
+        )
+        return AssetMetadataReport(
+            usefulSections: useful.filter { !$0.rows.isEmpty },
+            rawSections: [assetSection(asset), locationSection(location)]
+                .filter { !$0.rows.isEmpty },
+            shutterCountContext: context,
+            location: location
+        )
+    }
+
+    static func load(
+        for asset: PHAsset,
+        indexedMetadata: PhotoMetadata? = nil
+    ) async -> AssetMetadataReport {
+        let location = resolvedLocation(asset: asset, metadata: indexedMetadata)
         if asset.mediaType == .video {
-            var sections: [MetadataDumpSection] = [assetSection(asset)]
-            sections.append(contentsOf: resourceSections(asset))
-            sections.append(contentsOf: await videoSections(asset))
-            sections.append(locationSection(asset))
-            return sections.filter { !$0.rows.isEmpty }
+            let technicalSections = await videoSections(asset)
+            let useful = [
+                locationSection(location),
+            ] + technicalSections + [
+                usefulDateSection(asset),
+                usefulFileSection(asset, indexedMetadata: indexedMetadata),
+            ]
+            let raw = [assetSection(asset)]
+                + resourceSections(asset)
+                + technicalSections
+                + [locationSection(location)]
+            return AssetMetadataReport(
+                usefulSections: useful.filter { !$0.rows.isEmpty },
+                rawSections: raw.filter { !$0.rows.isEmpty },
+                shutterCountContext: ShutterCountContext(
+                    make: nil,
+                    model: nil,
+                    capability: .notApplicable
+                ),
+                location: location
+            )
         }
-        // Photo: curated useful sections first, then everything else in "Other".
+
         let properties = await imageProperties(asset)
-        let (make, model) = makeModel(from: properties)
-        let shutter = await shutterCount(asset, make: make, model: model)
-        var sections = photoSections(asset: asset, properties: properties, shutterCount: shutter)
-        sections.append(contentsOf: resourceSections(asset))
-        return sections.filter { !$0.rows.isEmpty }
+        let liveMakeModel = makeModel(from: properties)
+        let make = liveMakeModel.0 ?? indexedMetadata?.cameraManufacturer
+        let model = liveMakeModel.1 ?? indexedMetadata?.cameraModel
+        let useful = usefulPhotoSections(
+            asset: asset,
+            properties: properties,
+            indexedMetadata: indexedMetadata,
+            location: location
+        )
+        let raw = [assetSection(asset)]
+            + resourceSections(asset)
+            + rawImageSections(properties ?? [:])
+            + [locationSection(location)]
+        return AssetMetadataReport(
+            usefulSections: useful.filter { !$0.rows.isEmpty },
+            rawSections: raw.filter { !$0.rows.isEmpty },
+            shutterCountContext: ShutterCountContext(
+                make: make,
+                model: model,
+                capability: shutterCountCapability(make: make)
+            ),
+            location: location
+        )
     }
 
     // MARK: PHAsset facts
@@ -62,11 +177,24 @@ enum AssetMetadataDump {
         return section("Asset", from: pairs)
     }
 
-    private static func locationSection(_ asset: PHAsset) -> MetadataDumpSection {
-        guard let location = asset.location else { return section("Location", from: []) }
+    private static func resolvedLocation(
+        asset: PHAsset,
+        metadata: PhotoMetadata?
+    ) -> AssetLocation? {
+        if let location = asset.location {
+            return AssetLocation(location)
+        }
+        guard let latitude = metadata?.latitude,
+              let longitude = metadata?.longitude
+        else { return nil }
+        return AssetLocation(latitude: latitude, longitude: longitude)
+    }
+
+    private static func locationSection(_ location: AssetLocation?) -> MetadataDumpSection {
+        guard let location else { return section("Location", from: []) }
         return section("Location", from: [
-            ("Coordinate", String(format: "%.6f, %.6f", location.coordinate.latitude, location.coordinate.longitude)),
-            ("Altitude", String(format: "%.1f m", location.altitude)),
+            ("Coordinate", String(format: "%.6f, %.6f", location.latitude, location.longitude)),
+            ("Altitude", location.altitude.map { String(format: "%.1f m", $0) }),
         ])
     }
 
@@ -83,136 +211,294 @@ enum AssetMetadataDump {
         }
     }
 
-    // MARK: Image (ImageIO) — curated sections
+    private static func usefulFileSection(
+        _ asset: PHAsset,
+        indexedMetadata: PhotoMetadata? = nil
+    ) -> MetadataDumpSection {
+        let resource = PHAssetResource.assetResources(for: asset)
+            .first { $0.type == .photo || $0.type == .video || $0.type == .fullSizePhoto || $0.type == .fullSizeVideo }
+        let size = indexedMetadata?.fileSize
+            ?? (resource?.value(forKey: "fileSize") as? NSNumber)?.intValue
+        var pairs: [(String, String?)] = [
+            ("Filename", resource?.originalFilename ?? indexedMetadata?.originalFilename),
+            ("Format", resource?.uniformTypeIdentifier),
+            ("Dimensions", resolvedDimensions(asset: asset, metadata: indexedMetadata)
+                .map { "\($0.width) × \($0.height)" }),
+            ("Megapixels", resolvedDimensions(asset: asset, metadata: indexedMetadata)
+                .flatMap { FormatUtils.megapixels(Double($0.width * $0.height) / 1_000_000) }),
+            ("File Size", size.flatMap { FormatUtils.fileSize($0) }),
+            ("Type", subtypeNames(asset.mediaSubtypes)),
+        ]
+        if asset.mediaType == .video {
+            pairs.append(("Duration", FormatUtils.duration(asset.duration)))
+        }
+        return section("File", from: pairs)
+    }
 
-    /// Splits the raw ImageIO property tree into curated, human-useful sections
-    /// (Resolution / Camera / Exposure / Software / Date / Shutter Count /
-    /// Location) and dumps everything not surfaced into "Other" (grouped by its
-    /// source block), so nothing is lost.
-    private static func photoSections(
+    private static func indexedUsefulSections(
+        asset: PHAsset,
+        metadata: PhotoMetadata,
+        location: AssetLocation?
+    ) -> [MetadataDumpSection] {
+        let dimensions = resolvedDimensions(asset: asset, metadata: metadata)
+        let camera = section("Camera & Lens", from: [
+            ("Make", metadata.cameraManufacturer ?? metadata.normalizedCameraManufacturer),
+            ("Model", metadata.cameraModel ?? metadata.normalizedCameraModel),
+            ("Lens", metadata.lensModel ?? metadata.normalizedLensModel),
+            ("Lens Make", metadata.lensManufacturer),
+        ])
+        let exposure = section("Exposure", from: [
+            ("Shutter Speed", metadata.shutterSpeedDisplay
+                ?? metadata.shutterSpeedSeconds.flatMap(FormatUtils.shutterSpeed)),
+            ("Aperture", metadata.aperture.flatMap(FormatUtils.aperture)),
+            ("ISO", metadata.iso.flatMap(FormatUtils.iso)),
+            ("Focal Length", metadata.focalLength.flatMap(FormatUtils.focalLength)),
+            ("35mm Equivalent", metadata.equivalentFocalLength.flatMap(FormatUtils.focalLength)),
+        ])
+        let date = section("Date", from: [
+            ("Captured", metadata.creationDateValue.map(dateString)
+                ?? asset.creationDate.map(dateString)),
+            ("Modified", metadata.modificationDate
+                .map { Date(timeIntervalSince1970: TimeInterval($0)) }
+                .map(dateString)
+                ?? asset.modificationDate.map(dateString)),
+        ])
+        let file = section("File", from: [
+            ("Filename", metadata.originalFilename),
+            ("Dimensions", dimensions.map { "\($0.width) × \($0.height)" }),
+            ("Megapixels", dimensions.flatMap {
+                FormatUtils.megapixels(Double($0.width * $0.height) / 1_000_000)
+            }),
+            ("File Size", metadata.fileSize.flatMap(FormatUtils.fileSize)),
+            ("Type", subtypeNames(asset.mediaSubtypes)),
+        ])
+
+        return [
+            locationSection(location),
+            camera,
+            exposure,
+            date,
+            file,
+        ]
+    }
+
+    private static func resolvedDimensions(
+        asset: PHAsset,
+        metadata: PhotoMetadata?
+    ) -> (width: Int, height: Int)? {
+        let width = metadata?.width ?? (asset.pixelWidth > 0 ? asset.pixelWidth : nil)
+        let height = metadata?.height ?? (asset.pixelHeight > 0 ? asset.pixelHeight : nil)
+        guard let width, let height, width > 0, height > 0 else { return nil }
+        return (width, height)
+    }
+
+    private static func usefulDateSection(_ asset: PHAsset) -> MetadataDumpSection {
+        section("Date", from: [
+            ("Captured", asset.creationDate.map(dateString)),
+            ("Modified", asset.modificationDate.map(dateString)),
+        ])
+    }
+
+    // MARK: Image (ImageIO) — photographer-focused summary
+
+    /// Cross-brand summary built from standard Exif/TIFF fields. MakerNotes
+    /// differ by vendor and model, so proprietary internals stay in Raw
+    /// Metadata rather than crowding the default screen with opaque numbers.
+    private static func usefulPhotoSections(
         asset: PHAsset,
         properties: [CFString: Any]?,
-        shutterCount: Int?
+        indexedMetadata: PhotoMetadata?,
+        location: AssetLocation?
     ) -> [MetadataDumpSection] {
         let props = properties ?? [:]
         let exif = nestedDict(props, kCGImagePropertyExifDictionary)
         let tiff = nestedDict(props, kCGImagePropertyTIFFDictionary)
         let aux = nestedDict(props, kCGImagePropertyExifAuxDictionary)
+        let iptc = nestedDict(props, kCGImagePropertyIPTCDictionary)
 
-        // Tracks which (block, key) pairs a curated section consumed so "Other"
-        // doesn't repeat them.
-        var consumed = Set<String>()
-        func take(_ block: String, _ dict: [String: Any], _ key: CFString) -> String? {
-            guard let value = dict[key as String], let string = stringify(value) else { return nil }
-            consumed.insert("\(block).\(key as String)")
-            return string
+        func string(_ dict: [String: Any], _ key: CFString) -> String? {
+            dict[key as String].flatMap(stringify)
         }
-        // Top-level keys live in the "Image" block for Other purposes.
-        func takeTop(_ key: CFString) -> Any? {
-            guard let value = props[key] else { return nil }
-            consumed.insert("Image.\(key as String)")
-            return value
+        func number(_ dict: [String: Any], _ key: CFString) -> Double? {
+            (dict[key as String] as? NSNumber)?.doubleValue
         }
-
-        // Resolution.
-        var resolution: [(String, String?)] = []
-        let pixelWidth = (takeTop(kCGImagePropertyPixelWidth) as? NSNumber)?.intValue ?? asset.pixelWidth
-        let pixelHeight = (takeTop(kCGImagePropertyPixelHeight) as? NSNumber)?.intValue ?? asset.pixelHeight
-        if pixelWidth > 0, pixelHeight > 0 {
-            resolution.append(("Dimensions", "\(pixelWidth) × \(pixelHeight)"))
-            resolution.append(("Megapixels", FormatUtils.megapixels(Double(pixelWidth * pixelHeight) / 1_000_000)))
+        func integer(_ dict: [String: Any], _ key: CFString) -> Int? {
+            (dict[key as String] as? NSNumber)?.intValue
         }
-        if let dpi = (takeTop(kCGImagePropertyDPIWidth) as? NSNumber)?.doubleValue, dpi > 0 {
-            resolution.append(("DPI", String(format: "%.0f", dpi)))
-        }
-        if let orientation = takeTop(kCGImagePropertyOrientation).flatMap({ stringify($0) }) {
-            resolution.append(("Orientation", orientation))
+        func enumValue(_ dict: [String: Any], _ key: CFString, labels: [Int: String]) -> String? {
+            guard let value = integer(dict, key) else { return nil }
+            return labels[value] ?? "Other (\(value))"
         }
 
-        // Camera.
+        let resource = PHAssetResource.assetResources(for: asset)
+            .first { $0.type == .photo || $0.type == .fullSizePhoto || $0.type == .alternatePhoto }
+        let fileSize = indexedMetadata?.fileSize
+            ?? (resource?.value(forKey: "fileSize") as? NSNumber)?.intValue
+        let pixelWidth = (props[kCGImagePropertyPixelWidth] as? NSNumber)?.intValue
+            ?? indexedMetadata?.width
+            ?? asset.pixelWidth
+        let pixelHeight = (props[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue
+            ?? indexedMetadata?.height
+            ?? asset.pixelHeight
+        let file: [(String, String?)] = [
+            ("Filename", resource?.originalFilename ?? indexedMetadata?.originalFilename),
+            ("Format", resource?.uniformTypeIdentifier),
+            ("Dimensions", pixelWidth > 0 && pixelHeight > 0 ? "\(pixelWidth) × \(pixelHeight)" : nil),
+            ("Megapixels", pixelWidth > 0 && pixelHeight > 0
+                ? FormatUtils.megapixels(Double(pixelWidth * pixelHeight) / 1_000_000)
+                : nil),
+            ("File Size", fileSize.flatMap { FormatUtils.fileSize($0) }),
+            ("Color Model", props[kCGImagePropertyColorModel].flatMap(stringify)),
+            ("Bit Depth", (props[kCGImagePropertyDepth] as? NSNumber).map { "\($0.intValue)-bit" }),
+            ("Color Space", enumValue(exif, "ColorSpace" as CFString, labels: [
+                1: "sRGB",
+                2: "Adobe RGB",
+                65_535: "Uncalibrated",
+            ])),
+        ]
+
+        let lensModel = string(exif, kCGImagePropertyExifLensModel)
+            ?? string(aux, kCGImagePropertyExifAuxLensModel)
+        let firmware = string(aux, kCGImagePropertyExifAuxFirmware)
+            ?? string(tiff, kCGImagePropertyTIFFSoftware)
         let camera: [(String, String?)] = [
-            ("Make", take("TIFF", tiff, kCGImagePropertyTIFFMake)),
-            ("Model", take("TIFF", tiff, kCGImagePropertyTIFFModel)),
-            ("Lens Make", take("Exif", exif, kCGImagePropertyExifLensMake)),
-            ("Lens Model", take("Exif", exif, kCGImagePropertyExifLensModel)
-                ?? take("ExifAux", aux, "LensModel" as CFString)),
-            ("Lens", take("Exif", exif, kCGImagePropertyExifLensSpecification)),
-            ("Body Serial", take("Exif", exif, kCGImagePropertyExifBodySerialNumber)),
-            ("Lens Serial", take("Exif", exif, kCGImagePropertyExifLensSerialNumber)),
+            ("Make", string(tiff, kCGImagePropertyTIFFMake)
+                ?? indexedMetadata?.cameraManufacturer
+                ?? indexedMetadata?.normalizedCameraManufacturer),
+            ("Model", string(tiff, kCGImagePropertyTIFFModel)
+                ?? indexedMetadata?.cameraModel
+                ?? indexedMetadata?.normalizedCameraModel),
+            ("Lens", lensModel
+                ?? indexedMetadata?.lensModel
+                ?? indexedMetadata?.normalizedLensModel),
+            ("Lens Make", string(exif, kCGImagePropertyExifLensMake)
+                ?? indexedMetadata?.lensManufacturer),
+            ("Lens Range", lensSpecification(exif[kCGImagePropertyExifLensSpecification as String])),
+            ("Firmware / Software", firmware),
         ]
 
-        // Exposure (formatted where we have a nice helper).
-        func double(_ dict: [String: Any], _ block: String, _ key: CFString) -> Double? {
-            guard let number = dict[key as String] as? NSNumber else { return nil }
-            consumed.insert("\(block).\(key as String)")
-            return number.doubleValue
-        }
         let isoValue: Int? = {
-            guard let value = exif[kCGImagePropertyExifISOSpeedRatings as String] else { return nil }
-            consumed.insert("Exif.\(kCGImagePropertyExifISOSpeedRatings as String)")
-            if let array = value as? [NSNumber] { return array.first?.intValue }
-            return (value as? NSNumber)?.intValue
+            let ratings = exif[kCGImagePropertyExifISOSpeedRatings as String]
+            if let array = ratings as? [NSNumber] { return array.first?.intValue }
+            return (ratings as? NSNumber)?.intValue
+                ?? (exif["ISOSpeed"] as? NSNumber)?.intValue
         }()
+        let bias = number(exif, kCGImagePropertyExifExposureBiasValue)
+            .map { String(format: "%+.1f EV", $0) }
         let exposure: [(String, String?)] = [
-            ("ISO", isoValue.flatMap { FormatUtils.iso($0) }),
-            ("Aperture", double(exif, "Exif", kCGImagePropertyExifFNumber).flatMap { FormatUtils.aperture($0) }),
-            ("Shutter Speed", double(exif, "Exif", kCGImagePropertyExifExposureTime).flatMap { FormatUtils.shutterSpeed($0) }),
-            ("Focal Length", double(exif, "Exif", kCGImagePropertyExifFocalLength).flatMap { FormatUtils.focalLength($0) }),
-            ("Focal Length (35mm)", double(exif, "Exif", kCGImagePropertyExifFocalLenIn35mmFilm).flatMap { FormatUtils.focalLength($0) }),
-            ("Exposure Bias", take("Exif", exif, kCGImagePropertyExifExposureBiasValue).map { "\($0) EV" }),
-            ("Exposure Program", take("Exif", exif, kCGImagePropertyExifExposureProgram)),
-            ("Metering Mode", take("Exif", exif, kCGImagePropertyExifMeteringMode)),
-            ("Flash", take("Exif", exif, kCGImagePropertyExifFlash)),
-            ("White Balance", take("Exif", exif, kCGImagePropertyExifWhiteBalance)),
+            ("Shutter Speed", number(exif, kCGImagePropertyExifExposureTime)
+                .flatMap(FormatUtils.shutterSpeed)
+                ?? indexedMetadata?.shutterSpeedDisplay
+                ?? indexedMetadata?.shutterSpeedSeconds.flatMap(FormatUtils.shutterSpeed)),
+            ("Aperture", number(exif, kCGImagePropertyExifFNumber)
+                .flatMap(FormatUtils.aperture)
+                ?? indexedMetadata?.aperture.flatMap(FormatUtils.aperture)),
+            ("ISO", isoValue.flatMap(FormatUtils.iso)
+                ?? indexedMetadata?.iso.flatMap(FormatUtils.iso)),
+            ("Exposure Compensation", bias),
+            ("Focal Length", number(exif, kCGImagePropertyExifFocalLength)
+                .flatMap(FormatUtils.focalLength)
+                ?? indexedMetadata?.focalLength.flatMap(FormatUtils.focalLength)),
+            ("35mm Equivalent", number(exif, kCGImagePropertyExifFocalLenIn35mmFilm)
+                .flatMap(FormatUtils.focalLength)
+                ?? indexedMetadata?.equivalentFocalLength.flatMap(FormatUtils.focalLength)),
+            ("Subject Distance", number(exif, kCGImagePropertyExifSubjectDistance).flatMap(distance)),
         ]
 
-        // Software / iOS.
-        let software: [(String, String?)] = [
-            ("Software", take("TIFF", tiff, kCGImagePropertyTIFFSoftware)),
-            ("Host", take("TIFF", tiff, kCGImagePropertyTIFFHostComputer)),
+        let capture: [(String, String?)] = [
+            ("Exposure Program", enumValue(exif, kCGImagePropertyExifExposureProgram, labels: exposurePrograms)),
+            ("Exposure Mode", enumValue(exif, kCGImagePropertyExifExposureMode, labels: [
+                0: "Auto",
+                1: "Manual",
+                2: "Auto Bracket",
+            ])),
+            ("Metering", enumValue(exif, kCGImagePropertyExifMeteringMode, labels: meteringModes)),
+            ("White Balance", enumValue(exif, kCGImagePropertyExifWhiteBalance, labels: [
+                0: "Auto",
+                1: "Manual",
+            ])),
+            ("Light Source", enumValue(exif, kCGImagePropertyExifLightSource, labels: lightSources)),
+            ("Flash", integer(exif, kCGImagePropertyExifFlash).map(flashDescription)),
+            ("Scene", enumValue(exif, kCGImagePropertyExifSceneCaptureType, labels: [
+                0: "Standard",
+                1: "Landscape",
+                2: "Portrait",
+                3: "Night",
+            ])),
+            ("Subject Range", enumValue(exif, kCGImagePropertyExifSubjectDistRange, labels: [
+                0: "Unknown",
+                1: "Macro",
+                2: "Close",
+                3: "Distant",
+            ])),
+            ("Digital Zoom", number(exif, kCGImagePropertyExifDigitalZoomRatio)
+                .flatMap { $0 > 1 ? String(format: "%.1f×", $0) : nil }),
         ]
 
-        // Date.
         let date: [(String, String?)] = [
-            ("Date Taken", take("Exif", exif, kCGImagePropertyExifDateTimeOriginal)),
-            ("Date Digitized", take("Exif", exif, kCGImagePropertyExifDateTimeDigitized)),
-            ("File Date", take("TIFF", tiff, kCGImagePropertyTIFFDateTime)),
-            ("Time Zone", take("Exif", exif, "OffsetTimeOriginal" as CFString)),
-            ("Sub-second", take("Exif", exif, kCGImagePropertyExifSubsecTimeOriginal)),
+            ("Captured", asset.creationDate.map(dateString)
+                ?? string(exif, kCGImagePropertyExifDateTimeOriginal)),
+            ("Time Zone", string(exif, "OffsetTimeOriginal" as CFString)),
+            ("Modified", asset.modificationDate.map(dateString)),
         ]
 
-        var sections: [MetadataDumpSection] = [
-            section("Resolution", from: resolution),
-            section("Camera", from: camera),
-            section("Exposure", from: exposure),
-            section("Software", from: software),
-            section("Date", from: date),
+        let rights: [(String, String?)] = [
+            ("Artist", string(tiff, kCGImagePropertyTIFFArtist)),
+            ("Copyright", string(tiff, kCGImagePropertyTIFFCopyright)
+                ?? string(iptc, kCGImagePropertyIPTCCopyrightNotice)),
+            ("Headline", string(iptc, kCGImagePropertyIPTCHeadline)),
+            ("Caption", string(iptc, kCGImagePropertyIPTCCaptionAbstract)),
+            ("Keywords", string(iptc, kCGImagePropertyIPTCKeywords)),
+            ("Credit", string(iptc, kCGImagePropertyIPTCCredit)),
         ]
-        if let shutterCount {
-            sections.append(section("Shutter Count", from: [("Actuations", "\(shutterCount)")]))
-        }
-        sections.append(locationSection(asset))
-        sections.append(contentsOf: otherSections(props, consumed: consumed))
-        return sections
+
+        return [
+            locationSection(location),
+            section("Camera & Lens", from: camera),
+            section("Exposure", from: exposure),
+            section("Capture Settings", from: capture),
+            section("Date", from: date),
+            section("File", from: file),
+            section("Rights & Description", from: rights),
+        ]
     }
 
-    /// Everything the curated sections didn't consume, grouped by its original
-    /// ImageIO block name (top-level → "Image").
-    private static func otherSections(_ props: [CFString: Any], consumed: Set<String>) -> [MetadataDumpSection] {
-        var top: [(String, String?)] = []
-        var nested: [MetadataDumpSection] = []
-        for (key, value) in props {
+    // MARK: ImageIO raw tree
+
+    /// Exhaustive ImageIO tree, grouped by source dictionary. Nested
+    /// dictionaries are flattened into dotted key paths; binary MakerNotes are
+    /// represented by byte count so the list stays usable.
+    private static func rawImageSections(_ props: [CFString: Any]) -> [MetadataDumpSection] {
+        var topRows: [(String, String?)] = []
+        var nestedSections: [MetadataDumpSection] = []
+
+        for (key, value) in props.sorted(by: { ($0.key as String) < ($1.key as String) }) {
             let name = key as String
-            if let dict = asStringDict(value) {
-                let rows = dict.compactMap { pair -> (String, String?)? in
-                    consumed.contains("\(name).\(pair.key)") ? nil : (pair.key, stringify(pair.value))
-                }
-                nested.append(section(name, from: rows))
-            } else if !consumed.contains("Image.\(name)") {
-                top.append((name, stringify(value)))
+            if let dictionary = asStringDict(value) {
+                var pairs: [(String, String?)] = []
+                flatten(dictionary, prefix: nil, into: &pairs)
+                nestedSections.append(section("Raw · \(name)", from: pairs))
+            } else {
+                topRows.append((name, stringify(value)))
             }
         }
-        return [section("Other", from: top)] + nested
+        return [section("Raw · Image", from: topRows)] + nestedSections
+    }
+
+    private static func flatten(
+        _ dictionary: [String: Any],
+        prefix: String?,
+        into pairs: inout [(String, String?)]
+    ) {
+        for key in dictionary.keys.sorted() {
+            guard let value = dictionary[key] else { continue }
+            let path = prefix.map { "\($0).\(key)" } ?? key
+            if let child = asStringDict(value) {
+                flatten(child, prefix: path, into: &pairs)
+            } else {
+                pairs.append((path, stringify(value)))
+            }
+        }
     }
 
     private static func nestedDict(_ props: [CFString: Any], _ key: CFString) -> [String: Any] {
@@ -229,12 +515,83 @@ enum AssetMetadataDump {
     /// Reads the total shutter-actuation count from the asset's **original**
     /// file bytes (edits strip MakerNotes, so a derivative won't do). Best-effort
     /// per vendor — see `MakerNoteParser`.
-    private static func shutterCount(_ asset: PHAsset, make: String?, model: String?) async -> Int? {
-        // Vendors we can't read from a file (or no camera at all) — skip the
-        // original-bytes fetch entirely.
-        guard let make, MakerNoteParser.isSupportedVendor(make) else { return nil }
+    static func loadShutterCount(
+        for asset: PHAsset,
+        context: ShutterCountContext
+    ) async -> Int? {
+        guard case .readable = context.capability,
+              let make = context.make
+        else { return nil }
         guard let data = await originalPhotoData(asset), !data.isEmpty else { return nil }
-        return MakerNoteParser.shutterCount(from: data, make: make, model: model)
+        return MakerNoteParser.shutterCount(
+            from: data,
+            make: make,
+            model: context.model
+        )
+    }
+
+    static func shutterCountNote(for context: ShutterCountContext) -> String {
+        let vendor = (context.make ?? "").uppercased()
+        if vendor.contains("FUJI") {
+            return "Fujifilm stores an image counter; it may reset after a firmware update and is not a guaranteed mechanical-shutter total."
+        }
+        if vendor.contains("SONY") {
+            return "Sony reports total image exposures for supported models; electronic and mechanical shutter behavior varies by body."
+        }
+        return "Read from the original camera MakerNote. Edited or exported copies may not contain this value."
+    }
+
+    private static func shutterCountCapability(make: String?) -> ShutterCountContext.Capability {
+        guard let make, !make.isEmpty else {
+            return .unavailable("Camera manufacturer is missing from this file.")
+        }
+        if MakerNoteParser.isSupportedVendor(make) {
+            return .readable
+        }
+
+        let vendor = make.uppercased()
+        if vendor.contains("CANON") {
+            return .unavailable(
+                "Canon does not provide one reliable cross-model shutter-count field in image files; some newer CR3 bodies use undocumented model-specific data."
+            )
+        }
+        if vendor.contains("OLYMPUS") || vendor.contains("OM DIGITAL") || vendor.contains("OM SYSTEM") {
+            return .unavailable(
+                "Olympus/OM bodies generally expose the reliable mechanical count through the camera service menu, not a consistent image-file tag."
+            )
+        }
+        if vendor.contains("PANASONIC") || vendor.contains("LEICA") {
+            return .unavailable(
+                "This camera does not expose a reliable total shutter count in its standard image metadata."
+            )
+        }
+        if vendor.contains("PENTAX") || vendor.contains("RICOH") {
+            return .unavailable(
+                "Pentax/Ricoh stores a proprietary encrypted counter that this build does not decode yet."
+            )
+        }
+        return .unavailable(
+            "No reliable file-based shutter-count decoder is available for \(make)."
+        )
+    }
+
+    private static func shutterCountContext(
+        mediaType: PHAssetMediaType,
+        make: String?,
+        model: String?
+    ) -> ShutterCountContext {
+        guard mediaType == .image else {
+            return ShutterCountContext(
+                make: nil,
+                model: nil,
+                capability: .notApplicable
+            )
+        }
+        return ShutterCountContext(
+            make: make,
+            model: model,
+            capability: shutterCountCapability(make: make)
+        )
     }
 
     /// Camera make/model from the TIFF block of the already-read properties.
@@ -252,19 +609,22 @@ enum AssetMetadataDump {
         return await withCheckedContinuation { continuation in
             let options = PHAssetResourceRequestOptions()
             options.isNetworkAccessAllowed = true
-            // The handlers run on an arbitrary queue; guard shared state with a
-            // lock and resume the continuation exactly once (matching
-            // `imageProperties`). `buffer`/`finished` live inside the lock state.
-            let state = OSAllocatedUnfairLock(initialState: (buffer: Data(), finished: false))
-            _ = PHAssetResourceManager.default().requestData(for: resource, options: options) { chunk in
-                let done = state.withLock { s -> Data? in
+            let manager = PHAssetResourceManager.default()
+            let state = OSAllocatedUnfairLock(initialState: OriginalMetadataReadState())
+            let requestID = manager.requestData(for: resource, options: options) { chunk in
+                let outcome = state.withLock { s -> (Data, PHAssetResourceDataRequestID?)? in
                     guard !s.finished else { return nil }
                     s.buffer.append(chunk)
                     guard s.buffer.count >= maxBytes else { return nil }
                     s.finished = true
-                    return s.buffer
+                    return (s.buffer, s.requestID)
                 }
-                if let done { continuation.resume(returning: done) }
+                if let (data, requestID) = outcome {
+                    if let requestID {
+                        manager.cancelDataRequest(requestID)
+                    }
+                    continuation.resume(returning: data)
+                }
             } completionHandler: { _ in
                 // Outer nil → already resumed (skip); inner value → resume now.
                 let result: Data?? = state.withLock { s in
@@ -274,17 +634,45 @@ enum AssetMetadataDump {
                 }
                 if let inner = result { continuation.resume(returning: inner) }
             }
+            let shouldCancel = state.withLock { s -> Bool in
+                s.requestID = requestID
+                return s.finished
+            }
+            if shouldCancel {
+                manager.cancelDataRequest(requestID)
+            }
         }
     }
 
 
-    /// Full ImageIO property dictionary from the on-device rendition (no
-    /// network; the downscaled derivative keeps the intact metadata block).
+    /// ImageIO property dictionary, local-first. An optimized on-device
+    /// derivative normally retains standard Exif/TIFF and makes the sheet
+    /// appear immediately. Only fall back to an iCloud-enabled high-quality
+    /// request when PhotoKit has no local image data at all.
     private static func imageProperties(_ asset: PHAsset) async -> [CFString: Any]? {
+        if let local = await requestImageProperties(
+            asset,
+            allowNetwork: false,
+            deliveryMode: .fastFormat
+        ) {
+            return local
+        }
+        return await requestImageProperties(
+            asset,
+            allowNetwork: true,
+            deliveryMode: .highQualityFormat
+        )
+    }
+
+    private static func requestImageProperties(
+        _ asset: PHAsset,
+        allowNetwork: Bool,
+        deliveryMode: PHImageRequestOptionsDeliveryMode
+    ) async -> [CFString: Any]? {
         await withCheckedContinuation { continuation in
             let options = PHImageRequestOptions()
-            options.isNetworkAccessAllowed = true
-            options.deliveryMode = .highQualityFormat
+            options.isNetworkAccessAllowed = allowNetwork
+            options.deliveryMode = deliveryMode
             options.isSynchronous = false
             let resumed = OSAllocatedUnfairLock(initialState: false)
             PHImageManager.default().requestImageDataAndOrientation(for: asset, options: options) { data, _, _, _ in
@@ -373,6 +761,104 @@ enum AssetMetadataDump {
 
     // MARK: Formatting
 
+    private static let exposurePrograms: [Int: String] = [
+        0: "Not Defined",
+        1: "Manual",
+        2: "Program AE",
+        3: "Aperture Priority",
+        4: "Shutter Priority",
+        5: "Creative Program",
+        6: "Action Program",
+        7: "Portrait",
+        8: "Landscape",
+        9: "Bulb",
+    ]
+
+    private static let meteringModes: [Int: String] = [
+        0: "Unknown",
+        1: "Average",
+        2: "Center-weighted",
+        3: "Spot",
+        4: "Multi-spot",
+        5: "Multi-segment",
+        6: "Partial",
+        255: "Other",
+    ]
+
+    private static let lightSources: [Int: String] = [
+        0: "Unknown",
+        1: "Daylight",
+        2: "Fluorescent",
+        3: "Tungsten",
+        4: "Flash",
+        9: "Fine Weather",
+        10: "Cloudy",
+        11: "Shade",
+        12: "Daylight Fluorescent",
+        13: "Day White Fluorescent",
+        14: "Cool White Fluorescent",
+        15: "White Fluorescent",
+        17: "Standard Light A",
+        18: "Standard Light B",
+        19: "Standard Light C",
+        20: "D55",
+        21: "D65",
+        22: "D75",
+        23: "D50",
+        24: "ISO Studio Tungsten",
+        255: "Other",
+    ]
+
+    private static func lensSpecification(_ value: Any?) -> String? {
+        let numbers: [Double]
+        if let values = value as? [NSNumber] {
+            numbers = values.map(\.doubleValue)
+        } else if let values = value as? [Any] {
+            numbers = values.compactMap { ($0 as? NSNumber)?.doubleValue }
+        } else {
+            return value.flatMap(stringify)
+        }
+        guard numbers.count >= 4 else { return numbers.first.flatMap(FormatUtils.focalLength) }
+        let focal = numbers[0] == numbers[1]
+            ? FormatUtils.focalLength(numbers[0])
+            : "\(cleanNumber(numbers[0]))–\(cleanNumber(numbers[1]))mm"
+        let aperture = numbers[2] == numbers[3]
+            ? FormatUtils.aperture(numbers[2])
+            : "f/\(cleanNumber(numbers[2]))–\(cleanNumber(numbers[3]))"
+        return FormatUtils.metadataLine([focal, aperture])
+    }
+
+    private static func cleanNumber(_ value: Double) -> String {
+        value == value.rounded()
+            ? "\(Int(value))"
+            : String(format: "%.1f", value)
+    }
+
+    private static func distance(_ meters: Double) -> String? {
+        guard meters > 0, meters.isFinite, meters < 1_000_000 else { return nil }
+        if meters < 1 {
+            return String(format: "%.0f cm", meters * 100)
+        }
+        return meters < 10
+            ? String(format: "%.2f m", meters)
+            : String(format: "%.1f m", meters)
+    }
+
+    private static func flashDescription(_ value: Int) -> String {
+        let fired = value & 0x1 != 0
+        let mode = (value >> 3) & 0x3
+        let redEye = value & 0x40 != 0
+        var parts = [fired ? "Fired" : "Did Not Fire"]
+        switch mode {
+        case 1: parts.append("Forced")
+        case 2: parts.append("Suppressed")
+        case 3: parts.append("Auto")
+        default: break
+        }
+        if redEye { parts.append("Red-eye Reduction") }
+        return parts.joined(separator: " · ")
+    }
+
     private static func section(_ title: String, from pairs: [(String, String?)]) -> MetadataDumpSection {
         let rows = pairs.enumerated().compactMap { index, pair -> MetadataDumpRow? in
             guard let value = pair.1, !value.isEmpty else { return nil }
@@ -391,6 +877,7 @@ enum AssetMetadataDump {
     }
 
     private static func stringifyScalar(_ value: Any) -> String {
+        if let data = value as? Data { return "\(data.count) bytes" }
         if let number = value as? NSNumber { return number.stringValue }
         return String(describing: value)
     }

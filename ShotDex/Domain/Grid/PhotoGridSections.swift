@@ -21,6 +21,31 @@ struct PhotoGridSection: Equatable, Identifiable, Sendable {
     }
 }
 
+/// One screen-supplied section: a contiguous run of flat indices plus its
+/// header text. Same range contract as `PhotoGridSection`.
+struct PhotoGridCustomSection: Equatable, Sendable {
+    let range: Range<Int>
+    let title: String
+}
+
+/// How the grid divides `photos` into sections. Exclusive by construction: the
+/// grid either groups by creation date (re-grouped on every pinch step), takes
+/// one flat headerless section, or the screen owns the grouping — which is
+/// semantic (On This Day years), never a function of density.
+enum PhotoGridSectionMode: Equatable, Sendable {
+    case dates
+    case flat
+    case custom([PhotoGridCustomSection])
+
+    var hasHeaders: Bool { self != .flat }
+
+    /// Screen-supplied sections, empty for the grid-owned modes — lets a
+    /// consumer diff them without unwrapping the enum.
+    var customSections: [PhotoGridCustomSection] {
+        if case .custom(let sections) = self { sections } else { [] }
+    }
+}
+
 /// Groups a date-sorted photo list into day/month sections in one pass.
 enum PhotoGridSectionBuilder {
     /// - Parameter creationDates: `photos.map(\.creationDateValue)`, already

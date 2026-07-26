@@ -71,6 +71,10 @@ final class LibraryController {
     var matchCount: Int { items.count }
 
     @ObservationIgnored private var loadTask: Task<Void, Never>?
+    /// SwiftUI `.task` can run again when a full-screen cover is dismissed.
+    /// Initial grid loading is controller-scoped and must happen only once;
+    /// explicit filter/library changes still call `reload()` directly.
+    @ObservationIgnored private var hasRequestedInitialLoad = false
     /// Bounded, non-blocking PHAsset resolution for grid tiles. A miss returns
     /// nil immediately, resolves the surrounding chunk off-main, then bumps
     /// `contentRefreshGeneration` so visible cells pick it up. This keeps
@@ -207,6 +211,12 @@ final class LibraryController {
     /// few screens of scroll headroom at the densest column setting.
     private static let firstPaintLimit = 600
 
+    func loadIfNeeded() {
+        guard !hasRequestedInitialLoad else { return }
+        hasRequestedInitialLoad = true
+        reload()
+    }
+
     func reload() {
         loadTask?.cancel()
         loadError = nil
@@ -220,21 +230,24 @@ final class LibraryController {
         // system Photos app, instead of waiting on the EXIF index. Any active
         // filter, advanced query, or metric sort falls back to the DB query.
         let usePhotoKit = criteria.isEmpty && advancedQuery == nil && sort.isDateSort
+        // The capped first-paint phase exists only for a grid with nothing on
+        // screen (enumerating a large library takes seconds). With rows already
+        // showing, publishing the 600-row slice first would replace the content
+        // twice — two `reloadData()`s and a content-height collapse/re-expand,
+        // which is what made an index run finishing jump the grid and flicker.
+        let useFirstPaintSlice = usePhotoKit && items.isEmpty
         loadTask = Task { [weak self] in
             do {
                 if usePhotoKit {
-                    // Two phases: a capped fetch paints the grid immediately
-                    // (enumerating a large library takes seconds), then the
-                    // full enumeration replaces it. The grid re-anchors to
-                    // the bottom on the swap, where the slice's photos are —
-                    // visually seamless for a user still at the newest end.
-                    let slice = try await Self.photoKitGridItems(
-                        sort: sort, queryDAO: queryDAO, limit: Self.firstPaintLimit
-                    )
-                    guard let self, !Task.isCancelled else { return }
-                    self.applyLoadedRows(slice)
+                    if useFirstPaintSlice {
+                        let slice = try await Self.photoKitGridItems(
+                            sort: sort, queryDAO: queryDAO, limit: Self.firstPaintLimit
+                        )
+                        guard let self, !Task.isCancelled else { return }
+                        self.applyLoadedRows(slice)
+                    }
                     let all = try await Self.photoKitGridItems(sort: sort, queryDAO: queryDAO)
-                    guard !Task.isCancelled else { return }
+                    guard let self, !Task.isCancelled else { return }
                     self.applyLoadedRows(all)
                 } else if let advancedQuery, !advancedQuery.isEmpty {
                     let rows = try await queryDAO.gridItems(matching: advancedQuery, sort: sort)
@@ -276,7 +289,13 @@ final class LibraryController {
         // Every row was just re-fetched — cached lazy-badge answers are stale.
         badgeCache.removeAll()
         items = reversed
-        assetCache.setIds(items.map(\.assetId))
+        // Same ids in the same order = every resolved PHAsset chunk is still
+        // valid. Re-seeding would drop them all, so `asset(atFlatIndex:)`
+        // would return nil for every visible tile and each one would blank
+        // and re-resolve — thumbnail flicker on an index-finish refresh.
+        if !sameList {
+            assetCache.setIds(items.map(\.assetId))
+        }
         if sameList {
             contentRefreshGeneration &+= 1
         } else {

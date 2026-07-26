@@ -14,6 +14,10 @@ struct MakerNoteParserTests {
     private func le32(_ v: Int) -> [UInt8] {
         [UInt8(v & 0xFF), UInt8((v >> 8) & 0xFF), UInt8((v >> 16) & 0xFF), UInt8((v >> 24) & 0xFF)]
     }
+    private func be16(_ v: Int) -> [UInt8] { [UInt8((v >> 8) & 0xFF), UInt8(v & 0xFF)] }
+    private func be32(_ v: Int) -> [UInt8] {
+        [UInt8((v >> 24) & 0xFF), UInt8((v >> 16) & 0xFF), UInt8((v >> 8) & 0xFF), UInt8(v & 0xFF)]
+    }
     private func ascii(_ s: String) -> [UInt8] { Array(s.utf8) }
 
     /// A 12-byte IFD entry with an inline or pointer value field (caller passes
@@ -78,6 +82,18 @@ struct MakerNoteParserTests {
         maker += entry(tag: 0x1438, type: 4, count: 1, valueField: le32(shutter))
         maker += le32(0)
         let data = buildTIFF(make: "FUJIFILM", model: "X-T5", makerNote: maker)
+        #expect(MakerNoteParser.shutterCount(from: data, make: "FUJIFILM", model: "X-T5") == shutter)
+    }
+
+    @Test func fujiRAFEmbeddedJPEGImageCount() {
+        let shutter = 24_680
+        var maker: [UInt8] = ascii("FUJIFILM") + le32(12)
+        maker += le16(1)
+        maker += entry(tag: 0x1438, type: 3, count: 1, valueField: le16(shutter) + [0, 0])
+        maker += le32(0)
+        let tiff = buildTIFF(make: "FUJIFILM", model: "X-T5", makerNote: maker)
+        let data = buildRAF(embeddedTIFF: tiff)
+
         #expect(MakerNoteParser.shutterCount(from: data, make: "FUJIFILM", model: "X-T5") == shutter)
     }
 
@@ -181,6 +197,24 @@ struct MakerNoteParserTests {
 
         buf += note.block
         return Data(buf)
+    }
+
+    /// Minimal RAF offset directory pointing to an embedded JPEG/Exif stream.
+    /// The JPEG offset is the big-endian value at byte 84.
+    private func buildRAF(embeddedTIFF: Data) -> Data {
+        let jpegOffset = 128
+        let exifPayload = ascii("Exif") + [0, 0] + [UInt8](embeddedTIFF)
+        let jpeg: [UInt8] = [0xFF, 0xD8, 0xFF, 0xE1]
+            + be16(exifPayload.count + 2)
+            + exifPayload
+            + [0xFF, 0xD9]
+
+        var raf = ascii("FUJIFILMCCD-RAW ")
+        raf += [UInt8](repeating: 0, count: 84 - raf.count)
+        raf += be32(jpegOffset)
+        raf += [UInt8](repeating: 0, count: jpegOffset - raf.count)
+        raf += jpeg
+        return Data(raf)
     }
 
     private struct SonyNote { let block: [UInt8] }

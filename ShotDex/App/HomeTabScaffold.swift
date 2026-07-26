@@ -15,6 +15,7 @@ struct HomeTabScaffold: View {
     /// Library first paint.
     @State private var mountedLegacyTabs: Set<AppTab> = [.library]
     @State private var hasPassedInitialIndexDelay = false
+    @State private var hasScheduledAlbumCoverPreheat = false
 
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(\.scenePhase) private var scenePhase
@@ -26,6 +27,21 @@ struct HomeTabScaffold: View {
     private func autoIndex() {
         guard photoLibrary.authorizationState.canReadLibrary else { return }
         libraryController?.startIndexing()
+    }
+
+    /// Albums is mounted lazily, but its hero should already be sharp when the
+    /// user first opens the tab. Start after the launch frame so this small
+    /// PhotoKit request does not delay initial interaction.
+    private func preheatAlbumCoverIfNeeded() {
+        guard photoLibrary.authorizationState.canReadLibrary,
+              !hasScheduledAlbumCoverPreheat
+        else { return }
+        hasScheduledAlbumCoverPreheat = true
+        Task {
+            try? await Task.sleep(for: .milliseconds(250))
+            guard !Task.isCancelled else { return }
+            await AlbumsController.preheatOnThisDayCover(using: photoLibrary)
+        }
     }
 
     var body: some View {
@@ -118,6 +134,7 @@ struct HomeTabScaffold: View {
             if libraryController == nil {
                 libraryController = LibraryController(dependencies: dependencies)
             }
+            preheatAlbumCoverIfNeeded()
             // Let the Library publish its first interactive frame before the
             // full PhotoKit/index reconciliation starts competing for I/O.
             try? await Task.sleep(for: .milliseconds(500))
@@ -185,6 +202,7 @@ struct HomeTabScaffold: View {
                 if libraryController == nil {
                     libraryController = LibraryController(dependencies: dependencies)
                 }
+                preheatAlbumCoverIfNeeded()
                 // Let the Library publish its first interactive frame before
                 // the full PhotoKit/index reconciliation starts competing.
                 try? await Task.sleep(for: .milliseconds(500))

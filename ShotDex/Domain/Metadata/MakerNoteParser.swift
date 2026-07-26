@@ -103,7 +103,7 @@ enum MakerNoteParser {
         else { return nil }
         let blockStart = header.dataStart(of: entry, offsetBase: tiffBase)
         let blockLen = entry.count
-        guard blockStart >= 0, blockLen > offset + 4, blockStart + blockLen <= bytes.count else { return nil }
+        guard blockStart >= 0, blockLen >= offset + 4, blockStart + blockLen <= bytes.count else { return nil }
 
         let decode = Self.sonyDecodeTable
         // Decipher only the four bytes we need.
@@ -187,17 +187,37 @@ enum MakerNoteParser {
     }
 
     /// Finds the TIFF header origin: byte 0 for TIFF-based files (NEF/ARW/…),
-    /// or just past the JPEG `APP1`/`Exif\0\0` marker. Returns nil for
-    /// containers we don't parse (e.g. HEIC — no shutter count anyway).
+    /// just past JPEG `APP1`/`Exif\0\0`, or inside the embedded JPEG carried by
+    /// Fujifilm RAF. RAF does not start with TIFF/JPEG, which was why its
+    /// advertised ImageCount support previously never ran for actual `.RAF`
+    /// originals.
     private static func tiffBase(in bytes: [UInt8]) -> Int? {
         guard bytes.count > 8 else { return nil }
         // Direct TIFF ("II"/"MM").
         if (bytes[0] == 0x49 && bytes[1] == 0x49) || (bytes[0] == 0x4D && bytes[1] == 0x4D) {
             return 0
         }
-        // JPEG: scan segments for APP1 carrying Exif.
-        guard bytes[0] == 0xFF, bytes[1] == 0xD8 else { return nil }
-        var i = 2
+
+        if bytes[0] == 0xFF, bytes[1] == 0xD8 {
+            return jpegTIFFBase(in: bytes, jpegStart: 0)
+        }
+
+        // RAF offset directory: magic (16) + version/id/camera (44) +
+        // directory version/reserved (24), then big-endian JPEG offset at 84.
+        if matches(bytes, at: 0, ascii: "FUJIFILMCCD-RAW"),
+           let jpegOffset = readU32(bytes, at: 84, littleEndian: false) {
+            return jpegTIFFBase(in: bytes, jpegStart: Int(jpegOffset))
+        }
+        return nil
+    }
+
+    private static func jpegTIFFBase(in bytes: [UInt8], jpegStart: Int) -> Int? {
+        guard jpegStart >= 0,
+              jpegStart + 4 < bytes.count,
+              bytes[jpegStart] == 0xFF,
+              bytes[jpegStart + 1] == 0xD8
+        else { return nil }
+        var i = jpegStart + 2
         while i + 4 < bytes.count {
             guard bytes[i] == 0xFF else { i += 1; continue }
             let marker = bytes[i + 1]

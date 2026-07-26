@@ -35,6 +35,27 @@ final class OnThisDayController: PhotoBrowsingSource {
     private(set) var sections: [OnThisDayYearSection] = []
     private(set) var isLoading = false
 
+    /// Bumped when the content is *replaced* (date change, delete) so the grid
+    /// reloads and re-anchors. A date change can land a same-count array, which
+    /// the grid's count check alone would miss.
+    private(set) var contentGeneration = 0
+    /// Bumped when the same ordered list gains fresher per-tile data (favorite
+    /// toggle, a viewer download that indexed a row) — visible cells
+    /// reconfigure in place and the scroll position is kept.
+    private(set) var contentRefreshGeneration = 0
+
+    /// Year groups in the shared grid's section contract.
+    var gridSections: [PhotoGridCustomSection] {
+        let currentYear = calendar.component(.year, from: .now)
+        return sections.map { section in
+            let yearsAgo = currentYear - section.year
+            let suffix = yearsAgo == 1 ? "1 year ago" : "\(yearsAgo) years ago"
+            return PhotoGridCustomSection(
+                range: section.range, title: "\(section.year) · \(suffix)"
+            )
+        }
+    }
+
     /// Stale-result guard: a date change mid-load bumps this so the older
     /// load's result is dropped instead of overwriting the newer one.
     private var reloadGeneration = 0
@@ -116,6 +137,7 @@ final class OnThisDayController: PhotoBrowsingSource {
             photos = snapshot.photos
             assetsById = snapshot.assetsById
             rebuildSections()
+            contentGeneration &+= 1
             isLoading = false
         }
     }
@@ -182,6 +204,7 @@ final class OnThisDayController: PhotoBrowsingSource {
             assetsById.removeValue(forKey: id)
         }
         rebuildSections()
+        contentGeneration &+= 1
     }
 
     func deleteAsset(id: String) async throws {
@@ -215,6 +238,7 @@ final class OnThisDayController: PhotoBrowsingSource {
         try? metadataDAO.updateFavorite(assetId: assetId, isFavorite: isFavorite)
         if let index = photos.firstIndex(where: { $0.assetId == assetId }) {
             photos[index].isFavorite = isFavorite
+            contentRefreshGeneration &+= 1
         }
     }
 
@@ -222,6 +246,7 @@ final class OnThisDayController: PhotoBrowsingSource {
         guard let updated = await indexPipeline.indexSingle(assetId: assetId) else { return nil }
         if let index = photos.firstIndex(where: { $0.assetId == assetId }) {
             photos[index] = updated
+            contentRefreshGeneration &+= 1
         }
         return updated
     }
