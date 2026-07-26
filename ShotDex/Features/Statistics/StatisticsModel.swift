@@ -5,7 +5,7 @@ import Foundation
 /// that persist changes. All aggregate queries run off the main thread.
 @MainActor
 @Observable
-final class StatsController {
+final class StatisticsModel {
     private let statsDAO: StatsDAO
     private let statChartDAO: StatChartDAO
 

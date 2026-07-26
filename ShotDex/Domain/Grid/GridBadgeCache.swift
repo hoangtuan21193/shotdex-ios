@@ -10,7 +10,7 @@ import Foundation
 /// row upgrades (`pendingRead` → `indexed`) picks the badge up on its next
 /// display.
 ///
-/// Main-actor confined: callers are the grid cells and `LibraryController`.
+/// Main-actor confined: callers are the grid cells and `LibraryModel`.
 @MainActor
 final class GridBadgeCache {
     /// What a lookup found.

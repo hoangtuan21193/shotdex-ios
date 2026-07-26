@@ -7,7 +7,7 @@ struct SettingsScreen: View {
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(AppDependencies.self) private var dependencies
 
-    let libraryController: LibraryController?
+    let libraryModel: LibraryModel?
 
     @AppStorage("display.showISO") private var showISO = true
     @AppStorage("display.showAperture") private var showAperture = true
@@ -39,7 +39,7 @@ struct SettingsScreen: View {
         .fullScreenCover(isPresented: $isImportPresented) {
             ImportScreen(service: dependencies.importService)
         }
-        .task(id: libraryController?.isIndexing) {
+        .task(id: libraryModel?.isIndexing) {
             refreshIndexInfo()
         }
         .confirmationDialog(
@@ -49,7 +49,7 @@ struct SettingsScreen: View {
         ) {
             Button("Clear Index", role: .destructive) {
                 try? dependencies.metadataDAO.deleteAll()
-                libraryController?.reload()
+                libraryModel?.reload()
                 refreshIndexInfo()
             }
         }
@@ -86,11 +86,11 @@ struct SettingsScreen: View {
                 )
             }
 
-            if let controller = libraryController {
-                if controller.isIndexing {
+            if let model = libraryModel {
+                if model.isIndexing {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack {
-                            if let progress = controller.indexProgress {
+                            if let progress = model.indexProgress {
                                 ProgressView(value: progress.fraction)
                                 Text("\(progress.processed)/\(progress.total) (\(progress.percent)%)")
                                     .font(.caption.monospacedDigit())
@@ -101,9 +101,9 @@ struct SettingsScreen: View {
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
-                            Button("Cancel") { controller.cancelIndexing() }
+                            Button("Cancel") { model.cancelIndexing() }
                         }
-                        if let network = controller.indexNetworkStatus {
+                        if let network = model.indexNetworkStatus {
                             Text(network.displayLine)
                                 .font(.caption2.monospacedDigit())
                                 .foregroundStyle(.secondary)
@@ -114,11 +114,11 @@ struct SettingsScreen: View {
                     }
                 } else if photoLibrary.authorizationState.canReadLibrary {
                     Button("Re-index Library") {
-                        controller.startIndexing(fullReindex: true, manual: true)
+                        model.startIndexing(fullReindex: true, manual: true)
                     }
                     if incompleteCount > 0 {
                         Button("Re-index Incomplete Photos (\(incompleteCount))") {
-                            controller.startReindexIncomplete(manual: true)
+                            model.startReindexIncomplete(manual: true)
                         }
                     }
                 }
@@ -167,7 +167,7 @@ struct SettingsScreen: View {
     private var cameraDatabaseSection: some View {
         Section("Camera Database") {
             NavigationLink("Unknown Cameras") {
-                CameraDatabaseScreen(libraryController: libraryController)
+                CameraDatabaseScreen(libraryModel: libraryModel)
             }
             Button("Reset Custom Mappings", role: .destructive) {
                 isResetMappingsConfirmationPresented = true
@@ -218,7 +218,7 @@ struct SettingsScreen: View {
 #Preview {
     let dependencies = AppDependencies.preview()
     return NavigationStack {
-        SettingsScreen(libraryController: nil)
+        SettingsScreen(libraryModel: nil)
     }
     .environment(dependencies)
     .environment(dependencies.photoLibrary)

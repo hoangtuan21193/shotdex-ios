@@ -38,7 +38,7 @@ struct IndexThroughput: Equatable {
 /// library as slim grid rows, plus index pipeline coordination.
 @MainActor
 @Observable
-final class LibraryController {
+final class LibraryModel {
 
     private let queryDAO: LibraryQueryDAO
     private let filterSuggestions: FilterSuggestionRepository
@@ -72,7 +72,7 @@ final class LibraryController {
 
     @ObservationIgnored private var loadTask: Task<Void, Never>?
     /// SwiftUI `.task` can run again when a full-screen cover is dismissed.
-    /// Initial grid loading is controller-scoped and must happen only once;
+    /// Initial grid loading is model-scoped and must happen only once;
     /// explicit filter/library changes still call `reload()` directly.
     @ObservationIgnored private var hasRequestedInitialLoad = false
     /// Bounded, non-blocking PHAsset resolution for grid tiles. A miss returns
@@ -568,7 +568,7 @@ final class LibraryController {
     //
     // A run can end with photos still `pendingICloud` on an allowed network
     // (iCloud auth dead — accountsd Code=7 — or a Wi-Fi that can't serve
-    // originals). Indexing must never sit dead in that state: the controller
+    // originals). Indexing must never sit dead in that state: the model
     // schedules an automatic `reindexIncomplete` every 30 s, and the UI shows
     // a small "retrying in Ns" card instead of the old dead-end
     // "iCloud not downloading over Wi-Fi" banner. A fixed interval, no
@@ -784,7 +784,7 @@ final class LibraryController {
 
 // MARK: PhotoBrowsingSource
 
-extension LibraryController: PhotoBrowsingSource {
+extension LibraryModel: PhotoBrowsingSource {
     var photoCount: Int { items.count }
 
     func photoId(at index: Int) -> String? {

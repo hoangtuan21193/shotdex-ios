@@ -10,7 +10,7 @@ struct OnThisDayScreen: View {
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(AppNavigation.self) private var navigation
 
-    @State private var controller: OnThisDayController?
+    @State private var model: OnThisDayModel?
     @State private var viewerTarget: PhotoViewerTarget?
     @State private var isDatePickerPresented = false
 
@@ -29,11 +29,11 @@ struct OnThisDayScreen: View {
 
     var body: some View {
         Group {
-            if let controller {
-                if controller.photos.isEmpty {
-                    placeholder(isLoading: controller.isLoading)
+            if let model {
+                if model.photos.isEmpty {
+                    placeholder(isLoading: model.isLoading)
                 } else {
-                    photoGrid(controller)
+                    photoGrid(model)
                 }
             } else {
                 placeholder(isLoading: true)
@@ -54,24 +54,24 @@ struct OnThisDayScreen: View {
             if isSelecting { navigation.selectionBar = nil }
         }
         .task {
-            if controller == nil {
-                let newController = OnThisDayController(dependencies: dependencies)
-                newController.reload()
-                controller = newController
+            if model == nil {
+                let newModel = OnThisDayModel(dependencies: dependencies)
+                newModel.reload()
+                model = newModel
             }
         }
         .onChange(of: photoLibrary.libraryChangeToken) {
             // Skip while selecting so an external change doesn't wipe the
             // selection mid-flow; our own deletes already prune locally.
             guard !isSelecting else { return }
-            controller?.reload()
+            model?.reload()
         }
         .sheet(isPresented: $isDatePickerPresented) {
             datePickerSheet
         }
         .fullScreenCover(item: $viewerTarget) { target in
-            if let controller {
-                PhotoDetailScreen(controller: controller, currentIndex: target.startIndex)
+            if let model {
+                PhotoDetailScreen(model: model, currentIndex: target.startIndex)
             }
         }
         .fullScreenCover(isPresented: $isComparePresented, onDismiss: stopSelecting) {
@@ -94,7 +94,7 @@ struct OnThisDayScreen: View {
     }
 
     private var dateTitle: String {
-        (controller?.selectedDate ?? .now)
+        (model?.selectedDate ?? .now)
             .formatted(.dateTime.month(.wide).day())
     }
 
@@ -113,16 +113,16 @@ struct OnThisDayScreen: View {
 
     // MARK: Grid
 
-    private func photoGrid(_ controller: OnThisDayController) -> some View {
+    private func photoGrid(_ model: OnThisDayModel) -> some View {
         PhotoGridCollectionView(
-            photos: controller.photos,
-            assetProvider: { _, item in controller.assetsById[item.assetId] },
+            photos: model.photos,
+            assetProvider: { _, item in model.assetsById[item.assetId] },
             // Year groups are semantic, not derived from the date granularity
             // the grid would pick for itself.
-            sectionMode: .custom(controller.gridSections),
+            sectionMode: .custom(model.gridSections),
             anchorsBottom: false,
-            contentVersion: controller.contentGeneration,
-            contentRefreshVersion: controller.contentRefreshGeneration,
+            contentVersion: model.contentGeneration,
+            contentRefreshVersion: model.contentRefreshGeneration,
             jumpToNewestToken: 0,
             columnCount: Binding(
                 get: { GridDensity.clamped(storedColumns) },
@@ -137,7 +137,7 @@ struct OnThisDayScreen: View {
                     toggleSelection(of: metadata.assetId)
                 } else {
                     // The grid's flat index *is* the index into
-                    // `controller.photos` — no lookup needed.
+                    // `model.photos` — no lookup needed.
                     viewerTarget = PhotoViewerTarget(
                         id: metadata.assetId, startIndex: flatIndex
                     )
@@ -217,18 +217,18 @@ struct OnThisDayScreen: View {
 
     /// Compare panes follow the pick order of the selection.
     private func comparePhotos() -> [ComparePhoto]? {
-        guard let controller,
+        guard let model,
               (2...CompareScreen.maxPhotoCount).contains(selectedIds.count) else { return nil }
         let photos = selectedIds.compactMap { id -> ComparePhoto? in
-            guard let asset = controller.assetsById[id] else { return nil }
-            return ComparePhoto(metadata: controller.metadata(for: id), asset: asset)
+            guard let asset = model.assetsById[id] else { return nil }
+            return ComparePhoto(metadata: model.metadata(for: id), asset: asset)
         }
         return photos.count >= 2 ? photos : nil
     }
 
     private func shareSelected() {
-        guard let controller, !selectedIds.isEmpty, !isPreparingShare else { return }
-        let assets = selectedIds.compactMap { controller.assetsById[$0] }
+        guard let model, !selectedIds.isEmpty, !isPreparingShare else { return }
+        let assets = selectedIds.compactMap { model.assetsById[$0] }
         isPreparingShare = true
         Task {
             let items = await PhotoShareSheet.gather(assets: assets)
@@ -238,13 +238,13 @@ struct OnThisDayScreen: View {
     }
 
     private func deleteSelected() {
-        guard let controller, !selectedIds.isEmpty else { return }
+        guard let model, !selectedIds.isEmpty else { return }
         let ids = Set(selectedIds)
         isDeleting = true
         Task {
             defer { isDeleting = false }
             do {
-                try await controller.deleteAssets(ids: ids)
+                try await model.deleteAssets(ids: ids)
                 withAnimation { stopSelecting() }
             } catch let error as PHPhotosError where error.code == .userCancelled {
                 // User dismissed the system confirm — keep the selection.
@@ -266,8 +266,8 @@ struct OnThisDayScreen: View {
                 DatePicker(
                     "Date",
                     selection: Binding(
-                        get: { controller?.selectedDate ?? .now },
-                        set: { controller?.selectedDate = $0 }
+                        get: { model?.selectedDate ?? .now },
+                        set: { model?.selectedDate = $0 }
                     ),
                     displayedComponents: .date
                 )
@@ -280,7 +280,7 @@ struct OnThisDayScreen: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Today") {
-                        controller?.selectedDate = .now
+                        model?.selectedDate = .now
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -327,7 +327,7 @@ struct OnThisDayScreen: View {
             }
         }
         ToolbarItem(placement: .topBarTrailing) {
-            if controller?.photos.isEmpty == false {
+            if model?.photos.isEmpty == false {
                 Button {
                     if isSelecting {
                         stopSelecting()

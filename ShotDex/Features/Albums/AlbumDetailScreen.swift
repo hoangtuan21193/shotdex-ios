@@ -11,7 +11,7 @@ struct AlbumDetailScreen: View {
 
     let album: AlbumItem
 
-    @State private var controller: AlbumDetailController?
+    @State private var model: AlbumDetailModel?
     @State private var viewerTarget: PhotoViewerTarget?
 
     /// Multi-select: uncapped asset ids, kept in pick order (Compare panes
@@ -29,8 +29,8 @@ struct AlbumDetailScreen: View {
 
     var body: some View {
         Group {
-            if let controller {
-                photoGrid(controller)
+            if let model {
+                photoGrid(model)
             } else {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -52,19 +52,19 @@ struct AlbumDetailScreen: View {
             if isSelecting { navigation.selectionBar = nil }
         }
         .task {
-            if controller == nil {
-                let newController = AlbumDetailController(album: album, dependencies: dependencies)
-                newController.loadNextPage()
-                controller = newController
+            if model == nil {
+                let newModel = AlbumDetailModel(album: album, dependencies: dependencies)
+                newModel.loadNextPage()
+                model = newModel
             }
         }
         .fullScreenCover(item: $viewerTarget) { target in
-            if let controller {
-                PhotoDetailScreen(controller: controller, currentIndex: target.startIndex)
+            if let model {
+                PhotoDetailScreen(model: model, currentIndex: target.startIndex)
             }
         }
         .fullScreenCover(isPresented: $isComparePresented, onDismiss: stopSelecting) {
-            if let controller, let photos = comparePhotos(controller) {
+            if let model, let photos = comparePhotos(model) {
                 CompareScreen(photos: photos)
             }
         }
@@ -84,10 +84,10 @@ struct AlbumDetailScreen: View {
 
     // MARK: Grid
 
-    private func photoGrid(_ controller: AlbumDetailController) -> some View {
+    private func photoGrid(_ model: AlbumDetailModel) -> some View {
         PhotoGridCollectionView(
-            photos: controller.photos,
-            assetProvider: { _, item in controller.assetsById[item.assetId] },
+            photos: model.photos,
+            assetProvider: { _, item in model.assetsById[item.assetId] },
             // Album fetch is hard-sorted by creationDate, so date headers
             // always apply here.
             sectionMode: .dates,
@@ -108,7 +108,7 @@ struct AlbumDetailScreen: View {
             onTap: { _, metadata in
                 if isSelecting {
                     toggleSelection(of: metadata.assetId)
-                } else if let index = controller.index(of: metadata.assetId) {
+                } else if let index = model.index(of: metadata.assetId) {
                     viewerTarget = PhotoViewerTarget(id: metadata.assetId, startIndex: index)
                 }
             },
@@ -119,7 +119,7 @@ struct AlbumDetailScreen: View {
                 }
             },
             onSwipeEvent: handleSwipeEvent,
-            onNearEnd: { controller.loadNextPage() },
+            onNearEnd: { model.loadNextPage() },
             onUserScroll: {}
         )
         .ignoresSafeArea(edges: .bottom)
@@ -165,20 +165,20 @@ struct AlbumDetailScreen: View {
     }
 
     /// Compare panes follow the pick order of the selection.
-    private func comparePhotos(_ controller: AlbumDetailController) -> [ComparePhoto]? {
+    private func comparePhotos(_ model: AlbumDetailModel) -> [ComparePhoto]? {
         guard (2...CompareScreen.maxPhotoCount).contains(selectedIds.count) else { return nil }
         // Videos have no metadata row (index is image-only) — require the
         // asset instead, and let the caption go missing.
         let photos = selectedIds.compactMap { id -> ComparePhoto? in
-            guard let asset = controller.assetsById[id] else { return nil }
-            return ComparePhoto(metadata: controller.metadata(for: id), asset: asset)
+            guard let asset = model.assetsById[id] else { return nil }
+            return ComparePhoto(metadata: model.metadata(for: id), asset: asset)
         }
         return photos.count >= 2 ? photos : nil
     }
 
-    private func shareSelected(_ controller: AlbumDetailController) {
+    private func shareSelected(_ model: AlbumDetailModel) {
         guard !selectedIds.isEmpty, !isPreparingShare else { return }
-        let assets = selectedIds.compactMap { controller.assetsById[$0] }
+        let assets = selectedIds.compactMap { model.assetsById[$0] }
         isPreparingShare = true
         Task {
             let items = await PhotoShareSheet.gather(assets: assets)
@@ -187,14 +187,14 @@ struct AlbumDetailScreen: View {
         }
     }
 
-    private func deleteSelected(_ controller: AlbumDetailController) {
+    private func deleteSelected(_ model: AlbumDetailModel) {
         guard !selectedIds.isEmpty else { return }
         let ids = Set(selectedIds)
         isDeleting = true
         Task {
             defer { isDeleting = false }
             do {
-                try await controller.deleteAssets(ids: ids)
+                try await model.deleteAssets(ids: ids)
                 withAnimation { stopSelecting() }
             } catch let error as PHPhotosError where error.code == .userCancelled {
                 // User dismissed the system confirm — keep the selection.
@@ -218,13 +218,13 @@ struct AlbumDetailScreen: View {
     /// The selection-bar model the root tab view renders (Compare 2–4 + Delete +
     /// thumbnail preview; Share is in the toolbar).
     private func selectionBarModel() -> SelectionBarModel? {
-        guard let controller else { return nil }
+        guard let model else { return nil }
         return SelectionBarModel(
             selectionCount: selectedIds.count,
             thumbnailIds: selectedIds,
             photoLibrary: photoLibrary,
             onCompare: { isComparePresented = true },
-            onDelete: { deleteSelected(controller) },
+            onDelete: { deleteSelected(model) },
             onDeselect: { toggleSelection(of: $0) },
             isDeleting: isDeleting
         )
@@ -237,7 +237,7 @@ struct AlbumDetailScreen: View {
     @ViewBuilder
     private var shareToolbarButton: some View {
         Button {
-            if let controller { shareSelected(controller) }
+            if let model { shareSelected(model) }
         } label: {
             if isPreparingShare {
                 ProgressView()
@@ -257,7 +257,7 @@ struct AlbumDetailScreen: View {
             }
         }
         ToolbarItem(placement: .topBarTrailing) {
-            if controller?.photos.isEmpty == false {
+            if model?.photos.isEmpty == false {
                 Button {
                     if isSelecting {
                         stopSelecting()

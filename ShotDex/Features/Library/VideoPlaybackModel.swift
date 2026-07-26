@@ -33,7 +33,7 @@ enum VideoFrameSaveOutcome: Equatable {
 /// request, readiness/failure classification, the transport's derived state,
 /// and the extra transport actions (rate, loop, frame export).
 ///
-/// Why a controller and not `@State` in the page view: the state machine needs
+/// Why a model and not `@State` in the page view: the state machine needs
 /// KVO observers, a notification observer, a periodic time observer, a stall
 /// watchdog task and a cancellable PhotoKit request id, all with a single
 /// teardown point. Spreading that across `@State` in `PhotoDetailScreen.swift`
@@ -41,7 +41,7 @@ enum VideoFrameSaveOutcome: Equatable {
 /// place.
 @MainActor
 @Observable
-final class VideoPlaybackController {
+final class VideoPlaybackModel {
     private static let logger = Logger(subsystem: "com.hoangtuan.shotdex", category: "video")
 
     /// Matches the image path's iCloud stall window (`PhotoDetailScreen`), so a
@@ -736,7 +736,7 @@ final class VideoPlaybackController {
 /// Without it, unmuting produced no sound at all while the ring/silent switch
 /// was set to silent — the default `.soloAmbient` category is muted by that
 /// switch. Reference counted because pager neighbours can each hold a
-/// controller, and the last one out must be the one that hands audio focus back
+/// model, and the last one out must be the one that hands audio focus back
 /// (`.notifyOthersOnDeactivation` resumes whatever was playing before).
 @MainActor
 enum VideoAudioSession {

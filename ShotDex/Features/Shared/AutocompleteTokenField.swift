@@ -30,7 +30,7 @@ struct AutocompleteTokenField: View {
     }
 
     /// Indexed values matching the current draft, excluding already-added
-    /// tokens (mirrors `LibraryController.suggestions(for:)`).
+    /// tokens (mirrors `LibraryModel.suggestions(for:)`).
     private var filteredSuggestions: [String] {
         guard !trimmedDraft.isEmpty else { return [] }
         let tokenSet = Set(tokens)

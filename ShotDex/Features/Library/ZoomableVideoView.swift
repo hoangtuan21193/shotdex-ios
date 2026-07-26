@@ -12,10 +12,10 @@ import UIKit
 /// `UIPageViewController`.
 ///
 /// Also the only place that can answer "does this layer actually have a frame
-/// yet" — `isReadyForDisplay` is reported to the controller, which needs it to
+/// yet" — `isReadyForDisplay` is reported to the model, which needs it to
 /// tell a buffering clip apart from a black screen that will never resolve.
 struct ZoomableVideoView: UIViewRepresentable {
-    let controller: VideoPlaybackController
+    let model: VideoPlaybackModel
     let player: AVPlayer
     /// Changing this snaps zoom back to fit. Entering or leaving immersive
     /// fullscreen re-lays-out the view, so a zoom left over from the previous
@@ -65,7 +65,7 @@ struct ZoomableVideoView: UIViewRepresentable {
         context.coordinator.playerView = playerView
         context.coordinator.resetToken = resetToken
         context.coordinator.apply(self)
-        context.coordinator.observe(playerView.playerLayer, controller: controller)
+        context.coordinator.observe(playerView.playerLayer, model: model)
 
         // UIKit recognizers rather than SwiftUI `.onTapGesture`: a SwiftUI tap
         // layered over a UIScrollView competes with the scroll view's own
@@ -97,7 +97,7 @@ struct ZoomableVideoView: UIViewRepresentable {
         // drops the displayed frame — a black flash for no reason.
         if let layer, layer.player !== player {
             layer.player = player
-            context.coordinator.observe(layer, controller: controller)
+            context.coordinator.observe(layer, model: model)
         }
 
         if context.coordinator.resetToken != resetToken {
@@ -131,14 +131,14 @@ struct ZoomableVideoView: UIViewRepresentable {
             onDoubleTap = view.onDoubleTap
         }
 
-        func observe(_ layer: AVPlayerLayer, controller: VideoPlaybackController) {
+        func observe(_ layer: AVPlayerLayer, model: VideoPlaybackModel) {
             observation?.invalidate()
             observation = layer.observe(
                 \.isReadyForDisplay,
                 options: [.initial, .new]
             ) { _, change in
                 guard let ready = change.newValue else { return }
-                Task { @MainActor in controller.noteReadyForDisplay(ready) }
+                Task { @MainActor in model.noteReadyForDisplay(ready) }
             }
         }
 

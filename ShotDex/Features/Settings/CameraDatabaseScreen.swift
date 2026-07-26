@@ -5,7 +5,7 @@ import SwiftUI
 struct CameraDatabaseScreen: View {
     @Environment(AppDependencies.self) private var dependencies
 
-    let libraryController: LibraryController?
+    let libraryModel: LibraryModel?
 
     @State private var unknownModels: [String] = []
 
@@ -26,7 +26,7 @@ struct CameraDatabaseScreen: View {
                         NavigationLink(model) {
                             SensorMappingScreen(cameraModel: model) {
                                 refresh()
-                                libraryController?.reload()
+                                libraryModel?.reload()
                             }
                         }
                     }

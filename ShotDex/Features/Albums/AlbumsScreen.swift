@@ -7,7 +7,7 @@ struct AlbumsScreen: View {
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(AppDependencies.self) private var dependencies
 
-    @State private var controller = AlbumsController()
+    @State private var model = AlbumsModel()
     @State private var isCreatingSmartAlbum = false
     @State private var editingSmartAlbum: SmartAlbum?
 
@@ -40,30 +40,30 @@ struct AlbumsScreen: View {
         }
         .task(id: photoLibrary.libraryChangeToken) {
             guard photoLibrary.authorizationState.canReadLibrary else { return }
-            controller.dependencies = dependencies
-            controller.load()
+            model.dependencies = dependencies
+            model.load()
         }
         .navigationDestination(for: AlbumItem.ID.self) { albumId in
-            if let album = controller.albums.first(where: { $0.id == albumId }) {
+            if let album = model.albums.first(where: { $0.id == albumId }) {
                 AlbumDetailScreen(album: album)
             }
         }
         .navigationDestination(for: OnThisDayDestination.self) { _ in
             OnThisDayScreen()
         }
-        .navigationDestination(for: SmartAlbumDestination.self) { route in
-            if let model = controller.smartQueryAlbums.first(where: { $0.album.id == route.id }) {
-                SmartAlbumDetailScreen(album: model.album)
+        .navigationDestination(for: SmartAlbumDestination.self) { destination in
+            if let item = model.smartQueryAlbums.first(where: { $0.album.id == destination.id }) {
+                SmartAlbumDetailScreen(album: item.album)
             }
         }
         .sheet(isPresented: $isCreatingSmartAlbum) {
             SmartAlbumEditorSheet(existing: nil, dependencies: dependencies) {
-                controller.load()
+                model.load()
             }
         }
         .sheet(item: $editingSmartAlbum) { album in
             SmartAlbumEditorSheet(existing: album, dependencies: dependencies) {
-                controller.load()
+                model.load()
             }
         }
     }
@@ -80,23 +80,23 @@ struct AlbumsScreen: View {
 
                 NavigationLink(value: OnThisDayDestination()) {
                     OnThisDayCard(
-                        count: controller.onThisDayCount,
-                        coverAsset: controller.onThisDayCover
+                        count: model.onThisDayCount,
+                        coverAsset: model.onThisDayCover
                     )
                 }
                 .buttonStyle(.plain)
                 .padding(.horizontal)
 
-                if !(controller.smartQueryAlbums.isEmpty && controller.smartAlbums.isEmpty) {
+                if !(model.smartQueryAlbums.isEmpty && model.smartAlbums.isEmpty) {
                     smartAlbumsSection()
                 }
 
-                if !controller.userAlbums.isEmpty {
-                    albumTokenSection(title: "My Albums", albums: controller.userAlbums)
+                if !model.userAlbums.isEmpty {
+                    albumTokenSection(title: "My Albums", albums: model.userAlbums)
                 }
 
-                if !controller.sharedAlbums.isEmpty {
-                    albumTokenSection(title: "Shared Albums", albums: controller.sharedAlbums)
+                if !model.sharedAlbums.isEmpty {
+                    albumTokenSection(title: "Shared Albums", albums: model.sharedAlbums)
                 }
 
                 if #unavailable(iOS 26.0) {
@@ -147,7 +147,7 @@ struct AlbumsScreen: View {
     /// and offer Edit / Delete via context menu; system tokens push the normal
     /// `AlbumDetailScreen`.
     private func smartAlbumsSection() -> some View {
-        let total = controller.smartQueryAlbums.count + controller.smartAlbums.count
+        let total = model.smartQueryAlbums.count + model.smartAlbums.count
         let rowCount = max(1, min(3, (total + 2) / 3))
         let rows = Array(
             repeating: GridItem(.fixed(AlbumToken.height), spacing: 10),
@@ -160,26 +160,26 @@ struct AlbumsScreen: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHGrid(rows: rows, spacing: 10) {
-                    ForEach(controller.smartQueryAlbums) { model in
-                        NavigationLink(value: SmartAlbumDestination(id: model.album.id)) {
-                            SmartAlbumToken(model: model)
+                    ForEach(model.smartQueryAlbums) { item in
+                        NavigationLink(value: SmartAlbumDestination(id: item.album.id)) {
+                            SmartAlbumToken(item: item)
                         }
                         .buttonStyle(.plain)
                         .contextMenu {
                             Button {
-                                editingSmartAlbum = model.album
+                                editingSmartAlbum = item.album
                             } label: {
                                 Label("Edit", systemImage: "pencil")
                             }
                             Button(role: .destructive) {
-                                controller.deleteSmartAlbum(id: model.album.id)
+                                model.deleteSmartAlbum(id: item.album.id)
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
                         }
                     }
 
-                    ForEach(controller.smartAlbums) { album in
+                    ForEach(model.smartAlbums) { album in
                         NavigationLink(value: album.id) {
                             AlbumToken(album: album)
                         }
@@ -275,7 +275,7 @@ struct AlbumToken: View {
 struct SmartAlbumToken: View {
     @Environment(PhotoLibraryService.self) private var photoLibrary
 
-    let model: SmartAlbumTokenItem
+    let item: SmartAlbumTokenItem
 
     @State private var cover: UIImage?
 
@@ -300,11 +300,11 @@ struct SmartAlbumToken: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(model.album.name)
+                Text(item.album.name)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color(.label))
                     .lineLimit(1)
-                Text("\(model.count)")
+                Text("\(item.count)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -316,11 +316,11 @@ struct SmartAlbumToken: View {
         .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .onAppear(perform: loadCover)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(model.album.name), \(model.count) photos")
+        .accessibilityLabel("\(item.album.name), \(item.count) photos")
     }
 
     private func loadCover() {
-        guard cover == nil, let asset = model.coverAsset else { return }
+        guard cover == nil, let asset = item.coverAsset else { return }
         let scale = UIScreen.main.scale
         _ = photoLibrary.requestThumbnail(
             for: asset,
@@ -380,7 +380,7 @@ struct OnThisDayCard: View {
                     .padding(14)
             }
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            // `coverAsset` is filled asynchronously by AlbumsController, so
+            // `coverAsset` is filled asynchronously by AlbumsModel, so
             // onAppear alone can miss it when this card appears first.
             .task(id: coverAsset?.localIdentifier) {
                 loadCover()
@@ -402,7 +402,7 @@ struct OnThisDayCard: View {
         let requestedAssetID = asset.localIdentifier
         _ = photoLibrary.requestAlbumCover(
             for: asset,
-            targetSize: AlbumsController.onThisDayCoverTargetSize,
+            targetSize: AlbumsModel.onThisDayCoverTargetSize,
             allowNetwork: true
         ) { image in
             if requestedAssetID == coverAsset?.localIdentifier, let image {
