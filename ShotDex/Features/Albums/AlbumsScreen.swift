@@ -7,7 +7,16 @@ struct AlbumsScreen: View {
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(AppDependencies.self) private var dependencies
 
-    @State private var model = AlbumsModel()
+    /// Owned by `RootTabView` so the snapshot is preloaded in the background
+    /// after Library first paint. Falls back to a local model for previews.
+    private let injectedModel: AlbumsModel?
+    @State private var fallbackModel = AlbumsModel()
+    private var model: AlbumsModel { injectedModel ?? fallbackModel }
+
+    init(model: AlbumsModel? = nil) {
+        self.injectedModel = model
+    }
+
     @State private var isCreatingSmartAlbum = false
     @State private var editingSmartAlbum: SmartAlbum?
 
@@ -38,10 +47,15 @@ struct AlbumsScreen: View {
                 .accessibilityLabel("New Smart Album")
             }
         }
-        .task(id: photoLibrary.libraryChangeToken) {
+        // `assetChangeToken`, not `libraryChangeToken`: the album list only
+        // moves on insert/remove/move. Content-only notifications (PhotoKit
+        // caching a rendition, a favorite toggle) used to rebuild the whole
+        // snapshot, and iCloud streaming during an index run fires those about
+        // once a second.
+        .task(id: photoLibrary.assetChangeToken) {
             guard photoLibrary.authorizationState.canReadLibrary else { return }
-            model.dependencies = dependencies
-            model.load()
+            if model.dependencies == nil { model.dependencies = dependencies }
+            model.load(forAssetToken: photoLibrary.assetChangeToken)
         }
         .navigationDestination(for: AlbumItem.ID.self) { albumId in
             if let album = model.albums.first(where: { $0.id == albumId }) {
@@ -209,6 +223,10 @@ struct AlbumToken: View {
     let album: AlbumItem
 
     @State private var cover: UIImage?
+    /// Assets warmed for this album's detail grid, so caching is cancelled
+    /// again when the token scrolls away.
+    @State private var prewarmedAssets: [PHAsset] = []
+    @AppStorage(SettingsKeys.gridColumns) private var storedColumns = 3
 
     /// Fixed outer height so grid rows align.
     static let height: CGFloat = 60
@@ -248,9 +266,41 @@ struct AlbumToken: View {
         .padding(8)
         .frame(width: tokenWidth, height: Self.height, alignment: .leading)
         .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .onAppear(perform: loadCover)
+        .onAppear {
+            loadCover()
+            prewarmDetailGrid()
+        }
+        .onDisappear(perform: stopPrewarmingDetailGrid)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(album.title), \(album.count) photos")
+    }
+
+    /// Warms the first screenful of this album's detail grid while its token is
+    /// on screen. Opening an album costs 16ms of data and then 120 thumbnail
+    /// renditions from cold — the renditions are the wait, and they can be paid
+    /// for before the tap.
+    private func prewarmDetailGrid() {
+        guard prewarmedAssets.isEmpty else { return }
+        let targetSize = GridThumbnailTarget.fullWidthThumbnailSize(columns: storedColumns)
+        let count = GridThumbnailTarget.prewarmCount(columns: storedColumns)
+        let album = album
+        Task {
+            let assets = await Task.detached(priority: .utility) {
+                AlbumsModel.firstAssets(of: album, limit: count)
+            }.value
+            guard !Task.isCancelled, !assets.isEmpty else { return }
+            prewarmedAssets = assets
+            photoLibrary.startCachingThumbnails(for: assets, targetSize: targetSize)
+        }
+    }
+
+    private func stopPrewarmingDetailGrid() {
+        guard !prewarmedAssets.isEmpty else { return }
+        photoLibrary.stopCachingThumbnails(
+            for: prewarmedAssets,
+            targetSize: GridThumbnailTarget.fullWidthThumbnailSize(columns: storedColumns)
+        )
+        prewarmedAssets = []
     }
 
     private func loadCover() {

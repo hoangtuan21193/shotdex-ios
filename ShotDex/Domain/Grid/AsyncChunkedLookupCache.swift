@@ -7,8 +7,10 @@ private struct UncheckedSendableBox<Wrapped>: @unchecked Sendable {
 /// Main-actor, non-blocking counterpart to `ChunkedLookupCache`.
 ///
 /// A cache miss schedules the surrounding chunk on a detached task and returns
-/// nil immediately, so collection-view data-source and prefetch callbacks never
-/// block on PhotoKit. The caller bumps a lightweight refresh token from
+/// immediately — with the value carried over from the previous key ordering
+/// when there is one, otherwise nil — so collection-view data-source and
+/// prefetch callbacks never block on PhotoKit. The caller bumps a
+/// lightweight refresh token from
 /// `onChunkLoaded`; visible cells then reconfigure and pick up the resolved
 /// values. Generation checks discard results from an old id ordering.
 @MainActor
@@ -22,6 +24,14 @@ final class AsyncChunkedLookupCache<Value> {
     private var lru: [Int] = []
     private var loadingTasks: [Int: Task<Void, Never>] = [:]
     private var generation = 0
+    /// Values resolved under the previous key ordering, kept by key so a
+    /// `replaceKeys` that shares keys keeps serving them while the new chunks
+    /// resolve. Chunks are indexed by position, so growing the list at the
+    /// anchored end (the first-paint slice becoming the whole library) moves
+    /// every on-screen tile to a different chunk index — without this the
+    /// tiles would all blank for a round trip. Bounded by the chunk budget
+    /// and replaced, not accumulated, on each `replaceKeys`.
+    private var carriedValues: [String: Value] = [:]
 
     /// Called on the main actor after a current-generation chunk is installed.
     var onChunkLoaded: (() -> Void)?
@@ -39,24 +49,32 @@ final class AsyncChunkedLookupCache<Value> {
 
     /// Replaces the ordered id list and invalidates every cached/in-flight
     /// chunk. Detached fetches that already started may finish, but their
-    /// generation no longer matches and their result is ignored.
+    /// generation no longer matches and their result is ignored. Values already
+    /// resolved stay available by key (see `carriedValues`) until the next
+    /// replacement, so keys the two orderings share never regress to nil.
     func replaceKeys(_ ids: [String]) {
+        let resolved = chunks.values.reduce(into: [String: Value]()) { merged, chunk in
+            merged.merge(chunk) { current, _ in current }
+        }
         generation &+= 1
         self.ids = ids
         removeAll()
+        carriedValues = resolved
     }
 
-    /// Returns a cached value or schedules its chunk and returns nil. This
-    /// method is intentionally cheap enough for `cellForItem` and prefetch.
+    /// Returns a cached value, or schedules its chunk and falls back to the
+    /// value carried over from the previous ordering (nil when there is none).
+    /// This method is intentionally cheap enough for `cellForItem` and prefetch.
     func value(at index: Int) -> Value? {
         guard ids.indices.contains(index) else { return nil }
+        let id = ids[index]
         let chunkIndex = index / chunkSize
-        if let value = chunks[chunkIndex]?[ids[index]] {
+        if let value = chunks[chunkIndex]?[id] {
             touch(chunkIndex)
             return value
         }
         loadIfNeeded(chunkIndex)
-        return nil
+        return carriedValues[id]
     }
 
     func removeAll() {
@@ -66,6 +84,7 @@ final class AsyncChunkedLookupCache<Value> {
         loadingTasks = [:]
         chunks = [:]
         lru = []
+        carriedValues = [:]
     }
 
     private func loadIfNeeded(_ chunkIndex: Int) {

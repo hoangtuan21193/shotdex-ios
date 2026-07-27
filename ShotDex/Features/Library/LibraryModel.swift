@@ -239,14 +239,17 @@ final class LibraryModel {
         loadTask = Task { [weak self] in
             do {
                 if usePhotoKit {
+                    var slice: [LibraryGridItem] = []
                     if useFirstPaintSlice {
-                        let slice = try await Self.photoKitGridItems(
+                        slice = try await Self.photoKitGridItems(
                             sort: sort, libraryQueries: libraryQueries, limit: Self.firstPaintLimit
                         )
                         guard let self, !Task.isCancelled else { return }
                         self.applyLoadedRows(slice)
                     }
-                    let all = try await Self.photoKitGridItems(sort: sort, libraryQueries: libraryQueries)
+                    let all = try await Self.fullLibraryRows(
+                        sort: sort, libraryQueries: libraryQueries, anchorSlice: slice
+                    )
                     guard let self, !Task.isCancelled else { return }
                     self.applyLoadedRows(all)
                 } else if let advancedQuery, !advancedQuery.isEmpty {
@@ -304,14 +307,62 @@ final class LibraryModel {
         isLoading = false
     }
 
+    /// The whole library for the phase that follows a first-paint slice.
+    ///
+    /// Materializing 55k `PHAsset`s costs ~930ms against ~350ms to decode the
+    /// same rows out of SQLite, and when the index already covers every asset
+    /// the enumeration learns nothing. So: read the DB, and use it only if it
+    /// provably agrees with PhotoKit — same total count (O(1) on a fetch
+    /// result), and the same set of ids at the anchored end as the slice that
+    /// just painted. Otherwise fall back to the authoritative enumeration,
+    /// which is also what every later reload uses, so a structural change can
+    /// never be papered over by this shortcut.
+    ///
+    /// The slice's own rows are kept verbatim at the anchored end rather than
+    /// the DB's: PhotoKit and SQL break creation-date ties differently (SQL
+    /// falls back to `assetId`), and re-ordering a burst under the user's eyes
+    /// is the thing the section-aligned slice exists to prevent.
+    private static func fullLibraryRows(
+        sort: SortOption,
+        libraryQueries: LibraryQueries,
+        anchorSlice: [LibraryGridItem]
+    ) async throws -> [LibraryGridItem] {
+        guard !anchorSlice.isEmpty else {
+            return try await photoKitGridItems(sort: sort, libraryQueries: libraryQueries)
+        }
+        let rows = try await libraryQueries.gridItems(matching: FilterCriteria.empty, sort: sort)
+        let assetCount = await Task.detached(priority: .userInitiated) {
+            PHAsset.fetchAssets(with: Self.browsableFetchOptions(sort: sort)).count
+        }.value
+        let agrees = rows.count == assetCount
+            && rows.count >= anchorSlice.count
+            && Set(rows.prefix(anchorSlice.count).map(\.assetId))
+                == Set(anchorSlice.map(\.assetId))
+        guard agrees else {
+            return try await photoKitGridItems(sort: sort, libraryQueries: libraryQueries)
+        }
+        return anchorSlice + rows.dropFirst(anchorSlice.count)
+    }
+
+    /// Every browsable-asset fetch in this type uses these: same predicate and
+    /// sort, so a count taken here is comparable with a list built there.
+    private nonisolated static func browsableFetchOptions(sort: SortOption) -> PHFetchOptions {
+        let options = PHFetchOptions()
+        options.predicate = PhotoLibraryService.browsableMediaPredicate
+        options.sortDescriptors = [
+            NSSortDescriptor(key: "creationDate", ascending: sort == .dateTakenOldest)
+        ]
+        return options
+    }
+
     /// The whole library as grid rows sourced from PhotoKit, in `sort` order.
     /// Each asset uses its indexed DB row when one exists (so the exposure
     /// overlay shows) and a PhotoKit-only placeholder otherwise — so photos
     /// appear before, and regardless of, the EXIF index. The PHFetchResult
     /// enumeration runs off the main thread (it materializes every asset).
-    /// `limit` caps both fetches to the sort's newest/oldest slice for the
-    /// first-paint phase; the capped DB read can miss overlays for assets
-    /// indexed out of date order — the full phase corrects them.
+    /// `limit` takes the leading slice of the sort — the end the grid anchors
+    /// to — for the first-paint phase; the capped DB read can miss overlays for
+    /// assets indexed out of date order, which the full phase corrects.
     private static func photoKitGridItems(
         sort: SortOption,
         libraryQueries: LibraryQueries,
@@ -324,20 +375,73 @@ final class LibraryModel {
         byId.reserveCapacity(indexed.count)
         for row in indexed { byId[row.assetId] = row }
 
-        let ascending = sort == .dateTakenOldest
         return await Task.detached(priority: .userInitiated) {
-            let options = PHFetchOptions()
-            options.predicate = PhotoLibraryService.browsableMediaPredicate
-            options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: ascending)]
-            if let limit { options.fetchLimit = limit }
+            let options = Self.browsableFetchOptions(sort: sort)
+            // Deliberately no `fetchLimit`: alongside a custom sort descriptor
+            // it does not mean "the newest 600" — Photos may truncate in its
+            // native order and sort only that window, so the slice was not the
+            // sorted prefix. The grid anchors to the slice's own end, so the
+            // full phase then grew a row of genuinely newer photos there —
+            // the flicker-plus-extra-row on every cold launch. `PHFetchResult`
+            // is lazy, so slicing an unlimited fetch by index costs the same
+            // and is a true prefix of the full phase by construction.
             let fetch = PHAsset.fetchAssets(with: options)
             var items: [LibraryGridItem] = []
-            items.reserveCapacity(fetch.count)
-            fetch.enumerateObjects { asset, _, _ in
-                items.append(byId[asset.localIdentifier] ?? LibraryGridItem(asset: asset))
+            if let limit {
+                let upperBound = Self.dateGroupAlignedBound(min(limit, fetch.count), in: fetch)
+                items.reserveCapacity(upperBound)
+                for index in 0..<upperBound {
+                    let asset = fetch.object(at: index)
+                    items.append(byId[asset.localIdentifier] ?? LibraryGridItem(asset: asset))
+                }
+            } else {
+                items.reserveCapacity(fetch.count)
+                fetch.enumerateObjects { asset, _, _ in
+                    items.append(byId[asset.localIdentifier] ?? LibraryGridItem(asset: asset))
+                }
             }
             return items
         }.value
+    }
+
+    /// Grows `bound` until it sits on a month boundary, so the first-paint
+    /// slice ends on a whole date group.
+    ///
+    /// Tiles pack into rows from the *start of their section*, so a slice that
+    /// cuts a date group in half gives that group a different item count than
+    /// the full phase — the group's whole row layout then shifts when the
+    /// missing members arrive, which is the grid re-flowing and losing tiles
+    /// from its last row a second after launch. A true prefix is not enough;
+    /// it has to be a prefix of whole sections. A month boundary is also a day
+    /// boundary, so this holds for either `PhotoGridDateGranularity`.
+    ///
+    /// Growing (not shrinking) because the anchored end is the newest group:
+    /// shrinking to the previous boundary would empty the slice whenever that
+    /// one group is larger than the limit. Capped so a single enormous month
+    /// can't turn the first paint back into a whole-library enumeration — past
+    /// the cap the slice stays misaligned and the full phase re-packs as before.
+    private nonisolated static func dateGroupAlignedBound(
+        _ bound: Int,
+        in fetch: PHFetchResult<PHAsset>,
+        calendar: Calendar = .current
+    ) -> Int {
+        guard bound > 0, bound < fetch.count else { return bound }
+        let boundaryDate = fetch.object(at: bound - 1).creationDate
+        let cap = min(fetch.count, bound * 8)
+        var aligned = bound
+        while aligned < cap {
+            let date = fetch.object(at: aligned).creationDate
+            // nil dates form their own `.undated` group; they sort to the far
+            // end, so this only matters for a library of undated assets.
+            let continuesGroup = switch (boundaryDate, date) {
+            case (nil, nil): true
+            case let (previous?, next?): calendar.isDate(previous, equalTo: next, toGranularity: .month)
+            default: false
+            }
+            guard continuesGroup else { return aligned }
+            aligned += 1
+        }
+        return aligned
     }
 
     /// PHAsset for the tile at a flat grid index. A cache miss schedules an
