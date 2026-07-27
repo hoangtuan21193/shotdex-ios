@@ -9,6 +9,11 @@ struct RootTabView: View {
     @State private var navigation = AppNavigation()
     @State private var isSearchPresented = false
     @State private var libraryModel: LibraryModel?
+    /// Owned here, not by `AlbumsScreen`, so the album snapshot can be built in
+    /// the background after Library first paint instead of when the user taps
+    /// the tab — enumerating every collection's assets took 300–670ms, which
+    /// was dead time on every visit.
+    @State private var albumsModel: AlbumsModel?
     /// Pre-iOS 26 keeps a custom ZStack so visited tabs preserve navigation
     /// state, but mounts each tab only on first selection. Hidden, never-visited
     /// Albums/Statistics screens therefore do no PhotoKit/aggregate work during
@@ -29,9 +34,10 @@ struct RootTabView: View {
         libraryModel?.startIndexing()
     }
 
-    /// Albums is mounted lazily, but its hero should already be sharp when the
-    /// user first opens the tab. Start after the launch frame so this small
-    /// PhotoKit request does not delay initial interaction.
+    /// Albums is mounted lazily, but its hero should already be sharp — and its
+    /// snapshot already built — when the user first opens the tab. Both start
+    /// after the launch frame so this PhotoKit work does not delay initial
+    /// interaction.
     private func preheatAlbumCoverIfNeeded() {
         guard photoLibrary.authorizationState.canReadLibrary,
               !hasScheduledAlbumCoverPreheat
@@ -41,6 +47,7 @@ struct RootTabView: View {
             try? await Task.sleep(for: .milliseconds(250))
             guard !Task.isCancelled else { return }
             await AlbumsModel.preheatOnThisDayCover(using: photoLibrary)
+            albumsModel?.load(forAssetToken: photoLibrary.assetChangeToken)
         }
     }
 
@@ -95,7 +102,7 @@ struct RootTabView: View {
                 NavigationStack { LibraryScreen(model: libraryModel) }
             }
             Tab(AppTab.albums.title, systemImage: AppTab.albums.systemImage, value: .albums) {
-                NavigationStack { AlbumsScreen() }
+                NavigationStack { AlbumsScreen(model: albumsModel) }
             }
             Tab(AppTab.statistics.title, systemImage: AppTab.statistics.systemImage, value: .statistics) {
                 NavigationStack { StatisticsScreen() }
@@ -133,6 +140,9 @@ struct RootTabView: View {
         .task {
             if libraryModel == nil {
                 libraryModel = LibraryModel(dependencies: dependencies)
+            }
+            if albumsModel == nil {
+                albumsModel = AlbumsModel(dependencies: dependencies)
             }
             preheatAlbumCoverIfNeeded()
             // Let the Library publish its first interactive frame before the
@@ -202,6 +212,9 @@ struct RootTabView: View {
                 if libraryModel == nil {
                     libraryModel = LibraryModel(dependencies: dependencies)
                 }
+                if albumsModel == nil {
+                    albumsModel = AlbumsModel(dependencies: dependencies)
+                }
                 preheatAlbumCoverIfNeeded()
                 // Let the Library publish its first interactive frame before
                 // the full PhotoKit/index reconciliation starts competing.
@@ -240,7 +253,7 @@ struct RootTabView: View {
                 tabStack(.library) { LibraryScreen(model: libraryModel) }
             }
             if mountedLegacyTabs.contains(.albums) {
-                tabStack(.albums) { AlbumsScreen() }
+                tabStack(.albums) { AlbumsScreen(model: albumsModel) }
             }
             if mountedLegacyTabs.contains(.statistics) {
                 tabStack(.statistics) { StatisticsScreen() }

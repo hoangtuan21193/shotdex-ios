@@ -40,9 +40,20 @@ final class AlbumsModel {
     private(set) var albums: [AlbumItem] = []
     private(set) var isLoading = false
 
-    /// Injected by the screen before the first `load()`; enables the
-    /// smart-album (saved-filter) section, which needs the DB queries.
+    /// Enables the smart-album (saved-filter) section, which needs the DB
+    /// queries. Injected at init by the root (which preloads the snapshot);
+    /// still settable for the previews/tests that build the model bare.
     var dependencies: AppDependencies?
+
+    /// `assetChangeToken` the current snapshot was built from. The screen asks
+    /// for a load on every appearance and on every structural library change;
+    /// rebuilding an unchanged snapshot costs a `PHAsset.fetchAssets(in:)` plus
+    /// `count` per collection — 300–670ms here — so it is skipped.
+    private var loadedAssetToken: Int?
+
+    init(dependencies: AppDependencies? = nil) {
+        self.dependencies = dependencies
+    }
 
     /// Summary for the "On This Day" hero card (today's date, previous years).
     private(set) var onThisDayCount = 0
@@ -92,6 +103,14 @@ final class AlbumsModel {
             targetSize: onThisDayCoverTargetSize,
             allowNetwork: true
         ) { _ in }
+    }
+
+    /// Builds the snapshot unless one already exists for this structural state.
+    /// `nil` token means "rebuild regardless" (a smart album was edited).
+    func load(forAssetToken token: Int?) {
+        if let token, token == loadedAssetToken, !albums.isEmpty { return }
+        loadedAssetToken = token
+        load()
     }
 
     func load() {
@@ -180,6 +199,27 @@ final class AlbumsModel {
             onThisDayCount: onThisDay.count,
             onThisDayCover: onThisDay.firstObject
         )
+    }
+
+    /// Leading assets of an album in detail-grid order, for prewarming its
+    /// thumbnails before the album is opened. Same options as
+    /// `AlbumDetailModel.init`, so the warmed assets are the ones its first
+    /// page will ask for.
+    nonisolated static func firstAssets(of album: AlbumItem, limit: Int) -> [PHAsset] {
+        let options = PHFetchOptions()
+        options.predicate = PhotoLibraryService.browsableMediaPredicate
+        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        let fetch = switch album.kind {
+        case .allPhotos: PHAsset.fetchAssets(with: options)
+        case .collection(let collection): PHAsset.fetchAssets(in: collection, options: options)
+        }
+        var assets: [PHAsset] = []
+        let upperBound = min(limit, fetch.count)
+        assets.reserveCapacity(upperBound)
+        for index in 0..<upperBound {
+            assets.append(fetch.object(at: index))
+        }
+        return assets
     }
 
     private nonisolated static func item(for collection: PHAssetCollection, imageOptions: PHFetchOptions) -> AlbumItem? {

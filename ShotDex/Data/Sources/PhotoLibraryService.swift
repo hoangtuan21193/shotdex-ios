@@ -79,6 +79,21 @@ final class PhotoLibraryService: NSObject {
         cache.totalCostLimit = 160 * 1_024 * 1_024
         return cache
     }()
+    /// Final (non-degraded) grid thumbnails, keyed by asset *and* requested
+    /// width. Opportunistic delivery paints a soft preview before the sharp
+    /// rendition, which is invisible while scrolling but not on a `reloadData`:
+    /// cells get reused for different tiles, so every visible cell clears and
+    /// re-requests, and the whole grid visibly goes soft and sharpens again —
+    /// what the first-paint-to-full-library swap looked like. A cell that finds
+    /// its exact rendition here paints sharp synchronously and skips the
+    /// request entirely. Sized for a dense screenful plus prefetch headroom.
+    @ObservationIgnored
+    private let gridThumbnailCache: NSCache<NSString, UIImage> = {
+        let cache = NSCache<NSString, UIImage>()
+        cache.countLimit = 400
+        cache.totalCostLimit = 48 * 1_024 * 1_024
+        return cache
+    }()
     /// Final, display-sized album hero covers. This is deliberately separate
     /// from grid/detail caches: scrolling or paging must not evict the
     /// On This Day cover that was warmed during app launch.
@@ -223,12 +238,36 @@ final class PhotoLibraryService: NSObject {
             targetSize: targetSize,
             contentMode: contentMode,
             options: options
-        ) { image, _ in
+        ) { [weak self] image, info in
+            let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
             // Opportunistic PhotoKit callbacks may fire before requestImage
             // returns. Always defer state delivery so callers can first store
             // the returned request ID and cancellation remains correct.
-            Task { @MainActor in completion(image) }
+            Task { @MainActor in
+                if let image, !isDegraded {
+                    self?.gridThumbnailCache.setObject(
+                        image,
+                        forKey: Self.gridThumbnailKey(asset.localIdentifier, width: targetSize.width),
+                        cost: Int(image.size.width * image.size.height * image.scale * image.scale * 4)
+                    )
+                }
+                completion(image)
+            }
         }
+    }
+
+    /// The sharp rendition for this exact cell size, when one was already
+    /// delivered. Lets a cell paint on its first frame instead of clearing to
+    /// grey and waiting for an opportunistic preview.
+    func cachedThumbnail(for assetId: String, width: CGFloat) -> UIImage? {
+        gridThumbnailCache.object(forKey: Self.gridThumbnailKey(assetId, width: width))
+    }
+
+    /// Width is part of the key: a rendition from a different column count is
+    /// the wrong number of pixels, and painting it would be the soft tile this
+    /// cache exists to avoid.
+    private static func gridThumbnailKey(_ assetId: String, width: CGFloat) -> NSString {
+        "\(assetId)@\(Int(width.rounded()))" as NSString
     }
 
     func cancelThumbnailRequest(_ requestId: PHImageRequestID) {

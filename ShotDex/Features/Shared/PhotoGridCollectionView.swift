@@ -543,11 +543,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         /// Square cell side for a column count, floored to pixel precision so
         /// a row of N cells + gaps never exceeds the width (which would wrap).
         static func cellSize(width: CGFloat, columns: Int) -> CGSize {
-            let spacing: CGFloat = 2
-            let scale = UIScreen.main.scale
-            let raw = (width - spacing * CGFloat(columns - 1)) / CGFloat(columns)
-            let side = max(1, (raw * scale).rounded(.down) / scale)
-            return CGSize(width: side, height: side)
+            GridThumbnailTarget.cellSize(width: width, columns: columns)
         }
 
         /// Cell width in points for the current committed layout — sizes
@@ -561,12 +557,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         }
 
         private var thumbnailTargetSize: CGSize {
-            // Match the physical display scale. Capping a 3x phone at 2x saved
-            // decode memory but left one- and two-column thumbnails visibly
-            // soft compared with Photos.
-            let scale = UIScreen.main.scale
-            let side = cellPointWidth * scale
-            return CGSize(width: side, height: side)
+            GridThumbnailTarget.thumbnailSize(cellPointWidth: cellPointWidth)
         }
 
         private var detailTargetSize: CGSize {
@@ -1451,9 +1442,22 @@ final class PhotoGridCell: UICollectionViewCell {
         let needsUpgrade = targetSize.width > lastRequestedPixelWidth * 1.4
         guard assetChanged || needsUpgrade else { return }
         cancelRequest()
-        if assetChanged { imageView.image = nil }
+        // A sharp rendition of this exact size already delivered once: paint it
+        // now instead of clearing to grey and letting opportunistic delivery
+        // fade a soft preview in first. This is what keeps a `reloadData` (the
+        // first-paint slice growing into the whole library) from softening
+        // every visible tile — cells are reused for different tiles there, so
+        // they all clear and re-request at once.
         requestedAssetId = asset.localIdentifier
         lastRequestedPixelWidth = targetSize.width
+        if let cached = photoLibrary.cachedThumbnail(
+            for: asset.localIdentifier, width: targetSize.width
+        ) {
+            // Right asset, right pixel size — nothing left to ask PhotoKit for.
+            imageView.image = cached
+            return
+        }
+        if assetChanged { imageView.image = nil }
         // Local-only: scrolling the grid must never trigger iCloud downloads.
         requestId = photoLibrary.requestThumbnail(
             for: asset, targetSize: targetSize, allowNetwork: false
