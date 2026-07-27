@@ -28,6 +28,43 @@ enum ExifReadResult: Sendable {
     case failure
 }
 
+/// Where the time inside one EXIF read goes, accumulated process-wide and
+/// drained per batch by `IndexPipeline`. The read splits into "get the bytes"
+/// (PhotoKit resource streaming) and "parse them" (ImageIO), and the two point
+/// at opposite fixes — fewer bytes read vs fewer/cheaper parses — so the batch
+/// log has to separate them. `bytes` is what the local path actually pulled off
+/// disk, the number an early-stop would reduce.
+struct ExifReadMetrics: Sendable, Equatable {
+    var streamNanos: Int64 = 0
+    var parseNanos: Int64 = 0
+    var parseCalls = 0
+    var bytes: Int64 = 0
+    var reads = 0
+    /// Which fallback finally answered. A run whose assets all resolve from the
+    /// local original behaves nothing like one where every asset has to come
+    /// down from iCloud, and the per-batch numbers only make sense against the
+    /// mix — so count the mix.
+    var viaLocalOriginal = 0
+    var viaLocalDerivative = 0
+    /// Original streamed over the network — ≥1 MB/asset, PhotoKit's minimum
+    /// chunk, and the only iCloud path Photos actually serves (see the comment
+    /// in `networkAttempt`).
+    var viaNetwork = 0
+
+    static func - (lhs: Self, rhs: Self) -> Self {
+        Self(
+            streamNanos: lhs.streamNanos - rhs.streamNanos,
+            parseNanos: lhs.parseNanos - rhs.parseNanos,
+            parseCalls: lhs.parseCalls - rhs.parseCalls,
+            bytes: lhs.bytes - rhs.bytes,
+            reads: lhs.reads - rhs.reads,
+            viaLocalOriginal: lhs.viaLocalOriginal - rhs.viaLocalOriginal,
+            viaLocalDerivative: lhs.viaLocalDerivative - rhs.viaLocalDerivative,
+            viaNetwork: lhs.viaNetwork - rhs.viaNetwork
+        )
+    }
+}
+
 /// Reads EXIF from asset originals via ImageIO without decoding pixels.
 /// Every read *streams* the original — from disk for local files, from the
 /// network for iCloud-only originals — and stops as soon as the leading bytes
@@ -46,6 +83,45 @@ struct ExifReader: Sendable {
     /// Static so the cap holds process-wide, covering the pipeline and the
     /// detail viewer's `indexSingle` alike. Local reads are not limited.
     private static let networkStreamLimiter = AsyncLimiter(limit: 4)
+
+    /// Absolute cap on one iCloud read, independent of the stall window. A read
+    /// that keeps making progress is never killed by the watchdog, so this is
+    /// what stops a crawling download from holding a streaming permit forever.
+    /// Sized off the measured shape of a slow spell: PhotoKit needs a full 1 MB
+    /// chunk before it can parse, and ~28 KB/s makes that ~36 s.
+    static let networkReadCeiling: Duration = .seconds(120)
+
+    private static let metrics = OSAllocatedUnfairLock(initialState: ExifReadMetrics())
+
+    static var currentMetrics: ExifReadMetrics { metrics.withLock { $0 } }
+
+    /// Times one ImageIO parse attempt into the shared counters. Every parse of
+    /// a (possibly partial) buffer goes through here, so `parseCalls` counts the
+    /// failed attempts too — those are the ones an early-stop scheme adds.
+    private static func timingParse<T>(_ body: () -> T) -> T {
+        let clock = ContinuousClock()
+        let start = clock.now
+        let result = body()
+        let elapsed = clock.now - start
+        metrics.withLock {
+            $0.parseNanos += Int64(elapsed.components.seconds) * 1_000_000_000
+                + Int64(elapsed.components.attoseconds / 1_000_000_000)
+            $0.parseCalls += 1
+        }
+        return result
+    }
+
+    private static func recordResolution(_ update: (inout ExifReadMetrics) -> Void) {
+        metrics.withLock { update(&$0) }
+    }
+
+    private static func recordStream(nanos: Int64, bytes: Int) {
+        metrics.withLock {
+            $0.streamNanos += nanos
+            $0.bytes += Int64(bytes)
+            $0.reads += 1
+        }
+    }
 
     /// Receives the size of every chunk streamed from iCloud, feeding the
     /// indexing UI's downloaded-bytes / speed display. Disk reads don't count.
@@ -85,6 +161,7 @@ struct ExifReader: Sendable {
             // a stall window per asset. Half-open: after the cooldown the
             // check passes again and reads probe the network on their own.
             if trafficMonitor?.isNetworkTripped == true {
+                trafficMonitor?.recordNetworkSkip()
                 Self.logger.info("readExif \(name, privacy: .public): circuit breaker tripped — pendingICloud")
                 return .pendingICloud
             }
@@ -92,6 +169,7 @@ struct ExifReader: Sendable {
             // have tripped while this read waited behind the other streams.
             return await Self.networkStreamLimiter.withPermit {
                 if trafficMonitor?.isNetworkTripped == true {
+                    trafficMonitor?.recordNetworkSkip()
                     Self.logger.info("readExif \(name, privacy: .public): breaker tripped while queued — pendingICloud")
                     return .pendingICloud
                 }
@@ -105,15 +183,25 @@ struct ExifReader: Sendable {
                 // slept, and at half-open only one read wins the probe slot —
                 // the rest skip instead of burning a stall window each.
                 if trafficMonitor?.shouldSkipNetworkRead() == true {
+                    trafficMonitor?.recordNetworkSkip()
                     Self.logger.info("readExif \(name, privacy: .public): half-open probe lost — pendingICloud")
                     return .pendingICloud
                 }
-                Self.logger.info("readExif \(name, privacy: .public): starting 8s network stream")
                 trafficMonitor?.beginNetworkRead()
                 defer { trafficMonitor?.endNetworkRead() }
                 let before = trafficMonitor?.totalBytes ?? 0
                 let clock = ContinuousClock()
                 let start = clock.now
+
+                // Deliberately NOT tried here: asking `PHImageManager` for the
+                // downscaled rendition **with network allowed**, hoping to pay a
+                // fraction of the original's bytes. Measured on device over a
+                // fully offloaded library: 1 rendition served against 11+ falling
+                // through to the original, at an unchanged 1.05 MB/asset — Photos
+                // simply will not serve a rendition for a non-local asset, so the
+                // attempt only added a failed round-trip per asset, and that
+                // request churn is what wedges cloudphotod.
+                Self.logger.info("readExif \(name, privacy: .public): starting 8s network stream")
                 // 8 s *stall* window (no-progress), not an absolute cap: a real
                 // download delivers the small metadata header well within one
                 // window, while an unreachable original bails after ~8 s instead
@@ -124,6 +212,7 @@ struct ExifReader: Sendable {
                 if bytes > 0 { trafficMonitor?.recordNetworkProgress() }
                 switch result {
                 case .success(let exif):
+                    Self.recordResolution { $0.viaNetwork += 1 }
                     Self.logger.info("readExif \(name, privacy: .public): network stream success, \(bytes) B in \(elapsedMilliseconds) ms")
                     return .success(exif)
                 case .needsNetwork:
@@ -169,6 +258,7 @@ struct ExifReader: Sendable {
             let local = await readExifFromLocalDerivative(for: asset)
             switch local {
             case .success:
+                Self.recordResolution { $0.viaLocalDerivative += 1 }
                 Self.logger.info("readExif \(name, privacy: .public): resolved via local derivative")
                 return local
             case .unreadable:
@@ -187,6 +277,7 @@ struct ExifReader: Sendable {
 
         switch await streamExif(resource: resource, useNetwork: false, timeout: .seconds(10)) {
         case .success(let exif):
+            Self.recordResolution { $0.viaLocalOriginal += 1 }
             return .success(exif)
         case .unreadable:
             // Full local buffer arrived (no error) but doesn't parse — a broken
@@ -297,8 +388,39 @@ struct ExifReader: Sendable {
         options.isNetworkAccessAllowed = useNetwork
         let manager = PHAssetResourceManager.default()
 
+        // The stall watchdog below measures "no progress", and without this it
+        // could only see progress when a **chunk** was delivered. PhotoKit hands
+        // over iCloud data in 1 MB chunks, so on a slow link a read receives
+        // nothing at all until the whole megabyte has landed: measured on device
+        // at ~28 KB/s, that is 36 s of apparent silence, and the 8 s window
+        // killed every read before its first chunk — below ~128 KB/s no asset
+        // could *ever* finish, and each kill threw away the partial download so
+        // the next attempt restarted from zero. `progressHandler` reports the
+        // download advancing before any chunk arrives, which is what the
+        // watchdog actually wants to know.
+        let downloadProgressed = OSAllocatedUnfairLock(initialState: false)
+        if useNetwork {
+            options.progressHandler = { _ in
+                downloadProgressed.withLock { $0 = true }
+            }
+        }
+
+        // Hoisted so the byte count survives the continuation: how many bytes a
+        // read actually pulled is the number that decides whether early-stopping
+        // the local path is worth its risk.
+        let state = OSAllocatedUnfairLock(initialState: StreamState())
+        let clock = ContinuousClock()
+        let started = clock.now
+        defer {
+            let elapsed = clock.now - started
+            Self.recordStream(
+                nanos: Int64(elapsed.components.seconds) * 1_000_000_000
+                    + Int64(elapsed.components.attoseconds / 1_000_000_000),
+                bytes: state.withLock { $0.buffer.count }
+            )
+        }
+
         return await withCheckedContinuation { continuation in
-            let state = OSAllocatedUnfairLock(initialState: StreamState())
             // With a dozen concurrent reads over a large library, un-cancelled
             // timeout tasks would pile up by the thousands — cancel on resume.
             let timeoutTask = OSAllocatedUnfairLock<Task<Void, Never>?>(initialState: nil)
@@ -322,18 +444,31 @@ struct ExifReader: Sendable {
                     guard !s.resumed else { return nil }
                     s.buffer.append(chunk)
                     s.progressed = true
-                    // Incremental parse (early-stop) only for network reads,
-                    // where cutting the download short after the metadata box
-                    // saves real bandwidth. For local reads the whole file
-                    // arrives from disk in milliseconds anyway, and feeding a
-                    // growing partial buffer to `CGImageSourceCopyPropertiesAtIndex`
-                    // makes ImageIO try to init the HEVC decoder on incomplete
-                    // HEIC on *every* chunk — repeated failures (err -39/-12894)
-                    // that spam the log and burn CPU. Local reads parse once in
-                    // the completion handler on the complete buffer instead.
+                    // Network reads parse after **every** chunk: cutting an
+                    // iCloud download short the moment the metadata box lands
+                    // saves real bandwidth, and the chunks are large enough that
+                    // the attempt count stays low.
                     if useNetwork, let properties = Self.metadataProperties(fromPartial: s.buffer) {
                         s.resumed = true
                         return .success(Self.parse(properties: properties))
+                    }
+                    // Local reads parse at **thresholds**, not per chunk. Per
+                    // chunk is what the old code refused to do, for a real
+                    // reason: feeding a growing partial HEIC buffer to
+                    // `CGImageSourceCopyPropertiesAtIndex` makes ImageIO retry
+                    // the HEVC decoder init on every attempt (err -39/-12894),
+                    // spamming the log and burning CPU. But parsing *once per
+                    // threshold* caps that at three attempts while stopping most
+                    // reads far short of the 8 MB budget — measured on device,
+                    // local originals were streaming the full 8 MB at ~145 ms
+                    // each while the parse of it cost 2 ms, so the bytes were
+                    // nearly the entire cost of the read.
+                    if !useNetwork, s.buffer.count >= s.nextLocalParseThreshold {
+                        if let properties = Self.metadataProperties(fromPartial: s.buffer) {
+                            s.resumed = true
+                            return .success(Self.parse(properties: properties))
+                        }
+                        s.nextLocalParseThreshold *= 4
                     }
                     if s.buffer.count >= maxBytes {
                         s.resumed = true
@@ -386,8 +521,11 @@ struct ExifReader: Sendable {
                 // Whole (small) file arrived before the incremental parse
                 // succeeded — parse it as a complete image.
                 let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
-                if let source = CGImageSourceCreateWithData(buffer as CFData, sourceOptions),
-                   let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, sourceOptions) as? [CFString: Any] {
+                let properties = Self.timingParse { () -> [CFString: Any]? in
+                    guard let source = CGImageSourceCreateWithData(buffer as CFData, sourceOptions) else { return nil }
+                    return CGImageSourceCopyPropertiesAtIndex(source, 0, sourceOptions) as? [CFString: Any]
+                }
+                if let properties {
                     continuation.resume(returning: .success(Self.parse(properties: properties)))
                 } else {
                     // Bytes fully arrived (no error) but unparseable — the
@@ -414,12 +552,35 @@ struct ExifReader: Sendable {
             // stall window, so a library full of offloaded assets doesn't
             // serialise 30 s per asset.
             let task = Task {
+                // Absolute ceiling on top of the stall window: with progress
+                // keeping a read alive, one very slow download could otherwise
+                // hold a streaming permit (there are only four) indefinitely and
+                // starve the rest of the batch.
+                let deadline = clock.now + Self.networkReadCeiling
                 while true {
                     try? await Task.sleep(for: timeout)
                     if Task.isCancelled { return }
+                    if useNetwork, clock.now > deadline {
+                        let claimed = state.withLock { s -> Bool in
+                            guard !s.resumed else { return false }
+                            s.resumed = true
+                            return true
+                        }
+                        guard claimed else { return }
+                        Self.logger.info("readExif \(resource.originalFilename, privacy: .public): hit \(Int(Self.networkReadCeiling.components.seconds))s ceiling — pendingICloud")
+                        cancelDownload()
+                        continuation.resume(returning: .needsNetwork)
+                        return
+                    }
+                    // A download that advanced counts as progress even with no
+                    // chunk delivered yet (see `progressHandler` above).
+                    let downloading = downloadProgressed.withLock { moved -> Bool in
+                        defer { moved = false }
+                        return moved
+                    }
                     let decision = state.withLock { s -> Int in
                         if s.resumed { return 0 }          // already finished
-                        if s.progressed { s.progressed = false; return 1 }  // still moving
+                        if s.progressed || downloading { s.progressed = false; return 1 }
                         s.resumed = true; return 2         // stalled
                     }
                     switch decision {
@@ -449,6 +610,12 @@ struct ExifReader: Sendable {
         /// Set on every chunk; the watchdog resets it each interval to detect
         /// a stalled transfer (no bytes arriving) and bail out early.
         var progressed = false
+        /// Buffer size at which a **local** read next attempts a parse, ×4 per
+        /// failed attempt: 256 KB → 1 MB → 4 MB, so at most three attempts land
+        /// before the 8 MB budget ends the read anyway. JPEG and most containers
+        /// carry the metadata block at the front, so the first threshold
+        /// resolves the common case after ~3% of a large original.
+        var nextLocalParseThreshold = 262_144
     }
 
     /// Slow-path fallback for local originals whose metadata lies beyond the
@@ -489,14 +656,16 @@ struct ExifReader: Sendable {
     /// once an EXIF or TIFF section is present — partial data can yield a
     /// dictionary before the metadata sections have arrived.
     private static func metadataProperties(fromPartial data: Data) -> [CFString: Any]? {
-        let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
-        let source = CGImageSourceCreateIncremental(sourceOptions)
-        CGImageSourceUpdateData(source, data as CFData, false)
-        guard let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, sourceOptions) as? [CFString: Any],
-              properties[kCGImagePropertyExifDictionary] != nil
-                || properties[kCGImagePropertyTIFFDictionary] != nil
-        else { return nil }
-        return properties
+        timingParse {
+            let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
+            let source = CGImageSourceCreateIncremental(sourceOptions)
+            CGImageSourceUpdateData(source, data as CFData, false)
+            guard let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, sourceOptions) as? [CFString: Any],
+                  properties[kCGImagePropertyExifDictionary] != nil
+                    || properties[kCGImagePropertyTIFFDictionary] != nil
+            else { return nil }
+            return properties
+        }
     }
 
     /// Reads EXIF from an image file URL. Never decodes the image

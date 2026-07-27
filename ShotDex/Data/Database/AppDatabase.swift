@@ -150,6 +150,17 @@ final class AppDatabase: Sendable {
             }
         }
 
+        // Archived `PHPersistentChangeToken` from the end of the last complete
+        // run. With it an incremental run asks Photos for exactly what changed
+        // instead of walking (and materializing) every asset in the library —
+        // the difference between a 7 s no-op run and a few milliseconds. Null
+        // until the first full walk completes.
+        migrator.registerMigration("v6-changeToken") { db in
+            try db.alter(table: "index_state") { t in
+                t.add(column: "changeToken", .blob)
+            }
+        }
+
         return migrator
     }
 }

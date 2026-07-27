@@ -41,8 +41,18 @@ final class AppDependencies {
         self.photoLibrary = photoLibrary
         self.importService = ImportService(photoLibrary: photoLibrary, metadataStore: metadataStore)
         self.indexPipeline = indexPipeline
-        self.backgroundIndex = BackgroundIndexService(pipeline: indexPipeline, metadataStore: metadataStore)
-        self.networkStatus = NetworkMonitor()
+        let networkStatus = NetworkMonitor()
+        self.networkStatus = networkStatus
+        // Same policy the foreground uses (`LibraryModel.allowNetworkForIndexing`):
+        // an unmetered path always, a metered one only on explicit opt-in.
+        self.backgroundIndex = BackgroundIndexService(
+            pipeline: indexPipeline,
+            metadataStore: metadataStore,
+            allowNetwork: {
+                !networkStatus.isExpensivePath
+                    || UserDefaults.standard.bool(forKey: SettingsKeys.allowCellularIndexing)
+            }
+        )
         self.powerStatus = PowerMonitor()
         self.indexTraffic = indexTraffic
         self.indexInteractionGate = indexInteractionGate

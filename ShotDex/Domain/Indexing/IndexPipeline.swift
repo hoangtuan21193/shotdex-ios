@@ -165,6 +165,46 @@ actor IndexPipeline {
         Self.logger.log("EXIF pass resumed after thermal pause")
     }
 
+    /// Suspends while the iCloud circuit breaker is cooling down.
+    ///
+    /// Without this the pass keeps consuming assets during the 30 s cooldown:
+    /// each one costs only a failed local read plus an instant breaker
+    /// rejection (~40 ms × 12 readers ≈ 300 assets/s), so a single cooldown
+    /// marks ~9 000 rows `pendingICloud` **without ever asking iCloud**. On a
+    /// library whose originals live in iCloud that burns through the whole
+    /// remaining library in a couple of cooldowns — the run then "finishes"
+    /// having read almost nothing, which is exactly the observed
+    /// works-then-dies-then-retries cycle. Waiting instead costs 30 s and keeps
+    /// every one of those assets for the probe that follows.
+    ///
+    /// Only waits while the network is actually allowed and is the thing the
+    /// run needs; same 1 s-tick shape as the thermal wait, so `cancel()` lands
+    /// within one tick.
+    /// Each wait is bounded — the breaker half-opens on its own after its
+    /// cooldown — but a dead iCloud can re-trip indefinitely, and a run that
+    /// pauses forever holds the "Indexing…" indicator forever and never reaches
+    /// the end-of-run auto-retry (whose card at least shows a countdown). So the
+    /// pauses are capped per run: past the cap the pass walks on as it used to,
+    /// finishes, and hands off to `LibraryModel`'s 30 s retry loop.
+    static let maxBreakerPausesPerRun = 3
+
+    private var breakerPauses = 0
+
+    private func waitWhileNetworkBreakerTripped(allowNetwork: Bool) async {
+        guard allowNetwork, exifReader.trafficMonitor?.isNetworkTripped == true else { return }
+        guard breakerPauses < Self.maxBreakerPausesPerRun else { return }
+        breakerPauses += 1
+        let signpostState = Self.signposter.beginInterval("breakerPause")
+        defer { Self.signposter.endInterval("breakerPause", signpostState) }
+        IndexTrafficMonitor.health(
+            "EXIF pass paused (\(breakerPauses)/\(Self.maxBreakerPausesPerRun)): iCloud breaker cooling down"
+        )
+        while !isCancelled, exifReader.trafficMonitor?.isNetworkTripped == true {
+            try? await Task.sleep(for: .seconds(1))
+        }
+        IndexTrafficMonitor.health("EXIF pass resumed: breaker half-open, probing iCloud")
+    }
+
     /// Duty-cycle sleep between EXIF batches, scaled by thermal/power state
     /// (`interBatchPause`). Same shape as the other waits: 250 ms ticks with
     /// the actor free, so `cancel()` lands within one tick. State is
@@ -284,6 +324,10 @@ actor IndexPipeline {
     ///     delivered its first path update when a launch-triggered run
     ///     begins (it defaults to "expensive"), and the user can leave
     ///     Wi-Fi mid-run.
+    ///   - onWorkFound: called once, the moment the run establishes that it has
+    ///     real work (a row to write or an asset to read). A run that finds
+    ///     nothing never calls it — that's what keeps the "Indexing…" indicator
+    ///     off on a launch where the library is already fully indexed.
     ///   - onProgress: called when each asset read starts and completes,
     ///     throttled to ~5/s (EXIF pass only; the fast pass finishes within
     ///     seconds and stays on the indeterminate "Indexing…" display).
@@ -291,6 +335,7 @@ actor IndexPipeline {
     func run(
         fullReindex: Bool = false,
         allowNetwork: @escaping @Sendable () -> Bool = { false },
+        onWorkFound: @escaping @Sendable () -> Void = {},
         onProgress: @escaping @Sendable (IndexProgress) -> Void = { _ in }
     ) async throws -> IndexRunSummary {
         guard !isRunning else {
@@ -298,6 +343,7 @@ actor IndexPipeline {
         }
         isRunning = true
         isCancelled = false
+        breakerPauses = 0
         defer { isRunning = false }
 
         let clock = ContinuousClock()
@@ -306,23 +352,58 @@ actor IndexPipeline {
 
         let composer = makeComposer()
 
+        // Sampled *before* any diffing, and only persisted once the run
+        // completes: a change landing mid-run is then replayed by the next run
+        // rather than lost. Replaying a change already handled is harmless —
+        // `needsReindex` skips rows that are complete and unchanged.
+        let tokenAtStart = PHPhotoLibrary.shared().currentChangeToken
+
+        // Preferred path: ask Photos what changed instead of walking the whole
+        // library. Returns nil when the change history can't answer (no token
+        // yet, or an expired one), which is what the full walk below is for.
+        if !fullReindex,
+           let summary = try await runFromPersistentChanges(
+               composer: composer,
+               allowNetwork: allowNetwork,
+               timings: timings,
+               tokenAtStart: tokenAtStart,
+               clock: clock,
+               onWorkFound: onWorkFound,
+               onProgress: onProgress
+           ) {
+            return summary
+        }
+
+        var hasSignalledWork = false
+        let signalWork = { [onWorkFound] in
+            guard !hasSignalledWork else { return }
+            hasSignalledWork = true
+            onWorkFound()
+        }
+
         // Rows already present — the fast pass must never overwrite them
         // (a full reindex still keeps old EXIF visible until re-read).
+        var mark = clock.now
         let existingStates = try metadataStore.indexedAssetStates()
+        let statesTime = clock.now - mark
         // Diff snapshot for the EXIF pass; fullReindex re-reads everything.
         let existing = fullReindex ? [:] : existingStates
 
-        let fetchOptions = PHFetchOptions()
-        // Newest first: recently shot photos get their metadata soonest.
-        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-        fetchOptions.predicate = PhotoLibraryService.browsableMediaPredicate
-        let fetchResult = PHAsset.fetchAssets(with: fetchOptions)
+        mark = clock.now
+        let fetchResult = PHAsset.fetchAssets(with: Self.browsableFetchOptions())
 
         let total = fetchResult.count
+        let fetchTime = clock.now - mark
+        IndexTrafficMonitor.health(
+            "run setup: \(total) assets, \(existingStates.count) rows — states \(Self.milliseconds(statesTime))ms, fetch \(Self.milliseconds(fetchTime))ms"
+        )
         var summary = IndexRunSummary(indexed: 0, skipped: 0, pendingICloud: 0, failed: 0, deleted: 0, wasCancelled: false)
 
         // Phase 1 — fast pass over brand-new assets.
-        try fastPass(fetchResult: fetchResult, existingStates: existingStates, composer: composer, clock: clock)
+        try fastPass(
+            fetchResult: fetchResult, existingStates: existingStates,
+            composer: composer, clock: clock, onWorkFound: signalWork
+        )
 
         // Phase 2 — EXIF enrichment.
         //
@@ -341,8 +422,18 @@ actor IndexPipeline {
         var batch: [PHAsset] = []
         batch.reserveCapacity(Self.batchSize)
 
+        // Split of the EXIF-pass loop's wall clock: `batchTime` is real read
+        // work, the remainder is the incremental diff scan (materializing every
+        // PHAsset and hashing it against `existing`). On a fully-indexed launch
+        // the scan is the *whole* cost, so the two must be reported apart.
+        var batchTime = Duration.zero
+        var needsRead = 0
+
         var firstBatch = true
         func runBatch(_ assets: [PHAsset]) async throws {
+            signalWork()
+            let batchMark = clock.now
+            defer { batchTime += clock.now - batchMark }
             // No breather before the first batch: a cool device starts
             // instantly and short incremental runs feel unchanged.
             if !firstBatch { await pauseBetweenBatches() }
@@ -356,6 +447,7 @@ actor IndexPipeline {
             onProgress(IndexProgress(processed: baseline + newlyDone, total: total))
         }
 
+        let loopMark = clock.now
         for index in 0..<total {
             if isCancelled { break }
             let asset = fetchResult.object(at: index)
@@ -385,6 +477,7 @@ actor IndexPipeline {
                 }
             }
 
+            needsRead += 1
             batch.append(asset)
             if batch.count == Self.batchSize {
                 try await runBatch(batch)
@@ -396,11 +489,16 @@ actor IndexPipeline {
             try await runBatch(batch)
         }
 
+        IndexTrafficMonitor.health(
+            "diff scan: \(needsRead) of \(total) need a read — scan \(Self.milliseconds((clock.now - loopMark) - batchTime))ms, batches \(Self.milliseconds(batchTime))ms"
+        )
+
         // Remove rows for assets that vanished from the library
         // (only safe to compute after a full, uncancelled walk).
         if !isCancelled && !fullReindex {
             let deletedIds = existing.keys.filter { !seenAssetIds.contains($0) }
             if !deletedIds.isEmpty {
+                signalWork()
                 try metadataStore.deleteAssets(ids: deletedIds)
                 summary.deleted = deletedIds.count
             }
@@ -413,6 +511,12 @@ actor IndexPipeline {
         if !isCancelled {
             state.cursorAssetId = nil
             state.lastFullIndexAt = Int(Date().timeIntervalSince1970)
+            // The walk just brought the DB into agreement with the library, so
+            // the change history can take over from here: every later run reads
+            // only what Photos reports as changed. Only ever set after an
+            // uncancelled walk — a partial walk would let the next run skip
+            // assets it never reached.
+            state.changeToken = Self.archived(tokenAtStart)
         }
         try metadataStore.saveIndexState(state)
 
@@ -426,6 +530,7 @@ actor IndexPipeline {
     /// precisely to fetch what a local-only run couldn't.
     @discardableResult
     func reindexIncomplete(
+        onWorkFound: @escaping @Sendable () -> Void = {},
         onProgress: @escaping @Sendable (IndexProgress) -> Void = { _ in }
     ) async throws -> IndexRunSummary {
         guard !isRunning else {
@@ -433,6 +538,7 @@ actor IndexPipeline {
         }
         isRunning = true
         isCancelled = false
+        breakerPauses = 0
         defer { isRunning = false }
 
         let clock = ContinuousClock()
@@ -443,13 +549,13 @@ actor IndexPipeline {
         let ids = try metadataStore.retryableAssetIds()
         var summary = IndexRunSummary(indexed: 0, skipped: 0, pendingICloud: 0, failed: 0, deleted: 0, wasCancelled: false)
         let assets = PhotoLibraryService.fetchAssets(ids: ids)
+        guard !assets.isEmpty else { return summary }
+        onWorkFound()
 
         // Progress is cumulative against the whole library, matching `run()`:
         // the count climbs from what's already done toward the library total,
         // never the "1 of 97 retryable" view.
-        let fetchOptions = PHFetchOptions()
-        fetchOptions.predicate = PhotoLibraryService.browsableMediaPredicate
-        let total = PHAsset.fetchAssets(with: fetchOptions).count
+        let total = PHAsset.fetchAssets(with: Self.browsableFetchOptions()).count
         let baseline = (try? metadataStore.completedCount()) ?? 0
         var newlyDone = 0
         onProgress(IndexProgress(processed: baseline, total: total))
@@ -473,6 +579,233 @@ actor IndexPipeline {
         return summary
     }
 
+    // MARK: Persistent-change fast path
+
+    /// Fetch options shared by every full-library walk and count.
+    private static func browsableFetchOptions() -> PHFetchOptions {
+        let options = PHFetchOptions()
+        // Newest first: recently shot photos get their metadata soonest.
+        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        options.predicate = PhotoLibraryService.browsableMediaPredicate
+        return options
+    }
+
+    /// Incremental run driven by Photos' persistent change history: instead of
+    /// materializing every asset in the library to diff it against the DB, ask
+    /// Photos what was inserted/updated/deleted since the last complete run and
+    /// combine that with the rows still unfinished. On a fully-indexed library
+    /// this is two scoped queries and no work at all — where the full walk costs
+    /// seconds of pure scanning on every launch (measured: 6.8 s over 55k
+    /// assets, all of it skips).
+    ///
+    /// Returns nil when the history can't serve this run — no stored token (no
+    /// full walk has completed yet) or Photos has expired it — leaving the
+    /// caller to fall back to the full walk, which re-establishes the token.
+    private func runFromPersistentChanges(
+        composer: MetadataComposer,
+        allowNetwork: @escaping @Sendable () -> Bool,
+        timings: OSAllocatedUnfairLock<StageTotals>,
+        tokenAtStart: PHPersistentChangeToken,
+        clock: ContinuousClock,
+        onWorkFound: @escaping @Sendable () -> Void,
+        onProgress: @escaping @Sendable (IndexProgress) -> Void
+    ) async throws -> IndexRunSummary? {
+        let start = clock.now
+        guard let stored = try metadataStore.indexState().changeToken,
+              let since = Self.unarchivedToken(stored) else { return nil }
+
+        let changes: PersistentChanges
+        do {
+            changes = try Self.persistentChanges(since: since)
+        } catch {
+            // Photos keeps a bounded change window; past it the token expires
+            // and the only correct answer is a full walk. Drop the token so the
+            // fallback re-establishes a fresh one.
+            let nsError = error as NSError
+            IndexTrafficMonitor.health(
+                "persistent changes unavailable (\(nsError.domain) code \(nsError.code)) — full walk"
+            )
+            var state = try metadataStore.indexState()
+            state.changeToken = nil
+            try metadataStore.saveIndexState(state)
+            return nil
+        }
+
+        var summary = IndexRunSummary(indexed: 0, skipped: 0, pendingICloud: 0, failed: 0, deleted: 0, wasCancelled: false)
+
+        // Rows whose read never finished carry over regardless of what changed:
+        // `pendingRead` placeholders, `error` retries, and `pendingICloud` once
+        // the network is allowed again.
+        let unfinished = try metadataStore.unfinishedAssetStates()
+        var candidateIds = Set(unfinished.keys)
+        candidateIds.formUnion(changes.inserted)
+        candidateIds.formUnion(changes.updated)
+        candidateIds.subtract(changes.deleted)
+
+        // Assets that left the library: drop only the ids we actually hold, so
+        // `summary.deleted` stays an accurate count of rows removed.
+        if !changes.deleted.isEmpty {
+            let present = try metadataStore.assetStates(ids: Array(changes.deleted))
+            if !present.isEmpty {
+                onWorkFound()
+                try metadataStore.deleteAssets(ids: Array(present.keys))
+                summary.deleted = present.count
+            }
+        }
+
+        // Newest-first, matching the full walk's ordering, so recently shot
+        // photos get their metadata soonest.
+        let candidates = PhotoLibraryService.fetchAssets(ids: Array(candidateIds))
+            .filter { $0.mediaType == .image || $0.mediaType == .video }
+            .sorted { ($0.creationDate ?? .distantPast) > ($1.creationDate ?? .distantPast) }
+        let states = try metadataStore.assetStates(ids: candidates.map(\.localIdentifier))
+
+        var work: [PHAsset] = []
+        var newAssets: [PHAsset] = []
+        // Assets being re-read that already counted as complete — the progress
+        // baseline has to give them back, exactly as the full walk does.
+        var rereadComplete = 0
+        // Why each asset made the work list. A re-read that "shouldn't" happen
+        // is either an edit Photos reported (modificationDate moved), a version
+        // bump backfilling fields, or a row whose read never finished — and only
+        // the reason tells which.
+        var noRow = 0, edited = 0, versionBump = 0, incompleteStatus = 0
+        for asset in candidates {
+            let state = states[asset.localIdentifier]
+            let currentModified = asset.modificationDate.map { Int($0.timeIntervalSince1970) }
+            guard Self.needsReindex(
+                existing: state,
+                currentModificationDate: currentModified,
+                allowNetworkRetry: allowNetwork()
+            ) else {
+                summary.skipped += 1
+                continue
+            }
+            if let state {
+                if state.modificationDate != currentModified {
+                    edited += 1
+                } else if state.indexerVersion < PhotoMetadata.currentIndexerVersion {
+                    versionBump += 1
+                } else {
+                    incompleteStatus += 1
+                }
+                if let status = ExifStatus(rawValue: state.exifStatus),
+                   status == .indexed || status == .noExif {
+                    rereadComplete += 1
+                }
+            } else {
+                noRow += 1
+                newAssets.append(asset)
+            }
+            work.append(asset)
+        }
+
+        guard !work.isEmpty || summary.deleted > 0 else {
+            // Nothing to do. Advance the token so the next run starts here, and
+            // never signal work — the indexing indicator stays off.
+            try persistCompletion(token: tokenAtStart)
+            IndexTrafficMonitor.health(
+                "persistent changes: no work — \(changes.inserted.count) inserted, \(changes.updated.count) updated, \(changes.deleted.count) deleted, \(unfinished.count) unfinished, \(summary.skipped) skipped in \(Self.milliseconds(clock.now - start))ms"
+            )
+            return summary
+        }
+        onWorkFound()
+        // Same breakdown as the no-work line: a run with unexpectedly much work
+        // has to say whether it came from the DB (rows never finished) or from
+        // Photos' history (assets it reports as inserted/updated), because the
+        // two mean completely different things.
+        IndexTrafficMonitor.health(
+            "persistent changes: \(work.count) to read — history \(changes.inserted.count) inserted / \(changes.updated.count) updated / \(changes.deleted.count) deleted, DB \(unfinished.count) unfinished, \(summary.skipped) skipped, \(summary.deleted) rows deleted; reason — noRow \(noRow), edited \(edited), versionBump \(versionBump), incomplete \(incompleteStatus) — planned in \(Self.milliseconds(clock.now - start))ms"
+        )
+
+        // Placeholder rows for brand-new assets first (the fast pass' job), so
+        // they appear in the grid before their EXIF is read.
+        if !newAssets.isEmpty {
+            let rows = newAssets.map {
+                composer.compose(
+                    asset: Self.assetInfo(for: $0, fileSize: nil), exif: .empty, exifStatus: .pendingRead
+                )
+            }
+            for chunk in stride(from: 0, to: rows.count, by: Self.fastPassBatchSize) {
+                let slice = Array(rows[chunk..<min(chunk + Self.fastPassBatchSize, rows.count)])
+                try metadataStore.saveBatch(slice, cursorAssetId: nil)
+            }
+        }
+
+        // Progress is cumulative against the whole library, matching `run()`.
+        let total = PHAsset.fetchAssets(with: Self.browsableFetchOptions()).count
+        let baseline = ((try? metadataStore.completedCount()) ?? 0) - rereadComplete
+        var newlyDone = 0
+        onProgress(IndexProgress(processed: baseline, total: total))
+
+        var firstBatch = true
+        for chunk in stride(from: 0, to: work.count, by: Self.batchSize) {
+            if isCancelled { break }
+            if !firstBatch { await pauseBetweenBatches() }
+            firstBatch = false
+            await waitWhileInteractionPaused()
+            let batch = Array(work[chunk..<min(chunk + Self.batchSize, work.count)])
+            let base = baseline + newlyDone
+            let done = try await processBatch(
+                batch, composer: composer, allowNetwork: allowNetwork(),
+                timings: timings, summary: &summary
+            ) { done, item in
+                onProgress(IndexProgress(processed: base + done, total: total, activeItems: item))
+            }
+            newlyDone += done
+            onProgress(IndexProgress(processed: baseline + newlyDone, total: total))
+        }
+
+        summary.wasCancelled = isCancelled
+        if !isCancelled { try persistCompletion(token: tokenAtStart) }
+        onProgress(IndexProgress(processed: baseline + newlyDone, total: total))
+        Self.logSummary(
+            "persistentChanges", summary: summary, elapsed: clock.now - start,
+            timings: timings.withLock { $0 }
+        )
+        return summary
+    }
+
+    private struct PersistentChanges {
+        var inserted: Set<String> = []
+        var updated: Set<String> = []
+        var deleted: Set<String> = []
+    }
+
+    /// Collapses Photos' change history since `token` into one insert/update/
+    /// delete set. Throws when the history is unavailable (expired token), which
+    /// the caller answers with a full walk.
+    private static func persistentChanges(since token: PHPersistentChangeToken) throws -> PersistentChanges {
+        var changes = PersistentChanges()
+        let result = try PHPhotoLibrary.shared().fetchPersistentChanges(since: token)
+        for change in result {
+            let details = try change.changeDetails(for: .asset)
+            changes.inserted.formUnion(details.insertedLocalIdentifiers)
+            changes.updated.formUnion(details.updatedLocalIdentifiers)
+            changes.deleted.formUnion(details.deletedLocalIdentifiers)
+        }
+        return changes
+    }
+
+    /// Marks the run complete and hands the next one a change token to diff
+    /// from. `lastFullIndexAt` is deliberately untouched — it records the last
+    /// *full walk*, and an incremental run isn't one.
+    private func persistCompletion(token: PHPersistentChangeToken) throws {
+        var state = try metadataStore.indexState()
+        state.lastIndexedAt = Int(Date().timeIntervalSince1970)
+        state.cursorAssetId = nil
+        state.changeToken = Self.archived(token)
+        try metadataStore.saveIndexState(state)
+    }
+
+    private static func archived(_ token: PHPersistentChangeToken) -> Data? {
+        try? NSKeyedArchiver.archivedData(withRootObject: token, requiringSecureCoding: true)
+    }
+
+    private static func unarchivedToken(_ data: Data) -> PHPersistentChangeToken? {
+        try? NSKeyedUnarchiver.unarchivedObject(ofClass: PHPersistentChangeToken.self, from: data)
+    }
+
     // MARK: Fast pass
 
     /// Writes placeholder rows (`pendingRead`) for assets with no row yet,
@@ -481,7 +814,8 @@ actor IndexPipeline {
         fetchResult: PHFetchResult<PHAsset>,
         existingStates: [String: IndexedAssetState],
         composer: MetadataComposer,
-        clock: ContinuousClock
+        clock: ContinuousClock,
+        onWorkFound: () -> Void
     ) throws {
         guard !isCancelled else { return }
         let start = clock.now
@@ -501,19 +835,23 @@ actor IndexPipeline {
                 exifStatus: .pendingRead
             ))
             if rows.count == Self.fastPassBatchSize {
+                onWorkFound()
                 try metadataStore.saveBatch(rows, cursorAssetId: nil)
                 written += rows.count
                 rows.removeAll(keepingCapacity: true)
             }
         }
         if !rows.isEmpty {
+            onWorkFound()
             try metadataStore.saveBatch(rows, cursorAssetId: nil)
             written += rows.count
         }
-        if written > 0 {
-            let seconds = Self.seconds(clock.now - start)
-            Self.logger.info("fast pass: \(written) placeholder rows in \(String(format: "%.2f", seconds), privacy: .public)s")
-        }
+        // Logged even at zero rows: the scan walks (and materializes) every
+        // asset in the library whether or not it writes anything, so its cost
+        // on a fully-indexed launch has to be visible.
+        IndexTrafficMonitor.health(
+            "fast pass: \(written) placeholder rows, scanned \(fetchResult.count) in \(Self.milliseconds(clock.now - start))ms"
+        )
     }
 
     // MARK: Batch processing
@@ -557,8 +895,24 @@ actor IndexPipeline {
         onAssetProcessed: (@Sendable (Int, [String]) -> Void)? = nil
     ) async throws -> Int {
         var results = [PhotoMetadata?](repeating: nil, count: assets.count)
+        // Assets whose read came back with no bytes — their rows must keep the
+        // EXIF a previous run wrote (see `MetadataStore.saveBatch`).
+        var unreadAssetIds = Set<String>()
         var completed = 0
         var doneCount = 0
+        // Per-batch stage split, so a slow run can be attributed live (which
+        // stage, on which batch) instead of only from the end-of-run averages.
+        let batchClock = ContinuousClock()
+        let batchStart = batchClock.now
+        let timingsBefore = timings.withLock { $0 }
+        let exifBefore = ExifReader.currentMetrics
+        let monitor = exifReader.trafficMonitor
+        let networkBefore = (
+            reads: monitor?.networkReadsStarted ?? 0,
+            stalls: monitor?.stallCount ?? 0,
+            skips: monitor?.networkSkipCount ?? 0,
+            bytes: monitor?.totalBytes ?? 0
+        )
 
         let progressClock = ContinuousClock()
         let progressState = OSAllocatedUnfairLock(
@@ -585,9 +939,14 @@ actor IndexPipeline {
                 // Facts (size/filename) fall back to any resource so videos —
                 // which have no photo resource — still record them.
                 let factsResource = resource ?? resources.first
-                let fileSize = (factsResource?.value(forKey: "fileSize") as? NSNumber)?.intValue
-                let info = Self.assetInfo(for: asset, fileSize: fileSize, originalFilename: factsResource?.originalFilename)
                 let resourcesTime = clock.now - mark
+                // Timed apart from the resource list: this KVC can fault in a
+                // whole original-metadata set for an iCloud asset, and it is the
+                // one part of the pre-read step that could be dropped.
+                mark = clock.now
+                let fileSize = (factsResource?.value(forKey: "fileSize") as? NSNumber)?.intValue
+                let fileSizeTime = clock.now - mark
+                let info = Self.assetInfo(for: asset, fileSize: fileSize, originalFilename: factsResource?.originalFilename)
 
                 if let onAssetProcessed, let filename = factsResource?.originalFilename {
                     let payload = progressState.withLock { state -> (Int, [String])? in
@@ -674,6 +1033,7 @@ actor IndexPipeline {
 
                 timings.withLock {
                     $0.resources += resourcesTime
+                    $0.fileSize += fileSizeTime
                     $0.exif += exifTime
                     $0.compose += composeTime
                     $0.assets += 1
@@ -684,6 +1044,7 @@ actor IndexPipeline {
 
             await waitWhileInteractionPaused()
             await waitWhileThermalCritical()
+            await waitWhileNetworkBreakerTripped(allowNetwork: allowNetwork)
             // Target fan-out is re-sampled at every read completion below, so
             // a device that heats mid-batch stops replacing finished reads
             // (fan-out decays to the new target) and ramps back up on cooling
@@ -704,8 +1065,12 @@ actor IndexPipeline {
                 results[item.index] = item.record
                 switch item.outcome {
                 case .indexed: summary.indexed += 1
-                case .pendingICloud: summary.pendingICloud += 1
-                case .failed: summary.failed += 1
+                case .pendingICloud:
+                    summary.pendingICloud += 1
+                    unreadAssetIds.insert(item.record.assetId)
+                case .failed:
+                    summary.failed += 1
+                    unreadAssetIds.insert(item.record.assetId)
                 }
                 completed += 1
                 if item.outcome == .indexed { doneCount += 1 }
@@ -734,6 +1099,7 @@ actor IndexPipeline {
                     // then the loop drains them and refills on resume.
                     await waitWhileInteractionPaused()
                     await waitWhileThermalCritical()
+                    await waitWhileNetworkBreakerTripped(allowNetwork: allowNetwork)
                     guard !isCancelled else { continue }
                     let target = Self.readConcurrency(thermal: thermalState(), isLowPowerMode: isLowPowerMode())
                     var toSpawn = Self.refillCount(
@@ -762,12 +1128,23 @@ actor IndexPipeline {
         }
 
         guard !records.isEmpty else { return doneCount }
-        let clock = ContinuousClock()
-        let mark = clock.now
+        let mark = batchClock.now
         let signpostState = Self.signposter.beginInterval("dbWrite")
-        try metadataStore.saveBatch(records, cursorAssetId: records.last?.assetId)
+        try metadataStore.saveBatch(
+            records, unreadAssetIds: unreadAssetIds, cursorAssetId: records.last?.assetId
+        )
         Self.signposter.endInterval("dbWrite", signpostState)
-        timings.withLock { $0.dbWrite += clock.now - mark }
+        timings.withLock { $0.dbWrite += batchClock.now - mark }
+        Self.logBatch(
+            assets.count, elapsed: batchClock.now - batchStart,
+            before: timingsBefore, after: timings.withLock { $0 },
+            exif: ExifReader.currentMetrics - exifBefore,
+            networkReads: (monitor?.networkReadsStarted ?? 0) - networkBefore.reads,
+            networkStalls: (monitor?.stallCount ?? 0) - networkBefore.stalls,
+            networkSkips: (monitor?.networkSkipCount ?? 0) - networkBefore.skips,
+            networkBytes: (monitor?.totalBytes ?? 0) - networkBefore.bytes,
+            outcomes: summary
+        )
         return doneCount
     }
 
@@ -793,6 +1170,8 @@ actor IndexPipeline {
     /// concurrent reads, for the end-of-run summary log.
     private struct StageTotals: Sendable {
         var resources: Duration = .zero
+        /// The `fileSize` KVC alone, split out of `resources`.
+        var fileSize: Duration = .zero
         var exif: Duration = .zero
         var compose: Duration = .zero
         var dbWrite: Duration = .zero
@@ -804,6 +1183,48 @@ actor IndexPipeline {
         var exifReads = 0
     }
 
+    /// One line per finished batch: wall clock plus the per-asset split of this
+    /// batch alone (the run summary only reports averages over the whole run,
+    /// which hides a stage degrading partway through — a thermal step-down, or
+    /// iCloud starting to stall).
+    private static func logBatch(
+        _ count: Int, elapsed: Duration, before: StageTotals, after: StageTotals,
+        exif: ExifReadMetrics,
+        networkReads: Int, networkStalls: Int, networkSkips: Int, networkBytes: Int64,
+        outcomes: IndexRunSummary
+    ) {
+        let assets = after.assets - before.assets
+        let reads = after.exifReads - before.exifReads
+        // `parse` is a *subset* of `exif` (ImageIO runs inside the streaming
+        // window), and `read` is the remainder — the PhotoKit resource transfer.
+        // `KB` is bytes actually pulled per read, the lever an early-stop pulls.
+        let parseMilliseconds = Double(exif.parseNanos) / 1_000_000
+        let streamMilliseconds = Double(exif.streamNanos) / 1_000_000
+        let streamReads = max(exif.reads, 1)
+        IndexTrafficMonitor.health(
+            "batch: \(count) assets in \(milliseconds(elapsed))ms"
+                + String(format: " (%.1f/s)", Double(count) / max(seconds(elapsed), 0.001))
+                + "; ms/asset — resources \(averageMilliseconds(after.resources - before.resources, over: assets))"
+                + ", fileSize \(averageMilliseconds(after.fileSize - before.fileSize, over: assets))"
+                + ", exif \(averageMilliseconds(after.exif - before.exif, over: reads))"
+                + ", compose \(averageMilliseconds(after.compose - before.compose, over: assets))"
+                + ", dbWrite \(averageMilliseconds(after.dbWrite - before.dbWrite, over: assets))"
+                + String(
+                    format: "; per stream read — read %.1f, parse %.1f (%.1f calls), %.0f KB",
+                    (streamMilliseconds - parseMilliseconds) / Double(streamReads),
+                    parseMilliseconds / Double(streamReads),
+                    Double(exif.parseCalls) / Double(streamReads),
+                    Double(exif.bytes) / Double(streamReads) / 1024
+                )
+                // iCloud side of the same batch. `skips` are assets the breaker
+                // rejected without a request — a batch that is mostly skips did
+                // no work at all, however fast it looked.
+                + "; net — \(networkReads) reads, \(networkStalls) stalls, \(networkSkips) skipped, \(networkBytes / 1024) KB"
+                + "; resolved via — localOriginal \(exif.viaLocalOriginal), localDerivative \(exif.viaLocalDerivative), netOriginal \(exif.viaNetwork)"
+                + "; run totals — indexed \(outcomes.indexed), pendingICloud \(outcomes.pendingICloud), failed \(outcomes.failed)"
+        )
+    }
+
     private static func logSummary(_ kind: String, summary: IndexRunSummary, elapsed: Duration, timings: StageTotals) {
         let elapsedSeconds = max(seconds(elapsed), 0.001)
         let read = summary.indexed + summary.pendingICloud + summary.failed
@@ -812,12 +1233,17 @@ actor IndexPipeline {
             + (summary.wasCancelled ? " (cancelled)" : "")
             + String(format: " in %.1fs — %.1f assets/s", elapsedSeconds, Double(read) / elapsedSeconds)
             + "; avg ms/asset — resources \(averageMilliseconds(timings.resources, over: timings.assets))"
+            + ", fileSize \(averageMilliseconds(timings.fileSize, over: timings.assets))"
             + ", exif \(averageMilliseconds(timings.exif, over: timings.exifReads))"
             + ", compose \(averageMilliseconds(timings.compose, over: timings.assets))"
             + ", dbWrite \(averageMilliseconds(timings.dbWrite, over: timings.assets))"
         // On the health category so a run's boundary lines, stalls, breaker
         // events, and 10 s snapshots read as one stream.
-        IndexTrafficMonitor.healthLogger.info("\(line, privacy: .public)")
+        IndexTrafficMonitor.health(line)
+    }
+
+    private static func milliseconds(_ duration: Duration) -> String {
+        String(format: "%.0f", seconds(duration) * 1000)
     }
 
     private static func seconds(_ duration: Duration) -> Double {

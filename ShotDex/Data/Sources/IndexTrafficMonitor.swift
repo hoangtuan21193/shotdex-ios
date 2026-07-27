@@ -12,6 +12,44 @@ final class IndexTrafficMonitor: Sendable {
     /// story of a degrading run in one place.
     static let healthLogger = Logger(subsystem: "com.hoangtuan.shotdex", category: "index-health")
 
+    /// TEMPORARY (on-device indexing investigation): mirrors a health line into
+    /// `Documents/index-health.log` as well as os_log. macOS can no longer read
+    /// os_log from a paired device, and `devicectl … --console` (the stdout
+    /// route) hangs; a file in the app container can always be pulled with
+    /// `devicectl device copy from`. Remove with the investigation.
+    static func health(_ line: String) {
+        healthLogger.log("\(line, privacy: .public)")
+        appendToHealthFile(line)
+    }
+
+    private static let healthFileLock = OSAllocatedUnfairLock(initialState: ())
+
+    private static func appendToHealthFile(_ line: String) {
+        guard let url = healthFileURL else { return }
+        let stamped = "\(Date().formatted(date: .omitted, time: .standard)) \(line)\n"
+        guard let data = stamped.data(using: .utf8) else { return }
+        healthFileLock.withLock { _ in
+            guard let handle = try? FileHandle(forWritingTo: url) else {
+                try? data.write(to: url)
+                return
+            }
+            defer { try? handle.close() }
+            _ = try? handle.seekToEnd()
+            try? handle.write(contentsOf: data)
+        }
+    }
+
+    private static let healthFileURL: URL? = {
+        guard let directory = FileManager.default.urls(
+            for: .documentDirectory, in: .userDomainMask
+        ).first else { return nil }
+        let url = directory.appendingPathComponent("index-health.log")
+        if !FileManager.default.fileExists(atPath: url.path) {
+            FileManager.default.createFile(atPath: url.path, contents: nil)
+        }
+        return url
+    }()
+
     private let bytes = OSAllocatedUnfairLock(initialState: Int64(0))
 
     func add(_ count: Int) {
@@ -166,6 +204,19 @@ final class IndexTrafficMonitor: Sendable {
         breaker.withLock { $0.totalStalls }
     }
 
+    private let skips = OSAllocatedUnfairLock(initialState: 0)
+
+    /// An asset that needed the network but never got a request: the breaker was
+    /// tripped, or it lost the half-open probe. Counted apart from stalls
+    /// because these reads cost nothing and learned nothing — a run that
+    /// accumulates them is walking the library marking rows `pendingICloud`
+    /// without ever touching iCloud.
+    func recordNetworkSkip() {
+        skips.withLock { $0 += 1 }
+    }
+
+    var networkSkipCount: Int { skips.withLock { $0 } }
+
     /// Time left in the post-stall breather; nil when reads may start freely.
     /// Every stall pushes the breather out again — a struggling daemon gets a
     /// continuous rest, not one fixed pause.
@@ -216,16 +267,16 @@ final class IndexTrafficMonitor: Sendable {
         let ms = elapsedMilliseconds.map(String.init) ?? "?"
         switch outcome {
         case .counted(let inWindow, let windowSize):
-            Self.healthLogger.log("stall #\(totalStalls) (\(inWindow)/\(windowSize) in window): \(file, privacy: .public), 0 B in \(ms, privacy: .public) ms — resting new reads")
+            Self.health("stall #\(totalStalls) (\(inWindow)/\(windowSize) in window): \(file), 0 B in \(ms) ms — resting new reads")
             return false
         case .lateDuringCooldown:
-            Self.healthLogger.log("stall #\(totalStalls) (late, breaker already cooling): \(file, privacy: .public)")
+            Self.health("stall #\(totalStalls) (late, breaker already cooling): \(file)")
             return false
         case .tripped:
-            Self.healthLogger.log("breaker TRIPPED at stall #\(totalStalls) (\(Self.stallTripCount)+/\(Self.stallTripThreshold) recent reads stalled) — pausing iCloud reads for \(Int(self.cooldown.components.seconds))s")
+            Self.health("breaker TRIPPED at stall #\(totalStalls) (\(Self.stallTripCount)+/\(Self.stallTripThreshold) recent reads stalled) — pausing iCloud reads for \(Int(self.cooldown.components.seconds))s")
             return true
         case .reTripped(let trips):
-            Self.healthLogger.log("breaker RE-TRIPPED (#\(trips)): half-open probe stalled (\(file, privacy: .public)) — cooling down \(Int(self.cooldown.components.seconds))s")
+            Self.health("breaker RE-TRIPPED (#\(trips)): half-open probe stalled (\(file)) — cooling down \(Int(self.cooldown.components.seconds))s")
             return true
         }
     }
@@ -250,7 +301,7 @@ final class IndexTrafficMonitor: Sendable {
             return closed
         }
         if closedByProbe {
-            Self.healthLogger.log("breaker CLOSED: half-open probe delivered bytes — iCloud serving again")
+            Self.health("breaker CLOSED: half-open probe delivered bytes — iCloud serving again")
         }
     }
 

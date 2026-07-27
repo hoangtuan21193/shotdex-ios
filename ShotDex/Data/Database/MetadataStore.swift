@@ -19,16 +19,66 @@ struct MetadataStore: Sendable {
     // MARK: Batch writes
 
     /// Upserts one indexing batch and advances the resume cursor atomically.
-    func saveBatch(_ records: [PhotoMetadata], cursorAssetId: String?) throws {
+    ///
+    /// `unreadAssetIds` names the records whose EXIF read **failed to obtain any
+    /// bytes** (`pendingICloud`, or `error` before the give-up cap). Those rows
+    /// are written *without* their EXIF columns: the run learned nothing new
+    /// about the photo, so writing the composed row — which carries empty EXIF —
+    /// would erase camera/lens/exposure data an earlier run had read. Measured
+    /// on device: one full reindex while iCloud served zero bytes blanked 49_828
+    /// already-indexed rows. `indexSingle` has always refused to clobber on this
+    /// outcome; the batch path must match it. Assets with no row yet still get
+    /// the full insert, so a new photo appears with its PHAsset facts.
+    func saveBatch(
+        _ records: [PhotoMetadata],
+        unreadAssetIds: Set<String> = [],
+        cursorAssetId: String?
+    ) throws {
         try database.writer.write { db in
             for record in records {
-                try record.upsert(db)
+                if unreadAssetIds.contains(record.assetId),
+                   try Self.rowExists(db, assetId: record.assetId) {
+                    try Self.updateFactsAndStatus(db, record)
+                } else {
+                    try record.upsert(db)
+                }
             }
             var state = try IndexState.fetchOne(db, key: IndexState.singletonId) ?? .initial
             state.cursorAssetId = cursorAssetId
             state.lastIndexedAt = Int(Date().timeIntervalSince1970)
             try state.upsert(db)
         }
+    }
+
+    private static func rowExists(_ db: Database, assetId: String) throws -> Bool {
+        try Bool.fetchOne(
+            db, sql: "SELECT 1 FROM photo_metadata WHERE assetId = ? LIMIT 1", arguments: [assetId]
+        ) != nil
+    }
+
+    /// Writes only what a failed read genuinely knows: the PHAsset facts (read
+    /// off the asset, never from the file) plus the new status/attempt counter.
+    /// Every EXIF-derived column keeps its current value, and `modificationDate`
+    /// deliberately stays stale — advancing it would let an edit be forgotten
+    /// before its metadata was ever read.
+    private static func updateFactsAndStatus(_ db: Database, _ record: PhotoMetadata) throws {
+        try db.execute(
+            sql: """
+                UPDATE photo_metadata SET
+                    exifStatus = ?, readAttempts = ?, indexedAt = ?,
+                    creationDate = ?, mediaType = ?, width = ?, height = ?, fileSize = ?,
+                    originalFilename = COALESCE(?, originalFilename),
+                    latitude = ?, longitude = ?, isFavorite = ?
+                WHERE assetId = ?
+                """,
+            arguments: [
+                record.exifStatus, record.readAttempts, record.indexedAt,
+                record.creationDate, record.mediaType, record.width, record.height, record.fileSize,
+                record.originalFilename,
+                record.latitude, record.longitude, record.isFavorite,
+                record.assetId,
+            ]
+        )
     }
 
     /// Upserts a single row **without touching the resume cursor** — used by
@@ -157,6 +207,74 @@ struct MetadataStore: Sendable {
                 sql: "SELECT readAttempts FROM photo_metadata WHERE assetId = ?",
                 arguments: [assetId]
             ) ?? 0
+        }
+    }
+
+    /// Diff snapshots for rows that are **not** a finished read — any status
+    /// other than `indexed`/`noExif`, plus rows written by an older indexer
+    /// build (which must be re-read so newly-indexed fields backfill).
+    ///
+    /// This is the persistent half of an incremental run's work list; the other
+    /// half is what Photos' change history reports as inserted/updated. Unlike
+    /// `indexedAssetStates()` it stays tiny on a healthy library, which is what
+    /// lets a run skip loading all 50k+ rows.
+    func unfinishedAssetStates() throws -> [String: IndexedAssetState] {
+        try database.reader.read { db in
+            let rows = try Row.fetchAll(
+                db,
+                sql: """
+                    SELECT assetId, modificationDate, exifStatus, indexerVersion
+                    FROM photo_metadata
+                    WHERE exifStatus NOT IN (?, ?) OR indexerVersion < ?
+                    """,
+                arguments: [
+                    ExifStatus.indexed.rawValue,
+                    ExifStatus.noExif.rawValue,
+                    PhotoMetadata.currentIndexerVersion,
+                ]
+            )
+            var result: [String: IndexedAssetState] = [:]
+            result.reserveCapacity(rows.count)
+            for row in rows {
+                result[row["assetId"]] = IndexedAssetState(
+                    modificationDate: row["modificationDate"],
+                    exifStatus: row["exifStatus"],
+                    indexerVersion: row["indexerVersion"]
+                )
+            }
+            return result
+        }
+    }
+
+    /// Diff snapshots for named assets only — the scoped counterpart of
+    /// `indexedAssetStates()`, for an incremental run that already knows which
+    /// handful of assets changed. A missing key means there is no row yet, so
+    /// the asset is genuinely new.
+    func assetStates(ids: [String]) throws -> [String: IndexedAssetState] {
+        guard !ids.isEmpty else { return [:] }
+        return try database.reader.read { db in
+            var result: [String: IndexedAssetState] = [:]
+            result.reserveCapacity(ids.count)
+            // Chunked: SQLite's variable limit (999 by default) caps one IN list.
+            for chunk in stride(from: 0, to: ids.count, by: 500) {
+                let slice = Array(ids[chunk..<min(chunk + 500, ids.count)])
+                let rows = try Row.fetchAll(
+                    db,
+                    sql: """
+                        SELECT assetId, modificationDate, exifStatus, indexerVersion
+                        FROM photo_metadata WHERE assetId IN (\(databaseQuestionMarks(count: slice.count)))
+                        """,
+                    arguments: StatementArguments(slice)
+                )
+                for row in rows {
+                    result[row["assetId"]] = IndexedAssetState(
+                        modificationDate: row["modificationDate"],
+                        exifStatus: row["exifStatus"],
+                        indexerVersion: row["indexerVersion"]
+                    )
+                }
+            }
+            return result
         }
     }
 

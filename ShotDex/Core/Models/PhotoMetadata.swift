@@ -135,11 +135,16 @@ struct IndexState: Codable, Equatable, Sendable {
     var cursorAssetId: String?
     var lastIndexedAt: Int?
     var lastFullIndexAt: Int?
+    /// Archived `PHPersistentChangeToken` captured at the start of the last
+    /// complete run. The next incremental run replays Photos' change history
+    /// from here instead of walking the whole library. Nil until a full walk
+    /// finishes, and cleared whenever Photos reports the token as expired.
+    var changeToken: Data?
 
     static let singletonId = 1
 
     static var initial: IndexState {
-        IndexState(id: singletonId, cursorAssetId: nil, lastIndexedAt: nil, lastFullIndexAt: nil)
+        IndexState(id: singletonId, cursorAssetId: nil, lastIndexedAt: nil, lastFullIndexAt: nil, changeToken: nil)
     }
 }
 

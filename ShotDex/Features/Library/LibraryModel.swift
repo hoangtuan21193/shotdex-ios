@@ -84,7 +84,31 @@ final class LibraryModel {
     /// Lazy badge lookups for tiles indexed mid-run (see `lazyBadgeItem`).
     @ObservationIgnored private let badgeCache = GridBadgeCache()
 
+    /// UI-visible indexing state. A **manual** run sets it the instant it
+    /// starts — the user tapped something and needs the acknowledgement. An
+    /// **automatic** run sets it only once it has found real work (a row to
+    /// write or an asset to read), never merely because it is walking the
+    /// library to decide: a launch on a fully-indexed library used to hold this
+    /// true for ~7 s while skipping all 55k assets, which read as "still
+    /// indexing" long after indexing was done. Use `isIndexRunActive` for
+    /// reentrancy, not this.
     private(set) var isIndexing = false
+    /// A pipeline run is in flight, whether or not it has found work — the
+    /// reentrancy guard for every start path. Not observed: no UI depends on a
+    /// run that may turn out to have nothing to do.
+    @ObservationIgnored private var isIndexRunActive = false
+    /// The current run was cancelled by the user. Its UI is already gone, so
+    /// every late callback from the unwinding run (work signal, progress emit,
+    /// network/thermal sample) must stay silent instead of flashing the
+    /// indicator back on.
+    @ObservationIgnored private var hasCancelledIndexRun = false
+    /// A start was requested while a run was still in flight. Almost always this
+    /// is the app returning to the foreground after the system stopped the
+    /// previous run (the background-task assertion expired): that run is still
+    /// unwinding, so the `isIndexRunActive` guard would swallow the request and
+    /// indexing would simply stay stopped until the *next* foreground. Honoured
+    /// once the current run finishes.
+    @ObservationIgnored private var pendingStartAfterCurrentRun = false
     /// Whether the system is in Low Power Mode. Drives keep-awake suppression
     /// and the automatic-indexing guard.
     private(set) var isLowPowerMode = false
@@ -500,7 +524,7 @@ final class LibraryModel {
     /// asset, and reloading the whole grid per photo is what made the grid
     /// flicker and the device heat up.
     func libraryDidChange() {
-        guard !isIndexing else {
+        guard !isIndexRunActive else {
             pendingLibraryChange = true
             return
         }
@@ -509,24 +533,38 @@ final class LibraryModel {
     }
 
     func startIndexing(fullReindex: Bool = false, manual: Bool = false) {
-        guard !isIndexing else { return }
+        if isIndexRunActive {
+            pendingStartAfterCurrentRun = true
+            return
+        }
         // No automatic indexing in Low Power Mode. The user can still start it
         // by hand (`manual`), and a charger connecting resumes it through
         // `resumeIndexingForCharger` (which drives `runPipeline` directly).
         guard manual || !isLowPowerMode else { return }
         let allowNetwork = allowNetworkForIndexing
-        runPipeline(allowsNetwork: allowNetwork, manual: manual) { pipeline, onProgress in
-            try await pipeline.run(fullReindex: fullReindex, allowNetwork: allowNetwork, onProgress: onProgress)
+        runPipeline(
+            allowsNetwork: allowNetwork,
+            manual: manual,
+            trigger: fullReindex ? "fullReindex" : (manual ? "manual" : "incremental")
+        ) { pipeline, onWorkFound, onProgress in
+            try await pipeline.run(
+                fullReindex: fullReindex, allowNetwork: allowNetwork,
+                onWorkFound: onWorkFound, onProgress: onProgress
+            )
         }
     }
 
     /// Re-reads only the assets stuck at `pendingICloud`/`error`
     /// (Settings → Re-index Incomplete Photos). Always uses the network.
     func reindexIncompleteAssets(manual: Bool = false) {
-        guard !isIndexing else { return }
+        guard !isIndexRunActive else { return }
         guard manual || !isLowPowerMode else { return }
-        runPipeline(allowsNetwork: { true }, manual: manual) { pipeline, onProgress in
-            try await pipeline.reindexIncomplete(onProgress: onProgress)
+        runPipeline(
+            allowsNetwork: { true },
+            manual: manual,
+            trigger: manual ? "incomplete-manual" : "incomplete-auto"
+        ) { pipeline, onWorkFound, onProgress in
+            try await pipeline.reindexIncomplete(onWorkFound: onWorkFound, onProgress: onProgress)
         }
     }
 
@@ -535,21 +573,40 @@ final class LibraryModel {
     /// (`manual: false`), bypassing the LPM start-guard by driving the pipeline
     /// directly.
     private func resumeIndexingForCharger() {
-        guard !isIndexing else { return }
+        guard !isIndexRunActive else { return }
         let allowNetwork = allowNetworkForIndexing
-        runPipeline(allowsNetwork: allowNetwork, manual: false) { pipeline, onProgress in
-            try await pipeline.run(fullReindex: false, allowNetwork: allowNetwork, onProgress: onProgress)
+        runPipeline(allowsNetwork: allowNetwork, manual: false, trigger: "charger") { pipeline, onWorkFound, onProgress in
+            try await pipeline.run(
+                fullReindex: false, allowNetwork: allowNetwork,
+                onWorkFound: onWorkFound, onProgress: onProgress
+            )
         }
     }
 
     /// `allowsNetwork` mirrors what the pipeline run may do, so the status
     /// line can show speed/total (even at zero) whenever streaming is possible.
+    /// `trigger` names what started the run on the health log — the indexing
+    /// indicator is visible for exactly this run's lifetime, so an unexpected
+    /// indicator has to be traceable back to its cause.
     private func runPipeline(
         allowsNetwork: @escaping @Sendable () -> Bool,
         manual: Bool,
-        _ operation: @escaping @Sendable (IndexPipeline, @escaping @Sendable (IndexProgress) -> Void) async throws -> IndexRunSummary
+        trigger: String,
+        _ operation: @escaping @Sendable (
+            IndexPipeline,
+            @escaping @Sendable () -> Void,
+            @escaping @Sendable (IndexProgress) -> Void
+        ) async throws -> IndexRunSummary
     ) {
-        isIndexing = true
+        isIndexRunActive = true
+        hasCancelledIndexRun = false
+        pendingStartAfterCurrentRun = false
+        // A run the user asked for shows its state **immediately**: the Settings
+        // row and the toolbar token are the only acknowledgement of the tap, and
+        // a full reindex needs seconds of scanning before its first batch. Only
+        // automatic runs wait for `onWorkFound`, since those are the ones that
+        // must stay invisible when there is nothing to do.
+        isIndexing = manual
         isManualIndexRun = manual
         pendingLibraryChange = false
         indexProgress = nil
@@ -560,28 +617,53 @@ final class LibraryModel {
         let networkStatus = self.networkStatus
         // .utility: parse/compose/DB writes and PhotoKit XPC servicing must
         // not compete with interactive image loads at UI priority.
+        let indicatorStart = ContinuousClock.now
         Task(priority: .utility) {
             // Resolve the real network path before showing status, so the
             // indicator reflects Wi-Fi/cellular from the first frame rather
             // than `NWPathMonitor`'s metered-until-first-update default.
             await networkStatus.awaitInitialPath()
             self.indexTraffic.reset()
-            IndexTrafficMonitor.healthLogger.log(
-                "run start: connection \(networkStatus.connectionType.displayName, privacy: .public), expensivePath \(networkStatus.isExpensivePath), allowCellularSetting \(UserDefaults.standard.bool(forKey: SettingsKeys.allowCellularIndexing)), allowNetwork \(allowsNetwork())"
+            IndexTrafficMonitor.health(
+                "run start [\(trigger)]: connection \(networkStatus.connectionType.displayName), expensivePath \(networkStatus.isExpensivePath), allowCellularSetting \(UserDefaults.standard.bool(forKey: SettingsKeys.allowCellularIndexing)), allowNetwork \(allowsNetwork())"
             )
-            self.indexNetworkStatus = IndexNetworkStatus(
-                connection: networkStatus.connectionType,
-                bytesDownloaded: 0,
-                bytesPerSecond: nil,
-                isNetworkAllowed: allowsNetwork()
-            )
+            if !self.hasCancelledIndexRun {
+                self.indexNetworkStatus = IndexNetworkStatus(
+                    connection: networkStatus.connectionType,
+                    bytesDownloaded: 0,
+                    bytesPerSecond: nil,
+                    isNetworkAllowed: allowsNetwork()
+                )
+            }
             self.refreshPausedState()
             let samplingTask = self.startNetworkSampling(allowsNetwork: allowsNetwork)
             // Keeps the run alive through a brief trip to the background;
             // on expiry it cancels cleanly and hands off to the BGProcessingTask.
-            self.backgroundIndex.beginRunAssertion()
+            self.backgroundIndex.beginRunAssertion { [weak self] in
+                guard let self else { return }
+                // System stopped the run because the app left the foreground.
+                // Drop the indicator now rather than when the suspended task
+                // eventually unwinds — otherwise reopening the app shows
+                // "Indexing…" for a run that ended minutes earlier.
+                self.isIndexing = false
+                self.indexProgress = nil
+                self.indexThroughput = nil
+                self.indexNetworkStatus = nil
+                self.indexDiagnostics = nil
+            }
             defer {
+                // Span of the whole run, which is wider than the pipeline's own
+                // summary (network path resolution at the head, grid reload +
+                // filter refresh at the tail). `indicator` says whether any of
+                // it was ever visible as "Indexing…" — a run that found no work
+                // must report false.
+                let elapsed = indicatorStart.duration(to: .now)
+                let seconds = Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) * 1e-18
+                IndexTrafficMonitor.health(
+                    "run end [\(trigger)]: \(String(format: "%.1f", seconds))s, indicator \(self.isIndexing)"
+                )
                 samplingTask.cancel()
+                self.isIndexRunActive = false
                 self.isIndexing = false
                 self.isManualIndexRun = false
                 self.indexProgress = nil
@@ -589,13 +671,20 @@ final class LibraryModel {
                 self.indexNetworkStatus = nil
                 self.indexDiagnostics = nil
                 self.backgroundIndex.endRunAssertion()
-                // One-tap Retry: the cancelled run has now stopped (isIndexing
+                // One-tap Retry: the cancelled run has now stopped (isIndexRunActive
                 // cleared above), so a fresh incomplete pass can start. Next
                 // tick, so this Task fully unwinds first.
                 if self.pendingRetryAfterCancel {
                     self.pendingRetryAfterCancel = false
                     // User-initiated retry — allowed even in Low Power Mode.
                     Task { @MainActor in self.reindexIncompleteAssets(manual: true) }
+                } else if self.pendingStartAfterCurrentRun, !self.hasCancelledIndexRun {
+                    // Requested while this run was still unwinding — usually the
+                    // foreground return after a system stop. Cheap when there is
+                    // nothing to do (the change-token path settles in ~60 ms and
+                    // never shows the indicator).
+                    self.pendingStartAfterCurrentRun = false
+                    Task { @MainActor in self.startIndexing() }
                 } else if self.pendingLibraryChange {
                     // A library change arrived mid-run (deferred by
                     // libraryDidChange). The end-of-run reload below has
@@ -608,11 +697,24 @@ final class LibraryModel {
             }
             var summary: IndexRunSummary?
             do {
-                summary = try await operation(pipeline) { progress in
-                    Task { @MainActor in
-                        self.indexProgress = progress
+                summary = try await operation(
+                    pipeline,
+                    {
+                        // First real work of the run: only now does the UI say
+                        // "Indexing…". A no-op run never gets here, and neither
+                        // does a run the user already cancelled.
+                        Task { @MainActor in
+                            guard !self.hasCancelledIndexRun else { return }
+                            self.isIndexing = true
+                        }
+                    },
+                    { progress in
+                        Task { @MainActor in
+                            guard !self.hasCancelledIndexRun else { return }
+                            self.indexProgress = progress
+                        }
                     }
-                }
+                )
             } catch {
                 self.loadError = "Indexing failed."
             }
@@ -704,7 +806,7 @@ final class LibraryModel {
             guard !Task.isCancelled, let self else { return }
             self.indexAutoRetryDate = nil
             // A run in flight reschedules on its own when it ends.
-            guard !self.isIndexing else { return }
+            guard !self.isIndexRunActive else { return }
             // Network became disallowed mid-countdown (left Wi-Fi, no
             // cellular opt-in): keep the loop armed instead of dying —
             // `reindexIncompleteAssets` always streams, so firing it here
@@ -749,7 +851,7 @@ final class LibraryModel {
         // (a full incremental diff, not just the incomplete rows) isn't
         // pre-empted by an eager reindex.
         if (wasPaused || retryWasScheduled), !isIndexStreamingPaused, pendingICloudCount > 0,
-           !isIndexing, allowNetworkForIndexing() {
+           !isIndexRunActive, allowNetworkForIndexing() {
             cancelScheduledAutoRetry()
             reindexIncompleteAssets()
         }
@@ -762,10 +864,10 @@ final class LibraryModel {
     /// "Retry Now" action from the auto-retry card: skips the countdown and
     /// tries the incomplete iCloud reads again *now*. If a (futile) run is
     /// still walking, cancel it first and resume once it has stopped — the
-    /// `isIndexing` guard would otherwise swallow the retry.
+    /// `isIndexRunActive` guard would otherwise swallow the retry.
     func retryIncompleteAssets() {
         cancelScheduledAutoRetry()
-        if isIndexing {
+        if isIndexRunActive {
             pendingRetryAfterCancel = true
             cancelIndexing()
         } else {
@@ -776,17 +878,17 @@ final class LibraryModel {
     /// "Use Cellular" action from the paused/stalled indicator: opts into
     /// cellular indexing. A futile Wi-Fi run in flight is cancelled so the
     /// cellular retry (on the next path change, or manual Retry) isn't blocked
-    /// by the `isIndexing` guard; when nothing is running it resumes now.
+    /// by the `isIndexRunActive` guard; when nothing is running it resumes now.
     func resumeIndexingOverCellular() {
         UserDefaults.standard.set(true, forKey: SettingsKeys.allowCellularIndexing)
-        if isIndexing {
-            // Don't restart here — isIndexing is still true (cancel is async);
+        if isIndexRunActive {
+            // Don't restart here — isIndexRunActive is still true (cancel is async);
             // the resume happens when the user reaches cellular (handleNetwork
             // change) or taps Retry once the run has stopped.
             cancelIndexing()
         }
         refreshPausedState()
-        if pendingICloudCount > 0, !isIndexing {
+        if pendingICloudCount > 0, !isIndexRunActive {
             reindexIncompleteAssets(manual: true)
         }
     }
@@ -803,6 +905,9 @@ final class LibraryModel {
                 try? await Task.sleep(for: .seconds(1))
                 tick += 1
                 guard !Task.isCancelled else { break }
+                // Cancelled runs unwind with their UI already cleared; keep the
+                // sampler quiet so it can't repaint the status it just lost.
+                guard !self.hasCancelledIndexRun else { continue }
                 let total = indexTraffic.totalBytes
                 let speed = max(0, total - previousBytes)
                 self.indexNetworkStatus = IndexNetworkStatus(
@@ -829,8 +934,15 @@ final class LibraryModel {
                 // per-second "net sample" debug spam.
                 if tick % 10 == 0, let diagnostics = self.indexDiagnostics {
                     let progress = self.indexProgress.map { "\($0.processed)/\($0.total)" } ?? "-"
-                    IndexTrafficMonitor.healthLogger.log(
-                        "health: \(progress, privacy: .public) · \(networkStatus.connectionType.displayName, privacy: .public) \(speed) B/s, total \(total) B · \(diagnostics.iCloudLine, privacy: .public) · \(diagnostics.thermalLine, privacy: .public) · allowNetwork \(allowsNetwork())"
+                    // Which fallback is answering, on the 10 s tick as well as
+                    // per batch: at iCloud speeds a batch line can be ten
+                    // minutes apart, far too slow to judge a change by.
+                    let mix = ExifReader.currentMetrics
+                    IndexTrafficMonitor.health(
+                        "reads: localOriginal \(mix.viaLocalOriginal), localDerivative \(mix.viaLocalDerivative), netOriginal \(mix.viaNetwork)"
+                    )
+                    IndexTrafficMonitor.health(
+                        "health: \(progress) · \(networkStatus.connectionType.displayName) \(speed) B/s, total \(total) B · \(diagnostics.iCloudLine) · \(diagnostics.thermalLine) · allowNetwork \(allowsNetwork())"
                     )
                 }
                 previousBytes = total
@@ -838,7 +950,20 @@ final class LibraryModel {
         }
     }
 
+    /// Cancels the run and clears the indexing UI **at once**. The pipeline
+    /// itself takes seconds to unwind — up to 12 reads are in flight, each with
+    /// its own stall window, and the end-of-run grid reload follows — so waiting
+    /// for it left the spinner and progress up long after the tap, reading as an
+    /// ignored Cancel. The tail of the run keeps going in the background: rows
+    /// already read are still saved and the grid still reloads when it lands.
     func cancelIndexing() {
+        hasCancelledIndexRun = true
+        isIndexing = false
+        isManualIndexRun = false
+        indexProgress = nil
+        indexThroughput = nil
+        indexNetworkStatus = nil
+        indexDiagnostics = nil
         let pipeline = self.pipeline
         Task { await pipeline.cancel() }
     }
@@ -852,9 +977,9 @@ final class LibraryModel {
         isLowPowerMode = lowPower
         wasCharging = charging
 
-        if enteredLowPower, isIndexing {
+        if enteredLowPower, isIndexRunActive {
             cancelIndexing()
-        } else if pluggedIn, lowPower, !isIndexing {
+        } else if pluggedIn, lowPower, !isIndexRunActive {
             resumeIndexingForCharger()
         }
     }
