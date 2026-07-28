@@ -52,10 +52,13 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
     let onNearEnd: () -> Void
     /// Fired on any user-initiated scroll (Library collapses the index panel).
     let onUserScroll: () -> Void
-    /// Optional on-display badge lookup: a cell whose item carries no
-    /// exposure fields asks for a fresh row when it becomes visible, so
-    /// tiles indexed mid-run fill in lazily instead of the whole grid
-    /// reloading per indexed photo. Nil (Album Detail) disables the lookup.
+    /// Optional low-emphasis text rendered as a real footer after the final
+    /// photo. Nil keeps the shared album grids unchanged.
+    var trailingFooterText: String? = nil
+    /// Optional on-display badge lookup: a cell missing exposure or source-file
+    /// fields asks for a fresh row when it becomes visible, so tiles indexed
+    /// mid-run fill in lazily instead of the whole grid reloading per photo.
+    /// Nil (Album Detail) disables the lookup.
     var lazyMetadataProvider: ((String) async -> (any PhotoGridDisplayable)?)? = nil
 
     func makeCoordinator() -> Coordinator {
@@ -85,6 +88,11 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader,
             withReuseIdentifier: Coordinator.headerReuseId
         )
+        collectionView.register(
+            UICollectionViewCell.self,
+            forSupplementaryViewOfKind: UICollectionView.elementKindSectionFooter,
+            withReuseIdentifier: Coordinator.footerReuseId
+        )
         coordinator.collectionView = collectionView
         coordinator.installGestures(on: collectionView)
         coordinator.apply(self, isInitial: true)
@@ -112,6 +120,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         UIGestureRecognizerDelegate {
 
         static var headerReuseId: String { "PhotoGridHeader" }
+        static var footerReuseId: String { "PhotoGridFooter" }
 
         var parent: PhotoGridCollectionView
         weak var collectionView: UICollectionView?
@@ -131,6 +140,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         }
         private var appliedContentVersion: Int?
         private var appliedContentRefreshVersion: Int?
+        private var appliedTrailingFooterText: String?
         /// List owners bump `contentVersion` for same-count identity/order
         /// changes. Album paging uses a stable version but changes count, so the
         /// coordinator only needs this scalar — never an O(n) id snapshot.
@@ -262,10 +272,11 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             // entry per group, so comparing them per update is cheap.
             let newCustomSections = newParent.sectionMode.customSections
             let sectionsChanged = newCustomSections != appliedCustomSections
+            let footerChanged = newParent.trailingFooterText != appliedTrailingFooterText
             appliedCustomSections = newCustomSections
             // Re-anchoring stays gated on `contentReplaced` — a section-only
             // change must reload in place, not jump the scroll position.
-            if contentReplaced || listChanged || sectionsChanged || isInitial {
+            if contentReplaced || listChanged || sectionsChanged || footerChanged || isInitial {
                 rebuildSections()
                 collectionView.reloadData()
                 if contentReplaced || isInitial {
@@ -282,6 +293,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 reconfigureVisibleCells(collectionView)
             }
             appliedContentRefreshVersion = newParent.contentRefreshVersion
+            appliedTrailingFooterText = newParent.trailingFooterText
 
             if let token = appliedJumpToken, token != newParent.jumpToNewestToken {
                 anchor(collectionView)
@@ -540,6 +552,17 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             return CGSize(width: collectionView.bounds.width, height: 32)
         }
 
+        func collectionView(
+            _ collectionView: UICollectionView,
+            layout collectionViewLayout: UICollectionViewLayout,
+            referenceSizeForFooterInSection section: Int
+        ) -> CGSize {
+            guard let lastSection = sections.indices.last, section == lastSection,
+                  let text = parent.trailingFooterText, !text.isEmpty
+            else { return .zero }
+            return CGSize(width: collectionView.bounds.width, height: 48)
+        }
+
         /// Square cell side for a column count, floored to pixel precision so
         /// a row of N cells + gaps never exceeds the width (which would wrap).
         static func cellSize(width: CGFloat, columns: Int) -> CGSize {
@@ -613,6 +636,17 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             viewForSupplementaryElementOfKind kind: String,
             at indexPath: IndexPath
         ) -> UICollectionReusableView {
+            if kind == UICollectionView.elementKindSectionFooter {
+                let view = collectionView.dequeueReusableSupplementaryView(
+                    ofKind: kind, withReuseIdentifier: Self.footerReuseId, for: indexPath
+                ) as! UICollectionViewCell
+                view.contentConfiguration = UIHostingConfiguration {
+                    GridTrailingFooter(text: parent.trailingFooterText ?? "")
+                }
+                .margins(.all, 0)
+                return view
+            }
+
             let view = collectionView.dequeueReusableSupplementaryView(
                 ofKind: kind, withReuseIdentifier: Self.headerReuseId, for: indexPath
             ) as! UICollectionViewCell
@@ -1250,10 +1284,27 @@ struct GridSectionHeader: View {
     }
 }
 
+/// Low-priority informational footer shown only after the final grid item.
+/// Tertiary system text adapts to Light/Dark Mode without competing with the
+/// photos or the active-condition controls.
+private struct GridTrailingFooter: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.caption)
+            .foregroundStyle(.tertiary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .accessibilityLabel(text)
+    }
+}
+
 // MARK: - Cell
 
 /// One square grid cell, pure UIKit for scroll performance: thumbnail +
-/// bottom metadata line over a gradient + video badge + selection UI.
+/// file-type badge + bottom metadata line over a gradient + video duration +
+/// selection UI.
 final class PhotoGridCell: UICollectionViewCell {
     static var reuseId: String { "PhotoGridCell" }
 
@@ -1263,6 +1314,7 @@ final class PhotoGridCell: UICollectionViewCell {
     private let imageView = UIImageView()
     private let gradient = CAGradientLayer()
     private let metadataLabel = UILabel()
+    private let fileTypeBadge = UILabel()
     private let videoBadge = UILabel()
     private let selectionBorder = UIView()
     private let selectionBadge = UIImageView()
@@ -1275,6 +1327,9 @@ final class PhotoGridCell: UICollectionViewCell {
     /// only applies while the cell still shows the asset it was started for.
     private var configuredAssetId: String?
     private var badgeFetchTask: Task<Void, Never>?
+    private var accessibilityMediaLabel = "Photo"
+    private var accessibilityMetadataLine: String?
+    private var accessibilityFileType: String?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -1293,6 +1348,14 @@ final class PhotoGridCell: UICollectionViewCell {
         metadataLabel.font = .systemFont(ofSize: 10, weight: .medium)
         metadataLabel.textColor = .white
         contentView.addSubview(metadataLabel)
+
+        fileTypeBadge.font = .systemFont(ofSize: 9, weight: .bold)
+        fileTypeBadge.textColor = .white
+        fileTypeBadge.backgroundColor = UIColor.black.withAlphaComponent(0.58)
+        fileTypeBadge.layer.cornerRadius = 4
+        fileTypeBadge.clipsToBounds = true
+        fileTypeBadge.textAlignment = .center
+        contentView.addSubview(fileTypeBadge)
 
         videoBadge.font = .monospacedDigitSystemFont(ofSize: 10, weight: .semibold)
         videoBadge.textColor = .white
@@ -1333,10 +1396,24 @@ final class PhotoGridCell: UICollectionViewCell {
             width: contentView.bounds.width, height: 24
         )
         CATransaction.commit()
+        let fileTypeSize = fileTypeBadge.intrinsicContentSize
+        let fileTypeWidth = fileTypeBadge.isHidden
+            ? 0
+            : min(fileTypeSize.width + 10, contentView.bounds.width - 8)
+        fileTypeBadge.frame = CGRect(
+            x: 4, y: 4,
+            width: max(0, fileTypeWidth), height: 16
+        )
+
         let badgeSize = videoBadge.intrinsicContentSize
+        let videoWidth = min(badgeSize.width + 10, contentView.bounds.width - 8)
+        let videoX = contentView.bounds.width - videoWidth - 4
+        // Dense grids cannot fit both labels on one line. Keep file type in
+        // its promised top-left position and drop duration to the next row.
+        let videoY: CGFloat = videoX < fileTypeBadge.frame.maxX + 4 ? 22 : 4
         videoBadge.frame = CGRect(
-            x: contentView.bounds.width - badgeSize.width - 14, y: 4,
-            width: badgeSize.width + 10, height: 16
+            x: videoX, y: videoY,
+            width: max(0, videoWidth), height: 16
         )
         selectionBadge.frame = CGRect(
             x: contentView.bounds.width - 26, y: contentView.bounds.height - 26,
@@ -1353,6 +1430,10 @@ final class PhotoGridCell: UICollectionViewCell {
         badgeFetchTask?.cancel()
         badgeFetchTask = nil
         configuredAssetId = nil
+        fileTypeBadge.text = nil
+        fileTypeBadge.isHidden = true
+        accessibilityMetadataLine = nil
+        accessibilityFileType = nil
     }
 
     func configure(
@@ -1374,17 +1455,27 @@ final class PhotoGridCell: UICollectionViewCell {
         let showsBadge = cellWidth >= Self.metadataMinCellWidth
         let line = showsBadge ? Self.metadataLine(for: item, options: displayOptions) : nil
         applyBadge(line: line)
+        accessibilityMediaLabel = item.mediaType == 2 ? "Video" : "Photo"
+        applyFileTypeBadge(
+            displayOptions.showsFileTypeBadge ? item.fileTypeBadgeText : nil
+        )
 
-        // Item carries no exposure fields at all — typically a tile the
-        // index run hasn't reached (or has filled since this list loaded).
-        // Ask for a fresh row and update just this cell when it arrives.
-        if showsBadge, let lazyMetadataProvider, Self.hasNoBadgeData(item) {
+        // Item is missing exposure or source filename fields — typically a
+        // tile the index run hasn't reached (or has filled since this list
+        // loaded). Ask for a fresh row and update just this cell when it arrives.
+        if let lazyMetadataProvider,
+           Self.needsLazyMetadata(item, options: displayOptions, showsMetadataLine: showsBadge) {
             let assetId = item.assetId
             badgeFetchTask = Task { [weak self] in
                 guard let fetched = await lazyMetadataProvider(assetId) else { return }
                 guard let self, !Task.isCancelled,
                       self.configuredAssetId == assetId else { return }
-                self.applyBadge(line: Self.metadataLine(for: fetched, options: displayOptions))
+                if showsBadge {
+                    self.applyBadge(line: Self.metadataLine(for: fetched, options: displayOptions))
+                }
+                self.applyFileTypeBadge(
+                    displayOptions.showsFileTypeBadge ? fetched.fileTypeBadgeText : nil
+                )
             }
         }
 
@@ -1419,8 +1510,26 @@ final class PhotoGridCell: UICollectionViewCell {
         metadataLabel.text = line
         metadataLabel.isHidden = line == nil
         gradient.isHidden = line == nil
+        accessibilityMetadataLine = line
+        updateAccessibilityLabel()
+    }
+
+    private func applyFileTypeBadge(_ text: String?) {
+        fileTypeBadge.text = text
+        fileTypeBadge.isHidden = text == nil
+        accessibilityFileType = text
+        updateAccessibilityLabel()
+        setNeedsLayout()
+    }
+
+    private func updateAccessibilityLabel() {
         isAccessibilityElement = true
-        accessibilityLabel = line.map { "Photo, \($0)" } ?? "Photo"
+        let components: [String?] = [
+            accessibilityMediaLabel,
+            accessibilityFileType.map { "file type \($0)" },
+            accessibilityMetadataLine,
+        ]
+        accessibilityLabel = components.compactMap { $0 }.joined(separator: ", ")
     }
 
     /// Requests the thumbnail sized to the cell. Re-requests only when the
@@ -1493,13 +1602,19 @@ final class PhotoGridCell: UICollectionViewCell {
         ])
     }
 
-    /// True when the item carries none of the overlay's exposure fields —
-    /// the trigger for the lazy on-display lookup. A data check, not a
-    /// formatted-line check: display toggles hiding all fields must not
-    /// cause fetches for rows that are already filled.
-    private static func hasNoBadgeData(_ item: some PhotoGridDisplayable) -> Bool {
-        item.iso == nil && item.aperture == nil && item.shutterSpeedDisplay == nil
+    /// Whether the visible cell needs one lazy row refresh. A data check, not
+    /// a formatted-line check: hidden display fields must not cause needless
+    /// fetches for rows that are already filled.
+    private static func needsLazyMetadata(
+        _ item: some PhotoGridDisplayable,
+        options: GridMetadataDisplayOptions,
+        showsMetadataLine: Bool
+    ) -> Bool {
+        let needsOverlay = showsMetadataLine
+            && item.iso == nil && item.aperture == nil && item.shutterSpeedDisplay == nil
             && item.focalLength == nil && item.equivalentFocalLength == nil
+        let needsFileType = options.showsFileTypeBadge && item.originalFilename == nil
+        return needsOverlay || needsFileType
     }
 }
 
@@ -1508,6 +1623,7 @@ final class PhotoGridCell: UICollectionViewCell {
 /// refreshed on the defaults-change notification instead of five defaults
 /// reads per cell configure.
 struct GridMetadataDisplayOptions: Equatable {
+    var showsFileTypeBadge: Bool
     var showsISO: Bool
     var showsAperture: Bool
     var showsShutter: Bool
@@ -1521,6 +1637,7 @@ struct GridMetadataDisplayOptions: Equatable {
             defaults.object(forKey: key) as? Bool ?? defaultValue
         }
         return GridMetadataDisplayOptions(
+            showsFileTypeBadge: flag(SettingsKeys.showFileTypeBadge, default: true),
             showsISO: flag("display.showISO", default: true),
             showsAperture: flag("display.showAperture", default: true),
             showsShutter: flag("display.showShutter", default: false),

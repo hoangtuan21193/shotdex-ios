@@ -110,6 +110,65 @@ enum SearchParser {
         return result
     }
 
+    /// User-editable pieces of a query, used by the active-search chip bar.
+    ///
+    /// Most words are independent so a query such as `Canon R6 portrait`
+    /// produces three removable chips. Tokens that the DSL treats as one
+    /// value stay together: `ISO 3200` and multi-word sensor names such as
+    /// `full frame`.
+    static func editableTokens(in query: String) -> [String] {
+        let words = query
+            .split(whereSeparator: { $0.isWhitespace || $0 == "," })
+            .map(String.init)
+        guard !words.isEmpty else { return [] }
+
+        let sensorPhrases = sensorFormatAliases.keys
+            .map { $0.split(separator: " ").map(String.init) }
+            .filter { $0.count > 1 }
+            .sorted { $0.count > $1.count }
+
+        var result: [String] = []
+        var index = 0
+        while index < words.count {
+            let word = words[index]
+
+            if word.caseInsensitiveCompare("iso") == .orderedSame,
+               words.indices.contains(index + 1),
+               Double(words[index + 1]) != nil {
+                result.append("\(word) \(words[index + 1])")
+                index += 2
+                continue
+            }
+
+            let remaining = words[index...].map { $0.lowercased() }
+            if let phrase = sensorPhrases.first(where: { parts in
+                remaining.count >= parts.count
+                    && zip(remaining.prefix(parts.count), parts).allSatisfy { $0.0 == $0.1 }
+            }) {
+                result.append(words[index..<(index + phrase.count)].joined(separator: " "))
+                index += phrase.count
+                continue
+            }
+
+            result.append(word)
+            index += 1
+        }
+        return result
+    }
+
+    /// Removes one visible query chip and returns the normalized remaining
+    /// query. `nil` means the last chip was removed.
+    static func removingEditableToken(at index: Int, from query: String) -> String? {
+        var tokens = editableTokens(in: query)
+        guard tokens.indices.contains(index) else {
+            let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : trimmed
+        }
+        tokens.remove(at: index)
+        let updated = tokens.joined(separator: " ")
+        return updated.isEmpty ? nil : updated
+    }
+
     /// "2s"-style long exposures; avoids treating "50s" (as in "ISO 50s" typo)
     /// weirdly — only accept small values as whole-second shutters.
     private static func lowerLooksLikeShutter(_ token: String) -> Bool {

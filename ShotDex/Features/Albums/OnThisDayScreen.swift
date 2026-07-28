@@ -6,6 +6,10 @@ import SwiftUI
 /// multi-select deletion. Uses the shared UIKit grid with screen-supplied
 /// year sections.
 struct OnThisDayScreen: View {
+    /// Which day to show. A tapped reminder opens its own day; everywhere else
+    /// this is today.
+    var initialDate: Date = .now
+
     @Environment(AppDependencies.self) private var dependencies
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(AppNavigation.self) private var navigation
@@ -18,6 +22,7 @@ struct OnThisDayScreen: View {
     /// Compare), so Compare panes and the selection bar follow the taps.
     @State private var isSelecting = false
     @State private var isComparePresented = false
+    @State private var compressionPresentation: CompressionPresentation?
     @State private var selectedIds: [String] = []
     @State private var swipeBaseline: [String] = []
     @State private var isDeleting = false
@@ -55,7 +60,7 @@ struct OnThisDayScreen: View {
         }
         .task {
             if model == nil {
-                let newModel = OnThisDayModel(dependencies: dependencies)
+                let newModel = OnThisDayModel(dependencies: dependencies, selectedDate: initialDate)
                 newModel.reload()
                 model = newModel
             }
@@ -78,6 +83,12 @@ struct OnThisDayScreen: View {
             if let photos = comparePhotos() {
                 CompareScreen(photos: photos)
             }
+        }
+        .fullScreenCover(item: $compressionPresentation) { presentation in
+            CompressionScreen(
+                assets: presentation.assets,
+                sourceAlbum: presentation.sourceAlbum
+            )
         }
         .alert(
             "Couldn't Delete Photos",
@@ -184,6 +195,19 @@ struct OnThisDayScreen: View {
         case .ended:
             swipeBaseline = []
         }
+    }
+
+    private func presentCompression() {
+        guard let model else { return }
+        let assets: [PHAsset] = selectedIds.compactMap { id -> PHAsset? in
+            guard let asset = model.assetsById[id], asset.mediaType == .image else { return nil }
+            return asset
+        }
+        guard !assets.isEmpty else { return }
+        compressionPresentation = CompressionPresentation(
+            assets: assets,
+            sourceAlbum: nil
+        )
     }
 
     private func stopSelecting() {
@@ -314,6 +338,26 @@ struct OnThisDayScreen: View {
         ToolbarItem(placement: .topBarLeading) {
             if isSelecting {
                 shareToolbarButton
+            }
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+            if isSelecting {
+                Menu {
+                    Button(action: presentCompression) {
+                        Label(
+                            "Resize & Compress",
+                            systemImage: "arrow.down.right.and.arrow.up.left"
+                        )
+                    }
+                    .disabled(
+                        !selectedIds.contains {
+                            model?.assetsById[$0]?.mediaType == .image
+                        }
+                    )
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .accessibilityLabel("More selection actions")
             }
         }
         ToolbarItem(placement: .topBarTrailing) {

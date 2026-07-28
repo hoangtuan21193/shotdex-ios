@@ -30,16 +30,27 @@ final class BackgroundIndexService {
     /// Re-evaluated per batch by the pipeline, so a background run that starts
     /// on Wi-Fi and drops to cellular stops streaming at the next batch.
     private let allowNetwork: @Sendable () -> Bool
+    /// Whether the daily "On This Day" reminder is on. A background slot is
+    /// worth asking for even with nothing left to index, because the reminder
+    /// schedule only reaches a week ahead and has to be refilled.
+    private let notificationsEnabled: @Sendable () -> Bool
+    /// Rebuilds the reminder schedule. Injected rather than referenced so this
+    /// type stays unaware of notifications, like `allowNetwork`.
+    private let refreshNotifications: @Sendable () async -> Void
     private var assertionId: UIBackgroundTaskIdentifier = .invalid
 
     init(
         pipeline: IndexPipeline,
         metadataStore: MetadataStore,
-        allowNetwork: @escaping @Sendable () -> Bool
+        allowNetwork: @escaping @Sendable () -> Bool,
+        notificationsEnabled: @escaping @Sendable () -> Bool = { false },
+        refreshNotifications: @escaping @Sendable () async -> Void = {}
     ) {
         self.pipeline = pipeline
         self.metadataStore = metadataStore
         self.allowNetwork = allowNetwork
+        self.notificationsEnabled = notificationsEnabled
+        self.refreshNotifications = refreshNotifications
     }
 
     // MARK: BGProcessingTask
@@ -50,6 +61,8 @@ final class BackgroundIndexService {
         let pipeline = self.pipeline
         let metadataStore = self.metadataStore
         let allowNetwork = self.allowNetwork
+        let notificationsEnabled = self.notificationsEnabled
+        let refreshNotifications = self.refreshNotifications
         BGTaskScheduler.shared.register(
             forTaskWithIdentifier: Self.taskIdentifier, using: nil
         ) { task in
@@ -80,7 +93,14 @@ final class BackgroundIndexService {
                 // is not a finished library — this slot simply did nothing.
                 let ranToEnd = summary?.wasCancelled == false && summary?.didNotStart == false
                 let finished = ranToEnd && unfinished == 0
-                if !finished {
+                // Top up the reminder week while we have the slot: the app may
+                // not be opened again before the last scheduled day fires.
+                await refreshNotifications()
+                // Reschedule for the reminder too, not just for unread rows —
+                // otherwise a fully indexed library never gets another slot and
+                // the background refresh stops for exactly the people who have
+                // used the app longest.
+                if !finished || notificationsEnabled() {
                     Self.schedule(requiresNetwork: pending > 0)
                 }
                 task.setTaskCompleted(success: finished)
@@ -103,10 +123,12 @@ final class BackgroundIndexService {
 
     /// Called when the app enters the background: schedules a continuation
     /// if there is unfinished work — a run in flight, or a persisted cursor
-    /// left behind by a cancelled/expired one.
+    /// left behind by a cancelled/expired one — or if the "On This Day"
+    /// reminder needs its week topped up.
     func scheduleContinuationIfNeeded() {
         let pipeline = self.pipeline
         let metadataStore = self.metadataStore
+        let notificationsEnabled = self.notificationsEnabled
         Task {
             // Rows whose read never finished count as unfinished work even when no
             // cursor is left behind: a completed-but-incomplete run clears the
@@ -114,7 +136,10 @@ final class BackgroundIndexService {
             // got a background continuation.
             let unfinished = (try? metadataStore.unfinishedCount()) ?? 0
             let pending = (try? metadataStore.pendingICloudReadCount()) ?? 0
-            if await pipeline.isActive || (try? metadataStore.indexState())?.cursorAssetId != nil || unfinished > 0 {
+            let hasIndexWork = await pipeline.isActive
+                || (try? metadataStore.indexState())?.cursorAssetId != nil
+                || unfinished > 0
+            if hasIndexWork || notificationsEnabled() {
                 Self.schedule(requiresNetwork: pending > 0)
             }
         }

@@ -62,12 +62,17 @@ struct GridBadgeCacheTests {
         #expect(item.equivalentFocalLength == 75)
     }
 
-    @Test func noExifRowIsFinalNegative() {
-        #expect(GridBadgeCache.entry(for: makeRow(iso: nil, status: .noExif)) == .noBadge)
+    @Test func noExifRowIsFinalAndStillCarriesFileType() {
+        let entry = GridBadgeCache.entry(for: makeRow(iso: nil, status: .noExif))
+        guard case .badge(let item)? = entry else {
+            Issue.record("expected .badge, got \(String(describing: entry))")
+            return
+        }
+        #expect(item.mediaType == 1)
     }
 
     @Test func missingRowIsFinalNegative() {
-        // Videos and deleted assets never get a row.
+        // A deleted asset no longer has a row.
         #expect(GridBadgeCache.entry(for: nil) == .noBadge)
     }
 
@@ -112,5 +117,31 @@ struct GridBadgeCacheTests {
         cache.removeAll()
         #expect(cache.cachedEntry(for: "a1") == nil)
         #expect(cache.cachedEntry(for: "a2") == nil)
+    }
+
+    @Test func fileTypeBadgeNormalizesCommonPhotoAndVideoFormats() {
+        func item(filename: String?, mediaType: Int = 1) -> LibraryGridItem {
+            LibraryGridItem(
+                assetId: "a1",
+                creationDate: nil,
+                mediaType: mediaType,
+                originalFilename: filename,
+                iso: nil,
+                aperture: nil,
+                shutterSpeedDisplay: nil,
+                focalLength: nil,
+                equivalentFocalLength: nil,
+                width: nil,
+                height: nil,
+                fileSize: nil
+            )
+        }
+
+        #expect(item(filename: "IMG_0001.CR3").fileTypeBadgeText == "RAW")
+        #expect(item(filename: "IMG_0002.jpeg").fileTypeBadgeText == "JPG")
+        #expect(item(filename: "IMG_0003.heif").fileTypeBadgeText == "HEIC")
+        #expect(item(filename: "clip.mov", mediaType: 2).fileTypeBadgeText == "MOV")
+        #expect(item(filename: nil, mediaType: 2).fileTypeBadgeText == "VIDEO")
+        #expect(item(filename: nil).fileTypeBadgeText == "PHOTO")
     }
 }

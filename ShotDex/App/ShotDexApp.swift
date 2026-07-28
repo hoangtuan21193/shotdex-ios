@@ -10,6 +10,9 @@ struct ShotDexApp: App {
         _dependencies = State(initialValue: dependencies)
         // BGTaskScheduler requires registration before launch finishes.
         dependencies.backgroundIndex.register()
+        // Same requirement: a notification tap that launched the app is
+        // delivered to nobody unless the delegate is already in place.
+        dependencies.onThisDayNotifications.registerDelegate()
         dependencies.resolveNewlyKnownCameras()
     }
 

@@ -3,7 +3,16 @@ import Photos
 import SwiftUI
 
 /// Navigation destination value for the On This Day screen.
-struct OnThisDayDestination: Hashable {}
+struct OnThisDayDestination: Hashable {
+    /// Which day to open; nil means today. Normalized to the start of the day so
+    /// two values naming the same day compare and hash equal — a repeat tap on a
+    /// reminder must be a no-op, not a second push.
+    let date: Date?
+
+    init(date: Date? = nil) {
+        self.date = date.map { Calendar.current.startOfDay(for: $0) }
+    }
+}
 
 /// One year's group of photos: a contiguous index range into the flat
 /// `photos` array, so a tile tap maps straight to the pager index.

@@ -2,13 +2,12 @@ import Foundation
 
 /// Results of lazy per-cell badge lookups, keyed by assetId.
 ///
-/// While an index run is filling the DB, grid tiles that were loaded without
-/// EXIF (PhotoKit fast path, or rows still `pendingRead`) fetch their badge
-/// on display instead of the whole grid reloading per indexed photo. This
-/// cache remembers *final* answers so a tile scrolled past twice doesn't hit
-/// the DB twice, and deliberately forgets *non-final* ones so a tile whose
-/// row upgrades (`pendingRead` → `indexed`) picks the badge up on its next
-/// display.
+/// While an index run is filling the DB, grid tiles loaded without EXIF or a
+/// source filename fetch their badge data on display instead of the whole grid
+/// reloading per indexed photo. This cache remembers *final* answers so a tile
+/// scrolled past twice doesn't hit the DB twice, and deliberately forgets
+/// *non-final* ones so a tile whose row upgrades (`pendingRead` → `indexed`)
+/// picks the badge up on its next display.
 ///
 /// Main-actor confined: callers are the grid cells and `LibraryModel`.
 @MainActor
@@ -17,9 +16,8 @@ final class GridBadgeCache {
     enum LookupResult: Equatable {
         /// Final: the row is indexed — show these fields (may all be nil).
         case badge(LibraryGridItem)
-        /// Final: no badge will ever exist (no EXIF, or no row at all —
-        /// videos and deleted assets). Named to avoid resolving as
-        /// `Optional.none` in `LookupResult?` contexts.
+        /// Final: no row exists (normally a deleted asset). Named to avoid
+        /// resolving as `Optional.none` in `LookupResult?` contexts.
         case noBadge
     }
 
@@ -31,10 +29,12 @@ final class GridBadgeCache {
     nonisolated static func entry(for row: PhotoMetadata?) -> LookupResult? {
         guard let row else { return .noBadge }
         switch row.resolvedExifStatus {
-        case .indexed:
+        case .indexed, .noExif:
             return .badge(LibraryGridItem(
                 assetId: row.assetId,
                 creationDate: row.creationDate,
+                mediaType: row.mediaType,
+                originalFilename: row.originalFilename,
                 iso: row.iso,
                 aperture: row.aperture,
                 shutterSpeedDisplay: row.shutterSpeedDisplay,
@@ -44,8 +44,6 @@ final class GridBadgeCache {
                 height: row.height,
                 fileSize: row.fileSize
             ))
-        case .noExif:
-            return .noBadge
         case .pendingRead, .pendingICloud, .error:
             return nil
         }

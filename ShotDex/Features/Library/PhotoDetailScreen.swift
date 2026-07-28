@@ -10,6 +10,9 @@ import UIKit
 @MainActor
 protocol PhotoBrowsingSource: AnyObject {
     var photoCount: Int { get }
+    /// Writable user album that owns the opened grid, if any. New copies are
+    /// added back to this collection after Edit/Compress.
+    var sourceAlbum: PHAssetCollection? { get }
     func photoId(at index: Int) -> String?
     /// Current position of a photo by its stable id. Viewers open by identity
     /// (not a captured position) so a deletion that shifts the array can't
@@ -33,6 +36,9 @@ protocol PhotoBrowsingSource: AnyObject {
     func refreshMetadataAfterDownload(assetId: String) async -> PhotoMetadata?
 }
 
+extension PhotoBrowsingSource {
+    var sourceAlbum: PHAssetCollection? { nil }
+}
 
 /// Presentation target for the fullscreen viewer, captured at tap time. Holds
 /// the stable id (for `fullScreenCover(item:)` identity) plus the starting
@@ -41,6 +47,12 @@ protocol PhotoBrowsingSource: AnyObject {
 struct PhotoViewerTarget: Identifiable, Equatable {
     let id: String
     let startIndex: Int
+}
+
+private struct PhotoDetailActionTarget: Identifiable {
+    let id: String
+    let asset: PHAsset
+    let sourceAlbum: PHAssetCollection?
 }
 
 /// Fullscreen photo viewer: horizontal paging between photos, pinch/double-tap
@@ -59,6 +71,8 @@ struct PhotoDetailScreen: View {
     /// to rebuild the current page even when the (clamped) index is unchanged.
     @State private var reseatToken = 0
     @State private var isMetadataPresented = false
+    @State private var editorTarget: PhotoDetailActionTarget?
+    @State private var compressionTarget: PhotoDetailActionTarget?
     /// True while the current image is pinch/double-tap zoomed in — hides all
     /// chrome (top bar, action buttons, info panel) so nothing overlaps the photo.
     @State private var isZoomed = false
@@ -238,6 +252,18 @@ struct PhotoDetailScreen: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
+        .fullScreenCover(item: $editorTarget) { target in
+            PhotoEditorScreen(
+                asset: target.asset,
+                sourceAlbum: target.sourceAlbum
+            )
+        }
+        .fullScreenCover(item: $compressionTarget) { target in
+            CompressionScreen(
+                assets: [target.asset],
+                sourceAlbum: target.sourceAlbum
+            )
+        }
         .alert("Unable to Share", isPresented: $isShareUnavailable) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -398,6 +424,28 @@ struct PhotoDetailScreen: View {
                     ) {
                         showVideoChrome()
                         isMetadataPresented = true
+                    }
+                    if !isCurrentVideo, let currentAsset {
+                        actionBarCenterButton(
+                            systemImage: "slider.horizontal.3",
+                            accessibilityLabel: "Edit"
+                        ) {
+                            editorTarget = PhotoDetailActionTarget(
+                                id: currentAsset.localIdentifier,
+                                asset: currentAsset,
+                                sourceAlbum: model.sourceAlbum
+                            )
+                        }
+                        actionBarCenterButton(
+                            systemImage: "arrow.down.right.and.arrow.up.left",
+                            accessibilityLabel: "Compress"
+                        ) {
+                            compressionTarget = PhotoDetailActionTarget(
+                                id: currentAsset.localIdentifier,
+                                asset: currentAsset,
+                                sourceAlbum: model.sourceAlbum
+                            )
+                        }
                     }
                 }
                 .padding(.horizontal, 8)

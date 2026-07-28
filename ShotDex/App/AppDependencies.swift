@@ -13,6 +13,9 @@ final class AppDependencies {
     let smartAlbumStore: SmartAlbumStore
     let chartStore: ChartStore
     let photoLibrary: PhotoLibraryService
+    let photoRenderer: PhotoRenderService
+    let photoEditing: PhotoEditingService
+    let compressionPresets: CompressionPresetStore
     let importService: ImportService
     let indexPipeline: IndexPipeline
     let backgroundIndex: BackgroundIndexService
@@ -20,6 +23,7 @@ final class AppDependencies {
     let powerStatus: PowerMonitor
     let indexTraffic: IndexTrafficMonitor
     let indexInteractionGate: IndexInteractionGate
+    let onThisDayNotifications: OnThisDayNotificationService
 
     init(database: AppDatabase, photoLibrary: PhotoLibraryService) {
         let metadataStore = MetadataStore(database: database)
@@ -39,10 +43,23 @@ final class AppDependencies {
         self.smartAlbumStore = SmartAlbumStore(database: database)
         self.chartStore = ChartStore(database: database)
         self.photoLibrary = photoLibrary
+        let photoRenderer = PhotoRenderService()
+        self.photoRenderer = photoRenderer
+        self.photoEditing = PhotoEditingService(
+            renderer: photoRenderer,
+            indexNewAsset: { assetID in
+                _ = await indexPipeline.indexSingle(assetId: assetID)
+            }
+        )
+        self.compressionPresets = CompressionPresetStore()
         self.importService = ImportService(photoLibrary: photoLibrary, metadataStore: metadataStore)
         self.indexPipeline = indexPipeline
         let networkStatus = NetworkMonitor()
         self.networkStatus = networkStatus
+        let onThisDayScheduler = OnThisDayNotificationScheduler(
+            queries: OnThisDayQueries(database: database)
+        )
+        self.onThisDayNotifications = OnThisDayNotificationService(scheduler: onThisDayScheduler)
         // Same policy the foreground uses (`LibraryModel.allowNetworkForIndexing`):
         // an unmetered path always, a metered one only on explicit opt-in.
         self.backgroundIndex = BackgroundIndexService(
@@ -51,7 +68,11 @@ final class AppDependencies {
             allowNetwork: {
                 !networkStatus.isExpensivePath
                     || UserDefaults.standard.bool(forKey: SettingsKeys.allowCellularIndexing)
-            }
+            },
+            notificationsEnabled: {
+                UserDefaults.standard.bool(forKey: SettingsKeys.onThisDayNotificationsEnabled)
+            },
+            refreshNotifications: { await onThisDayScheduler.refresh() }
         )
         self.powerStatus = PowerMonitor()
         self.indexTraffic = indexTraffic

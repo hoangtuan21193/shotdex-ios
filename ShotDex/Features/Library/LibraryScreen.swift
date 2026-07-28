@@ -20,6 +20,7 @@ struct LibraryScreen: View {
     @State private var isSelecting = false
     @State private var selectedIds: [String] = []
     @State private var isComparePresented = false
+    @State private var compressionPresentation: CompressionPresentation?
     /// Selection snapshot at swipe-drag start; each move re-applies the
     /// dragged range on top of it so backtracking un-does.
     @State private var swipeBaseline: [String] = []
@@ -125,6 +126,12 @@ struct LibraryScreen: View {
                 CompareScreen(photos: photos)
             }
         }
+        .fullScreenCover(item: $compressionPresentation) { presentation in
+            CompressionScreen(
+                assets: presentation.assets,
+                sourceAlbum: presentation.sourceAlbum
+            )
+        }
         .alert(
             "Couldn't Delete Photos",
             isPresented: Binding(
@@ -165,6 +172,21 @@ struct LibraryScreen: View {
         case .ended:
             swipeBaseline = []
         }
+    }
+
+    private func presentCompression(_ model: LibraryModel) {
+        let selected = Set(selectedIds)
+        let photoIDs = model.items
+            .filter { selected.contains($0.assetId) && $0.mediaType == PHAssetMediaType.image.rawValue }
+            .map(\.assetId)
+        let fetched = PhotoLibraryService.fetchAssets(ids: photoIDs)
+        let byID = Dictionary(uniqueKeysWithValues: fetched.map { ($0.localIdentifier, $0) })
+        let assets: [PHAsset] = photoIDs.compactMap { byID[$0] }
+        guard !assets.isEmpty else { return }
+        compressionPresentation = CompressionPresentation(
+            assets: assets,
+            sourceAlbum: nil
+        )
     }
 
     private func deleteSelected(_ model: LibraryModel) {
@@ -287,8 +309,12 @@ struct LibraryScreen: View {
             if let advancedQuery = model.advancedQuery, !advancedQuery.isEmpty {
                 AdvancedSearchBar(
                     query: advancedQuery,
-                    matchCount: model.matchCount,
                     onEdit: { isAdvancedSearchPresented = true },
+                    onRemoveRule: { ruleId in
+                        var updated = advancedQuery
+                        updated.rules.removeAll { $0.id == ruleId }
+                        model.advancedQuery = updated.isEmpty ? nil : updated
+                    },
                     onClear: { model.advancedQuery = nil }
                 )
             } else if !model.criteria.isEmpty {
@@ -296,8 +322,7 @@ struct LibraryScreen: View {
                     criteria: Binding(
                         get: { model.criteria },
                         set: { model.criteria = $0 }
-                    ),
-                    matchCount: model.matchCount
+                    )
                 )
             }
         }
@@ -365,6 +390,7 @@ struct LibraryScreen: View {
             onUserScroll: {
                 if isIndexPanelExpanded { setIndexPanelExpanded(false) }
             },
+            trailingFooterText: model.hasActiveQuery ? matchCountFooter(model.matchCount) : nil,
             lazyMetadataProvider: { assetId in
                 await model.lazyBadgeItem(assetId: assetId)
             }
@@ -375,6 +401,10 @@ struct LibraryScreen: View {
         // of leaving a black band behind the buttons.
         .ignoresSafeArea()
         .sensoryFeedback(.selection, trigger: selectedIds.count)
+    }
+
+    private func matchCountFooter(_ count: Int) -> String {
+        "\(count.formatted()) \(count == 1 ? "photo" : "photos")"
     }
 
     @ViewBuilder
@@ -758,6 +788,29 @@ struct LibraryScreen: View {
                model.isIndexing || model.isIndexStreamingPaused || model.indexICloudRetryDate != nil,
                !isSelecting {
                 indexStatusButton(model)
+            }
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+            if let model, isSelecting {
+                Menu {
+                    Button {
+                        presentCompression(model)
+                    } label: {
+                        Label(
+                            "Resize & Compress",
+                            systemImage: "arrow.down.right.and.arrow.up.left"
+                        )
+                    }
+                    .disabled(
+                        !model.items.contains {
+                            selectedIds.contains($0.assetId)
+                                && $0.mediaType == PHAssetMediaType.image.rawValue
+                        }
+                    )
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .accessibilityLabel("More selection actions")
             }
         }
         ToolbarItem(placement: .topBarTrailing) {

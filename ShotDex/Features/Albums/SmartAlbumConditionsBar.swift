@@ -61,6 +61,114 @@ extension SmartAlbumRule {
         return "\(field.displayName) \(op.displayName) \(value)"
     }
 
+    /// Compact result-bar wording. The rule editor and VoiceOver can keep the
+    /// full natural-language summary while chips use symbols that scan quickly:
+    /// `ISO 100`, `f > 1.4`, `focal 50–85mm`.
+    var compactDisplaySummary: String {
+        switch field.kind {
+        case .text:
+            return compactTextSummary
+        case .choice:
+            let value = displayValue
+            guard !value.isEmpty else { return compactFieldName }
+            return op == .isNot
+                ? "\(compactFieldName) ≠ \(value)"
+                : "\(compactFieldName) \(value)"
+        case .number:
+            return compactNumberSummary
+        case .date:
+            return compactDateSummary
+        case .favorite:
+            return boolValue ? "Favorite" : "Not favorite"
+        }
+    }
+
+    private var compactTextSummary: String {
+        let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else { return compactFieldName }
+        switch op {
+        case .contains:
+            return "\(compactFieldName) \(value)"
+        case .doesNotContain:
+            return "\(compactFieldName) excludes \(value)"
+        case .isExactly:
+            return "\(compactFieldName) = \(value)"
+        case .isNot:
+            return "\(compactFieldName) ≠ \(value)"
+        default:
+            return "\(compactFieldName) \(value)"
+        }
+    }
+
+    private var compactNumberSummary: String {
+        guard let number else { return compactFieldName }
+        let value = compactNumber(number)
+        switch op {
+        case .equalTo:
+            if field == .aperture {
+                return "f/\(value)"
+            }
+            return "\(compactFieldName) \(value)"
+        case .greaterThan:
+            return "\(compactFieldName) > \(value)"
+        case .lessThan:
+            return "\(compactFieldName) < \(value)"
+        case .inRange:
+            guard let numberUpper else { return "\(compactFieldName) \(value)" }
+            return "\(compactFieldName) \(value)–\(compactNumber(numberUpper))"
+        default:
+            return "\(compactFieldName) \(value)"
+        }
+    }
+
+    private var compactDateSummary: String {
+        switch op {
+        case .on:
+            return "date \(displayValue)"
+        case .inLastDays:
+            return "last \(Int((number ?? 0).rounded()))d"
+        case .before:
+            return "date < \(displayValue)"
+        case .after:
+            return "date > \(displayValue)"
+        case .inRange:
+            return "date \(displayValue)"
+        default:
+            return "date \(displayValue)"
+        }
+    }
+
+    private var compactFieldName: String {
+        switch field {
+        case .cameraBrand: "brand"
+        case .cameraBody: "camera"
+        case .lens: "lens"
+        case .sensorFormat: "sensor"
+        case .fileType, .filename: "file"
+        case .iso: "ISO"
+        case .aperture: "f"
+        case .shutter: "shutter"
+        case .focalLength: focalMode == .equivalent ? "focal eq" : "focal"
+        case .dateTaken: "date"
+        case .favorite: "favorite"
+        }
+    }
+
+    private func compactNumber(_ value: Double) -> String {
+        switch field {
+        case .iso:
+            return NumericFieldKind.int.format(value)
+        case .aperture:
+            return NumericFieldKind.double.format(value)
+        case .shutter:
+            return "\(NumericFieldKind.shutter.format(value))s"
+        case .focalLength:
+            return "\(NumericFieldKind.double.format(value))mm"
+        default:
+            return field.numericKind.format(value)
+        }
+    }
+
     private var displayValue: String {
         switch field.kind {
         case .text:

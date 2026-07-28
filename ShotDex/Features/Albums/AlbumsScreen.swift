@@ -62,8 +62,8 @@ struct AlbumsScreen: View {
                 AlbumDetailScreen(album: album)
             }
         }
-        .navigationDestination(for: OnThisDayDestination.self) { _ in
-            OnThisDayScreen()
+        .navigationDestination(for: OnThisDayDestination.self) { destination in
+            OnThisDayScreen(initialDate: destination.date ?? .now)
         }
         .navigationDestination(for: SmartAlbumDestination.self) { destination in
             if let item = model.smartQueryAlbums.first(where: { $0.album.id == destination.id }) {

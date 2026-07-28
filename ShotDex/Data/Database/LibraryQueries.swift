@@ -17,7 +17,8 @@ struct LibraryQueries: Sendable {
     ) async throws -> [LibraryGridItem] {
         let (whereSQL, arguments) = Self.whereClause(for: criteria)
         let sql = """
-            SELECT assetId, creationDate, iso, aperture, shutterSpeedDisplay,
+            SELECT assetId, creationDate, mediaType, originalFilename,
+                   iso, aperture, shutterSpeedDisplay,
                    focalLength, equivalentFocalLength, width, height, fileSize
             FROM photo_metadata
             \(whereSQL)
@@ -66,7 +67,8 @@ struct LibraryQueries: Sendable {
     ) async throws -> [LibraryGridItem] {
         let (whereSQL, arguments) = Self.whereClause(for: query)
         let sql = """
-            SELECT assetId, creationDate, iso, aperture, shutterSpeedDisplay,
+            SELECT assetId, creationDate, mediaType, originalFilename,
+                   iso, aperture, shutterSpeedDisplay,
                    focalLength, equivalentFocalLength, width, height, fileSize
             FROM photo_metadata
             \(whereSQL)

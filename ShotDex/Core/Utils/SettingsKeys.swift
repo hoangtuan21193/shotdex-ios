@@ -11,6 +11,10 @@ enum SettingsKeys {
     /// `GridDensity.clamped`.
     static let gridColumns = "grid.columns"
 
+    /// Show the compact RAW/JPG/HEIC/MOV-style badge at the top-leading corner
+    /// of every grid thumbnail. Defaults to true.
+    static let showFileTypeBadge = "display.showFileType"
+
     /// Keep the display awake — and auto-dim via a black overlay after an idle
     /// period — while indexing runs. Defaults to false.
     static let keepScreenAwake = "index.keepScreenAwake"
@@ -18,4 +22,22 @@ enum SettingsKeys {
     /// Set once the Statistics dashboard has seeded its default charts, so a
     /// board a user deliberately cleared isn't re-seeded on next launch.
     static let hasSeededStatCharts = "stats.didSeedCharts"
+
+    /// Daily "On This Day" reminder on/off. Defaults to false — notification
+    /// permission is only asked for once the user turns it on.
+    static let onThisDayNotificationsEnabled = "notifications.onThisDay"
+
+    /// Reminder time as minutes since local midnight, default 540 (09:00). Read
+    /// through an `object(forKey:)` nil check, never plain `integer(forKey:)`:
+    /// that answers 0 for an unwritten key, which would schedule at midnight
+    /// while the picker shows 09:00.
+    static let onThisDayNotifyMinutes = "notifications.onThisDayMinutes"
+
+    /// JSON-encoded user-created resize/compression presets. Built-in Original,
+    /// 4K, 2048 px and 1080 px presets are code-defined and never stored here.
+    static let compressionPresets = "export.compressionPresets"
+
+    /// Per-source counters used by `_SHOTDEX_EDITED_N` and
+    /// `_SHOTDEX_COMPRESSED_N` output filenames.
+    static let outputFilenameIndexes = "export.outputFilenameIndexes"
 }

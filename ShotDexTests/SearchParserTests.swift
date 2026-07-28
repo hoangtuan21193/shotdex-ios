@@ -59,4 +59,35 @@ struct SearchParserTests {
     @Test func emptyQuery() {
         #expect(SearchParser.parse("  ").isEmpty)
     }
+
+    @Test func editableTokensKeepSemanticPhrasesTogether() {
+        #expect(SearchParser.editableTokens(in: "bose s1 pro") == ["bose", "s1", "pro"])
+        #expect(
+            SearchParser.editableTokens(in: "Canon ISO 100 full frame")
+                == ["Canon", "ISO 100", "full frame"]
+        )
+    }
+
+    @Test func editableTokenCanBeRemovedIndividually() {
+        let query = "Canon ISO 100 full frame"
+        #expect(SearchParser.removingEditableToken(at: 0, from: query) == "ISO 100 full frame")
+        #expect(SearchParser.removingEditableToken(at: 1, from: query) == "Canon full frame")
+        #expect(SearchParser.removingEditableToken(at: 2, from: query) == "Canon ISO 100")
+        #expect(SearchParser.removingEditableToken(at: 0, from: "Canon") == nil)
+    }
+
+    @Test func compactRuleSummariesUseSymbolsAndUnits() {
+        let iso = SmartAlbumRule(field: .iso, op: .equalTo, number: 100)
+        let aperture = SmartAlbumRule(field: .aperture, op: .greaterThan, number: 1.4)
+        let focal = SmartAlbumRule(
+            field: .focalLength,
+            op: .inRange,
+            number: 50,
+            numberUpper: 85
+        )
+
+        #expect(iso.compactDisplaySummary == "ISO 100")
+        #expect(aperture.compactDisplaySummary == "f > 1.4")
+        #expect(focal.compactDisplaySummary == "focal 50mm–85mm")
+    }
 }

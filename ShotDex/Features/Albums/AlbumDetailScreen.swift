@@ -19,6 +19,7 @@ struct AlbumDetailScreen: View {
     @State private var isSelecting = false
     @State private var selectedIds: [String] = []
     @State private var isComparePresented = false
+    @State private var compressionPresentation: CompressionPresentation?
     @State private var swipeBaseline: [String] = []
     @State private var isDeleting = false
     @State private var isPreparingShare = false
@@ -58,6 +59,12 @@ struct AlbumDetailScreen: View {
                 model = newModel
             }
         }
+        .onChange(of: photoLibrary.assetChangeToken) {
+            guard !isSelecting else { return }
+            let refreshed = AlbumDetailModel(album: album, dependencies: dependencies)
+            refreshed.loadNextPage()
+            model = refreshed
+        }
         .fullScreenCover(item: $viewerTarget) { target in
             if let model {
                 PhotoDetailScreen(model: model, currentIndex: target.startIndex)
@@ -67,6 +74,12 @@ struct AlbumDetailScreen: View {
             if let model, let photos = comparePhotos(model) {
                 CompareScreen(photos: photos)
             }
+        }
+        .fullScreenCover(item: $compressionPresentation) { presentation in
+            CompressionScreen(
+                assets: presentation.assets,
+                sourceAlbum: presentation.sourceAlbum
+            )
         }
         .alert(
             "Couldn't Delete Photos",
@@ -156,6 +169,18 @@ struct AlbumDetailScreen: View {
         case .ended:
             swipeBaseline = []
         }
+    }
+
+    private func presentCompression(_ model: AlbumDetailModel) {
+        let assets: [PHAsset] = selectedIds.compactMap { id -> PHAsset? in
+            guard let asset = model.assetsById[id], asset.mediaType == .image else { return nil }
+            return asset
+        }
+        guard !assets.isEmpty else { return }
+        compressionPresentation = CompressionPresentation(
+            assets: assets,
+            sourceAlbum: model.sourceAlbum
+        )
     }
 
     private func stopSelecting() {
@@ -254,6 +279,28 @@ struct AlbumDetailScreen: View {
         ToolbarItem(placement: .topBarLeading) {
             if isSelecting {
                 shareToolbarButton
+            }
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+            if let model, isSelecting {
+                Menu {
+                    Button {
+                        presentCompression(model)
+                    } label: {
+                        Label(
+                            "Resize & Compress",
+                            systemImage: "arrow.down.right.and.arrow.up.left"
+                        )
+                    }
+                    .disabled(
+                        !selectedIds.contains {
+                            model.assetsById[$0]?.mediaType == .image
+                        }
+                    )
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .accessibilityLabel("More selection actions")
             }
         }
         ToolbarItem(placement: .topBarTrailing) {

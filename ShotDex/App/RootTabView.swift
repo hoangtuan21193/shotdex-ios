@@ -21,6 +21,9 @@ struct RootTabView: View {
     @State private var mountedLegacyTabs: Set<AppTab> = [.library]
     @State private var hasPassedInitialIndexDelay = false
     @State private var hasScheduledAlbumCoverPreheat = false
+    /// Albums is the only tab pushed programmatically (a tapped "On This Day"
+    /// reminder), so it is the only one that needs a bound path.
+    @State private var albumsPath = NavigationPath()
 
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(\.scenePhase) private var scenePhase
@@ -49,6 +52,29 @@ struct RootTabView: View {
             await AlbumsModel.preheatOnThisDayCover(using: photoLibrary)
             albumsModel?.load(forAssetToken: photoLibrary.assetChangeToken)
         }
+    }
+
+    /// Rebuilds the week of "On This Day" reminders. Safe to call blindly — the
+    /// scheduler bails on one `UserDefaults` read when the reminder is off.
+    private func refreshOnThisDayNotifications() {
+        Task { await dependencies.onThisDayNotifications.refresh() }
+    }
+
+    /// Picks up a reminder tapped before this view existed (cold launch straight
+    /// from the notification, where the delegate fires while the UI is still
+    /// being built and no `.onChange` is installed yet).
+    private func drainPendingOnThisDayOpen() {
+        guard let date = dependencies.onThisDayNotifications.consumePendingOpenDate() else { return }
+        navigation.openOnThisDay(date: date)
+    }
+
+    /// Pushes On This Day onto the Albums tab. Replaces the path rather than
+    /// appending: a tap while already on the screen for another day must not
+    /// stack a second copy.
+    private func handleOnThisDayPush() {
+        guard let date = navigation.pendingOnThisDayDate else { return }
+        albumsPath = NavigationPath([OnThisDayDestination(date: date)])
+        navigation.pendingOnThisDayDate = nil
     }
 
     var body: some View {
@@ -102,7 +128,7 @@ struct RootTabView: View {
                 NavigationStack { LibraryScreen(model: libraryModel) }
             }
             Tab(AppTab.albums.title, systemImage: AppTab.albums.systemImage, value: .albums) {
-                NavigationStack { AlbumsScreen(model: albumsModel) }
+                NavigationStack(path: $albumsPath) { AlbumsScreen(model: albumsModel) }
             }
             Tab(AppTab.statistics.title, systemImage: AppTab.statistics.systemImage, value: .statistics) {
                 NavigationStack { StatisticsScreen() }
@@ -145,20 +171,32 @@ struct RootTabView: View {
                 albumsModel = AlbumsModel(dependencies: dependencies)
             }
             preheatAlbumCoverIfNeeded()
+            drainPendingOnThisDayOpen()
             // Let the Library publish its first interactive frame before the
             // full PhotoKit/index reconciliation starts competing for I/O.
             try? await Task.sleep(for: .milliseconds(500))
             guard !Task.isCancelled else { return }
             hasPassedInitialIndexDelay = true
-            if scenePhase == .active { autoIndex() }
+            if scenePhase == .active {
+                autoIndex()
+                refreshOnThisDayNotifications()
+            }
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active, hasPassedInitialIndexDelay { autoIndex() }
+            guard phase == .active, hasPassedInitialIndexDelay else { return }
+            autoIndex()
+            refreshOnThisDayNotifications()
         }
         .onChange(of: navigation.pendingLibraryFilter) { _, pending in
             guard let pending else { return }
             libraryModel?.criteria = pending
             navigation.pendingLibraryFilter = nil
+        }
+        .onChange(of: dependencies.onThisDayNotifications.pendingOpenDate) {
+            drainPendingOnThisDayOpen()
+        }
+        .onChange(of: navigation.onThisDayToken) {
+            handleOnThisDayPush()
         }
     }
 
@@ -216,20 +254,32 @@ struct RootTabView: View {
                     albumsModel = AlbumsModel(dependencies: dependencies)
                 }
                 preheatAlbumCoverIfNeeded()
+                drainPendingOnThisDayOpen()
                 // Let the Library publish its first interactive frame before
                 // the full PhotoKit/index reconciliation starts competing.
                 try? await Task.sleep(for: .milliseconds(500))
                 guard !Task.isCancelled else { return }
                 hasPassedInitialIndexDelay = true
-                if scenePhase == .active { autoIndex() }
+                if scenePhase == .active {
+                    autoIndex()
+                    refreshOnThisDayNotifications()
+                }
             }
             .onChange(of: scenePhase) { _, phase in
-                if phase == .active, hasPassedInitialIndexDelay { autoIndex() }
+                guard phase == .active, hasPassedInitialIndexDelay else { return }
+                autoIndex()
+                refreshOnThisDayNotifications()
             }
             .onChange(of: navigation.pendingLibraryFilter) { _, pending in
                 guard let pending else { return }
                 libraryModel?.criteria = pending
                 navigation.pendingLibraryFilter = nil
+            }
+            .onChange(of: dependencies.onThisDayNotifications.pendingOpenDate) {
+                drainPendingOnThisDayOpen()
+            }
+            .onChange(of: navigation.onThisDayToken) {
+                handleOnThisDayPush()
             }
             .onChange(of: navigation.selectedTab) { _, tab in
                 guard tab != .search else { return }
@@ -253,7 +303,7 @@ struct RootTabView: View {
                 tabStack(.library) { LibraryScreen(model: libraryModel) }
             }
             if mountedLegacyTabs.contains(.albums) {
-                tabStack(.albums) { AlbumsScreen(model: albumsModel) }
+                tabStack(.albums, path: $albumsPath) { AlbumsScreen(model: albumsModel) }
             }
             if mountedLegacyTabs.contains(.statistics) {
                 tabStack(.statistics) { StatisticsScreen() }
@@ -261,13 +311,20 @@ struct RootTabView: View {
         }
     }
 
+    /// `path` is supplied only for tabs that are pushed programmatically. Which
+    /// branch a call site takes is static, so view identity stays stable.
     @ViewBuilder
     private func tabStack<Content: View>(
         _ tab: AppTab,
+        path: Binding<NavigationPath>? = nil,
         @ViewBuilder content: () -> Content
     ) -> some View {
-        NavigationStack {
-            content()
+        Group {
+            if let path {
+                NavigationStack(path: path) { content() }
+            } else {
+                NavigationStack { content() }
+            }
         }
         .opacity(navigation.selectedTab == tab ? 1 : 0)
         .allowsHitTesting(navigation.selectedTab == tab)

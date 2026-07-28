@@ -117,44 +117,53 @@ struct AdvancedSearchSheet: View {
 /// advanced-search counterpart to `FilterTokenBar`.
 struct AdvancedSearchBar: View {
     let query: SmartAlbumQuery
-    let matchCount: Int
     var onEdit: () -> Void
+    var onRemoveRule: (UUID) -> Void
     var onClear: () -> Void
 
     private var rules: [SmartAlbumRule] { query.validRules }
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                Text("\(matchCount) photos")
-                    .font(.footnote.weight(.medium))
-                    .foregroundStyle(.secondary)
+        HStack(spacing: 0) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    if rules.count > 1 {
+                        Text("Match \(query.matchMode.word)")
+                            .font(.footnote.weight(.medium))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 7)
+                            .background(Color(.tertiarySystemFill), in: Capsule())
+                            .foregroundStyle(.secondary)
+                            .frame(minHeight: 44)
+                    }
 
-                if rules.count > 1 {
-                    Text("Match \(query.matchMode.word)")
-                        .font(.caption.weight(.medium))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(Color(.tertiarySystemFill), in: Capsule())
-                        .foregroundStyle(.secondary)
+                    ForEach(rules) { rule in
+                        ActiveConditionChip(
+                            label: rule.compactDisplaySummary,
+                            removalAccessibilityLabel: "Remove condition: \(rule.displaySummary)",
+                            onRemove: { onRemoveRule(rule.id) }
+                        )
+                    }
                 }
+                .padding(.leading)
+                .padding(.trailing, 8)
+                .padding(.vertical, 6)
+            }
 
-                ForEach(rules) { rule in
-                    Text(rule.displaySummary)
-                        .font(.footnote)
-                        .lineLimit(1)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(Color(.secondarySystemBackground), in: Capsule())
-                }
-
+            HStack(spacing: 12) {
+                Divider()
+                    .frame(height: 24)
                 Button("Edit", action: onEdit)
                     .font(.footnote.weight(.medium))
+                    .frame(minHeight: 44)
                 Button("Clear", action: onClear)
                     .font(.footnote.weight(.medium))
+                    .frame(minHeight: 44)
             }
-            .padding(.horizontal)
-            .padding(.vertical, 6)
+            .padding(.trailing, 12)
+            .fixedSize(horizontal: true, vertical: false)
+            .layoutPriority(1)
+            .background(Color(.systemBackground))
         }
         .background(Color(.systemBackground))
     }

@@ -15,9 +15,16 @@ struct SettingsScreen: View {
     @AppStorage("display.showFocal") private var showsFocal = true
     @AppStorage("display.showMegapixels") private var showsMegapixels = false
     @AppStorage("display.showFileSize") private var showsFileSize = false
+    @AppStorage(SettingsKeys.showFileTypeBadge) private var showsFileTypeBadge = true
     @AppStorage("display.focalStyleEquivalent") private var showsEquivalentFocalLength = false
     @AppStorage(SettingsKeys.allowCellularIndexing) private var allowCellularIndexing = false
     @AppStorage(SettingsKeys.keepScreenAwake) private var keepScreenAwake = false
+    @AppStorage(SettingsKeys.onThisDayNotificationsEnabled) private var isOnThisDayReminderEnabled = false
+    /// Minutes since local midnight. The default matches the scheduler's, which
+    /// has to spell it out separately because `UserDefaults.integer` cannot tell
+    /// an unwritten key from midnight.
+    @AppStorage(SettingsKeys.onThisDayNotifyMinutes) private var onThisDayNotifyMinutes =
+        OnThisDayNotificationSchedule.defaultNotifyMinutes
 
     /// Rows whose EXIF read has finished — the numerator of "how far along is
     /// indexing", never the row count (see `MetadataStore.rowCount`).
@@ -29,11 +36,18 @@ struct SettingsScreen: View {
     @State private var isClearIndexConfirmationPresented = false
     @State private var isResetMappingsConfirmationPresented = false
     @State private var isImportPresented = false
+    @State private var notificationAuthorization: NotificationAuthorizationState = .notDetermined
+    /// Debounces the reminder-time picker: `.hourAndMinute` publishes on every
+    /// detent, and each refresh is seven queries plus seven scheduling calls, so
+    /// one scroll would otherwise trigger dozens of full reschedules.
+    @State private var notifyTimeRefreshTask: Task<Void, Never>?
 
     var body: some View {
         List {
             photoLibrarySection
+            notificationsSection
             displaySection
+            exportSection
             cameraDatabaseSection
             privacySection
         }
@@ -45,6 +59,20 @@ struct SettingsScreen: View {
         }
         .task(id: libraryModel?.isIndexing) {
             await refreshIndexInfo()
+        }
+        .task {
+            notificationAuthorization = await dependencies.onThisDayNotifications.authorizationState()
+        }
+        .onChange(of: isOnThisDayReminderEnabled) { _, isEnabled in
+            Task { await applyReminderToggle(isEnabled) }
+        }
+        .onChange(of: onThisDayNotifyMinutes) {
+            notifyTimeRefreshTask?.cancel()
+            notifyTimeRefreshTask = Task {
+                try? await Task.sleep(for: .milliseconds(500))
+                guard !Task.isCancelled else { return }
+                await dependencies.onThisDayNotifications.refresh()
+            }
         }
         .confirmationDialog(
             "Clear the local metadata index? Your photos are not affected.",
@@ -196,10 +224,69 @@ struct SettingsScreen: View {
     /// is doing, in words a photographer can act on.
     private static let explainer = "ShotDex is reading the camera, lens and exposure info from each photo and video. For items kept in iCloud it downloads only the small part of the file holding that info — nothing is saved to this iPhone. The app may feel slow until this finishes."
 
+    // MARK: Notifications
+
+    private var notificationsSection: some View {
+        Section {
+            Toggle("Daily On This Day Reminder", isOn: $isOnThisDayReminderEnabled)
+            if isOnThisDayReminderEnabled, notificationAuthorization.canNotify {
+                DatePicker(
+                    "Remind Me At",
+                    selection: notifyTimeBinding,
+                    displayedComponents: .hourAndMinute
+                )
+            }
+            if notificationAuthorization == .denied {
+                LabeledContent("Notifications") { Text("Denied") }
+                Button("Open Settings") { openAppSettings() }
+            }
+        } header: {
+            Text("Notifications")
+        } footer: {
+            Text("Once a day ShotDex tells you how many photos and videos you shot on that date in previous years, and how much space they take, so you can go clear out what you no longer want. Days with nothing to show are skipped.\n\nSizes come from the local index: while indexing is still running the total is reported as a minimum and grows as more files are read.\n\nReminders are scheduled a week at a time and refilled whenever you open ShotDex.")
+        }
+    }
+
+    /// The stored minutes-since-midnight as a `Date` for the picker. The
+    /// conversion lives in `OnThisDayNotificationSchedule` so it is unit-tested
+    /// rather than inlined here.
+    private var notifyTimeBinding: Binding<Date> {
+        Binding(
+            get: {
+                OnThisDayNotificationSchedule.date(
+                    fromMinutesSinceMidnight: onThisDayNotifyMinutes,
+                    on: .now,
+                    calendar: .current
+                ) ?? .now
+            },
+            set: { newValue in
+                onThisDayNotifyMinutes = OnThisDayNotificationSchedule.minutesSinceMidnight(
+                    from: newValue, calendar: .current
+                )
+            }
+        )
+    }
+
+    /// Turning the reminder on asks for permission first; a refusal (including a
+    /// denial made earlier in system Settings, where the request returns without
+    /// prompting) puts the toggle back rather than storing a preference that can
+    /// never fire.
+    private func applyReminderToggle(_ isEnabled: Bool) async {
+        let service = dependencies.onThisDayNotifications
+        if isEnabled {
+            let granted = await service.enable()
+            notificationAuthorization = await service.authorizationState()
+            if !granted { isOnThisDayReminderEnabled = false }
+        } else {
+            await service.disable()
+        }
+    }
+
     // MARK: Display
 
     private var displaySection: some View {
         Section {
+            Toggle("File Type", isOn: $showsFileTypeBadge)
             Toggle("ISO", isOn: $showsISO)
             Toggle("Aperture", isOn: $showsAperture)
             Toggle("Shutter Speed", isOn: $showsShutter)
@@ -213,7 +300,26 @@ struct SettingsScreen: View {
         } header: {
             Text("Thumbnail Metadata")
         } footer: {
-            Text("Pinch the photo grid to change how many columns are shown.\n\nFile Size is recorded while indexing — photos indexed before this option existed fill it in automatically the next time indexing runs.")
+            Text("File Type Badge shows RAW, JPG, HEIC or the video format in the top-left corner of each thumbnail.\n\nPinch the photo grid to change how many columns are shown.\n\nFile Size is recorded while indexing — photos indexed before this option existed fill it in automatically the next time indexing runs.")
+        }
+    }
+
+    // MARK: Export
+
+    private var exportSection: some View {
+        Section {
+            NavigationLink {
+                CompressionPresetsScreen()
+            } label: {
+                LabeledContent(
+                    "Compression Presets",
+                    value: "\(dependencies.compressionPresets.customPresets.count) custom"
+                )
+            }
+        } header: {
+            Text("Export")
+        } footer: {
+            Text("Built-in presets keep the original proportions at Original, 4K, 2048 px or 1080 px. Add named presets for apps that require exact dimensions.")
         }
     }
 

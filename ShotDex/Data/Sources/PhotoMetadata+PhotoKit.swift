@@ -37,6 +37,8 @@ extension LibraryGridItem {
         self.init(
             assetId: asset.localIdentifier,
             creationDate: asset.creationDate.map { Int($0.timeIntervalSince1970) },
+            mediaType: asset.mediaType.rawValue,
+            originalFilename: nil,
             iso: nil,
             aperture: nil,
             shutterSpeedDisplay: nil,

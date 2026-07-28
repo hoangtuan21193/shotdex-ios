@@ -247,6 +247,7 @@ final class AlbumDetailModel: PhotoBrowsingSource {
     private let photoLibrary: PhotoLibraryService
     private let indexPipeline: IndexPipeline
     private let fetchResult: PHFetchResult<PHAsset>
+    let sourceAlbum: PHAssetCollection?
 
     private(set) var photos: [PhotoMetadata] = []
     private(set) var assetsById: [String: PHAsset] = [:]
@@ -274,8 +275,13 @@ final class AlbumDetailModel: PhotoBrowsingSource {
         options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         switch album.kind {
         case .allPhotos:
+            self.sourceAlbum = nil
             self.fetchResult = PHAsset.fetchAssets(with: options)
         case .collection(let collection):
+            self.sourceAlbum = collection.assetCollectionType == .album
+                && collection.canPerform(.addContent)
+                ? collection
+                : nil
             self.fetchResult = PHAsset.fetchAssets(in: collection, options: options)
         }
     }

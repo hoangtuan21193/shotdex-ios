@@ -60,6 +60,16 @@ final class AppNavigation {
     /// iOS 26 `.search`-role tab (SwiftUI suppresses it).
     private(set) var advancedSearchToken = 0
 
+    /// Bumped when a tapped "On This Day" reminder should open that day.
+    /// Monotonic for reliable `.onChange`. Routed through the Albums tab's
+    /// navigation path (that is where the screen lives) rather than presented,
+    /// for the same reason `openAdvancedSearch` is routed through Library.
+    private(set) var onThisDayToken = 0
+
+    /// The day the pending On This Day push should land on; consumed by the
+    /// root tab view when it sets the Albums path.
+    var pendingOnThisDayDate: Date?
+
     func resetLibraryToRoot() {
         libraryRetapToken &+= 1
     }
@@ -68,6 +78,13 @@ final class AppNavigation {
     func openAdvancedSearch() {
         advancedSearchToken &+= 1
         selectedTab = .library
+    }
+
+    /// Switch to Albums and push On This Day for `date`.
+    func openOnThisDay(date: Date) {
+        pendingOnThisDayDate = date
+        onThisDayToken &+= 1
+        selectedTab = .albums
     }
 
     func openLibrary(with criteria: FilterCriteria) {
