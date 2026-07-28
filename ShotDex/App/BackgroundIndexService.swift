@@ -64,12 +64,22 @@ final class BackgroundIndexService {
                 let summary = try? await pipeline.run(allowNetwork: allowNetwork)
                 // "Finished" means the library is actually read, not merely that
                 // this slot ran to its end. A run that walks everything and
-                // leaves 40k rows `pendingICloud` (iCloud slow or wedged) is not
-                // done, and without rescheduling here it would never be picked up
-                // again in the background — the old check only looked at
-                // `wasCancelled`, so exactly that case silently stopped.
+                // leaves 40k rows unread (iCloud slow or wedged, or a run stopped
+                // before it reached them) is not done, and without rescheduling
+                // here it would never be picked up again in the background — the
+                // old check only looked at `wasCancelled`, so exactly that case
+                // silently stopped.
+                //
+                // `unfinishedCount` rather than the iCloud-only count: rows left
+                // at `pendingRead` are just as unread, and counting only the
+                // iCloud tail reported "finished" with tens of thousands of
+                // placeholders still in the table.
+                let unfinished = (try? metadataStore.unfinishedCount()) ?? 0
                 let pending = (try? metadataStore.pendingICloudReadCount()) ?? 0
-                let finished = summary?.wasCancelled == false && pending == 0
+                // `didNotStart`: the foreground owns the pipeline right now. That
+                // is not a finished library — this slot simply did nothing.
+                let ranToEnd = summary?.wasCancelled == false && summary?.didNotStart == false
+                let finished = ranToEnd && unfinished == 0
                 if !finished {
                     Self.schedule(requiresNetwork: pending > 0)
                 }
@@ -98,12 +108,13 @@ final class BackgroundIndexService {
         let pipeline = self.pipeline
         let metadataStore = self.metadataStore
         Task {
-            // Rows still waiting on iCloud count as unfinished work even when no
+            // Rows whose read never finished count as unfinished work even when no
             // cursor is left behind: a completed-but-incomplete run clears the
-            // cursor, and keying only off that meant the long iCloud tail never
+            // cursor, and keying only off that meant the long unread tail never
             // got a background continuation.
+            let unfinished = (try? metadataStore.unfinishedCount()) ?? 0
             let pending = (try? metadataStore.pendingICloudReadCount()) ?? 0
-            if await pipeline.isActive || (try? metadataStore.indexState())?.cursorAssetId != nil || pending > 0 {
+            if await pipeline.isActive || (try? metadataStore.indexState())?.cursorAssetId != nil || unfinished > 0 {
                 Self.schedule(requiresNetwork: pending > 0)
             }
         }

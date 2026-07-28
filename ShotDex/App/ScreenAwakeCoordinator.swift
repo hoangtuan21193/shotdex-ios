@@ -136,7 +136,7 @@ private struct DimOverlayView: View {
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            DimmedIndexProgress(
+            DimIndexProgressView(
                 progress: library?.indexProgress,
                 throughput: library?.indexThroughput,
                 networkStatus: library?.indexNetworkStatus,
@@ -148,77 +148,6 @@ private struct DimOverlayView: View {
             DragGesture(minimumDistance: 0)
                 .onChanged { _ in onWake() }
         )
-    }
-}
-
-/// Faint, large index readout shown on the dim overlay so the user can still
-/// read how far indexing has got. Drifts slowly to avoid OLED burn-in.
-private struct DimmedIndexProgress: View {
-    let progress: IndexProgress?
-    let throughput: IndexThroughput?
-    let networkStatus: IndexNetworkStatus?
-    let diagnostics: IndexDiagnostics?
-
-    /// Slow vertical drift so static text never sits on the same OLED pixels.
-    /// Each step glides over ~the full interval, so motion is ~1–2 pt/s —
-    /// below the perception threshold but enough travel to avoid burn-in.
-    private static let driftPositions: [CGFloat] = [-16, 0, 16, 0]
-    private static let driftInterval: TimeInterval = 20
-    @State private var driftIndex = 0
-    private let driftTimer = Timer.publish(every: driftInterval, on: .main, in: .common).autoconnect()
-
-    var body: some View {
-        VStack(spacing: 16) {
-            Text("Indexing")
-                .font(.title.weight(.semibold))
-            if let progress {
-                ProgressView(value: progress.fraction)
-                    .frame(maxWidth: 260)
-                Text("\(progress.processed)/\(progress.total) · \(progress.percent)%")
-                    .font(.title3.monospacedDigit())
-            } else {
-                ProgressView()
-                    .controlSize(.large)
-            }
-            if let throughput {
-                VStack(spacing: 6) {
-                    Text(throughput.rateText)
-                        .font(.headline.monospacedDigit())
-                    if let remaining = throughput.remainingText {
-                        Text(remaining)
-                            .font(.headline)
-                    }
-                }
-                .padding(.top, 4)
-            }
-            // Always-on network readout — speed and downloaded total show even
-            // at zero (`Wi-Fi · 0 KB/s · 0 KB`) so the state is legible at a
-            // glance without waiting for traffic to start.
-            if let networkStatus {
-                Text(networkStatus.detailedLine)
-                    .font(.headline.monospacedDigit())
-                    .padding(.top, 4)
-            }
-            if let diagnostics {
-                VStack(spacing: 6) {
-                    Text(diagnostics.thermalLine)
-                    Text(diagnostics.iCloudLine)
-                }
-                .font(.subheadline.monospacedDigit())
-            }
-            Text("When originals live in iCloud, ShotDex streams only the first few hundred kilobytes of each photo to read its camera metadata — nothing is stored on this device.")
-                .font(.footnote)
-                .padding(.top, 8)
-                .padding(.horizontal, 40)
-        }
-        .multilineTextAlignment(.center)
-        .tint(.white.opacity(0.6))
-        .foregroundStyle(.white.opacity(0.6))
-        .offset(y: Self.driftPositions[driftIndex])
-        .animation(.easeInOut(duration: Self.driftInterval - 1), value: driftIndex)
-        .onReceive(driftTimer) { _ in
-            driftIndex = (driftIndex + 1) % Self.driftPositions.count
-        }
     }
 }
 

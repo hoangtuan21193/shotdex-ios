@@ -57,7 +57,7 @@ struct DatabaseTests {
     @Test func migrationCreatesSchema() throws {
         let database = try AppDatabase.makeEmpty()
         let store = MetadataStore(database: database)
-        #expect(try store.indexedCount() == 0)
+        #expect(try store.rowCount() == 0)
         #expect(try store.indexState() == .initial)
     }
 
@@ -66,12 +66,12 @@ struct DatabaseTests {
         let store = MetadataStore(database: database)
         let records = (1...5).map { makeRecord(assetId: "a\($0)") }
         try store.saveBatch(records, cursorAssetId: "a5")
-        #expect(try store.indexedCount() == 5)
+        #expect(try store.rowCount() == 5)
         #expect(try store.indexState().cursorAssetId == "a5")
 
         // Upsert same batch — no duplicates.
         try store.saveBatch(records, cursorAssetId: "a5")
-        #expect(try store.indexedCount() == 5)
+        #expect(try store.rowCount() == 5)
     }
 
     @Test func deleteAssetsAndClearAll() throws {
@@ -79,9 +79,9 @@ struct DatabaseTests {
         let store = MetadataStore(database: database)
         try store.saveBatch((1...3).map { makeRecord(assetId: "a\($0)") }, cursorAssetId: nil)
         try store.deleteAssets(ids: ["a1", "a2"])
-        #expect(try store.indexedCount() == 1)
+        #expect(try store.rowCount() == 1)
         try store.deleteAll()
-        #expect(try store.indexedCount() == 0)
+        #expect(try store.rowCount() == 0)
         #expect(try store.indexState().cursorAssetId == nil)
     }
 
@@ -225,6 +225,46 @@ struct DatabaseTests {
             exifStatus: ExifStatus.pendingICloud.rawValue
         ))
         #expect(Set(try store.retryableAssetIds()) == ["a2", "a3"])
+    }
+
+    /// The four counts must not be confused for one another: Settings showed the
+    /// row count as "Indexed Photos" and so always read as complete, and
+    /// auto-retry keyed off the iCloud count and so ignored `pendingRead` rows
+    /// entirely.
+    @Test func countsSeparateReadRowsFromUnreadOnes() throws {
+        let database = try AppDatabase.makeEmpty()
+        let store = MetadataStore(database: database)
+        try store.saveBatch([
+            makeRecord(assetId: "a1", status: .indexed),
+            makeRecord(assetId: "a2", status: .noExif),
+            makeRecord(assetId: "a3", status: .pendingICloud),
+            makeRecord(assetId: "a4", status: .error),
+            makeRecord(assetId: "a5", status: .pendingRead),
+        ], cursorAssetId: nil)
+
+        #expect(try store.rowCount() == 5)
+        #expect(try store.completedCount() == 2)
+        // Everything not read: the iCloud tail, the failures, and the
+        // placeholders a stopped run never reached.
+        #expect(try store.unfinishedCount() == 3)
+        // What the targeted retry can actually re-read — short of
+        // `unfinishedCount`, which is what tells the model to run a full
+        // incremental pass instead.
+        #expect(try store.retryableCount() == 2)
+    }
+
+    @Test func unfinishedCountIncludesRowsFromAnOlderIndexerBuild() throws {
+        let database = try AppDatabase.makeEmpty()
+        let store = MetadataStore(database: database)
+        var stale = makeRecord(assetId: "old", status: .indexed)
+        stale.indexerVersion = PhotoMetadata.currentIndexerVersion - 1
+        try store.saveBatch([stale, makeRecord(assetId: "fresh", status: .indexed)], cursorAssetId: nil)
+
+        #expect(try store.completedCount() == 2)
+        // Read, but missing fields a later build records — still work to do,
+        // and `unfinishedAssetStates` already treats it that way.
+        #expect(try store.unfinishedCount() == 1)
+        #expect(try store.retryableCount() == 0)
     }
 
     @Test func usageIncludesUnknownBucketWithFullScopePercentages() throws {

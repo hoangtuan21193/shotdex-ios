@@ -244,7 +244,7 @@ struct LibraryScreen: View {
         // buttons). Full-width, single GlassPanel material.
         .overlay(alignment: .top) {
             if isIndexPanelExpanded,
-               model.isIndexing || model.isIndexStreamingPaused || model.indexAutoRetryDate != nil,
+               model.isIndexing || model.isIndexStreamingPaused || model.indexICloudRetryDate != nil,
                !isSelecting {
                 indexDetailPanel(model)
                     .padding(.horizontal, 12)
@@ -254,7 +254,7 @@ struct LibraryScreen: View {
         }
         // Reset the expanded state once no index status is active, so a later
         // run doesn't reopen the dropdown.
-        .onChange(of: model.isIndexing || model.isIndexStreamingPaused || model.indexAutoRetryDate != nil) { _, active in
+        .onChange(of: model.isIndexing || model.isIndexStreamingPaused || model.indexICloudRetryDate != nil) { _, active in
             if !active { isIndexPanelExpanded = false }
         }
     }
@@ -379,7 +379,7 @@ struct LibraryScreen: View {
 
     @ViewBuilder
     private func emptyState(_ model: LibraryModel) -> some View {
-        if let retryAt = model.indexAutoRetryDate {
+        if let retryAt = model.indexICloudRetryDate {
             VStack(spacing: 12) {
                 Image(systemName: "icloud.slash")
                     .font(.largeTitle)
@@ -394,7 +394,7 @@ struct LibraryScreen: View {
                 }
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-                Text("\(model.pendingICloudCount) photos are waiting. Indexing keeps retrying on its own — cellular or a different network usually helps too.")
+                Text("\(model.pendingICloudCount) items are waiting. Indexing keeps retrying on its own — cellular or a different network usually helps too.")
                     .font(.footnote)
                     .foregroundStyle(.tertiary)
                     .multilineTextAlignment(.center)
@@ -415,20 +415,37 @@ struct LibraryScreen: View {
                 if let progress = model.indexProgress, progress.total > 0 {
                     ProgressView(value: progress.fraction)
                         .frame(maxWidth: 220)
-                    Text("Indexing \(progress.processed) of \(progress.total) photos (\(progress.percent)%)")
+                    Text("Reading photo and video info · \(progress.percent)%")
                         .font(.subheadline.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                    Text("\(progress.processed.formatted()) of \(progress.total.formatted()) photos and videos")
+                        .font(.footnote.monospacedDigit())
                         .foregroundStyle(.secondary)
                 } else {
                     ProgressView()
-                    Text("Indexing your library…")
+                    Text("Reading photo and video info…")
+                        .foregroundStyle(.secondary)
+                }
+                if let throughput = model.indexThroughput {
+                    Text(throughput.summaryLine)
+                        .font(.footnote.monospacedDigit())
                         .foregroundStyle(.secondary)
                 }
                 if let network = model.indexNetworkStatus {
                     Text(network.displayLine)
                         .font(.footnote.monospacedDigit())
                         .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
                 }
-                Text("Only metadata is read — full photos are never downloaded, so memory use stays low. The app may feel slow until indexing finishes.")
+                if let diagnostics = model.indexDiagnostics {
+                    ForEach(diagnostics.advisories, id: \.self) { advisory in
+                        Label(advisory, systemImage: "exclamationmark.triangle")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                }
+                Text("ShotDex is reading the camera, lens and exposure info from each photo and video. For items kept in iCloud it downloads only the small part of the file holding that info — nothing is saved to this iPhone. The app may feel slow until this finishes.")
                     .font(.footnote)
                     .foregroundStyle(.tertiary)
                     .multilineTextAlignment(.center)
@@ -441,7 +458,7 @@ struct LibraryScreen: View {
                     .foregroundStyle(.secondary)
                 Text("Indexing paused — waiting for Wi-Fi")
                     .foregroundStyle(.secondary)
-                Text("\(model.pendingICloudCount) photos in iCloud will finish indexing once you're on Wi-Fi. Local metadata was read without using cellular data.")
+                Text("\(model.pendingICloudCount) items in iCloud will finish indexing once you're on Wi-Fi. Local metadata was read without using cellular data.")
                     .font(.footnote)
                     .foregroundStyle(.tertiary)
                     .multilineTextAlignment(.center)
@@ -536,7 +553,7 @@ struct LibraryScreen: View {
     private func indexDetailPanel(_ model: LibraryModel) -> some View {
         if model.isIndexing {
             expandedIndexCard(model)
-        } else if let retryAt = model.indexAutoRetryDate {
+        } else if let retryAt = model.indexICloudRetryDate {
             // Between runs: iCloud couldn't serve, the next automatic
             // attempt is counting down. Indexing never sits dead.
             autoRetryCard(model, retryAt: retryAt)
@@ -562,7 +579,7 @@ struct LibraryScreen: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 if model.pendingICloudCount > 0 {
-                    Text("\(model.pendingICloudCount) photos still waiting for iCloud.")
+                    Text("\(model.pendingICloudCount) items still waiting for iCloud.")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -596,7 +613,7 @@ struct LibraryScreen: View {
                 )
                 .font(.caption.weight(.medium))
                 if model.pendingICloudCount > 0 {
-                    Text("\(model.pendingICloudCount) photos in iCloud left to read.")
+                    Text("\(model.pendingICloudCount) items in iCloud left to read.")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -613,19 +630,25 @@ struct LibraryScreen: View {
         .accessibilityLabel("Indexing paused, waiting for Wi-Fi")
     }
 
-    /// Expanded state (on tap): full progress, network status, the files
-    /// being read, the metadata explainer, and Cancel. Anchored top-right,
-    /// width-capped; tapping it or the grid collapses back to the token.
+    /// Expanded state (on tap): progress in words and photos, how long it has
+    /// left, what it is downloading, anything holding it back, the explainer,
+    /// and Cancel. Anchored top-right, width-capped; tapping it or the grid
+    /// collapses back to the token.
+    ///
+    /// "Indexing" stays the feature's name in Settings and on the toolbar
+    /// token; the live cards say what it *does* instead, and every number is
+    /// labelled — the old card read `Thermal: Fair · 6 readers` and
+    /// `iCloud: 4 in flight · 132 requested`, which no photographer can act on.
     private func expandedIndexCard(_ model: LibraryModel) -> some View {
         let progress = model.indexProgress
         return GlassPanel {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 12) {
                     if let progress {
-                        Text("Indexing \(progress.processed)/\(progress.total) (\(progress.percent)%)")
+                        Text("Reading photo and video info · \(progress.percent)%")
                             .font(.caption.weight(.medium).monospacedDigit())
                     } else {
-                        Text("Indexing…")
+                        Text("Reading photo and video info…")
                             .font(.caption.weight(.medium))
                     }
                     Spacer()
@@ -634,25 +657,34 @@ struct LibraryScreen: View {
                         .foregroundStyle(.secondary)
                 }
                 ProgressView(value: progress?.fraction ?? 0)
-                if let throughput = model.indexThroughput {
-                    Text(throughput.remainingText.map { "\(throughput.rateText) · \($0)" } ?? throughput.rateText)
+                if let progress, progress.total > 0 {
+                    Text("\(progress.processed.formatted()) of \(progress.total.formatted()) photos and videos")
                         .font(.caption2.monospacedDigit())
                         .foregroundStyle(.secondary)
+                }
+                if let throughput = model.indexThroughput {
+                    Text(throughput.summaryLine)
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 if let network = model.indexNetworkStatus {
                     Text(network.displayLine)
                         .font(.caption2.monospacedDigit())
                         .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+                // Only surfaces when something is actually holding the run
+                // back (warm device, Low Power Mode, iCloud not answering).
                 if let diagnostics = model.indexDiagnostics {
-                    Text(diagnostics.thermalLine)
-                        .font(.caption2.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                    Text(diagnostics.iCloudLine)
-                        .font(.caption2.monospacedDigit())
-                        .foregroundStyle(.secondary)
+                    ForEach(diagnostics.advisories, id: \.self) { advisory in
+                        Label(advisory, systemImage: "exclamationmark.triangle")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
-                Text("Only metadata is read — full photos are never downloaded. The app may feel slow until indexing finishes.")
+                Text("ShotDex is reading the camera, lens and exposure info from each photo and video. For items kept in iCloud it downloads only the small part of the file holding that info — nothing is saved to this iPhone. The app may feel slow until this finishes.")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -723,7 +755,7 @@ struct LibraryScreen: View {
         }
         ToolbarItem(placement: .topBarLeading) {
             if let model,
-               model.isIndexing || model.isIndexStreamingPaused || model.indexAutoRetryDate != nil,
+               model.isIndexing || model.isIndexStreamingPaused || model.indexICloudRetryDate != nil,
                !isSelecting {
                 indexStatusButton(model)
             }

@@ -24,6 +24,13 @@ struct IndexRunSummary: Equatable, Sendable {
     var failed: Int
     var deleted: Int
     var wasCancelled: Bool
+    /// The actor refused this run because another one already owns it — the
+    /// foreground/background collision (`BGProcessingTask` drives the pipeline
+    /// directly, since a background launch has no UI to drive it through).
+    /// Without this flag the refusal is indistinguishable from "ran, found
+    /// nothing": callers concluded the library was done and stopped, while tens
+    /// of thousands of rows were still unread.
+    var didNotStart = false
 }
 
 /// Background metadata indexer, two phases per run:
@@ -98,6 +105,26 @@ actor IndexPipeline {
     /// Fast-pass rows per transaction; no EXIF is read, so batches can be
     /// much larger than EXIF batches.
     static let fastPassBatchSize = 1000
+
+    /// Above this many unfinished rows the persistent-change fast path stops
+    /// being fast: it has to fetch and sort every unfinished id through
+    /// PhotoKit, which cost **69.7 s** for 42.5k rows on the measured library,
+    /// against 6.8 s for the full walk's straight scan of 55k assets. Past the
+    /// threshold the walk wins outright, so hand the run over to it.
+    static let maxUnfinishedForChangeHistory = 5_000
+
+    /// While planning takes this long or more, the run is doing invisible work.
+    /// Above this many candidates the fast path signals work *before* the
+    /// PhotoKit fetch, so the indicator appears instead of the app looking dead
+    /// (measured: 70 s of silent planning with 42.5k unfinished rows).
+    static let planningWorkSignalThreshold = 200
+
+    /// Returned when the actor refuses a run because another one owns it. Zero
+    /// counts, `didNotStart` set — never mistakable for a completed no-op run.
+    static let notStartedSummary = IndexRunSummary(
+        indexed: 0, skipped: 0, pendingICloud: 0, failed: 0, deleted: 0,
+        wasCancelled: false, didNotStart: true
+    )
 
     private static let logger = Logger(subsystem: "com.hoangtuan.shotdex", category: "index")
     private static let signposter = OSSignposter(subsystem: "com.hoangtuan.shotdex", category: "index")
@@ -339,7 +366,8 @@ actor IndexPipeline {
         onProgress: @escaping @Sendable (IndexProgress) -> Void = { _ in }
     ) async throws -> IndexRunSummary {
         guard !isRunning else {
-            return IndexRunSummary(indexed: 0, skipped: 0, pendingICloud: 0, failed: 0, deleted: 0, wasCancelled: false)
+            IndexTrafficMonitor.health("run refused: another run owns the pipeline")
+            return Self.notStartedSummary
         }
         isRunning = true
         isCancelled = false
@@ -534,7 +562,8 @@ actor IndexPipeline {
         onProgress: @escaping @Sendable (IndexProgress) -> Void = { _ in }
     ) async throws -> IndexRunSummary {
         guard !isRunning else {
-            return IndexRunSummary(indexed: 0, skipped: 0, pendingICloud: 0, failed: 0, deleted: 0, wasCancelled: false)
+            IndexTrafficMonitor.health("reindexIncomplete refused: another run owns the pipeline")
+            return Self.notStartedSummary
         }
         isRunning = true
         isCancelled = false
@@ -637,10 +666,32 @@ actor IndexPipeline {
         // `pendingRead` placeholders, `error` retries, and `pendingICloud` once
         // the network is allowed again.
         let unfinished = try metadataStore.unfinishedAssetStates()
+
+        // A large unfinished backlog is the case this path handles *worse* than
+        // the walk it exists to avoid — fetching and sorting tens of thousands
+        // of ids through PhotoKit takes over a minute. Hand it back.
+        if unfinished.count > Self.maxUnfinishedForChangeHistory {
+            IndexTrafficMonitor.health(
+                "persistent changes: \(unfinished.count) unfinished rows exceeds \(Self.maxUnfinishedForChangeHistory) — full walk instead"
+            )
+            return nil
+        }
+
         var candidateIds = Set(unfinished.keys)
         candidateIds.formUnion(changes.inserted)
         candidateIds.formUnion(changes.updated)
         candidateIds.subtract(changes.deleted)
+
+        // Planning a big candidate set costs seconds of PhotoKit fetch + sort
+        // before the first read starts. Claim the indicator now, so that stretch
+        // reads as "working" rather than as an app that ignored the launch. Only
+        // when the set genuinely contains work: `pendingICloud` rows with the
+        // network disallowed all skip, and a run that ends up doing nothing must
+        // leave the indicator off.
+        if candidateIds.count >= Self.planningWorkSignalThreshold,
+           allowNetwork() || unfinished.values.contains(where: { ExifStatus(rawValue: $0.exifStatus) != .pendingICloud }) {
+            onWorkFound()
+        }
 
         // Assets that left the library: drop only the ids we actually hold, so
         // `summary.deleted` stays an accurate count of rows removed.
@@ -701,8 +752,10 @@ actor IndexPipeline {
         }
 
         guard !work.isEmpty || summary.deleted > 0 else {
-            // Nothing to do. Advance the token so the next run starts here, and
-            // never signal work — the indexing indicator stays off.
+            // Nothing to do. Advance the token so the next run starts here. The
+            // indicator stays off unless the planning-threshold signal above
+            // already claimed it — a set of 200+ candidates that all skip, which
+            // needs the honest "it was working" more than it needs silence.
             try persistCompletion(token: tokenAtStart)
             IndexTrafficMonitor.health(
                 "persistent changes: no work — \(changes.inserted.count) inserted, \(changes.updated.count) updated, \(changes.deleted.count) deleted, \(unfinished.count) unfinished, \(summary.skipped) skipped in \(Self.milliseconds(clock.now - start))ms"

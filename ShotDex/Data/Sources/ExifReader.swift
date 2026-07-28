@@ -73,13 +73,41 @@ struct ExifReader: Sendable {
     private static let logger = Logger(subsystem: "com.hoangtuan.shotdex", category: "exif")
 
     /// Caps concurrent iCloud streaming reads below the pipeline's total
-    /// fan-out (12 readers). That many parallel network streams divide the bandwidth
-    /// until individual reads starve through their 8 s stall window — false
-    /// stalls that feed (and eventually trip) the circuit breaker even on a
-    /// healthy link. Four streams keep the pipe full without starving any one
-    /// read, and — as important — halve the request+cancel churn against
-    /// cloudphotod: sustained bursts of cancelled downloads wedge the daemon
-    /// into serving zero bytes until it gets a rest (observed on device).
+    /// fan-out (12 readers), so the queued readers wait on a permit instead of
+    /// dividing the link between a dozen crawling downloads.
+    ///
+    /// Was 4, when a read that made no progress for 8 s counted as a stall: a
+    /// dozen parallel streams starved each other into false stalls that tripped
+    /// the circuit breaker on a healthy link, and the resulting request+cancel
+    /// churn wedged cloudphotod into serving zero bytes. The watchdog now
+    /// measures download progress rather than chunk delivery, so slow reads no
+    /// longer register as stalls and that failure mode is gone — measured on
+    /// device at 4 permits: 200 assets/batch with 0 stalls and 0 breaker skips.
+    ///
+    /// Stays 4 after measuring 8 on device, even though 4 looked permit-bound:
+    /// every 10 s health sample read `4 in flight`, and 4 × ~520 KB/s per
+    /// stream came to exactly the 2.0 MB/s the run sustained, while the same
+    /// Wi-Fi was seen bursting to 6.4 MB/s. Those bursts turned out to be chunk
+    /// arrivals, not headroom — at 8 permits the *byte* rate never rose, so the
+    /// same pipe was split into twice as many streams running at half speed,
+    /// and reads started coming back `pendingICloud` instead of read:
+    ///
+    /// | permits | batch     | resolved | KB/s | ms/stream |
+    /// |---------|-----------|----------|------|-----------|
+    /// | 4       | 127 s     | 200/200  | 2046 | 1251      |
+    /// | 4       | 128 s     | 200/200  | 1595 | 1277      |
+    /// | 8       | 118 s     | 145/200  | 1255 | 2331      |
+    /// | 8       |  95 s     | 163/200  | 2227 | 1885      |
+    /// | 8       | 172 s     | 117/200  |  695 | 3360      |
+    ///
+    /// Effective indexed rate fell (1.56/s → 1.44/s and dropping), and it kept
+    /// degrading: after the third batch, requests climbed 658 → 839 while bytes
+    /// moved at ~340 KB/s — cloudphotod backing off under the wider fan-out.
+    /// No stalls or breaker skips registered, so the watchdog cannot see this
+    /// happen; the only signal is the read coming back unread. The failed reads
+    /// also re-download from scratch later, so the wider fan-out costs bytes on
+    /// top of time. Raise this only alongside a measured byte-rate improvement.
+    ///
     /// Static so the cap holds process-wide, covering the pipeline and the
     /// detail viewer's `indexSingle` alike. Local reads are not limited.
     private static let networkStreamLimiter = AsyncLimiter(limit: 4)

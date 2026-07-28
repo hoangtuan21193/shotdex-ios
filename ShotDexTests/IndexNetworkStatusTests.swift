@@ -13,7 +13,7 @@ struct IndexNetworkStatusTests {
             isNetworkAllowed: false
         )
         #expect(status.isStreamingPaused)
-        #expect(status.displayLine == "Cellular · Paused — Wi-Fi needed")
+        #expect(status.displayLine == "Paused — waiting for Wi-Fi")
     }
 
     @Test func cellularWithOptInIsNotPaused() {
@@ -36,7 +36,8 @@ struct IndexNetworkStatusTests {
         )
         // Only a metered cellular path pauses; Wi-Fi never does.
         #expect(!status.isStreamingPaused)
-        #expect(status.displayLine == "Wi-Fi")
+        // Nothing downloaded yet — said in words, not as a bare "0 KB".
+        #expect(status.displayLine == "Wi-Fi · nothing downloaded yet")
     }
 
     @Test func wifiShowsSpeedAndTotalWhenStreaming() {
@@ -47,10 +48,26 @@ struct IndexNetworkStatusTests {
             isNetworkAllowed: true
         )
         #expect(!status.isStreamingPaused)
-        // Connection name, then speed, then total — separated by " · ".
+        // Connection name, then speed, then a labelled total — " · " apart.
         let parts = status.displayLine.components(separatedBy: " · ")
         #expect(parts.count == 3)
         #expect(parts.first == "Wi-Fi")
+        #expect(parts.last?.hasSuffix("downloaded from iCloud") == true)
+    }
+
+    @Test func detailedLineKeepsZerosForTheDimOverlay() {
+        let status = IndexNetworkStatus(
+            connection: .wifi,
+            bytesDownloaded: 0,
+            bytesPerSecond: nil,
+            isNetworkAllowed: true
+        )
+        // The dim overlay wants a stable readout, so zeros stay numeric here
+        // even though `displayLine` spells them out.
+        let parts = status.detailedLine.components(separatedBy: " · ")
+        #expect(parts.count == 3)
+        #expect(parts[1].hasSuffix("/s"))
+        #expect(parts[2].hasSuffix("downloaded from iCloud"))
     }
 }
 
@@ -216,10 +233,11 @@ struct IndexDiagnosticsTests {
 
     private func make(
         started: Int = 132, inFlight: Int = 4, stalls: Int = 0,
-        cooldown: Duration? = nil, isLowPowerMode: Bool = false
+        cooldown: Duration? = nil, isLowPowerMode: Bool = false,
+        thermalState: ProcessInfo.ThermalState = .fair
     ) -> IndexDiagnostics {
         IndexDiagnostics(
-            thermalState: .fair,
+            thermalState: thermalState,
             readConcurrency: 6,
             isLowPowerMode: isLowPowerMode,
             networkReadsStarted: started,
@@ -247,5 +265,67 @@ struct IndexDiagnosticsTests {
 
     @Test func iCloudLineShowsBreakerCooldown() {
         #expect(make(cooldown: .seconds(42)).iCloudLine == "iCloud paused · retry in 42s")
+    }
+
+    @Test func healthyRunHasNoAdvisories() {
+        // Nominal and fair are the normal case — nothing to explain, so the
+        // UI shows no warning line at all.
+        #expect(make().advisories.isEmpty)
+        #expect(make(thermalState: .nominal).advisories.isEmpty)
+        // Stalls alone are internal detail; only the tripped breaker is news.
+        #expect(make(stalls: 12).advisories.isEmpty)
+    }
+
+    @Test func advisoriesExplainWhatSlowsTheRun() {
+        #expect(make(cooldown: .seconds(42)).advisories == [
+            "iCloud isn't responding — trying again in 42s"
+        ])
+        #expect(make(thermalState: .serious).advisories == [
+            "Your iPhone is warm — indexing slowed down to cool it"
+        ])
+        #expect(make(thermalState: .critical).advisories == [
+            "Indexing paused until your iPhone cools down"
+        ])
+        #expect(make(isLowPowerMode: true).advisories == [
+            "Low Power Mode is slowing indexing down"
+        ])
+    }
+
+    @Test func advisoriesStackWorstFirst() {
+        let lines = make(
+            cooldown: .seconds(30), isLowPowerMode: true, thermalState: .serious
+        ).advisories
+        #expect(lines.count == 3)
+        #expect(lines[0].hasPrefix("iCloud isn't responding"))
+        #expect(lines[1].hasPrefix("Your iPhone is warm"))
+        #expect(lines[2].hasPrefix("Low Power Mode"))
+    }
+}
+
+/// Plain-language speed / time-left lines.
+struct IndexThroughputTests {
+
+    @Test func rateTextGroupsThousands() {
+        #expect(IndexThroughput(photosPerMinute: 1548.4, remaining: nil).rateText
+            == "1,548 photos and videos per minute")
+    }
+
+    @Test func remainingTextReadsAsAnEstimate() {
+        func text(_ seconds: Int) -> String? {
+            IndexThroughput(photosPerMinute: 100, remaining: .seconds(seconds)).remainingText
+        }
+        #expect(text(30) == "Less than a minute left")
+        #expect(text(45 * 60) == "About 45 min left")
+        #expect(text(2 * 3600) == "About 2 hours left")
+        #expect(text(3600) == "About 1 hour left")
+        #expect(text(2 * 3600 + 15 * 60) == "About 2 hr 15 min left")
+    }
+
+    @Test func summaryLinePutsTimeLeftFirst() {
+        let throughput = IndexThroughput(photosPerMinute: 96, remaining: .seconds(600))
+        #expect(throughput.summaryLine == "About 10 min left · 96 photos and videos per minute")
+        // No estimate yet — the rate stands alone rather than showing a gap.
+        #expect(IndexThroughput(photosPerMinute: 96, remaining: nil).summaryLine
+            == "96 photos and videos per minute")
     }
 }

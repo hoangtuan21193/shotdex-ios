@@ -151,7 +151,13 @@ struct MetadataStore: Sendable {
         }
     }
 
-    func indexedCount() throws -> Int {
+    /// Every row the index holds, **including** rows whose EXIF read hasn't
+    /// happened yet: the fast pass writes a `pendingRead` placeholder for each
+    /// new asset, so this equals the library size within seconds of the first
+    /// run. It is the *denominator* of indexing progress, never the numerator —
+    /// Settings showed it as "Indexed Photos" and so always read as 100 %. Use
+    /// `completedCount()` for what has actually been read.
+    func rowCount() throws -> Int {
         try database.reader.read { db in
             try PhotoMetadata.fetchCount(db)
         }
@@ -181,6 +187,44 @@ struct MetadataStore: Sendable {
                 db,
                 sql: "SELECT COUNT(*) FROM photo_metadata WHERE exifStatus = ?",
                 arguments: [ExifStatus.pendingICloud.rawValue]
+            ) ?? 0
+        }
+    }
+
+    /// Rows whose EXIF read has not finished for **any** reason — the same
+    /// predicate as `unfinishedAssetStates`, counted. Wider than
+    /// `pendingICloudReadCount`: it also covers `pendingRead` placeholders (a
+    /// run that never reached them) and version-bumped rows. Auto-retry and the
+    /// background-task "is it finished?" check both key off this, because keying
+    /// off the iCloud count alone let a backlog of `pendingRead` rows sit forever
+    /// with nothing scheduled to read them.
+    func unfinishedCount() throws -> Int {
+        try database.reader.read { db in
+            try Int.fetchOne(
+                db,
+                sql: """
+                    SELECT COUNT(*) FROM photo_metadata
+                    WHERE exifStatus NOT IN (?, ?) OR indexerVersion < ?
+                    """,
+                arguments: [
+                    ExifStatus.indexed.rawValue,
+                    ExifStatus.noExif.rawValue,
+                    PhotoMetadata.currentIndexerVersion,
+                ]
+            ) ?? 0
+        }
+    }
+
+    /// Count of what `reindexIncomplete` would actually re-read
+    /// (`pendingICloud` + `error`). Compared against `unfinishedCount()` it says
+    /// whether the targeted retry can finish the job or a full incremental run
+    /// is needed.
+    func retryableCount() throws -> Int {
+        try database.reader.read { db in
+            try Int.fetchOne(
+                db,
+                sql: "SELECT COUNT(*) FROM photo_metadata WHERE exifStatus IN (?, ?)",
+                arguments: [ExifStatus.pendingICloud.rawValue, ExifStatus.error.rawValue]
             ) ?? 0
         }
     }

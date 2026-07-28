@@ -331,37 +331,45 @@ struct IndexNetworkStatus: Equatable, Sendable {
         !isNetworkAllowed && connection == .cellular
     }
 
-    /// `Wi-Fi · 1.2 MB/s · 45 MB`. Speed and downloaded total are dropped
-    /// when zero — a local-only run reads just `Wi-Fi`, and stats appear
-    /// only once real iCloud traffic starts. On an unpermitted cellular path
-    /// it reads `Cellular · Paused — Wi-Fi needed`.
+    /// `Wi-Fi · 1.2 MB/s · 45 MB downloaded from iCloud`. Speed is dropped
+    /// while zero, and before any iCloud traffic the line says so in words
+    /// rather than showing a bare `0 KB` a reader has to interpret — a
+    /// local-only run never downloads anything at all. On an unpermitted
+    /// cellular path it reads `Paused — waiting for Wi-Fi`.
     var displayLine: String {
-        if isStreamingPaused {
-            return "\(connection.displayName) · " + String(localized: "Paused — Wi-Fi needed")
+        if isStreamingPaused { return Self.pausedText }
+        guard bytesDownloaded > 0 else {
+            return "\(connection.displayName) · " + String(localized: "nothing downloaded yet")
         }
         var parts = [connection.displayName]
         if let bytesPerSecond, bytesPerSecond > 0 {
             parts.append(Self.byteString(bytesPerSecond) + "/s")
         }
-        if bytesDownloaded > 0 {
-            parts.append(Self.byteString(bytesDownloaded))
-        }
+        parts.append(Self.downloadedText(bytesDownloaded))
         return parts.joined(separator: " · ")
     }
 
     /// Like `displayLine` but always shows speed and downloaded total, even at
-    /// zero (`Wi-Fi · 0 KB/s · 0 KB`). Used on the dim overlay, where a stable,
-    /// always-present network readout is wanted rather than one that appears
-    /// only once traffic starts.
+    /// zero (`Wi-Fi · 0 KB/s · 0 KB downloaded from iCloud`). Used on the dim
+    /// overlay, where a stable, always-present network readout is wanted
+    /// rather than one that appears only once traffic starts.
     var detailedLine: String {
-        if isStreamingPaused {
-            return "\(connection.displayName) · " + String(localized: "Paused — Wi-Fi needed")
-        }
+        if isStreamingPaused { return Self.pausedText }
         return [
             connection.displayName,
             Self.byteString(bytesPerSecond ?? 0) + "/s",
-            Self.byteString(bytesDownloaded)
+            Self.downloadedText(bytesDownloaded)
         ].joined(separator: " · ")
+    }
+
+    private static var pausedText: String {
+        String(localized: "Paused — waiting for Wi-Fi")
+    }
+
+    /// Names what the number is: an unlabelled `45 MB` next to a speed reads
+    /// as a file size or a storage cost, which is the wrong idea entirely.
+    private static func downloadedText(_ value: Int64) -> String {
+        "\(Self.byteString(value)) " + String(localized: "downloaded from iCloud")
     }
 
     private static func byteString(_ value: Int64) -> String {
@@ -395,8 +403,37 @@ struct IndexDiagnostics: Equatable, Sendable {
     /// Set while the iCloud circuit breaker is cooling down.
     var breakerCooldownRemaining: Duration?
 
+    /// Plain-language notes for the indexing UI, empty while nothing needs
+    /// explaining — the normal case, where the progress and download lines
+    /// already say everything a reader wants. Only conditions that visibly
+    /// slow the run down get a line, and each says what it means for the
+    /// user rather than which counter tripped.
+    ///
+    /// `thermalLine`/`iCloudLine` keep the raw counters for the health log;
+    /// no screen shows them (`Thermal: Fair · 6 readers`, `4 in flight` and
+    /// stall counts are meaningless to anyone but us).
+    var advisories: [String] {
+        var lines: [String] = []
+        if let breakerCooldownRemaining {
+            let seconds = max(0, Int(breakerCooldownRemaining.components.seconds))
+            lines.append(String(localized: "iCloud isn't responding — trying again in") + " \(seconds)s")
+        }
+        switch thermalState {
+        case .serious:
+            lines.append(String(localized: "Your iPhone is warm — indexing slowed down to cool it"))
+        case .critical:
+            lines.append(String(localized: "Indexing paused until your iPhone cools down"))
+        default:
+            break
+        }
+        if isLowPowerMode {
+            lines.append(String(localized: "Low Power Mode is slowing indexing down"))
+        }
+        return lines
+    }
+
     /// `Thermal: Fair · 6 readers` — with ` · Low Power` appended while
-    /// Low Power Mode is on.
+    /// Low Power Mode is on. Health log only; see `advisories`.
     var thermalLine: String {
         var line = "Thermal: \(thermalState.displayName) · \(readConcurrency) readers"
         if isLowPowerMode {
@@ -408,6 +445,7 @@ struct IndexDiagnostics: Equatable, Sendable {
     /// `iCloud: 4 in flight · 132 requested` — with ` · 12 stalls` appended
     /// once any read has stalled, and replaced by
     /// `iCloud paused · retry in 42s` while the breaker cools down.
+    /// Health log only; see `advisories`.
     var iCloudLine: String {
         if let breakerCooldownRemaining {
             let seconds = max(0, Int(breakerCooldownRemaining.components.seconds))

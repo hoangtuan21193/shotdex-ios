@@ -5,32 +5,47 @@ import os
 
 /// Index speed and ETA, derived from progress samples over the current run.
 struct IndexThroughput: Equatable {
-    /// Photos processed per minute, averaged over the run so far.
+    /// Items (photos *and* videos — both are indexed) processed per minute,
+    /// averaged over the run so far.
     let photosPerMinute: Double
     /// Estimated time until the run finishes; nil until estimable.
     let remaining: Duration?
 
+    /// `1,548 photos and videos per minute` — grouped, and spelled out rather than
+    /// `photos/min`, which reads as a unit off a spec sheet.
     var rateText: String {
-        "\(Int(photosPerMinute.rounded())) photos/min"
+        let rate = Int(photosPerMinute.rounded()).formatted()
+        return "\(rate) " + String(localized: "photos and videos per minute")
     }
 
     var remainingText: String? {
         remaining.map(Self.format)
     }
 
-    /// e.g. "2 hours remaining", "1 hr 20 min remaining", "45 min remaining".
+    /// Time first, speed second: the wait is what the user is actually
+    /// reading for — `About 2 hr 15 min left · 1,548 photos and videos per minute`.
+    /// Drops to the rate alone until an estimate exists.
+    var summaryLine: String {
+        guard let remainingText else { return rateText }
+        return "\(remainingText) · \(rateText)"
+    }
+
+    /// e.g. "About 2 hours left", "About 1 hr 20 min left", "About 45 min left".
+    /// "About" is honest — the estimate is a run average, so it moves.
     static func format(_ duration: Duration) -> String {
         let total = Int(duration.components.seconds)
-        if total < 60 { return "less than a minute remaining" }
+        if total < 60 { return String(localized: "Less than a minute left") }
+        let about = String(localized: "About")
+        let left = String(localized: "left")
         let hours = total / 3600
         let minutes = (total % 3600) / 60
         if hours >= 1 {
             if minutes == 0 {
-                return "\(hours) hour\(hours == 1 ? "" : "s") remaining"
+                return "\(about) \(hours) hour\(hours == 1 ? "" : "s") \(left)"
             }
-            return "\(hours) hr \(minutes) min remaining"
+            return "\(about) \(hours) hr \(minutes) min \(left)"
         }
-        return "\(minutes) min remaining"
+        return "\(about) \(minutes) min \(left)"
     }
 }
 
@@ -534,7 +549,13 @@ final class LibraryModel {
 
     func startIndexing(fullReindex: Bool = false, manual: Bool = false) {
         if isIndexRunActive {
-            pendingStartAfterCurrentRun = true
+            // A tap must not queue behind a run that has hours of work left, and
+            // must not vanish: it preempts, and the indicator says so now.
+            if manual {
+                enqueueManualRun(fullReindex ? .fullReindex : .incremental)
+            } else {
+                pendingStartAfterCurrentRun = true
+            }
             return
         }
         // No automatic indexing in Low Power Mode. The user can still start it
@@ -557,7 +578,13 @@ final class LibraryModel {
     /// Re-reads only the assets stuck at `pendingICloud`/`error`
     /// (Settings → Re-index Incomplete Photos). Always uses the network.
     func reindexIncompleteAssets(manual: Bool = false) {
-        guard !isIndexRunActive else { return }
+        if isIndexRunActive {
+            // Same as `startIndexing`: a tap preempts, an automatic call yields.
+            // This used to `return` outright — the Settings button and "Retry Now"
+            // simply did nothing whenever a run happened to be in flight.
+            if manual { enqueueManualRun(.incomplete) }
+            return
+        }
         guard manual || !isLowPowerMode else { return }
         runPipeline(
             allowsNetwork: { true },
@@ -613,6 +640,7 @@ final class LibraryModel {
         indexThroughput = nil
         indexRunStart = nil
         cancelScheduledAutoRetry()
+        startRetryTask?.cancel()
         let pipeline = self.pipeline
         let networkStatus = self.networkStatus
         // .utility: parse/compose/DB writes and PhotoKit XPC servicing must
@@ -636,6 +664,20 @@ final class LibraryModel {
                 )
             }
             self.refreshPausedState()
+            // The pipeline may already be owned by a BGProcessingTask run, which
+            // drives the actor directly (a background launch has no model to go
+            // through). Take it back before starting, or `run` refuses and the
+            // app shows nothing while work remains.
+            guard await self.claimPipelineFromBackgroundRun(trigger: trigger) else {
+                // Declared before this run's `defer`, so clean up by hand.
+                self.isIndexRunActive = false
+                self.isIndexing = false
+                self.isManualIndexRun = false
+                self.indexNetworkStatus = nil
+                self.indexDiagnostics = nil
+                self.scheduleStartRetry(after: Self.busyPipelineRetryDelay)
+                return
+            }
             let samplingTask = self.startNetworkSampling(allowsNetwork: allowsNetwork)
             // Keeps the run alive through a brief trip to the background;
             // on expiry it cancels cleanly and hands off to the BGProcessingTask.
@@ -671,13 +713,17 @@ final class LibraryModel {
                 self.indexNetworkStatus = nil
                 self.indexDiagnostics = nil
                 self.backgroundIndex.endRunAssertion()
-                // One-tap Retry: the cancelled run has now stopped (isIndexRunActive
-                // cleared above), so a fresh incomplete pass can start. Next
-                // tick, so this Task fully unwinds first.
-                if self.pendingRetryAfterCancel {
-                    self.pendingRetryAfterCancel = false
-                    // User-initiated retry — allowed even in Low Power Mode.
-                    Task { @MainActor in self.reindexIncompleteAssets(manual: true) }
+                // A tap preempted this run (Re-index, Retry Now, Use Cellular):
+                // it has now stopped (isIndexRunActive cleared above), so what the
+                // user asked for can start. Next tick, so this Task fully unwinds
+                // first — and the indicator is held on across the handover, since
+                // dropping it for one frame reads as "the tap did nothing".
+                if let request = self.pendingManualRun {
+                    self.pendingManualRun = nil
+                    self.isIndexing = true
+                    self.isManualIndexRun = true
+                    // User-initiated — allowed even in Low Power Mode.
+                    Task { @MainActor in self.startManualRun(request) }
                 } else if self.pendingStartAfterCurrentRun, !self.hasCancelledIndexRun {
                     // Requested while this run was still unwinding — usually the
                     // foreground return after a system stop. Cheap when there is
@@ -723,8 +769,68 @@ final class LibraryModel {
             // A local-only run leaves iCloud-only photos pending; surface a
             // persistent "waiting for Wi-Fi" state when they can't stream now.
             self.refreshPausedState()
-            self.scheduleAutoRetryIfNeeded(after: summary)
+            if summary?.didNotStart == true {
+                // Lost a race for the actor (a background run claimed it between
+                // the check above and the call). Not a finished run — retry.
+                IndexTrafficMonitor.health("run [\(trigger)] refused by the pipeline — retrying in \(Int(Self.busyPipelineRetryDelay.components.seconds))s")
+                self.scheduleStartRetry(after: Self.busyPipelineRetryDelay)
+            } else {
+                self.scheduleAutoRetryIfNeeded(after: summary)
+            }
         }
+    }
+
+    /// Time before a run that couldn't get the pipeline tries again.
+    static let busyPipelineRetryDelay: Duration = .seconds(15)
+    /// How long to wait for a cancelled background run to unwind. Cancelling
+    /// stops new reads being spawned but never kills reads in flight, and an
+    /// iCloud read can sit on the 8 s stall watchdog — so the wait has to
+    /// outlast a full in-flight batch draining, not a single read.
+    private static let pipelineHandoverTimeout: Duration = .seconds(30)
+
+    @ObservationIgnored private var startRetryTask: Task<Void, Never>?
+
+    /// Retries `startIndexing` after a delay. Separate from the iCloud
+    /// auto-retry: this one means "the pipeline was busy", shows no countdown
+    /// card, and always resumes the full incremental run rather than the
+    /// iCloud-only subset.
+    private func scheduleStartRetry(after delay: Duration) {
+        startRetryTask?.cancel()
+        startRetryTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled, let self, !self.isIndexRunActive else { return }
+            self.startIndexing()
+        }
+    }
+
+    /// Stops a `BGProcessingTask` run so the foreground can index, and waits for
+    /// the actor to come free.
+    ///
+    /// The background task has to drive `IndexPipeline` directly — the app can be
+    /// launched into the background with no `LibraryModel` at all — so the actor
+    /// can be busy with a run this model knows nothing about. `IndexPipeline.run`
+    /// then refuses, and before `didNotStart` existed that refusal looked exactly
+    /// like "the library is fully indexed": no indicator, no progress, no retry,
+    /// with 42k rows still unread (observed on device, 2026-07-27).
+    ///
+    /// The foreground wins the tie-break: it has a UI to report progress in, and
+    /// the background run is rescheduled on the way out anyway. Nothing is lost
+    /// by cancelling — rows are written per batch.
+    ///
+    /// - Returns: whether the pipeline is free to run.
+    private func claimPipelineFromBackgroundRun(trigger: String) async -> Bool {
+        guard await pipeline.isActive else { return true }
+        IndexTrafficMonitor.health("run start [\(trigger)]: a background run owns the pipeline — cancelling it")
+        await pipeline.cancel()
+        let deadline = ContinuousClock.now.advanced(by: Self.pipelineHandoverTimeout)
+        while await pipeline.isActive {
+            guard ContinuousClock.now < deadline else {
+                IndexTrafficMonitor.health("run start [\(trigger)]: background run still unwinding after \(Int(Self.pipelineHandoverTimeout.components.seconds))s — deferring")
+                return false
+            }
+            try? await Task.sleep(for: .milliseconds(200))
+        }
+        return true
     }
 
     /// Averages photos-per-minute over the run and projects the remaining time.
@@ -769,33 +875,56 @@ final class LibraryModel {
     /// runs, so they must not drive the "iCloud not responding" auto-retry/card
     /// (doing so popped that dialog for corrupt *local* files).
     private(set) var pendingICloudCount = 0
+    /// Rows whose read hasn't finished for **any** reason — the iCloud tail plus
+    /// `pendingRead` placeholders and `error` rows. What decides whether
+    /// indexing is done; `pendingICloudCount` only decides whether *iCloud* is
+    /// what it's waiting on.
+    private(set) var unfinishedCount = 0
+    /// Of `unfinishedCount`, how many `reindexIncomplete` would actually re-read
+    /// (`pendingICloud` + `error`). When it's short of `unfinishedCount` the
+    /// targeted retry can't finish the job and a full incremental run must run.
+    @ObservationIgnored private var retryableCount = 0
 
     // MARK: Auto-retry
     //
-    // A run can end with photos still `pendingICloud` on an allowed network
-    // (iCloud auth dead — accountsd Code=7 — or a Wi-Fi that can't serve
-    // originals). Indexing must never sit dead in that state: the model
-    // schedules an automatic `reindexIncomplete` every 30 s, and the UI shows
-    // a small "retrying in Ns" card instead of the old dead-end
-    // "iCloud not downloading over Wi-Fi" banner. A fixed interval, no
-    // backoff — a failed attempt is cheap (the breaker trips within ~12
-    // reads), and picking iCloud up seconds after it recovers matters more.
+    // A run can end with work still unread: photos `pendingICloud` on an allowed
+    // network (iCloud auth dead — accountsd Code=7 — or a Wi-Fi that can't serve
+    // originals), or `pendingRead` placeholders a stopped run never reached.
+    // Indexing must never sit dead in either state: the model schedules an
+    // automatic retry every 30 s, and the UI shows a small "retrying in Ns" card
+    // instead of the old dead-end "iCloud not downloading over Wi-Fi" banner. A
+    // fixed interval, no backoff — a failed attempt is cheap (the breaker trips
+    // within ~12 reads), and picking iCloud up seconds after it recovers matters
+    // more.
+    //
+    // The retry keys off `unfinishedCount`, not `pendingICloudCount`: keying off
+    // the iCloud count meant a backlog of 42k `pendingRead` rows armed nothing at
+    // all, and even when it did arm, `reindexIncomplete` reads only
+    // `pendingICloud`/`error` — so those rows would never have been picked up.
 
     static let autoRetryDelay: Duration = .seconds(30)
 
     /// When the next automatic retry fires — drives the countdown card.
     /// nil when no retry is scheduled.
     private(set) var indexAutoRetryDate: Date?
+
+    /// The countdown as the UI should use it: a card that says "iCloud isn't
+    /// responding" may only appear when iCloud is in fact what the run is
+    /// waiting on. A retry armed for `pendingRead` rows (a stopped run's
+    /// leftovers) runs silently — there is nothing for the user to do about it.
+    var indexICloudRetryDate: Date? {
+        pendingICloudCount > 0 ? indexAutoRetryDate : nil
+    }
     @ObservationIgnored private var autoRetryTask: Task<Void, Never>?
 
     /// Called at the end of every uncancelled run. Schedules a follow-up
     /// incomplete pass when iCloud work remains and the network is allowed.
     private func scheduleAutoRetryIfNeeded(after summary: IndexRunSummary?) {
         guard let summary, !summary.wasCancelled else { return }
-        guard pendingICloudCount > 0 else { return }
+        guard unfinishedCount > 0 else { return }
         // Metered cellular without opt-in: the paused card owns this state.
         guard allowNetworkForIndexing() else { return }
-        IndexTrafficMonitor.healthLogger.log("auto-retry scheduled in \(Int(Self.autoRetryDelay.components.seconds))s — \(self.pendingICloudCount) photos still pending iCloud")
+        IndexTrafficMonitor.healthLogger.log("auto-retry scheduled in \(Int(Self.autoRetryDelay.components.seconds))s — \(self.unfinishedCount) unread (\(self.pendingICloudCount) pending iCloud)")
         armAutoRetry(after: Self.autoRetryDelay)
     }
 
@@ -815,7 +944,21 @@ final class LibraryModel {
                 self.armAutoRetry(after: delay)
                 return
             }
-            self.reindexIncompleteAssets()
+            self.resumeUnfinishedWork()
+        }
+    }
+
+    /// Picks the cheapest run that can actually finish what's left.
+    /// `reindexIncomplete` only reads `pendingICloud`/`error` rows, so it is the
+    /// right (and much cheaper) choice only when every unread row is one of
+    /// those. Anything else left — `pendingRead` placeholders from a run that was
+    /// stopped part-way, version-bumped rows — needs the incremental run.
+    private func resumeUnfinishedWork() {
+        if retryableCount >= unfinishedCount {
+            reindexIncompleteAssets()
+        } else {
+            IndexTrafficMonitor.healthLogger.log("resuming with a full incremental run — \(self.unfinishedCount) unread, only \(self.retryableCount) of them iCloud/error retryable")
+            startIndexing()
         }
     }
 
@@ -825,11 +968,13 @@ final class LibraryModel {
         indexAutoRetryDate = nil
     }
 
-    /// Recomputes `pendingICloudCount`/`isIndexStreamingPaused` from the DB and
-    /// the current network path. Cheap query; called at run edges and on path
+    /// Recomputes the unread counts and `isIndexStreamingPaused` from the DB and
+    /// the current network path. Cheap queries; called at run edges and on path
     /// changes (both rare).
     func refreshPausedState() {
         pendingICloudCount = (try? metadataStore.pendingICloudReadCount()) ?? 0
+        unfinishedCount = (try? metadataStore.unfinishedCount()) ?? 0
+        retryableCount = (try? metadataStore.retryableCount()) ?? 0
         isIndexStreamingPaused = networkStatus.isExpensivePath
             && !UserDefaults.standard.bool(forKey: SettingsKeys.allowCellularIndexing)
             && pendingICloudCount > 0
@@ -850,46 +995,67 @@ final class LibraryModel {
         // of a healthy launch run (guarded below), so the launch index run
         // (a full incremental diff, not just the incomplete rows) isn't
         // pre-empted by an eager reindex.
-        if (wasPaused || retryWasScheduled), !isIndexStreamingPaused, pendingICloudCount > 0,
+        if (wasPaused || retryWasScheduled), !isIndexStreamingPaused, unfinishedCount > 0,
            !isIndexRunActive, allowNetworkForIndexing() {
             cancelScheduledAutoRetry()
-            reindexIncompleteAssets()
+            resumeUnfinishedWork()
         }
     }
 
-    /// Set while cancelling a stalled run so the completion can immediately
-    /// kick off a fresh `reindexIncomplete` (a one-tap "Retry").
-    @ObservationIgnored private var pendingRetryAfterCancel = false
+    /// What the user asked for while a run was still in flight.
+    private enum ManualIndexRun {
+        case fullReindex
+        case incremental
+        case incomplete
+    }
+
+    /// Set while cancelling the run a tap preempted, so the completion starts
+    /// what the user actually asked for. Survives `hasCancelledIndexRun` (it is
+    /// checked before that guard) — the cancel here is ours, not the user's.
+    @ObservationIgnored private var pendingManualRun: ManualIndexRun?
+
+    /// Acknowledges a tap that arrived mid-run: stop the current run and hold the
+    /// request until the pipeline is free.
+    ///
+    /// The indicator is turned **on optimistically**, because the honest wait is
+    /// not short: `cancel()` stops new reads being spawned but never kills reads
+    /// in flight, and an iCloud read can sit on the 8 s stall watchdog. Without
+    /// this the user tapped Re-index and the screen sat unchanged for seconds
+    /// (or, when the request was silently dropped, forever).
+    private func enqueueManualRun(_ request: ManualIndexRun) {
+        pendingManualRun = request
+        cancelIndexing()
+        isIndexing = true
+        isManualIndexRun = true
+    }
+
+    private func startManualRun(_ request: ManualIndexRun) {
+        switch request {
+        case .fullReindex: startIndexing(fullReindex: true, manual: true)
+        case .incremental: startIndexing(manual: true)
+        case .incomplete: reindexIncompleteAssets(manual: true)
+        }
+    }
 
     /// "Retry Now" action from the auto-retry card: skips the countdown and
-    /// tries the incomplete iCloud reads again *now*. If a (futile) run is
-    /// still walking, cancel it first and resume once it has stopped — the
-    /// `isIndexRunActive` guard would otherwise swallow the retry.
+    /// tries the incomplete iCloud reads again *now*. A (futile) run still
+    /// walking is preempted by `reindexIncompleteAssets` itself.
     func retryIncompleteAssets() {
         cancelScheduledAutoRetry()
-        if isIndexRunActive {
-            pendingRetryAfterCancel = true
-            cancelIndexing()
-        } else {
-            reindexIncompleteAssets(manual: true)
-        }
+        reindexIncompleteAssets(manual: true)
     }
 
     /// "Use Cellular" action from the paused/stalled indicator: opts into
-    /// cellular indexing. A futile Wi-Fi run in flight is cancelled so the
-    /// cellular retry (on the next path change, or manual Retry) isn't blocked
-    /// by the `isIndexRunActive` guard; when nothing is running it resumes now.
+    /// cellular indexing and resumes now. A futile Wi-Fi run in flight is
+    /// preempted by the manual start paths themselves.
     func resumeIndexingOverCellular() {
         UserDefaults.standard.set(true, forKey: SettingsKeys.allowCellularIndexing)
-        if isIndexRunActive {
-            // Don't restart here — isIndexRunActive is still true (cancel is async);
-            // the resume happens when the user reaches cellular (handleNetwork
-            // change) or taps Retry once the run has stopped.
-            cancelIndexing()
-        }
         refreshPausedState()
-        if pendingICloudCount > 0, !isIndexRunActive {
+        guard unfinishedCount > 0 else { return }
+        if retryableCount >= unfinishedCount {
             reindexIncompleteAssets(manual: true)
+        } else {
+            startIndexing(manual: true)
         }
     }
 
