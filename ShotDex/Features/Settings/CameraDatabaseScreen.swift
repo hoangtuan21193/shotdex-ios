@@ -50,6 +50,7 @@ struct CameraDatabaseScreen: View {
 struct SensorMappingScreen: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.appAccent) private var accent
 
     let cameraModel: String
     var onSaved: () -> Void
@@ -76,7 +77,7 @@ struct SensorMappingScreen: View {
                             Spacer()
                             if selectedFormat == format {
                                 Image(systemName: "checkmark")
-                                    .foregroundStyle(Color.accentColor)
+                                    .foregroundStyle(accent)
                             }
                         }
                     }

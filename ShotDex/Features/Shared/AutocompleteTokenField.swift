@@ -6,6 +6,7 @@ import SwiftUI
 /// from `suggestions` (indexed values) appear as tappable rows while typing.
 /// Any text is allowed — suggestions only assist; they don't constrain.
 struct AutocompleteTokenField: View {
+    @Environment(\.appAccent) private var accent
     let title: String
     @Binding var tokens: [String]
     let suggestions: [String]
@@ -78,7 +79,7 @@ struct AutocompleteTokenField: View {
                 } label: {
                     HStack {
                         Image(systemName: "plus.circle")
-                            .foregroundStyle(Color.accentColor)
+                            .foregroundStyle(accent)
                         Text(suggestion)
                             .foregroundStyle(Color(.label))
                         Spacer()

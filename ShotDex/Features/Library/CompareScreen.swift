@@ -179,6 +179,7 @@ struct CompareScreen: View {
     static let maxPhotoCount = 4
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.appAccent) private var accent
 
     /// 2–4 photos, in selection order.
     let photos: [ComparePhoto]
@@ -283,7 +284,7 @@ struct CompareScreen: View {
                 .frame(height: 44)
                 .background {
                     if isOn.wrappedValue {
-                        Capsule().fill(Color.accentColor)
+                        Capsule().fill(accent)
                     } else {
                         Capsule().fill(.ultraThinMaterial)
                     }

@@ -11,6 +11,7 @@ struct DateRangePickerSheet: View {
     var onApply: (ClosedRange<Date>) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.appAccent) private var accent
     @State private var startDay: Date?
     @State private var endDay: Date?
 
@@ -168,22 +169,22 @@ struct DateRangePickerSheet: View {
     private func background(for state: DayState) -> some View {
         switch state {
         case .single:
-            Circle().fill(Color.accentColor)
+            Circle().fill(accent)
         case .start:
             // Half band toward the range side + the endpoint circle.
             HStack(spacing: 0) {
                 Color.clear
-                Color.accentColor.opacity(0.2)
+                accent.opacity(0.2)
             }
-            .overlay(Circle().fill(Color.accentColor))
+            .overlay(Circle().fill(accent))
         case .end:
             HStack(spacing: 0) {
-                Color.accentColor.opacity(0.2)
+                accent.opacity(0.2)
                 Color.clear
             }
-            .overlay(Circle().fill(Color.accentColor))
+            .overlay(Circle().fill(accent))
         case .inRange:
-            Color.accentColor.opacity(0.2)
+            accent.opacity(0.2)
         case .none:
             Color.clear
         }

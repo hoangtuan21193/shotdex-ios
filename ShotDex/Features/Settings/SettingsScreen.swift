@@ -17,6 +17,8 @@ struct SettingsScreen: View {
     @AppStorage("display.showFileSize") private var showsFileSize = false
     @AppStorage(SettingsKeys.showFileTypeBadge) private var showsFileTypeBadge = true
     @AppStorage("display.focalStyleEquivalent") private var showsEquivalentFocalLength = false
+    @AppStorage(SettingsKeys.accentTheme) private var accentThemeRawValue =
+        AppAccentTheme.default.rawValue
     @AppStorage(SettingsKeys.allowCellularIndexing) private var allowCellularIndexing = false
     @AppStorage(SettingsKeys.keepScreenAwake) private var keepScreenAwake = false
     @AppStorage(SettingsKeys.onThisDayNotificationsEnabled) private var isOnThisDayReminderEnabled = false
@@ -31,7 +33,10 @@ struct SettingsScreen: View {
     @State private var readCount = 0
     /// Every asset the index knows about, read or not: the denominator.
     @State private var totalCount = 0
-    @State private var incompleteCount = 0
+    /// Rows whose read hasn't finished for **any** reason — `pendingRead`
+    /// placeholders included. The denominator of "is there anything left to
+    /// do", and what the Continue action offers to finish.
+    @State private var unfinishedCount = 0
     @State private var lastIndexedAt: Date?
     @State private var isClearIndexConfirmationPresented = false
     @State private var isResetMappingsConfirmationPresented = false
@@ -46,6 +51,7 @@ struct SettingsScreen: View {
         List {
             photoLibrarySection
             notificationsSection
+            appearanceSection
             displaySection
             exportSection
             cameraDatabaseSection
@@ -142,8 +148,16 @@ struct SettingsScreen: View {
         }
     }
 
-    /// The re-index actions — **one row each**, always present, disabled while a
-    /// run is going — plus the live progress readout as a single row below them.
+    /// The index actions — **one row each**, disabled while a run is going —
+    /// plus the live progress readout as a single row below them.
+    ///
+    /// "Continue Indexing" is keyed to `unfinishedCount`, not the retryable
+    /// (`pendingICloud`/`error`) count: a run stopped part-way leaves its
+    /// remainder at `pendingRead`, so the retryable count was 0 and the only
+    /// offer left was Re-index Library — throwing away tens of thousands of
+    /// finished reads to redo work that just needed picking back up. The model
+    /// still picks the cheaper targeted retry when every unread row is one it
+    /// can serve.
     ///
     /// The actions stay put instead of being replaced by the progress rows: the
     /// swap changed the section's row set, and `List` animates that diff, so a
@@ -157,17 +171,17 @@ struct SettingsScreen: View {
     @ViewBuilder
     private func indexControls(_ model: LibraryModel) -> some View {
         if photoLibrary.authorizationState.canReadLibrary {
+            if unfinishedCount > 0 {
+                Button("Continue Indexing (\(unfinishedCount.formatted()))") {
+                    model.continueIndexing()
+                }
+                .disabled(model.isIndexing)
+            }
+
             Button("Re-index Library") {
                 model.startIndexing(fullReindex: true, manual: true)
             }
             .disabled(model.isIndexing)
-
-            if incompleteCount > 0 {
-                Button("Re-index Incomplete Photos and Videos (\(incompleteCount))") {
-                    model.reindexIncompleteAssets(manual: true)
-                }
-                .disabled(model.isIndexing)
-            }
         }
 
         if model.isIndexing {
@@ -282,6 +296,64 @@ struct SettingsScreen: View {
         }
     }
 
+    // MARK: Appearance
+
+    /// The accent applies the moment it is picked: the root view holds the same
+    /// `@AppStorage` key, so writing it re-tints the app under the open sheet.
+    ///
+    /// The choices are a row of tappable swatches, not a `Picker` — for a colour,
+    /// the colour itself is the whole answer, and a menu would hide all of them
+    /// behind a tap. `.borderless` keeps `List` from treating the row as one
+    /// button and firing every swatch at once.
+    private var appearanceSection: some View {
+        let selected = AppAccentTheme.resolved(accentThemeRawValue)
+        return Section {
+            VStack(alignment: .leading, spacing: 12) {
+                LabeledContent("Accent Color", value: selected.displayName)
+                HStack(spacing: 18) {
+                    ForEach(AppAccentTheme.allCases) { theme in
+                        accentSwatch(theme, isSelected: theme == selected)
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
+            .padding(.vertical, 2)
+        } header: {
+            Text("Appearance")
+        } footer: {
+            Text("The accent color tints buttons, selections and highlights throughout ShotDex, including the photo editor. Amber and Sand are the colors of the app icon; iOS Default is the system blue.")
+        }
+    }
+
+    private func accentSwatch(_ theme: AppAccentTheme, isSelected: Bool) -> some View {
+        Button {
+            accentThemeRawValue = theme.rawValue
+        } label: {
+            Circle()
+                .fill(theme.color)
+                .frame(width: 32, height: 32)
+                .overlay {
+                    if isSelected {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(.white)
+                            // Keeps the check legible on the pale Sand swatch.
+                            .shadow(color: .black.opacity(0.55), radius: 1)
+                    }
+                }
+                .overlay {
+                    // Hairline so the pale swatches (Sand in dark mode) keep an
+                    // edge against the row background.
+                    Circle().strokeBorder(Color.primary.opacity(0.12), lineWidth: 1)
+                }
+                .frame(width: 44, height: 44)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.borderless)
+        .accessibilityLabel(theme.displayName)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
     // MARK: Display
 
     private var displaySection: some View {
@@ -384,18 +456,18 @@ struct SettingsScreen: View {
     /// has to feel instant.
     private func refreshIndexInfo() async {
         let store = dependencies.metadataStore
-        let info = await Task.detached(priority: .userInitiated) { () -> (read: Int, total: Int, incomplete: Int, lastIndexedAt: Date?) in
+        let info = await Task.detached(priority: .userInitiated) { () -> (read: Int, total: Int, unfinished: Int, lastIndexedAt: Date?) in
             (
                 read: (try? store.completedCount()) ?? 0,
                 total: (try? store.rowCount()) ?? 0,
-                incomplete: (try? store.retryableCount()) ?? 0,
+                unfinished: (try? store.unfinishedCount()) ?? 0,
                 lastIndexedAt: (try? store.indexState())?.lastIndexedAt
                     .map { Date(timeIntervalSince1970: TimeInterval($0)) }
             )
         }.value
         readCount = info.read
         totalCount = info.total
-        incompleteCount = info.incomplete
+        unfinishedCount = info.unfinished
         lastIndexedAt = info.lastIndexedAt
     }
 

@@ -5,6 +5,7 @@ import SwiftUI
 /// ISO / shutter / aperture / focal quick-group pickers. Renders as a set of
 /// `Section`s; embed inside a `List`.
 struct FilterCriteriaSections: View {
+    @Environment(\.appAccent) private var accent
     @Binding var draft: FilterCriteria
     let availableBrands: [String]
     let availableBodies: [String]
@@ -59,7 +60,7 @@ struct FilterCriteriaSections: View {
                         Spacer()
                         if selection.wrappedValue.contains(option) {
                             Image(systemName: "checkmark")
-                                .foregroundStyle(Color.accentColor)
+                                .foregroundStyle(accent)
                         }
                     }
                 }
@@ -83,7 +84,7 @@ struct FilterCriteriaSections: View {
                         Spacer()
                         if draft.sensorFormats.contains(format) {
                             Image(systemName: "checkmark")
-                                .foregroundStyle(Color.accentColor)
+                                .foregroundStyle(accent)
                         }
                     }
                 }
@@ -109,7 +110,7 @@ struct FilterCriteriaSections: View {
                         Spacer()
                         if range.wrappedValue == group.range {
                             Image(systemName: "checkmark")
-                                .foregroundStyle(Color.accentColor)
+                                .foregroundStyle(accent)
                         }
                     }
                 }
@@ -137,7 +138,7 @@ struct FilterCriteriaSections: View {
                         Spacer()
                         if draft.focalRange == bucket.range {
                             Image(systemName: "checkmark")
-                                .foregroundStyle(Color.accentColor)
+                                .foregroundStyle(accent)
                         }
                     }
                 }

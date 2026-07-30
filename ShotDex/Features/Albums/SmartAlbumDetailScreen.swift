@@ -66,6 +66,12 @@ struct SmartAlbumDetailScreen: View {
                 model = newModel
             }
         }
+        .onChange(of: photoLibrary.assetChangeToken) {
+            guard !isSelecting, let model else { return }
+            Task {
+                await model.load()
+            }
+        }
         .fullScreenCover(item: $viewerTarget) { target in
             if let model {
                 PhotoDetailScreen(model: model, currentIndex: target.startIndex)

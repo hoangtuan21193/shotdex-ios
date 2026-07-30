@@ -532,18 +532,17 @@ final class LibraryModel {
         }
     }
 
-    /// Entry point for PhotoKit library-change notifications. Outside a run,
-    /// behaves like the old inline handler (reload so new photos appear on
-    /// the fast path, then index them). Mid-run, defers to the end-of-run
-    /// reload: streaming iCloud originals fires a change per downloaded
-    /// asset, and reloading the whole grid per photo is what made the grid
-    /// flicker and the device heat up.
+    /// Entry point for structural PhotoKit changes. Membership reloads
+    /// immediately even during a long index run, so a photo just saved by the
+    /// user appears without waiting for that run to finish. Only the follow-up
+    /// incremental index is deferred; content-only iCloud rendition changes
+    /// never reach this method because PhotoLibraryService filters them out.
     func libraryDidChange() {
+        reload()
         guard !isIndexRunActive else {
             pendingLibraryChange = true
             return
         }
-        reload()
         startIndexing()
     }
 
@@ -576,7 +575,8 @@ final class LibraryModel {
     }
 
     /// Re-reads only the assets stuck at `pendingICloud`/`error`
-    /// (Settings → Re-index Incomplete Photos). Always uses the network.
+    /// (auto-retry, "Retry Now", and Settings → Continue Indexing when every
+    /// unread row is one of those). Always uses the network.
     func reindexIncompleteAssets(manual: Bool = false) {
         if isIndexRunActive {
             // Same as `startIndexing`: a tap preempts, an automatic call yields.
@@ -953,13 +953,23 @@ final class LibraryModel {
     /// right (and much cheaper) choice only when every unread row is one of
     /// those. Anything else left — `pendingRead` placeholders from a run that was
     /// stopped part-way, version-bumped rows — needs the incremental run.
-    private func resumeUnfinishedWork() {
+    private func resumeUnfinishedWork(manual: Bool = false) {
         if retryableCount >= unfinishedCount {
-            reindexIncompleteAssets()
+            reindexIncompleteAssets(manual: manual)
         } else {
             IndexTrafficMonitor.healthLogger.log("resuming with a full incremental run — \(self.unfinishedCount) unread, only \(self.retryableCount) of them iCloud/error retryable")
-            startIndexing()
+            startIndexing(manual: manual)
         }
+    }
+
+    /// Settings' "Continue Indexing": finish the reading that's left without
+    /// throwing away what's already read. Counts are re-read first — Settings
+    /// keeps its own copy and this decides which run to start from them.
+    func continueIndexing() {
+        cancelScheduledAutoRetry()
+        refreshPausedState()
+        guard unfinishedCount > 0 else { return }
+        resumeUnfinishedWork(manual: true)
     }
 
     private func cancelScheduledAutoRetry() {
@@ -1052,11 +1062,7 @@ final class LibraryModel {
         UserDefaults.standard.set(true, forKey: SettingsKeys.allowCellularIndexing)
         refreshPausedState()
         guard unfinishedCount > 0 else { return }
-        if retryableCount >= unfinishedCount {
-            reindexIncompleteAssets(manual: true)
-        } else {
-            startIndexing(manual: true)
-        }
+        resumeUnfinishedWork(manual: true)
     }
 
     /// Once a second, snapshots the traffic counter and the network path;

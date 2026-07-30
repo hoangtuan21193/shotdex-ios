@@ -49,6 +49,9 @@ final class AppDependencies {
             renderer: photoRenderer,
             indexNewAsset: { assetID in
                 _ = await indexPipeline.indexSingle(assetId: assetID)
+            },
+            publishCreatedAsset: { _ in
+                photoLibrary.publishAppCreatedAsset()
             }
         )
         self.compressionPresets = CompressionPresetStore()

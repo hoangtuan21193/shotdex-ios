@@ -73,6 +73,11 @@ struct PhotoDetailScreen: View {
     @State private var isMetadataPresented = false
     @State private var editorTarget: PhotoDetailActionTarget?
     @State private var compressionTarget: PhotoDetailActionTarget?
+    /// Asset saved by the editor, waiting for its cover to finish dismissing —
+    /// then the viewer pages to it (Save Changes: this page rebuilt with the
+    /// edit; Save Copy: the new copy, once the library change lands).
+    @State private var pendingSavedAssetID: String?
+    @State private var revealSavedTask: Task<Void, Never>?
     /// True while the current image is pinch/double-tap zoomed in — hides all
     /// chrome (top bar, action buttons, info panel) so nothing overlaps the photo.
     @State private var isZoomed = false
@@ -255,8 +260,14 @@ struct PhotoDetailScreen: View {
         .fullScreenCover(item: $editorTarget) { target in
             PhotoEditorScreen(
                 asset: target.asset,
-                sourceAlbum: target.sourceAlbum
+                sourceAlbum: target.sourceAlbum,
+                onSaved: { pendingSavedAssetID = $0 }
             )
+        }
+        // Reveal only once the cover is gone — paging the viewer underneath a
+        // dismissing full-screen cover just flashes.
+        .onChange(of: editorTarget?.id) { _, targetID in
+            if targetID == nil { revealSavedAssetIfNeeded() }
         }
         .fullScreenCover(item: $compressionTarget) { target in
             CompressionScreen(
@@ -287,6 +298,32 @@ struct PhotoDetailScreen: View {
             stallWatchTask = nil
             videoChromeHideTask?.cancel()
             videoChromeHideTask = nil
+            revealSavedTask?.cancel()
+            revealSavedTask = nil
+        }
+    }
+
+    /// Pages the viewer to the asset the editor just saved. Save Changes finds
+    /// its index on the first try (same asset) — the reseat still matters, it
+    /// rebuilds the page so the edited render replaces the cached one. Save
+    /// Copy has to wait for the library change and the index's fast pass to put
+    /// the new asset into the source, so this polls briefly instead of giving
+    /// up on the first miss.
+    private func revealSavedAssetIfNeeded() {
+        guard let assetID = pendingSavedAssetID else { return }
+        pendingSavedAssetID = nil
+        revealSavedTask?.cancel()
+        revealSavedTask = Task {
+            for _ in 0..<20 {
+                guard !Task.isCancelled else { return }
+                if let index = model.index(of: assetID) {
+                    currentIndex = index
+                    reseatToken += 1
+                    refreshCurrentPhoto()
+                    return
+                }
+                try? await Task.sleep(for: .milliseconds(250))
+            }
         }
     }
 

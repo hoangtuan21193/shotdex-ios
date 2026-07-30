@@ -255,6 +255,7 @@ struct ImportScreen: View {
 /// selection check and a RAW badge. Unlike `PhotoGridCell` these images come
 /// from files on the card, not PHAssets, so thumbnails are decoded directly.
 private struct ImportGridTile: View {
+    @Environment(\.appAccent) private var accent
     let candidate: ImportCandidate
     let service: ImportService
     let cellWidth: CGFloat
@@ -297,7 +298,7 @@ private struct ImportGridTile: View {
     private var selectionBadge: some View {
         Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
             .font(.system(size: 20))
-            .foregroundStyle(isSelected ? Color.accentColor : .white.opacity(0.9))
+            .foregroundStyle(isSelected ? accent : .white.opacity(0.9))
             .background(Circle().fill(.black.opacity(isSelected ? 0 : 0.15)))
             .shadow(radius: 1)
             .padding(5)

@@ -44,6 +44,7 @@ enum AppTab: String, CaseIterable, Identifiable {
 /// a material-blurred pill holding the four tabs, with a separate round
 /// search button beside it.
 struct LiquidGlassTabBar: View {
+    @Environment(\.appAccent) private var accent
     @Binding var selection: AppTab
     /// Called when the already-selected tab is tapped again.
     var onReselect: (AppTab) -> Void = { _ in }
@@ -93,7 +94,7 @@ struct LiquidGlassTabBar: View {
                 Text(tab.title)
                     .font(.system(size: 10, weight: .medium))
             }
-            .foregroundStyle(isSelected ? Color.accentColor : Color(.secondaryLabel))
+            .foregroundStyle(isSelected ? accent : Color(.secondaryLabel))
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
             .background {

@@ -25,6 +25,7 @@ private func compareEnabled(for count: Int) -> Bool {
 /// glass. Label pinned to its intrinsic size with a high layout priority so it
 /// never clips behind the centre thumbnails.
 struct SelectionCompareControl: View {
+    @Environment(\.appAccent) private var accent
     let model: SelectionBarModel
 
     var body: some View {
@@ -34,7 +35,7 @@ struct SelectionCompareControl: View {
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
                     .fixedSize()
-                    .foregroundStyle(compareEnabled(for: model.selectionCount) ? Color.accentColor : Color(.tertiaryLabel))
+                    .foregroundStyle(compareEnabled(for: model.selectionCount) ? accent : Color(.tertiaryLabel))
                     .padding(.horizontal, 12)
                     .frame(height: 44)
                     .contentShape(Rectangle())

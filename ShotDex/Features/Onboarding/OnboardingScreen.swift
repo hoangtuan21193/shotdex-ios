@@ -4,6 +4,7 @@ import SwiftUI
 /// photo library prompt.
 struct OnboardingScreen: View {
     @Environment(PhotoLibraryService.self) private var photoLibrary
+    @Environment(\.appAccent) private var accent
 
     var body: some View {
         VStack(spacing: 0) {
@@ -11,7 +12,7 @@ struct OnboardingScreen: View {
 
             Image(systemName: "camera.metering.matrix")
                 .font(.system(size: 56))
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(accent)
                 .padding(.bottom, 16)
 
             Text("ShotDex")
@@ -63,7 +64,7 @@ struct OnboardingScreen: View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: icon)
                 .font(.title3)
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(accent)
                 .frame(width: 30)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)

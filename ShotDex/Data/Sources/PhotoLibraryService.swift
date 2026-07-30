@@ -788,6 +788,18 @@ final class PhotoLibraryService: NSObject {
 
     // MARK: Change observation
 
+    /// Publishes an asset created by ShotDex immediately instead of waiting for
+    /// PhotoKit's debounced observer callback. The direct index has already
+    /// completed before this is called, so query-backed grids and PhotoKit-backed
+    /// grids can both reload with a complete row before the save UI dismisses.
+    func publishAppCreatedAsset() {
+        // Advance the structural-classification baseline to include the new
+        // asset. A later PhotoKit callback remains a harmless safety-net bump.
+        refreshAllPhotos()
+        libraryChangeToken &+= 1
+        assetChangeToken &+= 1
+    }
+
     private func startObservingChanges() {
         guard !isObservingChanges else { return }
         PHPhotoLibrary.shared().register(self)
