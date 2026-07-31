@@ -1,0 +1,1402 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "" : {
+
+    },
+    " m" : {
+
+    },
+    "· %@" : {
+
+    },
+    "%@ · at least %@" : {
+      "comment" : "On This Day reminder body when some matching items are not indexed yet, so the size is a lower bound. First placeholder is the count phrase, second is the formatted size.",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · ít nhất %2$@"
+          }
+        }
+      }
+    },
+    "%@ %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$lld"
+          }
+        }
+      }
+    },
+    "%@ bar chart" : {
+
+    },
+    "%@ donut chart" : {
+
+    },
+    "%@ line chart" : {
+
+    },
+    "%@ of %@ photos and videos" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ of %2$@ photos and videos"
+          }
+        }
+      }
+    },
+    "%@ options" : {
+
+    },
+    "%@ photos and videos" : {
+      "comment" : "Count phrase in the On This Day reminder body.",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ảnh và video"
+          }
+        }
+      }
+    },
+    "%@ slider" : {
+
+    },
+    "%@ stroke" : {
+
+    },
+    "%@, %lld photos" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$lld photos"
+          }
+        }
+      }
+    },
+    "%lld" : {
+
+    },
+    "%lld failed" : {
+
+    },
+    "%lld items are waiting. Indexing keeps retrying on its own — cellular or a different network usually helps too." : {
+
+    },
+    "%lld items in iCloud left to read." : {
+
+    },
+    "%lld items in iCloud will finish indexing once you're on Wi-Fi. Local metadata was read without using cellular data." : {
+
+    },
+    "%lld items still waiting for iCloud." : {
+
+    },
+    "%lld photos without this info." : {
+
+    },
+    "%lld RAW hidden" : {
+
+    },
+    "%lld saved as JPEG because HEIC wasn't supported" : {
+
+    },
+    "%lld saved to Photos" : {
+
+    },
+    "%lld%%" : {
+
+    },
+    "^[%lld file](inflect: true) couldn't be imported." : {
+
+    },
+    "^[%lld item](inflect: true)" : {
+
+    },
+    "^[%lld photo](inflect: true)" : {
+
+    },
+    "0" : {
+
+    },
+    "1 photo or video" : {
+      "comment" : "Count phrase in the On This Day reminder body when exactly one item matches.",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 ảnh hoặc video"
+          }
+        }
+      }
+    },
+    "255" : {
+
+    },
+    "A mask limits Light, Color, Detail and Effects to one area." : {
+
+    },
+    "A smart album named “%@” already exists." : {
+
+    },
+    "About" : {
+
+    },
+    "Accent Color" : {
+
+    },
+    "Access" : {
+
+    },
+    "Actual" : {
+
+    },
+    "Actuations" : {
+
+    },
+    "Add" : {
+
+    },
+    "Add chart" : {
+
+    },
+    "Add Condition" : {
+
+    },
+    "Add Preset" : {
+
+    },
+    "Adding to mask" : {
+
+    },
+    "Adjust the filter or turn off Hide RAW." : {
+
+    },
+    "Advanced Search" : {
+
+    },
+    "AI" : {
+
+    },
+    "All" : {
+
+    },
+    "All Time" : {
+
+    },
+    "Allow photo access in the Library tab to browse albums." : {
+
+    },
+    "Altitude" : {
+
+    },
+    "Angle-of-view groups use full-frame equivalent focal lengths." : {
+
+    },
+    "Any" : {
+
+    },
+    "Aperture" : {
+
+    },
+    "Appearance" : {
+
+    },
+    "Apply" : {
+
+    },
+    "Auto" : {
+
+    },
+    "Buckets" : {
+
+    },
+    "Built-in" : {
+
+    },
+    "Built-in presets keep the original proportions at Original, 4K, 2048 px or 1080 px. Add named presets for apps that require exact dimensions." : {
+
+    },
+    "Bulk Fill presets use a centered crop for every photo." : {
+
+    },
+    "Camera Database" : {
+
+    },
+    "Camera EXIF, date, location and orientation" : {
+
+    },
+    "Camera, lens and exposure filters become accurate once metadata finishes loading." : {
+
+    },
+    "Cancel" : {
+
+    },
+    "Cancel Export and Remove Copies" : {
+
+    },
+    "Cancel selection" : {
+
+    },
+    "Cancel this export?" : {
+
+    },
+    "Cancellation Cleanup" : {
+
+    },
+    "Canon R6, 85mm, ISO 3200…" : {
+
+    },
+    "Category" : {
+
+    },
+    "Cellular" : {
+
+    },
+    "Change date" : {
+
+    },
+    "Chart" : {
+
+    },
+    "Chart Type" : {
+
+    },
+    "Choose Folder" : {
+
+    },
+    "Choose how to select the area. You can add and subtract several kinds inside one mask." : {
+
+    },
+    "Clear" : {
+
+    },
+    "Clear All" : {
+
+    },
+    "Clear Filters" : {
+
+    },
+    "Clear Index" : {
+
+    },
+    "Clear Local Metadata Index" : {
+
+    },
+    "Clear Strokes" : {
+
+    },
+    "Clear the local metadata index? Your photos are not affected." : {
+
+    },
+    "Clone source" : {
+
+    },
+    "Closed" : {
+
+    },
+    "Collapse histogram" : {
+
+    },
+    "Compare" : {
+
+    },
+    "Compress %lld Photos" : {
+
+    },
+    "Compress Photo" : {
+
+    },
+    "Compression Error" : {
+
+    },
+    "Compression Presets" : {
+
+    },
+    "Conditions" : {
+
+    },
+    "Continue" : {
+
+    },
+    "Continue Export" : {
+
+    },
+    "Continue Indexing (%@)" : {
+
+    },
+    "Coordinates" : {
+
+    },
+    "Couldn't Delete Photos" : {
+
+    },
+    "Couldn't read metadata for this item." : {
+
+    },
+    "Crop" : {
+
+    },
+    "Crop %@ corner" : {
+
+    },
+    "Crop %@ edge" : {
+
+    },
+    "Crop frame" : {
+
+    },
+    "Crop Mode" : {
+
+    },
+    "Custom" : {
+
+    },
+    "Custom presets store a name, pixel dimensions, Fill or Fit behavior, quality and output format." : {
+
+    },
+    "Custom Range…" : {
+
+    },
+    "Daily On This Day Reminder" : {
+      "comment" : "Settings toggle.",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nhắc Ngày này năm xưa hằng ngày"
+          }
+        }
+      }
+    },
+    "Date" : {
+
+    },
+    "Date Range" : {
+
+    },
+    "days" : {
+
+    },
+    "Delete" : {
+
+    },
+    "Delete %@ %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Delete %1$@ %2$lld"
+          }
+        }
+      }
+    },
+    "Delete condition" : {
+
+    },
+    "Delete mask" : {
+
+    },
+    "Delete Point" : {
+
+    },
+    "Delete Stroke" : {
+
+    },
+    "Delete This Shape" : {
+
+    },
+    "Denied" : {
+      "comment" : "Permission state.",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bị từ chối"
+          }
+        }
+      }
+    },
+    "Deselect All" : {
+
+    },
+    "Discard Changes" : {
+
+    },
+    "Discard this editing session?" : {
+
+    },
+    "Done" : {
+
+    },
+    "Done with this mask" : {
+
+    },
+    "Double tap to collapse" : {
+
+    },
+    "Double tap to reset" : {
+
+    },
+    "downloaded from iCloud" : {
+
+    },
+    "Downloading from iCloud" : {
+
+    },
+    "Drag to adjust" : {
+
+    },
+    "Drag to move the crop" : {
+
+    },
+    "Drag to reposition crop" : {
+
+    },
+    "Drag to resize the crop" : {
+
+    },
+    "Duplicate" : {
+
+    },
+    "Edit" : {
+
+    },
+    "Edit Chart" : {
+
+    },
+    "Edit Preset" : {
+
+    },
+    "Edit Smart Album" : {
+
+    },
+    "Editor Error" : {
+
+    },
+    "Enter value" : {
+
+    },
+    "Every camera in your library has a known sensor format." : {
+
+    },
+    "Examples: IMG_1234 · Canon R6 · RF 100-500 · 85mm · ISO 3200 · f/1.8 · 1/500" : {
+
+    },
+    "Export" : {
+
+    },
+    "Export cancelled" : {
+
+    },
+    "Failures" : {
+
+    },
+    "Favorite" : {
+
+    },
+    "FF Equivalent" : {
+
+    },
+    "File Size" : {
+
+    },
+    "File Type" : {
+
+    },
+    "File Type Badge shows RAW, JPG, HEIC or the video format in the top-left corner of each thumbnail.\n\nPinch the photo grid to change how many columns are shown.\n\nFile Size is recorded while indexing — photos indexed before this option existed fill it in automatically the next time indexing runs." : {
+
+    },
+    "Fill With AI" : {
+
+    },
+    "Fill Without AI" : {
+
+    },
+    "Filter" : {
+
+    },
+    "Filters" : {
+
+    },
+    "Finding place name…" : {
+
+    },
+    "Finish configuring the chart to see a preview." : {
+
+    },
+    "Flip horizontally" : {
+
+    },
+    "Focal Length" : {
+
+    },
+    "Focal Length Style" : {
+
+    },
+    "Format" : {
+
+    },
+    "Frame Saved" : {
+
+    },
+    "Framing applies as you drag it. Tap Save when the whole edit is ready." : {
+
+    },
+    "Group by" : {
+
+    },
+    "HEIC" : {
+
+    },
+    "HEIC encoding isn't available on this device. ShotDex will save JPEG instead." : {
+
+    },
+    "Height" : {
+
+    },
+    "Hidden" : {
+
+    },
+    "Hide RAW files" : {
+
+    },
+    "History" : {
+
+    },
+    "History covers this editing session. Recall last ShotDex edit restores the recipe stored in Photos instead." : {
+
+    },
+    "Hue %lld degrees, saturation %lld percent" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hue %1$lld degrees, saturation %2$lld percent"
+          }
+        }
+      }
+    },
+    "iCloud download stalled" : {
+
+    },
+    "iCloud isn't responding" : {
+
+    },
+    "iCloud isn't responding — trying again in" : {
+
+    },
+    "iCloud not responding" : {
+
+    },
+    "iCloud not responding, retrying automatically" : {
+
+    },
+    "Import" : {
+
+    },
+    "Import ^[%lld item](inflect: true)" : {
+
+    },
+    "Import from a Card or Drive" : {
+
+    },
+    "Import Photos" : {
+
+    },
+    "Imported ^[%lld item](inflect: true)" : {
+
+    },
+    "Importing %lld of %lld…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Importing %1$lld of %2$lld…"
+          }
+        }
+      }
+    },
+    "Include Metadata" : {
+
+    },
+    "Includes identifiers, serial numbers, internal Exif/TIFF values, resources, and vendor-specific binary blocks." : {
+
+    },
+    "Indexed photo info is ready. Detailed raw metadata is still being read in the background." : {
+
+    },
+    "Indexed Photos and Videos" : {
+
+    },
+    "Indexing" : {
+
+    },
+    "Indexing %lld of %lld photos, %lld percent" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Indexing %1$lld of %2$lld photos, %3$lld percent"
+          }
+        }
+      }
+    },
+    "Indexing %lld%%" : {
+
+    },
+    "Indexing is how ShotDex learns what camera, lens and settings each photo was shot with. Videos are indexed too, so they show up in the library and in counts. For items kept in iCloud it downloads only the small part of the file holding that info — nothing is saved to this iPhone. Wi-Fi is always allowed.\n\nKeep Screen Awake stops the display from sleeping while indexing runs; after 1 minute without a touch the screen dims to save battery, and tapping the screen brings it back.\n\nIn Low Power Mode, automatic indexing pauses and the screen is left to sleep; you can still start indexing by hand, and it resumes automatically when you plug in a charger." : {
+
+    },
+    "Indexing paused — waiting for Wi-Fi" : {
+
+    },
+    "Indexing paused until your iPhone cools down" : {
+
+    },
+    "Indexing paused, waiting for Wi-Fi" : {
+
+    },
+    "Indexing, %lld percent" : {
+
+    },
+    "Invert" : {
+
+    },
+    "Invert mask" : {
+
+    },
+    "ISO" : {
+
+    },
+    "JPEG" : {
+
+    },
+    "Keep Editing" : {
+
+    },
+    "Keep Screen Awake While Indexing" : {
+
+    },
+    "Last Indexed" : {
+
+    },
+    "left" : {
+
+    },
+    "Less than a minute left" : {
+
+    },
+    "Limited Access" : {
+
+    },
+    "Limits how many bars/slices appear." : {
+
+    },
+    "Loading full-quality preview…" : {
+
+    },
+    "Location" : {
+
+    },
+    "Loop" : {
+
+    },
+    "Low Power Mode is slowing indexing down" : {
+
+    },
+    "Manage" : {
+
+    },
+    "Manage Selected Photos" : {
+
+    },
+    "Map showing where this item was captured" : {
+
+    },
+    "Mask actions" : {
+
+    },
+    "Mask effect" : {
+
+    },
+    "Mask name" : {
+
+    },
+    "Masks" : {
+
+    },
+    "Match" : {
+
+    },
+    "Match %@" : {
+
+    },
+    "Matches ^[%lld photo](inflect: true)." : {
+
+    },
+    "Max" : {
+
+    },
+    "Measure" : {
+
+    },
+    "Megapixels" : {
+
+    },
+    "MID" : {
+
+    },
+    "Min" : {
+
+    },
+    "mm" : {
+
+    },
+    "More editor actions" : {
+
+    },
+    "More selection actions" : {
+
+    },
+    "Move ellipse" : {
+
+    },
+    "Name" : {
+
+    },
+    "Network" : {
+
+    },
+    "New Chart" : {
+
+    },
+    "New Mask" : {
+
+    },
+    "New photos appear in your library and are indexed automatically." : {
+
+    },
+    "New Preset" : {
+
+    },
+    "New Smart Album" : {
+
+    },
+    "No Access to Photos" : {
+
+    },
+    "No data for this range." : {
+
+    },
+    "No Date" : {
+
+    },
+    "No location data" : {
+
+    },
+    "No location data. This item doesn't contain a saved capture location." : {
+
+    },
+    "No masks yet" : {
+
+    },
+    "No Metadata" : {
+
+    },
+    "No Photos" : {
+
+    },
+    "No Photos Match" : {
+
+    },
+    "No photos match these filters." : {
+
+    },
+    "No Photos on This Day" : {
+
+    },
+    "No photos were taken on %@ in previous years." : {
+
+    },
+    "No Unknown Cameras" : {
+
+    },
+    "No values indexed yet" : {
+
+    },
+    "None" : {
+
+    },
+    "Not available for this file" : {
+
+    },
+    "Not favorite" : {
+
+    },
+    "nothing downloaded yet" : {
+
+    },
+    "Notifications" : {
+      "comment" : "Settings section header and permission row label.",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thông báo"
+          }
+        }
+      }
+    },
+    "Of" : {
+
+    },
+    "Off" : {
+
+    },
+    "Offline" : {
+
+    },
+    "OK" : {
+
+    },
+    "On" : {
+
+    },
+    "On This Day" : {
+      "comment" : "Title of the daily reminder notification.",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ngày này năm xưa"
+          }
+        }
+      }
+    },
+    "On This Day, %lld photos from previous years" : {
+
+    },
+    "Once a day ShotDex tells you how many photos and videos you shot on that date in previous years, and how much space they take, so you can go clear out what you no longer want. Days with nothing to show are skipped.\n\nSizes come from the local index: while indexing is still running the total is reported as a minimum and grows as more files are read.\n\nReminders are scheduled a week at a time and refilled whenever you open ShotDex." : {
+      "comment" : "Footer of the Notifications settings section.",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mỗi ngày một lần, ShotDex cho bạn biết ngày đó những năm trước bạn đã chụp bao nhiêu ảnh và video, và chúng chiếm bao nhiêu dung lượng, để bạn vào dọn những gì không còn muốn giữ. Ngày không có gì thì bỏ qua.\n\nDung lượng lấy từ index trên máy: trong lúc index còn chạy, tổng được báo là mức tối thiểu và tăng dần khi đọc thêm file.\n\nThông báo được đặt trước một tuần và nạp lại mỗi lần bạn mở ShotDex."
+          }
+        }
+      }
+    },
+    "Open" : {
+
+    },
+    "Open Settings" : {
+      "comment" : "Button opening the system Settings app for this app.",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mở Cài đặt"
+          }
+        }
+      }
+    },
+    "Opening original…" : {
+
+    },
+    "Output" : {
+
+    },
+    "Pause" : {
+
+    },
+    "Paused — waiting for Wi-Fi" : {
+
+    },
+    "Period" : {
+
+    },
+    "Photo" : {
+
+    },
+    "Photo Info" : {
+
+    },
+    "Photo Library" : {
+
+    },
+    "photos and videos per minute" : {
+
+    },
+    "Photos doesn't support an HEIC edited rendition for this asset. ShotDex will save a maximum-quality JPEG." : {
+
+    },
+    "Photos doesn't support HEIC as the edited rendition for this asset, so ShotDex saved a maximum-quality JPEG instead." : {
+
+    },
+    "Photos must match at least one condition below." : {
+
+    },
+    "Photos must match every condition below." : {
+
+    },
+    "Pick a Date" : {
+
+    },
+    "Pick Another Date" : {
+
+    },
+    "Pick the sensor format for each camera to include it in statistics and equivalent focal length calculations." : {
+
+    },
+    "Place name needs a network connection. The saved coordinate remains available offline." : {
+
+    },
+    "Play" : {
+
+    },
+    "Playback speed" : {
+
+    },
+    "Playback Speed" : {
+
+    },
+    "Plug in your camera's SD card or a USB drive, then pick its folder (usually DCIM). RAW is skipped by default; JPEG, HEIC and videos import." : {
+
+    },
+    "Point color" : {
+
+    },
+    "Preparing original…" : {
+
+    },
+    "Preset" : {
+
+    },
+    "Preview" : {
+
+    },
+    "Privacy" : {
+
+    },
+    "Processing %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Processing %1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "Quality" : {
+
+    },
+    "RAW and DNG are hidden by default; JPEG, HEIC and videos import." : {
+
+    },
+    "Raw Metadata" : {
+
+    },
+    "Re-index Library" : {
+
+    },
+    "reading metadata %lld/%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "reading metadata %1$lld/%2$lld"
+          }
+        }
+      }
+    },
+    "Reading metadata %lld/%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reading metadata %1$lld/%2$lld"
+          }
+        }
+      }
+    },
+    "Reading original…" : {
+
+    },
+    "Reading photo and video info" : {
+
+    },
+    "Reading photo and video info · %lld%%" : {
+
+    },
+    "Reading photo and video info, %lld percent, %lld of %lld items" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reading photo and video info, %1$lld percent, %2$lld of %3$lld items"
+          }
+        }
+      }
+    },
+    "Reading photo and video info…" : {
+
+    },
+    "Reading photo info…" : {
+
+    },
+    "Recall last ShotDex edit" : {
+
+    },
+    "Recall Last ShotDex Edit" : {
+
+    },
+    "Redo" : {
+
+    },
+    "Remind Me At" : {
+      "comment" : "Settings time picker for the daily reminder.",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nhắc lúc"
+          }
+        }
+      }
+    },
+    "Remove Invert" : {
+
+    },
+    "Removes this condition" : {
+
+    },
+    "Rename" : {
+
+    },
+    "Rename Mask" : {
+
+    },
+    "Rendering full resolution…" : {
+
+    },
+    "Reorder charts" : {
+
+    },
+    "Reset" : {
+
+    },
+    "Reset all" : {
+
+    },
+    "Reset all custom camera mappings?" : {
+
+    },
+    "Reset Crop" : {
+
+    },
+    "Reset Custom Mappings" : {
+
+    },
+    "Reset Mappings" : {
+
+    },
+    "Resize & Compress" : {
+
+    },
+    "Retry" : {
+
+    },
+    "Retry Now" : {
+
+    },
+    "Retrying automatically in" : {
+
+    },
+    "Retrying in" : {
+
+    },
+    "RGB" : {
+
+    },
+    "RGB histogram" : {
+
+    },
+    "Rotate 90 degrees" : {
+
+    },
+    "Same as Original" : {
+
+    },
+    "Sample a color" : {
+
+    },
+    "Save" : {
+
+    },
+    "Save as Smart Album" : {
+
+    },
+    "Save Changes" : {
+
+    },
+    "Save Changes is non-destructive: Photos keeps the original and ShotDex reopens this asset with the saved crop, sliders and masks. A Live Photo keeps its motion. Save Copy creates a still image." : {
+
+    },
+    "Save Copy" : {
+
+    },
+    "Save Copy is full resolution at maximum quality. Turning off metadata strips EXIF and clears the Photos date/location on Save Changes. If Photos doesn't support HEIC for this asset, ShotDex falls back to JPEG and tells you." : {
+
+    },
+    "Save Edit" : {
+
+    },
+    "Save to Photos" : {
+
+    },
+    "Saved as JPEG" : {
+
+    },
+    "Saving Frame…" : {
+
+    },
+    "Scanning %@…" : {
+
+    },
+    "Search" : {
+
+    },
+    "Search by filename, camera, lens, focal length, ISO, aperture or shutter speed." : {
+
+    },
+    "Search for “%@”" : {
+
+    },
+    "Select a start date" : {
+
+    },
+    "Select All" : {
+
+    },
+    "Select items to import" : {
+
+    },
+    "Select photos" : {
+
+    },
+    "Select photos to delete" : {
+
+    },
+    "Sensor Format" : {
+
+    },
+    "Series" : {
+
+    },
+    "Set" : {
+
+    },
+    "Settings" : {
+
+    },
+    "Share" : {
+
+    },
+    "ShotDex" : {
+
+    },
+    "ShotDex is reading the camera, lens and exposure info from each photo and video. For items kept in iCloud it downloads only the small part of the file holding that info — nothing is saved to this iPhone." : {
+
+    },
+    "ShotDex is reading the camera, lens and exposure info from each photo and video. For items kept in iCloud it downloads only the small part of the file holding that info — nothing is saved to this iPhone. The app may feel slow until this finishes." : {
+
+    },
+    "ShotDex only analyzes the photos you selected." : {
+
+    },
+    "ShotDex reads photo metadata entirely on your device. Your photos and metadata never leave your device." : {
+
+    },
+    "ShotDex will ask Photos to remove every copy already exported." : {
+
+    },
+    "Show All Raw Metadata" : {
+
+    },
+    "Show mask area" : {
+
+    },
+    "Show top %lld" : {
+
+    },
+    "Shown" : {
+
+    },
+    "Shows a single value across the whole library." : {
+
+    },
+    "Shows all photo info" : {
+
+    },
+    "Shows details about shutter count availability" : {
+
+    },
+    "Shows indexing details" : {
+
+    },
+    "Shows the top group by photo count." : {
+
+    },
+    "Shutter Count" : {
+
+    },
+    "Shutter Speed" : {
+
+    },
+    "Size" : {
+
+    },
+    "Smart Album Name" : {
+
+    },
+    "Smart Albums" : {
+
+    },
+    "Some exported copies may remain in Photos" : {
+
+    },
+    "Sort" : {
+
+    },
+    "Source" : {
+
+    },
+    "Split compare" : {
+
+    },
+    "Split into series by" : {
+
+    },
+    "Starting…" : {
+
+    },
+    "Subtracting from mask" : {
+
+    },
+    "Tab bar" : {
+
+    },
+    "Tap a mask to adjust that area on its own" : {
+
+    },
+    "Tap the eyedropper, then tap a color in the photo" : {
+
+    },
+    "Tap to expand" : {
+
+    },
+    "Tap to switch" : {
+
+    },
+    "Tap to type a value" : {
+
+    },
+    "The accent color tints buttons, selections and highlights throughout ShotDex, including the photo editor. Amber and Sand are the colors of the app icon; iOS Default is the system blue." : {
+
+    },
+    "The size is a fast estimate and may change slightly when the full-resolution file is encoded." : {
+
+    },
+    "The typical crop factor of the chosen format is used for full-frame equivalent focal lengths." : {
+
+    },
+    "This item doesn't contain a saved capture location." : {
+
+    },
+    "This Month" : {
+
+    },
+    "This photo hasn't been downloaded from iCloud yet." : {
+
+    },
+    "This Year" : {
+
+    },
+    "Thumbnail Metadata" : {
+
+    },
+    "Tint wheel" : {
+
+    },
+    "to" : {
+
+    },
+    "Today" : {
+
+    },
+    "Top %lld series" : {
+
+    },
+    "Unable to Share" : {
+
+    },
+    "Undo" : {
+
+    },
+    "Unknown Cameras" : {
+
+    },
+    "Use Cellular" : {
+
+    },
+    "Use Cellular Data for Indexing" : {
+
+    },
+    "Value" : {
+
+    },
+    "Video progress" : {
+
+    },
+    "Whole library" : {
+
+    },
+    "Wi-Fi" : {
+
+    },
+    "Width" : {
+
+    },
+    "Wired" : {
+
+    },
+    "X-Axis" : {
+
+    },
+    "X-Axis (time)" : {
+
+    },
+    "Y-Axis" : {
+
+    },
+    "Yesterday" : {
+
+    },
+    "Your iPhone is warm — indexing slowed down to cool it" : {
+
+    },
+    "Your photo library appears to be empty." : {
+
+    }
+  },
+  "version" : "1.0"
+}

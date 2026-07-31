@@ -6,3 +6,14 @@ build/
 .build/
 .swiftpm/
 .idea/
+
+# Core ML models, kept out of history: 139 MB of weights that git would carry
+# forever, and both are reproducible. See ShotDex/Resources/Models/README.md for
+# how to put them back. The app works without them — Sky masks and AI Fill are
+# hidden or fall back when a model is missing.
+ShotDex/Resources/Models/*.mlpackage/
+# Upstream LaMa weights archive the conversion script downloads (368 MB).
+big-lama.zip
+lama/
+__pycache__/
+*.pyc
