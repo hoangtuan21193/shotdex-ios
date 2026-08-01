@@ -34,6 +34,10 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
     case sensorFormat
     case fileType
     case filename
+    /// Where the photo was taken, matched against the reverse-geocoded address
+    /// (`photo_metadata.placeSearchText`). Only photos the geocoding pass has
+    /// reached can match — see `PlaceIndexPass`.
+    case place
     case iso
     case aperture
     case shutter
@@ -51,6 +55,7 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
         case .sensorFormat: "Sensor Format"
         case .fileType: "File Type"
         case .filename: "Filename"
+        case .place: "Place"
         case .iso: "ISO"
         case .aperture: "Aperture"
         case .shutter: "Shutter Speed"
@@ -62,7 +67,7 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
 
     var kind: RuleFieldKind {
         switch self {
-        case .cameraBrand, .cameraBody, .lens, .filename: .text
+        case .cameraBrand, .cameraBody, .lens, .filename, .place: .text
         case .sensorFormat, .fileType: .choice
         case .iso, .aperture, .shutter, .focalLength: .number
         case .dateTaken: .date

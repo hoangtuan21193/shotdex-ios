@@ -15,6 +15,11 @@ struct EditorMaskGuideOverlay: View {
     @Bindable var controller: PhotoEditorController
     /// The fitted photo rect, in the stage's coordinates.
     let imageRect: CGRect
+    /// The overlay lives inside the zoomed stack, so everything it draws is scaled
+    /// up on screen. Knobs, hit targets and guide lines divide by the zoom to stay
+    /// the same size under the finger — at 8× an uncompensated 18pt knob covers a
+    /// third of the photo and its 44pt target swallows the shape it is editing.
+    var zoomScale: CGFloat = 1
     /// Values captured on the first change of a knob drag, so every subsequent
     /// change is an absolute delta from where the drag started — the same pattern
     /// as the crop frame's move gesture, and for the same reason: accumulating
@@ -135,6 +140,11 @@ struct EditorMaskGuideOverlay: View {
 
         // Move target: the inside of the ellipse. Sits under the knobs, so a drag
         // that starts on a knob resizes and one that starts inside moves.
+        //
+        // Known limitation: being a view on top, this is what UIKit hit-tests to,
+        // so a *two-finger* drag that starts inside the ellipse reaches neither the
+        // paint layer's pan recogniser below nor this one-finger `DragGesture` — the
+        // photo will not pan from in here. Panning from outside the ellipse works.
         Color.clear
             .frame(width: max(1, outer.width), height: max(1, outer.height))
             .contentShape(Ellipse())
@@ -206,9 +216,9 @@ struct EditorMaskGuideOverlay: View {
         let point = EditorLayoutMetrics.maskViewPoint(component.subjectPoint, in: imageRect)
         return Circle()
             .fill(EditorTheme.accent)
-            .frame(width: 10, height: 10)
-            .overlay { Circle().stroke(.white, lineWidth: 1.5) }
-            .shadow(color: .black.opacity(0.5), radius: 2)
+            .frame(width: 10 / zoomScale, height: 10 / zoomScale)
+            .overlay { Circle().stroke(.white, lineWidth: 1.5 / zoomScale) }
+            .shadow(color: .black.opacity(0.5), radius: 2 / zoomScale)
             .position(point)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
@@ -225,7 +235,10 @@ struct EditorMaskGuideOverlay: View {
         Path(draw)
             .stroke(
                 Color.white.opacity(0.85),
-                style: StrokeStyle(lineWidth: 1, dash: dash)
+                style: StrokeStyle(
+                    lineWidth: 1 / zoomScale,
+                    dash: dash.map { $0 / zoomScale }
+                )
             )
             .shadow(color: .black.opacity(0.5), radius: 1)
             // Lines run to infinity; only the part over the photo is guide, the
@@ -260,9 +273,9 @@ struct EditorMaskGuideOverlay: View {
         label: String,
         onDrag: @escaping (DragAnchor, CGSize, CGPoint) -> Void
     ) -> some View {
-        let diameter = isSmall
+        let diameter = (isSmall
             ? EditorLayoutMetrics.maskGuideKnobSize * 0.7
-            : EditorLayoutMetrics.maskGuideKnobSize
+            : EditorLayoutMetrics.maskGuideKnobSize) / zoomScale
         return Circle()
             .fill(isFilled ? Color.white : Color.black.opacity(0.4))
             .overlay {
@@ -272,10 +285,10 @@ struct EditorMaskGuideOverlay: View {
                 )
             }
             .frame(width: diameter, height: diameter)
-            .shadow(color: .black.opacity(0.5), radius: 3, y: 1)
+            .shadow(color: .black.opacity(0.5), radius: 3 / zoomScale, y: 1 / zoomScale)
             .frame(
-                width: EditorLayoutMetrics.maskGuideHitTarget,
-                height: EditorLayoutMetrics.maskGuideHitTarget
+                width: EditorLayoutMetrics.maskGuideHitTarget / zoomScale,
+                height: EditorLayoutMetrics.maskGuideHitTarget / zoomScale
             )
             .contentShape(Rectangle())
             .position(point)
@@ -343,29 +356,40 @@ struct EditorBrushCursor: View {
     let feather: Double
     let isEraser: Bool
     let imageRect: CGRect
-    /// The cursor lives inside the zoomed stack, so everything it draws is scaled
-    /// up on screen. Dividing by the zoom is what keeps the ring — and the
-    /// footprint it promises — a constant size under the finger: `size` is a
-    /// screen size, and the stroke records `paintedSize(size:zoomScale:)`.
+    /// The cursor lives inside the zoomed stack, so **every** length it draws is
+    /// multiplied by the zoom on screen — the diameter, but the ring outlines, the
+    /// eraser glyph and the shadow just as much. All of them divide by the zoom
+    /// here: `size` is a screen size and the stroke records
+    /// `paintedSize(size:zoomScale:)`, so the ring has to stay the same size under
+    /// the finger at any magnification.
+    ///
+    /// Dividing only the diameter was the bug behind "the brush zooms with the
+    /// photo": a flat 1.5pt outline is 12pt thick at 800%, which swallows an 8pt
+    /// ring whole and turns a fine brush into a white blob that grows as you pinch.
     var zoomScale: CGFloat = 1
 
     var body: some View {
-        let diameter = max(8, size * min(imageRect.width, imageRect.height)) / zoomScale
-        let core = diameter * max(0.08, 1 - feather * 0.8)
+        let diameter = EditorLayoutMetrics.brushCursorDiameter(
+            size: size,
+            in: imageRect,
+            zoomScale: zoomScale
+        )
+        let core = diameter * EditorLayoutMetrics.brushCoreScale(feather: feather)
+        let scale = max(1, zoomScale)
         ZStack {
             Circle()
-                .stroke(Color.white.opacity(0.9), lineWidth: 1.5)
+                .stroke(Color.white.opacity(0.9), lineWidth: 1.5 / scale)
                 .frame(width: diameter, height: diameter)
             Circle()
-                .stroke(Color.white.opacity(0.45), lineWidth: 1)
+                .stroke(Color.white.opacity(0.45), lineWidth: 1 / scale)
                 .frame(width: core, height: core)
             if isEraser {
                 Image(systemName: "minus")
-                    .font(.system(size: 9, weight: .bold))
+                    .font(.system(size: 9 / scale, weight: .bold))
                     .foregroundStyle(.white)
             }
         }
-        .shadow(color: .black.opacity(0.5), radius: 1)
+        .shadow(color: .black.opacity(0.5), radius: 1 / scale)
         .position(point)
         .allowsHitTesting(false)
         .accessibilityHidden(true)

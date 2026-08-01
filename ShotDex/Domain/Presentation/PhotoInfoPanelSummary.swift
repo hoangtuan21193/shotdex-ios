@@ -116,9 +116,13 @@ struct PhotoInfoPanelSummary: Equatable {
         locale: Locale
     ) -> String? {
         guard let date else { return nil }
-        let time = date.formatted(
-            Date.FormatStyle(locale: locale, calendar: calendar).hour().minute()
-        )
+        // `Date.FormatStyle` takes its time zone from the current one, not from the
+        // calendar it is handed — so a caller that passes a calendar in a specific
+        // zone (tests do) got the day from that zone and the clock time from
+        // another, which can differ by a day.
+        var timeStyle = Date.FormatStyle(locale: locale, calendar: calendar).hour().minute()
+        timeStyle.timeZone = calendar.timeZone
+        let time = date.formatted(timeStyle)
         return "\(dayText(date, calendar: calendar, now: now, locale: locale)) \(time)"
     }
 
@@ -139,6 +143,7 @@ struct PhotoInfoPanelSummary: Equatable {
         }
         var style = Date.FormatStyle(locale: locale, calendar: calendar)
             .day().month(.abbreviated)
+        style.timeZone = calendar.timeZone
         if !calendar.isDate(date, equalTo: now, toGranularity: .year) {
             style = style.year()
         }

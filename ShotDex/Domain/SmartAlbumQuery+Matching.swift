@@ -11,12 +11,24 @@ extension SmartAlbumQuery {
     /// Whether `metadata` satisfies this query. An empty query (no compilable
     /// rule) matches everything, matching the builder's "no predicate" case.
     func matches(_ metadata: PhotoMetadata) -> Bool {
-        let rules = validRules
+        let rules = validRules.filter(Self.isEvaluableInMemory)
         guard !rules.isEmpty else { return true }
         switch matchMode {
         case .all: return rules.allSatisfy { Self.matches(rule: $0, metadata) }
         case .any: return rules.contains { Self.matches(rule: $0, metadata) }
         }
+    }
+
+    /// Rules this matcher cannot answer, so callers can leave them out instead of
+    /// silently getting `false`.
+    ///
+    /// `.place` is the only one: the reverse-geocoded address lives in columns
+    /// deliberately kept off `PhotoMetadata` (an indexer upsert carrying empty
+    /// place values would erase them), and an import candidate has no row to read
+    /// them from anyway. Treating it as "no match" would make an import filter
+    /// that mentions a place quietly return nothing.
+    static func isEvaluableInMemory(_ rule: SmartAlbumRule) -> Bool {
+        rule.field != .place
     }
 
     private static func matches(rule: SmartAlbumRule, _ metadata: PhotoMetadata) -> Bool {

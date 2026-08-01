@@ -177,8 +177,14 @@ struct EditorHistoryAndSummaryTests {
             EditorAdjustmentSummary.describeChange(from: base, to: pointed)
                 == "Added Point Color"
         )
+        // Back to a recipe that still has *something* in it — dropping the last
+        // adjustment of all is a "Reset", which is a different label on purpose.
+        var keptSomething = base
+        keptSomething.adjustments.exposure = 0.3
+        var pointedOnTop = keptSomething
+        pointedOnTop.color.points = pointed.color.points
         #expect(
-            EditorAdjustmentSummary.describeChange(from: pointed, to: base)
+            EditorAdjustmentSummary.describeChange(from: pointedOnTop, to: keptSomething)
                 == "Removed Point Color"
         )
 

@@ -45,6 +45,9 @@ enum SmartAlbumSQLBuilder {
     /// not" (and behaves under `OR` in match-any albums).
     static func clause(for rule: SmartAlbumRule) -> (sql: String, values: [DatabaseValueConvertible])? {
         switch rule.field.kind {
+        case .text where rule.field == .place:
+            return placeClause(rule.op, term: rule.text)
+
         case .text:
             return textClause(rule.op, term: rule.text, columns: textColumns(rule.field))
 
@@ -147,6 +150,35 @@ enum SmartAlbumSQLBuilder {
         case .isNot:
             let ands = columns.map { "COALESCE(\($0), '') <> ? COLLATE NOCASE" }
             return ("(" + ands.joined(separator: " AND ") + ")", exactValues)
+        default:
+            return nil
+        }
+    }
+
+    /// Place is its own text path because both sides of the comparison have to be
+    /// normalized the same way: the column holds every address component folded
+    /// free of diacritics and lowercased (`PlaceSearchText`), which is what lets
+    /// "da nang" find "Đà Nẵng" with a plain `LIKE` and no per-row work.
+    ///
+    /// `isExactly` means "this component, whole" rather than "the entire address":
+    /// the column is a concatenation, so an equality test against it would never
+    /// match anything a person would type. Padding both sides with spaces gives
+    /// the word boundary.
+    private static func placeClause(
+        _ op: RuleOperator,
+        term rawTerm: String
+    ) -> (sql: String, values: [DatabaseValueConvertible])? {
+        let term = PlaceSearchText.normalized(rawTerm)
+        guard !term.isEmpty else { return nil }
+        switch op {
+        case .contains:
+            return ("placeSearchText LIKE ?", ["%\(term)%"])
+        case .doesNotContain:
+            return ("COALESCE(placeSearchText, '') NOT LIKE ?", ["%\(term)%"])
+        case .isExactly:
+            return ("(' ' || COALESCE(placeSearchText, '') || ' ') LIKE ?", ["% \(term) %"])
+        case .isNot:
+            return ("(' ' || COALESCE(placeSearchText, '') || ' ') NOT LIKE ?", ["% \(term) %"])
         default:
             return nil
         }

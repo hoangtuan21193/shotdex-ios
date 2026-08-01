@@ -475,6 +475,23 @@ struct EditorMaskActionsMenu: View {
 
     var body: some View {
         Menu {
+            // Undo and redo are on the action row everywhere else, but that row is
+            // the shape controls while a mask is open — which left the one tool
+            // where a wrong move is a stroke of paint with no way to take it back
+            // short of leaving the mask.
+            Button {
+                controller.undo()
+            } label: {
+                Label("Undo", systemImage: "arrow.uturn.backward")
+            }
+            .disabled(!controller.canUndo)
+            Button {
+                controller.redo()
+            } label: {
+                Label("Redo", systemImage: "arrow.uturn.forward")
+            }
+            .disabled(!controller.canRedo)
+            Divider()
             Button(action: rename) {
                 Label("Rename", systemImage: "pencil")
             }
@@ -589,6 +606,26 @@ struct EditorMaskDetailPanel: View {
             .buttonStyle(.plain)
 
             Spacer(minLength: 0)
+
+            // One-tap undo, because the thing most likely to need taking back in
+            // here is a brush stroke and a menu is two taps too many. Redo is
+            // rarer, so it stays in the `⋯` menu with this one.
+            Button {
+                controller.undo()
+            } label: {
+                Image(systemName: "arrow.uturn.backward")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(
+                        controller.canUndo
+                            ? EditorTheme.secondaryText
+                            : EditorTheme.dimText.opacity(0.5)
+                    )
+                    .frame(width: 34, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(!controller.canUndo)
+            .accessibilityLabel("Undo")
 
             // The mask's *effect* on and off, and it is the eye on purpose:
             // Lightroom and every layers panel taught that instinct, and a

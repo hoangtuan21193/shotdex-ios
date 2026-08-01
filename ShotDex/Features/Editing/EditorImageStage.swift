@@ -26,8 +26,12 @@ struct EditorImageStage: View {
     @State private var cleanUpLocation: CGPoint?
     @State private var cleanUpPath: [CGPoint] = []
     @State private var pinchStartScale: CGFloat = 1
-    /// True only while a pinch is in progress: the zoom readout answers the
-    /// gesture, and is not a permanent badge on the photo.
+    /// Where the pinch's two fingers were centred when it began, in stage points.
+    /// Held for the whole gesture so the photo scales about that point rather than
+    /// about the middle of the stage.
+    @State private var pinchAnchor: CGPoint?
+    /// True only while a pinch is in progress: the zoom readout is louder then, and
+    /// is not a permanent badge on the photo.
     @State private var isZooming = false
     @State private var panStartOffset = CGSize.zero
 
@@ -99,7 +103,7 @@ struct EditorImageStage: View {
             // 1024 — which was below the display on any modern phone and made
             // every drag look like the picture lost resolution.
             .onChange(of: imageRect.size, initial: true) { _, size in
-                controller.setDisplaySize(size, scale: displayScale)
+                controller.setDisplaySize(size, scale: displayScale * chrome.zoomScale)
             }
         }
         .clipped()
@@ -152,7 +156,8 @@ struct EditorImageStage: View {
                     if !chrome.isFullBleed {
                         EditorMaskGuideOverlay(
                             controller: controller,
-                            imageRect: imageRect
+                            imageRect: imageRect,
+                            zoomScale: chrome.zoomScale
                         )
                     }
 
@@ -208,7 +213,8 @@ struct EditorImageStage: View {
                         EditorCleanUpOverlay(
                             controller: controller,
                             imageRect: imageRect,
-                            livePath: cleanUpPath
+                            livePath: cleanUpPath,
+                            zoomScale: chrome.zoomScale
                         )
                     }
 
@@ -328,13 +334,33 @@ struct EditorImageStage: View {
             // Live zoom readout while the fingers are still on the photo, top-left
             // like Lightroom's. It replaces a permanent `1:1` pill that said
             // nothing true past 100% and had to be read at the wrong corner.
-            if isZooming {
-                EditorPillLabel(
-                    text: "\(EditorLayoutMetrics.zoomPercent(chrome.zoomScale))%",
-                    isActive: true
-                )
-                .position(x: stageRect.minX + 44, y: stageRect.minY + 24)
+            //
+            // It stays up while the photo is zoomed, because it is also the way
+            // back to 100%: pinching a photo all the way out again is fiddly, and
+            // in a paint tool a double tap is two dabs, so nothing else could do
+            // it. Tapping while the fingers are still down would fight the pinch,
+            // so the button only acts once the gesture is over.
+            if isZooming || chrome.isZoomedIn {
+                Button {
+                    withAnimation(EditorTheme.animation) { chrome.resetZoom() }
+                    pinchStartScale = 1
+                    panStartOffset = .zero
+                    refreshRenderResolution(imageRect: imageRect)
+                } label: {
+                    EditorPillLabel(
+                        text: "\(EditorLayoutMetrics.zoomPercent(chrome.zoomScale))%",
+                        systemImage: isZooming
+                            ? nil
+                            : "arrow.down.right.and.arrow.up.left",
+                        isActive: isZooming
+                    )
+                }
+                .buttonStyle(.plain)
+                .disabled(isZooming)
+                .position(x: stageRect.minX + 52, y: stageRect.minY + 24)
                 .transition(.opacity)
+                .accessibilityLabel("Zoom \(EditorLayoutMetrics.zoomPercent(chrome.zoomScale)) percent")
+                .accessibilityHint("Tap to fit the photo")
             }
 
             if chrome.isFullBleed {
@@ -447,25 +473,61 @@ struct EditorImageStage: View {
     private func zoomGesture(imageRect: CGRect, stage: CGSize) -> some Gesture {
         MagnifyGesture()
             .onChanged { value in
-                chrome.zoomScale = min(
+                let anchor = pinchAnchor ?? CGPoint(
+                    x: value.startAnchor.x * stage.width,
+                    y: value.startAnchor.y * stage.height
+                )
+                if pinchAnchor == nil {
+                    pinchAnchor = anchor
+                    pinchStartScale = chrome.zoomScale
+                }
+                let scale = min(
                     EditorLayoutMetrics.maximumZoomScale,
                     max(1, pinchStartScale * value.magnification)
                 )
-                // Pinching back out shrinks the photo around the stage centre, so
-                // an offset that was legal a moment ago can now be pushing empty
-                // space onto the screen.
+                // Stepped from the *previous* frame rather than from the start of
+                // the gesture, so a two-finger drag arriving between frames is not
+                // undone: that gesture writes the offset too, and rebuilding it
+                // from a start value would put it back every frame — which is
+                // exactly what stopped the photo panning while zoomed.
+                chrome.zoomOffset = EditorLayoutMetrics.anchoredZoomOffset(
+                    anchor: anchor,
+                    stage: stage,
+                    startScale: chrome.zoomScale,
+                    startOffset: chrome.zoomOffset,
+                    scale: scale
+                )
+                chrome.zoomScale = scale
+                // Pinching back out shrinks the photo, so an offset that was legal
+                // a moment ago can now be pushing empty space onto the screen.
                 clampPan(imageRect: imageRect, stage: stage)
                 isZooming = true
             }
             .onEnded { _ in
+                pinchAnchor = nil
                 pinchStartScale = chrome.zoomScale
                 if chrome.zoomScale <= 1.02 {
                     withAnimation(EditorTheme.animation) { chrome.resetZoom() }
                     pinchStartScale = 1
                 }
                 panStartOffset = chrome.zoomOffset
+                // The picture is now drawn at `zoomScale` times the size it was
+                // rendered for, so re-render at the resolution it is actually being
+                // shown at. Nothing else in the editor asks for this: an edit
+                // schedules its own render, a zoom does not change the recipe.
+                refreshRenderResolution(imageRect: imageRect)
                 withAnimation(EditorTheme.animation) { isZooming = false }
             }
+    }
+
+    /// Tells the controller how many pixels of photo are actually on screen, zoom
+    /// included, and re-renders for it.
+    private func refreshRenderResolution(imageRect: CGRect) {
+        controller.setDisplaySize(
+            imageRect.size,
+            scale: displayScale * chrome.zoomScale
+        )
+        controller.scheduleRender()
     }
 
     /// Drags the zoomed photo around with one finger. Only attached when there is

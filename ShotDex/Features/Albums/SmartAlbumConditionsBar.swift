@@ -86,6 +86,11 @@ extension SmartAlbumRule {
     private var compactTextSummary: String {
         let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty else { return compactFieldName }
+        // A place name says what it is: "Fukuoka" reads better on a chip than
+        // "place Fukuoka". A negated one still needs the marker.
+        if field == .place, op == .contains || op == .isExactly {
+            return value
+        }
         switch op {
         case .contains:
             return "\(compactFieldName) \(value)"
@@ -145,6 +150,7 @@ extension SmartAlbumRule {
         case .lens: "lens"
         case .sensorFormat: "sensor"
         case .fileType, .filename: "file"
+        case .place: "place"
         case .iso: "ISO"
         case .aperture: "f"
         case .shutter: "shutter"

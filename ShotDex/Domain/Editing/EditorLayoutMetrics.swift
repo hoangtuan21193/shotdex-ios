@@ -208,6 +208,21 @@ enum EditorLayoutMetrics {
         CGFloat(max(0.08, 1 - feather * 0.8))
     }
 
+    /// Diameter to draw the brush cursor at *inside the zoomed stack*, so that on
+    /// screen it always comes back out as `brushDiameter` — the footprint the
+    /// stroke will record, whatever the photo is pinched to. This is the whole
+    /// point of a screen-sized brush: zooming in is how small detail is reached.
+    ///
+    /// The 8pt floor is a *screen* floor for the same reason — it is applied
+    /// before the divide, so the multiply back out leaves exactly 8pt.
+    static func brushCursorDiameter(
+        size: Double,
+        in rect: CGRect,
+        zoomScale: CGFloat
+    ) -> CGFloat {
+        max(8, brushDiameter(size: size, in: rect)) / max(1, zoomScale)
+    }
+
     /// Matches the Size slider in the mask popup.
     static let brushSizeRange = 0.02...0.5
 
@@ -226,6 +241,34 @@ enum EditorLayoutMetrics {
     /// that gets written has to shrink by exactly the zoom.
     static func paintedSize(_ size: Double, zoomScale: CGFloat) -> Double {
         size / Double(max(1, zoomScale))
+    }
+
+    /// Offset that keeps the pixel under the pinch's own anchor point still while
+    /// the scale changes from `startScale` to `scale`.
+    ///
+    /// Without it the photo scales about the middle of the stage, so pinching open
+    /// on a corner walks that corner off screen and finding the detail again costs
+    /// a two-finger pan — which is most of the work when the reason for zooming was
+    /// to paint one small thing.
+    ///
+    /// `anchor` and `startOffset` are in stage points; the maths is the inverse of
+    /// the stage's own `scaleEffect(scale).offset(offset)`, which scales about the
+    /// stage's centre.
+    static func anchoredZoomOffset(
+        anchor: CGPoint,
+        stage: CGSize,
+        startScale: CGFloat,
+        startOffset: CGSize,
+        scale: CGFloat
+    ) -> CGSize {
+        guard startScale > 0 else { return startOffset }
+        let ratio = scale / startScale
+        let dx = anchor.x - stage.width / 2
+        let dy = anchor.y - stage.height / 2
+        return CGSize(
+            width: dx - (dx - startOffset.width) * ratio,
+            height: dy - (dy - startOffset.height) * ratio
+        )
     }
 
     /// Zoom readout, rounded the way a percentage is read: 100, 250, 800.

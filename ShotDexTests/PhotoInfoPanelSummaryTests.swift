@@ -18,7 +18,7 @@ struct PhotoInfoPanelSummaryTests {
         return calendar
     }
 
-    /// 20 Jul 2026, 16:32 UTC.
+    /// 21 Jul 2026, 16:32 UTC.
     private static let shotDate = Date(timeIntervalSince1970: 1_784_651_520)
 
     private static func metadata(
@@ -125,17 +125,17 @@ struct PhotoInfoPanelSummaryTests {
         let today = Self.make(Self.metadata(), width: 900)
         #expect(today.titleLine == "Today 16:32")
 
-        // 19 Jul 2026, 16:32 UTC — one day before `now`.
+        // 20 Jul 2026, 16:32 UTC — one day before `now`.
         let yesterdayShot = Date(timeIntervalSince1970: 1_784_565_120)
         let yesterday = Self.make(Self.metadata(date: yesterdayShot), width: 900)
         #expect(yesterday.titleLine == "Yesterday 16:32")
     }
 
     @Test func olderDatesShowDayAndMonthWithoutAt() {
-        // 10 Jul 2026, 16:32 UTC — same year, more than a day back.
+        // 11 Jul 2026, 16:32 UTC — same year, more than a day back.
         let sameYear = Date(timeIntervalSince1970: 1_783_787_520)
         let summary = Self.make(Self.metadata(date: sameYear), width: 900)
-        #expect(summary.titleLine == "10 Jul 16:32")
+        #expect(summary.titleLine == "11 Jul 16:32")
         #expect(!summary.titleLine.contains(" at "))
         #expect(!summary.titleLine.contains("2026"))
 

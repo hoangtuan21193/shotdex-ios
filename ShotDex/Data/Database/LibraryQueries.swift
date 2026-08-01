@@ -106,6 +106,39 @@ struct LibraryQueries: Sendable {
         try distinctValues(column: "normalizedLensModel")
     }
 
+    /// Place names the library actually contains, most-photographed first — the
+    /// display spelling, not the folded search text.
+    ///
+    /// Two jobs: autosuggest, and telling a search term apart from a camera name
+    /// without guessing. "fukuoka" is a place because the library says so, so the
+    /// parser never has to decide what a word looks like.
+    func distinctPlaceTerms(limit: Int = 400) throws -> [String] {
+        try database.reader.read { db in
+            var seen = Set<String>()
+            var terms: [String] = []
+            // Locality first: it is what people type. Then the wider names, so a
+            // country or prefecture still matches when no city was resolved.
+            for column in ["placeLocality", "placeSubLocality", "placeAdminArea", "placeCountry"] {
+                let rows = try String.fetchAll(
+                    db,
+                    sql: """
+                        SELECT \(column) FROM photo_metadata
+                        WHERE \(column) IS NOT NULL AND \(column) != ''
+                        GROUP BY \(column) COLLATE NOCASE
+                        ORDER BY COUNT(*) DESC
+                        LIMIT ?
+                        """,
+                    arguments: [limit]
+                )
+                for row in rows where seen.insert(PlaceSearchText.normalized(row)).inserted {
+                    terms.append(row)
+                    if terms.count >= limit { return terms }
+                }
+            }
+            return terms
+        }
+    }
+
     private func distinctValues(column: String) throws -> [String] {
         try database.reader.read { db in
             try String.fetchAll(

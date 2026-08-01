@@ -10,6 +10,9 @@
     "· %@" : {
 
     },
+    "“%@”" : {
+
+    },
     "%@ · at least %@" : {
       "comment" : "On This Day reminder body when some matching items are not indexed yet, so the size is a lower bound. First placeholder is the count phrase, second is the formatted size.",
       "localizations" : {
@@ -178,6 +181,9 @@
     "Adjust the filter or turn off Hide RAW." : {
 
     },
+    "Advanced" : {
+
+    },
     "Advanced Search" : {
 
     },
@@ -248,9 +254,6 @@
 
     },
     "Cancellation Cleanup" : {
-
-    },
-    "Canon R6, 85mm, ISO 3200…" : {
 
     },
     "Category" : {
@@ -486,9 +489,6 @@
     "Every camera in your library has a known sensor format." : {
 
     },
-    "Examples: IMG_1234 · Canon R6 · RF 100-500 · 85mm · ISO 3200 · f/1.8 · 1/500" : {
-
-    },
     "Export" : {
 
     },
@@ -651,7 +651,7 @@
     "Indexing %lld%%" : {
 
     },
-    "Indexing is how ShotDex learns what camera, lens and settings each photo was shot with. Videos are indexed too, so they show up in the library and in counts. For items kept in iCloud it downloads only the small part of the file holding that info — nothing is saved to this iPhone. Wi-Fi is always allowed.\n\nKeep Screen Awake stops the display from sleeping while indexing runs; after 1 minute without a touch the screen dims to save battery, and tapping the screen brings it back.\n\nIn Low Power Mode, automatic indexing pauses and the screen is left to sleep; you can still start indexing by hand, and it resumes automatically when you plug in a charger." : {
+    "Indexing is how ShotDex learns what camera, lens and settings each photo was shot with. Videos are indexed too, so they show up in the library and in counts. For items kept in iCloud it downloads only the small part of the file holding that info — nothing is saved to this iPhone. Wi-Fi is always allowed.\n\nKeep Screen Awake stops the display from sleeping while indexing runs; after 1 minute without a touch the screen dims to save battery, and tapping the screen brings it back.\n\nIn Low Power Mode, automatic indexing pauses and the screen is left to sleep; you can still start indexing by hand, and it resumes automatically when you plug in a charger.\n\nLook Up Place Names turns your photos' coordinates into names you can search for — type Fukuoka and get the photos taken there. It asks Apple's mapping service for one address per place you have been, not per photo, and remembers each answer, so a library only costs that lookup once. This is the only part of indexing that sends anything off the device; with it off, everything else still works and searching by place simply finds nothing." : {
 
     },
     "Indexing paused — waiting for Wi-Fi" : {
@@ -703,6 +703,9 @@
 
     },
     "Location" : {
+
+    },
+    "Look Up Place Names" : {
 
     },
     "Loop" : {
@@ -1059,6 +1062,9 @@
     "Recall Last ShotDex Edit" : {
 
     },
+    "Recents" : {
+
+    },
     "Redo" : {
 
     },
@@ -1175,10 +1181,7 @@
     "Search" : {
 
     },
-    "Search by filename, camera, lens, focal length, ISO, aperture or shutter speed." : {
-
-    },
-    "Search for “%@”" : {
+    "Search again for %@" : {
 
     },
     "Select a start date" : {
@@ -1304,6 +1307,9 @@
     "Tap to expand" : {
 
     },
+    "Tap to fit the photo" : {
+
+    },
     "Tap to switch" : {
 
     },
@@ -1344,6 +1350,9 @@
 
     },
     "Top %lld series" : {
+
+    },
+    "Try: Fukuoka · f > 1.2 · ISO trên 3200 · trước 2020 · 85mm" : {
 
     },
     "Unable to Share" : {
@@ -1395,6 +1404,9 @@
 
     },
     "Your photo library appears to be empty." : {
+
+    },
+    "Zoom %lld percent" : {
 
     }
   },

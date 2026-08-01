@@ -14,6 +14,18 @@ struct EditorCleanUpOverlay: View {
     /// Painting does not re-render — solving a fill costs real time — so this path
     /// is the only feedback until the finger lifts.
     let livePath: [CGPoint]
+    /// Same reason as `EditorMaskGuideOverlay`: the overlay is inside the zoomed
+    /// stack, so the pin, the source knob and the ring's dashes divide by the zoom
+    /// to keep their screen size.
+    ///
+    /// So does the painted path, and that is not a chrome decision — it is what the
+    /// stroke *is*. `beginCleanUpStroke` records `paintedSize(size, zoomScale:)`, a
+    /// brush that holds its screen size so detail can be reached by zooming in, and
+    /// the trail has to promise exactly that. Drawing it from the raw slider made it
+    /// `zoomScale` times too fat: paint a bar at 400% and the fill lands on a quarter
+    /// of it. Only the source ring keeps growing with the photo — see `sourceRing`,
+    /// which reads the already-recorded `stroke.size`.
+    var zoomScale: CGFloat = 1
 
     var body: some View {
         ZStack {
@@ -44,9 +56,16 @@ struct EditorCleanUpOverlay: View {
         }
     }
 
+    /// Taken from `paintedSize`, the same call `beginCleanUpStroke` makes, so the
+    /// trail cannot drift from the stroke it is previewing.
     private var strokeWidth: CGFloat {
-        EditorLayoutMetrics.brushDiameter(size: controller.cleanUpSize, in: imageRect)
-            * EditorLayoutMetrics.brushCoreScale(feather: controller.cleanUpFeather)
+        EditorLayoutMetrics.brushDiameter(
+            size: EditorLayoutMetrics.paintedSize(
+                controller.cleanUpSize,
+                zoomScale: zoomScale
+            ),
+            in: imageRect
+        ) * EditorLayoutMetrics.brushCoreScale(feather: controller.cleanUpFeather)
     }
 
     private func pin(_ stroke: CleanUpStroke) -> some View {
@@ -54,16 +73,16 @@ struct EditorCleanUpOverlay: View {
         let center = EditorLayoutMetrics.maskViewPoint(stroke.centroid, in: imageRect)
         return Circle()
             .fill(isSelected ? EditorTheme.accent : Color.white.opacity(0.85))
-            .frame(width: 14, height: 14)
+            .frame(width: 14 / zoomScale, height: 14 / zoomScale)
             .overlay {
-                Circle().stroke(Color.black.opacity(0.55), lineWidth: 1)
+                Circle().stroke(Color.black.opacity(0.55), lineWidth: 1 / zoomScale)
             }
-            .shadow(color: .black.opacity(0.5), radius: 2)
+            .shadow(color: .black.opacity(0.5), radius: 2 / zoomScale)
             // A 14pt dot is far too small to hit, so the tap target is the usual
             // 44pt and only the dot is drawn.
             .frame(
-                width: EditorLayoutMetrics.maskGuideHitTarget,
-                height: EditorLayoutMetrics.maskGuideHitTarget
+                width: EditorLayoutMetrics.maskGuideHitTarget / zoomScale,
+                height: EditorLayoutMetrics.maskGuideHitTarget / zoomScale
             )
             .contentShape(Circle())
             .position(center)
@@ -80,33 +99,36 @@ struct EditorCleanUpOverlay: View {
             in: imageRect
         )
         let diameter = max(
-            18,
+            18 / zoomScale,
             EditorLayoutMetrics.brushDiameter(size: stroke.size, in: imageRect)
         )
         return ZStack {
             Circle()
                 .stroke(
                     Color.white.opacity(0.9),
-                    style: StrokeStyle(lineWidth: 1.5, dash: [5, 4])
+                    style: StrokeStyle(
+                        lineWidth: 1.5 / zoomScale,
+                        dash: [5 / zoomScale, 4 / zoomScale]
+                    )
                 )
                 .frame(width: diameter, height: diameter)
-                .shadow(color: .black.opacity(0.5), radius: 1)
+                .shadow(color: .black.opacity(0.5), radius: 1 / zoomScale)
                 .allowsHitTesting(false)
             Circle()
                 .fill(.white)
                 .frame(
-                    width: EditorLayoutMetrics.maskGuideKnobSize,
-                    height: EditorLayoutMetrics.maskGuideKnobSize
+                    width: EditorLayoutMetrics.maskGuideKnobSize / zoomScale,
+                    height: EditorLayoutMetrics.maskGuideKnobSize / zoomScale
                 )
                 .overlay {
                     Image(systemName: "arrow.up.and.down.and.arrow.left.and.right")
-                        .font(.system(size: 8, weight: .bold))
+                        .font(.system(size: 8 / zoomScale, weight: .bold))
                         .foregroundStyle(.black.opacity(0.7))
                 }
-                .shadow(color: .black.opacity(0.55), radius: 2)
+                .shadow(color: .black.opacity(0.55), radius: 2 / zoomScale)
                 .frame(
-                    width: EditorLayoutMetrics.maskGuideHitTarget,
-                    height: EditorLayoutMetrics.maskGuideHitTarget
+                    width: EditorLayoutMetrics.maskGuideHitTarget / zoomScale,
+                    height: EditorLayoutMetrics.maskGuideHitTarget / zoomScale
                 )
                 .contentShape(Circle())
                 .gesture(sourceDrag(stroke))

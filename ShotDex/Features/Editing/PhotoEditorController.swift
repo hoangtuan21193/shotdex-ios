@@ -127,6 +127,12 @@ final class PhotoEditorController {
     /// Nonisolated so it can be a default argument — the settle render's size is a
     /// constant, not actor state.
     nonisolated private static let settleEdge: CGFloat = 2_400
+    /// Ceiling for the settle render once the photo is pinched open. 2400 is about
+    /// the pixels a whole photo needs on a phone at 100%; at 400% the same photo is
+    /// being drawn four times that, so a flat 2400 made the picture soft exactly
+    /// when the user zoomed in to look closely. Capped rather than uncapped:
+    /// following an 800% zoom literally would ask Core Image for a 9600px frame.
+    private static let zoomedSettleEdge: CGFloat = 4_800
     @ObservationIgnored private var activeBrushStrokeIndex: Int?
     @ObservationIgnored private var activeCleanUpStrokeIndex: Int?
     /// What was selected before the stroke in progress claimed the selection, so
@@ -1185,7 +1191,10 @@ final class PhotoEditorController {
         renderTask = Task { [weak self] in
             try? await Task.sleep(for: delay)
             guard !Task.isCancelled, let self else { return }
-            await self.renderPreview(generation: generation)
+            await self.renderPreview(
+                generation: generation,
+                maximumDimension: self.settleDimension
+            )
         }
     }
 
@@ -1193,7 +1202,10 @@ final class PhotoEditorController {
         renderTask?.cancel()
         cancelInteractiveRender()
         renderGeneration += 1
-        await renderPreview(generation: renderGeneration)
+        await renderPreview(
+            generation: renderGeneration,
+            maximumDimension: settleDimension
+        )
     }
 
     func saveCopy(format: PhotoOutputFormat, includeMetadata: Bool) async {
@@ -1267,7 +1279,7 @@ final class PhotoEditorController {
             if isInteractive {
                 maximumDimension = interactiveEdge(changesRAWDemosaic: changesRAWDemosaic)
             } else {
-                maximumDimension = Self.settleEdge
+                maximumDimension = settleDimension
                 frozenInteractiveEdge = nil
             }
             await renderPreview(
@@ -1318,16 +1330,29 @@ final class PhotoEditorController {
         // re-rendering at a new pixel size would resample the photo differently and
         // — at 800% zoom especially — read as the picture twitching.
         if let frozenInteractiveEdge { return frozenInteractiveEdge }
-        frozenInteractiveEdge = displayEdge
-        return displayEdge
+        // A zoomed stage can ask for more than the settle size; a *drag* still
+        // stops there, because paying for 4800px per frame would cost the frame
+        // rate the interactive render exists to protect.
+        let edge = min(Self.settleEdge, displayEdge)
+        frozenInteractiveEdge = edge
+        return edge
     }
 
-    /// Called by the stage: how large the photo is actually drawn, in pixels. This
-    /// is what an interactive render targets — never less.
+    /// Size the render that stays on screen aims for: the settle size normally, and
+    /// the display size when the photo is pinched open past it.
+    private var settleDimension: CGFloat {
+        max(Self.settleEdge, displayEdge)
+    }
+
+    /// Called by the stage: how large the photo is actually drawn, in pixels, zoom
+    /// included. This is what a render targets — never less.
     func setDisplaySize(_ size: CGSize, scale: CGFloat) {
         let edge = max(size.width, size.height) * max(1, scale)
         guard edge > 0 else { return }
-        let clamped = min(Self.settleEdge, max(Self.minimumInteractiveEdge, edge.rounded()))
+        let clamped = min(
+            Self.zoomedSettleEdge,
+            max(Self.minimumInteractiveEdge, edge.rounded())
+        )
         guard abs(clamped - displayEdge) >= 1 else { return }
         displayEdge = clamped
     }

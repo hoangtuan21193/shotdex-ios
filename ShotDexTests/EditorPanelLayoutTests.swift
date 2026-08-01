@@ -167,6 +167,74 @@ struct EditorPanelLayoutTests {
         #expect(atRest.height == 300)
     }
 
+    @Test func pinchingKeepsThePointUnderTheFingersStill() {
+        let stage = CGSize(width: 400, height: 600)
+        let center = CGPoint(x: 200, y: 300)
+
+        /// Where a stage point ends up on screen for a given zoom and offset —
+        /// the transform `EditorImageStage` applies, so the assertions below read
+        /// as "the anchor did not move".
+        func screenPoint(
+            _ point: CGPoint,
+            scale: CGFloat,
+            offset: CGSize
+        ) -> CGPoint {
+            CGPoint(
+                x: center.x + (point.x - center.x) * scale + offset.width,
+                y: center.y + (point.y - center.y) * scale + offset.height
+            )
+        }
+
+        // Pinching open on a corner: from 1× to 3× about (60, 90).
+        let anchor = CGPoint(x: 60, y: 90)
+        let openOffset = EditorLayoutMetrics.anchoredZoomOffset(
+            anchor: anchor,
+            stage: stage,
+            startScale: 1,
+            startOffset: .zero,
+            scale: 3
+        )
+        // The content that was under the fingers at 1× is the anchor itself.
+        let stillOpen = screenPoint(anchor, scale: 3, offset: openOffset)
+        #expect(abs(stillOpen.x - anchor.x) < 0.0001)
+        #expect(abs(stillOpen.y - anchor.y) < 0.0001)
+
+        // And pinching closed again from an offset state pins the same way: start
+        // at 3× with the offset above, squeeze back to 1.5× about (330, 500).
+        let secondAnchor = CGPoint(x: 330, y: 500)
+        let closedOffset = EditorLayoutMetrics.anchoredZoomOffset(
+            anchor: secondAnchor,
+            stage: stage,
+            startScale: 3,
+            startOffset: openOffset,
+            scale: 1.5
+        )
+        // Whatever content sat under the second anchor at 3× has to still be there
+        // at 1.5×, so both transforms must map it to the same screen point.
+        let contentUnderAnchor = CGPoint(
+            x: center.x + (secondAnchor.x - center.x - openOffset.width) / 3,
+            y: center.y + (secondAnchor.y - center.y - openOffset.height) / 3
+        )
+        let stillClosed = screenPoint(
+            contentUnderAnchor,
+            scale: 1.5,
+            offset: closedOffset
+        )
+        #expect(abs(stillClosed.x - secondAnchor.x) < 0.0001)
+        #expect(abs(stillClosed.y - secondAnchor.y) < 0.0001)
+
+        // A pinch centred on the stage's own middle is the old behaviour: no offset.
+        let centred = EditorLayoutMetrics.anchoredZoomOffset(
+            anchor: center,
+            stage: stage,
+            startScale: 1,
+            startOffset: .zero,
+            scale: 4
+        )
+        #expect(abs(centred.width) < 0.0001)
+        #expect(abs(centred.height) < 0.0001)
+    }
+
     @Test func maskPointsRoundTripBetweenNormalizedAndViewSpace() {
         let rect = CGRect(x: 30, y: 100, width: 300, height: 200)
         let point = NormalizedPoint(x: 0.25, y: 0.75)
@@ -272,6 +340,70 @@ struct EditorPanelLayoutTests {
         )
         // Zooming out past 1× is not a thing, so it never *grows* a stroke.
         #expect(EditorLayoutMetrics.paintedSize(0.2, zoomScale: 0.5) == 0.2)
+    }
+
+    @Test func theBrushKeepsItsScreenSizeAtEveryZoom() {
+        let rect = CGRect(x: 0, y: 0, width: 400, height: 300)
+        let size = 0.2
+        // The invariant the whole screen-sized-brush design rests on: the cursor is
+        // drawn inside a stack scaled by the zoom, so `diameter × zoom` — what the
+        // eye actually sees — must not move.
+        let onScreen = EditorLayoutMetrics.brushDiameter(size: size, in: rect)
+        for zoom in [CGFloat(1), 2, 4, EditorLayoutMetrics.maximumZoomScale] {
+            let drawn = EditorLayoutMetrics.brushCursorDiameter(
+                size: size,
+                in: rect,
+                zoomScale: zoom
+            )
+            #expect(abs(drawn * zoom - onScreen) < 0.0001)
+        }
+
+        // And the ring keeps promising what the stroke records: the footprint of
+        // `paintedSize` at that zoom is the same 60pt on screen.
+        for zoom in [CGFloat(1), 4, EditorLayoutMetrics.maximumZoomScale] {
+            let painted = EditorLayoutMetrics.brushDiameter(
+                size: EditorLayoutMetrics.paintedSize(size, zoomScale: zoom),
+                in: rect
+            )
+            #expect(abs(painted * zoom - onScreen) < 0.0001)
+        }
+
+        // The 8pt floor is a *screen* floor — it survives the multiply back out,
+        // so the smallest brush is still visible at 800% instead of vanishing.
+        let tiny = EditorLayoutMetrics.brushCursorDiameter(
+            size: 0.001,
+            in: rect,
+            zoomScale: EditorLayoutMetrics.maximumZoomScale
+        )
+        #expect(abs(tiny * EditorLayoutMetrics.maximumZoomScale - 8) < 0.0001)
+
+        // Zoom below 1× cannot inflate the ring, matching `paintedSize`.
+        #expect(
+            EditorLayoutMetrics.brushCursorDiameter(size: size, in: rect, zoomScale: 0.5)
+                == onScreen
+        )
+    }
+
+    @Test func theCleanUpTrailIsAsWideAsTheStrokeItPreviews() {
+        let rect = CGRect(x: 0, y: 0, width: 400, height: 300)
+        let size = 0.12
+        let feather = 0.35
+        let core = EditorLayoutMetrics.brushCoreScale(feather: feather)
+
+        // `EditorCleanUpOverlay.strokeWidth` in one line: the trail is drawn from
+        // the size the stroke recorded, not from the raw slider, so it is the same
+        // width on screen as the cursor ring and as the fill that lands.
+        func trail(at zoom: CGFloat) -> CGFloat {
+            EditorLayoutMetrics.brushDiameter(
+                size: EditorLayoutMetrics.paintedSize(size, zoomScale: zoom),
+                in: rect
+            ) * core
+        }
+
+        let expected = EditorLayoutMetrics.brushDiameter(size: size, in: rect) * core
+        for zoom in [CGFloat(1), 4, EditorLayoutMetrics.maximumZoomScale] {
+            #expect(abs(trail(at: zoom) * zoom - expected) < 0.0001)
+        }
     }
 
     @Test func theZoomReadoutIsRoundedPercent() {

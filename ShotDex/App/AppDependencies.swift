@@ -23,6 +23,11 @@ final class AppDependencies {
     let powerStatus: PowerMonitor
     let indexTraffic: IndexTrafficMonitor
     let indexInteractionGate: IndexInteractionGate
+    let placeStore: PlaceStore
+    let placeGeocoding: PlaceGeocodingService
+    let placeIndexPass: PlaceIndexPass
+    let recentSearches: RecentSearchStore
+    let searchService: SearchService
     let onThisDayNotifications: OnThisDayNotificationService
 
     init(database: AppDatabase, photoLibrary: PhotoLibraryService) {
@@ -38,7 +43,8 @@ final class AppDependencies {
         self.metadataStore = metadataStore
         let libraryQueries = LibraryQueries(database: database)
         self.libraryQueries = libraryQueries
-        self.filterSuggestions = FilterSuggestionCache(libraryQueries: libraryQueries)
+        let filterSuggestions = FilterSuggestionCache(libraryQueries: libraryQueries)
+        self.filterSuggestions = filterSuggestions
         self.statisticsQueries = StatisticsQueries(database: database)
         self.smartAlbumStore = SmartAlbumStore(database: database)
         self.chartStore = ChartStore(database: database)
@@ -53,6 +59,17 @@ final class AppDependencies {
             publishCreatedAsset: { _ in
                 photoLibrary.publishAppCreatedAsset()
             }
+        )
+        let placeStore = PlaceStore(database: database)
+        let placeGeocoding = PlaceGeocodingService(store: placeStore)
+        self.placeStore = placeStore
+        self.placeGeocoding = placeGeocoding
+        self.placeIndexPass = PlaceIndexPass(store: placeStore, geocoder: placeGeocoding)
+        let recentSearches = RecentSearchStore()
+        self.recentSearches = recentSearches
+        self.searchService = SearchService(
+            filterSuggestions: filterSuggestions,
+            recentSearches: recentSearches
         )
         self.compressionPresets = CompressionPresetStore()
         self.importService = ImportService(photoLibrary: photoLibrary, metadataStore: metadataStore)

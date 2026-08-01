@@ -50,7 +50,7 @@ struct MetadataPanel: View {
     private func usefulMetadataList(_ report: AssetMetadataReport) -> some View {
         List {
             if let location = report.location {
-                PhotoLocationSection(location: location)
+                PhotoLocationSection(location: location, assetId: asset?.localIdentifier)
             } else {
                 PhotoLocationUnavailableSection()
             }
@@ -277,10 +277,13 @@ private struct PhotoLocationUnavailableSection: View {
 
 private struct PhotoLocationSection: View {
     let location: AssetLocation
+    /// Used to read the address the indexing pass already stored, if any.
+    let assetId: String?
 
-    @State private var place: ResolvedPhotoPlace?
+    @State private var place: ResolvedPlace?
     @State private var isResolving = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(AppDependencies.self) private var dependencies
 
     private var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(
@@ -301,7 +304,7 @@ private struct PhotoLocationSection: View {
     var body: some View {
         Section {
             Map(initialPosition: mapPosition, interactionModes: []) {
-                Marker(place?.title ?? "Photo Location", coordinate: coordinate)
+                Marker(place?.displayTitle ?? "Photo Location", coordinate: coordinate)
             }
             .mapStyle(.standard(pointsOfInterest: .excludingAll))
             .frame(height: 128)
@@ -309,10 +312,10 @@ private struct PhotoLocationSection: View {
             .accessibilityLabel("Map showing where this item was captured")
 
             VStack(alignment: .leading, spacing: 8) {
-                if let place {
-                    Text(place.title)
+                if let place, let title = place.displayTitle {
+                    Text(title)
                         .font(.headline)
-                    if let address = place.address, address != place.title {
+                    if let address = place.address, address != title {
                         Text(address)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
@@ -351,8 +354,19 @@ private struct PhotoLocationSection: View {
         }
         .task(id: cacheKey) {
             place = nil
+            // The indexing pass has usually been here already, and its answer is
+            // on disk: showing that first means no spinner, no request, and a
+            // place name even with no network.
+            if let assetId,
+               let stored = try? dependencies.placeStore.place(assetId: assetId) {
+                place = stored
+                return
+            }
             isResolving = true
-            place = await PhotoLocationResolver.shared.resolve(location)
+            place = await dependencies.placeGeocoding.place(
+                latitude: location.latitude,
+                longitude: location.longitude
+            )
             isResolving = false
         }
     }
@@ -396,138 +410,6 @@ private struct PhotoLocationSection: View {
     }
 }
 
-private struct ResolvedPhotoPlace: Sendable {
-    let title: String
-    let address: String?
-}
-
-/// Reverse geocoding is rate-limited and network-backed, so results are shared
-/// for the app session. Coordinates are rounded to roughly 10 m to reuse a
-/// result for bursts shot at the same place.
-@MainActor
-private final class PhotoLocationResolver {
-    static let shared = PhotoLocationResolver()
-
-    private struct CacheKey: Hashable {
-        let latitude: Int
-        let longitude: Int
-        let localeIdentifier: String
-    }
-
-    private var cache: [CacheKey: ResolvedPhotoPlace] = [:]
-    private var inFlight: [CacheKey: Task<ResolvedPhotoPlace?, Never>] = [:]
-
-    func resolve(_ location: AssetLocation) async -> ResolvedPhotoPlace? {
-        let key = CacheKey(
-            latitude: Int((location.latitude * 10_000).rounded()),
-            longitude: Int((location.longitude * 10_000).rounded()),
-            localeIdentifier: Locale.current.identifier
-        )
-        if let cached = cache[key] {
-            return cached
-        }
-        if let task = inFlight[key] {
-            return await task.value
-        }
-
-        let task = Task {
-            await Self.reverseGeocode(
-                latitude: location.latitude,
-                longitude: location.longitude,
-                locale: Locale.current
-            )
-        }
-        inFlight[key] = task
-        let result = await task.value
-        inFlight[key] = nil
-
-        if let result {
-            if cache.count >= 256 {
-                cache.removeAll(keepingCapacity: true)
-            }
-            cache[key] = result
-        }
-        return result
-    }
-
-    private static func reverseGeocode(
-        latitude: Double,
-        longitude: Double,
-        locale: Locale
-    ) async -> ResolvedPhotoPlace? {
-        let location = CLLocation(latitude: latitude, longitude: longitude)
-
-        if #available(iOS 26.0, *) {
-            guard let request = MKReverseGeocodingRequest(location: location) else {
-                return nil
-            }
-            request.preferredLocale = locale
-            guard let item = try? await request.mapItems.first else {
-                return nil
-            }
-
-            let title = firstNonempty(
-                item.addressRepresentations?.cityWithContext,
-                item.name,
-                item.address?.shortAddress,
-                item.addressRepresentations?.regionName
-            )
-            guard let title else { return nil }
-            let address = item.addressRepresentations?
-                .fullAddress(includingRegion: true, singleLine: true)
-                ?? item.address?.fullAddress.replacingOccurrences(of: "\n", with: ", ")
-            return ResolvedPhotoPlace(title: title, address: address)
-        } else {
-            let geocoder = CLGeocoder()
-            guard let placemark = try? await geocoder.reverseGeocodeLocation(
-                location,
-                preferredLocale: locale
-            ).first else {
-                return nil
-            }
-
-            let title = firstNonempty(
-                placemark.name,
-                placemark.locality,
-                placemark.subAdministrativeArea,
-                placemark.administrativeArea,
-                placemark.country
-            )
-            guard let title else { return nil }
-            let address = uniqueNonempty([
-                placemark.subLocality,
-                placemark.locality,
-                placemark.administrativeArea,
-                placemark.country,
-            ], excluding: title)
-                .joined(separator: ", ")
-            return ResolvedPhotoPlace(
-                title: title,
-                address: address.isEmpty ? nil : address
-            )
-        }
-    }
-
-    private static func firstNonempty(_ values: String?...) -> String? {
-        values.lazy
-            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .first { !$0.isEmpty }
-    }
-
-    private static func uniqueNonempty(
-        _ values: [String?],
-        excluding excluded: String
-    ) -> [String] {
-        var seen = Set([excluded])
-        return values.compactMap { value in
-            guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines),
-                  !value.isEmpty,
-                  seen.insert(value).inserted
-            else { return nil }
-            return value
-        }
-    }
-}
 
 private struct RawMetadataView: View {
     let sections: [MetadataReportSection]
