@@ -19,6 +19,13 @@ enum SettingsKeys {
     /// period — while indexing runs. Defaults to false.
     static let keepScreenAwake = "index.keepScreenAwake"
 
+    /// Reverse-geocode photo coordinates into place names after an index run, so
+    /// searching for a city works. Defaults to **true** (read through an
+    /// `object(forKey:)` nil check, never plain `bool(forKey:)`, which answers
+    /// false for an unwritten key). Uses the network, hence a switch: it is the
+    /// only part of indexing that talks to a server about where the user has been.
+    static let lookUpPlaces = "index.lookUpPlaces"
+
     /// Set once the Statistics dashboard has seeded its default charts, so a
     /// board a user deliberately cleared isn't re-seeded on next launch.
     static let hasSeededStatCharts = "stats.didSeedCharts"

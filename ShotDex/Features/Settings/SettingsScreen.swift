@@ -21,6 +21,7 @@ struct SettingsScreen: View {
         AppAccentTheme.default.rawValue
     @AppStorage(SettingsKeys.allowCellularIndexing) private var allowCellularIndexing = false
     @AppStorage(SettingsKeys.keepScreenAwake) private var keepScreenAwake = false
+    @AppStorage(SettingsKeys.lookUpPlaces) private var looksUpPlaces = true
     @AppStorage(SettingsKeys.onThisDayNotificationsEnabled) private var isOnThisDayReminderEnabled = false
     /// Minutes since local midnight. The default matches the scheduler's, which
     /// has to spell it out separately because `UserDefaults.integer` cannot tell
@@ -141,10 +142,11 @@ struct SettingsScreen: View {
 
             Toggle("Use Cellular Data for Indexing", isOn: $allowCellularIndexing)
             Toggle("Keep Screen Awake While Indexing", isOn: $keepScreenAwake)
+            Toggle("Look Up Place Names", isOn: $looksUpPlaces)
         } header: {
             Text("Photo Library")
         } footer: {
-            Text("Indexing is how ShotDex learns what camera, lens and settings each photo was shot with. Videos are indexed too, so they show up in the library and in counts. For items kept in iCloud it downloads only the small part of the file holding that info — nothing is saved to this iPhone. Wi-Fi is always allowed.\n\nKeep Screen Awake stops the display from sleeping while indexing runs; after 1 minute without a touch the screen dims to save battery, and tapping the screen brings it back.\n\nIn Low Power Mode, automatic indexing pauses and the screen is left to sleep; you can still start indexing by hand, and it resumes automatically when you plug in a charger.")
+            Text("Indexing is how ShotDex learns what camera, lens and settings each photo was shot with. Videos are indexed too, so they show up in the library and in counts. For items kept in iCloud it downloads only the small part of the file holding that info — nothing is saved to this iPhone. Wi-Fi is always allowed.\n\nKeep Screen Awake stops the display from sleeping while indexing runs; after 1 minute without a touch the screen dims to save battery, and tapping the screen brings it back.\n\nIn Low Power Mode, automatic indexing pauses and the screen is left to sleep; you can still start indexing by hand, and it resumes automatically when you plug in a charger.\n\nLook Up Place Names turns your photos' coordinates into names you can search for — type Fukuoka and get the photos taken there. It asks Apple's mapping service for one address per place you have been, not per photo, and remembers each answer, so a library only costs that lookup once. This is the only part of indexing that sends anything off the device; with it off, everything else still works and searching by place simply finds nothing.")
         }
     }
 

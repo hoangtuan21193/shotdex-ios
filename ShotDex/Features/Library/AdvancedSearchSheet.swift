@@ -45,6 +45,7 @@ struct AdvancedSearchSheet: View {
                     brands: model.availableBrands,
                     bodies: model.availableBodies,
                     lenses: model.availableLenses,
+                    places: model.availablePlaces,
                     matchCount: matchCount
                 )
 

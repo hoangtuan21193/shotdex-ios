@@ -9,6 +9,7 @@ struct SmartAlbumRuleRow: View {
     let brands: [String]
     let bodies: [String]
     let lenses: [String]
+    var places: [String] = []
     /// Removes this condition from the parent list.
     var onDelete: () -> Void
 
@@ -289,6 +290,7 @@ struct SmartAlbumRuleRow: View {
     private var suggestions: [String] {
         switch rule.field {
         case .cameraBrand: brands
+        case .place: places
         case .cameraBody: bodies
         case .lens: lenses
         default: []

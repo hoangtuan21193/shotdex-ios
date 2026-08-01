@@ -7,8 +7,19 @@ struct FilterSuggestionCatalog: Sendable {
     var brands: [String]
     var bodies: [String]
     var lenses: [String]
+    /// Reverse-geocoded place names present in the library, most-photographed
+    /// first. Also the vocabulary that lets the search parser recognise "fukuoka"
+    /// as a place without guessing from the shape of the word.
+    var places: [String]
 
-    static let empty = FilterSuggestionCatalog(brands: [], bodies: [], lenses: [])
+    init(brands: [String] = [], bodies: [String] = [], lenses: [String] = [], places: [String] = []) {
+        self.brands = brands
+        self.bodies = bodies
+        self.lenses = lenses
+        self.places = places
+    }
+
+    static let empty = FilterSuggestionCatalog()
 }
 
 actor FilterSuggestionCache {
@@ -26,7 +37,8 @@ actor FilterSuggestionCache {
         let catalog = FilterSuggestionCatalog(
             brands: (try? libraryQueries.distinctCameraBrands()) ?? [],
             bodies: (try? libraryQueries.distinctCameraBodies()) ?? [],
-            lenses: (try? libraryQueries.distinctLenses()) ?? []
+            lenses: (try? libraryQueries.distinctLenses()) ?? [],
+            places: (try? libraryQueries.distinctPlaceTerms()) ?? []
         )
         cached = catalog
         return catalog

@@ -59,6 +59,7 @@ final class LibraryModel {
     private let filterSuggestions: FilterSuggestionCache
     private let metadataStore: MetadataStore
     private let pipeline: IndexPipeline
+    private let placeIndexPass: PlaceIndexPass
     private let backgroundIndex: BackgroundIndexService
     private let photoLibrary: PhotoLibraryService
     private let networkStatus: NetworkMonitor
@@ -185,12 +186,16 @@ final class LibraryModel {
     private(set) var availableBrands: [String] = []
     private(set) var availableBodies: [String] = []
     private(set) var availableLenses: [String] = []
+    /// Reverse-geocoded place names in the library — autosuggest, the Place rule
+    /// row, and the vocabulary the search parser matches a bare term against.
+    private(set) var availablePlaces: [String] = []
 
     init(dependencies: AppDependencies) {
         self.libraryQueries = dependencies.libraryQueries
         self.filterSuggestions = dependencies.filterSuggestions
         self.metadataStore = dependencies.metadataStore
         self.pipeline = dependencies.indexPipeline
+        self.placeIndexPass = dependencies.placeIndexPass
         self.backgroundIndex = dependencies.backgroundIndex
         self.photoLibrary = dependencies.photoLibrary
         self.networkStatus = dependencies.networkStatus
@@ -500,15 +505,91 @@ final class LibraryModel {
             self.availableBrands = catalog.brands
             self.availableBodies = catalog.bodies
             self.availableLenses = catalog.lenses
+            self.availablePlaces = catalog.places
         }
     }
 
-    /// Autosuggest source for search: known camera + lens names.
+    // MARK: Search
+
+    /// Applies a typed query to the grid.
+    ///
+    /// Returns immediately: the caller closes the search surface on the same tap,
+    /// and the resolution — which may consult the on-device model — lands a moment
+    /// later. Waiting would make the keyboard's Search key feel like it did
+    /// nothing, which is worse than a grid that updates a beat behind.
+    ///
+    /// The one place a search becomes a grid state, so the keyboard's Search key,
+    /// the "Search for …" row and a tapped suggestion cannot behave differently.
+    func applySearch(_ text: String, using service: SearchService) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            criteria.searchText = nil
+            return
+        }
+        // Remembered before the resolution lands, and remembered as typed: recents
+        // are "what I asked for", not "what the parser made of it".
+        service.recentSearches.remember(trimmed)
+        Task { [weak self] in
+            let resolution = await service.resolve(trimmed)
+            guard let self else { return }
+            // `criteria` and `advancedQuery` clear each other, so exactly one of
+            // these is ever set.
+            if resolution.hasRules {
+                advancedQuery = resolution.query
+            } else {
+                criteria.searchText = resolution.searchText
+            }
+        }
+    }
+
+    // MARK: Places
+
+    /// Photos with coordinates still waiting for an address, while the pass runs.
+    /// Nil when nothing is in flight.
+    private(set) var placeLookupRemaining: Int?
+
+    /// Reverse-geocodes the library into place names, after an index run has
+    /// settled. Deliberately its own task rather than part of the run: this is
+    /// network work at someone else's pace, and holding the "Indexing…" indicator
+    /// for the quarter of an hour it can take on a first pass would misdescribe
+    /// what the app is doing. Cheap when there is nothing new — the work list
+    /// query is one indexed scan.
+    func startPlaceLookup() {
+        guard Self.looksUpPlaces else { return }
+        let pass = placeIndexPass
+        Task(priority: .utility) { [weak self] in
+            let summary = await pass.run(
+                isEnabled: { Self.looksUpPlaces },
+                onProgress: { remaining in
+                    Task { @MainActor in
+                        self?.placeLookupRemaining = remaining > 0 ? remaining : nil
+                    }
+                }
+            )
+            guard let self else { return }
+            self.placeLookupRemaining = nil
+            // New place names mean new search vocabulary and new autosuggest
+            // entries; without this refresh they only appear on the next launch.
+            if summary.didWork { self.refreshFilterOptions(force: true) }
+        }
+    }
+
+    /// Defaults to on, and reads through an `object(forKey:)` check because
+    /// `bool(forKey:)` answers false for a key nobody has written.
+    ///
+    /// `nonisolated` on purpose: the place pass re-reads it from its own task on
+    /// every cell, so turning the switch off stops the run in progress instead of
+    /// only affecting the next one.
+    nonisolated static var looksUpPlaces: Bool {
+        UserDefaults.standard.object(forKey: SettingsKeys.lookUpPlaces) as? Bool ?? true
+    }
+
+    /// Autosuggest source for search: known camera, lens and place names.
     func suggestions(for query: String) -> [String] {
         guard !query.isEmpty else { return [] }
         var result: [String] = []
         result.reserveCapacity(8)
-        for values in [availableBodies, availableLenses, availableBrands] {
+        for values in [availableBodies, availableLenses, availablePlaces, availableBrands] {
             for value in values where value.localizedCaseInsensitiveContains(query) {
                 result.append(value)
                 if result.count == 8 { return result }
@@ -766,6 +847,7 @@ final class LibraryModel {
             }
             self.reload()
             self.refreshFilterOptions(force: true)
+            self.startPlaceLookup()
             // A local-only run leaves iCloud-only photos pending; surface a
             // persistent "waiting for Wi-Fi" state when they can't stream now.
             self.refreshPausedState()

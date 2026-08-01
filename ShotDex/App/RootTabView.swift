@@ -138,6 +138,7 @@ struct RootTabView: View {
                     if let libraryModel {
                         SearchTab(
                             model: libraryModel,
+                            service: dependencies.searchService,
                             onApply: { navigation.selectedTab = .library },
                             onAdvanced: { navigation.openAdvancedSearch() }
                         )
@@ -287,7 +288,10 @@ struct RootTabView: View {
             }
             .sheet(isPresented: $isSearchPresented) {
                 if let libraryModel {
-                    SearchSheet(model: libraryModel) {
+                    SearchSheet(
+                        model: libraryModel,
+                        service: dependencies.searchService
+                    ) {
                         isSearchPresented = false
                         navigation.openAdvancedSearch()
                     }
@@ -417,12 +421,29 @@ private struct SelectionBottomAccessory: ViewModifier {
     }
 }
 
+/// Focuses the search field where the API exists (iOS 18+). Before that,
+/// presenting the field is what raises the keyboard and there is nothing to add.
+private struct SearchFieldFocus: ViewModifier {
+    var isFocused: FocusState<Bool>.Binding
+
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.searchFocused(isFocused)
+        } else {
+            content
+        }
+    }
+}
+
 /// iOS 26 search tab content: the `.search`-role tab anchors the search
 /// field to the bottom edge (Music-app style). Applying a query jumps to
 /// the Library tab with the search criteria set.
 @available(iOS 26.0, *)
 struct SearchTab: View {
+    @Environment(AppNavigation.self) private var navigation
+
     let model: LibraryModel
+    let service: SearchService
     var onApply: () -> Void
     /// Opens the advanced-search sheet. Presented by the root tab view (not here):
     /// a `.sheet` attached inside a `.search`-role tab's searchable scope is
@@ -430,56 +451,66 @@ struct SearchTab: View {
     var onAdvanced: () -> Void
 
     @State private var query = ""
+    /// Presents the field. Without it the tab opens with the field idle and the
+    /// first tap does nothing but focus it — the search screen appears not to work.
+    @State private var isFieldActive = false
+    /// Raises the keyboard. Presentation alone leaves a field with a caret and no
+    /// keyboard, which is the same complaint from the user's side.
+    @FocusState private var isFieldFocused: Bool
 
     var body: some View {
-        List {
-            Section {
-                Button {
-                    onAdvanced()
-                } label: {
-                    Label("Advanced Search", systemImage: "slider.horizontal.3")
-                }
-            }
-            if query.isEmpty {
-                Section {
-                    Text("Search by filename, camera, lens, focal length, ISO, aperture or shutter speed.")
-                        .foregroundStyle(.secondary)
-                    Text("Examples: IMG_1234 · Canon R6 · RF 100-500 · 85mm · ISO 3200 · f/1.8 · 1/500")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
+        SearchSuggestionsScreen(
+            query: $query,
+            model: model,
+            service: service,
+            onApplied: onApply,
+            // Advanced Search sits inside the search field, so the title row does not
+            // repeat it. On this tier that costs a ghost copy of the icon in the
+            // status-bar strip — a deliberate trade, see SearchFieldTrailingButton.
+            onAdvanced: nil
+        )
+        .searchFieldTrailingButton(
+            systemImage: "slider.horizontal.3",
+            accessibilityLabel: "Advanced Search",
+            action: onAdvanced
+        )
+        // Attached beside `.searchable`, not inside the content: the keyboard's
+        // Search key is delivered to the view that owns the search field, and a
+        // submit that reaches nothing is how a search box comes to feel broken.
+        .searchable(
+            text: $query,
+            isPresented: $isFieldActive,
+            prompt: SearchSuggestionsScreen.prompt
+        )
+        .searchFocused($isFieldFocused)
+        .onSubmit(of: .search) {
+            model.applySearch(query, using: service)
+            onApply()
+        }
+        // No toolbar item for Advanced Search here, and no `navigationTitle`: the
+        // `.search`-role tab owns the whole bottom row — the slot left of the field
+        // is the system's return-to-previous-tab button, a plain `.bottomBar` item
+        // lands *behind* the field, and moving the field into the bottom bar with
+        // `DefaultToolbarItem` breaks its layout (the typed text draws outside the
+        // pill). iOS 26 also hides the navigation title while the field is active.
+        // So the screen draws its own title row and puts Advanced Search on it.
+        .onAppear { isFieldActive = true }
+        // The tab is not rebuilt when it is selected again and the field stays
+        // presented, so `onAppear` alone leaves the second visit with a field that
+        // looks active but has no keyboard — the "I have to tap the field again"
+        // complaint. Presenting raises the keyboard by itself; only a field that is
+        // already presented needs focus put back on it.
+        .onChange(of: navigation.selectedTab) { _, tab in
+            guard tab == .search else { return }
+            // Leaving the tab empties the field on screen without writing the
+            // binding, so the old text would still be what the Search key submits.
+            query = ""
+            if isFieldActive {
+                isFieldFocused = true
             } else {
-                Section {
-                    Button {
-                        apply(query)
-                    } label: {
-                        Label("Search for “\(query)”", systemImage: "magnifyingglass")
-                    }
-                    ForEach(model.suggestions(for: query), id: \.self) { suggestion in
-                        Button {
-                            apply(suggestion)
-                        } label: {
-                            Label(suggestion, systemImage: "camera")
-                                .foregroundStyle(Color(.label))
-                        }
-                    }
-                }
+                isFieldActive = true
             }
         }
-        .listStyle(.insetGrouped)
-        .searchable(text: $query, prompt: "Canon R6, 85mm, ISO 3200…")
-        .onSubmit(of: .search) { apply(query) }
-        .navigationTitle("Search")
-        .onAppear {
-            query = model.criteria.searchText ?? ""
-            model.refreshFilterOptions()
-        }
-    }
-
-    private func apply(_ text: String) {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        model.criteria.searchText = trimmed.isEmpty ? nil : trimmed
-        onApply()
     }
 }
 
@@ -489,67 +520,57 @@ struct SearchSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     let model: LibraryModel
+    let service: SearchService
     /// Dismisses this sheet and opens advanced search on the Library tab.
     var onAdvanced: () -> Void
     @State private var query = ""
+    /// Opens the field — and the keyboard — as the sheet appears.
+    @State private var isFieldActive = false
+    @FocusState private var isFieldFocused: Bool
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    Button {
-                        onAdvanced()
-                    } label: {
-                        Label("Advanced Search", systemImage: "slider.horizontal.3")
-                    }
-                }
-                if query.isEmpty {
-                    Section {
-                        Text("Search by filename, camera, lens, focal length, ISO, aperture or shutter speed.")
-                            .foregroundStyle(.secondary)
-                        Text("Examples: IMG_1234 · Canon R6 · RF 100-500 · 85mm · ISO 3200 · f/1.8 · 1/500")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
-                } else {
-                    Section {
-                        Button {
-                            apply(query)
-                        } label: {
-                            Label("Search for “\(query)”", systemImage: "magnifyingglass")
-                        }
-                        ForEach(model.suggestions(for: query), id: \.self) { suggestion in
-                            Button {
-                                apply(suggestion)
-                            } label: {
-                                Label(suggestion, systemImage: "camera")
-                                    .foregroundStyle(Color(.label))
-                            }
-                        }
-                    }
-                }
+            SearchSuggestionsScreen(
+                query: $query,
+                model: model,
+                service: service,
+                onApplied: { dismiss() },
+                onAdvanced: nil
+            )
+            .searchFieldTrailingButton(
+                systemImage: "slider.horizontal.3",
+                accessibilityLabel: "Advanced Search",
+                action: onAdvanced
+            )
+            .searchable(
+                text: $query,
+                isPresented: $isFieldActive,
+                prompt: SearchSuggestionsScreen.prompt
+            )
+            .modifier(SearchFieldFocus(isFocused: $isFieldFocused))
+            .onSubmit(of: .search) {
+                model.applySearch(query, using: service)
+                dismiss()
             }
-            .listStyle(.insetGrouped)
-            .searchable(text: $query, prompt: "Canon R6, 85mm, ISO 3200…")
-            .onSubmit(of: .search) { apply(query) }
-            .navigationTitle("Search")
-            .navigationBarTitleDisplayMode(.inline)
+            // No title, and no Advanced Search item: an active search field takes
+            // over this whole bar on this tier, so anything put here is gone exactly
+            // when the user is searching. The screen draws its own title row with
+            // Advanced Search on it; Cancel comes from the field itself. The bar
+            // stays (hiding it would hide the field with it) and holds Done for when
+            // the field is not active.
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                 }
             }
+            .onAppear {
+                isFieldActive = true
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(50))
+                    isFieldFocused = true
+                }
+            }
         }
-        .onAppear {
-            query = model.criteria.searchText ?? ""
-            model.refreshFilterOptions()
-        }
-    }
-
-    private func apply(_ text: String) {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        model.criteria.searchText = trimmed.isEmpty ? nil : trimmed
-        dismiss()
     }
 }
 

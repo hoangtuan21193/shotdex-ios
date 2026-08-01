@@ -161,6 +161,65 @@ final class AppDatabase: Sendable {
             }
         }
 
+        // Where each photo was taken, in words. `latitude`/`longitude` have been
+        // stored since v1 but coordinates are not something anyone types into a
+        // search field, so a reverse-geocoding pass fills these in and search
+        // matches `placeSearchText` — every component lowercased, folded free of
+        // diacritics and joined, so "da nang" finds "Đà Nẵng".
+        //
+        // `placeCellKey` is the ~100 m grid cell the coordinates fall in, and
+        // `place_cells` caches one resolved address per cell. Photos cluster
+        // heavily in space, so this is what turns "one geocoding request per
+        // photo" — hopeless against Apple's rate limits — into one per place
+        // visited, kept across re-indexes and app launches.
+        migrator.registerMigration("v7-places") { db in
+            try db.alter(table: "photo_metadata") { t in
+                t.add(column: "placeName", .text)
+                t.add(column: "placeSubLocality", .text)
+                t.add(column: "placeLocality", .text)
+                t.add(column: "placeAdminArea", .text)
+                t.add(column: "placeCountry", .text)
+                t.add(column: "placeCountryCode", .text)
+                t.add(column: "placeAddress", .text)
+                t.add(column: "placeSearchText", .text)
+                t.add(column: "placeCellKey", .text)
+                t.add(column: "placeResolvedAt", .integer)
+            }
+            // The geocoding pass scans for rows that have coordinates and no
+            // resolved place yet, then groups them by cell.
+            try db.create(
+                index: "idx_photo_metadata_placeCellKey",
+                on: "photo_metadata",
+                columns: ["placeCellKey"]
+            )
+            try db.create(
+                index: "idx_photo_metadata_placeResolvedAt",
+                on: "photo_metadata",
+                columns: ["placeResolvedAt"]
+            )
+            try db.create(table: "place_cells") { t in
+                t.primaryKey("cellKey", .text)
+                t.column("latitude", .double).notNull()
+                t.column("longitude", .double).notNull()
+                t.column("name", .text)
+                t.column("subLocality", .text)
+                t.column("locality", .text)
+                t.column("adminArea", .text)
+                t.column("country", .text)
+                t.column("countryCode", .text)
+                t.column("address", .text)
+                t.column("searchText", .text)
+                // Addresses come back in the user's language, so a locale change
+                // invalidates the words without invalidating the coordinates.
+                t.column("localeIdentifier", .text).notNull()
+                t.column("resolvedAt", .integer)
+                // Counts genuine "no data here" answers. A cell that fails this
+                // many times stops being retried; a network failure does not
+                // count, so going offline never poisons the cache.
+                t.column("failureCount", .integer).notNull().defaults(to: 0)
+            }
+        }
+
         return migrator
     }
 }

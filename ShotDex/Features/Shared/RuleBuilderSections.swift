@@ -10,6 +10,7 @@ struct RuleBuilderSections: View {
     let brands: [String]
     let bodies: [String]
     let lenses: [String]
+    var places: [String] = []
     /// Live count of matching photos; nil hides the footer.
     var matchCount: Int?
 
@@ -34,6 +35,7 @@ struct RuleBuilderSections: View {
                     brands: brands,
                     bodies: bodies,
                     lenses: lenses,
+                    places: places,
                     onDelete: { query.rules.removeAll { $0.id == rule.id } }
                 )
             }
