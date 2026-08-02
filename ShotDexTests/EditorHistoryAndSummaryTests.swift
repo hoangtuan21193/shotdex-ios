@@ -41,6 +41,35 @@ struct EditorHistoryAndSummaryTests {
         #expect(history.redo(current: first) == second)
     }
 
+    /// A cancelled Crop session drops its own entries: undo must not step back into
+    /// framing that was just thrown away.
+    @Test func rewindDropsTheEntriesRecordedAfterTheGivenDepth() {
+        var history = PhotoEditHistory()
+        let first = PhotoEditRecipe.identity
+        var second = first
+        second.adjustments.exposure = 0.4
+        var beforeCrop = second
+        beforeCrop.adjustments.shadows = 0.2
+        history.record(first)
+        history.record(second)
+        let depth = history.undoDepth
+
+        // The first drag of the Crop session records the state it started from.
+        history.record(beforeCrop)
+        #expect(history.undoDepth == depth + 1)
+
+        // Cancelling puts `beforeCrop` back and takes that entry with it.
+        history.rewind(toUndoDepth: depth)
+        #expect(history.undoDepth == depth)
+        #expect(history.timeline(current: beforeCrop) == [first, second, beforeCrop])
+        #expect(history.canRedo == false)
+
+        // Out-of-range depths leave the stack alone rather than clearing it.
+        history.rewind(toUndoDepth: depth)
+        history.rewind(toUndoDepth: 99)
+        #expect(history.undoDepth == depth)
+    }
+
     @Test func maskSummaryListsSetSlidersAndCountsTheRest() {
         var adjustments = PhotoAdjustments.zero
         #expect(EditorAdjustmentSummary.text(for: adjustments) == nil)

@@ -402,7 +402,6 @@ struct EditorMaskControlPopup: View {
                     "Size",
                     value: controller.brushSize,
                     range: EditorLayoutMetrics.brushSizeRange,
-                    displayScale: EditorLayoutMetrics.brushSizeRange.upperBound,
                     resetTo: 0.25
                 ) { controller.brushSize = $0 }
             case .brushFeather:
@@ -426,7 +425,6 @@ struct EditorMaskControlPopup: View {
         _ title: String,
         value: Double,
         range: ClosedRange<Double>,
-        displayScale: Double = 1,
         resetTo: Double,
         write: @escaping (Double) -> Void
     ) -> some View {
@@ -435,7 +433,7 @@ struct EditorMaskControlPopup: View {
             value: value,
             range: range,
             isBipolar: false,
-            valueText: percent(value / displayScale),
+            valueText: EditorLayoutMetrics.brushAmountText(value, in: range),
             isActive: false,
             onBeginDrag: {},
             onDrag: write,
@@ -450,7 +448,7 @@ struct EditorMaskControlPopup: View {
             value: component.feather,
             range: 0...1,
             isBipolar: false,
-            valueText: percent(component.feather),
+            valueText: EditorLayoutMetrics.brushAmountText(component.feather, in: 0...1),
             isActive: false,
             onBeginDrag: { controller.beginContinuousChange() },
             onDrag: { value in
@@ -461,9 +459,6 @@ struct EditorMaskControlPopup: View {
         )
     }
 
-    private func percent(_ value: Double) -> String {
-        "\(Int((min(1, max(0, value)) * 100).rounded()))%"
-    }
 }
 
 /// Mask housekeeping in the panel's nav row: rename and duplicate, plus dropping
@@ -735,7 +730,10 @@ struct EditorMaskDetailPanel: View {
             value: controller.brushFlow,
             range: 0.05...1,
             isBipolar: false,
-            valueText: percent(controller.brushFlow),
+            valueText: EditorLayoutMetrics.brushAmountText(
+                controller.brushFlow,
+                in: 0.05...1
+            ),
             isActive: false,
             onBeginDrag: {},
             onDrag: { controller.brushFlow = $0 },

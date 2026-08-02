@@ -145,7 +145,7 @@ private struct EditorPointColorSection: View {
                     if let point = controller.selectedPointColor {
                         pointSliders(point)
                     } else {
-                        Text("Tap the eyedropper, then tap a color in the photo")
+                        Text("Drag on the photo — the loupe shows the pixel under your finger. Lift to pick it.")
                             .font(EditorTheme.rowLabel)
                             .foregroundStyle(EditorTheme.secondaryText)
                             .multilineTextAlignment(.center)
@@ -159,51 +159,105 @@ private struct EditorPointColorSection: View {
         }
     }
 
+    /// The eyedropper shares this row with the swatches, so it is sized by how
+    /// much there is to share it with: on an empty section it is the only thing
+    /// to do here and spans the whole width with its label showing, and the first
+    /// sample collapses it into the icon to make room for the swatch it just
+    /// created. Same button throughout — the label and the width animate, so the
+    /// collapse reads as the button stepping aside rather than being replaced.
     private var swatchRow: some View {
         HStack(spacing: 10) {
-            Button {
-                withAnimation(EditorTheme.animation) {
-                    chrome.isEyedropperActive.toggle()
-                }
-            } label: {
-                EditorPillLabel(
-                    text: nil,
-                    systemImage: "eyedropper",
-                    isActive: chrome.isEyedropperActive
-                )
-            }
-            .buttonStyle(.plain)
-            .disabled(!controller.canAddPointColor && !chrome.isEyedropperActive)
-            .opacity(controller.canAddPointColor || chrome.isEyedropperActive ? 1 : 0.4)
-            .accessibilityLabel("Sample a color")
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(controller.pointColors) { point in
-                        let isSelected = controller.selectedPointColorID == point.id
-                        Button {
-                            controller.selectedPointColorID = point.id
-                        } label: {
-                            Circle()
-                                .fill(EditorColorMixerStyle.referenceColor(of: point))
-                                .frame(width: 28, height: 28)
-                                .overlay {
-                                    Circle().strokeBorder(
-                                        isSelected ? EditorTheme.accent : EditorTheme.hairline,
-                                        lineWidth: isSelected ? 2 : 1
-                                    )
-                                }
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Point color")
-                        .accessibilityAddTraits(isSelected ? .isSelected : [])
-                    }
-                }
-                .padding(.vertical, 2)
+            eyedropperButton
+            if !controller.pointColors.isEmpty {
+                swatches
             }
         }
         .padding(.horizontal, 14)
         .frame(height: 44)
+        .animation(EditorTheme.animation, value: controller.pointColors.isEmpty)
+    }
+
+    private var isEyedropperCollapsed: Bool {
+        !controller.pointColors.isEmpty
+    }
+
+    private var eyedropperButton: some View {
+        let isEnabled = controller.canAddPointColor || chrome.isEyedropperActive
+        return Button {
+            withAnimation(EditorTheme.animation) {
+                chrome.isEyedropperActive.toggle()
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "eyedropper")
+                    .font(.system(size: 13, weight: .semibold))
+                if !isEyedropperCollapsed {
+                    Text("Pick a Color from the Photo")
+                        .font(.system(size: 13.5, weight: .semibold))
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, isEyedropperCollapsed ? 12 : 16)
+            .frame(maxWidth: isEyedropperCollapsed ? nil : .infinity)
+            .frame(height: 34)
+            .background(fill, in: Capsule())
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .opacity(isEnabled ? 1 : 0.4)
+        .accessibilityLabel("Sample a color")
+        .accessibilityValue(chrome.isEyedropperActive ? "Armed" : "Off")
+    }
+
+    /// Accent while armed — and while the section is still empty, where the
+    /// button is the section's only call to action.
+    private var fill: Color {
+        chrome.isEyedropperActive || !isEyedropperCollapsed
+            ? EditorTheme.accent
+            : EditorTheme.control
+    }
+
+    private var swatches: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(controller.pointColors) { point in
+                    let isSelected = controller.selectedPointColorID == point.id
+                    Button {
+                        controller.selectedPointColorID = point.id
+                    } label: {
+                        Circle()
+                            .fill(EditorColorMixerStyle.referenceColor(of: point))
+                            .frame(width: 28, height: 28)
+                            .overlay {
+                                Circle().strokeBorder(
+                                    isSelected ? EditorTheme.accent : EditorTheme.hairline,
+                                    lineWidth: isSelected ? 2 : 1
+                                )
+                            }
+                    }
+                    .buttonStyle(.plain)
+                    // A swatch is a 28pt dot, and the only thing you can do to it
+                    // besides select it is throw it away — so the long press goes
+                    // straight to that instead of selecting the point first and
+                    // then reaching for Delete Point at the bottom of the sliders.
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            withAnimation(EditorTheme.animation) {
+                                controller.removePointColor(id: point.id)
+                            }
+                        } label: {
+                            Label("Delete Point Color", systemImage: "trash")
+                        }
+                    }
+                    .accessibilityLabel("Point color")
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
+                }
+            }
+            .padding(.vertical, 2)
+        }
     }
 
     @ViewBuilder

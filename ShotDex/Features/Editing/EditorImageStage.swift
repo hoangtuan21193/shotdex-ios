@@ -255,13 +255,18 @@ struct EditorImageStage: View {
                         .position(x: imageRect.midX, y: imageRect.midY)
                         .gesture(eyedropperGesture(in: imageRect))
 
-                    if let sampleLocation,
-                       let normalizedSample = normalized(sampleLocation, in: imageRect) {
-                        EditorColorLoupe(
-                            point: sampleLocation,
-                            color: controller.previewColor(at: normalizedSample),
-                            imageRect: imageRect
-                        )
+                    if let sampleLocation {
+                        let anchor = clamped(sampleLocation, in: imageRect)
+                        if let sample = pinnedNormalized(anchor, in: imageRect) {
+                            EditorColorLoupe(
+                                point: sampleLocation,
+                                anchor: anchor,
+                                readout: controller.previewColorReadout(at: sample),
+                                image: image,
+                                imageRect: imageRect,
+                                zoomScale: chrome.zoomScale
+                            )
+                        }
                     }
                 }
             }
@@ -369,7 +374,10 @@ struct EditorImageStage: View {
             }
 
             if isSamplingColor {
-                EditorPillLabel(text: "TAP THE PHOTO TO SAMPLE", systemImage: "eyedropper")
+                EditorPillLabel(
+                    text: "DRAG ON THE PHOTO · LIFT TO PICK",
+                    systemImage: "eyedropper"
+                )
                     .position(x: imageRect.midX, y: imageRect.maxY - 24)
             }
 
@@ -713,7 +721,9 @@ struct EditorImageStage: View {
     }
 
     /// Touch-down shows the loupe, dragging refines the spot, lifting commits
-    /// the sample and disarms the eyedropper.
+    /// the sample and disarms the eyedropper. The spot is pinned to the photo, so
+    /// a finger that wanders onto the letterbox picks the nearest pixel — the one
+    /// the loupe was showing all along — rather than nothing at all.
     private func eyedropperGesture(in imageRect: CGRect) -> some Gesture {
         DragGesture(minimumDistance: 0, coordinateSpace: .named(Self.stageSpace))
             .onChanged { value in
@@ -721,7 +731,8 @@ struct EditorImageStage: View {
             }
             .onEnded { value in
                 defer { sampleLocation = nil }
-                guard let point = normalized(value.location, in: imageRect) else { return }
+                let anchor = clamped(value.location, in: imageRect)
+                guard let point = pinnedNormalized(anchor, in: imageRect) else { return }
                 controller.addPointColor(sampledAt: point)
                 withAnimation(EditorTheme.animation) {
                     chrome.isEyedropperActive = false
@@ -763,42 +774,181 @@ struct EditorImageStage: View {
             y: min(1, max(0, (point.y - rect.minY) / rect.height))
         )
     }
+
+    /// Same conversion, minus the "must be on the photo" guard: a point already
+    /// clamped to the image rect lands exactly on its edge, which `contains`
+    /// rejects on the trailing side.
+    private func pinnedNormalized(_ point: CGPoint, in rect: CGRect) -> NormalizedPoint? {
+        guard rect.width > 0, rect.height > 0 else { return nil }
+        return NormalizedPoint(
+            x: min(1, max(0, (point.x - rect.minX) / rect.width)),
+            y: min(1, max(0, (point.y - rect.minY) / rect.height))
+        )
+    }
 }
 
-/// Live readout above the eyedropper finger: the color under the crosshair,
-/// held 56pt up so the fingertip never hides it, clamped inside the photo near
-/// the top edge.
+/// Magnifying glass over the eyedropper finger: the photo blown up around the
+/// crosshair with one cell per photo pixel, the cell being read outlined in the
+/// middle, and the color's hex under it. A plain swatch said *what* was under
+/// the finger but not *where* to move it — the fingertip covers the pixels, so
+/// aiming at one of them needs the pixels drawn somewhere the finger is not.
+///
+/// Held above the fingertip and free to leave the photo with it: the glass is
+/// chrome floating over the stage, so at the picture's edges it hangs over the
+/// letterbox instead of being shoved back inside — pinning it to the photo
+/// dragged the glass out from under the hand exactly where aiming is hardest.
 private struct EditorColorLoupe: View {
+    /// The fingertip, unpinned — where the glass and the crosshair go.
     let point: CGPoint
-    let color: Color?
+    /// The same touch pinned to the photo — which pixel is being read. The two
+    /// part company only once the finger has wandered past the edge, where the
+    /// glass keeps showing the nearest column of real pixels.
+    let anchor: CGPoint
+    let readout: (color: Color, hex: String)?
+    let image: UIImage
     let imageRect: CGRect
+    /// The loupe lives inside the zoomed stack, so every length it draws is
+    /// multiplied by the zoom on screen. All of them divide by it here: the glass
+    /// is chrome, and chrome stays the same size under the finger at 100% and at
+    /// 800% alike. Only the photo inside the glass magnifies.
+    var zoomScale: CGFloat = 1
+
+    private static let diameter: CGFloat = 84
+    /// Photo pixels across the glass. 10 over 84pt is 8.4pt a pixel: still an
+    /// easy cell to aim at, and the glass covers a quarter less of the photo.
+    private static let pixelsAcross: CGFloat = 10
+    private static let hexHeight: CGFloat = 18
+    private static let hexSpacing: CGFloat = 5
 
     var body: some View {
+        let scale = max(1, zoomScale)
         ZStack {
-            Circle()
-                .fill(color ?? Color(white: 0.2))
-                .frame(width: 44, height: 44)
-                .overlay {
-                    Circle().strokeBorder(.white, lineWidth: 2)
-                }
-                .overlay {
-                    Circle().stroke(.black.opacity(0.4), lineWidth: 0.5).padding(-1)
-                }
-                .shadow(color: .black.opacity(0.4), radius: 4, y: 2)
-                .position(
-                    x: point.x,
-                    y: max(imageRect.minY + 24, point.y - 56)
-                )
+            glass
+                .scaleEffect(1 / scale)
+                .position(center(scale: scale))
 
-            // Crosshair at the exact pixel being read.
+            // Crosshair at the exact pixel being read, left uncovered by the
+            // glass so the finger has something to aim with.
             Group {
-                Rectangle().frame(width: 11, height: 1)
-                Rectangle().frame(width: 1, height: 11)
+                Rectangle().frame(width: 11 / scale, height: 1 / scale)
+                Rectangle().frame(width: 1 / scale, height: 11 / scale)
             }
             .foregroundStyle(.white.opacity(0.9))
-            .position(x: point.x, y: point.y)
+            .shadow(color: .black.opacity(0.6), radius: 1 / scale)
+            .position(point)
         }
         .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    /// Full height of the glass plus its hex label — the lift above the fingertip
+    /// is measured from it.
+    private static var height: CGFloat {
+        diameter + hexSpacing + hexHeight
+    }
+
+    /// Straight above the finger, nothing clamped: the glass goes where the hand
+    /// goes, off the edge of the picture included.
+    private func center(scale: CGFloat) -> CGPoint {
+        CGPoint(
+            x: point.x,
+            y: point.y - (Self.height / 2 + 30) / scale
+        )
+    }
+
+    private var glass: some View {
+        VStack(spacing: Self.hexSpacing) {
+            ZStack {
+                magnifiedPhoto
+                pixelGrid
+                sampledCell
+            }
+            .frame(width: Self.diameter, height: Self.diameter)
+            .background(.black)
+            .clipShape(Circle())
+            // The rim carries the sampled color, so the answer is readable
+            // without looking away from the pixels.
+            .overlay {
+                Circle().strokeBorder(readout?.color ?? Color(white: 0.2), lineWidth: 3)
+            }
+            .overlay {
+                Circle().strokeBorder(.white.opacity(0.9), lineWidth: 1)
+            }
+            .shadow(color: .black.opacity(0.45), radius: 5, y: 2)
+
+            Text(readout?.hex ?? "—")
+                .font(.system(size: 10, weight: .semibold).monospaced())
+                .foregroundStyle(.white)
+                .padding(.horizontal, 7)
+                .frame(height: Self.hexHeight)
+                .background(.black.opacity(0.6), in: Capsule())
+        }
+    }
+
+    /// Layout points one photo pixel occupies on the un-zoomed stage, and the
+    /// magnification that turns it into one cell of the glass.
+    private var pixelSize: CGFloat {
+        guard let cgImage = image.cgImage, cgImage.width > 0, imageRect.width > 0 else {
+            return 1
+        }
+        return imageRect.width / CGFloat(cgImage.width)
+    }
+
+    private var cell: CGFloat { Self.diameter / Self.pixelsAcross }
+
+    private var magnification: CGFloat { cell / pixelSize }
+
+    /// The photo, scaled about the *centre of the pixel* under the finger rather
+    /// than about the finger itself: the cell being read then sits square in the
+    /// middle of the glass instead of straddling the crosshair.
+    private var magnifiedPhoto: some View {
+        let centre = CGPoint(
+            x: imageRect.minX + (floor((anchor.x - imageRect.minX) / pixelSize) + 0.5) * pixelSize,
+            y: imageRect.minY + (floor((anchor.y - imageRect.minY) / pixelSize) + 0.5) * pixelSize
+        )
+        return Image(uiImage: image)
+            .resizable()
+            // Nearest-neighbour: a pixel loupe that smooths its pixels is a
+            // blur, and the cell under the crosshair has to be one flat colour.
+            .interpolation(.none)
+            .frame(
+                width: imageRect.width * magnification,
+                height: imageRect.height * magnification
+            )
+            .offset(
+                x: (imageRect.midX - centre.x) * magnification,
+                y: (imageRect.midY - centre.y) * magnification
+            )
+    }
+
+    private var pixelGrid: some View {
+        Canvas { context, size in
+            let cellSize = cell
+            guard cellSize >= 4 else { return }
+            let middle = CGPoint(x: size.width / 2, y: size.height / 2)
+            let steps = Int(ceil(size.width / cellSize / 2)) + 1
+            var path = Path()
+            for step in -steps...steps {
+                let x = middle.x + (CGFloat(step) + 0.5) * cellSize
+                path.move(to: CGPoint(x: x, y: 0))
+                path.addLine(to: CGPoint(x: x, y: size.height))
+                let y = middle.y + (CGFloat(step) + 0.5) * cellSize
+                path.move(to: CGPoint(x: 0, y: y))
+                path.addLine(to: CGPoint(x: size.width, y: y))
+            }
+            context.stroke(path, with: .color(.white.opacity(0.16)), lineWidth: 0.5)
+        }
+        .frame(width: Self.diameter, height: Self.diameter)
+    }
+
+    /// The one cell the sample comes from — black under white so it reads on a
+    /// pale pixel as well as a dark one.
+    private var sampledCell: some View {
+        ZStack {
+            Rectangle().strokeBorder(.black.opacity(0.7), lineWidth: 3)
+            Rectangle().strokeBorder(.white, lineWidth: 1.5)
+        }
+        .frame(width: cell, height: cell)
     }
 }
 

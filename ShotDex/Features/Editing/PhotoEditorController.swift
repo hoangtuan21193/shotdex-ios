@@ -51,10 +51,33 @@ final class PhotoEditorController {
     private(set) var originalPreviewImage: UIImage?
     private(set) var histogram = PhotoHistogram.empty
     private(set) var maskThumbnails: [UUID: UIImage] = [:]
+    /// The photo through each film look, at swatch size. Filled one category at a
+    /// time — fifty swatches means fifty lookup tables, and only one strip is ever
+    /// on screen.
+    private(set) var filterThumbnails: [PhotoFilter: UIImage] = [:]
     @ObservationIgnored private var colorSamplingImage: CGImage?
     @ObservationIgnored private var maskThumbnailSignature = ""
     @ObservationIgnored private var maskThumbnailTask: Task<Void, Never>?
-    var selectedTool: PhotoEditorTool = .adjust
+    @ObservationIgnored private var filterThumbnailSignature = ""
+    @ObservationIgnored private var filterThumbnailTask: Task<Void, Never>?
+    /// Which strip the Filters tab is showing. Session state, like the selected
+    /// adjustment: it starts on the category the recipe's own look belongs to and is
+    /// the user's business after that.
+    private(set) var selectedFilterCategory: FilmLookCategory = .basic
+    /// Crop is the one modal tool: entering it opens a draft session and leaving it
+    /// any way other than `Done` throws the framing away, so every tool switch has
+    /// to run through here rather than assigning the stored property.
+    var selectedTool: PhotoEditorTool {
+        get { currentTool }
+        set {
+            guard newValue != currentTool else { return }
+            if currentTool == .crop { cancelCropSession() }
+            currentTool = newValue
+            if newValue == .crop { beginCropSession() }
+        }
+    }
+
+    private var currentTool: PhotoEditorTool = .adjust
     var selectedAdjustment: PhotoAdjustmentKind = .exposure
     var selectedMaskID: UUID?
     var selectedComponentID: UUID?
@@ -108,6 +131,7 @@ final class PhotoEditorController {
     private(set) var savedAssetID: String?
 
     @ObservationIgnored private var history = PhotoEditHistory()
+    @ObservationIgnored private var cropSession: CropSession?
     @ObservationIgnored private var renderTask: Task<Void, Never>?
     @ObservationIgnored private var interactiveRenderTask: Task<Void, Never>?
     @ObservationIgnored private var interactiveRenderPending = false
@@ -226,6 +250,7 @@ final class PhotoEditorController {
             selectedMaskID = initialRecipe.masks.first?.id
             selectedComponentID = initialRecipe.masks.first?.components.first?.id
             selectedCleanUpStrokeID = initialRecipe.cleanUpStrokes.last?.id
+            selectedFilterCategory = initialRecipe.filter.category
             await renderNow()
         } catch {
             errorMessage = error.localizedDescription
@@ -237,6 +262,7 @@ final class PhotoEditorController {
         renderTask?.cancel()
         interactiveRenderTask?.cancel()
         maskThumbnailTask?.cancel()
+        filterThumbnailTask?.cancel()
         if let session {
             service.endSession(session)
         }
@@ -355,6 +381,12 @@ final class PhotoEditorController {
         recordHistory()
         recipe.filter = filter
         scheduleRender()
+    }
+
+    func chooseFilterCategory(_ category: FilmLookCategory) {
+        guard selectedFilterCategory != category else { return }
+        selectedFilterCategory = category
+        refreshFilterThumbnails()
     }
 
     func editGlobalAdjustments() {
@@ -527,10 +559,16 @@ final class PhotoEditorController {
         scheduleRender()
     }
 
-    /// Live color under the eyedropper, for the loupe.
-    func previewColor(at point: NormalizedPoint) -> Color? {
+    /// Live readout under the eyedropper, for the loupe: the color itself and its
+    /// sRGB hex, read in one pass so a dragging finger never decodes the same
+    /// pixel twice a frame.
+    func previewColorReadout(at point: NormalizedPoint) -> (color: Color, hex: String)? {
         guard let sample = samplePreviewColor(at: point) else { return nil }
-        return Color(red: sample.red, green: sample.green, blue: sample.blue)
+        let byte = { (value: Double) in Int((min(1, max(0, value)) * 255).rounded()) }
+        return (
+            Color(red: sample.red, green: sample.green, blue: sample.blue),
+            String(format: "#%02X%02X%02X", byte(sample.red), byte(sample.green), byte(sample.blue))
+        )
     }
 
     func gradingWheel(_ region: ColorGradingRegion) -> ColorGradingAdjustments.Wheel {
@@ -581,29 +619,24 @@ final class PhotoEditorController {
         guard recipe.crop.aspect != aspect else { return }
         recordHistory()
         recipe.crop.aspect = aspect
-        guard let requestedRatio = aspect.ratio
-            ?? (aspect == .original ? effectiveImageAspect : nil),
-              requestedRatio > 0
-        else {
-            scheduleRender()
-            return
+        switch aspect {
+        case .free:
+            // Unlocking a ratio leaves the frame alone; there is nothing to fit.
+            break
+        case .original:
+            // `Original` means the whole frame back, the way Photos reads it —
+            // fitting the image's own ratio inside whatever frame was there just
+            // made the chip a shrink button.
+            recipe.crop.rect = .full
+        default:
+            guard let ratio = aspect.ratio, ratio > 0 else { break }
+            // Equal area, not inscribed: see `CropFrameGeometry`.
+            recipe.crop.rect = CropFrameGeometry.rect(
+                matchingRatio: ratio,
+                keepingAreaOf: recipe.crop.rect,
+                imageAspect: effectiveImageAspect
+            )
         }
-        let current = recipe.crop.rect
-        let normalizedRatio = requestedRatio / max(0.0001, effectiveImageAspect)
-        let currentRatio = current.width / current.height
-        var width = current.width
-        var height = current.height
-        if currentRatio > normalizedRatio {
-            width = height * normalizedRatio
-        } else {
-            height = width / normalizedRatio
-        }
-        recipe.crop.rect = NormalizedRect(
-            x: min(1 - width, max(0, current.x + (current.width - width) / 2)),
-            y: min(1 - height, max(0, current.y + (current.height - height) / 2)),
-            width: width,
-            height: height
-        )
         scheduleRender()
     }
 
@@ -743,9 +776,41 @@ final class PhotoEditorController {
         scheduleRender()
     }
 
-    /// Clears frame, straighten, rotation and flip in one step. The crop has no
-    /// commit of its own — the frame is live in the recipe — so the panel needs one
-    /// way back to untouched framing rather than several undos.
+    /// The framing the Crop tab opened on, plus how deep the undo stack was then —
+    /// a cancelled session has to drop its own history entries too, or undo would
+    /// step back into frames that no longer exist.
+    private struct CropSession {
+        let crop: PhotoCropRecipe
+        let undoDepth: Int
+    }
+
+    /// Opened on entry to the Crop tab. Drags keep writing straight into the recipe
+    /// so the preview stays live; the snapshot is what makes leaving reversible.
+    private func beginCropSession() {
+        guard cropSession == nil else { return }
+        cropSession = CropSession(crop: recipe.crop, undoDepth: history.undoDepth)
+    }
+
+    /// `Done`, and any save: the draft framing is the framing from now on.
+    func commitCropSession() {
+        cropSession = nil
+    }
+
+    /// Leaving Crop any other way — another tab, or the session being closed under
+    /// it — puts the framing back. A crop the user never confirmed must not ride
+    /// along into the saved image. Only `crop` is restored: anything else the session
+    /// touched (an undo that reached back past the frame) is the user's, not ours.
+    func cancelCropSession() {
+        guard let session = cropSession else { return }
+        cropSession = nil
+        history.rewind(toUndoDepth: session.undoDepth)
+        guard recipe.crop != session.crop else { return }
+        recipe.crop = session.crop
+        scheduleRender()
+    }
+
+    /// Clears frame, straighten, rotation and flip in one step, back to how the
+    /// photo came in — one tap instead of undoing every drag of the session.
     func resetCrop() {
         guard recipe.crop != .identity else { return }
         recordHistory()
@@ -1418,7 +1483,10 @@ final class PhotoEditorController {
             editedPreviewImage = image
             colorSamplingImage = preview.cleanImage
             await updateHistogram()
-            if !isContinuousChange { refreshMaskThumbnails() }
+            if !isContinuousChange {
+                refreshMaskThumbnails()
+                refreshFilterThumbnails()
+            }
         } catch {
             guard generation == renderGeneration else { return }
             errorMessage = error.localizedDescription
@@ -1466,6 +1534,57 @@ final class PhotoEditorController {
                 // A missing thumbnail only costs the row its preview image.
             }
         }
+    }
+
+    /// Renders the swatches for the strip on screen, if they are not already there.
+    /// Called when the Filters tab appears, when the strip changes, and after every
+    /// settled render — a swatch has to show the photo as it is now, not as it was
+    /// before the exposure moved.
+    func refreshFilterThumbnails() {
+        guard selectedTool == .filters, let loadedSource else { return }
+        let signature = filterThumbnailBaseSignature(for: recipe)
+        if signature != filterThumbnailSignature {
+            filterThumbnailSignature = signature
+            // Tone, colour or framing moved, so every swatch already rendered —
+            // including the strips not on screen — describes an older photo.
+            filterThumbnails = [:]
+        }
+        let filters = PhotoFilter.all(in: selectedFilterCategory)
+        guard filters.contains(where: { filterThumbnails[$0] == nil }) else { return }
+        filterThumbnailTask?.cancel()
+        let recipe = recipe
+        let info = loadedSource.info
+        filterThumbnailTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let resolved = try await service.renderer.filterThumbnails(
+                    source: info,
+                    recipe: recipe,
+                    filters: filters
+                )
+                guard !Task.isCancelled, signature == filterThumbnailSignature else { return }
+                filterThumbnails.merge(
+                    resolved.images.mapValues { UIImage(cgImage: $0) },
+                    uniquingKeysWith: { _, rendered in rendered }
+                )
+            } catch {
+                // Swatches are a nicety: the strip falls back to drawing each look
+                // as a two-tone gradient instead.
+            }
+        }
+    }
+
+    /// Everything *under* the filter — tone, the Color tab, framing, which file is
+    /// being edited. Deliberately not the filter or its intensity: those are what
+    /// the swatches are showing, and changing them must not rebuild them.
+    private func filterThumbnailBaseSignature(for recipe: PhotoEditRecipe) -> String {
+        [
+            "\(recipe.source)",
+            recipe.sourceFilename ?? "",
+            "\(recipe.adjustments)",
+            "\(recipe.color)",
+            "\(recipe.crop)",
+        ].joined(separator: "#")
     }
 
     private func maskGeometrySignature(for recipe: PhotoEditRecipe) -> String {

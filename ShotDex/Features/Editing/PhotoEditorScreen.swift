@@ -241,6 +241,9 @@ struct PhotoEditorScreen: View {
             Spacer(minLength: 0)
 
             Button("Save") {
+                // Saving is a confirmation of what is on screen, so a crop still in
+                // draft is kept rather than dropped by the tab switch behind us.
+                controller.commitCropSession()
                 isSaveSheetPresented = true
             }
             .font(.system(size: 16, weight: .semibold))
@@ -332,9 +335,8 @@ struct PhotoEditorScreen: View {
         )
     }
 
-    /// Reset the frame, or leave Crop. Framing is written into the recipe on every
-    /// drag, so `Done` commits nothing — it is there because a crop tool with no way
-    /// out reads as unfinished.
+    /// Reset the frame, or leave Crop. `Done` is the crop's only commit: the draft
+    /// framing survives it, and every other way out of the tab puts the frame back.
     private func cropActions(_ controller: PhotoEditorController) -> some View {
         HStack(spacing: 6) {
             Button("Reset Crop") {
@@ -344,6 +346,7 @@ struct PhotoEditorScreen: View {
             .disabled(controller.recipe.crop == .identity)
 
             Button {
+                controller.commitCropSession()
                 select(.adjust, in: controller)
             } label: {
                 Text("Done")
@@ -428,8 +431,19 @@ struct PhotoEditorScreen: View {
 
     /// What is left over once undo/redo/compare/history/reset have their own
     /// buttons: recalling the recipe stored in Photos, and picking the RAW or JPEG
-    /// source of a RAW+JPEG pair.
+    /// source of a RAW+JPEG pair. Both are conditional, so the button is not in
+    /// the row at all when neither applies — a `⋯` that opens an empty menu is
+    /// worse than no `⋯`. New Mask used to live here too; it is the Masks tab's
+    /// own primary button, and a second copy in a menu three taps away from it
+    /// bought nothing.
+    @ViewBuilder
     private func overflowMenu(_ controller: PhotoEditorController) -> some View {
+        if controller.recalledRecipe != nil || controller.sourceOptions.count > 1 {
+            overflowButton(controller)
+        }
+    }
+
+    private func overflowButton(_ controller: PhotoEditorController) -> some View {
         Menu {
             if controller.recalledRecipe != nil {
                 Button {
@@ -457,12 +471,6 @@ struct PhotoEditorScreen: View {
                     }
                 }
             }
-
-            Button {
-                chrome.isNewMaskSheetPresented = true
-            } label: {
-                Label("New Mask", systemImage: "circle.dashed")
-            }
         } label: {
             Image(systemName: "ellipsis")
                 .font(.system(size: 13, weight: .semibold))
@@ -482,7 +490,7 @@ struct PhotoEditorScreen: View {
     private func panel(_ controller: PhotoEditorController, height: CGFloat) -> some View {
         VStack(spacing: 0) {
             actionRow(controller)
-            toolPanel(controller)
+            toolPanel(controller, panelHeight: height)
                 .frame(height: height - EditorLayoutMetrics.tabBarHeight)
             tabBar(controller)
                 .padding(.bottom, EditorLayoutMetrics.panelBottomInset)
@@ -491,7 +499,10 @@ struct PhotoEditorScreen: View {
     }
 
     @ViewBuilder
-    private func toolPanel(_ controller: PhotoEditorController) -> some View {
+    private func toolPanel(
+        _ controller: PhotoEditorController,
+        panelHeight: CGFloat
+    ) -> some View {
         switch controller.selectedTool {
         case .adjust:
             EditorAdjustmentGroupsView(
@@ -505,7 +516,11 @@ struct PhotoEditorScreen: View {
         case .color:
             EditorColorPanel(controller: controller, chrome: chrome)
         case .filters:
-            EditorFiltersPanel(controller: controller, chrome: chrome)
+            EditorFiltersPanel(
+                controller: controller,
+                chrome: chrome,
+                panelHeight: panelHeight
+            )
         case .crop:
             EditorCropPanel(controller: controller)
         case .masks:

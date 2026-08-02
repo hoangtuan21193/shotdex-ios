@@ -34,6 +34,20 @@ struct PhotoEditHistory: Sendable {
         undoStack.removeLast()
     }
 
+    /// How many steps back the stack currently reaches. A modal session (Crop)
+    /// remembers this on entry so it can drop its own entries if it is cancelled.
+    var undoDepth: Int { undoStack.count }
+
+    /// Rolls the stack back to the depth of `toUndoDepth`, for a session the user
+    /// left without committing: the states recorded while it was open describe
+    /// framing that has just been thrown away. Redo goes with them — `record` had
+    /// already cleared it on the session's first edit.
+    mutating func rewind(toUndoDepth depth: Int) {
+        guard depth >= 0, depth < undoStack.count else { return }
+        undoStack.removeLast(undoStack.count - depth)
+        redoStack.removeAll(keepingCapacity: true)
+    }
+
     mutating func undo(current: PhotoEditRecipe) -> PhotoEditRecipe? {
         guard let previous = undoStack.popLast() else { return nil }
         redoStack.append(current)

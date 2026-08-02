@@ -143,6 +143,7 @@ struct EditorGroupHeader: View {
             }
         }
         .padding(.horizontal, 14)
+        .frame(maxWidth: .infinity)
         .frame(height: 36)
         .background(isFirst ? EditorTheme.panel : EditorTheme.stickyHeader)
         .overlay(alignment: .top) {
@@ -155,6 +156,12 @@ struct EditorGroupHeader: View {
                 Rectangle().fill(EditorTheme.hairline).frame(height: 0.5)
             }
         }
+        // A pinned header keeps its slot in the `LazyVStack`'s draw order, which
+        // is *below* the rows that come after it — so it stays put but the rows
+        // scroll over the top of it, and an opaque slider track passing across it
+        // reads as the header having scrolled away. It has to be lifted out of
+        // that order to be the thing rows disappear behind.
+        .zIndex(1)
     }
 }
 

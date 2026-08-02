@@ -98,6 +98,41 @@ enum EditorLayoutMetrics {
         return min(max(preferred, height / 3), height * 0.46)
     }
 
+    // MARK: Film-look grid
+
+    /// Everything in the Filters tab that is not the swatch grid: the 19pt heading
+    /// and its top padding (35), the category strip (44), the Intensity slider (44)
+    /// and three 12pt gaps.
+    static let filterPanelFixedHeight: CGFloat = 160
+    /// Caption plus its gap under a swatch.
+    static let filterTileCaptionHeight: CGFloat = 18
+    static let filterGridRowSpacing: CGFloat = 8
+    /// Below this a swatch is too small to tell two looks apart, so the grid drops
+    /// to one row rather than shrinking further.
+    static let filterTileMinimumSide: CGFloat = 44
+    /// Above this the grid is just wasting the panel — a swatch is a swatch.
+    static let filterTileMaximumSide: CGFloat = 66
+
+    struct FilterGridLayout: Equatable, Sendable {
+        var rows: Int
+        var tileSide: CGFloat
+    }
+
+    /// Two rows of swatches wherever the panel can hold them, which is every phone
+    /// from the 6.1" up: two rows show twice as many looks per screenful, and the
+    /// panel has the height to spare. A 4.7" panel does not, so it gets one row and
+    /// full-size swatches instead of two unreadable ones.
+    static func filterGrid(forPanelHeight panelHeight: CGFloat) -> FilterGridLayout {
+        let available = max(0, panelHeight - tabBarHeight - filterPanelFixedHeight)
+        for rows in [2, 1] {
+            let spacing = filterGridRowSpacing * CGFloat(rows - 1)
+            let side = (available - spacing) / CGFloat(rows) - filterTileCaptionHeight
+            guard side >= filterTileMinimumSide else { continue }
+            return FilterGridLayout(rows: rows, tileSide: min(filterTileMaximumSide, side))
+        }
+        return FilterGridLayout(rows: 1, tileSide: filterTileMinimumSide)
+    }
+
     static func histogramSize(collapsed: Bool) -> CGSize {
         collapsed
             ? CGSize(width: histogramCollapsedWidth, height: histogramCollapsedHeight)
@@ -226,12 +261,33 @@ enum EditorLayoutMetrics {
     /// Matches the Size slider in the mask popup.
     static let brushSizeRange = 0.02...0.5
 
+    /// How a brush control reads out: a bare 0–100 number, the way Lightroom writes
+    /// Size, Feather and Flow.
+    ///
+    /// Not a percentage, because the thing it is a percentage *of* differs per
+    /// control and none of them is the photo: Size is a fraction of the short edge,
+    /// Feather a fraction of the stamp, Flow a fraction of full opacity. A `%` sign
+    /// invites the reading "50% of the picture", which Size at 0.25 is not. The
+    /// number is simply where the knob sits on its own slider — so the top of every
+    /// brush control is 100 and they can be compared at a glance.
+    static func brushAmountText(_ value: Double, in range: ClosedRange<Double>) -> String {
+        guard range.upperBound > 0 else { return "0" }
+        let position = min(1, max(0, value / range.upperBound))
+        return "\(Int((position * 100).rounded()))"
+    }
+
     // MARK: Zoom
 
-    /// How far the photo can be pinched open in the editor. 8× because that is
-    /// what painting a mask into small detail needs — an eyelash, a power line —
-    /// and it is Lightroom's own ceiling.
-    static let maximumZoomScale: CGFloat = 8
+    /// How far the photo can be pinched open in the editor. 10×, one stop past
+    /// Lightroom's own 8× ceiling: painting a mask into small detail — an eyelash,
+    /// a power line — is what the zoom is for, and the brush is a screen size, so
+    /// every extra stop is a finer brush rather than just a bigger picture.
+    ///
+    /// The picture itself stops sharpening before here: the settle render caps at
+    /// `zoomedSettleEdge` (4800px), which on a phone is roughly 400%. Past that the
+    /// photo is being magnified rather than resolved — still the right trade, since
+    /// what is being aimed at is the *mask*, not the grain.
+    static let maximumZoomScale: CGFloat = 10
 
     /// What a stroke records when it is painted at `zoomScale`.
     ///

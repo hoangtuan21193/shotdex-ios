@@ -86,7 +86,10 @@ struct EditorCleanUpPanel: View {
             range: EditorLayoutMetrics.cleanUpSizeRange.lowerBound * 100
                 ... EditorLayoutMetrics.cleanUpSizeRange.upperBound * 100,
             isBipolar: false,
-            valueText: percent(controller.cleanUpSize),
+            valueText: EditorLayoutMetrics.brushAmountText(
+                controller.cleanUpSize,
+                in: EditorLayoutMetrics.cleanUpSizeRange
+            ),
             isActive: chrome.activePlainSliderID == "cleanup.size",
             onBeginDrag: { beginPlainDrag("cleanup.size") },
             onDrag: { controller.cleanUpSize = $0 / 100 },
@@ -98,7 +101,10 @@ struct EditorCleanUpPanel: View {
             value: controller.cleanUpFeather * 100,
             range: 0...100,
             isBipolar: false,
-            valueText: percent(controller.cleanUpFeather),
+            valueText: EditorLayoutMetrics.brushAmountText(
+                controller.cleanUpFeather,
+                in: 0...1
+            ),
             isActive: chrome.activePlainSliderID == "cleanup.feather",
             onBeginDrag: { beginPlainDrag("cleanup.feather") },
             onDrag: { controller.cleanUpFeather = $0 / 100 },

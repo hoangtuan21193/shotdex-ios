@@ -217,6 +217,9 @@
     "Apply" : {
 
     },
+    "Armed" : {
+
+    },
     "Auto" : {
 
     },
@@ -409,6 +412,9 @@
     "Delete Point" : {
 
     },
+    "Delete Point Color" : {
+
+    },
     "Delete Stroke" : {
 
     },
@@ -451,6 +457,9 @@
 
     },
     "Downloading from iCloud" : {
+
+    },
+    "Drag on the photo — the loupe shows the pixel under your finger. Lift to pick it." : {
 
     },
     "Drag to adjust" : {
@@ -546,7 +555,7 @@
     "Frame Saved" : {
 
     },
-    "Framing applies as you drag it. Tap Save when the whole edit is ready." : {
+    "Framing stays a draft until you tap Done. Leaving this tab keeps the photo uncropped." : {
 
     },
     "Group by" : {
@@ -950,6 +959,9 @@
     "Photos must match every condition below." : {
 
     },
+    "Pick a Color from the Photo" : {
+
+    },
     "Pick a Date" : {
 
     },
@@ -1299,9 +1311,6 @@
 
     },
     "Tap a mask to adjust that area on its own" : {
-
-    },
-    "Tap the eyedropper, then tap a color in the photo" : {
 
     },
     "Tap to expand" : {

@@ -17,6 +17,42 @@ struct EditorPanelLayoutTests {
         }
     }
 
+    @Test func filterGridTakesTwoRowsOnEveryPanelTallEnoughToHoldThem() {
+        for height in [812.0, 852, 926, 956] {
+            let layout = EditorLayoutMetrics.filterGrid(
+                forPanelHeight: EditorLayoutMetrics.panelHeight(forHeight: height)
+            )
+            #expect(layout.rows == 2, "\(height)pt screen should get two rows")
+            #expect(layout.tileSide >= EditorLayoutMetrics.filterTileMinimumSide)
+            #expect(layout.tileSide <= EditorLayoutMetrics.filterTileMaximumSide)
+        }
+    }
+
+    @Test func filterGridDropsToOneRowRatherThanShrinkingSwatchesBelowUse() {
+        // A 4.7" panel cannot hold two readable rows, so it holds one.
+        let small = EditorLayoutMetrics.filterGrid(
+            forPanelHeight: EditorLayoutMetrics.panelHeight(forHeight: 667)
+        )
+        #expect(small.rows == 1)
+        #expect(small.tileSide >= EditorLayoutMetrics.filterTileMinimumSide)
+        // And a panel with nothing left over still returns something drawable.
+        let starved = EditorLayoutMetrics.filterGrid(forPanelHeight: 0)
+        #expect(starved.rows == 1)
+        #expect(starved.tileSide == EditorLayoutMetrics.filterTileMinimumSide)
+    }
+
+    @Test func theFilterGridFitsInsideThePanelItWasGiven() {
+        for height in [667.0, 812, 852, 926, 956] {
+            let panel = EditorLayoutMetrics.panelHeight(forHeight: height)
+            let layout = EditorLayoutMetrics.filterGrid(forPanelHeight: panel)
+            let rows = CGFloat(layout.rows)
+            let grid = (layout.tileSide + EditorLayoutMetrics.filterTileCaptionHeight) * rows
+                + EditorLayoutMetrics.filterGridRowSpacing * (rows - 1)
+            let content = panel - EditorLayoutMetrics.tabBarHeight
+            #expect(grid + EditorLayoutMetrics.filterPanelFixedHeight <= content + 0.001)
+        }
+    }
+
     @Test func histogramSnapsToTheNearestCornerOfTheImageArea() {
         let bounds = CGRect(x: 0, y: 100, width: 393, height: 460)
         #expect(
@@ -330,12 +366,13 @@ struct EditorPanelLayoutTests {
         // zooming in to paint an eyelash.
         #expect(EditorLayoutMetrics.paintedSize(0.2, zoomScale: 1) == 0.2)
         #expect(abs(EditorLayoutMetrics.paintedSize(0.2, zoomScale: 4) - 0.05) < 0.000001)
+        // And at the 10× ceiling a half-of-the-short-edge brush is down to 2% of it.
         #expect(
             abs(
                 EditorLayoutMetrics.paintedSize(
                     0.2,
                     zoomScale: EditorLayoutMetrics.maximumZoomScale
-                ) - 0.025
+                ) - 0.02
             ) < 0.000001
         )
         // Zooming out past 1× is not a thing, so it never *grows* a stroke.
@@ -406,11 +443,47 @@ struct EditorPanelLayoutTests {
         }
     }
 
+    @Test func brushControlsReadOutAsBareNumbersOutOfAHundred() {
+        // Lightroom's brush numbers, and for the same reason: what each control is a
+        // fraction *of* differs, so a `%` sign would be read as "of the photo".
+        #expect(
+            EditorLayoutMetrics.brushAmountText(0.25, in: EditorLayoutMetrics.brushSizeRange)
+                == "50"
+        )
+        // The top of every brush slider is 100, whatever its underlying range —
+        // that is what lets Size, Feather and Flow be compared at a glance.
+        #expect(
+            EditorLayoutMetrics.brushAmountText(
+                EditorLayoutMetrics.brushSizeRange.upperBound,
+                in: EditorLayoutMetrics.brushSizeRange
+            ) == "100"
+        )
+        #expect(
+            EditorLayoutMetrics.brushAmountText(
+                EditorLayoutMetrics.cleanUpSizeRange.upperBound,
+                in: EditorLayoutMetrics.cleanUpSizeRange
+            ) == "100"
+        )
+        // Clean Up's default sits at 40 on its own 0.01…0.3 slider.
+        #expect(
+            EditorLayoutMetrics.brushAmountText(
+                EditorLayoutMetrics.cleanUpDefaultSize,
+                in: EditorLayoutMetrics.cleanUpSizeRange
+            ) == "40"
+        )
+        #expect(EditorLayoutMetrics.brushAmountText(0.45, in: 0...1) == "45")
+        #expect(EditorLayoutMetrics.brushAmountText(0, in: 0...1) == "0")
+        // Nothing overflows the value column: out-of-range input clamps.
+        #expect(EditorLayoutMetrics.brushAmountText(3, in: 0...1) == "100")
+        #expect(EditorLayoutMetrics.brushAmountText(-1, in: 0...1) == "0")
+        #expect(EditorLayoutMetrics.brushAmountText(0.5, in: 0...0) == "0")
+    }
+
     @Test func theZoomReadoutIsRoundedPercent() {
         #expect(EditorLayoutMetrics.zoomPercent(1) == 100)
         #expect(EditorLayoutMetrics.zoomPercent(3.456) == 346)
         #expect(
-            EditorLayoutMetrics.zoomPercent(EditorLayoutMetrics.maximumZoomScale) == 800
+            EditorLayoutMetrics.zoomPercent(EditorLayoutMetrics.maximumZoomScale) == 1_000
         )
     }
 

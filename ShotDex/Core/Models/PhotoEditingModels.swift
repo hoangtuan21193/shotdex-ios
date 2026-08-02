@@ -178,6 +178,12 @@ enum PhotoEditSource: String, Codable, CaseIterable, Identifiable, Sendable {
     }
 }
 
+/// Every look the Filters tab offers. Raw values are persisted inside saved
+/// recipes, so a case may be added but never renamed.
+///
+/// The first ten are the original Core Image presets. Everything after them is a
+/// film simulation driven by a `FilmLook` — the nineteen an X-T5 has, the twelve
+/// Leica Looks, and six well-known stocks neither company sells a mode for.
 enum PhotoFilter: String, Codable, CaseIterable, Identifiable, Sendable {
     case original
     case vivid
@@ -189,6 +195,55 @@ enum PhotoFilter: String, Codable, CaseIterable, Identifiable, Sendable {
     case mono
     case silvertone
     case noir
+
+    // Fujifilm colour simulations.
+    case provia
+    case velvia
+    case astia
+    case classicChrome
+    case proNegHi
+    case proNegStd
+    case classicNeg
+    case nostalgicNeg
+    case eterna
+    case eternaBleachBypass
+
+    // Fujifilm monochrome simulations, plus the two black-and-white stocks that
+    // belong in the same strip. `fuji`-prefixed because `mono` and `silvertone`
+    // above are already taken by the original presets.
+    case acros
+    case acrosYellow
+    case acrosRed
+    case acrosGreen
+    case fujiMonochrome
+    case fujiMonochromeYellow
+    case fujiMonochromeRed
+    case fujiMonochromeGreen
+    case fujiSepia
+    case hp5
+    case triX
+
+    // Leica Looks.
+    case leicaChrome
+    case leicaClassic
+    case leicaContemporary
+    case leicaEternal
+    case leicaBlue
+    case leicaSelenium
+    case leicaSepia
+    case leicaBleach
+    case leicaSilver
+    case leicaTeal
+    case leicaBrass
+    case leicaGregWilliams
+
+    // Colour stocks.
+    case portra400
+    case gold200
+    case kodachrome64
+    case ektar100
+    case superia400
+    case cineStill800T
 
     var id: String { rawValue }
 
@@ -204,7 +259,120 @@ enum PhotoFilter: String, Codable, CaseIterable, Identifiable, Sendable {
         case .mono: "Mono"
         case .silvertone: "Silvertone"
         case .noir: "Noir"
+        case .provia: "PROVIA / Standard"
+        case .velvia: "Velvia / Vivid"
+        case .astia: "ASTIA / Soft"
+        case .classicChrome: "Classic Chrome"
+        case .proNegHi: "PRO Neg. Hi"
+        case .proNegStd: "PRO Neg. Std"
+        case .classicNeg: "Classic Negative"
+        case .nostalgicNeg: "Nostalgic Neg."
+        case .eterna: "ETERNA / Cinema"
+        case .eternaBleachBypass: "ETERNA Bleach Bypass"
+        case .acros: "ACROS"
+        case .acrosYellow: "ACROS + Ye Filter"
+        case .acrosRed: "ACROS + R Filter"
+        case .acrosGreen: "ACROS + G Filter"
+        case .fujiMonochrome: "Monochrome"
+        case .fujiMonochromeYellow: "Monochrome + Ye Filter"
+        case .fujiMonochromeRed: "Monochrome + R Filter"
+        case .fujiMonochromeGreen: "Monochrome + G Filter"
+        case .fujiSepia: "Sepia"
+        case .hp5: "Ilford HP5 Plus"
+        case .triX: "Kodak Tri-X 400"
+        case .leicaChrome: "Leica Chrome"
+        case .leicaClassic: "Leica Classic"
+        case .leicaContemporary: "Leica Contemporary"
+        case .leicaEternal: "Leica Eternal"
+        case .leicaBlue: "Leica Blue"
+        case .leicaSelenium: "Leica Selenium"
+        case .leicaSepia: "Leica Sepia"
+        case .leicaBleach: "Leica Bleach"
+        case .leicaSilver: "Leica Silver"
+        case .leicaTeal: "Leica Teal"
+        case .leicaBrass: "Leica Brass"
+        case .leicaGregWilliams: "Leica Greg Williams"
+        case .portra400: "Kodak Portra 400"
+        case .gold200: "Kodak Gold 200"
+        case .kodachrome64: "Kodachrome 64"
+        case .ektar100: "Kodak Ektar 100"
+        case .superia400: "Fujicolor Superia 400"
+        case .cineStill800T: "CineStill 800T"
         }
+    }
+
+    /// Caption under a swatch. A tile is about 60pt wide, so anything longer than
+    /// roughly twelve characters has to lose the part the strip's own heading
+    /// already says — the brand.
+    var tileName: String {
+        switch self {
+        case .provia: "PROVIA"
+        case .velvia: "Velvia"
+        case .astia: "ASTIA"
+        case .classicChrome: "Cl. Chrome"
+        case .proNegHi: "Neg. Hi"
+        case .proNegStd: "Neg. Std"
+        case .classicNeg: "Cl. Neg."
+        case .nostalgicNeg: "Nostalgic"
+        case .eterna: "ETERNA"
+        case .eternaBleachBypass: "Bleach BP"
+        case .acrosYellow: "ACROS+Ye"
+        case .acrosRed: "ACROS+R"
+        case .acrosGreen: "ACROS+G"
+        case .fujiMonochrome: "Mono"
+        case .fujiMonochromeYellow: "Mono+Ye"
+        case .fujiMonochromeRed: "Mono+R"
+        case .fujiMonochromeGreen: "Mono+G"
+        case .hp5: "HP5"
+        case .triX: "Tri-X"
+        case .leicaChrome: "Chrome"
+        case .leicaClassic: "Classic"
+        case .leicaContemporary: "Contemp."
+        case .leicaEternal: "Eternal"
+        case .leicaBlue: "Blue"
+        case .leicaSelenium: "Selenium"
+        case .leicaSepia: "Sepia"
+        case .leicaBleach: "Bleach"
+        case .leicaSilver: "Silver"
+        case .leicaTeal: "Teal"
+        case .leicaBrass: "Brass"
+        case .leicaGregWilliams: "G. Williams"
+        case .portra400: "Portra 400"
+        case .gold200: "Gold 200"
+        case .kodachrome64: "Kodachrome"
+        case .ektar100: "Ektar 100"
+        case .superia400: "Superia"
+        case .cineStill800T: "800T"
+        default: displayName
+        }
+    }
+
+    var category: FilmLookCategory {
+        switch self {
+        case .original, .vivid, .vividWarm, .vividCool, .dramatic, .dramaticWarm,
+             .dramaticCool, .mono, .silvertone, .noir:
+            .basic
+        case .provia, .velvia, .astia, .classicChrome, .proNegHi, .proNegStd,
+             .classicNeg, .nostalgicNeg, .eterna, .eternaBleachBypass,
+             .leicaChrome, .leicaClassic, .leicaContemporary, .leicaEternal,
+             .leicaBleach, .leicaTeal, .leicaBrass, .leicaGregWilliams,
+             .portra400, .gold200, .kodachrome64, .ektar100, .superia400,
+             .cineStill800T:
+            .film
+        // Sorted by what the look *is*, not who makes it: a toned silver print
+        // belongs beside the other black-and-white looks.
+        case .acros, .acrosYellow, .acrosRed, .acrosGreen, .fujiMonochrome,
+             .fujiMonochromeYellow, .fujiMonochromeRed, .fujiMonochromeGreen,
+             .fujiSepia, .hp5, .triX, .leicaBlue, .leicaSelenium, .leicaSepia,
+             .leicaSilver:
+            .monochrome
+        }
+    }
+
+    /// Ordered as declared, so a strip always shows its looks in the order the
+    /// camera's own menu does.
+    static func all(in category: FilmLookCategory) -> [PhotoFilter] {
+        allCases.filter { $0.category == category }
     }
 }
 

@@ -1,52 +1,33 @@
 import SwiftUI
 import UIKit
 
-/// Filters tab: preset strip plus an Intensity slider, so a look can be dialled
-/// back instead of only being on or off.
+/// Filters tab: a strip picker for where the looks come from, a grid of swatches
+/// showing the photo itself through each of them, and an Intensity slider so a
+/// look can be dialled back instead of only being on or off.
+///
+/// The grid is two rows deep rather than one. Forty-nine looks in a single row is
+/// a quarter of a mile of horizontal scrolling under a panel that has the height
+/// for two, and the second row costs nothing that was being used.
 struct EditorFiltersPanel: View {
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
+    /// Drives how tall a swatch can be: the grid takes whatever the heading, the
+    /// strip picker and the Intensity slider leave behind.
+    let panelHeight: CGFloat
 
     var body: some View {
+        let layout = EditorLayoutMetrics.filterGrid(forPanelHeight: panelHeight)
         VStack(alignment: .leading, spacing: 12) {
             Text(controller.recipe.filter.displayName)
                 .font(EditorTheme.panelTitle)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
                 .padding(.horizontal, 16)
-                .padding(.top, 14)
+                .padding(.top, 12)
 
-            ScrollView(.horizontal) {
-                HStack(spacing: 10) {
-                    ForEach(PhotoFilter.allCases) { filter in
-                        Button {
-                            controller.chooseFilter(filter)
-                        } label: {
-                            VStack(spacing: 6) {
-                                RoundedRectangle(cornerRadius: 10)
-                                    .fill(gradient(for: filter))
-                                    .frame(width: 62, height: 62)
-                                    .overlay {
-                                        if controller.recipe.filter == filter {
-                                            RoundedRectangle(cornerRadius: 10)
-                                                .stroke(EditorTheme.accent, lineWidth: 2)
-                                        }
-                                    }
-                                Text(filter.displayName)
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(
-                                        controller.recipe.filter == filter
-                                            ? EditorTheme.accent
-                                            : EditorTheme.secondaryText
-                                    )
-                                    .lineLimit(1)
-                            }
-                            .frame(width: 74)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal, 16)
-            }
-            .scrollIndicators(.hidden)
+            categoryStrip
+
+            swatchGrid(layout)
 
             if controller.recipe.filter != .original {
                 EditorPlainSliderRow(
@@ -67,11 +48,113 @@ struct EditorFiltersPanel: View {
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .task { controller.refreshFilterThumbnails() }
     }
 
-    private func gradient(for filter: PhotoFilter) -> LinearGradient {
-        let colors: [Color] = switch filter {
-        case .original: [.gray, .white.opacity(0.6)]
+    private var categoryStrip: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 8) {
+                ForEach(FilmLookCategory.allCases) { category in
+                    Button(category.displayName) {
+                        controller.chooseFilterCategory(category)
+                    }
+                    .buttonStyle(
+                        EditorChipButtonStyle(
+                            isSelected: controller.selectedFilterCategory == category
+                        )
+                    )
+                }
+            }
+            .padding(.horizontal, 16)
+        }
+        .scrollIndicators(.hidden)
+    }
+
+    private func swatchGrid(_ layout: EditorLayoutMetrics.FilterGridLayout) -> some View {
+        let rowHeight = layout.tileSide + EditorLayoutMetrics.filterTileCaptionHeight
+        let rows = Array(
+            repeating: GridItem(
+                .fixed(rowHeight),
+                spacing: EditorLayoutMetrics.filterGridRowSpacing
+            ),
+            count: layout.rows
+        )
+        return ScrollView(.horizontal) {
+            LazyHGrid(rows: rows, spacing: 10) {
+                ForEach(PhotoFilter.all(in: controller.selectedFilterCategory)) { filter in
+                    swatch(filter, side: layout.tileSide)
+                }
+            }
+            .padding(.horizontal, 16)
+        }
+        .scrollIndicators(.hidden)
+        .frame(height: rowHeight * CGFloat(layout.rows)
+            + EditorLayoutMetrics.filterGridRowSpacing * CGFloat(layout.rows - 1))
+    }
+
+    private func swatch(_ filter: PhotoFilter, side: CGFloat) -> some View {
+        let isSelected = controller.recipe.filter == filter
+        return Button {
+            controller.chooseFilter(filter)
+        } label: {
+            VStack(spacing: 4) {
+                ZStack {
+                    if let image = controller.filterThumbnails[filter] {
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } else {
+                        LinearGradient(
+                            colors: swatchColors(for: filter),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    }
+                }
+                .frame(width: side, height: side)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(
+                            isSelected ? EditorTheme.accent : .white.opacity(0.10),
+                            lineWidth: isSelected ? 2 : 0.5
+                        )
+                }
+
+                Text(filter.tileName)
+                    .font(.system(size: 10))
+                    .foregroundStyle(
+                        isSelected ? EditorTheme.accent : EditorTheme.secondaryText
+                    )
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .frame(width: side + 16)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(filter.displayName)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    /// Stand-in until the photo's own swatch has rendered: the look applied to a lit
+    /// warm tone and a shadowed cool one. Made of the same maths as the real thing,
+    /// so the placeholder already leans the way the look does.
+    private func swatchColors(for filter: PhotoFilter) -> [Color] {
+        guard let look = FilmLookLibrary.look(for: filter) else {
+            return legacyColors(for: filter)
+        }
+        let highlight = look.apply(to: SIMD3(0.82, 0.76, 0.66))
+        let shadow = look.apply(to: SIMD3(0.22, 0.25, 0.32))
+        return [
+            Color(red: highlight.x, green: highlight.y, blue: highlight.z),
+            Color(red: shadow.x, green: shadow.y, blue: shadow.z),
+        ]
+    }
+
+    /// The ten original presets are Core Image chains rather than `FilmLook`s, so
+    /// their placeholders stay hand-picked.
+    private func legacyColors(for filter: PhotoFilter) -> [Color] {
+        switch filter {
         case .vivid: [.pink, .blue]
         case .vividWarm: [.orange, .pink]
         case .vividCool: [.cyan, .indigo]
@@ -81,12 +164,8 @@ struct EditorFiltersPanel: View {
         case .mono: [.white, .gray]
         case .silvertone: [.gray.opacity(0.5), .white]
         case .noir: [.black, .white]
+        default: [.gray, .white.opacity(0.6)]
         }
-        return LinearGradient(
-            colors: colors,
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
     }
 }
 
@@ -164,7 +243,7 @@ struct EditorCropPanel: View {
 
             Spacer(minLength: 0)
 
-            Text("Framing applies as you drag it. Tap Save when the whole edit is ready.")
+            Text("Framing stays a draft until you tap Done. Leaving this tab keeps the photo uncropped.")
                 .font(.system(size: 11))
                 .foregroundStyle(EditorTheme.secondaryText)
                 .padding(.horizontal, 18)

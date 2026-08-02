@@ -29,6 +29,10 @@ struct ResolvedMaskThumbnails: @unchecked Sendable {
     let images: [UUID: CGImage]
 }
 
+struct ResolvedFilterThumbnails: @unchecked Sendable {
+    let images: [PhotoFilter: CGImage]
+}
+
 /// Remove fills baked from the still, keyed by stroke, for the Live Photo frame
 /// processor.
 struct ResolvedCleanUpPatches: @unchecked Sendable {
@@ -827,6 +831,58 @@ actor PhotoRenderService {
         return ResolvedMaskThumbnails(images: images)
     }
 
+    /// Swatches for the Filters tab: the photo being edited, at thumbnail size,
+    /// through every look asked for.
+    ///
+    /// Masks and Clean Up strokes are dropped rather than rendered — at 150px they
+    /// are invisible, and solving a Remove fill fifty times over would cost seconds
+    /// to show nothing. Everything that does change the colour of a swatch —
+    /// adjustments, the Color tab, the crop — is kept, so a swatch always predicts
+    /// what tapping it will do. Filter intensity is ignored on purpose: a swatch
+    /// shows the whole look, and the slider then dials it back.
+    func filterThumbnails(
+        source: PhotoRenderSourceInfo,
+        recipe: PhotoEditRecipe,
+        filters: [PhotoFilter],
+        maximumDimension: CGFloat = 150
+    ) throws -> ResolvedFilterThumbnails {
+        guard !filters.isEmpty else { return ResolvedFilterThumbnails(images: [:]) }
+        var base = recipe
+        base.filter = .original
+        base.filterIntensity = 1
+        base.masks = []
+        base.cleanUpStrokes = []
+        let result = try render(
+            source: source,
+            recipe: base,
+            maximumDimension: maximumDimension
+        )
+        // Flattened once: reusing the recipe's `CIImage` per look would make Core
+        // Image re-evaluate the whole adjustment chain fifty times over.
+        guard let flattened = context.createCGImage(
+            result.image,
+            from: result.image.extent,
+            format: .RGBA8,
+            colorSpace: result.colorSpace
+        ) else { return ResolvedFilterThumbnails(images: [:]) }
+        let unfiltered = CIImage(cgImage: flattened)
+        var images: [PhotoFilter: CGImage] = [:]
+        for filter in filters {
+            guard filter != .original else {
+                images[filter] = flattened
+                continue
+            }
+            guard let cgImage = context.createCGImage(
+                Self.applyFilter(filter, to: unfiltered),
+                from: unfiltered.extent,
+                format: .RGBA8,
+                colorSpace: result.colorSpace
+            ) else { continue }
+            images[filter] = cgImage
+        }
+        return ResolvedFilterThumbnails(images: images)
+    }
+
     func resolvedOutputFormat(
         requested: PhotoOutputFormat,
         sourceType: UTType,
@@ -1249,6 +1305,12 @@ actor PhotoRenderService {
     }
 
     static func applyFilter(_ filter: PhotoFilter, to input: CIImage) -> CIImage {
+        // Every film simulation is a lookup table. The ten original presets below
+        // keep their hand-built Core Image chains, so a recipe saved before the
+        // film looks existed still renders byte-for-byte the way it did.
+        if let look = FilmLookLibrary.look(for: filter) {
+            return applyFilmLook(look, key: filter.rawValue, to: input)
+        }
         switch filter {
         case .original:
             return input
@@ -1315,6 +1377,9 @@ actor PhotoRenderService {
             return filtered("CIPhotoEffectTonal", image: input)
         case .noir:
             return filtered("CIPhotoEffectNoir", image: input)
+        default:
+            // Unreachable: everything else has a `FilmLook` and returned above.
+            return input
         }
     }
 
@@ -2002,45 +2067,15 @@ actor PhotoRenderService {
         context.fill(CGRect(origin: .zero, size: extent.size))
         let shortEdge = min(extent.width, extent.height)
 
-        for stroke in strokes where stroke.points.count > 0 {
-            let width = max(1, stroke.size * shortEdge)
-            context.setBlendMode(stroke.isEraser ? .clear : .normal)
-            context.setStrokeColor(
-                gray: stroke.isEraser ? 0 : 1,
-                alpha: max(0.01, stroke.flow)
-            )
-            context.setLineWidth(width * max(0.08, 1 - stroke.feather * 0.8))
-            context.setLineCap(.round)
-            context.setLineJoin(.round)
-            context.beginPath()
-            let first = Self.imagePoint(stroke.points[0], extent: extent)
-            context.move(to: CGPoint(x: first.x - extent.minX, y: first.y - extent.minY))
-            for point in stroke.points.dropFirst() {
-                let mapped = Self.imagePoint(point, extent: extent)
-                context.addLine(
-                    to: CGPoint(x: mapped.x - extent.minX, y: mapped.y - extent.minY)
-                )
-            }
-            if stroke.points.count == 1 {
-                context.addLine(to: CGPoint(x: first.x - extent.minX, y: first.y - extent.minY))
-            }
-            context.strokePath()
+        // Each stroke carries its own soft edge — see `BrushStrokeRasterizer` for
+        // why the single Gaussian this replaces made zoom-painted detail disappear.
+        BrushStrokeRasterizer.draw(strokes, in: context, shortEdge: shortEdge) { point in
+            let mapped = Self.imagePoint(point, extent: extent)
+            return CGPoint(x: mapped.x - extent.minX, y: mapped.y - extent.minY)
         }
         guard let cgImage = context.makeImage() else { return blackMask(extent: extent) }
-        var mask = CIImage(cgImage: cgImage)
+        return CIImage(cgImage: cgImage)
             .transformed(by: CGAffineTransform(translationX: extent.minX, y: extent.minY))
-        let feather = strokes.map(\.feather).max() ?? 0
-        let maxWidth = strokes.map(\.size).max() ?? 0
-        if feather > 0 {
-            mask = mask
-                .clampedToExtent()
-                .applyingFilter(
-                    "CIGaussianBlur",
-                    parameters: [kCIInputRadiusKey: feather * maxWidth * shortEdge * 0.45]
-                )
-                .cropped(to: extent)
-        }
-        return mask
     }
 
     private func linearGradientMask(

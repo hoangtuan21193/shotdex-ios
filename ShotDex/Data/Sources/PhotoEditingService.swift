@@ -903,50 +903,18 @@ private final class LivePhotoFrameRenderer: @unchecked Sendable {
         bitmap.setFillColor(gray: 0, alpha: 1)
         bitmap.fill(CGRect(origin: .zero, size: extent.size))
         let shortEdge = min(extent.width, extent.height)
-        for stroke in strokes where !stroke.points.isEmpty {
-            bitmap.setBlendMode(stroke.isEraser ? .copy : .normal)
-            bitmap.setStrokeColor(
-                gray: stroke.isEraser ? 0 : 1,
-                alpha: max(0.01, stroke.flow)
-            )
-            bitmap.setLineWidth(
-                max(1, stroke.size * shortEdge * max(0.08, 1 - stroke.feather * 0.8))
-            )
-            bitmap.setLineCap(.round)
-            bitmap.setLineJoin(.round)
-            bitmap.beginPath()
-            let first = imagePoint(stroke.points[0], extent: extent)
-            bitmap.move(to: CGPoint(x: first.x - extent.minX, y: first.y - extent.minY))
-            for point in stroke.points.dropFirst() {
-                let mapped = imagePoint(point, extent: extent)
-                bitmap.addLine(
-                    to: CGPoint(x: mapped.x - extent.minX, y: mapped.y - extent.minY)
-                )
-            }
-            if stroke.points.count == 1 {
-                bitmap.addLine(
-                    to: CGPoint(x: first.x - extent.minX, y: first.y - extent.minY)
-                )
-            }
-            bitmap.strokePath()
+        // Shared with `PhotoRenderService.brushMask` on purpose: the two used to
+        // carry copies of this loop that had already drifted apart on eraser blending
+        // and on where the 1px floor sat.
+        BrushStrokeRasterizer.draw(strokes, in: bitmap, shortEdge: shortEdge) { point in
+            let mapped = imagePoint(point, extent: extent)
+            return CGPoint(x: mapped.x - extent.minX, y: mapped.y - extent.minY)
         }
         guard let cgImage = bitmap.makeImage() else { return blackMask(extent) }
-        var result = CIImage(cgImage: cgImage)
+        return CIImage(cgImage: cgImage)
             .transformed(by:
                 CGAffineTransform(translationX: extent.minX, y: extent.minY)
             )
-        let feather = strokes.map(\.feather).max() ?? 0
-        let size = strokes.map(\.size).max() ?? 0
-        if feather > 0 {
-            result = result
-                .clampedToExtent()
-                .applyingFilter(
-                    "CIGaussianBlur",
-                    parameters: [kCIInputRadiusKey: feather * size * shortEdge * 0.45]
-                )
-                .cropped(to: extent)
-        }
-        return result
     }
 
     private func blackMask(_ extent: CGRect) -> CIImage {
