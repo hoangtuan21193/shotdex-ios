@@ -24,16 +24,6 @@
         }
       }
     },
-    "%@ %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ %2$lld"
-          }
-        }
-      }
-    },
     "%@ bar chart" : {
 
     },
@@ -67,10 +57,10 @@
         }
       }
     },
-    "%@ slider" : {
+    "%@ settings" : {
 
     },
-    "%@ stroke" : {
+    "%@ slider" : {
 
     },
     "%@, %lld photos" : {
@@ -166,6 +156,9 @@
     "Add" : {
 
     },
+    "Add %@" : {
+
+    },
     "Add chart" : {
 
     },
@@ -173,6 +166,9 @@
 
     },
     "Add Preset" : {
+
+    },
+    "Adding image…" : {
 
     },
     "Adding to mask" : {
@@ -185,9 +181,6 @@
 
     },
     "Advanced Search" : {
-
-    },
-    "AI" : {
 
     },
     "All" : {
@@ -221,6 +214,12 @@
 
     },
     "Auto" : {
+
+    },
+    "Bold" : {
+
+    },
+    "Bring Forward" : {
 
     },
     "Buckets" : {
@@ -280,6 +279,9 @@
     "Choose how to select the area. You can add and subtract several kinds inside one mask." : {
 
     },
+    "Choose Image" : {
+
+    },
     "Clear" : {
 
     },
@@ -299,9 +301,6 @@
 
     },
     "Clear the local metadata index? Your photos are not affected." : {
-
-    },
-    "Clone source" : {
 
     },
     "Closed" : {
@@ -326,6 +325,9 @@
 
     },
     "Conditions" : {
+
+    },
+    "Content" : {
 
     },
     "Continue" : {
@@ -393,17 +395,10 @@
     "Delete" : {
 
     },
-    "Delete %@ %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete %1$@ %2$lld"
-          }
-        }
-      }
-    },
     "Delete condition" : {
+
+    },
+    "Delete layer" : {
 
     },
     "Delete mask" : {
@@ -413,9 +408,6 @@
 
     },
     "Delete Point Color" : {
-
-    },
-    "Delete Stroke" : {
 
     },
     "Delete This Shape" : {
@@ -522,12 +514,6 @@
     "File Type Badge shows RAW, JPG, HEIC or the video format in the top-left corner of each thumbnail.\n\nPinch the photo grid to change how many columns are shown.\n\nFile Size is recorded while indexing — photos indexed before this option existed fill it in automatically the next time indexing runs." : {
 
     },
-    "Fill With AI" : {
-
-    },
-    "Fill Without AI" : {
-
-    },
     "Filter" : {
 
     },
@@ -547,6 +533,9 @@
 
     },
     "Focal Length Style" : {
+
+    },
+    "Font" : {
 
     },
     "Format" : {
@@ -571,6 +560,9 @@
 
     },
     "Hidden" : {
+
+    },
+    "Hide %@" : {
 
     },
     "Hide RAW files" : {
@@ -684,6 +676,9 @@
     "ISO" : {
 
     },
+    "Italic" : {
+
+    },
     "JPEG" : {
 
     },
@@ -694,6 +689,9 @@
 
     },
     "Last Indexed" : {
+
+    },
+    "Layers" : {
 
     },
     "left" : {
@@ -810,6 +808,9 @@
     "No Date" : {
 
     },
+    "No layers yet" : {
+
+    },
     "No location data" : {
 
     },
@@ -835,6 +836,9 @@
 
     },
     "No photos were taken on %@ in previous years." : {
+
+    },
+    "No presets yet" : {
 
     },
     "No Unknown Cameras" : {
@@ -893,6 +897,9 @@
       }
     },
     "On This Day, %lld photos from previous years" : {
+
+    },
+    "ON THIS PHOTO" : {
 
     },
     "Once a day ShotDex tells you how many photos and videos you shot on that date in previous years, and how much space they take, so you can go clear out what you no longer want. Days with nothing to show are skipped.\n\nSizes come from the local index: while indexing is still running the total is reported as a minimum and grows as more files are read.\n\nReminders are scheduled a week at a time and refilled whenever you open ShotDex." : {
@@ -995,6 +1002,9 @@
     "Preset" : {
 
     },
+    "Presets" : {
+
+    },
     "Preview" : {
 
     },
@@ -1074,6 +1084,9 @@
     "Recall Last ShotDex Edit" : {
 
     },
+    "RECENT" : {
+
+    },
     "Recents" : {
 
     },
@@ -1101,6 +1114,9 @@
 
     },
     "Rename Mask" : {
+
+    },
+    "Rename Signature" : {
 
     },
     "Rendering full resolution…" : {
@@ -1178,10 +1194,16 @@
     "Save Edit" : {
 
     },
+    "Save Preset" : {
+
+    },
     "Save to Photos" : {
 
     },
     "Saved as JPEG" : {
+
+    },
+    "Saves every layer on this photo as a preset, so it can be stamped onto another one." : {
 
     },
     "Saving Frame…" : {
@@ -1209,6 +1231,9 @@
 
     },
     "Select photos to delete" : {
+
+    },
+    "Send Backward" : {
 
     },
     "Sensor Format" : {
@@ -1242,6 +1267,9 @@
 
     },
     "ShotDex will ask Photos to remove every copy already exported." : {
+
+    },
+    "Show %@" : {
 
     },
     "Show All Raw Metadata" : {
@@ -1365,6 +1393,9 @@
 
     },
     "Unable to Share" : {
+
+    },
+    "Unavailable" : {
 
     },
     "Undo" : {

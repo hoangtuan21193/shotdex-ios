@@ -803,9 +803,13 @@ struct PhotoEditRecipe: Codable, Equatable, Sendable {
     var crop = PhotoCropRecipe.identity
     var masks: [PhotoMask] = []
     var color = PhotoColorRecipe.identity
-    /// Clone / Heal / Remove areas, applied after crop and before local masks.
-    /// Order matters: a later stroke reads the pixels earlier ones produced.
-    var cleanUpStrokes: [CleanUpStroke] = []
+    /// Text and signature layers drawn on top of the finished photo, back to
+    /// front. Composited last of everything, so nothing in the tone or colour
+    /// pipeline can tint them and the downscale cannot soften them.
+    var overlays: [PhotoOverlay] = []
+    /// Freehand Markup drawing, composited just under the overlays (so a caption
+    /// stays legible over a scribble). `nil` when nothing is drawn.
+    var drawing: PhotoDrawing?
 
     static let identity = PhotoEditRecipe()
 
@@ -815,7 +819,8 @@ struct PhotoEditRecipe: Codable, Equatable, Sendable {
             && crop == .identity
             && masks.isEmpty
             && color.isIdentity
-            && cleanUpStrokes.isEmpty
+            && overlays.isEmpty
+            && (drawing?.isEmpty ?? true)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -828,7 +833,8 @@ struct PhotoEditRecipe: Codable, Equatable, Sendable {
         case crop
         case masks
         case color
-        case cleanUpStrokes
+        case overlays
+        case drawing
     }
 
     init() {}
@@ -856,15 +862,12 @@ struct PhotoEditRecipe: Codable, Equatable, Sendable {
         crop = try container.decodeIfPresent(PhotoCropRecipe.self, forKey: .crop) ?? .identity
         masks = try container.decodeIfPresent([PhotoMask].self, forKey: .masks) ?? []
         color = try container.decodeIfPresent(PhotoColorRecipe.self, forKey: .color) ?? .identity
-        cleanUpStrokes = try container.decodeIfPresent(
-            [CleanUpStroke].self,
-            forKey: .cleanUpStrokes
-        ) ?? []
+        overlays = try container.decodeIfPresent([PhotoOverlay].self, forKey: .overlays) ?? []
+        drawing = try container.decodeIfPresent(PhotoDrawing.self, forKey: .drawing)
     }
 
-    /// Written by hand so an untouched Color or Clean Up tab adds no key at all —
-    /// a recipe saved without those edits stays byte-compatible with earlier
-    /// builds.
+    /// Written by hand so an untouched Color tab adds no key at all — a recipe
+    /// saved without those edits stays byte-compatible with earlier builds.
     func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(source, forKey: .source)
@@ -876,9 +879,8 @@ struct PhotoEditRecipe: Codable, Equatable, Sendable {
         try container.encode(crop, forKey: .crop)
         try container.encode(masks, forKey: .masks)
         if !color.isIdentity { try container.encode(color, forKey: .color) }
-        if !cleanUpStrokes.isEmpty {
-            try container.encode(cleanUpStrokes, forKey: .cleanUpStrokes)
-        }
+        if !overlays.isEmpty { try container.encode(overlays, forKey: .overlays) }
+        if let drawing, !drawing.isEmpty { try container.encode(drawing, forKey: .drawing) }
     }
 }
 

@@ -52,4 +52,12 @@ enum SettingsKeys {
     /// Per-source counters used by `_SHOTDEX_EDITED_N` and
     /// `_SHOTDEX_COMPRESSED_N` output filenames.
     static let outputFilenameIndexes = "export.outputFilenameIndexes"
+
+    /// JSON-encoded saved overlay layer sets — the editor's reusable signatures.
+    /// The images they reference live as files under `Application Support`.
+    static let overlaySignatures = "editor.overlaySignatures"
+
+    /// JSON-encoded most-recently-used typefaces, so the full installed-font list
+    /// has to be searched once rather than once per photo.
+    static let overlayRecentFonts = "editor.overlayRecentFonts"
 }

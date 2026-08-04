@@ -7,6 +7,7 @@ import UIKit
 struct EditorImageStage: View {
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
+    @Bindable var drawSession: EditorDrawSession
     let histogramNamespace: Namespace.ID
     @Environment(\.displayScale) private var displayScale
 
@@ -20,11 +21,12 @@ struct EditorImageStage: View {
     @State private var brushLocation: CGPoint?
     /// Fingertip while the point-color eyedropper is down — drives the loupe.
     @State private var sampleLocation: CGPoint?
-    /// Fingertip and painted path of the Clean Up stroke in progress. The path is
-    /// kept here rather than read back from the recipe because Clean Up does not
-    /// re-render while a finger is down.
-    @State private var cleanUpLocation: CGPoint?
-    @State private var cleanUpPath: [CGPoint] = []
+    /// Signature images decoded for the live overlay proxy. Loaded here rather than
+    /// inside the `Canvas`, which cannot read files while drawing.
+    @State private var overlayImages: [UUID: CGImage] = [:]
+    /// Which centre axes the layer being dragged is currently snapped to — drives
+    /// the guide lines, reported up from whichever layer's move target is active.
+    @State private var overlaySnappedAxes: Set<String> = []
     @State private var pinchStartScale: CGFloat = 1
     /// Where the pinch's two fingers were centred when it began, in stage points.
     /// Held for the whole gesture so the photo scales about that point rather than
@@ -51,23 +53,29 @@ struct EditorImageStage: View {
         controller.selectedTool == .color && chrome.isEyedropperActive
     }
 
-    /// Clean Up paints with one finger, exactly like the mask brush — so it keeps
-    /// the photo-level gestures attached and pinch still zooms through the layer.
-    private var isCleaningUp: Bool {
-        controller.selectedTool == .cleanUp
-    }
-
     /// An `EditorPaintTouchLayer` is installed over the photo, so it owns both the
     /// one-finger stroke and the two-finger pan.
     private var hasPaintLayer: Bool {
-        isPaintingMask || isCleaningUp
+        isPaintingMask
+    }
+
+    /// A text or signature layer is selected, so the photo hands its gestures to
+    /// the layer's own box. The alternative was a third touch arbiter next to
+    /// `PaintTouchArbiter`; suspending the photo instead is what Crop already does,
+    /// and deselecting is one tap away when the photo needs zooming again.
+    private var isEditingOverlay: Bool {
+        controller.isEditingOverlay
     }
 
     /// Disables the photo-level gestures (zoom, pan, double-tap, hold-before)
-    /// while the Crop tool is up or the eyedropper is armed, so only the
-    /// crop frame / sampling layer reacts to a drag.
+    /// while the Crop tool is up, the eyedropper is armed, or an overlay layer is
+    /// selected, so only the crop frame / sampling layer / layer box reacts to a
+    /// drag.
     private var imageGestureMask: GestureMask {
-        controller.selectedTool == .crop || isSamplingColor ? .subviews : .all
+        controller.selectedTool == .crop || isSamplingColor || isEditingOverlay
+            || controller.isEditingDrawing
+            ? .subviews
+            : .all
     }
 
     var body: some View {
@@ -105,8 +113,47 @@ struct EditorImageStage: View {
             .onChange(of: imageRect.size, initial: true) { _, size in
                 controller.setDisplaySize(size, scale: displayScale * chrome.zoomScale)
             }
+            .task(id: overlayImageIDs) { await loadOverlayImages() }
         }
         .clipped()
+    }
+
+    /// Which signature files the proxy needs, as a stable key for the load task.
+    private var overlayImageIDs: [UUID] {
+        controller.recipe.overlays.compactMap(\.imageID)
+    }
+
+    private func loadOverlayImages() async {
+        let ids = overlayImageIDs
+        guard !ids.isEmpty else {
+            if !overlayImages.isEmpty { overlayImages = [:] }
+            return
+        }
+        let store = OverlayImageStore()
+        let urls = ids.map { ($0, store.url(for: $0)) }
+        let loaded = await Task.detached(priority: .userInitiated) {
+            var images: [UUID: CGImage] = [:]
+            for (id, url) in urls {
+                guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+                      let image = CGImageSourceCreateImageAtIndex(source, 0, nil)
+                else { continue }
+                images[id] = image
+            }
+            return images
+        }.value
+        overlayImages = loaded
+    }
+
+    private func overlayFrame(
+        _ overlay: PhotoOverlay,
+        imageRect: CGRect
+    ) -> EditorOverlayFrame? {
+        EditorOverlayFrame.make(
+            for: overlay,
+            resolvedText: controller.resolvedText(for: overlay),
+            imageRect: imageRect,
+            image: overlay.imageID.flatMap { overlayImages[$0] }
+        )
     }
 
     @ViewBuilder
@@ -130,6 +177,18 @@ struct EditorImageStage: View {
 
                 if controller.selectedTool == .crop {
                     EditorCropOverlay(controller: controller, imageRect: imageRect)
+                }
+
+                // The Markup drawing canvas fits the photo exactly. Zoom is reset on
+                // entry and suspended while drawing, so canvas points map straight to
+                // the fitted rect and the strokes land where the finger is.
+                if controller.isEditingDrawing {
+                    EditorDrawingCanvas(
+                        session: drawSession,
+                        clearSignal: drawSession.clearToken
+                    )
+                    .frame(width: imageRect.width, height: imageRect.height)
+                    .position(x: imageRect.midX, y: imageRect.midY)
                 }
 
                 // The paint layer sits *inside* the zoomed stack, so a stroke lands
@@ -192,55 +251,68 @@ struct EditorImageStage: View {
                     }
                 }
 
-                // Same slot and shape as the mask paint layer: one finger paints,
-                // two still pinch, and the guides above claim their own knobs.
-                if isCleaningUp {
-                    EditorPaintTouchLayer(
-                        origin: imageRect.origin,
-                        onTracked: { cleanUpLocation = $0.map { clamped($0, in: imageRect) } },
-                        onBegan: { paintCleanUp($0, in: imageRect) },
-                        onMoved: { paintCleanUp($0, in: imageRect) },
-                        onEnded: { _ in endCleanUpPaint() },
-                        onCancelled: cancelCleanUpPaint,
-                        onPanBegan: beginPhotoPan,
-                        onPanChanged: { panPhoto($0, imageRect: imageRect, stage: stageSize) },
-                        onPanEnded: endPhotoPan
-                    )
-                    .frame(width: imageRect.width, height: imageRect.height)
-                    .position(x: imageRect.midX, y: imageRect.midY)
+                // While a layer is selected the render leaves the overlays out and
+                // this draws them instead — re-running the whole Core Image graph
+                // per drag frame to move a caption is not affordable. Both paths
+                // call the same rasterizer, so deselecting does not shift anything.
+                if controller.selectedTool == .markup {
+                    // At the list level, a tap on empty photo drops the selection —
+                    // clearing the box and handing zoom/pan back. Bottom-most, so the
+                    // tap targets and box above it win a tap that lands on a layer.
+                    // Not in detail: there a tap must not deselect (the panel is the
+                    // way back), matching the old behaviour.
+                    if isEditingOverlay, !controller.showsOverlayDetail {
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .frame(width: imageRect.width, height: imageRect.height)
+                            .position(x: imageRect.midX, y: imageRect.midY)
+                            .onTapGesture { controller.selectOverlay(nil) }
+                    }
 
-                    if !chrome.isFullBleed {
-                        EditorCleanUpOverlay(
+                    // Bottom-most, so the move targets above it still get one-finger
+                    // touches: two fingers anywhere on the photo scale and turn the
+                    // selected layer.
+                    if let selected = controller.selectedOverlay {
+                        EditorOverlayPinchLayer(
+                            controller: controller,
+                            overlay: selected,
+                            imageRect: imageRect
+                        )
+                    }
+
+                    // A tap/drag target for every layer, whether or not it is the
+                    // selected one: a tap selects, a drag picks the layer up and
+                    // moves it under the finger from the first millimetre. Rendered
+                    // for all layers so selecting one mid-drag never changes this
+                    // view's identity and cancels the gesture. Gating on selection
+                    // was a trap: with nothing selected there was no way to pick a
+                    // caption up, so a pinch meant to scale it zoomed the photo.
+                    ForEach(controller.recipe.overlays) { overlay in
+                        if let frame = overlayFrame(overlay, imageRect: imageRect) {
+                            EditorOverlayMoveTarget(
+                                controller: controller,
+                                overlay: overlay,
+                                frame: frame,
+                                imageRect: imageRect,
+                                zoomScale: chrome.zoomScale,
+                                onSnap: { overlaySnappedAxes = $0 }
+                            )
+                        }
+                    }
+
+                    EditorOverlaySnapGuides(
+                        snappedAxes: overlaySnappedAxes,
+                        imageRect: imageRect,
+                        zoomScale: chrome.zoomScale
+                    )
+
+                    if isEditingOverlay {
+                        EditorOverlayProxyLayer(
                             controller: controller,
                             imageRect: imageRect,
-                            livePath: cleanUpPath,
-                            zoomScale: chrome.zoomScale
-                        )
-                    }
-
-                    // The brush footprint previews in the middle of the photo
-                    // while Size or Feather is being dragged, so neither slider
-                    // ever adjusts an invisible number.
-                    if cleanUpLocation == nil,
-                       chrome.activePlainSliderID?.hasPrefix("cleanup.") == true {
-                        EditorBrushCursor(
-                            point: CGPoint(x: imageRect.midX, y: imageRect.midY),
-                            size: controller.cleanUpSize,
-                            feather: controller.cleanUpFeather,
-                            isEraser: false,
-                            imageRect: imageRect,
-                            zoomScale: chrome.zoomScale
-                        )
-                    }
-
-                    if let cleanUpLocation {
-                        EditorBrushCursor(
-                            point: cleanUpLocation,
-                            size: controller.cleanUpSize,
-                            feather: controller.cleanUpFeather,
-                            isEraser: false,
-                            imageRect: imageRect,
-                            zoomScale: chrome.zoomScale
+                            images: overlayImages,
+                            selectedID: controller.selectedOverlayID,
+                            accent: UIColor(EditorTheme.accent).cgColor
                         )
                     }
                 }
@@ -283,7 +355,7 @@ struct EditorImageStage: View {
             // Zoom is simultaneous, not exclusive: the paint layer inside the
             // stack has a recogniser of its own, and an exclusive pinch here lost
             // every arbitration against it — which is why two fingers did nothing
-            // at all while the mask brush or Clean Up was up.
+            // at all while the mask brush was up.
             .simultaneousGesture(
                 zoomGesture(imageRect: imageRect, stage: stageSize),
                 including: imageGestureMask
@@ -381,25 +453,6 @@ struct EditorImageStage: View {
                     .position(x: imageRect.midX, y: imageRect.maxY - 24)
             }
 
-            if isCleaningUp, !chrome.isFullBleed {
-                // A Remove is the one edit here that is not instant, so it says so
-                // rather than looking like a dropped touch.
-                EditorPillLabel(
-                    text: controller.isCleanUpProcessing
-                        ? "FILLING…"
-                        : cleanUpHint,
-                    systemImage: controller.cleanUpMode.systemImage
-                )
-                .position(x: imageRect.midX, y: imageRect.maxY - 24)
-            }
-        }
-    }
-
-    private var cleanUpHint: String {
-        switch controller.cleanUpMode {
-        case .clone: "PAINT, THEN DRAG THE SOURCE RING"
-        case .heal: "PAINT, THEN DRAG THE SOURCE RING"
-        case .remove: "BRUSH OVER WHAT TO REMOVE"
         }
     }
 
@@ -685,39 +738,6 @@ struct EditorImageStage: View {
         gradientStart = nil
         gradientMoveLocation = nil
         brushLocation = nil
-    }
-
-    /// Paints one Clean Up stroke. The pixels only change on release — a Remove
-    /// has to solve for its fill, and doing that per touch-move would stall the
-    /// drag — so the drawn path is the feedback while the finger is down.
-    private func paintCleanUp(_ touch: EditorPaintTouchLayer.Touch, in imageRect: CGRect) {
-        cleanUpLocation = clamped(touch.location, in: imageRect)
-        guard let point = normalized(touch.location, in: imageRect) else { return }
-        if cleanUpPath.isEmpty {
-            controller.beginCleanUpStroke(at: point, zoomScale: chrome.zoomScale)
-        } else {
-            controller.continueCleanUpStroke(at: point)
-        }
-        if let last = cleanUpPath.last,
-           hypot(touch.location.x - last.x, touch.location.y - last.y) < 1 {
-            return
-        }
-        cleanUpPath.append(touch.location)
-    }
-
-    private func endCleanUpPaint() {
-        cleanUpLocation = nil
-        guard !cleanUpPath.isEmpty else { return }
-        cleanUpPath = []
-        controller.endCleanUpStroke()
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-    }
-
-    private func cancelCleanUpPaint() {
-        cleanUpLocation = nil
-        guard !cleanUpPath.isEmpty else { return }
-        cleanUpPath = []
-        controller.cancelCleanUpStroke()
     }
 
     /// Touch-down shows the loupe, dragging refines the spot, lifting commits

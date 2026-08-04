@@ -152,14 +152,20 @@ final class PhotoEditingService {
         return LoadedPhotoEditSource(optionID: option.id, info: info)
     }
 
+    /// `recipe` is what gets attached to the photo; `renderRecipe` is what gets
+    /// drawn. They differ for text overlays: the attachment keeps the `{camera}`
+    /// template so reopening the edit shows what the user typed, while the pixels
+    /// need the tokens already expanded.
     func saveCopy(
         session: PhotoEditingSession,
         source: LoadedPhotoEditSource,
         recipe: PhotoEditRecipe,
+        renderRecipe: PhotoEditRecipe? = nil,
         requestedFormat: PhotoOutputFormat,
         includeMetadata: Bool,
         album: PHAssetCollection?
     ) async throws -> PhotoSaveResult {
+        let renderRecipe = renderRecipe ?? recipe
         let resolvedRequested = await renderer.resolvedOutputFormat(
             requested: requestedFormat,
             sourceType: source.info.type,
@@ -189,7 +195,7 @@ final class PhotoEditingService {
             quality: 1,
             includeMetadata: includeMetadata
         )
-        let final = try await renderer.render(source: source.info, recipe: recipe)
+        let final = try await renderer.render(source: source.info, recipe: renderRecipe)
         try await renderer.write(
             final,
             to: renderedURL,
@@ -267,13 +273,16 @@ final class PhotoEditingService {
         )
     }
 
+    /// See `saveCopy` for why the attached and the rendered recipe can differ.
     func saveChanges(
         session: PhotoEditingSession,
         source: LoadedPhotoEditSource,
         recipe: PhotoEditRecipe,
+        renderRecipe: PhotoEditRecipe? = nil,
         requestedFormat: PhotoOutputFormat,
         includeMetadata: Bool
     ) async throws -> PhotoSaveResult {
+        let renderRecipe = renderRecipe ?? recipe
         let output = PHContentEditingOutput(contentEditingInput: session.contentInput)
         let resolvedRequested = await renderer.resolvedOutputFormat(
             requested: requestedFormat,
@@ -286,7 +295,7 @@ final class PhotoEditingService {
                 session: session,
                 source: source,
                 output: output,
-                recipe: recipe
+                recipe: renderRecipe
             )
             output.adjustmentData = makeAdjustmentData(recipe)
             try await commit(
@@ -310,7 +319,7 @@ final class PhotoEditingService {
             resolvedRequested.uniformType
         ) ? resolvedRequested : .jpeg
         let destination = try output.renderedContentURL(for: actualFormat.uniformType)
-        let rendered = try await renderer.render(source: source.info, recipe: recipe)
+        let rendered = try await renderer.render(source: source.info, recipe: renderRecipe)
         try await renderer.write(
             rendered,
             to: destination,
@@ -654,14 +663,9 @@ final class PhotoEditingService {
             source: source.info,
             recipe: recipe
         )
-        let cleanUpPatches = try await renderer.cleanUpStillPatches(
-            source: source.info,
-            recipe: recipe
-        )
         let frameRenderer = LivePhotoFrameRenderer(
             recipe: recipe,
-            automaticMasks: automaticMasks.images,
-            cleanUpPatches: cleanUpPatches.patches
+            automaticMasks: automaticMasks.images
         )
         context.frameProcessor = { frame, _ in
             frameRenderer.render(frame.image)
@@ -676,16 +680,18 @@ final class PhotoEditingService {
 private final class LivePhotoFrameRenderer: @unchecked Sendable {
     private let recipe: PhotoEditRecipe
     private let automaticMasks: [UUID: CGImage]
-    private let cleanUpPatches: [UUID: CIImage]
+    /// The overlay layer, rasterized on the first frame and reused for the rest.
+    /// Every frame of the motion resource is the same size, so laying out Core Text
+    /// ninety times over would cost seconds to draw the same pixels.
+    private let overlayLock = NSLock()
+    private var overlayLayer: (extent: CGRect, image: CIImage)?
 
     init(
         recipe: PhotoEditRecipe,
-        automaticMasks: [UUID: CGImage],
-        cleanUpPatches: [UUID: CGImage]
+        automaticMasks: [UUID: CGImage]
     ) {
         self.recipe = recipe
         self.automaticMasks = automaticMasks
-        self.cleanUpPatches = cleanUpPatches.mapValues(CIImage.init(cgImage:))
     }
 
     func render(_ input: CIImage) -> CIImage {
@@ -701,7 +707,6 @@ private final class LivePhotoFrameRenderer: @unchecked Sendable {
             to: image
         )
         image = PhotoRenderService.applyCrop(recipe.crop, to: image)
-        image = applyCleanUp(to: image)
         for mask in recipe.masks where mask.isVisible {
             let maskImage = renderMask(mask, over: image)
             let adjusted = PhotoRenderService.applyAdjustments(
@@ -718,54 +723,37 @@ private final class LivePhotoFrameRenderer: @unchecked Sendable {
                 ]
             )
         }
-        return image
+        image = applyDrawing(to: image)
+        return applyOverlays(to: image)
     }
 
-    /// Clone and Heal are gathered per frame so they follow the motion; Remove
-    /// reuses the patch baked from the still, tone-matched on the way in so it
-    /// still sits inside the frame's own brightness.
-    private func applyCleanUp(to input: CIImage) -> CIImage {
-        guard !recipe.cleanUpStrokes.isEmpty else { return input }
+    private func applyDrawing(to input: CIImage) -> CIImage {
+        guard recipe.drawing?.hasVisibleEffect == true else { return input }
         let extent = input.extent
-        var image = input
-        for stroke in recipe.cleanUpStrokes where stroke.hasVisibleEffect {
-            let points = stroke.points.map { PhotoRenderService.imagePoint($0, extent: extent) }
-            let tile = EditorLayoutMetrics.cleanUpTileRect(
-                around: points,
-                diameter: EditorLayoutMetrics.brushDiameter(size: stroke.size, in: extent),
-                in: extent
-            )
-            guard !tile.isNull, tile.width >= 8, tile.height >= 8 else { continue }
-            let payload: PhotoRenderService.CleanUpFill.Payload
-            switch stroke.mode {
-            case .clone, .heal:
-                let offset = CGPoint(
-                    x: CGFloat(stroke.sourceOffsetX) * extent.width,
-                    y: -CGFloat(stroke.sourceOffsetY) * extent.height
-                )
-                guard abs(offset.x) >= 1 || abs(offset.y) >= 1 else { continue }
-                payload = .translation(offset)
-            case .remove:
-                guard let patch = cleanUpPatches[stroke.id] else { continue }
-                payload = .patch(patch)
-            }
-            guard let matte = PhotoRenderService.cleanUpMatte(
-                stroke,
-                extent: extent,
-                tile: tile
-            ) else { continue }
-            image = PhotoRenderService.applyCleanUpFill(
-                PhotoRenderService.CleanUpFill(
-                    payload: payload,
-                    tile: tile,
-                    matchesTone: stroke.mode != .clone
-                ),
-                stroke: stroke,
-                matte: matte,
-                to: image
-            )
-        }
-        return image.cropped(to: extent)
+        // `PhotoRenderService.drawingLayer` caches by data + size, so the vector is
+        // rasterized once for the clip and composited over every frame.
+        guard let layer = PhotoRenderService.drawingLayer(recipe.drawing, extent: extent)
+        else { return input }
+        return layer.composited(over: input).cropped(to: extent)
+    }
+
+    private func applyOverlays(to input: CIImage) -> CIImage {
+        guard !recipe.overlays.isEmpty else { return input }
+        let extent = input.extent
+        guard let layer = cachedOverlayLayer(for: extent) else { return input }
+        return layer.composited(over: input).cropped(to: extent)
+    }
+
+    private func cachedOverlayLayer(for extent: CGRect) -> CIImage? {
+        overlayLock.lock()
+        defer { overlayLock.unlock() }
+        if let overlayLayer, overlayLayer.extent == extent { return overlayLayer.image }
+        guard let layer = PhotoRenderService.overlayLayer(
+            recipe.overlays,
+            extent: extent
+        ) else { return nil }
+        overlayLayer = (extent, layer)
+        return layer
     }
 
     private func renderMask(_ mask: PhotoMask, over image: CIImage) -> CIImage {

@@ -17,6 +17,25 @@ struct EditorPanelLayoutTests {
         }
     }
 
+    /// The bar is six equal tabs wide on the narrowest supported phone and stays
+    /// readable. Eight is where a tab drops below a legible width — past that the
+    /// bar has to start scrolling rather than silently truncate a label.
+    @Test func everyToolTabStaysWideEnoughToRead() {
+        let count = PhotoEditorTool.allCases.count
+        #expect(count == 6)
+        #expect(
+            EditorLayoutMetrics.tabWidth(screenWidth: 375, tabCount: count)
+                >= EditorLayoutMetrics.tabMinimumWidth
+        )
+        // Eight tools no longer fit, which is the ceiling the bar must not cross
+        // without switching to a scrolling layout.
+        #expect(
+            EditorLayoutMetrics.tabWidth(screenWidth: 375, tabCount: 8)
+                < EditorLayoutMetrics.tabMinimumWidth
+        )
+        #expect(EditorLayoutMetrics.tabWidth(screenWidth: 375, tabCount: 0) == 0)
+    }
+
     @Test func filterGridTakesTwoRowsOnEveryPanelTallEnoughToHoldThem() {
         for height in [812.0, 852, 926, 956] {
             let layout = EditorLayoutMetrics.filterGrid(
@@ -421,28 +440,6 @@ struct EditorPanelLayoutTests {
         )
     }
 
-    @Test func theCleanUpTrailIsAsWideAsTheStrokeItPreviews() {
-        let rect = CGRect(x: 0, y: 0, width: 400, height: 300)
-        let size = 0.12
-        let feather = 0.35
-        let core = EditorLayoutMetrics.brushCoreScale(feather: feather)
-
-        // `EditorCleanUpOverlay.strokeWidth` in one line: the trail is drawn from
-        // the size the stroke recorded, not from the raw slider, so it is the same
-        // width on screen as the cursor ring and as the fill that lands.
-        func trail(at zoom: CGFloat) -> CGFloat {
-            EditorLayoutMetrics.brushDiameter(
-                size: EditorLayoutMetrics.paintedSize(size, zoomScale: zoom),
-                in: rect
-            ) * core
-        }
-
-        let expected = EditorLayoutMetrics.brushDiameter(size: size, in: rect) * core
-        for zoom in [CGFloat(1), 4, EditorLayoutMetrics.maximumZoomScale] {
-            #expect(abs(trail(at: zoom) * zoom - expected) < 0.0001)
-        }
-    }
-
     @Test func brushControlsReadOutAsBareNumbersOutOfAHundred() {
         // Lightroom's brush numbers, and for the same reason: what each control is a
         // fraction *of* differs, so a `%` sign would be read as "of the photo".
@@ -458,19 +455,6 @@ struct EditorPanelLayoutTests {
                 in: EditorLayoutMetrics.brushSizeRange
             ) == "100"
         )
-        #expect(
-            EditorLayoutMetrics.brushAmountText(
-                EditorLayoutMetrics.cleanUpSizeRange.upperBound,
-                in: EditorLayoutMetrics.cleanUpSizeRange
-            ) == "100"
-        )
-        // Clean Up's default sits at 40 on its own 0.01…0.3 slider.
-        #expect(
-            EditorLayoutMetrics.brushAmountText(
-                EditorLayoutMetrics.cleanUpDefaultSize,
-                in: EditorLayoutMetrics.cleanUpSizeRange
-            ) == "40"
-        )
         #expect(EditorLayoutMetrics.brushAmountText(0.45, in: 0...1) == "45")
         #expect(EditorLayoutMetrics.brushAmountText(0, in: 0...1) == "0")
         // Nothing overflows the value column: out-of-range input clamps.
@@ -485,83 +469,6 @@ struct EditorPanelLayoutTests {
         #expect(
             EditorLayoutMetrics.zoomPercent(EditorLayoutMetrics.maximumZoomScale) == 1_000
         )
-    }
-
-    @Test func cleanUpTileGrowsPastTheStrokeAndStaysInsideTheImage() {
-        let rect = CGRect(x: 0, y: 0, width: 400, height: 300)
-        // A 30pt brush (0.1 of the 300pt short edge) over a 20pt path: the margin
-        // adds 1.5 diameters plus a radius either side, so PatchMatch gets far
-        // more clean pixels to copy from than the hole itself.
-        let diameter = EditorLayoutMetrics.brushDiameter(size: 0.1, in: rect)
-        #expect(diameter == 30)
-        let tile = EditorLayoutMetrics.cleanUpTileRect(
-            around: [CGPoint(x: 200, y: 150), CGPoint(x: 220, y: 150)],
-            diameter: diameter,
-            in: rect
-        )
-        #expect(tile.width > 20 + diameter)
-        #expect(tile.height > diameter)
-        #expect(rect.contains(tile))
-
-        // A stroke in the corner clamps rather than reaching outside the photo.
-        let corner = EditorLayoutMetrics.cleanUpTileRect(
-            around: [CGPoint(x: 0, y: 0)],
-            diameter: EditorLayoutMetrics.brushDiameter(size: 0.3, in: rect),
-            in: rect
-        )
-        #expect(corner.minX == 0)
-        #expect(corner.minY == 0)
-        #expect(rect.contains(corner))
-
-        // A long stroke gets a margin measured against itself, not just the brush:
-        // paint over a whole subject with brush-width margins and the hole fills
-        // the tile, leaving the inpainter nothing to reason from.
-        let long = EditorLayoutMetrics.cleanUpTileRect(
-            around: [CGPoint(x: 100, y: 150), CGPoint(x: 300, y: 150)],
-            diameter: diameter,
-            in: rect
-        )
-        let painted = 200 + diameter
-        #expect(long.width > painted + diameter * EditorLayoutMetrics.cleanUpTileMargin)
-        #expect(rect.contains(long))
-
-        // No points means no tile to inpaint.
-        #expect(
-            EditorLayoutMetrics.cleanUpTileRect(around: [], diameter: 30, in: rect).isNull
-        )
-    }
-
-    @Test func cleanUpSourcePointRoundTripsThroughItsOffset() {
-        let rect = CGRect(x: 30, y: 100, width: 300, height: 200)
-        let centroid = NormalizedPoint(x: 0.4, y: 0.6)
-        let point = EditorLayoutMetrics.cleanUpSourcePoint(
-            centroid: centroid,
-            offsetX: -0.2,
-            offsetY: 0.1,
-            in: rect
-        )
-        // Each axis scales by its own dimension, like the radial mask guide.
-        #expect(abs(point.x - (30 + 120 - 60)) < 0.0001)
-        #expect(abs(point.y - (100 + 120 + 20)) < 0.0001)
-
-        let back = EditorLayoutMetrics.cleanUpSourceOffset(
-            from: point,
-            centroid: centroid,
-            in: rect
-        )
-        #expect(abs(back.x - -0.2) < 0.0001)
-        #expect(abs(back.y - 0.1) < 0.0001)
-    }
-
-    @Test func cleanUpBrushStaysSmallerThanTheMaskBrush() {
-        // A removal is a spot or a wire; a quarter-frame hole leaves PatchMatch
-        // nothing plausible to copy from.
-        #expect(EditorLayoutMetrics.cleanUpSizeRange.upperBound
-            < EditorLayoutMetrics.brushSizeRange.upperBound)
-        #expect(EditorLayoutMetrics.cleanUpSizeRange.contains(
-            EditorLayoutMetrics.cleanUpDefaultSize
-        ))
-        #expect((0.0...1.0).contains(EditorLayoutMetrics.cleanUpDefaultFeather))
     }
 
     @Test func gradientRailsRunPerpendicularToTheAxis() {

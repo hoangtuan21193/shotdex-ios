@@ -6,9 +6,12 @@ enum PhotoEditorTool: String, CaseIterable, Identifiable {
     case adjust
     case color
     case filters
+    /// The Markup tab: text, image and signature-preset layers plus freehand
+    /// drawing. The raw value stays `markup` for a clean identifier; the tab used
+    /// to be "Text" before it grew image layers and a pencil.
+    case markup
     case crop
     case masks
-    case cleanUp
 
     var id: String { rawValue }
 
@@ -17,9 +20,9 @@ enum PhotoEditorTool: String, CaseIterable, Identifiable {
         case .adjust: "Adjust"
         case .color: "Color"
         case .filters: "Filters"
+        case .markup: "Markup"
         case .crop: "Crop"
         case .masks: "Masks"
-        case .cleanUp: "Clean Up"
         }
     }
 
@@ -28,9 +31,9 @@ enum PhotoEditorTool: String, CaseIterable, Identifiable {
         case .adjust: "slider.horizontal.3"
         case .color: "circle.hexagongrid"
         case .filters: "camera.filters"
+        case .markup: "pencil.tip.crop.circle"
         case .crop: "crop.rotate"
         case .masks: "circle.dashed"
-        case .cleanUp: "wand.and.stars"
         }
     }
 }
@@ -40,6 +43,10 @@ enum PhotoEditorTool: String, CaseIterable, Identifiable {
 final class PhotoEditorController {
     let asset: PHAsset
     let sourceAlbum: PHAssetCollection?
+    /// What `{camera}`-style tokens in a text layer expand to. Resolved once from
+    /// the indexed row the caller already had — this is the whole reason the
+    /// editor takes a `PhotoMetadata` at all.
+    let overlayTokens: OverlayTokenValues
 
     private let service: PhotoEditingService
     private(set) var session: PhotoEditingSession?
@@ -107,21 +114,18 @@ final class PhotoEditorController {
     var brushFlow = 0.8
     var brushIsEraser = false
 
-    // Clean Up session state. Mode, size and feather belong to the tool rather
-    // than the recipe: a stroke captures them when it is drawn, exactly the way a
-    // mask brush stroke captures the brush.
-    var cleanUpMode: CleanUpMode = .remove
-    var cleanUpSize = EditorLayoutMetrics.cleanUpDefaultSize
-    var cleanUpFeather = EditorLayoutMetrics.cleanUpDefaultFeather
-    /// Whether new Remove strokes ask for the inpainting model. Ignored when the
-    /// build has no model.
-    var usesAICleanUp = false
-    private(set) var hasCleanUpModel = false
-    var selectedCleanUpStrokeID: UUID?
-    /// Set while the fill for a freshly painted stroke is being solved, so the
-    /// stage can say so — a Remove is the one edit in the editor that is not
-    /// instant.
-    private(set) var isCleanUpProcessing = false
+    // Text/signature session state. Which layer is being worked on, and the look a
+    // *new* layer inherits — tool-level, like the brush's size: a layer captures
+    // them when it is created, and changing them afterwards is not an edit to the
+    // photo.
+    var selectedOverlayID: UUID?
+    /// Whether the selected layer's *detail* panel is up. Separate from selection:
+    /// a selected layer can be moved / resized / rotated on the photo while the list
+    /// is still showing. Detail (fine sliders, content, font) is opened explicitly
+    /// from a row's chevron.
+    var showsOverlayDetail = false
+    var lastFont = OverlayFontChoice.system
+    var lastFill = OverlayColor.white
 
     private(set) var isLoading = true
     private(set) var isRendering = false
@@ -137,6 +141,10 @@ final class PhotoEditorController {
     @ObservationIgnored private var interactiveRenderPending = false
     @ObservationIgnored private var renderGeneration = 0
     @ObservationIgnored private var isContinuousChange = false
+    /// A drag, pinch or slider sweep on an overlay layer is in progress. Its own
+    /// flag rather than `isContinuousChange` because an overlay gesture must not
+    /// drive the render loop at all — see `beginOverlayGesture`.
+    @ObservationIgnored private var isOverlayGesture = false
     /// Pixels the photo is drawn at right now — the interactive render's target.
     /// Starts at the old flat ceiling and is replaced by the real stage size on
     /// first layout, so a controller nobody measured still renders something.
@@ -158,10 +166,6 @@ final class PhotoEditorController {
     /// following an 800% zoom literally would ask Core Image for a 9600px frame.
     private static let zoomedSettleEdge: CGFloat = 4_800
     @ObservationIgnored private var activeBrushStrokeIndex: Int?
-    @ObservationIgnored private var activeCleanUpStrokeIndex: Int?
-    /// What was selected before the stroke in progress claimed the selection, so
-    /// a stroke cancelled by a second finger hands it back.
-    @ObservationIgnored private var cleanUpSelectionBeforeStroke: UUID?
     @ObservationIgnored private var sessionBaselineRecipe = PhotoEditRecipe.identity
     /// Gradient components added this session that have never been placed. Only
     /// these take the drag-to-place gesture; once a gradient exists, a drag on
@@ -173,11 +177,13 @@ final class PhotoEditorController {
     init(
         asset: PHAsset,
         sourceAlbum: PHAssetCollection?,
-        service: PhotoEditingService
+        service: PhotoEditingService,
+        metadata: PhotoMetadata? = nil
     ) {
         self.asset = asset
         self.sourceAlbum = sourceAlbum
         self.service = service
+        overlayTokens = OverlayTokenValues(metadata: metadata)
     }
 
     var canUndo: Bool { history.canUndo }
@@ -227,9 +233,6 @@ final class PhotoEditorController {
         guard session == nil else { return }
         isLoading = true
         errorMessage = nil
-        // Whether AI Fill is on offer at all. Asked once: the answer is a build
-        // property, not something that changes during a session.
-        hasCleanUpModel = await service.renderer.hasInpaintingModel()
         do {
             let session = try await service.beginSession(for: asset)
             self.session = session
@@ -249,7 +252,6 @@ final class PhotoEditorController {
             history.clear()
             selectedMaskID = initialRecipe.masks.first?.id
             selectedComponentID = initialRecipe.masks.first?.components.first?.id
-            selectedCleanUpStrokeID = initialRecipe.cleanUpStrokes.last?.id
             selectedFilterCategory = initialRecipe.filter.category
             await renderNow()
         } catch {
@@ -315,6 +317,9 @@ final class PhotoEditorController {
         recipe.sourceAssetIdentifier = sourceAssetIdentifier
         selectedMaskID = nil
         selectedComponentID = nil
+        selectedOverlayID = nil
+        showsOverlayDetail = false
+        isEditingText = false
         scheduleRender()
     }
 
@@ -830,6 +835,330 @@ final class PhotoEditorController {
         scheduleRender()
     }
 
+    // MARK: Text and signature layers
+
+    var selectedOverlay: PhotoOverlay? {
+        guard let selectedOverlayID else { return nil }
+        return recipe.overlays.first { $0.id == selectedOverlayID }
+    }
+
+    /// True while a layer is selected in the Markup tab, which is also what tells the
+    /// stage to hand its gestures to the layer instead of the photo.
+    var isEditingOverlay: Bool {
+        selectedTool == .markup && selectedOverlayID != nil
+    }
+
+    /// What a text layer actually renders, tokens expanded. The panel rows, the
+    /// on-canvas proxy and the bake all read this, so the three can never disagree
+    /// about what the caption says.
+    func resolvedText(for overlay: PhotoOverlay) -> String {
+        guard overlay.kind == .text else { return "" }
+        return OverlayTokenResolver.resolve(overlay.text, values: overlayTokens)
+    }
+
+    func addTextOverlay() {
+        recordHistory()
+        var overlay = PhotoOverlay.text()
+        overlay.fontPostScriptName = lastFont.postScriptName
+        overlay.fontFamilyName = lastFont.familyName
+        overlay.fill = lastFill
+        recipe.overlays.append(overlay)
+        selectedOverlayID = overlay.id
+        // A new caption opens straight into its detail so it can be styled once the
+        // words are in.
+        showsOverlayDetail = true
+        selectedTool = .markup
+        scheduleRender()
+    }
+
+    // MARK: Inline text entry
+
+    /// Whether the on-photo text field is up. Like `isEditingDrawing`, a light modal
+    /// sub-mode of Markup: the words are typed straight over the photo, Snapseed
+    /// style, instead of in a sheet that hides the picture.
+    var isEditingText = false
+
+    /// Opens the on-photo field for the selected text layer. No history step — the
+    /// commit records one.
+    func beginTextEntry() {
+        guard selectedOverlay?.kind == .text else { return }
+        isEditingText = true
+    }
+
+    /// Writes the typed words to the selected layer and closes the field.
+    func commitText(_ text: String) {
+        isEditingText = false
+        guard let overlay = selectedOverlay, overlay.kind == .text, overlay.text != text
+        else { return }
+        updateSelectedOverlay { $0.text = text }
+    }
+
+    /// Closes the field without writing. The caller decides whether a still-empty new
+    /// layer should be dropped.
+    func endTextEntry() {
+        isEditingText = false
+    }
+
+    func addImageOverlay(imageID: UUID, assetIdentifier: String?) {
+        recordHistory()
+        let overlay = PhotoOverlay.image(id: imageID, assetIdentifier: assetIdentifier)
+        recipe.overlays.append(overlay)
+        selectedOverlayID = overlay.id
+        // Placed on the photo and selected, but on the list — the user positions and
+        // sizes it on the photo straight away rather than in a panel.
+        showsOverlayDetail = false
+        selectedTool = .markup
+        scheduleRender()
+    }
+
+    /// Selecting and deselecting both re-render: the baked overlays and the live
+    /// proxy trade places on the selection, so the photo underneath has to change
+    /// with it. Selecting does *not* open the detail panel — that is
+    /// `openOverlayDetail(_:)` — so a tap on the photo picks a layer up for moving
+    /// and resizing while the list stays on screen.
+    func selectOverlay(_ id: UUID?) {
+        guard selectedOverlayID != id else { return }
+        selectedOverlayID = id
+        if id == nil { showsOverlayDetail = false }
+        scheduleRender()
+    }
+
+    /// Selects a layer and opens its detail panel (content, font, sliders).
+    func openOverlayDetail(_ id: UUID) {
+        selectedOverlayID = id
+        showsOverlayDetail = true
+        scheduleRender()
+    }
+
+    /// Leaves the detail panel but keeps the layer selected, so its box and gestures
+    /// stay live on the photo back at the list.
+    func closeOverlayDetail() {
+        showsOverlayDetail = false
+    }
+
+    /// Opens one undo step for a whole drag, pinch or slider sweep.
+    ///
+    /// Deliberately *not* `beginContinuousChange()`, which also kicks an
+    /// interactive render. Nothing about the photo changes when a caption moves,
+    /// so a render per frame buys nothing and costs the drag its frame rate.
+    func beginOverlayGesture() {
+        guard !isOverlayGesture else { return }
+        recordHistory()
+        isOverlayGesture = true
+    }
+
+    func endOverlayGesture() {
+        isOverlayGesture = false
+    }
+
+    func updateSelectedOverlay(_ update: (inout PhotoOverlay) -> Void) {
+        guard let index = selectedOverlayIndex else { return }
+        if !isOverlayGesture, !isContinuousChange { recordHistory() }
+        update(&recipe.overlays[index])
+        // While a layer is selected the preview is rendered *without* overlays and
+        // the stage draws them live, so the baked image is already correct — it is
+        // the photo, and the photo did not change. Re-rendering here is what made
+        // dragging a caption flicker: every frame swapped the preview between the
+        // interactive and the settled resolution.
+        guard !isEditingOverlay else { return }
+        scheduleRender()
+    }
+
+    func duplicateSelectedOverlay() {
+        guard let index = selectedOverlayIndex else { return }
+        recordHistory()
+        var copy = recipe.overlays[index]
+        copy.id = UUID()
+        // Offset so the copy is visibly its own layer rather than hiding exactly
+        // behind the original.
+        copy.center = NormalizedPoint(
+            x: min(1, copy.center.x + 0.04),
+            y: min(1, copy.center.y + 0.04)
+        )
+        recipe.overlays.insert(copy, at: index + 1)
+        selectedOverlayID = copy.id
+        scheduleRender()
+    }
+
+    func deleteSelectedOverlay() {
+        guard let index = selectedOverlayIndex else { return }
+        recordHistory()
+        recipe.overlays.remove(at: index)
+        selectedOverlayID = nil
+        scheduleRender()
+    }
+
+    func toggleSelectedOverlayVisibility() {
+        updateSelectedOverlay { $0.isVisible.toggle() }
+    }
+
+    /// Layers are drawn back to front, so "forward" is later in the array.
+    func moveSelectedOverlayForward() {
+        guard let index = selectedOverlayIndex, index < recipe.overlays.count - 1 else { return }
+        recordHistory()
+        recipe.overlays.swapAt(index, index + 1)
+        scheduleRender()
+    }
+
+    func moveSelectedOverlayBackward() {
+        guard let index = selectedOverlayIndex, index > 0 else { return }
+        recordHistory()
+        recipe.overlays.swapAt(index, index - 1)
+        scheduleRender()
+    }
+
+    // MARK: Layer-row actions, targeted by id so they never open a layer's detail.
+
+    private func overlayIndex(id: UUID) -> Int? {
+        recipe.overlays.firstIndex { $0.id == id }
+    }
+
+    func deleteOverlay(id: UUID) {
+        guard let index = overlayIndex(id: id) else { return }
+        recordHistory()
+        recipe.overlays.remove(at: index)
+        if selectedOverlayID == id { selectedOverlayID = nil }
+        scheduleRender()
+    }
+
+    func toggleOverlayVisibility(id: UUID) {
+        guard let index = overlayIndex(id: id) else { return }
+        recordHistory()
+        recipe.overlays[index].isVisible.toggle()
+        scheduleRender()
+    }
+
+    /// Layers are drawn back to front, so "forward" is later in the array.
+    func moveOverlay(id: UUID, forward: Bool) {
+        guard let index = overlayIndex(id: id) else { return }
+        let target = forward ? index + 1 : index - 1
+        guard recipe.overlays.indices.contains(target) else { return }
+        recordHistory()
+        recipe.overlays.swapAt(index, target)
+        scheduleRender()
+    }
+
+    func canMoveOverlay(id: UUID, forward: Bool) -> Bool {
+        guard let index = overlayIndex(id: id) else { return false }
+        return forward ? index < recipe.overlays.count - 1 : index > 0
+    }
+
+    /// Drag-to-reorder from the layer list. The list shows the overlays front-to-back
+    /// (`reversed()`), so the offsets arrive in that display order and are mapped
+    /// back onto the stored back-to-front array.
+    func moveOverlays(fromDisplay source: IndexSet, toDisplay destination: Int) {
+        var displayed = Array(recipe.overlays.reversed())
+        guard !displayed.isEmpty else { return }
+        displayed.move(fromOffsets: source, toOffset: destination)
+        recordHistory()
+        recipe.overlays = Array(displayed.reversed())
+        scheduleRender()
+    }
+
+    /// Nudges the selected layer by a normalized delta. Clamped to the frame: a
+    /// layer dragged off the photo would be unreachable afterwards.
+    func moveSelectedOverlay(dx: Double, dy: Double) {
+        updateSelectedOverlay { overlay in
+            overlay.center = NormalizedPoint(
+                x: min(1, max(0, overlay.center.x + dx)),
+                y: min(1, max(0, overlay.center.y + dy))
+            )
+        }
+    }
+
+    /// Sets the selected layer's centre absolutely — the on-photo drag positions
+    /// from a fixed start rather than accumulating per-frame deltas.
+    func moveSelectedOverlay(toCenter center: NormalizedPoint) {
+        updateSelectedOverlay { overlay in
+            overlay.center = NormalizedPoint(
+                x: min(1, max(0, center.x)),
+                y: min(1, max(0, center.y))
+            )
+        }
+    }
+
+    /// Stamps a saved signature onto this photo. Appended rather than replacing, so
+    /// applying a signature never silently discards a caption already in place.
+    /// Fresh ids: the same signature can be applied twice, and undo has to be able
+    /// to tell the two apart.
+    func applySignature(_ preset: SignaturePreset) {
+        guard !preset.layers.isEmpty else { return }
+        recordHistory()
+        let stamped = preset.layers.map { layer in
+            var copy = layer
+            copy.id = UUID()
+            return copy
+        }
+        recipe.overlays.append(contentsOf: stamped)
+        selectedOverlayID = stamped.last?.id
+        showsOverlayDetail = false
+        selectedTool = .markup
+        scheduleRender()
+    }
+
+    // MARK: - Drawing (Markup)
+
+    /// Whether the freehand drawing sub-mode is up. A modal takeover of the Markup
+    /// tab, on the same pattern as Crop: the tab bar and panel step aside, the
+    /// `PKCanvasView` and its tool picker own the photo, and Clear / Done are the
+    /// only ways out.
+    var isEditingDrawing = false
+
+    var hasDrawing: Bool { !(recipe.drawing?.isEmpty ?? true) }
+
+    /// The strokes the canvas should open with — the current drawing, so reopening
+    /// the tool continues the same drawing rather than starting a blank one.
+    var drawingData: Data? { recipe.drawing?.data }
+
+    /// Enters the drawing sub-mode. No history step: nothing changes until Done.
+    func beginDrawing() {
+        selectOverlay(nil)
+        selectedTool = .markup
+        isEditingDrawing = true
+    }
+
+    /// Leaves the drawing sub-mode, keeping whatever the canvas ended on.
+    ///
+    /// `data` is `PKDrawing.dataRepresentation()` and `canvasSize` the points the
+    /// canvas used, so the renderer can scale the vector to any resolution. An empty
+    /// drawing becomes `nil`, so it adds no key to the recipe. One history step for
+    /// the whole session, like a crop's Done.
+    func commitDrawing(data: Data, canvasSize: CGSize) {
+        let next: PhotoDrawing? = data.isEmpty ? nil : PhotoDrawing(
+            data: data,
+            canvasWidth: Double(canvasSize.width),
+            canvasHeight: Double(canvasSize.height)
+        )
+        isEditingDrawing = false
+        guard next != recipe.drawing else { return }
+        recordHistory()
+        recipe.drawing = next
+        scheduleRender()
+    }
+
+    /// Drops the drawing entirely. Used by the layer row's Delete and by Clear.
+    func clearDrawing() {
+        guard recipe.drawing != nil else { return }
+        recordHistory()
+        recipe.drawing = nil
+        scheduleRender()
+    }
+
+    var drawingIsVisible: Bool { recipe.drawing?.isVisible ?? false }
+
+    /// The drawing layer's eye toggle. The strokes stay in the recipe when hidden.
+    func toggleDrawingVisibility() {
+        guard recipe.drawing != nil else { return }
+        recordHistory()
+        recipe.drawing?.isVisible.toggle()
+        scheduleRender()
+    }
+
+    private var selectedOverlayIndex: Int? {
+        guard let selectedOverlayID else { return nil }
+        return recipe.overlays.firstIndex { $0.id == selectedOverlayID }
+    }
+
     // MARK: Masks
 
     func addMask(kind: PhotoMaskComponentKind) {
@@ -1051,160 +1380,6 @@ final class PhotoEditorController {
         scheduleRender()
     }
 
-    // MARK: - Clean Up
-
-    var cleanUpStrokes: [CleanUpStroke] { recipe.cleanUpStrokes }
-
-    var selectedCleanUpStroke: CleanUpStroke? {
-        guard let selectedCleanUpStrokeID else { return nil }
-        return recipe.cleanUpStrokes.first { $0.id == selectedCleanUpStrokeID }
-    }
-
-    /// Whether a new Remove stroke will use the model.
-    var appliesAICleanUp: Bool { usesAICleanUp && hasCleanUpModel }
-
-    /// Same screen-size rule as the mask brush: see `beginBrushStroke`.
-    func beginCleanUpStroke(at point: NormalizedPoint, zoomScale: CGFloat = 1) {
-        // Deliberately not `beginContinuousChange()`: that kicks an interactive
-        // render on touch-down, which would solve a fill for a one-point stroke —
-        // and then solve the real stroke again on release, because the signature
-        // changed. One history entry for the whole stroke is all this needs.
-        if !isContinuousChange {
-            history.record(recipe)
-            isContinuousChange = true
-        }
-        let stroke = CleanUpStroke(
-            mode: cleanUpMode,
-            points: [point],
-            size: EditorLayoutMetrics.paintedSize(cleanUpSize, zoomScale: zoomScale),
-            feather: cleanUpFeather,
-            usesModel: cleanUpMode == .remove && appliesAICleanUp
-        )
-        recipe.cleanUpStrokes.append(stroke)
-        activeCleanUpStrokeIndex = recipe.cleanUpStrokes.count - 1
-        cleanUpSelectionBeforeStroke = selectedCleanUpStrokeID
-        selectedCleanUpStrokeID = stroke.id
-    }
-
-    /// Deliberately does not render. Solving a fill costs real time, so the stage
-    /// draws the path being painted itself and the pixels arrive once, on release.
-    func continueCleanUpStroke(at point: NormalizedPoint) {
-        guard let index = activeCleanUpStrokeIndex,
-              recipe.cleanUpStrokes.indices.contains(index)
-        else { return }
-        if let last = recipe.cleanUpStrokes[index].points.last {
-            let distance = hypot(point.x - last.x, point.y - last.y)
-            guard distance > 0.002 else { return }
-        }
-        recipe.cleanUpStrokes[index].points.append(point)
-    }
-
-    func endCleanUpStroke() {
-        guard let index = activeCleanUpStrokeIndex,
-              recipe.cleanUpStrokes.indices.contains(index)
-        else {
-            activeCleanUpStrokeIndex = nil
-            endContinuousChange()
-            return
-        }
-        activeCleanUpStrokeIndex = nil
-        // Clone and Heal start with no displacement, which would make the stroke
-        // a no-op with a pin on the photo and nothing to show for it. Offer a
-        // source a brush-width up and to the left; the user drags it from there.
-        if recipe.cleanUpStrokes[index].mode.usesSourceOffset,
-           recipe.cleanUpStrokes[index].sourceOffsetX == 0,
-           recipe.cleanUpStrokes[index].sourceOffsetY == 0 {
-            let step = recipe.cleanUpStrokes[index].size * 1.4
-            let centroid = recipe.cleanUpStrokes[index].centroid
-            recipe.cleanUpStrokes[index].sourceOffsetX = centroid.x > step ? -step : step
-            recipe.cleanUpStrokes[index].sourceOffsetY = centroid.y > step ? -step : step
-        }
-        isCleanUpProcessing = true
-        // Same two-stage settle a slider gets: a 1024pt pass off the cached base
-        // for immediate feedback, then the 2400pt one. Both share the solved fill,
-        // because the solve size is derived from the stroke rather than from the
-        // render size.
-        scheduleInteractiveRender()
-        endContinuousChange()
-    }
-
-    /// A second finger landed, so the touch was a pinch: drop the stroke, the
-    /// history entry it opened and the selection it stole. Nothing has to be
-    /// re-rendered — Clean Up never draws a stroke that is still being painted.
-    func cancelCleanUpStroke() {
-        defer {
-            activeCleanUpStrokeIndex = nil
-            cleanUpSelectionBeforeStroke = nil
-            isContinuousChange = false
-        }
-        guard let index = activeCleanUpStrokeIndex,
-              recipe.cleanUpStrokes.indices.contains(index)
-        else { return }
-        recipe.cleanUpStrokes.remove(at: index)
-        selectedCleanUpStrokeID = cleanUpSelectionBeforeStroke
-        history.discardLast(matching: recipe)
-    }
-
-    func selectCleanUpStroke(id: UUID) {
-        guard recipe.cleanUpStrokes.contains(where: { $0.id == id }) else { return }
-        selectedCleanUpStrokeID = id
-    }
-
-    func removeCleanUpStroke(id: UUID) {
-        guard let index = recipe.cleanUpStrokes.firstIndex(where: { $0.id == id }) else { return }
-        recordHistory()
-        recipe.cleanUpStrokes.remove(at: index)
-        repairSelection()
-        scheduleRender()
-    }
-
-    /// Drags the source ring of the selected Clone or Heal stroke. `dx`/`dy` are
-    /// normalized deltas, and the source is kept inside the frame so the gather
-    /// never reads clamped edge pixels.
-    func moveSelectedCleanUpSource(dx: Double, dy: Double) {
-        guard let index = selectedCleanUpStrokeIndex,
-              recipe.cleanUpStrokes[index].mode.usesSourceOffset
-        else { return }
-        if !isContinuousChange { recordHistory() }
-        let centroid = recipe.cleanUpStrokes[index].centroid
-        let x = recipe.cleanUpStrokes[index].sourceOffsetX + dx
-        let y = recipe.cleanUpStrokes[index].sourceOffsetY + dy
-        recipe.cleanUpStrokes[index].sourceOffsetX = min(1 - centroid.x, max(-centroid.x, x))
-        recipe.cleanUpStrokes[index].sourceOffsetY = min(1 - centroid.y, max(-centroid.y, y))
-        scheduleRender(delay: .milliseconds(40))
-    }
-
-    func setSelectedCleanUpUsesModel(_ usesModel: Bool) {
-        guard let index = selectedCleanUpStrokeIndex,
-              recipe.cleanUpStrokes[index].mode == .remove,
-              recipe.cleanUpStrokes[index].usesModel != usesModel
-        else { return }
-        recordHistory()
-        recipe.cleanUpStrokes[index].usesModel = usesModel && hasCleanUpModel
-        isCleanUpProcessing = true
-        scheduleRender(delay: .zero)
-    }
-
-    func setSelectedCleanUpOpacity(_ opacity: Double) {
-        guard let index = selectedCleanUpStrokeIndex else { return }
-        if !isContinuousChange { recordHistory() }
-        recipe.cleanUpStrokes[index].opacity = min(1, max(0, opacity))
-        scheduleRender()
-    }
-
-    func resetCleanUp() {
-        guard !recipe.cleanUpStrokes.isEmpty else { return }
-        recordHistory()
-        recipe.cleanUpStrokes = []
-        selectedCleanUpStrokeID = nil
-        scheduleRender()
-    }
-
-    private var selectedCleanUpStrokeIndex: Int? {
-        guard let selectedCleanUpStrokeID else { return nil }
-        return recipe.cleanUpStrokes.firstIndex { $0.id == selectedCleanUpStrokeID }
-    }
-
     func setAutomaticMaskPoint(_ point: NormalizedPoint) {
         guard let component = selectedComponent,
               component.kind == .subject || component.kind == .colorRange
@@ -1283,6 +1458,7 @@ final class PhotoEditorController {
                 session: session,
                 source: loadedSource,
                 recipe: recipe,
+                renderRecipe: renderReady(recipe),
                 requestedFormat: format,
                 includeMetadata: includeMetadata,
                 album: sourceAlbum
@@ -1304,6 +1480,7 @@ final class PhotoEditorController {
                 session: session,
                 source: loadedSource,
                 recipe: recipe,
+                renderRecipe: renderReady(recipe),
                 requestedFormat: format,
                 includeMetadata: includeMetadata
             )
@@ -1445,11 +1622,19 @@ final class PhotoEditorController {
                 previewRecipe.crop.rect = .full
                 previewRecipe.crop.aspect = .free
                 previewRecipe.masks = []
-                // Clean Up strokes are normalized against the cropped frame too,
-                // so drawing them over the uncropped canvas would put every
-                // removal in the wrong place.
-                previewRecipe.cleanUpStrokes = []
+                // Overlays and the drawing are normalized against the cropped frame
+                // too, and would only be in the way over the framing grid.
+                previewRecipe.overlays = []
+                previewRecipe.drawing = nil
             }
+            // A selected layer is drawn live by the stage instead, so the bake
+            // steps aside — otherwise the caption appears twice while it is being
+            // moved, once where it was and once where it is going.
+            if isEditingOverlay { previewRecipe.overlays = [] }
+            // The canvas draws its own strokes live while a drawing is being made,
+            // so the baked drawing steps aside to avoid a doubled image.
+            if isEditingDrawing { previewRecipe.drawing = nil }
+            previewRecipe = renderReady(previewRecipe)
             // Only inside the single-mask editor: the list level is for choosing
             // a mask, and `selectMask` flips `showsMaskOverlay` on for the row
             // taps too — without the `editingMaskAdjustments` gate that tinted
@@ -1493,7 +1678,6 @@ final class PhotoEditorController {
         }
         if generation == renderGeneration {
             isRendering = false
-            isCleanUpProcessing = false
         }
     }
 
@@ -1625,6 +1809,25 @@ final class PhotoEditorController {
         history.record(recipe)
     }
 
+    /// The recipe as the renderer needs it: text layers carry expanded tokens
+    /// rather than `{camera}` templates.
+    ///
+    /// Every render and every save goes through here. The stored recipe keeps the
+    /// template — it is what gets written into the photo's adjustment data, and
+    /// reopening the edit has to show the tokens the user typed, not the values
+    /// they happened to expand to.
+    private func renderReady(_ recipe: PhotoEditRecipe) -> PhotoEditRecipe {
+        guard recipe.overlays.contains(where: { $0.kind == .text }) else { return recipe }
+        var resolved = recipe
+        resolved.overlays = recipe.overlays.map { overlay in
+            guard overlay.kind == .text else { return overlay }
+            var copy = overlay
+            copy.text = resolvedText(for: overlay)
+            return copy
+        }
+        return resolved
+    }
+
     private var selectedMaskIndex: Int? {
         guard let selectedMaskID else { return nil }
         return recipe.masks.firstIndex { $0.id == selectedMaskID }
@@ -1648,9 +1851,12 @@ final class PhotoEditorController {
            !recipe.color.points.contains(where: { $0.id == selectedPointColorID }) {
             self.selectedPointColorID = recipe.color.points.last?.id
         }
-        if let selectedCleanUpStrokeID,
-           !recipe.cleanUpStrokes.contains(where: { $0.id == selectedCleanUpStrokeID }) {
-            self.selectedCleanUpStrokeID = recipe.cleanUpStrokes.last?.id
+        // Deselected rather than moved to a neighbour: undoing past a layer's
+        // creation should leave the Text tab at its list, not silently editing a
+        // different caption.
+        if let selectedOverlayID,
+           !recipe.overlays.contains(where: { $0.id == selectedOverlayID }) {
+            self.selectedOverlayID = nil
         }
     }
 

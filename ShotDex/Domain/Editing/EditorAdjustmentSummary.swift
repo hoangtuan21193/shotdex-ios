@@ -59,11 +59,11 @@ enum EditorAdjustmentSummary {
             }
         }
 
-        if previous.cleanUpStrokes != current.cleanUpStrokes {
-            return describeCleanUpChange(
-                from: previous.cleanUpStrokes,
-                to: current.cleanUpStrokes
-            )
+        if previous.overlays != current.overlays {
+            return describeOverlayChange(from: previous.overlays, to: current.overlays)
+        }
+        if previous.drawing != current.drawing {
+            return describeDrawingChange(from: previous.drawing, to: current.drawing)
         }
         if let change = firstChange(from: previous.adjustments, to: current.adjustments) {
             return change
@@ -123,43 +123,98 @@ enum EditorAdjustmentSummary {
         return "Color"
     }
 
-    /// Names the removal, not the mechanism: the History sheet is read as "what
-    /// did I do", and "Removed an Object" answers that where "Clean Up · Stroke"
-    /// does not.
-    private static func describeCleanUpChange(
-        from previous: [CleanUpStroke],
-        to current: [CleanUpStroke]
+    /// Named by what the layer says wherever possible, because a history full of
+    /// "Text" steps is unreadable on a photo with three captions on it. Tokens are
+    /// left unexpanded here: this file is pure, and the template is what the user
+    /// typed.
+    private static func describeOverlayChange(
+        from previous: [PhotoOverlay],
+        to current: [PhotoOverlay]
     ) -> String {
         if current.count > previous.count {
             let previousIDs = Set(previous.map(\.id))
-            let added = current.first { !previousIDs.contains($0.id) }
-            switch added?.mode {
-            case .remove: return "Removed an Object"
-            case .clone: return "Cloned an Area"
-            case .heal: return "Healed an Area"
-            case nil: return "Clean Up"
+            let added = current.filter { !previousIDs.contains($0.id) }
+            if added.count > 1 { return "Applied Preset" }
+            switch added.first?.kind {
+            case .text: return "Added Text"
+            case .image: return "Added Image"
+            case nil: return "Text"
             }
         }
         if current.count < previous.count {
-            return current.isEmpty && previous.count > 1
-                ? "Cleared Clean Up"
-                : "Deleted Clean Up"
+            let currentIDs = Set(current.map(\.id))
+            let removed = previous.first { !currentIDs.contains($0.id) }
+            return removed?.kind == .image ? "Deleted Image" : "Deleted Text"
         }
-        for stroke in current {
-            guard let old = previous.first(where: { $0.id == stroke.id }) else { continue }
-            if old.usesModel != stroke.usesModel {
-                return stroke.usesModel ? "Clean Up · AI Fill" : "Clean Up · Auto Fill"
+        for layer in current {
+            guard let old = previous.first(where: { $0.id == layer.id }) else {
+                // Same count but a different id: the set was replaced wholesale.
+                return "Text"
             }
-            if old.sourceOffsetX != stroke.sourceOffsetX
-                || old.sourceOffsetY != stroke.sourceOffsetY {
-                return "Clean Up · Source"
-            }
-            if abs(old.opacity - stroke.opacity) > 0.0001 {
-                return "Clean Up · Opacity "
-                    + String(format: "%.0f%%", stroke.opacity * 100)
-            }
+            guard old != layer else { continue }
+            return describeOverlayEdit(from: old, to: layer)
         }
-        return "Clean Up"
+        // Same layers, different order.
+        return "Reordered Layers"
+    }
+
+    private static func describeOverlayEdit(
+        from previous: PhotoOverlay,
+        to current: PhotoOverlay
+    ) -> String {
+        let name = label(for: current)
+        if previous.text != current.text { return "\(name) · Content" }
+        if previous.isVisible != current.isVisible {
+            return "\(name) · \(current.isVisible ? "Show" : "Hide")"
+        }
+        if previous.fontPostScriptName != current.fontPostScriptName
+            || previous.isBold != current.isBold
+            || previous.isItalic != current.isItalic {
+            return "\(name) · Font"
+        }
+        if previous.fill != current.fill { return "\(name) · Color" }
+        if previous.outlineWidth != current.outlineWidth
+            || previous.outlineColor != current.outlineColor {
+            return "\(name) · Outline"
+        }
+        if previous.shadowOpacity != current.shadowOpacity
+            || previous.shadowRadius != current.shadowRadius
+            || previous.shadowOffsetY != current.shadowOffsetY {
+            return "\(name) · Shadow"
+        }
+        if abs(previous.size - current.size) > 0.0001 { return "\(name) · Size" }
+        if abs(previous.opacity - current.opacity) > 0.0001 {
+            return "\(name) · Opacity " + String(format: "%.0f%%", current.opacity * 100)
+        }
+        if abs(previous.rotationDegrees - current.rotationDegrees) > 0.0001 {
+            return String(format: "\(name) · Rotate %+.0f°", current.rotationDegrees)
+        }
+        if previous.center != current.center { return "\(name) · Move" }
+        if previous.alignment != current.alignment { return "\(name) · Alignment" }
+        if previous.imageID != current.imageID { return "\(name) · Image" }
+        return name
+    }
+
+    /// Names a drawing change by what happened to the whole layer, since a freehand
+    /// scribble has nothing to read back the way a caption does.
+    private static func describeDrawingChange(
+        from previous: PhotoDrawing?,
+        to current: PhotoDrawing?
+    ) -> String {
+        let had = !(previous?.isEmpty ?? true)
+        let has = !(current?.isEmpty ?? true)
+        if !had, has { return "Added Drawing" }
+        if had, !has { return "Cleared Drawing" }
+        return "Edited Drawing"
+    }
+
+    private static func label(for overlay: PhotoOverlay) -> String {
+        guard overlay.kind == .text else { return "Image" }
+        let line = overlay.text
+            .replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespaces)
+        guard !line.isEmpty else { return "Text" }
+        return String(line.prefix(18))
     }
 
     private static func describeCrop(

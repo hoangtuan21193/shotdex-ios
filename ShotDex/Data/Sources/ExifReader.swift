@@ -195,7 +195,9 @@ struct ExifReader: Sendable {
             }
             // Queue for a streaming slot, then re-check the breaker: it may
             // have tripped while this read waited behind the other streams.
-            return await Self.networkStreamLimiter.withPermit {
+            // A nil result means the run was cancelled while this read was
+            // queued: it never happened, so it stays retryable.
+            let streamed: ExifReadResult? = await Self.networkStreamLimiter.withPermit {
                 if trafficMonitor?.isNetworkTripped == true {
                     trafficMonitor?.recordNetworkSkip()
                     Self.logger.info("readExif \(name, privacy: .public): breaker tripped while queued — pendingICloud")
@@ -204,8 +206,17 @@ struct ExifReader: Sendable {
                 // Post-stall breather: sleeping *while holding the permit* is
                 // deliberate — it throttles the whole network lane, giving
                 // cloudphotod room to drain before the next request lands.
+                // The sleep error is handled, not swallowed with `try?`: a
+                // cancelled sleep throws immediately, and swallowing it spun
+                // this loop hot forever while holding the permit, which is what
+                // made a cancelled run impossible to unwind.
                 while let rest = trafficMonitor?.networkRestRemaining {
-                    try? await Task.sleep(for: rest)
+                    do {
+                        try await Task.sleep(for: rest)
+                    } catch {
+                        Self.logger.info("readExif \(name, privacy: .public): cancelled during the post-stall breather — pendingICloud")
+                        return .pendingICloud
+                    }
                 }
                 // Final gate: the window may have tripped while this read
                 // slept, and at half-open only one read wins the probe slot —
@@ -273,6 +284,11 @@ struct ExifReader: Sendable {
                     return .pendingICloud
                 }
             }
+            guard let streamed else {
+                Self.logger.info("readExif \(name, privacy: .public): cancelled while queued for a stream slot — pendingICloud")
+                return .pendingICloud
+            }
+            return streamed
         }
 
         // When the original isn't on disk, try the on-device optimized

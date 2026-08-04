@@ -33,12 +33,6 @@ struct ResolvedFilterThumbnails: @unchecked Sendable {
     let images: [PhotoFilter: CGImage]
 }
 
-/// Remove fills baked from the still, keyed by stroke, for the Live Photo frame
-/// processor.
-struct ResolvedCleanUpPatches: @unchecked Sendable {
-    let patches: [UUID: CGImage]
-}
-
 struct PhotoRenderPreview: @unchecked Sendable {
     let displayImage: CGImage
     let cleanImage: CGImage
@@ -75,30 +69,6 @@ actor PhotoRenderService {
     private var automaticMaskCache: [String: CIImage] = [:]
     private var automaticMaskCacheOrder: [String] = []
     private static let automaticMaskCacheCapacity = 8
-    private var inpaintingModel: MLModel?
-    /// Solved Clean Up fills. Unlike `automaticMaskCache` the key carries no
-    /// render size, because a fill is resolution-independent by construction —
-    /// and no tone either, so moving a slider never re-runs the solver.
-    private var cleanUpFillCache: [String: CleanUpFill.Payload] = [:]
-    private var cleanUpFillCacheOrder: [String] = []
-    private static let cleanUpFillCacheCapacity = 16
-    /// Feathered stroke coverage, which is a CPU rasterization plus a blur and so
-    /// must not run per render frame.
-    private var cleanUpMatteCache: [String: CIImage] = [:]
-    private var cleanUpMatteCacheOrder: [String] = []
-    private static let cleanUpMatteCacheCapacity = 24
-    /// Longest edge PatchMatch works at. The search is local to one stroke, so a
-    /// small tile is both fast and enough; the result is scaled onto the tile, so
-    /// a stroke much larger than this comes back softer than its surroundings.
-    private static let cleanUpSolveEdge: CGFloat = 512
-    /// Frame size the solve size is measured against, so it depends on the stroke
-    /// rather than on which preview is being rendered.
-    private static let cleanUpSolveReferenceEdge: CGFloat = 1_800
-    /// Renders below this are thumbnails — the mask list's 120pt mattes — where a
-    /// removal cannot be seen and solving one is pure cost.
-    private static let cleanUpMinimumRenderEdge: CGFloat = 400
-    /// Fixed input size of the bundled inpainting model.
-    private static let inpaintingModelEdge: CGFloat = 800
 
     static let addMaskKernel = CIColorKernel(source: """
         kernel vec4 addMask(__sample current, __sample incoming) {
@@ -199,7 +169,7 @@ actor PhotoRenderService {
         showsMaskOverlay: Bool = false,
         selectedMaskID: UUID? = nil
     ) throws -> PhotoRenderPreview {
-        let result = try render(
+        let result = try renderPhoto(
             source: source,
             recipe: recipe,
             maximumDimension: maximumDimension
@@ -273,37 +243,52 @@ actor PhotoRenderService {
         ) else {
             throw PhotoEditingError.cannotRender
         }
-        guard showsMaskOverlay,
-              let selectedMaskID,
-              let mask = recipe.masks.first(where: { $0.id == selectedMaskID }),
-              let renderedMask = try renderMask(
-                  mask,
-                  over: result.image,
-                  rawSkyMatte: nil,
-                  cacheIdentity: maskCacheIdentity(source: source, recipe: recipe)
-              )
-        else {
+        var display = result.image
+        var isDisplayDistinct = false
+
+        if showsMaskOverlay,
+           let selectedMaskID,
+           let mask = recipe.masks.first(where: { $0.id == selectedMaskID }),
+           let renderedMask = try renderMask(
+               mask,
+               over: result.image,
+               rawSkyMatte: nil,
+               cacheIdentity: maskCacheIdentity(source: source, recipe: recipe)
+           ) {
+            // The tint answers "where is the mask", not "is its effect on" — it
+            // shows whenever the overlay is asked for, even with the effect
+            // unticked. The controller hides the overlay at the moment the effect
+            // is switched off, so an eye that is lit is always an explicit request.
+            // (An earlier build refused to tint an effect-off mask instead, which
+            // made the eye a button that sometimes did nothing.)
+            display = overlayMask(renderedMask, on: display)
+            isDisplayDistinct = true
+        }
+
+        // The drawing and overlays land on the display copy only, and after the
+        // mask tint: the clean copy is what the eyedropper samples and what the
+        // histogram is built from, and neither a scribble nor a caption is part of
+        // the photo's exposure. Drawing first so a caption stays legible over it.
+        if recipe.drawing?.hasVisibleEffect == true {
+            display = Self.applyDrawing(recipe.drawing, to: display)
+            isDisplayDistinct = true
+        }
+        if !recipe.overlays.isEmpty {
+            display = Self.applyOverlays(recipe.overlays, to: display)
+            isDisplayDistinct = true
+        }
+
+        guard isDisplayDistinct else {
             return PhotoRenderPreview(
                 displayImage: cleanImage,
                 cleanImage: cleanImage
             )
         }
-        // The tint answers "where is the mask", not "is its effect on" — it
-        // shows whenever the overlay is asked for, even with the effect
-        // unticked. The controller hides the overlay at the moment the effect
-        // is switched off, so an eye that is lit is always an explicit request.
-        // (An earlier build refused to tint an effect-off mask instead, which
-        // made the eye a button that sometimes did nothing.)
-        let displayResult = PhotoRenderResult(
-            image: overlayMask(renderedMask, on: result.image),
-            colorSpace: result.colorSpace,
-            properties: result.properties
-        )
         guard let displayImage = context.createCGImage(
-            displayResult.image,
-            from: displayResult.image.extent,
+            display,
+            from: display.extent,
             format: .RGBA8,
-            colorSpace: displayResult.colorSpace
+            colorSpace: result.colorSpace
         ) else {
             throw PhotoEditingError.cannotRender
         }
@@ -313,7 +298,37 @@ actor PhotoRenderService {
         )
     }
 
+    /// The finished photo, overlays included — every path that writes a file goes
+    /// through here, so a saved photo can never be missing its watermark.
+    ///
+    /// The overlay composite lives here rather than inside `render(baseResult:)` so
+    /// the preview path can keep an overlay-free copy: the eyedropper and the
+    /// histogram read the *photo*, and a white credit line would otherwise be
+    /// sampled as a colour and spike the highlight end of the histogram.
     func render(
+        source: PhotoRenderSourceInfo,
+        recipe: PhotoEditRecipe,
+        maximumDimension: CGFloat? = nil
+    ) throws -> PhotoRenderResult {
+        let result = try renderPhoto(
+            source: source,
+            recipe: recipe,
+            maximumDimension: maximumDimension
+        )
+        let hasDrawing = recipe.drawing?.hasVisibleEffect ?? false
+        guard hasDrawing || !recipe.overlays.isEmpty else { return result }
+        // Drawing first, then the text/signature overlays on top of it.
+        var image = Self.applyDrawing(recipe.drawing, to: result.image)
+        image = Self.applyOverlays(recipe.overlays, to: image)
+        return PhotoRenderResult(
+            image: image,
+            colorSpace: result.colorSpace,
+            properties: result.properties
+        )
+    }
+
+    /// Everything except the overlays.
+    private func renderPhoto(
         source: PhotoRenderSourceInfo,
         recipe: PhotoEditRecipe,
         maximumDimension: CGFloat? = nil
@@ -352,17 +367,6 @@ actor PhotoRenderService {
         image = Self.applyCrop(recipe.crop, to: image)
         let croppedRawSkyMatte = baseResult.rawSkyMatte.map {
             Self.applyCrop(recipe.crop, to: $0)
-        }
-        // After crop so the strokes share the mask brush's coordinate space, and
-        // before the masks so a local adjustment sees the cleaned pixels.
-        if !recipe.cleanUpStrokes.isEmpty {
-            let cleanUp = cleanUpFills(for: recipe.cleanUpStrokes, image: image)
-            image = Self.applyCleanUp(
-                recipe.cleanUpStrokes,
-                fills: cleanUp.fills,
-                mattes: cleanUp.mattes,
-                to: image
-            )
         }
         let cacheIdentity = maskCacheIdentity(source: source, recipe: recipe)
 
@@ -739,57 +743,6 @@ actor PhotoRenderService {
         return ResolvedAutomaticMasks(images: images)
     }
 
-    /// Remove fills resolved once from the still, for the Live Photo frame
-    /// processor — it runs synchronously and cannot wait on an inpainter, let
-    /// alone run one per frame.
-    ///
-    /// Clone and Heal are absent on purpose: their fill is a displacement, cheap
-    /// enough to gather live so they track the motion. A generated Remove cannot,
-    /// so its pixels are frozen from the still across the whole clip — the same
-    /// compromise the automatic masks already make.
-    func cleanUpStillPatches(
-        source: PhotoRenderSourceInfo,
-        recipe: PhotoEditRecipe,
-        maximumDimension: CGFloat = 2_400
-    ) throws -> ResolvedCleanUpPatches {
-        let removals = recipe.cleanUpStrokes.filter {
-            $0.mode == .remove && $0.hasVisibleEffect
-        }
-        guard !removals.isEmpty else { return ResolvedCleanUpPatches(patches: [:]) }
-        let base = try makeBaseImage(
-            source: source,
-            recipe: recipe,
-            maximumDimension: maximumDimension
-        )
-        var image = Self.applyAdjustments(
-            recipe.adjustments,
-            to: base.image,
-            appliesExposure: !source.isRAW
-        )
-        image = Self.applyColor(recipe.color, to: image)
-        image = Self.applyFilter(
-            recipe.filter,
-            intensity: recipe.filterIntensity,
-            to: image
-        )
-        image = Self.applyCrop(recipe.crop, to: image)
-        let solved = cleanUpFills(for: removals, image: image)
-        var patches: [UUID: CGImage] = [:]
-        for stroke in removals {
-            guard let fill = solved.fills[stroke.id],
-                  case let .patch(patch) = fill.payload,
-                  let cgImage = context.createCGImage(
-                      patch,
-                      from: patch.extent,
-                      format: .RGBA8,
-                      colorSpace: CGColorSpaceCreateDeviceRGB()
-                  )
-            else { continue }
-            patches[stroke.id] = cgImage
-        }
-        return ResolvedCleanUpPatches(patches: patches)
-    }
-
     /// Small per-mask previews for the mask list: the edited image with that
     /// mask's real shape tinted. Rendered once per mask-set change, not per
     /// slider frame.
@@ -799,7 +752,9 @@ actor PhotoRenderService {
         maximumDimension: CGFloat = 120
     ) throws -> ResolvedMaskThumbnails {
         guard !recipe.masks.isEmpty else { return ResolvedMaskThumbnails(images: [:]) }
-        let result = try render(
+        // `renderPhoto`, so a caption sitting over the mask never appears in a 120pt
+        // matte swatch whose whole job is to show a shape.
+        let result = try renderPhoto(
             source: source,
             recipe: recipe,
             maximumDimension: maximumDimension
@@ -834,9 +789,9 @@ actor PhotoRenderService {
     /// Swatches for the Filters tab: the photo being edited, at thumbnail size,
     /// through every look asked for.
     ///
-    /// Masks and Clean Up strokes are dropped rather than rendered — at 150px they
-    /// are invisible, and solving a Remove fill fifty times over would cost seconds
-    /// to show nothing. Everything that does change the colour of a swatch —
+    /// Masks, Clean Up strokes and overlays are dropped rather than rendered — at
+    /// 150px they are invisible, and solving a Remove fill fifty times over would
+    /// cost seconds to show nothing. Everything that does change the colour of a swatch —
     /// adjustments, the Color tab, the crop — is kept, so a swatch always predicts
     /// what tapping it will do. Filter intensity is ignored on purpose: a swatch
     /// shows the whole look, and the slider then dials it back.
@@ -851,8 +806,8 @@ actor PhotoRenderService {
         base.filter = .original
         base.filterIntensity = 1
         base.masks = []
-        base.cleanUpStrokes = []
-        let result = try render(
+        base.overlays = []
+        let result = try renderPhoto(
             source: source,
             recipe: base,
             maximumDimension: maximumDimension
@@ -1623,421 +1578,6 @@ actor PhotoRenderService {
                 )
             )
             .cropped(to: extent)
-    }
-
-    // MARK: Clean Up
-
-    /// Replacement pixels for every stroke, reusing anything already solved.
-    ///
-    /// The tile lives in image coordinates and so changes with the render size,
-    /// but the solve does not: PatchMatch and the model both work at a fixed
-    /// working size and the result is scaled onto the tile, so one solve serves
-    /// the 1024pt preview, the 2400pt settle and the full-resolution export.
-    /// Nothing in the key describes tone either — the low-frequency match at
-    /// composite time is what keeps a solved fill valid while sliders move.
-    private func cleanUpFills(
-        for strokes: [CleanUpStroke],
-        image: CIImage
-    ) -> (fills: [UUID: CleanUpFill], mattes: [UUID: CIImage]) {
-        var fills: [UUID: CleanUpFill] = [:]
-        var mattes: [UUID: CIImage] = [:]
-        let extent = image.extent
-        guard extent.width >= 1, extent.height >= 1,
-              max(extent.width, extent.height) >= Self.cleanUpMinimumRenderEdge
-        else { return ([:], [:]) }
-        for stroke in strokes where stroke.hasVisibleEffect {
-            guard let tile = cleanUpTile(for: stroke, extent: extent) else { continue }
-            let payload: CleanUpFill.Payload
-            switch stroke.mode {
-            case .clone, .heal:
-                // Cheap enough to rebuild every frame, and it has to be: the
-                // source ring is draggable, so this changes while a finger moves.
-                let offset = CGPoint(
-                    x: CGFloat(stroke.sourceOffsetX) * extent.width,
-                    y: -CGFloat(stroke.sourceOffsetY) * extent.height
-                )
-                guard abs(offset.x) >= 1 || abs(offset.y) >= 1 else { continue }
-                payload = .translation(offset)
-            case .remove:
-                let size = Self.cleanUpSolveSize(tile: tile, extent: extent)
-                let key = "fill|\(stroke.id.uuidString)|\(stroke.fillSignature)"
-                    + "|\(size.width)x\(size.height)"
-                if let cached = cleanUpFillCache[key] {
-                    payload = cached
-                } else {
-                    guard let solved = solveRemoveFill(stroke, image: image, tile: tile)
-                    else { continue }
-                    remember(solved, forKey: key)
-                    payload = solved
-                }
-            }
-            guard let matte = cleanUpMatte(stroke, extent: extent, tile: tile) else { continue }
-            mattes[stroke.id] = matte
-            fills[stroke.id] = CleanUpFill(
-                payload: payload,
-                tile: tile,
-                // Clone copies pixels verbatim, on purpose. Everything else is
-                // either meant to blend in (Heal) or is fixed pixels that have to
-                // keep up with later tone edits (Remove).
-                matchesTone: stroke.mode != .clone
-            )
-        }
-        return (fills, mattes)
-    }
-
-    private func remember(_ payload: CleanUpFill.Payload, forKey key: String) {
-        cleanUpFillCache[key] = payload
-        cleanUpFillCacheOrder.append(key)
-        while cleanUpFillCacheOrder.count > Self.cleanUpFillCacheCapacity {
-            let evicted = cleanUpFillCacheOrder.removeFirst()
-            cleanUpFillCache.removeValue(forKey: evicted)
-        }
-    }
-
-    /// The stroke's feathered coverage. Cached because it is a CPU rasterization
-    /// plus a blur, and without the cache it ran once per stroke per render — the
-    /// single most expensive thing in the stage.
-    private func cleanUpMatte(
-        _ stroke: CleanUpStroke,
-        extent: CGRect,
-        tile: CGRect
-    ) -> CIImage? {
-        let key = "matte|\(stroke.id.uuidString)|\(stroke.fillSignature)"
-            + "|\(Int(tile.minX)),\(Int(tile.minY)),\(Int(tile.width))x\(Int(tile.height))"
-        if let cached = cleanUpMatteCache[key] { return cached }
-        guard let matte = Self.cleanUpMatte(stroke, extent: extent, tile: tile) else {
-            return nil
-        }
-        cleanUpMatteCache[key] = matte
-        cleanUpMatteCacheOrder.append(key)
-        while cleanUpMatteCacheOrder.count > Self.cleanUpMatteCacheCapacity {
-            let evicted = cleanUpMatteCacheOrder.removeFirst()
-            cleanUpMatteCache.removeValue(forKey: evicted)
-        }
-        return matte
-    }
-
-    private func cleanUpTile(for stroke: CleanUpStroke, extent: CGRect) -> CGRect? {
-        let points = stroke.points.map { Self.imagePoint($0, extent: extent) }
-        let tile = EditorLayoutMetrics.cleanUpTileRect(
-            around: points,
-            diameter: EditorLayoutMetrics.brushDiameter(size: stroke.size, in: extent),
-            in: extent
-        )
-        guard !tile.isNull, tile.width >= 8, tile.height >= 8 else { return nil }
-        return tile
-    }
-
-    /// Runs the inpainter — the model when the stroke asks for it and it is
-    /// present, PatchMatch otherwise. A recipe saved on a device that has the
-    /// model has to still fill on one that does not, so a missing model falls
-    /// through instead of dropping the stroke.
-    private func solveRemoveFill(
-        _ stroke: CleanUpStroke,
-        image: CIImage,
-        tile: CGRect
-    ) -> CleanUpFill.Payload? {
-        if stroke.usesModel, let patch = try? inpaintedPatch(
-            stroke,
-            image: image,
-            tile: tile
-        ) {
-            return .patch(patch)
-        }
-        let size = Self.cleanUpSolveSize(tile: tile, extent: image.extent)
-        guard let coverage = Self.cleanUpCoverageBytes(
-            stroke,
-            extent: image.extent,
-            tile: tile,
-            size: size,
-            hardEdged: true
-        ) else { return nil }
-        let hole = coverage.map { $0 > 127 }
-        guard hole.contains(true),
-              let pixels = cleanUpTilePixels(image: image, tile: tile, size: size),
-              let filled = PatchMatchInpainter.filled(
-                  tile: PatchMatchInpainter.Tile(
-                      width: size.width,
-                      height: size.height,
-                      pixels: pixels
-                  ),
-                  hole: hole,
-                  seed: stroke.fillSeed
-              ),
-              let patch = Self.rgbImage(filled, size: size)
-        else { return nil }
-        return .patch(patch)
-    }
-
-    /// Tile pixels as interleaved RGB floats, which is what the inpainter takes.
-    private func cleanUpTilePixels(
-        image: CIImage,
-        tile: CGRect,
-        size: (width: Int, height: Int)
-    ) -> [Float]? {
-        guard size.width > 0, size.height > 0 else { return nil }
-        let cropped = image
-            .cropped(to: tile)
-            .transformed(by: CGAffineTransform(translationX: -tile.minX, y: -tile.minY))
-        let scaled = lanczosScale(cropped, scale: CGFloat(size.width) / tile.width)
-        var bytes = [UInt8](repeating: 0, count: size.width * size.height * 4)
-        bytes.withUnsafeMutableBytes { raw in
-            guard let base = raw.baseAddress else { return }
-            context.render(
-                scaled,
-                toBitmap: base,
-                rowBytes: size.width * 4,
-                bounds: CGRect(x: 0, y: 0, width: size.width, height: size.height),
-                format: .RGBA8,
-                colorSpace: CGColorSpaceCreateDeviceRGB()
-            )
-        }
-        var pixels = [Float](repeating: 0, count: size.width * size.height * 3)
-        for index in 0..<(size.width * size.height) {
-            pixels[index * 3] = Float(bytes[index * 4]) / 255
-            pixels[index * 3 + 1] = Float(bytes[index * 4 + 1]) / 255
-            pixels[index * 3 + 2] = Float(bytes[index * 4 + 2]) / 255
-        }
-        return pixels
-    }
-
-    /// Interleaved RGB floats back to an image. Both this and the buffer the tile
-    /// was read into are top-down, so the inpainter never has to know which way
-    /// Core Image counts rows.
-    static func rgbImage(_ pixels: [Float], size: (width: Int, height: Int)) -> CIImage? {
-        let count = size.width * size.height
-        guard count > 0, pixels.count >= count * 3 else { return nil }
-        var bytes = [UInt8](repeating: 255, count: count * 4)
-        for index in 0..<count {
-            for channel in 0..<3 {
-                let value = pixels[index * 3 + channel]
-                bytes[index * 4 + channel] = UInt8(
-                    max(0, min(255, (value * 255).rounded()))
-                )
-            }
-        }
-        return CIImage(
-            bitmapData: Data(bytes),
-            bytesPerRow: size.width * 4,
-            size: CGSize(width: size.width, height: size.height),
-            format: .RGBA8,
-            colorSpace: CGColorSpaceCreateDeviceRGB()
-        )
-    }
-
-    /// Size the inpainter works at.
-    ///
-    /// Derived from how big the tile is *relative to the frame*, against a fixed
-    /// reference, rather than from its pixel size — so the 1024pt pass, the 2400pt
-    /// settle and the full-resolution export all ask for the same size and share
-    /// one solve. Keying on pixels instead meant a stroke was solved once per
-    /// render resolution.
-    static func cleanUpSolveSize(
-        tile: CGRect,
-        extent: CGRect
-    ) -> (width: Int, height: Int) {
-        let frameEdge = max(extent.width, extent.height)
-        guard frameEdge > 0, tile.width > 0, tile.height > 0 else { return (0, 0) }
-        let reference = cleanUpSolveReferenceEdge / frameEdge
-        var width = tile.width * reference
-        var height = tile.height * reference
-        let longEdge = max(width, height)
-        if longEdge > cleanUpSolveEdge {
-            let clamp = cleanUpSolveEdge / longEdge
-            width *= clamp
-            height *= clamp
-        }
-        // Quantized to multiples of 8 so the `.integral` rounding of the tile at
-        // two render sizes cannot land one pixel apart and cost a second solve.
-        // The patch is stretched onto the tile regardless, so a few pixels of
-        // aspect drift here changes nothing.
-        return (quantized(width), quantized(height))
-    }
-
-    private static func quantized(_ value: CGFloat) -> Int {
-        max(8, (Int(value.rounded()) / 8) * 8)
-    }
-
-    // MARK: Clean Up · inpainting model
-
-    /// True when the app was built with the inpainting model. Only probes the
-    /// bundle, so the panel can decide whether to offer AI Fill without paying
-    /// for a load.
-    func hasInpaintingModel() -> Bool {
-        Bundle.main.url(
-            forResource: Self.inpaintingModelResource,
-            withExtension: "mlmodelc"
-        ) != nil
-    }
-
-    private static let inpaintingModelResource = "LaMaInpainting"
-
-    private func loadInpaintingModel() throws -> MLModel {
-        if let inpaintingModel { return inpaintingModel }
-        guard let url = Bundle.main.url(
-            forResource: Self.inpaintingModelResource,
-            withExtension: "mlmodelc"
-        ) else {
-            throw PhotoEditingError.unavailable
-        }
-        let configuration = MLModelConfiguration()
-        // Not `.all`, unlike the sky model. The DFT matmuls that stand in for this
-        // network's FFTs do not compile for the Neural Engine — converting it logs
-        // `MILCompilerForANE ... ANECCompile() FAILED` — and when Core ML tries
-        // anyway a whole region of the output comes back as garbage. The GPU runs
-        // it correctly and, measured on the desktop, faster.
-        configuration.computeUnits = .cpuAndGPU
-        let model = try MLModel(contentsOf: url, configuration: configuration)
-        inpaintingModel = model
-        return model
-    }
-
-    /// Generated pixels for one stroke's tile.
-    ///
-    /// The model takes a fixed square, so the tile is aspect-fitted into it on a
-    /// black field and the result cropped back out — the same letterbox dance
-    /// `coreMLSkyMask` does. The returned patch sits at the origin at model
-    /// resolution; the compositor scales it onto the tile, which is why one
-    /// inference serves the preview and the export alike.
-    private func inpaintedPatch(
-        _ stroke: CleanUpStroke,
-        image: CIImage,
-        tile: CGRect
-    ) throws -> CIImage {
-        let model = try loadInpaintingModel()
-        let modelSize = CGSize(
-            width: Self.inpaintingModelEdge,
-            height: Self.inpaintingModelEdge
-        )
-        let scale = min(modelSize.width / tile.width, modelSize.height / tile.height)
-        let fitted = CGRect(
-            x: ((modelSize.width - tile.width * scale) / 2).rounded(.down),
-            y: ((modelSize.height - tile.height * scale) / 2).rounded(.down),
-            width: max(1, (tile.width * scale).rounded(.down)),
-            height: max(1, (tile.height * scale).rounded(.down))
-        )
-        let colorInput = image
-            .cropped(to: tile)
-            .transformed(by: CGAffineTransform(translationX: -tile.minX, y: -tile.minY))
-            .transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-            .transformed(by: CGAffineTransform(translationX: fitted.minX, y: fitted.minY))
-            .composited(over: CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 1)))
-            .cropped(to: CGRect(origin: .zero, size: modelSize))
-
-        // The hole goes in by hand rather than through Core Image.
-        // `CIContext.render(_:to:bounds:colorSpace:)` only writes a handful of
-        // pixel formats, and `OneComponent8` is not one of them — it silently left
-        // the buffer at whatever memory it was handed, so the model was told to
-        // invent pixels for a random mask and returned exactly the black-with-
-        // magenta-blocks garbage that looks like. Rasterizing the stroke straight
-        // into the letterboxed square has no such question hanging over it.
-        let fittedSize = (width: Int(fitted.width), height: Int(fitted.height))
-        guard let coverage = Self.cleanUpCoverageBytes(
-            stroke,
-            extent: image.extent,
-            tile: tile,
-            size: fittedSize,
-            hardEdged: true
-        ) else { throw PhotoEditingError.cannotRender }
-
-        guard let colorBuffer = Self.makePixelBuffer(
-            size: modelSize,
-            format: kCVPixelFormatType_32BGRA
-        ), let maskBuffer = Self.makePixelBuffer(
-            size: modelSize,
-            format: kCVPixelFormatType_OneComponent8
-        ) else { throw PhotoEditingError.cannotRender }
-
-        context.render(
-            colorInput,
-            to: colorBuffer,
-            bounds: CGRect(origin: .zero, size: modelSize),
-            colorSpace: CGColorSpace(name: CGColorSpace.sRGB)
-        )
-        // Pixel buffer rows run top-down while `fitted` is in Core Image's
-        // bottom-up space, so the letterbox offset has to be measured from its top
-        // edge. Everything outside the fitted rect stays 0 — "keep these pixels" —
-        // or the model paints the padding too.
-        guard Self.write(
-            coverage: coverage,
-            size: fittedSize,
-            into: maskBuffer,
-            atX: Int(fitted.minX),
-            topY: Int(modelSize.height - fitted.maxY)
-        ) else { throw PhotoEditingError.cannotRender }
-
-        let provider = try MLDictionaryFeatureProvider(dictionary: [
-            "image": MLFeatureValue(pixelBuffer: colorBuffer),
-            "mask": MLFeatureValue(pixelBuffer: maskBuffer),
-        ])
-        let prediction = try model.prediction(from: provider)
-        let outputName = prediction.featureValue(for: "output") != nil
-            ? "output"
-            : model.modelDescription.outputDescriptionsByName.keys.sorted().first
-        guard let outputName,
-              let buffer = prediction.featureValue(for: outputName)?.imageBufferValue
-        else { throw PhotoEditingError.cannotRender }
-
-        return CIImage(cvPixelBuffer: buffer)
-            .cropped(to: fitted)
-            .transformed(by: CGAffineTransform(translationX: -fitted.minX, y: -fitted.minY))
-    }
-
-    /// Clears a single-channel buffer and copies `coverage` into it at an offset.
-    private static func write(
-        coverage: [UInt8],
-        size: (width: Int, height: Int),
-        into buffer: CVPixelBuffer,
-        atX x: Int,
-        topY: Int
-    ) -> Bool {
-        guard CVPixelBufferLockBaseAddress(buffer, []) == kCVReturnSuccess else {
-            return false
-        }
-        defer { CVPixelBufferUnlockBaseAddress(buffer, []) }
-        guard let base = CVPixelBufferGetBaseAddress(buffer) else { return false }
-        let rowBytes = CVPixelBufferGetBytesPerRow(buffer)
-        let width = CVPixelBufferGetWidth(buffer)
-        let height = CVPixelBufferGetHeight(buffer)
-        let destination = base.assumingMemoryBound(to: UInt8.self)
-        // The buffer arrives with whatever was in that memory.
-        destination.update(repeating: 0, count: rowBytes * height)
-        guard size.width > 0, size.height > 0,
-              coverage.count >= size.width * size.height
-        else { return true }
-        coverage.withUnsafeBufferPointer { source in
-            guard let origin = source.baseAddress else { return }
-            for row in 0..<size.height {
-                let targetRow = topY + row
-                guard targetRow >= 0, targetRow < height else { continue }
-                let count = min(size.width, width - x)
-                guard x >= 0, count > 0 else { continue }
-                (destination + targetRow * rowBytes + x)
-                    .update(from: origin + row * size.width, count: count)
-            }
-        }
-        return true
-    }
-
-    private static func makePixelBuffer(
-        size: CGSize,
-        format: OSType
-    ) -> CVPixelBuffer? {
-        var buffer: CVPixelBuffer?
-        let attributes: [String: Any] = [
-            kCVPixelBufferCGImageCompatibilityKey as String: true,
-            kCVPixelBufferCGBitmapContextCompatibilityKey as String: true,
-        ]
-        let status = CVPixelBufferCreate(
-            kCFAllocatorDefault,
-            Int(size.width),
-            Int(size.height),
-            format,
-            attributes as CFDictionary,
-            &buffer
-        )
-        guard status == kCVReturnSuccess else { return nil }
-        return buffer
     }
 
     private func combineMask(

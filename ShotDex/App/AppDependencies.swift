@@ -16,6 +16,9 @@ final class AppDependencies {
     let photoRenderer: PhotoRenderService
     let photoEditing: PhotoEditingService
     let compressionPresets: CompressionPresetStore
+    let signaturePresets: SignaturePresetStore
+    let overlayFontRecents: OverlayFontRecentsStore
+    let overlayImages: OverlayImageStore
     let importService: ImportService
     let indexPipeline: IndexPipeline
     let backgroundIndex: BackgroundIndexService
@@ -72,6 +75,10 @@ final class AppDependencies {
             recentSearches: recentSearches
         )
         self.compressionPresets = CompressionPresetStore()
+        let overlayImages = OverlayImageStore()
+        self.overlayImages = overlayImages
+        self.signaturePresets = SignaturePresetStore(images: overlayImages)
+        self.overlayFontRecents = OverlayFontRecentsStore()
         self.importService = ImportService(photoLibrary: photoLibrary, metadataStore: metadataStore)
         self.indexPipeline = indexPipeline
         let networkStatus = NetworkMonitor()

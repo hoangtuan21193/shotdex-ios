@@ -247,88 +247,13 @@ struct EditorHistoryAndSummaryTests {
         #expect(history.redo(current: before) == after)
     }
 
-    @Test func historyLabelsDescribeCleanUpChanges() {
-        let base = PhotoEditRecipe.identity
-
-        var removed = base
-        removed.cleanUpStrokes = [cleanUpStroke(.remove)]
-        #expect(
-            EditorAdjustmentSummary.describeChange(from: base, to: removed)
-                == "Removed an Object"
-        )
-        #expect(
-            EditorAdjustmentSummary.describeChange(from: removed, to: base) == "Reset"
-        )
-
-        var cloned = base
-        cloned.cleanUpStrokes = [cleanUpStroke(.clone)]
-        #expect(
-            EditorAdjustmentSummary.describeChange(from: base, to: cloned)
-                == "Cloned an Area"
-        )
-
-        var healed = base
-        healed.cleanUpStrokes = [cleanUpStroke(.heal)]
-        #expect(
-            EditorAdjustmentSummary.describeChange(from: base, to: healed)
-                == "Healed an Area"
-        )
-
-        // Deleting one of several is not a reset, so it gets its own label.
-        var pair = removed
-        pair.cleanUpStrokes.append(cleanUpStroke(.remove))
-        #expect(
-            EditorAdjustmentSummary.describeChange(from: pair, to: removed)
-                == "Deleted Clean Up"
-        )
-        #expect(
-            EditorAdjustmentSummary.describeChange(from: pair, to: base) == "Reset"
-        )
-
-        var moved = cloned
-        moved.cleanUpStrokes[0].sourceOffsetX = 0.2
-        #expect(
-            EditorAdjustmentSummary.describeChange(from: cloned, to: moved)
-                == "Clean Up · Source"
-        )
-
-        var ai = removed
-        ai.cleanUpStrokes[0].usesModel = true
-        #expect(
-            EditorAdjustmentSummary.describeChange(from: removed, to: ai)
-                == "Clean Up · AI Fill"
-        )
-        #expect(
-            EditorAdjustmentSummary.describeChange(from: ai, to: removed)
-                == "Clean Up · Auto Fill"
-        )
-
-        var faded = removed
-        faded.cleanUpStrokes[0].opacity = 0.4
-        #expect(
-            EditorAdjustmentSummary.describeChange(from: removed, to: faded)
-                == "Clean Up · Opacity 40%"
-        )
-    }
-
-    @Test func undoRestoresCleanUpStrokes() {
-        var history = PhotoEditHistory()
-        let before = PhotoEditRecipe.identity
-        var after = before
-        after.cleanUpStrokes = [cleanUpStroke(.remove)]
-
-        history.record(before)
-        #expect(history.undo(current: after) == before)
-        #expect(history.redo(current: before) == after)
-    }
-
     @Test func discardingTheLastStepUndoesAGestureThatChangedNothing() {
         var history = PhotoEditHistory()
         let before = PhotoEditRecipe.identity
         var painted = before
-        painted.cleanUpStrokes = [cleanUpStroke(.remove)]
+        painted.adjustments.exposure = 0.5
 
-        // A stroke that a second finger cancelled: recorded on touch-down, rolled
+        // A gesture that a second finger cancelled: recorded on touch-down, rolled
         // back on cancel. The entry goes with it, so the zoom costs no undo.
         history.record(before)
         history.discardLast(matching: before)
@@ -339,15 +264,6 @@ struct EditorHistoryAndSummaryTests {
         history.record(before)
         history.discardLast(matching: painted)
         #expect(history.undo(current: painted) == before)
-    }
-
-    private func cleanUpStroke(_ mode: CleanUpMode) -> CleanUpStroke {
-        CleanUpStroke(
-            mode: mode,
-            points: [NormalizedPoint(x: 0.4, y: 0.4), NormalizedPoint(x: 0.42, y: 0.43)],
-            size: 0.12,
-            feather: 0.35
-        )
     }
 
     private func bins(populated: Range<Int>, count: Int) -> [Double] {

@@ -125,6 +125,9 @@ struct EditorGroupHeader: View {
     var isFirst = false
     var onAuto: (() -> Void)?
     var onReset: (() -> Void)?
+    /// A generic trailing action, e.g. "Presets" on the Markup layer list.
+    var trailingLabel: String?
+    var onTrailing: (() -> Void)?
 
     var body: some View {
         HStack(spacing: 12) {
@@ -133,6 +136,10 @@ struct EditorGroupHeader: View {
                 .tracking(1.1)
                 .foregroundStyle(EditorTheme.secondaryText)
             Spacer(minLength: 0)
+            if let trailingLabel, let onTrailing {
+                Button(trailingLabel, action: onTrailing)
+                    .buttonStyle(EditorTextButtonStyle())
+            }
             if let onAuto {
                 Button("Auto", action: onAuto)
                     .buttonStyle(EditorTextButtonStyle())

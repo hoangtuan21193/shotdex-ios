@@ -113,6 +113,17 @@ final class LibraryModel {
     /// reentrancy guard for every start path. Not observed: no UI depends on a
     /// run that may turn out to have nothing to do.
     @ObservationIgnored private var isIndexRunActive = false
+    /// Bumped once per run. A run abandoned by the unwind watchdog compares
+    /// this against the generation it started with, so if it ever does unwind it
+    /// keeps its hands off state a newer run now owns.
+    @ObservationIgnored private var runGeneration = 0
+    /// The in-flight run's task. Cancelling the pipeline actor only asks it to
+    /// stop; this is what lets a stuck run be cancelled outright.
+    @ObservationIgnored private var runTask: Task<Void, Never>?
+    /// The current run's network sampler, so an abandoned run's samples stop
+    /// overwriting the next run's readout.
+    @ObservationIgnored private var runSamplingTask: Task<Void, Never>?
+    @ObservationIgnored private var runUnwindWatchdog: Task<Void, Never>?
     /// The current run was cancelled by the user. Its UI is already gone, so
     /// every late callback from the unwinding run (work signal, progress emit,
     /// network/thermal sample) must stay silent instead of flashing the
@@ -634,6 +645,7 @@ final class LibraryModel {
             if manual {
                 enqueueManualRun(fullReindex ? .fullReindex : .incremental)
             } else {
+                IndexTrafficMonitor.health("automatic start deferred: a run is already in flight")
                 pendingStartAfterCurrentRun = true
             }
             return
@@ -707,6 +719,8 @@ final class LibraryModel {
         ) async throws -> IndexRunSummary
     ) {
         isIndexRunActive = true
+        runGeneration += 1
+        let generation = runGeneration
         hasCancelledIndexRun = false
         pendingStartAfterCurrentRun = false
         // A run the user asked for shows its state **immediately**: the Settings
@@ -727,7 +741,7 @@ final class LibraryModel {
         // .utility: parse/compose/DB writes and PhotoKit XPC servicing must
         // not compete with interactive image loads at UI priority.
         let indicatorStart = ContinuousClock.now
-        Task(priority: .utility) {
+        runTask = Task(priority: .utility) {
             // Resolve the real network path before showing status, so the
             // indicator reflects Wi-Fi/cellular from the first frame rather
             // than `NWPathMonitor`'s metered-until-first-update default.
@@ -760,6 +774,7 @@ final class LibraryModel {
                 return
             }
             let samplingTask = self.startNetworkSampling(allowsNetwork: allowsNetwork)
+            self.runSamplingTask = samplingTask
             // Keeps the run alive through a brief trip to the background;
             // on expiry it cancels cleanly and hands off to the BGProcessingTask.
             self.backgroundIndex.beginRunAssertion { [weak self] in
@@ -773,54 +788,21 @@ final class LibraryModel {
                 self.indexThroughput = nil
                 self.indexNetworkStatus = nil
                 self.indexDiagnostics = nil
+                // The task above is only *asked* to stop. If it never unwinds it
+                // keeps `isIndexRunActive` set, which silently swallows every
+                // later start — this releases the latch by force.
+                self.armRunUnwindWatchdog()
             }
             defer {
+                samplingTask.cancel()
                 // Span of the whole run, which is wider than the pipeline's own
                 // summary (network path resolution at the head, grid reload +
-                // filter refresh at the tail). `indicator` says whether any of
-                // it was ever visible as "Indexing…" — a run that found no work
-                // must report false.
+                // filter refresh at the tail).
                 let elapsed = indicatorStart.duration(to: .now)
                 let seconds = Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) * 1e-18
-                IndexTrafficMonitor.health(
-                    "run end [\(trigger)]: \(String(format: "%.1f", seconds))s, indicator \(self.isIndexing)"
-                )
-                samplingTask.cancel()
-                self.isIndexRunActive = false
-                self.isIndexing = false
-                self.isManualIndexRun = false
-                self.indexProgress = nil
-                self.indexThroughput = nil
-                self.indexNetworkStatus = nil
-                self.indexDiagnostics = nil
-                self.backgroundIndex.endRunAssertion()
-                // A tap preempted this run (Re-index, Retry Now, Use Cellular):
-                // it has now stopped (isIndexRunActive cleared above), so what the
-                // user asked for can start. Next tick, so this Task fully unwinds
-                // first — and the indicator is held on across the handover, since
-                // dropping it for one frame reads as "the tap did nothing".
-                if let request = self.pendingManualRun {
-                    self.pendingManualRun = nil
-                    self.isIndexing = true
-                    self.isManualIndexRun = true
-                    // User-initiated — allowed even in Low Power Mode.
-                    Task { @MainActor in self.startManualRun(request) }
-                } else if self.pendingStartAfterCurrentRun, !self.hasCancelledIndexRun {
-                    // Requested while this run was still unwinding — usually the
-                    // foreground return after a system stop. Cheap when there is
-                    // nothing to do (the change-token path settles in ~60 ms and
-                    // never shows the indicator).
-                    self.pendingStartAfterCurrentRun = false
-                    Task { @MainActor in self.startIndexing() }
-                } else if self.pendingLibraryChange {
-                    // A library change arrived mid-run (deferred by
-                    // libraryDidChange). The end-of-run reload below has
-                    // already re-fetched the grid; one incremental run picks
-                    // up whatever the change added. Next tick, so this Task
-                    // fully unwinds first.
-                    self.pendingLibraryChange = false
-                    Task { @MainActor in self.startIndexing() }
-                }
+                // A `defer` block cannot `return`, and the abandoned-run case
+                // needs an early out — so the rest lives in a method.
+                self.finishRun(trigger: trigger, seconds: seconds, generation: generation)
             }
             var summary: IndexRunSummary?
             do {
@@ -829,15 +811,17 @@ final class LibraryModel {
                     {
                         // First real work of the run: only now does the UI say
                         // "Indexing…". A no-op run never gets here, and neither
-                        // does a run the user already cancelled.
+                        // does a run the user already cancelled — nor an
+                        // abandoned one, whose late callbacks would otherwise
+                        // flash the indicator on over the run that replaced it.
                         Task { @MainActor in
-                            guard !self.hasCancelledIndexRun else { return }
+                            guard self.runGeneration == generation, !self.hasCancelledIndexRun else { return }
                             self.isIndexing = true
                         }
                     },
                     { progress in
                         Task { @MainActor in
-                            guard !self.hasCancelledIndexRun else { return }
+                            guard self.runGeneration == generation, !self.hasCancelledIndexRun else { return }
                             self.indexProgress = progress
                         }
                     }
@@ -862,6 +846,66 @@ final class LibraryModel {
         }
     }
 
+    /// End of one run: clears its state and hands over to whatever was requested
+    /// while it was in flight. `seconds` is the indicator's whole lifetime and
+    /// `generation` identifies the run, so a run the unwind watchdog already gave
+    /// up on reports the late unwind and then keeps out of the way — the state it
+    /// would otherwise reset now belongs to the run that replaced it.
+    private func finishRun(trigger: String, seconds: Double, generation: Int) {
+        guard runGeneration == generation else {
+            IndexTrafficMonitor.health(
+                "run end [\(trigger)]: \(String(format: "%.1f", seconds))s, unwound after being abandoned"
+            )
+            return
+        }
+        // `indicator` says whether any of the run was ever visible as
+        // "Indexing…" — a run that found no work must report false.
+        IndexTrafficMonitor.health(
+            "run end [\(trigger)]: \(String(format: "%.1f", seconds))s, indicator \(isIndexing)"
+        )
+        runUnwindWatchdog?.cancel()
+        runUnwindWatchdog = nil
+        runSamplingTask = nil
+        runTask = nil
+        isIndexRunActive = false
+        isIndexing = false
+        isManualIndexRun = false
+        indexProgress = nil
+        indexThroughput = nil
+        indexNetworkStatus = nil
+        indexDiagnostics = nil
+        backgroundIndex.endRunAssertion()
+        startPendingRequestAfterRun()
+    }
+
+    /// Starts whatever was requested while the run that just ended was still in
+    /// flight — a tap that preempted it (Re-index, Retry Now, Use Cellular), a
+    /// start deferred by the reentrancy guard, or a library change. Always on the
+    /// next tick, so the finished run's task fully unwinds first, and with the
+    /// indicator held on across the handover: dropping it for one frame reads as
+    /// "the tap did nothing".
+    private func startPendingRequestAfterRun() {
+        if let request = pendingManualRun {
+            pendingManualRun = nil
+            isIndexing = true
+            isManualIndexRun = true
+            // User-initiated — allowed even in Low Power Mode.
+            Task { @MainActor in self.startManualRun(request) }
+        } else if pendingStartAfterCurrentRun, !hasCancelledIndexRun {
+            // Usually the foreground return after a system stop. Cheap when
+            // there is nothing to do (the change-token path settles in ~60 ms
+            // and never shows the indicator).
+            pendingStartAfterCurrentRun = false
+            Task { @MainActor in self.startIndexing() }
+        } else if pendingLibraryChange {
+            // A library change arrived mid-run (deferred by libraryDidChange).
+            // The end-of-run reload has already re-fetched the grid; one
+            // incremental run picks up whatever the change added.
+            pendingLibraryChange = false
+            Task { @MainActor in self.startIndexing() }
+        }
+    }
+
     /// Time before a run that couldn't get the pipeline tries again.
     static let busyPipelineRetryDelay: Duration = .seconds(15)
     /// How long to wait for a cancelled background run to unwind. Cancelling
@@ -869,6 +913,59 @@ final class LibraryModel {
     /// iCloud read can sit on the 8 s stall watchdog — so the wait has to
     /// outlast a full in-flight batch draining, not a single read.
     private static let pipelineHandoverTimeout: Duration = .seconds(30)
+    /// How long a cancelled run gets to unwind before the reentrancy latch is
+    /// released by force. Cancelling stops new reads being spawned but never
+    /// kills reads in flight, so this has to outlast a full in-flight batch
+    /// draining — the same reasoning as `pipelineHandoverTimeout`, with room to
+    /// spare because releasing early would run two pipelines at once.
+    private static let runUnwindTimeout: Duration = .seconds(45)
+
+    /// Arms the release of `isIndexRunActive` for a run that has been asked to
+    /// stop. `pipeline.cancel()` is cooperative: it cannot promise the run's
+    /// task ever returns, and a read parked forever used to leave the latch set
+    /// for the life of the process. Every later start — including both Settings
+    /// buttons — then hit the reentrancy guard and returned before `runPipeline`,
+    /// so nothing ran and nothing was logged. Force-quitting was the only cure.
+    private func armRunUnwindWatchdog() {
+        guard isIndexRunActive else { return }
+        let generation = runGeneration
+        runUnwindWatchdog?.cancel()
+        runUnwindWatchdog = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: Self.runUnwindTimeout)
+            guard !Task.isCancelled, let self else { return }
+            self.abandonStuckRun(generation: generation)
+        }
+    }
+
+    /// Gives up on a run that did not unwind: releases the latch and starts
+    /// whatever the user asked for while it was stuck.
+    private func abandonStuckRun(generation: Int) {
+        guard isIndexRunActive, runGeneration == generation else { return }
+        IndexTrafficMonitor.health(
+            "run abandoned: still in flight \(Int(Self.runUnwindTimeout.components.seconds))s after being cancelled — releasing the latch"
+        )
+        runUnwindWatchdog = nil
+        // Escalation: the pipeline was already asked to stop, so cancel the task
+        // itself — the reads it is parked in may honour cancellation even when
+        // the actor's own flag didn't reach them. Bumping the generation makes
+        // its `defer` a no-op if it ever does unwind.
+        runTask?.cancel()
+        runTask = nil
+        runSamplingTask?.cancel()
+        runSamplingTask = nil
+        runGeneration += 1
+        isIndexRunActive = false
+        isIndexing = false
+        isManualIndexRun = false
+        indexProgress = nil
+        indexThroughput = nil
+        indexNetworkStatus = nil
+        indexDiagnostics = nil
+        backgroundIndex.endRunAssertion()
+        // Same handover as the end of a healthy run: a tap made while the run was
+        // stuck is the whole reason this matters.
+        startPendingRequestAfterRun()
+    }
 
     @ObservationIgnored private var startRetryTask: Task<Void, Never>?
 
@@ -1115,6 +1212,10 @@ final class LibraryModel {
     /// this the user tapped Re-index and the screen sat unchanged for seconds
     /// (or, when the request was silently dropped, forever).
     private func enqueueManualRun(_ request: ManualIndexRun) {
+        // A tap that lands on the reentrancy guard used to leave no trace at all,
+        // which is exactly what made a stuck run so hard to tell apart from a
+        // network fault: the buttons greyed out and the log stayed empty.
+        IndexTrafficMonitor.health("manual run queued behind the run in flight: \(request)")
         pendingManualRun = request
         cancelIndexing()
         isIndexing = true
@@ -1220,6 +1321,9 @@ final class LibraryModel {
         indexDiagnostics = nil
         let pipeline = self.pipeline
         Task { await pipeline.cancel() }
+        // The cancel above may never land. Guarantee the latch is released so a
+        // preempting tap can't be queued behind a run that never ends.
+        armRunUnwindWatchdog()
     }
 
     /// Reacts to Low Power Mode / charging changes (from `PowerMonitor`):

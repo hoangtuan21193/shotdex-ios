@@ -261,6 +261,9 @@ struct PhotoDetailScreen: View {
             PhotoEditorScreen(
                 asset: target.asset,
                 sourceAlbum: target.sourceAlbum,
+                // Only so a text overlay can say "Shot on …" — the row is already
+                // in hand for the info panel.
+                metadata: currentMetadata,
                 onSaved: { pendingSavedAssetID = $0 }
             )
         }

@@ -1,3 +1,4 @@
+import PencilKit
 import Photos
 import SwiftUI
 
@@ -18,6 +19,10 @@ struct PhotoEditorScreen: View {
 
     let asset: PHAsset
     let sourceAlbum: PHAssetCollection?
+    /// The indexed row for this photo, when the presenter already has it. Only used
+    /// to expand `{camera}`-style tokens in text overlays; everything else in the
+    /// editor reads the original file.
+    var metadata: PhotoMetadata?
     /// Called with the saved asset's local identifier as the editor closes after
     /// a successful save — Save Changes hands back this asset's own id, Save
     /// Copy the new copy's. The presenter uses it to put that photo on screen.
@@ -30,6 +35,20 @@ struct PhotoEditorScreen: View {
     @State private var isFallbackNoticePresented = false
     @State private var isRenamePresented = false
     @State private var renameText = ""
+    /// Set while the text field opened on a layer that was created for it, so
+    /// cancelling out of a caption that was never typed drops the empty layer rather
+    /// than leaving an "Empty text" row behind.
+    @State private var textEntryIsNew = false
+    @State private var isFontPickerPresented = false
+    @State private var isImagePickerPresented = false
+    /// Up from the moment a photo is chosen for an image layer until it has been
+    /// decoded, stored and placed — the decode/store is a visible beat and would
+    /// otherwise read as the editor freezing.
+    @State private var isImportingImage = false
+    @State private var isSignatureLibraryPresented = false
+    @State private var isSignatureNamePresented = false
+    @State private var signatureName = ""
+    @State private var drawSession = EditorDrawSession()
     @Namespace private var histogramNamespace
 
     var body: some View {
@@ -42,6 +61,10 @@ struct PhotoEditorScreen: View {
                     .tint(.white)
                     .foregroundStyle(.white)
             }
+            importingImageOverlay
+            if let controller, controller.isEditingText {
+                inlineTextEditor(controller)
+            }
         }
         .preferredColorScheme(.dark)
         .statusBarHidden()
@@ -50,7 +73,8 @@ struct PhotoEditorScreen: View {
             let newController = PhotoEditorController(
                 asset: asset,
                 sourceAlbum: sourceAlbum,
-                service: dependencies.photoEditing
+                service: dependencies.photoEditing,
+                metadata: metadata
             )
             // Every session opens on Adjust: the tab the user left last time is
             // rarely the one they want on a different photo.
@@ -93,6 +117,158 @@ struct PhotoEditorScreen: View {
         } message: {
             Text("Photos doesn't support HEIC as the edited rendition for this asset, so ShotDex saved a maximum-quality JPEG instead.")
         }
+        .sheet(isPresented: $isFontPickerPresented) {
+            if let controller {
+                EditorFontPickerSheet(
+                    recents: dependencies.overlayFontRecents.recents,
+                    current: currentFontChoice(controller)
+                ) { choice in
+                    controller.updateSelectedOverlay {
+                        $0.fontPostScriptName = choice.postScriptName
+                        $0.fontFamilyName = choice.familyName
+                    }
+                    // Remembered on the controller for the next layer, and in the
+                    // store for the next photo.
+                    controller.lastFont = choice
+                    dependencies.overlayFontRecents.remember(choice)
+                }
+            }
+        }
+        .sheet(isPresented: $isImagePickerPresented) {
+            if let controller {
+                EditorSignatureImagePicker(
+                    onPick: { data, assetIdentifier in
+                        applyPickedImage(
+                            data: data,
+                            assetIdentifier: assetIdentifier,
+                            controller: controller
+                        )
+                    },
+                    onFailure: { isImportingImage = false },
+                    onBegin: { isImportingImage = true }
+                )
+            }
+        }
+        .sheet(isPresented: $isSignatureLibraryPresented) {
+            if let controller {
+                EditorSignatureSheet(
+                    presets: dependencies.signaturePresets.presets,
+                    onApply: { controller.applySignature($0) },
+                    onRename: { id, name in
+                        dependencies.signaturePresets.rename(id: id, to: name)
+                    },
+                    onDelete: { dependencies.signaturePresets.delete(id: $0) }
+                )
+            }
+        }
+        .alert("Save Preset", isPresented: $isSignatureNamePresented) {
+            TextField("Name", text: $signatureName)
+            Button("Cancel", role: .cancel) {}
+            Button("Save") {
+                if let controller { saveSignature(controller) }
+            }
+        } message: {
+            Text("Saves every layer on this photo as a preset, so it can be stamped onto another one.")
+        }
+    }
+
+    /// The on-photo text field. Selecting a text layer and typing happen here rather
+    /// than in a sheet; Cancel on a layer that was just created and never typed drops
+    /// it so the list is not left with an empty row.
+    private func inlineTextEditor(_ controller: PhotoEditorController) -> some View {
+        EditorInlineTextEditor(
+            initialText: controller.selectedOverlay?.text ?? "",
+            tokens: controller.overlayTokens,
+            alignment: controller.selectedOverlay?.alignment ?? .center,
+            onCommit: { text in
+                controller.commitText(text)
+                textEntryIsNew = false
+            },
+            onCancel: {
+                let wasEmpty = (controller.selectedOverlay?.text ?? "")
+                    .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                controller.endTextEntry()
+                if textEntryIsNew, wasEmpty {
+                    controller.deleteSelectedOverlay()
+                }
+                textEntryIsNew = false
+            }
+        )
+        .transition(.opacity)
+    }
+
+    /// Opens the on-photo field. A brand-new caption first gets an empty text layer
+    /// to type into; editing an existing one just opens the field on it.
+    private func startTextEntry(_ controller: PhotoEditorController, isNew: Bool) {
+        if isNew {
+            controller.addTextOverlay()
+        }
+        textEntryIsNew = isNew
+        controller.beginTextEntry()
+    }
+
+    @ViewBuilder
+    private var importingImageOverlay: some View {
+        if isImportingImage {
+            ZStack {
+                Color.black.opacity(0.45).ignoresSafeArea()
+                ProgressView("Adding image…")
+                    .tint(.white)
+                    .foregroundStyle(.white)
+                    .padding(20)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+            }
+            .transition(.opacity)
+        }
+    }
+
+    /// The face the font picker should show as current: the selected layer's, or the
+    /// one a new layer would inherit when nothing is selected.
+    private func currentFontChoice(_ controller: PhotoEditorController) -> OverlayFontChoice {
+        guard let overlay = controller.selectedOverlay, overlay.kind == .text else {
+            return controller.lastFont
+        }
+        guard !overlay.fontPostScriptName.isEmpty else { return .system }
+        return OverlayFontChoice(
+            postScriptName: overlay.fontPostScriptName,
+            familyName: overlay.fontFamilyName,
+            displayName: overlay.fontFamilyName.isEmpty
+                ? overlay.fontPostScriptName
+                : overlay.fontFamilyName
+        )
+    }
+
+    /// A picked image becomes a file first: the recipe carries an identifier, never
+    /// bytes, because it has to fit inside a photo's adjustment data.
+    private func applyPickedImage(
+        data: Data,
+        assetIdentifier: String?,
+        controller: PhotoEditorController
+    ) {
+        defer { isImportingImage = false }
+        guard let id = try? dependencies.overlayImages.store(pngData: data) else {
+            return
+        }
+        if controller.selectedOverlay?.kind == .image {
+            controller.updateSelectedOverlay {
+                $0.imageID = id
+                $0.imageAssetIdentifier = assetIdentifier
+            }
+        } else {
+            controller.addImageOverlay(imageID: id, assetIdentifier: assetIdentifier)
+        }
+    }
+
+    private func saveSignature(_ controller: PhotoEditorController) {
+        let name = signatureName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, !controller.recipe.overlays.isEmpty else { return }
+        dependencies.signaturePresets.upsert(
+            SignaturePreset(
+                name: name,
+                createdAt: Date(),
+                layers: controller.recipe.overlays
+            )
+        )
     }
 
     private func editor(_ controller: PhotoEditorController) -> some View {
@@ -102,7 +278,12 @@ struct PhotoEditorScreen: View {
             // The editor claims the top safe area itself: the chrome starts level
             // with the Dynamic Island rather than under it.
             VStack(spacing: 0) {
-                if !chrome.isFullBleed {
+                // Drawing is a full takeover, like Crop: Cancel / Save step aside and
+                // a Clear / Done bar takes the top, clear of the tool picker below.
+                if controller.isEditingDrawing {
+                    drawTopBar(controller)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                } else if !chrome.isFullBleed {
                     topBar(controller)
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
@@ -110,6 +291,7 @@ struct PhotoEditorScreen: View {
                 EditorImageStage(
                     controller: controller,
                     chrome: chrome,
+                    drawSession: drawSession,
                     histogramNamespace: histogramNamespace
                 )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -131,12 +313,18 @@ struct PhotoEditorScreen: View {
                     }
                     .animation(EditorTheme.animation, value: chrome.activeMaskControl)
 
-                if !chrome.isFullBleed {
+                // No bottom panel while drawing: the tool picker owns that space and
+                // Clear / Done live in the top bar.
+                if !chrome.isFullBleed, !controller.isEditingDrawing {
                     panel(controller, height: panelHeight)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
             .ignoresSafeArea(.container, edges: [.top, .bottom])
+            // The editor and its fixed panel never move for the keyboard: when the
+            // on-photo text field opens, only that overlay reacts (its token bar
+            // rides the keyboard). Without this the whole panel is shoved upward.
+            .ignoresSafeArea(.keyboard, edges: .bottom)
         }
         .overlay(alignment: .bottom) {
             if let toast = chrome.undoToast {
@@ -253,6 +441,38 @@ struct PhotoEditorScreen: View {
         }
         // Wider than the rest of the chrome: these two sit at the very top of a
         // rounded display, where flush-to-the-edge reads as cramped.
+        .padding(.horizontal, 26)
+        .padding(.top, EditorLayoutMetrics.dynamicIslandRowTopInset)
+        .background(EditorTheme.background)
+    }
+
+    /// The drawing sub-mode's own top bar: Clear and Done sit up here, level with
+    /// the Dynamic Island, because the `PKToolPicker` owns the bottom of the screen
+    /// and would otherwise cover a bottom action row.
+    private func drawTopBar(_ controller: PhotoEditorController) -> some View {
+        HStack(spacing: 6) {
+            Button("Clear") {
+                drawSession.clear()
+            }
+            .font(.system(size: 16))
+            .foregroundStyle(
+                drawSession.isEmpty ? EditorTheme.dimText : EditorTheme.secondaryText
+            )
+            .disabled(drawSession.isEmpty)
+            .frame(minWidth: 56, minHeight: 44, alignment: .leading)
+
+            Spacer(minLength: 0)
+
+            Button("Done") {
+                controller.commitDrawing(
+                    data: drawSession.drawing.dataRepresentation(),
+                    canvasSize: drawSession.canvasSize
+                )
+            }
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundStyle(EditorTheme.accent)
+            .frame(minWidth: 52, minHeight: 44, alignment: .trailing)
+        }
         .padding(.horizontal, 26)
         .padding(.top, EditorLayoutMetrics.dynamicIslandRowTopInset)
         .background(EditorTheme.background)
@@ -521,6 +741,31 @@ struct PhotoEditorScreen: View {
                 chrome: chrome,
                 panelHeight: panelHeight
             )
+        case .markup:
+            // The detail panel shows only when explicitly opened. A merely selected
+            // layer keeps the list up and is moved / resized / rotated on the photo.
+            if !controller.showsOverlayDetail || controller.selectedOverlay == nil {
+                EditorTextPanel(
+                    controller: controller,
+                    chrome: chrome,
+                    addText: { startTextEntry(controller, isNew: true) },
+                    addImage: { isImagePickerPresented = true },
+                    startDrawing: { startDrawing(controller) },
+                    openPresets: { isSignatureLibraryPresented = true }
+                )
+            } else {
+                EditorTextDetailPanel(
+                    controller: controller,
+                    chrome: chrome,
+                    editText: { startTextEntry(controller, isNew: false) },
+                    pickFont: { isFontPickerPresented = true },
+                    replaceImage: { isImagePickerPresented = true },
+                    saveSignature: {
+                        signatureName = defaultSignatureName(controller)
+                        isSignatureNamePresented = true
+                    }
+                )
+            }
         case .crop:
             EditorCropPanel(controller: controller)
         case .masks:
@@ -537,13 +782,15 @@ struct PhotoEditorScreen: View {
                     rename: { presentRename(controller) }
                 )
             }
-        case .cleanUp:
-            EditorCleanUpPanel(controller: controller, chrome: chrome)
         }
     }
 
     private func tabBar(_ controller: PhotoEditorController) -> some View {
-        HStack(spacing: 4) {
+        // Six tabs leave about 57pt each on a 375pt screen. Anything added beyond
+        // this tightens the spacing again and eventually needs a scrolling bar —
+        // `EditorPanelLayoutTests` asserts the arithmetic so a seventh tab fails
+        // loudly rather than truncating a label.
+        HStack(spacing: EditorLayoutMetrics.tabBarSpacing) {
             ForEach(PhotoEditorTool.allCases) { tool in
                 let isSelected = controller.selectedTool == tool
                 Button {
@@ -555,11 +802,11 @@ struct PhotoEditorScreen: View {
                         Text(tool.title)
                             .font(EditorTheme.tabLabel)
                             .fontWeight(isSelected ? .semibold : .regular)
-                            // Six tabs leave about 56pt each on a 375pt screen,
-                            // and "Clean Up" does not fit. Shrinking beats a
-                            // silent truncation to "Clean U…".
+                            // Shrink rather than truncate: at six tabs the labels
+                            // fit comfortably, but keeping the guard means a longer
+                            // label never clips to "Filter…" if the set grows.
                             .lineLimit(1)
-                            .minimumScaleFactor(0.8)
+                            .minimumScaleFactor(0.72)
                     }
                     .foregroundStyle(isSelected ? EditorTheme.accent : EditorTheme.secondaryText)
                     .frame(maxWidth: .infinity)
@@ -574,7 +821,7 @@ struct PhotoEditorScreen: View {
                 .accessibilityAddTraits(isSelected ? .isSelected : [])
             }
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, EditorLayoutMetrics.tabBarHorizontalInset)
         // The selected pill has to clear the bottom edge: the panel now runs into
         // the home-indicator area, and a rounded highlight flush with the screen
         // reads as a rendering glitch.
@@ -613,10 +860,37 @@ struct PhotoEditorScreen: View {
         case .masks:
             controller.selectedTool = .masks
             controller.scheduleRender()
-        case .color, .filters, .crop, .cleanUp:
+        case .markup:
+            // Always at the list level on arrival: a layer left selected from a
+            // previous visit would hand the photo's gestures to it before the user
+            // has said which layer they mean.
+            controller.selectOverlay(nil)
+            controller.selectedTool = .markup
+            controller.closeSelectedMaskAdjustments()
+        case .color, .filters, .crop:
             controller.selectedTool = tool
+            controller.selectOverlay(nil)
             controller.closeSelectedMaskAdjustments()
         }
+    }
+
+    /// Loads the current drawing into the canvas and enters the draw sub-mode. Zoom
+    /// is reset so canvas points map straight to the fitted photo rect.
+    private func startDrawing(_ controller: PhotoEditorController) {
+        chrome.resetZoom()
+        drawSession.load(data: controller.drawingData)
+        controller.beginDrawing()
+    }
+
+    /// Names a new signature after what it says, so the library is browsable
+    /// without applying every entry.
+    private func defaultSignatureName(_ controller: PhotoEditorController) -> String {
+        let firstText = controller.recipe.overlays
+            .first { $0.kind == .text && !$0.text.isEmpty }
+            .map { controller.resolvedText(for: $0) }
+            .map { $0.replacingOccurrences(of: "\n", with: " ") }
+        guard let firstText, !firstText.isEmpty else { return "Signature" }
+        return String(firstText.prefix(40))
     }
 
     private func presentRename(_ controller: PhotoEditorController) {

@@ -23,6 +23,22 @@ enum EditorLayoutMetrics {
     static let histogramCollapsedHeight: CGFloat = 30
     static let histogramInset: CGFloat = 12
     static let tabBarHeight: CGFloat = 62
+    static let tabBarSpacing: CGFloat = 2
+    static let tabBarHorizontalInset: CGFloat = 6
+    /// What one tab needs to show an icon over its label. Below this a label stops
+    /// being readable at all and the bar would have to start scrolling instead.
+    static let tabMinimumWidth: CGFloat = 44
+
+    /// Width of one equal-share tab. The tab bar lays out with `maxWidth: .infinity`
+    /// rather than this number, so the point of having it is the assertion in
+    /// `EditorPanelLayoutTests`: adding an eighth tool has to fail a test rather
+    /// than quietly truncate a label on the narrowest supported phone.
+    static func tabWidth(screenWidth: CGFloat, tabCount: Int) -> CGFloat {
+        guard tabCount > 0 else { return 0 }
+        let spacing = tabBarSpacing * CGFloat(tabCount - 1)
+        let available = screenWidth - tabBarHorizontalInset * 2 - spacing
+        return max(0, available / CGFloat(tabCount))
+    }
     /// Top padding for the editor's first row so `Cancel` / `Done` sit level with
     /// the Dynamic Island instead of below it, giving the photo the safe-area
     /// height back. The status bar is hidden in the editor, so nothing collides.
@@ -365,84 +381,6 @@ enum EditorLayoutMetrics {
         return CGSize(
             width: min(limitX, max(-limitX, offset.width)),
             height: min(limitY, max(-limitY, offset.height))
-        )
-    }
-
-    // MARK: Clean Up
-
-    /// Deliberately much smaller than `brushSizeRange`: a removal is usually a
-    /// spot or a wire, and a brush a quarter of the frame wide gives PatchMatch
-    /// a hole too big to find plausible sources for.
-    static let cleanUpSizeRange = 0.01...0.3
-    static let cleanUpDefaultSize = 0.12
-    static let cleanUpDefaultFeather = 0.35
-    /// How far past the painted area the inpainting tile reaches, as a multiple
-    /// of the brush diameter. PatchMatch needs surrounding pixels to copy from,
-    /// so the tile is always wider than the hole.
-    static let cleanUpTileMargin: CGFloat = 1.5
-    /// And at least this fraction of the painted area's own size. Brush widths
-    /// alone are not enough for a long stroke: paint over a whole person and the
-    /// hole fills the tile, leaving both inpainters almost nothing to reason from —
-    /// which is exactly when a removal comes back as a dark smear.
-    static let cleanUpTileContextFraction: CGFloat = 0.6
-
-    /// Region an inpainter has to look at for one stroke: the painted bounds
-    /// grown by `cleanUpTileMargin` brush widths, clamped to the image.
-    ///
-    /// Takes points already mapped into `rect` rather than normalized ones,
-    /// because its two callers disagree about which way y runs — the renderer
-    /// works in Core Image's bottom-up space, the overlay in SwiftUI's top-down
-    /// one, and a vertical flip moves the box.
-    static func cleanUpTileRect(
-        around points: [CGPoint],
-        diameter: CGFloat,
-        in rect: CGRect
-    ) -> CGRect {
-        guard !points.isEmpty, rect.width > 0, rect.height > 0 else { return .null }
-        var minX = CGFloat.greatestFiniteMagnitude
-        var minY = CGFloat.greatestFiniteMagnitude
-        var maxX = -CGFloat.greatestFiniteMagnitude
-        var maxY = -CGFloat.greatestFiniteMagnitude
-        for point in points {
-            minX = min(minX, point.x)
-            minY = min(minY, point.y)
-            maxX = max(maxX, point.x)
-            maxY = max(maxY, point.y)
-        }
-        let painted = CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
-            .insetBy(dx: -diameter / 2, dy: -diameter / 2)
-        let inset = max(
-            diameter * cleanUpTileMargin,
-            max(painted.width, painted.height) * cleanUpTileContextFraction
-        )
-        return painted.insetBy(dx: -inset, dy: -inset).intersection(rect).integral
-    }
-
-    /// Where Clone / Heal reads from, in view coordinates.
-    static func cleanUpSourcePoint(
-        centroid: NormalizedPoint,
-        offsetX: Double,
-        offsetY: Double,
-        in rect: CGRect
-    ) -> CGPoint {
-        let anchor = maskViewPoint(centroid, in: rect)
-        return CGPoint(
-            x: anchor.x + rect.width * CGFloat(offsetX),
-            y: anchor.y + rect.height * CGFloat(offsetY)
-        )
-    }
-
-    /// Inverse of `cleanUpSourcePoint`, for the source knob's drag.
-    static func cleanUpSourceOffset(
-        from point: CGPoint,
-        centroid: NormalizedPoint,
-        in rect: CGRect
-    ) -> (x: Double, y: Double) {
-        guard rect.width > 0, rect.height > 0 else { return (0, 0) }
-        let anchor = maskViewPoint(centroid, in: rect)
-        return (
-            Double((point.x - anchor.x) / rect.width),
-            Double((point.y - anchor.y) / rect.height)
         )
     }
 

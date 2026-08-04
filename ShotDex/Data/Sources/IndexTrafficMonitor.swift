@@ -12,43 +12,9 @@ final class IndexTrafficMonitor: Sendable {
     /// story of a degrading run in one place.
     static let healthLogger = Logger(subsystem: "com.hoangtuan.shotdex", category: "index-health")
 
-    /// TEMPORARY (on-device indexing investigation): mirrors a health line into
-    /// `Documents/index-health.log` as well as os_log. macOS can no longer read
-    /// os_log from a paired device, and `devicectl … --console` (the stdout
-    /// route) hangs; a file in the app container can always be pulled with
-    /// `devicectl device copy from`. Remove with the investigation.
     static func health(_ line: String) {
         healthLogger.log("\(line, privacy: .public)")
-        appendToHealthFile(line)
     }
-
-    private static let healthFileLock = OSAllocatedUnfairLock(initialState: ())
-
-    private static func appendToHealthFile(_ line: String) {
-        guard let url = healthFileURL else { return }
-        let stamped = "\(Date().formatted(date: .omitted, time: .standard)) \(line)\n"
-        guard let data = stamped.data(using: .utf8) else { return }
-        healthFileLock.withLock { _ in
-            guard let handle = try? FileHandle(forWritingTo: url) else {
-                try? data.write(to: url)
-                return
-            }
-            defer { try? handle.close() }
-            _ = try? handle.seekToEnd()
-            try? handle.write(contentsOf: data)
-        }
-    }
-
-    private static let healthFileURL: URL? = {
-        guard let directory = FileManager.default.urls(
-            for: .documentDirectory, in: .userDomainMask
-        ).first else { return nil }
-        let url = directory.appendingPathComponent("index-health.log")
-        if !FileManager.default.fileExists(atPath: url.path) {
-            FileManager.default.createFile(atPath: url.path, contents: nil)
-        }
-        return url
-    }()
 
     private let bytes = OSAllocatedUnfairLock(initialState: Int64(0))
 

@@ -643,9 +643,29 @@ actor IndexPipeline {
         guard let stored = try metadataStore.indexState().changeToken,
               let since = Self.unarchivedToken(stored) else { return nil }
 
+        // A large unfinished backlog is the case this path handles *worse* than
+        // the walk it exists to avoid — fetching and sorting tens of thousands
+        // of ids through PhotoKit takes over a minute. Hand it back — and do it
+        // BEFORE touching the change history: with a stale token (cancelled
+        // runs never advance it) enumerating the history costs minutes
+        // (measured 4–10 min against a 55k library), all thrown away by this
+        // very bail-out. That silent stretch is what read as "indexing never
+        // starts" on the device.
+        let unfinishedCount = try metadataStore.unfinishedCount()
+        if unfinishedCount > Self.maxUnfinishedForChangeHistory {
+            IndexTrafficMonitor.health(
+                "persistent changes: \(unfinishedCount) unfinished rows exceeds \(Self.maxUnfinishedForChangeHistory) — full walk instead"
+            )
+            return nil
+        }
+
         let changes: PersistentChanges
         do {
-            changes = try Self.persistentChanges(since: since)
+            guard let enumerated = try persistentChanges(since: since) else {
+                IndexTrafficMonitor.health("change history: cancelled mid-enumeration")
+                return nil
+            }
+            changes = enumerated
         } catch {
             // Photos keeps a bounded change window; past it the token expires
             // and the only correct answer is a full walk. Drop the token so the
@@ -659,6 +679,9 @@ actor IndexPipeline {
             try metadataStore.saveIndexState(state)
             return nil
         }
+        IndexTrafficMonitor.health(
+            "change history: \(changes.inserted.count) inserted, \(changes.updated.count) updated, \(changes.deleted.count) deleted in \(Self.milliseconds(clock.now - start))ms"
+        )
 
         var summary = IndexRunSummary(indexed: 0, skipped: 0, pendingICloud: 0, failed: 0, deleted: 0, wasCancelled: false)
 
@@ -666,16 +689,6 @@ actor IndexPipeline {
         // `pendingRead` placeholders, `error` retries, and `pendingICloud` once
         // the network is allowed again.
         let unfinished = try metadataStore.unfinishedAssetStates()
-
-        // A large unfinished backlog is the case this path handles *worse* than
-        // the walk it exists to avoid — fetching and sorting tens of thousands
-        // of ids through PhotoKit takes over a minute. Hand it back.
-        if unfinished.count > Self.maxUnfinishedForChangeHistory {
-            IndexTrafficMonitor.health(
-                "persistent changes: \(unfinished.count) unfinished rows exceeds \(Self.maxUnfinishedForChangeHistory) — full walk instead"
-            )
-            return nil
-        }
 
         var candidateIds = Set(unfinished.keys)
         candidateIds.formUnion(changes.inserted)
@@ -827,11 +840,15 @@ actor IndexPipeline {
 
     /// Collapses Photos' change history since `token` into one insert/update/
     /// delete set. Throws when the history is unavailable (expired token), which
-    /// the caller answers with a full walk.
-    private static func persistentChanges(since token: PHPersistentChangeToken) throws -> PersistentChanges {
+    /// the caller answers with a full walk. Returns nil when the run is
+    /// cancelled mid-enumeration — with a stale token this loop runs for
+    /// minutes, and a cancelled run must not keep paying for it (the fallback
+    /// walk exits on the same flag immediately).
+    private func persistentChanges(since token: PHPersistentChangeToken) throws -> PersistentChanges? {
         var changes = PersistentChanges()
         let result = try PHPhotoLibrary.shared().fetchPersistentChanges(since: token)
         for change in result {
+            if isCancelled { return nil }
             let details = try change.changeDetails(for: .asset)
             changes.inserted.formUnion(details.insertedLocalIdentifiers)
             changes.updated.formUnion(details.updatedLocalIdentifiers)
