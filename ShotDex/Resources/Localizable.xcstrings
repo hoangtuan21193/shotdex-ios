@@ -13,6 +13,9 @@
     "“%@”" : {
 
     },
+    "%@ — coming soon" : {
+
+    },
     "%@ · at least %@" : {
       "comment" : "On This Day reminder body when some matching items are not indexed yet, so the size is a lower bound. First placeholder is the count phrase, second is the formatted size.",
       "localizations" : {
@@ -309,6 +312,9 @@
     "Collapse histogram" : {
 
     },
+    "Color Mix" : {
+
+    },
     "Compare" : {
 
     },
@@ -346,9 +352,6 @@
 
     },
     "Couldn't read metadata for this item." : {
-
-    },
-    "Crop" : {
 
     },
     "Crop %@ corner" : {
@@ -436,13 +439,13 @@
     "Done" : {
 
     },
+    "Done cropping" : {
+
+    },
     "Done with this mask" : {
 
     },
     "Double tap to collapse" : {
-
-    },
-    "Double tap to reset" : {
 
     },
     "downloaded from iCloud" : {
@@ -770,6 +773,9 @@
 
     },
     "More editor actions" : {
+
+    },
+    "More groups" : {
 
     },
     "More selection actions" : {
@@ -1134,7 +1140,7 @@
     "Reset all custom camera mappings?" : {
 
     },
-    "Reset Crop" : {
+    "Reset crop" : {
 
     },
     "Reset Custom Mappings" : {
@@ -1323,9 +1329,6 @@
     "Source" : {
 
     },
-    "Split compare" : {
-
-    },
     "Split into series by" : {
 
     },
@@ -1348,9 +1351,6 @@
 
     },
     "Tap to switch" : {
-
-    },
-    "Tap to type a value" : {
 
     },
     "The accent color tints buttons, selections and highlights throughout ShotDex, including the photo editor. Amber and Sand are the colors of the app icon; iOS Default is the system blue." : {

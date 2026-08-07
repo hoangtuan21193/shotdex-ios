@@ -19,7 +19,6 @@ struct EditorAdjustmentGroupsView<Footer: View>: View {
                         ForEach(group.kinds, id: \.self) { kind in
                             row(for: kind)
                         }
-                        .padding(.bottom, 2)
                     } header: {
                         EditorGroupHeader(
                             title: group.title,
@@ -187,7 +186,7 @@ struct EditorToggleRow: View {
         .font(EditorTheme.rowLabel)
         .tint(EditorTheme.accent)
         .padding(.horizontal, 14)
-        .frame(height: 44)
+        .frame(height: EditorLayoutMetrics.sliderRowTotalHeight)
     }
 }
 

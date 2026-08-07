@@ -389,11 +389,33 @@ enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Sendable 
     case vibrance
     case warmth
     case tint
+    case blackAndWhite
     case sharpness
+    case sharpenRadius
     case definition
     case noiseReduction
+    case colorNoiseReduction
+    case texture
+    case clarity
+    case dehaze
     case vignette
+    case vignetteMidpoint
+    case vignetteFeather
+    case vignetteRoundness
+    case vignetteHighlights
     case grain
+    case grainSize
+    case grainRoughness
+    // Optics
+    case chromaticAberration
+    case defringe
+    // Geo (transform)
+    case geoVertical
+    case geoHorizontal
+    case geoRotate
+    case geoScale
+    case geoOffsetX
+    case geoOffsetY
     case rawTemperature
     case rawTint
     case rawLuminanceNoise
@@ -417,11 +439,31 @@ enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Sendable 
         case .vibrance: "Vibrance"
         case .warmth: "Warmth"
         case .tint: "Tint"
+        case .blackAndWhite: "Black & White"
         case .sharpness: "Sharpness"
+        case .sharpenRadius: "Sharpen Radius"
         case .definition: "Definition"
         case .noiseReduction: "Noise"
+        case .colorNoiseReduction: "Color Noise"
+        case .texture: "Texture"
+        case .clarity: "Clarity"
+        case .dehaze: "Dehaze"
         case .vignette: "Vignette"
+        case .vignetteMidpoint: "Vignette Midpoint"
+        case .vignetteFeather: "Vignette Feather"
+        case .vignetteRoundness: "Vignette Roundness"
+        case .vignetteHighlights: "Vignette Highlights"
         case .grain: "Grain"
+        case .grainSize: "Grain Size"
+        case .grainRoughness: "Grain Roughness"
+        case .chromaticAberration: "Remove Chromatic Aberration"
+        case .defringe: "Defringe"
+        case .geoVertical: "Vertical"
+        case .geoHorizontal: "Horizontal"
+        case .geoRotate: "Rotate"
+        case .geoScale: "Scale"
+        case .geoOffsetX: "Offset X"
+        case .geoOffsetY: "Offset Y"
         case .rawTemperature: "RAW White Balance"
         case .rawTint: "RAW Tint"
         case .rawLuminanceNoise: "RAW Luminance Noise"
@@ -445,11 +487,31 @@ enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Sendable 
         case .vibrance: "paintpalette.fill"
         case .warmth: "thermometer.sun"
         case .tint: "eyedropper.halffull"
+        case .blackAndWhite: "circle.lefthalf.filled.inverse"
         case .sharpness: "triangle"
+        case .sharpenRadius: "triangle.tophalf.filled"
         case .definition: "circle.dotted"
         case .noiseReduction: "aqi.medium"
+        case .colorNoiseReduction: "drop.halffull"
+        case .texture: "circle.grid.2x2"
+        case .clarity: "circle.hexagonpath"
+        case .dehaze: "sun.haze"
         case .vignette: "viewfinder"
+        case .vignetteMidpoint: "smallcircle.circle"
+        case .vignetteFeather: "circle.dashed"
+        case .vignetteRoundness: "squareshape.dashed.squareshape"
+        case .vignetteHighlights: "sun.max.circle"
         case .grain: "circle.grid.3x3.fill"
+        case .grainSize: "circle.grid.3x3"
+        case .grainRoughness: "circle.grid.3x3.circle"
+        case .chromaticAberration: "camera.aperture"
+        case .defringe: "scribble.variable"
+        case .geoVertical: "perspective"
+        case .geoHorizontal: "perspective"
+        case .geoRotate: "rotate.right"
+        case .geoScale: "arrow.up.left.and.arrow.down.right"
+        case .geoOffsetX: "arrow.left.and.right"
+        case .geoOffsetY: "arrow.up.and.down"
         case .rawTemperature: "thermometer.medium"
         case .rawTint: "slider.horizontal.2.square"
         case .rawLuminanceNoise: "sparkles.rectangle.stack"
@@ -461,7 +523,10 @@ enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Sendable 
 
     var range: ClosedRange<Double> {
         switch self {
-        case .lensCorrection, .grain: 0...1
+        case .lensCorrection, .grain, .grainSize, .grainRoughness,
+             .vignetteMidpoint, .vignetteFeather, .blackAndWhite,
+             .sharpenRadius, .colorNoiseReduction,
+             .vignetteHighlights, .chromaticAberration, .defringe: 0...1
         case .exposure: -2...2
         default: -1...1
         }
@@ -495,11 +560,34 @@ struct PhotoAdjustments: Codable, Equatable, Sendable {
     var vibrance = 0.0
     var warmth = 0.0
     var tint = 0.0
+    var blackAndWhite = 0.0
     var sharpness = 0.0
+    var sharpenRadius = 0.0
     var definition = 0.0
     var noiseReduction = 0.0
+    var colorNoiseReduction = 0.0
+    var texture = 0.0
+    var clarity = 0.0
+    var dehaze = 0.0
     var vignette = 0.0
+    /// Where the vignette starts falling off (0 = near the centre, 1 = only the
+    /// extreme corners). Default 0.5 — a neutral value, so it is part of `.zero`
+    /// and adds no key until touched.
+    var vignetteMidpoint = 0.5
+    var vignetteFeather = 0.5
+    var vignetteRoundness = 0.0
+    var vignetteHighlights = 0.0
     var grain = 0.0
+    var grainSize = 0.0
+    var grainRoughness = 0.0
+    var chromaticAberration = 0.0
+    var defringe = 0.0
+    var geoVertical = 0.0
+    var geoHorizontal = 0.0
+    var geoRotate = 0.0
+    var geoScale = 0.0
+    var geoOffsetX = 0.0
+    var geoOffsetY = 0.0
     var rawTemperature = 0.0
     var rawTint = 0.0
     var rawLuminanceNoise = 0.0
@@ -524,11 +612,31 @@ struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .vibrance: vibrance
             case .warmth: warmth
             case .tint: tint
+            case .blackAndWhite: blackAndWhite
             case .sharpness: sharpness
+            case .sharpenRadius: sharpenRadius
             case .definition: definition
             case .noiseReduction: noiseReduction
+            case .colorNoiseReduction: colorNoiseReduction
+            case .texture: texture
+            case .clarity: clarity
+            case .dehaze: dehaze
             case .vignette: vignette
+            case .vignetteMidpoint: vignetteMidpoint
+            case .vignetteFeather: vignetteFeather
+            case .vignetteRoundness: vignetteRoundness
+            case .vignetteHighlights: vignetteHighlights
             case .grain: grain
+            case .grainSize: grainSize
+            case .grainRoughness: grainRoughness
+            case .chromaticAberration: chromaticAberration
+            case .defringe: defringe
+            case .geoVertical: geoVertical
+            case .geoHorizontal: geoHorizontal
+            case .geoRotate: geoRotate
+            case .geoScale: geoScale
+            case .geoOffsetX: geoOffsetX
+            case .geoOffsetY: geoOffsetY
             case .rawTemperature: rawTemperature
             case .rawTint: rawTint
             case .rawLuminanceNoise: rawLuminanceNoise
@@ -551,11 +659,31 @@ struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .vibrance: vibrance = newValue
             case .warmth: warmth = newValue
             case .tint: tint = newValue
+            case .blackAndWhite: blackAndWhite = newValue
             case .sharpness: sharpness = newValue
+            case .sharpenRadius: sharpenRadius = newValue
             case .definition: definition = newValue
             case .noiseReduction: noiseReduction = newValue
+            case .colorNoiseReduction: colorNoiseReduction = newValue
+            case .texture: texture = newValue
+            case .clarity: clarity = newValue
+            case .dehaze: dehaze = newValue
             case .vignette: vignette = newValue
+            case .vignetteMidpoint: vignetteMidpoint = newValue
+            case .vignetteFeather: vignetteFeather = newValue
+            case .vignetteRoundness: vignetteRoundness = newValue
+            case .vignetteHighlights: vignetteHighlights = newValue
             case .grain: grain = newValue
+            case .grainSize: grainSize = newValue
+            case .grainRoughness: grainRoughness = newValue
+            case .chromaticAberration: chromaticAberration = newValue
+            case .defringe: defringe = newValue
+            case .geoVertical: geoVertical = newValue
+            case .geoHorizontal: geoHorizontal = newValue
+            case .geoRotate: geoRotate = newValue
+            case .geoScale: geoScale = newValue
+            case .geoOffsetX: geoOffsetX = newValue
+            case .geoOffsetY: geoOffsetY = newValue
             case .rawTemperature: rawTemperature = newValue
             case .rawTint: rawTint = newValue
             case .rawLuminanceNoise: rawLuminanceNoise = newValue
@@ -803,6 +931,9 @@ struct PhotoEditRecipe: Codable, Equatable, Sendable {
     var crop = PhotoCropRecipe.identity
     var masks: [PhotoMask] = []
     var color = PhotoColorRecipe.identity
+    /// Point tone curve (RGB master + per-channel). Applied right after Color in
+    /// the render chain. Identity (straight line) adds no key to the JSON.
+    var curve = ToneCurveAdjustments.identity
     /// Text and signature layers drawn on top of the finished photo, back to
     /// front. Composited last of everything, so nothing in the tone or colour
     /// pipeline can tint them and the downscale cannot soften them.
@@ -819,6 +950,7 @@ struct PhotoEditRecipe: Codable, Equatable, Sendable {
             && crop == .identity
             && masks.isEmpty
             && color.isIdentity
+            && curve.isIdentity
             && overlays.isEmpty
             && (drawing?.isEmpty ?? true)
     }
@@ -833,6 +965,7 @@ struct PhotoEditRecipe: Codable, Equatable, Sendable {
         case crop
         case masks
         case color
+        case curve
         case overlays
         case drawing
     }
@@ -862,6 +995,10 @@ struct PhotoEditRecipe: Codable, Equatable, Sendable {
         crop = try container.decodeIfPresent(PhotoCropRecipe.self, forKey: .crop) ?? .identity
         masks = try container.decodeIfPresent([PhotoMask].self, forKey: .masks) ?? []
         color = try container.decodeIfPresent(PhotoColorRecipe.self, forKey: .color) ?? .identity
+        curve = try container.decodeIfPresent(
+            ToneCurveAdjustments.self,
+            forKey: .curve
+        ) ?? .identity
         overlays = try container.decodeIfPresent([PhotoOverlay].self, forKey: .overlays) ?? []
         drawing = try container.decodeIfPresent(PhotoDrawing.self, forKey: .drawing)
     }
@@ -879,6 +1016,7 @@ struct PhotoEditRecipe: Codable, Equatable, Sendable {
         try container.encode(crop, forKey: .crop)
         try container.encode(masks, forKey: .masks)
         if !color.isIdentity { try container.encode(color, forKey: .color) }
+        if !curve.isIdentity { try container.encode(curve, forKey: .curve) }
         if !overlays.isEmpty { try container.encode(overlays, forKey: .overlays) }
         if let drawing, !drawing.isEmpty { try container.encode(drawing, forKey: .drawing) }
     }

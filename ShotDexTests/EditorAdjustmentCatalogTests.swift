@@ -36,23 +36,79 @@ struct EditorAdjustmentCatalogTests {
     }
 
     @Test func unipolarSlidersStartAtZero() {
-        // Grain and the RAW strengths are the only one-way sliders.
-        #expect(EditorAdjustmentCatalog.sliderRange(of: .grain) == 0...1)
-        #expect(EditorAdjustmentCatalog.isBipolar(.grain) == false)
-        #expect(EditorAdjustmentCatalog.sliderRange(of: .rawLuminanceNoise) == 0...1)
+        // Grain (and its Size / Roughness) plus the RAW strengths are the one-way
+        // sliders.
+        for kind in [
+            PhotoAdjustmentKind.grain, .grainSize, .grainRoughness,
+            .vignetteMidpoint, .vignetteFeather, .sharpenRadius,
+            .colorNoiseReduction, .vignetteHighlights, .defringe, .rawLuminanceNoise,
+        ] {
+            #expect(EditorAdjustmentCatalog.sliderRange(of: kind) == 0...1)
+            #expect(EditorAdjustmentCatalog.isBipolar(kind) == false)
+        }
         #expect(EditorAdjustmentCatalog.sliderRange(of: .exposure) == -2...2)
         #expect(EditorAdjustmentCatalog.isBipolar(.whites))
     }
 
     @Test func detailAndEffectsSlidersGoBothWays() {
         // Left of centre has a real meaning for each of these: soften, denoise,
-        // flatten local contrast, brighten the corners.
+        // flatten local contrast, brighten the corners, smooth texture/clarity.
         for kind in [
             PhotoAdjustmentKind.sharpness, .noiseReduction, .definition, .vignette,
+            .texture, .clarity, .dehaze,
         ] {
             #expect(EditorAdjustmentCatalog.isBipolar(kind))
             #expect(EditorAdjustmentCatalog.sliderRange(of: kind) == -1...1)
         }
+    }
+
+    @Test func effectsGroupCarriesTheExpandedSet() {
+        let effects = EditorAdjustmentCatalog
+            .groups(isRAWSource: false, scope: .global)
+            .first { $0.id == .effects }
+        #expect(effects?.kinds == [
+            .texture, .clarity, .dehaze,
+            .vignette, .vignetteMidpoint, .vignetteFeather,
+            .grain, .grainSize, .grainRoughness,
+        ])
+    }
+
+    @Test func opticsAndGeoAreGlobalOnlyGroups() {
+        let global = EditorAdjustmentCatalog.groups(isRAWSource: false, scope: .global)
+        #expect(global.map(\.id).contains(.optics))
+        #expect(global.map(\.id).contains(.geo))
+        let optics = global.first { $0.id == .optics }
+        #expect(optics?.kinds == [.chromaticAberration, .defringe])
+        let geo = global.first { $0.id == .geo }
+        #expect(geo?.kinds == [
+            .geoVertical, .geoHorizontal, .geoRotate, .geoScale, .geoOffsetX, .geoOffsetY,
+        ])
+        // Never inside a mask.
+        let mask = EditorAdjustmentCatalog.groups(isRAWSource: true, scope: .mask)
+        #expect(!mask.map(\.id).contains(.optics))
+        #expect(!mask.map(\.id).contains(.geo))
+        // Chromatic aberration reads as a toggle; the geo transforms are bipolar.
+        #expect(EditorAdjustmentCatalog.format(of: .chromaticAberration) == .toggle)
+        #expect(EditorAdjustmentCatalog.isBipolar(.geoRotate))
+        #expect(EditorAdjustmentCatalog.isBipolar(.vignetteRoundness))
+    }
+
+    @Test func blackAndWhiteIsAToggleInTheColorGroup() {
+        #expect(EditorAdjustmentCatalog.format(of: .blackAndWhite) == .toggle)
+        #expect(EditorAdjustmentCatalog.displayText(1, of: .blackAndWhite) == "On")
+        #expect(EditorAdjustmentCatalog.displayText(0, of: .blackAndWhite) == "Off")
+        let color = EditorAdjustmentCatalog
+            .groups(isRAWSource: false, scope: .global)
+            .first { $0.id == .color }
+        #expect(color?.kinds.contains(.blackAndWhite) == true)
+    }
+
+    @Test func vignetteMidpointAndFeatherDefaultToNeutralWithoutBreakingIdentity() {
+        // Their 0.5 defaults are part of `.zero`, so an untouched recipe is still
+        // identity and encodes no key for them.
+        #expect(PhotoAdjustments().vignetteMidpoint == 0.5)
+        #expect(PhotoAdjustments().vignetteFeather == 0.5)
+        #expect(PhotoAdjustments.zero.isIdentity)
     }
 
     @Test func valuesReadInPhotographicUnits() {

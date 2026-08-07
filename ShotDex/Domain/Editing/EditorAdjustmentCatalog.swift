@@ -17,6 +17,8 @@ struct EditorAdjustmentGroup: Identifiable, Equatable, Sendable {
         case color
         case detail
         case effects
+        case optics
+        case geo
         case raw
     }
 
@@ -45,6 +47,14 @@ enum EditorAdjustmentCatalog {
     /// strengths inside `CIRAWFilter`.
     static let unipolarKinds: Set<PhotoAdjustmentKind> = [
         .grain,
+        .grainSize,
+        .grainRoughness,
+        .vignetteMidpoint,
+        .vignetteFeather,
+        .sharpenRadius,
+        .colorNoiseReduction,
+        .vignetteHighlights,
+        .defringe,
         .rawSharpness,
         .rawLuminanceNoise,
         .rawColorNoise,
@@ -71,22 +81,53 @@ enum EditorAdjustmentCatalog {
             EditorAdjustmentGroup(
                 id: .color,
                 title: "Color",
-                kinds: [.warmth, .tint, .vibrance, .saturation],
+                kinds: [.warmth, .tint, .vibrance, .saturation, .blackAndWhite],
                 hasAuto: false
             ),
             EditorAdjustmentGroup(
                 id: .detail,
                 title: "Detail",
-                kinds: [.sharpness, .noiseReduction, .definition],
+                kinds: [
+                    .sharpness, .sharpenRadius, .definition,
+                    .noiseReduction, .colorNoiseReduction,
+                ],
                 hasAuto: false
             ),
             EditorAdjustmentGroup(
                 id: .effects,
                 title: "Effects",
-                kinds: [.vignette, .grain],
+                kinds: [
+                    .texture, .clarity, .dehaze,
+                    .vignette, .vignetteMidpoint, .vignetteFeather,
+                    .vignetteRoundness, .vignetteHighlights,
+                    .grain, .grainSize, .grainRoughness,
+                ],
                 hasAuto: false
             ),
         ]
+        // Optics and Geo act on the whole frame's geometry / lens, so they are
+        // global-only — never inside a mask.
+        if scope == .global {
+            groups.append(
+                EditorAdjustmentGroup(
+                    id: .optics,
+                    title: "Optics",
+                    kinds: [.chromaticAberration, .defringe],
+                    hasAuto: false
+                )
+            )
+            groups.append(
+                EditorAdjustmentGroup(
+                    id: .geo,
+                    title: "Geo",
+                    kinds: [
+                        .geoVertical, .geoHorizontal, .geoRotate,
+                        .geoScale, .geoOffsetX, .geoOffsetY,
+                    ],
+                    hasAuto: false
+                )
+            )
+        }
         // RAW demosaic and lens controls act on the decode of the source file, so
         // they exist once per photo and never inside a mask.
         if isRAWSource, scope == .global {
@@ -111,7 +152,7 @@ enum EditorAdjustmentCatalog {
 
     static func format(of kind: PhotoAdjustmentKind) -> EditorValueFormat {
         switch kind {
-        case .lensCorrection: .toggle
+        case .lensCorrection, .blackAndWhite, .chromaticAberration: .toggle
         case .exposure, .contrast: .stops
         case .warmth: .kelvinOffset
         case .tint: .tintOffset
@@ -137,6 +178,16 @@ enum EditorAdjustmentCatalog {
         case .warmth: "Temp"
         case .noiseReduction: "Noise"
         case .sharpness: "Sharpen"
+        case .sharpenRadius: "Radius"
+        case .colorNoiseReduction: "Color NR"
+        case .blackAndWhite: "B&W"
+        case .grainSize: "Size"
+        case .grainRoughness: "Roughness"
+        case .vignetteMidpoint: "Midpoint"
+        case .vignetteFeather: "Feather"
+        case .vignetteRoundness: "Round"
+        case .vignetteHighlights: "Highlights"
+        case .chromaticAberration: "Remove CA"
         case .rawTemperature: "WB Temp"
         case .rawTint: "WB Tint"
         case .rawLuminanceNoise: "Lum Noise"

@@ -1,44 +1,32 @@
 import CoreGraphics
 import Foundation
 
-/// Corner the floating histogram card snaps to when the user lets go.
-enum EditorHistogramCorner: String, CaseIterable, Codable, Sendable {
-    case topLeading
-    case topTrailing
-    case bottomLeading
-    case bottomTrailing
-
-    var isTop: Bool { self == .topLeading || self == .topTrailing }
-    var isLeading: Bool { self == .topLeading || self == .bottomLeading }
-}
-
 /// Fixed geometry of the editor. The panel never resizes — not while scrolling,
 /// changing tab, entering a mask, or dragging a slider. Only full-bleed takes it
 /// away, so its height is a pure function of the screen.
 enum EditorLayoutMetrics {
-    static let histogramCardWidth: CGFloat = 152
-    static let histogramCardHeight: CGFloat = 86
-    /// Just the sparkline: the collapsed pill carries no text and no chevron.
-    static let histogramCollapsedWidth: CGFloat = 52
-    static let histogramCollapsedHeight: CGFloat = 30
-    static let histogramInset: CGFloat = 12
-    static let tabBarHeight: CGFloat = 62
-    static let tabBarSpacing: CGFloat = 2
-    static let tabBarHorizontalInset: CGFloat = 6
-    /// What one tab needs to show an icon over its label. Below this a label stops
-    /// being readable at all and the bar would have to start scrolling instead.
-    static let tabMinimumWidth: CGFloat = 44
+    // MARK: 28c panel
 
-    /// Width of one equal-share tab. The tab bar lays out with `maxWidth: .infinity`
-    /// rather than this number, so the point of having it is the assertion in
-    /// `EditorPanelLayoutTests`: adding an eighth tool has to fail a test rather
-    /// than quietly truncate a label on the narrowest supported phone.
-    static func tabWidth(screenWidth: CGFloat, tabCount: Int) -> CGFloat {
-        guard tabCount > 0 else { return 0 }
-        let spacing = tabBarSpacing * CGFloat(tabCount - 1)
-        let available = screenWidth - tabBarHorizontalInset * 2 - spacing
-        return max(0, available / CGFloat(tabCount))
-    }
+    /// The "28c" panel: one opaque slab of fixed height glued to the bottom, the
+    /// image taking everything above it. Four stacked tiers — action bar, optional
+    /// target strip, the scrolling row list, and the group nav — that never reorder
+    /// and never exceed this total.
+    static let editorPanelFixedHeight: CGFloat = 246
+    static let editorActionBarHeight: CGFloat = 46
+    static let editorTargetStripHeight: CGFloat = 40
+    static let editorGroupNavHeight: CGFloat = 48
+    /// One parameter row. Every gesture surface (label, track, value) spans the
+    /// full row width at this height, so a value can be dragged from anywhere on it.
+    static let editorRowHeight: CGFloat = 34
+    static let editorRowLabelWidth: CGFloat = 88
+    static let editorRowValueWidth: CGFloat = 40
+    /// Mini histogram parked at the left of the action bar.
+    static let editorMiniHistogramSize = CGSize(width: 54, height: 28)
+    /// Fine-adjust: press in place this long, then drag, and the value moves at
+    /// `sliderFineGain` of the normal rate.
+    static let sliderFineHoldSeconds: Double = 0.3
+    static let sliderFineGain: Double = 0.25
+
     /// Top padding for the editor's first row so `Cancel` / `Done` sit level with
     /// the Dynamic Island instead of below it, giving the photo the safe-area
     /// height back. The status bar is hidden in the editor, so nothing collides.
@@ -51,10 +39,11 @@ enum EditorLayoutMetrics {
     /// handles sit inside the screen rather than on its edge.
     static let cropStageInset: CGFloat = 30
     static let maskNavigationRowHeight: CGFloat = 44
-    /// Fixed row at the top of the panel: undo/redo/compare/history/reset plus the
-    /// parked histogram. Sits above the tool content and outside `panelHeight`.
-    static let actionRowHeight: CGFloat = 46
     static let sliderRowHeight: CGFloat = 32
+    /// Total height of one slider/toggle row in the edit panel. 36pt on purpose —
+    /// under the 44pt HIG tap minimum — so the panel fits more sliders per
+    /// screenful. The track's pan area still spans the full row.
+    static let sliderRowTotalHeight: CGFloat = 36
     static let sliderLabelWidth: CGFloat = 78
     static let sliderValueWidth: CGFloat = 44
     /// The pan has to travel this far before either the scroll view or a slider
@@ -98,88 +87,6 @@ enum EditorLayoutMetrics {
         return abs(value - detent) <= tolerance ? detent : value
     }
 
-    /// 370pt on a 6.1" phone, less on a 4.7", more on a Max — always between a
-    /// third and just under half the height it is given. The Color tab's wheel
-    /// and the 24-row mixer are what pushed every size up 50pt: at 320 the
-    /// grading wheel left room for barely one slider under it.
-    static func panelHeight(forHeight height: CGFloat) -> CGFloat {
-        guard height > 0 else { return 370 }
-        let preferred: CGFloat = if height >= 926 {
-            390
-        } else if height >= 812 {
-            370
-        } else {
-            338
-        }
-        return min(max(preferred, height / 3), height * 0.46)
-    }
-
-    // MARK: Film-look grid
-
-    /// Everything in the Filters tab that is not the swatch grid: the 19pt heading
-    /// and its top padding (35), the category strip (44), the Intensity slider (44)
-    /// and three 12pt gaps.
-    static let filterPanelFixedHeight: CGFloat = 160
-    /// Caption plus its gap under a swatch.
-    static let filterTileCaptionHeight: CGFloat = 18
-    static let filterGridRowSpacing: CGFloat = 8
-    /// Below this a swatch is too small to tell two looks apart, so the grid drops
-    /// to one row rather than shrinking further.
-    static let filterTileMinimumSide: CGFloat = 44
-    /// Above this the grid is just wasting the panel — a swatch is a swatch.
-    static let filterTileMaximumSide: CGFloat = 66
-
-    struct FilterGridLayout: Equatable, Sendable {
-        var rows: Int
-        var tileSide: CGFloat
-    }
-
-    /// Two rows of swatches wherever the panel can hold them, which is every phone
-    /// from the 6.1" up: two rows show twice as many looks per screenful, and the
-    /// panel has the height to spare. A 4.7" panel does not, so it gets one row and
-    /// full-size swatches instead of two unreadable ones.
-    static func filterGrid(forPanelHeight panelHeight: CGFloat) -> FilterGridLayout {
-        let available = max(0, panelHeight - tabBarHeight - filterPanelFixedHeight)
-        for rows in [2, 1] {
-            let spacing = filterGridRowSpacing * CGFloat(rows - 1)
-            let side = (available - spacing) / CGFloat(rows) - filterTileCaptionHeight
-            guard side >= filterTileMinimumSide else { continue }
-            return FilterGridLayout(rows: rows, tileSide: min(filterTileMaximumSide, side))
-        }
-        return FilterGridLayout(rows: 1, tileSide: filterTileMinimumSide)
-    }
-
-    static func histogramSize(collapsed: Bool) -> CGSize {
-        collapsed
-            ? CGSize(width: histogramCollapsedWidth, height: histogramCollapsedHeight)
-            : CGSize(width: histogramCardWidth, height: histogramCardHeight)
-    }
-
-    /// Centre point for the card in a corner of the image area.
-    static func histogramCenter(
-        for corner: EditorHistogramCorner,
-        cardSize: CGSize,
-        in bounds: CGRect
-    ) -> CGPoint {
-        let field = bounds.insetBy(dx: histogramInset, dy: histogramInset)
-        let x = corner.isLeading
-            ? field.minX + cardSize.width / 2
-            : field.maxX - cardSize.width / 2
-        let y = corner.isTop
-            ? field.minY + cardSize.height / 2
-            : field.maxY - cardSize.height / 2
-        return CGPoint(x: x, y: y)
-    }
-
-    static func nearestHistogramCorner(
-        to center: CGPoint,
-        in bounds: CGRect
-    ) -> EditorHistogramCorner {
-        let isLeading = center.x <= bounds.midX
-        let isTop = center.y <= bounds.midY
-        if isTop { return isLeading ? .topLeading : .topTrailing }
-        return isLeading ? .bottomLeading : .bottomTrailing
-    }
 
     // MARK: Mask guides
 

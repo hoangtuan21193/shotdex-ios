@@ -1,54 +1,48 @@
 import SwiftUI
 import UIKit
 
-/// Filters tab: a strip picker for where the looks come from, a grid of swatches
-/// showing the photo itself through each of them, and an Intensity slider so a
-/// look can be dialled back instead of only being on or off.
-///
-/// The grid is two rows deep rather than one. Forty-nine looks in a single row is
-/// a quarter of a mile of horizontal scrolling under a panel that has the height
-/// for two, and the second row costs nothing that was being used.
+/// Presets tab (28c): a category strip, an Amount row while a look is active, and
+/// a vertical list of preset rows — each a small thumbnail of the photo through
+/// that look plus its name, in place of the old swatch grid. One row language with
+/// the rest of the panel.
 struct EditorFiltersPanel: View {
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
-    /// Drives how tall a swatch can be: the grid takes whatever the heading, the
-    /// strip picker and the Intensity slider leave behind.
-    let panelHeight: CGFloat
 
     var body: some View {
-        let layout = EditorLayoutMetrics.filterGrid(forPanelHeight: panelHeight)
-        VStack(alignment: .leading, spacing: 12) {
-            Text(controller.recipe.filter.displayName)
-                .font(EditorTheme.panelTitle)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-
+        VStack(spacing: 0) {
             categoryStrip
-
-            swatchGrid(layout)
+                .padding(.top, 8)
+                .padding(.bottom, 6)
 
             if controller.recipe.filter != .original {
-                EditorPlainSliderRow(
-                    title: "Intensity",
-                    value: controller.recipe.filterIntensity,
-                    range: 0...1,
-                    isBipolar: false,
-                    valueText: "\(Int((controller.recipe.filterIntensity * 100).rounded()))%",
-                    isActive: false,
-                    detent: 1,
-                    onBeginDrag: { controller.beginContinuousChange() },
-                    onDrag: { controller.setFilterIntensity($0) },
-                    onEndDrag: { controller.endContinuousChange() },
-                    onReset: { controller.setFilterIntensity(1) }
-                )
+                amountRow
+                Rectangle()
+                    .fill(EditorTheme.hairline)
+                    .frame(height: 0.5)
+                    .padding(.horizontal, 14)
             }
 
-            Spacer(minLength: 0)
+            presetList
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
         .task { controller.refreshFilterThumbnails() }
+    }
+
+    private var amountRow: some View {
+        EditorPlainSliderRow(
+            title: "Amount",
+            value: controller.recipe.filterIntensity,
+            range: 0...1,
+            isBipolar: false,
+            valueText: "\(Int((controller.recipe.filterIntensity * 100).rounded()))%",
+            isActive: false,
+            detent: 1,
+            onBeginDrag: { controller.beginContinuousChange() },
+            onDrag: { controller.setFilterIntensity($0) },
+            onEndDrag: { controller.endContinuousChange() },
+            onReset: { controller.setFilterIntensity(1) }
+        )
     }
 
     private var categoryStrip: some View {
@@ -65,75 +59,81 @@ struct EditorFiltersPanel: View {
                     )
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 14)
         }
         .scrollIndicators(.hidden)
     }
 
-    private func swatchGrid(_ layout: EditorLayoutMetrics.FilterGridLayout) -> some View {
-        let rowHeight = layout.tileSide + EditorLayoutMetrics.filterTileCaptionHeight
-        let rows = Array(
-            repeating: GridItem(
-                .fixed(rowHeight),
-                spacing: EditorLayoutMetrics.filterGridRowSpacing
-            ),
-            count: layout.rows
-        )
-        return ScrollView(.horizontal) {
-            LazyHGrid(rows: rows, spacing: 10) {
+    private var presetList: some View {
+        ScrollView(.vertical) {
+            LazyVStack(spacing: 3) {
                 ForEach(PhotoFilter.all(in: controller.selectedFilterCategory)) { filter in
-                    swatch(filter, side: layout.tileSide)
+                    filterRow(filter)
                 }
+                Color.clear.frame(height: 12)
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 12)
+            .padding(.top, 4)
         }
         .scrollIndicators(.hidden)
-        .frame(height: rowHeight * CGFloat(layout.rows)
-            + EditorLayoutMetrics.filterGridRowSpacing * CGFloat(layout.rows - 1))
     }
 
-    private func swatch(_ filter: PhotoFilter, side: CGFloat) -> some View {
+    private func filterRow(_ filter: PhotoFilter) -> some View {
         let isSelected = controller.recipe.filter == filter
         return Button {
             controller.chooseFilter(filter)
         } label: {
-            VStack(spacing: 4) {
-                ZStack {
-                    if let image = controller.filterThumbnails[filter] {
-                        Image(uiImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } else {
-                        LinearGradient(
-                            colors: swatchColors(for: filter),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
+            HStack(spacing: 10) {
+                thumbnail(filter)
+                    .frame(width: 28, height: 28)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(
+                                isSelected ? EditorTheme.accent : .white.opacity(0.10),
+                                lineWidth: isSelected ? 1.5 : 0.5
+                            )
                     }
-                }
-                .frame(width: side, height: side)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(
-                            isSelected ? EditorTheme.accent : .white.opacity(0.10),
-                            lineWidth: isSelected ? 2 : 0.5
-                        )
-                }
 
-                Text(filter.tileName)
-                    .font(.system(size: 10))
-                    .foregroundStyle(
-                        isSelected ? EditorTheme.accent : EditorTheme.secondaryText
-                    )
+                Text(filter.displayName)
+                    .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
+                    .foregroundStyle(isSelected ? EditorTheme.accent : .white)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                    .frame(width: side + 16)
+
+                Spacer(minLength: 0)
+
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(EditorTheme.accent)
+                }
             }
+            .padding(.horizontal, 10)
+            .frame(height: 40)
+            .background(
+                isSelected ? EditorTheme.accent.opacity(0.10) : Color.clear,
+                in: RoundedRectangle(cornerRadius: 10)
+            )
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(filter.displayName)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    @ViewBuilder
+    private func thumbnail(_ filter: PhotoFilter) -> some View {
+        if let image = controller.filterThumbnails[filter] {
+            Image(uiImage: image)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+        } else {
+            LinearGradient(
+                colors: swatchColors(for: filter),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
     }
 
     /// Stand-in until the photo's own swatch has rendered: the look applied to a lit
@@ -179,34 +179,9 @@ struct EditorCropPanel: View {
     @Bindable var controller: PhotoEditorController
 
     var body: some View {
+        // Rotate / flip / Reset / Done now live in the panel's action bar (28c), so
+        // the crop panel is just the straighten row and the ratio strip.
         VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Text("Crop")
-                    .font(EditorTheme.panelTitle)
-                Spacer(minLength: 0)
-                Button {
-                    controller.rotate()
-                } label: {
-                    Image(systemName: "rotate.right")
-                        .frame(width: 44, height: 44)
-                }
-                .accessibilityLabel("Rotate 90 degrees")
-
-                Button {
-                    controller.flip()
-                } label: {
-                    Image(
-                        systemName:
-                            "arrow.left.and.right.righttriangle.left.righttriangle.right"
-                    )
-                    .frame(width: 44, height: 44)
-                }
-                .accessibilityLabel("Flip horizontally")
-            }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-
             EditorPlainSliderRow(
                 title: "Straighten",
                 value: controller.recipe.crop.straightenDegrees,
@@ -286,7 +261,7 @@ struct EditorPlainSliderRow: View {
                 .foregroundStyle(EditorTheme.secondaryText)
                 .lineLimit(1)
                 .frame(width: EditorLayoutMetrics.sliderLabelWidth, alignment: .leading)
-                .frame(height: 44)
+                .frame(height: EditorLayoutMetrics.sliderRowTotalHeight)
                 .contentShape(Rectangle())
                 .onTapGesture(count: 2) {
                     UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
@@ -354,7 +329,7 @@ struct EditorPlainSliderRow: View {
                     )
                 }
             }
-            .frame(height: 44)
+            .frame(height: EditorLayoutMetrics.sliderRowTotalHeight)
 
             Text(valueText)
                 .font(EditorTheme.rowValue)

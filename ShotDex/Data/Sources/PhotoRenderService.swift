@@ -359,6 +359,9 @@ actor PhotoRenderService {
             appliesExposure: !source.isRAW
         )
         image = Self.applyColor(recipe.color, to: image)
+        image = Self.applyCurve(recipe.curve, to: image)
+        image = Self.applyOptics(recipe.adjustments, to: image)
+        image = Self.applyGeo(recipe.adjustments, to: image)
         image = Self.applyFilter(
             recipe.filter,
             intensity: recipe.filterIntensity,
@@ -714,6 +717,9 @@ actor PhotoRenderService {
             appliesExposure: !source.isRAW
         )
         image = Self.applyColor(recipe.color, to: image)
+        image = Self.applyCurve(recipe.curve, to: image)
+        image = Self.applyOptics(recipe.adjustments, to: image)
+        image = Self.applyGeo(recipe.adjustments, to: image)
         image = Self.applyFilter(
             recipe.filter,
             intensity: recipe.filterIntensity,
@@ -1018,6 +1024,15 @@ actor PhotoRenderService {
         appliesExposure: Bool
     ) -> CIImage {
         var image = input
+        // Black & White first, so the tone work runs on grey and a later Grade wheel
+        // can split-tone it — the standard mono-then-tint order.
+        if adjustments.blackAndWhite >= 0.5 {
+            image = filtered(
+                "CIColorControls",
+                image: image,
+                values: [kCIInputSaturationKey: 0]
+            )
+        }
         if appliesExposure, abs(adjustments.exposure) > 0.0001 {
             image = filtered(
                 "CIExposureAdjust",
@@ -1127,6 +1142,18 @@ actor PhotoRenderService {
                 image: image,
                 values: ["inputSharpness": adjustments.sharpness * 1.2]
             )
+            // Radius adds a coarser edge-emphasis pass on top, so sharpening can
+            // work at a wider scale than `CISharpenLuminance`'s fixed one.
+            if adjustments.sharpenRadius > 0 {
+                image = filtered(
+                    "CIUnsharpMask",
+                    image: image,
+                    values: [
+                        kCIInputRadiusKey: 0.5 + adjustments.sharpenRadius * 3,
+                        kCIInputIntensityKey: adjustments.sharpness * 0.5,
+                    ]
+                )
+            }
         } else if adjustments.sharpness < 0 {
             // Left of centre softens instead of sharpening.
             image = blurred(image, radius: -adjustments.sharpness * 2.5)
@@ -1153,6 +1180,53 @@ actor PhotoRenderService {
                 ]
             ).cropped(to: image.extent)
         }
+        // Texture: fine-detail local contrast — a small-radius unsharp mask one way,
+        // a light smooth of the same band the other.
+        if adjustments.texture > 0 {
+            image = filtered(
+                "CIUnsharpMask",
+                image: image,
+                values: [
+                    kCIInputRadiusKey: 1 + adjustments.texture * 1.5,
+                    kCIInputIntensityKey: adjustments.texture * 0.8,
+                ]
+            )
+        } else if adjustments.texture < 0 {
+            let amount = -adjustments.texture
+            image = filtered(
+                "CIMix",
+                image: blurred(image, radius: 0.5 + amount * 1.5),
+                values: [
+                    kCIInputBackgroundImageKey: image,
+                    "inputAmount": amount * 0.5,
+                ]
+            ).cropped(to: image.extent)
+        }
+        // Clarity: midtone local contrast — the same idea at a much larger radius,
+        // so it shapes broad regions rather than fine grain.
+        if adjustments.clarity > 0 {
+            image = filtered(
+                "CIUnsharpMask",
+                image: image,
+                values: [
+                    kCIInputRadiusKey: 8 + adjustments.clarity * 20,
+                    kCIInputIntensityKey: adjustments.clarity * 0.7,
+                ]
+            )
+        } else if adjustments.clarity < 0 {
+            let amount = -adjustments.clarity
+            image = filtered(
+                "CIMix",
+                image: blurred(image, radius: 4 + amount * 10),
+                values: [
+                    kCIInputBackgroundImageKey: image,
+                    "inputAmount": amount * 0.6,
+                ]
+            ).cropped(to: image.extent)
+        }
+        if abs(adjustments.dehaze) > 0.0001 {
+            image = applyDehaze(adjustments.dehaze, to: image)
+        }
         if adjustments.noiseReduction < 0 {
             // Left of centre removes noise; the slider reads as "how much noise
             // the photo has", so less is to the left.
@@ -1167,20 +1241,27 @@ actor PhotoRenderService {
         } else if adjustments.noiseReduction > 0 {
             image = applyGrain(adjustments.noiseReduction * 0.6, to: image)
         }
-        if abs(adjustments.vignette) > 0.0001 {
-            // A negative intensity brightens the corners instead of darkening
-            // them, so the same slider covers both looks.
+        if adjustments.colorNoiseReduction > 0 {
+            // `CINoiseReduction` with zero luminance sharpening leans on its chroma
+            // smoothing, which is what colour-noise reduction wants — clean up the
+            // speckle without softening detail.
             image = filtered(
-                "CIVignette",
+                "CINoiseReduction",
                 image: image,
                 values: [
-                    kCIInputIntensityKey: adjustments.vignette * 2,
-                    kCIInputRadiusKey: min(image.extent.width, image.extent.height) * 0.45,
+                    "inputNoiseLevel": adjustments.colorNoiseReduction * 0.05,
+                    "inputSharpness": 0.4,
                 ]
             )
         }
+        image = applyVignette(adjustments, to: image)
         if adjustments.grain > 0 {
-            image = applyGrain(adjustments.grain, to: image)
+            image = applyGrain(
+                adjustments.grain,
+                size: adjustments.grainSize,
+                roughness: adjustments.grainRoughness,
+                to: image
+            )
         }
         return image
     }
@@ -1200,12 +1281,17 @@ actor PhotoRenderService {
     /// pattern stays put between renders instead of boiling while a slider moves.
     /// The noise is desaturated and soft-light blended so it reads as film grain
     /// rather than colored sensor noise.
-    static func applyGrain(_ amount: Double, to input: CIImage) -> CIImage {
+    static func applyGrain(
+        _ amount: Double,
+        size: Double = 0,
+        roughness: Double = 0,
+        to input: CIImage
+    ) -> CIImage {
         let extent = input.extent
         guard extent.width > 1, extent.height > 1,
               let noise = CIFilter(name: "CIRandomGenerator")?.outputImage
         else { return input }
-        let grayNoise = filtered(
+        var grayNoise = filtered(
             "CIColorMatrix",
             image: noise,
             values: [
@@ -1216,9 +1302,20 @@ actor PhotoRenderService {
                 "inputBiasVector": CIVector(x: 0, y: 0, z: 0, w: 1),
             ]
         )
+        // Roughness hardens the grain by stretching the noise's contrast about its
+        // midpoint. 0 leaves the pattern as it was (so a plain Grain amount renders
+        // exactly as before); higher makes fewer, harsher specks.
+        if roughness > 0.0001 {
+            grayNoise = filtered(
+                "CIColorControls",
+                image: grayNoise,
+                values: [kCIInputContrastKey: 1 + roughness * 1.5]
+            )
+        }
         // Grain clumps are scaled with the image so a 2400 px preview and the
-        // full-resolution save show the same texture.
-        let grainScale = max(1, max(extent.width, extent.height) / 1_600)
+        // full-resolution save show the same texture; Size coarsens them on top of
+        // that (0 keeps the previous fine default).
+        let grainScale = max(1, max(extent.width, extent.height) / 1_600) * (1 + size * 1.5)
         let sized = grayNoise
             .transformed(by: CGAffineTransform(scaleX: grainScale, y: grainScale))
             .cropped(to: extent)
@@ -1235,6 +1332,45 @@ actor PhotoRenderService {
                 "inputAmount": min(1, max(0, amount)),
             ]
         ).cropped(to: extent)
+    }
+
+    /// A pragmatic dehaze — not a dark-channel transmission estimate, but the look
+    /// one produces. Positive lifts contrast and saturation, deepens the black
+    /// point and adds midtone local contrast to cut through flat haze; negative
+    /// fades the image and veils it toward a light haze grey.
+    static func applyDehaze(_ amount: Double, to input: CIImage) -> CIImage {
+        var image = filtered(
+            "CIColorControls",
+            image: input,
+            values: [
+                kCIInputContrastKey: 1 + amount * 0.35,
+                kCIInputSaturationKey: 1 + amount * 0.30,
+                kCIInputBrightnessKey: -amount * 0.04,
+            ]
+        )
+        if amount > 0 {
+            image = filtered(
+                "CIUnsharpMask",
+                image: image,
+                values: [
+                    kCIInputRadiusKey: 12 + amount * 18,
+                    kCIInputIntensityKey: amount * 0.4,
+                ]
+            )
+        } else {
+            let veil = -amount * 0.14
+            let haze = CIImage(color: CIColor(red: 0.85, green: 0.86, blue: 0.88))
+                .cropped(to: input.extent)
+            image = filtered(
+                "CIMix",
+                image: haze,
+                values: [
+                    kCIInputBackgroundImageKey: image,
+                    "inputAmount": veil,
+                ]
+            ).cropped(to: input.extent)
+        }
+        return image
     }
 
     /// Mixes the filtered image back over the unfiltered one so a preset can be

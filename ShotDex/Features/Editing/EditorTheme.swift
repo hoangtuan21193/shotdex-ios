@@ -10,6 +10,12 @@ enum EditorTheme {
     static var accent: Color { AppAccentTheme.stored.color }
     static let background = Color.black
     static let panel = Color(white: 0.055)
+    /// The opaque "28c" panel slab (`#0f1012`) — no blur, no glass. The whole edit
+    /// panel sits on this and the image never shows through it.
+    static let panelSolid = Color(red: 15 / 255, green: 16 / 255, blue: 18 / 255)
+    /// The 28c panel's 1pt top edge and its inner tier dividers.
+    static let panelTopHairline = Color.white.opacity(0.10)
+    static let panelDivider = Color.white.opacity(0.07)
     static let stickyHeader = Color(white: 0.078)
     static let control = Color(white: 0.11)
     static let sliderTrack = Color(white: 0.165)
@@ -35,8 +41,8 @@ enum EditorTheme {
 
     static let panelTitle = Font.system(size: 19, weight: .semibold)
     static let groupLabel = Font.system(size: 11.5, weight: .bold)
-    static let rowLabel = Font.system(size: 13.5)
-    static let rowValue = Font.system(size: 13).monospacedDigit()
+    static let rowLabel = Font.system(size: 12)
+    static let rowValue = Font.system(size: 11.5).monospacedDigit()
     static let tabLabel = Font.system(size: 10.5)
     static let pillLabel = Font.system(size: 11, weight: .semibold)
     static let maskTitle = Font.system(size: 14.5, weight: .semibold)

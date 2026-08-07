@@ -1,13 +1,16 @@
 import SwiftUI
 import UIKit
 
-/// One adjustment row: label · track · value.
+/// One "28c" parameter row: `[label 88][track][value 40]`, 34pt tall.
 ///
-/// The three columns are also the gesture rule from the spec. Label and value
-/// take taps only, so a pan that starts there always scrolls. The track hands the
-/// pan to `SliderPanCatcher`, which decides after 10pt whether the scroll view or
-/// the slider owns the gesture — never both — and only writes a value once the
-/// finger has moved 6pt.
+/// The whole row is one horizontal-drag surface — a pan that starts on the label,
+/// the track or the value all set the value (`delta = translation.x / trackWidth *
+/// range`). Press in place for 300ms first and the drag switches to fine mode
+/// (quarter rate). A vertical pan anywhere on the row scrolls the list instead. A
+/// double tap resets the row; a long press on the value column opens the numeric
+/// keypad. There is no round knob and no system `Slider`: the value is a white
+/// bar, the pushed range an accent bar with a glow, and a track that already
+/// carries a colour (Temp, Tint) is never tinted accent on top.
 struct EditorSliderRow: View {
     let kind: PhotoAdjustmentKind
     let value: Double
@@ -22,42 +25,36 @@ struct EditorSliderRow: View {
     @State private var dragStartDate = Date()
     @State private var hasActivated = false
     @State private var isHoldingDetent = false
+    @State private var trackWidth: CGFloat = 1
 
     private var range: ClosedRange<Double> { EditorAdjustmentCatalog.sliderRange(of: kind) }
     private var isBipolar: Bool { EditorAdjustmentCatalog.isBipolar(kind) }
-    private var isZero: Bool {
-        abs(value - PhotoAdjustments()[kind]) < 0.0001
-    }
+    private var identity: Double { PhotoAdjustments()[kind] }
+    private var isZero: Bool { abs(value - identity) < 0.0001 }
+    private var coloredGradient: LinearGradient? { EditorTheme.troughGradient(for: kind) }
 
     var body: some View {
         HStack(spacing: 10) {
-            Text(EditorAdjustmentCatalog.shortTitle(of: kind))
-                .font(EditorTheme.rowLabel)
-                .foregroundStyle(isZero ? EditorTheme.secondaryText : .white)
+            Text(EditorAdjustmentCatalog.shortTitle(of: kind).uppercased())
+                .font(.system(size: 10.5, weight: .semibold))
+                .tracking(0.5)
+                .foregroundStyle(isActive ? .white : EditorTheme.secondaryText)
                 .lineLimit(1)
-                .frame(width: EditorLayoutMetrics.sliderLabelWidth, alignment: .leading)
-                .frame(height: 44)
-                .contentShape(Rectangle())
-                .onTapGesture(count: 2) {
-                    UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
-                    onReset()
-                }
-                .accessibilityHint("Double tap to reset")
+                .frame(width: EditorLayoutMetrics.editorRowLabelWidth, alignment: .leading)
 
             track
 
             Text(EditorAdjustmentCatalog.displayText(value, of: kind))
-                .font(EditorTheme.rowValue)
-                .foregroundStyle(isZero ? EditorTheme.dimText : EditorTheme.accent)
+                .font(.system(size: 11.5, weight: .semibold).monospacedDigit())
+                .foregroundStyle(isActive ? EditorTheme.accent : Color.white.opacity(0.85))
                 .lineLimit(1)
-                .frame(width: EditorLayoutMetrics.sliderValueWidth, alignment: .trailing)
-                .frame(height: 44)
-                .contentShape(Rectangle())
-                .onTapGesture(perform: onEditValue)
-                .accessibilityHint("Tap to type a value")
+                .frame(width: EditorLayoutMetrics.editorRowValueWidth, alignment: .trailing)
         }
         .padding(.horizontal, 14)
-        .background(isActive ? EditorTheme.activeRow : .clear, in: RoundedRectangle(cornerRadius: 8))
+        .frame(height: EditorLayoutMetrics.editorRowHeight)
+        .background(isActive ? Color.white.opacity(0.05) : .clear)
+        .contentShape(Rectangle())
+        .overlay { gestureCatcher }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(kind.displayName)
         .accessibilityValue(EditorAdjustmentCatalog.displayText(value, of: kind))
@@ -74,75 +71,85 @@ struct EditorSliderRow: View {
         GeometryReader { proxy in
             let width = proxy.size.width
             let fraction = normalizedFraction
+            let anchor = anchorFraction
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(EditorTheme.troughGradient(for: kind) ?? troughFill)
-                    .frame(height: isActive ? 4 : 3)
+                    .fill(coloredGradient ?? neutralTrack)
+                    .frame(height: coloredGradient == nil ? 4 : 6)
 
-                if isBipolar {
-                    Rectangle()
-                        .fill(Color.white.opacity(0.28))
-                        .frame(width: 1, height: 8)
-                        .offset(x: width / 2 - 0.5)
+                if coloredGradient == nil {
+                    accentFill(width: width, fraction: fraction, anchor: anchor)
                 }
 
-                fill(width: width, fraction: fraction)
+                // Zero mark: bipolar rows only. A one-way row (Grain, Feather…) has
+                // no meaningful centre, so it gets none.
+                if isBipolar {
+                    Rectangle()
+                        .fill(Color.black.opacity(coloredGradient == nil ? 0.62 : 0.55))
+                        .frame(width: 1, height: coloredGradient == nil ? 8 : 10)
+                        .offset(x: anchor * width - 0.5)
+                }
 
-                Circle()
-                    .fill(.white)
-                    .frame(width: isActive ? 20 : 16, height: isActive ? 20 : 16)
-                    .shadow(color: .black.opacity(0.6), radius: 4, y: 2)
-                    .overlay {
-                        if isActive {
-                            Circle()
-                                .fill(EditorTheme.accent.opacity(0.3))
-                                .frame(width: 34, height: 34)
-                                .allowsHitTesting(false)
-                        }
-                    }
-                    .offset(x: min(width - 16, max(0, fraction * width - 8)))
+                cursor
+                    .offset(x: min(width - 4, max(0, fraction * width - 2)))
             }
-            .frame(height: EditorLayoutMetrics.sliderRowHeight)
             .frame(maxHeight: .infinity)
-            .overlay {
-                SliderPanCatcher(
-                    onBegan: {
-                        dragStartValue = value
-                        dragStartDate = Date()
-                        hasActivated = false
-                        isHoldingDetent = abs(value - PhotoAdjustments()[kind]) < 0.0001
-                        onBeginDrag()
-                    },
-                    onChanged: { translation in
-                        guard width > 0 else { return }
-                        guard abs(translation) >= EditorLayoutMetrics.sliderActivationDistance
-                        else { return }
-                        hasActivated = true
-                        let span = range.upperBound - range.lowerBound
-                        let proposed = dragStartValue + Double(translation / width) * span
-                        onDrag(
-                            detented(
-                                min(range.upperBound, max(range.lowerBound, proposed)),
-                                trackWidth: width
-                            )
-                        )
-                    },
-                    onEnded: { _ in
-                        let wasQuick = Date().timeIntervalSince(dragStartDate) < 0.25
-                        onEndDrag(dragStartValue, value, hasActivated && wasQuick)
-                        hasActivated = false
-                    }
-                )
-            }
+            .onAppear { trackWidth = max(1, width) }
+            .onChange(of: width) { trackWidth = max(1, $0) }
         }
-        .frame(height: 44)
+        .frame(height: EditorLayoutMetrics.editorRowHeight)
     }
 
-    /// Pulls the value onto its identity as the knob passes it and taps out a
-    /// selection haptic on the way in, so getting a slider back to 0 mid-drag
-    /// takes no precision and is felt rather than read.
+    private var cursor: some View {
+        RoundedRectangle(cornerRadius: 2)
+            .fill(.white)
+            .frame(width: 4, height: 14)
+            .modifier(CursorGlow(isColored: coloredGradient != nil))
+    }
+
+    private var gestureCatcher: some View {
+        EditorRowGestureCatcher(
+            valueColumnWidth: EditorLayoutMetrics.editorRowValueWidth + 14,
+            onBegan: {
+                dragStartValue = value
+                dragStartDate = Date()
+                hasActivated = false
+                isHoldingDetent = isZero
+                onBeginDrag()
+            },
+            onChanged: { translation, isFine in
+                guard trackWidth > 0 else { return }
+                guard abs(translation) >= EditorLayoutMetrics.sliderActivationDistance
+                else { return }
+                hasActivated = true
+                let span = range.upperBound - range.lowerBound
+                let gain = isFine ? EditorLayoutMetrics.sliderFineGain : 1
+                let proposed = dragStartValue
+                    + Double(translation / trackWidth) * span * gain
+                onDrag(
+                    detented(
+                        min(range.upperBound, max(range.lowerBound, proposed)),
+                        trackWidth: trackWidth
+                    )
+                )
+            },
+            onEnded: {
+                let wasQuick = Date().timeIntervalSince(dragStartDate) < 0.25
+                onEndDrag(dragStartValue, value, hasActivated && wasQuick)
+                hasActivated = false
+            },
+            onReset: {
+                UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
+                onReset()
+            },
+            onEditValue: onEditValue
+        )
+    }
+
+    /// Pulls the value onto its identity as the cursor passes it and taps out a
+    /// selection haptic on the way in, so getting a row back to 0 takes no
+    /// precision and is felt rather than read.
     private func detented(_ value: Double, trackWidth: CGFloat) -> Double {
-        let identity = PhotoAdjustments()[kind]
         let result = EditorLayoutMetrics.snapped(
             value,
             detent: identity,
@@ -157,36 +164,219 @@ struct EditorSliderRow: View {
         return result
     }
 
-    private var troughFill: LinearGradient {
+    private var neutralTrack: LinearGradient {
         LinearGradient(
-            colors: [EditorTheme.sliderTrack, EditorTheme.sliderTrack],
+            colors: [Color.white.opacity(0.14), Color.white.opacity(0.14)],
             startPoint: .leading,
             endPoint: .trailing
         )
     }
 
     private var normalizedFraction: CGFloat {
+        fraction(of: value)
+    }
+
+    /// Where the accent fill and the zero mark are anchored: the identity value.
+    /// For a bipolar row that is the centre; for a one-way row it is the left end.
+    private var anchorFraction: CGFloat {
+        fraction(of: identity)
+    }
+
+    private func fraction(of raw: Double) -> CGFloat {
         let span = range.upperBound - range.lowerBound
         guard span > 0 else { return 0 }
-        return CGFloat((value - range.lowerBound) / span)
+        return CGFloat((raw - range.lowerBound) / span)
     }
 
     @ViewBuilder
-    private func fill(width: CGFloat, fraction: CGFloat) -> some View {
-        if EditorTheme.troughGradient(for: kind) == nil {
-            let center: CGFloat = 0.5
-            if isBipolar {
-                let start = min(fraction, center)
-                let end = max(fraction, center)
-                Capsule()
-                    .fill(EditorTheme.accent)
-                    .frame(width: max(0, (end - start) * width), height: isActive ? 4 : 3)
-                    .offset(x: start * width)
-            } else {
-                Capsule()
-                    .fill(EditorTheme.accent)
-                    .frame(width: max(0, fraction * width), height: isActive ? 4 : 3)
+    private func accentFill(width: CGFloat, fraction: CGFloat, anchor: CGFloat) -> some View {
+        let start = min(fraction, anchor)
+        let end = max(fraction, anchor)
+        Capsule()
+            .fill(EditorTheme.accent)
+            .frame(width: max(0, (end - start) * width), height: 4)
+            .offset(x: start * width)
+            .shadow(color: EditorTheme.accent.opacity(0.65), radius: 5)
+    }
+}
+
+/// The cursor's glow. On a neutral track it is a soft white halo; on a coloured
+/// track the white bar instead gets a dark hairline and drop shadow so it stays
+/// legible over any hue it sits on.
+private struct CursorGlow: ViewModifier {
+    let isColored: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if isColored {
+            content
+                .overlay {
+                    RoundedRectangle(cornerRadius: 2)
+                        .stroke(Color.black.opacity(0.5), lineWidth: 1)
+                }
+                .shadow(color: .black.opacity(0.6), radius: 3, y: 1)
+        } else {
+            content.shadow(color: .white.opacity(0.75), radius: 4)
+        }
+    }
+}
+
+/// The whole-row gesture surface for a `EditorSliderRow`.
+///
+/// One `UIView` carries every gesture the row needs so they never fight a SwiftUI
+/// tap layered on top:
+/// - a horizontal pan sets the value (vertical pans fail so the list scrolls);
+/// - holding still for `sliderFineHoldSeconds` before moving switches the pan to
+///   fine mode, reported through `onChanged`'s `isFine` flag;
+/// - a double tap resets the row;
+/// - a long press that lands in the value column opens the numeric keypad.
+struct EditorRowGestureCatcher: UIViewRepresentable {
+    let valueColumnWidth: CGFloat
+    let onBegan: () -> Void
+    let onChanged: (CGFloat, Bool) -> Void
+    let onEnded: () -> Void
+    let onReset: () -> Void
+    let onEditValue: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(
+            valueColumnWidth: valueColumnWidth,
+            onBegan: onBegan,
+            onChanged: onChanged,
+            onEnded: onEnded,
+            onReset: onReset,
+            onEditValue: onEditValue
+        )
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        let pan = HorizontalPanGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handlePan(_:))
+        )
+        pan.maximumNumberOfTouches = 1
+        pan.delegate = context.coordinator
+
+        let doubleTap = UITapGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleDoubleTap(_:))
+        )
+        doubleTap.numberOfTapsRequired = 2
+
+        let longPress = UILongPressGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleLongPress(_:))
+        )
+        longPress.minimumPressDuration = 0.5
+
+        view.addGestureRecognizer(pan)
+        view.addGestureRecognizer(doubleTap)
+        view.addGestureRecognizer(longPress)
+        return view
+    }
+
+    func updateUIView(_: UIView, context: Context) {
+        context.coordinator.valueColumnWidth = valueColumnWidth
+        context.coordinator.onBegan = onBegan
+        context.coordinator.onChanged = onChanged
+        context.coordinator.onEnded = onEnded
+        context.coordinator.onReset = onReset
+        context.coordinator.onEditValue = onEditValue
+    }
+
+    @MainActor
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        var valueColumnWidth: CGFloat
+        var onBegan: () -> Void
+        var onChanged: (CGFloat, Bool) -> Void
+        var onEnded: () -> Void
+        var onReset: () -> Void
+        var onEditValue: () -> Void
+
+        private weak var suspendedScrollView: UIScrollView?
+        private var beganDate = Date()
+        private var isFine = false
+        private var decidedFine = false
+
+        init(
+            valueColumnWidth: CGFloat,
+            onBegan: @escaping () -> Void,
+            onChanged: @escaping (CGFloat, Bool) -> Void,
+            onEnded: @escaping () -> Void,
+            onReset: @escaping () -> Void,
+            onEditValue: @escaping () -> Void
+        ) {
+            self.valueColumnWidth = valueColumnWidth
+            self.onBegan = onBegan
+            self.onChanged = onChanged
+            self.onEnded = onEnded
+            self.onReset = onReset
+            self.onEditValue = onEditValue
+        }
+
+        @objc func handlePan(_ recognizer: UIPanGestureRecognizer) {
+            guard let view = recognizer.view else { return }
+            let translation = recognizer.translation(in: view).x
+            switch recognizer.state {
+            case .began:
+                suspendScrolling(from: view)
+                beganDate = Date()
+                isFine = false
+                decidedFine = false
+                onBegan()
+                onChanged(translation, false)
+            case .changed:
+                if !decidedFine,
+                   abs(translation) >= EditorLayoutMetrics.sliderActivationDistance {
+                    decidedFine = true
+                    isFine = Date().timeIntervalSince(beganDate)
+                        > EditorLayoutMetrics.sliderFineHoldSeconds
+                }
+                onChanged(translation, isFine)
+            case .ended, .cancelled, .failed:
+                resumeScrolling()
+                onEnded()
+            default:
+                break
             }
+        }
+
+        @objc func handleDoubleTap(_: UITapGestureRecognizer) {
+            onReset()
+        }
+
+        @objc func handleLongPress(_ recognizer: UILongPressGestureRecognizer) {
+            guard recognizer.state == .began, let view = recognizer.view else { return }
+            let x = recognizer.location(in: view).x
+            if x >= view.bounds.width - valueColumnWidth {
+                onEditValue()
+            }
+        }
+
+        private func suspendScrolling(from view: UIView) {
+            var candidate: UIView? = view.superview
+            while let current = candidate {
+                if let scrollView = current as? UIScrollView {
+                    scrollView.panGestureRecognizer.isEnabled = false
+                    suspendedScrollView = scrollView
+                    return
+                }
+                candidate = current.superview
+            }
+        }
+
+        private func resumeScrolling() {
+            suspendedScrollView?.panGestureRecognizer.isEnabled = true
+            suspendedScrollView = nil
+        }
+
+        func gestureRecognizer(
+            _ recognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
+        ) -> Bool {
+            // The pan owns the value and must never run alongside the taps.
+            false
         }
     }
 }

@@ -104,13 +104,6 @@ struct EditorMaskListPanel: View {
     private func open(_ mask: PhotoMask) {
         controller.selectMask(mask.id)
         controller.editSelectedMaskAdjustments()
-        // A brush mask that has never been painted opens straight into brush
-        // setup — Size dialog plus the footprint preview — the same way a
-        // gradient opens with its guides on.
-        if mask.components.first?.kind == .brush,
-           mask.components.allSatisfy({ $0.brushStrokes.isEmpty }) {
-            chrome.activeMaskControl = .brushSize
-        }
     }
 }
 
@@ -223,243 +216,6 @@ struct EditorMaskRow: View {
     }
 }
 
-/// How the mask's *shape* is edited, Lightroom iOS style: the shape's own
-/// parameters — brush Size and Feather, a gradient's Feather — are buttons right
-/// on the action row, each popping a one-slider dialog above the row
-/// (`EditorMaskControlPopup`), instead of sliders buried at the bottom of the
-/// scrolling panel. Everything else about the mask is a flat button too — delete,
-/// add/subtract toggle, invert, the red-tint eye — no overflow menu, and `Done`
-/// on the far right closes the mask and returns to the list.
-struct EditorMaskShapeControls: View {
-    @Bindable var controller: PhotoEditorController
-    @Bindable var chrome: EditorChromeModel
-
-    private var componentKind: PhotoMaskComponentKind? {
-        controller.selectedComponent?.kind
-    }
-
-    /// Radial / luminance / colour range masks have a `feather` of their own;
-    /// linear ignores it (the band *is* the ramp) and subject/sky have none.
-    private var hasShapeFeather: Bool {
-        componentKind == .radialGradient
-            || componentKind == .luminanceRange
-            || componentKind == .colorRange
-    }
-
-    var body: some View {
-        HStack(spacing: 4) {
-            // Delete sits leftmost — the full row away from Done, so finishing a
-            // mask and destroying it are never neighbouring taps.
-            deleteButton
-
-            // Icon-only, like the rest of the row: the popup each one opens is
-            // titled ("Size", "Feather"), so the glyph never has to carry the
-            // word for long. VoiceOver still reads the full name.
-            if componentKind == .brush {
-                controlButton(
-                    "Size",
-                    systemImage: "smallcircle.filled.circle",
-                    control: .brushSize
-                )
-                controlButton("Feather", systemImage: "circle.dashed", control: .brushFeather)
-            } else if hasShapeFeather {
-                controlButton("Feather", systemImage: "circle.dashed", control: .shapeFeather)
-            }
-
-            operationToggle
-
-            invertButton
-
-            // Shows or hides the red selection tint. Not an eye — the eye means
-            // "effect on/off" in every layers panel, and in this app's nav row
-            // too. The glyph is the tint itself: a red dot when the overlay is
-            // up, a slashed circle when it is off.
-            Button {
-                controller.setMaskOverlay(!controller.showsMaskOverlay)
-            } label: {
-                EditorPillLabel(
-                    text: nil,
-                    systemImage: controller.showsMaskOverlay ? "circle.fill" : "circle.slash",
-                    iconColor: controller.showsMaskOverlay
-                        ? Color(red: 1, green: 0.08, blue: 0.13)
-                        : nil
-                )
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Show mask area")
-            .accessibilityValue(controller.showsMaskOverlay ? "Shown" : "Hidden")
-
-            doneButton
-        }
-        // Leaving mask mode with a popup still up would strand it: next visit
-        // opens with a dialog nobody asked for.
-        .onDisappear { chrome.activeMaskControl = nil }
-    }
-
-    private var invertButton: some View {
-        Button {
-            controller.invertSelectedMask()
-        } label: {
-            EditorPillLabel(
-                text: nil,
-                systemImage: "circle.lefthalf.filled",
-                isActive: controller.selectedMask?.isInverted == true
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Invert mask")
-        .accessibilityValue(controller.selectedMask?.isInverted == true ? "On" : "Off")
-    }
-
-    private var deleteButton: some View {
-        Button {
-            controller.deleteSelectedMask()
-            chrome.resetZoom()
-            controller.closeSelectedMaskAdjustments()
-        } label: {
-            EditorPillLabel(text: nil, systemImage: "trash")
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Delete mask")
-    }
-
-    /// "I am finished with this mask": back to the list. Worded, not a glyph —
-    /// the same `Done` capsule as the crop tool's, in the same corner, so the two
-    /// modes end the same way.
-    private var doneButton: some View {
-        Button {
-            chrome.activeMaskControl = nil
-            chrome.resetZoom()
-            controller.closeSelectedMaskAdjustments()
-        } label: {
-            Text("Done")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.white)
-                // Two points slimmer than the crop tool's capsule: this row
-                // seats seven controls, crop's seats two.
-                .padding(.horizontal, 16)
-                .frame(height: 30)
-                .background(EditorTheme.accent, in: Capsule())
-                .frame(minHeight: 44)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Done with this mask")
-    }
-
-    /// Tap opens the slider dialog above the row; tapping again puts it away.
-    private func controlButton(
-        _ name: String,
-        systemImage: String,
-        control: EditorMaskControl
-    ) -> some View {
-        let isOpen = chrome.activeMaskControl == control
-        return Button {
-            chrome.activeMaskControl = isOpen ? nil : control
-        } label: {
-            EditorPillLabel(text: nil, systemImage: systemImage, isActive: isOpen)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(name) slider")
-        .accessibilityValue(isOpen ? "Open" : "Closed")
-    }
-
-    /// One button, two states — add or subtract — because a segmented pair spent
-    /// twice the width saying the same thing. Accent means subtract, the mode
-    /// that deserves the louder flag.
-    private var operationToggle: some View {
-        let isSubtracting = controller.maskOperation == .subtract
-        return Button {
-            controller.maskOperation = isSubtracting ? .add : .subtract
-        } label: {
-            EditorPillLabel(
-                text: nil,
-                systemImage: isSubtracting ? "minus.circle" : "plus.circle",
-                isActive: isSubtracting
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(isSubtracting ? "Subtracting from mask" : "Adding to mask")
-        .accessibilityHint("Tap to switch")
-    }
-
-}
-
-/// The one-slider dialog the shape buttons pop up, floating just above the action
-/// row. It reuses the panel's slider row, so the feel is identical — only the
-/// place changed: the slider now sits next to the button that named it, and the
-/// photo stays fully visible above. Painting dismisses it (the stage clears
-/// `activeMaskControl` on the first stroke touch).
-struct EditorMaskControlPopup: View {
-    @Bindable var controller: PhotoEditorController
-    let control: EditorMaskControl
-
-    var body: some View {
-        Group {
-            switch control {
-            case .brushSize:
-                brushSlider(
-                    "Size",
-                    value: controller.brushSize,
-                    range: EditorLayoutMetrics.brushSizeRange,
-                    resetTo: 0.25
-                ) { controller.brushSize = $0 }
-            case .brushFeather:
-                brushSlider("Feather", value: controller.brushFeather, range: 0...1, resetTo: 0.45) {
-                    controller.brushFeather = $0
-                }
-            case .shapeFeather:
-                if let component = controller.selectedComponent {
-                    shapeFeatherSlider(component)
-                }
-            }
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
-        .editorGlass(cornerRadius: 16)
-    }
-
-    /// Brush parameters live on the controller, not in the recipe: no history
-    /// entry and no continuous-change bracket, exactly like the old panel rows.
-    private func brushSlider(
-        _ title: String,
-        value: Double,
-        range: ClosedRange<Double>,
-        resetTo: Double,
-        write: @escaping (Double) -> Void
-    ) -> some View {
-        EditorPlainSliderRow(
-            title: title,
-            value: value,
-            range: range,
-            isBipolar: false,
-            valueText: EditorLayoutMetrics.brushAmountText(value, in: range),
-            isActive: false,
-            onBeginDrag: {},
-            onDrag: write,
-            onEndDrag: {},
-            onReset: { write(resetTo) }
-        )
-    }
-
-    private func shapeFeatherSlider(_ component: PhotoMaskComponent) -> some View {
-        EditorPlainSliderRow(
-            title: "Feather",
-            value: component.feather,
-            range: 0...1,
-            isBipolar: false,
-            valueText: EditorLayoutMetrics.brushAmountText(component.feather, in: 0...1),
-            isActive: false,
-            onBeginDrag: { controller.beginContinuousChange() },
-            onDrag: { value in
-                controller.updateSelectedComponent { $0.feather = value }
-            },
-            onEndDrag: { controller.endContinuousChange() },
-            onReset: {}
-        )
-    }
-
-}
 
 /// Mask housekeeping in the panel's nav row: rename and duplicate, plus dropping
 /// one shape of a multi-shape mask. Delete-the-mask lives on the action row as a
@@ -669,6 +425,7 @@ struct EditorMaskDetailPanel: View {
                 componentSlider("Opacity", keyPath: \.opacity, range: 0.01...1)
             case .radialGradient:
                 hint("Drag the photo to move, the dots to resize")
+                shapeFeatherRow(component)
                 componentSlider("Opacity", keyPath: \.opacity, range: 0.01...1)
             case .subject:
                 hint("Tap a person or object on the photo")
@@ -680,10 +437,12 @@ struct EditorMaskDetailPanel: View {
                 hint("Pick the range with the Min and Max sliders")
                 componentSlider("Min", keyPath: \.luminanceMinimum, range: 0...1)
                 componentSlider("Max", keyPath: \.luminanceMaximum, range: 0...1)
+                shapeFeatherRow(component)
                 componentSlider("Opacity", keyPath: \.opacity, range: 0.01...1)
             case .colorRange:
                 hint("Tap a colour on the photo")
                 componentSlider("Range", keyPath: \.colorTolerance, range: 0.01...1)
+                shapeFeatherRow(component)
                 componentSlider("Opacity", keyPath: \.opacity, range: 0.01...1)
             }
         }
@@ -718,28 +477,19 @@ struct EditorMaskDetailPanel: View {
         .frame(height: 52)
     }
 
-    /// Size and Feather moved up into the action row's popup dialogs — setting up
-    /// the shape happens next to the photo, not at the bottom of a scrolling
-    /// panel. Flow stays down here: it is a per-stroke build-up rate, tuned
-    /// rarely, and the action row has no width left for a fourth shape button.
+    /// Size / Feather / Flow are all rows now (28c): the whole panel is one row
+    /// language, and the shape controls left the floating pod for the action bar.
     @ViewBuilder
     private func brushRows(_ component: PhotoMaskComponent) -> some View {
-        hint("Set Size and Feather in the bar above the panel")
-        EditorPlainSliderRow(
-            title: "Flow",
-            value: controller.brushFlow,
-            range: 0.05...1,
-            isBipolar: false,
-            valueText: EditorLayoutMetrics.brushAmountText(
-                controller.brushFlow,
-                in: 0.05...1
-            ),
-            isActive: false,
-            onBeginDrag: {},
-            onDrag: { controller.brushFlow = $0 },
-            onEndDrag: {},
-            onReset: { controller.brushFlow = 0.8 }
-        )
+        brushSlider("Size", value: controller.brushSize, range: EditorLayoutMetrics.brushSizeRange, resetTo: 0.25) {
+            controller.brushSize = $0
+        }
+        brushSlider("Feather", value: controller.brushFeather, range: 0...1, resetTo: 0.45) {
+            controller.brushFeather = $0
+        }
+        brushSlider("Flow", value: controller.brushFlow, range: 0.05...1, resetTo: 0.8) {
+            controller.brushFlow = $0
+        }
         componentSlider("Opacity", keyPath: \.opacity, range: 0.01...1)
         Button("Clear Strokes") {
             controller.updateSelectedComponent { $0.brushStrokes = [] }
@@ -771,6 +521,49 @@ struct EditorMaskDetailPanel: View {
             },
             onEndDrag: { controller.endContinuousChange() },
             onReset: {}
+        )
+    }
+
+    /// Brush parameters (Size / Feather / Flow) live on the controller, not the
+    /// recipe: no history entry and no continuous-change bracket, so their rows
+    /// skip the `beginContinuousChange` plumbing the recipe-backed rows use.
+    private func brushSlider(
+        _ title: String,
+        value: Double,
+        range: ClosedRange<Double>,
+        resetTo: Double,
+        write: @escaping (Double) -> Void
+    ) -> some View {
+        EditorPlainSliderRow(
+            title: title,
+            value: value,
+            range: range,
+            isBipolar: false,
+            valueText: EditorLayoutMetrics.brushAmountText(value, in: range),
+            isActive: false,
+            onBeginDrag: {},
+            onDrag: write,
+            onEndDrag: {},
+            onReset: { write(resetTo) }
+        )
+    }
+
+    /// A radial / luminance / colour-range shape's own feather, as a row (it used
+    /// to be a popup dialog off the floating shape controls).
+    private func shapeFeatherRow(_ component: PhotoMaskComponent) -> some View {
+        EditorPlainSliderRow(
+            title: "Feather",
+            value: component.feather,
+            range: 0...1,
+            isBipolar: false,
+            valueText: EditorLayoutMetrics.brushAmountText(component.feather, in: 0...1),
+            isActive: false,
+            onBeginDrag: { controller.beginContinuousChange() },
+            onDrag: { value in
+                controller.updateSelectedComponent { $0.feather = value }
+            },
+            onEndDrag: { controller.endContinuousChange() },
+            onReset: { controller.updateSelectedComponent { $0.feather = 0 } }
         )
     }
 

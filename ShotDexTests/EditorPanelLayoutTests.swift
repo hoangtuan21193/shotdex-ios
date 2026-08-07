@@ -3,124 +3,24 @@ import Testing
 @testable import ShotDex
 
 struct EditorPanelLayoutTests {
-    @Test func panelHeightFollowsTheScreenClassAndStaysWithinBounds() {
-        // 6.1" and 6.9" phones get the documented 370/390pt.
-        #expect(EditorLayoutMetrics.panelHeight(forHeight: 852) == 370)
-        #expect(EditorLayoutMetrics.panelHeight(forHeight: 956) == 390)
-        // A 4.7" screen would be over the ceiling at 338pt, so the clamp wins.
-        let small = EditorLayoutMetrics.panelHeight(forHeight: 667)
-        #expect(small == 667 * 0.46)
-        for height in [667.0, 812, 852, 926, 956] {
-            let panel = EditorLayoutMetrics.panelHeight(forHeight: height)
-            #expect(panel >= height / 3)
-            #expect(panel <= height * 0.46)
-        }
-    }
 
-    /// The bar is six equal tabs wide on the narrowest supported phone and stays
-    /// readable. Eight is where a tab drops below a legible width — past that the
-    /// bar has to start scrolling rather than silently truncate a label.
-    @Test func everyToolTabStaysWideEnoughToRead() {
-        let count = PhotoEditorTool.allCases.count
-        #expect(count == 6)
-        #expect(
-            EditorLayoutMetrics.tabWidth(screenWidth: 375, tabCount: count)
-                >= EditorLayoutMetrics.tabMinimumWidth
-        )
-        // Eight tools no longer fit, which is the ceiling the bar must not cross
-        // without switching to a scrolling layout.
-        #expect(
-            EditorLayoutMetrics.tabWidth(screenWidth: 375, tabCount: 8)
-                < EditorLayoutMetrics.tabMinimumWidth
-        )
-        #expect(EditorLayoutMetrics.tabWidth(screenWidth: 375, tabCount: 0) == 0)
-    }
-
-    @Test func filterGridTakesTwoRowsOnEveryPanelTallEnoughToHoldThem() {
-        for height in [812.0, 852, 926, 956] {
-            let layout = EditorLayoutMetrics.filterGrid(
-                forPanelHeight: EditorLayoutMetrics.panelHeight(forHeight: height)
-            )
-            #expect(layout.rows == 2, "\(height)pt screen should get two rows")
-            #expect(layout.tileSide >= EditorLayoutMetrics.filterTileMinimumSide)
-            #expect(layout.tileSide <= EditorLayoutMetrics.filterTileMaximumSide)
-        }
-    }
-
-    @Test func filterGridDropsToOneRowRatherThanShrinkingSwatchesBelowUse() {
-        // A 4.7" panel cannot hold two readable rows, so it holds one.
-        let small = EditorLayoutMetrics.filterGrid(
-            forPanelHeight: EditorLayoutMetrics.panelHeight(forHeight: 667)
-        )
-        #expect(small.rows == 1)
-        #expect(small.tileSide >= EditorLayoutMetrics.filterTileMinimumSide)
-        // And a panel with nothing left over still returns something drawable.
-        let starved = EditorLayoutMetrics.filterGrid(forPanelHeight: 0)
-        #expect(starved.rows == 1)
-        #expect(starved.tileSide == EditorLayoutMetrics.filterTileMinimumSide)
-    }
-
-    @Test func theFilterGridFitsInsideThePanelItWasGiven() {
-        for height in [667.0, 812, 852, 926, 956] {
-            let panel = EditorLayoutMetrics.panelHeight(forHeight: height)
-            let layout = EditorLayoutMetrics.filterGrid(forPanelHeight: panel)
-            let rows = CGFloat(layout.rows)
-            let grid = (layout.tileSide + EditorLayoutMetrics.filterTileCaptionHeight) * rows
-                + EditorLayoutMetrics.filterGridRowSpacing * (rows - 1)
-            let content = panel - EditorLayoutMetrics.tabBarHeight
-            #expect(grid + EditorLayoutMetrics.filterPanelFixedHeight <= content + 0.001)
-        }
-    }
-
-    @Test func histogramSnapsToTheNearestCornerOfTheImageArea() {
-        let bounds = CGRect(x: 0, y: 100, width: 393, height: 460)
-        #expect(
-            EditorLayoutMetrics.nearestHistogramCorner(
-                to: CGPoint(x: 20, y: 120),
-                in: bounds
-            ) == .topLeading
-        )
-        #expect(
-            EditorLayoutMetrics.nearestHistogramCorner(
-                to: CGPoint(x: 380, y: 130),
-                in: bounds
-            ) == .topTrailing
-        )
-        #expect(
-            EditorLayoutMetrics.nearestHistogramCorner(
-                to: CGPoint(x: 10, y: 540),
-                in: bounds
-            ) == .bottomLeading
-        )
-        #expect(
-            EditorLayoutMetrics.nearestHistogramCorner(
-                to: CGPoint(x: 390, y: 550),
-                in: bounds
-            ) == .bottomTrailing
-        )
-    }
-
-    @Test func histogramCardKeepsItsInsetInEveryCorner() {
-        let bounds = CGRect(x: 0, y: 100, width: 393, height: 460)
-        let size = EditorLayoutMetrics.histogramSize(collapsed: false)
-        #expect(size.width == EditorLayoutMetrics.histogramCardWidth)
-        for corner in EditorHistogramCorner.allCases {
-            let center = EditorLayoutMetrics.histogramCenter(
-                for: corner,
-                cardSize: size,
-                in: bounds
-            )
-            let frame = CGRect(
-                x: center.x - size.width / 2,
-                y: center.y - size.height / 2,
-                width: size.width,
-                height: size.height
-            )
-            #expect(frame.minX >= bounds.minX + EditorLayoutMetrics.histogramInset - 0.01)
-            #expect(frame.maxX <= bounds.maxX - EditorLayoutMetrics.histogramInset + 0.01)
-            #expect(frame.minY >= bounds.minY + EditorLayoutMetrics.histogramInset - 0.01)
-            #expect(frame.maxY <= bounds.maxY - EditorLayoutMetrics.histogramInset + 0.01)
-        }
+    /// The 28c panel is one fixed slab, and the bottom group nav holds every
+    /// editing group as its own chip.
+    @Test func the28cPanelIsAFixedSlabWithTwelveGroupChips() {
+        #expect(EditorLayoutMetrics.editorPanelFixedHeight == 246)
+        #expect(EditorLayoutMetrics.editorActionBarHeight == 46)
+        #expect(EditorLayoutMetrics.editorGroupNavHeight == 48)
+        // Light · Color · Point · Grade · Effects · Detail · Optics · Geo · Crop ·
+        // Mask · Markup · Presets.
+        #expect(EditorGroup.allCases.count == 12)
+        #expect(EditorGroup.allCases.allSatisfy { !$0.title.isEmpty })
+        // The tool content gets whatever the fixed slab leaves after the action bar
+        // and the nav (plus the home-indicator inset) — a positive, usable height.
+        let content = EditorLayoutMetrics.editorPanelFixedHeight
+            - EditorLayoutMetrics.editorActionBarHeight
+            - EditorLayoutMetrics.editorGroupNavHeight
+            - EditorLayoutMetrics.panelBottomInset
+        #expect(content >= 120)
     }
 
     @Test func onlyNearHorizontalPansBelongToASlider() {

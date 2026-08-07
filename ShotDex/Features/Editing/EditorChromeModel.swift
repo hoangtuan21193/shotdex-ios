@@ -1,38 +1,9 @@
 import SwiftUI
 
-/// Presentation state of the editor chrome: where the histogram card sits, which
-/// slider currently owns the gesture, whether the image is full-bleed, and which
-/// sheet is up. Kept apart from `PhotoEditorController` so a pan never has to
-/// touch the render pipeline's state.
-/// One slider each, popped up over the action row by the mask shape buttons.
-/// `brush*` write the controller's brush parameters; `shapeFeather` writes the
-/// selected component's own `feather` (radial / luminance / color range).
-enum EditorMaskControl: String, Identifiable, Sendable {
-    case brushSize
-    case brushFeather
-    case shapeFeather
-
-    var id: String { rawValue }
-}
-
-/// The three sections of the Color tool panel.
-enum EditorColorSection: String, CaseIterable, Identifiable, Sendable {
-    case mixer
-    case pointColor
-    case grading
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .mixer: "Mixer"
-        case .pointColor: "Point Color"
-        case .grading: "Grading"
-        }
-    }
-}
-
-
+/// Presentation state of the editor chrome: which nav group is showing, which
+/// slider owns the gesture, whether the image is full-bleed, and which sheet is
+/// up. Kept apart from `PhotoEditorController` so a pan never has to touch the
+/// render pipeline's state.
 @MainActor
 @Observable
 final class EditorChromeModel {
@@ -41,21 +12,16 @@ final class EditorChromeModel {
         let message: String
     }
 
-    private enum Key {
-        static let histogramCorner = "shotdex.edit.histogramCorner"
-    }
-
-    var histogramCorner: EditorHistogramCorner {
-        didSet { defaults.set(histogramCorner.rawValue, forKey: Key.histogramCorner) }
-    }
-
-    /// Not persisted, and collapsed on open: the photo is what the editor is for,
-    /// so nothing covers it until the user asks for the readout by tapping the
-    /// pill in the action row.
-    var isHistogramCollapsed = true
-
-    /// Live drag position of the card; nil once it has snapped back to a corner.
-    var histogramDragOffset: CGSize?
+    /// Which 28c bottom-nav group is showing. Drives the panel content; the six
+    /// adjustment groups all sit on the controller's global `.adjust` tool.
+    var selectedGroup: EditorGroup = .light
+    /// Within the Color group, whether the Color Mix (HSL mixer) sub-view is open
+    /// rather than the base Temp/Tint/Vibrance/Saturation rows. Reset on every
+    /// group switch.
+    var showsColorMix = false
+    /// Color Mix target channel: `nil` shows all eight channels' HUE/SAT/LUM in one
+    /// scroll, a band shows just that channel's three rows. Reset on group switch.
+    var mixerChannel: ColorMixerBand?
 
     var isFullBleed = false
     var showsSplitCompare = false
@@ -70,16 +36,11 @@ final class EditorChromeModel {
     var isNewMaskSheetPresented = false
     var isHistorySheetPresented = false
     var isMaskPickerPresented = false
-    /// Which mask-shape slider is popped up over the action row (Lightroom-style
-    /// Size/Feather/Flow). Nil = no popup. Cleared the moment a brush stroke
-    /// starts, so the dialog never covers the area being painted.
-    var activeMaskControl: EditorMaskControl?
     var numericEntryKind: PhotoAdjustmentKind?
     var numericEntryText = ""
     var undoToast: UndoToast?
 
     // Color tool presentation state.
-    var colorSection: EditorColorSection = .mixer
     var gradingRegion: ColorGradingRegion = .midtones
     /// The eyedropper is armed: the next tap on the photo samples a point color.
     var isEyedropperActive = false
@@ -88,21 +49,9 @@ final class EditorChromeModel {
     /// BOTH this and `activeSlider`.
     var activePlainSliderID: String?
 
-    @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var toastTask: Task<Void, Never>?
 
-    init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
-        histogramCorner = defaults.string(forKey: Key.histogramCorner)
-            .flatMap(EditorHistogramCorner.init(rawValue:)) ?? .topTrailing
-    }
-
-    /// Tapping the expanded card parks it as a pill in the top bar, off the photo
-    /// entirely. Expanding again brings it back to the corner it was dropped in.
-    func collapseHistogram() {
-        histogramDragOffset = nil
-        isHistogramCollapsed = true
-    }
+    init() {}
 
     var isZoomedIn: Bool { zoomScale > 1.01 }
 

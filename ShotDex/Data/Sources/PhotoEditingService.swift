@@ -701,6 +701,9 @@ private final class LivePhotoFrameRenderer: @unchecked Sendable {
             appliesExposure: true
         )
         image = PhotoRenderService.applyColor(recipe.color, to: image)
+        image = PhotoRenderService.applyCurve(recipe.curve, to: image)
+        image = PhotoRenderService.applyOptics(recipe.adjustments, to: image)
+        image = PhotoRenderService.applyGeo(recipe.adjustments, to: image)
         image = PhotoRenderService.applyFilter(
             recipe.filter,
             intensity: recipe.filterIntensity,

@@ -1,78 +1,88 @@
 import SwiftUI
 import UIKit
 
-/// The Color tool: Mixer / Point Color / Grading behind a fixed section picker.
-/// The panel's content height is only ~230–280pt, so each section owns the
-/// space alone instead of sharing one long scroll.
-struct EditorColorPanel: View {
-    @Bindable var controller: PhotoEditorController
-    @Bindable var chrome: EditorChromeModel
-
-    var body: some View {
-        VStack(spacing: 0) {
-            sectionPicker
-            switch chrome.colorSection {
-            case .mixer:
-                EditorColorMixerSection(controller: controller, chrome: chrome)
-            case .pointColor:
-                EditorPointColorSection(controller: controller, chrome: chrome)
-            case .grading:
-                EditorColorGradingSection(controller: controller, chrome: chrome)
-            }
-        }
-    }
-
-    private var sectionPicker: some View {
-        HStack(spacing: 4) {
-            ForEach(EditorColorSection.allCases) { section in
-                let isSelected = chrome.colorSection == section
-                Button {
-                    withAnimation(EditorTheme.animation) {
-                        chrome.colorSection = section
-                        chrome.isEyedropperActive = false
-                    }
-                } label: {
-                    Text(section.title)
-                        .font(.system(size: 12, weight: .semibold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .foregroundStyle(isSelected ? Color.white : EditorTheme.secondaryText)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 30)
-                        .background(
-                            isSelected ? EditorTheme.accent : Color.clear,
-                            in: Capsule()
-                        )
-                        .contentShape(Capsule())
-                }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(isSelected ? .isSelected : [])
-            }
-        }
-        .padding(3)
-        .background(EditorTheme.control, in: Capsule())
-        .padding(.horizontal, 14)
-        .padding(.top, 8)
-        .padding(.bottom, 4)
-    }
-}
+// The Color tool used to be one tab behind a Mixer | Point Color | Grading
+// section picker; it is now three sibling tabs (`PhotoEditorTool.colorMixer` /
+// `.pointColor` / `.colorGrading`), so each block is one tap and owns the whole
+// panel. `PhotoEditorScreen.toolPanel` renders one of the three section views
+// below directly — there is no wrapper and no picker.
 
 // MARK: - Mixer
 
-private struct EditorColorMixerSection: View {
+struct EditorColorMixerSection: View {
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
 
-    /// All three properties in one scroll with sticky headers — the same shape
-    /// as the Adjust panel. A Hue/Saturation/Luminance/All chip row on top of it
-    /// spent 38pt to hide two thirds of the sliders behind a tap.
+    /// A channel target strip (28c §6): "All" shows every channel's HUE / SAT / LUM
+    /// in one scroll (the previous shape); picking a channel narrows to just that
+    /// channel's three rows, each track tinted the way the channel would shift.
     var body: some View {
+        VStack(spacing: 0) {
+            channelStrip
+                .padding(.top, 8)
+                .padding(.bottom, 4)
+            if let band = chrome.mixerChannel {
+                ScrollView(.vertical) {
+                    VStack(spacing: 0) {
+                        mixerRow(band: band, property: .hue, title: "Hue")
+                        mixerRow(band: band, property: .saturation, title: "Saturation")
+                        mixerRow(band: band, property: .luminance, title: "Luminance")
+                        Color.clear.frame(height: 16)
+                    }
+                }
+                .scrollDisabled(chrome.activePlainSliderID != nil)
+            } else {
+                allChannelsScroll
+            }
+        }
+    }
+
+    private var channelStrip: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 8) {
+                Button("All") {
+                    withAnimation(EditorTheme.animation) { chrome.mixerChannel = nil }
+                }
+                .buttonStyle(EditorChipButtonStyle(isSelected: chrome.mixerChannel == nil))
+
+                ForEach(ColorMixerBand.allCases) { band in
+                    let isSelected = chrome.mixerChannel == band
+                    Button {
+                        withAnimation(EditorTheme.animation) { chrome.mixerChannel = band }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(EditorColorMixerStyle.hueColor(
+                                    band.centerDegrees,
+                                    saturation: 0.85,
+                                    brightness: 0.95
+                                ))
+                                .frame(width: 12, height: 12)
+                                .overlay {
+                                    Circle().strokeBorder(Color.white.opacity(0.3), lineWidth: 0.5)
+                                }
+                            Text(band.displayName)
+                        }
+                    }
+                    .buttonStyle(EditorChipButtonStyle(isSelected: isSelected))
+                    .accessibilityLabel(band.displayName)
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
+                }
+            }
+            .padding(.horizontal, 14)
+        }
+        .scrollIndicators(.hidden)
+    }
+
+    private var allChannelsScroll: some View {
         ScrollView(.vertical) {
             LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
                 ForEach(ColorMixerProperty.allCases) { property in
                     Section {
-                        bandRows(property)
-                            .padding(.bottom, 2)
+                        ForEach(ColorMixerBand.allCases) { band in
+                            mixerRow(band: band, property: property, title: band.displayName)
+                        }
+                        .padding(.bottom, 2)
                     } header: {
                         EditorGroupHeader(
                             title: property.displayName,
@@ -96,50 +106,52 @@ private struct EditorColorMixerSection: View {
         }
     }
 
-    @ViewBuilder
-    private func bandRows(_ property: ColorMixerProperty) -> some View {
-        ForEach(ColorMixerBand.allCases) { band in
-            let sliderID = "mixer.\(property.rawValue).\(band.rawValue)"
-            EditorPlainSliderRow(
-                title: band.displayName,
-                value: controller.mixerValue(band: band, property: property) * 100,
-                range: -100...100,
-                isBipolar: true,
-                valueText: EditorColorFormat.signed(
-                    controller.mixerValue(band: band, property: property) * 100
-                ),
-                isActive: chrome.activePlainSliderID == sliderID,
-                detent: 0,
-                trackGradient: EditorColorMixerStyle.gradient(band: band, property: property),
-                onBeginDrag: {
-                    controller.beginContinuousChange()
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    chrome.activePlainSliderID = sliderID
-                },
-                onDrag: { value in
-                    controller.setMixerValue(value / 100, band: band, property: property)
-                },
-                onEndDrag: {
-                    controller.endContinuousChange()
-                    chrome.activePlainSliderID = nil
-                },
-                onReset: {
-                    controller.setMixerValue(0, band: band, property: property)
-                }
-            )
-        }
+    private func mixerRow(
+        band: ColorMixerBand,
+        property: ColorMixerProperty,
+        title: String
+    ) -> some View {
+        let sliderID = "mixer.\(property.rawValue).\(band.rawValue)"
+        return EditorPlainSliderRow(
+            title: title,
+            value: controller.mixerValue(band: band, property: property) * 100,
+            range: -100...100,
+            isBipolar: true,
+            valueText: EditorColorFormat.signed(
+                controller.mixerValue(band: band, property: property) * 100
+            ),
+            isActive: chrome.activePlainSliderID == sliderID,
+            detent: 0,
+            trackGradient: EditorColorMixerStyle.gradient(band: band, property: property),
+            onBeginDrag: {
+                controller.beginContinuousChange()
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                chrome.activePlainSliderID = sliderID
+            },
+            onDrag: { value in
+                controller.setMixerValue(value / 100, band: band, property: property)
+            },
+            onEndDrag: {
+                controller.endContinuousChange()
+                chrome.activePlainSliderID = nil
+            },
+            onReset: {
+                controller.setMixerValue(0, band: band, property: property)
+            }
+        )
     }
 }
 
 // MARK: - Point Color
 
-private struct EditorPointColorSection: View {
+struct EditorPointColorSection: View {
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
 
     var body: some View {
         VStack(spacing: 0) {
             swatchRow
+                .padding(.top, 6)
             ScrollView(.vertical) {
                 VStack(spacing: 0) {
                     if let point = controller.selectedPointColor {
@@ -351,7 +363,7 @@ private struct EditorPointColorSection: View {
 
 // MARK: - Grading
 
-private struct EditorColorGradingSection: View {
+struct EditorColorGradingSection: View {
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
 
@@ -359,29 +371,43 @@ private struct EditorColorGradingSection: View {
         ScrollView(.vertical) {
             VStack(spacing: 8) {
                 regionSelector
-                EditorColorWheel(
-                    hue: controller.gradingWheel(chrome.gradingRegion).hue / 360,
-                    saturation: controller.gradingWheel(chrome.gradingRegion).saturation,
-                    onBegin: {
-                        controller.beginContinuousChange()
-                        chrome.activePlainSliderID = "grading.wheel"
-                    },
-                    onChange: { hue, saturation in
-                        controller.setGradingHueSat(
-                            region: chrome.gradingRegion,
-                            hue: hue * 360,
-                            saturation: saturation
-                        )
-                    },
-                    onEnd: {
-                        controller.endContinuousChange()
-                        chrome.activePlainSliderID = nil
-                    },
-                    onReset: {
-                        controller.resetColorGrading(region: chrome.gradingRegion)
-                    }
-                )
-                .padding(.top, 2)
+                // 28c Grade is three rows per region — Hue / Saturation / Luminance —
+                // not a tint wheel: the whole panel is one row language now, and the
+                // wheel needed height the fixed 246pt slab does not have. Hue and
+                // Saturation write through the same `setGradingHueSat` the wheel did.
+                gradingRow(
+                    id: "grading.hue",
+                    title: "Hue",
+                    value: controller.gradingWheel(chrome.gradingRegion).hue,
+                    range: 0...360,
+                    isBipolar: false,
+                    gradient: EditorColorMixerStyle.fullHueGradient,
+                    valueText: "\(Int(controller.gradingWheel(chrome.gradingRegion).hue.rounded()))°",
+                    resetValue: 0
+                ) { value in
+                    controller.setGradingHueSat(
+                        region: chrome.gradingRegion,
+                        hue: value,
+                        saturation: controller.gradingWheel(chrome.gradingRegion).saturation
+                    )
+                }
+                gradingRow(
+                    id: "grading.saturation",
+                    title: "Saturation",
+                    value: controller.gradingWheel(chrome.gradingRegion).saturation * 100,
+                    range: 0...100,
+                    isBipolar: false,
+                    gradient: EditorColorMixerStyle.saturationGradient(
+                        aroundDegrees: controller.gradingWheel(chrome.gradingRegion).hue
+                    ),
+                    resetValue: 0
+                ) { value in
+                    controller.setGradingHueSat(
+                        region: chrome.gradingRegion,
+                        hue: controller.gradingWheel(chrome.gradingRegion).hue,
+                        saturation: value / 100
+                    )
+                }
                 gradingRow(
                     id: "grading.luminance",
                     title: "Luminance",
@@ -418,49 +444,52 @@ private struct EditorColorGradingSection: View {
                 }
                 Color.clear.frame(height: 12)
             }
+            .padding(.top, 6)
         }
         .scrollDisabled(chrome.activePlainSliderID != nil)
     }
 
+    /// Region picker in the same capsule-chip language as the Filters and Crop
+    /// strips — a horizontal `EditorChipButtonStyle` strip, accent when selected —
+    /// instead of the old dot-over-caption buttons that read as a different control
+    /// from every other tab. Natural-width chips in a horizontal scroll, exactly
+    /// like `EditorFiltersPanel.categoryStrip`; the four fit a phone without
+    /// scrolling and larger Dynamic Type scrolls rather than truncating. The
+    /// per-region tint stays on as a small leading dot inside each chip, so the
+    /// readout the wheel writes is not lost.
     private var regionSelector: some View {
-        HStack(spacing: 6) {
-            ForEach(ColorGradingRegion.allCases) { region in
-                let isSelected = chrome.gradingRegion == region
-                Button {
-                    withAnimation(EditorTheme.animation) {
-                        chrome.gradingRegion = region
+        ScrollView(.horizontal) {
+            HStack(spacing: 8) {
+                ForEach(ColorGradingRegion.allCases) { region in
+                    let isSelected = chrome.gradingRegion == region
+                    Button {
+                        withAnimation(EditorTheme.animation) {
+                            chrome.gradingRegion = region
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(EditorColorMixerStyle.regionTint(
+                                    controller.gradingWheel(region)
+                                ))
+                                .frame(width: 10, height: 10)
+                                .overlay {
+                                    Circle().strokeBorder(
+                                        Color.white.opacity(0.3),
+                                        lineWidth: 0.5
+                                    )
+                                }
+                            Text(region.displayName)
+                        }
                     }
-                } label: {
-                    VStack(spacing: 3) {
-                        Circle()
-                            .fill(EditorColorMixerStyle.regionTint(
-                                controller.gradingWheel(region)
-                            ))
-                            .frame(width: 22, height: 22)
-                            .overlay {
-                                Circle().strokeBorder(
-                                    isSelected ? EditorTheme.accent : EditorTheme.hairline,
-                                    lineWidth: isSelected ? 2 : 1
-                                )
-                            }
-                        Text(region.displayName)
-                            .font(.system(size: 10.5))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                            .foregroundStyle(
-                                isSelected ? EditorTheme.accent : EditorTheme.secondaryText
-                            )
-                    }
-                    .frame(maxWidth: .infinity)
-                    .contentShape(Rectangle())
+                    .buttonStyle(EditorChipButtonStyle(isSelected: isSelected))
+                    .accessibilityLabel(region.displayName)
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(region.displayName)
-                .accessibilityAddTraits(isSelected ? .isSelected : [])
             }
+            .padding(.horizontal, 14)
         }
-        .padding(.horizontal, 14)
-        .padding(.top, 4)
+        .scrollIndicators(.hidden)
     }
 
     private func gradingRow(
@@ -470,6 +499,8 @@ private struct EditorColorGradingSection: View {
         range: ClosedRange<Double>,
         isBipolar: Bool,
         gradient: LinearGradient?,
+        valueText: String? = nil,
+        resetValue: Double? = nil,
         write: @escaping (Double) -> Void
     ) -> some View {
         EditorPlainSliderRow(
@@ -477,9 +508,10 @@ private struct EditorColorGradingSection: View {
             value: value,
             range: range,
             isBipolar: isBipolar,
-            valueText: isBipolar
-                ? EditorColorFormat.signed(value)
-                : "\(Int(value.rounded()))",
+            valueText: valueText
+                ?? (isBipolar
+                    ? EditorColorFormat.signed(value)
+                    : "\(Int(value.rounded()))"),
             isActive: chrome.activePlainSliderID == id,
             detent: isBipolar ? 0 : nil,
             trackGradient: gradient,
@@ -493,7 +525,7 @@ private struct EditorColorGradingSection: View {
                 controller.endContinuousChange()
                 chrome.activePlainSliderID = nil
             },
-            onReset: { write(isBipolar ? 0 : 50) }
+            onReset: { write(resetValue ?? (isBipolar ? 0 : 50)) }
         )
     }
 }
@@ -565,6 +597,15 @@ enum EditorColorMixerStyle {
 
     static let neutralLuminanceGradient = LinearGradient(
         colors: [Color(white: 0.1), Color(white: 0.95)],
+        startPoint: .leading,
+        endPoint: .trailing
+    )
+
+    /// The whole hue wheel laid out flat, for the Grade Hue row.
+    static let fullHueGradient = LinearGradient(
+        colors: stride(from: 0.0, through: 360, by: 30).map {
+            hueColor($0, saturation: 0.9)
+        },
         startPoint: .leading,
         endPoint: .trailing
     )

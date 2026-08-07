@@ -4,7 +4,13 @@ import UIKit
 
 enum PhotoEditorTool: String, CaseIterable, Identifiable {
     case adjust
-    case color
+    /// The old single Color tab, split into its three Lightroom blocks so each is
+    /// one tap rather than a tap plus a section switch. The three sit together,
+    /// right of Adjust, where Color used to be — the eighth tab is what pushed the
+    /// bar to scroll horizontally (`PhotoEditorScreen.tabBar`).
+    case colorMixer
+    case pointColor
+    case colorGrading
     case filters
     /// The Markup tab: text, image and signature-preset layers plus freehand
     /// drawing. The raw value stays `markup` for a clean identifier; the tab used
@@ -18,7 +24,9 @@ enum PhotoEditorTool: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .adjust: "Adjust"
-        case .color: "Color"
+        case .colorMixer: "Mixer"
+        case .pointColor: "Point"
+        case .colorGrading: "Grading"
         case .filters: "Filters"
         case .markup: "Markup"
         case .crop: "Crop"
@@ -29,7 +37,9 @@ enum PhotoEditorTool: String, CaseIterable, Identifiable {
     var systemImage: String {
         switch self {
         case .adjust: "slider.horizontal.3"
-        case .color: "circle.hexagongrid"
+        case .colorMixer: "circle.hexagongrid"
+        case .pointColor: "eyedropper"
+        case .colorGrading: "paintpalette"
         case .filters: "camera.filters"
         case .markup: "pencil.tip.crop.circle"
         case .crop: "crop.rotate"
@@ -38,9 +48,64 @@ enum PhotoEditorTool: String, CaseIterable, Identifiable {
     }
 }
 
+/// The 28c bottom nav: one chip per editing group. Finer than `PhotoEditorTool` —
+/// Light / Color / Effects / Detail / Optics / Geo all drive the single global
+/// `.adjust` tool but show different rows — so the group is its own selection,
+/// held on `EditorChromeModel.selectedGroup`. The chip order is the nav order.
+enum EditorGroup: String, CaseIterable, Identifiable {
+    case light
+    case color
+    case pointColor
+    case grade
+    case effects
+    case detail
+    case optics
+    case geo
+    case crop
+    case mask
+    case markup
+    case presets
+
+    var id: String { rawValue }
+
+    /// Plain (not upper-cased) chip title, per 28c §5.
+    var title: String {
+        switch self {
+        case .light: "Light"
+        case .color: "Color"
+        case .pointColor: "Point"
+        case .grade: "Grade"
+        case .effects: "Effects"
+        case .detail: "Detail"
+        case .optics: "Optics"
+        case .geo: "Geo"
+        case .crop: "Crop"
+        case .mask: "Mask"
+        case .markup: "Markup"
+        case .presets: "Presets"
+        }
+    }
+
+    /// The tool this group activates. The six adjustment-style groups share the
+    /// global `.adjust` tool; the rest map one-to-one. (Optics and Geo have no
+    /// parameters yet, so they sit on `.adjust` and show a placeholder.)
+    var tool: PhotoEditorTool {
+        switch self {
+        case .light, .color, .effects, .detail, .optics, .geo: .adjust
+        case .pointColor: .pointColor
+        case .grade: .colorGrading
+        case .crop: .crop
+        case .mask: .masks
+        case .markup: .markup
+        case .presets: .filters
+        }
+    }
+}
+
 @MainActor
 @Observable
 final class PhotoEditorController {
+    // Curve setters live in an extension at the end of this file.
     let asset: PHAsset
     let sourceAlbum: PHAssetCollection?
     /// What `{camera}`-style tokens in a text layer expand to. Resolved once from
@@ -1937,5 +2002,33 @@ final class PhotoEditorController {
                 Double(values[2]) / 255
             )
         }
+    }
+}
+
+// MARK: - Tone curve
+
+extension PhotoEditorController {
+    /// Replace one channel's control points. The full-screen curve editor calls
+    /// this live inside a `beginContinuousChange` / `endContinuousChange` bracket,
+    /// exactly like the grading rows, so a drag coalesces into one undo step.
+    func setCurve(_ points: [CurvePoint], for channel: ToneCurveChannel) {
+        recipe.curve[channel] = points
+        scheduleRender()
+    }
+
+    /// Straighten one channel back to the identity line.
+    func resetCurve(_ channel: ToneCurveChannel) {
+        beginContinuousChange()
+        recipe.curve[channel] = ToneCurveAdjustments.linear
+        endContinuousChange()
+        scheduleRender()
+    }
+
+    /// Straighten every channel.
+    func resetAllCurves() {
+        beginContinuousChange()
+        recipe.curve = .identity
+        endContinuousChange()
+        scheduleRender()
     }
 }

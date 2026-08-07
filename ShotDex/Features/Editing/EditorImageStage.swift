@@ -8,7 +8,6 @@ struct EditorImageStage: View {
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
     @Bindable var drawSession: EditorDrawSession
-    let histogramNamespace: Namespace.ID
     @Environment(\.displayScale) private var displayScale
 
     @State private var isDrawing = false
@@ -50,7 +49,7 @@ struct EditorImageStage: View {
 
     /// The point-color eyedropper is armed: the next touch samples the photo.
     private var isSamplingColor: Bool {
-        controller.selectedTool == .color && chrome.isEyedropperActive
+        controller.selectedTool == .pointColor && chrome.isEyedropperActive
     }
 
     /// An `EditorPaintTouchLayer` is installed over the photo, so it owns both the
@@ -220,23 +219,6 @@ struct EditorImageStage: View {
                         )
                     }
 
-                    // While a Size/Feather/Flow popup is up, the footprint the
-                    // next stroke will lay down previews in the middle of the
-                    // photo — Lightroom's own move — so the sliders are never
-                    // adjusting an invisible number.
-                    if !isDrawing,
-                       controller.selectedComponent?.kind == .brush,
-                       let control = chrome.activeMaskControl,
-                       control != .shapeFeather {
-                        EditorBrushCursor(
-                            point: CGPoint(x: imageRect.midX, y: imageRect.midY),
-                            size: controller.brushSize,
-                            feather: controller.brushFeather,
-                            isEraser: controller.brushIsEraser,
-                            imageRect: imageRect,
-                            zoomScale: chrome.zoomScale
-                        )
-                    }
 
                     if let brushLocation,
                        controller.selectedComponent?.kind == .brush {
@@ -395,18 +377,9 @@ struct EditorImageStage: View {
     @ViewBuilder
     private func overlays(imageRect: CGRect, stageRect: CGRect) -> some View {
         ZStack {
-            // Expanded, the card roams the whole stage — not just the photo: a
-            // landscape shot leaves black bands above and below, and parking the
-            // card there keeps it off the picture entirely. Collapsed, it is not
-            // here at all: the pill lives in the top bar.
-            if !chrome.isHistogramCollapsed {
-                EditorHistogramCard(
-                    histogram: controller.histogram,
-                    chrome: chrome,
-                    bounds: stageRect,
-                    namespace: histogramNamespace
-                )
-            }
+            // The histogram no longer floats over the photo — it lives as a mini
+            // readout in the panel's action bar (28c), so nothing here covers the
+            // image. Only transient, on-photo affordances remain below.
 
             // Live zoom readout while the fingers are still on the photo, top-left
             // like Lightroom's. It replaces a permanent `1:1` pill that said
@@ -653,9 +626,6 @@ struct EditorImageStage: View {
                 controller.continueBrushStroke(at: point)
             } else {
                 isDrawing = true
-                // The finger is now the control: the popup dialog gets
-                // out of the way of the area being painted.
-                chrome.activeMaskControl = nil
                 controller.beginBrushStroke(at: point, zoomScale: chrome.zoomScale)
             }
         case .linearGradient, .radialGradient:
