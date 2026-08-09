@@ -2,17 +2,18 @@ import PencilKit
 import Photos
 import SwiftUI
 
-/// Photo editor: top bar, photo, fixed panel (action row + tool content + tab bar).
+/// Photo editor (Turn 31): a Dynamic Island band, the photo, and a fixed panel.
 ///
-/// The panel height is fixed for the whole session — it does not change when the
-/// list scrolls, when the tab changes, when a mask is opened, or while a slider is
-/// being dragged. Only full-bleed takes it away. The chrome claims both safe
-/// areas so the photo gets that height: the first row sits level with the Dynamic
-/// Island and the tab bar sits close to the bottom edge. The histogram floats over
-/// the photo when expanded and parks in the top bar when collapsed. Every session
-/// opens on the Adjust tab. The top bar carries only Cancel and Done; everything
-/// that acts on the session lives in the panel's fixed action row, in reach of a
-/// thumb.
+/// There is no top bar and no in-panel command row. A floating command row rides
+/// the band over the Dynamic Island: undo / redo / hold-for-original on the leading
+/// edge, the histogram mini (taps to expand the floating card) and the ⋯ menu on
+/// the trailing edge. The panel height is fixed for the whole session and never
+/// resizes — its tiers, top to bottom, are the scrolling parameter zone (an
+/// optional Grade target strip is its first row, so the panel is the same height on
+/// every tab), the group strip — a snap wheel flanked by Back and Save — and a bare
+/// home-indicator inset. The wheel is the one horizontally-scrolling tier and sits
+/// above only the 10pt inset, which the system's vertical edge swipe leaves alone.
+/// Only full-bleed takes the panel away. Every session opens on the Adjust tab.
 struct PhotoEditorScreen: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppDependencies.self) private var dependencies
@@ -49,10 +50,10 @@ struct PhotoEditorScreen: View {
     @State private var isSignatureNamePresented = false
     @State private var signatureName = ""
     @State private var drawSession = EditorDrawSession()
-    /// Whether the group nav's paging arrow has jumped to the end (chevron flips to
-    /// page back to the start).
-    @State private var groupNavAtEnd = false
     @State private var isCurveEditorPresented = false
+    /// Ties the band's histogram pill to the floating card so expanding /
+    /// collapsing animates as one object moving between the two.
+    @Namespace private var histogramNamespace
 
     var body: some View {
         ZStack {
@@ -283,31 +284,54 @@ struct PhotoEditorScreen: View {
 
     private func editor(_ controller: PhotoEditorController) -> some View {
         @Bindable var chrome = chrome
-        return GeometryReader { _ in
-            // 28c: the panel is one fixed 246pt slab glued to the bottom. The image
-            // takes everything above it and is never overlapped by it.
-            let panelHeight = EditorLayoutMetrics.editorPanelFixedHeight
-            // The editor claims the top safe area itself: the chrome starts level
-            // with the Dynamic Island rather than under it.
+        return GeometryReader { proxy in
+            // 30c: the panel is one fixed slab glued to the bottom, the photo above
+            // it, and a band over the Dynamic Island carrying the histogram and the
+            // clipping readout. The editor claims both safe areas so the photo gets
+            // that height.
+            let panelHeight = EditorLayoutMetrics.editorPanelHeight
+            // The band must reach past the bottom of the Dynamic Island so a tall,
+            // aspect-fit photo starts *below* it — the 48pt design height is short of
+            // the ~59pt top safe area on Face-ID iPhones, which is what was slicing
+            // the top of tall images. Grow it to the real inset when that is larger.
+            let bandHeight = max(
+                EditorLayoutMetrics.editorTopBandHeight,
+                proxy.safeAreaInsets.top
+            )
             VStack(spacing: 0) {
-                // Drawing is a full takeover, like Crop: Cancel / Save step aside and
-                // a Clear / Done bar takes the top, clear of the tool picker below.
+                // Drawing is a full takeover, like Crop: the band steps aside and a
+                // Clear / Done bar takes the top, clear of the tool picker below.
                 if controller.isEditingDrawing {
                     drawTopBar(controller)
                         .transition(.move(edge: .top).combined(with: .opacity))
                 } else if !chrome.isFullBleed {
-                    topBar(controller)
-                        .transition(.move(edge: .top).combined(with: .opacity))
+                    commandBand(controller, height: bandHeight)
+                        .transition(.opacity)
                 }
 
-                // 28c: the image is never overlapped — no floating pods. Every
-                // control (session, crop, mask) lives in the panel's action bar.
+                // The only thing allowed over the image is the histogram card, and
+                // only when the user taps the band mini open — every other control
+                // lives in the panel's command row. It parks back to the mini on
+                // tap / close.
                 EditorImageStage(
                     controller: controller,
                     chrome: chrome,
                     drawSession: drawSession
                 )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .overlay {
+                        GeometryReader { proxy in
+                            if !chrome.isHistogramCollapsed {
+                                EditorHistogramCard(
+                                    histogram: controller.histogram,
+                                    chrome: chrome,
+                                    bounds: CGRect(origin: .zero, size: proxy.size),
+                                    namespace: histogramNamespace
+                                )
+                                .transition(.identity)
+                            }
+                        }
+                    }
 
                 // No bottom panel while drawing: the tool picker owns that space and
                 // Clear / Done live in the top bar.
@@ -397,42 +421,140 @@ struct PhotoEditorScreen: View {
         }
     }
 
-    // MARK: Top bar
+    // MARK: Floating command band
 
-    /// Only `Cancel` and `Done`, level with the Dynamic Island and on either side
-    /// of it, inside what would otherwise be dead safe-area space. Every other
-    /// action lives in the panel's action row, within thumb reach.
-    private func topBar(_ controller: PhotoEditorController) -> some View {
-        HStack(spacing: 6) {
-            Button("Cancel") {
-                if controller.hasSessionChanges {
-                    isDiscardConfirmationPresented = true
+    /// The band over the Dynamic Island, carrying the floating command row. The
+    /// island splits it: undo / redo / hold-for-original on the leading edge, the
+    /// histogram mini and the ⋯ menu on the trailing edge. Both clusters are inset
+    /// `editorFloatingCommandSideInset` from their screen edge so the outermost disc
+    /// clears the device's rounded corner; they can still butt right up against the
+    /// island in the middle. Every control is a 34pt circle — this is where the
+    /// panel's old command row went. The histogram mini taps to expand the card.
+    private func commandBand(
+        _ controller: PhotoEditorController,
+        height bandHeight: CGFloat
+    ) -> some View {
+        let sideInset = EditorLayoutMetrics.editorFloatingCommandSideInset
+        let buttonSize = EditorLayoutMetrics.editorFloatingCommandButtonSize
+        return GeometryReader { geo in
+            // The three left discs plus their two 5pt gaps. The pill starts just
+            // right of the Dynamic Island, so the fixed reserve is the run from the
+            // end of that cluster to there; the pill then flexes out to the ⋯.
+            let leftClusterWidth = buttonSize * 3 + 5 * 2
+            let reserve = max(
+                0,
+                EditorLayoutMetrics.editorHistogramPillLeading(bandWidth: geo.size.width)
+                    - sideInset - leftClusterWidth
+            )
+            HStack(spacing: 5) {
+                circleCommand(
+                    "arrow.uturn.backward",
+                    isEnabled: controller.canUndo
+                ) { controller.undo() }
+                    .accessibilityLabel("Undo")
+
+                circleCommand(
+                    "arrow.uturn.forward",
+                    isEnabled: controller.canRedo
+                ) { controller.redo() }
+                    .accessibilityLabel("Redo")
+
+                beforeAfterButton(controller)
+
+                // Fixed reserve for the island; keeps the pill clear of the cutout.
+                Color.clear.frame(width: reserve)
+
+                // The pill (or, while the card floats, a clear stand-in so the ⋯
+                // does not shift) stretches from the island out to the ⋯, at the
+                // buttons' full height.
+                Group {
+                    if chrome.isHistogramCollapsed {
+                        EditorHistogramPill(
+                            histogram: controller.histogram,
+                            namespace: histogramNamespace
+                        ) {
+                            withAnimation(EditorHistogramTransition.animation) {
+                                chrome.isHistogramCollapsed = false
+                            }
+                        }
+                    } else {
+                        Color.clear
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                overflowMenu(controller)
+            }
+            .frame(height: buttonSize)
+            .padding(.horizontal, sideInset)
+            .padding(.top, EditorLayoutMetrics.editorFloatingCommandRowTopInset)
+            .frame(height: bandHeight, alignment: .top)
+        }
+        .frame(height: bandHeight)
+        .background(EditorTheme.background)
+    }
+
+    /// Hold-to-see-original, mirroring the photo's own press-and-hold. Down shows
+    /// the original, up restores the edit; the circle turns accent while it is held.
+    private func beforeAfterButton(_ controller: PhotoEditorController) -> some View {
+        let size = EditorLayoutMetrics.editorFloatingCommandButtonSize
+        return Image(systemName: "rectangle.split.2x1")
+            .font(.system(size: 15, weight: .medium))
+            .foregroundStyle(controller.showsOriginal ? .black : Color.white.opacity(0.9))
+            .frame(width: size, height: size)
+            .background {
+                if controller.showsOriginal {
+                    Circle().fill(EditorTheme.accent)
                 } else {
-                    dismiss()
+                    floatingCircleFill
                 }
             }
-            .font(.system(size: 16))
-            .foregroundStyle(EditorTheme.secondaryText)
-            .frame(minWidth: 56, minHeight: 44, alignment: .leading)
+            .contentShape(Circle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in controller.showsOriginal = true }
+                    .onEnded { _ in controller.showsOriginal = false }
+            )
+            .accessibilityLabel("Hold to see original")
+    }
 
-            Spacer(minLength: 0)
-
-            Button("Save") {
-                // Saving is a confirmation of what is on screen, so a crop still in
-                // draft is kept rather than dropped by the tab switch behind us.
-                controller.commitCropSession()
-                isSaveSheetPresented = true
-            }
-            .font(.system(size: 16, weight: .semibold))
-            .foregroundStyle(EditorTheme.accent)
-            .frame(minWidth: 52, minHeight: 44, alignment: .trailing)
-            .disabled(controller.isLoading || controller.isSaving)
+    /// A 34pt circular band button: a blurred near-black disc, white glyph. Dims
+    /// when disabled; goes accent when `isActive`.
+    private func circleCommand(
+        _ systemName: String,
+        isEnabled: Bool,
+        isActive: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        let size = EditorLayoutMetrics.editorFloatingCommandButtonSize
+        return Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(
+                    isActive
+                        ? Color.black
+                        : (isEnabled ? Color.white.opacity(0.9) : Color.white.opacity(0.28))
+                )
+                .frame(width: size, height: size)
+                .background {
+                    if isActive {
+                        Circle().fill(EditorTheme.accent)
+                    } else {
+                        floatingCircleFill
+                    }
+                }
+                .contentShape(Circle())
         }
-        // Wider than the rest of the chrome: these two sit at the very top of a
-        // rounded display, where flush-to-the-edge reads as cramped.
-        .padding(.horizontal, 26)
-        .padding(.top, EditorLayoutMetrics.dynamicIslandRowTopInset)
-        .background(EditorTheme.background)
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+    }
+
+    /// The blurred near-black disc under every band button.
+    private var floatingCircleFill: some View {
+        ZStack {
+            Circle().fill(.ultraThinMaterial)
+            Circle().fill(Color(red: 18 / 255, green: 18 / 255, blue: 20 / 255).opacity(0.6))
+        }
     }
 
     /// The drawing sub-mode's own top bar: Clear and Done sit up here, level with
@@ -468,11 +590,50 @@ struct PhotoEditorScreen: View {
     }
 
 
-    /// The `⋯` menu at the right of the action bar. History lives here now (rather
-    /// than as its own bar button, per 28c's five-slot right group), alongside the
-    /// conditional Recall and RAW/JPEG source actions.
+    /// The band's ⋯ menu: every command that has no room beside the Dynamic Island.
+    /// A fixed part (Reset All, History, the conditional Recall / Source) plus a
+    /// per-tab part — Crop gets Rotate 90° / Flip Horizontal, an open mask gets Show
+    /// Overlay / Invert Selection — following the rule that the most-used action of
+    /// the tab is promoted only if there is room, and the rest fall in here.
     private func overflowMenu(_ controller: PhotoEditorController) -> some View {
-        Menu {
+        let size = EditorLayoutMetrics.editorFloatingCommandButtonSize
+        return Menu {
+            if controller.selectedTool == .crop {
+                Button {
+                    controller.rotate()
+                } label: {
+                    Label("Rotate 90°", systemImage: "rotate.right")
+                }
+                Button {
+                    controller.flip()
+                } label: {
+                    Label("Flip Horizontal", systemImage: "arrow.left.and.right.righttriangle.left.righttriangle.right")
+                }
+                Divider()
+            } else if controller.editingMaskAdjustments {
+                Button {
+                    controller.setMaskOverlay(!controller.showsMaskOverlay)
+                } label: {
+                    Label(
+                        controller.showsMaskOverlay ? "Hide Mask Overlay" : "Show Mask Overlay",
+                        systemImage: "circle.righthalf.filled"
+                    )
+                }
+                Button {
+                    controller.invertSelectedMask()
+                } label: {
+                    Label("Invert Selection", systemImage: "circle.lefthalf.filled")
+                }
+                Divider()
+            }
+
+            Button {
+                controller.reset()
+            } label: {
+                Label("Reset All", systemImage: "arrow.counterclockwise")
+            }
+            .disabled(controller.recipe.isIdentity)
+
             Button {
                 chrome.isHistorySheetPresented = true
             } label: {
@@ -507,32 +668,46 @@ struct PhotoEditorScreen: View {
             }
         } label: {
             Image(systemName: "ellipsis")
-                .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(Color.white.opacity(0.78))
-                .frame(width: 40, height: 40)
-                .contentShape(Rectangle())
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Color.white.opacity(0.9))
+                .frame(width: size, height: size)
+                .background { floatingCircleFill }
+                .contentShape(Circle())
         }
         .accessibilityLabel("More editor actions")
     }
 
     // MARK: Panel
 
-    /// The 28c panel: one opaque slab of fixed height, four stacked tiers that never
-    /// reorder — action bar, the tool content, and the group nav (a target strip
-    /// joins in later modes). No blur, no glass; the image never shows through it.
+    /// The Turn 31 panel: one opaque slab of fixed height. Top to bottom — the
+    /// parameter zone (its first row is the Grade target strip when shown, so the
+    /// zone, and the panel, stay one height on every tab), then the group strip (a
+    /// snap wheel flanked by Back and Save), then a bare home-indicator inset. No
+    /// command row: it moved to the band. No blur, no glass; the image never shows
+    /// through it.
     private func panel(_ controller: PhotoEditorController, height: CGFloat) -> some View {
-        let navHeight = EditorLayoutMetrics.editorGroupNavHeight
-            + EditorLayoutMetrics.panelBottomInset
-        let contentHeight = max(
-            0,
-            height - EditorLayoutMetrics.editorActionBarHeight - navHeight
+        let hasTarget = panelHasTargetStrip(controller)
+        let rowsHeight = EditorLayoutMetrics.editorParamAreaHeight(
+            hasTargetStrip: hasTarget
         )
         return VStack(spacing: 0) {
-            actionBar(controller)
-            toolPanel(controller)
-                .frame(height: contentHeight)
-            groupNav(controller)
-                .padding(.bottom, EditorLayoutMetrics.panelBottomInset)
+            // Parameter zone: fixed total height, the target strip eating into it
+            // rather than adding to the panel.
+            VStack(spacing: 0) {
+                if hasTarget {
+                    targetStrip(controller)
+                        .frame(height: EditorLayoutMetrics.editorTargetStripHeight)
+                }
+                toolPanel(controller)
+                    .frame(height: rowsHeight)
+            }
+            .frame(height: EditorLayoutMetrics.editorParamZoneHeight)
+
+            groupStripRow(controller)
+                .frame(height: EditorLayoutMetrics.editorGroupStripHeight)
+            // Bare home-indicator zone: the wheel above takes only horizontal
+            // swipes, so the system's vertical bottom-edge gesture never fights it.
+            Color.clear.frame(height: EditorLayoutMetrics.editorPanelSafeAreaInset)
         }
         .frame(height: height)
         .background(EditorTheme.panelSolid)
@@ -541,213 +716,68 @@ struct PhotoEditorScreen: View {
         }
     }
 
-    // MARK: Action bar
-
-    /// The panel's top row (28c): a mini histogram parked at the left, and a
-    /// trailing control group that swaps with the mode. Solid, not glass, always in
-    /// the same place — tool-specific actions join this row rather than floating a
-    /// second bar over the photo. Crop shows its rotate / flip / reset / done here;
-    /// every other group shows the session controls.
-    private func actionBar(_ controller: PhotoEditorController) -> some View {
-        HStack(spacing: 0) {
-            EditorHistogramSparkline(histogram: controller.histogram)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 5)
-                .frame(
-                    width: EditorLayoutMetrics.editorMiniHistogramSize.width,
-                    height: EditorLayoutMetrics.editorMiniHistogramSize.height
-                )
-                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
-                .accessibilityLabel("RGB histogram")
-
-            Spacer(minLength: 0)
-
-            if controller.selectedTool == .crop {
-                cropBarControls(controller)
-            } else if controller.editingMaskAdjustments {
-                maskBarControls(controller)
-            } else {
-                sessionBarControls(controller)
-            }
-        }
-        .padding(.horizontal, 8)
-        .frame(height: EditorLayoutMetrics.editorActionBarHeight)
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(EditorTheme.panelDivider).frame(height: 1)
-        }
+    /// The target strip — which area of the photo the controls act on — shows only
+    /// where there is one to pick: Grade's tonal region. (Mask keeps its own list /
+    /// detail panels for now.)
+    private func panelHasTargetStrip(_ controller: PhotoEditorController) -> Bool {
+        chrome.selectedGroup == .grade
     }
 
-    /// A single mask's controls, in the action bar instead of a glass pod: delete
-    /// (leftmost, a full row from Done), add / subtract, invert, the red-overlay
-    /// toggle, and Done. Size / Feather / Flow are rows in the panel below now, so
-    /// they are not repeated here.
-    private func maskBarControls(_ controller: PhotoEditorController) -> some View {
-        let isSubtracting = controller.maskOperation == .subtract
-        return HStack(spacing: 2) {
-            barButton("trash", isEnabled: true) {
-                controller.deleteSelectedMask()
-                chrome.resetZoom()
-                controller.closeSelectedMaskAdjustments()
-            }
-            .accessibilityLabel("Delete mask")
-
-            barButton(
-                isSubtracting ? "minus.circle" : "plus.circle",
-                isEnabled: true,
-                isActive: isSubtracting
-            ) {
-                controller.maskOperation = isSubtracting ? .add : .subtract
-            }
-            .accessibilityLabel(isSubtracting ? "Subtracting from mask" : "Adding to mask")
-
-            barButton(
-                "circle.lefthalf.filled",
-                isEnabled: true,
-                isActive: controller.selectedMask?.isInverted == true
-            ) {
-                controller.invertSelectedMask()
-            }
-            .accessibilityLabel("Invert mask")
-
-            Button {
-                controller.setMaskOverlay(!controller.showsMaskOverlay)
-            } label: {
-                Image(systemName: controller.showsMaskOverlay ? "circle.fill" : "circle.slash")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(
-                        controller.showsMaskOverlay
-                            ? Color(red: 1, green: 0.08, blue: 0.13)
-                            : Color.white.opacity(0.78)
-                    )
-                    .frame(width: 40, height: 40)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Show mask area")
-            .accessibilityValue(controller.showsMaskOverlay ? "Shown" : "Hidden")
-
-            Button {
-                chrome.resetZoom()
-                controller.closeSelectedMaskAdjustments()
-            } label: {
-                Text("Done")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 16)
-                    .frame(height: 32)
-                    .background(EditorTheme.accent, in: Capsule())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Done with this mask")
-        }
-    }
-
-    private func sessionBarControls(_ controller: PhotoEditorController) -> some View {
-        HStack(spacing: 2) {
-            barButton("arrow.uturn.backward", isEnabled: controller.canUndo) {
-                controller.undo()
-            }
-            .accessibilityLabel("Undo")
-
-            barButton("arrow.uturn.forward", isEnabled: controller.canRedo) {
-                controller.redo()
-            }
-            .accessibilityLabel("Redo")
-
-            barButton(
-                "rectangle.split.2x1",
-                isEnabled: controller.originalPreviewImage != nil,
-                isActive: chrome.showsSplitCompare
-            ) {
-                withAnimation(EditorTheme.animation) {
-                    chrome.showsSplitCompare.toggle()
+    @ViewBuilder
+    private func targetStrip(_ controller: PhotoEditorController) -> some View {
+        switch chrome.selectedGroup {
+        case .grade:
+            EditorGradeRegionStrip(controller: controller, chrome: chrome)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay(alignment: .bottom) {
+                    Rectangle().fill(Color.white.opacity(0.07)).frame(height: 1)
                 }
-            }
-            .accessibilityLabel("Compare")
-            .accessibilityValue(chrome.showsSplitCompare ? "On" : "Off")
-
-            barButton(
-                "arrow.counterclockwise",
-                isEnabled: !controller.recipe.isIdentity
-            ) {
-                controller.reset()
-            }
-            .accessibilityLabel("Reset all")
-
-            overflowMenu(controller)
+        default:
+            EmptyView()
         }
     }
 
-    /// Crop's controls, now in the action bar instead of a glass pod over the
-    /// photo: rotate 90°, flip, Reset Crop, and Done. Done is the crop's only
-    /// commit — leaving the group any other way still reverts the framing.
-    private func cropBarControls(_ controller: PhotoEditorController) -> some View {
-        let canReset = controller.recipe.crop != .identity
-        return HStack(spacing: 2) {
-            barButton("rotate.right", isEnabled: true) {
-                controller.rotate()
-            }
-            .accessibilityLabel("Rotate 90 degrees")
+    // MARK: Back / Save (group-strip ends)
 
-            barButton(
-                "arrow.left.and.right.righttriangle.left.righttriangle.right",
-                isEnabled: true
-            ) {
-                controller.flip()
+    /// Back: a 38pt chevron on the leading end of the group strip, discard-guarded
+    /// when the session has changes.
+    private func backButton(_ controller: PhotoEditorController) -> some View {
+        Button {
+            if controller.hasSessionChanges {
+                isDiscardConfirmationPresented = true
+            } else {
+                dismiss()
             }
-            .accessibilityLabel("Flip horizontally")
-
-            Button {
-                controller.resetCrop()
-            } label: {
-                Text("Reset")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(canReset ? .white : Color.white.opacity(0.3))
-                    .padding(.horizontal, 10)
-                    .frame(height: 40)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(!canReset)
-            .accessibilityLabel("Reset crop")
-
-            Button {
-                controller.commitCropSession()
-                selectGroup(.light, in: controller)
-            } label: {
-                Text("Done")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 16)
-                    .frame(height: 32)
-                    .background(EditorTheme.accent, in: Capsule())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Done cropping")
-        }
-    }
-
-    private func barButton(
-        _ systemName: String,
-        isEnabled: Bool,
-        isActive: Bool = false,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(
-                    isEnabled ? Color.white.opacity(0.78) : Color.white.opacity(0.24)
-                )
-                .frame(width: 40, height: 40)
-                .background(
-                    isActive ? Color.white.opacity(0.09) : .clear,
-                    in: RoundedRectangle(cornerRadius: 10)
-                )
-                .contentShape(Rectangle())
+        } label: {
+            Image(systemName: "chevron.backward")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(Color.white.opacity(0.6))
+                .frame(width: 38, height: 38)
+                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 11))
+                .contentShape(RoundedRectangle(cornerRadius: 11))
         }
         .buttonStyle(.plain)
-        .disabled(!isEnabled)
+        .accessibilityLabel("Back")
+    }
+
+    /// Save (✓): the one accent control on the screen, a 42pt filled circle on the
+    /// trailing end of the group strip. Commits a draft crop first, then opens the
+    /// save sheet.
+    private func saveButton(_ controller: PhotoEditorController) -> some View {
+        Button {
+            controller.commitCropSession()
+            isSaveSheetPresented = true
+        } label: {
+            Image(systemName: "checkmark")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(.black)
+                .frame(width: 42, height: 42)
+                .background(EditorTheme.accent, in: Circle())
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .disabled(controller.isLoading || controller.isSaving)
+        .accessibilityLabel("Save")
     }
 
     @ViewBuilder
@@ -759,6 +789,8 @@ struct PhotoEditorScreen: View {
             adjustmentContent(chrome.selectedGroup, controller: controller)
         case .color:
             colorContent(controller)
+        case .colorMix:
+            EditorColorMixerSection(controller: controller, chrome: chrome)
         case .pointColor:
             EditorPointColorSection(controller: controller, chrome: chrome)
         case .grade:
@@ -903,164 +935,34 @@ struct PhotoEditorScreen: View {
         .buttonStyle(.plain)
     }
 
-    /// The Color group: the base Temp / Tint / Vibrance / Saturation rows with a
-    /// Color Mix entry beneath them, or the HSL mixer itself once that entry is
-    /// tapped. (The §6 target-strip mixer form and the B&W toggle land with the
-    /// parity work; this keeps the existing mixer reachable in the new layout.)
-    @ViewBuilder
+    /// The Color group: the base Temp / Tint / Vibrance / Saturation rows. The HSL
+    /// mixer is now its own nav chip (`.colorMix`), not a sub-view reached from a
+    /// row here.
     private func colorContent(_ controller: PhotoEditorController) -> some View {
-        if chrome.showsColorMix {
-            VStack(spacing: 0) {
-                colorMixBackBar
-                EditorColorMixerSection(controller: controller, chrome: chrome)
-            }
-        } else {
-            EditorAdjustmentGroupsView(
-                controller: controller,
-                chrome: chrome,
-                groups: catalogGroups(for: .color, controller: controller)
-            ) {
-                colorMixEntry
-            }
-        }
+        EditorAdjustmentGroupsView(
+            controller: controller,
+            chrome: chrome,
+            groups: catalogGroups(for: .color, controller: controller)
+        )
     }
 
-    private var colorMixEntry: some View {
-        Button {
-            withAnimation(EditorTheme.animation) { chrome.showsColorMix = true }
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: "circle.hexagongrid")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(EditorTheme.secondaryText)
-                Text("Color Mix")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.white)
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(EditorTheme.secondaryText)
+    /// The group-strip tier: `[Back] [wheel] [Save]`. The wheel is a snap picker
+    /// whose centred chip is the open group; Back and Save flank it. Padding 10,
+    /// gap 8, per Turn 31 §4.
+    private func groupStripRow(_ controller: PhotoEditorController) -> some View {
+        HStack(spacing: 8) {
+            backButton(controller)
+            EditorGroupWheel(controller: controller, chrome: chrome) { group in
+                selectGroup(group, in: controller)
             }
-            .padding(.horizontal, 14)
-            .frame(height: EditorLayoutMetrics.editorRowHeight + 6)
-            .contentShape(Rectangle())
+            .frame(maxWidth: .infinity)
+            saveButton(controller)
         }
-        .buttonStyle(.plain)
-    }
-
-    private var colorMixBackBar: some View {
-        Button {
-            withAnimation(EditorTheme.animation) { chrome.showsColorMix = false }
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 13, weight: .semibold))
-                Text("Color Mix")
-                    .font(.system(size: 13, weight: .semibold))
-                Spacer(minLength: 0)
-            }
-            .foregroundStyle(EditorTheme.accent)
-            .padding(.horizontal, 14)
-            .frame(height: 36)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    /// The 28c bottom nav: 12 group chips in a horizontal scroll, with a paging
-    /// arrow pinned to the right edge. Plain-text chips (accent-tinted when
-    /// selected), no icons. The selected group is scrolled into view whenever it
-    /// changes — including programmatic returns like Crop's Done.
-    private func groupNav(_ controller: PhotoEditorController) -> some View {
-        ScrollViewReader { scroller in
-            ZStack(alignment: .trailing) {
-                ScrollView(.horizontal) {
-                    HStack(spacing: 6) {
-                        ForEach(EditorGroup.allCases) { group in
-                            groupChip(group, in: controller).id(group)
-                        }
-                    }
-                    .padding(.horizontal, 12)
-                    // Clear the paging arrow so the last chip is never under it.
-                    .padding(.trailing, 36)
-                    .frame(height: EditorLayoutMetrics.editorGroupNavHeight)
-                }
-                .scrollIndicators(.hidden)
-                .onChange(of: chrome.selectedGroup) { _, group in
-                    withAnimation(EditorTheme.animation) {
-                        scroller.scrollTo(group, anchor: .center)
-                    }
-                }
-                .onAppear {
-                    scroller.scrollTo(chrome.selectedGroup, anchor: .center)
-                }
-
-                navArrow(scroller: scroller)
-            }
-        }
-        .frame(height: EditorLayoutMetrics.editorGroupNavHeight)
+        .padding(.horizontal, 10)
+        .frame(height: EditorLayoutMetrics.editorGroupStripHeight)
         .overlay(alignment: .top) {
-            Rectangle().fill(Color.white.opacity(0.09)).frame(height: 1)
+            Rectangle().fill(Color.white.opacity(0.07)).frame(height: 1)
         }
-    }
-
-    private func groupChip(
-        _ group: EditorGroup,
-        in controller: PhotoEditorController
-    ) -> some View {
-        let isSelected = chrome.selectedGroup == group
-        return Button {
-            selectGroup(group, in: controller)
-        } label: {
-            Text(group.title)
-                .font(.system(size: 13, weight: isSelected ? .semibold : .medium))
-                .foregroundStyle(isSelected ? EditorTheme.accent : EditorTheme.secondaryText)
-                .padding(.horizontal, 12)
-                .frame(height: 32)
-                .background(
-                    isSelected ? EditorTheme.accent.opacity(0.16) : Color.clear,
-                    in: RoundedRectangle(cornerRadius: 9)
-                )
-                .contentShape(RoundedRectangle(cornerRadius: 9))
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
-    }
-
-    /// Pages the nav a screenful at a time. First tap jumps to the end (chevron
-    /// flips); the next returns to the start. A rough stand-in for true per-page
-    /// paging that reads the same to a thumb.
-    private func navArrow(scroller: ScrollViewProxy) -> some View {
-        Button {
-            withAnimation(EditorTheme.animation) {
-                if groupNavAtEnd {
-                    scroller.scrollTo(EditorGroup.allCases.first, anchor: .leading)
-                } else {
-                    scroller.scrollTo(EditorGroup.allCases.last, anchor: .trailing)
-                }
-            }
-            groupNavAtEnd.toggle()
-        } label: {
-            Image(systemName: "chevron.right")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Color.white.opacity(0.62))
-                .rotationEffect(.degrees(groupNavAtEnd ? 180 : 0))
-                .frame(width: 36)
-                .frame(maxHeight: .infinity)
-                .background(
-                    LinearGradient(
-                        colors: [EditorTheme.panelSolid.opacity(0), EditorTheme.panelSolid],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .overlay(alignment: .leading) {
-                    Rectangle().fill(Color.white.opacity(0.12)).frame(width: 1)
-                }
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("More groups")
     }
 
     private func undoToastView(
@@ -1091,13 +993,17 @@ struct PhotoEditorScreen: View {
     private func selectGroup(_ group: EditorGroup, in controller: PhotoEditorController) {
         chrome.resetZoom()
         chrome.isEyedropperActive = false
-        chrome.showsColorMix = false
-        chrome.mixerChannel = nil
+        // 30c has no crop Done: the crop stays live and is committed when its tab is
+        // left (or when the edit is saved). Switching to any other group is that
+        // moment. Leaving via Save commits too, so a double commit is harmless.
+        if chrome.selectedGroup == .crop, group != .crop {
+            controller.commitCropSession()
+        }
         withAnimation(EditorTheme.animation) {
             chrome.selectedGroup = group
         }
         switch group {
-        case .light, .color, .effects, .detail, .optics, .geo:
+        case .light, .color, .colorMix, .effects, .detail, .optics, .geo:
             controller.editGlobalAdjustments()
         case .mask:
             controller.selectedTool = .masks
@@ -1226,5 +1132,176 @@ private struct PhotoEditorSaveSheet: View {
                 }
             }
         }
+    }
+}
+
+/// The group wheel (Turn 31 §4): a horizontal snap picker where the chip nearest the
+/// centre *is* the open group. Swiping and letting go snaps the nearest chip to the
+/// centre and switches to it — one gesture, no second tap; tapping an off-centre chip
+/// scrolls it to the centre and switches too. Half-viewport margins on both ends let
+/// the first and last groups reach the centre; a fade dissolves each edge into the
+/// panel colour. The centred chip is accent-tinted; the rest are dim. Every change
+/// gives a selection haptic.
+private struct EditorGroupWheel: View {
+    @Bindable var controller: PhotoEditorController
+    @Bindable var chrome: EditorChromeModel
+    /// Called with the group that reached the centre, to drive `selectGroup`.
+    let onSelect: (EditorGroup) -> Void
+
+    /// The chip the scroll view has snapped to the centre. Bound to
+    /// `scrollPosition`, so it follows both drags and programmatic scrolls.
+    @State private var centered: EditorGroup?
+
+    var body: some View {
+        GeometryReader { geo in
+            // Half-viewport-minus-half-chip padding at each end, so the first and
+            // last chips can sit dead centre.
+            let sideInset = max(
+                0,
+                (geo.size.width - EditorLayoutMetrics.editorGroupChipWidth) / 2
+            )
+            ScrollView(.horizontal) {
+                HStack(spacing: 8) {
+                    ForEach(EditorGroup.allCases) { group in
+                        chip(group).id(group)
+                    }
+                }
+                .frame(maxHeight: .infinity)
+                .scrollTargetLayout()
+            }
+            .scrollIndicators(.hidden)
+            .contentMargins(.horizontal, sideInset, for: .scrollContent)
+            .scrollTargetBehavior(.viewAligned)
+            .scrollPosition(id: $centered, anchor: .center)
+            .sensoryFeedback(.selection, trigger: centered)
+            .onAppear { centered = chrome.selectedGroup }
+            .onChange(of: centered) { _, new in
+                guard let new, new != chrome.selectedGroup else { return }
+                onSelect(new)
+            }
+            .onChange(of: chrome.selectedGroup) { _, group in
+                // A group changed from outside the wheel (rare — Save's crop commit,
+                // a deep-link): keep the centred chip in step.
+                guard centered != group else { return }
+                withAnimation(EditorTheme.animation) { centered = group }
+            }
+            .overlay { edgeFades }
+            .overlay { notchRail }
+        }
+    }
+
+    /// The selection indicator: a rail across the top of the wheel that dips into a
+    /// rounded pocket around the chip at the centre — the open group nests in the
+    /// notch, the rest sit under the rail. Fixed at the centre; chips scroll through
+    /// the pocket. Solid accent, drawn *over* the edge fades so it stays fully
+    /// coloured out to both ends of the wheel.
+    private var notchRail: some View {
+        WheelNotchRail(
+            pocketWidth: EditorLayoutMetrics.editorGroupChipWidth + 10,
+            pocketHeight: EditorLayoutMetrics.editorGroupChipHeight + 8,
+            corner: 10
+        )
+        .stroke(EditorTheme.accent, style: StrokeStyle(lineWidth: 2, lineJoin: .round))
+        .allowsHitTesting(false)
+    }
+
+    private func chip(_ group: EditorGroup) -> some View {
+        let isCenter = centered == group
+        return Button {
+            withAnimation(EditorTheme.animation) { centered = group }
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: group.icon)
+                    .font(.system(size: 19, weight: isCenter ? .semibold : .regular))
+                Text(group.title)
+                    .font(.system(size: 9.5, weight: isCenter ? .semibold : .regular))
+                    .lineLimit(1)
+            }
+            .foregroundStyle(isCenter ? EditorTheme.accent : Color.white.opacity(0.5))
+            .frame(
+                width: EditorLayoutMetrics.editorGroupChipWidth,
+                height: EditorLayoutMetrics.editorGroupChipHeight
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 11))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(group.title)
+        .accessibilityAddTraits(isCenter ? .isSelected : [])
+    }
+
+    /// The two 26pt fades dissolving the wheel's ends into the panel colour.
+    private var edgeFades: some View {
+        let fade = EditorLayoutMetrics.editorGroupWheelEdgeFade
+        return HStack(spacing: 0) {
+            LinearGradient(
+                colors: [EditorTheme.panelSolid, EditorTheme.panelSolid.opacity(0)],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .frame(width: fade)
+            Spacer(minLength: 0)
+            LinearGradient(
+                colors: [EditorTheme.panelSolid.opacity(0), EditorTheme.panelSolid],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .frame(width: fade)
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+/// The wheel's selection indicator, drawn as one stroked path: a horizontal rail
+/// near the top that detours down into a rounded-bottom pocket cradling the
+/// centred chip, then returns to the rail. The pocket is centred in `rect`; the
+/// selected chip is always there.
+private struct WheelNotchRail: Shape {
+    /// Width of the pocket's flat bottom span — chip width plus a little breathing
+    /// room each side.
+    let pocketWidth: CGFloat
+    /// Height of the pocket — the chip height plus a little room, so the whole chip
+    /// (icon *and* label) nests inside the notch.
+    let pocketHeight: CGFloat
+    /// Corner radius of the four pocket bends.
+    let corner: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        // Pocket is centred on the chip row; the rail runs level with the pocket's
+        // top edge and the pocket dips one chip-height-plus below it.
+        let cy = rect.midY
+        let railY = cy - pocketHeight / 2
+        let pocketBottom = cy + pocketHeight / 2
+        let cx = rect.midX
+        let half = pocketWidth / 2
+        let r = min(corner, (pocketBottom - railY) / 2, half)
+
+        var p = Path()
+        p.move(to: CGPoint(x: rect.minX, y: railY))
+        p.addLine(to: CGPoint(x: cx - half - r, y: railY))
+        // Rail dips into the left wall.
+        p.addQuadCurve(
+            to: CGPoint(x: cx - half, y: railY + r),
+            control: CGPoint(x: cx - half, y: railY)
+        )
+        p.addLine(to: CGPoint(x: cx - half, y: pocketBottom - r))
+        // Bottom-left bend.
+        p.addQuadCurve(
+            to: CGPoint(x: cx - half + r, y: pocketBottom),
+            control: CGPoint(x: cx - half, y: pocketBottom)
+        )
+        p.addLine(to: CGPoint(x: cx + half - r, y: pocketBottom))
+        // Bottom-right bend.
+        p.addQuadCurve(
+            to: CGPoint(x: cx + half, y: pocketBottom - r),
+            control: CGPoint(x: cx + half, y: pocketBottom)
+        )
+        p.addLine(to: CGPoint(x: cx + half, y: railY + r))
+        // Right wall climbs back to the rail.
+        p.addQuadCurve(
+            to: CGPoint(x: cx + half + r, y: railY),
+            control: CGPoint(x: cx + half, y: railY)
+        )
+        p.addLine(to: CGPoint(x: rect.maxX, y: railY))
+        return p
     }
 }

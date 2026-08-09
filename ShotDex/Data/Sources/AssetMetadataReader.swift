@@ -749,14 +749,7 @@ enum AssetMetadataReader {
     }
 
     private static func avAsset(for phAsset: PHAsset) async -> AVAsset? {
-        await withCheckedContinuation { continuation in
-            let options = PHVideoRequestOptions()
-            options.isNetworkAccessAllowed = true
-            options.deliveryMode = .highQualityFormat
-            PHImageManager.default().requestAVAsset(forVideo: phAsset, options: options) { asset, _, _ in
-                continuation.resume(returning: asset)
-            }
-        }
+        await PhotoLibraryService.requestAVAsset(for: phAsset)
     }
 
     // MARK: Formatting

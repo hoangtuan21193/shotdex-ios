@@ -41,6 +41,7 @@ struct EditorAdjustmentCatalogTests {
         for kind in [
             PhotoAdjustmentKind.grain, .grainSize, .grainRoughness,
             .vignetteMidpoint, .vignetteFeather, .sharpenRadius,
+            .sharpenDetail, .sharpenMasking,
             .colorNoiseReduction, .vignetteHighlights, .defringe, .rawLuminanceNoise,
         ] {
             #expect(EditorAdjustmentCatalog.sliderRange(of: kind) == 0...1)
@@ -71,6 +72,19 @@ struct EditorAdjustmentCatalogTests {
             .vignette, .vignetteMidpoint, .vignetteFeather,
             .grain, .grainSize, .grainRoughness,
         ])
+    }
+
+    @Test func detailGroupCarriesTheFourSharpenControls() {
+        let detail = EditorAdjustmentCatalog
+            .groups(isRAWSource: false, scope: .global)
+            .first { $0.id == .detail }
+        #expect(detail?.kinds == [
+            .sharpness, .sharpenRadius, .sharpenDetail, .sharpenMasking,
+            .definition, .noiseReduction, .colorNoiseReduction,
+        ])
+        // Detail and Masking are one-way strengths, like Radius.
+        #expect(EditorAdjustmentCatalog.shortTitle(of: .sharpenDetail) == "Detail")
+        #expect(EditorAdjustmentCatalog.shortTitle(of: .sharpenMasking) == "Masking")
     }
 
     @Test func opticsAndGeoAreGlobalOnlyGroups() {

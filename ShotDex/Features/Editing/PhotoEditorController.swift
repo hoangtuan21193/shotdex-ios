@@ -55,6 +55,7 @@ enum PhotoEditorTool: String, CaseIterable, Identifiable {
 enum EditorGroup: String, CaseIterable, Identifiable {
     case light
     case color
+    case colorMix
     case pointColor
     case grade
     case effects
@@ -73,6 +74,7 @@ enum EditorGroup: String, CaseIterable, Identifiable {
         switch self {
         case .light: "Light"
         case .color: "Color"
+        case .colorMix: "Mix"
         case .pointColor: "Point"
         case .grade: "Grade"
         case .effects: "Effects"
@@ -86,12 +88,31 @@ enum EditorGroup: String, CaseIterable, Identifiable {
         }
     }
 
+    /// The wheel chip's glyph (Turn 31): each group is an icon over its label.
+    var icon: String {
+        switch self {
+        case .light: "sun.max"
+        case .color: "drop.fill"
+        case .colorMix: "circle.hexagongrid.fill"
+        case .pointColor: "eyedropper"
+        case .grade: "paintpalette"
+        case .effects: "sparkles"
+        case .detail: "wand.and.rays"
+        case .optics: "camera.aperture"
+        case .geo: "grid"
+        case .crop: "crop"
+        case .mask: "circle.dashed"
+        case .markup: "pencil.tip.crop.circle"
+        case .presets: "camera.filters"
+        }
+    }
+
     /// The tool this group activates. The six adjustment-style groups share the
     /// global `.adjust` tool; the rest map one-to-one. (Optics and Geo have no
     /// parameters yet, so they sit on `.adjust` and show a placeholder.)
     var tool: PhotoEditorTool {
         switch self {
-        case .light, .color, .effects, .detail, .optics, .geo: .adjust
+        case .light, .color, .colorMix, .effects, .detail, .optics, .geo: .adjust
         case .pointColor: .pointColor
         case .grade: .colorGrading
         case .crop: .crop
@@ -1798,27 +1819,36 @@ final class PhotoEditorController {
             // including the strips not on screen — describes an older photo.
             filterThumbnails = [:]
         }
-        let filters = PhotoFilter.all(in: selectedFilterCategory)
-        guard filters.contains(where: { filterThumbnails[$0] == nil }) else { return }
+        // The Presets tab shows every look at once now, so all 49 need a swatch.
+        // Rendered one category at a time inside the task: each batch is ≤24 looks
+        // so the LUT cache is never blown, and the swatches stream in category by
+        // category rather than all appearing after one long await.
+        guard PhotoFilter.allCases.contains(where: { filterThumbnails[$0] == nil })
+        else { return }
         filterThumbnailTask?.cancel()
         let recipe = recipe
         let info = loadedSource.info
         filterThumbnailTask = Task { [weak self] in
             guard let self else { return }
-            do {
-                let resolved = try await service.renderer.filterThumbnails(
-                    source: info,
-                    recipe: recipe,
-                    filters: filters
-                )
-                guard !Task.isCancelled, signature == filterThumbnailSignature else { return }
-                filterThumbnails.merge(
-                    resolved.images.mapValues { UIImage(cgImage: $0) },
-                    uniquingKeysWith: { _, rendered in rendered }
-                )
-            } catch {
-                // Swatches are a nicety: the strip falls back to drawing each look
-                // as a two-tone gradient instead.
+            for category in FilmLookCategory.allCases {
+                let filters = PhotoFilter.all(in: category)
+                    .filter { filterThumbnails[$0] == nil }
+                guard !filters.isEmpty else { continue }
+                do {
+                    let resolved = try await service.renderer.filterThumbnails(
+                        source: info,
+                        recipe: recipe,
+                        filters: filters
+                    )
+                    guard !Task.isCancelled, signature == filterThumbnailSignature else { return }
+                    filterThumbnails.merge(
+                        resolved.images.mapValues { UIImage(cgImage: $0) },
+                        uniquingKeysWith: { _, rendered in rendered }
+                    )
+                } catch {
+                    // Swatches are a nicety: the strip falls back to drawing each
+                    // look as a two-tone gradient instead.
+                }
             }
         }
     }

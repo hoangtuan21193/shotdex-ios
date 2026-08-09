@@ -52,6 +52,8 @@ enum EditorAdjustmentCatalog {
         .vignetteMidpoint,
         .vignetteFeather,
         .sharpenRadius,
+        .sharpenDetail,
+        .sharpenMasking,
         .colorNoiseReduction,
         .vignetteHighlights,
         .defringe,
@@ -88,7 +90,8 @@ enum EditorAdjustmentCatalog {
                 id: .detail,
                 title: "Detail",
                 kinds: [
-                    .sharpness, .sharpenRadius, .definition,
+                    .sharpness, .sharpenRadius, .sharpenDetail, .sharpenMasking,
+                    .definition,
                     .noiseReduction, .colorNoiseReduction,
                 ],
                 hasAuto: false
@@ -179,6 +182,8 @@ enum EditorAdjustmentCatalog {
         case .noiseReduction: "Noise"
         case .sharpness: "Sharpen"
         case .sharpenRadius: "Radius"
+        case .sharpenDetail: "Detail"
+        case .sharpenMasking: "Masking"
         case .colorNoiseReduction: "Color NR"
         case .blackAndWhite: "B&W"
         case .grainSize: "Size"

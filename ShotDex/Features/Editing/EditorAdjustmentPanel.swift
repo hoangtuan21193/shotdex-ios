@@ -2,9 +2,10 @@ import SwiftUI
 import UIKit
 
 /// The scrolling slider stack shared by global Adjust and the single-mask editor.
-/// The group titles are sticky headers inside the scroll — there is no segmented
-/// control above them, so the panel spends none of its fixed height on chrome and
-/// `Auto` / `Reset` always travel with the group they belong to.
+/// There is no segmented control and no per-group Auto / Reset — reset lives in
+/// the action bar. A section shows a plain sticky title only when the scroll holds
+/// more than one group (Detail + RAW, the mask editor); a single-group 28c tab
+/// shows no header, spending none of the panel's fixed height on chrome.
 struct EditorAdjustmentGroupsView<Footer: View>: View {
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
@@ -20,11 +21,13 @@ struct EditorAdjustmentGroupsView<Footer: View>: View {
                             row(for: kind)
                         }
                     } header: {
+                        // No Auto, no Reset anywhere — the action bar carries reset.
+                        // A header survives only to label sections when a scroll
+                        // holds more than one (Detail + RAW, the mask editor); a
+                        // single-group 28c tab shows no header at all.
                         EditorGroupHeader(
-                            title: group.title,
-                            isFirst: group.id == groups.first?.id,
-                            onAuto: group.hasAuto ? { controller.applyAutoTone() } : nil,
-                            onReset: { controller.resetAdjustments(group.kinds) }
+                            title: groups.count > 1 ? group.title : "",
+                            isFirst: group.id == groups.first?.id
                         )
                     }
                 }
@@ -119,34 +122,29 @@ extension EditorAdjustmentGroupsView where Footer == EmptyView {
     }
 }
 
+/// A plain section label. It carries no Auto / Reset — those are gone from every
+/// panel (reset lives in the action bar) — so it exists only to name a section
+/// when a scroll holds more than one. An empty title collapses it to zero height,
+/// which is how a single-group 28c tab shows no header at all.
 struct EditorGroupHeader: View {
     let title: String
     var isFirst = false
-    var onAuto: (() -> Void)?
-    var onReset: (() -> Void)?
-    /// A generic trailing action, e.g. "Presets" on the Markup layer list.
-    var trailingLabel: String?
-    var onTrailing: (() -> Void)?
 
     var body: some View {
+        if title.isEmpty {
+            Color.clear.frame(height: 0)
+        } else {
+            content
+        }
+    }
+
+    private var content: some View {
         HStack(spacing: 12) {
             Text(title.uppercased())
                 .font(EditorTheme.groupLabel)
                 .tracking(1.1)
                 .foregroundStyle(EditorTheme.secondaryText)
             Spacer(minLength: 0)
-            if let trailingLabel, let onTrailing {
-                Button(trailingLabel, action: onTrailing)
-                    .buttonStyle(EditorTextButtonStyle())
-            }
-            if let onAuto {
-                Button("Auto", action: onAuto)
-                    .buttonStyle(EditorTextButtonStyle())
-            }
-            if let onReset {
-                Button("Reset", action: onReset)
-                    .buttonStyle(EditorTextButtonStyle())
-            }
         }
         .padding(.horizontal, 14)
         .frame(maxWidth: .infinity)

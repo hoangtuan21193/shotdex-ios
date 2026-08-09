@@ -20,6 +20,7 @@ final class AppDependencies {
     let overlayFontRecents: OverlayFontRecentsStore
     let overlayImages: OverlayImageStore
     let importService: ImportService
+    let videoStudio: VideoStudioService
     let indexPipeline: IndexPipeline
     let backgroundIndex: BackgroundIndexService
     let networkStatus: NetworkMonitor
@@ -80,6 +81,17 @@ final class AppDependencies {
         self.signaturePresets = SignaturePresetStore(images: overlayImages)
         self.overlayFontRecents = OverlayFontRecentsStore()
         self.importService = ImportService(photoLibrary: photoLibrary, metadataStore: metadataStore)
+        self.videoStudio = VideoStudioService(
+            importFile: { url, isVideo in
+                try await photoLibrary.importFile(at: url, isVideo: isVideo)
+            },
+            indexNewAsset: { assetID in
+                _ = await indexPipeline.indexSingle(assetId: assetID)
+            },
+            publishCreatedAsset: {
+                photoLibrary.publishAppCreatedAsset()
+            }
+        )
         self.indexPipeline = indexPipeline
         let networkStatus = NetworkMonitor()
         self.networkStatus = networkStatus

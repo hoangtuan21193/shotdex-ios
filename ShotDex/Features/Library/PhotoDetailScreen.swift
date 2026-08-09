@@ -73,6 +73,7 @@ struct PhotoDetailScreen: View {
     @State private var isMetadataPresented = false
     @State private var editorTarget: PhotoDetailActionTarget?
     @State private var compressionTarget: PhotoDetailActionTarget?
+    @State private var videoStudioTarget: PhotoDetailActionTarget?
     /// Asset saved by the editor, waiting for its cover to finish dismissing —
     /// then the viewer pages to it (Save Changes: this page rebuilt with the
     /// edit; Save Copy: the new copy, once the library change lands).
@@ -278,6 +279,16 @@ struct PhotoDetailScreen: View {
                 sourceAlbum: target.sourceAlbum
             )
         }
+        .fullScreenCover(item: $videoStudioTarget) { target in
+            VideoStudioScreen(
+                assets: [target.asset],
+                mode: .singleVideo,
+                onSaved: { pendingSavedAssetID = $0 }
+            )
+        }
+        .onChange(of: videoStudioTarget?.id) { _, targetID in
+            if targetID == nil { revealSavedAssetIfNeeded() }
+        }
         .alert("Unable to Share", isPresented: $isShareUnavailable) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -481,6 +492,19 @@ struct PhotoDetailScreen: View {
                             accessibilityLabel: "Compress"
                         ) {
                             compressionTarget = PhotoDetailActionTarget(
+                                id: currentAsset.localIdentifier,
+                                asset: currentAsset,
+                                sourceAlbum: model.sourceAlbum
+                            )
+                        }
+                    }
+                    if isCurrentVideo, let currentAsset {
+                        actionBarCenterButton(
+                            systemImage: "slider.horizontal.3",
+                            accessibilityLabel: "Edit"
+                        ) {
+                            showVideoChrome()
+                            videoStudioTarget = PhotoDetailActionTarget(
                                 id: currentAsset.localIdentifier,
                                 asset: currentAsset,
                                 sourceAlbum: model.sourceAlbum

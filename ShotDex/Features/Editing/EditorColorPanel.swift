@@ -13,65 +13,11 @@ struct EditorColorMixerSection: View {
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
 
-    /// A channel target strip (28c §6): "All" shows every channel's HUE / SAT / LUM
-    /// in one scroll (the previous shape); picking a channel narrows to just that
-    /// channel's three rows, each track tinted the way the channel would shift.
+    /// Every channel's HUE / SAT / LUM in one scroll, grouped under three sticky
+    /// section labels. No channel-picker strip: each row's track is already tinted
+    /// the way that channel shifts, so the colour is the label.
     var body: some View {
-        VStack(spacing: 0) {
-            channelStrip
-                .padding(.top, 8)
-                .padding(.bottom, 4)
-            if let band = chrome.mixerChannel {
-                ScrollView(.vertical) {
-                    VStack(spacing: 0) {
-                        mixerRow(band: band, property: .hue, title: "Hue")
-                        mixerRow(band: band, property: .saturation, title: "Saturation")
-                        mixerRow(band: band, property: .luminance, title: "Luminance")
-                        Color.clear.frame(height: 16)
-                    }
-                }
-                .scrollDisabled(chrome.activePlainSliderID != nil)
-            } else {
-                allChannelsScroll
-            }
-        }
-    }
-
-    private var channelStrip: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 8) {
-                Button("All") {
-                    withAnimation(EditorTheme.animation) { chrome.mixerChannel = nil }
-                }
-                .buttonStyle(EditorChipButtonStyle(isSelected: chrome.mixerChannel == nil))
-
-                ForEach(ColorMixerBand.allCases) { band in
-                    let isSelected = chrome.mixerChannel == band
-                    Button {
-                        withAnimation(EditorTheme.animation) { chrome.mixerChannel = band }
-                    } label: {
-                        HStack(spacing: 6) {
-                            Circle()
-                                .fill(EditorColorMixerStyle.hueColor(
-                                    band.centerDegrees,
-                                    saturation: 0.85,
-                                    brightness: 0.95
-                                ))
-                                .frame(width: 12, height: 12)
-                                .overlay {
-                                    Circle().strokeBorder(Color.white.opacity(0.3), lineWidth: 0.5)
-                                }
-                            Text(band.displayName)
-                        }
-                    }
-                    .buttonStyle(EditorChipButtonStyle(isSelected: isSelected))
-                    .accessibilityLabel(band.displayName)
-                    .accessibilityAddTraits(isSelected ? .isSelected : [])
-                }
-            }
-            .padding(.horizontal, 14)
-        }
-        .scrollIndicators(.hidden)
+        allChannelsScroll
     }
 
     private var allChannelsScroll: some View {
@@ -86,8 +32,7 @@ struct EditorColorMixerSection: View {
                     } header: {
                         EditorGroupHeader(
                             title: property.displayName,
-                            isFirst: property == ColorMixerProperty.allCases.first,
-                            onReset: { controller.resetColorMixer(property: property) }
+                            isFirst: property == ColorMixerProperty.allCases.first
                         )
                     }
                 }
@@ -370,8 +315,9 @@ struct EditorColorGradingSection: View {
     var body: some View {
         ScrollView(.vertical) {
             VStack(spacing: 8) {
-                regionSelector
-                // 28c Grade is three rows per region — Hue / Saturation / Luminance —
+                // The region picker moved to the panel's target strip (30c), so the
+                // scroll is just the rows for whichever region is selected there.
+                // Grade is three rows per region — Hue / Saturation / Luminance —
                 // not a tint wheel: the whole panel is one row language now, and the
                 // wheel needed height the fixed 246pt slab does not have. Hue and
                 // Saturation write through the same `setGradingHueSat` the wheel did.
@@ -449,48 +395,6 @@ struct EditorColorGradingSection: View {
         .scrollDisabled(chrome.activePlainSliderID != nil)
     }
 
-    /// Region picker in the same capsule-chip language as the Filters and Crop
-    /// strips — a horizontal `EditorChipButtonStyle` strip, accent when selected —
-    /// instead of the old dot-over-caption buttons that read as a different control
-    /// from every other tab. Natural-width chips in a horizontal scroll, exactly
-    /// like `EditorFiltersPanel.categoryStrip`; the four fit a phone without
-    /// scrolling and larger Dynamic Type scrolls rather than truncating. The
-    /// per-region tint stays on as a small leading dot inside each chip, so the
-    /// readout the wheel writes is not lost.
-    private var regionSelector: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 8) {
-                ForEach(ColorGradingRegion.allCases) { region in
-                    let isSelected = chrome.gradingRegion == region
-                    Button {
-                        withAnimation(EditorTheme.animation) {
-                            chrome.gradingRegion = region
-                        }
-                    } label: {
-                        HStack(spacing: 6) {
-                            Circle()
-                                .fill(EditorColorMixerStyle.regionTint(
-                                    controller.gradingWheel(region)
-                                ))
-                                .frame(width: 10, height: 10)
-                                .overlay {
-                                    Circle().strokeBorder(
-                                        Color.white.opacity(0.3),
-                                        lineWidth: 0.5
-                                    )
-                                }
-                            Text(region.displayName)
-                        }
-                    }
-                    .buttonStyle(EditorChipButtonStyle(isSelected: isSelected))
-                    .accessibilityLabel(region.displayName)
-                    .accessibilityAddTraits(isSelected ? .isSelected : [])
-                }
-            }
-            .padding(.horizontal, 14)
-        }
-        .scrollIndicators(.hidden)
-    }
 
     private func gradingRow(
         id: String,
@@ -527,6 +431,51 @@ struct EditorColorGradingSection: View {
             },
             onReset: { write(resetValue ?? (isBipolar ? 0 : 50)) }
         )
+    }
+}
+
+/// Grade's target strip: which tonal region — Shadow / Mid / Highlight / Global —
+/// the Hue / Saturation / Luminance rows below act on. Lives at the top of the
+/// panel, touching the photo, because it names an area the grade applies to.
+/// Capsule-chip language shared with the Filters and Crop strips, each chip
+/// carrying a leading dot in the region's current tint so the readout is not lost.
+struct EditorGradeRegionStrip: View {
+    @Bindable var controller: PhotoEditorController
+    @Bindable var chrome: EditorChromeModel
+
+    var body: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 8) {
+                ForEach(ColorGradingRegion.allCases) { region in
+                    let isSelected = chrome.gradingRegion == region
+                    Button {
+                        withAnimation(EditorTheme.animation) {
+                            chrome.gradingRegion = region
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(EditorColorMixerStyle.regionTint(
+                                    controller.gradingWheel(region)
+                                ))
+                                .frame(width: 10, height: 10)
+                                .overlay {
+                                    Circle().strokeBorder(
+                                        Color.white.opacity(0.3),
+                                        lineWidth: 0.5
+                                    )
+                                }
+                            Text(region.displayName)
+                        }
+                    }
+                    .buttonStyle(EditorChipButtonStyle(isSelected: isSelected))
+                    .accessibilityLabel(region.displayName)
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
+                }
+            }
+            .padding(.horizontal, 14)
+        }
+        .scrollIndicators(.hidden)
     }
 }
 

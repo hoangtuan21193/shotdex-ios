@@ -392,6 +392,8 @@ enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Sendable 
     case blackAndWhite
     case sharpness
     case sharpenRadius
+    case sharpenDetail
+    case sharpenMasking
     case definition
     case noiseReduction
     case colorNoiseReduction
@@ -442,6 +444,8 @@ enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Sendable 
         case .blackAndWhite: "Black & White"
         case .sharpness: "Sharpness"
         case .sharpenRadius: "Sharpen Radius"
+        case .sharpenDetail: "Sharpen Detail"
+        case .sharpenMasking: "Sharpen Masking"
         case .definition: "Definition"
         case .noiseReduction: "Noise"
         case .colorNoiseReduction: "Color Noise"
@@ -490,6 +494,8 @@ enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Sendable 
         case .blackAndWhite: "circle.lefthalf.filled.inverse"
         case .sharpness: "triangle"
         case .sharpenRadius: "triangle.tophalf.filled"
+        case .sharpenDetail: "triangle.righthalf.filled"
+        case .sharpenMasking: "theatermask.and.paintbrush"
         case .definition: "circle.dotted"
         case .noiseReduction: "aqi.medium"
         case .colorNoiseReduction: "drop.halffull"
@@ -525,7 +531,7 @@ enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Sendable 
         switch self {
         case .lensCorrection, .grain, .grainSize, .grainRoughness,
              .vignetteMidpoint, .vignetteFeather, .blackAndWhite,
-             .sharpenRadius, .colorNoiseReduction,
+             .sharpenRadius, .sharpenDetail, .sharpenMasking, .colorNoiseReduction,
              .vignetteHighlights, .chromaticAberration, .defringe: 0...1
         case .exposure: -2...2
         default: -1...1
@@ -563,6 +569,8 @@ struct PhotoAdjustments: Codable, Equatable, Sendable {
     var blackAndWhite = 0.0
     var sharpness = 0.0
     var sharpenRadius = 0.0
+    var sharpenDetail = 0.0
+    var sharpenMasking = 0.0
     var definition = 0.0
     var noiseReduction = 0.0
     var colorNoiseReduction = 0.0
@@ -615,6 +623,8 @@ struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .blackAndWhite: blackAndWhite
             case .sharpness: sharpness
             case .sharpenRadius: sharpenRadius
+            case .sharpenDetail: sharpenDetail
+            case .sharpenMasking: sharpenMasking
             case .definition: definition
             case .noiseReduction: noiseReduction
             case .colorNoiseReduction: colorNoiseReduction
@@ -662,6 +672,8 @@ struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .blackAndWhite: blackAndWhite = newValue
             case .sharpness: sharpness = newValue
             case .sharpenRadius: sharpenRadius = newValue
+            case .sharpenDetail: sharpenDetail = newValue
+            case .sharpenMasking: sharpenMasking = newValue
             case .definition: definition = newValue
             case .noiseReduction: noiseReduction = newValue
             case .colorNoiseReduction: colorNoiseReduction = newValue

@@ -4,23 +4,61 @@ import Testing
 
 struct EditorPanelLayoutTests {
 
-    /// The 28c panel is one fixed slab, and the bottom group nav holds every
-    /// editing group as its own chip.
-    @Test func the28cPanelIsAFixedSlabWithTwelveGroupChips() {
-        #expect(EditorLayoutMetrics.editorPanelFixedHeight == 246)
-        #expect(EditorLayoutMetrics.editorActionBarHeight == 46)
-        #expect(EditorLayoutMetrics.editorGroupNavHeight == 48)
-        // Light · Color · Point · Grade · Effects · Detail · Optics · Geo · Crop ·
-        // Mask · Markup · Presets.
-        #expect(EditorGroup.allCases.count == 12)
+    /// The Turn 31 panel is one fixed 246pt slab: a parameter zone, the group
+    /// strip (a wheel flanked by Back and Save) and a bare home-indicator inset.
+    /// There is no in-panel command row — it moved to the band — and the panel is
+    /// the same height on every tab, the target strip eating into the parameter
+    /// zone rather than adding to the panel.
+    @Test func theTurn31PanelIsAFixed246SlabOfThreeTiers() {
+        #expect(EditorLayoutMetrics.editorPanelHeight == 246)
+        #expect(EditorLayoutMetrics.editorParamZoneHeight == 167)
+        #expect(EditorLayoutMetrics.editorGroupStripHeight == 54)
+        #expect(EditorLayoutMetrics.editorTargetStripHeight == 36)
+        #expect(EditorLayoutMetrics.editorPanelSafeAreaInset == 25)
+
+        // Light · Color · Mix · Point · Grade · Effects · Detail · Optics · Geo ·
+        // Crop · Mask · Markup · Presets — all in the wheel, each with an icon.
+        #expect(EditorGroup.allCases.count == 13)
         #expect(EditorGroup.allCases.allSatisfy { !$0.title.isEmpty })
-        // The tool content gets whatever the fixed slab leaves after the action bar
-        // and the nav (plus the home-indicator inset) — a positive, usable height.
-        let content = EditorLayoutMetrics.editorPanelFixedHeight
-            - EditorLayoutMetrics.editorActionBarHeight
-            - EditorLayoutMetrics.editorGroupNavHeight
-            - EditorLayoutMetrics.panelBottomInset
-        #expect(content >= 120)
+        #expect(EditorGroup.allCases.allSatisfy { !$0.icon.isEmpty })
+
+        // The three tiers total the slab.
+        #expect(
+            EditorLayoutMetrics.editorParamZoneHeight
+                + EditorLayoutMetrics.editorGroupStripHeight
+                + EditorLayoutMetrics.editorPanelSafeAreaInset
+                == EditorLayoutMetrics.editorPanelHeight
+        )
+
+        // The parameter *rows* get the zone, less the target strip when one shows —
+        // but the panel height is unchanged either way.
+        let plain = EditorLayoutMetrics.editorParamAreaHeight(hasTargetStrip: false)
+        let withTarget = EditorLayoutMetrics.editorParamAreaHeight(hasTargetStrip: true)
+        #expect(plain == 167)
+        #expect(withTarget == 131)
+        #expect(plain == EditorLayoutMetrics.editorParamZoneHeight)
+        #expect(
+            withTarget + EditorLayoutMetrics.editorTargetStripHeight
+                == EditorLayoutMetrics.editorParamZoneHeight
+        )
+    }
+
+    /// The floating histogram card snaps to whichever corner it is dropped in and
+    /// parks there inset from the image edges.
+    @Test func histogramCardSnapsToTheNearestCorner() {
+        let bounds = CGRect(x: 0, y: 0, width: 400, height: 600)
+        #expect(EditorLayoutMetrics.nearestHistogramCorner(to: CGPoint(x: 10, y: 10), in: bounds) == .topLeading)
+        #expect(EditorLayoutMetrics.nearestHistogramCorner(to: CGPoint(x: 390, y: 10), in: bounds) == .topTrailing)
+        #expect(EditorLayoutMetrics.nearestHistogramCorner(to: CGPoint(x: 10, y: 590), in: bounds) == .bottomLeading)
+        #expect(EditorLayoutMetrics.nearestHistogramCorner(to: CGPoint(x: 390, y: 590), in: bounds) == .bottomTrailing)
+
+        // The expanded card is larger than the parked mini, and its resting centre
+        // sits a card-half plus the inset in from the chosen corner.
+        let size = EditorLayoutMetrics.histogramSize(collapsed: false)
+        #expect(size == CGSize(width: 152, height: 86))
+        let center = EditorLayoutMetrics.histogramCenter(for: .topTrailing, cardSize: size, in: bounds)
+        #expect(center.x == bounds.maxX - EditorLayoutMetrics.histogramInset - size.width / 2)
+        #expect(center.y == bounds.minY + EditorLayoutMetrics.histogramInset + size.height / 2)
     }
 
     @Test func onlyNearHorizontalPansBelongToASlider() {

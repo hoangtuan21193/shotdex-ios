@@ -149,14 +149,12 @@ struct RootTabView: View {
             }
         }
         .tabBarMinimizeBehavior(.never)
-        // Host the selection controls in the native bottom accessory (the tab bar
-        // stays visible and unchanged; it minimizes on scroll and the accessory
-        // follows it from expanded to inline placement). See SelectionAccessory.
-        .modifier(SelectionBottomAccessory(model: navigation.selectionBar))
-        // The selection count floats above the accessory band (out of the glass).
-        .overlay(alignment: .bottom) {
+        // Selection chrome is one full-screen floating overlay above every tab's
+        // content and the tab bar. The selecting screen hides the native tab/nav
+        // bars (`.toolbar(.hidden, …)`), so the grid runs full-bleed under it.
+        .overlay {
             if let model = navigation.selectionBar {
-                SelectionCountBanner(model: model)
+                SelectionOverlay(model: model)
                     .transition(.opacity)
             }
         }
@@ -202,12 +200,9 @@ struct RootTabView: View {
     }
 
     private var legacyTabView: some View {
-        // Pre-26 has no native tab bar. The custom floating tab bar stays a
-        // bottom overlay (its clearance handled by each grid's `bottomChromeInset`,
-        // unchanged). During selection it hides and the selection bar takes over a
-        // root-level `.safeAreaInset` — real safe area, so grids auto-clear it and
-        // only add a small selection pad. One static layout matching the iOS 26
-        // expanded form; no inline emulation.
+        // Pre-26 has no native tab bar. The custom floating tab bar stays a bottom
+        // overlay, hidden during selection; the selection chrome is then the same
+        // full-screen `SelectionOverlay` used on iOS 26, layered above everything.
         tabContent
             .overlay(alignment: .bottom) {
                 if navigation.selectionBar == nil {
@@ -225,21 +220,11 @@ struct RootTabView: View {
                     )
                     .padding(.bottom, 8)
                     .transition(.opacity)
-                } else {
-                    // Scrim lives here (root overlay) — not as the bar's own
-                    // background — so it ignores the safe area and paints all the
-                    // way to the physical bottom edge, covering the home-indicator
-                    // strip below the bar (else that strip renders white pre-26).
-                    BottomScrim()
-                        .ignoresSafeArea()
-                        .allowsHitTesting(false)
-                        .transition(.opacity)
                 }
             }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
+            .overlay {
                 if let model = navigation.selectionBar {
-                    SelectionBottomBar(model)
-                        .padding(.bottom, 8)
+                    SelectionOverlay(model: model)
                         .transition(.opacity)
                 }
             }
@@ -399,27 +384,6 @@ extension View {
     }
 }
 
-/// Hosts the multi-select controls in the iOS 26 tab-bar bottom accessory. The
-/// accessory content is always supplied (stable identity) and toggled via
-/// `isEnabled:` — the intended API for showing/hiding it without leaving an empty
-/// accessory band. `isEnabled:` is iOS 26.1+; on 26.0 it falls back to
-/// conditional content.
-@available(iOS 26.0, *)
-private struct SelectionBottomAccessory: ViewModifier {
-    let model: SelectionBarModel?
-
-    func body(content: Content) -> some View {
-        if #available(iOS 26.1, *) {
-            content.tabViewBottomAccessory(isEnabled: model != nil) {
-                if let model { SelectionAccessory(model) }
-            }
-        } else {
-            content.tabViewBottomAccessory {
-                if let model { SelectionAccessory(model) }
-            }
-        }
-    }
-}
 
 /// Focuses the search field where the API exists (iOS 18+). Before that,
 /// presenting the field is what raises the keyboard and there is nothing to add.

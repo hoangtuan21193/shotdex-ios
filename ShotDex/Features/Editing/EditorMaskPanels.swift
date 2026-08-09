@@ -25,12 +25,12 @@ struct EditorMaskListPanel: View {
                     chrome.isNewMaskSheetPresented = true
                 } label: {
                     Label("New Mask", systemImage: "plus")
-                        .font(.system(size: 13.5, weight: .semibold))
+                        .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 14)
-                        .frame(height: 38)
-                        .background(EditorTheme.accent, in: Capsule())
-                        .frame(minHeight: 44)
+                        .padding(.horizontal, 12)
+                        .frame(height: 28)
+                        .background(EditorTheme.accent, in: RoundedRectangle(cornerRadius: 7))
+                        .contentShape(RoundedRectangle(cornerRadius: 7))
                 }
                 .buttonStyle(.plain)
             }
@@ -223,6 +223,9 @@ struct EditorMaskRow: View {
 struct EditorMaskActionsMenu: View {
     @Bindable var controller: PhotoEditorController
     let rename: () -> Void
+    /// Removes the whole mask and returns to the list. Turn 31 moved this off the
+    /// (now gone) command row and into here.
+    var deleteMask: (() -> Void)?
 
     var body: some View {
         Menu {
@@ -259,6 +262,12 @@ struct EditorMaskActionsMenu: View {
                     controller.deleteSelectedComponent()
                 } label: {
                     Label("Delete This Shape", systemImage: "minus.circle")
+                }
+            }
+            if let deleteMask {
+                Divider()
+                Button(role: .destructive, action: deleteMask) {
+                    Label("Delete Mask", systemImage: "trash")
                 }
             }
         } label: {
@@ -399,7 +408,11 @@ struct EditorMaskDetailPanel: View {
                 controller.selectedMask?.isVisible == false ? "Off" : "On"
             )
 
-            EditorMaskActionsMenu(controller: controller, rename: rename)
+            EditorMaskActionsMenu(controller: controller, rename: rename) {
+                controller.deleteSelectedMask()
+                chrome.resetZoom()
+                controller.closeSelectedMaskAdjustments()
+            }
         }
         .padding(.horizontal, 12)
         .frame(height: EditorLayoutMetrics.maskNavigationRowHeight)
@@ -412,6 +425,11 @@ struct EditorMaskDetailPanel: View {
     private var maskShapeSection: some View {
         if let component = controller.selectedComponent {
             EditorGroupHeader(title: "Mask · Shape")
+
+            // Add / Subtract for new strokes and shapes. Turn 31 moved it off the
+            // command row into the shape section, where it is in reach while
+            // painting.
+            addSubtractRow
 
             if (controller.selectedMask?.components.count ?? 0) > 1 {
                 componentPicker
@@ -446,6 +464,30 @@ struct EditorMaskDetailPanel: View {
                 componentSlider("Opacity", keyPath: \.opacity, range: 0.01...1)
             }
         }
+    }
+
+    /// Add / Subtract for the next stroke or shape, mirroring `maskOperation`.
+    private var addSubtractRow: some View {
+        HStack(spacing: 8) {
+            ForEach(MaskBlendOperation.allCases) { operation in
+                Button {
+                    controller.maskOperation = operation
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(
+                            systemName: operation == .add ? "plus.circle" : "minus.circle"
+                        )
+                        Text(operation == .add ? "Add" : "Subtract")
+                    }
+                }
+                .buttonStyle(
+                    EditorChipButtonStyle(isSelected: controller.maskOperation == operation)
+                )
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.top, 2)
     }
 
     private var componentPicker: some View {

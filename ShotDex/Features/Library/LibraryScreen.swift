@@ -21,6 +21,9 @@ struct LibraryScreen: View {
     @State private var selectedIds: [String] = []
     @State private var isComparePresented = false
     @State private var compressionPresentation: CompressionPresentation?
+    @State private var collagePresentation: CollagePresentation?
+    @State private var videoStudioPresentation: VideoStudioPresentation?
+    @State private var addToCollectionPresentation: AddToCollectionPresentation?
     /// Selection snapshot at swipe-drag start; each move re-applies the
     /// dragged range on top of it so backtracking un-does.
     @State private var swipeBaseline: [String] = []
@@ -29,7 +32,11 @@ struct LibraryScreen: View {
     @State private var retapResetCount = 0
     @State private var isDeleting = false
     @State private var isPreparingShare = false
+    @State private var isDuplicating = false
     @State private var deleteErrorMessage: String?
+    /// Errors from the ⋯ actions (Export EXIF, Duplicate) — its own alert so it
+    /// never collides with the delete alert.
+    @State private var actionErrorMessage: String?
     /// Index indicator: a compact token in the top-leading toolbar (right of
     /// the Settings gear); tapping presents the detail popover. This drives
     /// the popover's presentation.
@@ -63,9 +70,10 @@ struct LibraryScreen: View {
             }
         }
         .toolbar { toolbarContent }
-        // Select mode keeps the native tab bar visible: on iOS 26 the selection
-        // controls live in the tab-bar bottom accessory (expanded → inline on
-        // scroll); pre-26 the selection bar takes over a root `.safeAreaInset`.
+        // Selection mode runs full-bleed: the floating `SelectionOverlay` owns all
+        // controls, so both the nav bar and the tab bar hide and the grid shows
+        // through beneath the glass.
+        .toolbar(isSelecting ? .hidden : .automatic, for: .navigationBar, .tabBar)
         .onChange(of: isSelecting) { navigation.hidesTabBar = isSelecting }
         // Publish the selection to the root tab view, which hosts the bar in the tab
         // bar's slot. Republished on any selection change so counts/thumbnails
@@ -132,6 +140,23 @@ struct LibraryScreen: View {
                 sourceAlbum: presentation.sourceAlbum
             )
         }
+        .fullScreenCover(item: $collagePresentation) { presentation in
+            CollageScreen(assets: presentation.assets)
+        }
+        .fullScreenCover(item: $videoStudioPresentation) { presentation in
+            VideoStudioScreen(
+                assets: presentation.assets,
+                mode: presentation.mode,
+                onSaved: { _ in }
+            )
+        }
+        .sheet(item: $addToCollectionPresentation) { presentation in
+            AddToCollectionSheet(
+                assets: presentation.assets,
+                photoLibrary: photoLibrary,
+                onAdded: { withAnimation { stopSelecting() } }
+            )
+        }
         .alert(
             "Couldn't Delete Photos",
             isPresented: Binding(
@@ -142,6 +167,17 @@ struct LibraryScreen: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(deleteErrorMessage ?? "")
+        }
+        .alert(
+            "Something Went Wrong",
+            isPresented: Binding(
+                get: { actionErrorMessage != nil },
+                set: { if !$0 { actionErrorMessage = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(actionErrorMessage ?? "")
         }
     }
 
@@ -187,6 +223,29 @@ struct LibraryScreen: View {
             assets: assets,
             sourceAlbum: nil
         )
+    }
+
+    /// Selected *image* asset ids, in pick order (videos dropped) — the
+    /// selection itself stays mixed; Collage just ignores the videos.
+    private func selectedImageIDs(_ model: LibraryModel) -> [String] {
+        let imageIDs = Set(
+            model.items
+                .filter { $0.mediaType == PHAssetMediaType.image.rawValue }
+                .map(\.assetId)
+        )
+        return selectedIds.filter { imageIDs.contains($0) }
+    }
+
+    private func presentCollage(_ model: LibraryModel) {
+        let assets = PhotoLibraryService.fetchAssets(ids: selectedImageIDs(model))
+        guard CollageTemplateCatalog.supportedCounts.contains(assets.count) else { return }
+        collagePresentation = CollagePresentation(assets: assets)
+    }
+
+    private func presentVideoStudio(_ model: LibraryModel) {
+        let assets = PhotoLibraryService.fetchAssets(ids: selectedIds)
+        guard !assets.isEmpty else { return }
+        videoStudioPresentation = VideoStudioPresentation(assets: assets, mode: .multiClip)
     }
 
     private func deleteSelected(_ model: LibraryModel) {
@@ -334,24 +393,88 @@ struct LibraryScreen: View {
         var isSelecting: Bool
         var ids: [String]
         var isDeleting: Bool
+        var isPreparingShare: Bool
     }
     private var selectionSnapshot: SelectionSnapshot {
-        SelectionSnapshot(isSelecting: isSelecting, ids: selectedIds, isDeleting: isDeleting)
+        SelectionSnapshot(
+            isSelecting: isSelecting,
+            ids: selectedIds,
+            isDeleting: isDeleting,
+            isPreparingShare: isPreparingShare
+        )
     }
 
-    /// The selection-bar model the root tab view renders (Share lives in the toolbar;
-    /// here it's Compare (2–4) + Delete + the selection thumbnail preview).
+    /// The model the root tab view's floating `SelectionOverlay` renders: the full
+    /// action set (Share, Close, Compare, Compress, Collage, Video, Delete, plus
+    /// the ⋯ menu) with the selection thumbnail tray.
     private func selectionBarModel() -> SelectionBarModel? {
         guard let model else { return nil }
         return SelectionBarModel(
             selectionCount: selectedIds.count,
+            imageSelectionCount: selectedImageIDs(model).count,
             thumbnailIds: selectedIds,
             photoLibrary: photoLibrary,
-            onCompare: { isComparePresented = true },
-            onDelete: { deleteSelected(model) },
+            isDeleting: isDeleting,
+            isPreparingShare: isPreparingShare,
+            onShare: shareSelected,
+            onClose: { withAnimation { stopSelecting() } },
             onDeselect: { toggleSelection(of: $0) },
-            isDeleting: isDeleting
+            onCollage: { presentCollage(model) },
+            onVideo: { presentVideoStudio(model) },
+            onCompare: { isComparePresented = true },
+            onCompress: { presentCompression(model) },
+            onDelete: { deleteSelected(model) },
+            onAddToCollection: { addToCollection() },
+            onExportEXIF: { exportEXIF(model) },
+            onDuplicate: { duplicateSelected() }
         )
+    }
+
+    // MARK: ⋯ actions
+
+    /// Opens the album picker for the current selection.
+    private func addToCollection() {
+        let assets = PhotoLibraryService.fetchAssets(ids: selectedIds)
+        guard !assets.isEmpty else { return }
+        addToCollectionPresentation = AddToCollectionPresentation(assets: assets)
+    }
+
+    /// Exports the selected *images'* indexed EXIF to a CSV and shares it.
+    private func exportEXIF(_ model: LibraryModel) {
+        let imageIDs = selectedImageIDs(model)
+        guard !imageIDs.isEmpty else { return }
+        Task {
+            let byId = (try? dependencies.libraryQueries.metadata(assetIds: imageIDs)) ?? [:]
+            let rows = imageIDs.compactMap { byId[$0] }
+            guard !rows.isEmpty else {
+                actionErrorMessage = "These photos aren't indexed yet — their EXIF isn't available."
+                return
+            }
+            do {
+                let url = try ExifCSVExporter.writeTemporaryFile(rows)
+                PhotoShareSheet.present(items: [url])
+            } catch {
+                actionErrorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    /// Duplicates the selected assets as new library items.
+    private func duplicateSelected() {
+        guard !selectedIds.isEmpty, !isDuplicating else { return }
+        let assets = PhotoLibraryService.fetchAssets(ids: selectedIds)
+        guard !assets.isEmpty else { return }
+        isDuplicating = true
+        Task {
+            defer { isDuplicating = false }
+            do {
+                _ = try await photoLibrary.duplicateAssets(assets)
+                photoLibrary.publishAppCreatedAsset()
+                withAnimation { stopSelecting() }
+            } catch {
+                actionErrorMessage = error.localizedDescription
+            }
+        }
     }
 
     private func photoGrid(_ model: LibraryModel) -> some View {
@@ -749,34 +872,12 @@ struct LibraryScreen: View {
 
     // MARK: Toolbar
 
-    /// Share button for the top-bar leading slot during select mode; a spinner
-    /// replaces the glyph while the assets are being gathered.
-    @ViewBuilder
-    private var shareToolbarButton: some View {
-        Button {
-            shareSelected()
-        } label: {
-            if isPreparingShare {
-                ProgressView()
-            } else {
-                Image(systemName: "square.and.arrow.up")
-            }
-        }
-        .disabled(selectedIds.isEmpty || isPreparingShare)
-        .accessibilityLabel("Share")
-    }
-
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        // Separate items so each button gets its own Liquid Glass circle
-        // on iOS 26 instead of sharing one capsule. In select mode the leading
-        // slot shows Share in place of the Settings gear.
+        // During selection the nav bar is hidden entirely (all controls live in
+        // the floating overlay), so these items only ever render when browsing.
         ToolbarItem(placement: .topBarLeading) {
-            if isSelecting {
-                shareToolbarButton
-            } else {
-                SettingsButton()
-            }
+            SettingsButton()
         }
         // Break the shared Liquid Glass container so the indexing token reads as
         // its own control, not part of the Settings gear's tap target.
@@ -791,40 +892,13 @@ struct LibraryScreen: View {
             }
         }
         ToolbarItem(placement: .topBarTrailing) {
-            if let model, isSelecting {
-                Menu {
-                    Button {
-                        presentCompression(model)
-                    } label: {
-                        Label(
-                            "Resize & Compress",
-                            systemImage: "arrow.down.right.and.arrow.up.left"
-                        )
-                    }
-                    .disabled(
-                        !model.items.contains {
-                            selectedIds.contains($0.assetId)
-                                && $0.mediaType == PHAssetMediaType.image.rawValue
-                        }
-                    )
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                }
-                .accessibilityLabel("More selection actions")
-            }
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-            if model != nil {
+            if model != nil, !isSelecting {
                 Button {
-                    if isSelecting {
-                        stopSelecting()
-                    } else {
-                        isSelecting = true
-                    }
+                    isSelecting = true
                 } label: {
-                    Image(systemName: isSelecting ? "xmark.circle.fill" : "checkmark.circle")
+                    Image(systemName: "checkmark.circle")
                 }
-                .accessibilityLabel(isSelecting ? "Cancel selection" : "Select photos")
+                .accessibilityLabel("Select photos")
             }
         }
         ToolbarItem(placement: .topBarTrailing) {

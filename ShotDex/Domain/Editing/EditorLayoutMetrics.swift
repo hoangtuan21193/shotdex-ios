@@ -1,27 +1,152 @@
 import CoreGraphics
 import Foundation
 
+/// Corner the floating histogram card snaps to when the user lets go.
+enum EditorHistogramCorner: String, CaseIterable, Codable, Sendable {
+    case topLeading
+    case topTrailing
+    case bottomLeading
+    case bottomTrailing
+
+    var isTop: Bool { self == .topLeading || self == .topTrailing }
+    var isLeading: Bool { self == .topLeading || self == .bottomLeading }
+}
+
 /// Fixed geometry of the editor. The panel never resizes — not while scrolling,
 /// changing tab, entering a mask, or dragging a slider. Only full-bleed takes it
 /// away, so its height is a pure function of the screen.
 enum EditorLayoutMetrics {
-    // MARK: 28c panel
+    // MARK: Turn 31 panel
 
-    /// The "28c" panel: one opaque slab of fixed height glued to the bottom, the
-    /// image taking everything above it. Four stacked tiers — action bar, optional
-    /// target strip, the scrolling row list, and the group nav — that never reorder
-    /// and never exceed this total.
-    static let editorPanelFixedHeight: CGFloat = 246
-    static let editorActionBarHeight: CGFloat = 46
-    static let editorTargetStripHeight: CGFloat = 40
+    /// The "Turn 31" editor: a floating command row rides the Dynamic Island band
+    /// over the photo (undo / redo / hold-for-original on the leading edge, the
+    /// histogram mini and the ⋯ menu on the trailing edge), and one opaque panel is
+    /// glued to the bottom. The panel never resizes. Its tiers, top to bottom, are
+    /// the scrolling parameter zone (an optional target strip is its first row, not
+    /// a tier of its own, so the panel is the same height on every tab), the group
+    /// strip — a snap wheel flanked by Back and Save — and a bare home-indicator
+    /// inset. There is no in-panel command row: everything that used to sit there
+    /// moved onto the band or into the ⋯ menu.
+    static let editorPanelHeight: CGFloat = 246
+    /// The parameter zone: the scrolling rows. Fixed, so the panel stays 246 on
+    /// every tab. When a target strip shows it is the zone's first 36pt and the rows
+    /// take the rest — the panel height itself does not change.
+    /// 167 = 246 − 54 group strip − 25 safe-area inset.
+    static let editorParamZoneHeight: CGFloat = 167
+    /// The group-strip tier: `[Back 38] [wheel] [Save 42]`. Taller than the old chip
+    /// row (54, not 40) because the wheel's chips are an icon over a label.
+    static let editorGroupStripHeight: CGFloat = 54
+    /// Target strip — "which area does this act on" — the first row *inside* the
+    /// parameter zone (not a tier of its own). Only Grade shows it; Color Mix keeps
+    /// its all-channels scroll and Mask keeps its own list / detail panels.
+    static let editorTargetStripHeight: CGFloat = 36
+    /// Bare home-indicator zone under the group strip. 25pt, not the full 34: the
+    /// wheel above it takes only horizontal swipes, which the system's bottom-edge
+    /// (vertical) gesture does not claim.
+    static let editorPanelSafeAreaInset: CGFloat = 25
+    /// The band over the Dynamic Island. It carries the floating command row; the
+    /// photo starts at its bottom edge so it never touches the island. This 48 is a
+    /// *floor*: the band is grown to the device's top safe-area inset (≈59 on Face-ID
+    /// iPhones) when that is larger, so a tall aspect-fit photo begins below the
+    /// island's bottom rather than being sliced by it.
+    static let editorTopBandHeight: CGFloat = 48
+    /// The floating command row inside the band: 34pt circular buttons, 37 tall,
+    /// inset 11 from the band's top so the row sits level with the Dynamic Island.
+    static let editorFloatingCommandRowHeight: CGFloat = 37
+    static let editorFloatingCommandRowTopInset: CGFloat = 11
+    static let editorFloatingCommandButtonSize: CGFloat = 34
+    /// Horizontal inset for the command clusters from each screen edge. Must clear
+    /// the device's rounded corner (≈55–62pt radius on Face-ID iPhones) at the row's
+    /// vertical band so a 34pt disc is never sliced by the corner; the clusters can
+    /// still sit right up against the Dynamic Island in the middle. Same value on
+    /// both edges so undo (left-most) and ⋯ (right-most) are equally safe.
+    static let editorFloatingCommandSideInset: CGFloat = 20
+    /// On-screen width of the Dynamic Island, plus a hair of margin, used to keep
+    /// the stretchable histogram pill out from under it. Face-ID iPhones are ~126pt;
+    /// a touch wider so the pill's edge parks just clear of the cutout.
+    static let editorDynamicIslandWidth: CGFloat = 132
+
+    /// Where the stretchable histogram pill should start (its leading x), given the
+    /// band's full width: just right of the Dynamic Island. The pill then runs from
+    /// here out to the ⋯ button, filling the band's right half.
+    static func editorHistogramPillLeading(bandWidth: CGFloat) -> CGFloat {
+        bandWidth / 2 + editorDynamicIslandWidth / 2
+    }
+
+    // MARK: Group wheel
+
+    /// One wheel chip: an icon over a label. Fixed width so the snap picker has a
+    /// regular stride and the chip nearest the centre is unambiguous.
+    static let editorGroupChipWidth: CGFloat = 58
+    static let editorGroupChipHeight: CGFloat = 42
+    /// The fade over each end of the wheel, dissolving chips into the panel colour.
+    static let editorGroupWheelEdgeFade: CGFloat = 26
+
+    // MARK: Legacy panel constants (Collage / Video Studio, draw takeover)
+
+    /// Still used by the Collage and Video Studio panels and the drawing top bar —
+    /// left in place so this change stays inside the photo editor.
+    static let editorPanelFixedHeight: CGFloat = 240
+    static let editorActionBarHeight: CGFloat = 40
     static let editorGroupNavHeight: CGFloat = 48
     /// One parameter row. Every gesture surface (label, track, value) spans the
     /// full row width at this height, so a value can be dragged from anywhere on it.
     static let editorRowHeight: CGFloat = 34
     static let editorRowLabelWidth: CGFloat = 88
     static let editorRowValueWidth: CGFloat = 40
-    /// Mini histogram parked at the left of the action bar.
-    static let editorMiniHistogramSize = CGSize(width: 54, height: 28)
+    /// Mini histogram, in the Dynamic Island band. Tapping it expands the floating
+    /// card over the photo.
+    static let editorMiniHistogramSize = CGSize(width: 56, height: 29)
+
+    /// Height the parameter-row list gets: the whole parameter zone, less the target
+    /// strip when one is shown. The panel height is unaffected either way.
+    static func editorParamAreaHeight(hasTargetStrip: Bool) -> CGFloat {
+        editorParamZoneHeight - (hasTargetStrip ? editorTargetStripHeight : 0)
+    }
+
+    // MARK: Floating histogram card
+
+    /// The expanded histogram card that floats over the photo. Tapping the mini
+    /// histogram opens it; it drags to any corner and taps closed.
+    static let histogramCardWidth: CGFloat = 152
+    static let histogramCardHeight: CGFloat = 86
+    static let histogramCollapsedHeight: CGFloat = 30
+    /// Margin the card keeps from the image edges when parked in a corner.
+    static let histogramInset: CGFloat = 12
+
+    static func histogramSize(collapsed: Bool) -> CGSize {
+        collapsed
+            ? CGSize(width: editorMiniHistogramSize.width, height: histogramCollapsedHeight)
+            : CGSize(width: histogramCardWidth, height: histogramCardHeight)
+    }
+
+    /// Resting centre of the card for a given corner inside the image bounds.
+    static func histogramCenter(
+        for corner: EditorHistogramCorner,
+        cardSize: CGSize,
+        in bounds: CGRect
+    ) -> CGPoint {
+        let field = bounds.insetBy(dx: histogramInset, dy: histogramInset)
+        let x = corner.isLeading
+            ? field.minX + cardSize.width / 2
+            : field.maxX - cardSize.width / 2
+        let y = corner.isTop
+            ? field.minY + cardSize.height / 2
+            : field.maxY - cardSize.height / 2
+        return CGPoint(x: x, y: y)
+    }
+
+    /// Corner nearest a dropped centre, so the card snaps to whichever quadrant
+    /// the user let go in.
+    static func nearestHistogramCorner(
+        to center: CGPoint,
+        in bounds: CGRect
+    ) -> EditorHistogramCorner {
+        let isLeading = center.x <= bounds.midX
+        let isTop = center.y <= bounds.midY
+        if isTop { return isLeading ? .topLeading : .topTrailing }
+        return isLeading ? .bottomLeading : .bottomTrailing
+    }
     /// Fine-adjust: press in place this long, then drag, and the value moves at
     /// `sliderFineGain` of the normal rate.
     static let sliderFineHoldSeconds: Double = 0.3

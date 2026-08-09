@@ -1,25 +1,40 @@
 import SwiftUI
 import UIKit
 
-/// One "28c" parameter row: `[label 88][track][value 40]`, 34pt tall.
+/// The one slider used everywhere in the editor.
 ///
-/// The whole row is one horizontal-drag surface — a pan that starts on the label,
-/// the track or the value all set the value (`delta = translation.x / trackWidth *
-/// range`). Press in place for 300ms first and the drag switches to fine mode
-/// (quarter rate). A vertical pan anywhere on the row scrolls the list instead. A
-/// double tap resets the row; a long press on the value column opens the numeric
-/// keypad. There is no round knob and no system `Slider`: the value is a white
-/// bar, the pushed range an accent bar with a glow, and a track that already
-/// carries a colour (Temp, Tint) is never tinted accent on top.
-struct EditorSliderRow: View {
-    let kind: PhotoAdjustmentKind
+/// Light / Color / Effects / Detail rows, the colour mixer, grading, point colour,
+/// crop straighten — all render through this, so the whole look (white cursor bar,
+/// accent fill, colour tracks, the zero notch) and the whole-row gesture (drag
+/// anywhere, 300ms-hold fine mode, vertical-pan scrolls, double-tap reset, long-
+/// press the value for the keypad) live in exactly one place. Callers pass data
+/// and a few switches; nobody re-implements the style. There is no round knob and
+/// no system `Slider`.
+///
+/// - `range` sets min/max. `anchor` is where the accent fill starts and the notch
+///   sits — the centre for a two-way row, the left end for a one-way one.
+///   `showsAnchorNotch` draws that centre notch. `detent` is an optional value the
+///   cursor snaps onto as it passes (0, or 100% for a filter amount). A
+///   `trackGradient` makes the track carry its own colour and suppresses the
+///   accent fill — the colour is the meaning.
+struct EditorValueSlider: View {
+    let label: String
     let value: Double
-    let isActive: Bool
+    let range: ClosedRange<Double>
+    let valueText: String
+    var isActive = false
+    var anchor: Double = 0
+    var showsAnchorNotch = false
+    var detent: Double?
+    var trackGradient: LinearGradient?
+    /// Overrides the spoken accessibility name; defaults to `label` (which is often
+    /// an abbreviation like "TEMP").
+    var accessibilityName: String?
     let onBeginDrag: () -> Void
     let onDrag: (Double) -> Void
-    let onEndDrag: (Double, Double, Bool) -> Void
+    var onEndDrag: (Double, Double, Bool) -> Void = { _, _, _ in }
     let onReset: () -> Void
-    let onEditValue: () -> Void
+    var onEditValue: (() -> Void)?
 
     @State private var dragStartValue = 0.0
     @State private var dragStartDate = Date()
@@ -27,24 +42,19 @@ struct EditorSliderRow: View {
     @State private var isHoldingDetent = false
     @State private var trackWidth: CGFloat = 1
 
-    private var range: ClosedRange<Double> { EditorAdjustmentCatalog.sliderRange(of: kind) }
-    private var isBipolar: Bool { EditorAdjustmentCatalog.isBipolar(kind) }
-    private var identity: Double { PhotoAdjustments()[kind] }
-    private var isZero: Bool { abs(value - identity) < 0.0001 }
-    private var coloredGradient: LinearGradient? { EditorTheme.troughGradient(for: kind) }
-
     var body: some View {
         HStack(spacing: 10) {
-            Text(EditorAdjustmentCatalog.shortTitle(of: kind).uppercased())
+            Text(label.uppercased())
                 .font(.system(size: 10.5, weight: .semibold))
                 .tracking(0.5)
                 .foregroundStyle(isActive ? .white : EditorTheme.secondaryText)
                 .lineLimit(1)
+                .minimumScaleFactor(0.75)
                 .frame(width: EditorLayoutMetrics.editorRowLabelWidth, alignment: .leading)
 
             track
 
-            Text(EditorAdjustmentCatalog.displayText(value, of: kind))
+            Text(valueText)
                 .font(.system(size: 11.5, weight: .semibold).monospacedDigit())
                 .foregroundStyle(isActive ? EditorTheme.accent : Color.white.opacity(0.85))
                 .lineLimit(1)
@@ -56,8 +66,8 @@ struct EditorSliderRow: View {
         .contentShape(Rectangle())
         .overlay { gestureCatcher }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(kind.displayName)
-        .accessibilityValue(EditorAdjustmentCatalog.displayText(value, of: kind))
+        .accessibilityLabel(accessibilityName ?? label)
+        .accessibilityValue(valueText)
         .accessibilityAdjustableAction { direction in
             let step = (range.upperBound - range.lowerBound) / 40
             let next = direction == .increment ? value + step : value - step
@@ -70,28 +80,26 @@ struct EditorSliderRow: View {
     private var track: some View {
         GeometryReader { proxy in
             let width = proxy.size.width
-            let fraction = normalizedFraction
-            let anchor = anchorFraction
+            let frac = fraction(of: value)
+            let anchorFrac = fraction(of: anchor)
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(coloredGradient ?? neutralTrack)
-                    .frame(height: coloredGradient == nil ? 4 : 6)
+                    .fill(trackGradient ?? neutralTrack)
+                    .frame(height: trackGradient == nil ? 4 : 6)
 
-                if coloredGradient == nil {
-                    accentFill(width: width, fraction: fraction, anchor: anchor)
+                if trackGradient == nil {
+                    accentFill(width: width, fraction: frac, anchor: anchorFrac)
                 }
 
-                // Zero mark: bipolar rows only. A one-way row (Grain, Feather…) has
-                // no meaningful centre, so it gets none.
-                if isBipolar {
+                if showsAnchorNotch {
                     Rectangle()
-                        .fill(Color.black.opacity(coloredGradient == nil ? 0.62 : 0.55))
-                        .frame(width: 1, height: coloredGradient == nil ? 8 : 10)
-                        .offset(x: anchor * width - 0.5)
+                        .fill(Color.black.opacity(trackGradient == nil ? 0.62 : 0.55))
+                        .frame(width: 1, height: trackGradient == nil ? 8 : 10)
+                        .offset(x: anchorFrac * width - 0.5)
                 }
 
                 cursor
-                    .offset(x: min(width - 4, max(0, fraction * width - 2)))
+                    .offset(x: min(width - 4, max(0, frac * width - 2)))
             }
             .frame(maxHeight: .infinity)
             .onAppear { trackWidth = max(1, width) }
@@ -104,7 +112,7 @@ struct EditorSliderRow: View {
         RoundedRectangle(cornerRadius: 2)
             .fill(.white)
             .frame(width: 4, height: 14)
-            .modifier(CursorGlow(isColored: coloredGradient != nil))
+            .modifier(CursorGlow(isColored: trackGradient != nil))
     }
 
     private var gestureCatcher: some View {
@@ -114,7 +122,7 @@ struct EditorSliderRow: View {
                 dragStartValue = value
                 dragStartDate = Date()
                 hasActivated = false
-                isHoldingDetent = isZero
+                isHoldingDetent = detent.map { abs(value - $0) < 0.0001 } ?? false
                 onBeginDrag()
             },
             onChanged: { translation, isFine in
@@ -127,7 +135,7 @@ struct EditorSliderRow: View {
                 let proposed = dragStartValue
                     + Double(translation / trackWidth) * span * gain
                 onDrag(
-                    detented(
+                    snapped(
                         min(range.upperBound, max(range.lowerBound, proposed)),
                         trackWidth: trackWidth
                     )
@@ -142,21 +150,22 @@ struct EditorSliderRow: View {
                 UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
                 onReset()
             },
-            onEditValue: onEditValue
+            onEditValue: onEditValue ?? {}
         )
     }
 
-    /// Pulls the value onto its identity as the cursor passes it and taps out a
-    /// selection haptic on the way in, so getting a row back to 0 takes no
-    /// precision and is felt rather than read.
-    private func detented(_ value: Double, trackWidth: CGFloat) -> Double {
+    /// Pulls the value onto `detent` as the cursor passes it and taps out a
+    /// selection haptic on the way in, so getting a row back to its rest point
+    /// takes no precision and is felt rather than read.
+    private func snapped(_ value: Double, trackWidth: CGFloat) -> Double {
+        guard let detent else { return value }
         let result = EditorLayoutMetrics.snapped(
             value,
-            detent: identity,
+            detent: detent,
             range: range,
             trackWidth: trackWidth
         )
-        let isOnDetent = result == identity
+        let isOnDetent = result == detent
         if isOnDetent, !isHoldingDetent {
             UISelectionFeedbackGenerator().selectionChanged()
         }
@@ -170,16 +179,6 @@ struct EditorSliderRow: View {
             startPoint: .leading,
             endPoint: .trailing
         )
-    }
-
-    private var normalizedFraction: CGFloat {
-        fraction(of: value)
-    }
-
-    /// Where the accent fill and the zero mark are anchored: the identity value.
-    /// For a bipolar row that is the centre; for a one-way row it is the left end.
-    private var anchorFraction: CGFloat {
-        fraction(of: identity)
     }
 
     private func fraction(of raw: Double) -> CGFloat {
@@ -197,6 +196,41 @@ struct EditorSliderRow: View {
             .frame(width: max(0, (end - start) * width), height: 4)
             .offset(x: start * width)
             .shadow(color: EditorTheme.accent.opacity(0.65), radius: 5)
+    }
+}
+
+/// The catalog-driven wrapper for a `PhotoAdjustmentKind` row: it reads the kind's
+/// range, identity, bipolarity, colour track, and formatted value, then hands them
+/// to the one `EditorValueSlider`.
+struct EditorSliderRow: View {
+    let kind: PhotoAdjustmentKind
+    let value: Double
+    let isActive: Bool
+    let onBeginDrag: () -> Void
+    let onDrag: (Double) -> Void
+    let onEndDrag: (Double, Double, Bool) -> Void
+    let onReset: () -> Void
+    let onEditValue: () -> Void
+
+    var body: some View {
+        let identity = PhotoAdjustments()[kind]
+        EditorValueSlider(
+            label: EditorAdjustmentCatalog.shortTitle(of: kind),
+            value: value,
+            range: EditorAdjustmentCatalog.sliderRange(of: kind),
+            valueText: EditorAdjustmentCatalog.displayText(value, of: kind),
+            isActive: isActive,
+            anchor: identity,
+            showsAnchorNotch: EditorAdjustmentCatalog.isBipolar(kind),
+            detent: identity,
+            trackGradient: EditorTheme.troughGradient(for: kind),
+            accessibilityName: kind.displayName,
+            onBeginDrag: onBeginDrag,
+            onDrag: onDrag,
+            onEndDrag: onEndDrag,
+            onReset: onReset,
+            onEditValue: onEditValue
+        )
     }
 }
 

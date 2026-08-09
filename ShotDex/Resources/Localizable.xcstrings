@@ -27,6 +27,26 @@
         }
       }
     },
+    "%@ / %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ / %2$@"
+          }
+        }
+      }
+    },
+    "%@ %lld%%" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$lld%%"
+          }
+        }
+      }
+    },
     "%@ bar chart" : {
 
     },
@@ -61,9 +81,6 @@
       }
     },
     "%@ settings" : {
-
-    },
-    "%@ slider" : {
 
     },
     "%@, %lld photos" : {
@@ -150,6 +167,9 @@
     "Access" : {
 
     },
+    "Acoustic" : {
+
+    },
     "Actual" : {
 
     },
@@ -168,13 +188,19 @@
     "Add Condition" : {
 
     },
+    "Add music" : {
+
+    },
     "Add Preset" : {
 
     },
-    "Adding image…" : {
+    "Add Text" : {
 
     },
-    "Adding to mask" : {
+    "Add to Collection" : {
+
+    },
+    "Adding image…" : {
 
     },
     "Adjust the filter or turn off Hide RAW." : {
@@ -184,6 +210,9 @@
 
     },
     "Advanced Search" : {
+
+    },
+    "Album Name" : {
 
     },
     "All" : {
@@ -213,10 +242,28 @@
     "Apply" : {
 
     },
+    "Apply to All" : {
+
+    },
     "Armed" : {
 
     },
-    "Auto" : {
+    "Aspect" : {
+
+    },
+    "Back" : {
+
+    },
+    "Background" : {
+
+    },
+    "Black" : {
+
+    },
+    "Blur In" : {
+
+    },
+    "Blur Out" : {
 
     },
     "Bold" : {
@@ -249,10 +296,10 @@
     "Cancel" : {
 
     },
-    "Cancel Export and Remove Copies" : {
+    "Cancel Export" : {
 
     },
-    "Cancel selection" : {
+    "Cancel Export and Remove Copies" : {
 
     },
     "Cancel this export?" : {
@@ -276,6 +323,9 @@
     "Chart Type" : {
 
     },
+    "Chill" : {
+
+    },
     "Choose Folder" : {
 
     },
@@ -283,6 +333,9 @@
 
     },
     "Choose Image" : {
+
+    },
+    "Cinematic" : {
 
     },
     "Clear" : {
@@ -306,13 +359,19 @@
     "Clear the local metadata index? Your photos are not affected." : {
 
     },
-    "Closed" : {
+    "Close" : {
+
+    },
+    "Collage" : {
+
+    },
+    "Collage Error" : {
 
     },
     "Collapse histogram" : {
 
     },
-    "Color Mix" : {
+    "Color" : {
 
     },
     "Compare" : {
@@ -348,10 +407,37 @@
     "Coordinates" : {
 
     },
+    "Corners" : {
+
+    },
+    "Couldn't Add to Album" : {
+
+    },
     "Couldn't Delete Photos" : {
 
     },
+    "Couldn't load the photos for this collage." : {
+
+    },
+    "Couldn't load the selected items." : {
+
+    },
+    "Couldn't prepare the video composition." : {
+
+    },
     "Couldn't read metadata for this item." : {
+
+    },
+    "Couldn't render the collage." : {
+
+    },
+    "Create" : {
+
+    },
+    "Create Collage" : {
+
+    },
+    "Create Video" : {
 
     },
     "Crop %@ corner" : {
@@ -364,6 +450,12 @@
 
     },
     "Crop Mode" : {
+
+    },
+    "Crossfade" : {
+
+    },
+    "Curve" : {
 
     },
     "Custom" : {
@@ -404,7 +496,7 @@
     "Delete layer" : {
 
     },
-    "Delete mask" : {
+    "Delete Mask" : {
 
     },
     "Delete Point" : {
@@ -430,19 +522,25 @@
     "Deselect All" : {
 
     },
+    "Discard" : {
+
+    },
     "Discard Changes" : {
+
+    },
+    "Discard this collage?" : {
 
     },
     "Discard this editing session?" : {
 
     },
+    "Discard this video?" : {
+
+    },
     "Done" : {
 
     },
-    "Done cropping" : {
-
-    },
-    "Done with this mask" : {
+    "Done selecting" : {
 
     },
     "Double tap to collapse" : {
@@ -469,7 +567,13 @@
     "Drag to resize the crop" : {
 
     },
+    "Drag to shape · drag on empty graph to add · double-tap a point to remove" : {
+
+    },
     "Duplicate" : {
+
+    },
+    "Duration" : {
 
     },
     "Edit" : {
@@ -487,6 +591,12 @@
     "Editor Error" : {
 
     },
+    "Effect" : {
+
+    },
+    "Electronic" : {
+
+    },
     "Enter value" : {
 
     },
@@ -497,6 +607,21 @@
 
     },
     "Export cancelled" : {
+
+    },
+    "Export Video" : {
+
+    },
+    "Exporting…" : {
+
+    },
+    "Fade Black" : {
+
+    },
+    "Fade In" : {
+
+    },
+    "Fade Out" : {
 
     },
     "Failures" : {
@@ -520,6 +645,9 @@
     "Filter" : {
 
     },
+    "Filter · %@" : {
+
+    },
     "Filters" : {
 
     },
@@ -529,7 +657,7 @@
     "Finish configuring the chart to see a preview." : {
 
     },
-    "Flip horizontally" : {
+    "Flip Horizontal" : {
 
     },
     "Focal Length" : {
@@ -547,9 +675,6 @@
     "Frame Saved" : {
 
     },
-    "Framing stays a draft until you tap Done. Leaving this tab keeps the photo uncropped." : {
-
-    },
     "Group by" : {
 
     },
@@ -562,10 +687,10 @@
     "Height" : {
 
     },
-    "Hidden" : {
+    "Hide %@" : {
 
     },
-    "Hide %@" : {
+    "Hide Mask Overlay" : {
 
     },
     "Hide RAW files" : {
@@ -575,6 +700,9 @@
 
     },
     "History covers this editing session. Recall last ShotDex edit restores the recipe stored in Photos instead." : {
+
+    },
+    "Hold to see original" : {
 
     },
     "Hue %lld degrees, saturation %lld percent" : {
@@ -612,6 +740,9 @@
 
     },
     "Import Photos" : {
+
+    },
+    "Import…" : {
 
     },
     "Imported ^[%lld item](inflect: true)" : {
@@ -670,10 +801,13 @@
     "Indexing, %lld percent" : {
 
     },
+    "Intensity" : {
+
+    },
     "Invert" : {
 
     },
-    "Invert mask" : {
+    "Invert Selection" : {
 
     },
     "ISO" : {
@@ -695,6 +829,9 @@
 
     },
     "Layers" : {
+
+    },
+    "Layout" : {
 
     },
     "left" : {
@@ -775,19 +912,31 @@
     "More editor actions" : {
 
     },
-    "More groups" : {
-
-    },
     "More selection actions" : {
 
     },
     "Move ellipse" : {
 
     },
+    "Music" : {
+
+    },
+    "Mute" : {
+
+    },
+    "Mute clip audio" : {
+
+    },
     "Name" : {
 
     },
     "Network" : {
+
+    },
+    "New Album" : {
+
+    },
+    "New Album…" : {
 
     },
     "New Chart" : {
@@ -806,6 +955,9 @@
 
     },
     "No Access to Photos" : {
+
+    },
+    "No albums yet. Create one to add these photos." : {
 
     },
     "No data for this range." : {
@@ -919,7 +1071,7 @@
         }
       }
     },
-    "Open" : {
+    "Opacity" : {
 
     },
     "Open Settings" : {
@@ -937,6 +1089,12 @@
 
     },
     "Output" : {
+
+    },
+    "Pan Left" : {
+
+    },
+    "Pan Right" : {
 
     },
     "Pause" : {
@@ -1000,6 +1158,9 @@
 
     },
     "Point color" : {
+
+    },
+    "Preparing clips…" : {
 
     },
     "Preparing original…" : {
@@ -1113,6 +1274,9 @@
     "Remove Invert" : {
 
     },
+    "Removes it from the selection" : {
+
+    },
     "Removes this condition" : {
 
     },
@@ -1131,16 +1295,16 @@
     "Reorder charts" : {
 
     },
+    "Replace With" : {
+
+    },
     "Reset" : {
 
     },
-    "Reset all" : {
+    "Reset All" : {
 
     },
     "Reset all custom camera mappings?" : {
-
-    },
-    "Reset crop" : {
 
     },
     "Reset Custom Mappings" : {
@@ -1149,7 +1313,7 @@
     "Reset Mappings" : {
 
     },
-    "Resize & Compress" : {
+    "Resize and Compress" : {
 
     },
     "Retry" : {
@@ -1170,7 +1334,10 @@
     "RGB histogram" : {
 
     },
-    "Rotate 90 degrees" : {
+    "Rotate" : {
+
+    },
+    "Rotate 90°" : {
 
     },
     "Same as Original" : {
@@ -1215,6 +1382,9 @@
     "Saving Frame…" : {
 
     },
+    "Saving to Photos…" : {
+
+    },
     "Scanning %@…" : {
 
     },
@@ -1222,6 +1392,9 @@
 
     },
     "Search again for %@" : {
+
+    },
+    "Select a clip on the timeline." : {
 
     },
     "Select a start date" : {
@@ -1236,7 +1409,7 @@
     "Select photos" : {
 
     },
-    "Select photos to delete" : {
+    "Selected photo" : {
 
     },
     "Send Backward" : {
@@ -1252,6 +1425,9 @@
 
     },
     "Settings" : {
+
+    },
+    "Shake" : {
 
     },
     "Share" : {
@@ -1281,13 +1457,10 @@
     "Show All Raw Metadata" : {
 
     },
-    "Show mask area" : {
+    "Show Mask Overlay" : {
 
     },
     "Show top %lld" : {
-
-    },
-    "Shown" : {
 
     },
     "Shows a single value across the whole library." : {
@@ -1314,13 +1487,25 @@
     "Size" : {
 
     },
+    "Slide Left" : {
+
+    },
+    "Slide Right" : {
+
+    },
     "Smart Album Name" : {
 
     },
     "Smart Albums" : {
 
     },
+    "Soft Glow" : {
+
+    },
     "Some exported copies may remain in Photos" : {
+
+    },
+    "Something Went Wrong" : {
 
     },
     "Sort" : {
@@ -1329,13 +1514,19 @@
     "Source" : {
 
     },
+    "Spacing" : {
+
+    },
     "Split into series by" : {
 
     },
     "Starting…" : {
 
     },
-    "Subtracting from mask" : {
+    "Style" : {
+
+    },
+    "Subtract" : {
 
     },
     "Tab bar" : {
@@ -1350,10 +1541,19 @@
     "Tap to fit the photo" : {
 
     },
-    "Tap to switch" : {
+    "Template" : {
+
+    },
+    "Template %@" : {
+
+    },
+    "Text" : {
 
     },
     "The accent color tints buttons, selections and highlights throughout ShotDex, including the photo editor. Amber and Sand are the colors of the app icon; iOS Default is the system blue." : {
+
+    },
+    "The crop applies when you leave this tab or save." : {
 
     },
     "The size is a fast estimate and may change slightly when the full-resolution file is encoded." : {
@@ -1361,6 +1561,19 @@
     },
     "The typical crop factor of the chosen format is used for full-frame equivalent focal lengths." : {
 
+    },
+    "There are no clips to build a video from." : {
+
+    },
+    "These %lld %@ will be added to the new album." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "These %1$lld %2$@ will be added to the new album."
+          }
+        }
+      }
     },
     "This item doesn't contain a saved capture location." : {
 
@@ -1389,6 +1602,12 @@
     "Top %lld series" : {
 
     },
+    "Transition" : {
+
+    },
+    "Trim" : {
+
+    },
     "Try: Fukuoka · f > 1.2 · ISO trên 3200 · trước 2020 · 85mm" : {
 
     },
@@ -1404,6 +1623,9 @@
     "Unknown Cameras" : {
 
     },
+    "Upbeat" : {
+
+    },
     "Use Cellular" : {
 
     },
@@ -1413,7 +1635,19 @@
     "Value" : {
 
     },
+    "Video Error" : {
+
+    },
     "Video progress" : {
+
+    },
+    "Video Vol." : {
+
+    },
+    "Vignette Pulse" : {
+
+    },
+    "White" : {
 
     },
     "Whole library" : {
@@ -1423,6 +1657,9 @@
 
     },
     "Width" : {
+
+    },
+    "Wipe" : {
 
     },
     "Wired" : {
@@ -1440,13 +1677,25 @@
     "Yesterday" : {
 
     },
+    "Your Albums" : {
+
+    },
     "Your iPhone is warm — indexing slowed down to cool it" : {
 
     },
     "Your photo library appears to be empty." : {
 
     },
+    "Zoom" : {
+
+    },
     "Zoom %lld percent" : {
+
+    },
+    "Zoom In" : {
+
+    },
+    "Zoom Out" : {
 
     }
   },

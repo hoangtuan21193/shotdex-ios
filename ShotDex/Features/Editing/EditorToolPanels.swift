@@ -1,29 +1,26 @@
 import SwiftUI
 import UIKit
 
-/// Presets tab (28c): a category strip, an Amount row while a look is active, and
-/// a vertical list of preset rows — each a small thumbnail of the photo through
-/// that look plus its name, in place of the old swatch grid. One row language with
-/// the rest of the panel.
+/// Presets tab (30c): an Amount row while a look is active, then every look at
+/// once in one horizontal scroll of thumbnail cards — each a small preview of the
+/// photo through that look plus its name. No category picker (Basic / Film / B&W);
+/// the strips are flattened into the single scroll.
 struct EditorFiltersPanel: View {
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
 
     var body: some View {
         VStack(spacing: 0) {
-            categoryStrip
-                .padding(.top, 8)
-                .padding(.bottom, 6)
-
             if controller.recipe.filter != .original {
                 amountRow
+                    .padding(.top, 8)
                 Rectangle()
                     .fill(EditorTheme.hairline)
                     .frame(height: 0.5)
                     .padding(.horizontal, 14)
             }
 
-            presetList
+            presetStrip
         }
         .frame(maxWidth: .infinity)
         .task { controller.refreshFilterThumbnails() }
@@ -45,75 +42,60 @@ struct EditorFiltersPanel: View {
         )
     }
 
-    private var categoryStrip: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 8) {
-                ForEach(FilmLookCategory.allCases) { category in
-                    Button(category.displayName) {
-                        controller.chooseFilterCategory(category)
+    /// Every look at once — no category picker — in one horizontal scroll of
+    /// thumbnail cards. Opens scrolled to the active look. Swatches stream in as the
+    /// controller renders each category batch; until one arrives the card draws the
+    /// look's two-tone gradient stand-in.
+    private var presetStrip: some View {
+        ScrollViewReader { scroller in
+            ScrollView(.horizontal) {
+                LazyHStack(spacing: 10) {
+                    ForEach(PhotoFilter.allCases) { filter in
+                        filterCard(filter).id(filter)
                     }
-                    .buttonStyle(
-                        EditorChipButtonStyle(
-                            isSelected: controller.selectedFilterCategory == category
-                        )
-                    )
                 }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
             }
-            .padding(.horizontal, 14)
+            .scrollIndicators(.hidden)
+            .onAppear {
+                scroller.scrollTo(controller.recipe.filter, anchor: .center)
+            }
         }
-        .scrollIndicators(.hidden)
     }
 
-    private var presetList: some View {
-        ScrollView(.vertical) {
-            LazyVStack(spacing: 3) {
-                ForEach(PhotoFilter.all(in: controller.selectedFilterCategory)) { filter in
-                    filterRow(filter)
-                }
-                Color.clear.frame(height: 12)
-            }
-            .padding(.horizontal, 12)
-            .padding(.top, 4)
-        }
-        .scrollIndicators(.hidden)
-    }
-
-    private func filterRow(_ filter: PhotoFilter) -> some View {
+    private func filterCard(_ filter: PhotoFilter) -> some View {
         let isSelected = controller.recipe.filter == filter
         return Button {
             controller.chooseFilter(filter)
         } label: {
-            HStack(spacing: 10) {
+            VStack(spacing: 5) {
                 thumbnail(filter)
-                    .frame(width: 28, height: 28)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .frame(width: 62, height: 62)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 6)
+                        RoundedRectangle(cornerRadius: 8)
                             .stroke(
                                 isSelected ? EditorTheme.accent : .white.opacity(0.10),
-                                lineWidth: isSelected ? 1.5 : 0.5
+                                lineWidth: isSelected ? 2 : 0.5
                             )
+                    }
+                    .overlay(alignment: .topTrailing) {
+                        if isSelected {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 15))
+                                .foregroundStyle(EditorTheme.accent)
+                                .background(Circle().fill(.black.opacity(0.5)))
+                                .padding(4)
+                        }
                     }
 
                 Text(filter.displayName)
-                    .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
-                    .foregroundStyle(isSelected ? EditorTheme.accent : .white)
+                    .font(.system(size: 10, weight: isSelected ? .semibold : .regular))
+                    .foregroundStyle(isSelected ? EditorTheme.accent : EditorTheme.secondaryText)
                     .lineLimit(1)
-
-                Spacer(minLength: 0)
-
-                if isSelected {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(EditorTheme.accent)
-                }
+                    .frame(width: 66)
             }
-            .padding(.horizontal, 10)
-            .frame(height: 40)
-            .background(
-                isSelected ? EditorTheme.accent.opacity(0.10) : Color.clear,
-                in: RoundedRectangle(cornerRadius: 10)
-            )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -169,19 +151,20 @@ struct EditorFiltersPanel: View {
     }
 }
 
-/// Crop tab: straighten, ratio chips, rotate and flip. Mask overlays stay hidden
-/// while framing, which the render path already handles.
+/// Crop tab: rotate / flip / reset, straighten, ratio chips. Mask overlays stay
+/// hidden while framing, which the render path already handles.
 ///
-/// The two exits — `Reset Crop` and `Done` — are not here: they take over the
-/// panel's action row while this tab is up, so framing controls sit where the
-/// session controls normally are instead of adding a second row of buttons.
+/// Turn 31: there is no in-panel command row, so the framing actions that lived
+/// there — rotate, flip, reset crop — are a button row at the top of this panel
+/// (rotate and flip are also in the band's ⋯ menu). There is no Done: the crop
+/// commits when the tab is left or the edit is saved.
 struct EditorCropPanel: View {
     @Bindable var controller: PhotoEditorController
 
     var body: some View {
-        // Rotate / flip / Reset / Done now live in the panel's action bar (28c), so
-        // the crop panel is just the straighten row and the ratio strip.
         VStack(alignment: .leading, spacing: 12) {
+            actionRow
+
             EditorPlainSliderRow(
                 title: "Straighten",
                 value: controller.recipe.crop.straightenDegrees,
@@ -218,13 +201,64 @@ struct EditorCropPanel: View {
 
             Spacer(minLength: 0)
 
-            Text("Framing stays a draft until you tap Done. Leaving this tab keeps the photo uncropped.")
+            Text("The crop applies when you leave this tab or save.")
                 .font(.system(size: 11))
                 .foregroundStyle(EditorTheme.secondaryText)
                 .padding(.horizontal, 18)
                 .padding(.bottom, 6)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Rotate 90° / Flip / Reset Crop — the framing actions that used to sit in the
+    /// panel's command row. Reset is disabled until there is a crop to reset.
+    private var actionRow: some View {
+        HStack(spacing: 8) {
+            cropAction("Rotate", icon: "rotate.right", isEnabled: true) {
+                controller.rotate()
+            }
+            cropAction(
+                "Flip",
+                icon: "arrow.left.and.right.righttriangle.left.righttriangle.right",
+                isEnabled: true
+            ) {
+                controller.flip()
+            }
+            cropAction(
+                "Reset",
+                icon: "crop",
+                isEnabled: controller.recipe.crop != .identity
+            ) {
+                controller.resetCrop()
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.top, 6)
+    }
+
+    private func cropAction(
+        _ title: String,
+        icon: String,
+        isEnabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .medium))
+                Text(title)
+                    .font(.system(size: 12, weight: .medium))
+            }
+            .foregroundStyle(isEnabled ? .white : EditorTheme.dimText)
+            .padding(.horizontal, 10)
+            .frame(height: 28)
+            .background(EditorTheme.control, in: RoundedRectangle(cornerRadius: 7))
+            .contentShape(RoundedRectangle(cornerRadius: 7))
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .accessibilityLabel(title)
     }
 }
 
@@ -251,118 +285,23 @@ struct EditorPlainSliderRow: View {
     let onEndDrag: () -> Void
     let onReset: () -> Void
 
-    @State private var dragStartValue = 0.0
-    @State private var isHoldingDetent = false
-
     var body: some View {
-        HStack(spacing: 10) {
-            Text(title)
-                .font(EditorTheme.rowLabel)
-                .foregroundStyle(EditorTheme.secondaryText)
-                .lineLimit(1)
-                .frame(width: EditorLayoutMetrics.sliderLabelWidth, alignment: .leading)
-                .frame(height: EditorLayoutMetrics.sliderRowTotalHeight)
-                .contentShape(Rectangle())
-                .onTapGesture(count: 2) {
-                    UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
-                    onReset()
-                }
-
-            GeometryReader { proxy in
-                let width = proxy.size.width
-                let position = fraction
-                ZStack(alignment: .leading) {
-                    if let trackGradient {
-                        Capsule()
-                            .fill(trackGradient)
-                            .frame(height: 4)
-                    } else {
-                        Capsule()
-                            .fill(EditorTheme.sliderTrack)
-                            .frame(height: 3)
-                    }
-                    if isBipolar {
-                        Rectangle()
-                            .fill(Color.white.opacity(0.28))
-                            .frame(width: 1, height: 8)
-                            .offset(x: width / 2 - 0.5)
-                        if trackGradient == nil {
-                            Capsule()
-                                .fill(EditorTheme.accent)
-                                .frame(width: abs(position - 0.5) * width, height: 3)
-                                .offset(x: min(position, 0.5) * width)
-                        }
-                    } else if trackGradient == nil {
-                        Capsule()
-                            .fill(EditorTheme.accent)
-                            .frame(width: position * width, height: 3)
-                    }
-                    Circle()
-                        .fill(.white)
-                        .frame(width: isActive ? 20 : 16, height: isActive ? 20 : 16)
-                        .shadow(color: .black.opacity(0.6), radius: 4, y: 2)
-                        .offset(x: min(width - 16, max(0, position * width - 8)))
-                }
-                .frame(maxHeight: .infinity, alignment: .center)
-                .overlay {
-                    SliderPanCatcher(
-                        onBegan: {
-                            dragStartValue = value
-                            isHoldingDetent = detent.map { abs(value - $0) < 0.0001 } ?? false
-                            onBeginDrag()
-                        },
-                        onChanged: { translation in
-                            guard width > 0,
-                                  abs(translation) >= EditorLayoutMetrics.sliderActivationDistance
-                            else { return }
-                            let span = range.upperBound - range.lowerBound
-                            let proposed = dragStartValue
-                                + Double(translation / width) * span
-                            onDrag(
-                                detented(
-                                    min(range.upperBound, max(range.lowerBound, proposed)),
-                                    trackWidth: width
-                                )
-                            )
-                        },
-                        onEnded: { _ in onEndDrag() }
-                    )
-                }
-            }
-            .frame(height: EditorLayoutMetrics.sliderRowTotalHeight)
-
-            Text(valueText)
-                .font(EditorTheme.rowValue)
-                .foregroundStyle(EditorTheme.accent)
-                .lineLimit(1)
-                .frame(width: EditorLayoutMetrics.sliderValueWidth, alignment: .trailing)
-        }
-        .padding(.horizontal, 14)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(title)
-        .accessibilityValue(valueText)
-    }
-
-    private var fraction: CGFloat {
-        let span = range.upperBound - range.lowerBound
-        guard span > 0 else { return 0 }
-        return CGFloat((value - range.lowerBound) / span)
-    }
-
-    private func detented(_ value: Double, trackWidth: CGFloat) -> Double {
-        guard let detent else { return value }
-        let result = EditorLayoutMetrics.snapped(
-            value,
-            detent: detent,
+        EditorValueSlider(
+            label: title,
+            value: value,
             range: range,
-            trackWidth: trackWidth
+            valueText: valueText,
+            isActive: isActive,
+            anchor: isBipolar ? (range.lowerBound + range.upperBound) / 2 : range.lowerBound,
+            showsAnchorNotch: isBipolar,
+            detent: detent,
+            trackGradient: trackGradient,
+            onBeginDrag: onBeginDrag,
+            onDrag: onDrag,
+            onEndDrag: { _, _, _ in onEndDrag() },
+            onReset: onReset,
+            onEditValue: nil
         )
-        let isOnDetent = result == detent
-        if isOnDetent, !isHoldingDetent {
-            UISelectionFeedbackGenerator().selectionChanged()
-        }
-        isHoldingDetent = isOnDetent
-        return result
     }
 }
 
@@ -371,15 +310,16 @@ struct EditorChipButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 13, weight: .medium))
+            .font(.system(size: 12, weight: .medium))
             .foregroundStyle(isSelected ? .white : EditorTheme.secondaryText)
-            .padding(.horizontal, 14)
-            .frame(minHeight: 44)
+            .padding(.horizontal, 10)
+            .frame(height: 28)
             .background(
                 isSelected
                     ? EditorTheme.accent
                     : EditorTheme.control.opacity(configuration.isPressed ? 0.6 : 1),
-                in: Capsule()
+                in: RoundedRectangle(cornerRadius: 7)
             )
+            .contentShape(RoundedRectangle(cornerRadius: 7))
     }
 }

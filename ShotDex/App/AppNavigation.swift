@@ -24,26 +24,12 @@ final class AppNavigation {
     /// two different containers. `nil` when nothing is selecting.
     var selectionBar: SelectionBarModel?
 
-    /// Extra bottom padding a grid adds to its content while selecting. The
-    /// selection chrome is system-managed safe area on both tiers (iOS 26 tab-bar
-    /// bottom accessory; pre-26 root `.safeAreaInset`), which the collection view
-    /// already clears via automatic content-inset adjustment — so this is only a
-    /// small breathing pad on top, not the full bar height.
-    var selectionBarHeight: CGFloat = 12
-
-    /// Bottom inset a grid adds to its content while selecting. On iOS 26 the
-    /// count caption floats *over* the grid, above the tab-bar accessory and
-    /// outside the safe area the collection view auto-clears — so the last row
-    /// scrolls up under it. Extra clearance keeps that row visible and tappable.
-    /// Pre-26 the caption lives inside the `.safeAreaInset` bar (already
-    /// auto-cleared), so only the breathing pad is needed.
-    var selectionGridInset: CGFloat {
-        if #available(iOS 26.0, *) {
-            selectionBarHeight + 46
-        } else {
-            selectionBarHeight
-        }
-    }
+    /// Bottom inset a grid adds to its content while selecting. The selection
+    /// chrome is now a floating `SelectionOverlay` on both tiers (not system safe
+    /// area), so the grid gets no automatic clearance — this reserves room for the
+    /// bottom action clusters (≈48pt bar + its padding + the home-indicator strip)
+    /// so the last photo row stays visible and tappable beneath them.
+    var selectionGridInset: CGFloat { 100 }
 
     /// Set by Statistics drill-downs; consumed by the Library model owner.
     var pendingLibraryFilter: FilterCriteria?

@@ -202,6 +202,23 @@ final class PhotoLibraryService: NSObject {
         return result
     }
 
+    /// The playable `AVAsset` behind a video `PHAsset` (downloading from
+    /// iCloud when needed). Shared by the metadata reader's file-info section
+    /// and the Video Studio's source loader.
+    nonisolated static func requestAVAsset(for asset: PHAsset) async -> AVAsset? {
+        await withCheckedContinuation { continuation in
+            let options = PHVideoRequestOptions()
+            options.isNetworkAccessAllowed = true
+            options.deliveryMode = .highQualityFormat
+            PHImageManager.default().requestAVAsset(
+                forVideo: asset,
+                options: options
+            ) { avAsset, _, _ in
+                continuation.resume(returning: avAsset)
+            }
+        }
+    }
+
     /// Fetches specific assets by local identifier, preserving request order.
     nonisolated static func fetchAssets(ids: [String]) -> [PHAsset] {
         guard !ids.isEmpty else { return [] }
@@ -784,6 +801,98 @@ final class PhotoLibraryService: NSObject {
         }
         guard let placeholderId else { throw PhotoImportError.creationFailed }
         return placeholderId
+    }
+
+    // MARK: Collections
+
+    /// Every user-created album, newest title order as PhotoKit returns them.
+    /// Smart albums and shared albums are excluded — "Add to Collection" only
+    /// targets albums the user can freely add to.
+    nonisolated static func fetchUserAlbums() -> [PHAssetCollection] {
+        var albums: [PHAssetCollection] = []
+        let result = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .albumRegular, options: nil)
+        result.enumerateObjects { collection, _, _ in albums.append(collection) }
+        return albums
+    }
+
+    /// Creates a new user album and returns its freshly-fetched collection.
+    func createAlbum(named name: String) async throws -> PHAssetCollection {
+        var placeholder: PHObjectPlaceholder?
+        try await PHPhotoLibrary.shared().performChanges {
+            let request = PHAssetCollectionChangeRequest.creationRequestForAssetCollection(withTitle: name)
+            placeholder = request.placeholderForCreatedAssetCollection
+        }
+        guard let id = placeholder?.localIdentifier,
+              let collection = PHAssetCollection.fetchAssetCollections(
+                  withLocalIdentifiers: [id], options: nil
+              ).firstObject
+        else { throw PhotoImportError.creationFailed }
+        return collection
+    }
+
+    /// Appends assets to an existing user album. PhotoKit keeps membership a set,
+    /// so re-adding an already-present asset is a harmless no-op.
+    func addAssets(_ assets: [PHAsset], to collection: PHAssetCollection) async throws {
+        guard !assets.isEmpty else { return }
+        try await PHPhotoLibrary.shared().performChanges {
+            guard let request = PHAssetCollectionChangeRequest(for: collection) else { return }
+            request.addAssets(assets as NSArray)
+        }
+    }
+
+    // MARK: Duplicate
+
+    /// Duplicates each asset as a brand-new library item, preserving every
+    /// resource (RAW+JPEG pairs, Live Photo video, original filenames) by copying
+    /// the source resources verbatim — no re-encode. iCloud-only originals are
+    /// downloaded (`isNetworkAccessAllowed`); an asset whose resources all fail to
+    /// stage is skipped rather than aborting the batch. Returns how many were
+    /// created. The new assets reach the index through `photoLibraryDidChange`.
+    func duplicateAssets(_ assets: [PHAsset]) async throws -> Int {
+        guard !assets.isEmpty else { return 0 }
+        let stagingDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("shotdex-duplicate-\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: stagingDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: stagingDir) }
+
+        var created = 0
+        for asset in assets {
+            let resources = PHAssetResource.assetResources(for: asset)
+            guard !resources.isEmpty else { continue }
+            var staged: [(type: PHAssetResourceType, filename: String, url: URL)] = []
+            for resource in resources {
+                let fileURL = stagingDir.appendingPathComponent(
+                    UUID().uuidString + "-" + resource.originalFilename
+                )
+                if await writeResource(resource, to: fileURL) {
+                    staged.append((resource.type, resource.originalFilename, fileURL))
+                }
+            }
+            guard !staged.isEmpty else { continue }
+            try await PHPhotoLibrary.shared().performChanges {
+                let request = PHAssetCreationRequest.forAsset()
+                for item in staged {
+                    let options = PHAssetResourceCreationOptions()
+                    options.originalFilename = item.filename
+                    options.shouldMoveFile = false
+                    request.addResource(with: item.type, fileURL: item.url, options: options)
+                }
+            }
+            created += 1
+        }
+        return created
+    }
+
+    /// Writes one `PHAssetResource` to `url`, allowing an iCloud download.
+    /// Returns whether it succeeded (a failed resource is dropped from the copy).
+    private nonisolated func writeResource(_ resource: PHAssetResource, to url: URL) async -> Bool {
+        let options = PHAssetResourceRequestOptions()
+        options.isNetworkAccessAllowed = true
+        return await withCheckedContinuation { continuation in
+            PHAssetResourceManager.default().writeData(for: resource, toFile: url, options: options) { error in
+                continuation.resume(returning: error == nil)
+            }
+        }
     }
 
     // MARK: Change observation

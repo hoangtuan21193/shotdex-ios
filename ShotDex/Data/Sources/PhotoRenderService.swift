@@ -944,13 +944,18 @@ actor PhotoRenderService {
             }
             raw.orientation = source.orientation
             raw.exposure = Float(recipe.adjustments.exposure)
+            // `neutralTemperature` is the Kelvin the decoder treats as the scene's
+            // white, so raising it cools the result — the opposite of the slider
+            // (right = warm). Subtract so a positive RAW White Balance warms and a
+            // positive RAW Tint goes magenta, matching the colored track and the
+            // non-RAW Temp/Tint above.
             raw.neutralTemperature = max(
                 2_000,
-                min(50_000, raw.neutralTemperature + Float(recipe.adjustments.rawTemperature * 4_000))
+                min(50_000, raw.neutralTemperature - Float(recipe.adjustments.rawTemperature * 4_000))
             )
             raw.neutralTint = max(
                 -150,
-                min(150, raw.neutralTint + Float(recipe.adjustments.rawTint * 150))
+                min(150, raw.neutralTint - Float(recipe.adjustments.rawTint * 150))
             )
             if raw.isLuminanceNoiseReductionSupported {
                 raw.luminanceNoiseReductionAmount = clampedUnit(
@@ -1126,9 +1131,14 @@ actor PhotoRenderService {
                 image: image,
                 values: [
                     "inputNeutral": CIVector(x: 6_500, y: 0),
+                    // `CITemperatureAndTint` reads temperature as physical Kelvin
+                    // (high = blue), the opposite of a photographer's slider where
+                    // right = warm. So a positive Warmth LOWERS the target Kelvin
+                    // and a positive Tint pushes toward magenta — matching the
+                    // colored track (right = orange / magenta).
                     "inputTargetNeutral": CIVector(
-                        x: 6_500 + adjustments.warmth * 3_000,
-                        y: adjustments.tint * 150
+                        x: 6_500 - adjustments.warmth * 3_000,
+                        y: -adjustments.tint * 150
                     ),
                 ]
             )
@@ -1136,28 +1146,7 @@ actor PhotoRenderService {
         // Detail and Effects are two-way. Dragging right does the obvious thing;
         // dragging left does its opposite, which is what a photographer expects
         // from a slider with a centre tick.
-        if adjustments.sharpness > 0 {
-            image = filtered(
-                "CISharpenLuminance",
-                image: image,
-                values: ["inputSharpness": adjustments.sharpness * 1.2]
-            )
-            // Radius adds a coarser edge-emphasis pass on top, so sharpening can
-            // work at a wider scale than `CISharpenLuminance`'s fixed one.
-            if adjustments.sharpenRadius > 0 {
-                image = filtered(
-                    "CIUnsharpMask",
-                    image: image,
-                    values: [
-                        kCIInputRadiusKey: 0.5 + adjustments.sharpenRadius * 3,
-                        kCIInputIntensityKey: adjustments.sharpness * 0.5,
-                    ]
-                )
-            }
-        } else if adjustments.sharpness < 0 {
-            // Left of centre softens instead of sharpening.
-            image = blurred(image, radius: -adjustments.sharpness * 2.5)
-        }
+        image = applySharpen(adjustments, to: image)
         if adjustments.definition > 0 {
             image = filtered(
                 "CIUnsharpMask",
@@ -1372,6 +1361,92 @@ actor PhotoRenderService {
         }
         return image
     }
+
+    /// Sharpening with Lightroom-style Amount / Radius / Detail / Masking.
+    ///
+    /// Amount drives a luminance sharpen; Radius adds a wider unsharp band; Detail
+    /// adds a fine high-frequency pass — an **approximation** of Lightroom's halo
+    /// suppression: it emphasises texture rather than truly deconvolving. Masking
+    /// restricts the whole sharpen to edges through an edge-magnitude mask so flat
+    /// areas (skies, skin) stay clean, with the amount narrowing the mask to the
+    /// strongest edges. Dragging Amount left of centre softens instead.
+    static func applySharpen(_ adjustments: PhotoAdjustments, to input: CIImage) -> CIImage {
+        guard adjustments.sharpness != 0 else { return input }
+        if adjustments.sharpness < 0 {
+            return blurred(input, radius: -adjustments.sharpness * 2.5)
+        }
+        let base = input
+        var sharp = filtered(
+            "CISharpenLuminance",
+            image: input,
+            values: ["inputSharpness": adjustments.sharpness * 1.2]
+        )
+        // Radius adds a coarser edge-emphasis pass so sharpening can work at a
+        // wider scale than `CISharpenLuminance`'s fixed one.
+        if adjustments.sharpenRadius > 0 {
+            sharp = filtered(
+                "CIUnsharpMask",
+                image: sharp,
+                values: [
+                    kCIInputRadiusKey: 0.5 + adjustments.sharpenRadius * 3,
+                    kCIInputIntensityKey: adjustments.sharpness * 0.5,
+                ]
+            )
+        }
+        // Detail: a tight-radius unsharp pass that lifts fine texture on top of the
+        // base sharpen. Scaled by Amount, so Detail does nothing without Amount.
+        if adjustments.sharpenDetail > 0 {
+            sharp = filtered(
+                "CIUnsharpMask",
+                image: sharp,
+                values: [
+                    kCIInputRadiusKey: 0.6,
+                    kCIInputIntensityKey: adjustments.sharpenDetail * adjustments.sharpness * 0.7,
+                ]
+            )
+        }
+        guard adjustments.sharpenMasking > 0.001 else { return sharp }
+        return blendSharpenEdges(sharpened: sharp, original: base, masking: adjustments.sharpenMasking)
+    }
+
+    /// Builds a soft edge mask from the original and blends the sharpened image over
+    /// the original through it, so only edges keep the sharpen. Higher `masking`
+    /// slides the threshold up so fewer, stronger edges pass. Falls back to the
+    /// unmasked sharpen if the edge kernel fails to compile.
+    private static func blendSharpenEdges(
+        sharpened: CIImage,
+        original: CIImage,
+        masking: Double
+    ) -> CIImage {
+        let extent = original.extent
+        let edges = filtered(
+            "CIEdges",
+            image: original,
+            values: [kCIInputIntensityKey: 4.0]
+        )
+        guard let kernel = edgeMaskKernel else { return sharpened }
+        let lo = masking * 0.5
+        let hi = lo + 0.08
+        guard let mask = kernel.apply(extent: extent, arguments: [edges, lo, hi]) else {
+            return sharpened
+        }
+        return filtered(
+            "CIBlendWithMask",
+            image: sharpened,
+            values: [
+                kCIInputBackgroundImageKey: original,
+                kCIInputMaskImageKey: mask,
+            ]
+        ).cropped(to: extent)
+    }
+
+    private static let edgeMaskKernel = CIColorKernel(source: """
+    kernel vec4 shotdexEdgeMask(__sample s, float lo, float hi) {
+        float e = max(s.r, max(s.g, s.b));
+        float m = smoothstep(lo, hi, e);
+        return vec4(m, m, m, 1.0);
+    }
+    """)
 
     /// Mixes the filtered image back over the unfiltered one so a preset can be
     /// dialled in instead of being all-or-nothing.

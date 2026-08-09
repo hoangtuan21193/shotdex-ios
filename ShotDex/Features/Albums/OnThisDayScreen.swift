@@ -47,6 +47,7 @@ struct OnThisDayScreen: View {
         .navigationTitle(dateTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
+        .toolbar(isSelecting ? .hidden : .automatic, for: .navigationBar, .tabBar)
         .onChange(of: isSelecting) { navigation.hidesTabBar = isSelecting }
         .onChange(of: selectionSnapshot) {
             navigation.selectionBar = isSelecting ? selectionBarModel() : nil
@@ -220,22 +221,35 @@ struct OnThisDayScreen: View {
         var isSelecting: Bool
         var ids: [String]
         var isDeleting: Bool
+        var isPreparingShare: Bool
     }
     private var selectionSnapshot: SelectionSnapshot {
-        SelectionSnapshot(isSelecting: isSelecting, ids: selectedIds, isDeleting: isDeleting)
+        SelectionSnapshot(
+            isSelecting: isSelecting,
+            ids: selectedIds,
+            isDeleting: isDeleting,
+            isPreparingShare: isPreparingShare
+        )
     }
 
-    /// The selection-bar model the root tab view renders — same as the other
-    /// albums: Compare (2–4) + Delete + thumbnail preview, all in pick order.
+    /// The model the floating `SelectionOverlay` renders. On This Day stays
+    /// action-lean — Share, Compare (2–4), Resize/Compress and Delete — so the
+    /// Create cluster and ⋯ menu are absent (their closures left `nil`).
     private func selectionBarModel() -> SelectionBarModel {
-        SelectionBarModel(
+        let imageCount = selectedIds.filter { model?.assetsById[$0]?.mediaType == .image }.count
+        return SelectionBarModel(
             selectionCount: selectedIds.count,
+            imageSelectionCount: imageCount,
             thumbnailIds: selectedIds,
             photoLibrary: photoLibrary,
-            onCompare: { isComparePresented = true },
-            onDelete: deleteSelected,
+            isDeleting: isDeleting,
+            isPreparingShare: isPreparingShare,
+            onShare: shareSelected,
+            onClose: { withAnimation { stopSelecting() } },
             onDeselect: { toggleSelection(of: $0) },
-            isDeleting: isDeleting
+            onCompare: { isComparePresented = true },
+            onCompress: presentCompression,
+            onDelete: deleteSelected
         )
     }
 
@@ -320,46 +334,10 @@ struct OnThisDayScreen: View {
 
     // MARK: Toolbar
 
-    @ViewBuilder
-    private var shareToolbarButton: some View {
-        Button(action: shareSelected) {
-            if isPreparingShare {
-                ProgressView()
-            } else {
-                Image(systemName: "square.and.arrow.up")
-            }
-        }
-        .disabled(selectedIds.isEmpty || isPreparingShare)
-        .accessibilityLabel("Share")
-    }
-
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            if isSelecting {
-                shareToolbarButton
-            }
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-            if isSelecting {
-                Menu {
-                    Button(action: presentCompression) {
-                        Label(
-                            "Resize & Compress",
-                            systemImage: "arrow.down.right.and.arrow.up.left"
-                        )
-                    }
-                    .disabled(
-                        !selectedIds.contains {
-                            model?.assetsById[$0]?.mediaType == .image
-                        }
-                    )
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                }
-                .accessibilityLabel("More selection actions")
-            }
-        }
+        // During selection the nav bar is hidden entirely (controls live in the
+        // floating overlay), so these only render while browsing.
         ToolbarItem(placement: .topBarTrailing) {
             if !isSelecting {
                 Button {
@@ -371,17 +349,13 @@ struct OnThisDayScreen: View {
             }
         }
         ToolbarItem(placement: .topBarTrailing) {
-            if model?.photos.isEmpty == false {
+            if model?.photos.isEmpty == false, !isSelecting {
                 Button {
-                    if isSelecting {
-                        stopSelecting()
-                    } else {
-                        isSelecting = true
-                    }
+                    isSelecting = true
                 } label: {
-                    Image(systemName: isSelecting ? "checkmark.circle.fill" : "checkmark.circle")
+                    Image(systemName: "checkmark.circle")
                 }
-                .accessibilityLabel(isSelecting ? "Cancel selection" : "Select photos to delete")
+                .accessibilityLabel("Select photos")
             }
         }
     }

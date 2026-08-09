@@ -377,9 +377,10 @@ struct EditorImageStage: View {
     @ViewBuilder
     private func overlays(imageRect: CGRect, stageRect: CGRect) -> some View {
         ZStack {
-            // The histogram no longer floats over the photo — it lives as a mini
-            // readout in the panel's action bar (28c), so nothing here covers the
-            // image. Only transient, on-photo affordances remain below.
+            // The histogram parks as a mini in the Dynamic Island band above the
+            // photo; when the user taps it open, the floating card is overlaid on
+            // this stage by `PhotoEditorScreen` (not here). Only transient, on-photo
+            // affordances remain below.
 
             // Live zoom readout while the fingers are still on the photo, top-left
             // like Lightroom's. It replaces a permanent `1:1` pill that said

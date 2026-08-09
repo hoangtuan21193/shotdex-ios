@@ -20,10 +20,16 @@ struct AlbumDetailScreen: View {
     @State private var selectedIds: [String] = []
     @State private var isComparePresented = false
     @State private var compressionPresentation: CompressionPresentation?
+    @State private var collagePresentation: CollagePresentation?
+    @State private var videoStudioPresentation: VideoStudioPresentation?
+    @State private var addToCollectionPresentation: AddToCollectionPresentation?
     @State private var swipeBaseline: [String] = []
     @State private var isDeleting = false
     @State private var isPreparingShare = false
+    @State private var isDuplicating = false
     @State private var deleteErrorMessage: String?
+    /// Errors from the ⋯ actions (Export EXIF, Duplicate).
+    @State private var actionErrorMessage: String?
 
     /// Persisted density (column count), shared with the Library grid.
     @AppStorage(SettingsKeys.gridColumns) private var storedColumns = 3
@@ -41,6 +47,7 @@ struct AlbumDetailScreen: View {
         .navigationTitle(album.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
+        .toolbar(isSelecting ? .hidden : .automatic, for: .navigationBar, .tabBar)
         .onChange(of: isSelecting) { navigation.hidesTabBar = isSelecting }
         .onChange(of: selectionSnapshot) {
             navigation.selectionBar = isSelecting ? selectionBarModel() : nil
@@ -81,6 +88,23 @@ struct AlbumDetailScreen: View {
                 sourceAlbum: presentation.sourceAlbum
             )
         }
+        .fullScreenCover(item: $collagePresentation) { presentation in
+            CollageScreen(assets: presentation.assets)
+        }
+        .fullScreenCover(item: $videoStudioPresentation) { presentation in
+            VideoStudioScreen(
+                assets: presentation.assets,
+                mode: presentation.mode,
+                onSaved: { _ in }
+            )
+        }
+        .sheet(item: $addToCollectionPresentation) { presentation in
+            AddToCollectionSheet(
+                assets: presentation.assets,
+                photoLibrary: photoLibrary,
+                onAdded: { withAnimation { stopSelecting() } }
+            )
+        }
         .alert(
             "Couldn't Delete Photos",
             isPresented: Binding(
@@ -91,6 +115,17 @@ struct AlbumDetailScreen: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(deleteErrorMessage ?? "")
+        }
+        .alert(
+            "Something Went Wrong",
+            isPresented: Binding(
+                get: { actionErrorMessage != nil },
+                set: { if !$0 { actionErrorMessage = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(actionErrorMessage ?? "")
         }
         .sensoryFeedback(.selection, trigger: selectedIds.count)
     }
@@ -183,6 +218,23 @@ struct AlbumDetailScreen: View {
         )
     }
 
+    /// Selected *image* asset ids in pick order (videos dropped) for Collage.
+    private func selectedImageIDs(_ model: AlbumDetailModel) -> [String] {
+        selectedIds.filter { model.assetsById[$0]?.mediaType == .image }
+    }
+
+    private func presentCollage(_ model: AlbumDetailModel) {
+        let assets = selectedImageIDs(model).compactMap { model.assetsById[$0] }
+        guard CollageTemplateCatalog.supportedCounts.contains(assets.count) else { return }
+        collagePresentation = CollagePresentation(assets: assets)
+    }
+
+    private func presentVideoStudio(_ model: AlbumDetailModel) {
+        let assets = selectedIds.compactMap { model.assetsById[$0] }
+        guard !assets.isEmpty else { return }
+        videoStudioPresentation = VideoStudioPresentation(assets: assets, mode: .multiClip)
+    }
+
     private func stopSelecting() {
         isSelecting = false
         selectedIds = []
@@ -235,23 +287,39 @@ struct AlbumDetailScreen: View {
         var isSelecting: Bool
         var ids: [String]
         var isDeleting: Bool
+        var isPreparingShare: Bool
     }
     private var selectionSnapshot: SelectionSnapshot {
-        SelectionSnapshot(isSelecting: isSelecting, ids: selectedIds, isDeleting: isDeleting)
+        SelectionSnapshot(
+            isSelecting: isSelecting,
+            ids: selectedIds,
+            isDeleting: isDeleting,
+            isPreparingShare: isPreparingShare
+        )
     }
 
-    /// The selection-bar model the root tab view renders (Compare 2–4 + Delete +
-    /// thumbnail preview; Share is in the toolbar).
+    /// The model the root tab view's floating `SelectionOverlay` renders: the full
+    /// action set plus the selection thumbnail tray.
     private func selectionBarModel() -> SelectionBarModel? {
         guard let model else { return nil }
         return SelectionBarModel(
             selectionCount: selectedIds.count,
+            imageSelectionCount: selectedImageIDs(model).count,
             thumbnailIds: selectedIds,
             photoLibrary: photoLibrary,
-            onCompare: { isComparePresented = true },
-            onDelete: { deleteSelected(model) },
+            isDeleting: isDeleting,
+            isPreparingShare: isPreparingShare,
+            onShare: { shareSelected(model) },
+            onClose: { withAnimation { stopSelecting() } },
             onDeselect: { toggleSelection(of: $0) },
-            isDeleting: isDeleting
+            onCollage: { presentCollage(model) },
+            onVideo: { presentVideoStudio(model) },
+            onCompare: { isComparePresented = true },
+            onCompress: { presentCompression(model) },
+            onDelete: { deleteSelected(model) },
+            onAddToCollection: { addToCollection(model) },
+            onExportEXIF: { exportEXIF(model) },
+            onDuplicate: { duplicateSelected(model) }
         )
     }
 
@@ -259,62 +327,62 @@ struct AlbumDetailScreen: View {
         if #available(iOS 26.0, *) { 8 } else { 100 }
     }
 
-    @ViewBuilder
-    private var shareToolbarButton: some View {
-        Button {
-            if let model { shareSelected(model) }
-        } label: {
-            if isPreparingShare {
-                ProgressView()
-            } else {
-                Image(systemName: "square.and.arrow.up")
+    // MARK: ⋯ actions
+
+    private func addToCollection(_ model: AlbumDetailModel) {
+        let assets = selectedIds.compactMap { model.assetsById[$0] }
+        guard !assets.isEmpty else { return }
+        addToCollectionPresentation = AddToCollectionPresentation(assets: assets)
+    }
+
+    private func exportEXIF(_ model: AlbumDetailModel) {
+        let imageIDs = selectedImageIDs(model)
+        guard !imageIDs.isEmpty else { return }
+        Task {
+            let byId = (try? dependencies.libraryQueries.metadata(assetIds: imageIDs)) ?? [:]
+            let rows = imageIDs.compactMap { byId[$0] }
+            guard !rows.isEmpty else {
+                actionErrorMessage = "These photos aren't indexed yet — their EXIF isn't available."
+                return
+            }
+            do {
+                let url = try ExifCSVExporter.writeTemporaryFile(rows)
+                PhotoShareSheet.present(items: [url])
+            } catch {
+                actionErrorMessage = error.localizedDescription
             }
         }
-        .disabled(selectedIds.isEmpty || isPreparingShare)
-        .accessibilityLabel("Share")
+    }
+
+    private func duplicateSelected(_ model: AlbumDetailModel) {
+        guard !selectedIds.isEmpty, !isDuplicating else { return }
+        let assets = selectedIds.compactMap { model.assetsById[$0] }
+        guard !assets.isEmpty else { return }
+        isDuplicating = true
+        Task {
+            defer { isDuplicating = false }
+            do {
+                _ = try await photoLibrary.duplicateAssets(assets)
+                photoLibrary.publishAppCreatedAsset()
+                withAnimation { stopSelecting() }
+            } catch {
+                actionErrorMessage = error.localizedDescription
+            }
+        }
     }
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            if isSelecting {
-                shareToolbarButton
-            }
-        }
+        // During selection the nav bar is hidden entirely (controls live in the
+        // floating overlay), so this only renders while browsing.
         ToolbarItem(placement: .topBarTrailing) {
-            if let model, isSelecting {
-                Menu {
-                    Button {
-                        presentCompression(model)
-                    } label: {
-                        Label(
-                            "Resize & Compress",
-                            systemImage: "arrow.down.right.and.arrow.up.left"
-                        )
-                    }
-                    .disabled(
-                        !selectedIds.contains {
-                            model.assetsById[$0]?.mediaType == .image
-                        }
-                    )
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                }
-                .accessibilityLabel("More selection actions")
-            }
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-            if model?.photos.isEmpty == false {
+            if model?.photos.isEmpty == false, !isSelecting {
                 Button {
-                    if isSelecting {
-                        stopSelecting()
-                    } else {
-                        isSelecting = true
-                    }
+                    isSelecting = true
                 } label: {
-                    Image(systemName: isSelecting ? "checkmark.circle.fill" : "checkmark.circle")
+                    Image(systemName: "checkmark.circle")
                 }
-                .accessibilityLabel(isSelecting ? "Cancel selection" : "Select photos")
+                .accessibilityLabel("Select photos")
             }
         }
     }
