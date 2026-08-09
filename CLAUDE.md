@@ -44,6 +44,7 @@ Layered, composition root at `ShotDex/App/AppDependencies.swift` — built once 
 
 ## Working rules
 
+- **UI work: read `DESIGN.md` first.** It is the single source of truth for ShotDex's design language (tokens, colors, corner radii, components). Before adding or editing any screen, read it and reuse what's there — do not invent new tokens, colors, radii, or components that already exist. When a rule in `DESIGN.md` conflicts with current code, the current code is tech debt (follow `DESIGN.md`).
 - Unclear or ambiguous request: ask back to confirm scope before acting. Never decide alone on unstated requirement.
 - Test/build run costs many tokens (xcodebuild, simulator): tell user to run it themself instead of running it directly.
 - Code change alters behavior/architecture described in `spec.md`: update `spec.md` too, same turn.

@@ -7,9 +7,6 @@
     " m" : {
 
     },
-    "· %@" : {
-
-    },
     "“%@”" : {
 
     },
@@ -133,6 +130,9 @@
 
     },
     "^[%lld photo](inflect: true)" : {
+
+    },
+    "~%@" : {
 
     },
     "0" : {
@@ -425,10 +425,22 @@
     "Couldn't prepare the video composition." : {
 
     },
+    "Couldn't prepare the video encoder." : {
+
+    },
     "Couldn't read metadata for this item." : {
 
     },
+    "Couldn't read the video frames." : {
+
+    },
     "Couldn't render the collage." : {
+
+    },
+    "Couldn't start reading." : {
+
+    },
+    "Couldn't start writing." : {
 
     },
     "Create" : {
@@ -561,9 +573,6 @@
     "Drag to move the crop" : {
 
     },
-    "Drag to reposition crop" : {
-
-    },
     "Drag to resize the crop" : {
 
     },
@@ -598,6 +607,9 @@
 
     },
     "Enter value" : {
+
+    },
+    "Estimating size…" : {
 
     },
     "Every camera in your library has a known sensor format." : {
@@ -1245,6 +1257,9 @@
     "Reading photo info…" : {
 
     },
+    "Reading the video failed." : {
+
+    },
     "Recall last ShotDex edit" : {
 
     },
@@ -1565,6 +1580,9 @@
     "There are no clips to build a video from." : {
 
     },
+    "There is no video to export." : {
+
+    },
     "These %lld %@ will be added to the new album." : {
       "localizations" : {
         "en" : {
@@ -1663,6 +1681,9 @@
 
     },
     "Wired" : {
+
+    },
+    "Writing the video failed." : {
 
     },
     "X-Axis" : {

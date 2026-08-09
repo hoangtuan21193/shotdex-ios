@@ -29,8 +29,8 @@ struct EditorMaskListPanel: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal, 12)
                         .frame(height: 28)
-                        .background(EditorTheme.accent, in: RoundedRectangle(cornerRadius: 7))
-                        .contentShape(RoundedRectangle(cornerRadius: 7))
+                        .background(EditorTheme.accent, in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
+                        .contentShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
                 }
                 .buttonStyle(.plain)
             }
@@ -46,7 +46,7 @@ struct EditorMaskListPanel: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 8) {
             Image(systemName: "circle.dashed")
                 .font(.system(size: 26))
                 .foregroundStyle(EditorTheme.dimText)
@@ -119,7 +119,7 @@ struct EditorMaskRow: View {
     let onDelete: () -> Void
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             thumbnailView
             VStack(alignment: .leading, spacing: 2) {
                 Text(mask.name)
@@ -156,11 +156,11 @@ struct EditorMaskRow: View {
         .frame(height: 56)
         .background(
             isSelected ? EditorTheme.accent.opacity(0.13) : EditorTheme.maskRow,
-            in: RoundedRectangle(cornerRadius: 14)
+            in: RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous)
         )
         .overlay {
             if isSelected {
-                RoundedRectangle(cornerRadius: 14)
+                RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous)
                     .stroke(EditorTheme.accent.opacity(0.4), lineWidth: 1)
             }
         }
@@ -192,7 +192,7 @@ struct EditorMaskRow: View {
     }
 
     private var thumbnailView: some View {
-        RoundedRectangle(cornerRadius: 9)
+        RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous)
             .fill(Color.white.opacity(0.06))
             .frame(width: 42, height: 42)
             .overlay {
@@ -205,7 +205,7 @@ struct EditorMaskRow: View {
                         // portrait matte grew to the row's full height and sat
                         // flush against the card's edges.
                         .frame(width: 42, height: 42)
-                        .clipShape(RoundedRectangle(cornerRadius: 9))
+                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
                 } else {
                     Image(systemName: mask.components.first?.kind.systemImage ?? "circle.dashed")
                         .font(.system(size: 15))
@@ -340,14 +340,14 @@ struct EditorMaskDetailPanel: View {
             Button {
                 chrome.isMaskPickerPresented = true
             } label: {
-                HStack(spacing: 6) {
+                HStack(spacing: 8) {
                     if let id = controller.selectedMaskID,
                        let thumbnail = controller.maskThumbnails[id] {
                         Image(uiImage: thumbnail)
                             .resizable()
                             .aspectRatio(contentMode: .fill)
                             .frame(width: 24, height: 24)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                            .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
                     }
                     Text(controller.selectedMask?.name ?? "Mask")
                         .font(.system(size: 15, weight: .semibold))
@@ -657,7 +657,7 @@ struct EditorNewMaskSheet: View {
                     // the two-column tile grid wrapped its blurbs to different
                     // line counts, so every card was a different size and the
                     // sheet ate the screen.
-                    VStack(spacing: 6) {
+                    VStack(spacing: 8) {
                         ForEach(order) { kind in
                             row(kind)
                         }
@@ -703,7 +703,7 @@ struct EditorNewMaskSheet: View {
             .padding(.horizontal, 12)
             // The height is the row's, not the text's: every card identical.
             .frame(height: 54)
-            .background(EditorTheme.maskRow, in: RoundedRectangle(cornerRadius: 12))
+            .background(EditorTheme.maskRow, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.plain)
     }
@@ -724,13 +724,13 @@ struct EditorMaskPickerSheet: View {
                     onSelect(mask.id)
                     dismiss()
                 } label: {
-                    HStack(spacing: 10) {
+                    HStack(spacing: 8) {
                         if let image = thumbnails[mask.id] {
                             Image(uiImage: image)
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
                                 .frame(width: 34, height: 34)
-                                .clipShape(RoundedRectangle(cornerRadius: 7))
+                                .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
                         }
                         VStack(alignment: .leading, spacing: 1) {
                             Text(mask.name)

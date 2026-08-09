@@ -63,7 +63,7 @@ struct CompressionPresetsScreen: View {
 
     private func presetRow(_ preset: ResizePreset) -> some View {
         HStack {
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(preset.name)
                     .foregroundStyle(.primary)
                 Text(detail(for: preset))

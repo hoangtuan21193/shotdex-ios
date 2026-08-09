@@ -178,7 +178,7 @@ struct SearchSuggestionsScreen: View {
     // MARK: Suggestions
 
     private var capsuleStack: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             ForEach(suggestions, id: \.self) { suggestion in
                 capsule(suggestion) { apply(suggestion) }
             }

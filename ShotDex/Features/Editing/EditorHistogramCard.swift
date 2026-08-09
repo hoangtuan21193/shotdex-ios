@@ -58,7 +58,7 @@ struct EditorHistogramCard: View {
         // top of the photo the whole time, so the picture has to stay readable
         // through it.
         .editorGlass(
-            cornerRadius: 14,
+            cornerRadius: AppTheme.Radius.lg,
             tint: EditorTheme.glassLight,
             materialOpacity: 0.45
         )
@@ -74,7 +74,7 @@ struct EditorHistogramCard: View {
     }
 
     private var header: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
             HStack(spacing: 2) {
                 ForEach(0..<3, id: \.self) { _ in
                     Circle()
@@ -120,7 +120,7 @@ struct EditorHistogramCard: View {
     private var plot: some View {
         GeometryReader { proxy in
             ZStack {
-                RoundedRectangle(cornerRadius: 6)
+                RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous)
                     .fill(Color.black.opacity(0.06))
 
                 toneGrid(size: proxy.size)
@@ -147,7 +147,7 @@ struct EditorHistogramCard: View {
                     }
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
             .drawingGroup()
         }
     }
@@ -268,7 +268,7 @@ struct EditorHistogramPill: View {
                 // Fills whatever the band frames it to — a flexible width running out
                 // to the Dynamic Island, at the band buttons' full height.
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                 .matchedGeometryEffect(id: EditorHistogramTransition.id, in: namespace)
                 .contentShape(Rectangle())
         }

@@ -597,7 +597,7 @@ struct PhotoDetailScreen: View {
         return Button {
             isMetadataPresented = true
         } label: {
-            GlassPanel(cornerRadius: 18) {
+            GlassPanel(cornerRadius: AppTheme.Radius.lg) {
                 VStack(alignment: .leading, spacing: 1) {
                     HStack(spacing: 8) {
                         Text(summary.titleLine)
@@ -610,7 +610,7 @@ struct PhotoDetailScreen: View {
                                 .font(.caption2.weight(.bold))
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 1)
-                                .background(Color(.systemFill), in: RoundedRectangle(cornerRadius: 4))
+                                .background(Color(.systemFill), in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
                         }
                         Spacer()
                         if isDownloadStalled {
@@ -1403,7 +1403,7 @@ private struct DetailVideoPlayer: View {
     private var statusOverlay: some View {
         switch model.phase {
         case .downloading(let progress):
-            VStack(spacing: 10) {
+            VStack(spacing: 8) {
                 ICloudDownloadRing(progress: progress)
                     .scaleEffect(1.6)
                     .tint(.white)
@@ -1448,7 +1448,7 @@ private struct DetailVideoPlayer: View {
             .padding(24)
             .frame(maxWidth: 300)
             .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.Radius.xl, style: .continuous)
                     .fill(.black.opacity(0.55))
             )
             .transition(.opacity)
@@ -1486,7 +1486,7 @@ private struct DetailVideoPlayer: View {
         .foregroundStyle(.white)
         .padding(20)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous)
                 .fill(.black.opacity(0.55))
         )
         .transition(.opacity)

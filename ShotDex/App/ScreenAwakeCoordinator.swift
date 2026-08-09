@@ -2,16 +2,17 @@ import SwiftUI
 import UIKit
 
 /// Keeps the display awake while indexing runs and, after an idle period with
-/// no user touch, covers it with a black overlay to save battery. A touch
-/// removes the overlay and resets the idle timer.
+/// no user touch, lowers the screen brightness to save battery. A touch
+/// restores the brightness and resets the idle timer.
 ///
-/// `@Observable` so the black dim overlay reacts to `isDimmed`; the rest is
-/// side effects (idle timer + overlay window).
+/// `@Observable` for parity with the rest of the app's state holders; the work
+/// here is all side effects (idle timer + screen brightness).
 ///
-/// Deliberately does NOT touch `UIScreen.brightness`: iOS auto-brightness
-/// fights a programmatic value, and a restore that runs while the scene is
-/// resigning can miss — leaving the user's brightness stuck near zero. The
-/// black overlay alone keeps the panel dark (on OLED, black pixels are off).
+/// Unlike a full-screen black overlay, dimming the brightness leaves the app
+/// content visible (just dark). iOS auto-brightness can nudge the value back up
+/// on an ambient-light change; that is an accepted trade-off for not covering
+/// the UI. Brightness is always restored on wake, on deactivate, and when the
+/// app leaves the foreground, so it can never get stuck dark.
 @MainActor
 @Observable
 final class ScreenAwakeCoordinator {
@@ -19,20 +20,18 @@ final class ScreenAwakeCoordinator {
     /// for the system Auto-Lock value, so this is a fixed 1-minute stand-in.
     static let idleDimDelay: Duration = .seconds(60)
 
-    /// Drives the full-screen black overlay.
-    private(set) var isDimmed = false
+    /// Brightness applied while idle-dimmed. Not fully off, so the user can see
+    /// the screen is alive and touch it to wake.
+    private static let dimmedBrightness: CGFloat = 0.0
 
-    /// Source of index progress/throughput for the dim overlay. Weak — owned by
-    /// the root tab view for the whole session.
-    weak var libraryModel: LibraryModel?
+    /// True while the screen is held at the dimmed brightness.
+    private(set) var isDimmed = false
 
     private var isEnabled = false
     private var isIndexing = false
     private var dimTask: Task<Void, Never>?
-    /// Hosts the dim visuals in a top-level window so they sit above everything
-    /// — tab UI, sheets, and the photo-detail `fullScreenCover` (a SwiftUI
-    /// `.overlay` on the root tab view would be hidden behind that cover).
-    private var overlayWindow: UIWindow?
+    /// Brightness captured just before dimming, restored on wake.
+    private var restoreBrightness: CGFloat?
 
     private var isActive: Bool { isEnabled && isIndexing }
 
@@ -83,71 +82,17 @@ final class ScreenAwakeCoordinator {
     private func dim() {
         guard !isDimmed else { return }
         isDimmed = true
-        showOverlay()
+        restoreBrightness = UIScreen.main.brightness
+        UIScreen.main.brightness = Self.dimmedBrightness
     }
 
     private func wake() {
+        guard isDimmed else { return }
         isDimmed = false
-        hideOverlay()
-    }
-
-    // MARK: Overlay window
-
-    private func showOverlay() {
-        guard overlayWindow == nil, let scene = Self.currentWindowScene() else { return }
-        let window = UIWindow(windowScene: scene)
-        // Above the app content, sheets, and the photo-detail fullScreenCover.
-        window.windowLevel = UIWindow.Level(rawValue: UIWindow.Level.alert.rawValue + 1)
-        window.backgroundColor = .clear
-        let host = UIHostingController(
-            rootView: DimOverlayView(
-                library: libraryModel,
-                onWake: { [weak self] in self?.registerActivity() }
-            )
-        )
-        host.view.backgroundColor = .clear
-        window.rootViewController = host
-        // Visible but not key: swallow taps to wake without stealing focus.
-        window.isHidden = false
-        overlayWindow = window
-    }
-
-    private func hideOverlay() {
-        overlayWindow?.isHidden = true
-        overlayWindow = nil
-    }
-
-    private static func currentWindowScene() -> UIWindowScene? {
-        UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .first { $0.activationState == .foregroundActive }
-            ?? UIApplication.shared.connectedScenes
-                .compactMap { $0 as? UIWindowScene }
-                .first
-    }
-}
-
-/// Root of the dim overlay window: black fill + faint live progress, and a
-/// touch-to-wake gesture that swallows the tap so it never reaches the app.
-private struct DimOverlayView: View {
-    let library: LibraryModel?
-    let onWake: () -> Void
-
-    var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-            DimIndexProgressView(
-                progress: library?.indexProgress,
-                throughput: library?.indexThroughput,
-                networkStatus: library?.indexNetworkStatus,
-                diagnostics: library?.indexDiagnostics
-            )
+        if let restoreBrightness {
+            UIScreen.main.brightness = restoreBrightness
         }
-        .contentShape(Rectangle())
-        .gesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in onWake() }
-        )
+        restoreBrightness = nil
     }
 }
 

@@ -14,7 +14,7 @@ struct SmartAlbumRuleRow: View {
     var onDelete: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 fieldMenu
                 if rule.field.kind != .favorite {
@@ -112,14 +112,14 @@ struct SmartAlbumRuleRow: View {
     /// Free-typed value with inline autocomplete: matching indexed values show
     /// as tappable tokens beneath the field (no dropdown button).
     private var textEditor: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             TextField("Value", text: $rule.text)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
                 .textFieldStyle(.roundedBorder)
             if !matchingSuggestions.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 8) {
                         ForEach(matchingSuggestions, id: \.self) { value in
                             Button { rule.text = value } label: {
                                 Text(value)
@@ -154,7 +154,7 @@ struct SmartAlbumRuleRow: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(Color(.secondarySystemFill), in: RoundedRectangle(cornerRadius: 8))
+            .background(Color(.secondarySystemFill), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
     }
 

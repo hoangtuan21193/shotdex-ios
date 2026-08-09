@@ -1272,11 +1272,7 @@ struct GridSectionHeader: View {
             .lineLimit(1)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
-            .background(.ultraThinMaterial, in: Capsule())
-            .overlay(
-                Capsule()
-                    .strokeBorder(Color(.separator).opacity(0.3), lineWidth: 0.5)
-            )
+            .glassBackground(Capsule())
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
@@ -1366,7 +1362,7 @@ final class PhotoGridCell: UICollectionViewCell {
         contentView.addSubview(videoBadge)
 
         selectionBorder.layer.borderWidth = 3
-        selectionBorder.layer.borderColor = UIColor.tintColor.cgColor
+        selectionBorder.layer.borderColor = UIColor.white.cgColor
         selectionBorder.isUserInteractionEnabled = false
         contentView.addSubview(selectionBorder)
 
@@ -1498,10 +1494,22 @@ final class PhotoGridCell: UICollectionViewCell {
     func updateSelection(isSelecting: Bool, isSelected: Bool) {
         selectionBorder.isHidden = !(isSelecting && isSelected)
         selectionBadge.isHidden = !isSelecting
-        selectionBadge.image = UIImage(
-            systemName: isSelected ? "checkmark.circle.fill" : "circle"
-        )
-        selectionBadge.tintColor = isSelected ? .tintColor : .white
+        let base = UIImage.SymbolConfiguration(pointSize: 18, weight: .semibold)
+        if isSelected {
+            // White check on a dark disc — no accent, and it reads over a bright
+            // photo unlike a plain white glyph. Palette: layer 0 = check (white),
+            // layer 1 = filled circle (dark).
+            selectionBadge.image = UIImage(systemName: "checkmark.circle.fill")
+            selectionBadge.preferredSymbolConfiguration = base.applying(
+                UIImage.SymbolConfiguration(
+                    paletteColors: [.white, UIColor.black.withAlphaComponent(0.6)]
+                )
+            )
+        } else {
+            selectionBadge.image = UIImage(systemName: "circle")
+            selectionBadge.preferredSymbolConfiguration = base
+            selectionBadge.tintColor = .white
+        }
     }
 
     /// Single write point for the metadata overlay (sync configure and the

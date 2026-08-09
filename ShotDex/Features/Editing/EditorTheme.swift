@@ -36,8 +36,10 @@ enum EditorTheme {
     /// histogram has to stay blue whatever the app's accent is.
     static let histogramBlue = Color(red: 0.039, green: 0.518, blue: 1)
 
-    static let animation = Animation.easeOut(duration: 0.22)
-    static let panelSpring = Animation.spring(response: 0.32, dampingFraction: 0.85)
+    // Geometry and motion live in `AppTheme`; tier D re-exports the two motion
+    // curves under their editor names so existing call sites stay unchanged.
+    static let animation = AppTheme.Motion.standard
+    static let panelSpring = AppTheme.Motion.panelSpring
 
     static let panelTitle = Font.system(size: 19, weight: .semibold)
     static let groupLabel = Font.system(size: 11.5, weight: .bold)
@@ -72,7 +74,7 @@ enum EditorTheme {
 
 /// Blurred dark glass used by every on-image control.
 struct EditorGlassBackground: ViewModifier {
-    var cornerRadius: CGFloat = 14
+    var cornerRadius: CGFloat = AppTheme.Radius.lg
     var tint: Color = EditorTheme.glass
     /// How much of the blur to keep. The histogram card turns this down so the
     /// photo reads through it; chrome that carries text keeps it at full strength.
@@ -82,20 +84,37 @@ struct EditorGlassBackground: ViewModifier {
         content
             .background(
                 .ultraThinMaterial.opacity(materialOpacity),
-                in: RoundedRectangle(cornerRadius: cornerRadius)
+                in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
             )
-            .background(tint, in: RoundedRectangle(cornerRadius: cornerRadius))
+            .background(tint, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: cornerRadius)
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .stroke(EditorTheme.glassStroke, lineWidth: 1)
             }
             .shadow(color: .black.opacity(0.45), radius: 12, y: 4)
     }
 }
 
+/// The same dark glass clipped to an arbitrary shape — the tier-D counterpart
+/// to `.glassBackground(_:)`. Round and pill editor buttons use this so they
+/// stay dark and legible instead of the bright tier-C chrome glass.
+struct EditorGlassShapeBackground<S: InsettableShape>: ViewModifier {
+    var shape: S
+    var tint: Color = EditorTheme.glass
+    var materialOpacity: Double = 1
+
+    func body(content: Content) -> some View {
+        content
+            .background(.ultraThinMaterial.opacity(materialOpacity), in: shape)
+            .background(tint, in: shape)
+            .overlay { shape.strokeBorder(EditorTheme.glassStroke, lineWidth: 1) }
+            .shadow(color: .black.opacity(0.45), radius: 12, y: 4)
+    }
+}
+
 extension View {
     func editorGlass(
-        cornerRadius: CGFloat = 14,
+        cornerRadius: CGFloat = AppTheme.Radius.lg,
         tint: Color = EditorTheme.glass,
         materialOpacity: Double = 1
     ) -> some View {
@@ -105,6 +124,16 @@ extension View {
                 tint: tint,
                 materialOpacity: materialOpacity
             )
+        )
+    }
+
+    func editorGlass<S: InsettableShape>(
+        _ shape: S,
+        tint: Color = EditorTheme.glass,
+        materialOpacity: Double = 1
+    ) -> some View {
+        modifier(
+            EditorGlassShapeBackground(shape: shape, tint: tint, materialOpacity: materialOpacity)
         )
     }
 }
@@ -152,6 +181,6 @@ struct EditorPillLabel: View {
                 isActive ? EditorTheme.accent : Color.clear,
                 in: Capsule()
             )
-            .editorGlass(cornerRadius: 14)
+            .editorGlass(cornerRadius: AppTheme.Radius.lg)
     }
 }

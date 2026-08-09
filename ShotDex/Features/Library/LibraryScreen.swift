@@ -665,7 +665,7 @@ struct LibraryScreen: View {
 
     @ViewBuilder
     private func indexStatusLabel(_ model: LibraryModel) -> some View {
-        let content = HStack(spacing: 6) {
+        let content = HStack(spacing: 8) {
             ProgressView()
                 .controlSize(.small)
             if let progress = model.indexProgress, progress.total > 0 {
@@ -691,11 +691,7 @@ struct LibraryScreen: View {
             content
                 .padding(.horizontal, 14)
                 .padding(.vertical, 6)
-                .background(.ultraThinMaterial, in: Capsule())
-                .overlay(
-                    Capsule()
-                        .strokeBorder(Color(.separator).opacity(0.3), lineWidth: 0.5)
-                )
+                .glassBackground(Capsule())
         }
     }
 
@@ -721,7 +717,7 @@ struct LibraryScreen: View {
     /// down: live countdown, skip-the-wait retry, and the cellular shortcut.
     private func autoRetryCard(_ model: LibraryModel, retryAt: Date) -> some View {
         GlassPanel {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 Label("iCloud not responding", systemImage: "icloud.slash")
                     .font(.caption.weight(.medium))
                 HStack(spacing: 4) {
@@ -759,7 +755,7 @@ struct LibraryScreen: View {
     /// with a shortcut to opt into cellular and resume now.
     private func pausedIndexCard(_ model: LibraryModel) -> some View {
         GlassPanel {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 Label(
                     "Indexing paused — waiting for Wi-Fi",
                     systemImage: "wifi.slash"
@@ -795,7 +791,7 @@ struct LibraryScreen: View {
     private func expandedIndexCard(_ model: LibraryModel) -> some View {
         let progress = model.indexProgress
         return GlassPanel {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 12) {
                     if let progress {
                         Text("Reading photo and video info · \(progress.percent)%")
@@ -878,6 +874,7 @@ struct LibraryScreen: View {
         // the floating overlay), so these items only ever render when browsing.
         ToolbarItem(placement: .topBarLeading) {
             SettingsButton()
+                .tint(.primary)
         }
         // Break the shared Liquid Glass container so the indexing token reads as
         // its own control, not part of the Settings gear's tap target.
@@ -898,6 +895,7 @@ struct LibraryScreen: View {
                 } label: {
                     Image(systemName: "checkmark.circle")
                 }
+                .tint(.primary)
                 .accessibilityLabel("Select photos")
             }
         }
@@ -915,6 +913,7 @@ struct LibraryScreen: View {
                 } label: {
                     Image(systemName: "arrow.up.arrow.down.circle")
                 }
+                .tint(.primary)
                 .accessibilityLabel("Sort")
             }
         }
@@ -978,7 +977,7 @@ struct LimitedAccessBanner: View {
                 .font(.subheadline.weight(.medium))
         }
         .padding(12)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .padding(.horizontal)
         .accessibilityElement(children: .combine)
     }

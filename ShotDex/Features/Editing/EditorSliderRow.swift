@@ -43,7 +43,7 @@ struct EditorValueSlider: View {
     @State private var trackWidth: CGFloat = 1
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             Text(label.uppercased())
                 .font(.system(size: 10.5, weight: .semibold))
                 .tracking(0.5)
@@ -109,7 +109,7 @@ struct EditorValueSlider: View {
     }
 
     private var cursor: some View {
-        RoundedRectangle(cornerRadius: 2)
+        RoundedRectangle(cornerRadius: 2, style: .continuous)
             .fill(.white)
             .frame(width: 4, height: 14)
             .modifier(CursorGlow(isColored: trackGradient != nil))
@@ -245,7 +245,7 @@ private struct CursorGlow: ViewModifier {
         if isColored {
             content
                 .overlay {
-                    RoundedRectangle(cornerRadius: 2)
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
                         .stroke(Color.black.opacity(0.5), lineWidth: 1)
                 }
                 .shadow(color: .black.opacity(0.6), radius: 3, y: 1)

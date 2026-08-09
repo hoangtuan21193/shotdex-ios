@@ -218,13 +218,13 @@ private struct CompactMetadataGrid: View {
     private var columns: [GridItem] {
         let count = dynamicTypeSize.isAccessibilitySize ? 1 : 2
         return Array(
-            repeating: GridItem(.flexible(), spacing: 10, alignment: .topLeading),
+            repeating: GridItem(.flexible(), spacing: 8, alignment: .topLeading),
             count: count
         )
     }
 
     var body: some View {
-        LazyVGrid(columns: columns, alignment: .leading, spacing: 10) {
+        LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
             ForEach(rows) { row in
                 VStack(alignment: .leading, spacing: 2) {
                     Text(row.key)

@@ -193,7 +193,7 @@ struct SettingsScreen: View {
     }
 
     private func indexProgressRow(_ model: LibraryModel) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
                 if let progress = model.indexProgress {
                     ProgressView(value: progress.fraction)
@@ -312,7 +312,7 @@ struct SettingsScreen: View {
         return Section {
             VStack(alignment: .leading, spacing: 12) {
                 LabeledContent("Accent Color", value: selected.displayName)
-                HStack(spacing: 18) {
+                HStack(spacing: 16) {
                     ForEach(AppAccentTheme.allCases) { theme in
                         accentSwatch(theme, isSelected: theme == selected)
                     }

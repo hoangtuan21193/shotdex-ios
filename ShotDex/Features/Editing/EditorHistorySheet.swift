@@ -45,7 +45,7 @@ struct EditorHistorySheet: View {
                             controller.jumpToHistoryStep(step.id)
                             dismiss()
                         } label: {
-                            HStack(spacing: 10) {
+                            HStack(spacing: 8) {
                                 thumbnail
                                 Text(step.label)
                                     .font(.system(size: 14))
@@ -92,7 +92,7 @@ struct EditorHistorySheet: View {
     /// would mean a full Core Image pass per row, which is not worth it in a list
     /// the user scrolls quickly.
     private var thumbnail: some View {
-        RoundedRectangle(cornerRadius: 5)
+        RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous)
             .fill(Color.white.opacity(0.06))
             .frame(width: 30, height: 30)
             .overlay {
@@ -100,7 +100,7 @@ struct EditorHistorySheet: View {
                     Image(uiImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .clipShape(RoundedRectangle(cornerRadius: 5))
+                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
                         .opacity(0.9)
                 }
             }

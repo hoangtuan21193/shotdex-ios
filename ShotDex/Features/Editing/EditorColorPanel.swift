@@ -123,7 +123,7 @@ struct EditorPointColorSection: View {
     /// created. Same button throughout — the label and the width animate, so the
     /// collapse reads as the button stepping aside rather than being replaced.
     private var swatchRow: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             eyedropperButton
             if !controller.pointColors.isEmpty {
                 swatches
@@ -145,7 +145,7 @@ struct EditorPointColorSection: View {
                 chrome.isEyedropperActive.toggle()
             }
         } label: {
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 Image(systemName: "eyedropper")
                     .font(.system(size: 13, weight: .semibold))
                 if !isEyedropperCollapsed {
@@ -453,7 +453,7 @@ struct EditorGradeRegionStrip: View {
                             chrome.gradingRegion = region
                         }
                     } label: {
-                        HStack(spacing: 6) {
+                        HStack(spacing: 8) {
                             Circle()
                                 .fill(EditorColorMixerStyle.regionTint(
                                     controller.gradingWheel(region)

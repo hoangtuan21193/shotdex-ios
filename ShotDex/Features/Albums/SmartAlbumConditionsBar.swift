@@ -26,7 +26,7 @@ struct SmartAlbumConditionsBar: View {
             }
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
+                HStack(spacing: 8) {
                     ForEach(rules) { rule in
                         Text(rule.displaySummary)
                             .font(.footnote)

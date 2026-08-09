@@ -10,6 +10,9 @@ struct CompressionPresentation: Identifiable {
     let sourceAlbum: PHAssetCollection?
 }
 
+/// Compress / resize — a tier-D tool (DESIGN.md §2): dark stage, editor slider,
+/// drawn controls. It shares the editor's palette and the `EditorValueSlider` so
+/// it reads as the same surface as the Photo Editor rather than a system form.
 struct CompressionScreen: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppDependencies.self) private var dependencies
@@ -23,11 +26,16 @@ struct CompressionScreen: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if let controller {
-                    content(controller)
-                } else {
-                    ProgressView("Preparing original…")
+            ZStack {
+                EditorTheme.background.ignoresSafeArea()
+                Group {
+                    if let controller {
+                        content(controller)
+                    } else {
+                        ProgressView("Preparing original…")
+                            .tint(.white)
+                            .foregroundStyle(.white)
+                    }
                 }
             }
             .navigationTitle(assets.count == 1 ? "Compress Photo" : "Compress \(assets.count) Photos")
@@ -43,7 +51,10 @@ struct CompressionScreen: View {
                     }
                 }
             }
+            .toolbarBackground(EditorTheme.panelSolid, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
         }
+        .preferredColorScheme(.dark)
         .task {
             guard controller == nil else { return }
             let newController = CompressionController(
@@ -90,7 +101,7 @@ struct CompressionScreen: View {
             }
         } else {
             ScrollView {
-                VStack(spacing: 18) {
+                VStack(spacing: AppTheme.Spacing.lg) {
                     CompressionPreview(controller: controller)
                         .frame(height: assets.count == 1 ? 320 : 250)
 
@@ -105,25 +116,13 @@ struct CompressionScreen: View {
                             systemImage: "crop"
                         )
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(EditorTheme.dimText)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
 
-                    Button {
-                        controller.startExport()
-                    } label: {
-                        Label(
-                            assets.count == 1 ? "Save to Photos" : "Compress \(assets.count) Photos",
-                            systemImage: "arrow.down.circle.fill"
-                        )
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(controller.isLoading || controller.isExporting)
+                    exportButton(controller)
                 }
-                .padding()
+                .padding(AppTheme.Spacing.lg)
             }
             .safeAreaInset(edge: .bottom) {
                 if controller.isExporting {
@@ -133,24 +132,45 @@ struct CompressionScreen: View {
         }
     }
 
+    private func exportButton(_ controller: CompressionController) -> some View {
+        let isDisabled = controller.isLoading || controller.isExporting
+        return Button {
+            controller.startExport()
+        } label: {
+            Label(
+                assets.count == 1 ? "Save to Photos" : "Compress \(assets.count) Photos",
+                systemImage: "arrow.down.circle.fill"
+            )
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundStyle(isDisabled ? EditorTheme.dimText : .white)
+            .frame(maxWidth: .infinity)
+            .frame(height: AppTheme.Size.primaryActionHeight)
+            .background(
+                isDisabled ? EditorTheme.control : accent,
+                in: RoundedRectangle.app(AppTheme.Radius.md)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
+    }
+
     private func presetSection(_ controller: CompressionController) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Size")
-                .font(.headline)
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+            CompressionGroupLabel(text: "Size")
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
+                HStack(spacing: AppTheme.Spacing.sm) {
                     ForEach(controller.presets) { preset in
                         Button {
                             controller.choosePreset(preset.id)
                         } label: {
-                            VStack(spacing: 3) {
+                            VStack(spacing: AppTheme.Spacing.xs) {
                                 Text(preset.name)
                                     .font(.subheadline.weight(.medium))
                                 Text(presetDetail(preset))
                                     .font(.caption2)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(EditorTheme.secondaryText)
                             }
-                            .padding(.horizontal, 14)
+                            .padding(.horizontal, AppTheme.Spacing.md)
                             .frame(minHeight: 48)
                         }
                         .buttonStyle(
@@ -167,42 +187,46 @@ struct CompressionScreen: View {
     }
 
     private func qualitySection(_ controller: CompressionController) -> some View {
-        VStack(alignment: .leading, spacing: 9) {
-            HStack {
-                Text("Quality")
-                    .font(.headline)
-                Spacer()
-                Text("\(Int((controller.quality * 100).rounded()))%")
-                    .monospacedDigit()
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+            EditorValueSlider(
+                label: "Quality",
+                value: controller.quality,
+                range: 0.1...1,
+                valueText: "\(Int((controller.quality * 100).rounded()))%",
+                accessibilityName: "Quality",
+                onBeginDrag: {},
+                onDrag: {
+                    controller.quality = $0
+                    controller.scheduleEstimate()
+                },
+                onEndDrag: { _, _, _ in controller.scheduleEstimate() },
+                onReset: {
+                    controller.quality = 0.8
+                    controller.scheduleEstimate()
+                }
+            )
+            HStack(spacing: AppTheme.Spacing.sm) {
                 if controller.isEstimating {
                     ProgressView().controlSize(.small)
+                    Text("Estimating size…")
+                        .font(.caption)
+                        .foregroundStyle(EditorTheme.secondaryText)
                 } else if let text = controller.estimatedSizeText {
-                    Text("· \(text)")
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
+                    Text("~\(text)")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(EditorTheme.secondaryText)
                 }
+                Spacer(minLength: 0)
             }
-            Slider(
-                value: Binding(
-                    get: { controller.quality },
-                    set: {
-                        controller.quality = $0
-                        controller.scheduleEstimate()
-                    }
-                ),
-                in: 0.1...1,
-                step: 0.01
-            )
             Text("The size is a fast estimate and may change slightly when the full-resolution file is encoded.")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(EditorTheme.dimText)
         }
     }
 
     private func formatSection(_ controller: CompressionController) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Format")
-                .font(.headline)
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+            CompressionGroupLabel(text: "Format")
             Picker(
                 "Format",
                 selection: Binding(
@@ -241,32 +265,41 @@ struct CompressionScreen: View {
                 }
             )
         ) {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
                 Text("Include Metadata")
-                    .font(.headline)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
                 Text("Camera EXIF, date, location and orientation")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(EditorTheme.secondaryText)
             }
         }
+        .tint(accent)
     }
 
     private func exportProgress(_ controller: CompressionController) -> some View {
-        VStack(spacing: 10) {
+        VStack(spacing: AppTheme.Spacing.sm) {
             ProgressView(value: controller.progressFraction)
+                .tint(accent)
             HStack {
                 Text(
                     "Processing \(min(controller.processedCount + 1, assets.count)) of \(assets.count)"
                 )
                 .font(.subheadline.monospacedDigit())
+                .foregroundStyle(EditorTheme.secondaryText)
                 Spacer()
                 Button("Cancel", role: .destructive) {
                     isCancelConfirmationPresented = true
                 }
             }
         }
-        .padding()
-        .background(.regularMaterial)
+        .padding(AppTheme.Spacing.lg)
+        .background(EditorTheme.panelSolid)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(EditorTheme.panelTopHairline)
+                .frame(height: 1)
+        }
     }
 
     private func presetDetail(_ preset: ResizePreset) -> String {
@@ -281,6 +314,19 @@ struct CompressionScreen: View {
     }
 }
 
+/// The uppercase tier-D group heading (DESIGN.md §7.2) used above each control.
+private struct CompressionGroupLabel: View {
+    let text: String
+
+    var body: some View {
+        Text(text.uppercased())
+            .font(EditorTheme.groupLabel)
+            .tracking(0.6)
+            .foregroundStyle(EditorTheme.secondaryText)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 private struct CompressionPreview: View {
     @Bindable var controller: CompressionController
     @State private var dragStartAnchor: NormalizedPoint?
@@ -288,32 +334,28 @@ private struct CompressionPreview: View {
     var body: some View {
         GeometryReader { proxy in
             ZStack {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(.secondarySystemBackground))
+                RoundedRectangle.app(AppTheme.Radius.lg)
+                    .fill(EditorTheme.panel)
                 if let image = controller.previewImage {
                     Image(uiImage: image)
                         .resizable()
                         .interpolation(.high)
                         .aspectRatio(contentMode: .fit)
-                        .padding(8)
+                        .padding(AppTheme.Spacing.sm)
                 } else {
-                    ProgressView()
+                    ProgressView().tint(.white)
                 }
 
                 if canRepositionCrop {
                     VStack {
                         Spacer()
-                        Label("Drag to reposition crop", systemImage: "hand.draw")
-                            .font(.caption.weight(.medium))
-                            .padding(.horizontal, 10)
-                            .frame(height: 30)
-                            .background(.ultraThinMaterial, in: Capsule())
-                            .padding(12)
+                        EditorPillLabel(text: "Drag to reposition crop", systemImage: "hand.draw")
+                            .padding(AppTheme.Spacing.md)
                     }
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .contentShape(RoundedRectangle(cornerRadius: 16))
+            .clipShape(RoundedRectangle.app(AppTheme.Radius.lg))
+            .contentShape(RoundedRectangle.app(AppTheme.Radius.lg))
             .gesture(
                 DragGesture()
                     .onChanged { value in
@@ -391,7 +433,7 @@ private struct CompressionSummary: View {
             if !controller.failures.isEmpty {
                 Section("Failures") {
                     ForEach(controller.failures) { failure in
-                        VStack(alignment: .leading, spacing: 4) {
+                        VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
                             Text(failure.filename)
                             Text(failure.message)
                                 .font(.caption)
@@ -406,6 +448,8 @@ private struct CompressionSummary: View {
                     .frame(maxWidth: .infinity)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(EditorTheme.background)
     }
 }
 
@@ -417,17 +461,17 @@ private struct CompressionChoiceStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .foregroundStyle(selected ? Color.white : Color.primary)
+            .foregroundStyle(selected ? Color.white : EditorTheme.secondaryText)
             .background(
                 selected
                     ? accent.opacity(configuration.isPressed ? 0.75 : 1)
-                    : Color(.secondarySystemBackground),
-                in: RoundedRectangle(cornerRadius: 12)
+                    : EditorTheme.control,
+                in: RoundedRectangle.app(AppTheme.Radius.md)
             )
             .overlay {
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle.app(AppTheme.Radius.md)
                     .stroke(
-                        selected ? accent : Color.secondary.opacity(0.18),
+                        selected ? accent : EditorTheme.hairline,
                         lineWidth: 1
                     )
             }

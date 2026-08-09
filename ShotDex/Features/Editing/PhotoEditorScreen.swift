@@ -227,7 +227,7 @@ struct PhotoEditorScreen: View {
                     .tint(.white)
                     .foregroundStyle(.white)
                     .padding(20)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+                    .editorGlass(cornerRadius: AppTheme.Radius.lg)
             }
             .transition(.opacity)
         }
@@ -549,19 +549,18 @@ struct PhotoEditorScreen: View {
         .disabled(!isEnabled)
     }
 
-    /// The blurred near-black disc under every band button.
+    /// The blurred near-black disc under every band button. The near-black tint
+    /// sits over the shared glass so the disc keeps its dark editor look while the
+    /// blur (Liquid Glass on iOS 26) comes through the single glass entrypoint.
     private var floatingCircleFill: some View {
-        ZStack {
-            Circle().fill(.ultraThinMaterial)
-            Circle().fill(Color(red: 18 / 255, green: 18 / 255, blue: 20 / 255).opacity(0.6))
-        }
+        Color.clear.editorGlass(Circle())
     }
 
     /// The drawing sub-mode's own top bar: Clear and Done sit up here, level with
     /// the Dynamic Island, because the `PKToolPicker` owns the bottom of the screen
     /// and would otherwise cover a bottom action row.
     private func drawTopBar(_ controller: PhotoEditorController) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
             Button("Clear") {
                 drawSession.clear()
             }
@@ -753,8 +752,8 @@ struct PhotoEditorScreen: View {
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(Color.white.opacity(0.6))
                 .frame(width: 38, height: 38)
-                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 11))
-                .contentShape(RoundedRectangle(cornerRadius: 11))
+                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous))
+                .contentShape(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Back")
@@ -884,7 +883,7 @@ struct PhotoEditorScreen: View {
     }
 
     private func placeholderContent(_ group: EditorGroup) -> some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 8) {
             Image(systemName: group == .optics ? "camera.aperture" : "grid")
                 .font(.system(size: 24))
                 .foregroundStyle(EditorTheme.dimText)
@@ -911,7 +910,7 @@ struct PhotoEditorScreen: View {
         Button {
             isCurveEditorPresented = true
         } label: {
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 Image(systemName: "chart.xyaxis.line")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(EditorTheme.secondaryText)
@@ -969,7 +968,7 @@ struct PhotoEditorScreen: View {
         _ controller: PhotoEditorController,
         toast: EditorChromeModel.UndoToast
     ) -> some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             Text(toast.message)
                 .font(.system(size: 13).monospacedDigit())
                 .foregroundStyle(.white)
@@ -1122,7 +1121,7 @@ private struct PhotoEditorSaveSheet: View {
                         Color.black.opacity(0.35).ignoresSafeArea()
                         ProgressView("Rendering full resolution…")
                             .padding(20)
-                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                            .glassBackground(RoundedRectangle.app(AppTheme.Radius.lg))
                     }
                 }
             }
@@ -1222,7 +1221,7 @@ private struct EditorGroupWheel: View {
                 width: EditorLayoutMetrics.editorGroupChipWidth,
                 height: EditorLayoutMetrics.editorGroupChipHeight
             )
-            .contentShape(RoundedRectangle(cornerRadius: 11))
+            .contentShape(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(group.title)

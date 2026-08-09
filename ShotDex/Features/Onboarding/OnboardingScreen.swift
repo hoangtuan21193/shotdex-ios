@@ -61,7 +61,7 @@ struct OnboardingScreen: View {
     }
 
     private func onboardingRow(icon: String, title: String, detail: String) -> some View {
-        HStack(alignment: .top, spacing: 14) {
+        HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
                 .font(.title3)
                 .foregroundStyle(accent)

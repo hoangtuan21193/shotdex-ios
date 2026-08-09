@@ -351,7 +351,7 @@ private struct KeepScreenAwakeModifier: ViewModifier {
             .overlay {
                 if isActive {
                     // Passive, non-blocking probe that resets the idle timer
-                    // on any touch. The dim visuals live in a top-level window
+                    // on any touch. Dimming is done via screen brightness
                     // (see ScreenAwakeCoordinator), so nothing is drawn here.
                     IdleActivityReporterView { model.registerActivity() }
                         .allowsHitTesting(false)
@@ -371,7 +371,6 @@ private struct KeepScreenAwakeModifier: ViewModifier {
     }
 
     private func sync() {
-        model.libraryModel = libraryModel
         model.update(enabled: isActive, indexing: isIndexing)
     }
 }

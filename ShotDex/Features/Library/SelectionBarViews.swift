@@ -1,6 +1,16 @@
 import Photos
 import SwiftUI
 
+private extension View {
+    /// Native Liquid Glass for the selection chrome — the same material iOS
+    /// Photos uses for its floating bars. On iOS 26 this is real `glassEffect`
+    /// (translucent, with vibrancy so monochrome glyphs stay legible); a blurred
+    /// material fallback earlier. No dark tint: keep it clean like Photos.
+    func selectionGlass(_ shape: some InsettableShape) -> some View {
+        glassBackground(shape)
+    }
+}
+
 /// Full-screen floating selection chrome — the Liquid Glass layer the root tab
 /// view overlays above every tab's content (and above the hidden native tab /
 /// nav bars) while a screen is in multi-select. Nothing here paints a solid
@@ -21,7 +31,7 @@ struct SelectionOverlay: View {
         ZStack {
             VStack(spacing: 0) {
                 SelectionTopRow(model: model)
-                    .padding(.horizontal, 12)
+                    .padding(.horizontal, 16)
                     .padding(.top, 6)
                 if model.selectionCount > 0 {
                     SelectionCountCaption(model: model)
@@ -30,7 +40,7 @@ struct SelectionOverlay: View {
                 }
                 Spacer(minLength: 0)
                 SelectionBottomRow(model: model, isMoreOpen: $isMoreOpen)
-                    .padding(.horizontal, 12)
+                    .padding(.horizontal, 16)
                     .padding(.bottom, 10)
             }
 
@@ -65,7 +75,7 @@ private struct SelectionTopRow: View {
     let model: SelectionBarModel
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             SelectionCircleButton(
                 systemImage: "square.and.arrow.up",
                 iconSize: 21,
@@ -78,7 +88,7 @@ private struct SelectionTopRow: View {
             SelectionTray(model: model)
                 .frame(maxWidth: .infinity)
                 .frame(height: 48)
-                .glassBackground(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .selectionGlass(RoundedRectangle(cornerRadius: AppTheme.Radius.xl, style: .continuous))
 
             SelectionCircleButton(
                 systemImage: "xmark",
@@ -90,27 +100,32 @@ private struct SelectionTopRow: View {
     }
 }
 
-/// The selected thumbnails in pick order — no placeholders. While they fit the
-/// tray they stay centred; once they overflow it becomes a horizontal scroll
-/// pinned to the newest pick on the right. Indicator hidden; each thumbnail
-/// carries an inset × to deselect.
+/// The selected thumbnails in pick order, leading-aligned. Up to the compare
+/// cap the remaining slots show dashed placeholders on the right (the classic
+/// tray look); once picks exceed the cap the placeholders drop and it becomes
+/// a horizontal scroll pinned to the newest pick. Each thumbnail carries an
+/// inset × to deselect.
 private struct SelectionTray: View {
     let model: SelectionBarModel
 
     private let slot: CGFloat = 36
     private let gap: CGFloat = 7
     private let pad: CGFloat = 10
+    private var maxSlots: Int { CompareScreen.maxPhotoCount }
 
     var body: some View {
         GeometryReader { geo in
-            let count = model.thumbnailIds.count
-            let contentWidth = CGFloat(count) * slot
-                + CGFloat(max(0, count - 1)) * gap
-                + pad * 2
-            if contentWidth <= geo.size.width {
-                // Fits: lay them out centred, no scrolling.
-                HStack(spacing: gap) { thumbnails }
-                    .frame(width: geo.size.width, height: geo.size.height)
+            let ids = model.thumbnailIds
+            if ids.count <= maxSlots {
+                // Thumbnails on the left, dashed placeholders filling the rest.
+                HStack(spacing: gap) {
+                    thumbnails
+                    ForEach(0..<(maxSlots - ids.count), id: \.self) { _ in
+                        SelectionSlotPlaceholder(side: slot)
+                    }
+                }
+                .padding(.horizontal, pad)
+                .frame(width: geo.size.width, height: geo.size.height, alignment: .leading)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: gap) { thumbnails }
@@ -133,6 +148,29 @@ private struct SelectionTray: View {
                 onRemove: { model.onDeselect(id) }
             )
         }
+    }
+}
+
+/// An empty tray slot: a dashed rounded square with a faint photo glyph.
+private struct SelectionSlotPlaceholder: View {
+    let side: CGFloat
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
+        shape
+            .fill(Color.primary.opacity(0.05))
+            .overlay {
+                shape.strokeBorder(
+                    Color.secondary.opacity(0.55),
+                    style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])
+                )
+            }
+            .overlay {
+                Image(systemName: "photo")
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundStyle(Color.secondary.opacity(0.6))
+            }
+            .frame(width: side, height: side)
     }
 }
 
@@ -162,7 +200,7 @@ private struct SelectionTrayThumbnail: View {
     }
 
     private var thumbnail: some View {
-        let shape = RoundedRectangle(cornerRadius: 11, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
         return shape
             .fill(Color.white.opacity(0.12))
             .overlay {
@@ -233,15 +271,10 @@ struct SelectionCountCaption: View {
             .font(.footnote.weight(.medium))
             .monospacedDigit()
             .lineLimit(1)
-            .foregroundStyle(.white)
+            .foregroundStyle(.primary)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background {
-                Capsule()
-                    .fill(.black.opacity(0.28))
-                    .background(.ultraThinMaterial, in: Capsule())
-            }
-            .shadow(color: .black.opacity(0.25), radius: 4, y: 1)
+            .selectionGlass(Capsule())
     }
 }
 
@@ -396,7 +429,7 @@ private struct Triangle: Shape {
 /// Compare: two side-by-side portrait frames.
 private struct CompareGlyph: View {
     var body: some View {
-        HStack(spacing: 3) {
+        HStack(spacing: 4) {
             RoundedRectangle(cornerRadius: 2.5, style: .continuous)
                 .stroke(style: StrokeStyle(lineWidth: 1.5, lineJoin: .round))
                 .frame(width: 9, height: 20)
@@ -488,11 +521,11 @@ private struct SelectionMoreMenu: View {
                     HStack {
                         Text(row.title)
                             .font(.system(size: 15.5))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                         Spacer(minLength: 12)
                         Image(systemName: row.systemImage)
                             .font(.system(size: 19, weight: .regular))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                     }
                     .padding(.horizontal, 16)
                     .frame(height: 44)
@@ -501,14 +534,14 @@ private struct SelectionMoreMenu: View {
                 .buttonStyle(.plain)
                 if index < rows.count - 1 {
                     Rectangle()
-                        .fill(Color.white.opacity(0.2))
+                        .fill(Color.primary.opacity(0.15))
                         .frame(height: 0.5)
                         .padding(.leading, 16)
                 }
             }
         }
         .frame(width: 246)
-        .glassBackground(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .selectionGlass(RoundedRectangle(cornerRadius: AppTheme.Radius.xl, style: .continuous))
     }
 }
 
@@ -521,12 +554,12 @@ private struct SelectionCluster<Content: View>: View {
     @ViewBuilder var content: Content
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 12) {
             content
         }
-        .padding(.horizontal, 9)
+        .padding(.horizontal, 14)
         .padding(.vertical, 4)
-        .glassBackground(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .selectionGlass(RoundedRectangle(cornerRadius: AppTheme.Radius.xl, style: .continuous))
     }
 }
 
@@ -535,7 +568,6 @@ private struct SelectionCluster<Content: View>: View {
 /// while its menu is open; a disabled tile dims but keeps its slot. The glyph
 /// inherits the tile's tint (enabled = white, disabled = faded).
 private struct SelectionTileButton<Icon: View>: View {
-    @Environment(\.appAccent) private var accent
     var isEnabled: Bool = true
     var isActive: Bool = false
     let action: () -> Void
@@ -544,11 +576,11 @@ private struct SelectionTileButton<Icon: View>: View {
     var body: some View {
         Button(action: action) {
             icon
-                .foregroundStyle(isEnabled ? accent : accent.opacity(0.3))
+                .foregroundStyle(isEnabled ? Color.primary : Color.primary.opacity(0.3))
                 .frame(width: 40, height: 40)
                 .background {
                     if isActive {
-                        Circle().fill(Color.white.opacity(0.24))
+                        Circle().fill(Color.primary.opacity(0.12))
                     }
                 }
                 .contentShape(Circle())
@@ -571,35 +603,19 @@ private struct SelectionCircleButton: View {
         Button(action: action) {
             Group {
                 if showsSpinner {
-                    ProgressView().tint(.white)
+                    ProgressView().tint(.primary)
                 } else {
                     Image(systemName: systemImage)
                         .font(.system(size: iconSize, weight: .medium))
-                        .foregroundStyle(isEnabled ? Color.white : Color.white.opacity(0.32))
+                        .foregroundStyle(isEnabled ? Color.primary : Color.primary.opacity(0.3))
                 }
             }
             .frame(width: 48, height: 48)
             .contentShape(Circle())
-            .glassBackground(Circle())
+            .selectionGlass(Circle())
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
-    }
-}
-
-private extension View {
-    /// Liquid Glass on iOS 26; a blurred material with a hairline edge and drop
-    /// shadow on earlier tiers. Shared by every cluster, tray and circle button
-    /// so the whole selection layer reads as one glass system.
-    @ViewBuilder
-    func glassBackground(_ shape: some InsettableShape) -> some View {
-        if #available(iOS 26.0, *) {
-            glassEffect(.regular, in: shape)
-        } else {
-            background(.ultraThinMaterial, in: shape)
-                .overlay(shape.strokeBorder(Color.white.opacity(0.22), lineWidth: 0.5))
-                .shadow(color: .black.opacity(0.4), radius: 12, y: 6)
-        }
     }
 }
 

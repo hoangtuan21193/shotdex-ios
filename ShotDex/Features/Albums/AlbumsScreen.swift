@@ -130,7 +130,7 @@ struct AlbumsScreen: View {
         // 3-row block.
         let rowCount = max(1, min(3, (albums.count + 2) / 3))
         let rows = Array(
-            repeating: GridItem(.fixed(AlbumToken.height), spacing: 10),
+            repeating: GridItem(.fixed(AlbumToken.height), spacing: 8),
             count: rowCount
         )
         return VStack(alignment: .leading, spacing: 12) {
@@ -141,7 +141,7 @@ struct AlbumsScreen: View {
             }
 
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHGrid(rows: rows, spacing: 10) {
+                LazyHGrid(rows: rows, spacing: 8) {
                     ForEach(albums) { album in
                         NavigationLink(value: album.id) {
                             AlbumToken(album: album)
@@ -164,7 +164,7 @@ struct AlbumsScreen: View {
         let total = model.smartQueryAlbums.count + model.smartAlbums.count
         let rowCount = max(1, min(3, (total + 2) / 3))
         let rows = Array(
-            repeating: GridItem(.fixed(AlbumToken.height), spacing: 10),
+            repeating: GridItem(.fixed(AlbumToken.height), spacing: 8),
             count: rowCount
         )
         return VStack(alignment: .leading, spacing: 12) {
@@ -173,7 +173,7 @@ struct AlbumsScreen: View {
                 .padding(.horizontal)
 
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHGrid(rows: rows, spacing: 10) {
+                LazyHGrid(rows: rows, spacing: 8) {
                     ForEach(model.smartQueryAlbums) { item in
                         NavigationLink(value: SmartAlbumDestination(id: item.album.id)) {
                             SmartAlbumToken(item: item)
@@ -235,7 +235,7 @@ struct AlbumToken: View {
     private let tokenWidth: CGFloat = 190
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             Color(.tertiarySystemBackground)
                 .frame(width: thumbSide, height: thumbSide)
                 .overlay {
@@ -249,7 +249,7 @@ struct AlbumToken: View {
                             .foregroundStyle(.tertiary)
                     }
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(album.title)
@@ -265,7 +265,7 @@ struct AlbumToken: View {
         }
         .padding(8)
         .frame(width: tokenWidth, height: Self.height, alignment: .leading)
-        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous))
         .onAppear {
             loadCover()
             prewarmDetailGrid()
@@ -333,7 +333,7 @@ struct SmartAlbumToken: View {
     private let tokenWidth: CGFloat = 190
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             Color(.tertiarySystemBackground)
                 .frame(width: thumbSide, height: thumbSide)
                 .overlay {
@@ -347,7 +347,7 @@ struct SmartAlbumToken: View {
                             .foregroundStyle(.tertiary)
                     }
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.album.name)
@@ -363,7 +363,7 @@ struct SmartAlbumToken: View {
         }
         .padding(8)
         .frame(width: tokenWidth, height: AlbumToken.height, alignment: .leading)
-        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous))
         .onAppear(perform: loadCover)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(item.album.name), \(item.count) photos")
@@ -429,7 +429,7 @@ struct OnThisDayCard: View {
                     .foregroundStyle(cover == nil ? Color(.secondaryLabel) : .white)
                     .padding(14)
             }
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous))
             // `coverAsset` is filled asynchronously by AlbumsModel, so
             // onAppear alone can miss it when this card appears first.
             .task(id: coverAsset?.localIdentifier) {

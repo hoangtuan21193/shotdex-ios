@@ -49,7 +49,7 @@ struct EditorFiltersPanel: View {
     private var presetStrip: some View {
         ScrollViewReader { scroller in
             ScrollView(.horizontal) {
-                LazyHStack(spacing: 10) {
+                LazyHStack(spacing: 8) {
                     ForEach(PhotoFilter.allCases) { filter in
                         filterCard(filter).id(filter)
                     }
@@ -72,9 +72,9 @@ struct EditorFiltersPanel: View {
             VStack(spacing: 5) {
                 thumbnail(filter)
                     .frame(width: 62, height: 62)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 8)
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
                             .stroke(
                                 isSelected ? EditorTheme.accent : .white.opacity(0.10),
                                 lineWidth: isSelected ? 2 : 0.5
@@ -253,8 +253,8 @@ struct EditorCropPanel: View {
             .foregroundStyle(isEnabled ? .white : EditorTheme.dimText)
             .padding(.horizontal, 10)
             .frame(height: 28)
-            .background(EditorTheme.control, in: RoundedRectangle(cornerRadius: 7))
-            .contentShape(RoundedRectangle(cornerRadius: 7))
+            .background(EditorTheme.control, in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
@@ -318,8 +318,8 @@ struct EditorChipButtonStyle: ButtonStyle {
                 isSelected
                     ? EditorTheme.accent
                     : EditorTheme.control.opacity(configuration.isPressed ? 0.6 : 1),
-                in: RoundedRectangle(cornerRadius: 7)
+                in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous)
             )
-            .contentShape(RoundedRectangle(cornerRadius: 7))
+            .contentShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
     }
 }

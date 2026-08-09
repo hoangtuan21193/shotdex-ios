@@ -235,9 +235,18 @@ struct CompareScreen: View {
 
     private var topBar: some View {
         HStack(spacing: 12) {
-            GlassIconButton(systemImage: "xmark", accessibilityLabel: "Close") {
+            Button {
                 dismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(.white)
+                    .frame(width: 52, height: 52)
+                    .editorGlass(Circle())
+                    .contentShape(Circle())
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Close")
             Spacer()
             syncToggle(
                 isOn: $isZoomSynced,
@@ -279,21 +288,17 @@ struct CompareScreen: View {
             Label(title, systemImage: systemImage)
                 .labelStyle(.titleAndIcon)
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.white)
+                // Black on the accent capsule, white on the dark glass — the
+                // tier-D rule shared with the editor's active buttons.
+                .foregroundStyle(isOn.wrappedValue ? .black : .white)
                 .padding(.horizontal, 14)
                 .frame(height: 44)
+                // Accent capsule when on sits in front of the dark editor glass
+                // (opaque, so it hides it); when off the glass shows through.
                 .background {
-                    if isOn.wrappedValue {
-                        Capsule().fill(accent)
-                    } else {
-                        Capsule().fill(.ultraThinMaterial)
-                    }
+                    Capsule().fill(accent).opacity(isOn.wrappedValue ? 1 : 0)
                 }
-                .overlay(
-                    Capsule()
-                        .strokeBorder(Color.white.opacity(isOn.wrappedValue ? 0.2 : 0.15), lineWidth: 0.5)
-                )
-                .shadow(color: .black.opacity(0.12), radius: 12, y: 4)
+                .editorGlass(Capsule())
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -378,11 +383,7 @@ private struct ComparePane: View {
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(width: 40, height: 40)
-                .background(.ultraThinMaterial, in: Circle())
-                .overlay(
-                    Circle()
-                        .strokeBorder(Color.white.opacity(0.25), lineWidth: 0.5)
-                )
+                .editorGlass(Circle())
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
