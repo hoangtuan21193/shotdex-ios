@@ -69,7 +69,9 @@ Chỉ dùng system color để tự có light/dark:
 
 ### 3.3 Bảng màu tầng D
 
-Chỉ dùng token trong `EditorTheme`: `background`, `panel`, `panelSolid`, `panelTopHairline`, `panelDivider`, `stickyHeader`, `control`, `sliderTrack`, `hairline`, `secondaryText`, `dimText`, `clipping`, `maskRow`, `activeRow`, `glass`, `glassLight`, `glassStroke`.
+Chỉ dùng token trong `EditorTheme`: `background`, `panel`, `panelSolid`, `panelTopHairline`, `panelDivider`, `stickyHeader`, `control`, `sliderTrack`, `hairline`, `secondaryText`, `dimText`, `clipping`, `maskRow`, `activeRow`, `glass`, `glassLight`, `glassStroke`, `timelineSelection`, `timelineDestructive`.
+
+`timelineSelection` (`#57BFD1`) chỉ dùng cho **trạng thái chọn trong Video Studio timeline** (clip/băng/overlay đang chọn) — cố ý khác accent để "đang chọn" (xanh) không đụng "đang bật" (vàng accent). `timelineDestructive` (`#FF6B5E`) là glyph phá hủy trong inspector Video Studio.
 
 Thiếu token thì **thêm vào `EditorTheme`**, không viết `Color(white: 0.13)` trong file feature.
 
@@ -93,6 +95,16 @@ Chỉ dùng 5 giá trị. `style: .continuous` là bắt buộc cho mọi `Round
 | `Capsule` | — | Pill, token filter, tab bar, nút tròn |
 
 Thumbnail trong lưới ảnh: vuông, không bo (do `PhotoGridCollectionView` quản lý).
+
+**Ngoại lệ có tên — timeline Video Studio.** Băng timeline cao 28–32pt, thang chung quá lớn. Chỉ trong `Features/VideoStudio/`:
+
+| Token | Giá trị | Dùng cho |
+| --- | --- | --- |
+| `r-track` | **6** | băng clip/chữ/lọc/nhạc, ô chuyển cảnh, nút thêm trên rãnh |
+| `r-cell` | **10** | ô lệnh trong dải lệnh inspector |
+| `r-export` | **19** | pill Export |
+
+Định nghĩa trong `VideoStudioMetrics` (`trackRadius`/`commandCellRadius`/`exportPillRadius`). **Không** dùng ba giá trị này ở màn khác.
 
 ---
 

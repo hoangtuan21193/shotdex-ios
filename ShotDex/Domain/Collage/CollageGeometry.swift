@@ -44,10 +44,12 @@ enum CollageGeometry {
     static func cellFrames(
         template: CollageTemplate,
         canvasSize: CGSize,
-        gutter: CGFloat
+        gutter: CGFloat,
+        overrides: [String: [Double]] = [:]
     ) -> [CGRect] {
         let epsilon = 1e-6
-        return template.cells.map { cell in
+        let cells = overrides.isEmpty ? template.cells : template.resolvedCells(overrides: overrides)
+        return cells.map { cell in
             let raw = CGRect(
                 x: cell.x * canvasSize.width,
                 y: cell.y * canvasSize.height,
@@ -120,5 +122,35 @@ enum CollageGeometry {
     /// Hit test for the swap-drop target; the gutter and outside return nil.
     static func cellIndex(at point: CGPoint, frames: [CGRect]) -> Int? {
         frames.firstIndex { $0.contains(point) }
+    }
+
+    // MARK: - Polaroid
+
+    /// The white border around a Polaroid photo, as a fraction of the cell's
+    /// short edge (§10).
+    static let polaroidInsetFraction: CGFloat = 0.05
+    /// The taller bottom band that holds the caption, same units.
+    static let polaroidCaptionFraction: CGFloat = 0.18
+
+    /// Splits a Polaroid cell into the photo rect (top, inset on three sides) and
+    /// the caption rect (the wider bottom band). Shared by the canvas and the
+    /// exporter so the plate reads identically at any resolution.
+    static func polaroidLayout(cellFrame: CGRect) -> (photo: CGRect, caption: CGRect) {
+        let short = min(cellFrame.width, cellFrame.height)
+        let inset = short * polaroidInsetFraction
+        let captionHeight = short * polaroidCaptionFraction
+        let photo = CGRect(
+            x: cellFrame.minX + inset,
+            y: cellFrame.minY + inset,
+            width: max(1, cellFrame.width - inset * 2),
+            height: max(1, cellFrame.height - inset - captionHeight)
+        )
+        let caption = CGRect(
+            x: cellFrame.minX + inset,
+            y: photo.maxY,
+            width: max(1, cellFrame.width - inset * 2),
+            height: max(1, captionHeight - inset)
+        )
+        return (photo, caption)
     }
 }

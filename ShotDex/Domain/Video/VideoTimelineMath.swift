@@ -104,9 +104,18 @@ enum VideoTimelineMath {
     }
 
     /// Segments that tile a music bed under `totalDuration`: the source
-    /// repeated end to end, the final repetition trimmed.
-    static func musicSegments(sourceDuration: Double, totalDuration: Double) -> [MusicSegment] {
+    /// repeated end to end, the final repetition trimmed. When `loops` is
+    /// false the bed plays once (trimmed to the video) and stops.
+    static func musicSegments(
+        sourceDuration: Double,
+        totalDuration: Double,
+        loops: Bool = true
+    ) -> [MusicSegment] {
         guard sourceDuration > 0, totalDuration > 0 else { return [] }
+        guard loops else {
+            let duration = min(sourceDuration, totalDuration)
+            return [MusicSegment(insertAt: 0, sourceStart: 0, duration: duration)]
+        }
         var result: [MusicSegment] = []
         var cursor = 0.0
         while cursor < totalDuration - 0.0001 {

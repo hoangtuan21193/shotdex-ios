@@ -1,4 +1,5 @@
 import AVFoundation
+import CoreImage
 import Foundation
 import Photos
 
@@ -51,6 +52,14 @@ final class VideoStudioService {
                     assetID: clip.assetID,
                     pixelSize: CGSize(width: asset.pixelWidth, height: asset.pixelHeight)
                 )
+            case .freeze:
+                // A frame lifted out of the source video at load time.
+                guard let avAsset = await PhotoLibraryService.requestAVAsset(for: asset),
+                      let image = await Self.extractFrame(
+                          from: avAsset, at: clip.freezeSourceTime ?? 0
+                      )
+                else { continue }
+                loaded.sources[clip.id] = .freeze(image: image, pixelSize: image.extent.size)
             case .video:
                 guard let avAsset = await PhotoLibraryService.requestAVAsset(for: asset) else { continue }
                 do {
@@ -76,6 +85,18 @@ final class VideoStudioService {
             }
         }
         return loaded
+    }
+
+    /// A single frame out of a source video, oriented, for a freeze clip.
+    /// Zero tolerance so the held frame is exactly the one under the playhead.
+    static func extractFrame(from avAsset: AVAsset, at seconds: Double) async -> CIImage? {
+        let generator = AVAssetImageGenerator(asset: avAsset)
+        generator.appliesPreferredTrackTransform = true
+        generator.requestedTimeToleranceBefore = .zero
+        generator.requestedTimeToleranceAfter = .zero
+        let requested = CMTime(seconds: max(0, seconds), preferredTimescale: 600)
+        guard let cgImage = try? await generator.image(at: requested).image else { return nil }
+        return CIImage(cgImage: cgImage)
     }
 
     // MARK: - Blank backbone clip
@@ -164,17 +185,22 @@ final class VideoStudioService {
         recipe: VideoProjectRecipe,
         sources: [UUID: VideoClipSource]
     ) async throws -> (track: AVAssetTrack, duration: Double)? {
-        let hasPhotoClip = recipe.clips.contains { clip in
-            if case .photo = sources[clip.id] { return true }
-            return false
+        let hasStillClip = recipe.clips.contains { clip in
+            sources[clip.id]?.isStill ?? false
         }
-        guard hasPhotoClip else { return nil }
+        guard hasStillClip else { return nil }
         return try await loadBlankClip()
     }
 
     /// The bundled or imported music behind a selection, with its audio track
     /// and duration loaded for the builder.
-    func loadMusic(_ selection: MusicSelection?) async -> (track: AVAssetTrack, duration: Double)? {
+    ///
+    /// The `asset` is returned alongside the track deliberately: `AVAssetTrack`
+    /// does not retain its `AVAsset`, and `insertTimeRange(of:)` fails with
+    /// AVError -11800 / -12780 if the source asset has been released. The caller
+    /// must keep this asset alive across the `VideoCompositionBuilder.build`
+    /// call (unlike clip sources, which live in the session's `sources` dict).
+    func loadMusic(_ selection: MusicSelection?) async -> (asset: AVURLAsset, track: AVAssetTrack, duration: Double)? {
         guard let selection else { return nil }
         let url: URL?
         switch selection.source {
@@ -188,7 +214,7 @@ final class VideoStudioService {
         do {
             guard let track = try await asset.loadTracks(withMediaType: .audio).first else { return nil }
             let duration = try await asset.load(.duration).seconds
-            return (track, duration)
+            return (asset, track, duration)
         } catch {
             return nil
         }
@@ -210,14 +236,25 @@ final class VideoStudioService {
         let music = await loadMusic(recipe.music)
         let blank = try await blankClipIfNeeded(recipe: recipe, sources: sources)
         let renderSize = previewRenderSize(for: recipe)
-        let (composition, layout) = try VideoCompositionBuilder.build(
-            recipe: recipe,
-            sources: sources,
-            musicSourceTrack: music?.track,
-            musicDuration: music?.duration,
-            blankVideo: blank,
-            renderSize: renderSize
-        )
+        // `music` must stay alive across `build`: the music track's source asset
+        // is released otherwise and `insertTimeRange(of:)` fails (-11800/-12780).
+        let (composition, layout) = try withExtendedLifetime(music) {
+            try VideoCompositionBuilder.build(
+                recipe: recipe,
+                sources: sources,
+                musicSourceTrack: music?.track,
+                musicDuration: music?.duration,
+                blankVideo: blank,
+                renderSize: renderSize
+            )
+        }
+        // Parity with `VideoExportWriter`: the builder always adds the A/B audio
+        // backbone tracks, and a photo-only project leaves them empty. Reading an
+        // empty track through an engaged audio mix fails, so drop them.
+        for track in composition.tracks(withMediaType: .audio)
+        where track.timeRange.duration.seconds <= 0.01 {
+            composition.removeTrack(track)
+        }
         let item = AVPlayerItem(asset: composition)
         item.videoComposition = VideoCompositionBuilder.videoComposition(
             recipe: recipe,
@@ -265,15 +302,19 @@ final class VideoStudioService {
     ) async throws -> URL {
         let music = await loadMusic(recipe.music)
         let blank = try await blankClipIfNeeded(recipe: recipe, sources: sources)
-        let renderSize = recipe.renderPreset.renderSize
-        let (composition, layout) = try VideoCompositionBuilder.build(
-            recipe: recipe,
-            sources: sources,
-            musicSourceTrack: music?.track,
-            musicDuration: music?.duration,
-            blankVideo: blank,
-            renderSize: renderSize
-        )
+        let renderSize = recipe.canvasSize()
+        // Keep `music` alive across `build` (see `makePreviewItem`): otherwise the
+        // music source asset is released and `insertTimeRange` fails -11800.
+        let (composition, layout) = try withExtendedLifetime(music) {
+            try VideoCompositionBuilder.build(
+                recipe: recipe,
+                sources: sources,
+                musicSourceTrack: music?.track,
+                musicDuration: music?.duration,
+                blankVideo: blank,
+                renderSize: renderSize
+            )
+        }
         let exportStillStore = StillFrameStore(targetLongEdge: max(renderSize.width, renderSize.height))
         let videoComposition = VideoCompositionBuilder.videoComposition(
             recipe: recipe,
@@ -329,7 +370,7 @@ final class VideoStudioService {
     // MARK: - Internals
 
     private func previewRenderSize(for recipe: VideoProjectRecipe) -> CGSize {
-        let full = recipe.renderPreset.renderSize
+        let full = recipe.canvasSize()
         let scale = Self.previewLongEdge / max(full.width, full.height)
         return CGSize(
             width: (full.width * scale / 2).rounded() * 2,

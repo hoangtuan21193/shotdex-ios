@@ -1,17 +1,30 @@
 import Foundation
 
-/// A named arrangement of unit-space cells. Rects tile [0,1]² edge to edge —
-/// no gutter is baked in, so one template serves every aspect and spacing;
-/// `CollageGeometry.cellFrames` applies both at resolve time.
+/// A named arrangement of photo cells, held as a split tree (`CollageLayoutNode`)
+/// so its seams are draggable (§9). `cells` is the tree resolved with default
+/// weights — the tiling the thumbnail and a freshly opened collage show; the
+/// live canvas resolves the same tree with the recipe's weight overrides.
 struct CollageTemplate: Identifiable, Equatable, Sendable {
     let id: String
-    let cellCount: Int
-    let cells: [NormalizedRect]
+    let root: CollageLayoutNode
+
+    var cellCount: Int { root.leafCount }
+    var cells: [NormalizedRect] { root.resolve(in: .full) }
+
+    /// Cells resolved with the user's divider drags folded in.
+    func resolvedCells(overrides: [String: [Double]]) -> [NormalizedRect] {
+        root.resolve(in: .full, overrides: overrides)
+    }
+
+    /// Draggable seams in unit space, honouring the same overrides.
+    func dividers(overrides: [String: [Double]]) -> [CollageDivider] {
+        root.dividers(in: .full, overrides: overrides)
+    }
 }
 
-/// The fixed template catalog for 2–9 photos. Everything is generated from a
-/// handful of tiling helpers rather than hand-typed rects: the helpers can't
-/// produce gaps or overlaps, which is also what the unit tests pin down.
+/// The fixed template catalog for 2–9 photos. Each template is a split tree; the
+/// tree cannot produce gaps or overlaps (the unit tests pin that), and every
+/// interior split is a place a divider can be dragged.
 enum CollageTemplateCatalog {
     /// The photo counts a collage supports — also the Create menu's gate.
     static let supportedCounts: ClosedRange<Int> = 2...9
@@ -26,161 +39,98 @@ enum CollageTemplateCatalog {
 
     static let all: [CollageTemplate] = [
         // 2
-        columns(id: "2-cols", weights: [1, 1]),
-        rows(id: "2-rows", weights: [1, 1]),
-        columns(id: "2-cols-wide", weights: [2, 1]),
-        rows(id: "2-rows-tall", weights: [2, 1]),
+        make("2-cols", .columns([1, 1], [.leaf, .leaf])),
+        make("2-rows", .rows([1, 1], [.leaf, .leaf])),
+        make("2-cols-wide", .columns([2, 1], [.leaf, .leaf])),
+        make("2-rows-tall", .rows([2, 1], [.leaf, .leaf])),
+        make("2-cols-right", .columns([1, 2], [.leaf, .leaf])),
+        make("2-rows-bottom", .rows([1, 2], [.leaf, .leaf])),
         // 3
-        mainPlusStrip(id: "3-left-tall", edge: .leading, stripCount: 2),
-        mainPlusStrip(id: "3-right-tall", edge: .trailing, stripCount: 2),
-        mainPlusStrip(id: "3-top-wide", edge: .top, stripCount: 2),
-        columns(id: "3-cols", weights: [1, 1, 1]),
-        rows(id: "3-rows", weights: [1, 1, 1]),
+        make("3-left-tall", .columns([2, 1], [.leaf, rowStrip(2)])),
+        make("3-right-tall", .columns([1, 2], [rowStrip(2), .leaf])),
+        make("3-top-wide", .rows([2, 1], [.leaf, colStrip(2)])),
+        make("3-bottom-wide", .rows([1, 2], [colStrip(2), .leaf])),
+        make("3-1-2", .rows([1, 1], [.leaf, colStrip(2)])),
+        make("3-2-1", .rows([1, 1], [colStrip(2), .leaf])),
+        make("3-cols", colStrip(3)),
+        make("3-rows", rowStrip(3)),
         // 4
-        grid(id: "4-grid", rows: 2, columns: 2),
-        mainPlusStrip(id: "4-left-tall", edge: .leading, stripCount: 3),
-        mainPlusStrip(id: "4-top-wide", edge: .top, stripCount: 3),
-        rowsOfCounts(id: "4-1-3", counts: [1, 3]),
-        columns(id: "4-cols", weights: [1, 1, 1, 1]),
+        make("4-grid", grid(rows: 2, columns: 2)),
+        make("4-left-tall", .columns([2, 1], [.leaf, rowStrip(3)])),
+        make("4-right-tall", .columns([1, 2], [rowStrip(3), .leaf])),
+        make("4-top-wide", .rows([2, 1], [.leaf, colStrip(3)])),
+        make("4-1-3", .rows([1, 1], [.leaf, colStrip(3)])),
+        make("4-3-1", .rows([1, 1], [colStrip(3), .leaf])),
+        make("4-windmill", .rows([1, 1], [
+            .columns([2, 1], [.leaf, .leaf]),
+            .columns([1, 2], [.leaf, .leaf]),
+        ])),
+        make("4-rows", rowStrip(4)),
+        make("4-cols", colStrip(4)),
         // 5
-        rowsOfCounts(id: "5-2-3", counts: [2, 3]),
-        rowsOfCounts(id: "5-3-2", counts: [3, 2]),
-        rowsOfCounts(id: "5-1-4", counts: [1, 4], weights: [2, 1]),
-        mainPlusStrip(id: "5-left-tall", edge: .leading, stripCount: 4),
+        make("5-2-3", .rows([1, 1], [colStrip(2), colStrip(3)])),
+        make("5-3-2", .rows([1, 1], [colStrip(3), colStrip(2)])),
+        make("5-1-4", .rows([2, 1], [.leaf, colStrip(4)])),
+        make("5-4-1", .rows([1, 2], [colStrip(4), .leaf])),
+        make("5-2-1-2", .rows([1, 1, 1], [colStrip(2), .leaf, colStrip(2)])),
+        make("5-left-tall", .columns([2, 1], [.leaf, rowStrip(4)])),
+        make("5-right-tall", .columns([1, 2], [rowStrip(4), .leaf])),
+        make("5-cols", colStrip(5)),
         // 6
-        grid(id: "6-grid", rows: 2, columns: 3),
-        grid(id: "6-grid-tall", rows: 3, columns: 2),
-        rowsOfCounts(id: "6-1-2-3", counts: [1, 2, 3], weights: [2, 1, 1]),
-        rowsOfCounts(id: "6-2-4", counts: [2, 4], weights: [2, 1]),
+        make("6-grid", grid(rows: 2, columns: 3)),
+        make("6-grid-tall", grid(rows: 3, columns: 2)),
+        make("6-1-2-3", .rows([2, 1, 1], [.leaf, colStrip(2), colStrip(3)])),
+        make("6-2-4", .rows([2, 1], [colStrip(2), colStrip(4)])),
+        make("6-4-2", .rows([1, 1], [colStrip(4), colStrip(2)])),
+        make("6-3-2-1", .rows([1, 1, 1], [colStrip(3), colStrip(2), .leaf])),
+        make("6-left-tall", .columns([2, 1], [.leaf, rowStrip(5)])),
         // 7
-        rowsOfCounts(id: "7-3-4", counts: [3, 4]),
-        rowsOfCounts(id: "7-2-2-3", counts: [2, 2, 3]),
-        rowsOfCounts(id: "7-1-3-3", counts: [1, 3, 3], weights: [2, 1, 1]),
-        mainPlusStrip(id: "7-top-wide", edge: .top, stripCount: 6),
+        make("7-3-4", .rows([1, 1], [colStrip(3), colStrip(4)])),
+        make("7-4-3", .rows([1, 1], [colStrip(4), colStrip(3)])),
+        make("7-2-2-3", .rows([1, 1, 1], [colStrip(2), colStrip(2), colStrip(3)])),
+        make("7-2-3-2", .rows([1, 1, 1], [colStrip(2), colStrip(3), colStrip(2)])),
+        make("7-1-3-3", .rows([2, 1, 1], [.leaf, colStrip(3), colStrip(3)])),
+        make("7-top-wide", .rows([2, 1], [.leaf, colStrip(6)])),
+        make("7-left-tall", .columns([2, 1], [.leaf, rowStrip(6)])),
         // 8
-        grid(id: "8-grid", rows: 2, columns: 4),
-        grid(id: "8-grid-tall", rows: 4, columns: 2),
-        rowsOfCounts(id: "8-2-3-3", counts: [2, 3, 3]),
-        rowsOfCounts(id: "8-3-2-3", counts: [3, 2, 3]),
+        make("8-grid", grid(rows: 2, columns: 4)),
+        make("8-grid-tall", grid(rows: 4, columns: 2)),
+        make("8-2-3-3", .rows([1, 1, 1], [colStrip(2), colStrip(3), colStrip(3)])),
+        make("8-3-2-3", .rows([1, 1, 1], [colStrip(3), colStrip(2), colStrip(3)])),
+        make("8-2-4-2", .rows([1, 1, 1], [colStrip(2), colStrip(4), colStrip(2)])),
+        make("8-3-3-2", .rows([1, 1, 1], [colStrip(3), colStrip(3), colStrip(2)])),
+        make("8-left-tall", .columns([2, 1], [.leaf, rowStrip(7)])),
         // 9
-        grid(id: "9-grid", rows: 3, columns: 3),
-        rowsOfCounts(id: "9-2-3-4", counts: [2, 3, 4]),
-        rowsOfCounts(id: "9-1-4-4", counts: [1, 4, 4], weights: [2, 1, 1]),
-        rowsOfCounts(id: "9-4-1-4", counts: [4, 1, 4], weights: [1, 2, 1]),
+        make("9-grid", grid(rows: 3, columns: 3)),
+        make("9-2-3-4", .rows([1, 1, 1], [colStrip(2), colStrip(3), colStrip(4)])),
+        make("9-1-4-4", .rows([2, 1, 1], [.leaf, colStrip(4), colStrip(4)])),
+        make("9-4-1-4", .rows([1, 2, 1], [colStrip(4), .leaf, colStrip(4)])),
+        make("9-2-2-2-3", .rows([1, 1, 1, 1], [colStrip(2), colStrip(2), colStrip(2), colStrip(3)])),
+        make("9-3-3-2-1", .rows([1, 1, 1, 1], [colStrip(3), colStrip(3), colStrip(2), .leaf])),
+        make("9-left-tall", .columns([2, 1], [.leaf, rowStrip(8)])),
     ]
 
-    // MARK: - Tiling helpers
+    // MARK: - Builders
 
-    private enum StripEdge { case leading, trailing, top, bottom }
-
-    private static func grid(id: String, rows: Int, columns: Int) -> CollageTemplate {
-        var cells: [NormalizedRect] = []
-        let width = 1.0 / Double(columns)
-        let height = 1.0 / Double(rows)
-        for row in 0..<rows {
-            for column in 0..<columns {
-                cells.append(NormalizedRect(
-                    x: Double(column) * width,
-                    y: Double(row) * height,
-                    width: width,
-                    height: height
-                ))
-            }
-        }
-        return CollageTemplate(id: id, cellCount: rows * columns, cells: cells)
+    private static func make(_ id: String, _ root: CollageLayoutNode) -> CollageTemplate {
+        CollageTemplate(id: id, root: root.assigningIDs())
     }
 
-    /// Full-width horizontal bands, heights proportional to `weights`.
-    private static func rows(id: String, weights: [Double]) -> CollageTemplate {
-        let total = weights.reduce(0, +)
-        var y = 0.0
-        var cells: [NormalizedRect] = []
-        for weight in weights {
-            let height = weight / total
-            cells.append(NormalizedRect(x: 0, y: y, width: 1, height: height))
-            y += height
-        }
-        return CollageTemplate(id: id, cellCount: weights.count, cells: cells)
+    /// A row of `n` equal columns.
+    private static func colStrip(_ n: Int) -> CollageLayoutNode {
+        .columns(Array(repeating: 1, count: n), Array(repeating: .leaf, count: n))
     }
 
-    /// Full-height vertical bands, widths proportional to `weights`.
-    private static func columns(id: String, weights: [Double]) -> CollageTemplate {
-        let total = weights.reduce(0, +)
-        var x = 0.0
-        var cells: [NormalizedRect] = []
-        for weight in weights {
-            let width = weight / total
-            cells.append(NormalizedRect(x: x, y: 0, width: width, height: 1))
-            x += width
-        }
-        return CollageTemplate(id: id, cellCount: weights.count, cells: cells)
+    /// A column of `n` equal rows.
+    private static func rowStrip(_ n: Int) -> CollageLayoutNode {
+        .rows(Array(repeating: 1, count: n), Array(repeating: .leaf, count: n))
     }
 
-    /// Rows of equal-width cells; `counts[i]` cells in row i, row heights
-    /// proportional to `weights` (equal when nil).
-    private static func rowsOfCounts(
-        id: String,
-        counts: [Int],
-        weights: [Double]? = nil
-    ) -> CollageTemplate {
-        let rowWeights = weights ?? Array(repeating: 1, count: counts.count)
-        let total = rowWeights.reduce(0, +)
-        var y = 0.0
-        var cells: [NormalizedRect] = []
-        for (row, count) in counts.enumerated() {
-            let height = rowWeights[row] / total
-            let width = 1.0 / Double(count)
-            for column in 0..<count {
-                cells.append(NormalizedRect(
-                    x: Double(column) * width,
-                    y: y,
-                    width: width,
-                    height: height
-                ))
-            }
-            y += height
-        }
-        return CollageTemplate(id: id, cellCount: counts.reduce(0, +), cells: cells)
-    }
-
-    /// One dominant cell (2/3 of the canvas) plus a strip of `stripCount`
-    /// equal cells along the given edge.
-    private static func mainPlusStrip(
-        id: String,
-        edge: StripEdge,
-        stripCount: Int
-    ) -> CollageTemplate {
-        let major = 2.0 / 3.0
-        let minor = 1.0 - major
-        var cells: [NormalizedRect] = []
-        switch edge {
-        case .leading, .trailing:
-            let mainX = edge == .leading ? 0 : minor
-            let stripX = edge == .leading ? major : 0
-            cells.append(NormalizedRect(x: mainX, y: 0, width: major, height: 1))
-            let height = 1.0 / Double(stripCount)
-            for index in 0..<stripCount {
-                cells.append(NormalizedRect(
-                    x: stripX,
-                    y: Double(index) * height,
-                    width: minor,
-                    height: height
-                ))
-            }
-        case .top, .bottom:
-            let mainY = edge == .top ? 0 : minor
-            let stripY = edge == .top ? major : 0
-            cells.append(NormalizedRect(x: 0, y: mainY, width: 1, height: major))
-            let width = 1.0 / Double(stripCount)
-            for index in 0..<stripCount {
-                cells.append(NormalizedRect(
-                    x: Double(index) * width,
-                    y: stripY,
-                    width: width,
-                    height: minor
-                ))
-            }
-        }
-        return CollageTemplate(id: id, cellCount: stripCount + 1, cells: cells)
+    /// `rows` × `columns`, row-major leaf order (matches the geometry tests).
+    private static func grid(rows: Int, columns: Int) -> CollageLayoutNode {
+        .rows(
+            Array(repeating: 1, count: rows),
+            Array(repeating: colStrip(columns), count: rows)
+        )
     }
 }

@@ -141,7 +141,7 @@ struct LibraryScreen: View {
             )
         }
         .fullScreenCover(item: $collagePresentation) { presentation in
-            CollageScreen(assets: presentation.assets)
+            CollageScreen(assets: presentation.assets, onSaved: openSavedPhoto)
         }
         .fullScreenCover(item: $videoStudioPresentation) { presentation in
             VideoStudioScreen(
@@ -240,6 +240,22 @@ struct LibraryScreen: View {
         let assets = PhotoLibraryService.fetchAssets(ids: selectedImageIDs(model))
         guard CollageTemplateCatalog.supportedCounts.contains(assets.count) else { return }
         collagePresentation = CollagePresentation(assets: assets)
+    }
+
+    /// Opens the freshly-saved collage's detail once the grid reload (triggered
+    /// by `publishAppCreatedAsset`) has surfaced it (§12). Polls briefly because
+    /// the reload is asynchronous and the collage cover is still dismissing.
+    private func openSavedPhoto(_ assetID: String) {
+        guard let model else { return }
+        Task { @MainActor in
+            for _ in 0..<25 {
+                if let index = model.index(of: assetID) {
+                    viewerTarget = PhotoViewerTarget(id: assetID, startIndex: index)
+                    return
+                }
+                try? await Task.sleep(for: .seconds(0.12))
+            }
+        }
     }
 
     private func presentVideoStudio(_ model: LibraryModel) {

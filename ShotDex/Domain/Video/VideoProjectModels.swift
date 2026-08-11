@@ -7,6 +7,57 @@ import Foundation
 
 enum VideoClipKind: String, Sendable {
     case photo, video
+    /// A single frame lifted out of a source video and held on screen, like a
+    /// photo clip. `VideoClip.freezeSourceTime` says which frame; the frame is
+    /// extracted once at load and drawn as a still (no track samples).
+    case freeze
+}
+
+/// The output canvas shape. renderSize derives from the render preset's pixel
+/// budget fitted to this aspect, so portrait/square exports are true canvases
+/// (the compositor letterboxes/pillarboxes over the recipe background), not a
+/// 16:9 frame with bars baked in.
+enum VideoAspect: String, CaseIterable, Identifiable, Sendable {
+    case r16x9, r9x16, r1x1, r4x5
+
+    var id: String { rawValue }
+
+    /// Width ÷ height.
+    var ratio: CGFloat {
+        switch self {
+        case .r16x9: 16.0 / 9.0
+        case .r9x16: 9.0 / 16.0
+        case .r1x1: 1
+        case .r4x5: 4.0 / 5.0
+        }
+    }
+
+    var displayName: String {
+        switch self {
+        case .r16x9: "16:9"
+        case .r9x16: "9:16"
+        case .r1x1: "1:1"
+        case .r4x5: "4:5"
+        }
+    }
+
+    /// The canvas for a given long edge (the preset's larger dimension), rounded
+    /// to even pixels so H.264 never chokes on an odd dimension.
+    func canvasSize(longEdge: CGFloat) -> CGSize {
+        let width: CGFloat
+        let height: CGFloat
+        if ratio >= 1 {
+            width = longEdge
+            height = longEdge / ratio
+        } else {
+            height = longEdge
+            width = longEdge * ratio
+        }
+        return CGSize(
+            width: (width / 2).rounded() * 2,
+            height: (height / 2).rounded() * 2
+        )
+    }
 }
 
 /// A per-clip look/motion effect, evaluated over the clip's own placement
@@ -47,6 +98,11 @@ struct VideoClip: Identifiable, Equatable, Sendable {
     var trimEnd: Double?
     var isMuted = false
     var effect: VideoClipEffect = .none
+    /// Playback speed multiplier for video clips (1 = real time). Photo and
+    /// freeze clips ignore it — their length is `photoDuration` directly.
+    var speed: Double = 1
+    /// Freeze clips: the source-video time (seconds) the held frame came from.
+    var freezeSourceTime: Double?
     /// Resolved at load, not user state.
     var sourceDuration: Double?
 
@@ -58,12 +114,12 @@ struct VideoClip: Identifiable, Equatable, Sendable {
 
     var effectiveDuration: Double {
         switch kind {
-        case .photo:
+        case .photo, .freeze:
             photoDuration
         case .video:
             max(
                 VideoClip.minimumClipDuration,
-                (trimEnd ?? sourceDuration ?? 0) - trimStart
+                ((trimEnd ?? sourceDuration ?? 0) - trimStart) / max(speed, VideoClip.speedRange.lowerBound)
             )
         }
     }
@@ -71,6 +127,7 @@ struct VideoClip: Identifiable, Equatable, Sendable {
     static let defaultPhotoDuration: Double = 3
     static let photoDurationRange: ClosedRange<Double> = 0.5...10
     static let minimumClipDuration: Double = 0.1
+    static let speedRange: ClosedRange<Double> = 0.25...4
 }
 
 /// How one clip hands over to the next. Every kind but `.none` overlaps the
@@ -134,6 +191,9 @@ struct MusicSelection: Equatable, Sendable {
     var volume: Double = 1
     var fadeIn: Double = 2
     var fadeOut: Double = 2
+    /// When true the bed tiles to fill the whole video; when false it plays
+    /// once and stops.
+    var loops = true
 }
 
 enum VideoRenderPreset: String, CaseIterable, Identifiable, Sendable {
@@ -182,6 +242,19 @@ struct VideoProjectRecipe: Equatable, Sendable {
     /// Single-video mode: user rotation in quarter turns (0–3).
     var quarterTurns = 0
     var renderPreset: VideoRenderPreset = .hd1080
+    /// Output canvas shape. renderSize = preset long edge fitted to this.
+    var aspect: VideoAspect = .r16x9
+    /// Overall output gain applied on top of clip-audio and music volumes.
+    var masterVolume: Double = 1
+    /// Letterbox / pillarbox fill behind aspect-fitted frames.
+    var background = OverlayColor.black
+
+    /// The render canvas: the preset's pixel budget fitted to the aspect.
+    func canvasSize() -> CGSize {
+        let preset = renderPreset.renderSize
+        let longEdge = max(preset.width, preset.height)
+        return aspect.canvasSize(longEdge: longEdge)
+    }
 }
 
 extension VideoProjectRecipe {

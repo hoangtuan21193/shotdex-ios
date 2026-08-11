@@ -60,4 +60,7 @@ enum SettingsKeys {
     /// JSON-encoded most-recently-used typefaces, so the full installed-font list
     /// has to be searched once rather than once per photo.
     static let overlayRecentFonts = "editor.overlayRecentFonts"
+
+    /// JSON-encoded user collage presets (frame + style, no text).
+    static let collagePresets = "collage.presets"
 }

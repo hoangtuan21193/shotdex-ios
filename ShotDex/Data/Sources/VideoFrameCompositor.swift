@@ -13,6 +13,8 @@ struct VideoRenderRecipe: Sendable {
     let overlays: [TimedOverlay]
     let renderSize: CGSize
     let totalDuration: Double
+    /// Letterbox / pillarbox fill behind aspect-fitted frames.
+    let background: CIColor
 
     init(recipe: VideoProjectRecipe, renderSize: CGSize, totalDuration: Double) {
         self.filter = recipe.filter
@@ -21,6 +23,11 @@ struct VideoRenderRecipe: Sendable {
         self.overlays = recipe.overlays
         self.renderSize = renderSize
         self.totalDuration = totalDuration
+        self.background = CIColor(
+            red: recipe.background.red,
+            green: recipe.background.green,
+            blue: recipe.background.blue
+        )
     }
 
     var hasWork: Bool {
@@ -109,6 +116,9 @@ final class VideoCompositionInstruction: NSObject, AVVideoCompositionInstruction
         /// A still photo, drawn by the compositor into `fitRect` on the
         /// canvas. The track underneath is an empty time range.
         case still(assetID: String, fitRect: CGRect)
+        /// An already-loaded still (a freeze frame), drawn into `fitRect`.
+        /// Bypasses the PHAsset-backed `StillFrameStore`.
+        case stillImage(image: CIImage, fitRect: CGRect)
     }
 
     /// A source clip's placement timing + effect: everything a per-clip
@@ -211,15 +221,16 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
         let renderSize = request.renderContext.size
         let canvas = CGRect(origin: .zero, size: renderSize)
         let seconds = request.compositionTime.seconds
+        let backgroundImage = CIImage(color: instruction.recipe.background).cropped(to: canvas)
 
         guard var image = resolvedImage(
             instruction.front,
             request: request,
             renderSize: renderSize
         ) else {
-            // A missing still or dropped frame renders black rather than
-            // failing the whole export.
-            render(CIImage(color: .black).cropped(to: canvas), to: output, request: request)
+            // A missing still or dropped frame renders the background rather
+            // than failing the whole export.
+            render(backgroundImage, to: output, request: request)
             return
         }
 
@@ -243,13 +254,15 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
                 back: outgoing.cropped(to: canvas),
                 kind: instruction.transitionKind,
                 progress: progress,
-                canvas: canvas
+                canvas: canvas,
+                background: backgroundImage
             )
         }
 
-        // Letterbox bars: undefined pixels outside the fitted frame become
-        // black, and the canvas extent is pinned before the filter chain.
-        image = image.composited(over: CIImage(color: .black).cropped(to: canvas))
+        // Letterbox bars: undefined pixels outside the fitted frame take the
+        // recipe background, and the canvas extent is pinned before the filter
+        // chain.
+        image = image.composited(over: backgroundImage)
             .cropped(to: canvas)
 
         let recipe = instruction.recipe
@@ -351,9 +364,13 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
         back: CIImage,
         kind: VideoTransitionKind,
         progress: Double,
-        canvas: CGRect
+        canvas: CGRect,
+        background: CIImage
     ) -> CIImage {
+        // Fade-to-*black* is literal by name; slide/zoom expose the recipe
+        // background where a frame has slid away.
         let black = CIImage(color: .black).cropped(to: canvas)
+        let fill = background
         switch kind {
         case .fadeBlack:
             let (stage, t) = VideoEffectMath.fadeBlackStage(progress: progress)
@@ -373,7 +390,7 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
             let movedBack = back
                 .transformed(by: CGAffineTransform(translationX: offsets.back.dx, y: 0))
                 .cropped(to: canvas)
-            return movedFront.composited(over: movedBack.composited(over: black))
+            return movedFront.composited(over: movedBack.composited(over: fill))
         case .wipe:
             let sweep = VideoEffectMath.wipeGradientX(
                 progress: progress, width: canvas.width
@@ -451,16 +468,23 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
             return image.transformed(by: flipIn.concatenating(transform).concatenating(flipOut))
         case .still(let assetID, let fitRect):
             guard let image = stillImage(assetID: assetID, request: request) else { return nil }
-            let scale = fitRect.width / image.extent.width
-            // `fitRect` is centred on the canvas, so it reads the same in
-            // either vertical convention — no flip needed for stills.
-            return image
-                .transformed(by: CGAffineTransform(scaleX: scale, y: scale)
-                    .concatenating(CGAffineTransform(
-                        translationX: fitRect.minX,
-                        y: fitRect.minY
-                    )))
+            return placedStill(image, in: fitRect)
+        case .stillImage(let image, let fitRect):
+            return placedStill(image, in: fitRect)
         }
+    }
+
+    /// Scale a still into its centred `fitRect`. `fitRect` is centred on the
+    /// canvas, so it reads the same in either vertical convention — no flip.
+    private func placedStill(_ image: CIImage, in fitRect: CGRect) -> CIImage? {
+        guard image.extent.width > 0 else { return nil }
+        let scale = fitRect.width / image.extent.width
+        return image
+            .transformed(by: CGAffineTransform(scaleX: scale, y: scale)
+                .concatenating(CGAffineTransform(
+                    translationX: fitRect.minX - image.extent.minX * scale,
+                    y: fitRect.minY - image.extent.minY * scale
+                )))
     }
 
     private func stillImage(

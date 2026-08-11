@@ -1,26 +1,34 @@
 import SwiftUI
 import UIKit
 
-/// Pinch phases the timeline reports to whoever owns the points-per-second
-/// scale. The anchor time is captured at `.began` and the scroller itself
-/// keeps it pinned under the playhead while the scale changes.
+/// Pinch phases reported to the owner of the points-per-second scale. The
+/// anchor time is captured at `.began` and kept pinned under the playhead.
 enum TimelinePinchPhase {
     case began
     case changed(scale: CGFloat)
     case ended
 }
 
-/// A draggable region of the timeline content. SwiftUI drag gestures never
-/// activate inside the hosted content of a UIScrollView (they defer to the
-/// scroll pan forever, even when it is vetoed), so dragging is routed through
-/// a UIKit pan on the scroller: rows publish these zones, the scroller
-/// hit-tests its dedicated pan against them and reports phases back.
+/// A draggable region of the timeline content. SwiftUI drag/pinch gestures
+/// never activate inside the hosted content of a `UIScrollView` (they defer to
+/// the scroll pan forever), so every drag is routed through dedicated UIKit
+/// recognizers on the scroller: the rows publish these zones, the scroller
+/// hit-tests them, and reports phases back.
 struct TimelineDragZone: Equatable {
     enum Kind: Equatable, Hashable {
+        case clipLeadingHandle(UUID)
+        case clipTrailingHandle(UUID)
+        case clipReorder(UUID)
         case textBody(UUID)
         case textLeadingHandle(UUID)
         case textTrailingHandle(UUID)
-        case clipReorder(UUID)
+
+        /// Reorder rides a long-press so a plain drag over a selected clip
+        /// still scrubs; the handle/body zones block the scroll pan instead.
+        var isReorder: Bool {
+            if case .clipReorder = self { return true }
+            return false
+        }
     }
     var kind: Kind
     var rect: CGRect
@@ -32,26 +40,22 @@ enum TimelineZoneDragPhase {
     case cancelled
 }
 
-/// The timeline's horizontal scroller: a `UIScrollView` wrapping hosted
-/// SwiftUI track rows, with a fixed centre playhead. iOS 17 has no
-/// `onScrollGeometryChange`, and `ScrollViewReader` can neither read a
-/// continuous offset nor write one at 30 Hz without animating — so UIKit it is.
+/// The timeline's horizontal scroller: a `UIScrollView` wrapping hosted SwiftUI
+/// track rows, with a fixed centre playhead the parent draws over it. The
+/// scroller occupies the row area only (the gutter is a sibling column), so its
+/// own centre already lands on the playhead.
 ///
-/// Time ↔ offset mapping: `contentInset` is half the viewport on both sides,
-/// so `time = (contentOffset.x + inset.left) / pps` and t = 0 sits exactly
-/// under the centre playhead when scrolled fully left.
+/// Time ↔ offset: `contentInset` is half the viewport on both sides, so
+/// `time = (contentOffset.x + inset.left) / pps`, and t = 0 sits under the
+/// centre playhead when scrolled fully left.
 ///
-/// Feedback-loop arbitration: while the user drags/decelerates, the offset is
-/// the source of truth (`onScrubTime` drives the model, whose time observer
-/// already ignores ticks while scrubbing); while playing, `currentTime` is the
-/// source of truth and programmatic offset writes are flagged so the delegate
-/// echo is ignored. The two can never both write in one frame.
+/// Feedback arbitration mirrors the proven v1 bridge: while the user drives the
+/// scroll it is the source of truth; while playing, `currentTime` is, and
+/// programmatic writes are flagged so the delegate echo is ignored.
 struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
     var contentWidth: CGFloat
     var currentTime: Double
     var pps: CGFloat
-    /// Content-space regions the zone pan owns; the scroll pan refuses to
-    /// begin inside them.
     var dragZones: [TimelineDragZone]
     var onScrubStart: () -> Void
     var onScrubTime: (Double) -> Void
@@ -60,9 +64,7 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
     var onZoneDrag: (TimelineDragZone.Kind, TimelineZoneDragPhase) -> Void
     @ViewBuilder var content: () -> Content
 
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
 
     func makeUIView(context: Context) -> TimelineScrollView {
         let scrollView = TimelineScrollView()
@@ -74,6 +76,7 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
         scrollView.decelerationRate = .fast
         scrollView.scrollsToTop = false
         scrollView.delaysContentTouches = false
+        scrollView.backgroundColor = .clear
         scrollView.delegate = context.coordinator
 
         let host = UIHostingController(rootView: AnyView(content()))
@@ -91,22 +94,30 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
         ])
 
         let pinch = UIPinchGestureRecognizer(
-            target: context.coordinator,
-            action: #selector(Coordinator.handlePinch(_:))
+            target: context.coordinator, action: #selector(Coordinator.handlePinch(_:))
         )
         pinch.delegate = context.coordinator
         scrollView.addGestureRecognizer(pinch)
 
-        // The dedicated drag-zone pan (text bars, clip reorder). Begins only
-        // inside a published zone, so it never steals plain scrubbing.
+        // Handle drags (clip trim, text move/resize) begin only inside a
+        // blocking zone, so plain scrubbing is never stolen.
         let zonePan = UIPanGestureRecognizer(
-            target: context.coordinator,
-            action: #selector(Coordinator.handleZonePan(_:))
+            target: context.coordinator, action: #selector(Coordinator.handleZonePan(_:))
         )
         zonePan.delegate = context.coordinator
         zonePan.maximumNumberOfTouches = 1
         scrollView.addGestureRecognizer(zonePan)
         context.coordinator.zonePan = zonePan
+
+        // Reorder: long-press a clip body then drag. Coexists with scrolling —
+        // a quick drag scrubs, a held drag reorders.
+        let longPress = UILongPressGestureRecognizer(
+            target: context.coordinator, action: #selector(Coordinator.handleReorder(_:))
+        )
+        longPress.minimumPressDuration = 0.32
+        longPress.delegate = context.coordinator
+        scrollView.addGestureRecognizer(longPress)
+        context.coordinator.reorderPress = longPress
 
         context.coordinator.host = host
         context.coordinator.widthConstraint = widthConstraint
@@ -146,14 +157,19 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
             onLayout?()
         }
 
-        func zone(at point: CGPoint) -> TimelineDragZone? {
-            dragZones.first { $0.rect.contains(point) }
+        /// A blocking (non-reorder) zone at a content point.
+        func blockingZone(at point: CGPoint) -> TimelineDragZone? {
+            dragZones.first { !$0.kind.isReorder && $0.rect.contains(point) }
+        }
+
+        func reorderZone(at point: CGPoint) -> TimelineDragZone? {
+            dragZones.first { $0.kind.isReorder && $0.rect.contains(point) }
         }
 
         override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
             if gestureRecognizer === panGestureRecognizer, let hostView {
                 let point = gestureRecognizer.location(in: hostView)
-                if zone(at: point) != nil { return false }
+                if blockingZone(at: point) != nil { return false }
             }
             return super.gestureRecognizerShouldBegin(gestureRecognizer)
         }
@@ -166,15 +182,16 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
         var host: UIHostingController<AnyView>?
         var widthConstraint: NSLayoutConstraint?
         var zonePan: UIPanGestureRecognizer?
+        var reorderPress: UILongPressGestureRecognizer?
 
         private var isProgrammaticScroll = false
         private(set) var isPinching = false
         private var pinchAnchorTime: Double = 0
         private var activeZone: TimelineDragZone?
+        private var reorderZone: TimelineDragZone?
+        private var reorderStart: CGPoint = .zero
 
-        init(_ parent: VideoTimelineScroller) {
-            self.parent = parent
-        }
+        init(_ parent: VideoTimelineScroller) { self.parent = parent }
 
         private func isUserDriven(_ scrollView: UIScrollView) -> Bool {
             scrollView.isTracking || scrollView.isDragging || scrollView.isDecelerating
@@ -189,11 +206,7 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
             CGFloat(time) * parent.pps - scrollView.contentInset.left
         }
 
-        /// Playback → offset (and initial positioning, pinch re-anchoring).
-        /// Never fights the user: only writes while no touch owns the scroll.
         func syncOffsetIfIdle(_ scrollView: UIScrollView) {
-            // A pinch keeps `isTracking` true, but the anchor must stay pinned
-            // under the playhead while the scale changes — pinch overrides.
             guard scrollView.bounds.width > 0,
                   isPinching || !isUserDriven(scrollView)
             else { return }
@@ -202,8 +215,6 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
                 in: scrollView
             )
             guard abs(target - scrollView.contentOffset.x) > 0.5 else { return }
-            // The setter fires scrollViewDidScroll synchronously, so the flag
-            // safely brackets it.
             isProgrammaticScroll = true
             scrollView.contentOffset.x = target
             isProgrammaticScroll = false
@@ -240,9 +251,6 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
                 parent.onPinch(.began)
             case .changed:
                 parent.onPinch(.changed(scale: recognizer.scale))
-                // The parent's pps state change re-invokes updateUIView, but
-                // re-anchor immediately too so the frame this event lands in
-                // doesn't jitter.
                 syncOffsetIfIdle(scrollView)
             case .ended, .cancelled, .failed:
                 isPinching = false
@@ -252,7 +260,7 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
             }
         }
 
-        // MARK: Zone drag (text bars, clip reorder)
+        // MARK: Handle drags (clip trim, text move/resize)
 
         @objc func handleZonePan(_ recognizer: UIPanGestureRecognizer) {
             guard let scrollView = recognizer.view as? TimelineScrollView,
@@ -260,39 +268,74 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
             else { return }
             switch recognizer.state {
             case .began:
-                // shouldBegin already verified the zone; re-resolve it here
-                // because the recognizer's location has settled by now.
                 let start = recognizer.location(in: hostView)
                 let translation = recognizer.translation(in: hostView)
                 let origin = CGPoint(x: start.x - translation.x, y: start.y - translation.y)
-                activeZone = scrollView.zone(at: origin) ?? scrollView.zone(at: start)
+                activeZone = scrollView.blockingZone(at: origin) ?? scrollView.blockingZone(at: start)
                 if let activeZone {
                     parent.onZoneDrag(activeZone.kind, .changed(translationX: translation.x))
                 }
             case .changed:
                 guard let activeZone else { return }
-                let translation = recognizer.translation(in: hostView)
-                parent.onZoneDrag(activeZone.kind, .changed(translationX: translation.x))
+                parent.onZoneDrag(
+                    activeZone.kind,
+                    .changed(translationX: recognizer.translation(in: hostView).x)
+                )
             case .ended:
                 guard let activeZone else { return }
-                let translation = recognizer.translation(in: hostView)
-                parent.onZoneDrag(activeZone.kind, .ended(translationX: translation.x))
+                parent.onZoneDrag(
+                    activeZone.kind,
+                    .ended(translationX: recognizer.translation(in: hostView).x)
+                )
                 self.activeZone = nil
             case .cancelled, .failed:
-                if let activeZone {
-                    parent.onZoneDrag(activeZone.kind, .cancelled)
-                }
+                if let activeZone { parent.onZoneDrag(activeZone.kind, .cancelled) }
                 activeZone = nil
             default:
                 break
             }
         }
 
+        // MARK: Reorder (long-press then drag a clip body)
+
+        @objc func handleReorder(_ recognizer: UILongPressGestureRecognizer) {
+            guard let scrollView = recognizer.view as? TimelineScrollView,
+                  let hostView = scrollView.hostView
+            else { return }
+            let point = recognizer.location(in: hostView)
+            switch recognizer.state {
+            case .began:
+                reorderZone = scrollView.reorderZone(at: point)
+                reorderStart = point
+                if reorderZone != nil {
+                    UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
+                    parent.onZoneDrag(reorderZone!.kind, .changed(translationX: 0))
+                }
+            case .changed:
+                guard let reorderZone else { return }
+                parent.onZoneDrag(reorderZone.kind, .changed(translationX: point.x - reorderStart.x))
+            case .ended:
+                guard let reorderZone else { return }
+                parent.onZoneDrag(reorderZone.kind, .ended(translationX: point.x - reorderStart.x))
+                self.reorderZone = nil
+            case .cancelled, .failed:
+                if let reorderZone { parent.onZoneDrag(reorderZone.kind, .cancelled) }
+                reorderZone = nil
+            default:
+                break
+            }
+        }
+
         func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-            if gestureRecognizer === zonePan,
-               let scrollView = gestureRecognizer.view as? TimelineScrollView,
-               let hostView = scrollView.hostView {
-                return scrollView.zone(at: gestureRecognizer.location(in: hostView)) != nil
+            guard let scrollView = gestureRecognizer.view as? TimelineScrollView,
+                  let hostView = scrollView.hostView
+            else { return true }
+            let point = gestureRecognizer.location(in: hostView)
+            if gestureRecognizer === zonePan {
+                return scrollView.blockingZone(at: point) != nil
+            }
+            if gestureRecognizer === reorderPress {
+                return scrollView.reorderZone(at: point) != nil
             }
             return true
         }
@@ -301,13 +344,14 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
             _ gestureRecognizer: UIGestureRecognizer,
             shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
         ) -> Bool {
-            // The zone pan must stay exclusive: the scroll pan is already
-            // vetoed inside zones, and running both would double-handle.
+            // The zone pan is exclusive. The long-press may run alongside the
+            // scroll pan (the press wins once it fires; a quick drag scrubs).
             if gestureRecognizer === zonePan || otherGestureRecognizer === zonePan {
                 return false
             }
-            // Pinch may start mid-scroll; `isPinching` silences the scrub
-            // callbacks while both are active.
+            if gestureRecognizer === reorderPress || otherGestureRecognizer === reorderPress {
+                return true
+            }
             return true
         }
     }

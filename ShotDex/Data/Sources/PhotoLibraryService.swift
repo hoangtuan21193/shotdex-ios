@@ -790,6 +790,28 @@ final class PhotoLibraryService: NSObject {
     /// temporary file has to be written and cleaned up. Requires `.readWrite`
     /// authorization (requested at launch), and the new asset reaches the index
     /// through the normal `photoLibraryDidChange` path.
+    /// Full image-property dictionary (EXIF/TIFF/GPS/…) of an asset's original,
+    /// for carrying metadata into an exported collage. Pulls the original data
+    /// (network allowed), so use only on an explicit opt-in.
+    func imageProperties(for asset: PHAsset) async -> [CFString: Any]? {
+        await withCheckedContinuation { continuation in
+            let options = PHImageRequestOptions()
+            options.isNetworkAccessAllowed = true
+            options.version = .current
+            options.isSynchronous = false
+            PHImageManager.default().requestImageDataAndOrientation(for: asset, options: options) { data, _, _, _ in
+                guard let data,
+                      let source = CGImageSourceCreateWithData(data as CFData, nil),
+                      let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+                else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                continuation.resume(returning: properties)
+            }
+        }
+    }
+
     func saveImage(_ data: Data, filename: String) async throws -> String {
         var placeholderId: String?
         try await PHPhotoLibrary.shared().performChanges {

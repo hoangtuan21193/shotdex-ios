@@ -18,6 +18,7 @@ final class AppDependencies {
     let compressionPresets: CompressionPresetStore
     let signaturePresets: SignaturePresetStore
     let overlayFontRecents: OverlayFontRecentsStore
+    let collagePresets: CollagePresetStore
     let overlayImages: OverlayImageStore
     let importService: ImportService
     let videoStudio: VideoStudioService
@@ -80,6 +81,7 @@ final class AppDependencies {
         self.overlayImages = overlayImages
         self.signaturePresets = SignaturePresetStore(images: overlayImages)
         self.overlayFontRecents = OverlayFontRecentsStore()
+        self.collagePresets = CollagePresetStore()
         self.importService = ImportService(photoLibrary: photoLibrary, metadataStore: metadataStore)
         self.videoStudio = VideoStudioService(
             importFile: { url, isVideo in

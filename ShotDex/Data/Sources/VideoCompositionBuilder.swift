@@ -1,5 +1,6 @@
 import AVFoundation
 import CoreGraphics
+import CoreImage
 import Foundation
 
 /// A clip's loaded media, resolved once per session by `VideoStudioService`.
@@ -13,10 +14,21 @@ enum VideoClipSource: @unchecked Sendable {
         preferredTransform: CGAffineTransform
     )
     case photo(assetID: String, pixelSize: CGSize)
+    /// A frame lifted out of a source video at load time — drawn as a still
+    /// (no track samples), so it reuses the photo backbone path.
+    case freeze(image: CIImage, pixelSize: CGSize)
 
     var duration: Double? {
         if case .video(_, _, _, let duration, _, _) = self { return duration }
         return nil
+    }
+
+    /// Photo and freeze clips both render as stills on the blank backbone.
+    var isStill: Bool {
+        switch self {
+        case .video: false
+        case .photo, .freeze: true
+        }
     }
 }
 
@@ -129,18 +141,16 @@ enum VideoCompositionBuilder {
                 // player stops at 0. The blank backbone clip is inserted and
                 // stretched to the photo's window; the compositor draws the
                 // still and never reads these pixels.
-                if let blankVideo {
-                    let sourceRange = CMTimeRange(start: .zero, end: time(blankVideo.duration))
-                    try videoTrack.insertTimeRange(sourceRange, of: blankVideo.track, at: at)
-                    videoTrack.scaleTimeRange(
-                        CMTimeRange(start: at, duration: sourceRange.duration),
-                        toDuration: clipRange.duration
-                    )
-                } else {
-                    videoTrack.insertEmptyTimeRange(clipRange)
-                }
+                try insertStillBackbone(into: videoTrack, at: at, clipRange: clipRange, blankVideo: blankVideo)
                 frontSources.append(.still(
                     assetID: assetID,
+                    fitRect: VideoGeometry.stillFitRect(imageSize: pixelSize, renderSize: renderSize)
+                ))
+            case .freeze(let image, let pixelSize):
+                // Same backbone as a photo, but the still is already loaded.
+                try insertStillBackbone(into: videoTrack, at: at, clipRange: clipRange, blankVideo: blankVideo)
+                frontSources.append(.stillImage(
+                    image: image,
                     fitRect: VideoGeometry.stillFitRect(imageSize: pixelSize, renderSize: renderSize)
                 ))
             case .video(_, let sourceVideo, let sourceAudio, let duration, let naturalSize, let preferredTransform):
@@ -154,12 +164,28 @@ enum VideoCompositionBuilder {
                     end: time(trimmed.end)
                 )
                 try videoTrack.insertTimeRange(sourceRange, of: sourceVideo, at: at)
+                // Speed: scale the inserted source range onto its (shorter/
+                // longer) timeline slot. The placement math already sized the
+                // slot from `effectiveDuration`, so scaling to `clipRange`
+                // keeps the track samples aligned with the instruction ranges.
+                if clip.speed != 1 {
+                    videoTrack.scaleTimeRange(
+                        CMTimeRange(start: at, duration: sourceRange.duration),
+                        toDuration: clipRange.duration
+                    )
+                }
                 if let sourceAudio {
                     try audioTrack.insertTimeRange(sourceRange, of: sourceAudio, at: at)
+                    if clip.speed != 1 {
+                        audioTrack.scaleTimeRange(
+                            CMTimeRange(start: at, duration: sourceRange.duration),
+                            toDuration: clipRange.duration
+                        )
+                    }
                     layout.clipAudio.append(Layout.ClipAudio(
                         clipID: clip.id,
                         trackID: audioTrack.trackID,
-                        range: CMTimeRange(start: at, duration: sourceRange.duration)
+                        range: CMTimeRange(start: at, duration: clipRange.duration)
                     ))
                 }
                 frontSources.append(.track(
@@ -180,7 +206,8 @@ enum VideoCompositionBuilder {
                withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) {
             let segments = VideoTimelineMath.musicSegments(
                 sourceDuration: musicDuration,
-                totalDuration: total
+                totalDuration: total,
+                loops: recipe.music?.loops ?? true
             )
             for segment in segments {
                 try musicTrack.insertTimeRange(
@@ -259,6 +286,7 @@ enum VideoCompositionBuilder {
         let mix = AVMutableAudioMix()
         var parameters: [AVMutableAudioMixInputParameters] = []
 
+        let master = max(0, recipe.masterVolume)
         let mutedClipIDs = Set(recipe.clips.filter(\.isMuted).map(\.id))
         var byTrack: [CMPersistentTrackID: [Layout.ClipAudio]] = [:]
         for clipAudio in layout.clipAudio {
@@ -270,7 +298,7 @@ enum VideoCompositionBuilder {
             for clipAudio in clipRanges {
                 let volume = mutedClipIDs.contains(clipAudio.clipID)
                     ? 0
-                    : Float(recipe.videoVolume)
+                    : Float(recipe.videoVolume * master)
                 params.setVolumeRamp(
                     fromStartVolume: volume,
                     toEndVolume: volume,
@@ -291,8 +319,8 @@ enum VideoCompositionBuilder {
             )
             for ramp in ramps {
                 params.setVolumeRamp(
-                    fromStartVolume: Float(ramp.fromVolume),
-                    toEndVolume: Float(ramp.toVolume),
+                    fromStartVolume: Float(ramp.fromVolume * master),
+                    toEndVolume: Float(ramp.toVolume * master),
                     timeRange: CMTimeRange(
                         start: time(ramp.start),
                         end: time(ramp.start + ramp.duration)
@@ -307,6 +335,26 @@ enum VideoCompositionBuilder {
     }
 
     // MARK: - Internals
+
+    /// The shared blank-backbone insert for still (photo / freeze) clips: real
+    /// samples the player can clock against, scaled to the still's window.
+    private static func insertStillBackbone(
+        into videoTrack: AVMutableCompositionTrack,
+        at: CMTime,
+        clipRange: CMTimeRange,
+        blankVideo: (track: AVAssetTrack, duration: Double)?
+    ) throws {
+        if let blankVideo {
+            let sourceRange = CMTimeRange(start: .zero, end: time(blankVideo.duration))
+            try videoTrack.insertTimeRange(sourceRange, of: blankVideo.track, at: at)
+            videoTrack.scaleTimeRange(
+                CMTimeRange(start: at, duration: sourceRange.duration),
+                toDuration: clipRange.duration
+            )
+        } else {
+            videoTrack.insertEmptyTimeRange(clipRange)
+        }
+    }
 
     static func time(_ seconds: Double) -> CMTime {
         CMTime(value: CMTimeValue((seconds * Double(timescale)).rounded()), timescale: timescale)

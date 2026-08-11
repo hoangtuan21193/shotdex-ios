@@ -20,9 +20,12 @@ final class ScreenAwakeCoordinator {
     /// for the system Auto-Lock value, so this is a fixed 1-minute stand-in.
     static let idleDimDelay: Duration = .seconds(60)
 
-    /// Brightness applied while idle-dimmed. Not fully off, so the user can see
-    /// the screen is alive and touch it to wake.
-    private static let dimmedBrightness: CGFloat = 0.0
+    /// Brightness applied while idle-dimmed. Deliberately low but **not zero**:
+    /// at absolute 0 the display reads as fully off and iOS auto-brightness
+    /// takes control, so the programmatic restore on wake gets ignored and the
+    /// screen stays dark. A small non-zero floor keeps the screen visibly alive
+    /// and lets `wake()` restore reliably.
+    private static let dimmedBrightness: CGFloat = 0.15
 
     /// True while the screen is held at the dimmed brightness.
     private(set) var isDimmed = false
