@@ -261,7 +261,11 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 parent.photoLibrary.stopCachingAllThumbnails()
                 collectionView.setCollectionViewLayout(
                     makeLayout(columns: newParent.columnCount), animated: false
-                )
+                ) { [weak self] _ in
+                    // New cell sizes: re-request so a 1-column swap gets tall,
+                    // aspect-correct renditions rather than stale square ones.
+                    self?.reconfigureVisibleCells(collectionView)
+                }
             }
             appliedColumns = newParent.columnCount
 
@@ -534,11 +538,12 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             layout collectionViewLayout: UICollectionViewLayout,
             sizeForItemAt indexPath: IndexPath
         ) -> CGSize {
-            Self.cellSize(
-                width: collectionView.bounds.width,
-                columns: (collectionViewLayout as? GridFlowLayout)?.columns
-                    ?? GridDensity.clamped(parent.columnCount)
-            )
+            let columns = (collectionViewLayout as? GridFlowLayout)?.columns
+                ?? GridDensity.clamped(parent.columnCount)
+            guard let flatIndex = flatIndex(for: indexPath) else {
+                return Self.cellSize(width: collectionView.bounds.width, columns: columns)
+            }
+            return itemSize(width: collectionView.bounds.width, columns: columns, flatIndex: flatIndex)
         }
 
         func collectionView(
@@ -567,6 +572,28 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         /// a row of N cells + gaps never exceeds the width (which would wrap).
         static func cellSize(width: CGFloat, columns: Int) -> CGSize {
             GridThumbnailTarget.cellSize(width: width, columns: columns)
+        }
+
+        /// Portrait cap for the 1-column aspect layout: a photo taller than
+        /// this (relative to its width) is shown at this ratio so one frame
+        /// never scrolls for pages. Landscape keeps its natural ratio.
+        private static var oneColumnMaxAspect: CGFloat { 1.9 }
+
+        /// One cell's point size. Square at every density except 1 column,
+        /// where each cell takes the photo's own aspect ratio (full-width,
+        /// natural height) — the Photos "one-up" look, scrolling vertically.
+        /// Falls back to square when pixel dimensions are unknown.
+        func itemSize(width: CGFloat, columns: Int, flatIndex: Int) -> CGSize {
+            guard columns == 1 else { return Self.cellSize(width: width, columns: columns) }
+            guard parent.photos.indices.contains(flatIndex),
+                  let pixelWidth = parent.photos[flatIndex].pixelWidth,
+                  let pixelHeight = parent.photos[flatIndex].pixelHeight,
+                  pixelWidth > 0, pixelHeight > 0
+            else { return CGSize(width: width, height: width) }
+            let aspect = min(CGFloat(pixelHeight) / CGFloat(pixelWidth), Self.oneColumnMaxAspect)
+            let scale = UIScreen.main.scale
+            let height = max(1, (width * aspect * scale).rounded(.down) / scale)
+            return CGSize(width: width, height: height)
         }
 
         /// Cell width in points for the current committed layout — sizes
@@ -618,11 +645,19 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         private func configure(_ cell: PhotoGridCell, at flatIndex: Int) {
             let item = parent.photos[flatIndex]
             let asset = parent.assetProvider(flatIndex, item)
+            // Per-item so a 1-column cell requests a rendition at its own
+            // (tall) aspect, not a square that would crop in the frame.
+            let columns = GridDensity.clamped(parent.columnCount)
+            let size = itemSize(
+                width: collectionView?.bounds.width ?? 0, columns: columns, flatIndex: flatIndex
+            )
+            let scale = UIScreen.main.scale
+            let target = CGSize(width: size.width * scale, height: size.height * scale)
             cell.configure(
                 item: item,
                 asset: asset,
-                cellWidth: cellPointWidth,
-                targetSize: thumbnailTargetSize,
+                cellWidth: size.width,
+                targetSize: target,
                 isSelecting: parent.isSelecting,
                 isSelected: appliedSelectedIds.contains(item.assetId),
                 photoLibrary: parent.photoLibrary,
@@ -1362,7 +1397,7 @@ final class PhotoGridCell: UICollectionViewCell {
         contentView.addSubview(videoBadge)
 
         selectionBorder.layer.borderWidth = 3
-        selectionBorder.layer.borderColor = UIColor.white.cgColor
+        selectionBorder.layer.borderColor = UIColor(AppAccentTheme.stored.color).cgColor
         selectionBorder.isUserInteractionEnabled = false
         contentView.addSubview(selectionBorder)
 
@@ -1421,6 +1456,7 @@ final class PhotoGridCell: UICollectionViewCell {
         super.prepareForReuse()
         cancelRequest()
         imageView.image = nil
+        imageView.alpha = 1
         requestedAssetId = nil
         lastRequestedPixelWidth = 0
         badgeFetchTask?.cancel()
@@ -1494,15 +1530,17 @@ final class PhotoGridCell: UICollectionViewCell {
     func updateSelection(isSelecting: Bool, isSelected: Bool) {
         selectionBorder.isHidden = !(isSelecting && isSelected)
         selectionBadge.isHidden = !isSelecting
+        // Selected thumbnail dims slightly, iOS Photos style, so the accent
+        // border and check read clearly over it.
+        imageView.alpha = (isSelecting && isSelected) ? 0.82 : 1
         let base = UIImage.SymbolConfiguration(pointSize: 18, weight: .semibold)
         if isSelected {
-            // White check on a dark disc — no accent, and it reads over a bright
-            // photo unlike a plain white glyph. Palette: layer 0 = check (white),
-            // layer 1 = filled circle (dark).
+            // White check on an accent-filled disc, iOS Photos style. Palette:
+            // layer 0 = check (white), layer 1 = filled circle (accent).
             selectionBadge.image = UIImage(systemName: "checkmark.circle.fill")
             selectionBadge.preferredSymbolConfiguration = base.applying(
                 UIImage.SymbolConfiguration(
-                    paletteColors: [.white, UIColor.black.withAlphaComponent(0.6)]
+                    paletteColors: [.white, UIColor(AppAccentTheme.stored.color)]
                 )
             )
         } else {

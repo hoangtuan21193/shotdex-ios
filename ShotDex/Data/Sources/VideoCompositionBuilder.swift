@@ -73,9 +73,18 @@ enum VideoCompositionBuilder {
             let trackID: CMPersistentTrackID
             let range: CMTimeRange
         }
+        /// One entry per music track that made it into the composition, with the
+        /// window it actually occupies — the mix offsets its fade ramps by
+        /// `insertAt`.
+        struct MusicAudio {
+            let musicID: UUID
+            let trackID: CMPersistentTrackID
+            let insertAt: Double
+            let duration: Double
+        }
         var segments: [Segment] = []
         var clipAudio: [ClipAudio] = []
-        var musicTrackID: CMPersistentTrackID?
+        var musicAudio: [MusicAudio] = []
         var totalDuration: Double = 0
         var renderSize: CGSize = .zero
     }
@@ -83,8 +92,7 @@ enum VideoCompositionBuilder {
     static func build(
         recipe: VideoProjectRecipe,
         sources: [UUID: VideoClipSource],
-        musicSourceTrack: AVAssetTrack?,
-        musicDuration: Double?,
+        musicSources: [UUID: (track: AVAssetTrack, duration: Double)],
         blankVideo: (track: AVAssetTrack, duration: Double)?,
         renderSize: CGSize
     ) throws -> (composition: AVMutableComposition, layout: Layout) {
@@ -200,26 +208,34 @@ enum VideoCompositionBuilder {
             }
         }
 
-        // Music bed: one dedicated track, the source looped under the video.
-        if let musicSource = musicSourceTrack, let musicDuration, musicDuration > 0,
-           let musicTrack = composition.addMutableTrack(
-               withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) {
-            let segments = VideoTimelineMath.musicSegments(
-                sourceDuration: musicDuration,
-                totalDuration: total,
-                loops: recipe.music?.loops ?? true
+        // Music beds: one dedicated track each, so overlapping beds mix instead
+        // of fighting over a single track's timeline.
+        for music in recipe.musicTracks {
+            guard let source = musicSources[music.id] else { continue }
+            guard let placement = VideoTimelineMath.musicPlacement(
+                start: music.start,
+                trimStart: music.trimStart,
+                trimEnd: music.trimEnd,
+                sourceDuration: music.sourceDuration ?? source.duration,
+                totalDuration: total
+            ) else { continue }
+            guard let musicTrack = composition.addMutableTrack(
+                withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid
+            ) else { continue }
+            try musicTrack.insertTimeRange(
+                CMTimeRange(
+                    start: time(placement.sourceStart),
+                    end: time(placement.sourceStart + placement.duration)
+                ),
+                of: source.track,
+                at: time(placement.insertAt)
             )
-            for segment in segments {
-                try musicTrack.insertTimeRange(
-                    CMTimeRange(
-                        start: time(segment.sourceStart),
-                        end: time(segment.sourceStart + segment.duration)
-                    ),
-                    of: musicSource,
-                    at: time(segment.insertAt)
-                )
-            }
-            layout.musicTrackID = musicTrack.trackID
+            layout.musicAudio.append(Layout.MusicAudio(
+                musicID: music.id,
+                trackID: musicTrack.trackID,
+                insertAt: placement.insertAt,
+                duration: placement.duration
+            ))
         }
 
         layout.segments = makeSegments(
@@ -238,12 +254,14 @@ enum VideoCompositionBuilder {
     static func videoComposition(
         recipe: VideoProjectRecipe,
         layout: Layout,
-        stillStore: StillFrameStore
+        stillStore: StillFrameStore,
+        bakesOverlays: Bool
     ) -> AVMutableVideoComposition {
         let renderRecipe = VideoRenderRecipe(
             recipe: recipe,
             renderSize: layout.renderSize,
-            totalDuration: layout.totalDuration
+            totalDuration: layout.totalDuration,
+            bakesOverlays: bakesOverlays
         )
         // Effects come from the FRESH recipe, not the layout: an effect edit
         // swaps the video composition without rebuilding the AVComposition.
@@ -308,11 +326,18 @@ enum VideoCompositionBuilder {
             parameters.append(params)
         }
 
-        if let musicTrackID = layout.musicTrackID, let music = recipe.music {
+        let musicByID = Dictionary(
+            recipe.musicTracks.map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        for entry in layout.musicAudio {
+            guard let music = musicByID[entry.musicID] else { continue }
             let params = AVMutableAudioMixInputParameters()
-            params.trackID = musicTrackID
+            params.trackID = entry.trackID
+            // Ramps come back relative to the track's own window, so shift them
+            // onto the timeline by where the track was inserted.
             let ramps = VideoTimelineMath.musicRamps(
-                total: layout.totalDuration,
+                total: entry.duration,
                 volume: music.volume,
                 fadeIn: music.fadeIn,
                 fadeOut: music.fadeOut
@@ -322,8 +347,8 @@ enum VideoCompositionBuilder {
                     fromStartVolume: Float(ramp.fromVolume * master),
                     toEndVolume: Float(ramp.toVolume * master),
                     timeRange: CMTimeRange(
-                        start: time(ramp.start),
-                        end: time(ramp.start + ramp.duration)
+                        start: time(entry.insertAt + ramp.start),
+                        end: time(entry.insertAt + ramp.start + ramp.duration)
                     )
                 )
             }

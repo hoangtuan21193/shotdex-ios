@@ -16,10 +16,12 @@ struct TimelineDragZonesKey: PreferenceKey {
     }
 }
 
-/// The scrolling timeline content: ruler + the four track rows, positioned by
-/// time. Every band sits at `start * pps`; the ruler and rows share the same
-/// content width so they scroll as one. Selection is timeline-blue; the empty
-/// background clears the selection on tap.
+/// The scrolling timeline content: overlay lanes above the video lane, music
+/// lanes below it, every band positioned at `start * pps`. Lanes are assigned by
+/// `TimelineLaneLayout`, so overlapping overlays (or music beds) stack instead of
+/// drawing over each other, and the stack scrolls vertically when it outgrows
+/// the viewport. The ruler is pinned by the parent and is not part of this
+/// content. Selection is timeline-blue; the empty background clears it on tap.
 struct TimelineTracksContent: View {
     @Bindable var model: VideoStudioModel
     let pps: CGFloat
@@ -28,8 +30,7 @@ struct TimelineTracksContent: View {
     let visibleLeftTime: Double
     let activeDrag: TimelineActiveDrag?
 
-    let onAddText: () -> Void
-    let onAddFilter: () -> Void
+    let onAddOverlay: () -> Void
     let onAddMusic: () -> Void
     let onAddMedia: () -> Void
     let onEditText: (PhotoOverlay) -> Void
@@ -38,46 +39,63 @@ struct TimelineTracksContent: View {
     private var placements: [VideoTimelineMath.Placement] { model.clipPlacements }
 
     var body: some View {
-        VStack(spacing: 0) {
-            TimelineRuler(totalDuration: model.totalDuration, pps: pps, visibleLeftTime: visibleLeftTime)
-                .frame(width: contentWidth, height: VideoStudioMetrics.rulerHeight)
-                .padding(.top, VideoStudioMetrics.timelineTopPadding)
-                .padding(.bottom, VideoStudioMetrics.rulerToTracks)
+        let overlayLanes = model.overlayLaneAssignment
+        let overlayLaneCount = model.overlayLaneCount
+        let musicLanes = model.musicLaneAssignment
+        let musicLaneCount = model.musicLaneCount
 
-            row(.text) { TextTrack(model: model, pps: pps, visibleLeftTime: visibleLeftTime, activeDrag: activeDrag, onAdd: onAddText) }
-            spacer
-            row(.video) { VideoTrack(model: model, pps: pps, placements: placements, activeDrag: activeDrag, onAddMedia: onAddMedia, onTransition: onTransition) }
-            spacer
-            row(.filter) { FilterTrack(model: model, pps: pps, visibleLeftTime: visibleLeftTime, onAdd: onAddFilter) }
-            spacer
-            row(.music) { MusicTrackRow(model: model, pps: pps, visibleLeftTime: visibleLeftTime, onAdd: onAddMusic) }
+        VStack(spacing: VideoStudioMetrics.laneSpacing) {
+            ForEach(0..<overlayLaneCount, id: \.self) { lane in
+                OverlayLaneRow(
+                    model: model,
+                    lane: lane,
+                    laneAssignment: overlayLanes,
+                    pps: pps,
+                    visibleLeftTime: visibleLeftTime,
+                    activeDrag: activeDrag,
+                    onAdd: onAddOverlay
+                )
+                .frame(width: contentWidth, height: VideoStudioMetrics.overlayLaneHeight, alignment: .leading)
+            }
+
+            VideoTrack(
+                model: model,
+                pps: pps,
+                placements: placements,
+                activeDrag: activeDrag,
+                onAddMedia: onAddMedia,
+                onTransition: onTransition
+            )
+            .frame(width: contentWidth, height: VideoStudioMetrics.videoLaneHeight, alignment: .leading)
+
+            ForEach(0..<musicLaneCount, id: \.self) { lane in
+                MusicLaneRow(
+                    model: model,
+                    lane: lane,
+                    laneAssignment: musicLanes,
+                    pps: pps,
+                    visibleLeftTime: visibleLeftTime,
+                    activeDrag: activeDrag,
+                    onAdd: onAddMusic
+                )
+                .frame(width: contentWidth, height: VideoStudioMetrics.musicLaneHeight, alignment: .leading)
+            }
         }
+        .padding(.bottom, VideoStudioMetrics.timelineBottomPadding)
         .frame(width: contentWidth, alignment: .leading)
         .frame(maxHeight: .infinity, alignment: .top)
         .contentShape(Rectangle())
         .onTapGesture { model.clearSelection() }
         .coordinateSpace(name: "timelineContent")
     }
-
-    private var spacer: some View {
-        Color.clear.frame(height: VideoStudioMetrics.trackSpacing)
-    }
-
-    private func row<Content: View>(
-        _ track: VideoStudioMetrics.Track,
-        @ViewBuilder _ content: () -> Content
-    ) -> some View {
-        content()
-            .frame(width: contentWidth, height: track.height, alignment: .leading)
-    }
 }
 
 // MARK: - Ruler
 
-/// Second ticks (major every 1s with a label, minor every 0.5s). A label that
-/// reaches the right edge of the row area is right-aligned instead of left
-/// (spec §4.3).
-private struct TimelineRuler: View {
+/// Second ticks (major every 1s with a label, minor every 0.5s). Drawn in
+/// viewport space by the parent so it stays pinned while the lanes scroll
+/// vertically; `visibleLeftTime` is the timeline time at x = 0.
+struct TimelineRuler: View {
     let totalDuration: Double
     let pps: CGFloat
     let visibleLeftTime: Double
@@ -85,32 +103,34 @@ private struct TimelineRuler: View {
     var body: some View {
         Canvas { context, size in
             guard pps > 0 else { return }
-            let seconds = Int(totalDuration.rounded(.up))
-            // Half-second ticks.
-            var half = 0.0
-            while half <= Double(seconds) + 0.5 {
-                let x = CGFloat(half) * pps
+            let firstHalf = (visibleLeftTime * 2).rounded(.down) / 2
+            var half = max(0, firstHalf)
+            let last = min(totalDuration + 0.5, visibleLeftTime + Double(size.width / pps) + 0.5)
+            while half <= last {
+                let x = CGFloat(half - visibleLeftTime) * pps
                 if x > size.width + 1 { break }
-                let isMajor = half.truncatingRemainder(dividingBy: 1) == 0
-                let tickHeight: CGFloat = isMajor ? 7 : 4
-                context.stroke(
-                    Path { p in
-                        p.move(to: CGPoint(x: x, y: size.height - tickHeight))
-                        p.addLine(to: CGPoint(x: x, y: size.height))
-                    },
-                    with: .color(.white.opacity(isMajor ? 0.36 : 0.22)),
-                    lineWidth: 1
-                )
-                if isMajor {
-                    let second = Int(half)
-                    let atRightEdge = x > size.width - 20
-                    context.draw(
-                        Text("\(second)s")
-                            .font(.system(size: 9).monospacedDigit())
-                            .foregroundStyle(.white.opacity(0.36)),
-                        at: CGPoint(x: atRightEdge ? x - 3 : x + 3, y: size.height - 15),
-                        anchor: atRightEdge ? .trailing : .leading
+                if x >= -1 {
+                    let isMajor = half.truncatingRemainder(dividingBy: 1) == 0
+                    let tickHeight: CGFloat = isMajor ? 7 : 4
+                    context.stroke(
+                        Path { p in
+                            p.move(to: CGPoint(x: x, y: size.height - tickHeight))
+                            p.addLine(to: CGPoint(x: x, y: size.height))
+                        },
+                        with: .color(.white.opacity(isMajor ? 0.36 : 0.22)),
+                        lineWidth: 1
                     )
+                    if isMajor {
+                        let second = Int(half)
+                        let atRightEdge = x > size.width - 20
+                        context.draw(
+                            Text("\(second)s")
+                                .font(.system(size: 9).monospacedDigit())
+                                .foregroundStyle(.white.opacity(0.36)),
+                            at: CGPoint(x: atRightEdge ? x - 3 : x + 3, y: size.height - 15),
+                            anchor: atRightEdge ? .trailing : .leading
+                        )
+                    }
                 }
                 half += 0.5
             }
@@ -336,12 +356,16 @@ struct ClipFilmstrip: View {
     }
 }
 
-// MARK: - Text track
+// MARK: - Overlay lanes
 
-/// One bar per timed text overlay. Drag the body to move, a handle to resize;
-/// the drags arrive from the scroller's zone pan via `activeDrag`.
-private struct TextTrack: View {
+/// One lane of timed overlays — text and stickers share the same lane stack, so
+/// a sticker's window is editable on the timeline just like a text bar's. Drag
+/// the body to move, a handle to resize; the drags arrive from the scroller's
+/// zone pan via `activeDrag`.
+private struct OverlayLaneRow: View {
     @Bindable var model: VideoStudioModel
+    let lane: Int
+    let laneAssignment: [UUID: Int]
     let pps: CGFloat
     let visibleLeftTime: Double
     let activeDrag: TimelineActiveDrag?
@@ -349,15 +373,17 @@ private struct TextTrack: View {
 
     private static let minimumDuration = 0.5
 
+    private var overlaysInLane: [TimedOverlay] {
+        model.recipe.overlays.filter { laneAssignment[$0.id] == lane }
+    }
+
     var body: some View {
         ZStack(alignment: .leading) {
-            ForEach(model.recipe.overlays.filter { $0.overlay.kind == .text }) { timed in
+            ForEach(overlaysInLane) { timed in
                 bar(timed)
             }
-            if model.recipe.overlays.contains(where: { $0.overlay.kind == .text }) {
-                addButtonAfterLast
-            } else {
-                emptyAddButton(title: "Text", systemImage: "textformat", action: onAdd)
+            if lane == 0, model.recipe.overlays.isEmpty {
+                dashedAdd(title: "Text", systemImage: "textformat", action: onAdd)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -368,14 +394,14 @@ private struct TextTrack: View {
         guard let activeDrag else { return (timed.start, base) }
         let delta = Double(activeDrag.translationX) / Double(pps)
         switch activeDrag.kind {
-        case .textBody(let id) where id == timed.id:
+        case .overlayBody(let id) where id == timed.id:
             let limit = max(0, model.totalDuration - base)
             return (min(max(0, timed.start + delta), limit), base)
-        case .textLeadingHandle(let id) where id == timed.id:
+        case .overlayLeadingHandle(let id) where id == timed.id:
             let end = timed.start + base
             let newStart = min(max(0, timed.start + delta), end - Self.minimumDuration)
             return (newStart, end - newStart)
-        case .textTrailingHandle(let id) where id == timed.id:
+        case .overlayTrailingHandle(let id) where id == timed.id:
             let duration = min(
                 max(Self.minimumDuration, base + delta),
                 max(Self.minimumDuration, model.totalDuration - timed.start)
@@ -386,16 +412,24 @@ private struct TextTrack: View {
         }
     }
 
+    private func label(_ timed: TimedOverlay) -> (icon: String, title: String) {
+        if timed.overlay.kind == .image {
+            return ("photo", String(localized: "Sticker"))
+        }
+        return ("textformat", timed.overlay.text.isEmpty ? String(localized: "Text") : timed.overlay.text)
+    }
+
     @ViewBuilder
     private func bar(_ timed: TimedOverlay) -> some View {
         let isSelected = model.selectedOverlayID == timed.id
         let win = window(timed)
         let width = max(28, CGFloat(win.duration) * pps)
         let stickyInset = min(max(0, CGFloat(visibleLeftTime - win.start) * pps), width - 40)
+        let content = label(timed)
 
         chipBody(
-            icon: "textformat",
-            title: timed.overlay.text.isEmpty ? String(localized: "Text") : timed.overlay.text,
+            icon: content.icon,
+            title: content.title,
             width: width,
             isSelected: isSelected,
             stickyInset: max(0, stickyInset)
@@ -406,7 +440,7 @@ private struct TextTrack: View {
         .onTapGesture { model.toggleOverlay(timed.id) }
         .background(dragZones(timed, isSelected: isSelected))
         .offset(x: CGFloat(win.start) * pps)
-        .accessibilityLabel("Text, \(timed.overlay.text), from second \(Int(win.start)) to \(Int(win.start + win.duration))")
+        .accessibilityLabel("\(content.title), from second \(Int(win.start)) to \(Int(win.start + win.duration))")
     }
 
     private var handle: some View {
@@ -415,52 +449,22 @@ private struct TextTrack: View {
             .frame(width: 4, height: VideoStudioMetrics.chipBandHeight - 6)
     }
 
-    private var addButtonAfterLast: some View {
-        let last = model.recipe.overlays.filter { $0.overlay.kind == .text }
-            .map { ($0.duration ?? max(0.1, model.totalDuration - $0.start)) + $0.start }
-            .max() ?? 0
-        return dashedAdd(title: "Text", systemImage: "textformat", action: onAdd)
-            .offset(x: CGFloat(last) * pps + 8)
-    }
-
     @ViewBuilder
     private func dragZones(_ timed: TimedOverlay, isSelected: Bool) -> some View {
         if isSelected {
             GeometryReader { proxy in
-                let frame = proxy.frame(in: .named("timelineContent")).insetBy(dx: 0, dy: -6)
+                let frame = proxy.frame(in: .named("timelineContent")).insetBy(dx: 0, dy: -3)
                 let handleWidth: CGFloat = 22
                 Color.clear.preference(
                     key: TimelineDragZonesKey.self,
                     value: [
-                        TimelineDragZone(kind: .textLeadingHandle(timed.id), rect: CGRect(x: frame.minX - 14, y: frame.minY, width: handleWidth + 14, height: frame.height)),
-                        TimelineDragZone(kind: .textTrailingHandle(timed.id), rect: CGRect(x: frame.maxX - handleWidth, y: frame.minY, width: handleWidth + 14, height: frame.height)),
-                        TimelineDragZone(kind: .textBody(timed.id), rect: frame.insetBy(dx: handleWidth, dy: 0)),
+                        TimelineDragZone(kind: .overlayLeadingHandle(timed.id), rect: CGRect(x: frame.minX - 14, y: frame.minY, width: handleWidth + 14, height: frame.height)),
+                        TimelineDragZone(kind: .overlayTrailingHandle(timed.id), rect: CGRect(x: frame.maxX - handleWidth, y: frame.minY, width: handleWidth + 14, height: frame.height)),
+                        TimelineDragZone(kind: .overlayBody(timed.id), rect: frame.insetBy(dx: handleWidth, dy: 0)),
                     ]
                 )
             }
         }
-    }
-
-    private func emptyAddButton(title: LocalizedStringKey, systemImage: String, action: @escaping () -> Void) -> some View {
-        dashedAdd(title: title, systemImage: systemImage, action: action)
-    }
-
-    private func dashedAdd(title: LocalizedStringKey, systemImage: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 5) {
-                Image(systemName: "plus").font(.system(size: 10, weight: .bold))
-                Label(title, systemImage: systemImage).labelStyle(.titleOnly)
-                    .font(.system(size: 10.5, weight: .semibold))
-            }
-            .foregroundStyle(EditorTheme.secondaryText)
-            .padding(.horizontal, 10)
-            .frame(height: VideoStudioMetrics.chipBandHeight)
-            .background(
-                RoundedRectangle(cornerRadius: VideoStudioMetrics.trackRadius, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.26), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
-            )
-        }
-        .buttonStyle(.plain)
     }
 
     private func chipBody(icon: String, title: String, width: CGFloat, isSelected: Bool, stickyInset: CGFloat) -> some View {
@@ -483,113 +487,86 @@ private struct TextTrack: View {
     }
 }
 
-// MARK: - Filter track
+// MARK: - Music lanes
 
-/// One full-span bar for the global filter (a look applies to the whole video),
-/// or a dashed add button when the filter is Original.
-private struct FilterTrack: View {
+/// One lane of music beds. Each bar can be dragged along the timeline and
+/// trimmed from either end; the waveform is windowed to the bed's trim so what
+/// you see is what plays.
+private struct MusicLaneRow: View {
     @Bindable var model: VideoStudioModel
+    let lane: Int
+    let laneAssignment: [UUID: Int]
     let pps: CGFloat
     let visibleLeftTime: Double
+    let activeDrag: TimelineActiveDrag?
     let onAdd: () -> Void
 
-    var body: some View {
-        let isOriginal = model.recipe.filter == .original
-        Group {
-            if isOriginal {
-                Button(action: onAdd) {
-                    HStack(spacing: 5) {
-                        Image(systemName: "plus").font(.system(size: 10, weight: .bold))
-                        Text("Filter").font(.system(size: 10.5, weight: .semibold))
-                    }
-                    .foregroundStyle(EditorTheme.secondaryText)
-                    .padding(.horizontal, 10)
-                    .frame(height: VideoStudioMetrics.chipBandHeight)
-                    .background(
-                        RoundedRectangle(cornerRadius: VideoStudioMetrics.trackRadius, style: .continuous)
-                            .strokeBorder(Color.white.opacity(0.26), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
-                    )
-                }
-                .buttonStyle(.plain)
-            } else {
-                let width = max(40, CGFloat(model.totalDuration) * pps)
-                let stickyInset = min(max(0, CGFloat(visibleLeftTime) * pps), width - 60)
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: VideoStudioMetrics.trackRadius, style: .continuous)
-                        .fill(Color.white.opacity(0.1))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: VideoStudioMetrics.trackRadius, style: .continuous)
-                                .strokeBorder(Color.white.opacity(0.14), lineWidth: 1)
-                        }
-                    HStack(spacing: 4) {
-                        Image(systemName: "camera.filters").font(.system(size: 12, weight: .semibold))
-                        Text(model.recipe.filter.displayName).font(.system(size: 10.5, weight: .semibold)).lineLimit(1)
-                    }
-                    .foregroundStyle(.white)
-                    .padding(.leading, 6 + max(0, stickyInset))
-                    .padding(.trailing, 6)
-                }
-                .frame(width: width, height: VideoStudioMetrics.chipBandHeight)
-                .contentShape(Rectangle())
-                .onTapGesture(perform: onAdd)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+    private var tracksInLane: [MusicTrack] {
+        model.recipe.musicTracks.filter { laneAssignment[$0.id] == lane }
     }
-}
-
-// MARK: - Music track
-
-private struct MusicTrackRow: View {
-    @Bindable var model: VideoStudioModel
-    let pps: CGFloat
-    let visibleLeftTime: Double
-    let onAdd: () -> Void
 
     var body: some View {
-        Group {
-            if model.recipe.music != nil {
-                musicBar
-            } else {
-                Button(action: onAdd) {
-                    HStack(spacing: 5) {
-                        Image(systemName: "plus").font(.system(size: 10, weight: .bold))
-                        Text("Music").font(.system(size: 10.5, weight: .semibold))
-                    }
-                    .foregroundStyle(EditorTheme.secondaryText)
-                    .padding(.horizontal, 10)
-                    .frame(height: VideoStudioMetrics.musicBandHeight)
-                    .background(
-                        RoundedRectangle(cornerRadius: VideoStudioMetrics.trackRadius, style: .continuous)
-                            .strokeBorder(Color.white.opacity(0.26), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
-                    )
-                }
-                .buttonStyle(.plain)
+        ZStack(alignment: .leading) {
+            ForEach(tracksInLane) { music in
+                bar(music)
+            }
+            if lane == 0, model.recipe.musicTracks.isEmpty {
+                dashedAdd(title: "Music", systemImage: "music.note", action: onAdd)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var musicName: String {
-        switch model.recipe.music?.source {
-        case .bundled(let id): MusicTrackCatalog.track(id: id)?.displayName ?? String(localized: "Music")
-        case .imported(_, let name): name
-        case nil: ""
+    /// Draft geometry while a drag is in flight, mirroring what the commit will
+    /// apply once the finger lifts.
+    private func window(_ music: MusicTrack) -> (start: Double, duration: Double, trimStart: Double, trimEnd: Double) {
+        let sourceDuration = music.sourceDuration ?? music.effectiveDuration
+        let trimEnd = music.trimEnd ?? sourceDuration
+        var start = music.start
+        var trimStart = music.trimStart
+        var end = trimEnd
+        if let activeDrag {
+            let delta = Double(activeDrag.translationX) / Double(pps)
+            switch activeDrag.kind {
+            case .musicBody(let id) where id == music.id:
+                start = max(0, min(music.start + delta, max(0, model.totalDuration - MusicTrack.minimumDuration)))
+            case .musicLeadingHandle(let id) where id == music.id:
+                let lowerBound = max(-music.trimStart, -music.start)
+                let upperBound = trimEnd - music.trimStart - MusicTrack.minimumDuration
+                if upperBound >= lowerBound {
+                    let applied = min(max(delta, lowerBound), upperBound)
+                    trimStart = music.trimStart + applied
+                    start = music.start + applied
+                }
+            case .musicTrailingHandle(let id) where id == music.id:
+                end = min(max(trimEnd + delta, trimStart + MusicTrack.minimumDuration), sourceDuration)
+            default:
+                break
+            }
         }
+        return (start, max(MusicTrack.minimumDuration, end - trimStart), trimStart, end)
     }
 
-    private var musicBar: some View {
-        let isSelected = model.isMusicSelected
-        let width = max(40, CGFloat(model.totalDuration) * pps)
-        let stickyInset = min(max(0, CGFloat(visibleLeftTime) * pps), width - 60)
-        return ZStack(alignment: .leading) {
+    @ViewBuilder
+    private func bar(_ music: MusicTrack) -> some View {
+        let isSelected = model.selectedMusicID == music.id
+        let win = window(music)
+        let width = max(40, CGFloat(win.duration) * pps)
+        let stickyInset = min(max(0, CGFloat(visibleLeftTime - win.start) * pps), width - 60)
+        let sourceDuration = music.sourceDuration ?? win.duration
+
+        ZStack(alignment: .leading) {
             RoundedRectangle(cornerRadius: VideoStudioMetrics.trackRadius, style: .continuous)
                 .fill(isSelected ? EditorTheme.timelineSelection.opacity(0.22) : Color.white.opacity(0.06))
-            WaveformShape(samples: model.musicWaveform)
-                .fill(isSelected ? EditorTheme.timelineSelection : Color.white.opacity(0.42))
+            WaveformShape(
+                samples: model.musicWaveforms[music.id] ?? [],
+                startFraction: sourceDuration > 0 ? win.trimStart / sourceDuration : 0,
+                endFraction: sourceDuration > 0 ? win.trimEnd / sourceDuration : 1
+            )
+            .fill(isSelected ? EditorTheme.timelineSelection : Color.white.opacity(0.42))
             HStack(spacing: 4) {
                 Image(systemName: "music.note").font(.system(size: 9, weight: .bold))
-                Text(musicName).font(.system(size: 9.5, weight: .semibold)).lineLimit(1)
+                Text(music.displayName).font(.system(size: 9.5, weight: .semibold)).lineLimit(1)
             }
             .foregroundStyle(.white)
             .padding(.horizontal, 6)
@@ -604,15 +581,71 @@ private struct MusicTrackRow: View {
                     .strokeBorder(EditorTheme.timelineSelection, lineWidth: 1.5)
             }
         }
-        .contentShape(Rectangle())
-        .onTapGesture { model.isMusicSelected ? model.clearSelection() : model.selectMusic() }
-        .accessibilityLabel("Music, \(musicName)")
+        .overlay(alignment: .leading) { if isSelected { handle } }
+        .overlay(alignment: .trailing) { if isSelected { handle } }
+        .contentShape(Rectangle().inset(by: VideoStudioMetrics.bandHitInset))
+        .onTapGesture { model.toggleMusic(music.id) }
+        .background(dragZones(music, isSelected: isSelected))
+        .offset(x: CGFloat(win.start) * pps)
+        .accessibilityLabel("Music, \(music.displayName), from second \(Int(win.start)) to \(Int(win.start + win.duration))")
+    }
+
+    private var handle: some View {
+        RoundedRectangle(cornerRadius: 2)
+            .fill(EditorTheme.timelineSelection)
+            .frame(width: 4, height: VideoStudioMetrics.musicBandHeight - 8)
+    }
+
+    @ViewBuilder
+    private func dragZones(_ music: MusicTrack, isSelected: Bool) -> some View {
+        if isSelected {
+            GeometryReader { proxy in
+                let frame = proxy.frame(in: .named("timelineContent")).insetBy(dx: 0, dy: -3)
+                let handleWidth: CGFloat = 22
+                Color.clear.preference(
+                    key: TimelineDragZonesKey.self,
+                    value: [
+                        TimelineDragZone(kind: .musicLeadingHandle(music.id), rect: CGRect(x: frame.minX - 14, y: frame.minY, width: handleWidth + 14, height: frame.height)),
+                        TimelineDragZone(kind: .musicTrailingHandle(music.id), rect: CGRect(x: frame.maxX - handleWidth, y: frame.minY, width: handleWidth + 14, height: frame.height)),
+                        TimelineDragZone(kind: .musicBody(music.id), rect: frame.insetBy(dx: handleWidth, dy: 0)),
+                    ]
+                )
+            }
+        }
     }
 }
 
-/// The music band's real waveform, mirrored around the band's centre line.
+// MARK: - Shared band pieces
+
+/// The dashed "add" pill both empty lanes use.
+private func dashedAdd(
+    title: LocalizedStringKey,
+    systemImage: String,
+    action: @escaping () -> Void
+) -> some View {
+    Button(action: action) {
+        HStack(spacing: 5) {
+            Image(systemName: "plus").font(.system(size: 10, weight: .bold))
+            Label(title, systemImage: systemImage).labelStyle(.titleOnly)
+                .font(.system(size: 10.5, weight: .semibold))
+        }
+        .foregroundStyle(EditorTheme.secondaryText)
+        .padding(.horizontal, 10)
+        .frame(height: VideoStudioMetrics.chipBandHeight)
+        .background(
+            RoundedRectangle(cornerRadius: VideoStudioMetrics.trackRadius, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.26), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+        )
+    }
+    .buttonStyle(.plain)
+}
+
+/// The music band's real waveform, mirrored around the band's centre line and
+/// windowed to the track's trim so trimming visibly slices the samples.
 private struct WaveformShape: Shape {
     let samples: [Float]
+    var startFraction: Double = 0
+    var endFraction: Double = 1
 
     func path(in rect: CGRect) -> Path {
         var path = Path()
@@ -620,13 +653,17 @@ private struct WaveformShape: Shape {
             path.addRect(CGRect(x: 0, y: rect.midY - 0.5, width: rect.width, height: 1))
             return path
         }
+        let lower = min(max(0, startFraction), 1)
+        let upper = min(max(lower, endFraction), 1)
+        let span = max(0.0001, upper - lower)
         let barWidth: CGFloat = 2
         let gap: CGFloat = 2
         let step = barWidth + gap
         let count = max(1, Int(rect.width / step))
         for i in 0..<count {
-            let sampleIndex = Int(Double(i) / Double(count) * Double(samples.count))
-            let value = CGFloat(samples[min(sampleIndex, samples.count - 1)])
+            let fraction = lower + Double(i) / Double(count) * span
+            let sampleIndex = Int(fraction * Double(samples.count))
+            let value = CGFloat(samples[min(max(0, sampleIndex), samples.count - 1)])
             let barHeight = max(2, value * (rect.height - 6))
             let x = CGFloat(i) * step + 3
             path.addRoundedRect(

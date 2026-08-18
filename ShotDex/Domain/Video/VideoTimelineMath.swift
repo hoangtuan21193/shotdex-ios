@@ -18,10 +18,12 @@ enum VideoTimelineMath {
         var duration: Double
     }
 
-    struct MusicSegment: Equatable {
+    /// Where one trimmed music track lands under the video.
+    struct MusicPlacement: Equatable {
         var insertAt: Double
         var sourceStart: Double
         var duration: Double
+        var end: Double { insertAt + duration }
     }
 
     struct VolumeRamp: Equatable {
@@ -103,33 +105,36 @@ enum VideoTimelineMath {
         return result
     }
 
-    /// Segments that tile a music bed under `totalDuration`: the source
-    /// repeated end to end, the final repetition trimmed. When `loops` is
-    /// false the bed plays once (trimmed to the video) and stops.
-    static func musicSegments(
-        sourceDuration: Double,
-        totalDuration: Double,
-        loops: Bool = true
-    ) -> [MusicSegment] {
-        guard sourceDuration > 0, totalDuration > 0 else { return [] }
-        guard loops else {
-            let duration = min(sourceDuration, totalDuration)
-            return [MusicSegment(insertAt: 0, sourceStart: 0, duration: duration)]
-        }
-        var result: [MusicSegment] = []
-        var cursor = 0.0
-        while cursor < totalDuration - 0.0001 {
-            let remaining = totalDuration - cursor
-            let duration = min(sourceDuration, remaining)
-            result.append(MusicSegment(insertAt: cursor, sourceStart: 0, duration: duration))
-            cursor += duration
-        }
-        return result
+    /// Where a music track's trimmed window sits under the video. Returns nil
+    /// when the track starts at or past the end of the video, or when the trim
+    /// window has nothing left to play — the builder skips those tracks
+    /// entirely rather than inserting an empty range.
+    static func musicPlacement(
+        start: Double,
+        trimStart: Double,
+        trimEnd: Double?,
+        sourceDuration: Double?,
+        totalDuration: Double
+    ) -> MusicPlacement? {
+        guard let sourceDuration, sourceDuration > 0, totalDuration > 0 else { return nil }
+        let insertAt = max(0, start)
+        guard insertAt < totalDuration - minimumMusicDuration else { return nil }
+        let sourceStart = min(max(0, trimStart), sourceDuration)
+        let sourceEnd = min(max(trimEnd ?? sourceDuration, sourceStart), sourceDuration)
+        let trimmed = sourceEnd - sourceStart
+        guard trimmed >= minimumMusicDuration else { return nil }
+        let duration = min(trimmed, totalDuration - insertAt)
+        guard duration >= minimumMusicDuration else { return nil }
+        return MusicPlacement(insertAt: insertAt, sourceStart: sourceStart, duration: duration)
     }
 
-    /// Fade-in and fade-out ramps for the music bed. When the two fades would
-    /// overlap (fadeIn + fadeOut > total) both shrink proportionally so the
-    /// volume envelope stays continuous.
+    /// Shortest music window worth inserting; below this the track is dropped.
+    static let minimumMusicDuration: Double = 0.1
+
+    /// Fade-in and fade-out ramps for one music track, in times relative to the
+    /// track's own placed window (the builder offsets them by `insertAt`). When
+    /// the two fades would overlap (fadeIn + fadeOut > total) both shrink
+    /// proportionally so the volume envelope stays continuous.
     static func musicRamps(
         total: Double,
         volume: Double,

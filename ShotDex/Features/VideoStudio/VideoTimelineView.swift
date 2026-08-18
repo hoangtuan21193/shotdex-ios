@@ -1,14 +1,13 @@
 import SwiftUI
 
-/// The multi-track timeline (spec §4): a fixed icon gutter, a scrolling content
-/// area whose centre carries a fixed playhead, and a thin scrollbar. Scrolling
-/// scrubs; playback scrolls; pinch rescales; the transport's fit button zooms
-/// the whole project into view.
+/// The multi-track timeline: a pinned ruler, a scrolling lane stack whose centre
+/// carries a fixed playhead, and a thin scrollbar. Horizontal scrolling scrubs;
+/// vertical scrolling reveals lanes beyond the viewport; playback scrolls; pinch
+/// rescales.
 struct VideoTimelineView: View {
     @Bindable var model: VideoStudioModel
 
-    let onAddText: () -> Void
-    let onAddFilter: () -> Void
+    let onAddOverlay: () -> Void
     let onAddMusic: () -> Void
     let onAddMedia: () -> Void
     let onEditText: (PhotoOverlay) -> Void
@@ -20,10 +19,20 @@ struct VideoTimelineView: View {
     @State private var activeDrag: TimelineActiveDrag?
     @State private var viewportWidth: CGFloat = 393
     @State private var lastHapticSecond = 0
+    /// Mirrors the lane stack's vertical scroll so the gutter icons stay on
+    /// their rows.
+    @State private var laneOffsetY: CGFloat = 0
 
     /// Timeline width plus trailing room so the end-of-row add buttons (up to a
-    /// dashed pill) are fully scrollable into view, never half-clipped (§4.6).
+    /// dashed pill) are fully scrollable into view, never half-clipped.
     private var contentWidth: CGFloat { max(model.totalDuration, 0.1) * pps + 130 }
+
+    private var contentHeight: CGFloat {
+        VideoStudioMetrics.laneContentHeight(
+            overlayLanes: model.overlayLaneCount,
+            musicLanes: model.musicLaneCount
+        )
+    }
 
     var body: some View {
         GeometryReader { geo in
@@ -31,61 +40,83 @@ struct VideoTimelineView: View {
             let halfWidth = VideoStudioMetrics.rowAreaHalfWidth(screenWidth: screenWidth)
             let visibleLeftTime = model.currentTime - Double(halfWidth / pps)
 
-            HStack(spacing: 0) {
-                VideoTimelineGutter(activeTrack: activeTrack)
+            VStack(spacing: 0) {
+                // Inset by the gutter so the ruler's x = 0 lines up with the
+                // scrolling content's x = 0.
+                TimelineRuler(totalDuration: model.totalDuration, pps: pps, visibleLeftTime: visibleLeftTime)
+                    .frame(height: VideoStudioMetrics.rulerHeight)
+                    .padding(.leading, VideoStudioMetrics.gutterWidth)
+                    .padding(.top, VideoStudioMetrics.timelineTopPadding)
+                    .padding(.bottom, VideoStudioMetrics.rulerToTracks)
+                    .allowsHitTesting(false)
+
+                HStack(spacing: 0) {
+                    VideoTimelineGutter(
+                        overlayLaneCount: model.overlayLaneCount,
+                        musicLaneCount: model.musicLaneCount,
+                        activeLane: activeLane,
+                        offsetY: laneOffsetY
+                    )
                     .zIndex(2)
 
-                VideoTimelineScroller(
-                    contentWidth: contentWidth,
-                    currentTime: model.currentTime,
-                    pps: pps,
-                    dragZones: dragZones,
-                    onScrubStart: { model.beginScrub() },
-                    onScrubTime: { scrub(to: $0) },
-                    onScrubEnd: { model.endScrub(at: $0) },
-                    onPinch: handlePinch,
-                    onZoneDrag: handleZoneDrag
-                ) {
-                    TimelineTracksContent(
-                        model: model,
-                        pps: pps,
+                    VideoTimelineScroller(
                         contentWidth: contentWidth,
-                        visibleLeftTime: visibleLeftTime,
-                        activeDrag: activeDrag,
-                        onAddText: onAddText,
-                        onAddFilter: onAddFilter,
-                        onAddMusic: onAddMusic,
-                        onAddMedia: onAddMedia,
-                        onEditText: onEditText,
-                        onTransition: onTransition
-                    )
-                    .onPreferenceChange(TimelineDragZonesKey.self) { dragZones = $0 }
+                        contentHeight: contentHeight,
+                        currentTime: model.currentTime,
+                        pps: pps,
+                        dragZones: dragZones,
+                        onScrubStart: { model.beginScrub() },
+                        onScrubTime: { scrub(to: $0) },
+                        onScrubEnd: { model.endScrub(at: $0) },
+                        onVerticalOffset: { laneOffsetY = $0 },
+                        onPinch: handlePinch,
+                        onZoneDrag: handleZoneDrag
+                    ) {
+                        TimelineTracksContent(
+                            model: model,
+                            pps: pps,
+                            contentWidth: contentWidth,
+                            visibleLeftTime: visibleLeftTime,
+                            activeDrag: activeDrag,
+                            onAddOverlay: onAddOverlay,
+                            onAddMusic: onAddMusic,
+                            onAddMedia: onAddMedia,
+                            onEditText: onEditText,
+                            onTransition: onTransition
+                        )
+                        .onPreferenceChange(TimelineDragZonesKey.self) { dragZones = $0 }
+                    }
                 }
+
+                scrollbar(screenWidth: screenWidth)
+                    .padding(.bottom, 2)
             }
             .overlay(alignment: .topLeading) {
                 playhead.offset(x: VideoStudioMetrics.playheadX(screenWidth: screenWidth) - 1)
             }
-            .overlay(alignment: .topLeading) { scrollbar(screenWidth: screenWidth) }
             .onAppear { viewportWidth = screenWidth }
-            .onChange(of: screenWidth) { viewportWidth = $0 }
+            .onChange(of: screenWidth) { viewportWidth = screenWidth }
         }
         .frame(height: VideoStudioMetrics.timelineHeight)
         .background(EditorTheme.background)
         .clipped()
-        .onChange(of: model.fitToWindowToken) { _ in fitToWindow() }
+        .onChange(of: model.fitToWindowToken) { fitToWindow() }
     }
 
-    private var activeTrack: VideoStudioMetrics.Track? {
+    /// The lane the selection sits in, so its gutter icon lights up.
+    private var activeLane: VideoTimelineLane? {
         switch model.inspectorTarget {
         case .clip: .video
-        case .music: .music
-        case .text: model.selectedOverlay?.kind == .text ? .text : nil
+        case .text: model.selectedOverlayID.flatMap { model.overlayLaneAssignment[$0] }.map(VideoTimelineLane.overlay)
+        case .music: model.selectedMusicID.flatMap { model.musicLaneAssignment[$0] }.map(VideoTimelineLane.music)
         case .none: nil
         }
     }
 
     // MARK: Playhead & scrollbar
 
+    /// Runs the full height of the timeline: the lanes scroll under it, so it
+    /// can't be sized to a fixed lane stack.
     private var playhead: some View {
         VStack(spacing: 0) {
             UnevenRoundedRectangle(
@@ -99,27 +130,37 @@ struct VideoTimelineView: View {
                 .frame(width: 2)
                 .frame(maxHeight: .infinity)
         }
-        .frame(height: VideoStudioMetrics.trackAreaBottom - VideoStudioMetrics.timelineTopPadding)
+        .frame(
+            height: VideoStudioMetrics.timelineHeight
+                - VideoStudioMetrics.timelineTopPadding
+                - VideoStudioMetrics.scrollbarHeight
+                - 2
+        )
         .padding(.top, VideoStudioMetrics.timelineTopPadding)
         .offset(x: -4.5)  // centre the 11pt cap on the 2pt line
         .allowsHitTesting(false)
     }
 
     private func scrollbar(screenWidth: CGFloat) -> some View {
-        let left = VideoStudioMetrics.gutterWidth
-        let width = screenWidth - left - 8
+        let rowWidth = screenWidth - VideoStudioMetrics.gutterWidth
+        let width = max(20, rowWidth - 8)
         let total = max(model.totalDuration, 0.1)
-        let viewportTime = Double((screenWidth - left) / pps)
+        let viewportTime = Double(rowWidth / pps)
         let thumbFraction = min(1, viewportTime / total)
         let posFraction = total > 0 ? min(1 - thumbFraction, max(0, model.currentTime / total - thumbFraction / 2)) : 0
         return ZStack(alignment: .leading) {
-            Capsule().fill(Color.white.opacity(0.07)).frame(width: width, height: 3)
+            Capsule().fill(Color.white.opacity(0.07))
+                .frame(width: width, height: VideoStudioMetrics.scrollbarHeight)
             Capsule()
                 .fill(Color.white.opacity(0.28))
-                .frame(width: max(20, width * CGFloat(thumbFraction)), height: 3)
+                .frame(
+                    width: max(20, width * CGFloat(thumbFraction)),
+                    height: VideoStudioMetrics.scrollbarHeight
+                )
                 .offset(x: width * CGFloat(posFraction))
         }
-        .offset(x: left, y: VideoStudioMetrics.trackAreaBottom + 1)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.leading, VideoStudioMetrics.gutterWidth + 4)
         .allowsHitTesting(false)
     }
 
@@ -177,25 +218,40 @@ struct VideoTimelineView: View {
     private func commit(_ kind: TimelineDragZone.Kind, translationX: CGFloat) {
         let delta = Double(translationX) / Double(pps)
         switch kind {
-        case .textBody(let id):
+        case .overlayBody(let id):
             guard let timed = model.recipe.overlays.first(where: { $0.id == id }) else { return }
             let base = timed.duration ?? max(0.1, model.totalDuration - timed.start)
             let limit = max(0, model.totalDuration - base)
             model.pushUndo()
             model.setOverlayTiming(start: min(max(0, timed.start + delta), limit), duration: timed.duration, forOverlay: id)
-        case .textLeadingHandle(let id):
+        case .overlayLeadingHandle(let id):
             guard let timed = model.recipe.overlays.first(where: { $0.id == id }) else { return }
             let base = timed.duration ?? max(0.1, model.totalDuration - timed.start)
             let end = timed.start + base
             let newStart = min(max(0, timed.start + delta), end - 0.5)
             model.pushUndo()
             model.setOverlayTiming(start: newStart, duration: end - newStart, forOverlay: id)
-        case .textTrailingHandle(let id):
+        case .overlayTrailingHandle(let id):
             guard let timed = model.recipe.overlays.first(where: { $0.id == id }) else { return }
             let base = timed.duration ?? max(0.1, model.totalDuration - timed.start)
             let newDuration = min(max(0.5, base + delta), max(0.5, model.totalDuration - timed.start))
             model.pushUndo()
             model.setOverlayTiming(start: timed.start, duration: newDuration, forOverlay: id)
+        case .musicBody(let id):
+            guard let music = model.recipe.musicTracks.first(where: { $0.id == id }) else { return }
+            model.pushUndo()
+            model.setMusicStart(music.start + delta, for: id)
+        case .musicLeadingHandle(let id):
+            // Head trim moves the source window and the placement together, in
+            // one undo step, so the untouched tail stays where it plays.
+            model.trimMusicHead(by: delta, for: id)
+        case .musicTrailingHandle(let id):
+            guard let music = model.recipe.musicTracks.first(where: { $0.id == id }),
+                  let sourceDuration = music.sourceDuration
+            else { return }
+            let end = music.trimEnd ?? sourceDuration
+            model.pushUndo()
+            model.setMusicTrim(start: music.trimStart, end: end + delta, for: id)
         case .clipReorder(let id):
             guard let sourceIndex = model.recipe.clips.firstIndex(where: { $0.id == id }) else { return }
             let placements = model.clipPlacements
@@ -209,7 +265,7 @@ struct VideoTimelineView: View {
                 model.moveClip(from: sourceIndex, to: target)
             }
         case .clipLeadingHandle, .clipTrailingHandle:
-            break  // clips trim via the inspector Duration slider (spec §5.2)
+            break  // clips trim via the inspector Duration slider
         }
     }
 }

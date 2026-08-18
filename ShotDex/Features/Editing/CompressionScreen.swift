@@ -24,29 +24,41 @@ struct CompressionScreen: View {
     @State private var controller: CompressionController?
     @State private var isCancelConfirmationPresented = false
 
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                EditorTheme.background.ignoresSafeArea()
-                Group {
-                    if let controller {
-                        content(controller)
-                    } else {
-                        ProgressView("Preparing original…")
-                            .tint(.white)
-                            .foregroundStyle(.white)
-                    }
+    private var stage: some View {
+        ZStack {
+            EditorTheme.background.ignoresSafeArea()
+            Group {
+                if let controller {
+                    content(controller)
+                } else {
+                    ProgressView("Preparing original…")
+                        .tint(.white)
+                        .foregroundStyle(.white)
                 }
             }
+        }
+        .overlay {
+            if let controller, controller.isExporting {
+                exportOverlay(controller)
+            }
+        }
+        .animation(EditorTheme.animation, value: controller?.isExporting)
+    }
+
+    var body: some View {
+        NavigationStack {
+            stage
             .navigationTitle(assets.count == 1 ? "Compress Photo" : "Compress \(assets.count) Photos")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        if controller?.isExporting == true {
-                            isCancelConfirmationPresented = true
-                        } else {
-                            dismiss()
+                    if controller?.didFinish != true {
+                        Button("Cancel") {
+                            if controller?.isExporting == true {
+                                isCancelConfirmationPresented = true
+                            } else {
+                                dismiss()
+                            }
                         }
                     }
                 }
@@ -96,39 +108,51 @@ struct CompressionScreen: View {
     @ViewBuilder
     private func content(_ controller: CompressionController) -> some View {
         if controller.didFinish {
-            CompressionSummary(controller: controller) {
-                dismiss()
+            if controller.finishedCleanly {
+                Color.clear.onAppear { dismiss() }
+            } else {
+                CompressionSummary(controller: controller) {
+                    dismiss()
+                }
             }
         } else {
             ScrollView {
-                VStack(spacing: AppTheme.Spacing.lg) {
-                    CompressionPreview(controller: controller)
-                        .frame(height: assets.count == 1 ? 320 : 250)
-
-                    presetSection(controller)
-                    qualitySection(controller)
-                    formatSection(controller)
-                    metadataSection(controller)
-
-                    if assets.count > 1 {
-                        Label(
-                            "Bulk Fill presets use a centered crop for every photo.",
-                            systemImage: "crop"
-                        )
-                        .font(.footnote)
-                        .foregroundStyle(EditorTheme.dimText)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-
-                    exportButton(controller)
-                }
-                .padding(AppTheme.Spacing.lg)
+                formBody(controller)
+                    .padding(AppTheme.Spacing.lg)
             }
-            .safeAreaInset(edge: .bottom) {
-                if controller.isExporting {
-                    exportProgress(controller)
-                }
+            .disabled(controller.isExporting)
+        }
+    }
+
+    @ViewBuilder
+    private func formBody(_ controller: CompressionController) -> some View {
+        let previewHeight: CGFloat = assets.count == 1 ? 320 : 250
+        VStack(spacing: AppTheme.Spacing.lg) {
+            if assets.count == 1 {
+                CompressionPreview(controller: controller)
+                    .frame(height: previewHeight)
+            } else {
+                CompressionGallery(assets: assets, photoLibrary: dependencies.photoLibrary)
+                    .frame(height: previewHeight)
             }
+
+            presetSection(controller)
+            qualitySection(controller)
+            formatSection(controller)
+            metadataSection(controller)
+            deleteOriginalsSection(controller)
+
+            if assets.count > 1 {
+                Label(
+                    "Bulk Fill presets use a centered crop for every photo.",
+                    systemImage: "crop"
+                )
+                .font(.footnote)
+                .foregroundStyle(EditorTheme.dimText)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            exportButton(controller)
         }
     }
 
@@ -277,28 +301,73 @@ struct CompressionScreen: View {
         .tint(accent)
     }
 
-    private func exportProgress(_ controller: CompressionController) -> some View {
-        VStack(spacing: AppTheme.Spacing.sm) {
-            ProgressView(value: controller.progressFraction)
-                .tint(accent)
-            HStack {
-                Text(
-                    "Processing \(min(controller.processedCount + 1, assets.count)) of \(assets.count)"
-                )
-                .font(.subheadline.monospacedDigit())
-                .foregroundStyle(EditorTheme.secondaryText)
-                Spacer()
+    private func deleteOriginalsSection(_ controller: CompressionController) -> some View {
+        let subtitle = assets.count == 1
+            ? "Remove the source photo after the compressed copy is saved"
+            : "Remove each source photo after its compressed copy is saved"
+        return Toggle(
+            isOn: Binding(
+                get: { controller.deleteOriginals },
+                set: { controller.deleteOriginals = $0 }
+            )
+        ) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                Text("Delete Originals")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(EditorTheme.secondaryText)
+            }
+        }
+        .tint(accent)
+    }
+
+    /// Centered modal shown while the batch runs — spinner + determinate bar over
+    /// a dimming scrim that captures every touch, so the controls below can't be
+    /// tapped mid-export (DESIGN.md §11).
+    private func exportOverlay(_ controller: CompressionController) -> some View {
+        let current = min(controller.processedCount + 1, assets.count)
+        let title = controller.isDeletingOriginals ? "Deleting originals…" : "Compressing…"
+        let counter = "Processing \(current) of \(assets.count)"
+        return ZStack {
+            Color.black.opacity(0.6)
+                .ignoresSafeArea()
+                .contentShape(Rectangle())
+                .onTapGesture {}
+
+            VStack(spacing: AppTheme.Spacing.md) {
+                ProgressView()
+                    .controlSize(.large)
+                    .tint(accent)
+
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(.white)
+
+                if !controller.isDeletingOriginals {
+                    ProgressView(value: controller.progressFraction)
+                        .tint(accent)
+                    Text(counter)
+                        .font(.subheadline.monospacedDigit())
+                        .foregroundStyle(EditorTheme.secondaryText)
+                }
+
                 Button("Cancel", role: .destructive) {
                     isCancelConfirmationPresented = true
                 }
+                .disabled(controller.isDeletingOriginals)
+                .padding(.top, AppTheme.Spacing.xs)
             }
-        }
-        .padding(AppTheme.Spacing.lg)
-        .background(EditorTheme.panelSolid)
-        .overlay(alignment: .top) {
-            Rectangle()
-                .fill(EditorTheme.panelTopHairline)
-                .frame(height: 1)
+            .padding(AppTheme.Spacing.xl)
+            .frame(maxWidth: 300)
+            .background(EditorTheme.panelSolid, in: RoundedRectangle.app(AppTheme.Radius.lg))
+            .overlay(
+                RoundedRectangle.app(AppTheme.Radius.lg)
+                    .stroke(EditorTheme.panelTopHairline, lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.5), radius: 30, y: 12)
+            .padding(AppTheme.Spacing.xl)
         }
     }
 
@@ -385,6 +454,89 @@ private struct CompressionPreview: View {
     }
 }
 
+/// Swipeable review of the selected photos above the batch controls. Only shown
+/// for multi-select — a single photo uses `CompressionPreview` (crop drag). Pages
+/// snap natively (`.scrollTargetBehavior(.paging)`), a pill counts position.
+private struct CompressionGallery: View {
+    let assets: [PHAsset]
+    let photoLibrary: PhotoLibraryService
+
+    @State private var currentIndex: Int?
+
+    private var displayIndex: Int { (currentIndex ?? 0) + 1 }
+
+    var body: some View {
+        GeometryReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 0) {
+                    ForEach(Array(assets.enumerated()), id: \.element.localIdentifier) { index, asset in
+                        CompressionGalleryPage(asset: asset, photoLibrary: photoLibrary)
+                            .frame(width: proxy.size.width)
+                            .id(index)
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            .scrollTargetBehavior(.paging)
+            .scrollPosition(id: $currentIndex)
+        }
+        .overlay(alignment: .bottom) {
+            Text("\(displayIndex) / \(assets.count)")
+                .font(.caption.monospacedDigit().weight(.medium))
+                .foregroundStyle(.white)
+                .padding(.horizontal, AppTheme.Spacing.sm)
+                .padding(.vertical, AppTheme.Spacing.xs)
+                .background(.ultraThinMaterial, in: Capsule())
+                .padding(AppTheme.Spacing.sm)
+        }
+    }
+}
+
+private struct CompressionGalleryPage: View {
+    let asset: PHAsset
+    let photoLibrary: PhotoLibraryService
+
+    @State private var image: UIImage?
+    @State private var requestId: PHImageRequestID?
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle.app(AppTheme.Radius.lg)
+                .fill(EditorTheme.panel)
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .padding(AppTheme.Spacing.sm)
+            } else {
+                ProgressView().tint(.white)
+            }
+        }
+        .clipShape(RoundedRectangle.app(AppTheme.Radius.lg))
+        .padding(.horizontal, AppTheme.Spacing.xs)
+        .onAppear(perform: load)
+        .onDisappear(perform: cancel)
+    }
+
+    private func load() {
+        guard image == nil else { return }
+        requestId = photoLibrary.requestDetailImage(
+            for: asset,
+            targetSize: CGSize(width: 1_200, height: 1_200),
+            allowNetwork: true,
+            progress: { _ in }
+        ) { result, _ in
+            if let result { image = result }
+        }
+    }
+
+    private func cancel() {
+        if let requestId { photoLibrary.cancelThumbnailRequest(requestId) }
+        requestId = nil
+    }
+}
+
 private struct CompressionSummary: View {
     @Bindable var controller: CompressionController
     let done: () -> Void
@@ -414,6 +566,20 @@ private struct CompressionSummary: View {
                         systemImage: "info.circle"
                     )
                 }
+                if controller.deletedOriginalCount > 0 {
+                    let noun = controller.deletedOriginalCount == 1 ? "original" : "originals"
+                    Label(
+                        "\(controller.deletedOriginalCount) \(noun) deleted",
+                        systemImage: "trash"
+                    )
+                }
+                if controller.deleteOriginalsErrorMessage != nil {
+                    Label(
+                        "Originals couldn't be deleted",
+                        systemImage: "exclamationmark.triangle.fill"
+                    )
+                    .foregroundStyle(.orange)
+                }
                 if controller.rollbackErrorMessage != nil {
                     Label(
                         "Some exported copies may remain in Photos",
@@ -426,6 +592,13 @@ private struct CompressionSummary: View {
             if let rollbackErrorMessage = controller.rollbackErrorMessage {
                 Section("Cancellation Cleanup") {
                     Text(rollbackErrorMessage)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if let deleteOriginalsErrorMessage = controller.deleteOriginalsErrorMessage {
+                Section("Delete Originals") {
+                    Text(deleteOriginalsErrorMessage)
                         .foregroundStyle(.secondary)
                 }
             }

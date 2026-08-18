@@ -21,6 +21,10 @@ protocol PhotoGridDisplayable {
     /// when unknown. File size in bytes, nil until the EXIF pass fills it.
     var megapixels: Double? { get }
     var fileSize: Int? { get }
+    /// Stored pixel dimensions (orientation-corrected), for the 1-column
+    /// aspect-ratio layout. Nil until the index records them.
+    var pixelWidth: Int? { get }
+    var pixelHeight: Int? { get }
 }
 
 extension PhotoGridDisplayable {
@@ -87,5 +91,12 @@ struct LibraryGridItem: Codable, Equatable, Identifiable, Sendable, FetchableRec
     }
 }
 
-extension LibraryGridItem: PhotoGridDisplayable {}
-extension PhotoMetadata: PhotoGridDisplayable {}
+extension LibraryGridItem: PhotoGridDisplayable {
+    var pixelWidth: Int? { width }
+    var pixelHeight: Int? { height }
+}
+
+extension PhotoMetadata: PhotoGridDisplayable {
+    var pixelWidth: Int? { width }
+    var pixelHeight: Int? { height }
+}

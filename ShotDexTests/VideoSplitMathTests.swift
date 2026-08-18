@@ -122,28 +122,27 @@ struct VideoAspectTests {
     }
 }
 
-struct VideoMusicLoopTests {
-    @Test func nonLoopingMusicIsOneTrimmedSegment() {
-        let segments = VideoTimelineMath.musicSegments(
-            sourceDuration: 5, totalDuration: 12, loops: false
-        )
-        #expect(segments.count == 1)
-        #expect(segments.first?.duration == 5)
+struct VideoMusicTrackTests {
+    @Test func effectiveDurationIsTheTrimWindow() {
+        var music = MusicTrack(source: .bundled(id: "x"))
+        music.sourceDuration = 30
+        music.trimStart = 4
+        music.trimEnd = 12
+        #expect(music.effectiveDuration == 8)
     }
 
-    @Test func nonLoopingMusicTrimsToVideoWhenShorter() {
-        let segments = VideoTimelineMath.musicSegments(
-            sourceDuration: 20, totalDuration: 8, loops: false
-        )
-        #expect(segments.count == 1)
-        #expect(segments.first?.duration == 8)
+    /// Before the source resolves there is nothing to measure, so the track
+    /// collapses to the minimum rather than reporting a negative length.
+    @Test func effectiveDurationBottomsOutBeforeTheSourceResolves() {
+        let music = MusicTrack(source: .bundled(id: "x"))
+        #expect(music.effectiveDuration == MusicTrack.minimumDuration)
     }
 
-    @Test func loopingMusicTilesToFill() {
-        let segments = VideoTimelineMath.musicSegments(
-            sourceDuration: 5, totalDuration: 12, loops: true
-        )
-        #expect(segments.count == 3)   // 5 + 5 + 2
-        #expect(segments.last?.duration == 2)
+    @Test func endIsStartPlusTheTrimWindow() {
+        var music = MusicTrack(source: .bundled(id: "x"))
+        music.sourceDuration = 30
+        music.trimEnd = 10
+        music.start = 5
+        #expect(music.end == 15)
     }
 }

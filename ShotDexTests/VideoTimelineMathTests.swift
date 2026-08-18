@@ -129,23 +129,48 @@ struct VideoTimelineMathTests {
 
     // MARK: - Music
 
-    @Test func musicSegmentsLoopWithATrimmedTail() {
-        let segments = VideoTimelineMath.musicSegments(sourceDuration: 4, totalDuration: 10)
-        #expect(segments.count == 3)
-        #expect(isClose(segments[2].insertAt, 8))
-        #expect(isClose(segments[2].duration, 2))
-        #expect(isClose(segments.reduce(0) { $0 + $1.duration }, 10))
+    @Test func musicPlacementUsesTheWholeTrimWhenItFits() {
+        let placement = VideoTimelineMath.musicPlacement(
+            start: 2, trimStart: 1, trimEnd: 5, sourceDuration: 30, totalDuration: 10
+        )
+        #expect(placement?.insertAt == 2)
+        #expect(placement?.sourceStart == 1)
+        #expect(isClose(placement?.duration ?? 0, 4))
     }
 
-    @Test func musicLongerThanTheVideoIsASingleTrimmedSegment() {
-        let segments = VideoTimelineMath.musicSegments(sourceDuration: 60, totalDuration: 10)
-        #expect(segments.count == 1)
-        #expect(isClose(segments[0].duration, 10))
+    @Test func musicPlacementClipsTheTailAtTheEndOfTheVideo() {
+        let placement = VideoTimelineMath.musicPlacement(
+            start: 8, trimStart: 0, trimEnd: 30, sourceDuration: 30, totalDuration: 10
+        )
+        #expect(isClose(placement?.duration ?? 0, 2))
     }
 
-    @Test func exactFitMusicDoesNotGrowAnExtraSegment() {
-        let segments = VideoTimelineMath.musicSegments(sourceDuration: 5, totalDuration: 10)
-        #expect(segments.count == 2)
+    @Test func musicStartingPastTheVideoIsDropped() {
+        let placement = VideoTimelineMath.musicPlacement(
+            start: 12, trimStart: 0, trimEnd: nil, sourceDuration: 30, totalDuration: 10
+        )
+        #expect(placement == nil)
+    }
+
+    @Test func musicPlacementFallsBackToTheSourceDurationWithoutATrimEnd() {
+        let placement = VideoTimelineMath.musicPlacement(
+            start: 0, trimStart: 0, trimEnd: nil, sourceDuration: 6, totalDuration: 10
+        )
+        #expect(isClose(placement?.duration ?? 0, 6))
+    }
+
+    @Test func musicWithAnEmptyTrimWindowIsDropped() {
+        let placement = VideoTimelineMath.musicPlacement(
+            start: 0, trimStart: 5, trimEnd: 5.02, sourceDuration: 30, totalDuration: 10
+        )
+        #expect(placement == nil)
+    }
+
+    @Test func musicWithoutAResolvedSourceDurationIsDropped() {
+        let placement = VideoTimelineMath.musicPlacement(
+            start: 0, trimStart: 0, trimEnd: nil, sourceDuration: nil, totalDuration: 10
+        )
+        #expect(placement == nil)
     }
 
     @Test func musicRampsCoverTheWholeBed() {

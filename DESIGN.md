@@ -19,7 +19,9 @@ Mỗi màn hình phải khai báo rõ mình thuộc tầng nào. Không trộn h
 | **C. Glass chrome** | Thanh nổi trên ảnh: tab bar, selection bar, nút tròn, panel trạng thái | Kính mờ trong suốt | `GlassPanel`, `GlassIconButton`, `LiquidGlassTabBar`, `.glassBackground(_:)` |
 | **D. Tool (dark)** | Toàn màn hình chỉnh sửa: Photo Editor, Compare, Compress, Collage, Video Studio | `EditorTheme.background` (đen) / `panelSolid` `#0F1012` | `EditorTheme`, `.editorGlass()`, `EditorPillLabel` |
 
-**Collage và Video Studio thuộc tầng D**, không có ngoại lệ: cả hai thao tác trực tiếp lên pixel/khung hình nên cần nền trung tính để đánh giá màu. Kéo theo đó, bước chọn layout collage và timeline video phải nằm trong panel tầng D — không được tách ra thành sheet hệ thống, vì như vậy màn hình lại lai hai tầng.
+**Collage và Video Studio thuộc tầng D**, không có ngoại lệ: cả hai thao tác trực tiếp lên pixel/khung hình nên cần nền trung tính để đánh giá màu. Kéo theo đó, bước chọn layout collage và **timeline video** phải nằm **trong màn hình** tầng D — không được tách ra thành sheet hệ thống, vì như vậy màn hình lại lai hai tầng.
+
+**Panel ngữ cảnh Video Studio là panel trượt IN-SCREEN, không phải sheet hệ thống** (2026-08-12). Inspector của Video Studio (thông số của clip/chữ/sticker/nhạc đang chọn, và các global tool) trượt lên từ đáy màn hình khi có selection và trượt xuống khi bỏ chọn — trông như bottom sheet (grabber 36×5, bo góc trên `Radius.lg`, nền `panelSolid`, kéo xuống để đóng) nhưng vẽ trong màn hình. Hai lý do, cả hai đều bắt buộc: (1) giữ đúng quy tắc tầng D ở trên; (2) các picker của studio (font, media, nhạc, sticker) **là** sheet hệ thống mở từ chính panel này — UIKit không present được sheet từ một view đang present sheet khác, nên inspector mà là sheet thì mọi nút Replace/Font sẽ im lặng không mở. Panel dùng `EditorTheme.animation` + `.transition(.move(edge: .bottom))` và **trượt đè lên** hàng công cụ + bottom bar — **không đẩy layout bên dưới**, để timeline đứng yên đúng vị trí user vừa cuộn tới.
 
 **Quy tắc chọn tầng cho màn hình mới**
 
@@ -71,7 +73,7 @@ Chỉ dùng system color để tự có light/dark:
 
 Chỉ dùng token trong `EditorTheme`: `background`, `panel`, `panelSolid`, `panelTopHairline`, `panelDivider`, `stickyHeader`, `control`, `sliderTrack`, `hairline`, `secondaryText`, `dimText`, `clipping`, `maskRow`, `activeRow`, `glass`, `glassLight`, `glassStroke`, `timelineSelection`, `timelineDestructive`.
 
-`timelineSelection` (`#57BFD1`) chỉ dùng cho **trạng thái chọn trong Video Studio timeline** (clip/băng/overlay đang chọn) — cố ý khác accent để "đang chọn" (xanh) không đụng "đang bật" (vàng accent). `timelineDestructive` (`#FF6B5E`) là glyph phá hủy trong inspector Video Studio.
+`timelineSelection` (`#57BFD1`) chỉ dùng cho **trạng thái chọn trong Video Studio timeline** (clip/băng/overlay đang chọn) — cố ý khác accent để "đang chọn" (xanh) không đụng "đang bật" (vàng accent). `timelineDestructive` (`#FF6B5E`) là glyph phá hủy trong panel ngữ cảnh Video Studio.
 
 Thiếu token thì **thêm vào `EditorTheme`**, không viết `Color(white: 0.13)` trong file feature.
 
@@ -204,7 +206,7 @@ Cấu trúc cố định từ trên xuống:
 3. **Panel** — nền `panelSolid`, hairline trên `panelTopHairline`, các tier ngăn bằng `panelDivider`.
 4. **Tab row** (nếu có nhiều nhóm công cụ) — dưới cùng panel.
 
-Tiến trình dài chạy: `safeAreaInset(edge: .bottom)` với `ProgressView` + đếm `Processing N of M` + nút `Cancel` màu đỏ.
+Tiến trình dài chạy: `safeAreaInset(edge: .bottom)` với `ProgressView` + đếm `Processing N of M` + nút `Cancel` màu đỏ. Với tác vụ hàng loạt cần **khóa toàn màn hình** (Compress batch): dùng **modal giữa màn hình** — scrim `Color.black.opacity(0.6)` phủ kín nuốt mọi chạm, thẻ `panelSolid` bo `Radius.lg` chứa `ProgressView` xoay + thanh `ProgressView(value:)` + đếm + `Cancel` đỏ; nội dung dưới `.disabled(true)`.
 
 ### 10.4 Sheet
 - Sheet nhập liệu ngắn → `.presentationDetents([.medium])`.
@@ -222,7 +224,7 @@ Một mẫu duy nhất cho Library, Album Detail, Smart Album Detail, On This Da
 - Hàng trên: nút Share (tròn kính) · khay thumbnail đã chọn (cuộn ngang, có nút ✕ từng ảnh) · nút đóng (tròn kính); nhãn `N Photos Selected` ngay dưới.
 - Hàng dưới: ba cụm — [Collage, Video] · [Compare, Compress, ⋯] · [Delete].
 - Hành động không khả dụng thì **làm mờ** (`.tertiaryLabel` / opacity 0.32), không ẩn. Compare yêu cầu ≤ 4 ảnh.
-- **Glass của selection bar là Liquid Glass sáng gốc** (`glassBackground` / `glassEffect`), giống thanh nổi của app Photos — trong suốt, có vibrancy, **không** đè tint tối. Glyph **monochrome** `.primary` (đen/trắng theo hệ, vibrancy lo độ đọc), **không** accent. Accent chỉ dành cho trạng thái active/selected. Icon chrome ở toolbar (Select/Settings/Sort) cũng `.tint(.primary)` monochrome, không ăn theo accent vàng toàn app. Badge chọn ảnh trong lưới: check trắng trên đĩa tối + viền trắng, không dùng accent.
+- **Glass của selection bar là Liquid Glass sáng gốc** (`glassBackground` / `glassEffect`), giống thanh nổi của app Photos — trong suốt, có vibrancy, **không** đè tint tối. Glyph **monochrome** `.primary` (đen/trắng theo hệ, vibrancy lo độ đọc), **không** accent. Accent chỉ dành cho trạng thái active/selected. Icon chrome ở toolbar (Select/Settings/Sort) cũng `.tint(.primary)` monochrome, không ăn theo accent vàng toàn app. **Badge chọn ảnh trong lưới dùng accent, kiểu app Photos** (2026-08-12): ô đã chọn = check trắng trên đĩa **accent** (`checkmark.circle.fill`, palette `[.white, accent]`) + viền accent 3pt + thumbnail mờ nhẹ (`alpha 0.82`); ô chưa chọn = `circle` viền trắng. Đây là ngoại lệ có tên của "accent chỉ cho active" — badge lưới là chỉ báo chọn/chưa chọn nên ăn theo accent như app Photos. Accent lấy qua `UIColor(AppAccentTheme.stored.color)` vì cell là UIKit.
 
 ---
 

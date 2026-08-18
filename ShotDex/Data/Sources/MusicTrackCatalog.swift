@@ -1,8 +1,9 @@
 import Foundation
 
-/// One music bed reference (kept for the `MusicSource.bundled` code paths, which
-/// now resolve to nothing — the app ships no bundled beds).
-struct MusicTrack: Identifiable, Equatable, Sendable {
+/// One bundled music bed reference (kept for the `MusicSource.bundled` code
+/// paths, which now resolve to nothing — the app ships no bundled beds). Not to
+/// be confused with `MusicTrack`, the bed a project actually places.
+struct BundledMusicTrack: Identifiable, Equatable, Sendable {
     let id: String
     let displayName: String
     let url: URL?
@@ -13,7 +14,7 @@ struct MusicTrack: Identifiable, Equatable, Sendable {
 /// for reuse by `ImportedMusicStore`. The lookup remains so the older
 /// `MusicSource.bundled(id:)` case resolves safely to `nil` (no music).
 enum MusicTrackCatalog {
-    static let availableTracks: [MusicTrack] = []
+    static let availableTracks: [BundledMusicTrack] = []
 
-    static func track(id: String) -> MusicTrack? { nil }
+    static func track(id: String) -> BundledMusicTrack? { nil }
 }

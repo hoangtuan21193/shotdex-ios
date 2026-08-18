@@ -46,6 +46,24 @@ struct LibraryQueries: Sendable {
         return Dictionary(uniqueKeysWithValues: rows.map { ($0.assetId, $0) })
     }
 
+    /// Indexed byte total for a selection, plus how many of the ids had a known
+    /// size. `knownCount < assetIds.count` means some assets aren't indexed yet
+    /// (or carry no size) — the caller shows the sum as an estimate (`~`). Covers
+    /// photos and videos alike; `photo_metadata` holds both.
+    func fileSizeTotal(assetIds: [String]) async throws -> (bytes: Int64, knownCount: Int) {
+        guard !assetIds.isEmpty else { return (0, 0) }
+        let placeholders = Array(repeating: "?", count: assetIds.count).joined(separator: ", ")
+        let sql = """
+            SELECT COALESCE(SUM(fileSize), 0) AS bytes, COUNT(fileSize) AS known
+            FROM photo_metadata
+            WHERE assetId IN (\(placeholders))
+            """
+        return try await database.reader.read { db in
+            let row = try Row.fetchOne(db, sql: sql, arguments: StatementArguments(assetIds))
+            return (row?["bytes"] ?? 0, row?["known"] ?? 0)
+        }
+    }
+
     /// Number of photos matching the criteria (for the filter tokens bar).
     func count(matching criteria: FilterCriteria) throws -> Int {
         let (whereSQL, arguments) = Self.whereClause(for: criteria)

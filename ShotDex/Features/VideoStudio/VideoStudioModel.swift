@@ -24,17 +24,57 @@ final class VideoStudioModel {
         case failed(String)
     }
 
-    /// Which object the inspector panel reskins for. Purely derived from the
-    /// selection — there are no sheet-panels in Turn 2.
+    /// Which object the contextual bottom sheet reskins for. Purely derived
+    /// from the selection.
     enum InspectorTarget: Equatable {
         case none, clip, text, music
     }
 
-    /// The no-selection inspector's sub-panel: the root (ratio / master / bg),
-    /// the filter strip, or the global adjustments. Keeps Filters/Effects
-    /// sheet-free — they reskin the param zone instead.
-    enum NoneTool: Equatable {
-        case root, filters, effects
+    /// A project-wide tool, opened from the toolbar when nothing is selected.
+    /// Each reskins the same bottom sheet.
+    enum GlobalTool: Equatable, Identifiable {
+        case ratio, filters, adjustments, masterVolume, background
+
+        var id: Self { self }
+
+        var title: String {
+            switch self {
+            case .ratio: String(localized: "Ratio")
+            case .filters: String(localized: "Filter")
+            case .adjustments: String(localized: "Adjust")
+            case .masterVolume: String(localized: "Volume")
+            case .background: String(localized: "Background")
+            }
+        }
+
+        /// The same label as a key, for the toolbar cells (which take one).
+        var titleKey: LocalizedStringKey {
+            switch self {
+            case .ratio: "Ratio"
+            case .filters: "Filter"
+            case .adjustments: "Adjust"
+            case .masterVolume: "Volume"
+            case .background: "Background"
+            }
+        }
+
+        var systemImage: String {
+            switch self {
+            case .ratio: "aspectratio"
+            case .filters: "camera.filters"
+            case .adjustments: "slider.horizontal.3"
+            case .masterVolume: "speaker.wave.2"
+            case .background: "square.fill"
+            }
+        }
+    }
+
+    /// The selected-text sheet's sub-panel: transform (content/size/opacity/
+    /// timing), font (family + bold/italic), colour, alignment, style
+    /// (outline/shadow), or animation. Reskins the sheet's param zone rather
+    /// than stacking another sheet on top.
+    enum TextTool: Equatable {
+        case transform, font, color, align, style, animate
     }
 
     let mode: VideoStudioMode
@@ -54,17 +94,23 @@ final class VideoStudioModel {
 
     private(set) var selectedClipID: UUID?
     private(set) var selectedOverlayID: UUID?
-    private(set) var isMusicSelected = false
+    private(set) var selectedMusicID: UUID?
     /// Set when the user taps a transition chip; drives the transition picker.
     var editingTransitionIndex: Int?
-    /// The no-selection inspector's sub-panel.
-    var inspectorNoneTool: NoneTool = .root
+    /// The project-wide tool the bottom sheet is showing, when nothing is
+    /// selected. Mutually exclusive with the selection.
+    var activeGlobalTool: GlobalTool?
+    /// The selected-text sheet's sub-panel.
+    var inspectorTextTool: TextTool = .transform
     private(set) var hasEdits = false
 
-    /// Decoded music waveform buckets (0…1), for the audio band. Empty until a
-    /// track is selected and decoded.
-    private(set) var musicWaveform: [Float] = []
-    private var waveformTask: Task<Void, Never>?
+    /// Decoded waveform buckets (0…1) per music track, for the audio bands.
+    /// Keyed by `MusicTrack.id`; a track is absent until its decode lands.
+    private(set) var musicWaveforms: [UUID: [Float]] = [:]
+    /// Decodes are cached by source URL so several tracks over the same file
+    /// only pay for one pass.
+    private var waveformsByURL: [String: [Float]] = [:]
+    private var waveformTasks: [UUID: Task<Void, Never>] = [:]
 
     /// Bumped to ask the timeline to scroll the whole project into view.
     private(set) var fitToWindowToken = 0
@@ -139,11 +185,16 @@ final class VideoStudioModel {
         selectedTimedOverlay?.overlay
     }
 
+    var selectedMusicTrack: MusicTrack? {
+        guard let selectedMusicID else { return nil }
+        return recipe.musicTracks.first { $0.id == selectedMusicID }
+    }
+
     /// Which object the inspector reskins for — selection is single-target.
     var inspectorTarget: InspectorTarget {
         if selectedOverlayID != nil { return .text }
         if selectedClipID != nil { return .clip }
-        if isMusicSelected { return .music }
+        if selectedMusicID != nil { return .music }
         return .none
     }
 
@@ -151,7 +202,7 @@ final class VideoStudioModel {
 
     func selectClip(_ id: UUID?) {
         selectedClipID = id
-        if id != nil { selectedOverlayID = nil; isMusicSelected = false; inspectorNoneTool = .root }
+        if id != nil { selectedOverlayID = nil; selectedMusicID = nil; activeGlobalTool = nil }
     }
 
     func toggleClip(_ id: UUID) {
@@ -160,34 +211,52 @@ final class VideoStudioModel {
 
     func selectOverlay(_ id: UUID?) {
         selectedOverlayID = id
-        if id != nil { selectedClipID = nil; isMusicSelected = false; inspectorNoneTool = .root }
+        if id != nil {
+            selectedClipID = nil
+            selectedMusicID = nil
+            activeGlobalTool = nil
+            inspectorTextTool = .transform
+        }
     }
 
     func toggleOverlay(_ id: UUID) {
         selectOverlay(selectedOverlayID == id ? nil : id)
     }
 
-    func selectMusic() {
-        guard recipe.music != nil else { return }
-        isMusicSelected = true
-        selectedClipID = nil
-        selectedOverlayID = nil
-        inspectorNoneTool = .root
+    func selectMusic(_ id: UUID?) {
+        guard id == nil || recipe.musicTracks.contains(where: { $0.id == id }) else { return }
+        selectedMusicID = id
+        if id != nil {
+            selectedClipID = nil
+            selectedOverlayID = nil
+            activeGlobalTool = nil
+        }
+    }
+
+    func toggleMusic(_ id: UUID) {
+        selectMusic(selectedMusicID == id ? nil : id)
     }
 
     func clearSelection() {
         selectedClipID = nil
         selectedOverlayID = nil
-        isMusicSelected = false
-        inspectorNoneTool = .root
+        selectedMusicID = nil
+        activeGlobalTool = nil
     }
 
-    /// Deselect everything and show a no-selection sub-panel (Filters/Effects).
-    func showNoneTool(_ tool: NoneTool) {
+    /// Deselect everything and open a project-wide tool sheet (Ratio, Filters,
+    /// Adjustments, Volume, Background).
+    func showGlobalTool(_ tool: GlobalTool?) {
         selectedClipID = nil
         selectedOverlayID = nil
-        isMusicSelected = false
-        inspectorNoneTool = tool
+        selectedMusicID = nil
+        activeGlobalTool = tool
+    }
+
+    /// True whenever the contextual bottom sheet should be up: something is
+    /// selected, or a project-wide tool is open.
+    var presentsSheet: Bool {
+        inspectorTarget != .none || activeGlobalTool != nil
     }
 
     /// The clip currently under the playhead — the target for playhead-relative
@@ -210,6 +279,36 @@ final class VideoStudioModel {
             durations: durations
         )
         return VideoTimelineMath.placements(durations: durations, overlaps: overlaps)
+    }
+
+    // MARK: - Timeline lanes
+
+    /// Which lane each overlay (text and sticker alike) draws in, above the
+    /// video track. Overlays with no explicit end run to the end of the video.
+    var overlayLaneAssignment: [UUID: Int] {
+        let total = totalDuration
+        return TimelineLaneLayout.assignLanes(recipe.overlays.map { overlay in
+            TimelineLaneLayout.Item(
+                id: overlay.id,
+                start: overlay.start,
+                end: overlay.start + (overlay.duration ?? max(0.1, total - overlay.start))
+            )
+        })
+    }
+
+    var overlayLaneCount: Int {
+        max(1, TimelineLaneLayout.laneCount(for: overlayLaneAssignment))
+    }
+
+    /// Which lane each music track draws in, below the video track.
+    var musicLaneAssignment: [UUID: Int] {
+        TimelineLaneLayout.assignLanes(recipe.musicTracks.map { music in
+            TimelineLaneLayout.Item(id: music.id, start: music.start, end: music.end)
+        })
+    }
+
+    var musicLaneCount: Int {
+        max(1, TimelineLaneLayout.laneCount(for: musicLaneAssignment))
     }
 
     // MARK: - Load
@@ -236,7 +335,7 @@ final class VideoStudioModel {
         // the builder will actually use.
         recipe.clips.removeAll { sources[$0.id] == nil }
         recipe.syncTransitionsWithClips()
-        reloadWaveform()
+        reloadWaveforms()
         await rebuildPreview()
         phase = .ready
     }
@@ -244,7 +343,8 @@ final class VideoStudioModel {
     func close() {
         rebuildTask?.cancel()
         exportTask?.cancel()
-        waveformTask?.cancel()
+        for task in waveformTasks.values { task.cancel() }
+        waveformTasks.removeAll()
         detachObservers()
         player?.pause()
         player = nil
@@ -378,11 +478,14 @@ final class VideoStudioModel {
         if let selectedOverlayID, !recipe.overlays.contains(where: { $0.id == selectedOverlayID }) {
             self.selectedOverlayID = nil
         }
-        if recipe.music == nil { isMusicSelected = false }
+        if let selectedMusicID, !recipe.musicTracks.contains(where: { $0.id == selectedMusicID }) {
+            self.selectedMusicID = nil
+        }
         if let index = editingTransitionIndex, !recipe.transitions.indices.contains(index) {
             editingTransitionIndex = nil
         }
         markEdited()
+        reloadWaveforms()
         // Always the structural tier: a snapshot can differ in any dimension,
         // and the 300 ms debounce keeps repeated undos cheap.
         schedulePreviewRebuild()
@@ -462,23 +565,115 @@ final class VideoStudioModel {
         schedulePreviewRebuild()
     }
 
-    func setMusic(_ selection: MusicSelection?) {
-        recipe.music = selection
-        if selection == nil { isMusicSelected = false }
-        reloadWaveform()
+    /// Adds a bed starting at the playhead and selects it. The source's length
+    /// resolves asynchronously and seeds the trim window.
+    func addMusicTrack(source: MusicSource) {
+        pushUndo()
+        var music = MusicTrack(source: source)
+        music.start = max(0, min(currentTime, max(0, totalDuration - MusicTrack.minimumDuration)))
+        recipe.musicTracks.append(music)
+        selectMusic(music.id)
+        markEdited()
+        resolveMusicDuration(for: music.id)
+        loadWaveform(for: music.id)
+        schedulePreviewRebuild()
+    }
+
+    func removeMusicTrack(_ id: UUID) {
+        guard let index = recipe.musicTracks.firstIndex(where: { $0.id == id }) else { return }
+        pushUndo()
+        recipe.musicTracks.remove(at: index)
+        if selectedMusicID == id { selectedMusicID = nil }
+        waveformTasks[id]?.cancel()
+        waveformTasks[id] = nil
+        musicWaveforms[id] = nil
         markEdited()
         schedulePreviewRebuild()
+    }
+
+    /// Swaps the audio behind a bed, keeping where it sits but resetting the
+    /// trim window to the new source.
+    func replaceMusicTrack(_ id: UUID, source: MusicSource) {
+        guard let index = recipe.musicTracks.firstIndex(where: { $0.id == id }) else { return }
+        pushUndo()
+        recipe.musicTracks[index].source = source
+        recipe.musicTracks[index].trimStart = 0
+        recipe.musicTracks[index].trimEnd = nil
+        recipe.musicTracks[index].sourceDuration = nil
+        musicWaveforms[id] = nil
+        markEdited()
+        resolveMusicDuration(for: id)
+        loadWaveform(for: id)
+        schedulePreviewRebuild()
+    }
+
+    func setMusicStart(_ start: Double, for id: UUID) {
+        guard let index = recipe.musicTracks.firstIndex(where: { $0.id == id }) else { return }
+        recipe.musicTracks[index].start = max(
+            0,
+            min(start, max(0, totalDuration - MusicTrack.minimumDuration))
+        )
+        markEdited()
+        schedulePreviewRebuild()
+    }
+
+    func setMusicTrim(start: Double, end: Double, for id: UUID) {
+        guard let index = recipe.musicTracks.firstIndex(where: { $0.id == id }),
+              let sourceDuration = recipe.musicTracks[index].sourceDuration
+        else { return }
+        let trimmed = VideoTimelineMath.clampedTrim(
+            start: start,
+            end: end,
+            sourceDuration: sourceDuration
+        )
+        recipe.musicTracks[index].trimStart = trimmed.start
+        recipe.musicTracks[index].trimEnd = trimmed.end
+        markEdited()
+        schedulePreviewRebuild()
+    }
+
+    /// Head trim: the window slides in the source and on the timeline together,
+    /// so the audio under the untouched tail never shifts. One undo step.
+    func trimMusicHead(by delta: Double, for id: UUID) {
+        guard let music = recipe.musicTracks.first(where: { $0.id == id }),
+              let sourceDuration = music.sourceDuration
+        else { return }
+        let end = music.trimEnd ?? sourceDuration
+        let lowerBound = max(-music.trimStart, -music.start)
+        let upperBound = end - music.trimStart - MusicTrack.minimumDuration
+        guard upperBound >= lowerBound else { return }
+        let applied = min(max(delta, lowerBound), upperBound)
+        guard abs(applied) > 0.0005 else { return }
+        beginUndoGroup()
+        setMusicTrim(start: music.trimStart + applied, end: end, for: id)
+        setMusicStart(music.start + applied, for: id)
+        endUndoGroup()
     }
 
     func importMusic(from pickedURL: URL) {
         do {
             let copied = try service.copyImportedMusic(from: pickedURL)
-            setMusic(MusicSelection(source: .imported(
+            addMusicTrack(source: .imported(
                 url: copied,
                 displayName: pickedURL.deletingPathExtension().lastPathComponent
-            )))
+            ))
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    private func resolveMusicDuration(for id: UUID) {
+        guard let music = recipe.musicTracks.first(where: { $0.id == id }) else { return }
+        let source = music.source
+        Task { [weak self] in
+            guard let self else { return }
+            guard let duration = await service.loadAudioDuration(for: source) else { return }
+            guard let index = recipe.musicTracks.firstIndex(where: { $0.id == id }) else { return }
+            recipe.musicTracks[index].sourceDuration = duration
+            if recipe.musicTracks[index].trimEnd == nil {
+                recipe.musicTracks[index].trimEnd = duration
+            }
+            schedulePreviewRebuild()
         }
     }
 
@@ -495,14 +690,6 @@ final class VideoStudioModel {
         guard recipe.aspect != aspect else { return }
         pushUndo()
         recipe.aspect = aspect
-        markEdited()
-        schedulePreviewRebuild()
-    }
-
-    func setMusicLoops(_ loops: Bool) {
-        guard recipe.music != nil else { return }
-        pushUndo()
-        recipe.music?.loops = loops
         markEdited()
         schedulePreviewRebuild()
     }
@@ -631,20 +818,23 @@ final class VideoStudioModel {
         applyAudioTier()
     }
 
-    func setMusicVolume(_ volume: Double) {
-        recipe.music?.volume = min(max(volume, 0), 1)
+    func setMusicVolume(_ volume: Double, for id: UUID) {
+        guard let index = recipe.musicTracks.firstIndex(where: { $0.id == id }) else { return }
+        recipe.musicTracks[index].volume = min(max(volume, 0), 1)
         markEdited()
         applyAudioTier()
     }
 
-    func setMusicFadeIn(_ seconds: Double) {
-        recipe.music?.fadeIn = max(0, seconds)
+    func setMusicFadeIn(_ seconds: Double, for id: UUID) {
+        guard let index = recipe.musicTracks.firstIndex(where: { $0.id == id }) else { return }
+        recipe.musicTracks[index].fadeIn = min(max(seconds, 0), MusicTrack.fadeRange.upperBound)
         markEdited()
         applyAudioTier()
     }
 
-    func setMusicFadeOut(_ seconds: Double) {
-        recipe.music?.fadeOut = max(0, seconds)
+    func setMusicFadeOut(_ seconds: Double, for id: UUID) {
+        guard let index = recipe.musicTracks.firstIndex(where: { $0.id == id }) else { return }
+        recipe.musicTracks[index].fadeOut = min(max(seconds, 0), MusicTrack.fadeRange.upperBound)
         markEdited()
         applyAudioTier()
     }
@@ -701,7 +891,10 @@ final class VideoStudioModel {
         applyVideoTier()
     }
 
-    func addTextOverlay(_ text: String, at start: Double = 0) {
+    /// Returns the new overlay so the caller can open the text editor on it
+    /// straight away — an empty caption is never what the user wanted.
+    @discardableResult
+    func addTextOverlay(_ text: String, at start: Double = 0) -> PhotoOverlay {
         var overlay = PhotoOverlay.text()
         overlay.text = text
         overlay.fontPostScriptName = lastFont.postScriptName
@@ -709,26 +902,66 @@ final class VideoStudioModel {
         recipe.overlays.append(TimedOverlay(overlay: overlay, start: max(0, start)))
         selectOverlay(overlay.id)
         markEdited()
-        applyVideoTier()
+        return overlay
     }
 
+    /// Overlays render through the live preview proxy, not the baked composition
+    /// (see `VideoRenderRecipe.bakesOverlays`), so an overlay edit only mutates the
+    /// recipe — the `@Observable` proxy repaints, no video-composition rebuild.
     func updateSelectedOverlay(_ mutate: (inout PhotoOverlay) -> Void) {
         guard let selectedOverlayID,
               let index = recipe.overlays.firstIndex(where: { $0.id == selectedOverlayID })
         else { return }
         mutate(&recipe.overlays[index].overlay)
         markEdited()
-        applyVideoTier()
     }
 
-    /// Overlay visibility window — composition timing is untouched, so this
-    /// rides the cheap video-composition tier too.
+    /// Mutate the selected overlay's timing wrapper (start / duration / in-out
+    /// animation). Proxy-only, like every overlay edit.
+    func updateSelectedTimedOverlay(_ mutate: (inout TimedOverlay) -> Void) {
+        guard let selectedOverlayID,
+              let index = recipe.overlays.firstIndex(where: { $0.id == selectedOverlayID })
+        else { return }
+        mutate(&recipe.overlays[index])
+        markEdited()
+    }
+
+    /// Overlay visibility window. Proxy-only, like every overlay edit.
     func setOverlayTiming(start: Double, duration: Double?, forOverlay id: UUID) {
         guard let index = recipe.overlays.firstIndex(where: { $0.id == id }) else { return }
         recipe.overlays[index].start = min(max(0, start), totalDuration)
         recipe.overlays[index].duration = duration.map { max(0.1, $0) }
         markEdited()
-        applyVideoTier()
+    }
+
+    // MARK: - Overlay geometry (on-canvas gestures)
+
+    /// True while a drag / pinch / rotate on the preview canvas is in flight — one
+    /// undo step spans the whole gesture rather than one per frame.
+    private(set) var isOverlayGestureActive = false
+
+    func beginOverlayGesture() {
+        guard selectedOverlayID != nil, !isOverlayGestureActive else { return }
+        beginUndoGroup()
+        isOverlayGestureActive = true
+    }
+
+    func endOverlayGesture() {
+        guard isOverlayGestureActive else { return }
+        isOverlayGestureActive = false
+        endUndoGroup()
+    }
+
+    func moveSelectedOverlay(toCenter center: NormalizedPoint) {
+        updateSelectedOverlay { $0.center = center }
+    }
+
+    func setSelectedOverlaySize(_ size: Double) {
+        updateSelectedOverlay { $0.size = size }
+    }
+
+    func setSelectedOverlayRotation(_ degrees: Double) {
+        updateSelectedOverlay { $0.rotationDegrees = degrees }
     }
 
     func deleteSelectedOverlay() {
@@ -736,7 +969,6 @@ final class VideoStudioModel {
         recipe.overlays.removeAll { $0.id == selectedOverlayID }
         self.selectedOverlayID = nil
         markEdited()
-        applyVideoTier()
     }
 
     /// Letterbox / pillarbox fill colour behind aspect-fitted frames. Rides the
@@ -765,7 +997,6 @@ final class VideoStudioModel {
         recipe.overlays.append(copy)
         selectOverlay(overlay.id)
         markEdited()
-        applyVideoTier()
     }
 
     /// Add an image sticker: the PNG is copied into the overlay-image cache and
@@ -780,7 +1011,6 @@ final class VideoStudioModel {
         recipe.overlays.append(TimedOverlay(overlay: overlay, start: max(0, currentTime)))
         selectOverlay(overlay.id)
         markEdited()
-        applyVideoTier()
     }
 
     func rememberFont(_ font: OverlayFontChoice) {
@@ -844,14 +1074,38 @@ final class VideoStudioModel {
         }
     }
 
-    private func reloadWaveform() {
-        waveformTask?.cancel()
-        musicWaveform = []
-        guard let music = recipe.music, let url = musicURL(for: music.source) else { return }
-        waveformTask = Task { [weak self] in
+    /// Decodes one track's waveform, reusing an earlier decode of the same file.
+    private func loadWaveform(for id: UUID) {
+        guard let music = recipe.musicTracks.first(where: { $0.id == id }),
+              let url = musicURL(for: music.source)
+        else { return }
+        if let cached = waveformsByURL[url.absoluteString] {
+            musicWaveforms[id] = cached
+            return
+        }
+        guard waveformTasks[id] == nil else { return }
+        waveformTasks[id] = Task { [weak self] in
             let samples = await VideoWaveform.samples(from: url, buckets: 400)
-            if Task.isCancelled { return }
-            self?.musicWaveform = samples
+            guard let self, !Task.isCancelled else { return }
+            waveformsByURL[url.absoluteString] = samples
+            musicWaveforms[id] = samples
+            waveformTasks[id] = nil
+        }
+    }
+
+    /// Re-syncs the waveform cache with the recipe — after an undo, say, where
+    /// tracks can come back or disappear wholesale.
+    private func reloadWaveforms() {
+        let liveIDs = Set(recipe.musicTracks.map(\.id))
+        for id in musicWaveforms.keys where !liveIDs.contains(id) {
+            musicWaveforms[id] = nil
+        }
+        for id in waveformTasks.keys where !liveIDs.contains(id) {
+            waveformTasks[id]?.cancel()
+            waveformTasks[id] = nil
+        }
+        for music in recipe.musicTracks where musicWaveforms[music.id] == nil {
+            loadWaveform(for: music.id)
         }
     }
 

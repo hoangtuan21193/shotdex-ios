@@ -134,7 +134,7 @@ struct LibraryScreen: View {
                 CompareScreen(photos: photos)
             }
         }
-        .fullScreenCover(item: $compressionPresentation) { presentation in
+        .fullScreenCover(item: $compressionPresentation, onDismiss: stopSelecting) { presentation in
             CompressionScreen(
                 assets: presentation.assets,
                 sourceAlbum: presentation.sourceAlbum
@@ -430,6 +430,7 @@ struct LibraryScreen: View {
             imageSelectionCount: selectedImageIDs(model).count,
             thumbnailIds: selectedIds,
             photoLibrary: photoLibrary,
+            libraryQueries: dependencies.libraryQueries,
             isDeleting: isDeleting,
             isPreparingShare: isPreparingShare,
             onShare: shareSelected,

@@ -15,14 +15,24 @@ struct VideoRenderRecipe: Sendable {
     let totalDuration: Double
     /// Letterbox / pillarbox fill behind aspect-fitted frames.
     let background: CIColor
+    /// Preview draws overlays with a live SwiftUI proxy on top of the player, so
+    /// the preview composition skips baking them (no per-edit rebuild, no ghosting
+    /// while a caption is dragged). Export has no proxy — it bakes them into pixels.
+    let bakesOverlays: Bool
 
-    init(recipe: VideoProjectRecipe, renderSize: CGSize, totalDuration: Double) {
+    init(
+        recipe: VideoProjectRecipe,
+        renderSize: CGSize,
+        totalDuration: Double,
+        bakesOverlays: Bool
+    ) {
         self.filter = recipe.filter
         self.filterIntensity = recipe.filterIntensity
         self.adjustments = recipe.adjustments
         self.overlays = recipe.overlays
         self.renderSize = renderSize
         self.totalDuration = totalDuration
+        self.bakesOverlays = bakesOverlays
         self.background = CIColor(
             red: recipe.background.red,
             green: recipe.background.green,
@@ -34,11 +44,10 @@ struct VideoRenderRecipe: Sendable {
         filter != .original || !adjustments.isIdentity || !overlays.isEmpty
     }
 
-    /// The overlays visible at `time`, in recipe order.
-    func activeOverlays(at time: Double) -> [PhotoOverlay] {
-        overlays
-            .filter { $0.isActive(at: time, total: totalDuration) }
-            .map(\.overlay)
+    /// The overlays visible at `time`, in recipe (z) order — with their timing, so
+    /// the compositor can evaluate each one's in/out animation.
+    func activeTimedOverlays(at time: Double) -> [TimedOverlay] {
+        overlays.filter { $0.isActive(at: time, total: totalDuration) }
     }
 }
 
@@ -195,10 +204,12 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
         .name: "ShotDex Video Compositor",
     ])
     private let overlayLock = NSLock()
-    /// Keyed by extent AND overlay content: the compositor instance outlives
-    /// `videoComposition` swaps (AVF creates it per player item / export
-    /// session), so an overlay edit must invalidate the cached layer.
-    private var overlayLayer: (extent: CGRect, overlays: [PhotoOverlay], image: CIImage)?
+    /// Each overlay rasterized alone and cached by its id, so the in/out animation
+    /// can transform and fade one caption without disturbing the others. Keyed on
+    /// extent and overlay content too: the compositor instance outlives
+    /// `videoComposition` swaps (AVF creates it per player item / export session),
+    /// so an overlay edit must invalidate its cached layer.
+    private var overlayLayers: [UUID: (extent: CGRect, overlay: PhotoOverlay, image: CIImage)] = [:]
 
     var sourcePixelBufferAttributes: [String: any Sendable]? {
         [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
@@ -277,9 +288,17 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
                 intensity: recipe.filterIntensity,
                 to: image
             )
-            let active = recipe.activeOverlays(at: seconds)
-            if let layer = cachedOverlayLayer(overlays: active, extent: canvas) {
-                image = layer.composited(over: image)
+            if recipe.bakesOverlays {
+                for timed in recipe.activeTimedOverlays(at: seconds) where timed.overlay.hasVisibleEffect {
+                    let anim = timed.animationTransform(at: seconds, total: recipe.totalDuration)
+                    guard anim.opacity > 0.001, anim.scale > 0.0001,
+                          let base = cachedSingleOverlayLayer(timed.overlay, extent: canvas)
+                    else { continue }
+                    let layer = animatedOverlay(
+                        base, transform: anim, center: timed.overlay.center, extent: canvas
+                    )
+                    image = layer.composited(over: image)
+                }
             }
             image = image.cropped(to: canvas)
         }
@@ -496,18 +515,51 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
         return instruction.stillStore.image(for: assetID)
     }
 
-    /// Rasterized once per build (extent never changes between frames) —
-    /// the exact reason `PhotoRenderService.overlayLayer` is exposed.
-    private func cachedOverlayLayer(overlays: [PhotoOverlay], extent: CGRect) -> CIImage? {
-        guard !overlays.isEmpty else { return nil }
+    /// One overlay rasterized alone on `extent`, cached by its id — extent never
+    /// changes between frames, so the Core Text pass runs once per caption per
+    /// build and every frame reuses the same layer (the reason
+    /// `PhotoRenderService.overlayLayer` is exposed).
+    private func cachedSingleOverlayLayer(_ overlay: PhotoOverlay, extent: CGRect) -> CIImage? {
         overlayLock.lock()
         defer { overlayLock.unlock() }
-        if let overlayLayer, overlayLayer.extent == extent, overlayLayer.overlays == overlays {
-            return overlayLayer.image
+        if let cached = overlayLayers[overlay.id],
+           cached.extent == extent, cached.overlay == overlay {
+            return cached.image
         }
-        guard let layer = PhotoRenderService.overlayLayer(overlays, extent: extent) else { return nil }
-        overlayLayer = (extent, overlays, layer)
+        guard let layer = PhotoRenderService.overlayLayer([overlay], extent: extent) else { return nil }
+        overlayLayers[overlay.id] = (extent, overlay, layer)
         return layer
+    }
+
+    /// Apply an in/out animation pose to a rasterized overlay: fade its alpha, then
+    /// scale it about its own centre and translate it, all in the render extent's
+    /// Core Image space (origin bottom-left, y upward).
+    private func animatedOverlay(
+        _ layer: CIImage,
+        transform: OverlayAnimationMath.Transform,
+        center: NormalizedPoint,
+        extent: CGRect
+    ) -> CIImage {
+        var image = layer
+        if transform.opacity < 0.999 {
+            image = image.applyingFilter("CIColorMatrix", parameters: [
+                "inputAVector": CIVector(x: 0, y: 0, z: 0, w: CGFloat(transform.opacity)),
+            ])
+        }
+        let isIdentityGeometry = transform.scale == 1
+            && transform.translation == .zero
+        guard !isIdentityGeometry else { return image }
+
+        // Overlay centre in CI space; recipe y runs downward, CI upward.
+        let cx = extent.minX + extent.width * center.x
+        let cy = extent.minY + extent.height * (1 - center.y)
+        // Screen-down translation is negative in CI's upward y.
+        let dx = transform.translation.width * extent.width
+        let dy = -transform.translation.height * extent.height
+        let affine = CGAffineTransform(translationX: cx + dx, y: cy + dy)
+            .scaledBy(x: CGFloat(transform.scale), y: CGFloat(transform.scale))
+            .translatedBy(x: -cx, y: -cy)
+        return image.transformed(by: affine)
     }
 }
 

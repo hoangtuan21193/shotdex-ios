@@ -25,11 +25,10 @@ enum EditorTheme {
     static let clipping = Color(red: 1, green: 0.271, blue: 0.227)
     static let maskRow = Color(white: 0.102)
     static var activeRow: Color { accent.opacity(0.1) }
-    /// Video Studio timeline selection colour (`#57BFD1`). Deliberately not the
-    /// app accent: a selected clip/band/overlay reads blue while the yellow
-    /// accent stays reserved for Export and active controls, so "selected" and
-    /// "on" never collide on the same screen.
-    static let timelineSelection = Color(red: 87 / 255, green: 191 / 255, blue: 209 / 255)
+    /// Video Studio selection colour. Aliased to the app accent so a selected
+    /// clip/band/overlay, the inspector badge, and the on-canvas selection all
+    /// read in the same amber as the rest of the app.
+    static var timelineSelection: Color { accent }
     /// Destructive glyph in the Video Studio inspector (`#FF6B5E`) — a warmer
     /// coral than the `clipping` red, matching the timeline spec.
     static let timelineDestructive = Color(red: 1, green: 0.42, blue: 0.369)

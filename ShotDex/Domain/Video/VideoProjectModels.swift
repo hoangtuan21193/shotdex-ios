@@ -171,6 +171,12 @@ struct TimedOverlay: Equatable, Sendable, Identifiable {
     var overlay: PhotoOverlay
     var start: Double = 0
     var duration: Double?
+    /// How the layer appears at the top of its window and disappears at the end.
+    /// The durations are the ramp lengths, clamped to the window at render time.
+    var animateIn: OverlayAnimation = .none
+    var animateOut: OverlayAnimation = .none
+    var inDuration: Double = 0.4
+    var outDuration: Double = 0.4
 
     var id: UUID { overlay.id }
 
@@ -179,6 +185,32 @@ struct TimedOverlay: Equatable, Sendable, Identifiable {
         let end = duration.map { start + $0 } ?? total
         return time >= start && time < end
     }
+
+    /// The animated deviation from the resting pose at `time` — identity outside
+    /// the in/out ramps. Shared by the export bake and the preview proxy.
+    func animationTransform(at time: Double, total: Double) -> OverlayAnimationMath.Transform {
+        let end = duration.map { start + $0 } ?? total
+        let window = max(0.01, end - start)
+        var transform = OverlayAnimationMath.Transform.identity
+        if animateIn != .none {
+            let ramp = min(inDuration, window)
+            if ramp > 0, time < start + ramp {
+                transform = transform.combined(
+                    with: OverlayAnimationMath.enter(animateIn, progress: (time - start) / ramp)
+                )
+            }
+        }
+        if animateOut != .none {
+            let ramp = min(outDuration, window)
+            let outStart = end - ramp
+            if ramp > 0, time > outStart {
+                transform = transform.combined(
+                    with: OverlayAnimationMath.exit(animateOut, progress: (time - outStart) / ramp)
+                )
+            }
+        }
+        return transform
+    }
 }
 
 enum MusicSource: Equatable, Sendable {
@@ -186,14 +218,46 @@ enum MusicSource: Equatable, Sendable {
     case imported(url: URL, displayName: String)
 }
 
-struct MusicSelection: Equatable, Sendable {
+/// One music bed on the timeline. A project can hold several, each with its own
+/// placement, trim and envelope; overlapping tracks stack into lanes below the
+/// video track and mix together at export.
+struct MusicTrack: Identifiable, Equatable, Sendable {
+    let id: UUID
     var source: MusicSource
+    /// Timeline second the trimmed audio begins at.
+    var start: Double = 0
+    /// Trim window in source seconds. `trimEnd` is nil until the source's
+    /// duration resolves at load, mirroring `VideoClip`.
+    var trimStart: Double = 0
+    var trimEnd: Double?
+    /// Resolved at load, not user state.
+    var sourceDuration: Double?
     var volume: Double = 1
     var fadeIn: Double = 2
     var fadeOut: Double = 2
-    /// When true the bed tiles to fill the whole video; when false it plays
-    /// once and stops.
-    var loops = true
+
+    init(source: MusicSource, id: UUID = UUID()) {
+        self.id = id
+        self.source = source
+    }
+
+    /// How long the track occupies the timeline, before the video's own end
+    /// clips it — that final clamp lives in `VideoTimelineMath.musicPlacement`.
+    var effectiveDuration: Double {
+        max(MusicTrack.minimumDuration, (trimEnd ?? sourceDuration ?? 0) - trimStart)
+    }
+
+    var end: Double { start + effectiveDuration }
+
+    var displayName: String {
+        switch source {
+        case let .imported(_, displayName): displayName
+        case let .bundled(id): id
+        }
+    }
+
+    static let minimumDuration: Double = 0.1
+    static let fadeRange: ClosedRange<Double> = 0...10
 }
 
 enum VideoRenderPreset: String, CaseIterable, Identifiable, Sendable {
@@ -231,7 +295,9 @@ struct VideoProjectRecipe: Equatable, Sendable {
     /// between `clips[i]` and `clips[i + 1]`. Kept sized via
     /// `syncTransitionsWithClips()` whenever clips are added or removed.
     var transitions: [VideoBoundaryTransition] = []
-    var music: MusicSelection?
+    /// Music beds, each independently placed and trimmed. Overlapping tracks
+    /// stack into lanes on the timeline and mix together at export.
+    var musicTracks: [MusicTrack] = []
     /// Global volume for the clips' own audio (music has its own).
     var videoVolume: Double = 1
     /// One look for the whole video (deliberately not per-clip).

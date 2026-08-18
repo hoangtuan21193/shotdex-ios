@@ -27,6 +27,8 @@ struct SelectionBarModel {
     /// Selected asset ids in pick order (drives the thumbnail tray).
     var thumbnailIds: [String]
     let photoLibrary: PhotoLibraryService
+    /// Reads indexed byte totals for the selection size caption.
+    let libraryQueries: LibraryQueries
     var isDeleting: Bool = false
     /// While gathering originals for the share sheet — the Share glyph swaps to
     /// a spinner.

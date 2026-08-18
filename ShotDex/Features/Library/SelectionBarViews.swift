@@ -257,13 +257,34 @@ private struct SelectionTrayThumbnail: View {
 struct SelectionCountCaption: View {
     let model: SelectionBarModel
 
+    /// Summed indexed bytes and how many of the selected ids had a known size —
+    /// `knownCount < selectionCount` prints the total as an estimate (`~`).
+    @State private var totalBytes: Int64 = 0
+    @State private var knownCount = 0
+
+    private static let byteFormatter: ByteCountFormatter = {
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        // "0 KB", not "Zero KB", while a selection is still un-indexed.
+        formatter.allowsNonnumericFormatting = false
+        return formatter
+    }()
+
     private var canCompare: Bool { model.onCompare != nil }
+
+    /// e.g. "24.5 MB" when every pick is indexed, "~24.5 MB" while some size is
+    /// still missing (or nothing indexed yet).
+    private var sizeText: String {
+        let formatted = Self.byteFormatter.string(fromByteCount: totalBytes)
+        return knownCount < model.selectionCount ? "~\(formatted)" : formatted
+    }
+
     private var countText: String {
         let count = model.selectionCount
         if canCompare, count <= CompareScreen.maxPhotoCount {
-            return "\(count) selected・select up to \(CompareScreen.maxPhotoCount) to compare"
+            return "\(count) selected・\(sizeText)・up to \(CompareScreen.maxPhotoCount) to compare"
         }
-        return "\(count) selected"
+        return "\(count) selected・\(sizeText)"
     }
 
     var body: some View {
@@ -271,10 +292,25 @@ struct SelectionCountCaption: View {
             .font(.footnote.weight(.medium))
             .monospacedDigit()
             .lineLimit(1)
+            .minimumScaleFactor(0.85)
             .foregroundStyle(.primary)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .selectionGlass(Capsule())
+            .task(id: model.thumbnailIds) { await recomputeSize() }
+    }
+
+    private func recomputeSize() async {
+        let ids = model.thumbnailIds
+        guard !ids.isEmpty else {
+            totalBytes = 0
+            knownCount = 0
+            return
+        }
+        if let result = try? await model.libraryQueries.fileSizeTotal(assetIds: ids) {
+            totalBytes = result.bytes
+            knownCount = result.knownCount
+        }
     }
 }
 
@@ -644,6 +680,7 @@ struct BottomScrim: View {
             imageSelectionCount: count,
             thumbnailIds: ids,
             photoLibrary: dependencies.photoLibrary,
+            libraryQueries: dependencies.libraryQueries,
             isDeleting: false,
             isPreparingShare: false,
             onShare: {},

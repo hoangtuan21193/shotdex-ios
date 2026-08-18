@@ -1,83 +1,81 @@
 import CoreGraphics
 
-/// Fixed geometry for the Turn-2 Video Studio, in points on the 393×852
-/// reference frame (Dynamic Island). The screen is a vertical stack of fixed
-/// bands; only the preview flexes. Everything here is read by the screen, the
-/// timeline, and the inspector so no view invents its own measurement.
+/// Fixed geometry for the Video Studio, in points on the 393×852 reference
+/// frame (Dynamic Island). The screen is a vertical stack of fixed bands; only
+/// the preview flexes. Everything here is read by the screen, the timeline, and
+/// the contextual sheets so no view invents its own measurement.
 ///
-/// Vertical map (spec §1):
-///   band 37 @ y11 · preview 221 · transport 44 · timeline 248 · panel 260.
+/// Vertical map: top band · preview (flex) · timeline 248 · toolbar 62.
+/// The timeline is a viewport: its lane content is taller than 248 whenever the
+/// overlay/music lanes stack up, and scrolls vertically inside it.
 enum VideoStudioMetrics {
     // MARK: Screen bands
 
-    static let commandBandHeight: CGFloat = 37
-    static let previewHeight: CGFloat = 221
-    static let transportHeight: CGFloat = 44
     static let timelineHeight: CGFloat = 248
-    static let panelHeight: CGFloat = 260
+    static let toolbarHeight: CGFloat = 62
+    /// Back · export estimate · Export pill. Always on screen.
+    static let bottomBarHeight: CGFloat = 50
+    /// Height of the contextual panel (selection + global tools), above the
+    /// device's bottom safe inset. It slides over the bars, never displaces them.
+    static let sheetHeight: CGFloat = 264
 
-    // MARK: Panel tiers (sum = 260)
+    // MARK: Sheet tiers
 
-    static let panelTitleHeight: CGFloat = 36
-    static let panelParamHeight: CGFloat = 102
-    static let panelCommandHeight: CGFloat = 62
-    static let panelExportHeight: CGFloat = 50
-    static let panelSafeAreaInset: CGFloat = 10
+    static let sheetTitleHeight: CGFloat = 36
+    static let sheetParamHeight: CGFloat = 112
+    static let sheetCommandHeight: CGFloat = 62
 
-    // MARK: Timeline verticals (sum = 248)
+    // MARK: Timeline verticals
 
     static let timelineTopPadding: CGFloat = 8
     static let rulerHeight: CGFloat = 26
     static let rulerToTracks: CGFloat = 3
-    static let trackSpacing: CGFloat = 3
+    static let laneSpacing: CGFloat = 3
     static let scrollbarHeight: CGFloat = 3
     static let timelineBottomPadding: CGFloat = 5
 
-    /// Track order top-to-bottom and their heights (spec §4.2 / §4.4).
-    enum Track: Int, CaseIterable {
-        case text, video, filter, music
+    // MARK: Lanes
 
-        var height: CGFloat {
-            switch self {
-            case .text: 40
-            case .video: 66
-            case .filter: 40
-            case .music: 48
-            }
-        }
+    /// Overlay lanes (text and stickers) stack above the video lane; music
+    /// lanes stack below it. Both grow with the number of lanes in use.
+    static let overlayLaneHeight: CGFloat = 34
+    static let videoLaneHeight: CGFloat = 66
+    static let musicLaneHeight: CGFloat = 40
 
-        var systemImage: String {
-            switch self {
-            case .text: "textformat"
-            case .video: "film"
-            case .filter: "camera.filters"  // two intersecting circles
-            case .music: "music.note"
-            }
-        }
+    /// Where the lane stack starts, below the pinned ruler.
+    static let laneAreaTop: CGFloat = 0
+
+    static func overlayLaneTop(_ lane: Int) -> CGFloat {
+        laneAreaTop + CGFloat(lane) * (overlayLaneHeight + laneSpacing)
     }
 
-    /// Y of a track's top edge from the timeline's top.
-    static func trackTop(_ track: Track) -> CGFloat {
-        var y = timelineTopPadding + rulerHeight + rulerToTracks
-        for candidate in Track.allCases {
-            if candidate == track { return y }
-            y += candidate.height + trackSpacing
-        }
-        return y
+    static func videoLaneTop(overlayLanes: Int) -> CGFloat {
+        overlayLaneTop(max(0, overlayLanes))
     }
 
-    /// Bottom edge of the last track (where the scrollbar rides).
-    static var trackAreaBottom: CGFloat {
-        trackTop(.music) + Track.music.height
+    static func musicLaneTop(_ lane: Int, overlayLanes: Int) -> CGFloat {
+        videoLaneTop(overlayLanes: overlayLanes)
+            + videoLaneHeight + laneSpacing
+            + CGFloat(lane) * (musicLaneHeight + laneSpacing)
+    }
+
+    /// Total scrollable height of the lane stack (excludes the pinned ruler).
+    static func laneContentHeight(overlayLanes: Int, musicLanes: Int) -> CGFloat {
+        musicLaneTop(max(0, musicLanes - 1), overlayLanes: overlayLanes)
+            + musicLaneHeight
+            + timelineBottomPadding
+    }
+
+    /// Height of the scrolling viewport under the pinned ruler.
+    static var laneViewportHeight: CGFloat {
+        timelineHeight - timelineTopPadding - rulerHeight - rulerToTracks - scrollbarHeight - 2
     }
 
     // MARK: Timeline horizontals
 
     /// The fixed left icon column; the scrolling content starts after it.
-    static let gutterWidth: CGFloat = 38
-    /// Playhead's absolute x on the 393-wide reference frame (spec §4.1).
-    /// At runtime the screen recomputes it as `gutterWidth + rowAreaWidth / 2`.
-    static let referencePlayheadX: CGFloat = 215.5
+    static let gutterWidth: CGFloat = 30
+    static let gutterIconSize: CGFloat = 20
 
     /// x of the fixed playhead for a given screen width: centre of the row area.
     static func playheadX(screenWidth: CGFloat) -> CGFloat {
@@ -99,7 +97,6 @@ enum VideoStudioMetrics {
 
     static let trackRadius: CGFloat = 6
     static let commandCellRadius: CGFloat = 10
-    static let exportPillRadius: CGFloat = 19
 
     static let clipCellHeight: CGFloat = 54
     static let chipBandHeight: CGFloat = 28
@@ -107,7 +104,6 @@ enum VideoStudioMetrics {
     /// Extended hit target for the 28pt chip bands (spec §8: ≥44).
     static let bandHitInset: CGFloat = -8
 
-    static let gutterIconSize: CGFloat = 18
     static let commandCellWidth: CGFloat = 52
     static let commandCellHeight: CGFloat = 54
     static let inspectorTitleButton: CGFloat = 30

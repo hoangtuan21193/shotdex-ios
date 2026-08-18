@@ -19,9 +19,13 @@ struct TimelineDragZone: Equatable {
         case clipLeadingHandle(UUID)
         case clipTrailingHandle(UUID)
         case clipReorder(UUID)
-        case textBody(UUID)
-        case textLeadingHandle(UUID)
-        case textTrailingHandle(UUID)
+        /// Text and sticker overlays share these — both are `TimedOverlay`.
+        case overlayBody(UUID)
+        case overlayLeadingHandle(UUID)
+        case overlayTrailingHandle(UUID)
+        case musicBody(UUID)
+        case musicLeadingHandle(UUID)
+        case musicTrailingHandle(UUID)
 
         /// Reorder rides a long-press so a plain drag over a selected clip
         /// still scrubs; the handle/body zones block the scroll pan instead.
@@ -54,12 +58,17 @@ enum TimelineZoneDragPhase {
 /// programmatic writes are flagged so the delegate echo is ignored.
 struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
     var contentWidth: CGFloat
+    /// Height of the lane stack. Taller than the viewport once the overlay or
+    /// music lanes stack up, which is what makes the timeline scroll vertically.
+    var contentHeight: CGFloat
     var currentTime: Double
     var pps: CGFloat
     var dragZones: [TimelineDragZone]
     var onScrubStart: () -> Void
     var onScrubTime: (Double) -> Void
     var onScrubEnd: (Double) -> Void
+    /// Vertical scroll position, so the sibling icon gutter tracks the lanes.
+    var onVerticalOffset: (CGFloat) -> Void
     var onPinch: (TimelinePinchPhase) -> Void
     var onZoneDrag: (TimelineDragZone.Kind, TimelineZoneDragPhase) -> Void
     @ViewBuilder var content: () -> Content
@@ -73,6 +82,9 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
         scrollView.contentInsetAdjustmentBehavior = .never
         scrollView.alwaysBounceHorizontal = true
         scrollView.alwaysBounceVertical = false
+        // Scrubbing is horizontal and lane-reveal is vertical; the lock keeps a
+        // diagonal drag from doing both at once.
+        scrollView.isDirectionalLockEnabled = true
         scrollView.decelerationRate = .fast
         scrollView.scrollsToTop = false
         scrollView.delaysContentTouches = false
@@ -84,13 +96,16 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
         host.view.translatesAutoresizingMaskIntoConstraints = false
         scrollView.addSubview(host.view)
         let widthConstraint = host.view.widthAnchor.constraint(equalToConstant: max(contentWidth, 1))
+        // The height is a constant, not a pin to the frame: pinning would cap the
+        // content at the viewport and extra lanes would clip instead of scroll.
+        let heightConstraint = host.view.heightAnchor.constraint(equalToConstant: max(contentHeight, 1))
         NSLayoutConstraint.activate([
             host.view.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
             host.view.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
             host.view.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
             host.view.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
-            host.view.heightAnchor.constraint(equalTo: scrollView.frameLayoutGuide.heightAnchor),
             widthConstraint,
+            heightConstraint,
         ])
 
         let pinch = UIPinchGestureRecognizer(
@@ -121,9 +136,11 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
 
         context.coordinator.host = host
         context.coordinator.widthConstraint = widthConstraint
+        context.coordinator.heightConstraint = heightConstraint
         scrollView.hostView = host.view
         scrollView.onLayout = { [weak coordinator = context.coordinator, weak scrollView] in
             guard let coordinator, let scrollView else { return }
+            coordinator.applyContentHeight(scrollView)
             coordinator.syncOffsetIfIdle(scrollView)
         }
         return scrollView
@@ -137,6 +154,7 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
            abs(constraint.constant - max(contentWidth, 1)) > 0.5 {
             constraint.constant = max(contentWidth, 1)
         }
+        coordinator.applyContentHeight(scrollView)
         scrollView.dragZones = dragZones
         coordinator.syncOffsetIfIdle(scrollView)
     }
@@ -181,10 +199,12 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
         var parent: VideoTimelineScroller
         var host: UIHostingController<AnyView>?
         var widthConstraint: NSLayoutConstraint?
+        var heightConstraint: NSLayoutConstraint?
         var zonePan: UIPanGestureRecognizer?
         var reorderPress: UILongPressGestureRecognizer?
 
         private var isProgrammaticScroll = false
+        private var lastVerticalOffset: CGFloat = 0
         private(set) var isPinching = false
         private var pinchAnchorTime: Double = 0
         private var activeZone: TimelineDragZone?
@@ -204,6 +224,15 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
 
         private func offsetX(forTime time: Double, in scrollView: UIScrollView) -> CGFloat {
             CGFloat(time) * parent.pps - scrollView.contentInset.left
+        }
+
+        /// Lane content never shrinks below the viewport, so a short project
+        /// doesn't leave the lanes floating over empty scrollable space.
+        func applyContentHeight(_ scrollView: UIScrollView) {
+            guard let heightConstraint else { return }
+            let target = max(parent.contentHeight, scrollView.bounds.height, 1)
+            guard abs(heightConstraint.constant - target) > 0.5 else { return }
+            heightConstraint.constant = target
         }
 
         func syncOffsetIfIdle(_ scrollView: UIScrollView) {
@@ -227,6 +256,11 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
         }
 
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
+            // The gutter follows the lanes on every scroll, programmatic or not.
+            if abs(lastVerticalOffset - scrollView.contentOffset.y) > 0.5 {
+                lastVerticalOffset = scrollView.contentOffset.y
+                parent.onVerticalOffset(scrollView.contentOffset.y)
+            }
             guard !isProgrammaticScroll, !isPinching, isUserDriven(scrollView) else { return }
             parent.onScrubTime(time(at: scrollView.contentOffset.x, in: scrollView))
         }

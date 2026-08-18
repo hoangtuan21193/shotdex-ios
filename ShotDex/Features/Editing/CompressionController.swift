@@ -23,6 +23,9 @@ final class CompressionController {
     var quality = 0.8
     var format: PhotoOutputFormat = .preserve
     var includeMetadata = true
+    /// Delete each source photo once its compressed copy is saved. On by default
+    /// — compressing is normally a replace, not a duplicate.
+    var deleteOriginals = true
     var cropAnchor = NormalizedPoint.center
     var previewImage: UIImage?
 
@@ -30,13 +33,17 @@ final class CompressionController {
     private(set) var isLoading = true
     private(set) var isEstimating = false
     private(set) var isExporting = false
+    private(set) var isDeletingOriginals = false
     private(set) var processedCount = 0
     private(set) var createdAssetIDs: [String] = []
+    private(set) var compressedOriginalIDs: [String] = []
+    private(set) var deletedOriginalCount = 0
     private(set) var fallbackToJPEGCount = 0
     private(set) var failures: [CompressionFailure] = []
     private(set) var didFinish = false
     private(set) var wasCancelled = false
     private(set) var rollbackErrorMessage: String?
+    private(set) var deleteOriginalsErrorMessage: String?
     private(set) var errorMessage: String?
 
     @ObservationIgnored private var previewTask: Task<Void, Never>?
@@ -71,6 +78,17 @@ final class CompressionController {
             includeMetadata: includeMetadata,
             cropAnchor: assets.count > 1 ? .center : cropAnchor
         )
+    }
+
+    /// A finished batch worth no summary: everything saved, nothing to report.
+    /// The screen dismisses straight through instead of showing an empty receipt.
+    var finishedCleanly: Bool {
+        didFinish
+            && !wasCancelled
+            && failures.isEmpty
+            && fallbackToJPEGCount == 0
+            && rollbackErrorMessage == nil
+            && deleteOriginalsErrorMessage == nil
     }
 
     var progressFraction: Double {
@@ -158,13 +176,17 @@ final class CompressionController {
     func startExport() {
         guard !isExporting else { return }
         isExporting = true
+        isDeletingOriginals = false
         didFinish = false
         wasCancelled = false
         processedCount = 0
         createdAssetIDs = []
+        compressedOriginalIDs = []
+        deletedOriginalCount = 0
         fallbackToJPEGCount = 0
         failures = []
         rollbackErrorMessage = nil
+        deleteOriginalsErrorMessage = nil
 
         exportTask = Task { [weak self] in
             guard let self else { return }
@@ -178,6 +200,7 @@ final class CompressionController {
                         cropAnchor: self.assets.count > 1 ? .center : self.cropAnchor
                     )
                     self.createdAssetIDs.append(result.assetID)
+                    self.compressedOriginalIDs.append(asset.localIdentifier)
                     if result.fellBackToJPEG {
                         self.fallbackToJPEGCount += 1
                     }
@@ -195,6 +218,7 @@ final class CompressionController {
             if Task.isCancelled || self.wasCancelled {
                 await self.removeCreatedAssetsAfterCancellation()
             } else {
+                await self.deleteOriginalsIfRequested()
                 self.isExporting = false
                 self.didFinish = true
             }
@@ -244,6 +268,22 @@ final class CompressionController {
             )
         } catch {
             estimatedBytes = nil
+        }
+    }
+
+    /// After a successful batch, delete the source photos whose compressed copy
+    /// was saved. Only runs when `deleteOriginals` is on. Photos shows its own
+    /// system confirmation; deletions land in Recently Deleted. A failure here is
+    /// non-fatal — the compressed copies are already saved.
+    private func deleteOriginalsIfRequested() async {
+        guard deleteOriginals, !compressedOriginalIDs.isEmpty else { return }
+        isDeletingOriginals = true
+        defer { isDeletingOriginals = false }
+        do {
+            try await service.deleteAssets(ids: compressedOriginalIDs)
+            deletedOriginalCount = compressedOriginalIDs.count
+        } catch {
+            deleteOriginalsErrorMessage = error.localizedDescription
         }
     }
 

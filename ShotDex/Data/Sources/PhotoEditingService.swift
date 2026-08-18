@@ -412,6 +412,14 @@ final class PhotoEditingService {
     }
 
     func deleteCreatedAssets(ids: [String]) async throws {
+        try await deleteAssets(ids: ids)
+    }
+
+    /// Deletes library assets by identifier. Photos shows its own system
+    /// confirmation before removing user originals; deletions land in Recently
+    /// Deleted, not permanent. Used both for cancellation rollback of exported
+    /// copies and for removing originals after a successful compress.
+    func deleteAssets(ids: [String]) async throws {
         guard !ids.isEmpty else { return }
         let fetch = PHAsset.fetchAssets(withLocalIdentifiers: ids, options: nil)
         var assets: [PHAsset] = []

@@ -93,8 +93,38 @@
         }
       }
     },
+    "%@, from second %lld to %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, from second %2$lld to %3$lld"
+          }
+        }
+      }
+    },
     "%lld" : {
 
+    },
+    "%lld / %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld / %2$lld"
+          }
+        }
+      }
+    },
+    "%lld %@ deleted" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld %2$@ deleted"
+          }
+        }
+      }
     },
     "%lld failed" : {
 
@@ -218,10 +248,16 @@
     "Add to Collection" : {
 
     },
+    "Add Track" : {
+
+    },
     "Added to the Collages smart album" : {
 
     },
     "Adding image…" : {
+
+    },
+    "Adjust" : {
 
     },
     "Adjust the filter or turn off Hide RAW." : {
@@ -234,6 +270,9 @@
 
     },
     "Album Name" : {
+
+    },
+    "Align" : {
 
     },
     "All" : {
@@ -267,9 +306,6 @@
 
     },
     "Armed" : {
-
-    },
-    "Audio" : {
 
     },
     "Back" : {
@@ -553,6 +589,9 @@
     "Delete Mask" : {
 
     },
+    "Delete Originals" : {
+
+    },
     "Delete Point" : {
 
     },
@@ -642,10 +681,10 @@
     "Edit Smart Album" : {
 
     },
-    "Editor Error" : {
+    "Edit text full screen" : {
 
     },
-    "Effects" : {
+    "Editor Error" : {
 
     },
     "Empty slot, double tap to choose a photo" : {
@@ -675,6 +714,9 @@
     "Exporting…" : {
 
     },
+    "Fade" : {
+
+    },
     "Fade Black" : {
 
     },
@@ -700,9 +742,6 @@
 
     },
     "Filter" : {
-
-    },
-    "Filter track" : {
 
     },
     "Filters" : {
@@ -824,6 +863,9 @@
         }
       }
     },
+    "In" : {
+
+    },
     "Include Metadata" : {
 
     },
@@ -924,15 +966,6 @@
     "Loop" : {
 
     },
-    "Loop Off" : {
-
-    },
-    "Loop On" : {
-
-    },
-    "Loops" : {
-
-    },
     "Low Power Mode is slowing indexing down" : {
 
     },
@@ -996,11 +1029,15 @@
     "Music" : {
 
     },
-    "Music track" : {
-
-    },
-    "Music, %@" : {
-
+    "Music, %@, from second %lld to %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Music, %1$@, from second %2$lld to %3$lld"
+          }
+        }
+      }
     },
     "Mute" : {
 
@@ -1178,10 +1215,13 @@
     "Or drop on another photo to swap" : {
 
     },
-    "Output" : {
+    "Originals couldn't be deleted" : {
 
     },
-    "Overlay" : {
+    "Out" : {
+
+    },
+    "Output" : {
 
     },
     "Pan Left" : {
@@ -1253,9 +1293,6 @@
     "Playback Speed" : {
 
     },
-    "Plays once" : {
-
-    },
     "Plug in your camera's SD card or a USB drive, then pick its folder (usually DCIM). RAW is skipped by default; JPEG, HEIC and videos import." : {
 
     },
@@ -1266,6 +1303,9 @@
 
     },
     "Polaroid style" : {
+
+    },
+    "Pop" : {
 
     },
     "Preparing clips…" : {
@@ -1291,16 +1331,6 @@
     },
     "Privacy" : {
 
-    },
-    "Processing %lld of %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Processing %1$lld of %2$lld"
-          }
-        }
-      }
     },
     "Project" : {
 
@@ -1612,10 +1642,22 @@
     "Size" : {
 
     },
+    "Slide down" : {
+
+    },
+    "Slide left" : {
+
+    },
     "Slide Left" : {
 
     },
+    "Slide right" : {
+
+    },
     "Slide Right" : {
+
+    },
+    "Slide up" : {
 
     },
     "Smart Album Name" : {
@@ -1639,9 +1681,6 @@
     "Source" : {
 
     },
-    "Speed" : {
-
-    },
     "Split" : {
 
     },
@@ -1658,6 +1697,9 @@
 
     },
     "Subtract" : {
+
+    },
+    "System" : {
 
     },
     "Tab bar" : {
@@ -1677,19 +1719,6 @@
     },
     "Text" : {
 
-    },
-    "Text track" : {
-
-    },
-    "Text, %@, from second %lld to %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Text, %1$@, from second %2$lld to %3$lld"
-          }
-        }
-      }
     },
     "The accent color tints buttons, selections and highlights throughout ShotDex, including the photo editor. Amber and Sand are the colors of the app icon; iOS Default is the system blue." : {
 
@@ -1794,10 +1823,10 @@
     "Video progress" : {
 
     },
-    "Video track" : {
+    "Vignette Pulse" : {
 
     },
-    "Vignette Pulse" : {
+    "Volume" : {
 
     },
     "White" : {

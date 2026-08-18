@@ -1,4 +1,5 @@
 import AVFoundation
+import ImageIO
 import Photos
 import SwiftUI
 import UniformTypeIdentifiers
@@ -12,10 +13,10 @@ struct VideoStudioPresentation: Identifiable {
     let mode: VideoStudioMode
 }
 
-/// Full-screen video editor (Turn 2): a floating command band over the Dynamic
-/// Island, the preview, a transport bar, the multi-track timeline with a fixed
-/// centre playhead, and a 260pt inspector that reskins per selected object —
-/// never a sheet.
+/// Full-screen video editor: a floating command band over the Dynamic Island
+/// (undo/redo, timecode, back, export), the preview, the multi-lane timeline
+/// with a fixed centre playhead, and a tool row. Editing controls live in one
+/// contextual bottom sheet that reskins for whatever is selected.
 struct VideoStudioScreen: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppDependencies.self) private var dependencies
@@ -29,10 +30,14 @@ struct VideoStudioScreen: View {
     @State private var isExportSheetPresented = false
     @State private var isMusicImporterPresented = false
     @State private var isFontPickerPresented = false
-    @State private var isMusicChooserPresented = false
+    @State private var musicChooserIntent: MusicChooserIntent?
     @State private var isStickerPickerPresented = false
     @State private var mediaPickerMode: MediaPickerMode?
     @State private var editingOverlay: PhotoOverlay?
+    /// The caption just created by Add Text — cancelling its first edit removes
+    /// it again instead of leaving an empty layer behind.
+    @State private var newOverlayID: UUID?
+    @State private var stickerImages: [UUID: CGImage] = [:]
     @StateObject private var importedMusic = ImportedMusicStore()
 
     private enum MediaPickerMode: Identifiable {
@@ -94,10 +99,15 @@ struct VideoStudioScreen: View {
                 VideoExportSheet(model: model).presentationDetents([.height(300)])
             }
         }
-        .sheet(isPresented: $isMusicChooserPresented) {
+        .sheet(item: $musicChooserIntent) { intent in
             if let model {
-                VideoMusicChooserSheet(model: model, importedMusic: importedMusic, onImport: { isMusicImporterPresented = true })
-                    .presentationDetents([.medium, .large])
+                VideoMusicChooserSheet(
+                    model: model,
+                    intent: intent,
+                    importedMusic: importedMusic,
+                    onImport: { isMusicImporterPresented = true }
+                )
+                .presentationDetents([.medium, .large])
             }
         }
         .sheet(isPresented: $isFontPickerPresented) {
@@ -129,10 +139,9 @@ struct VideoStudioScreen: View {
         .fileImporter(isPresented: $isMusicImporterPresented, allowedContentTypes: [.audio]) { result in
             guard case .success(let url) = result, let model else { return }
             do {
-                // Persist for reuse in later sessions, then select it.
+                // Persist for reuse in later sessions, then add it as a track.
                 let track = try importedMusic.add(from: url)
-                model.setMusic(MusicSelection(source: .imported(url: track.url, displayName: track.displayName)))
-                model.selectMusic()
+                model.addMusicTrack(source: .imported(url: track.url, displayName: track.displayName))
             } catch {
                 model.errorMessage = error.localizedDescription
             }
@@ -142,9 +151,32 @@ struct VideoStudioScreen: View {
                 initialText: overlay.text,
                 tokens: .empty,
                 alignment: overlay.alignment,
-                onCommit: { text in model?.updateSelectedOverlay { $0.text = text }; editingOverlay = nil },
-                onCancel: { editingOverlay = nil }
+                onCommit: { text in finishTextEditing(overlay, text: text) },
+                onCancel: { finishTextEditing(overlay, text: nil) }
             )
+        }
+    }
+
+    /// Adds a caption and drops straight into the keyboard — an overlay reading
+    /// "Text" is never the goal.
+    private func addTextOverlay(_ model: VideoStudioModel) {
+        let overlay = model.addTextOverlay("", at: model.currentTime)
+        newOverlayID = overlay.id
+        editingOverlay = overlay
+    }
+
+    /// Commits (or abandons) the inline editor. A caption that never got any
+    /// text is removed rather than left as an invisible empty layer.
+    private func finishTextEditing(_ overlay: PhotoOverlay, text: String?) {
+        defer { editingOverlay = nil; newOverlayID = nil }
+        guard let model else { return }
+        if let text {
+            model.updateSelectedOverlay { $0.text = text }
+            if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                model.deleteSelectedOverlay()
+            }
+        } else if newOverlayID == overlay.id {
+            model.deleteSelectedOverlay()
         }
     }
 
@@ -164,25 +196,74 @@ struct VideoStudioScreen: View {
             // inset (≈59 on Face-ID iPhones) so its 11pt-inset row lands level with
             // the island and the preview starts below it — mirrors the photo editor.
             let bandHeight = max(EditorLayoutMetrics.editorTopBandHeight, proxy.safeAreaInsets.top)
-            VStack(spacing: 0) {
-                VideoStudioTopBand(model: model)
-                    .frame(height: bandHeight, alignment: .top)
-                preview(model).frame(maxHeight: .infinity)  // fills the space freed by the removed transport bar
-                Color.clear.frame(height: 8)   // preview → timeline gap
-                VideoTimelineView(
-                    model: model,
-                    onAddText: { model.addTextOverlay(String(localized: "Text"), at: model.currentTime) },
-                    onAddFilter: { model.showNoneTool(.filters) },
-                    onAddMusic: { isMusicChooserPresented = true },
-                    onAddMedia: { mediaPickerMode = .add },
-                    onEditText: { editingOverlay = $0 },
-                    onTransition: { model.editingTransitionIndex = $0 }
-                )
-                VideoInspectorPanel(model: model, actions: actions(model))
+            let panelHeight = VideoStudioMetrics.sheetHeight + proxy.safeAreaInsets.bottom
+            ZStack(alignment: .bottom) {
+                VStack(spacing: 0) {
+                    VideoStudioTopBand(model: model)
+                        .frame(height: bandHeight, alignment: .top)
+                    preview(model).frame(maxHeight: .infinity)
+                    Color.clear.frame(height: 8)   // preview → timeline gap
+                    VideoTimelineView(
+                        model: model,
+                        onAddOverlay: { addTextOverlay(model) },
+                        onAddMusic: { musicChooserIntent = .add },
+                        onAddMedia: { mediaPickerMode = .add },
+                        onEditText: { editingOverlay = $0 },
+                        onTransition: { model.editingTransitionIndex = $0 }
+                    )
+                    VideoStudioToolbar(model: model, actions: actions(model))
+                    VideoStudioBottomBar(model: model, actions: actions(model))
+                    Color.clear.frame(height: proxy.safeAreaInsets.bottom)
+                }
+
+                // The panel slides over the bars; the layout underneath never
+                // moves, so the timeline stays exactly where the user left it.
+                if model.presentsSheet {
+                    contextPanel(model, height: panelHeight)
+                        .transition(.move(edge: .bottom))
+                }
             }
+            .animation(EditorTheme.animation, value: model.presentsSheet)
             .ignoresSafeArea(.container, edges: [.top, .bottom])
             .ignoresSafeArea(.keyboard, edges: .bottom)
         }
+    }
+
+    /// The contextual editing panel. It looks and behaves like a bottom sheet —
+    /// grabber, rounded top, drag down to dismiss — but is drawn in-screen rather
+    /// than presented: the studio's pickers (font, media, music, sticker) are
+    /// system sheets fired from here, and UIKit cannot present a sheet from a view
+    /// that is already presenting one. It slides *over* the tool row and the
+    /// bottom bar; nothing underneath is displaced.
+    private func contextPanel(_ model: VideoStudioModel, height: CGFloat) -> some View {
+        VStack(spacing: 0) {
+            Capsule()
+                .fill(Color.white.opacity(0.22))
+                .frame(width: 36, height: 5)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 8)
+                        .onEnded { if $0.translation.height > 40 { model.clearSelection() } }
+                )
+            VideoStudioSheetHost(model: model, actions: actions(model))
+        }
+        .frame(height: height, alignment: .top)
+        .background(EditorTheme.panelSolid)
+        .clipShape(UnevenRoundedRectangle(
+            cornerRadii: .init(topLeading: AppTheme.Radius.lg, topTrailing: AppTheme.Radius.lg),
+            style: .continuous
+        ))
+        .overlay(alignment: .top) {
+            UnevenRoundedRectangle(
+                cornerRadii: .init(topLeading: AppTheme.Radius.lg, topTrailing: AppTheme.Radius.lg),
+                style: .continuous
+            )
+            .strokeBorder(EditorTheme.panelTopHairline, lineWidth: 1)
+        }
+        // Reads as a layer above the timeline rather than part of the stack.
+        .shadow(color: .black.opacity(0.45), radius: 14, y: -2)
     }
 
     private func actions(_ model: VideoStudioModel) -> VideoInspectorActions {
@@ -191,8 +272,10 @@ struct VideoStudioScreen: View {
             onBack: { if model.hasEdits { isDiscardConfirmationPresented = true } else { dismiss() } },
             onAddMedia: { mediaPickerMode = .add },
             onReplaceClip: { mediaPickerMode = .replace },
+            onAddText: { addTextOverlay(model) },
             onAddSticker: { isStickerPickerPresented = true },
-            onChooseMusic: { isMusicChooserPresented = true },
+            onAddMusic: { musicChooserIntent = .add },
+            onReplaceMusic: { musicChooserIntent = .replace($0) },
             onEditText: { editingOverlay = $0 },
             onPickFont: { isFontPickerPresented = true }
         )
@@ -203,6 +286,20 @@ struct VideoStudioScreen: View {
             Color.black
             if let player = model.player {
                 VideoPlayerLayerView(player: player)
+            }
+            // Text and sticker overlays, drawn and manipulated live on top of the
+            // player (the preview composition does not bake them). `contentRect` is
+            // the aspect-fitted video rect the overlays' normalized centres map into.
+            GeometryReader { geo in
+                let contentRect = VideoGeometry.stillFitRect(
+                    imageSize: model.recipe.canvasSize(),
+                    renderSize: geo.size
+                )
+                VideoOverlayCanvas(
+                    model: model,
+                    contentRect: contentRect,
+                    images: stickerImages
+                )
             }
             if !model.isPlaying {
                 Button { model.togglePlayback() } label: {
@@ -220,6 +317,24 @@ struct VideoStudioScreen: View {
         .frame(maxWidth: .infinity)
         .contentShape(Rectangle())
         .onTapGesture { if model.isPlaying { model.togglePlayback() } }
+        .onAppear { loadStickerImages(model) }
+        .onChange(of: model.recipe.overlays) { loadStickerImages(model) }
+    }
+
+    /// Decode the sticker PNGs the preview proxy draws — off the render path, keyed
+    /// by `imageID`, refreshed whenever the overlay set changes.
+    private func loadStickerImages(_ model: VideoStudioModel) {
+        var map: [UUID: CGImage] = [:]
+        for timed in model.recipe.overlays {
+            guard timed.overlay.kind == .image, let id = timed.overlay.imageID else { continue }
+            if let existing = stickerImages[id] { map[id] = existing; continue }
+            guard let data = try? Data(contentsOf: model.overlayImages.url(for: id)),
+                  let source = CGImageSourceCreateWithData(data as CFData, nil),
+                  let image = CGImageSourceCreateImageAtIndex(source, 0, nil)
+            else { continue }
+            map[id] = image
+        }
+        stickerImages = map
     }
 
     @ViewBuilder
@@ -273,10 +388,26 @@ private extension Array {
     }
 }
 
-/// A compact bundled-music chooser (tier D). Not a titled "sheet-panel" in the
-/// timeline sense — it is the picker for choosing which bed to use.
+/// Whether the music chooser adds a new bed or swaps the audio behind one that
+/// is already on the timeline.
+enum MusicChooserIntent: Identifiable {
+    case add
+    case replace(UUID)
+
+    var id: String {
+        switch self {
+        case .add: "add"
+        case .replace(let id): id.uuidString
+        }
+    }
+}
+
+/// The picker for choosing which bed to add (or what to swap an existing bed
+/// for). Music itself is multi-track, so this never "deselects" — removing a
+/// bed is the timeline's job.
 struct VideoMusicChooserSheet: View {
     @Bindable var model: VideoStudioModel
+    let intent: MusicChooserIntent
     @ObservedObject var importedMusic: ImportedMusicStore
     let onImport: () -> Void
     @Environment(\.dismiss) private var dismiss
@@ -288,13 +419,9 @@ struct VideoMusicChooserSheet: View {
             Text("Music").font(EditorTheme.panelTitle).foregroundStyle(.white).padding(.top, 20)
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 8, pinnedViews: [.sectionHeaders]) {
-                    // Add-your-own sits at the top (accent), then the silence
-                    // option, then the user's reusable imports. No bundled beds.
+                    // Add-your-own sits at the top (accent), then the user's
+                    // reusable imports. No bundled beds.
                     importRow
-                    trackRow(
-                        title: String(localized: "None"), systemImage: "speaker.slash",
-                        selected: model.recipe.music == nil, trackID: nil, previewURL: nil
-                    ) { model.setMusic(nil); dismiss() }
 
                     if importedMusic.tracks.isEmpty {
                         emptyState
@@ -303,15 +430,16 @@ struct VideoMusicChooserSheet: View {
                             ForEach(importedMusic.tracks) { track in
                                 trackRow(
                                     title: track.displayName, systemImage: "music.note",
-                                    selected: isImportedSelected(track.url), trackID: track.id, previewURL: track.url,
-                                    onDelete: {
-                                        if isImportedSelected(track.url) { model.setMusic(nil) }
-                                        preview.stop(); importedMusic.delete(track)
-                                    }
+                                    selected: isInUse(track.url), trackID: track.id, previewURL: track.url,
+                                    onDelete: { preview.stop(); importedMusic.delete(track) }
                                 ) {
                                     preview.stop()
-                                    model.setMusic(MusicSelection(source: .imported(url: track.url, displayName: track.displayName)))
-                                    model.selectMusic(); dismiss()
+                                    let source = MusicSource.imported(url: track.url, displayName: track.displayName)
+                                    switch intent {
+                                    case .add: model.addMusicTrack(source: source)
+                                    case .replace(let id): model.replaceMusicTrack(id, source: source)
+                                    }
+                                    dismiss()
                                 }
                             }
                         } header: { sectionHeader(String(localized: "My Music")) }
@@ -364,9 +492,13 @@ struct VideoMusicChooserSheet: View {
             .background(EditorTheme.panelSolid)
     }
 
-    private func isImportedSelected(_ url: URL) -> Bool {
-        if case .imported(let selected, _)? = model.recipe.music?.source { return selected == url }
-        return false
+    /// Whether any bed on the timeline already plays this file — a checkmark,
+    /// not an exclusive selection (the same file can be used more than once).
+    private func isInUse(_ url: URL) -> Bool {
+        model.recipe.musicTracks.contains { music in
+            if case .imported(let used, _) = music.source { return used == url }
+            return false
+        }
     }
 
     /// A track row: tap the row to pick it, tap the leading disc to audition

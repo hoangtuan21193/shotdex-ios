@@ -4,7 +4,8 @@ import SwiftUI
 
 /// The band over the Dynamic Island, mirroring the photo editor's: Undo · Redo
 /// on the leading edge; a running playback timecode on the trailing edge.
-/// Every control is a 34pt dark-glass circle.
+/// Every control is a 34pt dark-glass circle. Back and Export live on the
+/// bottom bar, where they have always been.
 struct VideoStudioTopBand: View {
     @Bindable var model: VideoStudioModel
 
@@ -91,7 +92,7 @@ struct VideoCommandBand: View {
             }
             .padding(.horizontal, 14)
         }
-        .frame(height: VideoStudioMetrics.panelCommandHeight)
+        .frame(height: VideoStudioMetrics.sheetCommandHeight)
         .overlay(alignment: .trailing) {
             LinearGradient(
                 colors: [EditorTheme.panelSolid.opacity(0), EditorTheme.panelSolid],

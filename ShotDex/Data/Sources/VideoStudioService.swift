@@ -192,32 +192,51 @@ final class VideoStudioService {
         return try await loadBlankClip()
     }
 
-    /// The bundled or imported music behind a selection, with its audio track
-    /// and duration loaded for the builder.
+    /// Audio tracks for the project's music beds, keyed by `MusicTrack.id`.
     ///
-    /// The `asset` is returned alongside the track deliberately: `AVAssetTrack`
-    /// does not retain its `AVAsset`, and `insertTimeRange(of:)` fails with
-    /// AVError -11800 / -12780 if the source asset has been released. The caller
-    /// must keep this asset alive across the `VideoCompositionBuilder.build`
-    /// call (unlike clip sources, which live in the session's `sources` dict).
-    func loadMusic(_ selection: MusicSelection?) async -> (asset: AVURLAsset, track: AVAssetTrack, duration: Double)? {
-        guard let selection else { return nil }
-        let url: URL?
-        switch selection.source {
-        case .bundled(let id):
-            url = MusicTrackCatalog.track(id: id)?.url
-        case .imported(let importedURL, _):
-            url = importedURL
+    /// `assets` is carried alongside deliberately: `AVAssetTrack` does not retain
+    /// its `AVAsset`, and `insertTimeRange(of:)` fails with AVError -11800 /
+    /// -12780 if the source asset has been released. The caller must keep the
+    /// assets alive across the `VideoCompositionBuilder.build` call (unlike clip
+    /// sources, which live in the session's `sources` dict).
+    struct LoadedMusic {
+        var assets: [AVURLAsset] = []
+        var sources: [UUID: (track: AVAssetTrack, duration: Double)] = [:]
+    }
+
+    static func url(for source: MusicSource) -> URL? {
+        switch source {
+        case .bundled(let id): MusicTrackCatalog.track(id: id)?.url
+        case .imported(let importedURL, _): importedURL
         }
-        guard let url else { return nil }
+    }
+
+    func loadMusicSources(_ tracks: [MusicTrack]) async -> LoadedMusic {
+        var loaded = LoadedMusic()
+        for music in tracks {
+            guard let url = Self.url(for: music.source) else { continue }
+            let asset = AVURLAsset(url: url)
+            do {
+                guard let track = try await asset.loadTracks(withMediaType: .audio).first else { continue }
+                let duration = try await asset.load(.duration).seconds
+                loaded.assets.append(asset)
+                loaded.sources[music.id] = (track, duration)
+            } catch {
+                continue
+            }
+        }
+        return loaded
+    }
+
+    /// The playable length of a music source, so a freshly added track can seed
+    /// its trim window before the first preview rebuild.
+    func loadAudioDuration(for source: MusicSource) async -> Double? {
+        guard let url = Self.url(for: source) else { return nil }
         let asset = AVURLAsset(url: url)
-        do {
-            guard let track = try await asset.loadTracks(withMediaType: .audio).first else { return nil }
-            let duration = try await asset.load(.duration).seconds
-            return (asset, track, duration)
-        } catch {
+        guard let duration = try? await asset.load(.duration).seconds, duration.isFinite, duration > 0 else {
             return nil
         }
+        return duration
     }
 
     // MARK: - Preview
@@ -233,17 +252,17 @@ final class VideoStudioService {
         recipe: VideoProjectRecipe,
         sources: [UUID: VideoClipSource]
     ) async throws -> PreviewBuild {
-        let music = await loadMusic(recipe.music)
+        let music = await loadMusicSources(recipe.musicTracks)
         let blank = try await blankClipIfNeeded(recipe: recipe, sources: sources)
         let renderSize = previewRenderSize(for: recipe)
-        // `music` must stay alive across `build`: the music track's source asset
-        // is released otherwise and `insertTimeRange(of:)` fails (-11800/-12780).
-        let (composition, layout) = try withExtendedLifetime(music) {
+        // The music assets must stay alive across `build`: a music track's source
+        // asset is released otherwise and `insertTimeRange(of:)` fails
+        // (-11800/-12780).
+        let (composition, layout) = try withExtendedLifetime(music.assets) {
             try VideoCompositionBuilder.build(
                 recipe: recipe,
                 sources: sources,
-                musicSourceTrack: music?.track,
-                musicDuration: music?.duration,
+                musicSources: music.sources,
                 blankVideo: blank,
                 renderSize: renderSize
             )
@@ -259,7 +278,8 @@ final class VideoStudioService {
         item.videoComposition = VideoCompositionBuilder.videoComposition(
             recipe: recipe,
             layout: layout,
-            stillStore: previewStillStore
+            stillStore: previewStillStore,
+            bakesOverlays: false
         )
         item.audioMix = VideoCompositionBuilder.audioMix(recipe: recipe, layout: layout)
         return PreviewBuild(playerItem: item, layout: layout)
@@ -275,7 +295,8 @@ final class VideoStudioService {
         item.videoComposition = VideoCompositionBuilder.videoComposition(
             recipe: recipe,
             layout: layout,
-            stillStore: previewStillStore
+            stillStore: previewStillStore,
+            bakesOverlays: false
         )
     }
 
@@ -300,17 +321,16 @@ final class VideoStudioService {
         sources: [UUID: VideoClipSource],
         progress: @escaping @MainActor (Double) -> Void
     ) async throws -> URL {
-        let music = await loadMusic(recipe.music)
+        let music = await loadMusicSources(recipe.musicTracks)
         let blank = try await blankClipIfNeeded(recipe: recipe, sources: sources)
         let renderSize = recipe.canvasSize()
-        // Keep `music` alive across `build` (see `makePreviewItem`): otherwise the
-        // music source asset is released and `insertTimeRange` fails -11800.
-        let (composition, layout) = try withExtendedLifetime(music) {
+        // Keep the music assets alive across `build` (see `makePreviewItem`):
+        // otherwise a source asset is released and `insertTimeRange` fails -11800.
+        let (composition, layout) = try withExtendedLifetime(music.assets) {
             try VideoCompositionBuilder.build(
                 recipe: recipe,
                 sources: sources,
-                musicSourceTrack: music?.track,
-                musicDuration: music?.duration,
+                musicSources: music.sources,
                 blankVideo: blank,
                 renderSize: renderSize
             )
@@ -319,7 +339,8 @@ final class VideoStudioService {
         let videoComposition = VideoCompositionBuilder.videoComposition(
             recipe: recipe,
             layout: layout,
-            stillStore: exportStillStore
+            stillStore: exportStillStore,
+            bakesOverlays: true
         )
         let audioMix = VideoCompositionBuilder.audioMix(recipe: recipe, layout: layout)
 
