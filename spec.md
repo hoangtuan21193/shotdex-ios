@@ -740,6 +740,13 @@ Tab **Markup** đứng sau Filters (tên cũ "Text" — đổi vì tab thêm đ�
 - `.onMapCameraChange(frequency: .onEnd)` cập nhật span nên pin gộp/tách theo zoom. Tự gom cụm chứ không dùng annotation clustering của MapKit vì cần thumbnail bìa + số đếm riêng cho từng cụm
 - Chạm cụm → `PhotoListScreen`
 
+**Panorama (2026-09-19):**
+
+- ⋯ → **View Panorama** (chỉ hiện với ảnh `mediaSubtypes.contains(.photoPanorama)`) mở `PanoramaScreen` (fullScreenCover, nền đen): ảnh **cao bằng màn hình**, bề ngang chạy ra ngoài hai mép, cuộn ngang. Viewer thường fit cả khung nên ảnh 9000×1200 thành một dải cao vài trăm pixel — vứt đi đúng lý do người ta chụp panorama
+- **Màn riêng chứ không phải mode trong viewer**: đã cao bằng màn hình thì kéo ngang phải là cuộn ảnh, mà trong viewer kéo ngang là lật sang ảnh kế. Hai cái phải nhường nhau một, tách màn là cách nói thẳng cái nào nhường
+- Mở ra **đứng giữa** ảnh (như app Photos). Nút **play** quét một lượt từ mép trái sang phải, tốc độ ~4 giây một màn hình — đủ chậm để đọc là *nhìn* chứ không phải cuộn. Chạm tay vào ảnh là dừng quét ngay (`scrollViewWillBeginDragging`), và dừng ở **chỗ animation đang thật sự hiện** (`layer.presentation()`), không phải đích nó đang nhắm tới
+- Ảnh tải ở `PHImageManagerMaximumSize`: xem một dải ở chiều cao thật, rendition vừa màn hình thì đã vứt chi tiết mất rồi
+
 **Kéo thả ảnh (2026-09-19):**
 
 - `PhotoDragItem` (`Features/Shared/`) dựng `NSItemProvider` **hai payload** cho mỗi ảnh: (1) **file gốc** đúng UTI của nó (`PHAssetResourceManager.writeData`, cho phép tải iCloud) để thả sang app khác — ảnh kéo ra phải là *ảnh*, EXIF và tất cả, không phải rendition; (2) **local identifier** dưới type riêng `com.hoangtuan.shotdex.asset-identifier` (`visibility: .ownProcess`, khai `UTExportedTypeDeclarations` trong Info.plist) để thả trong app. Thả 40 ảnh vào một album **không được** export 40 file trước, mà album chỉ cần id

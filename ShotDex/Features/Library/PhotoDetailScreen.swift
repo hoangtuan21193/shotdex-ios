@@ -88,6 +88,7 @@ struct PhotoDetailScreen: View {
     /// payload type: both are "a run of asset ids plus where to start".
     @State private var burstList: SlideshowPresentation?
     @State private var trimTarget: VideoTrimPresentation?
+    @State private var panoramaTarget: PanoramaPresentation?
     @State private var isSavingLiveVideo = false
     @State private var liveVideoErrorMessage: String?
     @State private var editorTarget: PhotoDetailActionTarget?
@@ -347,6 +348,9 @@ struct PhotoDetailScreen: View {
         }
         .onChange(of: videoStudioTarget?.id) { _, targetID in
             if targetID == nil { revealSavedAssetIfNeeded() }
+        }
+        .fullScreenCover(item: $panoramaTarget) { target in
+            PanoramaScreen(asset: target.asset)
         }
         .fullScreenCover(item: $trimTarget) { target in
             VideoTrimScreen(asset: target.asset) {
@@ -671,6 +675,14 @@ struct PhotoDetailScreen: View {
             }
 
             Section {
+                if currentAsset?.mediaSubtypes.contains(.photoPanorama) == true,
+                   let currentAsset {
+                    Button {
+                        panoramaTarget = PanoramaPresentation(asset: currentAsset)
+                    } label: {
+                        Label("View Panorama", systemImage: "pano")
+                    }
+                }
                 if currentAsset?.burstIdentifier != nil {
                     Button {
                         showBurst()
