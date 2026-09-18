@@ -37,6 +37,18 @@ final class AppNavigation {
     /// Free text a Shortcut or Spotlight asked the Library to search for.
     var pendingSearchQuery: String?
 
+    /// A photo another device handed over, to open in the viewer.
+    private(set) var pendingPhotoAssetId: String?
+    /// Bumped with it, so handing over the same photo twice still opens it.
+    private(set) var pendingPhotoToken = 0
+
+    /// Switch to Library and open this photo's viewer.
+    func openPhoto(assetId: String) {
+        pendingPhotoAssetId = assetId
+        pendingPhotoToken &+= 1
+        selectedTab = .library
+    }
+
     /// Bumped when the user taps the Library tab while it's already selected;
     /// the Library grid jumps back to the newest photos. Monotonic so
     /// consecutive re-taps never compare equal for `.onChange`. Programmatic
@@ -109,6 +121,8 @@ final class AppNavigation {
         case .trips:
             albumsPath = NavigationPath([TripsDestination()])
             selectedTab = .albums
+        case .photo(let assetId):
+            openPhoto(assetId: assetId)
         }
     }
 }

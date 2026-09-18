@@ -89,6 +89,10 @@ struct PhotoDetailScreen: View {
     @State private var burstList: SlideshowPresentation?
     @State private var trimTarget: VideoTrimPresentation?
     @State private var panoramaTarget: PanoramaPresentation?
+    /// The Handoff offer for the photo on screen, and the lookup that builds
+    /// it — asking PhotoKit for a cloud identifier is a round trip.
+    @State private var handoffActivity: NSUserActivity?
+    @State private var handoffTask: Task<Void, Never>?
     @State private var isSavingLiveVideo = false
     @State private var liveVideoErrorMessage: String?
     @State private var editorTarget: PhotoDetailActionTarget?
@@ -385,6 +389,12 @@ struct PhotoDetailScreen: View {
             videoChromeHideTask = nil
             revealSavedTask?.cancel()
             revealSavedTask = nil
+            // Closing the viewer withdraws the offer: nothing is on screen to
+            // hand over any more.
+            handoffTask?.cancel()
+            handoffTask = nil
+            handoffActivity?.invalidate()
+            handoffActivity = nil
         }
     }
 
@@ -459,6 +469,31 @@ struct PhotoDetailScreen: View {
         currentMetadata = model.metadata(for: assetId)
         currentAsset = model.asset(for: assetId)
         updateFilename(assetId: assetId)
+        publishHandoffActivity()
+    }
+
+    /// Offers the photo on screen to the user's other devices.
+    ///
+    /// Re-published on every page change and cancelled when the viewer closes,
+    /// so the Handoff banner always names the photo actually in front of the
+    /// user. A photo with no cloud identity publishes nothing and clears what
+    /// was there — handing over a photo the other device cannot find is worse
+    /// than offering nothing.
+    private func publishHandoffActivity() {
+        handoffTask?.cancel()
+        guard let asset = currentAsset else {
+            handoffActivity?.invalidate()
+            handoffActivity = nil
+            return
+        }
+        let title = currentFilename
+        handoffTask = Task {
+            let activity = await HandoffActivity.activity(for: asset, title: title)
+            guard !Task.isCancelled else { return }
+            handoffActivity?.invalidate()
+            handoffActivity = activity
+            activity?.becomeCurrent()
+        }
     }
 
     /// Stores a page's download report and, when it is the visible page,

@@ -115,6 +115,14 @@ struct LibraryScreen: View {
             // reload while indexing (see LibraryModel.libraryDidChange).
             model?.libraryDidChange()
         }
+        .onChange(of: navigation.pendingPhotoToken) {
+            // A photo handed over from another device. It opens through the
+            // same path a freshly saved photo does, because it needs the same
+            // thing: the grid has to contain the photo before its viewer can be
+            // opened on it, and the grid may still be loading.
+            guard let assetId = navigation.pendingPhotoAssetId else { return }
+            openSavedPhoto(assetId)
+        }
         .onChange(of: navigation.advancedSearchToken) {
             // Advanced search is routed here from the search tab (a sheet can't
             // present over the iOS 26 search-role tab); open it on Library.

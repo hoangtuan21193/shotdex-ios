@@ -39,6 +39,16 @@ struct ShotDexApp: App {
                     else { return }
                     IntentRouter.shared.request(request)
                 }
+                // A photo handed over from another device. The payload is a
+                // cloud identifier, so it has to be translated into this
+                // device's own before anything can be opened.
+                .onContinueUserActivity(HandoffActivity.viewPhoto) { activity in
+                    Task {
+                        guard let local = await HandoffActivity.localIdentifier(from: activity)
+                        else { return }
+                        IntentRouter.shared.request(.photo(assetId: local))
+                    }
+                }
                 .task {
                     // Cheap: a few SELECT DISTINCTs and one Spotlight write.
                     await dependencies.backfillMediaSubtypes()

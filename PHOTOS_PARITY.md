@@ -2,7 +2,7 @@
 
 > **Tiến độ đêm 2026-09-19** — mỗi mục dưới đây đều build pass, chạy thật trên simulator và có ảnh chụp màn hình kiểm chứng, commit riêng trên `main`.
 >
-> Xong: Dynamic Type cho token Collections · Viewer panorama · Depth Blur ảnh Portrait · Kéo thả ảnh · Markup shapes + kính lúp · Trim video trong viewer + nút tua khung · People & Pets (pass Vision opt-in) · hành động PhotoKit (ngày/vị trí/ẩn/favorite) · context menu trên tile · Media Types · date section ngày/tháng/năm + thanh cuộn ngày · badge trạng thái · menu ⋯ trong viewer · Live Text · Live Photo + Save as Video · Slideshow · Places · Trips · App Intents + Spotlight · Widget · Share Extension · iPad · quản lý album/folder · Settings (autoplay, HDR, dung lượng) · Auto Enhance + Revert · Merge duplicates.
+> Xong: Handoff · Dynamic Type cho token Collections · Viewer panorama · Depth Blur ảnh Portrait · Kéo thả ảnh · Markup shapes + kính lúp · Trim video trong viewer + nút tua khung · People & Pets (pass Vision opt-in) · hành động PhotoKit (ngày/vị trí/ẩn/favorite) · context menu trên tile · Media Types · date section ngày/tháng/năm + thanh cuộn ngày · badge trạng thái · menu ⋯ trong viewer · Live Text · Live Photo + Save as Video · Slideshow · Places · Trips · App Intents + Spotlight · Widget · Share Extension · iPad · quản lý album/folder · Settings (autoplay, HDR, dung lượng) · Auto Enhance + Revert · Merge duplicates.
 >
 > Vướng, cần bạn quyết hoặc cần máy thật: xem mục "Cần quyết định" ở cuối file.
 
@@ -60,7 +60,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 - [x] C2 CoreSpotlight — index **bộ sưu tập** (smart album, thân máy, ống kính), **không** index từng ảnh; chạm kết quả mở app đúng chỗ qua `NSUserActivity`
 - [x] C3 Widget — target `ShotDexWidget`, widget "Your Gear" (small / medium / lock-screen rectangular) đọc digest app ghi vào App Group `group.com.hoangtuan.shotdex`. **Widget không đụng thư viện ảnh**. Đã thêm lên màn hình chính với số liệu thật
 - [x] C4 Share Extension — target `ShotDexShare` ("Save to ShotDex"), nhận ảnh từ app khác (tối đa 40), xin quyền `.addOnly`, lưu vào thư viện; đã test từ share sheet của app Photos
-- [ ] C5 Handoff qua NSUserActivity
+- [x] C5 Handoff qua NSUserActivity — payload là **cloud identifier** (`PHCloudIdentifier`), nên chỉ ảnh trong iCloud Photos mới bàn giao được; ảnh local-only không publish gì. **Chưa chạy thật** (simulator không có iCloud)
 - [ ] C6 Photo editing extension
 - [~] C7 iPad — `TARGETED_DEVICE_FAMILY = "1,2"`, build/cài/chạy được trên iPad Pro 11", xoay ngang đã khai báo sẵn trong Info.plist; lưới đã tự co giãn theo regular width (`GridDensity.columns(forDensity:width:isRegularWidth:)`). Phím tắt trong viewer: `f` favorite, `i` info, `delete` xoá, `⌘S` share. **CHƯA kiểm thử tương tác**: panel Simulator cho iPad chưa được cấp quyền nên không bấm qua được màn onboarding — cần chạy tay để soát bố cục từng màn
 - [~] C8 Rà soát Dynamic Type — đo ở `accessibility-extra-large`: tab Collections **vỡ** (token cắt chữ, thumbnail đè tiêu đề), đã sửa bằng `@ScaledMetric` cho `AlbumTokenMetrics` + thẻ Memory + thẻ On This Day. Lưới ảnh, Settings, Statistics dùng font ngữ nghĩa nên đã tự scale. **Còn lại**: nhãn tab bar tự dựng (size 10 cố định) và nhãn metadata trên tile (chrome tầng C, cố ý cố định)
@@ -98,7 +98,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 ## Chưa làm (ưu tiên theo mình thấy)
 
 1. **B7 Video trong viewer**: còn lại **chỉnh dải slo-mo**. Nút tua khung trên màn và **Trim tại chỗ** đã xong.
-9. **C5 Handoff**, **C6 photo editing extension**: hai cái này giá trị thấp nhất trong danh sách.
+1. **C6 photo editing extension**: mở editor của ShotDex ngay trong app Photos. Giá trị thấp nhất trong danh sách.
 
 ## Hai việc mình làm sai / cần bạn xử lý
 

@@ -72,4 +72,42 @@ struct IntentRoutingTests {
         )
         #expect(SpotlightIndexer.request(forSpotlightIdentifier: "something-else") == nil)
     }
+
+    // MARK: Handoff
+
+    @Test func handedOverPhotoOpensOnTheLibraryTab() {
+        let navigation = AppNavigation()
+        navigation.selectedTab = .statistics
+        var path = NavigationPath()
+
+        navigation.handle(.photo(assetId: "ABC/L0/001"), albumsPath: &path)
+
+        #expect(navigation.selectedTab == .library)
+        #expect(navigation.pendingPhotoAssetId == "ABC/L0/001")
+    }
+
+    /// Handing the same photo over twice has to open it twice. The identifier
+    /// alone cannot say so — it is unchanged — which is what the token is for.
+    @Test func handingTheSamePhotoTwiceFiresTwice() {
+        let navigation = AppNavigation()
+        var path = NavigationPath()
+
+        navigation.handle(.photo(assetId: "same"), albumsPath: &path)
+        let first = navigation.pendingPhotoToken
+        navigation.handle(.photo(assetId: "same"), albumsPath: &path)
+
+        #expect(navigation.pendingPhotoToken != first)
+    }
+
+    /// A Handoff payload is a cloud identifier, so an activity of any other
+    /// type, or one without that key, resolves to nothing rather than being
+    /// guessed at.
+    @Test func foreignActivityResolvesToNothing() async {
+        let wrongType = NSUserActivity(activityType: "com.example.other")
+        wrongType.userInfo = ["cloudIdentifier": "whatever"]
+        #expect(await HandoffActivity.localIdentifier(from: wrongType) == nil)
+
+        let noPayload = NSUserActivity(activityType: HandoffActivity.viewPhoto)
+        #expect(await HandoffActivity.localIdentifier(from: noPayload) == nil)
+    }
 }

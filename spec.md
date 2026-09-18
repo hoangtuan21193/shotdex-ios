@@ -740,6 +740,14 @@ Tab **Markup** đứng sau Filters (tên cũ "Text" — đổi vì tab thêm đ�
 - `.onMapCameraChange(frequency: .onEnd)` cập nhật span nên pin gộp/tách theo zoom. Tự gom cụm chứ không dùng annotation clustering của MapKit vì cần thumbnail bìa + số đếm riêng cho từng cụm
 - Chạm cụm → `PhotoListScreen`
 
+**Handoff (2026-09-19):**
+
+- Viewer publish `NSUserActivity` kiểu `com.hoangtuan.shotdex.view-photo` (khai trong `NSUserActivityTypes`) cho ảnh đang xem; máy khác mở tiếp đúng ảnh đó
+- **Payload là cloud identifier, không phải local identifier.** Local identifier chỉ có nghĩa trên chính máy cấp nó — đưa sang iPad là gọi tên một tấm ảnh không tồn tại. `PHCloudIdentifier` (`cloudIdentifierMappings` / `localIdentifierMappings`) là API PhotoKit sinh ra đúng cho việc này. Hệ quả: **chỉ ảnh trong iCloud Photos mới handoff được**; ảnh local-only không có cloud identity nên **không publish gì cả**, thay vì publish một cái chắc chắn hỏng ở đầu kia
+- Publish lại ở **mỗi lần đổi trang**, và `invalidate()` khi đóng viewer — banner Handoff luôn đúng tấm đang trước mặt
+- Đầu nhận: `onContinueUserActivity` dịch cloud identifier về local rồi đẩy `IntentRouter.Request.photo`, đi chung đường với intent/Spotlight. `LibraryScreen` mở viewer qua đúng `openSavedPhoto` — cùng một bài toán: lưới phải có ảnh đó trước đã, mà lưới có thể còn đang tải
+- **Chưa chạy thật**: simulator không đăng nhập iCloud nên không có cloud identifier để đo
+
 **Panorama (2026-09-19):**
 
 - ⋯ → **View Panorama** (chỉ hiện với ảnh `mediaSubtypes.contains(.photoPanorama)`) mở `PanoramaScreen` (fullScreenCover, nền đen): ảnh **cao bằng màn hình**, bề ngang chạy ra ngoài hai mép, cuộn ngang. Viewer thường fit cả khung nên ảnh 9000×1200 thành một dải cao vài trăm pixel — vứt đi đúng lý do người ta chụp panorama

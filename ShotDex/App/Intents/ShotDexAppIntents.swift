@@ -20,6 +20,9 @@ final class IntentRouter {
         case statistics
         case places
         case trips
+        /// A photo handed over from another device, already translated into
+        /// this device's own identifier.
+        case photo(assetId: String)
     }
 
     static let shared = IntentRouter()
