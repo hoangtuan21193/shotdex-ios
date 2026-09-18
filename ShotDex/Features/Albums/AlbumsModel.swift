@@ -2,6 +2,23 @@ import Foundation
 import Photos
 import SwiftUI
 
+/// Which section of the Collections screen an album belongs to. Mirrors the
+/// grouping iOS Photos uses, so a user who knows Photos finds the same album
+/// in the same band.
+enum AlbumGroup {
+    /// Recents and Favorites — the two system albums people reach for most.
+    case suggested
+    /// Capture-format collections: Videos, Selfies, Live Photos, Portrait,
+    /// Panoramas, Bursts, RAW and the rest.
+    case mediaType
+    /// Library housekeeping rather than browsing: Hidden, Unable to Upload.
+    case utility
+    /// An album the user made.
+    case user
+    /// An iCloud Shared Album.
+    case shared
+}
+
 /// One row in the Albums grid.
 struct AlbumItem: Identifiable {
     enum Kind {
@@ -14,6 +31,10 @@ struct AlbumItem: Identifiable {
     var count: Int
     var kind: Kind
     var coverAsset: PHAsset?
+    var group: AlbumGroup = .user
+    /// SF Symbol shown instead of a cover when the album has no thumbnail
+    /// worth showing — media-type and utility albums carry one.
+    var symbolName: String?
     /// System-provided collection (Recents, Favorites, …) vs user album.
     var isSmart = false
     /// iCloud Shared Album (`PHAssetCollectionSubtype.albumCloudShared`).
@@ -62,9 +83,11 @@ final class AlbumsModel {
     /// User-created smart albums (saved filters), newest first.
     private(set) var smartQueryAlbums: [SmartAlbumTokenItem] = []
 
-    var smartAlbums: [AlbumItem] { albums.filter(\.isSmart) }
-    var userAlbums: [AlbumItem] { albums.filter { !$0.isSmart && !$0.isShared } }
-    var sharedAlbums: [AlbumItem] { albums.filter { !$0.isSmart && $0.isShared } }
+    var smartAlbums: [AlbumItem] { albums.filter { $0.group == .suggested } }
+    var mediaTypeAlbums: [AlbumItem] { albums.filter { $0.group == .mediaType } }
+    var utilityAlbums: [AlbumItem] { albums.filter { $0.group == .utility } }
+    var userAlbums: [AlbumItem] { albums.filter { $0.group == .user } }
+    var sharedAlbums: [AlbumItem] { albums.filter { $0.group == .shared } }
 
     /// Collections and counts fetched off the main thread; PHAsset fetches
     /// are thread-safe but expensive on large libraries.
@@ -161,6 +184,60 @@ final class AlbumsModel {
         return models
     }
 
+    /// One system smart album ShotDex surfaces, with the section it belongs
+    /// to and the glyph its token falls back to. Order here is the order the
+    /// sections render in.
+    private struct SystemAlbumEntry {
+        let subtype: PHAssetCollectionSubtype
+        let group: AlbumGroup
+        let symbolName: String
+        /// Overrides PhotoKit's localized title when Photos labels it
+        /// differently; `nil` keeps the system name.
+        var title: String?
+    }
+
+    /// Every system smart album with a public subtype, grouped the way Photos
+    /// groups them. Albums that come back empty are dropped by `item(for:)`,
+    /// so a library with no panoramas never shows a Panoramas token.
+    ///
+    /// `.smartAlbumSpatial` is iOS 18, so it is appended conditionally.
+    private nonisolated static var systemAlbumCatalog: [SystemAlbumEntry] {
+        var entries: [SystemAlbumEntry] = [
+            .init(subtype: .smartAlbumRecentlyAdded, group: .suggested, symbolName: "clock"),
+            .init(subtype: .smartAlbumFavorites, group: .suggested, symbolName: "heart"),
+
+            .init(subtype: .smartAlbumVideos, group: .mediaType, symbolName: "video"),
+            .init(subtype: .smartAlbumSelfPortraits, group: .mediaType, symbolName: "person.crop.square"),
+            .init(subtype: .smartAlbumLivePhotos, group: .mediaType, symbolName: "livephoto"),
+            .init(subtype: .smartAlbumDepthEffect, group: .mediaType, symbolName: "f.cursive", title: "Portrait"),
+            .init(subtype: .smartAlbumPanoramas, group: .mediaType, symbolName: "pano"),
+            .init(subtype: .smartAlbumTimelapses, group: .mediaType, symbolName: "timelapse"),
+            .init(subtype: .smartAlbumSlomoVideos, group: .mediaType, symbolName: "slowmo"),
+            .init(subtype: .smartAlbumCinematic, group: .mediaType, symbolName: "video.badge.waveform"),
+            .init(subtype: .smartAlbumBursts, group: .mediaType, symbolName: "square.stack.3d.down.right"),
+            .init(subtype: .smartAlbumScreenshots, group: .mediaType, symbolName: "camera.viewfinder"),
+            .init(subtype: .smartAlbumScreenRecordings, group: .mediaType, symbolName: "record.circle"),
+            .init(subtype: .smartAlbumAnimated, group: .mediaType, symbolName: "square.stack.3d.forward.dottedline"),
+            .init(subtype: .smartAlbumLongExposures, group: .mediaType, symbolName: "circle.dashed"),
+            .init(subtype: .smartAlbumRAW, group: .mediaType, symbolName: "camera.aperture"),
+
+            // No Hidden album: since iOS 16 the system withholds hidden assets
+            // from every app but Photos. Verified on iOS 26 — fetching
+            // `.smartAlbumAllHidden` returns an empty result, and a library
+            // fetch with `includeHiddenAssets` reports no hidden asset either.
+            // Hiding a photo still works; it simply leaves our view of the
+            // library for good.
+            .init(subtype: .smartAlbumUnableToUpload, group: .utility, symbolName: "exclamationmark.icloud"),
+        ]
+        if #available(iOS 18.0, *) {
+            entries.insert(
+                .init(subtype: .smartAlbumSpatial, group: .mediaType, symbolName: "cube.transparent"),
+                at: entries.count - 2
+            )
+        }
+        return entries
+    }
+
     private nonisolated static func loadSnapshot() -> Snapshot {
         var result: [AlbumItem] = []
 
@@ -170,18 +247,20 @@ final class AlbumsModel {
 
         let onThisDay = OnThisDayModel.fetchAssets(for: .now)
 
-        let smartSubtypes: [PHAssetCollectionSubtype] = [
-            .smartAlbumRecentlyAdded,
-            .smartAlbumFavorites,
-            .smartAlbumScreenshots,
-        ]
-        for subtype in smartSubtypes {
+        for entry in Self.systemAlbumCatalog {
             let collections = PHAssetCollection.fetchAssetCollections(
-                with: .smartAlbum, subtype: subtype, options: nil
+                with: .smartAlbum, subtype: entry.subtype, options: nil
             )
+            let options = imageOptions
             collections.enumerateObjects { collection, _, _ in
-                if var item = Self.item(for: collection, imageOptions: imageOptions) {
+                if var item = Self.item(for: collection, imageOptions: options) {
                     item.isSmart = true
+                    item.group = entry.group
+                    item.symbolName = entry.symbolName
+                    // The catalog's own name keeps the section in the order and
+                    // wording Photos uses even where PhotoKit's localized title
+                    // differs ("Recents" vs "Recently Added").
+                    if let title = entry.title { item.title = title }
                     result.append(item)
                 }
             }
@@ -189,7 +268,8 @@ final class AlbumsModel {
 
         let userAlbums = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .any, options: nil)
         userAlbums.enumerateObjects { collection, _, _ in
-            if let item = Self.item(for: collection, imageOptions: imageOptions) {
+            if var item = Self.item(for: collection, imageOptions: imageOptions) {
+                item.group = item.isShared ? .shared : .user
                 result.append(item)
             }
         }

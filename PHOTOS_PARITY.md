@@ -16,7 +16,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 ## Phase A — Thao tác asset qua PhotoKit
 
 - [x] A1 `PhotoLibraryService`: hide/unhide, sửa creationDate, sửa location, xoá khỏi album, rename/delete album, restore/xoá vĩnh viễn, favorite hàng loạt
-- [ ] A2 Album Hidden + Recently Deleted (khoá Face ID)
+- [-] A2 Album Hidden + Recently Deleted — iOS 16+ giấu ảnh ẩn khỏi mọi app trừ Photos; đã đo trên iOS 26: `.smartAlbumAllHidden` trả 0, `includeHiddenAssets` cũng không thấy ảnh nào. Hành động **Hide vẫn chạy**, chỉ không duyệt/bỏ ẩn được
 - [x] A3 Sheet Adjust Date & Time, sheet Adjust Location (chọn trên bản đồ)
 - [ ] A4 Context menu khi giữ tile + Select All
 - [x] A5 Bulk: favorite, hide, adjust date, adjust location, copy
@@ -30,7 +30,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 
 - [ ] B1 Years / Months / Days / All + sticky header có tên địa điểm + thanh cuộn ngày
 - [ ] B2 Toggle lưới theo tỉ lệ gốc
-- [ ] B3 Media Types collections (Videos, Selfies, Live, Portrait, Panorama, Time-lapse, Slo-mo, Cinematic, Bursts, Screen Recording, Animated, RAW, Depth)
+- [x] B3 Media Types collections — section riêng trong Collections, 16 subtype (Videos, Selfies, Live, Portrait, Panorama, Time-lapse, Slo-mo, Cinematic, Bursts, Screenshots, Screen Recording, Animated, Long Exposure, RAW, Spatial); album rỗng tự ẩn như Photos
 - [ ] B4 Recently Viewed / Recently Shared / Recently Saved
 - [ ] B5 Live Photo: phát trong viewer + badge + Save as Video
 - [ ] B6 Portrait: đọc depth data, hiển thị, chỉnh độ mờ nền
@@ -80,3 +80,4 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 - [-] Holiday Events, Transfer to Mac, Lock Screen Photo Shuffle (thuộc hệ điều hành)
 - [-] Sort "Recently Added" (PhotoKit không expose ngày thêm vào thư viện)
 - [-] Recently Deleted: duyệt / khôi phục / xoá vĩnh viễn — `PHAssetCollectionSubtype` không có `recentlyDeleted`, không fetch được
+- [-] Duyệt album Hidden / bỏ ẩn — hệ thống chặn, xem mục A2

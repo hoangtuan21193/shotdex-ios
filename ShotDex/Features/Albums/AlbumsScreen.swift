@@ -109,6 +109,10 @@ struct AlbumsScreen: View {
                     smartAlbumsSection()
                 }
 
+                if !model.mediaTypeAlbums.isEmpty {
+                    albumTokenSection(title: "Media Types", albums: model.mediaTypeAlbums)
+                }
+
                 if !model.userAlbums.isEmpty {
                     albumTokenSection(title: "My Albums", albums: model.userAlbums)
                 }
@@ -229,6 +233,16 @@ extension AlbumsScreen {
                         DuplicatesToken()
                     }
                     .buttonStyle(.plain)
+
+                    // Hidden and Unable to Upload: library housekeeping rather
+                    // than browsing, so they sit beside Duplicates the way
+                    // Photos groups its own utilities.
+                    ForEach(model.utilityAlbums) { album in
+                        NavigationLink(value: album.id) {
+                            AlbumToken(album: album)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
                 .padding(.horizontal)
             }
@@ -319,7 +333,7 @@ struct AlbumToken: View {
                             .resizable()
                             .scaledToFill()
                     } else {
-                        Image(systemName: "photo.on.rectangle")
+                        Image(systemName: album.symbolName ?? "photo.on.rectangle")
                             .font(.body)
                             .foregroundStyle(.tertiary)
                     }
