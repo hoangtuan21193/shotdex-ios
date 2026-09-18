@@ -5,6 +5,7 @@ import Foundation
 enum PhotoGridDateGranularity: Equatable, Sendable {
     case day
     case month
+    case year
 }
 
 /// Pure math for the Photos/Metapho-style pinch-to-change-density gesture.
@@ -25,9 +26,16 @@ enum GridDensity {
         clamped(current + delta)
     }
 
-    /// Wide cells get day headers; dense levels group by month.
+    /// The zoom ladder Photos walks with a pinch: wide cells get day headers,
+    /// middle densities group by month, and the densest levels group by year.
+    /// Density is the only control — there is no separate Years/Months/Days
+    /// switch, because pinching already expresses the same intent.
     static func granularity(forColumns columns: Int) -> PhotoGridDateGranularity {
-        columns <= 3 ? .day : .month
+        switch columns {
+        case ...3: .day
+        case 4...6: .month
+        default: .year
+        }
     }
 
     /// Content width the persisted column count is expressed at — a compact

@@ -5,7 +5,8 @@ import Foundation
 /// `OnThisDayYearSection`, so tap/paging/swipe-select keep flat-index math.
 struct PhotoGridSection: Equatable, Identifiable, Sendable {
     enum Kind: Hashable, Sendable {
-        /// Normalized to start-of-day (`.day`) or start-of-month (`.month`).
+        /// Normalized to the start of the day, month or year the granularity
+        /// asks for.
         case date(Date)
         case undated
     }
@@ -106,6 +107,9 @@ enum PhotoGridSectionBuilder {
             return .date(calendar.startOfDay(for: date))
         case .month:
             let components = calendar.dateComponents([.year, .month], from: date)
+            return .date(calendar.date(from: components) ?? calendar.startOfDay(for: date))
+        case .year:
+            let components = calendar.dateComponents([.year], from: date)
             return .date(calendar.date(from: components) ?? calendar.startOfDay(for: date))
         }
     }

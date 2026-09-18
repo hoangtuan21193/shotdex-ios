@@ -28,7 +28,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 
 ## Phase B — Duyệt và xem
 
-- [ ] B1 Years / Months / Days / All + sticky header có tên địa điểm + thanh cuộn ngày
+- [~] B1 Years / Months / Days — pinch 1–3 cột = ngày, 4–6 = tháng, 7+ = năm; Library bật lại date header làm mặc định; thanh cuộn ngày có nhãn ngày khi kéo. **Còn thiếu**: tên địa điểm trong header (chờ D1 Places, `LibraryGridItem` chưa có cột place)
 - [ ] B2 Toggle lưới theo tỉ lệ gốc
 - [x] B3 Media Types collections — section riêng trong Collections, 16 subtype (Videos, Selfies, Live, Portrait, Panorama, Time-lapse, Slo-mo, Cinematic, Bursts, Screenshots, Screen Recording, Animated, Long Exposure, RAW, Spatial); album rỗng tự ẩn như Photos
 - [ ] B4 Recently Viewed / Recently Shared / Recently Saved

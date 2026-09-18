@@ -68,6 +68,10 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
     /// (or a `nil` return) leaves the tile without a menu, in which case the
     /// long press falls back to entering selection mode.
     var contextMenuProvider: ((Item) -> UIMenu?)? = nil
+    /// Drives the date scrubber drawn over the grid's right edge. The grid
+    /// publishes its position and the date under the top of the viewport, and
+    /// registers the jump closure the scrubber calls back.
+    var scrubber: PhotoGridScrubberModel? = nil
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -91,7 +95,10 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         collectionView.onContentWidthChange = { [weak coordinator] in
             // Out of the layout pass: swapping the layout from inside
             // `layoutSubviews` re-enters UIKit's own layout.
-            Task { @MainActor in coordinator?.reapplyLayoutIfColumnsChanged() }
+            Task { @MainActor in
+                coordinator?.reapplyLayoutIfColumnsChanged()
+                coordinator?.refreshScrubberAfterLayout()
+            }
         }
         collectionView.backgroundColor = .systemBackground
         collectionView.contentInset.bottom = bottomInset
@@ -111,6 +118,9 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         )
         coordinator.collectionView = collectionView
         coordinator.installGestures(on: collectionView)
+        scrubber?.scrollTo = { [weak coordinator] fraction in
+            coordinator?.scrollToFraction(fraction)
+        }
         coordinator.apply(self, isInitial: true)
         return collectionView
     }
@@ -513,10 +523,40 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
 
         // MARK: Sections
 
+        /// Recomputes the scrubber's state after a layout pass. `scrollViewDidScroll`
+        /// alone is not enough: a freshly laid-out grid has never scrolled, so the
+        /// handle would stay untouchable until the user scrolled by hand first.
+        /// Jumps the grid to `fraction` of its scrollable span, for the date
+        /// scrubber. Ends anchor tracking first: the Library opens pinned to the
+        /// newest photos and re-applies that anchor until the user takes over, so
+        /// without this the grid snaps straight back to the bottom.
+        func scrollToFraction(_ fraction: Double) {
+            guard let collectionView else { return }
+            endAnchorTracking()
+            let span = collectionView.contentSize.height
+                - collectionView.bounds.height
+                + collectionView.adjustedContentInset.top
+                + collectionView.adjustedContentInset.bottom
+            guard span > 0 else { return }
+            let y = -collectionView.adjustedContentInset.top + span * fraction
+            collectionView.setContentOffset(CGPoint(x: 0, y: y), animated: false)
+        }
+
+        func refreshScrubberAfterLayout() {
+            guard parent.scrubber != nil else { return }
+            // Out of the current layout pass: content size is only final once
+            // UIKit has finished laying the sections out.
+            Task { @MainActor [weak self] in
+                guard let self, let collectionView = self.collectionView else { return }
+                self.updateScrubber(collectionView)
+            }
+        }
+
         private func rebuildSections() {
             sections = Self.resolvedSections(
                 for: parent, columns: resolvedColumns(parent.columnCount)
             )
+            refreshScrubberAfterLayout()
         }
 
         private static func resolvedSections(
@@ -649,9 +689,11 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             case .undated:
                 return String(localized: "No Date")
             case .date(let date):
-                return granularity == .day
-                    ? MetadataFormatter.dayHeader(date)
-                    : MetadataFormatter.monthHeader(date)
+                switch granularity {
+                case .day: return MetadataFormatter.dayHeader(date)
+                case .month: return MetadataFormatter.monthHeader(date)
+                case .year: return MetadataFormatter.yearHeader(date)
+                }
             }
         }
 
@@ -927,9 +969,57 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             self.highlightPreheat = nil
         }
 
+        func scrollViewDidScroll(_ scrollView: UIScrollView) {
+            updateScrubber(scrollView)
+        }
+
         func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
             endAnchorTracking()
             parent.onUserScroll()
+        }
+
+        /// Feeds the date scrubber: where the grid is, and which section title
+        /// sits under the top of the viewport. Skipped while the user is
+        /// dragging the handle, so the handle does not chase the scroll it is
+        /// itself causing.
+        func updateScrubber(_ scrollView: UIScrollView) {
+            guard let scrubber = parent.scrubber else { return }
+            let span = scrollView.contentSize.height
+                - scrollView.bounds.height
+                + scrollView.adjustedContentInset.top
+                + scrollView.adjustedContentInset.bottom
+            scrubber.isScrollable = span > 1
+            guard !scrubber.isScrubbing else {
+                scrubber.label = topVisibleSectionTitle(scrollView) ?? scrubber.label
+                return
+            }
+            if span > 1 {
+                let y = scrollView.contentOffset.y + scrollView.adjustedContentInset.top
+                scrubber.progress = min(max(Double(y / span), 0), 1)
+            }
+            scrubber.label = topVisibleSectionTitle(scrollView) ?? ""
+        }
+
+        /// Title of the section whose items are under the top edge of the
+        /// viewport — nil when the grid has no headers at all.
+        private func topVisibleSectionTitle(_ scrollView: UIScrollView) -> String? {
+            guard let collectionView = scrollView as? UICollectionView,
+                  !sections.isEmpty
+            else { return nil }
+            let probe = CGPoint(
+                x: collectionView.adjustedContentInset.left + 8,
+                y: collectionView.contentOffset.y
+                    + collectionView.adjustedContentInset.top + 8
+            )
+            if let indexPath = collectionView.indexPathForItem(at: probe),
+               sections.indices.contains(indexPath.section) {
+                return sections[indexPath.section].title
+            }
+            // Between rows (or over a pinned header): fall back to the topmost
+            // visible cell rather than showing nothing.
+            return collectionView.indexPathsForVisibleItems
+                .min()
+                .flatMap { sections.indices.contains($0.section) ? sections[$0.section].title : nil }
         }
 
         func scrollViewDidEndDragging(

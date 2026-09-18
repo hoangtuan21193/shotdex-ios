@@ -125,6 +125,17 @@ enum MetadataFormatter {
         )
     }
 
+    /// Grid year-section header: "2026".
+    static func yearHeader(
+        _ date: Date,
+        calendar: Calendar = .current,
+        locale: Locale = .current
+    ) -> String {
+        date.formatted(
+            Date.FormatStyle(locale: locale, calendar: calendar).year()
+        )
+    }
+
     /// Day-range label: "Mar 12 – Jun 4, 2026" (locale-dependent).
     static func dateRange(_ start: Date, _ end: Date) -> String {
         dayRangeFormatter.string(from: start, to: end)

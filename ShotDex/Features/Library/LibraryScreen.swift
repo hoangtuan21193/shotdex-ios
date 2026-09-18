@@ -30,6 +30,8 @@ struct LibraryScreen: View {
     /// Bumped on Library-tab retap — the collection view scrolls back to
     /// the newest photos.
     @State private var retapResetCount = 0
+    /// Drives the date scrubber on the grid's right edge.
+    @State private var scrubberModel = PhotoGridScrubberModel()
     @State private var isDeleting = false
     @State private var isPreparingShare = false
     @State private var isDuplicating = false
@@ -521,9 +523,11 @@ struct LibraryScreen: View {
         PhotoGridCollectionView(
             photos: model.items,
             assetProvider: { index, _ in model.asset(atFlatIndex: index) },
-            // No date headers in the library grid: one uninterrupted sheet of
-            // photos, whatever the sort.
-            sectionMode: .flat,
+            // Date headers, grouped by day / month / year depending on how
+            // far the grid is pinched — the Photos zoom ladder. Non-date sorts
+            // still get one flat section, since a date header would lie about
+            // the order.
+            sectionMode: model.sort.isDateSort ? .dates : .flat,
             anchorsBottom: true,
             contentVersion: model.contentGeneration,
             contentRefreshVersion: model.contentRefreshGeneration,
@@ -560,8 +564,12 @@ struct LibraryScreen: View {
                 await model.lazyBadgeItem(assetId: assetId)
             },
             removal: model.lastRemoval,
-            contextMenuProvider: { item in tileMenu(assetId: item.assetId).makeMenu() }
+            contextMenuProvider: { item in tileMenu(assetId: item.assetId).makeMenu() },
+            scrubber: scrubberModel
         )
+        .overlay(alignment: .trailing) {
+            PhotoGridScrubber(model: scrubberModel, topInset: 12, bottomInset: 96)
+        }
         // Fill behind the top nav bar too (not just bottom): the collection
         // view's automatic content-inset adjustment + anchor() position items
         // below the bar, so photos scroll under the translucent chrome instead
