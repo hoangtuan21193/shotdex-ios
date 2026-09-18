@@ -740,6 +740,12 @@ Tab **Markup** đứng sau Filters (tên cũ "Text" — đổi vì tab thêm đ�
 - `.onMapCameraChange(frequency: .onEnd)` cập nhật span nên pin gộp/tách theo zoom. Tự gom cụm chứ không dùng annotation clustering của MapKit vì cần thumbnail bìa + số đếm riêng cho từng cụm
 - Chạm cụm → `PhotoListScreen`
 
+**Copy / Paste edits (2026-09-19):**
+
+- Menu ⋯ của editor: **Copy Edits** (mờ đi khi chưa có gì để chép) và **Paste Edits** (chỉ hiện khi clipboard có nội dung). `EditClipboard` lưu một recipe trong UserDefaults nên **sống qua cả lần mở app sau**
+- **Chỉ chép "cái nhìn"**: `adjustments` + `color` + `curve` + `filter` + `filterIntensity`. **Không chép** crop, mask, drawing, overlay — mấy thứ đó thuộc về *một khung hình cụ thể*: dán crop là cắt lại một tấm ảnh người ta chưa từng cắt, dán mask là làm sáng một vùng mà trên ảnh này là mặt người. Photos và Lightroom cũng chia đúng chỗ này, cùng một lý do
+- Paste là **một bước history**, nên undo một phát là xong
+
 **Giữ tay xem bản gốc trong viewer (2026-09-19):**
 
 - Ảnh **đã chỉnh** thì giữ tay lên ảnh hiện lại **bản gốc** + pill chữ "Original"; nhả tay là về bản đã chỉnh. Đây là phép so sánh mà editor đã có, đem về đúng chỗ người ta nhận ra ảnh bị chỉnh

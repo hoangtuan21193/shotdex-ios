@@ -1021,6 +1021,16 @@ final class PhotoEditorController {
     /// Places a shape in the middle of the photo, selected but with the list
     /// still on screen — the same way a signature arrives, because both are
     /// positioned by dragging on the picture rather than by typing numbers.
+    /// Lays a copied look over this photo, keeping its own framing and layers.
+    /// One history step, so a paste is a single undo.
+    func pasteEdits(from clipboard: EditClipboard) {
+        let pasted = clipboard.paste(onto: recipe)
+        guard pasted != recipe else { return }
+        recordHistory()
+        recipe = pasted
+        scheduleRender()
+    }
+
     func addShapeOverlay(_ style: OverlayShapeStyle) {
         recordHistory()
         var overlay = PhotoOverlay.shape(style)

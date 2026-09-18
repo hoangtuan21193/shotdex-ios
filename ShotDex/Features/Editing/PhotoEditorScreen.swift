@@ -653,6 +653,22 @@ struct PhotoEditorScreen: View {
                 Label("Auto Enhance", systemImage: "wand.and.stars")
             }
 
+            // Tone, colour, curve and filter only — see `EditClipboard`.
+            Button {
+                dependencies.editClipboard.copy(from: controller.recipe)
+            } label: {
+                Label("Copy Edits", systemImage: "doc.on.doc")
+            }
+            .disabled(EditClipboard.look(of: controller.recipe).isIdentity)
+
+            if dependencies.editClipboard.hasContent {
+                Button {
+                    controller.pasteEdits(from: dependencies.editClipboard)
+                } label: {
+                    Label("Paste Edits", systemImage: "doc.on.clipboard")
+                }
+            }
+
             Button {
                 controller.reset()
             } label: {
