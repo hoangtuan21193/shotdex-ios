@@ -77,6 +77,9 @@ struct AlbumsScreen: View {
         .navigationDestination(for: PlacesDestination.self) { _ in
             PlacesMapScreen()
         }
+        .navigationDestination(for: TripsDestination.self) { _ in
+            TripsScreen()
+        }
         .sheet(isPresented: $isCreatingSmartAlbum) {
             SmartAlbumEditorSheet(existing: nil, dependencies: dependencies) {
                 model.load()
@@ -242,6 +245,15 @@ extension AlbumsScreen {
                             title: "Places",
                             subtitle: "Browse on a map",
                             systemImage: "map"
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    NavigationLink(value: TripsDestination()) {
+                        UtilityToken(
+                            title: "Trips",
+                            subtitle: "Days spent away",
+                            systemImage: "airplane"
                         )
                     }
                     .buttonStyle(.plain)

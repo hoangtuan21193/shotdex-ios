@@ -62,7 +62,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 ## Phase D — Tự dựng phần Apple Intelligence
 
 - [x] D1 Places — token trong Utilities, bản đồ gom cụm theo ô lưới độ (co giãn theo mức zoom), pin có thumbnail + số lượng + tên địa điểm đã geocode; chạm cụm mở lưới ảnh có khoảng ngày
-- [ ] D2 Trips: gom theo ngày + vị trí
+- [x] D2 Trips — token trong Utilities, gom các đợt ảnh liên tục cách "nhà" > 80km; thẻ ảnh bìa + tên nơi + khoảng ngày; có unit test (5 ca)
 - [ ] D3 Memories / Featured Photos: tự chọn + dựng phim qua Video Studio
 - [ ] D4 People & Pets: pass quét Vision riêng, opt-in trong Settings
 - [x] D5 Live Text on-demand trong viewer — `ImageAnalysisInteraction`, chỉ phân tích khi bật từ menu, tự tắt khi lật sang ảnh khác

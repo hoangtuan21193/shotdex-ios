@@ -697,6 +697,13 @@ Tab **Markup** đứng sau Filters (tên cũ "Text" — đổi vì tab thêm đ�
 
 **`PhotoListScreen` + `PhotoListModel`** (`Features/Shared/`, 2026-09-19): lưới cho một **danh sách assetId tự tính** — hình dạng thứ ba bên cạnh album PhotoKit (`AlbumDetailModel`) và truy vấn đã lưu (`SmartAlbumDetailModel`). Dùng cho Places, và sẽ dùng lại cho Trips/Memories. Giữ **đúng thứ tự caller truyền vào** (một chuyến đi chạy xuôi thời gian, một memory đã được chọn lọc). `PhotoListModel` conform `PhotoBrowsingSource` nên mở thẳng được viewer. **Chỉ để duyệt**: không có chế độ chọn nhiều ảnh, vì đây là danh sách dẫn xuất và một selection ở đây không có chỗ về rõ ràng.
 
+**Trips (chuyến đi, 2026-09-19):**
+
+- `TripGrouping` (`Domain/Places/`) + `TripsScreen`. Luật cố ý máy móc, không "thông minh": một chuyến là chuỗi ảnh cách **nhà** hơn `homeRadiusKm` 80km, không đoạn nào hở quá `maximumGapDays` 2 ngày, kéo dài ≥ `minimumDays` 1 ngày và có ≥ `minimumPhotos` 8 ảnh
+- **"Nhà" = ô 0.5° dày ảnh nhất**, và chỉ tính là nhà khi chiếm ≥ 20% thư viện; dưới ngưỡng đó coi như người dùng chụp khắp nơi (`home = nil`, mọi ảnh đều tính là "đi xa"). Không có tín hiệu nào khác về "nhà" khi chạy offline
+- Khoảng hở đo với ảnh **cuối của chuỗi đang gom**, không phải ảnh vừa duyệt qua — một tấm lạc giữa chừng không được reset đồng hồ. Một ảnh chụp ở nhà **kết thúc** chuỗi; sau đó `merged(_:)` nối lại các chuỗi liền kề **cùng tên địa điểm** và cách nhau ≤ 2 ngày, vì một tấm sai giờ / import từ máy khác / một đêm về nhà giữa chuyến sẽ cắt một kỳ nghỉ thành ba
+- Ảnh bìa lấy **giữa chuỗi**, không lấy tấm đầu (ảnh lúc mới tới hiếm khi đáng làm bìa). Test: `ShotDexTests/TripGroupingTests.swift` (5 ca)
+
 **Duplicates (tìm và xoá ảnh trùng / gần trùng):**
 
 - **Phát hiện bằng perceptual hash**, không so byte: mỗi ảnh (chỉ ảnh, **không video**) lấy một rendition PhotoKit 96px (`PerceptualHashReader`, `deliveryMode = .highQualityFormat` để callback đúng một lần, `isNetworkAccessAllowed` theo chính sách index: Wi-Fi luôn, cellular chỉ khi bật "Use Cellular Data for Indexing") → vẽ ép vào lưới gray 9×8 → **dHash 64-bit** (`DifferenceHash`, Domain, pure: bit = pixel tối hơn pixel bên phải). Hash lưu `perceptual_hash` (§5). Thumbnail không lấy được → row `hash NULL`, chỉ thử lại khi run được phép mạng.
