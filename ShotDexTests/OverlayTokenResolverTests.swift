@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+@testable import ShotDexKit
 @testable import ShotDex
 
 struct OverlayTokenResolverTests {

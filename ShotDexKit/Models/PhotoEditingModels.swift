@@ -2,36 +2,36 @@ import CoreGraphics
 import Foundation
 import UniformTypeIdentifiers
 
-struct PhotoHistogram: Equatable, Sendable {
-    var red: [Double]
-    var green: [Double]
-    var blue: [Double]
+public struct PhotoHistogram: Equatable, Sendable {
+    public var red: [Double]
+    public var green: [Double]
+    public var blue: [Double]
     /// Fraction of sampled pixels at the top of the range, used by the editor's
     /// clipping indicator. Kept out of the plotted bins so a clipped peak can be
     /// flagged even after percentile normalization flattens it.
-    var clippedHighlightFraction = 0.0
-    var clippedShadowFraction = 0.0
+    public var clippedHighlightFraction = 0.0
+    public var clippedShadowFraction = 0.0
 
-    static let empty = PhotoHistogram(red: [], green: [], blue: [])
+    public static let empty = PhotoHistogram(red: [], green: [], blue: [])
 
-    var luminance: [Double] {
+    public var luminance: [Double] {
         zip(zip(red, green), blue).map {
             0.2126 * $0.0.0 + 0.7152 * $0.0.1 + 0.0722 * $0.1
         }
     }
 
-    var hasClippedHighlights: Bool { clippedHighlightFraction > 0.001 }
-    var hasClippedShadows: Bool { clippedShadowFraction > 0.001 }
+    public var hasClippedHighlights: Bool { clippedHighlightFraction > 0.001 }
+    public var hasClippedShadows: Bool { clippedShadowFraction > 0.001 }
 }
 
-enum PhotoOutputFormat: String, Codable, CaseIterable, Identifiable, Sendable {
+public enum PhotoOutputFormat: String, Codable, CaseIterable, Identifiable, Sendable {
     case preserve
     case jpeg
     case heic
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .preserve: "Same as Original"
         case .jpeg: "JPEG"
@@ -39,14 +39,14 @@ enum PhotoOutputFormat: String, Codable, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    var fileExtension: String {
+    public var fileExtension: String {
         switch self {
         case .preserve, .jpeg: "jpg"
         case .heic: "heic"
         }
     }
 
-    var uniformType: UTType {
+    public var uniformType: UTType {
         switch self {
         case .preserve, .jpeg: .jpeg
         case .heic: .heic
@@ -54,33 +54,33 @@ enum PhotoOutputFormat: String, Codable, CaseIterable, Identifiable, Sendable {
     }
 }
 
-enum ResizeCropMode: String, Codable, CaseIterable, Identifiable, Sendable {
+public enum ResizeCropMode: String, Codable, CaseIterable, Identifiable, Sendable {
     case fill
     case fit
 
-    var id: String { rawValue }
-    var displayName: String { rawValue.capitalized }
+    public var id: String { rawValue }
+    public var displayName: String { rawValue.capitalized }
 }
 
-enum ResizePresetKind: String, Codable, Sendable {
+public enum ResizePresetKind: String, Codable, Sendable {
     case original
     case longEdge
     case exact
 }
 
-struct ResizePreset: Codable, Identifiable, Equatable, Sendable {
-    var id: UUID
-    var name: String
-    var kind: ResizePresetKind
-    var longEdge: Int?
-    var width: Int?
-    var height: Int?
-    var cropMode: ResizeCropMode
-    var quality: Double
-    var format: PhotoOutputFormat
-    var isBuiltIn: Bool
+public struct ResizePreset: Codable, Identifiable, Equatable, Sendable {
+    public var id: UUID
+    public var name: String
+    public var kind: ResizePresetKind
+    public var longEdge: Int?
+    public var width: Int?
+    public var height: Int?
+    public var cropMode: ResizeCropMode
+    public var quality: Double
+    public var format: PhotoOutputFormat
+    public var isBuiltIn: Bool
 
-    init(
+    public init(
         id: UUID = UUID(),
         name: String,
         kind: ResizePresetKind,
@@ -104,14 +104,14 @@ struct ResizePreset: Codable, Identifiable, Equatable, Sendable {
         self.isBuiltIn = isBuiltIn
     }
 
-    static let original = ResizePreset(
+    public static let original = ResizePreset(
         id: UUID(uuidString: "5CEB1742-9BB8-4E36-8075-5C60543B40D9")!,
         name: "Original",
         kind: .original,
         isBuiltIn: true
     )
 
-    static let fourK = ResizePreset(
+    public static let fourK = ResizePreset(
         id: UUID(uuidString: "447E6B22-6070-47C8-8E39-A06523B34462")!,
         name: "4K",
         kind: .longEdge,
@@ -119,7 +119,7 @@ struct ResizePreset: Codable, Identifiable, Equatable, Sendable {
         isBuiltIn: true
     )
 
-    static let twoK = ResizePreset(
+    public static let twoK = ResizePreset(
         id: UUID(uuidString: "9E85B65C-C492-435F-8DA1-A4DA2732852F")!,
         name: "2048 px",
         kind: .longEdge,
@@ -127,7 +127,7 @@ struct ResizePreset: Codable, Identifiable, Equatable, Sendable {
         isBuiltIn: true
     )
 
-    static let social = ResizePreset(
+    public static let social = ResizePreset(
         id: UUID(uuidString: "91A9AA69-47DF-4FB2-9D1E-E5AF8B111A30")!,
         name: "1080 px",
         kind: .longEdge,
@@ -135,13 +135,13 @@ struct ResizePreset: Codable, Identifiable, Equatable, Sendable {
         isBuiltIn: true
     )
 
-    static let builtIns: [ResizePreset] = [.original, .fourK, .twoK, .social]
+    public static let builtIns: [ResizePreset] = [.original, .fourK, .twoK, .social]
 
-    var allowsLongEdgeUpscaling: Bool {
+    public var allowsLongEdgeUpscaling: Bool {
         id == Self.fourK.id || id == Self.social.id
     }
 
-    func targetPixelSize(sourceWidth: Int, sourceHeight: Int) -> CGSize {
+    public func targetPixelSize(sourceWidth: Int, sourceHeight: Int) -> CGSize {
         let source = CGSize(width: max(1, sourceWidth), height: max(1, sourceHeight))
         switch kind {
         case .original:
@@ -162,14 +162,14 @@ struct ResizePreset: Codable, Identifiable, Equatable, Sendable {
     }
 }
 
-enum PhotoEditSource: String, Codable, CaseIterable, Identifiable, Sendable {
+public enum PhotoEditSource: String, Codable, CaseIterable, Identifiable, Sendable {
     case automatic
     case raw
     case rendered
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .automatic: "Automatic"
         case .raw: "RAW"
@@ -184,7 +184,7 @@ enum PhotoEditSource: String, Codable, CaseIterable, Identifiable, Sendable {
 /// The first ten are the original Core Image presets. Everything after them is a
 /// film simulation driven by a `FilmLook` — the nineteen an X-T5 has, the twelve
 /// Leica Looks, and six well-known stocks neither company sells a mode for.
-enum PhotoFilter: String, Codable, CaseIterable, Identifiable, Sendable {
+public enum PhotoFilter: String, Codable, CaseIterable, Identifiable, Sendable {
     case original
     case vivid
     case vividWarm
@@ -245,9 +245,9 @@ enum PhotoFilter: String, Codable, CaseIterable, Identifiable, Sendable {
     case superia400
     case cineStill800T
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .original: "Original"
         case .vivid: "Vivid"
@@ -304,7 +304,7 @@ enum PhotoFilter: String, Codable, CaseIterable, Identifiable, Sendable {
     /// Caption under a swatch. A tile is about 60pt wide, so anything longer than
     /// roughly twelve characters has to lose the part the strip's own heading
     /// already says — the brand.
-    var tileName: String {
+    public var tileName: String {
         switch self {
         case .provia: "PROVIA"
         case .velvia: "Velvia"
@@ -347,7 +347,7 @@ enum PhotoFilter: String, Codable, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    var category: FilmLookCategory {
+    public var category: FilmLookCategory {
         switch self {
         case .original, .vivid, .vividWarm, .vividCool, .dramatic, .dramaticWarm,
              .dramaticCool, .mono, .silvertone, .noir:
@@ -371,12 +371,12 @@ enum PhotoFilter: String, Codable, CaseIterable, Identifiable, Sendable {
 
     /// Ordered as declared, so a strip always shows its looks in the order the
     /// camera's own menu does.
-    static func all(in category: FilmLookCategory) -> [PhotoFilter] {
+    public static func all(in category: FilmLookCategory) -> [PhotoFilter] {
         allCases.filter { $0.category == category }
     }
 }
 
-enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Sendable {
+public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Sendable {
     case exposure
     case brilliance
     case highlights
@@ -429,9 +429,9 @@ enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Sendable 
     case rawSharpness
     case lensCorrection
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .exposure: "Exposure"
         case .brilliance: "Brilliance"
@@ -482,7 +482,7 @@ enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Sendable 
         }
     }
 
-    var systemImage: String {
+    public var systemImage: String {
         switch self {
         case .exposure: "plusminus.circle"
         case .brilliance: "wand.and.stars"
@@ -533,7 +533,7 @@ enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Sendable 
         }
     }
 
-    var range: ClosedRange<Double> {
+    public var range: ClosedRange<Double> {
         switch self {
         case .lensCorrection, .grain, .grainSize, .grainRoughness,
              .vignetteMidpoint, .vignetteFeather, .blackAndWhite,
@@ -544,7 +544,7 @@ enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Sendable 
         }
     }
 
-    var isRAWOnly: Bool {
+    public var isRAWOnly: Bool {
         switch self {
         case .rawTemperature, .rawTint, .rawLuminanceNoise, .rawColorNoise,
              .rawSharpness, .lensCorrection:
@@ -554,68 +554,164 @@ enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Sendable 
         }
     }
 
-    var affectsRAWDemosaic: Bool {
+    public var affectsRAWDemosaic: Bool {
         self == .exposure || isRAWOnly
     }
 }
 
-struct PhotoAdjustments: Codable, Equatable, Sendable {
-    var exposure = 0.0
-    var brilliance = 0.0
-    var highlights = 0.0
-    var shadows = 0.0
-    var whites = 0.0
-    var contrast = 0.0
-    var brightness = 0.0
-    var blackPoint = 0.0
-    var saturation = 0.0
-    var vibrance = 0.0
-    var warmth = 0.0
-    var tint = 0.0
-    var blackAndWhite = 0.0
-    var sharpness = 0.0
-    var sharpenRadius = 0.0
-    var sharpenDetail = 0.0
-    var sharpenMasking = 0.0
-    var definition = 0.0
-    var noiseReduction = 0.0
-    var colorNoiseReduction = 0.0
-    var texture = 0.0
-    var clarity = 0.0
-    var dehaze = 0.0
+public struct PhotoAdjustments: Codable, Equatable, Sendable {
+    public init(
+        exposure: Double = 0.0,
+        brilliance: Double = 0.0,
+        highlights: Double = 0.0,
+        shadows: Double = 0.0,
+        whites: Double = 0.0,
+        contrast: Double = 0.0,
+        brightness: Double = 0.0,
+        blackPoint: Double = 0.0,
+        saturation: Double = 0.0,
+        vibrance: Double = 0.0,
+        warmth: Double = 0.0,
+        tint: Double = 0.0,
+        blackAndWhite: Double = 0.0,
+        sharpness: Double = 0.0,
+        sharpenRadius: Double = 0.0,
+        sharpenDetail: Double = 0.0,
+        sharpenMasking: Double = 0.0,
+        definition: Double = 0.0,
+        noiseReduction: Double = 0.0,
+        colorNoiseReduction: Double = 0.0,
+        texture: Double = 0.0,
+        clarity: Double = 0.0,
+        dehaze: Double = 0.0,
+        depthBlur: Double = 0.0,
+        vignette: Double = 0.0,
+        vignetteMidpoint: Double = 0.5,
+        vignetteFeather: Double = 0.5,
+        vignetteRoundness: Double = 0.0,
+        vignetteHighlights: Double = 0.0,
+        grain: Double = 0.0,
+        grainSize: Double = 0.0,
+        grainRoughness: Double = 0.0,
+        chromaticAberration: Double = 0.0,
+        defringe: Double = 0.0,
+        geoVertical: Double = 0.0,
+        geoHorizontal: Double = 0.0,
+        geoRotate: Double = 0.0,
+        geoScale: Double = 0.0,
+        geoOffsetX: Double = 0.0,
+        geoOffsetY: Double = 0.0,
+        rawTemperature: Double = 0.0,
+        rawTint: Double = 0.0,
+        rawLuminanceNoise: Double = 0.0,
+        rawColorNoise: Double = 0.0,
+        rawSharpness: Double = 0.0,
+        lensCorrection: Double = 1.0,
+    ) {
+        self.exposure = exposure
+        self.brilliance = brilliance
+        self.highlights = highlights
+        self.shadows = shadows
+        self.whites = whites
+        self.contrast = contrast
+        self.brightness = brightness
+        self.blackPoint = blackPoint
+        self.saturation = saturation
+        self.vibrance = vibrance
+        self.warmth = warmth
+        self.tint = tint
+        self.blackAndWhite = blackAndWhite
+        self.sharpness = sharpness
+        self.sharpenRadius = sharpenRadius
+        self.sharpenDetail = sharpenDetail
+        self.sharpenMasking = sharpenMasking
+        self.definition = definition
+        self.noiseReduction = noiseReduction
+        self.colorNoiseReduction = colorNoiseReduction
+        self.texture = texture
+        self.clarity = clarity
+        self.dehaze = dehaze
+        self.depthBlur = depthBlur
+        self.vignette = vignette
+        self.vignetteMidpoint = vignetteMidpoint
+        self.vignetteFeather = vignetteFeather
+        self.vignetteRoundness = vignetteRoundness
+        self.vignetteHighlights = vignetteHighlights
+        self.grain = grain
+        self.grainSize = grainSize
+        self.grainRoughness = grainRoughness
+        self.chromaticAberration = chromaticAberration
+        self.defringe = defringe
+        self.geoVertical = geoVertical
+        self.geoHorizontal = geoHorizontal
+        self.geoRotate = geoRotate
+        self.geoScale = geoScale
+        self.geoOffsetX = geoOffsetX
+        self.geoOffsetY = geoOffsetY
+        self.rawTemperature = rawTemperature
+        self.rawTint = rawTint
+        self.rawLuminanceNoise = rawLuminanceNoise
+        self.rawColorNoise = rawColorNoise
+        self.rawSharpness = rawSharpness
+        self.lensCorrection = lensCorrection
+    }
+
+    public var exposure = 0.0
+    public var brilliance = 0.0
+    public var highlights = 0.0
+    public var shadows = 0.0
+    public var whites = 0.0
+    public var contrast = 0.0
+    public var brightness = 0.0
+    public var blackPoint = 0.0
+    public var saturation = 0.0
+    public var vibrance = 0.0
+    public var warmth = 0.0
+    public var tint = 0.0
+    public var blackAndWhite = 0.0
+    public var sharpness = 0.0
+    public var sharpenRadius = 0.0
+    public var sharpenDetail = 0.0
+    public var sharpenMasking = 0.0
+    public var definition = 0.0
+    public var noiseReduction = 0.0
+    public var colorNoiseReduction = 0.0
+    public var texture = 0.0
+    public var clarity = 0.0
+    public var dehaze = 0.0
     /// Portrait depth blur, 0 = the photo as shot. Not a stop count: the
     /// f-number the panel shows is a label over this, because the strength
     /// Core Image's depth blur takes is not calibrated in stops.
-    var depthBlur = 0.0
-    var vignette = 0.0
+    public var depthBlur = 0.0
+    public var vignette = 0.0
     /// Where the vignette starts falling off (0 = near the centre, 1 = only the
     /// extreme corners). Default 0.5 — a neutral value, so it is part of `.zero`
     /// and adds no key until touched.
-    var vignetteMidpoint = 0.5
-    var vignetteFeather = 0.5
-    var vignetteRoundness = 0.0
-    var vignetteHighlights = 0.0
-    var grain = 0.0
-    var grainSize = 0.0
-    var grainRoughness = 0.0
-    var chromaticAberration = 0.0
-    var defringe = 0.0
-    var geoVertical = 0.0
-    var geoHorizontal = 0.0
-    var geoRotate = 0.0
-    var geoScale = 0.0
-    var geoOffsetX = 0.0
-    var geoOffsetY = 0.0
-    var rawTemperature = 0.0
-    var rawTint = 0.0
-    var rawLuminanceNoise = 0.0
-    var rawColorNoise = 0.0
-    var rawSharpness = 0.0
-    var lensCorrection = 1.0
+    public var vignetteMidpoint = 0.5
+    public var vignetteFeather = 0.5
+    public var vignetteRoundness = 0.0
+    public var vignetteHighlights = 0.0
+    public var grain = 0.0
+    public var grainSize = 0.0
+    public var grainRoughness = 0.0
+    public var chromaticAberration = 0.0
+    public var defringe = 0.0
+    public var geoVertical = 0.0
+    public var geoHorizontal = 0.0
+    public var geoRotate = 0.0
+    public var geoScale = 0.0
+    public var geoOffsetX = 0.0
+    public var geoOffsetY = 0.0
+    public var rawTemperature = 0.0
+    public var rawTint = 0.0
+    public var rawLuminanceNoise = 0.0
+    public var rawColorNoise = 0.0
+    public var rawSharpness = 0.0
+    public var lensCorrection = 1.0
 
-    static let zero = PhotoAdjustments()
+    public static let zero = PhotoAdjustments()
 
-    subscript(kind: PhotoAdjustmentKind) -> Double {
+    public subscript(kind: PhotoAdjustmentKind) -> Double {
         get {
             switch kind {
             case .exposure: exposure
@@ -718,7 +814,7 @@ struct PhotoAdjustments: Codable, Equatable, Sendable {
         }
     }
 
-    var isIdentity: Bool {
+    public var isIdentity: Bool {
         var comparison = self
         comparison.lensCorrection = 1
         return comparison == .zero
@@ -729,20 +825,20 @@ struct PhotoAdjustments: Codable, Equatable, Sendable {
 /// coding key. Decoding each value with `decodeIfPresent` keeps recipes saved by
 /// an earlier build readable after a new slider is added.
 extension PhotoAdjustmentKind: CodingKey {
-    var stringValue: String { rawValue }
-    var intValue: Int? { nil }
+    public var stringValue: String { rawValue }
+    public var intValue: Int? { nil }
 
-    init?(stringValue: String) {
+    public init?(stringValue: String) {
         self.init(rawValue: stringValue)
     }
 
-    init?(intValue _: Int) {
+    public init?(intValue _: Int) {
         return nil
     }
 }
 
-extension PhotoAdjustments {
-    init(from decoder: any Decoder) throws {
+public extension PhotoAdjustments {
+    public init(from decoder: any Decoder) throws {
         self.init()
         let container = try decoder.container(keyedBy: PhotoAdjustmentKind.self)
         for kind in PhotoAdjustmentKind.allCases {
@@ -752,7 +848,7 @@ extension PhotoAdjustments {
         }
     }
 
-    func encode(to encoder: any Encoder) throws {
+    public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: PhotoAdjustmentKind.self)
         let defaults = PhotoAdjustments()
         for kind in PhotoAdjustmentKind.allCases where self[kind] != defaults[kind] {
@@ -761,29 +857,49 @@ extension PhotoAdjustments {
     }
 }
 
-struct NormalizedPoint: Codable, Hashable, Sendable {
-    var x: Double
-    var y: Double
+public struct NormalizedPoint: Codable, Hashable, Sendable {
+    public init(
+        x: Double,
+        y: Double,
+    ) {
+        self.x = x
+        self.y = y
+    }
 
-    static let center = NormalizedPoint(x: 0.5, y: 0.5)
+    public var x: Double
+    public var y: Double
 
-    var cgPoint: CGPoint { CGPoint(x: x, y: y) }
+    public static let center = NormalizedPoint(x: 0.5, y: 0.5)
+
+    public var cgPoint: CGPoint { CGPoint(x: x, y: y) }
 }
 
-struct NormalizedRect: Codable, Equatable, Sendable {
-    var x: Double
-    var y: Double
-    var width: Double
-    var height: Double
+public struct NormalizedRect: Codable, Equatable, Sendable {
+    public init(
+        x: Double,
+        y: Double,
+        width: Double,
+        height: Double,
+    ) {
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+    }
 
-    static let full = NormalizedRect(x: 0, y: 0, width: 1, height: 1)
+    public var x: Double
+    public var y: Double
+    public var width: Double
+    public var height: Double
 
-    var cgRect: CGRect {
+    public static let full = NormalizedRect(x: 0, y: 0, width: 1, height: 1)
+
+    public var cgRect: CGRect {
         CGRect(x: x, y: y, width: width, height: height)
     }
 }
 
-enum CropAspect: String, Codable, CaseIterable, Identifiable, Sendable {
+public enum CropAspect: String, Codable, CaseIterable, Identifiable, Sendable {
     case free
     case original
     case square
@@ -793,9 +909,9 @@ enum CropAspect: String, Codable, CaseIterable, Identifiable, Sendable {
     case fourFive
     case nineSixteen
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .free: "Free"
         case .original: "Original"
@@ -808,7 +924,7 @@ enum CropAspect: String, Codable, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    var ratio: Double? {
+    public var ratio: Double? {
         switch self {
         case .free, .original: nil
         case .square: 1
@@ -823,35 +939,35 @@ enum CropAspect: String, Codable, CaseIterable, Identifiable, Sendable {
 
 /// Side of the crop frame being dragged. Photos lets you grab an edge, not just a
 /// corner, so the frame can be trimmed one side at a time.
-enum CropEdge: String, CaseIterable, Identifiable, Sendable {
+public enum CropEdge: String, CaseIterable, Identifiable, Sendable {
     case left
     case right
     case top
     case bottom
 
-    var id: String { rawValue }
-    var isHorizontal: Bool { self == .left || self == .right }
+    public var id: String { rawValue }
+    public var isHorizontal: Bool { self == .left || self == .right }
 }
 
-struct PhotoCropRecipe: Codable, Equatable, Sendable {
-    var rect = NormalizedRect.full
-    var aspect: CropAspect = .free
-    var straightenDegrees = 0.0
-    var quarterTurns = 0
-    var flippedHorizontally = false
+public struct PhotoCropRecipe: Codable, Equatable, Sendable {
+    public var rect = NormalizedRect.full
+    public var aspect: CropAspect = .free
+    public var straightenDegrees = 0.0
+    public var quarterTurns = 0
+    public var flippedHorizontally = false
 
-    static let identity = PhotoCropRecipe()
+    public static let identity = PhotoCropRecipe()
 }
 
-enum MaskBlendOperation: String, Codable, CaseIterable, Identifiable, Sendable {
+public enum MaskBlendOperation: String, Codable, CaseIterable, Identifiable, Sendable {
     case add
     case subtract
 
-    var id: String { rawValue }
-    var displayName: String { rawValue.capitalized }
+    public var id: String { rawValue }
+    public var displayName: String { rawValue.capitalized }
 }
 
-enum PhotoMaskComponentKind: String, Codable, CaseIterable, Identifiable, Sendable {
+public enum PhotoMaskComponentKind: String, Codable, CaseIterable, Identifiable, Sendable {
     case brush
     case linearGradient
     case radialGradient
@@ -860,9 +976,9 @@ enum PhotoMaskComponentKind: String, Codable, CaseIterable, Identifiable, Sendab
     case luminanceRange
     case colorRange
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .brush: "Brush"
         case .linearGradient: "Linear Gradient"
@@ -874,7 +990,7 @@ enum PhotoMaskComponentKind: String, Codable, CaseIterable, Identifiable, Sendab
         }
     }
 
-    var systemImage: String {
+    public var systemImage: String {
         switch self {
         case .brush: "paintbrush.pointed"
         case .linearGradient: "square.tophalf.filled"
@@ -887,88 +1003,102 @@ enum PhotoMaskComponentKind: String, Codable, CaseIterable, Identifiable, Sendab
     }
 }
 
-struct BrushStroke: Codable, Equatable, Sendable {
-    var points: [NormalizedPoint]
-    var size: Double
-    var feather: Double
-    var flow: Double
-    var isEraser: Bool
+public struct BrushStroke: Codable, Equatable, Sendable {
+    public init(
+        points: [NormalizedPoint],
+        size: Double,
+        feather: Double,
+        flow: Double,
+        isEraser: Bool,
+    ) {
+        self.points = points
+        self.size = size
+        self.feather = feather
+        self.flow = flow
+        self.isEraser = isEraser
+    }
+
+    public var points: [NormalizedPoint]
+    public var size: Double
+    public var feather: Double
+    public var flow: Double
+    public var isEraser: Bool
 }
 
-struct PhotoMaskComponent: Codable, Identifiable, Equatable, Sendable {
-    var id = UUID()
-    var kind: PhotoMaskComponentKind
-    var operation: MaskBlendOperation = .add
-    var opacity = 1.0
+public struct PhotoMaskComponent: Codable, Identifiable, Equatable, Sendable {
+    public var id = UUID()
+    public var kind: PhotoMaskComponentKind
+    public var operation: MaskBlendOperation = .add
+    public var opacity = 1.0
 
-    var brushStrokes: [BrushStroke] = []
-    var startPoint = NormalizedPoint(x: 0.5, y: 0.2)
-    var endPoint = NormalizedPoint(x: 0.5, y: 0.8)
-    var center = NormalizedPoint.center
-    var radiusX = 0.3
-    var radiusY = 0.3
-    var feather = 0.5
-    var subjectPoint = NormalizedPoint.center
-    var luminanceMinimum = 0.25
-    var luminanceMaximum = 0.75
-    var sampledRed = 0.5
-    var sampledGreen = 0.5
-    var sampledBlue = 0.5
-    var colorTolerance = 0.2
+    public var brushStrokes: [BrushStroke] = []
+    public var startPoint = NormalizedPoint(x: 0.5, y: 0.2)
+    public var endPoint = NormalizedPoint(x: 0.5, y: 0.8)
+    public var center = NormalizedPoint.center
+    public var radiusX = 0.3
+    public var radiusY = 0.3
+    public var feather = 0.5
+    public var subjectPoint = NormalizedPoint.center
+    public var luminanceMinimum = 0.25
+    public var luminanceMaximum = 0.75
+    public var sampledRed = 0.5
+    public var sampledGreen = 0.5
+    public var sampledBlue = 0.5
+    public var colorTolerance = 0.2
 
-    init(kind: PhotoMaskComponentKind, operation: MaskBlendOperation = .add) {
+    public init(kind: PhotoMaskComponentKind, operation: MaskBlendOperation = .add) {
         self.kind = kind
         self.operation = operation
     }
 }
 
-struct PhotoMask: Codable, Identifiable, Equatable, Sendable {
-    var id = UUID()
-    var name: String
-    var isVisible = true
-    var isInverted = false
-    var components: [PhotoMaskComponent]
-    var adjustments = PhotoAdjustments.zero
+public struct PhotoMask: Codable, Identifiable, Equatable, Sendable {
+    public var id = UUID()
+    public var name: String
+    public var isVisible = true
+    public var isInverted = false
+    public var components: [PhotoMaskComponent]
+    public var adjustments = PhotoAdjustments.zero
 
-    init(name: String, component: PhotoMaskComponent) {
+    public init(name: String, component: PhotoMaskComponent) {
         self.name = name
         self.components = [component]
     }
 }
 
-struct PhotoEditRecipe: Codable, Equatable, Sendable {
-    static let formatIdentifier = "com.hoangtuan.shotdex.photo-edit"
-    static let formatVersion = "1.0"
+public struct PhotoEditRecipe: Codable, Equatable, Sendable {
+    public static let formatIdentifier = "com.hoangtuan.shotdex.photo-edit"
+    public static let formatVersion = "1.0"
 
-    var source: PhotoEditSource = .automatic
-    var sourceFilename: String?
+    public var source: PhotoEditSource = .automatic
+    public var sourceFilename: String?
     /// Save Copy keeps rendering from the original asset's immutable PhotoKit
     /// resource so RAW controls can be recalled exactly on the rendered copy.
     /// Local identifiers are intentionally device-local; no separate iCloud
     /// recipe/source synchronization is attempted.
-    var sourceAssetIdentifier: String?
-    var adjustments = PhotoAdjustments.zero
-    var filter: PhotoFilter = .original
+    public var sourceAssetIdentifier: String?
+    public var adjustments = PhotoAdjustments.zero
+    public var filter: PhotoFilter = .original
     /// How much of the chosen filter is mixed over the unfiltered image. Only
     /// meaningful when `filter != .original`.
-    var filterIntensity = 1.0
-    var crop = PhotoCropRecipe.identity
-    var masks: [PhotoMask] = []
-    var color = PhotoColorRecipe.identity
+    public var filterIntensity = 1.0
+    public var crop = PhotoCropRecipe.identity
+    public var masks: [PhotoMask] = []
+    public var color = PhotoColorRecipe.identity
     /// Point tone curve (RGB master + per-channel). Applied right after Color in
     /// the render chain. Identity (straight line) adds no key to the JSON.
-    var curve = ToneCurveAdjustments.identity
+    public var curve = ToneCurveAdjustments.identity
     /// Text and signature layers drawn on top of the finished photo, back to
     /// front. Composited last of everything, so nothing in the tone or colour
     /// pipeline can tint them and the downscale cannot soften them.
-    var overlays: [PhotoOverlay] = []
+    public var overlays: [PhotoOverlay] = []
     /// Freehand Markup drawing, composited just under the overlays (so a caption
     /// stays legible over a scribble). `nil` when nothing is drawn.
-    var drawing: PhotoDrawing?
+    public var drawing: PhotoDrawing?
 
-    static let identity = PhotoEditRecipe()
+    public static let identity = PhotoEditRecipe()
 
-    var isIdentity: Bool {
+    public var isIdentity: Bool {
         adjustments.isIdentity
             && filter == .original
             && crop == .identity
@@ -994,11 +1124,11 @@ struct PhotoEditRecipe: Codable, Equatable, Sendable {
         case drawing
     }
 
-    init() {}
+    public init() {}
 
     /// Recipes written by an earlier build lack the newer keys, so every field is
     /// optional on the wire and falls back to its identity value.
-    init(from decoder: any Decoder) throws {
+    public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         source = try container.decodeIfPresent(PhotoEditSource.self, forKey: .source)
             ?? .automatic
@@ -1029,7 +1159,7 @@ struct PhotoEditRecipe: Codable, Equatable, Sendable {
 
     /// Written by hand so an untouched Color tab adds no key at all — a recipe
     /// saved without those edits stays byte-compatible with earlier builds.
-    func encode(to encoder: any Encoder) throws {
+    public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(source, forKey: .source)
         try container.encodeIfPresent(sourceFilename, forKey: .sourceFilename)
@@ -1046,14 +1176,28 @@ struct PhotoEditRecipe: Codable, Equatable, Sendable {
     }
 }
 
-struct PhotoExportOptions: Codable, Equatable, Sendable {
-    var format: PhotoOutputFormat
-    var quality: Double
-    var preset: ResizePreset
-    var includeMetadata: Bool
-    var cropAnchor: NormalizedPoint
+public struct PhotoExportOptions: Codable, Equatable, Sendable {
+    public init(
+        format: PhotoOutputFormat,
+        quality: Double,
+        preset: ResizePreset,
+        includeMetadata: Bool,
+        cropAnchor: NormalizedPoint,
+    ) {
+        self.format = format
+        self.quality = quality
+        self.preset = preset
+        self.includeMetadata = includeMetadata
+        self.cropAnchor = cropAnchor
+    }
 
-    static let compressDefault = PhotoExportOptions(
+    public var format: PhotoOutputFormat
+    public var quality: Double
+    public var preset: ResizePreset
+    public var includeMetadata: Bool
+    public var cropAnchor: NormalizedPoint
+
+    public static let compressDefault = PhotoExportOptions(
         format: .preserve,
         quality: 0.8,
         preset: .original,
@@ -1062,7 +1206,7 @@ struct PhotoExportOptions: Codable, Equatable, Sendable {
     )
 }
 
-enum PhotoEditingError: LocalizedError, Sendable {
+public enum PhotoEditingError: LocalizedError, Sendable {
     case unavailable
     case unsupportedRAW
     case missingSource
@@ -1074,7 +1218,7 @@ enum PhotoEditingError: LocalizedError, Sendable {
     case cannotCreateAsset
     case cannotAddToAlbum
 
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .unavailable: "This photo is unavailable."
         case .unsupportedRAW: "This RAW format can't be decoded on this device."

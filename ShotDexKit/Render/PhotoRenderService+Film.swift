@@ -12,14 +12,14 @@ import Foundation
 /// all of them means re-rendering the swatches after a slider settles reuses the
 /// tables instead of rebuilding two dozen of them.
 private final class FilmLookTableCache: @unchecked Sendable {
-    static let shared = FilmLookTableCache()
+    public static let shared = FilmLookTableCache()
 
     private static let capacity = 24
     private let lock = NSLock()
     private var tables: [String: Data] = [:]
     private var order: [String] = []
 
-    func table(for look: FilmLook, key: String) -> Data {
+    public func table(for look: FilmLook, key: String) -> Data {
         lock.lock()
         if let cached = tables[key] {
             lock.unlock()
@@ -45,12 +45,12 @@ private final class FilmLookTableCache: @unchecked Sendable {
     }
 }
 
-extension PhotoRenderService {
+public extension PhotoRenderService {
     /// One `CIColorCube` pass for the whole look. The table is generated in display
     /// gamma, so the cube is told to work in sRGB rather than the context's linear
     /// working space — the curves in `FilmLook` were dialled against gamma-encoded
     /// values, which is what a film simulation in a camera operates on too.
-    static func applyFilmLook(
+    public static func applyFilmLook(
         _ look: FilmLook,
         key: String,
         to input: CIImage

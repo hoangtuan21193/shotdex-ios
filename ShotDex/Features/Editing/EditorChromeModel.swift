@@ -1,4 +1,5 @@
 import SwiftUI
+import ShotDexKit
 
 /// Presentation state of the editor chrome: which nav group is showing, which
 /// slider owns the gesture, whether the image is full-bleed, and which sheet is

@@ -1,4 +1,5 @@
 import SwiftUI
+import ShotDexKit
 
 /// The saved signature library: stamp one onto this photo, or manage the list.
 struct EditorSignatureSheet: View {

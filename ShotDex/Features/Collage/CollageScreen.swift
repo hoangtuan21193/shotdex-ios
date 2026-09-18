@@ -1,5 +1,6 @@
 import Photos
 import SwiftUI
+import ShotDexKit
 
 /// Immutable payload for presenting the collage editor. Assets live inside the
 /// item (see `CompressionPresentation`) so the cover never opens against an

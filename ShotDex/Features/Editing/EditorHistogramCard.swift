@@ -1,4 +1,5 @@
 import SwiftUI
+import ShotDexKit
 
 /// The histogram, as a glass card floating over the photo instead of a fixed
 /// strip that costs the image height. It can be dragged to any of the four

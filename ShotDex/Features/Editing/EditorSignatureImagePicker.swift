@@ -1,6 +1,7 @@
 import PhotosUI
 import SwiftUI
 import UniformTypeIdentifiers
+import ShotDexKit
 
 /// Picks the image for a signature layer out of the photo library.
 ///

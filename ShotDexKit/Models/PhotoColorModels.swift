@@ -5,17 +5,17 @@ import Foundation
 /// The eight Lightroom-style hue bands the mixer can target. The band centers
 /// are the single source of truth shared by the render kernels (interpolated
 /// into the kernel source) and the slider-track gradients in the UI.
-enum ColorMixerBand: String, Codable, CaseIterable, Identifiable, Sendable {
+public enum ColorMixerBand: String, Codable, CaseIterable, Identifiable, Sendable {
     case red, orange, yellow, green, aqua, blue, purple, magenta
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    var displayName: String {
+    public var displayName: String {
         rawValue.prefix(1).uppercased() + rawValue.dropFirst()
     }
 
     /// Band center hue in degrees on the 0–360 wheel.
-    var centerDegrees: Double {
+    public var centerDegrees: Double {
         switch self {
         case .red: 0
         case .orange: 30
@@ -31,49 +31,49 @@ enum ColorMixerBand: String, Codable, CaseIterable, Identifiable, Sendable {
 
 /// Which of a band's three sliders is being addressed. Presentation-level —
 /// stored values live on `ColorMixerAdjustments.Channel`.
-enum ColorMixerProperty: String, CaseIterable, Identifiable, Sendable {
+public enum ColorMixerProperty: String, CaseIterable, Identifiable, Sendable {
     case hue, saturation, luminance
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    var displayName: String {
+    public var displayName: String {
         rawValue.prefix(1).uppercased() + rawValue.dropFirst()
     }
 }
 
 /// Per-band HSL shifts. All values -1…1 (UI shows ±100); a full hue shift is
 /// ±30° toward the neighboring bands.
-struct ColorMixerAdjustments: Codable, Equatable, Sendable {
-    struct Channel: Codable, Equatable, Sendable {
-        var hue = 0.0
-        var saturation = 0.0
-        var luminance = 0.0
+public struct ColorMixerAdjustments: Codable, Equatable, Sendable {
+    public struct Channel: Codable, Equatable, Sendable {
+        public var hue = 0.0
+        public var saturation = 0.0
+        public var luminance = 0.0
 
-        static let identity = Channel()
+        public static let identity = Channel()
 
-        var isIdentity: Bool { self == .identity }
+        public var isIdentity: Bool { self == .identity }
 
         private enum CodingKeys: String, CodingKey {
             case hue, saturation, luminance
         }
 
-        init() {}
+        public init() {}
 
-        init(from decoder: any Decoder) throws {
+        public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             hue = try container.decodeIfPresent(Double.self, forKey: .hue) ?? 0
             saturation = try container.decodeIfPresent(Double.self, forKey: .saturation) ?? 0
             luminance = try container.decodeIfPresent(Double.self, forKey: .luminance) ?? 0
         }
 
-        func encode(to encoder: any Encoder) throws {
+        public func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             if hue != 0 { try container.encode(hue, forKey: .hue) }
             if saturation != 0 { try container.encode(saturation, forKey: .saturation) }
             if luminance != 0 { try container.encode(luminance, forKey: .luminance) }
         }
 
-        subscript(property: ColorMixerProperty) -> Double {
+        public subscript(property: ColorMixerProperty) -> Double {
             get {
                 switch property {
                 case .hue: hue
@@ -91,20 +91,20 @@ struct ColorMixerAdjustments: Codable, Equatable, Sendable {
         }
     }
 
-    var red = Channel()
-    var orange = Channel()
-    var yellow = Channel()
-    var green = Channel()
-    var aqua = Channel()
-    var blue = Channel()
-    var purple = Channel()
-    var magenta = Channel()
+    public var red = Channel()
+    public var orange = Channel()
+    public var yellow = Channel()
+    public var green = Channel()
+    public var aqua = Channel()
+    public var blue = Channel()
+    public var purple = Channel()
+    public var magenta = Channel()
 
-    static let identity = ColorMixerAdjustments()
+    public static let identity = ColorMixerAdjustments()
 
-    var isIdentity: Bool { self == .identity }
+    public var isIdentity: Bool { self == .identity }
 
-    subscript(band: ColorMixerBand) -> Channel {
+    public subscript(band: ColorMixerBand) -> Channel {
         get {
             switch band {
             case .red: red
@@ -132,17 +132,17 @@ struct ColorMixerAdjustments: Codable, Equatable, Sendable {
     }
 
     private struct BandKey: CodingKey {
-        var stringValue: String
-        var intValue: Int? { nil }
+        public var stringValue: String
+        public var intValue: Int? { nil }
 
-        init(stringValue: String) { self.stringValue = stringValue }
-        init?(intValue _: Int) { nil }
-        init(_ band: ColorMixerBand) { stringValue = band.rawValue }
+        public init(stringValue: String) { self.stringValue = stringValue }
+        public init?(intValue _: Int) { nil }
+        public init(_ band: ColorMixerBand) { stringValue = band.rawValue }
     }
 
-    init() {}
+    public init() {}
 
-    init(from decoder: any Decoder) throws {
+    public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: BandKey.self)
         for band in ColorMixerBand.allCases {
             guard let channel = try container.decodeIfPresent(Channel.self, forKey: BandKey(band))
@@ -151,7 +151,7 @@ struct ColorMixerAdjustments: Codable, Equatable, Sendable {
         }
     }
 
-    func encode(to encoder: any Encoder) throws {
+    public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: BandKey.self)
         for band in ColorMixerBand.allCases where !self[band].isIdentity {
             try container.encode(self[band], forKey: BandKey(band))
@@ -164,35 +164,55 @@ struct ColorMixerAdjustments: Codable, Equatable, Sendable {
 /// One eyedropper-sampled color plus the shifts applied around it. The
 /// reference is captured in HSV at sample time (from the edited preview, like
 /// Lightroom) and never resampled when upstream edits change.
-struct PointColorAdjustment: Codable, Identifiable, Equatable, Sendable {
-    var id = UUID()
+public struct PointColorAdjustment: Codable, Identifiable, Equatable, Sendable {
+    public init(
+        id: UUID = UUID(),
+        referenceHue: Double,
+        referenceSaturation: Double,
+        referenceValue: Double,
+        hueShift: Double = 0,
+        saturationShift: Double = 0,
+        luminanceShift: Double = 0,
+        range: Double = 0.5
+    ) {
+        self.id = id
+        self.referenceHue = referenceHue
+        self.referenceSaturation = referenceSaturation
+        self.referenceValue = referenceValue
+        self.hueShift = hueShift
+        self.saturationShift = saturationShift
+        self.luminanceShift = luminanceShift
+        self.range = range
+    }
+
+    public var id = UUID()
     /// Reference hue in degrees 0…360.
-    var referenceHue: Double
+    public var referenceHue: Double
     /// Reference saturation 0…1.
-    var referenceSaturation: Double
+    public var referenceSaturation: Double
     /// Reference value (brightness) 0…1.
-    var referenceValue: Double
-    var hueShift = 0.0
-    var saturationShift = 0.0
-    var luminanceShift = 0.0
+    public var referenceValue: Double
+    public var hueShift = 0.0
+    public var saturationShift = 0.0
+    public var luminanceShift = 0.0
     /// Falloff radius of the match around the reference, 0…1.
-    var range = 0.5
+    public var range = 0.5
 
-    static let maximumCount = 8
+    public static let maximumCount = 8
 
-    var hasVisibleEffect: Bool {
+    public var hasVisibleEffect: Bool {
         hueShift != 0 || saturationShift != 0 || luminanceShift != 0
     }
 }
 
 // MARK: - Color Grading
 
-enum ColorGradingRegion: String, Codable, CaseIterable, Identifiable, Sendable {
+public enum ColorGradingRegion: String, Codable, CaseIterable, Identifiable, Sendable {
     case shadows, midtones, highlights, global
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .shadows: "Shadows"
         case .midtones: "Midtones"
@@ -205,35 +225,35 @@ enum ColorGradingRegion: String, Codable, CaseIterable, Identifiable, Sendable {
 /// Lightroom-style split toning: a tint wheel plus luminance lift per
 /// luminance region, with Blending controlling region overlap and Balance
 /// shifting the shadow/highlight pivots.
-struct ColorGradingAdjustments: Codable, Equatable, Sendable {
-    struct Wheel: Codable, Equatable, Sendable {
+public struct ColorGradingAdjustments: Codable, Equatable, Sendable {
+    public struct Wheel: Codable, Equatable, Sendable {
         /// Tint hue in degrees 0…360. Invisible while saturation is 0.
-        var hue = 0.0
+        public var hue = 0.0
         /// Tint strength 0…1.
-        var saturation = 0.0
+        public var saturation = 0.0
         /// Region luminance lift -1…1.
-        var luminance = 0.0
+        public var luminance = 0.0
 
-        static let identity = Wheel()
+        public static let identity = Wheel()
 
-        var isIdentity: Bool { self == .identity }
+        public var isIdentity: Bool { self == .identity }
 
-        var hasVisibleEffect: Bool { saturation != 0 || luminance != 0 }
+        public var hasVisibleEffect: Bool { saturation != 0 || luminance != 0 }
 
         private enum CodingKeys: String, CodingKey {
             case hue, saturation, luminance
         }
 
-        init() {}
+        public init() {}
 
-        init(from decoder: any Decoder) throws {
+        public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             hue = try container.decodeIfPresent(Double.self, forKey: .hue) ?? 0
             saturation = try container.decodeIfPresent(Double.self, forKey: .saturation) ?? 0
             luminance = try container.decodeIfPresent(Double.self, forKey: .luminance) ?? 0
         }
 
-        func encode(to encoder: any Encoder) throws {
+        public func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             if hue != 0 { try container.encode(hue, forKey: .hue) }
             if saturation != 0 { try container.encode(saturation, forKey: .saturation) }
@@ -241,20 +261,20 @@ struct ColorGradingAdjustments: Codable, Equatable, Sendable {
         }
     }
 
-    var shadows = Wheel()
-    var midtones = Wheel()
-    var highlights = Wheel()
-    var global = Wheel()
+    public var shadows = Wheel()
+    public var midtones = Wheel()
+    public var highlights = Wheel()
+    public var global = Wheel()
     /// Region overlap width, 0…1. Default 0.5 matches Lightroom's 50.
-    var blending = 0.5
+    public var blending = 0.5
     /// Shifts the shadow/highlight pivots, -1…1.
-    var balance = 0.0
+    public var balance = 0.0
 
-    static let identity = ColorGradingAdjustments()
+    public static let identity = ColorGradingAdjustments()
 
-    var isIdentity: Bool { self == .identity }
+    public var isIdentity: Bool { self == .identity }
 
-    subscript(region: ColorGradingRegion) -> Wheel {
+    public subscript(region: ColorGradingRegion) -> Wheel {
         get {
             switch region {
             case .shadows: shadows
@@ -277,9 +297,9 @@ struct ColorGradingAdjustments: Codable, Equatable, Sendable {
         case shadows, midtones, highlights, global, blending, balance
     }
 
-    init() {}
+    public init() {}
 
-    init(from decoder: any Decoder) throws {
+    public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         shadows = try container.decodeIfPresent(Wheel.self, forKey: .shadows) ?? .identity
         midtones = try container.decodeIfPresent(Wheel.self, forKey: .midtones) ?? .identity
@@ -289,7 +309,7 @@ struct ColorGradingAdjustments: Codable, Equatable, Sendable {
         balance = try container.decodeIfPresent(Double.self, forKey: .balance) ?? 0
     }
 
-    func encode(to encoder: any Encoder) throws {
+    public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         if !shadows.isIdentity { try container.encode(shadows, forKey: .shadows) }
         if !midtones.isIdentity { try container.encode(midtones, forKey: .midtones) }
@@ -304,14 +324,14 @@ struct ColorGradingAdjustments: Codable, Equatable, Sendable {
 
 /// The whole Color tab under a single recipe key, so `PhotoEditRecipe` grows
 /// exactly one field and untouched recipes encode no color data at all.
-struct PhotoColorRecipe: Codable, Equatable, Sendable {
-    var mixer = ColorMixerAdjustments.identity
-    var points: [PointColorAdjustment] = []
-    var grading = ColorGradingAdjustments.identity
+public struct PhotoColorRecipe: Codable, Equatable, Sendable {
+    public var mixer = ColorMixerAdjustments.identity
+    public var points: [PointColorAdjustment] = []
+    public var grading = ColorGradingAdjustments.identity
 
-    static let identity = PhotoColorRecipe()
+    public static let identity = PhotoColorRecipe()
 
-    var isIdentity: Bool {
+    public var isIdentity: Bool {
         mixer.isIdentity && points.isEmpty && grading.isIdentity
     }
 
@@ -319,9 +339,9 @@ struct PhotoColorRecipe: Codable, Equatable, Sendable {
         case mixer, points, grading
     }
 
-    init() {}
+    public init() {}
 
-    init(from decoder: any Decoder) throws {
+    public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         mixer = try container.decodeIfPresent(ColorMixerAdjustments.self, forKey: .mixer)
             ?? .identity
@@ -331,7 +351,7 @@ struct PhotoColorRecipe: Codable, Equatable, Sendable {
             ?? .identity
     }
 
-    func encode(to encoder: any Encoder) throws {
+    public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         if !mixer.isIdentity { try container.encode(mixer, forKey: .mixer) }
         if !points.isEmpty { try container.encode(points, forKey: .points) }

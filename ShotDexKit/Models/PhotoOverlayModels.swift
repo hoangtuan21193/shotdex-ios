@@ -5,7 +5,7 @@ import Foundation
 /// One kind enum on one struct rather than an enum with two payloads, following
 /// `PhotoMaskComponent`: the layer list treats both kinds uniformly, and adding a
 /// field to either kind stays a one-line change.
-enum PhotoOverlayKind: String, Codable, CaseIterable, Identifiable, Sendable {
+public enum PhotoOverlayKind: String, Codable, CaseIterable, Identifiable, Sendable {
     case text
     case image
     /// A drawn outline — box, oval, speech bubble, arrow or line.
@@ -15,9 +15,9 @@ enum PhotoOverlayKind: String, Codable, CaseIterable, Identifiable, Sendable {
     /// under it, which is why the renderer handles it apart from the rest.
     case magnifier
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .text: "Text"
         case .image: "Image"
@@ -26,7 +26,7 @@ enum PhotoOverlayKind: String, Codable, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    var systemImage: String {
+    public var systemImage: String {
         switch self {
         case .text: "textformat"
         case .image: "photo"
@@ -38,16 +38,16 @@ enum PhotoOverlayKind: String, Codable, CaseIterable, Identifiable, Sendable {
 
 /// What a shape layer draws. The set Photos' Markup offers, plus a plain line,
 /// which is the one people reach for that Photos makes them fake with an arrow.
-enum OverlayShapeStyle: String, Codable, CaseIterable, Identifiable, Sendable {
+public enum OverlayShapeStyle: String, Codable, CaseIterable, Identifiable, Sendable {
     case rectangle
     case oval
     case speechBubble
     case arrow
     case line
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .rectangle: "Rectangle"
         case .oval: "Oval"
@@ -57,7 +57,7 @@ enum OverlayShapeStyle: String, Codable, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    var systemImage: String {
+    public var systemImage: String {
         switch self {
         case .rectangle: "rectangle"
         case .oval: "oval"
@@ -69,7 +69,7 @@ enum OverlayShapeStyle: String, Codable, CaseIterable, Identifiable, Sendable {
 
     /// An arrow and a line are strokes by definition — filling them would paint
     /// the triangle they are made of, not a thicker arrow.
-    var supportsFill: Bool {
+    public var supportsFill: Bool {
         switch self {
         case .rectangle, .oval, .speechBubble: true
         case .arrow, .line: false
@@ -78,14 +78,14 @@ enum OverlayShapeStyle: String, Codable, CaseIterable, Identifiable, Sendable {
 }
 
 /// Where each line sits inside the layer's text box.
-enum OverlayTextAlignment: String, Codable, CaseIterable, Identifiable, Sendable {
+public enum OverlayTextAlignment: String, Codable, CaseIterable, Identifiable, Sendable {
     case leading
     case center
     case trailing
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    var systemImage: String {
+    public var systemImage: String {
         switch self {
         case .leading: "text.alignleft"
         case .center: "text.aligncenter"
@@ -99,21 +99,21 @@ enum OverlayTextAlignment: String, Codable, CaseIterable, Identifiable, Sendable
 /// No alpha channel on purpose: transparency belongs to the layer's own opacity
 /// sliders, so a swatch can never carry hidden translucency that makes two
 /// identical-looking colours behave differently.
-struct OverlayColor: Codable, Equatable, Sendable {
-    var red: Double
-    var green: Double
-    var blue: Double
+public struct OverlayColor: Codable, Equatable, Sendable {
+    public var red: Double
+    public var green: Double
+    public var blue: Double
 
-    static let white = OverlayColor(red: 1, green: 1, blue: 1)
-    static let black = OverlayColor(red: 0, green: 0, blue: 0)
+    public static let white = OverlayColor(red: 1, green: 1, blue: 1)
+    public static let black = OverlayColor(red: 0, green: 0, blue: 0)
 
-    init(red: Double, green: Double, blue: Double) {
+    public init(red: Double, green: Double, blue: Double) {
         self.red = red
         self.green = green
         self.blue = blue
     }
 
-    init(white: Double) {
+    public init(white: Double) {
         self.init(red: white, green: white, blue: white)
     }
 }
@@ -125,77 +125,77 @@ struct OverlayColor: Codable, Equatable, Sendable {
 /// edge. That is what makes a layer render identically in the small interactive
 /// preview and in a full-resolution export, and what lets a signature saved on a
 /// landscape photo keep its apparent size on a portrait one.
-struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
-    var id = UUID()
-    var kind: PhotoOverlayKind
-    var isVisible = true
-    var opacity = 1.0
+public struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
+    public var id = UUID()
+    public var kind: PhotoOverlayKind
+    public var isVisible = true
+    public var opacity = 1.0
     /// Anchor point of the layer, and the point it rotates about.
-    var center: NormalizedPoint
-    var rotationDegrees = 0.0
+    public var center: NormalizedPoint
+    public var rotationDegrees = 0.0
     /// Text: the font's point size. Image: the layer's width. Both as a fraction
     /// of the cropped image's short edge.
-    var size: Double
+    public var size: Double
 
     // MARK: Text
 
     /// The literal the user typed, EXIF tokens and all — `{camera}` is resolved at
     /// render time, never stored resolved, so reopening the edit still shows the
     /// template.
-    var text = ""
+    public var text = ""
     /// PostScript name of the chosen face; empty means the system font. The family
     /// is kept beside it so a face that is gone on this device can still fall back
     /// within its own family instead of jumping to Helvetica.
-    var fontPostScriptName = ""
-    var fontFamilyName = ""
-    var isBold = false
-    var isItalic = false
-    var alignment: OverlayTextAlignment = .center
+    public var fontPostScriptName = ""
+    public var fontFamilyName = ""
+    public var isBold = false
+    public var isItalic = false
+    public var alignment: OverlayTextAlignment = .center
     /// Extra leading, as a multiple of the point size.
-    var lineSpacing = 0.15
+    public var lineSpacing = 0.15
     /// Letter spacing, as a multiple of the point size.
-    var tracking = 0.0
+    public var tracking = 0.0
     /// Width of the text box as a fraction of the image width. Lines wrap inside
     /// it, and `alignment` positions them within it, so a long caption cannot run
     /// off the frame.
-    var maximumWidth = 0.9
-    var fill = OverlayColor.white
+    public var maximumWidth = 0.9
+    public var fill = OverlayColor.white
     /// Outline thickness as a fraction of the point size. Zero disables it.
-    var outlineWidth = 0.0
-    var outlineColor = OverlayColor.black
+    public var outlineWidth = 0.0
+    public var outlineColor = OverlayColor.black
     /// Blur radius as a fraction of the point size.
-    var shadowRadius = 0.0
+    public var shadowRadius = 0.0
     /// Downward offset as a fraction of the point size.
-    var shadowOffsetY = 0.0
+    public var shadowOffsetY = 0.0
     /// Zero disables the shadow regardless of radius and offset.
-    var shadowOpacity = 0.0
+    public var shadowOpacity = 0.0
 
     // MARK: Shape and magnifier
 
-    var shapeStyle: OverlayShapeStyle = .rectangle
+    public var shapeStyle: OverlayShapeStyle = .rectangle
     /// Filled rather than outlined. Ignored by the styles that cannot be filled.
-    var isFilled = false
+    public var isFilled = false
     /// Outline thickness as a fraction of the cropped image's short edge. The
     /// same unit as `size`, so a shape keeps its proportions when resized.
-    var strokeWidth = 0.006
+    public var strokeWidth = 0.006
     /// Height as a fraction of the layer's own width, so one `size` plus this
     /// describes a box of any proportion. A circle is 1.
-    var heightRatio = 0.62
+    public var heightRatio = 0.62
     /// How much bigger the photo appears inside the loupe.
-    var magnification = 2.0
+    public var magnification = 2.0
 
     // MARK: Image
 
     /// File in the watermark cache. Nil on a text layer.
-    var imageID: UUID?
+    public var imageID: UUID?
     /// The photo-library asset the signature was picked from, so a cache file lost
     /// to a reinstall can be fetched again rather than silently dropping the layer.
-    var imageAssetIdentifier: String?
+    public var imageAssetIdentifier: String?
 
     /// Per-kind defaults: a caption belongs across the bottom, a signature in the
     /// bottom-right corner, and a signature needs to be far bigger than a font's
     /// point size to read as a mark.
-    init(kind: PhotoOverlayKind) {
+    public init(kind: PhotoOverlayKind) {
         self.kind = kind
         switch kind {
         case .text:
@@ -215,11 +215,11 @@ struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
         }
     }
 
-    static func text() -> PhotoOverlay {
+    public static func text() -> PhotoOverlay {
         PhotoOverlay(kind: .text)
     }
 
-    static func shape(_ style: OverlayShapeStyle) -> PhotoOverlay {
+    public static func shape(_ style: OverlayShapeStyle) -> PhotoOverlay {
         var overlay = PhotoOverlay(kind: .shape)
         overlay.shapeStyle = style
         // An arrow reads as a diagonal, not as a wide flat box.
@@ -229,11 +229,11 @@ struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
         return overlay
     }
 
-    static func magnifier() -> PhotoOverlay {
+    public static func magnifier() -> PhotoOverlay {
         PhotoOverlay(kind: .magnifier)
     }
 
-    static func image(id: UUID, assetIdentifier: String?) -> PhotoOverlay {
+    public static func image(id: UUID, assetIdentifier: String?) -> PhotoOverlay {
         var overlay = PhotoOverlay(kind: .image)
         overlay.imageID = id
         overlay.imageAssetIdentifier = assetIdentifier
@@ -242,7 +242,7 @@ struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
 
     /// Whether the layer would put any pixels on the photo. An empty string and a
     /// fully transparent layer are both no-ops the renderer can skip.
-    var hasVisibleEffect: Bool {
+    public var hasVisibleEffect: Bool {
         guard isVisible, opacity > 0.001 else { return false }
         switch kind {
         case .text: return !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -252,9 +252,9 @@ struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
         }
     }
 
-    var hasShadow: Bool { shadowOpacity > 0.001 && (shadowRadius > 0 || shadowOffsetY != 0) }
+    public var hasShadow: Bool { shadowOpacity > 0.001 && (shadowRadius > 0 || shadowOffsetY != 0) }
 
-    var hasOutline: Bool { outlineWidth > 0.0005 }
+    public var hasOutline: Bool { outlineWidth > 0.0005 }
 
     // MARK: Codable
 
@@ -294,7 +294,7 @@ struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
     /// inside users' photos forever, so a layer written by an older build has to
     /// decode against whatever fields exist today. Every key is optional on the
     /// wire and falls back to the kind's default.
-    init(from decoder: any Decoder) throws {
+    public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let kind = try container.decode(PhotoOverlayKind.self, forKey: .kind)
         self.init(kind: kind)
@@ -359,7 +359,7 @@ struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
     /// Only what differs from the kind's default is written — a plain white
     /// caption is a handful of keys rather than two dozen, and the recipe has to
     /// fit in a photo's adjustment data alongside everything else.
-    func encode(to encoder: any Encoder) throws {
+    public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         let defaults = PhotoOverlay(kind: kind)
         try container.encode(id, forKey: .id)
@@ -434,14 +434,24 @@ struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
 /// so a face missing on another device can fall back within its own family; the
 /// display name is what the picker showed, so the panel can say which font is set
 /// without asking the font system again.
-struct OverlayFontChoice: Codable, Equatable, Identifiable, Sendable {
-    var postScriptName: String
-    var familyName: String
-    var displayName: String
+public struct OverlayFontChoice: Codable, Equatable, Identifiable, Sendable {
+    public init(
+        postScriptName: String,
+        familyName: String,
+        displayName: String,
+    ) {
+        self.postScriptName = postScriptName
+        self.familyName = familyName
+        self.displayName = displayName
+    }
 
-    var id: String { postScriptName.isEmpty ? "system" : postScriptName }
+    public var postScriptName: String
+    public var familyName: String
+    public var displayName: String
 
-    static let system = OverlayFontChoice(
+    public var id: String { postScriptName.isEmpty ? "system" : postScriptName }
+
+    public static let system = OverlayFontChoice(
         postScriptName: "",
         familyName: "",
         displayName: "System"
@@ -452,13 +462,13 @@ struct OverlayFontChoice: Codable, Equatable, Identifiable, Sendable {
 ///
 /// A layer *set* rather than a single layer, because a real watermark is usually a
 /// logo plus a credit line, and the two only make sense together.
-struct SignaturePreset: Codable, Identifiable, Equatable, Sendable {
-    var id = UUID()
-    var name: String
-    var createdAt: Date
-    var layers: [PhotoOverlay]
+public struct SignaturePreset: Codable, Identifiable, Equatable, Sendable {
+    public var id = UUID()
+    public var name: String
+    public var createdAt: Date
+    public var layers: [PhotoOverlay]
 
-    init(id: UUID = UUID(), name: String, createdAt: Date, layers: [PhotoOverlay]) {
+    public init(id: UUID = UUID(), name: String, createdAt: Date, layers: [PhotoOverlay]) {
         self.id = id
         self.name = name
         self.createdAt = createdAt

@@ -1,4 +1,5 @@
 import SwiftUI
+import ShotDexKit
 
 /// The live collage canvas. Cells are plain `Image` views framed by the same
 /// `CollageGeometry` math the exporter uses — WYSIWYG comes from shared pure

@@ -1,6 +1,7 @@
 import AVFoundation
 import Photos
 import SwiftUI
+import ShotDexKit
 
 /// State holder for the Video Studio. Owns the recipe, the loaded sources,
 /// the preview player, and the export flow.

@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import ShotDexKit
 
 /// The photo and everything that floats over it. The image fills all the height
 /// the panel does not use — there is no extra letterbox — and every control on

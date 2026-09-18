@@ -4,15 +4,25 @@ import Foundation
 /// `PhotoRenderService+Color`. The kernels interpolate the same constants
 /// (`ColorMixerBand.centerDegrees`) into their GLSL source, so unit tests over
 /// these functions pin down the GPU behavior without needing a GPU.
-enum ColorRenderMath {
-    struct HSV: Equatable {
+public enum ColorRenderMath {
+    public struct HSV: Equatable {
+        public init(
+            hue: Double,
+            saturation: Double,
+            value: Double,
+        ) {
+            self.hue = hue
+            self.saturation = saturation
+            self.value = value
+        }
+
         /// Degrees 0…360.
-        var hue: Double
-        var saturation: Double
-        var value: Double
+        public var hue: Double
+        public var saturation: Double
+        public var value: Double
     }
 
-    static func smoothstep(_ edge0: Double, _ edge1: Double, _ x: Double) -> Double {
+    public static func smoothstep(_ edge0: Double, _ edge1: Double, _ x: Double) -> Double {
         guard edge1 > edge0 else { return x < edge0 ? 0 : 1 }
         let t = min(max((x - edge0) / (edge1 - edge0), 0), 1)
         return t * t * (3 - 2 * t)
@@ -20,7 +30,7 @@ enum ColorRenderMath {
 
     // MARK: - HSV conversion
 
-    static func hsv(fromRed red: Double, green: Double, blue: Double) -> HSV {
+    public static func hsv(fromRed red: Double, green: Double, blue: Double) -> HSV {
         let maximum = max(red, green, blue)
         let minimum = min(red, green, blue)
         let delta = maximum - minimum
@@ -42,7 +52,7 @@ enum ColorRenderMath {
         return HSV(hue: hue, saturation: saturation, value: maximum)
     }
 
-    static func rgb(from hsv: HSV) -> (red: Double, green: Double, blue: Double) {
+    public static func rgb(from hsv: HSV) -> (red: Double, green: Double, blue: Double) {
         let saturation = min(max(hsv.saturation, 0), 1)
         let value = min(max(hsv.value, 0), 1)
         guard saturation > 0 else { return (value, value, value) }
@@ -74,7 +84,7 @@ enum ColorRenderMath {
     /// wrapped wheel; the two get smoothstep-complementary weights and every
     /// other band gets zero, so adjacent-band shifts cross over with no dead
     /// zones despite the uneven center spacing.
-    static func bandWeights(hueDegrees: Double) -> [Double] {
+    public static func bandWeights(hueDegrees: Double) -> [Double] {
         var hue = hueDegrees.truncatingRemainder(dividingBy: 360)
         if hue < 0 { hue += 360 }
 
@@ -101,7 +111,7 @@ enum ColorRenderMath {
 
     /// Shadows/midtones/highlights membership for a luma value, shaped by the
     /// grading Blending (overlap width) and Balance (pivot shift) controls.
-    static func regionWeights(
+    public static func regionWeights(
         luma: Double,
         blending: Double,
         balance: Double
@@ -117,7 +127,7 @@ enum ColorRenderMath {
 
     // MARK: - Point color weight
 
-    static func circularHueDistance(_ a: Double, _ b: Double) -> Double {
+    public static func circularHueDistance(_ a: Double, _ b: Double) -> Double {
         let difference = abs(a - b).truncatingRemainder(dividingBy: 360)
         return min(difference, 360 - difference)
     }
@@ -125,7 +135,7 @@ enum ColorRenderMath {
     /// Match strength of a pixel against a sampled reference. Hue distance
     /// dominates the metric so a red pixel never matches a blue reference no
     /// matter how close in brightness.
-    static func pointWeight(pixel: HSV, reference: HSV, range: Double) -> Double {
+    public static func pointWeight(pixel: HSV, reference: HSV, range: Double) -> Double {
         let hueDistance = circularHueDistance(pixel.hue, reference.hue) / 180
         let saturationDistance = abs(pixel.saturation - reference.saturation)
         let valueDistance = abs(pixel.value - reference.value)

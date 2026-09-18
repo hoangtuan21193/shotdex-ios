@@ -22,20 +22,31 @@ import Foundation
 ///
 /// It also makes the stamp honest: it now ends at the full width, which is the outer
 /// ring `EditorBrushCursor` draws. The old Gaussian spilled past that ring.
-enum BrushStrokeRasterizer {
+public enum BrushStrokeRasterizer {
+    /// How much of a stamp's footprint stays fully opaque before the feather
+    /// ramp begins.
+    ///
+    /// Lives here rather than in the editor's layout metrics because the
+    /// renderer is what has to agree with it, and the renderer ships in
+    /// ShotDexKit where the editor's measurements do not. `EditorLayoutMetrics`
+    /// reads it back for the on-screen brush cursor.
+    public static func coreScale(feather: Double) -> CGFloat {
+        CGFloat(max(0.08, 1 - feather * 0.8))
+    }
+
     /// One concentric pass: how wide to stroke, and the alpha to stroke it with so
     /// that the passes so far add up to the intended coverage.
-    struct Ring: Equatable {
-        var lineWidth: CGFloat
+    public struct Ring: Equatable {
+        public var lineWidth: CGFloat
         /// Source alpha for *this* pass, not the cumulative coverage — the passes
         /// composite over each other, so each one only has to close the gap.
-        var alpha: CGFloat
+        public var alpha: CGFloat
     }
 
     /// Widest a soft edge is allowed to be cut into. Enough that the banding is
     /// finer than the mask is ever resampled to, cheap enough that a mask of thirty
     /// strokes is still a handful of path fills.
-    static let maximumRings = 20
+    public static let maximumRings = 20
 
     /// The passes that make up one stroke, outermost first.
     ///
@@ -43,7 +54,7 @@ enum BrushStrokeRasterizer {
     /// size only scales the widths. Two strokes with the same settings painted at
     /// different zooms therefore land at the same strength, differing only in how
     /// much of the photo they cover.
-    static func rings(
+    public static func rings(
         size: Double,
         feather: Double,
         flow: Double,
@@ -51,7 +62,7 @@ enum BrushStrokeRasterizer {
         shortEdge: CGFloat
     ) -> [Ring] {
         let full = max(1, CGFloat(size) * shortEdge)
-        let core = full * EditorLayoutMetrics.brushCoreScale(feather: feather)
+        let core = full * Self.coreScale(feather: feather)
         // An eraser takes the pixel away completely at its centre, the way the old
         // `.clear` blend did; flow shapes a paint stroke, not a removal.
         let peak = isEraser ? 1 : min(1, max(0.01, flow))
@@ -87,7 +98,7 @@ enum BrushStrokeRasterizer {
     /// Strokes `strokes` into `context` in order. `point` maps a normalized mask
     /// coordinate into the context's own pixels — the two renderers flip y through
     /// their own `imagePoint`, so neither the flip nor the extent offset lives here.
-    static func draw(
+    public static func draw(
         _ strokes: [BrushStroke],
         in context: CGContext,
         shortEdge: CGFloat,

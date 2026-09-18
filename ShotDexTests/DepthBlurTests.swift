@@ -2,6 +2,7 @@ import CoreGraphics
 import CoreImage
 import Foundation
 import Testing
+@testable import ShotDexKit
 @testable import ShotDex
 
 /// Portrait depth blur, against real pixels: the point of it is that the same

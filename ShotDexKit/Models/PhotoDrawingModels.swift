@@ -13,21 +13,33 @@ import Foundation
 /// canvasWidth`, so one capture serves the 1024pt preview, the settle pass and the
 /// full-resolution export alike. The canvas aspect matches the cropped image's, so
 /// height follows width.
-struct PhotoDrawing: Codable, Equatable, Sendable {
+public struct PhotoDrawing: Codable, Equatable, Sendable {
+    public init(
+        data: Data,
+        canvasWidth: Double,
+        canvasHeight: Double,
+        isVisible: Bool = true,
+    ) {
+        self.data = data
+        self.canvasWidth = canvasWidth
+        self.canvasHeight = canvasHeight
+        self.isVisible = isVisible
+    }
+
     /// `PKDrawing.dataRepresentation()`.
-    var data: Data
+    public var data: Data
     /// Canvas size in points at capture time, so the vector can be scaled to any
     /// render extent.
-    var canvasWidth: Double
-    var canvasHeight: Double
+    public var canvasWidth: Double
+    public var canvasHeight: Double
     /// The layer's eye toggle. A hidden drawing stays in the recipe (so the strokes
     /// are not lost) but is not composited.
-    var isVisible = true
+    public var isVisible = true
 
     /// No strokes to composite. An empty drawing is treated as no drawing at all,
     /// so it adds no key to a recipe and reads as identity.
-    var isEmpty: Bool { data.isEmpty || canvasWidth <= 0 || canvasHeight <= 0 }
+    public var isEmpty: Bool { data.isEmpty || canvasWidth <= 0 || canvasHeight <= 0 }
 
     /// Actually drawn on the photo: has strokes and its eye is on.
-    var hasVisibleEffect: Bool { !isEmpty && isVisible }
+    public var hasVisibleEffect: Bool { !isEmpty && isVisible }
 }

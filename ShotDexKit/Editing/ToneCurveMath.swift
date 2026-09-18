@@ -7,10 +7,10 @@ import Foundation
 /// curve reads as a band that gets *darker* as its input gets brighter. The
 /// Fritsch–Carlson tangent limiting guarantees the output never reverses, so a
 /// curve the user drew as always-rising renders as always-rising.
-enum ToneCurveMath {
+public enum ToneCurveMath {
     /// A `count`-entry LUT (outputs 0…1) sampled uniformly across the 0…1 input
     /// domain. Fewer than two usable points falls back to the identity ramp.
-    static func lut(points rawPoints: [CurvePoint], count: Int = 256) -> [Float] {
+    public static func lut(points rawPoints: [CurvePoint], count: Int = 256) -> [Float] {
         precondition(count >= 2)
         let pts = sanitized(rawPoints)
         guard pts.count >= 2 else {

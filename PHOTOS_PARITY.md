@@ -2,7 +2,7 @@
 
 > **Tiến độ đêm 2026-09-19** — mỗi mục dưới đây đều build pass, chạy thật trên simulator và có ảnh chụp màn hình kiểm chứng, commit riêng trên `main`.
 >
-> Xong: Customize tab Collections · Memory → phim · Share bỏ vị trí · Sort trong album · Copy/Paste edits · Giữ tay xem bản gốc · Show in All Photos · Handoff · Dynamic Type cho token Collections · Viewer panorama · Depth Blur ảnh Portrait · Kéo thả ảnh · Markup shapes + kính lúp · Trim video trong viewer + nút tua khung · People & Pets (pass Vision opt-in) · hành động PhotoKit (ngày/vị trí/ẩn/favorite) · context menu trên tile · Media Types · date section ngày/tháng/năm + thanh cuộn ngày · badge trạng thái · menu ⋯ trong viewer · Live Text · Live Photo + Save as Video · Slideshow · Places · Trips · App Intents + Spotlight · Widget · Share Extension · iPad · quản lý album/folder · Settings (autoplay, HDR, dung lượng) · Auto Enhance + Revert · Merge duplicates.
+> Xong: **C6 photo editing extension + tách framework ShotDexKit** · Customize tab Collections · Memory → phim · Share bỏ vị trí · Sort trong album · Copy/Paste edits · Giữ tay xem bản gốc · Show in All Photos · Handoff · Dynamic Type cho token Collections · Viewer panorama · Depth Blur ảnh Portrait · Kéo thả ảnh · Markup shapes + kính lúp · Trim video trong viewer + nút tua khung · People & Pets (pass Vision opt-in) · hành động PhotoKit (ngày/vị trí/ẩn/favorite) · context menu trên tile · Media Types · date section ngày/tháng/năm + thanh cuộn ngày · badge trạng thái · menu ⋯ trong viewer · Live Text · Live Photo + Save as Video · Slideshow · Places · Trips · App Intents + Spotlight · Widget · Share Extension · iPad · quản lý album/folder · Settings (autoplay, HDR, dung lượng) · Auto Enhance + Revert · Merge duplicates.
 >
 > Vướng, cần bạn quyết hoặc cần máy thật: xem mục "Cần quyết định" ở cuối file.
 
@@ -61,7 +61,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 - [x] C3 Widget — target `ShotDexWidget`, widget "Your Gear" (small / medium / lock-screen rectangular) đọc digest app ghi vào App Group `group.com.hoangtuan.shotdex`. **Widget không đụng thư viện ảnh**. Đã thêm lên màn hình chính với số liệu thật
 - [x] C4 Share Extension — target `ShotDexShare` ("Save to ShotDex"), nhận ảnh từ app khác (tối đa 40), xin quyền `.addOnly`, lưu vào thư viện; đã test từ share sheet của app Photos
 - [x] C5 Handoff qua NSUserActivity — payload là **cloud identifier** (`PHCloudIdentifier`), nên chỉ ảnh trong iCloud Photos mới bàn giao được; ảnh local-only không publish gì. **Chưa chạy thật** (simulator không có iCloud)
-- [ ] C6 Photo editing extension
+- [x] C6 Photo editing extension — target **ShotDexEdit**, mở trong app Photos; dùng chung lõi render qua framework **ShotDexKit** vừa tách (xem spec §7.2.5)
 - [~] C7 iPad — `TARGETED_DEVICE_FAMILY = "1,2"`, build/cài/chạy được trên iPad Pro 11", xoay ngang đã khai báo sẵn trong Info.plist; lưới đã tự co giãn theo regular width (`GridDensity.columns(forDensity:width:isRegularWidth:)`). Phím tắt trong viewer: `f` favorite, `i` info, `delete` xoá, `⌘S` share. **CHƯA kiểm thử tương tác**: panel Simulator cho iPad chưa được cấp quyền nên không bấm qua được màn onboarding — cần chạy tay để soát bố cục từng màn
 - [~] C8 Rà soát Dynamic Type — đo ở `accessibility-extra-large`: tab Collections **vỡ** (token cắt chữ, thumbnail đè tiêu đề), đã sửa bằng `@ScaledMetric` cho `AlbumTokenMetrics` + thẻ Memory + thẻ On This Day. Lưới ảnh, Settings, Statistics dùng font ngữ nghĩa nên đã tự scale. **Còn lại**: nhãn tab bar tự dựng (size 10 cố định) và nhãn metadata trên tile (chrome tầng C, cố ý cố định)
 
@@ -97,9 +97,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 
 ## Chưa làm
 
-Chỉ còn **một** mục có API mà chưa làm, và nó cần bạn quyết kiến trúc trước:
-
-1. **C6 Photo editing extension** (mở editor ShotDex ngay trong app Photos). API thì có (`PHContentEditingController`), **vướng là cách chia target**: extension cần compile được `PhotoEditRecipe` + `PhotoRenderService` + `EditorTheme` + panel — khoảng 30 file trải khắp Core/Domain/Data/Features. Hiện project dùng `PBXFileSystemSynchronizedRootGroup`, tức file trong thư mục `ShotDex/` **tự động** thuộc app target; cho extension dùng chung thì phải **tách một framework/static library** — đó là một cuộc tái cấu trúc project, mình **không tự làm ban đêm** vì sáng ra bạn sẽ nhận một project khác hẳn. Hai lựa chọn: (a) tách `ShotDexKit` framework rồi mới làm extension, (b) bỏ C6 (tracker vốn xếp nó giá trị thấp nhất).
+Không còn mục nào có API mà chưa làm. C6 đã xong cùng với việc tách framework `ShotDexKit`.
 
 Những mục còn `[~]` khác đều đã ghi rõ phần thiếu là **không có API** (slo-mo range, Portrait Lighting, nhận diện từng người, badge "đã chỉnh", ảnh bìa album, Recently Deleted, album Hidden) hoặc **cần bạn quyết** (xem cuối file).
 

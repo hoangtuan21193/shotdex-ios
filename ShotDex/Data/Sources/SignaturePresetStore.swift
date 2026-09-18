@@ -1,4 +1,5 @@
 import Foundation
+import ShotDexKit
 
 /// Saved overlay layer sets, reusable across photos — the Lightroom signature.
 ///

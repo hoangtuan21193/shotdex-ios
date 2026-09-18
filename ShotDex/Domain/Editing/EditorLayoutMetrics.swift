@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import ShotDexKit
 
 /// Corner the floating histogram card snaps to when the user lets go.
 enum EditorHistogramCorner: String, CaseIterable, Codable, Sendable {
@@ -315,8 +316,12 @@ enum EditorLayoutMetrics {
     }
 
     /// How much of that footprint stays fully opaque before the feather ramp.
+    ///
+    /// The number itself lives in `BrushStrokeRasterizer`, which is in
+    /// ShotDexKit: the renderer is what has to agree with it, and two copies of
+    /// a curve like this drift. This is the editor's way of asking.
     static func brushCoreScale(feather: Double) -> CGFloat {
-        CGFloat(max(0.08, 1 - feather * 0.8))
+        BrushStrokeRasterizer.coreScale(feather: feather)
     }
 
     /// Diameter to draw the brush cursor at *inside the zoomed stack*, so that on

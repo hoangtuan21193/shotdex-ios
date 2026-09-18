@@ -1,6 +1,7 @@
 import Photos
 import SwiftUI
 import UIKit
+import ShotDexKit
 
 struct CompressionFailure: Identifiable {
     let id = UUID()

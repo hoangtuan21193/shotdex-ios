@@ -2,6 +2,7 @@ import CoreGraphics
 import CoreText
 import Foundation
 import UIKit
+import ShotDexKit
 
 /// Draws a finished collage into one bitmap. Mostly Core Graphics — rounded-rect
 /// clipping and aspect-fill placement are CGContext's home turf; the one Core

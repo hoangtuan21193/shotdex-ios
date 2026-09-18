@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import ShotDexKit
 
 /// Colour control for an overlay layer: a swatch row for the colours a watermark
 /// actually uses, and the grading wheel behind a Custom toggle for everything else.

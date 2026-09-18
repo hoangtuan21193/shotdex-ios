@@ -1,4 +1,5 @@
 import Foundation
+import ShotDexKit
 
 /// Human-readable descriptions of what a recipe holds and of what changed
 /// between two recipes. The mask list uses the first for its row subtitles and

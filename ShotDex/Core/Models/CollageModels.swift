@@ -1,4 +1,5 @@
 import Foundation
+import ShotDexKit
 
 /// One slot of a collage. `assetID` is nil for an **empty slot** — a cell the
 /// layout drew but no photo fills yet (§6); tapping it opens the picker. When a

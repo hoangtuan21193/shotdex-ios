@@ -1,4 +1,5 @@
 import Foundation
+import ShotDexKit
 
 /// A named arrangement of photo cells, held as a split tree (`CollageLayoutNode`)
 /// so its seams are draggable (§9). `cells` is the tree resolved with default

@@ -1,4 +1,5 @@
 import Foundation
+import ShotDexKit
 
 enum PhotoOutputFilename {
     static func make(

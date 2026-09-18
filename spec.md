@@ -81,6 +81,7 @@ ShotDex/
 │   ├── Models/                     // PhotoMetadata, LibraryGridItem (+PhotoGridDisplayable),
 │   │   │                           // FilterCriteria, SortOption, SensorFormat, Stats models
 │   └── Utils/MetadataFormatter.swift     // format shutter/aperture/focal/ISO/fileSize
+├── (target: ShotDexKit — framework, xem §7.2.5)
 ├── Data/
 │   ├── Database/
 │   │   ├── AppDatabase.swift       // GRDB setup + migrations
@@ -660,6 +661,24 @@ Ba tab màu **Mixer / Point / Grading** đứng liền nhau ngay bên phải Adj
 - **Không dùng `CIDepthBlurEffect`** (renderer portrait của chính Apple): thiếu calibration data + auxiliary metadata của máy ảnh thì nó **trả ảnh y nguyên** — đo được: ảnh test kẻ sọc ra với độ tương phản sọc không đổi. **Cũng không dùng `CIMaskedVariableBlur`** (đúng filter cho việc này, falloff liên tục): trên simulator nó **không bao giờ render xong** một ảnh 240pt — phải giết test run ở mốc 10 phút. Thay bằng **hai bản Gaussian** (bán kính r*0.45 và r) blend ngược vào qua mặt nạ depth theo hai nấc (0→0.5, 0.5→1): vài pass, xong trong mili-giây
 - Mặt nạ = **đảo** disparity (disparity cao = gần), nhân với **đảo portrait matte** khi có — matte biết tóc và mép người dừng ở đâu, chính xác hơn map depth độ phân giải 1/4. Bán kính = 3.5% cạnh ngắn × slider, nên cùng một slider cho ra cùng độ mờ ở preview và ở export
 - Recipe dán từ ảnh Portrait sang ảnh không có depth: **trả ảnh gốc**, không lỗi, không đoán
+
+#### 7.2.5 ShotDexKit (framework) + ShotDexEdit (photo editing extension)
+
+**ShotDexKit** là framework chứa **lõi render**, 21 file: 5 file model của recipe (`PhotoEditRecipe`, `PhotoAdjustments`, overlay/color/curve/drawing), `PhotoRenderService` + 6 extension của nó + `OverlayImageStore` + `DepthImageReader`, và 7 file toán thuần (`FilmSimulation`, `ToneCurveMath`, `ColorRenderMath`, `TextOverlayLayout`, `ShapeOverlayGeometry`, `OverlayTokenResolver`, `BrushStrokeRasterizer`). App, test target và extension đều link nó. Kit **không** import SwiftUI hay GRDB.
+
+- **Chỉ có lõi render, không có UI editor.** Đưa một type vào kit nghĩa là phải `public` hoá nó và toàn bộ member — đó là cái giá của ranh giới module. Panel, catalog slider, layout metrics, history, clipboard ở lại app
+- Hai chỗ phải **gỡ phụ thuộc ngược** để kit đứng một mình: `BrushStrokeRasterizer.coreScale(feather:)` chuyển từ `EditorLayoutMetrics` vào kit (renderer mới là bên phải khớp với con số đó, `EditorLayoutMetrics` giờ hỏi ngược lại), và `OverlayTokenValues.init(metadata:)` tách ra file app `OverlayTokenValues+Metadata.swift` vì `PhotoMetadata` thuộc tầng database
+- Struct trong kit phải khai **`public init` tường minh**: memberwise init của Swift là `internal`, app gọi không được. Thêm cho: `NormalizedPoint`, `NormalizedRect`, `PhotoAdjustments`, `PhotoDrawing`, `BrushStroke`, `PhotoExportOptions`, `PointColorAdjustment`, `PhotoRenderSourceInfo`, `OverlayFontChoice`, `ColorRenderMath.HSV`, `PhotoRenderService`
+- Test dùng `@testable import ShotDexKit` — chúng vốn chọc vào internal của app thì cũng chọc vào internal của kit như vậy
+
+**ShotDexEdit** là **photo editing extension** (`PHContentEditingController`, `NSExtensionPointIdentifier = com.apple.photo-editing`): mở ShotDex ngay trong app Photos.
+
+- Giao diện cố ý **nhỏ hơn editor**: dải film look + Strength + bốn thanh tone (Exposure/Contrast/Highlights/Shadows). Extension chạy trong process chật bộ nhớ cạnh Photos; bê cả editor vào là nuôi thêm một app thứ hai chứ không phải đi tắt
+- **Adjustment data là `PhotoEditRecipe`** dưới đúng `formatIdentifier` của app, nên vòng quay khép kín: mở lại ảnh trong extension thì slider hiện nguyên trạng, mở trong ShotDex thì editor đầy đủ thấy cùng một edit. `canHandle` **chỉ nhận format của mình** — nhận bừa adjustment của app khác là vứt edit của họ đi lúc save
+- `NSExtensionPrincipalClass` chứ không phải storyboard: giao diện là một view SwiftUI, một storyboard chỉ để khởi tạo nó là file chỉ có thể mục nát
+- **Phải link `PhotosUI.framework` tường minh**: autolink không kéo nó vào, và thiếu nó Photos không tìm ra `PHEditingExtensionContext` — extension mở lên trắng trơn, log ghi `Unable to find NSExtensionContextClass`
+- Info.plist phải nằm trong `membershipExceptions` của synchronized group, nếu không build lỗi *Multiple commands produce Info.plist* (đã sinh tự động lại còn copy như resource)
+- **Chỉ ảnh tĩnh** (`PHSupportedMediaTypes = [Image]`): renderer làm việc trên `CIImage`, video cần cả pipeline của Video Studio
 
 #### 7.2.4 Markup (text, image, drawing, presets)
 

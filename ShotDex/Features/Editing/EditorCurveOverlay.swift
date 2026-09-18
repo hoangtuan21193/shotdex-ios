@@ -1,4 +1,5 @@
 import SwiftUI
+import ShotDexKit
 
 /// The point tone curve, drawn over the photo while the Curve group is open —
 /// Snapseed's model rather than a separate screen, so every drag is judged on the

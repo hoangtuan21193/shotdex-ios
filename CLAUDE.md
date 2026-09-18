@@ -28,6 +28,8 @@ Run in simulator: build, then `xcrun simctl install <udid> <path/to/ShotDex.app>
 
 Layered, composition root at `ShotDex/App/AppDependencies.swift` — built once in `ShotDexApp`, injected via SwiftUI environment (`@Observable` + `.environment`). No singletons except `AppDatabase.makeShared()`.
 
+**Targets.** `ShotDexKit` (framework) holds the render core — the edit recipe models, `PhotoRenderService` and its extensions, and the pure editing math (film looks, tone curve, colour, text/shape overlay layout, brush rasterizer). The app, the tests and the **ShotDexEdit** photo-editing extension all link it; nothing in it imports SwiftUI or GRDB. Everything else stays in the app target. Adding a type to the kit means marking it and its members `public` — that is the cost of the boundary, and the reason the kit is the renderer and not the whole editor.
+
 **Data flow:** PhotoKit assets → `IndexPipeline` (actor, batches of 200) reads EXIF via `ExifReader` (ImageIO, no image decode) → `MetadataComposer` normalizes (camera/lens names, sensor lookup) → GRDB SQLite rows → the store/query types serve UI queries.
 
 - `ShotDex/Data/Database/` — `AppDatabase` (GRDB setup/migrations) plus: `MetadataStore` (index writes, cursor persistence), `LibraryQueries` (filtered/sorted grid queries — whole library as slim `LibraryGridItem` rows, full rows by id on demand), `StatisticsQueries` (SQL aggregates for statistics; GROUP BY/histograms done in SQL, not Swift — this is why GRDB over SwiftData), `SmartAlbumStore`, `ChartStore`, `FilterSuggestionCache`.

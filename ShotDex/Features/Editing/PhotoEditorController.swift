@@ -1,6 +1,7 @@
 import Photos
 import SwiftUI
 import UIKit
+import ShotDexKit
 
 enum PhotoEditorTool: String, CaseIterable, Identifiable {
     case adjust

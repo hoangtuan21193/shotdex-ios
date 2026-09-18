@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import ShotDexKit
 
 /// Video Studio project state. In-memory only for now — a project lives one
 /// editing session and its output is a flat new video asset, so nothing here

@@ -12,14 +12,14 @@ import UIKit
 /// exporter and the Live Photo frame processor. A drawing changes only on Done, so
 /// a handful of entries (one per resolution — preview, settle, export) is plenty.
 private final class DrawingLayerCache: @unchecked Sendable {
-    static let shared = DrawingLayerCache()
+    public static let shared = DrawingLayerCache()
 
     private static let capacity = 6
     private let lock = NSLock()
     private var images: [String: CGImage] = [:]
     private var order: [String] = []
 
-    func image(forKey key: String, build: () -> CGImage?) -> CGImage? {
+    public func image(forKey key: String, build: () -> CGImage?) -> CGImage? {
         lock.lock()
         if let cached = images[key] {
             lock.unlock()
@@ -44,12 +44,12 @@ private final class DrawingLayerCache: @unchecked Sendable {
     }
 }
 
-extension PhotoRenderService {
+public extension PhotoRenderService {
     /// Draws the Markup layer over a finished photo. Like `applyOverlays`, this runs
     /// after the tone/colour/film chain and after the downscale, so nothing tints
     /// the marks and a Lanczos pass never softens them. Called *before* the text and
     /// signature overlays, so a caption stays legible over a scribble.
-    static func applyDrawing(_ drawing: PhotoDrawing?, to input: CIImage) -> CIImage {
+    public static func applyDrawing(_ drawing: PhotoDrawing?, to input: CIImage) -> CIImage {
         guard let layer = drawingLayer(drawing, extent: input.extent) else { return input }
         return layer.composited(over: input).cropped(to: input.extent)
     }
@@ -57,7 +57,7 @@ extension PhotoRenderService {
     /// The drawing alone, on transparent pixels, positioned on `extent`. Exposed
     /// separately for the Live Photo frame processor, which composites the same
     /// rasterized layer over every frame rather than re-rasterizing per frame.
-    static func drawingLayer(_ drawing: PhotoDrawing?, extent: CGRect) -> CIImage? {
+    public static func drawingLayer(_ drawing: PhotoDrawing?, extent: CGRect) -> CIImage? {
         guard let drawing, drawing.hasVisibleEffect, !extent.isInfinite, !extent.isEmpty
         else { return nil }
         let width = Int(extent.width.rounded())

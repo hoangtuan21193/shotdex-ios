@@ -1,4 +1,5 @@
 import Foundation
+import ShotDexKit
 
 /// How a slider's raw −1…1 (or −2…2) storage value is written for the user. The
 /// editor shows photographic units — stops with two decimals, ±100 percentages,

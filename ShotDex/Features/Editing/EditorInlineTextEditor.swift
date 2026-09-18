@@ -1,4 +1,5 @@
 import SwiftUI
+import ShotDexKit
 
 /// Types a caption straight over the photo, the way Snapseed's Text tool does,
 /// rather than in a sheet that slides up and hides the picture.

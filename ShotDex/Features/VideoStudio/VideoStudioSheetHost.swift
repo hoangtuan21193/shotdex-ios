@@ -1,4 +1,5 @@
 import SwiftUI
+import ShotDexKit
 
 /// The callbacks the sheets fire for actions that need a picker or a full-screen
 /// editor the screen owns.

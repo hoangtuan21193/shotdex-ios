@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSExtension</key>
+	<dict>
+		<key>NSExtensionAttributes</key>
+		<dict>
+			<!-- Stills only. The renderer this extension shares with the app
+			     works on a CIImage of a photo; a video would need the studio's
+			     whole pipeline, which is not here. -->
+			<key>PHSupportedMediaTypes</key>
+			<array>
+				<string>Image</string>
+			</array>
+		</dict>
+		<!-- A principal class rather than a storyboard: the interface is one
+		     SwiftUI view hosted by this controller, and a storyboard whose only
+		     job is to instantiate it is a file that can only go stale. -->
+		<key>NSExtensionPrincipalClass</key>
+		<string>ShotDexEdit.PhotoEditingViewController</string>
+		<key>NSExtensionPointIdentifier</key>
+		<string>com.apple.photo-editing</string>
+	</dict>
+</dict>
+</plist>

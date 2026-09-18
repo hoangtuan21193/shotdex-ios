@@ -1,4 +1,5 @@
 import Foundation
+import ShotDexKit
 
 /// Snapshot history keeps the editor's full recipe coherent across sliders,
 /// crop gestures and multi-part masks. Coalescing is handled by the controller:

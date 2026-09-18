@@ -1,4 +1,5 @@
 import SwiftUI
+import ShotDexKit
 
 /// Panel content for the collage editor's three groups. Built from the shared
 /// editor pieces (`EditorPlainSliderRow`, `EditorChipButtonStyle`,

@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import ShotDexKit
 
 /// Picks a typeface from everything installed on the device.
 ///

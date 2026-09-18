@@ -2,6 +2,7 @@ import CoreGraphics
 import CoreText
 import Foundation
 import Testing
+@testable import ShotDexKit
 @testable import ShotDex
 
 struct TextOverlayLayoutTests {

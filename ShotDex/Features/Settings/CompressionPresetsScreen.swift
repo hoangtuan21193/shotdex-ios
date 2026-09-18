@@ -1,4 +1,5 @@
 import SwiftUI
+import ShotDexKit
 
 struct CompressionPresetsScreen: View {
     @Environment(AppDependencies.self) private var dependencies

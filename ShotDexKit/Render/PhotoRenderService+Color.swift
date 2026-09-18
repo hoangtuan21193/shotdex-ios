@@ -5,7 +5,7 @@ import Foundation
 /// three `CIColorKernel`s. All decision math mirrors `ColorRenderMath` exactly
 /// — the band centers and weight formulas are interpolated into the kernel
 /// source from the same constants the unit tests cover.
-extension PhotoRenderService {
+public extension PhotoRenderService {
     /// GLSL HSV helpers shared by every color kernel. Hue is 0…1 here; the
     /// generated code converts the degree-based Swift constants.
     private static let hsvHelpersSource = """
@@ -46,7 +46,7 @@ extension PhotoRenderService {
         return branches.joined(separator: " else ")
     }
 
-    static let hslMixerKernel = CIColorKernel(source: """
+    public static let hslMixerKernel = CIColorKernel(source: """
         \(hsvHelpersSource)
         kernel vec4 hslMixer(__sample s,
                              vec4 hueA, vec4 hueB,
@@ -92,7 +92,7 @@ extension PhotoRenderService {
         """
     }
 
-    static let pointColorKernel: CIColorKernel? = {
+    public static let pointColorKernel: CIColorKernel? = {
         let slots = (0..<PointColorAdjustment.maximumCount)
         let parameters = slots
             .map { "vec4 ref\($0), vec4 shift\($0)" }
@@ -132,7 +132,7 @@ extension PhotoRenderService {
         """
     }
 
-    static let colorGradeKernel = CIColorKernel(source: """
+    public static let colorGradeKernel = CIColorKernel(source: """
         \(hsvHelpersSource)
         kernel vec4 colorGrade(__sample s,
                                vec4 shadowW, vec4 midW, vec4 highW, vec4 globalW,
@@ -242,7 +242,7 @@ extension PhotoRenderService {
     /// Mixer → point colors → grading, matching Lightroom's stage order.
     /// Global-only by construction: only the whole-image call sites invoke it,
     /// never the per-mask adjustment pass.
-    static func applyColor(_ color: PhotoColorRecipe, to input: CIImage) -> CIImage {
+    public static func applyColor(_ color: PhotoColorRecipe, to input: CIImage) -> CIImage {
         guard !color.isIdentity else { return input }
         var image = applyMixer(color.mixer, to: input)
         image = applyPointColors(color.points, to: image)

@@ -3,14 +3,14 @@ import Foundation
 /// Strip the Filters tab groups a look under. Three generic strips rather than one
 /// per camera maker: a heading is a label on ShotDex's own UI, and naming brands
 /// there invites a trademark complaint the looks themselves do not.
-enum FilmLookCategory: String, CaseIterable, Identifiable, Sendable {
+public enum FilmLookCategory: String, CaseIterable, Identifiable, Sendable {
     case basic
     case film
     case monochrome
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .basic: "Basic"
         case .film: "Film"
@@ -41,27 +41,27 @@ enum FilmLookCategory: String, CaseIterable, Identifiable, Sendable {
 /// These are emulations tuned by eye against reference frames, not measured
 /// densitometric profiles — the same thing a camera maker's own "film simulation"
 /// is.
-struct FilmLook: Sendable, Equatable {
+public struct FilmLook: Sendable, Equatable {
     /// Transfer curve for one channel. Monotone by construction for any
     /// `gain > lift`, `gamma > 0`, `shoulder >= 0` and `contrast` in -1...1, so a
     /// look can never invert tones.
-    struct Curve: Sendable, Equatable {
+    public struct Curve: Sendable, Equatable {
         /// Output floor. Negative film never reaches pure black; a small lift here
         /// is most of why a scan looks like a scan.
-        var lift = 0.0
+        public var lift = 0.0
         /// Output ceiling.
-        var gain = 1.0
+        public var gain = 1.0
         /// Midtone power. Below 1 opens the midtones, above 1 closes them.
-        var gamma = 1.0
+        public var gamma = 1.0
         /// S-curve strength about the 0.5 pivot. Negative flattens.
-        var contrast = 0.0
+        public var contrast = 0.0
         /// Highlight compression — the film shoulder. Rolls values off toward the
         /// ceiling instead of clipping into it.
-        var shoulder = 0.0
+        public var shoulder = 0.0
 
-        static let linear = Curve()
+        public static let linear = Curve()
 
-        func apply(_ input: Double) -> Double {
+        public func apply(_ input: Double) -> Double {
             var value = min(1, max(0, input))
             if gamma != 1 { value = pow(value, gamma) }
             if contrast != 0 {
@@ -81,12 +81,12 @@ struct FilmLook: Sendable, Equatable {
 
     /// Dye crosstalk, row-major. Each row says how much of the R/G/B input a
     /// channel picks up.
-    struct Matrix: Sendable, Equatable {
-        var red: SIMD3<Double>
-        var green: SIMD3<Double>
-        var blue: SIMD3<Double>
+    public struct Matrix: Sendable, Equatable {
+        public var red: SIMD3<Double>
+        public var green: SIMD3<Double>
+        public var blue: SIMD3<Double>
 
-        static let identity = Matrix(
+        public static let identity = Matrix(
             red: SIMD3(1, 0, 0),
             green: SIMD3(0, 1, 0),
             blue: SIMD3(0, 0, 1)
@@ -95,7 +95,7 @@ struct FilmLook: Sendable, Equatable {
         /// Bleeds every channel toward the other two by `amount`, keeping row sums
         /// at 1 so overall brightness is untouched. A gentle, plausible stand-in
         /// for real layer contamination.
-        static func bleed(_ amount: Double) -> Matrix {
+        public static func bleed(_ amount: Double) -> Matrix {
             let side = amount / 2
             let center = 1 - amount
             return Matrix(
@@ -105,7 +105,7 @@ struct FilmLook: Sendable, Equatable {
             )
         }
 
-        func apply(_ input: SIMD3<Double>) -> SIMD3<Double> {
+        public func apply(_ input: SIMD3<Double>) -> SIMD3<Double> {
             SIMD3(
                 (red * input).sum(),
                 (green * input).sum(),
@@ -116,52 +116,52 @@ struct FilmLook: Sendable, Equatable {
 
     /// Hue-selective tweak. Bands are evaluated against the *incoming* hue and
     /// their effects summed, so listing them in any order gives the same result.
-    struct HueBand: Sendable, Equatable {
+    public struct HueBand: Sendable, Equatable {
         /// Hue this band is centred on, in degrees. 0 red, 60 yellow, 120 green,
         /// 180 cyan, 240 blue, 300 magenta.
-        var center: Double
+        public var center: Double
         /// Half-width in degrees. The band fades to nothing at the edge.
-        var width: Double
+        public var width: Double
         /// Degrees of rotation applied at full weight.
-        var hueShift = 0.0
+        public var hueShift = 0.0
         /// Saturation multiplier at full weight.
-        var saturation = 1.0
+        public var saturation = 1.0
         /// Luminance multiplier at full weight.
-        var luminance = 1.0
+        public var luminance = 1.0
     }
 
     /// Channel gains standing in for a white-balance shift. Cheaper and more
     /// predictable here than a temperature model, because the LUT is built in
     /// display gamma.
-    var whiteBalance = SIMD3<Double>(1, 1, 1)
-    var matrix = Matrix.identity
-    var red = Curve.linear
-    var green = Curve.linear
-    var blue = Curve.linear
-    var saturation = 1.0
+    public var whiteBalance = SIMD3<Double>(1, 1, 1)
+    public var matrix = Matrix.identity
+    public var red = Curve.linear
+    public var green = Curve.linear
+    public var blue = Curve.linear
+    public var saturation = 1.0
     /// How much saturation is surrendered as a pixel approaches white.
-    var highlightDesaturation = 0.0
+    public var highlightDesaturation = 0.0
     /// Tint added into the shadows, weighted by 1 - luma.
-    var shadowTint = SIMD3<Double>()
+    public var shadowTint = SIMD3<Double>()
     /// Tint added into the highlights, weighted by luma.
-    var highlightTint = SIMD3<Double>()
-    var bands: [HueBand] = []
+    public var highlightTint = SIMD3<Double>()
+    public var bands: [HueBand] = []
     /// Set for a monochrome look: how sensitive the "emulsion" is to each channel.
     /// A coloured lens filter over panchromatic stock is exactly this — Ye/R/G
     /// filters lighten their own hue and darken the complement.
-    var monochromeMix: SIMD3<Double>?
+    public var monochromeMix: SIMD3<Double>?
     /// Two-point toning for a monochrome look. Black maps to `shadowToner`, white
     /// to `highlightToner`; sepia, selenium and cyanotype are all this one move.
-    var shadowToner: SIMD3<Double>?
-    var highlightToner: SIMD3<Double>?
+    public var shadowToner: SIMD3<Double>?
+    public var highlightToner: SIMD3<Double>?
 
-    var isMonochrome: Bool { monochromeMix != nil }
+    public var isMonochrome: Bool { monochromeMix != nil }
 
     private static let lumaWeights = SIMD3<Double>(0.2126, 0.7152, 0.0722)
 
     /// Maps one sRGB triple through the look. Pure, so the LUT can be built on any
     /// thread and the whole look is testable without Core Image.
-    func apply(to input: SIMD3<Double>) -> SIMD3<Double> {
+    public func apply(to input: SIMD3<Double>) -> SIMD3<Double> {
         var color = Self.clamped(input * whiteBalance)
 
         if let monochromeMix {
@@ -233,7 +233,7 @@ struct FilmLook: Sendable, Equatable {
         return color + shadow * (1 - luma) + highlight * luma
     }
 
-    static func clamped(_ color: SIMD3<Double>) -> SIMD3<Double> {
+    public static func clamped(_ color: SIMD3<Double>) -> SIMD3<Double> {
         SIMD3(
             min(1, max(0, color.x)),
             min(1, max(0, color.y)),
@@ -248,7 +248,7 @@ struct FilmLook: Sendable, Equatable {
     }
 
     /// Hue in degrees, saturation and value in 0...1.
-    static func hsv(from rgb: SIMD3<Double>) -> SIMD3<Double> {
+    public static func hsv(from rgb: SIMD3<Double>) -> SIMD3<Double> {
         let maximum = max(rgb.x, max(rgb.y, rgb.z))
         let minimum = min(rgb.x, min(rgb.y, rgb.z))
         let delta = maximum - minimum
@@ -266,7 +266,7 @@ struct FilmLook: Sendable, Equatable {
         return SIMD3(hue, maximum > 0 ? delta / maximum : 0, maximum)
     }
 
-    static func rgb(fromHSV hsv: SIMD3<Double>) -> SIMD3<Double> {
+    public static func rgb(fromHSV hsv: SIMD3<Double>) -> SIMD3<Double> {
         let chroma = hsv.z * hsv.y
         let sector = hsv.x / 60
         let secondary = chroma * (1 - abs(sector.truncatingRemainder(dividingBy: 2) - 1))
@@ -283,11 +283,11 @@ struct FilmLook: Sendable, Equatable {
     }
 }
 
-extension FilmLook {
+public extension FilmLook {
     /// Colour look. `curve` seeds all three channels; pass `red`/`green`/`blue` to
     /// pull one of them off the shared shape, which is what gives a stock its cast
     /// at a specific end of the range.
-    static func color(
+    public static func color(
         curve: Curve = .linear,
         red: Curve? = nil,
         green: Curve? = nil,
@@ -317,7 +317,7 @@ extension FilmLook {
     /// Monochrome look. `curve` is the master transfer curve — for a monochrome
     /// look it is stored in `green`, because there is only one channel left to
     /// shape.
-    static func monochrome(
+    public static func monochrome(
         mix: SIMD3<Double>,
         curve: Curve,
         shadowToner: SIMD3<Double>? = nil,
@@ -340,10 +340,10 @@ extension FilmLook {
 /// classic contrast filters over it. A yellow filter darkens blue sky a little, a
 /// red one dramatically, and a green one lifts foliage while dropping skin.
 private enum MonochromeMix {
-    static let none = SIMD3<Double>(0.30, 0.59, 0.11)
-    static let yellow = SIMD3<Double>(0.42, 0.50, 0.08)
-    static let red = SIMD3<Double>(0.62, 0.33, 0.05)
-    static let green = SIMD3<Double>(0.22, 0.68, 0.10)
+    public static let none = SIMD3<Double>(0.30, 0.59, 0.11)
+    public static let yellow = SIMD3<Double>(0.42, 0.50, 0.08)
+    public static let red = SIMD3<Double>(0.62, 0.33, 0.05)
+    public static let green = SIMD3<Double>(0.22, 0.68, 0.10)
 }
 
 /// Every look ShotDex ships, and the mapping from `PhotoFilter` onto it.
@@ -352,12 +352,12 @@ private enum MonochromeMix {
 /// list as an X100VI minus REALA ACE, which needs a body Fujifilm never shipped
 /// that mode to. The Leica set is the twelve Leica Looks distributed through
 /// FOTOS for M11/Q3/SL3.
-enum FilmLookLibrary {
+public enum FilmLookLibrary {
     // MARK: Fujifilm
 
     /// The default. Barely anything: a touch of contrast and a shoulder, because
     /// PROVIA's job is to be the neutral all the others are judged against.
-    static let provia = FilmLook.color(
+    public static let provia = FilmLook.color(
         curve: Curve(contrast: 0.10, shoulder: 0.10),
         saturation: 1.05,
         highlightDesaturation: 0.16
@@ -366,7 +366,7 @@ enum FilmLookLibrary {
     /// Velvia 50's reputation in one line: the most saturated colour film ever
     /// sold, with blacks that fall off a cliff. Reds and magentas lead, greens go
     /// deep and slightly blue.
-    static let velvia = FilmLook.color(
+    public static let velvia = FilmLook.color(
         curve: Curve(gamma: 1.06, contrast: 0.30, shoulder: 0.14),
         blue: Curve(gamma: 1.10, contrast: 0.30, shoulder: 0.14),
         saturation: 1.42,
@@ -384,7 +384,7 @@ enum FilmLookLibrary {
     /// tone rather than shaping it — while overall saturation goes up 12%. Greens
     /// and cyans lose a little saturation but gain brightness, which is what keeps
     /// a lit background from competing with a face.
-    static let astia = FilmLook.color(
+    public static let astia = FilmLook.color(
         red: Curve(lift: 0.0, gain: 0.955, gamma: 1.191, contrast: -0.162, shoulder: 0.292),
         green: Curve(lift: 0.012, gain: 0.974, gamma: 1.291, contrast: -0.154, shoulder: 0.439),
         blue: Curve(lift: 0.0, gain: 1.0, gamma: 1.054, contrast: 0.035, shoulder: 0.075),
@@ -410,7 +410,7 @@ enum FilmLookLibrary {
     /// Caveat worth keeping: the reference frame is sky, desert and a red truck, so
     /// only cyans and magentas carried enough pixels to fit a band. Greens and
     /// yellows here are whatever the global curves do to them.
-    static let classicChrome = FilmLook.color(
+    public static let classicChrome = FilmLook.color(
         red: Curve(lift: 0.0, gain: 1.0, gamma: 1.036, contrast: 0.062, shoulder: 0.075),
         green: Curve(lift: 0.0, gain: 1.0, gamma: 1.057, contrast: 0.014, shoulder: 0.152),
         blue: Curve(lift: 0.020, gain: 1.0, gamma: 1.387, contrast: -0.399, shoulder: 0.436),
@@ -425,7 +425,7 @@ enum FilmLookLibrary {
 
     /// Studio negative stock with the contrast pushed: true colour, hard light
     /// handled without skin going red.
-    static let proNegHi = FilmLook.color(
+    public static let proNegHi = FilmLook.color(
         curve: Curve(lift: 0.008, contrast: 0.20, shoulder: 0.14),
         saturation: 1.02,
         highlightDesaturation: 0.20,
@@ -434,7 +434,7 @@ enum FilmLookLibrary {
 
     /// The flattest colour simulation Fujifilm makes — built to be graded, or to
     /// keep every tone in a face.
-    static let proNegStd = FilmLook.color(
+    public static let proNegStd = FilmLook.color(
         curve: Curve(lift: 0.020, gamma: 0.98, contrast: 0.02, shoulder: 0.24),
         saturation: 0.95,
         highlightDesaturation: 0.22
@@ -474,7 +474,7 @@ enum FilmLookLibrary {
     /// cyan-green, at the top red outruns green and blue so highlights land warm.
     /// The measured 0.9 contrast on red is the ceiling this curve allows before an
     /// S-curve stops being monotone — the real stock is harder still.
-    static let classicNeg = FilmLook.color(
+    public static let classicNeg = FilmLook.color(
         red: Curve(lift: 0.044, gain: 0.963, gamma: 1.158, contrast: 0.900, shoulder: 0.513),
         green: Curve(lift: 0.074, gain: 0.965, gamma: 1.269, contrast: 0.755, shoulder: 0.525),
         blue: Curve(lift: 0.041, gain: 0.979, gamma: 1.297, contrast: 0.374, shoulder: 0.413),
@@ -503,7 +503,7 @@ enum FilmLookLibrary {
     /// (negative contrast) rather than lifted, shadows are raised instead of
     /// crushed, contrast is soft, and warm hues gain saturation while greens give a
     /// little up.
-    static let nostalgicNeg = FilmLook.color(
+    public static let nostalgicNeg = FilmLook.color(
         // Gain measured at 1.014; shipped at 1.0 so the top end rolls off instead of
         // clipping the last percent of the highlights flat.
         red: Curve(lift: 0.065, gain: 1.0, gamma: 1.056, contrast: 0.124, shoulder: 0.020),
@@ -530,7 +530,7 @@ enum FilmLookLibrary {
     /// The fit wanted `highlightDesaturation` at its 0.9 bound. Shipped at 0.45:
     /// 0.9 renders a bright saturated sky nearly grey, and the reference frame — a
     /// grey-blue interior — had nothing bright and saturated in it to say otherwise.
-    static let eterna = FilmLook.color(
+    public static let eterna = FilmLook.color(
         red: Curve(lift: 0.097, gain: 0.884, gamma: 1.318, contrast: 0.051, shoulder: 0.610),
         green: Curve(lift: 0.053, gain: 0.935, gamma: 1.0, contrast: -0.013),
         blue: Curve(lift: 0.044, gain: 0.875, gamma: 0.873, contrast: 0.127),
@@ -547,7 +547,7 @@ enum FilmLookLibrary {
 
     /// Skipping the bleach step leaves the silver in with the dyes: almost
     /// monochrome, very hard, faintly metallic.
-    static let eternaBleachBypass = FilmLook.color(
+    public static let eternaBleachBypass = FilmLook.color(
         curve: Curve(lift: 0.018, gamma: 1.06, contrast: 0.42, shoulder: 0.10),
         saturation: 0.34,
         highlightDesaturation: 0.30,
@@ -561,7 +561,7 @@ enum FilmLookLibrary {
     /// ACROS 100: fine grain, deep blacks, a long smooth shoulder in the
     /// highlights. Fujifilm's best monochrome rendering, and noticeably richer
     /// than the plain Monochrome mode.
-    static func acros(_ mix: SIMD3<Double>) -> FilmLook {
+    public static func acros(_ mix: SIMD3<Double>) -> FilmLook {
         .monochrome(
             mix: mix,
             curve: Curve(lift: 0.014, gamma: 1.02, contrast: 0.20, shoulder: 0.18)
@@ -570,11 +570,11 @@ enum FilmLookLibrary {
 
     /// The older, plainer black-and-white conversion: flatter, no shoulder worth
     /// the name.
-    static func monochrome(_ mix: SIMD3<Double>) -> FilmLook {
+    public static func monochrome(_ mix: SIMD3<Double>) -> FilmLook {
         .monochrome(mix: mix, curve: Curve(lift: 0.022, contrast: 0.10, shoulder: 0.06))
     }
 
-    static let sepia = FilmLook.monochrome(
+    public static let sepia = FilmLook.monochrome(
         mix: MonochromeMix.none,
         curve: Curve(contrast: 0.12, shoulder: 0.14),
         shadowToner: SIMD3(0.085, 0.050, 0.024),
@@ -592,7 +592,7 @@ enum FilmLookLibrary {
     /// The first version of this made it a Kodachrome — rich, dense, saturated —
     /// which is close to the opposite. Saturation comes down, the contrast lives in
     /// the midtones, and nothing shouts.
-    static let leicaChrome = FilmLook.color(
+    public static let leicaChrome = FilmLook.color(
         curve: Curve(lift: 0.014, gamma: 1.02, contrast: 0.22, shoulder: 0.20),
         saturation: 0.84,
         highlightDesaturation: 0.20,
@@ -606,7 +606,7 @@ enum FilmLookLibrary {
     /// washed-out part is the lifted floor: contrast is high *and* black stops
     /// short of black, which is what an analogue print does and a contrast slider
     /// does not.
-    static let leicaClassic = FilmLook.color(
+    public static let leicaClassic = FilmLook.color(
         curve: Curve(lift: 0.042, gamma: 1.02, contrast: 0.30, shoulder: 0.18),
         saturation: 0.88,
         highlightDesaturation: 0.24,
@@ -616,7 +616,7 @@ enum FilmLookLibrary {
     /// "Bright shadows, natural colours and a subtle reddish tint." The first
     /// version had cool blue shadows, which is the wrong direction on the one
     /// detail Leica bothers to name.
-    static let leicaContemporary = FilmLook.color(
+    public static let leicaContemporary = FilmLook.color(
         curve: Curve(lift: 0.048, gamma: 0.96, contrast: 0.14, shoulder: 0.20),
         saturation: 0.97,
         highlightDesaturation: 0.20,
@@ -626,7 +626,7 @@ enum FilmLookLibrary {
 
     /// Leica's own description is striking contrast, bold saturation and a
     /// magenta cast — which is exactly what this is.
-    static let leicaEternal = FilmLook.color(
+    public static let leicaEternal = FilmLook.color(
         curve: Curve(gamma: 1.06, contrast: 0.34, shoulder: 0.12),
         saturation: 1.24,
         highlightDesaturation: 0.12,
@@ -635,7 +635,7 @@ enum FilmLookLibrary {
     )
 
     /// Cyanotype. Monochrome first, then toned into Prussian blue.
-    static let leicaBlue = FilmLook.monochrome(
+    public static let leicaBlue = FilmLook.monochrome(
         mix: MonochromeMix.none,
         curve: Curve(contrast: 0.16, shoulder: 0.14),
         shadowToner: SIMD3(0.016, 0.055, 0.150),
@@ -643,7 +643,7 @@ enum FilmLookLibrary {
     )
 
     /// Selenium-toned silver print: cool, slightly purple, soft contrast.
-    static let leicaSelenium = FilmLook.monochrome(
+    public static let leicaSelenium = FilmLook.monochrome(
         mix: MonochromeMix.none,
         curve: Curve(lift: 0.020, contrast: 0.08, shoulder: 0.18),
         shadowToner: SIMD3(0.050, 0.046, 0.088),
@@ -652,7 +652,7 @@ enum FilmLookLibrary {
 
     /// Warmer and flatter than the Fujifilm sepia — a faded print rather than a
     /// deliberate tone.
-    static let leicaSepia = FilmLook.monochrome(
+    public static let leicaSepia = FilmLook.monochrome(
         mix: MonochromeMix.none,
         curve: Curve(lift: 0.030, contrast: 0.06, shoulder: 0.20),
         shadowToner: SIMD3(0.120, 0.082, 0.052),
@@ -660,7 +660,7 @@ enum FilmLookLibrary {
     )
 
     /// Bleach bypass, Leica's version: harder than Fujifilm's and a shade cooler.
-    static let leicaBleach = FilmLook.color(
+    public static let leicaBleach = FilmLook.color(
         curve: Curve(lift: 0.012, gamma: 1.08, contrast: 0.46, shoulder: 0.08),
         saturation: 0.30,
         highlightDesaturation: 0.32,
@@ -669,7 +669,7 @@ enum FilmLookLibrary {
     )
 
     /// High-key silver: bright, open shadows, blacks that stop short of black.
-    static let leicaSilver = FilmLook.monochrome(
+    public static let leicaSilver = FilmLook.monochrome(
         mix: MonochromeMix.none,
         curve: Curve(lift: 0.036, gain: 0.985, gamma: 0.94, contrast: 0.14, shoulder: 0.20),
         shadowToner: SIMD3(0.036, 0.038, 0.046),
@@ -678,7 +678,7 @@ enum FilmLookLibrary {
 
     /// Teal-and-orange, kept restrained: shadows cool, highlights warm, mids
     /// untouched.
-    static let leicaTeal = FilmLook.color(
+    public static let leicaTeal = FilmLook.color(
         curve: Curve(lift: 0.024, contrast: 0.22, shoulder: 0.16),
         saturation: 1.04,
         highlightDesaturation: 0.20,
@@ -691,7 +691,7 @@ enum FilmLookLibrary {
     )
 
     /// Brass: gold highlights over a slightly green-brown mid, like old lacquer.
-    static let leicaBrass = FilmLook.color(
+    public static let leicaBrass = FilmLook.color(
         curve: Curve(lift: 0.022, gamma: 1.02, contrast: 0.18, shoulder: 0.18),
         blue: Curve(lift: 0.022, gain: 0.955, gamma: 1.06, contrast: 0.18, shoulder: 0.18),
         saturation: 0.96,
@@ -705,7 +705,7 @@ enum FilmLookLibrary {
 
     /// The portrait look in the FOTOS set: soft toe, warm skin, greens pulled
     /// back so a face is the only saturated thing in frame.
-    static let leicaGregWilliams = FilmLook.color(
+    public static let leicaGregWilliams = FilmLook.color(
         curve: Curve(lift: 0.034, gamma: 0.97, contrast: 0.12, shoulder: 0.24),
         saturation: 0.94,
         highlightDesaturation: 0.24,
@@ -720,7 +720,7 @@ enum FilmLookLibrary {
 
     /// The portrait standard. Very low contrast, creamy skin, foliage nudged
     /// yellow, and a long shoulder that never lets a highlight go hard.
-    static let portra400 = FilmLook.color(
+    public static let portra400 = FilmLook.color(
         curve: Curve(lift: 0.032, gamma: 0.97, contrast: 0.08, shoulder: 0.26),
         blue: Curve(lift: 0.040, gamma: 1.00, contrast: 0.08, shoulder: 0.26),
         saturation: 0.98,
@@ -733,7 +733,7 @@ enum FilmLookLibrary {
     )
 
     /// Consumer Kodak: everything golden, sky slightly cyan, contrast mild.
-    static let gold200 = FilmLook.color(
+    public static let gold200 = FilmLook.color(
         curve: Curve(lift: 0.028, gamma: 0.98, contrast: 0.14, shoulder: 0.22),
         blue: Curve(lift: 0.034, gain: 0.96, gamma: 1.06, contrast: 0.14, shoulder: 0.22),
         saturation: 1.10,
@@ -747,7 +747,7 @@ enum FilmLookLibrary {
 
     /// Kodachrome 64: dense, dark, red-forward, and the sharpest-looking colour
     /// film there was. Blues are held down hard.
-    static let kodachrome64 = FilmLook.color(
+    public static let kodachrome64 = FilmLook.color(
         curve: Curve(gamma: 1.06, contrast: 0.30, shoulder: 0.12),
         blue: Curve(gain: 0.940, gamma: 1.12, contrast: 0.30, shoulder: 0.12),
         saturation: 1.16,
@@ -762,7 +762,7 @@ enum FilmLookLibrary {
 
     /// Ektar 100: the most saturated colour negative Kodak sells, cool-neutral
     /// rather than golden, and unforgiving of skin.
-    static let ektar100 = FilmLook.color(
+    public static let ektar100 = FilmLook.color(
         curve: Curve(lift: 0.008, gamma: 1.02, contrast: 0.24, shoulder: 0.16),
         saturation: 1.30,
         highlightDesaturation: 0.14,
@@ -775,7 +775,7 @@ enum FilmLookLibrary {
 
     /// Superia 400: the green-cyan cast that made every nineties snapshot look
     /// the way it does.
-    static let superia400 = FilmLook.color(
+    public static let superia400 = FilmLook.color(
         curve: Curve(lift: 0.024, contrast: 0.18, shoulder: 0.18),
         red: Curve(lift: 0.024, gain: 0.985, contrast: 0.18, shoulder: 0.18),
         saturation: 1.12,
@@ -789,7 +789,7 @@ enum FilmLookLibrary {
 
     /// Tungsten-balanced cine stock shot in daylight, which is how everyone
     /// actually uses it: strong cyan-blue cast, warm-magenta highlight bloom.
-    static let cineStill800T = FilmLook.color(
+    public static let cineStill800T = FilmLook.color(
         curve: Curve(lift: 0.042, gamma: 0.97, contrast: 0.16, shoulder: 0.24),
         saturation: 1.06,
         highlightDesaturation: 0.22,
@@ -803,14 +803,14 @@ enum FilmLookLibrary {
     )
 
     /// HP5 pushed a stop: open shadows, gritty mids, highlights that keep going.
-    static let hp5 = FilmLook.monochrome(
+    public static let hp5 = FilmLook.monochrome(
         mix: SIMD3(0.32, 0.55, 0.13),
         curve: Curve(lift: 0.032, gamma: 0.98, contrast: 0.24, shoulder: 0.14)
     )
 
     /// Tri-X: blacker blacks than HP5 and a much stronger shoulder — the reason
     /// its highlights never look clipped.
-    static let triX = FilmLook.monochrome(
+    public static let triX = FilmLook.monochrome(
         mix: SIMD3(0.36, 0.52, 0.12),
         curve: Curve(lift: 0.012, gamma: 1.04, contrast: 0.30, shoulder: 0.22)
     )
@@ -821,7 +821,7 @@ enum FilmLookLibrary {
     /// The look behind a filter, or `nil` for the ten original presets, which stay
     /// on their Core Image chains so recipes saved before this existed render
     /// exactly as they did.
-    static func look(for filter: PhotoFilter) -> FilmLook? {
+    public static func look(for filter: PhotoFilter) -> FilmLook? {
         switch filter {
         case .original, .vivid, .vividWarm, .vividCool, .dramatic, .dramaticWarm,
              .dramaticCool, .mono, .silvertone, .noir:
@@ -873,14 +873,14 @@ enum FilmLookLibrary {
 /// replaces what would otherwise be a dozen chained filters, and — because the
 /// table is resolution-independent — the 150pt thumbnail, the on-screen preview
 /// and the full-resolution save are guaranteed to be the same look.
-enum FilmLookLUT {
+public enum FilmLookLUT {
     /// 33 is the size commercial LUTs standardise on: odd, so the neutral midpoint
     /// is sampled exactly, and fine enough that trilinear interpolation of a
     /// smooth curve shows no banding. 575 KB per table.
-    static let dimension = 33
+    public static let dimension = 33
 
     /// Float RGBA, red varying fastest, as `CIColorCubeWithColorSpace` expects.
-    static func data(for look: FilmLook, dimension: Int = dimension) -> Data {
+    public static func data(for look: FilmLook, dimension: Int = dimension) -> Data {
         let steps = max(2, dimension)
         let last = Double(steps - 1)
         var values = [Float](repeating: 0, count: steps * steps * steps * 4)

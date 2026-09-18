@@ -1,4 +1,5 @@
 import SwiftUI
+import ShotDexKit
 
 /// Masks tab, list level. One primary action — New Mask — and one row per mask
 /// with its real shape and a summary of what it changes. Everything else lives a

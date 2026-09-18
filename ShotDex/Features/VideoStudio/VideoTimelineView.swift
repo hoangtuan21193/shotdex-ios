@@ -1,4 +1,5 @@
 import SwiftUI
+import ShotDexKit
 
 /// The multi-track timeline: a pinned ruler, a scrolling lane stack whose centre
 /// carries a fixed playhead, and a thin scrollbar. Horizontal scrolling scrubs;

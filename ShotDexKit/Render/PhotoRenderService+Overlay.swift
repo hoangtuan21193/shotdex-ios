@@ -11,7 +11,7 @@ import ImageIO
 /// isolation and carries its own lock. Small capacity — a photo has one or two
 /// signatures on it, not twenty.
 private final class OverlayImageCache: @unchecked Sendable {
-    static let shared = OverlayImageCache()
+    public static let shared = OverlayImageCache()
 
     private static let capacity = 8
     private let lock = NSLock()
@@ -19,7 +19,7 @@ private final class OverlayImageCache: @unchecked Sendable {
     private var images: [UUID: CGImage] = [:]
     private var order: [UUID] = []
 
-    func image(for id: UUID) -> CGImage? {
+    public func image(for id: UUID) -> CGImage? {
         lock.lock()
         if let cached = images[id] {
             lock.unlock()
@@ -48,7 +48,7 @@ private final class OverlayImageCache: @unchecked Sendable {
     }
 }
 
-extension PhotoRenderService {
+public extension PhotoRenderService {
     /// Draws the text and signature layers over a finished photo.
     ///
     /// Deliberately the last thing that happens to the pixels, and deliberately
@@ -59,7 +59,7 @@ extension PhotoRenderService {
     /// `overlay.text` is expected to be already resolved — the controller expands
     /// `{camera}` before it hands a recipe to the renderer, so this layer has no
     /// opinion about tokens.
-    static func applyOverlays(_ overlays: [PhotoOverlay], to input: CIImage) -> CIImage {
+    public static func applyOverlays(_ overlays: [PhotoOverlay], to input: CIImage) -> CIImage {
         // Loupes first, and against the image itself: a magnifier shows the
         // photo under it, so it has to be composited before anything drawn on
         // top of the photo — a caption inside a loupe would otherwise be the
@@ -71,7 +71,7 @@ extension PhotoRenderService {
 
     /// Composites each loupe: the photo scaled about the circle's centre,
     /// masked to that circle, with a rim drawn over it.
-    static func applyMagnifiers(_ overlays: [PhotoOverlay], to input: CIImage) -> CIImage {
+    public static func applyMagnifiers(_ overlays: [PhotoOverlay], to input: CIImage) -> CIImage {
         let loupes = overlays.filter { $0.kind == .magnifier && $0.hasVisibleEffect }
         let extent = input.extent
         guard !loupes.isEmpty, !extent.isInfinite, !extent.isEmpty else { return input }
@@ -138,7 +138,7 @@ extension PhotoRenderService {
     /// Exposed separately for the Live Photo frame processor: every frame is the
     /// same size, so it rasterizes once and composites the same layer over each
     /// frame rather than laying out Core Text ninety times.
-    static func overlayLayer(_ overlays: [PhotoOverlay], extent: CGRect) -> CIImage? {
+    public static func overlayLayer(_ overlays: [PhotoOverlay], extent: CGRect) -> CIImage? {
         // A loupe's magnified content is not in this bitmap — that is
         // composited against the photo itself by `applyMagnifiers`, because it
         // draws what is underneath. Its rim is, so the rim sits above the other
@@ -158,7 +158,7 @@ extension PhotoRenderService {
     /// Internal (not private) because the collage canvas previews its text
     /// overlays through the exact same rasterization — one implementation,
     /// no CI wrapper needed there.
-    static func rasterizedOverlayImage(
+    public static func rasterizedOverlayImage(
         _ overlays: [PhotoOverlay],
         extent: CGRect
     ) -> CGImage? {

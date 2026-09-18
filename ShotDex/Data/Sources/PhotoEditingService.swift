@@ -4,6 +4,7 @@ import ImageIO
 import Photos
 import UniformTypeIdentifiers
 import UIKit
+import ShotDexKit
 
 struct PhotoEditSourceOption: Identifiable {
     let id: String

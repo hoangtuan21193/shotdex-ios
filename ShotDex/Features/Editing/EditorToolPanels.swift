@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import ShotDexKit
 
 /// Presets tab (30c): an Amount row while a look is active, then every look at
 /// once in one horizontal scroll of thumbnail cards — each a small preview of the

@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import ShotDexKit
 
 /// The Markup tab's list level: what is stacked on the photo, and how to add more.
 ///

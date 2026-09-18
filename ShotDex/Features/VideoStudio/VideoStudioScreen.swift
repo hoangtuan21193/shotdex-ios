@@ -3,6 +3,7 @@ import ImageIO
 import Photos
 import SwiftUI
 import UniformTypeIdentifiers
+import ShotDexKit
 
 /// Immutable payload for presenting the Video Studio (see
 /// `CompressionPresentation` for why assets live inside the item).

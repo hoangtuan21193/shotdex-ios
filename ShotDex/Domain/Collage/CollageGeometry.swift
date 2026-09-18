@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import ShotDexKit
 
 /// The shared geometry between the interactive collage canvas and the export
 /// compositor. Both resolve cell frames and photo placement through these

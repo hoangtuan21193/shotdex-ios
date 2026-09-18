@@ -9,23 +9,23 @@ import Foundation
 /// which means no actor isolation to lean on. Tiny capacity — a photo has one or two
 /// typefaces on it.
 private final class TextOverlayFontCache: @unchecked Sendable {
-    static let shared = TextOverlayFontCache()
+    public static let shared = TextOverlayFontCache()
     /// Faces are cached at one size and resized on use; `CTFontCreateCopyWithAttributes`
     /// is cheap, a descriptor match is not.
-    static let referenceSize: CGFloat = 100
+    public static let referenceSize: CGFloat = 100
 
     private static let capacity = 8
     private let lock = NSLock()
     private var fonts: [String: TextOverlayLayout.ResolvedFont] = [:]
     private var order: [String] = []
 
-    func font(for key: String) -> TextOverlayLayout.ResolvedFont? {
+    public func font(for key: String) -> TextOverlayLayout.ResolvedFont? {
         lock.lock()
         defer { lock.unlock() }
         return fonts[key]
     }
 
-    func store(_ font: TextOverlayLayout.ResolvedFont, for key: String) {
+    public func store(_ font: TextOverlayLayout.ResolvedFont, for key: String) {
         lock.lock()
         defer { lock.unlock() }
         guard fonts[key] == nil else { return }
@@ -43,20 +43,20 @@ private final class TextOverlayFontCache: @unchecked Sendable {
 /// a `CTFramesetter` two or three times over — once for the selection box, once for
 /// the proxy, once for the panel — to arrive at the same number.
 private final class TextOverlayMeasurementCache: @unchecked Sendable {
-    static let shared = TextOverlayMeasurementCache()
+    public static let shared = TextOverlayMeasurementCache()
 
     private static let capacity = 16
     private let lock = NSLock()
     private var sizes: [String: CGSize] = [:]
     private var order: [String] = []
 
-    func size(for key: String) -> CGSize? {
+    public func size(for key: String) -> CGSize? {
         lock.lock()
         defer { lock.unlock() }
         return sizes[key]
     }
 
-    func store(_ size: CGSize, for key: String) {
+    public func store(_ size: CGSize, for key: String) {
         lock.lock()
         defer { lock.unlock() }
         if sizes[key] == nil { order.append(key) }
@@ -74,32 +74,32 @@ private final class TextOverlayMeasurementCache: @unchecked Sendable {
 /// the single source of truth for the *geometry* of a layer, and it is used from
 /// three places — the render actor that bakes the pixels, the on-canvas proxy the
 /// user drags, and the tests — so it cannot live behind `UIKit`.
-enum TextOverlayLayout {
+public enum TextOverlayLayout {
     /// A face that could not be found is a real possibility: recipes live inside
     /// users' photos, and the font that was installed when the edit was saved may
     /// be gone on the next device. `didSubstitute` exists so the UI can say so
     /// rather than silently reflowing the caption.
-    struct ResolvedFont {
-        var font: CTFont
-        var didSubstitute: Bool
+    public struct ResolvedFont {
+        public var font: CTFont
+        public var didSubstitute: Bool
     }
 
     /// Point size from the layer's normalized size. Against the short edge, so a
     /// caption keeps its apparent size when the same recipe renders at a 768px
     /// interactive preview and at full export resolution.
-    static func pointSize(for size: Double, shortEdge: CGFloat) -> CGFloat {
+    public static func pointSize(for size: Double, shortEdge: CGFloat) -> CGFloat {
         max(1, CGFloat(size) * shortEdge)
     }
 
     /// Width of the text box in pixels. Against the *width* rather than the short
     /// edge: a wrap limit is about how far across the frame a line may run.
-    static func maximumWidth(for overlay: PhotoOverlay, extent: CGRect) -> CGFloat {
+    public static func maximumWidth(for overlay: PhotoOverlay, extent: CGRect) -> CGFloat {
         max(1, extent.width * CGFloat(min(max(overlay.maximumWidth, 0.05), 1)))
     }
 
     // MARK: Font
 
-    static func resolvedFont(for overlay: PhotoOverlay, pointSize: CGFloat) -> ResolvedFont {
+    public static func resolvedFont(for overlay: PhotoOverlay, pointSize: CGFloat) -> ResolvedFont {
         let base = baseFont(for: overlay, pointSize: pointSize)
         return ResolvedFont(
             font: applyTraits(to: base.font, overlay: overlay, pointSize: pointSize),
@@ -196,7 +196,7 @@ enum TextOverlayLayout {
 
     // MARK: Attributed string
 
-    static func attributedString(
+    public static func attributedString(
         for overlay: PhotoOverlay,
         resolvedText: String,
         pointSize: CGFloat
@@ -265,7 +265,7 @@ enum TextOverlayLayout {
         }
     }
 
-    static func cgColor(_ color: OverlayColor, alpha: Double = 1) -> CGColor {
+    public static func cgColor(_ color: OverlayColor, alpha: Double = 1) -> CGColor {
         CGColor(
             colorSpace: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
             components: [color.red, color.green, color.blue, alpha]
@@ -281,7 +281,7 @@ enum TextOverlayLayout {
     /// proxy and the selection box. They have to agree to the pixel, or the dashed
     /// box does not sit around the glyphs and the caption jumps when the bake takes
     /// over from the proxy.
-    static func textContentSize(
+    public static func textContentSize(
         for overlay: PhotoOverlay,
         resolvedText: String,
         extent: CGRect,
@@ -295,7 +295,7 @@ enum TextOverlayLayout {
         )
     }
 
-    static func contentSize(
+    public static func contentSize(
         for overlay: PhotoOverlay,
         resolvedText: String,
         pointSize: CGFloat,
@@ -374,7 +374,7 @@ enum TextOverlayLayout {
     /// including the y-flip — the same injected-closure arrangement as
     /// `BrushStrokeRasterizer.draw`, so this file never has to know which way up
     /// the caller's image is.
-    static func drawText(
+    public static func drawText(
         _ overlay: PhotoOverlay,
         resolvedText: String,
         in context: CGContext,
@@ -423,7 +423,7 @@ enum TextOverlayLayout {
         context.restoreGState()
     }
 
-    static func drawImage(
+    public static func drawImage(
         _ overlay: PhotoOverlay,
         image: CGImage,
         in context: CGContext,
@@ -442,7 +442,7 @@ enum TextOverlayLayout {
 
     /// A signature's width is what the user sets; its height follows the source
     /// image's own aspect ratio so a logo is never squashed.
-    static func imageContentSize(
+    public static func imageContentSize(
         for overlay: PhotoOverlay,
         image: CGImage,
         shortEdge: CGFloat
@@ -459,7 +459,7 @@ enum TextOverlayLayout {
     /// Rotation is negated because the context is bottom-up: a positive
     /// `rotationDegrees` has to read as clockwise on screen, which is the
     /// direction the on-canvas handle turns.
-    static func transform(
+    public static func transform(
         for overlay: PhotoOverlay,
         contentSize: CGSize,
         point: (NormalizedPoint) -> CGPoint

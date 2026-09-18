@@ -5,63 +5,83 @@ import ImageIO
 import UniformTypeIdentifiers
 import Vision
 
-struct PhotoRenderSourceInfo: @unchecked Sendable {
-    let url: URL
-    let type: UTType
-    let pixelWidth: Int
-    let pixelHeight: Int
-    let orientation: CGImagePropertyOrientation
-    let isRAW: Bool
-    let properties: [CFString: Any]
+public struct PhotoRenderSourceInfo: @unchecked Sendable {
+    public init(
+        url: URL,
+        type: UTType,
+        pixelWidth: Int,
+        pixelHeight: Int,
+        orientation: CGImagePropertyOrientation,
+        isRAW: Bool,
+        properties: [CFString: Any],
+    ) {
+        self.url = url
+        self.type = type
+        self.pixelWidth = pixelWidth
+        self.pixelHeight = pixelHeight
+        self.orientation = orientation
+        self.isRAW = isRAW
+        self.properties = properties
+    }
+
+    public let url: URL
+    public let type: UTType
+    public let pixelWidth: Int
+    public let pixelHeight: Int
+    public let orientation: CGImagePropertyOrientation
+    public let isRAW: Bool
+    public let properties: [CFString: Any]
 }
 
-struct PhotoRenderResult {
-    let image: CIImage
-    let colorSpace: CGColorSpace
-    let properties: [CFString: Any]
+public struct PhotoRenderResult {
+    public let image: CIImage
+    public let colorSpace: CGColorSpace
+    public let properties: [CFString: Any]
 }
 
-struct ResolvedAutomaticMasks: @unchecked Sendable {
-    let images: [UUID: CGImage]
+public struct ResolvedAutomaticMasks: @unchecked Sendable {
+    public let images: [UUID: CGImage]
 }
 
-struct ResolvedMaskThumbnails: @unchecked Sendable {
-    let images: [UUID: CGImage]
+public struct ResolvedMaskThumbnails: @unchecked Sendable {
+    public let images: [UUID: CGImage]
 }
 
-struct ResolvedFilterThumbnails: @unchecked Sendable {
-    let images: [PhotoFilter: CGImage]
+public struct ResolvedFilterThumbnails: @unchecked Sendable {
+    public let images: [PhotoFilter: CGImage]
 }
 
-struct PhotoRenderPreview: @unchecked Sendable {
-    let displayImage: CGImage
-    let cleanImage: CGImage
+public struct PhotoRenderPreview: @unchecked Sendable {
+    public let displayImage: CGImage
+    public let cleanImage: CGImage
 }
 
 /// Core Image render graph shared by the editor, single-photo compression and
 /// bulk export. The actor owns one CIContext and the Core ML model so neither is
 /// repeatedly constructed while sliders move.
-actor PhotoRenderService {
+public actor PhotoRenderService {
+    public init() {}
+
     private let context = CIContext(options: [
         .cacheIntermediates: false,
         .name: "ShotDex Photo Renderer",
     ])
 
     private struct RAWBaseSignature: Equatable {
-        let exposure: Double
-        let temperature: Double
-        let tint: Double
-        let luminanceNoise: Double
-        let colorNoise: Double
-        let sharpness: Double
-        let lensCorrection: Double
+        public let exposure: Double
+        public let temperature: Double
+        public let tint: Double
+        public let luminanceNoise: Double
+        public let colorNoise: Double
+        public let sharpness: Double
+        public let lensCorrection: Double
     }
 
     private struct InteractiveBaseCache {
-        let sourceURL: URL
-        let rawSignature: RAWBaseSignature?
-        let image: CGImage
-        let colorSpace: CGColorSpace
+        public let sourceURL: URL
+        public let rawSignature: RAWBaseSignature?
+        public let image: CGImage
+        public let colorSpace: CGColorSpace
     }
 
     private var interactiveBaseCache: InteractiveBaseCache?
@@ -70,28 +90,28 @@ actor PhotoRenderService {
     private var automaticMaskCacheOrder: [String] = []
     private static let automaticMaskCacheCapacity = 8
 
-    static let addMaskKernel = CIColorKernel(source: """
+    public static let addMaskKernel = CIColorKernel(source: """
         kernel vec4 addMask(__sample current, __sample incoming) {
             float value = max(current.r, incoming.r * incoming.a);
             return vec4(value, value, value, 1.0);
         }
         """)
 
-    static let subtractMaskKernel = CIColorKernel(source: """
+    public static let subtractMaskKernel = CIColorKernel(source: """
         kernel vec4 subtractMask(__sample current, __sample incoming) {
             float value = max(0.0, current.r - incoming.r * incoming.a);
             return vec4(value, value, value, 1.0);
         }
         """)
 
-    static let invertMaskKernel = CIColorKernel(source: """
+    public static let invertMaskKernel = CIColorKernel(source: """
         kernel vec4 invertMask(__sample value) {
             float result = 1.0 - value.r;
             return vec4(result, result, result, 1.0);
         }
         """)
 
-    static let luminanceMaskKernel = CIColorKernel(source: """
+    public static let luminanceMaskKernel = CIColorKernel(source: """
         kernel vec4 luminanceMask(__sample color, float lower, float upper, float feather) {
             float luminance = dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));
             float edge = max(0.001, feather);
@@ -102,7 +122,7 @@ actor PhotoRenderService {
         }
         """)
 
-    static let colorMaskKernel = CIColorKernel(source: """
+    public static let colorMaskKernel = CIColorKernel(source: """
         kernel vec4 colorMask(__sample color, vec3 target, float tolerance, float feather) {
             float distance = length(color.rgb - target);
             float edge = max(0.001, feather);
@@ -111,7 +131,7 @@ actor PhotoRenderService {
         }
         """)
 
-    func inspectSource(at url: URL, typeHint: UTType? = nil) throws -> PhotoRenderSourceInfo {
+    public func inspectSource(at url: URL, typeHint: UTType? = nil) throws -> PhotoRenderSourceInfo {
         let options = [kCGImageSourceShouldCache: false] as CFDictionary
         guard let source = CGImageSourceCreateWithURL(url as CFURL, options),
               let rawProperties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil)
@@ -146,7 +166,7 @@ actor PhotoRenderService {
         )
     }
 
-    func renderPreview(
+    public func renderPreview(
         source: PhotoRenderSourceInfo,
         recipe: PhotoEditRecipe,
         maximumDimension: CGFloat,
@@ -162,7 +182,7 @@ actor PhotoRenderService {
         ).displayImage
     }
 
-    func renderPreviewImages(
+    public func renderPreviewImages(
         source: PhotoRenderSourceInfo,
         recipe: PhotoEditRecipe,
         maximumDimension: CGFloat,
@@ -183,7 +203,7 @@ actor PhotoRenderService {
         )
     }
 
-    func installInteractiveBase(
+    public func installInteractiveBase(
         _ image: CGImage,
         source: PhotoRenderSourceInfo,
         recipe: PhotoEditRecipe
@@ -199,7 +219,7 @@ actor PhotoRenderService {
         )
     }
 
-    func renderInteractivePreviewImages(
+    public func renderInteractivePreviewImages(
         source: PhotoRenderSourceInfo,
         recipe: PhotoEditRecipe,
         maximumDimension: CGFloat,
@@ -305,7 +325,7 @@ actor PhotoRenderService {
     /// the preview path can keep an overlay-free copy: the eyedropper and the
     /// histogram read the *photo*, and a white credit line would otherwise be
     /// sampled as a colour and spike the highlight end of the histogram.
-    func render(
+    public func render(
         source: PhotoRenderSourceInfo,
         recipe: PhotoEditRecipe,
         maximumDimension: CGFloat? = nil
@@ -414,7 +434,7 @@ actor PhotoRenderService {
         )
     }
 
-    func resize(
+    public func resize(
         _ result: PhotoRenderResult,
         preset: ResizePreset,
         cropAnchor: NormalizedPoint
@@ -473,7 +493,7 @@ actor PhotoRenderService {
         )
     }
 
-    func write(
+    public func write(
         _ result: PhotoRenderResult,
         to url: URL,
         format: PhotoOutputFormat,
@@ -510,7 +530,7 @@ actor PhotoRenderService {
         }
     }
 
-    func estimatedEncodedByteCount(
+    public func estimatedEncodedByteCount(
         source: PhotoRenderSourceInfo,
         recipe: PhotoEditRecipe,
         options: PhotoExportOptions
@@ -611,7 +631,7 @@ actor PhotoRenderService {
         )
     }
 
-    func previewImage(
+    public func previewImage(
         _ result: PhotoRenderResult,
         maximumDimension: CGFloat = 1_800
     ) throws -> CGImage {
@@ -630,7 +650,7 @@ actor PhotoRenderService {
     /// Samples the display histogram of the whole image. It is never scoped to a
     /// mask: the card has to keep describing the frame's exposure, otherwise it
     /// changes meaning the moment a mask is opened.
-    func histogram(
+    public func histogram(
         of image: CGImage,
         binCount: Int = 64
     ) -> PhotoHistogram {
@@ -711,7 +731,7 @@ actor PhotoRenderService {
         )
     }
 
-    func automaticMaskImages(
+    public func automaticMaskImages(
         source: PhotoRenderSourceInfo,
         recipe: PhotoEditRecipe,
         maximumDimension: CGFloat = 2_400
@@ -762,7 +782,7 @@ actor PhotoRenderService {
     /// Small per-mask previews for the mask list: the edited image with that
     /// mask's real shape tinted. Rendered once per mask-set change, not per
     /// slider frame.
-    func maskThumbnails(
+    public func maskThumbnails(
         source: PhotoRenderSourceInfo,
         recipe: PhotoEditRecipe,
         maximumDimension: CGFloat = 120
@@ -811,7 +831,7 @@ actor PhotoRenderService {
     /// adjustments, the Color tab, the crop — is kept, so a swatch always predicts
     /// what tapping it will do. Filter intensity is ignored on purpose: a swatch
     /// shows the whole look, and the slider then dials it back.
-    func filterThumbnails(
+    public func filterThumbnails(
         source: PhotoRenderSourceInfo,
         recipe: PhotoEditRecipe,
         filters: [PhotoFilter],
@@ -854,7 +874,7 @@ actor PhotoRenderService {
         return ResolvedFilterThumbnails(images: images)
     }
 
-    func resolvedOutputFormat(
+    public func resolvedOutputFormat(
         requested: PhotoOutputFormat,
         sourceType: UTType,
         sourceIsRAW: Bool
@@ -867,14 +887,14 @@ actor PhotoRenderService {
     // MARK: Base image
 
     private struct BaseImageResult {
-        var image: CIImage
-        let colorSpace: CGColorSpace
-        let rawSkyMatte: CIImage?
+        public var image: CIImage
+        public let colorSpace: CGColorSpace
+        public let rawSkyMatte: CIImage?
         /// Portrait depth, loaded only when the recipe asks for depth blur —
         /// reading it for every render would cost a second decode on photos
         /// that never use it.
-        var disparity: CIImage?
-        var portraitMatte: CIImage?
+        public var disparity: CIImage?
+        public var portraitMatte: CIImage?
     }
 
     private func makeInteractiveBaseImage(
@@ -1063,7 +1083,7 @@ actor PhotoRenderService {
 
     // MARK: Adjustment graph
 
-    static func applyAdjustments(
+    public static func applyAdjustments(
         _ adjustments: PhotoAdjustments,
         to input: CIImage,
         appliesExposure: Bool
@@ -1297,7 +1317,7 @@ actor PhotoRenderService {
 
     /// Gaussian blur that keeps the image's extent: the filter itself grows the
     /// extent and leaves transparent edges unless the input is clamped first.
-    static func blurred(_ input: CIImage, radius: Double) -> CIImage {
+    public static func blurred(_ input: CIImage, radius: Double) -> CIImage {
         guard radius > 0.01 else { return input }
         return filtered(
             "CIGaussianBlur",
@@ -1310,7 +1330,7 @@ actor PhotoRenderService {
     /// pattern stays put between renders instead of boiling while a slider moves.
     /// The noise is desaturated and soft-light blended so it reads as film grain
     /// rather than colored sensor noise.
-    static func applyGrain(
+    public static func applyGrain(
         _ amount: Double,
         size: Double = 0,
         roughness: Double = 0,
@@ -1381,7 +1401,7 @@ actor PhotoRenderService {
     /// A missing map is not an error. The row only appears on photos that have
     /// one, but a recipe carrying depth blur can be pasted onto a photo that
     /// does not, and the right answer there is the photo as shot.
-    static func applyDepthBlur(
+    public static func applyDepthBlur(
         _ amount: Double,
         to input: CIImage,
         disparity: CIImage?,
@@ -1506,7 +1526,7 @@ actor PhotoRenderService {
     /// one produces. Positive lifts contrast and saturation, deepens the black
     /// point and adds midtone local contrast to cut through flat haze; negative
     /// fades the image and veils it toward a light haze grey.
-    static func applyDehaze(_ amount: Double, to input: CIImage) -> CIImage {
+    public static func applyDehaze(_ amount: Double, to input: CIImage) -> CIImage {
         var image = filtered(
             "CIColorControls",
             image: input,
@@ -1549,7 +1569,7 @@ actor PhotoRenderService {
     /// restricts the whole sharpen to edges through an edge-magnitude mask so flat
     /// areas (skies, skin) stay clean, with the amount narrowing the mask to the
     /// strongest edges. Dragging Amount left of centre softens instead.
-    static func applySharpen(_ adjustments: PhotoAdjustments, to input: CIImage) -> CIImage {
+    public static func applySharpen(_ adjustments: PhotoAdjustments, to input: CIImage) -> CIImage {
         guard adjustments.sharpness != 0 else { return input }
         if adjustments.sharpness < 0 {
             return blurred(input, radius: -adjustments.sharpness * 2.5)
@@ -1629,7 +1649,7 @@ actor PhotoRenderService {
 
     /// Mixes the filtered image back over the unfiltered one so a preset can be
     /// dialled in instead of being all-or-nothing.
-    static func applyFilter(
+    public static func applyFilter(
         _ filter: PhotoFilter,
         intensity: Double,
         to input: CIImage
@@ -1649,7 +1669,7 @@ actor PhotoRenderService {
         ).cropped(to: input.extent)
     }
 
-    static func applyFilter(_ filter: PhotoFilter, to input: CIImage) -> CIImage {
+    public static func applyFilter(_ filter: PhotoFilter, to input: CIImage) -> CIImage {
         // Every film simulation is a lookup table. The ten original presets below
         // keep their hand-built Core Image chains, so a recipe saved before the
         // film looks existed still renders byte-for-byte the way it did.
@@ -1728,7 +1748,7 @@ actor PhotoRenderService {
         }
     }
 
-    static func filtered(
+    public static func filtered(
         _ name: String,
         image: CIImage,
         values: [String: Any] = [:]
@@ -1743,7 +1763,7 @@ actor PhotoRenderService {
 
     // MARK: Crop
 
-    static func applyCrop(_ crop: PhotoCropRecipe, to input: CIImage) -> CIImage {
+    public static func applyCrop(_ crop: PhotoCropRecipe, to input: CIImage) -> CIImage {
         var image = input
         if crop.quarterTurns % 4 != 0 {
             image = image.oriented(
@@ -2293,7 +2313,7 @@ actor PhotoRenderService {
     /// Static so the Clean Up stage — which also runs from the Live Photo frame
     /// processor, outside the actor — maps points exactly the way the mask
     /// rasterizer does instead of carrying a third copy of the y flip.
-    static func imagePoint(_ point: NormalizedPoint, extent: CGRect) -> CGPoint {
+    public static func imagePoint(_ point: NormalizedPoint, extent: CGRect) -> CGPoint {
         CGPoint(
             x: extent.minX + extent.width * point.x,
             y: extent.minY + extent.height * (1 - point.y)

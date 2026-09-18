@@ -1,5 +1,6 @@
 import CoreGraphics
 import Testing
+@testable import ShotDexKit
 @testable import ShotDex
 
 @Suite struct BrushStrokeRasterizerTests {

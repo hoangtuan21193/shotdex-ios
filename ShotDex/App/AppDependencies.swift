@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import ShotDexKit
 
 /// Composition root. Built once at launch and injected through the environment.
 @MainActor

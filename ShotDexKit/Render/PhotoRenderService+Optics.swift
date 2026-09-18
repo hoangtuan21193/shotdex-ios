@@ -1,6 +1,6 @@
 import CoreImage
 
-extension PhotoRenderService {
+public extension PhotoRenderService {
     // MARK: Vignette (Effects — with Roundness + Highlights)
 
     /// The shaped vignette. For the common case (no Roundness, no Highlights) it
@@ -8,7 +8,7 @@ extension PhotoRenderService {
     /// it switch to a colour kernel that can do a super-ellipse falloff and protect
     /// highlights. If the kernel fails to compile it degrades to leaving the image
     /// untouched rather than crashing.
-    static func applyVignette(_ adjustments: PhotoAdjustments, to input: CIImage) -> CIImage {
+    public static func applyVignette(_ adjustments: PhotoAdjustments, to input: CIImage) -> CIImage {
         guard abs(adjustments.vignette) > 0.0001 else { return input }
         let extent = input.extent
         let minDimension = min(extent.width, extent.height)
@@ -68,7 +68,7 @@ extension PhotoRenderService {
     /// no data for. CA does a gentle chroma cleanup that softens colour fringing
     /// without touching luminance detail; Defringe pulls down the most-saturated
     /// colours (where fringing lives) globally, scaled by amount.
-    static func applyOptics(_ adjustments: PhotoAdjustments, to input: CIImage) -> CIImage {
+    public static func applyOptics(_ adjustments: PhotoAdjustments, to input: CIImage) -> CIImage {
         var image = input
         if adjustments.chromaticAberration >= 0.5 {
             image = filtered(
@@ -99,7 +99,7 @@ extension PhotoRenderService {
     /// crop-aware coordinate remap are **not** done — combining a heavy Geo warp
     /// with masks can misalign the mask; the common case (Geo without masks) is
     /// exact.
-    static func applyGeo(_ adjustments: PhotoAdjustments, to input: CIImage) -> CIImage {
+    public static func applyGeo(_ adjustments: PhotoAdjustments, to input: CIImage) -> CIImage {
         let extent = input.extent
         var image = input
 

@@ -6,11 +6,11 @@ import Foundation
 /// Pure geometry, so every style can be checked without a renderer: the drawing
 /// code only has to place the box and hand it over. All paths are built in a
 /// rect whose origin is the box's corner, with y up, matching Core Graphics.
-enum ShapeOverlayGeometry {
+public enum ShapeOverlayGeometry {
 
     /// The layer's box on the image, before rotation. `width` is the layer's
     /// size in pixels and the height follows `heightRatio`.
-    static func box(center: CGPoint, width: CGFloat, heightRatio: Double) -> CGRect {
+    public static func box(center: CGPoint, width: CGFloat, heightRatio: Double) -> CGRect {
         let height = width * CGFloat(max(heightRatio, 0.01))
         return CGRect(
             x: center.x - width / 2,
@@ -20,7 +20,7 @@ enum ShapeOverlayGeometry {
         )
     }
 
-    static func path(for style: OverlayShapeStyle, in rect: CGRect) -> CGPath {
+    public static func path(for style: OverlayShapeStyle, in rect: CGRect) -> CGPath {
         switch style {
         case .rectangle: rectanglePath(in: rect)
         case .oval: CGPath(ellipseIn: rect, transform: nil)
@@ -32,7 +32,7 @@ enum ShapeOverlayGeometry {
 
     /// Slightly rounded, like Photos' own box: a hard 90° corner reads as a UI
     /// frame rather than as something drawn on the picture.
-    static func rectanglePath(in rect: CGRect) -> CGPath {
+    public static func rectanglePath(in rect: CGRect) -> CGPath {
         let radius = min(rect.width, rect.height) * 0.06
         return CGPath(
             roundedRect: rect,
@@ -43,7 +43,7 @@ enum ShapeOverlayGeometry {
     }
 
     /// A rounded box with a tail from its lower-left, pointing down-left.
-    static func speechBubblePath(in rect: CGRect) -> CGPath {
+    public static func speechBubblePath(in rect: CGRect) -> CGPath {
         // The body takes the top 78%; the tail lives in the strip below it, so
         // the whole bubble still fits the box the user sized.
         let bodyHeight = rect.height * 0.78
@@ -70,7 +70,7 @@ enum ShapeOverlayGeometry {
     /// A stroked shaft from the lower-left to the upper-right with an open head,
     /// which is what a hand-drawn arrow looks like — a filled triangle head
     /// reads as a signpost.
-    static func arrowPath(in rect: CGRect) -> CGPath {
+    public static func arrowPath(in rect: CGRect) -> CGPath {
         let start = CGPoint(x: rect.minX, y: rect.minY)
         let end = CGPoint(x: rect.maxX, y: rect.maxY)
         let path = CGMutablePath()
@@ -93,7 +93,7 @@ enum ShapeOverlayGeometry {
         return path
     }
 
-    static func linePath(in rect: CGRect) -> CGPath {
+    public static func linePath(in rect: CGRect) -> CGPath {
         let path = CGMutablePath()
         path.move(to: CGPoint(x: rect.minX, y: rect.minY))
         path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
@@ -102,13 +102,13 @@ enum ShapeOverlayGeometry {
 
     /// Stroke thickness in pixels, floored at one so a shape never vanishes on a
     /// small preview.
-    static func strokeWidth(_ fraction: Double, shortEdge: CGFloat) -> CGFloat {
+    public static func strokeWidth(_ fraction: Double, shortEdge: CGFloat) -> CGFloat {
         max(1, CGFloat(max(fraction, 0)) * shortEdge)
     }
 
     /// The loupe's circle. Always round, whatever the box: a magnifier that can
     /// be squashed into an ellipse distorts what it is supposed to clarify.
-    static func magnifierCircle(center: CGPoint, diameter: CGFloat) -> CGRect {
+    public static func magnifierCircle(center: CGPoint, diameter: CGFloat) -> CGRect {
         CGRect(
             x: center.x - diameter / 2,
             y: center.y - diameter / 2,
@@ -120,7 +120,7 @@ enum ShapeOverlayGeometry {
     /// The transform that magnifies the photo inside the loupe: scale about the
     /// circle's centre, so the point under the middle of the glass stays put and
     /// everything around it spreads outwards.
-    static func magnifyTransform(center: CGPoint, magnification: Double) -> CGAffineTransform {
+    public static func magnifyTransform(center: CGPoint, magnification: Double) -> CGAffineTransform {
         let scale = CGFloat(max(magnification, 1))
         return CGAffineTransform(translationX: center.x, y: center.y)
             .scaledBy(x: scale, y: scale)
@@ -132,9 +132,9 @@ enum ShapeOverlayGeometry {
 /// Drawing for shape and magnifier layers, shared by the renderer and by the
 /// editor's live proxy — one implementation, so a selected shape and a baked
 /// one cannot disagree about where its edge is.
-enum ShapeOverlayLayout {
+public enum ShapeOverlayLayout {
     /// One shape layer: its path, in its box, rotated about its centre.
-    static func drawShape(
+    public static func drawShape(
         _ overlay: PhotoOverlay,
         in context: CGContext,
         shortEdge: CGFloat,
@@ -182,7 +182,7 @@ enum ShapeOverlayLayout {
     /// The ring around a loupe. Drawn even when the magnified content could not
     /// be composited: a rim with nothing in it still reads as "there is a loupe
     /// here", where nothing at all reads as a lost layer.
-    static func drawMagnifierRim(
+    public static func drawMagnifierRim(
         _ overlay: PhotoOverlay,
         in context: CGContext,
         shortEdge: CGFloat,
@@ -209,7 +209,7 @@ enum ShapeOverlayLayout {
 
     /// The box a shape occupies on screen, for the selection outline and the
     /// drag/resize handles.
-    static func contentSize(for overlay: PhotoOverlay, shortEdge: CGFloat) -> CGSize {
+    public static func contentSize(for overlay: PhotoOverlay, shortEdge: CGFloat) -> CGSize {
         switch overlay.kind {
         case .shape:
             let width = CGFloat(overlay.size) * shortEdge

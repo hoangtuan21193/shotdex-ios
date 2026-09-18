@@ -1,4 +1,5 @@
 import Foundation
+import ShotDexKit
 
 /// Geometry of the crop frame's ratio presets. It lives in Domain rather than in
 /// the controller because "does tapping a chip cost pixels" is a question about

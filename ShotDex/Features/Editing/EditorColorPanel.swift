@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import ShotDexKit
 
 // The Color tool used to be one tab behind a Mixer | Point Color | Grading
 // section picker; it is now three sibling tabs (`PhotoEditorTool.colorMixer` /

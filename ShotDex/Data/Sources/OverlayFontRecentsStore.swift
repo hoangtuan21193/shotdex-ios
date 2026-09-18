@@ -1,4 +1,5 @@
 import Foundation
+import ShotDexKit
 
 /// The typefaces most recently used on a text layer.
 ///

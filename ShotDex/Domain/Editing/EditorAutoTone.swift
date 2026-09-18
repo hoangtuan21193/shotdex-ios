@@ -1,4 +1,5 @@
 import Foundation
+import ShotDexKit
 
 /// The Light group's `Auto` button. The suggestion is derived from the histogram
 /// the editor already samples for display, so it needs no extra render pass and

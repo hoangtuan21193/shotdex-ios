@@ -1,4 +1,5 @@
 import SwiftUI
+import ShotDexKit
 
 /// Lightroom-style on-image guides for refining a mask after it has been placed.
 /// Placement alone was not enough: dragging on the photo re-creates the whole

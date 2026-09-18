@@ -1,5 +1,6 @@
 import Photos
 import SwiftUI
+import ShotDexKit
 
 /// State holder for the collage editor. Owns the recipe (the single source of
 /// truth the canvas and the exporter both read), the unplaced tray, the preview

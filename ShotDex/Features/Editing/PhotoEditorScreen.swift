@@ -1,6 +1,7 @@
 import PencilKit
 import Photos
 import SwiftUI
+import ShotDexKit
 
 /// Photo editor (Turn 31): a Dynamic Island band, the photo, and a fixed panel.
 ///

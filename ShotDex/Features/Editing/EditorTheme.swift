@@ -1,4 +1,5 @@
 import SwiftUI
+import ShotDexKit
 
 /// Design tokens for the photo editor. One accent colour, one panel colour, one
 /// animation curve — every editor view reads them from here so the chrome stays

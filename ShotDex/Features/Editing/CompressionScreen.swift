@@ -1,5 +1,6 @@
 import Photos
 import SwiftUI
+import ShotDexKit
 
 /// Immutable payload for presenting compression. Keeping the assets inside the
 /// item passed to `fullScreenCover(item:)` prevents SwiftUI from opening the

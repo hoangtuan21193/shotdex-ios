@@ -1,5 +1,6 @@
 import Photos
 import SwiftUI
+import ShotDexKit
 
 /// A zone drag in flight: which zone, and how far the finger has moved. Rows
 /// render their draft geometry from this; the commit happens on end.

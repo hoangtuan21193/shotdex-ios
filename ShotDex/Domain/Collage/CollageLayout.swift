@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import ShotDexKit
 
 /// A collage template as a binary(-ish) space partition (§9). Every template is
 /// a tree of splits: a `split` divides its rect among its children along one

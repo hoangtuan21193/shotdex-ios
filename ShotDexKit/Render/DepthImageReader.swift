@@ -9,11 +9,11 @@ import UniformTypeIdentifiers
 /// data in the same file. Core Image can hand it back directly, which is what
 /// `CIDepthBlurEffect` wants — no `AVDepthData` conversion, no pixel-buffer
 /// juggling.
-enum DepthImageReader {
+public enum DepthImageReader {
 
     /// Whether this file carries depth at all. Cheap: it reads the auxiliary
     /// data's header, not the picture.
-    static func hasDepth(at url: URL) -> Bool {
+    public static func hasDepth(at url: URL) -> Bool {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return false }
         for type in auxiliaryTypes {
             if CGImageSourceCopyAuxiliaryDataInfoAtIndex(source, 0, type) != nil {
@@ -29,7 +29,7 @@ enum DepthImageReader {
     /// depth blur is written against disparity. Asking for the disparity
     /// option lets Core Image do that conversion for a file that only stores
     /// depth.
-    static func disparity(at url: URL) -> CIImage? {
+    public static func disparity(at url: URL) -> CIImage? {
         CIImage(
             contentsOf: url,
             options: [
@@ -48,7 +48,7 @@ enum DepthImageReader {
     /// The portrait matte, when the capture has one. It marks the subject far
     /// more precisely than the depth map does around hair and edges, and the
     /// blur filter takes it as a separate input for exactly that.
-    static func matte(at url: URL) -> CIImage? {
+    public static func matte(at url: URL) -> CIImage? {
         CIImage(
             contentsOf: url,
             options: [

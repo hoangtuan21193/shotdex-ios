@@ -1,4 +1,5 @@
 import Foundation
+import ShotDexKit
 
 /// The "copy edits / paste edits" clipboard: one recipe, kept between photos
 /// and across launches.

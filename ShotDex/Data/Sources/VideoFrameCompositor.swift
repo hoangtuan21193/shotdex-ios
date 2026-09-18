@@ -2,6 +2,7 @@ import AVFoundation
 import CoreImage
 import Photos
 import UIKit
+import ShotDexKit
 
 /// The per-frame render settings shared by every instruction of one build.
 /// A value snapshot: editing the recipe mid-preview swaps the whole

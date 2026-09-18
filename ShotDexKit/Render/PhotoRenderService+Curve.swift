@@ -1,7 +1,7 @@
 import CoreImage
 import CoreGraphics
 
-extension PhotoRenderService {
+public extension PhotoRenderService {
     /// One `CIColorCurves` pass for the point tone curve. Like the film cube, the
     /// curve was dialled against gamma-encoded values, so it runs in sRGB rather
     /// than the context's linear working space, and the input is clamped first
@@ -11,7 +11,7 @@ extension PhotoRenderService {
     /// three 256-sample series: each channel is sampled as `channel(master(v))`, so
     /// the master shapes all three tones first and the per-channel curve trims from
     /// there — the order a point-curve panel applies them.
-    static func applyCurve(_ curve: ToneCurveAdjustments, to input: CIImage) -> CIImage {
+    public static func applyCurve(_ curve: ToneCurveAdjustments, to input: CIImage) -> CIImage {
         guard !curve.isIdentity else { return input }
         let clamped = filtered("CIColorClamp", image: input)
         guard let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) else {

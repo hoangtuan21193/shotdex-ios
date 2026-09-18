@@ -2,7 +2,7 @@ import Foundation
 
 /// A placeholder a text overlay can carry instead of a fixed string, so one saved
 /// signature reads correctly on every photo it is stamped onto.
-enum OverlayToken: String, CaseIterable, Identifiable, Sendable {
+public enum OverlayToken: String, CaseIterable, Identifiable, Sendable {
     case camera
     case lens
     case focal
@@ -12,10 +12,10 @@ enum OverlayToken: String, CaseIterable, Identifiable, Sendable {
     case date
     case filename
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
     /// What the token expands to, written as the user will see it in the picker.
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .camera: "Camera"
         case .lens: "Lens"
@@ -28,7 +28,7 @@ enum OverlayToken: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    var placeholder: String { "{\(rawValue)}" }
+    public var placeholder: String { "{\(rawValue)}" }
 }
 
 /// The resolved value of every token for one photo.
@@ -36,19 +36,19 @@ enum OverlayToken: String, CaseIterable, Identifiable, Sendable {
 /// A nil field means the photo has no such value — an unindexed lens, a scan with
 /// no exposure data — and the resolver removes the token *and* the prose that only
 /// existed to introduce it, rather than leaving a gap.
-struct OverlayTokenValues: Equatable, Sendable {
-    var camera: String?
-    var lens: String?
-    var focal: String?
-    var aperture: String?
-    var shutter: String?
-    var iso: String?
-    var date: String?
-    var filename: String?
+public struct OverlayTokenValues: Equatable, Sendable {
+    public var camera: String?
+    public var lens: String?
+    public var focal: String?
+    public var aperture: String?
+    public var shutter: String?
+    public var iso: String?
+    public var date: String?
+    public var filename: String?
 
-    static let empty = OverlayTokenValues()
+    public static let empty = OverlayTokenValues()
 
-    init(
+    public init(
         camera: String? = nil,
         lens: String? = nil,
         focal: String? = nil,
@@ -68,40 +68,15 @@ struct OverlayTokenValues: Equatable, Sendable {
         self.filename = filename
     }
 
-    /// Built from the indexed row rather than from a fresh EXIF read: the values
-    /// here have already been through the camera and lens normalizers, so a text
-    /// overlay says "Canon EOS R6" where the raw tag says "Canon EOS R6 Body".
-    init(
-        metadata: PhotoMetadata?,
-        locale: Locale = .current,
-        timeZone: TimeZone = .current
-    ) {
-        guard let metadata else { return }
-        camera = Self.trimmed(metadata.normalizedCameraModel ?? metadata.cameraModel)
-        lens = Self.trimmed(metadata.normalizedLensModel ?? metadata.lensModel)
-        focal = metadata.focalLength.flatMap(MetadataFormatter.focalLength)
-        aperture = metadata.aperture.flatMap(MetadataFormatter.aperture)
-        shutter = metadata.shutterSpeedDisplay
-            ?? metadata.shutterSpeedSeconds.flatMap(MetadataFormatter.shutterSpeedCompact)
-        iso = metadata.iso.flatMap(MetadataFormatter.iso)
-        filename = Self.trimmed(metadata.originalFilename)
-        if let value = metadata.creationDateValue {
-            let formatter = DateFormatter()
-            formatter.locale = locale
-            formatter.timeZone = timeZone
-            formatter.dateStyle = .long
-            formatter.timeStyle = .none
-            date = formatter.string(from: value)
-        }
-    }
-
-    private static func trimmed(_ value: String?) -> String? {
+    /// Not private: the initializer that builds these values from an indexed
+    /// row lives in the app, because the row type belongs to the database layer.
+    public static func trimmed(_ value: String?) -> String? {
         guard let value else { return nil }
         let cleaned = value.trimmingCharacters(in: .whitespacesAndNewlines)
         return cleaned.isEmpty ? nil : cleaned
     }
 
-    func value(for token: OverlayToken) -> String? {
+    public func value(for token: OverlayToken) -> String? {
         switch token {
         case .camera: camera
         case .lens: lens
@@ -123,14 +98,14 @@ struct OverlayTokenValues: Equatable, Sendable {
 /// first cut into separator-delimited segments, and a segment whose tokens all
 /// came out empty is dropped whole — the separator and the prose that introduced
 /// the token go with it.
-enum OverlayTokenResolver {
+public enum OverlayTokenResolver {
     /// Characters that always start a separator between segments.
     private static let strongSeparators: Set<Character> = ["·", "•", "|", ","]
     /// Characters that separate only when they stand alone between spaces, so a
     /// literal "1/500" or "sun-drenched" in the template is left intact.
     private static let spacedSeparators: Set<Character> = ["-", "–", "—", "/"]
 
-    static func resolve(_ template: String, values: OverlayTokenValues) -> String {
+    public static func resolve(_ template: String, values: OverlayTokenValues) -> String {
         // `omittingEmptySubsequences: false` keeps blank lines the user typed on
         // purpose; only a line whose whole content resolved away is dropped.
         let lines = template.split(separator: "\n", omittingEmptySubsequences: false)
@@ -149,7 +124,7 @@ enum OverlayTokenResolver {
 
     /// Whether any resolvable token appears, so a line of plain prose is passed
     /// through untouched instead of going through the segment machinery.
-    static func containsKnownToken(_ text: String) -> Bool {
+    public static func containsKnownToken(_ text: String) -> Bool {
         OverlayToken.allCases.contains { text.contains($0.placeholder) }
     }
 
@@ -218,10 +193,10 @@ enum OverlayTokenResolver {
     }
 
     private struct Segment {
-        var text: String
+        public var text: String
         /// The separator that followed this segment in the template, reused
         /// verbatim so "A | B" does not come back as "A · B". Nil at end of line.
-        var separator: String?
+        public var separator: String?
     }
 
     private static func segments(of line: String) -> [Segment] {

@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import ShotDexKit
 
 /// The scrolling slider stack shared by global Adjust and the single-mask editor.
 /// There is no segmented control and no per-group Auto / Reset — reset lives in

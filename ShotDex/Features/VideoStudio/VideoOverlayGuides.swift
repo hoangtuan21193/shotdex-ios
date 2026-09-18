@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import ShotDexKit
 
 /// The on-canvas layer for text and sticker overlays in the Video Studio preview.
 ///

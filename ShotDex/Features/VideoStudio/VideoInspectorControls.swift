@@ -1,4 +1,5 @@
 import SwiftUI
+import ShotDexKit
 
 /// The controls the Video Studio's contextual sheets are built from: one slider
 /// row, the overlay colour/animation/alignment strips, and the project-wide
