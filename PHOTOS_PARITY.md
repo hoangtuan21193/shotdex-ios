@@ -18,7 +18,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 - [x] A1 `PhotoLibraryService`: hide/unhide, sửa creationDate, sửa location, xoá khỏi album, rename/delete album, restore/xoá vĩnh viễn, favorite hàng loạt
 - [-] A2 Album Hidden + Recently Deleted — iOS 16+ giấu ảnh ẩn khỏi mọi app trừ Photos; đã đo trên iOS 26: `.smartAlbumAllHidden` trả 0, `includeHiddenAssets` cũng không thấy ảnh nào. Hành động **Hide vẫn chạy**, chỉ không duyệt/bỏ ẩn được
 - [x] A3 Sheet Adjust Date & Time, sheet Adjust Location (chọn trên bản đồ)
-- [ ] A4 Context menu khi giữ tile + Select All
+- [x] A4 Context menu khi giữ tile (xem trước + 11 hành động, 3 nhóm) + Select All
 - [x] A5 Bulk: favorite, hide, adjust date, adjust location, copy
 - [~] A6 Album CRUD — service layer xong hết (rename/delete/sắp xếp tay/folder), Remove from album đã lên UI; còn phần UI cho rename/delete/folder
 - [ ] A7 Add to Album trong viewer, Show in All Photos, Copy ảnh, Open in Maps, Print

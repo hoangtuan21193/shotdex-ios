@@ -64,6 +64,10 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
     /// in the same update as the pruned `photos`; the grid animates those
     /// tiles out and skips the reload that `contentVersion`/count would cause.
     var removal: PhotoGridRemoval? = nil
+    /// Builds the long-press context menu for one tile, as in Photos. `nil`
+    /// (or a `nil` return) leaves the tile without a menu, in which case the
+    /// long press falls back to entering selection mode.
+    var contextMenuProvider: ((Item) -> UIMenu?)? = nil
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -338,6 +342,12 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             // intact while the user changes density.
             pinchRecognizer?.isEnabled = true
             swipeRecognizer?.isEnabled = newParent.isSelecting
+            // With a context menu installed, a press that is *not* already in
+            // selection mode belongs to UIKit's own menu interaction — two
+            // long presses on the same view would otherwise fight. Once
+            // selecting, the press goes back to driving the range drag.
+            longPressRecognizer?.isEnabled =
+                newParent.contextMenuProvider == nil || newParent.isSelecting
             if !newParent.isSelecting, swipeActivation == .select {
                 finishActiveSwipeSelection()
             }
@@ -966,6 +976,30 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         private func assets(at indexPaths: [IndexPath]) -> [PHAsset] {
             indexPaths.compactMap { indexPath in
                 flatIndex(for: indexPath).flatMap { parent.assetProvider($0, parent.photos[$0]) }
+            }
+        }
+
+        // MARK: Context menu
+
+        /// Photos' tile menu: a zoomed preview of the tile plus the actions
+        /// that apply to a single photo. Suppressed while selecting, where a
+        /// press means "extend the range" instead.
+        func collectionView(
+            _ collectionView: UICollectionView,
+            contextMenuConfigurationForItemAt indexPath: IndexPath,
+            point: CGPoint
+        ) -> UIContextMenuConfiguration? {
+            guard !parent.isSelecting,
+                  let provider = parent.contextMenuProvider,
+                  let flatIndex = flatIndex(for: indexPath)
+            else { return nil }
+            let item = parent.photos[flatIndex]
+            return UIContextMenuConfiguration(identifier: item.assetId as NSString) {
+                // No custom preview controller: UIKit lifts the cell itself,
+                // which is the zoomed thumbnail Photos shows.
+                nil
+            } actionProvider: { _ in
+                provider(item)
             }
         }
 

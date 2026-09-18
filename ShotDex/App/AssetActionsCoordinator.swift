@@ -40,10 +40,14 @@ final class AssetActionsCoordinator {
         }
     }
 
-    private let photoLibrary: PhotoLibraryService
+    /// Read by the host so the album picker can reuse the same service.
+    let photoLibrary: PhotoLibraryService
 
     var dateRequest: DateRequest?
     var locationRequest: LocationRequest?
+    /// Album picker raised from a tile's context menu. The selection bar keeps
+    /// its own copy because it also has to leave selection mode afterwards.
+    var addToAlbumRequest: AddToCollectionPresentation?
     var errorMessage: String?
     /// Short confirmation for actions with no visible result of their own
     /// (Copy, Hide). Cleared by the host after it fades.
@@ -110,6 +114,12 @@ final class AssetActionsCoordinator {
         dateRequest = DateRequest(assets: assets)
     }
 
+    func presentAddToAlbum(ids: [String]) {
+        let assets = PhotoLibraryService.fetchAssets(ids: ids)
+        guard !assets.isEmpty else { return }
+        addToAlbumRequest = AddToCollectionPresentation(assets: assets)
+    }
+
     func presentAdjustLocation(ids: [String]) {
         let assets = PhotoLibraryService.fetchAssets(ids: ids)
         guard !assets.isEmpty else { return }
@@ -168,6 +178,39 @@ final class AssetActionsCoordinator {
         }
     }
 
+    // MARK: Share / delete / duplicate
+
+    /// Gathers originals and raises the system share sheet. Shared with the
+    /// selection bar's Share button so a tile menu and a multi-select share
+    /// behave identically, including the iCloud download.
+    func share(ids: [String]) {
+        let assets = PhotoLibraryService.fetchAssets(ids: ids)
+        guard !assets.isEmpty else { return }
+        perform {
+            let items = await PhotoShareSheet.gather(assets: assets)
+            PhotoShareSheet.present(items: items)
+        }
+    }
+
+    /// Moves assets to Recently Deleted. PhotoKit raises its own confirmation,
+    /// and declining it is a cancel rather than an error.
+    func delete(ids: [String]) {
+        let assets = PhotoLibraryService.fetchAssets(ids: ids)
+        guard !assets.isEmpty else { return }
+        perform {
+            try await self.photoLibrary.deleteAssets(assets)
+        }
+    }
+
+    func duplicate(ids: [String]) {
+        let assets = PhotoLibraryService.fetchAssets(ids: ids)
+        guard !assets.isEmpty else { return }
+        perform {
+            _ = try await self.photoLibrary.duplicateAssets(assets)
+            self.photoLibrary.publishAppCreatedAsset()
+        }
+    }
+
     // MARK: Plumbing
 
     private func perform(_ work: @escaping () async throws -> Void) {
@@ -221,6 +264,13 @@ private struct AssetActionHost: ViewModifier {
                 AdjustDateTimeSheet(request: request) { date in
                     coordinator.applyDate(date, to: request)
                 }
+            }
+            .sheet(item: $coordinator.addToAlbumRequest) { request in
+                AddToCollectionSheet(
+                    assets: request.assets,
+                    photoLibrary: coordinator.photoLibrary,
+                    onAdded: {}
+                )
             }
             .sheet(item: $coordinator.locationRequest) { request in
                 AdjustLocationSheet(request: request) { coordinate in

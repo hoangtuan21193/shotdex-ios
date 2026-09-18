@@ -174,9 +174,28 @@ struct OnThisDayScreen: View {
             // Everything is loaded up front — no pagination.
             onNearEnd: {},
             onUserScroll: {},
-            removal: model.lastRemoval
+            removal: model.lastRemoval,
+            contextMenuProvider: { metadata in
+                tileMenu(assetId: metadata.assetId).makeMenu()
+            }
         )
         .ignoresSafeArea(edges: .bottom)
+    }
+
+
+    /// The long-press menu for one tile.
+    private func tileMenu(assetId: String) -> PhotoTileContextMenu {
+        let actions = dependencies.assetActions
+        let isVideo = model?.assetsById[assetId]?.mediaType == .video
+        return PhotoTileContextMenu(
+            assetId: assetId,
+            isVideo: isVideo,
+            actions: actions,
+            onShare: { actions.share(ids: [assetId]) },
+            onAddToAlbum: { actions.presentAddToAlbum(ids: [assetId]) },
+            onDuplicate: { actions.duplicate(ids: [assetId]) },
+            onDelete: { actions.delete(ids: [assetId]) }
+        )
     }
 
     // MARK: Selection & deletion

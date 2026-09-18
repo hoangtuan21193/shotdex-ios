@@ -173,7 +173,10 @@ struct AlbumDetailScreen: View {
             onSwipeEvent: handleSwipeEvent,
             onNearEnd: { model.loadNextPage() },
             onUserScroll: {},
-            removal: model.lastRemoval
+            removal: model.lastRemoval,
+            contextMenuProvider: { metadata in
+                tileMenu(model, assetId: metadata.assetId).makeMenu()
+            }
         )
         .ignoresSafeArea(edges: .bottom)
     }
@@ -353,6 +356,28 @@ struct AlbumDetailScreen: View {
 
     private var bottomChromeInset: CGFloat {
         if #available(iOS 26.0, *) { 8 } else { 100 }
+    }
+
+
+    /// The long-press menu for one tile. Album Detail is the only screen that
+    /// can also take a photo out of the album it is showing.
+    private func tileMenu(_ model: AlbumDetailModel, assetId: String) -> PhotoTileContextMenu {
+        let actions = dependencies.assetActions
+        let isVideo = model.assetsById[assetId]?.mediaType == .video
+        return PhotoTileContextMenu(
+            assetId: assetId,
+            isVideo: isVideo,
+            actions: actions,
+            onShare: { actions.share(ids: [assetId]) },
+            onAddToAlbum: { actions.presentAddToAlbum(ids: [assetId]) },
+            onDuplicate: { actions.duplicate(ids: [assetId]) },
+            onDelete: {
+                Task { try? await model.deleteAssets(ids: [assetId]) }
+            },
+            onRemoveFromAlbum: model.sourceAlbum == nil ? nil : {
+                Task { try? await model.removeFromAlbum(ids: [assetId]) }
+            }
+        )
     }
 
     // MARK: ⋯ actions

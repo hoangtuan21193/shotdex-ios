@@ -451,6 +451,25 @@ struct LibraryScreen: View {
         )
     }
 
+
+    /// The long-press menu for one tile. Share, delete and duplicate route
+    /// through the shared coordinator so they behave exactly as they do from
+    /// the selection bar.
+    private func tileMenu(assetId: String) -> PhotoTileContextMenu {
+        let actions = dependencies.assetActions
+        let isVideo = PhotoLibraryService.fetchAssets(ids: [assetId])
+            .first?.mediaType == .video
+        return PhotoTileContextMenu(
+            assetId: assetId,
+            isVideo: isVideo,
+            actions: actions,
+            onShare: { actions.share(ids: [assetId]) },
+            onAddToAlbum: { actions.presentAddToAlbum(ids: [assetId]) },
+            onDuplicate: { actions.duplicate(ids: [assetId]) },
+            onDelete: { actions.delete(ids: [assetId]) }
+        )
+    }
+
     // MARK: ⋯ actions
 
     /// Opens the album picker for the current selection.
@@ -540,7 +559,8 @@ struct LibraryScreen: View {
             lazyMetadataProvider: { assetId in
                 await model.lazyBadgeItem(assetId: assetId)
             },
-            removal: model.lastRemoval
+            removal: model.lastRemoval,
+            contextMenuProvider: { item in tileMenu(assetId: item.assetId).makeMenu() }
         )
         // Fill behind the top nav bar too (not just bottom): the collection
         // view's automatic content-inset adjustment + anchor() position items
