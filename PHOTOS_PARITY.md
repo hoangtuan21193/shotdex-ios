@@ -1,5 +1,11 @@
 # ShotDex ⟷ iOS Photos — Feature Parity
 
+> **Tiến độ đêm 2026-09-19** — mỗi mục dưới đây đều build pass, chạy thật trên simulator và có ảnh chụp màn hình kiểm chứng, commit riêng trên `main`.
+>
+> Xong: hành động PhotoKit (ngày/vị trí/ẩn/favorite) · context menu trên tile · Media Types · date section ngày/tháng/năm + thanh cuộn ngày · badge trạng thái · menu ⋯ trong viewer · Live Text · Live Photo + Save as Video · Slideshow · Places · Trips · App Intents + Spotlight · Widget · Share Extension · iPad · quản lý album/folder · Settings (autoplay, HDR, dung lượng) · Auto Enhance + Revert · Merge duplicates.
+>
+> Vướng, cần bạn quyết hoặc cần máy thật: xem mục "Cần quyết định" ở cuối file.
+
 Tracker cho đợt bổ sung tính năng còn thiếu so với app Photos (iOS 18/26).
 Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 
@@ -85,3 +91,13 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 - [-] Sort "Recently Added" (PhotoKit không expose ngày thêm vào thư viện)
 - [-] Recently Deleted: duyệt / khôi phục / xoá vĩnh viễn — `PHAssetCollectionSubtype` không có `recentlyDeleted`, không fetch được
 - [-] Duyệt album Hidden / bỏ ẩn — hệ thống chặn, xem mục A2
+
+
+---
+
+## Cần bạn quyết định
+
+- **Filmstrip dưới viewer** (mục 35): spec ghi rõ đã **cố ý bỏ** trước đây. Mình chưa thêm lại vì không biết lý do bỏ — khác với date header, cái đó bạn đã chốt là thêm lại. Muốn thêm lại không, và có cần toggle không?
+- **Lưới theo tỉ lệ gốc** (mục 3 / B2): làm đúng như Photos cần layout so le nhiều cột (mosaic), tức viết lại `GridFlowLayout`. Làm rẻ hơn thì chỉ là letterbox trong ô vuông, nhìn không giống Photos. Chọn bản nào?
+- **iPad**: đã bật và chạy được, nhưng panel Simulator cho iPad chưa được cấp quyền nên mình không bấm qua nổi màn onboarding. Cần bạn mở tay để soát bố cục từng màn.
+- **App Group**: widget và share extension khai `group.com.hoangtuan.shotdex`. Build lên máy thật cần bật capability App Groups trên App ID (Xcode signing tự động thường tự thêm).
