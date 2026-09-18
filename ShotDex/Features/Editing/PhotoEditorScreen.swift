@@ -33,6 +33,7 @@ struct PhotoEditorScreen: View {
     @State private var chrome = EditorChromeModel()
     @State private var isSaveSheetPresented = false
     @State private var isDiscardConfirmationPresented = false
+    @State private var isRevertConfirmationPresented = false
     @State private var isFallbackNoticePresented = false
     @State private var isRenamePresented = false
     @State private var renameText = ""
@@ -91,6 +92,17 @@ struct PhotoEditorScreen: View {
         .interactiveDismissDisabled(controller?.hasSessionChanges == true)
         // An alert, not a confirmation dialog: on iOS 26 the dialog floats over the
         // photo with its cancel-role button hidden, so only the red Discard shows.
+        .alert(
+            "Revert to Original?",
+            isPresented: $isRevertConfirmationPresented
+        ) {
+            Button("Cancel", role: .cancel) {}
+            Button("Revert", role: .destructive) {
+                controller?.revertToOriginal { dismiss() }
+            }
+        } message: {
+            Text("This throws away every edit saved to this photo, including edits made in Photos.")
+        }
         .alert("Discard this editing session?", isPresented: $isDiscardConfirmationPresented) {
             Button("Discard Changes", role: .destructive) { dismiss() }
             Button("Keep Editing", role: .cancel) {}
@@ -636,11 +648,28 @@ struct PhotoEditorScreen: View {
             }
 
             Button {
+                controller.applyAutoTone()
+            } label: {
+                Label("Auto Enhance", systemImage: "wand.and.stars")
+            }
+
+            Button {
                 controller.reset()
             } label: {
                 Label("Reset All", systemImage: "arrow.counterclockwise")
             }
             .disabled(controller.recipe.isIdentity)
+
+            // Reset All only undoes this session. Revert throws away every edit
+            // ever saved to the asset, including edits made in Photos, and is
+            // the only way back to the camera's own frame.
+            if controller.canRevertToOriginal {
+                Button(role: .destructive) {
+                    isRevertConfirmationPresented = true
+                } label: {
+                    Label("Revert to Original", systemImage: "arrow.uturn.backward")
+                }
+            }
 
             Button {
                 chrome.isHistorySheetPresented = true

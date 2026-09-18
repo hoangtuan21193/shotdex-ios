@@ -555,6 +555,26 @@ final class PhotoEditorController {
         scheduleRender()
     }
 
+    /// Whether PhotoKit will let this asset be put back to the camera's frame.
+    /// False for an asset that was never edited, and for one the app may not
+    /// write to (a shared album's photo, say).
+    var canRevertToOriginal: Bool {
+        asset.canPerform(.content)
+    }
+
+    /// Throws away every saved edit on the asset — including ones made in
+    /// Photos — and closes the editor, since what it is editing no longer
+    /// exists. Distinct from `reset()`, which only undoes this session.
+    func revertToOriginal(completion: @escaping () -> Void) {
+        let asset = asset
+        Task { @MainActor in
+            try? await PHPhotoLibrary.shared().performChanges {
+                PHAssetChangeRequest(for: asset).revertAssetContentToOriginal()
+            }
+            completion()
+        }
+    }
+
     /// `Auto` in the Light header. The suggestion comes from the histogram the
     /// editor already has, so it costs no extra render.
     func applyAutoTone() {
