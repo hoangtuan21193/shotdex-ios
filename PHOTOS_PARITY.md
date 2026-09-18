@@ -103,9 +103,13 @@ Chỉ còn **một** mục có API mà chưa làm, và nó cần bạn quyết k
 
 Những mục còn `[~]` khác đều đã ghi rõ phần thiếu là **không có API** (slo-mo range, Portrait Lighting, nhận diện từng người, badge "đã chỉnh", ảnh bìa album, Recently Deleted, album Hidden) hoặc **cần bạn quyết** (xem cuối file).
 
-## Hai việc mình làm sai / cần bạn xử lý
+## Hai việc mình làm sai
 
-1. **Commit đầu tiên `e7a1096` gộp nhầm việc bạn đang làm dở.** Lúc bắt đầu phiên, git status báo "clean" nên mình chạy `git add -A`. Thực tế cây làm việc đang có khoảng 40 file chưa commit của bạn — toàn bộ tính năng Duplicates (`PerceptualHash*`, `DuplicateGrouper`, `DuplicateScanPipeline`, `DuplicatesModel/Screen`), `OverlayAnimationMath`, `TimelineLaneLayout`, bản làm lại `AppAccentTheme`, `ActiveDisplay`, `MediaKind`, v.v. Tất cả nằm trong commit mang tiêu đề về chỉnh ngày/vị trí. **Mình không tự sửa lịch sử** vì đó là quyết định của bạn. Chưa push gì cả (local đi trước `origin/main` 27 commit). Muốn tách ra thì: `git reset --soft e7a1096~1` rồi commit lại thành hai lần.
+1. **Commit đầu tiên gộp nhầm việc bạn đang làm dở — đã xử lý 2026-09-19.** Lúc bắt đầu phiên, `git status` báo "clean" nên mình chạy `git add -A`; thực tế cây làm việc đang có khoảng 40 file chưa commit của bạn (toàn bộ Duplicates, inspector/sheet host/toolbar của Video Studio, `OverlayAnimationMath`, `TimelineLaneLayout`, bản làm lại `AppAccentTheme`, `ActiveDisplay`, `MediaKind`, `EditorCurveOverlay`, `SelectedItemsSheet`) và tất cả rơi vào một commit mang tiêu đề chỉ nói về chỉnh ngày/vị trí.
+
+   **Đã sửa bằng cách viết lại *thông điệp* commit, không đụng nội dung**: commit giờ nói rõ nó chứa cả hai phần và liệt kê đúng những gì bị gộp. **Không tách theo file** vì hai phần dùng chung file theo từng dòng (`PhotoGridCollectionView`, `SelectionBarViews`, `LibraryScreen`, `LibraryQueries`, `PhotoLibraryService`, `spec.md`) — tách kiểu đó sẽ đem một nửa tính năng này ghi tên tính năng kia.
+
+   Kiểm chứng: **cây của `main` sau khi sửa giống hệt trước khi sửa** (`dc2ea5c8`), diff rỗng, vẫn đúng 80 commit. Tag an toàn `backup/pre-git-fix-2026-09-19` giữ ở máy. Lịch sử viết lại **chỉ nằm trong phần chưa push**, nên push là fast-forward, không force.
 
 2. **5 test đang đỏ là từ phần việc dở đó, không phải từ mình** (chạy lại lúc kết thúc đêm: **699 test, 693 pass, 5 đỏ + 1 flaky**): `EditorAdjustmentCatalogTests` (2 ca — catalog giờ có 6 nhóm, test còn kỳ vọng 4), `CropFrameGeometryTests` (so sánh float `0.9999999999999999 == 1`), `OverlayAnimationMathTests`, `PhotoDrawingModelsTests`. Mình không sửa vì không rõ ý định của code đang viết dở. Hai test khác **đúng là của mình** và đã cập nhật: `GridDensityTests.granularityMapping` (thang zoom thêm `.year`) và `EditorAdjustmentCatalogTests.everyGroupedKindAppearsExactlyOnce` (giờ hỏi catalog `hasDepth: true`, vì Depth Blur cố ý chỉ có ở ảnh có depth).
 
