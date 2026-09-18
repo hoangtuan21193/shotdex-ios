@@ -2,7 +2,7 @@
 
 > **Tiến độ đêm 2026-09-19** — mỗi mục dưới đây đều build pass, chạy thật trên simulator và có ảnh chụp màn hình kiểm chứng, commit riêng trên `main`.
 >
-> Xong: Markup shapes + kính lúp · Trim video trong viewer + nút tua khung · People & Pets (pass Vision opt-in) · hành động PhotoKit (ngày/vị trí/ẩn/favorite) · context menu trên tile · Media Types · date section ngày/tháng/năm + thanh cuộn ngày · badge trạng thái · menu ⋯ trong viewer · Live Text · Live Photo + Save as Video · Slideshow · Places · Trips · App Intents + Spotlight · Widget · Share Extension · iPad · quản lý album/folder · Settings (autoplay, HDR, dung lượng) · Auto Enhance + Revert · Merge duplicates.
+> Xong: Kéo thả ảnh · Markup shapes + kính lúp · Trim video trong viewer + nút tua khung · People & Pets (pass Vision opt-in) · hành động PhotoKit (ngày/vị trí/ẩn/favorite) · context menu trên tile · Media Types · date section ngày/tháng/năm + thanh cuộn ngày · badge trạng thái · menu ⋯ trong viewer · Live Text · Live Photo + Save as Video · Slideshow · Places · Trips · App Intents + Spotlight · Widget · Share Extension · iPad · quản lý album/folder · Settings (autoplay, HDR, dung lượng) · Auto Enhance + Revert · Merge duplicates.
 >
 > Vướng, cần bạn quyết hoặc cần máy thật: xem mục "Cần quyết định" ở cuối file.
 
@@ -30,7 +30,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 - [~] A7 Viewer có menu ⋯: Add to Album, Duplicate, Copy, Select Text in Photo, Adjust Date & Time, Adjust Location, Show on Map, Hide. **Còn thiếu**: Show in All Photos, Print riêng (hiện đi qua share sheet hệ thống)
 - [~] A8 **Auto Enhance** và **Revert to Original** đã vào menu ⋯ của editor. **Còn thiếu**: tuỳ chọn Share (kèm/không kèm vị trí, bản gốc/bản sửa), Copy & Paste edits giữa ảnh, giữ tay xem bản gốc trong *viewer* (trong editor thì đã có)
 - [~] A9 Badge trên tile: favorite/Live/Portrait/Panorama/HDR/Slo-mo/Time-lapse xong; pull-to-refresh xong. **Không làm được**: badge "edited" (PhotoKit không expose cờ chỉnh sửa trên `PHAsset`, chỉ có cách duyệt `PHAssetResource` từng ảnh — quá đắt cho lưới đang cuộn). Filter Screenshots (và 7 loại khác) đã xong qua cột `mediaSubtypes`
-- [ ] A10 Kéo thả ảnh ra app khác và thả vào album
+- [x] A10 Kéo thả ảnh ra app khác và thả vào album — kéo **trong chế độ chọn** (ngoài chế độ chọn chạm-giữ đã là gesture chọn dải), kéo cả selection; thả lên token album thì **thêm** vào album
 
 ## Phase B — Duyệt và xem
 
@@ -98,7 +98,6 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 ## Chưa làm (ưu tiên theo mình thấy)
 
 1. **B7 Video trong viewer**: còn lại **chỉnh dải slo-mo**. Nút tua khung trên màn và **Trim tại chỗ** đã xong.
-5. **A10 Kéo thả** ảnh ra app khác và thả vào album.
 6. **B8 Burst stack** (`PHAsset.burstIdentifier` có sẵn) và viewer panorama.
 7. **B6 Portrait**: đọc `AVDepthData` để hiện và chỉnh độ mờ nền (Portrait Lighting thì không có API).
 8. **C8 Dynamic Type**: rà soát toàn app (giờ mới có ở panel info và vài chỗ).

@@ -435,6 +435,11 @@ struct AlbumsScreen: View {
                             AlbumToken(album: album)
                         }
                         .buttonStyle(.plain)
+                        .albumDropTarget(
+                            collection: album.assetCollection,
+                            photoLibrary: photoLibrary,
+                            onAdded: { model.load() }
+                        )
                         .contextMenu {
                             // System albums (Recents, Videos, …) reject both,
                             // so the menu is only offered on the user's own.

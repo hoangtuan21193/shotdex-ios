@@ -10,6 +10,25 @@
 	<array>
 		<string>processing</string>
 	</array>
+	<!-- The drag payload that carries a photo's local identifier between the
+	     grid and an album inside this app. Declared so `UTType(exportedAs:)`
+	     resolves to a real, registered type; it is deliberately not public,
+	     because a local identifier means nothing outside this device. -->
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>com.hoangtuan.shotdex.asset-identifier</string>
+			<key>UTTypeDescription</key>
+			<string>ShotDex Photo Reference</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict/>
+		</dict>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

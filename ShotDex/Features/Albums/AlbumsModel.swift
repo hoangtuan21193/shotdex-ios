@@ -39,6 +39,13 @@ struct AlbumItem: Identifiable {
     var isSmart = false
     /// iCloud Shared Album (`PHAssetCollectionSubtype.albumCloudShared`).
     var isShared = false
+
+    /// The PhotoKit collection behind this row, or nil for All Photos, which
+    /// is a fetch rather than an album and cannot be added to.
+    var assetCollection: PHAssetCollection? {
+        guard case .collection(let collection) = kind else { return nil }
+        return collection
+    }
 }
 
 /// One user-created smart album, resolved for display: the saved album plus

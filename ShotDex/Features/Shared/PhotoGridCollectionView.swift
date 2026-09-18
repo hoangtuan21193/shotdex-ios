@@ -108,6 +108,8 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         collectionView.dataSource = coordinator
         collectionView.delegate = coordinator
         collectionView.prefetchDataSource = coordinator
+        collectionView.dragDelegate = coordinator
+        collectionView.dragInteractionEnabled = true
         collectionView.register(PhotoGridCell.self, forCellWithReuseIdentifier: PhotoGridCell.reuseId)
         collectionView.register(
             UICollectionViewCell.self,
@@ -155,7 +157,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
     @MainActor
     final class Coordinator: NSObject, UICollectionViewDataSource,
         UICollectionViewDelegateFlowLayout, UICollectionViewDataSourcePrefetching,
-        UIGestureRecognizerDelegate {
+        UICollectionViewDragDelegate, UIGestureRecognizerDelegate {
 
         static var headerReuseId: String { "PhotoGridHeader" }
         static var footerReuseId: String { "PhotoGridFooter" }
@@ -933,6 +935,71 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             }
             .margins(.all, 0)
             return view
+        }
+
+        // MARK: Drag
+
+        /// Photos drag out of the grid into another app, and onto an album
+        /// inside ShotDex.
+        ///
+        /// **Only while selecting, and only from a selected tile.** Outside
+        /// selection mode a touch-and-hold on a tile is what *enters*
+        /// selection and starts range-selecting, and one touch cannot mean
+        /// both. Inside it, the two gestures divide cleanly: swipe-select
+        /// needs movement, so a finger that rests long enough for UIKit's lift
+        /// is unambiguously asking to drag.
+        ///
+        /// The whole selection travels, not the one tile under the finger —
+        /// picking photos and then dragging them somewhere is one thought.
+        func collectionView(
+            _ collectionView: UICollectionView,
+            itemsForBeginning session: any UIDragSession,
+            at indexPath: IndexPath
+        ) -> [UIDragItem] {
+            guard parent.isSelecting,
+                  let flatIndex = flatIndex(for: indexPath),
+                  appliedSelectedIds.contains(parent.photos[flatIndex].assetId)
+            else { return [] }
+            return selectedDragItems(startingAt: flatIndex)
+        }
+
+        /// Dragging another selected tile onto an existing drag is a no-op:
+        /// the first lift already took the whole selection.
+        func collectionView(
+            _ collectionView: UICollectionView,
+            itemsForAddingTo session: any UIDragSession,
+            at indexPath: IndexPath,
+            point: CGPoint
+        ) -> [UIDragItem] {
+            []
+        }
+
+        func collectionView(
+            _ collectionView: UICollectionView,
+            dragPreviewParametersForItemAt indexPath: IndexPath
+        ) -> UIDragPreviewParameters? {
+            let parameters = UIDragPreviewParameters()
+            // Square, like the tiles: UIKit's default rounding would shave
+            // visible slivers off the picture.
+            parameters.backgroundColor = .clear
+            return parameters
+        }
+
+        /// Every selected photo as a drag item, the lifted one first so the
+        /// stack under the finger shows what the user grabbed.
+        private func selectedDragItems(startingAt flatIndex: Int) -> [UIDragItem] {
+            var ordered: [Int] = [flatIndex]
+            for index in parent.photos.indices
+            where index != flatIndex && appliedSelectedIds.contains(parent.photos[index].assetId) {
+                ordered.append(index)
+            }
+            return ordered.compactMap { index in
+                guard let asset = parent.assetProvider(index, parent.photos[index])
+                else { return nil }
+                let item = UIDragItem(itemProvider: PhotoDragItem.provider(for: asset))
+                item.localObject = asset
+                return item
+            }
         }
 
         // MARK: Delegate
