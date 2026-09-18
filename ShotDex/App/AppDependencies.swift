@@ -56,6 +56,8 @@ final class AppDependencies {
     let collectionPins: CollectionPinStore
     /// Copied edits, carried between photos and across launches.
     let editClipboard: EditClipboard
+    /// The order and visibility of the Collections tab's sections.
+    let collectionsLayout: CollectionsLayoutStore
     /// Photos opened and photos shared, for the Recently Viewed / Recently
     /// Shared collections. PhotoKit records neither.
     let recentActivity: RecentActivityStore
@@ -174,6 +176,7 @@ final class AppDependencies {
         )
         self.collectionPins = CollectionPinStore()
         self.editClipboard = EditClipboard()
+        self.collectionsLayout = CollectionsLayoutStore()
         self.spotlight = SpotlightIndexer(
             libraryQueries: libraryQueries,
             smartAlbumStore: SmartAlbumStore(database: database)

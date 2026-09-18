@@ -22,6 +22,7 @@ struct AlbumsScreen: View {
     }
 
     @State private var isCreatingSmartAlbum = false
+    @State private var isCustomizePresented = false
     @State private var editingSmartAlbum: SmartAlbum?
     @State private var namingRequest: NamingRequest?
     @State private var enteredName = ""
@@ -130,11 +131,17 @@ struct AlbumsScreen: View {
                     } label: {
                         Label("New Folder", systemImage: "folder.badge.plus")
                     }
+                    Divider()
+                    Button {
+                        isCustomizePresented = true
+                    } label: {
+                        Label("Customize", systemImage: "slider.horizontal.3")
+                    }
                 } label: {
                     Image(systemName: "plus")
                 }
                 .tint(.primary)
-                .accessibilityLabel("New album, smart album or folder")
+                .accessibilityLabel("New album, smart album or folder, or customize this tab")
             }
         }
         // `assetChangeToken`, not `libraryChangeToken`: the album list only
@@ -168,6 +175,9 @@ struct AlbumsScreen: View {
         }
         .navigationDestination(for: TripsDestination.self) { _ in
             TripsScreen()
+        }
+        .sheet(isPresented: $isCustomizePresented) {
+            CustomizeCollectionsSheet(store: dependencies.collectionsLayout)
         }
         .sheet(isPresented: $isCreatingSmartAlbum) {
             SmartAlbumEditorSheet(existing: nil, dependencies: dependencies) {
@@ -209,6 +219,48 @@ struct AlbumsScreen: View {
         }
     }
 
+    /// One section of the tab, drawn only when it has something in it.
+    ///
+    /// An empty section is worse than a missing one: it takes a screenful of
+    /// scrolling to pass and says nothing. The exception is Utilities, which is
+    /// the tools and is always there.
+    @ViewBuilder
+    private func sectionView(_ section: CollectionsSection) -> some View {
+        switch section {
+        case .pinned:
+            if !pinnedAlbums.isEmpty || !pinnedSmartAlbums.isEmpty
+                || !pinnedUtilities.isEmpty {
+                pinnedSection()
+            }
+        case .memories:
+            if !model.memories.isEmpty { memoriesSection() }
+        case .recents:
+            if !recentTokens.isEmpty { recentsSection() }
+        case .subjects:
+            if !subjectTokens.isEmpty { subjectsSection() }
+        case .smartAlbums:
+            if !(model.smartQueryAlbums.isEmpty && model.smartAlbums.isEmpty) {
+                smartAlbumsSection()
+            }
+        case .mediaTypes:
+            if !model.mediaTypeAlbums.isEmpty {
+                albumTokenSection(title: "Media Types", albums: model.mediaTypeAlbums)
+            }
+        case .folders:
+            if !model.folders.isEmpty { foldersSection() }
+        case .myAlbums:
+            if !model.userAlbums.isEmpty {
+                albumTokenSection(title: "My Albums", albums: model.userAlbums)
+            }
+        case .sharedAlbums:
+            if !model.sharedAlbums.isEmpty {
+                albumTokenSection(title: "Shared Albums", albums: model.sharedAlbums)
+            }
+        case .utilities:
+            utilitiesSection()
+        }
+    }
+
     private var albumGrid: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -228,44 +280,9 @@ struct AlbumsScreen: View {
                 .buttonStyle(.plain)
                 .padding(.horizontal)
 
-                if !pinnedAlbums.isEmpty || !pinnedSmartAlbums.isEmpty
-                    || !pinnedUtilities.isEmpty {
-                    pinnedSection()
+                ForEach(dependencies.collectionsLayout.visibleOrder) { section in
+                    sectionView(section)
                 }
-
-                if !model.memories.isEmpty {
-                    memoriesSection()
-                }
-
-                if !recentTokens.isEmpty {
-                    recentsSection()
-                }
-
-                if !subjectTokens.isEmpty {
-                    subjectsSection()
-                }
-
-                if !(model.smartQueryAlbums.isEmpty && model.smartAlbums.isEmpty) {
-                    smartAlbumsSection()
-                }
-
-                if !model.mediaTypeAlbums.isEmpty {
-                    albumTokenSection(title: "Media Types", albums: model.mediaTypeAlbums)
-                }
-
-                if !model.folders.isEmpty {
-                    foldersSection()
-                }
-
-                if !model.userAlbums.isEmpty {
-                    albumTokenSection(title: "My Albums", albums: model.userAlbums)
-                }
-
-                if !model.sharedAlbums.isEmpty {
-                    albumTokenSection(title: "Shared Albums", albums: model.sharedAlbums)
-                }
-
-                utilitiesSection()
 
                 if #unavailable(iOS 26.0) {
                     Color.clear.frame(height: 90)
