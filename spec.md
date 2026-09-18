@@ -740,6 +740,14 @@ Tab **Markup** đứng sau Filters (tên cũ "Text" — đổi vì tab thêm đ�
 - `.onMapCameraChange(frequency: .onEnd)` cập nhật span nên pin gộp/tách theo zoom. Tự gom cụm chứ không dùng annotation clustering của MapKit vì cần thumbnail bìa + số đếm riêng cho từng cụm
 - Chạm cụm → `PhotoListScreen`
 
+**Sort trong Album Detail (2026-09-19):**
+
+- Nút sort (`arrow.up.arrow.down`) cạnh Select: **Album Order · Newest First · Oldest First**. `AlbumSortOrder` map thẳng sang `sortDescriptors`; **Album Order = không sort gì cả** (`sortDescriptors = nil`) — đó là cách PhotoKit trả về thứ tự riêng của album (thứ tự thêm vào, hoặc thứ tự user kéo trong app Photos)
+- **Smart album không có Album Order**: nó là một truy vấn, không có sắp xếp riêng nào để quay về. Mặc định của smart album là Newest First, của album người dùng là Album Order
+- **Nhớ theo từng album** (`AlbumSortStore`, dictionary trong UserDefaults khoá theo album id), không phải một setting chung: album chuyến đi đọc theo thứ tự nó xảy ra, album hình nền đọc theo thứ tự thêm vào — một công tắc chung thì cứ đổi album là phải chọn lại
+- Đổi sort phải **bump `contentVersion`**: lưới reload theo version, mà re-sort giữ nguyên số ảnh lẫn tập ảnh nên không còn tín hiệu nào khác nói cho lưới biết danh sách nó đang hiện đã khác
+- Ở **Album Order thì lưới bỏ header ngày** (`sectionMode: .flat`): chia theo ngày sẽ cắt vụn đúng cái trình tự người dùng tự xếp
+
 **Copy / Paste edits (2026-09-19):**
 
 - Menu ⋯ của editor: **Copy Edits** (mờ đi khi chưa có gì để chép) và **Paste Edits** (chỉ hiện khi clipboard có nội dung). `EditClipboard` lưu một recipe trong UserDefaults nên **sống qua cả lần mở app sau**

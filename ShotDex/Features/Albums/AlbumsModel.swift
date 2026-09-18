@@ -463,6 +463,68 @@ final class AlbumsModel {
     }
 }
 
+/// How an album's photos are ordered on screen.
+///
+/// `albumOrder` is the album's own arrangement — the order photos were added,
+/// or the order the user dragged them into in Photos. PhotoKit gives it by
+/// asking for no sort at all, which is why it is not just another descriptor.
+enum AlbumSortOrder: String, CaseIterable, Identifiable, Sendable {
+    case albumOrder
+    case newestFirst
+    case oldestFirst
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .albumOrder: "Album Order"
+        case .newestFirst: "Newest First"
+        case .oldestFirst: "Oldest First"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .albumOrder: "list.number"
+        case .newestFirst: "arrow.down"
+        case .oldestFirst: "arrow.up"
+        }
+    }
+
+    var sortDescriptors: [NSSortDescriptor]? {
+        switch self {
+        case .albumOrder: nil
+        case .newestFirst: [NSSortDescriptor(key: "creationDate", ascending: false)]
+        case .oldestFirst: [NSSortDescriptor(key: "creationDate", ascending: true)]
+        }
+    }
+}
+
+/// Remembers the order each album was last browsed in.
+///
+/// Per album, not one setting for all of them: a trip album reads in the order
+/// it happened, a wallpapers album in the order things were added, and one
+/// global switch would make the user re-pick every time they moved between the
+/// two.
+enum AlbumSortStore {
+    private static let key = "albums.sortOrder"
+
+    static func order(for albumId: String, isSmartAlbum: Bool) -> AlbumSortOrder {
+        let stored = UserDefaults.standard.dictionary(forKey: key) as? [String: String]
+        if let raw = stored?[albumId], let order = AlbumSortOrder(rawValue: raw) {
+            return order
+        }
+        // A smart album has no arrangement of its own to fall back on.
+        return isSmartAlbum ? .newestFirst : .albumOrder
+    }
+
+    static func setOrder(_ order: AlbumSortOrder, for albumId: String) {
+        var stored = UserDefaults.standard.dictionary(forKey: key) as? [String: String] ?? [:]
+        stored[albumId] = order.rawValue
+        UserDefaults.standard.set(stored, forKey: key)
+    }
+}
+
 /// Pages one album's photos, joining PHAssets with their indexed metadata.
 @MainActor
 @Observable
@@ -473,8 +535,16 @@ final class AlbumDetailModel: PhotoBrowsingSource {
     private let database: AppDatabase
     private let photoLibrary: PhotoLibraryService
     private let indexPipeline: IndexPipeline
-    private let fetchResult: PHFetchResult<PHAsset>
+    private var fetchResult: PHFetchResult<PHAsset>
     let sourceAlbum: PHAssetCollection?
+    /// The album this model is paging, kept so a sort change can re-fetch.
+    private let albumKind: AlbumItem.Kind
+    private let albumId: String
+    private(set) var sortOrder: AlbumSortOrder
+    /// Bumped when the order changes. The grid reloads on a content-version
+    /// change; a re-sort keeps the same photos and the same count, so nothing
+    /// else would tell it the list it is showing is no longer the list.
+    private(set) var contentVersion = 0
 
     private(set) var photos: [PhotoMetadata] = []
     private(set) var assetsById: [String: PHAsset] = [:]
@@ -499,20 +569,64 @@ final class AlbumDetailModel: PhotoBrowsingSource {
         self.database = dependencies.database
         self.photoLibrary = dependencies.photoLibrary
         self.indexPipeline = dependencies.indexPipeline
+        self.albumKind = album.kind
+        self.albumId = album.id
+        let order = AlbumSortStore.order(for: album.id, isSmartAlbum: album.isSmart)
+        self.sortOrder = order
 
-        let options = PHFetchOptions()
-        options.predicate = PhotoLibraryService.browsableMediaPredicate
-        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         switch album.kind {
         case .allPhotos:
             self.sourceAlbum = nil
-            self.fetchResult = PHAsset.fetchAssets(with: options)
         case .collection(let collection):
             self.sourceAlbum = collection.assetCollectionType == .album
                 && collection.canPerform(.addContent)
                 ? collection
                 : nil
-            self.fetchResult = PHAsset.fetchAssets(in: collection, options: options)
+        }
+        self.fetchResult = Self.fetch(kind: album.kind, order: order)
+    }
+
+    /// Whether this album has an arrangement of its own to offer. A smart
+    /// album is a query, so "Album Order" would mean nothing there.
+    var supportsAlbumOrder: Bool {
+        if case .collection(let collection) = albumKind {
+            return collection.assetCollectionType == .album
+        }
+        return false
+    }
+
+    /// Re-orders the album and starts its paging again from the top.
+    func setSortOrder(_ order: AlbumSortOrder) {
+        guard order != sortOrder else { return }
+        sortOrder = order
+        AlbumSortStore.setOrder(order, for: albumId)
+        fetchResult = Self.fetch(kind: albumKind, order: order)
+        photos = []
+        assetsById = [:]
+        pageTriggerIds = []
+        nextFetchIndex = 0
+        hasMorePages = true
+        lastRemoval = nil
+        contentVersion += 1
+        loadNextPage()
+    }
+
+    private nonisolated static func fetch(
+        kind: AlbumItem.Kind,
+        order: AlbumSortOrder
+    ) -> PHFetchResult<PHAsset> {
+        let options = PHFetchOptions()
+        options.predicate = PhotoLibraryService.browsableMediaPredicate
+        options.sortDescriptors = order.sortDescriptors
+        switch kind {
+        case .allPhotos:
+            // All Photos has no arrangement of its own; unsorted there is
+            // whatever order PhotoKit happens to hand back.
+            options.sortDescriptors = order.sortDescriptors
+                ?? [NSSortDescriptor(key: "creationDate", ascending: false)]
+            return PHAsset.fetchAssets(with: options)
+        case .collection(let collection):
+            return PHAsset.fetchAssets(in: collection, options: options)
         }
     }
 

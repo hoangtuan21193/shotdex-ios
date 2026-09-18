@@ -140,13 +140,14 @@ struct AlbumDetailScreen: View {
         PhotoGridCollectionView(
             photos: model.photos,
             assetProvider: { _, item in model.assetsById[item.assetId] },
-            // Album fetch is hard-sorted by creationDate, so date headers
-            // always apply here.
-            sectionMode: .dates,
+            // Date headers only make sense while the album is in date order;
+            // in the album's own arrangement they would cut the user's
+            // sequence into groups it does not have.
+            sectionMode: model.sortOrder == .albumOrder ? .flat : .dates,
             anchorsBottom: false,
-            // Constant: album content is only ever appended (paging) or
-            // pruned (delete) — count changes reload without re-anchoring.
-            contentVersion: 0,
+            // Otherwise constant: album content is only ever appended (paging)
+            // or pruned (delete), and count changes reload on their own.
+            contentVersion: model.contentVersion,
             contentRefreshVersion: 0,
             jumpToNewestToken: 0,
             columnCount: Binding(
@@ -424,9 +425,37 @@ struct AlbumDetailScreen: View {
         }
     }
 
+    /// Newest / oldest / the album's own order, remembered per album.
+    private func sortMenu(_ model: AlbumDetailModel) -> some View {
+        Menu {
+            ForEach(AlbumSortOrder.allCases) { order in
+                if order != .albumOrder || model.supportsAlbumOrder {
+                    Button {
+                        model.setSortOrder(order)
+                    } label: {
+                        if order == model.sortOrder {
+                            Label(order.displayName, systemImage: "checkmark")
+                        } else {
+                            Label(order.displayName, systemImage: order.systemImage)
+                        }
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "arrow.up.arrow.down")
+        }
+        .tint(.primary)
+        .accessibilityLabel("Sort photos")
+    }
+
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         // Browsing: just Select. Selecting: the shared ⋯ + × items below.
+        ToolbarItem(placement: .topBarTrailing) {
+            if let model, !model.photos.isEmpty, !isSelecting {
+                sortMenu(model)
+            }
+        }
         ToolbarItem(placement: .topBarTrailing) {
             if model?.photos.isEmpty == false, !isSelecting {
                 // Spelled out, like Photos.
