@@ -779,6 +779,14 @@ Màn Statistics là **dashboard chart tuỳ biến** (thay cho danh sách sectio
 - Số liệu lấy từ **chính `StatisticsQueries`** mà tab Statistics dùng, nên widget không thể nói khác màn hình nó tóm tắt; bucket "Unknown" bị loại khỏi tên máy/ống kính
 - Cả hai target khai `com.apple.security.application-groups`. **Build lên máy thật cần capability App Groups bật trên App ID** — Xcode signing tự động thường tự thêm; không có nó thì `containerURL` trả nil và widget hiện trạng thái "Open ShotDex" thay vì số 0 giả
 
+### 7.4c Share Extension (2026-09-19)
+
+- Target **`ShotDexShare`** (bundle id `com.hoangtuan.shotdex.share`, tên hiển thị "Save to ShotDex"), nhúng cùng chỗ với widget. `NSExtensionActivationSupportsImageWithMaxCount = 40`, `NSExtensionPrincipalClass = $(PRODUCT_MODULE_NAME).ShareViewController` (không dùng storyboard)
+- `UIViewController` thường chứ **không** `SLComposeServiceViewController`: không có gì để soạn. Sheet nói sẽ làm gì, làm, rồi đóng
+- Xin quyền **`.addOnly`** — vừa đủ để thêm ảnh, và là mức ít nhất người dùng phải cấp. Ảnh vào thư viện bằng `PHAssetCreationRequest`, app index metadata ở lần mở sau
+- `loadFileRepresentation` **xoá file tạm ngay khi completion trả về**, nên phải copy sang thư mục tạm của chính extension trước khi `performChanges`
+- Trạng thái: `ready` / `saving(done,total)` / `finished(saved,failed)` / `nothingToSave` / `denied`; ảnh nào đọc không được thì đếm vào `failed` chứ không bỏ cả mẻ
+
 ### 7.5 Settings
 
 Mở bằng nút gear (`gearshape`) top-left của Library/Albums/Statistics; hiển thị dạng bottom sheet trượt từ dưới lên (native `.sheet`, `presentationDetents([.medium, .large])`, grabber hiện, kéo xuống để đóng), giống panel metadata màn detail ảnh, title `.inline`.

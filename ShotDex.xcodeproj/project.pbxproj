@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		AA0000102D00000100000001 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000112D00000100000001 /* GRDB */; };
 		BB0001012D00000100000001 /* ShotDexWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = BB0001022D00000100000001 /* ShotDexWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		CC0001012D00000100000001 /* ShotDexShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CC0001022D00000100000001 /* ShotDexShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -26,6 +27,13 @@
 			remoteGlobalIDString = BB0001102D00000100000001;
 			remoteInfo = ShotDexWidget;
 		};
+		CC0001032D00000100000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA00000A2D00000100000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CC0001102D00000100000001;
+			remoteInfo = ShotDexShare;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -36,6 +44,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				BB0001012D00000100000001 /* ShotDexWidget.appex in Embed Foundation Extensions */,
+				CC0001012D00000100000001 /* ShotDexShare.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -48,6 +57,7 @@
 		AA0000052D00000100000001 /* ShotDex.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShotDex.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000212D00000100000001 /* ShotDexTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ShotDexTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		BB0001022D00000100000001 /* ShotDexWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShotDexWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		CC0001022D00000100000001 /* ShotDexShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShotDexShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -66,6 +76,14 @@
 				ShotDexWidget.entitlements,
 			);
 			target = BB0001102D00000100000001 /* ShotDexWidget */;
+		};
+		CC0001042D00000100000001 /* Exceptions for "ShotDexShare" folder in "ShotDexShare" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				ShotDexShare.entitlements,
+			);
+			target = CC0001102D00000100000001 /* ShotDexShare */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -89,6 +107,14 @@
 				BB0001042D00000100000001 /* Exceptions for "ShotDexWidget" folder in "ShotDexWidget" target */,
 			);
 			path = ShotDexWidget;
+			sourceTree = "<group>";
+		};
+		CC0001052D00000100000001 /* ShotDexShare */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CC0001042D00000100000001 /* Exceptions for "ShotDexShare" folder in "ShotDexShare" target */,
+			);
+			path = ShotDexShare;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -116,6 +142,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CC0001062D00000100000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -133,6 +166,7 @@
 			children = (
 				AA0000012D00000100000001 /* ShotDex */,
 				BB0001052D00000100000001 /* ShotDexWidget */,
+				CC0001052D00000100000001 /* ShotDexShare */,
 				AA0000222D00000100000001 /* ShotDexTests */,
 				0E765CA03010E673001A134A /* Frameworks */,
 				AA0000042D00000100000001 /* Products */,
@@ -144,6 +178,7 @@
 			children = (
 				AA0000052D00000100000001 /* ShotDex.app */,
 				BB0001022D00000100000001 /* ShotDexWidget.appex */,
+				CC0001022D00000100000001 /* ShotDexShare.appex */,
 				AA0000212D00000100000001 /* ShotDexTests.xctest */,
 			);
 			name = Products;
@@ -165,6 +200,7 @@
 			);
 			dependencies = (
 				BB0001072D00000100000001 /* PBXTargetDependency */,
+				CC0001072D00000100000001 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				AA0000012D00000100000001 /* ShotDex */,
@@ -222,6 +258,28 @@
 			productReference = BB0001022D00000100000001 /* ShotDexWidget.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		CC0001102D00000100000001 /* ShotDexShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CC0001112D00000100000001 /* Build configuration list for PBXNativeTarget "ShotDexShare" */;
+			buildPhases = (
+				CC0001082D00000100000001 /* Sources */,
+				CC0001062D00000100000001 /* Frameworks */,
+				CC0001092D00000100000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				CC0001052D00000100000001 /* ShotDexShare */,
+			);
+			name = ShotDexShare;
+			packageProductDependencies = (
+			);
+			productName = ShotDexShare;
+			productReference = CC0001022D00000100000001 /* ShotDexShare.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -236,6 +294,9 @@
 						CreatedOnToolsVersion = 26.0;
 					};
 					BB0001102D00000100000001 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+					CC0001102D00000100000001 = {
 						CreatedOnToolsVersion = 26.0;
 					};
 				};
@@ -260,6 +321,7 @@
 			targets = (
 				AA0000062D00000100000001 /* ShotDex */,
 				BB0001102D00000100000001 /* ShotDexWidget */,
+				CC0001102D00000100000001 /* ShotDexShare */,
 				AA0000232D00000100000001 /* ShotDexTests */,
 			);
 		};
@@ -281,6 +343,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		BB0001092D00000100000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CC0001092D00000100000001 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -311,6 +380,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CC0001082D00000100000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -323,6 +399,11 @@
 			isa = PBXTargetDependency;
 			target = BB0001102D00000100000001 /* ShotDexWidget */;
 			targetProxy = BB0001032D00000100000001 /* PBXContainerItemProxy */;
+		};
+		CC0001072D00000100000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CC0001102D00000100000001 /* ShotDexShare */;
+			targetProxy = CC0001032D00000100000001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -604,6 +685,67 @@
 			};
 			name = Release;
 		};
+		CC0001122D00000100000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CODE_SIGN_ENTITLEMENTS = ShotDexShare/ShotDexShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = MF2ESUE9HV;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShotDexShare/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Save to ShotDex";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Saves the photos you share into your library so ShotDex can index them.";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hoangtuan.shotdex.share;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		CC0001132D00000100000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CODE_SIGN_ENTITLEMENTS = ShotDexShare/ShotDexShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = MF2ESUE9HV;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShotDexShare/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Save to ShotDex";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Saves the photos you share into your library so ShotDex can index them.";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hoangtuan.shotdex.share;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -639,6 +781,15 @@
 			buildConfigurations = (
 				BB0001122D00000100000001 /* Debug */,
 				BB0001132D00000100000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CC0001112D00000100000001 /* Build configuration list for PBXNativeTarget "ShotDexShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CC0001122D00000100000001 /* Debug */,
+				CC0001132D00000100000001 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
