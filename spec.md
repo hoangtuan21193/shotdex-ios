@@ -707,6 +707,8 @@ Tab **Markup** đứng sau Filters (tên cũ "Text" — đổi vì tab thêm đ�
 - Khoảng hở đo với ảnh **cuối của chuỗi đang gom**, không phải ảnh vừa duyệt qua — một tấm lạc giữa chừng không được reset đồng hồ. Một ảnh chụp ở nhà **kết thúc** chuỗi; sau đó `merged(_:)` nối lại các chuỗi liền kề **cùng tên địa điểm** và cách nhau ≤ 2 ngày, vì một tấm sai giờ / import từ máy khác / một đêm về nhà giữa chuyến sẽ cắt một kỳ nghỉ thành ba
 - Ảnh bìa lấy **giữa chuỗi**, không lấy tấm đầu (ảnh lúc mới tới hiếm khi đáng làm bìa). Test: `ShotDexTests/TripGroupingTests.swift` (5 ca)
 
+**Merge (2026-09-19):** menu ⋯ có **Merge All Groups**. Bản giữ lại = **file lớn nhất**, hoà thì **nhiều pixel hơn** (cả hai đều là proxy cho "bản ít bị nén lại nhất", vốn là thứ một cụm trùng thường khác nhau). Nó **thừa hưởng** những gì bản sao có mà nó thiếu: cờ favorite, toạ độ, và **ngày chụp sớm nhất** (bản lưu lại mang ngày lúc lưu lại, khoảnh khắc gốc mới là thứ đáng giữ). Chép metadata xong **mới** đánh dấu xoá, nên hỏng giữa chừng để lại thư viện còn trùng chứ không để lại bản giữ bị mất dữ liệu. Merge **không tự xoá** — nó chỉ đánh dấu, nút Delete vẫn do người dùng bấm.
+
 **Duplicates (tìm và xoá ảnh trùng / gần trùng):**
 
 - **Phát hiện bằng perceptual hash**, không so byte: mỗi ảnh (chỉ ảnh, **không video**) lấy một rendition PhotoKit 96px (`PerceptualHashReader`, `deliveryMode = .highQualityFormat` để callback đúng một lần, `isNetworkAccessAllowed` theo chính sách index: Wi-Fi luôn, cellular chỉ khi bật "Use Cellular Data for Indexing") → vẽ ép vào lưới gray 9×8 → **dHash 64-bit** (`DifferenceHash`, Domain, pure: bit = pixel tối hơn pixel bên phải). Hash lưu `perceptual_hash` (§5). Thumbnail không lấy được → row `hash NULL`, chỉ thử lại khi run được phép mạng.

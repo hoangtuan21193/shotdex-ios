@@ -96,6 +96,12 @@ struct DuplicatesScreen: View {
                     }
                     .disabled(model.isBusy)
                     Button {
+                        Task { await model.mergeAll() }
+                    } label: {
+                        Label("Merge All Groups", systemImage: "arrow.trianglehead.merge")
+                    }
+                    .disabled(model.isBusy || model.groups.isEmpty)
+                    Button {
                         model.clearAllMarks()
                     } label: {
                         Label("Clear Selection", systemImage: "xmark.circle")

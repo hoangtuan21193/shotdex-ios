@@ -272,6 +272,78 @@ final class DuplicatesModel {
         markedForDeletion.removeAll()
     }
 
+    // MARK: Merge
+
+    /// Which member of a group survives a merge: the biggest file, then the
+    /// most pixels. Both are proxies for "the least re-compressed copy", which
+    /// is what a duplicate set usually differs by.
+    nonisolated static func keeper(of group: DuplicateGroup) -> HashedPhoto? {
+        group.members.max { left, right in
+            let leftSize = left.fileSize ?? 0
+            let rightSize = right.fileSize ?? 0
+            if leftSize != rightSize { return leftSize < rightSize }
+            return left.pixelCount < right.pixelCount
+        }
+    }
+
+    /// Folds every group down to one photo, the way Photos' own Merge does:
+    /// the keeper inherits anything its copies have and it lacks — the
+    /// favourite flag, a location, the earliest capture date — and the rest are
+    /// marked for deletion.
+    ///
+    /// Metadata is copied *before* anything is deleted, so a failure half way
+    /// leaves the library with duplicates rather than with a stripped keeper.
+    func mergeAll() async {
+        guard !isDeleting else { return }
+        for group in groups {
+            guard let keeper = Self.keeper(of: group),
+                  let keeperAsset = assetsById[keeper.assetId]
+            else { continue }
+            let others = group.members
+                .filter { $0.assetId != keeper.assetId }
+                .compactMap { assetsById[$0.assetId] }
+            await adoptMetadata(into: keeperAsset, from: others)
+            keepOnly(keeper.assetId, in: group)
+        }
+    }
+
+    /// Gives `keeper` the facts its duplicates have and it does not.
+    private func adoptMetadata(into keeper: PHAsset, from others: [PHAsset]) async {
+        let shouldFavorite = !keeper.isFavorite && others.contains { $0.isFavorite }
+        let adoptedLocation = keeper.location == nil
+            ? others.compactMap(\.location).first
+            : nil
+        // Earliest wins: a re-saved copy carries the date it was re-saved, and
+        // the original moment is the one worth keeping.
+        let earliest = ([keeper] + others).compactMap(\.creationDate).min()
+        let adoptedDate = earliest.flatMap { $0 < (keeper.creationDate ?? .distantFuture) ? $0 : nil }
+
+        guard shouldFavorite || adoptedLocation != nil || adoptedDate != nil else { return }
+        try? await PHPhotoLibrary.shared().performChanges {
+            let request = PHAssetChangeRequest(for: keeper)
+            if shouldFavorite { request.isFavorite = true }
+            if let adoptedLocation { request.location = adoptedLocation }
+            if let adoptedDate { request.creationDate = adoptedDate }
+        }
+        if shouldFavorite {
+            try? dependencies.metadataStore.updateFavorite(
+                assetId: keeper.localIdentifier, isFavorite: true
+            )
+        }
+        if let adoptedLocation {
+            try? dependencies.metadataStore.updateLocation(
+                assetIds: [keeper.localIdentifier],
+                latitude: adoptedLocation.coordinate.latitude,
+                longitude: adoptedLocation.coordinate.longitude
+            )
+        }
+        if let adoptedDate {
+            try? dependencies.metadataStore.updateCreationDate(
+                assetIds: [keeper.localIdentifier], date: adoptedDate
+            )
+        }
+    }
+
     func markedCount(in group: DuplicateGroup) -> Int {
         group.members.filter { markedForDeletion.contains($0.assetId) }.count
     }
