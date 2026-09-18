@@ -19,6 +19,77 @@ struct AlbumsScreen: View {
 
     @State private var isCreatingSmartAlbum = false
     @State private var editingSmartAlbum: SmartAlbum?
+    @State private var namingRequest: NamingRequest?
+    @State private var enteredName = ""
+    @State private var deletionRequest: DeletionRequest?
+
+    /// A pending "type a name" alert — creating an album or folder, or
+    /// renaming one. One piece of state for all four, because they differ only
+    /// in the title and what happens on confirm.
+    struct NamingRequest: Identifiable {
+        enum Kind {
+            case newAlbum
+            case newFolder
+            case renameAlbum(AlbumItem)
+            case renameFolder(AlbumsModel.FolderItem)
+        }
+
+        let id = UUID()
+        let kind: Kind
+
+        var title: String {
+            switch kind {
+            case .newAlbum: String(localized: "New Album")
+            case .newFolder: String(localized: "New Folder")
+            case .renameAlbum: String(localized: "Rename Album")
+            case .renameFolder: String(localized: "Rename Folder")
+            }
+        }
+
+        var confirmTitle: String {
+            switch kind {
+            case .newAlbum, .newFolder: String(localized: "Create")
+            case .renameAlbum, .renameFolder: String(localized: "Rename")
+            }
+        }
+
+        var currentName: String {
+            switch kind {
+            case .newAlbum, .newFolder: ""
+            case .renameAlbum(let album): album.title
+            case .renameFolder(let folder): folder.title
+            }
+        }
+    }
+
+    /// A pending delete, confirmed before it happens. Deleting an album never
+    /// deletes photos — the message says so, because that is the one thing a
+    /// user needs to be sure of here.
+    struct DeletionRequest: Identifiable {
+        enum Target {
+            case album(AlbumItem)
+            case folder(AlbumsModel.FolderItem)
+        }
+
+        let id = UUID()
+        let target: Target
+
+        var title: String {
+            switch target {
+            case .album(let album): String(localized: "Delete “\(album.title)”?")
+            case .folder(let folder): String(localized: "Delete “\(folder.title)”?")
+            }
+        }
+
+        var message: String {
+            switch target {
+            case .album:
+                String(localized: "The photos stay in your library.")
+            case .folder:
+                String(localized: "The albums inside move back to My Albums.")
+            }
+        }
+    }
 
     var body: some View {
         Group {
@@ -39,13 +110,27 @@ struct AlbumsScreen: View {
             // Separate item so the "+" gets its own Liquid Glass circle on
             // iOS 26 instead of sharing the settings button's capsule.
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    isCreatingSmartAlbum = true
+                Menu {
+                    Button {
+                        namingRequest = NamingRequest(kind: .newAlbum)
+                    } label: {
+                        Label("New Album", systemImage: "rectangle.stack.badge.plus")
+                    }
+                    Button {
+                        isCreatingSmartAlbum = true
+                    } label: {
+                        Label("New Smart Album", systemImage: "line.3.horizontal.decrease.circle")
+                    }
+                    Button {
+                        namingRequest = NamingRequest(kind: .newFolder)
+                    } label: {
+                        Label("New Folder", systemImage: "folder.badge.plus")
+                    }
                 } label: {
                     Image(systemName: "plus")
                 }
                 .tint(.primary)
-                .accessibilityLabel("New Smart Album")
+                .accessibilityLabel("New album, smart album or folder")
             }
         }
         // `assetChangeToken`, not `libraryChangeToken`: the album list only
@@ -85,6 +170,34 @@ struct AlbumsScreen: View {
                 model.load()
             }
         }
+        .alert(
+            namingRequest?.title ?? "",
+            isPresented: Binding(
+                get: { namingRequest != nil },
+                set: { if !$0 { namingRequest = nil } }
+            ),
+            presenting: namingRequest
+        ) { request in
+            TextField("Name", text: $enteredName)
+            Button("Cancel", role: .cancel) { namingRequest = nil }
+            Button(request.confirmTitle) { apply(request) }
+        }
+        .onChange(of: namingRequest?.id) { _, _ in
+            enteredName = namingRequest?.currentName ?? ""
+        }
+        .alert(
+            deletionRequest?.title ?? "",
+            isPresented: Binding(
+                get: { deletionRequest != nil },
+                set: { if !$0 { deletionRequest = nil } }
+            ),
+            presenting: deletionRequest
+        ) { request in
+            Button("Cancel", role: .cancel) { deletionRequest = nil }
+            Button("Delete", role: .destructive) { confirmDelete(request) }
+        } message: { request in
+            Text(request.message)
+        }
         .sheet(item: $editingSmartAlbum) { album in
             SmartAlbumEditorSheet(existing: album, dependencies: dependencies) {
                 model.load()
@@ -119,6 +232,10 @@ struct AlbumsScreen: View {
                     albumTokenSection(title: "Media Types", albums: model.mediaTypeAlbums)
                 }
 
+                if !model.folders.isEmpty {
+                    foldersSection()
+                }
+
                 if !model.userAlbums.isEmpty {
                     albumTokenSection(title: "My Albums", albums: model.userAlbums)
                 }
@@ -133,6 +250,47 @@ struct AlbumsScreen: View {
                     Color.clear.frame(height: 90)
                 }
             }
+        }
+    }
+
+    /// "Move to Folder" — the only way an album gets into a folder, since a
+    /// folder created here starts empty.
+    @ViewBuilder
+    private func moveToFolderMenu(_ album: AlbumItem) -> some View {
+        if !model.folders.isEmpty {
+            Menu {
+                ForEach(model.folders) { folder in
+                    Button(folder.title) { model.move(album, to: folder) }
+                }
+                if model.folders.contains(where: { folder in
+                    folder.albums.contains { $0.id == album.id }
+                }) {
+                    Divider()
+                    Button("Move Out of Folder") { model.move(album, to: nil) }
+                }
+            } label: {
+                Label("Move to Folder", systemImage: "folder")
+            }
+        }
+    }
+
+    private func apply(_ request: NamingRequest) {
+        let name = enteredName.trimmingCharacters(in: .whitespacesAndNewlines)
+        namingRequest = nil
+        guard !name.isEmpty else { return }
+        switch request.kind {
+        case .newAlbum: model.createAlbum(named: name)
+        case .newFolder: model.createFolder(named: name)
+        case .renameAlbum(let album): model.rename(album, to: name)
+        case .renameFolder(let folder): model.rename(folder, to: name)
+        }
+    }
+
+    private func confirmDelete(_ request: DeletionRequest) {
+        deletionRequest = nil
+        switch request.target {
+        case .album(let album): model.delete(album)
+        case .folder(let folder): model.delete(folder)
         }
     }
 
@@ -163,6 +321,23 @@ struct AlbumsScreen: View {
                             AlbumToken(album: album)
                         }
                         .buttonStyle(.plain)
+                        .contextMenu {
+                            // System albums (Recents, Videos, …) reject both,
+                            // so the menu is only offered on the user's own.
+                            if album.group == .user {
+                                Button {
+                                    namingRequest = NamingRequest(kind: .renameAlbum(album))
+                                } label: {
+                                    Label("Rename", systemImage: "pencil")
+                                }
+                                moveToFolderMenu(album)
+                                Button(role: .destructive) {
+                                    deletionRequest = DeletionRequest(target: .album(album))
+                                } label: {
+                                    Label("Delete Album", systemImage: "trash")
+                                }
+                            }
+                        }
                     }
                 }
                 .padding(.horizontal)
@@ -271,6 +446,76 @@ extension AlbumsScreen {
                 .padding(.horizontal)
             }
             .scrollClipDisabled()
+        }
+    }
+}
+
+extension AlbumsScreen {
+    /// One row per folder, each showing the albums it holds. Folders are rare
+    /// and usually few, so they are listed rather than squeezed into the same
+    /// horizontal token grid as everything else.
+    fileprivate func foldersSection() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Folders")
+                .font(.title2.bold())
+                .padding(.horizontal)
+
+            ForEach(model.folders) { folder in
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "folder")
+                            .foregroundStyle(.secondary)
+                        Text(folder.title)
+                            .font(.headline)
+                    }
+                    .padding(.horizontal)
+                    .contextMenu {
+                        Button {
+                            namingRequest = NamingRequest(kind: .renameFolder(folder))
+                        } label: {
+                            Label("Rename", systemImage: "pencil")
+                        }
+                        Button(role: .destructive) {
+                            deletionRequest = DeletionRequest(target: .folder(folder))
+                        } label: {
+                            Label("Delete Folder", systemImage: "trash")
+                        }
+                    }
+
+                    if folder.albums.isEmpty {
+                        Text("Empty. Move an album here from its own menu.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal)
+                    } else {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            LazyHStack(spacing: 8) {
+                                ForEach(folder.albums) { album in
+                                    NavigationLink(value: album.id) {
+                                        AlbumToken(album: album)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .contextMenu {
+                                        Button {
+                                            namingRequest = NamingRequest(kind: .renameAlbum(album))
+                                        } label: {
+                                            Label("Rename", systemImage: "pencil")
+                                        }
+                                        moveToFolderMenu(album)
+                                        Button(role: .destructive) {
+                                            deletionRequest = DeletionRequest(target: .album(album))
+                                        } label: {
+                                            Label("Delete Album", systemImage: "trash")
+                                        }
+                                    }
+                                }
+                            }
+                            .padding(.horizontal)
+                        }
+                        .scrollClipDisabled()
+                    }
+                }
+            }
         }
     }
 }
