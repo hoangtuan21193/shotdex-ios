@@ -125,6 +125,55 @@ struct MetadataStore: Sendable {
         }
     }
 
+    /// Mirrors a capture-date correction made through PhotoKit, so the grid's
+    /// sort, the date sections and the statistics follow the new date without
+    /// waiting for the next index run.
+    func updateCreationDate(assetIds: [String], date: Date) throws {
+        guard !assetIds.isEmpty else { return }
+        let stamp = Int(date.timeIntervalSince1970)
+        try database.writer.write { db in
+            for assetId in assetIds {
+                try db.execute(
+                    sql: "UPDATE photo_metadata SET creationDate = ? WHERE assetId = ?",
+                    arguments: [stamp, assetId]
+                )
+            }
+        }
+    }
+
+    /// Shifts stored capture dates by a fixed interval — the batch form of
+    /// "Adjust Date & Time", which moves a selection as a block.
+    func shiftCreationDates(assetIds: [String], by interval: TimeInterval) throws {
+        guard !assetIds.isEmpty, interval != 0 else { return }
+        let delta = Int(interval.rounded())
+        try database.writer.write { db in
+            for assetId in assetIds {
+                try db.execute(
+                    sql: """
+                        UPDATE photo_metadata
+                        SET creationDate = creationDate + ?
+                        WHERE assetId = ? AND creationDate IS NOT NULL
+                        """,
+                    arguments: [delta, assetId]
+                )
+            }
+        }
+    }
+
+    /// Mirrors a GPS correction made through PhotoKit. A `nil` coordinate
+    /// clears both columns, which is how "Remove Location" reaches the index.
+    func updateLocation(assetIds: [String], latitude: Double?, longitude: Double?) throws {
+        guard !assetIds.isEmpty else { return }
+        try database.writer.write { db in
+            for assetId in assetIds {
+                try db.execute(
+                    sql: "UPDATE photo_metadata SET latitude = ?, longitude = ? WHERE assetId = ?",
+                    arguments: [latitude, longitude, assetId]
+                )
+            }
+        }
+    }
+
     /// Clears the whole index (Settings → Clear local metadata index).
     func deleteAll() throws {
         try database.writer.write { db in

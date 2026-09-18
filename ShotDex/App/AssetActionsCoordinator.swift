@@ -42,6 +42,10 @@ final class AssetActionsCoordinator {
 
     /// Read by the host so the album picker can reuse the same service.
     let photoLibrary: PhotoLibraryService
+    /// PhotoKit is the source of truth, but the grid's filters, sort, date
+    /// sections and statistics all read the local index — so every mutation
+    /// mirrors itself into the index rather than waiting for the next run.
+    private let metadataStore: MetadataStore
 
     var dateRequest: DateRequest?
     var locationRequest: LocationRequest?
@@ -54,8 +58,9 @@ final class AssetActionsCoordinator {
     var toastMessage: String?
     private(set) var isWorking = false
 
-    init(photoLibrary: PhotoLibraryService) {
+    init(photoLibrary: PhotoLibraryService, metadataStore: MetadataStore) {
         self.photoLibrary = photoLibrary
+        self.metadataStore = metadataStore
     }
 
     // MARK: Favorite
@@ -75,6 +80,7 @@ final class AssetActionsCoordinator {
         let makeFavorite = !assets.allSatisfy(\.isFavorite)
         perform {
             try await self.photoLibrary.setFavorite(makeFavorite, for: assets)
+            self.mirrorFavorite(makeFavorite, ids: ids)
         }
     }
 
@@ -83,7 +89,15 @@ final class AssetActionsCoordinator {
         guard !assets.isEmpty else { return }
         perform {
             try await self.photoLibrary.setFavorite(isFavorite, for: assets)
+            self.mirrorFavorite(isFavorite, ids: ids)
         }
+    }
+
+    private func mirrorFavorite(_ isFavorite: Bool, ids: [String]) {
+        for id in ids {
+            try? metadataStore.updateFavorite(assetId: id, isFavorite: isFavorite)
+        }
+        photoLibrary.publishAppCreatedAsset()
     }
 
     // MARK: Hide
@@ -133,13 +147,17 @@ final class AssetActionsCoordinator {
     /// Photos does when several are adjusted at once.
     func applyDate(_ date: Date, to request: DateRequest) {
         let assets = request.assets
+        let ids = assets.map(\.localIdentifier)
         perform {
             if assets.count == 1 {
                 try await self.photoLibrary.setCreationDate(date, for: assets)
+                try? self.metadataStore.updateCreationDate(assetIds: ids, date: date)
             } else {
                 let delta = date.timeIntervalSince(request.seed)
                 try await self.photoLibrary.shiftCreationDates(by: delta, for: assets)
+                try? self.metadataStore.shiftCreationDates(assetIds: ids, by: delta)
             }
+            self.photoLibrary.publishAppCreatedAsset()
         }
     }
 
@@ -150,6 +168,12 @@ final class AssetActionsCoordinator {
         }
         perform {
             try await self.photoLibrary.setLocation(location, for: assets)
+            try? self.metadataStore.updateLocation(
+                assetIds: assets.map(\.localIdentifier),
+                latitude: coordinate?.latitude,
+                longitude: coordinate?.longitude
+            )
+            self.photoLibrary.publishAppCreatedAsset()
         }
     }
 

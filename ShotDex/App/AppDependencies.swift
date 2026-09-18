@@ -129,7 +129,10 @@ final class AppDependencies {
         )
         self.indexTraffic = indexTraffic
         self.indexInteractionGate = indexInteractionGate
-        self.assetActions = AssetActionsCoordinator(photoLibrary: photoLibrary)
+        self.assetActions = AssetActionsCoordinator(
+            photoLibrary: photoLibrary,
+            metadataStore: metadataStore
+        )
     }
 
     /// Re-resolves cameras indexed as Unknown against the bundled sensor

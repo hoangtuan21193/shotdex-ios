@@ -565,6 +565,7 @@ struct LibraryScreen: View {
             },
             removal: model.lastRemoval,
             contextMenuProvider: { item in tileMenu(assetId: item.assetId).makeMenu() },
+            onPullToRefresh: { model.reload() },
             scrubber: scrubberModel
         )
         .overlay(alignment: .trailing) {

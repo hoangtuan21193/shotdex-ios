@@ -23,7 +23,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 - [~] A6 Album CRUD — service layer xong hết (rename/delete/sắp xếp tay/folder), Remove from album đã lên UI; còn phần UI cho rename/delete/folder
 - [ ] A7 Add to Album trong viewer, Show in All Photos, Copy ảnh, Open in Maps, Print
 - [ ] A8 Tuỳ chọn Share (kèm/không kèm vị trí, bản gốc/bản sửa), Revert to Original, nút Auto-enhance, Copy & Paste edits, giữ tay xem bản gốc trong viewer
-- [ ] A9 Badge trên tile (favorite/Live/edited/HDR/Portrait), filter Edited, filter Screenshots, pull-to-refresh
+- [~] A9 Badge trên tile: favorite/Live/Portrait/Panorama/HDR/Slo-mo/Time-lapse xong; pull-to-refresh xong. **Không làm được**: badge "edited" (PhotoKit không expose cờ chỉnh sửa trên `PHAsset`, chỉ có cách duyệt `PHAssetResource` từng ảnh — quá đắt cho lưới đang cuộn). Filter Screenshots cần cột `mediaSubtypes` trong DB, xem mục riêng bên dưới
 - [ ] A10 Kéo thả ảnh ra app khác và thả vào album
 
 ## Phase B — Duyệt và xem
@@ -43,6 +43,10 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 - [ ] B13 Markup: hình khối, kính lúp
 - [ ] B14 Import: bỏ qua ảnh đã nhập, xoá sau khi nhập, nhập thẳng vào album
 - [ ] B15 Toggle autoplay, thống kê dung lượng thư viện
+
+### Việc phát sinh
+
+- [ ] Thêm cột `mediaSubtypes` vào `photo_metadata` (migration GRDB + `MetadataComposer`) — mở khoá filter Screenshots / Live / Portrait / Panorama và rule smart album theo loại phương tiện
 
 ## Phase C — Hệ thống
 

@@ -68,6 +68,9 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
     /// (or a `nil` return) leaves the tile without a menu, in which case the
     /// long press falls back to entering selection mode.
     var contextMenuProvider: ((Item) -> UIMenu?)? = nil
+    /// Pull-to-refresh handler. `nil` leaves the grid without a refresh
+    /// control — album grids reload from PhotoKit on their own.
+    var onPullToRefresh: (() -> Void)? = nil
     /// Drives the date scrubber drawn over the grid's right edge. The grid
     /// publishes its position and the date under the top of the viewport, and
     /// registers the jump closure the scrubber calls back.
@@ -117,6 +120,15 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             withReuseIdentifier: Coordinator.footerReuseId
         )
         coordinator.collectionView = collectionView
+        if onPullToRefresh != nil {
+            let refresh = UIRefreshControl()
+            refresh.addTarget(
+                coordinator,
+                action: #selector(Coordinator.handlePullToRefresh(_:)),
+                for: .valueChanged
+            )
+            collectionView.refreshControl = refresh
+        }
         coordinator.installGestures(on: collectionView)
         scrubber?.scrollTo = { [weak coordinator] fraction in
             coordinator?.scrollToFraction(fraction)
@@ -1069,6 +1081,17 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             }
         }
 
+        @objc func handlePullToRefresh(_ control: UIRefreshControl) {
+            parent.onPullToRefresh?()
+            // The work this kicks off is asynchronous and reports through the
+            // screen's own indicator, so the spinner's job is only to
+            // acknowledge the pull.
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(600))
+                control.endRefreshing()
+            }
+        }
+
         // MARK: Context menu
 
         /// Photos' tile menu: a zoomed preview of the tile plus the actions
@@ -1609,6 +1632,9 @@ final class PhotoGridCell: UICollectionViewCell {
     private let metadataLabel = UILabel()
     private let fileTypeBadge = UILabel()
     private let videoBadge = UILabel()
+    /// Favorite / Live Photo / Portrait / RAW-pair status glyphs, as Photos
+    /// stamps on a tile. Sits bottom-left, clear of the metadata line's text.
+    private let statusBadges = UIStackView()
     private let selectionBorder = UIView()
     private let selectionBadge = UIImageView()
 
@@ -1672,6 +1698,11 @@ final class PhotoGridCell: UICollectionViewCell {
         videoBadge.textAlignment = .center
         contentView.addSubview(videoBadge)
 
+        statusBadges.axis = .horizontal
+        statusBadges.spacing = 3
+        statusBadges.alignment = .center
+        contentView.addSubview(statusBadges)
+
         selectionBorder.layer.borderWidth = 3
         selectionBorder.layer.borderColor = AppAccent.uiColor.cgColor
         selectionBorder.isUserInteractionEnabled = false
@@ -1725,6 +1756,21 @@ final class PhotoGridCell: UICollectionViewCell {
         selectionBadge.frame = CGRect(
             x: contentView.bounds.width - 26, y: contentView.bounds.height - 26,
             width: 22, height: 22
+        )
+
+        let statusSize = statusBadges.systemLayoutSizeFitting(
+            UIView.layoutFittingCompressedSize
+        )
+        // Above the metadata line when there is one, otherwise on the bottom
+        // edge itself — either way the glyphs stay over the dark gradient.
+        let statusBottom = metadataLabel.isHidden
+            ? contentView.bounds.height - 4
+            : metadataLabel.frame.minY - 2
+        statusBadges.frame = CGRect(
+            x: 5,
+            y: max(0, statusBottom - statusSize.height),
+            width: statusSize.width,
+            height: statusSize.height
         )
     }
 
@@ -1790,6 +1836,8 @@ final class PhotoGridCell: UICollectionViewCell {
             }
         }
 
+        applyStatusBadges(for: asset)
+
         if let asset, asset.mediaType == .video {
             videoBadge.text = asset.duration > 0
                 ? "▶ \(MetadataFormatter.duration(asset.duration))" : "▶"
@@ -1837,6 +1885,53 @@ final class PhotoGridCell: UICollectionViewCell {
         gradient.isHidden = line == nil
         accessibilityMetadataLine = line
         updateAccessibilityLabel()
+    }
+
+    /// Status glyphs for one asset. Everything here reads a property PhotoKit
+    /// already has in memory (`isFavorite`, `mediaSubtypes`), so it costs
+    /// nothing on a scrolling grid.
+    ///
+    /// No "edited" glyph: PhotoKit exposes no adjustment flag on `PHAsset`, and
+    /// the only way to tell is to enumerate `PHAssetResource`s per asset, which
+    /// is far too expensive per cell.
+    private func applyStatusBadges(for asset: PHAsset?) {
+        for view in statusBadges.arrangedSubviews {
+            statusBadges.removeArrangedSubview(view)
+            view.removeFromSuperview()
+        }
+        guard let asset else {
+            statusBadges.isHidden = true
+            return
+        }
+        var symbols: [String] = []
+        if asset.isFavorite { symbols.append("heart.fill") }
+        let subtypes = asset.mediaSubtypes
+        if subtypes.contains(.photoLive) { symbols.append("livephoto") }
+        if subtypes.contains(.photoDepthEffect) { symbols.append("camera.aperture") }
+        if subtypes.contains(.photoPanorama) { symbols.append("pano") }
+        if subtypes.contains(.photoHDR) { symbols.append("sparkles") }
+        if subtypes.contains(.videoHighFrameRate) { symbols.append("slowmo") }
+        if subtypes.contains(.videoTimelapse) { symbols.append("timelapse") }
+
+        guard !symbols.isEmpty else {
+            statusBadges.isHidden = true
+            return
+        }
+        let configuration = UIImage.SymbolConfiguration(pointSize: 10, weight: .semibold)
+        for symbol in symbols {
+            let view = UIImageView(image: UIImage(systemName: symbol, withConfiguration: configuration))
+            view.tintColor = .white
+            view.contentMode = .center
+            // A hairline shadow keeps white glyphs readable on a pale photo,
+            // the same trick the metadata line's gradient does for its text.
+            view.layer.shadowColor = UIColor.black.cgColor
+            view.layer.shadowOpacity = 0.6
+            view.layer.shadowRadius = 1.5
+            view.layer.shadowOffset = .zero
+            statusBadges.addArrangedSubview(view)
+        }
+        statusBadges.isHidden = false
+        setNeedsLayout()
     }
 
     private func applyFileTypeBadge(_ text: String?) {
