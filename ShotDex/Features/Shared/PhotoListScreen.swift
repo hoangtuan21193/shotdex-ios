@@ -19,6 +19,7 @@ struct PhotoListScreen: View {
 
     @State private var model: PhotoListModel?
     @State private var viewerTarget: PhotoViewerTarget?
+    @State private var videoStudioPresentation: VideoStudioPresentation?
 
     var body: some View {
         Group {
@@ -33,6 +34,17 @@ struct PhotoListScreen: View {
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                if let model, !model.items.isEmpty {
+                    Button {
+                        makeVideo(model)
+                    } label: {
+                        Image(systemName: "film")
+                    }
+                    .tint(.primary)
+                    .accessibilityLabel("Make a video from these photos")
+                }
+            }
             if let subtitle {
                 ToolbarItem(placement: .principal) {
                     VStack(spacing: 0) {
@@ -58,7 +70,33 @@ struct PhotoListScreen: View {
                 )
             }
         }
+        .fullScreenCover(item: $videoStudioPresentation) { presentation in
+            VideoStudioScreen(
+                assets: presentation.assets,
+                mode: presentation.mode,
+                onSaved: { _ in }
+            )
+        }
     }
+
+    /// Opens this list in Video Studio, in the order it is shown.
+    ///
+    /// A memory or a trip is already a chosen, ordered run of photos, which is
+    /// the hard part of making a video out of them. The studio's own timeline
+    /// is where the rest of the decisions belong, so this hands the photos over
+    /// rather than building a film nobody asked for.
+    ///
+    /// Capped: a studio project carries every clip in memory, and a memory of
+    /// four hundred photos would be a timeline nobody can work with.
+    private func makeVideo(_ model: PhotoListModel) {
+        let ids = model.items.prefix(Self.videoClipLimit).map(\.assetId)
+        let assets = PhotoLibraryService.fetchAssets(ids: ids)
+        guard !assets.isEmpty else { return }
+        videoStudioPresentation = VideoStudioPresentation(assets: assets, mode: .multiClip)
+    }
+
+    /// Roughly two minutes at the studio's default photo duration.
+    private static let videoClipLimit = 60
 
     private func grid(_ model: PhotoListModel) -> some View {
         PhotoGridCollectionView(

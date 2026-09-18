@@ -2,7 +2,7 @@
 
 > **Tiến độ đêm 2026-09-19** — mỗi mục dưới đây đều build pass, chạy thật trên simulator và có ảnh chụp màn hình kiểm chứng, commit riêng trên `main`.
 >
-> Xong: Share bỏ vị trí · Sort trong album · Copy/Paste edits · Giữ tay xem bản gốc · Show in All Photos · Handoff · Dynamic Type cho token Collections · Viewer panorama · Depth Blur ảnh Portrait · Kéo thả ảnh · Markup shapes + kính lúp · Trim video trong viewer + nút tua khung · People & Pets (pass Vision opt-in) · hành động PhotoKit (ngày/vị trí/ẩn/favorite) · context menu trên tile · Media Types · date section ngày/tháng/năm + thanh cuộn ngày · badge trạng thái · menu ⋯ trong viewer · Live Text · Live Photo + Save as Video · Slideshow · Places · Trips · App Intents + Spotlight · Widget · Share Extension · iPad · quản lý album/folder · Settings (autoplay, HDR, dung lượng) · Auto Enhance + Revert · Merge duplicates.
+> Xong: Memory → phim · Share bỏ vị trí · Sort trong album · Copy/Paste edits · Giữ tay xem bản gốc · Show in All Photos · Handoff · Dynamic Type cho token Collections · Viewer panorama · Depth Blur ảnh Portrait · Kéo thả ảnh · Markup shapes + kính lúp · Trim video trong viewer + nút tua khung · People & Pets (pass Vision opt-in) · hành động PhotoKit (ngày/vị trí/ẩn/favorite) · context menu trên tile · Media Types · date section ngày/tháng/năm + thanh cuộn ngày · badge trạng thái · menu ⋯ trong viewer · Live Text · Live Photo + Save as Video · Slideshow · Places · Trips · App Intents + Spotlight · Widget · Share Extension · iPad · quản lý album/folder · Settings (autoplay, HDR, dung lượng) · Auto Enhance + Revert · Merge duplicates.
 >
 > Vướng, cần bạn quyết hoặc cần máy thật: xem mục "Cần quyết định" ở cuối file.
 
@@ -40,7 +40,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 - [~] B4 **Recently Viewed** và **Recently Shared** — app tự ghi (PhotoKit không có), section **Recents** trên tab Collections, giữ 100 mục mới nhất. **Recently Saved** đã có sẵn dưới tên Recently Added trong Smart Albums
 - [x] B5 Live Photo: badge LIVE trong viewer (bấm để phát, `PHLivePhotoView` phủ lên ảnh tĩnh nên giữ nguyên zoom/paging), badge `livephoto` trên tile, **Save as Video** trích `PHAssetResource.pairedVideo` thành clip mới
 - [~] B6 Portrait: **chỉnh độ mờ nền** có (hàng Depth Blur trong Effects, chỉ hiện với ảnh có depth). **Portrait Lighting không làm được** — Apple không public API nào cho các preset ánh sáng đó
-- [~] B7 Video — **tua từng khung**: có, cả phím ← → lẫn hàng nút `Frame` trên màn (chỉ hiện khi clip đang dừng, nên không chen vào hai hàng đã chật). **Trim ngay trong viewer**: có (`VideoTrimScreen`, ghi đè qua `PHContentEditingOutput` nên Photos vẫn Revert được). **Chưa làm**: chỉnh dải slo-mo
+- [~] B7 Video — **tua từng khung**: có, cả phím ← → lẫn hàng nút `Frame` trên màn (chỉ hiện khi clip đang dừng, nên không chen vào hai hàng đã chật). **Trim ngay trong viewer**: có (`VideoTrimScreen`, ghi đè qua `PHContentEditingOutput` nên Photos vẫn Revert được). **Chỉnh dải slo-mo: KHÔNG có API.** PhotoKit không cho ghi lại đoạn chậm của một clip slo-mo hệ thống (adjustment đó là của Photos, không có định dạng công khai); muốn đổi thì phải **render lại** cả clip — mà đó chính là công cụ **Speed** trong Video Studio, đã có
 - [~] B8 Burst — menu ⋯ của viewer có **Show All Frames** mở mọi khung của loạt chụp (`includeAllBurstAssets`, lưới chỉ hiện khung đại diện). **Viewer panorama**: xong (⋯ → View Panorama, cao bằng màn hình, cuộn ngang, có nút quét tự động). **Chưa chạy thật**: thư viện test không có burst nào
 - [ ] B9 Filmstrip dưới viewer
 - [x] B10 Slideshow — mở từ menu ⋯ của viewer, cross-fade, Pause/Prev/Next, chọn 2/3/5/8/12 giây mỗi ảnh (nhớ qua UserDefaults), bỏ qua video
@@ -69,7 +69,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 
 - [x] D1 Places — token trong Utilities, bản đồ gom cụm theo ô lưới độ (co giãn theo mức zoom), pin có thumbnail + số lượng + tên địa điểm đã geocode; chạm cụm mở lưới ảnh có khoảng ngày
 - [x] D2 Trips — token trong Utilities, gom các đợt ảnh liên tục cách "nhà" > 80km; thẻ ảnh bìa + tên nơi + khoảng ngày; có unit test (5 ca)
-- [~] D3 Memories — hàng thẻ trên tab Collections, gom từ tín hiệu app đã có: chuyến đi, từng năm đã trọn, nơi hay quay lại. **Cố ý không bắt chước Memories của Apple** (không có face/scene model); chạm mở lưới ảnh. **Chưa làm**: tự dựng thành phim qua Video Studio
+- [~] D3 Memories — hàng thẻ trên tab Collections, gom từ tín hiệu app đã có: chuyến đi, từng năm đã trọn, nơi hay quay lại. **Cố ý không bắt chước Memories của Apple** (không có face/scene model); chạm mở lưới ảnh. **Dựng thành phim**: xong — nút film trên `PhotoListScreen` mở Video Studio với đúng thứ tự đang hiện, tối đa 60 clip
 - [~] D4 People & Pets: pass quét Vision riêng, opt-in trong Settings — **có** collection People / Pets (đếm mặt + chó/mèo), **không có** nhận diện từng người hay đặt tên: Vision không public request face-embedding nào
 - [x] D5 Live Text on-demand trong viewer — `ImageAnalysisInteraction`, chỉ phân tích khi bật từ menu, tự tắt khi lật sang ảnh khác
 - [~] D6 Tách chủ thể — cùng `ImageAnalysisInteraction` với Live Text: bật "Select Text or Subject" rồi giữ tay lên chủ thể là nhấc ra được (`.automatic` cho cả hai). **Chưa làm**: tạo sticker (không có API công khai)
