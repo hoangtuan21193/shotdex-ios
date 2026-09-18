@@ -153,6 +153,25 @@ extension PhotoLibraryService {
         }
     }
 
+    // MARK: Bursts
+
+    /// Every frame of the burst `asset` belongs to, oldest first, or an empty
+    /// array when it is not part of one.
+    ///
+    /// A burst is a run of frames sharing one identifier, and PhotoKit hides
+    /// all but the representative unless asked — hence `includeAllBurstAssets`,
+    /// without which this returns the single frame the grid already shows.
+    nonisolated static func burstMembers(of asset: PHAsset) -> [PHAsset] {
+        guard let identifier = asset.burstIdentifier else { return [] }
+        let options = PHFetchOptions()
+        options.includeAllBurstAssets = true
+        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
+        let result = PHAsset.fetchAssets(withBurstIdentifier: identifier, options: options)
+        var members: [PHAsset] = []
+        result.enumerateObjects { member, _, _ in members.append(member) }
+        return members
+    }
+
     // MARK: Folders
 
     /// Every user folder (a `PHCollectionList` of kind `.folder`).

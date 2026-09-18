@@ -41,7 +41,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 - [x] B5 Live Photo: badge LIVE trong viewer (bấm để phát, `PHLivePhotoView` phủ lên ảnh tĩnh nên giữ nguyên zoom/paging), badge `livephoto` trên tile, **Save as Video** trích `PHAssetResource.pairedVideo` thành clip mới
 - [ ] B6 Portrait: đọc depth data, hiển thị, chỉnh độ mờ nền
 - [ ] B7 Video: tua từng khung, chỉnh dải slo-mo, trim ngay trong viewer
-- [ ] B8 Burst stack, viewer panorama
+- [~] B8 Burst — menu ⋯ của viewer có **Show All Frames** mở mọi khung của loạt chụp (`includeAllBurstAssets`, lưới chỉ hiện khung đại diện). **Chưa làm**: viewer panorama cuộn ngang. **Chưa chạy thật**: thư viện test không có burst nào
 - [ ] B9 Filmstrip dưới viewer
 - [x] B10 Slideshow — mở từ menu ⋯ của viewer, cross-fade, Pause/Prev/Next, chọn 2/3/5/8/12 giây mỗi ảnh (nhớ qua UserDefaults), bỏ qua video
 - [x] B11 Gộp ảnh trùng — **Merge All Groups** trong menu ⋯ của Duplicates: chọn bản giữ lại (file lớn nhất, hoà thì nhiều pixel hơn), chép sang nó những thứ bản sao có mà nó thiếu (favorite, toạ độ, ngày chụp sớm nhất), rồi đánh dấu phần còn lại; **xoá vẫn do người dùng bấm**
@@ -106,6 +106,12 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 7. **B6 Portrait**: đọc `AVDepthData` để hiện và chỉnh độ mờ nền (Portrait Lighting thì không có API).
 8. **C8 Dynamic Type**: rà soát toàn app (giờ mới có ở panel info và vài chỗ).
 9. **C5 Handoff**, **C6 photo editing extension**: hai cái này giá trị thấp nhất trong danh sách.
+
+## Hai việc mình làm sai / cần bạn xử lý
+
+1. **Commit đầu tiên `e7a1096` gộp nhầm việc bạn đang làm dở.** Lúc bắt đầu phiên, git status báo "clean" nên mình chạy `git add -A`. Thực tế cây làm việc đang có khoảng 40 file chưa commit của bạn — toàn bộ tính năng Duplicates (`PerceptualHash*`, `DuplicateGrouper`, `DuplicateScanPipeline`, `DuplicatesModel/Screen`), `OverlayAnimationMath`, `TimelineLaneLayout`, bản làm lại `AppAccentTheme`, `ActiveDisplay`, `MediaKind`, v.v. Tất cả nằm trong commit mang tiêu đề về chỉnh ngày/vị trí. **Mình không tự sửa lịch sử** vì đó là quyết định của bạn. Chưa push gì cả (local đi trước `origin/main` 27 commit). Muốn tách ra thì: `git reset --soft e7a1096~1` rồi commit lại thành hai lần.
+
+2. **5 test đang đỏ là từ phần việc dở đó, không phải từ mình**: `EditorAdjustmentCatalogTests` (2 ca — catalog giờ có 6 nhóm, test còn kỳ vọng 4), `CropFrameGeometryTests` (so sánh float `0.9999999999999999 == 1`), `OverlayAnimationMathTests`, `PhotoDrawingModelsTests`. Mình không sửa vì không rõ ý định của code đang viết dở. Test thứ 6 (`GridDensityTests.granularityMapping`) **đúng là của mình** — thang zoom thêm `.year` — và mình đã cập nhật test.
 
 ## Cần bạn quyết định
 

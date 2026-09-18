@@ -78,10 +78,15 @@ struct GridDensityTests {
 
     // MARK: granularity
 
+    /// The zoom ladder the pinch walks: day, then month, then year. Year was
+    /// added 2026-09-19 when the Library got its date sections back, so the
+    /// densest levels no longer stop at month.
     @Test func granularityMapping() {
         #expect(GridDensity.granularity(forColumns: 1) == .day)
         #expect(GridDensity.granularity(forColumns: 3) == .day)
         #expect(GridDensity.granularity(forColumns: 4) == .month)
-        #expect(GridDensity.granularity(forColumns: 8) == .month)
+        #expect(GridDensity.granularity(forColumns: 6) == .month)
+        #expect(GridDensity.granularity(forColumns: 7) == .year)
+        #expect(GridDensity.granularity(forColumns: 8) == .year)
     }
 }

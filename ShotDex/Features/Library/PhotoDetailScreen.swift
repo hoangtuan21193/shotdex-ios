@@ -84,6 +84,9 @@ struct PhotoDetailScreen: View {
     /// so text selection never steals the pinch and swipe gestures.
     @State private var isLiveTextActive = false
     @State private var slideshow: SlideshowPresentation?
+    /// Frames of the burst the current photo belongs to. Reuses the slideshow
+    /// payload type: both are "a run of asset ids plus where to start".
+    @State private var burstList: SlideshowPresentation?
     @State private var isSavingLiveVideo = false
     @State private var liveVideoErrorMessage: String?
     @State private var editorTarget: PhotoDetailActionTarget?
@@ -270,6 +273,17 @@ struct PhotoDetailScreen: View {
         // cannot reach over it — it hosts the shared action sheets itself.
         // Its own coordinator, not the root's: see `viewerAssetActions`.
         .assetActionHost(dependencies.viewerAssetActions)
+        .sheet(item: $burstList) { presentation in
+            NavigationStack {
+                PhotoListScreen(
+                    title: String(localized: "Burst"),
+                    subtitle: "\(presentation.assetIds.count) frames",
+                    assetIds: presentation.assetIds
+                )
+            }
+            .environment(dependencies)
+            .environment(photoLibrary)
+        }
         .fullScreenCover(item: $slideshow) { presentation in
             SlideshowScreen(
                 assetIds: presentation.assetIds,
@@ -637,6 +651,13 @@ struct PhotoDetailScreen: View {
             }
 
             Section {
+                if currentAsset?.burstIdentifier != nil {
+                    Button {
+                        showBurst()
+                    } label: {
+                        Label("Show All Frames", systemImage: "square.stack.3d.down.right")
+                    }
+                }
                 Button {
                     startSlideshow()
                 } label: {
@@ -660,6 +681,19 @@ struct PhotoDetailScreen: View {
                 .contentShape(Rectangle())
         }
         .accessibilityLabel("More actions")
+    }
+
+    /// Opens every frame of the burst this photo belongs to. The grid only
+    /// ever shows the representative, so without this the other frames are
+    /// invisible in the app.
+    private func showBurst() {
+        guard let asset = currentAsset else { return }
+        let members = PhotoLibraryService.burstMembers(of: asset)
+        guard members.count > 1 else { return }
+        burstList = SlideshowPresentation(
+            assetIds: members.map(\.localIdentifier),
+            startIndex: 0
+        )
     }
 
     /// Plays the whole run the viewer is browsing, starting from the photo on
