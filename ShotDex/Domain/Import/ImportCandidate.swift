@@ -32,6 +32,10 @@ struct ImportCandidate: Identifiable, Sendable {
     /// immediately; camera/lens/ISO rules match once EXIF has been read.
     var metadata: PhotoMetadata
 
+    /// True when the library already holds a photo with this filename and
+    /// exact byte count — almost certainly this same file, imported before.
+    var isAlreadyImported = false
+
     /// True for RAW/DNG files — hidden by default (the whole point of the
     /// filtered importer: skip RAW, keep JPEG/HEIC). Videos are never RAW.
     var isRaw: Bool { fileType?.isRawFormat ?? false }

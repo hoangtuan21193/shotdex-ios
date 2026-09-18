@@ -866,6 +866,8 @@ Import ảnh + video từ thẻ máy ảnh (SD qua đầu đọc), USB drive, ho
 
 **Wiring**: `ImportService` (`Data/Sources`) inject qua `AppDependencies`; `ImportModel` (`Features/Import`, `@Observable`) giữ state phiên import.
 
+**Bỏ qua ảnh đã nhập + nhập vào album (2026-09-19):** `LibraryQueries.importedFingerprints()` trả tập `filename|byteCount` của mọi ảnh đã có trong index; scan gắn cờ `ImportCandidate.isAlreadyImported`, toggle **Hide Photos Already Imported** (mặc định bật) ẩn chúng, footer nói rõ có bao nhiêu cái. Dùng **tên + đúng số byte chứ không hash**: importer phải trả lời trước khi người dùng chọn gì, mà hash cả thẻ RAW qua USB thì mất vài phút; hai ảnh khác nhau mà trùng cả tên lẫn số byte chính xác là đủ hiếm để chấp nhận. Picker **Add to Album** thêm mọi ảnh vừa nhập vào một album user — chạy **sau cả mẻ** (một `performChanges` thay vì N, và mẻ nhập dở vẫn bỏ được phần đã xong vào album). **KHÔNG có "xoá sau khi nhập"**: thẻ đang được đối xử chỉ-đọc (`shouldMoveFile = false`).
+
 ### 7.8 Collage
 
 Ghép 2–9 ảnh thành một ảnh mới theo template layout (rebuild Turn 5). Entry: selection mode ở Library / Album detail / Smart Album detail → tile **Collage** trên selection bar (2–9 **ảnh**, `imageSelectionCount`). Mở `fullScreenCover` với `CollagePresentation { id, assets }` — asset trong payload như `CompressionPresentation`. Library truyền `onSaved` để mở detail ảnh mới sau khi lưu (§12); Album/Smart Album chỉ dismiss.

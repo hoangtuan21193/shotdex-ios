@@ -1,3 +1,4 @@
+import Photos
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -17,9 +18,19 @@ struct ImportScreen: View {
 
     let service: ImportService
 
-    init(service: ImportService) {
+    init(
+        service: ImportService,
+        libraryQueries: LibraryQueries,
+        photoLibrary: PhotoLibraryService
+    ) {
         self.service = service
-        _model = State(initialValue: ImportModel(service: service))
+        _model = State(
+            initialValue: ImportModel(
+                service: service,
+                libraryQueries: libraryQueries,
+                photoLibrary: photoLibrary
+            )
+        )
     }
 
     var body: some View {
@@ -343,15 +354,41 @@ private struct ImportGridTile: View {
 private struct ImportFilterSheet: View {
     @Bindable var model: ImportModel
     @Environment(\.dismiss) private var dismiss
+    @State private var userAlbums: [PHAssetCollection] = []
+
+    /// Explains both switches at once, and says how many of the card's files
+    /// the library already holds — the number that decides whether the second
+    /// switch matters.
+    private var alreadyImportedFooter: String {
+        let base = String(localized: "RAW and DNG are hidden by default; JPEG, HEIC and videos import.")
+        guard model.alreadyImportedCount > 0 else { return base }
+        return base + " " + String(
+            localized: "\(model.alreadyImportedCount) of these files are already in your library, matched by name and exact size."
+        )
+    }
 
     var body: some View {
         NavigationStack {
             List {
                 Section {
                     Toggle("Hide RAW files", isOn: $model.hideRaw)
+                    Toggle("Hide Photos Already Imported", isOn: $model.hidesAlreadyImported)
                 } footer: {
-                    Text("RAW and DNG are hidden by default; JPEG, HEIC and videos import.")
+                    Text(alreadyImportedFooter)
                 }
+
+                Section {
+                    Picker("Add to Album", selection: $model.destinationAlbum) {
+                        Text("None").tag(PHAssetCollection?.none)
+                        ForEach(userAlbums, id: \.localIdentifier) { album in
+                            Text(album.localizedTitle ?? "Album")
+                                .tag(PHAssetCollection?.some(album))
+                        }
+                    }
+                } footer: {
+                    Text("Imported photos go into your library either way. An album here just files them as well.")
+                }
+                .task { userAlbums = PhotoLibraryService.fetchUserAlbums() }
 
                 if !model.isExifScanComplete {
                     Section {

@@ -1,3 +1,4 @@
+import Photos
 import Foundation
 
 /// Drives the import screen: folder scan → browse/filter → import. Owns the
@@ -51,8 +52,28 @@ final class ImportModel {
     @ObservationIgnored private var exifTask: Task<Void, Never>?
     @ObservationIgnored private var importTask: Task<Void, Never>?
 
-    init(service: ImportService) {
+    /// Reads what the library already holds, so the scan can flag a card's
+    /// photos that were imported on an earlier trip.
+    private let libraryQueries: LibraryQueries?
+    /// Album new imports are added to. Nil means "just the library".
+    var destinationAlbum: PHAssetCollection?
+    /// Whether photos already in the library are hidden from the grid.
+    var hidesAlreadyImported = true
+    private let photoLibrary: PhotoLibraryService?
+
+    init(
+        service: ImportService,
+        libraryQueries: LibraryQueries? = nil,
+        photoLibrary: PhotoLibraryService? = nil
+    ) {
         self.service = service
+        self.libraryQueries = libraryQueries
+        self.photoLibrary = photoLibrary
+    }
+
+    /// How many of the scanned files the library already holds.
+    var alreadyImportedCount: Int {
+        candidates.lazy.filter(\.isAlreadyImported).count
     }
 
     // MARK: Derived
@@ -63,6 +84,7 @@ final class ImportModel {
     var visibleCandidates: [ImportCandidate] {
         candidates.filter { candidate in
             if hideRaw && candidate.isRaw { return false }
+            if hidesAlreadyImported && candidate.isAlreadyImported { return false }
             return query.matches(candidate.metadata)
         }
     }
@@ -97,7 +119,7 @@ final class ImportModel {
                     try service.scanFolder(at: url, using: composer)
                 }.value
                 guard !Task.isCancelled else { return }
-                candidates = found
+                candidates = await self.flaggingAlreadyImported(found)
                 phase = .browsing
                 startExifScan(composer: composer)
             } catch {
@@ -105,6 +127,35 @@ final class ImportModel {
                 scanError = "Couldn't read this folder. Plug in the card and pick its DCIM folder, then try again."
                 phase = .pickFolder
             }
+        }
+    }
+
+    /// Files the destination album gets, once they exist. Done after the whole
+    /// batch rather than per file: one `performChanges` instead of N, and a
+    /// half-finished import still puts what it managed into the album.
+    private func addImportedToDestinationAlbum(_ ids: [String]) async {
+        guard let destinationAlbum, let photoLibrary, !ids.isEmpty else { return }
+        let assets = PhotoLibraryService.fetchAssets(ids: ids)
+        try? await photoLibrary.addAssets(assets, to: destinationAlbum)
+    }
+
+    /// Marks the candidates the library already holds, by filename and exact
+    /// byte count. A card usually still carries everything from the last trip,
+    /// and re-importing all of it is the mistake this avoids.
+    private func flaggingAlreadyImported(
+        _ found: [ImportCandidate]
+    ) async -> [ImportCandidate] {
+        guard let libraryQueries,
+              let fingerprints = try? await libraryQueries.importedFingerprints(),
+              !fingerprints.isEmpty
+        else { return found }
+        return found.map { candidate in
+            var candidate = candidate
+            if let size = candidate.fileSize,
+               fingerprints.contains("\(candidate.filename)|\(size)") {
+                candidate.isAlreadyImported = true
+            }
+            return candidate
         }
     }
 
@@ -199,17 +250,20 @@ final class ImportModel {
         importedCount = 0
         importFailures = []
         let service = self.service
+        var importedIds: [String] = []
         importTask = Task {
             for candidate in targets {
                 if Task.isCancelled { break }
                 do {
-                    _ = try await service.importAsset(candidate)
+                    let id = try await service.importAsset(candidate)
+                    importedIds.append(id)
                     importedCount += 1
                 } catch {
                     importFailures.append(candidate.filename)
                 }
                 importDone += 1
             }
+            await addImportedToDestinationAlbum(importedIds)
             phase = .done
         }
     }

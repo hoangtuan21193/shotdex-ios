@@ -47,7 +47,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 - [x] B11 Gộp ảnh trùng — **Merge All Groups** trong menu ⋯ của Duplicates: chọn bản giữ lại (file lớn nhất, hoà thì nhiều pixel hơn), chép sang nó những thứ bản sao có mà nó thiếu (favorite, toạ độ, ngày chụp sớm nhất), rồi đánh dấu phần còn lại; **xoá vẫn do người dùng bấm**
 - [x] B12 Hiển thị HDR đầy đủ — `UIImageView.preferredImageDynamicRange`, toggle **View Full HDR** trong Settings (mặc định tắt)
 - [ ] B13 Markup: hình khối, kính lúp
-- [ ] B14 Import: bỏ qua ảnh đã nhập, xoá sau khi nhập, nhập thẳng vào album
+- [~] B14 Import — **bỏ qua ảnh đã nhập** (khớp tên + đúng số byte, có toggle và đếm số lượng) và **nhập thẳng vào album** (picker trong sheet filter). **Cố ý KHÔNG làm "xoá sau khi nhập"**: app đang coi thẻ nhớ là chỉ-đọc (`shouldMoveFile = false`), xoá file khỏi thẻ là thao tác phá huỷ trên thiết bị ngoài — cần bạn quyết. **Chưa chạy thật**: Simulator không có thẻ/thư mục nào để quét, mới build pass
 - [x] B15 Settings: section **Playback** (Autoplay Videos) và **Library Size** (tổng dung lượng cộng từ fileSize đã index, có `~` khi chưa đo hết)
 
 ### Việc phát sinh
@@ -100,4 +100,5 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 - **Filmstrip dưới viewer** (mục 35): spec ghi rõ đã **cố ý bỏ** trước đây. Mình chưa thêm lại vì không biết lý do bỏ — khác với date header, cái đó bạn đã chốt là thêm lại. Muốn thêm lại không, và có cần toggle không?
 - **Lưới theo tỉ lệ gốc** (mục 3 / B2): làm đúng như Photos cần layout so le nhiều cột (mosaic), tức viết lại `GridFlowLayout`. Làm rẻ hơn thì chỉ là letterbox trong ô vuông, nhìn không giống Photos. Chọn bản nào?
 - **iPad**: đã bật và chạy được, nhưng panel Simulator cho iPad chưa được cấp quyền nên mình không bấm qua nổi màn onboarding. Cần bạn mở tay để soát bố cục từng màn.
+- **Xoá file khỏi thẻ sau khi nhập** (mục 76): chưa làm. Hiện code coi thẻ là chỉ-đọc; xoá là phá huỷ trên thiết bị ngoài nên mình không tự quyết. Muốn có không?
 - **App Group**: widget và share extension khai `group.com.hoangtuan.shotdex`. Build lên máy thật cần bật capability App Groups trên App ID (Xcode signing tự động thường tự thêm).

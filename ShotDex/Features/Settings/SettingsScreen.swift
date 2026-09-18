@@ -64,7 +64,11 @@ struct SettingsScreen: View {
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         .fullScreenCover(isPresented: $isImportPresented) {
-            ImportScreen(service: dependencies.importService)
+            ImportScreen(
+                service: dependencies.importService,
+                libraryQueries: dependencies.libraryQueries,
+                photoLibrary: dependencies.photoLibrary
+            )
         }
         .task(id: libraryModel?.isIndexing) {
             await refreshIndexInfo()
