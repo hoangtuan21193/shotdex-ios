@@ -95,16 +95,21 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 
 ---
 
-## Chưa làm (ưu tiên theo mình thấy)
+## Chưa làm
 
-1. **B7 Video trong viewer**: còn lại **chỉnh dải slo-mo**. Nút tua khung trên màn và **Trim tại chỗ** đã xong.
-1. **C6 photo editing extension**: mở editor của ShotDex ngay trong app Photos. Giá trị thấp nhất trong danh sách.
+Chỉ còn **một** mục có API mà chưa làm, và nó cần bạn quyết kiến trúc trước:
+
+1. **C6 Photo editing extension** (mở editor ShotDex ngay trong app Photos). API thì có (`PHContentEditingController`), **vướng là cách chia target**: extension cần compile được `PhotoEditRecipe` + `PhotoRenderService` + `EditorTheme` + panel — khoảng 30 file trải khắp Core/Domain/Data/Features. Hiện project dùng `PBXFileSystemSynchronizedRootGroup`, tức file trong thư mục `ShotDex/` **tự động** thuộc app target; cho extension dùng chung thì phải **tách một framework/static library** — đó là một cuộc tái cấu trúc project, mình **không tự làm ban đêm** vì sáng ra bạn sẽ nhận một project khác hẳn. Hai lựa chọn: (a) tách `ShotDexKit` framework rồi mới làm extension, (b) bỏ C6 (tracker vốn xếp nó giá trị thấp nhất).
+
+Những mục còn `[~]` khác đều đã ghi rõ phần thiếu là **không có API** (slo-mo range, Portrait Lighting, nhận diện từng người, badge "đã chỉnh", ảnh bìa album, Recently Deleted, album Hidden) hoặc **cần bạn quyết** (xem cuối file).
 
 ## Hai việc mình làm sai / cần bạn xử lý
 
 1. **Commit đầu tiên `e7a1096` gộp nhầm việc bạn đang làm dở.** Lúc bắt đầu phiên, git status báo "clean" nên mình chạy `git add -A`. Thực tế cây làm việc đang có khoảng 40 file chưa commit của bạn — toàn bộ tính năng Duplicates (`PerceptualHash*`, `DuplicateGrouper`, `DuplicateScanPipeline`, `DuplicatesModel/Screen`), `OverlayAnimationMath`, `TimelineLaneLayout`, bản làm lại `AppAccentTheme`, `ActiveDisplay`, `MediaKind`, v.v. Tất cả nằm trong commit mang tiêu đề về chỉnh ngày/vị trí. **Mình không tự sửa lịch sử** vì đó là quyết định của bạn. Chưa push gì cả (local đi trước `origin/main` 27 commit). Muốn tách ra thì: `git reset --soft e7a1096~1` rồi commit lại thành hai lần.
 
-2. **5 test đang đỏ là từ phần việc dở đó, không phải từ mình** (chạy lại lúc kết thúc đêm: **683 test, 678 pass, 5 đỏ**): `EditorAdjustmentCatalogTests` (2 ca — catalog giờ có 6 nhóm, test còn kỳ vọng 4), `CropFrameGeometryTests` (so sánh float `0.9999999999999999 == 1`), `OverlayAnimationMathTests`, `PhotoDrawingModelsTests`. Mình không sửa vì không rõ ý định của code đang viết dở. Hai test khác **đúng là của mình** và đã cập nhật: `GridDensityTests.granularityMapping` (thang zoom thêm `.year`) và `EditorAdjustmentCatalogTests.everyGroupedKindAppearsExactlyOnce` (giờ hỏi catalog `hasDepth: true`, vì Depth Blur cố ý chỉ có ở ảnh có depth).
+2. **5 test đang đỏ là từ phần việc dở đó, không phải từ mình** (chạy lại lúc kết thúc đêm: **699 test, 693 pass, 5 đỏ + 1 flaky**): `EditorAdjustmentCatalogTests` (2 ca — catalog giờ có 6 nhóm, test còn kỳ vọng 4), `CropFrameGeometryTests` (so sánh float `0.9999999999999999 == 1`), `OverlayAnimationMathTests`, `PhotoDrawingModelsTests`. Mình không sửa vì không rõ ý định của code đang viết dở. Hai test khác **đúng là của mình** và đã cập nhật: `GridDensityTests.granularityMapping` (thang zoom thêm `.year`) và `EditorAdjustmentCatalogTests.everyGroupedKindAppearsExactlyOnce` (giờ hỏi catalog `hasDepth: true`, vì Depth Blur cố ý chỉ có ở ảnh có depth).
+
+   Ngoài ra `IndexNetworkStatusTests.stallStartsRestWindow` đỏ **một lần** khi chạy cả bộ, nhưng chạy riêng **hai lần đều xanh** — test nhạy thời gian, flaky khi chạy song song. Không đụng vào.
 
 ## Cần bạn quyết định
 
