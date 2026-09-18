@@ -52,7 +52,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 
 - [x] C1 App Intents + Shortcuts + Siri — 7 intent (Library / Search / Favorites / Camera / Statistics / Places / Trips) + `AppShortcutsProvider` với câu thoại; đã thấy trong app Shortcuts. **Lưu ý**: bấm chạy trong Shortcuts trên Simulator báo "Unable to run App Shortcut" — hạn chế của Simulator, phần định tuyến có unit test riêng
 - [x] C2 CoreSpotlight — index **bộ sưu tập** (smart album, thân máy, ống kính), **không** index từng ảnh; chạm kết quả mở app đúng chỗ qua `NSUserActivity`
-- [ ] C3 Widget (Home Screen + Lock Screen)
+- [x] C3 Widget — target `ShotDexWidget`, widget "Your Gear" (small / medium / lock-screen rectangular) đọc digest app ghi vào App Group `group.com.hoangtuan.shotdex`. **Widget không đụng thư viện ảnh**. Đã thêm lên màn hình chính với số liệu thật
 - [ ] C4 Share Extension
 - [ ] C5 Handoff qua NSUserActivity
 - [ ] C6 Photo editing extension

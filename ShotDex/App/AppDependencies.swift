@@ -153,6 +153,16 @@ final class AppDependencies {
         )
     }
 
+    /// Refreshes the digest the Home and Lock Screen widgets read. Called
+    /// after an index run and on launch; a no-op when the App Group is not
+    /// reachable, which is how a build without the capability behaves.
+    func refreshWidgetSnapshot() async {
+        await GearSnapshotWriter(
+            statisticsQueries: statisticsQueries,
+            photoLibrary: photoLibrary
+        ).write()
+    }
+
     /// Re-resolves cameras indexed as Unknown against the bundled sensor
     /// database — an app update that ships new records fixes already-indexed
     /// photos without a reindex. Cheap: touches only still-unknown models.

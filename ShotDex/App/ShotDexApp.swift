@@ -42,6 +42,7 @@ struct ShotDexApp: App {
                 .task {
                     // Cheap: a few SELECT DISTINCTs and one Spotlight write.
                     await dependencies.spotlight.reindex()
+                    await dependencies.refreshWidgetSnapshot()
                 }
         }
     }

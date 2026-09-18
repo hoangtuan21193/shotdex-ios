@@ -770,6 +770,15 @@ Màn Statistics là **dashboard chart tuỳ biến** (thay cho danh sách sectio
 - **Spotlight** (`App/Intents/SpotlightIndexer.swift`): chỉ index **bộ sưu tập** — smart album, thân máy, ống kính. **KHÔNG index từng ảnh**: thư viện có thể tới sáu chữ số, Spotlight sẽ giữ bản sao metadata ra ngoài store của app, mà cam kết của app là metadata ảnh không rời máy. Ghi đè toàn bộ thay vì diff (tập nhỏ, và diff sẽ để sót dòng của gear đã rời thư viện). Chạm kết quả về app dưới dạng `NSUserActivity` (`CSSearchableItemActionType`) rồi dịch thành đúng `IntentRouter.Request`
 - Test: `ShotDexTests/IntentRoutingTests.swift` (6 ca). **Bấm chạy App Shortcut trong app Shortcuts trên Simulator luôn báo "Unable to run App Shortcut"** — hạn chế của Simulator, không phải lỗi app; danh sách shortcut vẫn hiện đúng
 
+### 7.4b Widget (2026-09-19)
+
+- Target **`ShotDexWidget`** (`com.apple.product-type.app-extension`, bundle id `com.hoangtuan.shotdex.widget`), nhúng vào app qua phase "Embed Foundation Extensions". Thư mục `ShotDexWidget/` là `PBXFileSystemSynchronizedRootGroup` riêng, trừ `Info.plist` và `.entitlements`
+- Một widget **"Your Gear"**: `systemSmall` (tổng số ảnh + máy dùng nhiều nhất), `systemMedium` (thêm ống kính, số ảnh tháng này, ảnh bìa), `accessoryRectangular` (Lock Screen)
+- **Widget KHÔNG đọc thư viện ảnh.** App ghi sẵn một digest nhỏ (`GearSnapshot`: 4 số, 2 tên, 1 ảnh bìa JPEG ~400px) vào App Group `group.com.hoangtuan.shotdex`; widget chỉ đọc file đó. Extension mà đọc PhotoKit sẽ đưa metadata ảnh sang tiến trình thứ hai theo lịch refresh của WidgetKit, trái với cam kết "metadata ở nguyên một chỗ"
+- `GearSnapshot` **trùng lặp có chủ ý** ở cả hai target (`App/GearSnapshot.swift` và `ShotDexWidget/GearSnapshot.swift`): mỗi target là một synchronized folder nên một file chỉ thuộc đúng một target; giữ đồng bộ 20 dòng rẻ hơn dựng thêm một framework target
+- Số liệu lấy từ **chính `StatisticsQueries`** mà tab Statistics dùng, nên widget không thể nói khác màn hình nó tóm tắt; bucket "Unknown" bị loại khỏi tên máy/ống kính
+- Cả hai target khai `com.apple.security.application-groups`. **Build lên máy thật cần capability App Groups bật trên App ID** — Xcode signing tự động thường tự thêm; không có nó thì `containerURL` trả nil và widget hiện trạng thái "Open ShotDex" thay vì số 0 giả
+
 ### 7.5 Settings
 
 Mở bằng nút gear (`gearshape`) top-left của Library/Albums/Statistics; hiển thị dạng bottom sheet trượt từ dưới lên (native `.sheet`, `presentationDetents([.medium, .large])`, grabber hiện, kéo xuống để đóng), giống panel metadata màn detail ảnh, title `.inline`.
