@@ -1,4 +1,6 @@
 import AVKit
+import CoreLocation
+import MapKit
 import Photos
 import SwiftUI
 import UIKit
@@ -71,6 +73,9 @@ struct PhotoDetailScreen: View {
     /// to rebuild the current page even when the (clamped) index is unchanged.
     @State private var reseatToken = 0
     @State private var isMetadataPresented = false
+    /// Live Text: off by default so the analysis only runs when asked for, and
+    /// so text selection never steals the pinch and swipe gestures.
+    @State private var isLiveTextActive = false
     @State private var editorTarget: PhotoDetailActionTarget?
     @State private var compressionTarget: PhotoDetailActionTarget?
     @State private var videoStudioTarget: PhotoDetailActionTarget?
@@ -159,6 +164,7 @@ struct PhotoDetailScreen: View {
                 videoFullscreenEdgeInset: max(24, max(safeAreaTop, safeAreaBottom)),
                 isVideoFullscreen: isVideoFullscreen,
                 isVideoChromeVisible: isVideoChromeVisible,
+                isLiveTextActive: isLiveTextActive,
                 onVideoFullscreenChange: { fullscreen in
                     if reduceMotion {
                         isVideoFullscreen = fullscreen
@@ -250,6 +256,11 @@ struct PhotoDetailScreen: View {
         .scaleEffect(dismissScale)
         .preferredColorScheme(.dark)
         .statusBarHidden(shouldHideStatusBar)
+        // The viewer is a fullScreenCover, so a sheet presented from the root
+        // cannot reach over it — it hosts the shared action sheets itself.
+        // Its own coordinator, not the root's: see `viewerAssetActions`.
+        .assetActionHost(dependencies.viewerAssetActions)
+        .onChange(of: currentIndex) { _, _ in isLiveTextActive = false }
         .sheet(isPresented: $isMetadataPresented) {
             MetadataPanel(
                 asset: currentAsset,
@@ -511,6 +522,7 @@ struct PhotoDetailScreen: View {
                             )
                         }
                     }
+                    overflowMenu(metadata)
                 }
                 .padding(.horizontal, 8)
                 .frame(height: 56)
@@ -519,6 +531,97 @@ struct PhotoDetailScreen: View {
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 20)
         .padding(.bottom, 12)
+    }
+
+    /// Everything that does not earn a button of its own, in the order Photos
+    /// keeps it: organise first, then the corrections, then the destructive row.
+    /// Same action set as the grid's tile menu, plus the two that only make
+    /// sense with a photo open — jumping to it on the map, and lifting its text.
+    @ViewBuilder
+    private func overflowMenu(_ metadata: PhotoMetadata) -> some View {
+        let actions = dependencies.viewerAssetActions
+        let id = metadata.assetId
+        Menu {
+            Section {
+                Button {
+                    actions.presentAddToAlbum(ids: [id])
+                } label: {
+                    Label("Add to Album", systemImage: "rectangle.stack.badge.plus")
+                }
+                Button {
+                    actions.duplicate(ids: [id])
+                } label: {
+                    Label("Duplicate", systemImage: "plus.square.on.square")
+                }
+                if !isCurrentVideo {
+                    Button {
+                        actions.copyToPasteboard(id: id)
+                    } label: {
+                        Label("Copy", systemImage: "doc.on.doc")
+                    }
+                    Button {
+                        isLiveTextActive.toggle()
+                    } label: {
+                        Label(
+                            isLiveTextActive ? "Hide Text Selection" : "Select Text in Photo",
+                            systemImage: "text.viewfinder"
+                        )
+                    }
+                }
+            }
+
+            Section {
+                Button {
+                    actions.presentAdjustDate(ids: [id])
+                } label: {
+                    Label("Adjust Date & Time", systemImage: "calendar")
+                }
+                Button {
+                    actions.presentAdjustLocation(ids: [id])
+                } label: {
+                    Label("Adjust Location", systemImage: "mappin.and.ellipse")
+                }
+                if metadata.latitude != nil, metadata.longitude != nil {
+                    Button {
+                        openInMaps(metadata)
+                    } label: {
+                        Label("Show on Map", systemImage: "map")
+                    }
+                }
+            }
+
+            Section {
+                Button(role: .destructive) {
+                    actions.toggleHidden(ids: [id])
+                } label: {
+                    Label("Hide", systemImage: "eye.slash")
+                }
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 20, weight: .medium))
+                .foregroundStyle(.white)
+                .frame(width: 48, height: 48)
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel("More actions")
+    }
+
+    /// Hands the photo's coordinate to Maps, which is the one place the app
+    /// cannot show: driving directions and the surrounding area.
+    private func openInMaps(_ metadata: PhotoMetadata) {
+        guard let latitude = metadata.latitude, let longitude = metadata.longitude else { return }
+        let coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+        let item: MKMapItem
+        if #available(iOS 26.0, *) {
+            item = MKMapItem(location: CLLocation(latitude: latitude, longitude: longitude), address: nil)
+        } else {
+            item = MKMapItem(placemark: MKPlacemark(coordinate: coordinate))
+        }
+        item.name = currentFilename ?? String(localized: "Photo Location")
+        item.openInMaps(launchOptions: [
+            MKLaunchOptionsMapCenterKey: NSValue(mkCoordinate: coordinate),
+        ])
     }
 
     private func actionBarCenterButton(
@@ -1596,6 +1699,9 @@ final class DetailPageLoadState {
     var videoFullscreenEdgeInset: CGFloat = 0
     var isVideoFullscreen = false
     var isVideoChromeVisible = true
+    /// Live Text on this page. Off unless the viewer's ⋯ menu turns it on, and
+    /// reset whenever the viewer pages to another photo.
+    var isLiveTextActive = false
 }
 
 /// One page of the detail pager: the zoomable full image, or an AVPlayer for
@@ -1696,7 +1802,8 @@ struct PhotoDetailPage: View {
                 ZoomableImageView(
                     image: image,
                     onZoomStart: loadFullResolution,
-                    onZoomChange: handleZoom
+                    onZoomChange: handleZoom,
+                    isLiveTextActive: loadState.isLiveTextActive
                 )
             } else {
                 ZStack {
@@ -2094,6 +2201,8 @@ private struct PhotoPager: UIViewControllerRepresentable {
     let videoFullscreenEdgeInset: CGFloat
     let isVideoFullscreen: Bool
     let isVideoChromeVisible: Bool
+    /// Live Text for the page currently on screen.
+    let isLiveTextActive: Bool
     let onVideoFullscreenChange: (Bool) -> Void
     let onVideoPlaybackChange: (Int, Bool) -> Void
     let onVideoInteraction: () -> Void
@@ -2136,6 +2245,7 @@ private struct PhotoPager: UIViewControllerRepresentable {
         context.coordinator.reseatIfNeeded(pager, token: reseatToken, to: currentIndex)
         context.coordinator.syncIfNeeded(pager, to: currentIndex)
         context.coordinator.applyVideoChromeState(pager)
+        context.coordinator.applyLiveTextState(pager)
     }
 
     final class Coordinator: NSObject, UIPageViewControllerDataSource,
@@ -2208,6 +2318,13 @@ private struct PhotoPager: UIViewControllerRepresentable {
 
         /// Pushes chrome measurements and fullscreen mode into the existing page
         /// so entering immersive playback never rebuilds or rewinds its player.
+        /// Live Text belongs to the page on screen only — a neighbour page
+        /// that is merely preloaded must not start an analysis.
+        func applyLiveTextState(_ pager: UIPageViewController) {
+            guard let host = pager.viewControllers?.first as? PhotoPageHost else { return }
+            host.loadState.isLiveTextActive = parent.isLiveTextActive
+        }
+
         func applyVideoChromeState(_ pager: UIPageViewController) {
             guard let host = pager.viewControllers?.first as? PhotoPageHost,
                   host.isVideo

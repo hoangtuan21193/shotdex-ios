@@ -499,6 +499,12 @@ Yêu cầu hiệu năng:
   - Video giữ summary **File/Date/Location + Video/Audio Track** (duration, dimensions, frame rate, bitrate, codec, common metadata); raw view vẫn có PHAsset/resources đầy đủ. Row rỗng bị bỏ; value `textSelection(.enabled)`.
 - Không hiển thị giá trị không tồn tại
 
+**Menu ⋯ trong viewer** (2026-09-19): nút `ellipsis` nằm cuối capsule giữa của action bar, mở `Menu` ba `Section`: (1) Add to Album · Duplicate · Copy · **Select Text in Photo**; (2) Adjust Date & Time · Adjust Location · **Show on Map** (chỉ hiện khi ảnh có toạ độ, mở `MKMapItem.openInMaps`; iOS 26 dùng `MKMapItem(location:address:)`, cũ hơn dùng `MKPlacemark`); (3) Hide. Video ẩn Copy và Select Text.
+
+**Live Text** (`ZoomableImageView.isLiveTextActive` + `ImageAnalysisInteraction`, 2026-09-19): **mặc định tắt**, bật từ menu ⋯, tự tắt khi lật trang (`onChange(of: currentIndex)`). Hai lý do không bật sẵn: phân tích phải decode + quét ảnh, phí với phần lớn ảnh; và interaction đang bật thì tranh gesture với swipe của pager lẫn pinch của scroll view. Cờ đi qua `DetailPageLoadState.isLiveTextActive` nên chỉ trang **đang hiển thị** phân tích, trang preload kế bên không chạy. `ImageAnalyzer.isSupported` gate việc cài interaction.
+
+**Viewer có `AssetActionsCoordinator` RIÊNG** (`AppDependencies.viewerAssetActions`): viewer là `fullScreenCover`, mà hai host cùng bind một state trình bày thì cả hai đều present — sheet của root thắng bằng cách gỡ luôn cover (đã gặp: chọn Adjust Date & Time là viewer đóng sạch). Mỗi lúc chỉ có một viewer nên một instance phụ là đủ.
+
 #### 7.2.1 Photo Editor, masks và compression
 
 **Phạm vi và UI**

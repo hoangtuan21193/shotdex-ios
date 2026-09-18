@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import VisionKit
 
 /// UIScrollView-backed zoomable image: pinch-to-zoom + double-tap zoom.
 /// Optionally participates in a `CompareScrollSynchronizer` group so zoom and pan
@@ -14,6 +15,14 @@ struct ZoomableImageView: UIViewRepresentable {
     /// Reports the current zoom scale on every zoom change — lets a host
     /// (the detail pager) disable swipe-down-dismiss while zoomed in.
     var onZoomChange: ((CGFloat) -> Void)?
+    /// Runs Live Text over the displayed image and lets the user select,
+    /// copy, translate and look up what it finds.
+    ///
+    /// Off by default and driven from the viewer's ⋯ menu for two reasons: the
+    /// analysis decodes and scans the image, which is wasted work on the vast
+    /// majority of photos; and an active text interaction competes with the
+    /// pager's own swipe and the scroll view's pinch.
+    var isLiveTextActive: Bool = false
 
     func makeUIView(context: Context) -> UIScrollView {
         let scrollView = UIScrollView()
@@ -46,6 +55,14 @@ struct ZoomableImageView: UIViewRepresentable {
         context.coordinator.onZoomChange = onZoomChange
         sync?.register(scrollView, at: paneIndex)
 
+        if ImageAnalyzer.isSupported {
+            let interaction = ImageAnalysisInteraction()
+            interaction.preferredInteractionTypes = []
+            imageView.addInteraction(interaction)
+            imageView.isUserInteractionEnabled = true
+            context.coordinator.analysisInteraction = interaction
+        }
+
         let doubleTap = UITapGestureRecognizer(
             target: context.coordinator,
             action: #selector(Coordinator.handleDoubleTap(_:))
@@ -60,6 +77,7 @@ struct ZoomableImageView: UIViewRepresentable {
         context.coordinator.imageView?.image = image
         context.coordinator.onZoomStart = onZoomStart
         context.coordinator.onZoomChange = onZoomChange
+        context.coordinator.setLiveTextActive(isLiveTextActive, for: image)
     }
 
     func makeCoordinator() -> Coordinator {
@@ -68,9 +86,43 @@ struct ZoomableImageView: UIViewRepresentable {
 
     final class Coordinator: NSObject, UIScrollViewDelegate {
         weak var imageView: UIImageView?
+        var analysisInteraction: ImageAnalysisInteraction?
+        /// Identity of the image the current analysis belongs to, so paging to
+        /// another photo does not leave the previous photo's text boxes behind.
+        private var analyzedImage: UIImage?
+        private var analysisTask: Task<Void, Never>?
         var sync: CompareScrollSynchronizer?
         var onZoomStart: (() -> Void)?
         var onZoomChange: ((CGFloat) -> Void)?
+
+        /// Turns Live Text on or off, analysing lazily the first time it is
+        /// asked for a given image.
+        @MainActor
+        func setLiveTextActive(_ isActive: Bool, for image: UIImage) {
+            guard let interaction = analysisInteraction else { return }
+            guard isActive else {
+                analysisTask?.cancel()
+                analysisTask = nil
+                interaction.preferredInteractionTypes = []
+                interaction.analysis = nil
+                analyzedImage = nil
+                return
+            }
+            guard analyzedImage !== image else {
+                interaction.preferredInteractionTypes = .automatic
+                return
+            }
+            analysisTask?.cancel()
+            analyzedImage = image
+            analysisTask = Task { [weak self] in
+                let analyzer = ImageAnalyzer()
+                let configuration = ImageAnalyzer.Configuration([.text, .machineReadableCode])
+                let analysis = try? await analyzer.analyze(image, configuration: configuration)
+                guard !Task.isCancelled, let self, self.analyzedImage === image else { return }
+                interaction.analysis = analysis
+                interaction.preferredInteractionTypes = .automatic
+            }
+        }
 
         func viewForZooming(in scrollView: UIScrollView) -> UIView? {
             imageView

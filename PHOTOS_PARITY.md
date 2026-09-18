@@ -21,7 +21,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 - [x] A4 Context menu khi giữ tile (xem trước + 11 hành động, 3 nhóm) + Select All
 - [x] A5 Bulk: favorite, hide, adjust date, adjust location, copy
 - [~] A6 Album CRUD — service layer xong hết (rename/delete/sắp xếp tay/folder), Remove from album đã lên UI; còn phần UI cho rename/delete/folder
-- [ ] A7 Add to Album trong viewer, Show in All Photos, Copy ảnh, Open in Maps, Print
+- [~] A7 Viewer có menu ⋯: Add to Album, Duplicate, Copy, Select Text in Photo, Adjust Date & Time, Adjust Location, Show on Map, Hide. **Còn thiếu**: Show in All Photos, Print riêng (hiện đi qua share sheet hệ thống)
 - [ ] A8 Tuỳ chọn Share (kèm/không kèm vị trí, bản gốc/bản sửa), Revert to Original, nút Auto-enhance, Copy & Paste edits, giữ tay xem bản gốc trong viewer
 - [~] A9 Badge trên tile: favorite/Live/Portrait/Panorama/HDR/Slo-mo/Time-lapse xong; pull-to-refresh xong. **Không làm được**: badge "edited" (PhotoKit không expose cờ chỉnh sửa trên `PHAsset`, chỉ có cách duyệt `PHAssetResource` từng ảnh — quá đắt cho lưới đang cuộn). Filter Screenshots cần cột `mediaSubtypes` trong DB, xem mục riêng bên dưới
 - [ ] A10 Kéo thả ảnh ra app khác và thả vào album
@@ -65,7 +65,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 - [ ] D2 Trips: gom theo ngày + vị trí
 - [ ] D3 Memories / Featured Photos: tự chọn + dựng phim qua Video Studio
 - [ ] D4 People & Pets: pass quét Vision riêng, opt-in trong Settings
-- [ ] D5 Live Text on-demand trong viewer
+- [x] D5 Live Text on-demand trong viewer — `ImageAnalysisInteraction`, chỉ phân tích khi bật từ menu, tự tắt khi lật sang ảnh khác
 - [ ] D6 Tách chủ thể / tạo sticker trong viewer
 - [ ] D7 Pinned Collections + tuỳ biến thứ tự màn Collections
 

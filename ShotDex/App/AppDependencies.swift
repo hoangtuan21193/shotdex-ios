@@ -39,6 +39,13 @@ final class AppDependencies {
     /// Shared favorite / hide / capture-date / location / copy actions and the
     /// sheets they raise. Hosted by `RootTabView` and by the detail viewer.
     let assetActions: AssetActionsCoordinator
+    /// A second, independent coordinator for the detail viewer.
+    ///
+    /// It cannot share `assetActions`: the viewer is a `fullScreenCover`, and
+    /// two hosts bound to the same presentation state both try to present —
+    /// the root's sheet wins by tearing the cover down. Only one viewer exists
+    /// at a time, so one extra instance covers it.
+    let viewerAssetActions: AssetActionsCoordinator
 
     init(database: AppDatabase, photoLibrary: PhotoLibraryService) {
         let metadataStore = MetadataStore(database: database)
@@ -130,6 +137,10 @@ final class AppDependencies {
         self.indexTraffic = indexTraffic
         self.indexInteractionGate = indexInteractionGate
         self.assetActions = AssetActionsCoordinator(
+            photoLibrary: photoLibrary,
+            metadataStore: metadataStore
+        )
+        self.viewerAssetActions = AssetActionsCoordinator(
             photoLibrary: photoLibrary,
             metadataStore: metadataStore
         )
