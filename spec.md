@@ -740,6 +740,12 @@ Tab **Markup** đứng sau Filters (tên cũ "Text" — đổi vì tab thêm đ�
 - `.onMapCameraChange(frequency: .onEnd)` cập nhật span nên pin gộp/tách theo zoom. Tự gom cụm chứ không dùng annotation clustering của MapKit vì cần thumbnail bìa + số đếm riêng cho từng cụm
 - Chạm cụm → `PhotoListScreen`
 
+**Chia sẻ không kèm vị trí (2026-09-19):**
+
+- Settings → **Sharing → Include Location** (mặc định **bật**, như Photos: toạ độ là một phần hồ sơ của tấm ảnh, và thợ ảnh gửi cho khách thường muốn có nó). Tắt thì `PhotoShareSheet.gather` bỏ GPS trước khi ảnh rời khỏi app
+- Ghi lại bằng **ImageIO** (`CGImageDestinationAddImageFromSource` + properties đã sửa), **không** re-encode qua `UIImage`: lời hứa của công tắc là bỏ toạ độ mà **không đụng một pixel hay một field EXIF nào khác**. Xoá key phải gán **`kCFNull`** — ImageIO hiểu key vắng mặt là "giữ nguyên của nguồn", chỉ null mới là "bỏ đi". Bỏ cả `GPSDictionary`, `ExifSubjectLocation` và mấy field địa danh trong IPTC
+- **Video không nằm trong phạm vi**: vị trí của clip nằm trong metadata của container, bỏ nó nghĩa là ghi lại cả file — một cú share không được phép re-encode clip 4K. Footer của setting nói thẳng điều đó
+
 **Sort trong Album Detail (2026-09-19):**
 
 - Nút sort (`arrow.up.arrow.down`) cạnh Select: **Album Order · Newest First · Oldest First**. `AlbumSortOrder` map thẳng sang `sortDescriptors`; **Album Order = không sort gì cả** (`sortDescriptors = nil`) — đó là cách PhotoKit trả về thứ tự riêng của album (thứ tự thêm vào, hoặc thứ tự user kéo trong app Photos)

@@ -11,6 +11,7 @@ struct SettingsScreen: View {
 
     @AppStorage(SettingsKeys.autoplayVideos) private var autoplayVideos = true
     @AppStorage(SettingsKeys.viewFullHDR) private var viewFullHDR = false
+    @AppStorage(SettingsKeys.shareIncludesLocation) private var shareIncludesLocation = true
     @State private var storage: LibraryQueries.StorageTotals?
     @AppStorage("display.showISO") private var showsISO = true
     @AppStorage("display.showAperture") private var showsAperture = true
@@ -57,6 +58,7 @@ struct SettingsScreen: View {
             playbackSection
             subjectScanSection
             storageSection
+            sharingSection
             exportSection
             cameraDatabaseSection
             privacySection
@@ -240,6 +242,16 @@ struct SettingsScreen: View {
             Text(Self.explainer)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    private var sharingSection: some View {
+        Section {
+            Toggle("Include Location", isOn: $shareIncludesLocation)
+        } header: {
+            Text("Sharing")
+        } footer: {
+            Text("Turning this off removes where a photo was taken before it leaves the app. Everything else — camera, lens, exposure, date — still goes with it.\n\nVideos are unaffected: their location lives in the file itself, and removing it would mean re-encoding the whole clip.")
         }
     }
 

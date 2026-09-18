@@ -32,6 +32,12 @@ enum SettingsKeys {
     /// Whether the viewer renders HDR photos at their full brightness.
     static let viewFullHDR = "display.viewFullHDR"
 
+    /// Whether a shared photo carries the place it was taken. On by default,
+    /// like Photos: the location is part of the picture's record, and a
+    /// photographer sharing with a client usually wants it. Off is for the
+    /// times the recipient should not learn where you were.
+    static let shareIncludesLocation = "share.includeLocation"
+
     /// Set once the Statistics dashboard has seeded its default charts, so a
     /// board a user deliberately cleared isn't re-seeded on next launch.
     static let hasSeededStatCharts = "stats.didSeedCharts"

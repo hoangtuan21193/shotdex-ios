@@ -1,6 +1,8 @@
 import AVFoundation
+import ImageIO
 import Photos
 import UIKit
+import UniformTypeIdentifiers
 
 /// Shared multi-asset share plumbing. Gathers shareable items for a set of
 /// assets (downloading from iCloud when needed) and presents a single system
@@ -11,15 +13,67 @@ enum PhotoShareSheet {
     /// downloaded (`isNetworkAccessAllowed = true`); any that still fail are
     /// skipped rather than aborting the whole share.
     static func gather(assets: [PHAsset]) async -> [Any] {
+        // Read once, not per photo: the user cannot change the switch while
+        // the share is being assembled.
+        let includesLocation = UserDefaults.standard.object(
+            forKey: SettingsKeys.shareIncludesLocation
+        ) as? Bool ?? true
         var items: [Any] = []
         for asset in assets {
             if asset.mediaType == .video {
                 if let url = await videoURL(for: asset) { items.append(url) }
             } else if let data = await imageData(for: asset) {
-                items.append(data)
+                items.append(includesLocation ? data : stripLocation(from: data) ?? data)
             }
         }
         return items
+    }
+
+    /// The same photo with its GPS tags removed, and every other tag kept.
+    ///
+    /// Rewritten through ImageIO rather than re-encoded through UIImage: this
+    /// has to drop three metadata dictionaries without touching a pixel or a
+    /// single other EXIF field, which is the whole promise of the switch.
+    ///
+    /// Video is not covered. A movie's location lives in its container
+    /// metadata, and stripping it means rewriting the file — a share should
+    /// not re-encode a 4K clip, so a video shares as it is and the switch says
+    /// nothing about it.
+    static func stripLocation(from data: Data) -> Data? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let type = CGImageSourceGetType(source),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil)
+                  as? [CFString: Any]
+        else { return nil }
+
+        var updated = properties
+        // kCFNull, not "remove the key": ImageIO treats an absent key as
+        // "leave what the source had" and only a null as "drop it".
+        updated[kCGImagePropertyGPSDictionary] = kCFNull
+        if var exif = updated[kCGImagePropertyExifDictionary] as? [CFString: Any] {
+            // Some cameras repeat the coordinate here.
+            exif[kCGImagePropertyExifSubjectLocation] = kCFNull
+            updated[kCGImagePropertyExifDictionary] = exif
+        }
+        if var iptc = updated[kCGImagePropertyIPTCDictionary] as? [CFString: Any] {
+            for key in [
+                kCGImagePropertyIPTCSubLocation,
+                kCGImagePropertyIPTCCity,
+                kCGImagePropertyIPTCProvinceState,
+                kCGImagePropertyIPTCCountryPrimaryLocationName,
+            ] {
+                iptc[key] = kCFNull
+            }
+            updated[kCGImagePropertyIPTCDictionary] = iptc
+        }
+
+        let output = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(
+            output, type, 1, nil
+        ) else { return nil }
+        CGImageDestinationAddImageFromSource(destination, source, 0, updated as CFDictionary)
+        guard CGImageDestinationFinalize(destination) else { return nil }
+        return output as Data
     }
 
     /// Presents one `UIActivityViewController` for the gathered items. No-op if
