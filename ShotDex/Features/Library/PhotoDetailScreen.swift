@@ -1375,6 +1375,24 @@ private struct DetailVideoPlayer: View {
                 handleSkip(isLeading: false)
             }
         }
+        // Frame stepping rides on the arrow keys rather than two more buttons:
+        // this row is already three targets over the picture, and the controls
+        // row below it is six at 375pt. A hardware keyboard costs no layout.
+        .background {
+            Button("Step back one frame") {
+                onInteraction()
+                model.stepFrame(by: -1)
+            }
+            .keyboardShortcut(.leftArrow, modifiers: [])
+            .opacity(0)
+
+            Button("Step forward one frame") {
+                onInteraction()
+                model.stepFrame(by: 1)
+            }
+            .keyboardShortcut(.rightArrow, modifiers: [])
+            .opacity(0)
+        }
     }
 
     private func centerButton(

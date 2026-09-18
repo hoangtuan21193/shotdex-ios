@@ -40,7 +40,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 - [ ] B4 Recently Viewed / Recently Shared / Recently Saved
 - [x] B5 Live Photo: badge LIVE trong viewer (bấm để phát, `PHLivePhotoView` phủ lên ảnh tĩnh nên giữ nguyên zoom/paging), badge `livephoto` trên tile, **Save as Video** trích `PHAssetResource.pairedVideo` thành clip mới
 - [ ] B6 Portrait: đọc depth data, hiển thị, chỉnh độ mờ nền
-- [ ] B7 Video: tua từng khung, chỉnh dải slo-mo, trim ngay trong viewer
+- [~] B7 Video — **tua từng khung** có rồi (`stepFrame(by:)`, tự pause trước, tolerance 0, gắn vào phím ← →). **Chưa có nút trên màn**: hàng nút giữa đã 3 cái đè lên ảnh và hàng dưới đã 6 cái ở 375pt, thêm nữa là chật — cần bạn quyết đặt ở đâu. **Chưa làm**: chỉnh dải slo-mo, trim ngay trong viewer
 - [~] B8 Burst — menu ⋯ của viewer có **Show All Frames** mở mọi khung của loạt chụp (`includeAllBurstAssets`, lưới chỉ hiện khung đại diện). **Chưa làm**: viewer panorama cuộn ngang. **Chưa chạy thật**: thư viện test không có burst nào
 - [ ] B9 Filmstrip dưới viewer
 - [x] B10 Slideshow — mở từ menu ⋯ của viewer, cross-fade, Pause/Prev/Next, chọn 2/3/5/8/12 giây mỗi ảnh (nhớ qua UserDefaults), bỏ qua video
@@ -97,7 +97,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 
 ## Chưa làm (ưu tiên theo mình thấy)
 
-1. **B7 Video trong viewer**: tua từng khung, chỉnh dải slo-mo, trim ngay tại chỗ (giờ phải qua Video Studio).
+1. **B7 Video trong viewer**: nút tua khung trên màn (logic đã xong, mới gắn phím ← →), chỉnh dải slo-mo, trim ngay tại chỗ (giờ phải qua Video Studio).
 2. **B4 Recently Viewed / Shared / Saved**: cần app tự ghi lại lượt xem/chia sẻ, PhotoKit không cấp.
 3. **D4 People & Pets**: pass Vision riêng, bạn bấm mới chạy (đúng như bạn dặn là không đưa vào index).
 4. **B13 Markup**: thêm hình khối và kính lúp (PencilKit hiện có pen/highlighter/eraser/lasso/ruler).

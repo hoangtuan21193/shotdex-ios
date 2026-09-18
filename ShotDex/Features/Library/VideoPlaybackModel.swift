@@ -580,6 +580,24 @@ final class VideoPlaybackModel {
         seek(to: target, tolerance: Tolerance.skip)
     }
 
+    /// Moves exactly one frame, for inspecting a clip rather than navigating
+    /// it. Pauses first: stepping while the decoder is running lands wherever
+    /// playback has reached by the time the seek is served, not on the frame
+    /// the user was looking at.
+    ///
+    /// Zero tolerance, unlike `skip(by:)` — the whole point is the exact frame.
+    func stepFrame(by frames: Int) {
+        guard player != nil, frames != 0 else { return }
+        if isPlaying { pause() }
+        let step = Double(frames) / max(frameRate, 1)
+        let target = VideoTransportMath.seekTarget(
+            current: displayTime,
+            duration: duration,
+            delta: step
+        )
+        seek(to: target, tolerance: Tolerance.exact)
+    }
+
     /// Records the requested position, publishes it immediately, and hands the
     /// actual seek to `dispatchPendingSeek`. The optimistic write is what makes
     /// the scrubber track the gesture instead of the decoder.
