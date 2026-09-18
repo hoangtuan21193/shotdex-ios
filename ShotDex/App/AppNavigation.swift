@@ -34,6 +34,9 @@ final class AppNavigation {
     /// Set by Statistics drill-downs; consumed by the Library model owner.
     var pendingLibraryFilter: FilterCriteria?
 
+    /// Free text a Shortcut or Spotlight asked the Library to search for.
+    var pendingSearchQuery: String?
+
     /// Bumped when the user taps the Library tab while it's already selected;
     /// the Library grid jumps back to the newest photos. Monotonic so
     /// consecutive re-taps never compare equal for `.onChange`. Programmatic
@@ -76,5 +79,36 @@ final class AppNavigation {
     func openLibrary(with criteria: FilterCriteria) {
         pendingLibraryFilter = criteria
         selectedTab = .library
+    }
+
+    /// A Shortcut, a Siri phrase or a Spotlight result asked for something.
+    /// Routed here rather than performed by the intent itself, which runs
+    /// without the app's dependency graph.
+    func handle(_ request: IntentRouter.Request, albumsPath: inout NavigationPath) {
+        switch request {
+        case .library:
+            selectedTab = .library
+        case .search(let query):
+            pendingSearchQuery = query
+            selectedTab = .library
+        case .favorites:
+            var criteria = FilterCriteria()
+            criteria.favoritesOnly = true
+            openLibrary(with: criteria)
+        case .camera(let body):
+            var criteria = FilterCriteria()
+            // A contains-term rather than an exact set: a spoken or typed
+            // camera name ("R6") rarely matches the indexed body verbatim.
+            criteria.cameraBodyTerms = [body]
+            openLibrary(with: criteria)
+        case .statistics:
+            selectedTab = .statistics
+        case .places:
+            albumsPath = NavigationPath([PlacesDestination()])
+            selectedTab = .albums
+        case .trips:
+            albumsPath = NavigationPath([TripsDestination()])
+            selectedTab = .albums
+        }
     }
 }

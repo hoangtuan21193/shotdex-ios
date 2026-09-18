@@ -1,3 +1,4 @@
+import CoreSpotlight
 import SwiftUI
 
 @main
@@ -24,6 +25,23 @@ struct ShotDexApp: App {
                     if phase == .background {
                         dependencies.backgroundIndex.scheduleContinuationIfNeeded()
                     }
+                }
+                // A tapped Spotlight result arrives as a user activity rather
+                // than an intent, so it is translated into the same request an
+                // intent would have made.
+                .onContinueUserActivity(CSSearchableItemActionType) { activity in
+                    guard let identifier = activity.userInfo?[
+                        CSSearchableItemActivityIdentifier
+                    ] as? String,
+                        let request = SpotlightIndexer.request(
+                            forSpotlightIdentifier: identifier
+                        )
+                    else { return }
+                    IntentRouter.shared.request(request)
+                }
+                .task {
+                    // Cheap: a few SELECT DISTINCTs and one Spotlight write.
+                    await dependencies.spotlight.reindex()
                 }
         }
     }

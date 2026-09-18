@@ -50,8 +50,8 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 
 ## Phase C — Hệ thống
 
-- [ ] C1 App Intents + Shortcuts + Siri
-- [ ] C2 CoreSpotlight
+- [x] C1 App Intents + Shortcuts + Siri — 7 intent (Library / Search / Favorites / Camera / Statistics / Places / Trips) + `AppShortcutsProvider` với câu thoại; đã thấy trong app Shortcuts. **Lưu ý**: bấm chạy trong Shortcuts trên Simulator báo "Unable to run App Shortcut" — hạn chế của Simulator, phần định tuyến có unit test riêng
+- [x] C2 CoreSpotlight — index **bộ sưu tập** (smart album, thân máy, ống kính), **không** index từng ảnh; chạm kết quả mở app đúng chỗ qua `NSUserActivity`
 - [ ] C3 Widget (Home Screen + Lock Screen)
 - [ ] C4 Share Extension
 - [ ] C5 Handoff qua NSUserActivity

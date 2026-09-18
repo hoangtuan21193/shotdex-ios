@@ -762,6 +762,14 @@ Màn Statistics là **dashboard chart tuỳ biến** (thay cho danh sách sectio
 - **Date scope — riêng từng chart** (KHÔNG còn nút range toàn màn hình): mỗi `ChartSpec` mang `scope` riêng, chọn trong section **Date Range** của editor (All Time / This Year / This Month + Custom Range… mở `DateRangePickerSheet` — calendar range picker kiểu app book máy bay, tháng dọc từ `StatisticsQueries.earliestCreationDate()` tới nay). `StatsDateScope` là enum `Codable` với case `custom(ClosedRange<Int>)` epoch seconds trọn ngày, lưu trong JSON config của spec. Card hiện scope.title dưới title. Ảnh không có `creationDate` (NULL) không khớp scope BETWEEN → chỉ xuất hiện ở chart để All Time.
 - Lens normalize gom lens trùng tên khác cách ghi (`RF100-500mm F4.5-7.1 L IS USM` / `Canon RF100-500mm…` / `RF 100-500mm F4.5-7.1L…` → một lens) — do `LensNormalizer` ở tầng index, áp cho mọi chart dùng dimension lens.
 
+### 7.4a Shortcuts, Siri và Spotlight (2026-09-19)
+
+- **App Intents** (`App/Intents/ShotDexAppIntents.swift`): `OpenLibraryIntent`, `SearchPhotosIntent(query)`, `ShowFavoritesIntent`, `ShowCameraPhotosIntent(camera)`, `ShowStatisticsIntent`, `ShowPlacesIntent`, `ShowTripsIntent` — tất cả `openAppWhenRun = true`. Intent **không tự làm việc**: tiến trình intent không có `AppDependencies`, nên mỗi intent chỉ ghi một `IntentRouter.Request` rồi mở app; `RootTabView` rút yêu cầu đó ra (`drainPendingIntent`) và gọi `AppNavigation.handle(_:albumsPath:)`. Phải rút cả trong `.task` lẫn `.onChange` — intent mở app đã set request **trước khi** view tồn tại nên không có change nào bắn
+- `.camera` map sang `cameraBodyTerms` (contains) chứ không phải `cameraBodies` (exact): tên máy nói/gõ ra ("R6") hiếm khi khớp nguyên văn giá trị đã index
+- `ShotDexShortcuts: AppShortcutsProvider` khai báo câu thoại sẵn có cho Siri/Spotlight (mọi câu bắt buộc phải chứa tên app — yêu cầu của hệ, không phải lựa chọn văn phong)
+- **Spotlight** (`App/Intents/SpotlightIndexer.swift`): chỉ index **bộ sưu tập** — smart album, thân máy, ống kính. **KHÔNG index từng ảnh**: thư viện có thể tới sáu chữ số, Spotlight sẽ giữ bản sao metadata ra ngoài store của app, mà cam kết của app là metadata ảnh không rời máy. Ghi đè toàn bộ thay vì diff (tập nhỏ, và diff sẽ để sót dòng của gear đã rời thư viện). Chạm kết quả về app dưới dạng `NSUserActivity` (`CSSearchableItemActionType`) rồi dịch thành đúng `IntentRouter.Request`
+- Test: `ShotDexTests/IntentRoutingTests.swift` (6 ca). **Bấm chạy App Shortcut trong app Shortcuts trên Simulator luôn báo "Unable to run App Shortcut"** — hạn chế của Simulator, không phải lỗi app; danh sách shortcut vẫn hiện đúng
+
 ### 7.5 Settings
 
 Mở bằng nút gear (`gearshape`) top-left của Library/Albums/Statistics; hiển thị dạng bottom sheet trượt từ dưới lên (native `.sheet`, `presentationDetents([.medium, .large])`, grabber hiện, kéo xuống để đóng), giống panel metadata màn detail ảnh, title `.inline`.

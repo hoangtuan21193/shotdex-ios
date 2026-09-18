@@ -63,6 +63,14 @@ struct RootTabView: View {
     /// Picks up a reminder tapped before this view existed (cold launch straight
     /// from the notification, where the delegate fires while the UI is still
     /// being built and no `.onChange` is installed yet).
+    /// Applies a request left by a Shortcut, a Siri phrase or a Spotlight
+    /// result, then clears it so it is acted on once.
+    private func drainPendingIntent(_ request: IntentRouter.Request?) {
+        guard let request else { return }
+        navigation.handle(request, albumsPath: &albumsPath)
+        IntentRouter.shared.pending = nil
+    }
+
     private func drainPendingOnThisDayOpen() {
         guard let date = dependencies.onThisDayNotifications.consumePendingOpenDate() else { return }
         navigation.openOnThisDay(date: date)
@@ -194,6 +202,19 @@ struct RootTabView: View {
             guard let pending else { return }
             libraryModel?.criteria = pending
             navigation.pendingLibraryFilter = nil
+        }
+        .onChange(of: navigation.pendingSearchQuery) { _, pending in
+            guard let pending else { return }
+            libraryModel?.applySearch(pending, using: dependencies.searchService)
+            navigation.pendingSearchQuery = nil
+        }
+        .onChange(of: IntentRouter.shared.pending) { _, request in
+            drainPendingIntent(request)
+        }
+        .task(id: IntentRouter.shared.pending) {
+            // Also drain on appear: an intent that launched the app set its
+            // request before this view existed, so no change would ever fire.
+            drainPendingIntent(IntentRouter.shared.pending)
         }
         .onChange(of: dependencies.onThisDayNotifications.pendingOpenDate) {
             drainPendingOnThisDayOpen()

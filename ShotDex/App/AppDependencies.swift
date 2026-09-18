@@ -46,6 +46,9 @@ final class AppDependencies {
     /// the root's sheet wins by tearing the cover down. Only one viewer exists
     /// at a time, so one extra instance covers it.
     let viewerAssetActions: AssetActionsCoordinator
+    /// Publishes the library's collections (smart albums, cameras, lenses) to
+    /// Spotlight. Individual photos are never indexed — see the type's note.
+    let spotlight: SpotlightIndexer
 
     init(database: AppDatabase, photoLibrary: PhotoLibraryService) {
         let metadataStore = MetadataStore(database: database)
@@ -143,6 +146,10 @@ final class AppDependencies {
         self.viewerAssetActions = AssetActionsCoordinator(
             photoLibrary: photoLibrary,
             metadataStore: metadataStore
+        )
+        self.spotlight = SpotlightIndexer(
+            libraryQueries: libraryQueries,
+            smartAlbumStore: SmartAlbumStore(database: database)
         )
     }
 
