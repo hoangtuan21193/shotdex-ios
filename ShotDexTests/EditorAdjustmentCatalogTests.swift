@@ -27,9 +27,13 @@ struct EditorAdjustmentCatalogTests {
         #expect(!renderedGlobal.map(\.id).contains(.raw))
     }
 
+    /// Asked for the richest catalog there is — RAW, global, with depth — so
+    /// "every kind is grouped somewhere" stays the claim. Depth Blur is only
+    /// offered on photos that carry a depth map, so without `hasDepth` this
+    /// would fail for a row that is deliberately conditional.
     @Test func everyGroupedKindAppearsExactlyOnce() {
         let kinds = EditorAdjustmentCatalog
-            .groups(isRAWSource: true, scope: .global)
+            .groups(isRAWSource: true, scope: .global, hasDepth: true)
             .flatMap(\.kinds)
         #expect(Set(kinds).count == kinds.count)
         #expect(Set(kinds) == Set(PhotoAdjustmentKind.allCases))
