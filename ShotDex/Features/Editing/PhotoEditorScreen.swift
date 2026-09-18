@@ -907,7 +907,8 @@ struct PhotoEditorScreen: View {
     ) -> [EditorAdjustmentGroup] {
         let all = EditorAdjustmentCatalog.groups(
             isRAWSource: controller.isRAWSource,
-            scope: .global
+            scope: .global,
+            hasDepth: controller.hasDepthSource
         )
         let ids: [EditorAdjustmentGroup.Identity]
         switch group {

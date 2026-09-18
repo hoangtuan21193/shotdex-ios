@@ -63,7 +63,14 @@ enum EditorAdjustmentCatalog {
         .lensCorrection,
     ]
 
-    static func groups(isRAWSource: Bool, scope: Scope) -> [EditorAdjustmentGroup] {
+    /// `hasDepth` adds the portrait Depth Blur row. Off by default so every
+    /// existing caller keeps the catalog it had, and so the row never appears
+    /// on a photo with no depth map to blur by.
+    static func groups(
+        isRAWSource: Bool,
+        scope: Scope,
+        hasDepth: Bool = false
+    ) -> [EditorAdjustmentGroup] {
         var groups: [EditorAdjustmentGroup] = [
             EditorAdjustmentGroup(
                 id: .light,
@@ -104,7 +111,11 @@ enum EditorAdjustmentCatalog {
                     .vignette, .vignetteMidpoint, .vignetteFeather,
                     .vignetteRoundness, .vignetteHighlights,
                     .grain, .grainSize, .grainRoughness,
-                ],
+                ]
+                    // First in the group, not last: on a portrait it is the
+                    // adjustment people came for, and the one that changes the
+                    // picture most.
+                    .prepending(hasDepth && scope == .global ? [.depthBlur] : []),
                 hasAuto: false
             ),
         ]
@@ -255,5 +266,13 @@ enum EditorAdjustmentCatalog {
 
     private static func typographic(_ text: String) -> String {
         text.replacingOccurrences(of: "-", with: "\u{2212}")
+    }
+}
+
+private extension Array {
+    /// `prefix + self`, kept as a call so the catalog's declaration reads as
+    /// one list rather than a concatenation.
+    func prepending(_ prefix: [Element]) -> [Element] {
+        prefix + self
     }
 }

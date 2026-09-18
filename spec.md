@@ -96,6 +96,7 @@ ShotDex/
 │       ├── PerceptualHashReader.swift // thumbnail PhotoKit 96px → dHash (§7.3)
 │       ├── SubjectVisionReader.swift  // rendition 512px → đếm mặt người + chó/mèo bằng Vision (§7.3 People and Pets)
 │       ├── VideoTrimService.swift     // cắt video tại chỗ qua PHContentEditingOutput (passthrough export)
+│       ├── DepthImageReader.swift     // đọc disparity + portrait matte từ ảnh Portrait (§7.2 Depth Blur)
 │       ├── PhotoRenderService.swift   // actor CI render pipeline (+Curve/+Drawing/+Film/+Overlay)
 │       ├── PhotoEditingService.swift  // PhotoKit content-editing session, save copy/changes, Live Photo
 │       ├── ImportService.swift        // quét folder ngoài + EXIF (xem §7.7)
@@ -650,6 +651,15 @@ Ba tab màu **Mixer / Point / Grading** đứng liền nhau ngay bên phải Adj
 - Ba kernel liên tiếp được Core Image fuse một GPU pass; guard identity từng khối; **không đụng `rawBaseSignature`** (color không phải tham số decode RAW) và `maskCacheIdentity` giữ nguyên (đã chỉ key url+crop).
 
 **History**: `EditorAdjustmentSummary.describeColorChange` — "Mixer · Red Hue +20", "Added/Removed Point Color", "Grading · Shadows", "Grading · Blending 65". Controller surface (`PhotoEditorController`): `mixerValue/setMixerValue/resetColorMixer(property:)`, `addPointColor(sampledAt:)`/`removePointColor`/`updateSelectedPointColor`/`selectedPointColorID` (được `repairSelection` dọn sau undo/jump), `setGradingHueSat/Luminance/Blending/Balance`, `resetColor()`. Tests: `PhotoColorModelsTests` (identity, round-trip, JSON hygiene, decode build cũ), `ColorRenderMathTests` (band weights tổng 1/wrap/đúng 2 band, region weights biên + balance + blending, point weight đơn điệu + wrap hue, HSV↔RGB), nhãn history trong `EditorHistoryAndSummaryTests`.
+
+**Depth Blur (ảnh Portrait, 2026-09-19)**
+
+- Hàng **Depth Blur** nằm **đầu nhóm Effects**, và **chỉ hiện khi ảnh có depth map** (`PhotoEditorController.hasDepthSource`, đo một lần lúc load source, chạy off-main vì phải mở file). Ảnh thường không có slider chết nằm đó. Trong mask thì **không có** hàng này: mask đã giới hạn vùng, còn depth blur có ý riêng về vùng
+- `DepthImageReader` đọc **disparity** (`CIImageOption.auxiliaryDisparity`, fallback `.auxiliaryDepth`) và **portrait matte** ngay từ URL của source — Core Image trả thẳng `CIImage`, không cần đi qua `AVDepthData`. Chỉ đọc khi recipe thực sự có `depthBlur > 0`, vì đó là một lần decode thứ hai
+- **Chạy đầu chuỗi**, trên ảnh chưa chỉnh: đây là thuộc tính lúc chụp đang được quyết lại, không phải lớp phủ lên kết quả. Làm mờ sau tone/màu là làm mờ một phiên bản ống kính chưa từng thấy, và map sẽ không còn khớp sau crop/straighten
+- **Không dùng `CIDepthBlurEffect`** (renderer portrait của chính Apple): thiếu calibration data + auxiliary metadata của máy ảnh thì nó **trả ảnh y nguyên** — đo được: ảnh test kẻ sọc ra với độ tương phản sọc không đổi. **Cũng không dùng `CIMaskedVariableBlur`** (đúng filter cho việc này, falloff liên tục): trên simulator nó **không bao giờ render xong** một ảnh 240pt — phải giết test run ở mốc 10 phút. Thay bằng **hai bản Gaussian** (bán kính r*0.45 và r) blend ngược vào qua mặt nạ depth theo hai nấc (0→0.5, 0.5→1): vài pass, xong trong mili-giây
+- Mặt nạ = **đảo** disparity (disparity cao = gần), nhân với **đảo portrait matte** khi có — matte biết tóc và mép người dừng ở đâu, chính xác hơn map depth độ phân giải 1/4. Bán kính = 3.5% cạnh ngắn × slider, nên cùng một slider cho ra cùng độ mờ ở preview và ở export
+- Recipe dán từ ảnh Portrait sang ảnh không có depth: **trả ảnh gốc**, không lỗi, không đoán
 
 #### 7.2.4 Markup (text, image, drawing, presets)
 

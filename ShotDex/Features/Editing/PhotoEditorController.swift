@@ -282,6 +282,10 @@ final class PhotoEditorController {
     var hasSessionChanges: Bool { recipe != sessionBaselineRecipe }
     var sourceOptions: [PhotoEditSourceOption] { session?.sourceOptions ?? [] }
     var isRAWSource: Bool { loadedSource?.info.isRAW == true }
+    /// Whether this photo carries a depth map, which is what puts the Depth
+    /// Blur row in Effects. Resolved once when the source loads: the check
+    /// opens the file, so it must not run per panel rebuild.
+    private(set) var hasDepthSource = false
     var supportsHEICEditOutput: Bool {
         guard let session else { return false }
         return service.supportsEditOutputFormat(.heic, in: session)
@@ -369,6 +373,12 @@ final class PhotoEditorController {
         let loaded = try await service.loadSource(option, in: session)
         selectedSourceOption = option
         loadedSource = loaded
+        // Off the main actor: this opens the file to look at its auxiliary
+        // data, and a Portrait original is a large HEIC.
+        let url = loaded.info.url
+        hasDepthSource = await Task.detached(priority: .userInitiated) {
+            DepthImageReader.hasDepth(at: url)
+        }.value
         recipe.source = option.source
         recipe.sourceFilename = option.filename
         await renderOriginal()

@@ -408,6 +408,10 @@ enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Sendable 
     case grain
     case grainSize
     case grainRoughness
+    /// Portrait depth blur. Only meaningful on a photo that carries depth, so
+    /// the catalog hides the row on every other photo rather than offering a
+    /// slider that does nothing.
+    case depthBlur
     // Optics
     case chromaticAberration
     case defringe
@@ -451,6 +455,7 @@ enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Sendable 
         case .colorNoiseReduction: "Color Noise"
         case .texture: "Texture"
         case .clarity: "Clarity"
+        case .depthBlur: "Depth Blur"
         case .dehaze: "Dehaze"
         case .vignette: "Vignette"
         case .vignetteMidpoint: "Vignette Midpoint"
@@ -501,6 +506,7 @@ enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Sendable 
         case .colorNoiseReduction: "drop.halffull"
         case .texture: "circle.grid.2x2"
         case .clarity: "circle.hexagonpath"
+        case .depthBlur: "camera.aperture"
         case .dehaze: "sun.haze"
         case .vignette: "viewfinder"
         case .vignetteMidpoint: "smallcircle.circle"
@@ -532,7 +538,7 @@ enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Sendable 
         case .lensCorrection, .grain, .grainSize, .grainRoughness,
              .vignetteMidpoint, .vignetteFeather, .blackAndWhite,
              .sharpenRadius, .sharpenDetail, .sharpenMasking, .colorNoiseReduction,
-             .vignetteHighlights, .chromaticAberration, .defringe: 0...1
+             .vignetteHighlights, .chromaticAberration, .defringe, .depthBlur: 0...1
         case .exposure: -2...2
         default: -1...1
         }
@@ -577,6 +583,10 @@ struct PhotoAdjustments: Codable, Equatable, Sendable {
     var texture = 0.0
     var clarity = 0.0
     var dehaze = 0.0
+    /// Portrait depth blur, 0 = the photo as shot. Not a stop count: the
+    /// f-number the panel shows is a label over this, because the strength
+    /// Core Image's depth blur takes is not calibrated in stops.
+    var depthBlur = 0.0
     var vignette = 0.0
     /// Where the vignette starts falling off (0 = near the centre, 1 = only the
     /// extreme corners). Default 0.5 — a neutral value, so it is part of `.zero`
@@ -630,6 +640,7 @@ struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .colorNoiseReduction: colorNoiseReduction
             case .texture: texture
             case .clarity: clarity
+            case .depthBlur: depthBlur
             case .dehaze: dehaze
             case .vignette: vignette
             case .vignetteMidpoint: vignetteMidpoint
@@ -679,6 +690,7 @@ struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .colorNoiseReduction: colorNoiseReduction = newValue
             case .texture: texture = newValue
             case .clarity: clarity = newValue
+            case .depthBlur: depthBlur = newValue
             case .dehaze: dehaze = newValue
             case .vignette: vignette = newValue
             case .vignetteMidpoint: vignetteMidpoint = newValue
