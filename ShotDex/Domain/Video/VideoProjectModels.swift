@@ -84,6 +84,22 @@ enum VideoClipEffect: String, CaseIterable, Identifiable, Sendable {
         case .vignettePulse: String(localized: "Vignette Pulse")
         }
     }
+
+    /// Chip glyph in the clip inspector's Animate row.
+    var systemImage: String {
+        switch self {
+        case .none: "circle.slash"
+        case .zoomIn: "plus.magnifyingglass"
+        case .zoomOut: "minus.magnifyingglass"
+        case .panLeft: "arrow.left"
+        case .panRight: "arrow.right"
+        case .shake: "waveform.path"
+        case .blurIn: "aqi.medium"
+        case .blurOut: "aqi.low"
+        case .softGlow: "sun.haze"
+        case .vignettePulse: "circle.dotted.circle"
+        }
+    }
 }
 
 struct VideoClip: Identifiable, Equatable, Sendable {

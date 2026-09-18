@@ -44,11 +44,6 @@ enum SettingsKeys {
     /// 4K, 2048 px and 1080 px presets are code-defined and never stored here.
     static let compressionPresets = "export.compressionPresets"
 
-    /// `AppAccentTheme` raw value for the app-wide accent colour. An unwritten
-    /// or unrecognised value means the system accent — see
-    /// `AppAccentTheme.resolved`.
-    static let accentTheme = "display.accentTheme"
-
     /// Per-source counters used by `_SHOTDEX_EDITED_N` and
     /// `_SHOTDEX_COMPRESSED_N` output filenames.
     static let outputFilenameIndexes = "export.outputFilenameIndexes"
@@ -63,4 +58,12 @@ enum SettingsKeys {
 
     /// JSON-encoded user collage presets (frame + style, no text).
     static let collagePresets = "collage.presets"
+
+    /// `DuplicateStrictness` raw value the Duplicates screen groups with.
+    /// Unwritten means `.similar`.
+    static let duplicateStrictness = "duplicates.strictness"
+
+    /// Group count of the last duplicate grouping, so the Collections tab token
+    /// can show it without loading every hash. Unwritten means never scanned.
+    static let duplicateGroupCount = "duplicates.lastGroupCount"
 }

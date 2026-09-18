@@ -60,6 +60,10 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
     /// mid-run fill in lazily instead of the whole grid reloading per photo.
     /// Nil (Album Detail) disables the lookup.
     var lazyMetadataProvider: ((String) async -> (any PhotoGridDisplayable)?)? = nil
+    /// The list owner's latest in-place deletion (see `PhotoGridRemoval`). Set
+    /// in the same update as the pruned `photos`; the grid animates those
+    /// tiles out and skips the reload that `contentVersion`/count would cause.
+    var removal: PhotoGridRemoval? = nil
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -69,13 +73,21 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         let coordinator = context.coordinator
         let collectionView = GridCollectionView(
             frame: .zero,
-            collectionViewLayout: coordinator.makeLayout(columns: columnCount)
+            collectionViewLayout: coordinator.makeLayout(density: columnCount)
         )
         // SwiftUI sizes the representable after creation, and UIKit settles the
         // safe area later still — the opening anchor re-applies until the user
         // takes over the scroll position.
         collectionView.onAnchorNeeded = { [weak coordinator] in
             coordinator?.anchorIfNeeded()
+        }
+        // A width change (device fold, Split View, rotation) can mean a
+        // different column count for the same stored density — see
+        // `Coordinator.resolvedColumns`.
+        collectionView.onContentWidthChange = { [weak coordinator] in
+            // Out of the layout pass: swapping the layout from inside
+            // `layoutSubviews` re-enters UIKit's own layout.
+            Task { @MainActor in coordinator?.reapplyLayoutIfColumnsChanged() }
         }
         collectionView.backgroundColor = .systemBackground
         collectionView.contentInset.bottom = bottomInset
@@ -109,7 +121,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
     }
 
     static func dismantleUIView(_ uiView: UICollectionView, coordinator: Coordinator) {
-        coordinator.stopAllDetailPreheating()
+        coordinator.cancelHighlightPreheat()
     }
 
     // MARK: Coordinator
@@ -147,24 +159,18 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         private var appliedPhotoCount = 0
         private var appliedColumns = 0
         private var appliedJumpToken: Int?
+        private var appliedRemovalToken: Int?
         private var appliedSelecting = false
         /// Membership snapshot for O(1) cell configuration. Selection order is
         /// owned by the screen/selection bar; the grid only needs membership.
         private var appliedSelectedIds: Set<String> = []
-        /// Local-only, screen-sized detail renditions for cells currently on
-        /// screen. Preheating before the tap avoids enlarging a grid thumbnail
-        /// while the detail viewer waits for its first usable image.
-        private final class DetailPreheatEntry {
-            let asset: PHAsset
-            var requestId: PHImageRequestID?
-            var warmTask: Task<Void, Never>?
-
-            init(asset: PHAsset) {
-                self.asset = asset
-            }
-        }
-        private var detailPreheatedByIndexPath: [IndexPath: DetailPreheatEntry] = [:]
-        private let maximumDetailPreheatCount = 18
+        /// Local-only, screen-sized detail rendition for the tile under the
+        /// user's finger, warmed on highlight so the viewer's first frame is not
+        /// an enlarged grid thumbnail. Only that one tile: preheating every
+        /// visible cell queued up to 18 full-screen decodes on the image manager
+        /// that also serves the thumbnails, and the sharp grid renditions sat
+        /// behind them — the grid stayed soft for seconds after each scroll.
+        private var highlightPreheat: (asset: PHAsset, requestId: PHImageRequestID)?
 
         // Pinch state
         private var transitionLayout: UICollectionViewTransitionLayout?
@@ -236,6 +242,20 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 return
             }
 
+            // An in-place deletion animates the tiles out and leaves the
+            // scroll position alone. It consumes the version/count/section
+            // change that came with it, so the reload branch below sees a
+            // settled grid. Anything the note does not account for falls
+            // through to that branch.
+            if let removal = newParent.removal, removal.token != appliedRemovalToken {
+                appliedRemovalToken = removal.token
+                if !isInitial, applyRemoval(removal, newParent: newParent, in: collectionView) {
+                    appliedContentVersion = newParent.contentVersion
+                    appliedPhotoCount = newParent.photos.count
+                    appliedCustomSections = newParent.sectionMode.customSections
+                }
+            }
+
             let contentReplaced = newParent.contentVersion != appliedContentVersion
             // A replacement while the user is reading mid-grid (a photo imported
             // or deleted elsewhere) must not teleport them to the anchor end —
@@ -260,7 +280,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 // density) — swap without animation, cache is stale.
                 parent.photoLibrary.stopCachingAllThumbnails()
                 collectionView.setCollectionViewLayout(
-                    makeLayout(columns: newParent.columnCount), animated: false
+                    makeLayout(density: newParent.columnCount), animated: false
                 ) { [weak self] _ in
                     // New cell sizes: re-request so a 1-column swap gets tall,
                     // aspect-correct renditions rather than stale square ones.
@@ -357,12 +377,21 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             collectionView.setContentOffset(CGPoint(x: 0, y: target), animated: false)
         }
 
-        /// A scroll position expressed as a photo id plus that tile's offset
-        /// relative to the top of the viewport, so it survives a `reloadData`
-        /// even when the list shifted (photos added or removed at either end).
+        /// A scroll position expressed as visible photo ids plus each tile's
+        /// offset relative to the top of the viewport, so it survives a
+        /// `reloadData` even when the list shifted (photos added or removed at
+        /// either end) or the tile the user was looking at is itself gone.
         private struct PreservedScroll {
-            let assetId: String
-            let offsetFromTileTop: CGFloat
+            struct Anchor {
+                let assetId: String
+                let offsetFromTileTop: CGFloat
+            }
+            /// Visible tiles top to bottom; the first one still in the list wins.
+            let anchors: [Anchor]
+            /// Flat index of the topmost visible tile. When every visible tile
+            /// was deleted, the grid lands on whatever now occupies that spot
+            /// instead of teleporting to the anchor end.
+            let fallbackFlatIndex: Int
         }
 
         /// The spot to restore after a content replacement, or nil when the grid
@@ -370,30 +399,48 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         /// already parked at the end the grid anchors to — that's where newly
         /// added photos land, and staying there is what they expect.
         private func preservableScroll(_ collectionView: UICollectionView) -> PreservedScroll? {
-            guard !isNearAnchorEnd(collectionView) else { return nil }
+            guard !isAtAnchorEnd(collectionView) else { return nil }
             let layout = collectionView.collectionViewLayout
+            var anchors: [PreservedScroll.Anchor] = []
+            var fallbackFlatIndex: Int?
             for indexPath in collectionView.indexPathsForVisibleItems.sorted() {
                 guard let flatIndex = flatIndex(for: indexPath),
                       let frame = layout.layoutAttributesForItem(at: indexPath)?.frame
                 else { continue }
-                return PreservedScroll(
+                if fallbackFlatIndex == nil { fallbackFlatIndex = flatIndex }
+                anchors.append(PreservedScroll.Anchor(
                     assetId: parent.photos[flatIndex].assetId,
                     offsetFromTileTop: collectionView.contentOffset.y - frame.minY
-                )
+                ))
             }
-            return nil
+            guard let fallbackFlatIndex else { return nil }
+            return PreservedScroll(anchors: anchors, fallbackFlatIndex: fallbackFlatIndex)
         }
 
-        /// False when the anchor photo is gone from the new list (it was the
-        /// deleted one) — the caller then falls back to the end anchor.
+        /// False only when the new list is empty — every other case lands on
+        /// a surviving visible tile, or on the tile now sitting where the
+        /// topmost deleted one was.
         private func restoreScroll(
             _ preserved: PreservedScroll, in collectionView: UICollectionView
         ) -> Bool {
-            guard let flatIndex = parent.photos.firstIndex(
-                where: { $0.assetId == preserved.assetId }
-            ),
-                let indexPath = indexPath(forFlatIndex: flatIndex),
-                let frame = collectionView.collectionViewLayout
+            guard !parent.photos.isEmpty else { return false }
+            var indexById: [String: Int] = [:]
+            for (index, photo) in parent.photos.enumerated() where indexById[photo.assetId] == nil {
+                indexById[photo.assetId] = index
+            }
+            let target: (flatIndex: Int, offsetFromTileTop: CGFloat)
+            if let survivor = preserved.anchors.lazy
+                .compactMap({ anchor in indexById[anchor.assetId].map { ($0, anchor.offsetFromTileTop) } })
+                .first {
+                target = survivor
+            } else {
+                target = (
+                    min(preserved.fallbackFlatIndex, parent.photos.count - 1),
+                    preserved.anchors.first?.offsetFromTileTop ?? 0
+                )
+            }
+            guard let indexPath = indexPath(forFlatIndex: target.flatIndex),
+                  let frame = collectionView.collectionViewLayout
                     .layoutAttributesForItem(at: indexPath)?.frame
             else { return false }
             let minimum = -collectionView.adjustedContentInset.top
@@ -402,19 +449,23 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 collectionView.collectionViewLayout.collectionViewContentSize.height
                     - collectionView.bounds.height + collectionView.adjustedContentInset.bottom
             )
-            let target = min(max(frame.minY + preserved.offsetFromTileTop, minimum), maximum)
-            collectionView.setContentOffset(CGPoint(x: 0, y: target), animated: false)
+            let offset = min(max(frame.minY + target.offsetFromTileTop, minimum), maximum)
+            collectionView.setContentOffset(CGPoint(x: 0, y: offset), animated: false)
             return true
         }
 
-        /// Within one screen height of the end the grid anchors to (bottom for
-        /// Library, top for albums).
-        private func isNearAnchorEnd(_ collectionView: UICollectionView) -> Bool {
+        /// Parked at the end the grid anchors to. Bottom-anchored (Library):
+        /// within one screen height of the bottom, where new photos land, so
+        /// staying "at the newest" means following them. Top-anchored (albums,
+        /// On This Day): only when actually at the top — these lists are short,
+        /// so "within a screen of the top" was nearly always true and every
+        /// reload snapped a user who had scrolled a few rows back to the start.
+        private func isAtAnchorEnd(_ collectionView: UICollectionView) -> Bool {
             let height = collectionView.bounds.height
             guard height > 0 else { return true }
             guard parent.anchorsBottom else {
                 return collectionView.contentOffset.y
-                    + collectionView.adjustedContentInset.top <= height
+                    + collectionView.adjustedContentInset.top <= 1
             }
             let bottom = collectionView.collectionViewLayout.collectionViewContentSize.height
                 - height + collectionView.adjustedContentInset.bottom
@@ -453,22 +504,27 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         // MARK: Sections
 
         private func rebuildSections() {
-            guard !parent.photos.isEmpty else {
-                sections = []
-                return
-            }
+            sections = Self.resolvedSections(
+                for: parent, columns: resolvedColumns(parent.columnCount)
+            )
+        }
+
+        private static func resolvedSections(
+            for parent: PhotoGridCollectionView, columns: Int
+        ) -> [ResolvedSection] {
+            guard !parent.photos.isEmpty else { return [] }
             switch parent.sectionMode {
             case .flat:
-                sections = [ResolvedSection(range: 0..<parent.photos.count, title: nil)]
+                return [ResolvedSection(range: 0..<parent.photos.count, title: nil)]
             case .dates:
-                let granularity = GridDensity.granularity(forColumns: parent.columnCount)
-                sections = PhotoGridSectionBuilder.sections(
+                let granularity = GridDensity.granularity(forColumns: columns)
+                return PhotoGridSectionBuilder.sections(
                     creationDates: parent.photos.map(\.creationDateValue),
                     granularity: granularity
                 ).map {
                     ResolvedSection(
                         range: $0.range,
-                        title: Self.dateTitle(for: $0.kind, granularity: granularity)
+                        title: dateTitle(for: $0.kind, granularity: granularity)
                     )
                 }
             case .custom(let supplied):
@@ -476,7 +532,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 // SwiftUI update, but clamp anyway: a momentarily stale pair
                 // must degrade to fewer tiles, never to an item count that
                 // indexes past the array.
-                sections = supplied.compactMap { section in
+                return supplied.compactMap { section in
                     let upper = min(section.range.upperBound, parent.photos.count)
                     guard section.range.lowerBound < upper else { return nil }
                     return ResolvedSection(
@@ -484,6 +540,82 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                     )
                 }
             }
+        }
+
+        // MARK: In-place removal
+
+        /// Animates `removal.assetIds` out of the grid when the new list is
+        /// verifiably the old one minus those ids. Every check that fails
+        /// returns false with nothing touched, and the caller reloads instead:
+        /// a list that emptied, a pinch mid-transition, a note whose ids or
+        /// order do not match the arrays, or a section shape UIKit could not
+        /// be told about as pure deletions (a surviving section whose title or
+        /// remaining count is not what the old one predicts).
+        private func applyRemoval(
+            _ removal: PhotoGridRemoval,
+            newParent: PhotoGridCollectionView,
+            in collectionView: UICollectionView
+        ) -> Bool {
+            let oldPhotos = parent.photos
+            let newPhotos = newParent.photos
+            guard !newPhotos.isEmpty, transitionLayout == nil, !isSettling else { return false }
+
+            // Old flat indices of the removed tiles, and the order check: the
+            // survivors must be the new list, in the same order.
+            var removedFlatIndices: [Int] = []
+            var survivorIndex = 0
+            for (flatIndex, photo) in oldPhotos.enumerated() {
+                if removal.assetIds.contains(photo.assetId) {
+                    removedFlatIndices.append(flatIndex)
+                } else {
+                    guard survivorIndex < newPhotos.count,
+                          newPhotos[survivorIndex].assetId == photo.assetId
+                    else { return false }
+                    survivorIndex += 1
+                }
+            }
+            guard !removedFlatIndices.isEmpty, survivorIndex == newPhotos.count else { return false }
+
+            let oldSections = sections
+            var removedPerSection = [Int](repeating: 0, count: oldSections.count)
+            var removedIndexPaths: [IndexPath] = []
+            for flatIndex in removedFlatIndices {
+                guard let indexPath = indexPath(forFlatIndex: flatIndex) else { return false }
+                removedPerSection[indexPath.section] += 1
+                removedIndexPaths.append(indexPath)
+            }
+            var emptiedSections = IndexSet()
+            for (section, resolved) in oldSections.enumerated()
+            where removedPerSection[section] == resolved.range.count {
+                emptiedSections.insert(section)
+            }
+            // UIKit rejects item deletions inside a section that is itself
+            // being deleted.
+            removedIndexPaths.removeAll { emptiedSections.contains($0.section) }
+
+            let newSections = Self.resolvedSections(
+                for: newParent, columns: resolvedColumns(newParent.columnCount)
+            )
+            guard newSections.count == oldSections.count - emptiedSections.count else { return false }
+            var newSection = 0
+            for (section, resolved) in oldSections.enumerated() where !emptiedSections.contains(section) {
+                guard newSections[newSection].range.count == resolved.range.count - removedPerSection[section],
+                      newSections[newSection].title == resolved.title
+                else { return false }
+                newSection += 1
+            }
+
+            parent = newParent
+            collectionView.performBatchUpdates {
+                sections = newSections
+                if !emptiedSections.isEmpty {
+                    collectionView.deleteSections(emptiedSections)
+                }
+                if !removedIndexPaths.isEmpty {
+                    collectionView.deleteItems(at: removedIndexPaths)
+                }
+            }
+            return true
         }
 
         private func flatIndex(for indexPath: IndexPath) -> Int? {
@@ -515,6 +647,58 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
 
         // MARK: Layout
 
+        /// Width the cells actually get: the collection view minus whatever
+        /// the adjusted content inset takes horizontally. Equal to the bounds
+        /// width on a plain portrait iPhone; smaller wherever a horizontal
+        /// safe area exists (iPhone Duo's vertical navigation, Split View),
+        /// where measuring off the bounds would size a row too wide to fit.
+        private var contentWidth: CGFloat {
+            guard let collectionView else { return 0 }
+            return max(
+                0,
+                collectionView.bounds.width
+                    - collectionView.adjustedContentInset.left
+                    - collectionView.adjustedContentInset.right
+            )
+        }
+
+        /// Columns to draw for the stored density at the current width. Identity
+        /// on compact width; scaled on a regular-width display (iPhone Duo's
+        /// inner screen) so tiles keep their size instead of doubling.
+        func resolvedColumns(_ density: Int) -> Int {
+            guard let collectionView else { return GridDensity.clamped(density) }
+            return GridDensity.columns(
+                forDensity: density,
+                width: contentWidth,
+                isRegularWidth: collectionView.traitCollection.horizontalSizeClass == .regular
+            )
+        }
+
+        /// The window grew or shrank enough to change the drawn column count —
+        /// swap the layout. Never during a pinch: starting a layout change
+        /// while an interactive transition is live corrupts UIKit's state.
+        func reapplyLayoutIfColumnsChanged() {
+            guard let collectionView, transitionLayout == nil, !isSettling,
+                  contentWidth > 0
+            else { return }
+            let columns = resolvedColumns(parent.columnCount)
+            guard (collectionView.collectionViewLayout as? GridFlowLayout)?.columns != columns
+            else { return }
+            parent.photoLibrary.stopCachingAllThumbnails()
+            collectionView.setCollectionViewLayout(
+                makeLayout(density: parent.columnCount), animated: false
+            ) { [weak self] _ in
+                guard let self else { return }
+                let before = sections
+                rebuildSections()
+                if sections != before {
+                    collectionView.reloadData()
+                } else {
+                    reconfigureVisibleCells(collectionView)
+                }
+            }
+        }
+
         /// Flow layout, not compositional: `UICollectionViewTransitionLayout`
         /// (the pinch mechanic) only supports flow-style layouts —
         /// `startInteractiveTransition` with a compositional layout returns
@@ -522,9 +706,9 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         /// A uniform square grid needs nothing compositional anyway, and
         /// pinned date headers exist here too
         /// (`sectionHeadersPinToVisibleBounds`).
-        func makeLayout(columns: Int) -> UICollectionViewFlowLayout {
+        func makeLayout(density: Int) -> UICollectionViewFlowLayout {
             let layout = GridFlowLayout()
-            layout.columns = GridDensity.clamped(columns)
+            layout.columns = resolvedColumns(density)
             layout.minimumInteritemSpacing = 2
             layout.minimumLineSpacing = 2
             layout.sectionHeadersPinToVisibleBounds = parent.sectionMode.hasHeaders
@@ -539,11 +723,12 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             sizeForItemAt indexPath: IndexPath
         ) -> CGSize {
             let columns = (collectionViewLayout as? GridFlowLayout)?.columns
-                ?? GridDensity.clamped(parent.columnCount)
+                ?? resolvedColumns(parent.columnCount)
+            let width = contentWidth
             guard let flatIndex = flatIndex(for: indexPath) else {
-                return Self.cellSize(width: collectionView.bounds.width, columns: columns)
+                return Self.cellSize(width: width, columns: columns)
             }
-            return itemSize(width: collectionView.bounds.width, columns: columns, flatIndex: flatIndex)
+            return itemSize(width: width, columns: columns, flatIndex: flatIndex)
         }
 
         func collectionView(
@@ -554,7 +739,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             guard sections.indices.contains(section),
                   let title = sections[section].title, !title.isEmpty
             else { return .zero }
-            return CGSize(width: collectionView.bounds.width, height: 32)
+            return CGSize(width: contentWidth, height: 32)
         }
 
         func collectionView(
@@ -565,7 +750,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             guard let lastSection = sections.indices.last, section == lastSection,
                   let text = parent.trailingFooterText, !text.isEmpty
             else { return .zero }
-            return CGSize(width: collectionView.bounds.width, height: 48)
+            return CGSize(width: contentWidth, height: 48)
         }
 
         /// Square cell side for a column count, floored to pixel precision so
@@ -591,7 +776,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                   pixelWidth > 0, pixelHeight > 0
             else { return CGSize(width: width, height: width) }
             let aspect = min(CGFloat(pixelHeight) / CGFloat(pixelWidth), Self.oneColumnMaxAspect)
-            let scale = UIScreen.main.scale
+            let scale = ActiveDisplay.scale
             let height = max(1, (width * aspect * scale).rounded(.down) / scale)
             return CGSize(width: width, height: height)
         }
@@ -599,10 +784,9 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         /// Cell width in points for the current committed layout — sizes
         /// thumbnail requests and gates the metadata line.
         private var cellPointWidth: CGFloat {
-            guard let collectionView else { return 0 }
-            return Self.cellSize(
-                width: collectionView.bounds.width,
-                columns: GridDensity.clamped(parent.columnCount)
+            Self.cellSize(
+                width: contentWidth,
+                columns: resolvedColumns(parent.columnCount)
             ).width
         }
 
@@ -610,13 +794,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             GridThumbnailTarget.thumbnailSize(cellPointWidth: cellPointWidth)
         }
 
-        private var detailTargetSize: CGSize {
-            let scale = UIScreen.main.scale
-            return CGSize(
-                width: UIScreen.main.bounds.width * scale,
-                height: UIScreen.main.bounds.height * scale
-            )
-        }
+        private var detailTargetSize: CGSize { ActiveDisplay.pixelSize() }
 
         // MARK: UICollectionViewDataSource
 
@@ -647,11 +825,9 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             let asset = parent.assetProvider(flatIndex, item)
             // Per-item so a 1-column cell requests a rendition at its own
             // (tall) aspect, not a square that would crop in the frame.
-            let columns = GridDensity.clamped(parent.columnCount)
-            let size = itemSize(
-                width: collectionView?.bounds.width ?? 0, columns: columns, flatIndex: flatIndex
-            )
-            let scale = UIScreen.main.scale
+            let columns = resolvedColumns(parent.columnCount)
+            let size = itemSize(width: contentWidth, columns: columns, flatIndex: flatIndex)
+            let scale = ActiveDisplay.scale
             let target = CGSize(width: size.width * scale, height: size.height * scale)
             cell.configure(
                 item: item,
@@ -711,64 +887,38 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             forItemAt indexPath: IndexPath
         ) {
             guard let flatIndex = flatIndex(for: indexPath) else { return }
-            if let oldEntry = detailPreheatedByIndexPath.removeValue(forKey: indexPath) {
-                cancelDecodedDetailPreheat(oldEntry)
-                parent.photoLibrary.stopCachingDetailImages(
-                    for: [oldEntry.asset],
-                    targetSize: detailTargetSize
-                )
-            }
-            let item = parent.photos[flatIndex]
-            if let asset = parent.assetProvider(flatIndex, item),
-               asset.mediaType == .image,
-               detailPreheatedByIndexPath.count < maximumDetailPreheatCount {
-                parent.photoLibrary.startCachingDetailImages(
-                    for: [asset],
-                    targetSize: detailTargetSize
-                )
-                let entry = DetailPreheatEntry(asset: asset)
-                detailPreheatedByIndexPath[indexPath] = entry
-                // Let fast-scrolling cells leave before starting a screen-sized
-                // decode. Stable visible cells warm the shared decoded cache.
-                scheduleDecodedDetailPreheat(entry, at: indexPath, delay: .milliseconds(180))
-            }
             if flatIndex >= parent.photos.count - 30 {
                 parent.onNearEnd()
             }
         }
 
+        /// Touch-down on a tile: warm the screen-sized local rendition of that
+        /// one asset so a tap opens the viewer on a sharp first frame. The
+        /// request is left running through unhighlight — the tap that follows
+        /// is what it is for — and replaced by the next highlight.
         func collectionView(
-            _ collectionView: UICollectionView,
-            didEndDisplaying cell: UICollectionViewCell,
-            forItemAt indexPath: IndexPath
+            _ collectionView: UICollectionView, didHighlightItemAt indexPath: IndexPath
         ) {
-            guard let entry = detailPreheatedByIndexPath.removeValue(forKey: indexPath) else {
-                return
-            }
-            cancelDecodedDetailPreheat(entry)
-            parent.photoLibrary.stopCachingDetailImages(
-                for: [entry.asset],
-                targetSize: detailTargetSize
-            )
+            guard let flatIndex = flatIndex(for: indexPath),
+                  let asset = parent.assetProvider(flatIndex, parent.photos[flatIndex]),
+                  asset.mediaType == .image
+            else { return }
+            guard highlightPreheat?.asset.localIdentifier != asset.localIdentifier else { return }
+            cancelHighlightPreheat()
+            let requestId = parent.photoLibrary.requestBestLocalImage(
+                for: asset, targetSize: detailTargetSize, contentMode: .aspectFit
+            ) { _ in }
+            highlightPreheat = (asset, requestId)
         }
 
-        func stopAllDetailPreheating() {
-            let entries = Array(detailPreheatedByIndexPath.values)
-            detailPreheatedByIndexPath.removeAll()
-            for entry in entries {
-                cancelDecodedDetailPreheat(entry)
-            }
-            parent.photoLibrary.stopCachingDetailImages(
-                for: entries.map(\.asset),
-                targetSize: detailTargetSize
-            )
+        func cancelHighlightPreheat() {
+            guard let highlightPreheat else { return }
+            parent.photoLibrary.cancelThumbnailRequest(highlightPreheat.requestId)
+            self.highlightPreheat = nil
         }
 
         func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
             endAnchorTracking()
-            for entry in detailPreheatedByIndexPath.values {
-                cancelDecodedDetailPreheat(entry)
-            }
             parent.onUserScroll()
         }
 
@@ -776,48 +926,22 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             _ scrollView: UIScrollView,
             willDecelerate decelerate: Bool
         ) {
-            if !decelerate { warmVisibleDetailProxies() }
+            if !decelerate { upgradeVisibleThumbnails(scrollView) }
         }
 
         func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-            warmVisibleDetailProxies()
+            upgradeVisibleThumbnails(scrollView)
         }
 
-        private func warmVisibleDetailProxies() {
-            for (indexPath, entry) in detailPreheatedByIndexPath {
-                scheduleDecodedDetailPreheat(entry, at: indexPath, delay: .zero)
+        /// The grid came to rest: tiles whose local final was only a small
+        /// iCloud proxy now fetch the cell-sized rendition over the network.
+        /// Never during a scroll, so flinging through the library still costs
+        /// no downloads.
+        private func upgradeVisibleThumbnails(_ scrollView: UIScrollView) {
+            guard let collectionView = scrollView as? UICollectionView else { return }
+            for cell in collectionView.visibleCells {
+                (cell as? PhotoGridCell)?.upgradeThumbnailIfIdle()
             }
-        }
-
-        private func scheduleDecodedDetailPreheat(
-            _ entry: DetailPreheatEntry,
-            at indexPath: IndexPath,
-            delay: Duration
-        ) {
-            guard entry.requestId == nil, entry.warmTask == nil else { return }
-            entry.warmTask = Task { @MainActor [weak self, weak entry] in
-                if delay != .zero {
-                    try? await Task.sleep(for: delay)
-                }
-                guard !Task.isCancelled, let self, let entry,
-                      self.detailPreheatedByIndexPath[indexPath] === entry
-                else { return }
-                entry.warmTask = nil
-                entry.requestId = self.parent.photoLibrary.requestBestLocalImage(
-                    for: entry.asset,
-                    targetSize: self.detailTargetSize,
-                    contentMode: .aspectFit
-                ) { _ in }
-            }
-        }
-
-        private func cancelDecodedDetailPreheat(_ entry: DetailPreheatEntry) {
-            entry.warmTask?.cancel()
-            entry.warmTask = nil
-            if let requestId = entry.requestId {
-                parent.photoLibrary.cancelThumbnailRequest(requestId)
-            }
-            entry.requestId = nil
         }
 
         // MARK: Prefetching
@@ -1011,7 +1135,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             transitionDelta = delta
             parent.photoLibrary.stopCachingAllThumbnails()
             let layout = collectionView.startInteractiveTransition(
-                to: makeLayout(columns: target)
+                to: makeLayout(density: target)
             ) { [weak self] completed, _ in
                 self?.transitionDidEnd(committed: completed)
             }
@@ -1268,23 +1392,37 @@ private final class GridFlowLayout: UICollectionViewFlowLayout {
 /// amount, which read as the grid re-flowing seconds after launch.
 private final class GridCollectionView: UICollectionView {
     var onAnchorNeeded: (() -> Void)?
+    /// Fired when the width available to cells changes (fold, Split View,
+    /// rotation), so the coordinator can re-resolve the column count.
+    var onContentWidthChange: (() -> Void)?
+    private var reportedContentWidth: CGFloat = 0
     /// Cleared by the coordinator on the first user interaction — from then on
     /// the scroll position belongs to the user, not to the anchor.
     var needsAnchor = true
 
     override func layoutSubviews() {
         super.layoutSubviews()
+        reportContentWidthIfChanged()
         requestAnchor()
     }
 
     override func safeAreaInsetsDidChange() {
         super.safeAreaInsetsDidChange()
+        reportContentWidthIfChanged()
         requestAnchor()
     }
 
     override func adjustedContentInsetDidChange() {
         super.adjustedContentInsetDidChange()
+        reportContentWidthIfChanged()
         requestAnchor()
+    }
+
+    private func reportContentWidthIfChanged() {
+        let width = bounds.width - adjustedContentInset.left - adjustedContentInset.right
+        guard width > 0, width != reportedContentWidth else { return }
+        reportedContentWidth = width
+        onContentWidthChange?()
     }
 
     private func requestAnchor() {
@@ -1353,6 +1491,20 @@ final class PhotoGridCell: UICollectionViewCell {
     private var requestId: PHImageRequestID?
     private var requestedAssetId: String?
     private var lastRequestedPixelWidth: CGFloat = 0
+    /// The asset and pixel size of the current request, kept so the idle-time
+    /// network upgrade asks for exactly what the local pass asked for.
+    private var requestedAsset: PHAsset?
+    private var requestedTargetSize: CGSize = .zero
+    /// Next rung of the thumbnail ladder (see `PhotoLibraryService.requestThumbnail`)
+    /// for a tile whose last final was undersized. Runs only while the grid is
+    /// at rest; each rung is attempted once per configure, so an offline
+    /// device does not retry the same tile at every scroll stop.
+    private enum UpgradePass {
+        case exactLocal
+        case network
+    }
+    private var pendingUpgrade: UpgradePass?
+    private var upgradeRequestId: PHImageRequestID?
     private weak var photoLibrary: PhotoLibraryService?
     /// Identity + in-flight lookup of the lazy badge fill: the fetch result
     /// only applies while the cell still shows the asset it was started for.
@@ -1397,7 +1549,7 @@ final class PhotoGridCell: UICollectionViewCell {
         contentView.addSubview(videoBadge)
 
         selectionBorder.layer.borderWidth = 3
-        selectionBorder.layer.borderColor = UIColor(AppAccentTheme.stored.color).cgColor
+        selectionBorder.layer.borderColor = AppAccent.uiColor.cgColor
         selectionBorder.isUserInteractionEnabled = false
         contentView.addSubview(selectionBorder)
 
@@ -1458,7 +1610,10 @@ final class PhotoGridCell: UICollectionViewCell {
         imageView.image = nil
         imageView.alpha = 1
         requestedAssetId = nil
+        requestedAsset = nil
+        requestedTargetSize = .zero
         lastRequestedPixelWidth = 0
+        pendingUpgrade = nil
         badgeFetchTask?.cancel()
         badgeFetchTask = nil
         configuredAssetId = nil
@@ -1540,7 +1695,7 @@ final class PhotoGridCell: UICollectionViewCell {
             selectionBadge.image = UIImage(systemName: "checkmark.circle.fill")
             selectionBadge.preferredSymbolConfiguration = base.applying(
                 UIImage.SymbolConfiguration(
-                    paletteColors: [.white, UIColor(AppAccentTheme.stored.color)]
+                    paletteColors: [.white, AppAccent.uiColor]
                 )
             )
         } else {
@@ -1590,13 +1745,17 @@ final class PhotoGridCell: UICollectionViewCell {
             // the re-configure that follows look like "same asset, nothing to
             // do" — the tile would stay grey until it was reused.
             requestedAssetId = nil
+            requestedAsset = nil
+            requestedTargetSize = .zero
             lastRequestedPixelWidth = 0
+            pendingUpgrade = nil
             return
         }
         let assetChanged = asset.localIdentifier != requestedAssetId
         let needsUpgrade = targetSize.width > lastRequestedPixelWidth * 1.4
         guard assetChanged || needsUpgrade else { return }
         cancelRequest()
+        pendingUpgrade = nil
         // A sharp rendition of this exact size already delivered once: paint it
         // now instead of clearing to grey and letting opportunistic delivery
         // fade a soft preview in first. This is what keeps a `reloadData` (the
@@ -1604,6 +1763,8 @@ final class PhotoGridCell: UICollectionViewCell {
         // every visible tile — cells are reused for different tiles there, so
         // they all clear and re-request at once.
         requestedAssetId = asset.localIdentifier
+        requestedAsset = asset
+        requestedTargetSize = targetSize
         lastRequestedPixelWidth = targetSize.width
         if let cached = photoLibrary.cachedThumbnail(
             for: asset.localIdentifier, width: targetSize.width
@@ -1613,13 +1774,60 @@ final class PhotoGridCell: UICollectionViewCell {
             return
         }
         if assetChanged { imageView.image = nil }
-        // Local-only: scrolling the grid must never trigger iCloud downloads.
+        // First rung: PhotoKit's nearest ready-made rendition, local-only — the
+        // same request the prefetcher warms, so a scrolled-into tile is
+        // usually a cache hit. Scrolling never triggers iCloud downloads.
         requestId = photoLibrary.requestThumbnail(
-            for: asset, targetSize: targetSize, allowNetwork: false
-        ) { [weak self] image in
+            for: asset, targetSize: targetSize, resizeMode: .fast, allowNetwork: false
+        ) { [weak self] image, delivery in
             guard let self, self.requestedAssetId == asset.localIdentifier else { return }
             if let image {
                 self.imageView.image = image
+            }
+            guard delivery.isFinal else { return }
+            self.requestId = nil
+            // Nearest rendition came up short of the cell. Keep it on screen
+            // and climb the ladder once the grid is not moving.
+            if !delivery.isSharp {
+                self.pendingUpgrade = .exactLocal
+                self.upgradeThumbnailIfIdle()
+            }
+        }
+    }
+
+    /// Runs the pending ladder rung — exact local, then network — for a tile
+    /// whose last final was undersized. Only while the grid is at rest: the
+    /// coordinator calls it when scrolling stops, and a final callback calls
+    /// it directly when the grid was already still.
+    func upgradeThumbnailIfIdle() {
+        guard let pass = pendingUpgrade, upgradeRequestId == nil,
+              let asset = requestedAsset, let photoLibrary
+        else { return }
+        if let scrollView = superview as? UIScrollView,
+           scrollView.isDragging || scrollView.isDecelerating {
+            return
+        }
+        pendingUpgrade = nil
+        let allowNetwork = pass == .network
+        upgradeRequestId = photoLibrary.requestThumbnail(
+            for: asset,
+            targetSize: requestedTargetSize,
+            resizeMode: .exact,
+            allowNetwork: allowNetwork
+        ) { [weak self] image, delivery in
+            guard let self, self.requestedAssetId == asset.localIdentifier else { return }
+            // Opportunistic delivery repeats the proxy first; only a rendition
+            // with the cell's pixels is worth repainting over what is shown.
+            if let image, delivery.isSharp {
+                self.imageView.image = image
+            }
+            guard delivery.isFinal else { return }
+            self.upgradeRequestId = nil
+            // Exact local still short: the on-device best is an Optimize
+            // Storage proxy, so the last rung fetches the cell-sized rendition.
+            if !delivery.isSharp, !allowNetwork {
+                self.pendingUpgrade = .network
+                self.upgradeThumbnailIfIdle()
             }
         }
     }
@@ -1629,6 +1837,10 @@ final class PhotoGridCell: UICollectionViewCell {
             photoLibrary?.cancelThumbnailRequest(requestId)
         }
         requestId = nil
+        if let upgradeRequestId {
+            photoLibrary?.cancelThumbnailRequest(upgradeRequestId)
+        }
+        upgradeRequestId = nil
     }
 
     /// Only real values — never placeholders like `ISO -- · --mm`.

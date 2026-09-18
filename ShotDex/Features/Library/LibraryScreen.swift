@@ -70,10 +70,11 @@ struct LibraryScreen: View {
             }
         }
         .toolbar { toolbarContent }
-        // Selection mode runs full-bleed: the floating `SelectionOverlay` owns all
-        // controls, so both the nav bar and the tab bar hide and the grid shows
-        // through beneath the glass.
-        .toolbar(isSelecting ? .hidden : .automatic, for: .navigationBar, .tabBar)
+        // Selection keeps the navigation bar: its ⋯ and × live there (Photos
+        // does the same), so the title, the date under it and the grid's pinned
+        // date header never shift when selection starts. Only the tab bar hides,
+        // clearing the bottom for the floating `SelectionOverlay`.
+        .toolbar(isSelecting ? .hidden : .automatic, for: .tabBar)
         .onChange(of: isSelecting) { navigation.hidesTabBar = isSelecting }
         // Publish the selection to the root tab view, which hosts the bar in the tab
         // bar's slot. Republished on any selection change so counts/thumbnails
@@ -309,7 +310,7 @@ struct LibraryScreen: View {
     /// fetched on demand — the grid only holds slim items. A photo deleted
     /// mid-selection just drops out.
     private func comparePhotos(_ model: LibraryModel) -> [ComparePhoto]? {
-        guard (2...CompareScreen.maxPhotoCount).contains(selectedIds.count) else { return nil }
+        guard selectedIds.count >= CompareScreen.minPhotoCount else { return nil }
         let metadataById = (try? dependencies.libraryQueries.metadata(assetIds: selectedIds)) ?? [:]
         let assets = PhotoLibraryService.fetchAssets(ids: selectedIds)
         let assetById = Dictionary(uniqueKeysWithValues: assets.map { ($0.localIdentifier, $0) })
@@ -428,7 +429,7 @@ struct LibraryScreen: View {
         return SelectionBarModel(
             selectionCount: selectedIds.count,
             imageSelectionCount: selectedImageIDs(model).count,
-            thumbnailIds: selectedIds,
+            selectedIds: selectedIds,
             photoLibrary: photoLibrary,
             libraryQueries: dependencies.libraryQueries,
             isDeleting: isDeleting,
@@ -436,6 +437,7 @@ struct LibraryScreen: View {
             onShare: shareSelected,
             onClose: { withAnimation { stopSelecting() } },
             onDeselect: { toggleSelection(of: $0) },
+            onDeselectAll: { selectedIds = [] },
             onCollage: { presentCollage(model) },
             onVideo: { presentVideoStudio(model) },
             onCompare: { isComparePresented = true },
@@ -443,7 +445,9 @@ struct LibraryScreen: View {
             onDelete: { deleteSelected(model) },
             onAddToCollection: { addToCollection() },
             onExportEXIF: { exportEXIF(model) },
-            onDuplicate: { duplicateSelected() }
+            onDuplicate: { duplicateSelected() },
+            assetActions: dependencies.assetActions,
+            onSelectAll: { selectedIds = model.items.map(\.assetId) }
         )
     }
 
@@ -498,7 +502,9 @@ struct LibraryScreen: View {
         PhotoGridCollectionView(
             photos: model.items,
             assetProvider: { index, _ in model.asset(atFlatIndex: index) },
-            sectionMode: model.sort.isDateSort ? .dates : .flat,
+            // No date headers in the library grid: one uninterrupted sheet of
+            // photos, whatever the sort.
+            sectionMode: .flat,
             anchorsBottom: true,
             contentVersion: model.contentGeneration,
             contentRefreshVersion: model.contentRefreshGeneration,
@@ -533,7 +539,8 @@ struct LibraryScreen: View {
             trailingFooterText: model.hasActiveQuery ? matchCountFooter(model.matchCount) : nil,
             lazyMetadataProvider: { assetId in
                 await model.lazyBadgeItem(assetId: assetId)
-            }
+            },
+            removal: model.lastRemoval
         )
         // Fill behind the top nav bar too (not just bottom): the collection
         // view's automatic content-inset adjustment + anchor() position items
@@ -890,8 +897,12 @@ struct LibraryScreen: View {
         // During selection the nav bar is hidden entirely (all controls live in
         // the floating overlay), so these items only ever render when browsing.
         ToolbarItem(placement: .topBarLeading) {
-            SettingsButton()
-                .tint(.primary)
+            // Hidden while selecting: Photos clears the bar down to the
+            // selection's own controls.
+            if !isSelecting {
+                SettingsButton()
+                    .tint(.primary)
+            }
         }
         // Break the shared Liquid Glass container so the indexing token reads as
         // its own control, not part of the Settings gear's tap target.
@@ -905,35 +916,101 @@ struct LibraryScreen: View {
                 indexStatusButton(model)
             }
         }
+        // Filter leads the trailing group and stays there while selecting, the
+        // way Photos keeps it. Sort lives inside it (the two date orders on top,
+        // every metric order under View Options), so there is no sort button.
         ToolbarItem(placement: .topBarTrailing) {
-            if model != nil, !isSelecting {
-                Button {
-                    isSelecting = true
-                } label: {
-                    Image(systemName: "checkmark.circle")
-                }
-                .tint(.primary)
-                .accessibilityLabel("Select photos")
+            if let model {
+                filterMenu(model)
             }
         }
-        ToolbarItem(placement: .topBarTrailing) {
-            if let model, !isSelecting {
+        if isSelecting, let selectionModel = selectionBarModel() {
+            // ⋯ joins the filter's capsule; the item itself puts × on its own.
+            SelectionToolbarItems(model: selectionModel)
+        }
+        // Select gets its own Liquid Glass capsule, split off from the filter.
+        if !isSelecting {
+            if #available(iOS 26.0, *) {
+                ToolbarSpacer(.fixed, placement: .topBarTrailing)
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                if model != nil {
+                    // Spelled out, like Photos.
+                    Button("Select") {
+                        isSelecting = true
+                    }
+                    .tint(.primary)
+                    .accessibilityLabel("Select photos")
+                }
+            }
+        }
+    }
+
+    /// Photos' filter menu, ShotDex's filters: the quick filters under a
+    /// `Filter:` header, then Sort By. Only the date orders are offered here —
+    /// the metric orders (ISO, focal length, aperture, shutter) stay in
+    /// `SortOption` for the queries, but not in this menu.
+    private func filterMenu(_ model: LibraryModel) -> some View {
+        Menu {
+            Section("Filter:") {
+                Toggle(isOn: Binding(
+                    get: { model.criteria.isEmpty },
+                    set: { _ in model.criteria = FilterCriteria() }
+                )) {
+                    Label("All Items", systemImage: "square.grid.3x3")
+                }
+                Toggle(isOn: Binding(
+                    get: { model.criteria.favoritesOnly },
+                    set: { model.criteria.favoritesOnly = $0 }
+                )) {
+                    Label("Favorites", systemImage: "heart")
+                }
+                // One row per kind rather than a submenu: the whole filter list
+                // reads as one column, the way Photos lays it out.
+                Toggle(isOn: mediaKindBinding(model, kind: .photo)) {
+                    Label("Photos Only", systemImage: "photo")
+                }
+                Toggle(isOn: mediaKindBinding(model, kind: .video)) {
+                    Label("Videos Only", systemImage: "video")
+                }
+                Button {
+                    isAdvancedSearchPresented = true
+                } label: {
+                    Label("Advanced Filter…", systemImage: "slider.horizontal.3")
+                }
+            }
+
+            Section {
                 Menu {
-                    Picker("Sort", selection: Binding(
-                        get: { model.sort },
+                    Picker("Sort By", selection: Binding(
+                        get: {
+                            SortOption.menuOrders.contains(model.sort) ? model.sort : .dateTakenNewest
+                        },
                         set: { model.sort = $0 }
                     )) {
-                        ForEach(SortOption.allCases) { option in
+                        ForEach(SortOption.menuOrders) { option in
                             Text(option.displayName).tag(option)
                         }
                     }
                 } label: {
-                    Image(systemName: "arrow.up.arrow.down.circle")
+                    Label("Sort By", systemImage: "arrow.up.arrow.down")
                 }
-                .tint(.primary)
-                .accessibilityLabel("Sort")
             }
+        } label: {
+            Image(systemName: "line.3.horizontal.decrease")
         }
+        .tint(.primary)
+        .accessibilityLabel("Filter and sort")
+    }
+
+    /// "Photos Only" / "Videos Only": turning one on replaces the kind set, so
+    /// the two rows behave as mutually exclusive filters and turning the active
+    /// one off goes back to showing everything.
+    private func mediaKindBinding(_ model: LibraryModel, kind: MediaKind) -> Binding<Bool> {
+        Binding(
+            get: { model.criteria.mediaKinds == [kind] },
+            set: { isOn in model.criteria.mediaKinds = isOn ? [kind] : [] }
+        )
     }
 
     // MARK: Permission states

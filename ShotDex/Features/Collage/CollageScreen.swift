@@ -86,11 +86,7 @@ struct CollageScreen: View {
     @ViewBuilder
     private func modals<Content: View>(_ content: Content) -> some View {
         content
-        .confirmationDialog(
-            "Discard this collage?",
-            isPresented: $isDiscardConfirmationPresented,
-            titleVisibility: .visible
-        ) {
+        .alert("Discard this collage?", isPresented: $isDiscardConfirmationPresented) {
             Button("Discard", role: .destructive) { dismiss() }
             Button("Keep Editing", role: .cancel) {}
         }

@@ -232,24 +232,46 @@ final class PhotoLibraryService: NSObject {
 
     // MARK: Thumbnails
 
+    /// What one `requestThumbnail` callback carried. `.opportunistic` delivery
+    /// fires a cheap preview first, then the final; the final is only *sharp*
+    /// when it has the pixels the cell asked for.
+    struct ThumbnailDelivery {
+        /// PhotoKit's own flag: a preview that a later callback will replace.
+        let isDegraded: Bool
+        /// Final callback with (near) the requested pixel size. A local-only
+        /// request for an iCloud-optimized asset ends with a non-degraded
+        /// callback that is just the small proxy on device — displayable, but
+        /// not the rendition the cell wanted.
+        let isSharp: Bool
+        /// The request finished: no further callback will come.
+        var isFinal: Bool { !isDegraded }
+    }
+
     /// Requests a thumbnail sized for a grid cell. The handler may fire twice
     /// (degraded then final) because of `.opportunistic` delivery.
-    /// Pass `allowNetwork: false` for grid cells so scrolling never triggers
-    /// iCloud downloads — the locally cached derivative is always available.
+    ///
+    /// Grid cells run a three-pass ladder, cheapest first, each pass only when
+    /// the previous final was not `isSharp`:
+    /// 1. `.fast`, local — PhotoKit hands over its nearest ready-made rendition
+    ///    (same size or slightly larger) without a resample. This is what
+    ///    Photos and Apple's PhotoKit sample use for grids, and it is the pass
+    ///    that runs while scrolling, so it must match `startCachingThumbnails`.
+    /// 2. `.exact`, local — once the grid is at rest, for tiles whose fast
+    ///    rendition came up short.
+    /// 3. `.exact`, network — the on-device best was an Optimize Storage proxy.
     func requestThumbnail(
         for asset: PHAsset,
         targetSize: CGSize,
         contentMode: PHImageContentMode = .aspectFill,
+        resizeMode: PHImageRequestOptionsResizeMode = .exact,
         allowNetwork: Bool = true,
-        completion: @escaping (UIImage?) -> Void
+        completion: @escaping (UIImage?, ThumbnailDelivery) -> Void
     ) -> PHImageRequestID {
         let options = PHImageRequestOptions()
         options.deliveryMode = .opportunistic
-        // Opportunistic still paints a cheap preview first; `.exact` requires
-        // the final callback to match the physical cell size instead of
-        // allowing PhotoKit to stop at a visibly softer nearby rendition.
-        options.resizeMode = .exact
+        options.resizeMode = resizeMode
         options.isNetworkAccessAllowed = allowNetwork
+        let requestedAt = ContinuousClock.now
         return imageManager.requestImage(
             for: asset,
             targetSize: targetSize,
@@ -257,20 +279,130 @@ final class PhotoLibraryService: NSObject {
             options: options
         ) { [weak self] image, info in
             let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+            let isSharp = !isDegraded && image.map {
+                Self.hasThumbnailResolution($0, for: asset, targetSize: targetSize, contentMode: contentMode)
+            } ?? false
+            if !isDegraded {
+                Self.thumbnailProbe.recordFinal(
+                    latency: requestedAt.duration(to: .now),
+                    resizeMode: resizeMode,
+                    allowNetwork: allowNetwork,
+                    isSharp: isSharp
+                )
+            }
             // Opportunistic PhotoKit callbacks may fire before requestImage
             // returns. Always defer state delivery so callers can first store
             // the returned request ID and cancellation remains correct.
             Task { @MainActor in
-                if let image, !isDegraded {
+                // Only a rendition with the cell's pixels goes in: caching the
+                // small local proxy of an Optimize-Storage asset as the "final"
+                // for this width kept that tile soft for the life of the cache,
+                // since a hit skips the request entirely.
+                if let image, isSharp {
                     self?.gridThumbnailCache.setObject(
                         image,
                         forKey: Self.gridThumbnailKey(asset.localIdentifier, width: targetSize.width),
                         cost: Int(image.size.width * image.size.height * image.scale * image.scale * 4)
                     )
                 }
-                completion(image)
+                completion(image, ThumbnailDelivery(isDegraded: isDegraded, isSharp: isSharp))
             }
         }
+    }
+
+    /// Request-to-final latency, aggregated per ladder pass and logged every
+    /// 100 finals (`category: thumbnails`, debug level). Reading the summary on
+    /// device answers whether prefetch hits (fast/local finals in single-digit
+    /// ms) and how often tiles fall through to the exact and network passes.
+    private static let thumbnailProbe = ThumbnailLatencyProbe()
+
+    private final class ThumbnailLatencyProbe: @unchecked Sendable {
+        private struct Bucket {
+            var count = 0
+            var sharpCount = 0
+            var total: Duration = .zero
+            var slowest: Duration = .zero
+            var summary: String {
+                guard count > 0 else { return "0" }
+                let mean = total / count
+                return "\(count) (sharp \(sharpCount), mean \(Self.milliseconds(mean))ms, max \(Self.milliseconds(slowest))ms)"
+            }
+            private static func milliseconds(_ duration: Duration) -> Int {
+                Int(duration.components.seconds * 1_000)
+                    + Int(duration.components.attoseconds / 1_000_000_000_000_000)
+            }
+        }
+        private let lock = NSLock()
+        private var fastLocal = Bucket()
+        private var exactLocal = Bucket()
+        private var network = Bucket()
+        private var sinceLog = 0
+        private static let logger = Logger(subsystem: "com.hoangtuan.shotdex", category: "thumbnails")
+
+        func recordFinal(
+            latency: Duration,
+            resizeMode: PHImageRequestOptionsResizeMode,
+            allowNetwork: Bool,
+            isSharp: Bool
+        ) {
+            lock.lock()
+            defer { lock.unlock() }
+            func record(_ bucket: inout Bucket) {
+                bucket.count += 1
+                if isSharp { bucket.sharpCount += 1 }
+                bucket.total += latency
+                bucket.slowest = max(bucket.slowest, latency)
+            }
+            if allowNetwork {
+                record(&network)
+            } else if resizeMode == .fast {
+                record(&fastLocal)
+            } else {
+                record(&exactLocal)
+            }
+            sinceLog += 1
+            guard sinceLog >= 100 else { return }
+            sinceLog = 0
+            Self.logger.debug(
+                "thumbnail finals — fast/local: \(self.fastLocal.summary, privacy: .public); exact/local: \(self.exactLocal.summary, privacy: .public); network: \(self.network.summary, privacy: .public)"
+            )
+        }
+    }
+
+    /// Image-only convenience for callers that just paint whatever arrives.
+    func requestThumbnail(
+        for asset: PHAsset,
+        targetSize: CGSize,
+        contentMode: PHImageContentMode = .aspectFill,
+        allowNetwork: Bool = true,
+        completion: @escaping (UIImage?) -> Void
+    ) -> PHImageRequestID {
+        requestThumbnail(
+            for: asset,
+            targetSize: targetSize,
+            contentMode: contentMode,
+            allowNetwork: allowNetwork
+        ) { image, _ in completion(image) }
+    }
+
+    /// Whether a thumbnail callback has (within 10%) the pixels the request
+    /// asked for, capped by what the asset itself has. Aspect-fill results are
+    /// cropped to the target, so only the shorter side is comparable there;
+    /// aspect-fit reuses the detail viewer's check.
+    private nonisolated static func hasThumbnailResolution(
+        _ image: UIImage,
+        for asset: PHAsset,
+        targetSize: CGSize,
+        contentMode: PHImageContentMode
+    ) -> Bool {
+        guard contentMode == .aspectFill else {
+            return hasDisplayResolution(image, for: asset, targetSize: targetSize)
+        }
+        let assetShortSide = CGFloat(min(asset.pixelWidth, asset.pixelHeight))
+        guard assetShortSide > 0 else { return true }
+        let expectedShortSide = min(min(targetSize.width, targetSize.height), assetShortSide)
+        let actualShortSide = min(image.size.width, image.size.height) * image.scale
+        return actualShortSide >= expectedShortSide * 0.9
     }
 
     /// The sharp rendition for this exact cell size, when one was already
@@ -576,12 +708,17 @@ final class PhotoLibraryService: NSObject {
         imageManager.stopCachingImagesForAllAssets()
     }
 
-    /// Matches `requestThumbnail`'s sizing options (minus `.opportunistic`,
-    /// which is invalid for caching): exact resize, local-only.
+    /// Identical to the grid's scrolling pass (`requestThumbnail` with `.fast`,
+    /// local-only, opportunistic). `PHCachingImageManager` keys its cache on
+    /// the request options too, so a prefetch with different delivery or
+    /// resize settings than the cell's request is decode work the cell never
+    /// benefits from — the earlier `.highQualityFormat` + `.exact` prefetch
+    /// against an `.opportunistic` request was exactly that. Apple's PhotoKit
+    /// sample passes the same (nil) options to both calls for this reason.
     private static var cachingOptions: PHImageRequestOptions {
         let options = PHImageRequestOptions()
-        options.deliveryMode = .highQualityFormat
-        options.resizeMode = .exact
+        options.deliveryMode = .opportunistic
+        options.resizeMode = .fast
         options.isNetworkAccessAllowed = false
         return options
     }

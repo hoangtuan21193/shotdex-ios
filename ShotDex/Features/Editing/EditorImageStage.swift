@@ -66,13 +66,20 @@ struct EditorImageStage: View {
         controller.isEditingOverlay
     }
 
+    /// The Curve group is open and its graph is on the photo: the graph owns every
+    /// touch on the stage, exactly as the crop frame does.
+    private var isShapingCurve: Bool {
+        chrome.selectedGroup == .curve && !chrome.isCurveGraphHidden
+    }
+
     /// Disables the photo-level gestures (zoom, pan, double-tap, hold-before)
-    /// while the Crop tool is up, the eyedropper is armed, or an overlay layer is
-    /// selected, so only the crop frame / sampling layer / layer box reacts to a
-    /// drag.
+    /// while the Crop tool is up, the eyedropper is armed, an overlay layer is
+    /// selected, or the curve graph is up, so only the crop frame / sampling layer
+    /// / layer box / graph reacts to a drag. Leaving them attached let the parent's
+    /// recognisers swallow the child's drag — the original crop-frame bug.
     private var imageGestureMask: GestureMask {
         controller.selectedTool == .crop || isSamplingColor || isEditingOverlay
-            || controller.isEditingDrawing
+            || controller.isEditingDrawing || isShapingCurve
             ? .subviews
             : .all
     }
@@ -427,6 +434,18 @@ struct EditorImageStage: View {
                     .position(x: imageRect.midX, y: imageRect.maxY - 24)
             }
 
+            // The tone curve is shaped on the photo, not on a screen of its own:
+            // the plot sits in this un-zoomed slot so it never scales with the
+            // picture, and fades while a finger is on it so the change reads.
+            if isShapingCurve {
+                EditorCurveOverlay(
+                    controller: controller,
+                    chrome: chrome,
+                    imageRect: imageRect,
+                    stageRect: stageRect
+                )
+                .transition(.opacity)
+            }
         }
     }
 

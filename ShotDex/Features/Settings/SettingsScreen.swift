@@ -17,8 +17,6 @@ struct SettingsScreen: View {
     @AppStorage("display.showFileSize") private var showsFileSize = false
     @AppStorage(SettingsKeys.showFileTypeBadge) private var showsFileTypeBadge = true
     @AppStorage("display.focalStyleEquivalent") private var showsEquivalentFocalLength = false
-    @AppStorage(SettingsKeys.accentTheme) private var accentThemeRawValue =
-        AppAccentTheme.default.rawValue
     @AppStorage(SettingsKeys.allowCellularIndexing) private var allowCellularIndexing = false
     @AppStorage(SettingsKeys.keepScreenAwake) private var keepScreenAwake = false
     @AppStorage(SettingsKeys.lookUpPlaces) private var looksUpPlaces = true
@@ -52,7 +50,6 @@ struct SettingsScreen: View {
         List {
             photoLibrarySection
             notificationsSection
-            appearanceSection
             displaySection
             exportSection
             cameraDatabaseSection
@@ -146,7 +143,7 @@ struct SettingsScreen: View {
         } header: {
             Text("Photo Library")
         } footer: {
-            Text("Indexing is how ShotDex learns what camera, lens and settings each photo was shot with. Videos are indexed too, so they show up in the library and in counts. For items kept in iCloud it downloads only the small part of the file holding that info — nothing is saved to this iPhone. Wi-Fi is always allowed.\n\nKeep Screen Awake stops the display from sleeping while indexing runs; after 1 minute without a touch the screen dims to save battery, and tapping the screen brings it back.\n\nIn Low Power Mode, automatic indexing pauses and the screen is left to sleep; you can still start indexing by hand, and it resumes automatically when you plug in a charger.\n\nLook Up Place Names turns your photos' coordinates into names you can search for — type Fukuoka and get the photos taken there. It asks Apple's mapping service for one address per place you have been, not per photo, and remembers each answer, so a library only costs that lookup once. This is the only part of indexing that sends anything off the device; with it off, everything else still works and searching by place simply finds nothing.")
+            Text("Indexing reads the camera, lens and exposure info out of each photo and video. Wi-Fi is always allowed; in Low Power Mode automatic indexing pauses.\n\nLook Up Place Names is the only step that leaves this device — one lookup per place, then remembered.")
         }
     }
 
@@ -259,7 +256,7 @@ struct SettingsScreen: View {
         } header: {
             Text("Notifications")
         } footer: {
-            Text("Once a day ShotDex tells you how many photos and videos you shot on that date in previous years, and how much space they take, so you can go clear out what you no longer want. Days with nothing to show are skipped.\n\nSizes come from the local index: while indexing is still running the total is reported as a minimum and grows as more files are read.\n\nReminders are scheduled a week at a time and refilled whenever you open ShotDex.")
+            Text("A daily reminder of what you shot on this date in past years, and how much space it takes. Days with nothing are skipped.")
         }
     }
 
@@ -298,64 +295,6 @@ struct SettingsScreen: View {
         }
     }
 
-    // MARK: Appearance
-
-    /// The accent applies the moment it is picked: the root view holds the same
-    /// `@AppStorage` key, so writing it re-tints the app under the open sheet.
-    ///
-    /// The choices are a row of tappable swatches, not a `Picker` — for a colour,
-    /// the colour itself is the whole answer, and a menu would hide all of them
-    /// behind a tap. `.borderless` keeps `List` from treating the row as one
-    /// button and firing every swatch at once.
-    private var appearanceSection: some View {
-        let selected = AppAccentTheme.resolved(accentThemeRawValue)
-        return Section {
-            VStack(alignment: .leading, spacing: 12) {
-                LabeledContent("Accent Color", value: selected.displayName)
-                HStack(spacing: 16) {
-                    ForEach(AppAccentTheme.allCases) { theme in
-                        accentSwatch(theme, isSelected: theme == selected)
-                    }
-                    Spacer(minLength: 0)
-                }
-            }
-            .padding(.vertical, 2)
-        } header: {
-            Text("Appearance")
-        } footer: {
-            Text("The accent color tints buttons, selections and highlights throughout ShotDex, including the photo editor. Amber and Sand are the colors of the app icon; iOS Default is the system blue.")
-        }
-    }
-
-    private func accentSwatch(_ theme: AppAccentTheme, isSelected: Bool) -> some View {
-        Button {
-            accentThemeRawValue = theme.rawValue
-        } label: {
-            Circle()
-                .fill(theme.color)
-                .frame(width: 32, height: 32)
-                .overlay {
-                    if isSelected {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(.white)
-                            // Keeps the check legible on the pale Sand swatch.
-                            .shadow(color: .black.opacity(0.55), radius: 1)
-                    }
-                }
-                .overlay {
-                    // Hairline so the pale swatches (Sand in dark mode) keep an
-                    // edge against the row background.
-                    Circle().strokeBorder(Color.primary.opacity(0.12), lineWidth: 1)
-                }
-                .frame(width: 44, height: 44)
-                .contentShape(Circle())
-        }
-        .buttonStyle(.borderless)
-        .accessibilityLabel(theme.displayName)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
-    }
-
     // MARK: Display
 
     private var displaySection: some View {
@@ -374,7 +313,7 @@ struct SettingsScreen: View {
         } header: {
             Text("Thumbnail Metadata")
         } footer: {
-            Text("File Type Badge shows RAW, JPG, HEIC or the video format in the top-left corner of each thumbnail.\n\nPinch the photo grid to change how many columns are shown.\n\nFile Size is recorded while indexing — photos indexed before this option existed fill it in automatically the next time indexing runs.")
+            Text("Pinch the photo grid to change how many columns it shows.")
         }
     }
 
@@ -393,7 +332,7 @@ struct SettingsScreen: View {
         } header: {
             Text("Export")
         } footer: {
-            Text("Built-in presets keep the original proportions at Original, 4K, 2048 px or 1080 px. Add named presets for apps that require exact dimensions.")
+            Text("Built-in presets keep the original proportions. Add named presets for exact dimensions.")
         }
     }
 
@@ -414,7 +353,7 @@ struct SettingsScreen: View {
 
     private var privacySection: some View {
         Section {
-            Text("ShotDex reads photo metadata entirely on your device. Your photos and metadata never leave your device.")
+            Text("Photos and metadata never leave this device.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
             Button("Clear Local Metadata Index", role: .destructive) {

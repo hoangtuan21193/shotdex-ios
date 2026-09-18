@@ -46,7 +46,10 @@ struct SmartAlbumDetailScreen: View {
         .navigationTitle(album.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
-        .toolbar(isSelecting ? .hidden : .automatic, for: .navigationBar, .tabBar)
+        // Selection keeps the navigation bar (its ⋯ and × live there, Photos
+        // style) so the title and the grid's pinned date header stay put; only
+        // the tab bar hides, clearing the bottom for `SelectionOverlay`.
+        .toolbar(isSelecting ? .hidden : .automatic, for: .tabBar)
         .disablesBackSwipe(isSelecting)
         .onChange(of: isSelecting) { navigation.hidesTabBar = isSelecting }
         .onChange(of: selectionSnapshot) {
@@ -172,7 +175,8 @@ struct SmartAlbumDetailScreen: View {
             },
             onSwipeEvent: handleSwipeEvent,
             onNearEnd: {},
-            onUserScroll: {}
+            onUserScroll: {},
+            removal: model.lastRemoval
         )
         .ignoresSafeArea(edges: .bottom)
     }
@@ -243,7 +247,7 @@ struct SmartAlbumDetailScreen: View {
 
     /// Compare panes follow the pick order of the selection.
     private func comparePhotos(_ model: SmartAlbumDetailModel) -> [ComparePhoto]? {
-        guard (2...CompareScreen.maxPhotoCount).contains(selectedIds.count) else { return nil }
+        guard selectedIds.count >= CompareScreen.minPhotoCount else { return nil }
         let photos = selectedIds.compactMap { id -> ComparePhoto? in
             guard let asset = model.asset(for: id) else { return nil }
             return ComparePhoto(metadata: model.metadata(for: id), asset: asset)
@@ -303,7 +307,7 @@ struct SmartAlbumDetailScreen: View {
         return SelectionBarModel(
             selectionCount: selectedIds.count,
             imageSelectionCount: selectedImageIDs(model).count,
-            thumbnailIds: selectedIds,
+            selectedIds: selectedIds,
             photoLibrary: photoLibrary,
             libraryQueries: dependencies.libraryQueries,
             isDeleting: isDeleting,
@@ -311,6 +315,7 @@ struct SmartAlbumDetailScreen: View {
             onShare: { shareSelected(model) },
             onClose: { withAnimation { stopSelecting() } },
             onDeselect: { toggleSelection(of: $0) },
+            onDeselectAll: { selectedIds = [] },
             onCollage: { presentCollage(model) },
             onVideo: { presentVideoStudio(model) },
             onCompare: { isComparePresented = true },
@@ -318,7 +323,9 @@ struct SmartAlbumDetailScreen: View {
             onDelete: { deleteSelected(model) },
             onAddToCollection: { addToCollection(model) },
             onExportEXIF: { exportEXIF(model) },
-            onDuplicate: { duplicateSelected(model) }
+            onDuplicate: { duplicateSelected(model) },
+            assetActions: dependencies.assetActions,
+            onSelectAll: { selectedIds = model.items.map(\.assetId) }
         )
     }
 
@@ -372,15 +379,14 @@ struct SmartAlbumDetailScreen: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        // During selection the nav bar is hidden entirely (controls live in the
-        // floating overlay), so this only renders while browsing.
+        // Browsing: just Select. Selecting: the shared ⋯ + × items below.
         ToolbarItem(placement: .topBarTrailing) {
             if model?.items.isEmpty == false, !isSelecting {
-                Button {
+                // Spelled out, like Photos.
+                Button("Select") {
                     isSelecting = true
-                } label: {
-                    Image(systemName: "checkmark.circle")
                 }
+                .tint(.primary)
                 .accessibilityLabel("Select photos")
             }
         }

@@ -17,7 +17,8 @@ struct SmartAlbumQueryMatchingTests {
         shutter: Double? = nil,
         focal: Double? = nil,
         date: Date? = nil,
-        favorite: Bool = false
+        favorite: Bool = false,
+        kind: MediaKind = .photo
     ) -> PhotoMetadata {
         let composer = MetadataComposer(sensorLookup: SensorLookup(records: [
             SensorCameraRecord(manufacturer: "Canon", model: "EOS R7", sensorFormat: "APS-C", cropFactor: 1.6, aliases: nil),
@@ -26,7 +27,7 @@ struct SmartAlbumQueryMatchingTests {
             assetId: filename ?? "asset",
             creationDate: date,
             modificationDate: date,
-            mediaType: 1,
+            mediaType: kind.storedValue,
             width: nil, height: nil, fileSize: nil,
             latitude: nil, longitude: nil,
             isFavorite: favorite,
@@ -65,6 +66,18 @@ struct SmartAlbumQueryMatchingTests {
         #expect(notRaw.op == .isNot)
         #expect(query(.all, notRaw).matches(row(filename: "IMG.JPG")))
         #expect(!query(.all, notRaw).matches(row(filename: "IMG.ARW")))
+    }
+
+    // MARK: Media type (mirrors `mediaType = ?` / `mediaType <> ?`)
+
+    @Test func mediaTypeMatchesVideoRowsOnly() {
+        let isVideo = SmartAlbumRule(field: .mediaType, op: .isExactly, text: MediaKind.video.rawValue)
+        #expect(query(.all, isVideo).matches(row(filename: "IMG.MOV", kind: .video)))
+        #expect(!query(.all, isVideo).matches(row(filename: "IMG.JPG", kind: .photo)))
+
+        let isNotVideo = SmartAlbumRule(field: .mediaType, op: .isNot, text: MediaKind.video.rawValue)
+        #expect(query(.all, isNotVideo).matches(row(filename: "IMG.JPG", kind: .photo)))
+        #expect(!query(.all, isNotVideo).matches(row(filename: "IMG.MOV", kind: .video)))
     }
 
     // MARK: Text (normalized + raw columns, case-insensitive)

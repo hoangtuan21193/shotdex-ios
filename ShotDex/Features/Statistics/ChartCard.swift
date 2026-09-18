@@ -228,6 +228,7 @@ struct ChartCard: View {
                     .font(.title3)
                     .foregroundStyle(.secondary)
             }
+            .tint(.primary)
             .accessibilityLabel("\(spec.title) options")
         }
     }

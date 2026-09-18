@@ -52,6 +52,9 @@ final class OnThisDayModel: PhotoBrowsingSource {
     /// toggle, a viewer download that indexed a row) — visible cells
     /// reconfigure in place and the scroll position is kept.
     private(set) var contentRefreshGeneration = 0
+    /// Latest in-place deletion, published in the same update as the pruned
+    /// list so the grid animates the tiles out instead of reloading.
+    private(set) var lastRemoval: PhotoGridRemoval?
 
     /// Year groups in the shared grid's section contract.
     var gridSections: [PhotoGridCustomSection] {
@@ -143,10 +146,19 @@ final class OnThisDayModel: PhotoBrowsingSource {
                 Self.loadSnapshot(for: date, calendar: calendar, database: database)
             }.value
             guard generation == reloadGeneration else { return }
+            // The asset-change reload that follows our own delete returns the
+            // list we already pruned: refresh tiles in place, no reload, no
+            // scroll jump.
+            let sameList = snapshot.photos.count == photos.count
+                && zip(snapshot.photos, photos).allSatisfy { $0.assetId == $1.assetId }
             photos = snapshot.photos
             assetsById = snapshot.assetsById
             rebuildSections()
-            contentGeneration &+= 1
+            if sameList {
+                contentRefreshGeneration &+= 1
+            } else {
+                contentGeneration &+= 1
+            }
             isLoading = false
         }
     }
@@ -208,11 +220,14 @@ final class OnThisDayModel: PhotoBrowsingSource {
         // PhotoKit is the source of truth; prune the DB rows right away so
         // the Library grid doesn't show stale entries until the next index run.
         try? metadataStore.deleteAssets(ids: Array(ids))
+        lastRemoval = .next(after: lastRemoval, removing: ids)
         photos.removeAll { ids.contains($0.assetId) }
         for id in ids {
             assetsById.removeValue(forKey: id)
         }
         rebuildSections()
+        // Consumed by the grid together with `lastRemoval`; the fallback
+        // reload when the removal cannot be applied in place.
         contentGeneration &+= 1
     }
 

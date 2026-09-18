@@ -5,19 +5,59 @@ import CoreGraphics
 /// the preview flexes. Everything here is read by the screen, the timeline, and
 /// the contextual sheets so no view invents its own measurement.
 ///
-/// Vertical map: top band · preview (flex) · timeline 248 · toolbar 62.
-/// The timeline is a viewport: its lane content is taller than 248 whenever the
-/// overlay/music lanes stack up, and scrolls vertically inside it.
+/// Vertical map: top band · preview · timeline · toolbar 62 · bottom bar 50.
+/// The preview takes its aspect-fit height and the timeline gets everything
+/// left over (never less than `timelineMinimumHeight`); a portrait canvas
+/// flips that — the preview is capped so the timeline keeps its minimum. The
+/// timeline is a viewport: its lane content is taller whenever the overlay /
+/// music lanes stack up, and scrolls vertically inside it. `stackLayout`
+/// is the one place these heights are decided.
 enum VideoStudioMetrics {
     // MARK: Screen bands
 
-    static let timelineHeight: CGFloat = 248
+    /// The least the timeline ever gets: ruler + one overlay lane + video lane +
+    /// one music lane, all visible without vertical scrolling.
+    static let timelineMinimumHeight: CGFloat = 248
+    /// The least the preview ever gets, so a portrait canvas under the contextual
+    /// panel still shows the frame being edited.
+    static let previewMinimumHeight: CGFloat = 150
+    /// Gap between the preview and the timeline.
+    static let previewTimelineGap: CGFloat = 8
     static let toolbarHeight: CGFloat = 62
     /// Back · export estimate · Export pill. Always on screen.
     static let bottomBarHeight: CGFloat = 50
     /// Height of the contextual panel (selection + global tools), above the
     /// device's bottom safe inset. It slides over the bars, never displaces them.
     static let sheetHeight: CGFloat = 264
+    /// How far the contextual panel reaches above the toolbar and bottom bar.
+    /// The stack lifts by this much while the panel is up, so the whole timeline
+    /// stays visible above it and the selected band never hides under the panel.
+    static var sheetLift: CGFloat { sheetHeight - toolbarHeight - bottomBarHeight }
+
+    /// The preview / timeline split for one screen. Pure, so it is unit-tested.
+    struct StackLayout: Equatable {
+        var preview: CGFloat
+        var timeline: CGFloat
+        /// Spacer under the timeline while the panel is up (`sheetLift`), zero
+        /// otherwise.
+        var lift: CGFloat
+    }
+
+    static func stackLayout(
+        screen: CGSize,
+        bandHeight: CGFloat,
+        bottomInset: CGFloat,
+        canvas: CGSize,
+        presentsSheet: Bool
+    ) -> StackLayout {
+        let lift = presentsSheet ? sheetLift : 0
+        let fixed = bandHeight + previewTimelineGap + toolbarHeight + bottomBarHeight + bottomInset + lift
+        let usable = max(0, screen.height - fixed)
+        let natural = canvas.width > 0 ? screen.width * canvas.height / canvas.width : usable
+        let previewCap = max(previewMinimumHeight, usable - timelineMinimumHeight)
+        let preview = min(max(natural, previewMinimumHeight), previewCap)
+        return StackLayout(preview: preview, timeline: max(0, usable - preview), lift: lift)
+    }
 
     // MARK: Sheet tiers
 
@@ -67,7 +107,7 @@ enum VideoStudioMetrics {
     }
 
     /// Height of the scrolling viewport under the pinned ruler.
-    static var laneViewportHeight: CGFloat {
+    static func laneViewportHeight(timelineHeight: CGFloat) -> CGFloat {
         timelineHeight - timelineTopPadding - rulerHeight - rulerToTracks - scrollbarHeight - 2
     }
 

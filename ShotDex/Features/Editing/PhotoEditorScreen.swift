@@ -50,7 +50,6 @@ struct PhotoEditorScreen: View {
     @State private var isSignatureNamePresented = false
     @State private var signatureName = ""
     @State private var drawSession = EditorDrawSession()
-    @State private var isCurveEditorPresented = false
     /// Ties the band's histogram pill to the floating card so expanding /
     /// collapsing animates as one object moving between the two.
     @Namespace private var histogramNamespace
@@ -72,13 +71,6 @@ struct PhotoEditorScreen: View {
         }
         .preferredColorScheme(.dark)
         .statusBarHidden()
-        .fullScreenCover(isPresented: $isCurveEditorPresented) {
-            if let controller {
-                EditorCurveEditor(controller: controller) {
-                    isCurveEditorPresented = false
-                }
-            }
-        }
         .task {
             guard controller == nil else { return }
             let newController = PhotoEditorController(
@@ -97,11 +89,9 @@ struct PhotoEditorScreen: View {
             controller?.close()
         }
         .interactiveDismissDisabled(controller?.hasSessionChanges == true)
-        .confirmationDialog(
-            "Discard this editing session?",
-            isPresented: $isDiscardConfirmationPresented,
-            titleVisibility: .visible
-        ) {
+        // An alert, not a confirmation dialog: on iOS 26 the dialog floats over the
+        // photo with its cancel-role button hidden, so only the red Discard shows.
+        .alert("Discard this editing session?", isPresented: $isDiscardConfirmationPresented) {
             Button("Discard Changes", role: .destructive) { dismiss() }
             Button("Keep Editing", role: .cancel) {}
         }
@@ -312,7 +302,8 @@ struct PhotoEditorScreen: View {
                 // The only thing allowed over the image is the histogram card, and
                 // only when the user taps the band mini open — every other control
                 // lives in the panel's command row. It parks back to the mini on
-                // tap / close.
+                // tap / close. (The curve graph is the one exception, and it is
+                // drawn by the stage itself; the card stays parked while it is up.)
                 EditorImageStage(
                     controller: controller,
                     chrome: chrome,
@@ -321,7 +312,7 @@ struct PhotoEditorScreen: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .overlay {
                         GeometryReader { proxy in
-                            if !chrome.isHistogramCollapsed {
+                            if !chrome.isHistogramCollapsed, chrome.selectedGroup != .curve {
                                 EditorHistogramCard(
                                     histogram: controller.histogram,
                                     chrome: chrome,
@@ -609,6 +600,24 @@ struct PhotoEditorScreen: View {
                     Label("Flip Horizontal", systemImage: "arrow.left.and.right.righttriangle.left.righttriangle.right")
                 }
                 Divider()
+            } else if chrome.selectedGroup == .curve {
+                Button {
+                    withAnimation(EditorTheme.animation) {
+                        chrome.isCurveGraphHidden.toggle()
+                    }
+                } label: {
+                    Label(
+                        chrome.isCurveGraphHidden ? "Show Graph" : "Hide Graph",
+                        systemImage: "chart.xyaxis.line"
+                    )
+                }
+                Button {
+                    controller.resetAllCurves()
+                } label: {
+                    Label("Reset Curve", systemImage: "arrow.counterclockwise")
+                }
+                .disabled(controller.recipe.curve.isIdentity)
+                Divider()
             } else if controller.editingMaskAdjustments {
                 Button {
                     controller.setMaskOverlay(!controller.showsMaskOverlay)
@@ -782,10 +791,10 @@ struct PhotoEditorScreen: View {
     @ViewBuilder
     private func toolPanel(_ controller: PhotoEditorController) -> some View {
         switch chrome.selectedGroup {
-        case .light:
-            lightContent(controller)
-        case .effects, .detail, .optics, .geo:
+        case .light, .effects, .detail, .optics, .geo:
             adjustmentContent(chrome.selectedGroup, controller: controller)
+        case .curve:
+            EditorCurvePanel(controller: controller, chrome: chrome)
         case .color:
             colorContent(controller)
         case .colorMix:
@@ -894,46 +903,6 @@ struct PhotoEditorScreen: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// The Light group: the tone rows with a Curve entry beneath them that opens
-    /// the full-screen point-curve editor.
-    private func lightContent(_ controller: PhotoEditorController) -> some View {
-        EditorAdjustmentGroupsView(
-            controller: controller,
-            chrome: chrome,
-            groups: catalogGroups(for: .light, controller: controller)
-        ) {
-            curveEntry(controller)
-        }
-    }
-
-    private func curveEntry(_ controller: PhotoEditorController) -> some View {
-        Button {
-            isCurveEditorPresented = true
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "chart.xyaxis.line")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(EditorTheme.secondaryText)
-                Text("Curve")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.white)
-                Spacer(minLength: 0)
-                if !controller.recipe.curve.isIdentity {
-                    Circle()
-                        .fill(EditorTheme.accent)
-                        .frame(width: 6, height: 6)
-                }
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(EditorTheme.secondaryText)
-            }
-            .padding(.horizontal, 14)
-            .frame(height: EditorLayoutMetrics.editorRowHeight + 6)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
     /// The Color group: the base Temp / Tint / Vibrance / Saturation rows. The HSL
     /// mixer is now its own nav chip (`.colorMix`), not a sub-view reached from a
     /// row here.
@@ -1002,8 +971,12 @@ struct PhotoEditorScreen: View {
             chrome.selectedGroup = group
         }
         switch group {
-        case .light, .color, .colorMix, .effects, .detail, .optics, .geo:
+        case .light, .curve, .color, .colorMix, .effects, .detail, .optics, .geo:
             controller.editGlobalAdjustments()
+            // The graph takes the photo; a card floating over both would be noise.
+            if group == .curve {
+                chrome.collapseHistogram()
+            }
         case .mask:
             controller.selectedTool = .masks
             controller.scheduleRender()
@@ -1139,8 +1112,9 @@ private struct PhotoEditorSaveSheet: View {
 /// centre and switches to it — one gesture, no second tap; tapping an off-centre chip
 /// scrolls it to the centre and switches too. Half-viewport margins on both ends let
 /// the first and last groups reach the centre; a fade dissolves each edge into the
-/// panel colour. The centred chip is accent-tinted; the rest are dim. Every change
-/// gives a selection haptic.
+/// panel colour. The centred chip is accent-tinted; the rest are dim — that tint is
+/// the whole selection indicator (the accent notch rail that used to frame the
+/// centred chip was dropped as visual noise). Every change gives a selection haptic.
 private struct EditorGroupWheel: View {
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
@@ -1185,23 +1159,7 @@ private struct EditorGroupWheel: View {
                 withAnimation(EditorTheme.animation) { centered = group }
             }
             .overlay { edgeFades }
-            .overlay { notchRail }
         }
-    }
-
-    /// The selection indicator: a rail across the top of the wheel that dips into a
-    /// rounded pocket around the chip at the centre — the open group nests in the
-    /// notch, the rest sit under the rail. Fixed at the centre; chips scroll through
-    /// the pocket. Solid accent, drawn *over* the edge fades so it stays fully
-    /// coloured out to both ends of the wheel.
-    private var notchRail: some View {
-        WheelNotchRail(
-            pocketWidth: EditorLayoutMetrics.editorGroupChipWidth + 10,
-            pocketHeight: EditorLayoutMetrics.editorGroupChipHeight + 8,
-            corner: 10
-        )
-        .stroke(EditorTheme.accent, style: StrokeStyle(lineWidth: 2, lineJoin: .round))
-        .allowsHitTesting(false)
     }
 
     private func chip(_ group: EditorGroup) -> some View {
@@ -1250,57 +1208,3 @@ private struct EditorGroupWheel: View {
     }
 }
 
-/// The wheel's selection indicator, drawn as one stroked path: a horizontal rail
-/// near the top that detours down into a rounded-bottom pocket cradling the
-/// centred chip, then returns to the rail. The pocket is centred in `rect`; the
-/// selected chip is always there.
-private struct WheelNotchRail: Shape {
-    /// Width of the pocket's flat bottom span — chip width plus a little breathing
-    /// room each side.
-    let pocketWidth: CGFloat
-    /// Height of the pocket — the chip height plus a little room, so the whole chip
-    /// (icon *and* label) nests inside the notch.
-    let pocketHeight: CGFloat
-    /// Corner radius of the four pocket bends.
-    let corner: CGFloat
-
-    func path(in rect: CGRect) -> Path {
-        // Pocket is centred on the chip row; the rail runs level with the pocket's
-        // top edge and the pocket dips one chip-height-plus below it.
-        let cy = rect.midY
-        let railY = cy - pocketHeight / 2
-        let pocketBottom = cy + pocketHeight / 2
-        let cx = rect.midX
-        let half = pocketWidth / 2
-        let r = min(corner, (pocketBottom - railY) / 2, half)
-
-        var p = Path()
-        p.move(to: CGPoint(x: rect.minX, y: railY))
-        p.addLine(to: CGPoint(x: cx - half - r, y: railY))
-        // Rail dips into the left wall.
-        p.addQuadCurve(
-            to: CGPoint(x: cx - half, y: railY + r),
-            control: CGPoint(x: cx - half, y: railY)
-        )
-        p.addLine(to: CGPoint(x: cx - half, y: pocketBottom - r))
-        // Bottom-left bend.
-        p.addQuadCurve(
-            to: CGPoint(x: cx - half + r, y: pocketBottom),
-            control: CGPoint(x: cx - half, y: pocketBottom)
-        )
-        p.addLine(to: CGPoint(x: cx + half - r, y: pocketBottom))
-        // Bottom-right bend.
-        p.addQuadCurve(
-            to: CGPoint(x: cx + half, y: pocketBottom - r),
-            control: CGPoint(x: cx + half, y: pocketBottom)
-        )
-        p.addLine(to: CGPoint(x: cx + half, y: railY + r))
-        // Right wall climbs back to the rail.
-        p.addQuadCurve(
-            to: CGPoint(x: cx + half + r, y: railY),
-            control: CGPoint(x: cx + half, y: railY)
-        )
-        p.addLine(to: CGPoint(x: rect.maxX, y: railY))
-        return p
-    }
-}

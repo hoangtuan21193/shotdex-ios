@@ -83,6 +83,16 @@
     "%@ settings" : {
 
     },
+    "%@, %@%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@%3$@"
+          }
+        }
+      }
+    },
     "%@, %lld photos" : {
       "localizations" : {
         "en" : {
@@ -126,6 +136,16 @@
         }
       }
     },
+    "%lld %@ not scanned yet." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld %2$@ not scanned yet."
+          }
+        }
+      }
+    },
     "%lld failed" : {
 
     },
@@ -139,6 +159,9 @@
 
     },
     "%lld items still waiting for iCloud." : {
+
+    },
+    "%lld Photos" : {
 
     },
     "%lld photos without this info." : {
@@ -188,6 +211,9 @@
     "255" : {
 
     },
+    "A daily reminder of what you shot on this date in past years, and how much space it takes. Days with nothing are skipped." : {
+
+    },
     "A mask limits Light, Color, Detail and Effects to one area." : {
 
     },
@@ -195,9 +221,6 @@
 
     },
     "About" : {
-
-    },
-    "Accent Color" : {
 
     },
     "Access" : {
@@ -266,6 +289,9 @@
     "Advanced" : {
 
     },
+    "Advanced Filter…" : {
+
+    },
     "Advanced Search" : {
 
     },
@@ -278,6 +304,9 @@
     "All" : {
 
     },
+    "All Items" : {
+
+    },
     "All Time" : {
 
     },
@@ -287,9 +316,6 @@
     "Altitude" : {
 
     },
-    "Angle-of-view groups use full-frame equivalent focal lengths." : {
-
-    },
     "Animate" : {
 
     },
@@ -297,9 +323,6 @@
 
     },
     "Aperture" : {
-
-    },
-    "Appearance" : {
 
     },
     "Apply" : {
@@ -338,6 +361,9 @@
     "Border" : {
 
     },
+    "Brighten" : {
+
+    },
     "Bring Forward" : {
 
     },
@@ -347,7 +373,7 @@
     "Built-in" : {
 
     },
-    "Built-in presets keep the original proportions at Original, 4K, 2048 px or 1080 px. Add named presets for apps that require exact dimensions." : {
+    "Built-in presets keep the original proportions. Add named presets for exact dimensions." : {
 
     },
     "Bulk Fill presets use a centered crop for every photo." : {
@@ -407,9 +433,6 @@
     "Clear" : {
 
     },
-    "Clear All" : {
-
-    },
     "Clear Filters" : {
 
     },
@@ -417,6 +440,9 @@
 
     },
     "Clear Local Metadata Index" : {
+
+    },
+    "Clear Selection" : {
 
     },
     "Clear Strokes" : {
@@ -512,6 +538,9 @@
     "Couldn't start writing." : {
 
     },
+    "Counts as one of the conditions, so it widens the match rather than narrowing it." : {
+
+    },
     "Create" : {
 
     },
@@ -534,9 +563,6 @@
 
     },
     "Crossfade" : {
-
-    },
-    "Curve" : {
 
     },
     "Custom" : {
@@ -578,6 +604,15 @@
 
     },
     "Delete %@" : {
+
+    },
+    "Delete %lld marked photos" : {
+
+    },
+    "Delete %lld Photos" : {
+
+    },
+    "Delete 1 Photo" : {
 
     },
     "Delete condition" : {
@@ -648,6 +683,9 @@
     "Downloading from iCloud" : {
 
     },
+    "Drag on the graph to shape the curve" : {
+
+    },
     "Drag on the photo — the loupe shows the pixel under your finger. Lift to pick it." : {
 
     },
@@ -667,6 +705,15 @@
 
     },
     "Duplicate" : {
+
+    },
+    "Duplicates" : {
+
+    },
+    "Duplicates Error" : {
+
+    },
+    "Duplicates, %@" : {
 
     },
     "Edit" : {
@@ -702,10 +749,16 @@
     "Every camera in your library has a known sensor format." : {
 
     },
+    "Exact" : {
+
+    },
     "Export" : {
 
     },
     "Export cancelled" : {
+
+    },
+    "Export EXIF (CSV)" : {
 
     },
     "Export Video" : {
@@ -738,13 +791,13 @@
     "File Type" : {
 
     },
-    "File Type Badge shows RAW, JPG, HEIC or the video format in the top-left corner of each thumbnail.\n\nPinch the photo grid to change how many columns are shown.\n\nFile Size is recorded while indexing — photos indexed before this option existed fill it in automatically the next time indexing runs." : {
-
-    },
     "Filter" : {
 
     },
-    "Filters" : {
+    "Filter and sort" : {
+
+    },
+    "Filter:" : {
 
     },
     "Finding place name…" : {
@@ -783,6 +836,9 @@
     "Group by" : {
 
     },
+    "Grouping duplicates…" : {
+
+    },
     "HEIC" : {
 
     },
@@ -793,6 +849,9 @@
 
     },
     "Hide %@" : {
+
+    },
+    "Hide Graph" : {
 
     },
     "Hide Mask Overlay" : {
@@ -872,6 +931,9 @@
     "Includes identifiers, serial numbers, internal Exif/TIFF values, resources, and vendor-specific binary blocks." : {
 
     },
+    "Index your library from the Library tab, then come back to find duplicates." : {
+
+    },
     "Indexed photo info is ready. Detailed raw metadata is still being read in the background." : {
 
     },
@@ -894,9 +956,6 @@
     "Indexing %lld%%" : {
 
     },
-    "Indexing is how ShotDex learns what camera, lens and settings each photo was shot with. Videos are indexed too, so they show up in the library and in counts. For items kept in iCloud it downloads only the small part of the file holding that info — nothing is saved to this iPhone. Wi-Fi is always allowed.\n\nKeep Screen Awake stops the display from sleeping while indexing runs; after 1 minute without a touch the screen dims to save battery, and tapping the screen brings it back.\n\nIn Low Power Mode, automatic indexing pauses and the screen is left to sleep; you can still start indexing by hand, and it resumes automatically when you plug in a charger.\n\nLook Up Place Names turns your photos' coordinates into names you can search for — type Fukuoka and get the photos taken there. It asks Apple's mapping service for one address per place you have been, not per photo, and remembers each answer, so a library only costs that lookup once. This is the only part of indexing that sends anything off the device; with it off, everything else still works and searching by place simply finds nothing." : {
-
-    },
     "Indexing paused — waiting for Wi-Fi" : {
 
     },
@@ -904,6 +963,9 @@
 
     },
     "Indexing paused, waiting for Wi-Fi" : {
+
+    },
+    "Indexing reads the camera, lens and exposure info out of each photo and video. Wi-Fi is always allowed; in Low Power Mode automatic indexing pauses.\n\nLook Up Place Names is the only step that leaves this device — one lookup per place, then remembered." : {
 
     },
     "Indexing, %lld percent" : {
@@ -924,16 +986,25 @@
     "JPEG" : {
 
     },
+    "Keep" : {
+
+    },
     "Keep Editing" : {
 
     },
     "Keep EXIF of first photo" : {
 
     },
+    "Keep Only This" : {
+
+    },
     "Keep Screen Awake While Indexing" : {
 
     },
     "Last Indexed" : {
+
+    },
+    "Last scan %@" : {
 
     },
     "Layers" : {
@@ -948,10 +1019,16 @@
     "Less than a minute left" : {
 
     },
+    "Library up to date." : {
+
+    },
     "Limited Access" : {
 
     },
     "Limits how many bars/slices appear." : {
+
+    },
+    "Linear" : {
 
     },
     "Loading full-quality preview…" : {
@@ -978,6 +1055,9 @@
     "Map showing where this item was captured" : {
 
     },
+    "Mark for Deletion" : {
+
+    },
     "Mask actions" : {
 
     },
@@ -999,10 +1079,16 @@
     "Matches ^[%lld photo](inflect: true)." : {
 
     },
+    "Matte" : {
+
+    },
     "Max" : {
 
     },
     "Measure" : {
+
+    },
+    "Media Type" : {
 
     },
     "Megapixels" : {
@@ -1015,6 +1101,9 @@
 
     },
     "mm" : {
+
+    },
+    "More" : {
 
     },
     "More editor actions" : {
@@ -1072,6 +1161,16 @@
     "New Smart Album" : {
 
     },
+    "No %@ duplicates among %lld photos." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No %1$@ duplicates among %2$lld photos."
+          }
+        }
+      }
+    },
     "No Access to Photos" : {
 
     },
@@ -1082,6 +1181,12 @@
 
     },
     "No Date" : {
+
+    },
+    "No Duplicates" : {
+
+    },
+    "No Indexed Photos" : {
 
     },
     "No layers yet" : {
@@ -1123,9 +1228,6 @@
     "No Unknown Cameras" : {
 
     },
-    "No values indexed yet" : {
-
-    },
     "None" : {
 
     },
@@ -1133,6 +1235,9 @@
 
     },
     "Not favorite" : {
+
+    },
+    "Not Scanned Yet" : {
 
     },
     "nothing downloaded yet" : {
@@ -1183,6 +1288,7 @@
     },
     "Once a day ShotDex tells you how many photos and videos you shot on that date in previous years, and how much space they take, so you can go clear out what you no longer want. Days with nothing to show are skipped.\n\nSizes come from the local index: while indexing is still running the total is reported as a minimum and grows as more files are read.\n\nReminders are scheduled a week at a time and refilled whenever you open ShotDex." : {
       "comment" : "Footer of the Notifications settings section.",
+      "extractionState" : "stale",
       "localizations" : {
         "vi" : {
           "stringUnit" : {
@@ -1254,6 +1360,9 @@
     "Photo set aside" : {
 
     },
+    "Photos and metadata never leave this device." : {
+
+    },
     "photos and videos per minute" : {
 
     },
@@ -1269,6 +1378,9 @@
     "Photos must match every condition below." : {
 
     },
+    "Photos Only" : {
+
+    },
     "Pick a Color from the Photo" : {
 
     },
@@ -1279,6 +1391,9 @@
 
     },
     "Pick the sensor format for each camera to include it in statistics and equivalent focal length calculations." : {
+
+    },
+    "Pinch the photo grid to change how many columns it shows." : {
 
     },
     "Place name needs a network connection. The saved coordinate remains available offline." : {
@@ -1312,6 +1427,9 @@
 
     },
     "Preparing original…" : {
+
+    },
+    "Preparing scan…" : {
 
     },
     "Preset" : {
@@ -1447,6 +1565,9 @@
     "Replace" : {
 
     },
+    "Rescan" : {
+
+    },
     "Reset" : {
 
     },
@@ -1456,13 +1577,16 @@
     "Reset all custom camera mappings?" : {
 
     },
+    "Reset Curve" : {
+
+    },
     "Reset Custom Mappings" : {
 
     },
     "Reset Mappings" : {
 
     },
-    "Resize and Compress" : {
+    "Resize" : {
 
     },
     "Retry" : {
@@ -1540,8 +1664,24 @@
     "Saving to Photos…" : {
 
     },
+    "Scan Library" : {
+
+    },
+    "Scan your library once; the results are kept and you rescan whenever you like." : {
+
+    },
     "Scanning %@…" : {
 
+    },
+    "Scanning %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Scanning %1$lld of %2$lld"
+          }
+        }
+      }
     },
     "Screenshots" : {
 
@@ -1550,6 +1690,9 @@
 
     },
     "Search again for %@" : {
+
+    },
+    "Select" : {
 
     },
     "Select a start date" : {
@@ -1600,9 +1743,6 @@
     "ShotDex only analyzes the photos you selected." : {
 
     },
-    "ShotDex reads photo metadata entirely on your device. Your photos and metadata never leave your device." : {
-
-    },
     "ShotDex will ask Photos to remove every copy already exported." : {
 
     },
@@ -1610,6 +1750,9 @@
 
     },
     "Show All Raw Metadata" : {
+
+    },
+    "Show Graph" : {
 
     },
     "Show Mask Overlay" : {
@@ -1637,6 +1780,9 @@
 
     },
     "Shutter Speed" : {
+
+    },
+    "Similar" : {
 
     },
     "Size" : {
@@ -1669,13 +1815,16 @@
     "Soft Glow" : {
 
     },
+    "Soft S" : {
+
+    },
     "Some exported copies may remain in Photos" : {
 
     },
     "Something Went Wrong" : {
 
     },
-    "Sort" : {
+    "Sort By" : {
 
     },
     "Source" : {
@@ -1691,6 +1840,9 @@
 
     },
     "Stop preview" : {
+
+    },
+    "Strong S" : {
 
     },
     "Style" : {
@@ -1718,9 +1870,6 @@
 
     },
     "Text" : {
-
-    },
-    "The accent color tints buttons, selections and highlights throughout ShotDex, including the photo editor. Amber and Sand are the colors of the app icon; iOS Default is the system blue." : {
 
     },
     "The crop applies when you leave this tab or save." : {
@@ -1775,6 +1924,9 @@
     "Today" : {
 
     },
+    "Tone curve, %@ channel" : {
+
+    },
     "Top %lld series" : {
 
     },
@@ -1782,6 +1934,9 @@
 
     },
     "Try: Fukuoka · f > 1.2 · ISO trên 3200 · trước 2020 · 85mm" : {
+
+    },
+    "Type a caption" : {
 
     },
     "Unable to Share" : {
@@ -1794,6 +1949,9 @@
 
     },
     "Unknown Cameras" : {
+
+    },
+    "Unmark" : {
 
     },
     "Unmute" : {
@@ -1811,6 +1969,9 @@
     "Use Cellular Data for Indexing" : {
 
     },
+    "Utilities" : {
+
+    },
     "Value" : {
 
     },
@@ -1821,6 +1982,9 @@
 
     },
     "Video progress" : {
+
+    },
+    "Videos Only" : {
 
     },
     "Vignette Pulse" : {

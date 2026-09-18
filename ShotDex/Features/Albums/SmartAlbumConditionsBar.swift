@@ -71,6 +71,10 @@ extension SmartAlbumRule {
         case .choice:
             let value = displayValue
             guard !value.isEmpty else { return compactFieldName }
+            // "Video" already names itself, the way a place name does.
+            if field == .mediaType {
+                return op == .isNot ? "≠ \(value)" : value
+            }
             return op == .isNot
                 ? "\(compactFieldName) ≠ \(value)"
                 : "\(compactFieldName) \(value)"
@@ -150,6 +154,7 @@ extension SmartAlbumRule {
         case .lens: "lens"
         case .sensorFormat: "sensor"
         case .fileType, .filename: "file"
+        case .mediaType: "media"
         case .place: "place"
         case .iso: "ISO"
         case .aperture: "f"
@@ -182,6 +187,9 @@ extension SmartAlbumRule {
         case .choice:
             if field == .fileType {
                 return PhotoFileType(rawValue: text)?.displayName ?? text
+            }
+            if field == .mediaType {
+                return MediaKind(rawValue: text)?.displayName ?? text
             }
             return text // sensor-format rawValue is already its display name
         case .number:

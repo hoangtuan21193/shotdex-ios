@@ -44,14 +44,8 @@ struct StatisticsScreen: View {
             ToolbarItem(placement: .topBarLeading) {
                 SettingsButton()
             }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    editorTarget = .new
-                } label: {
-                    Image(systemName: "plus")
-                }
-                .accessibilityLabel("Add chart")
-            }
+            // Reorder first, then a spacer, so "+" sits on its own Liquid Glass
+            // capsule at the trailing edge instead of sharing one with it.
             ToolbarItem(placement: .topBarTrailing) {
                 if !(model?.charts.isEmpty ?? true) {
                     Button {
@@ -60,8 +54,21 @@ struct StatisticsScreen: View {
                         Image(systemName: editMode.isEditing ? "checkmark" : "arrow.up.arrow.down")
                             .font(.callout)
                     }
+                    .tint(.primary)
                     .accessibilityLabel(editMode.isEditing ? "Done" : "Reorder charts")
                 }
+            }
+            if #available(iOS 26.0, *) {
+                ToolbarSpacer(.fixed, placement: .topBarTrailing)
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    editorTarget = .new
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .tint(.primary)
+                .accessibilityLabel("Add chart")
             }
         }
         .environment(\.editMode, $editMode)

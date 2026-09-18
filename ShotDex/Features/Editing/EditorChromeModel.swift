@@ -46,6 +46,14 @@ final class EditorChromeModel {
     var numericEntryText = ""
     var undoToast: UndoToast?
 
+    // Curve tool presentation state.
+    /// Which series the on-photo graph shows and edits: the RGB master or one
+    /// channel. Shared by the panel's chips and the overlay on the stage.
+    var curveChannel: ToneCurveChannel = .rgb
+    /// The ⋯ menu's Hide Graph: the photo is shown bare while the Curve group is
+    /// open, and the photo's own gestures come back. Session-only.
+    var isCurveGraphHidden = false
+
     // Color tool presentation state.
     var gradingRegion: ColorGradingRegion = .midtones
     /// The eyedropper is armed: the next tap on the photo samples a point color.

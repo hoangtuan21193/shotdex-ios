@@ -14,7 +14,49 @@ struct RuleBuilderSections: View {
     /// Live count of matching photos; nil hides the footer.
     var matchCount: Int?
 
+    /// Photo-vs-video as a scope control instead of a condition row. Backed by a
+    /// single `.mediaType` rule so it compiles through the same SQL builder as
+    /// everything else; "All" simply removes it.
+    private var mediaKind: Binding<MediaKind?> {
+        Binding(
+            get: {
+                query.rules
+                    .first { $0.field == .mediaType && $0.op == .isExactly }
+                    .flatMap { MediaKind(rawValue: $0.text) }
+            },
+            set: { kind in
+                query.rules.removeAll { $0.field == .mediaType && $0.op == .isExactly }
+                guard let kind else { return }
+                query.rules.insert(
+                    SmartAlbumRule(field: .mediaType, op: .isExactly, text: kind.rawValue),
+                    at: 0
+                )
+            }
+        )
+    }
+
+    /// Editable bindings for the conditions shown as rows.
+    private var visibleRuleBindings: [Binding<SmartAlbumRule>] {
+        Array($query.rules).filter { $0.wrappedValue.field != .mediaType }
+    }
+
     var body: some View {
+        Section {
+            Picker("Media Type", selection: mediaKind) {
+                Text("All").tag(MediaKind?.none)
+                ForEach(MediaKind.allCases) { kind in
+                    Text(kind.displayName).tag(MediaKind?.some(kind))
+                }
+            }
+            .pickerStyle(.segmented)
+        } header: {
+            Text("Media Type")
+        } footer: {
+            if query.matchMode == .any, mediaKind.wrappedValue != nil {
+                Text("Counts as one of the conditions, so it widens the match rather than narrowing it.")
+            }
+        }
+
         Section {
             Picker("Match", selection: $query.matchMode) {
                 Text("All").tag(RuleMatchMode.all)
@@ -29,7 +71,10 @@ struct RuleBuilderSections: View {
         }
 
         Section {
-            ForEach($query.rules) { $rule in
+            // The media-type rule has its own control above, so it is filtered
+            // out of the rows rather than skipped inside the `ForEach` — swipe
+            // offsets have to line up with what is actually on screen.
+            ForEach(visibleRuleBindings, id: \.wrappedValue.id) { $rule in
                 SmartAlbumRuleRow(
                     rule: $rule,
                     brands: brands,
@@ -39,7 +84,10 @@ struct RuleBuilderSections: View {
                     onDelete: { query.rules.removeAll { $0.id == rule.id } }
                 )
             }
-            .onDelete { query.rules.remove(atOffsets: $0) }
+            .onDelete { offsets in
+                let deleted = Set(offsets.map { visibleRuleBindings[$0].wrappedValue.id })
+                query.rules.removeAll { deleted.contains($0.id) }
+            }
 
             Button {
                 query.rules.append(SmartAlbumRule())

@@ -24,6 +24,9 @@ final class SmartAlbumDetailModel {
     /// Bumped when an async PHAsset chunk becomes available; visible cells
     /// reconfigure in place without rebuilding/re-anchoring the grid.
     private(set) var contentRefreshGeneration = 0
+    /// Latest in-place deletion, published in the same update as the pruned
+    /// list so the grid animates the tiles out instead of reloading.
+    private(set) var lastRemoval: PhotoGridRemoval?
     private(set) var isLoading = false
 
     var matchCount: Int { items.count }
@@ -59,9 +62,17 @@ final class SmartAlbumDetailModel {
         isLoading = true
         defer { isLoading = false }
         let rows = (try? await libraryQueries.gridItems(matching: query, sort: .default)) ?? []
+        // The library-change reload after our own delete returns the list we
+        // already pruned: refresh tiles in place, keep the scroll position.
+        let sameList = rows.count == items.count
+            && zip(rows, items).allSatisfy { $0.assetId == $1.assetId }
         items = rows
-        assetCache.replaceKeys(items.map(\.assetId))
-        contentGeneration &+= 1
+        if sameList {
+            contentRefreshGeneration &+= 1
+        } else {
+            assetCache.replaceKeys(items.map(\.assetId))
+            contentGeneration &+= 1
+        }
     }
 
     /// Returns immediately; a miss starts an off-main chunk lookup.
@@ -78,8 +89,11 @@ final class SmartAlbumDetailModel {
         guard !assets.isEmpty else { return }
         try await photoLibrary.deleteAssets(assets)
         try? metadataStore.deleteAssets(ids: Array(ids))
+        lastRemoval = .next(after: lastRemoval, removing: ids)
         items.removeAll { ids.contains($0.assetId) }
         assetCache.replaceKeys(items.map(\.assetId))
+        // The grid consumes this bump together with `lastRemoval`; it is the
+        // fallback reload if the removal cannot be applied in place.
         contentGeneration &+= 1
     }
 }

@@ -1786,13 +1786,7 @@ struct PhotoDetailPage: View {
         }
     }
 
-    private var targetSize: CGSize {
-        let scale = UIScreen.main.scale
-        return CGSize(
-            width: UIScreen.main.bounds.width * scale,
-            height: UIScreen.main.bounds.height * scale
-        )
-    }
+    private var targetSize: CGSize { ActiveDisplay.pixelSize() }
 
     /// Paging is local-only: paint a cached thumbnail immediately, then replace
     /// it with the exact best-local screen rendition. No iCloud image request
@@ -2311,10 +2305,7 @@ private struct PhotoPager: UIViewControllerRepresentable {
         }
 
         func preheatDetailImages(around index: Int) {
-            let targetSize = CGSize(
-                width: UIScreen.main.bounds.width * UIScreen.main.scale,
-                height: UIScreen.main.bounds.height * UIScreen.main.scale
-            )
+            let targetSize = ActiveDisplay.pixelSize()
             let newAssets = ((index - 1)...(index + 1)).compactMap { candidate -> PHAsset? in
                 guard candidate >= 0, candidate < parent.source.photoCount,
                       let id = parent.source.photoId(at: candidate),

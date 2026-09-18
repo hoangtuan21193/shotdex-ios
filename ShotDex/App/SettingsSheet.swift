@@ -10,6 +10,9 @@ struct SettingsButton: View {
         } label: {
             Image(systemName: "gearshape")
         }
+        // Monochrome like every other chrome glyph — the accent is reserved for
+        // active/selected state (DESIGN §10.6).
+        .tint(.primary)
         .accessibilityLabel("Settings")
     }
 }

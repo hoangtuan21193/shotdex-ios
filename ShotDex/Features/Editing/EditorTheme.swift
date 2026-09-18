@@ -7,7 +7,7 @@ enum EditorTheme {
     /// Follows the accent picked in Settings. Read from `UserDefaults` rather
     /// than the environment because these are static tokens; the editor is only
     /// ever built after Settings closes, so there is nothing to refresh.
-    static var accent: Color { AppAccentTheme.stored.color }
+    static var accent: Color { AppAccent.color }
     static let background = Color.black
     static let panel = Color(white: 0.055)
     /// The opaque "28c" panel slab (`#0f1012`) — no blur, no glass. The whole edit

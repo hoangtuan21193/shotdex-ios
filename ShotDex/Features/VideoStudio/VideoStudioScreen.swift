@@ -55,7 +55,11 @@ struct VideoStudioScreen: View {
             } else {
                 ProgressView()
             }
+            if let editingOverlay {
+                inlineTextEditor(editingOverlay)
+            }
         }
+        .animation(EditorTheme.animation, value: editingOverlay == nil)
         .preferredColorScheme(.dark)
         .statusBarHidden()
         .task {
@@ -74,11 +78,7 @@ struct VideoStudioScreen: View {
         }
         .onDisappear { model?.close() }
         .interactiveDismissDisabled(model?.hasEdits == true || isExporting)
-        .confirmationDialog(
-            "Discard this video?",
-            isPresented: $isDiscardConfirmationPresented,
-            titleVisibility: .visible
-        ) {
+        .alert("Discard this video?", isPresented: $isDiscardConfirmationPresented) {
             Button("Discard", role: .destructive) { dismiss() }
             Button("Keep Editing", role: .cancel) {}
         }
@@ -146,15 +146,22 @@ struct VideoStudioScreen: View {
                 model.errorMessage = error.localizedDescription
             }
         }
-        .fullScreenCover(item: $editingOverlay) { overlay in
-            EditorInlineTextEditor(
-                initialText: overlay.text,
-                tokens: .empty,
-                alignment: overlay.alignment,
-                onCommit: { text in finishTextEditing(overlay, text: text) },
-                onCancel: { finishTextEditing(overlay, text: nil) }
-            )
-        }
+    }
+
+    /// The caption editor, laid over the studio the way the photo editor's is —
+    /// the frame dims behind the words instead of a black cover. No token bar: a
+    /// video project has no EXIF for the tokens to expand to.
+    @ViewBuilder
+    private func inlineTextEditor(_ overlay: PhotoOverlay) -> some View {
+        EditorInlineTextEditor(
+            initialText: overlay.text,
+            tokens: .empty,
+            showsTokens: false,
+            alignment: overlay.alignment,
+            onCommit: { text in finishTextEditing(overlay, text: text) },
+            onCancel: { finishTextEditing(overlay, text: nil) }
+        )
+        .transition(.opacity)
     }
 
     /// Adds a caption and drops straight into the keyboard — an overlay reading
@@ -197,20 +204,39 @@ struct VideoStudioScreen: View {
             // the island and the preview starts below it — mirrors the photo editor.
             let bandHeight = max(EditorLayoutMetrics.editorTopBandHeight, proxy.safeAreaInsets.top)
             let panelHeight = VideoStudioMetrics.sheetHeight + proxy.safeAreaInsets.bottom
+            // The preview takes its aspect-fit height and the timeline the rest, so
+            // a landscape project gets a tall timeline instead of black bars. While
+            // the panel is up the stack lifts by the panel's overlap, so the lanes
+            // stay visible above it.
+            // The reader sits inside the safe area while the stack below ignores it,
+            // so the stack's real height is the reader's plus both insets.
+            let layout = VideoStudioMetrics.stackLayout(
+                screen: CGSize(
+                    width: proxy.size.width,
+                    height: proxy.size.height + proxy.safeAreaInsets.top + proxy.safeAreaInsets.bottom
+                ),
+                bandHeight: bandHeight,
+                bottomInset: proxy.safeAreaInsets.bottom,
+                canvas: model.recipe.canvasSize(),
+                presentsSheet: model.presentsSheet
+            )
             ZStack(alignment: .bottom) {
                 VStack(spacing: 0) {
                     VideoStudioTopBand(model: model)
                         .frame(height: bandHeight, alignment: .top)
-                    preview(model).frame(maxHeight: .infinity)
-                    Color.clear.frame(height: 8)   // preview → timeline gap
+                    preview(model).frame(height: layout.preview)
+                    Color.clear.frame(height: VideoStudioMetrics.previewTimelineGap)
                     VideoTimelineView(
                         model: model,
+                        height: layout.timeline,
                         onAddOverlay: { addTextOverlay(model) },
                         onAddMusic: { musicChooserIntent = .add },
                         onAddMedia: { mediaPickerMode = .add },
                         onEditText: { editingOverlay = $0 },
                         onTransition: { model.editingTransitionIndex = $0 }
                     )
+                    // Sits under the panel; keeps the timeline above it.
+                    Color.clear.frame(height: layout.lift)
                     VideoStudioToolbar(model: model, actions: actions(model))
                     VideoStudioBottomBar(model: model, actions: actions(model))
                     Color.clear.frame(height: proxy.safeAreaInsets.bottom)
@@ -316,7 +342,16 @@ struct VideoStudioScreen: View {
         }
         .frame(maxWidth: .infinity)
         .contentShape(Rectangle())
-        .onTapGesture { if model.isPlaying { model.togglePlayback() } }
+        // Paused, with a sheet up: a tap on the stage outside the video is the
+        // obvious "done with this" — it closes the sheet. (A tap *inside* the video
+        // is handled by the overlay canvas, which deselects the same way.)
+        .onTapGesture {
+            if model.isPlaying {
+                model.togglePlayback()
+            } else if model.presentsSheet {
+                withAnimation(EditorTheme.animation) { model.clearSelection() }
+            }
+        }
         .onAppear { loadStickerImages(model) }
         .onChange(of: model.recipe.overlays) { loadStickerImages(model) }
     }

@@ -81,6 +81,9 @@ final class LibraryModel {
     /// re-renders visible cells in place — it must NOT re-anchor, so the user's
     /// scroll position survives an index run finishing or being cancelled.
     private(set) var contentRefreshGeneration = 0
+    /// Latest in-place deletion, published in the same update as the pruned
+    /// list so the grid animates the tiles out instead of reloading.
+    private(set) var lastRemoval: PhotoGridRemoval?
     private(set) var isLoading = false
     private(set) var loadError: String?
 
@@ -280,11 +283,12 @@ final class LibraryModel {
         let advancedQuery = self.advancedQuery
         let sort = self.sort
         let libraryQueries = self.libraryQueries
-        // Fast path (no metadata filter/search + a date sort): drive the grid
-        // from PhotoKit directly so the whole library shows instantly, like the
-        // system Photos app, instead of waiting on the EXIF index. Any active
-        // filter, advanced query, or metric sort falls back to the DB query.
-        let usePhotoKit = criteria.isEmpty && advancedQuery == nil && sort.isDateSort
+        // Fast path (no metadata filter/search + an order PhotoKit itself can
+        // produce): drive the grid from PhotoKit directly so the whole library
+        // shows instantly, like the system Photos app, instead of waiting on the
+        // EXIF index. Any active filter, advanced query, or metric sort falls
+        // back to the DB query.
+        let usePhotoKit = criteria.isEmpty && advancedQuery == nil && sort.photoKitSortKey != nil
         // The capped first-paint phase exists only for a grid with nothing on
         // screen (enumerating a large library takes seconds). With rows already
         // showing, publishing the 600-row slice first would replace the content
@@ -405,7 +409,7 @@ final class LibraryModel {
         let options = PHFetchOptions()
         options.predicate = PhotoLibraryService.browsableMediaPredicate
         options.sortDescriptors = [
-            NSSortDescriptor(key: "creationDate", ascending: sort == .dateTakenOldest)
+            NSSortDescriptor(key: sort.photoKitSortKey ?? "creationDate", ascending: sort.isAscending)
         ]
         return options
     }
@@ -1354,6 +1358,7 @@ final class LibraryModel {
         // PhotoKit is the source of truth; prune the DB rows right away so
         // the grid doesn't show stale entries until the next index run.
         try? metadataStore.deleteAssets(ids: Array(ids))
+        lastRemoval = .next(after: lastRemoval, removing: ids)
         items.removeAll { ids.contains($0.assetId) }
         // Indexes shifted; rebuild the id list (drops cached chunks). No
         // contentGeneration bump — the user should keep their scroll spot.

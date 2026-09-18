@@ -11,68 +11,44 @@ private extension View {
     }
 }
 
-/// Full-screen floating selection chrome — the Liquid Glass layer the root tab
-/// view overlays above every tab's content (and above the hidden native tab /
-/// nav bars) while a screen is in multi-select. Nothing here paints a solid
-/// background: the grid stays the root scroll view and shows through the gaps, so
-/// only the glass clusters and the (menu-open) scrim intercept touches.
+/// The floating half of the multi-select chrome, modelled on the iOS Photos
+/// app: one bottom bar over the grid — `Share · caption · Delete`. Everything
+/// else (the × that leaves selection, and the create/compare/⋯ actions) lives in
+/// the hosting screen's own navigation bar via `SelectionToolbarItems`, so the
+/// screen title and the grid's pinned date header keep the exact position they
+/// have while browsing.
 ///
-/// Layout (over a 393-wide frame):
-/// - Top row: Share · selected-thumbnail tray · Close, one glass row near the top.
-/// - Count caption just below it ("{n} Photos Selected").
-/// - Bottom row: Create cluster (Collage / Video) · middle cluster (Compare /
-///   Compress / ⋯) · standalone Delete.
-/// - ⋯ opens a glass popover above it (Add to Collection / Export EXIF / Duplicate).
+/// Nothing here paints a solid background: the grid stays the root scroll view
+/// and shows through the gaps, so only the glass controls intercept touches.
 struct SelectionOverlay: View {
     let model: SelectionBarModel
-    @State private var isMoreOpen = false
+    @State private var isSelectedItemsPresented = false
 
     var body: some View {
-        ZStack {
-            VStack(spacing: 0) {
-                SelectionTopRow(model: model)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 6)
-                if model.selectionCount > 0 {
-                    SelectionCountCaption(model: model)
-                        .padding(.top, 10)
-                        .transition(.opacity)
-                }
-                Spacer(minLength: 0)
-                SelectionBottomRow(model: model, isMoreOpen: $isMoreOpen)
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 10)
-            }
-
-            if isMoreOpen {
-                // Tap-anywhere-to-close scrim; also the darkening the spec asks
-                // for (the grid + the other clusters read as dimmed beneath it).
-                Color.black.opacity(0.35)
-                    .ignoresSafeArea()
-                    .contentShape(Rectangle())
-                    .onTapGesture { closeMore() }
-                    .transition(.opacity)
-
-                SelectionMoreMenu(model: model, close: closeMore)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                    .padding(.trailing, 12)
-                    .padding(.bottom, 78)
-                    .transition(.scale(scale: 0.92, anchor: .bottomTrailing).combined(with: .opacity))
-            }
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            SelectionBottomBar(
+                model: model,
+                showSelected: { isSelectedItemsPresented = true }
+            )
+            .padding(.horizontal, 16)
+            .padding(.bottom, 10)
         }
         .animation(.snappy(duration: 0.2), value: model.selectionCount)
-        .animation(.easeOut(duration: 0.18), value: isMoreOpen)
+        .sheet(isPresented: $isSelectedItemsPresented) {
+            SelectedItemsSheet(model: model)
+        }
     }
-
-    private func closeMore() { isMoreOpen = false }
 }
 
-// MARK: - Top row
+// MARK: - Bottom bar
 
-/// Share · thumbnail tray · Close. Share and Close are 48pt glass circles; the
-/// tray takes the middle and scrolls horizontally.
-private struct SelectionTopRow: View {
+/// Share (leading) · count/size caption (centre) · Delete (trailing) — the
+/// Photos arrangement. Share and Delete are 48pt glass circles and keep their
+/// slots while nothing is picked; the caption then reads "Select Items".
+private struct SelectionBottomBar: View {
     let model: SelectionBarModel
+    let showSelected: () -> Void
 
     var body: some View {
         HStack(spacing: 8) {
@@ -85,177 +61,29 @@ private struct SelectionTopRow: View {
             )
             .accessibilityLabel("Share")
 
-            SelectionTray(model: model)
+            SelectionCountCaption(model: model, action: showSelected)
                 .frame(maxWidth: .infinity)
-                .frame(height: 48)
-                .selectionGlass(RoundedRectangle(cornerRadius: AppTheme.Radius.xl, style: .continuous))
 
             SelectionCircleButton(
-                systemImage: "xmark",
-                iconSize: 17,
-                action: model.onClose
+                systemImage: "trash",
+                iconSize: 20,
+                isEnabled: model.selectionCount > 0 && !model.isDeleting,
+                action: model.onDelete
             )
-            .accessibilityLabel("Done selecting")
+            .accessibilityLabel("Delete")
         }
-    }
-}
-
-/// The selected thumbnails in pick order, leading-aligned. Up to the compare
-/// cap the remaining slots show dashed placeholders on the right (the classic
-/// tray look); once picks exceed the cap the placeholders drop and it becomes
-/// a horizontal scroll pinned to the newest pick. Each thumbnail carries an
-/// inset × to deselect.
-private struct SelectionTray: View {
-    let model: SelectionBarModel
-
-    private let slot: CGFloat = 36
-    private let gap: CGFloat = 7
-    private let pad: CGFloat = 10
-    private var maxSlots: Int { CompareScreen.maxPhotoCount }
-
-    var body: some View {
-        GeometryReader { geo in
-            let ids = model.thumbnailIds
-            if ids.count <= maxSlots {
-                // Thumbnails on the left, dashed placeholders filling the rest.
-                HStack(spacing: gap) {
-                    thumbnails
-                    ForEach(0..<(maxSlots - ids.count), id: \.self) { _ in
-                        SelectionSlotPlaceholder(side: slot)
-                    }
-                }
-                .padding(.horizontal, pad)
-                .frame(width: geo.size.width, height: geo.size.height, alignment: .leading)
-            } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: gap) { thumbnails }
-                        .padding(.horizontal, pad)
-                        .frame(height: geo.size.height)
-                }
-                // Grows to the right and re-anchors to the newest (rightmost)
-                // pick automatically on every add.
-                .defaultScrollAnchor(.trailing)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var thumbnails: some View {
-        ForEach(model.thumbnailIds, id: \.self) { id in
-            SelectionTrayThumbnail(
-                assetId: id,
-                photoLibrary: model.photoLibrary,
-                onRemove: { model.onDeselect(id) }
-            )
-        }
-    }
-}
-
-/// An empty tray slot: a dashed rounded square with a faint photo glyph.
-private struct SelectionSlotPlaceholder: View {
-    let side: CGFloat
-
-    var body: some View {
-        let shape = RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
-        shape
-            .fill(Color.primary.opacity(0.05))
-            .overlay {
-                shape.strokeBorder(
-                    Color.secondary.opacity(0.55),
-                    style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])
-                )
-            }
-            .overlay {
-                Image(systemName: "photo")
-                    .font(.system(size: 13, weight: .regular))
-                    .foregroundStyle(Color.secondary.opacity(0.6))
-            }
-            .frame(width: side, height: side)
-    }
-}
-
-/// One 36pt tray thumbnail with an inset deselect ×. Loads a local (never
-/// networked) rendition like the grid tile; reloads in place if its id changes.
-private struct SelectionTrayThumbnail: View {
-    let assetId: String
-    let photoLibrary: PhotoLibraryService
-    let onRemove: () -> Void
-
-    private let side: CGFloat = 36
-
-    @State private var image: UIImage?
-    @State private var requestId: PHImageRequestID?
-
-    var body: some View {
-        thumbnail
-            .overlay(alignment: .topTrailing) { deselectButton }
-            .accessibilityElement()
-            .accessibilityLabel("Selected photo")
-            .accessibilityAddTraits(.isButton)
-            .accessibilityHint("Removes it from the selection")
-            .accessibilityAction(.default, onRemove)
-            .onAppear(perform: load)
-            .onChange(of: assetId) { load() }
-            .onDisappear(perform: cancel)
-    }
-
-    private var thumbnail: some View {
-        let shape = RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
-        return shape
-            .fill(Color.white.opacity(0.12))
-            .overlay {
-                if let image {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                }
-            }
-            .frame(width: side, height: side)
-            .clipShape(shape)
-            .overlay { shape.strokeBorder(Color.white.opacity(0.4), lineWidth: 1.5) }
-    }
-
-    // × lives *inside* the top-right corner so the tray never clips it.
-    private var deselectButton: some View {
-        Button(action: onRemove) {
-            Image(systemName: "xmark")
-                .font(.system(size: 8, weight: .bold))
-                .foregroundStyle(.white)
-                .frame(width: 14, height: 14)
-                .background(Color(white: 0.12).opacity(0.82), in: Circle())
-        }
-        .buttonStyle(.plain)
-        .padding(1)
-    }
-
-    private func load() {
-        cancel()
-        image = nil
-        guard let asset = PhotoLibraryService.fetchAssets(ids: [assetId]).first else { return }
-        let pixels = side * min(UIScreen.main.scale, 2)
-        requestId = photoLibrary.requestThumbnail(
-            for: asset,
-            targetSize: CGSize(width: pixels, height: pixels),
-            allowNetwork: false
-        ) { result in
-            if let result { image = result }
-        }
-    }
-
-    private func cancel() {
-        if let requestId { photoLibrary.cancelThumbnailRequest(requestId) }
-        requestId = nil
     }
 }
 
 // MARK: - Count caption
 
-/// Selection count, centred under the top row on a blurred dark pill so white
-/// text stays legible over any photo. When Compare is offered and still in range
-/// it spells the cap out; past the max (or where Compare isn't offered) it shows
-/// just the running count.
+/// Selection count and total file size on a glass pill between Share and
+/// Delete, where Photos labels its own selection bar. It is a button: tapping it
+/// opens `SelectedItemsSheet`, the way Photos opens the list of what's picked.
+/// An empty selection reads "Select Items" and does nothing.
 struct SelectionCountCaption: View {
     let model: SelectionBarModel
+    let action: () -> Void
 
     /// Summed indexed bytes and how many of the selected ids had a known size —
     /// `knownCount < selectionCount` prints the total as an estimate (`~`).
@@ -270,38 +98,42 @@ struct SelectionCountCaption: View {
         return formatter
     }()
 
-    private var canCompare: Bool { model.onCompare != nil }
-
-    /// e.g. "24.5 MB" when every pick is indexed, "~24.5 MB" while some size is
-    /// still missing (or nothing indexed yet).
+    /// e.g. "24.5MB" when every pick is indexed, "~24.5MB" while some size is
+    /// still missing (or nothing indexed yet). Space-free so the whole label
+    /// stays on one line on a 393pt frame.
     private var sizeText: String {
         let formatted = Self.byteFormatter.string(fromByteCount: totalBytes)
+            .replacingOccurrences(of: " ", with: "")
         return knownCount < model.selectionCount ? "~\(formatted)" : formatted
     }
 
-    private var countText: String {
-        let count = model.selectionCount
-        if canCompare, count <= CompareScreen.maxPhotoCount {
-            return "\(count) selected・\(sizeText)・up to \(CompareScreen.maxPhotoCount) to compare"
-        }
-        return "\(count) selected・\(sizeText)"
+    private var captionText: String {
+        guard model.selectionCount > 0 else { return "Select Items" }
+        return "Show Selected (\(model.selectionCount)・\(sizeText))"
     }
 
     var body: some View {
-        Text(countText)
-            .font(.footnote.weight(.medium))
-            .monospacedDigit()
-            .lineLimit(1)
-            .minimumScaleFactor(0.85)
-            .foregroundStyle(.primary)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .selectionGlass(Capsule())
-            .task(id: model.thumbnailIds) { await recomputeSize() }
+        Button(action: action) {
+            Text(captionText)
+                .font(.subheadline.weight(.medium))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .foregroundStyle(model.selectionCount > 0 ? Color.primary : Color.primary.opacity(0.3))
+                .padding(.horizontal, 18)
+                // Same 48pt height and glass as the Share/Delete circles, so
+                // the three read as one bar.
+                .frame(height: 48)
+                .contentShape(Capsule())
+                .selectionGlass(Capsule())
+        }
+        .buttonStyle(.plain)
+        .disabled(model.selectionCount == 0)
+        .task(id: model.selectedIds) { await recomputeSize() }
     }
 
     private func recomputeSize() async {
-        let ids = model.thumbnailIds
+        let ids = model.selectedIds
         guard !ids.isEmpty else {
             totalBytes = 0
             knownCount = 0
@@ -314,320 +146,180 @@ struct SelectionCountCaption: View {
     }
 }
 
-// MARK: - Bottom row
+// MARK: - Navigation bar items
 
-/// Create cluster · middle cluster · standalone Delete, distributed across the
-/// width. Clusters are `EmptyView` when the hosting screen offers none of their
-/// actions, so Delete always keeps the trailing slot.
-private struct SelectionBottomRow: View {
+/// The navigation-bar half of the selection chrome: a ⋯ menu carrying every
+/// action that isn't Share or Delete, plus the × that leaves selection mode.
+/// Screens add it to their existing `.toolbar` while selecting — the bar itself
+/// never hides, so the title, the date under it and the grid's pinned headers
+/// stay put when selection starts.
+struct SelectionToolbarItems: ToolbarContent {
     let model: SelectionBarModel
-    @Binding var isMoreOpen: Bool
 
-    private var hasMoreMenu: Bool {
-        model.onAddToCollection != nil || model.onExportEXIF != nil || model.onDuplicate != nil
-    }
-    private var hasCreateCluster: Bool {
-        model.onCollage != nil || model.onVideo != nil
-    }
-    private var hasMiddleCluster: Bool {
-        model.onCompare != nil || model.onCompress != nil || hasMoreMenu
+    private var hasMenu: Bool {
+        model.onCollage != nil || model.onVideo != nil || model.onCompress != nil
+            || model.onAddToCollection != nil || model.onExportEXIF != nil
+            || model.onDuplicate != nil || model.assetActions != nil
+            || model.onSelectAll != nil || model.onRemoveFromAlbum != nil
     }
 
-    var body: some View {
-        HStack(spacing: 8) {
-            createCluster
-            Spacer(minLength: 8)
-            middleCluster
-            Spacer(minLength: 8)
-            SelectionCircleButton(
-                systemImage: "trash",
-                iconSize: 20,
-                isEnabled: model.selectionCount > 0 && !model.isDeleting,
-                action: model.onDelete
-            )
-            .accessibilityLabel("Delete")
-        }
-    }
-
-    @ViewBuilder
-    private var createCluster: some View {
-        if hasCreateCluster {
-            SelectionCluster {
-                if let onCollage = model.onCollage {
-                    SelectionTileButton(
-                        isEnabled: CollageTemplateCatalog.supportedCounts.contains(model.imageSelectionCount),
-                        action: onCollage
-                    ) { CollageGlyph() }
-                    .accessibilityLabel("Create Collage")
-                }
-                if let onVideo = model.onVideo {
-                    SelectionTileButton(
-                        isEnabled: model.selectionCount >= 1,
-                        action: onVideo
-                    ) { VideoGlyph() }
-                    .accessibilityLabel("Create Video")
-                }
+    var body: some ToolbarContent {
+        // Compare is the one action with its own button: it takes the leading
+        // slot the Settings gear vacates when selection starts, spelled out.
+        ToolbarItem(placement: .topBarLeading) {
+            if let onCompare = model.onCompare {
+                Button("Compare", action: onCompare)
+                    .tint(.primary)
+                    .disabled(model.selectionCount < CompareScreen.minPhotoCount)
             }
         }
-    }
-
-    @ViewBuilder
-    private var middleCluster: some View {
-        if hasMiddleCluster {
-            SelectionCluster {
-                if let onCompare = model.onCompare {
-                    SelectionTileButton(
-                        isEnabled: (2...CompareScreen.maxPhotoCount).contains(model.selectionCount),
-                        action: onCompare
-                    ) { CompareGlyph() }
-                    .accessibilityLabel("Compare")
-                }
-                if let onCompress = model.onCompress {
-                    SelectionTileButton(
-                        isEnabled: model.imageSelectionCount >= 1,
-                        action: onCompress
-                    ) { CompressGlyph() }
-                    .accessibilityLabel("Resize and Compress")
-                }
-                if hasMoreMenu {
-                    SelectionTileButton(
-                        isActive: isMoreOpen,
-                        action: { isMoreOpen.toggle() }
-                    ) {
-                        Image(systemName: "ellipsis")
-                            .font(.system(size: 21, weight: .regular))
+        ToolbarItem(placement: .topBarTrailing) {
+            if hasMenu {
+                Menu {
+                    if let onCollage = model.onCollage {
+                        Button(action: onCollage) {
+                            Label("Create Collage", systemImage: "square.grid.2x2")
+                        }
+                        .disabled(!CollageTemplateCatalog.supportedCounts.contains(model.imageSelectionCount))
                     }
-                    .accessibilityLabel("More selection actions")
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Custom action glyphs
-
-/// Collage: a rounded frame split into one tall left cell and two stacked right
-/// cells (matches the reference — an uneven grid, not a 2×2).
-private struct CollageGlyph: View {
-    var body: some View {
-        CollageShape()
-            .stroke(style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
-            .frame(width: 23, height: 21)
-    }
-}
-
-private struct CollageShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        let corner = rect.width * 0.16
-        path.addRoundedRect(in: rect, cornerSize: CGSize(width: corner, height: corner))
-        let splitX = rect.minX + rect.width * 0.46
-        path.move(to: CGPoint(x: splitX, y: rect.minY))
-        path.addLine(to: CGPoint(x: splitX, y: rect.maxY))
-        path.move(to: CGPoint(x: splitX, y: rect.midY))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
-        return path
-    }
-}
-
-/// Create Video: a photo frame with a play triangle and a music note — an image
-/// turned into a video with music.
-private struct VideoGlyph: View {
-    var body: some View {
-        HStack(spacing: 2.5) {
-            RoundedRectangle(cornerRadius: 4, style: .continuous)
-                .stroke(style: StrokeStyle(lineWidth: 1.5, lineJoin: .round))
-                .frame(width: 15, height: 17)
-                .overlay {
-                    Triangle()
-                        .frame(width: 6, height: 7.5)
-                        .offset(x: -0.5)
-                }
-            // Note beside the frame, matched to its height.
-            Image(systemName: "music.note")
-                .font(.system(size: 17, weight: .regular))
-        }
-        .frame(height: 23)
-    }
-}
-
-private struct Triangle: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: rect.minX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
-        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
-        path.closeSubpath()
-        return path
-    }
-}
-
-/// Compare: two side-by-side portrait frames.
-private struct CompareGlyph: View {
-    var body: some View {
-        HStack(spacing: 4) {
-            RoundedRectangle(cornerRadius: 2.5, style: .continuous)
-                .stroke(style: StrokeStyle(lineWidth: 1.5, lineJoin: .round))
-                .frame(width: 9, height: 20)
-            RoundedRectangle(cornerRadius: 2.5, style: .continuous)
-                .stroke(style: StrokeStyle(lineWidth: 1.5, lineJoin: .round))
-                .frame(width: 9, height: 20)
-        }
-        .frame(width: 23, height: 23)
-    }
-}
-
-/// Resize/Compress: four arrows pointing inward from the corners.
-private struct CompressGlyph: View {
-    var body: some View {
-        CompressShape()
-            .stroke(style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
-            .frame(width: 23, height: 23)
-    }
-}
-
-private struct CompressShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        // Short arrows: heads pulled back toward the corners so the four don't
-        // bunch up in the centre.
-        let inset = rect.width * 0.06
-        let tip = rect.width * 0.34
-        let barb = rect.width * 0.15
-        let corners: [(CGPoint, CGPoint)] = [
-            (CGPoint(x: rect.minX + inset, y: rect.minY + inset), CGPoint(x: rect.minX + tip, y: rect.minY + tip)),
-            (CGPoint(x: rect.maxX - inset, y: rect.minY + inset), CGPoint(x: rect.maxX - tip, y: rect.minY + tip)),
-            (CGPoint(x: rect.minX + inset, y: rect.maxY - inset), CGPoint(x: rect.minX + tip, y: rect.maxY - tip)),
-            (CGPoint(x: rect.maxX - inset, y: rect.maxY - inset), CGPoint(x: rect.maxX - tip, y: rect.maxY - tip)),
-        ]
-        for (tail, head) in corners {
-            let dx = head.x - tail.x
-            let dy = head.y - tail.y
-            let length = max(0.0001, (dx * dx + dy * dy).squareRoot())
-            let ux = dx / length
-            let uy = dy / length
-            path.move(to: tail)
-            path.addLine(to: head)
-            // Arrowhead: two barbs opening back toward the corner along each axis.
-            path.move(to: head)
-            path.addLine(to: CGPoint(x: head.x - ux * barb, y: head.y))
-            path.move(to: head)
-            path.addLine(to: CGPoint(x: head.x, y: head.y - uy * barb))
-        }
-        return path
-    }
-}
-
-// MARK: - ⋯ menu
-
-/// Glass popover above the ⋯ button. Only the rows whose closures are supplied
-/// appear; a hairline separates them.
-private struct SelectionMoreMenu: View {
-    let model: SelectionBarModel
-    let close: () -> Void
-
-    private struct Row: Identifiable {
-        let id = UUID()
-        let title: String
-        let systemImage: String
-        let action: () -> Void
-    }
-
-    private var rows: [Row] {
-        var rows: [Row] = []
-        if let action = model.onAddToCollection {
-            rows.append(Row(title: "Add to Collection", systemImage: "rectangle.stack.badge.plus", action: action))
-        }
-        if let action = model.onExportEXIF {
-            rows.append(Row(title: "Export EXIF (CSV)", systemImage: "tablecells", action: action))
-        }
-        if let action = model.onDuplicate {
-            rows.append(Row(title: "Duplicate", systemImage: "plus.square.on.square", action: action))
-        }
-        return rows
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-                Button {
-                    close()
-                    row.action()
+                    if let onVideo = model.onVideo {
+                        Button(action: onVideo) {
+                            Label("Create Video", systemImage: "film")
+                        }
+                        .disabled(model.selectionCount < 1)
+                    }
+                    if let onCompress = model.onCompress {
+                        Button(action: onCompress) {
+                            Label("Resize", systemImage: "arrow.down.right.and.arrow.up.left")
+                        }
+                        .disabled(model.imageSelectionCount < 1)
+                    }
+                    if let onAddToCollection = model.onAddToCollection {
+                        Button(action: onAddToCollection) {
+                            Label("Add to Collection", systemImage: "rectangle.stack.badge.plus")
+                        }
+                        .disabled(model.selectionCount < 1)
+                    }
+                    if let onExportEXIF = model.onExportEXIF {
+                        Button(action: onExportEXIF) {
+                            Label("Export EXIF (CSV)", systemImage: "tablecells")
+                        }
+                        .disabled(model.imageSelectionCount < 1)
+                    }
+                    if let onDuplicate = model.onDuplicate {
+                        Button(action: onDuplicate) {
+                            Label("Duplicate", systemImage: "plus.square.on.square")
+                        }
+                        .disabled(model.selectionCount < 1)
+                    }
+                    libraryActions
+                    destructiveActions
                 } label: {
-                    HStack {
-                        Text(row.title)
-                            .font(.system(size: 15.5))
-                            .foregroundStyle(.primary)
-                        Spacer(minLength: 12)
-                        Image(systemName: row.systemImage)
-                            .font(.system(size: 19, weight: .regular))
-                            .foregroundStyle(.primary)
-                    }
-                    .padding(.horizontal, 16)
-                    .frame(height: 44)
-                    .contentShape(Rectangle())
+                    Image(systemName: "ellipsis")
                 }
-                .buttonStyle(.plain)
-                if index < rows.count - 1 {
-                    Rectangle()
-                        .fill(Color.primary.opacity(0.15))
-                        .frame(height: 0.5)
-                        .padding(.leading, 16)
+                .tint(.primary)
+                .accessibilityLabel("More selection actions")
+            }
+        }
+        // Break the shared Liquid Glass container: × gets its own circle beside
+        // the filter/⋯ capsule, the way Photos separates it.
+        if #available(iOS 26.0, *) {
+            ToolbarSpacer(.fixed, placement: .topBarTrailing)
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+            Button(action: model.onClose) {
+                Image(systemName: "xmark")
+            }
+            .tint(.primary)
+            .accessibilityLabel("Done selecting")
+        }
+    }
+}
+
+// MARK: - Selection menu sections
+
+private extension SelectionToolbarItems {
+    /// Favorite / Hide / Adjust Date & Time / Adjust Location / Copy, plus
+    /// Select All — the block Photos keeps in its own ⋯ menu. Grouped into a
+    /// `Section` so the system draws a divider between these and the
+    /// ShotDex-specific rows above.
+    @ViewBuilder
+    var libraryActions: some View {
+        Section {
+            if let onSelectAll = model.onSelectAll {
+                Button(action: onSelectAll) {
+                    Label("Select All", systemImage: "checkmark.circle")
+                }
+            }
+            if let actions = model.assetActions {
+                let ids = model.selectedIds
+                let allFavorites = model.isSelectionAllFavorites
+                Button {
+                    actions.toggleFavorite(ids: ids)
+                } label: {
+                    Label(
+                        allFavorites ? "Unfavorite" : "Favorite",
+                        systemImage: allFavorites ? "heart.slash" : "heart"
+                    )
+                }
+                .disabled(model.selectionCount < 1)
+
+                Button {
+                    actions.presentAdjustDate(ids: ids)
+                } label: {
+                    Label("Adjust Date & Time", systemImage: "calendar")
+                }
+                .disabled(model.selectionCount < 1)
+
+                Button {
+                    actions.presentAdjustLocation(ids: ids)
+                } label: {
+                    Label("Adjust Location", systemImage: "mappin.and.ellipse")
+                }
+                .disabled(model.selectionCount < 1)
+
+                if model.selectionCount == 1, let id = ids.first {
+                    Button {
+                        actions.copyToPasteboard(id: id)
+                    } label: {
+                        Label("Copy", systemImage: "doc.on.doc")
+                    }
                 }
             }
         }
-        .frame(width: 246)
-        .selectionGlass(RoundedRectangle(cornerRadius: AppTheme.Radius.xl, style: .continuous))
+    }
+
+    /// Rows that take photos out of something. Kept in their own section, below
+    /// everything else, so a mis-tap on the additive rows can't land here.
+    @ViewBuilder
+    var destructiveActions: some View {
+        Section {
+            if let actions = model.assetActions {
+                let allHidden = model.isSelectionAllHidden
+                Button(role: allHidden ? nil : .destructive) {
+                    actions.toggleHidden(ids: model.selectedIds)
+                } label: {
+                    Label(
+                        allHidden ? "Unhide" : "Hide",
+                        systemImage: allHidden ? "eye" : "eye.slash"
+                    )
+                }
+                .disabled(model.selectionCount < 1)
+            }
+            if let onRemoveFromAlbum = model.onRemoveFromAlbum {
+                Button(role: .destructive, action: onRemoveFromAlbum) {
+                    Label("Remove from Album", systemImage: "minus.circle")
+                }
+                .disabled(model.selectionCount < 1)
+            }
+        }
     }
 }
 
 // MARK: - Building blocks
 
-/// A glass pill holding a run of icon tiles. Roomy horizontal padding + tile
-/// spacing so the glyphs sit off the pill's rounded edge and apart from each
-/// other; the tile height keeps the cluster level (48pt) with the top row.
-private struct SelectionCluster<Content: View>: View {
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        HStack(spacing: 12) {
-            content
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 4)
-        .selectionGlass(RoundedRectangle(cornerRadius: AppTheme.Radius.xl, style: .continuous))
-    }
-}
-
-/// A 40pt icon tile inside a cluster, generic over its glyph so it can host an
-/// SF Symbol or a custom-drawn icon. `isActive` gives the ⋯ its lit background
-/// while its menu is open; a disabled tile dims but keeps its slot. The glyph
-/// inherits the tile's tint (enabled = white, disabled = faded).
-private struct SelectionTileButton<Icon: View>: View {
-    var isEnabled: Bool = true
-    var isActive: Bool = false
-    let action: () -> Void
-    @ViewBuilder var icon: Icon
-
-    var body: some View {
-        Button(action: action) {
-            icon
-                .foregroundStyle(isEnabled ? Color.primary : Color.primary.opacity(0.3))
-                .frame(width: 40, height: 40)
-                .background {
-                    if isActive {
-                        Circle().fill(Color.primary.opacity(0.12))
-                    }
-                }
-                .contentShape(Circle())
-        }
-        .buttonStyle(.plain)
-        .disabled(!isEnabled)
-    }
-}
-
-/// A 48pt glass circle button (Share / Close / Delete). Bare white glyph — no
-/// destructive tint on Delete; the confirm sheet is the safety net.
+/// A 48pt glass circle button (Share / Delete). Bare monochrome glyph — no
+/// destructive tint on Delete; PhotoKit's own confirmation is the safety net.
 private struct SelectionCircleButton: View {
     let systemImage: String
     var iconSize: CGFloat = 20
@@ -678,7 +370,7 @@ struct BottomScrim: View {
         SelectionBarModel(
             selectionCount: count,
             imageSelectionCount: count,
-            thumbnailIds: ids,
+            selectedIds: ids,
             photoLibrary: dependencies.photoLibrary,
             libraryQueries: dependencies.libraryQueries,
             isDeleting: false,
@@ -686,6 +378,7 @@ struct BottomScrim: View {
             onShare: {},
             onClose: {},
             onDeselect: { _ in },
+            onDeselectAll: {},
             onCollage: {},
             onVideo: {},
             onCompare: {},

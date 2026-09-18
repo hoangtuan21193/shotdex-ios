@@ -44,6 +44,7 @@ struct AlbumsScreen: View {
                 } label: {
                     Image(systemName: "plus")
                 }
+                .tint(.primary)
                 .accessibilityLabel("New Smart Album")
             }
         }
@@ -69,6 +70,9 @@ struct AlbumsScreen: View {
             if let item = model.smartQueryAlbums.first(where: { $0.album.id == destination.id }) {
                 SmartAlbumDetailScreen(album: item.album)
             }
+        }
+        .navigationDestination(for: DuplicatesDestination.self) { _ in
+            DuplicatesScreen()
         }
         .sheet(isPresented: $isCreatingSmartAlbum) {
             SmartAlbumEditorSheet(existing: nil, dependencies: dependencies) {
@@ -112,6 +116,8 @@ struct AlbumsScreen: View {
                 if !model.sharedAlbums.isEmpty {
                     albumTokenSection(title: "Shared Albums", albums: model.sharedAlbums)
                 }
+
+                utilitiesSection()
 
                 if #unavailable(iOS 26.0) {
                     Color.clear.frame(height: 90)
@@ -204,6 +210,75 @@ struct AlbumsScreen: View {
             }
             .scrollClipDisabled()
         }
+    }
+}
+
+/// Utilities that act on the library rather than browse it — today only the
+/// duplicate finder. Same token footprint as the album grids so the section
+/// lines up with them.
+extension AlbumsScreen {
+    fileprivate func utilitiesSection() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Utilities")
+                .font(.title2.bold())
+                .padding(.horizontal)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHGrid(rows: [GridItem(.fixed(AlbumToken.height), spacing: 8)], spacing: 8) {
+                    NavigationLink(value: DuplicatesDestination()) {
+                        DuplicatesToken()
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal)
+            }
+            .scrollClipDisabled()
+        }
+    }
+}
+
+/// Token for the Duplicates utility: glyph in place of a cover, and the group
+/// count of the last grouping (or an invitation to scan) as the subtitle.
+struct DuplicatesToken: View {
+    @AppStorage(SettingsKeys.duplicateGroupCount) private var groupCount: Int?
+
+    private let thumbSide: CGFloat = 44
+    private let tokenWidth: CGFloat = 190
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Color(.tertiarySystemBackground)
+                .frame(width: thumbSide, height: thumbSide)
+                .overlay {
+                    Image(systemName: "square.on.square")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Duplicates")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color(.label))
+                    .lineLimit(1)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(8)
+        .frame(width: tokenWidth, height: AlbumToken.height, alignment: .leading)
+        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Duplicates, \(subtitle)")
+    }
+
+    private var subtitle: String {
+        guard let groupCount else { return "Scan library" }
+        return groupCount == 1 ? "1 group" : "\(groupCount) groups"
     }
 }
 
@@ -305,7 +380,7 @@ struct AlbumToken: View {
 
     private func loadCover() {
         guard cover == nil, let asset = album.coverAsset else { return }
-        let scale = UIScreen.main.scale
+        let scale = ActiveDisplay.scale
         _ = photoLibrary.requestThumbnail(
             for: asset,
             targetSize: CGSize(width: thumbSide * scale, height: thumbSide * scale),
@@ -371,7 +446,7 @@ struct SmartAlbumToken: View {
 
     private func loadCover() {
         guard cover == nil, let asset = item.coverAsset else { return }
-        let scale = UIScreen.main.scale
+        let scale = ActiveDisplay.scale
         _ = photoLibrary.requestThumbnail(
             for: asset,
             targetSize: CGSize(width: thumbSide * scale, height: thumbSide * scale),

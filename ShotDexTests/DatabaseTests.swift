@@ -18,13 +18,14 @@ struct DatabaseTests {
         format: String? = nil,
         creation: Int? = 1_700_000_000,
         favorite: Bool = false,
+        kind: MediaKind = .photo,
         status: ExifStatus = .indexed
     ) -> PhotoMetadata {
         PhotoMetadata(
             assetId: assetId,
             creationDate: creation,
             modificationDate: creation,
-            mediaType: 1,
+            mediaType: kind.storedValue,
             cameraManufacturer: brand,
             cameraModel: camera,
             normalizedCameraModel: camera,
@@ -102,6 +103,50 @@ struct DatabaseTests {
         criteria.isoRange = NumericRangeFilter(lowerBound: 1601, upperBound: 6400)
         let matches = try await libraryQueries.gridItems(matching: criteria, sort: .default)
         #expect(matches.map(\.assetId) == ["a2"])
+    }
+
+    @Test func filterByMediaKind() async throws {
+        let database = try AppDatabase.makeEmpty()
+        let metadataStore = MetadataStore(database: database)
+        let libraryQueries = LibraryQueries(database: database)
+        try metadataStore.saveBatch([
+            makeRecord(assetId: "a1", kind: .photo),
+            makeRecord(assetId: "a2", kind: .video),
+        ], cursorAssetId: nil)
+
+        var criteria = FilterCriteria()
+        criteria.mediaKinds = [.video]
+        let videos = try await libraryQueries.gridItems(matching: criteria, sort: .default)
+        #expect(videos.map(\.assetId) == ["a2"])
+
+        criteria.mediaKinds = [.photo]
+        #expect(try libraryQueries.count(matching: criteria) == 1)
+
+        // Every kind selected constrains nothing, same as none selected.
+        criteria.mediaKinds = Set(MediaKind.allCases)
+        #expect(try libraryQueries.count(matching: criteria) == 2)
+        criteria.mediaKinds = []
+        #expect(try libraryQueries.count(matching: criteria) == 2)
+    }
+
+    @Test func smartAlbumMediaTypeRuleFiltersVideos() async throws {
+        let database = try AppDatabase.makeEmpty()
+        let metadataStore = MetadataStore(database: database)
+        let libraryQueries = LibraryQueries(database: database)
+        try metadataStore.saveBatch([
+            makeRecord(assetId: "a1", kind: .photo),
+            makeRecord(assetId: "a2", kind: .video),
+        ], cursorAssetId: nil)
+
+        let isVideo = SmartAlbumQuery(matchMode: .all, rules: [
+            SmartAlbumRule(field: .mediaType, op: .isExactly, text: MediaKind.video.rawValue),
+        ])
+        #expect(try await libraryQueries.count(matching: isVideo) == 1)
+
+        let isNotVideo = SmartAlbumQuery(matchMode: .all, rules: [
+            SmartAlbumRule(field: .mediaType, op: .isNot, text: MediaKind.video.rawValue),
+        ])
+        #expect(try await libraryQueries.count(matching: isNotVideo) == 1)
     }
 
     @Test func searchTextMatchesCameraAndLens() throws {
@@ -479,6 +524,30 @@ struct DatabaseTests {
         #expect(loaded.query.rules.count == 2)
         #expect(loaded.query.rules.first?.text == "R6")
         #expect(loaded.query.rules.last?.number == 1600)
+    }
+
+    @Test func filterCriteriaMediaKindsSurviveJSONAndOlderJSONDecodes() throws {
+        var criteria = FilterCriteria()
+        criteria.mediaKinds = [.video]
+        let data = try JSONEncoder().encode(criteria)
+        #expect(try JSONDecoder().decode(FilterCriteria.self, from: data).mediaKinds == [.video])
+
+        // A smart album saved before the field existed still decodes.
+        let legacy = Data(#"{"favoritesOnly":true}"#.utf8)
+        #expect(try JSONDecoder().decode(FilterCriteria.self, from: legacy).mediaKinds.isEmpty)
+    }
+
+    @Test func legacyCriteriaMigratesSingleMediaKindOnly() {
+        var oneKind = FilterCriteria()
+        oneKind.mediaKinds = [.video]
+        let migrated = SmartAlbumQuery.migrating(oneKind)
+        #expect(migrated.rules.map(\.field) == [.mediaType])
+        #expect(migrated.rules.first?.text == MediaKind.video.rawValue)
+
+        // Both kinds ANDed would match nothing, so they compile to no rule.
+        var bothKinds = FilterCriteria()
+        bothKinds.mediaKinds = Set(MediaKind.allCases)
+        #expect(SmartAlbumQuery.migrating(bothKinds).rules.isEmpty)
     }
 
     @Test func smartAlbumQueryFiltersNotFullLibrary() async throws {

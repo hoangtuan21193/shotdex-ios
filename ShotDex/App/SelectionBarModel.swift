@@ -24,8 +24,8 @@ struct SelectionBarModel {
     /// How many of the selected assets are images — Collage / Compress / Export
     /// EXIF gate on this (`selectionCount` also counts videos).
     var imageSelectionCount: Int = 0
-    /// Selected asset ids in pick order (drives the thumbnail tray).
-    var thumbnailIds: [String]
+    /// Selected asset ids in pick order — the size caption sums their indexed bytes.
+    var selectedIds: [String]
     let photoLibrary: PhotoLibraryService
     /// Reads indexed byte totals for the selection size caption.
     let libraryQueries: LibraryQueries
@@ -39,15 +39,17 @@ struct SelectionBarModel {
     var onShare: () -> Void
     /// Leaves selection mode.
     var onClose: () -> Void
-    /// Tapping a tray thumbnail's × removes that id from the selection.
+    /// Removes one id — the Selected Items sheet deselects by tapping a tile.
     var onDeselect: (String) -> Void
+    /// Clears the whole selection without leaving selection mode.
+    var onDeselectAll: () -> Void
 
     // Bottom clusters (`nil` = screen doesn't offer it).
     /// Create cluster — combine the picked images into a collage.
     var onCollage: (() -> Void)? = nil
     /// Create cluster — build a video from the picked photos/videos.
     var onVideo: (() -> Void)? = nil
-    /// Middle cluster — side-by-side compare (valid 2…`CompareScreen.maxPhotoCount`).
+    /// Middle cluster — side-by-side compare (valid from `CompareScreen.minPhotoCount` up).
     var onCompare: (() -> Void)? = nil
     /// Middle cluster — resize / compress the picked images.
     var onCompress: (() -> Void)? = nil
@@ -58,4 +60,27 @@ struct SelectionBarModel {
     var onAddToCollection: (() -> Void)? = nil
     var onExportEXIF: (() -> Void)? = nil
     var onDuplicate: (() -> Void)? = nil
+
+    /// Favorite / Hide / Adjust Date & Time / Adjust Location / Copy. One
+    /// object instead of five closures: every screen offers the identical set
+    /// on the identical payload (`selectedIds`), and the sheets two of them
+    /// raise are hosted once by the root tab view.
+    var assetActions: AssetActionsCoordinator? = nil
+    /// Picks every item the hosting screen is showing. `nil` on a screen whose
+    /// list is unbounded or not yet loaded.
+    var onSelectAll: (() -> Void)? = nil
+    /// Album Detail only: take the photos out of this album without deleting
+    /// them from the library.
+    var onRemoveFromAlbum: (() -> Void)? = nil
+
+    /// Whether every picked asset is already a favorite — flips the menu row
+    /// between "Favorite" and "Unfavorite" the way Photos does.
+    var isSelectionAllFavorites: Bool {
+        assetActions?.areAllFavorites(ids: selectedIds) ?? false
+    }
+
+    /// Whether every picked asset is already hidden.
+    var isSelectionAllHidden: Bool {
+        assetActions?.areAllHidden(ids: selectedIds) ?? false
+    }
 }

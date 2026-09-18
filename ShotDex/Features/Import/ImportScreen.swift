@@ -245,6 +245,7 @@ struct ImportScreen: View {
                         ? "line.3.horizontal.decrease.circle"
                         : "line.3.horizontal.decrease.circle.fill")
                 }
+                .tint(.primary)
                 .accessibilityLabel("Filter")
             }
         }
@@ -326,7 +327,7 @@ private struct ImportGridTile: View {
 
     private func loadThumbnail() async {
         guard cellWidth > 0, image == nil else { return }
-        let maxPixelSize = cellWidth * min(UIScreen.main.scale, 2)
+        let maxPixelSize = cellWidth * min(ActiveDisplay.scale, 2)
         let candidate = self.candidate
         let service = self.service
         let result = await Task.detached(priority: .utility) {

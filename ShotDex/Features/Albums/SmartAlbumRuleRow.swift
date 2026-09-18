@@ -32,7 +32,7 @@ struct SmartAlbumRuleRow: View {
 
     private var fieldMenu: some View {
         Menu {
-            ForEach(RuleField.allCases) { field in
+            ForEach(RuleField.selectableCases) { field in
                 Button(field.displayName) { selectField(field) }
             }
         } label: {

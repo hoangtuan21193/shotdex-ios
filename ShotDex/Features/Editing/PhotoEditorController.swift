@@ -54,6 +54,7 @@ enum PhotoEditorTool: String, CaseIterable, Identifiable {
 /// held on `EditorChromeModel.selectedGroup`. The chip order is the nav order.
 enum EditorGroup: String, CaseIterable, Identifiable {
     case light
+    case curve
     case color
     case colorMix
     case pointColor
@@ -73,6 +74,7 @@ enum EditorGroup: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .light: "Light"
+        case .curve: "Curve"
         case .color: "Color"
         case .colorMix: "Mix"
         case .pointColor: "Point"
@@ -92,6 +94,7 @@ enum EditorGroup: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .light: "sun.max"
+        case .curve: "chart.xyaxis.line"
         case .color: "drop.fill"
         case .colorMix: "circle.hexagongrid.fill"
         case .pointColor: "eyedropper"
@@ -112,7 +115,7 @@ enum EditorGroup: String, CaseIterable, Identifiable {
     /// parameters yet, so they sit on `.adjust` and show a placeholder.)
     var tool: PhotoEditorTool {
         switch self {
-        case .light, .color, .colorMix, .effects, .detail, .optics, .geo: .adjust
+        case .light, .curve, .color, .colorMix, .effects, .detail, .optics, .geo: .adjust
         case .pointColor: .pointColor
         case .grade: .colorGrading
         case .crop: .crop
@@ -2038,11 +2041,20 @@ final class PhotoEditorController {
 // MARK: - Tone curve
 
 extension PhotoEditorController {
-    /// Replace one channel's control points. The full-screen curve editor calls
+    /// Replace one channel's control points. The on-photo curve overlay calls
     /// this live inside a `beginContinuousChange` / `endContinuousChange` bracket,
     /// exactly like the grading rows, so a drag coalesces into one undo step.
     func setCurve(_ points: [CurvePoint], for channel: ToneCurveChannel) {
         recipe.curve[channel] = points
+        scheduleRender()
+    }
+
+    /// Replace one channel with a preset shape as a single undo step.
+    func applyCurvePreset(_ preset: ToneCurvePreset, to channel: ToneCurveChannel) {
+        guard recipe.curve[channel] != preset.points else { return }
+        beginContinuousChange()
+        recipe.curve[channel] = preset.points
+        endContinuousChange()
         scheduleRender()
     }
 

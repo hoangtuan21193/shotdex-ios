@@ -49,8 +49,8 @@ struct VideoTimelineGutter: View {
     private func icon(_ lane: VideoTimelineLane) -> some View {
         let isActive = lane == activeLane
         return Image(systemName: lane.systemImage)
-            .font(.system(size: 12, weight: .medium))
-            .foregroundStyle(isActive ? EditorTheme.timelineSelection : EditorTheme.dimText)
+            .font(.system(size: 13, weight: .medium))
+            .foregroundStyle(isActive ? EditorTheme.timelineSelection : EditorTheme.secondaryText)
             .frame(width: VideoStudioMetrics.gutterIconSize, height: VideoStudioMetrics.gutterIconSize)
             .background(
                 RoundedRectangle(cornerRadius: 4, style: .continuous)

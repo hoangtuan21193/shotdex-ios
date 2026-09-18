@@ -6,6 +6,9 @@ import SwiftUI
 /// rescales.
 struct VideoTimelineView: View {
     @Bindable var model: VideoStudioModel
+    /// Decided by `VideoStudioMetrics.stackLayout`: the preview's leftover, never
+    /// under `timelineMinimumHeight`.
+    let height: CGFloat
 
     let onAddOverlay: () -> Void
     let onAddMusic: () -> Void
@@ -97,7 +100,7 @@ struct VideoTimelineView: View {
             .onAppear { viewportWidth = screenWidth }
             .onChange(of: screenWidth) { viewportWidth = screenWidth }
         }
-        .frame(height: VideoStudioMetrics.timelineHeight)
+        .frame(height: height)
         .background(EditorTheme.background)
         .clipped()
         .onChange(of: model.fitToWindowToken) { fitToWindow() }
@@ -131,7 +134,7 @@ struct VideoTimelineView: View {
                 .frame(maxHeight: .infinity)
         }
         .frame(
-            height: VideoStudioMetrics.timelineHeight
+            height: height
                 - VideoStudioMetrics.timelineTopPadding
                 - VideoStudioMetrics.scrollbarHeight
                 - 2

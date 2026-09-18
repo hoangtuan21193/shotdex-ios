@@ -11,27 +11,76 @@ struct ComparePhoto {
     let asset: PHAsset?
 }
 
-/// Mirrors zoom and pan across the compare panes' scroll views (2–4 panes).
+/// Mirrors zoom and pan across the compare panes' scroll views.
 /// Zoom sync and pan sync toggle independently (Lightroom-style).
 @MainActor
 final class CompareScrollSynchronizer {
     var isZoomSyncEnabled = true
     var isPanSyncEnabled = true
 
-    private var scrollViews: [Int: UIScrollView] = [:]
+    /// Weak, because the scrolling column builds and drops panes as they come
+    /// and go — a pane that is gone must not be mirrored into forever.
+    private var scrollViews: [Int: WeakScrollView] = [:]
     private var isPropagating = false
+    /// The last state a gesture produced, replayed onto panes that are built
+    /// later so a pane scrolled into view mid-comparison arrives in step.
+    private var lastZoomScale: CGFloat?
+    private var lastOffsetFraction: CGPoint?
 
     func register(_ scrollView: UIScrollView, at index: Int) {
-        scrollViews[index] = scrollView
+        scrollViews[index] = WeakScrollView(view: scrollView)
+        guard lastZoomScale != nil || lastOffsetFraction != nil else { return }
+        // `makeUIView` runs before the pane has a frame (so no content size to
+        // offset against); the catch-up waits for the layout pass after it.
+        Task { @MainActor [weak scrollView] in
+            guard let scrollView else { return }
+            applyStoredState(to: scrollView)
+        }
+    }
+
+    private struct WeakScrollView {
+        weak var view: UIScrollView?
+    }
+
+    private var liveScrollViews: [UIScrollView] {
+        scrollViews.values.compactMap(\.view)
+    }
+
+    private func applyStoredState(to scrollView: UIScrollView) {
+        isPropagating = true
+        defer { isPropagating = false }
+        if isZoomSyncEnabled, let lastZoomScale {
+            scrollView.zoomScale = lastZoomScale
+        }
+        if isPanSyncEnabled, let lastOffsetFraction {
+            scrollView.contentOffset = CGPoint(
+                x: lastOffsetFraction.x * scrollView.contentSize.width,
+                y: lastOffsetFraction.y * scrollView.contentSize.height
+            )
+        }
+    }
+
+    /// Remembers where a gesture left the source pane, for panes built later.
+    private func record(_ source: UIScrollView) {
+        lastZoomScale = source.zoomScale
+        let width = source.contentSize.width
+        let height = source.contentSize.height
+        guard width > 0, height > 0 else { return }
+        lastOffsetFraction = CGPoint(
+            x: source.contentOffset.x / width,
+            y: source.contentOffset.y / height
+        )
     }
 
     /// Called from scroll-view delegate callbacks; copies the source pane's
     /// zoom and/or normalized offset to the other panes.
     func mirror(from source: UIScrollView) {
-        guard !isPropagating, isZoomSyncEnabled || isPanSyncEnabled else { return }
+        guard !isPropagating else { return }
+        record(source)
+        guard isZoomSyncEnabled || isPanSyncEnabled else { return }
         isPropagating = true
         defer { isPropagating = false }
-        for (_, target) in scrollViews where target !== source {
+        for target in liveScrollViews where target !== source {
             if isZoomSyncEnabled, target.zoomScale != source.zoomScale {
                 target.zoomScale = source.zoomScale
             }
@@ -43,20 +92,22 @@ final class CompareScrollSynchronizer {
 
     /// Snaps every other pane to pane `index`'s zoom scale.
     func resyncZoom(to index: Int) {
-        guard let source = scrollViews[index] else { return }
+        guard let source = scrollViews[index]?.view else { return }
+        record(source)
         isPropagating = true
         defer { isPropagating = false }
-        for (_, target) in scrollViews where target !== source {
+        for target in liveScrollViews where target !== source {
             target.zoomScale = source.zoomScale
         }
     }
 
     /// Snaps every other pane to pane `index`'s relative position.
     func resyncPan(to index: Int) {
-        guard let source = scrollViews[index] else { return }
+        guard let source = scrollViews[index]?.view else { return }
+        record(source)
         isPropagating = true
         defer { isPropagating = false }
-        for (_, target) in scrollViews where target !== source {
+        for target in liveScrollViews where target !== source {
             target.contentOffset = Self.normalizedOffset(from: source, to: target)
         }
     }
@@ -91,6 +142,10 @@ private struct CompareVideoPaneView: UIViewRepresentable {
         scrollView.showsHorizontalScrollIndicator = false
         scrollView.bouncesZoom = true
         scrollView.contentInsetAdjustmentBehavior = .never
+        // At 1x the pane has nothing to pan, so the drag belongs to whatever
+        // scrolls around it (the compare column). Pinch is a separate
+        // recognizer, so it stays live.
+        scrollView.panGestureRecognizer.isEnabled = false
 
         let playerView = PlayerContainerView()
         playerView.playerLayer.player = player
@@ -143,6 +198,8 @@ private struct CompareVideoPaneView: UIViewRepresentable {
         }
 
         func scrollViewDidZoom(_ scrollView: UIScrollView) {
+            scrollView.panGestureRecognizer.isEnabled =
+                scrollView.zoomScale / max(scrollView.minimumZoomScale, 0.001) > 1.01
             sync?.mirror(from: scrollView)
         }
 
@@ -172,65 +229,156 @@ private struct CompareVideoPaneView: UIViewRepresentable {
     }
 }
 
-/// Lightroom-style compare: 2–3 photos stacked vertically, 4 photos in a
-/// 2x2 grid, with synchronized zoom and pan toggled independently.
+/// Compare: one scrolling column of cards, one card per photo — the photo on
+/// top, its exposure line and a Delete button underneath. Zoom and pan stay
+/// mirrored across every card (no toggles: comparing two photos at different
+/// zooms is not a comparison).
 struct CompareScreen: View {
-    /// Upper bound for the compare selection (grid layout tops out at 2x2).
-    static let maxPhotoCount = 4
-
+    /// Compare needs two photos to mean anything. There is no upper bound.
+    static let minPhotoCount = 2
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.appAccent) private var accent
+    @Environment(PhotoLibraryService.self) private var photoLibrary
 
-    /// 2–4 photos, in selection order.
+    /// Two or more photos, in selection order.
     let photos: [ComparePhoto]
+    /// When set (the Duplicates screen), every pane gets a trash toggle bound
+    /// to this set of asset ids, and a Delete pill appears while any is marked.
+    var deletionMarks: Binding<Set<String>>? = nil
+    /// Performs the delete of the marked photos; returns whether anything was
+    /// deleted (a cancelled system dialog returns false). The screen closes on
+    /// success because its panes would otherwise show photos that are gone.
+    var onDeleteMarked: (() async -> Bool)? = nil
 
     @State private var sync = CompareScrollSynchronizer()
-    @State private var isZoomSynced = true
-    @State private var isPanSynced = true
+    @State private var isDeleting = false
+    /// Photos deleted from inside this screen (no deletion-marks binding), so
+    /// their cards leave the column without the caller having to reload.
+    @State private var deletedIds: Set<String> = []
 
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            paneLayout
+            cardColumn
 
             VStack {
                 topBar
                 Spacer()
+                if markedCount > 0 {
+                    deletePill
+                }
             }
         }
         .statusBarHidden()
+        .animation(AppTheme.Motion.standard, value: markedCount > 0)
+        .animation(AppTheme.Motion.standard, value: deletedIds)
     }
 
-    @ViewBuilder
-    private var paneLayout: some View {
-        if photos.count == 4 {
-            VStack(spacing: 1) {
-                HStack(spacing: 1) {
-                    pane(0)
-                    pane(1)
-                }
-                HStack(spacing: 1) {
-                    pane(2)
-                    pane(3)
-                }
-            }
-        } else {
-            VStack(spacing: 1) {
-                ForEach(photos.indices, id: \.self) { index in
-                    pane(index)
-                }
-            }
+    /// Photos still on screen: everything the user hasn't deleted from here.
+    private var visiblePhotos: [ComparePhoto] {
+        photos.filter { photo in
+            guard let id = photo.asset?.localIdentifier else { return true }
+            return !deletedIds.contains(id)
         }
     }
 
-    private func pane(_ index: Int) -> some View {
-        ComparePane(
-            photo: photos[index],
+    private var markedCount: Int {
+        guard let deletionMarks else { return 0 }
+        return visiblePhotos.filter { photo in
+            photo.asset.map { deletionMarks.wrappedValue.contains($0.localIdentifier) } ?? false
+        }.count
+    }
+
+    /// Bottom pill over the panes: the one place the compare screen deletes
+    /// from. Same wording and glyph as the Duplicates screen's bar.
+    private var deletePill: some View {
+        Button {
+            guard let onDeleteMarked, !isDeleting else { return }
+            isDeleting = true
+            Task {
+                let didDelete = await onDeleteMarked()
+                isDeleting = false
+                if didDelete { dismiss() }
+            }
+        } label: {
+            Label(
+                markedCount == 1 ? "Delete 1 Photo" : "Delete \(markedCount) Photos",
+                systemImage: "trash"
+            )
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 20)
+            .frame(height: 44)
+            .background(Capsule().fill(.red))
+            .editorGlass(Capsule())
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .disabled(isDeleting)
+        .padding(.bottom, 16)
+        .accessibilityLabel("Delete \(markedCount) marked photos")
+    }
+
+    /// One card per photo, one column, scrolling. Cards never go side by side —
+    /// a photo cut down to a corner tile can't be judged.
+    private var cardColumn: some View {
+        ScrollView {
+            LazyVStack(spacing: 14) {
+                ForEach(visiblePhotos.indices, id: \.self) { index in
+                    card(visiblePhotos[index], index: index)
+                }
+            }
+            // Clear of the close button above and the Delete pill below.
+            .padding(.horizontal, 12)
+            .padding(.top, 72)
+            .padding(.bottom, 24)
+        }
+        .scrollIndicators(.hidden)
+    }
+
+    private func card(_ photo: ComparePhoto, index: Int) -> some View {
+        let assetId = photo.asset?.localIdentifier
+        let isMarked = deletionMarks.flatMap { marks in
+            assetId.map { marks.wrappedValue.contains($0) }
+        }
+        return CompareCard(
+            photo: photo,
             sync: sync,
             paneIndex: index,
-            isCompact: photos.count == 4
+            isMarkedForDeletion: isMarked,
+            onDelete: { delete(photo) }
         )
+    }
+
+    /// The card's Delete button. With a deletion-marks binding (Duplicates) it
+    /// marks the photo and the bottom pill does the deleting; without one
+    /// (Compare from a selection) it deletes that photo right here, through
+    /// PhotoKit's own confirmation.
+    private func delete(_ photo: ComparePhoto) {
+        guard let asset = photo.asset else { return }
+        if let deletionMarks {
+            let id = asset.localIdentifier
+            if deletionMarks.wrappedValue.contains(id) {
+                deletionMarks.wrappedValue.remove(id)
+            } else {
+                deletionMarks.wrappedValue.insert(id)
+            }
+            return
+        }
+        guard !isDeleting else { return }
+        isDeleting = true
+        Task {
+            defer { isDeleting = false }
+            do {
+                try await photoLibrary.deleteAssets([asset])
+                deletedIds.insert(asset.localIdentifier)
+                // Below two photos there is nothing left to compare.
+                if visiblePhotos.count < Self.minPhotoCount { dismiss() }
+            } catch {
+                // Cancelled confirmation or a failed change request: the card
+                // stays, which is the correct outcome either way.
+            }
+        }
     }
 
     private var topBar: some View {
@@ -248,75 +396,26 @@ struct CompareScreen: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Close")
             Spacer()
-            syncToggle(
-                isOn: $isZoomSynced,
-                title: "Zoom",
-                systemImage: "plus.magnifyingglass",
-                hint: "Zoom all panes together"
-            ) {
-                sync.isZoomSyncEnabled = isZoomSynced
-                if isZoomSynced { sync.resyncZoom(to: 0) }
-            }
-            syncToggle(
-                isOn: $isPanSynced,
-                title: "Move",
-                systemImage: "arrow.up.and.down.and.arrow.left.and.right",
-                hint: "Move all panes together"
-            ) {
-                sync.isPanSyncEnabled = isPanSynced
-                if isPanSynced { sync.resyncPan(to: 0) }
-            }
         }
         .padding(.horizontal)
         .padding(.top, 8)
     }
-
-    /// Filter-token toggle over the black backdrop: icon + short word,
-    /// ON = solid accent capsule + white text (that gesture mirrors across
-    /// panes), OFF = dim glass capsule (each pane independent).
-    private func syncToggle(
-        isOn: Binding<Bool>,
-        title: String,
-        systemImage: String,
-        hint: String,
-        onChange: @escaping () -> Void
-    ) -> some View {
-        Button {
-            isOn.wrappedValue.toggle()
-            onChange()
-        } label: {
-            Label(title, systemImage: systemImage)
-                .labelStyle(.titleAndIcon)
-                .font(.subheadline.weight(.semibold))
-                // Black on the accent capsule, white on the dark glass — the
-                // tier-D rule shared with the editor's active buttons.
-                .foregroundStyle(isOn.wrappedValue ? .black : .white)
-                .padding(.horizontal, 14)
-                .frame(height: 44)
-                // Accent capsule when on sits in front of the dark editor glass
-                // (opaque, so it hides it); when off the glass shows through.
-                .background {
-                    Capsule().fill(accent).opacity(isOn.wrappedValue ? 1 : 0)
-                }
-                .editorGlass(Capsule())
-                .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(hint)
-        .accessibilityAddTraits(isOn.wrappedValue ? .isSelected : [])
-    }
 }
 
-/// One compare pane: loads its image, then shows the synced zoomable view
-/// with a small metadata caption.
-private struct ComparePane: View {
+/// One compare card: the photo (or video) at its own aspect ratio — whole
+/// frame, nothing cropped, full card width — with a one-line caption and a red
+/// Delete under it. Media keeps the synced zoomable view, so a pinch on one card
+/// moves every other card with it.
+private struct CompareCard: View {
     @Environment(PhotoLibraryService.self) private var photoLibrary
 
     let photo: ComparePhoto
     let sync: CompareScrollSynchronizer
     let paneIndex: Int
-    /// Quarter-screen panes (2x2 grid) drop the camera model from the caption.
-    let isCompact: Bool
+    /// `nil` when the screen deletes straight away instead of marking first
+    /// (Duplicates marks; Compare from a selection deletes).
+    var isMarkedForDeletion: Bool? = nil
+    let onDelete: () -> Void
 
     @State private var image: UIImage?
     @State private var player: AVPlayer?
@@ -324,39 +423,30 @@ private struct ComparePane: View {
     @State private var isPlaying = false
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            if isVideo {
-                if let player {
-                    // Same zoom/pan scroll view as image panes, wrapping an
-                    // AVPlayerLayer — video participates in sync like a photo.
-                    CompareVideoPaneView(player: player, sync: sync, paneIndex: paneIndex)
-                } else {
-                    ProgressView()
-                        .tint(.white)
+        VStack(spacing: 0) {
+            media
+                // The photo's own shape: cards differ in height, and every
+                // frame is shown whole — cropping to a common height would be
+                // comparing two different crops.
+                .aspectRatio(aspectRatio, contentMode: .fit)
+                .frame(maxWidth: .infinity)
+                .clipped()
+                .overlay(alignment: .bottomTrailing) {
+                    if isVideo, player != nil {
+                        playPauseButton
+                            .padding(8)
+                    }
                 }
-            } else if let image {
-                ZoomableImageView(image: image, sync: sync, paneIndex: paneIndex)
-            } else {
-                ProgressView()
-                    .tint(.white)
-            }
-            if let caption {
-                Text(caption)
-                    .font(.caption2)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(.black.opacity(0.45), in: Capsule())
-                    .padding(8)
+            infoRow
+        }
+        .background(EditorTheme.panelSolid)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous))
+        .overlay {
+            if isMarkedForDeletion == true {
+                RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous)
+                    .strokeBorder(.red, lineWidth: 3)
             }
         }
-        .overlay(alignment: .bottomTrailing) {
-            if isVideo, player != nil {
-                playPauseButton
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .clipped()
         .onAppear(perform: load)
         .onDisappear { player?.pause() }
         // Rewind and show the play icon again when the clip finishes.
@@ -364,6 +454,68 @@ private struct ComparePane: View {
             guard let item = note.object as? AVPlayerItem, item === player?.currentItem else { return }
             player?.seek(to: .zero)
             isPlaying = false
+        }
+    }
+
+    /// Width ÷ height of the asset, orientation applied by PhotoKit. Square
+    /// while the asset is missing, so a card never collapses to nothing.
+    private var aspectRatio: CGFloat {
+        guard let asset = photo.asset, asset.pixelWidth > 0, asset.pixelHeight > 0 else { return 1 }
+        return CGFloat(asset.pixelWidth) / CGFloat(asset.pixelHeight)
+    }
+
+    @ViewBuilder
+    private var media: some View {
+        if isVideo {
+            if let player {
+                // Same zoom/pan scroll view as image cards, wrapping an
+                // AVPlayerLayer — video participates in sync like a photo.
+                CompareVideoPaneView(player: player, sync: sync, paneIndex: paneIndex)
+            } else {
+                ProgressView().tint(.white)
+            }
+        } else if let image {
+            ZoomableImageView(image: image, sync: sync, paneIndex: paneIndex)
+        } else {
+            ProgressView().tint(.white)
+        }
+    }
+
+    /// Under the photo: one line of numbers on the left, Delete on the right.
+    private var infoRow: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(caption ?? "No metadata")
+                .font(.caption)
+                .monospacedDigit()
+                .foregroundStyle(caption == nil ? EditorTheme.dimText : EditorTheme.secondaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Spacer(minLength: 0)
+            deleteButton
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+    }
+
+    /// Plain red text — the card is for judging the photo, so the control under
+    /// it stays out of the way. Marked (Duplicates) it reads "Keep".
+    private var deleteButton: some View {
+        Button(action: onDelete) {
+            Text(isMarkedForDeletion == true ? "Keep" : "Delete")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.red)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(deleteAccessibilityLabel)
+        .accessibilityAddTraits(isMarkedForDeletion == true ? .isSelected : [])
+    }
+
+    private var deleteAccessibilityLabel: String {
+        switch isMarkedForDeletion {
+        case true: "Keep this photo"
+        case false: "Mark this photo for deletion"
+        case nil: "Delete this photo"
         }
     }
 
@@ -388,15 +540,16 @@ private struct ComparePane: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(isPlaying ? "Pause" : "Play")
-        .padding(8)
     }
 
+    /// Camera and exposure on one line — the numbers a comparison turns on.
     private var caption: String? {
         guard let metadata = photo.metadata else { return nil }
         return MetadataFormatter.metadataLine([
-            isCompact ? nil : metadata.normalizedCameraModel,
+            metadata.normalizedCameraModel,
             metadata.focalLength.flatMap(MetadataFormatter.focalLength),
             metadata.aperture.flatMap(MetadataFormatter.aperture),
+            metadata.shutterSpeedDisplay,
             metadata.iso.flatMap(MetadataFormatter.iso),
         ])
     }
@@ -429,11 +582,7 @@ private struct ComparePane: View {
 
     private func loadImage(_ asset: PHAsset) {
         guard image == nil else { return }
-        let scale = UIScreen.main.scale
-        let targetSize = CGSize(
-            width: UIScreen.main.bounds.width * scale,
-            height: UIScreen.main.bounds.height * scale
-        )
+        let targetSize = ActiveDisplay.pixelSize()
         // Paint the best local rendition first, then replace it with the exact
         // high-quality screen-sized derivative. The latter is cached by the
         // shared service, so revisiting the same comparison is immediate.

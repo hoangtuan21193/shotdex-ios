@@ -220,6 +220,66 @@ final class AppDatabase: Sendable {
             }
         }
 
+        // Photo-vs-video is a filter of its own (Library filter sheet and the
+        // `mediaType` smart-album rule), and a library that is overwhelmingly
+        // one kind makes "videos only" worth an index despite the column's two
+        // values.
+        migrator.registerMigration("v8-mediaTypeIndex") { db in
+            try db.create(
+                index: "idx_photo_metadata_mediaType",
+                on: "photo_metadata",
+                columns: ["mediaType"]
+            )
+        }
+
+        // Perceptual hashes for the duplicate finder (§7.3 Utilities). A table
+        // of its own, like `place_cells`: the indexer upserts whole
+        // `PhotoMetadata` rows and would blank a hash column on every re-index.
+        // `hash` is nullable — NULL records a thumbnail that could not be read
+        // (iCloud-only, network disallowed) so the scan skips it until network
+        // is allowed again. `modificationDate` mirrors the photo's at hash time;
+        // a mismatch re-queues the photo after an edit.
+        migrator.registerMigration("v9-perceptualHash") { db in
+            try db.create(table: "perceptual_hash") { t in
+                t.primaryKey("assetId", .text)
+                t.column("hash", .integer)
+                t.column("modificationDate", .integer)
+                t.column("computedAt", .integer).notNull()
+            }
+        }
+
+        // Cached duplicate groups, one row per member per strictness, plus when
+        // each strictness was last grouped. Opening the Duplicates screen reads
+        // these instead of re-hashing and regrouping — the user rescans on demand.
+        migrator.registerMigration("v10-duplicateCache") { db in
+            try db.create(table: "duplicate_groups") { t in
+                t.column("strictness", .text).notNull()
+                t.column("groupId", .text).notNull()
+                t.column("assetId", .text).notNull()
+                t.primaryKey(["strictness", "assetId"])
+            }
+            try db.create(
+                index: "idx_duplicate_groups_group",
+                on: "duplicate_groups",
+                columns: ["strictness", "groupId"]
+            )
+            try db.create(table: "duplicate_scan_state") { t in
+                t.primaryKey("strictness", .text)
+                t.column("scannedAt", .integer).notNull()
+                t.column("groupCount", .integer).notNull()
+            }
+        }
+
+        // Sorting the whole library by "Date Modified" scans this column, the
+        // same way the date-taken orders scan `creationDate`.
+        migrator.registerMigration("v11-modificationDateIndex") { db in
+            try db.create(
+                index: "idx_photo_metadata_modificationDate",
+                on: "photo_metadata",
+                columns: ["modificationDate"]
+            )
+        }
+
         return migrator
     }
 }

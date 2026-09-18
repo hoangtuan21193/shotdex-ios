@@ -11,6 +11,9 @@ import SwiftUI
 struct EditorInlineTextEditor: View {
     let initialText: String
     let tokens: OverlayTokenValues
+    /// Whether the token chips ride above the keyboard. Off in the Video Studio,
+    /// where a caption has no EXIF to draw on.
+    let showsTokens: Bool
     let alignment: OverlayTextAlignment
     let onCommit: (String) -> Void
     let onCancel: () -> Void
@@ -21,12 +24,14 @@ struct EditorInlineTextEditor: View {
     init(
         initialText: String,
         tokens: OverlayTokenValues,
+        showsTokens: Bool = true,
         alignment: OverlayTextAlignment,
         onCommit: @escaping (String) -> Void,
         onCancel: @escaping () -> Void
     ) {
         self.initialText = initialText
         self.tokens = tokens
+        self.showsTokens = showsTokens
         self.alignment = alignment
         self.onCommit = onCommit
         self.onCancel = onCancel
@@ -46,13 +51,17 @@ struct EditorInlineTextEditor: View {
                 topBar
                 Spacer(minLength: 0)
                 field
-                if OverlayTokenResolver.containsKnownToken(text) {
+                if showsTokens, OverlayTokenResolver.containsKnownToken(text) {
                     preview
                 }
                 Spacer(minLength: 0)
             }
         }
-        .safeAreaInset(edge: .bottom) { tokenBar }
+        .safeAreaInset(edge: .bottom) {
+            if showsTokens {
+                tokenBar
+            }
+        }
         .onAppear { isFocused = true }
     }
 
@@ -89,6 +98,28 @@ struct EditorInlineTextEditor: View {
             .frame(maxHeight: 220)
             .padding(.horizontal, 24)
             .shadow(color: .black.opacity(0.5), radius: 6, y: 1)
+            // `TextEditor` has no placeholder of its own; without one an empty
+            // caption is a black screen with a caret the eye has to hunt for.
+            .overlay(alignment: .top) {
+                if text.isEmpty {
+                    Text("Type a caption")
+                        .font(.system(size: 30, weight: .semibold))
+                        .foregroundStyle(EditorTheme.dimText)
+                        .multilineTextAlignment(textAlignment)
+                        .frame(maxWidth: .infinity, alignment: placeholderAlignment)
+                        .padding(.horizontal, 29)
+                        .padding(.top, 8)
+                        .allowsHitTesting(false)
+                }
+            }
+    }
+
+    private var placeholderAlignment: Alignment {
+        switch alignment {
+        case .leading: .leading
+        case .center: .center
+        case .trailing: .trailing
+        }
     }
 
     /// What the tokens expand to on *this* photo, shown live so a caption full of

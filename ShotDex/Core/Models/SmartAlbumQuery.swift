@@ -33,6 +33,7 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
     case lens
     case sensorFormat
     case fileType
+    case mediaType
     case filename
     /// Where the photo was taken, matched against the reverse-geocoded address
     /// (`photo_metadata.placeSearchText`). Only photos the geocoding pass has
@@ -54,6 +55,7 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
         case .lens: "Lens"
         case .sensorFormat: "Sensor Format"
         case .fileType: "File Type"
+        case .mediaType: "Media Type"
         case .filename: "Filename"
         case .place: "Place"
         case .iso: "ISO"
@@ -68,7 +70,7 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
     var kind: RuleFieldKind {
         switch self {
         case .cameraBrand, .cameraBody, .lens, .filename, .place: .text
-        case .sensorFormat, .fileType: .choice
+        case .sensorFormat, .fileType, .mediaType: .choice
         case .iso, .aperture, .shutter, .focalLength: .number
         case .dateTaken: .date
         case .favorite: .favorite
@@ -91,6 +93,8 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
             SensorFormat.allCases.map { ($0.rawValue, $0.displayName) }
         case .fileType:
             PhotoFileType.allCases.map { ($0.rawValue, $0.displayName) }
+        case .mediaType:
+            MediaKind.allCases.map { ($0.rawValue, $0.displayName) }
         default:
             []
         }
@@ -98,6 +102,14 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
 
     var defaultOperator: RuleOperator {
         kind.allowedOperators.first ?? .contains
+    }
+
+    /// Fields the condition rows offer. `.mediaType` is left out because the
+    /// rule builder gives photo-vs-video its own All/Photo/Video control — it is
+    /// still a rule underneath, so offering it in the field menu too would show
+    /// the same condition twice.
+    static var selectableCases: [RuleField] {
+        allCases.filter { $0 != .mediaType }
     }
 }
 
@@ -341,6 +353,12 @@ struct SmartAlbumQuery: Codable, Equatable, Sendable {
         rangeRule(criteria.shutterRange, field: .shutter)
         rangeRule(criteria.apertureRange, field: .aperture)
         rangeRule(criteria.focalRange, field: .focalLength, focalMode: criteria.focalLengthMode)
+
+        // Only a single-kind selection carries a constraint: both kinds ANDed
+        // under `.all` would match nothing, and neither means "no filter".
+        if let kind = criteria.mediaKinds.count == 1 ? criteria.mediaKinds.first : nil {
+            rules.append(SmartAlbumRule(field: .mediaType, op: .isExactly, text: kind.rawValue))
+        }
 
         if criteria.favoritesOnly {
             rules.append(SmartAlbumRule(field: .favorite, boolValue: true))

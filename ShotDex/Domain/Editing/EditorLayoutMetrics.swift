@@ -104,6 +104,34 @@ enum EditorLayoutMetrics {
         editorParamZoneHeight - (hasTargetStrip ? editorTargetStripHeight : 0)
     }
 
+    // MARK: On-photo curve graph
+
+    /// The point-curve plot floats over the photo while the Curve group is open: a
+    /// square centred on the image. Its side is the stage's shorter dimension less
+    /// this inset on each side — not the image's — so a landscape photo gets a
+    /// plot as wide as the screen, spilling onto the letterbox rather than being
+    /// squeezed into the image's height where the points crowd.
+    static let curvePlotInset: CGFloat = 16
+    /// Smallest plot worth drawing — below this the points overlap.
+    static let curvePlotMinimumSide: CGFloat = 120
+    static let curvePointDiameter: CGFloat = 13
+    /// A touch this close to a control point grabs it; farther drops a new point.
+    static let curvePointHitRadius: CGFloat = 26
+
+    /// The square plot for a photo laid out in `imageRect` on a stage of
+    /// `stageRect`: sized to the stage, centred on the image, then nudged to stay
+    /// inside the stage.
+    static func curvePlotRect(in imageRect: CGRect, stage stageRect: CGRect) -> CGRect {
+        let side = max(
+            curvePlotMinimumSide,
+            min(stageRect.width, stageRect.height) - curvePlotInset * 2
+        )
+        var origin = CGPoint(x: imageRect.midX - side / 2, y: imageRect.midY - side / 2)
+        origin.x = min(max(origin.x, stageRect.minX + curvePlotInset), stageRect.maxX - curvePlotInset - side)
+        origin.y = min(max(origin.y, stageRect.minY + curvePlotInset), stageRect.maxY - curvePlotInset - side)
+        return CGRect(origin: origin, size: CGSize(width: side, height: side))
+    }
+
     // MARK: Floating histogram card
 
     /// The expanded histogram card that floats over the photo. Tapping the mini

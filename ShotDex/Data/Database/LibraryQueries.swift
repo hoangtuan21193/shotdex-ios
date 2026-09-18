@@ -229,6 +229,15 @@ struct LibraryQueries: Sendable {
             : "focalLength"
         addRange(criteria.focalRange, column: focalColumn)
 
+        // A set holding every kind constrains nothing, so it is left out of the
+        // SQL rather than expanded into an IN over all values.
+        if !criteria.mediaKinds.isEmpty, criteria.mediaKinds.count < MediaKind.allCases.count {
+            let stored = criteria.mediaKinds.map(\.storedValue).sorted()
+            let placeholders = Array(repeating: "?", count: stored.count).joined(separator: ", ")
+            conditions.append("mediaType IN (\(placeholders))")
+            values.append(contentsOf: stored)
+        }
+
         if criteria.favoritesOnly {
             conditions.append("isFavorite = 1")
         }
@@ -301,6 +310,8 @@ struct LibraryQueries: Sendable {
         let clause = switch sort {
         case .dateTakenNewest: "creationDate DESC NULLS LAST"
         case .dateTakenOldest: "creationDate ASC NULLS LAST"
+        case .dateModifiedNewest: "modificationDate DESC NULLS LAST"
+        case .dateModifiedOldest: "modificationDate ASC NULLS LAST"
         case .isoDescending: "iso DESC NULLS LAST, creationDate DESC NULLS LAST"
         case .isoAscending: "iso ASC NULLS LAST, creationDate DESC NULLS LAST"
         case .focalLengthDescending: "focalLength DESC NULLS LAST, creationDate DESC NULLS LAST"

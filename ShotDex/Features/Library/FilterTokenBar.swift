@@ -216,6 +216,15 @@ struct FilterTokenBar: View {
                 ) { $0.focalRange = NumericRangeFilter() }
             )
         }
+        for kind in criteria.mediaKinds.sorted(by: { $0.rawValue < $1.rawValue }) {
+            result.append(
+                FilterToken(
+                    id: "media-\(kind.rawValue)",
+                    label: kind.displayName,
+                    removalAccessibilityLabel: "Remove media type filter \(kind.displayName)"
+                ) { $0.mediaKinds.remove(kind) }
+            )
+        }
         if criteria.favoritesOnly {
             result.append(
                 FilterToken(

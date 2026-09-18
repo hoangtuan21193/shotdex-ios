@@ -70,3 +70,26 @@ struct ToneCurveMathTests {
         #expect(decoded.curve == recipe.curve)
     }
 }
+
+@Suite struct ToneCurvePresetTests {
+    /// Every preset is a usable starting shape: anchored at both edges, x strictly
+    /// increasing (so the monotone spline is defined), y never decreasing (so no
+    /// preset inverts tones), and no two presets share a shape.
+    @Test func presetsAreWellFormed() {
+        let presets = ToneCurveAdjustments.presets
+        #expect(presets.first?.points == ToneCurveAdjustments.linear)
+        for preset in presets {
+            #expect(preset.points.first?.x == 0, "\(preset.id)")
+            #expect(preset.points.last?.x == 1, "\(preset.id)")
+            for (a, b) in zip(preset.points, preset.points.dropFirst()) {
+                #expect(a.x < b.x, "\(preset.id)")
+                #expect(a.y <= b.y, "\(preset.id)")
+            }
+            for point in preset.points {
+                #expect((0...1).contains(point.y), "\(preset.id)")
+            }
+        }
+        #expect(Set(presets.map(\.id)).count == presets.count)
+        #expect(Set(presets.map(\.points)).count == presets.count)
+    }
+}

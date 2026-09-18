@@ -149,9 +149,9 @@ struct RootTabView: View {
             }
         }
         .tabBarMinimizeBehavior(.never)
-        // Selection chrome is one full-screen floating overlay above every tab's
-        // content and the tab bar. The selecting screen hides the native tab/nav
-        // bars (`.toolbar(.hidden, …)`), so the grid runs full-bleed under it.
+        // Selection chrome is one floating bottom bar above every tab's content
+        // and the tab bar. The selecting screen hides only the tab bar and keeps
+        // its navigation bar, which carries the selection ⋯ and ×.
         .overlay {
             if let model = navigation.selectionBar {
                 SelectionOverlay(model: model)
@@ -161,6 +161,10 @@ struct RootTabView: View {
         .animation(.snappy(duration: 0.25), value: navigation.selectionBar != nil)
         .settingsSheet(isPresented: $navigation.isSettingsSheetPresented, libraryModel: libraryModel)
         .keepScreenAwakeWhileIndexing(libraryModel: libraryModel)
+        // Hosts the Adjust Date & Time / Adjust Location sheets and the error
+        // alert for every grid, so the four selecting screens don't each carry
+        // their own copy.
+        .assetActionHost(dependencies.assetActions)
         .environment(navigation)
         .task {
             if libraryModel == nil {
@@ -231,6 +235,7 @@ struct RootTabView: View {
             .animation(.snappy(duration: 0.25), value: navigation.selectionBar != nil)
             .settingsSheet(isPresented: $navigation.isSettingsSheetPresented, libraryModel: libraryModel)
             .keepScreenAwakeWhileIndexing(libraryModel: libraryModel)
+            .assetActionHost(dependencies.assetActions)
             .environment(navigation)
             .task {
                 if libraryModel == nil {

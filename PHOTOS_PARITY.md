@@ -1,0 +1,82 @@
+# ShotDex ⟷ iOS Photos — Feature Parity
+
+Tracker cho đợt bổ sung tính năng còn thiếu so với app Photos (iOS 18/26).
+Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
+
+**Quy ước:** `[ ]` chưa làm · `[x]` xong (đã build pass + commit) · `[-]` bỏ qua, không có public API · `[~]` làm một phần, có ghi chú.
+
+**Quyết định phạm vi (chốt với chủ dự án 2026-09-19):**
+- Commit thẳng `main`, mỗi tính năng một commit build-pass.
+- Có làm: App Intents, Spotlight, Widget target, Share Extension, hỗ trợ iPad.
+- Vision **không** được đưa vào `IndexPipeline`. OCR/Live Text chạy on-demand khi mở ảnh. People & Pets là pass quét riêng, người dùng tự bấm trong Settings.
+- Library grid: Years / Months / Days / All làm **mặc định**, thay chế độ `.flat` hiện tại.
+
+---
+
+## Phase A — Thao tác asset qua PhotoKit
+
+- [x] A1 `PhotoLibraryService`: hide/unhide, sửa creationDate, sửa location, xoá khỏi album, rename/delete album, restore/xoá vĩnh viễn, favorite hàng loạt
+- [ ] A2 Album Hidden + Recently Deleted (khoá Face ID)
+- [x] A3 Sheet Adjust Date & Time, sheet Adjust Location (chọn trên bản đồ)
+- [ ] A4 Context menu khi giữ tile + Select All
+- [x] A5 Bulk: favorite, hide, adjust date, adjust location, copy
+- [~] A6 Album CRUD — service layer xong hết (rename/delete/sắp xếp tay/folder), Remove from album đã lên UI; còn phần UI cho rename/delete/folder
+- [ ] A7 Add to Album trong viewer, Show in All Photos, Copy ảnh, Open in Maps, Print
+- [ ] A8 Tuỳ chọn Share (kèm/không kèm vị trí, bản gốc/bản sửa), Revert to Original, nút Auto-enhance, Copy & Paste edits, giữ tay xem bản gốc trong viewer
+- [ ] A9 Badge trên tile (favorite/Live/edited/HDR/Portrait), filter Edited, filter Screenshots, pull-to-refresh
+- [ ] A10 Kéo thả ảnh ra app khác và thả vào album
+
+## Phase B — Duyệt và xem
+
+- [ ] B1 Years / Months / Days / All + sticky header có tên địa điểm + thanh cuộn ngày
+- [ ] B2 Toggle lưới theo tỉ lệ gốc
+- [ ] B3 Media Types collections (Videos, Selfies, Live, Portrait, Panorama, Time-lapse, Slo-mo, Cinematic, Bursts, Screen Recording, Animated, RAW, Depth)
+- [ ] B4 Recently Viewed / Recently Shared / Recently Saved
+- [ ] B5 Live Photo: phát trong viewer + badge + Save as Video
+- [ ] B6 Portrait: đọc depth data, hiển thị, chỉnh độ mờ nền
+- [ ] B7 Video: tua từng khung, chỉnh dải slo-mo, trim ngay trong viewer
+- [ ] B8 Burst stack, viewer panorama
+- [ ] B9 Filmstrip dưới viewer
+- [ ] B10 Slideshow
+- [ ] B11 Gộp ảnh trùng (giữ bản tốt nhất, hợp nhất metadata)
+- [ ] B12 Hiển thị HDR đầy đủ
+- [ ] B13 Markup: hình khối, kính lúp
+- [ ] B14 Import: bỏ qua ảnh đã nhập, xoá sau khi nhập, nhập thẳng vào album
+- [ ] B15 Toggle autoplay, thống kê dung lượng thư viện
+
+## Phase C — Hệ thống
+
+- [ ] C1 App Intents + Shortcuts + Siri
+- [ ] C2 CoreSpotlight
+- [ ] C3 Widget (Home Screen + Lock Screen)
+- [ ] C4 Share Extension
+- [ ] C5 Handoff qua NSUserActivity
+- [ ] C6 Photo editing extension
+- [ ] C7 Hỗ trợ iPad (sizeClass, sidebar, landscape, phím tắt)
+- [ ] C8 Rà soát Dynamic Type toàn app
+
+## Phase D — Tự dựng phần Apple Intelligence
+
+- [ ] D1 Places: bản đồ duyệt ảnh, gom cụm
+- [ ] D2 Trips: gom theo ngày + vị trí
+- [ ] D3 Memories / Featured Photos: tự chọn + dựng phim qua Video Studio
+- [ ] D4 People & Pets: pass quét Vision riêng, opt-in trong Settings
+- [ ] D5 Live Text on-demand trong viewer
+- [ ] D6 Tách chủ thể / tạo sticker trong viewer
+- [ ] D7 Pinned Collections + tuỳ biến thứ tự màn Collections
+
+## Không có public API — bỏ qua
+
+- [-] Visual Look Up (không có API)
+- [-] Clean Up / xoá vật thể bằng Apple Intelligence (không có API)
+- [-] Live Photo effects Loop / Bounce / Long Exposure (`PHAssetPlaybackStyle` chỉ đọc)
+- [-] Đổi key photo của Live Photo (không có API)
+- [-] Caption / title của PHAsset (`PHAssetChangeRequest` không có thuộc tính này)
+- [-] Spatial Scene 3D, Custom Memory Movie theo prompt, Events (không có API)
+- [-] iCloud Shared Photo Library, Shared with You, subscriber/comment của Shared Album (không có API)
+- [-] Cinematic mode focus edit (không có API)
+- [-] Portrait Lighting (không có API)
+- [-] Utilities gợi ý bằng ML: Receipts, Handwriting, Illustrations, QR, Documents (không có API)
+- [-] Holiday Events, Transfer to Mac, Lock Screen Photo Shuffle (thuộc hệ điều hành)
+- [-] Sort "Recently Added" (PhotoKit không expose ngày thêm vào thư viện)
+- [-] Recently Deleted: duyệt / khôi phục / xoá vĩnh viễn — `PHAssetCollectionSubtype` không có `recentlyDeleted`, không fetch được

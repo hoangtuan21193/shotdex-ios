@@ -34,6 +34,11 @@ final class AppDependencies {
     let recentSearches: RecentSearchStore
     let searchService: SearchService
     let onThisDayNotifications: OnThisDayNotificationService
+    let perceptualHashStore: PerceptualHashStore
+    let duplicateScanPipeline: DuplicateScanPipeline
+    /// Shared favorite / hide / capture-date / location / copy actions and the
+    /// sheets they raise. Hosted by `RootTabView` and by the detail viewer.
+    let assetActions: AssetActionsCoordinator
 
     init(database: AppDatabase, photoLibrary: PhotoLibraryService) {
         let metadataStore = MetadataStore(database: database)
@@ -116,8 +121,15 @@ final class AppDependencies {
             refreshNotifications: { await onThisDayScheduler.refresh() }
         )
         self.powerStatus = PowerMonitor()
+        let perceptualHashStore = PerceptualHashStore(database: database)
+        self.perceptualHashStore = perceptualHashStore
+        self.duplicateScanPipeline = DuplicateScanPipeline(
+            store: perceptualHashStore,
+            reader: PerceptualHashReader()
+        )
         self.indexTraffic = indexTraffic
         self.indexInteractionGate = indexInteractionGate
+        self.assetActions = AssetActionsCoordinator(photoLibrary: photoLibrary)
     }
 
     /// Re-resolves cameras indexed as Unknown against the bundled sensor

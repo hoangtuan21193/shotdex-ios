@@ -2,7 +2,7 @@ import Foundation
 
 /// One control point of a tone curve, in the unit square: `x` is the input level
 /// and `y` the output, both 0…1 in display gamma.
-struct CurvePoint: Codable, Equatable, Sendable {
+struct CurvePoint: Codable, Hashable, Sendable {
     var x: Double
     var y: Double
 
@@ -32,6 +32,13 @@ enum ToneCurveChannel: String, Codable, CaseIterable, Identifiable, Sendable {
     }
 }
 
+/// A named starting shape for the point curve — one tap in the Curve panel.
+struct ToneCurvePreset: Identifiable, Equatable, Sendable {
+    let id: String
+    let name: String
+    let points: [CurvePoint]
+}
+
 /// A Lightroom-style point tone curve: four independent series of control points.
 /// Identity is the straight line for every channel, and a channel that is still
 /// the straight line adds no key to the encoded recipe — so an untouched Curve
@@ -46,6 +53,33 @@ struct ToneCurveAdjustments: Codable, Equatable, Sendable {
     /// The straight line: input maps to itself.
     static let linear = [CurvePoint(x: 0, y: 0), CurvePoint(x: 1, y: 1)]
     static let identity = ToneCurveAdjustments()
+
+    /// The Curve panel's one-tap shapes, applied to whichever channel is showing.
+    /// All monotone, all through sensible anchors, so each is a starting point the
+    /// user then drags — not a look.
+    static let presets: [ToneCurvePreset] = [
+        ToneCurvePreset(id: "linear", name: String(localized: "Linear"), points: linear),
+        ToneCurvePreset(id: "softS", name: String(localized: "Soft S"), points: [
+            CurvePoint(x: 0, y: 0), CurvePoint(x: 0.25, y: 0.22),
+            CurvePoint(x: 0.75, y: 0.78), CurvePoint(x: 1, y: 1),
+        ]),
+        ToneCurvePreset(id: "strongS", name: String(localized: "Strong S"), points: [
+            CurvePoint(x: 0, y: 0), CurvePoint(x: 0.25, y: 0.16),
+            CurvePoint(x: 0.75, y: 0.84), CurvePoint(x: 1, y: 1),
+        ]),
+        ToneCurvePreset(id: "brighten", name: String(localized: "Brighten"), points: [
+            CurvePoint(x: 0, y: 0), CurvePoint(x: 0.5, y: 0.58), CurvePoint(x: 1, y: 1),
+        ]),
+        ToneCurvePreset(id: "darken", name: String(localized: "Darken"), points: [
+            CurvePoint(x: 0, y: 0), CurvePoint(x: 0.5, y: 0.42), CurvePoint(x: 1, y: 1),
+        ]),
+        ToneCurvePreset(id: "fade", name: String(localized: "Fade"), points: [
+            CurvePoint(x: 0, y: 0.1), CurvePoint(x: 1, y: 1),
+        ]),
+        ToneCurvePreset(id: "matte", name: String(localized: "Matte"), points: [
+            CurvePoint(x: 0, y: 0.12), CurvePoint(x: 0.5, y: 0.52), CurvePoint(x: 1, y: 0.92),
+        ]),
+    ]
 
     init(
         rgb: [CurvePoint] = ToneCurveAdjustments.linear,

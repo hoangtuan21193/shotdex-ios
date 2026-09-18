@@ -9,8 +9,8 @@ struct CollageLayoutTests {
     /// Every template's leaf count equals its declared cell count.
     @Test func leafCountMatchesCells() {
         for template in CollageTemplateCatalog.all {
-            #expect(template.root.leafCount == template.cellCount, template.id)
-            #expect(template.cells.count == template.cellCount, template.id)
+            #expect(template.root.leafCount == template.cellCount, "\(template.id)")
+            #expect(template.cells.count == template.cellCount, "\(template.id)")
         }
     }
 
@@ -26,7 +26,7 @@ struct CollageLayoutTests {
         for test in cases {
             let template = CollageTemplateCatalog.template(id: test.id)!
             let cells = template.resolvedCells(overrides: [test.node: test.weights])
-            #expect(cells.count == template.cellCount, test.id)
+            #expect(cells.count == template.cellCount, "\(test.id)")
             assertTiles(cells, id: test.id)
         }
     }
@@ -55,10 +55,10 @@ struct CollageLayoutTests {
         for template in CollageTemplateCatalog.all {
             let dividers = template.dividers(overrides: [:])
             for divider in dividers {
-                #expect(divider.weights.count >= 2, template.id)
-                #expect(divider.index >= 0 && divider.index < divider.weights.count - 1, template.id)
-                #expect(divider.nodeSpan > 0, template.id)
-                #expect(divider.crossEnd > divider.crossStart, template.id)
+                #expect(divider.weights.count >= 2, "\(template.id)")
+                #expect(divider.index >= 0 && divider.index < divider.weights.count - 1, "\(template.id)")
+                #expect(divider.nodeSpan > 0, "\(template.id)")
+                #expect(divider.crossEnd > divider.crossStart, "\(template.id)")
             }
         }
     }
@@ -105,10 +105,10 @@ struct CollageLayoutTests {
         let epsilon = 1e-6
         var area = 0.0
         for cell in cells {
-            #expect(cell.x >= -epsilon && cell.y >= -epsilon, id)
-            #expect(cell.x + cell.width <= 1 + epsilon, id)
-            #expect(cell.y + cell.height <= 1 + epsilon, id)
-            #expect(cell.width > epsilon && cell.height > epsilon, id)
+            #expect(cell.x >= -epsilon && cell.y >= -epsilon, "\(id)")
+            #expect(cell.x + cell.width <= 1 + epsilon, "\(id)")
+            #expect(cell.y + cell.height <= 1 + epsilon, "\(id)")
+            #expect(cell.width > epsilon && cell.height > epsilon, "\(id)")
             area += cell.width * cell.height
         }
         #expect(abs(area - 1) < 1e-4, "\(id) area \(area)")

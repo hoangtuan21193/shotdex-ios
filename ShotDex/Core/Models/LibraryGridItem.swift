@@ -32,15 +32,17 @@ extension PhotoGridDisplayable {
     /// badge. RAW container extensions are intentionally grouped as "RAW";
     /// common rendered formats keep their familiar short name.
     var fileTypeBadgeText: String {
+        let kindBadge = MediaKind(storedValue: mediaType) == .video ? "VIDEO" : "PHOTO"
+
         guard let filename = originalFilename?.trimmingCharacters(in: .whitespacesAndNewlines),
               !filename.isEmpty
         else {
-            return mediaType == 2 ? "VIDEO" : "PHOTO"
+            return kindBadge
         }
 
         let fileExtension = URL(fileURLWithPath: filename).pathExtension.uppercased()
         guard !fileExtension.isEmpty else {
-            return mediaType == 2 ? "VIDEO" : "PHOTO"
+            return kindBadge
         }
 
         switch fileExtension {

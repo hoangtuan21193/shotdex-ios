@@ -81,9 +81,9 @@ final class AlbumsModel {
     /// Physical-pixel target for the full-width hero. Using the native display
     /// scale avoids the soft 1x rendition that is visible on 2x/3x screens.
     static var onThisDayCoverTargetSize: CGSize {
-        let scale = UIScreen.main.scale
+        let scale = ActiveDisplay.scale
         return CGSize(
-            width: UIScreen.main.bounds.width * scale,
+            width: ActiveDisplay.size.width * scale,
             height: 150 * scale
         )
     }
@@ -252,6 +252,9 @@ final class AlbumDetailModel: PhotoBrowsingSource {
     private(set) var photos: [PhotoMetadata] = []
     private(set) var assetsById: [String: PHAsset] = [:]
     private(set) var hasMorePages = true
+    /// Latest in-place deletion, published in the same update as the pruned
+    /// list so the grid animates the tiles out instead of reloading.
+    private(set) var lastRemoval: PhotoGridRemoval?
     /// Ids of the tail of `photos`; O(1) membership test replaces the
     /// per-tile-appear `firstIndex` scan that lagged scrolling on big grids.
     private var pageTriggerIds: Set<String> = []
@@ -357,6 +360,24 @@ final class AlbumDetailModel: PhotoBrowsingSource {
     /// Deletes the given assets via PhotoKit (system shows its own confirm
     /// dialog), then syncs the local index and in-memory state.
     /// Throws `PHPhotosError.userCancelled` if the user cancels.
+    /// Takes assets out of this album but leaves them in the library. The grid
+    /// prunes exactly like a delete — from this screen's point of view the rows
+    /// are gone either way — but the photos and their indexed metadata survive,
+    /// so no `metadataStore.deleteAssets` here.
+    func removeFromAlbum(ids: Set<String>) async throws {
+        guard let sourceAlbum else { return }
+        let assets = ids.compactMap { assetsById[$0] }
+        guard !assets.isEmpty else { return }
+        try await photoLibrary.removeAssets(assets, from: sourceAlbum)
+        deletedIds.formUnion(ids)
+        lastRemoval = .next(after: lastRemoval, removing: ids)
+        photos.removeAll { ids.contains($0.assetId) }
+        pageTriggerIds = Set(photos.suffix(30).map(\.assetId))
+        for id in ids {
+            assetsById.removeValue(forKey: id)
+        }
+    }
+
     func deleteAssets(ids: Set<String>) async throws {
         let assets = ids.compactMap { assetsById[$0] }
         guard !assets.isEmpty else { return }
@@ -365,6 +386,7 @@ final class AlbumDetailModel: PhotoBrowsingSource {
         // the grid doesn't show stale entries until the next index run.
         try? metadataStore.deleteAssets(ids: Array(ids))
         deletedIds.formUnion(ids)
+        lastRemoval = .next(after: lastRemoval, removing: ids)
         photos.removeAll { ids.contains($0.assetId) }
         pageTriggerIds = Set(photos.suffix(30).map(\.assetId))
         for id in ids {

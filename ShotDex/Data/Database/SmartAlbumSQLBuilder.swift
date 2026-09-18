@@ -60,6 +60,14 @@ enum SmartAlbumSQLBuilder {
                 case .isNot: return ("COALESCE(sensorFormat, '') <> ?", [value])
                 default: return nil
                 }
+            case .mediaType:
+                // `mediaType` is NOT NULL, so `isNot` needs no COALESCE guard.
+                guard let kind = MediaKind(rawValue: rule.text) else { return nil }
+                switch rule.op {
+                case .isExactly: return ("mediaType = ?", [kind.storedValue])
+                case .isNot: return ("mediaType <> ?", [kind.storedValue])
+                default: return nil
+                }
             case .fileType:
                 guard let type = PhotoFileType(rawValue: rule.text) else { return nil }
                 let patterns = type.extensions.map { "%.\($0)" }

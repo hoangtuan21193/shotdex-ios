@@ -47,7 +47,10 @@ struct OnThisDayScreen: View {
         .navigationTitle(dateTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
-        .toolbar(isSelecting ? .hidden : .automatic, for: .navigationBar, .tabBar)
+        // Selection keeps the navigation bar (its ⋯ and × live there, Photos
+        // style) so the title and the grid's pinned date header stay put; only
+        // the tab bar hides, clearing the bottom for `SelectionOverlay`.
+        .toolbar(isSelecting ? .hidden : .automatic, for: .tabBar)
         .disablesBackSwipe(isSelecting)
         .onChange(of: isSelecting) { navigation.hidesTabBar = isSelecting }
         .onChange(of: selectionSnapshot) {
@@ -67,7 +70,12 @@ struct OnThisDayScreen: View {
                 model = newModel
             }
         }
-        .onChange(of: photoLibrary.libraryChangeToken) {
+        // `assetChangeToken`, not `libraryChangeToken`: only an asset added or
+        // removed can change which photos belong to this day. The broader token
+        // also fires for content-only changes — a favorite toggle, the viewer
+        // caching a rendition, an iCloud download — and each one reloaded the
+        // grid, which jumped the scroll position back to the top.
+        .onChange(of: photoLibrary.assetChangeToken) {
             // Skip while selecting so an external change doesn't wipe the
             // selection mid-flow; our own deletes already prune locally.
             guard !isSelecting else { return }
@@ -165,7 +173,8 @@ struct OnThisDayScreen: View {
             onSwipeEvent: handleSwipeEvent,
             // Everything is loaded up front — no pagination.
             onNearEnd: {},
-            onUserScroll: {}
+            onUserScroll: {},
+            removal: model.lastRemoval
         )
         .ignoresSafeArea(edges: .bottom)
     }
@@ -241,7 +250,7 @@ struct OnThisDayScreen: View {
         return SelectionBarModel(
             selectionCount: selectedIds.count,
             imageSelectionCount: imageCount,
-            thumbnailIds: selectedIds,
+            selectedIds: selectedIds,
             photoLibrary: photoLibrary,
             libraryQueries: dependencies.libraryQueries,
             isDeleting: isDeleting,
@@ -249,16 +258,19 @@ struct OnThisDayScreen: View {
             onShare: shareSelected,
             onClose: { withAnimation { stopSelecting() } },
             onDeselect: { toggleSelection(of: $0) },
+            onDeselectAll: { selectedIds = [] },
             onCompare: { isComparePresented = true },
             onCompress: presentCompression,
-            onDelete: deleteSelected
+            onDelete: deleteSelected,
+            assetActions: dependencies.assetActions,
+            onSelectAll: { selectedIds = (model?.photos ?? []).map(\.assetId) }
         )
     }
 
     /// Compare panes follow the pick order of the selection.
     private func comparePhotos() -> [ComparePhoto]? {
         guard let model,
-              (2...CompareScreen.maxPhotoCount).contains(selectedIds.count) else { return nil }
+              selectedIds.count >= CompareScreen.minPhotoCount else { return nil }
         let photos = selectedIds.compactMap { id -> ComparePhoto? in
             guard let asset = model.assetsById[id] else { return nil }
             return ComparePhoto(metadata: model.metadata(for: id), asset: asset)
@@ -338,8 +350,7 @@ struct OnThisDayScreen: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        // During selection the nav bar is hidden entirely (controls live in the
-        // floating overlay), so these only render while browsing.
+        // Browsing: date picker + Select. Selecting: the shared ⋯ + × items.
         ToolbarItem(placement: .topBarTrailing) {
             if !isSelecting {
                 Button {
@@ -347,18 +358,27 @@ struct OnThisDayScreen: View {
                 } label: {
                     Image(systemName: "calendar")
                 }
+                .tint(.primary)
                 .accessibilityLabel("Change date")
             }
         }
+        // Select keeps its own Liquid Glass capsule, split off from the date
+        // button — Photos separates them the same way.
+        if #available(iOS 26.0, *) {
+            ToolbarSpacer(.fixed, placement: .topBarTrailing)
+        }
         ToolbarItem(placement: .topBarTrailing) {
             if model?.photos.isEmpty == false, !isSelecting {
-                Button {
+                // Spelled out, like Photos.
+                Button("Select") {
                     isSelecting = true
-                } label: {
-                    Image(systemName: "checkmark.circle")
                 }
+                .tint(.primary)
                 .accessibilityLabel("Select photos")
             }
+        }
+        if isSelecting {
+            SelectionToolbarItems(model: selectionBarModel())
         }
     }
 

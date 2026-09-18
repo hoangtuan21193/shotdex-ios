@@ -159,6 +159,8 @@ Mọi con số thay đổi theo thời gian thực (%, MB, đếm tiến trình,
 | Thêm hành động | `ellipsis` (menu) |
 | Lưu về Photos | `arrow.down.circle.fill` |
 | Crop | `crop` |
+| Duplicates (utility) | `square.on.square` |
+| Rescan / làm lại | `arrow.clockwise` |
 
 Adjustment icon lấy từ `PhotoAdjustmentKind.systemImage`; mask icon từ `PhotoMaskComponentKind.systemImage`. Không tự chọn lại.
 
@@ -187,7 +189,7 @@ Adjustment icon lấy từ `PhotoAdjustmentKind.systemImage`; mask icon từ `Ph
 
 Mọi helper glass phải giữ nhánh `if #available(iOS 26.0, *) { glassEffect(...) } else { ultraThinMaterial + stroke + shadow }`.
 
-**Nút tròn/pill trong tầng D** (Compare, Video Studio, editor) dùng `.editorGlass(_ shape:)` — kính **tối**, không dùng `.glassBackground` (kính sáng tầng C, chữ trắng khó đọc trên nền tối). Màu glyph theo một quy tắc: **inactive** = trắng (`.white` / `.white.opacity(0.9)`), **active** = nền accent + glyph **đen**, **disabled** = `.white.opacity(0.28)`. Không trộn glyph accent với glyph trắng cho cùng một vai trò.
+**Nút tròn/pill trong tầng D** (Compare, Video Studio, editor) dùng `.editorGlass(_ shape:)` — kính **tối**, không dùng `.glassBackground` (kính sáng tầng C, chữ trắng khó đọc trên nền tối). Màu glyph theo một quy tắc: **inactive** = trắng (`.white` / `.white.opacity(0.9)`), **active** = nền accent + glyph **đen**, **disabled** = `.white.opacity(0.28)`. Không trộn glyph accent với glyph trắng cho cùng một vai trò. Trạng thái **đánh dấu phá hủy** (card Compare mở từ Duplicates: viền đỏ 3pt quanh card, nút chữ đổi `Delete` → `Keep`) = đĩa `.red` + glyph trắng — bản phá hủy của "active", không dùng accent cho nó.
 
 ---
 
@@ -197,7 +199,7 @@ Mọi helper glass phải giữ nhánh `if #available(iOS 26.0, *) { glassEffect
 `NavigationStack` → `List` (`.insetGrouped`) → `Section` có header chữ hoa nhỏ. Hành động phá hủy ở section cuối, màu `.red`. Nút chính dùng `.borderedProminent`, nút phụ `.bordered`.
 
 ### 10.2 Màn hình lưới ảnh (tầng B + C)
-Lưới tràn viền, không padding. Chrome nổi đè lên lưới bằng `safeAreaInset(edge:)` hoặc overlay, luôn dùng kính tầng C. Khi vào chế độ chọn: lưới mờ đi, selection bar trượt lên từ đáy.
+Lưới tràn viền, không padding. Lưới Library **không chèn header ngày** (2026-09-18). Chrome nổi đè lên lưới bằng `safeAreaInset(edge:)` hoặc overlay, luôn dùng kính tầng C. Khi vào chế độ chọn: lưới mờ đi, selection bar trượt lên từ đáy.
 
 ### 10.3 Công cụ toàn màn hình (tầng D)
 Cấu trúc cố định từ trên xuống:
@@ -216,14 +218,19 @@ Tiến trình dài chạy: `safeAreaInset(edge: .bottom)` với `ProgressView` +
 
 ### 10.5 Presentation
 - **Sheet** cho tùy chọn/nhập liệu (Filter, Advanced Search, Smart Album Editor, Chart Editor, History).
-- **fullScreenCover** cho công cụ chiếm toàn bộ ảnh (Viewer, Compare, Compress, Collage, Video Studio, Curve Editor).
+- **fullScreenCover** cho công cụ chiếm toàn bộ ảnh (Viewer, Compare, Compress, Collage, Video Studio). Công cụ cần xem ảnh trong lúc kéo (Curve) **không** mở màn riêng — vẽ overlay lên stage của editor, mờ đi khi giữ tay (`EditorCurveOverlay`).
+- - **Xác nhận Discard/Huỷ dùng `.alert` 2 nút** (Discard đỏ + Keep Editing), **không** dùng `confirmationDialog`: iOS 26 vẽ dialog thành popover nổi và **ẩn nút role `.cancel`**, chỉ còn nút đỏ (Photo Editor, Video Studio, Collage đều đã đổi 2026-09-06).
 - Payload của `fullScreenCover(item:)` phải là struct `Identifiable` chứa sẵn dữ liệu (xem `CompressionPresentation`) — không đọc lại state ngoài.
 
 ### 10.6 Chế độ chọn nhiều ảnh
-Một mẫu duy nhất cho Library, Album Detail, Smart Album Detail, On This Day:
-- Hàng trên: nút Share (tròn kính) · khay thumbnail đã chọn (cuộn ngang, có nút ✕ từng ảnh) · nút đóng (tròn kính); nhãn `N Photos Selected` ngay dưới.
-- Hàng dưới: ba cụm — [Collage, Video] · [Compare, Compress, ⋯] · [Delete].
-- Hành động không khả dụng thì **làm mờ** (`.tertiaryLabel` / opacity 0.32), không ẩn. Compare yêu cầu ≤ 4 ảnh.
+Một mẫu duy nhất cho Library, Album Detail, Smart Album Detail, On This Day — **bắt chước app Photos** (2026-09-18):
+- **Nav bar không ẩn khi chọn**: tiêu đề màn hình (và dòng ngày dưới nó ở Library) đứng nguyên vị trí như lúc duyệt; header ngày dính của lưới cũng không nhảy lên. Chỉ tab bar ẩn.
+- Nav bar khi chọn: các nút duyệt (Settings/Sort/Select) ẩn; leading là button chữ **`Compare`**, trailing là **⋯** (Collage, Video, Compare, Resize & Compress, Add to Collection, Export EXIF, Duplicate — dòng nào screen không cấp thì không hiện) và **×** (thoát chọn). Nút vào chế độ chọn ghi **chữ `Select`**, không dùng icon.
+- Thanh nổi duy nhất ở đáy (`SelectionOverlay`): `[ Share (tròn kính) · pill đếm · Delete (tròn kính) ]`. Pill đếm ghi `N selected・{dung lượng}`, chưa chọn gì thì ghi `Select Items`; **pill là button cao 48pt, cùng kính/hiệu ứng với nút tròn**, nhãn `Show Selected (N・{size})` — chạm mở `SelectedItemsSheet` liệt kê ảnh đã chọn (chạm ô = bỏ chọn, có `Deselect All`).
+- Nút **Filter** đứng đầu nhóm trailing (vẫn hiện khi đang chọn, kiểu Photos); `Select` (lúc duyệt) và `×` (lúc chọn) **tách sang capsule kính riêng** bằng `ToolbarSpacer(.fixed)`. Không có nút Sort riêng — sort nằm trong menu filter.
+- Icon chrome ở mọi tab dùng `.tint(.primary)`, kể cả tab Collections (Settings, `+`, calendar) — accent chỉ cho trạng thái active/selected.
+- Hành động không khả dụng thì **làm mờ** (dòng menu `.disabled`, nút tròn opacity 0.3), không ẩn. Compare yêu cầu ≥ 2 ảnh (không có trần trên).
+- **Accent cố định là amber, KHÔNG còn setting và KHÔNG còn là tint toàn app (2026-09-19)**: `AppAccent.color` / `.uiColor` là hằng số (amber của icon, hai biến thể light/dark), phát qua `\.appAccent`; `ShotDexApp` **không** `.tint(...)`. Mọi control chuẩn của hệ (nav bar, menu, sheet, toggle, tab bar đang chọn) giữ **mặc định iOS**; accent chỉ dùng cho phần ShotDex tự vẽ: badge chọn ảnh trong lưới, trạng thái active của editor (`EditorTheme.accent`), chart. Chrome kính nổi (gear, filter, Select, ×, +, calendar, ⋯) luôn `.tint(.primary)` monochrome; `UIButton` tự dựng (icon Advanced Search trong search field) phải set `tintColor = .label`.
 - **Glass của selection bar là Liquid Glass sáng gốc** (`glassBackground` / `glassEffect`), giống thanh nổi của app Photos — trong suốt, có vibrancy, **không** đè tint tối. Glyph **monochrome** `.primary` (đen/trắng theo hệ, vibrancy lo độ đọc), **không** accent. Accent chỉ dành cho trạng thái active/selected. Icon chrome ở toolbar (Select/Settings/Sort) cũng `.tint(.primary)` monochrome, không ăn theo accent vàng toàn app. **Badge chọn ảnh trong lưới dùng accent, kiểu app Photos** (2026-08-12): ô đã chọn = check trắng trên đĩa **accent** (`checkmark.circle.fill`, palette `[.white, accent]`) + viền accent 3pt + thumbnail mờ nhẹ (`alpha 0.82`); ô chưa chọn = `circle` viền trắng. Đây là ngoại lệ có tên của "accent chỉ cho active" — badge lưới là chỉ báo chọn/chưa chọn nên ăn theo accent như app Photos. Accent lấy qua `UIColor(AppAccentTheme.stored.color)` vì cell là UIKit.
 
 ---

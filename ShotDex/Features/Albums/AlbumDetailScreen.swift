@@ -47,7 +47,10 @@ struct AlbumDetailScreen: View {
         .navigationTitle(album.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
-        .toolbar(isSelecting ? .hidden : .automatic, for: .navigationBar, .tabBar)
+        // Selection keeps the navigation bar (its ⋯ and × live there, Photos
+        // style) so the title and the grid's pinned date header stay put; only
+        // the tab bar hides, clearing the bottom for `SelectionOverlay`.
+        .toolbar(isSelecting ? .hidden : .automatic, for: .tabBar)
         .disablesBackSwipe(isSelecting)
         .onChange(of: isSelecting) { navigation.hidesTabBar = isSelecting }
         .onChange(of: selectionSnapshot) {
@@ -169,7 +172,8 @@ struct AlbumDetailScreen: View {
             },
             onSwipeEvent: handleSwipeEvent,
             onNearEnd: { model.loadNextPage() },
-            onUserScroll: {}
+            onUserScroll: {},
+            removal: model.lastRemoval
         )
         .ignoresSafeArea(edges: .bottom)
     }
@@ -244,7 +248,7 @@ struct AlbumDetailScreen: View {
 
     /// Compare panes follow the pick order of the selection.
     private func comparePhotos(_ model: AlbumDetailModel) -> [ComparePhoto]? {
-        guard (2...CompareScreen.maxPhotoCount).contains(selectedIds.count) else { return nil }
+        guard selectedIds.count >= CompareScreen.minPhotoCount else { return nil }
         // Videos have no metadata row (index is image-only) — require the
         // asset instead, and let the caption go missing.
         let photos = selectedIds.compactMap { id -> ComparePhoto? in
@@ -262,6 +266,20 @@ struct AlbumDetailScreen: View {
             let items = await PhotoShareSheet.gather(assets: assets)
             isPreparingShare = false
             PhotoShareSheet.present(items: items)
+        }
+    }
+
+    /// Removes the selection from this album without deleting the photos.
+    private func removeFromAlbum(_ model: AlbumDetailModel, album: PHAssetCollection) {
+        guard !selectedIds.isEmpty else { return }
+        let ids = Set(selectedIds)
+        Task {
+            do {
+                try await model.removeFromAlbum(ids: ids)
+                withAnimation { stopSelecting() }
+            } catch {
+                deleteErrorMessage = error.localizedDescription
+            }
         }
     }
 
@@ -306,7 +324,7 @@ struct AlbumDetailScreen: View {
         return SelectionBarModel(
             selectionCount: selectedIds.count,
             imageSelectionCount: selectedImageIDs(model).count,
-            thumbnailIds: selectedIds,
+            selectedIds: selectedIds,
             photoLibrary: photoLibrary,
             libraryQueries: dependencies.libraryQueries,
             isDeleting: isDeleting,
@@ -314,6 +332,7 @@ struct AlbumDetailScreen: View {
             onShare: { shareSelected(model) },
             onClose: { withAnimation { stopSelecting() } },
             onDeselect: { toggleSelection(of: $0) },
+            onDeselectAll: { selectedIds = [] },
             onCollage: { presentCollage(model) },
             onVideo: { presentVideoStudio(model) },
             onCompare: { isComparePresented = true },
@@ -321,7 +340,14 @@ struct AlbumDetailScreen: View {
             onDelete: { deleteSelected(model) },
             onAddToCollection: { addToCollection(model) },
             onExportEXIF: { exportEXIF(model) },
-            onDuplicate: { duplicateSelected(model) }
+            onDuplicate: { duplicateSelected(model) },
+            assetActions: dependencies.assetActions,
+            onSelectAll: { selectedIds = model.photos.map(\.assetId) },
+            // Only a real, mutable user album offers this; "All Photos" and
+            // smart albums have no membership to remove from.
+            onRemoveFromAlbum: model.sourceAlbum.map { album in
+                { removeFromAlbum(model, album: album) }
+            }
         )
     }
 
@@ -375,17 +401,19 @@ struct AlbumDetailScreen: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        // During selection the nav bar is hidden entirely (controls live in the
-        // floating overlay), so this only renders while browsing.
+        // Browsing: just Select. Selecting: the shared ⋯ + × items below.
         ToolbarItem(placement: .topBarTrailing) {
             if model?.photos.isEmpty == false, !isSelecting {
-                Button {
+                // Spelled out, like Photos.
+                Button("Select") {
                     isSelecting = true
-                } label: {
-                    Image(systemName: "checkmark.circle")
                 }
+                .tint(.primary)
                 .accessibilityLabel("Select photos")
             }
+        }
+        if isSelecting, let selectionModel = selectionBarModel() {
+            SelectionToolbarItems(model: selectionModel)
         }
     }
 }

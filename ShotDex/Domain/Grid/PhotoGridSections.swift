@@ -28,6 +28,23 @@ struct PhotoGridCustomSection: Equatable, Sendable {
     let title: String
 }
 
+/// A list owner's note that its latest `photos` is the previous list minus
+/// exactly these ids, order untouched. The grid then animates those tiles out
+/// (`deleteItems`, plus `deleteSections` for groups that emptied) instead of
+/// a `reloadData`, which re-requested every visible thumbnail and, on short
+/// lists, snapped the scroll position. `token` distinguishes consecutive
+/// deletions; the grid ignores a removal it has already applied. Any mismatch
+/// between the note and the arrays falls back to the reload path.
+struct PhotoGridRemoval: Equatable, Sendable {
+    let assetIds: Set<String>
+    let token: Int
+
+    /// The removal that follows `previous` in a list owner's sequence.
+    static func next(after previous: PhotoGridRemoval?, removing assetIds: Set<String>) -> PhotoGridRemoval {
+        PhotoGridRemoval(assetIds: assetIds, token: (previous?.token ?? 0) &+ 1)
+    }
+}
+
 /// How the grid divides `photos` into sections. Exclusive by construction: the
 /// grid either groups by creation date (re-grouped on every pinch step), takes
 /// one flat headerless section, or the screen owns the grouping — which is

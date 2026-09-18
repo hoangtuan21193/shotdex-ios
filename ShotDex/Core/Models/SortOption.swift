@@ -4,6 +4,8 @@ import Foundation
 enum SortOption: String, CaseIterable, Identifiable, Codable, Sendable {
     case dateTakenNewest
     case dateTakenOldest
+    case dateModifiedNewest
+    case dateModifiedOldest
     case isoDescending
     case isoAscending
     case focalLengthDescending
@@ -17,15 +19,40 @@ enum SortOption: String, CaseIterable, Identifiable, Codable, Sendable {
 
     var id: String { rawValue }
 
-    /// Date-ordered grids show date section headers; metric sorts don't.
+    /// Date-taken orders: the ones PhotoKit's own `creationDate` matches, so a
+    /// grid on one of them can be driven straight from the photo library.
     var isDateSort: Bool {
         self == .dateTakenNewest || self == .dateTakenOldest
     }
+
+    /// The `PHAsset` key this order maps to, or nil for the metric orders,
+    /// which only the indexed rows can answer. A non-nil key lets the grid skip
+    /// the EXIF index and show the whole library straight from PhotoKit.
+    var photoKitSortKey: String? {
+        switch self {
+        case .dateTakenNewest, .dateTakenOldest: "creationDate"
+        case .dateModifiedNewest, .dateModifiedOldest: "modificationDate"
+        default: nil
+        }
+    }
+
+    /// Whether `photoKitSortKey` runs oldest-first.
+    var isAscending: Bool {
+        self == .dateTakenOldest || self == .dateModifiedOldest
+    }
+
+    /// The orders the Library's filter menu offers. The metric orders stay in
+    /// the enum (queries and smart albums still use them) but not in the menu.
+    static let menuOrders: [SortOption] = [
+        .dateTakenNewest, .dateTakenOldest, .dateModifiedNewest, .dateModifiedOldest,
+    ]
 
     var displayName: String {
         switch self {
         case .dateTakenNewest: "Date Taken (Newest)"
         case .dateTakenOldest: "Date Taken (Oldest)"
+        case .dateModifiedNewest: "Date Modified (Newest)"
+        case .dateModifiedOldest: "Date Modified (Oldest)"
         case .isoDescending: "ISO (High to Low)"
         case .isoAscending: "ISO (Low to High)"
         case .focalLengthDescending: "Focal Length (Long to Short)"

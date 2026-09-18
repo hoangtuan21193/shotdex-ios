@@ -77,7 +77,7 @@ extension SmartAlbumQuery {
         }
     }
 
-    // MARK: Choice (sensor format / file type)
+    // MARK: Choice (sensor format / file type / media type)
 
     private static func choiceMatch(_ rule: SmartAlbumRule, _ metadata: PhotoMetadata) -> Bool {
         switch rule.field {
@@ -85,6 +85,13 @@ extension SmartAlbumQuery {
             switch rule.op {
             case .isExactly: return metadata.sensorFormat == rule.text
             case .isNot: return (metadata.sensorFormat ?? "") != rule.text
+            default: return false
+            }
+        case .mediaType:
+            guard let kind = MediaKind(rawValue: rule.text) else { return false }
+            switch rule.op {
+            case .isExactly: return metadata.mediaType == kind.storedValue
+            case .isNot: return metadata.mediaType != kind.storedValue
             default: return false
             }
         case .fileType:

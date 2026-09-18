@@ -83,17 +83,17 @@ final class ScreenAwakeCoordinator {
     }
 
     private func dim() {
-        guard !isDimmed else { return }
+        guard !isDimmed, let screen = ActiveDisplay.screen else { return }
         isDimmed = true
-        restoreBrightness = UIScreen.main.brightness
-        UIScreen.main.brightness = Self.dimmedBrightness
+        restoreBrightness = screen.brightness
+        screen.brightness = Self.dimmedBrightness
     }
 
     private func wake() {
         guard isDimmed else { return }
         isDimmed = false
         if let restoreBrightness {
-            UIScreen.main.brightness = restoreBrightness
+            ActiveDisplay.screen?.brightness = restoreBrightness
         }
         restoreBrightness = nil
     }

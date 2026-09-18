@@ -136,6 +136,9 @@ private struct SearchFieldButtonInstaller: UIViewRepresentable {
                 self?.action()
             })
             button.setImage(UIImage(systemName: systemImage), for: .normal)
+            // Monochrome like every other chrome glyph: a `.system` button would
+            // otherwise take the window's accent tint.
+            button.tintColor = .label
             button.accessibilityLabel = accessibilityLabel
 
             button.frame = CGRect(x: 0, y: 0, width: 28, height: 28)

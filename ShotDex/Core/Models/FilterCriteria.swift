@@ -131,6 +131,10 @@ struct FilterCriteria: Equatable, Codable, Sendable {
     var focalRange = NumericRangeFilter()
     var focalLengthMode: FocalLengthMode = .actual
 
+    /// Photo / video multi-select. Empty — or holding every kind — means no
+    /// constraint, so the grid keeps showing both.
+    var mediaKinds: Set<MediaKind> = []
+
     var favoritesOnly = false
 
     /// Free-text search terms produced by SearchParser (camera/lens match).
@@ -148,6 +152,7 @@ struct FilterCriteria: Equatable, Codable, Sendable {
             && shutterRange.isEmpty
             && apertureRange.isEmpty
             && focalRange.isEmpty
+            && mediaKinds.isEmpty
             && !favoritesOnly
             && (searchText?.isEmpty ?? true)
     }
@@ -165,6 +170,7 @@ struct FilterCriteria: Equatable, Codable, Sendable {
         if !shutterRange.isEmpty { count += 1 }
         if !apertureRange.isEmpty { count += 1 }
         if !focalRange.isEmpty { count += 1 }
+        if !mediaKinds.isEmpty { count += 1 }
         if favoritesOnly { count += 1 }
         if let searchText, !searchText.isEmpty { count += 1 }
         return count
@@ -180,7 +186,7 @@ struct FilterCriteria: Equatable, Codable, Sendable {
         case cameraBrands, cameraBodies, lenses, sensorFormats
         case cameraBrandTerms, cameraBodyTerms, lensTerms
         case isoRange, shutterRange, apertureRange, focalRange, focalLengthMode
-        case favoritesOnly, searchText
+        case mediaKinds, favoritesOnly, searchText
     }
 
     /// Tolerant decode: every key is optional-with-default so stored albums
@@ -199,6 +205,7 @@ struct FilterCriteria: Equatable, Codable, Sendable {
         apertureRange = try c.decodeIfPresent(NumericRangeFilter.self, forKey: .apertureRange) ?? NumericRangeFilter()
         focalRange = try c.decodeIfPresent(NumericRangeFilter.self, forKey: .focalRange) ?? NumericRangeFilter()
         focalLengthMode = try c.decodeIfPresent(FocalLengthMode.self, forKey: .focalLengthMode) ?? .actual
+        mediaKinds = try c.decodeIfPresent(Set<MediaKind>.self, forKey: .mediaKinds) ?? []
         favoritesOnly = try c.decodeIfPresent(Bool.self, forKey: .favoritesOnly) ?? false
         searchText = try c.decodeIfPresent(String.self, forKey: .searchText)
     }
