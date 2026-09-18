@@ -51,6 +51,9 @@ final class AppDependencies {
     let spotlight: SpotlightIndexer
     /// Collections the user pinned to the top of the Collections tab.
     let collectionPins: CollectionPinStore
+    /// Photos opened and photos shared, for the Recently Viewed / Recently
+    /// Shared collections. PhotoKit records neither.
+    let recentActivity: RecentActivityStore
 
     init(database: AppDatabase, photoLibrary: PhotoLibraryService) {
         let metadataStore = MetadataStore(database: database)
@@ -141,13 +144,17 @@ final class AppDependencies {
         )
         self.indexTraffic = indexTraffic
         self.indexInteractionGate = indexInteractionGate
+        let recentActivity = RecentActivityStore()
+        self.recentActivity = recentActivity
         self.assetActions = AssetActionsCoordinator(
             photoLibrary: photoLibrary,
-            metadataStore: metadataStore
+            metadataStore: metadataStore,
+            recentActivity: recentActivity
         )
         self.viewerAssetActions = AssetActionsCoordinator(
             photoLibrary: photoLibrary,
-            metadataStore: metadataStore
+            metadataStore: metadataStore,
+            recentActivity: recentActivity
         )
         self.collectionPins = CollectionPinStore()
         self.spotlight = SpotlightIndexer(

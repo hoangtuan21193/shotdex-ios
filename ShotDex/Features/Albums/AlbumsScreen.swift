@@ -233,6 +233,10 @@ struct AlbumsScreen: View {
                     memoriesSection()
                 }
 
+                if !recentTokens.isEmpty {
+                    recentsSection()
+                }
+
                 if !(model.smartQueryAlbums.isEmpty && model.smartAlbums.isEmpty) {
                     smartAlbumsSection()
                 }
@@ -287,6 +291,36 @@ struct AlbumsScreen: View {
             default: false
             }
         }
+    }
+
+    /// The recent-activity collections that actually have something in them.
+    /// An empty "Recently Viewed" is worse than none: it invites a tap that
+    /// leads nowhere.
+    private var recentTokens: [(title: String, subtitle: String, ids: [String])] {
+        var result: [(String, String, [String])] = []
+        let viewed = dependencies.recentActivity.viewed
+        if !viewed.isEmpty {
+            result.append((
+                String(localized: "Recently Viewed"),
+                Self.photoCountLabel(viewed.count),
+                viewed
+            ))
+        }
+        let shared = dependencies.recentActivity.shared
+        if !shared.isEmpty {
+            result.append((
+                String(localized: "Recently Shared"),
+                Self.photoCountLabel(shared.count),
+                shared
+            ))
+        }
+        return result
+    }
+
+    private static func photoCountLabel(_ count: Int) -> String {
+        count == 1
+            ? String(localized: "1 photo")
+            : String(localized: "\(count) photos")
     }
 
     @ViewBuilder
@@ -505,6 +539,42 @@ extension AlbumsScreen {
 }
 
 extension AlbumsScreen {
+    /// What the user has just been looking at or sharing. Kept out of
+    /// "Media Types" and "Utilities" because it is neither: it is a record of
+    /// what this person did, which is why the app has to keep it itself.
+    fileprivate func recentsSection() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Recents")
+                .font(.title2.bold())
+                .padding(.horizontal)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 8) {
+                    ForEach(recentTokens, id: \.title) { token in
+                        NavigationLink {
+                            PhotoListScreen(
+                                title: token.title,
+                                subtitle: token.subtitle,
+                                assetIds: token.ids
+                            )
+                        } label: {
+                            UtilityToken(
+                                title: token.title,
+                                subtitle: token.subtitle,
+                                systemImage: token.title == String(localized: "Recently Viewed")
+                                    ? "eye"
+                                    : "square.and.arrow.up"
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal)
+            }
+            .scrollClipDisabled()
+        }
+    }
+
     /// Whatever the user pinned, in the order they pinned it, above everything
     /// the app decided to show.
     fileprivate func pinnedSection() -> some View {

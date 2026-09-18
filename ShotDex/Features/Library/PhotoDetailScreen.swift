@@ -303,7 +303,11 @@ struct PhotoDetailScreen: View {
         } message: { message in
             Text(message)
         }
-        .onChange(of: currentIndex) { _, _ in isLiveTextActive = false }
+        .onChange(of: currentIndex) { _, _ in
+            isLiveTextActive = false
+            recordCurrentAsViewed()
+        }
+        .onAppear { recordCurrentAsViewed() }
         .sheet(isPresented: $isMetadataPresented) {
             MetadataPanel(
                 asset: currentAsset,
@@ -681,6 +685,14 @@ struct PhotoDetailScreen: View {
                 .contentShape(Rectangle())
         }
         .accessibilityLabel("More actions")
+    }
+
+    /// Notes the photo on screen as recently viewed. Called on appear and on
+    /// every page change, so paging through a hundred photos records all of
+    /// them in the order they were seen.
+    private func recordCurrentAsViewed() {
+        guard let id = model.photoId(at: currentIndex) else { return }
+        dependencies.recentActivity.recordViewed(id)
     }
 
     /// Opens every frame of the burst this photo belongs to. The grid only

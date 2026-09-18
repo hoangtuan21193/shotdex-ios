@@ -37,7 +37,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 - [~] B1 Years / Months / Days — pinch 1–3 cột = ngày, 4–6 = tháng, 7+ = năm; Library bật lại date header làm mặc định; thanh cuộn ngày có nhãn ngày khi kéo. **Còn thiếu**: tên địa điểm trong header (chờ D1 Places, `LibraryGridItem` chưa có cột place)
 - [ ] B2 Toggle lưới theo tỉ lệ gốc
 - [x] B3 Media Types collections — section riêng trong Collections, 16 subtype (Videos, Selfies, Live, Portrait, Panorama, Time-lapse, Slo-mo, Cinematic, Bursts, Screenshots, Screen Recording, Animated, Long Exposure, RAW, Spatial); album rỗng tự ẩn như Photos
-- [ ] B4 Recently Viewed / Recently Shared / Recently Saved
+- [~] B4 **Recently Viewed** và **Recently Shared** — app tự ghi (PhotoKit không có), section **Recents** trên tab Collections, giữ 100 mục mới nhất. **Recently Saved** đã có sẵn dưới tên Recently Added trong Smart Albums
 - [x] B5 Live Photo: badge LIVE trong viewer (bấm để phát, `PHLivePhotoView` phủ lên ảnh tĩnh nên giữ nguyên zoom/paging), badge `livephoto` trên tile, **Save as Video** trích `PHAssetResource.pairedVideo` thành clip mới
 - [ ] B6 Portrait: đọc depth data, hiển thị, chỉnh độ mờ nền
 - [~] B7 Video — **tua từng khung** có rồi (`stepFrame(by:)`, tự pause trước, tolerance 0, gắn vào phím ← →). **Chưa có nút trên màn**: hàng nút giữa đã 3 cái đè lên ảnh và hàng dưới đã 6 cái ở 375pt, thêm nữa là chật — cần bạn quyết đặt ở đâu. **Chưa làm**: chỉnh dải slo-mo, trim ngay trong viewer
@@ -98,7 +98,6 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 ## Chưa làm (ưu tiên theo mình thấy)
 
 1. **B7 Video trong viewer**: nút tua khung trên màn (logic đã xong, mới gắn phím ← →), chỉnh dải slo-mo, trim ngay tại chỗ (giờ phải qua Video Studio).
-2. **B4 Recently Viewed / Shared / Saved**: cần app tự ghi lại lượt xem/chia sẻ, PhotoKit không cấp.
 3. **D4 People & Pets**: pass Vision riêng, bạn bấm mới chạy (đúng như bạn dặn là không đưa vào index).
 4. **B13 Markup**: thêm hình khối và kính lúp (PencilKit hiện có pen/highlighter/eraser/lasso/ruler).
 5. **A10 Kéo thả** ảnh ra app khác và thả vào album.

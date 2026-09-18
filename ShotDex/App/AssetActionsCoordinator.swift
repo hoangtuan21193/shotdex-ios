@@ -46,6 +46,9 @@ final class AssetActionsCoordinator {
     /// sections and statistics all read the local index — so every mutation
     /// mirrors itself into the index rather than waiting for the next run.
     private let metadataStore: MetadataStore
+    /// Records shares for the Recently Shared collection. Optional so the
+    /// viewer's own coordinator can share the one store.
+    private let recentActivity: RecentActivityStore?
 
     var dateRequest: DateRequest?
     var locationRequest: LocationRequest?
@@ -58,9 +61,14 @@ final class AssetActionsCoordinator {
     var toastMessage: String?
     private(set) var isWorking = false
 
-    init(photoLibrary: PhotoLibraryService, metadataStore: MetadataStore) {
+    init(
+        photoLibrary: PhotoLibraryService,
+        metadataStore: MetadataStore,
+        recentActivity: RecentActivityStore? = nil
+    ) {
         self.photoLibrary = photoLibrary
         self.metadataStore = metadataStore
+        self.recentActivity = recentActivity
     }
 
     // MARK: Favorite
@@ -210,6 +218,7 @@ final class AssetActionsCoordinator {
     func share(ids: [String]) {
         let assets = PhotoLibraryService.fetchAssets(ids: ids)
         guard !assets.isEmpty else { return }
+        recentActivity?.recordShared(ids)
         perform {
             let items = await PhotoShareSheet.gather(assets: assets)
             PhotoShareSheet.present(items: items)
