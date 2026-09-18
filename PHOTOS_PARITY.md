@@ -42,7 +42,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 - [ ] B12 Hiển thị HDR đầy đủ
 - [ ] B13 Markup: hình khối, kính lúp
 - [ ] B14 Import: bỏ qua ảnh đã nhập, xoá sau khi nhập, nhập thẳng vào album
-- [ ] B15 Toggle autoplay, thống kê dung lượng thư viện
+- [x] B15 Settings: section **Playback** (Autoplay Videos) và **Library Size** (tổng dung lượng cộng từ fileSize đã index, có `~` khi chưa đo hết)
 
 ### Việc phát sinh
 

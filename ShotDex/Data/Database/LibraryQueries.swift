@@ -48,6 +48,33 @@ struct LibraryQueries: Sendable {
         }
     }
 
+    /// How much space the library takes, summed from indexed file sizes.
+    ///
+    /// `knownCount` is how many rows actually carry a size: the fast index pass
+    /// writes a row before the EXIF pass fills its bytes, so early on the total
+    /// is a floor, and the caller prints it with a `~`.
+    struct StorageTotals: Equatable, Sendable {
+        var bytes: Int64
+        var knownCount: Int
+        var totalCount: Int
+    }
+
+    func storageTotals() async throws -> StorageTotals {
+        try await database.reader.read { db in
+            let row = try Row.fetchOne(db, sql: """
+                SELECT COALESCE(SUM(fileSize), 0) AS bytes,
+                       COUNT(fileSize) AS known,
+                       COUNT(*) AS total
+                FROM photo_metadata
+                """)
+            return StorageTotals(
+                bytes: row?["bytes"] ?? 0,
+                knownCount: row?["known"] ?? 0,
+                totalCount: row?["total"] ?? 0
+            )
+        }
+    }
+
     /// Full row for the detail viewer / metadata panel, fetched on demand.
     func metadata(assetId: String) throws -> PhotoMetadata? {
         try database.reader.read { db in

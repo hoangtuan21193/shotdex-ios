@@ -1121,6 +1121,7 @@ private struct VideoFullscreenLayout: ViewModifier {
 /// so mute and AirPlay can never be covered by it.
 private struct DetailVideoPlayer: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage(SettingsKeys.autoplayVideos) private var autoplayVideos = true
 
     let model: VideoPlaybackModel
     let isActive: Bool
@@ -1223,14 +1224,16 @@ private struct DetailVideoPlayer: View {
             )
         }
         .onAppear {
-            if isActive {
+            // Autoplay is a preference, the way it is in Photos. Pausing on
+            // leaving is not — a page that scrolled away must always stop.
+            if isActive, autoplayVideos {
                 model.play()
             }
             syncBufferingIndicator(for: model.phase)
         }
         .onChange(of: isActive) { _, active in
             if active {
-                model.play()
+                if autoplayVideos { model.play() }
             } else {
                 model.pause()
             }

@@ -9,6 +9,8 @@ struct SettingsScreen: View {
 
     let libraryModel: LibraryModel?
 
+    @AppStorage(SettingsKeys.autoplayVideos) private var autoplayVideos = true
+    @State private var storage: LibraryQueries.StorageTotals?
     @AppStorage("display.showISO") private var showsISO = true
     @AppStorage("display.showAperture") private var showsAperture = true
     @AppStorage("display.showShutter") private var showsShutter = false
@@ -51,6 +53,8 @@ struct SettingsScreen: View {
             photoLibrarySection
             notificationsSection
             displaySection
+            playbackSection
+            storageSection
             exportSection
             cameraDatabaseSection
             privacySection
@@ -315,6 +319,50 @@ struct SettingsScreen: View {
         } footer: {
             Text("Pinch the photo grid to change how many columns it shows.")
         }
+    }
+
+    private var playbackSection: some View {
+        Section {
+            Toggle("Autoplay Videos", isOn: $autoplayVideos)
+        } header: {
+            Text("Playback")
+        } footer: {
+            Text("When off, a video waits for you to press play. Looping is a button on the player itself.")
+        }
+    }
+
+    /// How much of the device the library takes up, from the indexed file
+    /// sizes. Photos reports the same figure in Settings, and for a metadata
+    /// app it is one of the more interesting numbers there is.
+    private var storageSection: some View {
+        Section {
+            LabeledContent("Photos and Videos", value: storageTotalLabel)
+            if let storage, storage.knownCount < storage.totalCount {
+                LabeledContent(
+                    "Measured",
+                    value: "\(storage.knownCount.formatted()) of \(storage.totalCount.formatted())"
+                )
+                .monospacedDigit()
+            }
+        } header: {
+            Text("Library Size")
+        } footer: {
+            Text("Summed from the file sizes the index has read. Photos still stored only in iCloud are counted at their full size.")
+        }
+        .task { await loadStorage() }
+    }
+
+    private var storageTotalLabel: String {
+        guard let storage else { return "—" }
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        let formatted = formatter.string(fromByteCount: storage.bytes)
+        return storage.knownCount < storage.totalCount ? "~\(formatted)" : formatted
+    }
+
+    private func loadStorage() async {
+        guard storage == nil else { return }
+        storage = try? await dependencies.libraryQueries.storageTotals()
     }
 
     // MARK: Export

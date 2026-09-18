@@ -27,6 +27,8 @@ enum SettingsKeys {
     static let lookUpPlaces = "index.lookUpPlaces"
     /// Seconds each photo is held during a slideshow.
     static let slideshowSeconds = "slideshow.seconds"
+    /// Whether a video starts playing on its own when its page opens.
+    static let autoplayVideos = "playback.autoplayVideos"
 
     /// Set once the Statistics dashboard has seeded its default charts, so a
     /// board a user deliberately cleared isn't re-seeded on next launch.
