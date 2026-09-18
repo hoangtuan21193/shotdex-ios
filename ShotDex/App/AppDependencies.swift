@@ -166,6 +166,37 @@ final class AppDependencies {
         ).write()
     }
 
+    /// Fills in the capture kind (screenshot, Live Photo, portrait, …) for
+    /// rows written before that column existed.
+    ///
+    /// A backfill rather than a reindex: `PHAsset.mediaSubtypes` is already in
+    /// memory once the asset is fetched, so this reads no files and touches no
+    /// EXIF. Without it the capture-kind filter would match nothing until each
+    /// photo happened to change and be re-read.
+    func backfillMediaSubtypes() async {
+        let store = metadataStore
+        await Task.detached(priority: .utility) {
+            // Batched so a very large library does not build one enormous
+            // dictionary or hold one very long write transaction.
+            while true {
+                guard let ids = try? store.assetIdsMissingMediaSubtypes(limit: 2_000),
+                      !ids.isEmpty
+                else { return }
+                var subtypes: [String: Int] = [:]
+                for asset in PhotoLibraryService.fetchAssets(ids: ids) {
+                    subtypes[asset.localIdentifier] = Int(asset.mediaSubtypes.rawValue)
+                }
+                // Ids PhotoKit no longer knows would otherwise be re-selected
+                // for ever; record them as "no subtype" so the loop ends.
+                for id in ids where subtypes[id] == nil {
+                    subtypes[id] = 0
+                }
+                try? store.fillMediaSubtypes(subtypes)
+                if ids.count < 2_000 { return }
+            }
+        }.value
+    }
+
     /// Re-resolves cameras indexed as Unknown against the bundled sensor
     /// database — an app update that ships new records fixes already-indexed
     /// photos without a reindex. Cheap: touches only still-unknown models.

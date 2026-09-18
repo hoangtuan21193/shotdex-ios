@@ -29,7 +29,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 - [~] A6 Album CRUD — nút "+" thành menu New Album / New Smart Album / New Folder; giữ token album để Rename / Move to Folder / Delete Album; section Folders; Remove from album trong selection và context menu. **Còn thiếu**: kéo sắp xếp tay thứ tự album, chọn ảnh bìa (PhotoKit không có API keyAsset), sort trong Album Detail
 - [~] A7 Viewer có menu ⋯: Add to Album, Duplicate, Copy, Select Text in Photo, Adjust Date & Time, Adjust Location, Show on Map, Hide. **Còn thiếu**: Show in All Photos, Print riêng (hiện đi qua share sheet hệ thống)
 - [~] A8 **Auto Enhance** và **Revert to Original** đã vào menu ⋯ của editor. **Còn thiếu**: tuỳ chọn Share (kèm/không kèm vị trí, bản gốc/bản sửa), Copy & Paste edits giữa ảnh, giữ tay xem bản gốc trong *viewer* (trong editor thì đã có)
-- [~] A9 Badge trên tile: favorite/Live/Portrait/Panorama/HDR/Slo-mo/Time-lapse xong; pull-to-refresh xong. **Không làm được**: badge "edited" (PhotoKit không expose cờ chỉnh sửa trên `PHAsset`, chỉ có cách duyệt `PHAssetResource` từng ảnh — quá đắt cho lưới đang cuộn). Filter Screenshots cần cột `mediaSubtypes` trong DB, xem mục riêng bên dưới
+- [~] A9 Badge trên tile: favorite/Live/Portrait/Panorama/HDR/Slo-mo/Time-lapse xong; pull-to-refresh xong. **Không làm được**: badge "edited" (PhotoKit không expose cờ chỉnh sửa trên `PHAsset`, chỉ có cách duyệt `PHAssetResource` từng ảnh — quá đắt cho lưới đang cuộn). Filter Screenshots (và 7 loại khác) đã xong qua cột `mediaSubtypes`
 - [ ] A10 Kéo thả ảnh ra app khác và thả vào album
 
 ## Phase B — Duyệt và xem
@@ -52,7 +52,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 
 ### Việc phát sinh
 
-- [ ] Thêm cột `mediaSubtypes` vào `photo_metadata` (migration GRDB + `MetadataComposer`) — mở khoá filter Screenshots / Live / Portrait / Panorama và rule smart album theo loại phương tiện
+- [x] Thêm cột `mediaSubtypes` vào `photo_metadata` (migration `v12` + composer + pass backfill) — mở khoá submenu **Capture Kind** trong filter Library: Screenshots · Live Photos · Portrait · Panoramas · HDR · Time-lapse · Slo-mo · Cinematic
 
 ## Phase C — Hệ thống
 

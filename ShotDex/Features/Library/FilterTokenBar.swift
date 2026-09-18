@@ -225,6 +225,15 @@ struct FilterTokenBar: View {
                 ) { $0.mediaKinds.remove(kind) }
             )
         }
+        for subtype in criteria.mediaSubtypes.sorted(by: { $0.rawValue < $1.rawValue }) {
+            result.append(
+                FilterToken(
+                    id: "subtype-\(subtype.rawValue)",
+                    label: subtype.title,
+                    removalAccessibilityLabel: "Remove capture kind filter \(subtype.title)"
+                ) { $0.mediaSubtypes.remove(subtype) }
+            )
+        }
         if criteria.favoritesOnly {
             result.append(
                 FilterToken(

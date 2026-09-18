@@ -457,6 +457,24 @@ struct LibraryScreen: View {
     /// The long-press menu for one tile. Share, delete and duplicate route
     /// through the shared coordinator so they behave exactly as they do from
     /// the selection bar.
+    /// One capture kind on or off. Several on means "any of these", which is
+    /// how the rest of the multi-selects behave.
+    private func mediaSubtypeBinding(
+        _ model: LibraryModel,
+        subtype: PhotoMediaSubtype
+    ) -> Binding<Bool> {
+        Binding(
+            get: { model.criteria.mediaSubtypes.contains(subtype) },
+            set: { isOn in
+                if isOn {
+                    model.criteria.mediaSubtypes.insert(subtype)
+                } else {
+                    model.criteria.mediaSubtypes.remove(subtype)
+                }
+            }
+        )
+    }
+
     private func tileMenu(assetId: String) -> PhotoTileContextMenu {
         let actions = dependencies.assetActions
         let isVideo = PhotoLibraryService.fetchAssets(ids: [assetId])
@@ -1001,6 +1019,17 @@ struct LibraryScreen: View {
                 }
                 Toggle(isOn: mediaKindBinding(model, kind: .video)) {
                     Label("Videos Only", systemImage: "video")
+                }
+                // A submenu, unlike the rows above: eight capture kinds would
+                // bury Advanced Filter under a wall of toggles.
+                Menu {
+                    ForEach(PhotoMediaSubtype.allCases) { subtype in
+                        Toggle(isOn: mediaSubtypeBinding(model, subtype: subtype)) {
+                            Label(subtype.title, systemImage: subtype.systemImage)
+                        }
+                    }
+                } label: {
+                    Label("Capture Kind", systemImage: "square.stack.3d.down.right")
                 }
                 Button {
                     isAdvancedSearchPresented = true

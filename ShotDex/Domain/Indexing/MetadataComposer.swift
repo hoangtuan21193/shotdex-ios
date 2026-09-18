@@ -45,6 +45,8 @@ struct AssetInfo: Equatable, Sendable {
     var creationDate: Date?
     var modificationDate: Date?
     var mediaType: Int
+    /// Raw `PHAssetMediaSubtype` bitmask, straight off the asset.
+    var mediaSubtypes: Int = 0
     var width: Int?
     var height: Int?
     var fileSize: Int?
@@ -83,6 +85,7 @@ struct MetadataComposer: Sendable {
             creationDate: asset.creationDate.map { Int($0.timeIntervalSince1970) },
             modificationDate: asset.modificationDate.map { Int($0.timeIntervalSince1970) },
             mediaType: asset.mediaType,
+            mediaSubtypes: asset.mediaSubtypes,
             cameraManufacturer: exif.make,
             cameraModel: exif.model,
             normalizedCameraModel: normalizedModel,

@@ -280,6 +280,17 @@ final class AppDatabase: Sendable {
             )
         }
 
+        // PhotoKit's media subtypes (screenshot, Live Photo, portrait,
+        // panorama, …) are a bitmask on `PHAsset`. Storing them lets the
+        // library be filtered by kind without walking PhotoKit, and lets a
+        // smart album rule say "screenshots only". Existing rows get NULL and
+        // are filled by the next index pass.
+        migrator.registerMigration("v12-mediaSubtypes") { db in
+            try db.alter(table: "photo_metadata") { t in
+                t.add(column: "mediaSubtypes", .integer)
+            }
+        }
+
         return migrator
     }
 }

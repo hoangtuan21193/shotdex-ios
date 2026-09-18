@@ -283,6 +283,17 @@ struct LibraryQueries: Sendable {
             values.append(contentsOf: stored)
         }
 
+        // Subtypes are bits in one mask, so "any of these" is an OR of ANDs.
+        // Rows written before the column existed hold NULL and match nothing,
+        // which is right: the index has not yet said what they are.
+        if !criteria.mediaSubtypes.isEmpty {
+            let tests = criteria.mediaSubtypes
+                .map(\.bit)
+                .sorted()
+                .map { "(mediaSubtypes & \($0)) != 0" }
+            conditions.append("(\(tests.joined(separator: " OR ")))")
+        }
+
         if criteria.favoritesOnly {
             conditions.append("isFavorite = 1")
         }

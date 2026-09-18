@@ -66,14 +66,16 @@ struct MetadataStore: Sendable {
             sql: """
                 UPDATE photo_metadata SET
                     exifStatus = ?, readAttempts = ?, indexedAt = ?,
-                    creationDate = ?, mediaType = ?, width = ?, height = ?, fileSize = ?,
+                    creationDate = ?, mediaType = ?, mediaSubtypes = ?,
+                    width = ?, height = ?, fileSize = ?,
                     originalFilename = COALESCE(?, originalFilename),
                     latitude = ?, longitude = ?, isFavorite = ?
                 WHERE assetId = ?
                 """,
             arguments: [
                 record.exifStatus, record.readAttempts, record.indexedAt,
-                record.creationDate, record.mediaType, record.width, record.height, record.fileSize,
+                record.creationDate, record.mediaType, record.mediaSubtypes,
+                record.width, record.height, record.fileSize,
                 record.originalFilename,
                 record.latitude, record.longitude, record.isFavorite,
                 record.assetId,
@@ -169,6 +171,37 @@ struct MetadataStore: Sendable {
                 try db.execute(
                     sql: "UPDATE photo_metadata SET latitude = ?, longitude = ? WHERE assetId = ?",
                     arguments: [latitude, longitude, assetId]
+                )
+            }
+        }
+    }
+
+    /// Asset ids whose capture kind has never been recorded — rows written
+    /// before the `mediaSubtypes` column existed.
+    func assetIdsMissingMediaSubtypes(limit: Int) throws -> [String] {
+        try database.reader.read { db in
+            try String.fetchAll(
+                db,
+                sql: """
+                    SELECT assetId FROM photo_metadata
+                    WHERE mediaSubtypes IS NULL
+                    LIMIT ?
+                    """,
+                arguments: [limit]
+            )
+        }
+    }
+
+    /// Fills in capture kinds read straight off `PHAsset`. One statement per
+    /// row inside a single transaction: the values come from memory, so the
+    /// write is the only cost.
+    func fillMediaSubtypes(_ subtypesById: [String: Int]) throws {
+        guard !subtypesById.isEmpty else { return }
+        try database.writer.write { db in
+            for (assetId, subtypes) in subtypesById {
+                try db.execute(
+                    sql: "UPDATE photo_metadata SET mediaSubtypes = ? WHERE assetId = ?",
+                    arguments: [subtypes, assetId]
                 )
             }
         }

@@ -17,6 +17,9 @@ struct PhotoMetadata: Codable, Equatable, Identifiable, Sendable {
     var creationDate: Int?
     var modificationDate: Int?
     var mediaType: Int
+    /// Raw `PHAssetMediaSubtype` bitmask. Nil for rows written before the
+    /// column existed, until the next index pass reaches them.
+    var mediaSubtypes: Int?
 
     var cameraManufacturer: String?
     var cameraModel: String?

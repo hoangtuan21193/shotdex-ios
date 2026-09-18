@@ -135,6 +135,10 @@ struct FilterCriteria: Equatable, Codable, Sendable {
     /// constraint, so the grid keeps showing both.
     var mediaKinds: Set<MediaKind> = []
 
+    /// Capture kinds (screenshot, Live Photo, portrait, …). Several selected
+    /// means "any of these", the way the other multi-selects work.
+    var mediaSubtypes: Set<PhotoMediaSubtype> = []
+
     var favoritesOnly = false
 
     /// Free-text search terms produced by SearchParser (camera/lens match).
@@ -153,6 +157,7 @@ struct FilterCriteria: Equatable, Codable, Sendable {
             && apertureRange.isEmpty
             && focalRange.isEmpty
             && mediaKinds.isEmpty
+            && mediaSubtypes.isEmpty
             && !favoritesOnly
             && (searchText?.isEmpty ?? true)
     }
@@ -169,6 +174,7 @@ struct FilterCriteria: Equatable, Codable, Sendable {
         if !isoRange.isEmpty { count += 1 }
         if !shutterRange.isEmpty { count += 1 }
         if !apertureRange.isEmpty { count += 1 }
+        if !mediaSubtypes.isEmpty { count += 1 }
         if !focalRange.isEmpty { count += 1 }
         if !mediaKinds.isEmpty { count += 1 }
         if favoritesOnly { count += 1 }

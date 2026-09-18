@@ -1224,6 +1224,7 @@ actor IndexPipeline {
             creationDate: asset.creationDate,
             modificationDate: asset.modificationDate,
             mediaType: asset.mediaType.rawValue,
+            mediaSubtypes: Int(asset.mediaSubtypes.rawValue),
             width: asset.pixelWidth > 0 ? asset.pixelWidth : nil,
             height: asset.pixelHeight > 0 ? asset.pixelHeight : nil,
             fileSize: fileSize,
