@@ -2,7 +2,7 @@
 
 > **Tiến độ đêm 2026-09-19** — mỗi mục dưới đây đều build pass, chạy thật trên simulator và có ảnh chụp màn hình kiểm chứng, commit riêng trên `main`.
 >
-> Xong: Handoff · Dynamic Type cho token Collections · Viewer panorama · Depth Blur ảnh Portrait · Kéo thả ảnh · Markup shapes + kính lúp · Trim video trong viewer + nút tua khung · People & Pets (pass Vision opt-in) · hành động PhotoKit (ngày/vị trí/ẩn/favorite) · context menu trên tile · Media Types · date section ngày/tháng/năm + thanh cuộn ngày · badge trạng thái · menu ⋯ trong viewer · Live Text · Live Photo + Save as Video · Slideshow · Places · Trips · App Intents + Spotlight · Widget · Share Extension · iPad · quản lý album/folder · Settings (autoplay, HDR, dung lượng) · Auto Enhance + Revert · Merge duplicates.
+> Xong: Giữ tay xem bản gốc · Show in All Photos · Handoff · Dynamic Type cho token Collections · Viewer panorama · Depth Blur ảnh Portrait · Kéo thả ảnh · Markup shapes + kính lúp · Trim video trong viewer + nút tua khung · People & Pets (pass Vision opt-in) · hành động PhotoKit (ngày/vị trí/ẩn/favorite) · context menu trên tile · Media Types · date section ngày/tháng/năm + thanh cuộn ngày · badge trạng thái · menu ⋯ trong viewer · Live Text · Live Photo + Save as Video · Slideshow · Places · Trips · App Intents + Spotlight · Widget · Share Extension · iPad · quản lý album/folder · Settings (autoplay, HDR, dung lượng) · Auto Enhance + Revert · Merge duplicates.
 >
 > Vướng, cần bạn quyết hoặc cần máy thật: xem mục "Cần quyết định" ở cuối file.
 
@@ -27,8 +27,8 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 - [x] A4 Context menu khi giữ tile (xem trước + 11 hành động, 3 nhóm) + Select All
 - [x] A5 Bulk: favorite, hide, adjust date, adjust location, copy
 - [~] A6 Album CRUD — nút "+" thành menu New Album / New Smart Album / New Folder; giữ token album để Rename / Move to Folder / Delete Album; section Folders; Remove from album trong selection và context menu. **Còn thiếu**: kéo sắp xếp tay thứ tự album, chọn ảnh bìa (PhotoKit không có API keyAsset), sort trong Album Detail
-- [~] A7 Viewer có menu ⋯: Add to Album, Duplicate, Copy, Select Text in Photo, Adjust Date & Time, Adjust Location, Show on Map, Hide. **Còn thiếu**: Show in All Photos, Print riêng (hiện đi qua share sheet hệ thống)
-- [~] A8 **Auto Enhance** và **Revert to Original** đã vào menu ⋯ của editor. **Còn thiếu**: tuỳ chọn Share (kèm/không kèm vị trí, bản gốc/bản sửa), Copy & Paste edits giữa ảnh, giữ tay xem bản gốc trong *viewer* (trong editor thì đã có)
+- [~] A7 Viewer có menu ⋯: Add to Album, Duplicate, Copy, Select Text in Photo, Adjust Date & Time, Adjust Location, Show on Map, **Show in All Photos**, Trim (video), View Panorama, Hide. **Còn thiếu**: Print riêng (hiện đi qua share sheet hệ thống)
+- [~] A8 **Auto Enhance** và **Revert to Original** đã vào menu ⋯ của editor. **Giữ tay xem bản gốc trong viewer**: xong (chỉ với ảnh đã chỉnh). **Còn thiếu**: tuỳ chọn Share (kèm/không kèm vị trí, bản gốc/bản sửa), Copy & Paste edits giữa ảnh
 - [~] A9 Badge trên tile: favorite/Live/Portrait/Panorama/HDR/Slo-mo/Time-lapse xong; pull-to-refresh xong. **Không làm được**: badge "edited" (PhotoKit không expose cờ chỉnh sửa trên `PHAsset`, chỉ có cách duyệt `PHAssetResource` từng ảnh — quá đắt cho lưới đang cuộn). Filter Screenshots (và 7 loại khác) đã xong qua cột `mediaSubtypes`
 - [x] A10 Kéo thả ảnh ra app khác và thả vào album — kéo **trong chế độ chọn** (ngoài chế độ chọn chạm-giữ đã là gesture chọn dải), kéo cả selection; thả lên token album thì **thêm** vào album
 

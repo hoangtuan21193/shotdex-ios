@@ -72,6 +72,7 @@ struct PhotoDetailScreen: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(AppNavigation.self) private var navigation
 
     let model: any PhotoBrowsingSource
     @State var currentIndex: Int
@@ -710,6 +711,18 @@ struct PhotoDetailScreen: View {
             }
 
             Section {
+                // Only where it means something. Opened from the Library the
+                // photo is already in All Photos, so the row would do nothing;
+                // from an album, a trip, a memory or a search result it is the
+                // way back to where the photo sits among everything else.
+                if !(model is LibraryModel), let id = currentAsset?.localIdentifier {
+                    Button {
+                        dismiss()
+                        navigation.openPhoto(assetId: id)
+                    } label: {
+                        Label("Show in All Photos", systemImage: "photo.on.rectangle.angled")
+                    }
+                }
                 if currentAsset?.mediaSubtypes.contains(.photoPanorama) == true,
                    let currentAsset {
                     Button {
@@ -2039,6 +2052,14 @@ struct PhotoDetailPage: View {
     /// player's end-of-playback callback.
     @State private var livePhoto: PHLivePhoto?
     @State private var isLoadingLivePhoto = false
+    /// Whether this photo has been edited, so holding it is worth offering.
+    @State private var hasEdits = false
+    /// The unedited frame, fetched the first time the user holds the photo and
+    /// kept for the rest of the page's life — comparing is something people do
+    /// repeatedly, and re-fetching on every press would stutter.
+    @State private var originalImage: UIImage?
+    @State private var isShowingOriginal = false
+    @State private var originalRequestId: PHImageRequestID?
     /// Set once the full-resolution original request has been fired (first
     /// zoom-in), so a later zoom doesn't kick off a second download.
     @State private var hasRequestedFullResolution = false
@@ -2088,11 +2109,14 @@ struct PhotoDetailPage: View {
                 )
             } else if let image {
                 ZoomableImageView(
-                    image: image,
+                    image: isShowingOriginal ? (originalImage ?? image) : image,
                     onZoomStart: loadFullResolution,
                     onZoomChange: handleZoom,
                     isLiveTextActive: loadState.isLiveTextActive,
-                    showsFullHDR: showsFullHDR
+                    showsFullHDR: showsFullHDR,
+                    onHoldChange: hasEdits ? { holding in
+                        if holding { showOriginal() } else { hideOriginal() }
+                    } : nil
                 )
                 .overlay {
                     if let livePhoto {
@@ -2100,6 +2124,26 @@ struct PhotoDetailPage: View {
                             self.livePhoto = nil
                         }
                         .allowsHitTesting(false)
+                    }
+                }
+                // Press and hold to see the photo as it was shot — the
+                // comparison the editor has, in the place people actually
+                // notice an edit. Offered only on an edited photo; the
+                // recognizer itself lives in `ZoomableImageView`.
+                // Bottom-centre, not the top: the viewer's own close button
+                // and title capsule own the top of the page, and this page
+                // draws edge to edge, so a badge up there lands behind them.
+                .overlay(alignment: .bottom) {
+                    if isShowingOriginal {
+                        Text("Original")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(.black.opacity(0.55), in: Capsule())
+                            .padding(.bottom, loadState.videoBottomInset + 12)
+                            .transition(.opacity)
+                            .allowsHitTesting(false)
                     }
                 }
                 // Bottom-left rather than Photos' top-left: this viewer already
@@ -2178,6 +2222,25 @@ struct PhotoDetailPage: View {
     /// Fetches the motion track on demand and plays it once. Photos only
     /// starts a Live Photo on a deliberate gesture too — loading every one on
     /// sight would pull a video for each page the pager preloads.
+    private func showOriginal() {
+        guard let asset else { return }
+        withAnimation(.easeInOut(duration: 0.15)) { isShowingOriginal = true }
+        guard originalImage == nil, originalRequestId == nil else { return }
+        originalRequestId = photoLibrary.requestOriginalImage(
+            for: asset,
+            targetSize: targetSize
+        ) { image in
+            originalRequestId = nil
+            guard let image else { return }
+            originalImage = image
+        }
+    }
+
+    private func hideOriginal() {
+        guard isShowingOriginal else { return }
+        withAnimation(.easeInOut(duration: 0.15)) { isShowingOriginal = false }
+    }
+
     private func playLivePhoto() {
         guard let asset, livePhoto == nil, !isLoadingLivePhoto else { return }
         isLoadingLivePhoto = true
@@ -2198,6 +2261,14 @@ struct PhotoDetailPage: View {
         else { return }
         self.asset = asset
         isLivePhoto = asset.mediaSubtypes.contains(.photoLive)
+        // Off the main actor: resource enumeration can reach for on-demand
+        // metadata, and this runs for every page the pager builds.
+        if asset.mediaType == .image {
+            Task.detached(priority: .utility) {
+                let edited = PhotoLibraryService.hasEdits(asset)
+                await MainActor.run { hasEdits = edited }
+            }
+        }
         if asset.mediaType == .video {
             isVideo = true
             videoModel.configure(

@@ -67,7 +67,10 @@ final class PhotoLibraryService: NSObject {
     private(set) var assetChangeToken = 0
 
     @ObservationIgnored
-    private let imageManager = PHCachingImageManager()
+    /// Not private: the original-image request lives in its own extension
+    /// file, and it needs the same manager so its requests share the cache and
+    /// the cancel table with every other request here.
+    let imageManager = PHCachingImageManager()
     /// Final, screen-sized detail renditions. PhotoKit's own cache is useful
     /// while a request is active, but does not guarantee that reopening a page
     /// gets the exact final callback immediately. Keep a small decoded-image

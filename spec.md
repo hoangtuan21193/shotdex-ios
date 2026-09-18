@@ -740,6 +740,17 @@ Tab **Markup** đứng sau Filters (tên cũ "Text" — đổi vì tab thêm đ�
 - `.onMapCameraChange(frequency: .onEnd)` cập nhật span nên pin gộp/tách theo zoom. Tự gom cụm chứ không dùng annotation clustering của MapKit vì cần thumbnail bìa + số đếm riêng cho từng cụm
 - Chạm cụm → `PhotoListScreen`
 
+**Giữ tay xem bản gốc trong viewer (2026-09-19):**
+
+- Ảnh **đã chỉnh** thì giữ tay lên ảnh hiện lại **bản gốc** + pill chữ "Original"; nhả tay là về bản đã chỉnh. Đây là phép so sánh mà editor đã có, đem về đúng chỗ người ta nhận ra ảnh bị chỉnh
+- **Recognizer nằm trong `ZoomableImageView` (UIKit), không phải `LongPressGesture` của SwiftUI**: nội dung được host trong `UIScrollView` nên gesture SwiftUI phủ lên **không bao giờ nổ** — cùng bức tường mà timeline drag và thanh cuộn ngày đã đâm phải. Recognizer chạy **song song** với pinch/pan của scroll view (`shouldRecognizeSimultaneouslyWith`), nếu không thì ảnh đã chỉnh sẽ không zoom được nữa
+- **Live Text bật thì tắt gesture này**: giữ tay lúc đó là thao tác nhấc chủ thể ra khỏi nền
+- Pill đặt ở **đáy giữa**, không phải trên đỉnh: trang ảnh vẽ tràn viền còn đỉnh màn là của nút đóng + capsule tiêu đề của viewer, đặt trên đó là nằm **sau lưng** chúng (đo được: pill render nhưng không nhìn thấy)
+- Ảnh gốc lấy bằng **`requestImageDataAndOrientation`**, không phải `requestImage(version: .original)`: cái sau trả về **đúng bản đã chỉnh** (đo được — giữ tay không thấy ảnh đổi gì). Bytes của file gốc thì không thể bị nhầm thành bản render của thứ gì khác. Decode thẳng xuống cỡ màn hình bằng `CGImageSourceCreateThumbnailAtIndex` — decode nguyên một file 48MP cho một phép so sánh giữ một giây là phí bộ nhớ
+- Phát hiện ảnh đã chỉnh: `PHAssetResource` có resource `.adjustmentData` (`PHAsset` không có cờ nào). Chỉ chạy cho **một** ảnh đang xem, off-main; đây cũng là lý do lưới **không** có badge "đã chỉnh"
+
+**Show in All Photos (2026-09-19):** menu ⋯ của viewer có dòng này khi ảnh **không** mở từ Library (album, chuyến đi, memory, kết quả tìm kiếm): đóng viewer, nhảy về tab Library rồi mở lại đúng ảnh đó ở giữa toàn bộ thư viện. Đi qua `AppNavigation.openPhoto` — cùng đường với Handoff.
+
 **Handoff (2026-09-19):**
 
 - Viewer publish `NSUserActivity` kiểu `com.hoangtuan.shotdex.view-photo` (khai trong `NSUserActivityTypes`) cho ảnh đang xem; máy khác mở tiếp đúng ảnh đó

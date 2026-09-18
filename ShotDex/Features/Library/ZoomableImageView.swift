@@ -29,6 +29,12 @@ struct ZoomableImageView: UIViewRepresentable {
     /// an HDR frame next to standard chrome makes the chrome look grey, and on
     /// some displays it is simply uncomfortable.
     var showsFullHDR: Bool = false
+    /// Press-and-hold, reported as it starts and ends, for "show me the
+    /// original". A UIKit recognizer rather than a SwiftUI gesture: a SwiftUI
+    /// `LongPressGesture` laid over this view never fires, because the content
+    /// it would cover is hosted inside a `UIScrollView` (the same wall the
+    /// timeline drag and the grid scrubber hit).
+    var onHoldChange: ((Bool) -> Void)?
 
     func makeUIView(context: Context) -> UIScrollView {
         let scrollView = UIScrollView()
@@ -77,6 +83,19 @@ struct ZoomableImageView: UIViewRepresentable {
         doubleTap.numberOfTapsRequired = 2
         scrollView.addGestureRecognizer(doubleTap)
 
+        let hold = UILongPressGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleHold(_:))
+        )
+        hold.minimumPressDuration = 0.35
+        // Runs beside the scroll view's own recognizers rather than instead of
+        // them: a hold that swallowed the pinch would make an edited photo
+        // impossible to zoom.
+        hold.delegate = context.coordinator
+        hold.cancelsTouchesInView = false
+        scrollView.addGestureRecognizer(hold)
+        context.coordinator.holdRecognizer = hold
+
         return scrollView
     }
 
@@ -87,13 +106,39 @@ struct ZoomableImageView: UIViewRepresentable {
         context.coordinator.onZoomStart = onZoomStart
         context.coordinator.onZoomChange = onZoomChange
         context.coordinator.setLiveTextActive(isLiveTextActive, for: image)
+        context.coordinator.onHoldChange = onHoldChange
+        // Live Text owns press-and-hold while it is on: that is how a subject
+        // is lifted out of the picture.
+        context.coordinator.holdRecognizer?.isEnabled =
+            onHoldChange != nil && !isLiveTextActive
     }
 
     func makeCoordinator() -> Coordinator {
         Coordinator()
     }
 
-    final class Coordinator: NSObject, UIScrollViewDelegate {
+    final class Coordinator: NSObject, UIScrollViewDelegate, UIGestureRecognizerDelegate {
+        var onHoldChange: ((Bool) -> Void)?
+        weak var holdRecognizer: UILongPressGestureRecognizer?
+
+        @objc func handleHold(_ recognizer: UILongPressGestureRecognizer) {
+            switch recognizer.state {
+            case .began:
+                onHoldChange?(true)
+            case .ended, .cancelled, .failed:
+                onHoldChange?(false)
+            default:
+                break
+            }
+        }
+
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
+        ) -> Bool {
+            gestureRecognizer === holdRecognizer
+        }
+
         weak var imageView: UIImageView?
         var analysisInteraction: ImageAnalysisInteraction?
         /// Cutout of everything the analyser considers a subject, for
