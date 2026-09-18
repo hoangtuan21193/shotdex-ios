@@ -74,6 +74,9 @@ struct AlbumsScreen: View {
         .navigationDestination(for: DuplicatesDestination.self) { _ in
             DuplicatesScreen()
         }
+        .navigationDestination(for: PlacesDestination.self) { _ in
+            PlacesMapScreen()
+        }
         .sheet(isPresented: $isCreatingSmartAlbum) {
             SmartAlbumEditorSheet(existing: nil, dependencies: dependencies) {
                 model.load()
@@ -234,6 +237,15 @@ extension AlbumsScreen {
                     }
                     .buttonStyle(.plain)
 
+                    NavigationLink(value: PlacesDestination()) {
+                        UtilityToken(
+                            title: "Places",
+                            subtitle: "Browse on a map",
+                            systemImage: "map"
+                        )
+                    }
+                    .buttonStyle(.plain)
+
                     // Hidden and Unable to Upload: library housekeeping rather
                     // than browsing, so they sit beside Duplicates the way
                     // Photos groups its own utilities.
@@ -248,6 +260,52 @@ extension AlbumsScreen {
             }
             .scrollClipDisabled()
         }
+    }
+}
+
+/// Generic utility token: an SF Symbol where an album would show a cover, plus
+/// a one-line subtitle. Same footprint as `AlbumToken` so the Utilities row
+/// lines up with the album grids above it.
+struct UtilityToken: View {
+    let title: String
+    let subtitle: String
+    let systemImage: String
+
+    private let thumbSide: CGFloat = 44
+    private let tokenWidth: CGFloat = 190
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Color(.tertiarySystemBackground)
+                .frame(width: thumbSide, height: thumbSide)
+                .overlay {
+                    Image(systemName: systemImage)
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color(.label))
+                    .lineLimit(1)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(8)
+        .frame(width: tokenWidth, height: AlbumToken.height, alignment: .leading)
+        .background(
+            Color(.secondarySystemBackground),
+            in: RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous)
+        )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(title), \(subtitle)")
     }
 }
 

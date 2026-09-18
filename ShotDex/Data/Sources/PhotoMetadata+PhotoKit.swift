@@ -49,4 +49,24 @@ extension LibraryGridItem {
             fileSize: nil
         )
     }
+
+    /// The slim projection of an indexed row, for the screens that build their
+    /// own list (Places, Trips, Memories) and need one item type across both
+    /// indexed and un-indexed assets.
+    init(metadata: PhotoMetadata) {
+        self.init(
+            assetId: metadata.assetId,
+            creationDate: metadata.creationDate,
+            mediaType: metadata.mediaType,
+            originalFilename: metadata.originalFilename,
+            iso: metadata.iso,
+            aperture: metadata.aperture,
+            shutterSpeedDisplay: metadata.shutterSpeedDisplay,
+            focalLength: metadata.focalLength,
+            equivalentFocalLength: metadata.equivalentFocalLength,
+            width: metadata.width,
+            height: metadata.height,
+            fileSize: metadata.fileSize
+        )
+    }
 }

@@ -30,6 +30,24 @@ struct LibraryQueries: Sendable {
         }
     }
 
+    /// Every indexed photo that carries a coordinate, newest first, as the
+    /// minimum the map needs: identity, position and the resolved locality.
+    ///
+    /// The whole set at once rather than per-viewport: a map that re-queries as
+    /// it pans cannot cluster stably, and the rows are three numbers and a
+    /// short string each.
+    func locatedPhotos() async throws -> [LocatedPhoto] {
+        try await database.reader.read { db in
+            try LocatedPhoto.fetchAll(db, sql: """
+                SELECT assetId, creationDate, latitude, longitude,
+                       placeLocality, placeAdminArea, placeCountry
+                FROM photo_metadata
+                WHERE latitude IS NOT NULL AND longitude IS NOT NULL
+                ORDER BY creationDate DESC
+                """)
+        }
+    }
+
     /// Full row for the detail viewer / metadata panel, fetched on demand.
     func metadata(assetId: String) throws -> PhotoMetadata? {
         try database.reader.read { db in
