@@ -12,6 +12,8 @@ struct EditorTextPanel: View {
     @Bindable var chrome: EditorChromeModel
     let addText: () -> Void
     let addImage: () -> Void
+    let addShape: (OverlayShapeStyle) -> Void
+    let addMagnifier: () -> Void
     let startDrawing: () -> Void
     let openPresets: () -> Void
 
@@ -27,19 +29,45 @@ struct EditorTextPanel: View {
         }
     }
 
-    /// The three ways to add a layer. Three separate "add" buttons rather than one
-    /// joined segmented control: the joined control read as a mode *picker* — "which
-    /// of these is selected" — when every tap actually *creates* a layer. A leading
+    /// The ways to add a layer. Separate "add" buttons rather than one joined
+    /// segmented control: the joined control read as a mode *picker* — "which of
+    /// these is selected" — when every tap actually *creates* a layer. A leading
     /// accent `+` on each button says so outright.
+    ///
+    /// Shapes and the magnifier share a menu rather than taking a button each:
+    /// five styles plus a loupe would be seven targets on a 375pt row, and
+    /// grouping them is also how Photos' own Markup `+` presents them.
     private var addBar: some View {
         HStack(spacing: 8) {
             addButton("Text", icon: "textformat", action: addText)
             addButton("Image", icon: "photo", action: addImage)
+            shapeMenu
             addButton("Draw", icon: "scribble.variable", action: startDrawing)
         }
         .padding(.horizontal, 14)
         .padding(.top, 10)
         .padding(.bottom, 2)
+    }
+
+    private var shapeMenu: some View {
+        Menu {
+            ForEach(OverlayShapeStyle.allCases) { style in
+                Button {
+                    addShape(style)
+                } label: {
+                    Label(style.displayName, systemImage: style.systemImage)
+                }
+            }
+            Divider()
+            Button {
+                addMagnifier()
+            } label: {
+                Label("Magnifier", systemImage: "plus.magnifyingglass")
+            }
+        } label: {
+            addButtonLabel("Shape", icon: "square.on.circle")
+        }
+        .accessibilityLabel("Add shape or magnifier")
     }
 
     /// Matches the shared chip language of every other tab (`EditorChipButtonStyle`):
@@ -51,25 +79,29 @@ struct EditorTextPanel: View {
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            HStack(spacing: 5) {
-                Image(systemName: "plus")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(EditorTheme.accent)
-                Image(systemName: icon)
-                    .font(.system(size: 12, weight: .medium))
-                Text(title)
-                    .font(.system(size: 12, weight: .medium))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .frame(height: 28)
-            .background(EditorTheme.control, in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
-            .contentShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
+            addButtonLabel(title, icon: icon)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Add \(title)")
+    }
+
+    private func addButtonLabel(_ title: String, icon: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: "plus")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(EditorTheme.accent)
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .medium))
+            Text(title)
+                .font(.system(size: 12, weight: .medium))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .foregroundStyle(.white)
+        .frame(maxWidth: .infinity)
+        .frame(height: 28)
+        .background(EditorTheme.control, in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
     }
 
     private var header: some View {
@@ -185,6 +217,10 @@ struct EditorTextPanel: View {
             return resolved.isEmpty ? "Empty text" : resolved
         case .image:
             return "Image"
+        case .shape:
+            return overlay.shapeStyle.displayName
+        case .magnifier:
+            return "Magnifier"
         }
     }
 
@@ -195,6 +231,10 @@ struct EditorTextPanel: View {
         case .image:
             let missing = overlay.imageID.map { !OverlayImageStore().imageExists(id: $0) } ?? true
             return missing ? "Missing file" : "Photo layer"
+        case .shape:
+            return overlay.isFilled && overlay.shapeStyle.supportsFill ? "Filled shape" : "Shape"
+        case .magnifier:
+            return String(format: "%.1f× zoom", overlay.magnification)
         }
     }
 }

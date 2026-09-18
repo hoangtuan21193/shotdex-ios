@@ -138,13 +138,20 @@ enum EditorAdjustmentSummary {
             switch added.first?.kind {
             case .text: return "Added Text"
             case .image: return "Added Image"
+            case .shape: return "Added \(added.first?.shapeStyle.displayName ?? "Shape")"
+            case .magnifier: return "Added Magnifier"
             case nil: return "Text"
             }
         }
         if current.count < previous.count {
             let currentIDs = Set(current.map(\.id))
             let removed = previous.first { !currentIDs.contains($0.id) }
-            return removed?.kind == .image ? "Deleted Image" : "Deleted Text"
+            switch removed?.kind {
+            case .image: return "Deleted Image"
+            case .shape: return "Deleted \(removed?.shapeStyle.displayName ?? "Shape")"
+            case .magnifier: return "Deleted Magnifier"
+            default: return "Deleted Text"
+            }
         }
         for layer in current {
             guard let old = previous.first(where: { $0.id == layer.id }) else {
@@ -192,6 +199,17 @@ enum EditorAdjustmentSummary {
         if previous.center != current.center { return "\(name) · Move" }
         if previous.alignment != current.alignment { return "\(name) · Alignment" }
         if previous.imageID != current.imageID { return "\(name) · Image" }
+        if previous.shapeStyle != current.shapeStyle { return "\(name) · Shape" }
+        if previous.isFilled != current.isFilled {
+            return "\(name) · \(current.isFilled ? "Fill" : "Outline")"
+        }
+        if abs(previous.strokeWidth - current.strokeWidth) > 0.00001 {
+            return "\(name) · Thickness"
+        }
+        if abs(previous.heightRatio - current.heightRatio) > 0.0001 { return "\(name) · Shape" }
+        if abs(previous.magnification - current.magnification) > 0.0001 {
+            return String(format: "\(name) · Zoom %.1f×", current.magnification)
+        }
         return name
     }
 
@@ -209,7 +227,12 @@ enum EditorAdjustmentSummary {
     }
 
     private static func label(for overlay: PhotoOverlay) -> String {
-        guard overlay.kind == .text else { return "Image" }
+        switch overlay.kind {
+        case .shape: return overlay.shapeStyle.displayName
+        case .magnifier: return "Magnifier"
+        case .image: return "Image"
+        case .text: break
+        }
         let line = overlay.text
             .replacingOccurrences(of: "\n", with: " ")
             .trimmingCharacters(in: .whitespaces)

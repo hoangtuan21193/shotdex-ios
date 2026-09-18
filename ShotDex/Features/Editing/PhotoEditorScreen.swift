@@ -843,6 +843,8 @@ struct PhotoEditorScreen: View {
                     chrome: chrome,
                     addText: { startTextEntry(controller, isNew: true) },
                     addImage: { isImagePickerPresented = true },
+                    addShape: { controller.addShapeOverlay($0) },
+                    addMagnifier: { controller.addMagnifierOverlay() },
                     startDrawing: { startDrawing(controller) },
                     openPresets: { isSignatureLibraryPresented = true }
                 )

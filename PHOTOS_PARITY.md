@@ -2,7 +2,7 @@
 
 > **Tiến độ đêm 2026-09-19** — mỗi mục dưới đây đều build pass, chạy thật trên simulator và có ảnh chụp màn hình kiểm chứng, commit riêng trên `main`.
 >
-> Xong: Trim video trong viewer + nút tua khung · People & Pets (pass Vision opt-in) · hành động PhotoKit (ngày/vị trí/ẩn/favorite) · context menu trên tile · Media Types · date section ngày/tháng/năm + thanh cuộn ngày · badge trạng thái · menu ⋯ trong viewer · Live Text · Live Photo + Save as Video · Slideshow · Places · Trips · App Intents + Spotlight · Widget · Share Extension · iPad · quản lý album/folder · Settings (autoplay, HDR, dung lượng) · Auto Enhance + Revert · Merge duplicates.
+> Xong: Markup shapes + kính lúp · Trim video trong viewer + nút tua khung · People & Pets (pass Vision opt-in) · hành động PhotoKit (ngày/vị trí/ẩn/favorite) · context menu trên tile · Media Types · date section ngày/tháng/năm + thanh cuộn ngày · badge trạng thái · menu ⋯ trong viewer · Live Text · Live Photo + Save as Video · Slideshow · Places · Trips · App Intents + Spotlight · Widget · Share Extension · iPad · quản lý album/folder · Settings (autoplay, HDR, dung lượng) · Auto Enhance + Revert · Merge duplicates.
 >
 > Vướng, cần bạn quyết hoặc cần máy thật: xem mục "Cần quyết định" ở cuối file.
 
@@ -46,7 +46,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 - [x] B10 Slideshow — mở từ menu ⋯ của viewer, cross-fade, Pause/Prev/Next, chọn 2/3/5/8/12 giây mỗi ảnh (nhớ qua UserDefaults), bỏ qua video
 - [x] B11 Gộp ảnh trùng — **Merge All Groups** trong menu ⋯ của Duplicates: chọn bản giữ lại (file lớn nhất, hoà thì nhiều pixel hơn), chép sang nó những thứ bản sao có mà nó thiếu (favorite, toạ độ, ngày chụp sớm nhất), rồi đánh dấu phần còn lại; **xoá vẫn do người dùng bấm**
 - [x] B12 Hiển thị HDR đầy đủ — `UIImageView.preferredImageDynamicRange`, toggle **View Full HDR** trong Settings (mặc định tắt)
-- [ ] B13 Markup: hình khối, kính lúp
+- [x] B13 Markup: hình khối (rectangle/oval/speech bubble/arrow/line) + kính lúp — layer overlay như text/image, kéo-xoay-resize sẵn có; kính lúp composite trước overlay vì nó phóng ảnh bên dưới
 - [~] B14 Import — **bỏ qua ảnh đã nhập** (khớp tên + đúng số byte, có toggle và đếm số lượng) và **nhập thẳng vào album** (picker trong sheet filter). **Cố ý KHÔNG làm "xoá sau khi nhập"**: app đang coi thẻ nhớ là chỉ-đọc (`shouldMoveFile = false`), xoá file khỏi thẻ là thao tác phá huỷ trên thiết bị ngoài — cần bạn quyết. **Chưa chạy thật**: Simulator không có thẻ/thư mục nào để quét, mới build pass
 - [x] B15 Settings: section **Playback** (Autoplay Videos) và **Library Size** (tổng dung lượng cộng từ fileSize đã index, có `~` khi chưa đo hết)
 
@@ -98,7 +98,6 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 ## Chưa làm (ưu tiên theo mình thấy)
 
 1. **B7 Video trong viewer**: còn lại **chỉnh dải slo-mo**. Nút tua khung trên màn và **Trim tại chỗ** đã xong.
-4. **B13 Markup**: thêm hình khối và kính lúp (PencilKit hiện có pen/highlighter/eraser/lasso/ruler).
 5. **A10 Kéo thả** ảnh ra app khác và thả vào album.
 6. **B8 Burst stack** (`PHAsset.burstIdentifier` có sẵn) và viewer panorama.
 7. **B6 Portrait**: đọc `AVDepthData` để hiện và chỉnh độ mờ nền (Portrait Lighting thì không có API).

@@ -60,8 +60,77 @@ extension PhotoRenderService {
     /// `{camera}` before it hands a recipe to the renderer, so this layer has no
     /// opinion about tokens.
     static func applyOverlays(_ overlays: [PhotoOverlay], to input: CIImage) -> CIImage {
-        guard let layer = overlayLayer(overlays, extent: input.extent) else { return input }
-        return layer.composited(over: input).cropped(to: input.extent)
+        // Loupes first, and against the image itself: a magnifier shows the
+        // photo under it, so it has to be composited before anything drawn on
+        // top of the photo — a caption inside a loupe would otherwise be the
+        // caption magnified, which is not what anyone means.
+        let magnified = applyMagnifiers(overlays, to: input)
+        guard let layer = overlayLayer(overlays, extent: input.extent) else { return magnified }
+        return layer.composited(over: magnified).cropped(to: input.extent)
+    }
+
+    /// Composites each loupe: the photo scaled about the circle's centre,
+    /// masked to that circle, with a rim drawn over it.
+    static func applyMagnifiers(_ overlays: [PhotoOverlay], to input: CIImage) -> CIImage {
+        let loupes = overlays.filter { $0.kind == .magnifier && $0.hasVisibleEffect }
+        let extent = input.extent
+        guard !loupes.isEmpty, !extent.isInfinite, !extent.isEmpty else { return input }
+
+        let shortEdge = min(extent.width, extent.height)
+        var result = input
+        for loupe in loupes {
+            let center = CGPoint(
+                x: extent.minX + extent.width * loupe.center.x,
+                y: extent.minY + extent.height * (1 - loupe.center.y)
+            )
+            let diameter = CGFloat(loupe.size) * shortEdge
+            let circle = ShapeOverlayGeometry.magnifierCircle(center: center, diameter: diameter)
+            guard circle.width > 1 else { continue }
+
+            let enlarged = result.transformed(
+                by: ShapeOverlayGeometry.magnifyTransform(
+                    center: center,
+                    magnification: loupe.magnification
+                )
+            )
+            guard let mask = circleMask(circle: circle, extent: extent, opacity: loupe.opacity)
+            else { continue }
+            // `blendWithMask` rather than a crop: a cropped CIImage keeps hard
+            // pixel edges, and the loupe's rim would show a stair-stepped circle
+            // at export resolution.
+            guard let blend = CIFilter(name: "CIBlendWithMask", parameters: [
+                kCIInputImageKey: enlarged,
+                kCIInputBackgroundImageKey: result,
+                kCIInputMaskImageKey: mask,
+            ])?.outputImage
+            else { continue }
+            result = blend.cropped(to: extent)
+        }
+        return result
+    }
+
+    /// White disc on black, the shape of one loupe, as a mask.
+    private static func circleMask(circle: CGRect, extent: CGRect, opacity: Double) -> CIImage? {
+        let width = Int(extent.width.rounded())
+        let height = Int(extent.height.rounded())
+        guard width > 0, height > 0,
+              let context = CGContext(
+                  data: nil,
+                  width: width,
+                  height: height,
+                  bitsPerComponent: 8,
+                  bytesPerRow: 0,
+                  space: CGColorSpaceCreateDeviceGray(),
+                  bitmapInfo: CGImageAlphaInfo.none.rawValue
+              )
+        else { return nil }
+        context.setFillColor(CGColor(gray: 0, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)))
+        context.setFillColor(CGColor(gray: min(max(opacity, 0), 1), alpha: 1))
+        context.fillEllipse(in: circle.offsetBy(dx: -extent.minX, dy: -extent.minY))
+        guard let image = context.makeImage() else { return nil }
+        return CIImage(cgImage: image)
+            .transformed(by: CGAffineTransform(translationX: extent.minX, y: extent.minY))
     }
 
     /// The layers alone, on transparent pixels, positioned on `extent`.
@@ -70,6 +139,10 @@ extension PhotoRenderService {
     /// same size, so it rasterizes once and composites the same layer over each
     /// frame rather than laying out Core Text ninety times.
     static func overlayLayer(_ overlays: [PhotoOverlay], extent: CGRect) -> CIImage? {
+        // A loupe's magnified content is not in this bitmap — that is
+        // composited against the photo itself by `applyMagnifiers`, because it
+        // draws what is underneath. Its rim is, so the rim sits above the other
+        // markup the way every drawn layer does.
         let visible = overlays.filter(\.hasVisibleEffect)
         guard !visible.isEmpty, !extent.isInfinite, !extent.isEmpty,
               let layer = rasterizedOverlayImage(visible, extent: extent)
@@ -132,6 +205,14 @@ extension PhotoRenderService {
                     shortEdge: shortEdge,
                     point: point
                 )
+            case .shape:
+                ShapeOverlayLayout.drawShape(
+                    overlay, in: context, shortEdge: shortEdge, point: point
+                )
+            case .magnifier:
+                ShapeOverlayLayout.drawMagnifierRim(
+                    overlay, in: context, shortEdge: shortEdge, point: point
+                )
             case .image:
                 // A signature whose cache file is gone is skipped rather than
                 // drawn as a placeholder — the panel is where the user is told.
@@ -150,4 +231,5 @@ extension PhotoRenderService {
         }
         return context.makeImage()
     }
+
 }

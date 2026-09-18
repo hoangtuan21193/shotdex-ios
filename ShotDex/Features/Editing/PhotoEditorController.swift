@@ -1008,6 +1008,31 @@ final class PhotoEditorController {
         isEditingText = false
     }
 
+    /// Places a shape in the middle of the photo, selected but with the list
+    /// still on screen — the same way a signature arrives, because both are
+    /// positioned by dragging on the picture rather than by typing numbers.
+    func addShapeOverlay(_ style: OverlayShapeStyle) {
+        recordHistory()
+        var overlay = PhotoOverlay.shape(style)
+        overlay.fill = lastFill
+        recipe.overlays.append(overlay)
+        selectedOverlayID = overlay.id
+        showsOverlayDetail = false
+        selectedTool = .markup
+        scheduleRender()
+    }
+
+    func addMagnifierOverlay() {
+        recordHistory()
+        var overlay = PhotoOverlay.magnifier()
+        overlay.fill = lastFill
+        recipe.overlays.append(overlay)
+        selectedOverlayID = overlay.id
+        showsOverlayDetail = false
+        selectedTool = .markup
+        scheduleRender()
+    }
+
     func addImageOverlay(imageID: UUID, assetIdentifier: String?) {
         recordHistory()
         let overlay = PhotoOverlay.image(id: imageID, assetIdentifier: assetIdentifier)
@@ -1739,7 +1764,20 @@ final class PhotoEditorController {
             // A selected layer is drawn live by the stage instead, so the bake
             // steps aside — otherwise the caption appears twice while it is being
             // moved, once where it was and once where it is going.
-            if isEditingOverlay { previewRecipe.overlays = [] }
+            //
+            // Loupes other than the selected one stay baked: they show the photo
+            // underneath, and the stage's proxy draws on a transparent canvas
+            // with no pixels to magnify, so dropping them would blank them for
+            // the whole time any layer is selected. The selected one does step
+            // aside, like every other layer, or its ring would appear twice
+            // while it is being dragged — once where the bake last had it and
+            // once under the finger.
+            if isEditingOverlay {
+                let selected = selectedOverlayID
+                previewRecipe.overlays = previewRecipe.overlays.filter {
+                    $0.kind == .magnifier && $0.id != selected
+                }
+            }
             // The canvas draws its own strokes live while a drawing is being made,
             // so the baked drawing steps aside to avoid a doubled image.
             if isEditingDrawing { previewRecipe.drawing = nil }

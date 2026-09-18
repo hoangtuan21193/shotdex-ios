@@ -8,6 +8,12 @@ import Foundation
 enum PhotoOverlayKind: String, Codable, CaseIterable, Identifiable, Sendable {
     case text
     case image
+    /// A drawn outline — box, oval, speech bubble, arrow or line.
+    case shape
+    /// A circle that magnifies the photo beneath it, the way Photos' Markup
+    /// loupe does. The only overlay whose appearance depends on the picture
+    /// under it, which is why the renderer handles it apart from the rest.
+    case magnifier
 
     var id: String { rawValue }
 
@@ -15,6 +21,8 @@ enum PhotoOverlayKind: String, Codable, CaseIterable, Identifiable, Sendable {
         switch self {
         case .text: "Text"
         case .image: "Image"
+        case .shape: "Shape"
+        case .magnifier: "Magnifier"
         }
     }
 
@@ -22,6 +30,49 @@ enum PhotoOverlayKind: String, Codable, CaseIterable, Identifiable, Sendable {
         switch self {
         case .text: "textformat"
         case .image: "photo"
+        case .shape: "square.on.circle"
+        case .magnifier: "plus.magnifyingglass"
+        }
+    }
+}
+
+/// What a shape layer draws. The set Photos' Markup offers, plus a plain line,
+/// which is the one people reach for that Photos makes them fake with an arrow.
+enum OverlayShapeStyle: String, Codable, CaseIterable, Identifiable, Sendable {
+    case rectangle
+    case oval
+    case speechBubble
+    case arrow
+    case line
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .rectangle: "Rectangle"
+        case .oval: "Oval"
+        case .speechBubble: "Speech Bubble"
+        case .arrow: "Arrow"
+        case .line: "Line"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .rectangle: "rectangle"
+        case .oval: "oval"
+        case .speechBubble: "bubble.left"
+        case .arrow: "arrow.up.right"
+        case .line: "line.diagonal"
+        }
+    }
+
+    /// An arrow and a line are strokes by definition — filling them would paint
+    /// the triangle they are made of, not a thicker arrow.
+    var supportsFill: Bool {
+        switch self {
+        case .rectangle, .oval, .speechBubble: true
+        case .arrow, .line: false
         }
     }
 }
@@ -119,6 +170,20 @@ struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
     /// Zero disables the shadow regardless of radius and offset.
     var shadowOpacity = 0.0
 
+    // MARK: Shape and magnifier
+
+    var shapeStyle: OverlayShapeStyle = .rectangle
+    /// Filled rather than outlined. Ignored by the styles that cannot be filled.
+    var isFilled = false
+    /// Outline thickness as a fraction of the cropped image's short edge. The
+    /// same unit as `size`, so a shape keeps its proportions when resized.
+    var strokeWidth = 0.006
+    /// Height as a fraction of the layer's own width, so one `size` plus this
+    /// describes a box of any proportion. A circle is 1.
+    var heightRatio = 0.62
+    /// How much bigger the photo appears inside the loupe.
+    var magnification = 2.0
+
     // MARK: Image
 
     /// File in the watermark cache. Nil on a text layer.
@@ -139,11 +204,33 @@ struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
         case .image:
             center = NormalizedPoint(x: 0.82, y: 0.88)
             size = 0.25
+        case .shape:
+            // Middle of the frame: a shape is drawn to point at something, and
+            // the user drags it there straight away.
+            center = NormalizedPoint(x: 0.5, y: 0.5)
+            size = 0.45
+        case .magnifier:
+            center = NormalizedPoint(x: 0.5, y: 0.5)
+            size = 0.35
         }
     }
 
     static func text() -> PhotoOverlay {
         PhotoOverlay(kind: .text)
+    }
+
+    static func shape(_ style: OverlayShapeStyle) -> PhotoOverlay {
+        var overlay = PhotoOverlay(kind: .shape)
+        overlay.shapeStyle = style
+        // An arrow reads as a diagonal, not as a wide flat box.
+        if style == .arrow || style == .line {
+            overlay.heightRatio = 0.5
+        }
+        return overlay
+    }
+
+    static func magnifier() -> PhotoOverlay {
+        PhotoOverlay(kind: .magnifier)
     }
 
     static func image(id: UUID, assetIdentifier: String?) -> PhotoOverlay {
@@ -160,6 +247,8 @@ struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
         switch kind {
         case .text: return !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         case .image: return imageID != nil
+        case .shape: return size > 0.001
+        case .magnifier: return size > 0.001 && magnification > 1.001
         }
     }
 
@@ -194,6 +283,11 @@ struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
         case shadowOpacity
         case imageID
         case imageAssetIdentifier
+        case shapeStyle
+        case isFilled
+        case strokeWidth
+        case heightRatio
+        case magnification
     }
 
     /// Hand-written for the same reason as `PhotoEditRecipe`: these recipes live
@@ -250,6 +344,16 @@ struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
             String.self,
             forKey: .imageAssetIdentifier
         )
+
+        shapeStyle = try container.decodeIfPresent(OverlayShapeStyle.self, forKey: .shapeStyle)
+            ?? defaults.shapeStyle
+        isFilled = try container.decodeIfPresent(Bool.self, forKey: .isFilled) ?? defaults.isFilled
+        strokeWidth = try container.decodeIfPresent(Double.self, forKey: .strokeWidth)
+            ?? defaults.strokeWidth
+        heightRatio = try container.decodeIfPresent(Double.self, forKey: .heightRatio)
+            ?? defaults.heightRatio
+        magnification = try container.decodeIfPresent(Double.self, forKey: .magnification)
+            ?? defaults.magnification
     }
 
     /// Only what differs from the kind's default is written — a plain white
@@ -306,6 +410,20 @@ struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
 
         try container.encodeIfPresent(imageID, forKey: .imageID)
         try container.encodeIfPresent(imageAssetIdentifier, forKey: .imageAssetIdentifier)
+
+        if shapeStyle != defaults.shapeStyle {
+            try container.encode(shapeStyle, forKey: .shapeStyle)
+        }
+        if isFilled != defaults.isFilled { try container.encode(isFilled, forKey: .isFilled) }
+        if strokeWidth != defaults.strokeWidth {
+            try container.encode(strokeWidth, forKey: .strokeWidth)
+        }
+        if heightRatio != defaults.heightRatio {
+            try container.encode(heightRatio, forKey: .heightRatio)
+        }
+        if magnification != defaults.magnification {
+            try container.encode(magnification, forKey: .magnification)
+        }
     }
 }
 

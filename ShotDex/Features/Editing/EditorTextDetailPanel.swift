@@ -25,6 +25,10 @@ struct EditorTextDetailPanel: View {
                             textSections(overlay)
                         case .image:
                             imageSections(overlay)
+                        case .shape:
+                            shapeSections(overlay)
+                        case .magnifier:
+                            magnifierSections(overlay)
                         }
                         Section {
                             placementRows(overlay)
@@ -368,6 +372,142 @@ struct EditorTextDetailPanel: View {
             )
         } header: {
             EditorGroupHeader(title: "Image", isFirst: true)
+        }
+    }
+
+    // MARK: Shape
+
+    @ViewBuilder
+    private func shapeSections(_ overlay: PhotoOverlay) -> some View {
+        Section {
+            styleRow(overlay)
+            colorControl(idPrefix: "overlay.fill", color: overlay.fill, keyPath: \.fill)
+            if overlay.shapeStyle.supportsFill {
+                Toggle("Filled", isOn: Binding(
+                    get: { overlay.isFilled },
+                    set: { filled in
+                        controller.updateSelectedOverlay { $0.isFilled = filled }
+                    }
+                ))
+                .font(.system(size: 13, weight: .medium))
+                .tint(EditorTheme.accent)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 4)
+            }
+            if !overlay.isFilled || !overlay.shapeStyle.supportsFill {
+                slider(
+                    overlay,
+                    "Thickness",
+                    id: "overlay.strokeWidth",
+                    keyPath: \.strokeWidth,
+                    range: 0.1...4,
+                    defaultValue: PhotoOverlay(kind: .shape).strokeWidth,
+                    text: { String(format: "%.2f%%", $0 * 100) }
+                )
+            }
+            slider(
+                overlay,
+                "Width",
+                id: "overlay.size",
+                keyPath: \.size,
+                range: 2...150,
+                defaultValue: PhotoOverlay(kind: .shape).size,
+                text: percent
+            )
+            slider(
+                overlay,
+                "Height",
+                id: "overlay.heightRatio",
+                keyPath: \.heightRatio,
+                range: 5...200,
+                defaultValue: PhotoOverlay(kind: .shape).heightRatio,
+                text: percent
+            )
+            slider(
+                overlay,
+                "Opacity",
+                id: "overlay.opacity",
+                keyPath: \.opacity,
+                range: 0...100,
+                detent: 100,
+                defaultValue: 1,
+                text: percent
+            )
+        } header: {
+            EditorGroupHeader(title: "Shape", isFirst: true)
+        }
+    }
+
+    /// The five styles as one row of chips. A shape's style is changeable after
+    /// the fact rather than fixed at creation: someone who wanted a circle and
+    /// drew a box should not have to delete the layer and place a new one.
+    private func styleRow(_ overlay: PhotoOverlay) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(OverlayShapeStyle.allCases) { style in
+                    Button {
+                        controller.updateSelectedOverlay { $0.shapeStyle = style }
+                    } label: {
+                        Label(style.displayName, systemImage: style.systemImage)
+                            .labelStyle(.iconOnly)
+                            .font(.system(size: 14, weight: .medium))
+                            .frame(width: 34, height: 28)
+                    }
+                    .buttonStyle(EditorChipButtonStyle(isSelected: overlay.shapeStyle == style))
+                    .accessibilityLabel(style.displayName)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 4)
+        }
+    }
+
+    // MARK: Magnifier
+
+    @ViewBuilder
+    private func magnifierSections(_ overlay: PhotoOverlay) -> some View {
+        Section {
+            slider(
+                overlay,
+                "Zoom",
+                id: "overlay.magnification",
+                keyPath: \.magnification,
+                range: 1...6,
+                scale: 1,
+                defaultValue: PhotoOverlay.magnifier().magnification,
+                text: { String(format: "%.1f\u{00D7}", $0) }
+            )
+            slider(
+                overlay,
+                "Size",
+                id: "overlay.size",
+                keyPath: \.size,
+                range: 5...100,
+                defaultValue: PhotoOverlay.magnifier().size,
+                text: percent
+            )
+            colorControl(idPrefix: "overlay.fill", color: overlay.fill, keyPath: \.fill)
+            slider(
+                overlay,
+                "Rim",
+                id: "overlay.strokeWidth",
+                keyPath: \.strokeWidth,
+                range: 0...4,
+                defaultValue: PhotoOverlay(kind: .magnifier).strokeWidth,
+                text: { String(format: "%.2f%%", $0 * 100) }
+            )
+            slider(
+                overlay,
+                "Opacity",
+                id: "overlay.opacity",
+                keyPath: \.opacity,
+                range: 0...100,
+                detent: 100,
+                defaultValue: 1,
+                text: percent
+            )
+        } header: {
+            EditorGroupHeader(title: "Magnifier", isFirst: true)
         }
     }
 

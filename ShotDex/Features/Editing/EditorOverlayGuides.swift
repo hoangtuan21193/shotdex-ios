@@ -37,6 +37,8 @@ struct EditorOverlayFrame {
                 image: image,
                 shortEdge: shortEdge
             )
+        case .shape, .magnifier:
+            size = ShapeOverlayLayout.contentSize(for: overlay, shortEdge: shortEdge)
         }
         guard size.width > 0, size.height > 0 else { return nil }
         return EditorOverlayFrame(
@@ -122,6 +124,22 @@ struct EditorOverlayProxyLayer: View {
                     for: overlay,
                     image: image,
                     shortEdge: shortEdge
+                )
+            case .shape:
+                ShapeOverlayLayout.drawShape(
+                    overlay, in: context, shortEdge: shortEdge, point: point
+                )
+                contentSize = ShapeOverlayLayout.contentSize(for: overlay, shortEdge: shortEdge)
+            case .magnifier:
+                // Rim only, and only for the selected loupe. The proxy draws on
+                // a transparent canvas over the photo, so it has no pixels to
+                // magnify; every other loupe is still in the baked image
+                // underneath, rim included, and drawing it again here would
+                // double the stroke.
+                contentSize = ShapeOverlayLayout.contentSize(for: overlay, shortEdge: shortEdge)
+                guard overlay.id == selectedID else { continue }
+                ShapeOverlayLayout.drawMagnifierRim(
+                    overlay, in: context, shortEdge: shortEdge, point: point
                 )
             }
             guard overlay.id == selectedID else { continue }
