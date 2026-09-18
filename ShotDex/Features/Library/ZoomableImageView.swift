@@ -15,8 +15,9 @@ struct ZoomableImageView: UIViewRepresentable {
     /// Reports the current zoom scale on every zoom change — lets a host
     /// (the detail pager) disable swipe-down-dismiss while zoomed in.
     var onZoomChange: ((CGFloat) -> Void)?
-    /// Runs Live Text over the displayed image and lets the user select,
-    /// copy, translate and look up what it finds.
+    /// Runs Live Text over the displayed image and lets the user select, copy,
+    /// translate and look up what it finds — and, from the same analysis, lift
+    /// the subject out of the background by pressing and holding it.
     ///
     /// Off by default and driven from the viewer's ⋯ menu for two reasons: the
     /// analysis decodes and scans the image, which is wasted work on the vast
@@ -95,6 +96,21 @@ struct ZoomableImageView: UIViewRepresentable {
     final class Coordinator: NSObject, UIScrollViewDelegate {
         weak var imageView: UIImageView?
         var analysisInteraction: ImageAnalysisInteraction?
+        /// Cutout of everything the analyser considers a subject, for
+        /// "Copy Subject". Nil until Live Text has been switched on and the
+        /// analysis has landed.
+        func copySubjectToPasteboard() async -> Bool {
+            guard let interaction = analysisInteraction,
+                  interaction.analysis != nil
+            else { return false }
+            let subjects = await interaction.subjects
+            guard !subjects.isEmpty,
+                  let cutout = try? await interaction.image(for: subjects)
+            else { return false }
+            UIPasteboard.general.image = cutout
+            return true
+        }
+
         /// Identity of the image the current analysis belongs to, so paging to
         /// another photo does not leave the previous photo's text boxes behind.
         private var analyzedImage: UIImage?
@@ -128,6 +144,9 @@ struct ZoomableImageView: UIViewRepresentable {
                 let analysis = try? await analyzer.analyze(image, configuration: configuration)
                 guard !Task.isCancelled, let self, self.analyzedImage === image else { return }
                 interaction.analysis = analysis
+                // `.automatic` covers text selection and subject lifting in
+                // one: a long press on the subject lifts it, exactly as in
+                // Photos, with no extra plumbing.
                 interaction.preferredInteractionTypes = .automatic
             }
         }

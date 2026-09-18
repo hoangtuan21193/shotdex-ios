@@ -599,7 +599,9 @@ struct PhotoDetailScreen: View {
                         isLiveTextActive.toggle()
                     } label: {
                         Label(
-                            isLiveTextActive ? "Hide Text Selection" : "Select Text in Photo",
+                            isLiveTextActive
+                                ? "Stop Selecting in Photo"
+                                : "Select Text or Subject",
                             systemImage: "text.viewfinder"
                         )
                     }
