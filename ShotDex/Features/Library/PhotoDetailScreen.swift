@@ -493,11 +493,13 @@ struct PhotoDetailScreen: View {
                     showVideoChrome()
                     share(metadata)
                 }
+                .keyboardShortcut("s", modifiers: .command)
                 Spacer()
                 GlassIconButton(systemImage: "trash", accessibilityLabel: "Delete") {
                     showVideoChrome()
                     deleteCurrentPhoto()
                 }
+                .keyboardShortcut(.delete, modifiers: [])
             }
 
             GlassPanel(cornerRadius: 28) {
@@ -509,6 +511,10 @@ struct PhotoDetailScreen: View {
                         showVideoChrome()
                         toggleFavorite(metadata)
                     }
+                    // Hardware-keyboard shortcuts, for iPad and a Mac running
+                    // the app. They hang off the buttons so the shortcut and the
+                    // tap always run the same code.
+                    .keyboardShortcut("f", modifiers: [])
                     actionBarCenterButton(
                         systemImage: "info.circle",
                         accessibilityLabel: "Info"
@@ -516,6 +522,7 @@ struct PhotoDetailScreen: View {
                         showVideoChrome()
                         isMetadataPresented = true
                     }
+                    .keyboardShortcut("i", modifiers: [])
                     if !isCurrentVideo, let currentAsset {
                         actionBarCenterButton(
                             systemImage: "slider.horizontal.3",

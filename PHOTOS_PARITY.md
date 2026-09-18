@@ -56,7 +56,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 - [ ] C4 Share Extension
 - [ ] C5 Handoff qua NSUserActivity
 - [ ] C6 Photo editing extension
-- [ ] C7 Hỗ trợ iPad (sizeClass, sidebar, landscape, phím tắt)
+- [~] C7 iPad — `TARGETED_DEVICE_FAMILY = "1,2"`, build/cài/chạy được trên iPad Pro 11", xoay ngang đã khai báo sẵn trong Info.plist; lưới đã tự co giãn theo regular width (`GridDensity.columns(forDensity:width:isRegularWidth:)`). Phím tắt trong viewer: `f` favorite, `i` info, `delete` xoá, `⌘S` share. **CHƯA kiểm thử tương tác**: panel Simulator cho iPad chưa được cấp quyền nên không bấm qua được màn onboarding — cần chạy tay để soát bố cục từng màn
 - [ ] C8 Rà soát Dynamic Type toàn app
 
 ## Phase D — Tự dựng phần Apple Intelligence
