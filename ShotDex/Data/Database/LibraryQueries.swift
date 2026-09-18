@@ -48,6 +48,31 @@ struct LibraryQueries: Sendable {
         }
     }
 
+    /// Photos the subject scan found at least one face in, newest first.
+    ///
+    /// Faces, not people: Vision offers no public face-embedding request, so
+    /// the app can say a photo has someone in it but never who, and never that
+    /// two photos show the same person.
+    func assetIdsWithFaces() async throws -> [String] {
+        try await subjectAssetIds(column: "faceCount")
+    }
+
+    /// Photos the subject scan found a cat or a dog in, newest first.
+    func assetIdsWithAnimals() async throws -> [String] {
+        try await subjectAssetIds(column: "animalCount")
+    }
+
+    private func subjectAssetIds(column: String) async throws -> [String] {
+        try await database.reader.read { db in
+            try String.fetchAll(db, sql: """
+                SELECT p.assetId FROM photo_metadata p
+                JOIN subject_scan s ON s.assetId = p.assetId
+                WHERE s.\(column) > 0
+                ORDER BY p.creationDate DESC
+                """)
+        }
+    }
+
     /// How much space the library takes, summed from indexed file sizes.
     ///
     /// `knownCount` is how many rows actually carry a size: the fast index pass

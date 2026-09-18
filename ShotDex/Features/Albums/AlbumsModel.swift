@@ -155,6 +155,7 @@ final class AlbumsModel {
                     libraryQueries: deps.libraryQueries
                 )
                 await loadMemories(libraryQueries: deps.libraryQueries)
+                await loadSubjects(libraryQueries: deps.libraryQueries)
             }
             isLoading = false
         }
@@ -164,6 +165,11 @@ final class AlbumsModel {
     private(set) var folders: [FolderItem] = []
     /// Auto-curated collections for the Memories row.
     private(set) var memories: [Memory] = []
+    /// Photos the opt-in subject scan found faces in. Empty until the user
+    /// runs that scan from Settings, which is when the People token appears.
+    private(set) var peopleAssetIds: [String] = []
+    /// Photos that scan found a cat or a dog in.
+    private(set) var petAssetIds: [String] = []
 
     /// One user folder plus the albums directly inside it.
     struct FolderItem: Identifiable {
@@ -264,6 +270,13 @@ final class AlbumsModel {
                 trips: TripGrouping.trips(from: photos)
             )
         }.value
+    }
+
+    /// Reads the two subject collections. Both are plain indexed reads of a
+    /// column the scan filled — no Vision work happens here.
+    private func loadSubjects(libraryQueries: LibraryQueries) async {
+        peopleAssetIds = (try? await libraryQueries.assetIdsWithFaces()) ?? []
+        petAssetIds = (try? await libraryQueries.assetIdsWithAnimals()) ?? []
     }
 
     /// Resolves each saved smart album's live count and cover off the main

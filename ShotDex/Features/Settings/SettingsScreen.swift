@@ -55,6 +55,7 @@ struct SettingsScreen: View {
             notificationsSection
             displaySection
             playbackSection
+            subjectScanSection
             storageSection
             exportSection
             cameraDatabaseSection
@@ -240,6 +241,73 @@ struct SettingsScreen: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
+    }
+
+    // MARK: People and pets
+
+    /// The opt-in Vision pass, and the only bulk image decode in the app.
+    ///
+    /// It lives behind a button rather than running with indexing on purpose:
+    /// indexing reads EXIF headers, this reads whole photos, and the user
+    /// should be the one who decides to pay for that. What it produces is
+    /// deliberately modest — "has a person in it", "has a cat or dog in it" —
+    /// because Vision publishes no face-identity request, so no app can tell
+    /// one person from another or name them.
+    @ViewBuilder
+    private var subjectScanSection: some View {
+        @Bindable var scan = dependencies.subjectScan
+        Section {
+            LabeledContent("Scanned", value: subjectScanCountLabel)
+                .monospacedDigit()
+
+            if scan.isScanning {
+                subjectScanProgressRow(scan)
+                    .transaction { $0.animation = nil }
+            } else {
+                Button(scan.isComplete ? "Scan Again" : "Find People and Pets") {
+                    scan.start()
+                }
+                .disabled(!photoLibrary.authorizationState.canReadLibrary)
+                if scan.scannedCount > 0 {
+                    Button("Clear Results", role: .destructive) { scan.clear() }
+                }
+            }
+        } header: {
+            Text("People and Pets")
+        } footer: {
+            Text("Looks through your photos for faces and for cats and dogs, then offers them as collections. This is the one thing ShotDex does that opens each photo in full, so it is slower than indexing and better left to a charger.\n\nIt all happens on this iPhone, and it counts faces without recognising anyone — iOS gives apps no way to tell one person from another.")
+        }
+        .task { dependencies.subjectScan.refreshCoverage() }
+    }
+
+    private func subjectScanProgressRow(_ scan: SubjectScanModel) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                if let progress = scan.progress, progress.total > 0 {
+                    ProgressView(value: progress.fraction)
+                    Text("\(Int(progress.fraction * 100))%")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                } else {
+                    ProgressView()
+                    Text("Looking through your photos…")
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button("Cancel") { scan.cancel() }
+            }
+            if let progress = scan.progress, progress.total > 0 {
+                Text("\(progress.processed.formatted()) of \(progress.total.formatted()) photos")
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var subjectScanCountLabel: String {
+        let scan = dependencies.subjectScan
+        guard scan.totalCount > 0 else { return "No photos yet" }
+        return "\(scan.scannedCount.formatted()) of \(scan.totalCount.formatted())"
     }
 
     /// Shared by the live row and the empty/dim states elsewhere: what indexing

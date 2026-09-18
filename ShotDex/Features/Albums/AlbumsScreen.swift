@@ -237,6 +237,10 @@ struct AlbumsScreen: View {
                     recentsSection()
                 }
 
+                if !subjectTokens.isEmpty {
+                    subjectsSection()
+                }
+
                 if !(model.smartQueryAlbums.isEmpty && model.smartAlbums.isEmpty) {
                     smartAlbumsSection()
                 }
@@ -312,6 +316,33 @@ struct AlbumsScreen: View {
                 String(localized: "Recently Shared"),
                 Self.photoCountLabel(shared.count),
                 shared
+            ))
+        }
+        return result
+    }
+
+    /// People and Pets, shown only once the opt-in scan has found some. An
+    /// empty People row would read as "you have no photos of anyone" when it
+    /// really means "nothing has looked yet", so the invitation to scan lives
+    /// in Settings instead.
+    private var subjectTokens: [(title: String, subtitle: String, symbol: String, ids: [String])] {
+        var result: [(String, String, String, [String])] = []
+        let people = model.peopleAssetIds
+        if !people.isEmpty {
+            result.append((
+                String(localized: "People"),
+                Self.photoCountLabel(people.count),
+                "person.crop.square",
+                people
+            ))
+        }
+        let pets = model.petAssetIds
+        if !pets.isEmpty {
+            result.append((
+                String(localized: "Pets"),
+                Self.photoCountLabel(pets.count),
+                "pawprint",
+                pets
             ))
         }
         return result
@@ -564,6 +595,37 @@ extension AlbumsScreen {
                                 systemImage: token.title == String(localized: "Recently Viewed")
                                     ? "eye"
                                     : "square.and.arrow.up"
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal)
+            }
+            .scrollClipDisabled()
+        }
+    }
+
+    fileprivate func subjectsSection() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("People and Pets")
+                .font(.title2.bold())
+                .padding(.horizontal)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 8) {
+                    ForEach(subjectTokens, id: \.title) { token in
+                        NavigationLink {
+                            PhotoListScreen(
+                                title: token.title,
+                                subtitle: token.subtitle,
+                                assetIds: token.ids
+                            )
+                        } label: {
+                            UtilityToken(
+                                title: token.title,
+                                subtitle: token.subtitle,
+                                systemImage: token.symbol
                             )
                         }
                         .buttonStyle(.plain)

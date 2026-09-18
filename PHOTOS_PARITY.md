@@ -2,7 +2,7 @@
 
 > **Tiến độ đêm 2026-09-19** — mỗi mục dưới đây đều build pass, chạy thật trên simulator và có ảnh chụp màn hình kiểm chứng, commit riêng trên `main`.
 >
-> Xong: hành động PhotoKit (ngày/vị trí/ẩn/favorite) · context menu trên tile · Media Types · date section ngày/tháng/năm + thanh cuộn ngày · badge trạng thái · menu ⋯ trong viewer · Live Text · Live Photo + Save as Video · Slideshow · Places · Trips · App Intents + Spotlight · Widget · Share Extension · iPad · quản lý album/folder · Settings (autoplay, HDR, dung lượng) · Auto Enhance + Revert · Merge duplicates.
+> Xong: People & Pets (pass Vision opt-in) · hành động PhotoKit (ngày/vị trí/ẩn/favorite) · context menu trên tile · Media Types · date section ngày/tháng/năm + thanh cuộn ngày · badge trạng thái · menu ⋯ trong viewer · Live Text · Live Photo + Save as Video · Slideshow · Places · Trips · App Intents + Spotlight · Widget · Share Extension · iPad · quản lý album/folder · Settings (autoplay, HDR, dung lượng) · Auto Enhance + Revert · Merge duplicates.
 >
 > Vướng, cần bạn quyết hoặc cần máy thật: xem mục "Cần quyết định" ở cuối file.
 
@@ -70,7 +70,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 - [x] D1 Places — token trong Utilities, bản đồ gom cụm theo ô lưới độ (co giãn theo mức zoom), pin có thumbnail + số lượng + tên địa điểm đã geocode; chạm cụm mở lưới ảnh có khoảng ngày
 - [x] D2 Trips — token trong Utilities, gom các đợt ảnh liên tục cách "nhà" > 80km; thẻ ảnh bìa + tên nơi + khoảng ngày; có unit test (5 ca)
 - [~] D3 Memories — hàng thẻ trên tab Collections, gom từ tín hiệu app đã có: chuyến đi, từng năm đã trọn, nơi hay quay lại. **Cố ý không bắt chước Memories của Apple** (không có face/scene model); chạm mở lưới ảnh. **Chưa làm**: tự dựng thành phim qua Video Studio
-- [ ] D4 People & Pets: pass quét Vision riêng, opt-in trong Settings
+- [~] D4 People & Pets: pass quét Vision riêng, opt-in trong Settings — **có** collection People / Pets (đếm mặt + chó/mèo), **không có** nhận diện từng người hay đặt tên: Vision không public request face-embedding nào
 - [x] D5 Live Text on-demand trong viewer — `ImageAnalysisInteraction`, chỉ phân tích khi bật từ menu, tự tắt khi lật sang ảnh khác
 - [~] D6 Tách chủ thể — cùng `ImageAnalysisInteraction` với Live Text: bật "Select Text or Subject" rồi giữ tay lên chủ thể là nhấc ra được (`.automatic` cho cả hai). **Chưa làm**: tạo sticker (không có API công khai)
 - [~] D7 **Pinned** — giữ bất kỳ album / smart album / utility rồi "Pin to Top", hiện thành section đầu tab Collections theo đúng thứ tự ghim (lưu UserDefaults, ghim hỏng thì bỏ qua chứ không báo lỗi). **Chưa làm**: kéo đổi thứ tự các section của tab
@@ -98,7 +98,6 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 ## Chưa làm (ưu tiên theo mình thấy)
 
 1. **B7 Video trong viewer**: nút tua khung trên màn (logic đã xong, mới gắn phím ← →), chỉnh dải slo-mo, trim ngay tại chỗ (giờ phải qua Video Studio).
-3. **D4 People & Pets**: pass Vision riêng, bạn bấm mới chạy (đúng như bạn dặn là không đưa vào index).
 4. **B13 Markup**: thêm hình khối và kính lúp (PencilKit hiện có pen/highlighter/eraser/lasso/ruler).
 5. **A10 Kéo thả** ảnh ra app khác và thả vào album.
 6. **B8 Burst stack** (`PHAsset.burstIdentifier` có sẵn) và viewer panorama.

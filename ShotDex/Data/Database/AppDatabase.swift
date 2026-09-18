@@ -291,6 +291,24 @@ final class AppDatabase: Sendable {
             }
         }
 
+        // People and pets, from the opt-in Vision pass.
+        //
+        // Its own table for the same reason `perceptual_hash` has one: the
+        // indexer upserts a whole `PhotoMetadata` record, so any column it
+        // does not know about is blanked on every re-index — and this is the
+        // one result in the app that costs a full image decode to rebuild.
+        //
+        // A row existing means "this photo was looked at"; zero counts are a
+        // real answer, and the work list is every photo with no row.
+        migrator.registerMigration("v13-subjectScan") { db in
+            try db.create(table: "subject_scan") { t in
+                t.column("assetId", .text).primaryKey()
+                t.column("faceCount", .integer).notNull()
+                t.column("animalCount", .integer).notNull()
+                t.column("scannedAt", .integer).notNull()
+            }
+        }
+
         return migrator
     }
 }

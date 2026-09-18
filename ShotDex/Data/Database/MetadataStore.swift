@@ -207,6 +207,72 @@ struct MetadataStore: Sendable {
         }
     }
 
+    // MARK: Subject scan
+
+    /// Asset ids the subject scan has never looked at. Videos are excluded:
+    /// the reader only handles stills, and leaving them pending would make the
+    /// work list never empty.
+    func assetIdsMissingSubjectScan() throws -> [String] {
+        try database.reader.read { db in
+            try String.fetchAll(
+                db,
+                sql: """
+                    SELECT p.assetId FROM photo_metadata p
+                    LEFT JOIN subject_scan s ON s.assetId = p.assetId
+                    WHERE s.assetId IS NULL AND p.mediaType = 1
+                    ORDER BY p.creationDate DESC
+                    """
+            )
+        }
+    }
+
+    func applySubjectObservations(_ observations: [SubjectObservation]) throws {
+        guard !observations.isEmpty else { return }
+        let now = Int(Date().timeIntervalSince1970)
+        try database.writer.write { db in
+            for observation in observations {
+                try db.execute(
+                    sql: """
+                        INSERT OR REPLACE INTO subject_scan
+                            (assetId, faceCount, animalCount, scannedAt)
+                        VALUES (?, ?, ?, ?)
+                        """,
+                    arguments: [
+                        observation.assetId,
+                        observation.faceCount,
+                        observation.animalCount,
+                        now,
+                    ]
+                )
+            }
+        }
+    }
+
+    /// How much of the library the subject scan has covered. Rows whose photo
+    /// has since left the library are not counted, so the pair can never read
+    /// as more scanned than there are photos.
+    func subjectScanCoverage() throws -> (scanned: Int, total: Int) {
+        try database.reader.read { db in
+            let row = try Row.fetchOne(db, sql: """
+                SELECT
+                    COUNT(s.assetId) AS scanned,
+                    COUNT(*) AS total
+                FROM photo_metadata p
+                LEFT JOIN subject_scan s ON s.assetId = p.assetId
+                WHERE p.mediaType = 1
+                """)
+            return (row?["scanned"] ?? 0, row?["total"] ?? 0)
+        }
+    }
+
+    /// Throws away every subject result, so the next scan starts over. Used
+    /// when the user turns the feature off.
+    func clearSubjectObservations() throws {
+        _ = try database.writer.write { db in
+            try db.execute(sql: "DELETE FROM subject_scan")
+        }
+    }
+
     /// Clears the whole index (Settings → Clear local metadata index).
     func deleteAll() throws {
         try database.writer.write { db in

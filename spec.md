@@ -94,6 +94,7 @@ ShotDex/
 │       ├── ExifReader.swift           // ImageIO EXIF reader
 │       ├── SensorDatabaseLoader.swift // load sensor_database.json
 │       ├── PerceptualHashReader.swift // thumbnail PhotoKit 96px → dHash (§7.3)
+│       ├── SubjectVisionReader.swift  // rendition 512px → đếm mặt người + chó/mèo bằng Vision (§7.3 People and Pets)
 │       ├── PhotoRenderService.swift   // actor CI render pipeline (+Curve/+Drawing/+Film/+Overlay)
 │       ├── PhotoEditingService.swift  // PhotoKit content-editing session, save copy/changes, Live Photo
 │       ├── ImportService.swift        // quét folder ngoài + EXIF (xem §7.7)
@@ -111,6 +112,7 @@ ShotDex/
 │   ├── Grid/AsyncChunkedLookupCache.swift // PHAsset cache async chunked + LRU cho grid
 │   ├── Indexing/
 │   │   ├── IndexPipeline.swift     // actor: batch, progress, cancel, resume
+│   │   ├── SubjectScanPipeline.swift // actor: pass Vision opt-in, batch 100, 4 read song song (§7.3)
 │   │   └── MetadataComposer.swift
 │   ├── Duplicates/
 │   │   ├── PerceptualHash.swift    // dHash 64-bit (pure) + hamming
@@ -199,6 +201,17 @@ computedAt (INTEGER)
 Bảng riêng, không phải cột của `photo_metadata`, cùng lý do với `place_cells`: indexer upsert nguyên record `PhotoMetadata` nên cột nó không biết sẽ bị xoá trắng mỗi lần re-index. Video không có row.
 
 Cache kết quả gom nhóm (migration `v10-duplicateCache`): `duplicate_groups (strictness, groupId, assetId — PK (strictness, assetId), index (strictness, groupId))` một row mỗi member mỗi mức; `duplicate_scan_state (strictness PK, scannedAt, groupCount)`. Mở màn Duplicates chỉ đọc hai bảng này (join `photo_metadata` + `perceptual_hash` lấy facts hiện tại), KHÔNG hash lại, KHÔNG gom lại.
+
+Bảng `subject_scan` (migration `v13-subjectScan`, ghi bởi `MetadataStore.applySubjectObservations`, dùng cho People and Pets §7.3):
+
+```
+assetId (TEXT PK)
+faceCount (INTEGER NOT NULL)    -- số khuôn mặt Vision thấy; 0 là câu trả lời thật, không phải "chưa biết"
+animalCount (INTEGER NOT NULL)  -- số chó/mèo
+scannedAt (INTEGER NOT NULL)
+```
+
+Có row = "ảnh này đã được nhìn qua"; work list của scan = mọi ảnh (`mediaType = 1`) **không** có row. Bảng riêng chứ không phải cột của `photo_metadata`, cùng lý do với `perceptual_hash`: indexer upsert nguyên record `PhotoMetadata` nên cột nó không biết sẽ bị xoá trắng mỗi lần re-index — mà dựng lại kết quả này tốn decode toàn bộ thư viện, đúng thứ tính năng đang tiết kiệm (`SubjectScanTests.reindexKeepsSubjectResults` chốt điều này).
 
 Bảng phụ: `custom_camera_mappings` (manual sensor mapping), `index_state` (con trỏ resume, last indexed time, `changeToken` = `PHPersistentChangeToken` đã archive — migration `v6-changeToken`, xem §6), `smart_albums` (saved rule query, migration `v3`), `stat_charts` (dashboard chart spec: `id` PK, `config` = JSON `ChartSpec`, `position`; migration `v4-statCharts`).
 
@@ -710,6 +723,17 @@ Tab **Markup** đứng sau Filters (tên cũ "Text" — đổi vì tab thêm đ�
 - `MemoryBuilder` (`Domain/Places/`) + hàng thẻ **Memories** trên tab Collections, ngay dưới On This Day. Nguồn: **chuyến đi** (3 cái mới nhất), **từng năm đã trọn** (3 năm gần nhất, ≥ `minimumPhotos` 12 ảnh, bỏ năm hiện tại vì nó chưa xong — cùng một tiêu đề mà nội dung cứ đổi), **nơi hay quay lại** (2 nơi nhiều ảnh nhất). Ảnh đã thuộc một chuyến thì không tính lại cho năm/nơi. Tối đa `limit` 8 thẻ
 - **Cố ý KHÔNG bắt chước Memories của Apple.** Apple dựng nó từ nhận diện mặt, phân loại cảnh và một model curation — app không có thứ nào trong đó, mà làm bản nhái yếu sẽ ra những bộ sưu tập người dùng không đoán được và không tin được. Nên mỗi memory ở đây luôn là thứ người dùng tự tìm được: một chuyến đi, một năm, một nơi. Tiêu đề nói rõ nó là cái nào
 - Chạm thẻ → `PhotoListScreen`
+
+**People and Pets (pass Vision opt-in, 2026-09-19):**
+
+- `SubjectVisionReader` (`Data/Sources/`) + `SubjectScanPipeline` (`Domain/Indexing/`, actor) + `SubjectScanModel` (`Features/Settings/`) + section **People and Pets** trong Settings + hàng token **People / Pets** trên tab Collections
+- **KHÔNG bao giờ tự chạy, và tuyệt đối không nằm trong pass index.** Index chỉ đọc header EXIF, không decode ảnh; nhét Vision vào đó là biến một cú đọc header thành decode toàn bộ thư viện. Nên đây là pass riêng **người dùng tự bấm** trong Settings, và là chỗ duy nhất trong app decode ảnh hàng loạt
+- Mỗi ảnh: một rendition PhotoKit cạnh **512px** (`deliveryMode .highQualityFormat` để callback về **đúng một lần**, không có cặp degraded-rồi-final làm continuation resume hai lần), rồi **một** `VNImageRequestHandler` chạy cả `VNDetectFaceRectanglesRequest` lẫn `VNRecognizeAnimalsRequest` — ảnh chỉ decode và prepare một lần
+- Batch 100, `readConcurrency` **4** (thấp hơn duplicate scan: bên kia hash thumbnail 96px nên nghẽn ở XPC, bên này nghẽn ở CPU). Hủy = hủy task gọi; batch đang bay vẫn ghi xong rồi mới dừng, nên lần sau chạy tiếp từ work list chứ không làm lại
+- Đọc không ra rendition → `didRead = false` → **không ghi row**, để lần scan sau thử lại; ghi row với count 0 ở đây sẽ thành một câu "trong ảnh này không có ai" mà thật ra chưa ai nhìn
+- **Chỉ đếm, không nhận diện.** Vision không public bất kỳ request face-embedding/face-identity nào (đã tra header SDK), nên app **không thể** phân biệt người này với người kia, càng không đặt tên — chỉ trả lời được "ảnh này có người" / "ảnh này có chó mèo". Vì vậy không có màn People kiểu Apple (lưới từng khuôn mặt có tên), chỉ có hai collection
+- Token People/Pets **chỉ hiện khi scan đã tìm được** (`AlbumsModel.peopleAssetIds` / `petAssetIds` rỗng thì giấu cả section): một token "People" trống đọc ra như "bạn không có ảnh ai cả", trong khi sự thật là "chưa có gì nhìn qua" — lời mời scan nằm ở Settings. Chạm token → `PhotoListScreen`
+- Settings hiện `Scanned N of M`, nút **Find People and Pets** / **Scan Again** (khi đã xong), dòng progress + **Cancel** lúc đang chạy, và **Clear Results** (xoá sạch `subject_scan`) — thứ người dùng cần để rút lại quyết định
 
 **Trips (chuyến đi, 2026-09-19):**
 

@@ -36,6 +36,9 @@ final class AppDependencies {
     let onThisDayNotifications: OnThisDayNotificationService
     let perceptualHashStore: PerceptualHashStore
     let duplicateScanPipeline: DuplicateScanPipeline
+    /// The opt-in people-and-pets pass. Never started by the app itself —
+    /// see `SubjectScanPipeline`.
+    let subjectScan: SubjectScanModel
     /// Shared favorite / hide / capture-date / location / copy actions and the
     /// sheets they raise. Hosted by `RootTabView` and by the detail viewer.
     let assetActions: AssetActionsCoordinator
@@ -155,6 +158,17 @@ final class AppDependencies {
             photoLibrary: photoLibrary,
             metadataStore: metadataStore,
             recentActivity: recentActivity
+        )
+        self.subjectScan = SubjectScanModel(
+            pipeline: SubjectScanPipeline(
+                store: metadataStore,
+                reader: SubjectVisionReader()
+            ),
+            store: metadataStore,
+            allowNetwork: {
+                !networkStatus.isExpensivePath
+                    || UserDefaults.standard.bool(forKey: SettingsKeys.allowCellularIndexing)
+            }
         )
         self.collectionPins = CollectionPinStore()
         self.spotlight = SpotlightIndexer(
