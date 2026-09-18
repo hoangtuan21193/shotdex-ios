@@ -224,6 +224,11 @@ struct AlbumsScreen: View {
                 .buttonStyle(.plain)
                 .padding(.horizontal)
 
+                if !pinnedAlbums.isEmpty || !pinnedSmartAlbums.isEmpty
+                    || !pinnedUtilities.isEmpty {
+                    pinnedSection()
+                }
+
                 if !model.memories.isEmpty {
                     memoriesSection()
                 }
@@ -254,6 +259,46 @@ struct AlbumsScreen: View {
                     Color.clear.frame(height: 90)
                 }
             }
+        }
+    }
+
+    /// Every pinned album still present in the library, in pin order. Pins
+    /// that no longer resolve are dropped rather than shown as errors — an
+    /// album can be deleted from Photos while a pin still names it.
+    private var pinnedAlbums: [AlbumItem] {
+        let all = model.albums + model.folders.flatMap(\.albums)
+        return dependencies.collectionPins.pinned.compactMap { target in
+            guard case .album(let id) = target else { return nil }
+            return all.first { $0.id == id }
+        }
+    }
+
+    private var pinnedSmartAlbums: [SmartAlbumTokenItem] {
+        dependencies.collectionPins.pinned.compactMap { target in
+            guard case .smartAlbum(let id) = target else { return nil }
+            return model.smartQueryAlbums.first { $0.album.id == id }
+        }
+    }
+
+    private var pinnedUtilities: [CollectionPinStore.Target] {
+        dependencies.collectionPins.pinned.filter { target in
+            switch target {
+            case .places, .trips, .duplicates: true
+            default: false
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func pinButton(_ target: CollectionPinStore.Target) -> some View {
+        let isPinned = dependencies.collectionPins.isPinned(target)
+        Button {
+            dependencies.collectionPins.toggle(target)
+        } label: {
+            Label(
+                isPinned ? "Unpin" : "Pin to Top",
+                systemImage: isPinned ? "pin.slash" : "pin"
+            )
         }
     }
 
@@ -328,6 +373,7 @@ struct AlbumsScreen: View {
                         .contextMenu {
                             // System albums (Recents, Videos, …) reject both,
                             // so the menu is only offered on the user's own.
+                            pinButton(.album(album.id))
                             if album.group == .user {
                                 Button {
                                     namingRequest = NamingRequest(kind: .renameAlbum(album))
@@ -375,6 +421,7 @@ struct AlbumsScreen: View {
                         }
                         .buttonStyle(.plain)
                         .contextMenu {
+                            pinButton(.smartAlbum(item.album.id))
                             Button {
                                 editingSmartAlbum = item.album
                             } label: {
@@ -418,6 +465,7 @@ extension AlbumsScreen {
                         DuplicatesToken()
                     }
                     .buttonStyle(.plain)
+                    .contextMenu { pinButton(.duplicates) }
 
                     NavigationLink(value: PlacesDestination()) {
                         UtilityToken(
@@ -427,6 +475,7 @@ extension AlbumsScreen {
                         )
                     }
                     .buttonStyle(.plain)
+                    .contextMenu { pinButton(.places) }
 
                     NavigationLink(value: TripsDestination()) {
                         UtilityToken(
@@ -436,6 +485,7 @@ extension AlbumsScreen {
                         )
                     }
                     .buttonStyle(.plain)
+                    .contextMenu { pinButton(.trips) }
 
                     // Hidden and Unable to Upload: library housekeeping rather
                     // than browsing, so they sit beside Duplicates the way
@@ -455,6 +505,66 @@ extension AlbumsScreen {
 }
 
 extension AlbumsScreen {
+    /// Whatever the user pinned, in the order they pinned it, above everything
+    /// the app decided to show.
+    fileprivate func pinnedSection() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Pinned")
+                .font(.title2.bold())
+                .padding(.horizontal)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 8) {
+                    ForEach(pinnedAlbums) { album in
+                        NavigationLink(value: album.id) {
+                            AlbumToken(album: album)
+                        }
+                        .buttonStyle(.plain)
+                        .contextMenu { pinButton(.album(album.id)) }
+                    }
+                    ForEach(pinnedSmartAlbums) { item in
+                        NavigationLink(value: SmartAlbumDestination(id: item.album.id)) {
+                            SmartAlbumToken(item: item)
+                        }
+                        .buttonStyle(.plain)
+                        .contextMenu { pinButton(.smartAlbum(item.album.id)) }
+                    }
+                    ForEach(pinnedUtilities, id: \.self) { target in
+                        pinnedUtilityLink(target)
+                    }
+                }
+                .padding(.horizontal)
+            }
+            .scrollClipDisabled()
+        }
+    }
+
+    @ViewBuilder
+    fileprivate func pinnedUtilityLink(_ target: CollectionPinStore.Target) -> some View {
+        switch target {
+        case .places:
+            NavigationLink(value: PlacesDestination()) {
+                UtilityToken(title: "Places", subtitle: "Browse on a map", systemImage: "map")
+            }
+            .buttonStyle(.plain)
+            .contextMenu { pinButton(.places) }
+        case .trips:
+            NavigationLink(value: TripsDestination()) {
+                UtilityToken(title: "Trips", subtitle: "Days spent away", systemImage: "airplane")
+            }
+            .buttonStyle(.plain)
+            .contextMenu { pinButton(.trips) }
+        case .duplicates:
+            NavigationLink(value: DuplicatesDestination()) {
+                DuplicatesToken()
+            }
+            .buttonStyle(.plain)
+            .contextMenu { pinButton(.duplicates) }
+        default:
+            EmptyView()
+        }
+    }
+
     /// The Memories row: wide cards the user scrolls sideways, each opening
     /// the photos it stands for.
     fileprivate func memoriesSection() -> some View {

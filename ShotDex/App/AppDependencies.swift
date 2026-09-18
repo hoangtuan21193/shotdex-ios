@@ -49,6 +49,8 @@ final class AppDependencies {
     /// Publishes the library's collections (smart albums, cameras, lenses) to
     /// Spotlight. Individual photos are never indexed — see the type's note.
     let spotlight: SpotlightIndexer
+    /// Collections the user pinned to the top of the Collections tab.
+    let collectionPins: CollectionPinStore
 
     init(database: AppDatabase, photoLibrary: PhotoLibraryService) {
         let metadataStore = MetadataStore(database: database)
@@ -147,6 +149,7 @@ final class AppDependencies {
             photoLibrary: photoLibrary,
             metadataStore: metadataStore
         )
+        self.collectionPins = CollectionPinStore()
         self.spotlight = SpotlightIndexer(
             libraryQueries: libraryQueries,
             smartAlbumStore: SmartAlbumStore(database: database)

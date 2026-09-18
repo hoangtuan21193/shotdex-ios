@@ -73,7 +73,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 - [ ] D4 People & Pets: pass quét Vision riêng, opt-in trong Settings
 - [x] D5 Live Text on-demand trong viewer — `ImageAnalysisInteraction`, chỉ phân tích khi bật từ menu, tự tắt khi lật sang ảnh khác
 - [ ] D6 Tách chủ thể / tạo sticker trong viewer
-- [ ] D7 Pinned Collections + tuỳ biến thứ tự màn Collections
+- [~] D7 **Pinned** — giữ bất kỳ album / smart album / utility rồi "Pin to Top", hiện thành section đầu tab Collections theo đúng thứ tự ghim (lưu UserDefaults, ghim hỏng thì bỏ qua chứ không báo lỗi). **Chưa làm**: kéo đổi thứ tự các section của tab
 
 ## Không có public API — bỏ qua
 
