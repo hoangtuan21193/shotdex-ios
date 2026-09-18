@@ -198,6 +198,14 @@ Mọi helper glass phải giữ nhánh `if #available(iOS 26.0, *) { glassEffect
 ### 10.1 Màn hình danh sách / cài đặt (tầng A)
 `NavigationStack` → `List` (`.insetGrouped`) → `Section` có header chữ hoa nhỏ. Hành động phá hủy ở section cuối, màu `.red`. Nút chính dùng `.borderedProminent`, nút phụ `.bordered`.
 
+### 10.1b Safe area ngang (2026-09-19)
+
+**Không màn nào được `.ignoresSafeArea()` cả bốn cạnh.** Lưới ảnh muốn tràn lên dưới nav bar và tab bar thì dùng `.ignoresSafeArea(edges: .vertical)`; cạnh ngang phải giữ.
+
+Lý do đo được trên **iPhone Duo** (iOS 27.1): màn ngoài rộng 466pt nhưng safe area chừa **84pt bên phải** cho dải hệ thống dọc (status bar + tab bar của OS nằm dọc ở đó). `LibraryScreen` bỏ qua cả bốn cạnh nên lưới trải 466pt trong khi app chỉ có 382pt — cột phải nằm **dưới** status bar và tab rail. Các màn lưới khác đã dùng `.ignoresSafeArea(edges: .bottom)` nên không dính.
+
+Viewer là ngoại lệ có lý: **chỉ pager ảnh** tràn viền, còn chrome (nút đóng, action bar) nằm ngoài lớp đó và vẫn tôn trọng safe area.
+
 ### 10.2 Màn hình lưới ảnh (tầng B + C)
 Lưới tràn viền, không padding. Lưới Library **không chèn header ngày** (2026-09-18). Chrome nổi đè lên lưới bằng `safeAreaInset(edge:)` hoặc overlay, luôn dùng kính tầng C. Khi vào chế độ chọn: lưới mờ đi, selection bar trượt lên từ đáy.
 

@@ -601,7 +601,13 @@ struct LibraryScreen: View {
         // view's automatic content-inset adjustment + anchor() position items
         // below the bar, so photos scroll under the translucent chrome instead
         // of leaving a black band behind the buttons.
-        .ignoresSafeArea()
+        //
+        // Vertical only. A device can put system chrome down the *side* — the
+        // iPhone Duo's cover display reserves 84pt on the right, measured — and
+        // ignoring that edge slid the whole grid under it: three columns laid
+        // out across 466pt while only 382pt were the app's, so the right column
+        // sat behind the status bar and the tab rail.
+        .ignoresSafeArea(edges: .vertical)
         .sensoryFeedback(.selection, trigger: selectedIds.count)
     }
 

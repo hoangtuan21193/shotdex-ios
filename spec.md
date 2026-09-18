@@ -805,6 +805,14 @@ Tab **Markup** đứng sau Filters (tên cũ "Text" — đổi vì tab thêm đ�
 - Đầu nhận: `onContinueUserActivity` dịch cloud identifier về local rồi đẩy `IntentRouter.Request.photo`, đi chung đường với intent/Spotlight. `LibraryScreen` mở viewer qua đúng `openSavedPhoto` — cùng một bài toán: lưới phải có ảnh đó trước đã, mà lưới có thể còn đang tải
 - **Chưa chạy thật**: simulator không đăng nhập iCloud nên không có cloud identifier để đo
 
+**iPhone Duo / iOS 27 (2026-09-19):**
+
+- Đo trên máy ảo thật (runtime iOS 27.1 — runtime này **chỉ tạo được máy Duo**, không tạo được iPhone/iPad khác): máy có **hai màn tích hợp**, màn ngoài `1398×2034 @3x` = **466×678pt**, màn trong `2007×2853 @3x` = **669×951pt**
+- Màn ngoài: scene của app là **382×644pt**, `horizontalSizeClass = .compact`, và **safe area phải 84pt** — iOS đặt status bar **dọc** cùng tab bar thành một **dải đứng bên phải**. Insets đo được: `top 0, left 0, bottom 34, right 84`
+- **Bug đã sửa**: `LibraryScreen` gọi `.ignoresSafeArea()` cả bốn cạnh nên lưới trải hết 466pt, cột phải chui xuống dưới dải hệ thống. Đổi thành `.ignoresSafeArea(edges: .vertical)` — giữ nguyên ý đồ cũ (ảnh cuộn dưới nav/tab bar) mà không lấn ngang. iPhone khoá dọc (`UISupportedInterfaceOrientations_iPhone = Portrait`) nên không máy iPhone nào đang chạy bị đổi bố cục
+- **Màn trong chưa chạy thật**: máy boot ở trạng thái gập, màn trong đen, và CoreSimulator **không có lệnh gập/mở** (`simctl ui` chỉ có appearance/content_size/increase_contrast); Simulator.app thì không script được ở đây. Luật cột cho màn trong (`GridDensity.columns(forDensity:width:isRegularWidth:)`, 626pt + regular width) là từ lần đo trước, giữ nguyên
+- Chrome nổi của viewer **không** dính lỗi này: chỉ pager ảnh `.ignoresSafeArea()`, còn nút đóng và action bar nằm ngoài lớp đó
+
 **Panorama (2026-09-19):**
 
 - ⋯ → **View Panorama** (chỉ hiện với ảnh `mediaSubtypes.contains(.photoPanorama)`) mở `PanoramaScreen` (fullScreenCover, nền đen): ảnh **cao bằng màn hình**, bề ngang chạy ra ngoài hai mép, cuộn ngang. Viewer thường fit cả khung nên ảnh 9000×1200 thành một dải cao vài trăm pixel — vứt đi đúng lý do người ta chụp panorama
