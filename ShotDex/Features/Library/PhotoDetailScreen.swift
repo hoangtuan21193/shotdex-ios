@@ -87,6 +87,7 @@ struct PhotoDetailScreen: View {
     /// Frames of the burst the current photo belongs to. Reuses the slideshow
     /// payload type: both are "a run of asset ids plus where to start".
     @State private var burstList: SlideshowPresentation?
+    @State private var trimTarget: VideoTrimPresentation?
     @State private var isSavingLiveVideo = false
     @State private var liveVideoErrorMessage: String?
     @State private var editorTarget: PhotoDetailActionTarget?
@@ -346,6 +347,14 @@ struct PhotoDetailScreen: View {
         }
         .onChange(of: videoStudioTarget?.id) { _, targetID in
             if targetID == nil { revealSavedAssetIfNeeded() }
+        }
+        .fullScreenCover(item: $trimTarget) { target in
+            VideoTrimScreen(asset: target.asset) {
+                // The clip's own bytes changed, so the page has to be rebuilt:
+                // its `AVPlayerItem` still points at the untrimmed version.
+                reseatToken += 1
+                refreshCurrentPhoto()
+            }
         }
         .alert("Unable to Share", isPresented: $isShareUnavailable) {
             Button("OK", role: .cancel) {}
@@ -635,6 +644,13 @@ struct PhotoDetailScreen: View {
             }
 
             Section {
+                if isCurrentVideo, let currentAsset {
+                    Button {
+                        trimTarget = VideoTrimPresentation(asset: currentAsset)
+                    } label: {
+                        Label("Trim", systemImage: "scissors")
+                    }
+                }
                 Button {
                     actions.presentAdjustDate(ids: [id])
                 } label: {
@@ -1352,6 +1368,20 @@ private struct DetailVideoPlayer: View {
     /// the hand reaching for it. Dimmed circles rather than a `GlassPanel`: this
     /// floats directly on the video, not on a panel.
     private var centerTransport: some View {
+        VStack(spacing: 18) {
+            centerTransportRow
+            frameStepRow
+                .opacity(model.isPlaying ? 0 : 1)
+                // A hidden row must not take the taps meant for the picture.
+                .allowsHitTesting(!model.isPlaying)
+                .animation(
+                    reduceMotion ? nil : .easeInOut(duration: 0.18),
+                    value: model.isPlaying
+                )
+        }
+    }
+
+    private var centerTransportRow: some View {
         HStack(spacing: 28) {
             centerButton(
                 systemImage: "gobackward.10",
@@ -1387,9 +1417,6 @@ private struct DetailVideoPlayer: View {
                 handleSkip(isLeading: false)
             }
         }
-        // Frame stepping rides on the arrow keys rather than two more buttons:
-        // this row is already three targets over the picture, and the controls
-        // row below it is six at 375pt. A hardware keyboard costs no layout.
         .background {
             Button("Step back one frame") {
                 onInteraction()
@@ -1405,6 +1432,49 @@ private struct DetailVideoPlayer: View {
             .keyboardShortcut(.rightArrow, modifiers: [])
             .opacity(0)
         }
+    }
+
+    /// Frame stepping, on screen only while the clip is paused.
+    ///
+    /// It used to be arrow keys alone, on the grounds that the centre row was
+    /// already three targets wide and the panel below it six. Keeping it to a
+    /// paused clip resolves that: stepping is what someone does when they have
+    /// stopped to look at one frame, `stepFrame` pauses anyway, and while the
+    /// clip is playing these two targets are not on screen to crowd anything.
+    ///
+    /// Smaller and lower-contrast than the transport above: this is inspection,
+    /// not navigation, and it must not compete with play.
+    private var frameStepRow: some View {
+        HStack(spacing: 16) {
+            frameStepButton(systemImage: "backward.frame.fill", label: "Step back one frame", frames: -1)
+            Text("Frame")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.6))
+                .accessibilityHidden(true)
+            frameStepButton(systemImage: "forward.frame.fill", label: "Step forward one frame", frames: 1)
+        }
+    }
+
+    private func frameStepButton(
+        systemImage: String,
+        label: String,
+        frames: Int
+    ) -> some View {
+        Button {
+            onInteraction()
+            model.stepFrame(by: frames)
+        } label: {
+            ZStack {
+                Circle().fill(.black.opacity(0.28))
+                Image(systemName: systemImage)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.92))
+            }
+            .frame(width: 44, height: 44)
+            .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 
     private func centerButton(
