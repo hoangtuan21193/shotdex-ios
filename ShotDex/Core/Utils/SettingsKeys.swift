@@ -29,6 +29,8 @@ enum SettingsKeys {
     static let slideshowSeconds = "slideshow.seconds"
     /// Whether a video starts playing on its own when its page opens.
     static let autoplayVideos = "playback.autoplayVideos"
+    /// Whether the viewer renders HDR photos at their full brightness.
+    static let viewFullHDR = "display.viewFullHDR"
 
     /// Set once the Statistics dashboard has seeded its default charts, so a
     /// board a user deliberately cleared isn't re-seeded on next launch.

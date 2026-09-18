@@ -1847,6 +1847,7 @@ struct PhotoDetailPage: View {
     /// Owns the player, its readiness state machine and the PhotoKit video
     /// request. Created per page identity, torn down on disappear.
     @State private var videoModel = VideoPlaybackModel()
+    @AppStorage(SettingsKeys.viewFullHDR) private var showsFullHDR = false
     @State private var isVideo = false
     @State private var asset: PHAsset?
     /// Whether this page's asset carries a motion track.
@@ -1907,7 +1908,8 @@ struct PhotoDetailPage: View {
                     image: image,
                     onZoomStart: loadFullResolution,
                     onZoomChange: handleZoom,
-                    isLiveTextActive: loadState.isLiveTextActive
+                    isLiveTextActive: loadState.isLiveTextActive,
+                    showsFullHDR: showsFullHDR
                 )
                 .overlay {
                     if let livePhoto {

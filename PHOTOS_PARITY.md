@@ -39,7 +39,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 - [ ] B9 Filmstrip dưới viewer
 - [x] B10 Slideshow — mở từ menu ⋯ của viewer, cross-fade, Pause/Prev/Next, chọn 2/3/5/8/12 giây mỗi ảnh (nhớ qua UserDefaults), bỏ qua video
 - [ ] B11 Gộp ảnh trùng (giữ bản tốt nhất, hợp nhất metadata)
-- [ ] B12 Hiển thị HDR đầy đủ
+- [x] B12 Hiển thị HDR đầy đủ — `UIImageView.preferredImageDynamicRange`, toggle **View Full HDR** trong Settings (mặc định tắt)
 - [ ] B13 Markup: hình khối, kính lúp
 - [ ] B14 Import: bỏ qua ảnh đã nhập, xoá sau khi nhập, nhập thẳng vào album
 - [x] B15 Settings: section **Playback** (Autoplay Videos) và **Library Size** (tổng dung lượng cộng từ fileSize đã index, có `~` khi chưa đo hết)

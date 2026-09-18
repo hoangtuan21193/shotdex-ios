@@ -23,6 +23,11 @@ struct ZoomableImageView: UIViewRepresentable {
     /// majority of photos; and an active text interaction competes with the
     /// pager's own swipe and the scroll view's pinch.
     var isLiveTextActive: Bool = false
+    /// Renders an HDR photo at its real brightness rather than tone-mapped to
+    /// the standard range. Off by default and switchable in Settings, because
+    /// an HDR frame next to standard chrome makes the chrome look grey, and on
+    /// some displays it is simply uncomfortable.
+    var showsFullHDR: Bool = false
 
     func makeUIView(context: Context) -> UIScrollView {
         let scrollView = UIScrollView()
@@ -39,6 +44,7 @@ struct ZoomableImageView: UIViewRepresentable {
 
         let imageView = UIImageView(image: image)
         imageView.contentMode = .scaleAspectFit
+        imageView.preferredImageDynamicRange = showsFullHDR ? .high : .standard
         imageView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.addSubview(imageView)
         NSLayoutConstraint.activate([
@@ -75,6 +81,8 @@ struct ZoomableImageView: UIViewRepresentable {
 
     func updateUIView(_ scrollView: UIScrollView, context: Context) {
         context.coordinator.imageView?.image = image
+        context.coordinator.imageView?.preferredImageDynamicRange =
+            showsFullHDR ? .high : .standard
         context.coordinator.onZoomStart = onZoomStart
         context.coordinator.onZoomChange = onZoomChange
         context.coordinator.setLiveTextActive(isLiveTextActive, for: image)

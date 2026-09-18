@@ -10,6 +10,7 @@ struct SettingsScreen: View {
     let libraryModel: LibraryModel?
 
     @AppStorage(SettingsKeys.autoplayVideos) private var autoplayVideos = true
+    @AppStorage(SettingsKeys.viewFullHDR) private var viewFullHDR = false
     @State private var storage: LibraryQueries.StorageTotals?
     @AppStorage("display.showISO") private var showsISO = true
     @AppStorage("display.showAperture") private var showsAperture = true
@@ -324,10 +325,11 @@ struct SettingsScreen: View {
     private var playbackSection: some View {
         Section {
             Toggle("Autoplay Videos", isOn: $autoplayVideos)
+            Toggle("View Full HDR", isOn: $viewFullHDR)
         } header: {
             Text("Playback")
         } footer: {
-            Text("When off, a video waits for you to press play. Looping is a button on the player itself.")
+            Text("When autoplay is off, a video waits for you to press play. Looping is a button on the player itself. Full HDR shows high-range photos at their real brightness, which makes everything around them look darker.")
         }
     }
 

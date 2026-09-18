@@ -812,7 +812,7 @@ Mở bằng nút gear (`gearshape`) top-left của Library/Albums/Statistics; hi
 (Section "Statistics" với toggle "Focal Lengths as FF Equivalent" đã bỏ — focal actual vs FF equivalent nay là lựa chọn dimension per-chart trong dashboard, xem §7.4.)
 - Lưu bằng `UserDefaults` (`@AppStorage`); key mới `index.keepScreenAwake` (registry `SettingsKeys.keepScreenAwake`), `notifications.onThisDay` + `notifications.onThisDayMinutes` (`SettingsKeys.onThisDayNotificationsEnabled` / `.onThisDayNotifyMinutes`), `export.compressionPresets` (`SettingsKeys.compressionPresets`), `display.accentTheme` (`SettingsKeys.accentTheme`)
 
-**Playback** (2026-09-19): một toggle **Autoplay Videos** (`SettingsKeys.autoplayVideos`, mặc định bật). Tắt thì video chờ bấm play; **tạm dừng khi rời trang thì không phải tuỳ chọn** — trang đã trôi đi luôn phải dừng. Loop vẫn là nút trên chính player, không đưa vào Settings.
+**Playback** (2026-09-19): toggle **View Full HDR** (`SettingsKeys.viewFullHDR`, **mặc định tắt**) đặt `UIImageView.preferredImageDynamicRange = .high` cho ảnh trong viewer. Tắt sẵn có lý do: một khung HDR đứng cạnh chrome tiêu chuẩn làm chrome trông xám, và trên vài màn hình thì chói. Và toggle **Autoplay Videos** (`SettingsKeys.autoplayVideos`, mặc định bật). Tắt thì video chờ bấm play; **tạm dừng khi rời trang thì không phải tuỳ chọn** — trang đã trôi đi luôn phải dừng. Loop vẫn là nút trên chính player, không đưa vào Settings.
 
 **Library Size** (2026-09-19): `LibraryQueries.storageTotals()` cộng `fileSize` của bảng `photo_metadata`. `knownCount < totalCount` (pass nhanh ghi row trước khi pass EXIF điền bytes) thì in kèm `~` vì con số mới là sàn.
 
