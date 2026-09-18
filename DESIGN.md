@@ -262,6 +262,7 @@ Một mẫu duy nhất cho Library, Album Detail, Smart Album Detail, On This Da
 - Trạng thái chọn dùng `accessibilityAddTraits(.isSelected)`.
 - Không truyền đạt thông tin chỉ bằng màu — luôn kèm icon hoặc chữ (ví dụ hàng "2 failed" có cả icon tam giác).
 - Hỗ trợ Dynamic Type ở tầng A/B; tầng D dùng size cố định nhưng phải chịu được `.accessibility1` mà không cắt chữ (dùng `.fixedSize()` như `EditorPillLabel`).
+- **Ô có kích thước cứng mà bên trong là chữ thật thì kích thước đó phải `@ScaledMetric`** (2026-09-19). Token album/utility/smart album (`AlbumTokenMetrics`: 60 cao × 190 rộng × thumbnail 44), thẻ Memory (260×150) và thẻ On This Day (cao 150) đều scale theo `.subheadline`/`.headline`. Đo ở `accessibility-extra-large` trước khi sửa: "Recently Viewed" ra "Rece…", thumbnail đè lên tiêu đề, câu dưới On This Day cụt. Hàng `LazyHGrid` chứa token phải scale **cùng một con số**, nếu không hàng sẽ cắt token bên trong.
 
 ---
 

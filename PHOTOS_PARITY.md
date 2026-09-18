@@ -2,7 +2,7 @@
 
 > **Tiến độ đêm 2026-09-19** — mỗi mục dưới đây đều build pass, chạy thật trên simulator và có ảnh chụp màn hình kiểm chứng, commit riêng trên `main`.
 >
-> Xong: Viewer panorama · Depth Blur ảnh Portrait · Kéo thả ảnh · Markup shapes + kính lúp · Trim video trong viewer + nút tua khung · People & Pets (pass Vision opt-in) · hành động PhotoKit (ngày/vị trí/ẩn/favorite) · context menu trên tile · Media Types · date section ngày/tháng/năm + thanh cuộn ngày · badge trạng thái · menu ⋯ trong viewer · Live Text · Live Photo + Save as Video · Slideshow · Places · Trips · App Intents + Spotlight · Widget · Share Extension · iPad · quản lý album/folder · Settings (autoplay, HDR, dung lượng) · Auto Enhance + Revert · Merge duplicates.
+> Xong: Dynamic Type cho token Collections · Viewer panorama · Depth Blur ảnh Portrait · Kéo thả ảnh · Markup shapes + kính lúp · Trim video trong viewer + nút tua khung · People & Pets (pass Vision opt-in) · hành động PhotoKit (ngày/vị trí/ẩn/favorite) · context menu trên tile · Media Types · date section ngày/tháng/năm + thanh cuộn ngày · badge trạng thái · menu ⋯ trong viewer · Live Text · Live Photo + Save as Video · Slideshow · Places · Trips · App Intents + Spotlight · Widget · Share Extension · iPad · quản lý album/folder · Settings (autoplay, HDR, dung lượng) · Auto Enhance + Revert · Merge duplicates.
 >
 > Vướng, cần bạn quyết hoặc cần máy thật: xem mục "Cần quyết định" ở cuối file.
 
@@ -63,7 +63,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 - [ ] C5 Handoff qua NSUserActivity
 - [ ] C6 Photo editing extension
 - [~] C7 iPad — `TARGETED_DEVICE_FAMILY = "1,2"`, build/cài/chạy được trên iPad Pro 11", xoay ngang đã khai báo sẵn trong Info.plist; lưới đã tự co giãn theo regular width (`GridDensity.columns(forDensity:width:isRegularWidth:)`). Phím tắt trong viewer: `f` favorite, `i` info, `delete` xoá, `⌘S` share. **CHƯA kiểm thử tương tác**: panel Simulator cho iPad chưa được cấp quyền nên không bấm qua được màn onboarding — cần chạy tay để soát bố cục từng màn
-- [ ] C8 Rà soát Dynamic Type toàn app
+- [~] C8 Rà soát Dynamic Type — đo ở `accessibility-extra-large`: tab Collections **vỡ** (token cắt chữ, thumbnail đè tiêu đề), đã sửa bằng `@ScaledMetric` cho `AlbumTokenMetrics` + thẻ Memory + thẻ On This Day. Lưới ảnh, Settings, Statistics dùng font ngữ nghĩa nên đã tự scale. **Còn lại**: nhãn tab bar tự dựng (size 10 cố định) và nhãn metadata trên tile (chrome tầng C, cố ý cố định)
 
 ## Phase D — Tự dựng phần Apple Intelligence
 
@@ -98,7 +98,6 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 ## Chưa làm (ưu tiên theo mình thấy)
 
 1. **B7 Video trong viewer**: còn lại **chỉnh dải slo-mo**. Nút tua khung trên màn và **Trim tại chỗ** đã xong.
-8. **C8 Dynamic Type**: rà soát toàn app (giờ mới có ở panel info và vài chỗ).
 9. **C5 Handoff**, **C6 photo editing extension**: hai cái này giá trị thấp nhất trong danh sách.
 
 ## Hai việc mình làm sai / cần bạn xử lý

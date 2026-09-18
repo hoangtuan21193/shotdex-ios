@@ -4,6 +4,10 @@ import SwiftUI
 /// Collections tab: On This Day hero, then horizontally-scrolling token
 /// grids (up to 3 rows) for smart albums, My Albums, and Shared Albums.
 struct AlbumsScreen: View {
+    /// Grid-row height for the token rows, scaled the same way the tokens
+    /// themselves are so a row never crops the token inside it.
+    @ScaledMetric(relativeTo: .subheadline) private var tokenRowHeight =
+        AlbumTokenMetrics.height
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(AppDependencies.self) private var dependencies
 
@@ -418,7 +422,7 @@ struct AlbumsScreen: View {
         // 3-row block.
         let rowCount = max(1, min(3, (albums.count + 2) / 3))
         let rows = Array(
-            repeating: GridItem(.fixed(AlbumToken.height), spacing: 8),
+            repeating: GridItem(.fixed(tokenRowHeight), spacing: 8),
             count: rowCount
         )
         return VStack(alignment: .leading, spacing: 12) {
@@ -475,7 +479,7 @@ struct AlbumsScreen: View {
         let total = model.smartQueryAlbums.count + model.smartAlbums.count
         let rowCount = max(1, min(3, (total + 2) / 3))
         let rows = Array(
-            repeating: GridItem(.fixed(AlbumToken.height), spacing: 8),
+            repeating: GridItem(.fixed(tokenRowHeight), spacing: 8),
             count: rowCount
         )
         return VStack(alignment: .leading, spacing: 12) {
@@ -530,7 +534,7 @@ extension AlbumsScreen {
                 .padding(.horizontal)
 
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHGrid(rows: [GridItem(.fixed(AlbumToken.height), spacing: 8)], spacing: 8) {
+                LazyHGrid(rows: [GridItem(.fixed(tokenRowHeight), spacing: 8)], spacing: 8) {
                     NavigationLink(value: DuplicatesDestination()) {
                         DuplicatesToken()
                     }
@@ -800,6 +804,19 @@ extension AlbumsScreen {
     }
 }
 
+/// The token grid's base measurements, at the standard text size.
+///
+/// A token holds two lines of real text, so its box has to grow with Dynamic
+/// Type or the titles clip — at accessibility sizes "Recently Viewed" came out
+/// as "Rece…" and the cover thumbnail sat on top of it. Each view scales these
+/// with `@ScaledMetric`, and the screen scales the same numbers for its grid
+/// rows so the rows and the tokens inside them stay the same height.
+enum AlbumTokenMetrics {
+    static let height: CGFloat = 60
+    static let width: CGFloat = 190
+    static let thumbSide: CGFloat = 44
+}
+
 /// Generic utility token: an SF Symbol where an album would show a cover, plus
 /// a one-line subtitle. Same footprint as `AlbumToken` so the Utilities row
 /// lines up with the album grids above it.
@@ -808,8 +825,9 @@ struct UtilityToken: View {
     let subtitle: String
     let systemImage: String
 
-    private let thumbSide: CGFloat = 44
-    private let tokenWidth: CGFloat = 190
+    @ScaledMetric(relativeTo: .subheadline) private var thumbSide = AlbumTokenMetrics.thumbSide
+    @ScaledMetric(relativeTo: .subheadline) private var tokenWidth = AlbumTokenMetrics.width
+    @ScaledMetric(relativeTo: .subheadline) private var tokenHeight = AlbumTokenMetrics.height
 
     var body: some View {
         HStack(spacing: 8) {
@@ -836,7 +854,7 @@ struct UtilityToken: View {
             Spacer(minLength: 0)
         }
         .padding(8)
-        .frame(width: tokenWidth, height: AlbumToken.height, alignment: .leading)
+        .frame(width: tokenWidth, height: tokenHeight, alignment: .leading)
         .background(
             Color(.secondarySystemBackground),
             in: RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous)
@@ -851,8 +869,9 @@ struct UtilityToken: View {
 struct DuplicatesToken: View {
     @AppStorage(SettingsKeys.duplicateGroupCount) private var groupCount: Int?
 
-    private let thumbSide: CGFloat = 44
-    private let tokenWidth: CGFloat = 190
+    @ScaledMetric(relativeTo: .subheadline) private var thumbSide = AlbumTokenMetrics.thumbSide
+    @ScaledMetric(relativeTo: .subheadline) private var tokenWidth = AlbumTokenMetrics.width
+    @ScaledMetric(relativeTo: .subheadline) private var tokenHeight = AlbumTokenMetrics.height
 
     var body: some View {
         HStack(spacing: 8) {
@@ -879,7 +898,7 @@ struct DuplicatesToken: View {
             Spacer(minLength: 0)
         }
         .padding(8)
-        .frame(width: tokenWidth, height: AlbumToken.height, alignment: .leading)
+        .frame(width: tokenWidth, height: tokenHeight, alignment: .leading)
         .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Duplicates, \(subtitle)")
@@ -913,10 +932,9 @@ struct AlbumToken: View {
     @AppStorage(SettingsKeys.gridColumns) private var storedColumns = 3
 
     /// Fixed outer height so grid rows align.
-    static let height: CGFloat = 60
-
-    private let thumbSide: CGFloat = 44
-    private let tokenWidth: CGFloat = 190
+    @ScaledMetric(relativeTo: .subheadline) private var thumbSide = AlbumTokenMetrics.thumbSide
+    @ScaledMetric(relativeTo: .subheadline) private var tokenWidth = AlbumTokenMetrics.width
+    @ScaledMetric(relativeTo: .subheadline) private var tokenHeight = AlbumTokenMetrics.height
 
     var body: some View {
         HStack(spacing: 8) {
@@ -948,7 +966,7 @@ struct AlbumToken: View {
             Spacer(minLength: 0)
         }
         .padding(8)
-        .frame(width: tokenWidth, height: Self.height, alignment: .leading)
+        .frame(width: tokenWidth, height: tokenHeight, alignment: .leading)
         .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous))
         .onAppear {
             loadCover()
@@ -1013,8 +1031,9 @@ struct SmartAlbumToken: View {
 
     @State private var cover: UIImage?
 
-    private let thumbSide: CGFloat = 44
-    private let tokenWidth: CGFloat = 190
+    @ScaledMetric(relativeTo: .subheadline) private var thumbSide = AlbumTokenMetrics.thumbSide
+    @ScaledMetric(relativeTo: .subheadline) private var tokenWidth = AlbumTokenMetrics.width
+    @ScaledMetric(relativeTo: .subheadline) private var tokenHeight = AlbumTokenMetrics.height
 
     var body: some View {
         HStack(spacing: 8) {
@@ -1046,7 +1065,7 @@ struct SmartAlbumToken: View {
             Spacer(minLength: 0)
         }
         .padding(8)
-        .frame(width: tokenWidth, height: AlbumToken.height, alignment: .leading)
+        .frame(width: tokenWidth, height: tokenHeight, alignment: .leading)
         .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous))
         .onAppear(perform: loadCover)
         .accessibilityElement(children: .ignore)
@@ -1077,10 +1096,12 @@ struct OnThisDayCard: View {
     let coverAsset: PHAsset?
 
     @State private var cover: UIImage?
+    /// The card carries a title and a sentence, so it grows with them.
+    @ScaledMetric(relativeTo: .headline) private var heroHeight: CGFloat = 150
 
     var body: some View {
         Color(.secondarySystemBackground)
-            .frame(height: 150)
+            .frame(height: heroHeight)
             .frame(maxWidth: .infinity)
             .overlay {
                 if let cover {
@@ -1154,8 +1175,10 @@ struct MemoryCard: View {
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @State private var cover: UIImage?
 
-    private static let width: CGFloat = 260
-    private static let height: CGFloat = 150
+    /// Wider and taller as the text grows: a memory card is mostly title and
+    /// date, and at accessibility sizes both were being cut in half.
+    @ScaledMetric(relativeTo: .headline) private var width: CGFloat = 260
+    @ScaledMetric(relativeTo: .headline) private var height: CGFloat = 150
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
@@ -1168,7 +1191,7 @@ struct MemoryCard: View {
                     Color(.secondarySystemBackground)
                 }
             }
-            .frame(width: Self.width, height: Self.height)
+            .frame(width: width, height: height)
             .clipped()
 
             LinearGradient(
@@ -1189,7 +1212,7 @@ struct MemoryCard: View {
             }
             .padding(12)
         }
-        .frame(width: Self.width, height: Self.height)
+        .frame(width: width, height: height)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(memory.title), \(memory.subtitle)")
@@ -1200,7 +1223,7 @@ struct MemoryCard: View {
         guard let asset = PhotoLibraryService.fetchAssets(ids: [memory.coverAssetId]).first
         else { return }
         let scale = ActiveDisplay.scale
-        let size = CGSize(width: Self.width * scale, height: Self.height * scale)
+        let size = CGSize(width: width * scale, height: height * scale)
         cover = await withCheckedContinuation { continuation in
             var hasResumed = false
             _ = photoLibrary.requestAlbumCover(for: asset, targetSize: size, allowNetwork: true) { image in
