@@ -76,6 +76,8 @@ struct PhotoDetailScreen: View {
     /// Live Text: off by default so the analysis only runs when asked for, and
     /// so text selection never steals the pinch and swipe gestures.
     @State private var isLiveTextActive = false
+    @State private var isSavingLiveVideo = false
+    @State private var liveVideoErrorMessage: String?
     @State private var editorTarget: PhotoDetailActionTarget?
     @State private var compressionTarget: PhotoDetailActionTarget?
     @State private var videoStudioTarget: PhotoDetailActionTarget?
@@ -260,6 +262,18 @@ struct PhotoDetailScreen: View {
         // cannot reach over it — it hosts the shared action sheets itself.
         // Its own coordinator, not the root's: see `viewerAssetActions`.
         .assetActionHost(dependencies.viewerAssetActions)
+        .alert(
+            "Couldn't Save Video",
+            isPresented: Binding(
+                get: { liveVideoErrorMessage != nil },
+                set: { if !$0 { liveVideoErrorMessage = nil } }
+            ),
+            presenting: liveVideoErrorMessage
+        ) { _ in
+            Button("OK", role: .cancel) { liveVideoErrorMessage = nil }
+        } message: { message in
+            Text(message)
+        }
         .onChange(of: currentIndex) { _, _ in isLiveTextActive = false }
         .sheet(isPresented: $isMetadataPresented) {
             MetadataPanel(
@@ -567,6 +581,14 @@ struct PhotoDetailScreen: View {
                             systemImage: "text.viewfinder"
                         )
                     }
+                    if currentAsset?.mediaSubtypes.contains(.photoLive) == true {
+                        Button {
+                            saveLivePhotoAsVideo()
+                        } label: {
+                            Label("Save as Video", systemImage: "film")
+                        }
+                        .disabled(isSavingLiveVideo)
+                    }
                 }
             }
 
@@ -605,6 +627,29 @@ struct PhotoDetailScreen: View {
                 .contentShape(Rectangle())
         }
         .accessibilityLabel("More actions")
+    }
+
+    /// Copies the motion half of a Live Photo out as a standalone clip, the
+    /// way Photos' "Save as Video" does. The still is left untouched.
+    private func saveLivePhotoAsVideo() {
+        guard let asset = currentAsset, !isSavingLiveVideo else { return }
+        isSavingLiveVideo = true
+        Task {
+            defer { isSavingLiveVideo = false }
+            guard let url = await LivePhotoLoader.exportVideo(asset: asset) else {
+                liveVideoErrorMessage = String(
+                    localized: "This Live Photo has no motion to save."
+                )
+                return
+            }
+            defer { try? FileManager.default.removeItem(at: url) }
+            do {
+                _ = try await photoLibrary.importFile(at: url, isVideo: true)
+                photoLibrary.publishAppCreatedAsset()
+            } catch {
+                liveVideoErrorMessage = error.localizedDescription
+            }
+        }
     }
 
     /// Hands the photo's coordinate to Maps, which is the one place the app
@@ -1751,6 +1796,12 @@ struct PhotoDetailPage: View {
     @State private var videoModel = VideoPlaybackModel()
     @State private var isVideo = false
     @State private var asset: PHAsset?
+    /// Whether this page's asset carries a motion track.
+    @State private var isLivePhoto = false
+    /// Non-nil only for the length of one playback, then cleared by the
+    /// player's end-of-playback callback.
+    @State private var livePhoto: PHLivePhoto?
+    @State private var isLoadingLivePhoto = false
     /// Set once the full-resolution original request has been fired (first
     /// zoom-in), so a later zoom doesn't kick off a second download.
     @State private var hasRequestedFullResolution = false
@@ -1805,6 +1856,29 @@ struct PhotoDetailPage: View {
                     onZoomChange: handleZoom,
                     isLiveTextActive: loadState.isLiveTextActive
                 )
+                .overlay {
+                    if let livePhoto {
+                        LivePhotoPlayerView(livePhoto: livePhoto) {
+                            self.livePhoto = nil
+                        }
+                        .allowsHitTesting(false)
+                    }
+                }
+                // Bottom-left rather than Photos' top-left: this viewer already
+                // owns the top-left with its close button and title capsule, and
+                // the page draws edge to edge so it cannot inset itself below
+                // them reliably. The bottom-left corner is free at every size.
+                .overlay(alignment: .bottomLeading) {
+                    if isLivePhoto, loadState.isActive {
+                        LivePhotoBadge(isPlaying: livePhoto != nil) {
+                            playLivePhoto()
+                        }
+                        .padding(.leading, 16)
+                        .padding(.bottom, loadState.videoBottomInset + 12)
+                        .opacity(isLoadingLivePhoto ? 0.5 : 1)
+                        .disabled(isLoadingLivePhoto || livePhoto != nil)
+                    }
+                }
             } else {
                 ZStack {
                     Color.black
@@ -1863,11 +1937,29 @@ struct PhotoDetailPage: View {
         }
     }
 
+    /// Fetches the motion track on demand and plays it once. Photos only
+    /// starts a Live Photo on a deliberate gesture too — loading every one on
+    /// sight would pull a video for each page the pager preloads.
+    private func playLivePhoto() {
+        guard let asset, livePhoto == nil, !isLoadingLivePhoto else { return }
+        isLoadingLivePhoto = true
+        Task {
+            defer { isLoadingLivePhoto = false }
+            let loaded = await LivePhotoLoader.load(
+                asset: asset,
+                targetSize: ActiveDisplay.pixelSize()
+            )
+            guard let loaded, self.asset?.localIdentifier == asset.localIdentifier else { return }
+            livePhoto = loaded
+        }
+    }
+
     private func load() {
         guard let assetId = source.photoId(at: index),
               let asset = source.asset(for: assetId)
         else { return }
         self.asset = asset
+        isLivePhoto = asset.mediaSubtypes.contains(.photoLive)
         if asset.mediaType == .video {
             isVideo = true
             videoModel.configure(

@@ -32,7 +32,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 - [ ] B2 Toggle lưới theo tỉ lệ gốc
 - [x] B3 Media Types collections — section riêng trong Collections, 16 subtype (Videos, Selfies, Live, Portrait, Panorama, Time-lapse, Slo-mo, Cinematic, Bursts, Screenshots, Screen Recording, Animated, Long Exposure, RAW, Spatial); album rỗng tự ẩn như Photos
 - [ ] B4 Recently Viewed / Recently Shared / Recently Saved
-- [ ] B5 Live Photo: phát trong viewer + badge + Save as Video
+- [x] B5 Live Photo: badge LIVE trong viewer (bấm để phát, `PHLivePhotoView` phủ lên ảnh tĩnh nên giữ nguyên zoom/paging), badge `livephoto` trên tile, **Save as Video** trích `PHAssetResource.pairedVideo` thành clip mới
 - [ ] B6 Portrait: đọc depth data, hiển thị, chỉnh độ mờ nền
 - [ ] B7 Video: tua từng khung, chỉnh dải slo-mo, trim ngay trong viewer
 - [ ] B8 Burst stack, viewer panorama
