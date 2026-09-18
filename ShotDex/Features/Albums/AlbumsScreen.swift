@@ -224,6 +224,10 @@ struct AlbumsScreen: View {
                 .buttonStyle(.plain)
                 .padding(.horizontal)
 
+                if !model.memories.isEmpty {
+                    memoriesSection()
+                }
+
                 if !(model.smartQueryAlbums.isEmpty && model.smartAlbums.isEmpty) {
                     smartAlbumsSection()
                 }
@@ -451,6 +455,35 @@ extension AlbumsScreen {
 }
 
 extension AlbumsScreen {
+    /// The Memories row: wide cards the user scrolls sideways, each opening
+    /// the photos it stands for.
+    fileprivate func memoriesSection() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Memories")
+                .font(.title2.bold())
+                .padding(.horizontal)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 12) {
+                    ForEach(model.memories) { memory in
+                        NavigationLink {
+                            PhotoListScreen(
+                                title: memory.title,
+                                subtitle: memory.subtitle,
+                                assetIds: memory.assetIds
+                            )
+                        } label: {
+                            MemoryCard(memory: memory)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal)
+            }
+            .scrollClipDisabled()
+        }
+    }
+
     /// One row per folder, each showing the albums it holds. Folders are rare
     /// and usually few, so they are listed rather than squeezed into the same
     /// horizontal token grid as everything else.
@@ -861,6 +894,72 @@ struct OnThisDayCard: View {
         ) { image in
             if requestedAssetID == coverAsset?.localIdentifier, let image {
                 cover = image
+            }
+        }
+    }
+}
+
+/// One memory as a wide cover with its title and count burned into the bottom.
+/// Same shape as `TripCard` but narrower, because these scroll sideways.
+struct MemoryCard: View {
+    let memory: Memory
+
+    @Environment(PhotoLibraryService.self) private var photoLibrary
+    @State private var cover: UIImage?
+
+    private static let width: CGFloat = 260
+    private static let height: CGFloat = 150
+
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            Group {
+                if let cover {
+                    Image(uiImage: cover)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    Color(.secondarySystemBackground)
+                }
+            }
+            .frame(width: Self.width, height: Self.height)
+            .clipped()
+
+            LinearGradient(
+                colors: [.clear, .black.opacity(0.65)],
+                startPoint: .center,
+                endPoint: .bottom
+            )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(memory.title)
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                Text(memory.subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.8))
+                    .lineLimit(1)
+            }
+            .padding(12)
+        }
+        .frame(width: Self.width, height: Self.height)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(memory.title), \(memory.subtitle)")
+        .task(id: memory.coverAssetId) { await loadCover() }
+    }
+
+    private func loadCover() async {
+        guard let asset = PhotoLibraryService.fetchAssets(ids: [memory.coverAssetId]).first
+        else { return }
+        let scale = ActiveDisplay.scale
+        let size = CGSize(width: Self.width * scale, height: Self.height * scale)
+        cover = await withCheckedContinuation { continuation in
+            var hasResumed = false
+            _ = photoLibrary.requestAlbumCover(for: asset, targetSize: size, allowNetwork: true) { image in
+                guard !hasResumed, let image else { return }
+                hasResumed = true
+                continuation.resume(returning: image)
             }
         }
     }

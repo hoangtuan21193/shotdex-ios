@@ -700,6 +700,12 @@ Tab **Markup** đứng sau Filters (tên cũ "Text" — đổi vì tab thêm đ�
 
 **`PhotoListScreen` + `PhotoListModel`** (`Features/Shared/`, 2026-09-19): lưới cho một **danh sách assetId tự tính** — hình dạng thứ ba bên cạnh album PhotoKit (`AlbumDetailModel`) và truy vấn đã lưu (`SmartAlbumDetailModel`). Dùng cho Places, và sẽ dùng lại cho Trips/Memories. Giữ **đúng thứ tự caller truyền vào** (một chuyến đi chạy xuôi thời gian, một memory đã được chọn lọc). `PhotoListModel` conform `PhotoBrowsingSource` nên mở thẳng được viewer. **Chỉ để duyệt**: không có chế độ chọn nhiều ảnh, vì đây là danh sách dẫn xuất và một selection ở đây không có chỗ về rõ ràng.
 
+**Memories (2026-09-19):**
+
+- `MemoryBuilder` (`Domain/Places/`) + hàng thẻ **Memories** trên tab Collections, ngay dưới On This Day. Nguồn: **chuyến đi** (3 cái mới nhất), **từng năm đã trọn** (3 năm gần nhất, ≥ `minimumPhotos` 12 ảnh, bỏ năm hiện tại vì nó chưa xong — cùng một tiêu đề mà nội dung cứ đổi), **nơi hay quay lại** (2 nơi nhiều ảnh nhất). Ảnh đã thuộc một chuyến thì không tính lại cho năm/nơi. Tối đa `limit` 8 thẻ
+- **Cố ý KHÔNG bắt chước Memories của Apple.** Apple dựng nó từ nhận diện mặt, phân loại cảnh và một model curation — app không có thứ nào trong đó, mà làm bản nhái yếu sẽ ra những bộ sưu tập người dùng không đoán được và không tin được. Nên mỗi memory ở đây luôn là thứ người dùng tự tìm được: một chuyến đi, một năm, một nơi. Tiêu đề nói rõ nó là cái nào
+- Chạm thẻ → `PhotoListScreen`
+
 **Trips (chuyến đi, 2026-09-19):**
 
 - `TripGrouping` (`Domain/Places/`) + `TripsScreen`. Luật cố ý máy móc, không "thông minh": một chuyến là chuỗi ảnh cách **nhà** hơn `homeRadiusKm` 80km, không đoạn nào hở quá `maximumGapDays` 2 ngày, kéo dài ≥ `minimumDays` 1 ngày và có ≥ `minimumPhotos` 8 ảnh

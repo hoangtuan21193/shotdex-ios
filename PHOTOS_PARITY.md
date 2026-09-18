@@ -69,7 +69,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 
 - [x] D1 Places — token trong Utilities, bản đồ gom cụm theo ô lưới độ (co giãn theo mức zoom), pin có thumbnail + số lượng + tên địa điểm đã geocode; chạm cụm mở lưới ảnh có khoảng ngày
 - [x] D2 Trips — token trong Utilities, gom các đợt ảnh liên tục cách "nhà" > 80km; thẻ ảnh bìa + tên nơi + khoảng ngày; có unit test (5 ca)
-- [ ] D3 Memories / Featured Photos: tự chọn + dựng phim qua Video Studio
+- [~] D3 Memories — hàng thẻ trên tab Collections, gom từ tín hiệu app đã có: chuyến đi, từng năm đã trọn, nơi hay quay lại. **Cố ý không bắt chước Memories của Apple** (không có face/scene model); chạm mở lưới ảnh. **Chưa làm**: tự dựng thành phim qua Video Studio
 - [ ] D4 People & Pets: pass quét Vision riêng, opt-in trong Settings
 - [x] D5 Live Text on-demand trong viewer — `ImageAnalysisInteraction`, chỉ phân tích khi bật từ menu, tự tắt khi lật sang ảnh khác
 - [ ] D6 Tách chủ thể / tạo sticker trong viewer
