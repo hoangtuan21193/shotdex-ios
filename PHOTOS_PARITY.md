@@ -37,7 +37,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 - [ ] B7 Video: tua từng khung, chỉnh dải slo-mo, trim ngay trong viewer
 - [ ] B8 Burst stack, viewer panorama
 - [ ] B9 Filmstrip dưới viewer
-- [ ] B10 Slideshow
+- [x] B10 Slideshow — mở từ menu ⋯ của viewer, cross-fade, Pause/Prev/Next, chọn 2/3/5/8/12 giây mỗi ảnh (nhớ qua UserDefaults), bỏ qua video
 - [ ] B11 Gộp ảnh trùng (giữ bản tốt nhất, hợp nhất metadata)
 - [ ] B12 Hiển thị HDR đầy đủ
 - [ ] B13 Markup: hình khối, kính lúp

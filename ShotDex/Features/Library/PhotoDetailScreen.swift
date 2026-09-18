@@ -51,6 +51,13 @@ struct PhotoViewerTarget: Identifiable, Equatable {
     let startIndex: Int
 }
 
+/// A pending slideshow — the run to play and where in it to start.
+struct SlideshowPresentation: Identifiable {
+    let id = UUID()
+    let assetIds: [String]
+    let startIndex: Int
+}
+
 private struct PhotoDetailActionTarget: Identifiable {
     let id: String
     let asset: PHAsset
@@ -76,6 +83,7 @@ struct PhotoDetailScreen: View {
     /// Live Text: off by default so the analysis only runs when asked for, and
     /// so text selection never steals the pinch and swipe gestures.
     @State private var isLiveTextActive = false
+    @State private var slideshow: SlideshowPresentation?
     @State private var isSavingLiveVideo = false
     @State private var liveVideoErrorMessage: String?
     @State private var editorTarget: PhotoDetailActionTarget?
@@ -262,6 +270,13 @@ struct PhotoDetailScreen: View {
         // cannot reach over it — it hosts the shared action sheets itself.
         // Its own coordinator, not the root's: see `viewerAssetActions`.
         .assetActionHost(dependencies.viewerAssetActions)
+        .fullScreenCover(item: $slideshow) { presentation in
+            SlideshowScreen(
+                assetIds: presentation.assetIds,
+                startIndex: presentation.startIndex
+            )
+            .environment(photoLibrary)
+        }
         .alert(
             "Couldn't Save Video",
             isPresented: Binding(
@@ -613,6 +628,15 @@ struct PhotoDetailScreen: View {
             }
 
             Section {
+                Button {
+                    startSlideshow()
+                } label: {
+                    Label("Slideshow", systemImage: "play.rectangle")
+                }
+                .disabled(model.photoCount < 2)
+            }
+
+            Section {
                 Button(role: .destructive) {
                     actions.toggleHidden(ids: [id])
                 } label: {
@@ -627,6 +651,25 @@ struct PhotoDetailScreen: View {
                 .contentShape(Rectangle())
         }
         .accessibilityLabel("More actions")
+    }
+
+    /// Plays the whole run the viewer is browsing, starting from the photo on
+    /// screen. Videos are skipped — a slideshow that stops to play a clip is a
+    /// different feature, and Video Studio already covers it.
+    private func startSlideshow() {
+        var ids: [String] = []
+        ids.reserveCapacity(model.photoCount)
+        for offset in 0..<model.photoCount {
+            guard let id = model.photoId(at: offset) else { continue }
+            guard model.asset(for: id)?.mediaType != .video else { continue }
+            ids.append(id)
+        }
+        guard ids.count > 1 else { return }
+        let currentId = model.photoId(at: currentIndex)
+        slideshow = SlideshowPresentation(
+            assetIds: ids,
+            startIndex: currentId.flatMap { ids.firstIndex(of: $0) } ?? 0
+        )
     }
 
     /// Copies the motion half of a Live Photo out as a standalone clip, the

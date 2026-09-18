@@ -25,6 +25,8 @@ enum SettingsKeys {
     /// false for an unwritten key). Uses the network, hence a switch: it is the
     /// only part of indexing that talks to a server about where the user has been.
     static let lookUpPlaces = "index.lookUpPlaces"
+    /// Seconds each photo is held during a slideshow.
+    static let slideshowSeconds = "slideshow.seconds"
 
     /// Set once the Statistics dashboard has seeded its default charts, so a
     /// board a user deliberately cleared isn't re-seeded on next launch.
