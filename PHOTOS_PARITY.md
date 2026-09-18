@@ -95,6 +95,18 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 
 ---
 
+## Chưa làm (ưu tiên theo mình thấy)
+
+1. **B7 Video trong viewer**: tua từng khung, chỉnh dải slo-mo, trim ngay tại chỗ (giờ phải qua Video Studio).
+2. **B4 Recently Viewed / Shared / Saved**: cần app tự ghi lại lượt xem/chia sẻ, PhotoKit không cấp.
+3. **D4 People & Pets**: pass Vision riêng, bạn bấm mới chạy (đúng như bạn dặn là không đưa vào index).
+4. **B13 Markup**: thêm hình khối và kính lúp (PencilKit hiện có pen/highlighter/eraser/lasso/ruler).
+5. **A10 Kéo thả** ảnh ra app khác và thả vào album.
+6. **B8 Burst stack** (`PHAsset.burstIdentifier` có sẵn) và viewer panorama.
+7. **B6 Portrait**: đọc `AVDepthData` để hiện và chỉnh độ mờ nền (Portrait Lighting thì không có API).
+8. **C8 Dynamic Type**: rà soát toàn app (giờ mới có ở panel info và vài chỗ).
+9. **C5 Handoff**, **C6 photo editing extension**: hai cái này giá trị thấp nhất trong danh sách.
+
 ## Cần bạn quyết định
 
 - **Filmstrip dưới viewer** (mục 35): spec ghi rõ đã **cố ý bỏ** trước đây. Mình chưa thêm lại vì không biết lý do bỏ — khác với date header, cái đó bạn đã chốt là thêm lại. Muốn thêm lại không, và có cần toggle không?
