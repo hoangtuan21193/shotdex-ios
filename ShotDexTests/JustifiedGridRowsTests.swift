@@ -112,6 +112,29 @@ struct JustifiedGridRowsTests {
         #expect(JustifiedGridRows.rows(aspectRatios: [1.5], width: 390, targetHeight: 0, spacing: 2).isEmpty)
     }
 
+    /// The grid is built for whole libraries, so the row pass has to be one
+    /// walk of the list and nothing quadratic hiding in it. 55k is the size
+    /// the Library was measured at when the one-pass load was written.
+    @Test func aLibrarySizedRunCoversEveryPhoto() {
+        let aspects: [CGFloat] = (0..<55_000).map { index in
+            switch index % 4 {
+            case 0: 1.5
+            case 1: 0.67
+            case 2: 1.0
+            default: 1.33
+            }
+        }
+        let rows = JustifiedGridRows.rows(
+            aspectRatios: aspects, width: 390, targetHeight: 120, spacing: 2
+        )
+        #expect(rows.first?.range.lowerBound == 0)
+        #expect(rows.last?.range.upperBound == aspects.count)
+        #expect(rows.count < aspects.count)
+        for (a, b) in zip(rows, rows.dropFirst()) {
+            #expect(a.range.upperBound == b.range.lowerBound)
+        }
+    }
+
     @Test func totalHeightCountsTheGapsBetweenRows() {
         let rows = [
             JustifiedRow(range: 0..<3, height: 100),

@@ -207,7 +207,20 @@ final class PhotoGridLayout: UICollectionViewLayout {
         if let cached = levels[columns] { return cached }
         let built = buildLevel(columns: columns)
         levels[columns] = built
+        evictDistantLevelsIfNeeded(keeping: columns)
         return built
+    }
+
+    /// The square grid's levels are a handful of numbers each, so every column
+    /// count the user has pinched through can stay cached. An aspect level
+    /// carries three arrays the length of the library — about a megabyte at
+    /// 55k photos — and a pinch from one column to eight would hold eight of
+    /// them for a zoom that is over. Only the two ends of the current blend
+    /// are worth keeping.
+    private func evictDistantLevelsIfNeeded(keeping columns: Int) {
+        guard levels.count > 3, levels.values.contains(where: { $0.aspect != nil }) else { return }
+        let keep: Set<Int> = [columns, zoomFrom, zoomTo]
+        levels = levels.filter { keep.contains($0.key) }
     }
 
     private func buildLevel(columns: Int) -> Level {

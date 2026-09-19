@@ -205,6 +205,69 @@ struct UprightAnalyzerTests {
         #expect(degrees < 20)
     }
 
+    /// End to end on pixels: a frame ruled with parallel lines at a known
+    /// tilt must come back with a correction that undoes that tilt. This is
+    /// the test that would catch a sign error between the detector's
+    /// coordinate space and the geometry's — the two halves are written in
+    /// different spaces (rows run down, segments run up) and agreeing about
+    /// it is the whole contract.
+    @Test(arguments: [-6.0, -3.0, 3.0, 6.0])
+    func aRuledFrameIsLevelledBackTheOtherWay(tilt: Double) throws {
+        let width = 256
+        let height = 256
+        var pixels = [Float](repeating: 0.12, count: width * height)
+        // Five parallel lines, so the median has a majority to find.
+        for line in 0..<5 {
+            let offset = Double(line - 2) * 40
+            drawLine(
+                into: &pixels, width: width, height: height,
+                degrees: tilt, offset: offset
+            )
+        }
+        let segments = UprightAnalyzer.segments(
+            luminance: pixels, width: width, height: height
+        )
+        #expect(!segments.isEmpty)
+
+        let rotate = UprightAnalyzer.levelRotation(from: segments)
+        // The correction runs against the tilt.
+        #expect(rotate * tilt < 0, "tilt \(tilt)° corrected by \(rotate)")
+        // And it is the right size: `applyGeo` turns this into
+        // `rotate * 0.35` radians.
+        let appliedDegrees = rotate * 0.35 * 180 / .pi
+        #expect(abs(appliedDegrees + tilt) < 2.5, "tilt \(tilt)° met with \(appliedDegrees)°")
+    }
+
+    /// One bright line across a frame at `degrees`, offset perpendicular to
+    /// itself. Rows run top-down, which is why the y step is negated: the
+    /// analyzer reports angles in a bottom-up space.
+    private func drawLine(
+        into pixels: inout [Float],
+        width: Int,
+        height: Int,
+        degrees: Double,
+        offset: Double
+    ) {
+        let radians = degrees * .pi / 180
+        let cx = Double(width) / 2 - sin(radians) * offset
+        let cy = Double(height) / 2 - cos(radians) * offset
+        let reach = Double(max(width, height)) * 1.5
+        let steps = Int(reach * 3)
+        for step in 0...steps {
+            let t = (Double(step) / Double(steps) - 0.5) * reach
+            let x = cx + cos(radians) * t
+            let y = cy - sin(radians) * t
+            for dx in -1...1 {
+                for dy in -1...1 {
+                    let px = Int(x.rounded()) + dx
+                    let py = Int(y.rounded()) + dy
+                    guard px >= 0, px < width, py >= 0, py < height else { continue }
+                    pixels[py * width + px] = 0.95
+                }
+            }
+        }
+    }
+
     @Test func aFlatFrameHasNoLines() {
         let pixels = [Float](repeating: 0.5, count: 64 * 64)
         #expect(UprightAnalyzer.segments(luminance: pixels, width: 64, height: 64).isEmpty)
