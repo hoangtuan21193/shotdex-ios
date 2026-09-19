@@ -16,6 +16,7 @@ import ShotDexKit
 /// The lifted-cell shadow/tilt is the *only* signal separating "carrying the
 /// whole cell" from "sliding the photo inside it".
 struct CollageCanvasView: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Bindable var model: CollageEditorModel
     let onFillRequest: (Int) -> Void
     let onEditText: (PhotoOverlay) -> Void
@@ -81,7 +82,10 @@ struct CollageCanvasView: View {
         let ratio = CGFloat(model.recipe.aspectRatio)
         guard available.width > 0, available.height > 0, ratio > 0 else { return .zero }
         var width = min(available.width, available.height * ratio)
-        width = min(width, CollageMetrics.maxFrameWidth)
+        width = min(
+            width,
+            CollageMetrics.maxFrameWidth(isRegularWidth: horizontalSizeClass == .regular)
+        )
         return CGSize(width: width, height: width / ratio)
     }
 

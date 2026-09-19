@@ -36,6 +36,36 @@ struct VideoStudioLayoutTests {
         #expect(layout.preview == usable - VideoStudioMetrics.timelineMinimumHeight)
     }
 
+    /// An iPad leaves 600pt over after the preview. All of it went to the
+    /// timeline, which drew three lanes at the top of an empty black field
+    /// with the playhead ruled down the middle of the nothing.
+    @Test func aBigScreenGivesTheSurplusToThePreviewNotTheTimeline() {
+        let iPad = CGSize(width: 1032, height: 1376)
+        let content = VideoStudioMetrics.timelineContentHeight(overlayLanes: 1, musicLanes: 1)
+        let layout = VideoStudioMetrics.stackLayout(
+            screen: iPad, bandHeight: 24, bottomInset: 20,
+            canvas: CGSize(width: 16, height: 9), presentsSheet: false,
+            timelineContentHeight: content
+        )
+        #expect(layout.timeline == max(VideoStudioMetrics.timelineMinimumHeight, content))
+        #expect(layout.preview > iPad.width * 9 / 16, "the surplus goes to the preview band")
+    }
+
+    /// Capping is opt-in. Left out — which is what the phone does — the
+    /// timeline still takes the whole leftover, because a landscape project
+    /// getting a tall timeline instead of black bars is the documented choice
+    /// on a screen that small.
+    @Test func withoutAContentHeightTheTimelineStillTakesTheLeftover() {
+        let layout = VideoStudioMetrics.stackLayout(
+            screen: screen, bandHeight: band, bottomInset: inset,
+            canvas: CGSize(width: 3, height: 2), presentsSheet: false
+        )
+        #expect(layout.timeline == usable - 268)
+        #expect(layout.timeline > VideoStudioMetrics.timelineContentHeight(
+            overlayLanes: 1, musicLanes: 1
+        ))
+    }
+
     @Test func sheetLiftsTheStackAndTakesFromTheTimelineFirst() {
         let idle = VideoStudioMetrics.stackLayout(
             screen: screen, bandHeight: band, bottomInset: inset,

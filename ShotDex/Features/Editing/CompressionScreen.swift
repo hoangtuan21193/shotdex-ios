@@ -49,7 +49,10 @@ struct CompressionScreen: View {
     var body: some View {
         NavigationStack {
             stage
-            .navigationTitle(assets.count == 1 ? "Compress Photo" : "Compress \(assets.count) Photos")
+            // "Resize", not "Compress", everywhere the user reads it: the entry
+            // point in both menus is called Resize, and a screen that renames
+            // itself on the way in reads as a different tool.
+            .navigationTitle(assets.count == 1 ? "Resize Photo" : "Resize \(assets.count) Photos")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -94,7 +97,7 @@ struct CompressionScreen: View {
             Text("ShotDex will ask Photos to remove every copy already exported.")
         }
         .alert(
-            "Compression Error",
+            "Resize Error",
             isPresented: Binding(
                 get: { controller?.errorMessage != nil },
                 set: { if !$0 { controller?.clearError() } }
@@ -105,6 +108,10 @@ struct CompressionScreen: View {
             Text(controller?.errorMessage ?? "")
         }
     }
+
+    /// How wide the form is allowed to get. Matches the reading width the
+    /// system's own grouped forms settle on in a regular-width window.
+    private static let maximumFormWidth: CGFloat = 700
 
     @ViewBuilder
     private func content(_ controller: CompressionController) -> some View {
@@ -120,6 +127,13 @@ struct CompressionScreen: View {
             ScrollView {
                 formBody(controller)
                     .padding(AppTheme.Spacing.lg)
+                    // A form is read across, and a segmented control stretched
+                    // to 1032pt on an iPad is a line of text with three words
+                    // a hand's width apart. The column stops at a readable
+                    // width and centres; the phone is narrower than the cap so
+                    // nothing changes there.
+                    .frame(maxWidth: Self.maximumFormWidth)
+                    .frame(maxWidth: .infinity)
             }
             .disabled(controller.isExporting)
         }
@@ -163,7 +177,7 @@ struct CompressionScreen: View {
             controller.startExport()
         } label: {
             Label(
-                assets.count == 1 ? "Save to Photos" : "Compress \(assets.count) Photos",
+                assets.count == 1 ? "Save to Photos" : "Resize \(assets.count) Photos",
                 systemImage: "arrow.down.circle.fill"
             )
             .font(.system(size: 16, weight: .semibold))
@@ -304,8 +318,8 @@ struct CompressionScreen: View {
 
     private func deleteOriginalsSection(_ controller: CompressionController) -> some View {
         let subtitle = assets.count == 1
-            ? "Remove the source photo after the compressed copy is saved"
-            : "Remove each source photo after its compressed copy is saved"
+            ? "Remove the source photo after the resized copy is saved"
+            : "Remove each source photo after its resized copy is saved"
         return Toggle(
             isOn: Binding(
                 get: { controller.deleteOriginals },
@@ -329,7 +343,7 @@ struct CompressionScreen: View {
     /// tapped mid-export (DESIGN.md §11).
     private func exportOverlay(_ controller: CompressionController) -> some View {
         let current = min(controller.processedCount + 1, assets.count)
-        let title = controller.isDeletingOriginals ? "Deleting originals…" : "Compressing…"
+        let title = controller.isDeletingOriginals ? "Deleting originals…" : "Resizing…"
         let counter = "Processing \(current) of \(assets.count)"
         return ZStack {
             Color.black.opacity(0.6)

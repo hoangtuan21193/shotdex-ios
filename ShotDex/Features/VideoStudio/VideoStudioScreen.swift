@@ -19,6 +19,7 @@ struct VideoStudioPresentation: Identifiable {
 /// with a fixed centre playhead, and a tool row. Editing controls live in one
 /// contextual bottom sheet that reskins for whatever is selected.
 struct VideoStudioScreen: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dismiss) private var dismiss
     @Environment(AppDependencies.self) private var dependencies
 
@@ -219,7 +220,17 @@ struct VideoStudioScreen: View {
                 bandHeight: bandHeight,
                 bottomInset: proxy.safeAreaInsets.bottom,
                 canvas: model.recipe.canvasSize(),
-                presentsSheet: model.presentsSheet
+                presentsSheet: model.presentsSheet,
+                // Only where there is a surplus worth arguing about. On a
+                // phone the leftover *is* the timeline — a landscape project
+                // gets a tall timeline instead of black bars, which is the
+                // documented choice — so the cap is not applied there.
+                timelineContentHeight: horizontalSizeClass == .regular
+                    ? VideoStudioMetrics.timelineContentHeight(
+                        overlayLanes: max(1, model.overlayLaneCount),
+                        musicLanes: max(1, model.musicLaneCount)
+                    )
+                    : .greatestFiniteMagnitude
             )
             ZStack(alignment: .bottom) {
                 VStack(spacing: 0) {

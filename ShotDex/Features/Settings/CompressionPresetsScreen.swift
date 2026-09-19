@@ -49,7 +49,7 @@ struct CompressionPresetsScreen: View {
                 Text("Custom presets store a name, pixel dimensions, Fill or Fit behavior, quality and output format.")
             }
         }
-        .navigationTitle("Compression Presets")
+        .navigationTitle("Resize Presets")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $editorPreset) { preset in
             CompressionPresetEditor(

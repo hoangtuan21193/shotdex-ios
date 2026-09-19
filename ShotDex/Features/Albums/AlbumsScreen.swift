@@ -837,6 +837,16 @@ enum AlbumTokenMetrics {
     static let height: CGFloat = 60
     static let width: CGFloat = 190
     static let thumbSide: CGFloat = 44
+
+    /// Tokens get wider where there is width going spare. 190pt leaves about
+    /// 120pt for the title once the cover and the padding are paid for, which
+    /// clips "Recently Viewed" — acceptable on a phone, absurd on an iPad with
+    /// 800pt of empty row beside it. This is not "bigger on a big screen": the
+    /// token holds the same things at the same sizes, the text just stops
+    /// being cut off.
+    static func width(isRegularWidth: Bool) -> CGFloat {
+        isRegularWidth ? 240 : width
+    }
 }
 
 /// Generic utility token: an SF Symbol where an album would show a cover, plus
@@ -848,8 +858,13 @@ struct UtilityToken: View {
     let systemImage: String
 
     @ScaledMetric(relativeTo: .subheadline) private var thumbSide = AlbumTokenMetrics.thumbSide
-    @ScaledMetric(relativeTo: .subheadline) private var tokenWidth = AlbumTokenMetrics.width
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @ScaledMetric(relativeTo: .subheadline) private var typeScale = 1.0
     @ScaledMetric(relativeTo: .subheadline) private var tokenHeight = AlbumTokenMetrics.height
+
+    private var tokenWidth: CGFloat {
+        AlbumTokenMetrics.width(isRegularWidth: horizontalSizeClass == .regular) * typeScale
+    }
 
     var body: some View {
         HStack(spacing: 8) {
@@ -892,8 +907,13 @@ struct DuplicatesToken: View {
     @AppStorage(SettingsKeys.duplicateGroupCount) private var groupCount: Int?
 
     @ScaledMetric(relativeTo: .subheadline) private var thumbSide = AlbumTokenMetrics.thumbSide
-    @ScaledMetric(relativeTo: .subheadline) private var tokenWidth = AlbumTokenMetrics.width
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @ScaledMetric(relativeTo: .subheadline) private var typeScale = 1.0
     @ScaledMetric(relativeTo: .subheadline) private var tokenHeight = AlbumTokenMetrics.height
+
+    private var tokenWidth: CGFloat {
+        AlbumTokenMetrics.width(isRegularWidth: horizontalSizeClass == .regular) * typeScale
+    }
 
     var body: some View {
         HStack(spacing: 8) {
@@ -955,8 +975,13 @@ struct AlbumToken: View {
 
     /// Fixed outer height so grid rows align.
     @ScaledMetric(relativeTo: .subheadline) private var thumbSide = AlbumTokenMetrics.thumbSide
-    @ScaledMetric(relativeTo: .subheadline) private var tokenWidth = AlbumTokenMetrics.width
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @ScaledMetric(relativeTo: .subheadline) private var typeScale = 1.0
     @ScaledMetric(relativeTo: .subheadline) private var tokenHeight = AlbumTokenMetrics.height
+
+    private var tokenWidth: CGFloat {
+        AlbumTokenMetrics.width(isRegularWidth: horizontalSizeClass == .regular) * typeScale
+    }
 
     var body: some View {
         HStack(spacing: 8) {
@@ -1054,8 +1079,13 @@ struct SmartAlbumToken: View {
     @State private var cover: UIImage?
 
     @ScaledMetric(relativeTo: .subheadline) private var thumbSide = AlbumTokenMetrics.thumbSide
-    @ScaledMetric(relativeTo: .subheadline) private var tokenWidth = AlbumTokenMetrics.width
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @ScaledMetric(relativeTo: .subheadline) private var typeScale = 1.0
     @ScaledMetric(relativeTo: .subheadline) private var tokenHeight = AlbumTokenMetrics.height
+
+    private var tokenWidth: CGFloat {
+        AlbumTokenMetrics.width(isRegularWidth: horizontalSizeClass == .regular) * typeScale
+    }
 
     var body: some View {
         HStack(spacing: 8) {

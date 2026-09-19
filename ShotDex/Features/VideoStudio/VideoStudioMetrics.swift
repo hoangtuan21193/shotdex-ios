@@ -43,20 +43,41 @@ enum VideoStudioMetrics {
         var lift: CGFloat
     }
 
+    /// `timelineContentHeight` is what the lanes in this project actually
+    /// occupy. On a phone the timeline is always the smaller half and the
+    /// parameter changes nothing; on an iPad the leftover is 600pt, and giving
+    /// all of it to the timeline drew three lanes at the top of an empty black
+    /// field with the playhead ruled down the middle of the nothing. The
+    /// timeline takes what it needs and the preview keeps the rest.
     static func stackLayout(
         screen: CGSize,
         bandHeight: CGFloat,
         bottomInset: CGFloat,
         canvas: CGSize,
-        presentsSheet: Bool
+        presentsSheet: Bool,
+        timelineContentHeight: CGFloat = .greatestFiniteMagnitude
     ) -> StackLayout {
         let lift = presentsSheet ? sheetLift : 0
         let fixed = bandHeight + previewTimelineGap + toolbarHeight + bottomBarHeight + bottomInset + lift
         let usable = max(0, screen.height - fixed)
         let natural = canvas.width > 0 ? screen.width * canvas.height / canvas.width : usable
         let previewCap = max(previewMinimumHeight, usable - timelineMinimumHeight)
-        let preview = min(max(natural, previewMinimumHeight), previewCap)
-        return StackLayout(preview: preview, timeline: max(0, usable - preview), lift: lift)
+        var preview = min(max(natural, previewMinimumHeight), previewCap)
+        var timeline = max(0, usable - preview)
+        let wanted = max(timelineMinimumHeight, timelineContentHeight)
+        if timeline > wanted {
+            preview += timeline - wanted
+            timeline = wanted
+        }
+        return StackLayout(preview: preview, timeline: timeline, lift: lift)
+    }
+
+    /// What the timeline needs to show every lane of this project without
+    /// scrolling: the ruler, the lanes, and the paddings around them.
+    static func timelineContentHeight(overlayLanes: Int, musicLanes: Int) -> CGFloat {
+        timelineTopPadding + rulerHeight + rulerToTracks
+            + laneContentHeight(overlayLanes: overlayLanes, musicLanes: musicLanes)
+            + scrollbarHeight
     }
 
     // MARK: Sheet tiers

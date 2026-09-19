@@ -459,7 +459,7 @@ struct SettingsScreen: View {
                 CompressionPresetsScreen()
             } label: {
                 LabeledContent(
-                    "Compression Presets",
+                    "Resize Presets",
                     value: "\(dependencies.compressionPresets.customPresets.count) custom"
                 )
             }

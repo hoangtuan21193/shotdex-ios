@@ -53,7 +53,16 @@ enum CollageMetrics {
     // MARK: Stage
 
     /// The collage frame never grows past this on its long screen axis.
+    ///
+    /// 353 is the phone's content width; on an iPad it is a postage stamp in
+    /// the middle of a 1032pt stage, so a regular-width window lets the frame
+    /// take whatever the stage leaves instead. The cap is not a design
+    /// preference, it is the phone's width written down.
     static let maxFrameWidth: CGFloat = 353
+
+    static func maxFrameWidth(isRegularWidth: Bool) -> CGFloat {
+        isRegularWidth ? .greatestFiniteMagnitude : maxFrameWidth
+    }
 
     // MARK: Counter / bottom controls
 

@@ -14,6 +14,7 @@ import SwiftUI
 struct SearchSuggestionsScreen: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(PhotoLibraryService.self) private var photoLibrary
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @Binding var query: String
     let model: LibraryModel
@@ -145,8 +146,14 @@ struct SearchSuggestionsScreen: View {
     /// Pre-iOS 26 the field lives in the navigation bar, so the capsules belong
     /// right under it; on iOS 26 the `.search`-role tab anchors it to the bottom
     /// edge and the capsules hug it from above.
+    ///
+    /// Except on iPad, where iOS 26 puts the field back in the toolbar at the
+    /// top: bottom-anchoring there left the title alone at the top of a 1376pt
+    /// screen, a 700pt hole, and the capsules floating above the keyboard with
+    /// nothing to hug. The rule is "the capsules go where the field is", so it
+    /// has to read the size class rather than the OS version alone.
     private var isFieldAtTop: Bool {
-        if #available(iOS 26.0, *) { false } else { true }
+        if #available(iOS 26.0, *) { horizontalSizeClass == .regular } else { true }
     }
 
     // MARK: Recents

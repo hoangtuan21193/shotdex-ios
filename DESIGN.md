@@ -303,6 +303,7 @@ Một mẫu duy nhất cho Library, Album Detail, Smart Album Detail, On This Da
 - Không truyền đạt thông tin chỉ bằng màu — luôn kèm icon hoặc chữ (ví dụ hàng "2 failed" có cả icon tam giác).
 - Hỗ trợ Dynamic Type ở tầng A/B; tầng D dùng size cố định nhưng phải chịu được `.accessibility1` mà không cắt chữ (dùng `.fixedSize()` như `EditorPillLabel`).
 - **Ô có kích thước cứng mà bên trong là chữ thật thì kích thước đó phải `@ScaledMetric`** (2026-09-19). Token album/utility/smart album (`AlbumTokenMetrics`: 60 cao × 190 rộng × thumbnail 44), thẻ Memory (260×150) và thẻ On This Day (cao 150) đều scale theo `.subheadline`/`.headline`. Đo ở `accessibility-extra-large` trước khi sửa: "Recently Viewed" ra "Rece…", thumbnail đè lên tiêu đề, câu dưới On This Day cụt. Hàng `LazyHGrid` chứa token phải scale **cùng một con số**, nếu không hàng sẽ cắt token bên trong.
+- **Và ô đó rộng thêm ở regular width nếu chữ vẫn cắt** (2026-09-19): `AlbumTokenMetrics.width(isRegularWidth:)` = 190 compact / **240 regular**. 190 chỉ chừa ~120pt cho tiêu đề, đủ cắt "Recently Viewed" ngay ở cỡ chữ mặc định — chấp nhận được trên điện thoại, vô lý trên iPad khi cạnh nó còn 800pt trống. Đây **không phải** ngoại lệ của luật "màn rộng = nhiều nội dung hơn, không phải to hơn": token vẫn chứa đúng chừng đó thứ ở đúng cỡ đó, chỉ là chữ thôi bị cắt.
 
 ---
 
