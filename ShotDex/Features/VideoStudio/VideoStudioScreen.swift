@@ -234,7 +234,8 @@ struct VideoStudioScreen: View {
                     overlayLanes: max(1, model.overlayLaneCount),
                     musicLanes: max(1, model.musicLaneCount)
                 ),
-                usesToolRail: usesToolRail
+                usesToolRail: usesToolRail,
+                panelMayDock: usesToolRail
             )
             // Measured on the window, not on the size class. An iPad Split
             // View half reports `.regular` at ~500pt, where a permanent 92pt
@@ -272,6 +273,15 @@ struct VideoStudioScreen: View {
                         )
                         // Sits under the panel; keeps the timeline above it.
                         Color.clear.frame(height: layout.lift)
+                        // Where the window has height to spare the panel takes
+                        // a place in the stack instead of sliding over the
+                        // bars: it covers nothing, the timeline does not move,
+                        // and the black that was padding the frame is spent on
+                        // the controls for the thing that is selected.
+                        if layout.dockedPanel > 0 {
+                            contextPanel(model, height: layout.dockedPanel)
+                                .transition(.move(edge: .bottom).combined(with: .opacity))
+                        }
                         if !usesRail {
                             VideoStudioToolbar(model: model, actions: actions(model))
                         }
@@ -282,7 +292,7 @@ struct VideoStudioScreen: View {
 
                 // The panel slides over the bars; the layout underneath never
                 // moves, so the timeline stays exactly where the user left it.
-                if model.presentsSheet {
+                if model.presentsSheet, layout.dockedPanel == 0 {
                     contextPanel(model, height: panelHeight)
                         .transition(.move(edge: .bottom))
                         // The rail is the one piece of chrome that must stay

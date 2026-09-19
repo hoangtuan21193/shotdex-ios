@@ -87,6 +87,44 @@ struct VideoStudioLayoutTests {
         #expect(rail.timeline == row.timeline)
     }
 
+    /// A portrait iPad showing a 16:9 project pads the frame with ~470pt of
+    /// black. The panel takes its place in the stack out of that padding
+    /// rather than sliding over the bars: nothing is covered, and the
+    /// timeline keeps the height and the position it had.
+    @Test func aWindowWithSlackDocksThePanelInsteadOfLiftingTheStack() {
+        let iPad = CGSize(width: 1032 - VideoStudioMetrics.railWidth, height: 1376)
+        let lanes = VideoStudioMetrics.Lanes.regular
+        let content = lanes.timelineContentHeight(overlayLanes: 1, musicLanes: 1)
+        let closed = VideoStudioMetrics.stackLayout(
+            screen: iPad, bandHeight: 48, bottomInset: 20,
+            canvas: CGSize(width: 16, height: 9), presentsSheet: false,
+            timelineContentHeight: content, usesToolRail: true, panelMayDock: true
+        )
+        let open = VideoStudioMetrics.stackLayout(
+            screen: iPad, bandHeight: 48, bottomInset: 20,
+            canvas: CGSize(width: 16, height: 9), presentsSheet: true,
+            timelineContentHeight: content, usesToolRail: true, panelMayDock: true
+        )
+        #expect(open.dockedPanel == VideoStudioMetrics.sheetHeight + 20)
+        #expect(open.lift == 0)
+        #expect(open.timeline == closed.timeline, "the timeline does not move for a docked panel")
+        #expect(open.preview == closed.preview - open.dockedPanel)
+        #expect(open.preview >= iPad.width * 9 / 16, "the frame keeps its natural size")
+    }
+
+    /// A phone has no slack to dock into, so the panel still slides over the
+    /// bars and the stack still lifts.
+    @Test func aPhoneKeepsTheSlidingPanel() {
+        let layout = VideoStudioMetrics.stackLayout(
+            screen: screen, bandHeight: band, bottomInset: inset,
+            canvas: CGSize(width: 16, height: 9), presentsSheet: true,
+            timelineContentHeight: VideoStudioMetrics.timelineContentHeight(overlayLanes: 1, musicLanes: 1),
+            panelMayDock: false
+        )
+        #expect(layout.dockedPanel == 0)
+        #expect(layout.lift == VideoStudioMetrics.sheetLift)
+    }
+
     /// With no tool row under it, the panel covers that much more of the
     /// stack, so the lift has to grow by the same amount.
     @Test func theRailMakesThePanelLiftFurther() {

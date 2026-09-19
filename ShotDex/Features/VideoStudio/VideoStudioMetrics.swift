@@ -53,8 +53,13 @@ enum VideoStudioMetrics {
         var preview: CGFloat
         var timeline: CGFloat
         /// Spacer under the timeline while the panel is up (`sheetLift`), zero
-        /// otherwise.
+        /// otherwise — and zero when the panel is docked, because a docked
+        /// panel covers nothing and so nothing has to move out of its way.
         var lift: CGFloat
+        /// Height reserved *in the stack* for the contextual panel, when the
+        /// window has room to spare for it. Zero means the panel slides over
+        /// the bars as it does on a phone.
+        var dockedPanel: CGFloat = 0
     }
 
     /// `timelineContentHeight` is what the lanes in this project actually
@@ -70,24 +75,46 @@ enum VideoStudioMetrics {
         canvas: CGSize,
         presentsSheet: Bool,
         timelineContentHeight: CGFloat = .greatestFiniteMagnitude,
-        usesToolRail: Bool = false
+        usesToolRail: Bool = false,
+        /// `true` lets the contextual panel take a place in the stack instead
+        /// of sliding over the bars, but only where the window has that much
+        /// height going spare. Callers pass the regular-width flag.
+        panelMayDock: Bool = false
     ) -> StackLayout {
-        let lift = presentsSheet ? sheetLift(usesToolRail: usesToolRail) : 0
         // The rail takes the tools out of the vertical stack entirely, so the
         // 62pt the row used to cost goes back to the preview and the timeline.
         let toolRow = usesToolRail ? 0 : toolbarHeight
-        let fixed = bandHeight + previewTimelineGap + toolRow + bottomBarHeight + bottomInset + lift
-        let usable = max(0, screen.height - fixed)
-        let natural = canvas.width > 0 ? screen.width * canvas.height / canvas.width : usable
-        let previewCap = max(previewMinimumHeight, usable - timelineMinimumHeight)
-        var preview = min(max(natural, previewMinimumHeight), previewCap)
-        var timeline = max(0, usable - preview)
+        let natural = canvas.width > 0 ? screen.width * canvas.height / canvas.width : 0
         let wanted = max(timelineMinimumHeight, timelineContentHeight)
-        if timeline > wanted {
-            preview += timeline - wanted
-            timeline = wanted
+
+        func split(lift: CGFloat, dock: CGFloat) -> StackLayout {
+            let fixed = bandHeight + previewTimelineGap + toolRow + bottomBarHeight + bottomInset + lift + dock
+            let usable = max(0, screen.height - fixed)
+            let previewCap = max(previewMinimumHeight, usable - timelineMinimumHeight)
+            var preview = min(max(natural > 0 ? natural : usable, previewMinimumHeight), previewCap)
+            var timeline = max(0, usable - preview)
+            if timeline > wanted {
+                preview += timeline - wanted
+                timeline = wanted
+            }
+            return StackLayout(preview: preview, timeline: timeline, lift: lift, dockedPanel: dock)
         }
-        return StackLayout(preview: preview, timeline: timeline, lift: lift)
+
+        guard presentsSheet else { return split(lift: 0, dock: 0) }
+
+        // Docking is worth it only when the slack the preview is padding with
+        // would still leave the frame its natural size afterwards. A portrait
+        // iPad showing a 16:9 project has ~470pt of black around the frame;
+        // spending 264 of it on the panel covers nothing, moves nothing, and
+        // leaves the timeline exactly where the user scrolled it. A phone has
+        // no such slack, so the panel keeps sliding over the bars.
+        if panelMayDock {
+            let undocked = split(lift: 0, dock: 0)
+            if undocked.preview - natural >= sheetHeight + bottomInset {
+                return split(lift: 0, dock: sheetHeight + bottomInset)
+            }
+        }
+        return split(lift: sheetLift(usesToolRail: usesToolRail), dock: 0)
     }
 
     /// The phone's lane geometry, kept as a free function for the layout

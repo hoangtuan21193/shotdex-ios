@@ -1,0 +1,24 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "tap", "label": "Library", "type": "button" },
+    { "action": "tap", "label": "Select", "type": "button" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "x": 0.07, "y": 0.1 },
+    { "action": "tap", "x": 0.21, "y": 0.1 },
+    { "action": "tap", "x": 0.35, "y": 0.1 },
+    { "action": "tap", "label": "More selection actions" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "label": "Create Video" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "screenshot", "name": "40-idle" },
+    { "action": "tap", "x": 0.62, "y": 0.865 },
+    { "action": "wait", "seconds": 2 },
+    { "action": "screenshot", "name": "41-clip-selected" },
+    { "action": "orientation", "text": "landscape" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "screenshot", "name": "42-landscape-selected" },
+    { "action": "orientation", "text": "portrait" }
+  ]
+}
