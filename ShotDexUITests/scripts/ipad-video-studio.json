@@ -1,0 +1,11 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "tap", "label": "Library", "type": "button" },
+    { "action": "tap", "label": "Select", "type": "button" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "screenshot", "name": "10-selection" },
+    { "action": "dump", "name": "10-selection" }
+  ]
+}

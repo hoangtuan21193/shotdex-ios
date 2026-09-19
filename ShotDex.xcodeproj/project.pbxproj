@@ -69,6 +69,13 @@
 			remoteGlobalIDString = DD0001102D00000100000001;
 			remoteInfo = ShotDexKit;
 		};
+		FF0001032D00000100000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA00000A2D00000100000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA0000062D00000100000001;
+			remoteInfo = ShotDex;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -109,6 +116,7 @@
 		EE0001022D00000100000001 /* ShotDexEdit.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShotDexEdit.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		EE0001202D00000100000001 /* PhotosUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PhotosUI.framework; path = System/Library/Frameworks/PhotosUI.framework; sourceTree = SDKROOT; };
 		EE0001212D00000100000001 /* Photos.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Photos.framework; path = System/Library/Frameworks/Photos.framework; sourceTree = SDKROOT; };
+		FF0001022D00000100000001 /* ShotDexUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ShotDexUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -185,6 +193,11 @@
 			path = ShotDexEdit;
 			sourceTree = "<group>";
 		};
+		FF0001052D00000100000001 /* ShotDexUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ShotDexUITests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -236,6 +249,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		FF0001092D00000100000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -268,6 +288,7 @@
 				BB0001052D00000100000001 /* ShotDexWidget */,
 				CC0001052D00000100000001 /* ShotDexShare */,
 				AA0000222D00000100000001 /* ShotDexTests */,
+				FF0001052D00000100000001 /* ShotDexUITests */,
 				0E765CA03010E673001A134A /* Frameworks */,
 				AA0000042D00000100000001 /* Products */,
 				0E397135305DE8030050F70A /* Recovered References */,
@@ -281,6 +302,7 @@
 				BB0001022D00000100000001 /* ShotDexWidget.appex */,
 				CC0001022D00000100000001 /* ShotDexShare.appex */,
 				AA0000212D00000100000001 /* ShotDexTests.xctest */,
+				FF0001022D00000100000001 /* ShotDexUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -430,6 +452,29 @@
 			productReference = EE0001022D00000100000001 /* ShotDexEdit.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		FF0001102D00000100000001 /* ShotDexUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FF0001112D00000100000001 /* Build configuration list for PBXNativeTarget "ShotDexUITests" */;
+			buildPhases = (
+				FF0001082D00000100000001 /* Sources */,
+				FF0001092D00000100000001 /* Frameworks */,
+				FF00010A2D00000100000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				FF0001062D00000100000001 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				FF0001052D00000100000001 /* ShotDexUITests */,
+			);
+			name = ShotDexUITests;
+			packageProductDependencies = (
+			);
+			productName = ShotDexUITests;
+			productReference = FF0001022D00000100000001 /* ShotDexUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -481,6 +526,7 @@
 				BB0001102D00000100000001 /* ShotDexWidget */,
 				CC0001102D00000100000001 /* ShotDexShare */,
 				AA0000232D00000100000001 /* ShotDexTests */,
+				FF0001102D00000100000001 /* ShotDexUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -522,6 +568,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		EE0001092D00000100000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FF00010A2D00000100000001 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -573,6 +626,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		FF0001082D00000100000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -610,6 +670,11 @@
 			isa = PBXTargetDependency;
 			target = DD0001102D00000100000001 /* ShotDexKit */;
 			targetProxy = EE0001192D00000100000001 /* PBXContainerItemProxy */;
+		};
+		FF0001062D00000100000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA0000062D00000100000001 /* ShotDex */;
+			targetProxy = FF0001032D00000100000001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -1078,6 +1143,40 @@
 			};
 			name = Release;
 		};
+		FF0001122D00000100000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hoangtuan.shotdex.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = ShotDex;
+			};
+			name = Debug;
+		};
+		FF0001132D00000100000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hoangtuan.shotdex.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = ShotDex;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1140,6 +1239,15 @@
 			buildConfigurations = (
 				EE0001122D00000100000001 /* Debug */,
 				EE0001132D00000100000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FF0001112D00000100000001 /* Build configuration list for PBXNativeTarget "ShotDexUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FF0001122D00000100000001 /* Debug */,
+				FF0001132D00000100000001 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

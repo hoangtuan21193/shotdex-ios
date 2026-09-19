@@ -24,6 +24,22 @@ xcodebuild ... test -only-testing:ShotDexTests/DatabaseTests/testSomething
 
 Run in simulator: build, then `xcrun simctl install <udid> <path/to/ShotDex.app>` + `xcrun simctl launch <udid> com.hoangtuan.shotdex`. Grant photo permission for testing: `xcrun simctl privacy <udid> grant photos com.hoangtuan.shotdex` (app may still prompt; permission dialog needs a UI tap).
 
+```bash
+# Drive the UI on a simulator and collect screenshots + a measured element dump
+Tools/ui-drive <udid> ShotDexUITests/scripts/<script>.json [out-dir]
+```
+
+`Tools/ui-drive` runs the `ShotDexUIDriver` scheme, whose only target is
+`ShotDexUITests/UIDriverTests` — a driver that replays a JSON list of steps
+(`tap` by accessibility label or normalized point, `swipe`, `typeText`,
+`longPress`, `scrollTo`, `wait`, `screenshot`, `dump`). It is **not** in the
+`ShotDex` scheme, so `xcodebuild … -scheme ShotDex test` still runs the unit
+tests and nothing else. Each `dump` writes every on-screen element with its
+label, identifier and frame in points, which is how a layout finding gets a
+number instead of an adjective. A run takes three to six minutes, so script
+the whole route to a screen in one go. Artifacts come back through the result
+bundle because the test itself runs inside the simulator.
+
 ## Architecture
 
 Layered, composition root at `ShotDex/App/AppDependencies.swift` — built once in `ShotDexApp`, injected via SwiftUI environment (`@Observable` + `.environment`). No singletons except `AppDatabase.makeShared()`.

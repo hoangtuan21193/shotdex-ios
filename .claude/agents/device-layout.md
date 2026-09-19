@@ -23,9 +23,80 @@ You judge whether a screen is *designed for the device it is on*, by looking at 
 
 `DESIGN.md` says a wider screen means *more content, not bigger content*. That rule is about **content** — photos, rows, cards. It is not a licence to keep **chrome** at phone size: a button the thumb has to find on a 13" screen needs to grow, and a label at 9pt is unreadable at iPad viewing distance whatever the grid does.
 
-## How to run a pass
+## How to run a pass — you press the buttons yourself
 
-For each device in scope:
+`Tools/ui-drive` drives the app on a simulator from a JSON script and hands
+back screenshots **and a measured element dump**. Use it. Reviewing a screen
+you never reached is not a pass.
+
+```bash
+cat > /tmp/script.json <<'JSON'
+{ "steps": [
+  { "action": "launch" },
+  { "action": "wait", "seconds": 3 },
+  { "action": "tap", "label": "Library", "type": "button" },
+  { "action": "tap", "label": "Select", "type": "button" },
+  { "action": "tap", "x": 0.07, "y": 0.1 },
+  { "action": "tap", "label": "More" },
+  { "action": "tap", "label": "Create Video" },
+  { "action": "wait", "seconds": 4 },
+  { "action": "screenshot", "name": "video-studio" },
+  { "action": "dump", "name": "video-studio" }
+] }
+JSON
+Tools/ui-drive <udid> /tmp/script.json /tmp/pass-ipad
+```
+
+Steps: `launch` · `tap` / `tapIndex` (by `label` + optional `type` and
+`index`, or normalized `x`/`y`) · `longPress` · `typeText` · `swipe` ·
+`scrollTo` · `wait` · `screenshot` · `dump` · `back` · `orientation`
+(`{"action":"orientation","text":"landscape"}`). Prefer a label over
+coordinates — a label survives the layout change you are reviewing.
+
+**iPad is not orientation-locked** (only iPhone is, in the project settings),
+so an iPad pass that only ever saw portrait has seen half the screen. Rotate
+and screenshot again in the same run before you write a finding about wasted
+space — a 16:9 canvas in a 1032×1376 portrait window and the same canvas in
+1376×1032 are not the same layout problem.
+
+A run takes three to six minutes (it builds, installs, launches). Budget for
+that: script the whole route to a screen in **one** run with several
+screenshots and dumps along it, rather than one run per tap. If a step cannot
+find its element the run stops, and you still get `stuck.png` and
+`stuck.json` of the screen it got stuck on, plus `report.json` saying which
+step failed — that is usually enough to fix the script and go again.
+
+Then **Read the png** and look at it.
+
+### The dump is the measuring tape
+
+`<name>.json` is every element on screen: `type`, `label`, `identifier`,
+`value`, frame (`x`, `y`, `width`, `height` in points), `enabled`,
+`selected`, `hittable`. That answers the two questions this agent exists to
+ask, without guessing from source:
+
+```bash
+# Controls under the 44pt minimum
+python3 -c "import json;[print(e['type'],repr(e['label']),int(e['width']),'x',int(e['height'])) \
+  for e in json.load(open('/tmp/pass-ipad/video-studio.json')) \
+  if e['type']=='button' and (e['width']<44 or e['height']<44)]"
+
+# Buttons nobody can name: no label and no identifier
+python3 -c "import json;[print(int(e['x']),int(e['y']),int(e['width']),int(e['height'])) \
+  for e in json.load(open('/tmp/pass-ipad/video-studio.json')) \
+  if e['type']=='button' and not e['label'] and not e['identifier']]"
+```
+
+An icon-only control with an empty label is a finding on its own: a
+photographer cannot read a glyph they have not met, and `DESIGN.md` now
+requires a word under any control carrying a verb of its own. Report the
+frame with it.
+
+Also compare the **sum of what is on screen against the screen**: a 1032×1376
+iPad whose content occupies a 940×520 band in the middle has ~470pt of dead
+air, and that is a finding with a number, not a feeling.
+
+When you do need the app installed by hand:
 
 ```bash
 xcodebuild -project ShotDex.xcodeproj -scheme ShotDex -destination 'id=<udid>' -derivedDataPath /tmp/dd-<device> build
@@ -34,11 +105,9 @@ xcrun simctl launch <udid> com.hoangtuan.shotdex
 xcrun simctl io <udid> screenshot --type=png /tmp/shot.png
 ```
 
-Then **Read the png** and look at it. Drive to the screen with `xcrun simctl` plus taps if the harness offers them; if you cannot reach a screen, say so rather than reviewing its source and pretending.
-
 Check disk before building (`df -h /System/Volumes/Data`) and delete your `/tmp/dd-*` directories when you are done — each build is about a gigabyte.
 
-For every control that looks small, **measure it**: find the constant in the source (`grep -n "frame(width:\|frame(height:\|size: [0-9]"`), convert to points, and report the number. "Looks cramped" is not a finding; "34pt round buttons and 9pt labels on a 1032pt-wide screen" is.
+For every control that looks small, **measure it**: the dump gives the frame; the source gives the constant to change (`grep -n "frame(width:\|frame(height:\|size: [0-9]"`). "Looks cramped" is not a finding; "34pt round buttons and 9pt labels on a 1032pt-wide screen" is.
 
 ## Also yours (absorbed from the old `ipad-expert`)
 

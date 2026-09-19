@@ -1,0 +1,72 @@
+#!/bin/bash
+# Drive the app on a simulator from a JSON script, and collect screenshots
+# and element dumps.
+#
+#   Tools/ui-drive <udid-or-name> <script.json> [out-dir]
+#
+# The script is a list of steps; see ShotDexUITests/UIDriver.swift for the
+# fields and ShotDexUITests/scripts/ for examples. Pass "-" as the script to
+# run the default (launch, screenshot, dump the first screen).
+#
+# Output lands in out-dir (default /tmp/shotdex-ui/<script name>):
+#   <name>.png     screenshots
+#   <name>.json    every element on screen: label, identifier, frame, enabled
+#   report.json    what each step did, and the first one that failed
+#
+# The point of the element dump is that it is measurable: an icon-only button
+# shows up as an empty label, and a 28pt control shows up as height 28.
+set -euo pipefail
+
+if [ $# -lt 2 ]; then
+    sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
+    exit 64
+fi
+
+DEVICE="$1"
+SCRIPT="$2"
+NAME="$(basename "${SCRIPT%.json}")"
+OUT="${3:-/tmp/shotdex-ui/$NAME}"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+rm -rf "$OUT"
+mkdir -p "$OUT"
+
+# The script travels as a resource in the test bundle: a UI test runner is a
+# process in the simulator, so it can read neither a path on the Mac nor the
+# TEST_RUNNER_ environment (measured: the runner's environment arrives empty).
+BUNDLED="$ROOT/ShotDexUITests/Resources/driver-script.json"
+mkdir -p "$(dirname "$BUNDLED")"
+if [ "$SCRIPT" = "-" ]; then
+    rm -f "$BUNDLED"
+else
+    cp "$SCRIPT" "$BUNDLED"
+fi
+trap 'rm -f "$BUNDLED"' EXIT
+
+case "$DEVICE" in
+    *-*-*-*-*) DEST="platform=iOS Simulator,id=$DEVICE" ;;
+    *)         DEST="platform=iOS Simulator,name=$DEVICE" ;;
+esac
+
+BUNDLE="$OUT/result.xcresult"
+rm -rf "$BUNDLE"
+
+xcodebuild test \
+    -project "$ROOT/ShotDex.xcodeproj" \
+    -scheme ShotDexUIDriver \
+    -destination "$DEST" \
+    -resultBundlePath "$BUNDLE" \
+    -only-testing:ShotDexUITests/UIDriverTests/testRunScript \
+    2>&1 | grep -E "error:|Testing (failed|passed)|TEST (SUCCEEDED|FAILED)|step [0-9]+ " || true
+
+# The test runs inside the simulator, so the artifacts come back out of the
+# result bundle rather than off the host filesystem.
+if [ -d "$BUNDLE" ]; then
+    xcrun xcresulttool export attachments --path "$BUNDLE" --output-path "$OUT" >/dev/null 2>&1 || true
+    python3 "$ROOT/Tools/ui-drive-rename.py" "$OUT" || true
+    rm -rf "$BUNDLE"
+fi
+
+echo
+echo "artifacts in $OUT:"
+ls -1 "$OUT" 2>/dev/null || echo "  (none — the run did not get far enough to write any)"
