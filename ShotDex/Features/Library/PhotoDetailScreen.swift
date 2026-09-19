@@ -98,6 +98,13 @@ struct PhotoDetailScreen: View {
     @State private var liveVideoErrorMessage: String?
     /// Pick / reject / rating for the photo on screen, re-read as the pager moves.
     @State private var cullState = PhotoCullState(assetId: "")
+    /// Set while the Hide confirmation is up, holding the photo it is about.
+    ///
+    /// Hiding is one-way from inside this app: iOS 16 took the hidden album
+    /// away from every app but Photos, so ShotDex can write the flag and then
+    /// never see the photo again to undo it. That is exactly the case Apple's
+    /// own guidance reserves an alert for.
+    @State private var hideConfirmationAssetId: String?
     @State private var editorTarget: PhotoDetailActionTarget?
     @State private var compressionTarget: PhotoDetailActionTarget?
     @State private var videoStudioTarget: PhotoDetailActionTarget?
@@ -371,11 +378,11 @@ struct PhotoDetailScreen: View {
                 refreshCurrentPhoto()
             }
         }
-        .alert("Unable to Share", isPresented: $isShareUnavailable) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("This photo hasn't been downloaded from iCloud yet.")
-        }
+        .viewerAlerts(
+            shareUnavailable: $isShareUnavailable,
+            hideAssetId: $hideConfirmationAssetId,
+            onHide: { dependencies.viewerAssetActions.toggleHidden(ids: [$0]) }
+        )
         .onChange(of: currentIndex) { _, newIndex in
             dependencies.indexInteractionGate.touch()
             model.loadNextPageIfNeeded(currentIndex: newIndex)
@@ -687,7 +694,7 @@ struct PhotoDetailScreen: View {
                 Button {
                     actions.presentAddToAlbum(ids: [id])
                 } label: {
-                    Label("Add to Album", systemImage: "rectangle.stack.badge.plus")
+                    Label("Add to Collection", systemImage: "rectangle.stack.badge.plus")
                 }
                 Button {
                     actions.duplicate(ids: [id])
@@ -730,12 +737,16 @@ struct PhotoDetailScreen: View {
                     }
                 }
                 Menu {
+                    // The row already in effect is disabled, so the menu says
+                    // what this photo carries instead of offering the state it
+                    // is in as something to choose.
                     ForEach(PhotoFlag.allCases) { flag in
                         Button {
                             setCullFlag(flag, id: id)
                         } label: {
                             Label(flag.title, systemImage: flag.systemImage)
                         }
+                        .disabled(cullState.flag == flag)
                     }
                     Divider()
                     ForEach(Array(PhotoCullState.ratingRange).reversed(), id: \.self) { rating in
@@ -747,6 +758,7 @@ struct PhotoDetailScreen: View {
                                 systemImage: rating == 0 ? "star.slash" : "star.fill"
                             )
                         }
+                        .disabled(cullState.rating == rating)
                     }
                 } label: {
                     Label(cullMenuTitle, systemImage: "flag")
@@ -823,7 +835,7 @@ struct PhotoDetailScreen: View {
 
             Section {
                 Button(role: .destructive) {
-                    actions.toggleHidden(ids: [id])
+                    hideConfirmationAssetId = id
                 } label: {
                     Label("Hide", systemImage: "eye.slash")
                 }
@@ -3005,5 +3017,41 @@ private final class PhotoPageHost: UIHostingController<AnyView> {
     @available(*, unavailable)
     @MainActor required dynamic init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+}
+
+/// The viewer's two alerts, lifted out of its body: one more `.alert` inline
+/// and the type-checker gives up on a view this size.
+private extension View {
+    func viewerAlerts(
+        shareUnavailable: Binding<Bool>,
+        hideAssetId: Binding<String?>,
+        onHide: @escaping (String) -> Void
+    ) -> some View {
+        self
+            .alert("Unable to Share", isPresented: shareUnavailable) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("This photo hasn't been downloaded from iCloud yet.")
+            }
+            // Hiding is one-way from inside this app: iOS 16 took the hidden
+            // album away from every app but Photos, so ShotDex can set the
+            // flag and then never see the photo again to undo it — the case
+            // Apple reserves an alert for.
+            .alert(
+                "Hide this photo?",
+                isPresented: Binding(
+                    get: { hideAssetId.wrappedValue != nil },
+                    set: { if !$0 { hideAssetId.wrappedValue = nil } }
+                )
+            ) {
+                Button("Cancel", role: .cancel) { hideAssetId.wrappedValue = nil }
+                Button("Hide", role: .destructive) {
+                    if let id = hideAssetId.wrappedValue { onHide(id) }
+                    hideAssetId.wrappedValue = nil
+                }
+            } message: {
+                Text("It moves to the Hidden album in Photos. ShotDex can't show hidden photos, so you'll need the Photos app to unhide it.")
+            }
     }
 }

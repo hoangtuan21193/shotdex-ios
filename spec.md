@@ -382,6 +382,17 @@ Yêu cầu hiệu năng:
 - **Khoá zoom/pan giữa hai pane** (`EditorSession.isReferenceLocked`, mặc định bật, nút link trong header pane): pane tham chiếu soi theo `chrome.zoomScale`/`zoomOffset` của canvas. Hai pane bằng kích thước và ảnh đều aspect-fit trong đó, nên cùng scale + offset rơi đúng cùng vùng của mỗi ảnh — đó chính là việc cần làm khi so hai tấm. Ảnh phóng bị `clipped()` để không tràn qua vạch ngăn. Pane tham chiếu **không tự pan được**: nó là thứ để nhìn, kéo nó rời khỏi ảnh đang sửa thì mất nghĩa so sánh.
 - Chưa có: undo theo từng ảnh (lịch sử nằm trên controller nên đổi ảnh là mất), Reference View, user preset, flag/rating.
 
+**HIG pass trên các màn chuẩn iOS (2026-09-19)** — kết quả agent `hig-components`:
+
+- **Xác nhận phá hủy phải là `.alert` có `Cancel`**, không phải `.confirmationDialog`: iOS 26 vẽ dialog thành popover nổi và **giấu nút `.cancel`**, để lại đúng một nút đỏ. Editor/Video Studio/Collage đã đổi từ trước (§10.5) nhưng ba chỗ trong Settings thì chưa — Clear Index, Reset Mappings, và **Clear Results** (trước đây xoá thẳng không hỏi, dù đó là kết quả của pass quét chậm nhất app). Ba alert gom vào modifier `destructiveAlerts` vì ba `.alert` inline làm type-checker bỏ cuộc.
+- **Sheet Settings có nút `Done`** (`.confirmationAction`): vuốt-xuống là lối tắt chứ không phải control, và trên iPad thanh kéo dễ không thấy — sheet có nav bar mà không có lối ra đọc như bị kẹt.
+- **`Hide` trong viewer giờ hỏi trước** — iOS 16 lấy album Hidden khỏi mọi app trừ Photos, nên ShotDex ghi được cờ nhưng **không bao giờ thấy lại ảnh để bỏ ẩn**; đúng trường hợp HIG bắt buộc alert (hành động phá hủy hiếm + không undo được trong app). Câu message nói thẳng phải mở Photos mới bỏ ẩn được.
+- **`ToolbarSpacer` giữa Compare và Edit**: hai nút chữ liền nhau trên iOS 26 gộp vào một pill kính, không thấy ranh giới.
+- **Đồng bộ icon/nhãn theo từ điển §8**: Create Collage dùng `rectangle.split.2x2` (trùng icon tool Layout của Collage), Export EXIF dùng `doc.badge.arrow.up`, và viewer đổi `Add to Album` → **`Add to Collection`** cho khớp thanh chọn và tiêu đề sheet.
+- **Submenu Flag/Rate của viewer disable dòng đang áp dụng** (giống `cullContextMenu`), nên menu *nói* ảnh đang mang gì thay vì mời chọn lại trạng thái hiện tại.
+- **Nút Delete/Keep của card Compare có target 44pt** (`minWidth/minHeight`): chữ `.caption` có hộp glyph chưa tới nửa mức tối thiểu, mà đây là nút bấm hàng trăm lần một buổi cull.
+- **Tile Survey đưa lại hành động Remove cho VoiceOver** (`accessibilityAction`): `children: .combine` nuốt mất nút ✕ của tile.
+
 **Cull — pick / reject / rating (2026-09-19)**
 
 - Bảng **riêng** `photo_cull` (migration `v14-cull`), không phải cột trên `photo_metadata`: indexer upsert cả row nên cột lạ bị xoá mỗi lần re-index — cùng lý do `perceptual_hash` và `subject_scan` có bảng riêng. Đây là dữ liệu **người dùng gõ vào**, mất vì một lần index nền là không chấp nhận được.

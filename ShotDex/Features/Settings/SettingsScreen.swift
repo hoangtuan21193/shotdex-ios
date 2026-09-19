@@ -4,6 +4,7 @@ import SwiftUI
 /// index controls, display options, camera database, statistics options,
 /// privacy.
 struct SettingsScreen: View {
+    @Environment(\.dismiss) private var dismiss
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(AppDependencies.self) private var dependencies
 
@@ -43,6 +44,7 @@ struct SettingsScreen: View {
     @State private var lastIndexedAt: Date?
     @State private var isClearIndexConfirmationPresented = false
     @State private var isResetMappingsConfirmationPresented = false
+    @State private var isClearScanConfirmationPresented = false
     @State private var isImportPresented = false
     @State private var notificationAuthorization: NotificationAuthorizationState = .notDetermined
     /// Debounces the reminder-time picker: `.hourAndMinute` publishes on every
@@ -51,6 +53,24 @@ struct SettingsScreen: View {
     @State private var notifyTimeRefreshTask: Task<Void, Never>?
 
     var body: some View {
+        // Split in two so the type-checker can keep up: the list with its
+        // lifecycle modifiers, then the three destructive alerts.
+        settingsList
+            .destructiveAlerts(
+                clearIndex: $isClearIndexConfirmationPresented,
+                resetMappings: $isResetMappingsConfirmationPresented,
+                clearScan: $isClearScanConfirmationPresented,
+                onClearIndex: {
+                    try? dependencies.metadataStore.deleteAll()
+                    libraryModel?.reload()
+                    Task { await refreshIndexInfo() }
+                },
+                onResetMappings: { try? dependencies.metadataStore.deleteAllCustomMappings() },
+                onClearScan: { dependencies.subjectScan.clear() }
+            )
+    }
+
+    private var settingsList: some View {
         List {
             photoLibrarySection
             notificationsSection
@@ -65,6 +85,14 @@ struct SettingsScreen: View {
         }
         .listStyle(.insetGrouped)
         .navigationTitle("Settings")
+        // A sheet dismisses by swipe, but the swipe is a shortcut and not the
+        // control: a sheet with a navigation bar and no way out of it reads as
+        // stuck, and on iPad the drag indicator is easy to miss entirely.
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Done") { dismiss() }
+            }
+        }
         .navigationBarTitleDisplayMode(.inline)
         .fullScreenCover(isPresented: $isImportPresented) {
             ImportScreen(
@@ -88,26 +116,6 @@ struct SettingsScreen: View {
                 try? await Task.sleep(for: .milliseconds(500))
                 guard !Task.isCancelled else { return }
                 await dependencies.onThisDayNotifications.refresh()
-            }
-        }
-        .confirmationDialog(
-            "Clear the local metadata index? Your photos are not affected.",
-            isPresented: $isClearIndexConfirmationPresented,
-            titleVisibility: .visible
-        ) {
-            Button("Clear Index", role: .destructive) {
-                try? dependencies.metadataStore.deleteAll()
-                libraryModel?.reload()
-                Task { await refreshIndexInfo() }
-            }
-        }
-        .confirmationDialog(
-            "Reset all custom camera mappings?",
-            isPresented: $isResetMappingsConfirmationPresented,
-            titleVisibility: .visible
-        ) {
-            Button("Reset Mappings", role: .destructive) {
-                try? dependencies.metadataStore.deleteAllCustomMappings()
             }
         }
     }
@@ -281,7 +289,12 @@ struct SettingsScreen: View {
                 }
                 .disabled(!photoLibrary.authorizationState.canReadLibrary)
                 if scan.scannedCount > 0 {
-                    Button("Clear Results", role: .destructive) { scan.clear() }
+                    // Confirmed like the other two destructive rows on this
+                    // screen: the scan it throws away is the slowest thing the
+                    // app does.
+                    Button("Clear Results", role: .destructive) {
+                        isClearScanConfirmationPresented = true
+                    }
                 }
             }
         } header: {
@@ -559,4 +572,42 @@ struct SettingsScreen: View {
     }
     .environment(dependencies)
     .environment(dependencies.photoLibrary)
+}
+
+/// The three destructive confirmations Settings owns.
+///
+/// `.alert`, not `.confirmationDialog`: on iOS 26 the dialog is drawn as a
+/// floating popover that hides the `.cancel` button, leaving a red button and
+/// no way out — the trap DESIGN.md §10.5 documents for the editor's discard
+/// prompt. Written as a modifier because three alerts inline pushed the
+/// screen's body past what the type-checker will solve.
+private extension View {
+    func destructiveAlerts(
+        clearIndex: Binding<Bool>,
+        resetMappings: Binding<Bool>,
+        clearScan: Binding<Bool>,
+        onClearIndex: @escaping () -> Void,
+        onResetMappings: @escaping () -> Void,
+        onClearScan: @escaping () -> Void
+    ) -> some View {
+        self
+            .alert("Clear the local metadata index?", isPresented: clearIndex) {
+                Button("Cancel", role: .cancel) {}
+                Button("Clear Index", role: .destructive, action: onClearIndex)
+            } message: {
+                Text("Your photos are not affected. ShotDex reads the camera and exposure data again on the next index run.")
+            }
+            .alert("Reset all custom camera mappings?", isPresented: resetMappings) {
+                Button("Cancel", role: .cancel) {}
+                Button("Reset Mappings", role: .destructive, action: onResetMappings)
+            } message: {
+                Text("Cameras you matched to a sensor format by hand go back to what the sensor database says.")
+            }
+            .alert("Clear the People and Pets results?", isPresented: clearScan) {
+                Button("Cancel", role: .cancel) {}
+                Button("Clear Results", role: .destructive, action: onClearScan)
+            } message: {
+                Text("The scan opens every photo in full, so building these again takes a while.")
+            }
+    }
 }

@@ -57,5 +57,6 @@ Layered, composition root at `ShotDex/App/AppDependencies.swift` — built once 
   - `ipad-expert` — large screens (iPad, Duo inner display): dead space, phone constants, stretched controls, size-class changes, pointer and keyboard.
   - `ux-reviewer` — the flow: silent no-ops, recoverability, where the user is left after a bulk action, long-running work, empty states, naming drift.
   - `design-reviewer` — `DESIGN.md` compliance: invented constants, tier confusion, glass entry points, accent use, geometry tokens.
+  - `challenger` — argues against a change: why this way, what it costs in screen space, what it breaks, what a photographer actually gets, and whether it is overthinking. Run it on anything that sounds obviously right.
   - `prior-art` — the fix side: given a finding, says how Photos, Lightroom, Halide, Darkroom, CapCut or Procreate solved the same thing and proposes the change with numbers, the tier it lands in and what it costs.
   - `lightroom-parity` — what Lightroom does today that ShotDex should do next, with feasibility on iOS and where the work would live.

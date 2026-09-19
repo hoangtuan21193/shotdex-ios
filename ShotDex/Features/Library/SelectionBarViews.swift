@@ -173,6 +173,12 @@ struct SelectionToolbarItems: ToolbarContent {
                     .disabled(model.selectionCount < CompareScreen.minPhotoCount)
             }
         }
+        // Two text labels side by side merge into one glass pill on iOS 26,
+        // so the spacer is what tells the eye where Compare ends and Edit
+        // begins — the same break the filter/⋯/× group gets.
+        if #available(iOS 26.0, *) {
+            ToolbarSpacer(.fixed, placement: .topBarLeading)
+        }
         // Edit sits beside Compare rather than inside ⋯: those two are what
         // a selection is usually made *for*, and a menu is a place to look
         // for the things that are not.
@@ -200,7 +206,7 @@ struct SelectionToolbarItems: ToolbarContent {
                     }
                     if let onCollage = model.onCollage {
                         Button(action: onCollage) {
-                            Label("Create Collage", systemImage: "square.grid.2x2")
+                            Label("Create Collage", systemImage: "rectangle.split.2x2")
                         }
                         .disabled(!CollageTemplateCatalog.supportedCounts.contains(model.imageSelectionCount))
                     }
@@ -224,7 +230,7 @@ struct SelectionToolbarItems: ToolbarContent {
                     }
                     if let onExportEXIF = model.onExportEXIF {
                         Button(action: onExportEXIF) {
-                            Label("Export EXIF (CSV)", systemImage: "tablecells")
+                            Label("Export EXIF (CSV)", systemImage: "doc.badge.arrow.up")
                         }
                         .disabled(model.imageSelectionCount < 1)
                     }

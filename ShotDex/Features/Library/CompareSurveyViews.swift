@@ -152,6 +152,10 @@ private struct SurveyTile: View {
         .onDisappear(perform: cancel)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isActive ? [.isButton, .isSelected] : .isButton)
+        // Combining the tile swallows the ✕ button's own element, so the
+        // action has to be re-offered on the tile or VoiceOver has no way to
+        // drop a photo from the comparison.
+        .accessibilityAction(named: "Remove from Comparison", remove)
     }
 
     private var removeButton: some View {

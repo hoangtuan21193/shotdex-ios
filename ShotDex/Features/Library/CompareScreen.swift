@@ -746,6 +746,11 @@ private struct CompareCard: View {
             Text(isMarkedForDeletion == true ? "Keep" : "Delete")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.red)
+                // The word is small on purpose — the card is for judging the
+                // photo — but the target is not: this is the control a cull
+                // presses hundreds of times, and a caption's glyph box is
+                // about half the 44pt minimum.
+                .frame(minWidth: AppTheme.Size.minTouch, minHeight: AppTheme.Size.minTouch, alignment: .trailing)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
