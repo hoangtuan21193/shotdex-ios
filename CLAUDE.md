@@ -53,6 +53,7 @@ Layered, composition root at `ShotDex/App/AppDependencies.swift` — built once 
 - Code change alters behavior/architecture described in `spec.md`: update `spec.md` too, same turn.
 - **Review agents live in `.claude/agents/`** — run the one that matches the work and act on its findings rather than re-deriving them:
   - `hig-components` — standard-iOS surfaces against Apple's HIG *Components* pages (fetches the page, never quotes from memory). Toolbars, menus, sheets, alerts, pickers, lists. Tier D is exempt except for target sizes, clipped text, accessibility labels, unconfirmed destructive actions and controls that misstate their state.
+  - `device-layout` — **looks at the screen on each device it ships to** (iPhone, iPad, Duo inner and cover): builds, installs, screenshots, measures the controls it thinks are wrong. The one that catches chrome left at phone size on a 13" display.
   - `ipad-expert` — large screens (iPad, Duo inner display): dead space, phone constants, stretched controls, size-class changes, pointer and keyboard.
   - `ux-reviewer` — the flow: silent no-ops, recoverability, where the user is left after a bulk action, long-running work, empty states, naming drift.
   - `design-reviewer` — `DESIGN.md` compliance: invented constants, tier confusion, glass entry points, accent use, geometry tokens.
