@@ -44,6 +44,13 @@ enum AppTab: String, CaseIterable, Identifiable {
 /// a material-blurred pill holding the four tabs, with a separate round
 /// search button beside it.
 struct LiquidGlassTabBar: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    /// The bar draws its own chrome, so the two sizes it hardcodes have to
+    /// scale by hand. Capped: past these the pill is taller than the gap it
+    /// floats in.
+    @ScaledMetric(relativeTo: .body) private var iconSize: CGFloat = 17
+    @ScaledMetric(relativeTo: .caption2) private var labelSize: CGFloat = 10
+
     @Environment(\.appAccent) private var accent
     @Binding var selection: AppTab
     /// Called when the already-selected tab is tapped again.
@@ -90,9 +97,17 @@ struct LiquidGlassTabBar: View {
         } label: {
             VStack(spacing: 2) {
                 Image(systemName: isSelected ? tab.selectedSystemImage : tab.systemImage)
-                    .font(.system(size: 17, weight: .medium))
-                Text(tab.title)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: min(iconSize, 24), weight: .medium))
+                // Dropped at accessibility sizes, the way the system tab bar
+                // drops its own: three labels at that size do not fit across
+                // a phone, and squeezing them is worse than the icon alone —
+                // which still carries the tab's name to VoiceOver through the
+                // button's accessibility label below.
+                if !dynamicTypeSize.isAccessibilitySize {
+                    Text(tab.title)
+                        .font(.system(size: min(labelSize, 15), weight: .medium))
+                        .lineLimit(1)
+                }
             }
             .foregroundStyle(isSelected ? accent : Color(.secondaryLabel))
             .frame(maxWidth: .infinity)

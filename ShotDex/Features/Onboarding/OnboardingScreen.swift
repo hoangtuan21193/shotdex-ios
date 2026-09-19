@@ -8,7 +8,34 @@ struct OnboardingScreen: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Spacer()
+            // Scrolls rather than squeezes: at accessibility sizes the four
+            // promises did not fit the screen and SwiftUI answered by
+            // truncating each one to a single line ending in "…", which is a
+            // pre-permission screen that cannot say what it is asking for.
+            // `.basedOnSize` keeps it a static screen at normal sizes.
+            ScrollView {
+                pitch
+            }
+            .scrollBounceBehavior(.basedOnSize)
+
+            Button {
+                Task { await photoLibrary.requestAuthorization() }
+            } label: {
+                Text("Continue")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+            }
+            .buttonStyle(.borderedProminent)
+            .padding(.horizontal, 28)
+            .padding(.bottom, 40)
+        }
+        .background(Color(.systemBackground))
+    }
+
+    private var pitch: some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 24)
 
             Image(systemName: "camera.metering.matrix")
                 .font(.system(size: 56))
@@ -43,21 +70,9 @@ struct OnboardingScreen: View {
             }
             .padding(.horizontal, 28)
 
-            Spacer()
-
-            Button {
-                Task { await photoLibrary.requestAuthorization() }
-            } label: {
-                Text("Continue")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
-            }
-            .buttonStyle(.borderedProminent)
-            .padding(.horizontal, 28)
-            .padding(.bottom, 40)
+            Spacer(minLength: 24)
         }
-        .background(Color(.systemBackground))
+        .frame(maxWidth: .infinity)
     }
 
     private func onboardingRow(icon: String, title: String, detail: String) -> some View {
