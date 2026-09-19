@@ -94,6 +94,11 @@ struct StatisticsScreen: View {
         }
     }
 
+    /// Widest a chart card is allowed to get. Roughly an iPad's readable
+    /// column; past this the card is mostly whitespace between a label and a
+    /// number.
+    private static let readableChartWidth: CGFloat = 640
+
     @ViewBuilder
     private func content(_ model: StatisticsModel) -> some View {
         List {
@@ -120,6 +125,13 @@ struct StatisticsScreen: View {
                         onDelete: { model.deleteChart(id: spec.id) },
                         onDrill: { navigation.openLibrary(with: $0) }
                     )
+                    // Capped and centred on a wide screen. A chart row stretched
+                    // across 835pt — measured on the iPhone Duo's inner display —
+                    // puts the bar's label at one edge and its value at the other,
+                    // which is a longer eye movement for the same number. Still a
+                    // single column, so drag-to-reorder and edit mode are untouched.
+                    .frame(maxWidth: Self.readableChartWidth)
+                    .frame(maxWidth: .infinity)
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))

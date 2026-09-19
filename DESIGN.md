@@ -206,6 +206,8 @@ Lý do đo được trên **iPhone Duo** (iOS 27.1): màn ngoài rộng 466pt nh
 
 Viewer là ngoại lệ có lý: **chỉ pager ảnh** tràn viền, còn chrome (nút đóng, action bar) nằm ngoài lớp đó và vẫn tôn trọng safe area.
 
+**Thẻ nội dung có bề rộng đọc được tối đa.** Ở regular width (iPad, màn trong iPhone Duo 867pt) một hàng chart kéo hết bề ngang đẩy nhãn về một mép còn số về mép kia — mắt phải đi xa hơn cho cùng một con số. `StatisticsScreen` giới hạn thẻ ở **640pt** rồi căn giữa, vẫn một cột nên kéo-đổi-thứ-tự và edit mode không đổi. Ở compact (mọi iPhone) giới hạn này không có tác dụng.
+
 ### 10.2 Màn hình lưới ảnh (tầng B + C)
 Lưới tràn viền, không padding. Lưới Library **không chèn header ngày** (2026-09-18). Chrome nổi đè lên lưới bằng `safeAreaInset(edge:)` hoặc overlay, luôn dùng kính tầng C. Khi vào chế độ chọn: lưới mờ đi, selection bar trượt lên từ đáy.
 
