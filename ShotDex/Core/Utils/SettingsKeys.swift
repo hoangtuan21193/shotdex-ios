@@ -11,6 +11,11 @@ enum SettingsKeys {
     /// `GridDensity.clamped`.
     static let gridColumns = "grid.columns"
 
+    /// The Library grid's sort order (`SortOption.rawValue`). A preference,
+    /// not scene state: the order a photographer picked is still the order
+    /// they want tomorrow.
+    static let librarySort = "grid.sort"
+
     /// Show the compact RAW/JPG/HEIC/MOV-style badge at the top-leading corner
     /// of every grid thumbnail. Defaults to true.
     static let showFileTypeBadge = "display.showFileType"

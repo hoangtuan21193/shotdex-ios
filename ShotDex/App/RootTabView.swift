@@ -25,6 +25,18 @@ struct RootTabView: View {
     /// reminder), so it is the only one that needs a bound path.
     @State private var albumsPath = NavigationPath()
 
+    /// State restoration: the tab this *window* was left on. `@SceneStorage`
+    /// rather than `@AppStorage` because it is per-window — on iPad two
+    /// windows can be left in two different places, and the system restores
+    /// each one to its own. (The grid's sort order is a preference and lives
+    /// in `SettingsKeys.librarySort` instead.)
+    ///
+    /// The search tab is deliberately never restored: coming back to a cold
+    /// launch with an empty field and no results reads as a broken app, and it
+    /// is not where the user was looking — it is where they typed.
+    @SceneStorage("scene.selectedTab") private var restoredTab = ""
+    @State private var hasRestoredScene = false
+
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(\.scenePhase) private var scenePhase
 
@@ -52,6 +64,31 @@ struct RootTabView: View {
             await AlbumsModel.preheatOnThisDayCover(using: photoLibrary)
             albumsModel?.load(forAssetToken: photoLibrary.assetChangeToken)
         }
+    }
+
+    /// Puts the scene back where it was left. Runs once per scene, after the
+    /// models exist and before first paint settles, so the restored tab is the
+    /// one that mounts rather than Library mounting and then being replaced.
+    /// Records and replays the tab, on both the iOS 26 tab view and the legacy
+    /// one. Written as a wrapper rather than modifiers on each branch: the two
+    /// bodies have drifted apart before, and restoration that works on one
+    /// iOS version and silently not the other is the worst version of this
+    /// feature.
+    private func withSceneRestoration(_ content: some View) -> some View {
+        content
+            .onChange(of: navigation.selectedTab) { _, tab in
+                guard tab != .search else { return }
+                restoredTab = tab.rawValue
+            }
+            .task { restoreScene() }
+    }
+
+    private func restoreScene() {
+        guard !hasRestoredScene else { return }
+        hasRestoredScene = true
+        guard let tab = AppTab(rawValue: restoredTab), tab != .search else { return }
+        navigation.selectedTab = tab
+        mountedLegacyTabs.insert(tab)
     }
 
     /// Rebuilds the week of "On This Day" reminders. Safe to call blindly — the
@@ -89,9 +126,9 @@ struct RootTabView: View {
         if photoLibrary.authorizationState == .notDetermined {
             OnboardingScreen()
         } else if #available(iOS 26.0, *) {
-            nativeTabView
+            withSceneRestoration(nativeTabView)
         } else {
-            legacyTabView
+            withSceneRestoration(legacyTabView)
         }
     }
 

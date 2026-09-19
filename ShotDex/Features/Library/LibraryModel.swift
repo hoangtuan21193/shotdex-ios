@@ -199,8 +199,26 @@ final class LibraryModel {
     var hasActiveQuery: Bool {
         !criteria.isEmpty || (advancedQuery?.isEmpty == false)
     }
-    var sort: SortOption = .default {
-        didSet { if sort != oldValue { reload() } }
+    /// Grid order. Persisted, because it is a preference and not scene state:
+    /// a photographer who culls by rating expects the grid to still be in that
+    /// order tomorrow, on whichever window they open.
+    var sort: SortOption = LibraryModel.storedSort() {
+        didSet {
+            guard sort != oldValue else { return }
+            UserDefaults.standard.set(sort.rawValue, forKey: SettingsKeys.librarySort)
+            reload()
+        }
+    }
+
+    /// The stored order, or the default. An order from a build that no longer
+    /// offers it falls back rather than leaving the grid in a state the sort
+    /// menu cannot show.
+    private static func storedSort() -> SortOption {
+        guard let raw = UserDefaults.standard.string(forKey: SettingsKeys.librarySort),
+              let sort = SortOption(rawValue: raw),
+              SortOption.menuOrders.contains(sort)
+        else { return .default }
+        return sort
     }
 
     /// Filter sheet option lists.
