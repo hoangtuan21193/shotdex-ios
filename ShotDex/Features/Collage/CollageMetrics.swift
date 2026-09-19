@@ -12,6 +12,12 @@ import CoreGraphics
 enum CollageMetrics {
     // MARK: Panel
 
+    /// Width of the side inspector that replaces the bottom panel on a
+    /// regular-width screen. Same reasoning as the photo editor's sidebar,
+    /// and inside its documented 280…420 range: wide enough for a slider row
+    /// with its label and value, narrow enough to leave the canvas the stage.
+    static let inspectorWidth: CGFloat = 320
+
     /// Total panel height — identical on Layout, Style and Text so switching tab
     /// never makes the panel jump.
     static let panelHeight: CGFloat = 216

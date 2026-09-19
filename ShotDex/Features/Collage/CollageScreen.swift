@@ -18,6 +18,7 @@ struct CollagePresentation: Identifiable {
 /// Export) stays put. The screen is a thin shell — state lives in
 /// `CollageEditorModel`, panel content in `CollagePanelViews`.
 struct CollageScreen: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dismiss) private var dismiss
     @Environment(AppDependencies.self) private var dependencies
 
@@ -174,38 +175,96 @@ struct CollageScreen: View {
     // MARK: - Layout
 
     private func editor(_ model: CollageEditorModel) -> some View {
+        // A 216pt panel stapled under a 900pt canvas is a phone sheet on an
+        // iPad. With room beside the canvas the tools go there instead, the
+        // way the photo editor's sidebar already does — and the canvas keeps
+        // the whole height rather than giving a fifth of it to the controls.
+        Group {
+            if horizontalSizeClass == .regular {
+                HStack(spacing: 0) {
+                    canvasColumn(model, includesPanel: false)
+                    inspector(model)
+                }
+                .ignoresSafeArea(.container, edges: .top)
+            } else {
+                phoneEditor(model)
+            }
+        }
+    }
+
+    /// The command band, the tray and the canvas — everything that is not the
+    /// controls. Shared by both layouts.
+    @ViewBuilder
+    private func canvasColumn(_ model: CollageEditorModel, includesPanel: Bool) -> some View {
+        VStack(spacing: 0) {
+            CollageCommandBand(model: model)
+
+            if !model.unplaced.isEmpty {
+                CollageUnplacedTray(model: model, photoLibrary: dependencies.photoLibrary)
+                    .frame(height: CollageMetrics.trayHeight)
+                    .padding(.horizontal, AppTheme.Spacing.md)
+                    .padding(.top, AppTheme.Spacing.xs)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
+            CollageCanvasView(
+                model: model,
+                onFillRequest: { index in fillingCellIndex = index },
+                onEditText: { overlay in
+                    model.selectedOverlayID = overlay.id
+                    editingOverlay = overlay
+                }
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            if includesPanel {
+                panel(model)
+            }
+        }
+    }
+
+    /// The side inspector: the tab strip at the top where a sidebar's header
+    /// goes, the tab's controls under it, and Export pinned to the bottom
+    /// where a primary action belongs.
+    private func inspector(_ model: CollageEditorModel) -> some View {
+        VStack(spacing: 0) {
+            CollageInspectorHeader(model: model, onBack: { close(model) })
+            Divider().overlay(EditorTheme.panelTopHairline)
+            ScrollView {
+                panelContent(model)
+                    .padding(.top, AppTheme.Spacing.md)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            Spacer(minLength: 0)
+            Button { isExportPresented = true } label: {
+                Text("Export")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(.black)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: AppTheme.Size.primaryActionHeight)
+                    .background(Capsule().fill(EditorTheme.accent))
+            }
+            .buttonStyle(.plain)
+            .padding(AppTheme.Spacing.md)
+        }
+        .frame(width: CollageMetrics.inspectorWidth)
+        .background(EditorTheme.panelSolid)
+        .overlay(alignment: .leading) {
+            Rectangle().fill(EditorTheme.panelTopHairline).frame(width: 1)
+        }
+    }
+
+    private func phoneEditor(_ model: CollageEditorModel) -> some View {
         ZStack(alignment: .bottom) {
             // The canvas layout stays structurally constant while a photo is
             // lifted — the tray only appears for genuinely unplaced photos, never
             // as a side effect of the hold. The lift's drop target and HUD are
             // overlays, so `beginLift` never rebuilds the canvas out from under
             // the live gesture (which was cancelling it, leaving photos stuck).
-            VStack(spacing: 0) {
-                CollageCommandBand(model: model)
-
-                if !model.unplaced.isEmpty {
-                    CollageUnplacedTray(model: model, photoLibrary: dependencies.photoLibrary)
-                        .frame(height: CollageMetrics.trayHeight)
-                        .padding(.horizontal, AppTheme.Spacing.md)
-                        .padding(.top, AppTheme.Spacing.xs)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                }
-
-                CollageCanvasView(
-                    model: model,
-                    onFillRequest: { index in fillingCellIndex = index },
-                    onEditText: { overlay in
-                        model.selectedOverlayID = overlay.id
-                        editingOverlay = overlay
-                    }
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                panel(model)
-            }
-            // Reclaim the top safe area so the command band sits beside the
-            // Dynamic Island rather than below the status bar.
-            .ignoresSafeArea(.container, edges: .top)
+            canvasColumn(model, includesPanel: true)
+                // Reclaim the top safe area so the command band sits beside the
+                // Dynamic Island rather than below the status bar.
+                .ignoresSafeArea(.container, edges: .top)
 
             if model.isLiftingCell {
                 CollageSwapHUD()
@@ -616,3 +675,47 @@ private struct CollageTrayThumbnail: View {
     }
 }
 
+/// The inspector's header: the three tab buttons where a sidebar's title would
+/// be, with Back beside them. On the phone these live in the bottom bar; in a
+/// side inspector a bottom tab strip would put the tabs furthest from the
+/// panel they switch.
+private struct CollageInspectorHeader: View {
+    @Bindable var model: CollageEditorModel
+    let onBack: () -> Void
+
+    var body: some View {
+        HStack(spacing: AppTheme.Spacing.sm) {
+            Button(action: onBack) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: AppTheme.Size.minTouch, height: AppTheme.Size.minTouch)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(String(localized: "Close"))
+
+            Spacer(minLength: 0)
+
+            ForEach(CollageEditorModel.PanelGroup.allCases) { group in
+                Button {
+                    withAnimation(EditorTheme.animation) { model.panelGroup = group }
+                } label: {
+                    VStack(spacing: 3) {
+                        Image(systemName: group.systemImage)
+                            .font(.system(size: 16, weight: .medium))
+                        Text(group.title)
+                            .font(EditorTheme.tabLabel)
+                    }
+                    .foregroundStyle(model.panelGroup == group ? EditorTheme.accent : EditorTheme.dimText)
+                    .frame(width: 60, height: AppTheme.Size.minTouch)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(model.panelGroup == group ? [.isButton, .isSelected] : .isButton)
+            }
+        }
+        .padding(.horizontal, AppTheme.Spacing.md)
+        .frame(height: EditorLayoutMetrics.editorTopBandHeight)
+    }
+}
