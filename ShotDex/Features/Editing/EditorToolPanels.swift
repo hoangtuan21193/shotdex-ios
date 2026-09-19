@@ -9,9 +9,16 @@ import ShotDexKit
 struct EditorFiltersPanel: View {
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
+    /// The user's own saved looks. Nil where the panel is shown without them
+    /// (previews).
+    var lookPresets: LookPresetStore?
+    /// Asks the screen to name and save the current edit as a look.
+    var saveLook: (() -> Void)?
 
     var body: some View {
         VStack(spacing: 0) {
+            myLooks
+
             if controller.recipe.filter != .original {
                 amountRow
                     .padding(.top, 8)
@@ -25,6 +32,86 @@ struct EditorFiltersPanel: View {
         }
         .frame(maxWidth: .infinity)
         .task { controller.refreshFilterThumbnails() }
+    }
+
+    /// The user's looks, above the fixed film looks: their own work comes
+    /// first, and the row is where they will look for it.
+    @ViewBuilder
+    private var myLooks: some View {
+        if let lookPresets {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("My Looks")
+                        .font(EditorTheme.groupLabel)
+                        .tracking(1.1)
+                        .foregroundStyle(EditorTheme.secondaryText)
+                    Spacer(minLength: 8)
+                    if let saveLook {
+                        Button(action: saveLook) {
+                            Label("Save Current", systemImage: "plus")
+                                .font(EditorTheme.maskSubtitle)
+                                .foregroundStyle(
+                                    controller.recipe.isIdentity
+                                        ? EditorTheme.dimText
+                                        : EditorTheme.accent
+                                )
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(controller.recipe.isIdentity)
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.top, 10)
+
+                if lookPresets.presets.isEmpty {
+                    Text("Save an edit here and it can be put on any other photo.")
+                        .font(EditorTheme.maskSubtitle)
+                        .foregroundStyle(EditorTheme.dimText)
+                        .padding(.horizontal, 14)
+                        .padding(.bottom, 10)
+                } else {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(lookPresets.presets) { preset in
+                                lookChip(preset, store: lookPresets)
+                            }
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.bottom, 10)
+                    }
+                    .scrollIndicators(.hidden)
+                }
+
+                Rectangle()
+                    .fill(EditorTheme.hairline)
+                    .frame(height: 0.5)
+                    .padding(.horizontal, 14)
+            }
+        }
+    }
+
+    private func lookChip(_ preset: LookPreset, store: LookPresetStore) -> some View {
+        Button {
+            controller.apply(EditorSyncScope.look.apply(preset.recipe, onto: controller.recipe))
+        } label: {
+            Text(preset.name)
+                .font(EditorTheme.pillLabel)
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .padding(.horizontal, 12)
+                .frame(height: AppTheme.Size.pillHeightDark)
+                .background(EditorTheme.control, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .hoverEffect(.highlight)
+        .contextMenu {
+            Button(role: .destructive) {
+                store.delete(preset)
+            } label: {
+                Label("Delete Look", systemImage: "trash")
+            }
+        }
+        .accessibilityLabel("Apply look \(preset.name)")
     }
 
     private var amountRow: some View {

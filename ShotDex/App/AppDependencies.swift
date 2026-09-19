@@ -59,6 +59,8 @@ final class AppDependencies {
     let collectionPins: CollectionPinStore
     /// Copied edits, carried between photos and across launches.
     let editClipboard: EditClipboard
+    /// The user's own saved looks, beside the fixed film looks.
+    let lookPresets: LookPresetStore
     /// The order and visibility of the Collections tab's sections.
     let collectionsLayout: CollectionsLayoutStore
     /// Photos opened and photos shared, for the Recently Viewed / Recently
@@ -180,6 +182,7 @@ final class AppDependencies {
         )
         self.collectionPins = CollectionPinStore()
         self.editClipboard = EditClipboard()
+        self.lookPresets = LookPresetStore()
         self.collectionsLayout = CollectionsLayoutStore()
         self.spotlight = SpotlightIndexer(
             libraryQueries: libraryQueries,

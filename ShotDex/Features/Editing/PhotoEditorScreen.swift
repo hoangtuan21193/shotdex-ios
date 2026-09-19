@@ -79,6 +79,8 @@ struct PhotoEditorScreen: View {
     /// reads an `@Observable` does not register a dependency, so an alert bound
     /// straight to the saver never appeared.
     @State private var showsBatchFailures = false
+    @State private var isSaveLookPresented = false
+    @State private var lookName = ""
     /// Pick / reject / rating for every photo in the run, read once when the
     /// strip appears and after each change rather than per thumbnail.
     @State private var cullStates: [String: PhotoCullState] = [:]
@@ -585,6 +587,15 @@ struct PhotoEditorScreen: View {
         }
         .onChange(of: batchSaver.hasFinishedWithFailures) { _, hasFailures in
             showsBatchFailures = hasFailures
+        }
+        .alert("Save Look", isPresented: $isSaveLookPresented) {
+            TextField("Name", text: $lookName)
+            Button("Cancel", role: .cancel) {}
+            Button("Save") {
+                dependencies.lookPresets.save(controller.recipe, name: lookName)
+            }
+        } message: {
+            Text("Saves the tone, colour, curve and film look on this photo. The crop, masks and markup stay with the photo.")
         }
         .alert("Some Photos Didn't Save", isPresented: $showsBatchFailures) {
             Button("OK") { batchSaver.clearFailures() }
@@ -1856,7 +1867,15 @@ struct PhotoEditorScreen: View {
         case .grade:
             EditorColorGradingSection(controller: controller, chrome: chrome)
         case .presets:
-            EditorFiltersPanel(controller: controller, chrome: chrome)
+            EditorFiltersPanel(
+                controller: controller,
+                chrome: chrome,
+                lookPresets: dependencies.lookPresets,
+                saveLook: {
+                    lookName = dependencies.lookPresets.suggestedName()
+                    isSaveLookPresented = true
+                }
+            )
         case .markup:
             // The detail panel shows only when explicitly opened. A merely selected
             // layer keeps the list up and is moved / resized / rotated on the photo.

@@ -79,6 +79,10 @@ enum SettingsKeys {
     /// can show it without loading every hash. Unwritten means never scanned.
     static let duplicateGroupCount = "duplicates.lastGroupCount"
 
+    /// JSON-encoded user looks — the presets saved from an edit and applied to
+    /// other photos. Look-only recipes, so they are small.
+    static let lookPresets = "editor.lookPresets"
+
     /// Which side the editor's wide-screen tool sidebar sits on
     /// (`EditorSidebarEdge` raw value). Unwritten means trailing, the side
     /// Lightroom puts its develop panels on.
