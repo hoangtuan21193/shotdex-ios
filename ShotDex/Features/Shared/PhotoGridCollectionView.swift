@@ -1350,9 +1350,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 }
                 isZooming = true
                 zoomStartColumns = zoomColumns
-                // Kill any deceleration: the zoom owns the offset from here.
-                collectionView.setContentOffset(collectionView.contentOffset, animated: false)
-                collectionView.isScrollEnabled = false
+                takeOverScrolling(collectionView)
                 let location = recognizer.location(in: collectionView)
                 zoomScreenPoint = CGPoint(
                     x: location.x - collectionView.contentOffset.x,
@@ -1361,11 +1359,16 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 captureZoomAnchor(at: location, in: collectionView)
             case .changed:
                 guard isZooming else { return }
-                let location = recognizer.location(in: collectionView)
-                zoomScreenPoint = CGPoint(
-                    x: location.x - collectionView.contentOffset.x,
-                    y: location.y - collectionView.contentOffset.y
-                )
+                // With one finger already lifted the centroid snaps to the
+                // other finger — a jump, not a pan. Hold the last two-finger
+                // point; `.ended` follows within a frame.
+                if recognizer.numberOfTouches >= 2 {
+                    let location = recognizer.location(in: collectionView)
+                    zoomScreenPoint = CGPoint(
+                        x: location.x - collectionView.contentOffset.x,
+                        y: location.y - collectionView.contentOffset.y
+                    )
+                }
                 let scale = max(0.05, recognizer.scale)
                 zoomColumns = clampedZoomColumns(zoomStartColumns / scale)
                 applyZoom()
@@ -1380,6 +1383,24 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             default:
                 break
             }
+        }
+
+        /// The zoom is the only thing allowed to move the content while the
+        /// fingers are down. The scroll view's own pan recognizes alongside
+        /// the pinch (two fingers drag as well as spread), and it writes an
+        /// absolute offset every frame from its own start point — against the
+        /// anchor's offset that is a fight, one frame each, which read as the
+        /// grid jittering. Toggling the pan off and on cancels the gesture in
+        /// flight without disturbing later scrolls (a recognizer never picks
+        /// up touches that began while it was disabled), and the offset write
+        /// stops the deceleration the cancel would otherwise start.
+        private func takeOverScrolling(_ collectionView: UICollectionView) {
+            let pan = collectionView.panGestureRecognizer
+            if pan.state == .began || pan.state == .changed {
+                pan.isEnabled = false
+                pan.isEnabled = true
+            }
+            collectionView.setContentOffset(collectionView.contentOffset, animated: false)
         }
 
         /// The drawn column counts a pinch may reach — the stored density
@@ -1461,7 +1482,11 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                     + collectionView.adjustedContentInset.bottom
             )
             let y = min(max(anchorPoint.y - zoomScreenPoint.y, minimumY), maximumY)
-            collectionView.contentOffset = CGPoint(x: collectionView.contentOffset.x, y: y)
+            // `setContentOffset(animated: false)`, not the property: it also
+            // stops any deceleration a cancelled pan left running.
+            collectionView.setContentOffset(
+                CGPoint(x: collectionView.contentOffset.x, y: y), animated: false
+            )
         }
 
         /// Eases the live count onto the nearest committed density.
@@ -1481,7 +1506,14 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         }
 
         private func zoomSettleTick() {
-            guard let target = zoomSettleTarget else { return }
+            guard let target = zoomSettleTarget, let collectionView else { return }
+            // The remaining finger started a scroll — hand the offset back
+            // at once rather than easing against it.
+            if collectionView.isDragging {
+                zoomColumns = CGFloat(target.columns)
+                commitZoom(target)
+                return
+            }
             let now = CACurrentMediaTime()
             let dt = min(max(now - zoomSettleLastTime, 1.0 / 120), 1.0 / 20)
             zoomSettleLastTime = now
@@ -1505,7 +1537,6 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             guard let collectionView, let gridLayout else { return }
             gridLayout.setColumns(target.columns)
             collectionView.layoutIfNeeded()
-            collectionView.isScrollEnabled = !isLongPressDragActive
             isZooming = false
             appliedColumns = target.density
             if parent.columnCount != target.density {
