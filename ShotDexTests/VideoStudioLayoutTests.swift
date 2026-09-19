@@ -125,13 +125,55 @@ struct VideoStudioLayoutTests {
         #expect(layout.lift == VideoStudioMetrics.sheetLift)
     }
 
-    /// With no tool row under it, the panel covers that much more of the
-    /// stack, so the lift has to grow by the same amount.
-    @Test func theRailMakesThePanelLiftFurther() {
+    /// The preview's clamp has to reserve what the *lanes* need, not the
+    /// phone's floor. At `Lanes.regular` one overlay and one music lane want
+    /// 255pt; reserving 248 handed the preview the other 7 and left the lanes
+    /// scrolling on every regular-width window.
+    @Test func theClampReservesWhatTheLanesActuallyNeed() {
+        let landscape = CGSize(width: 1376 - VideoStudioMetrics.railWidth, height: 1032)
+        let content = VideoStudioMetrics.Lanes.regular.timelineContentHeight(overlayLanes: 1, musicLanes: 1)
+        #expect(content > VideoStudioMetrics.timelineMinimumHeight, "the case this test is about")
+        let layout = VideoStudioMetrics.stackLayout(
+            screen: landscape, bandHeight: 48, bottomInset: 20,
+            canvas: CGSize(width: 16, height: 9), presentsSheet: false,
+            timelineContentHeight: content, usesToolRail: true, panelMayDock: true
+        )
+        #expect(layout.timeline >= content, "the lanes fit without scrolling")
+    }
+
+    /// Tablet tracks need a window that is tall as well as wide. The iPhone
+    /// Duo's inner display is 867×669: wide enough by the rail's threshold,
+    /// and far too short for 255pt of lanes.
+    @Test func aShortRegularWindowKeepsThePhonesLanes() {
+        #expect(VideoStudioMetrics.Lanes.for(size: CGSize(width: 867, height: 669)) == .compact)
+        #expect(VideoStudioMetrics.Lanes.for(size: CGSize(width: 1032, height: 1376)) == .regular)
+        #expect(VideoStudioMetrics.Lanes.for(size: CGSize(width: 1376, height: 1032)) == .regular)
+        #expect(VideoStudioMetrics.Lanes.for(size: CGSize(width: 402, height: 874)) == .compact)
+    }
+
+    /// The lift is the panel's height less the bands it lands on. Take the
+    /// tool row away and it grows by that much; take the bottom bar away too
+    /// — which is what moving Back and Export into the top band does — and it
+    /// is the whole panel.
+    @Test func theLiftIsWhateverThePanelDoesNotLandOn() {
         #expect(
             VideoStudioMetrics.sheetLift(usesToolRail: true)
                 == VideoStudioMetrics.sheetLift + VideoStudioMetrics.toolbarHeight
         )
+        #expect(
+            VideoStudioMetrics.sheetLift(usesToolRail: true, showsBottomBar: false)
+                == VideoStudioMetrics.sheetHeight
+        )
+    }
+
+    /// The top band has to hold Back, the read-out and Export beside the
+    /// command row on a regular-width window, which the phone's 48pt cannot.
+    @Test func theTopBandGrowsWhereItCarriesTheProjectActions() {
+        let phone = VideoStudioMetrics.topBandHeight(usesToolRail: false, safeAreaTop: 59)
+        let tablet = VideoStudioMetrics.topBandHeight(usesToolRail: true, safeAreaTop: 24)
+        #expect(phone == 59, "the phone's band is its safe-area inset")
+        #expect(tablet >= 66)
+        #expect(tablet > VideoStudioMetrics.topBandHeight(usesToolRail: false, safeAreaTop: 24))
     }
 
     @Test func sheetLiftsTheStackAndTakesFromTheTimelineFirst() {

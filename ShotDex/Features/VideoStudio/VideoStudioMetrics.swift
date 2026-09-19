@@ -32,8 +32,23 @@ enum VideoStudioMetrics {
     /// One rail cell: the same shape as a toolbar cell, stacked instead of
     /// spread.
     static let railCellHeight: CGFloat = 62
-    /// Back · export estimate · Export pill. Always on screen.
+    /// Back · export estimate · Export pill. On a phone this is a band of its
+    /// own at the bottom; on a regular-width window those three move into the
+    /// top band and this band is not drawn at all.
     static let bottomBarHeight: CGFloat = 50
+
+    /// The top band. It carries the command row on a phone, and the command
+    /// row *plus* Back, the read-out and Export on a regular-width window,
+    /// which needs more room than the 48pt the phone's row sits in.
+    ///
+    /// Every editor surveyed — Final Cut for iPad, CapCut, iMovie — puts the
+    /// project's primary action in the top bar. ShotDex had it at the bottom,
+    /// which is why the contextual panel could cover it.
+    static func topBandHeight(usesToolRail: Bool, safeAreaTop: CGFloat) -> CGFloat {
+        usesToolRail
+            ? max(66, safeAreaTop + 18)
+            : max(EditorLayoutMetrics.editorTopBandHeight, safeAreaTop)
+    }
     /// Height of the contextual panel (selection + global tools), above the
     /// device's bottom safe inset. It slides over the bars, never displaces them.
     static let sheetHeight: CGFloat = 264
@@ -42,10 +57,14 @@ enum VideoStudioMetrics {
     /// stays visible above it and the selected band never hides under the panel.
     static var sheetLift: CGFloat { sheetHeight - toolbarHeight - bottomBarHeight }
 
-    /// With the tools in a rail there is no bottom tool row for the panel to
-    /// cover, so it overlaps that much more of the stack.
-    static func sheetLift(usesToolRail: Bool) -> CGFloat {
-        usesToolRail ? sheetHeight - bottomBarHeight : sheetLift
+    /// How far the stack lifts so the panel covers nothing that matters: the
+    /// panel's height, less whatever bands it lands on top of. With the tools
+    /// in a rail and the project actions in the top band there are none, so
+    /// it is the whole panel.
+    static func sheetLift(usesToolRail: Bool, showsBottomBar: Bool = true) -> CGFloat {
+        sheetHeight
+            - (usesToolRail ? 0 : toolbarHeight)
+            - (showsBottomBar ? bottomBarHeight : 0)
     }
 
     /// The preview / timeline split for one screen. Pure, so it is unit-tested.
@@ -79,7 +98,10 @@ enum VideoStudioMetrics {
         /// `true` lets the contextual panel take a place in the stack instead
         /// of sliding over the bars, but only where the window has that much
         /// height going spare. Callers pass the regular-width flag.
-        panelMayDock: Bool = false
+        panelMayDock: Bool = false,
+        /// `false` where Back, the read-out and Export have moved into the top
+        /// band, so the bottom band is not drawn and costs no height.
+        showsBottomBar: Bool = true
     ) -> StackLayout {
         // The rail takes the tools out of the vertical stack entirely, so the
         // 62pt the row used to cost goes back to the preview and the timeline.
@@ -87,10 +109,24 @@ enum VideoStudioMetrics {
         let natural = canvas.width > 0 ? screen.width * canvas.height / canvas.width : 0
         let wanted = max(timelineMinimumHeight, timelineContentHeight)
 
+        // What the timeline must keep when the preview is clamped. It is the
+        // lanes' own height, not the phone's 248: at `Lanes.regular` one
+        // overlay and one music lane want 255, so reserving 248 handed the
+        // preview 7pt the lanes needed and left them scrolling on every
+        // regular-width window. A caller that passes no content height is
+        // asking for the old behaviour — the timeline takes the leftover —
+        // and gets the floor.
+        // (`.greatestFiniteMagnitude` *is* finite, so the sentinel has to be
+        // compared for, not tested with `isFinite` — doing that clamped the
+        // phone's preview to its 150pt floor.)
+        let reserve = timelineContentHeight == .greatestFiniteMagnitude ? timelineMinimumHeight : wanted
+
+        let bottomBand = showsBottomBar ? bottomBarHeight : 0
+
         func split(lift: CGFloat, dock: CGFloat) -> StackLayout {
-            let fixed = bandHeight + previewTimelineGap + toolRow + bottomBarHeight + bottomInset + lift + dock
+            let fixed = bandHeight + previewTimelineGap + toolRow + bottomBand + bottomInset + lift + dock
             let usable = max(0, screen.height - fixed)
-            let previewCap = max(previewMinimumHeight, usable - timelineMinimumHeight)
+            let previewCap = max(previewMinimumHeight, usable - reserve)
             var preview = min(max(natural > 0 ? natural : usable, previewMinimumHeight), previewCap)
             var timeline = max(0, usable - preview)
             if timeline > wanted {
@@ -114,7 +150,10 @@ enum VideoStudioMetrics {
                 return split(lift: 0, dock: sheetHeight + bottomInset)
             }
         }
-        return split(lift: sheetLift(usesToolRail: usesToolRail), dock: 0)
+        return split(
+            lift: sheetLift(usesToolRail: usesToolRail, showsBottomBar: showsBottomBar),
+            dock: 0
+        )
     }
 
     /// The phone's lane geometry, kept as a free function for the layout
@@ -161,11 +200,18 @@ enum VideoStudioMetrics {
         static let compact = Lanes(overlay: 34, video: 66, music: 40, ruler: 26, clipCell: 54)
         static let regular = Lanes(overlay: 44, video: 104, music: 52, ruler: 30, clipCell: 88)
 
-        /// Measured on the window, like every other regular-width decision in
-        /// this screen: an iPad Split View half reports `.regular` at ~500pt,
-        /// where tablet-sized tracks would leave no timeline.
-        static func forWidth(_ width: CGFloat) -> Lanes {
-            width >= EditorLayoutMetrics.sidebarMinCanvasWidth ? .regular : .compact
+        /// A window has to be wide **and tall** for tablet tracks. Width alone
+        /// is not enough: the iPhone Duo's inner display is 867pt wide and
+        /// 669pt tall, and 255pt of regular lanes on a 669pt window pushes the
+        /// preview down to its floor. The editor's sidebar already keys on a
+        /// height for the same reason.
+        static let minimumHeightForRegularLanes: CGFloat = 750
+
+        static func `for`(size: CGSize) -> Lanes {
+            size.width >= EditorLayoutMetrics.sidebarMinCanvasWidth
+                && size.height >= minimumHeightForRegularLanes
+                ? .regular
+                : .compact
         }
 
         func overlayLaneTop(_ lane: Int) -> CGFloat {

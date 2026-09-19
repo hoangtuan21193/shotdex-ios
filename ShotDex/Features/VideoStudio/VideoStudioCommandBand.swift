@@ -8,6 +8,12 @@ import SwiftUI
 /// bottom bar, where they have always been.
 struct VideoStudioTopBand: View {
     @Bindable var model: VideoStudioModel
+    /// On a regular-width window the band also carries the project's own
+    /// controls — Back, the read-out and Export — because the bottom band
+    /// they used to live in is not drawn there. Every tablet editor
+    /// surveyed keeps the primary output action in the top bar; having it at
+    /// the bottom is what let the contextual panel cover it.
+    var projectActions: VideoInspectorActions?
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     private var size: CGFloat {
@@ -19,6 +25,19 @@ struct VideoStudioTopBand: View {
 
     var body: some View {
         HStack(spacing: 5) {
+            if let projectActions {
+                Button(action: projectActions.onBack) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: size, height: size)
+                        .background { Color.clear.editorGlass(Circle()) }
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Back")
+                Spacer(minLength: 8)
+            }
             circle("arrow.uturn.backward", isEnabled: model.canUndo) { model.undo() }
                 .accessibilityLabel("Undo")
             circle("arrow.uturn.forward", isEnabled: model.canRedo) { model.redo() }
@@ -32,12 +51,38 @@ struct VideoStudioTopBand: View {
             Spacer(minLength: 8)
 
             timecodePill
+
+            if let projectActions {
+                readout
+                Button(action: projectActions.onExport) {
+                    Text("Export")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 20)
+                        .frame(height: size)
+                        .background(Capsule().fill(EditorTheme.accent))
+                }
+                .buttonStyle(.plain)
+            }
         }
         .frame(height: size)
         .padding(.horizontal, inset)
         // Inset the row from the band's top so it sits level with the Dynamic
         // Island, exactly like the photo editor's floating command row.
         .padding(.top, EditorLayoutMetrics.editorFloatingCommandRowTopInset)
+    }
+
+    /// Duration, preset and the size estimate — the same two lines the bottom
+    /// band showed, beside Export rather than away from it.
+    private var readout: some View {
+        VStack(alignment: .trailing, spacing: 1) {
+            Text(String(format: "%.1fs · %@ · 30fps", model.totalDuration, model.recipe.renderPreset.displayName))
+            Text("~\(ByteCountFormatter.string(fromByteCount: model.estimatedExportBytes, countStyle: .file))")
+        }
+        .font(.system(size: 11).monospacedDigit())
+        .foregroundStyle(EditorTheme.dimText)
+        .padding(.leading, 8)
+        .accessibilityElement(children: .combine)
     }
 
     private var timecodePill: some View {

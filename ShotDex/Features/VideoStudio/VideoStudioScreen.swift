@@ -203,7 +203,11 @@ struct VideoStudioScreen: View {
             // The band spans the Dynamic Island: grow it to the device's top safe
             // inset (≈59 on Face-ID iPhones) so its 11pt-inset row lands level with
             // the island and the preview starts below it — mirrors the photo editor.
-            let bandHeight = max(EditorLayoutMetrics.editorTopBandHeight, proxy.safeAreaInsets.top)
+            let usesRail = proxy.size.width >= EditorLayoutMetrics.sidebarMinCanvasWidth
+            let bandHeight = VideoStudioMetrics.topBandHeight(
+                usesToolRail: usesRail,
+                safeAreaTop: proxy.safeAreaInsets.top
+            )
             let panelHeight = VideoStudioMetrics.sheetHeight + proxy.safeAreaInsets.bottom
             // The preview takes its aspect-fit height and the timeline the rest, so
             // a landscape project gets a tall timeline instead of black bars. While
@@ -211,8 +215,8 @@ struct VideoStudioScreen: View {
             // stay visible above it.
             // The reader sits inside the safe area while the stack below ignores it,
             // so the stack's real height is the reader's plus both insets.
-            let usesToolRail = proxy.size.width >= EditorLayoutMetrics.sidebarMinCanvasWidth
-            let lanes = VideoStudioMetrics.Lanes.forWidth(proxy.size.width)
+            let usesToolRail = usesRail
+            let lanes = VideoStudioMetrics.Lanes.for(size: proxy.size)
             let layout = VideoStudioMetrics.stackLayout(
                 screen: CGSize(
                     // The preview is drawn in the column beside the rail, not
@@ -235,14 +239,16 @@ struct VideoStudioScreen: View {
                     musicLanes: max(1, model.musicLaneCount)
                 ),
                 usesToolRail: usesToolRail,
-                panelMayDock: usesToolRail
+                panelMayDock: usesToolRail,
+                // Back, the read-out and Export move into the top band there,
+                // so the bottom band is not drawn and costs no height.
+                showsBottomBar: !usesToolRail
             )
-            // Measured on the window, not on the size class. An iPad Split
-            // View half reports `.regular` at ~500pt, where a permanent 92pt
-            // rail costs a fifth of the width to save 62pt of height — the
-            // wrong trade, and the exact mistake the editor's sidebar avoids
-            // by using a 700pt threshold instead.
-            let usesRail = usesToolRail
+            // `usesRail` is measured on the window, not on the size class. An
+            // iPad Split View half reports `.regular` at ~500pt, where a
+            // permanent 92pt rail costs a fifth of the width to save 62pt of
+            // height — the wrong trade, and the exact mistake the editor's
+            // sidebar avoids by using a 700pt threshold instead.
             ZStack(alignment: .bottom) {
                 HStack(spacing: 0) {
                     // Regular width puts the tools down the leading edge: the
@@ -258,8 +264,11 @@ struct VideoStudioScreen: View {
                         )
                     }
                     VStack(spacing: 0) {
-                        VideoStudioTopBand(model: model)
-                            .frame(height: bandHeight, alignment: .top)
+                        VideoStudioTopBand(
+                            model: model,
+                            projectActions: usesRail ? actions(model) : nil
+                        )
+                        .frame(height: bandHeight, alignment: .top)
                         preview(model).frame(height: layout.preview)
                         Color.clear.frame(height: VideoStudioMetrics.previewTimelineGap)
                         VideoTimelineView(
@@ -285,7 +294,9 @@ struct VideoStudioScreen: View {
                         if !usesRail {
                             VideoStudioToolbar(model: model, actions: actions(model))
                         }
-                        VideoStudioBottomBar(model: model, actions: actions(model))
+                        if !usesRail {
+                            VideoStudioBottomBar(model: model, actions: actions(model))
+                        }
                         Color.clear.frame(height: proxy.safeAreaInsets.bottom)
                     }
                 }
@@ -376,6 +387,18 @@ struct VideoStudioScreen: View {
                     imageSize: model.recipe.canvasSize(),
                     renderSize: geo.size
                 )
+                // The frame's own edge. The compositor letterboxes a clip onto
+                // the project's background — black by default — and the stage
+                // behind it is black too, so without this line a 3:2 photo in
+                // a 16:9 project looks like a 3:2 project: the user cannot see
+                // the frame they are exporting, only the part of it the photo
+                // happens to fill.
+                Rectangle()
+                    .strokeBorder(EditorTheme.hairline, lineWidth: 1)
+                    .frame(width: contentRect.width, height: contentRect.height)
+                    .position(x: contentRect.midX, y: contentRect.midY)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
                 VideoOverlayCanvas(
                     model: model,
                     contentRect: contentRect,
