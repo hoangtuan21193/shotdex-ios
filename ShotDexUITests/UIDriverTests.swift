@@ -20,6 +20,7 @@ final class UIDriverTests: XCTestCase {
     private var outputDirectory: URL!
     private var artifacts: [String] = []
     private var results: [UIDriverStepResult] = []
+    private var hasWrittenReport = false
 
     override func setUpWithError() throws {
         continueAfterFailure = false
@@ -28,6 +29,13 @@ final class UIDriverTests: XCTestCase {
             ?? NSTemporaryDirectory().appending("shotdex-ui")
         outputDirectory = URL(fileURLWithPath: path, isDirectory: true)
         try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
+    }
+
+    override func tearDownWithError() throws {
+        // A step can fail in a way that never reaches the catch — a timeout
+        // inside XCTest itself, for one — and a run with no report at all is
+        // the one failure mode that tells the caller nothing.
+        if !hasWrittenReport { writeReport() }
     }
 
     func testRunScript() throws {
@@ -152,7 +160,14 @@ final class UIDriverTests: XCTestCase {
         case "screenshot":
             screenshot(named: step.name ?? "screen")
         case "dump":
-            write(name: step.name ?? "tree", tree: tree())
+            // `type` narrows the dump to one kind of element. Worth reaching
+            // for: the accessibility snapshot of a screen whose content never
+            // settles can time the whole query out (measured on the Video
+            // Studio on the phone, where even `app.buttons` never returns).
+            write(
+                name: step.name ?? "tree",
+                tree: tree(everything: step.text == "all", only: step.type)
+            )
         case "back":
             let back = app.navigationBars.buttons.element(boundBy: 0)
             guard back.exists else { throw DriverError.notFound("back button") }
@@ -241,8 +256,34 @@ final class UIDriverTests: XCTestCase {
 
     // MARK: Output
 
-    private func tree() -> [UIDriverElement] {
-        app.descendants(matching: .any).allElementsBoundByIndex.compactMap { element in
+    /// Cap for the whole-tree dump. Walking every descendant of a
+    /// canvas-heavy screen is the slowest thing the driver does, and XCTest
+    /// times the query out rather than returning a partial answer — measured
+    /// on the Video Studio, where a `.any` walk never came back.
+    private static let maxDumpedElements = 400
+
+    /// The types a layout review actually measures. Asking for these by kind
+    /// is bounded work; asking for `.any` is a walk of every SwiftUI
+    /// container on the screen, which the Video Studio does not survive.
+    private var dumpQueries: [XCUIElementQuery] {
+        [
+            app.buttons, app.staticTexts, app.images, app.cells, app.switches,
+            app.sliders, app.textFields, app.searchFields, app.segmentedControls,
+            app.navigationBars, app.tabBars, app.toolbars, app.sheets, app.alerts,
+        ]
+    }
+
+    /// `text: "all"` on a dump step asks for the whole tree instead, capped.
+    private func tree(everything: Bool = false, only type: String? = nil) -> [UIDriverElement] {
+        let elements: [XCUIElement]
+        if let type {
+            elements = queryForType(type).allElementsBoundByIndex
+        } else if everything {
+            elements = Array(app.descendants(matching: .any).allElementsBoundByIndex.prefix(Self.maxDumpedElements))
+        } else {
+            elements = dumpQueries.flatMap(\.allElementsBoundByIndex)
+        }
+        return elements.compactMap { element in
             guard element.exists else { return nil }
             let frame = element.frame
             guard frame.width > 0, frame.height > 0 else { return nil }
@@ -373,6 +414,7 @@ final class UIDriverTests: XCTestCase {
     }
 
     private func writeReport() {
+        hasWrittenReport = true
         let screen = XCUIApplication().frame
         let ours = ProcessInfo.processInfo.environment.filter { $0.key.contains("SHOTDEX") }
             .mapValues { $0.count > 120 ? "\($0.prefix(120))… (\($0.count) chars)" : $0 }

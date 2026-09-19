@@ -87,6 +87,14 @@ python3 -c "import json;[print(int(e['x']),int(e['y']),int(e['width']),int(e['he
   if e['type']=='button' and not e['label'] and not e['identifier']]"
 ```
 
+**A dump can time out.** XCUITest builds its snapshot from the accessibility
+hierarchy, and a screen whose content never settles can hang the query — the
+Video Studio on the phone does this, where even `app.buttons` never returns
+(the iPad's does fine). Narrow it with `{"action":"dump","type":"button"}`,
+take the dump before entering such a screen, or fall back to the screenshot
+and the source constants. A run that dies in a dump still leaves the
+screenshots taken before it.
+
 **Two traps in the numbers.** The frame is the element's *visual* frame:
 a system navigation-bar or toolbar button reports about 36pt tall and is
 still fine, because UIKit gives bar items a hit area the height of the bar.

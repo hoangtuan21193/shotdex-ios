@@ -146,6 +146,10 @@ the iPhone 17 and the iPad Pro 13" with the new `Tools/ui-drive`.
 - **A persistent inspector for Video Studio at ≥700pt** (`prior-art` #2, `challenger` objection 2). Every tablet NLE docks the inspector beside or above the timeline instead of covering it; ShotDex's editor and Collage already switched at this threshold. But `VideoStudioSheetHost` is a full-bleed horizontal band — a 36pt title row, a 112pt parameter zone built for the width of a phone, and a row of command cells — so making it work in a 300pt column is a rewrite of the panel, not a flag flip. `challenger` also warns this and the lane change spend the same freed pixels, so they must not land together. The lane change has landed; the surplus left in portrait is now about 230pt. Worth doing, and it is your call because it changes a panel you have opinions about.
 - **Video Studio in portrait at all.** iPad is not orientation-locked and landscape now looks right (measured, both orientations). If the studio should simply prefer landscape on iPad, that is a smaller change than any inspector work.
 
+## Found by the driver, not yet chased
+
+- [ ] **The Video Studio's accessibility hierarchy cannot be snapshotted on the phone.** XCUITest times out enumerating it — even `app.buttons` never returns — while the same screen on the iPad dumps 172 elements fine. Something on the compact layout keeps the tree from settling (the horizontally scrolling tool row and the timeline's drag zones are the suspects). This is not only a tooling problem: a hierarchy that never settles is what VoiceOver walks too. Worth an `a11y-voiceover` pass aimed at it.
+
 ## Still open from sweep 2
 
 - `Features/VideoStudio/VideoStudioSheetHost.swift` — every metric in the contextual sheet is phone-only with no regular-width branch. Overlaps the inspector decision above; do not fix twice.
