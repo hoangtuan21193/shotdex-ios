@@ -238,6 +238,8 @@ struct CompareScreen: View {
     static let minPhotoCount = 2
     @Environment(\.dismiss) private var dismiss
     @Environment(PhotoLibraryService.self) private var photoLibrary
+    @Environment(AppDependencies.self) private var dependencies
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     /// Two or more photos, in selection order.
     let photos: [ComparePhoto]
@@ -251,6 +253,18 @@ struct CompareScreen: View {
 
     @State private var sync = CompareScrollSynchronizer()
     @State private var isDeleting = false
+    /// Which of the three culling layouts is on screen.
+    @State private var mode: CompareViewMode = .column
+    @State private var hasChosenMode = false
+    /// Flags and ratings for the photos on screen, read once and written
+    /// through `CullStore`.
+    @State private var cullStates: [String: PhotoCullState] = [:]
+    /// Photos taken out of the comparison from the survey's ✕. Out of this
+    /// screen, not out of the library.
+    @State private var removedIds: Set<String> = []
+    /// Compare mode's two sides, as indices into `visiblePhotos`.
+    @State private var selectIndex = 0
+    @State private var candidateIndex = 1
     /// Photos deleted from inside this screen (no deletion-marks binding), so
     /// their cards leave the column without the caller having to reload.
     @State private var deletedIds: Set<String> = []
@@ -259,7 +273,7 @@ struct CompareScreen: View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            cardColumn
+            content
 
             VStack {
                 topBar
@@ -272,13 +286,39 @@ struct CompareScreen: View {
         .statusBarHidden()
         .animation(AppTheme.Motion.standard, value: markedCount > 0)
         .animation(AppTheme.Motion.standard, value: deletedIds)
+        .animation(AppTheme.Motion.standard, value: mode)
+        .task { start() }
+        .onChange(of: visiblePhotos.count) { clampCompareIndices() }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch mode {
+        case .column:
+            cardColumn
+        case .survey:
+            surveyGrid
+        case .compare:
+            comparePanes
+        }
+    }
+
+    /// Opens in the layout the screen has room for: a survey on an iPad with
+    /// more than two frames, the column everywhere else. Chosen once, so
+    /// switching to another mode survives a rotation.
+    private func start() {
+        if !hasChosenMode {
+            hasChosenMode = true
+            mode = horizontalSizeClass == .regular && photos.count > 2 ? .survey : .column
+        }
+        reloadCullStates()
     }
 
     /// Photos still on screen: everything the user hasn't deleted from here.
     private var visiblePhotos: [ComparePhoto] {
         photos.filter { photo in
             guard let id = photo.asset?.localIdentifier else { return true }
-            return !deletedIds.contains(id)
+            return !deletedIds.contains(id) && !removedIds.contains(id)
         }
     }
 
@@ -334,6 +374,179 @@ struct CompareScreen: View {
             .padding(.bottom, 24)
         }
         .scrollIndicators(.hidden)
+    }
+
+    // MARK: Survey
+
+    private var surveyGrid: some View {
+        SurveyGridView(
+            photos: visiblePhotos,
+            activeIndex: selectIndex,
+            cullStates: cullStates,
+            setActive: { selectIndex = $0 },
+            remove: { photo in
+                guard let id = photo.assetId else { return }
+                // Below two frames there is nothing left to compare, so the
+                // last removal closes the screen rather than leaving one photo
+                // sitting on its own.
+                if visiblePhotos.count <= Self.minPhotoCount {
+                    dismiss()
+                } else {
+                    removedIds.insert(id)
+                    clampCompareIndices()
+                }
+            },
+            setFlag: { photo, flag in setFlag(flag, on: photo) },
+            setRating: { photo, rating in setRating(rating, on: photo) }
+        )
+        .padding(.horizontal, AppTheme.Spacing.md)
+        .padding(.top, 72)
+        .padding(.bottom, AppTheme.Spacing.lg)
+    }
+
+    // MARK: Compare
+
+    /// Select and candidate, split whichever way leaves both frames bigger —
+    /// the same rule the editor's reference pane uses.
+    private var comparePanes: some View {
+        GeometryReader { proxy in
+            let canvas = CGSize(
+                width: proxy.size.width,
+                height: proxy.size.height - EditorLayoutMetrics.sidebarHeaderHeight
+            )
+            let aspect = SurveyLayout.averageAspectRatio(comparePair.map(\.aspectRatio))
+            let axis = EditorLayoutMetrics.referenceSplit(canvas: canvas, aspectRatio: aspect)
+
+            VStack(spacing: AppTheme.Spacing.sm) {
+                if axis == .horizontal {
+                    HStack(spacing: AppTheme.Spacing.sm) { panePair }
+                } else {
+                    VStack(spacing: AppTheme.Spacing.sm) { panePair }
+                }
+                compareControls
+            }
+        }
+        .padding(.horizontal, AppTheme.Spacing.md)
+        .padding(.top, 72)
+        .padding(.bottom, AppTheme.Spacing.lg)
+    }
+
+    /// The two photos being compared, select first.
+    private var comparePair: [ComparePhoto] {
+        let photos = visiblePhotos
+        guard photos.indices.contains(selectIndex), photos.indices.contains(candidateIndex) else {
+            return Array(photos.prefix(2))
+        }
+        return [photos[selectIndex], photos[candidateIndex]]
+    }
+
+    @ViewBuilder
+    private var panePair: some View {
+        let pair = comparePair
+        if pair.count == 2 {
+            pane(pair[0], role: "Select", index: selectIndex)
+            pane(pair[1], role: "Candidate", index: candidateIndex)
+        }
+    }
+
+    private func pane(_ photo: ComparePhoto, role: String, index: Int) -> some View {
+        ComparePaneView(
+            photo: photo,
+            role: role,
+            sync: sync,
+            paneIndex: index,
+            cullState: cullState(of: photo),
+            setFlag: { setFlag($0, on: photo) },
+            setRating: { setRating($0, on: photo) }
+        )
+    }
+
+    /// Step the candidate, swap the two, or promote the candidate to select —
+    /// Lightroom's three compare verbs, and nothing else. Promote is the one
+    /// that makes a long run converge: the winner stays and the next frame
+    /// comes up against it.
+    private var compareControls: some View {
+        HStack(spacing: AppTheme.Spacing.md) {
+            compareButton("chevron.left", label: "Previous candidate") {
+                stepCandidate(-1)
+            }
+            compareButton("arrow.left.arrow.right", label: "Swap select and candidate") {
+                swap(&selectIndex, &candidateIndex)
+            }
+            compareButton("crown", label: "Promote candidate to select") {
+                selectIndex = candidateIndex
+                stepCandidate(1)
+            }
+            compareButton("chevron.right", label: "Next candidate") {
+                stepCandidate(1)
+            }
+        }
+        .frame(height: EditorLayoutMetrics.sidebarHeaderHeight)
+    }
+
+    private func compareButton(
+        _ systemImage: String,
+        label: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: AppTheme.Size.glassButton, height: AppTheme.Size.minTouch)
+                .editorGlass(Capsule())
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+
+    /// Walks the candidate past the select rather than landing on it — a pane
+    /// compared with itself is a wasted press.
+    private func stepCandidate(_ delta: Int) {
+        let count = visiblePhotos.count
+        guard count > 1 else { return }
+        var next = candidateIndex
+        for _ in 0..<count {
+            next = (next + delta + count) % count
+            if next != selectIndex { break }
+        }
+        candidateIndex = next
+    }
+
+    private func clampCompareIndices() {
+        let count = visiblePhotos.count
+        guard count > 0 else { return }
+        selectIndex = min(selectIndex, count - 1)
+        candidateIndex = min(candidateIndex, count - 1)
+        if candidateIndex == selectIndex { stepCandidate(1) }
+    }
+
+    // MARK: Culling
+
+    private func cullState(of photo: ComparePhoto) -> PhotoCullState {
+        let id = photo.assetId ?? ""
+        return cullStates[id] ?? PhotoCullState(assetId: id)
+    }
+
+    /// One query for the whole comparison, not one per pane.
+    private func reloadCullStates() {
+        let ids = photos.compactMap(\.assetId)
+        cullStates = (try? dependencies.cullStore.states(assetIds: ids)) ?? [:]
+    }
+
+    private func setFlag(_ flag: PhotoFlag, on photo: ComparePhoto) {
+        guard let id = photo.assetId else { return }
+        try? dependencies.cullStore.setFlag(flag, ids: [id])
+        cullStates[id] = (try? dependencies.cullStore.state(assetId: id))
+            ?? PhotoCullState(assetId: id, flag: flag)
+    }
+
+    private func setRating(_ rating: Int, on photo: ComparePhoto) {
+        guard let id = photo.assetId else { return }
+        try? dependencies.cullStore.setRating(rating, ids: [id])
+        cullStates[id] = (try? dependencies.cullStore.state(assetId: id))
+            ?? PhotoCullState(assetId: id, rating: rating)
     }
 
     private func card(_ photo: ComparePhoto, index: Int) -> some View {
@@ -396,9 +609,38 @@ struct CompareScreen: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Close")
             Spacer()
+            modePicker
         }
         .padding(.horizontal)
         .padding(.top, 8)
+    }
+}
+
+extension CompareScreen {
+    /// Three icons, not a segmented control with words: the strip sits over a
+    /// photo and the words would need a background wide enough to cover it.
+    /// Compare is off below two photos and is the only mode with a hard
+    /// minimum.
+    fileprivate var modePicker: some View {
+        HStack(spacing: 0) {
+            ForEach(CompareViewMode.allCases) { candidate in
+                Button {
+                    mode = candidate
+                    if candidate == .compare { clampCompareIndices() }
+                } label: {
+                    Image(systemName: candidate.systemImage)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(mode == candidate ? EditorTheme.accent : .white)
+                        .frame(width: AppTheme.Size.minTouch, height: AppTheme.Size.minTouch)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(candidate.title)
+                .accessibilityAddTraits(mode == candidate ? .isSelected : [])
+            }
+        }
+        .padding(.horizontal, AppTheme.Spacing.xs)
+        .editorGlass(Capsule())
     }
 }
 
