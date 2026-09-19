@@ -166,8 +166,26 @@ struct VideoCommand: Identifiable {
 /// The horizontal, scrolling icon command band: 52×54 cells, a right-edge fade.
 struct VideoCommandBand: View {
     let commands: [VideoCommand]
+    /// In a narrow inspector column the row becomes a grid: a horizontal
+    /// scroller inside a 320pt column hides half its commands behind a
+    /// gesture nobody expects there.
+    var wraps = false
 
     var body: some View {
+        if wraps { grid } else { row }
+    }
+
+    private var grid: some View {
+        LazyVGrid(
+            columns: [GridItem(.adaptive(minimum: VideoStudioMetrics.commandCellWidth), spacing: 8)],
+            spacing: 8
+        ) {
+            ForEach(commands) { VideoCommandCell(command: $0) }
+        }
+        .padding(.horizontal, 14)
+    }
+
+    private var row: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(commands) { VideoCommandCell(command: $0) }

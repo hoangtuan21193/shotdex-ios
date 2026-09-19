@@ -166,6 +166,43 @@ struct VideoStudioLayoutTests {
         )
     }
 
+    /// Wide windows spend width on the inspector, tall ones spend height.
+    /// The Duo's inner display is landscape and wide enough, so it gets the
+    /// column too — which is the device the drawer hurt most.
+    @Test func theInspectorGoesBesideTheStageOnlyOnAWideWindow() {
+        #expect(VideoStudioMetrics.usesInspectorColumn(size: CGSize(width: 1376, height: 1032)))
+        #expect(VideoStudioMetrics.usesInspectorColumn(size: CGSize(width: 867, height: 669)))
+        #expect(!VideoStudioMetrics.usesInspectorColumn(size: CGSize(width: 1032, height: 1376)), "portrait docks instead")
+        #expect(!VideoStudioMetrics.usesInspectorColumn(size: CGSize(width: 402, height: 874)), "the phone keeps its band")
+        #expect(
+            !VideoStudioMetrics.usesInspectorColumn(size: CGSize(width: 780, height: 500)),
+            "a 368pt stage is narrower than a phone's screen"
+        )
+    }
+
+    /// The column costs the stage width, and the drawer costs it height. On
+    /// a landscape tablet the frame is height-limited, so the column is the
+    /// one that leaves a bigger picture — the whole reason to build it.
+    @Test func theColumnLeavesABiggerFrameThanTheDrawerInLandscape() {
+        let lanes = VideoStudioMetrics.Lanes.regular
+        let content = lanes.timelineContentHeight(overlayLanes: 1, musicLanes: 1)
+        func frameArea(width: CGFloat, presentsSheet: Bool) -> CGFloat {
+            let layout = VideoStudioMetrics.stackLayout(
+                screen: CGSize(width: width, height: 1032),
+                bandHeight: 66, bottomInset: 20,
+                canvas: CGSize(width: 16, height: 9), presentsSheet: presentsSheet,
+                timelineContentHeight: content, usesToolRail: true,
+                panelMayDock: !presentsSheet, showsBottomBar: false
+            )
+            let height = min(width * 9 / 16, layout.preview)
+            return height * height * 16 / 9
+        }
+        let rail = VideoStudioMetrics.railWidth
+        let drawer = frameArea(width: 1376 - rail, presentsSheet: true)
+        let column = frameArea(width: 1376 - rail - VideoStudioMetrics.inspectorColumnWidth, presentsSheet: false)
+        #expect(column > drawer * 1.5, "the column is worth the width it costs")
+    }
+
     /// The top band has to hold Back, the read-out and Export beside the
     /// command row on a regular-width window, which the phone's 48pt cannot.
     @Test func theTopBandGrowsWhereItCarriesTheProjectActions() {

@@ -24,6 +24,29 @@ enum VideoStudioMetrics {
     /// Gap between the preview and the timeline.
     static let previewTimelineGap: CGFloat = 8
     static let toolbarHeight: CGFloat = 62
+    /// The inspector, when it stands beside the stage instead of under the
+    /// timeline. Final Cut puts it left, Resolve right, LumaFusion left; it
+    /// goes right here because the tool rail already owns the leading edge
+    /// and two columns of chrome on one side is the mistake the photo
+    /// editor's sidebar was written to avoid.
+    static let inspectorColumnWidth: CGFloat = 320
+
+    /// A window wide enough for the rail **and** wider than it is tall gets
+    /// the column: there the stage is short of height, not width, so the
+    /// inspector should cost width. A portrait tablet is the opposite and
+    /// docks the panel under the timeline instead.
+    /// The floor is a stage no narrower than a phone's screen: below that the
+    /// column has taken more than it gave back. The iPhone Duo's inner
+    /// display leaves 455pt and clears it — and it is the device the drawer
+    /// hurt most, squeezing the frame to 266×150.
+    static let minimumStageWidth: CGFloat = 400
+
+    static func usesInspectorColumn(size: CGSize) -> Bool {
+        size.width >= EditorLayoutMetrics.sidebarMinCanvasWidth
+            && size.width > size.height
+            && size.width - railWidth - inspectorColumnWidth >= minimumStageWidth
+    }
+
     /// Width of the tool rail that replaces the bottom row on a regular-width
     /// screen. Wide enough for a 24pt glyph over an 11pt label without the
     /// label wrapping ("Background" is the longest), which is what Final Cut

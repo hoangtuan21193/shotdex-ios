@@ -216,19 +216,26 @@ struct VideoStudioScreen: View {
             // The reader sits inside the safe area while the stack below ignores it,
             // so the stack's real height is the reader's plus both insets.
             let usesToolRail = usesRail
+            // Beside the stage on a wide window, under the timeline on a tall
+            // one. Both spend the dimension the stage has to spare.
+            let usesInspectorColumn = VideoStudioMetrics.usesInspectorColumn(size: proxy.size)
             let lanes = VideoStudioMetrics.Lanes.for(size: proxy.size)
             let layout = VideoStudioMetrics.stackLayout(
                 screen: CGSize(
                     // The preview is drawn in the column beside the rail, not
                     // across the window, so the aspect-fit height has to be
                     // computed from the width it actually gets.
-                    width: proxy.size.width - (usesToolRail ? VideoStudioMetrics.railWidth : 0),
+                    width: proxy.size.width
+                        - (usesToolRail ? VideoStudioMetrics.railWidth : 0)
+                        - (usesInspectorColumn ? VideoStudioMetrics.inspectorColumnWidth : 0),
                     height: proxy.size.height + proxy.safeAreaInsets.top + proxy.safeAreaInsets.bottom
                 ),
                 bandHeight: bandHeight,
                 bottomInset: proxy.safeAreaInsets.bottom,
                 canvas: model.recipe.canvasSize(),
-                presentsSheet: model.presentsSheet,
+                // With the inspector in a column the stack never has to move
+                // for it, whatever is selected.
+                presentsSheet: model.presentsSheet && !usesInspectorColumn,
                 // The timeline takes what its lanes need and no more, on every
                 // width. Handing it the whole leftover drew three lanes at the
                 // top of a 330pt black field on the phone too — the surplus
@@ -239,7 +246,9 @@ struct VideoStudioScreen: View {
                     musicLanes: max(1, model.musicLaneCount)
                 ),
                 usesToolRail: usesToolRail,
-                panelMayDock: usesToolRail,
+                // The column never covers anything, so there is nothing for
+                // the stack to dock or lift out of the way of.
+                panelMayDock: usesToolRail && !usesInspectorColumn,
                 // Back, the read-out and Export move into the top band there,
                 // so the bottom band is not drawn and costs no height.
                 showsBottomBar: !usesToolRail
@@ -299,11 +308,21 @@ struct VideoStudioScreen: View {
                         }
                         Color.clear.frame(height: proxy.safeAreaInsets.bottom)
                     }
+
+                    if usesInspectorColumn {
+                        VideoStudioSheetHost(model: model, actions: actions(model), layout: .column)
+                            .frame(width: VideoStudioMetrics.inspectorColumnWidth)
+                            .padding(.top, bandHeight)
+                            .padding(.bottom, proxy.safeAreaInsets.bottom)
+                            .overlay(alignment: .leading) {
+                                Rectangle().fill(EditorTheme.panelDivider).frame(width: 1)
+                            }
+                    }
                 }
 
                 // The panel slides over the bars; the layout underneath never
                 // moves, so the timeline stays exactly where the user left it.
-                if model.presentsSheet, layout.dockedPanel == 0 {
+                if model.presentsSheet, layout.dockedPanel == 0, !usesInspectorColumn {
                     contextPanel(model, height: panelHeight)
                         .transition(.move(edge: .bottom))
                         // The rail is the one piece of chrome that must stay

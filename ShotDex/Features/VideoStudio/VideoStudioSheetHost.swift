@@ -22,10 +22,35 @@ struct VideoInspectorActions {
 /// re-presenting. With nothing selected the sheet carries a project-wide tool
 /// instead (ratio, filter, adjustments, master volume, background).
 struct VideoStudioSheetHost: View {
+    /// The same contents in the two shapes the window can give them.
+    enum Layout {
+        /// Full width, fixed tiers: the phone's band, and the panel docked
+        /// under the timeline on a portrait tablet.
+        case band
+        /// A narrow column beside the stage, as Final Cut, LumaFusion and
+        /// Resolve all put their inspector on a wide screen. Nothing is a
+        /// fixed height here — a column is read top to bottom and scrolls.
+        case column
+    }
+
     @Bindable var model: VideoStudioModel
     let actions: VideoInspectorActions
+    var layout: Layout = .band
 
     var body: some View {
+        Group {
+            switch layout {
+            case .band: bandBody
+            case .column: columnBody
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(EditorTheme.panelSolid)
+        .animation(EditorTheme.animation, value: model.inspectorTarget)
+        .animation(EditorTheme.animation, value: model.activeGlobalTool)
+    }
+
+    private var bandBody: some View {
         VStack(spacing: 0) {
             titleRow
                 .frame(height: VideoStudioMetrics.sheetTitleHeight)
@@ -37,10 +62,25 @@ struct VideoStudioSheetHost: View {
             }
             Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(EditorTheme.panelSolid)
-        .animation(EditorTheme.animation, value: model.inspectorTarget)
-        .animation(EditorTheme.animation, value: model.activeGlobalTool)
+    }
+
+    private var columnBody: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                titleRow
+                    .frame(minHeight: VideoStudioMetrics.sheetTitleHeight)
+                    .padding(.top, 10)
+                    .overlay(alignment: .bottom) { Rectangle().fill(EditorTheme.panelDivider).frame(height: 1) }
+                paramZone
+                    .padding(.top, 10)
+                if !commands.isEmpty {
+                    VideoCommandBand(commands: commands, wraps: true)
+                        .padding(.top, 10)
+                }
+            }
+            .padding(.bottom, 16)
+        }
+        .scrollBounceBehavior(.basedOnSize)
     }
 
     // MARK: Title row
