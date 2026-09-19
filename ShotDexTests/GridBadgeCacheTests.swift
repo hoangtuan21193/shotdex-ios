@@ -119,6 +119,32 @@ struct GridBadgeCacheTests {
         #expect(cache.cachedEntry(for: "a2") == nil)
     }
 
+    /// A scroll through a 55k library during the first index run reaches
+    /// every tile, and every answer is final once the row is indexed. Without
+    /// a bound the cache would hold one entry per photo for the life of the
+    /// screen.
+    @Test func theCacheStopsGrowingAtItsCapacity() {
+        let cache = GridBadgeCache()
+        for index in 0..<(GridBadgeCache.capacity + 500) {
+            let id = "a\(index)"
+            cache.record(makeRow(assetId: id, status: .indexed), assetId: id)
+        }
+        #expect(cache.count <= GridBadgeCache.capacity)
+        #expect(cache.count > GridBadgeCache.capacity / 2, "eviction drops half, not everything")
+        // The tiles the user is actually looking at are the newest ones.
+        let newest = "a\(GridBadgeCache.capacity + 499)"
+        #expect(cache.cachedEntry(for: newest) != nil)
+    }
+
+    /// Re-recording an id it already holds must not queue it for eviction a
+    /// second time, or the order list outgrows the dictionary it indexes.
+    @Test func recordingTheSameIdTwiceDoesNotDoubleCount() {
+        let cache = GridBadgeCache()
+        cache.record(makeRow(assetId: "a1", status: .indexed), assetId: "a1")
+        cache.record(makeRow(assetId: "a1", iso: 400, status: .indexed), assetId: "a1")
+        #expect(cache.count == 1)
+    }
+
     @Test func fileTypeBadgeNormalizesCommonPhotoAndVideoFormats() {
         func item(filename: String?, mediaType: Int = 1) -> LibraryGridItem {
             LibraryGridItem(
