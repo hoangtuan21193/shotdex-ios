@@ -1,5 +1,6 @@
 import Foundation
 import GRDB
+import Observation
 
 /// Picks, rejects and star ratings — the culling pass that happens before any
 /// editing.
@@ -12,11 +13,38 @@ import GRDB
 /// deletes the row rather than storing zeroes, so `SELECT COUNT(*)` on this
 /// table answers "how much of this library has been culled".
 @MainActor
+@Observable
 final class CullStore {
-    private let database: AppDatabase
+    /// Every culled photo, by asset id, held in memory.
+    ///
+    /// The whole table, not a window of it: a row exists only for a photo the
+    /// user has flagged or rated, so even a heavily culled library of 50k
+    /// photos is a few thousand entries of three fields. Grids read this
+    /// rather than querying per tile — a badge that costs a database round
+    /// trip per cell is a badge that drops frames while scrolling.
+    private(set) var states: [String: PhotoCullState] = [:]
+    /// Bumped on every write, so a view that cannot diff a dictionary cheaply
+    /// (the UIKit grid) still knows when to re-render its tiles.
+    private(set) var version = 0
+
+    @ObservationIgnored private let database: AppDatabase
 
     init(database: AppDatabase) {
         self.database = database
+        reloadAll()
+    }
+
+    /// Reads the whole table into `states`. Called at launch and after the
+    /// indexer's prune, which is the only writer other than this store.
+    func reloadAll() {
+        let rows = (try? database.reader.read { db in
+            try Row.fetchAll(db, sql: "SELECT assetId, rating, flag FROM photo_cull")
+        }) ?? []
+        states = Dictionary(uniqueKeysWithValues: rows.map { row in
+            let state = Self.state(from: row)
+            return (state.assetId, state)
+        })
+        version &+= 1
     }
 
     func state(assetId: String) throws -> PhotoCullState {
@@ -66,6 +94,10 @@ final class CullStore {
     /// prunes metadata.
     func deleteAssets(ids: [String]) throws {
         guard !ids.isEmpty else { return }
+        defer {
+            for id in ids { states.removeValue(forKey: id) }
+            version &+= 1
+        }
         try database.writer.write { db in
             let placeholders = databaseQuestionMarks(count: ids.count)
             try db.execute(
@@ -78,10 +110,15 @@ final class CullStore {
     private func update(ids: [String], _ change: (inout PhotoCullState) -> Void) throws {
         guard !ids.isEmpty else { return }
         let now = Int(Date().timeIntervalSince1970)
+        var written: [String: PhotoCullState] = [:]
+        // The cache is updated only after the write commits: a failed write
+        // must not leave a badge on a photo the database does not agree about.
+        defer { applyToCache(written) }
         try database.writer.write { db in
             for id in ids {
                 var state = try Self.row(db, assetId: id) ?? PhotoCullState(assetId: id)
                 change(&state)
+                written[id] = state
                 if state.isEmpty {
                     try db.execute(
                         sql: "DELETE FROM photo_cull WHERE assetId = ?",
@@ -99,6 +136,18 @@ final class CullStore {
                 }
             }
         }
+    }
+
+    private func applyToCache(_ written: [String: PhotoCullState]) {
+        guard !written.isEmpty else { return }
+        for (id, state) in written {
+            if state.isEmpty {
+                states.removeValue(forKey: id)
+            } else {
+                states[id] = state
+            }
+        }
+        version &+= 1
     }
 
     private static func row(_ db: Database, assetId: String) throws -> PhotoCullState? {

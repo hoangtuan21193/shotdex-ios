@@ -186,6 +186,8 @@ struct AlbumDetailScreen: View {
             isSelecting: isSelecting,
             selectedIds: selectedIds,
             bottomInset: isSelecting ? navigation.selectionGridInset : bottomChromeInset,
+            cullStates: dependencies.cullStore.states,
+            cullVersion: dependencies.cullStore.version,
             photoLibrary: photoLibrary,
             onTap: { _, metadata in
                 if isSelecting {

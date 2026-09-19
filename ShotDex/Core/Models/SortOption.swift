@@ -16,6 +16,8 @@ enum SortOption: String, CaseIterable, Identifiable, Codable, Sendable {
     case apertureDescending
     case shutterSpeedFastest
     case shutterSpeedSlowest
+    case ratingHighest
+    case ratingLowest
 
     var id: String { rawValue }
 
@@ -45,6 +47,7 @@ enum SortOption: String, CaseIterable, Identifiable, Codable, Sendable {
     /// the enum (queries and smart albums still use them) but not in the menu.
     static let menuOrders: [SortOption] = [
         .dateTakenNewest, .dateTakenOldest, .dateModifiedNewest, .dateModifiedOldest,
+        .ratingHighest, .ratingLowest,
     ]
 
     var displayName: String {
@@ -63,6 +66,8 @@ enum SortOption: String, CaseIterable, Identifiable, Codable, Sendable {
         case .apertureDescending: "Aperture (Narrow to Wide)"
         case .shutterSpeedFastest: "Shutter Speed (Fastest)"
         case .shutterSpeedSlowest: "Shutter Speed (Slowest)"
+        case .ratingHighest: "Rating (High to Low)"
+        case .ratingLowest: "Rating (Low to High)"
         }
     }
 
