@@ -173,42 +173,19 @@ struct SelectionToolbarItems: ToolbarContent {
                     .disabled(model.selectionCount < CompareScreen.minPhotoCount)
             }
         }
+        // Edit sits beside Compare rather than inside ⋯: those two are what
+        // a selection is usually made *for*, and a menu is a place to look
+        // for the things that are not.
+        ToolbarItem(placement: .topBarLeading) {
+            if let onEdit = model.onEdit {
+                Button("Edit", action: onEdit)
+                    .tint(.primary)
+                    .disabled(model.imageSelectionCount < 1)
+            }
+        }
         ToolbarItem(placement: .topBarTrailing) {
             if hasMenu {
                 Menu {
-                    if let onEdit = model.onEdit {
-                        Button(action: onEdit) {
-                            Label("Edit", systemImage: "slider.horizontal.3")
-                        }
-                        .disabled(model.imageSelectionCount < 1)
-                    }
-                    if let onFlag = model.onFlag {
-                        Section("Cull") {
-                            ForEach(PhotoFlag.allCases) { flag in
-                                Button {
-                                    onFlag(flag)
-                                } label: {
-                                    Label(flag.title, systemImage: flag.systemImage)
-                                }
-                            }
-                            if let onRate = model.onRate {
-                                Menu("Rating") {
-                                    // Highest first: a menu is read top-down and
-                                    // five stars is the one being reached for.
-                                    ForEach(Array(PhotoCullState.ratingRange).reversed(), id: \.self) { rating in
-                                        Button {
-                                            onRate(rating)
-                                        } label: {
-                                            Label(
-                                                rating == 0 ? "No Rating" : String(repeating: "★", count: rating),
-                                                systemImage: rating == 0 ? "star.slash" : "star.fill"
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
                     if let onPasteEdits = model.onPasteEdits {
                         Button(action: onPasteEdits) {
                             Label("Paste Edits", systemImage: "doc.on.clipboard")

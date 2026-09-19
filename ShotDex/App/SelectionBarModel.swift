@@ -61,9 +61,6 @@ struct SelectionBarModel {
     var onPasteEdits: (() -> Void)? = nil
     /// Combines the selection into one photo — multiple exposure, focus stack.
     var onCombine: (() -> Void)? = nil
-    /// Culling: pick, reject, unflag, and a star rating for the selection.
-    var onFlag: ((PhotoFlag) -> Void)? = nil
-    var onRate: ((Int) -> Void)? = nil
     /// Trailing standalone button — delete the selection (confirmed by PhotoKit).
     var onDelete: () -> Void
 

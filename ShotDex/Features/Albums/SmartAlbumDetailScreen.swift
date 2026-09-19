@@ -431,9 +431,20 @@ struct SmartAlbumDetailScreen: View {
         Task {
             defer { isDuplicating = false }
             do {
-                _ = try await photoLibrary.duplicateAssets(assets)
+                let created = try await photoLibrary.duplicateAssets(assets)
                 photoLibrary.publishAppCreatedAsset()
-                withAnimation { stopSelecting() }
+                // The selection stays: duplicating is a step in the middle of
+                // a job (copy these, then add the copies to an album, or edit
+                // them), and dropping out of selection mode makes the user
+                // pick the same photos again to do the next thing.
+                //
+                // A copy is made resource by resource, and a resource that
+                // cannot be written is skipped rather than throwing — so
+                // "nothing was copied" arrives here as a zero, not an error,
+                // and has to be said out loud or the command looks ignored.
+                if created == 0 {
+                    actionErrorMessage = "Those photos couldn't be copied."
+                }
             } catch {
                 actionErrorMessage = error.localizedDescription
             }

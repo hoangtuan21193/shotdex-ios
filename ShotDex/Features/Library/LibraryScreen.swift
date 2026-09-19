@@ -41,7 +41,6 @@ struct LibraryScreen: View {
     @State private var pasteEditsPresentation: PasteEditsPresentation?
     @State private var stackPresentation: PhotoStackPresentation?
     /// Bumped on every culling write so the grid re-reads its badges.
-    @State private var cullGeneration = 0
     /// Measured height of the limited-access banner plus the filter-token bar,
     /// handed to the grid as its top content inset (see `photoGrid`).
     @State private var topAccessoryHeight: CGFloat = 0
@@ -255,15 +254,6 @@ struct LibraryScreen: View {
     /// Runs a culling write and surfaces a failure the same way the other
     /// selection actions do. Culling is the one thing here the user typed, so a
     /// silent failure would lose work with no trace.
-    private func applyCull(_ write: () throws -> Void) {
-        do {
-            try write()
-            cullGeneration &+= 1
-        } catch {
-            actionErrorMessage = error.localizedDescription
-        }
-    }
-
     /// Writes the copied look onto every selected photo without opening the
     /// editor: cull to the keepers, paste, done. The clipboard persists across
     /// launches, so yesterday's look is still there.
@@ -540,8 +530,6 @@ struct LibraryScreen: View {
                 ? { pasteEditsToSelection(model) }
                 : nil,
             onCombine: { presentStack(model) },
-            onFlag: { flag in applyCull { try dependencies.cullStore.setFlag(flag, ids: selectedIds) } },
-            onRate: { rating in applyCull { try dependencies.cullStore.setRating(rating, ids: selectedIds) } },
             onDelete: { deleteSelected(model) },
             onAddToCollection: { addToCollection() },
             onExportEXIF: { exportEXIF(model) },
@@ -641,9 +629,20 @@ struct LibraryScreen: View {
         Task {
             defer { isDuplicating = false }
             do {
-                _ = try await photoLibrary.duplicateAssets(assets)
+                let created = try await photoLibrary.duplicateAssets(assets)
                 photoLibrary.publishAppCreatedAsset()
-                withAnimation { stopSelecting() }
+                // The selection stays: duplicating is a step in the middle of
+                // a job (copy these, then add the copies to an album, or edit
+                // them), and dropping out of selection mode makes the user
+                // pick the same photos again to do the next thing.
+                //
+                // A copy is made resource by resource, and a resource that
+                // cannot be written is skipped rather than throwing — so
+                // "nothing was copied" arrives here as a zero, not an error,
+                // and has to be said out loud or the command looks ignored.
+                if created == 0 {
+                    actionErrorMessage = "Those photos couldn't be copied."
+                }
             } catch {
                 actionErrorMessage = error.localizedDescription
             }
