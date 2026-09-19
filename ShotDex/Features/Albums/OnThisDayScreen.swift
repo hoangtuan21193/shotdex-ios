@@ -198,7 +198,7 @@ struct OnThisDayScreen: View {
             isVideo: isVideo,
             actions: actions,
             onShare: { actions.share(ids: [assetId]) },
-            onAddToAlbum: { actions.presentAddToAlbum(ids: [assetId]) },
+            onAddToCollection: { actions.presentAddToCollection(ids: [assetId]) },
             onDuplicate: { actions.duplicate(ids: [assetId]) },
             onDelete: { actions.delete(ids: [assetId]) }
         )

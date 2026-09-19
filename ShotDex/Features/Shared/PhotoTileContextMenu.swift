@@ -19,7 +19,7 @@ struct PhotoTileContextMenu {
     let actions: AssetActionsCoordinator
 
     var onShare: () -> Void
-    var onAddToAlbum: () -> Void
+    var onAddToCollection: () -> Void
     var onDuplicate: () -> Void
     var onDelete: () -> Void
     var onEdit: (() -> Void)?
@@ -65,9 +65,9 @@ struct PhotoTileContextMenu {
 
         let organise: [UIMenuElement] = [
             UIAction(
-                title: "Add to Album",
+                title: "Add to Collection",
                 image: UIImage(systemName: "rectangle.stack.badge.plus")
-            ) { _ in onAddToAlbum() },
+            ) { _ in onAddToCollection() },
             UIAction(
                 title: "Duplicate",
                 image: UIImage(systemName: "plus.square.on.square")

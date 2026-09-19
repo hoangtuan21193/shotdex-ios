@@ -174,7 +174,7 @@ enum AssetMetadataReader {
         if asset.mediaType == .video {
             pairs.append(("Duration", MetadataFormatter.duration(asset.duration)))
         }
-        return section("Asset", from: pairs)
+        return section("Photo", from: pairs)
     }
 
     private static func resolvedLocation(

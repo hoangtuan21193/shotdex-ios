@@ -225,6 +225,24 @@ struct CullFilterTests {
         ))
     }
 
+    /// Deleting a photo has to take its cull row with it. Every screen calls
+    /// `MetadataStore.deleteAssets`, and none of them called the cull store's
+    /// own prune — so rate, reject, delete left a row behind forever and the
+    /// "how much of this library is culled" count kept counting it.
+    @Test func deletingAPhotoPrunesItsCullRow() throws {
+        let database = try AppDatabase.makeEmpty()
+        let metadataStore = MetadataStore(database: database)
+        try metadataStore.saveBatch([makeRecord(assetId: "gone", creation: 1)], cursorAssetId: nil)
+        let cullStore = CullStore(database: database)
+        try cullStore.setRating(4, ids: ["gone"])
+        #expect(try cullStore.culledCount() == 1)
+
+        try metadataStore.deleteAssets(ids: ["gone"])
+
+        #expect(try cullStore.culledCount() == 0)
+        #expect(try cullStore.state(assetId: "gone").isEmpty)
+    }
+
     /// Criteria round-trip through JSON, because smart albums store them.
     @Test func cullCriteriaSurviveEncoding() throws {
         var criteria = FilterCriteria()

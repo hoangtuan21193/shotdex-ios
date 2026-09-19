@@ -39,3 +39,32 @@ Sources: `hig-components` (two passes), `device-layout` (iPhone 17 + iPad Pro 13
 
 - Photo editor on iPad — `device-layout` found no layout problem: the sidebar (`EditorLayoutMetrics.sidebarMinCanvasWidth` 700, width clamped 280…420) is the model the other two tools should follow. spec §10.3 already documents it.
 - 40pt icons in the viewer's action bar — DESIGN §6 records the exception.
+
+
+---
+
+# Sweep 2 — whole app, then editor + Video Studio (2026-09-19)
+
+Agents: `copy-consistency`, `data-migration` (done) · `component-consistency`, `perf-profiler`, `device-layout`, `a11y-voiceover`, `ux-reviewer`, `challenger` (running).
+
+## Blockers
+
+- [x] `Features/Shared/PhotoTileContextMenu.swift:68` + `AddToCollectionSheet.swift:91` — "Add to Album" survived the rename in the tile menu and in the sheet's own error alert, so the same sheet had two names _(copy-consistency)_
+
+## Should fix
+
+- [x] `Data/Database/MetadataStore.swift:113` — `photo_cull` was never pruned: eight deletion paths all call `deleteAssets`, none called the cull store's own prune, so rate → reject → delete left the row and `culledCount()` counted it forever _(data-migration)_
+- [x] `Features/Settings/SettingsScreen.swift` — "on the next index run": `IndexPipeline`'s vocabulary on a user-facing alert _(copy-consistency)_
+- [x] `Data/Sources/AssetMetadataReader.swift` — Info panel section called "Asset" beside "Camera & Lens", "Exposure", "File" _(copy-consistency)_
+- [ ] `Features/Editing/PhotoEditorScreen.swift:165,2146,2153,2215` — four user-facing strings say "asset" instead of "photo", one of them in an alert _(copy-consistency)_ — deferred while the editor agents are still reading the file
+
+## Nits
+
+- [ ] `Data/Sources/AssetMetadataReader.swift:210` — "Resource 1 / Resource 2" in the Info panel for what a photographer calls the RAW and the JPEG _(copy-consistency)_
+- [ ] `Features/Import/ImportScreen.swift:381` — the import picker says "Add to Album"; its list really is PhotoKit albums, so this may be correct as-is _(copy-consistency)_
+
+## Closed by spec.md
+
+- Compress → Resize: swept and complete everywhere, including the presets screen and spec _(copy-consistency)_
+- Migrations v1–v14: clean, additive, never edited after shipping; Clear Index deliberately leaves `photo_cull` alone because asset ids are stable and the culling is user input _(data-migration)_
+- `LookPresetStore` and `CollectionPinStore` belong in UserDefaults, not the database: neither is keyed by asset id nor touched by the indexer's row-replace _(data-migration)_

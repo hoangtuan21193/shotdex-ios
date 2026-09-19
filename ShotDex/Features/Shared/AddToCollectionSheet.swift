@@ -88,7 +88,7 @@ struct AddToCollectionSheet: View {
                 Text("These \(assets.count) \(assets.count == 1 ? "item" : "items") will be added to the new album.")
             }
             .alert(
-                "Couldn't Add to Album",
+                "Couldn't Add to Collection",
                 isPresented: Binding(
                     get: { errorMessage != nil },
                     set: { if !$0 { errorMessage = nil } }

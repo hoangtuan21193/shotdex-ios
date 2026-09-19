@@ -692,7 +692,7 @@ struct PhotoDetailScreen: View {
         Menu {
             Section {
                 Button {
-                    actions.presentAddToAlbum(ids: [id])
+                    actions.presentAddToCollection(ids: [id])
                 } label: {
                     Label("Add to Collection", systemImage: "rectangle.stack.badge.plus")
                 }

@@ -595,7 +595,7 @@ private extension View {
                 Button("Cancel", role: .cancel) {}
                 Button("Clear Index", role: .destructive, action: onClearIndex)
             } message: {
-                Text("Your photos are not affected. ShotDex reads the camera and exposure data again on the next index run.")
+                Text("Your photos are not affected. ShotDex reads the camera and exposure data again the next time it scans your library.")
             }
             .alert("Reset all custom camera mappings?", isPresented: resetMappings) {
                 Button("Cancel", role: .cancel) {}

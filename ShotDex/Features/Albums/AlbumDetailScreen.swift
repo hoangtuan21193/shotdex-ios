@@ -414,7 +414,7 @@ struct AlbumDetailScreen: View {
             isVideo: isVideo,
             actions: actions,
             onShare: { actions.share(ids: [assetId]) },
-            onAddToAlbum: { actions.presentAddToAlbum(ids: [assetId]) },
+            onAddToCollection: { actions.presentAddToCollection(ids: [assetId]) },
             onDuplicate: { actions.duplicate(ids: [assetId]) },
             onDelete: {
                 Task { try? await model.deleteAssets(ids: [assetId]) }

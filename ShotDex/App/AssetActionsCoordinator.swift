@@ -54,7 +54,7 @@ final class AssetActionsCoordinator {
     var locationRequest: LocationRequest?
     /// Album picker raised from a tile's context menu. The selection bar keeps
     /// its own copy because it also has to leave selection mode afterwards.
-    var addToAlbumRequest: AddToCollectionPresentation?
+    var addToCollectionRequest: AddToCollectionPresentation?
     var errorMessage: String?
     /// Short confirmation for actions with no visible result of their own
     /// (Copy, Hide). Cleared by the host after it fades.
@@ -136,10 +136,10 @@ final class AssetActionsCoordinator {
         dateRequest = DateRequest(assets: assets)
     }
 
-    func presentAddToAlbum(ids: [String]) {
+    func presentAddToCollection(ids: [String]) {
         let assets = PhotoLibraryService.fetchAssets(ids: ids)
         guard !assets.isEmpty else { return }
-        addToAlbumRequest = AddToCollectionPresentation(assets: assets)
+        addToCollectionRequest = AddToCollectionPresentation(assets: assets)
     }
 
     func presentAdjustLocation(ids: [String]) {
@@ -298,7 +298,7 @@ private struct AssetActionHost: ViewModifier {
                     coordinator.applyDate(date, to: request)
                 }
             }
-            .sheet(item: $coordinator.addToAlbumRequest) { request in
+            .sheet(item: $coordinator.addToCollectionRequest) { request in
                 AddToCollectionSheet(
                     assets: request.assets,
                     photoLibrary: coordinator.photoLibrary,

@@ -165,7 +165,7 @@ struct PhotoListScreen: View {
             isVideo: model.assetsById[assetId]?.mediaType == .video,
             actions: actions,
             onShare: { actions.share(ids: [assetId]) },
-            onAddToAlbum: { actions.presentAddToAlbum(ids: [assetId]) },
+            onAddToCollection: { actions.presentAddToCollection(ids: [assetId]) },
             onDuplicate: { actions.duplicate(ids: [assetId]) },
             onDelete: {
                 Task { try? await model.deleteAssets(ids: [assetId]) }
