@@ -81,4 +81,5 @@ Layered, composition root at `ShotDex/App/AppDependencies.swift` — built once 
   - `design-reviewer` — `DESIGN.md` compliance: invented constants, tier confusion, glass entry points, accent use, geometry tokens.
   - `challenger` — argues against a change: why this way, what it costs in screen space, what it breaks, what a photographer actually gets, and whether it is overthinking. Run it on anything that sounds obviously right.
   - `prior-art` — the fix side: given a finding, says how Photos, Lightroom, Halide, Darkroom, CapCut or Procreate solved the same thing and proposes the change with numbers, the tier it lands in and what it costs.
+  - `video-nle-survey` — how the video editors people use (CapCut, LumaFusion, Final Cut for iPad, iMovie, Resolve) lay out a **tablet and a dual-screen device**, turned into a layout and interaction spec in points for one ShotDex screen. Use it when a timeline-shaped surface needs designing for iPad, Split View or the Duo; use `prior-art` when a single control needs a number.
   - `lightroom-parity` — what Lightroom does today that ShotDex should do next, with feasibility on iOS and where the work would live.

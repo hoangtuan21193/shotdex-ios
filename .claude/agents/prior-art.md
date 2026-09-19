@@ -39,6 +39,11 @@ Alternative considered and rejected: <one, with the reason>
 
 ## Not your job
 
+- **A whole screen's tablet layout → `video-nle-survey`** for anything
+  timeline-shaped. You answer "here is one finding, how did another app solve
+  it"; they answer "here is a screen, how would a tablet video editor have
+  built it".
+
 - Deciding *whether* to fix it → `challenger`.
 - Finding the problem in the first place → the review agents.
 - A feature roadmap → `lightroom-parity`. You answer a problem in hand; they answer what to build next.
