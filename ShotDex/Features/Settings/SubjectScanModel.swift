@@ -47,10 +47,13 @@ final class SubjectScanModel {
         progress = SubjectScanProgress(processed: 0, total: 0)
         let pipeline = pipeline
         let allowNetwork = allowNetwork()
+        // Captures `self` weakly once, outside the task, rather than reading
+        // the task's captured `self` from the pipeline's concurrency domain.
+        let report: @Sendable (SubjectScanProgress) -> Void = { [weak self] update in
+            Task { @MainActor in self?.progress = update }
+        }
         task = Task { [weak self] in
-            _ = await pipeline.run(allowNetwork: allowNetwork) { update in
-                Task { @MainActor [weak self] in self?.progress = update }
-            }
+            _ = await pipeline.run(allowNetwork: allowNetwork, onProgress: report)
             await MainActor.run {
                 guard let self else { return }
                 self.task = nil

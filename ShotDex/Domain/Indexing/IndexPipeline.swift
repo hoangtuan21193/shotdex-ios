@@ -1101,13 +1101,19 @@ actor IndexPipeline {
                 }
                 let composeTime = clock.now - mark
 
+                // Copied into lets before the lock: the closure is
+                // `@Sendable` and these are mutable locals of an async
+                // function, which Swift 6 rejects outright. The values are
+                // final by here, so a snapshot is the honest spelling.
+                let exifDuration = exifTime
+                let didReadExif = hasReadExif
                 timings.withLock {
                     $0.resources += resourcesTime
                     $0.fileSize += fileSizeTime
-                    $0.exif += exifTime
+                    $0.exif += exifDuration
                     $0.compose += composeTime
                     $0.assets += 1
-                    if hasReadExif { $0.exifReads += 1 }
+                    if didReadExif { $0.exifReads += 1 }
                 }
                 return item
             }
@@ -1145,13 +1151,17 @@ actor IndexPipeline {
                 completed += 1
                 if item.outcome == .indexed { doneCount += 1 }
                 if let onAssetProcessed {
+                    // Same reason as the timings above: the loop's counters are
+                    // mutable locals, so the lock body reads a snapshot.
+                    let doneSoFar = doneCount
+                    let completedSoFar = completed
                     let payload = progressState.withLock { state -> (Int, [String])? in
-                        state.done = doneCount
+                        state.done = doneSoFar
                         if let filename = item.filename,
                            let position = state.active.firstIndex(of: filename) {
                             state.active.remove(at: position)
                         }
-                        guard completed < assets.count else { return nil }
+                        guard completedSoFar < assets.count else { return nil }
                         guard progressClock.now - state.lastEmit >= .milliseconds(200) else { return nil }
                         state.lastEmit = progressClock.now
                         // Report `done` (assets that actually finished a read),

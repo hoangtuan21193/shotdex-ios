@@ -187,15 +187,19 @@ final class DuplicatesModel {
         let pipeline = dependencies.duplicateScanPipeline
         let allowNetwork = allowNetworkForScanning
         phase = .scanning(DuplicateScanProgress(processed: 0, total: 0))
+        // Built outside the task, so it captures `self` weakly once instead of
+        // reading the task's own captured `self` from another concurrency
+        // domain every time the pipeline reports — which Swift 6 rejects.
+        let report: @Sendable (DuplicateScanProgress) -> Void = { [weak self] progress in
+            Task { @MainActor in
+                guard let self, self.isScanning else { return }
+                self.phase = .scanning(progress)
+            }
+        }
         scanTask = Task { [weak self] in
             defer { self?.scanTask = nil }
             do {
-                let summary = try await pipeline.run(allowNetwork: allowNetwork) { progress in
-                    Task { @MainActor [weak self] in
-                        guard let self, self.isScanning else { return }
-                        self.phase = .scanning(progress)
-                    }
-                }
+                let summary = try await pipeline.run(allowNetwork: allowNetwork, onProgress: report)
                 guard let self else { return }
                 if summary.didNotStart {
                     self.phase = .idle
