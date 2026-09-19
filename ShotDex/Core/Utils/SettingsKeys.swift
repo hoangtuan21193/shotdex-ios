@@ -16,6 +16,11 @@ enum SettingsKeys {
     /// they want tomorrow.
     static let librarySort = "grid.sort"
 
+    /// Photos' aspect-ratio grid: tiles keep each photo's shape and rows are
+    /// justified to the width. Defaults to false — the square grid is what
+    /// every photo app opens on, and the shape grid is a deliberate choice.
+    static let aspectRatioGrid = "grid.aspectTiles"
+
     /// Show the compact RAW/JPG/HEIC/MOV-style badge at the top-leading corner
     /// of every grid thumbnail. Defaults to true.
     static let showFileTypeBadge = "display.showFileType"

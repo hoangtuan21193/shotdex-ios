@@ -76,6 +76,24 @@ final class PhotoGridLayout: UICollectionViewLayout {
     /// Called once per photo per width change, never per frame.
     var oneColumnHeight: ((_ flatIndex: Int, _ width: CGFloat) -> CGFloat)?
 
+    /// Width ÷ height of a photo, for the aspect-ratio grid. Same contract as
+    /// `oneColumnHeight`: read once per photo per level, never per frame.
+    var aspectRatio: ((_ flatIndex: Int) -> CGFloat)?
+
+    /// Photos' aspect-ratio grid: rows of frames at their own shape, each row
+    /// filling the width. Off is the square grid.
+    ///
+    /// Only above one column — one column is already the photo's own shape,
+    /// full width, and justifying it would put two portraits side by side in
+    /// what the user asked to be a one-up view.
+    var showsAspectTiles = false {
+        didSet {
+            guard showsAspectTiles != oldValue else { return }
+            dropLevels()
+            invalidateLayout()
+        }
+    }
+
     // MARK: Zoom state
 
     /// The committed column count. Equal to both ends of the blend when no
@@ -138,9 +156,32 @@ final class PhotoGridLayout: UICollectionViewLayout {
         /// Per section at one column: cumulative row offsets, `count + 1`
         /// entries, `nil` at every other count (rows are uniform there).
         let rowOffsets: [[CGFloat]]?
+        /// Per section, the justified rows of the aspect grid. Nil for the
+        /// square grid, which needs no per-item storage at all.
+        let aspect: [AspectSection]?
         let contentHeight: CGFloat
 
         var rowStride: CGFloat { side + PhotoGridLayout.spacing }
+    }
+
+    /// One section's justified rows, flattened into arrays the frame lookup
+    /// can index directly.
+    ///
+    /// Three small arrays rather than one `[CGRect]` per item: a library of
+    /// 55k photos costs about 1 MB this way and three times that as rects,
+    /// and the layout caches a level per column count.
+    private struct AspectSection {
+        /// `rows.count + 1` cumulative tops, so a row's height is the
+        /// difference and the last entry is the section's item height.
+        var rowTops: [CGFloat]
+        var rowHeights: [CGFloat]
+        /// First item of each row, `rows.count + 1` entries, so a row's items
+        /// are a range and the visible query never walks the section.
+        var rowStart: [Int]
+        /// Which row each item is in, and where it sits across that row.
+        var itemRow: [Int32]
+        var itemX: [CGFloat]
+        var itemWidth: [CGFloat]
     }
 
     private var levels: [Int: Level] = [:]
@@ -180,11 +221,15 @@ final class PhotoGridLayout: UICollectionViewLayout {
             stride = width
         }
         let usesAspect = columns == 1 && oneColumnHeight != nil
+        // The aspect grid is the justified layout; one column keeps its own
+        // full-width path above.
+        let usesJustified = showsAspectTiles && columns > 1 && aspectRatio != nil
 
         var sectionTops: [CGFloat] = []
         var itemTops: [CGFloat] = []
         var sectionHeights: [CGFloat] = []
         var rowOffsets: [[CGFloat]]? = usesAspect ? [] : nil
+        var aspectSections: [AspectSection]? = usesJustified ? [] : nil
         var y: CGFloat = 0
         var flat = 0
         for (index, section) in sections.enumerated() {
@@ -193,7 +238,17 @@ final class PhotoGridLayout: UICollectionViewLayout {
             let itemsTop = y + header
             itemTops.append(itemsTop)
             var itemsHeight: CGFloat = 0
-            if usesAspect, let heightFor = oneColumnHeight {
+            if usesJustified, let ratioFor = aspectRatio {
+                let built = buildAspectSection(
+                    itemCount: section.itemCount,
+                    flatStart: flat,
+                    width: width,
+                    targetHeight: side,
+                    ratioFor: ratioFor
+                )
+                itemsHeight = built.rowTops.last ?? 0
+                aspectSections?.append(built)
+            } else if usesAspect, let heightFor = oneColumnHeight {
                 var offsets: [CGFloat] = [0]
                 offsets.reserveCapacity(section.itemCount + 1)
                 var running: CGFloat = 0
@@ -222,12 +277,87 @@ final class PhotoGridLayout: UICollectionViewLayout {
             sectionTops: sectionTops,
             sectionHeights: sectionHeights,
             rowOffsets: rowOffsets,
+            aspect: aspectSections,
             contentHeight: y
+        )
+    }
+
+    /// Justified rows for one section, pre-flattened for O(1) frame lookup.
+    private func buildAspectSection(
+        itemCount: Int,
+        flatStart: Int,
+        width: CGFloat,
+        targetHeight: CGFloat,
+        ratioFor: (Int) -> CGFloat
+    ) -> AspectSection {
+        guard itemCount > 0 else {
+            return AspectSection(
+                rowTops: [0], rowHeights: [], rowStart: [0],
+                itemRow: [], itemX: [], itemWidth: []
+            )
+        }
+        var ratios: [CGFloat] = []
+        ratios.reserveCapacity(itemCount)
+        for item in 0..<itemCount {
+            ratios.append(ratioFor(flatStart + item))
+        }
+        let rows = JustifiedGridRows.rows(
+            aspectRatios: ratios,
+            width: width,
+            targetHeight: targetHeight,
+            spacing: Self.spacing
+        )
+
+        var rowTops: [CGFloat] = [0]
+        var rowHeights: [CGFloat] = []
+        var rowStart: [Int] = []
+        var itemRow = [Int32](repeating: 0, count: itemCount)
+        var itemX = [CGFloat](repeating: 0, count: itemCount)
+        var itemWidth = [CGFloat](repeating: 0, count: itemCount)
+        var y: CGFloat = 0
+        for (rowIndex, row) in rows.enumerated() {
+            rowHeights.append(row.height)
+            rowStart.append(row.range.lowerBound)
+            var x: CGFloat = 0
+            for item in row.range {
+                let itemW = JustifiedGridRows.itemWidth(
+                    aspectRatio: ratios[item],
+                    rowHeight: row.height
+                )
+                itemRow[item] = Int32(rowIndex)
+                itemX[item] = x
+                itemWidth[item] = itemW
+                x += itemW + Self.spacing
+            }
+            y += row.height + Self.spacing
+            rowTops.append(y)
+        }
+        // The trailing gap is not part of the section's height.
+        if let last = rowTops.last, !rows.isEmpty {
+            rowTops[rowTops.count - 1] = last - Self.spacing
+        }
+        rowStart.append(itemCount)
+        return AspectSection(
+            rowTops: rowTops,
+            rowHeights: rowHeights,
+            rowStart: rowStart,
+            itemRow: itemRow,
+            itemX: itemX,
+            itemWidth: itemWidth
         )
     }
 
     private func frame(section: Int, item: Int, in level: Level) -> CGRect {
         let top = level.itemTops[section]
+        if let aspect = level.aspect?[section], item < aspect.itemRow.count {
+            let row = Int(aspect.itemRow[item])
+            return CGRect(
+                x: aspect.itemX[item],
+                y: top + aspect.rowTops[row],
+                width: aspect.itemWidth[item],
+                height: aspect.rowHeights[row]
+            )
+        }
         if let offsets = level.rowOffsets?[section] {
             let y = top + offsets[item]
             let height = offsets[item + 1] - offsets[item] - Self.spacing
@@ -430,6 +560,19 @@ final class PhotoGridLayout: UICollectionViewLayout {
         var found: [IndexPath] = []
         for (section, entry) in sections.enumerated() where entry.itemCount > 0 {
             let top = level.itemTops[section]
+            if let aspect = level.aspect?[section], !aspect.rowHeights.isEmpty {
+                // Rows differ in height, so the visible band is a binary
+                // search over their tops rather than a division.
+                let firstRow = max(0, lowerBound(aspect.rowTops, value: rect.minY - top) - 1)
+                var row = firstRow
+                while row < aspect.rowHeights.count, top + aspect.rowTops[row] <= rect.maxY {
+                    for item in aspect.rowStart[row]..<aspect.rowStart[row + 1] {
+                        found.append(IndexPath(item: item, section: section))
+                    }
+                    row += 1
+                }
+                continue
+            }
             if let offsets = level.rowOffsets?[section] {
                 // One column, per-photo heights: binary search the offsets.
                 let first = lowerBound(offsets, value: rect.minY - top)

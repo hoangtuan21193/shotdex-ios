@@ -5,6 +5,8 @@ import SwiftUI
 struct LibraryScreen: View {
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(AppDependencies.self) private var dependencies
+    /// The grid's shape mode, shared with every other grid in the app.
+    @AppStorage(SettingsKeys.aspectRatioGrid) private var showsAspectTiles = false
     @Environment(AppNavigation.self) private var navigation
 
     /// Owned by RootTabView so the search sheet shares the same state.
@@ -1233,6 +1235,12 @@ struct LibraryScreen: View {
                     }
                 } label: {
                     Label("Sort By", systemImage: "arrow.up.arrow.down")
+                }
+                // Photos' aspect toggle, in the same menu as the order: both
+                // are "how the grid is laid out", not "which photos are in
+                // it", which is what the section above answers.
+                Toggle(isOn: $showsAspectTiles) {
+                    Label("Aspect Ratio Grid", systemImage: "rectangle.3.group")
                 }
             }
         } label: {

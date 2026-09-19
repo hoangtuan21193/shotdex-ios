@@ -59,6 +59,14 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
     /// Bumped when `cullStates` changes, so visible tiles re-render without
     /// the grid diffing a dictionary on every SwiftUI update.
     var cullVersion: Int = 0
+    /// Photos' aspect-ratio grid: tiles keep the photo's shape and each row
+    /// fills the width. Off is the square grid.
+    ///
+    /// Read here rather than passed in by each of the five screens that host
+    /// a grid: it is one preference about how a photo grid looks, and five
+    /// copies of the same `@AppStorage` is five chances for one of them to
+    /// miss it.
+    @AppStorage(SettingsKeys.aspectRatioGrid) private var showsAspectTiles = false
     let photoLibrary: PhotoLibraryService
     let onTap: (_ flatIndex: Int, _ item: Item) -> Void
     let onLongPress: (Item) -> Void
@@ -399,6 +407,13 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 reconfigureVisibleCells(collectionView)
             }
             if let applied = appliedCullVersion, applied != newParent.cullVersion {
+                reconfigureVisibleCells(collectionView)
+            }
+            if gridLayout?.showsAspectTiles != newParent.showsAspectTiles {
+                gridLayout?.showsAspectTiles = newParent.showsAspectTiles
+                // Cells ask for a rendition shaped like their frame, so the
+                // switch is not just a relayout.
+                collectionView.layoutIfNeeded()
                 reconfigureVisibleCells(collectionView)
             }
             appliedCullVersion = newParent.cullVersion
@@ -859,6 +874,10 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             layout.oneColumnHeight = { [weak self] flatIndex, width in
                 self?.itemSize(width: width, columns: 1, flatIndex: flatIndex).height ?? width
             }
+            layout.aspectRatio = { [weak self] flatIndex in
+                self?.photoAspectRatio(flatIndex) ?? 1
+            }
+            layout.showsAspectTiles = parent.showsAspectTiles
             return layout
         }
 
@@ -879,7 +898,25 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         /// where each cell takes the photo's own aspect ratio (full-width,
         /// natural height) — the Photos "one-up" look, scrolling vertically.
         /// Falls back to square when pixel dimensions are unknown.
+        /// Width ÷ height of a photo, or 1 until the index has measured it.
+        func photoAspectRatio(_ flatIndex: Int) -> CGFloat {
+            guard parent.photos.indices.contains(flatIndex),
+                  let pixelWidth = parent.photos[flatIndex].pixelWidth,
+                  let pixelHeight = parent.photos[flatIndex].pixelHeight,
+                  pixelWidth > 0, pixelHeight > 0
+            else { return 1 }
+            return CGFloat(pixelWidth) / CGFloat(pixelHeight)
+        }
+
         func itemSize(width: CGFloat, columns: Int, flatIndex: Int) -> CGSize {
+            // In the aspect grid a cell is as wide as its shape makes it, so
+            // the rendition has to be asked for at that shape — a square
+            // request into a wide cell comes back already cropped square.
+            if parent.showsAspectTiles, columns > 1 {
+                let side = Self.cellSize(width: width, columns: columns).height
+                let aspect = JustifiedGridRows.clamped(photoAspectRatio(flatIndex))
+                return CGSize(width: max(1, side * aspect), height: side)
+            }
             guard columns == 1 else { return Self.cellSize(width: width, columns: columns) }
             guard parent.photos.indices.contains(flatIndex),
                   let pixelWidth = parent.photos[flatIndex].pixelWidth,

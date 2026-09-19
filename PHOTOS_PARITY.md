@@ -35,7 +35,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 ## Phase B — Duyệt và xem
 
 - [~] B1 Years / Months / Days — pinch 1–3 cột = ngày, 4–6 = tháng, 7+ = năm; thanh cuộn ngày có nhãn ngày khi kéo. **Đổi 2026-09-19 theo yêu cầu**: lưới **không** chia section ngày nữa (Library/Album/Smart Album/PhotoList đều `.flat`), ngày hiện ở **title giữa top bar** và đổi theo ảnh đang ở mép trên. **Còn thiếu**: tên địa điểm kèm ngày (chờ D1 Places, `LibraryGridItem` chưa có cột place)
-- [ ] B2 Toggle lưới theo tỉ lệ gốc
+- [x] B2 Toggle lưới theo tỉ lệ gốc — **chọn bản mosaic thật (justified rows), không phải letterbox trong ô vuông** (2026-09-19). Công tắc `Aspect Ratio Grid` trong menu filter, dùng chung cho cả 5 lưới; toán ở `Domain/Grid/JustifiedGridRows` có unit test; chỉ áp từ 2 cột trở lên vì 1 cột đã là one-up theo tỉ lệ gốc. Xem spec §Library grid.
 - [x] B3 Media Types collections — section riêng trong Collections, 16 subtype (Videos, Selfies, Live, Portrait, Panorama, Time-lapse, Slo-mo, Cinematic, Bursts, Screenshots, Screen Recording, Animated, Long Exposure, RAW, Spatial); album rỗng tự ẩn như Photos
 - [~] B4 **Recently Viewed** và **Recently Shared** — app tự ghi (PhotoKit không có), section **Recents** trên tab Collections, giữ 100 mục mới nhất. **Recently Saved** đã có sẵn dưới tên Recently Added trong Smart Albums
 - [x] B5 Live Photo: badge LIVE trong viewer (bấm để phát, `PHLivePhotoView` phủ lên ảnh tĩnh nên giữ nguyên zoom/paging), badge `livephoto` trên tile, **Save as Video** trích `PHAssetResource.pairedVideo` thành clip mới
@@ -116,7 +116,6 @@ Những mục còn `[~]` khác đều đã ghi rõ phần thiếu là **không c
 ## Cần bạn quyết định
 
 - **Filmstrip dưới viewer** (mục 35): spec ghi rõ đã **cố ý bỏ** trước đây. Mình chưa thêm lại vì không biết lý do bỏ — khác với date header, cái đó bạn đã chốt là thêm lại. Muốn thêm lại không, và có cần toggle không?
-- **Lưới theo tỉ lệ gốc** (mục 3 / B2): làm đúng như Photos cần layout so le nhiều cột (mosaic), tức viết lại `GridFlowLayout`. Làm rẻ hơn thì chỉ là letterbox trong ô vuông, nhìn không giống Photos. Chọn bản nào?
 - **iPad**: đã bật và chạy được, nhưng panel Simulator cho iPad chưa được cấp quyền nên mình không bấm qua nổi màn onboarding. Cần bạn mở tay để soát bố cục từng màn.
 - **Xoá file khỏi thẻ sau khi nhập** (mục 76): chưa làm. Hiện code coi thẻ là chỉ-đọc; xoá là phá huỷ trên thiết bị ngoài nên mình không tự quyết. Muốn có không?
 - **App Group**: widget và share extension khai `group.com.hoangtuan.shotdex`. Build lên máy thật cần bật capability App Groups trên App ID (Xcode signing tự động thường tự thêm).
