@@ -25,6 +25,12 @@ Grep, do not eyeball: `grep -n "cornerRadius\|\.padding(\|frame(height:\|Color("
 
 When a screen's look can only be judged in pixels, say which screen and state you want captured rather than speculating.
 
+## Not your job
+
+- Apple's rules → `hig-components`. You enforce ShotDex's document; they enforce Apple's.
+- Whether a number is right *on an iPad* → `device-layout`.
+- Flow and wording of actions → `ux-reviewer` / `copy-consistency`.
+
 ## How to report
 
 At most twelve findings, grouped by file, most severe first:

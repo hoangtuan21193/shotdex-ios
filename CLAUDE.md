@@ -53,8 +53,13 @@ Layered, composition root at `ShotDex/App/AppDependencies.swift` — built once 
 - Code change alters behavior/architecture described in `spec.md`: update `spec.md` too, same turn.
 - **Review agents live in `.claude/agents/`** — run the one that matches the work and act on its findings rather than re-deriving them:
   - `hig-components` — standard-iOS surfaces against Apple's HIG *Components* pages (fetches the page, never quotes from memory). Toolbars, menus, sheets, alerts, pickers, lists. Tier D is exempt except for target sizes, clipped text, accessibility labels, unconfirmed destructive actions and controls that misstate their state.
-  - `device-layout` — **looks at the screen on each device it ships to** (iPhone, iPad, Duo inner and cover): builds, installs, screenshots, measures the controls it thinks are wrong. The one that catches chrome left at phone size on a 13" display.
-  - `ipad-expert` — large screens (iPad, Duo inner display): dead space, phone constants, stretched controls, size-class changes, pointer and keyboard.
+  - `device-layout` — **looks at the screen on each device it ships to** (iPhone, iPad, Duo inner and cover): builds, installs, screenshots, measures the controls it thinks are wrong. The one that catches chrome left at phone size on a 13" display. (Absorbed the old `ipad-expert`, which reviewed the same ground from source only.)
+  - `component-consistency` — one concept, two implementations: an Add button that is a `+` here and a word there, two spinners, four corner radii. Sweeps every call site rather than sampling.
+  - `copy-consistency` — user-visible strings: one action under two names, errors with no next step, jargon (`asset`, `recipe`) leaking on screen, title vs sentence case.
+  - `a11y-voiceover` — VoiceOver and Dynamic Type: labels on icon-only controls, actions swallowed by `.combine`, custom-drawn tools with no elements, text that clips at accessibility sizes.
+  - `perf-profiler` — cost per frame and per photo at 55k: per-cell queries, quadratic sweeps, unbounded caches, reload storms, oversized image requests.
+  - `photokit-guard` — PhotoKit's traps and this app's history with them: Optimize Storage proxies, change-token storms, hidden/recently-deleted being unreadable, resource writes, `.limited` access.
+  - `data-migration` — GRDB schema and stores, and the rule that keeps user data alive: the indexer rewrites whole `photo_metadata` rows, so anything the *user* typed needs its own table.
   - `ux-reviewer` — the flow: silent no-ops, recoverability, where the user is left after a bulk action, long-running work, empty states, naming drift.
   - `design-reviewer` — `DESIGN.md` compliance: invented constants, tier confusion, glass entry points, accent use, geometry tokens.
   - `challenger` — argues against a change: why this way, what it costs in screen space, what it breaks, what a photographer actually gets, and whether it is overthinking. Run it on anything that sounds obviously right.

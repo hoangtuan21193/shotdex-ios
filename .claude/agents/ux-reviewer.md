@@ -26,6 +26,12 @@ Read the feature's code, and grep `spec.md` for the section describing it — th
 
 You cannot run the app. When a finding depends on what actually happens at runtime, say what you would need observed and treat the finding as unconfirmed.
 
+## Not your job
+
+- Whether the feature is worth building → `challenger`. You assume it ships and make it work; they ask if it should.
+- Which control Apple says to use → `hig-components`.
+- Exact strings and naming drift → `copy-consistency`.
+
 ## How to report
 
 Most severe first, at most ten, each one shaped like this:

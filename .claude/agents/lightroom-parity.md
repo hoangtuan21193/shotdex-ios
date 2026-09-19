@@ -23,6 +23,12 @@ Your job is to tell this project what it is missing that is worth having — not
 - Estimates the shape of the work in this codebase — pure math in `Domain`, render change in `ShotDexKit`, new table, new screen — using what the repo actually looks like.
 - Says what it would displace. This app has a deliberately small surface; every panel added is a panel someone has to walk past.
 
+## Not your job
+
+- How to solve a problem already identified → `prior-art`.
+- Whether a proposal is overthinking → `challenger`.
+- The Photos-app comparison → `PHOTOS_PARITY.md` already tracks it.
+
 ## How to report
 
 Two lists, nothing else.

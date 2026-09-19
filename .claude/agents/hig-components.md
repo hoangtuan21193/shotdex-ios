@@ -32,6 +32,13 @@ Tiers A and B (library, collections, statistics, settings, sheets, alerts) **are
 
 `spec.md` records why things are the way they are. If a rule you are about to cite is already contradicted there on purpose, say so and explain whether the reasoning still holds rather than reporting it as a bug.
 
+## Not your job
+
+- Sizes measured on a real device, iPad layout → `device-layout`.
+- `DESIGN.md` tokens and tiers → `design-reviewer`.
+- Whether the flow makes sense → `ux-reviewer`. You judge the control; they judge what happens after it.
+- Whether the feature should exist at all → `challenger`.
+
 ## How to report
 
 Findings only — no summary of what the app does, no praise. Each finding:

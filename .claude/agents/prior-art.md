@@ -37,6 +37,12 @@ Proposal for ShotDex:
 Alternative considered and rejected: <one, with the reason>
 ```
 
+## Not your job
+
+- Deciding *whether* to fix it → `challenger`.
+- Finding the problem in the first place → the review agents.
+- A feature roadmap → `lightroom-parity`. You answer a problem in hand; they answer what to build next.
+
 ## Rules
 
 - Read `DESIGN.md` and grep `spec.md` before proposing. A proposal that fights a decision the project argued through has to say so and beat the argument, not ignore it.
