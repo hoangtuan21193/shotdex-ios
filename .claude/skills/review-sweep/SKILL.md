@@ -1,11 +1,18 @@
 ---
 name: review-sweep
-description: Runs the review agents over an area of the app, merges what they find into one ranked queue in REVIEW_QUEUE.md, then works down the queue fixing items one at a time with a build, a test run and a screenshot behind each. Use for "review the whole app and fix what's wrong", for a pre-release sweep, or to resume a queue left half-finished.
+description: Reviews AND fixes. Runs the review agents over an area, merges what they find into a ranked queue in REVIEW_QUEUE.md, then implements every blocker and should-fix itself — build, full test run and a simulator screenshot behind each one, one commit per item — and re-runs the agents at the end to prove the findings are gone. A sweep that only reports has not finished. Use for "review the whole app and fix what's wrong", pre-release sweeps, or to resume a half-finished queue.
 ---
 
 # Review sweep
 
-Turns "look at everything and fix it" into a queue that survives a session ending.
+Turns "look at everything and fix it" into a queue that survives a session ending —
+and then **empties the queue**.
+
+**This skill is not finished when the findings are written down.** Reporting is
+Phase 3 of five. The deliverable is fixed code with the tests and screenshots
+that prove it, and a queue whose blockers and should-fixes are all ticked or
+struck through with a reason. If you stop after the review, you have done a
+third of the job.
 
 ## Phase 1 — scope
 
@@ -70,9 +77,13 @@ Format:
 
 Mirror the open items into the session's todo list so progress is visible while you work.
 
-## Phase 4 — fix, one at a time
+## Phase 4 — fix, one at a time (the main phase)
 
-Work top-down. Blockers and should-fixes are applied without asking; nits are batched and applied last, in one commit.
+Work top-down and **keep going until the blockers and should-fixes are gone**.
+They are applied without asking; nits are batched and applied last in one
+commit. Do not hand the queue back half-done because it is long — if the
+session is running out, leave the queue ticked as far as it got and say exactly
+where it stopped.
 
 For each item:
 
@@ -83,14 +94,16 @@ For each item:
 5. Update `spec.md` (and `DESIGN.md` if it is a rule) in the same step.
 6. Tick the box. Commit per item, or per small group of related items, with the reasoning in the message.
 7. Run the full test suite before the last commit of the batch.
+8. Re-read the item in the queue and tick it only when the fix is *observed*, not when the code compiles.
 
 Stop and ask only when: the fix needs a product decision, it would touch more than about six files, or two findings contradict each other.
 
-## Phase 5 — close the loop
+## Phase 5 — close the loop, with proof
 
 When the queue is empty of blockers and should-fixes:
 
-- Re-run the agent that reported the most items, on the files that changed, to confirm they are actually gone.
+- **Re-run the agents that reported them**, on the files that changed, and treat any finding that comes back as not fixed. This is the step that separates "I changed the code" from "the problem is gone".
+- Run the full test suite once more, and screenshot each screen that was touched on every device the change claims to affect.
 - Leave `REVIEW_QUEUE.md` in the repo with the closed items struck through and the "Needs a decision" section intact — it is the record of what was considered.
 - Report: what was fixed, what was struck and why, what is waiting on a decision.
 
@@ -99,4 +112,5 @@ When the queue is empty of blockers and should-fixes:
 - One fix per commit where it is possible to tell them apart; the message says what the agent saw, not just what changed.
 - Never take an agent's word about runtime behaviour. If it says a control is unreachable, reach for it in the simulator first.
 - Two agents disagreeing is a finding of its own — put it under "Needs a decision" rather than picking a side quietly.
-- A sweep that fixes nothing is a fine outcome and should say which areas were swept clean.
+- A sweep that fixes nothing is a fine outcome **only** when nothing was found; say which areas were swept clean.
+- Never end a sweep with an open blocker. If one genuinely cannot be fixed here — it needs a product decision, or an API that does not exist — move it to "Needs a decision" with the reason, so the queue's blocker list is empty and the reason is on the record.

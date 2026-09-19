@@ -369,11 +369,16 @@ struct CollageCircleGlyph: View {
     var isActive: Bool = false
     var isEnabled: Bool = true
 
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    private var side: CGFloat {
+        CollageMetrics.commandButtonSize(isRegularWidth: horizontalSizeClass == .regular)
+    }
+
     var body: some View {
         Image(systemName: systemImage)
-            .font(.system(size: 15, weight: .medium))
+            .font(.system(size: horizontalSizeClass == .regular ? 18 : 15, weight: .medium))
             .foregroundStyle(glyphColor)
-            .frame(width: CollageMetrics.commandButtonSize, height: CollageMetrics.commandButtonSize)
+            .frame(width: side, height: side)
             .background(isActive ? EditorTheme.accent : Color.clear, in: Circle())
             .editorGlass(Circle())
     }

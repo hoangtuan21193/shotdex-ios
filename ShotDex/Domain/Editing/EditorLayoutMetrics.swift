@@ -135,6 +135,15 @@ enum EditorLayoutMetrics {
     static let editorFloatingCommandRowHeight: CGFloat = 37
     static let editorFloatingCommandRowTopInset: CGFloat = 11
     static let editorFloatingCommandButtonSize: CGFloat = 34
+
+    /// 34pt is what fits beside the Dynamic Island on a 393pt phone, where the
+    /// band is the scarce thing. On a 1032pt iPad there is no island and no
+    /// scarcity, and 34pt discs read as specks with a hand's width of empty
+    /// band between them — so regular width gets the 44pt the rest of the
+    /// system uses.
+    static func editorFloatingCommandButtonSize(isRegularWidth: Bool) -> CGFloat {
+        isRegularWidth ? 44 : editorFloatingCommandButtonSize
+    }
     /// Horizontal inset for the command clusters from each screen edge. Must clear
     /// the device's rounded corner (≈55–62pt radius on Face-ID iPhones) at the row's
     /// vertical band so a 34pt disc is never sliced by the corner; the clusters can

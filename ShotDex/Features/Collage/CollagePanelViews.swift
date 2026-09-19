@@ -69,7 +69,10 @@ struct CollageLayoutPanel: View {
 struct CollagePresetChip: View {
     let preset: CollagePreset
 
-    private let side = CollageMetrics.templateCellSize
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    private var side: CGFloat {
+        CollageMetrics.templateCellSize(isRegularWidth: horizontalSizeClass == .regular)
+    }
 
     var body: some View {
         RoundedRectangle.app(AppTheme.Radius.md)
@@ -194,6 +197,13 @@ private struct CollageAspectRow: View {
             .foregroundStyle(model.recipe.aspectPreset == nil ? EditorTheme.accent : .white)
             .padding(.horizontal, AppTheme.Spacing.md)
             .frame(height: CollageMetrics.aspectChipHeight)
+            // The chip stays 28pt — that is the band's look — and the target
+            // grows around it without moving anything: pad out, claim the
+            // shape, pad back in. The row is only 34pt tall, so a real 44pt
+            // frame here would push the panel's three tiers apart.
+            .padding(.vertical, CollageMetrics.aspectChipHitInset)
+            .contentShape(Rectangle())
+            .padding(.vertical, -CollageMetrics.aspectChipHitInset)
             .frame(minWidth: CollageMetrics.aspectChipMinWidth)
             .overlay(
                 RoundedRectangle.app(AppTheme.Radius.sm).strokeBorder(
@@ -228,6 +238,13 @@ private struct CollageAspectChipStyle: ButtonStyle {
             .foregroundStyle(isSelected ? .black : .white)
             .padding(.horizontal, AppTheme.Spacing.md)
             .frame(height: CollageMetrics.aspectChipHeight)
+            // The chip stays 28pt — that is the band's look — and the target
+            // grows around it without moving anything: pad out, claim the
+            // shape, pad back in. The row is only 34pt tall, so a real 44pt
+            // frame here would push the panel's three tiers apart.
+            .padding(.vertical, CollageMetrics.aspectChipHitInset)
+            .contentShape(Rectangle())
+            .padding(.vertical, -CollageMetrics.aspectChipHitInset)
             .frame(minWidth: CollageMetrics.aspectChipMinWidth)
             .background(
                 RoundedRectangle.app(AppTheme.Radius.sm)
@@ -341,7 +358,12 @@ struct CollageTemplateThumbnail: View {
     let template: CollageTemplate
     var isSelected: Bool
 
-    private let side: CGFloat = 52
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    /// A template tile is a picture of a layout, not a glyph — at 52pt on a
+    /// 1032pt stage the layout it is offering cannot be read.
+    private var side: CGFloat {
+        CollageMetrics.templateCellSize(isRegularWidth: horizontalSizeClass == .regular)
+    }
     private var inner: CGFloat { side - 10 }
 
     private func wireFrame(for cell: NormalizedRect) -> CGRect {

@@ -18,6 +18,7 @@ import ShotDexKit
 struct PhotoEditorScreen: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppDependencies.self) private var dependencies
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     let asset: PHAsset
     /// Every photo opened together, when the editor was entered from a multi-photo
@@ -1343,7 +1344,7 @@ struct PhotoEditorScreen: View {
         showsDocumentControls: Bool = false
     ) -> some View {
         let sideInset = EditorLayoutMetrics.editorFloatingCommandSideInset
-        let buttonSize = EditorLayoutMetrics.editorFloatingCommandButtonSize
+        let buttonSize = EditorLayoutMetrics.editorFloatingCommandButtonSize(isRegularWidth: horizontalSizeClass == .regular)
         return GeometryReader { geo in
             // The three left discs plus their two 5pt gaps. The pill starts just
             // right of the Dynamic Island, so the fixed reserve is the run from the
@@ -1437,7 +1438,7 @@ struct PhotoEditorScreen: View {
     /// Hold-to-see-original, mirroring the photo's own press-and-hold. Down shows
     /// the original, up restores the edit; the circle turns accent while it is held.
     private func beforeAfterButton(_ controller: PhotoEditorController) -> some View {
-        let size = EditorLayoutMetrics.editorFloatingCommandButtonSize
+        let size = EditorLayoutMetrics.editorFloatingCommandButtonSize(isRegularWidth: horizontalSizeClass == .regular)
         return Image(systemName: "rectangle.split.2x1")
             .font(.system(size: 15, weight: .medium))
             .foregroundStyle(controller.showsOriginal ? .black : Color.white.opacity(0.9))
@@ -1472,7 +1473,7 @@ struct PhotoEditorScreen: View {
         isActive: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
-        let size = EditorLayoutMetrics.editorFloatingCommandButtonSize
+        let size = EditorLayoutMetrics.editorFloatingCommandButtonSize(isRegularWidth: horizontalSizeClass == .regular)
         return Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: 15, weight: .medium))
@@ -1544,7 +1545,7 @@ struct PhotoEditorScreen: View {
         _ controller: PhotoEditorController,
         showsSidebarControls: Bool = false
     ) -> some View {
-        let size = EditorLayoutMetrics.editorFloatingCommandButtonSize
+        let size = EditorLayoutMetrics.editorFloatingCommandButtonSize(isRegularWidth: horizontalSizeClass == .regular)
         return Menu {
             if showsSidebarControls {
                 Picker("Tools Panel", selection: $sidebarEdgeRaw) {

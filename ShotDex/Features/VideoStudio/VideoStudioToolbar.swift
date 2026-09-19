@@ -7,12 +7,30 @@ struct VideoStudioToolbar: View {
     @Bindable var model: VideoStudioModel
     let actions: VideoInspectorActions
 
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 4) {
-                ForEach(commands) { VideoToolbarCell(command: $0) }
+        Group {
+            if horizontalSizeClass == .regular {
+                // The nine cells fit twice over on an iPad, so scrolling them
+                // is pointless and clumping them at the leading edge leaves
+                // 560pt of empty bar with the tools in one corner. They spread
+                // instead, the way a desk-sized tool row is read.
+                HStack(spacing: 4) {
+                    ForEach(commands) {
+                        VideoToolbarCell(command: $0, isRegularWidth: true)
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+                .padding(.horizontal, 20)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 4) {
+                        ForEach(commands) { VideoToolbarCell(command: $0) }
+                    }
+                    .padding(.horizontal, 10)
+                }
             }
-            .padding(.horizontal, 10)
         }
         .frame(height: VideoStudioMetrics.toolbarHeight)
         .frame(maxWidth: .infinity)
@@ -100,6 +118,9 @@ struct VideoStudioBottomBar: View {
 /// One toolbar cell — the command band's cell shape, sized for a scrolling row.
 private struct VideoToolbarCell: View {
     let command: VideoCommand
+    /// On a big screen the cell keeps its shape but reads at desk distance:
+    /// a 20pt glyph and an 11pt label instead of 17 and 9.5.
+    var isRegularWidth = false
 
     var body: some View {
         Button(action: command.action) {
@@ -107,15 +128,18 @@ private struct VideoToolbarCell: View {
                 // Fixed glyph box: a tall symbol (photo.badge.plus) otherwise pushes
                 // its label lower than its neighbours'.
                 Image(systemName: command.systemImage)
-                    .font(.system(size: 17, weight: .regular))
-                    .frame(height: 22)
+                    .font(.system(size: isRegularWidth ? 20 : 17, weight: .regular))
+                    .frame(height: isRegularWidth ? 26 : 22)
                 Text(command.title)
-                    .font(.system(size: 9.5, weight: .medium))
+                    .font(.system(size: isRegularWidth ? 11 : 9.5, weight: .medium))
                     .lineLimit(1)
                     .fixedSize()
             }
             .foregroundStyle(tintColor)
-            .frame(width: VideoStudioMetrics.commandCellWidth, height: 52)
+            .frame(
+                width: isRegularWidth ? nil : VideoStudioMetrics.commandCellWidth,
+                height: isRegularWidth ? 58 : 52
+            )
             .background(
                 RoundedRectangle(cornerRadius: VideoStudioMetrics.commandCellRadius, style: .continuous)
                     .fill(command.tint == .accent ? EditorTheme.accent.opacity(0.16) : Color.clear)

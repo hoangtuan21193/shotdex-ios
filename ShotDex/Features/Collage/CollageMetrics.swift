@@ -34,6 +34,12 @@ enum CollageMetrics {
 
     /// Circular command button on the band.
     static let commandButtonSize: CGFloat = 34
+
+    /// Same reason as the editor's band: 34 is the phone's number, and a
+    /// 1032pt stage has room for the 44 the rest of the system uses.
+    static func commandButtonSize(isRegularWidth: Bool) -> CGFloat {
+        isRegularWidth ? 44 : commandButtonSize
+    }
     /// Full command-band height (row + top inset) — used to position the lift
     /// drop banner just below it.
     static let commandBandHeight: CGFloat = 48
@@ -74,9 +80,19 @@ enum CollageMetrics {
     // MARK: Aspect chips
 
     static let aspectChipHeight: CGFloat = 28
+    /// Padding added to each side of the 28pt chip to make a 44pt target, then
+    /// taken back off the layout. Video Studio's chip band already does this;
+    /// the collage chips never got it.
+    static let aspectChipHitInset: CGFloat = 8
     static let aspectChipMinWidth: CGFloat = 44
 
     // MARK: Template cells
 
     static let templateCellSize: CGFloat = 52
+
+    /// Template tiles are pictures of a layout, not glyphs: on a 1032pt stage
+    /// a 52pt tile is too small to read the layout it is offering.
+    static func templateCellSize(isRegularWidth: Bool) -> CGFloat {
+        isRegularWidth ? 68 : templateCellSize
+    }
 }

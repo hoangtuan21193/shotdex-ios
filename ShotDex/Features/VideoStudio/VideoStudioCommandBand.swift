@@ -9,7 +9,12 @@ import SwiftUI
 struct VideoStudioTopBand: View {
     @Bindable var model: VideoStudioModel
 
-    private let size = EditorLayoutMetrics.editorFloatingCommandButtonSize
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    private var size: CGFloat {
+        EditorLayoutMetrics.editorFloatingCommandButtonSize(
+            isRegularWidth: horizontalSizeClass == .regular
+        )
+    }
     private let inset = EditorLayoutMetrics.editorFloatingCommandSideInset
 
     var body: some View {
