@@ -88,6 +88,25 @@ final class EditorSession {
     /// picked from the Sync menu.
     var autoSyncScope: EditorSyncScope = .look
 
+    /// The frame pinned beside the canvas to match against — Lightroom's
+    /// Reference View. Nil when nothing is pinned.
+    ///
+    /// The whole point of a big screen: matching forty frames to a hero frame is
+    /// the actual job of a multi-photo edit, and "make it look like that one" is
+    /// impossible when only one photo is on screen. Meaningless on a phone,
+    /// where there is no room for two.
+    var referenceIndex: Int?
+
+    var referenceAsset: PHAsset? {
+        guard let referenceIndex, assets.indices.contains(referenceIndex) else { return nil }
+        return assets[referenceIndex]
+    }
+
+    /// Pins a frame, or unpins it when it is already the reference.
+    func toggleReference(at index: Int) {
+        referenceIndex = referenceIndex == index ? nil : index
+    }
+
     /// The photo the canvas was on before this one, for "apply previous".
     private(set) var previousIndex: Int?
 
@@ -117,6 +136,9 @@ struct EditorFilmstrip: View {
     var cullStates: [String: PhotoCullState] = [:]
     /// Sets the flag on one photo without leaving the one being edited.
     var setFlag: ((PhotoFlag, PHAsset) -> Void)?
+    /// Pins or unpins a frame as the reference. Nil on the phone, where there
+    /// is no room to show one.
+    var toggleReference: ((Int) -> Void)?
     var select: (Int) -> Void
 
     var body: some View {
@@ -176,6 +198,16 @@ struct EditorFilmstrip: View {
                             .padding(3)
                     }
                 }
+                .overlay(alignment: .topLeading) {
+                    if session.referenceIndex == index {
+                        Image(systemName: "rectangle.on.rectangle")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.black)
+                            .padding(3)
+                            .background(.white, in: Circle())
+                            .padding(3)
+                    }
+                }
                 .overlay(alignment: .bottomLeading) {
                     if let cull = cullStates[asset.localIdentifier], !cull.isEmpty {
                         HStack(spacing: 2) {
@@ -201,6 +233,17 @@ struct EditorFilmstrip: View {
         }
         .buttonStyle(.plain)
         .contextMenu {
+            if let toggleReference {
+                Button {
+                    toggleReference(index)
+                } label: {
+                    Label(
+                        session.referenceIndex == index ? "Clear Reference" : "Use as Reference",
+                        systemImage: session.referenceIndex == index ? "rectangle.slash" : "rectangle.on.rectangle"
+                    )
+                }
+                Divider()
+            }
             if let setFlag {
                 ForEach(PhotoFlag.allCases) { flag in
                     Button {

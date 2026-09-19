@@ -374,7 +374,9 @@ Yêu cầu hiệu năng:
 - **Apply Previous**: `EditorSession.previousIndex` nhớ ảnh vừa rời, áp recipe của nó lên ảnh hiện tại theo scope đang dùng.
 - **Paste Edits thẳng từ lưới** (`PasteEditsSheet`): chọn ảnh → ⋯ → Paste Edits, dán look trong `EditClipboard` lên cả loạt bằng cùng vòng lặp headless, không mở editor. Chỉ hiện khi clipboard có nội dung.
 - **Filmstrip tải thumbnail theo thang local → iCloud**, có placeholder và spinner. Máy bật Optimize Storage (đa số thư viện đầy) thì request local-only trả nil cho phần lớn khung, và dải ảnh trước đây là một hàng ô xám không phân biệt được đang tải hay hỏng.
-- Chưa có: undo theo từng ảnh (lịch sử nằm trên controller nên đổi ảnh là mất), Reference View, user preset, flag/rating.
+- **Reference View** (`EditorReferencePane`, chỉ layout rộng): long-press thumbnail trong filmstrip → `Use as Reference`, khung đó ghim **bên trái canvas**, ảnh đang sửa ở bên phải. Đây là lý do màn to tồn tại: việc thật của một phiên sửa nhiều ảnh là kéo 40 khung về giống một khung mẫu, mà "làm giống tấm kia" thì không thể làm khi chỉ thấy một tấm. Điện thoại không có.
+- Pane tham chiếu hiển thị ảnh **như nó đang nằm trong thư viện** (kèm edit đã lưu), không render lại qua controller thứ hai — nó là thứ để nhìn, không phải thứ đang sửa, và dựng thêm một controller là nhân đôi bộ nhớ editor cho một tấm không ai động vào. Nhãn "Reference" **nổi lên trên** ảnh chứ không chiếm một hàng: xếp thành hàng thì ảnh mẫu tụt thấp hơn ảnh đang sửa 44pt, đúng thứ phá hỏng việc so sánh. Thumbnail được ghim có badge trong filmstrip.
+- Chưa có: khoá zoom/pan giữa hai pane (dùng lại `CompareScrollSynchronizer` được), undo theo từng ảnh (lịch sử nằm trên controller nên đổi ảnh là mất), Reference View, user preset, flag/rating.
 
 **Cull — pick / reject / rating (2026-09-19)**
 

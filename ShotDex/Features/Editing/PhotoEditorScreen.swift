@@ -739,7 +739,26 @@ struct PhotoEditorScreen: View {
                     .transition(.opacity)
                 }
 
-                imageStage(controller)
+                if let reference = session?.referenceAsset, !chrome.isFullBleed,
+                   !controller.isEditingDrawing {
+                    HStack(spacing: 0) {
+                        EditorReferencePane(
+                            asset: reference,
+                            photoLibrary: dependencies.photoLibrary
+                        ) {
+                            withAnimation(EditorTheme.animation) {
+                                session?.referenceIndex = nil
+                            }
+                        }
+                        Rectangle()
+                            .fill(EditorTheme.panelTopHairline)
+                            .frame(width: 1)
+                        imageStage(controller)
+                    }
+                    .transition(.opacity)
+                } else {
+                    imageStage(controller)
+                }
 
                 filmstrip(controller)
             }
@@ -767,7 +786,14 @@ struct PhotoEditorScreen: View {
                 setFlag: { flag, asset in
                     try? dependencies.cullStore.setFlag(flag, ids: [asset.localIdentifier])
                     reloadCullStates()
-                }
+                },
+                toggleReference: chrome.isWideLayout
+                    ? { index in
+                        withAnimation(EditorTheme.animation) {
+                            session.toggleReference(at: index)
+                        }
+                    }
+                    : nil
             ) { index in
                 selectPhoto(at: index)
             }
