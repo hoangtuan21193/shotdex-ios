@@ -15,6 +15,8 @@ struct SmartAlbumDetailScreen: View {
 
     @State private var model: SmartAlbumDetailModel?
     @State private var viewerTarget: PhotoViewerTarget?
+    /// Date of the photos under the top of the grid, shown under the title.
+    @State private var visibleDate: String?
 
     @State private var isSelecting = false
     @State private var selectedIds: [String] = []
@@ -45,6 +47,28 @@ struct SmartAlbumDetailScreen: View {
         }
         .navigationTitle(album.name)
         .navigationBarTitleDisplayMode(.inline)
+        // Title plus the date of what is on screen. The grid draws no date
+        // headers any more, so this is where "when am I" lives.
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                VStack(spacing: 0) {
+                    Text(album.name)
+                        .font(.headline)
+                        .lineLimit(1)
+                    if let visibleDate {
+                        Text(visibleDate)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                            .lineLimit(1)
+                            .contentTransition(.numericText())
+                            .animation(.easeInOut(duration: 0.18), value: visibleDate)
+                    }
+                }
+                .accessibilityElement(children: .combine)
+            }
+        }
+
         .toolbar { toolbarContent }
         // Selection keeps the navigation bar (its ⋯ and × live there, Photos
         // style) so the title and the grid's pinned date header stay put; only
@@ -147,7 +171,8 @@ struct SmartAlbumDetailScreen: View {
         PhotoGridCollectionView(
             photos: model.items,
             assetProvider: { index, _ in model.asset(atFlatIndex: index) },
-            sectionMode: .dates,
+            // One unbroken run; the date rides in the subtitle instead.
+            sectionMode: .flat,
             anchorsBottom: false,
             contentVersion: model.contentGeneration,
             contentRefreshVersion: model.contentRefreshGeneration,
@@ -176,6 +201,7 @@ struct SmartAlbumDetailScreen: View {
             onSwipeEvent: handleSwipeEvent,
             onNearEnd: {},
             onUserScroll: {},
+            onVisibleDateChange: { visibleDate = $0 },
             removal: model.lastRemoval,
             contextMenuProvider: { item in
                 tileMenu(assetId: item.assetId).makeMenu()

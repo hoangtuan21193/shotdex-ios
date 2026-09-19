@@ -13,6 +13,8 @@ struct AlbumDetailScreen: View {
 
     @State private var model: AlbumDetailModel?
     @State private var viewerTarget: PhotoViewerTarget?
+    /// Date of the photos under the top of the grid, shown under the title.
+    @State private var visibleDate: String?
 
     /// Multi-select: uncapped asset ids, kept in pick order (Compare panes
     /// follow it).
@@ -46,6 +48,28 @@ struct AlbumDetailScreen: View {
         }
         .navigationTitle(album.title)
         .navigationBarTitleDisplayMode(.inline)
+        // Title plus the date of what is on screen. The grid draws no date
+        // headers any more, so this is where "when am I" lives.
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                VStack(spacing: 0) {
+                    Text(album.title)
+                        .font(.headline)
+                        .lineLimit(1)
+                    if let visibleDate {
+                        Text(visibleDate)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                            .lineLimit(1)
+                            .contentTransition(.numericText())
+                            .animation(.easeInOut(duration: 0.18), value: visibleDate)
+                    }
+                }
+                .accessibilityElement(children: .combine)
+            }
+        }
+
         .toolbar { toolbarContent }
         // Selection keeps the navigation bar (its ⋯ and × live there, Photos
         // style) so the title and the grid's pinned date header stay put; only
@@ -143,7 +167,10 @@ struct AlbumDetailScreen: View {
             // Date headers only make sense while the album is in date order;
             // in the album's own arrangement they would cut the user's
             // sequence into groups it does not have.
-            sectionMode: model.sortOrder == .albumOrder ? .flat : .dates,
+            // Always one unbroken run. The album's date now rides in the
+            // subtitle under its name, so a header every few rows would only
+            // repeat it while pushing photos off screen.
+            sectionMode: .flat,
             anchorsBottom: false,
             // Otherwise constant: album content is only ever appended (paging)
             // or pruned (delete), and count changes reload on their own.
@@ -174,6 +201,7 @@ struct AlbumDetailScreen: View {
             onSwipeEvent: handleSwipeEvent,
             onNearEnd: { model.loadNextPage() },
             onUserScroll: {},
+            onVisibleDateChange: { visibleDate = $0 },
             removal: model.lastRemoval,
             contextMenuProvider: { metadata in
                 tileMenu(model, assetId: metadata.assetId).makeMenu()

@@ -19,6 +19,8 @@ struct PhotoListScreen: View {
 
     @State private var model: PhotoListModel?
     @State private var viewerTarget: PhotoViewerTarget?
+    /// Date of the photos under the top of the grid, shown under the title.
+    @State private var visibleDate: String?
     @State private var videoStudioPresentation: VideoStudioPresentation?
 
     var body: some View {
@@ -45,15 +47,25 @@ struct PhotoListScreen: View {
                     .accessibilityLabel("Make a video from these photos")
                 }
             }
-            if let subtitle {
-                ToolbarItem(placement: .principal) {
-                    VStack(spacing: 0) {
-                        Text(title).font(.headline)
-                        Text(subtitle)
+            ToolbarItem(placement: .principal) {
+                VStack(spacing: 0) {
+                    Text(title)
+                        .font(.headline)
+                        .lineLimit(1)
+                    // The date of what is on screen once there is one, since
+                    // the grid draws no headers; the caller's own subtitle
+                    // (a photo count, a trip's dates) holds the spot until then.
+                    if let line = visibleDate ?? subtitle {
+                        Text(line)
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                            .lineLimit(1)
+                            .contentTransition(.numericText())
+                            .animation(.easeInOut(duration: 0.18), value: line)
                     }
                 }
+                .accessibilityElement(children: .combine)
             }
         }
         .task {
@@ -102,7 +114,8 @@ struct PhotoListScreen: View {
         PhotoGridCollectionView(
             photos: model.items,
             assetProvider: { _, item in model.assetsById[item.assetId] },
-            sectionMode: .dates,
+            // One unbroken run; the date rides in the subtitle instead.
+            sectionMode: .flat,
             anchorsBottom: false,
             contentVersion: model.contentGeneration,
             contentRefreshVersion: model.contentGeneration,
@@ -122,6 +135,7 @@ struct PhotoListScreen: View {
             onSwipeEvent: { _ in },
             onNearEnd: {},
             onUserScroll: {},
+            onVisibleDateChange: { visibleDate = $0 },
             removal: model.lastRemoval,
             contextMenuProvider: { item in tileMenu(model, assetId: item.assetId).makeMenu() }
         )

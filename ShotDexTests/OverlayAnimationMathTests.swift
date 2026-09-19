@@ -127,8 +127,18 @@ struct OverlayAnimationMathTests {
 
     @Test func openEndedOverlayUsesTotalForOut() {
         // duration nil → visible until the total; the out ramp hangs off the total.
+        //
+        // The ramp is 0.4s, so it starts at 4.6 on a 5s timeline. Checked as a
+        // shape rather than one number: the exit uses an accelerating ease, so
+        // three quarters of the way through it is still at 0.44 opacity, and a
+        // threshold picked from a linear fade fails a curve that is correct.
         let overlay = timed(animateOut: .fade, duration: nil)
         #expect(isClose(overlay.animationTransform(at: 2.0, total: 5).opacity, 1))
-        #expect(overlay.animationTransform(at: 4.9, total: 5).opacity < 0.2)
+        #expect(isClose(overlay.animationTransform(at: 4.5, total: 5).opacity, 1))
+        let quarterOut = overlay.animationTransform(at: 4.7, total: 5).opacity
+        let mostlyOut = overlay.animationTransform(at: 4.9, total: 5).opacity
+        #expect(quarterOut < 1)
+        #expect(mostlyOut < quarterOut)
+        #expect(overlay.animationTransform(at: 4.999, total: 5).opacity < 0.05)
     }
 }

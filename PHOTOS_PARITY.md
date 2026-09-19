@@ -2,7 +2,7 @@
 
 > **Tiến độ đêm 2026-09-19** — mỗi mục dưới đây đều build pass, chạy thật trên simulator và có ảnh chụp màn hình kiểm chứng, commit riêng trên `main`.
 >
-> Xong: **C6 photo editing extension + tách framework ShotDexKit** · Customize tab Collections · Memory → phim · Share bỏ vị trí · Sort trong album · Copy/Paste edits · Giữ tay xem bản gốc · Show in All Photos · Handoff · Dynamic Type cho token Collections · Viewer panorama · Depth Blur ảnh Portrait · Kéo thả ảnh · Markup shapes + kính lúp · Trim video trong viewer + nút tua khung · People & Pets (pass Vision opt-in) · hành động PhotoKit (ngày/vị trí/ẩn/favorite) · context menu trên tile · Media Types · date section ngày/tháng/năm + thanh cuộn ngày · badge trạng thái · menu ⋯ trong viewer · Live Text · Live Photo + Save as Video · Slideshow · Places · Trips · App Intents + Spotlight · Widget · Share Extension · iPad · quản lý album/folder · Settings (autoplay, HDR, dung lượng) · Auto Enhance + Revert · Merge duplicates.
+> Xong: **Lưới liền mạch + ngày ở title, lưới nhiều cột và dashboard 2–3 cột cho iPad/Duo** · **C6 photo editing extension + tách framework ShotDexKit** · Customize tab Collections · Memory → phim · Share bỏ vị trí · Sort trong album · Copy/Paste edits · Giữ tay xem bản gốc · Show in All Photos · Handoff · Dynamic Type cho token Collections · Viewer panorama · Depth Blur ảnh Portrait · Kéo thả ảnh · Markup shapes + kính lúp · Trim video trong viewer + nút tua khung · People & Pets (pass Vision opt-in) · hành động PhotoKit (ngày/vị trí/ẩn/favorite) · context menu trên tile · Media Types · ngày ở title + thanh cuộn ngày · badge trạng thái · menu ⋯ trong viewer · Live Text · Live Photo + Save as Video · Slideshow · Places · Trips · App Intents + Spotlight · Widget · Share Extension · iPad · quản lý album/folder · Settings (autoplay, HDR, dung lượng) · Auto Enhance + Revert · Merge duplicates.
 >
 > Vướng, cần bạn quyết hoặc cần máy thật: xem mục "Cần quyết định" ở cuối file.
 
@@ -34,7 +34,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 
 ## Phase B — Duyệt và xem
 
-- [~] B1 Years / Months / Days — pinch 1–3 cột = ngày, 4–6 = tháng, 7+ = năm; Library bật lại date header làm mặc định; thanh cuộn ngày có nhãn ngày khi kéo. **Còn thiếu**: tên địa điểm trong header (chờ D1 Places, `LibraryGridItem` chưa có cột place)
+- [~] B1 Years / Months / Days — pinch 1–3 cột = ngày, 4–6 = tháng, 7+ = năm; thanh cuộn ngày có nhãn ngày khi kéo. **Đổi 2026-09-19 theo yêu cầu**: lưới **không** chia section ngày nữa (Library/Album/Smart Album/PhotoList đều `.flat`), ngày hiện ở **title giữa top bar** và đổi theo ảnh đang ở mép trên. **Còn thiếu**: tên địa điểm kèm ngày (chờ D1 Places, `LibraryGridItem` chưa có cột place)
 - [ ] B2 Toggle lưới theo tỉ lệ gốc
 - [x] B3 Media Types collections — section riêng trong Collections, 16 subtype (Videos, Selfies, Live, Portrait, Panorama, Time-lapse, Slo-mo, Cinematic, Bursts, Screenshots, Screen Recording, Animated, Long Exposure, RAW, Spatial); album rỗng tự ẩn như Photos
 - [~] B4 **Recently Viewed** và **Recently Shared** — app tự ghi (PhotoKit không có), section **Recents** trên tab Collections, giữ 100 mục mới nhất. **Recently Saved** đã có sẵn dưới tên Recently Added trong Smart Albums

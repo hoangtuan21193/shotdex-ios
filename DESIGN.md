@@ -206,10 +206,16 @@ Lý do đo được trên **iPhone Duo** (iOS 27.1): màn ngoài rộng 466pt nh
 
 Viewer là ngoại lệ có lý: **chỉ pager ảnh** tràn viền, còn chrome (nút đóng, action bar) nằm ngoài lớp đó và vẫn tôn trọng safe area.
 
-**Thẻ nội dung có bề rộng đọc được tối đa.** Ở regular width (iPad, màn trong iPhone Duo 867pt) một hàng chart kéo hết bề ngang đẩy nhãn về một mép còn số về mép kia — mắt phải đi xa hơn cho cùng một con số. `StatisticsScreen` giới hạn thẻ ở **640pt** rồi căn giữa, vẫn một cột nên kéo-đổi-thứ-tự và edit mode không đổi. Ở compact (mọi iPhone) giới hạn này không có tác dụng.
+### 10.1c Màn rộng: nhiều cột, đừng phóng to (2026-09-19)
+
+Nguyên tắc chung cho regular width (iPad, màn trong iPhone Duo 867pt): **màn rộng hơn = nhiều nội dung hơn, không phải nội dung to hơn.**
+
+**Dashboard Statistics.** `StatisticsScreen` xếp `ChartCard` bằng `LazyVGrid` với `GridItem(.adaptive(minimum: 320, maximum: 520))`, spacing 16 — ra **2 cột** ở iPad 11" dọc và màn trong Duo, **3 cột** ở iPad 13" dọc và iPad ngang. Compact width (mọi iPhone) giữ nguyên `List` một cột. Edit mode cũng quay về `List` ở mọi size class, vì kéo-đổi-thứ-tự và nút xóa đỏ là affordance của `List`; thoát edit mode thì về lại lưới.
+
+**Lưới ảnh.** `GridDensity.columns(forDensity:width:isRegularWidth:)` quy đổi density đã lưu theo bề rộng thật rồi siết thêm `regularTileScale = 0.7`, trần cột `resolvedColumnRange = 1...20` (density mà pinch chạm tới vẫn là `columnRange = 1...8`). Density 3 ra 9 cột ở iPad 11" dọc, 13 cột khi xoay ngang, 9 cột ở màn trong Duo — ô ảnh giữ khoảng 85–105pt ở mọi bề rộng.
 
 ### 10.2 Màn hình lưới ảnh (tầng B + C)
-Lưới tràn viền, không padding. Lưới Library **không chèn header ngày** (2026-09-18). Chrome nổi đè lên lưới bằng `safeAreaInset(edge:)` hoặc overlay, luôn dùng kính tầng C. Khi vào chế độ chọn: lưới mờ đi, selection bar trượt lên từ đáy.
+Lưới tràn viền, không padding. **Không lưới ảnh nào chèn header ngày** (2026-09-19) — Library, Album, Smart Album và `PhotoListScreen` đều chạy `sectionMode: .flat`, ảnh trôi liền mạch. Ngày của ảnh đang ở mép trên viewport hiện ở **title giữa top bar** (Library) hoặc dòng phụ dưới tên album, do `PhotoGridCollectionView.onVisibleDateChange` đẩy lên. Cấp độ ngày/tháng/năm lấy theo density đã lưu, không theo số cột đã vẽ, để màn rộng không tự nhảy sang gom theo năm. `OnThisDayScreen` vẫn có header vì section của nó là "cùng ngày qua các năm", không phải chia ngày. Chrome nổi đè lên lưới bằng `safeAreaInset(edge:)` hoặc overlay, luôn dùng kính tầng C. Khi vào chế độ chọn: lưới mờ đi, selection bar trượt lên từ đáy.
 
 ### 10.3 Công cụ toàn màn hình (tầng D)
 Cấu trúc cố định từ trên xuống:

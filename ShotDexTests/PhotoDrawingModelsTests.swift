@@ -5,6 +5,14 @@ import Testing
 @testable import ShotDex
 
 struct PhotoDrawingModelsTests {
+
+    /// Top-level keys a recipe writes, order-independent.
+    private func keys(of recipe: PhotoEditRecipe) throws -> Set<String> {
+        let data = try JSONEncoder().encode(recipe)
+        let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        return Set(object?.keys ?? [:].keys)
+    }
+
     private func drawing(_ bytes: [UInt8] = [1, 2, 3]) -> PhotoDrawing {
         PhotoDrawing(data: Data(bytes), canvasWidth: 300, canvasHeight: 200)
     }
@@ -30,10 +38,15 @@ struct PhotoDrawingModelsTests {
         recipe.drawing = PhotoDrawing(data: Data(), canvasWidth: 300, canvasHeight: 200)
         #expect(recipe.isIdentity)
 
-        // Byte-identical to a recipe that never touched the drawing at all.
-        let withEmpty = try JSONEncoder().encode(recipe)
-        let untouched = try JSONEncoder().encode(PhotoEditRecipe.identity)
+        // The same keys as a recipe that never touched the drawing at all.
+        //
+        // Compared as parsed objects, not as bytes: `JSONEncoder` makes no
+        // promise about key order, and two encodes of the same value really do
+        // come out in different orders.
+        let withEmpty = try keys(of: recipe)
+        let untouched = try keys(of: .identity)
         #expect(withEmpty == untouched)
+        #expect(!withEmpty.contains("drawing"))
     }
 
     @Test func aRecipeSavedBeforeDrawingExistedDecodesWithNoDrawing() throws {

@@ -32,6 +32,9 @@ struct LibraryScreen: View {
     @State private var retapResetCount = 0
     /// Drives the date scrubber on the grid's right edge.
     @State private var scrubberModel = PhotoGridScrubberModel()
+    /// Date of the photos under the top of the grid, shown as the screen's
+    /// title. Nil before the first layout and while the library is empty.
+    @State private var visibleDate: String?
     @State private var isDeleting = false
     @State private var isPreparingShare = false
     @State private var isDuplicating = false
@@ -549,11 +552,12 @@ struct LibraryScreen: View {
         PhotoGridCollectionView(
             photos: model.items,
             assetProvider: { index, _ in model.asset(atFlatIndex: index) },
-            // Date headers, grouped by day / month / year depending on how
-            // far the grid is pinched — the Photos zoom ladder. Non-date sorts
-            // still get one flat section, since a date header would lie about
-            // the order.
-            sectionMode: model.sort.isDateSort ? .dates : .flat,
+            // One unbroken run of photos, never split into dated sections.
+            // The date the user needs is the one they are looking at, and that
+            // now rides in the title at the top of the screen — a header every
+            // few rows chops the grid up and pushes photos off screen for text
+            // that is only ever true for the rows right under it.
+            sectionMode: .flat,
             anchorsBottom: true,
             contentVersion: model.contentGeneration,
             contentRefreshVersion: model.contentRefreshGeneration,
@@ -585,6 +589,7 @@ struct LibraryScreen: View {
             onUserScroll: {
                 if isIndexPanelExpanded { setIndexPanelExpanded(false) }
             },
+            onVisibleDateChange: { visibleDate = $0 },
             trailingFooterText: model.hasActiveQuery ? matchCountFooter(model.matchCount) : nil,
             lazyMetadataProvider: { assetId in
                 await model.lazyBadgeItem(assetId: assetId)
@@ -963,6 +968,21 @@ struct LibraryScreen: View {
             if !isSelecting {
                 SettingsButton()
                     .tint(.primary)
+            }
+        }
+        // The date of what is on screen, centred, where a screen title goes.
+        // This is the only place a date appears now that the grid runs
+        // unbroken, so it gets the one spot the eye already checks for
+        // "where am I".
+        ToolbarItem(placement: .principal) {
+            if let visibleDate, !isSelecting {
+                Text(visibleDate)
+                    .font(.headline)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .contentTransition(.numericText())
+                    .animation(.easeInOut(duration: 0.18), value: visibleDate)
+                    .accessibilityLabel("Showing photos from \(visibleDate)")
             }
         }
         // Break the shared Liquid Glass container so the indexing token reads as

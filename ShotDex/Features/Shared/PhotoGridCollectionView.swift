@@ -52,6 +52,13 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
     let onNearEnd: () -> Void
     /// Fired on any user-initiated scroll (Library collapses the index panel).
     let onUserScroll: () -> Void
+    /// The date of whatever sits under the top of the viewport, already
+    /// formatted for the current density. Nil while the grid is empty.
+    ///
+    /// Published by the grid rather than derived by the screen because only
+    /// the grid knows which row is under the top edge, and it is what lets the
+    /// date live in the title now that the grid draws no headers.
+    var onVisibleDateChange: ((String?) -> Void)? = nil
     /// Optional low-emphasis text rendered as a real footer after the final
     /// photo. Nil keeps the shared album grids unchanged.
     var trailingFooterText: String? = nil
@@ -563,25 +570,29 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             Task { @MainActor [weak self] in
                 guard let self, let collectionView = self.collectionView else { return }
                 self.updateScrubber(collectionView)
+                self.publishVisibleDate(collectionView)
             }
         }
 
         private func rebuildSections() {
             sections = Self.resolvedSections(
-                for: parent, columns: resolvedColumns(parent.columnCount)
+                for: parent, density: parent.columnCount
             )
             refreshScrubberAfterLayout()
         }
 
+        /// `density` is the stored column count, not the drawn one: a wide
+        /// screen draws more columns than it was pinched to, and that must not
+        /// silently regroup the photos by year.
         private static func resolvedSections(
-            for parent: PhotoGridCollectionView, columns: Int
+            for parent: PhotoGridCollectionView, density: Int
         ) -> [ResolvedSection] {
             guard !parent.photos.isEmpty else { return [] }
             switch parent.sectionMode {
             case .flat:
                 return [ResolvedSection(range: 0..<parent.photos.count, title: nil)]
             case .dates:
-                let granularity = GridDensity.granularity(forColumns: columns)
+                let granularity = GridDensity.granularity(forColumns: density)
                 return PhotoGridSectionBuilder.sections(
                     creationDates: parent.photos.map(\.creationDateValue),
                     granularity: granularity
@@ -658,7 +669,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             removedIndexPaths.removeAll { emptiedSections.contains($0.section) }
 
             let newSections = Self.resolvedSections(
-                for: newParent, columns: resolvedColumns(newParent.columnCount)
+                for: newParent, density: newParent.columnCount
             )
             guard newSections.count == oldSections.count - emptiedSections.count else { return false }
             var newSection = 0
@@ -1062,6 +1073,9 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         /// dragging the handle, so the handle does not chase the scroll it is
         /// itself causing.
         func updateScrubber(_ scrollView: UIScrollView) {
+            if let collectionView = scrollView as? UICollectionView {
+                publishVisibleDate(collectionView)
+            }
             guard let scrubber = parent.scrubber else { return }
             let span = scrollView.contentSize.height
                 - scrollView.bounds.height
@@ -1069,18 +1083,66 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 + scrollView.adjustedContentInset.bottom
             scrubber.isScrollable = span > 1
             guard !scrubber.isScrubbing else {
-                scrubber.label = topVisibleSectionTitle(scrollView) ?? scrubber.label
+                scrubber.label = visibleDateLabel(scrollView) ?? scrubber.label
                 return
             }
             if span > 1 {
                 let y = scrollView.contentOffset.y + scrollView.adjustedContentInset.top
                 scrubber.progress = min(max(Double(y / span), 0), 1)
             }
-            scrubber.label = topVisibleSectionTitle(scrollView) ?? ""
+            scrubber.label = visibleDateLabel(scrollView) ?? ""
+        }
+
+        /// What the scrubber bubble shows: the section's own title where the
+        /// grid still draws sections (On This Day), otherwise the topmost
+        /// photo's date.
+        private func visibleDateLabel(_ scrollView: UIScrollView) -> String? {
+            if parent.sectionMode.hasHeaders,
+               let title = topVisibleSectionTitle(scrollView) {
+                return title
+            }
+            guard let collectionView = scrollView as? UICollectionView else { return nil }
+            return topVisibleDateTitle(collectionView)
         }
 
         /// Title of the section whose items are under the top edge of the
         /// viewport — nil when the grid has no headers at all.
+        /// Formatted date of the topmost visible photo, independent of whether
+        /// the grid draws sections. Granularity follows the column count, the
+        /// same ladder the old headers used: a day while the tiles are big, a
+        /// year once they are small, so the title does not flicker every row.
+        private func topVisibleDateTitle(_ collectionView: UICollectionView) -> String? {
+            guard !parent.photos.isEmpty else { return nil }
+            let probe = CGPoint(
+                x: collectionView.adjustedContentInset.left + 8,
+                y: collectionView.contentOffset.y
+                    + collectionView.adjustedContentInset.top + 8
+            )
+            let indexPath = collectionView.indexPathForItem(at: probe)
+                ?? collectionView.indexPathsForVisibleItems.min()
+            guard let indexPath, let flat = flatIndex(for: indexPath) else { return nil }
+            guard let date = parent.photos[flat].creationDateValue else {
+                return String(localized: "No Date")
+            }
+            switch GridDensity.granularity(forColumns: GridDensity.clamped(parent.columnCount)) {
+            case .day: return MetadataFormatter.dayHeader(date)
+            case .month: return MetadataFormatter.monthHeader(date)
+            case .year: return MetadataFormatter.yearHeader(date)
+            }
+        }
+
+        /// Last value handed to `onVisibleDateChange`, so an unchanged date
+        /// does not re-enter SwiftUI on every scroll frame.
+        private var publishedVisibleDate: String??
+
+        func publishVisibleDate(_ collectionView: UICollectionView) {
+            guard parent.onVisibleDateChange != nil else { return }
+            let title = topVisibleDateTitle(collectionView)
+            guard publishedVisibleDate != .some(title) else { return }
+            publishedVisibleDate = .some(title)
+            parent.onVisibleDateChange?(title)
+        }
+
         private func topVisibleSectionTitle(_ scrollView: UIScrollView) -> String? {
             guard let collectionView = scrollView as? UICollectionView,
                   !sections.isEmpty

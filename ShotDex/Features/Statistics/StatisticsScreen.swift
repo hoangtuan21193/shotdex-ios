@@ -12,6 +12,8 @@ struct StatisticsScreen: View {
     @State private var editMode: EditMode = .inactive
     @State private var editorTarget: EditorTarget?
 
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
     /// Which editor to present: a brand-new chart or an existing one.
     private enum EditorTarget: Identifiable {
         case new
@@ -94,71 +96,118 @@ struct StatisticsScreen: View {
         }
     }
 
-    /// Widest a chart card is allowed to get. Roughly an iPad's readable
-    /// column; past this the card is mostly whitespace between a label and a
-    /// number.
-    private static let readableChartWidth: CGFloat = 640
+    /// Card width the multi-column dashboard is built from. The minimum is
+    /// what a bar chart needs before its labels start truncating; the maximum
+    /// stops a card from turning into a label at one edge and a number at the
+    /// other. Between them, `.adaptive` gives two columns on an unfolded Duo
+    /// or a portrait iPad and three on a landscape one.
+    private static let chartCardWidth: ClosedRange<CGFloat> = 320...520
+
+    private static let cardSpacing: CGFloat = 16
+
+    /// Charts lay out in columns on a wide screen, and in a reorderable list
+    /// everywhere else. Edit mode falls back to the list on every size class:
+    /// drag-to-reorder and the red delete minus are `List` affordances, and
+    /// reordering a grid by eye is worse than reordering a column anyway.
+    private var usesColumns: Bool {
+        horizontalSizeClass == .regular && !editMode.isEditing
+    }
 
     @ViewBuilder
     private func content(_ model: StatisticsModel) -> some View {
-        List {
+        Group {
             if model.hasLoaded && model.totalPhotos == 0 {
-                unavailable(
+                ContentUnavailableView(
                     "No Indexed Photos",
-                    icon: "chart.bar.xaxis",
-                    message: "Statistics appear after your library has been indexed."
+                    systemImage: "chart.bar.xaxis",
+                    description: Text("Statistics appear after your library has been indexed.")
                 )
             } else if model.hasLoaded && model.charts.isEmpty {
-                unavailable(
+                ContentUnavailableView(
                     "No Charts",
-                    icon: "chart.bar.doc.horizontal",
-                    message: "Tap + to add a chart to your dashboard."
+                    systemImage: "chart.bar.doc.horizontal",
+                    description: Text("Tap + to add a chart to your dashboard.")
                 )
+            } else if usesColumns {
+                columns(model)
             } else {
-                ForEach(model.charts) { spec in
-                    ChartCard(
-                        spec: spec,
-                        data: model.results[spec.id] ?? [],
-                        isLoading: model.isLoading,
-                        onEdit: { editorTarget = .edit(spec) },
-                        onDuplicate: { model.addChart(duplicate(of: spec)) },
-                        onDelete: { model.deleteChart(id: spec.id) },
-                        onDrill: { navigation.openLibrary(with: $0) }
+                rows(model)
+            }
+        }
+        .background(Color(.systemGroupedBackground))
+    }
+
+    private func columns(_ model: StatisticsModel) -> some View {
+        ScrollView {
+            LazyVGrid(
+                columns: [
+                    GridItem(
+                        .adaptive(
+                            minimum: Self.chartCardWidth.lowerBound,
+                            maximum: Self.chartCardWidth.upperBound
+                        ),
+                        spacing: Self.cardSpacing,
+                        alignment: .top
                     )
-                    // Capped and centred on a wide screen. A chart row stretched
-                    // across 835pt — measured on the iPhone Duo's inner display —
-                    // puts the bar's label at one edge and its value at the other,
-                    // which is a longer eye movement for the same number. Still a
-                    // single column, so drag-to-reorder and edit mode are untouched.
-                    .frame(maxWidth: Self.readableChartWidth)
-                    .frame(maxWidth: .infinity)
+                ],
+                alignment: .center,
+                spacing: Self.cardSpacing
+            ) {
+                ForEach(model.charts) { spec in
+                    card(spec, model: model)
+                        // Cards in a row are as tall as the tallest of them, so
+                        // the background has to stretch or the shorter ones
+                        // float in a gap.
+                        .frame(maxHeight: .infinity, alignment: .top)
+                }
+            }
+            .padding(.horizontal, Self.cardSpacing)
+            .padding(.vertical, 8)
+            floatingChromeSpacer
+        }
+        .scrollContentBackground(.hidden)
+    }
+
+    private func rows(_ model: StatisticsModel) -> some View {
+        List {
+            ForEach(model.charts) { spec in
+                card(spec, model: model)
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     // Empty trailing swipe suppresses the synthesized swipe-to-delete;
                     // onDelete still drives the edit-mode red minus button.
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {}
-                }
-                .onMove { model.moveCharts(from: $0, to: $1) }
-                .onDelete { model.deleteCharts(at: $0) }
             }
+            .onMove { model.moveCharts(from: $0, to: $1) }
+            .onDelete { model.deleteCharts(at: $0) }
 
-            // Space for the floating chrome (custom bar, pre-iOS 26).
-            if #unavailable(iOS 26.0) {
-                Color.clear.frame(height: 60)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            }
+            floatingChromeSpacer
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .background(Color(.systemGroupedBackground))
     }
 
-    private func unavailable(_ title: String, icon: String, message: String) -> some View {
-        ContentUnavailableView(title, systemImage: icon, description: Text(message))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
+    private func card(_ spec: ChartSpec, model: StatisticsModel) -> some View {
+        ChartCard(
+            spec: spec,
+            data: model.results[spec.id] ?? [],
+            isLoading: model.isLoading,
+            onEdit: { editorTarget = .edit(spec) },
+            onDuplicate: { model.addChart(duplicate(of: spec)) },
+            onDelete: { model.deleteChart(id: spec.id) },
+            onDrill: { navigation.openLibrary(with: $0) }
+        )
+    }
+
+    /// Space for the floating chrome (custom bar, pre-iOS 26).
+    @ViewBuilder
+    private var floatingChromeSpacer: some View {
+        if #unavailable(iOS 26.0) {
+            Color.clear.frame(height: 60)
+        }
     }
 
     /// A copy of a spec with a fresh id and a "Copy" suffix.

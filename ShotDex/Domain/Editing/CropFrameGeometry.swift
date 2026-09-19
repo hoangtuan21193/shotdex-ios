@@ -21,6 +21,11 @@ enum CropFrameGeometry {
     ///   - rect: the current frame, normalized against the whole image.
     ///   - imageAspect: width / height of the image the frame sits on, so the
     ///     ratio can be expressed in the rect's own normalized space.
+    /// Pulls a value within floating-point noise of 1 onto exactly 1.
+    static func snappedToEdge(_ value: Double) -> Double {
+        abs(1 - value) < 1e-9 ? 1 : value
+    }
+
     static func rect(
         matchingRatio ratio: Double,
         keepingAreaOf rect: NormalizedRect,
@@ -35,8 +40,12 @@ enum CropFrameGeometry {
         // A ratio that does not fit the image at this area shrinks to fit — once,
         // because from then on the area it is compared against is the fitted one.
         let fit: Double = min(1, min(1 / max(0.0001, width), 1 / max(0.0001, height)))
-        width = min(1, max(minimumEdge, width * fit))
-        height = min(1, max(minimumEdge, height * fit))
+        // Snapped: `area.squareRoot() * fit` lands a hair under 1 for ratios
+        // that exactly fill an edge (9:16 on 3:2 gave 0.9999999999999999), and
+        // a crop that is a quadrillionth short of the frame is a crop the user
+        // cannot finish dragging to the edge.
+        width = Self.snappedToEdge(min(1, max(minimumEdge, width * fit)))
+        height = Self.snappedToEdge(min(1, max(minimumEdge, height * fit)))
         let centerX: Double = rect.x + rect.width / 2
         let centerY: Double = rect.y + rect.height / 2
         let x: Double = min(1 - width, max(0, centerX - width / 2))

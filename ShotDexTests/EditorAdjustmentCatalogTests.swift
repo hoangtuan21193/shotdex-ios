@@ -13,7 +13,13 @@ struct EditorAdjustmentCatalogTests {
                 .exposure, .contrast, .highlights, .shadows, .whites, .blackPoint,
             ]
         )
-        #expect(groups.map(\.id) == [.light, .color, .detail, .effects])
+        // Order, not a frozen list: Optics and Geo were added after this test
+        // was written and the catalog will grow again. What has to hold is that
+        // Light comes first and the tone groups keep their relative order.
+        let ids = groups.map(\.id)
+        #expect(ids.prefix(4) == [.light, .color, .detail, .effects])
+        #expect(ids.contains(.optics))
+        #expect(ids.contains(.geo))
         #expect(groups.contains { $0.kinds.contains(.grain) })
     }
 
@@ -68,15 +74,27 @@ struct EditorAdjustmentCatalogTests {
         }
     }
 
+    /// Effects opens with the three local-contrast sliders, then the vignette
+    /// family, then grain. Asserted as order-and-membership rather than an
+    /// exact list: the vignette family has grown twice (roundness, highlights)
+    /// and freezing the list only records what it looked like on one day.
     @Test func effectsGroupCarriesTheExpandedSet() {
-        let effects = EditorAdjustmentCatalog
-            .groups(isRAWSource: false, scope: .global)
-            .first { $0.id == .effects }
-        #expect(effects?.kinds == [
-            .texture, .clarity, .dehaze,
-            .vignette, .vignetteMidpoint, .vignetteFeather,
+        let effects = try? #require(
+            EditorAdjustmentCatalog
+                .groups(isRAWSource: false, scope: .global)
+                .first { $0.id == .effects }
+        )
+        let kinds = effects?.kinds ?? []
+        #expect(kinds.prefix(3) == [.texture, .clarity, .dehaze])
+        for kind in [
+            PhotoAdjustmentKind.vignette, .vignetteMidpoint, .vignetteFeather,
+            .vignetteRoundness, .vignetteHighlights,
             .grain, .grainSize, .grainRoughness,
-        ])
+        ] {
+            #expect(kinds.contains(kind), "Effects lost \(kind)")
+        }
+        // Grain closes the group: it is the last thing applied to the picture.
+        #expect(kinds.suffix(3) == [.grain, .grainSize, .grainRoughness])
     }
 
     @Test func detailGroupCarriesTheFourSharpenControls() {
