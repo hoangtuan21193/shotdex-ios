@@ -83,8 +83,12 @@ enum EditorLayoutMetrics {
 
     /// The strip of the open selection under the canvas. Thumbnail plus the
     /// padding above and below it.
-    static let filmstripThumbnailSide: CGFloat = 64
-    static let filmstripHeight: CGFloat = 88
+    /// Big enough to judge a frame from, which is the whole point of having the
+    /// run on screen: at 64pt a thumbnail said "this is a photo" and nothing
+    /// else, and picking between two frames of the same subject meant switching
+    /// the canvas back and forth.
+    static let filmstripThumbnailSide: CGFloat = 96
+    static let filmstripHeight: CGFloat = 124
     /// The floating command row inside the band: 34pt circular buttons, 37 tall,
     /// inset 11 from the band's top so the row sits level with the Dynamic Island.
     static let editorFloatingCommandRowHeight: CGFloat = 37

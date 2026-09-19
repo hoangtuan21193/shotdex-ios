@@ -309,6 +309,26 @@ final class AppDatabase: Sendable {
             }
         }
 
+        // Picks, rejects and star ratings.
+        //
+        // Its own table, like `subject_scan` above and for the same reason: the
+        // indexer upserts whole `photo_metadata` rows, so a column it does not
+        // know about is blanked on every re-index. Losing a background index
+        // run's worth of *user-entered* culling would be the worst version of
+        // that bug, so this data never shares a row with the indexed fields.
+        migrator.registerMigration("v14-cull") { db in
+            try db.create(table: "photo_cull") { t in
+                t.column("assetId", .text).primaryKey()
+                t.column("rating", .integer).notNull().defaults(to: 0)
+                t.column("flag", .integer).notNull().defaults(to: 0)
+                t.column("updatedAt", .integer).notNull()
+            }
+            // Culling is read as a filter over the whole library — "show me the
+            // picks" — so both columns are indexed rather than scanned.
+            try db.create(index: "photo_cull_rating", on: "photo_cull", columns: ["rating"])
+            try db.create(index: "photo_cull_flag", on: "photo_cull", columns: ["flag"])
+        }
+
         return migrator
     }
 }

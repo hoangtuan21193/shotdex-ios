@@ -245,6 +245,11 @@ Lưới tràn viền, không padding. **Không lưới ảnh nào chèn header n
 
 Tiến trình dài chạy: `safeAreaInset(edge: .bottom)` với `ProgressView` + đếm `Processing N of M` + nút `Cancel` màu đỏ. Với tác vụ hàng loạt cần **khóa toàn màn hình** (Compress batch): dùng **modal giữa màn hình** — scrim `Color.black.opacity(0.6)` phủ kín nuốt mọi chạm, thẻ `panelSolid` bo `Radius.lg` chứa `ProgressView` xoay + thanh `ProgressView(value:)` + đếm + `Cancel` đỏ; nội dung dưới `.disabled(true)`.
 
+### 10.3b Cull và ghép ảnh (2026-09-19)
+
+- **Cull** (pick/reject/rating) là dữ liệu người dùng gõ, sống ở bảng riêng `photo_cull`. Đặt ở menu ⋯ của thanh chọn (section `Cull`) và menu ⋯ của viewer; filmstrip editor hiện badge và long-press để đặt cờ. Thang sao là 0–5, hiện bằng `★`, "No Rating" cho 0.
+- **Combine Photos** (`PhotoStackScreen`) theo đúng khung tầng D §10.3: Cancel/tiêu đề/Save · stage đen · một panel. Mỗi mode kèm **một câu nói mode đó dùng để làm gì**, không mô tả phép toán — phép toán đã nằm ngay trong preview.
+
 ### 10.4 Sheet
 - Sheet nhập liệu ngắn → `.presentationDetents([.medium])`.
 - Sheet có danh sách dài → `[.medium, .large]`.

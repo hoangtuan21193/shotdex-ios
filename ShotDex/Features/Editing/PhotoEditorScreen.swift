@@ -79,6 +79,9 @@ struct PhotoEditorScreen: View {
     /// reads an `@Observable` does not register a dependency, so an alert bound
     /// straight to the saver never appeared.
     @State private var showsBatchFailures = false
+    /// Pick / reject / rating for every photo in the run, read once when the
+    /// strip appears and after each change rather than per thumbnail.
+    @State private var cullStates: [String: PhotoCullState] = [:]
     /// Ties the band's histogram pill to the floating card so expanding /
     /// collapsing animates as one object moving between the two.
     @Namespace private var histogramNamespace
@@ -759,12 +762,25 @@ struct PhotoEditorScreen: View {
             EditorFilmstrip(
                 session: session,
                 photoLibrary: dependencies.photoLibrary,
-                currentHasEdits: !controller.recipe.isIdentity
+                currentHasEdits: !controller.recipe.isIdentity,
+                cullStates: cullStates,
+                setFlag: { flag, asset in
+                    try? dependencies.cullStore.setFlag(flag, ids: [asset.localIdentifier])
+                    reloadCullStates()
+                }
             ) { index in
                 selectPhoto(at: index)
             }
+            .task(id: session.assets.count) { reloadCullStates() }
             .transition(.move(edge: .bottom).combined(with: .opacity))
         }
+    }
+
+    private func reloadCullStates() {
+        guard let session, session.isMultiPhoto else { return }
+        cullStates = (try? dependencies.cullStore.states(
+            assetIds: session.assets.map(\.localIdentifier)
+        )) ?? [:]
     }
 
     /// The photo itself, with the floating histogram card over it. Shared by both

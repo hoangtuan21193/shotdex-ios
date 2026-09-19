@@ -182,11 +182,44 @@ struct SelectionToolbarItems: ToolbarContent {
                         }
                         .disabled(model.imageSelectionCount < 1)
                     }
+                    if let onFlag = model.onFlag {
+                        Section("Cull") {
+                            ForEach(PhotoFlag.allCases) { flag in
+                                Button {
+                                    onFlag(flag)
+                                } label: {
+                                    Label(flag.title, systemImage: flag.systemImage)
+                                }
+                            }
+                            if let onRate = model.onRate {
+                                Menu("Rating") {
+                                    // Highest first: a menu is read top-down and
+                                    // five stars is the one being reached for.
+                                    ForEach(Array(PhotoCullState.ratingRange).reversed(), id: \.self) { rating in
+                                        Button {
+                                            onRate(rating)
+                                        } label: {
+                                            Label(
+                                                rating == 0 ? "No Rating" : String(repeating: "★", count: rating),
+                                                systemImage: rating == 0 ? "star.slash" : "star.fill"
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                     if let onPasteEdits = model.onPasteEdits {
                         Button(action: onPasteEdits) {
                             Label("Paste Edits", systemImage: "doc.on.clipboard")
                         }
                         .disabled(model.imageSelectionCount < 1)
+                    }
+                    if let onCombine = model.onCombine {
+                        Button(action: onCombine) {
+                            Label("Combine Photos", systemImage: "square.3.layers.3d")
+                        }
+                        .disabled(model.imageSelectionCount < 2)
                     }
                     if let onCollage = model.onCollage {
                         Button(action: onCollage) {

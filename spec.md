@@ -376,6 +376,20 @@ Yêu cầu hiệu năng:
 - **Filmstrip tải thumbnail theo thang local → iCloud**, có placeholder và spinner. Máy bật Optimize Storage (đa số thư viện đầy) thì request local-only trả nil cho phần lớn khung, và dải ảnh trước đây là một hàng ô xám không phân biệt được đang tải hay hỏng.
 - Chưa có: undo theo từng ảnh (lịch sử nằm trên controller nên đổi ảnh là mất), Reference View, user preset, flag/rating.
 
+**Cull — pick / reject / rating (2026-09-19)**
+
+- Bảng **riêng** `photo_cull` (migration `v14-cull`), không phải cột trên `photo_metadata`: indexer upsert cả row nên cột lạ bị xoá mỗi lần re-index — cùng lý do `perceptual_hash` và `subject_scan` có bảng riêng. Đây là dữ liệu **người dùng gõ vào**, mất vì một lần index nền là không chấp nhận được.
+- `PhotoFlag` (unflagged/picked/rejected) + rating 0–5 (thang Lightroom). `CullStore` đọc-ghi: `state(assetId:)`, `states(assetIds:)` (một query cho cả lưới), `setRating`, `setFlag`, `culledCount`, `deleteAssets`. Về lại "chưa đụng" thì **xoá row** chứ không lưu số 0, nên `COUNT(*)` trả lời được "đã cull bao nhiêu". Có 8 test.
+- Đặt được từ: menu ⋯ của thanh chọn (section `Cull`), và menu ⋯ của viewer (dòng `Flag or Rate` hiện luôn trạng thái hiện tại). Filmstrip của editor hiện badge cờ/sao và long-press để đặt cờ.
+- Chưa có: badge trên lưới ảnh chính, lọc/sắp theo cờ-sao, và field `.rating`/`.flag` trong `SmartAlbumQuery`.
+
+**Ghép nhiều ảnh — multiple exposure & focus stack (2026-09-19)**
+
+- `PhotoStackRenderer` (actor, trong **ShotDexKit** vì là render thuần): `combine(images:mode:)` với 4 mode — `average` (double exposure, chạy trung bình lũy tiến nên stack 40 tấm không clip ở tấm thứ hai), `lighten` (vệt sáng, pháo hoa, star trail), `darken` (dọn người qua đường khỏi chuỗi chụp tripod), `focusStack`.
+- **Focus stack**: mỗi frame được align bằng `VNTranslationalImageRegistrationRequest` (chỉ tịnh tiến — stack macro chụp trên ray/tripod, fit homography vào vài pixel trôi là fit nhiễu), rồi dựng **bản đồ độ nét** (mono → Laplacian 3×3 → độ lớn phản hồi → box blur) và ghép lũy tiến qua `blendWithMask`: giữ pixel nét nhất. Lũy tiến nên bộ nhớ phẳng theo số frame — stack macro thường 30 tấm. Frame sau align được `clampedToExtent` trước khi crop, nếu không mép hở thành viền trắng quanh ảnh (thấy trên sim).
+- `PhotoStackScreen` (tầng D): Cancel · tiêu đề · Save; stage đen; panel có picker mode + một dòng giải thích mode dùng để làm gì. Preview dựng ở 1600pt và **dùng lại** cho mọi lần đổi mode; bấm Save mới nạp full-res rồi ghép lại và lưu asset mới qua `PhotoLibraryService.saveImage`.
+- Vào từ: chọn ≥2 ảnh → ⋯ → **Combine Photos**.
+
 **Viewer — action bar**
 
 - **Một `HStack`, không phải capsule căn giữa bằng `ZStack`** (2026-09-19): Share tròn · capsule kính (favorite, info, edit, ⋯) · Delete tròn. Capsule nở theo số hành động của tấm ảnh; xếp chồng thì nó **đè lên** Share và Delete — bảy control đòi 288pt trong khe 234pt của máy 402pt. Xếp cùng hàng thì không thể đè, mà capsule vẫn đúng giữa vì hai nút tròn bằng nhau. Icon trong capsule về **40×40, padding 4** đúng token DESIGN.md §6 (trước là 48/8), kèm `minWidth 32` để máy hẹp bóp lại thay vì tràn.

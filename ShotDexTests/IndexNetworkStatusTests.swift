@@ -191,12 +191,26 @@ struct IndexTrafficMonitorTests {
         #expect(monitor.shouldSkipNetworkRead() == false)
     }
 
-    @Test func stallStartsRestWindow() async throws {
-        let monitor = IndexTrafficMonitor(restDuration: .milliseconds(50))
+    /// Opening the window and its expiry are two tests, not one.
+    ///
+    /// They used to share a 50ms `restDuration`, which made the first assertion
+    /// a race against the clock: on a loaded machine — the whole suite runs in
+    /// parallel — more than 50ms can pass between `recordNetworkStall()` and
+    /// the line that reads the window, and the breather is legitimately over by
+    /// then. It failed roughly one run in three. A window that cannot expire
+    /// mid-test proves the opening; a short one that is slept well past proves
+    /// the expiry, and a slow machine only makes *that* more true.
+    @Test func stallStartsRestWindow() {
+        let monitor = IndexTrafficMonitor(restDuration: .seconds(60))
         #expect(monitor.networkRestRemaining == nil)
         monitor.recordNetworkStall()
         #expect(monitor.networkRestRemaining != nil)
-        try await Task.sleep(for: .milliseconds(80))
+    }
+
+    @Test func restWindowExpiresOnItsOwn() async throws {
+        let monitor = IndexTrafficMonitor(restDuration: .milliseconds(20))
+        monitor.recordNetworkStall()
+        try await Task.sleep(for: .milliseconds(150))
         // Breather expired on its own — reads flow again.
         #expect(monitor.networkRestRemaining == nil)
     }

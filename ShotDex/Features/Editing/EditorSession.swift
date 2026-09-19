@@ -112,6 +112,11 @@ struct EditorFilmstrip: View {
     /// session has not been handed yet — the strip asks for it to badge the
     /// current thumbnail correctly.
     let currentHasEdits: Bool
+    /// Pick / reject / rating per asset, so the strip can show what a culling
+    /// pass decided. Empty where nothing has been culled.
+    var cullStates: [String: PhotoCullState] = [:]
+    /// Sets the flag on one photo without leaving the one being edited.
+    var setFlag: ((PhotoFlag, PHAsset) -> Void)?
     var select: (Int) -> Void
 
     var body: some View {
@@ -171,9 +176,41 @@ struct EditorFilmstrip: View {
                             .padding(3)
                     }
                 }
+                .overlay(alignment: .bottomLeading) {
+                    if let cull = cullStates[asset.localIdentifier], !cull.isEmpty {
+                        HStack(spacing: 2) {
+                            if cull.flag != .unflagged {
+                                Image(systemName: cull.flag.systemImage)
+                                    .foregroundStyle(cull.flag == .picked ? .white : .red)
+                            }
+                            if cull.rating > 0 {
+                                Text("\(cull.rating)")
+                                    .monospacedDigit()
+                                Image(systemName: "star.fill")
+                            }
+                        }
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 2)
+                        .background(.black.opacity(0.55), in: Capsule())
+                        .padding(3)
+                    }
+                }
                 .opacity(isCurrent ? 1 : 0.72)
         }
         .buttonStyle(.plain)
+        .contextMenu {
+            if let setFlag {
+                ForEach(PhotoFlag.allCases) { flag in
+                    Button {
+                        setFlag(flag, asset)
+                    } label: {
+                        Label(flag.title, systemImage: flag.systemImage)
+                    }
+                }
+            }
+        }
         .accessibilityLabel("Photo \(index + 1) of \(session.assets.count)")
         .accessibilityAddTraits(isCurrent ? [.isSelected, .isButton] : .isButton)
     }

@@ -96,6 +96,8 @@ struct PhotoDetailScreen: View {
     @State private var handoffTask: Task<Void, Never>?
     @State private var isSavingLiveVideo = false
     @State private var liveVideoErrorMessage: String?
+    /// Pick / reject / rating for the photo on screen, re-read as the pager moves.
+    @State private var cullState = PhotoCullState(assetId: "")
     @State private var editorTarget: PhotoDetailActionTarget?
     @State private var compressionTarget: PhotoDetailActionTarget?
     @State private var videoStudioTarget: PhotoDetailActionTarget?
@@ -313,8 +315,12 @@ struct PhotoDetailScreen: View {
         .onChange(of: currentIndex) { _, _ in
             isLiveTextActive = false
             recordCurrentAsViewed()
+            reloadCullState()
         }
-        .onAppear { recordCurrentAsViewed() }
+        .onAppear {
+            recordCurrentAsViewed()
+            reloadCullState()
+        }
         .sheet(isPresented: $isMetadataPresented) {
             MetadataPanel(
                 asset: currentAsset,
@@ -634,6 +640,40 @@ struct PhotoDetailScreen: View {
         .padding(.bottom, AppTheme.Spacing.md)
     }
 
+    /// What the cull row reads, so the state is visible without opening the
+    /// submenu — this is the one thing in the viewer the user typed.
+    private var cullMenuTitle: String {
+        var parts: [String] = []
+        if cullState.flag != .unflagged { parts.append(cullState.flag.title) }
+        if cullState.rating > 0 { parts.append(String(repeating: "★", count: cullState.rating)) }
+        return parts.isEmpty ? "Flag or Rate" : parts.joined(separator: " · ")
+    }
+
+    /// Re-reads the flag and rating for whichever photo the pager landed on.
+    private func reloadCullState() {
+        guard let id = currentAsset?.localIdentifier else { return }
+        cullState = (try? dependencies.cullStore.state(assetId: id))
+            ?? PhotoCullState(assetId: id)
+    }
+
+    private func setCullFlag(_ flag: PhotoFlag, id: String) {
+        do {
+            try dependencies.cullStore.setFlag(flag, ids: [id])
+            cullState = try dependencies.cullStore.state(assetId: id)
+        } catch {
+            liveVideoErrorMessage = error.localizedDescription
+        }
+    }
+
+    private func setCullRating(_ rating: Int, id: String) {
+        do {
+            try dependencies.cullStore.setRating(rating, ids: [id])
+            cullState = try dependencies.cullStore.state(assetId: id)
+        } catch {
+            liveVideoErrorMessage = error.localizedDescription
+        }
+    }
+
     /// Everything that does not earn a button of its own, in the order Photos
     /// keeps it: organise first, then the corrections, then the destructive row.
     /// Same action set as the grid's tile menu, plus the two that only make
@@ -689,6 +729,29 @@ struct PhotoDetailScreen: View {
                         Label("Trim", systemImage: "scissors")
                     }
                 }
+                Menu {
+                    ForEach(PhotoFlag.allCases) { flag in
+                        Button {
+                            setCullFlag(flag, id: id)
+                        } label: {
+                            Label(flag.title, systemImage: flag.systemImage)
+                        }
+                    }
+                    Divider()
+                    ForEach(Array(PhotoCullState.ratingRange).reversed(), id: \.self) { rating in
+                        Button {
+                            setCullRating(rating, id: id)
+                        } label: {
+                            Label(
+                                rating == 0 ? "No Rating" : String(repeating: "★", count: rating),
+                                systemImage: rating == 0 ? "star.slash" : "star.fill"
+                            )
+                        }
+                    }
+                } label: {
+                    Label(cullMenuTitle, systemImage: "flag")
+                }
+
                 if !isCurrentVideo, let currentAsset {
                     // "Resize", not "Compress": the Library's selection menu
                     // and the tile menu both call it that, and the same action

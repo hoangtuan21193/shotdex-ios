@@ -37,6 +37,9 @@ struct LibraryScreen: View {
     @State private var visibleDate: String?
     @State private var multiEditPresentation: MultiEditPresentation?
     @State private var pasteEditsPresentation: PasteEditsPresentation?
+    @State private var stackPresentation: PhotoStackPresentation?
+    /// Bumped on every culling write so the grid re-reads its badges.
+    @State private var cullGeneration = 0
     /// Measured height of the limited-access banner plus the filter-token bar,
     /// handed to the grid as its top content inset (see `photoGrid`).
     @State private var topAccessoryHeight: CGFloat = 0
@@ -155,6 +158,7 @@ struct LibraryScreen: View {
         }
         .multiEditCover($multiEditPresentation, sourceAlbum: nil, onDismiss: stopSelecting)
         .pasteEditsSheet($pasteEditsPresentation, onDismiss: stopSelecting)
+        .photoStackCover($stackPresentation, onDismiss: stopSelecting)
         .fullScreenCover(item: $compressionPresentation, onDismiss: stopSelecting) { presentation in
             CompressionScreen(
                 assets: presentation.assets,
@@ -228,6 +232,33 @@ struct LibraryScreen: View {
             if updated != selectedIds { selectedIds = updated }
         case .ended:
             swipeBaseline = []
+        }
+    }
+
+    /// Opens the combine tool on the selection — multiple exposure and focus
+    /// stacking, which are the two reasons a photographer shoots the same frame
+    /// several times.
+    private func presentStack(_ model: LibraryModel) {
+        let selected = Set(selectedIds)
+        let photoIDs = model.items
+            .filter { selected.contains($0.assetId) && $0.mediaType == PHAssetMediaType.image.rawValue }
+            .map(\.assetId)
+        let fetched = PhotoLibraryService.fetchAssets(ids: photoIDs)
+        let byID = Dictionary(uniqueKeysWithValues: fetched.map { ($0.localIdentifier, $0) })
+        let assets: [PHAsset] = photoIDs.compactMap { byID[$0] }
+        guard assets.count >= 2 else { return }
+        stackPresentation = PhotoStackPresentation(assets: assets)
+    }
+
+    /// Runs a culling write and surfaces a failure the same way the other
+    /// selection actions do. Culling is the one thing here the user typed, so a
+    /// silent failure would lose work with no trace.
+    private func applyCull(_ write: () throws -> Void) {
+        do {
+            try write()
+            cullGeneration &+= 1
+        } catch {
+            actionErrorMessage = error.localizedDescription
         }
     }
 
@@ -506,6 +537,9 @@ struct LibraryScreen: View {
             onPasteEdits: dependencies.editClipboard.hasContent
                 ? { pasteEditsToSelection(model) }
                 : nil,
+            onCombine: { presentStack(model) },
+            onFlag: { flag in applyCull { try dependencies.cullStore.setFlag(flag, ids: selectedIds) } },
+            onRate: { rating in applyCull { try dependencies.cullStore.setRating(rating, ids: selectedIds) } },
             onDelete: { deleteSelected(model) },
             onAddToCollection: { addToCollection() },
             onExportEXIF: { exportEXIF(model) },

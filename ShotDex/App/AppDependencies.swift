@@ -9,6 +9,8 @@ final class AppDependencies {
     let database: AppDatabase
     let metadataStore: MetadataStore
     let libraryQueries: LibraryQueries
+    /// Picks, rejects and ratings — the culling pass, in its own table.
+    let cullStore: CullStore
     let filterSuggestions: FilterSuggestionCache
     let statisticsQueries: StatisticsQueries
     let smartAlbumStore: SmartAlbumStore
@@ -76,6 +78,7 @@ final class AppDependencies {
         self.metadataStore = metadataStore
         let libraryQueries = LibraryQueries(database: database)
         self.libraryQueries = libraryQueries
+        self.cullStore = CullStore(database: database)
         let filterSuggestions = FilterSuggestionCache(libraryQueries: libraryQueries)
         self.filterSuggestions = filterSuggestions
         self.statisticsQueries = StatisticsQueries(database: database)
