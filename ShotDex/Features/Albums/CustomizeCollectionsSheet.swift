@@ -72,7 +72,7 @@ struct CustomizeCollectionsSheet: View {
                         .foregroundStyle(isShown ? Color(.label) : Color(.secondaryLabel))
                     Spacer()
                     Image(systemName: isShown ? "checkmark.circle.fill" : "circle")
-                        .foregroundStyle(isShown ? Color.accentColor : Color(.tertiaryLabel))
+                        .foregroundStyle(isShown ? AppAccent.color : Color(.tertiaryLabel))
                 }
             }
             .buttonStyle(.plain)

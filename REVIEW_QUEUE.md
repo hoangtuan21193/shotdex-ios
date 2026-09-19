@@ -58,6 +58,12 @@ Agents: `copy-consistency`, `data-migration` (done) · `component-consistency`, 
 - [x] `Data/Sources/AssetMetadataReader.swift` — Info panel section called "Asset" beside "Camera & Lens", "Exposure", "File" _(copy-consistency)_
 - [ ] `Features/Editing/PhotoEditorScreen.swift:165,2146,2153,2215` — four user-facing strings say "asset" instead of "photo", one of them in an alert _(copy-consistency)_ — deferred while the editor agents are still reading the file
 
+- [x] `Features/VideoStudio/VideoStudioScreen.swift` + `Features/Collage/CollageScreen.swift` — the iPad rail and inspector gated on `horizontalSizeClass`, so a ~500pt Split View half got a 92pt rail and a 320pt inspector; now measured on window width like the editor's sidebar _(challenger)_
+- [x] `Features/Import/ImportScreen.swift:311` — its own single-tone selection badge instead of the documented white-check-on-accent-disc _(component-consistency)_
+- [x] `Features/Albums/CustomizeCollectionsSheet.swift:75` — the one checkmark in the app reading `Color.accentColor`, so it would render system blue among amber _(component-consistency)_
+- [x] `Features/Albums/AlbumsScreen.swift:122` + `Features/Library/AdvancedSearchSheet.swift:56` — "New Album" and "Save as Smart Album" wore the add-to-album glyph; creating and adding now have one glyph each _(component-consistency)_
+- [x] `Features/Shared/PhotoGridCollectionView.swift:1435` — the aspect grid built a level (a walk of the whole library, ~23ms at 55k) synchronously inside the pinch; the reachable levels are warmed at gesture start _(perf-profiler)_
+
 ## Nits
 
 - [ ] `Data/Sources/AssetMetadataReader.swift:210` — "Resource 1 / Resource 2" in the Info panel for what a photographer calls the RAW and the JPEG _(copy-consistency)_
@@ -68,3 +74,12 @@ Agents: `copy-consistency`, `data-migration` (done) · `component-consistency`, 
 - Compress → Resize: swept and complete everywhere, including the presets screen and spec _(copy-consistency)_
 - Migrations v1–v14: clean, additive, never edited after shipping; Clear Index deliberately leaves `photo_cull` alone because asset ids are stable and the culling is user input _(data-migration)_
 - `LookPresetStore` and `CollectionPinStore` belong in UserDefaults, not the database: neither is keyed by asset id nor touched by the indexer's row-replace _(data-migration)_
+
+- [ ] `Domain/Grid/GridBadgeCache.swift:24` — unbounded until the next reload; a full scroll during first index can hold ~55k entries _(perf-profiler)_
+- [ ] `Features/Settings/CompressionPresetsScreen.swift:44` — "Add Preset" uses bare `plus` where the app's list rows use `plus.circle.fill` _(component-consistency)_
+- [ ] `Features/Collage/CollageMetrics.swift:42` — `commandButtonSize` duplicates `EditorLayoutMetrics.editorFloatingCommandButtonSize` with identical values _(component-consistency)_
+
+## Needs a decision (sweep 2)
+
+- **One "leave the tool" control for tier D.** Five variants today: Compare uses `xmark` in a 52pt `.editorGlass` circle; the editor, Collage and Video Studio each hand-roll a chevron at 38/44pt with a raw colour fill; Resize uses a system nav-bar Cancel. The glyph is the real question — chevron reads "back", ✕ reads "leave" — and the tools that can lose unsaved work are not the same as the ones that cannot. My proposal: chevron + `.editorGlass(Circle())` at the shared command size for editor/Collage/Video Studio, ✕ for Compare, and Resize keeps its nav bar because it is the only one that is a form. _(component-consistency, blocker)_
+- **The editor sidebar's width picker.** `EditorSidebar.swift:152` claims the ⋯ menu carries the same three widths "for anyone who cannot drag"; it does not — there is no width picker anywhere. Either add three presets to the menu or delete the claim. _(challenger)_

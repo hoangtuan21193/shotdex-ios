@@ -310,7 +310,12 @@ private struct ImportGridTile: View {
     private var selectionBadge: some View {
         Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
             .font(.system(size: 20))
-            .foregroundStyle(isSelected ? accent : .white.opacity(0.9))
+            // The same two-tone badge the Library grid draws (DESIGN §10.6):
+            // white check on an accent disc. Import is picking photos exactly
+            // the way the grid does, so it cannot have its own idea of what
+            // "selected" looks like.
+            .symbolRenderingMode(isSelected ? .palette : .monochrome)
+            .foregroundStyle(isSelected ? .white : .white.opacity(0.9), accent)
             .background(Circle().fill(.black.opacity(isSelected ? 0 : 0.15)))
             .shadow(radius: 1)
             .padding(5)

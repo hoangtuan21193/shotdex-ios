@@ -217,6 +217,22 @@ final class PhotoGridLayout: UICollectionViewLayout {
     /// 55k photos — and a pinch from one column to eight would hold eight of
     /// them for a zoom that is over. Only the two ends of the current blend
     /// are worth keeping.
+    /// Builds the levels a pinch is about to need, before it needs them.
+    ///
+    /// In the aspect grid a level costs a pass over the whole library — about
+    /// 23ms at 55k photos — and `applyZoom` forces that pass synchronously
+    /// inside the gesture the first time the pinch crosses into a column count
+    /// nobody has visited. Paying it once at `.began`, before the fingers have
+    /// moved, is a pause nobody sees; paying it mid-drag is a dropped frame in
+    /// the middle of the app's most-used gesture.
+    func warmLevels(around columns: Int) {
+        guard showsAspectTiles, aspectRatio != nil, preparedWidth > 0 else { return }
+        for candidate in [columns, columns - 1, columns + 1] where levels[candidate] == nil {
+            guard candidate >= 1 else { continue }
+            levels[candidate] = buildLevel(columns: candidate)
+        }
+    }
+
     private func evictDistantLevelsIfNeeded(keeping columns: Int) {
         guard levels.count > 3, levels.values.contains(where: { $0.aspect != nil }) else { return }
         let keep: Set<Int> = [columns, zoomFrom, zoomTo]

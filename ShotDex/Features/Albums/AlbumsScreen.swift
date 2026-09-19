@@ -119,7 +119,7 @@ struct AlbumsScreen: View {
                     Button {
                         namingRequest = NamingRequest(kind: .newAlbum)
                     } label: {
-                        Label("New Album", systemImage: "rectangle.stack.badge.plus")
+                        Label("New Album", systemImage: "plus.rectangle.on.rectangle")
                     }
                     Button {
                         isCreatingSmartAlbum = true

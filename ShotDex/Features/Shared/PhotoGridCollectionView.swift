@@ -1432,6 +1432,10 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 }
                 isZooming = true
                 zoomStartColumns = zoomColumns
+                // The aspect grid's levels are a walk of the whole library;
+                // build the two the pinch can reach now rather than inside a
+                // frame it is already driving.
+                gridLayout.warmLevels(around: Int(zoomColumns.rounded()))
                 takeOverScrolling(collectionView)
                 let location = recognizer.location(in: collectionView)
                 zoomScreenPoint = CGPoint(

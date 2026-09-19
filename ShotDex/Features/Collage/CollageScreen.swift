@@ -179,8 +179,11 @@ struct CollageScreen: View {
         // iPad. With room beside the canvas the tools go there instead, the
         // way the photo editor's sidebar already does — and the canvas keeps
         // the whole height rather than giving a fifth of it to the controls.
-        Group {
-            if horizontalSizeClass == .regular {
+        GeometryReader { proxy in
+            // Measured on the window, like the editor's sidebar: an iPad
+            // Split View half is `.regular` at ~500pt, and a 320pt inspector
+            // there would leave the canvas narrower than it is on a phone.
+            if proxy.size.width >= EditorLayoutMetrics.sidebarMinCanvasWidth {
                 HStack(spacing: 0) {
                     canvasColumn(model, includesPanel: false)
                     inspector(model)

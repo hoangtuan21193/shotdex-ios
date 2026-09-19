@@ -53,7 +53,7 @@ struct AdvancedSearchSheet: View {
                     Button {
                         isSaveAsAlbumPresented = true
                     } label: {
-                        Label("Save as Smart Album", systemImage: "rectangle.stack.badge.plus")
+                        Label("Save as Smart Album", systemImage: "plus.rectangle.on.rectangle")
                     }
                     .disabled(!canApply)
                 }

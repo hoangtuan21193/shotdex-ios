@@ -19,7 +19,6 @@ struct VideoStudioPresentation: Identifiable {
 /// with a fixed centre playhead, and a tool row. Editing controls live in one
 /// contextual bottom sheet that reskins for whatever is selected.
 struct VideoStudioScreen: View {
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dismiss) private var dismiss
     @Environment(AppDependencies.self) private var dependencies
 
@@ -225,15 +224,20 @@ struct VideoStudioScreen: View {
                 // phone the leftover *is* the timeline — a landscape project
                 // gets a tall timeline instead of black bars, which is the
                 // documented choice — so the cap is not applied there.
-                timelineContentHeight: horizontalSizeClass == .regular
+                timelineContentHeight: proxy.size.width >= EditorLayoutMetrics.sidebarMinCanvasWidth
                     ? VideoStudioMetrics.timelineContentHeight(
                         overlayLanes: max(1, model.overlayLaneCount),
                         musicLanes: max(1, model.musicLaneCount)
                     )
                     : .greatestFiniteMagnitude,
-                usesToolRail: horizontalSizeClass == .regular
+                usesToolRail: proxy.size.width >= EditorLayoutMetrics.sidebarMinCanvasWidth
             )
-            let usesRail = horizontalSizeClass == .regular
+            // Measured on the window, not on the size class. An iPad Split
+            // View half reports `.regular` at ~500pt, where a permanent 92pt
+            // rail costs a fifth of the width to save 62pt of height — the
+            // wrong trade, and the exact mistake the editor's sidebar avoids
+            // by using a 700pt threshold instead.
+            let usesRail = proxy.size.width >= EditorLayoutMetrics.sidebarMinCanvasWidth
             ZStack(alignment: .bottom) {
                 HStack(spacing: 0) {
                     // Regular width puts the tools down the leading edge: the
