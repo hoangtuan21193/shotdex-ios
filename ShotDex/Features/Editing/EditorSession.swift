@@ -102,6 +102,12 @@ final class EditorSession {
         return assets[referenceIndex]
     }
 
+    /// Whether the reference follows the canvas's zoom and pan — Lightroom's
+    /// Link Focus. On by default: the reason to zoom into a photo while a
+    /// reference is up is to compare the same detail in both, and doing that by
+    /// hand twice is the kind of work a computer should be doing.
+    var isReferenceLocked = true
+
     /// Pins a frame, or unpins it when it is already the reference.
     func toggleReference(at index: Int) {
         referenceIndex = referenceIndex == index ? nil : index

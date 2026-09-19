@@ -781,7 +781,11 @@ struct PhotoEditorScreen: View {
         )
         let pane = EditorReferencePane(
             asset: reference,
-            photoLibrary: dependencies.photoLibrary
+            photoLibrary: dependencies.photoLibrary,
+            zoomScale: chrome.zoomScale,
+            zoomOffset: chrome.zoomOffset,
+            isLocked: session?.isReferenceLocked ?? true,
+            toggleLock: { session?.isReferenceLocked.toggle() }
         ) {
             withAnimation(EditorTheme.animation) {
                 session?.referenceIndex = nil
