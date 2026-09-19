@@ -230,28 +230,46 @@ struct VideoStudioScreen: View {
                         overlayLanes: max(1, model.overlayLaneCount),
                         musicLanes: max(1, model.musicLaneCount)
                     )
-                    : .greatestFiniteMagnitude
+                    : .greatestFiniteMagnitude,
+                usesToolRail: horizontalSizeClass == .regular
             )
+            let usesRail = horizontalSizeClass == .regular
             ZStack(alignment: .bottom) {
-                VStack(spacing: 0) {
-                    VideoStudioTopBand(model: model)
-                        .frame(height: bandHeight, alignment: .top)
-                    preview(model).frame(height: layout.preview)
-                    Color.clear.frame(height: VideoStudioMetrics.previewTimelineGap)
-                    VideoTimelineView(
-                        model: model,
-                        height: layout.timeline,
-                        onAddOverlay: { addTextOverlay(model) },
-                        onAddMusic: { musicChooserIntent = .add },
-                        onAddMedia: { mediaPickerMode = .add },
-                        onEditText: { editingOverlay = $0 },
-                        onTransition: { model.editingTransitionIndex = $0 }
-                    )
-                    // Sits under the panel; keeps the timeline above it.
-                    Color.clear.frame(height: layout.lift)
-                    VideoStudioToolbar(model: model, actions: actions(model))
-                    VideoStudioBottomBar(model: model, actions: actions(model))
-                    Color.clear.frame(height: proxy.safeAreaInsets.bottom)
+                HStack(spacing: 0) {
+                    // Regular width puts the tools down the leading edge: the
+                    // row across the bottom spends 62pt of height — the thing
+                    // a timeline editor is short of — to show nine cells in a
+                    // bar that is 1032pt wide.
+                    if usesRail {
+                        VideoStudioToolRail(
+                            model: model,
+                            actions: actions(model),
+                            topInset: bandHeight,
+                            bottomInset: proxy.safeAreaInsets.bottom
+                        )
+                    }
+                    VStack(spacing: 0) {
+                        VideoStudioTopBand(model: model)
+                            .frame(height: bandHeight, alignment: .top)
+                        preview(model).frame(height: layout.preview)
+                        Color.clear.frame(height: VideoStudioMetrics.previewTimelineGap)
+                        VideoTimelineView(
+                            model: model,
+                            height: layout.timeline,
+                            onAddOverlay: { addTextOverlay(model) },
+                            onAddMusic: { musicChooserIntent = .add },
+                            onAddMedia: { mediaPickerMode = .add },
+                            onEditText: { editingOverlay = $0 },
+                            onTransition: { model.editingTransitionIndex = $0 }
+                        )
+                        // Sits under the panel; keeps the timeline above it.
+                        Color.clear.frame(height: layout.lift)
+                        if !usesRail {
+                            VideoStudioToolbar(model: model, actions: actions(model))
+                        }
+                        VideoStudioBottomBar(model: model, actions: actions(model))
+                        Color.clear.frame(height: proxy.safeAreaInsets.bottom)
+                    }
                 }
 
                 // The panel slides over the bars; the layout underneath never

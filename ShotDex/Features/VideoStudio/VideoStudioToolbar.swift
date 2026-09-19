@@ -10,27 +10,11 @@ struct VideoStudioToolbar: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     var body: some View {
-        Group {
-            if horizontalSizeClass == .regular {
-                // The nine cells fit twice over on an iPad, so scrolling them
-                // is pointless and clumping them at the leading edge leaves
-                // 560pt of empty bar with the tools in one corner. They spread
-                // instead, the way a desk-sized tool row is read.
-                HStack(spacing: 4) {
-                    ForEach(commands) {
-                        VideoToolbarCell(command: $0, isRegularWidth: true)
-                            .frame(maxWidth: .infinity)
-                    }
-                }
-                .padding(.horizontal, 20)
-            } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 4) {
-                        ForEach(commands) { VideoToolbarCell(command: $0) }
-                    }
-                    .padding(.horizontal, 10)
-                }
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 4) {
+                ForEach(commands) { VideoToolbarCell(command: $0) }
             }
+            .padding(.horizontal, 10)
         }
         .frame(height: VideoStudioMetrics.toolbarHeight)
         .frame(maxWidth: .infinity)
@@ -38,7 +22,7 @@ struct VideoStudioToolbar: View {
         .overlay(alignment: .top) { Rectangle().fill(EditorTheme.panelTopHairline).frame(height: 1) }
     }
 
-    private var commands: [VideoCommand] {
+    var commands: [VideoCommand] {
         [
             // Plain like Text / Sticker / Music: accent marks the *open* global
             // tool, and Add is an action, not a mode.
@@ -115,6 +99,43 @@ struct VideoStudioBottomBar: View {
     }
 }
 
+/// The same tools as a **vertical rail**, for a regular-width window.
+///
+/// A row of nine cells across 1032pt is a row with 560pt of nothing in it, and
+/// the horizontal band steals height from the thing the screen is for. Final
+/// Cut and CapCut both put the tools down the side on iPad for the same
+/// reason: vertical space is what a timeline editor is short of, and a rail
+/// costs none of it.
+struct VideoStudioToolRail: View {
+    @Bindable var model: VideoStudioModel
+    let actions: VideoInspectorActions
+    /// Clears the status bar and the command band, so the first cell starts
+    /// level with the preview rather than under the clock.
+    var topInset: CGFloat = 0
+    var bottomInset: CGFloat = 0
+
+    var body: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 6) {
+                ForEach(commands) { VideoToolbarCell(command: $0, isRegularWidth: true) }
+            }
+            .padding(.top, topInset + 12)
+            .padding(.bottom, bottomInset + 12)
+            .frame(maxWidth: .infinity)
+        }
+        .frame(width: VideoStudioMetrics.railWidth)
+        .frame(maxHeight: .infinity)
+        .background(EditorTheme.panelSolid)
+        .overlay(alignment: .trailing) {
+            Rectangle().fill(EditorTheme.panelTopHairline).frame(width: 1)
+        }
+    }
+
+    private var commands: [VideoCommand] {
+        VideoStudioToolbar(model: model, actions: actions).commands
+    }
+}
+
 /// One toolbar cell — the command band's cell shape, sized for a scrolling row.
 private struct VideoToolbarCell: View {
     let command: VideoCommand
@@ -137,8 +158,8 @@ private struct VideoToolbarCell: View {
             }
             .foregroundStyle(tintColor)
             .frame(
-                width: isRegularWidth ? nil : VideoStudioMetrics.commandCellWidth,
-                height: isRegularWidth ? 58 : 52
+                width: isRegularWidth ? VideoStudioMetrics.railWidth - 12 : VideoStudioMetrics.commandCellWidth,
+                height: isRegularWidth ? VideoStudioMetrics.railCellHeight : 52
             )
             .background(
                 RoundedRectangle(cornerRadius: VideoStudioMetrics.commandCellRadius, style: .continuous)

@@ -24,6 +24,14 @@ enum VideoStudioMetrics {
     /// Gap between the preview and the timeline.
     static let previewTimelineGap: CGFloat = 8
     static let toolbarHeight: CGFloat = 62
+    /// Width of the tool rail that replaces the bottom row on a regular-width
+    /// screen. Wide enough for a 24pt glyph over an 11pt label without the
+    /// label wrapping ("Background" is the longest), which is what Final Cut
+    /// and CapCut both settle on for an iPad rail.
+    static let railWidth: CGFloat = 92
+    /// One rail cell: the same shape as a toolbar cell, stacked instead of
+    /// spread.
+    static let railCellHeight: CGFloat = 62
     /// Back · export estimate · Export pill. Always on screen.
     static let bottomBarHeight: CGFloat = 50
     /// Height of the contextual panel (selection + global tools), above the
@@ -33,6 +41,12 @@ enum VideoStudioMetrics {
     /// The stack lifts by this much while the panel is up, so the whole timeline
     /// stays visible above it and the selected band never hides under the panel.
     static var sheetLift: CGFloat { sheetHeight - toolbarHeight - bottomBarHeight }
+
+    /// With the tools in a rail there is no bottom tool row for the panel to
+    /// cover, so it overlaps that much more of the stack.
+    static func sheetLift(usesToolRail: Bool) -> CGFloat {
+        usesToolRail ? sheetHeight - bottomBarHeight : sheetLift
+    }
 
     /// The preview / timeline split for one screen. Pure, so it is unit-tested.
     struct StackLayout: Equatable {
@@ -55,10 +69,14 @@ enum VideoStudioMetrics {
         bottomInset: CGFloat,
         canvas: CGSize,
         presentsSheet: Bool,
-        timelineContentHeight: CGFloat = .greatestFiniteMagnitude
+        timelineContentHeight: CGFloat = .greatestFiniteMagnitude,
+        usesToolRail: Bool = false
     ) -> StackLayout {
-        let lift = presentsSheet ? sheetLift : 0
-        let fixed = bandHeight + previewTimelineGap + toolbarHeight + bottomBarHeight + bottomInset + lift
+        let lift = presentsSheet ? sheetLift(usesToolRail: usesToolRail) : 0
+        // The rail takes the tools out of the vertical stack entirely, so the
+        // 62pt the row used to cost goes back to the preview and the timeline.
+        let toolRow = usesToolRail ? 0 : toolbarHeight
+        let fixed = bandHeight + previewTimelineGap + toolRow + bottomBarHeight + bottomInset + lift
         let usable = max(0, screen.height - fixed)
         let natural = canvas.width > 0 ? screen.width * canvas.height / canvas.width : usable
         let previewCap = max(previewMinimumHeight, usable - timelineMinimumHeight)

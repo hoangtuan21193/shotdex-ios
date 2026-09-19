@@ -66,6 +66,36 @@ struct VideoStudioLayoutTests {
         ))
     }
 
+    /// The rail takes the tool row out of the vertical stack, so the 62pt it
+    /// used to cost goes back to the preview and the timeline — the whole
+    /// reason to move the tools to the side on a screen that is short, not
+    /// narrow.
+    @Test func theToolRailGivesItsHeightBackToTheStack() {
+        let iPad = CGSize(width: 1032, height: 1376)
+        let content = VideoStudioMetrics.timelineContentHeight(overlayLanes: 1, musicLanes: 1)
+        let row = VideoStudioMetrics.stackLayout(
+            screen: iPad, bandHeight: 24, bottomInset: 20,
+            canvas: CGSize(width: 16, height: 9), presentsSheet: false,
+            timelineContentHeight: content
+        )
+        let rail = VideoStudioMetrics.stackLayout(
+            screen: iPad, bandHeight: 24, bottomInset: 20,
+            canvas: CGSize(width: 16, height: 9), presentsSheet: false,
+            timelineContentHeight: content, usesToolRail: true
+        )
+        #expect(rail.preview == row.preview + VideoStudioMetrics.toolbarHeight)
+        #expect(rail.timeline == row.timeline)
+    }
+
+    /// With no tool row under it, the panel covers that much more of the
+    /// stack, so the lift has to grow by the same amount.
+    @Test func theRailMakesThePanelLiftFurther() {
+        #expect(
+            VideoStudioMetrics.sheetLift(usesToolRail: true)
+                == VideoStudioMetrics.sheetLift + VideoStudioMetrics.toolbarHeight
+        )
+    }
+
     @Test func sheetLiftsTheStackAndTakesFromTheTimelineFirst() {
         let idle = VideoStudioMetrics.stackLayout(
             screen: screen, bandHeight: band, bottomInset: inset,
