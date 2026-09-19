@@ -699,8 +699,18 @@ private struct CollageTrayThumbnail: View {
             .frame(width: AppTheme.Size.minTouch, height: AppTheme.Size.minTouch)
             .contentShape(Rectangle())
             .accessibilityLabel(String(localized: "Unplaced photo, drag to place"))
-            // Drag a tray photo down onto a cell to place it there (§7).
-            .draggable(assetID)
+            // Drag a tray photo down onto a cell to place it there (§7) — and
+            // out of the app, where it has to be the photo. `.draggable(String)`
+            // registers plain text, so a collage photo dropped into Mail used
+            // to arrive as `B84E...F1/L0/001`. The library grid's provider
+            // carries both payloads: the identifier for ShotDex, the original
+            // file for everyone else.
+            .onDrag {
+                guard let asset = model.asset(id: assetID) else {
+                    return NSItemProvider(object: assetID as NSString)
+                }
+                return PhotoDragItem.provider(for: asset)
+            }
             .onAppear {
                 guard model.image(forAsset: assetID) == nil, let asset = model.asset(id: assetID) else { return }
                 _ = photoLibrary.requestThumbnail(

@@ -38,6 +38,16 @@ struct SelectionOverlay: View {
         .sheet(isPresented: $isSelectedItemsPresented) {
             SelectedItemsSheet(model: model)
         }
+        // Escape leaves selection, the way it leaves every other mode in the
+        // app. On an iPad with a keyboard the ✕ is a long reach for something
+        // the user does after every batch.
+        .background {
+            Button("Done Selecting", action: model.onClose)
+                .keyboardShortcut(.cancelAction)
+                .opacity(0)
+                .frame(width: 0, height: 0)
+                .accessibilityHidden(true)
+        }
     }
 }
 

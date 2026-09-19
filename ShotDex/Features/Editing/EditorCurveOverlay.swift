@@ -58,6 +58,10 @@ struct EditorCurveOverlay: View {
         }
         .frame(width: rect.width, height: rect.height)
         .contentShape(Rectangle())
+        // A curve is grabbed at points a pointer cannot see. `.automatic`
+        // gives the cursor the region to work in without lifting the canvas
+        // off the photo behind it.
+        .hoverEffect(.automatic)
         .highPriorityGesture(deleteGesture(local))
         .gesture(dragGesture(local))
         .animation(Self.fade, value: isShaping)

@@ -106,6 +106,18 @@ struct TimelineRuler: View {
     var body: some View {
         Canvas { context, size in
             guard pps > 0 else { return }
+            // The rule runs the whole width even where there is no time to
+            // mark yet. Before this the lead-in at t = 0 was blank canvas, so
+            // the timeline looked like it started half way across the screen
+            // instead of scrolling under a playhead that is parked there.
+            context.stroke(
+                Path { p in
+                    p.move(to: CGPoint(x: 0, y: size.height - 0.5))
+                    p.addLine(to: CGPoint(x: size.width, y: size.height - 0.5))
+                },
+                with: .color(.white.opacity(0.12)),
+                lineWidth: 1
+            )
             let firstHalf = (visibleLeftTime * 2).rounded(.down) / 2
             var half = max(0, firstHalf)
             let last = min(totalDuration + 0.5, visibleLeftTime + Double(size.width / pps) + 0.5)

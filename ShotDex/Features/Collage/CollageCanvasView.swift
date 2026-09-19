@@ -188,10 +188,18 @@ struct CollageCanvasView: View {
         .contentShape(shape)
         .position(x: frame.midX, y: frame.midY)
         // A photo dragged from the tray drops into this cell (§7); any photo
-        // already here is displaced back to the tray by `fillSlot`.
-        .dropDestination(for: String.self) { ids, _ in
-            guard let id = ids.first else { return false }
-            model.fillSlot(index, with: id)
+        // already here is displaced back to the tray by `fillSlot`. The tray
+        // now hands out a `PhotoDragItem` provider rather than a bare string,
+        // so the identifier arrives under ShotDex's own private type — which
+        // is also what keeps another app's text from looking like a photo.
+        .onDrop(of: [PhotoDragItem.assetIdentifierType], isTargeted: nil) { providers in
+            guard let provider = providers.first else { return false }
+            _ = provider.loadDataRepresentation(
+                forTypeIdentifier: PhotoDragItem.assetIdentifierType
+            ) { data, _ in
+                guard let data, let id = String(data: data, encoding: .utf8) else { return }
+                Task { @MainActor in model.fillSlot(index, with: id) }
+            }
             return true
         }
         .onTapGesture { tap(index) }

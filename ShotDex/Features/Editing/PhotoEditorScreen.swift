@@ -71,14 +71,21 @@ struct PhotoEditorScreen: View {
     @State private var signatureName = ""
     @State private var drawSession = EditorDrawSession()
 
-    /// Wide-screen sidebar: which side it is parked on, how wide, and whether it
-    /// is collapsed. All three are the user's, so all three persist.
-    @AppStorage(SettingsKeys.editorSidebarEdge)
-    private var sidebarEdgeRaw = EditorSidebarEdge.trailing.rawValue
-    @AppStorage(SettingsKeys.editorSidebarWidth)
-    private var storedSidebarWidth = Double(EditorLayoutMetrics.sidebarDefaultWidth)
-    @AppStorage(SettingsKeys.editorSidebarHidden)
-    private var isSidebarHidden = false
+    /// Wide-screen sidebar: which side it is parked on, how wide, and whether
+    /// it is collapsed. All three are the user's, so all three persist — but
+    /// as scene-local state read from and written back to defaults, not as a
+    /// live `@AppStorage` binding. A binding pushes every change to every
+    /// observer, so on an iPad with two editor windows open, dragging one
+    /// window's sidebar resized the other window's canvas mid-edit.
+    @State private var sidebarEdgeRaw = UserDefaults.standard.string(
+        forKey: SettingsKeys.editorSidebarEdge
+    ) ?? EditorSidebarEdge.trailing.rawValue
+    @State private var storedSidebarWidth = UserDefaults.standard.object(
+        forKey: SettingsKeys.editorSidebarWidth
+    ) as? Double ?? Double(EditorLayoutMetrics.sidebarDefaultWidth)
+    @State private var isSidebarHidden = UserDefaults.standard.bool(
+        forKey: SettingsKeys.editorSidebarHidden
+    )
     /// Live width while the edge is being dragged; written back on release so a
     /// drag is one `UserDefaults` write rather than one per frame.
     @State private var sidebarDragWidth: CGFloat?
@@ -259,7 +266,7 @@ struct PhotoEditorScreen: View {
                 .disabled(!dependencies.editClipboard.hasContent)
             Button("Fit or Fill") { chrome.requestFillZoomToggle() }
                 .keyboardShortcut("0", modifiers: .command)
-            Button("Hide or Show Tools") { isSidebarHidden.toggle() }
+            Button("Hide or Show Tools") { setSidebarHidden(!isSidebarHidden) }
                 .keyboardShortcut("\\", modifiers: .command)
             Button("Back") {
                 if hasUnsavedWork {
@@ -938,6 +945,13 @@ struct PhotoEditorScreen: View {
         UIDevice.current.userInterfaceIdiom == .phone
     }
 
+    /// Collapsed or not, persisted for the next window rather than pushed
+    /// into the one already open.
+    private func setSidebarHidden(_ hidden: Bool) {
+        isSidebarHidden = hidden
+        UserDefaults.standard.set(hidden, forKey: SettingsKeys.editorSidebarHidden)
+    }
+
     private var sidebarEdge: EditorSidebarEdge {
         EditorSidebarEdge.resolved(sidebarEdgeRaw)
     }
@@ -963,6 +977,7 @@ struct PhotoEditorScreen: View {
         } onEnd: {
             if let width = sidebarDragWidth {
                 storedSidebarWidth = Double(width)
+                UserDefaults.standard.set(storedSidebarWidth, forKey: SettingsKeys.editorSidebarWidth)
             }
             sidebarDragWidth = nil
             sidebarDragStartWidth = nil
@@ -989,7 +1004,7 @@ struct PhotoEditorScreen: View {
                     .foregroundStyle(.white)
                 Spacer(minLength: 8)
                 Button {
-                    isSidebarHidden = true
+                    setSidebarHidden(true)
                 } label: {
                     Image(systemName: sidebarEdge.collapseIcon)
                         .font(EditorTheme.commandGlyph)
@@ -1429,7 +1444,7 @@ struct PhotoEditorScreen: View {
     /// always answers.
     private var showSidebarCommand: some View {
         circleCommand(sidebarEdge.collapseIcon, isEnabled: true) {
-            isSidebarHidden = false
+            setSidebarHidden(false)
         }
         .accessibilityLabel("Show Tools")
     }

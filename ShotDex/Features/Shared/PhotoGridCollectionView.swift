@@ -1940,6 +1940,16 @@ final class PhotoGridCell: UICollectionViewCell {
     override init(frame: CGRect) {
         super.init(frame: frame)
 
+        // A pointer over a tile should say which tile it is over. This is the
+        // screen a photographer with a Magic Keyboard and trackpad spends the
+        // most time on, and it was the one surface with no pointer feedback
+        // at all. `.highlight` rather than `.lift`: a tile is flush with its
+        // neighbours, and lifting one out of a dense mosaic reads as a drag
+        // already having started.
+        if #available(iOS 17.0, *) {
+            hoverStyle = .init(effect: .highlight)
+        }
+
         imageView.contentMode = .scaleAspectFill
         imageView.clipsToBounds = true
         imageView.backgroundColor = .secondarySystemBackground

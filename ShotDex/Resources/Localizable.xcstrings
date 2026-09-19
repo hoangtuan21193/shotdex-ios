@@ -53,6 +53,9 @@
     "%@ donut chart" : {
 
     },
+    "%@ is on this video's timeline. Deleting it removes the file, and the track goes silent in the preview and the export." : {
+
+    },
     "%@ line chart" : {
 
     },
@@ -234,16 +237,6 @@
     },
     "%lld saved to Photos" : {
 
-    },
-    "%lld star%@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld star%2$@"
-          }
-        }
-      }
     },
     "%lld%%" : {
 
@@ -452,6 +445,12 @@
 
     },
     "Back" : {
+
+    },
+    "Back a Frame" : {
+
+    },
+    "Back a Second" : {
 
     },
     "Background" : {
@@ -801,6 +800,9 @@
     "Delete Mask" : {
 
     },
+    "Delete Music in Use?" : {
+
+    },
     "Delete Originals" : {
 
     },
@@ -823,6 +825,9 @@
           }
         }
       }
+    },
+    "Deselect" : {
+
     },
     "Deselect All" : {
 
@@ -878,6 +883,9 @@
     "Drag to shape · drag on empty graph to add · double-tap a point to remove" : {
 
     },
+    "Drag up for a taller timeline, down for a bigger preview" : {
+
+    },
     "Drop here to set aside" : {
 
     },
@@ -917,6 +925,9 @@
     "Empty. Move an album here from its own menu." : {
 
     },
+    "End" : {
+
+    },
     "Enter value" : {
 
     },
@@ -930,9 +941,6 @@
 
     },
     "Every camera in your library has a known sensor format." : {
-
-    },
-    "Exact" : {
 
     },
     "Export" : {
@@ -1007,9 +1015,6 @@
     "Fit Photo" : {
 
     },
-    "Flag" : {
-
-    },
     "Flip Horizontal" : {
 
     },
@@ -1026,6 +1031,12 @@
 
     },
     "Format" : {
+
+    },
+    "Forward a Frame" : {
+
+    },
+    "Forward a Second" : {
 
     },
     "Frame" : {
@@ -1226,13 +1237,13 @@
     "JPEG" : {
 
     },
-    "Keep" : {
-
-    },
     "Keep Editing" : {
 
     },
     "Keep EXIF of first photo" : {
+
+    },
+    "Keep only this" : {
 
     },
     "Keep Only This" : {
@@ -1320,6 +1331,9 @@
 
     },
     "Map showing where this item was captured" : {
+
+    },
+    "Mark for deletion" : {
 
     },
     "Mark for Deletion" : {
@@ -1461,16 +1475,6 @@
     "New Smart Album" : {
 
     },
-    "No %@ duplicates among %lld photos." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "No %1$@ duplicates among %2$lld photos."
-          }
-        }
-      }
-    },
     "No Access to Photos" : {
 
     },
@@ -1526,6 +1530,9 @@
 
     },
     "No presets yet" : {
+
+    },
+    "No Series" : {
 
     },
     "No trips yet. A trip is several days of photos taken well away from where you usually shoot." : {
@@ -1742,10 +1749,10 @@
     "photos and videos per minute" : {
 
     },
-    "Photos doesn't support an HEIC edited rendition for this asset. ShotDex will save a maximum-quality JPEG." : {
+    "Photos doesn't support an HEIC edited version of this photo. ShotDex will save a maximum-quality JPEG." : {
 
     },
-    "Photos doesn't support HEIC as the edited rendition for this asset, so ShotDex saved a maximum-quality JPEG instead." : {
+    "Photos doesn't support HEIC as the edited version of this photo, so ShotDex saved a maximum-quality JPEG instead." : {
 
     },
     "Photos must match at least one condition below." : {
@@ -1794,6 +1801,9 @@
 
     },
     "Play Live Photo" : {
+
+    },
+    "Play or Pause" : {
 
     },
     "Playback" : {
@@ -1847,6 +1857,9 @@
     "Presets" : {
 
     },
+    "Press and hold to see the clips without edits" : {
+
+    },
     "Preview" : {
 
     },
@@ -1860,9 +1873,6 @@
 
     },
     "Quality" : {
-
-    },
-    "Rating" : {
 
     },
     "Ratio" : {
@@ -1951,12 +1961,6 @@
       }
     },
     "Remove from Album" : {
-
-    },
-    "Remove from comparison" : {
-
-    },
-    "Remove from Comparison" : {
 
     },
     "Remove Invert" : {
@@ -2100,7 +2104,7 @@
     "Save Changes" : {
 
     },
-    "Save Changes is non-destructive: Photos keeps the original and ShotDex reopens this asset with the saved crop, sliders and masks. A Live Photo keeps its motion. Save Copy creates a still image." : {
+    "Save Changes is non-destructive: Photos keeps the original and ShotDex reopens this photo with the saved crop, sliders and masks. A Live Photo keeps its motion. Save Copy creates a still image." : {
 
     },
     "Save Changes to %lld Photos" : {
@@ -2109,7 +2113,7 @@
     "Save Copy" : {
 
     },
-    "Save Copy is full resolution at maximum quality. Turning off metadata strips EXIF and clears the Photos date/location on Save Changes. If Photos doesn't support HEIC for this asset, ShotDex falls back to JPEG and tells you." : {
+    "Save Copy is full resolution at maximum quality. Turning off metadata strips EXIF and clears the Photos date/location on Save Changes. If Photos doesn't support HEIC for this photo, ShotDex falls back to JPEG and tells you." : {
 
     },
     "Save Current" : {
@@ -2306,6 +2310,9 @@
     "Show on Map" : {
 
     },
+    "Show original" : {
+
+    },
     "Show photos from ${camera}" : {
 
     },
@@ -2346,9 +2353,6 @@
 
     },
     "Shutter Speed" : {
-
-    },
-    "Similar" : {
 
     },
     "Size" : {
@@ -2414,6 +2418,9 @@
     "Split into series by" : {
 
     },
+    "Start" : {
+
+    },
     "Statistics" : {
 
     },
@@ -2469,6 +2476,9 @@
 
     },
     "Tap a mask to adjust that area on its own" : {
+
+    },
+    "Tap a photo to mark it for deletion" : {
 
     },
     "Tap a section to show or hide it, and Edit to drag them into the order you want. A section with nothing in it stays hidden whatever you choose here." : {
@@ -2557,6 +2567,9 @@
 
     },
     "Time-lapse" : {
+
+    },
+    "Timeline height" : {
 
     },
     "Tint wheel" : {

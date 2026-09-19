@@ -56,6 +56,9 @@ struct EditorColorWheel: View {
                 onEnd()
             }
         }
+        // The wheel is a control a pointer has no other way to recognise:
+        // it is drawn, not composed from system views.
+        .hoverEffect(.highlight)
         .onTapGesture(count: 2) {
             UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
             onReset()

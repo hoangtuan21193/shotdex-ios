@@ -44,9 +44,7 @@ struct VideoTimelineView: View {
         GeometryReader { geo in
             let screenWidth = geo.size.width
             let halfWidth = VideoStudioMetrics.rowAreaHalfWidth(screenWidth: screenWidth, gutter: lanes.gutter)
-            // What time sits at the row's left edge. Until the playhead has
-            // walked to the centre the row has not moved, so that is still 0.
-            let visibleLeftTime = max(0, model.currentTime - Double(halfWidth / pps))
+            let visibleLeftTime = model.currentTime - Double(halfWidth / pps)
 
             VStack(spacing: 0) {
                 // Inset by the gutter so the ruler's x = 0 lines up with the
@@ -56,16 +54,7 @@ struct VideoTimelineView: View {
                     .padding(.leading, lanes.gutter)
                     .padding(.top, VideoStudioMetrics.timelineTopPadding)
                     .padding(.bottom, VideoStudioMetrics.rulerToTracks)
-                    // Tap the ruler to put the playhead there. Without this
-                    // the first half-viewport of the project is unreachable:
-                    // the row does not scroll until the playhead has walked
-                    // to the centre, so there is no drag that lands on 2s.
-                    .contentShape(Rectangle())
-                    .gesture(
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { seek(toRulerX: $0.location.x, visibleLeftTime: visibleLeftTime) }
-                            .onEnded { model.endScrub(at: rulerTime(at: $0.location.x, visibleLeftTime: visibleLeftTime)) }
-                    )
+                    .allowsHitTesting(false)
 
                 HStack(spacing: 0) {
                     VideoTimelineGutter(
@@ -103,20 +92,14 @@ struct VideoTimelineView: View {
                         )
                         .onPreferenceChange(TimelineDragZonesKey.self) { dragZones = $0 }
                     }
+                    .background(alignment: .topLeading) { laneRails }
                 }
 
                 scrollbar(screenWidth: screenWidth)
                     .padding(.bottom, 2)
             }
             .overlay(alignment: .topLeading) {
-                playhead.offset(
-                    x: VideoStudioMetrics.playheadX(
-                        screenWidth: screenWidth,
-                        gutter: lanes.gutter,
-                        time: model.currentTime,
-                        pointsPerSecond: pps
-                    ) - 1
-                )
+                playhead.offset(x: VideoStudioMetrics.playheadX(screenWidth: screenWidth, gutter: lanes.gutter) - 1)
             }
             .onAppear { viewportWidth = screenWidth }
             .onChange(of: screenWidth) { viewportWidth = screenWidth }
@@ -127,17 +110,37 @@ struct VideoTimelineView: View {
         .onChange(of: model.fitToWindowToken) { fitToWindow() }
     }
 
-    /// Time under a point on the ruler. The ruler is drawn inset by the
-    /// gutter, so its own x = 0 is the row's x = 0.
-    private func rulerTime(at x: CGFloat, visibleLeftTime: Double) -> Double {
-        guard pps > 0 else { return 0 }
-        let inRow = x - lanes.gutter
-        return min(max(0, visibleLeftTime + Double(inRow / pps)), model.totalDuration)
+    /// An empty rail for every lane, the full width of the row.
+    ///
+    /// The playhead is parked at the centre and the project scrolls under it,
+    /// so at t = 0 the leading half of the row has no clips in it. Drawn as
+    /// bare background that read as a broken screen; drawn as track rails it
+    /// reads as what it is — a timeline that has not started yet. CapCut's
+    /// lanes run the whole width for the same reason.
+    private var laneRails: some View {
+        let overlays = max(1, model.overlayLaneCount)
+        let musics = max(1, model.musicLaneCount)
+        return ZStack(alignment: .topLeading) {
+            ForEach(0..<overlays, id: \.self) { lane in
+                rail(height: lanes.overlay, top: lanes.overlayLaneTop(lane))
+            }
+            rail(height: lanes.video, top: lanes.videoLaneTop(overlayLanes: overlays))
+            ForEach(0..<musics, id: \.self) { lane in
+                rail(height: lanes.music, top: lanes.musicLaneTop(lane, overlayLanes: overlays))
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .offset(y: -laneOffsetY)
+        .clipped()
+        .allowsHitTesting(false)
     }
 
-    private func seek(toRulerX x: CGFloat, visibleLeftTime: Double) {
-        model.beginScrub()
-        scrub(to: rulerTime(at: x, visibleLeftTime: visibleLeftTime))
+    private func rail(height: CGFloat, top: CGFloat) -> some View {
+        RoundedRectangle(cornerRadius: VideoStudioMetrics.trackRadius, style: .continuous)
+            .fill(Color.white.opacity(0.04))
+            .frame(height: height)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .offset(y: top)
     }
 
     /// The lane the selection sits in, so its gutter icon lights up.
