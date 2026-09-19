@@ -1131,9 +1131,11 @@ struct PhotoEditorScreen: View {
     /// inside Color, and Optics and Geo have no parameters to show yet — a
     /// permanent "coming soon" row is unshipped UI, not an empty state. Fourteen
     /// headers plus dividers came to more than the sidebar is tall: the list did
-    /// not fit even with everything closed.
+    /// not fit even with everything closed. Optics and Geo came back once they
+    /// had controls to show — Geo now carries Upright, which is the reason to
+    /// open it.
     private static let sidebarParameterGroups: [EditorGroup] = [
-        .light, .curve, .color, .grade, .detail, .effects
+        .light, .curve, .color, .grade, .detail, .effects, .optics, .geo
     ]
 
     /// Tools that take the photo over. Exactly one can be up at a time, so they
@@ -1935,6 +1937,19 @@ struct PhotoEditorScreen: View {
         let groups = catalogGroups(for: group, controller: controller)
         if groups.isEmpty {
             placeholderContent(group)
+        } else if group == .geo {
+            // Upright sits above the sliders, the way Lightroom orders them:
+            // it is the thing that sets those sliders, so reading it after
+            // them is reading the answer before the question.
+            VStack(spacing: 0) {
+                EditorUprightRow(controller: controller)
+                EditorAdjustmentGroupsView(
+                    controller: controller,
+                    chrome: chrome,
+                    groups: groups,
+                    isScrollable: isScrollable
+                )
+            }
         } else {
             EditorAdjustmentGroupsView(
                 controller: controller,

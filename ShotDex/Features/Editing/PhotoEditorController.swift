@@ -1,3 +1,4 @@
+import CoreImage
 import Photos
 import SwiftUI
 import UIKit
@@ -226,6 +227,11 @@ final class PhotoEditorController {
 
     @ObservationIgnored private var history = PhotoEditHistory()
     @ObservationIgnored private var cropSession: CropSession?
+    /// Analysis-only context for Upright. Separate from the renderer's: it
+    /// reads one 256px bitmap and never draws anything the user sees.
+    @ObservationIgnored private static let uprightContext =
+        CIContext(options: [.useSoftwareRenderer: false])
+
     @ObservationIgnored private var renderTask: Task<Void, Never>?
     @ObservationIgnored private var interactiveRenderTask: Task<Void, Never>?
     @ObservationIgnored private var interactiveRenderPending = false
@@ -598,6 +604,51 @@ final class PhotoEditorController {
             writeAdjustment(kind, value: suggestion[kind])
         }
         scheduleRender()
+    }
+
+    /// Lightroom's Upright: find the frame's own lines and set the geo
+    /// controls that put them back where the eye expects them.
+    ///
+    /// Reads the **original** render, not the edited one — analysing the
+    /// preview would measure the correction already applied and then correct
+    /// it again, so a second press would keep leaning the photo further over.
+    /// Returns false when the frame has no usable straight edges (a sky, a
+    /// close-up of fur), because moving a photo on no evidence is worse than
+    /// leaving it alone; the caller says so rather than silently doing nothing.
+    @discardableResult
+    func applyUpright(_ mode: UprightMode) -> Bool {
+        guard let cgImage = (originalPreviewImage ?? editedPreviewImage)?.cgImage else {
+            return false
+        }
+        guard let suggestion = UprightAnalyzer.analyze(
+            CIImage(cgImage: cgImage),
+            mode: mode,
+            context: Self.uprightContext
+        ) else { return false }
+
+        recordHistory()
+        // Geo is global-only — there is no per-mask transform — so this writes
+        // the recipe directly rather than going through `writeAdjustment`,
+        // which would route into the selected mask.
+        suggestion.apply(to: &recipe.adjustments, mode: mode)
+        scheduleRender()
+        return true
+    }
+
+    /// Clears everything Upright can set, so "off" is one press rather than
+    /// three sliders dragged back to zero.
+    func resetUpright() {
+        recordHistory()
+        recipe.adjustments.geoRotate = 0
+        recipe.adjustments.geoVertical = 0
+        recipe.adjustments.geoHorizontal = 0
+        scheduleRender()
+    }
+
+    var hasUpright: Bool {
+        abs(recipe.adjustments.geoRotate) > 0.0001
+            || abs(recipe.adjustments.geoVertical) > 0.0001
+            || abs(recipe.adjustments.geoHorizontal) > 0.0001
     }
 
     func jumpToHistoryStep(_ index: Int) {

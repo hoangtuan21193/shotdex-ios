@@ -393,6 +393,68 @@ struct EditorPlainSliderRow: View {
     }
 }
 
+/// Upright — the row above the Geo sliders. Lightroom's Level / Vertical /
+/// Full plus an Off, as chips rather than sliders: none of them is a value the
+/// user dials, each is a question asked of the photo ("what would level look
+/// like?") and answered in one press.
+struct EditorUprightRow: View {
+    @Bindable var controller: PhotoEditorController
+
+    /// Said in the row rather than in the editor's toast: that toast carries an
+    /// Undo button, and there is nothing to undo when a pass found no lines —
+    /// pressing it would undo whatever the user did before instead.
+    @State private var note: String?
+    @State private var noteTask: Task<Void, Never>?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+            Text("UPRIGHT")
+                .font(EditorTheme.groupLabel)
+                .tracking(1.1)
+                .foregroundStyle(EditorTheme.secondaryText)
+            HStack(spacing: AppTheme.Spacing.sm) {
+                ForEach(UprightMode.allCases) { mode in
+                    Button(mode.title) {
+                        apply(mode)
+                    }
+                    .buttonStyle(EditorChipButtonStyle(isSelected: false))
+                }
+                Button("Off") {
+                    show(nil)
+                    controller.resetUpright()
+                }
+                .buttonStyle(EditorChipButtonStyle(isSelected: false))
+                .disabled(!controller.hasUpright)
+                Spacer(minLength: 0)
+            }
+            if let note {
+                Text(note)
+                    .font(EditorTheme.rowLabel)
+                    .foregroundStyle(EditorTheme.dimText)
+            }
+        }
+        .padding(.horizontal, AppTheme.Spacing.lg)
+        .padding(.vertical, AppTheme.Spacing.sm)
+        .animation(EditorTheme.animation, value: note)
+        .onDisappear { noteTask?.cancel() }
+    }
+
+    private func apply(_ mode: UprightMode) {
+        show(controller.applyUpright(mode) ? nil : "No straight lines to work from")
+    }
+
+    private func show(_ message: String?) {
+        noteTask?.cancel()
+        note = message
+        guard message != nil else { return }
+        noteTask = Task {
+            try? await Task.sleep(for: .seconds(3))
+            guard !Task.isCancelled else { return }
+            note = nil
+        }
+    }
+}
+
 struct EditorChipButtonStyle: ButtonStyle {
     let isSelected: Bool
 
