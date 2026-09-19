@@ -157,3 +157,40 @@ the iPhone 17 and the iPad Pro 13" with the new `Tools/ui-drive`.
 - `Features/VideoStudio/VideoStudioSheetHost.swift` — every metric in the contextual sheet is phone-only with no regular-width branch. Overlaps the inspector decision above; do not fix twice.
 - `Features/Editing/PhotoEditorScreen.swift:165,2146,2153,2215` — four user-facing strings say "asset" instead of "photo".
 - Nits carried over: `AssetMetadataReader.swift:210` "Resource 1 / 2", `ImportScreen.swift:381` "Add to Album", `GridBadgeCache` unbounded, `CompressionPresetsScreen:44` bare `plus`, `CollageMetrics.commandButtonSize` duplicating the editor token, `EditorOverlayGuides.swift:207` missing `accessibilityHidden`, editor Back/Save still 38/42pt, `VideoStudioMetrics.swift:139` 20pt lane glyphs, `CollageMetrics.swift:70,72` phone-scaled counter and Export pill.
+
+
+---
+
+# Sweep 4 — Video Studio on iPad and the Duo (2026-09-20)
+
+Agent: `video-nle-survey` (new), against Final Cut Pro for iPad, LumaFusion,
+CapCut iPad, iMovie, Videoleap, Premiere Rush and DaVinci Resolve for iPad.
+Its arithmetic reproduced the measured layout exactly, so its build order was
+taken as given and worked top-down.
+
+## Done
+
+- [x] **The frame had no edge.** The compositor letterboxes onto the project background — black — and the stage behind it is black, so a 3:2 photo in a 16:9 project looked like a 3:2 project. 1pt hairline on `contentRect`. This was most of why the surrounding black read as a bug.
+- [x] **Export was at the bottom, where the panel covered it.** Back · read-out · Export move into the top band at rail width and the bottom band is not drawn; its 50pt goes back to the preview. Every tablet editor surveyed puts the primary action in the top bar, and spec §7.9 already described a top-band read-out that was never built.
+- [x] **The timeline was 7pt short of its own lanes on every regular-width window** — the preview's clamp reserved the phone's 248 floor against 255 of regular lanes. And `Lanes.for(size:)` now needs 750pt of height as well as 700 of width: the Duo's inner display is 867×669, where regular lanes pushed the preview to its floor.
+- [x] **The inspector stands beside the stage on a wide window** — 320pt trailing column when width > height, bottom dock when height is the spare dimension, band on the phone. +67% frame area in iPad landscape, +190% on the Duo inner.
+
+## Struck
+
+- ~~"The timeline clamps at three lanes."~~ — it already reserves what the project's own lane counts need (`timelineContentHeight(overlayLanes:musicLanes:)` is called with the live counts). The real defect was the 248-vs-255 clamp, which is fixed.
+
+## Open
+
+- [ ] **64pt track headers at regular width.** The gutter is 30pt, `allowsHitTesting(false)`, 13pt glyphs, no name and no controls; LumaFusion's carries lock, meters, levels and visibility. Costs 34pt of row width out of 1284.
+- [ ] **A resize handle on the timeline divider**, persisted. Final Cut publishes one and CapCut Pad has resizable panels. spec §7.9's rule is about what the app does *unasked*; it does not say the user may not ask.
+- [ ] **Keyboard shortcuts and hover.** The whole feature has no `keyboardShortcut`, no `contextMenu` and no hover, while DESIGN.md §10.3 records all three as settled for the photo editor. Space / ← / → / ⌘Z / ⌘E are the universal bindings and cost no screen space.
+- [ ] **The Duo cover display should stop pretending to be an editor.** Measured at 382×644 in a prior session: every band is at its floor before the user touches anything, and the first selection puts all three regions below their minimums. The survey's proposal is viewer + transport + a video-lane-only filmstrip, with "Unfold to edit" on any editing tap; Export still works. Needs a decision, and needs the Duo photographed first — no run has reached the Video Studio on it yet.
+
+## Not verified on hardware
+
+The Duo numbers throughout are computed from `stackLayout` against confirmed
+scene sizes (inner 867×669 re-measured today; cover 382×644 from a prior
+session), not photographed: the drive script's tap fractions do not land on
+the Duo's inner-display grid and the run never reached the studio. A
+Duo-specific script with label-based taps is the fix, and belongs with the
+cover-display item above.
