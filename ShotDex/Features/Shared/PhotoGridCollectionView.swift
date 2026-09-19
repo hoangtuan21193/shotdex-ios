@@ -163,7 +163,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
 
     @MainActor
     final class Coordinator: NSObject, UICollectionViewDataSource,
-        UICollectionViewDelegateFlowLayout, UICollectionViewDataSourcePrefetching,
+        UICollectionViewDelegate, UICollectionViewDataSourcePrefetching,
         UICollectionViewDragDelegate, UIGestureRecognizerDelegate {
 
         static var headerReuseId: String { "PhotoGridHeader" }
@@ -207,13 +207,27 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         /// behind them — the grid stayed soft for seconds after each scroll.
         private var highlightPreheat: (asset: PHAsset, requestId: PHImageRequestID)?
 
-        // Pinch state
-        private var transitionLayout: UICollectionViewTransitionLayout?
-        private var transitionBaselineScale: CGFloat = 1
-        private var transitionDelta = 0
-        /// True from finish/cancel until UIKit's completion callback — no new
-        /// interactive transition may start in that window (see handlePinch).
-        private var isSettling = false
+        // Pinch-zoom state (see `PhotoGridLayout` for the mechanic)
+        /// True from the first pinch movement until the release animation has
+        /// committed a column count. Layout swaps and animated removals wait.
+        private(set) var isZooming = false
+        /// Column count (resolved, as drawn) when the fingers went down; the
+        /// live count is this divided by the recognizer's scale.
+        private var zoomStartColumns: CGFloat = 0
+        /// The live fractional column count.
+        private var zoomColumns: CGFloat = 0
+        /// The photo pinned under the pinch centroid, and where inside it the
+        /// centroid sits (unit coordinates), so it stays under the fingers as
+        /// its frame grows and shrinks.
+        private var zoomAnchorFlatIndex: Int?
+        private var zoomAnchorUnitPoint = CGPoint(x: 0.5, y: 0.5)
+        /// Where the anchor point must appear, in the collection view's
+        /// bounds (screen) coordinates. Follows the centroid while the fingers
+        /// are down — panning while zooming — and stays put for the settle.
+        private var zoomScreenPoint = CGPoint.zero
+        private var zoomSettleDriver: GridDisplayLinkDriver?
+        private var zoomSettleTarget: (columns: Int, density: Int)?
+        private var zoomSettleLastTime: CFTimeInterval = 0
 
         // Swipe-select state
         private var swipeActivation = SwipeSelection.Activation.undecided
@@ -310,17 +324,15 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             let listChanged = newParent.photos.count != appliedPhotoCount
             let columnsChanged = newParent.columnCount != appliedColumns
 
-            if columnsChanged, !isInitial, transitionLayout == nil {
+            if columnsChanged, !isInitial, !isZooming {
                 // External column change (other screen persisted a new
                 // density) — swap without animation, cache is stale.
                 parent.photoLibrary.stopCachingAllThumbnails()
-                collectionView.setCollectionViewLayout(
-                    makeLayout(density: newParent.columnCount), animated: false
-                ) { [weak self] _ in
-                    // New cell sizes: re-request so a 1-column swap gets tall,
-                    // aspect-correct renditions rather than stale square ones.
-                    self?.reconfigureVisibleCells(collectionView)
-                }
+                gridLayout?.setColumns(resolvedColumns(newParent.columnCount))
+                collectionView.layoutIfNeeded()
+                // New cell sizes: re-request so a 1-column swap gets tall,
+                // aspect-correct renditions rather than stale square ones.
+                reconfigureVisibleCells(collectionView)
             }
             appliedColumns = newParent.columnCount
 
@@ -353,6 +365,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             }
             appliedContentRefreshVersion = newParent.contentRefreshVersion
             appliedTrailingFooterText = newParent.trailingFooterText
+            if footerChanged { syncLayoutMetrics() }
 
             if let token = appliedJumpToken, token != newParent.jumpToNewestToken {
                 anchor(collectionView)
@@ -578,7 +591,28 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             sections = Self.resolvedSections(
                 for: parent, density: parent.columnCount
             )
+            syncLayoutMetrics()
             refreshScrubberAfterLayout()
+        }
+
+        /// The layout's own copy of the section shape and footer — set here
+        /// rather than queried through a delegate so its frames stay pure
+        /// arithmetic (no per-item callbacks during a zoom frame).
+        private func syncLayoutMetrics() {
+            guard let gridLayout else { return }
+            gridLayout.sections = sections.map {
+                PhotoGridLayoutSection(
+                    itemCount: $0.range.count,
+                    hasHeader: !($0.title ?? "").isEmpty
+                )
+            }
+            let footerText = parent.trailingFooterText ?? ""
+            gridLayout.footerHeight = footerText.isEmpty ? 0 : 48
+            gridLayout.invalidateGeometry()
+        }
+
+        private var gridLayout: PhotoGridLayout? {
+            collectionView?.collectionViewLayout as? PhotoGridLayout
         }
 
         /// `density` is the stored column count, not the drawn one: a wide
@@ -633,7 +667,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         ) -> Bool {
             let oldPhotos = parent.photos
             let newPhotos = newParent.photos
-            guard !newPhotos.isEmpty, transitionLayout == nil, !isSettling else { return false }
+            guard !newPhotos.isEmpty, !isZooming else { return false }
 
             // Old flat indices of the removed tiles, and the order check: the
             // survivors must be the new list, in the same order.
@@ -683,6 +717,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             parent = newParent
             collectionView.performBatchUpdates {
                 sections = newSections
+                syncLayoutMetrics()
                 if !emptiedSections.isEmpty {
                     collectionView.deleteSections(emptiedSections)
                 }
@@ -752,83 +787,38 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         }
 
         /// The window grew or shrank enough to change the drawn column count —
-        /// swap the layout. Never during a pinch: starting a layout change
-        /// while an interactive transition is live corrupts UIKit's state.
+        /// re-resolve. Never mid-pinch: the zoom owns the column count until
+        /// it commits.
         func reapplyLayoutIfColumnsChanged() {
-            guard let collectionView, transitionLayout == nil, !isSettling,
-                  contentWidth > 0
-            else { return }
+            guard let collectionView, let gridLayout, !isZooming, contentWidth > 0 else { return }
             let columns = resolvedColumns(parent.columnCount)
-            guard (collectionView.collectionViewLayout as? GridFlowLayout)?.columns != columns
-            else { return }
+            guard gridLayout.columns != columns else { return }
             parent.photoLibrary.stopCachingAllThumbnails()
-            collectionView.setCollectionViewLayout(
-                makeLayout(density: parent.columnCount), animated: false
-            ) { [weak self] _ in
-                guard let self else { return }
-                let before = sections
-                rebuildSections()
-                if sections != before {
-                    collectionView.reloadData()
-                } else {
-                    reconfigureVisibleCells(collectionView)
-                }
+            gridLayout.setColumns(columns)
+            collectionView.layoutIfNeeded()
+            let before = sections
+            rebuildSections()
+            if sections != before {
+                collectionView.reloadData()
+            } else {
+                reconfigureVisibleCells(collectionView)
             }
         }
 
-        /// Flow layout, not compositional: `UICollectionViewTransitionLayout`
-        /// (the pinch mechanic) only supports flow-style layouts —
-        /// `startInteractiveTransition` with a compositional layout returns
-        /// the target layout unwrapped and crashes on `transitionProgress`.
-        /// A uniform square grid needs nothing compositional anyway, and
-        /// pinned date headers exist here too
-        /// (`sectionHeadersPinToVisibleBounds`).
-        func makeLayout(density: Int) -> UICollectionViewFlowLayout {
-            let layout = GridFlowLayout()
-            layout.columns = resolvedColumns(density)
-            layout.minimumInteritemSpacing = 2
-            layout.minimumLineSpacing = 2
-            layout.sectionHeadersPinToVisibleBounds = parent.sectionMode.hasHeaders
+        /// The grid's own layout (`PhotoGridLayout`): arithmetic frames and a
+        /// fractional column count for the pinch. Cell heights at one column
+        /// come from the photo's aspect via `itemSize`.
+        func makeLayout(density: Int) -> PhotoGridLayout {
+            let layout = PhotoGridLayout()
+            layout.setColumns(resolvedColumns(density))
+            layout.pinsHeaders = parent.sectionMode.hasHeaders
+            layout.oneColumnHeight = { [weak self] flatIndex, width in
+                self?.itemSize(width: width, columns: 1, flatIndex: flatIndex).height ?? width
+            }
             return layout
         }
 
-        // MARK: UICollectionViewDelegateFlowLayout
-
-        func collectionView(
-            _ collectionView: UICollectionView,
-            layout collectionViewLayout: UICollectionViewLayout,
-            sizeForItemAt indexPath: IndexPath
-        ) -> CGSize {
-            let columns = (collectionViewLayout as? GridFlowLayout)?.columns
-                ?? resolvedColumns(parent.columnCount)
-            let width = contentWidth
-            guard let flatIndex = flatIndex(for: indexPath) else {
-                return Self.cellSize(width: width, columns: columns)
-            }
-            return itemSize(width: width, columns: columns, flatIndex: flatIndex)
-        }
-
-        func collectionView(
-            _ collectionView: UICollectionView,
-            layout collectionViewLayout: UICollectionViewLayout,
-            referenceSizeForHeaderInSection section: Int
-        ) -> CGSize {
-            guard sections.indices.contains(section),
-                  let title = sections[section].title, !title.isEmpty
-            else { return .zero }
-            return CGSize(width: contentWidth, height: 32)
-        }
-
-        func collectionView(
-            _ collectionView: UICollectionView,
-            layout collectionViewLayout: UICollectionViewLayout,
-            referenceSizeForFooterInSection section: Int
-        ) -> CGSize {
-            guard let lastSection = sections.indices.last, section == lastSection,
-                  let text = parent.trailingFooterText, !text.isEmpty
-            else { return .zero }
-            return CGSize(width: contentWidth, height: 48)
-        }
+        // MARK: Cell sizing
 
         /// Square cell side for a column count, floored to pixel precision so
         /// a row of N cells + gaps never exceeds the width (which would wrap).
@@ -1338,140 +1328,199 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             }
         }
 
-        // MARK: Pinch density (interactive layout transition)
+        // MARK: Pinch zoom (continuous, Photos-style)
 
-        /// Cumulative scale (relative to the segment baseline) that maps to
-        /// transition progress 1. Spreading (scale > 1) removes a column;
-        /// pinching in adds one.
-        private static var stepSpan: CGFloat { 0.35 }
-
+        /// The pinch is a live zoom: the column count is a real number that
+        /// tracks the fingers (spreading = bigger cells = fewer columns), the
+        /// photo under the centroid stays under the fingers, and the count is
+        /// eased onto the nearest density on release. No steps, no direction
+        /// lock, no dead window between columns — see `PhotoGridLayout`.
         @objc private func handlePinch(_ recognizer: UIPinchGestureRecognizer) {
-            guard collectionView != nil else { return }
+            guard let collectionView, let gridLayout else { return }
             switch recognizer.state {
             case .began:
                 endAnchorTracking()
-                // A second finger may turn an in-progress one-finger selection
-                // into a pinch. Close the selection gesture exactly once; the
-                // selected ids remain untouched.
+                // A pinch that starts mid-swipe ends the swipe; the ids it
+                // selected stay selected.
                 finishActiveSwipeSelection()
-                transitionBaselineScale = recognizer.scale
+                stopZoomSettle()
+                if !isZooming {
+                    zoomColumns = CGFloat(gridLayout.columns)
+                    parent.photoLibrary.stopCachingAllThumbnails()
+                }
+                isZooming = true
+                zoomStartColumns = zoomColumns
+                // Kill any deceleration: the zoom owns the offset from here.
+                collectionView.setContentOffset(collectionView.contentOffset, animated: false)
+                collectionView.isScrollEnabled = false
+                let location = recognizer.location(in: collectionView)
+                zoomScreenPoint = CGPoint(
+                    x: location.x - collectionView.contentOffset.x,
+                    y: location.y - collectionView.contentOffset.y
+                )
+                captureZoomAnchor(at: location, in: collectionView)
             case .changed:
-                // While the previous segment's finish/cancel animation is
-                // settling, ignore movement — starting a new interactive
-                // transition before the completion callback fires corrupts
-                // UIKit's transition state (returns the bare target layout,
-                // which crashes on `transitionProgress`).
-                guard !isSettling else {
-                    transitionBaselineScale = recognizer.scale
-                    return
-                }
-                guard transitionLayout != nil || beginSegment(recognizer.scale) else { return }
-                guard let transitionLayout else { return }
-                let progress = segmentProgress(scale: recognizer.scale)
-                if progress >= 1 {
-                    // Step committed mid-gesture — finish; the next segment
-                    // can start once the settle completes (so one long pinch
-                    // still walks through several densities, gated per step).
-                    transitionLayout.transitionProgress = 1
-                    finishSegment()
-                    transitionBaselineScale = recognizer.scale
-                } else if progress <= 0 {
-                    // Fingers reversed past the segment start — cancel and
-                    // allow a segment in the opposite direction.
-                    cancelSegment()
-                    transitionBaselineScale = recognizer.scale
-                } else {
-                    transitionLayout.transitionProgress = progress
-                    transitionLayout.invalidateLayout()
-                }
+                guard isZooming else { return }
+                let location = recognizer.location(in: collectionView)
+                zoomScreenPoint = CGPoint(
+                    x: location.x - collectionView.contentOffset.x,
+                    y: location.y - collectionView.contentOffset.y
+                )
+                let scale = max(0.05, recognizer.scale)
+                zoomColumns = clampedZoomColumns(zoomStartColumns / scale)
+                applyZoom()
             case .ended, .cancelled, .failed:
-                if let transitionLayout {
-                    if transitionLayout.transitionProgress > 0.4 {
-                        finishSegment()
-                    } else {
-                        cancelSegment()
-                    }
-                }
+                guard isZooming else { return }
+                // Project a little along the release velocity so a flick
+                // lands where it was heading, like Photos.
+                let velocity = recognizer.state == .ended ? recognizer.velocity : 0
+                let projectedScale = max(0.05, recognizer.scale + velocity * 0.08)
+                let projected = clampedZoomColumns(zoomStartColumns / projectedScale)
+                startZoomSettle(toward: projected)
             default:
                 break
             }
         }
 
-        /// Starts an interactive transition toward ±1 column once the pinch
-        /// direction is clear. Returns false while direction is ambiguous,
-        /// the range end is reached, or the previous segment is settling.
-        private func beginSegment(_ scale: CGFloat) -> Bool {
-            guard let collectionView, transitionLayout == nil, !isSettling else { return false }
-            let ratio = scale / transitionBaselineScale
-            guard abs(ratio - 1) > 0.02 else { return false }
-            // Spreading fingers = bigger cells = fewer columns.
-            let delta = ratio > 1 ? -1 : 1
-            let target = GridDensity.stepped(parent.columnCount, by: delta)
-            guard target != parent.columnCount else { return false }
-            transitionDelta = delta
-            parent.photoLibrary.stopCachingAllThumbnails()
-            let layout = collectionView.startInteractiveTransition(
-                to: makeLayout(density: target)
-            ) { [weak self] completed, _ in
-                self?.transitionDidEnd(committed: completed)
-            }
-            // Defensive: some layout classes (compositional) come back
-            // unwrapped instead of as a real transition layout — driving
-            // progress on those crashes. Commit the step instantly instead.
-            guard layout.responds(
-                to: #selector(setter: UICollectionViewTransitionLayout.transitionProgress)
-            ) else {
-                collectionView.finishInteractiveTransition()
-                return false
-            }
-            transitionLayout = layout
-            return true
+        /// The drawn column counts a pinch may reach — the stored density
+        /// range, resolved for this width.
+        private func clampedZoomColumns(_ r: CGFloat) -> CGFloat {
+            let lower = CGFloat(resolvedColumns(GridDensity.columnRange.lowerBound))
+            let upper = CGFloat(resolvedColumns(GridDensity.columnRange.upperBound))
+            return min(max(r, lower), upper)
         }
 
-        private func segmentProgress(scale: CGFloat) -> CGFloat {
-            let ratio = scale / transitionBaselineScale
-            // Log-space so pinching feels symmetric in both directions.
-            let signed = log(ratio) / Self.stepSpan
-            let toward = transitionDelta == -1 ? signed : -signed
-            return min(max(toward, 0), 1)
-        }
-
-        private func finishSegment() {
-            guard let collectionView else { return }
-            isSettling = true
-            collectionView.finishInteractiveTransition()
-            transitionLayout = nil
-        }
-
-        private func cancelSegment() {
-            guard let collectionView else { return }
-            isSettling = true
-            collectionView.cancelInteractiveTransition()
-            transitionLayout = nil
-        }
-
-        private func transitionDidEnd(committed: Bool) {
-            guard let collectionView else { return }
-            if committed {
-                let newColumns = GridDensity.stepped(parent.columnCount, by: transitionDelta)
-                appliedColumns = newColumns
-                parent.columnCount = newColumns
-                // Granularity may have flipped (day <-> month at 3/4) —
-                // regroup and reload so headers and item counts match. A flip
-                // that keeps the section count still changes the header text,
-                // so compare the resolved sections, not just how many.
-                // Screen-supplied sections resolve identically here, so they
-                // are never re-grouped by a pinch.
-                let before = sections
-                rebuildSections()
-                if sections != before {
-                    collectionView.reloadData()
+        /// The stored density whose drawn count is nearest `r`, and that count.
+        private func nearestDensity(to r: CGFloat) -> (columns: Int, density: Int) {
+            var best = (columns: resolvedColumns(parent.columnCount), density: parent.columnCount)
+            var bestDistance = CGFloat.infinity
+            for density in GridDensity.columnRange {
+                let columns = resolvedColumns(density)
+                let distance = abs(CGFloat(columns) - r)
+                if distance < bestDistance {
+                    bestDistance = distance
+                    best = (columns, density)
                 }
-                // Sharper thumbnails for the new cell size.
-                reconfigureVisibleCells(collectionView)
             }
-            transitionLayout = nil
-            isSettling = false
+            return best
+        }
+
+        /// Pins the photo under `location` (content coordinates); falls back
+        /// to the visible photo nearest to it when the point is in a gap.
+        private func captureZoomAnchor(at location: CGPoint, in collectionView: UICollectionView) {
+            var indexPath = collectionView.indexPathForItem(at: location)
+            if indexPath == nil {
+                indexPath = collectionView.indexPathsForVisibleItems.min { a, b in
+                    distance(from: location, to: a, in: collectionView)
+                        < distance(from: location, to: b, in: collectionView)
+                }
+            }
+            guard let indexPath, let flatIndex = flatIndex(for: indexPath),
+                  let frame = collectionView.layoutAttributesForItem(at: indexPath)?.frame,
+                  frame.width > 0, frame.height > 0
+            else {
+                zoomAnchorFlatIndex = nil
+                return
+            }
+            zoomAnchorFlatIndex = flatIndex
+            zoomAnchorUnitPoint = CGPoint(
+                x: min(max((location.x - frame.minX) / frame.width, 0), 1),
+                y: min(max((location.y - frame.minY) / frame.height, 0), 1)
+            )
+        }
+
+        private func distance(
+            from point: CGPoint, to indexPath: IndexPath, in collectionView: UICollectionView
+        ) -> CGFloat {
+            guard let frame = collectionView.layoutAttributesForItem(at: indexPath)?.frame
+            else { return .infinity }
+            return hypot(frame.midX - point.x, frame.midY - point.y)
+        }
+
+        /// One zoom frame: blend the layout at `zoomColumns`, then move the
+        /// content so the anchor point lands on `zoomScreenPoint`.
+        private func applyZoom() {
+            guard let collectionView, let gridLayout else { return }
+            gridLayout.setZoom(columns: zoomColumns, anchorFlatIndex: zoomAnchorFlatIndex)
+            // The content size must be current before the offset is placed,
+            // or the clamp below reads the previous frame's height.
+            collectionView.layoutIfNeeded()
+            guard let flatIndex = zoomAnchorFlatIndex,
+                  let indexPath = indexPath(forFlatIndex: flatIndex),
+                  let frame = gridLayout.layoutAttributesForItem(at: indexPath)?.frame
+            else { return }
+            let anchorPoint = CGPoint(
+                x: frame.minX + frame.width * zoomAnchorUnitPoint.x,
+                y: frame.minY + frame.height * zoomAnchorUnitPoint.y
+            )
+            let minimumY = -collectionView.adjustedContentInset.top
+            let maximumY = max(
+                minimumY,
+                gridLayout.collectionViewContentSize.height
+                    - collectionView.bounds.height
+                    + collectionView.adjustedContentInset.bottom
+            )
+            let y = min(max(anchorPoint.y - zoomScreenPoint.y, minimumY), maximumY)
+            collectionView.contentOffset = CGPoint(x: collectionView.contentOffset.x, y: y)
+        }
+
+        /// Eases the live count onto the nearest committed density.
+        private func startZoomSettle(toward projected: CGFloat) {
+            let target = nearestDensity(to: projected)
+            zoomSettleTarget = target
+            zoomSettleLastTime = CACurrentMediaTime()
+            let driver = GridDisplayLinkDriver { [weak self] in self?.zoomSettleTick() }
+            zoomSettleDriver = driver
+            driver.start()
+        }
+
+        private func stopZoomSettle() {
+            zoomSettleDriver?.invalidate()
+            zoomSettleDriver = nil
+            zoomSettleTarget = nil
+        }
+
+        private func zoomSettleTick() {
+            guard let target = zoomSettleTarget else { return }
+            let now = CACurrentMediaTime()
+            let dt = min(max(now - zoomSettleLastTime, 1.0 / 120), 1.0 / 20)
+            zoomSettleLastTime = now
+            let remaining = CGFloat(target.columns) - zoomColumns
+            // Critically damped: ~0.25s to land, no overshoot (an overshoot
+            // would reflow rows twice).
+            let step = 1 - exp(-CGFloat(dt) * 16)
+            if abs(remaining) < 0.004 {
+                zoomColumns = CGFloat(target.columns)
+                applyZoom()
+                commitZoom(target)
+            } else {
+                zoomColumns += remaining * step
+                applyZoom()
+            }
+        }
+
+        /// Lands the zoom: integer layout, persisted density, sharper tiles.
+        private func commitZoom(_ target: (columns: Int, density: Int)) {
+            stopZoomSettle()
+            guard let collectionView, let gridLayout else { return }
+            gridLayout.setColumns(target.columns)
+            collectionView.layoutIfNeeded()
+            collectionView.isScrollEnabled = !isLongPressDragActive
+            isZooming = false
+            appliedColumns = target.density
+            if parent.columnCount != target.density {
+                parent.columnCount = target.density
+            }
+            // Granularity follows the stored density; a change regroups.
+            let before = sections
+            rebuildSections()
+            if sections != before {
+                collectionView.reloadData()
+            }
+            // Thumbnails were scaled from the old renditions during the
+            // gesture — request the right size once, now that it is known.
+            reconfigureVisibleCells(collectionView)
+            refreshScrubberAfterLayout()
         }
 
         // MARK: Swipe-select
@@ -1642,15 +1691,6 @@ private final class GridDisplayLinkDriver {
     @objc private func tick() {
         onFrame()
     }
-}
-
-// MARK: - Flow layout subclass
-
-/// Flow layout tagged with its column count, so the sizing delegate can
-/// serve the right cell size for *each* layout during an interactive
-/// transition (UIKit asks both the old and the new layout).
-private final class GridFlowLayout: UICollectionViewFlowLayout {
-    var columns = 3
 }
 
 // MARK: - Collection view subclass
