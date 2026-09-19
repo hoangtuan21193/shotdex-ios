@@ -174,7 +174,7 @@ struct PhotoEditorScreen: View {
         .alert("Saved as JPEG", isPresented: $isFallbackNoticePresented) {
             Button("OK") { dismiss() }
         } message: {
-            Text("Photos doesn't support HEIC as the edited rendition for this asset, so ShotDex saved a maximum-quality JPEG instead.")
+            Text("Photos doesn't support HEIC as the edited version of this photo, so ShotDex saved a maximum-quality JPEG instead.")
         }
         .sheet(isPresented: $isFontPickerPresented) {
             if let controller {
@@ -2158,14 +2158,14 @@ private struct PhotoEditorSaveSheet: View {
                     Toggle("Include Metadata", isOn: $includeMetadata)
                     if format == .heic, !controller.supportsHEICEditOutput {
                         Label(
-                            "Photos doesn't support an HEIC edited rendition for this asset. ShotDex will save a maximum-quality JPEG.",
+                            "Photos doesn't support an HEIC edited version of this photo. ShotDex will save a maximum-quality JPEG.",
                             systemImage: "exclamationmark.triangle.fill"
                         )
                         .font(.footnote)
                         .foregroundStyle(.orange)
                     }
                 } footer: {
-                    Text("Save Copy is full resolution at maximum quality. Turning off metadata strips EXIF and clears the Photos date/location on Save Changes. If Photos doesn't support HEIC for this asset, ShotDex falls back to JPEG and tells you.")
+                    Text("Save Copy is full resolution at maximum quality. Turning off metadata strips EXIF and clears the Photos date/location on Save Changes. If Photos doesn't support HEIC for this photo, ShotDex falls back to JPEG and tells you.")
                 }
 
                 if pendingCount > 1, let saveAll {
@@ -2227,7 +2227,7 @@ private struct PhotoEditorSaveSheet: View {
                         format == nil || !controller.asset.canPerform(.content)
                     )
                 } footer: {
-                    Text("Save Changes is non-destructive: Photos keeps the original and ShotDex reopens this asset with the saved crop, sliders and masks. A Live Photo keeps its motion. Save Copy creates a still image.")
+                    Text("Save Changes is non-destructive: Photos keeps the original and ShotDex reopens this photo with the saved crop, sliders and masks. A Live Photo keeps its motion. Save Copy creates a still image.")
                 }
             }
             .navigationTitle("Save Edit")

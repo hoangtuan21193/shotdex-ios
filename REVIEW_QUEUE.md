@@ -112,3 +112,42 @@ Agents: `copy-consistency`, `data-migration` (done) · `component-consistency`, 
 
 - **The accessibility gaps above.** Curve points, gradient-mask placement and Video Studio overlay position all want the same remedy the photo editor already built for text overlays: numeric sliders beside the gesture. That is a panel each. The timeline wants adjustable actions on the selected clip and the timecode. Worth doing, none of it small, and it changes panels you have opinions about — so it waits for you rather than being decided inside a sweep.
 - **`device-layout` could not drive the UI.** Subagents have no tap tool in this session, so its report is source-only by its own admission. Either the agent file should say "ask the parent to drive", or the sweep should hand it screenshots. I verified its one testable claim (the panel over the rail) myself and it was right.
+
+---
+
+# Sweep 3 — compare chrome, the UI driver, Video Studio on iPad (2026-09-20)
+
+Agents: `prior-art`, `challenger`, `ux-reviewer`, plus a pass driven by hand on
+the iPhone 17 and the iPad Pro 13" with the new `Tools/ui-drive`.
+
+## Blockers
+
+- [x] `Features/VideoStudio/VideoStudioScreen.swift:416` — `Preparing clips…` had no exit: `fullScreenCover` has no swipe to dismiss and one iCloud original holds the state for minutes, so the only way out was force-quitting _(ux-reviewer)_
+- [x] `Features/VideoStudio/VideoStudioModel.swift:1045` — export held no background assertion, so leaving the app mid-run could suspend the writer with the sheet still showing a percentage; the indexer has done this since it shipped _(ux-reviewer)_
+
+## Should fix
+
+- [x] `Features/Library/CompareScreen.swift:597,619` — the compare screen's controls do not say what they do: three bare layout glyphs top right, and a crown between two chevrons underneath. Now a text segmented picker, a 2.5s summary on switch, and Previous · Swap · Keep · Next under their glyphs _(reported from the device)_
+- [x] `Features/VideoStudio/VideoStudioScreen.swift:227` — the timeline's content cap only applied above 700pt, so the **phone** drew three lanes at the top of a ~330pt black field, which is the bug the cap was added for _(measured)_
+- [x] `Features/VideoStudio/VideoStudioScreen.swift:214` — the preview's aspect-fit height came from the whole window width even where it is drawn in the column beside the 92pt rail _(prior-art, challenger — both, independently)_
+- [x] `Features/VideoStudio/VideoStudioMetrics.swift` — 66pt video lane and 54pt clip cells on a 1032pt iPad. `Lanes.compact` / `.regular` (44/104/52, cell 88) chosen on window width, carried by `\.videoLaneMetrics` _(prior-art #1, with the condition `challenger` set: change the constants, not just the cap, and fix the thumbnail request with them)_
+- [x] `Features/VideoStudio/VideoTimelineTracks.swift:353` — the filmstrip asked for a flat 240px thumbnail; an 88pt cell at 3x wants 264 _(challenger)_
+- [x] `Features/VideoStudio/VideoStudioScreen.swift:505` — deleting an imported music file already on the timeline left the bed drawn and silent in preview and export _(ux-reviewer)_
+- [x] `Features/VideoStudio/VideoStudioCommandBand.swift` — `setShowsOriginal` was fully implemented and wired to nothing, so hold-to-see-original (spec §7.9) did not exist _(ux-reviewer)_
+
+## Struck
+
+- ~~`Features/VideoStudio/VideoInspectorControls.swift:238` — three glyph-only alignment buttons~~ — the DESIGN.md rule exempts glyphs whose meaning is fixed outside the app, and left/centre/right alignment is as fixed as bold and italic. The rule is for a tool's *own* verb (promote, survey), not for the three icons every text editor on earth uses. _(ux-reviewer)_
+- ~~iPad selection bar controls under 44pt (`Done selecting` 26×36, `Compare` 94×36, `Filter and sort` 31×36)~~ — measured with the new element dump, then checked: these are system navigation-bar items, whose hit area is the height of the bar regardless of the glyph's frame. The dump reports the *visual* frame. `device-layout`'s brief now says so. _(driver dump)_
+- ~~The timeline's empty left half at t=0 on iPad~~ — struck again, now with the landscape evidence `challenger` asked for: the playhead is centred by the same model Final Cut and CapCut use, and the lead-in is what that model looks like at zero.
+
+## Needs a decision
+
+- **A persistent inspector for Video Studio at ≥700pt** (`prior-art` #2, `challenger` objection 2). Every tablet NLE docks the inspector beside or above the timeline instead of covering it; ShotDex's editor and Collage already switched at this threshold. But `VideoStudioSheetHost` is a full-bleed horizontal band — a 36pt title row, a 112pt parameter zone built for the width of a phone, and a row of command cells — so making it work in a 300pt column is a rewrite of the panel, not a flag flip. `challenger` also warns this and the lane change spend the same freed pixels, so they must not land together. The lane change has landed; the surplus left in portrait is now about 230pt. Worth doing, and it is your call because it changes a panel you have opinions about.
+- **Video Studio in portrait at all.** iPad is not orientation-locked and landscape now looks right (measured, both orientations). If the studio should simply prefer landscape on iPad, that is a smaller change than any inspector work.
+
+## Still open from sweep 2
+
+- `Features/VideoStudio/VideoStudioSheetHost.swift` — every metric in the contextual sheet is phone-only with no regular-width branch. Overlaps the inspector decision above; do not fix twice.
+- `Features/Editing/PhotoEditorScreen.swift:165,2146,2153,2215` — four user-facing strings say "asset" instead of "photo".
+- Nits carried over: `AssetMetadataReader.swift:210` "Resource 1 / 2", `ImportScreen.swift:381` "Add to Album", `GridBadgeCache` unbounded, `CompressionPresetsScreen:44` bare `plus`, `CollageMetrics.commandButtonSize` duplicating the editor token, `EditorOverlayGuides.swift:207` missing `accessibilityHidden`, editor Back/Save still 38/42pt, `VideoStudioMetrics.swift:139` 20pt lane glyphs, `CollageMetrics.swift:70,72` phone-scaled counter and Export pill.

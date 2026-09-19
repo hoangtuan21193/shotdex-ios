@@ -87,6 +87,14 @@ python3 -c "import json;[print(int(e['x']),int(e['y']),int(e['width']),int(e['he
   if e['type']=='button' and not e['label'] and not e['identifier']]"
 ```
 
+**Two traps in the numbers.** The frame is the element's *visual* frame:
+a system navigation-bar or toolbar button reports about 36pt tall and is
+still fine, because UIKit gives bar items a hit area the height of the bar.
+Only measure custom controls against 44pt, and say which kind you measured.
+And a nested `Button` inside a `Button`-shaped container shows up twice, once
+with an empty label — check the frames before reporting a duplicate as a
+missing label.
+
 An icon-only control with an empty label is a finding on its own: a
 photographer cannot read a glyph they have not met, and `DESIGN.md` now
 requires a word under any control carrying a verb of its own. Report the
