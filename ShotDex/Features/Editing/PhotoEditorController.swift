@@ -617,9 +617,11 @@ final class PhotoEditorController {
     /// leaving it alone; the caller says so rather than silently doing nothing.
     @discardableResult
     func applyUpright(_ mode: UprightMode) -> Bool {
-        guard let cgImage = (originalPreviewImage ?? editedPreviewImage)?.cgImage else {
-            return false
-        }
+        // The original only. Falling back to the edited preview would measure
+        // the correction already applied and correct it again — the compounding
+        // bug the comment above exists to prevent — so a missing original is a
+        // refusal, not a substitution.
+        guard let cgImage = originalPreviewImage?.cgImage else { return false }
         guard let suggestion = UprightAnalyzer.analyze(
             CIImage(cgImage: cgImage),
             mode: mode,

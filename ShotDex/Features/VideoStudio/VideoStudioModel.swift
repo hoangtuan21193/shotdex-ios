@@ -333,8 +333,17 @@ final class VideoStudioModel {
             }
         }
         // Drop clips whose media never resolved so the timeline matches what
-        // the builder will actually use.
+        // the builder will actually use — and say so. A clip that vanishes
+        // from the timeline with no word looks identical to a clip the app
+        // forgot to add, and the usual cause is an iCloud original that has
+        // not come down yet, which the user can do something about.
+        let droppedCount = recipe.clips.count(where: { sources[$0.id] == nil })
         recipe.clips.removeAll { sources[$0.id] == nil }
+        if droppedCount > 0 {
+            errorMessage = droppedCount == 1
+                ? String(localized: "One clip couldn't be loaded and was left out. It may still be in iCloud — check your connection and add it again.")
+                : String(localized: "\(droppedCount) clips couldn't be loaded and were left out. They may still be in iCloud — check your connection and add them again.")
+        }
         recipe.syncTransitionsWithClips()
         reloadWaveforms()
         await rebuildPreview()
@@ -799,6 +808,11 @@ final class VideoStudioModel {
         if !failed.isEmpty {
             recipe.clips.removeAll { failed.contains($0.id) }
             recipe.syncTransitionsWithClips()
+            // Same as the initial load: adding a clip that quietly does not
+            // arrive is indistinguishable from the app ignoring the tap.
+            errorMessage = failed.count == 1
+                ? String(localized: "One clip couldn't be loaded and was left out. It may still be in iCloud — check your connection and add it again.")
+                : String(localized: "\(failed.count) clips couldn't be loaded and were left out. They may still be in iCloud — check your connection and add them again.")
         }
         markEdited()
         await rebuildPreview()
@@ -866,6 +880,9 @@ final class VideoStudioModel {
     // MARK: - Look edits (videoComposition tier)
 
     func setFilter(_ filter: PhotoFilter) {
+        // A tap, not a drag: one snapshot, so picking a look and disliking it
+        // is undoable like every other edit in the studio.
+        pushUndo()
         recipe.filter = filter
         markEdited()
         applyVideoTier()
@@ -887,6 +904,7 @@ final class VideoStudioModel {
     /// recipe, so this swaps only the video composition — timing unchanged.
     func setEffect(_ effect: VideoClipEffect, for clipID: UUID) {
         guard let index = recipe.clips.firstIndex(where: { $0.id == clipID }) else { return }
+        pushUndo()
         recipe.clips[index].effect = effect
         markEdited()
         applyVideoTier()
@@ -975,6 +993,7 @@ final class VideoStudioModel {
     /// Letterbox / pillarbox fill colour behind aspect-fitted frames. Rides the
     /// video-composition tier (only the instructions' render recipe changes).
     func setBackground(_ color: OverlayColor) {
+        pushUndo()
         recipe.background = color
         markEdited()
         applyVideoTier()

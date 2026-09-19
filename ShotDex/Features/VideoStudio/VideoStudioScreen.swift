@@ -281,6 +281,12 @@ struct VideoStudioScreen: View {
                 if model.presentsSheet {
                     contextPanel(model, height: panelHeight)
                         .transition(.move(edge: .bottom))
+                        // The rail is the one piece of chrome that must stay
+                        // reachable while the panel is up — a tool row you
+                        // cannot reach without dismissing the panel is a tool
+                        // row that costs a tap for nothing. The panel starts
+                        // where the rail ends.
+                        .padding(.leading, usesRail ? VideoStudioMetrics.railWidth : 0)
                 }
             }
             .animation(EditorTheme.animation, value: model.presentsSheet)

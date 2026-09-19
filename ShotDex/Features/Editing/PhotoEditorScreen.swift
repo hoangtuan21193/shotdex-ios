@@ -37,6 +37,18 @@ struct PhotoEditorScreen: View {
 
     @State private var controller: PhotoEditorController?
     @State private var session: EditorSession?
+
+    /// Whether leaving now would throw work away — the photo on the canvas
+    /// **or** any other photo in the run.
+    ///
+    /// `hasSessionChanges` only knows about the controller currently on
+    /// screen, and Sync, Auto Sync, Paste Edits and Apply Previous all park
+    /// drafts on photos that are not. A run where the live photo happened to
+    /// net back to its baseline therefore dismissed without a word and took
+    /// every parked draft with it.
+    private var hasUnsavedWork: Bool {
+        controller?.hasSessionChanges == true || (session?.draftCount ?? 0) > 0
+    }
     @State private var chrome = EditorChromeModel()
     @State private var isSaveSheetPresented = false
     @State private var isDiscardConfirmationPresented = false
@@ -123,7 +135,7 @@ struct PhotoEditorScreen: View {
         .onDisappear {
             controller?.close()
         }
-        .interactiveDismissDisabled(controller?.hasSessionChanges == true)
+        .interactiveDismissDisabled(hasUnsavedWork)
         // An alert, not a confirmation dialog: on iOS 26 the dialog floats over the
         // photo with its cancel-role button hidden, so only the red Discard shows.
         .alert(
@@ -253,7 +265,7 @@ struct PhotoEditorScreen: View {
             Button("Hide or Show Tools") { isSidebarHidden.toggle() }
                 .keyboardShortcut("\\", modifiers: .command)
             Button("Back") {
-                if controller.hasSessionChanges {
+                if hasUnsavedWork {
                     isDiscardConfirmationPresented = true
                 } else {
                     dismiss()
@@ -595,6 +607,9 @@ struct PhotoEditorScreen: View {
             Button("Save") {
                 dependencies.lookPresets.save(controller.recipe, name: lookName)
             }
+            // A blank name is refused by the store, and the alert used to
+            // close as though it had saved — no chip, no reason.
+            .disabled(lookName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         } message: {
             Text("Saves the tone, colour, curve and film look on this photo. The crop, masks and markup stay with the photo.")
         }
@@ -1805,7 +1820,7 @@ struct PhotoEditorScreen: View {
     /// when the session has changes.
     private func backButton(_ controller: PhotoEditorController) -> some View {
         Button {
-            if controller.hasSessionChanges {
+            if hasUnsavedWork {
                 isDiscardConfirmationPresented = true
             } else {
                 dismiss()

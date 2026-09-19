@@ -83,3 +83,32 @@ Agents: `copy-consistency`, `data-migration` (done) · `component-consistency`, 
 
 - **One "leave the tool" control for tier D.** Five variants today: Compare uses `xmark` in a 52pt `.editorGlass` circle; the editor, Collage and Video Studio each hand-roll a chevron at 38/44pt with a raw colour fill; Resize uses a system nav-bar Cancel. The glyph is the real question — chevron reads "back", ✕ reads "leave" — and the tools that can lose unsaved work are not the same as the ones that cannot. My proposal: chevron + `.editorGlass(Circle())` at the shared command size for editor/Collage/Video Studio, ✕ for Compare, and Resize keeps its nav bar because it is the only one that is a form. _(component-consistency, blocker)_
 - **The editor sidebar's width picker.** `EditorSidebar.swift:152` claims the ⋯ menu carries the same three widths "for anyone who cannot drag"; it does not — there is no width picker anywhere. Either add three presets to the menu or delete the claim. _(challenger)_
+
+## Sweep 2 — editor and Video Studio (agents: ux-reviewer, a11y-voiceover, device-layout, challenger)
+
+### Blockers
+
+- [x] `Features/Editing/PhotoEditorScreen.swift:126` — the discard guard asked only the photo on screen, so a multi-photo run whose live photo happened to net back to baseline dismissed silently and threw away every parked draft _(ux-reviewer)_
+- [x] `Features/VideoStudio/VideoStudioModel.swift:337,807` — clips whose media failed to resolve were dropped from the timeline with no word; the usual cause is an iCloud original that has not arrived _(ux-reviewer)_
+- [ ] **Accessibility: four tools cannot be operated without sight** — tone curve, gradient masks, Video Studio overlay placement, and the whole timeline (trim/reorder/scrub). Each needs a real fallback, not a label. → Needs a decision _(a11y-voiceover)_
+
+### Should fix
+
+- [x] `Features/Editing/EditorBatchSaver.swift:89` — Cancel dropped the scrim while the current photo was still being written to the library _(ux-reviewer)_
+- [x] `Features/VideoStudio/VideoStudioModel.swift:868,888,977` — filter, per-clip effect and background were not in the undo stack _(ux-reviewer)_
+- [x] `Features/Editing/PhotoEditorController.swift:619` — Upright fell back to the *edited* preview when the original render was missing, which is the compounding-correction bug its own comment forbids _(ux-reviewer)_
+- [x] `Features/VideoStudio/VideoStudioScreen.swift:282` — the contextual panel covered the new 92pt rail; confirmed on the iPad and now inset past it _(device-layout)_
+- [x] `Features/VideoStudio/VideoStudioCommandBand.swift` — the sheet's own command cells stayed 52×54 with 9.5pt labels while the band and rail beside them grew _(device-layout)_
+- [ ] `Features/VideoStudio/VideoStudioSheetHost.swift` — every metric in the contextual sheet (264pt height, 36/112pt tiers, 22pt chips, 40pt add button) is phone-only with no regular-width branch _(device-layout)_
+
+### Nits
+
+- [x] `Domain/Editing/LookPresetStore.swift:69` — re-saving a look under the same name kept the old timestamp, so the strip re-ordered itself after relaunch _(ux-reviewer)_
+- [x] `Features/Editing/PhotoEditorScreen.swift:607` — Save Look with a cleared name closed the alert as though it had saved _(ux-reviewer)_
+- [ ] `Features/Editing/EditorOverlayGuides.swift:207` — the on-canvas move target has no `accessibilityHidden`, so VoiceOver may stop on a blank rectangle _(a11y-voiceover)_
+- [ ] Editor Back/Save buttons on the band stay 38/42pt while the circles beside them went to 44 _(device-layout)_
+
+### Needs a decision
+
+- **The accessibility gaps above.** Curve points, gradient-mask placement and Video Studio overlay position all want the same remedy the photo editor already built for text overlays: numeric sliders beside the gesture. That is a panel each. The timeline wants adjustable actions on the selected clip and the timecode. Worth doing, none of it small, and it changes panels you have opinions about — so it waits for you rather than being decided inside a sweep.
+- **`device-layout` could not drive the UI.** Subagents have no tap tool in this session, so its report is source-only by its own admission. Either the agent file should say "ask the parent to drive", or the sweep should hand it screenshots. I verified its one testable claim (the panel over the rail) myself and it was right.

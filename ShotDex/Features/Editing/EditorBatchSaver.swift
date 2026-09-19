@@ -30,6 +30,8 @@ final class EditorBatchSaver {
     /// Set when the run is over and something went wrong; the caller shows it and
     /// clears it.
     private(set) var hasFinishedWithFailures = false
+    /// Set while a cancelled run finishes the photo it was mid-write on.
+    private(set) var isCancelling = false
 
     private var task: Task<Void, Never>?
 
@@ -81,16 +83,24 @@ final class EditorBatchSaver {
                 completed += 1
             }
             isRunning = false
+            isCancelling = false
             hasFinishedWithFailures = !failures.isEmpty
             task = nil
             onFinished()
         }
     }
 
+    /// Stops after the photo currently being written.
+    ///
+    /// The overlay stays up — as "Finishing…" — until that write lands, and
+    /// `isRunning` is cleared by the loop itself. Dropping the scrim here
+    /// instead put the editor back in the user's hands while a save was still
+    /// writing to their library, with nothing on screen to say so and no way
+    /// to hear about it if it failed.
     func cancel() {
+        guard isRunning else { return }
+        isCancelling = true
         task?.cancel()
-        task = nil
-        isRunning = false
     }
 
     func clearFailures() {
@@ -188,7 +198,11 @@ struct EditorBatchSaveOverlay: View {
             VStack(spacing: AppTheme.Spacing.lg) {
                 ProgressView()
                     .tint(.white)
-                Text("Saving \(min(saver.completed + 1, saver.total)) of \(saver.total)")
+                Text(
+                    saver.isCancelling
+                        ? "Finishing this photo…"
+                        : "Saving \(min(saver.completed + 1, saver.total)) of \(saver.total)"
+                )
                     .font(EditorTheme.panelTitle)
                     .foregroundStyle(.white)
                     .monospacedDigit()
@@ -199,6 +213,10 @@ struct EditorBatchSaveOverlay: View {
                     saver.cancel()
                 }
                 .foregroundStyle(.red)
+                // The write in flight cannot be pulled back, so the scrim
+                // stays until it lands rather than handing the editor back
+                // while the library is still being written to.
+                .disabled(saver.isCancelling)
             }
             .padding(AppTheme.Spacing.xxl)
             .background(EditorTheme.panelSolid, in: RoundedRectangle.app(AppTheme.Radius.lg))

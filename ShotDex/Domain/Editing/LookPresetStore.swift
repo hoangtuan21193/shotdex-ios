@@ -68,8 +68,11 @@ final class LookPresetStore {
 
         var preset = LookPreset(name: trimmed, recipe: look)
         if let existing = presets.first(where: { $0.name.caseInsensitiveCompare(trimmed) == .orderedSame }) {
+            // Keeps its identity, takes a new timestamp: re-saving a look *is*
+            // the newest thing the user did to their looks, and the old date
+            // made the strip re-order itself on the next launch for no action
+            // the user took.
             preset.id = existing.id
-            preset.createdAt = existing.createdAt
             presets.removeAll { $0.id == existing.id }
         }
         presets.insert(preset, at: 0)

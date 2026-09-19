@@ -113,6 +113,12 @@ struct VideoCommandBand: View {
 private struct VideoCommandCell: View {
     let command: VideoCommand
 
+    /// The band beside it and the rail below it both grew on a big screen;
+    /// this row sat in the same feature at phone size, which is how one
+    /// screen ends up with two ideas of how big a tool cell is.
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    private var isRegularWidth: Bool { horizontalSizeClass == .regular }
+
     private var color: Color {
         switch command.tint {
         case .normal: command.isEnabled ? .white : .white.opacity(0.28)
@@ -124,11 +130,17 @@ private struct VideoCommandCell: View {
     var body: some View {
         Button(action: command.action) {
             VStack(spacing: 6) {
-                Image(systemName: command.systemImage).font(.system(size: 21, weight: .regular))
-                Text(command.title).font(.system(size: 9.5, weight: .medium)).lineLimit(1)
+                Image(systemName: command.systemImage)
+                    .font(.system(size: isRegularWidth ? 24 : 21, weight: .regular))
+                Text(command.title)
+                    .font(.system(size: isRegularWidth ? 11 : 9.5, weight: .medium))
+                    .lineLimit(1)
             }
             .foregroundStyle(color)
-            .frame(width: VideoStudioMetrics.commandCellWidth, height: VideoStudioMetrics.commandCellHeight)
+            .frame(
+                width: isRegularWidth ? VideoStudioMetrics.commandCellWidth + 12 : VideoStudioMetrics.commandCellWidth,
+                height: isRegularWidth ? VideoStudioMetrics.commandCellHeight + 8 : VideoStudioMetrics.commandCellHeight
+            )
             .background(
                 RoundedRectangle(cornerRadius: VideoStudioMetrics.commandCellRadius, style: .continuous)
                     .fill(Color.white.opacity(0.05))
