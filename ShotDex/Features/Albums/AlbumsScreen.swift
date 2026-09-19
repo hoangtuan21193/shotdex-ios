@@ -288,6 +288,11 @@ struct AlbumsScreen: View {
                     Color.clear.frame(height: 90)
                 }
             }
+            // The last section is Utilities, and the scroll view's bottom
+            // inset stops exactly at the floating tab bar — so its tokens sat
+            // right against it. Two section gaps of air below the last row;
+            // one was still read as touching.
+            .padding(.bottom, AppTheme.Spacing.xxl * 2)
         }
     }
 
