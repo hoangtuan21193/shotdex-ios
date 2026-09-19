@@ -38,13 +38,13 @@ enum CollageMetrics {
 
     // MARK: Command band (leading Undo/Redo/Original, trailing status + ⋯)
 
-    /// Circular command button on the band.
-    static let commandButtonSize: CGFloat = 34
+    /// Circular command button on the band. The editor's band owns this
+    /// number — two tools whose command rows look identical must not drift
+    /// apart because one of them kept its own copy of 34.
+    static var commandButtonSize: CGFloat { EditorLayoutMetrics.editorFloatingCommandButtonSize }
 
-    /// Same reason as the editor's band: 34 is the phone's number, and a
-    /// 1032pt stage has room for the 44 the rest of the system uses.
     static func commandButtonSize(isRegularWidth: Bool) -> CGFloat {
-        isRegularWidth ? 44 : commandButtonSize
+        EditorLayoutMetrics.editorFloatingCommandButtonSize(isRegularWidth: isRegularWidth)
     }
     /// Full command-band height (row + top inset) — used to position the lift
     /// drop banner just below it.
