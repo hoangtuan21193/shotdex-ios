@@ -590,7 +590,12 @@ struct LibraryScreen: View {
                 if isIndexPanelExpanded { setIndexPanelExpanded(false) }
             },
             onVisibleDateChange: { visibleDate = $0 },
-            trailingFooterText: model.hasActiveQuery ? matchCountFooter(model.matchCount) : nil,
+            // Always on, like Photos: the dim count sits in the gap between the
+            // last row and the tab bar, so the grid does not end flush against
+            // the chrome. With a query active it doubles as the match count.
+            trailingFooterText: countFooter(
+                photos: model.matchCount - model.videoCount, videos: model.videoCount
+            ),
             lazyMetadataProvider: { assetId in
                 await model.lazyBadgeItem(assetId: assetId)
             },
@@ -616,8 +621,16 @@ struct LibraryScreen: View {
         .sensoryFeedback(.selection, trigger: selectedIds.count)
     }
 
-    private func matchCountFooter(_ count: Int) -> String {
-        "\(count.formatted()) \(count == 1 ? "photo" : "photos")"
+    /// "1,234 Photos, 56 Videos" — either half drops out when it is zero.
+    private func countFooter(photos: Int, videos: Int) -> String {
+        var parts: [String] = []
+        if photos > 0 || videos == 0 {
+            parts.append("\(photos.formatted()) \(photos == 1 ? "Photo" : "Photos")")
+        }
+        if videos > 0 {
+            parts.append("\(videos.formatted()) \(videos == 1 ? "Video" : "Videos")")
+        }
+        return parts.joined(separator: ", ")
     }
 
     @ViewBuilder

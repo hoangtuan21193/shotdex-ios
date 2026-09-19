@@ -70,7 +70,14 @@ final class LibraryModel {
     /// order: the sort's primary results sit at the END of the array = the
     /// bottom of the grid, like the system Photos app. Loaded in one query;
     /// the grid virtualizes rendering, so this is the only per-photo state.
-    private(set) var items: [LibraryGridItem] = []
+    private(set) var items: [LibraryGridItem] = [] {
+        didSet {
+            videoCount = items.count { MediaKind(storedValue: $0.mediaType) == .video }
+        }
+    }
+    /// Videos among `items`, counted once per replacement rather than on
+    /// every body evaluation — the grid footer reads it while scrolling.
+    private(set) var videoCount = 0
     /// Bumped whenever the content is replaced (filter/sort change, index
     /// run, retap). The screen re-ids its ScrollView off it so
     /// `defaultScrollAnchor(.bottom)` re-applies without a long-distance
