@@ -241,6 +241,36 @@ struct VideoStudioLayoutTests {
         #expect(open.timeline >= VideoStudioMetrics.timelineMinimumHeight)
     }
 
+    /// The playhead starts at the left edge and walks right with the clip;
+    /// once it reaches the centre it pins and the row scrolls under it. The
+    /// old behaviour put it in the middle of an empty half-screen the moment
+    /// a project opened.
+    @Test func thePlayheadWalksToTheCentreThenPins() {
+        let width: CGFloat = 1032
+        let gutter = VideoStudioMetrics.Lanes.regular.gutter
+        let half = VideoStudioMetrics.rowAreaHalfWidth(screenWidth: width, gutter: gutter)
+        let pps: CGFloat = 55
+        func x(_ time: Double) -> CGFloat {
+            VideoStudioMetrics.playheadX(screenWidth: width, gutter: gutter, time: time, pointsPerSecond: pps)
+        }
+        func offset(_ time: Double) -> CGFloat {
+            VideoStudioMetrics.timelineOffsetX(time: time, pointsPerSecond: pps, screenWidth: width, gutter: gutter)
+        }
+
+        #expect(x(0) == gutter, "at zero it is on the first frame, at the left edge")
+        #expect(offset(0) == 0, "and nothing has scrolled")
+
+        let halfway = Double(half / pps) / 2
+        #expect(x(halfway) > gutter && x(halfway) < gutter + half, "it walks")
+        #expect(offset(halfway) == 0, "the row has still not moved")
+
+        let pinned = Double(half / pps)
+        #expect(x(pinned) == gutter + half, "it reaches the centre")
+        #expect(x(pinned + 5) == gutter + half, "and stays there")
+        #expect(offset(pinned + 5) > 0, "now the row scrolls instead")
+        #expect(offset(pinned + 5) == 5 * pps, "by exactly the overflow")
+    }
+
     /// The top band has to hold Back, the read-out and Export beside the
     /// command row on a regular-width window, which the phone's 48pt cannot.
     @Test func theTopBandGrowsWhereItCarriesTheProjectActions() {

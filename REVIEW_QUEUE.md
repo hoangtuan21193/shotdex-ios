@@ -205,3 +205,32 @@ session), not photographed: the drive script's tap fractions do not land on
 the Duo's inner-display grid and the run never reached the studio. A
 Duo-specific script with label-based taps is the fix, and belongs with the
 cover-display item above.
+
+
+---
+
+# Sweep 5 — iPad multitasking, and the playhead (2026-09-20)
+
+Agent: `ipad-multitasking`. Every finding is reasoned from source and confirmed
+by building — `simctl` drives neither Split View nor a second window, and the
+report says which two of its claims were measured.
+
+## Done
+
+- [x] **`AssetActionsCoordinator` was one instance for every window.** It holds which sheet is up; the file already documents the same failure for a single scene, which is why the viewer has its own. Each window's root builds its own now.
+- [x] **A Shortcut / Siri / Spotlight request could be consumed by a window nobody is looking at.** Only an on-screen window drains it. Partial by admission: Stage Manager can hold two windows active and the intent carries no scene to route by.
+- [x] **The Video Studio's timeline divider was `@AppStorage`**, so dragging it in one window resized the other window's timeline live. Scene-local state, seeded from and written back to defaults.
+- [x] **Stage Manager can make a window wide and short.** The rail and Collage's inspector gated on width alone; both use the editor's pair of floors now.
+- [x] **Collage disagreed with itself** — layout measured at 700pt, chrome read `horizontalSizeClass` (`.regular` from ~678). One `usesRegularToolChrome` value answers both, and the Video Studio's command cells moved onto it too.
+- [x] **Collage's seam grab strips were invisible to a pointer** and its command buttons had no hover; both do now, and Collage gains ⌘Z / ⇧⌘Z / Esc.
+- [x] **The playhead starts at the left edge and walks to the centre** before pinning (user request, 2026-09-20). Reverses the 2026-09-19 decision to keep a half-screen lead-in.
+
+## Open
+
+- [ ] **The photo editor's three sidebar keys are still `@AppStorage`** (`editorSidebarEdge`, `editorSidebarWidth`, `editorSidebarHidden`) — same live cross-window sync the Video Studio's divider had. Same fix, but the width is also clamped live against the canvas, so it wants its own pass.
+- [ ] **Collage's drag and drop moves a bare `String`.** Dragging a collage photo to Files or Mail exports the asset id as text, and dragging an image in from another app does nothing. The library grid already does this correctly with `PhotoDragItem` (in-app id *and* a file representation, iCloud original downloaded first) — Collage should use the same shape.
+- [ ] **The Video Studio accepts no drops at all.** Media enters only through the picker sheet; a photographer with Photos open beside it in Split View would expect to drag a clip in.
+- [ ] **Custom-drawn editor controls have no pointer affordance** — `EditorColorWheel`, `EditorCurveOverlay`, `EditorPaintTouchLayer`, `EditorMaskGuides`: no `onContinuousHover`, no `UIPointerInteraction`.
+- [ ] **Apple Pencil does nothing special.** `EditorPaintTouchLayer` reads raw `UITouch` with no `.force`, so pressure does not affect brush flow, and there is no double-tap tool switch.
+- [ ] **The library grid has no keyboard or hover.** Space to open, Esc to leave selection mode, and a per-cell hover are worth it; arrow-key focus across a virtualised 55k grid is not, and the agent said so itself. (Right-click already works — `UICollectionView` routes secondary click into the existing context menu.)
+- [ ] The Info panel's per-file section headings could not be reached on screen after several attempts; the change is a string composition and the shared format dictionary is covered by the grid-badge test, but it is **not photographed**.

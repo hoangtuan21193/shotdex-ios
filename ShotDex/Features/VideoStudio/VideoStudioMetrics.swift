@@ -323,15 +323,37 @@ enum VideoStudioMetrics {
     static let gutterWidth: CGFloat = Lanes.compact.gutter
     static let gutterIconSize: CGFloat = 20
 
-    /// x of the fixed playhead for a given screen width: centre of the row area.
-    static func playheadX(screenWidth: CGFloat, gutter: CGFloat = gutterWidth) -> CGFloat {
-        gutter + (screenWidth - gutter) / 2
+    /// Where the playhead sits for a given time.
+    ///
+    /// It starts at the left edge of the row area and walks right with the
+    /// clip, and once it reaches the centre it stops there and the timeline
+    /// scrolls under it instead. Opening a project with the playhead already
+    /// ruled down the middle of an empty half-screen is the thing this
+    /// replaces: at zero the first frame is the first thing on the row.
+    static func playheadX(
+        screenWidth: CGFloat,
+        gutter: CGFloat = gutterWidth,
+        time: Double,
+        pointsPerSecond: CGFloat
+    ) -> CGFloat {
+        gutter + min(CGFloat(max(0, time)) * pointsPerSecond, rowAreaHalfWidth(screenWidth: screenWidth, gutter: gutter))
     }
 
-    /// Half the row area — the content padding at each end so 0s and the last
-    /// mark can both sit under the centred playhead.
+    /// Half the row area: how far the playhead walks before it pins, and the
+    /// trailing padding that lets the last frame reach it.
     static func rowAreaHalfWidth(screenWidth: CGFloat, gutter: CGFloat = gutterWidth) -> CGFloat {
         (screenWidth - gutter) / 2
+    }
+
+    /// The scroll offset for a time: zero until the playhead has walked to
+    /// the centre, then the overflow.
+    static func timelineOffsetX(
+        time: Double,
+        pointsPerSecond: CGFloat,
+        screenWidth: CGFloat,
+        gutter: CGFloat = gutterWidth
+    ) -> CGFloat {
+        max(0, CGFloat(max(0, time)) * pointsPerSecond - rowAreaHalfWidth(screenWidth: screenWidth, gutter: gutter))
     }
 
     // MARK: Scale

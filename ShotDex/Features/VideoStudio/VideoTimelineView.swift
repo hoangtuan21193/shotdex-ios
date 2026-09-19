@@ -44,7 +44,9 @@ struct VideoTimelineView: View {
         GeometryReader { geo in
             let screenWidth = geo.size.width
             let halfWidth = VideoStudioMetrics.rowAreaHalfWidth(screenWidth: screenWidth, gutter: lanes.gutter)
-            let visibleLeftTime = model.currentTime - Double(halfWidth / pps)
+            // What time sits at the row's left edge. Until the playhead has
+            // walked to the centre the row has not moved, so that is still 0.
+            let visibleLeftTime = max(0, model.currentTime - Double(halfWidth / pps))
 
             VStack(spacing: 0) {
                 // Inset by the gutter so the ruler's x = 0 lines up with the
@@ -54,7 +56,16 @@ struct VideoTimelineView: View {
                     .padding(.leading, lanes.gutter)
                     .padding(.top, VideoStudioMetrics.timelineTopPadding)
                     .padding(.bottom, VideoStudioMetrics.rulerToTracks)
-                    .allowsHitTesting(false)
+                    // Tap the ruler to put the playhead there. Without this
+                    // the first half-viewport of the project is unreachable:
+                    // the row does not scroll until the playhead has walked
+                    // to the centre, so there is no drag that lands on 2s.
+                    .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { seek(toRulerX: $0.location.x, visibleLeftTime: visibleLeftTime) }
+                            .onEnded { model.endScrub(at: rulerTime(at: $0.location.x, visibleLeftTime: visibleLeftTime)) }
+                    )
 
                 HStack(spacing: 0) {
                     VideoTimelineGutter(
@@ -98,7 +109,14 @@ struct VideoTimelineView: View {
                     .padding(.bottom, 2)
             }
             .overlay(alignment: .topLeading) {
-                playhead.offset(x: VideoStudioMetrics.playheadX(screenWidth: screenWidth, gutter: lanes.gutter) - 1)
+                playhead.offset(
+                    x: VideoStudioMetrics.playheadX(
+                        screenWidth: screenWidth,
+                        gutter: lanes.gutter,
+                        time: model.currentTime,
+                        pointsPerSecond: pps
+                    ) - 1
+                )
             }
             .onAppear { viewportWidth = screenWidth }
             .onChange(of: screenWidth) { viewportWidth = screenWidth }
@@ -107,6 +125,19 @@ struct VideoTimelineView: View {
         .background(EditorTheme.background)
         .clipped()
         .onChange(of: model.fitToWindowToken) { fitToWindow() }
+    }
+
+    /// Time under a point on the ruler. The ruler is drawn inset by the
+    /// gutter, so its own x = 0 is the row's x = 0.
+    private func rulerTime(at x: CGFloat, visibleLeftTime: Double) -> Double {
+        guard pps > 0 else { return 0 }
+        let inRow = x - lanes.gutter
+        return min(max(0, visibleLeftTime + Double(inRow / pps)), model.totalDuration)
+    }
+
+    private func seek(toRulerX x: CGFloat, visibleLeftTime: Double) {
+        model.beginScrub()
+        scrub(to: rulerTime(at: x, visibleLeftTime: visibleLeftTime))
     }
 
     /// The lane the selection sits in, so its gutter icon lights up.

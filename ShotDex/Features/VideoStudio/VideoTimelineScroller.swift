@@ -49,9 +49,13 @@ enum TimelineZoneDragPhase {
 /// scroller occupies the row area only (the gutter is a sibling column), so its
 /// own centre already lands on the playhead.
 ///
-/// Time ↔ offset: `contentInset` is half the viewport on both sides, so
-/// `time = (contentOffset.x + inset.left) / pps`, and t = 0 sits under the
-/// centre playhead when scrolled fully left.
+/// Time ↔ offset: there is **no leading inset** — at t = 0 the first frame is
+/// flush with the left edge and the playhead is on it. The playhead walks
+/// right with the clip until it reaches the centre, and only then does the
+/// content start scrolling, so `time = (contentOffset.x + playheadInset) /
+/// pps` where `playheadInset` is however far the playhead has walked (half
+/// the viewport once it has pinned). The trailing inset is half a viewport so
+/// the last frame can reach the pinned playhead.
 ///
 /// Feedback arbitration mirrors the proven v1 bridge: while the user drives the
 /// scroll it is the source of truth; while playing, `currentTime` is, and
@@ -169,8 +173,11 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
         override func layoutSubviews() {
             super.layoutSubviews()
             let half = (bounds.width / 2).rounded()
-            if contentInset.left != half {
-                contentInset = UIEdgeInsets(top: 0, left: half, bottom: 0, right: half)
+            // Leading zero: the row starts where the row starts. Trailing
+            // half so the end of the project can still be scrolled under the
+            // pinned playhead.
+            if contentInset.left != 0 || contentInset.right != half {
+                contentInset = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: half)
             }
             onLayout?()
         }
@@ -217,13 +224,20 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
             scrollView.isTracking || scrollView.isDragging || scrollView.isDecelerating
         }
 
+        /// How far the playhead has walked from the left edge. Below the
+        /// centre it is the offset itself — the content has not moved yet, so
+        /// the playhead is the only thing that has.
+        private func playheadInset(_ scrollView: UIScrollView) -> CGFloat {
+            (scrollView.bounds.width / 2).rounded()
+        }
+
         private func time(at offsetX: CGFloat, in scrollView: UIScrollView) -> Double {
             guard parent.pps > 0 else { return 0 }
-            return Double((offsetX + scrollView.contentInset.left) / parent.pps)
+            return Double((max(0, offsetX) + playheadInset(scrollView)) / parent.pps)
         }
 
         private func offsetX(forTime time: Double, in scrollView: UIScrollView) -> CGFloat {
-            CGFloat(time) * parent.pps - scrollView.contentInset.left
+            max(0, CGFloat(time) * parent.pps - playheadInset(scrollView))
         }
 
         /// Lane content never shrinks below the viewport, so a short project
