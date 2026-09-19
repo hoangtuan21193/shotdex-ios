@@ -167,11 +167,14 @@ struct VideoStudioLayoutTests {
     }
 
     /// Wide windows spend width on the inspector, tall ones spend height.
-    /// The Duo's inner display is landscape and wide enough, so it gets the
-    /// column too — which is the device the drawer hurt most.
+    ///
+    /// (The survey that proposed this claimed the iPhone Duo's inner display
+    /// would take the column at 867×669. It does not: the iPhone target is
+    /// portrait-locked, so the app's scene there is 669×951 and stays on the
+    /// phone layout. The rule is right; that example was not.)
     @Test func theInspectorGoesBesideTheStageOnlyOnAWideWindow() {
         #expect(VideoStudioMetrics.usesInspectorColumn(size: CGSize(width: 1376, height: 1032)))
-        #expect(VideoStudioMetrics.usesInspectorColumn(size: CGSize(width: 867, height: 669)))
+        #expect(!VideoStudioMetrics.usesInspectorColumn(size: CGSize(width: 669, height: 951)), "the Duo's real scene")
         #expect(!VideoStudioMetrics.usesInspectorColumn(size: CGSize(width: 1032, height: 1376)), "portrait docks instead")
         #expect(!VideoStudioMetrics.usesInspectorColumn(size: CGSize(width: 402, height: 874)), "the phone keeps its band")
         #expect(
@@ -201,6 +204,41 @@ struct VideoStudioLayoutTests {
         let drawer = frameArea(width: 1376 - rail, presentsSheet: true)
         let column = frameArea(width: 1376 - rail - VideoStudioMetrics.inspectorColumnWidth, presentsSheet: false)
         #expect(column > drawer * 1.5, "the column is worth the width it costs")
+    }
+
+    /// The iPhone Duo's cover display is 382×644. Opening the panel there
+    /// used to put the preview on its 150pt floor *and* the timeline 108pt
+    /// under its own — three regions, all broken, to edit one clip. The
+    /// timeline stands down instead and the frame keeps the size it had.
+    @Test func aWindowTooShortForEverythingStandsTheTimelineDown() {
+        let cover = CGSize(width: 382, height: 644)
+        let content = VideoStudioMetrics.Lanes.compact.timelineContentHeight(overlayLanes: 1, musicLanes: 1)
+        func layout(open: Bool) -> VideoStudioMetrics.StackLayout {
+            VideoStudioMetrics.stackLayout(
+                screen: cover, bandHeight: 48, bottomInset: 34,
+                canvas: CGSize(width: 16, height: 9), presentsSheet: open,
+                timelineContentHeight: content
+            )
+        }
+        let idle = layout(open: false)
+        let open = layout(open: true)
+        #expect(open.hidesTimeline)
+        #expect(open.timeline == 0)
+        #expect(open.preview == idle.preview, "the frame does not shrink to make room")
+        #expect(open.preview > VideoStudioMetrics.previewMinimumHeight, "and is not on its floor")
+    }
+
+    /// A phone has the room, so its panel still slides over a timeline that
+    /// stays where it was.
+    @Test func aPhoneKeepsItsTimelineWhenThePanelOpens() {
+        let content = VideoStudioMetrics.Lanes.compact.timelineContentHeight(overlayLanes: 1, musicLanes: 1)
+        let open = VideoStudioMetrics.stackLayout(
+            screen: CGSize(width: 402, height: 874), bandHeight: 59, bottomInset: 34,
+            canvas: CGSize(width: 16, height: 9), presentsSheet: true,
+            timelineContentHeight: content
+        )
+        #expect(!open.hidesTimeline)
+        #expect(open.timeline >= VideoStudioMetrics.timelineMinimumHeight)
     }
 
     /// The top band has to hold Back, the read-out and Export beside the

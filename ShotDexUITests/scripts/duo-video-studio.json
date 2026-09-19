@@ -2,11 +2,21 @@
   "steps": [
     { "action": "launch" },
     { "action": "wait", "seconds": 4 },
-    { "action": "screenshot", "name": "60-duo-library" },
-    { "action": "dump", "name": "60-duo-library", "type": "cell" },
     { "action": "tap", "label": "Select", "type": "button" },
     { "action": "wait", "seconds": 1 },
-    { "action": "screenshot", "name": "61-duo-selection" },
-    { "action": "dump", "name": "61-duo-selection", "type": "cell" }
+    { "action": "tap", "x": 0.07, "y": 0.157 },
+    { "action": "tap", "x": 0.215, "y": 0.157 },
+    { "action": "tap", "x": 0.36, "y": 0.157 },
+    { "action": "wait", "seconds": 1 },
+    { "action": "screenshot", "name": "62-duo-selected" },
+    { "action": "tap", "label": "More selection actions" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "label": "Create Video" },
+    { "action": "wait", "seconds": 7 },
+    { "action": "screenshot", "name": "63-duo-studio" },
+    { "action": "orientation", "text": "landscape" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "screenshot", "name": "64-duo-studio-landscape" },
+    { "action": "orientation", "text": "portrait" }
   ]
 }

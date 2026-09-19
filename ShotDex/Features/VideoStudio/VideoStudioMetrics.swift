@@ -102,6 +102,10 @@ enum VideoStudioMetrics {
         /// window has room to spare for it. Zero means the panel slides over
         /// the bars as it does on a phone.
         var dockedPanel: CGFloat = 0
+        /// On a window too short to hold the frame, the lanes and the panel
+        /// at once, the timeline stands down while the panel is up rather
+        /// than every band being squeezed under its own floor.
+        var hidesTimeline = false
     }
 
     /// `timelineContentHeight` is what the lanes in this project actually
@@ -165,6 +169,26 @@ enum VideoStudioMetrics {
 
         guard presentsSheet else { return split(lift: 0, dock: 0) }
 
+        // A window can be too short to hold the frame, the lanes and the
+        // panel at once. Measured on the iPhone Duo's cover display
+        // (382×644): opening the panel there put the preview on its 150pt
+        // floor *and* the timeline 108pt under its own — three regions, all
+        // broken, to edit one clip. The timeline stands down instead; it is
+        // the one of the three the user can get back by deselecting, and a
+        // frame they cannot see is worth less than lanes they cannot reach.
+        let openable = split(lift: sheetLift(usesToolRail: usesToolRail, showsBottomBar: showsBottomBar), dock: 0)
+        if !panelMayDock,
+           screen.height <= shortWindowHeight,
+           openable.preview <= previewMinimumHeight,
+           openable.timeline < timelineMinimumHeight {
+            var standDown = split(lift: sheetHeight - (showsBottomBar ? bottomBarHeight : 0) - (usesToolRail ? 0 : toolbarHeight), dock: 0)
+            let idle = split(lift: 0, dock: 0)
+            standDown.preview = idle.preview
+            standDown.timeline = 0
+            standDown.hidesTimeline = true
+            return standDown
+        }
+
         // Docking is worth it only when the slack the preview is padding with
         // would still leave the frame its natural size afterwards. A portrait
         // iPad showing a 16:9 project has ~470pt of black around the frame;
@@ -182,6 +206,13 @@ enum VideoStudioMetrics {
             dock: 0
         )
     }
+
+    /// Shorter than any shipping iPhone — the smallest is 667pt — so this is
+    /// an outward-facing cover display, not a phone anyone edits on all day.
+    /// An iPhone SE with a vertical project is cramped too, but it is a
+    /// device people work on, and taking its timeline away on every
+    /// selection is not a trade to make unasked.
+    static let shortWindowHeight: CGFloat = 660
 
     /// How far the divider may be dragged. The ceiling is about five
     /// regular-width lanes' worth — past that the preview is the thing being

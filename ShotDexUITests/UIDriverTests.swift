@@ -389,8 +389,14 @@ final class UIDriverTests: XCTestCase {
         }
     }
 
+    /// The app's own window, not `XCUIScreen.main`. On a dual-screen device
+    /// `main` is whichever display the system calls main, which on the iPhone
+    /// Duo is the one that is switched off — every screenshot came back
+    /// black. The app's screenshot also follows the interface orientation,
+    /// so a landscape capture is landscape rather than a rotated portrait
+    /// frame.
     private func screenshot(named name: String) {
-        let shot = XCUIScreen.main.screenshot()
+        let shot = app.exists ? app.screenshot() : XCUIScreen.main.screenshot()
         emit(name: "\(name).png", data: shot.pngRepresentation, uniformTypeIdentifier: "public.png")
     }
 

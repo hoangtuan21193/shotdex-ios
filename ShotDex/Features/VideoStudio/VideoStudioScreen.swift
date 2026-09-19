@@ -292,7 +292,8 @@ struct VideoStudioScreen: View {
                         } else {
                             Color.clear.frame(height: VideoStudioMetrics.previewTimelineGap)
                         }
-                        VideoTimelineView(
+                        if !layout.hidesTimeline {
+                            VideoTimelineView(
                             model: model,
                             height: layout.timeline,
                             onAddOverlay: { addTextOverlay(model) },
@@ -300,7 +301,8 @@ struct VideoStudioScreen: View {
                             onAddMedia: { mediaPickerMode = .add },
                             onEditText: { editingOverlay = $0 },
                             onTransition: { model.editingTransitionIndex = $0 }
-                        )
+                            )
+                        }
                         // Sits under the panel; keeps the timeline above it.
                         Color.clear.frame(height: layout.lift)
                         // Where the window has height to spare the panel takes
