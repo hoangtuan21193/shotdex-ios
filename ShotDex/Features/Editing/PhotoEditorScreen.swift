@@ -20,6 +20,10 @@ struct PhotoEditorScreen: View {
     @Environment(AppDependencies.self) private var dependencies
 
     let asset: PHAsset
+    /// Every photo opened together, when the editor was entered from a multi-photo
+    /// selection. `asset` is whichever of them is on the canvas first. Empty (the
+    /// single-photo case) means no filmstrip and no sync.
+    var siblings: [PHAsset] = []
     let sourceAlbum: PHAssetCollection?
     /// The indexed row for this photo, when the presenter already has it. Only used
     /// to expand `{camera}`-style tokens in text overlays; everything else in the
@@ -31,6 +35,7 @@ struct PhotoEditorScreen: View {
     var onSaved: ((String) -> Void)?
 
     @State private var controller: PhotoEditorController?
+    @State private var session: EditorSession?
     @State private var chrome = EditorChromeModel()
     @State private var isSaveSheetPresented = false
     @State private var isDiscardConfirmationPresented = false
@@ -52,6 +57,23 @@ struct PhotoEditorScreen: View {
     @State private var isSignatureNamePresented = false
     @State private var signatureName = ""
     @State private var drawSession = EditorDrawSession()
+
+    /// Wide-screen sidebar: which side it is parked on, how wide, and whether it
+    /// is collapsed. All three are the user's, so all three persist.
+    @AppStorage(SettingsKeys.editorSidebarEdge)
+    private var sidebarEdgeRaw = EditorSidebarEdge.trailing.rawValue
+    @AppStorage(SettingsKeys.editorSidebarWidth)
+    private var storedSidebarWidth = Double(EditorLayoutMetrics.sidebarDefaultWidth)
+    @AppStorage(SettingsKeys.editorSidebarHidden)
+    private var isSidebarHidden = false
+    /// Live width while the edge is being dragged; written back on release so a
+    /// drag is one `UserDefaults` write rather than one per frame.
+    @State private var sidebarDragWidth: CGFloat?
+    /// Width the drag started from. `DragGesture` reports translation from the
+    /// gesture's start, not from the last frame, so adding it to the live width
+    /// every frame integrates the drag and the sidebar slams into its clamp
+    /// after a few tens of points.
+    @State private var sidebarDragStartWidth: CGFloat?
     /// Ties the band's histogram pill to the floating card so expanding /
     /// collapsing animates as one object moving between the two.
     @Namespace private var histogramNamespace
@@ -75,17 +97,12 @@ struct PhotoEditorScreen: View {
         .statusBarHidden()
         .task {
             guard controller == nil else { return }
-            let newController = PhotoEditorController(
-                asset: asset,
-                sourceAlbum: sourceAlbum,
-                service: dependencies.photoEditing,
-                metadata: metadata
-            )
-            // Every session opens on Adjust: the tab the user left last time is
-            // rarely the one they want on a different photo.
-            newController.selectedTool = .adjust
-            controller = newController
-            await newController.load()
+            if session == nil {
+                let run = siblings.isEmpty ? [asset] : siblings
+                let start = run.firstIndex { $0.localIdentifier == asset.localIdentifier } ?? 0
+                session = EditorSession(assets: run, startIndex: start)
+            }
+            await openCurrentPhoto()
         }
         .onDisappear {
             controller?.close()
@@ -189,6 +206,78 @@ struct PhotoEditorScreen: View {
     /// The on-photo text field. Selecting a text layer and typing happen here rather
     /// than in a sheet; Cancel on a layer that was just created and never typed drops
     /// it so the list is not left with an empty row.
+    // MARK: Multi-photo session
+
+    /// Opens whichever photo the session points at, restoring the edit it was
+    /// left with.
+    private func openCurrentPhoto() async {
+        guard let session, let target = session.current else { return }
+        let newController = PhotoEditorController(
+            asset: target,
+            sourceAlbum: sourceAlbum,
+            // The metadata is this screen's *entry* photo only — it expands
+            // `{camera}` tokens in text overlays, so handing it to a sibling
+            // would stamp the wrong camera on it.
+            service: dependencies.photoEditing,
+            metadata: target.localIdentifier == asset.localIdentifier ? metadata : nil
+        )
+        // Every session opens on Adjust: the tab the user left last time is
+        // rarely the one they want on a different photo.
+        newController.selectedTool = .adjust
+        controller = newController
+        await newController.load()
+        // After load: `load()` reads the asset's own saved edit, and the draft
+        // from this session is the newer of the two.
+        if let draft = session.draft(for: target) {
+            newController.apply(draft)
+        }
+    }
+
+    /// Switches the canvas to another photo in the run, parking the current
+    /// edit in the session first so coming back restores it.
+    private func selectPhoto(at index: Int) {
+        guard let session, index != session.index, session.assets.indices.contains(index) else {
+            return
+        }
+        if let controller, let current = session.current {
+            controller.commitCropSession()
+            session.store(controller.recipe, for: current)
+            controller.close()
+        }
+        session.index = index
+        controller = nil
+        Task { await openCurrentPhoto() }
+    }
+
+    /// After a save in a multi-photo run, move to the next photo that still has
+    /// an edit waiting instead of closing the editor. Returns false when there is
+    /// nothing left to go to — the single-photo case, and the end of a run — and
+    /// the caller dismisses.
+    ///
+    /// Closing on the first save is what made the run pointless: sync a look to
+    /// twenty frames, save one, and the other nineteen drafts went with the
+    /// screen.
+    private func advanceAfterSave() -> Bool {
+        guard let session, session.isMultiPhoto else { return false }
+        let order = session.assets.indices
+        // Look forward from here first, then wrap: the run reads left to right.
+        let forward = order.filter { $0 > session.index }
+        let behind = order.filter { $0 < session.index }
+        let next = (forward + behind).first { session.hasDraft(session.assets[$0]) }
+        guard let next else { return false }
+        selectPhoto(at: next)
+        return true
+    }
+
+    /// Lightroom's Sync Settings: this photo's edit onto every other photo in
+    /// the run. They are applied as drafts, so nothing is written until each
+    /// photo is saved.
+    private func syncEditsToAll(_ scope: EditorSyncScope) {
+        guard let session, let controller, let current = session.current else { return }
+        controller.commitCropSession()
+        session.syncToAll(controller.recipe, from: current, scope: scope)
+    }
+
     private func inlineTextEditor(_ controller: PhotoEditorController) -> some View {
         EditorInlineTextEditor(
             initialText: controller.selectedOverlay?.text ?? "",
@@ -301,48 +390,38 @@ struct PhotoEditorScreen: View {
                 EditorLayoutMetrics.editorTopBandHeight,
                 proxy.safeAreaInsets.top
             )
-            VStack(spacing: 0) {
-                // Drawing is a full takeover, like Crop: the band steps aside and a
-                // Clear / Done bar takes the top, clear of the tool picker below.
-                if controller.isEditingDrawing {
-                    drawTopBar(controller)
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                } else if !chrome.isFullBleed {
-                    commandBand(controller, height: bandHeight)
-                        .transition(.opacity)
+            let isWide = proxy.size.width >= EditorLayoutMetrics.sidebarMinCanvasWidth
+            Group {
+                if isWide {
+                    wideBody(
+                        controller,
+                        // The editor claims the safe areas, so the band has to
+                        // carry the status bar itself — `max` would tuck the
+                        // Back/Save row under an iPad Split View's clock.
+                        bandHeight: 56 + proxy.safeAreaInsets.top,
+                        safeArea: proxy.safeAreaInsets,
+                        canvasWidth: proxy.size.width
+                    )
+                } else {
+                    narrowBody(
+                        controller,
+                        bandHeight: bandHeight,
+                        panelHeight: panelHeight
+                    )
                 }
-
-                // The only thing allowed over the image is the histogram card, and
-                // only when the user taps the band mini open — every other control
-                // lives in the panel's command row. It parks back to the mini on
-                // tap / close. (The curve graph is the one exception, and it is
-                // drawn by the stage itself; the card stays parked while it is up.)
-                EditorImageStage(
-                    controller: controller,
-                    chrome: chrome,
-                    drawSession: drawSession
-                )
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .overlay {
-                        GeometryReader { proxy in
-                            if !chrome.isHistogramCollapsed, chrome.selectedGroup != .curve {
-                                EditorHistogramCard(
-                                    histogram: controller.histogram,
-                                    chrome: chrome,
-                                    bounds: CGRect(origin: .zero, size: proxy.size),
-                                    namespace: histogramNamespace
-                                )
-                                .transition(.identity)
-                            }
-                        }
-                    }
-
-                // No bottom panel while drawing: the tool picker owns that space and
-                // Clear / Done live in the top bar.
-                if !chrome.isFullBleed, !controller.isEditingDrawing {
-                    panel(controller, height: panelHeight)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
+            }
+            // Follows the window, not the device: a Split View that narrows past
+            // the threshold puts the graph back on the photo, where the phone
+            // layout needs it. `onChange`, not `task`: a task body runs a hop
+            // later, so a live Stage Manager drag would spend a frame with the
+            // stage on the other layout's rules.
+            .onChange(of: isWide, initial: true) { _, wide in
+                chrome.isWideLayout = wide
+                // Full bleed is a phone answer to a phone problem — no room. It
+                // has no exit in the wide layout (the sidebar and the band both
+                // hide for it), so a window dragged past the threshold while
+                // full-bleed would strand the session with no Back and no Save.
+                if wide { chrome.isFullBleed = false }
             }
             .ignoresSafeArea(.container, edges: [.top, .bottom])
             // The editor and its fixed panel never move for the keyboard: when the
@@ -365,11 +444,12 @@ struct PhotoEditorScreen: View {
                 // Announced here, once, not in the fallback alert's OK button:
                 // the JPEG fallback still saved an asset worth revealing.
                 if let savedAssetID = controller.savedAssetID {
+                    session?.markSaved(savedAssetID)
                     onSaved?(savedAssetID)
                 }
                 if controller.didFallbackToJPEG {
                     isFallbackNoticePresented = true
-                } else {
+                } else if !advanceAfterSave() {
                     dismiss()
                 }
             }
@@ -425,6 +505,466 @@ struct PhotoEditorScreen: View {
         }
     }
 
+    // MARK: Layouts
+
+    /// Phone layout: band on top, photo, one fixed slab of tools glued to the
+    /// bottom.
+    private func narrowBody(
+        _ controller: PhotoEditorController,
+        bandHeight: CGFloat,
+        panelHeight: CGFloat
+    ) -> some View {
+        VStack(spacing: 0) {
+            // Drawing is a full takeover, like Crop: the band steps aside and a
+            // Clear / Done bar takes the top, clear of the tool picker below.
+            if controller.isEditingDrawing {
+                drawTopBar(controller)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            } else if !chrome.isFullBleed {
+                commandBand(controller, height: bandHeight)
+                    .transition(.opacity)
+            }
+
+            imageStage(controller)
+
+            filmstrip(controller)
+
+            // No bottom panel while drawing: the tool picker owns that space and
+            // Clear / Done live in the top bar.
+            if !chrome.isFullBleed, !controller.isEditingDrawing {
+                panel(controller, height: panelHeight)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+    }
+
+    /// Wide layout (iPad, the Duo's inner display, a wide window): Lightroom on a
+    /// desktop. The tools stand beside the photo as a sidebar of collapsible
+    /// groups instead of a slab under it, which is the only way a landscape photo
+    /// gets height — a 246pt panel takes a third of an iPad's short side. Back
+    /// and Save move up into the band so they stay reachable with the sidebar
+    /// collapsed.
+    private func wideBody(
+        _ controller: PhotoEditorController,
+        bandHeight: CGFloat,
+        safeArea: EdgeInsets,
+        canvasWidth: CGFloat
+    ) -> some View {
+        let showsSidebar = !isSidebarHidden && !controller.isEditingDrawing
+        return HStack(spacing: 0) {
+            if sidebarEdge == .leading, showsSidebar {
+                sidebarColumn(controller, safeArea: safeArea, canvasWidth: canvasWidth)
+                    .transition(.move(edge: .leading))
+                resizeHandle(canvasWidth: canvasWidth)
+            }
+
+            VStack(spacing: 0) {
+                if controller.isEditingDrawing {
+                    drawTopBar(controller)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                } else if !chrome.isFullBleed, !showsSidebar {
+                    // Only when the tools are away. With the sidebar up the band
+                    // would be a second strip of chrome stealing 56pt from the
+                    // photo for controls the sidebar already carries — and on a
+                    // desktop-shaped editor the picture is what the space is for.
+                    commandBand(
+                        controller,
+                        height: bandHeight,
+                        showsDocumentControls: true
+                    )
+                    .transition(.opacity)
+                }
+
+                imageStage(controller)
+
+                filmstrip(controller)
+            }
+            if sidebarEdge == .trailing, showsSidebar {
+                resizeHandle(canvasWidth: canvasWidth)
+                sidebarColumn(controller, safeArea: safeArea, canvasWidth: canvasWidth)
+                    .transition(.move(edge: .trailing))
+            }
+        }
+        .animation(EditorTheme.animation, value: showsSidebar)
+        .animation(EditorTheme.animation, value: sidebarEdge)
+    }
+
+    /// The run of photos under the canvas. Nothing at all for a single photo, and
+    /// nothing while a tool has taken the screen over (drawing, full bleed) —
+    /// switching photos mid-stroke is not something anyone means to do.
+    @ViewBuilder
+    private func filmstrip(_ controller: PhotoEditorController) -> some View {
+        if let session, session.isMultiPhoto, !chrome.isFullBleed, !controller.isEditingDrawing {
+            EditorFilmstrip(
+                session: session,
+                photoLibrary: dependencies.photoLibrary,
+                currentHasEdits: !controller.recipe.isIdentity
+            ) { index in
+                selectPhoto(at: index)
+            }
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
+    }
+
+    /// The photo itself, with the floating histogram card over it. Shared by both
+    /// layouts — only the chrome around it differs.
+    private func imageStage(_ controller: PhotoEditorController) -> some View {
+        // The only thing allowed over the image is the histogram card, and only
+        // when the user taps the band mini open — every other control lives in
+        // the tools. It parks back to the mini on tap / close. (The curve graph
+        // is the one exception, and it is drawn by the stage itself; the card
+        // stays parked while it is up.)
+        EditorImageStage(
+            controller: controller,
+            chrome: chrome,
+            drawSession: drawSession
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay {
+            GeometryReader { proxy in
+                if !chrome.isHistogramCollapsed, chrome.selectedGroup != .curve {
+                    EditorHistogramCard(
+                        histogram: controller.histogram,
+                        chrome: chrome,
+                        bounds: CGRect(origin: .zero, size: proxy.size),
+                        namespace: histogramNamespace
+                    )
+                    .transition(.identity)
+                }
+            }
+        }
+    }
+
+    // MARK: Wide-screen sidebar
+
+    /// Whether the photo is currently filling the canvas rather than fitted into
+    /// it. Read from the zoom the fill sets, with a margin for float error — a
+    /// hand-pinched zoom reads as filled too, which is what the fit button should
+    /// undo anyway.
+    private var isFillingCanvas: Bool { chrome.zoomScale > 1.02 }
+
+    private var sidebarEdge: EditorSidebarEdge {
+        EditorSidebarEdge.resolved(sidebarEdgeRaw)
+    }
+
+    private func sidebarWidth(in canvasWidth: CGFloat) -> CGFloat {
+        clampedSidebarWidth(sidebarDragWidth ?? CGFloat(storedSidebarWidth), in: canvasWidth)
+    }
+
+    /// Inside the scale, and never more than a cramped window can spare: a stored
+    /// 420 in a 700pt Stage Manager window would leave the photo 270pt, narrower
+    /// than the tools beside it.
+    private func clampedSidebarWidth(_ width: CGFloat, in canvasWidth: CGFloat) -> CGFloat {
+        let range = EditorLayoutMetrics.sidebarWidthRange
+        let ceiling = max(range.lowerBound, min(range.upperBound, canvasWidth * 0.45))
+        return min(max(width, range.lowerBound), ceiling)
+    }
+
+    private func resizeHandle(canvasWidth: CGFloat) -> some View {
+        EditorSidebarResizeHandle(edge: sidebarEdge) { delta in
+            let base = sidebarDragStartWidth ?? sidebarWidth(in: canvasWidth)
+            sidebarDragStartWidth = base
+            sidebarDragWidth = clampedSidebarWidth(base + delta, in: canvasWidth)
+        } onEnd: {
+            if let width = sidebarDragWidth {
+                storedSidebarWidth = Double(width)
+            }
+            sidebarDragWidth = nil
+            sidebarDragStartWidth = nil
+        }
+    }
+
+    private func sidebarColumn(
+        _ controller: PhotoEditorController,
+        safeArea: EdgeInsets,
+        canvasWidth: CGFloat
+    ) -> some View {
+        VStack(spacing: 0) {
+            // The editor ignores the container's safe areas so the photo can use
+            // them; the sidebar is chrome and has to put them back, or its header
+            // sits under an iPad Split View's status bar and Save sits in the
+            // home-indicator swipe strip.
+            Color.clear.frame(height: safeArea.top)
+
+            HStack(spacing: 0) {
+                backButton(controller)
+                Spacer(minLength: 8)
+                Text("Edit")
+                    .font(EditorTheme.panelTitle)
+                    .foregroundStyle(.white)
+                Spacer(minLength: 8)
+                Button {
+                    isSidebarHidden = true
+                } label: {
+                    Image(systemName: sidebarEdge.collapseIcon)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(EditorTheme.secondaryText)
+                        .frame(width: AppTheme.Size.minTouch, height: AppTheme.Size.minTouch)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Hide tools")
+            }
+            .padding(.horizontal, AppTheme.Spacing.md)
+            .frame(height: EditorLayoutMetrics.sidebarHeaderHeight)
+
+            // The histogram is the first thing in the panel and it never leaves,
+            // the way every desktop raw editor has it: it is read continuously
+            // while the sliders move, so parking it behind a tap (the phone's
+            // band mini) would be one tap per glance.
+            EditorHistogramSparkline(histogram: controller.histogram)
+                .padding(AppTheme.Spacing.sm)
+                .frame(height: EditorLayoutMetrics.sidebarHistogramHeight)
+                .background(
+                    EditorTheme.control,
+                    in: RoundedRectangle.app(AppTheme.Radius.lg)
+                )
+                .padding(.horizontal, AppTheme.Spacing.md)
+                .padding(.bottom, AppTheme.Spacing.sm)
+                .accessibilityLabel("RGB histogram")
+
+            HStack(spacing: AppTheme.Spacing.xs) {
+                circleCommand("arrow.uturn.backward", isEnabled: controller.canUndo) {
+                    controller.undo()
+                }
+                .accessibilityLabel("Undo")
+                circleCommand("arrow.uturn.forward", isEnabled: controller.canRedo) {
+                    controller.redo()
+                }
+                .accessibilityLabel("Redo")
+                beforeAfterButton(controller)
+                // Fit ⇄ fill, the double tap's visible twin. A gesture nobody
+                // can see is not a feature on a screen this size.
+                circleCommand(
+                    isFillingCanvas
+                        ? "arrow.down.forward.and.arrow.up.backward"
+                        : "arrow.up.backward.and.arrow.down.forward",
+                    isEnabled: true,
+                    isActive: isFillingCanvas
+                ) {
+                    chrome.requestFillZoomToggle()
+                }
+                .accessibilityLabel(isFillingCanvas ? "Fit Photo" : "Fill Screen")
+                Spacer(minLength: 8)
+                overflowMenu(controller, showsSidebarControls: true)
+            }
+            .padding(.horizontal, AppTheme.Spacing.md)
+            .padding(.bottom, AppTheme.Spacing.sm)
+
+            Rectangle().fill(EditorTheme.panelDivider).frame(height: 1)
+
+            sidebarToolStrip(controller)
+
+            ScrollView(.vertical) {
+                LazyVStack(spacing: 0) {
+                    // Whichever stage tool is up gets its panel first, above the
+                    // parameter stack — it is the thing the user just picked.
+                    if let tool = activeStageTool {
+                        sidebarSectionBody(tool, controller: controller)
+                            .padding(.bottom, AppTheme.Spacing.sm)
+                        Rectangle().fill(EditorTheme.panelDivider).frame(height: 1)
+                    }
+
+                    ForEach(Self.sidebarParameterGroups) { group in
+                        EditorSidebarSection(
+                            group: group,
+                            isExpanded: chrome.expandedSidebarGroups.contains(group),
+                            isActive: chrome.selectedGroup == group
+                                || (group == .color && Self.colorSegments.contains(chrome.selectedGroup)),
+                            toggle: { toggleSidebarSection(group, in: controller) }
+                        ) {
+                            sidebarSectionBody(group, controller: controller)
+                        }
+                    }
+                    Color.clear.frame(height: AppTheme.Spacing.xxl)
+                }
+            }
+            // One switch for the whole stack: no panel inside the sidebar owns a
+            // vertical scroll, so every section is exactly as tall as its content
+            // and this scroll takes the overflow.
+            .environment(\.editorPanelScrolls, false)
+            // Same rule as the phone panel: a finger that owns a slider must not
+            // also be scrolling the list under it.
+            .scrollDisabled(chrome.activeSlider != nil)
+
+            Rectangle().fill(EditorTheme.panelDivider).frame(height: 1)
+
+            Button {
+                controller.commitCropSession()
+                isSaveSheetPresented = true
+            } label: {
+                Text("Save\u{2026}")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.black)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: AppTheme.Size.primaryActionHeight)
+                    .background(
+                        EditorTheme.accent,
+                        in: RoundedRectangle.app(AppTheme.Radius.md)
+                    )
+            }
+            .buttonStyle(.plain)
+            .disabled(controller.isLoading || controller.isSaving)
+            .padding(.horizontal, AppTheme.Spacing.md)
+            .padding(.top, AppTheme.Spacing.md)
+            .padding(.bottom, max(safeArea.bottom, AppTheme.Spacing.md))
+        }
+        .frame(width: sidebarWidth(in: canvasWidth))
+        .background(EditorTheme.panelSolid)
+    }
+
+    /// The parameter panels, in pipeline order — the order Lightroom's develop
+    /// panels run in, which is also the order an edit is actually made in.
+    ///
+    /// Six, not fourteen. The four stage-owning tools moved to the strip above
+    /// (they are mutually exclusive, so a disclosure triangle promising "open as
+    /// many as you like" was lying about them), Mix and Point became segments
+    /// inside Color, and Optics and Geo have no parameters to show yet — a
+    /// permanent "coming soon" row is unshipped UI, not an empty state. Fourteen
+    /// headers plus dividers came to more than the sidebar is tall: the list did
+    /// not fit even with everything closed.
+    private static let sidebarParameterGroups: [EditorGroup] = [
+        .light, .curve, .color, .grade, .detail, .effects
+    ]
+
+    /// Tools that take the photo over. Exactly one can be up at a time, so they
+    /// are a radio strip rather than four more disclosures.
+    private static let sidebarToolGroups: [EditorGroup] = [.crop, .mask, .markup, .presets]
+
+    /// The three ways to work on colour, shown as segments inside one section
+    /// the way Lightroom nests HSL under Color.
+    private static let colorSegments: [EditorGroup] = [.color, .colorMix, .pointColor]
+
+    private var activeStageTool: EditorGroup? {
+        Self.sidebarToolGroups.contains(chrome.selectedGroup) ? chrome.selectedGroup : nil
+    }
+
+    /// The radio strip of stage tools. Tapping the one that is already up puts
+    /// the photo back to plain adjusting, which is the only way out of Crop that
+    /// does not involve committing it.
+    private func sidebarToolStrip(_ controller: PhotoEditorController) -> some View {
+        HStack(spacing: AppTheme.Spacing.sm) {
+            ForEach(Self.sidebarToolGroups) { tool in
+                let isActive = chrome.selectedGroup == tool
+                Button {
+                    withAnimation(EditorTheme.animation) {
+                        selectGroup(isActive ? .light : tool, in: controller)
+                    }
+                } label: {
+                    VStack(spacing: 3) {
+                        Image(systemName: tool.icon)
+                            .font(.system(size: 15, weight: .medium))
+                        Text(tool.title)
+                            .font(EditorTheme.tabLabel)
+                    }
+                    .foregroundStyle(isActive ? Color.black : Color.white.opacity(0.9))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: AppTheme.Size.minTouch)
+                    .background {
+                        if isActive {
+                            RoundedRectangle.app(AppTheme.Radius.sm)
+                                .fill(EditorTheme.accent)
+                        }
+                    }
+                    .contentShape(RoundedRectangle.app(AppTheme.Radius.sm))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(tool.title)
+                .accessibilityAddTraits(isActive ? [.isSelected, .isButton] : .isButton)
+            }
+        }
+        .padding(.horizontal, AppTheme.Spacing.md)
+        .padding(.bottom, AppTheme.Spacing.sm)
+    }
+
+    /// One section's controls, at their natural height.
+    @ViewBuilder
+    private func sidebarSectionBody(
+        _ group: EditorGroup,
+        controller: PhotoEditorController
+    ) -> some View {
+        VStack(spacing: 0) {
+            // Grade acts on one tonal region at a time, so the region picker has
+            // to come with it — without it the section quietly edits only
+            // shadows.
+            if group == .grade {
+                targetStrip(for: group, controller: controller)
+                    .frame(height: EditorLayoutMetrics.editorTargetStripHeight)
+            }
+
+            if group == .color {
+                Picker("Colour controls", selection: colorSegmentBinding(controller)) {
+                    Text("Basic").tag(EditorGroup.color)
+                    Text("Mix").tag(EditorGroup.colorMix)
+                    Text("Point").tag(EditorGroup.pointColor)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .padding(.horizontal, AppTheme.Spacing.md)
+                .padding(.bottom, AppTheme.Spacing.sm)
+
+                toolPanelContent(for: colorSegment, controller: controller)
+            } else {
+                toolPanelContent(for: group, controller: controller)
+            }
+
+            // The graph goes in the panel, not on the photo: the sidebar is wide
+            // enough for a usable plot, and a picture with a grid drawn across it
+            // is not what a big screen is for.
+            if group == .curve {
+                sidebarCurveGraph(controller)
+            }
+        }
+    }
+
+    /// Which colour segment is showing. Kept on the selected group so the stage
+    /// keeps behaving — Point arms the eyedropper on the photo.
+    private var colorSegment: EditorGroup {
+        Self.colorSegments.contains(chrome.selectedGroup) ? chrome.selectedGroup : .color
+    }
+
+    private func colorSegmentBinding(_ controller: PhotoEditorController) -> Binding<EditorGroup> {
+        Binding(
+            get: { colorSegment },
+            set: { selectGroup($0, in: controller) }
+        )
+    }
+
+    /// The tone-curve plot, square, inside its sidebar section.
+    private func sidebarCurveGraph(_ controller: PhotoEditorController) -> some View {
+        GeometryReader { geo in
+            let rect = CGRect(origin: .zero, size: geo.size)
+            EditorCurveOverlay(
+                controller: controller,
+                chrome: chrome,
+                imageRect: rect,
+                stageRect: rect
+            )
+        }
+        .aspectRatio(1, contentMode: .fit)
+        .padding(.horizontal, AppTheme.Spacing.md)
+        .padding(.bottom, AppTheme.Spacing.sm)
+    }
+
+    /// Opening a section also makes it the active group: several panels can be
+    /// open at once, but only one of them can own the photo (crop handles, the
+    /// mask overlay, the curve graph). Closing one leaves the active group alone.
+    private func toggleSidebarSection(_ group: EditorGroup, in controller: PhotoEditorController) {
+        withAnimation(EditorTheme.animation) {
+            if chrome.expandedSidebarGroups.contains(group) {
+                chrome.expandedSidebarGroups.remove(group)
+            } else {
+                chrome.expandedSidebarGroups.insert(group)
+                // Opening Light while Crop is up must not close the crop frame:
+                // the strip above owns the stage, the stack below only owns
+                // parameters. Colour keeps whichever segment was last showing.
+                if activeStageTool == nil {
+                    selectGroup(group == .color ? colorSegment : group, in: controller)
+                }
+            }
+        }
+    }
+
     // MARK: Floating command band
 
     /// The band over the Dynamic Island, carrying the floating command row. The
@@ -434,9 +974,13 @@ struct PhotoEditorScreen: View {
     /// clears the device's rounded corner; they can still butt right up against the
     /// island in the middle. Every control is a 34pt circle — this is where the
     /// panel's old command row went. The histogram mini taps to expand the card.
+    /// `showsDocumentControls` is the wide layout: Back and Save ride the band's
+    /// two ends there, because the sidebar that used to carry them can be
+    /// collapsed and Save must never go with it.
     private func commandBand(
         _ controller: PhotoEditorController,
-        height bandHeight: CGFloat
+        height bandHeight: CGFloat,
+        showsDocumentControls: Bool = false
     ) -> some View {
         let sideInset = EditorLayoutMetrics.editorFloatingCommandSideInset
         let buttonSize = EditorLayoutMetrics.editorFloatingCommandButtonSize
@@ -445,12 +989,21 @@ struct PhotoEditorScreen: View {
             // right of the Dynamic Island, so the fixed reserve is the run from the
             // end of that cluster to there; the pill then flexes out to the ⋯.
             let leftClusterWidth = buttonSize * 3 + 5 * 2
-            let reserve = max(
-                0,
-                EditorLayoutMetrics.editorHistogramPillLeading(bandWidth: geo.size.width)
-                    - sideInset - leftClusterWidth
-            )
+            let reserve = showsDocumentControls
+                ? 0
+                : max(
+                    0,
+                    EditorLayoutMetrics.editorHistogramPillLeading(bandWidth: geo.size.width)
+                        - sideInset - leftClusterWidth
+                )
             HStack(spacing: 5) {
+                if showsDocumentControls {
+                    backButton(controller)
+                    if isSidebarHidden, sidebarEdge == .leading {
+                        showSidebarCommand
+                    }
+                }
+
                 circleCommand(
                     "arrow.uturn.backward",
                     isEnabled: controller.canUndo
@@ -487,15 +1040,34 @@ struct PhotoEditorScreen: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                overflowMenu(controller)
+                overflowMenu(controller, showsSidebarControls: showsDocumentControls)
+
+                if showsDocumentControls {
+                    if isSidebarHidden, sidebarEdge == .trailing {
+                        showSidebarCommand
+                    }
+                    saveButton(controller)
+                }
             }
-            .frame(height: buttonSize)
+            .frame(height: showsDocumentControls ? 42 : buttonSize)
             .padding(.horizontal, sideInset)
             .padding(.top, EditorLayoutMetrics.editorFloatingCommandRowTopInset)
             .frame(height: bandHeight, alignment: .top)
         }
         .frame(height: bandHeight)
         .background(EditorTheme.background)
+    }
+
+    /// Brings a collapsed sidebar back. It lives in the band rather than floating
+    /// over the photo: the stage owns every touch inside its own bounds (zoom,
+    /// pan, mask painting, crop handles), and a button laid over it there never
+    /// sees the tap — measured on iPad. The band is the one strip of chrome that
+    /// always answers.
+    private var showSidebarCommand: some View {
+        circleCommand(sidebarEdge.collapseIcon, isEnabled: true) {
+            isSidebarHidden = false
+        }
+        .accessibilityLabel("Show tools")
     }
 
     /// Hold-to-see-original, mirroring the photo's own press-and-hold. Down shows
@@ -598,9 +1170,32 @@ struct PhotoEditorScreen: View {
     /// per-tab part — Crop gets Rotate 90° / Flip Horizontal, an open mask gets Show
     /// Overlay / Invert Selection — following the rule that the most-used action of
     /// the tab is promoted only if there is room, and the rest fall in here.
-    private func overflowMenu(_ controller: PhotoEditorController) -> some View {
+    private func overflowMenu(
+        _ controller: PhotoEditorController,
+        showsSidebarControls: Bool = false
+    ) -> some View {
         let size = EditorLayoutMetrics.editorFloatingCommandButtonSize
         return Menu {
+            if showsSidebarControls {
+                Picker("Tools Panel", selection: $sidebarEdgeRaw) {
+                    ForEach(EditorSidebarEdge.allCases) { edge in
+                        Text(edge.title).tag(edge.rawValue)
+                    }
+                }
+                .pickerStyle(.menu)
+
+                Button {
+                    isSidebarHidden.toggle()
+                } label: {
+                    Label(
+                        isSidebarHidden ? "Show Tools" : "Hide Tools",
+                        systemImage: sidebarEdge.collapseIcon
+                    )
+                }
+
+                Divider()
+            }
+
             if controller.selectedTool == .crop {
                 Button {
                     controller.rotate()
@@ -668,6 +1263,22 @@ struct PhotoEditorScreen: View {
                 } label: {
                     Label("Paste Edits", systemImage: "doc.on.clipboard")
                 }
+            }
+
+            if let session, session.isMultiPhoto {
+                Menu("Sync to \(session.assets.count - 1) Photos") {
+                    Button {
+                        syncEditsToAll(.look)
+                    } label: {
+                        Label("Sync Look", systemImage: "paintpalette")
+                    }
+                    Button {
+                        syncEditsToAll(.everything)
+                    } label: {
+                        Label("Sync Everything", systemImage: "square.on.square.dashed")
+                    }
+                }
+                .disabled(controller.recipe.isIdentity)
             }
 
             Button {
@@ -777,9 +1388,16 @@ struct PhotoEditorScreen: View {
         chrome.selectedGroup == .grade
     }
 
-    @ViewBuilder
     private func targetStrip(_ controller: PhotoEditorController) -> some View {
-        switch chrome.selectedGroup {
+        targetStrip(for: chrome.selectedGroup, controller: controller)
+    }
+
+    @ViewBuilder
+    private func targetStrip(
+        for group: EditorGroup,
+        controller: PhotoEditorController
+    ) -> some View {
+        switch group {
         case .grade:
             EditorGradeRegionStrip(controller: controller, chrome: chrome)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -834,15 +1452,27 @@ struct PhotoEditorScreen: View {
         .accessibilityLabel("Save")
     }
 
-    @ViewBuilder
+    /// The panel for whichever group the phone layout has open.
     private func toolPanel(_ controller: PhotoEditorController) -> some View {
-        switch chrome.selectedGroup {
+        toolPanelContent(for: chrome.selectedGroup, controller: controller)
+    }
+
+    /// One group's controls. Takes the group explicitly rather than reading
+    /// `chrome.selectedGroup`, because the wide-screen sidebar draws several
+    /// groups at once and only one of them is the selected one.
+    @ViewBuilder
+    private func toolPanelContent(
+        for group: EditorGroup,
+        controller: PhotoEditorController,
+        isScrollable: Bool? = nil
+    ) -> some View {
+        switch group {
         case .light, .effects, .detail, .optics, .geo:
-            adjustmentContent(chrome.selectedGroup, controller: controller)
+            adjustmentContent(group, controller: controller, isScrollable: isScrollable)
         case .curve:
             EditorCurvePanel(controller: controller, chrome: chrome)
         case .color:
-            colorContent(controller)
+            colorContent(controller, isScrollable: isScrollable)
         case .colorMix:
             EditorColorMixerSection(controller: controller, chrome: chrome)
         case .pointColor:
@@ -904,7 +1534,8 @@ struct PhotoEditorScreen: View {
     @ViewBuilder
     private func adjustmentContent(
         _ group: EditorGroup,
-        controller: PhotoEditorController
+        controller: PhotoEditorController,
+        isScrollable: Bool? = nil
     ) -> some View {
         let groups = catalogGroups(for: group, controller: controller)
         if groups.isEmpty {
@@ -913,7 +1544,8 @@ struct PhotoEditorScreen: View {
             EditorAdjustmentGroupsView(
                 controller: controller,
                 chrome: chrome,
-                groups: groups
+                groups: groups,
+                isScrollable: isScrollable
             )
         }
     }
@@ -955,11 +1587,15 @@ struct PhotoEditorScreen: View {
     /// The Color group: the base Temp / Tint / Vibrance / Saturation rows. The HSL
     /// mixer is now its own nav chip (`.colorMix`), not a sub-view reached from a
     /// row here.
-    private func colorContent(_ controller: PhotoEditorController) -> some View {
+    private func colorContent(
+        _ controller: PhotoEditorController,
+        isScrollable: Bool? = nil
+    ) -> some View {
         EditorAdjustmentGroupsView(
             controller: controller,
             chrome: chrome,
-            groups: catalogGroups(for: .color, controller: controller)
+            groups: catalogGroups(for: .color, controller: controller),
+            isScrollable: isScrollable
         )
     }
 

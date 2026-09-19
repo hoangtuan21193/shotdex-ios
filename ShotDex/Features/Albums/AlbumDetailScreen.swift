@@ -22,6 +22,7 @@ struct AlbumDetailScreen: View {
     @State private var selectedIds: [String] = []
     @State private var isComparePresented = false
     @State private var compressionPresentation: CompressionPresentation?
+    @State private var multiEditPresentation: MultiEditPresentation?
     @State private var collagePresentation: CollagePresentation?
     @State private var videoStudioPresentation: VideoStudioPresentation?
     @State private var addToCollectionPresentation: AddToCollectionPresentation?
@@ -110,6 +111,7 @@ struct AlbumDetailScreen: View {
                 CompareScreen(photos: photos)
             }
         }
+        .multiEditCover($multiEditPresentation, sourceAlbum: model?.sourceAlbum, onDismiss: stopSelecting)
         .fullScreenCover(item: $compressionPresentation, onDismiss: stopSelecting) { presentation in
             CompressionScreen(
                 assets: presentation.assets,
@@ -243,6 +245,17 @@ struct AlbumDetailScreen: View {
         }
     }
 
+    /// Opens the editor on the whole selection. Same run a shoot lives in: an
+    /// album is where a day's frames land, so batch editing has to reach here.
+    private func presentMultiEdit(_ model: AlbumDetailModel) {
+        let assets: [PHAsset] = selectedIds.compactMap { id -> PHAsset? in
+            guard let asset = model.assetsById[id], asset.mediaType == .image else { return nil }
+            return asset
+        }
+        guard let first = assets.first else { return }
+        multiEditPresentation = MultiEditPresentation(assets: assets, first: first)
+    }
+
     private func presentCompression(_ model: AlbumDetailModel) {
         let assets: [PHAsset] = selectedIds.compactMap { id -> PHAsset? in
             guard let asset = model.assetsById[id], asset.mediaType == .image else { return nil }
@@ -369,6 +382,7 @@ struct AlbumDetailScreen: View {
             onVideo: { presentVideoStudio(model) },
             onCompare: { isComparePresented = true },
             onCompress: { presentCompression(model) },
+            onEdit: { presentMultiEdit(model) },
             onDelete: { deleteSelected(model) },
             onAddToCollection: { addToCollection(model) },
             onExportEXIF: { exportEXIF(model) },

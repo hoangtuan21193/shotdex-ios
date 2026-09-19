@@ -30,6 +30,28 @@ final class EditorChromeModel {
     /// Live finger offset while the card is being dragged; nil when parked.
     var histogramDragOffset: CGSize?
 
+    /// Sections open in the wide-screen sidebar. Several at once, the way
+    /// Lightroom's develop panels stack — unlike the phone's group wheel, where
+    /// the screen only has room for one group at a time. Session state: which
+    /// panels a photo needs is a property of the edit, not of the app.
+    var expandedSidebarGroups: Set<EditorGroup> = [.light]
+
+    /// True while the editor is laid out for a wide window (the sidebar beside
+    /// the photo rather than a slab under it). The stage reads it for the two
+    /// things that differ there: the tone-curve graph moves into the sidebar,
+    /// and a double tap fills the canvas instead of hiding chrome the sidebar's
+    /// own collapse control already hides.
+    var isWideLayout = false
+
+    /// Bumped when something outside the stage asks for fit ⇄ fill — the
+    /// sidebar's zoom button. The stage owns the geometry the fill factor is
+    /// computed from, so the request travels as a token rather than a scale.
+    private(set) var fillZoomToken = 0
+
+    func requestFillZoomToggle() {
+        fillZoomToken &+= 1
+    }
+
     var isFullBleed = false
     var showsSplitCompare = false
     var splitFraction = 0.5

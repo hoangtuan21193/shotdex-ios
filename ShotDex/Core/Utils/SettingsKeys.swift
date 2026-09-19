@@ -78,4 +78,14 @@ enum SettingsKeys {
     /// Group count of the last duplicate grouping, so the Collections tab token
     /// can show it without loading every hash. Unwritten means never scanned.
     static let duplicateGroupCount = "duplicates.lastGroupCount"
+
+    /// Which side the editor's wide-screen tool sidebar sits on
+    /// (`EditorSidebarEdge` raw value). Unwritten means trailing, the side
+    /// Lightroom puts its develop panels on.
+    static let editorSidebarEdge = "editor.sidebarEdge"
+    /// Width of that sidebar in points, clamped to
+    /// `EditorLayoutMetrics.sidebarWidthRange`. Unwritten means the default width.
+    static let editorSidebarWidth = "editor.sidebarWidth"
+    /// Whether the sidebar is collapsed so the photo has the whole window.
+    static let editorSidebarHidden = "editor.sidebarHidden"
 }

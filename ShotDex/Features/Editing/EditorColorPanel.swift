@@ -11,6 +11,7 @@ import ShotDexKit
 // MARK: - Mixer
 
 struct EditorColorMixerSection: View {
+    @Environment(\.editorPanelScrolls) private var panelScrolls
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
 
@@ -22,8 +23,24 @@ struct EditorColorMixerSection: View {
     }
 
     private var allChannelsScroll: some View {
-        ScrollView(.vertical) {
-            LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
+        mixerRows
+            .editorPanelScroll(panelScrolls)
+            .scrollDisabled(chrome.activePlainSliderID != nil)
+            .overlay(alignment: .bottom) {
+                if panelScrolls {
+                    LinearGradient(
+                        colors: [EditorTheme.panel.opacity(0), EditorTheme.panel],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .frame(height: 18)
+                    .allowsHitTesting(false)
+                }
+            }
+    }
+
+    private var mixerRows: some View {
+        LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
                 ForEach(ColorMixerProperty.allCases) { property in
                     Section {
                         ForEach(ColorMixerBand.allCases) { band in
@@ -37,18 +54,7 @@ struct EditorColorMixerSection: View {
                         )
                     }
                 }
-                Color.clear.frame(height: 16)
-            }
-        }
-        .scrollDisabled(chrome.activePlainSliderID != nil)
-        .overlay(alignment: .bottom) {
-            LinearGradient(
-                colors: [EditorTheme.panel.opacity(0), EditorTheme.panel],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .frame(height: 18)
-            .allowsHitTesting(false)
+            Color.clear.frame(height: 16)
         }
     }
 
@@ -91,6 +97,7 @@ struct EditorColorMixerSection: View {
 // MARK: - Point Color
 
 struct EditorPointColorSection: View {
+    @Environment(\.editorPanelScrolls) private var panelScrolls
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
 
@@ -98,8 +105,7 @@ struct EditorPointColorSection: View {
         VStack(spacing: 0) {
             swatchRow
                 .padding(.top, 6)
-            ScrollView(.vertical) {
-                VStack(spacing: 0) {
+            VStack(spacing: 0) {
                     if let point = controller.selectedPointColor {
                         pointSliders(point)
                     } else {
@@ -111,8 +117,8 @@ struct EditorPointColorSection: View {
                             .padding(.top, 40)
                     }
                     Color.clear.frame(height: 16)
-                }
             }
+            .editorPanelScroll(panelScrolls)
             .scrollDisabled(chrome.activePlainSliderID != nil)
         }
     }
@@ -310,12 +316,12 @@ struct EditorPointColorSection: View {
 // MARK: - Grading
 
 struct EditorColorGradingSection: View {
+    @Environment(\.editorPanelScrolls) private var panelScrolls
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
 
     var body: some View {
-        ScrollView(.vertical) {
-            VStack(spacing: 8) {
+        VStack(spacing: 8) {
                 // The region picker moved to the panel's target strip (30c), so the
                 // scroll is just the rows for whichever region is selected there.
                 // Grade is three rows per region — Hue / Saturation / Luminance —
@@ -390,9 +396,9 @@ struct EditorColorGradingSection: View {
                     controller.setGradingBalance(value / 100)
                 }
                 Color.clear.frame(height: 12)
-            }
-            .padding(.top, 6)
         }
+        .padding(.top, 6)
+        .editorPanelScroll(panelScrolls)
         .scrollDisabled(chrome.activePlainSliderID != nil)
     }
 

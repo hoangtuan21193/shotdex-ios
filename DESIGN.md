@@ -220,7 +220,19 @@ Nguyên tắc chung cho regular width (iPad, màn trong iPhone Duo 867pt): **mà
 Lưới tràn viền, không padding. **Không lưới ảnh nào chèn header ngày** (2026-09-19) — Library, Album, Smart Album và `PhotoListScreen` đều chạy `sectionMode: .flat`, ảnh trôi liền mạch. Ngày của ảnh đang ở mép trên viewport hiện ở **title giữa top bar** (Library) hoặc dòng phụ dưới tên album, do `PhotoGridCollectionView.onVisibleDateChange` đẩy lên. Cấp độ ngày/tháng/năm lấy theo density đã lưu, không theo số cột đã vẽ, để màn rộng không tự nhảy sang gom theo năm. `OnThisDayScreen` vẫn có header vì section của nó là "cùng ngày qua các năm", không phải chia ngày. Chrome nổi đè lên lưới bằng `safeAreaInset(edge:)` hoặc overlay, luôn dùng kính tầng C. Khi vào chế độ chọn: lưới mờ đi, selection bar trượt lên từ đáy.
 
 ### 10.3 Công cụ toàn màn hình (tầng D)
-Cấu trúc cố định từ trên xuống:
+
+**Màn rộng (≥ 700pt) — editor ảnh xếp như Lightroom trên desktop** (2026-09-19). Ngưỡng đo theo **bề rộng cửa sổ thật** (`EditorLayoutMetrics.sidebarMinCanvasWidth`), không theo size class: iPad Split View hẹp giữ layout điện thoại, iPhone xoay ngang thì không.
+
+- Bố cục: `[sidebar công cụ] | [canvas ảnh]`, sidebar **trái hoặc phải do người dùng chọn** (menu ⋯ → Tools Panel, mặc định phải), **kéo đổi rộng 280–420pt**, **thu gọn được**. Cả ba lưu `@AppStorage`.
+- Sidebar từ trên xuống: Back · "Edit" · nút thu gọn → **histogram luôn hiện** (đọc liên tục lúc kéo slider, không giấu sau một cú chạm) → hàng lệnh undo/redo/before-after/fit-fill/⋯ → **dải 4 tool chiếm stage** (Crop · Mask · Markup · Presets) → **6 panel tham số xổ được** → nút `Save…` chiếm hết bề ngang ở đáy.
+- **Hai loại công cụ, hai affordance.** Tool chiếm stage thì **loại trừ nhau** (chỉ một cái giữ được crop frame / mask overlay), nên chúng là **radio strip**, không phải disclosure — một tam giác xổ hứa "mở bao nhiêu cũng được" là nói dối về chúng. Chạm lại tool đang bật để tắt. Tham số thì mở chồng thoải mái, xếp **theo thứ tự pipeline**: Light → Curve → Color → Grade → Detail → Effects. `Mix` và `Point` là **segment bên trong Color** (Lightroom lồng HSL y hệt), `Optics`/`Geo` chưa có tham số thì **không có dòng** — "coming soon" là UI chưa ship, không phải empty state. Danh sách phẳng 14 section cũ cao hơn cả sidebar: đóng hết vẫn phải cuộn.
+- **Không có chiều cao cố định cho section.** Panel trong sidebar không được tự cuộn dọc (`\.editorPanelScrolls == false`): mỗi section cao đúng bằng nội dung, scroll của sidebar lo phần tràn. Scroll lồng vừa bẫy ngón tay vào sai danh sách, vừa buộc phải đoán một hằng số chiều cao vì scroll view không có intrinsic height.
+- **Không có command band khi sidebar đang mở**: band chỉ xuất hiện lúc sidebar thu gọn, mang theo Back/undo/redo/⋯/Save và nút mở lại sidebar. Hai dải chrome cùng lúc là ăn 56pt của ảnh để lặp lại thứ sidebar đã có.
+- **Không đặt control nổi đè lên stage**: stage nuốt mọi chạm trong bounds của nó (zoom, pan, vẽ mask, crop handle) — đo trên iPad, nút overlay ở đó không nhận tap. Chrome phải là view anh em của stage (band hoặc sidebar).
+- **Fit ⇄ Fill**: double-tap lên ảnh, và nút tương ứng trong hàng lệnh sidebar (`arrow.up.left.and.arrow.down.right` khi đang fit, `arrow.down.right.and.arrow.up.left` + nền accent khi đang fill). Fill phóng ảnh tới khi phủ kín canvas — phần thừa bị **stage** cắt, không đụng gì tới bản edit. Một cử chỉ không ai nhìn thấy thì chưa phải là tính năng, nên phải có cả nút. Điện thoại giữ double-tap = full-bleed: ở đó canvas gần vuông rồi, giấu chrome mới là thứ mua thêm chỗ, còn màn rộng đã có nút thu gọn sidebar làm việc đó.
+- **Tone curve vẽ trong sidebar, không đè lên ảnh** (`chrome.showsCurveOnStage == false`): sidebar đủ rộng cho một plot dùng được, và màn to là để xem ảnh.
+
+Điện thoại (< 700pt) giữ nguyên cấu trúc cố định từ trên xuống:
 1. **Top bar** — trái `Cancel`, giữa tiêu đề inline, phải `Done`/`Save`. Không đặt hành động lạ ở đây.
 2. **Stage** — ảnh/preview, nền đen, chiếm phần lớn không gian.
 3. **Panel** — nền `panelSolid`, hairline trên `panelTopHairline`, các tier ngăn bằng `panelDivider`.

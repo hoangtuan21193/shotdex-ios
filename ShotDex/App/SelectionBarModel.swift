@@ -53,6 +53,9 @@ struct SelectionBarModel {
     var onCompare: (() -> Void)? = nil
     /// Middle cluster — resize / compress the picked images.
     var onCompress: (() -> Void)? = nil
+    /// Opens the editor on the whole selection — one photo on the canvas, the
+    /// rest in a filmstrip under it.
+    var onEdit: (() -> Void)? = nil
     /// Trailing standalone button — delete the selection (confirmed by PhotoKit).
     var onDelete: () -> Void
 

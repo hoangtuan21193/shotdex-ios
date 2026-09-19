@@ -11,11 +11,40 @@ struct EditorAdjustmentGroupsView<Footer: View>: View {
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
     let groups: [EditorAdjustmentGroup]
+    /// Explicit override; `nil` follows `\.editorPanelScrolls`, which the wide
+    /// sidebar turns off for every panel at once.
+    var isScrollable: Bool?
+    @Environment(\.editorPanelScrolls) private var panelScrolls
     @ViewBuilder let footer: () -> Footer
 
+    private var scrolls: Bool { isScrollable ?? panelScrolls }
+
     var body: some View {
+        if scrolls {
+            scrollingBody
+        } else {
+            rows
+        }
+    }
+
+    private var scrollingBody: some View {
         ScrollView(.vertical) {
-            LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
+            rows
+        }
+        .scrollDisabled(chrome.activeSlider != nil)
+        .overlay(alignment: .bottom) {
+            LinearGradient(
+                colors: [EditorTheme.panel.opacity(0), EditorTheme.panel],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: 22)
+            .allowsHitTesting(false)
+        }
+    }
+
+    private var rows: some View {
+        LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
                 ForEach(groups) { group in
                     Section {
                         ForEach(group.kinds, id: \.self) { kind in
@@ -32,19 +61,8 @@ struct EditorAdjustmentGroupsView<Footer: View>: View {
                         )
                     }
                 }
-                footer()
-                Color.clear.frame(height: 20)
-            }
-        }
-        .scrollDisabled(chrome.activeSlider != nil)
-        .overlay(alignment: .bottom) {
-            LinearGradient(
-                colors: [EditorTheme.panel.opacity(0), EditorTheme.panel],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .frame(height: 22)
-            .allowsHitTesting(false)
+            footer()
+            Color.clear.frame(height: 20)
         }
     }
 
@@ -112,12 +130,14 @@ extension EditorAdjustmentGroupsView where Footer == EmptyView {
     init(
         controller: PhotoEditorController,
         chrome: EditorChromeModel,
-        groups: [EditorAdjustmentGroup]
+        groups: [EditorAdjustmentGroup],
+        isScrollable: Bool? = nil
     ) {
         self.init(
             controller: controller,
             chrome: chrome,
             groups: groups,
+            isScrollable: isScrollable,
             footer: { EmptyView() }
         )
     }

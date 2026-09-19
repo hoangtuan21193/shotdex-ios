@@ -63,7 +63,7 @@ final class EditClipboard {
     }
 
     /// Everything about how the photo looks, with nothing about which photo it
-    /// is or how it is framed.
+    /// is or how it is framed. `EditorSyncScope.look` is the same cut.
     static func look(of recipe: PhotoEditRecipe) -> PhotoEditRecipe {
         var look = PhotoEditRecipe.identity
         look.adjustments = recipe.adjustments
@@ -72,5 +72,36 @@ final class EditClipboard {
         look.filter = recipe.filter
         look.filterIntensity = recipe.filterIntensity
         return look
+    }
+}
+
+
+/// How much of one photo's edit travels to another.
+///
+/// The same line `EditClipboard` draws, made explicit because Sync has a second
+/// option the clipboard does not: a run shot on a tripod really does want the
+/// crop and the masks to come along, and only the user knows which run that is.
+enum EditorSyncScope {
+    /// Tone, colour, curve and film look. Never the crop, the masks, the markup
+    /// or the drawing — a portrait's face mask and 4:5 crop landing on thirty-nine
+    /// landscapes is a destructive surprise, and one nobody sees until the batch
+    /// has been saved.
+    case look
+    /// The whole recipe, framing and layers included.
+    case everything
+
+    func apply(_ source: PhotoEditRecipe, onto target: PhotoEditRecipe) -> PhotoEditRecipe {
+        switch self {
+        case .everything:
+            return source
+        case .look:
+            var result = target
+            result.adjustments = source.adjustments
+            result.color = source.color
+            result.curve = source.curve
+            result.filter = source.filter
+            result.filterIntensity = source.filterIntensity
+            return result
+        }
     }
 }

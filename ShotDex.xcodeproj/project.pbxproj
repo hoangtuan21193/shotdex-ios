@@ -244,6 +244,10 @@
 			children = (
 				DD0001022D00000100000001 /* ShotDexKit.framework */,
 				DD0001052D00000100000001 /* ShotDexKit */,
+				EE0001052D00000100000001 /* ShotDexEdit */,
+				EE0001202D00000100000001 /* PhotosUI.framework */,
+				EE0001212D00000100000001 /* Photos.framework */,
+				EE0001022D00000100000001 /* ShotDexEdit.appex */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";

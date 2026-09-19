@@ -51,6 +51,36 @@ enum EditorLayoutMetrics {
     /// iPhones) when that is larger, so a tall aspect-fit photo begins below the
     /// island's bottom rather than being sliced by it.
     static let editorTopBandHeight: CGFloat = 48
+
+    // MARK: Wide-screen sidebar
+
+    /// Window width from which the editor lays out like Lightroom on a desktop:
+    /// the tools become a vertical sidebar beside the photo instead of a slab
+    /// under it. Measured against the window, not the size class, so an iPad in
+    /// a narrow Split View keeps the phone layout and a phone in landscape does
+    /// not — below this the sidebar would leave the photo a letterbox.
+    static let sidebarMinCanvasWidth: CGFloat = 700
+    /// Sidebar width the user can drag between, and where it starts. 280 still
+    /// fits a slider row with its value; past 420 the photo starts paying for
+    /// space the rows cannot use.
+    static let sidebarWidthRange: ClosedRange<CGFloat> = 280...420
+    static let sidebarDefaultWidth: CGFloat = 320
+    /// The drag strip on the sidebar's inner edge. 10pt: a 44pt target would eat
+    /// into the rows, and this edge is dragged, not tapped.
+    static let sidebarResizeHandleWidth: CGFloat = 10
+    /// The sidebar's own title row, holding the collapse control.
+    static let sidebarHeaderHeight: CGFloat = 44
+    /// One collapsible section header in the sidebar.
+    static let sidebarSectionHeaderHeight: CGFloat = 44
+    /// The always-on histogram at the top of the sidebar.
+    static let sidebarHistogramHeight: CGFloat = 92
+
+    // MARK: Multi-photo filmstrip
+
+    /// The strip of the open selection under the canvas. Thumbnail plus the
+    /// padding above and below it.
+    static let filmstripThumbnailSide: CGFloat = 64
+    static let filmstripHeight: CGFloat = 88
     /// The floating command row inside the band: 34pt circular buttons, 37 tall,
     /// inset 11 from the band's top so the row sits level with the Dynamic Island.
     static let editorFloatingCommandRowHeight: CGFloat = 37

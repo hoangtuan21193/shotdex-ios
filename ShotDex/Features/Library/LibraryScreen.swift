@@ -35,6 +35,7 @@ struct LibraryScreen: View {
     /// Date of the photos under the top of the grid, shown as the screen's
     /// title. Nil before the first layout and while the library is empty.
     @State private var visibleDate: String?
+    @State private var multiEditPresentation: MultiEditPresentation?
     /// Measured height of the limited-access banner plus the filter-token bar,
     /// handed to the grid as its top content inset (see `photoGrid`).
     @State private var topAccessoryHeight: CGFloat = 0
@@ -151,6 +152,7 @@ struct LibraryScreen: View {
                 CompareScreen(photos: photos)
             }
         }
+        .multiEditCover($multiEditPresentation, sourceAlbum: nil, onDismiss: stopSelecting)
         .fullScreenCover(item: $compressionPresentation, onDismiss: stopSelecting) { presentation in
             CompressionScreen(
                 assets: presentation.assets,
@@ -225,6 +227,21 @@ struct LibraryScreen: View {
         case .ended:
             swipeBaseline = []
         }
+    }
+
+    /// Opens the editor on every selected photo. Videos are dropped — the photo
+    /// editor cannot open one, and a filmstrip cell that refuses to load is worse
+    /// than a shorter strip.
+    private func presentMultiEdit(_ model: LibraryModel) {
+        let selected = Set(selectedIds)
+        let photoIDs = model.items
+            .filter { selected.contains($0.assetId) && $0.mediaType == PHAssetMediaType.image.rawValue }
+            .map(\.assetId)
+        let fetched = PhotoLibraryService.fetchAssets(ids: photoIDs)
+        let byID = Dictionary(uniqueKeysWithValues: fetched.map { ($0.localIdentifier, $0) })
+        let assets: [PHAsset] = photoIDs.compactMap { byID[$0] }
+        guard let first = assets.first else { return }
+        multiEditPresentation = MultiEditPresentation(assets: assets, first: first)
     }
 
     private func presentCompression(_ model: LibraryModel) {
@@ -467,6 +484,7 @@ struct LibraryScreen: View {
             onVideo: { presentVideoStudio(model) },
             onCompare: { isComparePresented = true },
             onCompress: { presentCompression(model) },
+            onEdit: { presentMultiEdit(model) },
             onDelete: { deleteSelected(model) },
             onAddToCollection: { addToCollection() },
             onExportEXIF: { exportEXIF(model) },

@@ -176,6 +176,12 @@ struct SelectionToolbarItems: ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
             if hasMenu {
                 Menu {
+                    if let onEdit = model.onEdit {
+                        Button(action: onEdit) {
+                            Label("Edit", systemImage: "slider.horizontal.3")
+                        }
+                        .disabled(model.imageSelectionCount < 1)
+                    }
                     if let onCollage = model.onCollage {
                         Button(action: onCollage) {
                             Label("Create Collage", systemImage: "square.grid.2x2")

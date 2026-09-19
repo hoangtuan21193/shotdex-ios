@@ -351,6 +351,26 @@ Yêu cầu hiệu năng:
 - **Lưới nhận `topInset` = chiều cao thật của khối banner+token** (`measureHeight` → `PhotoGridCollectionView.topInset`). Lưới cố ý `ignoresSafeArea(edges: .vertical)` để ảnh trôi dưới nav bar trong suốt, nên nó **không** thấy `safeAreaInset(edge: .top)` mà SwiftUI thêm — hàng ảnh đầu bị thanh điều kiện che. Inset này trả chỗ đó lại: lúc đứng yên hàng đầu nằm trọn dưới chip, cuộn lên thì ảnh mới chui xuống dưới. Đổi inset lúc lưới đang ở đỉnh thì kéo `contentOffset` theo, không thì hàng đầu lại chui xuống dưới thanh vừa xuất hiện.
 - Nút Select (`checkmark.circle`) bật chế độ chọn nhiều ảnh; trong chế độ chọn đổi thành `xmark.circle.fill` (nút thoát select mode) — xem **Multi-select** bên dưới
 
+**Editor trên màn rộng (2026-09-19)**
+
+- Từ **700pt bề rộng cửa sổ** trở lên (`EditorLayoutMetrics.sidebarMinCanvasWidth`), editor đổi sang bố cục Lightroom-desktop: `[sidebar] | [canvas]`. Đo theo cửa sổ chứ không theo size class — iPad Split View hẹp giữ layout điện thoại.
+- Sidebar: Back/"Edit"/thu gọn → **histogram luôn hiện** → undo/redo/before-after/fit-fill/⋯ → **dải 4 tool chiếm stage** (Crop, Mask, Markup, Presets — loại trừ nhau, chạm lại để tắt) → **6 section tham số** theo thứ tự pipeline (Light, Curve, Color, Grade, Detail, Effects), mở nhiều cái cùng lúc (`chrome.expandedSidebarGroups`) → `Save…` full-width ở đáy. `Mix`/`Point` là segment trong Color; `Optics`/`Geo` ẩn tới khi có tham số. Mở một section **không** cướp stage của tool đang bật.
+- Bên trái/phải đổi trong menu ⋯ (`SettingsKeys.editorSidebarEdge`, mặc định phải), kéo mép trong để đổi rộng 280–420 (`editorSidebarWidth`, ghi một lần lúc thả tay), thu gọn (`editorSidebarHidden`).
+- **Band chỉ hiện khi sidebar thu gọn** — lúc đó nó mang Back/undo/redo/⋯/Save + nút mở lại sidebar. Sidebar mở thì band biến mất, ảnh lấy trọn chiều cao.
+- **Không nút nổi trên stage**: đã thử, stage nuốt tap trong bounds của nó (đo trên iPad); mọi chrome phải là view anh em.
+- **Không còn chiều cao cố định.** Sidebar đặt `\.editorPanelScrolls = false` một lần cho cả chồng; mọi panel có scroll dọc riêng (`EditorAdjustmentGroupsView`, mixer, point color, grading, markup detail) đọc environment đó và bỏ `ScrollView` của mình, nên section cao đúng bằng nội dung. Plot curve dùng `aspectRatio(1)` thay cho chiều cao đoán theo bề rộng sidebar.
+- **Curve vẽ trong sidebar** trên tier này (`chrome.isWideLayout`), không đè lên ảnh.
+- **Fit ⇄ Fill** (2026-09-19): double-tap lên ảnh, hoặc nút zoom trong hàng lệnh sidebar. Fill = `max(canvas.w / imageRect.w, canvas.h / imageRect.h)`, offset về 0; phần tràn do stage cắt, recipe không đổi. Nút đi qua `chrome.requestFillZoomToggle()` (token đơn điệu) vì chỉ stage biết hình học để tính hệ số fill. Điện thoại giữ double-tap = `isFullBleed`.
+
+**Sửa nhiều ảnh một lượt (2026-09-19)**
+
+- Vào từ thanh chọn: ⋯ → **Edit**, có ở **Library, Album, Smart Album, On This Day** (`SelectionBarModel.onEdit`; mỗi màn tự dựng `MultiEditPresentation`, bỏ video vì editor ảnh không mở được). Cover mở qua modifier chung `multiEditCover` — nhét `fullScreenCover` thẳng vào body `AlbumDetailScreen` làm type-checker sập.
+- `EditorSession` giữ **run ảnh + recipe nháp theo asset id** (`drafts`), không giữ pixel: `PhotoEditorController` vẫn mỗi lần một ảnh, nhân lên 20 ảnh là 20 original mở cùng lúc. Đổi ảnh = `commitCropSession` → `store(recipe)` → `close()` → dựng controller mới → `load()` → `apply(draft)` (draft mới hơn thứ `load()` đọc từ `PHAdjustmentData`).
+- **Filmstrip** (`EditorFilmstrip`, 88pt, thumbnail 64pt) nằm dưới canvas ở cả hai layout, ẩn khi full-bleed và khi đang vẽ. Badge: viền accent = đang sửa, `slider.horizontal.3` = có nháp chưa lưu, `checkmark.circle.fill` = đã lưu.
+- **Sync** (⋯ → `Sync to N Photos`) có hai mức, tách bằng `EditorSyncScope`: **Sync Look** (tone/màu/curve/film look — đúng lát cắt `EditClipboard.look(of:)` đang dùng) và **Sync Everything** (kèm crop, mask, markup). Bản đầu bê nguyên recipe, tức dán crop 4:5 và mask khuôn mặt của một tấm chân dung lên 39 tấm phong cảnh — đúng thứ `EditClipboard` cố tình từ chối và ghi lý do trong doc comment của nó. Sync chỉ ghi vào `drafts`, không đụng đĩa, và không ghi đè ảnh nguồn.
+- **Lưu trong run nhiều ảnh KHÔNG đóng editor**: `advanceAfterSave()` nhảy sang ảnh kế còn nháp (quét xuôi rồi vòng lại), chỉ `dismiss()` khi hết. Bản đầu `dismiss()` ngay sau mỗi lần lưu nên sync 20 ảnh chỉ lưu được 1, và badge "đã lưu" là code không bao giờ chạy tới.
+- Chưa có: **Save All** một lượt (vòng lặp headless qua `PhotoEditingService.beginSession/loadSource/saveChanges`, không cần controller), Auto Sync, `Previous`, undo theo từng ảnh (lịch sử nằm trên controller nên đổi ảnh là mất).
+
 **Viewer — action bar**
 
 - **Một `HStack`, không phải capsule căn giữa bằng `ZStack`** (2026-09-19): Share tròn · capsule kính (favorite, info, edit, ⋯) · Delete tròn. Capsule nở theo số hành động của tấm ảnh; xếp chồng thì nó **đè lên** Share và Delete — bảy control đòi 288pt trong khe 234pt của máy 402pt. Xếp cùng hàng thì không thể đè, mà capsule vẫn đúng giữa vì hai nút tròn bằng nhau. Icon trong capsule về **40×40, padding 4** đúng token DESIGN.md §6 (trước là 48/8), kèm `minWidth 32` để máy hẹp bóp lại thay vì tràn.

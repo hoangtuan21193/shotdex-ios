@@ -70,7 +70,9 @@ struct EditorImageStage: View {
     /// The Curve group is open and its graph is on the photo: the graph owns every
     /// touch on the stage, exactly as the crop frame does.
     private var isShapingCurve: Bool {
-        chrome.selectedGroup == .curve && !chrome.isCurveGraphHidden
+        chrome.selectedGroup == .curve
+            && !chrome.isCurveGraphHidden
+            && !chrome.isWideLayout
     }
 
     /// Disables the photo-level gestures (zoom, pan, double-tap, hold-before)
@@ -361,8 +363,13 @@ struct EditorImageStage: View {
             // brush twice should do — so it must not also toggle full-bleed. It
             // stays live in one case only: getting *out* of full-bleed, which
             // nothing else in the chrome can do.
+            .onChange(of: chrome.fillZoomToken) {
+                withAnimation(EditorTheme.animation) {
+                    toggleFill(imageRect: imageRect, stage: stageSize)
+                }
+            }
             .highPriorityGesture(
-                doubleTapGesture,
+                doubleTapGesture(imageRect: imageRect, stage: stageSize),
                 including: hasPaintLayer && !chrome.isFullBleed
                     ? .subviews
                     : imageGestureMask
@@ -499,14 +506,40 @@ struct EditorImageStage: View {
 
     // MARK: Gestures
 
-    private var doubleTapGesture: some Gesture {
+    private func doubleTapGesture(imageRect: CGRect, stage: CGSize) -> some Gesture {
         TapGesture(count: 2)
             .onEnded {
                 guard controller.selectedTool != .crop else { return }
                 withAnimation(EditorTheme.animation) {
-                    chrome.isFullBleed.toggle()
+                    if chrome.isWideLayout {
+                        toggleFill(imageRect: imageRect, stage: stage)
+                    } else {
+                        chrome.isFullBleed.toggle()
+                    }
                 }
             }
+    }
+
+    /// Fit ⇄ fill, the way a desktop editor's double click works.
+    ///
+    /// A landscape photo fitted into a tall canvas leaves most of the window
+    /// black, and on a wide layout that is the bulk of the screen. Filling scales
+    /// the picture until it covers the canvas — the overflow is cropped by the
+    /// stage, not by the edit — and a second double tap puts it back. The phone
+    /// keeps its full-bleed toggle here: there the canvas is nearly square
+    /// already, and hiding the chrome is what buys the photo room. On a wide
+    /// window the sidebar's collapse control does that job.
+    private func toggleFill(imageRect: CGRect, stage: CGSize) {
+        guard imageRect.width > 0, imageRect.height > 0 else { return }
+        let fill = max(stage.width / imageRect.width, stage.height / imageRect.height)
+        // Already filled (or the photo matches the canvas, so there is nothing to
+        // fill): go back to fit.
+        if chrome.zoomScale > 1.02 || fill <= 1.02 {
+            chrome.zoomScale = 1
+        } else {
+            chrome.zoomScale = fill
+        }
+        chrome.zoomOffset = .zero
     }
 
     /// Press and hold anywhere on the photo to see the original, exactly like the

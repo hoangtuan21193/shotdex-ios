@@ -1024,6 +1024,16 @@ final class PhotoEditorController {
     /// positioned by dragging on the picture rather than by typing numbers.
     /// Lays a copied look over this photo, keeping its own framing and layers.
     /// One history step, so a paste is a single undo.
+    /// Puts a whole recipe on the photo — a draft restored when a multi-photo
+    /// session switches back to it, or a synced edit from a sibling. Undoable,
+    /// like any other change, and a no-op when it changes nothing.
+    func apply(_ newRecipe: PhotoEditRecipe) {
+        guard newRecipe != recipe else { return }
+        recordHistory()
+        recipe = newRecipe
+        scheduleRender()
+    }
+
     func pasteEdits(from clipboard: EditClipboard) {
         let pasted = clipboard.paste(onto: recipe)
         guard pasted != recipe else { return }

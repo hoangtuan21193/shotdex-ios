@@ -22,6 +22,7 @@ struct SmartAlbumDetailScreen: View {
     @State private var selectedIds: [String] = []
     @State private var isComparePresented = false
     @State private var compressionPresentation: CompressionPresentation?
+    @State private var multiEditPresentation: MultiEditPresentation?
     @State private var collagePresentation: CollagePresentation?
     @State private var videoStudioPresentation: VideoStudioPresentation?
     @State private var addToCollectionPresentation: AddToCollectionPresentation?
@@ -117,6 +118,7 @@ struct SmartAlbumDetailScreen: View {
                 CompareScreen(photos: photos)
             }
         }
+        .multiEditCover($multiEditPresentation, sourceAlbum: nil, onDismiss: stopSelecting)
         .fullScreenCover(item: $compressionPresentation, onDismiss: stopSelecting) { presentation in
             CompressionScreen(
                 assets: presentation.assets,
@@ -239,6 +241,18 @@ struct SmartAlbumDetailScreen: View {
         }
     }
 
+    /// Opens the editor on the whole selection — a smart album ("Sony A7IV +
+    /// 35mm, last 7 days") is exactly the run a photographer wants to grade as
+    /// one.
+    private func presentMultiEdit(_ model: SmartAlbumDetailModel) {
+        let assets: [PHAsset] = selectedIds.compactMap { id -> PHAsset? in
+            guard let asset = model.asset(for: id), asset.mediaType == .image else { return nil }
+            return asset
+        }
+        guard let first = assets.first else { return }
+        multiEditPresentation = MultiEditPresentation(assets: assets, first: first)
+    }
+
     private func presentCompression(_ model: SmartAlbumDetailModel) {
         let assets: [PHAsset] = selectedIds.compactMap { id -> PHAsset? in
             guard let asset = model.asset(for: id), asset.mediaType == .image else { return nil }
@@ -349,6 +363,7 @@ struct SmartAlbumDetailScreen: View {
             onVideo: { presentVideoStudio(model) },
             onCompare: { isComparePresented = true },
             onCompress: { presentCompression(model) },
+            onEdit: { presentMultiEdit(model) },
             onDelete: { deleteSelected(model) },
             onAddToCollection: { addToCollection(model) },
             onExportEXIF: { exportEXIF(model) },

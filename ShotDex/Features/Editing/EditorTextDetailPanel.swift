@@ -8,6 +8,7 @@ import ShotDexKit
 /// the photo. Outline and shadow share a section because they exist for the same
 /// reason — a white caption over a bright sky is unreadable without one of them.
 struct EditorTextDetailPanel: View {
+    @Environment(\.editorPanelScrolls) private var panelScrolls
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
     let editText: () -> Void
@@ -19,8 +20,7 @@ struct EditorTextDetailPanel: View {
         VStack(spacing: 0) {
             header
             if let overlay = controller.selectedOverlay {
-                ScrollView(.vertical) {
-                    LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
+                LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
                         switch overlay.kind {
                         case .text:
                             textSections(overlay)
@@ -36,9 +36,9 @@ struct EditorTextDetailPanel: View {
                         } header: {
                             EditorGroupHeader(title: "Placement")
                         }
-                        Color.clear.frame(height: 16)
-                    }
+                    Color.clear.frame(height: 16)
                 }
+                .editorPanelScroll(panelScrolls)
                 .scrollDisabled(chrome.activePlainSliderID != nil)
             }
         }
