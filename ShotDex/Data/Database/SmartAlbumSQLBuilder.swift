@@ -68,6 +68,19 @@ enum SmartAlbumSQLBuilder {
                 case .isNot: return ("mediaType <> ?", [kind.storedValue])
                 default: return nil
                 }
+            case .flag:
+                guard let raw = Int(rule.text), let flag = PhotoFlag(rawValue: raw) else { return nil }
+                // Unflagged is every photo with no marked row — including the
+                // ones with no cull row at all, which is most of a library.
+                let marked = "assetId IN (SELECT assetId FROM photo_cull WHERE flag = ?)"
+                let unmarked = "assetId NOT IN (SELECT assetId FROM photo_cull WHERE flag != 0)"
+                switch (rule.op, flag) {
+                case (.isExactly, .unflagged): return (unmarked, [])
+                case (.isNot, .unflagged): return ("NOT (\(unmarked))", [])
+                case (.isExactly, _): return (marked, [flag.rawValue])
+                case (.isNot, _): return ("NOT (\(marked))", [flag.rawValue])
+                default: return nil
+                }
             case .fileType:
                 guard let type = PhotoFileType(rawValue: rule.text) else { return nil }
                 let patterns = type.extensions.map { "%.\($0)" }
@@ -202,12 +215,20 @@ enum SmartAlbumSQLBuilder {
         }
     }
 
+    /// Rating as a value `photo_metadata` rows can be compared against.
+    static let ratingExpression =
+        "COALESCE((SELECT rating FROM photo_cull c WHERE c.assetId = photo_metadata.assetId), 0)"
+
     private static func numberColumn(_ field: RuleField, focalMode: FocalLengthMode) -> String {
         switch field {
         case .iso: "iso"
         case .aperture: "aperture"
         case .shutter: "shutterSpeedSeconds"
         case .focalLength: focalMode == .equivalent ? "equivalentFocalLength" : "focalLength"
+        // Culling lives in its own table, so the "column" is a correlated
+        // subquery. Unrated reads as 0, the same as the library's rating sort,
+        // so "rating < 3" includes photos nobody has rated yet.
+        case .rating: Self.ratingExpression
         default: "iso"
         }
     }

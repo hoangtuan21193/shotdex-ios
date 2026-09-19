@@ -45,6 +45,11 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
     case focalLength
     case dateTaken
     case favorite
+    /// The culling pass, from `photo_cull` rather than `photo_metadata` — see
+    /// `CullStore`. Both need a join, so neither can be answered in memory
+    /// against a `PhotoMetadata` row.
+    case rating
+    case flag
 
     var id: String { rawValue }
 
@@ -64,14 +69,16 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
         case .focalLength: "Focal Length"
         case .dateTaken: "Date Taken"
         case .favorite: "Favorite"
+        case .rating: "Rating"
+        case .flag: "Flag"
         }
     }
 
     var kind: RuleFieldKind {
         switch self {
         case .cameraBrand, .cameraBody, .lens, .filename, .place: .text
-        case .sensorFormat, .fileType, .mediaType: .choice
-        case .iso, .aperture, .shutter, .focalLength: .number
+        case .sensorFormat, .fileType, .mediaType, .flag: .choice
+        case .iso, .aperture, .shutter, .focalLength, .rating: .number
         case .dateTaken: .date
         case .favorite: .favorite
         }
@@ -80,7 +87,7 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
     /// Parse/format kind for numeric fields (ignored for other kinds).
     var numericKind: NumericFieldKind {
         switch self {
-        case .iso: .int
+        case .iso, .rating: .int
         case .shutter: .shutter
         default: .double
         }
@@ -95,6 +102,8 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
             PhotoFileType.allCases.map { ($0.rawValue, $0.displayName) }
         case .mediaType:
             MediaKind.allCases.map { ($0.rawValue, $0.displayName) }
+        case .flag:
+            PhotoFlag.allCases.map { (String($0.rawValue), $0.title) }
         default:
             []
         }

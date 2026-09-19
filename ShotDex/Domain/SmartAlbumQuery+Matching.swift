@@ -28,7 +28,11 @@ extension SmartAlbumQuery {
     /// them from anyway. Treating it as "no match" would make an import filter
     /// that mentions a place quietly return nothing.
     static func isEvaluableInMemory(_ rule: SmartAlbumRule) -> Bool {
-        rule.field != .place
+        // `.rating` and `.flag` join the same way `.place` does: the culling
+        // pass has its own table (the indexer rewrites metadata rows), so a
+        // `PhotoMetadata` value cannot answer them, and an import candidate has
+        // no cull row to read anyway.
+        rule.field != .place && rule.field != .rating && rule.field != .flag
     }
 
     private static func matches(rule: SmartAlbumRule, _ metadata: PhotoMetadata) -> Bool {

@@ -169,6 +169,62 @@ struct CullFilterTests {
         #expect(reader.states["a"]?.flag == .picked)
     }
 
+    // MARK: Smart album rules
+
+    @Test func aSmartAlbumCanAskForThreeStarsAndUp() async throws {
+        let (queries, _) = try makeLibrary()
+        let query = SmartAlbumQuery(matchMode: .all, rules: [
+            SmartAlbumRule(field: .rating, op: .greaterThan, number: 2),
+        ])
+        let matches = try await queries.gridItems(matching: query, sort: .dateTakenNewest)
+        #expect(matches.map(\.assetId) == ["five", "three"])
+    }
+
+    /// Unrated counts as zero, so "below three stars" includes the photos
+    /// nobody has been through yet — which is the point of the rule.
+    @Test func belowThreeStarsIncludesTheUnrated() async throws {
+        let (queries, _) = try makeLibrary()
+        let query = SmartAlbumQuery(matchMode: .all, rules: [
+            SmartAlbumRule(field: .rating, op: .lessThan, number: 3),
+        ])
+        let matches = try await queries.gridItems(matching: query, sort: .dateTakenNewest)
+        #expect(matches.map(\.assetId) == ["rejected", "untouched"])
+    }
+
+    @Test func aSmartAlbumCanAskForPicksAndForUnflagged() async throws {
+        let (queries, _) = try makeLibrary()
+        let picked = SmartAlbumQuery(matchMode: .all, rules: [
+            SmartAlbumRule(field: .flag, op: .isExactly, text: String(PhotoFlag.picked.rawValue)),
+        ])
+        #expect(try await queries.count(matching: picked) == 1)
+
+        let notRejected = SmartAlbumQuery(matchMode: .all, rules: [
+            SmartAlbumRule(field: .flag, op: .isNot, text: String(PhotoFlag.rejected.rawValue)),
+        ])
+        #expect(try await queries.count(matching: notRejected) == 3)
+
+        let unflagged = SmartAlbumQuery(matchMode: .all, rules: [
+            SmartAlbumRule(field: .flag, op: .isExactly, text: String(PhotoFlag.unflagged.rawValue)),
+        ])
+        let matches = try await queries.gridItems(matching: unflagged, sort: .dateTakenNewest)
+        #expect(matches.map(\.assetId) == ["three", "untouched"])
+    }
+
+    /// Neither field can be answered from a `PhotoMetadata` value, so the
+    /// in-memory matcher must skip them rather than silently return false —
+    /// the same call `.place` gets, and for the same reason.
+    @Test func cullRulesAreNotEvaluatedInMemory() {
+        #expect(!SmartAlbumQuery.isEvaluableInMemory(
+            SmartAlbumRule(field: .rating, op: .greaterThan, number: 3)
+        ))
+        #expect(!SmartAlbumQuery.isEvaluableInMemory(
+            SmartAlbumRule(field: .flag, op: .isExactly, text: "1")
+        ))
+        #expect(SmartAlbumQuery.isEvaluableInMemory(
+            SmartAlbumRule(field: .iso, op: .greaterThan, number: 800)
+        ))
+    }
+
     /// Criteria round-trip through JSON, because smart albums store them.
     @Test func cullCriteriaSurviveEncoding() throws {
         var criteria = FilterCriteria()
