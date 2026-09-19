@@ -23,6 +23,11 @@ struct VideoStudioTopBand: View {
                 .accessibilityLabel("Undo")
             circle("arrow.uturn.forward", isEnabled: model.canRedo) { model.redo() }
                 .accessibilityLabel("Redo")
+            // Hold to see the clips as they came out of the library. The
+            // model has done this since the studio shipped (spec §7.9); the
+            // control went missing in a layout turn, which left the whole
+            // before/after capability unreachable.
+            beforeAfterCircle(isEnabled: model.hasEdits)
 
             Spacer(minLength: 8)
 
@@ -56,6 +61,33 @@ struct VideoStudioTopBand: View {
         let whole = Int(clamped)
         let tenths = Int((clamped - Double(whole)) * 10)
         return String(format: "%d:%02d.%d", whole / 60, whole % 60, tenths)
+    }
+
+    /// Press and hold, like the photo editor's before/after: the preview
+    /// drops every filter, adjustment and overlay while the finger is down.
+    private func beforeAfterCircle(isEnabled: Bool) -> some View {
+        Image(systemName: "rectangle.on.rectangle")
+            .font(.system(size: 15, weight: .medium))
+            .foregroundStyle(
+                model.showsOriginal
+                    ? EditorTheme.accent
+                    : (isEnabled ? Color.white.opacity(0.9) : Color.white.opacity(0.28))
+            )
+            .frame(width: size, height: size)
+            .background { Color.clear.editorGlass(Circle()) }
+            .contentShape(Circle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in
+                        guard isEnabled, !model.showsOriginal else { return }
+                        model.setShowsOriginal(true)
+                    }
+                    .onEnded { _ in model.setShowsOriginal(false) }
+            )
+            .allowsHitTesting(isEnabled)
+            .accessibilityLabel("Show original")
+            .accessibilityHint("Press and hold to see the clips without edits")
+            .accessibilityAddTraits(model.showsOriginal ? .isSelected : [])
     }
 
     private func circle(_ systemName: String, isEnabled: Bool, action: @escaping () -> Void) -> some View {

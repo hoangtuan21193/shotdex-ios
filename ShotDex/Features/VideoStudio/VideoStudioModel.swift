@@ -1047,7 +1047,16 @@ final class VideoStudioModel {
         player?.pause()
         isPlaying = false
         exportState = .exporting(0)
+        // An export runs an AVAssetReader/Writer pump for as long as the
+        // video is; if the user switches away mid-run the task is suspended
+        // with the sheet still reading "Exporting… 42%" and nothing ever
+        // finishes it. Hold an assertion the way the indexer does, and treat
+        // its expiry as a cancel the user can see.
+        let assertion = UIApplication.shared.beginBackgroundTask(withName: "video-export") { [weak self] in
+            Task { @MainActor in self?.cancelExport() }
+        }
         exportTask = Task { [self] in
+            defer { if assertion != .invalid { UIApplication.shared.endBackgroundTask(assertion) } }
             do {
                 let url = try await service.export(
                     recipe: recipe,

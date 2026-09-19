@@ -11,6 +11,8 @@ struct VideoTimelineView: View {
     /// under `timelineMinimumHeight`.
     let height: CGFloat
 
+    @Environment(\.videoLaneMetrics) private var lanes
+
     let onAddOverlay: () -> Void
     let onAddMusic: () -> Void
     let onAddMedia: () -> Void
@@ -32,7 +34,7 @@ struct VideoTimelineView: View {
     private var contentWidth: CGFloat { max(model.totalDuration, 0.1) * pps + 130 }
 
     private var contentHeight: CGFloat {
-        VideoStudioMetrics.laneContentHeight(
+        lanes.laneContentHeight(
             overlayLanes: model.overlayLaneCount,
             musicLanes: model.musicLaneCount
         )
@@ -48,7 +50,7 @@ struct VideoTimelineView: View {
                 // Inset by the gutter so the ruler's x = 0 lines up with the
                 // scrolling content's x = 0.
                 TimelineRuler(totalDuration: model.totalDuration, pps: pps, visibleLeftTime: visibleLeftTime)
-                    .frame(height: VideoStudioMetrics.rulerHeight)
+                    .frame(height: lanes.ruler)
                     .padding(.leading, VideoStudioMetrics.gutterWidth)
                     .padding(.top, VideoStudioMetrics.timelineTopPadding)
                     .padding(.bottom, VideoStudioMetrics.rulerToTracks)

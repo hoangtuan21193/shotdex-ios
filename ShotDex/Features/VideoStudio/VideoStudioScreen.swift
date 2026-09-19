@@ -211,33 +211,37 @@ struct VideoStudioScreen: View {
             // stay visible above it.
             // The reader sits inside the safe area while the stack below ignores it,
             // so the stack's real height is the reader's plus both insets.
+            let usesToolRail = proxy.size.width >= EditorLayoutMetrics.sidebarMinCanvasWidth
+            let lanes = VideoStudioMetrics.Lanes.forWidth(proxy.size.width)
             let layout = VideoStudioMetrics.stackLayout(
                 screen: CGSize(
-                    width: proxy.size.width,
+                    // The preview is drawn in the column beside the rail, not
+                    // across the window, so the aspect-fit height has to be
+                    // computed from the width it actually gets.
+                    width: proxy.size.width - (usesToolRail ? VideoStudioMetrics.railWidth : 0),
                     height: proxy.size.height + proxy.safeAreaInsets.top + proxy.safeAreaInsets.bottom
                 ),
                 bandHeight: bandHeight,
                 bottomInset: proxy.safeAreaInsets.bottom,
                 canvas: model.recipe.canvasSize(),
                 presentsSheet: model.presentsSheet,
-                // Only where there is a surplus worth arguing about. On a
-                // phone the leftover *is* the timeline — a landscape project
-                // gets a tall timeline instead of black bars, which is the
-                // documented choice — so the cap is not applied there.
-                timelineContentHeight: proxy.size.width >= EditorLayoutMetrics.sidebarMinCanvasWidth
-                    ? VideoStudioMetrics.timelineContentHeight(
-                        overlayLanes: max(1, model.overlayLaneCount),
-                        musicLanes: max(1, model.musicLaneCount)
-                    )
-                    : .greatestFiniteMagnitude,
-                usesToolRail: proxy.size.width >= EditorLayoutMetrics.sidebarMinCanvasWidth
+                // The timeline takes what its lanes need and no more, on every
+                // width. Handing it the whole leftover drew three lanes at the
+                // top of a 330pt black field on the phone too — the surplus
+                // belongs around the frame being edited, which is what black
+                // around a preview is for, not under the tracks.
+                timelineContentHeight: lanes.timelineContentHeight(
+                    overlayLanes: max(1, model.overlayLaneCount),
+                    musicLanes: max(1, model.musicLaneCount)
+                ),
+                usesToolRail: usesToolRail
             )
             // Measured on the window, not on the size class. An iPad Split
             // View half reports `.regular` at ~500pt, where a permanent 92pt
             // rail costs a fifth of the width to save 62pt of height — the
             // wrong trade, and the exact mistake the editor's sidebar avoids
             // by using a 700pt threshold instead.
-            let usesRail = proxy.size.width >= EditorLayoutMetrics.sidebarMinCanvasWidth
+            let usesRail = usesToolRail
             ZStack(alignment: .bottom) {
                 HStack(spacing: 0) {
                     // Regular width puts the tools down the leading edge: the
@@ -289,6 +293,7 @@ struct VideoStudioScreen: View {
                         .padding(.leading, usesRail ? VideoStudioMetrics.railWidth : 0)
                 }
             }
+            .environment(\.videoLaneMetrics, lanes)
             .animation(EditorTheme.animation, value: model.presentsSheet)
             .ignoresSafeArea(.container, edges: [.top, .bottom])
             .ignoresSafeArea(.keyboard, edges: .bottom)
@@ -421,9 +426,16 @@ struct VideoStudioScreen: View {
                 Button("Close") { dismiss() }
             }
         default:
+            // A Cancel here is not a nicety: `fullScreenCover` has no swipe to
+            // dismiss, and one clip whose original is still in iCloud can hold
+            // this state for minutes. Without it the only way off the screen
+            // is to kill the app.
             VStack(spacing: 12) {
                 ProgressView()
                 Text("Preparing clips…").font(EditorTheme.maskSubtitle).foregroundStyle(EditorTheme.secondaryText)
+                Button("Cancel") { dismiss() }
+                    .font(EditorTheme.maskSubtitle)
+                    .padding(.top, AppTheme.Spacing.xs)
             }
         }
     }
@@ -488,6 +500,8 @@ struct VideoMusicChooserSheet: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var preview = MusicPreviewPlayer()
     @StateObject private var waveforms = MusicWaveformCache()
+    /// A track the user asked to delete while it is on the timeline.
+    @State private var trackPendingDeletion: ImportedMusicTrack?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -506,7 +520,18 @@ struct VideoMusicChooserSheet: View {
                                 trackRow(
                                     title: track.displayName, systemImage: "music.note",
                                     selected: isInUse(track.url), trackID: track.id, previewURL: track.url,
-                                    onDelete: { preview.stop(); importedMusic.delete(track) }
+                                    onDelete: {
+                                        preview.stop()
+                                        // Deleting the file under a bed that
+                                        // is already on the timeline leaves
+                                        // the bed drawn but silent, in the
+                                        // preview and in the export. Ask.
+                                        if isInUse(track.url) {
+                                            trackPendingDeletion = track
+                                        } else {
+                                            importedMusic.delete(track)
+                                        }
+                                    }
                                 ) {
                                     preview.stop()
                                     let source = MusicSource.imported(url: track.url, displayName: track.displayName)
@@ -528,6 +553,19 @@ struct VideoMusicChooserSheet: View {
         .background(EditorTheme.panelSolid)
         .preferredColorScheme(.dark)
         .onDisappear { preview.stop() }
+        .alert(
+            "Delete Music in Use?",
+            isPresented: Binding(
+                get: { trackPendingDeletion != nil },
+                set: { if !$0 { trackPendingDeletion = nil } }
+            ),
+            presenting: trackPendingDeletion
+        ) { track in
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) { importedMusic.delete(track) }
+        } message: { track in
+            Text("\(track.displayName) is on this video's timeline. Deleting it removes the file, and the track goes silent in the preview and the export.")
+        }
     }
 
     private var importRow: some View {

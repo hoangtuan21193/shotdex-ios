@@ -16,6 +16,16 @@
     "%@ — coming soon" : {
 
     },
+    "%@ · %lld photos" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$lld photos"
+          }
+        }
+      }
+    },
     "%@ · at least %@" : {
       "comment" : "On This Day reminder body when some matching items are not indexed yet, so the size is a lower bound. First placeholder is the count phrase, second is the formatted size.",
       "localizations" : {
@@ -56,6 +66,16 @@
         }
       }
     },
+    "%@ of %@ photos" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ of %2$@ photos"
+          }
+        }
+      }
+    },
     "%@ of %@ photos and videos" : {
       "localizations" : {
         "en" : {
@@ -82,6 +102,26 @@
     },
     "%@ settings" : {
 
+    },
+    "%@, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@"
+          }
+        }
+      }
+    },
+    "%@, %@, %lld photos" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@, %3$lld photos"
+          }
+        }
+      }
     },
     "%@, %@%@" : {
       "localizations" : {
@@ -146,6 +186,9 @@
         }
       }
     },
+    "%lld clips couldn't be loaded and were left out. They may still be in iCloud — check your connection and add them again." : {
+
+    },
     "%lld failed" : {
 
     },
@@ -159,6 +202,22 @@
 
     },
     "%lld items still waiting for iCloud." : {
+
+    },
+    "%lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "%lld of these files are already in your library, matched by name and exact size." : {
+
+    },
+    "%lld photos" : {
 
     },
     "%lld Photos" : {
@@ -176,10 +235,23 @@
     "%lld saved to Photos" : {
 
     },
+    "%lld star%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld star%2$@"
+          }
+        }
+      }
+    },
     "%lld%%" : {
 
     },
     "%llds" : {
+
+    },
+    "%llds per photo" : {
 
     },
     "^[%lld file](inflect: true) couldn't be imported." : {
@@ -195,6 +267,9 @@
 
     },
     "0" : {
+
+    },
+    "1 photo" : {
 
     },
     "1 photo or video" : {
@@ -265,7 +340,13 @@
     "Add Preset" : {
 
     },
+    "Add shape or magnifier" : {
+
+    },
     "Add Title" : {
+
+    },
+    "Add to Album" : {
 
     },
     "Add to Collection" : {
@@ -283,7 +364,22 @@
     "Adjust" : {
 
     },
+    "Adjust %lld Photos" : {
+
+    },
+    "Adjust Date & Time" : {
+
+    },
+    "Adjust Location" : {
+
+    },
     "Adjust the filter or turn off Hide RAW." : {
+
+    },
+    "Adjust to resize the panel" : {
+
+    },
+    "Adjusting %lld photos. The earliest photo moves to this date and the rest shift by the same amount, keeping their order." : {
 
     },
     "Advanced" : {
@@ -316,6 +412,9 @@
     "Altitude" : {
 
     },
+    "Always" : {
+
+    },
     "Animate" : {
 
     },
@@ -325,10 +424,31 @@
     "Aperture" : {
 
     },
+    "Applies the copied look — tone, colour, curve and film look. The crop, masks and markup of each photo are left alone." : {
+
+    },
     "Apply" : {
 
     },
+    "Apply look %@" : {
+
+    },
+    "Apply Previous" : {
+
+    },
     "Armed" : {
+
+    },
+    "Aspect Ratio Grid" : {
+
+    },
+    "Auto Enhance" : {
+
+    },
+    "Auto Sync" : {
+
+    },
+    "Autoplay Videos" : {
 
     },
     "Back" : {
@@ -338,6 +458,9 @@
 
     },
     "BACKGROUND" : {
+
+    },
+    "Basic" : {
 
     },
     "Black" : {
@@ -361,9 +484,6 @@
     "Border" : {
 
     },
-    "Brighten" : {
-
-    },
     "Bring Forward" : {
 
     },
@@ -379,6 +499,12 @@
     "Bulk Fill presets use a centered crop for every photo." : {
 
     },
+    "Burst" : {
+
+    },
+    "Camera" : {
+
+    },
     "Camera Database" : {
 
     },
@@ -386,6 +512,9 @@
 
     },
     "Camera, lens and exposure filters become accurate once metadata finishes loading." : {
+
+    },
+    "Cameras you matched to a sensor format by hand go back to what the sensor database says." : {
 
     },
     "Cancel" : {
@@ -404,6 +533,9 @@
 
     },
     "Captions" : {
+
+    },
+    "Capture Kind" : {
 
     },
     "Category" : {
@@ -430,6 +562,9 @@
     "Choose Image" : {
 
     },
+    "Cinematic" : {
+
+    },
     "Clear" : {
 
     },
@@ -442,16 +577,28 @@
     "Clear Local Metadata Index" : {
 
     },
+    "Clear Reference" : {
+
+    },
+    "Clear Results" : {
+
+    },
     "Clear Selection" : {
 
     },
     "Clear Strokes" : {
 
     },
-    "Clear the local metadata index? Your photos are not affected." : {
+    "Clear the local metadata index?" : {
+
+    },
+    "Clear the People and Pets results?" : {
 
     },
     "Close" : {
+
+    },
+    "Close slideshow" : {
 
     },
     "Collage Error" : {
@@ -463,19 +610,16 @@
     "Color" : {
 
     },
+    "Colour controls" : {
+
+    },
+    "Combine %lld Photos" : {
+
+    },
+    "Combine Photos" : {
+
+    },
     "Compare" : {
-
-    },
-    "Compress %lld Photos" : {
-
-    },
-    "Compress Photo" : {
-
-    },
-    "Compression Error" : {
-
-    },
-    "Compression Presets" : {
 
     },
     "Conditions" : {
@@ -499,13 +643,19 @@
     "Copy" : {
 
     },
+    "Copy Edits" : {
+
+    },
     "Corners" : {
 
     },
     "Couldn't add the sticker." : {
 
     },
-    "Couldn't Add to Album" : {
+    "Couldn't Add to Collection" : {
+
+    },
+    "Couldn't Combine" : {
 
     },
     "Couldn't Delete Photos" : {
@@ -532,10 +682,19 @@
     "Couldn't render the collage." : {
 
     },
+    "Couldn't Save Video" : {
+
+    },
     "Couldn't start reading." : {
 
     },
     "Couldn't start writing." : {
+
+    },
+    "Couldn’t Trim" : {
+
+    },
+    "Couldn't Update Photos" : {
 
     },
     "Counts as one of the conditions, so it widens the match rather than narrowing it." : {
@@ -577,6 +736,9 @@
     "Custom Range…" : {
 
     },
+    "Customize" : {
+
+    },
     "Daily On This Day Reminder" : {
       "comment" : "Settings toggle.",
       "localizations" : {
@@ -594,6 +756,9 @@
     "Date" : {
 
     },
+    "Date & Time" : {
+
+    },
     "Date Range" : {
 
     },
@@ -601,6 +766,9 @@
 
     },
     "Delete" : {
+
+    },
+    "Delete “%@”?" : {
 
     },
     "Delete %@" : {
@@ -615,10 +783,19 @@
     "Delete 1 Photo" : {
 
     },
+    "Delete Album" : {
+
+    },
     "Delete condition" : {
 
     },
+    "Delete Folder" : {
+
+    },
     "Delete layer" : {
+
+    },
+    "Delete Look" : {
 
     },
     "Delete Mask" : {
@@ -737,7 +914,13 @@
     "Empty slot, double tap to choose a photo" : {
 
     },
+    "Empty. Move an album here from its own menu." : {
+
+    },
     "Enter value" : {
+
+    },
+    "Enter Value…" : {
 
     },
     "Estimated size" : {
@@ -791,6 +974,12 @@
     "File Type" : {
 
     },
+    "Fill Screen" : {
+
+    },
+    "Filled" : {
+
+    },
     "Filter" : {
 
     },
@@ -800,10 +989,25 @@
     "Filter:" : {
 
     },
+    "Find People and Pets" : {
+
+    },
     "Finding place name…" : {
 
     },
     "Finish configuring the chart to see a preview." : {
+
+    },
+    "Finishing this photo…" : {
+
+    },
+    "Fit or Fill" : {
+
+    },
+    "Fit Photo" : {
+
+    },
+    "Flag" : {
 
     },
     "Flip Horizontal" : {
@@ -815,13 +1019,22 @@
     "Focal Length Style" : {
 
     },
+    "Folders" : {
+
+    },
     "Font" : {
 
     },
     "Format" : {
 
     },
+    "Frame" : {
+
+    },
     "Frame Saved" : {
+
+    },
+    "Frames are lined up before stacking, so a handheld sequence still works — a tripod still works better." : {
 
     },
     "Freeze" : {
@@ -839,6 +1052,9 @@
     "Grouping duplicates…" : {
 
     },
+    "HDR" : {
+
+    },
     "HEIC" : {
 
     },
@@ -846,6 +1062,9 @@
 
     },
     "Height" : {
+
+    },
+    "Hide" : {
 
     },
     "Hide %@" : {
@@ -857,7 +1076,19 @@
     "Hide Mask Overlay" : {
 
     },
+    "Hide or Show Tools" : {
+
+    },
+    "Hide Photos Already Imported" : {
+
+    },
     "Hide RAW files" : {
+
+    },
+    "Hide this photo?" : {
+
+    },
+    "Hide Tools" : {
 
     },
     "History" : {
@@ -912,6 +1143,9 @@
     "Imported ^[%lld item](inflect: true)" : {
 
     },
+    "Imported photos go into your library either way. An album here just files them as well." : {
+
+    },
     "Importing %lld of %lld…" : {
       "localizations" : {
         "en" : {
@@ -923,6 +1157,9 @@
       }
     },
     "In" : {
+
+    },
+    "Include Location" : {
 
     },
     "Include Metadata" : {
@@ -980,6 +1217,9 @@
     "ISO" : {
 
     },
+    "It moves to the Hidden album in Photos. ShotDex can't show hidden photos, so you'll need the Photos app to unhide it." : {
+
+    },
     "Italic" : {
 
     },
@@ -1019,6 +1259,12 @@
     "Less than a minute left" : {
 
     },
+    "Library" : {
+
+    },
+    "Library Size" : {
+
+    },
     "Library up to date." : {
 
     },
@@ -1028,7 +1274,16 @@
     "Limits how many bars/slices appear." : {
 
     },
-    "Linear" : {
+    "Link Zoom" : {
+
+    },
+    "Linked" : {
+
+    },
+    "LIVE" : {
+
+    },
+    "Live Photos" : {
 
     },
     "Loading full-quality preview…" : {
@@ -1040,10 +1295,22 @@
     "Look Up Place Names" : {
 
     },
+    "Looking through your photos…" : {
+
+    },
+    "Looks through your photos for faces and for cats and dogs, then offers them as collections. This is the one thing ShotDex does that opens each photo in full, so it is slower than indexing and better left to a charger.\n\nIt all happens on this iPhone, and it counts faces without recognising anyone — iOS gives apps no way to tell one person from another." : {
+
+    },
     "Loop" : {
 
     },
     "Low Power Mode is slowing indexing down" : {
+
+    },
+    "Magnifier" : {
+
+    },
+    "Make a video from these photos" : {
 
     },
     "Manage" : {
@@ -1076,10 +1343,10 @@
     "Match %@" : {
 
     },
-    "Matches ^[%lld photo](inflect: true)." : {
+    "Match %@ of the conditions" : {
 
     },
-    "Matte" : {
+    "Matches ^[%lld photo](inflect: true)." : {
 
     },
     "Max" : {
@@ -1088,10 +1355,19 @@
     "Measure" : {
 
     },
+    "Measured" : {
+
+    },
     "Media Type" : {
 
     },
     "Megapixels" : {
+
+    },
+    "Memories" : {
+
+    },
+    "Merge All Groups" : {
 
     },
     "MID" : {
@@ -1100,10 +1376,19 @@
     "Min" : {
 
     },
+    "Mix" : {
+
+    },
     "mm" : {
 
     },
+    "Mode" : {
+
+    },
     "More" : {
+
+    },
+    "More actions" : {
 
     },
     "More editor actions" : {
@@ -1113,6 +1398,12 @@
 
     },
     "Move ellipse" : {
+
+    },
+    "Move Out of Folder" : {
+
+    },
+    "Move to Folder" : {
 
     },
     "Music" : {
@@ -1131,6 +1422,9 @@
     "Mute" : {
 
     },
+    "My Looks" : {
+
+    },
     "My Music" : {
 
     },
@@ -1143,10 +1437,16 @@
     "New Album" : {
 
     },
+    "New album, smart album or folder, or customize this tab" : {
+
+    },
     "New Album…" : {
 
     },
     "New Chart" : {
+
+    },
+    "New Folder" : {
 
     },
     "New Mask" : {
@@ -1175,6 +1475,9 @@
 
     },
     "No albums yet. Create one to add these photos." : {
+
+    },
+    "No Charts" : {
 
     },
     "No data for this range." : {
@@ -1225,16 +1528,25 @@
     "No presets yet" : {
 
     },
+    "No trips yet. A trip is several days of photos taken well away from where you usually shoot." : {
+
+    },
     "No Unknown Cameras" : {
 
     },
     "None" : {
 
     },
+    "None of your indexed photos carry a location yet." : {
+
+    },
     "Not available for this file" : {
 
     },
     "Not favorite" : {
+
+    },
+    "Not linked" : {
 
     },
     "Not Scanned Yet" : {
@@ -1298,7 +1610,13 @@
         }
       }
     },
+    "One clip couldn't be loaded and was left out. It may still be in iCloud — check your connection and add it again." : {
+
+    },
     "Opacity" : {
+
+    },
+    "Open Library" : {
 
     },
     "Open Settings" : {
@@ -1315,10 +1633,34 @@
     "Opening original…" : {
 
     },
+    "Opening…" : {
+
+    },
+    "Opens the map of where you have shot." : {
+
+    },
     "Opens the new photo when done" : {
 
     },
+    "Opens the photos taken with one camera body." : {
+
+    },
+    "Opens the statistics for your cameras, lenses and focal lengths." : {
+
+    },
+    "Opens the trips found in your library." : {
+
+    },
+    "Opens your favorite photos." : {
+
+    },
+    "Opens your photo library in ShotDex." : {
+
+    },
     "Or drop on another photo to swap" : {
+
+    },
+    "Original" : {
 
     },
     "Originals couldn't be deleted" : {
@@ -1336,13 +1678,31 @@
     "Pan Right" : {
 
     },
+    "Panoramas" : {
+
+    },
+    "Paste Edits" : {
+
+    },
+    "Paste onto %lld Photos" : {
+
+    },
     "Pause" : {
 
     },
     "Paused — waiting for Wi-Fi" : {
 
     },
+    "People" : {
+
+    },
+    "People and Pets" : {
+
+    },
     "Period" : {
+
+    },
+    "Pets" : {
 
     },
     "Photo" : {
@@ -1351,16 +1711,32 @@
     "Photo %lld" : {
 
     },
+    "Photo %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Photo %1$lld of %2$lld"
+          }
+        }
+      }
+    },
     "Photo Info" : {
 
     },
     "Photo Library" : {
 
     },
+    "Photo Location" : {
+
+    },
     "Photo set aside" : {
 
     },
     "Photos and metadata never leave this device." : {
+
+    },
+    "Photos and Videos" : {
 
     },
     "photos and videos per minute" : {
@@ -1381,6 +1757,12 @@
     "Photos Only" : {
 
     },
+    "Photos taken with this camera" : {
+
+    },
+    "Photos taken with this lens" : {
+
+    },
     "Pick a Color from the Photo" : {
 
     },
@@ -1393,13 +1775,28 @@
     "Pick the sensor format for each camera to include it in statistics and equivalent focal length calculations." : {
 
     },
+    "Pin to Top" : {
+
+    },
     "Pinch the photo grid to change how many columns it shows." : {
+
+    },
+    "Pinned" : {
 
     },
     "Place name needs a network connection. The saved coordinate remains available offline." : {
 
     },
+    "Places" : {
+
+    },
     "Play" : {
+
+    },
+    "Play Live Photo" : {
+
+    },
+    "Playback" : {
 
     },
     "Playback speed" : {
@@ -1408,7 +1805,13 @@
     "Playback Speed" : {
 
     },
+    "Playing Live Photo" : {
+
+    },
     "Plug in your camera's SD card or a USB drive, then pick its folder (usually DCIM). RAW is skipped by default; JPEG, HEIC and videos import." : {
+
+    },
+    "Point" : {
 
     },
     "Point color" : {
@@ -1421,6 +1824,9 @@
 
     },
     "Pop" : {
+
+    },
+    "Portrait" : {
 
     },
     "Preparing clips…" : {
@@ -1454,6 +1860,9 @@
 
     },
     "Quality" : {
+
+    },
+    "Rating" : {
 
     },
     "Ratio" : {
@@ -1515,10 +1924,19 @@
     "RECENT" : {
 
     },
+    "Recently Shared" : {
+
+    },
+    "Recently Viewed" : {
+
+    },
     "Recents" : {
 
     },
     "Redo" : {
+
+    },
+    "Reference" : {
 
     },
     "Remind Me At" : {
@@ -1532,7 +1950,19 @@
         }
       }
     },
+    "Remove from Album" : {
+
+    },
+    "Remove from comparison" : {
+
+    },
+    "Remove from Comparison" : {
+
+    },
     "Remove Invert" : {
+
+    },
+    "Remove Location" : {
 
     },
     "Remove photo slot" : {
@@ -1545,6 +1975,12 @@
 
     },
     "Rename" : {
+
+    },
+    "Rename Album" : {
+
+    },
+    "Rename Folder" : {
 
     },
     "Rename Mask" : {
@@ -1586,7 +2022,22 @@
     "Reset Mappings" : {
 
     },
+    "Reset to Default Order" : {
+
+    },
     "Resize" : {
+
+    },
+    "Resize %lld Photos" : {
+
+    },
+    "Resize Error" : {
+
+    },
+    "Resize Photo" : {
+
+    },
+    "Resize Presets" : {
 
     },
     "Retry" : {
@@ -1599,6 +2050,15 @@
 
     },
     "Retrying in" : {
+
+    },
+    "Revert" : {
+
+    },
+    "Revert to Original" : {
+
+    },
+    "Revert to Original?" : {
 
     },
     "RGB" : {
@@ -1622,7 +2082,19 @@
     "Save" : {
 
     },
+    "Save %lld Copies" : {
+
+    },
+    "Save an edit here and it can be put on any other photo." : {
+
+    },
+    "Save as Copies" : {
+
+    },
     "Save as Smart Album" : {
+
+    },
+    "Save as Video" : {
 
     },
     "Save Changes" : {
@@ -1631,13 +2103,22 @@
     "Save Changes is non-destructive: Photos keeps the original and ShotDex reopens this asset with the saved crop, sliders and masks. A Live Photo keeps its motion. Save Copy creates a still image." : {
 
     },
+    "Save Changes to %lld Photos" : {
+
+    },
     "Save Copy" : {
 
     },
     "Save Copy is full resolution at maximum quality. Turning off metadata strips EXIF and clears the Photos date/location on Save Changes. If Photos doesn't support HEIC for this asset, ShotDex falls back to JPEG and tells you." : {
 
     },
+    "Save Current" : {
+
+    },
     "Save Edit" : {
+
+    },
+    "Save Look" : {
 
     },
     "Save preset" : {
@@ -1649,6 +2130,9 @@
     "Save to Photos" : {
 
     },
+    "Save…" : {
+
+    },
     "Saved as JPEG" : {
 
     },
@@ -1658,16 +2142,38 @@
     "Saves the frame and style — not the photos or text." : {
 
     },
+    "Saves the tone, colour, curve and film look on this photo. The crop, masks and markup stay with the photo." : {
+
+    },
+    "Saving %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Saving %1$lld of %2$lld"
+          }
+        }
+      }
+    },
     "Saving Frame…" : {
 
     },
     "Saving to Photos…" : {
 
     },
+    "Saving…" : {
+
+    },
+    "Scan Again" : {
+
+    },
     "Scan Library" : {
 
     },
     "Scan your library once; the results are kept and you rescan whenever you like." : {
+
+    },
+    "Scanned" : {
 
     },
     "Scanning %@…" : {
@@ -1686,10 +2192,28 @@
     "Screenshots" : {
 
     },
+    "Scroll by date" : {
+
+    },
     "Search" : {
 
     },
     "Search again for %@" : {
+
+    },
+    "Search for a place" : {
+
+    },
+    "Search Photos" : {
+
+    },
+    "Search ShotDex for ${query}" : {
+
+    },
+    "Searches your library by camera, lens, exposure settings, place or date." : {
+
+    },
+    "Seconds per photo" : {
 
     },
     "Select" : {
@@ -1705,6 +2229,9 @@
 
     },
     "Select photos" : {
+
+    },
+    "Select Text or Subject" : {
 
     },
     "Selected %lld" : {
@@ -1734,6 +2261,12 @@
     "Share" : {
 
     },
+    "Sharing" : {
+
+    },
+    "Shift" : {
+
+    },
     "ShotDex" : {
 
     },
@@ -1749,16 +2282,49 @@
     "Show %@" : {
 
     },
+    "Show All Frames" : {
+
+    },
     "Show All Raw Metadata" : {
+
+    },
+    "Show Favorites" : {
+
+    },
+    "Show Gear Statistics" : {
 
     },
     "Show Graph" : {
 
     },
+    "Show in All Photos" : {
+
+    },
     "Show Mask Overlay" : {
 
     },
+    "Show on Map" : {
+
+    },
+    "Show photos from ${camera}" : {
+
+    },
+    "Show Photos from a Camera" : {
+
+    },
+    "Show Places" : {
+
+    },
+    "Show Tools" : {
+
+    },
     "Show top %lld" : {
+
+    },
+    "Show Trips" : {
+
+    },
+    "Showing photos from %@" : {
 
     },
     "Shows a single value across the whole library." : {
@@ -1806,6 +2372,15 @@
     "Slide up" : {
 
     },
+    "Slideshow" : {
+
+    },
+    "Slo-mo" : {
+
+    },
+    "Smart album in ShotDex" : {
+
+    },
     "Smart Album Name" : {
 
     },
@@ -1815,16 +2390,19 @@
     "Soft Glow" : {
 
     },
-    "Soft S" : {
+    "Some exported copies may remain in Photos" : {
 
     },
-    "Some exported copies may remain in Photos" : {
+    "Some Photos Didn't Save" : {
 
     },
     "Something Went Wrong" : {
 
     },
     "Sort By" : {
+
+    },
+    "Sort photos" : {
 
     },
     "Source" : {
@@ -1836,13 +2414,25 @@
     "Split into series by" : {
 
     },
+    "Statistics" : {
+
+    },
+    "Statistics appear after your library has been indexed." : {
+
+    },
+    "Step back one frame" : {
+
+    },
+    "Step forward one frame" : {
+
+    },
     "Sticker" : {
 
     },
     "Stop preview" : {
 
     },
-    "Strong S" : {
+    "Stop Selecting in Photo" : {
 
     },
     "Style" : {
@@ -1851,13 +2441,43 @@
     "Subtract" : {
 
     },
+    "Summed from the file sizes the index has read. Photos still stored only in iCloud are counted at their full size." : {
+
+    },
+    "Switches between matching all and any" : {
+
+    },
+    "Sync Everything" : {
+
+    },
+    "Sync Look" : {
+
+    },
+    "Sync to %lld Photos" : {
+
+    },
+    "Sync to 1 Photo" : {
+
+    },
     "System" : {
 
     },
     "Tab bar" : {
 
     },
+    "Tap + to add a chart to your dashboard." : {
+
+    },
     "Tap a mask to adjust that area on its own" : {
+
+    },
+    "Tap a section to show or hide it, and Edit to drag them into the order you want. A section with nothing in it stays hidden whatever you choose here." : {
+
+    },
+    "Tap the map or search to place this photo." : {
+
+    },
+    "Tap the map to move the pin." : {
 
     },
     "Tap to expand" : {
@@ -1872,7 +2492,22 @@
     "Text" : {
 
     },
+    "The albums inside move back to My Albums." : {
+
+    },
+    "The capture date in the original file is left unchanged, the same as in Photos." : {
+
+    },
     "The crop applies when you leave this tab or save." : {
+
+    },
+    "The original stays in your library. Revert in Photos brings the whole clip back." : {
+
+    },
+    "The photos stay in your library." : {
+
+    },
+    "The scan opens every photo in full, so building these again takes a while." : {
 
     },
     "The size is a fast estimate and may change slightly when the full-resolution file is encoded." : {
@@ -1897,7 +2532,13 @@
         }
       }
     },
+    "These photos are no longer in your library." : {
+
+    },
     "This item doesn't contain a saved capture location." : {
+
+    },
+    "This Live Photo has no motion to save." : {
 
     },
     "This Month" : {
@@ -1906,10 +2547,16 @@
     "This photo hasn't been downloaded from iCloud yet." : {
 
     },
+    "This throws away every edit saved to this photo, including edits made in Photos." : {
+
+    },
     "This Year" : {
 
     },
     "Thumbnail Metadata" : {
+
+    },
+    "Time-lapse" : {
 
     },
     "Tint wheel" : {
@@ -1927,13 +2574,37 @@
     "Tone curve, %@ channel" : {
 
     },
+    "Tools Panel" : {
+
+    },
+    "Tools panel width" : {
+
+    },
     "Top %lld series" : {
 
     },
     "Transition" : {
 
     },
+    "Trim" : {
+
+    },
+    "Trim end" : {
+
+    },
+    "Trim start" : {
+
+    },
+    "Trip" : {
+
+    },
+    "Trips" : {
+
+    },
     "Try: Fukuoka · f > 1.2 · ISO trên 3200 · trước 2020 · 85mm" : {
+
+    },
+    "Turning this off removes where a photo was taken before it leaves the app. Everything else — camera, lens, exposure, date — still goes with it.\n\nVideos are unaffected: their location lives in the file itself, and removing it would mean re-encoding the whole clip." : {
 
     },
     "Type a caption" : {
@@ -1948,7 +2619,16 @@
     "Undo" : {
 
     },
+    "Unfavorite" : {
+
+    },
+    "Unhide" : {
+
+    },
     "Unknown Cameras" : {
+
+    },
+    "Unlink Zoom" : {
 
     },
     "Unmark" : {
@@ -1957,10 +2637,19 @@
     "Unmute" : {
 
     },
+    "Unpin" : {
+
+    },
     "UNPLACED" : {
 
     },
     "Unplaced photo, drag to place" : {
+
+    },
+    "UPRIGHT" : {
+
+    },
+    "Use as Reference" : {
 
     },
     "Use Cellular" : {
@@ -1987,10 +2676,25 @@
     "Videos Only" : {
 
     },
+    "View Full HDR" : {
+
+    },
+    "View Panorama" : {
+
+    },
     "Vignette Pulse" : {
 
     },
     "Volume" : {
+
+    },
+    "What should I look for?" : {
+
+    },
+    "When autoplay is off, a video waits for you to press play. Looping is a button on the player itself. Full HDR shows high-range photos at their real brightness, which makes everything around them look darker." : {
+
+    },
+    "Which camera?" : {
 
     },
     "White" : {
@@ -2009,6 +2713,9 @@
 
     },
     "Wired" : {
+
+    },
+    "Writes every photo in this run that has edits. One that fails keeps its edits so you can try it again." : {
 
     },
     "Writing the video failed." : {
@@ -2033,6 +2740,9 @@
 
     },
     "Your photo library appears to be empty." : {
+
+    },
+    "Your photos are not affected. ShotDex reads the camera and exposure data again the next time it scans your library." : {
 
     },
     "Zoom" : {

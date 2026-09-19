@@ -31,6 +31,8 @@ struct TimelineTracksContent: View {
     let visibleLeftTime: Double
     let activeDrag: TimelineActiveDrag?
 
+    @Environment(\.videoLaneMetrics) private var lanes
+
     let onAddOverlay: () -> Void
     let onAddMusic: () -> Void
     let onAddMedia: () -> Void
@@ -56,7 +58,7 @@ struct TimelineTracksContent: View {
                     activeDrag: activeDrag,
                     onAdd: onAddOverlay
                 )
-                .frame(width: contentWidth, height: VideoStudioMetrics.overlayLaneHeight, alignment: .leading)
+                .frame(width: contentWidth, height: lanes.overlay, alignment: .leading)
             }
 
             VideoTrack(
@@ -67,7 +69,7 @@ struct TimelineTracksContent: View {
                 onAddMedia: onAddMedia,
                 onTransition: onTransition
             )
-            .frame(width: contentWidth, height: VideoStudioMetrics.videoLaneHeight, alignment: .leading)
+            .frame(width: contentWidth, height: lanes.video, alignment: .leading)
 
             ForEach(0..<musicLaneCount, id: \.self) { lane in
                 MusicLaneRow(
@@ -79,7 +81,7 @@ struct TimelineTracksContent: View {
                     activeDrag: activeDrag,
                     onAdd: onAddMusic
                 )
-                .frame(width: contentWidth, height: VideoStudioMetrics.musicLaneHeight, alignment: .leading)
+                .frame(width: contentWidth, height: lanes.music, alignment: .leading)
             }
         }
         .padding(.bottom, VideoStudioMetrics.timelineBottomPadding)
@@ -142,6 +144,8 @@ struct TimelineRuler: View {
 // MARK: - Video track
 
 private struct VideoTrack: View {
+    @Environment(\.videoLaneMetrics) private var lanes
+
     @Bindable var model: VideoStudioModel
     let pps: CGFloat
     let placements: [VideoTimelineMath.Placement]
@@ -177,7 +181,7 @@ private struct VideoTrack: View {
             Image(systemName: "plus")
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(.white)
-                .frame(width: VideoStudioMetrics.addMediaButtonWidth, height: VideoStudioMetrics.clipCellHeight)
+                .frame(width: VideoStudioMetrics.addMediaButtonWidth, height: lanes.clipCell)
                 .background(
                     RoundedRectangle(cornerRadius: VideoStudioMetrics.trackRadius, style: .continuous)
                         .fill(Color.white.opacity(0.12))
@@ -212,7 +216,7 @@ private struct VideoTrack: View {
             .accessibilityLabel("Transition")
             .offset(
                 x: x - VideoStudioMetrics.transitionChipSize / 2,
-                y: (VideoStudioMetrics.clipCellHeight - VideoStudioMetrics.transitionChipSize) / 2
+                y: (lanes.clipCell - VideoStudioMetrics.transitionChipSize) / 2
             )
             .zIndex(2)
         }
@@ -235,6 +239,8 @@ private struct VideoTrack: View {
 /// (for the selected clip) a 2.5px timeline-blue border. Reorder rides a
 /// long-press; the draft shift comes from `reorderShift`.
 private struct ClipBand: View {
+    @Environment(\.videoLaneMetrics) private var lanes
+
     @Bindable var model: VideoStudioModel
     let clip: VideoClip
     let placement: VideoTimelineMath.Placement
@@ -249,7 +255,7 @@ private struct ClipBand: View {
             assetID: clip.assetID,
             photoLibrary: model.photoLibrary,
             width: width,
-            height: VideoStudioMetrics.clipCellHeight
+            height: lanes.clipCell
         )
         .overlay(alignment: .bottomTrailing) { durationBadge }
         .overlay(alignment: .bottomLeading) { corners }
@@ -261,7 +267,7 @@ private struct ClipBand: View {
                     lineWidth: isSelected ? 2.5 : 1
                 )
         }
-        .frame(width: width, height: VideoStudioMetrics.clipCellHeight)
+        .frame(width: width, height: lanes.clipCell)
         .offset(x: CGFloat(placement.start) * pps + reorderShift)
         .scaleEffect(reorderShift != 0 ? 1.05 : 1)
         .zIndex(reorderShift != 0 ? 3 : 0)
@@ -348,9 +354,14 @@ struct ClipFilmstrip: View {
             guard image == nil,
                   let asset = PhotoLibraryService.fetchAssets(ids: [assetID]).first
             else { return }
+            // Sized from the cell the frame lands in, not a constant: an
+            // 88pt regular-width cell on a 3x screen wants 264px, and a 240px
+            // thumbnail upscaled into it is the soft filmstrip the taller
+            // lanes were supposed to fix.
+            let side = max(240, height * UIScreen.main.scale)
             _ = photoLibrary.requestThumbnail(
                 for: asset,
-                targetSize: CGSize(width: 240, height: 240),
+                targetSize: CGSize(width: side, height: side),
                 allowNetwork: false
             ) { result in if let result { image = result } }
         }

@@ -12,9 +12,11 @@ struct VideoTimelineGutter: View {
     /// The lane stack's vertical scroll offset, so the icons track their rows.
     let offsetY: CGFloat
 
+    @Environment(\.videoLaneMetrics) private var lanes
+
     var body: some View {
         ZStack(alignment: .topLeading) {
-            ForEach(lanes, id: \.self) { lane in
+            ForEach(laneOrder, id: \.self) { lane in
                 icon(lane)
                     .offset(y: top(of: lane) - offsetY)
             }
@@ -25,7 +27,7 @@ struct VideoTimelineGutter: View {
         .allowsHitTesting(false)
     }
 
-    private var lanes: [VideoTimelineLane] {
+    private var laneOrder: [VideoTimelineLane] {
         (0..<max(1, overlayLaneCount)).map { VideoTimelineLane.overlay($0) }
             + [.video]
             + (0..<max(1, musicLaneCount)).map { VideoTimelineLane.music($0) }
@@ -35,14 +37,14 @@ struct VideoTimelineGutter: View {
         let overlayLanes = max(1, overlayLaneCount)
         switch lane {
         case .overlay(let index):
-            return VideoStudioMetrics.overlayLaneTop(index)
-                + (VideoStudioMetrics.overlayLaneHeight - VideoStudioMetrics.gutterIconSize) / 2
+            return lanes.overlayLaneTop(index)
+                + (lanes.overlay - VideoStudioMetrics.gutterIconSize) / 2
         case .video:
-            return VideoStudioMetrics.videoLaneTop(overlayLanes: overlayLanes)
-                + (VideoStudioMetrics.videoLaneHeight - VideoStudioMetrics.gutterIconSize) / 2
+            return lanes.videoLaneTop(overlayLanes: overlayLanes)
+                + (lanes.video - VideoStudioMetrics.gutterIconSize) / 2
         case .music(let index):
-            return VideoStudioMetrics.musicLaneTop(index, overlayLanes: overlayLanes)
-                + (VideoStudioMetrics.musicLaneHeight - VideoStudioMetrics.gutterIconSize) / 2
+            return lanes.musicLaneTop(index, overlayLanes: overlayLanes)
+                + (lanes.music - VideoStudioMetrics.gutterIconSize) / 2
         }
     }
 

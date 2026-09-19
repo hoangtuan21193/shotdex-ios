@@ -90,12 +90,10 @@ enum VideoStudioMetrics {
         return StackLayout(preview: preview, timeline: timeline, lift: lift)
     }
 
-    /// What the timeline needs to show every lane of this project without
-    /// scrolling: the ruler, the lanes, and the paddings around them.
+    /// The phone's lane geometry, kept as a free function for the layout
+    /// tests and for callers that have no width to hand.
     static func timelineContentHeight(overlayLanes: Int, musicLanes: Int) -> CGFloat {
-        timelineTopPadding + rulerHeight + rulerToTracks
-            + laneContentHeight(overlayLanes: overlayLanes, musicLanes: musicLanes)
-            + scrollbarHeight
+        Lanes.compact.timelineContentHeight(overlayLanes: overlayLanes, musicLanes: musicLanes)
     }
 
     // MARK: Sheet tiers
@@ -107,7 +105,6 @@ enum VideoStudioMetrics {
     // MARK: Timeline verticals
 
     static let timelineTopPadding: CGFloat = 8
-    static let rulerHeight: CGFloat = 26
     static let rulerToTracks: CGFloat = 3
     static let laneSpacing: CGFloat = 3
     static let scrollbarHeight: CGFloat = 3
@@ -115,39 +112,68 @@ enum VideoStudioMetrics {
 
     // MARK: Lanes
 
-    /// Overlay lanes (text and stickers) stack above the video lane; music
-    /// lanes stack below it. Both grow with the number of lanes in use.
-    static let overlayLaneHeight: CGFloat = 34
-    static let videoLaneHeight: CGFloat = 66
-    static let musicLaneHeight: CGFloat = 40
-
     /// Where the lane stack starts, below the pinned ruler.
     static let laneAreaTop: CGFloat = 0
 
-    static func overlayLaneTop(_ lane: Int) -> CGFloat {
-        laneAreaTop + CGFloat(lane) * (overlayLaneHeight + laneSpacing)
-    }
+    /// Lane geometry for one screen width.
+    ///
+    /// Overlay lanes (text and stickers) stack above the video lane; music
+    /// lanes stack below it. Both grow with the number of lanes in use — and
+    /// with the screen. A 66pt video lane is right on a 393pt phone and is a
+    /// phone track sitting on a tablet at 1032pt: the thumbnail is what a cut
+    /// is judged from, and the height a tall window has spare is what
+    /// LumaFusion and Final Cut spend on taller tracks rather than on more
+    /// black around the preview.
+    struct Lanes: Equatable, Sendable {
+        var overlay: CGFloat
+        var video: CGFloat
+        var music: CGFloat
+        var ruler: CGFloat
+        var clipCell: CGFloat
 
-    static func videoLaneTop(overlayLanes: Int) -> CGFloat {
-        overlayLaneTop(max(0, overlayLanes))
-    }
+        static let compact = Lanes(overlay: 34, video: 66, music: 40, ruler: 26, clipCell: 54)
+        static let regular = Lanes(overlay: 44, video: 104, music: 52, ruler: 30, clipCell: 88)
 
-    static func musicLaneTop(_ lane: Int, overlayLanes: Int) -> CGFloat {
-        videoLaneTop(overlayLanes: overlayLanes)
-            + videoLaneHeight + laneSpacing
-            + CGFloat(lane) * (musicLaneHeight + laneSpacing)
-    }
+        /// Measured on the window, like every other regular-width decision in
+        /// this screen: an iPad Split View half reports `.regular` at ~500pt,
+        /// where tablet-sized tracks would leave no timeline.
+        static func forWidth(_ width: CGFloat) -> Lanes {
+            width >= EditorLayoutMetrics.sidebarMinCanvasWidth ? .regular : .compact
+        }
 
-    /// Total scrollable height of the lane stack (excludes the pinned ruler).
-    static func laneContentHeight(overlayLanes: Int, musicLanes: Int) -> CGFloat {
-        musicLaneTop(max(0, musicLanes - 1), overlayLanes: overlayLanes)
-            + musicLaneHeight
-            + timelineBottomPadding
-    }
+        func overlayLaneTop(_ lane: Int) -> CGFloat {
+            laneAreaTop + CGFloat(lane) * (overlay + laneSpacing)
+        }
 
-    /// Height of the scrolling viewport under the pinned ruler.
-    static func laneViewportHeight(timelineHeight: CGFloat) -> CGFloat {
-        timelineHeight - timelineTopPadding - rulerHeight - rulerToTracks - scrollbarHeight - 2
+        func videoLaneTop(overlayLanes: Int) -> CGFloat {
+            overlayLaneTop(max(0, overlayLanes))
+        }
+
+        func musicLaneTop(_ lane: Int, overlayLanes: Int) -> CGFloat {
+            videoLaneTop(overlayLanes: overlayLanes)
+                + video + laneSpacing
+                + CGFloat(lane) * (music + laneSpacing)
+        }
+
+        /// Total scrollable height of the lane stack (excludes the pinned ruler).
+        func laneContentHeight(overlayLanes: Int, musicLanes: Int) -> CGFloat {
+            musicLaneTop(max(0, musicLanes - 1), overlayLanes: overlayLanes)
+                + music
+                + timelineBottomPadding
+        }
+
+        /// What the timeline needs to show every lane of this project without
+        /// scrolling: the ruler, the lanes, and the paddings around them.
+        func timelineContentHeight(overlayLanes: Int, musicLanes: Int) -> CGFloat {
+            timelineTopPadding + ruler + rulerToTracks
+                + laneContentHeight(overlayLanes: overlayLanes, musicLanes: musicLanes)
+                + scrollbarHeight
+        }
+
+        /// Height of the scrolling viewport under the pinned ruler.
+        func laneViewportHeight(timelineHeight: CGFloat) -> CGFloat {
+            timelineHeight - timelineTopPadding - ruler - rulerToTracks - scrollbarHeight - 2
+        }
     }
 
     // MARK: Timeline horizontals
@@ -177,7 +203,6 @@ enum VideoStudioMetrics {
     static let trackRadius: CGFloat = 6
     static let commandCellRadius: CGFloat = 10
 
-    static let clipCellHeight: CGFloat = 54
     static let chipBandHeight: CGFloat = 28
     static let musicBandHeight: CGFloat = 32
     /// Extended hit target for the 28pt chip bands (spec §8: ≥44).
