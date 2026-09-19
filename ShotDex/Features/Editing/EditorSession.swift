@@ -75,6 +75,33 @@ final class EditorSession {
 
     /// How many photos are carrying unsaved edits, for the sync/save wording.
     var draftCount: Int { drafts.count }
+
+    /// Lightroom's Auto Sync: while this is on, every committed change lands on
+    /// the rest of the run as well.
+    ///
+    /// Shown as a lit control, never a hidden mode. Lightroom's is a ⌥-click on
+    /// the Sync button and fifteen years of users have pasted one photo's edit
+    /// over a shoot without knowing it was on; an iPad has no ⌥-click to reveal
+    /// it, so the state has to be on screen.
+    var isAutoSyncing = false
+    /// What `scope` an Auto Sync propagation uses — the last scope the user
+    /// picked from the Sync menu.
+    var autoSyncScope: EditorSyncScope = .look
+
+    /// The photo the canvas was on before this one, for "apply previous".
+    private(set) var previousIndex: Int?
+
+    func moveToPhoto(at index: Int) {
+        guard assets.indices.contains(index), index != self.index else { return }
+        previousIndex = self.index
+        self.index = index
+    }
+
+    /// The edit on the photo the user just came from, if it has one.
+    var previousRecipe: PhotoEditRecipe? {
+        guard let previousIndex, assets.indices.contains(previousIndex) else { return nil }
+        return drafts[assets[previousIndex].localIdentifier]
+    }
 }
 
 /// The strip of the session's photos under the canvas.

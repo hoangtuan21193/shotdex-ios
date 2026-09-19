@@ -36,6 +36,7 @@ struct LibraryScreen: View {
     /// title. Nil before the first layout and while the library is empty.
     @State private var visibleDate: String?
     @State private var multiEditPresentation: MultiEditPresentation?
+    @State private var pasteEditsPresentation: PasteEditsPresentation?
     /// Measured height of the limited-access banner plus the filter-token bar,
     /// handed to the grid as its top content inset (see `photoGrid`).
     @State private var topAccessoryHeight: CGFloat = 0
@@ -153,6 +154,7 @@ struct LibraryScreen: View {
             }
         }
         .multiEditCover($multiEditPresentation, sourceAlbum: nil, onDismiss: stopSelecting)
+        .pasteEditsSheet($pasteEditsPresentation, onDismiss: stopSelecting)
         .fullScreenCover(item: $compressionPresentation, onDismiss: stopSelecting) { presentation in
             CompressionScreen(
                 assets: presentation.assets,
@@ -227,6 +229,22 @@ struct LibraryScreen: View {
         case .ended:
             swipeBaseline = []
         }
+    }
+
+    /// Writes the copied look onto every selected photo without opening the
+    /// editor: cull to the keepers, paste, done. The clipboard persists across
+    /// launches, so yesterday's look is still there.
+    private func pasteEditsToSelection(_ model: LibraryModel) {
+        guard let recipe = dependencies.editClipboard.recipe else { return }
+        let selected = Set(selectedIds)
+        let photoIDs = model.items
+            .filter { selected.contains($0.assetId) && $0.mediaType == PHAssetMediaType.image.rawValue }
+            .map(\.assetId)
+        let fetched = PhotoLibraryService.fetchAssets(ids: photoIDs)
+        let byID = Dictionary(uniqueKeysWithValues: fetched.map { ($0.localIdentifier, $0) })
+        let assets: [PHAsset] = photoIDs.compactMap { byID[$0] }
+        guard !assets.isEmpty else { return }
+        pasteEditsPresentation = PasteEditsPresentation(assets: assets, recipe: recipe)
     }
 
     /// Opens the editor on every selected photo. Videos are dropped — the photo
@@ -485,6 +503,9 @@ struct LibraryScreen: View {
             onCompare: { isComparePresented = true },
             onCompress: { presentCompression(model) },
             onEdit: { presentMultiEdit(model) },
+            onPasteEdits: dependencies.editClipboard.hasContent
+                ? { pasteEditsToSelection(model) }
+                : nil,
             onDelete: { deleteSelected(model) },
             onAddToCollection: { addToCollection() },
             onExportEXIF: { exportEXIF(model) },

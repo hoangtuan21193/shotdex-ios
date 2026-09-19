@@ -74,6 +74,11 @@ struct PhotoEditorScreen: View {
     /// every frame integrates the drag and the sidebar slams into its clamp
     /// after a few tens of points.
     @State private var sidebarDragStartWidth: CGFloat?
+    @State private var batchSaver = EditorBatchSaver()
+    /// Mirrors the saver's failure flag into view state. A `Binding` closure that
+    /// reads an `@Observable` does not register a dependency, so an alert bound
+    /// straight to the saver never appeared.
+    @State private var showsBatchFailures = false
     /// Ties the band's histogram pill to the floating card so expanding /
     /// collapsing animates as one object moving between the two.
     @Namespace private var histogramNamespace
@@ -91,6 +96,11 @@ struct PhotoEditorScreen: View {
             importingImageOverlay
             if let controller, controller.isEditingText {
                 inlineTextEditor(controller)
+            }
+        }
+        .background {
+            if let controller {
+                editorKeyboardShortcuts(controller)
             }
         }
         .preferredColorScheme(.dark)
@@ -206,6 +216,50 @@ struct PhotoEditorScreen: View {
     /// The on-photo text field. Selecting a text layer and typing happen here rather
     /// than in a sheet; Cancel on a layer that was just created and never typed drops
     /// it so the list is not left with an empty row.
+    /// Keyboard for a desktop-shaped editor: a Magic Keyboard iPad running a
+    /// Lightroom-style layout has to answer ⌘Z, ⌘S and Esc.
+    ///
+    /// Zero-size buttons in a background rather than modifiers on the visible
+    /// controls, because two of these (Copy/Paste Edits) live inside a `Menu`,
+    /// and a shortcut attached to a menu item only fires while that menu is open.
+    private func editorKeyboardShortcuts(_ controller: PhotoEditorController) -> some View {
+        ZStack {
+            Button("Undo") { controller.undo() }
+                .keyboardShortcut("z", modifiers: .command)
+                .disabled(!controller.canUndo)
+            Button("Redo") { controller.redo() }
+                .keyboardShortcut("z", modifiers: [.command, .shift])
+                .disabled(!controller.canRedo)
+            Button("Save") {
+                controller.commitCropSession()
+                isSaveSheetPresented = true
+            }
+            .keyboardShortcut("s", modifiers: .command)
+            .disabled(controller.isLoading || controller.isSaving)
+            Button("Copy Edits") { dependencies.editClipboard.copy(from: controller.recipe) }
+                .keyboardShortcut("c", modifiers: .command)
+                .disabled(controller.recipe.isIdentity)
+            Button("Paste Edits") { controller.pasteEdits(from: dependencies.editClipboard) }
+                .keyboardShortcut("v", modifiers: .command)
+                .disabled(!dependencies.editClipboard.hasContent)
+            Button("Fit or Fill") { chrome.requestFillZoomToggle() }
+                .keyboardShortcut("0", modifiers: .command)
+            Button("Hide or Show Tools") { isSidebarHidden.toggle() }
+                .keyboardShortcut("\\", modifiers: .command)
+            Button("Back") {
+                if controller.hasSessionChanges {
+                    isDiscardConfirmationPresented = true
+                } else {
+                    dismiss()
+                }
+            }
+            .keyboardShortcut(.cancelAction)
+        }
+        .opacity(0)
+        .frame(width: 0, height: 0)
+        .accessibilityHidden(true)
+    }
+
     // MARK: Multi-photo session
 
     /// Opens whichever photo the session points at, restoring the edit it was
@@ -244,9 +298,66 @@ struct PhotoEditorScreen: View {
             session.store(controller.recipe, for: current)
             controller.close()
         }
-        session.index = index
+        session.moveToPhoto(at: index)
         controller = nil
         Task { await openCurrentPhoto() }
+    }
+
+    /// How many photos a Save All would write: every parked draft, plus the photo
+    /// on the canvas when it has been touched.
+    private var pendingSaveCount: Int {
+        guard let session, session.isMultiPhoto else { return 0 }
+        var count = session.draftCount
+        if let controller, !controller.recipe.isIdentity, !session.hasDraft(session.assets[session.index]) {
+            count += 1
+        }
+        return count
+    }
+
+    /// Writes every edited photo in the run. The photo on the canvas is parked
+    /// into the session first so it goes through the same path as its siblings.
+    private func saveWholeRun(
+        _ controller: PhotoEditorController,
+        format: PhotoOutputFormat,
+        includeMetadata: Bool,
+        savesCopy: Bool
+    ) {
+        guard let session, let current = session.current else { return }
+        controller.commitCropSession()
+        session.store(controller.recipe, for: current)
+
+        let items: [(asset: PHAsset, recipe: PhotoEditRecipe)] = session.assets.compactMap { asset in
+            guard let recipe = session.draft(for: asset) else { return nil }
+            return (asset, recipe)
+        }
+        guard !items.isEmpty else { return }
+
+        batchSaver.run(
+            items: items,
+            service: dependencies.photoEditing,
+            libraryQueries: dependencies.libraryQueries,
+            format: format,
+            includeMetadata: includeMetadata,
+            savesCopy: savesCopy,
+            album: sourceAlbum,
+            onSaved: { assetID in
+                session.markSaved(assetID)
+                onSaved?(assetID)
+            },
+            onFinished: {
+                // Everything that could be written has been; what is left is the
+                // failures, which keep their drafts so they can be retried.
+                if session.draftCount == 0 { dismiss() }
+            }
+        )
+    }
+
+    private var batchSaveFailureMessage: String {
+        let names = batchSaver.failures.prefix(3).map(\.filename).joined(separator: ", ")
+        let extra = batchSaver.failures.count - min(batchSaver.failures.count, 3)
+        let tail = extra > 0 ? " and \(extra) more" : ""
+        let reason = batchSaver.failures.first?.message ?? ""
+        return "\(names)\(tail). Their edits are still here — try saving them again.\n\n\(reason)"
     }
 
     /// After a save in a multi-photo run, move to the next photo that still has
@@ -275,7 +386,23 @@ struct PhotoEditorScreen: View {
     private func syncEditsToAll(_ scope: EditorSyncScope) {
         guard let session, let controller, let current = session.current else { return }
         controller.commitCropSession()
+        session.autoSyncScope = scope
         session.syncToAll(controller.recipe, from: current, scope: scope)
+    }
+
+    /// Applies the previous photo's edit to this one — Lightroom's `Previous`,
+    /// the rhythm of a filmstrip: next frame, same treatment, tweak.
+    private func applyPreviousEdit(_ controller: PhotoEditorController) {
+        guard let recipe = session?.previousRecipe else { return }
+        controller.apply(session?.autoSyncScope.apply(recipe, onto: controller.recipe) ?? recipe)
+    }
+
+    /// While Auto Sync is on, every committed change lands on the rest of the run.
+    private func propagateIfAutoSyncing(_ controller: PhotoEditorController) {
+        guard let session, session.isAutoSyncing, session.isMultiPhoto,
+              let current = session.current
+        else { return }
+        session.syncToAll(controller.recipe, from: current, scope: session.autoSyncScope)
     }
 
     private func inlineTextEditor(_ controller: PhotoEditorController) -> some View {
@@ -390,7 +517,11 @@ struct PhotoEditorScreen: View {
                 EditorLayoutMetrics.editorTopBandHeight,
                 proxy.safeAreaInsets.top
             )
+            // Width *and* height: the sidebar's own chrome — title, histogram,
+            // command row, tool strip, Save — is about 280pt before a single tool
+            // row, so a 700×400 window would be all panel and no tools.
             let isWide = proxy.size.width >= EditorLayoutMetrics.sidebarMinCanvasWidth
+                && proxy.size.height >= EditorLayoutMetrics.sidebarMinCanvasHeight
             Group {
                 if isWide {
                     wideBody(
@@ -415,6 +546,11 @@ struct PhotoEditorScreen: View {
             // layout needs it. `onChange`, not `task`: a task body runs a hop
             // later, so a live Stage Manager drag would spend a frame with the
             // stage on the other layout's rules.
+            // Auto Sync rides the recipe itself rather than each mutator: every
+            // change lands here once it has settled, whatever made it.
+            .onChange(of: controller.recipe) { _, _ in
+                propagateIfAutoSyncing(controller)
+            }
             .onChange(of: isWide, initial: true) { _, wide in
                 chrome.isWideLayout = wide
                 // Full bleed is a phone answer to a phone problem — no room. It
@@ -438,8 +574,33 @@ struct PhotoEditorScreen: View {
         }
         .animation(EditorTheme.animation, value: chrome.isFullBleed)
         .animation(EditorTheme.animation, value: chrome.undoToast?.id)
+        .overlay {
+            if batchSaver.isRunning {
+                EditorBatchSaveOverlay(saver: batchSaver)
+            }
+        }
+        .onChange(of: batchSaver.hasFinishedWithFailures) { _, hasFailures in
+            showsBatchFailures = hasFailures
+        }
+        .alert("Some Photos Didn't Save", isPresented: $showsBatchFailures) {
+            Button("OK") { batchSaver.clearFailures() }
+        } message: {
+            Text(batchSaveFailureMessage)
+        }
         .sheet(isPresented: $isSaveSheetPresented) {
-            PhotoEditorSaveSheet(controller: controller) {
+            PhotoEditorSaveSheet(
+                controller: controller,
+                pendingCount: pendingSaveCount,
+                saveAll: { format, includeMetadata, savesCopy in
+                    isSaveSheetPresented = false
+                    saveWholeRun(
+                        controller,
+                        format: format,
+                        includeMetadata: includeMetadata,
+                        savesCopy: savesCopy
+                    )
+                }
+            ) {
                 isSaveSheetPresented = false
                 // Announced here, once, not in the fallback alert's OK button:
                 // the JPEG fallback still saved an asset worth revealing.
@@ -643,6 +804,12 @@ struct PhotoEditorScreen: View {
     /// undo anyway.
     private var isFillingCanvas: Bool { chrome.zoomScale > 1.02 }
 
+    /// Whether this device has a Dynamic Island / notch worth routing the band
+    /// around. iPads have a 24pt status inset and no cutout.
+    private var hasTopCutout: Bool {
+        UIDevice.current.userInterfaceIdiom == .phone
+    }
+
     private var sidebarEdge: EditorSidebarEdge {
         EditorSidebarEdge.resolved(sidebarEdgeRaw)
     }
@@ -703,7 +870,7 @@ struct PhotoEditorScreen: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Hide tools")
+                .accessibilityLabel("Hide Tools")
             }
             .padding(.horizontal, AppTheme.Spacing.md)
             .frame(height: EditorLayoutMetrics.sidebarHeaderHeight)
@@ -721,9 +888,11 @@ struct PhotoEditorScreen: View {
                 )
                 .padding(.horizontal, AppTheme.Spacing.md)
                 .padding(.bottom, AppTheme.Spacing.sm)
+                .accessibilityElement()
                 .accessibilityLabel("RGB histogram")
+                .accessibilityValue(histogramClippingSummary(controller))
 
-            HStack(spacing: AppTheme.Spacing.xs) {
+            HStack(spacing: AppTheme.Spacing.sm) {
                 circleCommand("arrow.uturn.backward", isEnabled: controller.canUndo) {
                     controller.undo()
                 }
@@ -771,6 +940,7 @@ struct PhotoEditorScreen: View {
                             isExpanded: chrome.expandedSidebarGroups.contains(group),
                             isActive: chrome.selectedGroup == group
                                 || (group == .color && Self.colorSegments.contains(chrome.selectedGroup)),
+                            hasEdits: groupHasEdits(group, controller: controller),
                             toggle: { toggleSidebarSection(group, in: controller) }
                         ) {
                             sidebarSectionBody(group, controller: controller)
@@ -839,6 +1009,18 @@ struct PhotoEditorScreen: View {
         Self.sidebarToolGroups.contains(chrome.selectedGroup) ? chrome.selectedGroup : nil
     }
 
+    /// What the histogram says out loud. The shape is not describable; what a
+    /// photographer reads it for is whether the ends are against the wall.
+    private func histogramClippingSummary(_ controller: PhotoEditorController) -> String {
+        let histogram = controller.histogram
+        switch (histogram.hasClippedShadows, histogram.hasClippedHighlights) {
+        case (true, true): return "Shadows and highlights clipped"
+        case (true, false): return "Shadows clipped"
+        case (false, true): return "Highlights clipped"
+        case (false, false): return "No clipping"
+        }
+    }
+
     /// The radio strip of stage tools. Tapping the one that is already up puts
     /// the photo back to plain adjusting, which is the only way out of Crop that
     /// does not involve committing it.
@@ -875,6 +1057,43 @@ struct PhotoEditorScreen: View {
         }
         .padding(.horizontal, AppTheme.Spacing.md)
         .padding(.bottom, AppTheme.Spacing.sm)
+    }
+
+    /// Whether this group holds anything on this photo, for the header's dot.
+    /// Compared against an untouched recipe rather than tracked separately, so
+    /// undo and Reset All put the dots back on their own.
+    private func groupHasEdits(_ group: EditorGroup, controller: PhotoEditorController) -> Bool {
+        let recipe = controller.recipe
+        let identity = PhotoEditRecipe.identity
+        switch group {
+        case .light, .detail, .effects, .optics, .geo:
+            return catalogGroups(for: group, controller: controller).contains { catalogGroup in
+                catalogGroup.kinds.contains { recipe.adjustments[$0] != identity.adjustments[$0] }
+            }
+        case .curve:
+            return recipe.curve != identity.curve
+        case .color:
+            let basic = catalogGroups(for: .color, controller: controller).contains { catalogGroup in
+                catalogGroup.kinds.contains { recipe.adjustments[$0] != identity.adjustments[$0] }
+            }
+            return basic
+                || recipe.color.mixer != identity.color.mixer
+                || !recipe.color.points.isEmpty
+        case .grade:
+            return recipe.color.grading != identity.color.grading
+        case .presets:
+            return recipe.filter != identity.filter
+        case .crop:
+            return recipe.crop != identity.crop
+        case .mask:
+            return !recipe.masks.isEmpty
+        case .markup:
+            return !recipe.overlays.isEmpty || recipe.drawing != identity.drawing
+        case .colorMix:
+            return recipe.color.mixer != identity.color.mixer
+        case .pointColor:
+            return !recipe.color.points.isEmpty
+        }
     }
 
     /// One section's controls, at their natural height.
@@ -989,7 +1208,11 @@ struct PhotoEditorScreen: View {
             // right of the Dynamic Island, so the fixed reserve is the run from the
             // end of that cluster to there; the pill then flexes out to the ⋯.
             let leftClusterWidth = buttonSize * 3 + 5 * 2
-            let reserve = showsDocumentControls
+            // The reserve keeps the histogram pill clear of the Dynamic Island.
+            // Gate it on a device that actually has one: an iPad in a narrow
+            // Split View takes the phone layout and was leaving 219pt of empty
+            // band in the middle of an unbroken strip.
+            let reserve = showsDocumentControls || !hasTopCutout
                 ? 0
                 : max(
                     0,
@@ -1067,7 +1290,7 @@ struct PhotoEditorScreen: View {
         circleCommand(sidebarEdge.collapseIcon, isEnabled: true) {
             isSidebarHidden = false
         }
-        .accessibilityLabel("Show tools")
+        .accessibilityLabel("Show Tools")
     }
 
     /// Hold-to-see-original, mirroring the photo's own press-and-hold. Down shows
@@ -1092,6 +1315,12 @@ struct PhotoEditorScreen: View {
                     .onEnded { _ in controller.showsOriginal = false }
             )
             .accessibilityLabel("Hold to see original")
+            // The drag is the whole control, so without these there is no way to
+            // see the original with VoiceOver, Switch Control or a keyboard.
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction {
+                controller.showsOriginal.toggle()
+            }
     }
 
     /// A 34pt circular band button: a blurred near-black disc, white glyph. Dims
@@ -1266,7 +1495,26 @@ struct PhotoEditorScreen: View {
             }
 
             if let session, session.isMultiPhoto {
-                Menu("Sync to \(session.assets.count - 1) Photos") {
+                Toggle(isOn: Binding(
+                    get: { session.isAutoSyncing },
+                    set: { session.isAutoSyncing = $0 }
+                )) {
+                    Label("Auto Sync", systemImage: "arrow.triangle.2.circlepath")
+                }
+
+                if session.previousRecipe != nil {
+                    Button {
+                        applyPreviousEdit(controller)
+                    } label: {
+                        Label("Apply Previous", systemImage: "arrow.uturn.left.square")
+                    }
+                }
+
+                Menu(
+                    session.assets.count == 2
+                        ? "Sync to 1 Photo"
+                        : "Sync to \(session.assets.count - 1) Photos"
+                ) {
                     Button {
                         syncEditsToAll(.look)
                     } label: {
@@ -1707,6 +1955,12 @@ struct PhotoEditorScreen: View {
 private struct PhotoEditorSaveSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var controller: PhotoEditorController
+    /// Photos in this run carrying edits. Zero for a single-photo session, which
+    /// hides the batch row entirely.
+    var pendingCount: Int = 0
+    /// Starts a batch write: format, metadata, and whether it copies rather than
+    /// overwrites.
+    var saveAll: ((PhotoOutputFormat, Bool, Bool) -> Void)?
     let onFinished: () -> Void
 
     /// Defaults to JPEG: it is the format that always works, and making every save
@@ -1734,6 +1988,34 @@ private struct PhotoEditorSaveSheet: View {
                     }
                 } footer: {
                     Text("Save Copy is full resolution at maximum quality. Turning off metadata strips EXIF and clears the Photos date/location on Save Changes. If Photos doesn't support HEIC for this asset, ShotDex falls back to JPEG and tells you.")
+                }
+
+                if pendingCount > 1, let saveAll {
+                    Section {
+                        Button {
+                            guard let format else { return }
+                            saveAll(format, includeMetadata, false)
+                        } label: {
+                            Label(
+                                "Save Changes to \(pendingCount) Photos",
+                                systemImage: "square.and.arrow.down.on.square"
+                            )
+                        }
+                        .disabled(format == nil)
+
+                        Button {
+                            guard let format else { return }
+                            saveAll(format, includeMetadata, true)
+                        } label: {
+                            Label(
+                                "Save \(pendingCount) Copies",
+                                systemImage: "plus.square.on.square"
+                            )
+                        }
+                        .disabled(format == nil)
+                    } footer: {
+                        Text("Writes every photo in this run that has edits. One that fails keeps its edits so you can try it again.")
+                    }
                 }
 
                 Section {

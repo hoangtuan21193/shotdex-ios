@@ -182,6 +182,12 @@ struct SelectionToolbarItems: ToolbarContent {
                         }
                         .disabled(model.imageSelectionCount < 1)
                     }
+                    if let onPasteEdits = model.onPasteEdits {
+                        Button(action: onPasteEdits) {
+                            Label("Paste Edits", systemImage: "doc.on.clipboard")
+                        }
+                        .disabled(model.imageSelectionCount < 1)
+                    }
                     if let onCollage = model.onCollage {
                         Button(action: onCollage) {
                             Label("Create Collage", systemImage: "square.grid.2x2")

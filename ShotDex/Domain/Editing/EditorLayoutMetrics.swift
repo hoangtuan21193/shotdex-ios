@@ -60,6 +60,8 @@ enum EditorLayoutMetrics {
     /// a narrow Split View keeps the phone layout and a phone in landscape does
     /// not — below this the sidebar would leave the photo a letterbox.
     static let sidebarMinCanvasWidth: CGFloat = 700
+    /// And tall enough that the sidebar's fixed chrome is not the whole panel.
+    static let sidebarMinCanvasHeight: CGFloat = 600
     /// Sidebar width the user can drag between, and where it starts. 280 still
     /// fits a slider row with its value; past 420 the photo starts paying for
     /// space the rows cannot use.
@@ -68,6 +70,8 @@ enum EditorLayoutMetrics {
     /// The drag strip on the sidebar's inner edge. 10pt: a 44pt target would eat
     /// into the rows, and this edge is dragged, not tapped.
     static let sidebarResizeHandleWidth: CGFloat = 10
+    /// What the same strip answers to. Drawn thin, grabbed wide.
+    static let sidebarResizeGrabWidth: CGFloat = 24
     /// The sidebar's own title row, holding the collapse control.
     static let sidebarHeaderHeight: CGFloat = 44
     /// One collapsible section header in the sidebar.

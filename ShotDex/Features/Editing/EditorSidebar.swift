@@ -45,6 +45,11 @@ struct EditorSidebarSection<Content: View>: View {
     /// handles up, mask overlay live). Only one group can hold the stage, so
     /// this is not the same thing as being open.
     let isActive: Bool
+    /// This group has been touched on this photo. With a stack of collapsible
+    /// sections there is otherwise no way to tell which ones hold an edit
+    /// without opening every one of them — the same job Lightroom's per-panel
+    /// switch does.
+    var hasEdits = false
     var toggle: () -> Void
     @ViewBuilder var content: () -> Content
 
@@ -59,6 +64,11 @@ struct EditorSidebarSection<Content: View>: View {
                     Text(group.title)
                         .font(EditorTheme.groupLabel)
                         .foregroundStyle(isActive ? Color.white : EditorTheme.secondaryText)
+                    if hasEdits {
+                        Circle()
+                            .fill(EditorTheme.accent)
+                            .frame(width: 5, height: 5)
+                    }
                     Spacer(minLength: 8)
                     Image(systemName: "chevron.down")
                         .font(.system(size: 11, weight: .semibold))
@@ -70,8 +80,13 @@ struct EditorSidebarSection<Content: View>: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .hoverEffect(.highlight)
             .accessibilityLabel(group.title)
-            .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
+            .accessibilityValue(
+                [isExpanded ? "Expanded" : "Collapsed", hasEdits ? "Edited" : nil]
+                    .compactMap { $0 }
+                    .joined(separator: ", ")
+            )
             .accessibilityAddTraits(isActive ? [.isSelected, .isButton] : .isButton)
 
             if isExpanded {
@@ -105,7 +120,21 @@ struct EditorSidebarResizeHandle: View {
                 Rectangle().fill(EditorTheme.panelTopHairline).frame(width: 1)
             }
             .frame(width: EditorLayoutMetrics.sidebarResizeHandleWidth)
-            .contentShape(Rectangle())
+            // Drawn 10pt so it reads as a seam, grabbed at 24 so a finger can
+            // actually find it.
+            .contentShape(
+                Rectangle()
+                    .size(
+                        width: EditorLayoutMetrics.sidebarResizeGrabWidth,
+                        height: 10_000
+                    )
+                    .offset(
+                        x: -(EditorLayoutMetrics.sidebarResizeGrabWidth
+                            - EditorLayoutMetrics.sidebarResizeHandleWidth) / 2,
+                        y: -5_000
+                    )
+            )
+            .hoverEffect(.highlight)
             .gesture(
                 DragGesture(minimumDistance: 1)
                     .onChanged { value in
@@ -118,7 +147,15 @@ struct EditorSidebarResizeHandle: View {
                     }
                     .onEnded { _ in onEnd() }
             )
-            .accessibilityHidden(true)
+            // Not hidden from assistive technology: the width is a real setting,
+            // and a drag is not a route VoiceOver or Switch Control can take. The
+            // ⋯ menu carries the same three widths for anyone who cannot drag.
+            .accessibilityLabel("Tools panel width")
+            .accessibilityHint("Adjust to resize the panel")
+            .accessibilityAdjustableAction { direction in
+                onDrag(direction == .increment ? 40 : -40)
+                onEnd()
+            }
     }
 }
 

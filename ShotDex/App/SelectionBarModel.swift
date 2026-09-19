@@ -56,6 +56,9 @@ struct SelectionBarModel {
     /// Opens the editor on the whole selection — one photo on the canvas, the
     /// rest in a filmstrip under it.
     var onEdit: (() -> Void)? = nil
+    /// Writes the copied look onto every selected photo without opening the
+    /// editor. Nil where there is nothing on the clipboard to paste.
+    var onPasteEdits: (() -> Void)? = nil
     /// Trailing standalone button — delete the selection (confirmed by PhotoKit).
     var onDelete: () -> Void
 

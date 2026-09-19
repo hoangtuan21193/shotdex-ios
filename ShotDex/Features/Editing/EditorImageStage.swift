@@ -121,6 +121,22 @@ struct EditorImageStage: View {
             // every drag look like the picture lost resolution.
             .onChange(of: imageRect.size, initial: true) { _, size in
                 controller.setDisplaySize(size, scale: displayScale * chrome.zoomScale)
+                // A rotation or a window resize leaves a zoom that was computed
+                // for the old canvas: filled becomes over-filled, and the pan
+                // offset is now outside the picture with no way back but the fit
+                // button.
+                if chrome.zoomScale > 1.02 {
+                    chrome.zoomScale = min(
+                        chrome.zoomScale,
+                        max(proxy.size.width / size.width, proxy.size.height / size.height)
+                    )
+                }
+                chrome.zoomOffset = EditorLayoutMetrics.clampedZoomOffset(
+                    chrome.zoomOffset,
+                    imageSize: size,
+                    zoomScale: chrome.zoomScale,
+                    stage: proxy.size
+                )
             }
             .task(id: overlayImageIDs) { await loadOverlayImages() }
         }

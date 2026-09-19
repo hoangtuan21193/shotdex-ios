@@ -51,7 +51,11 @@ struct EditorDrawingCanvas: UIViewRepresentable {
 
     func makeUIView(context: Context) -> PKCanvasView {
         let canvas = PKCanvasView()
-        canvas.drawingPolicy = .anyInput
+        // `.default`, not `.anyInput`: with a Pencil paired this makes the Pencil
+        // the only thing that draws, so the palm resting on the glass pans instead
+        // of laying down a stroke. Without a Pencil it still resolves to finger
+        // drawing, so nothing is lost on a phone.
+        canvas.drawingPolicy = .default
         canvas.backgroundColor = .clear
         canvas.isOpaque = false
         canvas.isScrollEnabled = false

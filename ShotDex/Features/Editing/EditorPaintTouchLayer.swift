@@ -245,6 +245,29 @@ final class PaintTouchObserver: UIGestureRecognizer {
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         guard let view else { return }
+        // A Pencil anywhere in this event owns the stroke, and the tracked finger
+        // steps aside for it. This is the contract every drawing app on iPad has:
+        // Pencil paints, finger navigates, palm is ignored — and without it the
+        // palm that lands first becomes the stroke and the Pencil arriving second
+        // is reported as a second finger.
+        let pencil = touches.first { $0.type == .pencil }
+        if let pencil {
+            if let trackedTouch, trackedTouch.type != .pencil {
+                onEvent(.systemCancel)
+            }
+            trackedTouch = pencil
+            onEvent(.down(
+                activeTouches: 1,
+                location: pencil.location(in: view),
+                time: event.timestamp
+            ))
+            return
+        }
+        if trackedTouch?.type == .pencil {
+            // A finger while the Pencil is down is a pan, never a second stroke.
+            onEvent(.extraFinger(time: event.timestamp))
+            return
+        }
         if trackedTouch != nil {
             onEvent(.extraFinger(time: event.timestamp))
             return
