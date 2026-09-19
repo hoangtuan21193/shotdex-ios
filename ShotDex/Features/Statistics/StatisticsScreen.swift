@@ -96,14 +96,26 @@ struct StatisticsScreen: View {
         }
     }
 
-    /// Card width the multi-column dashboard is built from. The minimum is
-    /// what a bar chart needs before its labels start truncating; the maximum
-    /// stops a card from turning into a label at one edge and a number at the
-    /// other. Between them, `.adaptive` gives two columns on an unfolded Duo
-    /// or a portrait iPad and three on a landscape one.
-    private static let chartCardWidth: ClosedRange<CGFloat> = 320...520
+    /// Narrowest a chart card may be: below this a bar chart's labels start
+    /// truncating. Three columns are the ceiling — wider than that and a card
+    /// is a label at one edge and a number at the other.
+    private static let minimumCardWidth: CGFloat = 320
+    private static let maximumColumnCount = 3
 
     private static let cardSpacing: CGFloat = 16
+
+    /// Air below the last card, so the dashboard does not end against the
+    /// floating tab bar.
+    private static let bottomClearance: CGFloat = 48
+
+    /// Columns that fit `width` at `minimumCardWidth`, clamped to 2...3 —
+    /// `usesColumns` already guarantees a regular-width screen, which is
+    /// always wide enough for two.
+    private static func columnCount(forWidth width: CGFloat) -> Int {
+        let usable = width - cardSpacing // the outer margins
+        let fits = Int((usable + cardSpacing) / (minimumCardWidth + cardSpacing))
+        return min(maximumColumnCount, max(2, fits))
+    }
 
     /// Charts lay out in columns on a wide screen, and in a reorderable list
     /// everywhere else. Edit mode falls back to the list on every size class:
@@ -138,34 +150,38 @@ struct StatisticsScreen: View {
     }
 
     private func columns(_ model: StatisticsModel) -> some View {
-        ScrollView {
-            LazyVGrid(
-                columns: [
-                    GridItem(
-                        .adaptive(
-                            minimum: Self.chartCardWidth.lowerBound,
-                            maximum: Self.chartCardWidth.upperBound
-                        ),
-                        spacing: Self.cardSpacing,
-                        alignment: .top
-                    )
-                ],
-                alignment: .center,
-                spacing: Self.cardSpacing
-            ) {
-                ForEach(model.charts) { spec in
-                    card(spec, model: model)
-                        // Cards in a row are as tall as the tallest of them, so
-                        // the background has to stretch or the shorter ones
-                        // float in a gap.
-                        .frame(maxHeight: .infinity, alignment: .top)
+        GeometryReader { proxy in
+            let count = Self.columnCount(forWidth: proxy.size.width)
+            ScrollView {
+                // Independent columns, not a `LazyVGrid`: a grid gives every
+                // row the height of its tallest card, so a KPI next to a bar
+                // chart leaves a hole the height of the bar chart. Charts are
+                // dealt round-robin, which keeps reading order and lets each
+                // column close up behind a short card.
+                HStack(alignment: .top, spacing: Self.cardSpacing) {
+                    ForEach(0..<count, id: \.self) { column in
+                        LazyVStack(spacing: Self.cardSpacing) {
+                            ForEach(Self.charts(model.charts, inColumn: column, of: count)) { spec in
+                                card(spec, model: model)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .top)
+                    }
                 }
+                .padding(.horizontal, Self.cardSpacing)
+                .padding(.top, 8)
+                floatingChromeSpacer
+                Color.clear.frame(height: Self.bottomClearance)
             }
-            .padding(.horizontal, Self.cardSpacing)
-            .padding(.vertical, 8)
-            floatingChromeSpacer
+            .scrollContentBackground(.hidden)
         }
-        .scrollContentBackground(.hidden)
+    }
+
+    /// The charts dealt to one column, round-robin.
+    private static func charts(
+        _ charts: [ChartSpec], inColumn column: Int, of count: Int
+    ) -> [ChartSpec] {
+        charts.enumerated().compactMap { $0.offset % count == column ? $0.element : nil }
     }
 
     private func rows(_ model: StatisticsModel) -> some View {
@@ -182,9 +198,17 @@ struct StatisticsScreen: View {
             .onMove { model.moveCharts(from: $0, to: $1) }
             .onDelete { model.deleteCharts(at: $0) }
 
+            // Air below the last card plus, pre-iOS 26, the custom bar's own
+            // height — the list's bottom inset stops at the tab bar, so
+            // without this the last chart sits against it.
             floatingChromeSpacer
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets())
+            Color.clear.frame(height: Self.bottomClearance)
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets())
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
