@@ -215,6 +215,11 @@ struct EditorOverlayMoveTarget: View {
             .frame(width: touchSize.width, height: touchSize.height)
             .position(frame.center)
             .gesture(dragGesture)
+            // An invisible drag target on the canvas: there is nothing here
+            // for VoiceOver to read, and stopping on a blank rectangle over
+            // the photo tells a blind user nothing. The overlay itself is
+            // reachable from the panel, which is where it can be operated.
+            .accessibilityHidden(true)
     }
 
     private var touchSize: CGSize {

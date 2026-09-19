@@ -41,7 +41,7 @@ struct CompressionPresetsScreen: View {
                         format: .jpeg
                     )
                 } label: {
-                    Label("Add Preset", systemImage: "plus")
+                    Label("Add Preset", systemImage: "plus.circle.fill")
                 }
             } header: {
                 Text("Custom")
