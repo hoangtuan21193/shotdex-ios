@@ -37,12 +37,25 @@ struct SearchSuggestionsScreen: View {
     /// environment and are not available at init.
     @State private var recentsModel: SearchRecentsModel?
 
+    /// What the title row and the Recents strip actually need, and how much
+    /// screen there is once the keyboard has taken its share. Together they say
+    /// how many capsules there is room for — see `suggestionLimit`.
+    @State private var headerBlockHeight: CGFloat = 0
+    @State private var availableHeight: CGFloat = 0
+
     /// Field placeholder.
     static let prompt = "Search your library…"
 
     /// Photos shows a handful and stops. More than this and the stack starts
     /// competing with the keyboard for the screen.
     private static let maximumSuggestions = 5
+
+    /// One capsule plus the gap under it: `.body` text with 11pt of padding above
+    /// and below, and 8pt of `VStack` spacing.
+    private static let capsuleRowHeight: CGFloat = 52
+    /// What `capsuleStack` reserves around itself — its own top padding plus the
+    /// clearance for the floating field drawn over the content.
+    private static let capsuleStackChrome: CGFloat = 76
 
     var body: some View {
         content
@@ -86,23 +99,23 @@ struct SearchSuggestionsScreen: View {
             .scrollBounceBehavior(.basedOnSize)
             .scrollDismissesKeyboard(.never)
         } else {
-            VStack(alignment: .leading, spacing: 0) {
-                // Scrolls only when it has to: with the keyboard up on a small
-                // screen the title plus the recents strip can outgrow the space left
-                // over, and clipped content is worse than content that moves.
-                ScrollView {
+            GeometryReader { proxy in
+                VStack(alignment: .leading, spacing: 0) {
                     VStack(alignment: .leading, spacing: 0) {
                         header
                         recents
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, 4)
-                }
-                .scrollBounceBehavior(.basedOnSize)
-                .scrollDismissesKeyboard(.never)
-                .frame(maxHeight: .infinity, alignment: .top)
+                    .padding(.top, AppTheme.Spacing.xs)
+                    .measureHeight(into: $headerBlockHeight)
+                    .frame(maxHeight: .infinity, alignment: .top)
 
-                capsuleStack
+                    capsuleStack
+                }
+                .onAppear { availableHeight = proxy.size.height }
+                .onChange(of: proxy.size.height) { _, height in
+                    availableHeight = height
+                }
             }
         }
     }
@@ -219,8 +232,27 @@ struct SearchSuggestionsScreen: View {
         var seen = Set<String>()
         return result
             .filter { seen.insert($0.lowercased()).inserted }
-            .prefix(Self.maximumSuggestions)
+            .prefix(suggestionLimit)
             .map { $0 }
+    }
+
+    /// How many capsules fit under the title and Recents without pushing into
+    /// them.
+    ///
+    /// Five capsules, a Recents card and a keyboard do not all fit on a phone.
+    /// Something has to give, and it is not the Recents card: that card is a
+    /// query the user has already run and is most likely reaching for, and half
+    /// a card reads as a layout bug. Suggestions are the cheap thing to drop —
+    /// each one is a complete query on its own, so four of them work exactly
+    /// like five. Never fewer than one: an empty stack over the field looks like
+    /// the screen failed to load.
+    private var suggestionLimit: Int {
+        guard availableHeight > 0, headerBlockHeight > 0 else {
+            return Self.maximumSuggestions
+        }
+        let room = availableHeight - headerBlockHeight - Self.capsuleStackChrome
+        let fits = Int(room / Self.capsuleRowHeight)
+        return min(Self.maximumSuggestions, max(1, fits))
     }
 
     private func capsule(_ label: String, onTap: @escaping () -> Void) -> some View {

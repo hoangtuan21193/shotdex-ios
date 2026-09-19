@@ -44,6 +44,14 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
     let selectedIds: [String]
     /// Extra scrollable space under the grid (pre-iOS 26 floating chrome).
     let bottomInset: CGFloat
+    /// Extra scrollable space above the grid, for chrome the grid scrolls
+    /// *under* but must not start beneath — Library's filter-token bar. The
+    /// grid ignores the vertical safe area on purpose (photos run edge to edge
+    /// behind the translucent nav bar), and that also discards the inset a
+    /// SwiftUI `safeAreaInset(edge: .top)` would have added, so the bar has to
+    /// be handed to the collection view as a content inset instead. Default 0:
+    /// the album grids carry no such bar.
+    var topInset: CGFloat = 0
     let photoLibrary: PhotoLibraryService
     let onTap: (_ flatIndex: Int, _ item: Item) -> Void
     let onLongPress: (Item) -> Void
@@ -118,6 +126,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         // re-tap itself, via `jumpToNewestToken`.
         collectionView.scrollsToTop = !anchorsBottom
         collectionView.contentInset.bottom = bottomInset
+        collectionView.contentInset.top = topInset
         collectionView.dataSource = coordinator
         collectionView.delegate = coordinator
         collectionView.prefetchDataSource = coordinator
@@ -157,6 +166,18 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         // the full-width selection bar) and shrinks back on exit.
         if collectionView.contentInset.bottom != bottomInset {
             collectionView.contentInset.bottom = bottomInset
+        }
+        // Grows when a filter token appears and drops back to zero when the
+        // last one is cleared.
+        if collectionView.contentInset.top != topInset {
+            let wasAtTop = collectionView.contentOffset.y
+                <= -collectionView.adjustedContentInset.top + 1
+            collectionView.contentInset.top = topInset
+            // A grid already parked at the top must stay there; without this it
+            // keeps its old offset and the first row hides under the new bar.
+            if wasAtTop {
+                collectionView.contentOffset.y = -collectionView.adjustedContentInset.top
+            }
         }
         context.coordinator.apply(self, isInitial: false)
     }

@@ -121,6 +121,8 @@ struct AdvancedSearchBar: View {
     var onEdit: () -> Void
     var onRemoveRule: (UUID) -> Void
     var onClear: () -> Void
+    /// Flips the query between "match all" and "match any" and re-runs it.
+    var onToggleMatchMode: () -> Void
 
     private var rules: [SmartAlbumRule] { query.validRules }
 
@@ -129,13 +131,17 @@ struct AdvancedSearchBar: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     if rules.count > 1 {
-                        Text("Match \(query.matchMode.word)")
-                            .font(.footnote.weight(.medium))
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 7)
-                            .background(Color(.tertiarySystemFill), in: Capsule())
-                            .foregroundStyle(.secondary)
-                            .frame(minHeight: 44)
+                        // A control, not a caption. It used to be dead text that
+                        // said "Match all" and did nothing, while being the one
+                        // thing on the bar that changes what every condition
+                        // below it means — tapping it now switches all/any.
+                        ActiveConditionChip(
+                            label: "Match \(query.matchMode.word)",
+                            onTap: onToggleMatchMode,
+                            isEmphasised: false
+                        )
+                        .accessibilityLabel("Match \(query.matchMode.word) of the conditions")
+                        .accessibilityHint("Switches between matching all and any")
                     }
 
                     ForEach(rules) { rule in
@@ -147,25 +153,25 @@ struct AdvancedSearchBar: View {
                     }
                 }
                 .padding(.leading)
-                .padding(.trailing, 8)
+                .padding(.trailing, ActiveConditionChip.scrollFadeWidth)
                 .padding(.vertical, 6)
             }
+            .fadingTrailingEdge()
 
-            HStack(spacing: 12) {
-                Divider()
-                    .frame(height: 24)
+            HStack(spacing: 16) {
                 Button("Edit", action: onEdit)
                     .font(.footnote.weight(.medium))
-                    .frame(minHeight: 44)
                 Button("Clear", action: onClear)
                     .font(.footnote.weight(.medium))
-                    .frame(minHeight: 44)
             }
-            .padding(.trailing, 12)
+            .tint(.primary)
+            .padding(.horizontal, 14)
+            .frame(minHeight: 34)
+            .glassBackground(Capsule())
+            .padding(.trailing, AppTheme.Size.floatingChromeMargin)
             .fixedSize(horizontal: true, vertical: false)
             .layoutPriority(1)
-            .background(Color(.systemBackground))
         }
-        .background(Color(.systemBackground))
+        // Floating chrome, no band — same reasoning as `FilterTokenBar`.
     }
 }

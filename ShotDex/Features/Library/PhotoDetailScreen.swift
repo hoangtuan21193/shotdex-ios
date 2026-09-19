@@ -549,28 +549,28 @@ struct PhotoDetailScreen: View {
 
     /// Photos-style three-zone action row: Share is isolated at the leading
     /// edge, Delete at the trailing edge, and non-destructive actions share one
-    /// centered glass capsule. The exact center stays fixed on every width.
+    /// centered glass capsule.
+    ///
+    /// One `HStack`, not a centred overlay: the capsule grows with the number of
+    /// actions the photo offers, and layered over the row it simply ran on top
+    /// of Share and Delete — seven controls want 288pt of a 234pt gap on a
+    /// 402pt phone. Laid out in line it cannot overlap, and the capsule still
+    /// lands dead centre because the two round buttons are the same width.
     private func actionBar(_ metadata: PhotoMetadata) -> some View {
-        ZStack {
-            HStack {
-                GlassIconButton(
-                    systemImage: "square.and.arrow.up",
-                    accessibilityLabel: "Share"
-                ) {
-                    showVideoChrome()
-                    share(metadata)
-                }
-                .keyboardShortcut("s", modifiers: .command)
-                Spacer()
-                GlassIconButton(systemImage: "trash", accessibilityLabel: "Delete") {
-                    showVideoChrome()
-                    deleteCurrentPhoto()
-                }
-                .keyboardShortcut(.delete, modifiers: [])
+        HStack(spacing: AppTheme.Spacing.sm) {
+            GlassIconButton(
+                systemImage: "square.and.arrow.up",
+                accessibilityLabel: "Share"
+            ) {
+                showVideoChrome()
+                share(metadata)
             }
+            .keyboardShortcut("s", modifiers: .command)
 
-            GlassPanel(cornerRadius: 28) {
-                HStack(spacing: 8) {
+            Spacer(minLength: AppTheme.Spacing.sm)
+
+            GlassPanel(cornerRadius: AppTheme.Radius.xl) {
+                HStack(spacing: AppTheme.Spacing.xs) {
                     actionBarCenterButton(
                         systemImage: metadata.isFavorite ? "heart.fill" : "heart",
                         accessibilityLabel: metadata.isFavorite ? "Unfavorite" : "Favorite"
@@ -601,16 +601,6 @@ struct PhotoDetailScreen: View {
                                 sourceAlbum: model.sourceAlbum
                             )
                         }
-                        actionBarCenterButton(
-                            systemImage: "arrow.down.right.and.arrow.up.left",
-                            accessibilityLabel: "Compress"
-                        ) {
-                            compressionTarget = PhotoDetailActionTarget(
-                                id: currentAsset.localIdentifier,
-                                asset: currentAsset,
-                                sourceAlbum: model.sourceAlbum
-                            )
-                        }
                     }
                     if isCurrentVideo, let currentAsset {
                         actionBarCenterButton(
@@ -627,13 +617,21 @@ struct PhotoDetailScreen: View {
                     }
                     overflowMenu(metadata)
                 }
-                .padding(.horizontal, 8)
-                .frame(height: 56)
+                .padding(.horizontal, AppTheme.Spacing.xs)
+                .frame(height: AppTheme.Size.darkActionIcon + 2 * AppTheme.Spacing.xs)
             }
+
+            Spacer(minLength: AppTheme.Spacing.sm)
+
+            GlassIconButton(systemImage: "trash", accessibilityLabel: "Delete") {
+                showVideoChrome()
+                deleteCurrentPhoto()
+            }
+            .keyboardShortcut(.delete, modifiers: [])
         }
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, 20)
-        .padding(.bottom, 12)
+        .padding(.horizontal, AppTheme.Size.floatingChromeMargin)
+        .padding(.bottom, AppTheme.Spacing.md)
     }
 
     /// Everything that does not earn a button of its own, in the order Photos
@@ -689,6 +687,20 @@ struct PhotoDetailScreen: View {
                         trimTarget = VideoTrimPresentation(asset: currentAsset)
                     } label: {
                         Label("Trim", systemImage: "scissors")
+                    }
+                }
+                if !isCurrentVideo, let currentAsset {
+                    // "Resize", not "Compress": the Library's selection menu
+                    // and the tile menu both call it that, and the same action
+                    // must read the same everywhere.
+                    Button {
+                        compressionTarget = PhotoDetailActionTarget(
+                            id: currentAsset.localIdentifier,
+                            asset: currentAsset,
+                            sourceAlbum: model.sourceAlbum
+                        )
+                    } label: {
+                        Label("Resize", systemImage: "arrow.down.right.and.arrow.up.left")
                     }
                 }
                 Button {
@@ -852,7 +864,14 @@ struct PhotoDetailScreen: View {
             Image(systemName: systemImage)
                 .font(.system(size: 20, weight: .medium))
                 .foregroundStyle(.white)
-                .frame(width: 48, height: 48)
+                // 40pt is the dark action-bar icon size (DESIGN.md §6). The
+                // minimum lets the row give way on a narrow phone rather than
+                // pushing the capsule into Share and Delete.
+                .frame(
+                    minWidth: 32,
+                    maxWidth: AppTheme.Size.darkActionIcon,
+                    minHeight: AppTheme.Size.darkActionIcon
+                )
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

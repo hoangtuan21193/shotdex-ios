@@ -35,6 +35,9 @@ struct LibraryScreen: View {
     /// Date of the photos under the top of the grid, shown as the screen's
     /// title. Nil before the first layout and while the library is empty.
     @State private var visibleDate: String?
+    /// Measured height of the limited-access banner plus the filter-token bar,
+    /// handed to the grid as its top content inset (see `photoGrid`).
+    @State private var topAccessoryHeight: CGFloat = 0
     @State private var isDeleting = false
     @State private var isPreparingShare = false
     @State private var isDuplicating = false
@@ -346,6 +349,10 @@ struct LibraryScreen: View {
             // translucent nav bar chrome edge-to-edge, matching Album Detail.
             .safeAreaInset(edge: .top, spacing: 0) {
                 topAccessories(model)
+                    // The grid ignores the vertical safe area, so this inset
+                    // never reaches it — its height is forwarded as the grid's
+                    // own top content inset instead.
+                    .measureHeight(into: $topAccessoryHeight)
             }
             .onChange(of: navigation.libraryRetapToken) {
             retapResetCount += 1
@@ -404,7 +411,12 @@ struct LibraryScreen: View {
                         updated.rules.removeAll { $0.id == ruleId }
                         model.advancedQuery = updated.isEmpty ? nil : updated
                     },
-                    onClear: { model.advancedQuery = nil }
+                    onClear: { model.advancedQuery = nil },
+                    onToggleMatchMode: {
+                        var updated = advancedQuery
+                        updated.matchMode = updated.matchMode == .all ? .any : .all
+                        model.advancedQuery = updated
+                    }
                 )
             } else if !model.criteria.isEmpty {
                 FilterTokenBar(
@@ -569,6 +581,7 @@ struct LibraryScreen: View {
             isSelecting: isSelecting,
             selectedIds: selectedIds,
             bottomInset: isSelecting ? navigation.selectionGridInset : bottomChromeInset,
+            topInset: topAccessoryHeight,
             photoLibrary: photoLibrary,
             onTap: { _, item in
                 if isIndexPanelExpanded { setIndexPanelExpanded(false) }

@@ -6,6 +6,17 @@ struct ActiveConditionChip: View {
     let label: String
     var removalAccessibilityLabel: String?
     var onRemove: (() -> Void)?
+    /// A chip that does something other than remove itself (the match-mode
+    /// switch). Mutually exclusive with `onRemove`.
+    var onTap: (() -> Void)?
+    /// Full-strength label. A chip that carries a condition is the content;
+    /// one that carries a setting about the conditions reads a step quieter.
+    var isEmphasised = true
+
+    /// How far the chip row dissolves at its trailing edge, and therefore how
+    /// much room the row leaves after its last chip so that chip can still be
+    /// scrolled out of the fade.
+    static let scrollFadeWidth: CGFloat = 28
 
     var body: some View {
         if let onRemove {
@@ -15,6 +26,11 @@ struct ActiveConditionChip: View {
             .buttonStyle(.plain)
             .accessibilityLabel(removalAccessibilityLabel ?? "Remove \(label)")
             .accessibilityHint("Removes this condition")
+        } else if let onTap {
+            Button(action: onTap) {
+                chipContent(showsRemove: false)
+            }
+            .buttonStyle(.plain)
         } else {
             chipContent(showsRemove: false)
                 .accessibilityLabel(label)
@@ -26,6 +42,7 @@ struct ActiveConditionChip: View {
             Text(label)
                 .font(.footnote)
                 .lineLimit(1)
+                .foregroundStyle(isEmphasised ? Color(.label) : Color(.secondaryLabel))
 
             if showsRemove {
                 Image(systemName: "xmark")
@@ -37,9 +54,36 @@ struct ActiveConditionChip: View {
         .padding(.leading, 12)
         .padding(.trailing, showsRemove ? 10 : 12)
         .padding(.vertical, 7)
-        .background(Color(.secondarySystemFill), in: Capsule())
+        // Glass, not a flat fill: the bar these chips sit in has no background
+        // of its own, so a chip floats directly over the photos and a
+        // translucent system fill all but disappears against a bright one.
+        .glassBackground(Capsule())
         .frame(minHeight: 44)
         .contentShape(Capsule())
+    }
+}
+
+extension View {
+    /// Dissolves the trailing edge of a horizontally scrolling chip row.
+    ///
+    /// The row ends right beside the pinned Edit/Clear capsule, and a chip cut
+    /// off there by a straight edge reads as a chip *hidden behind the buttons*
+    /// — which is what it looked like. A fade reads as a row that keeps going,
+    /// and it is the only affordance a scroll view without a scroll bar has.
+    /// It costs nothing when the chips fit: there is no content at that edge to
+    /// fade out.
+    func fadingTrailingEdge(_ width: CGFloat = ActiveConditionChip.scrollFadeWidth) -> some View {
+        mask {
+            HStack(spacing: 0) {
+                Rectangle()
+                LinearGradient(
+                    colors: [.black, .black.opacity(0)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .frame(width: width)
+            }
+        }
     }
 }
 
@@ -68,29 +112,33 @@ struct FilterTokenBar: View {
                     }
                 }
                 .padding(.leading)
-                .padding(.trailing, 8)
+                .padding(.trailing, ActiveConditionChip.scrollFadeWidth)
                 .padding(.vertical, 6)
             }
+            .fadingTrailingEdge()
 
             if !readOnly {
-                HStack(spacing: 0) {
-                    Divider()
-                        .frame(height: 24)
-                        .padding(.trailing, 12)
-
-                    Button("Clear") {
-                        criteria = .empty
-                    }
-                    .font(.footnote.weight(.medium))
-                    .frame(minHeight: 44)
+                Button("Clear") {
+                    criteria = .empty
                 }
-                .padding(.trailing, 12)
+                .font(.footnote.weight(.medium))
+                .tint(.primary)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 34)
+                .glassBackground(Capsule())
+                .padding(.trailing, AppTheme.Size.floatingChromeMargin)
                 .fixedSize(horizontal: true, vertical: false)
                 .layoutPriority(1)
-                .background(Color(.systemBackground))
             }
         }
-        .background(Color(.systemBackground))
+        // No background. The bar is floating chrome over the grid, like the
+        // toolbar above it: a full-width fill — opaque or glass — draws a band
+        // with a cut edge across the photos, and a second one against the
+        // toolbar's own transparent strip, which is the seam Photos does not
+        // have. The grid keeps its first row clear of the chips through its top
+        // content inset instead (see `LibraryScreen.photoGrid`), and Clear
+        // carries its own glass capsule so it stays legible once photos do
+        // scroll behind it.
     }
 
     private struct FilterToken: Identifiable {
