@@ -27,25 +27,16 @@ protocol PhotoGridDisplayable {
     var pixelHeight: Int? { get }
 }
 
-extension PhotoGridDisplayable {
-    /// Compact, photographer-facing file category for the tile's top-leading
-    /// badge. RAW container extensions are intentionally grouped as "RAW";
-    /// common rendered formats keep their familiar short name.
-    var fileTypeBadgeText: String {
-        let kindBadge = MediaKind(storedValue: mediaType) == .video ? "VIDEO" : "PHOTO"
-
-        guard let filename = originalFilename?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !filename.isEmpty
-        else {
-            return kindBadge
-        }
-
-        let fileExtension = URL(fileURLWithPath: filename).pathExtension.uppercased()
-        guard !fileExtension.isEmpty else {
-            return kindBadge
-        }
-
-        switch fileExtension {
+/// The photographer-facing name for a file format, shared by the grid tile's
+/// badge and the Info panel's per-file sections — one dictionary, so RAW does
+/// not group one way on a tile and another way in a report.
+enum FileTypeBadge {
+    /// RAW container extensions are deliberately grouped as "RAW"; common
+    /// rendered formats keep their familiar short name.
+    static func text(forExtension fileExtension: String) -> String? {
+        let normalized = fileExtension.uppercased()
+        guard !normalized.isEmpty else { return nil }
+        switch normalized {
         case "3FR", "ARW", "CR2", "CR3", "CRW", "DCR", "DNG", "ERF",
              "IIQ", "KDC", "MEF", "MOS", "MRW", "NEF", "NRW", "ORF",
              "PEF", "RAF", "RAW", "RW2", "RWL", "SR2", "SRF", "SRW", "X3F":
@@ -58,8 +49,25 @@ extension PhotoGridDisplayable {
             return "TIFF"
         default:
             // Avoid an unusual/invalid extension expanding across a dense tile.
-            return String(fileExtension.prefix(6))
+            return String(normalized.prefix(6))
         }
+    }
+}
+
+extension PhotoGridDisplayable {
+    /// Compact, photographer-facing file category for the tile's top-leading
+    /// badge.
+    var fileTypeBadgeText: String {
+        let kindBadge = MediaKind(storedValue: mediaType) == .video ? "VIDEO" : "PHOTO"
+
+        guard let filename = originalFilename?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !filename.isEmpty
+        else {
+            return kindBadge
+        }
+
+        let fileExtension = URL(fileURLWithPath: filename).pathExtension
+        return FileTypeBadge.text(forExtension: fileExtension) ?? kindBadge
     }
 }
 

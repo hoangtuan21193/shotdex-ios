@@ -198,8 +198,17 @@ enum AssetMetadataReader {
         ])
     }
 
+    /// One section per file behind the asset, headed by what the file *is*.
+    ///
+    /// "Resource 1 / Resource 2" is PHAssetResource's vocabulary, and a
+    /// photographer looking at a RAW+JPEG pair wants to read "RAW" and
+    /// "JPEG", not count. The type alone is not enough either — both halves
+    /// of that pair are `.photo` — so the format goes in the heading and the
+    /// index only comes back when two headings would otherwise match.
     private static func resourceSections(_ asset: PHAsset) -> [MetadataReportSection] {
-        PHAssetResource.assetResources(for: asset).enumerated().map { index, resource in
+        let resources = PHAssetResource.assetResources(for: asset)
+        let headings = resources.map(resourceHeading)
+        return zip(resources, headings.indices).map { resource, index in
             let size = (resource.value(forKey: "fileSize") as? NSNumber)?.intValue
             let pairs: [(String, String?)] = [
                 ("Original Filename", resource.originalFilename),
@@ -207,8 +216,22 @@ enum AssetMetadataReader {
                 ("UTI", resource.uniformTypeIdentifier),
                 ("File Size", size.flatMap { MetadataFormatter.fileSize($0) }),
             ]
-            return section("Resource \(index + 1)", from: pairs)
+            let heading = headings[index]
+            let duplicates = headings.filter { $0 == heading }.count
+            let ordinal = headings[..<index].filter { $0 == heading }.count + 1
+            return section(duplicates > 1 ? "\(heading) \(ordinal)" : heading, from: pairs)
         }
+    }
+
+    /// `RAW`, `JPEG`, `Paired Video` — the format where the filename gives
+    /// one, the resource's own kind where it does not.
+    private static func resourceHeading(_ resource: PHAssetResource) -> String {
+        let kind = resourceTypeName(resource.type)
+        let ext = URL(fileURLWithPath: resource.originalFilename).pathExtension
+        guard let format = FileTypeBadge.text(forExtension: ext) else { return kind }
+        // "Photo · RAW" reads as a label; "Paired Video · MOV" does not add
+        // anything the kind has not already said.
+        return kind == "Photo" ? format : "\(kind) · \(format)"
     }
 
     private static func usefulFileSection(

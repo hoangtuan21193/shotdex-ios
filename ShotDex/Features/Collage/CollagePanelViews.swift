@@ -69,9 +69,9 @@ struct CollageLayoutPanel: View {
 struct CollagePresetChip: View {
     let preset: CollagePreset
 
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.usesRegularToolChrome) private var usesRegularToolChrome
     private var side: CGFloat {
-        CollageMetrics.templateCellSize(isRegularWidth: horizontalSizeClass == .regular)
+        CollageMetrics.templateCellSize(isRegularWidth: usesRegularToolChrome)
     }
 
     var body: some View {
@@ -358,11 +358,11 @@ struct CollageTemplateThumbnail: View {
     let template: CollageTemplate
     var isSelected: Bool
 
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.usesRegularToolChrome) private var usesRegularToolChrome
     /// A template tile is a picture of a layout, not a glyph — at 52pt on a
     /// 1032pt stage the layout it is offering cannot be read.
     private var side: CGFloat {
-        CollageMetrics.templateCellSize(isRegularWidth: horizontalSizeClass == .regular)
+        CollageMetrics.templateCellSize(isRegularWidth: usesRegularToolChrome)
     }
     private var inner: CGFloat { side - 10 }
 

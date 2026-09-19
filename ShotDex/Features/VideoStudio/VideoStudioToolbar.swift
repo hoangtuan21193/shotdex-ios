@@ -7,8 +7,6 @@ struct VideoStudioToolbar: View {
     @Bindable var model: VideoStudioModel
     let actions: VideoInspectorActions
 
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 4) {

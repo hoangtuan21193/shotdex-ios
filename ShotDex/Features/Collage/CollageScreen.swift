@@ -18,7 +18,6 @@ struct CollagePresentation: Identifiable {
 /// Export) stays put. The screen is a thin shell — state lives in
 /// `CollageEditorModel`, panel content in `CollagePanelViews`.
 struct CollageScreen: View {
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dismiss) private var dismiss
     @Environment(AppDependencies.self) private var dependencies
 
@@ -180,18 +179,34 @@ struct CollageScreen: View {
         // way the photo editor's sidebar already does — and the canvas keeps
         // the whole height rather than giving a fifth of it to the controls.
         GeometryReader { proxy in
+            // One answer for the whole tool: the layout switch below, the
+            // command buttons, the canvas cap and the template tiles all read
+            // the same measured window instead of `horizontalSizeClass`,
+            // which turns `.regular` about 20pt earlier and made the two
+            // disagree in the band between.
+            let regularChrome = proxy.size.width >= EditorLayoutMetrics.sidebarMinCanvasWidth
+                && proxy.size.height >= EditorLayoutMetrics.sidebarMinCanvasHeight
+
             // Measured on the window, like the editor's sidebar: an iPad
             // Split View half is `.regular` at ~500pt, and a 320pt inspector
             // there would leave the canvas narrower than it is on a phone.
-            if proxy.size.width >= EditorLayoutMetrics.sidebarMinCanvasWidth {
-                HStack(spacing: 0) {
-                    canvasColumn(model, includesPanel: false)
-                    inspector(model)
+            // Height matters too: a Stage Manager window can be 900 wide and
+            // 450 tall, where a side inspector leaves a canvas with no room
+            // to be a canvas — the same pair of floors the photo editor's
+            // sidebar uses.
+            Group {
+                if regularChrome {
+                    HStack(spacing: 0) {
+                        canvasColumn(model, includesPanel: false)
+                        inspector(model)
+                    }
+                    .ignoresSafeArea(.container, edges: .top)
+                } else {
+                    phoneEditor(model)
                 }
-                .ignoresSafeArea(.container, edges: .top)
-            } else {
-                phoneEditor(model)
             }
+            .environment(\.usesRegularToolChrome, regularChrome)
+            .background { keyboardShortcuts(model) }
         }
     }
 
@@ -299,6 +314,26 @@ struct CollageScreen: View {
     }
 
     /// Leaves the editor — straight out if untouched, via a discard prompt if not.
+    /// The three bindings a desk user reaches for. Zero-size buttons in a
+    /// background, the shape the photo editor and the Video Studio both use:
+    /// a shortcut on a visible control only fires while that control is in
+    /// the hierarchy, and the undo pair lives inside a nested view.
+    private func keyboardShortcuts(_ model: CollageEditorModel) -> some View {
+        ZStack {
+            Button("Undo") { withAnimation(EditorTheme.animation) { model.undo() } }
+                .keyboardShortcut("z", modifiers: .command)
+                .disabled(!model.canUndo)
+            Button("Redo") { withAnimation(EditorTheme.animation) { model.redo() } }
+                .keyboardShortcut("z", modifiers: [.command, .shift])
+                .disabled(!model.canRedo)
+            Button("Back") { close(model) }
+                .keyboardShortcut(.cancelAction)
+        }
+        .opacity(0)
+        .frame(width: 0, height: 0)
+        .accessibilityHidden(true)
+    }
+
     private func close(_ model: CollageEditorModel) {
         if model.hasEdits {
             isDiscardConfirmationPresented = true
@@ -431,14 +466,15 @@ struct CollageCircleGlyph: View {
     var isActive: Bool = false
     var isEnabled: Bool = true
 
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.usesRegularToolChrome) private var usesRegularToolChrome
     private var side: CGFloat {
-        CollageMetrics.commandButtonSize(isRegularWidth: horizontalSizeClass == .regular)
+        CollageMetrics.commandButtonSize(isRegularWidth: usesRegularToolChrome)
     }
 
     var body: some View {
         Image(systemName: systemImage)
-            .font(.system(size: horizontalSizeClass == .regular ? 18 : 15, weight: .medium))
+            .font(.system(size: usesRegularToolChrome ? 18 : 15, weight: .medium))
+            .hoverEffect(.lift)
             .foregroundStyle(glyphColor)
             .frame(width: side, height: side)
             .background(isActive ? EditorTheme.accent : Color.clear, in: Circle())

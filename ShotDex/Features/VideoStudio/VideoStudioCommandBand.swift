@@ -15,10 +15,10 @@ struct VideoStudioTopBand: View {
     /// the bottom is what let the contextual panel cover it.
     var projectActions: VideoInspectorActions?
 
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.usesRegularToolChrome) private var usesRegularToolChrome
     private var size: CGFloat {
         EditorLayoutMetrics.editorFloatingCommandButtonSize(
-            isRegularWidth: horizontalSizeClass == .regular
+            isRegularWidth: usesRegularToolChrome
         )
     }
     private let inset = EditorLayoutMetrics.editorFloatingCommandSideInset
@@ -211,8 +211,7 @@ private struct VideoCommandCell: View {
     /// The band beside it and the rail below it both grew on a big screen;
     /// this row sat in the same feature at phone size, which is how one
     /// screen ends up with two ideas of how big a tool cell is.
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    private var isRegularWidth: Bool { horizontalSizeClass == .regular }
+    @Environment(\.usesRegularToolChrome) private var isRegularWidth
 
     private var color: Color {
         switch command.tint {

@@ -37,6 +37,12 @@ struct RootTabView: View {
     @SceneStorage("scene.selectedTab") private var restoredTab = ""
     @State private var hasRestoredScene = false
 
+    /// This window's own action coordinator. Per-scene for the same reason
+    /// `restoredTab` is: the coordinator holds which sheet is up, and two
+    /// windows sharing one instance means a sheet raised in this window is
+    /// bound to state the other window is also hosting.
+    @State private var assetActions: AssetActionsCoordinator?
+
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(\.scenePhase) private var scenePhase
 
@@ -86,6 +92,7 @@ struct RootTabView: View {
     private func restoreScene() {
         guard !hasRestoredScene else { return }
         hasRestoredScene = true
+        assetActions = dependencies.makeAssetActions()
         guard let tab = AppTab(rawValue: restoredTab), tab != .search else { return }
         navigation.selectedTab = tab
         mountedLegacyTabs.insert(tab)
@@ -102,8 +109,18 @@ struct RootTabView: View {
     /// being built and no `.onChange` is installed yet).
     /// Applies a request left by a Shortcut, a Siri phrase or a Spotlight
     /// result, then clears it so it is acted on once.
+    /// A Shortcut, a Siri phrase or a Spotlight tap leaves one request in a
+    /// process-wide slot, and every open window watches it. Only a window
+    /// that is actually on screen may take it: a backgrounded one used to be
+    /// able to consume the request first and navigate where nobody is
+    /// looking, leaving the visible window on whatever it was showing.
+    ///
+    /// This is not a complete answer — iPadOS can hold two windows active at
+    /// once in Stage Manager, and the intent carries no scene of its own to
+    /// route by — but it removes the case where the window that wins is not
+    /// even visible.
     private func drainPendingIntent(_ request: IntentRouter.Request?) {
-        guard let request else { return }
+        guard let request, scenePhase == .active else { return }
         navigation.handle(request, albumsPath: &albumsPath)
         IntentRouter.shared.pending = nil
     }
@@ -210,7 +227,7 @@ struct RootTabView: View {
         // Hosts the Adjust Date & Time / Adjust Location sheets and the error
         // alert for every grid, so the four selecting screens don't each carry
         // their own copy.
-        .assetActionHost(dependencies.assetActions)
+        .assetActionHost(assetActions ?? dependencies.assetActions)
         .environment(navigation)
         .task {
             if libraryModel == nil {
@@ -294,7 +311,7 @@ struct RootTabView: View {
             .animation(.snappy(duration: 0.25), value: navigation.selectionBar != nil)
             .settingsSheet(isPresented: $navigation.isSettingsSheetPresented, libraryModel: libraryModel)
             .keepScreenAwakeWhileIndexing(libraryModel: libraryModel)
-            .assetActionHost(dependencies.assetActions)
+            .assetActionHost(assetActions ?? dependencies.assetActions)
             .environment(navigation)
             .task {
                 if libraryModel == nil {

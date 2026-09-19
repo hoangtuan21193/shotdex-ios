@@ -40,8 +40,14 @@ final class AppDependencies {
     /// The opt-in people-and-pets pass. Never started by the app itself —
     /// see `SubjectScanPipeline`.
     let subjectScan: SubjectScanModel
-    /// Shared favorite / hide / capture-date / location / copy actions and the
-    /// sheets they raise. Hosted by `RootTabView` and by the detail viewer.
+    /// Favorite / hide / capture-date / location / copy actions and the
+    /// sheets they raise, for anything outside a window's own root — the
+    /// detail viewer's sibling below, and previews.
+    ///
+    /// **A window's root builds its own** with `makeAssetActions()`: the
+    /// coordinator carries presentation state, and one instance hosted by two
+    /// windows means an Adjust Date sheet raised in one of them is bound to
+    /// state the other is also hosting.
     let assetActions: AssetActionsCoordinator
     /// A second, independent coordinator for the detail viewer.
     ///
@@ -50,6 +56,15 @@ final class AppDependencies {
     /// the root's sheet wins by tearing the cover down. Only one viewer exists
     /// at a time, so one extra instance covers it.
     let viewerAssetActions: AssetActionsCoordinator
+    /// A coordinator of its own for one window's root. See `assetActions`.
+    func makeAssetActions() -> AssetActionsCoordinator {
+        AssetActionsCoordinator(
+            photoLibrary: photoLibrary,
+            metadataStore: metadataStore,
+            recentActivity: recentActivity
+        )
+    }
+
     /// Publishes the library's collections (smart albums, cameras, lenses) to
     /// Spotlight. Individual photos are never indexed — see the type's note.
     let spotlight: SpotlightIndexer

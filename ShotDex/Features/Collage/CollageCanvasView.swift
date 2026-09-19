@@ -16,7 +16,7 @@ import ShotDexKit
 /// The lifted-cell shadow/tilt is the *only* signal separating "carrying the
 /// whole cell" from "sliding the photo inside it".
 struct CollageCanvasView: View {
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.usesRegularToolChrome) private var usesRegularToolChrome
     @Bindable var model: CollageEditorModel
     let onFillRequest: (Int) -> Void
     let onEditText: (PhotoOverlay) -> Void
@@ -84,7 +84,7 @@ struct CollageCanvasView: View {
         var width = min(available.width, available.height * ratio)
         width = min(
             width,
-            CollageMetrics.maxFrameWidth(isRegularWidth: horizontalSizeClass == .regular)
+            CollageMetrics.maxFrameWidth(isRegularWidth: usesRegularToolChrome)
         )
         return CGSize(width: width, height: width / ratio)
     }
@@ -489,6 +489,10 @@ struct CollageCanvasView: View {
             Color.clear
                 .frame(width: isVertical ? 24 : length, height: isVertical ? length : 24)
                 .contentShape(Rectangle())
+                // An invisible drag strip is invisible to a pointer too: on a
+                // trackpad the only way to find the seam was to guess at it.
+                // The editor's sidebar handle already highlights on hover.
+                .hoverEffect(.highlight)
                 .position(center)
                 .gesture(
                     DragGesture(minimumDistance: 2, coordinateSpace: .named("collageCanvas"))

@@ -40,9 +40,16 @@ struct VideoStudioScreen: View {
     @State private var newOverlayID: UUID?
     @State private var stickerImages: [UUID: CGImage] = [:]
     /// How much taller than its lanes the user has dragged the timeline.
-    /// Persisted: a divider the app forgets is a divider the user has to set
-    /// again every time they open a project.
-    @AppStorage(SettingsKeys.videoTimelineExtraHeight) private var timelineExtraHeight = 0.0
+    ///
+    /// Persisted, but read once into scene-local state rather than bound with
+    /// `@AppStorage`: a live binding pushes every change to every observer,
+    /// so on an iPad with two windows open dragging one window's divider
+    /// resized the other window's timeline under a user who was not touching
+    /// it. It is written back when the drag ends, so the next window to open
+    /// still starts where the last one left it.
+    @State private var timelineExtraHeight = UserDefaults.standard.double(
+        forKey: SettingsKeys.videoTimelineExtraHeight
+    )
     /// The drag in progress, added to the stored value while a finger is down.
     @State private var timelineDragOffset: CGFloat = 0
     @StateObject private var importedMusic = ImportedMusicStore()
@@ -209,7 +216,12 @@ struct VideoStudioScreen: View {
             // The band spans the Dynamic Island: grow it to the device's top safe
             // inset (≈59 on Face-ID iPhones) so its 11pt-inset row lands level with
             // the island and the preview starts below it — mirrors the photo editor.
+            // Wide *and* tall enough. A Stage Manager window can be 900×450,
+            // where a permanent rail and a top band carrying Back and Export
+            // take height the stage has none of — the same pair of floors the
+            // photo editor's sidebar uses.
             let usesRail = proxy.size.width >= EditorLayoutMetrics.sidebarMinCanvasWidth
+                && proxy.size.height >= EditorLayoutMetrics.sidebarMinCanvasHeight
             let bandHeight = VideoStudioMetrics.topBandHeight(
                 usesToolRail: usesRail,
                 safeAreaTop: proxy.safeAreaInsets.top
@@ -349,6 +361,9 @@ struct VideoStudioScreen: View {
             }
             .background { keyboardShortcuts(model) }
             .environment(\.videoLaneMetrics, lanes)
+            // The command cells and the band size off the same measured
+            // window the rail and the inspector do, not off the size class.
+            .environment(\.usesRegularToolChrome, usesRail)
             .animation(EditorTheme.animation, value: model.presentsSheet)
             .ignoresSafeArea(.container, edges: [.top, .bottom])
             .ignoresSafeArea(.keyboard, edges: .bottom)
@@ -418,6 +433,10 @@ struct VideoStudioScreen: View {
                         timelineExtraHeight = Double(
                             min(max(range.lowerBound, CGFloat(timelineExtraHeight) - value.translation.height), range.upperBound)
                         )
+                        UserDefaults.standard.set(
+                            timelineExtraHeight,
+                            forKey: SettingsKeys.videoTimelineExtraHeight
+                        )
                         timelineDragOffset = 0
                     }
             )
@@ -428,6 +447,10 @@ struct VideoStudioScreen: View {
                 let step: CGFloat = 40
                 let next = CGFloat(timelineExtraHeight) + (direction == .increment ? step : -step)
                 timelineExtraHeight = Double(min(max(range.lowerBound, next), range.upperBound))
+                UserDefaults.standard.set(
+                    timelineExtraHeight,
+                    forKey: SettingsKeys.videoTimelineExtraHeight
+                )
             }
     }
 
