@@ -40,7 +40,6 @@ struct LibraryScreen: View {
     @State private var multiEditPresentation: MultiEditPresentation?
     @State private var pasteEditsPresentation: PasteEditsPresentation?
     @State private var stackPresentation: PhotoStackPresentation?
-    /// Bumped on every culling write so the grid re-reads its badges.
     /// Measured height of the limited-access banner plus the filter-token bar,
     /// handed to the grid as its top content inset (see `photoGrid`).
     @State private var topAccessoryHeight: CGFloat = 0
@@ -251,9 +250,6 @@ struct LibraryScreen: View {
         stackPresentation = PhotoStackPresentation(assets: assets)
     }
 
-    /// Runs a culling write and surfaces a failure the same way the other
-    /// selection actions do. Culling is the one thing here the user typed, so a
-    /// silent failure would lose work with no trace.
     /// Writes the copied look onto every selected photo without opening the
     /// editor: cull to the keepers, paste, done. The clipboard persists across
     /// launches, so yesterday's look is still there.
@@ -545,21 +541,6 @@ struct LibraryScreen: View {
     /// the selection bar.
     /// One capture kind on or off. Several on means "any of these", which is
     /// how the rest of the multi-selects behave.
-    /// One flag's membership in the filter, as a toggle. Several selected
-    /// reads as "any of these", like the capture-kind toggles.
-    private func flagBinding(_ model: LibraryModel, flag: PhotoFlag) -> Binding<Bool> {
-        Binding(
-            get: { model.criteria.flags.contains(flag) },
-            set: { isOn in
-                if isOn {
-                    model.criteria.flags.insert(flag)
-                } else {
-                    model.criteria.flags.remove(flag)
-                }
-            }
-        )
-    }
-
     private func mediaSubtypeBinding(
         _ model: LibraryModel,
         subtype: PhotoMediaSubtype
@@ -671,8 +652,6 @@ struct LibraryScreen: View {
             selectedIds: selectedIds,
             bottomInset: isSelecting ? navigation.selectionGridInset : bottomChromeInset,
             topInset: topAccessoryHeight,
-            cullStates: dependencies.cullStore.states,
-            cullVersion: dependencies.cullStore.version,
             photoLibrary: photoLibrary,
             onTap: { _, item in
                 if isIndexPanelExpanded { setIndexPanelExpanded(false) }
@@ -1170,37 +1149,6 @@ struct LibraryScreen: View {
                 }
                 Toggle(isOn: mediaKindBinding(model, kind: .video)) {
                     Label("Videos Only", systemImage: "video")
-                }
-                // Culling, in two submenus for the same reason capture kind
-                // is one: six rating rows and three flag rows inline would
-                // bury everything under them.
-                Menu {
-                    ForEach(PhotoFlag.allCases) { flag in
-                        Toggle(isOn: flagBinding(model, flag: flag)) {
-                            Label(flag.title, systemImage: flag.systemImage)
-                        }
-                    }
-                } label: {
-                    Label("Flag", systemImage: "flag")
-                }
-                Menu {
-                    ForEach(Array(PhotoCullState.ratingRange).reversed(), id: \.self) { rating in
-                        Toggle(isOn: Binding(
-                            get: { model.criteria.minRating == rating },
-                            // Tapping the level already on clears it, the way
-                            // the star row in the editor does.
-                            set: { model.criteria.minRating = $0 ? rating : 0 }
-                        )) {
-                            Label(
-                                rating == 0
-                                    ? "Any Rating"
-                                    : String(repeating: "★", count: rating) + " and up",
-                                systemImage: rating == 0 ? "star.slash" : "star.fill"
-                            )
-                        }
-                    }
-                } label: {
-                    Label("Rating", systemImage: "star")
                 }
                 // A submenu, unlike the rows above: eight capture kinds would
                 // bury Advanced Filter under a wall of toggles.

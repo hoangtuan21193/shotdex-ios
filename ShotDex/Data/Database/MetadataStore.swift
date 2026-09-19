@@ -114,17 +114,6 @@ struct MetadataStore: Sendable {
         guard !ids.isEmpty else { return }
         _ = try database.writer.write { db in
             try PhotoMetadata.deleteAll(db, keys: ids)
-            // The culling pass keeps its own table, and every screen that
-            // deletes photos calls *this* sweep — eight call sites, none of
-            // which remembered `CullStore.deleteAssets`. Pruning it in the
-            // same transaction is the only version that cannot be forgotten
-            // by the ninth. Rate-reject-delete is precisely the workflow the
-            // table exists for, so its orphans are the ones that accumulate.
-            let placeholders = Array(repeating: "?", count: ids.count).joined(separator: ", ")
-            try db.execute(
-                sql: "DELETE FROM photo_cull WHERE assetId IN (\(placeholders))",
-                arguments: StatementArguments(ids)
-            )
         }
     }
 

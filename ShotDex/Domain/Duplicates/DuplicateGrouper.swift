@@ -19,7 +19,11 @@ struct HashedPhoto: Hashable, Sendable, Identifiable {
     }
 }
 
-/// How alike two photos must be to land in the same group.
+/// What the Duplicates screen is looking for.
+///
+/// The first two are thresholds on the same question — how alike are these two
+/// pictures. `series` asks a different one, and answers it with time as well as
+/// likeness, so it is not simply a third notch on the same dial.
 enum DuplicateStrictness: String, CaseIterable, Sendable, Identifiable {
     /// Same hash and same pixel dimensions — byte-for-byte copies and
     /// re-saves of the same frame.
@@ -27,8 +31,23 @@ enum DuplicateStrictness: String, CaseIterable, Sendable, Identifiable {
     /// Hashes within `similarMaxDistance` bits — resizes, re-exports, crops
     /// of a few percent, burst neighbours.
     case similar
+    /// A run of frames of one moment: shot close together in time, of a scene
+    /// that stayed recognisably the same. The pictures are *not* copies of each
+    /// other — the point is the pose that changed between them — so this mode
+    /// finds what the other two are built to ignore.
+    case series
 
     var id: String { rawValue }
+
+    /// Picker label. Driven off `allCases`, so a mode added here cannot be
+    /// forgotten in the segmented control.
+    var title: String {
+        switch self {
+        case .exact: "Exact"
+        case .similar: "Similar"
+        case .series: "Series"
+        }
+    }
 
     /// Largest Hamming distance still treated as "the same picture" in the
     /// `similar` mode. 10 of 64 bits is the usual dHash working threshold:
@@ -36,11 +55,32 @@ enum DuplicateStrictness: String, CaseIterable, Sendable, Identifiable {
     /// JPEG re-encode or a modest resize costs.
     static let similarMaxDistance = 10
 
+    /// Seconds allowed between one frame and the next before the run is over.
+    /// 30 covers the pause where somebody changes pose or the photographer
+    /// says something, without letting a whole afternoon in one place collapse
+    /// into a single group.
+    static let seriesMaxGap = 30
+
+    /// How far apart two *consecutive* frames of a series may be. Looser than
+    /// `similarMaxDistance` on purpose: the subject is supposed to have moved.
+    /// 20 of 64 bits still sits well below the ~32 two unrelated pictures
+    /// average, and the 30-second gap is doing most of the work anyway.
+    static let seriesMaxDistance = 20
+
+    /// Two frames 20 seconds apart is an ordinary thing to shoot; listing every
+    /// such pair would bury the runs that are actually a series.
+    static let seriesMinCount = 3
+
     var maxDistance: Int {
         switch self {
         case .exact: 0
         case .similar: Self.similarMaxDistance
+        case .series: Self.seriesMaxDistance
         }
+    }
+
+    var minimumGroupSize: Int {
+        self == .series ? Self.seriesMinCount : 2
     }
 }
 
@@ -73,6 +113,7 @@ struct DuplicateGroup: Identifiable, Equatable, Sendable {
 enum DuplicateGrouper {
     static func groups(from photos: [HashedPhoto], strictness: DuplicateStrictness) -> [DuplicateGroup] {
         guard photos.count > 1 else { return [] }
+        if strictness == .series { return seriesGroups(from: photos) }
 
         var parent = Array(0..<photos.count)
         func find(_ index: Int) -> Int {
@@ -101,9 +142,10 @@ enum DuplicateGrouper {
         var representativeByHash: [UInt64: Int] = [:]
         var firstByExactKey: [ExactKey: Int] = [:]
         for (index, photo) in photos.enumerated() {
+            // `.series` never reaches this pass — it returned above.
             let key = switch strictness {
             case .exact: ExactKey(bits: photo.hash.bits, width: photo.width, height: photo.height)
-            case .similar: ExactKey(bits: photo.hash.bits, width: nil, height: nil)
+            case .similar, .series: ExactKey(bits: photo.hash.bits, width: nil, height: nil)
             }
             if let first = firstByExactKey[key] {
                 union(first, index)
@@ -147,17 +189,73 @@ enum DuplicateGrouper {
         for index in photos.indices {
             membersByRoot[find(index), default: []].append(photos[index])
         }
-        return assemble(Array(membersByRoot.values))
+        return assemble(Array(membersByRoot.values), strictness: strictness)
     }
 
-    /// Turns raw member sets into ordered groups: singletons dropped, members
-    /// best-first, groups newest-first. Shared by the grouping pass and by the
-    /// cache read-back, so a cached group is ordered exactly like a fresh one.
-    static func assemble(_ memberSets: [[HashedPhoto]]) -> [DuplicateGroup] {
-        memberSets
-            .filter { $0.count > 1 }
-            .map { DuplicateGroup(members: $0.sorted(by: keepFirst)) }
+    /// Runs of frames of one moment, in the order they were taken.
+    ///
+    /// Sorted by capture time and cut wherever the next frame is too late or
+    /// too different from **the one before it**. Chaining neighbour to
+    /// neighbour rather than everything to a group representative is what lets
+    /// a series drift: the first pose and the last may share very little, and
+    /// they still belong to the same run as long as every step between them was
+    /// small. That is also why this cannot reuse the union-find pass above,
+    /// which would happily join two runs that merely look alike hours apart.
+    ///
+    /// A photo with no capture date is left out rather than guessed at — with
+    /// no time there is nothing to chain it to.
+    static func seriesGroups(from photos: [HashedPhoto]) -> [DuplicateGroup] {
+        let timed = photos
+            .filter { $0.creationDate != nil }
+            .sorted { lhs, rhs in
+                let left = lhs.creationDate ?? 0, right = rhs.creationDate ?? 0
+                return left == right ? lhs.assetId < rhs.assetId : left < right
+            }
+        guard timed.count >= DuplicateStrictness.seriesMinCount else { return [] }
+
+        var runs: [[HashedPhoto]] = []
+        var current: [HashedPhoto] = [timed[0]]
+        for photo in timed.dropFirst() {
+            let previous = current[current.count - 1]
+            let gap = (photo.creationDate ?? 0) - (previous.creationDate ?? 0)
+            let distance = (photo.hash.bits ^ previous.hash.bits).nonzeroBitCount
+            if gap <= DuplicateStrictness.seriesMaxGap,
+               distance <= DuplicateStrictness.seriesMaxDistance {
+                current.append(photo)
+            } else {
+                runs.append(current)
+                current = [photo]
+            }
+        }
+        runs.append(current)
+        return assemble(runs, strictness: .series)
+    }
+
+    /// Turns raw member sets into ordered groups: sets too small for the mode
+    /// dropped, members ordered the way that mode is read, groups newest-first.
+    /// Shared by the grouping pass and by the cache read-back, so a cached
+    /// group is ordered exactly like a fresh one.
+    ///
+    /// A duplicate group is read best-first — the copy worth keeping leads it.
+    /// A series is read **in the order it was shot**, because the thing being
+    /// judged is how the pose changed from one frame to the next, and a run
+    /// sorted by file size is not a run any more.
+    static func assemble(
+        _ memberSets: [[HashedPhoto]],
+        strictness: DuplicateStrictness
+    ) -> [DuplicateGroup] {
+        let order: (HashedPhoto, HashedPhoto) -> Bool =
+            strictness == .series ? oldestFirst : keepFirst
+        return memberSets
+            .filter { $0.count >= strictness.minimumGroupSize }
+            .map { DuplicateGroup(members: $0.sorted(by: order)) }
             .sorted(by: groupOrder)
+    }
+
+    /// Capture order, for a series.
+    static func oldestFirst(_ a: HashedPhoto, _ b: HashedPhoto) -> Bool {
+        let left = a.creationDate ?? .max, right = b.creationDate ?? .max
+        return left == right ? a.assetId < b.assetId : left < right
     }
 
     private struct BucketKey: Hashable {

@@ -52,13 +52,6 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
     /// be handed to the collection view as a content inset instead. Default 0:
     /// the album grids carry no such bar.
     var topInset: CGFloat = 0
-    /// Picks, rejects and ratings for the photos on screen, by asset id. Only
-    /// culled photos have an entry — the table holds nothing for the rest —
-    /// so this is small even for a library of tens of thousands.
-    var cullStates: [String: PhotoCullState] = [:]
-    /// Bumped when `cullStates` changes, so visible tiles re-render without
-    /// the grid diffing a dictionary on every SwiftUI update.
-    var cullVersion: Int = 0
     /// Photos' aspect-ratio grid: tiles keep the photo's shape and each row
     /// fills the width. Off is the square grid.
     ///
@@ -229,7 +222,6 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         }
         private var appliedContentVersion: Int?
         private var appliedContentRefreshVersion: Int?
-        private var appliedCullVersion: Int?
         private var appliedTrailingFooterText: String?
         /// List owners bump `contentVersion` for same-count identity/order
         /// changes. Album paging uses a stable version but changes count, so the
@@ -406,9 +398,6 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 // place. No reloadData/anchor, so the scroll spot is kept.
                 reconfigureVisibleCells(collectionView)
             }
-            if let applied = appliedCullVersion, applied != newParent.cullVersion {
-                reconfigureVisibleCells(collectionView)
-            }
             if gridLayout?.showsAspectTiles != newParent.showsAspectTiles {
                 gridLayout?.showsAspectTiles = newParent.showsAspectTiles
                 // Cells ask for a rendition shaped like their frame, so the
@@ -416,7 +405,6 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 collectionView.layoutIfNeeded()
                 reconfigureVisibleCells(collectionView)
             }
-            appliedCullVersion = newParent.cullVersion
             appliedContentRefreshVersion = newParent.contentRefreshVersion
             appliedTrailingFooterText = newParent.trailingFooterText
             if footerChanged { syncLayoutMetrics() }
@@ -986,7 +974,6 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 isSelected: appliedSelectedIds.contains(item.assetId),
                 photoLibrary: parent.photoLibrary,
                 displayOptions: displayOptions,
-                cullState: parent.cullStates[item.assetId],
                 lazyMetadataProvider: parent.lazyMetadataProvider
             )
         }
@@ -1921,9 +1908,6 @@ final class PhotoGridCell: UICollectionViewCell {
     /// Favorite / Live Photo / Portrait / RAW-pair status glyphs, as Photos
     /// stamps on a tile. Sits bottom-left, clear of the metadata line's text.
     private let statusBadges = UIStackView()
-    /// Pick / reject / rating for this tile, set by `configure` before the
-    /// status glyphs are built.
-    private var cullState: PhotoCullState?
     private let selectionBorder = UIView()
     private let selectionBadge = UIImageView()
 
@@ -2076,7 +2060,6 @@ final class PhotoGridCell: UICollectionViewCell {
         badgeFetchTask?.cancel()
         badgeFetchTask = nil
         configuredAssetId = nil
-        cullState = nil
         fileTypeBadge.text = nil
         fileTypeBadge.isHidden = true
         accessibilityMetadataLine = nil
@@ -2092,10 +2075,8 @@ final class PhotoGridCell: UICollectionViewCell {
         isSelected: Bool,
         photoLibrary: PhotoLibraryService,
         displayOptions: GridMetadataDisplayOptions,
-        cullState: PhotoCullState? = nil,
         lazyMetadataProvider: ((String) async -> (any PhotoGridDisplayable)?)? = nil
     ) {
-        self.cullState = cullState
         self.photoLibrary = photoLibrary
         configuredAssetId = item.assetId
         badgeFetchTask?.cancel()
@@ -2191,9 +2172,6 @@ final class PhotoGridCell: UICollectionViewCell {
             statusBadges.removeArrangedSubview(view)
             view.removeFromSuperview()
         }
-        // The cull marks lead the row: they are the one thing in it the user
-        // put there, and the only one they scan a contact sheet for.
-        addCullBadges()
         guard let asset else {
             statusBadges.isHidden = statusBadges.arrangedSubviews.isEmpty
             return
@@ -2228,35 +2206,6 @@ final class PhotoGridCell: UICollectionViewCell {
         }
         statusBadges.isHidden = false
         setNeedsLayout()
-    }
-
-    /// Flag glyph and a compact "★3" for the rating. Stars are a count, not
-    /// five separate glyphs: five stars is wider than a dense tile and the
-    /// number is what the eye is reading anyway.
-    private func addCullBadges() {
-        guard let cullState, !cullState.isEmpty else { return }
-        let configuration = UIImage.SymbolConfiguration(pointSize: 10, weight: .semibold)
-        if cullState.flag != .unflagged {
-            let view = UIImageView(
-                image: UIImage(systemName: cullState.flag == .picked ? "flag.fill" : "xmark.bin",
-                               withConfiguration: configuration)
-            )
-            view.tintColor = cullState.flag == .picked
-                ? AppAccent.uiColor
-                : .systemRed
-            view.contentMode = .center
-            Self.applyGlyphShadow(to: view)
-            statusBadges.addArrangedSubview(view)
-        }
-        if cullState.rating > 0 {
-            let label = UILabel()
-            label.text = "★\(cullState.rating)"
-            label.font = .systemFont(ofSize: 10, weight: .bold)
-            label.textColor = AppAccent.uiColor
-            Self.applyGlyphShadow(to: label)
-            statusBadges.addArrangedSubview(label)
-        }
-        statusBadges.isHidden = false
     }
 
     /// A hairline shadow keeps a light glyph readable on a pale photo — the

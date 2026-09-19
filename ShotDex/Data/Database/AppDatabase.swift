@@ -329,6 +329,81 @@ final class AppDatabase: Sendable {
             try db.create(index: "photo_cull_flag", on: "photo_cull", columns: ["flag"])
         }
 
+        // The pick/reject flag is gone: a rating and PhotoKit's favorite
+        // already answered "is this one good", and a third axis over the same
+        // judgement only widened Compare and the viewer menu.
+        //
+        // Three things have to happen together, or a library that used flags
+        // comes back wrong:
+        //
+        // 1. Rows that carried *only* a flag are now empty — `photo_cull`'s
+        //    contract is that a row means "the user touched this photo", and
+        //    `culledCount()` counts rows. They are deleted before the column
+        //    goes, not left as rating-0 ghosts.
+        // 2. The column and its index are dropped.
+        // 3. Smart albums holding a `flag` rule are rewritten without it.
+        //    `RuleField` no longer decodes `"flag"`, and `SmartAlbum`'s decoder
+        //    falls back to an *empty* query when the JSON will not parse — an
+        //    empty query matches the whole library, so leaving the rule in
+        //    place would silently turn "my picks" into "everything". Dropping
+        //    the rule widens the album by one condition; turning it into the
+        //    entire library does not.
+        migrator.registerMigration("v15-dropCullFlag") { db in
+            try db.execute(sql: "DELETE FROM photo_cull WHERE rating = 0")
+            try db.drop(index: "photo_cull_flag")
+            try db.alter(table: "photo_cull") { t in
+                t.drop(column: "flag")
+            }
+            try stripSmartAlbumRules(db, field: "flag")
+        }
+
+        // Star ratings are gone too, and with them the whole culling table.
+        //
+        // The flag went first because a rating and PhotoKit's favorite already
+        // answered the same question; what is left is that a rating answers it
+        // a *third* way, on a scale nobody reconciles with the heart. ShotDex
+        // keeps the one bit Photos keeps, and Compare does the choosing.
+        //
+        // Same three-part shape as `v15`, minus the column surgery: the table
+        // goes whole, and the smart albums that referenced it are rewritten so
+        // a stale `rating` rule cannot collapse an album into "match
+        // everything" (see `v15` for why that is the failure mode).
+        migrator.registerMigration("v16-dropCull") { db in
+            try db.drop(table: "photo_cull")
+            try stripSmartAlbumRules(db, field: "rating")
+        }
+
         return migrator
+    }
+}
+
+/// Rewrites every stored smart album, dropping rules that name a `RuleField`
+/// this build no longer has. Runs inside the migration that removes the field.
+///
+/// Done with `JSONSerialization` rather than the `SmartAlbum` model on purpose:
+/// a migration has to read the shape the *old* build wrote, and decoding through
+/// a model that has since lost a case is exactly the failure this is preventing.
+private func stripSmartAlbumRules(_ db: Database, field removed: String) throws {
+    let rows = try Row.fetchAll(db, sql: "SELECT id, criteria FROM smart_albums")
+    for row in rows {
+        let id: String = row["id"]
+        let json: String = row["criteria"] ?? ""
+        guard let data = json.data(using: .utf8),
+              var object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let rules = object["rules"] as? [[String: Any]]
+        else { continue }
+
+        let kept = rules.filter { ($0["field"] as? String) != removed }
+        guard kept.count != rules.count else { continue }
+
+        object["rules"] = kept
+        guard let rewritten = try? JSONSerialization.data(withJSONObject: object),
+              let text = String(data: rewritten, encoding: .utf8)
+        else { continue }
+
+        try db.execute(
+            sql: "UPDATE smart_albums SET criteria = ? WHERE id = ?",
+            arguments: [text, id]
+        )
     }
 }

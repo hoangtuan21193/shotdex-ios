@@ -132,6 +132,9 @@ private struct CompareVideoPaneView: UIViewRepresentable {
     let player: AVPlayer
     let sync: CompareScrollSynchronizer
     let paneIndex: Int
+    /// A plain tap on the frame, so a video card is picked the same way a photo
+    /// card is. Waits for the double-tap to fail — see `ZoomableImageView`.
+    var onSingleTap: (() -> Void)?
 
     func makeUIView(context: Context) -> UIScrollView {
         let scrollView = UIScrollView()
@@ -146,6 +149,9 @@ private struct CompareVideoPaneView: UIViewRepresentable {
         // scrolls around it (the compare column). Pinch is a separate
         // recognizer, so it stays live.
         scrollView.panGestureRecognizer.isEnabled = false
+        // And past 1x it still only answers to two fingers, so one finger
+        // always scrolls the column — see `ZoomableImageView`.
+        scrollView.panGestureRecognizer.minimumNumberOfTouches = 2
 
         let playerView = PlayerContainerView()
         playerView.playerLayer.player = player
@@ -171,11 +177,20 @@ private struct CompareVideoPaneView: UIViewRepresentable {
         doubleTap.numberOfTapsRequired = 2
         scrollView.addGestureRecognizer(doubleTap)
 
+        let singleTap = UITapGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleSingleTap)
+        )
+        singleTap.numberOfTapsRequired = 1
+        singleTap.require(toFail: doubleTap)
+        scrollView.addGestureRecognizer(singleTap)
+
         return scrollView
     }
 
     func updateUIView(_ scrollView: UIScrollView, context: Context) {
         context.coordinator.playerView?.playerLayer.player = player
+        context.coordinator.onSingleTap = onSingleTap
     }
 
     func makeCoordinator() -> Coordinator {
@@ -192,6 +207,12 @@ private struct CompareVideoPaneView: UIViewRepresentable {
     final class Coordinator: NSObject, UIScrollViewDelegate {
         weak var playerView: PlayerContainerView?
         var sync: CompareScrollSynchronizer?
+
+        var onSingleTap: (() -> Void)?
+
+        @objc func handleSingleTap() {
+            onSingleTap?()
+        }
 
         func viewForZooming(in scrollView: UIScrollView) -> UIView? {
             playerView
@@ -229,481 +250,321 @@ private struct CompareVideoPaneView: UIViewRepresentable {
     }
 }
 
-/// Compare: one scrolling column of cards, one card per photo — the photo on
-/// top, its exposure line and a Delete button underneath. Zoom and pan stay
-/// mirrored across every card (no toggles: comparing two photos at different
-/// zooms is not a comparison).
+
+/// Compare: one card per photo, and one verb. Zoom and pan stay mirrored
+/// across every card (no toggles: comparing two photos at different zooms is
+/// not a comparison).
+///
+/// **Tapping a photo marks it for deletion**, and that is the only thing a tap
+/// here does. The screen says so in the top bar before anything is marked,
+/// because a selection that means nothing until an action is picked later is a
+/// selection nobody can make: faced with eight frames and a row of empty
+/// circles, the first question is "am I ticking the ones I keep or the ones I
+/// lose", and no arrangement of buttons answers it as well as not having the
+/// question. It is also the same gesture, the same red, and the same badge as
+/// the Duplicates grid this screen is usually opened from — the opposite
+/// meaning two taps apart would be worse than either meaning alone.
+///
+/// One column on a phone, two or three on an iPad or the Duo's inner display
+/// (`CompareLayout`).
 struct CompareScreen: View {
     /// Compare needs two photos to mean anything. There is no upper bound.
     static let minPhotoCount = 2
     @Environment(\.dismiss) private var dismiss
     @Environment(PhotoLibraryService.self) private var photoLibrary
-    @Environment(AppDependencies.self) private var dependencies
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     /// Two or more photos, in selection order.
     let photos: [ComparePhoto]
-    /// When set (the Duplicates screen), every pane gets a trash toggle bound
-    /// to this set of asset ids, and a Delete pill appears while any is marked.
+    /// When set (the Duplicates screen), marks are written here and that screen
+    /// owns the delete; without it this screen marks locally and deletes itself.
     var deletionMarks: Binding<Set<String>>? = nil
-    /// Performs the delete of the marked photos; returns whether anything was
-    /// deleted (a cancelled system dialog returns false). The screen closes on
-    /// success because its panes would otherwise show photos that are gone.
-    var onDeleteMarked: (() async -> Bool)? = nil
+    /// Deletes exactly the ids handed to it — the marks among *these* cards,
+    /// never whatever else the caller has marked elsewhere — and returns
+    /// whether anything went (a cancelled system dialog returns false). The
+    /// screen closes on success because its cards would otherwise show photos
+    /// that are gone.
+    var onDeleteMarked: ((Set<String>) async -> Bool)? = nil
 
     @State private var sync = CompareScrollSynchronizer()
+    /// Marks made here when no binding was handed in. Same meaning as the
+    /// binding, so the rest of the screen never asks which flow it is in.
+    @State private var localMarks: Set<String> = []
     @State private var isDeleting = false
-    /// Which of the three culling layouts is on screen.
-    @State private var mode: CompareViewMode = .column
-    @State private var hasChosenMode = false
-    /// The picked mode's one-line summary, shown under the picker for a beat
-    /// after a switch. `Survey` and `Compare` are Lightroom's names; the
-    /// button tells you which view you are in, this tells you what it is.
-    @State private var modeHint: CompareViewMode?
-    /// Flags and ratings for the photos on screen, read once and written
-    /// through `CullStore`.
-    @State private var cullStates: [String: PhotoCullState] = [:]
-    /// Photos taken out of the comparison from the survey's ✕. Out of this
-    /// screen, not out of the library.
-    @State private var removedIds: Set<String> = []
-    /// Compare mode's two sides, as indices into `visiblePhotos`.
-    @State private var selectIndex = 0
-    @State private var candidateIndex = 1
-    /// Photos deleted from inside this screen (no deletion-marks binding), so
-    /// their cards leave the column without the caller having to reload.
+    /// Photos deleted from inside this screen, so their cards leave the layout
+    /// without the caller having to reload.
     @State private var deletedIds: Set<String> = []
+
+    private static let cardSpacing: CGFloat = 14
+    private static let horizontalPadding: CGFloat = 12
 
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-
-            content
-
+            cards
             VStack {
                 topBar
                 Spacer()
-                if markedCount > 0 {
-                    deletePill
-                }
             }
         }
         .statusBarHidden()
-        .animation(AppTheme.Motion.standard, value: markedCount > 0)
+        .animation(AppTheme.Motion.standard, value: markedCount)
         .animation(AppTheme.Motion.standard, value: deletedIds)
-        .animation(AppTheme.Motion.standard, value: mode)
-        .task { start() }
-        .onChange(of: visiblePhotos.count) { clampCompareIndices() }
     }
 
-    @ViewBuilder
-    private var content: some View {
-        switch mode {
-        case .column:
-            cardColumn
-        case .survey:
-            surveyGrid
-        case .compare:
-            comparePanes
-        }
-    }
+    // MARK: Marks
 
-    /// Opens in the layout the screen has room for: a survey on an iPad with
-    /// more than two frames, the column everywhere else. Chosen once, so
-    /// switching to another mode survives a rotation.
-    private func start() {
-        if !hasChosenMode {
-            hasChosenMode = true
-            mode = horizontalSizeClass == .regular && photos.count > 2 ? .survey : .column
+    /// Where marks live: the caller's set in the Duplicates flow, this screen's
+    /// own otherwise. One accessor so no caller has to know which.
+    private var markedIds: Set<String> {
+        get { deletionMarks?.wrappedValue ?? localMarks }
+        nonmutating set {
+            if let deletionMarks {
+                deletionMarks.wrappedValue = newValue
+            } else {
+                localMarks = newValue
+            }
         }
-        reloadCullStates()
     }
 
     /// Photos still on screen: everything the user hasn't deleted from here.
     private var visiblePhotos: [ComparePhoto] {
         photos.filter { photo in
-            guard let id = photo.asset?.localIdentifier else { return true }
-            return !deletedIds.contains(id) && !removedIds.contains(id)
+            guard let id = photo.assetId else { return true }
+            return !deletedIds.contains(id)
         }
     }
 
-    private var markedCount: Int {
-        guard let deletionMarks else { return 0 }
-        return visiblePhotos.filter { photo in
-            photo.asset.map { deletionMarks.wrappedValue.contains($0.localIdentifier) } ?? false
-        }.count
+    /// Marks that still have a card, so a deleted photo can never keep a stale
+    /// id in the count the Delete button is about to act on.
+    private var markedPhotos: [ComparePhoto] {
+        visiblePhotos.filter { $0.assetId.map(markedIds.contains) ?? false }
     }
 
-    /// Bottom pill over the panes: the one place the compare screen deletes
-    /// from. Same wording and glyph as the Duplicates screen's bar.
-    private var deletePill: some View {
-        Button {
-            guard let onDeleteMarked, !isDeleting else { return }
-            isDeleting = true
-            Task {
-                let didDelete = await onDeleteMarked()
-                isDeleting = false
-                if didDelete { dismiss() }
+    private var markedCount: Int { markedPhotos.count }
+
+    private func toggleMark(_ photo: ComparePhoto) {
+        guard let id = photo.assetId else { return }
+        if markedIds.contains(id) {
+            markedIds.remove(id)
+        } else {
+            markedIds.insert(id)
+        }
+    }
+
+    /// The shortcut the screen exists for: eight frames of one moment, one
+    /// keeper. Marking the other seven by hand is seven taps of the same
+    /// decision. In the card's long-press menu, where the Duplicates grid keeps
+    /// its "Keep Only This" — the same place, so it is learned once.
+    private func markAllOthers(than photo: ComparePhoto) {
+        guard let keeper = photo.assetId else { return }
+        markedIds = markedIds
+            .union(visiblePhotos.compactMap(\.assetId))
+            .subtracting([keeper])
+    }
+
+    // MARK: Layout
+
+    /// The cards, in as many columns as the width can hold.
+    ///
+    /// Columns are built as separate `LazyVStack`s rather than a `LazyVGrid`:
+    /// cards are as tall as their photo is, and a grid would align every row to
+    /// its tallest card, leaving a ragged gap under every short one.
+    /// `CompareLayout.distribute` deals each card to the shortest column so the
+    /// bottom edge stays roughly level.
+    private var cards: some View {
+        GeometryReader { proxy in
+            let available = proxy.size.width - Self.horizontalPadding * 2
+            let visible = visiblePhotos
+            let columnCount = CompareLayout.columns(
+                count: visible.count,
+                width: available,
+                spacing: Self.cardSpacing
+            )
+            let buckets = CompareLayout.distribute(
+                aspectRatios: visible.map(\.aspectRatio),
+                columns: columnCount
+            )
+
+            ScrollView {
+                HStack(alignment: .top, spacing: Self.cardSpacing) {
+                    ForEach(buckets.indices, id: \.self) { column in
+                        LazyVStack(spacing: Self.cardSpacing) {
+                            ForEach(buckets[column], id: \.self) { index in
+                                card(visible[index], index: index)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                }
+                // Clear of the top bar.
+                .padding(.horizontal, Self.horizontalPadding)
+                .padding(.top, 72)
+                .padding(.bottom, 24)
             }
-        } label: {
+            .scrollIndicators(.hidden)
+        }
+    }
+
+    private func card(_ photo: ComparePhoto, index: Int) -> some View {
+        CompareCard(
+            photo: photo,
+            sync: sync,
+            paneIndex: index,
+            isMarked: photo.assetId.map(markedIds.contains) ?? false,
+            canMarkOthers: visiblePhotos.count > 1,
+            onToggleMark: { toggleMark(photo) },
+            onMarkAllOthers: { markAllOthers(than: photo) }
+        )
+    }
+
+    // MARK: Top bar
+
+    /// Close on the left; on the right either what a tap does, or what the
+    /// taps so far add up to. The two never appear together and they occupy the
+    /// same corner, so the place that answers "what now" is always one place.
+    private var topBar: some View {
+        HStack(spacing: AppTheme.Spacing.sm) {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(.white)
+                    .frame(width: 52, height: 52)
+                    .editorGlass(Circle())
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Close")
+
+            Spacer(minLength: AppTheme.Spacing.sm)
+
+            if markedCount > 0 {
+                deleteButton
+                    .transition(.scale(scale: 0.9).combined(with: .opacity))
+            } else {
+                hint
+            }
+        }
+        .padding(.horizontal)
+        .padding(.top, 8)
+    }
+
+    /// The instruction, in the corner the Delete button will appear in. It is
+    /// the answer to the only question a first-time user of this screen has,
+    /// and it costs nothing once they know it — it is gone the moment they
+    /// mark anything.
+    private var hint: some View {
+        Text("Tap a photo to mark it for deletion")
+            .font(.caption)
+            .foregroundStyle(.white.opacity(0.75))
+            .multilineTextAlignment(.trailing)
+            .lineLimit(2)
+            .frame(maxWidth: 190, alignment: .trailing)
+            .shadow(color: .black.opacity(0.6), radius: 4, y: 1)
+            .accessibilityHidden(true)
+    }
+
+    /// One button, one verb, and the count it will act on. Red because it
+    /// deletes; no menu, because there is nothing to choose between.
+    private var deleteButton: some View {
+        Button(action: deleteMarked) {
             Label(
                 markedCount == 1 ? "Delete 1 Photo" : "Delete \(markedCount) Photos",
                 systemImage: "trash"
             )
             .font(.subheadline.weight(.semibold))
+            .monospacedDigit()
             .foregroundStyle(.white)
-            .padding(.horizontal, 20)
-            .frame(height: 44)
+            .padding(.horizontal, 18)
+            .frame(height: 52)
             .background(Capsule().fill(.red))
-            .editorGlass(Capsule())
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .disabled(isDeleting)
-        .padding(.bottom, 16)
         .accessibilityLabel("Delete \(markedCount) marked photos")
     }
 
-    /// One card per photo, one column, scrolling. Cards never go side by side —
-    /// a photo cut down to a corner tile can't be judged.
-    private var cardColumn: some View {
-        ScrollView {
-            LazyVStack(spacing: 14) {
-                ForEach(visiblePhotos.indices, id: \.self) { index in
-                    card(visiblePhotos[index], index: index)
-                }
-            }
-            // Clear of the close button above and the Delete pill below.
-            .padding(.horizontal, 12)
-            .padding(.top, 72)
-            .padding(.bottom, 24)
-        }
-        .scrollIndicators(.hidden)
-    }
+    // MARK: Deleting
 
-    // MARK: Survey
-
-    private var surveyGrid: some View {
-        SurveyGridView(
-            photos: visiblePhotos,
-            activeIndex: selectIndex,
-            cullStates: cullStates,
-            setActive: { selectIndex = $0 },
-            remove: { photo in
-                guard let id = photo.assetId else { return }
-                // Below two frames there is nothing left to compare, so the
-                // last removal closes the screen rather than leaving one photo
-                // sitting on its own.
-                if visiblePhotos.count <= Self.minPhotoCount {
-                    dismiss()
-                } else {
-                    removedIds.insert(id)
-                    clampCompareIndices()
-                }
-            },
-            setFlag: { photo, flag in setFlag(flag, on: photo) },
-            setRating: { photo, rating in setRating(rating, on: photo) }
-        )
-        .padding(.horizontal, AppTheme.Spacing.md)
-        .padding(.top, 72)
-        .padding(.bottom, AppTheme.Spacing.lg)
-    }
-
-    // MARK: Compare
-
-    /// Select and candidate, split whichever way leaves both frames bigger —
-    /// the same rule the editor's reference pane uses.
-    private var comparePanes: some View {
-        GeometryReader { proxy in
-            let canvas = CGSize(
-                width: proxy.size.width,
-                height: proxy.size.height - Self.compareControlsHeight
-            )
-            let aspect = SurveyLayout.averageAspectRatio(comparePair.map(\.aspectRatio))
-            let axis = EditorLayoutMetrics.referenceSplit(canvas: canvas, aspectRatio: aspect)
-
-            VStack(spacing: AppTheme.Spacing.sm) {
-                if axis == .horizontal {
-                    HStack(spacing: AppTheme.Spacing.sm) { panePair }
-                } else {
-                    VStack(spacing: AppTheme.Spacing.sm) { panePair }
-                }
-                compareControls
-            }
-        }
-        .padding(.horizontal, AppTheme.Spacing.md)
-        .padding(.top, 72)
-        .padding(.bottom, AppTheme.Spacing.lg)
-    }
-
-    /// The two photos being compared, select first.
-    private var comparePair: [ComparePhoto] {
-        let photos = visiblePhotos
-        guard photos.indices.contains(selectIndex), photos.indices.contains(candidateIndex) else {
-            return Array(photos.prefix(2))
-        }
-        return [photos[selectIndex], photos[candidateIndex]]
-    }
-
-    @ViewBuilder
-    private var panePair: some View {
-        let pair = comparePair
-        if pair.count == 2 {
-            pane(pair[0], role: "Select", index: selectIndex)
-            pane(pair[1], role: "Candidate", index: candidateIndex)
-        }
-    }
-
-    private func pane(_ photo: ComparePhoto, role: String, index: Int) -> some View {
-        ComparePaneView(
-            photo: photo,
-            role: role,
-            sync: sync,
-            paneIndex: index,
-            cullState: cullState(of: photo),
-            setFlag: { setFlag($0, on: photo) },
-            setRating: { setRating($0, on: photo) }
-        )
-    }
-
-    /// Step the candidate, swap the two, or promote the candidate to select —
-    /// Lightroom's three compare verbs, and nothing else. Promote is the one
-    /// that makes a long run converge: the winner stays and the next frame
-    /// comes up against it.
-    ///
-    /// Each verb is written under its glyph. A crown between two chevrons is
-    /// not a word anyone can read off the button, and this row is the whole
-    /// interaction model of the mode.
-    private var compareControls: some View {
-        HStack(spacing: AppTheme.Spacing.md) {
-            compareButton("chevron.left", caption: "Previous", label: "Previous candidate") {
-                stepCandidate(-1)
-            }
-            compareButton("arrow.left.arrow.right", caption: "Swap", label: "Swap select and candidate") {
-                swap(&selectIndex, &candidateIndex)
-            }
-            compareButton("crown", caption: "Keep", label: "Promote candidate to select") {
-                selectIndex = candidateIndex
-                stepCandidate(1)
-            }
-            compareButton("chevron.right", caption: "Next", label: "Next candidate") {
-                stepCandidate(1)
-            }
-        }
-        .frame(height: Self.compareControlsHeight)
-    }
-
-    /// Tall enough for a glyph with its verb under it.
-    fileprivate static let compareControlsHeight: CGFloat = 54
-
-    private func compareButton(
-        _ systemImage: String,
-        caption: String,
-        label: String,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            VStack(spacing: 2) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 15, weight: .semibold))
-                Text(caption)
-                    .font(.system(size: 10, weight: .semibold))
-                    .lineLimit(1)
-            }
-            .foregroundStyle(.white)
-            .frame(minWidth: 64, minHeight: Self.compareControlsHeight)
-            .padding(.horizontal, AppTheme.Spacing.xs)
-            .editorGlass(Capsule())
-            .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(label)
-    }
-
-    /// Walks the candidate past the select rather than landing on it — a pane
-    /// compared with itself is a wasted press.
-    private func stepCandidate(_ delta: Int) {
-        let count = visiblePhotos.count
-        guard count > 1 else { return }
-        var next = candidateIndex
-        for _ in 0..<count {
-            next = (next + delta + count) % count
-            if next != selectIndex { break }
-        }
-        candidateIndex = next
-    }
-
-    private func clampCompareIndices() {
-        let count = visiblePhotos.count
-        guard count > 0 else { return }
-        selectIndex = min(selectIndex, count - 1)
-        candidateIndex = min(candidateIndex, count - 1)
-        if candidateIndex == selectIndex { stepCandidate(1) }
-    }
-
-    // MARK: Culling
-
-    private func cullState(of photo: ComparePhoto) -> PhotoCullState {
-        let id = photo.assetId ?? ""
-        return cullStates[id] ?? PhotoCullState(assetId: id)
-    }
-
-    /// One query for the whole comparison, not one per pane.
-    private func reloadCullStates() {
-        let ids = photos.compactMap(\.assetId)
-        cullStates = (try? dependencies.cullStore.states(assetIds: ids)) ?? [:]
-    }
-
-    private func setFlag(_ flag: PhotoFlag, on photo: ComparePhoto) {
-        guard let id = photo.assetId else { return }
-        try? dependencies.cullStore.setFlag(flag, ids: [id])
-        cullStates[id] = (try? dependencies.cullStore.state(assetId: id))
-            ?? PhotoCullState(assetId: id, flag: flag)
-    }
-
-    private func setRating(_ rating: Int, on photo: ComparePhoto) {
-        guard let id = photo.assetId else { return }
-        try? dependencies.cullStore.setRating(rating, ids: [id])
-        cullStates[id] = (try? dependencies.cullStore.state(assetId: id))
-            ?? PhotoCullState(assetId: id, rating: rating)
-    }
-
-    private func card(_ photo: ComparePhoto, index: Int) -> some View {
-        let assetId = photo.asset?.localIdentifier
-        let isMarked = deletionMarks.flatMap { marks in
-            assetId.map { marks.wrappedValue.contains($0) }
-        }
-        return CompareCard(
-            photo: photo,
-            sync: sync,
-            paneIndex: index,
-            isMarkedForDeletion: isMarked,
-            onDelete: { delete(photo) }
-        )
-    }
-
-    /// The card's Delete button. With a deletion-marks binding (Duplicates) it
-    /// marks the photo and the bottom pill does the deleting; without one
-    /// (Compare from a selection) it deletes that photo right here, through
-    /// PhotoKit's own confirmation.
-    private func delete(_ photo: ComparePhoto) {
-        guard let asset = photo.asset else { return }
-        if let deletionMarks {
-            let id = asset.localIdentifier
-            if deletionMarks.wrappedValue.contains(id) {
-                deletionMarks.wrappedValue.remove(id)
-            } else {
-                deletionMarks.wrappedValue.insert(id)
+    /// The Duplicates screen owns its own delete (it has a confirmation and a
+    /// list to refresh), so there the button hands back to it. Everywhere else
+    /// this screen deletes, and PhotoKit's own alert ("Delete 7 Photos?") is
+    /// the confirmation — a second one of ours in front of it would be two
+    /// dialogs for one decision.
+    private func deleteMarked() {
+        guard !isDeleting, markedCount > 0 else { return }
+        if let onDeleteMarked {
+            let ids = Set(markedPhotos.compactMap(\.assetId))
+            isDeleting = true
+            Task {
+                let didDelete = await onDeleteMarked(ids)
+                isDeleting = false
+                if didDelete { dismiss() }
             }
             return
         }
-        guard !isDeleting else { return }
+        performDelete(markedPhotos.compactMap(\.asset))
+    }
+
+    /// One change request for the batch, and the screen closes once there is
+    /// nothing left to compare. A cancelled dialog throws, and the cards stay
+    /// marked — the correct outcome either way.
+    private func performDelete(_ assets: [PHAsset]) {
+        guard !assets.isEmpty else { return }
         isDeleting = true
         Task {
             defer { isDeleting = false }
             do {
-                try await photoLibrary.deleteAssets([asset])
-                deletedIds.insert(asset.localIdentifier)
-                // Below two photos there is nothing left to compare.
+                try await photoLibrary.deleteAssets(assets)
+                let gone = Set(assets.map(\.localIdentifier))
+                deletedIds.formUnion(gone)
+                markedIds.subtract(gone)
                 if visiblePhotos.count < Self.minPhotoCount { dismiss() }
             } catch {
-                // Cancelled confirmation or a failed change request: the card
-                // stays, which is the correct outcome either way.
+                // Cancelled confirmation or a failed change request.
             }
-        }
-    }
-
-    private var topBar: some View {
-        VStack(alignment: .trailing, spacing: AppTheme.Spacing.xs) {
-            HStack(spacing: 12) {
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(.white)
-                        .frame(width: 52, height: 52)
-                        .editorGlass(Circle())
-                        .contentShape(Circle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Close")
-                Spacer()
-                modePicker
-            }
-            if let modeHint {
-                Text(modeHint.summary)
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.85))
-                    .padding(.horizontal, AppTheme.Spacing.sm)
-                    .padding(.vertical, 4)
-                    .editorGlass(Capsule())
-                    .transition(.opacity)
-                    .accessibilityHidden(true)
-            }
-        }
-        .padding(.horizontal)
-        .padding(.top, 8)
-        .animation(EditorTheme.animation, value: modeHint)
-        .task(id: mode) {
-            modeHint = mode
-            try? await Task.sleep(for: .seconds(2.5))
-            guard !Task.isCancelled else { return }
-            modeHint = nil
         }
     }
 }
+extension ComparePhoto {
+    var assetId: String? { asset?.localIdentifier }
 
-extension CompareScreen {
-    /// Named segments, not three bare glyphs. The strip sits over a photo, but
-    /// the capsule behind it is already the background the words need — and a
-    /// row of unlabelled icons in the corner of a full-screen tool reads as
-    /// "three buttons", not as "the three ways to look at these photos".
-    /// Compare is off below two photos and is the only mode with a hard
-    /// minimum.
-    fileprivate var modePicker: some View {
-        HStack(spacing: 0) {
-            ForEach(CompareViewMode.allCases) { candidate in
-                Button {
-                    mode = candidate
-                    if candidate == .compare { clampCompareIndices() }
-                } label: {
-                    Text(candidate.title)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(mode == candidate ? EditorTheme.accent : .white)
-                        .lineLimit(1)
-                        .padding(.horizontal, AppTheme.Spacing.sm)
-                        .frame(minWidth: AppTheme.Size.minTouch, minHeight: AppTheme.Size.minTouch)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(candidate.pickerAccessibilityLabel)
-                .accessibilityAddTraits(mode == candidate ? .isSelected : [])
-            }
-        }
-        .padding(.horizontal, AppTheme.Spacing.xs)
-        .editorGlass(Capsule())
+    /// Width ÷ height with PhotoKit's orientation applied; square when the
+    /// asset is missing, so a card never collapses to nothing.
+    var aspectRatio: CGFloat {
+        guard let asset, asset.pixelWidth > 0, asset.pixelHeight > 0 else { return 1 }
+        return CGFloat(asset.pixelWidth) / CGFloat(asset.pixelHeight)
     }
 }
 
 /// One compare card: the photo (or video) at its own aspect ratio — whole
-/// frame, nothing cropped, full card width — with a one-line caption and a red
-/// Delete under it. Media keeps the synced zoomable view, so a pinch on one card
+/// frame, nothing cropped, full card width — with its numbers on a single line
+/// underneath. Media keeps the synced zoomable view, so a pinch on one card
 /// moves every other card with it.
+///
+/// The whole card is the control: tapping the frame or the numbers marks the
+/// photo for deletion. No buttons of its own — see `CompareScreen`.
 private struct CompareCard: View {
     @Environment(PhotoLibraryService.self) private var photoLibrary
 
     let photo: ComparePhoto
     let sync: CompareScrollSynchronizer
     let paneIndex: Int
-    /// `nil` when the screen deletes straight away instead of marking first
-    /// (Duplicates marks; Compare from a selection deletes).
-    var isMarkedForDeletion: Bool? = nil
-    let onDelete: () -> Void
+    let isMarked: Bool
+    /// False when this is the last photo left, where "mark all others" would
+    /// mark nothing.
+    let canMarkOthers: Bool
+    let onToggleMark: () -> Void
+    let onMarkAllOthers: () -> Void
 
     @State private var image: UIImage?
     @State private var player: AVPlayer?
     @State private var isVideo = false
     @State private var isPlaying = false
+
+    private var borderColor: Color? { isMarked ? .red : nil }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -711,23 +572,34 @@ private struct CompareCard: View {
                 // The photo's own shape: cards differ in height, and every
                 // frame is shown whole — cropping to a common height would be
                 // comparing two different crops.
-                .aspectRatio(aspectRatio, contentMode: .fit)
+                .aspectRatio(photo.aspectRatio, contentMode: .fit)
                 .frame(maxWidth: .infinity)
                 .clipped()
+                .overlay(alignment: .topTrailing) { markBadge }
                 .overlay(alignment: .bottomTrailing) {
                     if isVideo, player != nil {
                         playPauseButton
                             .padding(8)
                     }
                 }
-            infoRow
+            caption
         }
         .background(EditorTheme.panelSolid)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous))
         .overlay {
-            if isMarkedForDeletion == true {
+            if let borderColor {
                 RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous)
-                    .strokeBorder(.red, lineWidth: 3)
+                    .strokeBorder(borderColor, lineWidth: 3)
+            }
+        }
+        // A marked photo is on its way out; dimming it says so without
+        // covering the frame, the same as the Duplicates grid's tiles.
+        .opacity(isMarked ? 0.82 : 1)
+        .contextMenu {
+            if canMarkOthers {
+                Button(role: .destructive, action: onMarkAllOthers) {
+                    Label("Keep Only This", systemImage: "checkmark.circle")
+                }
             }
         }
         .onAppear(perform: load)
@@ -738,13 +610,14 @@ private struct CompareCard: View {
             player?.seek(to: .zero)
             isPlaying = false
         }
-    }
-
-    /// Width ÷ height of the asset, orientation applied by PhotoKit. Square
-    /// while the asset is missing, so a card never collapses to nothing.
-    private var aspectRatio: CGFloat {
-        guard let asset = photo.asset, asset.pixelWidth > 0, asset.pixelHeight > 0 else { return 1 }
-        return CGFloat(asset.pixelWidth) / CGFloat(asset.pixelHeight)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityAddTraits(isMarked ? [.isButton, .isSelected] : .isButton)
+        .accessibilityAction(
+            named: isMarked ? "Unmark" : "Mark for deletion",
+            onToggleMark
+        )
+        .accessibilityAction(named: "Keep only this", onMarkAllOthers)
     }
 
     @ViewBuilder
@@ -753,58 +626,70 @@ private struct CompareCard: View {
             if let player {
                 // Same zoom/pan scroll view as image cards, wrapping an
                 // AVPlayerLayer — video participates in sync like a photo.
-                CompareVideoPaneView(player: player, sync: sync, paneIndex: paneIndex)
+                CompareVideoPaneView(
+                    player: player,
+                    sync: sync,
+                    paneIndex: paneIndex,
+                    onSingleTap: onToggleMark
+                )
             } else {
                 ProgressView().tint(.white)
             }
         } else if let image {
-            ZoomableImageView(image: image, sync: sync, paneIndex: paneIndex)
+            ZoomableImageView(
+                image: image,
+                sync: sync,
+                paneIndex: paneIndex,
+                onSingleTap: onToggleMark,
+                panRequiresTwoFingers: true
+            )
         } else {
             ProgressView().tint(.white)
         }
     }
 
-    /// Under the photo: one line of numbers on the left, Delete on the right.
-    private var infoRow: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            Text(caption ?? "No metadata")
-                .font(.caption)
-                .monospacedDigit()
-                .foregroundStyle(caption == nil ? EditorTheme.dimText : EditorTheme.secondaryText)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-            Spacer(minLength: 0)
-            deleteButton
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+    /// The same red trash badge the Duplicates grid stamps on a marked tile.
+    /// Hollow rather than absent when the photo is not marked: an empty circle
+    /// on every card is what says the frames are tappable at all, on a screen
+    /// whose buttons have otherwise moved to the top bar.
+    private var markBadge: some View {
+        Image(systemName: isMarked ? "trash.circle.fill" : "circle")
+            .font(.system(size: 26))
+            .symbolRenderingMode(isMarked ? .palette : .monochrome)
+            .foregroundStyle(
+                isMarked ? AnyShapeStyle(Color.white) : AnyShapeStyle(Color.white.opacity(0.9)),
+                AnyShapeStyle(Color.red)
+            )
+            .shadow(color: .black.opacity(0.5), radius: 3, y: 1)
+            .padding(10)
+            .allowsHitTesting(false)
     }
 
-    /// Plain red text — the card is for judging the photo, so the control under
-    /// it stays out of the way. Marked (Duplicates) it reads "Keep".
-    private var deleteButton: some View {
-        Button(action: onDelete) {
-            Text(isMarkedForDeletion == true ? "Keep" : "Delete")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.red)
-                // The word is small on purpose — the card is for judging the
-                // photo — but the target is not: this is the control a cull
-                // presses hundreds of times, and a caption's glyph box is
-                // about half the 44pt minimum.
-                .frame(minWidth: AppTheme.Size.minTouch, minHeight: AppTheme.Size.minTouch, alignment: .trailing)
+    /// Camera, exposure and file size on one line — the numbers a comparison
+    /// turns on. Size last because it is the tie-breaker, not the question: two
+    /// frames of the same scene are told apart by the exposure first, and by
+    /// which one is the bigger original when they look the same.
+    ///
+    /// Also the card's second hit target: a strip the full width of the card,
+    /// for the photo that is zoomed in and being panned rather than picked.
+    private var caption: some View {
+        Button(action: onToggleMark) {
+            Text(captionText ?? "No metadata")
+                .font(.caption)
+                .monospacedDigit()
+                .foregroundStyle(captionText == nil ? EditorTheme.dimText : EditorTheme.secondaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(maxWidth: .infinity, minHeight: AppTheme.Size.minTouch, alignment: .leading)
+                .padding(.horizontal, 14)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(deleteAccessibilityLabel)
-        .accessibilityAddTraits(isMarkedForDeletion == true ? .isSelected : [])
     }
 
-    private var deleteAccessibilityLabel: String {
-        switch isMarkedForDeletion {
-        case true: "Keep this photo"
-        case false: "Mark this photo for deletion"
-        case nil: "Delete this photo"
-        }
+    private var accessibilityLabel: String {
+        let numbers = captionText ?? "No metadata"
+        return isMarked ? "\(numbers). Marked for deletion" : numbers
     }
 
     /// Small glass play/pause control — the zoomable wrapper replaces the
@@ -830,8 +715,7 @@ private struct CompareCard: View {
         .accessibilityLabel(isPlaying ? "Pause" : "Play")
     }
 
-    /// Camera and exposure on one line — the numbers a comparison turns on.
-    private var caption: String? {
+    private var captionText: String? {
         guard let metadata = photo.metadata else { return nil }
         return MetadataFormatter.metadataLine([
             metadata.normalizedCameraModel,
@@ -839,6 +723,7 @@ private struct CompareCard: View {
             metadata.aperture.flatMap(MetadataFormatter.aperture),
             metadata.shutterSpeedDisplay,
             metadata.iso.flatMap(MetadataFormatter.iso),
+            metadata.fileSize.flatMap(MetadataFormatter.fileSize),
         ])
     }
 

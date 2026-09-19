@@ -127,8 +127,6 @@ struct PhotoListScreen: View {
             isSelecting: false,
             selectedIds: [],
             bottomInset: 0,
-            cullStates: dependencies.cullStore.states,
-            cullVersion: dependencies.cullStore.version,
             photoLibrary: photoLibrary,
             onTap: { flatIndex, item in
                 viewerTarget = PhotoViewerTarget(id: item.assetId, startIndex: flatIndex)

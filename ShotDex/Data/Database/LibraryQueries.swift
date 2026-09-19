@@ -346,31 +346,6 @@ struct LibraryQueries: Sendable {
             conditions.append("isFavorite = 1")
         }
 
-        // Culling lives in its own table (the indexer rewrites metadata rows),
-        // so these are subqueries rather than columns. `photo_cull` holds a row
-        // only for a photo the user has marked, which is what makes the
-        // unflagged case a NOT IN rather than a flag comparison.
-        if criteria.minRating > 0 {
-            conditions.append(
-                "assetId IN (SELECT assetId FROM photo_cull WHERE rating >= ?)"
-            )
-            values.append(criteria.minRating)
-        }
-
-        if !criteria.flags.isEmpty {
-            var tests: [String] = []
-            let marked = criteria.flags.filter { $0 != .unflagged }.map(\.rawValue).sorted()
-            if !marked.isEmpty {
-                let placeholders = Array(repeating: "?", count: marked.count).joined(separator: ", ")
-                tests.append("assetId IN (SELECT assetId FROM photo_cull WHERE flag IN (\(placeholders)))")
-                values.append(contentsOf: marked)
-            }
-            if criteria.flags.contains(.unflagged) {
-                tests.append("assetId NOT IN (SELECT assetId FROM photo_cull WHERE flag != 0)")
-            }
-            conditions.append("(\(tests.joined(separator: " OR ")))")
-        }
-
         if let text = criteria.searchText, !text.isEmpty {
             let parsed = SearchParser.parse(text)
 
@@ -451,13 +426,6 @@ struct LibraryQueries: Sendable {
         case .apertureDescending: "aperture DESC NULLS LAST, creationDate DESC NULLS LAST"
         case .shutterSpeedFastest: "shutterSpeedSeconds ASC NULLS LAST, creationDate DESC NULLS LAST"
         case .shutterSpeedSlowest: "shutterSpeedSeconds DESC NULLS LAST, creationDate DESC NULLS LAST"
-        // Ratings live in another table, so the order is a correlated
-        // subquery; an unrated photo reads as 0 rather than NULL, which puts
-        // it below one star and above nothing.
-        case .ratingHighest:
-            "COALESCE((SELECT rating FROM photo_cull c WHERE c.assetId = photo_metadata.assetId), 0) DESC, creationDate DESC NULLS LAST"
-        case .ratingLowest:
-            "COALESCE((SELECT rating FROM photo_cull c WHERE c.assetId = photo_metadata.assetId), 0) ASC, creationDate DESC NULLS LAST"
         }
         return clause + ", assetId ASC"
     }

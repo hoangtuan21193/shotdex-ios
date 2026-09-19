@@ -383,7 +383,15 @@ final class DuplicatesModel {
     /// the marks. Returns whether anything was deleted.
     @discardableResult
     func deleteMarked() async -> Bool {
-        let ids = markedForDeletion
+        await delete(ids: markedForDeletion)
+    }
+
+    /// Deletes a subset of the marks and leaves the rest marked.
+    ///
+    /// The Compare screen only ever shows one group, so its Delete button must
+    /// act on that group alone — otherwise a mark left in another group would
+    /// be swept up by a button whose count never mentioned it.
+    func delete(ids: Set<String>) async -> Bool {
         let assets = ids.compactMap { assetsById[$0] }
         guard !assets.isEmpty, !isDeleting else { return false }
         isDeleting = true
@@ -407,7 +415,7 @@ final class DuplicatesModel {
             let remaining = group.members.filter { !ids.contains($0.assetId) }
             return remaining.count > 1 ? DuplicateGroup(members: remaining) : nil
         }
-        markedForDeletion.removeAll()
+        markedForDeletion.subtract(ids)
         UserDefaults.standard.set(groups.count, forKey: SettingsKeys.duplicateGroupCount)
         return true
     }

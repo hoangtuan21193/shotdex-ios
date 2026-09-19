@@ -162,8 +162,6 @@ extension SmartAlbumRule {
         case .focalLength: focalMode == .equivalent ? "focal eq" : "focal"
         case .dateTaken: "date"
         case .favorite: "favorite"
-        case .rating: "★"
-        case .flag: "flag"
         }
     }
 
@@ -192,9 +190,6 @@ extension SmartAlbumRule {
             }
             if field == .mediaType {
                 return MediaKind(rawValue: text)?.displayName ?? text
-            }
-            if field == .flag {
-                return Int(text).flatMap(PhotoFlag.init(rawValue:))?.title ?? text
             }
             return text // sensor-format rawValue is already its display name
         case .number:

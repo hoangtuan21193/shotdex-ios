@@ -233,7 +233,7 @@ struct PerceptualHashStore: Sendable {
                 )
                 membersByGroup[row["groupId"], default: []].append(photo)
             }
-            return DuplicateGrouper.assemble(membersByGroup.values.map(Array.init))
+            return DuplicateGrouper.assemble(membersByGroup.values.map(Array.init), strictness: strictness)
         }
     }
 

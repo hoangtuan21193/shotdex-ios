@@ -23,7 +23,7 @@ enum RuleFieldKind: Equatable, Sendable {
     case choice     // one value from a closed set (sensor format, file type)
     case number     // numeric metadata (ISO, aperture, shutter, focal length)
     case date       // capture date
-    case favorite   // boolean favorite flag
+    case favorite   // boolean favorite
 }
 
 /// A photo attribute a smart-album condition can test.
@@ -45,11 +45,6 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
     case focalLength
     case dateTaken
     case favorite
-    /// The culling pass, from `photo_cull` rather than `photo_metadata` — see
-    /// `CullStore`. Both need a join, so neither can be answered in memory
-    /// against a `PhotoMetadata` row.
-    case rating
-    case flag
 
     var id: String { rawValue }
 
@@ -69,16 +64,14 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
         case .focalLength: "Focal Length"
         case .dateTaken: "Date Taken"
         case .favorite: "Favorite"
-        case .rating: "Rating"
-        case .flag: "Flag"
         }
     }
 
     var kind: RuleFieldKind {
         switch self {
         case .cameraBrand, .cameraBody, .lens, .filename, .place: .text
-        case .sensorFormat, .fileType, .mediaType, .flag: .choice
-        case .iso, .aperture, .shutter, .focalLength, .rating: .number
+        case .sensorFormat, .fileType, .mediaType: .choice
+        case .iso, .aperture, .shutter, .focalLength: .number
         case .dateTaken: .date
         case .favorite: .favorite
         }
@@ -87,7 +80,7 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
     /// Parse/format kind for numeric fields (ignored for other kinds).
     var numericKind: NumericFieldKind {
         switch self {
-        case .iso, .rating: .int
+        case .iso: .int
         case .shutter: .shutter
         default: .double
         }
@@ -102,8 +95,6 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
             PhotoFileType.allCases.map { ($0.rawValue, $0.displayName) }
         case .mediaType:
             MediaKind.allCases.map { ($0.rawValue, $0.displayName) }
-        case .flag:
-            PhotoFlag.allCases.map { (String($0.rawValue), $0.title) }
         default:
             []
         }
@@ -308,7 +299,7 @@ struct SmartAlbumQuery: Codable, Equatable, Sendable {
         // New shape: { matchMode, rules }.
         if let c = try? decoder.container(keyedBy: CodingKeys.self), c.contains(.rules) {
             matchMode = try c.decodeIfPresent(RuleMatchMode.self, forKey: .matchMode) ?? .all
-            rules = try c.decodeIfPresent([SmartAlbumRule].self, forKey: .rules) ?? []
+            rules = try c.decodeIfPresent([LossyRule].self, forKey: .rules)?.compactMap(\.rule) ?? []
             return
         }
         // Legacy shape: a JSON-encoded `FilterCriteria` (pre-rule smart albums).
@@ -374,5 +365,22 @@ struct SmartAlbumQuery: Codable, Equatable, Sendable {
         }
 
         return SmartAlbumQuery(matchMode: .all, rules: rules)
+    }
+}
+
+/// A rule that decodes to `nil` instead of throwing when its stored `field` is
+/// one this build no longer has.
+///
+/// Without it, a single stale rule takes the whole album down: `SmartAlbum`
+/// falls back to `SmartAlbumQuery.empty` when the JSON will not parse, and an
+/// empty query has no predicate — the album would quietly match the entire
+/// library. Dropping the one rule loses a condition; the fallback loses the
+/// album's meaning. The `v15-dropCullFlag` migration rewrites the stored JSON
+/// so this only has to catch albums written by a build that ran before it.
+private struct LossyRule: Decodable {
+    let rule: SmartAlbumRule?
+
+    init(from decoder: Decoder) throws {
+        rule = try? SmartAlbumRule(from: decoder)
     }
 }

@@ -37,8 +37,9 @@ struct DuplicatesScreen: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
                 Picker("Match", selection: $model.strictness) {
-                    Text("Exact").tag(DuplicateStrictness.exact)
-                    Text("Similar").tag(DuplicateStrictness.similar)
+                    ForEach(DuplicateStrictness.allCases) { strictness in
+                        Text(strictness.title).tag(strictness)
+                    }
                 }
                 .pickerStyle(.segmented)
                 .disabled(model.isBusy)
@@ -118,7 +119,7 @@ struct DuplicatesScreen: View {
             CompareScreen(
                 photos: presentation.photos,
                 deletionMarks: $model.markedForDeletion,
-                onDeleteMarked: { await model.deleteMarked() }
+                onDeleteMarked: { ids in await model.delete(ids: ids) }
             )
         }
         .alert(
@@ -135,13 +136,30 @@ struct DuplicatesScreen: View {
         .animation(AppTheme.Motion.standard, value: model.markedCount > 0)
     }
 
+    private func emptyDescription(_ model: DuplicatesModel) -> String {
+        let scanned = model.coverage.hashedPhotos
+        return switch model.strictness {
+        case .exact: "No exact duplicates among \(scanned) photos."
+        case .similar: "No similar duplicates among \(scanned) photos."
+        case .series: "No runs of \(DuplicateStrictness.seriesMinCount) or more frames of one moment among \(scanned) photos."
+        }
+    }
+
     private func summary(_ model: DuplicatesModel) -> String {
         let groups = model.groups.count
         let photos = model.duplicatePhotoCount
-        let reclaimable = model.groups.reduce(0) { $0 + $1.reclaimableBytes }
-        var text = "\(groups) \(groups == 1 ? "group" : "groups") · \(photos) photos"
-        if reclaimable > 0 {
-            text += " · ~\(Self.byteFormatter.string(fromByteCount: Int64(reclaimable))) if one is kept per group"
+        let noun = model.strictness == .series
+            ? (groups == 1 ? "series" : "series")
+            : (groups == 1 ? "group" : "groups")
+        var text = "\(groups) \(noun) · \(photos) photos"
+        // No "if one is kept" figure for a series: the answer there is usually
+        // to keep several poses, so a saving quoted on keeping one would be a
+        // number for a choice nobody is making.
+        if model.strictness != .series {
+            let reclaimable = model.groups.reduce(0) { $0 + $1.reclaimableBytes }
+            if reclaimable > 0 {
+                text += " · ~\(Self.byteFormatter.string(fromByteCount: Int64(reclaimable))) if one is kept per group"
+            }
         }
         return text
     }
@@ -223,9 +241,9 @@ struct DuplicatesScreen: View {
             }
         } else {
             ContentUnavailableView(
-                "No Duplicates",
+                model.strictness == .series ? "No Series" : "No Duplicates",
                 systemImage: "checkmark.circle",
-                description: Text("No \(model.strictness == .exact ? "exact" : "similar") duplicates among \(model.coverage.hashedPhotos) photos.")
+                description: Text(emptyDescription(model))
             )
         }
     }
@@ -309,7 +327,12 @@ private struct DuplicateGroupCard: View {
                         member: member,
                         asset: model.assetsById[member.assetId],
                         isMarked: model.isMarked(member.assetId),
-                        isLargest: member.assetId == group.members[0].assetId && group.reclaimableBytes > 0
+                        // The lead tile of a series is the first frame, not
+                        // the biggest file — badging it "largest" would be a
+                        // lie about why it is first.
+                        isLargest: model.strictness != .series
+                            && member.assetId == group.members[0].assetId
+                            && group.reclaimableBytes > 0
                     )
                     .onTapGesture { model.toggleMark(member.assetId) }
                     .contextMenu {

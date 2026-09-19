@@ -291,24 +291,6 @@ struct FilterTokenBar: View {
                 ) { $0.favoritesOnly = false }
             )
         }
-        for flag in criteria.flags.sorted(by: { $0.rawValue < $1.rawValue }) {
-            result.append(
-                FilterToken(
-                    id: "flag-\(flag.rawValue)",
-                    label: flag.title,
-                    removalAccessibilityLabel: "Remove flag filter \(flag.title)"
-                ) { $0.flags.remove(flag) }
-            )
-        }
-        if criteria.minRating > 0 {
-            result.append(
-                FilterToken(
-                    id: "rating",
-                    label: String(repeating: "★", count: criteria.minRating) + "+",
-                    removalAccessibilityLabel: "Remove rating filter"
-                ) { $0.minRating = 0 }
-            )
-        }
         if let text = criteria.searchText, !text.isEmpty {
             for (index, term) in SearchParser.editableTokens(in: text).enumerated() {
                 result.append(

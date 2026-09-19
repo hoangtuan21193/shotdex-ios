@@ -32,10 +32,14 @@ struct DuplicateGrouperTests {
         #expect(groups.isEmpty)
     }
 
-    @Test func identicalHashesGroupInBothModes() {
+    /// Named modes rather than `allCases`: `.series` answers a different
+    /// question and deliberately does not group a pair (see
+    /// `DuplicateSeriesTests`), so sweeping every case here would assert the
+    /// wrong thing about it.
+    @Test func identicalHashesGroupInBothDuplicateModes() {
         // "c" is 32 bits away from the pair — far outside the similar threshold.
         let photos = [photo("a", bits: 42), photo("b", bits: 42), photo("c", bits: 42 ^ 0xFFFF_FFFF_0000_0000)]
-        for strictness in DuplicateStrictness.allCases {
+        for strictness in [DuplicateStrictness.exact, .similar] {
             let groups = DuplicateGrouper.groups(from: photos, strictness: strictness)
             #expect(groups.count == 1)
             #expect(Set(groups[0].members.map(\.assetId)) == ["a", "b"])

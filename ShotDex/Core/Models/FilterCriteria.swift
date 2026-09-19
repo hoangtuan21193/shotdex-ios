@@ -141,14 +141,6 @@ struct FilterCriteria: Equatable, Codable, Sendable {
 
     var favoritesOnly = false
 
-    /// Culling filters. `minRating` 0 means "any"; `flags` empty means "any",
-    /// and several selected reads as "any of these" like the other
-    /// multi-selects. Both are answered from `photo_cull`, so a photo the
-    /// index has not reached yet cannot match — it has no row to carry a
-    /// rating on.
-    var minRating = 0
-    var flags: Set<PhotoFlag> = []
-
     /// Free-text search terms produced by SearchParser (camera/lens match).
     var searchText: String?
 
@@ -167,8 +159,6 @@ struct FilterCriteria: Equatable, Codable, Sendable {
             && mediaKinds.isEmpty
             && mediaSubtypes.isEmpty
             && !favoritesOnly
-            && minRating == 0
-            && flags.isEmpty
             && (searchText?.isEmpty ?? true)
     }
 
@@ -188,8 +178,6 @@ struct FilterCriteria: Equatable, Codable, Sendable {
         if !focalRange.isEmpty { count += 1 }
         if !mediaKinds.isEmpty { count += 1 }
         if favoritesOnly { count += 1 }
-        if minRating > 0 { count += 1 }
-        if !flags.isEmpty { count += 1 }
         if let searchText, !searchText.isEmpty { count += 1 }
         return count
     }
@@ -204,7 +192,7 @@ struct FilterCriteria: Equatable, Codable, Sendable {
         case cameraBrands, cameraBodies, lenses, sensorFormats
         case cameraBrandTerms, cameraBodyTerms, lensTerms
         case isoRange, shutterRange, apertureRange, focalRange, focalLengthMode
-        case mediaKinds, favoritesOnly, minRating, flags, searchText
+        case mediaKinds, favoritesOnly, searchText
     }
 
     /// Tolerant decode: every key is optional-with-default so stored albums
@@ -225,10 +213,6 @@ struct FilterCriteria: Equatable, Codable, Sendable {
         focalLengthMode = try c.decodeIfPresent(FocalLengthMode.self, forKey: .focalLengthMode) ?? .actual
         mediaKinds = try c.decodeIfPresent(Set<MediaKind>.self, forKey: .mediaKinds) ?? []
         favoritesOnly = try c.decodeIfPresent(Bool.self, forKey: .favoritesOnly) ?? false
-        minRating = PhotoCullState.clampedRating(
-            try c.decodeIfPresent(Int.self, forKey: .minRating) ?? 0
-        )
-        flags = try c.decodeIfPresent(Set<PhotoFlag>.self, forKey: .flags) ?? []
         searchText = try c.decodeIfPresent(String.self, forKey: .searchText)
     }
 }

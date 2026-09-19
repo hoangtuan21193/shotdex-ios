@@ -156,8 +156,6 @@ struct OnThisDayScreen: View {
             isSelecting: isSelecting,
             selectedIds: selectedIds,
             bottomInset: isSelecting ? navigation.selectionGridInset : bottomChromeInset,
-            cullStates: dependencies.cullStore.states,
-            cullVersion: dependencies.cullStore.version,
             photoLibrary: photoLibrary,
             onTap: { flatIndex, metadata in
                 if isSelecting {

@@ -35,6 +35,22 @@ struct ZoomableImageView: UIViewRepresentable {
     /// it would cover is hosted inside a `UIScrollView` (the same wall the
     /// timeline drag and the grid scrubber hit).
     var onHoldChange: ((Bool) -> Void)?
+    /// A plain tap on the photo, for a host that treats the frame itself as a
+    /// control — the compare screen's "tap the photo to pick it". A UIKit
+    /// recognizer for the same reason `onHoldChange` is one, and it waits for
+    /// the double-tap to fail so picking a photo never fights zooming into it.
+    var onSingleTap: (() -> Void)?
+    /// Requires two fingers to pan the zoomed image, leaving one-finger drags
+    /// to whatever scrolls around this view.
+    ///
+    /// For the compare screen, where the cards live in a scrolling column. With
+    /// one-finger pan, a card zoomed past 1x eats every drag that starts on it
+    /// — and on a phone one card is most of the screen, so zooming in to judge
+    /// a detail is also how the list stops scrolling. Splitting by finger count
+    /// costs nothing to learn here, because zoom and pan are mirrored across
+    /// every card at once: they are the comparison's view state, not one
+    /// photo's, and the second finger is already down from the pinch.
+    var panRequiresTwoFingers: Bool = false
 
     func makeUIView(context: Context) -> UIScrollView {
         let scrollView = UIScrollView()
@@ -48,6 +64,8 @@ struct ZoomableImageView: UIViewRepresentable {
         // At 1x, horizontal movement belongs to the outer photo pager. Pinch
         // remains active because UIScrollView has a separate pinch recognizer.
         scrollView.panGestureRecognizer.isEnabled = false
+        scrollView.panGestureRecognizer.minimumNumberOfTouches =
+            panRequiresTwoFingers ? 2 : 1
 
         let imageView = UIImageView(image: image)
         imageView.contentMode = .scaleAspectFit
@@ -83,6 +101,15 @@ struct ZoomableImageView: UIViewRepresentable {
         doubleTap.numberOfTapsRequired = 2
         scrollView.addGestureRecognizer(doubleTap)
 
+        let singleTap = UITapGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleSingleTap)
+        )
+        singleTap.numberOfTapsRequired = 1
+        singleTap.require(toFail: doubleTap)
+        scrollView.addGestureRecognizer(singleTap)
+        context.coordinator.singleTapRecognizer = singleTap
+
         let hold = UILongPressGestureRecognizer(
             target: context.coordinator,
             action: #selector(Coordinator.handleHold(_:))
@@ -107,6 +134,10 @@ struct ZoomableImageView: UIViewRepresentable {
         context.coordinator.onZoomChange = onZoomChange
         context.coordinator.setLiveTextActive(isLiveTextActive, for: image)
         context.coordinator.onHoldChange = onHoldChange
+        context.coordinator.onSingleTap = onSingleTap
+        scrollView.panGestureRecognizer.minimumNumberOfTouches =
+            panRequiresTwoFingers ? 2 : 1
+        context.coordinator.singleTapRecognizer?.isEnabled = onSingleTap != nil
         // Live Text owns press-and-hold while it is on: that is how a subject
         // is lifted out of the picture.
         context.coordinator.holdRecognizer?.isEnabled =
@@ -120,6 +151,12 @@ struct ZoomableImageView: UIViewRepresentable {
     final class Coordinator: NSObject, UIScrollViewDelegate, UIGestureRecognizerDelegate {
         var onHoldChange: ((Bool) -> Void)?
         weak var holdRecognizer: UILongPressGestureRecognizer?
+        var onSingleTap: (() -> Void)?
+        weak var singleTapRecognizer: UITapGestureRecognizer?
+
+        @objc func handleSingleTap() {
+            onSingleTap?()
+        }
 
         @objc func handleHold(_ recognizer: UILongPressGestureRecognizer) {
             switch recognizer.state {
