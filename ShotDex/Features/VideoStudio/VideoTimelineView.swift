@@ -43,7 +43,7 @@ struct VideoTimelineView: View {
     var body: some View {
         GeometryReader { geo in
             let screenWidth = geo.size.width
-            let halfWidth = VideoStudioMetrics.rowAreaHalfWidth(screenWidth: screenWidth)
+            let halfWidth = VideoStudioMetrics.rowAreaHalfWidth(screenWidth: screenWidth, gutter: lanes.gutter)
             let visibleLeftTime = model.currentTime - Double(halfWidth / pps)
 
             VStack(spacing: 0) {
@@ -51,7 +51,7 @@ struct VideoTimelineView: View {
                 // scrolling content's x = 0.
                 TimelineRuler(totalDuration: model.totalDuration, pps: pps, visibleLeftTime: visibleLeftTime)
                     .frame(height: lanes.ruler)
-                    .padding(.leading, VideoStudioMetrics.gutterWidth)
+                    .padding(.leading, lanes.gutter)
                     .padding(.top, VideoStudioMetrics.timelineTopPadding)
                     .padding(.bottom, VideoStudioMetrics.rulerToTracks)
                     .allowsHitTesting(false)
@@ -98,7 +98,7 @@ struct VideoTimelineView: View {
                     .padding(.bottom, 2)
             }
             .overlay(alignment: .topLeading) {
-                playhead.offset(x: VideoStudioMetrics.playheadX(screenWidth: screenWidth) - 1)
+                playhead.offset(x: VideoStudioMetrics.playheadX(screenWidth: screenWidth, gutter: lanes.gutter) - 1)
             }
             .onAppear { viewportWidth = screenWidth }
             .onChange(of: screenWidth) { viewportWidth = screenWidth }
@@ -148,7 +148,7 @@ struct VideoTimelineView: View {
     }
 
     private func scrollbar(screenWidth: CGFloat) -> some View {
-        let rowWidth = screenWidth - VideoStudioMetrics.gutterWidth
+        let rowWidth = screenWidth - lanes.gutter
         let width = max(20, rowWidth - 8)
         let total = max(model.totalDuration, 0.1)
         let viewportTime = Double(rowWidth / pps)
@@ -166,7 +166,7 @@ struct VideoTimelineView: View {
                 .offset(x: width * CGFloat(posFraction))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.leading, VideoStudioMetrics.gutterWidth + 4)
+        .padding(.leading, lanes.gutter + 4)
         .allowsHitTesting(false)
     }
 
@@ -196,7 +196,7 @@ struct VideoTimelineView: View {
     }
 
     private func fitToWindow() {
-        let rowWidth = viewportWidth - VideoStudioMetrics.gutterWidth
+        let rowWidth = viewportWidth - lanes.gutter
         guard model.totalDuration > 0.1, rowWidth > 0 else { return }
         let target = rowWidth / CGFloat(model.totalDuration)
         withAnimation(EditorTheme.animation) {

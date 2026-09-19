@@ -1,0 +1,12 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "screenshot", "name": "60-duo-library" },
+    { "action": "dump", "name": "60-duo-library", "type": "cell" },
+    { "action": "tap", "label": "Select", "type": "button" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "screenshot", "name": "61-duo-selection" },
+    { "action": "dump", "name": "61-duo-selection", "type": "cell" }
+  ]
+}

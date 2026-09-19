@@ -21,6 +21,13 @@ enum SettingsKeys {
     /// every photo app opens on, and the shape grid is a deliberate choice.
     static let aspectRatioGrid = "grid.aspectTiles"
 
+    /// Points the Video Studio's timeline has been dragged taller than the
+    /// height its lanes need, on a regular-width window. Zero by default: the
+    /// app's own answer is that the surplus belongs around the frame, and
+    /// this is how the user says otherwise. Final Cut for iPad publishes the
+    /// same handle.
+    static let videoTimelineExtraHeight = "video.timelineExtraHeight"
+
     /// Show the compact RAW/JPG/HEIC/MOV-style badge at the top-leading corner
     /// of every grid thumbnail. Defaults to true.
     static let showFileTypeBadge = "display.showFileType"

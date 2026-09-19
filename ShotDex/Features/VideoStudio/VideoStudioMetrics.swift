@@ -124,13 +124,17 @@ enum VideoStudioMetrics {
         panelMayDock: Bool = false,
         /// `false` where Back, the read-out and Export have moved into the top
         /// band, so the bottom band is not drawn and costs no height.
-        showsBottomBar: Bool = true
+        showsBottomBar: Bool = true,
+        /// Points the user has dragged the divider to give the timeline more
+        /// than its lanes need. Clamped to `timelineExtraRange`.
+        timelineExtraHeight: CGFloat = 0
     ) -> StackLayout {
         // The rail takes the tools out of the vertical stack entirely, so the
         // 62pt the row used to cost goes back to the preview and the timeline.
         let toolRow = usesToolRail ? 0 : toolbarHeight
         let natural = canvas.width > 0 ? screen.width * canvas.height / canvas.width : 0
-        let wanted = max(timelineMinimumHeight, timelineContentHeight)
+        let extra = min(max(0, timelineExtraHeight), timelineExtraRange.upperBound)
+        let wanted = max(timelineMinimumHeight, timelineContentHeight) + extra
 
         // What the timeline must keep when the preview is clamped. It is the
         // lanes' own height, not the phone's 248: at `Lanes.regular` one
@@ -179,6 +183,12 @@ enum VideoStudioMetrics {
         )
     }
 
+    /// How far the divider may be dragged. The ceiling is about five
+    /// regular-width lanes' worth — past that the preview is the thing being
+    /// starved, and the point of the handle is to let the user choose between
+    /// them, not to let them lose one.
+    static let timelineExtraRange: ClosedRange<CGFloat> = 0...400
+
     /// The phone's lane geometry, kept as a free function for the layout
     /// tests and for callers that have no width to hand.
     static func timelineContentHeight(overlayLanes: Int, musicLanes: Int) -> CGFloat {
@@ -219,9 +229,13 @@ enum VideoStudioMetrics {
         var music: CGFloat
         var ruler: CGFloat
         var clipCell: CGFloat
+        /// The fixed column at the leading edge of the lane stack. A phone
+        /// has room for a glyph; a tablet has room for the lane's name, and
+        /// a track nobody can name is a track you count rather than read.
+        var gutter: CGFloat
 
-        static let compact = Lanes(overlay: 34, video: 66, music: 40, ruler: 26, clipCell: 54)
-        static let regular = Lanes(overlay: 44, video: 104, music: 52, ruler: 30, clipCell: 88)
+        static let compact = Lanes(overlay: 34, video: 66, music: 40, ruler: 26, clipCell: 54, gutter: 30)
+        static let regular = Lanes(overlay: 44, video: 104, music: 52, ruler: 30, clipCell: 88, gutter: 64)
 
         /// A window has to be wide **and tall** for tablet tracks. Width alone
         /// is not enough: the iPhone Duo's inner display is 867pt wide and
@@ -274,19 +288,19 @@ enum VideoStudioMetrics {
 
     // MARK: Timeline horizontals
 
-    /// The fixed left icon column; the scrolling content starts after it.
-    static let gutterWidth: CGFloat = 30
+    /// The phone's gutter, for anything that has no lane tier to hand.
+    static let gutterWidth: CGFloat = Lanes.compact.gutter
     static let gutterIconSize: CGFloat = 20
 
     /// x of the fixed playhead for a given screen width: centre of the row area.
-    static func playheadX(screenWidth: CGFloat) -> CGFloat {
-        gutterWidth + (screenWidth - gutterWidth) / 2
+    static func playheadX(screenWidth: CGFloat, gutter: CGFloat = gutterWidth) -> CGFloat {
+        gutter + (screenWidth - gutter) / 2
     }
 
     /// Half the row area — the content padding at each end so 0s and the last
     /// mark can both sit under the centred playhead.
-    static func rowAreaHalfWidth(screenWidth: CGFloat) -> CGFloat {
-        (screenWidth - gutterWidth) / 2
+    static func rowAreaHalfWidth(screenWidth: CGFloat, gutter: CGFloat = gutterWidth) -> CGFloat {
+        (screenWidth - gutter) / 2
     }
 
     // MARK: Scale

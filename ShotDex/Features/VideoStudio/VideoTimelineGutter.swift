@@ -21,7 +21,7 @@ struct VideoTimelineGutter: View {
                     .offset(y: top(of: lane) - offsetY)
             }
         }
-        .frame(width: VideoStudioMetrics.gutterWidth, alignment: .topLeading)
+        .frame(width: lanes.gutter, alignment: .topLeading)
         .frame(maxHeight: .infinity, alignment: .top)
         .clipped()
         .allowsHitTesting(false)
@@ -48,19 +48,37 @@ struct VideoTimelineGutter: View {
         }
     }
 
+    /// A glyph on a phone; on a tablet the lane's name under it, because a
+    /// 13pt icon at arm's length is a track you count rather than read. The
+    /// column stays decorative either way — the controls for what is in a
+    /// lane belong to the thing that is selected, in the inspector.
     private func icon(_ lane: VideoTimelineLane) -> some View {
         let isActive = lane == activeLane
-        return Image(systemName: lane.systemImage)
-            .font(.system(size: 13, weight: .medium))
-            .foregroundStyle(isActive ? EditorTheme.timelineSelection : EditorTheme.secondaryText)
-            .frame(width: VideoStudioMetrics.gutterIconSize, height: VideoStudioMetrics.gutterIconSize)
-            .background(
-                RoundedRectangle(cornerRadius: 4, style: .continuous)
-                    .fill(isActive ? EditorTheme.timelineSelection.opacity(0.14) : .clear)
-            )
-            .frame(width: VideoStudioMetrics.gutterWidth)
-            .accessibilityHidden(true)
+        let tint = isActive ? EditorTheme.timelineSelection : EditorTheme.secondaryText
+        return VStack(spacing: 2) {
+            Image(systemName: lane.systemImage)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(tint)
+                .frame(width: VideoStudioMetrics.gutterIconSize, height: VideoStudioMetrics.gutterIconSize)
+                .background(
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(isActive ? EditorTheme.timelineSelection.opacity(0.14) : .clear)
+                )
+            if showsLaneNames {
+                Text(lane.name)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(tint)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+        }
+        .frame(width: lanes.gutter)
+        .accessibilityHidden(true)
     }
+
+    /// Only where the column is wide enough to hold a word without clipping
+    /// it — the phone's 30pt is not.
+    private var showsLaneNames: Bool { lanes.gutter >= 56 }
 }
 
 /// One row of the timeline, in the order they stack: overlay lanes above the
@@ -75,6 +93,15 @@ enum VideoTimelineLane: Hashable {
         case .overlay: "textformat"
         case .video: "film"
         case .music: "music.note"
+        }
+    }
+
+    /// What the lane holds, in the words the rest of the studio uses for it.
+    var name: String {
+        switch self {
+        case .overlay: String(localized: "Text")
+        case .video: String(localized: "Video")
+        case .music: String(localized: "Music")
         }
     }
 }

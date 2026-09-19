@@ -1,0 +1,18 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "orientation", "text": "landscape" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "tap", "label": "Select", "type": "button" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "label": "ISO 400 · 105mm · f/5.6", "type": "staticText" },
+    { "action": "tap", "label": "ISO 200 · 26mm · f/4", "type": "staticText" },
+    { "action": "tap", "label": "ISO 200 · 24mm · f/10", "type": "staticText" },
+    { "action": "tap", "label": "ISO 200 · 16mm · f/10", "type": "staticText" },
+    { "action": "tap", "label": "ISO 16 · 6mm · f/2.4", "type": "staticText" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "label": "Compare", "type": "button" },
+    { "action": "wait", "seconds": 5 },
+    { "action": "screenshot", "name": "20-compare-landscape" }
+  ]
+}
