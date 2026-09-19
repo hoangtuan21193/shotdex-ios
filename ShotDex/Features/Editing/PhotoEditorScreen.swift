@@ -534,7 +534,8 @@ struct PhotoEditorScreen: View {
                         // Back/Save row under an iPad Split View's clock.
                         bandHeight: 56 + proxy.safeAreaInsets.top,
                         safeArea: proxy.safeAreaInsets,
-                        canvasWidth: proxy.size.width
+                        canvasWidth: proxy.size.width,
+                        canvasHeight: proxy.size.height
                     )
                 } else {
                     narrowBody(
@@ -712,7 +713,8 @@ struct PhotoEditorScreen: View {
         _ controller: PhotoEditorController,
         bandHeight: CGFloat,
         safeArea: EdgeInsets,
-        canvasWidth: CGFloat
+        canvasWidth: CGFloat,
+        canvasHeight: CGFloat
     ) -> some View {
         let showsSidebar = !isSidebarHidden && !controller.isEditingDrawing
         return HStack(spacing: 0) {
@@ -741,20 +743,14 @@ struct PhotoEditorScreen: View {
 
                 if let reference = session?.referenceAsset, !chrome.isFullBleed,
                    !controller.isEditingDrawing {
-                    HStack(spacing: 0) {
-                        EditorReferencePane(
-                            asset: reference,
-                            photoLibrary: dependencies.photoLibrary
-                        ) {
-                            withAnimation(EditorTheme.animation) {
-                                session?.referenceIndex = nil
-                            }
-                        }
-                        Rectangle()
-                            .fill(EditorTheme.panelTopHairline)
-                            .frame(width: 1)
-                        imageStage(controller)
-                    }
+                    referenceSplit(
+                        controller,
+                        reference: reference,
+                        canvas: CGSize(
+                            width: canvasWidth - (showsSidebar ? sidebarWidth(in: canvasWidth) : 0),
+                            height: canvasHeight
+                        )
+                    )
                     .transition(.opacity)
                 } else {
                     imageStage(controller)
@@ -770,6 +766,42 @@ struct PhotoEditorScreen: View {
         }
         .animation(EditorTheme.animation, value: showsSidebar)
         .animation(EditorTheme.animation, value: sidebarEdge)
+    }
+
+    /// The canvas cut in two, the way round that leaves both frames biggest.
+    @ViewBuilder
+    private func referenceSplit(
+        _ controller: PhotoEditorController,
+        reference: PHAsset,
+        canvas: CGSize
+    ) -> some View {
+        let axis = EditorLayoutMetrics.referenceSplit(
+            canvas: canvas,
+            aspectRatio: controller.previewAspectRatio
+        )
+        let pane = EditorReferencePane(
+            asset: reference,
+            photoLibrary: dependencies.photoLibrary
+        ) {
+            withAnimation(EditorTheme.animation) {
+                session?.referenceIndex = nil
+            }
+        }
+        let divider = Rectangle().fill(EditorTheme.panelTopHairline)
+
+        if axis == .horizontal {
+            HStack(spacing: 0) {
+                pane
+                divider.frame(width: 1)
+                imageStage(controller)
+            }
+        } else {
+            VStack(spacing: 0) {
+                pane
+                divider.frame(height: 1)
+                imageStage(controller)
+            }
+        }
     }
 
     /// The run of photos under the canvas. Nothing at all for a single photo, and

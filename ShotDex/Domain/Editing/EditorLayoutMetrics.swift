@@ -1,6 +1,7 @@
 import CoreGraphics
 import Foundation
 import ShotDexKit
+import SwiftUI
 
 /// Corner the floating histogram card snaps to when the user lets go.
 enum EditorHistogramCorner: String, CaseIterable, Codable, Sendable {
@@ -78,6 +79,46 @@ enum EditorLayoutMetrics {
     static let sidebarSectionHeaderHeight: CGFloat = 44
     /// The always-on histogram at the top of the sidebar.
     static let sidebarHistogramHeight: CGFloat = 92
+
+    // MARK: Reference view
+
+    /// Which way to cut the canvas in two when a reference frame is pinned.
+    ///
+    /// Not a fixed side-by-side: what matters is how big each photo ends up,
+    /// and that depends on both the shape of the canvas and the shape of the
+    /// photo. A landscape frame in a portrait canvas is far bigger stacked —
+    /// splitting that canvas vertically halves the one dimension the photo
+    /// already has plenty of. A portrait frame in a landscape canvas is the
+    /// other way round. Both panes are the same size, so measuring one is
+    /// enough.
+    ///
+    /// `.horizontal` means the panes sit side by side, `.vertical` means one
+    /// above the other.
+    static func referenceSplit(canvas: CGSize, aspectRatio: CGFloat) -> Axis {
+        guard canvas.width > 0, canvas.height > 0, aspectRatio > 0 else { return .horizontal }
+        let sideBySide = fittedArea(
+            aspectRatio: aspectRatio,
+            in: CGSize(width: canvas.width / 2, height: canvas.height)
+        )
+        let stacked = fittedArea(
+            aspectRatio: aspectRatio,
+            in: CGSize(width: canvas.width, height: canvas.height / 2)
+        )
+        // Ties go to side by side: two frames at the same height are easier to
+        // compare than two at the same width, because the eye travels along a
+        // line rather than across one.
+        return stacked > sideBySide ? .vertical : .horizontal
+    }
+
+    /// How much of a pane a photo of this shape actually covers.
+    static func fittedArea(aspectRatio: CGFloat, in pane: CGSize) -> CGFloat {
+        guard pane.width > 0, pane.height > 0, aspectRatio > 0 else { return 0 }
+        let paneAspect = pane.width / pane.height
+        let size = aspectRatio > paneAspect
+            ? CGSize(width: pane.width, height: pane.width / aspectRatio)
+            : CGSize(width: pane.height * aspectRatio, height: pane.height)
+        return size.width * size.height
+    }
 
     // MARK: Multi-photo filmstrip
 
