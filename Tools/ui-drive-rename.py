@@ -1,9 +1,11 @@
 """Give the exported attachments their real names.
 
-`xcresulttool export attachments` appends "_<index>_<uuid>" to every file so
-two attachments with the same name cannot collide. The driver already names
-each artifact itself, so strip the suffix back off and drop the manifest.
+`xcresulttool export attachments` writes each file under an opaque name and a
+manifest.json that maps it back to the name the test gave it; older
+toolchains instead append "_<index>_<uuid>" to the real name. Handle both,
+and leave anything unrecognised alone rather than clobbering it.
 """
+import json
 import os
 import re
 import shutil
@@ -11,11 +13,27 @@ import sys
 
 out = sys.argv[1]
 unique = re.compile(r"_\d+_[0-9A-Fa-f-]{36}(?=\.[A-Za-z0-9]+$)")
+manifest = os.path.join(out, "manifest.json")
+
+
+def rename(src_name, wanted):
+    if not wanted or wanted == src_name:
+        return
+    src = os.path.join(out, src_name)
+    if os.path.exists(src):
+        shutil.move(src, os.path.join(out, wanted))
+
+
+if os.path.exists(manifest):
+    with open(manifest) as handle:
+        tests = json.load(handle)
+    for test in tests:
+        for item in test.get("attachments", []):
+            exported = item.get("exportedFileName")
+            if not exported:
+                continue
+            rename(exported, item.get("suggestedHumanReadableName") or unique.sub("", exported))
+    os.remove(manifest)
 
 for name in os.listdir(out):
-    if name == "manifest.json":
-        os.remove(os.path.join(out, name))
-        continue
-    wanted = unique.sub("", name)
-    if wanted != name:
-        shutil.move(os.path.join(out, name), os.path.join(out, wanted))
+    rename(name, unique.sub("", name))
