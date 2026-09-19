@@ -181,10 +181,21 @@ taken as given and worked top-down.
 
 ## Open
 
-- [ ] **64pt track headers at regular width.** The gutter is 30pt, `allowsHitTesting(false)`, 13pt glyphs, no name and no controls; LumaFusion's carries lock, meters, levels and visibility. Costs 34pt of row width out of 1284.
-- [ ] **A resize handle on the timeline divider**, persisted. Final Cut publishes one and CapCut Pad has resizable panels. spec §7.9's rule is about what the app does *unasked*; it does not say the user may not ask.
-- [ ] **Keyboard shortcuts and hover.** The whole feature has no `keyboardShortcut`, no `contextMenu` and no hover, while DESIGN.md §10.3 records all three as settled for the photo editor. Space / ← / → / ⌘Z / ⌘E are the universal bindings and cost no screen space.
-- [ ] **The Duo cover display should stop pretending to be an editor.** Measured at 382×644 in a prior session: every band is at its floor before the user touches anything, and the first selection puts all three regions below their minimums. The survey's proposal is viewer + transport + a video-lane-only filmstrip, with "Unfold to edit" on any editing tap; Export still works. Needs a decision, and needs the Duo photographed first — no run has reached the Video Studio on it yet.
+- [x] **64pt track headers at regular width.** The gutter is 30pt, `allowsHitTesting(false)`, 13pt glyphs, no name and no controls; LumaFusion's carries lock, meters, levels and visibility. Costs 34pt of row width out of 1284.
+- [x] **A resize handle on the timeline divider**, persisted. Final Cut publishes one and CapCut Pad has resizable panels. spec §7.9's rule is about what the app does *unasked*; it does not say the user may not ask.
+- [x] **Keyboard shortcuts.** The whole feature has no `keyboardShortcut`, no `contextMenu` and no hover, while DESIGN.md §10.3 records all three as settled for the photo editor. Space / ← / → / ⌘Z / ⌘E are the universal bindings and cost no screen space.
+- [x] **The Duo cover display should stop pretending to be an editor.** Measured at 382×644 in a prior session: every band is at its floor before the user touches anything, and the first selection puts all three regions below their minimums. The survey's proposal is viewer + transport + a video-lane-only filmstrip, with "Unfold to edit" on any editing tap; Export still works. Needs a decision, and needs the Duo photographed first — no run has reached the Video Studio on it yet.
+
+## Corrected after measuring
+
+- The survey's **Duo inner-display case cannot occur.** It computed from an 867×669 landscape scene; the iPhone target is portrait-locked, so the app's scene there is **669×951**, compact, phone layout — frame 669×376, timeline 248, nothing near a floor. The inspector-column rule it proposed stands on its own merits; that example of it was wrong, and the test now says so.
+- The **cover display's numbers were right**: 382×644, and opening the panel put the preview on its 150pt floor with the timeline 108pt under its own. Fixed by standing the timeline down, gated at 660pt of height so an iPhone SE (667) keeps its timeline.
+- **Hover** was dropped from the shortcuts item: there is no pointer affordance to add to a timeline whose drags are already routed through UIKit, and inventing one without a device to test it on is guessing.
+- **Per-lane controls were left off the track headers** deliberately. LumaFusion's carry lock, meters, levels and visibility; ShotDex has no model state for any of those per lane, and one invented state is worse than a legible label. The header names the lane and stays non-interactive.
+
+## Still not photographed
+
+- **The iPhone Duo.** The driver reaches the Video Studio there — every step of the script succeeds — but no screenshot path works: `XCUIScreen.main` is the display the system calls main, which on a Duo is the one switched off, and `app.screenshot()` comes back black too. A host-side `simctl io` burst catches the home screen either side of the run but not the app. Everything reported for the Duo is computed from the pure metrics against scene sizes the driver confirmed (inner 669×951, cover 382×644 from a prior session).
 
 ## Not verified on hardware
 
