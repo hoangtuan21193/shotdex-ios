@@ -32,6 +32,20 @@ enum CompareViewMode: String, CaseIterable, Identifiable {
         case .compare: "rectangle.split.2x1"
         }
     }
+
+    /// One line saying what the mode does. `Survey` and `Compare` are
+    /// Lightroom's words for these views, not words a photographer can read
+    /// off the button, so the picker shows this for a moment after a switch
+    /// and VoiceOver reads it every time.
+    var summary: String {
+        switch self {
+        case .column: "One photo per row, scrolling"
+        case .survey: "Every photo on screen at once"
+        case .compare: "The keeper against one challenger"
+        }
+    }
+
+    var pickerAccessibilityLabel: String { "\(title). \(summary)" }
 }
 
 // MARK: - Survey

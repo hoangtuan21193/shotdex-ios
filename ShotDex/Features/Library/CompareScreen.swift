@@ -256,6 +256,10 @@ struct CompareScreen: View {
     /// Which of the three culling layouts is on screen.
     @State private var mode: CompareViewMode = .column
     @State private var hasChosenMode = false
+    /// The picked mode's one-line summary, shown under the picker for a beat
+    /// after a switch. `Survey` and `Compare` are Lightroom's names; the
+    /// button tells you which view you are in, this tells you what it is.
+    @State private var modeHint: CompareViewMode?
     /// Flags and ratings for the photos on screen, read once and written
     /// through `CullStore`.
     @State private var cullStates: [String: PhotoCullState] = [:]
@@ -412,7 +416,7 @@ struct CompareScreen: View {
         GeometryReader { proxy in
             let canvas = CGSize(
                 width: proxy.size.width,
-                height: proxy.size.height - EditorLayoutMetrics.sidebarHeaderHeight
+                height: proxy.size.height - Self.compareControlsHeight
             )
             let aspect = SurveyLayout.averageAspectRatio(comparePair.map(\.aspectRatio))
             let axis = EditorLayoutMetrics.referenceSplit(canvas: canvas, aspectRatio: aspect)
@@ -465,37 +469,51 @@ struct CompareScreen: View {
     /// Lightroom's three compare verbs, and nothing else. Promote is the one
     /// that makes a long run converge: the winner stays and the next frame
     /// comes up against it.
+    ///
+    /// Each verb is written under its glyph. A crown between two chevrons is
+    /// not a word anyone can read off the button, and this row is the whole
+    /// interaction model of the mode.
     private var compareControls: some View {
         HStack(spacing: AppTheme.Spacing.md) {
-            compareButton("chevron.left", label: "Previous candidate") {
+            compareButton("chevron.left", caption: "Previous", label: "Previous candidate") {
                 stepCandidate(-1)
             }
-            compareButton("arrow.left.arrow.right", label: "Swap select and candidate") {
+            compareButton("arrow.left.arrow.right", caption: "Swap", label: "Swap select and candidate") {
                 swap(&selectIndex, &candidateIndex)
             }
-            compareButton("crown", label: "Promote candidate to select") {
+            compareButton("crown", caption: "Keep", label: "Promote candidate to select") {
                 selectIndex = candidateIndex
                 stepCandidate(1)
             }
-            compareButton("chevron.right", label: "Next candidate") {
+            compareButton("chevron.right", caption: "Next", label: "Next candidate") {
                 stepCandidate(1)
             }
         }
-        .frame(height: EditorLayoutMetrics.sidebarHeaderHeight)
+        .frame(height: Self.compareControlsHeight)
     }
+
+    /// Tall enough for a glyph with its verb under it.
+    fileprivate static let compareControlsHeight: CGFloat = 54
 
     private func compareButton(
         _ systemImage: String,
+        caption: String,
         label: String,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: AppTheme.Size.glassButton, height: AppTheme.Size.minTouch)
-                .editorGlass(Capsule())
-                .contentShape(Capsule())
+            VStack(spacing: 2) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 15, weight: .semibold))
+                Text(caption)
+                    .font(.system(size: 10, weight: .semibold))
+                    .lineLimit(1)
+            }
+            .foregroundStyle(.white)
+            .frame(minWidth: 64, minHeight: Self.compareControlsHeight)
+            .padding(.horizontal, AppTheme.Spacing.xs)
+            .editorGlass(Capsule())
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)
@@ -595,30 +613,51 @@ struct CompareScreen: View {
     }
 
     private var topBar: some View {
-        HStack(spacing: 12) {
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(.white)
-                    .frame(width: 52, height: 52)
-                    .editorGlass(Circle())
-                    .contentShape(Circle())
+        VStack(alignment: .trailing, spacing: AppTheme.Spacing.xs) {
+            HStack(spacing: 12) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(.white)
+                        .frame(width: 52, height: 52)
+                        .editorGlass(Circle())
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Close")
+                Spacer()
+                modePicker
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Close")
-            Spacer()
-            modePicker
+            if let modeHint {
+                Text(modeHint.summary)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.85))
+                    .padding(.horizontal, AppTheme.Spacing.sm)
+                    .padding(.vertical, 4)
+                    .editorGlass(Capsule())
+                    .transition(.opacity)
+                    .accessibilityHidden(true)
+            }
         }
         .padding(.horizontal)
         .padding(.top, 8)
+        .animation(EditorTheme.animation, value: modeHint)
+        .task(id: mode) {
+            modeHint = mode
+            try? await Task.sleep(for: .seconds(2.5))
+            guard !Task.isCancelled else { return }
+            modeHint = nil
+        }
     }
 }
 
 extension CompareScreen {
-    /// Three icons, not a segmented control with words: the strip sits over a
-    /// photo and the words would need a background wide enough to cover it.
+    /// Named segments, not three bare glyphs. The strip sits over a photo, but
+    /// the capsule behind it is already the background the words need — and a
+    /// row of unlabelled icons in the corner of a full-screen tool reads as
+    /// "three buttons", not as "the three ways to look at these photos".
     /// Compare is off below two photos and is the only mode with a hard
     /// minimum.
     fileprivate var modePicker: some View {
@@ -628,14 +667,16 @@ extension CompareScreen {
                     mode = candidate
                     if candidate == .compare { clampCompareIndices() }
                 } label: {
-                    Image(systemName: candidate.systemImage)
-                        .font(.system(size: 15, weight: .semibold))
+                    Text(candidate.title)
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(mode == candidate ? EditorTheme.accent : .white)
-                        .frame(width: AppTheme.Size.minTouch, height: AppTheme.Size.minTouch)
+                        .lineLimit(1)
+                        .padding(.horizontal, AppTheme.Spacing.sm)
+                        .frame(minWidth: AppTheme.Size.minTouch, minHeight: AppTheme.Size.minTouch)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(candidate.title)
+                .accessibilityLabel(candidate.pickerAccessibilityLabel)
                 .accessibilityAddTraits(mode == candidate ? .isSelected : [])
             }
         }
