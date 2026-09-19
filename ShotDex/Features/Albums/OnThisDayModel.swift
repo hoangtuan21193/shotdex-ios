@@ -185,7 +185,11 @@ final class OnThisDayModel: PhotoBrowsingSource {
             newAssetsById[asset.localIdentifier] = asset
             newPhotos.append(indexed[asset.localIdentifier] ?? .placeholder(for: asset))
         }
-        return Snapshot(photos: newPhotos, assetsById: newAssetsById)
+        // The fetch is newest-first because the Albums card wants the newest
+        // asset as its cover. The grid is the other way up: like Library, the
+        // newest photos sit at the BOTTOM and that is where it opens, so the
+        // year sections run oldest to newest down the screen.
+        return Snapshot(photos: newPhotos.reversed(), assetsById: newAssetsById)
     }
 
     private func rebuildSections() {

@@ -156,6 +156,7 @@ struct RootTabView: View {
                 }
             }
         }
+        .tabViewSearchActivation(.searchTabSelection)
         .tabBarMinimizeBehavior(.never)
         // Selection chrome is one floating bottom bar above every tab's content
         // and the tab bar. The selecting screen hides only the tab bar and keeps
@@ -446,6 +447,9 @@ struct SearchTab: View {
     /// Raises the keyboard. Presentation alone leaves a field with a caret and no
     /// keyboard, which is the same complaint from the user's side.
     @FocusState private var isFieldFocused: Bool
+    /// Held so a fast tab-switch cannot land focus on a field that is on its way
+    /// out, which leaves the keyboard up over the Library grid.
+    @State private var focusTask: Task<Void, Never>?
 
     var body: some View {
         SearchSuggestionsScreen(
@@ -483,23 +487,30 @@ struct SearchTab: View {
         // `DefaultToolbarItem` breaks its layout (the typed text draws outside the
         // pill). iOS 26 also hides the navigation title while the field is active.
         // So the screen draws its own title row and puts Advanced Search on it.
-        .onAppear { isFieldActive = true }
+        .onAppear { activateField() }
         // The tab is not rebuilt when it is selected again and the field stays
-        // presented, so `onAppear` alone leaves the second visit with a field that
-        // looks active but has no keyboard — the "I have to tap the field again"
-        // complaint. Presenting raises the keyboard by itself; only a field that is
-        // already presented needs focus put back on it.
+        // presented, so `onAppear` alone would never run on a second visit.
         .onChange(of: navigation.selectedTab) { _, tab in
             guard tab == .search else { return }
             // Leaving the tab empties the field on screen without writing the
             // binding, so the old text would still be what the Search key submits.
             query = ""
-            if isFieldActive {
-                isFieldFocused = true
-            } else {
-                isFieldActive = true
-            }
+            activateField()
         }
+        .onDisappear { focusTask?.cancel() }
+    }
+
+    /// Presents the field *and* puts the caret in it.
+    ///
+    /// Presenting does **not** raise the keyboard on its own here — measured on
+    /// iOS 27, on the first visit as well as later ones: the tab opens with a field
+    /// that has a caret and no keys, and the first tap does nothing but focus it.
+    /// That is the whole "I have to tap the field again" complaint.
+    ///
+    /// The focus has to wait for the tab bar's morph into the search field to
+    /// finish; asked for in the same frame as `isFieldActive`, it is dropped.
+    private func activateField() {
+        isFieldActive = true
     }
 }
 

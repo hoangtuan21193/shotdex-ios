@@ -111,6 +111,12 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             }
         }
         collectionView.backgroundColor = .systemBackground
+        // A bottom-anchored grid has the newest photos at the END, so the
+        // system's "scroll to top" (status-bar tap, and re-tapping the
+        // selected tab) would send the user to the OLDEST photo — the
+        // opposite of what both gestures mean here. Library handles the tab
+        // re-tap itself, via `jumpToNewestToken`.
+        collectionView.scrollsToTop = !anchorsBottom
         collectionView.contentInset.bottom = bottomInset
         collectionView.dataSource = coordinator
         collectionView.delegate = coordinator
@@ -368,6 +374,11 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             if footerChanged { syncLayoutMetrics() }
 
             if let token = appliedJumpToken, token != newParent.jumpToNewestToken {
+                // Re-tapping the tab: go to the newest photos. The content
+                // size must be current first — a pending invalidation would
+                // otherwise place the jump against the previous frame's
+                // height and land short of the end.
+                collectionView.layoutIfNeeded()
                 anchor(collectionView)
             }
             appliedJumpToken = newParent.jumpToNewestToken

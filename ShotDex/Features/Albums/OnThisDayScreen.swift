@@ -141,7 +141,9 @@ struct OnThisDayScreen: View {
             // Year groups are semantic, not derived from the date granularity
             // the grid would pick for itself.
             sectionMode: .custom(model.gridSections),
-            anchorsBottom: false,
+            // Newest at the bottom, opening there — the same way up as
+            // Library, so moving between them does not flip the timeline.
+            anchorsBottom: true,
             contentVersion: model.contentGeneration,
             contentRefreshVersion: model.contentRefreshGeneration,
             jumpToNewestToken: 0,
