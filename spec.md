@@ -373,6 +373,7 @@ Yêu cầu hiệu năng:
 - **Auto Sync** (`EditorSession.isAutoSyncing`): bật thì mọi thay đổi đã chốt tự rải sang phần còn lại theo `autoSyncScope`. Hiện dưới dạng toggle sáng trong menu ⋯, **không phải chế độ ẩn** — Lightroom giấu nó sau ⌥-click và người dùng bỏng tay suốt mười lăm năm; iPad không có ⌥-click để lộ ra.
 - **Apply Previous**: `EditorSession.previousIndex` nhớ ảnh vừa rời, áp recipe của nó lên ảnh hiện tại theo scope đang dùng.
 - **Paste Edits thẳng từ lưới** (`PasteEditsSheet`): chọn ảnh → ⋯ → Paste Edits, dán look trong `EditClipboard` lên cả loạt bằng cùng vòng lặp headless, không mở editor. Chỉ hiện khi clipboard có nội dung.
+- **Filmstrip tải thumbnail theo thang local → iCloud**, có placeholder và spinner. Máy bật Optimize Storage (đa số thư viện đầy) thì request local-only trả nil cho phần lớn khung, và dải ảnh trước đây là một hàng ô xám không phân biệt được đang tải hay hỏng.
 - Chưa có: undo theo từng ảnh (lịch sử nằm trên controller nên đổi ảnh là mất), Reference View, user preset, flag/rating.
 
 **Viewer — action bar**

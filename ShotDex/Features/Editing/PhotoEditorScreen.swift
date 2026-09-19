@@ -770,6 +770,45 @@ struct PhotoEditorScreen: View {
     /// The photo itself, with the floating histogram card over it. Shared by both
     /// layouts — only the chrome around it differs.
     private func imageStage(_ controller: PhotoEditorController) -> some View {
+        stageContent(controller)
+            // A secondary click on the photo reaches the same commands as the ⋯
+            // button. Pointer users expect the canvas itself to answer; without
+            // it a trackpad right-click on an iPad does nothing anywhere in the
+            // editor.
+            .contextMenu {
+                Button {
+                    controller.applyAutoTone()
+                } label: {
+                    Label("Auto Enhance", systemImage: "wand.and.sparkles")
+                }
+                Button {
+                    dependencies.editClipboard.copy(from: controller.recipe)
+                } label: {
+                    Label("Copy Edits", systemImage: "doc.on.doc")
+                }
+                .disabled(controller.recipe.isIdentity)
+                Button {
+                    controller.pasteEdits(from: dependencies.editClipboard)
+                } label: {
+                    Label("Paste Edits", systemImage: "doc.on.clipboard")
+                }
+                .disabled(!dependencies.editClipboard.hasContent)
+                Divider()
+                Button {
+                    controller.reset()
+                } label: {
+                    Label("Reset All", systemImage: "arrow.counterclockwise")
+                }
+                .disabled(controller.recipe.isIdentity)
+                Button {
+                    chrome.isHistorySheetPresented = true
+                } label: {
+                    Label("History", systemImage: "clock.arrow.circlepath")
+                }
+            }
+    }
+
+    private func stageContent(_ controller: PhotoEditorController) -> some View {
         // The only thing allowed over the image is the histogram card, and only
         // when the user taps the band mini open — every other control lives in
         // the tools. It parks back to the mini on tap / close. (The curve graph
@@ -857,14 +896,14 @@ struct PhotoEditorScreen: View {
                 backButton(controller)
                 Spacer(minLength: 8)
                 Text("Edit")
-                    .font(EditorTheme.panelTitle)
+                    .font(EditorTheme.sidebarTitle)
                     .foregroundStyle(.white)
                 Spacer(minLength: 8)
                 Button {
                     isSidebarHidden = true
                 } label: {
                     Image(systemName: sidebarEdge.collapseIcon)
-                        .font(.system(size: 15, weight: .medium))
+                        .font(EditorTheme.commandGlyph)
                         .foregroundStyle(EditorTheme.secondaryText)
                         .frame(width: AppTheme.Size.minTouch, height: AppTheme.Size.minTouch)
                         .contentShape(Rectangle())
@@ -963,8 +1002,19 @@ struct PhotoEditorScreen: View {
                 controller.commitCropSession()
                 isSaveSheetPresented = true
             } label: {
-                Text("Save\u{2026}")
-                    .font(.system(size: 15, weight: .semibold))
+                Group {
+                    if controller.isSaving {
+                        HStack(spacing: AppTheme.Spacing.sm) {
+                            ProgressView().tint(.black)
+                            Text("Saving\u{2026}")
+                        }
+                    } else if controller.isLoading {
+                        Text("Opening\u{2026}")
+                    } else {
+                        Text("Save\u{2026}")
+                    }
+                }
+                    .font(EditorTheme.sidebarActionLabel)
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)
                     .frame(height: AppTheme.Size.primaryActionHeight)
@@ -1037,7 +1087,7 @@ struct PhotoEditorScreen: View {
                         Image(systemName: tool.icon)
                             .font(.system(size: 15, weight: .medium))
                         Text(tool.title)
-                            .font(EditorTheme.tabLabel)
+                            .font(EditorTheme.sidebarToolLabel)
                     }
                     .foregroundStyle(isActive ? Color.black : Color.white.opacity(0.9))
                     .frame(maxWidth: .infinity)

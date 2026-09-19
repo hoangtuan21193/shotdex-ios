@@ -188,15 +188,23 @@ private struct EditorFilmstripThumbnail: View {
 
     @State private var image: UIImage?
     @State private var requestID: PHImageRequestID?
+    @State private var isFetchingFromCloud = false
 
     var body: some View {
         Rectangle()
-            .fill(Color.white.opacity(0.06))
+            .fill(EditorTheme.control)
             .overlay {
                 if let image {
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFill()
+                } else if isFetchingFromCloud {
+                    ProgressView()
+                        .tint(EditorTheme.secondaryText)
+                } else {
+                    Image(systemName: "photo")
+                        .font(.system(size: 18))
+                        .foregroundStyle(EditorTheme.dimText)
                 }
             }
             .clipped()
@@ -204,15 +212,32 @@ private struct EditorFilmstripThumbnail: View {
             .onDisappear(perform: cancel)
     }
 
+    /// Local first, then iCloud. With Optimize Storage on — which is the normal
+    /// state of a full library — a local-only request returns nothing for most
+    /// frames, and the strip was a row of blank grey tiles with no way to tell
+    /// whether they were loading or broken.
     private func load() {
         cancel()
         let side = EditorLayoutMetrics.filmstripThumbnailSide * 3
+        let size = CGSize(width: side, height: side)
         requestID = photoLibrary.requestThumbnail(
             for: asset,
-            targetSize: CGSize(width: side, height: side),
+            targetSize: size,
             allowNetwork: false
         ) { result in
-            if let result { image = result }
+            if let result {
+                image = result
+                return
+            }
+            isFetchingFromCloud = true
+            requestID = photoLibrary.requestThumbnail(
+                for: asset,
+                targetSize: size,
+                allowNetwork: true
+            ) { downloaded in
+                isFetchingFromCloud = false
+                if let downloaded { image = downloaded }
+            }
         }
     }
 

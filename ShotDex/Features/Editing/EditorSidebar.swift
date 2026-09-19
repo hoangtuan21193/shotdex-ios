@@ -39,6 +39,8 @@ enum EditorSidebarEdge: String, CaseIterable, Identifiable {
 /// instead of two taps through a picker. The phone keeps the wheel — there the
 /// screen only has room for one group anyway.
 struct EditorSidebarSection<Content: View>: View {
+    @ScaledMetric(relativeTo: .subheadline)
+    private var headerHeight = EditorLayoutMetrics.sidebarSectionHeaderHeight
     let group: EditorGroup
     let isExpanded: Bool
     /// True when this is the group the photo's stage is currently in (crop
@@ -59,10 +61,10 @@ struct EditorSidebarSection<Content: View>: View {
                 HStack(spacing: AppTheme.Spacing.md) {
                     Image(systemName: group.icon)
                         .font(.system(size: 13, weight: .semibold))
-                        .frame(width: 18)
+                        .frame(width: AppTheme.Spacing.xl)
                         .foregroundStyle(isActive ? EditorTheme.accent : EditorTheme.secondaryText)
                     Text(group.title)
-                        .font(EditorTheme.groupLabel)
+                        .font(EditorTheme.sidebarGroupLabel)
                         .foregroundStyle(isActive ? Color.white : EditorTheme.secondaryText)
                     if hasEdits {
                         Circle()
@@ -76,7 +78,7 @@ struct EditorSidebarSection<Content: View>: View {
                         .rotationEffect(.degrees(isExpanded ? 0 : -90))
                 }
                 .padding(.horizontal, AppTheme.Spacing.lg)
-                .frame(height: EditorLayoutMetrics.sidebarSectionHeaderHeight)
+                .frame(height: headerHeight)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -170,10 +172,24 @@ private struct EditorPanelScrollsKey: EnvironmentKey {
     static let defaultValue = true
 }
 
+/// Whether a tool panel should draw its own title.
+///
+/// False in the wide sidebar, where the section header two rows up already says
+/// "Mask" — the panel repeating it in a larger font, sometimes uppercased and
+/// sometimes not, is the same name twice 44pt apart.
+private struct EditorPanelShowsTitleKey: EnvironmentKey {
+    static let defaultValue = true
+}
+
 extension EnvironmentValues {
     var editorPanelScrolls: Bool {
         get { self[EditorPanelScrollsKey.self] }
         set { self[EditorPanelScrollsKey.self] = newValue }
+    }
+
+    var editorPanelShowsTitle: Bool {
+        get { self[EditorPanelShowsTitleKey.self] }
+        set { self[EditorPanelShowsTitleKey.self] = newValue }
     }
 }
 

@@ -9,6 +9,7 @@ import ShotDexKit
 /// by touch-and-hold drag (`.onMove`), the drag-handle glyph on the left saying so;
 /// the drawing is fixed at the back and has no handle.
 struct EditorTextPanel: View {
+    @Environment(\.editorPanelShowsTitle) private var panelShowsTitle
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
     let addText: () -> Void
@@ -107,7 +108,7 @@ struct EditorTextPanel: View {
 
     private var header: some View {
         HStack {
-            Text(sectionTitle.uppercased())
+            Text(panelShowsTitle ? sectionTitle.uppercased() : sectionTitle)
                 .font(EditorTheme.groupLabel)
                 .tracking(1.1)
                 .foregroundStyle(EditorTheme.secondaryText)

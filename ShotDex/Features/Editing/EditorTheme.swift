@@ -58,6 +58,21 @@ enum EditorTheme {
     static let maskTitle = Font.system(size: 14.5, weight: .semibold)
     static let maskSubtitle = Font.system(size: 11.5)
 
+    // MARK: Scaling type (wide sidebar)
+    //
+    // Tier D is fixed-size by design (DESIGN.md §7.2): the phone's 246pt slab has
+    // no room to grow, and a relative font there pushes rows out of it. The wide
+    // sidebar has no fixed heights left, so its own labels scale with the user's
+    // text size instead of ignoring it — which is the rule §13 asks for wherever
+    // a fixed box holds real text.
+    static let sidebarTitle = Font.system(.headline, design: .default).weight(.semibold)
+    static let sidebarGroupLabel = Font.system(.subheadline, design: .default).weight(.semibold)
+    static let sidebarToolLabel = Font.system(.caption2, design: .default)
+    static let sidebarActionLabel = Font.system(.subheadline, design: .default).weight(.semibold)
+    /// The glyph in a 34pt band/sidebar disc. Matched to the icon, not to text,
+    /// so it stays inside its circle (DESIGN.md §7.1 allows this exception).
+    static let commandGlyph = Font.system(size: 15, weight: .medium)
+
     /// Temp and Tint get a coloured trough instead of the grey one, so the
     /// direction of the correction is readable without moving the knob.
     static func troughGradient(for kind: PhotoAdjustmentKind) -> LinearGradient? {

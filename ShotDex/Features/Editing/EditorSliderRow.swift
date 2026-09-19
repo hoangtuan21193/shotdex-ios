@@ -153,6 +153,24 @@ struct EditorValueSlider: View {
             },
             onEditValue: onEditValue ?? {}
         )
+        // Right-click on a trackpad, long-press on a finger: the two things a
+        // desktop editor puts on a slider, and until now the only way to either
+        // was a gesture nobody can see (double tap resets, two-finger tap types
+        // a value).
+        .contextMenu {
+            Button {
+                UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
+                onReset()
+            } label: {
+                Label("Reset", systemImage: "arrow.counterclockwise")
+            }
+            if let onEditValue {
+                Button(action: onEditValue) {
+                    Label("Enter Value…", systemImage: "keyboard")
+                }
+            }
+        }
+        .hoverEffect(.highlight)
     }
 
     /// Pulls the value onto `detent` as the cursor passes it and taps out a

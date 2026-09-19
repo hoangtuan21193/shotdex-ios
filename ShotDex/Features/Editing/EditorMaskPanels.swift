@@ -5,6 +5,7 @@ import ShotDexKit
 /// with its real shape and a summary of what it changes. Everything else lives a
 /// level down, inside the mask.
 struct EditorMaskListPanel: View {
+    @Environment(\.editorPanelShowsTitle) private var panelShowsTitle
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
     let rename: () -> Void
@@ -13,9 +14,11 @@ struct EditorMaskListPanel: View {
         VStack(spacing: 0) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Masks")
-                        .font(EditorTheme.panelTitle)
-                        .foregroundStyle(.white)
+                    if panelShowsTitle {
+                        Text("Masks")
+                            .font(EditorTheme.panelTitle)
+                            .foregroundStyle(.white)
+                    }
                     Text("Tap a mask to adjust that area on its own")
                         .font(EditorTheme.maskSubtitle)
                         .foregroundStyle(EditorTheme.secondaryText)
