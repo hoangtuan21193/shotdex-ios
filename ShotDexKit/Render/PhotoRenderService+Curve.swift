@@ -11,7 +11,7 @@ public extension PhotoRenderService {
     /// three 256-sample series: each channel is sampled as `channel(master(v))`, so
     /// the master shapes all three tones first and the per-channel curve trims from
     /// there — the order a point-curve panel applies them.
-    public static func applyCurve(_ curve: ToneCurveAdjustments, to input: CIImage) -> CIImage {
+    static func applyCurve(_ curve: ToneCurveAdjustments, to input: CIImage) -> CIImage {
         guard !curve.isIdentity else { return input }
         let clamped = filtered("CIColorClamp", image: input)
         guard let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) else {

@@ -50,7 +50,7 @@ public extension PhotoRenderService {
     /// gamma, so the cube is told to work in sRGB rather than the context's linear
     /// working space — the curves in `FilmLook` were dialled against gamma-encoded
     /// values, which is what a film simulation in a camera operates on too.
-    public static func applyFilmLook(
+    static func applyFilmLook(
         _ look: FilmLook,
         key: String,
         to input: CIImage

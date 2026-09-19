@@ -239,7 +239,9 @@ final class AppDependencies {
         Task.detached(priority: .utility) {
             guard let records = try? SensorDatabaseLoader().loadRecords() else { return }
             let mappings = (try? store.customMappings()) ?? []
-            try? store.resolveUnknownCameras(using: SensorLookup(records: records, customMappings: mappings))
+            _ = try? store.resolveUnknownCameras(
+                using: SensorLookup(records: records, customMappings: mappings)
+            )
         }
     }
 

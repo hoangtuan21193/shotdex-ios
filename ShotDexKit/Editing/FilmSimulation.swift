@@ -287,7 +287,7 @@ public extension FilmLook {
     /// Colour look. `curve` seeds all three channels; pass `red`/`green`/`blue` to
     /// pull one of them off the shared shape, which is what gives a stock its cast
     /// at a specific end of the range.
-    public static func color(
+    static func color(
         curve: Curve = .linear,
         red: Curve? = nil,
         green: Curve? = nil,
@@ -317,7 +317,7 @@ public extension FilmLook {
     /// Monochrome look. `curve` is the master transfer curve — for a monochrome
     /// look it is stored in `green`, because there is only one channel left to
     /// shape.
-    public static func monochrome(
+    static func monochrome(
         mix: SIMD3<Double>,
         curve: Curve,
         shadowToner: SIMD3<Double>? = nil,

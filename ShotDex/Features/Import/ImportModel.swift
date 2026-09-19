@@ -187,15 +187,15 @@ final class ImportModel {
                     // Apply (and publish progress) in batches so a large card
                     // doesn't re-render the grid once per file.
                     if buffer.count >= 25 {
-                        await self?.applyMetadata(buffer, snapshot: snapshot, scanned: processed)
+                        self?.applyMetadata(buffer, snapshot: snapshot, scanned: processed)
                         buffer.removeAll(keepingCapacity: true)
                     }
                     if next < snapshot.count { schedule(next); next += 1 }
                 }
-                await self?.applyMetadata(buffer, snapshot: snapshot, scanned: processed)
+                self?.applyMetadata(buffer, snapshot: snapshot, scanned: processed)
             }
             if Task.isCancelled { return }
-            await self?.finishExifScan()
+            self?.finishExifScan()
         }
     }
 

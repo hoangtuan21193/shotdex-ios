@@ -1028,7 +1028,7 @@ final class VideoStudioModel {
         player?.pause()
         isPlaying = false
         exportState = .exporting(0)
-        exportTask = Task {
+        exportTask = Task { [self] in
             do {
                 let url = try await service.export(
                     recipe: recipe,

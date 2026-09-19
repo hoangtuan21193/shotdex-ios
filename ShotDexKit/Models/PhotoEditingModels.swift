@@ -838,7 +838,7 @@ extension PhotoAdjustmentKind: CodingKey {
 }
 
 public extension PhotoAdjustments {
-    public init(from decoder: any Decoder) throws {
+    init(from decoder: any Decoder) throws {
         self.init()
         let container = try decoder.container(keyedBy: PhotoAdjustmentKind.self)
         for kind in PhotoAdjustmentKind.allCases {
@@ -848,7 +848,7 @@ public extension PhotoAdjustments {
         }
     }
 
-    public func encode(to encoder: any Encoder) throws {
+    func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: PhotoAdjustmentKind.self)
         let defaults = PhotoAdjustments()
         for kind in PhotoAdjustmentKind.allCases where self[kind] != defaults[kind] {

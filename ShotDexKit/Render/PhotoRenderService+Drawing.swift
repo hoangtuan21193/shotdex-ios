@@ -49,7 +49,7 @@ public extension PhotoRenderService {
     /// after the tone/colour/film chain and after the downscale, so nothing tints
     /// the marks and a Lanczos pass never softens them. Called *before* the text and
     /// signature overlays, so a caption stays legible over a scribble.
-    public static func applyDrawing(_ drawing: PhotoDrawing?, to input: CIImage) -> CIImage {
+    static func applyDrawing(_ drawing: PhotoDrawing?, to input: CIImage) -> CIImage {
         guard let layer = drawingLayer(drawing, extent: input.extent) else { return input }
         return layer.composited(over: input).cropped(to: input.extent)
     }
@@ -57,7 +57,7 @@ public extension PhotoRenderService {
     /// The drawing alone, on transparent pixels, positioned on `extent`. Exposed
     /// separately for the Live Photo frame processor, which composites the same
     /// rasterized layer over every frame rather than re-rasterizing per frame.
-    public static func drawingLayer(_ drawing: PhotoDrawing?, extent: CGRect) -> CIImage? {
+    static func drawingLayer(_ drawing: PhotoDrawing?, extent: CGRect) -> CIImage? {
         guard let drawing, drawing.hasVisibleEffect, !extent.isInfinite, !extent.isEmpty
         else { return nil }
         let width = Int(extent.width.rounded())

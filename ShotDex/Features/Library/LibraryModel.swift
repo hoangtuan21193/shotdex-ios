@@ -770,7 +770,11 @@ final class LibraryModel {
         // .utility: parse/compose/DB writes and PhotoKit XPC servicing must
         // not compete with interactive image loads at UI priority.
         let indicatorStart = ContinuousClock.now
-        runTask = Task(priority: .utility) {
+        // `[self]`, spelled out: the run already holds the model strongly
+        // through every `self.` below, and the nested `[weak self]` assertion
+        // callback reads as a lifetime decision only when the outer capture
+        // is visible next to it.
+        runTask = Task(priority: .utility) { [self] in
             // Resolve the real network path before showing status, so the
             // indicator reflects Wi-Fi/cellular from the first frame rather
             // than `NWPathMonitor`'s metered-until-first-update default.

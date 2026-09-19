@@ -59,7 +59,7 @@ public extension PhotoRenderService {
     /// `overlay.text` is expected to be already resolved — the controller expands
     /// `{camera}` before it hands a recipe to the renderer, so this layer has no
     /// opinion about tokens.
-    public static func applyOverlays(_ overlays: [PhotoOverlay], to input: CIImage) -> CIImage {
+    static func applyOverlays(_ overlays: [PhotoOverlay], to input: CIImage) -> CIImage {
         // Loupes first, and against the image itself: a magnifier shows the
         // photo under it, so it has to be composited before anything drawn on
         // top of the photo — a caption inside a loupe would otherwise be the
@@ -71,7 +71,7 @@ public extension PhotoRenderService {
 
     /// Composites each loupe: the photo scaled about the circle's centre,
     /// masked to that circle, with a rim drawn over it.
-    public static func applyMagnifiers(_ overlays: [PhotoOverlay], to input: CIImage) -> CIImage {
+    static func applyMagnifiers(_ overlays: [PhotoOverlay], to input: CIImage) -> CIImage {
         let loupes = overlays.filter { $0.kind == .magnifier && $0.hasVisibleEffect }
         let extent = input.extent
         guard !loupes.isEmpty, !extent.isInfinite, !extent.isEmpty else { return input }
@@ -138,7 +138,7 @@ public extension PhotoRenderService {
     /// Exposed separately for the Live Photo frame processor: every frame is the
     /// same size, so it rasterizes once and composites the same layer over each
     /// frame rather than laying out Core Text ninety times.
-    public static func overlayLayer(_ overlays: [PhotoOverlay], extent: CGRect) -> CIImage? {
+    static func overlayLayer(_ overlays: [PhotoOverlay], extent: CGRect) -> CIImage? {
         // A loupe's magnified content is not in this bitmap — that is
         // composited against the photo itself by `applyMagnifiers`, because it
         // draws what is underneath. Its rim is, so the rim sits above the other
@@ -158,7 +158,7 @@ public extension PhotoRenderService {
     /// Internal (not private) because the collage canvas previews its text
     /// overlays through the exact same rasterization — one implementation,
     /// no CI wrapper needed there.
-    public static func rasterizedOverlayImage(
+    static func rasterizedOverlayImage(
         _ overlays: [PhotoOverlay],
         extent: CGRect
     ) -> CGImage? {

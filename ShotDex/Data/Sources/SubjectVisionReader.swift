@@ -58,8 +58,8 @@ struct SubjectVisionReader: SubjectVisionReading {
 
         return SubjectObservation(
             assetId: assetId,
-            faceCount: (faces.results as? [VNFaceObservation])?.count ?? 0,
-            animalCount: (animals.results as? [VNRecognizedObjectObservation])?.count ?? 0,
+            faceCount: faces.results?.count ?? 0,
+            animalCount: animals.results?.count ?? 0,
             didRead: true
         )
     }
