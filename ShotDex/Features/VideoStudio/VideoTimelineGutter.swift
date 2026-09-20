@@ -38,13 +38,13 @@ struct VideoTimelineGutter: View {
         switch lane {
         case .overlay(let index):
             return lanes.overlayLaneTop(index)
-                + (lanes.overlay - VideoStudioMetrics.gutterIconSize) / 2
+                + (lanes.overlay - lanes.gutterStackHeight) / 2
         case .video:
             return lanes.videoLaneTop(overlayLanes: overlayLanes)
-                + (lanes.video - VideoStudioMetrics.gutterIconSize) / 2
+                + (lanes.video - lanes.gutterStackHeight) / 2
         case .music(let index):
             return lanes.musicLaneTop(index, overlayLanes: overlayLanes)
-                + (lanes.music - VideoStudioMetrics.gutterIconSize) / 2
+                + (lanes.music - lanes.gutterStackHeight) / 2
         }
     }
 
@@ -57,16 +57,16 @@ struct VideoTimelineGutter: View {
         let tint = isActive ? EditorTheme.timelineSelection : EditorTheme.secondaryText
         return VStack(spacing: 2) {
             Image(systemName: lane.systemImage)
-                .font(.system(size: 13, weight: .medium))
+                .font(.system(size: lanes.gutterGlyph, weight: .medium))
                 .foregroundStyle(tint)
-                .frame(width: VideoStudioMetrics.gutterIconSize, height: VideoStudioMetrics.gutterIconSize)
+                .frame(width: lanes.gutterIcon, height: lanes.gutterIcon)
                 .background(
                     RoundedRectangle(cornerRadius: 4, style: .continuous)
                         .fill(isActive ? EditorTheme.timelineSelection.opacity(0.14) : .clear)
                 )
-            if showsLaneNames {
+            if lanes.showsLaneNames {
                 Text(lane.name)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: lanes.gutterNameFont, weight: .medium))
                     .foregroundStyle(tint)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
@@ -75,10 +75,6 @@ struct VideoTimelineGutter: View {
         .frame(width: lanes.gutter)
         .accessibilityHidden(true)
     }
-
-    /// Only where the column is wide enough to hold a word without clipping
-    /// it — the phone's 30pt is not.
-    private var showsLaneNames: Bool { lanes.gutter >= 56 }
 }
 
 /// One row of the timeline, in the order they stack: overlay lanes above the

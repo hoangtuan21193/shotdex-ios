@@ -276,6 +276,23 @@ enum VideoStudioMetrics {
         static let compact = Lanes(overlay: 34, video: 66, music: 40, ruler: 26, clipCell: 54, gutter: 30)
         static let regular = Lanes(overlay: 44, video: 104, music: 52, ruler: 30, clipCell: 88, gutter: 64)
 
+        /// The glyph box in the gutter, and the symbol drawn in it. A 13pt
+        /// symbol on a phone held at reading distance is the same angular
+        /// size as a 16pt one on a 13" tablet at arm's length — and the wide
+        /// gutter has the room, so there is nothing to trade for it.
+        var gutterIcon: CGFloat { gutter >= 56 ? 26 : 20 }
+        var gutterGlyph: CGFloat { gutter >= 56 ? 16 : 13 }
+        /// Whether the lane's name fits under its glyph. The phone's 30pt
+        /// column does not hold a word without clipping it.
+        var showsLaneNames: Bool { gutter >= 56 }
+        var gutterNameFont: CGFloat { 11 }
+        /// Height of the whole glyph-plus-name stack, so the gutter can centre
+        /// it on the lane rather than centring the glyph and letting the name
+        /// hang below the lane's middle.
+        var gutterStackHeight: CGFloat {
+            showsLaneNames ? gutterIcon + 2 + gutterNameFont + 3 : gutterIcon
+        }
+
         /// A window has to be wide **and tall** for tablet tracks. Width alone
         /// is not enough: the iPhone Duo's inner display is 867pt wide and
         /// 669pt tall, and 255pt of regular lanes on a 669pt window pushes the
@@ -341,7 +358,6 @@ enum VideoStudioMetrics {
 
     /// The phone's gutter, for anything that has no lane tier to hand.
     static let gutterWidth: CGFloat = Lanes.compact.gutter
-    static let gutterIconSize: CGFloat = 20
 
     /// x of the fixed playhead for a given screen width: centre of the row area.
     static func playheadX(screenWidth: CGFloat, gutter: CGFloat = gutterWidth) -> CGFloat {
