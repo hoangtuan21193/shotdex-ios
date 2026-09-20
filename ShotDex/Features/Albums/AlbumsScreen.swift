@@ -683,9 +683,13 @@ struct CollectionListRow: View {
     var detailSpokenAs: String?
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @ScaledMetric(relativeTo: .body) private var glyphWidth: CGFloat = 24
-    @ScaledMetric(relativeTo: .body) private var rowHeight = CollectionListRowMetrics.height
-    @ScaledMetric(relativeTo: .body) private var typeScale = 1.0
+    // Scaled against `.subheadline`, the card's own title style — not
+    // `.body`. `.body` keeps growing into the accessibility sizes after
+    // `.subheadline` and `.caption` have capped, so a `.body` box around
+    // `.subheadline` text ends up mostly empty at AX sizes.
+    @ScaledMetric(relativeTo: .subheadline) private var glyphWidth: CGFloat = 24
+    @ScaledMetric(relativeTo: .subheadline) private var rowHeight = CollectionListRowMetrics.height
+    @ScaledMetric(relativeTo: .subheadline) private var typeScale = 1.0
 
     private var width: CGFloat {
         CollectionListRowMetrics.width(isRegularWidth: horizontalSizeClass == .regular) * typeScale
@@ -897,7 +901,11 @@ struct AlbumToken: View {
     var body: some View {
         AlbumCoverTile(
             title: album.title,
-            subtitle: album.count.formatted()
+            subtitle: album.count.formatted(),
+            accessibilityLabel: String(
+                localized: "\(album.title), \(album.count) photos",
+                comment: "VoiceOver label for an album tile: its name and how many photos it holds"
+            )
         ) {
             AlbumCoverWell(image: cover, systemImage: album.symbolName ?? "photo.on.rectangle")
         }
@@ -906,7 +914,6 @@ struct AlbumToken: View {
             prewarmDetailGrid()
         }
         .onDisappear(perform: stopPrewarmingDetailGrid)
-        .accessibilityLabel("\(album.title), \(album.count) photos")
     }
 
     /// Warms the first screenful of this album's detail grid while its token is
@@ -973,12 +980,15 @@ struct SmartAlbumToken: View {
     var body: some View {
         AlbumCoverTile(
             title: item.album.name,
-            subtitle: item.count.formatted()
+            subtitle: item.count.formatted(),
+            accessibilityLabel: String(
+                localized: "\(item.album.name), \(item.count) photos",
+                comment: "VoiceOver label for a smart album tile: its name and how many photos match it"
+            )
         ) {
             AlbumCoverWell(image: cover, systemImage: "line.3.horizontal.decrease.circle")
         }
         .onAppear(perform: loadCover)
-        .accessibilityLabel("\(item.album.name), \(item.count) photos")
     }
 
     private func loadCover() {
@@ -1004,7 +1014,13 @@ struct UtilityToken: View {
     let systemImage: String
 
     var body: some View {
-        AlbumCoverTile(title: title, subtitle: subtitle) {
+        // These already carry a worded subtitle ("Browse on a map"), so the
+        // two read correctly side by side.
+        AlbumCoverTile(
+            title: title,
+            subtitle: subtitle,
+            accessibilityLabel: "\(title), \(subtitle)"
+        ) {
             AlbumCoverWell(image: nil, systemImage: systemImage)
         }
     }
@@ -1085,10 +1101,9 @@ struct OnThisDayCard: View {
                 loadCover()
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text(
-                "On This Day, \(count) photo from previous years",
-                comment: "VoiceOver label for the On This Day card"
-            ))
+            // The same sentence a sighted user reads, rather than a second
+            // one written by hand that leaves the date out.
+            .accessibilityLabel("On This Day, \(subtitle)")
     }
 
     /// "September 20 · 3 photos from previous years".

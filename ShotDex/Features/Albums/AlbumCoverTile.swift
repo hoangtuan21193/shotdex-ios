@@ -50,6 +50,11 @@ enum AlbumTileMetrics {
 struct AlbumCoverTile<Cover: View>: View {
     let title: String
     let subtitle: String?
+    /// What VoiceOver says. Explicit rather than assembled from `title` and
+    /// `subtitle`, because the subtitle is usually a bare number: a tile
+    /// that forgot to pass this would read as "Vacation, 42" — forty-two
+    /// what? Callers pass the counted noun.
+    let accessibilityLabel: String
     @ViewBuilder var cover: () -> Cover
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -82,7 +87,7 @@ struct AlbumCoverTile<Cover: View>: View {
             .frame(width: side, alignment: .leading)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(subtitle.map { "\(title), \($0)" } ?? title)
+        .accessibilityLabel(accessibilityLabel)
         .accessibilityAddTraits(.isButton)
     }
 }

@@ -408,6 +408,21 @@ here so the next sweep knows what is new and what was deliberately decided.
 - [ ] **Recently Deleted cannot be built.** No `PHAssetCollectionSubtype` for
   it at all (iOS 26.1 SDK), and no public URL that opens Photos on it. Asked
   for, and the answer is the platform's.
-- [ ] Reviewed today by `a11y-voiceover`, `copy-consistency` and
-  `design-reviewer`; their findings go below as they land.
+- [x] Reviewed by `a11y-voiceover`, `copy-consistency` and `design-reviewer`.
+  Everything they raised is applied (`ffaebcf` and the commit after it):
+  the "Collages" name collision, accent used where DESIGN.md wants state,
+  "Remove from Creations" and the two dead-end alerts, a spoken "Video"
+  that reopened the ambiguity the row name exists to prevent, 6pt spacing
+  and five other literal spacings, §10.1d not being able to tell
+  `AlbumCoverTile` from `MemoryCard`, §13 naming a deleted type, the hero's
+  spoken label dropping its date, and `CollectionListRow` scaling on
+  `.body` while its text is `.subheadline`.
+  Two notes from those runs worth keeping:
+  - `a11y-voiceover` could not get PhotoKit to report `.authorized` on the
+    iOS 26 phone simulator at all — `simctl privacy grant` plus a TCC reset
+    still left "No Access to Photos" with `auth_value=2` in the database. So
+    its Dynamic Type conclusions are read from the `@ScaledMetric`
+    declarations, not from a screenshot, and it said so.
+  - The `MemoryCard` inconsistency was the useful finding: it showed the
+    rule, not the code, was the thing that was wrong.
 
