@@ -440,6 +440,11 @@ struct VideoStudioScreen: View {
                         if usesDeskChrome {
                             if isToolStripOpen { VideoViewerToolStrip(model: model) }
                             VideoTransportBar(model: model)
+                        } else {
+                            // Not "no transport" — the same commands in the
+                            // shape a phone has room for. See
+                            // `VideoCompactTransportBar`.
+                            VideoCompactTransportBar(model: model)
                         }
                         if resizableTimeline {
                             timelineDivider

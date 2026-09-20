@@ -540,9 +540,12 @@ struct VideoStudioSheetHost: View {
                 Spacer(minLength: 0)
             }
         case .color:
-            VideoColorPanel(model: model, showsScopes: layout == .column)
+            VideoColorPanel(model: model, usesTallScopes: layout == .column)
         case .masterVolume:
             VStack(spacing: 0) {
+                // The meter the desk window keeps beside the frame. A fader
+                // with nothing to read against it is a guess.
+                VideoLevelMeterBar(model: model)
                 InspectorSlider(
                     label: "Master", value: model.recipe.masterVolume, range: 0...1,
                     valueText: "\(Int(model.recipe.masterVolume * 100))", model: model,
@@ -564,7 +567,7 @@ struct VideoStudioSheetHost: View {
             }
         case .filters:
             VStack(spacing: 0) {
-                FilterStrip(model: model).frame(height: 34)
+                FilterStrip(model: model).frame(height: VideoStudioMetrics.filterStripHeight)
                 if model.recipe.filter != .original {
                     InspectorSlider(
                         label: "Intensity", value: model.recipe.filterIntensity, range: 0...1,

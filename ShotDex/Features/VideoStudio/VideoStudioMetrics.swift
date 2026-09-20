@@ -40,6 +40,12 @@ enum VideoStudioMetrics {
     /// below the fold on a 13" iPad in landscape.
     static let scopeHeight: CGFloat = 140
 
+    /// The same scope on the phone's 264pt band, where 140 would be most of
+    /// the panel. Short enough that the controls under it stay on screen,
+    /// tall enough that the gap between the black point and the trace is
+    /// still readable — which is the whole reason to look at one.
+    static let scopeCompactHeight: CGFloat = 96
+
     // MARK: Desk chrome
 
     /// A window this wide gets the bands a desktop-shaped editor has and a
@@ -71,11 +77,30 @@ enum VideoStudioMetrics {
     static let timelineOverviewHeight: CGFloat = 22
     static var timelineOverviewBandHeight: CGFloat { timelineOverviewHeight + 8 }
 
-    /// Total height the desk bands take out of the stack.
+    /// The phone's own transport row: the same playhead commands as the desk
+    /// bar, in one row that fits 320pt — the frame-accurate stepping inline,
+    /// the rest behind an overflow menu. Shorter than the desk row because it
+    /// carries no play pill: the frame has a 56pt play button on it already,
+    /// and a tap on the stage pauses.
+    static let compactTransportHeight: CGFloat = 40
+
+    /// The look picker in the Filter panel: a 62pt tile, its name, and the
+    /// gap between them.
+    static let filterStripHeight: CGFloat = 82
+
+    /// The lying-down level meter at the top of the Volume panel: a label
+    /// row and two 7pt bars.
+    static let levelMeterBarHeight: CGFloat = 46
+
+    /// Total height the chrome above the timeline takes out of the stack.
+    ///
+    /// A phone is not "no chrome" — it is a narrower shape for the same
+    /// commands. It pays for one transport row; a desk window pays for the
+    /// header, the wider row and the project overview.
     static func deskChromeHeight(usesDeskChrome: Bool) -> CGFloat {
         usesDeskChrome
             ? viewerHeaderHeight + transportBarHeight + timelineOverviewBandHeight
-            : 0
+            : compactTransportHeight
     }
 
     /// Extra trailing inset for a band that reaches the screen's own edge.

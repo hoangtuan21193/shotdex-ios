@@ -18,10 +18,11 @@ import ShotDexKit
 /// which is a feature, not a panel.
 struct VideoColorPanel: View {
     @Bindable var model: VideoStudioModel
-    /// Scopes only on the inspector column. On the phone's 264pt band a
-    /// 140pt scope is most of the panel, and the frame it measures is
-    /// already the biggest thing on that screen.
-    var showsScopes = false
+    /// The inspector column gets a taller scope. The phone's band gets the
+    /// same four, drawn shorter — a 140pt scope there is most of the panel,
+    /// but leaving them out put the measurement that a grade is dialled
+    /// against on one device only.
+    var usesTallScopes = false
 
     @Environment(PhotoLibraryService.self) private var photoLibrary
 
@@ -35,10 +36,8 @@ struct VideoColorPanel: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
-                if showsScopes {
-                    scopesSection
-                    Divider().overlay(EditorTheme.panelDivider)
-                }
+                scopesSection
+                Divider().overlay(EditorTheme.panelDivider)
                 inputTransformSection
                 Divider().overlay(EditorTheme.panelDivider)
                 primariesSection
@@ -59,7 +58,6 @@ struct VideoColorPanel: View {
         // 14pt label scrolls by 14pt.
         .accessibilityIdentifier("colorPanel")
         .task(id: model.clipIndexUnderPlayhead) {
-            guard showsScopes else { return }
             scopes.refresh(for: model, photoLibrary: photoLibrary)
         }
         // The grade itself is the other thing that makes the picture stale,
@@ -67,7 +65,6 @@ struct VideoColorPanel: View {
         // whole colour chain and only recounts when something in it moved,
         // so this can fire as often as SwiftUI likes.
         .onChange(of: model.recipe) {
-            guard showsScopes else { return }
             scopes.refresh(for: model, photoLibrary: photoLibrary)
         }
         .onDisappear { scopes.cancel() }
@@ -218,7 +215,11 @@ struct VideoColorPanel: View {
                         .foregroundStyle(EditorTheme.secondaryText)
                 }
             }
-            .frame(height: VideoStudioMetrics.scopeHeight)
+            .frame(
+                height: usesTallScopes
+                    ? VideoStudioMetrics.scopeHeight
+                    : VideoStudioMetrics.scopeCompactHeight
+            )
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
 
             Text(scopeCaption)

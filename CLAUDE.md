@@ -51,6 +51,10 @@ not always the one the app is on. Naming the display works, but the display
 UUIDs are regenerated on every boot, so `sim-shot` resolves them per call.
 It is also the way to photograph a `Tools/ui-drive` run: end the script with
 a long `wait` and burst `sim-shot` against the device while it holds.
+**Needed on the iPad too, after an `orientation` step**: the driver's own
+`screenshot` then comes back as the portrait scene letterboxed into a
+landscape frame — the app is laid out correctly, the capture is not. Replace
+each `screenshot` with a 12s `wait` and burst `sim-shot` from the host.
 
 **Do not drive the Duo with the iOS-simulator MCP tool** — its `attach`
 reports 466×678 (the *cover*), so its taps land on a screen that is off.
@@ -58,8 +62,12 @@ Use `Tools/ui-drive`, whose taps go to the right scene.
 
 `Tools/ui-drive` runs the `ShotDexUIDriver` scheme, whose only target is
 `ShotDexUITests/UIDriverTests` — a driver that replays a JSON list of steps
-(`tap` by accessibility label or normalized point, `swipe`, `typeText`,
-`longPress`, `scrollTo`, `wait`, `screenshot`, `dump`). It is **not** in the
+(`tap` by accessibility label or normalized point, `swipe` by label **or by
+point** — `x`/`y` with `direction` and `distance` — `typeText`, `longPress`,
+`scrollTo`, `wait`, `screenshot`, `dump`). Use the point form to scroll a
+panel whose middle is a control: `XCUIElement.swipeUp()` drags from the
+element's centre, so swiping the Color panel by label grades the project on
+its colour wheel instead of scrolling it. It is **not** in the
 `ShotDex` scheme, so `xcodebuild … -scheme ShotDex test` still runs the unit
 tests and nothing else. Each `dump` writes every on-screen element with its
 label, identifier and frame in points, which is how a layout finding gets a

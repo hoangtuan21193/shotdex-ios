@@ -80,11 +80,11 @@ final class UIDriverTests: XCTestCase {
         guard let path = ProcessInfo.processInfo.environment["SHOTDEX_UI_SCRIPT"], !path.isEmpty else {
             return [
                 UIDriverStep(action: "launch", label: nil, type: nil, index: nil, x: nil, y: nil,
-                             direction: nil, text: nil, seconds: nil, name: nil, arguments: nil, hittable: nil),
+                             direction: nil, distance: nil, text: nil, seconds: nil, name: nil, arguments: nil, hittable: nil),
                 UIDriverStep(action: "screenshot", label: nil, type: nil, index: nil, x: nil, y: nil,
-                             direction: nil, text: nil, seconds: nil, name: "launch", arguments: nil, hittable: nil),
+                             direction: nil, distance: nil, text: nil, seconds: nil, name: "launch", arguments: nil, hittable: nil),
                 UIDriverStep(action: "dump", label: nil, type: nil, index: nil, x: nil, y: nil,
-                             direction: nil, text: nil, seconds: nil, name: "launch", arguments: nil, hittable: nil),
+                             direction: nil, distance: nil, text: nil, seconds: nil, name: "launch", arguments: nil, hittable: nil),
             ]
         }
         // The test runs inside the simulator, which cannot see a path on the
@@ -140,6 +140,27 @@ final class UIDriverTests: XCTestCase {
                 app.typeText(text)
             }
         case "swipe":
+            // A point drag when the step gives coordinates: the element
+            // swipes start at the element's centre, and on a panel with a
+            // control in the middle that is a gesture on the control, not a
+            // scroll of the panel.
+            if let start = coordinate(for: step) {
+                let span = step.distance ?? 0.25
+                let (dx, dy): (Double, Double) = switch step.direction ?? "up" {
+                case "down": (0, span)
+                case "left": (-span, 0)
+                case "right": (span, 0)
+                default: (0, -span)
+                }
+                let end = app.coordinate(
+                    withNormalizedOffset: CGVector(
+                        dx: (step.x ?? 0) + dx,
+                        dy: (step.y ?? 0) + dy
+                    )
+                )
+                start.press(forDuration: 0.05, thenDragTo: end)
+                break
+            }
             let target: XCUIElement = step.label == nil ? app : try element(for: step)
             switch step.direction ?? "up" {
             case "down": target.swipeDown()

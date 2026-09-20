@@ -21,6 +21,12 @@ struct UIDriverStep: Decodable {
     let y: Double?
     /// `up`, `down`, `left`, `right` for `swipe`.
     let direction: String?
+    /// `swipe` with `x`/`y` only: how far to drag, as a fraction of the
+    /// screen. Default 0.25. A coordinate swipe exists because
+    /// `XCUIElement.swipeUp()` drags from the element's centre — on a panel
+    /// whose centre is a colour wheel, that grades the project instead of
+    /// scrolling it.
+    let distance: Double?
     /// Text for `typeText`.
     let text: String?
     /// Seconds for `wait`, and the timeout an element wait may take.

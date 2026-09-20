@@ -373,3 +373,104 @@ struct VideoAudioMeterColumn: View {
         return CGFloat(min(1, max(0, (decibels - floor) / (0 - floor))))
     }
 }
+
+/// The level meter, lying down — for the phone's Volume panel.
+///
+/// A desk window gives the meter its own column beside the frame, where it is
+/// read while cutting. A phone has no room for a standing column, so the same
+/// measurement goes where a phone user is already looking at levels: the
+/// Volume panel, above the faders it is there to justify. Same numbers, same
+/// scale, same colours; only the axis changes.
+///
+/// It keeps its own `VideoLevelMeterModel` rather than borrowing the screen's,
+/// because it exists only while the panel is open — and a model threaded
+/// through two call sites to be used by one of them is worse than a second
+/// one that costs nothing when the panel is shut.
+struct VideoLevelMeterBar: View {
+    @Bindable var model: VideoStudioModel
+
+    @State private var meter = VideoLevelMeterModel()
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text("Levels", comment: "Video Studio Volume panel: the meter over the faders")
+                    .font(EditorTheme.groupLabel)
+                    .foregroundStyle(EditorTheme.secondaryText)
+                Spacer(minLength: 0)
+                Text(readout)
+                    .font(.system(size: 10, weight: .medium).monospacedDigit())
+                    .foregroundStyle(EditorTheme.dimText)
+            }
+
+            bar(level: meter.left, peak: meter.peakLeft)
+            bar(level: meter.right, peak: meter.peakRight)
+        }
+        .padding(.horizontal, 14)
+        .frame(height: VideoStudioMetrics.levelMeterBarHeight)
+        .onChange(of: model.currentTime) { meter.refresh(model) }
+        .onChange(of: model.recipe) { meter.refresh(model) }
+        .onAppear { meter.refresh(model) }
+        .onDisappear { meter.cancelDecoding() }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text("Audio Levels", comment: "Video Studio: the level meter beside the viewer"))
+        .accessibilityValue(Text(readout))
+    }
+
+    private var readout: String {
+        let loudest = max(meter.left, meter.right)
+        guard loudest > VideoLevelMeterModel.floorDB else {
+            return String(localized: "—", comment: "Video Studio level meter: the mix is silent at the playhead")
+        }
+        return String(format: "%.1f dB", loudest)
+    }
+
+    private func bar(level: Double, peak: Double) -> some View {
+        GeometryReader { proxy in
+            let width = proxy.size.width
+            ZStack(alignment: .leading) {
+                Capsule().fill(EditorTheme.trackChip)
+                Capsule()
+                    .fill(gradient)
+                    .frame(width: max(0, width * fractionOf(level)))
+                    .mask(alignment: .leading) {
+                        Rectangle().frame(width: max(0, width * fractionOf(level)))
+                    }
+                // The peak hold, as a hairline where the loudest recent
+                // sample was — the reading that says a transient clipped
+                // even though the bar has already fallen back.
+                if peak > VideoLevelMeterModel.floorDB {
+                    Rectangle()
+                        .fill(EditorTheme.meterPeak)
+                        .frame(width: 2)
+                        .offset(x: max(0, width * fractionOf(peak) - 1))
+                }
+            }
+        }
+        .frame(height: 7)
+    }
+
+    /// Full width is 0 dBFS, empty is the floor — the same mapping the
+    /// standing meter uses, so a level read on a phone and on an iPad is the
+    /// same level.
+    private func fractionOf(_ db: Double) -> Double {
+        let floor = VideoLevelMeterModel.floorDB
+        guard db > floor else { return 0 }
+        return min(1, (db - floor) / (0 - floor))
+    }
+
+    private var gradient: LinearGradient {
+        LinearGradient(
+            stops: [
+                .init(color: EditorTheme.histogramGreen, location: 0),
+                .init(color: EditorTheme.histogramGreen, location: fractionOf(VideoLevelMeterModel.cautionDB)),
+                .init(color: .yellow, location: fractionOf(VideoLevelMeterModel.cautionDB)),
+                .init(color: .yellow, location: fractionOf(VideoLevelMeterModel.hotDB)),
+                .init(color: EditorTheme.clipping, location: fractionOf(VideoLevelMeterModel.hotDB)),
+                .init(color: EditorTheme.clipping, location: 1),
+            ],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+    }
+}

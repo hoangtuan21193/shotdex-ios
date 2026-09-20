@@ -339,26 +339,72 @@ struct BackgroundStrip: View {
     }
 }
 
+/// The looks, as the project's own frame under each one.
+///
+/// Forty-nine names in capsules meant reading labels and guessing; the media
+/// pool's Effects tab has shown the frame instead since the desk chrome
+/// landed, and a phone has no pool, so this is where a phone sees it. Same
+/// renderer (`VideoFilterThumbnails`): one downscaled base frame, 49 chains
+/// at cell size, on a background priority, cached until the playhead moves to
+/// a different clip.
+///
+/// The name stays under the tile. A preview says what a look *does*; the name
+/// is how the user asks for it again.
 struct FilterStrip: View {
     @Bindable var model: VideoStudioModel
+
+    @Environment(PhotoLibraryService.self) private var photoLibrary
+
+    /// Tile side. Small enough that four fit across a 320pt phone with the
+    /// panel's own margins, big enough to read a grade off.
+    private static let cell: CGFloat = 62
+
+    @State private var thumbnails = VideoFilterThumbnails()
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(PhotoFilter.allCases) { filter in
-                    let selected = model.recipe.filter == filter
-                    Button { model.setFilter(filter) } label: {
-                        Text(filter.displayName)
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(selected ? .black : .white)
-                            .padding(.horizontal, 10)
-                            .frame(height: 28)
-                            .background(Capsule().fill(selected ? EditorTheme.accent : EditorTheme.trackChip))
-                    }
-                    .buttonStyle(.plain)
+                    tile(filter)
                 }
             }
             .padding(.horizontal, 14)
         }
+        .task(id: model.clipIndexUnderPlayhead) {
+            thumbnails.refresh(for: model, photoLibrary: photoLibrary, cell: Self.cell)
+        }
+        .onDisappear { thumbnails.cancel() }
+    }
+
+    private func tile(_ filter: PhotoFilter) -> some View {
+        let selected = model.recipe.filter == filter
+        return Button { model.setFilter(filter) } label: {
+            VStack(spacing: 4) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous)
+                        .fill(EditorTheme.trackChip)
+                    if let preview = thumbnails.images[filter] {
+                        Image(uiImage: preview)
+                            .resizable()
+                            .scaledToFill()
+                    }
+                }
+                .frame(width: Self.cell, height: Self.cell)
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous)
+                        .strokeBorder(selected ? EditorTheme.accent : .clear, lineWidth: 2)
+                )
+
+                Text(filter.displayName)
+                    .font(.system(size: 10, weight: selected ? .semibold : .regular))
+                    .foregroundStyle(selected ? EditorTheme.accent : EditorTheme.secondaryText)
+                    .lineLimit(1)
+                    .frame(width: Self.cell)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(filter.displayName))
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }

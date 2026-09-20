@@ -27,7 +27,12 @@ struct VideoStudioDeskLayoutTests {
 
     @Test func aPhoneGetsNoDeskChrome() {
         #expect(!VideoStudioMetrics.usesDeskChrome(size: phone))
-        #expect(VideoStudioMetrics.deskChromeHeight(usesDeskChrome: false) == 0)
+        // Not zero any more: a phone gets no *desk* bands, but it does get
+        // its own transport row — see `aPhoneBudgetsForItsOwnTransportRow`.
+        #expect(
+            VideoStudioMetrics.deskChromeHeight(usesDeskChrome: false)
+                < VideoStudioMetrics.deskChromeHeight(usesDeskChrome: true)
+        )
     }
 
     /// The point of the 600pt threshold: a Split View half is wide enough to
@@ -210,10 +215,34 @@ struct VideoStudioDeskLayoutTests {
         }
     }
 
-    /// The compact path is untouched: a phone has no pool to move the insert
-    /// commands onto, so it keeps all nine in its horizontal row.
-    @Test func aPhoneKeepsAllNineCommands() {
-        #expect(VideoStudioToolbar.commandKinds(poolCarriesInserts: false).count == 9)
+    /// A phone has no pool to move the insert commands onto, so it keeps all
+    /// four of them in its horizontal row.
+    @Test func aPhoneKeepsEveryInsertCommand() {
+        let kinds = VideoStudioToolbar.commandKinds(poolCarriesInserts: false)
+        #expect(kinds.contains(.addMedia))
+        #expect(kinds.contains(.addText))
+        #expect(kinds.contains(.addSticker))
+        #expect(kinds.contains(.addMusic))
+    }
+
+    /// **Every** project-wide tool is on the phone's row, not just the ones
+    /// that happened to be listed. The row was written out by hand and the
+    /// desk window's project menu from `allCases`, so adding `Color` put the
+    /// whole grading stage on the iPad and nowhere else.
+    @Test func thePhoneRowCarriesEveryGlobalTool() {
+        let kinds = VideoStudioToolbar.commandKinds(poolCarriesInserts: false)
+        for tool in VideoStudioModel.GlobalTool.allCases {
+            #expect(kinds.contains(.global(tool)))
+        }
+    }
+
+    /// And the pool taking the inserts must not cost the window a tool.
+    @Test func thePoolRowStillCarriesEveryGlobalTool() {
+        let kinds = VideoStudioToolbar.commandKinds(poolCarriesInserts: true)
+        for tool in VideoStudioModel.GlobalTool.allCases {
+            #expect(kinds.contains(.global(tool)))
+        }
+        #expect(!kinds.contains(.addMedia))
     }
 
     /// Every project-wide tool the rail used to open is still reachable —
@@ -226,6 +255,43 @@ struct VideoStudioDeskLayoutTests {
         #expect(VideoStudioModel.GlobalTool.allCases.contains(.color))
         #expect(VideoStudioModel.GlobalTool.allCases.contains(.masterVolume))
         #expect(VideoStudioModel.GlobalTool.allCases.contains(.background))
+    }
+
+    /// A phone is not "no chrome": it pays for one transport row, so the
+    /// playhead commands have somewhere to live. A stack that budgets zero
+    /// for it draws the row over the timeline.
+    @Test func aPhoneBudgetsForItsOwnTransportRow() {
+        #expect(!VideoStudioMetrics.usesDeskChrome(size: phone))
+        #expect(
+            VideoStudioMetrics.deskChromeHeight(usesDeskChrome: false)
+                == VideoStudioMetrics.compactTransportHeight
+        )
+        #expect(VideoStudioMetrics.compactTransportHeight > 0)
+    }
+
+    /// And the desk window still pays for all three of its bands.
+    @Test func aDeskWindowBudgetsForAllThreeBands() {
+        #expect(
+            VideoStudioMetrics.deskChromeHeight(usesDeskChrome: true)
+                == VideoStudioMetrics.viewerHeaderHeight
+                    + VideoStudioMetrics.transportBarHeight
+                    + VideoStudioMetrics.timelineOverviewBandHeight
+        )
+    }
+
+    /// The compact row's inline glyphs plus its timecode and overflow button
+    /// have to fit the narrowest phone ShotDex ships to without the timecode
+    /// being squeezed — it is the one thing in the row that never shrinks,
+    /// because a truncated timecode is worse than none.
+    ///
+    /// 375pt is the floor: an iPhone SE, the smallest screen iOS 17 runs on.
+    @Test func theCompactTransportFitsTheNarrowestPhone() {
+        // Four stepping glyphs and the overflow button, each a full touch
+        // target, plus the row's own 6pt margins.
+        let controls = 5 * AppTheme.Size.minTouch + 12
+        // "00:00:00:00" at 11pt semibold monospaced, plus its chip padding.
+        let timecode: CGFloat = 92
+        #expect(controls + timecode <= 375)
     }
 
     // MARK: Transitions

@@ -1,0 +1,208 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Library",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Select",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "label": "More selection actions"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Select All"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "More selection actions"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Create Video"
+    },
+    {
+      "action": "wait",
+      "seconds": 14
+    },
+    {
+      "action": "orientation",
+      "text": "landscape"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "tap",
+      "label": "Project Tools"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "projectTool.color"
+    },
+    {
+      "action": "wait",
+      "seconds": 5
+    },
+    {
+      "action": "wait",
+      "seconds": 12
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "wait",
+      "seconds": 12
+    },
+    {
+      "action": "tap",
+      "label": "Parade"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "wait",
+      "seconds": 12
+    },
+    {
+      "action": "tap",
+      "label": "Vector"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "wait",
+      "seconds": 12
+    },
+    {
+      "action": "tap",
+      "label": "Histogram"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "wait",
+      "seconds": 12
+    },
+    {
+      "action": "swipe",
+      "x": 0.79,
+      "y": 0.35,
+      "direction": "up",
+      "distance": 0.25
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "wait",
+      "seconds": 12
+    },
+    {
+      "action": "swipe",
+      "x": 0.79,
+      "y": 0.35,
+      "direction": "up",
+      "distance": 0.25
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "wait",
+      "seconds": 12
+    },
+    {
+      "action": "swipe",
+      "x": 0.79,
+      "y": 0.35,
+      "direction": "up",
+      "distance": 0.25
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "wait",
+      "seconds": 12
+    },
+    {
+      "action": "swipe",
+      "x": 0.79,
+      "y": 0.35,
+      "direction": "up",
+      "distance": 0.25
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "wait",
+      "seconds": 12
+    },
+    {
+      "action": "swipe",
+      "x": 0.79,
+      "y": 0.35,
+      "direction": "up",
+      "distance": 0.25
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "wait",
+      "seconds": 12
+    },
+    {
+      "action": "orientation",
+      "text": "portrait"
+    }
+  ]
+}

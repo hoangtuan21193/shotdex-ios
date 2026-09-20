@@ -413,3 +413,294 @@ enum VideoMarkerPalette {
         }
     }
 }
+
+/// The phone's transport row — the same commands as `VideoTransportBar`, in
+/// one row that fits a 320pt screen.
+///
+/// The rule this follows: **a phone gets every tool the tablet has; what
+/// changes is the shape and the route to it.** The desk row spreads sixteen
+/// controls across 700pt. Here the four that are held down — frame and edit
+/// stepping — stay inline where a thumb can repeat them, and the ones that
+/// are chosen once (split, freeze, trim, markers, loop, fit) move into an
+/// overflow menu, which is what iOS does with a row that will not fit.
+///
+/// No play pill: the frame already carries a 56pt play button while paused,
+/// and a tap on the stage pauses. Two play buttons in 320pt is one too many.
+struct VideoCompactTransportBar: View {
+    @Bindable var model: VideoStudioModel
+
+    private var frame: Double { 1.0 / VideoStudioMetrics.timecodeFrameRate }
+    private var markerHere: TimedMarker? { model.marker(near: model.currentTime) }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            glyph("backward.end.fill", label: Text("Go to Start", comment: "Video Studio transport")) {
+                model.seek(to: 0)
+            }
+            glyph("backward.frame.fill", label: Text("Back a Frame", comment: "Video Studio transport")) {
+                model.seek(to: model.currentTime - frame)
+            }
+            glyph("forward.frame.fill", label: Text("Forward a Frame", comment: "Video Studio transport")) {
+                model.seek(to: model.currentTime + frame)
+            }
+            glyph("forward.end.fill", label: Text("Go to End", comment: "Video Studio transport")) {
+                model.seek(to: model.totalDuration)
+            }
+
+            Spacer(minLength: 0)
+
+            Text(VideoStudioMetrics.timecode(model.currentTime))
+                .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                .foregroundStyle(.white)
+                // Never shrink: a truncated timecode is worse than none.
+                .fixedSize()
+                .padding(.horizontal, 6)
+                .frame(height: 24)
+                .background(
+                    RoundedRectangle(cornerRadius: VideoStudioMetrics.trackRadius, style: .continuous)
+                        .fill(EditorTheme.trackChip)
+                )
+                .accessibilityLabel(Text("Playhead at \(VideoStudioMetrics.timecode(model.currentTime))", comment: "Video Studio transport: VoiceOver label for the timecode read-out"))
+
+            Spacer(minLength: 0)
+
+            overflow
+        }
+        .padding(.horizontal, 6)
+        .frame(height: VideoStudioMetrics.compactTransportHeight)
+        .frame(maxWidth: .infinity)
+        .background(EditorTheme.panelSolid)
+        .overlay(alignment: .top) {
+            Rectangle().fill(EditorTheme.panelDivider).frame(height: 1)
+        }
+    }
+
+    /// Everything the desk row shows as its own button. Grouped the way the
+    /// row is: what cuts, what loops, where the notes are, what the view does.
+    private var overflow: some View {
+        Menu {
+            Section {
+                Button {
+                    model.splitClipUnderPlayhead()
+                } label: {
+                    Label {
+                        Text("Split at Playhead", comment: "Video Studio transport: cuts the clip under the playhead in two")
+                    } icon: {
+                        Image(systemName: "scissors")
+                    }
+                }
+                Button {
+                    model.freezeUnderPlayhead()
+                } label: {
+                    Label {
+                        Text("Freeze Frame", comment: "Video Studio transport: holds the frame under the playhead as a still")
+                    } icon: {
+                        Image(systemName: "snowflake")
+                    }
+                }
+                Button {
+                    model.trimToPlayhead(.start)
+                } label: {
+                    Label {
+                        Text("Trim Start to Playhead", comment: "Video Studio transport: throws away the part of the clip before the playhead")
+                    } icon: {
+                        Image(systemName: "arrow.left.to.line")
+                    }
+                }
+                Button {
+                    model.trimToPlayhead(.end)
+                } label: {
+                    Label {
+                        Text("Trim End to Playhead", comment: "Video Studio transport: throws away the part of the clip after the playhead")
+                    } icon: {
+                        Image(systemName: "arrow.right.to.line")
+                    }
+                }
+            }
+
+            Section {
+                Button {
+                    model.seekToMarker(after: false)
+                } label: {
+                    Label {
+                        Text("Previous Marker", comment: "Video Studio transport")
+                    } icon: {
+                        Image(systemName: "chevron.left.2")
+                    }
+                }
+                Button {
+                    if let marker = markerHere {
+                        model.cycleMarkerColor(marker.id)
+                    } else {
+                        model.addMarker()
+                    }
+                } label: {
+                    Label {
+                        markerHere == nil
+                            ? Text("Add Marker", comment: "Video Studio transport: pins a note at the playhead")
+                            : Text("Change Marker Colour", comment: "Video Studio transport: cycles the colour of the marker at the playhead")
+                    } icon: {
+                        Image(systemName: markerHere == nil ? "mappin" : "mappin.circle.fill")
+                    }
+                }
+                Button {
+                    model.seekToMarker(after: true)
+                } label: {
+                    Label {
+                        Text("Next Marker", comment: "Video Studio transport")
+                    } icon: {
+                        Image(systemName: "chevron.right.2")
+                    }
+                }
+            }
+
+            Section {
+                Toggle(isOn: $model.loopsPlayback) {
+                    Label {
+                        Text("Loop Playback", comment: "Video Studio transport: restarts the project when it reaches the end")
+                    } icon: {
+                        Image(systemName: "repeat")
+                    }
+                }
+                Toggle(isOn: $model.snapsToEdits) {
+                    Label {
+                        Text("Snap to Edits", comment: "Video Studio transport: the playhead settles on a cut instead of near it")
+                    } icon: {
+                        Image(systemName: "magnet")
+                    }
+                }
+                Button {
+                    model.fitToWindow()
+                } label: {
+                    Label {
+                        Text("Fit Timeline to Window", comment: "Video Studio transport: rescales the timeline so the whole project fits")
+                    } icon: {
+                        Image(systemName: "rectangle.compress.vertical")
+                    }
+                }
+            }
+
+            Section {
+                tracksMenu
+            }
+
+            if let id = model.selectedClipID {
+                Section {
+                    Button(role: .destructive) {
+                        model.deleteClip(id)
+                    } label: {
+                        Label {
+                            Text("Delete Clip", comment: "Video Studio transport: removes the selected clip")
+                        } icon: {
+                            Image(systemName: "trash")
+                        }
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.white)
+                .frame(width: AppTheme.Size.minTouch, height: 28)
+                .videoHitTarget(drawnHeight: 28)
+        }
+        .accessibilityLabel(Text("More Playhead Tools", comment: "Video Studio transport: the overflow menu on a phone"))
+        .accessibilityIdentifier("transport.more")
+    }
+
+    /// Lock and mute, per track.
+    ///
+    /// A desk window puts these on the track header, where an NLE puts them.
+    /// A phone has no header column — its gutter is a glyph strip that must
+    /// stay untouchable, because anything hit-testable there swallows the
+    /// vertical drag that reveals the lanes under it. So the same two
+    /// switches live here, one submenu per lane, named the way the timeline
+    /// names them.
+    private var tracksMenu: some View {
+        Menu {
+            ForEach(laneOrder, id: \.self) { lane in
+                Section(laneTitle(lane)) {
+                    Toggle(isOn: Binding(
+                        get: { model.isLaneLocked(lane) },
+                        set: { _ in model.toggleLaneLock(lane) }
+                    )) {
+                        Label {
+                            Text("Lock", comment: "Video Studio track menu: stops the track being selected or dragged")
+                        } icon: {
+                            Image(systemName: "lock")
+                        }
+                    }
+                    if let mute = muteBinding(lane) {
+                        Toggle(isOn: mute) {
+                            Label {
+                                Text("Mute", comment: "Video Studio track menu: silences the track")
+                            } icon: {
+                                Image(systemName: "speaker.slash")
+                            }
+                        }
+                    }
+                }
+            }
+        } label: {
+            Label {
+                Text("Tracks", comment: "Video Studio transport menu: lock and mute, per track")
+            } icon: {
+                Image(systemName: "square.stack.3d.up")
+            }
+        }
+    }
+
+    /// The same order the timeline stacks them in.
+    private var laneOrder: [VideoTimelineLane] {
+        (0..<max(1, model.overlayLaneCount)).map { VideoTimelineLane.overlay($0) }
+            + [.video]
+            + (0..<max(1, model.musicLaneCount)).map { VideoTimelineLane.music($0) }
+    }
+
+    /// `V1 Video`, `A2 Music` — the badge the track header shows, so the two
+    /// places name the same track the same way.
+    private func laneTitle(_ lane: VideoTimelineLane) -> String {
+        let badge = switch lane {
+        case .overlay(let index): "T\(index + 1)"
+        case .video: "V1"
+        case .music(let index): "A\(index + 1)"
+        }
+        return "\(badge) · \(lane.name)"
+    }
+
+    /// Nil on a text lane, and on a music lane with nothing in it: a mute
+    /// switch over silence is the control the track header exists to avoid.
+    private func muteBinding(_ lane: VideoTimelineLane) -> Binding<Bool>? {
+        switch lane {
+        case .overlay:
+            return nil
+        case .video:
+            return Binding(
+                get: { model.isVideoTrackMuted },
+                set: { _ in model.toggleVideoTrackMuted() }
+            )
+        case .music(let index):
+            guard !model.musicTracks(inLane: index).isEmpty else { return nil }
+            return Binding(
+                get: { model.isMusicLaneMuted(index) },
+                set: { _ in model.toggleMusicLaneMuted(index) }
+            )
+        }
+    }
+
+    private func glyph(
+        _ systemImage: String,
+        label: Text,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.white)
+                .frame(width: AppTheme.Size.minTouch, height: 28)
+                .videoHitTarget(drawnHeight: 28)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+}

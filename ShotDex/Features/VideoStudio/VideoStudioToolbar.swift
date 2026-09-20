@@ -47,10 +47,13 @@ struct VideoStudioToolbar: View {
         if !poolCarriesInserts { kinds.append(.addMedia) }
         kinds.append(.addText)
         if !poolCarriesInserts { kinds += [.addSticker, .addMusic] }
-        kinds += [
-            .global(.ratio), .global(.filters), .global(.adjustments),
-            .global(.masterVolume), .global(.background),
-        ]
+        // Every project-wide tool, in the order a shot is worked: shape it,
+        // pick a look, set exposure, grade it, then sound and the bars
+        // behind it. The phone gets the same set as the desk window's
+        // project menu — `Color` was missing here while the menu had it,
+        // which put the whole grading stage, scopes and all, out of reach
+        // on a phone.
+        kinds += VideoStudioModel.GlobalTool.allCases.map { .global($0) }
         return kinds
     }
 
