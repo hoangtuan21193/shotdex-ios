@@ -3,6 +3,12 @@
 #
 #   Tools/sim-shot <udid-or-name> <out.png> [auto|inner|cover|<display-uuid>]
 #
+# The frame comes back with the display's own **mask applied** (rounded
+# corners drawn black), because that is the shape the user looks at. Without
+# it `simctl` hands over the raw framebuffer, which is a rectangle, and a
+# control tucked into a corner looks fine in the screenshot and is cut off on
+# the device. Set SIM_SHOT_MASK=ignored for the unmasked rectangle.
+#
 # Why this exists: on a dual-screen device (iPhone Duo) nothing else gets a
 # usable frame. `XCUIScreen.main.screenshot()` and `app.screenshot()` inside a
 # UI test both capture the display the system calls main — on a Duo that is
@@ -47,8 +53,10 @@ if [ -z "$displays" ]; then
     exit 1
 fi
 
+mask="${SIM_SHOT_MASK:-black}"
+
 shoot() {
-    xcrun simctl io "$device" screenshot --display "$1" "$out" >/dev/null 2>&1 || return 1
+    xcrun simctl io "$device" screenshot --display "$1" --mask="$mask" "$out" >/dev/null 2>&1 || return 1
     [ -s "$out" ]
 }
 
@@ -65,7 +73,7 @@ case "$which" in
         best_size=0
         tmp="${out%.png}.probe.png"
         for uuid in $(echo "$displays" | awk '{print $2}'); do
-            if xcrun simctl io "$device" screenshot --display "$uuid" "$tmp" >/dev/null 2>&1; then
+            if xcrun simctl io "$device" screenshot --display "$uuid" --mask="$mask" "$tmp" >/dev/null 2>&1; then
                 size=$(stat -f%z "$tmp" 2>/dev/null || echo 0)
                 if [ "$size" -gt "$best_size" ]; then
                     best_size=$size

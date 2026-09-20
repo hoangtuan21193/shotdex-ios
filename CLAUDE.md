@@ -34,6 +34,14 @@ Tools/ui-drive <udid> ShotDexUITests/scripts/<script>.json [out-dir]
 Tools/sim-shot <udid> out.png [inner|cover]
 ```
 
+It captures with the display's **mask applied** (rounded corners drawn
+black), because that is the shape the user looks at: `simctl` otherwise
+hands over the raw rectangular framebuffer, and a control tucked into a top
+corner looks correctly placed in the screenshot while the device cuts it
+off. The Duo's corner curve measures about 37pt, so anything within ~40pt
+of a top corner needs checking on a masked frame. `SIM_SHOT_MASK=ignored`
+gets the rectangle back.
+
 `Tools/sim-shot` exists because nothing else gets a frame off a dual-screen
 device. Inside a UI test, `XCUIScreen.main.screenshot()` and
 `app.screenshot()` both capture the display the system calls main — on an
