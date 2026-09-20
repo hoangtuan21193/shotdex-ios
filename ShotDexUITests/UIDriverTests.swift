@@ -80,11 +80,11 @@ final class UIDriverTests: XCTestCase {
         guard let path = ProcessInfo.processInfo.environment["SHOTDEX_UI_SCRIPT"], !path.isEmpty else {
             return [
                 UIDriverStep(action: "launch", label: nil, type: nil, index: nil, x: nil, y: nil,
-                             direction: nil, text: nil, seconds: nil, name: nil, arguments: nil),
+                             direction: nil, text: nil, seconds: nil, name: nil, arguments: nil, hittable: nil),
                 UIDriverStep(action: "screenshot", label: nil, type: nil, index: nil, x: nil, y: nil,
-                             direction: nil, text: nil, seconds: nil, name: "launch", arguments: nil),
+                             direction: nil, text: nil, seconds: nil, name: "launch", arguments: nil, hittable: nil),
                 UIDriverStep(action: "dump", label: nil, type: nil, index: nil, x: nil, y: nil,
-                             direction: nil, text: nil, seconds: nil, name: "launch", arguments: nil),
+                             direction: nil, text: nil, seconds: nil, name: "launch", arguments: nil, hittable: nil),
             ]
         }
         // The test runs inside the simulator, which cannot see a path on the
@@ -166,7 +166,11 @@ final class UIDriverTests: XCTestCase {
             // Studio on the phone, where even `app.buttons` never returns).
             write(
                 name: step.name ?? "tree",
-                tree: tree(everything: step.text == "all", only: step.type)
+                tree: tree(
+                    everything: step.text == "all",
+                    only: step.type,
+                    hittable: step.hittable ?? false
+                )
             )
         case "back":
             let back = app.navigationBars.buttons.element(boundBy: 0)
@@ -274,16 +278,29 @@ final class UIDriverTests: XCTestCase {
     }
 
     /// `text: "all"` on a dump step asks for the whole tree instead, capped.
-    private func tree(everything: Bool = false, only type: String? = nil) -> [UIDriverElement] {
+    ///
+    /// Every property read here is its own round trip into the app, and
+    /// `isHittable` is by far the dearest of them — it does a hit test.
+    /// Measured on the Video Studio on the phone: the dump never returned,
+    /// while `sample` showed the app's main thread **idle** the whole time,
+    /// so the cost was the driver asking, not the app thinking. `isHittable`
+    /// is opt-in now (`hittable: true` on the step) and every dump is capped,
+    /// so a screen with a lot on it returns a short answer instead of no
+    /// answer.
+    private func tree(
+        everything: Bool = false,
+        only type: String? = nil,
+        hittable: Bool = false
+    ) -> [UIDriverElement] {
         let elements: [XCUIElement]
         if let type {
             elements = queryForType(type).allElementsBoundByIndex
         } else if everything {
-            elements = Array(app.descendants(matching: .any).allElementsBoundByIndex.prefix(Self.maxDumpedElements))
+            elements = app.descendants(matching: .any).allElementsBoundByIndex
         } else {
             elements = dumpQueries.flatMap(\.allElementsBoundByIndex)
         }
-        return elements.compactMap { element in
+        return elements.prefix(Self.maxDumpedElements).compactMap { element in
             guard element.exists else { return nil }
             let frame = element.frame
             guard frame.width > 0, frame.height > 0 else { return nil }
@@ -298,7 +315,7 @@ final class UIDriverTests: XCTestCase {
                 height: frame.height,
                 enabled: element.isEnabled,
                 selected: element.isSelected,
-                hittable: element.isHittable
+                hittable: hittable ? element.isHittable : nil
             )
         }
     }

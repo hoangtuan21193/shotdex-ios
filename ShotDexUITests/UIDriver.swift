@@ -29,6 +29,10 @@ struct UIDriverStep: Decodable {
     let name: String?
     /// Launch arguments for `launch`.
     let arguments: [String]?
+    /// `dump` only: also report whether each element is hittable. Off by
+    /// default — it hit-tests every element, and on a busy screen that is the
+    /// difference between a dump and a timeout.
+    let hittable: Bool?
 }
 
 struct UIDriverScript: Decodable {
@@ -50,7 +54,9 @@ struct UIDriverElement: Encodable {
     let height: Double
     let enabled: Bool
     let selected: Bool
-    let hittable: Bool
+    /// Only filled when the step asked for it: reading it hit-tests every
+    /// element, which is what made a dump of the Video Studio never return.
+    let hittable: Bool?
 }
 
 struct UIDriverStepResult: Encodable {
