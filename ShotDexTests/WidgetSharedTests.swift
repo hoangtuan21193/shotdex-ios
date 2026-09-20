@@ -424,6 +424,90 @@ struct PhotoWidgetDataTests {
     }
 
     /// PhotoKit identifiers carry slashes, which are path separators.
+    /// One photo is the more specific answer, so it wins over an album set on
+    /// the same widget.
+    @Test func aChosenPhotoBeatsAChosenAlbum() throws {
+        let resolved = PhotoWidgetResolvedConfiguration.resolve(
+            kind: .clock,
+            settings: .default(for: .clock),
+            photoId: "PIC/L0/001",
+            photoLabel: "Sep 21, 2026 at 09:30",
+            albumId: "ALB/L0/040",
+            albumTitle: "Iceland",
+            rotation: nil,
+            dimming: nil,
+            frameCount: { _ in 1 }
+        )
+        #expect(resolved.settings.source == .photo(assetId: "PIC/L0/001"))
+        #expect(resolved.frameDirectoryName == PhotoWidgetSnapshot.assetDirectoryName(assetId: "PIC/L0/001"))
+        #expect(resolved.pendingAlbum == nil)
+    }
+
+    @Test func aChosenPhotoWithoutAFrameAsksForOne() throws {
+        let resolved = PhotoWidgetResolvedConfiguration.resolve(
+            kind: .weather,
+            settings: .default(for: .weather),
+            photoId: "PIC/L0/002",
+            photoLabel: "Yesterday",
+            albumId: nil,
+            albumTitle: nil,
+            rotation: nil,
+            dimming: nil,
+            frameCount: { _ in 0 }
+        )
+        let pending = try #require(resolved.pendingAlbum)
+        #expect(pending.id == "PIC/L0/002")
+        #expect(resolved.pendingSourceKind == .photo)
+    }
+
+    /// A photo's folder and an album's folder never collide, even when the two
+    /// identifiers slug to the same thing.
+    @Test func aPhotoFolderIsNotAnAlbumFolder() {
+        let identifier = "9F98-3C/L0/040"
+        let album = PhotoWidgetSnapshot.albumDirectoryName(albumId: identifier)
+        let asset = PhotoWidgetSnapshot.assetDirectoryName(assetId: identifier)
+        #expect(album != asset)
+        #expect(!asset.contains("/"))
+    }
+
+    /// The queue was album-only before single photos existed, and a queue
+    /// written by that build still decodes.
+    @Test func anOlderQueueEntryIsReadAsAnAlbumAsk() throws {
+        let legacy = """
+        {"requests":[{"albumId":"A/L0/1","title":"Trips","requestedAt":0}]}
+        """
+        let decoded = try JSONDecoder().decode(
+            PhotoWidgetFrameRequests.self, from: Data(legacy.utf8)
+        )
+        #expect(decoded.requests.first?.source == .album)
+        #expect(decoded.requests.first?.frameDirectoryName.hasPrefix("photo-widget-album-") == true)
+    }
+
+    /// Frames from the build that rendered at 1000 px are marked for redoing;
+    /// the ones written since are left alone.
+    @Test func framesRenderedSmallerThanTodayAreStale() {
+        let old = PhotoWidgetSnapshot(frames: [], generatedAt: .now, renderedPixels: nil)
+        #expect(old.isBelow(pixels: 1_600))
+        let smaller = PhotoWidgetSnapshot(frames: [], generatedAt: .now, renderedPixels: 1_000)
+        #expect(smaller.isBelow(pixels: 1_600))
+        let current = PhotoWidgetSnapshot(frames: [], generatedAt: .now, renderedPixels: 1_600)
+        #expect(!current.isBelow(pixels: 1_600))
+    }
+
+    @Test func thePhotoCatalogSearchesItsLabels() {
+        let catalog = WidgetPhotoCatalog(
+            photos: [
+                .init(id: "1", label: "Sep 21, 2026 at 09:30", thumbnailFileName: "a.jpg"),
+                .init(id: "2", label: "Aug 8, 2012 at 23:55", thumbnailFileName: "b.jpg"),
+            ],
+            generatedAt: .now
+        )
+        #expect(catalog.matching("sep").map(\.id) == ["1"])
+        #expect(catalog.matching("2012").map(\.id) == ["2"])
+        #expect(catalog.matching("").count == 2)
+        #expect(catalog.photo(id: "2")?.label.hasPrefix("Aug") == true)
+    }
+
     @Test func anAlbumFolderNameIsSafeToPutOnDisk() {
         let name = PhotoWidgetSnapshot.albumDirectoryName(albumId: "9F98-3C/L0/040")
         #expect(!name.contains("/"))

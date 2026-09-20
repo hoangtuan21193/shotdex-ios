@@ -68,7 +68,11 @@ struct PhotoWidgetProvider: AppIntentTimelineProvider {
         // An album chosen on the Home Screen has no pictures until the app has
         // rendered them, so the ask is left where the app will find it.
         if let pending = resolved.pendingAlbum {
-            PhotoWidgetFrameRequests.request(albumId: pending.id, title: pending.title)
+            PhotoWidgetFrameRequests.request(
+                albumId: pending.id,
+                title: pending.title,
+                source: resolved.pendingSourceKind == .photo ? .photo : .album
+            )
         }
 
         let showsClock = resolved.settings.showsTime
@@ -106,6 +110,8 @@ struct PhotoWidgetProvider: AppIntentTimelineProvider {
             PhotoWidgetResolvedConfiguration.resolve(
                 kind: kind,
                 settings: settings[kind],
+                photoId: configuration.photo?.id,
+                photoLabel: configuration.photo?.label,
                 albumId: configuration.album?.id,
                 albumTitle: configuration.album?.title,
                 rotation: configuration.rotation.rotation,

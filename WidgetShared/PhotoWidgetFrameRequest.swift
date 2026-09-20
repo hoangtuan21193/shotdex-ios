@@ -9,11 +9,43 @@ import Foundation
 /// reloads the timeline. This is the one file the widget writes and the app
 /// reads, the opposite direction from every other payload.
 struct PhotoWidgetFrameRequest: Codable, Equatable, Identifiable {
+    /// What was chosen on the Home Screen: a whole album, or one photo.
+    enum Source: String, Codable {
+        case album
+        case photo
+    }
+
     var albumId: String
     var title: String
     var requestedAt: Date
+    var source: Source
 
     var id: String { albumId }
+
+    init(albumId: String, title: String, requestedAt: Date, source: Source = .album) {
+        self.albumId = albumId
+        self.title = title
+        self.requestedAt = requestedAt
+        self.source = source
+    }
+
+    /// `source` arrived after the queue did, and a queue written by the older
+    /// build holds album asks only.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        albumId = try container.decode(String.self, forKey: .albumId)
+        title = (try? container.decode(String.self, forKey: .title)) ?? "Album"
+        requestedAt = (try? container.decode(Date.self, forKey: .requestedAt)) ?? .distantPast
+        source = (try? container.decode(Source.self, forKey: .source)) ?? .album
+    }
+
+    /// The folder this ask's frames belong in.
+    var frameDirectoryName: String {
+        switch source {
+        case .album: PhotoWidgetSnapshot.albumDirectoryName(albumId: albumId)
+        case .photo: PhotoWidgetSnapshot.assetDirectoryName(assetId: albumId)
+        }
+    }
 }
 
 struct PhotoWidgetFrameRequests: Codable, Equatable {
@@ -55,9 +87,16 @@ struct PhotoWidgetFrameRequests: Codable, Equatable {
     /// Records that a widget wants this album's photos. Called from the widget
     /// process, so it reads and writes the file in one go rather than holding
     /// state.
-    static func request(albumId: String, title: String, now: Date = .now) {
+    static func request(
+        albumId: String,
+        title: String,
+        source: PhotoWidgetFrameRequest.Source = .album,
+        now: Date = .now
+    ) {
         let existing = read().requests
-        let request = PhotoWidgetFrameRequest(albumId: albumId, title: title, requestedAt: now)
+        let request = PhotoWidgetFrameRequest(
+            albumId: albumId, title: title, requestedAt: now, source: source
+        )
         guard existing.first(where: { $0.albumId == albumId }) == nil else { return }
         PhotoWidgetFrameRequests(requests: merged(existing, adding: request)).write()
     }

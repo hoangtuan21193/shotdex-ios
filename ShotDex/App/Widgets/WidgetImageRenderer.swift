@@ -12,10 +12,16 @@ import UIKit
 struct WidgetImageRenderer {
     let photoLibrary: PhotoLibraryService
 
-    /// Longest edge in pixels. A large widget is about 360 pt wide, so 1000 px
-    /// covers a 3x screen with room to crop, and costs ~200 KB per frame.
-    static let maxPixels: CGFloat = 1_000
-    static let compressionQuality: CGFloat = 0.8
+    /// Longest edge in pixels.
+    ///
+    /// 1000 px was too few and it showed: a large widget is 329 × 345 pt, so a
+    /// 3x screen wants about 1035 px down the *short* edge — a landscape frame
+    /// capped at 1000 px on its long edge arrives already enlarged, and the
+    /// preview in Settings looked soft before anything was zoomed. 1600 px
+    /// covers the large family with room, and leaves something for the pinch
+    /// zoom to eat into. About 450 KB a frame.
+    static let maxPixels: CGFloat = 1_600
+    static let compressionQuality: CGFloat = 0.85
 
     /// Renders `asset` into `url`, returning false when PhotoKit had nothing to
     /// give (an iCloud-only asset with no network, a deleted one).
@@ -41,6 +47,36 @@ struct WidgetImageRenderer {
         guard let data = image?.jpegData(compressionQuality: Self.compressionQuality) else {
             return false
         }
+        do {
+            try FileManager.default.createDirectory(
+                at: url.deletingLastPathComponent(), withIntermediateDirectories: true
+            )
+            try data.write(to: url, options: .atomic)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    /// A small copy for a menu row, where the widget's own size would be a
+    /// hundred times more than the row can show.
+    @discardableResult
+    func writeThumbnail(for asset: PHAsset, to url: URL, maxPixels: CGFloat) async -> Bool {
+        let size = CGSize(width: maxPixels, height: maxPixels)
+        let image: UIImage? = await withCheckedContinuation { continuation in
+            var hasResumed = false
+            _ = photoLibrary.requestThumbnail(
+                for: asset,
+                targetSize: size,
+                contentMode: .aspectFill,
+                allowNetwork: false
+            ) { image in
+                guard !hasResumed, let image else { return }
+                hasResumed = true
+                continuation.resume(returning: image)
+            }
+        }
+        guard let data = image?.jpegData(compressionQuality: 0.7) else { return false }
         do {
             try FileManager.default.createDirectory(
                 at: url.deletingLastPathComponent(), withIntermediateDirectories: true

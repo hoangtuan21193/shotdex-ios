@@ -534,8 +534,14 @@ struct PhotoWidgetSnapshot: Codable, Equatable {
 
     var frames: [Frame]
     var generatedAt: Date
+    /// Longest edge these frames were rendered at. Missing on anything written
+    /// before the size went up, which is exactly what marks it for redoing.
+    var renderedPixels: Int?
 
     static let empty = PhotoWidgetSnapshot(frames: [], generatedAt: .distantPast)
+
+    /// True when these frames are smaller than what is drawn today.
+    func isBelow(pixels: Int) -> Bool { (renderedPixels ?? 0) < pixels }
     static let fileName = "snapshot.json"
     /// How many album photos are kept on disk per widget. Twelve covers half a
     /// day of hourly rotation and costs about a megabyte.
@@ -562,6 +568,15 @@ struct PhotoWidgetSnapshot: Codable, Equatable {
             character.isLetter || character.isNumber || character == "-" ? character : "-"
         }
         return "photo-widget-album-" + String(slug).prefix(80)
+    }
+
+    /// Where one chosen photo's frame lives. Same slug rule as an album's
+    /// folder, and a different prefix so the two can never collide.
+    static func assetDirectoryName(assetId: String) -> String {
+        let slug = assetId.map { character -> Character in
+            character.isLetter || character.isNumber || character == "-" ? character : "-"
+        }
+        return "photo-widget-asset-" + String(slug).prefix(80)
     }
 
     static func read(directoryName: String) -> PhotoWidgetSnapshot {

@@ -34,7 +34,11 @@ struct PhotoWidgetSnapshotWriter {
             )
         }
 
-        let snapshot = PhotoWidgetSnapshot(frames: frames, generatedAt: .now)
+        let snapshot = PhotoWidgetSnapshot(
+            frames: frames,
+            generatedAt: .now,
+            renderedPixels: Int(WidgetImageRenderer.maxPixels)
+        )
         try? WidgetSharedContainer.encode(
             snapshot,
             to: directory.appendingPathComponent(PhotoWidgetSnapshot.fileName)
@@ -44,6 +48,35 @@ struct PhotoWidgetSnapshotWriter {
             keeping: Set(frames.map(\.fileName) + [PhotoWidgetSnapshot.fileName])
         )
         WidgetCenter.shared.reloadTimelines(ofKind: kind.widgetKind)
+    }
+
+    /// Redoes the album and single-photo folders that were rendered at the old
+    /// size, so a widget pointed at an album from the Home Screen gets the
+    /// same sharpness as one set up in the app.
+    func refreshStaleFolders() async {
+        guard let container = WidgetSharedContainer.url else { return }
+        let target = Int(WidgetImageRenderer.maxPixels)
+        let manager = FileManager.default
+        guard let entries = try? manager.contentsOfDirectory(
+            at: container, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
+        ) else { return }
+
+        for folder in entries {
+            let name = folder.lastPathComponent
+            let isAlbum = name.hasPrefix("photo-widget-album-")
+            let isAsset = name.hasPrefix("photo-widget-asset-")
+            guard isAlbum || isAsset else { continue }
+            let snapshot = PhotoWidgetSnapshot.read(directoryName: name)
+            guard !snapshot.frames.isEmpty, snapshot.isBelow(pixels: target) else { continue }
+            // The identifier is not recoverable from the folder name (it was
+            // slugged), so the assets are found from the frames themselves.
+            let assets = PhotoLibraryService.fetchAssets(ids: snapshot.frames.map(\.assetId))
+            guard !assets.isEmpty else { continue }
+            await write(assets: assets, to: folder)
+        }
+        for kind in PhotoWidgetKind.allCases {
+            WidgetCenter.shared.reloadTimelines(ofKind: kind.widgetKind)
+        }
     }
 
     /// Renders the albums that widgets asked for from the Home Screen.
@@ -60,11 +93,13 @@ struct PhotoWidgetSnapshotWriter {
 
         var fulfilled: Set<String> = []
         for request in requests {
-            let directoryName = PhotoWidgetSnapshot.albumDirectoryName(albumId: request.albumId)
+            let directoryName = request.frameDirectoryName
             let directory = PhotoWidgetSnapshot.directoryURL(named: directoryName, in: container)
-            let assets = Self.assets(
-                for: .album(collectionId: request.albumId, title: request.title)
-            )
+            let source: PhotoWidgetSettings.Source = switch request.source {
+            case .album: .album(collectionId: request.albumId, title: request.title)
+            case .photo: .photo(assetId: request.albumId)
+            }
+            let assets = Self.assets(for: source)
             // An album that no longer exists still counts as answered: leaving
             // the ask queued would have the widget re-request it for ever.
             guard !assets.isEmpty else {
@@ -99,7 +134,11 @@ struct PhotoWidgetSnapshotWriter {
             )
         }
         try? WidgetSharedContainer.encode(
-            PhotoWidgetSnapshot(frames: frames, generatedAt: .now),
+            PhotoWidgetSnapshot(
+                frames: frames,
+                generatedAt: .now,
+                renderedPixels: Int(WidgetImageRenderer.maxPixels)
+            ),
             to: directory.appendingPathComponent(PhotoWidgetSnapshot.fileName)
         )
         WidgetImageRenderer.prune(
@@ -113,14 +152,24 @@ struct PhotoWidgetSnapshotWriter {
     /// recently written; the rest were pointed at by widgets that are gone.
     private static func pruneAlbumFolders(in container: URL, keeping albumIds: Set<String>) {
         let manager = FileManager.default
-        let keep = Set(albumIds.map { PhotoWidgetSnapshot.albumDirectoryName(albumId: $0) })
+        let keep = Set(
+            albumIds.flatMap {
+                [
+                    PhotoWidgetSnapshot.albumDirectoryName(albumId: $0),
+                    PhotoWidgetSnapshot.assetDirectoryName(assetId: $0),
+                ]
+            }
+        )
         guard let entries = try? manager.contentsOfDirectory(
             at: container,
             includingPropertiesForKeys: [.contentModificationDateKey],
             options: [.skipsHiddenFiles]
         ) else { return }
         let albumFolders = entries
-            .filter { $0.lastPathComponent.hasPrefix("photo-widget-album-") }
+            .filter {
+                $0.lastPathComponent.hasPrefix("photo-widget-album-")
+                    || $0.lastPathComponent.hasPrefix("photo-widget-asset-")
+            }
             .filter { !keep.contains($0.lastPathComponent) }
             .sorted { lhs, rhs in
                 let left = (try? lhs.resourceValues(forKeys: [.contentModificationDateKey]))?

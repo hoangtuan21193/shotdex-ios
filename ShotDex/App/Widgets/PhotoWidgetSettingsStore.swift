@@ -48,9 +48,12 @@ final class PhotoWidgetSettingsStore {
 
         // Anything with a source but no pictures — a migrated clock, or a
         // widget whose files were cleared — is rendered again rather than
-        // showing black until the user happens to open its settings.
+        // showing black until the user happens to open its settings. So is
+        // anything rendered at the old, softer size.
+        let target = Int(WidgetImageRenderer.maxPixels)
         for kind in PhotoWidgetKind.allCases where file[kind].source != .none {
-            if PhotoWidgetSnapshot.read(kind: kind).frames.isEmpty {
+            let snapshot = PhotoWidgetSnapshot.read(kind: kind)
+            if snapshot.frames.isEmpty || snapshot.isBelow(pixels: target) {
                 renderPhotos(for: kind)
             }
         }

@@ -12,8 +12,14 @@ import WidgetKit
 struct ConfigurePhotoWidgetIntent: WidgetConfigurationIntent {
     static let title: LocalizedStringResource = "Choose a Photo Source"
     static let description = IntentDescription(
-        "Pick the album this widget draws over. Leave it empty to use what you set in ShotDex."
+        "Pick the photo or album this widget draws over. Leave both empty to use what you set in ShotDex."
     )
+
+    @Parameter(
+        title: "Photo",
+        description: "One of your recent photos. Takes precedence over Album."
+    )
+    var photo: WidgetPhotoEntity?
 
     @Parameter(
         title: "Album",
@@ -29,6 +35,7 @@ struct ConfigurePhotoWidgetIntent: WidgetConfigurationIntent {
 
     static var parameterSummary: some ParameterSummary {
         Summary {
+            \.$photo
             \.$album
             \.$rotation
             \.$dimming
@@ -81,6 +88,59 @@ struct WidgetAlbumQuery: EntityQuery {
 extension WidgetAlbumQuery: EntityStringQuery {
     func entities(matching string: String) async throws -> [WidgetAlbumEntity] {
         WidgetAlbumCatalog.read().matching(string).map(WidgetAlbumEntity.init)
+    }
+}
+
+/// One photo, as the configuration menu lists it — with its thumbnail, since
+/// a date on its own is not how anyone recognises a picture.
+struct WidgetPhotoEntity: AppEntity, Identifiable, Hashable {
+    static let typeDisplayRepresentation = TypeDisplayRepresentation(name: "Photo")
+    static let defaultQuery = WidgetPhotoQuery()
+
+    var id: String
+    var label: String
+    var thumbnail: Data?
+
+    var displayRepresentation: DisplayRepresentation {
+        if let thumbnail {
+            DisplayRepresentation(
+                title: "\(label)",
+                image: .init(data: thumbnail)
+            )
+        } else {
+            DisplayRepresentation(title: "\(label)")
+        }
+    }
+
+    init(photo: WidgetPhotoCatalog.Photo, catalog: WidgetPhotoCatalog) {
+        id = photo.id
+        label = photo.label
+        thumbnail = catalog.thumbnailData(for: photo)
+    }
+}
+
+/// Answers the photo picker from the catalogue the app wrote — again a file,
+/// because this runs in the widget extension.
+struct WidgetPhotoQuery: EntityQuery {
+    func entities(for identifiers: [String]) async throws -> [WidgetPhotoEntity] {
+        let catalog = WidgetPhotoCatalog.read()
+        return identifiers.compactMap { identifier in
+            catalog.photo(id: identifier).map { WidgetPhotoEntity(photo: $0, catalog: catalog) }
+        }
+    }
+
+    func suggestedEntities() async throws -> [WidgetPhotoEntity] {
+        let catalog = WidgetPhotoCatalog.read()
+        return catalog.photos.map { WidgetPhotoEntity(photo: $0, catalog: catalog) }
+    }
+
+    func defaultResult() async -> WidgetPhotoEntity? { nil }
+}
+
+extension WidgetPhotoQuery: EntityStringQuery {
+    func entities(matching string: String) async throws -> [WidgetPhotoEntity] {
+        let catalog = WidgetPhotoCatalog.read()
+        return catalog.matching(string).map { WidgetPhotoEntity(photo: $0, catalog: catalog) }
     }
 }
 

@@ -238,7 +238,10 @@ final class AppDependencies {
         // the widgets that were pointed at one there are waiting for its
         // photos to be copied across.
         await WidgetAlbumCatalogWriter().write()
-        await PhotoWidgetSnapshotWriter(photoLibrary: photoLibrary).fulfilRequests()
+        await WidgetPhotoCatalogWriter(photoLibrary: photoLibrary).write()
+        let photoWidgetWriter = PhotoWidgetSnapshotWriter(photoLibrary: photoLibrary)
+        await photoWidgetWriter.fulfilRequests()
+        await photoWidgetWriter.refreshStaleFolders()
         await calendarWidgetWriter.write()
         await WeatherSnapshotWriter(location: widgetLocation).write()
     }

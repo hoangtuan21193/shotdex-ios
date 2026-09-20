@@ -13,9 +13,21 @@ struct PhotoWidgetResolvedConfiguration: Equatable {
     /// rendered yet.
     var pendingAlbum: WidgetAlbumCatalog.Album?
 
+    /// What kind of thing the Home Screen pointed this widget at, for the ask
+    /// that goes back to the app.
+    enum PendingSource: Equatable {
+        case album
+        case photo
+    }
+
+    /// Set when a single photo was chosen there and its frame is not rendered.
+    var pendingSourceKind: PendingSource = .album
+
     static func resolve(
         kind: PhotoWidgetKind,
         settings: PhotoWidgetSettings,
+        photoId: String? = nil,
+        photoLabel: String? = nil,
         albumId: String?,
         albumTitle: String?,
         rotation: PhotoWidgetSettings.Rotation?,
@@ -25,6 +37,24 @@ struct PhotoWidgetResolvedConfiguration: Equatable {
         var settings = settings
         if let rotation { settings.rotation = rotation }
         if let dimming { settings.photoDimming = dimming }
+
+        // One photo beats a whole album: it is the more specific answer, and
+        // the menu lists it first.
+        if let photoId, !photoId.isEmpty {
+            settings.source = .photo(assetId: photoId)
+            let directory = PhotoWidgetSnapshot.assetDirectoryName(assetId: photoId)
+            let isReady = frameCount(directory) > 0
+            return PhotoWidgetResolvedConfiguration(
+                settings: settings,
+                frameDirectoryName: directory,
+                pendingAlbum: isReady
+                    ? nil
+                    : WidgetAlbumCatalog.Album(
+                        id: photoId, title: photoLabel ?? "Photo", count: 0
+                    ),
+                pendingSourceKind: .photo
+            )
+        }
 
         guard let albumId, !albumId.isEmpty else {
             return PhotoWidgetResolvedConfiguration(
