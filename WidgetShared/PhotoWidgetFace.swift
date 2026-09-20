@@ -135,13 +135,21 @@ struct PhotoWidgetFace: View {
             .frame(maxWidth: gridWidth)
         }
         if showsEvents {
+            // An event line is cut, never shrunk: the face allows shrinking so
+            // a long clock format still fits, but applying that to a list made
+            // the titles a different size from the times beside them.
             eventRows
+                .minimumScaleFactor(1)
         }
     }
 
     /// The grid is a table of digits, so it is sized by its content rather
     /// than stretched across a wide widget.
-    private var gridWidth: CGFloat { min(width - 24, 7 * (supportingSize * 1.9)) }
+    private var gridWidth: CGFloat { min(rowWidth, 7 * (supportingSize * 1.9)) }
+
+    /// Width available to a line of text: the widget less the margins the
+    /// system gives its content, and less the preview's own padding.
+    private var rowWidth: CGFloat { max(40, width - 32) }
 
     @ViewBuilder
     private var eventRows: some View {
@@ -170,10 +178,21 @@ struct PhotoWidgetFace: View {
                                 .font(font(size: supportingSize * 0.9, isBold: false))
                                 .monospacedDigit()
                                 .opacity(0.9)
+                                .fixedSize()
+                            // The title is the only part that may be cut, and
+                            // it is cut rather than allowed to widen the row:
+                            // a long event name used to push the whole line
+                            // past both edges of the widget, taking the
+                            // colour dot off the left with it.
                             Text(event.title)
                                 .font(font(size: supportingSize * 0.9, isBold: false))
                                 .lineLimit(1)
+                                .truncationMode(.tail)
                         }
+                        // Every row is bounded by the widget, not by its own
+                        // longest title: an unbounded row grew past both edges
+                        // and took the colour dot off the left with it.
+                        .frame(width: rowWidth, alignment: .leading)
                     }
                     if visible.remaining > 0 {
                         Text("+\(visible.remaining) more")
