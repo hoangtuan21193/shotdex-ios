@@ -455,14 +455,21 @@ struct CompareScreen: View {
     /// and it costs nothing once they know it — it is gone the moment they
     /// mark anything.
     private var hint: some View {
-        Text("Tap a photo to mark it for deletion")
-            .font(.caption)
-            .foregroundStyle(.white.opacity(0.75))
-            .multilineTextAlignment(.trailing)
-            .lineLimit(2)
-            .frame(maxWidth: 190, alignment: .trailing)
-            .shadow(color: .black.opacity(0.6), radius: 4, y: 1)
-            .accessibilityHidden(true)
+        Text(
+            "Tap a photo to mark it for deletion",
+            comment: "Compare: the one instruction, shown until the first photo is marked"
+        )
+        .font(.caption)
+        .foregroundStyle(.white.opacity(0.75))
+        .multilineTextAlignment(.trailing)
+        // Three lines and no hard width cap: German runs about 30% longer
+        // than English and compounds give it nowhere to break, so a two-line
+        // box 190pt wide truncated the only instruction this screen has. It
+        // takes whatever is left beside the close button instead.
+        .lineLimit(3)
+        .frame(maxWidth: .infinity, alignment: .trailing)
+        .shadow(color: .black.opacity(0.6), radius: 4, y: 1)
+        .accessibilityHidden(true)
     }
 
     /// One button, one verb, and the count it will act on. Red because it

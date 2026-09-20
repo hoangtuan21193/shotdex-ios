@@ -293,7 +293,7 @@ private struct ClipBand: View {
     }
 
     private var durationBadge: some View {
-        Text(String(format: "%.1fs", clip.effectiveDuration))
+        Text("\(clip.effectiveDuration.formatted(.number.precision(.fractionLength(1))))s")
             .font(.system(size: 8.5, weight: .semibold).monospacedDigit())
             .padding(.horizontal, 4)
             .padding(.vertical, 1.5)
@@ -308,7 +308,7 @@ private struct ClipBand: View {
                 Image(systemName: "speaker.slash.fill").font(.system(size: 8.5))
             }
             if clip.kind == .video, clip.speed != 1 {
-                Text(String(format: "%.2g×", clip.speed)).font(.system(size: 8, weight: .bold).monospacedDigit())
+                Text("\(clip.speed.formatted(.number.precision(.significantDigits(2))))×").font(.system(size: 8, weight: .bold).monospacedDigit())
             }
             if clip.kind == .freeze {
                 Image(systemName: "snowflake").font(.system(size: 8.5))

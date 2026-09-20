@@ -193,8 +193,8 @@ enum AssetMetadataReader {
     private static func locationSection(_ location: AssetLocation?) -> MetadataReportSection {
         guard let location else { return section(String(localized: "Location", comment: "Info panel section title"), from: []) }
         return section(String(localized: "Location", comment: "Info panel section title"), from: [
-            (String(localized: "Coordinate", comment: "Info panel row label"), String(format: "%.6f, %.6f", location.latitude, location.longitude)),
-            (String(localized: "Altitude", comment: "Info panel row label"), location.altitude.map { String(format: "%.1f m", $0) }),
+            (String(localized: "Coordinate", comment: "Info panel row label"), "\(decimal(location.latitude, 6)), \(decimal(location.longitude, 6))"),
+            (String(localized: "Altitude", comment: "Info panel row label"), location.altitude.map { "\(decimal($0, 1)) m" }),
         ])
     }
 
@@ -407,7 +407,7 @@ enum AssetMetadataReader {
                 ?? (exif["ISOSpeed"] as? NSNumber)?.intValue
         }()
         let bias = number(exif, kCGImagePropertyExifExposureBiasValue)
-            .map { String(format: "%+.1f EV", $0) }
+            .map { "\($0 > 0 ? "+" : "")\(decimal($0, 1)) EV" }
         let exposure: [(String, String?)] = [
             (String(localized: "Shutter Speed", comment: "Info panel row label"), number(exif, kCGImagePropertyExifExposureTime)
                 .flatMap(MetadataFormatter.shutterSpeed)
@@ -455,7 +455,7 @@ enum AssetMetadataReader {
                 3: "Distant",
             ])),
             (String(localized: "Digital Zoom", comment: "Info panel row label"), number(exif, kCGImagePropertyExifDigitalZoomRatio)
-                .flatMap { $0 > 1 ? String(format: "%.1f×", $0) : nil }),
+                .flatMap { $0 > 1 ? "\(decimal($0, 1))×" : nil }),
         ]
 
         let date: [(String, String?)] = [
@@ -732,28 +732,28 @@ enum AssetMetadataReader {
             for (index, track) in tracks.enumerated() {
                 var rows: [(String, String?)] = []
                 if let size = try? await track.load(.naturalSize) {
-                    rows.append(("Dimensions", "\(Int(size.width)) × \(Int(size.height))"))
+                    rows.append((String(localized: "Dimensions", comment: "Info panel row label"), "\(Int(size.width)) × \(Int(size.height))"))
                 }
                 if let fps = try? await track.load(.nominalFrameRate) {
-                    rows.append(("Frame Rate", String(format: "%.2f fps", fps)))
+                    rows.append((String(localized: "Frame Rate", comment: "Info panel row label"), "\(decimal(Double(fps), 2)) fps"))
                 }
                 if let bitrate = try? await track.load(.estimatedDataRate) {
-                    rows.append(("Data Rate", String(format: "%.1f Mbps", bitrate / 1_000_000)))
+                    rows.append((String(localized: "Data Rate", comment: "Info panel row label"), "\(decimal(Double(bitrate) / 1_000_000, 1)) Mbps"))
                 }
                 if let formats = try? await track.load(.formatDescriptions), let codec = formats.first {
-                    rows.append(("Codec", fourCC(CMFormatDescriptionGetMediaSubType(codec))))
+                    rows.append((String(localized: "Codec", comment: "Info panel row label"), fourCC(CMFormatDescriptionGetMediaSubType(codec))))
                 }
-                sections.append(section("Video Track \(index + 1)", from: rows))
+                sections.append(section(String(localized: "Video Track \(index + 1)", comment: "Info panel section title for one video track"), from: rows))
             }
         }
 
         if let audio = try? await avAsset.loadTracks(withMediaType: .audio), let track = audio.first {
             var rows: [(String, String?)] = []
             if let bitrate = try? await track.load(.estimatedDataRate) {
-                rows.append(("Data Rate", String(format: "%.0f kbps", bitrate / 1000)))
+                rows.append((String(localized: "Data Rate", comment: "Info panel row label"), "\(decimal(Double(bitrate) / 1000, 0)) kbps"))
             }
             if let formats = try? await track.load(.formatDescriptions), let codec = formats.first {
-                rows.append(("Codec", fourCC(CMFormatDescriptionGetMediaSubType(codec))))
+                rows.append((String(localized: "Codec", comment: "Info panel row label"), fourCC(CMFormatDescriptionGetMediaSubType(codec))))
             }
             sections.append(section(String(localized: "Audio Track", comment: "Info panel section title"), from: rows))
         }
@@ -844,20 +844,29 @@ enum AssetMetadataReader {
         return MetadataFormatter.metadataLine([focal, aperture])
     }
 
+    /// A number for the Info panel, in the reader's own notation.
+    ///
+    /// `String(format:)` has no locale: its decimal separator is always a
+    /// dot, where half of Europe writes a comma. Now that the panel's labels
+    /// are translated, its numbers cannot stay half-English.
+    private static func decimal(_ value: Double, _ digits: Int) -> String {
+        value.formatted(.number.precision(.fractionLength(digits)))
+    }
+
     private static func cleanNumber(_ value: Double) -> String {
         value == value.rounded()
-            ? "\(Int(value))"
-            : String(format: "%.1f", value)
+            ? Int(value).formatted()
+            : decimal(value, 1)
     }
 
     private static func distance(_ meters: Double) -> String? {
         guard meters > 0, meters.isFinite, meters < 1_000_000 else { return nil }
         if meters < 1 {
-            return String(format: "%.0f cm", meters * 100)
+            return "\(decimal(meters * 100, 0)) cm"
         }
         return meters < 10
-            ? String(format: "%.2f m", meters)
-            : String(format: "%.1f m", meters)
+            ? "\(decimal(meters, 2)) m"
+            : "\(decimal(meters, 1)) m"
     }
 
     private static func flashDescription(_ value: Int) -> String {
