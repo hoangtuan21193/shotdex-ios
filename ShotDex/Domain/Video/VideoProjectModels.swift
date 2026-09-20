@@ -385,6 +385,10 @@ struct VideoProjectRecipe: Equatable, Codable, Sendable {
     var color = PhotoColorRecipe()
     /// Point tone curve, master plus per channel.
     var curve = ToneCurveAdjustments()
+    /// Power windows and qualifiers: a radial or linear window, a luminance
+    /// range or a colour range, each carrying its own adjustments. The photo
+    /// editor's mask stage, applied to every frame.
+    var masks: [PhotoMask] = []
     var overlays: [TimedOverlay] = []
     /// Single-video mode: user rotation in quarter turns (0–3).
     var quarterTurns = 0

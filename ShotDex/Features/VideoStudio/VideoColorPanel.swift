@@ -27,6 +27,8 @@ struct VideoColorPanel: View {
                 inputTransformSection
                 Divider().overlay(EditorTheme.panelDivider)
                 primariesSection
+                Divider().overlay(EditorTheme.panelDivider)
+                windowsSection
             }
             .padding(.horizontal, AppTheme.Spacing.lg)
             .padding(.bottom, AppTheme.Spacing.lg)
@@ -135,5 +137,164 @@ struct VideoColorPanel: View {
 
     private var wheel: ColorGradingAdjustments.Wheel {
         model.recipe.color.grading[region]
+    }
+
+    // MARK: Windows and qualifiers
+
+    /// Resolve calls these power windows and the HSL qualifier; the model
+    /// behind them is the photo editor's own `PhotoMask`, so a window means
+    /// the same thing in both editors.
+    private var windowsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Windows & Qualifiers", comment: "Video Studio colour: masked, local grades")
+                .font(EditorTheme.groupLabel)
+                .foregroundStyle(EditorTheme.secondaryText)
+
+            HStack(spacing: 6) {
+                ForEach(VideoMaskRenderer.supportedKinds) { kind in
+                    Button { model.addMask(kind) } label: {
+                        VStack(spacing: 3) {
+                            Image(systemName: kind.videoSystemImage)
+                                .font(.system(size: 14, weight: .medium))
+                            Text(kind.displayName)
+                                .font(.system(size: 9.5, weight: .medium))
+                                .lineLimit(2)
+                                .multilineTextAlignment(.center)
+                                .minimumScaleFactor(0.7)
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background(
+                            RoundedRectangle(cornerRadius: VideoStudioMetrics.commandCellRadius, style: .continuous)
+                                .fill(EditorTheme.trackChip)
+                        )
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text("Add \(kind.displayName) window", comment: "Video Studio colour: adds one local grade"))
+                }
+            }
+
+            if model.recipe.masks.isEmpty {
+                Text(
+                    "A window grades part of the frame. Brush, subject and sky are photo-only — they need a pass per frame.",
+                    comment: "Video Studio colour: empty state for windows, and which kinds are absent"
+                )
+                .font(.system(size: 11))
+                .foregroundStyle(EditorTheme.dimText)
+            }
+
+            ForEach(model.recipe.masks) { mask in
+                maskRow(mask)
+            }
+
+            if let mask = model.selectedMask {
+                maskControls(mask)
+            }
+        }
+    }
+
+    private func maskRow(_ mask: PhotoMask) -> some View {
+        let isOn = mask.id == model.selectedMaskID
+        return HStack(spacing: 8) {
+            Button { model.selectedMaskID = isOn ? nil : mask.id } label: {
+                Text(mask.name)
+                    .font(.system(size: 12, weight: isOn ? .semibold : .regular))
+                    .foregroundStyle(isOn ? EditorTheme.accent : .white)
+                Spacer(minLength: 0)
+            }
+            .buttonStyle(.plain)
+
+            Button { model.toggleMaskInverted(mask.id) } label: {
+                Image(systemName: mask.isInverted ? "circle.righthalf.filled" : "circle.lefthalf.filled")
+                    .foregroundStyle(mask.isInverted ? EditorTheme.accent : EditorTheme.dimText)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("Invert window", comment: "Video Studio colour: grades outside the window instead of inside"))
+
+            Button { model.toggleMaskVisible(mask.id) } label: {
+                Image(systemName: mask.isVisible ? "eye" : "eye.slash")
+                    .foregroundStyle(mask.isVisible ? EditorTheme.dimText : EditorTheme.timelineDestructive)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("Show window", comment: "Video Studio colour: turns one window off without deleting it"))
+
+            Button { model.removeMask(mask.id) } label: {
+                Image(systemName: "trash")
+                    .foregroundStyle(EditorTheme.timelineDestructive)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("Delete window", comment: "Video Studio colour"))
+        }
+        .font(.system(size: 13))
+        .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private func maskControls(_ mask: PhotoMask) -> some View {
+        if let component = mask.components.first {
+            VStack(spacing: 0) {
+                switch component.kind {
+                case .radialGradient:
+                    slider("Size", component.radiusX, 0.05...1) { value in
+                        model.updateSelectedMaskComponent { $0.radiusX = value; $0.radiusY = value }
+                    }
+                    slider("Feather", component.feather, 0...1) { value in
+                        model.updateSelectedMaskComponent { $0.feather = value }
+                    }
+                case .luminanceRange:
+                    slider("From", component.luminanceMinimum, 0...1) { value in
+                        model.updateSelectedMaskComponent { $0.luminanceMinimum = value }
+                    }
+                    slider("To", component.luminanceMaximum, 0...1) { value in
+                        model.updateSelectedMaskComponent { $0.luminanceMaximum = value }
+                    }
+                case .colorRange:
+                    slider("Tolerance", component.colorTolerance, 0.02...1) { value in
+                        model.updateSelectedMaskComponent { $0.colorTolerance = value }
+                    }
+                default:
+                    EmptyView()
+                }
+                // What the window actually does to the picture it covers.
+                slider("Exposure", mask.adjustments[.exposure], -1...1) { value in
+                    model.updateSelectedMaskAdjustment(.exposure, value: value)
+                }
+                slider("Saturation", mask.adjustments[.saturation], -1...1) { value in
+                    model.updateSelectedMaskAdjustment(.saturation, value: value)
+                }
+            }
+        }
+    }
+
+    private func slider(
+        _ label: String,
+        _ value: Double,
+        _ range: ClosedRange<Double>,
+        set: @escaping (Double) -> Void
+    ) -> some View {
+        InspectorSlider(
+            label: label,
+            value: value,
+            range: range,
+            valueText: String(format: "%.2f", value),
+            model: model,
+            set: set,
+            reset: { model.pushUndo(); set(range.lowerBound <= 0 ? 0 : range.lowerBound) }
+        )
+    }
+}
+
+extension PhotoMaskComponentKind {
+    /// The glyph the Video Studio uses for each window it supports.
+    var videoSystemImage: String {
+        switch self {
+        case .radialGradient: "circle.dashed"
+        case .linearGradient: "line.diagonal"
+        case .luminanceRange: "circle.lefthalf.filled"
+        case .colorRange: "eyedropper"
+        default: "square.dashed"
+        }
     }
 }

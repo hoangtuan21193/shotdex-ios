@@ -1254,11 +1254,82 @@ final class VideoStudioModel {
         applyVideoTier()
     }
 
+    // MARK: Power windows and qualifiers
+
+    /// Which window the Color panel is editing.
+    var selectedMaskID: UUID?
+
+    var selectedMask: PhotoMask? {
+        recipe.masks.first { $0.id == selectedMaskID }
+    }
+
+    func addMask(_ kind: PhotoMaskComponentKind) {
+        guard VideoMaskRenderer.supportedKinds.contains(kind) else { return }
+        pushUndo()
+        let mask = PhotoMask(
+            name: kind.displayName,
+            component: PhotoMaskComponent(kind: kind)
+        )
+        recipe.masks.append(mask)
+        selectedMaskID = mask.id
+        markEdited()
+        applyVideoTier()
+    }
+
+    func removeMask(_ id: UUID) {
+        guard recipe.masks.contains(where: { $0.id == id }) else { return }
+        pushUndo()
+        recipe.masks.removeAll { $0.id == id }
+        if selectedMaskID == id { selectedMaskID = recipe.masks.last?.id }
+        markEdited()
+        applyVideoTier()
+    }
+
+    func toggleMaskVisible(_ id: UUID) {
+        guard let index = recipe.masks.firstIndex(where: { $0.id == id }) else { return }
+        pushUndo()
+        recipe.masks[index].isVisible.toggle()
+        markEdited()
+        applyVideoTier()
+    }
+
+    func toggleMaskInverted(_ id: UUID) {
+        guard let index = recipe.masks.firstIndex(where: { $0.id == id }) else { return }
+        pushUndo()
+        recipe.masks[index].isInverted.toggle()
+        markEdited()
+        applyVideoTier()
+    }
+
+    /// Edits the window's first component — the panel offers one shape per
+    /// window, which keeps "what am I dragging" answerable.
+    func updateSelectedMaskComponent(_ mutate: (inout PhotoMaskComponent) -> Void) {
+        guard let id = selectedMaskID,
+              let index = recipe.masks.firstIndex(where: { $0.id == id }),
+              !recipe.masks[index].components.isEmpty
+        else { return }
+        mutate(&recipe.masks[index].components[0])
+        markEdited()
+        applyVideoTier()
+    }
+
+    func updateSelectedMaskAdjustment(_ kind: PhotoAdjustmentKind, value: Double) {
+        guard let id = selectedMaskID,
+              let index = recipe.masks.firstIndex(where: { $0.id == id })
+        else { return }
+        recipe.masks[index].adjustments[kind] = value
+        markEdited()
+        applyVideoTier()
+    }
+
     func resetColor() {
-        guard !recipe.color.isIdentity || recipe.curve != .identity else { return }
+        guard !recipe.color.isIdentity || recipe.curve != .identity || !recipe.masks.isEmpty
+        else { return }
         pushUndo()
         recipe.color = .identity
         recipe.curve = .identity
+        recipe.masks = []
+        selectedMaskID = nil
         markEdited()
         applyVideoTier()
     }

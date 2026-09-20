@@ -14,6 +14,7 @@ struct VideoRenderRecipe: Sendable {
     let adjustments: PhotoAdjustments
     let color: PhotoColorRecipe
     let curve: ToneCurveAdjustments
+    let masks: [PhotoMask]
     let overlays: [TimedOverlay]
     let renderSize: CGSize
     let totalDuration: Double
@@ -36,6 +37,7 @@ struct VideoRenderRecipe: Sendable {
         self.adjustments = recipe.adjustments
         self.color = recipe.color
         self.curve = recipe.curve
+        self.masks = recipe.masks.filter(\.isVisible)
         self.overlays = recipe.overlays
         self.renderSize = renderSize
         self.totalDuration = totalDuration
@@ -54,6 +56,7 @@ struct VideoRenderRecipe: Sendable {
             || !inputTransform.isIdentity
             || !color.isIdentity
             || curve != .identity
+            || !masks.isEmpty
     }
 
     /// The input transform as one `CIColorCurves` pass.
@@ -344,6 +347,13 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
             )
             image = PhotoRenderService.applyColor(recipe.color, to: image)
             image = PhotoRenderService.applyCurve(recipe.curve, to: image)
+            // Power windows and qualifiers, over the graded frame. The
+            // renderer is held for the whole composition so its mask caches
+            // survive between frames — a radial window's falloff does not
+            // change from one frame to the next, only the pixels under it do.
+            if !recipe.masks.isEmpty {
+                image = VideoMaskRenderer.apply(recipe.masks, to: image)
+            }
             image = PhotoRenderService.applyFilter(
                 recipe.filter,
                 intensity: recipe.filterIntensity,
