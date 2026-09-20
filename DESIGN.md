@@ -217,6 +217,19 @@ Nguyên tắc chung cho regular width (iPad, màn trong iPhone Duo 867pt): **mà
 
 **Lưới ảnh.** `GridDensity.columns(forDensity:width:isRegularWidth:)` quy đổi density đã lưu theo bề rộng thật rồi siết thêm `regularTileScale = 0.7`, trần cột `resolvedColumnRange = 1...20` (density mà pinch chạm tới vẫn là `columnRange = 1...8`). Density 3 ra 9 cột ở iPad 11" dọc, 13 cột khi xoay ngang, 9 cột ở màn trong Duo — ô ảnh giữ khoảng 85–105pt ở mọi bề rộng.
 
+### 10.1d Cover là nội dung, nên cover được phép to ra (2026-09-20)
+
+Ngoại lệ có phạm vi của §10.1c, và là ngoại lệ **duy nhất**: khi một ô là **ảnh bìa để nhận ra một bộ sưu tập**, ô đó to lên theo màn. Tile của tab Collections là **112pt (compact) → 168pt (regular)**, `AlbumTileMetrics`.
+
+Lý do: §10.1c cấm phóng to **cùng một layout**, và đúng — một hàng token 60pt kéo dài ra 1032pt chỉ là màn điện thoại bị thổi phồng. Nhưng cover thì khác: nó *là* nội dung. Một cover 168pt cho thấy **nhiều bức ảnh hơn** một cover 44pt, không phải cùng bức ảnh bị kéo giãn. Photos trên iPad cũng chọn vậy và còn đi xa hơn — cho user chọn Large / Small / Mixed Grid (đã đối chiếu Apple iPad user guide, `browse-your-photo-collections-ipad7b09d1cd`). ShotDex chọn **một cỡ cố định mỗi size class**, không thêm một setting: luật của dự án là "bớt một quyết định hơn là thêm một setting".
+
+Kéo theo:
+
+- **Token hàng (cover trái, chữ phải) bị bỏ ở tab này.** 60pt cao với thumbnail 44pt là hình dạng của một *hàng cài đặt*; tab này để nhận ra bộ sưu tập bằng bức ảnh của nó. Một component duy nhất `AlbumCoverTile` (cover vuông `r-lg` + tên + dòng phụ bên dưới) thay cho bốn struct gần-giống-nhau trước đây — bốn bản sao phải đồng bộ bằng tay chính là "hệ thống thứ hai" §1.5 cấm.
+- **Mỗi nhóm album một hàng, cuộn ngang.** Không xếp 3 hàng tile: 3 × 168 là 600pt chiều cao cho một heading. Photos cũng một hàng mỗi heading ("swipe left or right to see different collections").
+- **Nhóm không-có-cover (Media Types, Utilities) thì ngược lại**: thẻ **cao đúng một dòng text**, rộng 190 (compact) / 240 (regular), **xếp tối đa 3 hàng rồi cuộn ngang**. Chúng không có ảnh nào đáng nhận ra — "Panoramas" là một chữ, không phải một bức hình — nên đổi cover well lấy mật độ. Ba thẻ ngắn xếp chồng đọc ra một dải; một thẻ full-width trên iPad 13" đặt con số cách tên nó 800pt.
+- Glyph của tile không có cover phải **to theo tile** (30 → 44), nếu không một symbol cỡ body nằm giữa ô vuông 168pt đọc ra là ảnh tải hỏng chứ không phải icon cố ý.
+
 ### 10.2 Màn hình lưới ảnh (tầng B + C)
 Lưới tràn viền, không padding. **Không lưới ảnh nào chèn header ngày** (2026-09-19) — Library, Album, Smart Album và `PhotoListScreen` đều chạy `sectionMode: .flat`, ảnh trôi liền mạch. Ngày của ảnh đang ở mép trên viewport hiện ở **title giữa top bar** (Library) hoặc dòng phụ dưới tên album, do `PhotoGridCollectionView.onVisibleDateChange` đẩy lên. Cấp độ ngày/tháng/năm lấy theo density đã lưu, không theo số cột đã vẽ, để màn rộng không tự nhảy sang gom theo năm. `OnThisDayScreen` vẫn có header vì section của nó là "cùng ngày qua các năm", không phải chia ngày. Chrome nổi đè lên lưới bằng `safeAreaInset(edge:)` hoặc overlay, luôn dùng kính tầng C. Khi vào chế độ chọn: lưới mờ đi, selection bar trượt lên từ đáy.
 

@@ -1,13 +1,19 @@
 import Photos
 import SwiftUI
 
-/// Collections tab: On This Day hero, then horizontally-scrolling token
-/// grids (up to 3 rows) for smart albums, My Albums, and Shared Albums.
+/// Collections tab: On This Day hero, then one row of cover tiles per
+/// collection group, then the Media Types and Utilities lists.
 struct AlbumsScreen: View {
-    /// Grid-row height for the token rows, scaled the same way the tokens
-    /// themselves are so a row never crops the token inside it.
-    @ScaledMetric(relativeTo: .subheadline) private var tokenRowHeight =
-        AlbumTokenMetrics.height
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    /// One-line card height for the Media Types and Utilities bands, scaled
+    /// with the text inside so a row never crops the card.
+    @ScaledMetric(relativeTo: .body) private var rowHeight = CollectionListRowMetrics.height
+
+    /// Gap between tiles. Wider where the tiles are, so a row of 168pt covers
+    /// does not read as one striped block.
+    private var tileSpacing: CGFloat {
+        horizontalSizeClass == .regular ? AppTheme.Spacing.md : AppTheme.Spacing.sm
+    }
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(AppDependencies.self) private var dependencies
 
@@ -400,15 +406,7 @@ struct AlbumsScreen: View {
     /// before scrolling right, like the iOS Photos pinned-collections grid.
     /// Used for smart albums (no header), "My Albums", and "Shared Albums".
     private func albumTokenSection(title: String?, albums: [AlbumItem]) -> some View {
-        // Grow rows only as albums accumulate (~3 per column), capped at 3,
-        // so a handful of albums stays 1–2 rows tall instead of a stubby
-        // 3-row block.
-        let rowCount = max(1, min(3, (albums.count + 2) / 3))
-        let rows = Array(
-            repeating: GridItem(.fixed(tokenRowHeight), spacing: 8),
-            count: rowCount
-        )
-        return VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 12) {
             if let title {
                 Text(title)
                     .font(.title2.bold())
@@ -416,7 +414,7 @@ struct AlbumsScreen: View {
             }
 
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHGrid(rows: rows, spacing: 8) {
+                LazyHStack(alignment: .top, spacing: tileSpacing) {
                     ForEach(albums) { album in
                         NavigationLink(value: album.id) {
                             AlbumToken(album: album)
@@ -458,19 +456,13 @@ struct AlbumsScreen: View {
     /// and offer Edit / Delete via context menu; system tokens push the normal
     /// `AlbumDetailScreen`.
     private func smartAlbumsSection() -> some View {
-        let total = model.smartQueryAlbums.count + model.smartAlbums.count
-        let rowCount = max(1, min(3, (total + 2) / 3))
-        let rows = Array(
-            repeating: GridItem(.fixed(tokenRowHeight), spacing: 8),
-            count: rowCount
-        )
-        return VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Smart Albums")
                 .font(.title2.bold())
                 .padding(.horizontal)
 
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHGrid(rows: rows, spacing: 8) {
+                LazyHStack(alignment: .top, spacing: tileSpacing) {
                     ForEach(model.smartQueryAlbums) { item in
                         NavigationLink(value: SmartAlbumDestination(id: item.album.id)) {
                             SmartAlbumToken(item: item)
@@ -507,20 +499,21 @@ struct AlbumsScreen: View {
 
 /// The two list sections: Media Types and Utilities.
 ///
-/// Both are **one full-width row per entry**, not the horizontal token grid
-/// the album sections use, and Media Types sits directly above Utilities —
-/// the arrangement iOS 26 Photos settled on. The reason is that these are
-/// destinations you pick from a known list, not covers you browse: a token
-/// grid spends a 60×190 card and a cover thumbnail on each, scrolls half of
-/// them out of sight sideways, and still cuts the longer names. A row states
-/// the name in full, puts the count where the eye already goes for it, and
-/// costs one line.
+/// Both are **cards one line of text tall**, packed up to three rows deep and
+/// scrolled sideways — the same shape the album sections use, minus the cover
+/// well. Media Types sits directly above Utilities.
+///
+/// One line rather than the old two-line 60pt token because these entries
+/// have nothing to show but their name and their count, and no cover worth
+/// recognising: "Panoramas" is a word, not a picture. Three rows rather than
+/// one because a word-sized card is small, and stacking them is how Photos
+/// fills a heading's band without making the band tall.
 extension AlbumsScreen {
     /// Capture formats — Videos, Selfies, Live Photos, Portrait, RAW and the
     /// rest. Above Utilities because these are still *photos*; Utilities is
     /// the tools.
     fileprivate func mediaTypesSection() -> some View {
-        listSection("Media Types") {
+        listSection("Media Types", entryCount: model.mediaTypeAlbums.count) {
             ForEach(model.mediaTypeAlbums) { album in
                 NavigationLink(value: album.id) {
                     CollectionListRow(
@@ -536,7 +529,7 @@ extension AlbumsScreen {
     }
 
     fileprivate func utilitiesSection() -> some View {
-        listSection("Utilities") {
+        listSection("Utilities", entryCount: utilityEntryCount) {
             NavigationLink(value: DuplicatesDestination()) {
                 CollectionListRow(
                     title: String(localized: "Duplicates"),
@@ -601,30 +594,50 @@ extension AlbumsScreen {
     /// Title, then the rows. One shape for both sections so they cannot drift
     /// apart.
     ///
-    /// A grid, not a stack: a row the full width of a 13" iPad puts the count
-    /// 800pt from the name it belongs to, which is the "phone layout blown
-    /// up" that `DESIGN.md` §10.1c rules out — a wide screen gets **more
-    /// content**, not bigger content. The adaptive minimum is a phone's own
-    /// row width, so a phone still gets exactly one column.
-    @ViewBuilder
+    /// Up to three rows of cards, then sideways — the same band the album
+    /// sections use. Not a full-width stack: a card the full width of a 13"
+    /// iPad puts the count 800pt from the name it belongs to, and a list that
+    /// long pushes everything under it off the screen.
     private func listSection(
         _ title: LocalizedStringKey,
+        entryCount: Int,
         @ViewBuilder rows: () -> some View
     ) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        let rowCount = listRowCount(entryCount)
+        return VStack(alignment: .leading, spacing: 12) {
             Text(title)
                 .font(.title2.bold())
                 .padding(.horizontal)
 
-            LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: CollectionListRowMetrics.minimumWidth), spacing: 8)],
-                alignment: .leading,
-                spacing: 8
-            ) {
-                rows()
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHGrid(
+                    rows: Array(
+                        repeating: GridItem(.fixed(rowHeight), spacing: AppTheme.Spacing.sm),
+                        count: rowCount
+                    ),
+                    spacing: AppTheme.Spacing.sm
+                ) {
+                    rows()
+                }
+                .padding(.horizontal)
             }
-            .padding(.horizontal)
+            .scrollClipDisabled()
         }
+    }
+
+    /// Duplicates, Places and Trips are always drawn; Creations and the
+    /// system utility albums come and go, and the packing has to count what
+    /// is actually there.
+    private var utilityEntryCount: Int {
+        3 + (model.creationCount > 0 ? 1 : 0) + model.utilityAlbums.count
+    }
+
+    /// One row per card up to three, then sideways — the packing the album
+    /// sections have always used. Three short cards stacked read as one band;
+    /// three rows of *one* card each read as a mistake, so the count only
+    /// grows as the entries do.
+    private func listRowCount(_ count: Int) -> Int {
+        max(1, min(3, (count + 2) / 3))
     }
 
     /// `2 groups` / `Library up to date` under the Duplicates row, from the
@@ -651,38 +664,39 @@ struct CollectionListRow: View {
     let systemImage: String
     var detail: String?
 
-    @ScaledMetric(relativeTo: .body) private var glyphWidth: CGFloat = 28
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @ScaledMetric(relativeTo: .body) private var glyphWidth: CGFloat = 24
     @ScaledMetric(relativeTo: .body) private var rowHeight = CollectionListRowMetrics.height
+    @ScaledMetric(relativeTo: .body) private var typeScale = 1.0
+
+    private var width: CGFloat {
+        CollectionListRowMetrics.width(isRegularWidth: horizontalSizeClass == .regular) * typeScale
+    }
 
     var body: some View {
-        HStack(spacing: AppTheme.Spacing.md) {
+        HStack(spacing: AppTheme.Spacing.sm) {
             Image(systemName: systemImage)
                 .font(.body)
                 .foregroundStyle(AppAccent.color)
                 .frame(width: glyphWidth)
 
             Text(title)
-                .font(.body)
+                .font(.subheadline.weight(.semibold))
                 .foregroundStyle(Color(.label))
                 .lineLimit(1)
 
-            Spacer(minLength: AppTheme.Spacing.sm)
+            Spacer(minLength: AppTheme.Spacing.xs)
 
             if let detail {
                 Text(detail)
-                    .font(.subheadline)
+                    .font(.caption)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
                     .lineLimit(1)
             }
-
-            Image(systemName: "chevron.right")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.tertiary)
         }
-        .padding(.horizontal, AppTheme.Spacing.lg)
-        .frame(height: rowHeight)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, AppTheme.Spacing.md)
+        .frame(width: width, height: rowHeight, alignment: .leading)
         .background(
             Color(.secondarySystemBackground),
             in: RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous)
@@ -694,13 +708,21 @@ struct CollectionListRow: View {
 }
 
 enum CollectionListRowMetrics {
-    /// One line of body text with room to breathe, and past the 44pt minimum
+    /// One line of text with room to breathe, and past the 44pt minimum
     /// target on its own.
     static let height: CGFloat = 52
-    /// The narrowest a row may be, which is also what decides how many
-    /// columns a window gets. A phone's content width is about 370, so a
-    /// phone stays at one column and a 13" iPad lands on three.
-    static let minimumWidth: CGFloat = 320
+    /// Card width. 190 is what the two-line token this replaced already
+    /// needed, and it is the number that fits the longest pair the band
+    /// actually carries — measured on the phone, "Duplicates · 1 group" came
+    /// out as "Dupli… 1 group" at 170. Wider on a regular-width window for
+    /// the same reason the cover tiles are bigger there: the band is
+    /// horizontal, so width is what a wide screen has to give.
+    static let compactWidth: CGFloat = 190
+    static let regularWidth: CGFloat = 240
+
+    static func width(isRegularWidth: Bool) -> CGFloat {
+        isRegularWidth ? regularWidth : compactWidth
+    }
 }
 
 extension AlbumsScreen {
@@ -714,7 +736,7 @@ extension AlbumsScreen {
                 .padding(.horizontal)
 
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 8) {
+                LazyHStack(alignment: .top, spacing: tileSpacing) {
                     ForEach(recentTokens, id: \.title) { token in
                         NavigationLink {
                             PhotoListScreen(
@@ -747,7 +769,7 @@ extension AlbumsScreen {
                 .padding(.horizontal)
 
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 8) {
+                LazyHStack(alignment: .top, spacing: tileSpacing) {
                     ForEach(subjectTokens, id: \.title) { token in
                         NavigationLink {
                             PhotoListScreen(
@@ -780,7 +802,7 @@ extension AlbumsScreen {
                 .padding(.horizontal)
 
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 8) {
+                LazyHStack(alignment: .top, spacing: tileSpacing) {
                     ForEach(pinnedAlbums) { album in
                         NavigationLink(value: album.id) {
                             AlbumToken(album: album)
@@ -862,132 +884,6 @@ extension AlbumsScreen {
 
 }
 
-/// The token grid's base measurements, at the standard text size.
-///
-/// A token holds two lines of real text, so its box has to grow with Dynamic
-/// Type or the titles clip — at accessibility sizes "Recently Viewed" came out
-/// as "Rece…" and the cover thumbnail sat on top of it. Each view scales these
-/// with `@ScaledMetric`, and the screen scales the same numbers for its grid
-/// rows so the rows and the tokens inside them stay the same height.
-enum AlbumTokenMetrics {
-    static let height: CGFloat = 60
-    static let width: CGFloat = 190
-    static let thumbSide: CGFloat = 44
-
-    /// Tokens get wider where there is width going spare. 190pt leaves about
-    /// 120pt for the title once the cover and the padding are paid for, which
-    /// clips "Recently Viewed" — acceptable on a phone, absurd on an iPad with
-    /// 800pt of empty row beside it. This is not "bigger on a big screen": the
-    /// token holds the same things at the same sizes, the text just stops
-    /// being cut off.
-    static func width(isRegularWidth: Bool) -> CGFloat {
-        isRegularWidth ? 240 : width
-    }
-}
-
-/// Generic utility token: an SF Symbol where an album would show a cover, plus
-/// a one-line subtitle. Same footprint as `AlbumToken` so the Utilities row
-/// lines up with the album grids above it.
-struct UtilityToken: View {
-    let title: String
-    let subtitle: String
-    let systemImage: String
-
-    @ScaledMetric(relativeTo: .subheadline) private var thumbSide = AlbumTokenMetrics.thumbSide
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @ScaledMetric(relativeTo: .subheadline) private var typeScale = 1.0
-    @ScaledMetric(relativeTo: .subheadline) private var tokenHeight = AlbumTokenMetrics.height
-
-    private var tokenWidth: CGFloat {
-        AlbumTokenMetrics.width(isRegularWidth: horizontalSizeClass == .regular) * typeScale
-    }
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Color(.tertiarySystemBackground)
-                .frame(width: thumbSide, height: thumbSide)
-                .overlay {
-                    Image(systemName: systemImage)
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                }
-                .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color(.label))
-                    .lineLimit(1)
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: 0)
-        }
-        .padding(8)
-        .frame(width: tokenWidth, height: tokenHeight, alignment: .leading)
-        .background(
-            Color(.secondarySystemBackground),
-            in: RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous)
-        )
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(title), \(subtitle)")
-    }
-}
-
-/// Token for the Duplicates utility: glyph in place of a cover, and the group
-/// count of the last grouping (or an invitation to scan) as the subtitle.
-struct DuplicatesToken: View {
-    @AppStorage(SettingsKeys.duplicateGroupCount) private var groupCount: Int?
-
-    @ScaledMetric(relativeTo: .subheadline) private var thumbSide = AlbumTokenMetrics.thumbSide
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @ScaledMetric(relativeTo: .subheadline) private var typeScale = 1.0
-    @ScaledMetric(relativeTo: .subheadline) private var tokenHeight = AlbumTokenMetrics.height
-
-    private var tokenWidth: CGFloat {
-        AlbumTokenMetrics.width(isRegularWidth: horizontalSizeClass == .regular) * typeScale
-    }
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Color(.tertiarySystemBackground)
-                .frame(width: thumbSide, height: thumbSide)
-                .overlay {
-                    Image(systemName: "square.on.square")
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                }
-                .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Duplicates")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color(.label))
-                    .lineLimit(1)
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-            }
-
-            Spacer(minLength: 0)
-        }
-        .padding(8)
-        .frame(width: tokenWidth, height: tokenHeight, alignment: .leading)
-        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous))
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Duplicates, \(subtitle)")
-    }
-
-    private var subtitle: String {
-        guard let groupCount else { return "Scan library" }
-        return groupCount == 1 ? "1 group" : "\(groupCount) groups"
-    }
-}
-
 /// Navigation value for a user-created smart album's detail screen. Distinct
 /// type from `AlbumItem.ID` (also `String`) so it routes to
 /// `SmartAlbumDetailScreen` rather than the existing `AlbumItem.ID` destination.
@@ -995,9 +891,7 @@ struct SmartAlbumDestination: Hashable {
     let id: String
 }
 
-/// Fixed-size token: small square cover thumbnail on the left, album title
-/// and photo count on the right. Styled after the iOS Photos media-type
-/// rows but laid out as a horizontally scrolling token.
+/// One album as a cover tile: the album's first photo, its name and its count.
 struct AlbumToken: View {
     @Environment(PhotoLibraryService.self) private var photoLibrary
 
@@ -1009,54 +903,24 @@ struct AlbumToken: View {
     @State private var prewarmedAssets: [PHAsset] = []
     @AppStorage(SettingsKeys.gridColumns) private var storedColumns = 3
 
-    /// Fixed outer height so grid rows align.
-    @ScaledMetric(relativeTo: .subheadline) private var thumbSide = AlbumTokenMetrics.thumbSide
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @ScaledMetric(relativeTo: .subheadline) private var typeScale = 1.0
-    @ScaledMetric(relativeTo: .subheadline) private var tokenHeight = AlbumTokenMetrics.height
 
-    private var tokenWidth: CGFloat {
-        AlbumTokenMetrics.width(isRegularWidth: horizontalSizeClass == .regular) * typeScale
+    private var coverSide: CGFloat {
+        AlbumTileMetrics.side(isRegularWidth: horizontalSizeClass == .regular)
     }
 
     var body: some View {
-        HStack(spacing: 8) {
-            Color(.tertiarySystemBackground)
-                .frame(width: thumbSide, height: thumbSide)
-                .overlay {
-                    if let cover {
-                        Image(uiImage: cover)
-                            .resizable()
-                            .scaledToFill()
-                    } else {
-                        Image(systemName: album.symbolName ?? "photo.on.rectangle")
-                            .font(.body)
-                            .foregroundStyle(.tertiary)
-                    }
-                }
-                .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(album.title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color(.label))
-                    .lineLimit(1)
-                Text("\(album.count)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer(minLength: 0)
+        AlbumCoverTile(
+            title: album.title,
+            subtitle: album.count.formatted()
+        ) {
+            AlbumCoverWell(image: cover, systemImage: album.symbolName ?? "photo.on.rectangle")
         }
-        .padding(8)
-        .frame(width: tokenWidth, height: tokenHeight, alignment: .leading)
-        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous))
         .onAppear {
             loadCover()
             prewarmDetailGrid()
         }
         .onDisappear(perform: stopPrewarmingDetailGrid)
-        .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(album.title), \(album.count) photos")
     }
 
@@ -1090,10 +954,13 @@ struct AlbumToken: View {
 
     private func loadCover() {
         guard cover == nil, let asset = album.coverAsset else { return }
-        let scale = ActiveDisplay.scale
+        // A 168pt tile at 3x wants 504px; the old 44pt thumbnail request
+        // scaled up to this size is the blur a bigger cover would otherwise
+        // buy us.
+        let side = coverSide * ActiveDisplay.scale
         _ = photoLibrary.requestThumbnail(
             for: asset,
-            targetSize: CGSize(width: thumbSide * scale, height: thumbSide * scale),
+            targetSize: CGSize(width: side, height: side),
             allowNetwork: false
         ) { image in
             if let image {
@@ -1103,10 +970,8 @@ struct AlbumToken: View {
     }
 }
 
-/// FilterToken for a user-created smart album (saved filter): cover thumbnail of the
-/// first matching photo (funnel glyph when empty), the album name, and its
-/// live match count. Same footprint as `AlbumToken` so the two token grids line
-/// up.
+/// One user-created smart album as a cover tile: the first photo that matches
+/// it, its name and its live match count.
 struct SmartAlbumToken: View {
     @Environment(PhotoLibraryService.self) private var photoLibrary
 
@@ -1114,64 +979,71 @@ struct SmartAlbumToken: View {
 
     @State private var cover: UIImage?
 
-    @ScaledMetric(relativeTo: .subheadline) private var thumbSide = AlbumTokenMetrics.thumbSide
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @ScaledMetric(relativeTo: .subheadline) private var typeScale = 1.0
-    @ScaledMetric(relativeTo: .subheadline) private var tokenHeight = AlbumTokenMetrics.height
 
-    private var tokenWidth: CGFloat {
-        AlbumTokenMetrics.width(isRegularWidth: horizontalSizeClass == .regular) * typeScale
+    private var coverSide: CGFloat {
+        AlbumTileMetrics.side(isRegularWidth: horizontalSizeClass == .regular)
     }
 
     var body: some View {
-        HStack(spacing: 8) {
-            Color(.tertiarySystemBackground)
-                .frame(width: thumbSide, height: thumbSide)
-                .overlay {
-                    if let cover {
-                        Image(uiImage: cover)
-                            .resizable()
-                            .scaledToFill()
-                    } else {
-                        Image(systemName: "line.3.horizontal.decrease.circle")
-                            .font(.body)
-                            .foregroundStyle(.tertiary)
-                    }
-                }
-                .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item.album.name)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color(.label))
-                    .lineLimit(1)
-                Text("\(item.count)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer(minLength: 0)
+        AlbumCoverTile(
+            title: item.album.name,
+            subtitle: item.count.formatted()
+        ) {
+            AlbumCoverWell(image: cover, systemImage: "line.3.horizontal.decrease.circle")
         }
-        .padding(8)
-        .frame(width: tokenWidth, height: tokenHeight, alignment: .leading)
-        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous))
         .onAppear(perform: loadCover)
-        .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(item.album.name), \(item.count) photos")
     }
 
     private func loadCover() {
         guard cover == nil, let asset = item.coverAsset else { return }
-        let scale = ActiveDisplay.scale
+        let side = coverSide * ActiveDisplay.scale
         _ = photoLibrary.requestThumbnail(
             for: asset,
-            targetSize: CGSize(width: thumbSide * scale, height: thumbSide * scale),
+            targetSize: CGSize(width: side, height: side),
             allowNetwork: false
         ) { image in
             if let image {
                 cover = image
             }
         }
+    }
+}
+
+/// A tile for something that has no cover photo of its own — Places, Trips,
+/// Duplicates, Recently Viewed. Same tile, a glyph in the cover well.
+struct UtilityToken: View {
+    let title: String
+    let subtitle: String
+    let systemImage: String
+
+    var body: some View {
+        AlbumCoverTile(title: title, subtitle: subtitle) {
+            AlbumCoverWell(image: nil, systemImage: systemImage)
+        }
+    }
+}
+
+/// The Duplicates tile, whose second line is the group count of the last scan.
+struct DuplicatesToken: View {
+    @AppStorage(SettingsKeys.duplicateGroupCount) private var groupCount: Int?
+
+    var body: some View {
+        UtilityToken(title: String(localized: "Duplicates"), subtitle: subtitle, systemImage: "square.on.square")
+    }
+
+    private var subtitle: String {
+        guard let groupCount else {
+            return String(
+                localized: "Scan library",
+                comment: "Duplicates tile subtitle before the first scan"
+            )
+        }
+        return String(
+            localized: "\(groupCount) groups",
+            comment: "Detail on the Duplicates row in Collections: how many duplicate groups the last scan found"
+        )
     }
 }
 
