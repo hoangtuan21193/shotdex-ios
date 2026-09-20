@@ -92,7 +92,65 @@ final class PhotoEditingService {
         self.filenameIndexes = filenameIndexes ?? PhotoOutputFilenameIndexStore()
     }
 
+    /// Sessions kept alive for photos the user has just been on, newest
+    /// last. Switching photos in a multi-photo run used to redo the whole
+    /// `beginSession` — a `PHContentEditingInput` request, which is an iCloud
+    /// round trip for anything not local — so stepping back to the photo you
+    /// were on a second ago cost the same as opening it cold.
+    ///
+    /// Three: the one on screen and the two either side of it, which is what
+    /// a filmstrip walk actually revisits. Each entry holds a PhotoKit input
+    /// and a temporary directory, not a decoded image, so the cost is small
+    /// and bounded.
+    private var recentSessions: [(id: String, session: PhotoEditingSession)] = []
+    private static let recentSessionLimit = 3
+
+    /// Opens a session, reusing the cached one when this photo was open a
+    /// moment ago.
     func beginSession(for asset: PHAsset) async throws -> PhotoEditingSession {
+        if let cached = recentSessions.first(where: { $0.id == asset.localIdentifier })?.session {
+            return cached
+        }
+        let session = try await makeSession(for: asset)
+        remember(session, for: asset.localIdentifier)
+        return session
+    }
+
+    /// Warms a session the user has not asked for yet — the neighbours in a
+    /// multi-photo run. Failures are silent: this is a head start, not a
+    /// promise, and the real open will report anything that is wrong.
+    func prewarmSession(for asset: PHAsset) async {
+        guard asset.mediaType == .image,
+              !recentSessions.contains(where: { $0.id == asset.localIdentifier })
+        else { return }
+        guard let session = try? await makeSession(for: asset) else { return }
+        remember(session, for: asset.localIdentifier)
+    }
+
+    private func remember(_ session: PhotoEditingSession, for id: String) {
+        recentSessions.removeAll { $0.id == id }
+        recentSessions.append((id, session))
+        while recentSessions.count > Self.recentSessionLimit {
+            let evicted = recentSessions.removeFirst()
+            discard(evicted.session)
+        }
+    }
+
+    /// Drops a cached session for good — the only place its temporary
+    /// directory is removed, so a session still in the cache keeps its files.
+    private func discard(_ session: PhotoEditingSession) {
+        let directory = session.temporaryDirectory
+        guard directory.path.hasPrefix(FileManager.default.temporaryDirectory.path) else { return }
+        try? FileManager.default.removeItem(at: directory)
+    }
+
+    /// Everything the cache holds, released when the editor closes.
+    func releaseCachedSessions() {
+        for entry in recentSessions { discard(entry.session) }
+        recentSessions.removeAll()
+    }
+
+    private func makeSession(for asset: PHAsset) async throws -> PhotoEditingSession {
         guard asset.mediaType == .image else { throw PhotoEditingError.unavailable }
         let input = try await requestContentEditingInput(for: asset)
         let temporaryDirectory = try makeTemporaryDirectory()
@@ -127,10 +185,12 @@ final class PhotoEditingService {
         )
     }
 
+    /// Ends a session the caller owns. A session still in `recentSessions` is
+    /// *not* torn down: deleting its temporary directory would leave the next
+    /// open reading files that are gone.
     func endSession(_ session: PhotoEditingSession) {
-        let directory = session.temporaryDirectory
-        guard directory.path.hasPrefix(FileManager.default.temporaryDirectory.path) else { return }
-        try? FileManager.default.removeItem(at: directory)
+        guard !recentSessions.contains(where: { $0.session === session }) else { return }
+        discard(session)
     }
 
     func loadSource(

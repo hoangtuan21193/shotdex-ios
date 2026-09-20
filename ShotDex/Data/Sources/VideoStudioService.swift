@@ -44,47 +44,92 @@ final class VideoStudioService {
     /// simply absent from the result (the builder skips it).
     func loadSources(for clips: [VideoClip]) async -> LoadedSources {
         var loaded = LoadedSources()
+        // One fetch for every clip, not one per clip: a twenty-clip project
+        // was twenty PHAsset fetches before it awaited anything.
+        let assets = Dictionary(
+            PhotoLibraryService.fetchAssets(ids: clips.map(\.assetID))
+                .map { ($0.localIdentifier, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+
+        // Photos resolve with no await at all, so they are taken first and in
+        // one pass — a project of stills is now ready without waiting behind
+        // anything.
+        var pending: [(clip: VideoClip, asset: PHAsset)] = []
         for clip in clips {
-            guard let asset = PhotoLibraryService.fetchAssets(ids: [clip.assetID]).first else { continue }
-            switch clip.kind {
-            case .photo:
+            guard let asset = assets[clip.assetID] else { continue }
+            if clip.kind == .photo {
                 loaded.sources[clip.id] = .photo(
                     assetID: clip.assetID,
                     pixelSize: CGSize(width: asset.pixelWidth, height: asset.pixelHeight)
                 )
+            } else {
+                pending.append((clip, asset))
+            }
+        }
+
+        // The rest are AVFoundation loads, and the slow ones may be iCloud
+        // round trips. In parallel: the old serial loop paid for every clip's
+        // latency one after another, which is the wait the user sees on
+        // opening a project.
+        await withTaskGroup(of: (UUID, VideoClipSource?, Double?).self) { group in
+            for (clip, asset) in pending {
+                group.addTask { await Self.resolve(clip: clip, asset: asset) }
+            }
+            for await (id, source, duration) in group {
+                if let source { loaded.sources[id] = source }
+                if let duration { loaded.durations[id] = duration }
+            }
+        }
+        return loaded
+    }
+
+    /// One non-photo clip's media. Returns the clip's id so the caller can
+    /// put the results back in the right place whatever order they finish in.
+    private static func resolve(
+        clip: VideoClip,
+        asset: PHAsset
+    ) async -> (UUID, VideoClipSource?, Double?) {
+        do {
+            switch clip.kind {
+            case .photo:
+                break
             case .freeze:
                 // A frame lifted out of the source video at load time.
                 guard let avAsset = await PhotoLibraryService.requestAVAsset(for: asset),
                       let image = await Self.extractFrame(
                           from: avAsset, at: clip.freezeSourceTime ?? 0
                       )
-                else { continue }
-                loaded.sources[clip.id] = .freeze(image: image, pixelSize: image.extent.size)
+                else { return (clip.id, nil, nil) }
+                return (clip.id, .freeze(image: image, pixelSize: image.extent.size), nil)
             case .video:
-                guard let avAsset = await PhotoLibraryService.requestAVAsset(for: asset) else { continue }
-                do {
-                    let videoTracks = try await avAsset.loadTracks(withMediaType: .video)
-                    guard let videoTrack = videoTracks.first else { continue }
-                    let audioTrack = try await avAsset.loadTracks(withMediaType: .audio).first
-                    let (naturalSize, preferredTransform) = try await videoTrack.load(
-                        .naturalSize, .preferredTransform
-                    )
-                    let duration = try await avAsset.load(.duration).seconds
-                    loaded.sources[clip.id] = .video(
+                guard let avAsset = await PhotoLibraryService.requestAVAsset(for: asset) else {
+                    return (clip.id, nil, nil)
+                }
+                let videoTracks = try await avAsset.loadTracks(withMediaType: .video)
+                guard let videoTrack = videoTracks.first else { return (clip.id, nil, nil) }
+                let audioTrack = try await avAsset.loadTracks(withMediaType: .audio).first
+                let (naturalSize, preferredTransform) = try await videoTrack.load(
+                    .naturalSize, .preferredTransform
+                )
+                let duration = try await avAsset.load(.duration).seconds
+                return (
+                    clip.id,
+                    .video(
                         asset: avAsset,
                         videoTrack: videoTrack,
                         audioTrack: audioTrack,
                         duration: duration,
                         naturalSize: naturalSize,
                         preferredTransform: preferredTransform
-                    )
-                    loaded.durations[clip.id] = duration
-                } catch {
-                    continue
-                }
+                    ),
+                    duration
+                )
             }
+        } catch {
+            return (clip.id, nil, nil)
         }
-        return loaded
+        return (clip.id, nil, nil)
     }
 
     /// A single frame out of a source video, oriented, for a freeze clip.

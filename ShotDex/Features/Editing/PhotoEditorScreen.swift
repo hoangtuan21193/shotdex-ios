@@ -138,6 +138,10 @@ struct PhotoEditorScreen: View {
         }
         .onDisappear {
             controller?.close()
+            // The cached sessions belong to this editor run: their temporary
+            // directories have to go with it, or a long browse leaves three
+            // photos' worth of files behind every time.
+            dependencies.photoEditing.releaseCachedSessions()
         }
         .interactiveDismissDisabled(hasUnsavedWork)
         // An alert, not a confirmation dialog: on iOS 26 the dialog floats over the
@@ -306,6 +310,24 @@ struct PhotoEditorScreen: View {
         // from this session is the newer of the two.
         if let draft = session.draft(for: target) {
             newController.apply(draft)
+        }
+        prewarmNeighbours(of: session)
+    }
+
+    /// Opens the sessions either side of the current photo in the background.
+    /// A filmstrip walk goes next, next, back — and the back step used to pay
+    /// a full `beginSession` (an iCloud round trip for anything not local)
+    /// for a photo the editor had open a second earlier.
+    private func prewarmNeighbours(of session: EditorSession) {
+        let neighbours = [session.index - 1, session.index + 1]
+            .filter { session.assets.indices.contains($0) }
+            .map { session.assets[$0] }
+        guard !neighbours.isEmpty else { return }
+        Task { @MainActor in
+            for asset in neighbours {
+                guard !Task.isCancelled else { return }
+                await dependencies.photoEditing.prewarmSession(for: asset)
+            }
         }
     }
 
