@@ -68,7 +68,7 @@ struct RootTabView: View {
             try? await Task.sleep(for: .milliseconds(250))
             guard !Task.isCancelled else { return }
             await AlbumsModel.preheatOnThisDayCover(using: photoLibrary)
-            albumsModel?.load(forAssetToken: photoLibrary.assetChangeToken)
+            albumsModel?.load(forChangeTokens: photoLibrary.collectionsTabTokens)
         }
     }
 

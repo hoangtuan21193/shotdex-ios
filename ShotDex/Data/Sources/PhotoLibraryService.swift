@@ -65,6 +65,24 @@ final class PhotoLibraryService: NSObject {
     /// one, so viewing a photo (which makes PhotoKit cache renditions) never
     /// triggers a full-library reload or a fresh index pass.
     private(set) var assetChangeToken = 0
+    /// Bumped only when the set of **albums** changed: one created, deleted,
+    /// renamed, or its membership edited.
+    ///
+    /// Neither of the other two answers this. `assetChangeToken` is about the
+    /// browsable asset list, and creating an empty album moves no asset, so
+    /// the Collections tab did not reload and a just-created album was
+    /// invisible until the next launch. `libraryChangeToken` does fire, but
+    /// it fires on content-only changes too — about once a second while
+    /// iCloud streams during an index run — which is why the tab stopped
+    /// observing it in the first place.
+    private(set) var collectionChangeToken = 0
+
+    /// The pair the Collections tab reloads on. One value so it can be a
+    /// `.task(id:)`, and a named type so the reason there are two is written
+    /// down where the tab reads it.
+    var collectionsTabTokens: LibraryChangeTokens {
+        LibraryChangeTokens(asset: assetChangeToken, collection: collectionChangeToken)
+    }
 
     @ObservationIgnored
     /// Not private: the original-image request lives in its own extension
@@ -119,11 +137,18 @@ final class PhotoLibraryService: NSObject {
     /// swallow the `assetChangeToken` bump.
     @ObservationIgnored
     private var pendingStructuralChange = false
+    @ObservationIgnored
+    private var pendingCollectionChange = false
     /// Baseline for classifying changes as structural vs content-only. Must be
     /// seeded before the first notification arrives (see `startObservingChanges`)
     /// — without it every change looks structural.
     @ObservationIgnored
     private(set) var allPhotosFetchResult: PHFetchResult<PHAsset>?
+    /// Baseline for spotting album changes, seeded beside `allPhotosFetchResult`
+    /// and for the same reason: with no prior result there is nothing to diff
+    /// against and every change would look like an album change.
+    @ObservationIgnored
+    private var albumsFetchResult: PHFetchResult<PHAssetCollection>?
 
     override init() {
         let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
@@ -1071,6 +1096,18 @@ final class PhotoLibraryService: NSObject {
         assetChangeToken &+= 1
     }
 
+    /// Re-reads the album baseline and returns it. Fetching every user album
+    /// is lazy in PhotoKit — the result is a promise, not a list — so this is
+    /// cheap enough to do on every album change.
+    @discardableResult
+    func refreshAlbums() -> PHFetchResult<PHAssetCollection> {
+        let result = PHAssetCollection.fetchAssetCollections(
+            with: .album, subtype: .any, options: nil
+        )
+        albumsFetchResult = result
+        return result
+    }
+
     private func startObservingChanges() {
         guard !isObservingChanges else { return }
         PHPhotoLibrary.shared().register(self)
@@ -1081,6 +1118,7 @@ final class PhotoLibraryService: NSObject {
         // `photoLibraryDidChange` has to treat every change as structural.
         // Cheap — `PHFetchResult` is lazy, nothing is materialized.
         refreshAllPhotos()
+        refreshAlbums()
     }
 }
 
@@ -1089,6 +1127,8 @@ extension PhotoLibraryService: PHPhotoLibraryChangeObserver {
         Task { @MainActor in
             self.pendingStructuralChange =
                 self.pendingStructuralChange || self.isStructural(changeInstance)
+            self.pendingCollectionChange =
+                self.pendingCollectionChange || self.didAlbumsChange(changeInstance)
             // Both tokens share one trailing-edge debounce: iCloud downloads
             // during an index run fire a change per asset, and a full-library
             // reload per photo is what made the grid flicker and the device
@@ -1098,6 +1138,7 @@ extension PhotoLibraryService: PHPhotoLibraryChangeObserver {
                 defer {
                     self.pendingChangeTokenBump = nil
                     self.pendingStructuralChange = false
+                    self.pendingCollectionChange = false
                 }
                 try? await Task.sleep(for: .seconds(1))
                 guard !Task.isCancelled else { return }
@@ -1108,6 +1149,9 @@ extension PhotoLibraryService: PHPhotoLibraryChangeObserver {
                 // launch a fresh index pass after closing Detail.
                 if self.pendingStructuralChange {
                     self.assetChangeToken += 1
+                }
+                if self.pendingCollectionChange {
+                    self.collectionChangeToken += 1
                 }
             }
         }
@@ -1129,4 +1173,30 @@ extension PhotoLibraryService: PHPhotoLibraryChangeObserver {
             || details.removedIndexes?.isEmpty == false
             || details.hasMoves
     }
+
+    /// Whether a change touched the album list — one created, removed, moved,
+    /// or altered (a rename, or photos added to it).
+    ///
+    /// `changedIndexes` matters as much as inserts here: adding the first
+    /// photo to an album does not change *which* albums exist, but it does
+    /// decide whether that album is drawn at all, since an empty one is
+    /// dropped from the tab.
+    private func didAlbumsChange(_ changeInstance: PHChange) -> Bool {
+        guard let current = albumsFetchResult else { return true }
+        guard let details = changeInstance.changeDetails(for: current) else { return false }
+        albumsFetchResult = details.fetchResultAfterChanges
+        guard details.hasIncrementalChanges else { return true }
+        return details.insertedIndexes?.isEmpty == false
+            || details.removedIndexes?.isEmpty == false
+            || details.changedIndexes?.isEmpty == false
+            || details.hasMoves
+    }
+}
+
+/// What the Collections tab watches: the browsable asset list, and the set of
+/// albums. Separate counters because they answer different questions and an
+/// album created with no photos in it moves only the second.
+struct LibraryChangeTokens: Hashable, Sendable {
+    let asset: Int
+    let collection: Int
 }

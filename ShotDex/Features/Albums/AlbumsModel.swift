@@ -77,7 +77,7 @@ final class AlbumsModel {
     /// for a load on every appearance and on every structural library change;
     /// rebuilding an unchanged snapshot costs a `PHAsset.fetchAssets(in:)` plus
     /// `count` per collection — 300–670ms here — so it is skipped.
-    private var loadedAssetToken: Int?
+    private var loadedTokens: LibraryChangeTokens?
 
     init(dependencies: AppDependencies? = nil) {
         self.dependencies = dependencies
@@ -137,9 +137,15 @@ final class AlbumsModel {
 
     /// Builds the snapshot unless one already exists for this structural state.
     /// `nil` token means "rebuild regardless" (a smart album was edited).
-    func load(forAssetToken token: Int?) {
-        if let token, token == loadedAssetToken, !albums.isEmpty { return }
-        loadedAssetToken = token
+    /// Reloads unless nothing the tab draws has changed since the last one.
+    ///
+    /// Two tokens, not one. The asset token covers covers and membership; the
+    /// collection token covers "an album was created, renamed or deleted",
+    /// which moves no asset at all — a brand-new album was invisible here
+    /// until the next launch because only the first was watched.
+    func load(forChangeTokens tokens: LibraryChangeTokens?) {
+        if let tokens, tokens == loadedTokens, !albums.isEmpty { return }
+        loadedTokens = tokens
         load()
     }
 

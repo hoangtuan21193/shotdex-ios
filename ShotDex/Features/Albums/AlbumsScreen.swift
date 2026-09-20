@@ -141,15 +141,19 @@ struct AlbumsScreen: View {
                 .accessibilityLabel("New album or smart album, or customize this tab")
             }
         }
-        // `assetChangeToken`, not `libraryChangeToken`: the album list only
-        // moves on insert/remove/move. Content-only notifications (PhotoKit
-        // caching a rendition, a favorite toggle) used to rebuild the whole
-        // snapshot, and iCloud streaming during an index run fires those about
-        // once a second.
-        .task(id: photoLibrary.assetChangeToken) {
+        // The asset token and the collection token, not `libraryChangeToken`.
+        // `libraryChangeToken` also fires on content-only notifications —
+        // PhotoKit caching a rendition, a favorite toggled — about once a
+        // second while iCloud streams during an index run, and rebuilding
+        // this whole snapshot that often is what made the tab flicker. The
+        // two narrow tokens cover what this tab actually draws: the asset one
+        // for covers and membership, the collection one for an album being
+        // created, renamed or deleted, which moves no asset and so used to
+        // leave a just-made album invisible until the next launch.
+        .task(id: photoLibrary.collectionsTabTokens) {
             guard photoLibrary.authorizationState.canReadLibrary else { return }
             if model.dependencies == nil { model.dependencies = dependencies }
-            model.load(forAssetToken: photoLibrary.assetChangeToken)
+            model.load(forChangeTokens: photoLibrary.collectionsTabTokens)
         }
         .navigationDestination(for: AlbumItem.ID.self) { albumId in
             if let album = model.albums.first(where: { $0.id == albumId }) {
