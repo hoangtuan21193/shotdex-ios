@@ -221,7 +221,7 @@ cover-display item above.
 
 ## Still open
 
-- [ ] **The Video Studio accepts no drops at all** — same decision as above.
-- [ ] **Apple Pencil pressure does nothing.** `EditorPaintTouchLayer` reads raw `UITouch` with no `.force`, so flow is uniform, and there is no double-tap tool switch. Carrying pressure means threading it through the touch arbiter and into ShotDexKit's brush rasterizer — a real change through the render core, not a modifier.
+- [x] **The Video Studio accepts drops** — media dropped on the timeline appends to it, importing first when it came from another app.
+- [x] **Apple Pencil pressure and double-tap.** Pressure varies the stroke width (`BrushStroke.pressures`, additive and back-compatible); double-tap swaps brush and eraser, honouring the system preference. Not verifiable in the simulator — no Pencil to press — so it is covered by tests and wants a look on a real iPad. Old note:  `EditorPaintTouchLayer` reads raw `UITouch` with no `.force`, so flow is uniform, and there is no double-tap tool switch. Carrying pressure means threading it through the touch arbiter and into ShotDexKit's brush rasterizer — a real change through the render core, not a modifier.
 - [ ] **`EditorPaintTouchLayer` and `EditorMaskGuides` still have no hover.** Unlike the curve and the wheel they are full-canvas surfaces, where a hover highlight over the photo would be wrong; they want a cursor shape, which is `UIPointerInteraction` work.
 - [ ] Info panel per-file headings: changed and unit-covered through the shared format dictionary, but **not photographed** — the section could not be reached on screen.

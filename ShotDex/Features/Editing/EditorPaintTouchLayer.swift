@@ -65,6 +65,10 @@ struct EditorPaintTouchLayer: UIViewRepresentable {
     /// pan began — the space `zoomOffset` lives in, unscaled by the zoom.
     var onPanChanged: (CGSize) -> Void
     var onPanEnded: () -> Void
+    /// Apple Pencil double-tap (or squeeze, on the Pro): swap brush and
+    /// eraser. Every drawing app on iPad maps the gesture to the same thing,
+    /// and this is the only tool in the editor a Pencil stays in for minutes.
+    var onPencilToggle: () -> Void = {}
 
     func makeUIView(context: Context) -> UIView {
         let view = UIView()
@@ -95,6 +99,13 @@ struct EditorPaintTouchLayer: UIViewRepresentable {
         pan.delegate = context.coordinator
         pan.cancelsTouchesInView = false
         view.addGestureRecognizer(pan)
+
+        // The system decides what the double-tap means in Settings; ShotDex
+        // honours the two that make sense here and ignores the rest rather
+        // than overriding the user's choice.
+        let pencil = UIPencilInteraction()
+        pencil.delegate = context.coordinator
+        view.addInteraction(pencil)
         return view
     }
 
@@ -108,7 +119,7 @@ struct EditorPaintTouchLayer: UIViewRepresentable {
         Coordinator(layer: self)
     }
 
-    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate, UIPencilInteractionDelegate {
         var layer: EditorPaintTouchLayer
         private var arbiter = PaintTouchArbiter()
         /// First point of the stroke being painted, so every `Touch` can report
@@ -207,6 +218,35 @@ struct EditorPaintTouchLayer: UIViewRepresentable {
 
         private func stagePoint(_ point: CGPoint) -> CGPoint {
             CGPoint(x: point.x + layer.origin.x, y: point.y + layer.origin.y)
+        }
+
+        // MARK: Pencil
+
+        @available(iOS 17.5, *)
+        func pencilInteraction(
+            _ interaction: UIPencilInteraction,
+            didReceiveTap tap: UIPencilInteraction.Tap
+        ) {
+            handlePencilPreference()
+        }
+
+        /// The pre-17.5 callback. Deployment target is iOS 17, so both exist.
+        @available(iOS, introduced: 12.1, deprecated: 17.5)
+        func pencilInteractionDidTap(_ interaction: UIPencilInteraction) {
+            handlePencilPreference()
+        }
+
+        /// Honour only the preferences that mean something on a mask: swapping
+        /// tools and "switch to the previous tool" both land on brush ↔ eraser
+        /// here. Show Color Palette and Ignore are left alone — a gesture the
+        /// user pointed somewhere else should not be quietly repurposed.
+        private func handlePencilPreference() {
+            switch UIPencilInteraction.preferredTapAction {
+            case .switchEraser, .switchPrevious:
+                layer.onPencilToggle()
+            default:
+                break
+            }
         }
 
         private func touch(at point: CGPoint) -> Touch {

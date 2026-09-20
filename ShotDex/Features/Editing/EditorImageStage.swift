@@ -230,7 +230,8 @@ struct EditorImageStage: View {
                         onCancelled: cancelMaskPaint,
                         onPanBegan: beginPhotoPan,
                         onPanChanged: { panPhoto($0, imageRect: imageRect, stage: stageSize) },
-                        onPanEnded: endPhotoPan
+                        onPanEnded: endPhotoPan,
+                        onPencilToggle: { controller.brushIsEraser.toggle() }
                     )
                     .frame(width: imageRect.width, height: imageRect.height)
                     .position(x: imageRect.midX, y: imageRect.midY)
