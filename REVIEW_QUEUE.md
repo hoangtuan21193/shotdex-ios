@@ -276,3 +276,25 @@ structs, capped at 100).
   and the honest fix is a tiled `CIContext` render rather than one
   `CGContext` the size of the image. Needs Instruments on a real device with
   a real 48MP file before anyone decides how much work it is worth.
+
+
+---
+
+# Sweep 8 — privacy manifests and the extension boundary (2026-09-20)
+
+Agents: `privacy-manifest`, `extension-boundary`.
+
+- [x] **No `PrivacyInfo.xcprivacy` existed in the repository**, for any of the five targets — a submission blocker, and the app does use a required-reason API. App: UserDefaults `CA92.1`, File Timestamp `C617.1` + `3B52.1`. The other four: empty declarations. Verified in the built product.
+- [x] **The photo usage string described an app that only reads.** It also writes edits, favourites, albums, duplicates and videos. No key was missing — the sentence was.
+- [x] **ShotDexShare declared an App Group it never touches.** Removed.
+- [x] **The extension held the whole compressed file in memory to write it** — `writeJPEGRepresentation(of:to:)` streams it instead.
+- [x] **`needsFullExtentLayers` over-declined**, counting hidden masks and empty captions that the renderer skips anyway.
+
+Checked and found clean: the kit's public surface (everything newly public has a cross-module caller), kit purity for today's additions, `BrushStroke`'s hand-written decoder against its synthesized encoder (round-trips, and a pre-pressure recipe still decodes), and forbidden reach from all three extensions.
+
+## Still open
+
+- [ ] **The extension renders the base pipeline at full resolution even for a plain slider edit.** `EditExtensionModel.renderOutput` calls `render(source:recipe:)` with no bound: a 48MP source is ~195MB of RGBA before Core Image's own working space, against an extension's ceiling. Streaming the write helps the tail, not the peak. The honest fix is a tiled render, and it wants Instruments on a real device with a real 48MP file first — the same measurement the app-side blocker below needs.
+- [ ] **The full app renders full-extent mask/drawing/overlay layers monolithically too.** It has the memory to survive today; a 48MP RAW with several mask components is close to the edge.
+- [ ] `ShotDexKit/Render/PhotoRenderService+Drawing.swift` imports `PencilKit`, which is not on the kit's allowed list (UIKit is allowed for `UIImage`/`UIColor` bridging only). Pre-existing, from 2026-09-19.
+- [ ] **Reverse geocoding sends photo coordinates to Apple's geocoder** (`PlaceGeocodingService`, opt-out via `SettingsKeys.lookUpPlaces`). Not a privacy-manifest item — it is a system framework, not a server we control — but it belongs in the App Store Connect privacy questionnaire as Location, used but not linked and not for tracking.
