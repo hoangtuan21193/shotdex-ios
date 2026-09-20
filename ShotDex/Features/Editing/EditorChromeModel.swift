@@ -36,6 +36,14 @@ final class EditorChromeModel {
     /// panels a photo needs is a property of the edit, not of the app.
     var expandedSidebarGroups: Set<EditorGroup> = [.light]
 
+    /// Which colour band the wide sidebar's Mix section is working on, or nil
+    /// for the all-channels list. The swatch row is Lightroom's arrangement and
+    /// the reason it fits: eight bands × three properties is twenty-four rows,
+    /// which is more than the panel is tall, and picking the band first turns it
+    /// into three. The all-channels list stays one tap away (the "All" chip) and
+    /// is still the phone's only mode, where there is no room for a swatch row.
+    var sidebarMixBand: ColorMixerBand? = .red
+
     /// True while the editor is laid out for a wide window (the sidebar beside
     /// the photo rather than a slab under it). The stage reads it for the two
     /// things that differ there: the tone-curve graph moves into the sidebar,

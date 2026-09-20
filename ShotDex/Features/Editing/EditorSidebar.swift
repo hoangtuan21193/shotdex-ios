@@ -26,8 +26,160 @@ enum EditorSidebarEdge: String, CaseIterable, Identifiable {
         }
     }
 
+    /// And the glyph for bringing it back — the same sidebar symbol filled in,
+    /// so the rail button reads as a toggle rather than two unrelated controls.
+    var expandIcon: String {
+        switch self {
+        case .leading: "sidebar.squares.leading"
+        case .trailing: "sidebar.squares.trailing"
+        }
+    }
+
     static func resolved(_ rawValue: String) -> EditorSidebarEdge {
         EditorSidebarEdge(rawValue: rawValue) ?? .trailing
+    }
+}
+
+/// One stop on the wide editor's tool rail — the vertical icon column on the
+/// window's outer edge.
+///
+/// Lightroom's arrangement on an iPad, and taken for its reasons rather than its
+/// looks: the five are mutually exclusive, so they are a radio control and not
+/// five disclosures; they are the first decision of an edit, so they sit where
+/// nothing scrolls them away; and a column costs width — the dimension a
+/// landscape canvas has to spare — instead of the panel's height, which is what
+/// the parameter list is always short of. `edit` is the whole adjustment stack;
+/// the other four each take the photo over.
+enum EditorRailMode: String, CaseIterable, Identifiable {
+    case edit
+    case presets
+    case crop
+    case mask
+    case markup
+
+    var id: String { rawValue }
+
+    /// The group this rail stop puts the editor into. `edit` lands on Light,
+    /// which is where an edit starts and what the accordion opens on.
+    var group: EditorGroup {
+        switch self {
+        case .edit: .light
+        case .presets: .presets
+        case .crop: .crop
+        case .mask: .mask
+        case .markup: .markup
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .edit: "Edit"
+        default: group.title
+        }
+    }
+
+    /// Icon-only in the rail, so the glyph carries the whole name. `edit` gets
+    /// the sliders that every photo app uses for "adjust".
+    var icon: String {
+        switch self {
+        case .edit: "slider.horizontal.3"
+        default: group.icon
+        }
+    }
+
+    /// Which stop a group belongs to. Everything that is not one of the four
+    /// stage tools is part of the adjustment stack.
+    static func containing(_ group: EditorGroup) -> EditorRailMode {
+        allCases.first { $0 != .edit && $0.group == group } ?? .edit
+    }
+}
+
+/// The rail itself: five modes at the top, History and the panel toggle at the
+/// bottom. It never collapses — with the panel away it is the only thing left
+/// that can bring a tool back, which is exactly the job Lightroom's rail does.
+struct EditorToolRail: View {
+    let selected: EditorRailMode
+    /// Marks the modes holding an edit on this photo, the way the section
+    /// headers mark theirs.
+    let editedModes: Set<EditorRailMode>
+    let isPanelHidden: Bool
+    let edge: EditorSidebarEdge
+    var select: (EditorRailMode) -> Void
+    var showHistory: () -> Void
+    var togglePanel: () -> Void
+
+    var body: some View {
+        VStack(spacing: AppTheme.Spacing.xs) {
+            ForEach(EditorRailMode.allCases) { mode in
+                railButton(
+                    icon: mode.icon,
+                    title: mode.title,
+                    isActive: mode == selected,
+                    hasEdits: editedModes.contains(mode)
+                ) {
+                    select(mode)
+                }
+            }
+
+            Spacer(minLength: AppTheme.Spacing.md)
+
+            railButton(
+                icon: "clock.arrow.circlepath",
+                title: "History",
+                isActive: false,
+                hasEdits: false,
+                action: showHistory
+            )
+            railButton(
+                icon: isPanelHidden ? edge.expandIcon : edge.collapseIcon,
+                title: isPanelHidden ? "Show Tools" : "Hide Tools",
+                isActive: false,
+                hasEdits: false,
+                action: togglePanel
+            )
+        }
+        .padding(.vertical, AppTheme.Spacing.sm)
+        .frame(width: EditorLayoutMetrics.sidebarRailWidth)
+        .background(EditorTheme.panelSolid)
+        .overlay(alignment: edge == .trailing ? .leading : .trailing) {
+            Rectangle().fill(EditorTheme.panelDivider).frame(width: 1)
+        }
+    }
+
+    private func railButton(
+        icon: String,
+        title: String,
+        isActive: Bool,
+        hasEdits: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(EditorTheme.commandGlyph)
+                .foregroundStyle(isActive ? EditorTheme.accent : EditorTheme.secondaryText)
+                .frame(width: AppTheme.Size.minTouch, height: AppTheme.Size.minTouch)
+                .background {
+                    if isActive {
+                        RoundedRectangle.app(AppTheme.Radius.sm)
+                            .fill(Color.white.opacity(0.08))
+                    }
+                }
+                // The dot sits on the glyph rather than beside it: the rail is
+                // 48pt wide and has no room for a second column.
+                .overlay(alignment: .topTrailing) {
+                    if hasEdits {
+                        Circle()
+                            .fill(EditorTheme.accent)
+                            .frame(width: 5, height: 5)
+                            .padding(AppTheme.Spacing.sm)
+                    }
+                }
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .hoverEffect(.highlight)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(isActive ? [.isSelected, .isButton] : .isButton)
     }
 }
 
@@ -58,24 +210,27 @@ struct EditorSidebarSection<Content: View>: View {
     var body: some View {
         VStack(spacing: 0) {
             Button(action: toggle) {
-                HStack(spacing: AppTheme.Spacing.md) {
-                    Image(systemName: group.icon)
-                        .font(.system(size: 13, weight: .semibold))
-                        .frame(width: AppTheme.Spacing.xl)
-                        .foregroundStyle(isActive ? EditorTheme.accent : EditorTheme.secondaryText)
+                HStack(spacing: AppTheme.Spacing.sm) {
+                    // The disclosure leads the row, the way every desktop
+                    // develop panel writes it: the triangle is what the row is
+                    // *for*, and reading it before the name is one saccade
+                    // rather than a jump to the far margin and back. The group
+                    // icon went with the move — the rail carries the icons now,
+                    // and a glyph per header made eight rows of decoration.
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(isActive ? EditorTheme.accent : EditorTheme.dimText)
+                        .frame(width: AppTheme.Spacing.md)
+                        .rotationEffect(.degrees(isExpanded ? 0 : -90))
                     Text(group.title)
                         .font(EditorTheme.sidebarGroupLabel)
-                        .foregroundStyle(isActive ? Color.white : EditorTheme.secondaryText)
+                        .foregroundStyle(isActive || isExpanded ? Color.white : EditorTheme.secondaryText)
                     if hasEdits {
                         Circle()
                             .fill(EditorTheme.accent)
                             .frame(width: 5, height: 5)
                     }
                     Spacer(minLength: 8)
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(EditorTheme.dimText)
-                        .rotationEffect(.degrees(isExpanded ? 0 : -90))
                 }
                 .padding(.horizontal, AppTheme.Spacing.lg)
                 .frame(height: headerHeight)
@@ -184,6 +339,27 @@ private struct EditorPanelScrollsKey: EnvironmentKey {
 /// sometimes not, is the same name twice 44pt apart.
 private struct EditorPanelShowsTitleKey: EnvironmentKey {
     static let defaultValue = true
+}
+
+/// Whether a slider row stacks its track under its label instead of sitting
+/// beside it.
+///
+/// False on the phone, where 34pt rows are what let the 167pt parameter zone
+/// hold six of them. True in the wide sidebar, which is a different trade: the
+/// panel is 320pt wide and an inline row spends 88 of them on a name and 44 on
+/// a number, leaving the track — the only part that is actually aimed at — a
+/// third of the panel. Stacked, the same row gives the track the full width for
+/// 12pt more height, which is how Lightroom, Capture One and Photos all draw a
+/// develop slider on a tablet.
+private struct EditorSliderStackedKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    var editorSliderStacked: Bool {
+        get { self[EditorSliderStackedKey.self] }
+        set { self[EditorSliderStackedKey.self] = newValue }
+    }
 }
 
 extension EnvironmentValues {

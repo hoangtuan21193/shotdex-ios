@@ -80,6 +80,30 @@ enum EditorLayoutMetrics {
     /// The always-on histogram at the top of the sidebar.
     static let sidebarHistogramHeight: CGFloat = 92
 
+    /// The vertical tool rail on the window's outer edge — Lightroom's own
+    /// arrangement, and the reason the sidebar no longer carries a horizontal
+    /// four-up tool strip: the modes are mutually exclusive, they are always
+    /// reachable (the rail stays when the panel is collapsed), and a column of
+    /// icons costs 48pt of width rather than 44pt of the panel's height, which
+    /// is the dimension the parameter list is short of.
+    static let sidebarRailWidth: CGFloat = 48
+    /// The panel's own mode header — the group's name and the Auto button.
+    static let sidebarModeHeaderHeight: CGFloat = 40
+    /// The Look row under it: a two-line label and Browse.
+    static let sidebarLookRowHeight: CGFloat = 52
+    /// One stacked slider row in the sidebar: name and value on the first line,
+    /// the track full width underneath. 46, against the phone's 34, because the
+    /// track is the thing being bought — a 320pt panel gives it ~288pt of travel
+    /// instead of the 170pt left over beside an inline label and value.
+    static let sidebarSliderRowHeight: CGFloat = 46
+    /// One colour-mix band swatch in the sidebar's channel picker.
+    static let sidebarSwatchDiameter: CGFloat = 22
+    /// The filmstrip under a wide canvas. Shorter than the phone's 96/124: the
+    /// sidebar already spends the width, so the strip should not also spend a
+    /// tenth of the height, and at this size a frame is still judgeable.
+    static let wideFilmstripThumbnailSide: CGFloat = 56
+    static let wideFilmstripHeight: CGFloat = 72
+
     // MARK: Reference view
 
     /// Which way to cut the canvas in two when a reference frame is pinned.

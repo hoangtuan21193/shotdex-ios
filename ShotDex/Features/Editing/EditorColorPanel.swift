@@ -18,8 +18,49 @@ struct EditorColorMixerSection: View {
     /// Every channel's HUE / SAT / LUM in one scroll, grouped under three sticky
     /// section labels. No channel-picker strip: each row's track is already tinted
     /// the way that channel shifts, so the colour is the label.
+    ///
+    /// The wide sidebar takes Lightroom's arrangement instead — a row of eight
+    /// band swatches and then that band's three sliders. Twenty-four rows is
+    /// taller than the panel, so the all-channels list can only be read by
+    /// scrolling it; picking the band first turns it into three rows that are
+    /// all on screen at once, which is how a hue is actually adjusted. The
+    /// list is still there under the "All" swatch, and is still the only mode
+    /// on the phone, where a swatch row would cost a slider.
     var body: some View {
-        allChannelsScroll
+        if chrome.isWideLayout {
+            bandedMix
+        } else {
+            allChannelsScroll
+        }
+    }
+
+    // MARK: Banded (wide sidebar)
+
+    private var bandedMix: some View {
+        VStack(spacing: 0) {
+            EditorColorMixBandPicker(
+                selection: chrome.sidebarMixBand,
+                editedBands: editedBands
+            ) { band in
+                chrome.sidebarMixBand = band
+            }
+            .padding(.horizontal, AppTheme.Spacing.lg)
+            .padding(.bottom, AppTheme.Spacing.sm)
+
+            if let band = chrome.sidebarMixBand {
+                ForEach(ColorMixerProperty.allCases) { property in
+                    mixerRow(band: band, property: property, title: property.displayName)
+                }
+            } else {
+                mixerRows
+            }
+        }
+    }
+
+    /// Bands holding a shift on this photo, for the swatch's ring.
+    private var editedBands: Set<ColorMixerBand> {
+        let mixer = controller.recipe.color.mixer
+        return Set(ColorMixerBand.allCases.filter { !mixer[$0].isIdentity })
     }
 
     private var allChannelsScroll: some View {
@@ -591,5 +632,98 @@ enum EditorColorMixerStyle {
             saturation: wheel.saturation * 0.9 + 0.1,
             brightness: 0.9
         )
+    }
+}
+
+
+/// The eight colour bands as swatches, plus an "All" stop that falls back to the
+/// full twenty-four-row list.
+///
+/// Circles rather than chips because the thing being picked *is* a colour: a
+/// word ("Aqua") has to be read, a swatch is recognised. The selected one is
+/// ringed rather than enlarged, so the row does not reflow as the selection
+/// moves, and a band that already holds a shift keeps a small dot — otherwise
+/// the only way to find an edit made earlier is to tap all eight.
+struct EditorColorMixBandPicker: View {
+    let selection: ColorMixerBand?
+    let editedBands: Set<ColorMixerBand>
+    var select: (ColorMixerBand?) -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(ColorMixerBand.allCases) { band in
+                swatch(
+                    fill: AnyShapeStyle(
+                        EditorColorMixerStyle.hueColor(band.centerDegrees)
+                    ),
+                    isSelected: selection == band,
+                    hasEdits: editedBands.contains(band),
+                    label: band.displayName
+                ) {
+                    select(band)
+                }
+            }
+
+            swatch(
+                fill: AnyShapeStyle(EditorTheme.control),
+                isSelected: selection == nil,
+                hasEdits: false,
+                label: "All Colors",
+                glyph: "circle.hexagongrid"
+            ) {
+                select(nil)
+            }
+        }
+        .frame(height: AppTheme.Size.minTouch)
+    }
+
+    private func swatch(
+        fill: AnyShapeStyle,
+        isSelected: Bool,
+        hasEdits: Bool,
+        label: String,
+        glyph: String? = nil,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            ZStack {
+                Circle()
+                    .fill(fill)
+                    .frame(
+                        width: EditorLayoutMetrics.sidebarSwatchDiameter,
+                        height: EditorLayoutMetrics.sidebarSwatchDiameter
+                    )
+                if let glyph {
+                    Image(systemName: glyph)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(EditorTheme.secondaryText)
+                }
+                if hasEdits, !isSelected {
+                    Circle()
+                        .fill(.white)
+                        .frame(width: 4, height: 4)
+                        .offset(y: EditorLayoutMetrics.sidebarSwatchDiameter / 2 + 4)
+                }
+                if isSelected {
+                    Circle()
+                        .strokeBorder(.white, lineWidth: 1.5)
+                        .frame(
+                            width: EditorLayoutMetrics.sidebarSwatchDiameter + 8,
+                            height: EditorLayoutMetrics.sidebarSwatchDiameter + 8
+                        )
+                }
+            }
+            // The row seats nine items in as little as 248pt, so each one takes
+            // an equal share and the gaps close rather than the circles
+            // shrinking — a swatch below about 20pt stops reading as a colour.
+            .frame(maxWidth: .infinity)
+            .frame(height: AppTheme.Size.minTouch)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .hoverEffect(.highlight)
+        .accessibilityLabel(label)
+        .accessibilityValue(hasEdits ? "Edited" : "")
+        .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : .isButton)
     }
 }

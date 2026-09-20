@@ -777,55 +777,75 @@ struct PhotoEditorScreen: View {
         canvasWidth: CGFloat,
         canvasHeight: CGFloat
     ) -> some View {
-        let showsSidebar = !isSidebarHidden && !controller.isEditingDrawing
-        return HStack(spacing: 0) {
-            if sidebarEdge == .leading, showsSidebar {
-                sidebarColumn(controller, safeArea: safeArea, canvasWidth: canvasWidth)
-                    .transition(.move(edge: .leading))
-                resizeHandle(canvasWidth: canvasWidth)
+        let showsPanel = !isSidebarHidden && !controller.isEditingDrawing
+        let showsRail = !controller.isEditingDrawing
+        // How much of the window the chrome on the tool side takes, for the
+        // reference split's arithmetic.
+        let toolsWidth = (showsPanel ? sidebarWidth(in: canvasWidth) : 0)
+            + (showsRail ? EditorLayoutMetrics.sidebarRailWidth : 0)
+        return VStack(spacing: 0) {
+            // One toolbar across the whole window, the way every tablet editor
+            // draws it: Back on the leading edge, the document commands on the
+            // trailing one. It used to appear only when the tools were away, on
+            // the grounds that a second strip of chrome costs the photo 56pt —
+            // but the panel was then paying for the same controls twice over,
+            // in a title row and a command row it could not scroll, which is
+            // 88pt of the dimension the parameter list is actually short of.
+            if controller.isEditingDrawing {
+                drawTopBar(controller)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            } else {
+                commandBand(
+                    controller,
+                    height: bandHeight,
+                    showsDocumentControls: true,
+                    // The panel carries the histogram — the pill would be the
+                    // same graph twice, 40pt apart.
+                    showsHistogram: !showsPanel
+                )
+                .transition(.opacity)
             }
 
-            VStack(spacing: 0) {
-                if controller.isEditingDrawing {
-                    drawTopBar(controller)
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                } else if !chrome.isFullBleed, !showsSidebar {
-                    // Only when the tools are away. With the sidebar up the band
-                    // would be a second strip of chrome stealing 56pt from the
-                    // photo for controls the sidebar already carries — and on a
-                    // desktop-shaped editor the picture is what the space is for.
-                    commandBand(
-                        controller,
-                        height: bandHeight,
-                        showsDocumentControls: true
-                    )
-                    .transition(.opacity)
+            HStack(spacing: 0) {
+                if sidebarEdge == .leading {
+                    if showsRail { toolRail(controller, safeArea: safeArea) }
+                    if showsPanel {
+                        sidebarColumn(controller, safeArea: safeArea, canvasWidth: canvasWidth)
+                            .transition(.move(edge: .leading))
+                        resizeHandle(canvasWidth: canvasWidth)
+                    }
                 }
 
-                if let reference = session?.referenceAsset, !chrome.isFullBleed,
-                   !controller.isEditingDrawing {
-                    referenceSplit(
-                        controller,
-                        reference: reference,
-                        canvas: CGSize(
-                            width: canvasWidth - (showsSidebar ? sidebarWidth(in: canvasWidth) : 0),
-                            height: canvasHeight
+                VStack(spacing: 0) {
+                    if let reference = session?.referenceAsset, !chrome.isFullBleed,
+                       !controller.isEditingDrawing {
+                        referenceSplit(
+                            controller,
+                            reference: reference,
+                            canvas: CGSize(
+                                width: canvasWidth - toolsWidth,
+                                height: canvasHeight
+                            )
                         )
-                    )
-                    .transition(.opacity)
-                } else {
-                    imageStage(controller)
+                        .transition(.opacity)
+                    } else {
+                        imageStage(controller)
+                    }
+
+                    filmstrip(controller)
                 }
 
-                filmstrip(controller)
-            }
-            if sidebarEdge == .trailing, showsSidebar {
-                resizeHandle(canvasWidth: canvasWidth)
-                sidebarColumn(controller, safeArea: safeArea, canvasWidth: canvasWidth)
-                    .transition(.move(edge: .trailing))
+                if sidebarEdge == .trailing {
+                    if showsPanel {
+                        resizeHandle(canvasWidth: canvasWidth)
+                        sidebarColumn(controller, safeArea: safeArea, canvasWidth: canvasWidth)
+                            .transition(.move(edge: .trailing))
+                    }
+                    if showsRail { toolRail(controller, safeArea: safeArea) }
+                }
             }
         }
-        .animation(EditorTheme.animation, value: showsSidebar)
+        .animation(EditorTheme.animation, value: showsPanel)
         .animation(EditorTheme.animation, value: sidebarEdge)
     }
 

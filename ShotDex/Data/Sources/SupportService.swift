@@ -196,7 +196,11 @@ actor SupportService {
            let url = URL(string: override) {
             return url
         }
-        return URL(string: "https://dev-api.shotdex.app")!
+        // A Debug build talks to `wrangler dev` on this machine unless told
+        // otherwise; the simulator resolves 127.0.0.1 to the host. Point
+        // SUPPORT_API_ORIGIN at https://dev-api.shotdex.app to use the deployed
+        // dev environment, which is what a Debug build on a real device needs.
+        return URL(string: "http://127.0.0.1:8787")!
         #else
         return isTestFlightBuild
             ? URL(string: "https://dev-api.shotdex.app")!

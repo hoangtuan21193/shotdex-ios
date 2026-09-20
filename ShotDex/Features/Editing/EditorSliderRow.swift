@@ -42,27 +42,12 @@ struct EditorValueSlider: View {
     @State private var hasActivated = false
     @State private var isHoldingDetent = false
     @State private var trackWidth: CGFloat = 1
+    @Environment(\.editorSliderStacked) private var isStacked
 
     var body: some View {
-        HStack(spacing: 8) {
-            Text(label.uppercased())
-                .font(.system(size: 10.5, weight: .semibold))
-                .tracking(0.5)
-                .foregroundStyle(isActive ? .white : EditorTheme.secondaryText)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .frame(width: EditorLayoutMetrics.editorRowLabelWidth, alignment: .leading)
-
-            track
-
-            Text(valueText)
-                .font(.system(size: 11.5, weight: .semibold).monospacedDigit())
-                .foregroundStyle(isActive ? EditorTheme.accent : Color.white.opacity(0.85))
-                .lineLimit(1)
-                .frame(width: EditorLayoutMetrics.editorRowValueWidth, alignment: .trailing)
+        Group {
+            if isStacked { stackedRow } else { inlineRow }
         }
-        .padding(.horizontal, 14)
-        .frame(height: EditorLayoutMetrics.editorRowHeight)
         .background(isActive ? Color.white.opacity(0.05) : .clear)
         .contentShape(Rectangle())
         .overlay { gestureCatcher }
@@ -76,6 +61,57 @@ struct EditorValueSlider: View {
             onDrag(clamped)
             onEndDrag(value, clamped, false)
         }
+    }
+
+    /// Phone: name, track and number on one 34pt line.
+    private var inlineRow: some View {
+        HStack(spacing: 8) {
+            nameText
+                .frame(width: EditorLayoutMetrics.editorRowLabelWidth, alignment: .leading)
+
+            track
+
+            valueTextView
+                .frame(width: EditorLayoutMetrics.editorRowValueWidth, alignment: .trailing)
+        }
+        .padding(.horizontal, 14)
+        .frame(height: EditorLayoutMetrics.editorRowHeight)
+    }
+
+    /// Wide sidebar: name and number on the first line, the track full width
+    /// underneath. The name is no longer upper-cased and no longer clipped to
+    /// 88pt — there is room for "Saturation" to be written out.
+    private var stackedRow: some View {
+        VStack(spacing: 2) {
+            HStack(spacing: 8) {
+                nameText
+                Spacer(minLength: 8)
+                valueTextView
+            }
+            track
+        }
+        .padding(.horizontal, AppTheme.Spacing.lg)
+        .frame(height: EditorLayoutMetrics.sidebarSliderRowHeight)
+    }
+
+    private var nameText: some View {
+        Text(isStacked ? label : label.uppercased())
+            .font(
+                isStacked
+                    ? .system(size: 12, weight: .regular)
+                    : .system(size: 10.5, weight: .semibold)
+            )
+            .tracking(isStacked ? 0 : 0.5)
+            .foregroundStyle(isActive ? .white : EditorTheme.secondaryText)
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
+    }
+
+    private var valueTextView: some View {
+        Text(valueText)
+            .font(.system(size: 11.5, weight: .semibold).monospacedDigit())
+            .foregroundStyle(isActive ? EditorTheme.accent : Color.white.opacity(0.85))
+            .lineLimit(1)
     }
 
     private var track: some View {
@@ -106,7 +142,10 @@ struct EditorValueSlider: View {
             .onAppear { trackWidth = max(1, width) }
             .onChange(of: width) { trackWidth = max(1, $0) }
         }
-        .frame(height: EditorLayoutMetrics.editorRowHeight)
+        // Inline, the track is the row and takes its whole height so a drag can
+        // start anywhere on it. Stacked, the label line above already owns
+        // 18pt, so the track keeps only what is left.
+        .frame(height: isStacked ? 20 : EditorLayoutMetrics.editorRowHeight)
     }
 
     private var cursor: some View {
