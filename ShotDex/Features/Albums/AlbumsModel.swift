@@ -100,7 +100,6 @@ final class AlbumsModel {
     /// are thread-safe but expensive on large libraries.
     private struct Snapshot: @unchecked Sendable {
         var albums: [AlbumItem]
-        var folders: [FolderItem]
         var onThisDayCount: Int
         var onThisDayCover: PHAsset?
     }
@@ -153,7 +152,6 @@ final class AlbumsModel {
                 Self.loadSnapshot()
             }.value
             albums = snapshot.albums
-            folders = snapshot.folders
             onThisDayCount = snapshot.onThisDayCount
             onThisDayCover = snapshot.onThisDayCover
             if let deps {
@@ -168,8 +166,6 @@ final class AlbumsModel {
         }
     }
 
-    /// User folders and the albums inside each, for the Folders section.
-    private(set) var folders: [FolderItem] = []
     /// Auto-curated collections for the Memories row.
     private(set) var memories: [Memory] = []
     /// Photos the opt-in subject scan found faces in. Empty until the user
@@ -177,15 +173,6 @@ final class AlbumsModel {
     private(set) var peopleAssetIds: [String] = []
     /// Photos that scan found a cat or a dog in.
     private(set) var petAssetIds: [String] = []
-
-    /// One user folder plus the albums directly inside it.
-    struct FolderItem: Identifiable {
-        let collectionList: PHCollectionList
-        let albums: [AlbumItem]
-
-        var id: String { collectionList.localIdentifier }
-        var title: String { collectionList.localizedTitle ?? "Folder" }
-    }
 
     // MARK: Album lifecycle
 
@@ -196,12 +183,6 @@ final class AlbumsModel {
         }
     }
 
-    func createFolder(named name: String) {
-        Task {
-            _ = try? await photoLibraryService?.createFolder(named: name)
-            load()
-        }
-    }
 
     func rename(_ album: AlbumItem, to name: String) {
         guard case .collection(let collection) = album.kind else { return }
@@ -219,40 +200,8 @@ final class AlbumsModel {
         }
     }
 
-    func rename(_ folder: FolderItem, to name: String) {
-        Task {
-            try? await photoLibraryService?.renameFolder(folder.collectionList, to: name)
-            load()
-        }
-    }
 
-    func delete(_ folder: FolderItem) {
-        Task {
-            try? await photoLibraryService?.deleteFolders([folder.collectionList])
-            load()
-        }
-    }
 
-    /// Moves a user album into a folder, or back to the top level when
-    /// `folder` is nil.
-    func move(_ album: AlbumItem, to folder: FolderItem?) {
-        guard case .collection(let collection) = album.kind else { return }
-        Task {
-            // Out of whichever folder currently holds it, before it can go
-            // into another: PhotoKit lets a collection sit in only one.
-            for existing in folders where existing.albums.contains(where: { $0.id == album.id }) {
-                try? await photoLibraryService?.removeCollections(
-                    [collection], from: existing.collectionList
-                )
-            }
-            if let folder {
-                try? await photoLibraryService?.moveCollections(
-                    [collection], into: folder.collectionList
-                )
-            }
-            load()
-        }
-    }
 
     private var photoLibraryService: PhotoLibraryService? { dependencies?.photoLibrary }
 
@@ -350,6 +299,15 @@ final class AlbumsModel {
             // fetch with `includeHiddenAssets` reports no hidden asset either.
             // Hiding a photo still works; it simply leaves our view of the
             // library for good.
+            //
+            // No Recently Deleted either, and this one is not a permission
+            // wall but a missing API: `PHAssetCollectionSubtype` runs
+            // 200…220 and has no case for it (checked against the iOS 26.1
+            // SDK's `PhotosTypes.h`). There is no public way to list, count
+            // or restore a trashed asset, and no documented URL that opens
+            // Photos on that album. Our own delete does say where the photos
+            // go — see the Duplicates screen's "Photos move to Recently
+            // Deleted" — and that is as close as a third-party app gets.
             .init(subtype: .smartAlbumUnableToUpload, group: .utility, symbolName: "exclamationmark.icloud"),
         ]
         if #available(iOS 18.0, *) {
@@ -397,15 +355,11 @@ final class AlbumsModel {
             }
         }
 
-        // Albums that live inside a folder are shown under that folder, not
-        // twice — once here and once at the top level.
-        let folders = Self.loadFolders(imageOptions: imageOptions)
-        let nested = Set(folders.flatMap { $0.albums.map(\.id) })
-        result.removeAll { $0.group == .user && nested.contains($0.id) }
-
+        // Albums nested in a Photos folder are listed here like any other,
+        // not under a heading of their own: the tab shows albums, and a
+        // second level of containers to open first is a level of nothing.
         return Snapshot(
             albums: result,
-            folders: folders,
             onThisDayCount: onThisDay.count,
             onThisDayCover: onThisDay.firstObject
         )
@@ -432,22 +386,6 @@ final class AlbumsModel {
         return assets
     }
 
-    private nonisolated static func loadFolders(imageOptions: PHFetchOptions) -> [FolderItem] {
-        PhotoLibraryService.fetchFolders().map { list in
-            let albums = PhotoLibraryService.fetchChildren(of: list)
-                .compactMap { $0 as? PHAssetCollection }
-                .compactMap { collection -> AlbumItem? in
-                    guard var item = Self.item(for: collection, imageOptions: imageOptions)
-                    else { return nil }
-                    item.group = item.isShared ? .shared : .user
-                    return item
-                }
-            return FolderItem(collectionList: list, albums: albums)
-        }
-        // Empty folders are kept, unlike empty media-type albums: the user
-        // just made this one, and hiding it until an album moves in would look
-        // like the creation failed.
-    }
 
     private nonisolated static func item(for collection: PHAssetCollection, imageOptions: PHFetchOptions) -> AlbumItem? {
         let assets = PHAsset.fetchAssets(in: collection, options: imageOptions)

@@ -28,15 +28,13 @@ struct AlbumsScreen: View {
     @State private var enteredName = ""
     @State private var deletionRequest: DeletionRequest?
 
-    /// A pending "type a name" alert — creating an album or folder, or
-    /// renaming one. One piece of state for all four, because they differ only
-    /// in the title and what happens on confirm.
+    /// A pending "type a name" alert — creating an album or renaming one.
+    /// One piece of state for both, because they differ only in the title and
+    /// what happens on confirm.
     struct NamingRequest: Identifiable {
         enum Kind {
             case newAlbum
-            case newFolder
             case renameAlbum(AlbumItem)
-            case renameFolder(AlbumsModel.FolderItem)
         }
 
         let id = UUID()
@@ -45,24 +43,21 @@ struct AlbumsScreen: View {
         var title: String {
             switch kind {
             case .newAlbum: String(localized: "New Album")
-            case .newFolder: String(localized: "New Folder")
             case .renameAlbum: String(localized: "Rename Album")
-            case .renameFolder: String(localized: "Rename Folder")
             }
         }
 
         var confirmTitle: String {
             switch kind {
-            case .newAlbum, .newFolder: String(localized: "Create")
-            case .renameAlbum, .renameFolder: String(localized: "Rename")
+            case .newAlbum: String(localized: "Create")
+            case .renameAlbum: String(localized: "Rename")
             }
         }
 
         var currentName: String {
             switch kind {
-            case .newAlbum, .newFolder: ""
+            case .newAlbum: ""
             case .renameAlbum(let album): album.title
-            case .renameFolder(let folder): folder.title
             }
         }
     }
@@ -73,7 +68,6 @@ struct AlbumsScreen: View {
     struct DeletionRequest: Identifiable {
         enum Target {
             case album(AlbumItem)
-            case folder(AlbumsModel.FolderItem)
         }
 
         let id = UUID()
@@ -82,7 +76,6 @@ struct AlbumsScreen: View {
         var title: String {
             switch target {
             case .album(let album): String(localized: "Delete “\(album.title)”?")
-            case .folder(let folder): String(localized: "Delete “\(folder.title)”?")
             }
         }
 
@@ -90,8 +83,6 @@ struct AlbumsScreen: View {
             switch target {
             case .album:
                 String(localized: "The photos stay in your library.")
-            case .folder:
-                String(localized: "The albums inside move back to My Albums.")
             }
         }
     }
@@ -126,11 +117,6 @@ struct AlbumsScreen: View {
                     } label: {
                         Label("New Smart Album", systemImage: "line.3.horizontal.decrease.circle")
                     }
-                    Button {
-                        namingRequest = NamingRequest(kind: .newFolder)
-                    } label: {
-                        Label("New Folder", systemImage: "folder.badge.plus")
-                    }
                     Divider()
                     Button {
                         isCustomizePresented = true
@@ -141,7 +127,7 @@ struct AlbumsScreen: View {
                     Image(systemName: "plus")
                 }
                 .tint(.primary)
-                .accessibilityLabel("New album, smart album or folder, or customize this tab")
+                .accessibilityLabel("New album or smart album, or customize this tab")
             }
         }
         // `assetChangeToken`, not `libraryChangeToken`: the album list only
@@ -243,11 +229,7 @@ struct AlbumsScreen: View {
                 smartAlbumsSection()
             }
         case .mediaTypes:
-            if !model.mediaTypeAlbums.isEmpty {
-                albumTokenSection(title: "Media Types", albums: model.mediaTypeAlbums)
-            }
-        case .folders:
-            if !model.folders.isEmpty { foldersSection() }
+            if !model.mediaTypeAlbums.isEmpty { mediaTypesSection() }
         case .myAlbums:
             if !model.userAlbums.isEmpty {
                 albumTokenSection(title: "My Albums", albums: model.userAlbums)
@@ -300,7 +282,7 @@ struct AlbumsScreen: View {
     /// that no longer resolve are dropped rather than shown as errors — an
     /// album can be deleted from Photos while a pin still names it.
     private var pinnedAlbums: [AlbumItem] {
-        let all = model.albums + model.folders.flatMap(\.albums)
+        let all = model.albums
         return dependencies.collectionPins.pinned.compactMap { target in
             guard case .album(let id) = target else { return nil }
             return all.first { $0.id == id }
@@ -393,36 +375,13 @@ struct AlbumsScreen: View {
         }
     }
 
-    /// "Move to Folder" — the only way an album gets into a folder, since a
-    /// folder created here starts empty.
-    @ViewBuilder
-    private func moveToFolderMenu(_ album: AlbumItem) -> some View {
-        if !model.folders.isEmpty {
-            Menu {
-                ForEach(model.folders) { folder in
-                    Button(folder.title) { model.move(album, to: folder) }
-                }
-                if model.folders.contains(where: { folder in
-                    folder.albums.contains { $0.id == album.id }
-                }) {
-                    Divider()
-                    Button("Move Out of Folder") { model.move(album, to: nil) }
-                }
-            } label: {
-                Label("Move to Folder", systemImage: "folder")
-            }
-        }
-    }
-
     private func apply(_ request: NamingRequest) {
         let name = enteredName.trimmingCharacters(in: .whitespacesAndNewlines)
         namingRequest = nil
         guard !name.isEmpty else { return }
         switch request.kind {
         case .newAlbum: model.createAlbum(named: name)
-        case .newFolder: model.createFolder(named: name)
         case .renameAlbum(let album): model.rename(album, to: name)
-        case .renameFolder(let folder): model.rename(folder, to: name)
         }
     }
 
@@ -430,7 +389,6 @@ struct AlbumsScreen: View {
         deletionRequest = nil
         switch request.target {
         case .album(let album): model.delete(album)
-        case .folder(let folder): model.delete(folder)
         }
     }
 
@@ -476,7 +434,6 @@ struct AlbumsScreen: View {
                                 } label: {
                                     Label("Rename", systemImage: "pencil")
                                 }
-                                moveToFolderMenu(album)
                                 Button(role: .destructive) {
                                     deletionRequest = DeletionRequest(target: .album(album))
                                 } label: {
@@ -545,59 +502,173 @@ struct AlbumsScreen: View {
     }
 }
 
-/// Utilities that act on the library rather than browse it — today only the
-/// duplicate finder. Same token footprint as the album grids so the section
-/// lines up with them.
+/// The two list sections: Media Types and Utilities.
+///
+/// Both are **one full-width row per entry**, not the horizontal token grid
+/// the album sections use, and Media Types sits directly above Utilities —
+/// the arrangement iOS 26 Photos settled on. The reason is that these are
+/// destinations you pick from a known list, not covers you browse: a token
+/// grid spends a 60×190 card and a cover thumbnail on each, scrolls half of
+/// them out of sight sideways, and still cuts the longer names. A row states
+/// the name in full, puts the count where the eye already goes for it, and
+/// costs one line.
 extension AlbumsScreen {
+    /// Capture formats — Videos, Selfies, Live Photos, Portrait, RAW and the
+    /// rest. Above Utilities because these are still *photos*; Utilities is
+    /// the tools.
+    fileprivate func mediaTypesSection() -> some View {
+        listSection("Media Types") {
+            ForEach(model.mediaTypeAlbums) { album in
+                NavigationLink(value: album.id) {
+                    CollectionListRow(
+                        title: album.title,
+                        systemImage: album.symbolName ?? "photo.on.rectangle",
+                        detail: album.count.formatted()
+                    )
+                }
+                .buttonStyle(.plain)
+                .contextMenu { pinButton(.album(album.id)) }
+            }
+        }
+    }
+
     fileprivate func utilitiesSection() -> some View {
+        listSection("Utilities") {
+            NavigationLink(value: DuplicatesDestination()) {
+                CollectionListRow(
+                    title: String(localized: "Duplicates"),
+                    systemImage: "square.on.square",
+                    detail: duplicatesDetail
+                )
+            }
+            .buttonStyle(.plain)
+            .contextMenu { pinButton(.duplicates) }
+
+            NavigationLink(value: PlacesDestination()) {
+                CollectionListRow(
+                    title: String(localized: "Places"),
+                    systemImage: "map",
+                    detail: nil
+                )
+            }
+            .buttonStyle(.plain)
+            .contextMenu { pinButton(.places) }
+
+            NavigationLink(value: TripsDestination()) {
+                CollectionListRow(
+                    title: String(localized: "Trips"),
+                    systemImage: "airplane",
+                    detail: nil
+                )
+            }
+            .buttonStyle(.plain)
+            .contextMenu { pinButton(.trips) }
+
+            // Recently Deleted and Unable to Upload: library housekeeping
+            // rather than browsing, so they sit with Duplicates the way
+            // Photos groups its own utilities.
+            ForEach(model.utilityAlbums) { album in
+                NavigationLink(value: album.id) {
+                    CollectionListRow(
+                        title: album.title,
+                        systemImage: album.symbolName ?? "wrench.and.screwdriver",
+                        detail: album.count.formatted()
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    /// Title, then the rows stacked full width. One shape for both sections so
+    /// they cannot drift apart.
+    @ViewBuilder
+    private func listSection(
+        _ title: LocalizedStringKey,
+        @ViewBuilder rows: () -> some View
+    ) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Utilities")
+            Text(title)
                 .font(.title2.bold())
                 .padding(.horizontal)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHGrid(rows: [GridItem(.fixed(tokenRowHeight), spacing: 8)], spacing: 8) {
-                    NavigationLink(value: DuplicatesDestination()) {
-                        DuplicatesToken()
-                    }
-                    .buttonStyle(.plain)
-                    .contextMenu { pinButton(.duplicates) }
-
-                    NavigationLink(value: PlacesDestination()) {
-                        UtilityToken(
-                            title: "Places",
-                            subtitle: "Browse on a map",
-                            systemImage: "map"
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .contextMenu { pinButton(.places) }
-
-                    NavigationLink(value: TripsDestination()) {
-                        UtilityToken(
-                            title: "Trips",
-                            subtitle: "Days spent away",
-                            systemImage: "airplane"
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .contextMenu { pinButton(.trips) }
-
-                    // Hidden and Unable to Upload: library housekeeping rather
-                    // than browsing, so they sit beside Duplicates the way
-                    // Photos groups its own utilities.
-                    ForEach(model.utilityAlbums) { album in
-                        NavigationLink(value: album.id) {
-                            AlbumToken(album: album)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal)
+            VStack(spacing: 8) {
+                rows()
             }
-            .scrollClipDisabled()
+            .padding(.horizontal)
         }
     }
+
+    /// `2 groups` / `Library up to date` under the Duplicates row, from the
+    /// count the last scan wrote.
+    private var duplicatesDetail: String? {
+        guard let count = UserDefaults.standard.object(forKey: SettingsKeys.duplicateGroupCount) as? Int,
+              count > 0
+        else { return nil }
+        return String(
+            localized: "\(count) groups",
+            comment: "Detail on the Duplicates row in Collections: how many duplicate groups the last scan found"
+        )
+    }
+}
+
+/// One full-width row in Media Types or Utilities: a small leading glyph, the
+/// name, what there is of it, and a chevron.
+///
+/// Deliberately not `AlbumToken`'s 44pt cover well — at one row per line the
+/// glyph is an identifier, not a picture, and a 44pt tinted square beside a
+/// single line of text reads as a thumbnail that failed to load.
+struct CollectionListRow: View {
+    let title: String
+    let systemImage: String
+    var detail: String?
+
+    @ScaledMetric(relativeTo: .body) private var glyphWidth: CGFloat = 28
+    @ScaledMetric(relativeTo: .body) private var rowHeight = CollectionListRowMetrics.height
+
+    var body: some View {
+        HStack(spacing: AppTheme.Spacing.md) {
+            Image(systemName: systemImage)
+                .font(.body)
+                .foregroundStyle(AppAccent.color)
+                .frame(width: glyphWidth)
+
+            Text(title)
+                .font(.body)
+                .foregroundStyle(Color(.label))
+                .lineLimit(1)
+
+            Spacer(minLength: AppTheme.Spacing.sm)
+
+            if let detail {
+                Text(detail)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                    .lineLimit(1)
+            }
+
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, AppTheme.Spacing.lg)
+        .frame(height: rowHeight)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            Color(.secondarySystemBackground),
+            in: RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous)
+        )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(detail.map { "\(title), \($0)" } ?? title)
+        .accessibilityAddTraits(.isButton)
+    }
+}
+
+enum CollectionListRowMetrics {
+    /// One line of body text with room to breathe, and past the 44pt minimum
+    /// target on its own.
+    static let height: CGFloat = 52
 }
 
 extension AlbumsScreen {
@@ -757,73 +828,6 @@ extension AlbumsScreen {
         }
     }
 
-    /// One row per folder, each showing the albums it holds. Folders are rare
-    /// and usually few, so they are listed rather than squeezed into the same
-    /// horizontal token grid as everything else.
-    fileprivate func foldersSection() -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Folders")
-                .font(.title2.bold())
-                .padding(.horizontal)
-
-            ForEach(model.folders) { folder in
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "folder")
-                            .foregroundStyle(.secondary)
-                        Text(folder.title)
-                            .font(.headline)
-                    }
-                    .padding(.horizontal)
-                    .contextMenu {
-                        Button {
-                            namingRequest = NamingRequest(kind: .renameFolder(folder))
-                        } label: {
-                            Label("Rename", systemImage: "pencil")
-                        }
-                        Button(role: .destructive) {
-                            deletionRequest = DeletionRequest(target: .folder(folder))
-                        } label: {
-                            Label("Delete Folder", systemImage: "trash")
-                        }
-                    }
-
-                    if folder.albums.isEmpty {
-                        Text("Empty. Move an album here from its own menu.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal)
-                    } else {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            LazyHStack(spacing: 8) {
-                                ForEach(folder.albums) { album in
-                                    NavigationLink(value: album.id) {
-                                        AlbumToken(album: album)
-                                    }
-                                    .buttonStyle(.plain)
-                                    .contextMenu {
-                                        Button {
-                                            namingRequest = NamingRequest(kind: .renameAlbum(album))
-                                        } label: {
-                                            Label("Rename", systemImage: "pencil")
-                                        }
-                                        moveToFolderMenu(album)
-                                        Button(role: .destructive) {
-                                            deletionRequest = DeletionRequest(target: .album(album))
-                                        } label: {
-                                            Label("Delete Album", systemImage: "trash")
-                                        }
-                                    }
-                                }
-                            }
-                            .padding(.horizontal)
-                        }
-                        .scrollClipDisabled()
-                    }
-                }
-            }
-        }
-    }
 }
 
 /// The token grid's base measurements, at the standard text size.

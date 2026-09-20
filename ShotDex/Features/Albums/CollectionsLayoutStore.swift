@@ -8,10 +8,13 @@ enum CollectionsSection: String, CaseIterable, Identifiable, Codable, Sendable {
     case recents
     case subjects
     case smartAlbums
-    case mediaTypes
-    case folders
     case myAlbums
     case sharedAlbums
+    // Media Types sits directly above Utilities, the way iOS 26 Photos
+    // arranges the same two lists: both are pick-from-a-list destinations
+    // rather than covers to browse, so they read as one block at the foot of
+    // the tab.
+    case mediaTypes
     case utilities
 
     var id: String { rawValue }
@@ -24,7 +27,6 @@ enum CollectionsSection: String, CaseIterable, Identifiable, Codable, Sendable {
         case .subjects: "People and Pets"
         case .smartAlbums: "Smart Albums"
         case .mediaTypes: "Media Types"
-        case .folders: "Folders"
         case .myAlbums: "My Albums"
         case .sharedAlbums: "Shared Albums"
         case .utilities: "Utilities"
@@ -39,7 +41,6 @@ enum CollectionsSection: String, CaseIterable, Identifiable, Codable, Sendable {
         case .subjects: "person.crop.square"
         case .smartAlbums: "line.3.horizontal.decrease.circle"
         case .mediaTypes: "square.stack.3d.down.right"
-        case .folders: "folder"
         case .myAlbums: "rectangle.stack"
         case .sharedAlbums: "person.2"
         case .utilities: "wrench.and.screwdriver"
