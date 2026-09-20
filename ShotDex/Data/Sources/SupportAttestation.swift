@@ -66,12 +66,23 @@ actor SupportAttestation {
         }
         guard service.isSupported else { throw SupportError.attestationUnavailable }
 
-        let keyID = try await service.generateKey()
+        // A build signed without the App Attest capability still reports
+        // `isSupported`, and only fails here — a personal Apple Developer team
+        // cannot create a profile that carries it. Treat every failure from the
+        // Secure Enclave as "this build cannot attest" so the screen can offer
+        // mail instead of showing an error the user cannot act on.
+        let keyID: String
+        let attestation: Data
         let challenge = try await fetchChallenge()
-        let attestation = try await service.attestKey(
-            keyID,
-            clientDataHash: Data(SHA256.hash(data: Data(challenge.utf8)))
-        )
+        do {
+            keyID = try await service.generateKey()
+            attestation = try await service.attestKey(
+                keyID,
+                clientDataHash: Data(SHA256.hash(data: Data(challenge.utf8)))
+            )
+        } catch {
+            throw SupportError.attestationUnavailable
+        }
         try await register(keyID: keyID, attestation: attestation, challenge: challenge)
 
         // Stored only after the server accepted it: a key the backend never saw

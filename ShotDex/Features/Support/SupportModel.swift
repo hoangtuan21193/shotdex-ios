@@ -20,6 +20,10 @@ final class SupportModel {
     /// the server answers. The server is still the authority on the count.
     private(set) var votedIDs: Set<String> = []
     var error: SupportError?
+    /// Set the first time the Secure Enclave refuses, which is what a build
+    /// signed without the App Attest capability does. The screen then offers
+    /// mail rather than buttons that cannot work.
+    private(set) var canUsePortal = SupportService.isPortalPossible
 
     private static let votedDefaultsKey = "support.votedTicketIDs"
 
@@ -47,7 +51,13 @@ final class SupportModel {
             tickets = try await mine
             roadmap = try await items
         } catch let failure as SupportError {
-            error = failure
+            // Failing to load is not worth an alert when the cause is that this
+            // build cannot attest: the screen simply becomes the mail screen.
+            if case .attestationUnavailable = failure {
+                canUsePortal = false
+            } else {
+                error = failure
+            }
         } catch {
             self.error = .network
         }
@@ -66,6 +76,7 @@ final class SupportModel {
             await refresh()
             return true
         } catch let failure as SupportError {
+            if case .attestationUnavailable = failure { canUsePortal = false }
             error = failure
             return false
         } catch {

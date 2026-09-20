@@ -1,3 +1,4 @@
+import DeviceCheck
 import Foundation
 import UIKit
 
@@ -207,6 +208,18 @@ actor SupportService {
     /// is the only signal a Release build has to tell the two apart.
     static var isTestFlightBuild: Bool {
         Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+    }
+
+    /// Whether this build could reach the portal at all. It is optimistic:
+    /// App Attest reports itself supported even when the build was signed
+    /// without the capability, and only the first attestation attempt finds
+    /// out. `SupportModel` downgrades from here.
+    @MainActor
+    static var isPortalPossible: Bool {
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["SUPPORT_DEV_BYPASS_TOKEN"] != nil { return true }
+        #endif
+        return DCAppAttestService.shared.isSupported
     }
 
     // MARK: Reading

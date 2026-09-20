@@ -1,4 +1,3 @@
-import DeviceCheck
 import SwiftUI
 
 /// Support: report a bug, request a feature, read the replies, and vote on what
@@ -57,7 +56,7 @@ struct SupportScreen: View {
 
     private var composeSection: some View {
         Section {
-            if Self.isPortalAvailable {
+            if model.canUsePortal {
                 Button {
                     composeKind = .bug
                 } label: {
@@ -69,9 +68,10 @@ struct SupportScreen: View {
                     Label("Request a Feature", systemImage: SupportTicketKind.feature.symbolName)
                 }
             } else {
-                // App Attest does not exist on a simulator, and Apple can turn
-                // it off for a device. Mail is the fallback rather than a dead
-                // button that silently does nothing.
+                // App Attest does not exist on a simulator, needs a paid Apple
+                // Developer Program membership to be signed in at all, and can
+                // be refused for a device. Mail is the fallback rather than a
+                // dead button that silently does nothing.
                 Button {
                     openMail()
                 } label: {
@@ -79,7 +79,11 @@ struct SupportScreen: View {
                 }
             }
         } footer: {
-            Text("Replies arrive here in the app. There is no account and no email address to give.")
+            // The promise has to match the route actually on offer: a build that
+            // cannot attest has no inbox to deliver a reply to.
+            Text(model.canUsePortal
+                 ? "Replies arrive here in the app. There is no account and no email address to give."
+                 : "This build cannot use the in-app channel, so support runs by email. Replies go to wherever you write from.")
         }
     }
 
@@ -117,7 +121,7 @@ struct SupportScreen: View {
                         item: item,
                         accent: accent,
                         isVoted: model.isVoted(item),
-                        canVote: Self.isPortalAvailable
+                        canVote: model.canUsePortal
                     ) {
                         Task { await model.toggleVote(item) }
                     }
@@ -126,13 +130,17 @@ struct SupportScreen: View {
         } header: {
             Text("What People Asked For")
         } footer: {
-            Text("One vote per device. The most wanted requests are built first.")
+            Text(model.canUsePortal
+                 ? "One vote per device. The most wanted requests are built first."
+                 : "Voting needs the in-app channel, which this build cannot use.")
         }
     }
 
     private var privacySection: some View {
         Section {
-            Text("A message carries your words, the app and iOS version, the device model and roughly how many photos you have. Never a photo, a name or an email address.")
+            Text(model.canUsePortal
+                 ? "A message carries your words, the app and iOS version, the device model and roughly how many photos you have. Never a photo, a name or an email address."
+                 : "An email carries whatever you write, plus the app and iOS versions and the device model, which are filled in for you. Never a photo.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
@@ -141,17 +149,6 @@ struct SupportScreen: View {
     // MARK: Helpers
 
     static let supportAddress = "support@shotdex.app"
-
-    /// The portal needs App Attest. A Debug build with a bypass token reaches it
-    /// from the simulator too.
-    static var isPortalAvailable: Bool {
-        if DCAppAttestService.shared.isSupported { return true }
-        #if DEBUG
-        return ProcessInfo.processInfo.environment["SUPPORT_DEV_BYPASS_TOKEN"] != nil
-        #else
-        return false
-        #endif
-    }
 
     private func openMail() {
         let diagnostics = SupportDiagnostics(libraryCount: nil)

@@ -1313,6 +1313,21 @@ TestFlight. Build Release phân biệt bằng receipt: `appStoreReceiptURL` tên
 `sandboxReceipt` nghĩa là TestFlight. Báo lỗi của beta tester vì thế không rơi
 vào hàng đợi thật.
 
+**App Attest là capability trả phí.** Personal team (Apple ID miễn phí) không
+tạo được provisioning profile mang nó — Xcode báo *"Personal development teams
+do not support the App Attest capability"*. Nên project ký hai kiểu:
+`ShotDex.entitlements` cho **Debug** (không có App Attest, personal team ký
+được) và `ShotDex-AppAttest.entitlements` cho **Release** (có). Khi chưa có tài
+khoản Apple Developer Program, build Debug trên máy thật vẫn chạy, chỉ là màn
+Support đổi sang gửi mail.
+
+Việc này phải tự hồi phục ở runtime, không được dựa vào `isSupported`:
+`DCAppAttestService.isSupported` vẫn trả `true` trên máy thật dù build ký thiếu
+capability, chỉ tới `generateKey()` mới hỏng. Nên mọi lỗi từ Secure Enclave được
+quy về `SupportError.attestationUnavailable`, `SupportModel.canUsePortal` hạ
+xuống `false`, và màn hình đổi cả nút lẫn phần chữ mô tả sang luồng email — không
+để lại câu hứa "trả lời ngay trong app" khi không còn hộp thư nào để trả lời.
+
 Entitlement `com.apple.developer.devicecheck.appattest-environment` **chỉ có tác
 dụng với build cài từ Xcode** — iOS bỏ qua nó sau khi phân phối, TestFlight và
 App Store luôn attest vào production. Nên Worker dev nhận **cả hai** aaguid
