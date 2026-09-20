@@ -32,6 +32,14 @@ enum EditorTheme {
     static let trackBorder = Color.white.opacity(0.12)
     static let trackChip = Color.white.opacity(0.08)
     static let emptyLane = Color.white.opacity(0.04)
+    /// One clip in the project-overview strip. Brighter than `trackChip`
+    /// because the strip is 22pt tall and read at a glance, where a fill
+    /// tuned for an 88pt clip cell disappears.
+    static let overviewClip = Color.white.opacity(0.22)
+    /// The rectangle on the overview marking what the zoomed timeline shows.
+    static let overviewWindow = Color.white.opacity(0.5)
+    /// The peak-hold tick on the level meter, below the hot threshold.
+    static let meterPeak = Color.white.opacity(0.75)
     static let secondaryText = Color.white.opacity(0.55)
     static let dimText = Color.white.opacity(0.35)
     static let clipping = Color(red: 1, green: 0.271, blue: 0.227)

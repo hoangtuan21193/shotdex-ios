@@ -1,0 +1,28 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 5 },
+    { "action": "tap", "label": "Library", "type": "button" },
+    { "action": "tap", "label": "Select", "type": "button" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "x": 0.069, "y": 0.097 },
+    { "action": "tap", "x": 0.204, "y": 0.097 },
+    { "action": "tap", "x": 0.338, "y": 0.097 },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "label": "More selection actions" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "label": "Create Video" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "orientation", "text": "landscape" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "screenshot", "name": "20-landscape-all-columns" },
+    { "action": "tap", "label": "Inspector" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "screenshot", "name": "30-landscape-inspector-closed" },
+    { "action": "tap", "label": "Media Pool" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "screenshot", "name": "40-landscape-pool-closed" },
+    { "action": "orientation", "text": "portrait" },
+    { "action": "wait", "seconds": 4 }
+  ]
+}

@@ -229,6 +229,7 @@ final class VideoStudioModel {
     }
 
     func toggleClip(_ id: UUID) {
+        guard !isLaneLocked(.video) else { return }
         selectClip(selectedClipID == id ? nil : id)
     }
 
@@ -243,6 +244,7 @@ final class VideoStudioModel {
     }
 
     func toggleOverlay(_ id: UUID) {
+        guard !isLaneLocked(.overlay(overlayLaneAssignment[id] ?? 0)) else { return }
         selectOverlay(selectedOverlayID == id ? nil : id)
     }
 
@@ -257,8 +259,92 @@ final class VideoStudioModel {
     }
 
     func toggleMusic(_ id: UUID) {
+        guard !isLaneLocked(.music(musicLaneAssignment[id] ?? 0)) else { return }
         selectMusic(selectedMusicID == id ? nil : id)
     }
+
+    // MARK: - Track headers
+
+    /// Lanes the user has locked from the timeline's track headers.
+    ///
+    /// Session state, not recipe state: a lock is a guard against the wrong
+    /// drag while cutting, the way it is in every NLE — it says nothing about
+    /// how the project renders, so it has no business in a saved recipe or in
+    /// the undo stack. A locked lane refuses selection and refuses every edit
+    /// a timeline drag can start.
+    private(set) var lockedLanes: Set<VideoTimelineLane> = []
+
+    func isLaneLocked(_ lane: VideoTimelineLane) -> Bool { lockedLanes.contains(lane) }
+
+    func toggleLaneLock(_ lane: VideoTimelineLane) {
+        if lockedLanes.contains(lane) {
+            lockedLanes.remove(lane)
+        } else {
+            lockedLanes.insert(lane)
+            // A locked lane cannot stay selected, or the inspector goes on
+            // offering edits the lane will refuse.
+            switch lane {
+            case .video:
+                if selectedClipID != nil { selectClip(nil) }
+            case .overlay(let index):
+                if let id = selectedOverlayID, overlayLaneAssignment[id] == index { selectOverlay(nil) }
+            case .music(let index):
+                if let id = selectedMusicID, musicLaneAssignment[id] == index { selectMusic(nil) }
+            }
+        }
+    }
+
+    /// Whether a clip is locked against edits, by the lane it sits in.
+    private func isClipLocked(_: UUID) -> Bool { isLaneLocked(.video) }
+
+    /// The volume the Video track's mute button restores. Zero is a setting a
+    /// user can dial, so muting cannot be read off the volume alone.
+    private var videoVolumeBeforeMute: Double = 1
+
+    var isVideoTrackMuted: Bool { recipe.videoVolume <= 0 }
+
+    func toggleVideoTrackMuted() {
+        if isVideoTrackMuted {
+            setVideoVolume(videoVolumeBeforeMute > 0 ? videoVolumeBeforeMute : 1)
+        } else {
+            videoVolumeBeforeMute = recipe.videoVolume
+            setVideoVolume(0)
+        }
+    }
+
+    /// Music volumes a lane's mute button restores, by track.
+    private var musicVolumesBeforeMute: [UUID: Double] = [:]
+
+    func musicTracks(inLane lane: Int) -> [MusicTrack] {
+        let assignment = musicLaneAssignment
+        return recipe.musicTracks.filter { assignment[$0.id] == lane }
+    }
+
+    func isMusicLaneMuted(_ lane: Int) -> Bool {
+        let tracks = musicTracks(inLane: lane)
+        return !tracks.isEmpty && tracks.allSatisfy { $0.volume <= 0 }
+    }
+
+    func toggleMusicLaneMuted(_ lane: Int) {
+        let tracks = musicTracks(inLane: lane)
+        guard !tracks.isEmpty else { return }
+        let muting = !isMusicLaneMuted(lane)
+        beginUndoGroup()
+        for track in tracks {
+            if muting {
+                musicVolumesBeforeMute[track.id] = track.volume
+                setMusicVolume(0, for: track.id)
+            } else {
+                let restored = musicVolumesBeforeMute[track.id] ?? 1
+                setMusicVolume(restored > 0 ? restored : 1, for: track.id)
+            }
+        }
+        endUndoGroup()
+    }
+
+    /// Restarts at the end instead of stopping. Session state: it is how the
+    /// user is watching the project, not part of the project.
+    var loopsPlayback = false
 
     func clearSelection() {
         selectedClipID = nil
@@ -527,6 +613,7 @@ final class VideoStudioModel {
     // MARK: - Structural edits (full rebuild)
 
     func moveClip(from source: Int, to destination: Int) {
+        guard !isLaneLocked(.video) else { return }
         guard recipe.clips.indices.contains(source),
               recipe.clips.indices.contains(destination),
               source != destination
@@ -538,6 +625,7 @@ final class VideoStudioModel {
     }
 
     func setPhotoDuration(_ duration: Double, for clipID: UUID) {
+        guard !isClipLocked(clipID) else { return }
         guard let index = recipe.clips.firstIndex(where: { $0.id == clipID }) else { return }
         recipe.clips[index].photoDuration = min(
             max(duration, VideoClip.photoDurationRange.lowerBound),
@@ -548,6 +636,7 @@ final class VideoStudioModel {
     }
 
     func setTrim(start: Double, end: Double, for clipID: UUID) {
+        guard !isClipLocked(clipID) else { return }
         guard let index = recipe.clips.firstIndex(where: { $0.id == clipID }),
               let sourceDuration = recipe.clips[index].sourceDuration
         else { return }
@@ -641,6 +730,7 @@ final class VideoStudioModel {
     }
 
     func setMusicStart(_ start: Double, for id: UUID) {
+        guard !isLaneLocked(.music(musicLaneAssignment[id] ?? 0)) else { return }
         guard let index = recipe.musicTracks.firstIndex(where: { $0.id == id }) else { return }
         recipe.musicTracks[index].start = max(
             0,
@@ -651,6 +741,7 @@ final class VideoStudioModel {
     }
 
     func setMusicTrim(start: Double, end: Double, for id: UUID) {
+        guard !isLaneLocked(.music(musicLaneAssignment[id] ?? 0)) else { return }
         guard let index = recipe.musicTracks.firstIndex(where: { $0.id == id }),
               let sourceDuration = recipe.musicTracks[index].sourceDuration
         else { return }
@@ -970,6 +1061,7 @@ final class VideoStudioModel {
 
     /// Overlay visibility window. Proxy-only, like every overlay edit.
     func setOverlayTiming(start: Double, duration: Double?, forOverlay id: UUID) {
+        guard !isLaneLocked(.overlay(overlayLaneAssignment[id] ?? 0)) else { return }
         guard let index = recipe.overlays.firstIndex(where: { $0.id == id }) else { return }
         recipe.overlays[index].start = min(max(0, start), totalDuration)
         recipe.overlays[index].duration = duration.map { max(0.1, $0) }
@@ -1255,7 +1347,14 @@ final class VideoStudioModel {
             queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated {
-                self?.isPlaying = false
+                guard let self else { return }
+                guard self.loopsPlayback else {
+                    self.isPlaying = false
+                    return
+                }
+                self.seek(to: 0)
+                self.player?.play()
+                self.isPlaying = true
             }
         }
     }

@@ -18,6 +18,11 @@ struct VideoTimelineView: View {
     let onAddMedia: () -> Void
     let onEditText: (PhotoOverlay) -> Void
     let onTransition: (Int) -> Void
+    /// Seconds the viewport is showing, for the project-overview strip the
+    /// desk layout draws above the ruler. It lives outside the timeline (it is
+    /// a band of the stack, not a lane), but the zoom that decides it is in
+    /// here.
+    var onVisibleDuration: ((Double) -> Void)?
 
     @State private var pps: CGFloat = VideoStudioMetrics.defaultPointsPerSecond
     @State private var pinchStartPPS: CGFloat = VideoStudioMetrics.defaultPointsPerSecond
@@ -61,7 +66,8 @@ struct VideoTimelineView: View {
                         overlayLaneCount: model.overlayLaneCount,
                         musicLaneCount: model.musicLaneCount,
                         activeLane: activeLane,
-                        offsetY: laneOffsetY
+                        offsetY: laneOffsetY,
+                        model: lanes.showsTrackControls ? model : nil
                     )
                     .zIndex(2)
 
@@ -101,13 +107,25 @@ struct VideoTimelineView: View {
             .overlay(alignment: .topLeading) {
                 playhead.offset(x: VideoStudioMetrics.playheadX(screenWidth: screenWidth, gutter: lanes.gutter) - 1)
             }
-            .onAppear { viewportWidth = screenWidth }
-            .onChange(of: screenWidth) { viewportWidth = screenWidth }
+            .onAppear {
+                viewportWidth = screenWidth
+                reportVisibleDuration(screenWidth: screenWidth)
+            }
+            .onChange(of: screenWidth) {
+                viewportWidth = screenWidth
+                reportVisibleDuration(screenWidth: screenWidth)
+            }
+            .onChange(of: pps) { reportVisibleDuration(screenWidth: screenWidth) }
         }
         .frame(height: height)
         .background(EditorTheme.background)
         .clipped()
         .onChange(of: model.fitToWindowToken) { fitToWindow() }
+    }
+
+    private func reportVisibleDuration(screenWidth: CGFloat) {
+        guard let onVisibleDuration, pps > 0 else { return }
+        onVisibleDuration(Double(max(0, screenWidth - lanes.gutter) / pps))
     }
 
     /// An empty rail for every lane, the full width of the row.

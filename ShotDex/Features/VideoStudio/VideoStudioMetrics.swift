@@ -32,6 +32,121 @@ enum VideoStudioMetrics {
     /// editor's sidebar was written to avoid.
     static let inspectorColumnWidth: CGFloat = 320
 
+    // MARK: Desk chrome
+
+    /// A window this wide gets the bands a desktop-shaped editor has and a
+    /// phone cannot afford: a labelled viewer header, a transport row between
+    /// the frame and the lanes, a whole-project overview strip, and track
+    /// headers with controls on them instead of a glyph column.
+    ///
+    /// The threshold is lower than the tool rail's 700 on purpose. The rail is
+    /// a trade — 92pt of width for 62pt of height — and only pays on a
+    /// landscape tablet. These bands are not: they cost height a tall window
+    /// has going spare, and the window that needs them most is the iPhone
+    /// Duo's inner display, which is 669pt wide and never reaches 700.
+    static let deskChromeMinimumWidth: CGFloat = 600
+
+    static func usesDeskChrome(size: CGSize) -> Bool {
+        size.width >= deskChromeMinimumWidth
+    }
+
+    /// Names what is under the playhead and holds the two column toggles.
+    static let viewerHeaderHeight: CGFloat = 32
+    /// Cut tools, play controls, timecode.
+    static let transportBarHeight: CGFloat = 44
+    /// The whole-project strip above the ruler, its own padding included.
+    static let timelineOverviewHeight: CGFloat = 22
+    static var timelineOverviewBandHeight: CGFloat { timelineOverviewHeight + 8 }
+
+    /// Total height the desk bands take out of the stack.
+    static func deskChromeHeight(usesDeskChrome: Bool) -> CGFloat {
+        usesDeskChrome ? viewerHeaderHeight + transportBarHeight + timelineOverviewBandHeight : 0
+    }
+
+    /// Timecode is counted at 30fps: the studio renders at 30 and the frame
+    /// step in the transport has to land on the same grid the read-out shows,
+    /// or stepping forward one frame moves the last field by two.
+    static let timecodeFrameRate: Double = 30
+
+    /// `hh:mm:ss:ff`, the form every NLE's read-out takes. The command band's
+    /// pill keeps its shorter `m:ss.t` — it is read while scrubbing with a
+    /// thumb, not while matching a cut to a number.
+    static func timecode(_ seconds: Double) -> String {
+        let clamped = max(0, seconds)
+        let whole = Int(clamped)
+        let frames = Int((clamped - Double(whole)) * timecodeFrameRate)
+        return String(
+            format: "%02d:%02d:%02d:%02d",
+            whole / 3600,
+            (whole % 3600) / 60,
+            whole % 60,
+            min(Int(timecodeFrameRate) - 1, frames)
+        )
+    }
+
+    // MARK: Media pool
+
+    /// The library column beside the stage. 300 holds three 92pt thumbnails
+    /// with their dates under them; Resolve's iPad pool, Final Cut's browser
+    /// and LumaFusion's library all sit within 20pt of it.
+    static let mediaPoolWideWidth: CGFloat = 300
+    /// Two columns instead of three, for a window that has the room for a
+    /// pool but not for a wide one — the Duo's inner display.
+    static let mediaPoolNarrowWidth: CGFloat = 236
+    static let mediaPoolHeaderHeight: CGFloat = 34
+    static let mediaPoolToolRowHeight: CGFloat = 32
+    static let mediaPoolCellSpacing: CGFloat = 6
+
+    /// What the stage must keep once the pool and the meter have taken their
+    /// width. Lower than `minimumStageWidth`, and deliberately: the inspector
+    /// is a column the user did not ask for, while the pool is one they opened
+    /// and can close again from the same button.
+    static let mediaPoolMinimumStageWidth: CGFloat = 330
+
+    static func mediaPoolWidth(size: CGSize) -> CGFloat {
+        size.width >= 900 ? mediaPoolWideWidth : mediaPoolNarrowWidth
+    }
+
+    /// Whether the window can hold the pool at all. Below this the button is
+    /// not drawn, rather than drawn as a control that shrinks the frame to
+    /// nothing.
+    static func canShowMediaPool(size: CGSize) -> Bool {
+        guard usesDeskChrome(size: size) else { return false }
+        let taken = mediaPoolWidth(size: size)
+            + audioMeterWidth(size: size)
+            + (usesToolRail(size: size) ? railWidth : 0)
+        return size.width - taken >= mediaPoolMinimumStageWidth
+    }
+
+    /// Open from the start only where it costs the frame nothing that matters
+    /// — a full-width landscape tablet. Everywhere else it opens on the tap
+    /// that asks for it.
+    static func mediaPoolOpensByDefault(size: CGSize) -> Bool {
+        canShowMediaPool(size: size) && size.width >= 1100
+    }
+
+    static func mediaPoolColumnCount(columnWidth: CGFloat) -> Int {
+        columnWidth >= mediaPoolWideWidth ? 3 : 2
+    }
+
+    static func mediaPoolCellWidth(columnWidth: CGFloat) -> CGFloat {
+        let count = CGFloat(mediaPoolColumnCount(columnWidth: columnWidth))
+        let gaps = mediaPoolCellSpacing * (count + 1)
+        return ((columnWidth - gaps) / count).rounded(.down)
+    }
+
+    // MARK: Level meter
+
+    /// The program meter beside the viewer: a dB scale and two channel bars.
+    static let audioMeterWideWidth: CGFloat = 50
+    /// Bars without the scale, for a window that has no 50pt to spare.
+    static let audioMeterNarrowWidth: CGFloat = 32
+
+    static func audioMeterWidth(size: CGSize) -> CGFloat {
+        guard usesDeskChrome(size: size) else { return 0 }
+        return size.width >= 820 ? audioMeterWideWidth : audioMeterNarrowWidth
+    }
+
     /// A window wide enough for the rail **and** wider than it is tall gets
     /// the column: there the stage is short of height, not width, so the
     /// inspector should cost width. A portrait tablet is the opposite and
@@ -73,10 +188,16 @@ enum VideoStudioMetrics {
             && size.height >= EditorLayoutMetrics.sidebarMinCanvasHeight
     }
 
-    static func usesInspectorColumn(size: CGSize) -> Bool {
+    /// `otherColumns` is whatever else is standing beside the stage — the
+    /// media pool and the level meter. The inspector is the column that gives
+    /// way: the pool and the meter are there because the user asked for them,
+    /// and an inspector that squeezes the frame to 200pt to show controls for
+    /// a clip the user can no longer see is the trade this rule exists to
+    /// refuse.
+    static func usesInspectorColumn(size: CGSize, otherColumns: CGFloat = 0) -> Bool {
         size.width >= EditorLayoutMetrics.sidebarMinCanvasWidth
             && size.width > size.height
-            && size.width - railWidth - inspectorColumnWidth >= minimumStageWidth
+            && size.width - railWidth - inspectorColumnWidth - otherColumns >= minimumStageWidth
     }
 
     /// Width of the tool rail that replaces the bottom row on a regular-width
@@ -170,7 +291,11 @@ enum VideoStudioMetrics {
         showsBottomBar: Bool = true,
         /// Points the user has dragged the divider to give the timeline more
         /// than its lanes need. Clamped to `timelineExtraRange`.
-        timelineExtraHeight: CGFloat = 0
+        timelineExtraHeight: CGFloat = 0,
+        /// Viewer header + transport + overview, on a window wide enough for
+        /// them. They are fixed bands like the toolbar, so they come out of
+        /// the same pot the preview and the timeline divide.
+        deskChromeHeight: CGFloat = 0
     ) -> StackLayout {
         // The rail takes the tools out of the vertical stack entirely, so the
         // 62pt the row used to cost goes back to the preview and the timeline.
@@ -194,7 +319,8 @@ enum VideoStudioMetrics {
         let bottomBand = showsBottomBar ? bottomBarHeight : 0
 
         func split(lift: CGFloat, dock: CGFloat) -> StackLayout {
-            let fixed = bandHeight + previewTimelineGap + toolRow + bottomBand + bottomInset + lift + dock
+            let fixed = bandHeight + previewTimelineGap + toolRow + bottomBand
+                + bottomInset + lift + dock + deskChromeHeight
             let usable = max(0, screen.height - fixed)
             let previewCap = max(previewMinimumHeight, usable - reserve)
             var preview = min(max(natural > 0 ? natural : usable, previewMinimumHeight), previewCap)
@@ -306,6 +432,26 @@ enum VideoStudioMetrics {
 
         static let compact = Lanes(overlay: 34, video: 66, music: 40, ruler: 26, clipCell: 54, gutter: 30)
         static let regular = Lanes(overlay: 44, video: 104, music: 52, ruler: 30, clipCell: 88, gutter: 64)
+
+        /// The gutter widened into a track header column, the way every
+        /// desk-shaped editor draws one: the lane's number and name, and the
+        /// two switches that belong to a track rather than to a clip — lock
+        /// and mute. 104 is what a 3-glyph row plus a "A1" badge needs before
+        /// the glyphs fall under Apple's 44pt target on a stacked layout.
+        static let trackHeaderWidth: CGFloat = 104
+
+        /// Whether the gutter is wide enough to carry controls instead of a
+        /// glyph. Same test either way, so the ruler inset, the playhead and
+        /// the header all agree on one number.
+        var showsTrackControls: Bool { gutter >= Lanes.trackHeaderWidth }
+
+        /// The same lane heights with a track header column in front of them.
+        func withTrackHeaders(_ enabled: Bool) -> Lanes {
+            guard enabled else { return self }
+            var copy = self
+            copy.gutter = Lanes.trackHeaderWidth
+            return copy
+        }
 
         /// The glyph box in the gutter, and the symbol drawn in it. A 13pt
         /// symbol on a phone held at reading distance is the same angular

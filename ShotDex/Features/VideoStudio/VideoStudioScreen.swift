@@ -56,6 +56,15 @@ struct VideoStudioScreen: View {
     /// The drag in progress, added to the stored value while a finger is down.
     @State private var timelineDragOffset: CGFloat = 0
     @StateObject private var importedMusic = ImportedMusicStore()
+    /// The desk layout's two side columns. Both are user state, both start
+    /// where the window can afford them, and both are reachable from the
+    /// viewer header — the same place Resolve and Final Cut put them.
+    @State private var isMediaPoolOpen: Bool?
+    @State private var isInspectorOpen = true
+    /// Seconds the timeline viewport is showing, reported up by the timeline
+    /// so the project-overview strip can draw the window it stands for.
+    @State private var timelineVisibleDuration: Double = 0
+    @State private var levelMeter = VideoLevelMeterModel()
 
     private enum MediaPickerMode: Identifiable {
         case add, replace
@@ -95,7 +104,10 @@ struct VideoStudioScreen: View {
             model = newModel
             await newModel.load()
         }
-        .onDisappear { model?.close() }
+        .onDisappear {
+            model?.close()
+            levelMeter.cancelDecoding()
+        }
         .interactiveDismissDisabled(model?.hasEdits == true || isExporting)
         .alert("Discard this video?", isPresented: $isDiscardConfirmationPresented) {
             Button("Discard", role: .destructive) { dismiss() }
@@ -242,10 +254,28 @@ struct VideoStudioScreen: View {
             // The reader sits inside the safe area while the stack below ignores it,
             // so the stack's real height is the reader's plus both insets.
             let usesToolRail = usesRail
+            // The bands a desk-shaped window can afford and a phone cannot:
+            // the viewer header, the transport row, the project overview and
+            // track headers on the lanes.
+            let usesDeskChrome = VideoStudioMetrics.usesDeskChrome(size: proxy.size)
+            let canShowMediaPool = VideoStudioMetrics.canShowMediaPool(size: proxy.size)
+            let showsMediaPool = canShowMediaPool
+                && (isMediaPoolOpen ?? VideoStudioMetrics.mediaPoolOpensByDefault(size: proxy.size))
+            let mediaPoolWidth = showsMediaPool ? VideoStudioMetrics.mediaPoolWidth(size: proxy.size) : 0
+            let meterWidth = usesDeskChrome ? VideoStudioMetrics.audioMeterWidth(size: proxy.size) : 0
             // Beside the stage on a wide window, under the timeline on a tall
-            // one. Both spend the dimension the stage has to spare.
-            let usesInspectorColumn = VideoStudioMetrics.usesInspectorColumn(size: proxy.size)
-            let lanes = VideoStudioMetrics.Lanes.for(size: proxy.size)
+            // one. Both spend the dimension the stage has to spare. The pool
+            // and the meter are counted first: the inspector is the column
+            // that gives way when the window runs out of width.
+            let fitsInspectorColumn = VideoStudioMetrics.usesInspectorColumn(
+                size: proxy.size,
+                otherColumns: mediaPoolWidth + meterWidth
+            )
+            let usesInspectorColumn = fitsInspectorColumn && isInspectorOpen
+            let deskChromeHeight = VideoStudioMetrics.deskChromeHeight(usesDeskChrome: usesDeskChrome)
+            let lanes = VideoStudioMetrics.Lanes
+                .for(size: proxy.size)
+                .withTrackHeaders(usesDeskChrome)
             let layout = VideoStudioMetrics.stackLayout(
                 screen: CGSize(
                     // The preview is drawn in the column beside the rail, not
@@ -253,7 +283,9 @@ struct VideoStudioScreen: View {
                     // computed from the width it actually gets.
                     width: proxy.size.width
                         - (usesToolRail ? VideoStudioMetrics.railWidth : 0)
-                        - (usesInspectorColumn ? VideoStudioMetrics.inspectorColumnWidth : 0),
+                        - (usesInspectorColumn ? VideoStudioMetrics.inspectorColumnWidth : 0)
+                        - mediaPoolWidth
+                        - meterWidth,
                     height: proxy.size.height + proxy.safeAreaInsets.top + proxy.safeAreaInsets.bottom
                 ),
                 bandHeight: bandHeight,
@@ -279,7 +311,8 @@ struct VideoStudioScreen: View {
                 // so the bottom band is not drawn and costs no height.
                 showsBottomBar: !usesToolRail,
                 // Only where the divider exists to drag.
-                timelineExtraHeight: resizableTimeline ? CGFloat(timelineExtraHeight) + timelineDragOffset : 0
+                timelineExtraHeight: resizableTimeline ? CGFloat(timelineExtraHeight) + timelineDragOffset : 0,
+                deskChromeHeight: deskChromeHeight
             )
             // `usesRail` is measured on the window, not on the size class. An
             // iPad Split View half reports `.regular` at ~500pt, where a
@@ -300,19 +333,64 @@ struct VideoStudioScreen: View {
                             bottomInset: proxy.safeAreaInsets.bottom
                         )
                     }
+                    // The library, open beside the project the way it is in
+                    // every desk-shaped editor: a clip is one tap or one drag
+                    // from the timeline instead of a modal picker away.
+                    if showsMediaPool {
+                        VideoMediaPoolColumn(
+                            model: model,
+                            photoLibrary: dependencies.photoLibrary,
+                            width: mediaPoolWidth,
+                            topInset: bandHeight,
+                            bottomInset: proxy.safeAreaInsets.bottom,
+                            onClose: { isMediaPoolOpen = false }
+                        )
+                    }
                     VStack(spacing: 0) {
                         VideoStudioTopBand(
                             model: model,
                             projectActions: usesRail ? actions(model) : nil
                         )
                         .frame(height: bandHeight, alignment: .top)
-                        preview(model).frame(height: layout.preview)
+                        if usesDeskChrome {
+                            VideoViewerHeader(
+                                model: model,
+                                isMediaPoolOpen: canShowMediaPool ? showsMediaPool : nil,
+                                isInspectorOpen: fitsInspectorColumn ? isInspectorOpen : nil,
+                                onToggleMediaPool: { isMediaPoolOpen = !showsMediaPool },
+                                onToggleInspector: { isInspectorOpen.toggle() }
+                            )
+                        }
+                        // The meter stands beside the frame, not beside the
+                        // whole stack: it measures what the viewer is playing,
+                        // and a column of dB running past the timeline to the
+                        // bottom bar measures nothing that is down there.
+                        HStack(spacing: 0) {
+                            preview(model)
+                            if usesDeskChrome, meterWidth > 0 {
+                                VideoAudioMeterColumn(
+                                    model: model,
+                                    meter: levelMeter,
+                                    width: meterWidth
+                                )
+                            }
+                        }
+                        .frame(height: layout.preview)
+                        if usesDeskChrome {
+                            VideoTransportBar(model: model)
+                        }
                         if resizableTimeline {
                             timelineDivider
                         } else {
                             Color.clear.frame(height: VideoStudioMetrics.previewTimelineGap)
                         }
                         if !layout.hidesTimeline {
+                            if usesDeskChrome {
+                                VideoTimelineOverview(
+                                    model: model,
+                                    visibleDuration: timelineVisibleDuration
+                                )
+                            }
                             VideoTimelineView(
                             model: model,
                             height: layout.timeline,
@@ -320,7 +398,8 @@ struct VideoStudioScreen: View {
                             onAddMusic: { musicChooserIntent = .add },
                             onAddMedia: { mediaPickerMode = .add },
                             onEditText: { editingOverlay = $0 },
-                            onTransition: { model.editingTransitionIndex = $0 }
+                            onTransition: { model.editingTransitionIndex = $0 },
+                            onVisibleDuration: { timelineVisibleDuration = $0 }
                             )
                             // Drop photos or clips straight onto the timeline
                             // from Photos or Files beside us in Split View.
@@ -372,10 +451,16 @@ struct VideoStudioScreen: View {
                         // cannot reach without dismissing the panel is a tool
                         // row that costs a tap for nothing. The panel starts
                         // where the rail ends.
-                        .padding(.leading, usesRail ? VideoStudioMetrics.railWidth : 0)
+                        .padding(.leading, (usesRail ? VideoStudioMetrics.railWidth : 0) + mediaPoolWidth)
                 }
             }
             .background { keyboardShortcuts(model) }
+            // The meter reads the recipe at the playhead, so it is recomputed
+            // on the two things that change what is there: the time, and the
+            // mix itself.
+            .onChange(of: model.currentTime) { if usesDeskChrome { levelMeter.refresh(model) } }
+            .onChange(of: model.recipe) { if usesDeskChrome { levelMeter.refresh(model) } }
+            .onAppear { if usesDeskChrome { levelMeter.refresh(model) } }
             .environment(\.videoLaneMetrics, lanes)
             // The command cells and the band size off the same measured
             // window the rail and the inspector do, not off the size class.
