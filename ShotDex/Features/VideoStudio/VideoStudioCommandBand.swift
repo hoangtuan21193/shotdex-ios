@@ -20,6 +20,9 @@ struct VideoStudioTopBand: View {
     /// iPhone Duo's inner display, where the full row wrapped its timecode
     /// onto two lines.
     var stageWidth: CGFloat = .greatestFiniteMagnitude
+    /// Extra room on the trailing edge when this band runs to the screen's
+    /// own rounded corner — see `VideoStudioMetrics.displayCornerClearance`.
+    var trailingCornerClearance: CGFloat = 0
 
     @Environment(\.usesRegularToolChrome) private var usesRegularToolChrome
 
@@ -83,6 +86,7 @@ struct VideoStudioTopBand: View {
         }
         .frame(height: size)
         .padding(.horizontal, inset)
+        .padding(.trailing, trailingCornerClearance)
         // Inset the row from the band's top so it sits level with the Dynamic
         // Island, exactly like the photo editor's floating command row.
         .padding(.top, EditorLayoutMetrics.editorFloatingCommandRowTopInset)

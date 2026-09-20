@@ -365,7 +365,12 @@ struct VideoStudioScreen: View {
                                 // The meter sits inside this column, beside
                                 // the frame, so the band does not get its
                                 // width either.
-                                - meterWidth
+                                - meterWidth,
+                            // Only when nothing stands between the band and
+                            // the screen's rounded corner.
+                            trailingCornerClearance: usesInspectorColumn
+                                ? 0
+                                : VideoStudioMetrics.displayCornerClearance
                         )
                         .frame(height: bandHeight, alignment: .top)
                         if usesDeskChrome {

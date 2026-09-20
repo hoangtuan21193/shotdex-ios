@@ -63,6 +63,21 @@ enum VideoStudioMetrics {
         usesDeskChrome ? viewerHeaderHeight + transportBarHeight + timelineOverviewBandHeight : 0
     }
 
+    /// Extra trailing inset for a band that reaches the screen's own edge.
+    ///
+    /// These screens are **rounded**, and `simctl`'s default screenshot is a
+    /// rectangle, so a control parked in a top corner looks right in every
+    /// picture and is cut off on the device. Measured with the display mask
+    /// on: the corner eats 17pt of width at 14pt down on the iPhone Duo's
+    /// inner display (a ~66pt radius) and 4.5pt on a 13" iPad (~36pt). The
+    /// Export pill sat 19pt from the Duo's edge at that height — 1.7pt of
+    /// daylight, and 0.6pt at its tightest row. This is what buys it back.
+    ///
+    /// It is spent only when the band really is the trailing-most thing on
+    /// screen; with the inspector column open the band's edge is nowhere
+    /// near the glass.
+    static let displayCornerClearance: CGFloat = 16
+
     /// Timecode is counted at 30fps: the studio renders at 30 and the frame
     /// step in the transport has to land on the same grid the read-out shows,
     /// or stepping forward one frame moves the last field by two.
