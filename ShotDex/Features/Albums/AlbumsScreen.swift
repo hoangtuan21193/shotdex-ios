@@ -162,6 +162,9 @@ struct AlbumsScreen: View {
         .navigationDestination(for: TripsDestination.self) { _ in
             TripsScreen()
         }
+        .navigationDestination(for: CreationsDestination.self) { _ in
+            CreationsScreen()
+        }
         .sheet(isPresented: $isCustomizePresented) {
             CustomizeCollectionsSheet(store: dependencies.collectionsLayout)
         }
@@ -563,6 +566,21 @@ extension AlbumsScreen {
             }
             .buttonStyle(.plain)
             .contextMenu { pinButton(.trips) }
+
+            // Collages and videos this app made, with the recipe behind each.
+            // A utility rather than an album: the exported photos are already
+            // in the library, and what this row leads to is the way back into
+            // the editor.
+            if model.creationCount > 0 {
+                NavigationLink(value: CreationsDestination()) {
+                    CollectionListRow(
+                        title: String(localized: "Creations"),
+                        systemImage: "wand.and.stars",
+                        detail: model.creationCount.formatted()
+                    )
+                }
+                .buttonStyle(.plain)
+            }
 
             // Recently Deleted and Unable to Upload: library housekeeping
             // rather than browsing, so they sit with Duplicates the way

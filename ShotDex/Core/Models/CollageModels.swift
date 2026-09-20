@@ -8,7 +8,7 @@ import ShotDexKit
 /// filling), `contentOffset` pans in fractions of the cell's own size — both
 /// resolution-independent so the interactive canvas and the export resolve to
 /// the same picture.
-struct CollageCell: Equatable, Sendable {
+struct CollageCell: Equatable, Codable, Sendable {
     var assetID: String?
     var contentScale: Double = 1
     var contentOffset: NormalizedPoint = NormalizedPoint(x: 0, y: 0)
@@ -90,15 +90,20 @@ enum CollageAspect: String, CaseIterable, Identifiable, Codable, Sendable {
     }
 }
 
-/// The whole collage state. In-memory only — the export is a flat new asset,
-/// nothing is recalled from adjustment data, so there is deliberately no
-/// Codable conformance (and none of its compatibility burden).
+/// The whole collage state.
+///
+/// Codable since 2026-09-20, and it is the point of Creations: the export is
+/// a flat new asset that says nothing about which photos went in or how they
+/// were framed, so the recipe is the only way back into the editor. Nothing
+/// is read from PhotoKit adjustment data — the row in `creations` holds this
+/// JSON, and a recipe written by an older build that no longer decodes just
+/// means that creation can be seen and not reopened.
 ///
 /// `aspectRatio` is the source of truth for the canvas shape; `aspectPreset`
 /// records which named chip produced it (nil = a custom ratio). `gutter`,
 /// `cornerRadius` and `borderWidth` are fractions of the output's short edge,
 /// the same convention `PhotoOverlay.size` uses, so they survive any resolution.
-struct CollageRecipe: Equatable, Sendable {
+struct CollageRecipe: Equatable, Codable, Sendable {
     var templateID: String
     var aspectRatio: Double = 1
     var aspectPreset: CollageAspect? = .square

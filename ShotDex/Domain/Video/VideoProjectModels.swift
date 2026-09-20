@@ -6,7 +6,7 @@ import ShotDexKit
 /// editing session and its output is a flat new video asset, so nothing here
 /// carries the Codable compatibility burden of the photo recipes.
 
-enum VideoClipKind: String, Sendable {
+enum VideoClipKind: String, Codable, Sendable {
     case photo, video
     /// A single frame lifted out of a source video and held on screen, like a
     /// photo clip. `VideoClip.freezeSourceTime` says which frame; the frame is
@@ -18,7 +18,7 @@ enum VideoClipKind: String, Sendable {
 /// budget fitted to this aspect, so portrait/square exports are true canvases
 /// (the compositor letterboxes/pillarboxes over the recipe background), not a
 /// 16:9 frame with bars baked in.
-enum VideoAspect: String, CaseIterable, Identifiable, Sendable {
+enum VideoAspect: String, CaseIterable, Identifiable, Codable, Sendable {
     case r16x9, r9x16, r1x1, r4x5
 
     var id: String { rawValue }
@@ -64,7 +64,7 @@ enum VideoAspect: String, CaseIterable, Identifiable, Sendable {
 /// A per-clip look/motion effect, evaluated over the clip's own placement
 /// time by the frame compositor. Motion effects are affine-only so they read
 /// identically at preview (1280) and export resolution.
-enum VideoClipEffect: String, CaseIterable, Identifiable, Sendable {
+enum VideoClipEffect: String, CaseIterable, Identifiable, Codable, Sendable {
     case none
     case zoomIn, zoomOut, panLeft, panRight, shake
     case blurIn, blurOut, softGlow, vignettePulse
@@ -103,7 +103,7 @@ enum VideoClipEffect: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-struct VideoClip: Identifiable, Equatable, Sendable {
+struct VideoClip: Identifiable, Equatable, Codable, Sendable {
     let id: UUID
     let assetID: String
     let kind: VideoClipKind
@@ -149,7 +149,7 @@ struct VideoClip: Identifiable, Equatable, Sendable {
 
 /// How one clip hands over to the next. Every kind but `.none` overlaps the
 /// two clips by `duration` and blends them in the compositor.
-enum VideoTransitionKind: String, CaseIterable, Identifiable, Sendable {
+enum VideoTransitionKind: String, CaseIterable, Identifiable, Codable, Sendable {
     case none, crossfade, fadeBlack, slideLeft, slideRight, wipe, zoom
 
     var id: String { rawValue }
@@ -169,7 +169,7 @@ enum VideoTransitionKind: String, CaseIterable, Identifiable, Sendable {
 
 /// The transition at one boundary between adjacent clips.
 /// `recipe.transitions[i]` sits between `clips[i]` and `clips[i + 1]`.
-struct VideoBoundaryTransition: Equatable, Sendable {
+struct VideoBoundaryTransition: Equatable, Codable, Sendable {
     var kind: VideoTransitionKind = .none
     var duration: Double = 0.5
 
@@ -184,7 +184,7 @@ struct VideoBoundaryTransition: Equatable, Sendable {
 
 /// A text overlay with the window it is visible in. `duration` nil means
 /// "until the end of the video" and stays nil until the user resizes it.
-struct TimedOverlay: Equatable, Sendable, Identifiable {
+struct TimedOverlay: Equatable, Codable, Sendable, Identifiable {
     var overlay: PhotoOverlay
     var start: Double = 0
     var duration: Double?
@@ -230,7 +230,7 @@ struct TimedOverlay: Equatable, Sendable, Identifiable {
     }
 }
 
-enum MusicSource: Equatable, Sendable {
+enum MusicSource: Equatable, Codable, Sendable {
     case bundled(id: String)
     case imported(url: URL, displayName: String)
 }
@@ -238,7 +238,7 @@ enum MusicSource: Equatable, Sendable {
 /// One music bed on the timeline. A project can hold several, each with its own
 /// placement, trim and envelope; overlapping tracks stack into lanes below the
 /// video track and mix together at export.
-struct MusicTrack: Identifiable, Equatable, Sendable {
+struct MusicTrack: Identifiable, Equatable, Codable, Sendable {
     let id: UUID
     var source: MusicSource
     /// Timeline second the trimmed audio begins at.
@@ -277,7 +277,7 @@ struct MusicTrack: Identifiable, Equatable, Sendable {
     static let fadeRange: ClosedRange<Double> = 0...10
 }
 
-enum VideoRenderPreset: String, CaseIterable, Identifiable, Sendable {
+enum VideoRenderPreset: String, CaseIterable, Identifiable, Codable, Sendable {
     case hd1080
     case uhd4K
 
@@ -306,7 +306,7 @@ enum VideoStudioMode: Sendable {
     case singleVideo
 }
 
-struct VideoProjectRecipe: Equatable, Sendable {
+struct VideoProjectRecipe: Equatable, Codable, Sendable {
     var clips: [VideoClip]
     /// One entry per boundary between adjacent clips: `transitions[i]` sits
     /// between `clips[i]` and `clips[i + 1]`. Kept sized via

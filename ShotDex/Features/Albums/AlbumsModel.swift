@@ -152,6 +152,7 @@ final class AlbumsModel {
                 Self.loadSnapshot()
             }.value
             albums = snapshot.albums
+            creationCount = (try? deps?.creations.count()) ?? 0
             onThisDayCount = snapshot.onThisDayCount
             onThisDayCover = snapshot.onThisDayCover
             if let deps {
@@ -166,6 +167,10 @@ final class AlbumsModel {
         }
     }
 
+    /// How many collages and videos ShotDex has made. Drives whether the
+    /// Creations row appears at all — an empty Creations screen is a row that
+    /// only ever says "no".
+    private(set) var creationCount = 0
     /// Auto-curated collections for the Memories row.
     private(set) var memories: [Memory] = []
     /// Photos the opt-in subject scan found faces in. Empty until the user

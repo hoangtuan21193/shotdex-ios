@@ -373,6 +373,35 @@ final class AppDatabase: Sendable {
             try stripSmartAlbumRules(db, field: "rating")
         }
 
+        // What ShotDex has made: one row per collage or video, holding the
+        // recipe that produced it.
+        //
+        // Its own table for the reason `subject_scan` and the old `photo_cull`
+        // had theirs — the indexer upserts whole `photo_metadata` rows, so
+        // anything it does not know about is blanked on the next run — and
+        // because this is keyed by the *creation*, not by a photo: a collage
+        // draws on four assets and outputs a fifth, and none of those five
+        // rows is the right home for it.
+        //
+        // `recipe` is JSON text rather than columns: it is an opaque payload
+        // to SQL, nothing queries inside it, and the two recipe types it holds
+        // evolve with the editors.
+        migrator.registerMigration("v17-creations") { db in
+            try db.create(table: "creations") { t in
+                t.column("id", .text).primaryKey()
+                t.column("kind", .text).notNull()
+                // Null once the exported photo is deleted. The recipe stays:
+                // the photos it was built from usually do too.
+                t.column("assetId", .text)
+                t.column("createdAt", .integer).notNull()
+                t.column("updatedAt", .integer).notNull()
+                t.column("recipeJSON", .text).notNull()
+            }
+            // The list is "most recently edited first", which is the only sort
+            // this table is ever read in.
+            try db.create(index: "creations_updatedAt", on: "creations", columns: ["updatedAt"])
+        }
+
         return migrator
     }
 }

@@ -4,7 +4,7 @@ import CoreGraphics
 ///
 /// The same set is offered for the in ramp and the out ramp, chosen
 /// independently, the way CapCut / InShot separate "in" and "out" animations.
-enum OverlayAnimation: String, CaseIterable, Identifiable, Sendable {
+enum OverlayAnimation: String, CaseIterable, Identifiable, Codable, Sendable {
     case none
     case fade
     case slideUp

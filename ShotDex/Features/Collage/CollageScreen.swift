@@ -25,6 +25,9 @@ struct CollageScreen: View {
     /// Called with the new asset id after a successful export, so the presenter
     /// can open the new photo's detail (§12).
     var onSaved: (String) -> Void = { _ in }
+    /// Reopening a collage from Creations: its stored recipe comes back in
+    /// place of a fresh layout, and exporting updates that same row.
+    var restoring: Creation?
 
     @State private var model: CollageEditorModel?
     @State private var isExportPresented = false
@@ -65,7 +68,9 @@ struct CollageScreen: View {
                 photoLibrary: dependencies.photoLibrary,
                 indexPipeline: dependencies.indexPipeline,
                 overlayFontRecents: dependencies.overlayFontRecents,
-                presetStore: dependencies.collagePresets
+                presetStore: dependencies.collagePresets,
+                creationStore: dependencies.creations,
+                restoring: restoring
             )
             model = newModel
             newModel.loadPreviews()

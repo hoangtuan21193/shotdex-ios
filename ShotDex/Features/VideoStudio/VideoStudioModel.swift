@@ -156,26 +156,43 @@ final class VideoStudioModel {
         service: VideoStudioService,
         photoLibrary: PhotoLibraryService,
         overlayFontRecents: OverlayFontRecentsStore,
-        overlayImages: OverlayImageStore
+        overlayImages: OverlayImageStore,
+        creationStore: CreationStore? = nil,
+        /// Reopening a saved video: the stored recipe stands in for the one
+        /// built from `assets`. `load()` then resolves sources for *its*
+        /// clips, so trims, speeds, captions and music all come back.
+        restoring: Creation? = nil
     ) {
         self.mode = mode
         self.service = service
         self.photoLibrary = photoLibrary
         self.overlayFontRecents = overlayFontRecents
         self.overlayImages = overlayImages
-        self.recipe = VideoProjectRecipe(
-            clips: assets.map { asset in
-                VideoClip(
-                    assetID: asset.localIdentifier,
-                    kind: asset.mediaType == .video ? .video : .photo
-                )
-            }
-        )
+        self.creationStore = creationStore
+        self.creationID = restoring?.id ?? UUID().uuidString
+        if let stored = restoring?.videoRecipe {
+            self.recipe = stored
+        } else {
+            self.recipe = VideoProjectRecipe(
+                clips: assets.map { asset in
+                    VideoClip(
+                        assetID: asset.localIdentifier,
+                        kind: asset.mediaType == .video ? .video : .photo
+                    )
+                }
+            )
+        }
         recipe.syncTransitionsWithClips()
         if mode == .singleVideo {
             selectedClipID = recipe.clips.first?.id
         }
     }
+
+    /// Where a finished video is recorded so it can be reopened, and the id
+    /// of this project's row. Exporting a reopened video updates that row
+    /// rather than making a second one.
+    private let creationStore: CreationStore?
+    private let creationID: String
 
     var selectedClip: VideoClip? {
         guard let selectedClipID else { return nil }
@@ -1074,6 +1091,7 @@ final class VideoStudioModel {
                 }
                 exportState = .saving
                 let assetID = try await service.saveToPhotos(url: url)
+                recordCreation(assetID: assetID)
                 savedAssetID = assetID
                 exportState = .idle
                 onSaved?(assetID)
@@ -1087,6 +1105,19 @@ final class VideoStudioModel {
 
     func cancelExport() {
         exportTask?.cancel()
+    }
+
+    /// Files the finished video under Creations with the recipe that made it.
+    /// Never fails the export — the video is already in the library.
+    private func recordCreation(assetID: String) {
+        guard let creationStore else { return }
+        do {
+            try creationStore.upsert(
+                Creation.video(recipe: recipe, assetId: assetID, id: creationID)
+            )
+        } catch {
+            // Non-fatal: the video saved; only the record of how failed.
+        }
     }
 
     /// Rough output size for the export row (`~24 MB`). A bits-per-pixel model

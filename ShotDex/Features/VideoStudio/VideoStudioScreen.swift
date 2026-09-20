@@ -25,6 +25,9 @@ struct VideoStudioScreen: View {
     let assets: [PHAsset]
     let mode: VideoStudioMode
     var onSaved: (String) -> Void
+    /// Reopening a video from Creations: its stored recipe comes back in place
+    /// of a fresh project, and exporting updates that same row.
+    var restoring: Creation?
 
     @State private var model: VideoStudioModel?
     @State private var isDiscardConfirmationPresented = false
@@ -84,7 +87,9 @@ struct VideoStudioScreen: View {
                 service: dependencies.videoStudio,
                 photoLibrary: dependencies.photoLibrary,
                 overlayFontRecents: dependencies.overlayFontRecents,
-                overlayImages: dependencies.overlayImages
+                overlayImages: dependencies.overlayImages,
+                creationStore: dependencies.creations,
+                restoring: restoring
             )
             newModel.onSaved = { assetID in onSaved(assetID); dismiss() }
             model = newModel

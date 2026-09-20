@@ -387,7 +387,29 @@
         }
       }
     },
-    "%lld photos": {},
+    "%lld photos": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "1 photo"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld photos"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld photos without this info.": {},
     "%lld saved as JPEG because HEIC wasn't supported": {},
     "%lld saved to Photos": {},

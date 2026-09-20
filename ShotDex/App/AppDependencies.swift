@@ -12,6 +12,7 @@ final class AppDependencies {
     let filterSuggestions: FilterSuggestionCache
     let statisticsQueries: StatisticsQueries
     let smartAlbumStore: SmartAlbumStore
+    let creations: CreationStore
     let chartStore: ChartStore
     let photoLibrary: PhotoLibraryService
     let photoRenderer: PhotoRenderService
@@ -97,6 +98,7 @@ final class AppDependencies {
         self.filterSuggestions = filterSuggestions
         self.statisticsQueries = StatisticsQueries(database: database)
         self.smartAlbumStore = SmartAlbumStore(database: database)
+        self.creations = CreationStore(database: database)
         self.chartStore = ChartStore(database: database)
         self.photoLibrary = photoLibrary
         let photoRenderer = PhotoRenderService()

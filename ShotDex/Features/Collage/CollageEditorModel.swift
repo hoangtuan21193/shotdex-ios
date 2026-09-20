@@ -98,20 +98,37 @@ final class CollageEditorModel {
         photoLibrary: PhotoLibraryService,
         indexPipeline: IndexPipeline,
         overlayFontRecents: OverlayFontRecentsStore,
-        presetStore: CollagePresetStore
+        presetStore: CollagePresetStore,
+        creationStore: CreationStore? = nil,
+        /// Reopening a saved collage: its recipe and the row it belongs to.
+        /// The layout, styling, captions and crops come back exactly as they
+        /// were exported, because the recipe *is* what was exported.
+        restoring: Creation? = nil
     ) {
         self.assets = assets
         self.photoLibrary = photoLibrary
         self.indexPipeline = indexPipeline
         self.overlayFontRecents = overlayFontRecents
         self.presetStore = presetStore
-        let template = CollageTemplateCatalog.templates(for: assets.count).first
-        self.recipe = CollageRecipe(
-            templateID: template?.id ?? "",
-            cells: assets.map { CollageCell(assetID: $0.localIdentifier) }
-        )
+        self.creationStore = creationStore
+        self.creationID = restoring?.id ?? UUID().uuidString
+        if let stored = restoring?.collageRecipe {
+            self.recipe = stored
+        } else {
+            let template = CollageTemplateCatalog.templates(for: assets.count).first
+            self.recipe = CollageRecipe(
+                templateID: template?.id ?? "",
+                cells: assets.map { CollageCell(assetID: $0.localIdentifier) }
+            )
+        }
         self.unplaced = []
     }
+
+    /// Where a finished collage is recorded so it can be reopened, and the id
+    /// of this collage's row. Editing a reopened collage and exporting again
+    /// updates that row rather than making a second one.
+    private let creationStore: CreationStore?
+    private let creationID: String
 
     var template: CollageTemplate? {
         CollageTemplateCatalog.template(id: recipe.templateID)
@@ -667,10 +684,26 @@ final class CollageEditorModel {
             _ = await indexPipeline.indexSingle(assetId: assetID)
             await addToCollagesAlbum(assetID)
             photoLibrary.publishAppCreatedAsset()
+            recordCreation(assetID: assetID)
             didSaveAssetID = assetID
             didSave = true
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    /// Files the finished collage under Creations, with the recipe that made
+    /// it, so it can be reopened and edited instead of re-made from scratch.
+    /// Failure here never fails the save — the photo is already in the
+    /// library, which is what the user asked for.
+    private func recordCreation(assetID: String) {
+        guard let creationStore else { return }
+        do {
+            try creationStore.upsert(
+                Creation.collage(recipe: recipe, assetId: assetID, id: creationID)
+            )
+        } catch {
+            // Non-fatal: the collage saved; only the record of how failed.
         }
     }
 
