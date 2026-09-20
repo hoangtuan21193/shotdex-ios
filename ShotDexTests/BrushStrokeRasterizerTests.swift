@@ -249,3 +249,109 @@ import Testing
         #expect(!recipe.needsFullExtentLayers)
     }
 }
+
+/// The segment-by-segment pressured path in `BrushStrokeRasterizer.draw`,
+/// rendered into the exact context shape `PhotoRenderService.brushMask` uses
+/// (8-bit DeviceGray, no alpha channel, background painted black) so a
+/// pixel's value *is* the mask's coverage at that point.
+@Suite struct BrushStrokeRasterizerDrawTests {
+    private func renderedMask(_ strokes: [BrushStroke], width: Int, height: Int) -> [UInt8] {
+        guard let context = CGContext(
+            data: nil,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: width,
+            space: CGColorSpaceCreateDeviceGray(),
+            bitmapInfo: CGImageAlphaInfo.none.rawValue
+        ) else {
+            Issue.record("could not create test bitmap context")
+            return []
+        }
+        context.setFillColor(gray: 0, alpha: 1)
+        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        let shortEdge = CGFloat(min(width, height))
+        BrushStrokeRasterizer.draw(strokes, in: context, shortEdge: shortEdge) { point in
+            CGPoint(x: point.x * Double(width), y: point.y * Double(height))
+        }
+        guard let data = context.data else {
+            Issue.record("bitmap context had no backing data")
+            return []
+        }
+        let buffer = data.bindMemory(to: UInt8.self, capacity: width * height)
+        return Array(UnsafeBufferPointer(start: buffer, count: width * height))
+    }
+
+    /// How many rows in the column at `x` are painted above `threshold` — the
+    /// stroke's on-screen thickness at that point.
+    private func paintedHeight(
+        _ pixels: [UInt8], width: Int, height: Int, x: Int, threshold: UInt8 = 40
+    ) -> Int {
+        (0 ..< height).filter { y in pixels[y * width + x] >= threshold }.count
+    }
+
+    @Test func aHardPressSegmentIsWiderThanALightPressSegment() {
+        // Five points along one horizontal line: the first two segments are
+        // pressed lightly, the last two hard.
+        let stroke = BrushStroke(
+            points: [
+                NormalizedPoint(x: 0.1, y: 0.5),
+                NormalizedPoint(x: 0.3, y: 0.5),
+                NormalizedPoint(x: 0.5, y: 0.5),
+                NormalizedPoint(x: 0.7, y: 0.5),
+                NormalizedPoint(x: 0.9, y: 0.5),
+            ],
+            size: 0.3, feather: 0, flow: 1, isEraser: false,
+            pressures: [0, 0, 0, 1, 1]
+        )
+        let width = 100, height = 40
+        let pixels = renderedMask([stroke], width: width, height: height)
+        #expect(!pixels.isEmpty)
+        let light = paintedHeight(pixels, width: width, height: height, x: 20)
+        let hard = paintedHeight(pixels, width: width, height: height, x: 80)
+        #expect(hard > light, "a hard press must paint a visibly wider line than a light one")
+    }
+
+    @Test func aStrokeWithNoPressuresIsOneUniformWidthEndToEnd() {
+        let stroke = BrushStroke(
+            points: [
+                NormalizedPoint(x: 0.1, y: 0.5),
+                NormalizedPoint(x: 0.5, y: 0.5),
+                NormalizedPoint(x: 0.9, y: 0.5),
+            ],
+            size: 0.3, feather: 0, flow: 1, isEraser: false
+        )
+        let width = 100, height = 40
+        let pixels = renderedMask([stroke], width: width, height: height)
+        let start = paintedHeight(pixels, width: width, height: height, x: 20)
+        let end = paintedHeight(pixels, width: width, height: height, x: 80)
+        #expect(start == end, "a finger stroke has no pressures and draws at its nominal width throughout")
+    }
+
+    /// The state a corrupted or hand-edited recipe could hand the renderer:
+    /// a `pressures` array shorter than `points`. It must fall back to the
+    /// unpressured path rather than indexing out of bounds.
+    @Test func mismatchedPressureCountFallsBackToTheUnpressuredPath() {
+        var mismatched = BrushStroke(
+            points: [
+                NormalizedPoint(x: 0.1, y: 0.5),
+                NormalizedPoint(x: 0.5, y: 0.5),
+                NormalizedPoint(x: 0.9, y: 0.5),
+            ],
+            size: 0.3, feather: 0, flow: 1, isEraser: false
+        )
+        mismatched.pressures = [0.9] // one pressure, three points
+        let unpressured = BrushStroke(
+            points: mismatched.points,
+            size: 0.3, feather: 0, flow: 1, isEraser: false
+        )
+
+        let width = 100, height = 40
+        let mismatchedPixels = renderedMask([mismatched], width: width, height: height)
+        let unpressuredPixels = renderedMask([unpressured], width: width, height: height)
+        #expect(
+            mismatchedPixels == unpressuredPixels,
+            "a mismatched pressures count must be ignored, not partially applied"
+        )
+    }
+}

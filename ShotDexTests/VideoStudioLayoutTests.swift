@@ -278,4 +278,100 @@ struct VideoStudioLayoutTests {
             == 667 - 48 - VideoStudioMetrics.previewTimelineGap
                 - VideoStudioMetrics.toolbarHeight - VideoStudioMetrics.bottomBarHeight)
     }
+
+    /// A window smaller than the fixed bands alone (never shipped, but a
+    /// rotation or a Stage Manager resize can hand a transient size like this
+    /// for one frame) must not crash or produce NaN/negative geometry.
+    @Test func aZeroSizedScreenClampsRatherThanGoingNegative() {
+        let layout = VideoStudioMetrics.stackLayout(
+            screen: .zero, bandHeight: 0, bottomInset: 0,
+            canvas: CGSize(width: 16, height: 9), presentsSheet: false
+        )
+        #expect(layout.preview >= 0)
+        #expect(layout.timeline >= 0)
+        #expect(layout.preview.isFinite)
+        #expect(layout.timeline.isFinite)
+        // There is no usable space at all, so the preview floor is a fiction
+        // — the stack reports 150pt of preview on a 0pt-tall screen rather
+        // than reporting zero. Documented, not asserted as correct.
+        #expect(layout.preview == VideoStudioMetrics.previewMinimumHeight)
+    }
+
+    /// `bandHeight`/`bottomInset` are caller-supplied safe-area figures; a
+    /// negative one should not propagate into negative usable space.
+    @Test func aNegativeBottomInsetDoesNotProduceNegativeUsableSpace() {
+        let layout = VideoStudioMetrics.stackLayout(
+            screen: CGSize(width: 402, height: 200), bandHeight: 0, bottomInset: -1_000,
+            canvas: CGSize(width: 16, height: 9), presentsSheet: false
+        )
+        #expect(layout.preview >= 0)
+        #expect(layout.timeline >= 0)
+    }
+
+    /// A canvas that has not loaded its size yet may report a zero dimension.
+    /// `canvas.width > 0` is guarded explicitly, so this must fall back to
+    /// treating the preview as unconstrained by aspect rather than dividing
+    /// by zero.
+    @Test func aZeroWidthCanvasDoesNotDivideByZero() {
+        let layout = VideoStudioMetrics.stackLayout(
+            screen: screen, bandHeight: band, bottomInset: inset,
+            canvas: CGSize(width: 0, height: 9), presentsSheet: false
+        )
+        #expect(layout.preview.isFinite)
+        #expect(layout.timeline.isFinite)
+        #expect(!layout.preview.isNaN)
+    }
+
+    /// The handle that lets a user drag the timeline taller is clamped to
+    /// `timelineExtraRange` — dragging past the end of the range, or a stale
+    /// persisted value from before the range shrank, must not keep growing
+    /// the timeline past the documented ceiling.
+    @Test func timelineExtraHeightClampsAtItsUpperBound() {
+        let atCeiling = VideoStudioMetrics.stackLayout(
+            screen: screen, bandHeight: band, bottomInset: inset,
+            canvas: CGSize(width: 3, height: 2), presentsSheet: false,
+            timelineExtraHeight: VideoStudioMetrics.timelineExtraRange.upperBound
+        )
+        let wayPast = VideoStudioMetrics.stackLayout(
+            screen: screen, bandHeight: band, bottomInset: inset,
+            canvas: CGSize(width: 3, height: 2), presentsSheet: false,
+            timelineExtraHeight: VideoStudioMetrics.timelineExtraRange.upperBound + 10_000
+        )
+        #expect(wayPast == atCeiling, "past the range's end must clamp, not keep growing")
+    }
+
+    /// The lower end of the same clamp: a negative drag (or a stale negative
+    /// persisted value) must floor at zero extra height, not subtract from
+    /// the timeline's own minimum.
+    @Test func timelineExtraHeightClampsAtZeroRatherThanGoingNegative() {
+        let atFloor = VideoStudioMetrics.stackLayout(
+            screen: screen, bandHeight: band, bottomInset: inset,
+            canvas: CGSize(width: 3, height: 2), presentsSheet: false,
+            timelineExtraHeight: 0
+        )
+        let negative = VideoStudioMetrics.stackLayout(
+            screen: screen, bandHeight: band, bottomInset: inset,
+            canvas: CGSize(width: 3, height: 2), presentsSheet: false,
+            timelineExtraHeight: -500
+        )
+        #expect(negative == atFloor, "a negative extra height must not shrink the timeline below its own minimum")
+    }
+
+    /// A window sized to exactly the sum of both floors (a tall, narrow
+    /// portrait canvas on a modest phone height) pins the preview and the
+    /// timeline to their floors simultaneously — the case in between
+    /// `portraitCanvasIsCappedSoTheTimelineKeepsItsMinimum` (timeline at its
+    /// floor, preview with slack) and `aWindowTooShortForEverythingStandsTheTimelineDown`
+    /// (neither fits, so the timeline stands down).
+    @Test func aWindowAtExactlyBothFloorsPinsBothThere() {
+        let bothFloors = VideoStudioMetrics.previewMinimumHeight + VideoStudioMetrics.timelineMinimumHeight
+        let fixed = band + VideoStudioMetrics.previewTimelineGap
+            + VideoStudioMetrics.toolbarHeight + VideoStudioMetrics.bottomBarHeight + inset
+        let layout = VideoStudioMetrics.stackLayout(
+            screen: CGSize(width: screen.width, height: fixed + bothFloors), bandHeight: band, bottomInset: inset,
+            canvas: CGSize(width: 9, height: 16), presentsSheet: false
+        )
+        #expect(layout.preview == VideoStudioMetrics.previewMinimumHeight)
+        #expect(layout.timeline == VideoStudioMetrics.timelineMinimumHeight)
+    }
 }

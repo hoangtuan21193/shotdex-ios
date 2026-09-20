@@ -1193,14 +1193,29 @@ struct OnThisDayCard: View {
                 loadCover()
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("On This Day, \(count) photos from previous years")
+            .accessibilityLabel(Text(
+                "On This Day, \(count) photo from previous years",
+                comment: "VoiceOver label for the On This Day card"
+            ))
     }
 
+    /// "September 20 · 3 photos from previous years".
+    ///
+    /// Localized and inflected: this was a plain interpolation, so it read
+    /// "1 photos" on any day with a single match and stayed English in every
+    /// language.
     private var subtitle: String {
         let date = Date.now.formatted(.dateTime.month(.wide).day())
-        return count == 0
-            ? "\(date) · No photos in previous years"
-            : "\(date) · \(count) photos from previous years"
+        guard count > 0 else {
+            return String(
+                localized: "\(date) · No photos in previous years",
+                comment: "On This Day card subtitle when nothing matches today's date"
+            )
+        }
+        return String(
+            localized: "\(date) · \(count) photo from previous years",
+            comment: "On This Day card subtitle: the date and how many photos it found"
+        )
     }
 
     private func loadCover() {

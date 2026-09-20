@@ -98,7 +98,7 @@ struct RuleBuilderSections: View {
             Text("Conditions")
         } footer: {
             if let matchCount {
-                Text("Matches ^[\(matchCount) photo](inflect: true).")
+                Text("Matches \(matchCount) photo.")
             }
         }
     }

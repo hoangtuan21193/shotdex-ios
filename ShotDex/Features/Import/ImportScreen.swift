@@ -136,10 +136,10 @@ struct ImportScreen: View {
             Image(systemName: model.importFailures.isEmpty ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                 .font(.system(size: 48))
                 .foregroundStyle(model.importFailures.isEmpty ? .green : .orange)
-            Text("Imported ^[\(model.importedCount) item](inflect: true)")
+            Text("Imported \(model.importedCount) item")
                 .font(.title3.weight(.semibold))
             if !model.importFailures.isEmpty {
-                Text("^[\(model.importFailures.count) file](inflect: true) couldn't be imported.")
+                Text("\(model.importFailures.count) file couldn't be imported.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -160,7 +160,7 @@ struct ImportScreen: View {
 
     private var statusBar: some View {
         HStack(spacing: 12) {
-            Text("^[\(model.visibleCandidates.count) item](inflect: true)")
+            Text("\(model.visibleCandidates.count) item")
                 .font(.footnote.weight(.medium))
             if model.hideRaw && model.rawCount > 0 {
                 Text("\(model.rawCount) RAW hidden")
@@ -230,7 +230,7 @@ struct ImportScreen: View {
                 model.startImport()
             } label: {
                 Text(model.importableCount > 0
-                     ? "Import ^[\(model.importableCount) item](inflect: true)"
+                     ? "Import \(model.importableCount) item"
                      : "Select items to import")
                     .frame(maxWidth: .infinity)
             }

@@ -226,9 +226,16 @@ enum AssetMetadataReader {
     /// `RAW`, `JPEG`, `Paired Video` — the format where the filename gives
     /// one, the resource's own kind where it does not.
     private static func resourceHeading(_ resource: PHAssetResource) -> String {
-        let kind = resourceTypeName(resource.type)
         let ext = URL(fileURLWithPath: resource.originalFilename).pathExtension
-        guard let format = FileTypeBadge.text(forExtension: ext) else { return kind }
+        return resourceHeadingText(kind: resourceTypeName(resource.type), fileExtension: ext)
+    }
+
+    /// The composition rule `resourceHeading` applies, pulled out on its own
+    /// so it can be unit-tested without a live `PHAssetResource` — PhotoKit
+    /// hands those out only from `assetResources(for:)`, never from an
+    /// initializer a test could call.
+    static func resourceHeadingText(kind: String, fileExtension: String) -> String {
+        guard let format = FileTypeBadge.text(forExtension: fileExtension) else { return kind }
         // "Photo · RAW" reads as a label; "Paired Video · MOV" does not add
         // anything the kind has not already said.
         return kind == "Photo" ? format : "\(kind) · \(format)"

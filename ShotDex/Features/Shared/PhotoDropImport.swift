@@ -62,12 +62,12 @@ enum PhotoDropImport {
         switch destination {
         case .library:
             String(
-                localized: "^[\(count) photo](inflect: true) added to your library",
+                localized: "\(count) photo added to your library",
                 comment: "Toast after importing photos dropped from another app"
             )
         case .libraryAndTimeline:
             String(
-                localized: "^[\(count) item](inflect: true) added to your library and to the timeline",
+                localized: "\(count) item added to your library and to the timeline",
                 comment: "Toast after dropping media onto the Video Studio timeline from another app"
             )
         }
@@ -75,7 +75,7 @@ enum PhotoDropImport {
 
     static func failureMessage(count: Int) -> String {
         String(
-            localized: "^[\(count) item](inflect: true) couldn't be imported.",
+            localized: "\(count) item couldn't be imported.",
             comment: "Toast when items dropped from another app could not be read"
         )
     }

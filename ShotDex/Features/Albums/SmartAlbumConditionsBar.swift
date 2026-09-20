@@ -12,7 +12,7 @@ struct SmartAlbumConditionsBar: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("^[\(matchCount) photo](inflect: true)")
+                Text("\(matchCount) photo")
                     .font(.subheadline.weight(.semibold))
                 Spacer()
                 if rules.count > 1 {

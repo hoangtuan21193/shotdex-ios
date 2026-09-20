@@ -481,7 +481,7 @@ struct CompareScreen: View {
             // between, and Polish and Russian have more forms than two.
             Label {
                 Text(
-                    "Delete ^[\(markedCount) Photo](inflect: true)",
+                    "Delete \(markedCount) Photo",
                     comment: "Compare: button that deletes every marked photo"
                 )
             } icon: {
@@ -499,7 +499,7 @@ struct CompareScreen: View {
         .disabled(isDeleting)
         .accessibilityLabel(
             Text(
-                "Delete ^[\(markedCount) marked photo](inflect: true)",
+                "Delete \(markedCount) marked photo",
                 comment: "VoiceOver label for Compare's delete button"
             )
         )
