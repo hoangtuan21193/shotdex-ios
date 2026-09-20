@@ -284,7 +284,22 @@ struct CollageScreen: View {
                 // Dynamic Island rather than below the status bar.
                 .ignoresSafeArea(.container, edges: .top)
 
-            if model.isLiftingCell {
+            if model.isImportingDrop {
+                // A drop from another app copies the file into the photo
+                // library before it can fill a slot; on a large video or an
+                // iCloud original that is seconds, not a frame.
+                HStack(spacing: AppTheme.Spacing.sm) {
+                    ProgressView().controlSize(.small).tint(.white)
+                    Text("Adding to your library…")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.white)
+                }
+                .padding(.horizontal, AppTheme.Spacing.md)
+                .padding(.vertical, AppTheme.Spacing.sm)
+                .background(Capsule().fill(EditorTheme.panelSolid))
+                .padding(.bottom, CollageMetrics.panelHeight + AppTheme.Spacing.md)
+                .transition(.opacity)
+            } else if model.isLiftingCell {
                 CollageSwapHUD()
                     .padding(.bottom, CollageMetrics.panelHeight + AppTheme.Spacing.md)
             } else if let message = model.undoToastMessage {

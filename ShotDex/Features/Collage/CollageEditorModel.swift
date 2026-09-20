@@ -341,6 +341,40 @@ final class CollageEditorModel {
     /// Pulses the tray border once — a photo just landed there.
     private func flashTray() { trayFlashToken &+= 1 }
 
+    // MARK: Drops from other apps
+
+    /// A drop from another app is being written into the photo library. The
+    /// canvas dims its slot while this is true — an import is a file copy and
+    /// an iCloud round trip, not an instant.
+    var isImportingDrop = false
+
+    /// Photos imported by a drop that the user did not aim at a specific
+    /// slot. They go to the tray rather than overwriting whatever the cells
+    /// already hold.
+    func addToTray(_ ids: [String]) {
+        guard !ids.isEmpty else { return }
+        checkpoint()
+        ingest(ids)
+        unplaced.append(contentsOf: ids)
+        flashTray()
+    }
+
+    /// Says what the import did. A drop from another app adds to the user's
+    /// photo library, and an app that does that silently is an app that has
+    /// put photos somewhere the user did not watch it put them.
+    func reportDropImport(added: Int, failed: Int) {
+        if added > 0 {
+            undoToastMessage = added == 1
+                ? String(localized: "Photo added to your library")
+                : String(localized: "\(added) photos added to your library")
+        }
+        if failed > 0 {
+            errorMessage = failed == 1
+                ? String(localized: "One item couldn't be imported.")
+                : String(localized: "\(failed) items couldn't be imported.")
+        }
+    }
+
     /// Picks a template for the current slot count after the count changed.
     private func retargetTemplate() {
         if CollageTemplateCatalog.template(id: recipe.templateID)?.cellCount != slotCount {

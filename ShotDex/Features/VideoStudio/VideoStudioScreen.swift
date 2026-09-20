@@ -314,6 +314,14 @@ struct VideoStudioScreen: View {
                             onEditText: { editingOverlay = $0 },
                             onTransition: { model.editingTransitionIndex = $0 }
                             )
+                            // Drop photos or clips straight onto the timeline
+                            // from Photos or Files beside us in Split View.
+                            .onDrop(
+                                of: [PhotoDragItem.assetIdentifierType] + PhotoDropImport.acceptedTypes,
+                                isTargeted: nil
+                            ) { providers in
+                                appendDroppedMedia(providers, to: model)
+                            }
                         }
                         // Sits under the panel; keeps the timeline above it.
                         Color.clear.frame(height: layout.lift)
@@ -367,6 +375,62 @@ struct VideoStudioScreen: View {
             .animation(EditorTheme.animation, value: model.presentsSheet)
             .ignoresSafeArea(.container, edges: [.top, .bottom])
             .ignoresSafeArea(.keyboard, edges: .bottom)
+        }
+    }
+
+    /// Media dropped on the timeline. From inside ShotDex it is an asset
+    /// identifier and appends at once; from another app it is a file, and a
+    /// clip can only reference a `PHAsset`, so it is imported into the
+    /// library first and appended when it lands.
+    private func appendDroppedMedia(_ providers: [NSItemProvider], to model: VideoStudioModel) -> Bool {
+        let inApp = providers.filter {
+            $0.hasItemConformingToTypeIdentifier(PhotoDragItem.assetIdentifierType)
+        }
+        if !inApp.isEmpty {
+            Task { @MainActor in
+                var ids: [String] = []
+                for provider in inApp {
+                    let data: Data? = await withCheckedContinuation { continuation in
+                        _ = provider.loadDataRepresentation(
+                            forTypeIdentifier: PhotoDragItem.assetIdentifierType
+                        ) { data, _ in continuation.resume(returning: data) }
+                    }
+                    if let data, let id = String(data: data, encoding: .utf8) { ids.append(id) }
+                }
+                appendMedia(ids: ids, to: model, imported: 0, failed: 0)
+            }
+            return true
+        }
+        guard PhotoDropImport.canImport(providers) else { return false }
+        Task { @MainActor in
+            let result = await PhotoDropImport.importAssets(
+                from: providers,
+                into: dependencies.photoLibrary
+            )
+            appendMedia(ids: result.ids, to: model, imported: result.ids.count, failed: result.failures)
+        }
+        return true
+    }
+
+    @MainActor
+    private func appendMedia(ids: [String], to model: VideoStudioModel, imported: Int, failed: Int) {
+        let assets = PhotoLibraryService.fetchAssets(ids: ids)
+        let picks = assets.map {
+            VideoMediaPick(assetID: $0.localIdentifier, kind: $0.mediaType == .video ? .video : .photo)
+        }
+        if !picks.isEmpty { model.appendMedia(picks) }
+        // An import writes to the user's photo library; saying so is the
+        // difference between adding a clip and putting a file somewhere they
+        // did not watch it go.
+        if imported > 0 {
+            model.errorMessage = imported == 1
+                ? String(localized: "Photo added to your library and to the timeline.")
+                : String(localized: "\(imported) items added to your library and to the timeline.")
+        }
+        if failed > 0 {
+            model.errorMessage = failed == 1
+                ? String(localized: "One item couldn't be imported.")
+                : String(localized: "\(failed) items couldn't be imported.")
         }
     }
 

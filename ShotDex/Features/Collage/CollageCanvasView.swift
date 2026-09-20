@@ -17,6 +17,7 @@ import ShotDexKit
 /// whole cell" from "sliding the photo inside it".
 struct CollageCanvasView: View {
     @Environment(\.usesRegularToolChrome) private var usesRegularToolChrome
+    @Environment(PhotoLibraryService.self) private var photoLibrary
     @Bindable var model: CollageEditorModel
     let onFillRequest: (Int) -> Void
     let onEditText: (PhotoOverlay) -> Void
@@ -192,15 +193,11 @@ struct CollageCanvasView: View {
         // now hands out a `PhotoDragItem` provider rather than a bare string,
         // so the identifier arrives under ShotDex's own private type — which
         // is also what keeps another app's text from looking like a photo.
-        .onDrop(of: [PhotoDragItem.assetIdentifierType], isTargeted: nil) { providers in
-            guard let provider = providers.first else { return false }
-            _ = provider.loadDataRepresentation(
-                forTypeIdentifier: PhotoDragItem.assetIdentifierType
-            ) { data, _ in
-                guard let data, let id = String(data: data, encoding: .utf8) else { return }
-                Task { @MainActor in model.fillSlot(index, with: id) }
-            }
-            return true
+        .onDrop(
+            of: [PhotoDragItem.assetIdentifierType] + PhotoDropImport.acceptedTypes,
+            isTargeted: nil
+        ) { providers in
+            drop(providers, into: index)
         }
         .onTapGesture { tap(index) }
         .gesture(liftGesture(index: index, frames: frames))
@@ -417,6 +414,38 @@ struct CollageCanvasView: View {
     /// to outlive the touch — SwiftUI clears it on end *and* on cancel. The drop
     /// is committed in `onEnded`; a cancelled gesture simply returns the photo.
     /// The 0.5s hold keeps a plain pan from being mistaken for a lift.
+    /// A photo dropped on a cell. From inside ShotDex it is an identifier and
+    /// lands immediately; from another app it is a file, and a collage slot
+    /// can only hold a `PHAsset`, so it is imported into the library first
+    /// and the cell is filled when it arrives.
+    private func drop(_ providers: [NSItemProvider], into index: Int) -> Bool {
+        if let provider = providers.first(where: {
+            $0.hasItemConformingToTypeIdentifier(PhotoDragItem.assetIdentifierType)
+        }) {
+            _ = provider.loadDataRepresentation(
+                forTypeIdentifier: PhotoDragItem.assetIdentifierType
+            ) { data, _ in
+                guard let data, let id = String(data: data, encoding: .utf8) else { return }
+                Task { @MainActor in model.fillSlot(index, with: id) }
+            }
+            return true
+        }
+        guard PhotoDropImport.canImport(providers) else { return false }
+        Task { @MainActor in
+            model.isImportingDrop = true
+            let result = await PhotoDropImport.importAssets(from: providers, into: photoLibrary)
+            model.isImportingDrop = false
+            if let first = result.ids.first {
+                model.fillSlot(index, with: first)
+                // The rest go to the tray rather than overwriting cells the
+                // user did not aim at.
+                model.addToTray(Array(result.ids.dropFirst()))
+            }
+            model.reportDropImport(added: result.ids.count, failed: result.failures)
+        }
+        return true
+    }
+
     private func liftGesture(index: Int, frames: [CGRect]) -> some Gesture {
         LongPressGesture(minimumDuration: 0.5)
             .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named("collageCanvas")))
