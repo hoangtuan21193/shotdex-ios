@@ -26,8 +26,8 @@ Sources: `hig-components` (two passes), `device-layout` (iPhone 17 + iPad Pro 13
 
 ## Nits
 
-- [ ] `VideoStudioMetrics.swift:139` — 20pt lane glyphs in the timeline gutter, decorative but hard to read at iPad distance _(device-layout)_
-- [ ] `CollageMetrics.swift:70,72` — the counter (32pt) and Export pill (38pt) are legible but phone-scaled _(device-layout)_
+- [x] ~~`VideoStudioMetrics.swift:139` — 20pt lane glyphs in the timeline gutter~~ — done 2026-09-20: the glyph box and symbol follow the lane tier (20/13 compact, 26/16 regular) and the column centres the whole glyph-plus-name stack on the lane. Screenshotted on iPad Pro 13" and iPhone 17.
+- [x] ~~`CollageMetrics.swift:70,72` — the counter (32pt) and Export pill (38pt) are phone-scaled~~ — done 2026-09-20: 44 and 48 at regular width, and the compact counter's step buttons reach 44 through the hit shape.
 - [x] `PhotoDetailScreen.swift:733` — the Flag or Rate submenu did not mark the state already in effect _(hig-components)_
 
 ## Decided (2026-09-19)
@@ -99,14 +99,14 @@ Agents: `copy-consistency`, `data-migration` (done) · `component-consistency`, 
 - [x] `Features/Editing/PhotoEditorController.swift:619` — Upright fell back to the *edited* preview when the original render was missing, which is the compounding-correction bug its own comment forbids _(ux-reviewer)_
 - [x] `Features/VideoStudio/VideoStudioScreen.swift:282` — the contextual panel covered the new 92pt rail; confirmed on the iPad and now inset past it _(device-layout)_
 - [x] `Features/VideoStudio/VideoStudioCommandBand.swift` — the sheet's own command cells stayed 52×54 with 9.5pt labels while the band and rail beside them grew _(device-layout)_
-- [ ] `Features/VideoStudio/VideoStudioSheetHost.swift` — every metric in the contextual sheet (264pt height, 36/112pt tiers, 22pt chips, 40pt add button) is phone-only with no regular-width branch _(device-layout)_
+- [x] ~~`Features/VideoStudio/VideoStudioSheetHost.swift` — every metric in the contextual sheet is phone-only~~ — partly struck, partly fixed 2026-09-20. The sheet becomes a fixed 320pt column at regular width, so its heights are not "phone-scaled" — the column is narrow on both. What *was* wrong is the touch targets: the typeface button (40) and Bold/Italic toggles (36) now reach 44 through the hit shape. The 22pt badge is decorative, not a control.
 
 ### Nits
 
 - [x] `Domain/Editing/LookPresetStore.swift:69` — re-saving a look under the same name kept the old timestamp, so the strip re-ordered itself after relaunch _(ux-reviewer)_
 - [x] `Features/Editing/PhotoEditorScreen.swift:607` — Save Look with a cleared name closed the alert as though it had saved _(ux-reviewer)_
 - [x] `Features/Editing/EditorOverlayGuides.swift:207` — the on-canvas move target has no `accessibilityHidden`, so VoiceOver may stop on a blank rectangle _(a11y-voiceover)_
-- [ ] Editor Back/Save buttons on the band stay 38/42pt while the circles beside them went to 44 _(device-layout)_
+- [x] ~~Editor Back/Save buttons on the band stay 38/42pt~~ — done 2026-09-20: both take the band's own size at regular width, and the row's height follows it instead of being pinned to 42.
 
 ### Needs a decision
 
@@ -366,4 +366,15 @@ Closing out `ios26-parity`, `copy-consistency` and `localization` leftovers.
     thing.
   - **Collection everywhere** (2 strings inside the sheet + the empty state).
     Costs the match with Import and with PhotoKit's own vocabulary.
+
+## Sweep 10, continued — the device-layout leftovers (2026-09-20)
+
+All four `device-layout` items above are closed, each verified on the device
+it was reported against rather than on the build alone. What is left in this
+file is the list below, and none of it is a layout number:
+
+- the four tools with no sightless path (**Needs a decision**),
+- the two tiled-render items, which want Instruments on real hardware,
+- the Video Studio's accessibility tree not settling at compact width,
+- Album vs Collection (**Needs a decision**).
 
