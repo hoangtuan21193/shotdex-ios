@@ -83,6 +83,24 @@ enum CollageMetrics {
     /// Export pill (§12): a labelled button, not a round confirm.
     static let exportPillHeight: CGFloat = 38
 
+    /// Same rule as the command discs and the template tiles: a regular-width
+    /// window grows the tool's own controls, because 32 and 38 are the
+    /// phone's numbers and nothing on a 1032pt stage is competing for the
+    /// points. At regular width both clear 44 outright, so no hit inset is
+    /// needed there.
+    static func counterHeight(isRegularWidth: Bool) -> CGFloat {
+        isRegularWidth ? 44 : counterHeight
+    }
+
+    static func exportPillHeight(isRegularWidth: Bool) -> CGFloat {
+        isRegularWidth ? 48 : exportPillHeight
+    }
+
+    /// What the compact counter's step buttons add to their hit shape to
+    /// reach 44 from a 32pt row — DESIGN.md §308's rule for a tier-D control
+    /// that keeps its drawn size.
+    static let counterStepHitInset: CGFloat = -((AppTheme.Size.minTouch - counterHeight) / 2)
+
     // MARK: Aspect chips
 
     static let aspectChipHeight: CGFloat = 28

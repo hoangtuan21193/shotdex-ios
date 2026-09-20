@@ -107,6 +107,11 @@ private struct CollageCounterRow: View {
     @Bindable var model: CollageEditorModel
     let onSavePreset: () -> Void
 
+    @Environment(\.usesRegularToolChrome) private var usesRegularToolChrome
+    private var rowHeight: CGFloat {
+        CollageMetrics.counterHeight(isRegularWidth: usesRegularToolChrome)
+    }
+
     var body: some View {
         HStack(spacing: 0) {
             HStack(spacing: AppTheme.Spacing.md) {
@@ -122,7 +127,7 @@ private struct CollageCounterRow: View {
                 }
             }
             .padding(.horizontal, AppTheme.Spacing.md)
-            .frame(height: CollageMetrics.counterHeight)
+            .frame(height: rowHeight)
             .background(RoundedRectangle.app(AppTheme.Radius.sm + 1).fill(Color.white.opacity(0.07)))
 
             Spacer(minLength: AppTheme.Spacing.sm)
@@ -136,8 +141,10 @@ private struct CollageCounterRow: View {
             Image(systemName: symbol)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(enabled ? .white : EditorTheme.dimText)
-                .frame(width: AppTheme.Size.minTouch, height: CollageMetrics.counterHeight)
-                .contentShape(Rectangle())
+                .frame(width: AppTheme.Size.minTouch, height: rowHeight)
+                // 32pt tall on a phone, so the shape reaches past the row to
+                // make the target square.
+                .contentShape(Rectangle().inset(by: CollageMetrics.counterStepHitInset))
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
@@ -152,7 +159,7 @@ private struct CollageCounterRow: View {
                 .font(EditorTheme.pillLabel)
                 .foregroundStyle(EditorTheme.secondaryText)
                 .padding(.horizontal, AppTheme.Spacing.md)
-                .frame(height: CollageMetrics.counterHeight)
+                .frame(height: rowHeight)
                 .overlay(
                     Capsule().strokeBorder(EditorTheme.glassStroke, lineWidth: 1)
                 )

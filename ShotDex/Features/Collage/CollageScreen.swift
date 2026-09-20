@@ -513,6 +513,8 @@ private struct CollageBottomBar: View {
     let onBack: () -> Void
     let onExport: () -> Void
 
+    @Environment(\.usesRegularToolChrome) private var usesRegularToolChrome
+
     var body: some View {
         HStack(spacing: 0) {
             backButton
@@ -569,7 +571,7 @@ private struct CollageBottomBar: View {
                         .foregroundStyle(.black)
                 }
             }
-            .frame(height: CollageMetrics.exportPillHeight)
+            .frame(height: CollageMetrics.exportPillHeight(isRegularWidth: usesRegularToolChrome))
             .padding(.horizontal, AppTheme.Spacing.xl)
             .background(EditorTheme.accent, in: Capsule())
         }
