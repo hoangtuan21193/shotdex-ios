@@ -86,16 +86,31 @@ enum EditorTheme {
     // a fixed box holds real text.
     static let sidebarTitle = Font.system(.headline, design: .default).weight(.semibold)
     static let sidebarGroupLabel = Font.system(.subheadline, design: .default).weight(.semibold)
-    static let sidebarToolLabel = Font.system(.caption2, design: .default)
     static let sidebarActionLabel = Font.system(.subheadline, design: .default).weight(.semibold)
     /// The glyph in a 34pt band/sidebar disc. Matched to the icon, not to text,
     /// so it stays inside its circle (DESIGN.md §7.1 allows this exception).
     static let commandGlyph = Font.system(size: 15, weight: .medium)
 
-    /// Temp and Tint get a coloured trough instead of the grey one, so the
-    /// direction of the correction is readable without moving the knob.
+    /// The colour rows get a coloured trough instead of the grey one, so what
+    /// the slider does is readable without moving the knob — the same four
+    /// tracks Lightroom tints in its Color panel. Temp and Tint show the two
+    /// directions of a white-balance correction; Saturation and Vibrance show
+    /// grey on the left running to full colour on the right, which is the whole
+    /// definition of both.
     static func troughGradient(for kind: PhotoAdjustmentKind) -> LinearGradient? {
         switch kind {
+        case .saturation, .vibrance:
+            LinearGradient(
+                colors: [
+                    Color(white: 0.45),
+                    Color(red: 0.95, green: 0.45, blue: 0.35),
+                    Color(red: 0.98, green: 0.82, blue: 0.25),
+                    Color(red: 0.3, green: 0.78, blue: 0.5),
+                    Color(red: 0.25, green: 0.55, blue: 0.98),
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
         case .warmth, .rawTemperature:
             LinearGradient(
                 colors: [Color(red: 0.24, green: 0.55, blue: 1), Color(red: 1, green: 0.6, blue: 0.2)],

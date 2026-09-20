@@ -140,7 +140,25 @@ struct EditorFilmstrip: View {
     /// Pins or unpins a frame as the reference. Nil on the phone, where there
     /// is no room to show one.
     var toggleReference: ((Int) -> Void)?
+    /// Shorter frames beside a wide canvas. The sidebar already spends the
+    /// window's width; the strip should not also spend a tenth of its height,
+    /// and at 56pt a frame is still large enough to pick between two takes —
+    /// which is the only reason the run is on screen. The phone keeps 96,
+    /// where the strip is the only way back to the other photos.
+    var isCompact = false
     var select: (Int) -> Void
+
+    private var thumbnailSide: CGFloat {
+        isCompact
+            ? EditorLayoutMetrics.wideFilmstripThumbnailSide
+            : EditorLayoutMetrics.filmstripThumbnailSide
+    }
+
+    private var stripHeight: CGFloat {
+        isCompact
+            ? EditorLayoutMetrics.wideFilmstripHeight
+            : EditorLayoutMetrics.filmstripHeight
+    }
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -153,7 +171,7 @@ struct EditorFilmstrip: View {
                 }
                 .padding(.horizontal, AppTheme.Spacing.md)
             }
-            .frame(height: EditorLayoutMetrics.filmstripHeight)
+            .frame(height: stripHeight)
             .background(EditorTheme.panelSolid)
             .overlay(alignment: .top) {
                 Rectangle().fill(EditorTheme.panelTopHairline).frame(height: 1)
@@ -173,10 +191,7 @@ struct EditorFilmstrip: View {
             select(index)
         } label: {
             EditorFilmstripThumbnail(asset: asset, photoLibrary: photoLibrary)
-                .frame(
-                    width: EditorLayoutMetrics.filmstripThumbnailSide,
-                    height: EditorLayoutMetrics.filmstripThumbnailSide
-                )
+                .frame(width: thumbnailSide, height: thumbnailSide)
                 .clipShape(RoundedRectangle.app(AppTheme.Radius.sm))
                 .overlay {
                     RoundedRectangle.app(AppTheme.Radius.sm)

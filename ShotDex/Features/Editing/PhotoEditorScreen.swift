@@ -578,10 +578,11 @@ struct PhotoEditorScreen: View {
                 if isWide {
                     wideBody(
                         controller,
-                        // The editor claims the safe areas, so the band has to
-                        // carry the status bar itself — `max` would tuck the
-                        // Back/Save row under an iPad Split View's clock.
-                        bandHeight: 56 + proxy.safeAreaInsets.top,
+                        // The editor claims the safe areas, so the bar has to
+                        // carry the top one itself — `max` would tuck the
+                        // Back/Save row under an iPad Split View's clock. 52 is
+                        // the 44pt row with 4pt of air above and below it.
+                        bandHeight: 52 + proxy.safeAreaInsets.top,
                         safeArea: proxy.safeAreaInsets,
                         canvasWidth: proxy.size.width,
                         canvasHeight: proxy.size.height
@@ -801,7 +802,9 @@ struct PhotoEditorScreen: View {
                     showsDocumentControls: true,
                     // The panel carries the histogram — the pill would be the
                     // same graph twice, 40pt apart.
-                    showsHistogram: !showsPanel
+                    showsHistogram: !showsPanel,
+                    showsSave: !showsPanel,
+                    topInset: safeArea.top + AppTheme.Spacing.xs
                 )
                 .transition(.opacity)
             }
@@ -905,7 +908,8 @@ struct PhotoEditorScreen: View {
                             session.toggleReference(at: index)
                         }
                     }
-                    : nil
+                    : nil,
+                isCompact: chrome.isWideLayout
             ) { index in
                 selectPhoto(at: index)
             }
@@ -1040,38 +1044,12 @@ struct PhotoEditorScreen: View {
         canvasWidth: CGFloat
     ) -> some View {
         VStack(spacing: 0) {
-            // The editor ignores the container's safe areas so the photo can use
-            // them; the sidebar is chrome and has to put them back, or its header
-            // sits under an iPad Split View's status bar and Save sits in the
-            // home-indicator swipe strip.
-            Color.clear.frame(height: safeArea.top)
-
-            HStack(spacing: 0) {
-                backButton(controller, side: AppTheme.Size.minTouch)
-                Spacer(minLength: 8)
-                Text("Edit")
-                    .font(EditorTheme.sidebarTitle)
-                    .foregroundStyle(.white)
-                Spacer(minLength: 8)
-                Button {
-                    setSidebarHidden(true)
-                } label: {
-                    Image(systemName: sidebarEdge.collapseIcon)
-                        .font(EditorTheme.commandGlyph)
-                        .foregroundStyle(EditorTheme.secondaryText)
-                        .frame(width: AppTheme.Size.minTouch, height: AppTheme.Size.minTouch)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Hide Tools")
-            }
-            .padding(.horizontal, AppTheme.Spacing.md)
-            .frame(height: EditorLayoutMetrics.sidebarHeaderHeight)
-
             // The histogram is the first thing in the panel and it never leaves,
             // the way every desktop raw editor has it: it is read continuously
             // while the sliders move, so parking it behind a tap (the phone's
-            // band mini) would be one tap per glance.
+            // band mini) would be one tap per glance. Lightroom floats it over
+            // the photo instead; this stays put, because a graph that moves is
+            // a graph that has to be found again.
             EditorHistogramSparkline(histogram: controller.histogram)
                 .padding(AppTheme.Spacing.sm)
                 .frame(height: EditorLayoutMetrics.sidebarHistogramHeight)
@@ -1080,64 +1058,43 @@ struct PhotoEditorScreen: View {
                     in: RoundedRectangle.app(AppTheme.Radius.lg)
                 )
                 .padding(.horizontal, AppTheme.Spacing.md)
+                .padding(.top, AppTheme.Spacing.md)
                 .padding(.bottom, AppTheme.Spacing.sm)
                 .accessibilityElement()
                 .accessibilityLabel("RGB histogram")
                 .accessibilityValue(histogramClippingSummary(controller))
 
-            HStack(spacing: AppTheme.Spacing.sm) {
-                circleCommand("arrow.uturn.backward", isEnabled: controller.canUndo) {
-                    controller.undo()
-                }
-                .accessibilityLabel("Undo")
-                circleCommand("arrow.uturn.forward", isEnabled: controller.canRedo) {
-                    controller.redo()
-                }
-                .accessibilityLabel("Redo")
-                beforeAfterButton(controller)
-                // Fit ⇄ fill, the double tap's visible twin. A gesture nobody
-                // can see is not a feature on a screen this size.
-                circleCommand(
-                    isFillingCanvas
-                        ? "arrow.down.forward.and.arrow.up.backward"
-                        : "arrow.up.backward.and.arrow.down.forward",
-                    isEnabled: true,
-                    isActive: isFillingCanvas
-                ) {
-                    chrome.requestFillZoomToggle()
-                }
-                .accessibilityLabel(isFillingCanvas ? "Fit Photo" : "Fill Screen")
-                Spacer(minLength: 8)
-                overflowMenu(controller, showsSidebarControls: true)
-            }
-            .padding(.horizontal, AppTheme.Spacing.md)
-            .padding(.bottom, AppTheme.Spacing.sm)
+            sidebarModeHeader(controller)
 
             Rectangle().fill(EditorTheme.panelDivider).frame(height: 1)
 
-            sidebarToolStrip(controller)
+            if railMode == .edit {
+                sidebarLookRow(controller)
+                Rectangle().fill(EditorTheme.panelDivider).frame(height: 1)
+            }
 
             ScrollView(.vertical) {
                 LazyVStack(spacing: 0) {
-                    // Whichever stage tool is up gets its panel first, above the
-                    // parameter stack — it is the thing the user just picked.
-                    if let tool = activeStageTool {
-                        sidebarSectionBody(tool, controller: controller)
-                            .padding(.bottom, AppTheme.Spacing.sm)
-                        Rectangle().fill(EditorTheme.panelDivider).frame(height: 1)
-                    }
-
-                    ForEach(Self.sidebarParameterGroups) { group in
-                        EditorSidebarSection(
-                            group: group,
-                            isExpanded: chrome.expandedSidebarGroups.contains(group),
-                            isActive: chrome.selectedGroup == group
-                                || (group == .color && Self.colorSegments.contains(chrome.selectedGroup)),
-                            hasEdits: groupHasEdits(group, controller: controller),
-                            toggle: { toggleSidebarSection(group, in: controller) }
-                        ) {
-                            sidebarSectionBody(group, controller: controller)
+                    if railMode == .edit {
+                        ForEach(Self.sidebarParameterGroups) { group in
+                            EditorSidebarSection(
+                                group: group,
+                                isExpanded: chrome.expandedSidebarGroups.contains(group),
+                                isActive: chrome.selectedGroup == group
+                                    || (group == .color && Self.colorSegments.contains(chrome.selectedGroup)),
+                                hasEdits: groupHasEdits(group, controller: controller),
+                                toggle: { toggleSidebarSection(group, in: controller) }
+                            ) {
+                                sidebarSectionBody(group, controller: controller)
+                            }
                         }
+                    } else {
+                        // A stage tool takes the panel over rather than sitting
+                        // on top of the adjustment stack: the rail already says
+                        // which mode the editor is in, and the eight headers
+                        // underneath were a list of things this tool is not.
+                        sidebarSectionBody(railMode.group, controller: controller)
+                            .padding(.top, AppTheme.Spacing.sm)
                     }
                     Color.clear.frame(height: AppTheme.Spacing.xxl)
                 }
@@ -1151,6 +1108,158 @@ struct PhotoEditorScreen: View {
             .scrollDisabled(chrome.activeSlider != nil)
 
             Rectangle().fill(EditorTheme.panelDivider).frame(height: 1)
+
+            sidebarActionRow(controller, safeArea: safeArea)
+        }
+        // Every slider in the panel puts its track on its own line. The switch
+        // is here rather than at each call site so the mask, grade, curve and
+        // markup panels get it without knowing they are in a sidebar.
+        .environment(\.editorSliderStacked, true)
+        // And no panel draws its own title: the mode header two rows up already
+        // says "MASK", and the panel repeating it in a larger font 40pt below
+        // was the same name twice.
+        .environment(\.editorPanelShowsTitle, false)
+        .frame(width: sidebarWidth(in: canvasWidth))
+        .background(EditorTheme.panelSolid)
+    }
+
+    /// Which rail stop the panel is showing, derived from the selected group so
+    /// there is one source of truth — a mask opened from the photo's own context
+    /// menu moves the rail too.
+    private var railMode: EditorRailMode {
+        EditorRailMode.containing(chrome.selectedGroup)
+    }
+
+    private func toolRail(
+        _ controller: PhotoEditorController,
+        safeArea: EdgeInsets
+    ) -> some View {
+        EditorToolRail(
+            selected: railMode,
+            editedModes: Set(
+                EditorRailMode.allCases.filter {
+                    $0 != .edit && groupHasEdits($0.group, controller: controller)
+                }
+            ),
+            isPanelHidden: isSidebarHidden,
+            edge: sidebarEdge,
+            select: { mode in
+                withAnimation(EditorTheme.animation) {
+                    // Picking the mode already up puts the editor back to plain
+                    // adjusting — the only way out of Crop that does not commit
+                    // it. Picking any mode also opens the panel: a tap that
+                    // changed nothing visible would read as a dead control.
+                    let target = mode == railMode ? EditorRailMode.edit : mode
+                    if isSidebarHidden { setSidebarHidden(false) }
+                    selectGroup(target.group, in: controller)
+                }
+            },
+            showHistory: { chrome.isHistorySheetPresented = true },
+            togglePanel: {
+                withAnimation(EditorTheme.animation) {
+                    setSidebarHidden(!isSidebarHidden)
+                }
+            }
+        )
+        .padding(.bottom, safeArea.bottom)
+    }
+
+    /// The panel's own title line: what it is showing, and Auto — Lightroom's
+    /// one-press tone pass, which lived in the ⋯ menu and so was never found.
+    private func sidebarModeHeader(_ controller: PhotoEditorController) -> some View {
+        HStack(spacing: AppTheme.Spacing.sm) {
+            Text(railMode.title.uppercased())
+                .font(EditorTheme.groupLabel)
+                .tracking(1.1)
+                .foregroundStyle(EditorTheme.secondaryText)
+            Spacer(minLength: 8)
+            if railMode == .edit {
+                Button {
+                    controller.applyAutoTone()
+                } label: {
+                    Text("Auto")
+                        .font(EditorTheme.pillLabel)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, AppTheme.Spacing.md)
+                        .frame(height: AppTheme.Size.pillHeightDark)
+                        .background(EditorTheme.control, in: Capsule())
+                        .overlay {
+                            Capsule().strokeBorder(EditorTheme.hairline, lineWidth: 1)
+                        }
+                }
+                .buttonStyle(.plain)
+                .hoverEffect(.highlight)
+                .accessibilityLabel("Auto Enhance")
+            }
+        }
+        .padding(.horizontal, AppTheme.Spacing.lg)
+        .frame(height: EditorLayoutMetrics.sidebarModeHeaderHeight)
+    }
+
+    /// The film look the photo is on, and the way to another one — Lightroom's
+    /// Profile / Browse row. It is the first decision of an edit and the one
+    /// thing the adjustment stack cannot show, because a look is not a slider.
+    private func sidebarLookRow(_ controller: PhotoEditorController) -> some View {
+        HStack(spacing: AppTheme.Spacing.sm) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Look")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.white)
+                Text(controller.recipe.filter.displayName)
+                    .font(.system(size: 11))
+                    .foregroundStyle(EditorTheme.secondaryText)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 8)
+            Button {
+                withAnimation(EditorTheme.animation) {
+                    selectGroup(.presets, in: controller)
+                }
+            } label: {
+                Text("Browse")
+                    .font(EditorTheme.pillLabel)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, AppTheme.Spacing.md)
+                    .frame(height: AppTheme.Size.pillHeightDark)
+                    .background(EditorTheme.control, in: Capsule())
+                    .overlay {
+                        Capsule().strokeBorder(EditorTheme.hairline, lineWidth: 1)
+                    }
+            }
+            .buttonStyle(.plain)
+            .hoverEffect(.highlight)
+            .accessibilityLabel("Browse Looks")
+        }
+        .padding(.horizontal, AppTheme.Spacing.lg)
+        .frame(height: EditorLayoutMetrics.sidebarLookRowHeight)
+    }
+
+    /// The panel's foot: Reset on the leading edge, Save filling the rest.
+    /// Lightroom parks its reset in exactly this corner; Save has no Lightroom
+    /// counterpart because Lightroom has nothing to save to.
+    private func sidebarActionRow(
+        _ controller: PhotoEditorController,
+        safeArea: EdgeInsets
+    ) -> some View {
+        HStack(spacing: AppTheme.Spacing.md) {
+            Button {
+                controller.reset()
+            } label: {
+                Image(systemName: "arrow.counterclockwise")
+                    .font(EditorTheme.commandGlyph)
+                    .foregroundStyle(
+                        controller.recipe.isIdentity ? EditorTheme.dimText : .white
+                    )
+                    .frame(
+                        width: AppTheme.Size.minTouch,
+                        height: AppTheme.Size.primaryActionHeight
+                    )
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(controller.recipe.isIdentity)
+            .hoverEffect(.highlight)
+            .accessibilityLabel("Reset All")
 
             Button {
                 controller.commitCropSession()
@@ -1168,23 +1277,21 @@ struct PhotoEditorScreen: View {
                         Text("Save\u{2026}")
                     }
                 }
-                    .font(EditorTheme.sidebarActionLabel)
-                    .foregroundStyle(.black)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: AppTheme.Size.primaryActionHeight)
-                    .background(
-                        EditorTheme.accent,
-                        in: RoundedRectangle.app(AppTheme.Radius.md)
-                    )
+                .font(EditorTheme.sidebarActionLabel)
+                .foregroundStyle(.black)
+                .frame(maxWidth: .infinity)
+                .frame(height: AppTheme.Size.primaryActionHeight)
+                .background(
+                    EditorTheme.accent,
+                    in: RoundedRectangle.app(AppTheme.Radius.md)
+                )
             }
             .buttonStyle(.plain)
             .disabled(controller.isLoading || controller.isSaving)
-            .padding(.horizontal, AppTheme.Spacing.md)
-            .padding(.top, AppTheme.Spacing.md)
-            .padding(.bottom, max(safeArea.bottom, AppTheme.Spacing.md))
         }
-        .frame(width: sidebarWidth(in: canvasWidth))
-        .background(EditorTheme.panelSolid)
+        .padding(.horizontal, AppTheme.Spacing.md)
+        .padding(.top, AppTheme.Spacing.md)
+        .padding(.bottom, max(safeArea.bottom, AppTheme.Spacing.md))
     }
 
     /// The parameter panels, in pipeline order — the order Lightroom's develop
@@ -1200,20 +1307,12 @@ struct PhotoEditorScreen: View {
     /// had controls to show — Geo now carries Upright, which is the reason to
     /// open it.
     private static let sidebarParameterGroups: [EditorGroup] = [
-        .light, .curve, .color, .grade, .detail, .effects, .optics, .geo
+        .light, .curve, .color, .grade, .effects, .detail, .optics, .geo
     ]
-
-    /// Tools that take the photo over. Exactly one can be up at a time, so they
-    /// are a radio strip rather than four more disclosures.
-    private static let sidebarToolGroups: [EditorGroup] = [.crop, .mask, .markup, .presets]
 
     /// The three ways to work on colour, shown as segments inside one section
     /// the way Lightroom nests HSL under Color.
     private static let colorSegments: [EditorGroup] = [.color, .colorMix, .pointColor]
-
-    private var activeStageTool: EditorGroup? {
-        Self.sidebarToolGroups.contains(chrome.selectedGroup) ? chrome.selectedGroup : nil
-    }
 
     /// What the histogram says out loud. The shape is not describable; what a
     /// photographer reads it for is whether the ends are against the wall.
@@ -1225,44 +1324,6 @@ struct PhotoEditorScreen: View {
         case (false, true): return "Highlights clipped"
         case (false, false): return "No clipping"
         }
-    }
-
-    /// The radio strip of stage tools. Tapping the one that is already up puts
-    /// the photo back to plain adjusting, which is the only way out of Crop that
-    /// does not involve committing it.
-    private func sidebarToolStrip(_ controller: PhotoEditorController) -> some View {
-        HStack(spacing: AppTheme.Spacing.sm) {
-            ForEach(Self.sidebarToolGroups) { tool in
-                let isActive = chrome.selectedGroup == tool
-                Button {
-                    withAnimation(EditorTheme.animation) {
-                        selectGroup(isActive ? .light : tool, in: controller)
-                    }
-                } label: {
-                    VStack(spacing: 3) {
-                        Image(systemName: tool.icon)
-                            .font(.system(size: 15, weight: .medium))
-                        Text(tool.title)
-                            .font(EditorTheme.sidebarToolLabel)
-                    }
-                    .foregroundStyle(isActive ? Color.black : Color.white.opacity(0.9))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: AppTheme.Size.minTouch)
-                    .background {
-                        if isActive {
-                            RoundedRectangle.app(AppTheme.Radius.sm)
-                                .fill(EditorTheme.accent)
-                        }
-                    }
-                    .contentShape(RoundedRectangle.app(AppTheme.Radius.sm))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(tool.title)
-                .accessibilityAddTraits(isActive ? [.isSelected, .isButton] : .isButton)
-            }
-        }
-        .padding(.horizontal, AppTheme.Spacing.md)
-        .padding(.bottom, AppTheme.Spacing.sm)
     }
 
     /// Whether this group holds anything on this photo, for the header's dot.
@@ -1380,12 +1441,12 @@ struct PhotoEditorScreen: View {
                 chrome.expandedSidebarGroups.remove(group)
             } else {
                 chrome.expandedSidebarGroups.insert(group)
-                // Opening Light while Crop is up must not close the crop frame:
-                // the strip above owns the stage, the stack below only owns
-                // parameters. Colour keeps whichever segment was last showing.
-                if activeStageTool == nil {
-                    selectGroup(group == .color ? colorSegment : group, in: controller)
-                }
+                // Only the adjustment stack is on screen when a section can be
+                // opened at all — the rail's other four modes replace the stack
+                // rather than sitting above it — so this never has to worry
+                // about closing a live crop frame. Colour keeps whichever
+                // segment was last showing.
+                selectGroup(group == .color ? colorSegment : group, in: controller)
             }
         }
     }
@@ -1405,7 +1466,18 @@ struct PhotoEditorScreen: View {
     private func commandBand(
         _ controller: PhotoEditorController,
         height bandHeight: CGFloat,
-        showsDocumentControls: Bool = false
+        showsDocumentControls: Bool = false,
+        /// False when the panel beside the photo already draws the graph.
+        showsHistogram: Bool = true,
+        /// False when the panel's own full-width Save is on screen — two Saves
+        /// 300pt apart is one too many, and the panel's is the one that says
+        /// what it will do.
+        showsSave: Bool = true,
+        /// Where the row of discs starts inside the band. 11 on the phone, which
+        /// is what puts them level with the Dynamic Island. A wide window has no
+        /// island but does have a top safe area the editor took for the photo,
+        /// so the bar has to carry it or the row sits in it.
+        topInset: CGFloat = EditorLayoutMetrics.editorFloatingCommandRowTopInset
     ) -> some View {
         let sideInset = EditorLayoutMetrics.editorFloatingCommandSideInset
         let buttonSize = EditorLayoutMetrics.editorFloatingCommandButtonSize(isRegularWidth: horizontalSizeClass == .regular)
@@ -1428,9 +1500,13 @@ struct PhotoEditorScreen: View {
             HStack(spacing: 5) {
                 if showsDocumentControls {
                     backButton(controller, side: buttonSize)
-                    if isSidebarHidden, sidebarEdge == .leading {
-                        showSidebarCommand
-                    }
+                    // Back stands alone on the leading edge, the way it does in
+                    // Lightroom and in Photos: everything else on this bar acts
+                    // on the edit, and grouping the one control that leaves with
+                    // the ones that change the photo is how a session gets
+                    // thrown away by a mis-tap. The panel's own show/hide lives
+                    // on the rail, which never collapses.
+                    Spacer(minLength: AppTheme.Spacing.md)
                 }
 
                 circleCommand(
@@ -1447,56 +1523,63 @@ struct PhotoEditorScreen: View {
 
                 beforeAfterButton(controller)
 
+                if showsDocumentControls {
+                    // Fit ⇄ fill, the double tap's visible twin. A gesture
+                    // nobody can see is not a feature on a screen this size.
+                    // It rode in the sidebar's command row until that row's job
+                    // moved up here.
+                    circleCommand(
+                        isFillingCanvas
+                            ? "arrow.down.forward.and.arrow.up.backward"
+                            : "arrow.up.backward.and.arrow.down.forward",
+                        isEnabled: true,
+                        isActive: isFillingCanvas
+                    ) {
+                        chrome.requestFillZoomToggle()
+                    }
+                    .accessibilityLabel(isFillingCanvas ? "Fit Photo" : "Fill Screen")
+                }
+
                 // Fixed reserve for the island; keeps the pill clear of the cutout.
                 Color.clear.frame(width: reserve)
 
                 // The pill (or, while the card floats, a clear stand-in so the ⋯
                 // does not shift) stretches from the island out to the ⋯, at the
-                // buttons' full height.
-                Group {
-                    if chrome.isHistogramCollapsed {
-                        EditorHistogramPill(
-                            histogram: controller.histogram,
-                            namespace: histogramNamespace
-                        ) {
-                            withAnimation(EditorHistogramTransition.animation) {
-                                chrome.isHistogramCollapsed = false
+                // buttons' full height. With the panel drawing the graph there
+                // is no pill and no stand-in: a flexible gap here as well as the
+                // one after Back would split the bar's slack between them and
+                // leave the commands stranded in the middle.
+                if showsHistogram {
+                    Group {
+                        if chrome.isHistogramCollapsed {
+                            EditorHistogramPill(
+                                histogram: controller.histogram,
+                                namespace: histogramNamespace
+                            ) {
+                                withAnimation(EditorHistogramTransition.animation) {
+                                    chrome.isHistogramCollapsed = false
+                                }
                             }
+                        } else {
+                            Color.clear
                         }
-                    } else {
-                        Color.clear
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                 overflowMenu(controller, showsSidebarControls: showsDocumentControls)
 
-                if showsDocumentControls {
-                    if isSidebarHidden, sidebarEdge == .trailing {
-                        showSidebarCommand
-                    }
+                if showsDocumentControls, showsSave {
                     saveButton(controller, side: buttonSize)
                 }
             }
             .frame(height: buttonSize)
             .padding(.horizontal, sideInset)
-            .padding(.top, EditorLayoutMetrics.editorFloatingCommandRowTopInset)
+            .padding(.top, topInset)
             .frame(height: bandHeight, alignment: .top)
         }
         .frame(height: bandHeight)
         .background(EditorTheme.background)
-    }
-
-    /// Brings a collapsed sidebar back. It lives in the band rather than floating
-    /// over the photo: the stage owns every touch inside its own bounds (zoom,
-    /// pan, mask painting, crop handles), and a button laid over it there never
-    /// sees the tap — measured on iPad. The band is the one strip of chrome that
-    /// always answers.
-    private var showSidebarCommand: some View {
-        circleCommand(sidebarEdge.collapseIcon, isEnabled: true) {
-            setSidebarHidden(false)
-        }
-        .accessibilityLabel("Show Tools")
     }
 
     /// Hold-to-see-original, mirroring the photo's own press-and-hold. Down shows
