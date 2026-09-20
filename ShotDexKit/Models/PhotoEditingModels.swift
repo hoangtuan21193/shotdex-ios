@@ -1135,6 +1135,18 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
 
     public static let identity = PhotoEditRecipe()
 
+    /// Whether this recipe needs a full-extent bitmap layer of its own to
+    /// render — a mask, a drawing or an overlay.
+    ///
+    /// Each of those rasterizes into a `CGContext` the size of the whole
+    /// image: at 48MP that is ~195MB of RGBA for **one** layer, before the
+    /// source decode. An app doing that is close to the edge; an app
+    /// *extension*, whose ceiling is a fraction of an app's, is over it.
+    /// `ShotDexEdit` checks this before offering to continue an edit.
+    public var needsFullExtentLayers: Bool {
+        !masks.isEmpty || !overlays.isEmpty || !(drawing?.isEmpty ?? true)
+    }
+
     public var isIdentity: Bool {
         adjustments.isIdentity
             && filter == .original

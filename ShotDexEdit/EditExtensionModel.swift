@@ -33,7 +33,12 @@ final class EditExtensionModel {
         // An edit already on the photo is continued, not discarded: Photos only
         // hands this over after `canHandle` said the format is ours.
         if let data = input.adjustmentData?.data,
-           let decoded = try? JSONDecoder().decode(PhotoEditRecipe.self, from: data) {
+           let decoded = try? JSONDecoder().decode(PhotoEditRecipe.self, from: data),
+           // Belt and braces with `canHandle`: Photos is not obliged to ask
+           // before handing over adjustment data, and a recipe with
+           // full-extent layers would be rendered here at full resolution on
+           // Done — which this process does not have the memory for.
+           !decoded.needsFullExtentLayers {
             recipe = decoded
         }
         guard let url = input.fullSizeImageURL else { return }

@@ -82,7 +82,7 @@ Agents: `copy-consistency`, `data-migration` (done) · `component-consistency`, 
 ## Needs a decision (sweep 2)
 
 - **One "leave the tool" control for tier D.** Five variants today: Compare uses `xmark` in a 52pt `.editorGlass` circle; the editor, Collage and Video Studio each hand-roll a chevron at 38/44pt with a raw colour fill; Resize uses a system nav-bar Cancel. The glyph is the real question — chevron reads "back", ✕ reads "leave" — and the tools that can lose unsaved work are not the same as the ones that cannot. My proposal: chevron + `.editorGlass(Circle())` at the shared command size for editor/Collage/Video Studio, ✕ for Compare, and Resize keeps its nav bar because it is the only one that is a form. _(component-consistency, blocker)_
-- **The editor sidebar's width picker.** `EditorSidebar.swift:152` claims the ⋯ menu carries the same three widths "for anyone who cannot drag"; it does not — there is no width picker anywhere. Either add three presets to the menu or delete the claim. _(challenger)_
+- [x] ~~**The editor sidebar's width picker.**~~ — **decided 2026-09-20: delete the claim.** There is no ⋯ width picker and never was, but the handle already carries an `accessibilityAdjustableAction` that moves it 40pt a step, which is the route the comment was worried about. The comment says that now, and says what it used to claim.
 
 ## Sweep 2 — editor and Video Studio (agents: ux-reviewer, a11y-voiceover, device-layout, challenger)
 

@@ -149,9 +149,14 @@ struct EditorSidebarResizeHandle: View {
                     }
                     .onEnded { _ in onEnd() }
             )
-            // Not hidden from assistive technology: the width is a real setting,
-            // and a drag is not a route VoiceOver or Switch Control can take. The
-            // ⋯ menu carries the same three widths for anyone who cannot drag.
+            // Not hidden from assistive technology: the width is a real
+            // setting, and a drag is not a route VoiceOver or Switch Control
+            // can take — so the handle is an adjustable element, and the
+            // action below moves it 40pt at a time.
+            //
+            // (This comment used to promise "the ⋯ menu carries the same
+            // three widths". There is no such menu and never was; the
+            // adjustable action is the whole answer.)
             .accessibilityLabel("Tools panel width")
             .accessibilityHint("Adjust to resize the panel")
             .accessibilityAdjustableAction { direction in

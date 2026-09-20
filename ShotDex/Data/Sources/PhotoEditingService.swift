@@ -124,6 +124,12 @@ final class PhotoEditingService {
               !recentSessions.contains(where: { $0.id == asset.localIdentifier })
         else { return }
         guard let session = try? await makeSession(for: asset) else { return }
+        // The editor may have closed while this was waiting on iCloud, and
+        // the cache it would go into has already been released.
+        guard !Task.isCancelled else {
+            discard(session)
+            return
+        }
         remember(session, for: asset.localIdentifier)
     }
 

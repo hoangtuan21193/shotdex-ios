@@ -191,3 +191,37 @@ import Testing
         #expect(decoded.pressures == [0.2, 0.85])
     }
 }
+
+/// What the photo-editing extension may take on. Its memory ceiling is a
+/// fraction of the app's, and a mask, a drawing or an overlay each rasterize
+/// a bitmap the size of the whole image.
+@Suite struct ExtensionRecipeLimitTests {
+    @Test func aPlainRecipeHasNoFullExtentLayers() {
+        var recipe = PhotoEditRecipe.identity
+        recipe.filter = .vivid
+        recipe.adjustments.exposure = 0.4
+        #expect(!recipe.needsFullExtentLayers)
+    }
+
+    @Test func aMaskADrawingOrAnOverlayEachCount() {
+        var masked = PhotoEditRecipe.identity
+        masked.masks = [PhotoMask(name: "Brush", component: PhotoMaskComponent(kind: .brush))]
+        #expect(masked.needsFullExtentLayers)
+
+        var drawn = PhotoEditRecipe.identity
+        drawn.drawing = PhotoDrawing(data: Data("pk".utf8), canvasWidth: 100, canvasHeight: 100)
+        #expect(drawn.needsFullExtentLayers)
+
+        var captioned = PhotoEditRecipe.identity
+        captioned.overlays = [PhotoOverlay(kind: .text)]
+        #expect(captioned.needsFullExtentLayers)
+    }
+
+    /// An empty drawing is not a drawing — reverting every stroke must not
+    /// leave the photo locked out of the extension forever.
+    @Test func anEmptyDrawingDoesNotCount() {
+        var recipe = PhotoEditRecipe.identity
+        recipe.drawing = PhotoDrawing(data: Data(), canvasWidth: 100, canvasHeight: 100)
+        #expect(!recipe.needsFullExtentLayers)
+    }
+}

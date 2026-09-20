@@ -70,6 +70,12 @@ struct PhotoEditorScreen: View {
     @State private var isSignatureNamePresented = false
     @State private var signatureName = ""
     @State private var drawSession = EditorDrawSession()
+    /// Warming the neighbouring photos' sessions. Held so dismissing the
+    /// editor stops it: `prewarmSession` allows network access, so it can
+    /// still be waiting on iCloud when the screen goes, and finishing after
+    /// `releaseCachedSessions()` would put a session back into a cache that
+    /// no longer has an owner to release it.
+    @State private var prewarmTask: Task<Void, Never>?
 
     /// Wide-screen sidebar: which side it is parked on, how wide, and whether
     /// it is collapsed. All three are the user's, so all three persist — but
@@ -137,6 +143,7 @@ struct PhotoEditorScreen: View {
             await openCurrentPhoto()
         }
         .onDisappear {
+            prewarmTask?.cancel()
             controller?.close()
             // The cached sessions belong to this editor run: their temporary
             // directories have to go with it, or a long browse leaves three
@@ -323,7 +330,8 @@ struct PhotoEditorScreen: View {
             .filter { session.assets.indices.contains($0) }
             .map { session.assets[$0] }
         guard !neighbours.isEmpty else { return }
-        Task { @MainActor in
+        prewarmTask?.cancel()
+        prewarmTask = Task { @MainActor in
             for asset in neighbours {
                 guard !Task.isCancelled else { return }
                 await dependencies.photoEditing.prewarmSession(for: asset)

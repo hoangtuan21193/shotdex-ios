@@ -44,7 +44,22 @@ final class PhotoEditingViewController: UIViewController, PHContentEditingContro
     /// says nothing this extension can read, and claiming otherwise would throw
     /// that app's edit away on save.
     func canHandle(_ adjustmentData: PHAdjustmentData) -> Bool {
-        adjustmentData.formatIdentifier == PhotoEditRecipe.formatIdentifier
+        guard adjustmentData.formatIdentifier == PhotoEditRecipe.formatIdentifier else { return false }
+        // Ours, but not necessarily ours to *finish*. A recipe with a mask, a
+        // drawing or a text overlay rasterizes a bitmap the size of the whole
+        // image for each one — ~195MB of RGBA at 48MP for a single layer,
+        // before the source is even decoded. An extension has a fraction of
+        // an app's memory, so continuing that edit here would be a kill
+        // rather than a save, and a kill loses the user's work.
+        //
+        // Saying no means Photos offers "Revert" instead of "Edit in
+        // ShotDex", and the photo opens in the full app with the edit intact.
+        // That is the honest answer: this surface is four sliders and a film
+        // look, and it should only claim the edits it can actually render.
+        guard let recipe = try? JSONDecoder().decode(PhotoEditRecipe.self, from: adjustmentData.data) else {
+            return false
+        }
+        return !recipe.needsFullExtentLayers
     }
 
     func startContentEditing(with contentEditingInput: PHContentEditingInput, placeholderImage: UIImage) {
