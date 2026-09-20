@@ -431,10 +431,11 @@ struct CollageCanvasView: View {
             return true
         }
         guard PhotoDropImport.canImport(providers) else { return false }
-        Task { @MainActor in
+        model.dropImportTask = Task { @MainActor in
             model.isImportingDrop = true
             let result = await PhotoDropImport.importAssets(from: providers, into: photoLibrary)
             model.isImportingDrop = false
+            guard !Task.isCancelled else { return }
             if let first = result.ids.first {
                 model.fillSlot(index, with: first)
                 // The rest go to the tray rather than overwriting cells the

@@ -57,26 +57,36 @@ enum PhotoDropImport {
     /// its completion returns, so the file has to be copied out before the
     /// import — which is asynchronous — can look at it.
     private static func copyToTemporary(provider: NSItemProvider, type: String) async -> URL? {
-        await withCheckedContinuation { continuation in
-            _ = provider.loadFileRepresentation(forTypeIdentifier: type) { url, _ in
-                guard let url else {
-                    continuation.resume(returning: nil)
-                    return
+        let progress = Progress()
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                let load = provider.loadFileRepresentation(forTypeIdentifier: type) { url, _ in
+                    guard let url else {
+                        continuation.resume(returning: nil)
+                        return
+                    }
+                    let directory = FileManager.default.temporaryDirectory
+                        .appendingPathComponent("ShotDexDrop-\(UUID().uuidString)", isDirectory: true)
+                    let destination = directory.appendingPathComponent(url.lastPathComponent)
+                    do {
+                        try FileManager.default.createDirectory(
+                            at: directory,
+                            withIntermediateDirectories: true
+                        )
+                        try FileManager.default.copyItem(at: url, to: destination)
+                        continuation.resume(returning: destination)
+                    } catch {
+                        continuation.resume(returning: nil)
+                    }
                 }
-                let directory = FileManager.default.temporaryDirectory
-                    .appendingPathComponent("ShotDexDrop-\(UUID().uuidString)", isDirectory: true)
-                let destination = directory.appendingPathComponent(url.lastPathComponent)
-                do {
-                    try FileManager.default.createDirectory(
-                        at: directory,
-                        withIntermediateDirectories: true
-                    )
-                    try FileManager.default.copyItem(at: url, to: destination)
-                    continuation.resume(returning: destination)
-                } catch {
-                    continuation.resume(returning: nil)
-                }
+                progress.addChild(load, withPendingUnitCount: 1)
+                progress.totalUnitCount = 1
             }
+        } onCancel: {
+            // Without this, cancelling the caller leaves the provider copying
+            // a file nobody is waiting for and the continuation parked until
+            // it finishes anyway.
+            progress.cancel()
         }
     }
 }

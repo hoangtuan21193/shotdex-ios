@@ -348,6 +348,18 @@ final class CollageEditorModel {
     /// an iCloud round trip, not an instant.
     var isImportingDrop = false
 
+    /// The import in flight, held so leaving the editor stops it. Without a
+    /// handle, backing out a moment after a drop still wrote a new asset into
+    /// the user's library and then updated a model nobody was looking at.
+    var dropImportTask: Task<Void, Never>?
+
+    /// Called when the editor closes.
+    func cancelDropImport() {
+        dropImportTask?.cancel()
+        dropImportTask = nil
+        isImportingDrop = false
+    }
+
     /// Photos imported by a drop that the user did not aim at a specific
     /// slot. They go to the tray rather than overwriting whatever the cells
     /// already hold.

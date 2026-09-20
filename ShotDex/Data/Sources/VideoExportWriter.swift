@@ -127,6 +127,12 @@ enum VideoExportWriter {
 
                 group.enter()
                 let videoQueue = DispatchQueue(label: "shotdex.export.video")
+                // Last fraction actually reported. The pump runs once per
+                // sample — thirty times a second, for the length of the
+                // video — and a MainActor hop per frame is a task storm
+                // competing with the UI for the whole export. A percent is
+                // finer than the progress bar can draw.
+                var reportedFraction = -1.0
                 videoInput.requestMediaDataWhenReady(on: videoQueue) {
                     while videoInput.isReadyForMoreMediaData {
                         guard reader.status == .reading,
@@ -138,7 +144,10 @@ enum VideoExportWriter {
                         let seconds = CMSampleBufferGetPresentationTimeStamp(sample).seconds
                         if seconds.isFinite {
                             let fraction = min(max(seconds / denominator, 0), 1)
-                            Task { @MainActor in progress(fraction) }
+                            if fraction - reportedFraction >= 0.01 || fraction >= 1 {
+                                reportedFraction = fraction
+                                Task { @MainActor in progress(fraction) }
+                            }
                         }
                         videoInput.append(sample)
                     }

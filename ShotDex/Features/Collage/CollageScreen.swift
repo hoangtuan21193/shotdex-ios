@@ -350,6 +350,7 @@ struct CollageScreen: View {
     }
 
     private func close(_ model: CollageEditorModel) {
+        model.cancelDropImport()
         if model.hasEdits {
             isDiscardConfirmationPresented = true
         } else {

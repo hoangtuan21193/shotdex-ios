@@ -143,6 +143,11 @@ final class VideoStudioModel {
     private var endObserver: NSObjectProtocol?
     private var rebuildTask: Task<Void, Never>?
     private var exportTask: Task<Void, Never>?
+    /// Media dropped on the timeline from another app, being imported into
+    /// the photo library. Held so leaving the studio stops it: a drop that
+    /// lands after `close()` appends clips to a project the user believes
+    /// they shut, on a model whose player and observers are already gone.
+    var dropImportTask: Task<Void, Never>?
     private var isAudioSessionActive = false
 
     init(
@@ -353,6 +358,7 @@ final class VideoStudioModel {
     func close() {
         rebuildTask?.cancel()
         exportTask?.cancel()
+        dropImportTask?.cancel()
         for task in waveformTasks.values { task.cancel() }
         waveformTasks.removeAll()
         detachObservers()

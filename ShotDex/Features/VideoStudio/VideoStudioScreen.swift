@@ -387,7 +387,7 @@ struct VideoStudioScreen: View {
             $0.hasItemConformingToTypeIdentifier(PhotoDragItem.assetIdentifierType)
         }
         if !inApp.isEmpty {
-            Task { @MainActor in
+            model.dropImportTask = Task { @MainActor in
                 var ids: [String] = []
                 for provider in inApp {
                     let data: Data? = await withCheckedContinuation { continuation in
@@ -397,16 +397,18 @@ struct VideoStudioScreen: View {
                     }
                     if let data, let id = String(data: data, encoding: .utf8) { ids.append(id) }
                 }
+                guard !Task.isCancelled else { return }
                 appendMedia(ids: ids, to: model, imported: 0, failed: 0)
             }
             return true
         }
         guard PhotoDropImport.canImport(providers) else { return false }
-        Task { @MainActor in
+        model.dropImportTask = Task { @MainActor in
             let result = await PhotoDropImport.importAssets(
                 from: providers,
                 into: dependencies.photoLibrary
             )
+            guard !Task.isCancelled else { return }
             appendMedia(ids: result.ids, to: model, imported: result.ids.count, failed: result.failures)
         }
         return true
