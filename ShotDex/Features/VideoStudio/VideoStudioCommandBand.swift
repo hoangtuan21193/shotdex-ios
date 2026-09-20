@@ -232,6 +232,11 @@ private struct VideoCommandCell: View {
                 Text(command.title)
                     .font(.system(size: isRegularWidth ? 11 : 9.5, weight: .medium))
                     .lineLimit(1)
+                    // A 52pt cell holds "Split" and "Replace"; it does not
+                    // hold "Ersetzen" or "Remplacer". Shrink rather than
+                    // clip — a truncated verb on a command cell is a command
+                    // nobody can read.
+                    .minimumScaleFactor(0.7)
             }
             .foregroundStyle(color)
             .frame(
@@ -240,11 +245,11 @@ private struct VideoCommandCell: View {
             )
             .background(
                 RoundedRectangle(cornerRadius: VideoStudioMetrics.commandCellRadius, style: .continuous)
-                    .fill(Color.white.opacity(0.05))
+                    .fill(EditorTheme.emptyLane)
             )
         }
         .buttonStyle(.plain)
         .disabled(!command.isEnabled)
-        .accessibilityLabel(command.title)
+        .accessibilityLabel(Text(command.title))
     }
 }
