@@ -376,6 +376,106 @@ struct PhotoWidgetDataTests {
         #expect(PhotoWidgetSettings.anchor(forLegacyPlacement: "nonsense") == nil)
     }
 
+    // MARK: Home Screen configuration
+
+    /// What the Home Screen's menu says wins where it said something, and says
+    /// nothing by default — the widget then shows what ShotDex is set to.
+    @Test func theHomeScreenMenuOverridesOnlyWhatItAnswers() {
+        var stored = PhotoWidgetSettings.default(for: .clock)
+        stored.rotation = .daily
+        stored.photoDimming = 0.1
+        stored.source = .photo(assetId: "ABC/L0/001")
+
+        let untouched = PhotoWidgetResolvedConfiguration.resolve(
+            kind: .clock, settings: stored,
+            albumId: nil, albumTitle: nil, rotation: nil, dimming: nil,
+            frameCount: { _ in 3 }
+        )
+        #expect(untouched.settings.rotation == .daily)
+        #expect(untouched.settings.photoDimming == 0.1)
+        #expect(untouched.frameDirectoryName == PhotoWidgetKind.clock.directoryName)
+        #expect(untouched.pendingAlbum == nil)
+
+        let configured = PhotoWidgetResolvedConfiguration.resolve(
+            kind: .clock, settings: stored,
+            albumId: "9F98/L0/040", albumTitle: "Iceland",
+            rotation: .hourly, dimming: 0.3,
+            frameCount: { _ in 5 }
+        )
+        #expect(configured.settings.rotation == .hourly)
+        #expect(configured.settings.photoDimming == 0.3)
+        #expect(configured.settings.source == .album(collectionId: "9F98/L0/040", title: "Iceland"))
+        #expect(configured.frameDirectoryName == PhotoWidgetSnapshot.albumDirectoryName(albumId: "9F98/L0/040"))
+        #expect(configured.pendingAlbum == nil)
+    }
+
+    /// An album with no frames yet is reported as pending, which is what makes
+    /// the widget ask the app for it instead of drawing black.
+    @Test func anAlbumWithoutPicturesIsPending() throws {
+        let resolved = PhotoWidgetResolvedConfiguration.resolve(
+            kind: .weather, settings: .default(for: .weather),
+            albumId: "AAA/L0/001", albumTitle: "Trips",
+            rotation: nil, dimming: nil,
+            frameCount: { _ in 0 }
+        )
+        let pending = try #require(resolved.pendingAlbum)
+        #expect(pending.id == "AAA/L0/001")
+        #expect(pending.title == "Trips")
+    }
+
+    /// PhotoKit identifiers carry slashes, which are path separators.
+    @Test func anAlbumFolderNameIsSafeToPutOnDisk() {
+        let name = PhotoWidgetSnapshot.albumDirectoryName(albumId: "9F98-3C/L0/040")
+        #expect(!name.contains("/"))
+        #expect(name.hasPrefix("photo-widget-album-"))
+        // Two albums never collide into one folder.
+        #expect(name != PhotoWidgetSnapshot.albumDirectoryName(albumId: "9F98-3C/L0/041"))
+    }
+
+    @Test func theRenderQueueKeepsTheNewestAsksAndNoDuplicates() {
+        let first = PhotoWidgetFrameRequest(albumId: "a", title: "A", requestedAt: date(2026, 9, 21, hour: 1))
+        let second = PhotoWidgetFrameRequest(albumId: "b", title: "B", requestedAt: date(2026, 9, 21, hour: 2))
+        let againA = PhotoWidgetFrameRequest(albumId: "a", title: "A renamed", requestedAt: date(2026, 9, 21, hour: 3))
+
+        var queue = PhotoWidgetFrameRequests.merged([], adding: first)
+        queue = PhotoWidgetFrameRequests.merged(queue, adding: second)
+        #expect(queue.map(\.albumId) == ["b", "a"])
+
+        queue = PhotoWidgetFrameRequests.merged(queue, adding: againA)
+        #expect(queue.map(\.albumId) == ["a", "b"])
+        #expect(queue.first?.title == "A renamed")
+
+        // The queue is capped, oldest first out.
+        var long: [PhotoWidgetFrameRequest] = []
+        for index in 0..<12 {
+            long = PhotoWidgetFrameRequests.merged(
+                long,
+                adding: PhotoWidgetFrameRequest(
+                    albumId: "album-\(index)", title: "\(index)",
+                    requestedAt: date(2026, 9, 21, hour: 1)
+                ),
+                limit: 8
+            )
+        }
+        #expect(long.count == 8)
+        #expect(long.first?.albumId == "album-11")
+    }
+
+    @Test func theAlbumCatalogFindsNamesWithoutAccentsOrCase() {
+        let catalog = WidgetAlbumCatalog(
+            albums: [
+                .init(id: "1", title: "Đà Lạt", count: 40),
+                .init(id: "2", title: "Iceland", count: 12),
+            ],
+            generatedAt: .now
+        )
+        #expect(catalog.matching("da lat").map(\.id) == ["1"])
+        #expect(catalog.matching("ICE").map(\.id) == ["2"])
+        #expect(catalog.matching("").count == 2)
+        #expect(catalog.album(id: "2")?.title == "Iceland")
+        #expect(catalog.album(id: "nope") == nil)
+    }
+
     @Test func onlyTheWeatherAndCalendarReachTheLockScreen() {
         #expect(PhotoWidgetKind.allCases.filter(\.hasAccessoryFamilies) == [.calendar, .weather])
     }

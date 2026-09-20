@@ -234,6 +234,11 @@ final class AppDependencies {
     func refreshWidgetSnapshot() async {
         guard photoLibrary.authorizationState.canReadLibrary else { return }
         await OnThisDaySnapshotWriter(photoLibrary: photoLibrary).write()
+        // The Home Screen's own widget menu picks albums from this list, and
+        // the widgets that were pointed at one there are waiting for its
+        // photos to be copied across.
+        await WidgetAlbumCatalogWriter().write()
+        await PhotoWidgetSnapshotWriter(photoLibrary: photoLibrary).fulfilRequests()
         await calendarWidgetWriter.write()
         await WeatherSnapshotWriter(location: widgetLocation).write()
     }

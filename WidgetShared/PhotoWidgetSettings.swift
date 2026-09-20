@@ -541,16 +541,40 @@ struct PhotoWidgetSnapshot: Codable, Equatable {
     /// day of hourly rotation and costs about a megabyte.
     static let maxFrames = 12
 
-    static func directoryURL(for kind: PhotoWidgetKind, in container: URL) -> URL {
-        container.appendingPathComponent(kind.directoryName, isDirectory: true)
+    static func directoryURL(named name: String, in container: URL) -> URL {
+        container.appendingPathComponent(name, isDirectory: true)
     }
 
-    static func read(kind: PhotoWidgetKind) -> PhotoWidgetSnapshot {
+    static func directoryURL(for kind: PhotoWidgetKind, in container: URL) -> URL {
+        directoryURL(named: kind.directoryName, in: container)
+    }
+
+    /// Where an album's frames live when a widget was pointed at it from the
+    /// Home Screen. Keyed by album rather than by widget, because two widgets
+    /// can be set to the same album and neither should pay for the other's
+    /// copy — and because the identifier is what the widget carries.
+    ///
+    /// PhotoKit identifiers hold slashes (`ABCD-1234/L0/040`), which are path
+    /// separators, so everything outside letters, digits and dashes becomes a
+    /// dash.
+    static func albumDirectoryName(albumId: String) -> String {
+        let slug = albumId.map { character -> Character in
+            character.isLetter || character.isNumber || character == "-" ? character : "-"
+        }
+        return "photo-widget-album-" + String(slug).prefix(80)
+    }
+
+    static func read(directoryName: String) -> PhotoWidgetSnapshot {
         guard let container = WidgetSharedContainer.url else { return .empty }
         return WidgetSharedContainer.decode(
             PhotoWidgetSnapshot.self,
-            at: directoryURL(for: kind, in: container).appendingPathComponent(fileName)
+            at: directoryURL(named: directoryName, in: container)
+                .appendingPathComponent(fileName)
         ) ?? .empty
+    }
+
+    static func read(kind: PhotoWidgetKind) -> PhotoWidgetSnapshot {
+        read(directoryName: kind.directoryName)
     }
 
     /// Which frame is showing at `date`. Pure, so the rotation is tested
@@ -574,11 +598,15 @@ struct PhotoWidgetSnapshot: Codable, Equatable {
         }
     }
 
-    func imageURL(at index: Int, kind: PhotoWidgetKind) -> URL? {
+    func imageURL(at index: Int, directoryName: String) -> URL? {
         guard frames.indices.contains(index), let container = WidgetSharedContainer.url
         else { return nil }
-        return Self.directoryURL(for: kind, in: container)
+        return Self.directoryURL(named: directoryName, in: container)
             .appendingPathComponent(frames[index].fileName)
+    }
+
+    func imageURL(at index: Int, kind: PhotoWidgetKind) -> URL? {
+        imageURL(at: index, directoryName: kind.directoryName)
     }
 }
 

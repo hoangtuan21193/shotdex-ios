@@ -28,6 +28,14 @@ struct ShotDexApp: App {
                     if phase == .background {
                         dependencies.backgroundIndex.scheduleContinuationIfNeeded()
                     }
+                    if phase == .active {
+                        // Widgets ask for things while the app is away — an
+                        // album picked in "Edit Widget", a day that rolled
+                        // over, weather gone stale. The launch `task` runs
+                        // once, so coming back to the foreground is the other
+                        // moment those asks can be answered.
+                        Task { await dependencies.refreshWidgetSnapshot() }
+                    }
                 }
                 // A tapped Spotlight result arrives as a user activity rather
                 // than an intent, so it is translated into the same request an

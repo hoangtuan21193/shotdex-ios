@@ -1,3 +1,4 @@
+import AppIntents
 import SwiftUI
 import WidgetKit
 
@@ -16,9 +17,12 @@ struct PhotoWidgetEntry: TimelineEntry {
     let image: Image?
     let weather: WeatherSnapshot?
     let calendarSnapshot: CalendarSnapshot?
+    /// Set when this widget was pointed at an album on the Home Screen whose
+    /// photos the app has not rendered yet.
+    var pendingAlbum: WidgetAlbumCatalog.Album?
 }
 
-struct PhotoWidgetProvider: TimelineProvider {
+struct PhotoWidgetProvider: AppIntentTimelineProvider {
     let kind: PhotoWidgetKind
 
     /// One entry a minute for an hour when a clock is on show. A widget cannot
@@ -32,33 +36,58 @@ struct PhotoWidgetProvider: TimelineProvider {
     private static let quietStep = 15
 
     func placeholder(in context: Context) -> PhotoWidgetEntry {
-        entry(for: .now, settings: PhotoWidgetSettings.default(for: kind), payload: Payload())
+        PhotoWidgetEntry(
+            date: .now,
+            kind: kind,
+            settings: PhotoWidgetSettings.default(for: kind),
+            image: nil,
+            weather: nil,
+            calendarSnapshot: nil
+        )
     }
 
-    func getSnapshot(in context: Context, completion: @escaping (PhotoWidgetEntry) -> Void) {
+    func snapshot(
+        for configuration: ConfigurePhotoWidgetIntent,
+        in context: Context
+    ) async -> PhotoWidgetEntry {
         let payload = Payload()
-        completion(entry(for: .now, settings: payload.settings[kind], payload: payload))
+        return entry(for: .now, configuration: configuration, payload: payload)
     }
 
-    func getTimeline(in context: Context, completion: @escaping (Timeline<PhotoWidgetEntry>) -> Void) {
+    func timeline(
+        for configuration: ConfigurePhotoWidgetIntent,
+        in context: Context
+    ) async -> Timeline<PhotoWidgetEntry> {
         let calendar = Calendar.current
         let start = calendar.date(bySetting: .second, value: 0, of: .now) ?? .now
         // One pass over the files for the whole timeline, and one decode per
         // distinct picture in it. Reading them per entry would decode the same
         // JPEG sixty times to draw sixty different minutes of the same photo.
         let payload = Payload()
-        let settings = payload.settings[kind]
-        let showsClock = settings.showsTime
+        let resolved = payload.resolve(kind: kind, configuration: configuration)
+        // An album chosen on the Home Screen has no pictures until the app has
+        // rendered them, so the ask is left where the app will find it.
+        if let pending = resolved.pendingAlbum {
+            PhotoWidgetFrameRequests.request(albumId: pending.id, title: pending.title)
+        }
+
+        let showsClock = resolved.settings.showsTime
         let count = showsClock ? Self.clockEntries : Self.quietEntries
         let step = showsClock ? 1 : Self.quietStep
 
         let entries = (0..<count).compactMap { index -> PhotoWidgetEntry? in
             guard let date = calendar.date(byAdding: .minute, value: index * step, to: start)
             else { return nil }
-            return entry(for: date, settings: settings, payload: payload)
+            return entry(for: date, configuration: configuration, payload: payload, resolved: resolved)
         }
         let end = entries.last?.date ?? .now
-        completion(Timeline(entries: entries, policy: .after(end)))
+        // A widget waiting on the app checks back sooner: the pictures arrive
+        // the moment ShotDex is next opened, and the app reloads it then, but
+        // this keeps a missed reload from lasting an hour.
+        let policy: TimelineReloadPolicy = resolved.pendingAlbum == nil
+            ? .after(end)
+            : .after(calendar.date(byAdding: .minute, value: 15, to: start) ?? end)
+        return Timeline(entries: entries, policy: policy)
     }
 
     /// Everything read off disk once per timeline build, with the pictures
@@ -68,15 +97,35 @@ struct PhotoWidgetProvider: TimelineProvider {
         let weather = WeatherSnapshot.read()
         let calendarSnapshot = CalendarSnapshot.read()
         private var images: [String: Image] = [:]
+        private var snapshots: [String: PhotoWidgetSnapshot] = [:]
 
-        func image(for kind: PhotoWidgetKind, at date: Date, rotation: PhotoWidgetSettings.Rotation) -> Image? {
-            let snapshot = snapshot(for: kind)
+        func resolve(
+            kind: PhotoWidgetKind,
+            configuration: ConfigurePhotoWidgetIntent
+        ) -> PhotoWidgetResolvedConfiguration {
+            PhotoWidgetResolvedConfiguration.resolve(
+                kind: kind,
+                settings: settings[kind],
+                albumId: configuration.album?.id,
+                albumTitle: configuration.album?.title,
+                rotation: configuration.rotation.rotation,
+                dimming: configuration.dimming.dimming,
+                frameCount: { directory in self.snapshot(named: directory).frames.count }
+            )
+        }
+
+        func image(
+            directoryName: String,
+            at date: Date,
+            rotation: PhotoWidgetSettings.Rotation
+        ) -> Image? {
+            let snapshot = snapshot(named: directoryName)
             guard let index = PhotoWidgetSnapshot.frameIndex(
                 at: date, count: snapshot.frames.count, rotation: rotation
             ) else { return nil }
-            let key = "\(kind.rawValue)-\(index)"
+            let key = "\(directoryName)-\(index)"
             if let cached = images[key] { return cached }
-            guard let url = snapshot.imageURL(at: index, kind: kind),
+            guard let url = snapshot.imageURL(at: index, directoryName: directoryName),
                   let data = try? Data(contentsOf: url),
                   let uiImage = UIImage(data: data)
             else { return nil }
@@ -85,28 +134,33 @@ struct PhotoWidgetProvider: TimelineProvider {
             return image
         }
 
-        private var snapshots: [PhotoWidgetKind: PhotoWidgetSnapshot] = [:]
-
-        private func snapshot(for kind: PhotoWidgetKind) -> PhotoWidgetSnapshot {
-            if let cached = snapshots[kind] { return cached }
-            let snapshot = PhotoWidgetSnapshot.read(kind: kind)
-            snapshots[kind] = snapshot
+        func snapshot(named directoryName: String) -> PhotoWidgetSnapshot {
+            if let cached = snapshots[directoryName] { return cached }
+            let snapshot = PhotoWidgetSnapshot.read(directoryName: directoryName)
+            snapshots[directoryName] = snapshot
             return snapshot
         }
     }
 
     private func entry(
         for date: Date,
-        settings: PhotoWidgetSettings,
-        payload: Payload
+        configuration: ConfigurePhotoWidgetIntent,
+        payload: Payload,
+        resolved: PhotoWidgetResolvedConfiguration? = nil
     ) -> PhotoWidgetEntry {
-        PhotoWidgetEntry(
+        let resolved = resolved ?? payload.resolve(kind: kind, configuration: configuration)
+        return PhotoWidgetEntry(
             date: date,
             kind: kind,
-            settings: settings,
-            image: payload.image(for: kind, at: date, rotation: settings.rotation),
+            settings: resolved.settings,
+            image: payload.image(
+                directoryName: resolved.frameDirectoryName,
+                at: date,
+                rotation: resolved.settings.rotation
+            ),
             weather: payload.weather,
-            calendarSnapshot: payload.calendarSnapshot
+            calendarSnapshot: payload.calendarSnapshot,
+            pendingAlbum: resolved.pendingAlbum
         )
     }
 }
@@ -131,7 +185,11 @@ struct CombinedPhotoWidget: Widget {
 
 enum PhotoWidgetConfiguration {
     static func make(kind: PhotoWidgetKind) -> some WidgetConfiguration {
-        StaticConfiguration(kind: kind.widgetKind, provider: PhotoWidgetProvider(kind: kind)) { entry in
+        AppIntentConfiguration(
+            kind: kind.widgetKind,
+            intent: ConfigurePhotoWidgetIntent.self,
+            provider: PhotoWidgetProvider(kind: kind)
+        ) { entry in
             // The background is chosen inside the view, where the family is
             // known: a Lock Screen accessory has no photo behind it, and
             // painting one there would show as a grey block.
@@ -157,10 +215,10 @@ enum PhotoWidgetConfiguration {
 
     private static func description(for kind: PhotoWidgetKind) -> String {
         switch kind {
-        case .clock: "The time over a photo you choose, in the style you set in ShotDex."
-        case .calendar: "The month, or what is on today, over a photo you choose."
-        case .weather: "The weather where you are, over a photo you choose."
-        case .combined: "The time, the day and the weather, over a photo you choose."
+        case .clock: "The time over a photo or album you choose, in the style you set in ShotDex."
+        case .calendar: "The month, or what is on today, over a photo or album you choose."
+        case .weather: "The weather where you are, over a photo or album you choose."
+        case .combined: "The time, the day and the weather, over a photo or album you choose."
         }
     }
 }
@@ -205,11 +263,19 @@ struct PhotoWidgetView: View {
                 .containerBackground(.clear, for: .widget)
         default:
             GeometryReader { proxy in
-                PhotoWidgetPositionedFace(
-                    entry: entry,
-                    size: proxy.size,
-                    isCompact: family == .systemSmall
-                )
+                ZStack {
+                    PhotoWidgetPositionedFace(
+                        entry: entry,
+                        size: proxy.size,
+                        isCompact: family == .systemSmall
+                    )
+                    if let pending = entry.pendingAlbum {
+                        // The album was chosen here on the Home Screen, so the
+                        // app has not had a chance to copy its photos yet. Say
+                        // so rather than showing black and looking broken.
+                        PhotoWidgetPendingBanner(albumTitle: pending.title)
+                    }
+                }
             }
             .containerBackground(for: .widget) {
                 PhotoWidgetBackground(entry: entry)
@@ -268,5 +334,28 @@ struct PhotoWidgetPositionedFace: View {
             maxHeight: .infinity,
             alignment: entry.settings.anchor.alignment
         )
+    }
+}
+
+/// Shown while an album picked in "Edit Widget" is waiting for the app to copy
+/// its photos across.
+struct PhotoWidgetPendingBanner: View {
+    let albumTitle: String
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Image(systemName: "photo.badge.arrow.down")
+            Text(albumTitle)
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
+            Text("Open ShotDex to copy these photos")
+                .font(.caption2)
+                .multilineTextAlignment(.center)
+        }
+        .foregroundStyle(.white)
+        .padding(8)
+        .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     }
 }
