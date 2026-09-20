@@ -178,6 +178,20 @@ final class VideoCompositionInstruction: NSObject, AVVideoCompositionInstruction
         let start: Double
         let duration: Double
         let effect: VideoClipEffect
+        var fadeIn: Double = 0
+        var fadeOut: Double = 0
+
+        /// Opacity from this clip's own fades at one timeline second.
+        func fadeOpacity(at time: Double) -> Double {
+            guard duration > 0 else { return 1 }
+            let local = time - start
+            var opacity = 1.0
+            if fadeIn > 0, local < fadeIn { opacity = min(opacity, max(0, local / fadeIn)) }
+            if fadeOut > 0, local > duration - fadeOut {
+                opacity = min(opacity, max(0, (duration - local) / fadeOut))
+            }
+            return opacity
+        }
     }
 
     let timeRange: CMTimeRange
@@ -359,6 +373,26 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
     /// coordinates. Geometric effects are one affine; optics reuse the
     /// photo pipeline's extent-safe primitives.
     private func applyClipEffect(
+        _ image: CIImage,
+        timing: VideoCompositionInstruction.ClipRenderTiming,
+        at time: Double,
+        canvas: CGRect
+    ) -> CIImage {
+        // A fade is not an effect but it rides the same per-clip clock, and
+        // it must come **after** whatever the effect did: fading a blurred
+        // frame is right, blurring a faded one is not. So the effect switch
+        // runs first and its result is faded on the way out.
+        let rendered = applyEffectOnly(image, timing: timing, at: time, canvas: canvas)
+        let opacity = timing.fadeOpacity(at: time)
+        guard opacity < 0.999 else { return rendered }
+        return PhotoRenderService.filtered(
+            "CIColorMatrix",
+            image: rendered,
+            values: ["inputAVector": CIVector(x: 0, y: 0, z: 0, w: opacity)]
+        )
+    }
+
+    private func applyEffectOnly(
         _ image: CIImage,
         timing: VideoCompositionInstruction.ClipRenderTiming,
         at time: Double,

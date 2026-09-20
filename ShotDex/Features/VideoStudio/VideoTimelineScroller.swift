@@ -19,6 +19,11 @@ struct TimelineDragZone: Equatable {
         case clipLeadingHandle(UUID)
         case clipTrailingHandle(UUID)
         case clipReorder(UUID)
+        /// The two corner grips that set a clip's own fade from and to the
+        /// background — the affordance every video app the user has touched
+        /// puts there, and the one that replaces "open panel, find slider".
+        case clipFadeInHandle(UUID)
+        case clipFadeOutHandle(UUID)
         /// Text and sticker overlays share these — both are `TimedOverlay`.
         case overlayBody(UUID)
         case overlayLeadingHandle(UUID)

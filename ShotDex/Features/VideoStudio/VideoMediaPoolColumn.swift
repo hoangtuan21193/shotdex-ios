@@ -38,6 +38,7 @@ struct VideoMediaPoolColumn: View {
     let onAddText: (OverlayFontChoice?) -> Void
 
     @State private var tab: Tab = .media
+    @State private var lookThumbnails = VideoFilterThumbnails()
     @State private var source: Source = .all
     @State private var order: Order = .newest
     @State private var presentation: Presentation = .grid
@@ -333,15 +334,21 @@ struct VideoMediaPoolColumn: View {
                             RoundedRectangle(cornerRadius: 4, style: .continuous)
                                 .fill(EditorTheme.control)
                                 .overlay {
-                                    Image(systemName: "camera.filters")
-                                        .font(.system(size: 15))
-                                        .foregroundStyle(
-                                            model.recipe.filter == filter
-                                                ? EditorTheme.accent
-                                                : EditorTheme.dimText
-                                        )
+                                    // The frame the user is looking at, under
+                                    // this look — not a glyph that is the
+                                    // same for all forty-nine.
+                                    if let preview = lookThumbnails.images[filter] {
+                                        Image(uiImage: preview)
+                                            .resizable()
+                                            .scaledToFill()
+                                    } else {
+                                        Image(systemName: "camera.filters")
+                                            .font(.system(size: 15))
+                                            .foregroundStyle(EditorTheme.dimText)
+                                    }
                                 }
                                 .frame(width: cell, height: (cell * 9 / 16).rounded())
+                                .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
                                 .overlay {
                                     RoundedRectangle(cornerRadius: 4, style: .continuous)
                                         .stroke(
@@ -369,6 +376,14 @@ struct VideoMediaPoolColumn: View {
             .padding(.horizontal, VideoStudioMetrics.mediaPoolCellSpacing)
             .padding(.vertical, 8)
         }
+        .task(id: model.clipIndexUnderPlayhead) {
+            lookThumbnails.refresh(
+                for: model,
+                photoLibrary: photoLibrary,
+                cell: VideoStudioMetrics.mediaPoolCellWidth(columnWidth: width)
+            )
+        }
+        .onDisappear { lookThumbnails.cancel() }
     }
 
     /// The imported-music library. Bundled tracks are gone (the catalogue is

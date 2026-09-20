@@ -271,6 +271,11 @@ struct RootTabView: View {
             // request before this view existed, so no change would ever fire.
             drainPendingIntent(IntentRouter.shared.pending)
         }
+        // Same as the legacy path: keep the On This Day widget in step with
+        // the library.
+        .onChange(of: photoLibrary.assetChangeToken) {
+            Task { await dependencies.refreshWidgetSnapshot() }
+        }
         .onChange(of: dependencies.onThisDayNotifications.pendingOpenDate) {
             drainPendingOnThisDayOpen()
         }
@@ -341,6 +346,12 @@ struct RootTabView: View {
                 guard let pending else { return }
                 libraryModel?.criteria = pending
                 navigation.pendingLibraryFilter = nil
+            }
+            // A photo imported, deleted or edited changes what the On This
+            // Day widget should show. The writer's own fingerprint check makes
+            // this cheap when nothing that matters moved.
+            .onChange(of: photoLibrary.assetChangeToken) {
+                Task { await dependencies.refreshWidgetSnapshot() }
             }
             .onChange(of: dependencies.onThisDayNotifications.pendingOpenDate) {
                 drainPendingOnThisDayOpen()

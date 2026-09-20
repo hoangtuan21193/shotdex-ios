@@ -341,6 +341,42 @@ struct VideoStudioDeskLayoutTests {
         #expect(abs(above - below) < 0.001)
     }
 
+    // MARK: Clip fades
+
+    /// The two fades can never cross: half the clip each, so a shot is never
+    /// fading in and out at the same instant and therefore never fully
+    /// visible.
+    @Test func aClipsTwoFadesCannotCross() {
+        var clip = VideoClip(assetID: "x", kind: .photo)
+        clip.photoDuration = 4
+        #expect(clip.maximumFade() == 2)
+        clip.fadeIn = 2
+        clip.fadeOut = 2
+        #expect(clip.fadeOpacity(atLocalTime: 2) == 1)
+    }
+
+    @Test func aFadeRunsFromBlackToFullAndBack() {
+        var clip = VideoClip(assetID: "x", kind: .photo)
+        clip.photoDuration = 4
+        clip.fadeIn = 1
+        clip.fadeOut = 1
+        #expect(clip.fadeOpacity(atLocalTime: 0) == 0)
+        #expect(abs(clip.fadeOpacity(atLocalTime: 0.5) - 0.5) < 0.0001)
+        #expect(clip.fadeOpacity(atLocalTime: 2) == 1)
+        #expect(abs(clip.fadeOpacity(atLocalTime: 3.5) - 0.5) < 0.0001)
+        #expect(clip.fadeOpacity(atLocalTime: 4) == 0)
+    }
+
+    /// No fades means no fade maths at all — a hard cut is the default and
+    /// must stay exactly opaque.
+    @Test func aClipWithoutFadesIsAlwaysOpaque() {
+        var clip = VideoClip(assetID: "x", kind: .photo)
+        clip.photoDuration = 3
+        for t in stride(from: 0.0, through: 3.0, by: 0.25) {
+            #expect(clip.fadeOpacity(atLocalTime: t) == 1)
+        }
+    }
+
     // MARK: Media pool cells
 
     @Test func theMediaPoolFitsThreeColumnsWideAndTwoNarrow() {

@@ -269,12 +269,21 @@ enum VideoCompositionBuilder {
             recipe.clips.map { ($0.id, $0.effect) },
             uniquingKeysWith: { first, _ in first }
         )
+        // Fades ride the same fresh-recipe path as effects, for the same
+        // reason: dragging a fade handle must not rebuild the composition.
+        let fadesByClipID = Dictionary(
+            recipe.clips.map { ($0.id, (inSeconds: $0.fadeIn, outSeconds: $0.fadeOut)) },
+            uniquingKeysWith: { first, _ in first }
+        )
         func timing(_ clip: Layout.SegmentClip) -> VideoCompositionInstruction.ClipRenderTiming {
-            VideoCompositionInstruction.ClipRenderTiming(
+            let fade = fadesByClipID[clip.clipID] ?? (inSeconds: 0, outSeconds: 0)
+            return VideoCompositionInstruction.ClipRenderTiming(
                 clipIndex: clip.clipIndex,
                 start: clip.start,
                 duration: clip.duration,
-                effect: effectByClipID[clip.clipID] ?? .none
+                effect: effectByClipID[clip.clipID] ?? .none,
+                fadeIn: fade.inSeconds,
+                fadeOut: fade.outSeconds
             )
         }
         let videoComposition = AVMutableVideoComposition()

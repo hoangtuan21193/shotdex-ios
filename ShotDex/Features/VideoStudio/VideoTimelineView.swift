@@ -301,6 +301,17 @@ struct VideoTimelineView: View {
             let newDuration = min(max(0.5, snappedEnd - timed.start), max(0.5, model.totalDuration - timed.start))
             model.pushUndo()
             model.setOverlayTiming(start: timed.start, duration: newDuration, forOverlay: id)
+        case .clipFadeInHandle(let id):
+            guard let clip = model.recipe.clips.first(where: { $0.id == id }) else { return }
+            model.pushUndo()
+            model.setFade(clip.fadeIn + delta, at: .start, for: id)
+        case .clipFadeOutHandle(let id):
+            guard let clip = model.recipe.clips.first(where: { $0.id == id }) else { return }
+            model.pushUndo()
+            // Dragging the trailing grip leftwards makes the fade longer, so
+            // the sign flips — the grip moves with the finger, the value
+            // moves against it.
+            model.setFade(clip.fadeOut - delta, at: .end, for: id)
         case .musicBody(let id):
             guard let music = model.recipe.musicTracks.first(where: { $0.id == id }) else { return }
             model.pushUndo()

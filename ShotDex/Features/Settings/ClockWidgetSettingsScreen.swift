@@ -258,13 +258,18 @@ struct ClockWidgetSettingsScreen: View {
             // Swatches rather than a picker menu: with colour, the colour is
             // the whole answer, and a menu hides every option behind a tap
             // (DESIGN.md §7.5, the same reason the accent row is swatches).
-            HStack(spacing: 12) {
+            // Two rows of four rather than one row of eight: eight 44pt
+            // targets do not fit the width of a grouped row, and the ones at
+            // the ends were clipped by it.
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4),
+                spacing: 12
+            ) {
                 ForEach(WidgetTextColor.swatches, id: \.self) { hex in
                     swatch(hex: hex)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, 4)
+            .padding(.vertical, 6)
 
             Picker("Legibility", selection: legibilityBinding) {
                 ForEach(ClockWidgetSettings.Legibility.allCases) { option in
@@ -296,9 +301,25 @@ struct ClockWidgetSettingsScreen: View {
                 )
         }
         .buttonStyle(.plain)
-        .frame(minWidth: 44, minHeight: 44)
-        .accessibilityLabel(hex)
+        .frame(maxWidth: .infinity, minHeight: 44)
+        .accessibilityLabel(colourName(hex: hex))
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+    }
+
+    /// A colour needs a name a screen reader can say; a hex code read out
+    /// digit by digit is not one.
+    private func colourName(hex: String) -> String {
+        switch hex.uppercased() {
+        case "#FFFFFF": "White"
+        case "#000000": "Black"
+        case "#EB9526": "Amber"
+        case "#F2E8D5": "Sand"
+        case "#7FD1AE": "Green"
+        case "#8FC7E8": "Blue"
+        case "#E88FA8": "Pink"
+        case "#C7A8F0": "Purple"
+        default: hex
+        }
     }
 
     // MARK: Placement
@@ -418,9 +439,17 @@ struct ClockWidgetPreview: View {
 
     var body: some View {
         GeometryReader { proxy in
+            // The image is clipped to the preview's own size before anything
+            // is stacked on it: a `scaledToFill` image is larger than its
+            // frame, and a ZStack sized by it pushes the bottom-aligned clock
+            // out through the bottom edge.
             ZStack {
                 if let image {
-                    image.resizable().scaledToFill()
+                    image
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: proxy.size.width, height: proxy.size.height)
+                        .clipped()
                 } else {
                     LinearGradient(
                         colors: [.gray.opacity(0.55), .gray.opacity(0.25)],

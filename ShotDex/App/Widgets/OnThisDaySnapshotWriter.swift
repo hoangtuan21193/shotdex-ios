@@ -17,18 +17,23 @@ struct OnThisDaySnapshotWriter {
 
     /// A rewrite is skipped while today's file is fresher than this: the fetch
     /// is expensive and the answer only changes when the library does.
-    private static let staleAfter: TimeInterval = 6 * 3600
+    private nonisolated static let staleAfter: TimeInterval = 6 * 3600
 
     func write(now: Date = .now, force: Bool = false) async {
         guard let container = WidgetSharedContainer.url else { return }
         let directory = OnThisDaySnapshot.directoryURL(in: container)
         let days = Self.days(from: now, calendar: calendar)
-        guard force || Self.needsRewrite(days: days, now: now, calendar: calendar) else { return }
+        let stamp = await Task.detached(priority: .utility) { Self.libraryStamp() }.value
+        guard force || Self.needsRewrite(
+            days: days, now: now, calendar: calendar, libraryStamp: stamp
+        ) else { return }
 
         var keptFiles: Set<String> = []
         for day in days {
             let dayKey = WidgetSharedContainer.dayKey(for: day, calendar: calendar)
-            let snapshot = await write(day: day, dayKey: dayKey, directory: directory)
+            let snapshot = await write(
+                day: day, dayKey: dayKey, directory: directory, libraryStamp: stamp
+            )
             keptFiles.insert(OnThisDaySnapshot.fileName(dayKey: dayKey))
             keptFiles.formUnion(snapshot?.photos.map(\.fileName) ?? [])
         }
@@ -38,16 +43,34 @@ struct OnThisDaySnapshotWriter {
 
     /// Today first, then the days the widget will roll over to before the app
     /// is likely to be opened again.
-    static func days(from now: Date, calendar: Calendar) -> [Date] {
+    nonisolated static func days(from now: Date, calendar: Calendar) -> [Date] {
         let today = calendar.startOfDay(for: now)
         return (0...OnThisDaySnapshot.daysAhead).compactMap {
             calendar.date(byAdding: .day, value: $0, to: today)
         }
     }
 
-    /// True when any day is missing its file, or today's is old enough that the
-    /// library has probably changed under it. Pure, so the throttle is tested.
-    static func needsRewrite(days: [Date], now: Date, calendar: Calendar) -> Bool {
+    /// How many browsable items the library holds and when the newest was
+    /// taken — enough to notice an import, a delete or an edit that moved a
+    /// date, and two cheap fetches rather than the eight-day scan itself.
+    nonisolated static func libraryStamp() -> String {
+        let options = PHFetchOptions()
+        options.predicate = PhotoLibraryService.browsableMediaPredicate
+        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        let fetch = PHAsset.fetchAssets(with: options)
+        let newest = fetch.firstObject?.creationDate?.timeIntervalSince1970 ?? 0
+        return "\(fetch.count)-\(Int(newest))"
+    }
+
+    /// True when any day is missing its file, the library has changed under
+    /// them, or today's is old enough to be worth redoing anyway. Pure given
+    /// the files, so the throttle is tested.
+    nonisolated static func needsRewrite(
+        days: [Date],
+        now: Date,
+        calendar: Calendar,
+        libraryStamp: String
+    ) -> Bool {
         guard let today = days.first else { return false }
         for day in days {
             let key = WidgetSharedContainer.dayKey(for: day, calendar: calendar)
@@ -55,10 +78,16 @@ struct OnThisDaySnapshotWriter {
         }
         let todayKey = WidgetSharedContainer.dayKey(for: today, calendar: calendar)
         guard let snapshot = OnThisDaySnapshot.read(dayKey: todayKey) else { return true }
+        if snapshot.libraryStamp != libraryStamp { return true }
         return now.timeIntervalSince(snapshot.generatedAt) > staleAfter
     }
 
-    private func write(day: Date, dayKey: String, directory: URL) async -> OnThisDaySnapshot? {
+    private func write(
+        day: Date,
+        dayKey: String,
+        directory: URL,
+        libraryStamp: String
+    ) async -> OnThisDaySnapshot? {
         let candidates = await Task.detached(priority: .utility) {
             Self.candidates(for: day, calendar: calendar)
         }.value
@@ -88,7 +117,8 @@ struct OnThisDaySnapshotWriter {
             photoCount: candidates.count,
             years: Array(Set(candidates.years)).sorted(by: >),
             photos: photos,
-            generatedAt: .now
+            generatedAt: .now,
+            libraryStamp: libraryStamp
         )
         try? WidgetSharedContainer.encode(
             snapshot,

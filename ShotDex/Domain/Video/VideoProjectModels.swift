@@ -114,6 +114,15 @@ struct VideoClip: Identifiable, Equatable, Codable, Sendable {
     var trimStart: Double = 0
     var trimEnd: Double?
     var isMuted = false
+    /// Seconds of fade from the project background at the clip's head, and
+    /// back to it at its tail. Zero means a hard cut, which is the default
+    /// and what most cuts should be.
+    ///
+    /// Separate from a *transition*, which is a deal between two neighbours
+    /// and lives on the boundary. A fade is one clip's own business: it is
+    /// what opens a film and what closes it.
+    var fadeIn: Double = 0
+    var fadeOut: Double = 0
     var effect: VideoClipEffect = .none
     /// Playback speed multiplier for video clips (1 = real time). Photo and
     /// freeze clips ignore it — their length is `photoDuration` directly.
@@ -139,6 +148,24 @@ struct VideoClip: Identifiable, Equatable, Codable, Sendable {
                 ((trimEnd ?? sourceDuration ?? 0) - trimStart) / max(speed, VideoClip.speedRange.lowerBound)
             )
         }
+    }
+
+    /// How much of a clip a fade may take. Half each end, so the two can
+    /// never cross and leave a clip that is never fully visible.
+    func maximumFade() -> Double { max(0, effectiveDuration / 2) }
+
+    /// Opacity at one second into this clip, from its own fades.
+    func fadeOpacity(atLocalTime seconds: Double) -> Double {
+        let length = effectiveDuration
+        guard length > 0 else { return 1 }
+        var opacity = 1.0
+        if fadeIn > 0, seconds < fadeIn {
+            opacity = min(opacity, max(0, seconds / fadeIn))
+        }
+        if fadeOut > 0, seconds > length - fadeOut {
+            opacity = min(opacity, max(0, (length - seconds) / fadeOut))
+        }
+        return opacity
     }
 
     static let defaultPhotoDuration: Double = 3

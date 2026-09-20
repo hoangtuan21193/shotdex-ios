@@ -1271,6 +1271,23 @@ final class VideoStudioModel {
 
     /// Per-clip effect: the instructions carry the effect from the fresh
     /// recipe, so this swaps only the video composition — timing unchanged.
+    /// A clip's own fade from and to the project background. Clamped to half
+    /// the clip each end so the two can never cross and leave a shot that is
+    /// never fully visible.
+    func setFade(_ seconds: Double, at end: ClipEnd, for clipID: UUID) {
+        guard !isClipLocked(clipID),
+              let index = recipe.clips.firstIndex(where: { $0.id == clipID })
+        else { return }
+        let limit = recipe.clips[index].maximumFade()
+        let value = min(max(0, seconds), limit)
+        switch end {
+        case .start: recipe.clips[index].fadeIn = value
+        case .end: recipe.clips[index].fadeOut = value
+        }
+        markEdited()
+        applyVideoTier()
+    }
+
     func setEffect(_ effect: VideoClipEffect, for clipID: UUID) {
         guard let index = recipe.clips.firstIndex(where: { $0.id == clipID }) else { return }
         pushUndo()

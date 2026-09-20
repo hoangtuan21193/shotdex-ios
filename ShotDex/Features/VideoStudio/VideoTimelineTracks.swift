@@ -287,6 +287,7 @@ private struct ClipBand: View {
         .contentShape(Rectangle())
         .onTapGesture { model.toggleClip(clip.id) }
         .background(reorderZone)
+        .overlay(fadeZones)
         .accessibilityElement()
         .accessibilityLabel(accessibilityLabel)
         .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : .isButton)
@@ -331,6 +332,83 @@ private struct ClipBand: View {
             localized: "\(kind) clip, from second \(Int(placement.start)) to \(Int(placement.end))",
             comment: "VoiceOver label for one clip on the Video Studio timeline: its kind and the seconds it spans"
         )
+    }
+
+    /// The fade grips, and the wedge that shows how long the fade is.
+    ///
+    /// Drawn only on a selected clip: a grip on every clip in a forty-clip
+    /// timeline is forty targets nobody aimed at, and the wedge would read as
+    /// decoration rather than as a value.
+    @ViewBuilder
+    private var fadeZones: some View {
+        if isSelected {
+            GeometryReader { proxy in
+                let width = proxy.size.width
+                let height = proxy.size.height
+                let seconds = max(placement.duration, 0.0001)
+                let inWidth = CGFloat(clip.fadeIn / seconds) * width
+                let outWidth = CGFloat(clip.fadeOut / seconds) * width
+                ZStack(alignment: .topLeading) {
+                    if inWidth > 1 { fadeWedge(width: inWidth, height: height, leading: true) }
+                    if outWidth > 1 {
+                        fadeWedge(width: outWidth, height: height, leading: false)
+                            .offset(x: width - outWidth)
+                    }
+                    grip(leading: true).offset(x: max(0, inWidth - 11))
+                    grip(leading: false).offset(x: min(width - 22, width - outWidth))
+                }
+                .allowsHitTesting(false)
+                .preference(
+                    key: TimelineDragZonesKey.self,
+                    value: [
+                        TimelineDragZone(
+                            kind: .clipFadeInHandle(clip.id),
+                            rect: CGRect(
+                                x: proxy.frame(in: .named("timelineContent")).minX + max(0, inWidth - 11),
+                                y: proxy.frame(in: .named("timelineContent")).minY,
+                                width: 22,
+                                height: height
+                            )
+                        ),
+                        TimelineDragZone(
+                            kind: .clipFadeOutHandle(clip.id),
+                            rect: CGRect(
+                                x: proxy.frame(in: .named("timelineContent")).minX + min(width - 22, width - outWidth),
+                                y: proxy.frame(in: .named("timelineContent")).minY,
+                                width: 22,
+                                height: height
+                            )
+                        ),
+                    ]
+                )
+            }
+        }
+    }
+
+    private func fadeWedge(width: CGFloat, height: CGFloat, leading: Bool) -> some View {
+        Path { path in
+            if leading {
+                path.move(to: CGPoint(x: 0, y: 0))
+                path.addLine(to: CGPoint(x: width, y: 0))
+                path.addLine(to: CGPoint(x: 0, y: height))
+            } else {
+                path.move(to: CGPoint(x: width, y: 0))
+                path.addLine(to: CGPoint(x: 0, y: 0))
+                path.addLine(to: CGPoint(x: width, y: height))
+            }
+            path.closeSubpath()
+        }
+        .fill(Color.black.opacity(0.55))
+        .frame(width: width, height: height)
+    }
+
+    private func grip(leading: Bool) -> some View {
+        Circle()
+            .fill(.white)
+            .frame(width: 11, height: 11)
+            .overlay(Circle().stroke(Color.black.opacity(0.4), lineWidth: 0.5))
+            .padding(.top, 3)
+            .padding(leading ? .leading : .trailing, 3)
     }
 
     @ViewBuilder
