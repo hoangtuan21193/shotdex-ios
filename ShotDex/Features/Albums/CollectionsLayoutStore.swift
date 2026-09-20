@@ -5,7 +5,6 @@ import SwiftUI
 enum CollectionsSection: String, CaseIterable, Identifiable, Codable, Sendable {
     case pinned
     case memories
-    case recents
     case subjects
     case smartAlbums
     case myAlbums
@@ -23,7 +22,6 @@ enum CollectionsSection: String, CaseIterable, Identifiable, Codable, Sendable {
         switch self {
         case .pinned: "Pinned"
         case .memories: "Memories"
-        case .recents: "Recents"
         case .subjects: "People and Pets"
         case .smartAlbums: "Smart Albums"
         case .mediaTypes: "Media Types"
@@ -37,7 +35,6 @@ enum CollectionsSection: String, CaseIterable, Identifiable, Codable, Sendable {
         switch self {
         case .pinned: "pin"
         case .memories: "sparkles"
-        case .recents: "clock"
         case .subjects: "person.crop.square"
         case .smartAlbums: "line.3.horizontal.decrease.circle"
         case .mediaTypes: "square.stack.3d.down.right"

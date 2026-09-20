@@ -46,7 +46,7 @@ struct CollectionsLayoutTests {
     @Test func resetGoesBackToTheDefault() {
         let store = makeStore()
         store.move(fromOffsets: IndexSet(integer: 0), toOffset: 4)
-        store.setHidden(true, for: .recents)
+        store.setHidden(true, for: .memories)
         store.reset()
         #expect(store.order == CollectionsSection.allCases)
         #expect(store.hidden.isEmpty)

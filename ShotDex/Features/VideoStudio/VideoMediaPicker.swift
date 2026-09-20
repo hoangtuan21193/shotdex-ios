@@ -17,6 +17,12 @@ struct VideoMediaPick: Identifiable, Equatable, Sendable {
 struct VideoMediaPicker: UIViewControllerRepresentable {
     /// 0 = unlimited (Add media); 1 = single (Replace).
     var selectionLimit = 0
+    /// What may be picked. Photos and videos by default; the collage side of
+    /// Creations narrows it to images. Kept as one picker rather than a
+    /// second wrapper around `PHPickerViewController` — the identity
+    /// handling (`assetIdentifier` from a `.shared()` library) is the part
+    /// that is easy to get wrong, and it should exist once.
+    var filter: PHPickerFilter = .any(of: [.images, .videos])
     let onPick: ([VideoMediaPick]) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -28,7 +34,7 @@ struct VideoMediaPicker: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> PHPickerViewController {
         var configuration = PHPickerConfiguration(photoLibrary: .shared())
         configuration.selectionLimit = selectionLimit
-        configuration.filter = .any(of: [.images, .videos])
+        configuration.filter = filter
         let picker = PHPickerViewController(configuration: configuration)
         picker.delegate = context.coordinator
         return picker

@@ -8,6 +8,11 @@ struct AlbumsScreen: View {
     /// One-line card height for the Media Types and Utilities bands, scaled
     /// with the text inside so a row never crops the card.
     @ScaledMetric(relativeTo: .body) private var rowHeight = CollectionListRowMetrics.height
+    /// Height of the hero, scaled here rather than inside the card.
+    @ScaledMetric(relativeTo: .headline) private var heroScale = 1.0
+    private var heroHeight: CGFloat {
+        CollectionsHeroMetrics.height(isRegularWidth: horizontalSizeClass == .regular) * heroScale
+    }
 
     /// Gap between tiles. Wider where the tiles are, so a row of 168pt covers
     /// does not read as one striped block.
@@ -168,8 +173,8 @@ struct AlbumsScreen: View {
         .navigationDestination(for: TripsDestination.self) { _ in
             TripsScreen()
         }
-        .navigationDestination(for: CreationsDestination.self) { _ in
-            CreationsScreen()
+        .navigationDestination(for: CreationsDestination.self) { destination in
+            CreationsScreen(kind: destination.kind)
         }
         .sheet(isPresented: $isCustomizePresented) {
             CustomizeCollectionsSheet(store: dependencies.collectionsLayout)
@@ -229,8 +234,6 @@ struct AlbumsScreen: View {
             }
         case .memories:
             if !model.memories.isEmpty { memoriesSection() }
-        case .recents:
-            if !recentTokens.isEmpty { recentsSection() }
         case .subjects:
             if !subjectTokens.isEmpty { subjectsSection() }
         case .smartAlbums:
@@ -252,6 +255,19 @@ struct AlbumsScreen: View {
         }
     }
 
+    /// The top row: On This Day, full width, and nothing beside it.
+    private var heroRow: some View {
+        NavigationLink(value: OnThisDayDestination()) {
+            OnThisDayCard(
+                count: model.onThisDayCount,
+                coverAsset: model.onThisDayCover
+            )
+        }
+        .buttonStyle(.plain)
+        .frame(height: heroHeight)
+        .padding(.horizontal)
+    }
+
     private var albumGrid: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -262,14 +278,7 @@ struct AlbumsScreen: View {
                     .padding(.top, 4)
                 }
 
-                NavigationLink(value: OnThisDayDestination()) {
-                    OnThisDayCard(
-                        count: model.onThisDayCount,
-                        coverAsset: model.onThisDayCover
-                    )
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal)
+                heroRow
 
                 ForEach(dependencies.collectionsLayout.visibleOrder) { section in
                     sectionView(section)
@@ -317,26 +326,6 @@ struct AlbumsScreen: View {
     /// The recent-activity collections that actually have something in them.
     /// An empty "Recently Viewed" is worse than none: it invites a tap that
     /// leads nowhere.
-    private var recentTokens: [(title: String, subtitle: String, ids: [String])] {
-        var result: [(String, String, [String])] = []
-        let viewed = dependencies.recentActivity.viewed
-        if !viewed.isEmpty {
-            result.append((
-                String(localized: "Recently Viewed"),
-                Self.photoCountLabel(viewed.count),
-                viewed
-            ))
-        }
-        let shared = dependencies.recentActivity.shared
-        if !shared.isEmpty {
-            result.append((
-                String(localized: "Recently Shared"),
-                Self.photoCountLabel(shared.count),
-                shared
-            ))
-        }
-        return result
-    }
 
     /// People and Pets, shown only once the opt-in scan has found some. An
     /// empty People row would read as "you have no photos of anyone" when it
@@ -560,20 +549,31 @@ extension AlbumsScreen {
             .buttonStyle(.plain)
             .contextMenu { pinButton(.trips) }
 
-            // Collages and videos this app made, with the recipe behind each.
-            // A utility rather than an album: the exported photos are already
-            // in the library, and what this row leads to is the way back into
-            // the editor.
-            if model.creationCount > 0 {
-                NavigationLink(value: CreationsDestination()) {
-                    CollectionListRow(
-                        title: String(localized: "Creations"),
-                        systemImage: "wand.and.stars",
-                        detail: model.creationCount.formatted()
-                    )
-                }
-                .buttonStyle(.plain)
+            // What this app has made, split by the editor that made it:
+            // "Creations" as one row said nothing about what was inside, and
+            // a collage and a video are started from different places and
+            // edited by different tools. Both rows are always here, empty or
+            // not — each one is also where you start a new one.
+            NavigationLink(value: CreationsDestination(kind: .collage)) {
+                CollectionListRow(
+                    title: String(localized: "Collages"),
+                    systemImage: "square.grid.2x2",
+                    detail: model.collageCount > 0 ? model.collageCount.formatted() : nil
+                )
             }
+            .buttonStyle(.plain)
+
+            // "Video Projects", because Media Types already has a Videos
+            // album and that one means the footage the user shot. These are
+            // the things the Video Studio made and can reopen.
+            NavigationLink(value: CreationsDestination(kind: .video)) {
+                CollectionListRow(
+                    title: String(localized: "Video Projects", comment: "Utilities row: videos made in the Video Studio"),
+                    systemImage: "film",
+                    detail: model.videoCount > 0 ? model.videoCount.formatted() : nil
+                )
+            }
+            .buttonStyle(.plain)
 
             // Recently Deleted and Unable to Upload: library housekeeping
             // rather than browsing, so they sit with Duplicates the way
@@ -625,19 +625,25 @@ extension AlbumsScreen {
         }
     }
 
-    /// Duplicates, Places and Trips are always drawn; Creations and the
+    /// Duplicates, Places, Trips, Collages and Videos are always drawn; the
     /// system utility albums come and go, and the packing has to count what
     /// is actually there.
     private var utilityEntryCount: Int {
-        3 + (model.creationCount > 0 ? 1 : 0) + model.utilityAlbums.count
+        5 + model.utilityAlbums.count
     }
 
-    /// One row per card up to three, then sideways — the packing the album
-    /// sections have always used. Three short cards stacked read as one band;
-    /// three rows of *one* card each read as a mistake, so the count only
-    /// grows as the entries do.
+    /// How many rows the band stacks before it starts scrolling sideways.
+    ///
+    /// Driven by how many cards are actually *visible* — about two at 190pt
+    /// on a phone, about four at 240pt on a 13" iPad — so the band fills the
+    /// rows it has before hiding anything. Measured the other way round
+    /// first: five utilities packed three-per-row put Videos off the right
+    /// edge with no peek to say it was there, on the very build that added
+    /// it. Capped at three, because a fourth row of word-sized cards is
+    /// taller than the section it belongs to.
     private func listRowCount(_ count: Int) -> Int {
-        max(1, min(3, (count + 2) / 3))
+        let visibleColumns = horizontalSizeClass == .regular ? 4 : 2
+        return max(1, min(3, (count + visibleColumns - 1) / visibleColumns))
     }
 
     /// `2 groups` / `Library up to date` under the Duplicates row, from the
@@ -726,41 +732,6 @@ enum CollectionListRowMetrics {
 }
 
 extension AlbumsScreen {
-    /// What the user has just been looking at or sharing. Kept out of
-    /// "Media Types" and "Utilities" because it is neither: it is a record of
-    /// what this person did, which is why the app has to keep it itself.
-    fileprivate func recentsSection() -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Recents")
-                .font(.title2.bold())
-                .padding(.horizontal)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(alignment: .top, spacing: tileSpacing) {
-                    ForEach(recentTokens, id: \.title) { token in
-                        NavigationLink {
-                            PhotoListScreen(
-                                title: token.title,
-                                subtitle: token.subtitle,
-                                assetIds: token.ids
-                            )
-                        } label: {
-                            UtilityToken(
-                                title: token.title,
-                                subtitle: token.subtitle,
-                                systemImage: token.title == String(localized: "Recently Viewed")
-                                    ? "eye"
-                                    : "square.and.arrow.up"
-                            )
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal)
-            }
-            .scrollClipDisabled()
-        }
-    }
 
     fileprivate func subjectsSection() -> some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -1056,13 +1027,12 @@ struct OnThisDayCard: View {
     let coverAsset: PHAsset?
 
     @State private var cover: UIImage?
-    /// The card carries a title and a sentence, so it grows with them.
-    @ScaledMetric(relativeTo: .headline) private var heroHeight: CGFloat = 150
 
     var body: some View {
+        // Height comes from the row, which sets it once for the hero and the
+        // recents column beside it so the two stay level.
         Color(.secondarySystemBackground)
-            .frame(height: heroHeight)
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlay {
                 if let cover {
                     Image(uiImage: cover)
@@ -1141,6 +1111,18 @@ struct OnThisDayCard: View {
         }
     }
 }
+
+/// Geometry for the Collections tab's top row.
+enum CollectionsHeroMetrics {
+    /// The hero's height. Taller on a wide window for the same reason the
+    /// cover tiles are bigger there: the card is full width, so at 1032pt a
+    /// 150pt hero is a letterbox strip rather than a picture. Scaled with
+    /// Dynamic Type by the screen, not by the card.
+    static func height(isRegularWidth: Bool) -> CGFloat {
+        isRegularWidth ? 260 : 180
+    }
+}
+
 
 /// One memory as a wide cover with its title and count burned into the bottom.
 /// Same shape as `TripCard` but narrower, because these scroll sideways.

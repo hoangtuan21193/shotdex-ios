@@ -16,9 +16,25 @@ struct CreationStore: Sendable {
         }
     }
 
+    /// Everything of one kind, most recently edited first.
+    func fetchOrdered(kind: Creation.Kind) throws -> [Creation] {
+        try database.reader.read { db in
+            try Creation
+                .filter(Column("kind") == kind.rawValue)
+                .order(Column("updatedAt").desc)
+                .fetchAll(db)
+        }
+    }
+
     func count() throws -> Int {
         try database.reader.read { db in
             try Creation.fetchCount(db)
+        }
+    }
+
+    func count(kind: Creation.Kind) throws -> Int {
+        try database.reader.read { db in
+            try Creation.filter(Column("kind") == kind.rawValue).fetchCount(db)
         }
     }
 
