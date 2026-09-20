@@ -1049,7 +1049,7 @@ struct LibraryScreen: View {
 
     /// Pre-iOS 26 the floating custom chrome overlaps the content bottom.
     private var bottomChromeInset: CGFloat {
-        if #available(iOS 26.0, *) { 8 } else { 100 }
+        AppTheme.Size.bottomChromeClearance
     }
 
     // MARK: Toolbar

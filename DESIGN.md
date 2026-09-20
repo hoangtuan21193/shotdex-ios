@@ -118,6 +118,7 @@ Thumbnail trong lưới ảnh: vuông, không bo (do `PhotoGridCollectionView` q
 - **Nút hành động chính (full width):** cao **50**, `r-md`.
 - **Pill / token:** cao **28** (tầng D, `EditorPillLabel`) hoặc **32** (tầng A/B).
 - **Segmented control:** cao **32**, container `r-sm`+2.
+- **Khoảng trống đáy cho chrome nổi:** `AppTheme.Size.bottomChromeClearance` — **8** trên iOS 26 (thanh tab native tự chừa safe area), **100** trước 26 (tab bar tuỳ biến nổi đè lên nội dung). Màn hình cuộn nào cũng dùng token này, không tự viết nhánh `#available`.
 
 ---
 

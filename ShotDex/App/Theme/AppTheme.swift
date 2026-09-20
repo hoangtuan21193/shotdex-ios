@@ -51,6 +51,15 @@ enum AppTheme {
         static let pillHeightLight: CGFloat = 32
         /// Segmented control height (container radius `Radius.sm` + 2).
         static let segmentedHeight: CGFloat = 32
+        /// Clearance a scrolling screen leaves under its content for the
+        /// bottom chrome. Pre-iOS 26 the custom tab bar floats over the
+        /// content and needs the room; on 26 the native bar reserves its own
+        /// safe area and only a breathing gap is left. Five screens each had
+        /// their own copy of this branch, two of them disagreeing on the
+        /// number.
+        static var bottomChromeClearance: CGFloat {
+            if #available(iOS 26.0, *) { Spacing.sm } else { 100 }
+        }
     }
 
     /// Motion tokens (DESIGN.md §11). No view writes its own duration.

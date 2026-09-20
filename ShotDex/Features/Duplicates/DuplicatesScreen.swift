@@ -285,7 +285,7 @@ struct DuplicatesScreen: View {
 
     /// Pre-26 the floating tab chrome still overlays a pushed screen.
     private var bottomChromePadding: CGFloat {
-        if #available(iOS 26.0, *) { AppTheme.Spacing.sm } else { 90 }
+        AppTheme.Size.bottomChromeClearance
     }
 
     static let byteFormatter: ByteCountFormatter = {

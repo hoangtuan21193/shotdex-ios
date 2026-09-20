@@ -398,7 +398,7 @@ struct AlbumDetailScreen: View {
     }
 
     private var bottomChromeInset: CGFloat {
-        if #available(iOS 26.0, *) { 8 } else { 100 }
+        AppTheme.Size.bottomChromeClearance
     }
 
 
