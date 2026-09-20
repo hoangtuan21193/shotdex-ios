@@ -318,9 +318,19 @@ private struct ClipBand: View {
         .padding(3)
     }
 
+    /// Built from localized parts, not from English literals interpolated
+    /// into a `String`: this is the only way a blind user reads the timeline,
+    /// and a verbatim `String` would have stayed English in every language.
     private var accessibilityLabel: String {
-        let kind = clip.kind == .video ? "Video" : clip.kind == .freeze ? "Freeze" : "Photo"
-        return "\(kind) clip, from second \(Int(placement.start)) to \(Int(placement.end))"
+        let kind = switch clip.kind {
+        case .video: String(localized: "Video", comment: "Kind of timeline clip, read by VoiceOver")
+        case .freeze: String(localized: "Freeze", comment: "Kind of timeline clip — a frozen frame — read by VoiceOver")
+        default: String(localized: "Photo", comment: "Kind of timeline clip, read by VoiceOver")
+        }
+        return String(
+            localized: "\(kind) clip, from second \(Int(placement.start)) to \(Int(placement.end))",
+            comment: "VoiceOver label for one clip on the Video Studio timeline: its kind and the seconds it spans"
+        )
     }
 
     @ViewBuilder

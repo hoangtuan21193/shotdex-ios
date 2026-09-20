@@ -469,10 +469,17 @@ struct CompareScreen: View {
     /// deletes; no menu, because there is nothing to choose between.
     private var deleteButton: some View {
         Button(action: deleteMarked) {
-            Label(
-                markedCount == 1 ? "Delete 1 Photo" : "Delete \(markedCount) Photos",
-                systemImage: "trash"
-            )
+            // One key with grammar agreement rather than a singular and a
+            // plural branch: Vietnamese and Japanese have no plural to pick
+            // between, and Polish and Russian have more forms than two.
+            Label {
+                Text(
+                    "Delete ^[\(markedCount) Photo](inflect: true)",
+                    comment: "Compare: button that deletes every marked photo"
+                )
+            } icon: {
+                Image(systemName: "trash")
+            }
             .font(.subheadline.weight(.semibold))
             .monospacedDigit()
             .foregroundStyle(.white)
@@ -483,7 +490,12 @@ struct CompareScreen: View {
         }
         .buttonStyle(.plain)
         .disabled(isDeleting)
-        .accessibilityLabel("Delete \(markedCount) marked photos")
+        .accessibilityLabel(
+            Text(
+                "Delete ^[\(markedCount) marked photo](inflect: true)",
+                comment: "VoiceOver label for Compare's delete button"
+            )
+        )
     }
 
     // MARK: Deleting
@@ -674,7 +686,7 @@ private struct CompareCard: View {
     /// for the photo that is zoomed in and being panned rather than picked.
     private var caption: some View {
         Button(action: onToggleMark) {
-            Text(captionText ?? "No metadata")
+            Text(captionText ?? Self.noMetadata)
                 .font(.caption)
                 .monospacedDigit()
                 .foregroundStyle(captionText == nil ? EditorTheme.dimText : EditorTheme.secondaryText)
@@ -687,9 +699,22 @@ private struct CompareCard: View {
         .buttonStyle(.plain)
     }
 
+    /// `Text(String)` and `.accessibilityLabel(String)` are the **verbatim**
+    /// overloads — a literal interpolated into a `String` first never reaches
+    /// the catalogue and stays English everywhere. Both fragments are
+    /// localized before they are joined.
+    static let noMetadata = String(
+        localized: "No metadata",
+        comment: "Compare card caption when a photo or video carries no EXIF"
+    )
+
     private var accessibilityLabel: String {
-        let numbers = captionText ?? "No metadata"
-        return isMarked ? "\(numbers). Marked for deletion" : numbers
+        let numbers = captionText ?? Self.noMetadata
+        guard isMarked else { return numbers }
+        return String(
+            localized: "\(numbers). Marked for deletion",
+            comment: "VoiceOver label for a Compare card the user has marked to delete"
+        )
     }
 
     /// Small glass play/pause control — the zoomable wrapper replaces the

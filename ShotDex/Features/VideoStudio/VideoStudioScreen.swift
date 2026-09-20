@@ -425,14 +425,13 @@ struct VideoStudioScreen: View {
         // difference between adding a clip and putting a file somewhere they
         // did not watch it go.
         if imported > 0 {
-            model.errorMessage = imported == 1
-                ? String(localized: "Photo added to your library and to the timeline.")
-                : String(localized: "\(imported) items added to your library and to the timeline.")
+            model.errorMessage = PhotoDropImport.addedMessage(
+                count: imported,
+                destination: .libraryAndTimeline
+            )
         }
         if failed > 0 {
-            model.errorMessage = failed == 1
-                ? String(localized: "One item couldn't be imported.")
-                : String(localized: "\(failed) items couldn't be imported.")
+            model.errorMessage = PhotoDropImport.failureMessage(count: failed)
         }
     }
 

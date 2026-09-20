@@ -162,19 +162,19 @@ enum AssetMetadataReader {
 
     private static func assetSection(_ asset: PHAsset) -> MetadataReportSection {
         var pairs: [(String, String?)] = [
-            ("Local Identifier", asset.localIdentifier),
-            ("Media Type", mediaTypeName(asset.mediaType)),
-            ("Media Subtypes", subtypeNames(asset.mediaSubtypes)),
-            ("Pixel Size", "\(asset.pixelWidth) × \(asset.pixelHeight)"),
-            ("Creation Date", asset.creationDate.map(dateString)),
-            ("Modification Date", asset.modificationDate.map(dateString)),
-            ("Favorite", asset.isFavorite ? "Yes" : nil),
-            ("Hidden", asset.isHidden ? "Yes" : nil),
+            (String(localized: "Local Identifier", comment: "Info panel row label"), asset.localIdentifier),
+            (String(localized: "Media Type", comment: "Info panel row label"), mediaTypeName(asset.mediaType)),
+            (String(localized: "Media Subtypes", comment: "Info panel row label"), subtypeNames(asset.mediaSubtypes)),
+            (String(localized: "Pixel Size", comment: "Info panel row label"), "\(asset.pixelWidth) × \(asset.pixelHeight)"),
+            (String(localized: "Creation Date", comment: "Info panel row label"), asset.creationDate.map(dateString)),
+            (String(localized: "Modification Date", comment: "Info panel row label"), asset.modificationDate.map(dateString)),
+            (String(localized: "Favorite", comment: "Info panel row label"), asset.isFavorite ? "Yes" : nil),
+            (String(localized: "Hidden", comment: "Info panel row label"), asset.isHidden ? "Yes" : nil),
         ]
         if asset.mediaType == .video {
             pairs.append(("Duration", MetadataFormatter.duration(asset.duration)))
         }
-        return section("Photo", from: pairs)
+        return section(String(localized: "Photo", comment: "Info panel section title"), from: pairs)
     }
 
     private static func resolvedLocation(
@@ -191,10 +191,10 @@ enum AssetMetadataReader {
     }
 
     private static func locationSection(_ location: AssetLocation?) -> MetadataReportSection {
-        guard let location else { return section("Location", from: []) }
-        return section("Location", from: [
-            ("Coordinate", String(format: "%.6f, %.6f", location.latitude, location.longitude)),
-            ("Altitude", location.altitude.map { String(format: "%.1f m", $0) }),
+        guard let location else { return section(String(localized: "Location", comment: "Info panel section title"), from: []) }
+        return section(String(localized: "Location", comment: "Info panel section title"), from: [
+            (String(localized: "Coordinate", comment: "Info panel row label"), String(format: "%.6f, %.6f", location.latitude, location.longitude)),
+            (String(localized: "Altitude", comment: "Info panel row label"), location.altitude.map { String(format: "%.1f m", $0) }),
         ])
     }
 
@@ -211,10 +211,10 @@ enum AssetMetadataReader {
         return zip(resources, headings.indices).map { resource, index in
             let size = (resource.value(forKey: "fileSize") as? NSNumber)?.intValue
             let pairs: [(String, String?)] = [
-                ("Original Filename", resource.originalFilename),
-                ("Type", resourceTypeName(resource.type)),
-                ("UTI", resource.uniformTypeIdentifier),
-                ("File Size", size.flatMap { MetadataFormatter.fileSize($0) }),
+                (String(localized: "Original Filename", comment: "Info panel row label"), resource.originalFilename),
+                (String(localized: "Type", comment: "Info panel row label"), resourceTypeName(resource.type)),
+                (String(localized: "UTI", comment: "Info panel row label"), resource.uniformTypeIdentifier),
+                (String(localized: "File Size", comment: "Info panel row label"), size.flatMap { MetadataFormatter.fileSize($0) }),
             ]
             let heading = headings[index]
             let duplicates = headings.filter { $0 == heading }.count
@@ -243,19 +243,19 @@ enum AssetMetadataReader {
         let size = indexedMetadata?.fileSize
             ?? (resource?.value(forKey: "fileSize") as? NSNumber)?.intValue
         var pairs: [(String, String?)] = [
-            ("Filename", resource?.originalFilename ?? indexedMetadata?.originalFilename),
-            ("Format", resource?.uniformTypeIdentifier),
-            ("Dimensions", resolvedDimensions(asset: asset, metadata: indexedMetadata)
+            (String(localized: "Filename", comment: "Info panel row label"), resource?.originalFilename ?? indexedMetadata?.originalFilename),
+            (String(localized: "Format", comment: "Info panel row label"), resource?.uniformTypeIdentifier),
+            (String(localized: "Dimensions", comment: "Info panel row label"), resolvedDimensions(asset: asset, metadata: indexedMetadata)
                 .map { "\($0.width) × \($0.height)" }),
-            ("Megapixels", resolvedDimensions(asset: asset, metadata: indexedMetadata)
+            (String(localized: "Megapixels", comment: "Info panel row label"), resolvedDimensions(asset: asset, metadata: indexedMetadata)
                 .flatMap { MetadataFormatter.megapixels(Double($0.width * $0.height) / 1_000_000) }),
-            ("File Size", size.flatMap { MetadataFormatter.fileSize($0) }),
-            ("Type", subtypeNames(asset.mediaSubtypes)),
+            (String(localized: "File Size", comment: "Info panel row label"), size.flatMap { MetadataFormatter.fileSize($0) }),
+            (String(localized: "Type", comment: "Info panel row label"), subtypeNames(asset.mediaSubtypes)),
         ]
         if asset.mediaType == .video {
             pairs.append(("Duration", MetadataFormatter.duration(asset.duration)))
         }
-        return section("File", from: pairs)
+        return section(String(localized: "File", comment: "Info panel section title"), from: pairs)
     }
 
     private static func indexedUsefulSections(
@@ -264,36 +264,36 @@ enum AssetMetadataReader {
         location: AssetLocation?
     ) -> [MetadataReportSection] {
         let dimensions = resolvedDimensions(asset: asset, metadata: metadata)
-        let camera = section("Camera & Lens", from: [
-            ("Make", metadata.cameraManufacturer ?? metadata.normalizedCameraManufacturer),
-            ("Model", metadata.cameraModel ?? metadata.normalizedCameraModel),
-            ("Lens", metadata.lensModel ?? metadata.normalizedLensModel),
-            ("Lens Make", metadata.lensManufacturer),
+        let camera = section(String(localized: "Camera & Lens", comment: "Info panel section title"), from: [
+            (String(localized: "Make", comment: "Info panel row label"), metadata.cameraManufacturer ?? metadata.normalizedCameraManufacturer),
+            (String(localized: "Model", comment: "Info panel row label"), metadata.cameraModel ?? metadata.normalizedCameraModel),
+            (String(localized: "Lens", comment: "Info panel row label"), metadata.lensModel ?? metadata.normalizedLensModel),
+            (String(localized: "Lens Make", comment: "Info panel row label"), metadata.lensManufacturer),
         ])
-        let exposure = section("Exposure", from: [
-            ("Shutter Speed", metadata.shutterSpeedDisplay
+        let exposure = section(String(localized: "Exposure", comment: "Info panel section title"), from: [
+            (String(localized: "Shutter Speed", comment: "Info panel row label"), metadata.shutterSpeedDisplay
                 ?? metadata.shutterSpeedSeconds.flatMap(MetadataFormatter.shutterSpeed)),
-            ("Aperture", metadata.aperture.flatMap(MetadataFormatter.aperture)),
-            ("ISO", metadata.iso.flatMap(MetadataFormatter.iso)),
-            ("Focal Length", metadata.focalLength.flatMap(MetadataFormatter.focalLength)),
-            ("35mm Equivalent", metadata.equivalentFocalLength.flatMap(MetadataFormatter.focalLength)),
+            (String(localized: "Aperture", comment: "Info panel row label"), metadata.aperture.flatMap(MetadataFormatter.aperture)),
+            (String(localized: "ISO", comment: "Info panel row label"), metadata.iso.flatMap(MetadataFormatter.iso)),
+            (String(localized: "Focal Length", comment: "Info panel row label"), metadata.focalLength.flatMap(MetadataFormatter.focalLength)),
+            (String(localized: "35mm Equivalent", comment: "Info panel row label"), metadata.equivalentFocalLength.flatMap(MetadataFormatter.focalLength)),
         ])
-        let date = section("Date", from: [
-            ("Captured", metadata.creationDateValue.map(dateString)
+        let date = section(String(localized: "Date", comment: "Info panel section title"), from: [
+            (String(localized: "Captured", comment: "Info panel row label"), metadata.creationDateValue.map(dateString)
                 ?? asset.creationDate.map(dateString)),
-            ("Modified", metadata.modificationDate
+            (String(localized: "Modified", comment: "Info panel row label"), metadata.modificationDate
                 .map { Date(timeIntervalSince1970: TimeInterval($0)) }
                 .map(dateString)
                 ?? asset.modificationDate.map(dateString)),
         ])
-        let file = section("File", from: [
-            ("Filename", metadata.originalFilename),
-            ("Dimensions", dimensions.map { "\($0.width) × \($0.height)" }),
-            ("Megapixels", dimensions.flatMap {
+        let file = section(String(localized: "File", comment: "Info panel section title"), from: [
+            (String(localized: "Filename", comment: "Info panel row label"), metadata.originalFilename),
+            (String(localized: "Dimensions", comment: "Info panel row label"), dimensions.map { "\($0.width) × \($0.height)" }),
+            (String(localized: "Megapixels", comment: "Info panel row label"), dimensions.flatMap {
                 MetadataFormatter.megapixels(Double($0.width * $0.height) / 1_000_000)
             }),
-            ("File Size", metadata.fileSize.flatMap(MetadataFormatter.fileSize)),
-            ("Type", subtypeNames(asset.mediaSubtypes)),
+            (String(localized: "File Size", comment: "Info panel row label"), metadata.fileSize.flatMap(MetadataFormatter.fileSize)),
+            (String(localized: "Type", comment: "Info panel row label"), subtypeNames(asset.mediaSubtypes)),
         ])
 
         return [
@@ -316,9 +316,9 @@ enum AssetMetadataReader {
     }
 
     private static func usefulDateSection(_ asset: PHAsset) -> MetadataReportSection {
-        section("Date", from: [
-            ("Captured", asset.creationDate.map(dateString)),
-            ("Modified", asset.modificationDate.map(dateString)),
+        section(String(localized: "Date", comment: "Info panel section title"), from: [
+            (String(localized: "Captured", comment: "Info panel row label"), asset.creationDate.map(dateString)),
+            (String(localized: "Modified", comment: "Info panel row label"), asset.modificationDate.map(dateString)),
         ])
     }
 
@@ -364,16 +364,16 @@ enum AssetMetadataReader {
             ?? indexedMetadata?.height
             ?? asset.pixelHeight
         let file: [(String, String?)] = [
-            ("Filename", resource?.originalFilename ?? indexedMetadata?.originalFilename),
-            ("Format", resource?.uniformTypeIdentifier),
-            ("Dimensions", pixelWidth > 0 && pixelHeight > 0 ? "\(pixelWidth) × \(pixelHeight)" : nil),
-            ("Megapixels", pixelWidth > 0 && pixelHeight > 0
+            (String(localized: "Filename", comment: "Info panel row label"), resource?.originalFilename ?? indexedMetadata?.originalFilename),
+            (String(localized: "Format", comment: "Info panel row label"), resource?.uniformTypeIdentifier),
+            (String(localized: "Dimensions", comment: "Info panel row label"), pixelWidth > 0 && pixelHeight > 0 ? "\(pixelWidth) × \(pixelHeight)" : nil),
+            (String(localized: "Megapixels", comment: "Info panel row label"), pixelWidth > 0 && pixelHeight > 0
                 ? MetadataFormatter.megapixels(Double(pixelWidth * pixelHeight) / 1_000_000)
                 : nil),
-            ("File Size", fileSize.flatMap { MetadataFormatter.fileSize($0) }),
-            ("Color Model", props[kCGImagePropertyColorModel].flatMap(stringify)),
-            ("Bit Depth", (props[kCGImagePropertyDepth] as? NSNumber).map { "\($0.intValue)-bit" }),
-            ("Color Space", enumValue(exif, "ColorSpace" as CFString, labels: [
+            (String(localized: "File Size", comment: "Info panel row label"), fileSize.flatMap { MetadataFormatter.fileSize($0) }),
+            (String(localized: "Color Model", comment: "Info panel row label"), props[kCGImagePropertyColorModel].flatMap(stringify)),
+            (String(localized: "Bit Depth", comment: "Info panel row label"), (props[kCGImagePropertyDepth] as? NSNumber).map { "\($0.intValue)-bit" }),
+            (String(localized: "Color Space", comment: "Info panel row label"), enumValue(exif, "ColorSpace" as CFString, labels: [
                 1: "sRGB",
                 2: "Adobe RGB",
                 65_535: "Uncalibrated",
@@ -385,19 +385,19 @@ enum AssetMetadataReader {
         let firmware = string(aux, kCGImagePropertyExifAuxFirmware)
             ?? string(tiff, kCGImagePropertyTIFFSoftware)
         let camera: [(String, String?)] = [
-            ("Make", string(tiff, kCGImagePropertyTIFFMake)
+            (String(localized: "Make", comment: "Info panel row label"), string(tiff, kCGImagePropertyTIFFMake)
                 ?? indexedMetadata?.cameraManufacturer
                 ?? indexedMetadata?.normalizedCameraManufacturer),
-            ("Model", string(tiff, kCGImagePropertyTIFFModel)
+            (String(localized: "Model", comment: "Info panel row label"), string(tiff, kCGImagePropertyTIFFModel)
                 ?? indexedMetadata?.cameraModel
                 ?? indexedMetadata?.normalizedCameraModel),
-            ("Lens", lensModel
+            (String(localized: "Lens", comment: "Info panel row label"), lensModel
                 ?? indexedMetadata?.lensModel
                 ?? indexedMetadata?.normalizedLensModel),
-            ("Lens Make", string(exif, kCGImagePropertyExifLensMake)
+            (String(localized: "Lens Make", comment: "Info panel row label"), string(exif, kCGImagePropertyExifLensMake)
                 ?? indexedMetadata?.lensManufacturer),
-            ("Lens Range", lensSpecification(exif[kCGImagePropertyExifLensSpecification as String])),
-            ("Firmware / Software", firmware),
+            (String(localized: "Lens Range", comment: "Info panel row label"), lensSpecification(exif[kCGImagePropertyExifLensSpecification as String])),
+            (String(localized: "Firmware / Software", comment: "Info panel row label"), firmware),
         ]
 
         let isoValue: Int? = {
@@ -409,80 +409,80 @@ enum AssetMetadataReader {
         let bias = number(exif, kCGImagePropertyExifExposureBiasValue)
             .map { String(format: "%+.1f EV", $0) }
         let exposure: [(String, String?)] = [
-            ("Shutter Speed", number(exif, kCGImagePropertyExifExposureTime)
+            (String(localized: "Shutter Speed", comment: "Info panel row label"), number(exif, kCGImagePropertyExifExposureTime)
                 .flatMap(MetadataFormatter.shutterSpeed)
                 ?? indexedMetadata?.shutterSpeedDisplay
                 ?? indexedMetadata?.shutterSpeedSeconds.flatMap(MetadataFormatter.shutterSpeed)),
-            ("Aperture", number(exif, kCGImagePropertyExifFNumber)
+            (String(localized: "Aperture", comment: "Info panel row label"), number(exif, kCGImagePropertyExifFNumber)
                 .flatMap(MetadataFormatter.aperture)
                 ?? indexedMetadata?.aperture.flatMap(MetadataFormatter.aperture)),
-            ("ISO", isoValue.flatMap(MetadataFormatter.iso)
+            (String(localized: "ISO", comment: "Info panel row label"), isoValue.flatMap(MetadataFormatter.iso)
                 ?? indexedMetadata?.iso.flatMap(MetadataFormatter.iso)),
-            ("Exposure Compensation", bias),
-            ("Focal Length", number(exif, kCGImagePropertyExifFocalLength)
+            (String(localized: "Exposure Compensation", comment: "Info panel row label"), bias),
+            (String(localized: "Focal Length", comment: "Info panel row label"), number(exif, kCGImagePropertyExifFocalLength)
                 .flatMap(MetadataFormatter.focalLength)
                 ?? indexedMetadata?.focalLength.flatMap(MetadataFormatter.focalLength)),
-            ("35mm Equivalent", number(exif, kCGImagePropertyExifFocalLenIn35mmFilm)
+            (String(localized: "35mm Equivalent", comment: "Info panel row label"), number(exif, kCGImagePropertyExifFocalLenIn35mmFilm)
                 .flatMap(MetadataFormatter.focalLength)
                 ?? indexedMetadata?.equivalentFocalLength.flatMap(MetadataFormatter.focalLength)),
-            ("Subject Distance", number(exif, kCGImagePropertyExifSubjectDistance).flatMap(distance)),
+            (String(localized: "Subject Distance", comment: "Info panel row label"), number(exif, kCGImagePropertyExifSubjectDistance).flatMap(distance)),
         ]
 
         let capture: [(String, String?)] = [
-            ("Exposure Program", enumValue(exif, kCGImagePropertyExifExposureProgram, labels: exposurePrograms)),
-            ("Exposure Mode", enumValue(exif, kCGImagePropertyExifExposureMode, labels: [
+            (String(localized: "Exposure Program", comment: "Info panel row label"), enumValue(exif, kCGImagePropertyExifExposureProgram, labels: exposurePrograms)),
+            (String(localized: "Exposure Mode", comment: "Info panel row label"), enumValue(exif, kCGImagePropertyExifExposureMode, labels: [
                 0: "Auto",
                 1: "Manual",
                 2: "Auto Bracket",
             ])),
-            ("Metering", enumValue(exif, kCGImagePropertyExifMeteringMode, labels: meteringModes)),
-            ("White Balance", enumValue(exif, kCGImagePropertyExifWhiteBalance, labels: [
+            (String(localized: "Metering", comment: "Info panel row label"), enumValue(exif, kCGImagePropertyExifMeteringMode, labels: meteringModes)),
+            (String(localized: "White Balance", comment: "Info panel row label"), enumValue(exif, kCGImagePropertyExifWhiteBalance, labels: [
                 0: "Auto",
                 1: "Manual",
             ])),
-            ("Light Source", enumValue(exif, kCGImagePropertyExifLightSource, labels: lightSources)),
-            ("Flash", integer(exif, kCGImagePropertyExifFlash).map(flashDescription)),
-            ("Scene", enumValue(exif, kCGImagePropertyExifSceneCaptureType, labels: [
+            (String(localized: "Light Source", comment: "Info panel row label"), enumValue(exif, kCGImagePropertyExifLightSource, labels: lightSources)),
+            (String(localized: "Flash", comment: "Info panel row label"), integer(exif, kCGImagePropertyExifFlash).map(flashDescription)),
+            (String(localized: "Scene", comment: "Info panel row label"), enumValue(exif, kCGImagePropertyExifSceneCaptureType, labels: [
                 0: "Standard",
                 1: "Landscape",
                 2: "Portrait",
                 3: "Night",
             ])),
-            ("Subject Range", enumValue(exif, kCGImagePropertyExifSubjectDistRange, labels: [
+            (String(localized: "Subject Range", comment: "Info panel row label"), enumValue(exif, kCGImagePropertyExifSubjectDistRange, labels: [
                 0: "Unknown",
                 1: "Macro",
                 2: "Close",
                 3: "Distant",
             ])),
-            ("Digital Zoom", number(exif, kCGImagePropertyExifDigitalZoomRatio)
+            (String(localized: "Digital Zoom", comment: "Info panel row label"), number(exif, kCGImagePropertyExifDigitalZoomRatio)
                 .flatMap { $0 > 1 ? String(format: "%.1f×", $0) : nil }),
         ]
 
         let date: [(String, String?)] = [
-            ("Captured", asset.creationDate.map(dateString)
+            (String(localized: "Captured", comment: "Info panel row label"), asset.creationDate.map(dateString)
                 ?? string(exif, kCGImagePropertyExifDateTimeOriginal)),
-            ("Time Zone", string(exif, "OffsetTimeOriginal" as CFString)),
-            ("Modified", asset.modificationDate.map(dateString)),
+            (String(localized: "Time Zone", comment: "Info panel row label"), string(exif, "OffsetTimeOriginal" as CFString)),
+            (String(localized: "Modified", comment: "Info panel row label"), asset.modificationDate.map(dateString)),
         ]
 
         let rights: [(String, String?)] = [
-            ("Artist", string(tiff, kCGImagePropertyTIFFArtist)),
-            ("Copyright", string(tiff, kCGImagePropertyTIFFCopyright)
+            (String(localized: "Artist", comment: "Info panel row label"), string(tiff, kCGImagePropertyTIFFArtist)),
+            (String(localized: "Copyright", comment: "Info panel row label"), string(tiff, kCGImagePropertyTIFFCopyright)
                 ?? string(iptc, kCGImagePropertyIPTCCopyrightNotice)),
-            ("Headline", string(iptc, kCGImagePropertyIPTCHeadline)),
-            ("Caption", string(iptc, kCGImagePropertyIPTCCaptionAbstract)),
-            ("Keywords", string(iptc, kCGImagePropertyIPTCKeywords)),
-            ("Credit", string(iptc, kCGImagePropertyIPTCCredit)),
+            (String(localized: "Headline", comment: "Info panel row label"), string(iptc, kCGImagePropertyIPTCHeadline)),
+            (String(localized: "Caption", comment: "Info panel row label"), string(iptc, kCGImagePropertyIPTCCaptionAbstract)),
+            (String(localized: "Keywords", comment: "Info panel row label"), string(iptc, kCGImagePropertyIPTCKeywords)),
+            (String(localized: "Credit", comment: "Info panel row label"), string(iptc, kCGImagePropertyIPTCCredit)),
         ]
 
         return [
             locationSection(location),
-            section("Camera & Lens", from: camera),
-            section("Exposure", from: exposure),
-            section("Capture Settings", from: capture),
-            section("Date", from: date),
-            section("File", from: file),
-            section("Rights & Description", from: rights),
+            section(String(localized: "Camera & Lens", comment: "Info panel section title"), from: camera),
+            section(String(localized: "Exposure", comment: "Info panel section title"), from: exposure),
+            section(String(localized: "Capture Settings", comment: "Info panel section title"), from: capture),
+            section(String(localized: "Date", comment: "Info panel section title"), from: date),
+            section(String(localized: "File", comment: "Info panel section title"), from: file),
+            section(String(localized: "Rights & Description", comment: "Info panel section title"), from: rights),
         ]
     }
 
@@ -505,7 +505,7 @@ enum AssetMetadataReader {
                 topRows.append((name, stringify(value)))
             }
         }
-        return [section("Raw · Image", from: topRows)] + nestedSections
+        return [section(String(localized: "Raw · Image", comment: "Info panel section title"), from: topRows)] + nestedSections
     }
 
     private static func flatten(
@@ -726,7 +726,7 @@ enum AssetMetadataReader {
         if let duration = try? await avAsset.load(.duration) {
             video.append(("Duration", MetadataFormatter.duration(CMTimeGetSeconds(duration))))
         }
-        sections.append(section("Video", from: video))
+        sections.append(section(String(localized: "Video", comment: "Info panel section title"), from: video))
 
         if let tracks = try? await avAsset.loadTracks(withMediaType: .video) {
             for (index, track) in tracks.enumerated() {
@@ -755,7 +755,7 @@ enum AssetMetadataReader {
             if let formats = try? await track.load(.formatDescriptions), let codec = formats.first {
                 rows.append(("Codec", fourCC(CMFormatDescriptionGetMediaSubType(codec))))
             }
-            sections.append(section("Audio Track", from: rows))
+            sections.append(section(String(localized: "Audio Track", comment: "Info panel section title"), from: rows))
         }
 
         if let items = try? await avAsset.load(.commonMetadata), !items.isEmpty {
@@ -765,7 +765,7 @@ enum AssetMetadataReader {
                 let value = (try? await item.load(.stringValue)) ?? nil
                 rows.append((key, value))
             }
-            sections.append(section("Metadata", from: rows))
+            sections.append(section(String(localized: "Metadata", comment: "Info panel section title"), from: rows))
         }
 
         return sections
@@ -925,22 +925,25 @@ enum AssetMetadataReader {
         return names.isEmpty ? nil : names.joined(separator: ", ")
     }
 
+    /// These are section headings in the Info panel, so they are read, not
+    /// matched — every one is localized. The format acronym beside them
+    /// (RAW, JPG, MOV) is not: those are the same word everywhere.
     private static func resourceTypeName(_ type: PHAssetResourceType) -> String {
         switch type {
-        case .photo: "Photo"
-        case .video: "Video"
-        case .audio: "Audio"
-        case .alternatePhoto: "Alternate Photo"
-        case .fullSizePhoto: "Full-size Photo"
-        case .fullSizeVideo: "Full-size Video"
-        case .adjustmentData: "Adjustment Data"
-        case .adjustmentBasePhoto: "Adjustment Base Photo"
-        case .pairedVideo: "Paired Video"
-        case .fullSizePairedVideo: "Full-size Paired Video"
-        case .adjustmentBasePairedVideo: "Adjustment Base Paired Video"
-        case .adjustmentBaseVideo: "Adjustment Base Video"
-        case .photoProxy: "Photo Proxy"
-        @unknown default: "Other (\(type.rawValue))"
+        case .photo: return String(localized: "Photo", comment: "Name of one file behind a photo, as an Info panel heading")
+        case .video: return String(localized: "Video", comment: "Name of one file behind a photo, as an Info panel heading")
+        case .audio: return String(localized: "Audio", comment: "Name of one file behind a photo, as an Info panel heading")
+        case .alternatePhoto: return String(localized: "Alternate Photo", comment: "Name of one file behind a photo, as an Info panel heading")
+        case .fullSizePhoto: return String(localized: "Full-size Photo", comment: "Name of one file behind a photo, as an Info panel heading")
+        case .fullSizeVideo: return String(localized: "Full-size Video", comment: "Name of one file behind a photo, as an Info panel heading")
+        case .adjustmentData: return String(localized: "Adjustment Data", comment: "Name of one file behind a photo, as an Info panel heading")
+        case .adjustmentBasePhoto: return String(localized: "Adjustment Base Photo", comment: "Name of one file behind a photo, as an Info panel heading")
+        case .pairedVideo: return String(localized: "Paired Video", comment: "Name of one file behind a photo, as an Info panel heading")
+        case .fullSizePairedVideo: return String(localized: "Full-size Paired Video", comment: "Name of one file behind a photo, as an Info panel heading")
+        case .adjustmentBasePairedVideo: return String(localized: "Adjustment Base Paired Video", comment: "Name of one file behind a photo, as an Info panel heading")
+        case .adjustmentBaseVideo: return String(localized: "Adjustment Base Video", comment: "Name of one file behind a photo, as an Info panel heading")
+        case .photoProxy: return String(localized: "Photo Proxy", comment: "Name of one file behind a photo, as an Info panel heading")
+        @unknown default: return "Other (\(type.rawValue))"
         }
     }
 

@@ -99,9 +99,11 @@ enum VideoTimelineLane: Hashable {
     /// What the lane holds, in the words the rest of the studio uses for it.
     var name: String {
         switch self {
-        case .overlay: String(localized: "Text")
-        case .video: String(localized: "Video")
-        case .music: String(localized: "Music")
+        // "Text" with no context reads as an SMS in half the languages this
+        // ships in; every one of these says which lane it names.
+        case .overlay: String(localized: "Text", comment: "Video Studio timeline lane: the text and sticker overlay track")
+        case .video: String(localized: "Video", comment: "Video Studio timeline lane: the video and photo clip track")
+        case .music: String(localized: "Music", comment: "Video Studio timeline lane: the music track")
         }
     }
 }

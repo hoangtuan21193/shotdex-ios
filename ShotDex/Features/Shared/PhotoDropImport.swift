@@ -53,6 +53,38 @@ enum PhotoDropImport {
         return (ids, failures)
     }
 
+    /// What to tell the user after a drop, in one place rather than once per
+    /// tool. Grammar agreement rather than a singular and a plural branch:
+    /// Vietnamese and Japanese have no plural to pick between, and Polish and
+    /// Russian have more forms than two — a hand-written `if` is wrong for
+    /// all four.
+    static func addedMessage(count: Int, destination: Destination) -> String {
+        switch destination {
+        case .library:
+            String(
+                localized: "^[\(count) photo](inflect: true) added to your library",
+                comment: "Toast after importing photos dropped from another app"
+            )
+        case .libraryAndTimeline:
+            String(
+                localized: "^[\(count) item](inflect: true) added to your library and to the timeline",
+                comment: "Toast after dropping media onto the Video Studio timeline from another app"
+            )
+        }
+    }
+
+    static func failureMessage(count: Int) -> String {
+        String(
+            localized: "^[\(count) item](inflect: true) couldn't be imported.",
+            comment: "Toast when items dropped from another app could not be read"
+        )
+    }
+
+    enum Destination {
+        case library
+        case libraryAndTimeline
+    }
+
     /// `loadFileRepresentation` hands over a URL that is deleted the moment
     /// its completion returns, so the file has to be copied out before the
     /// import — which is asynchronous — can look at it.

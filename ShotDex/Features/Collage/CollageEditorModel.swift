@@ -14,9 +14,9 @@ final class CollageEditorModel {
         var id: String { rawValue }
         var title: String {
             switch self {
-            case .layout: String(localized: "Layout")
-            case .style: String(localized: "Style")
-            case .text: String(localized: "Text")
+            case .layout: String(localized: "Layout", comment: "Collage panel tab: template and slot count")
+            case .style: String(localized: "Style", comment: "Collage panel tab: spacing, corners and background")
+            case .text: String(localized: "Text", comment: "Collage panel tab: captions drawn on the collage")
             }
         }
         var systemImage: String {
@@ -130,7 +130,7 @@ final class CollageEditorModel {
     }
 
     var aspectLabel: String {
-        recipe.aspectPreset?.displayName ?? String(localized: "Custom")
+        recipe.aspectPreset?.displayName ?? String(localized: "Custom", comment: "Collage aspect ratio that matches no preset")
     }
 
     var selectedOverlay: PhotoOverlay? {
@@ -376,14 +376,10 @@ final class CollageEditorModel {
     /// put photos somewhere the user did not watch it put them.
     func reportDropImport(added: Int, failed: Int) {
         if added > 0 {
-            undoToastMessage = added == 1
-                ? String(localized: "Photo added to your library")
-                : String(localized: "\(added) photos added to your library")
+            undoToastMessage = PhotoDropImport.addedMessage(count: added, destination: .library)
         }
         if failed > 0 {
-            errorMessage = failed == 1
-                ? String(localized: "One item couldn't be imported.")
-                : String(localized: "\(failed) items couldn't be imported.")
+            errorMessage = PhotoDropImport.failureMessage(count: failed)
         }
     }
 

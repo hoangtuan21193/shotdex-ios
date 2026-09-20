@@ -76,7 +76,10 @@ struct VideoStudioTopBand: View {
     /// band showed, beside Export rather than away from it.
     private var readout: some View {
         VStack(alignment: .trailing, spacing: 1) {
-            Text(String(format: "%.1fs · %@ · 30fps", model.totalDuration, model.recipe.renderPreset.displayName))
+            Text(VideoStudioMetrics.exportReadout(
+                duration: model.totalDuration,
+                presetName: model.recipe.renderPreset.displayName
+            ))
             Text("~\(ByteCountFormatter.string(fromByteCount: model.estimatedExportBytes, countStyle: .file))")
         }
         .font(.system(size: 11).monospacedDigit())

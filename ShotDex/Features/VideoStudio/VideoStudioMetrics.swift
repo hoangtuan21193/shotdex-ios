@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 
 /// Fixed geometry for the Video Studio, in points on the 393×852 reference
 /// frame (Dynamic Island). The screen is a vertical stack of fixed bands; only
@@ -318,6 +319,18 @@ enum VideoStudioMetrics {
     }
 
     // MARK: Timeline horizontals
+
+    /// The export read-out — `9.0s · 1080p · 30fps` — in one place, because
+    /// the top band and the bottom bar both draw it and a `String(format:)`
+    /// copied into two files drifts.
+    ///
+    /// `String(format:)` also ignores the locale: its decimal point is always
+    /// a dot, where half of Europe writes a comma. The number goes through
+    /// `FormatStyle`; `s`, `fps` and the preset name are technical and stay.
+    static func exportReadout(duration: Double, presetName: String, frameRate: Int = 30) -> String {
+        let seconds = duration.formatted(.number.precision(.fractionLength(1)))
+        return "\(seconds)s · \(presetName) · \(frameRate)fps"
+    }
 
     /// The phone's gutter, for anything that has no lane tier to hand.
     static let gutterWidth: CGFloat = Lanes.compact.gutter

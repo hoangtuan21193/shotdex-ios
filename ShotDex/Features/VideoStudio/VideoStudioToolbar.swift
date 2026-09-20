@@ -67,7 +67,10 @@ struct VideoStudioBottomBar: View {
             .accessibilityLabel("Back")
 
             VStack(alignment: .leading, spacing: 1) {
-                Text(String(format: "%.1fs · %@ · 30fps", model.totalDuration, model.recipe.renderPreset.displayName))
+                Text(VideoStudioMetrics.exportReadout(
+                duration: model.totalDuration,
+                presetName: model.recipe.renderPreset.displayName
+            ))
                     .font(.system(size: 11).monospacedDigit())
                 Text("~\(sizeText)")
                     .font(.system(size: 11).monospacedDigit())
@@ -152,7 +155,11 @@ private struct VideoToolbarCell: View {
                 Text(command.title)
                     .font(.system(size: isRegularWidth ? 11 : 9.5, weight: .medium))
                     .lineLimit(1)
-                    .fixedSize()
+                    // Not `fixedSize()`: that turns off SwiftUI's own
+                    // compression, so a label longer than the 52pt cell —
+                    // "Hinzufügen" for Add, "Aufkleber" for Sticker — draws
+                    // straight over its neighbour instead of shrinking.
+                    .minimumScaleFactor(0.7)
             }
             .foregroundStyle(tintColor)
             .frame(
