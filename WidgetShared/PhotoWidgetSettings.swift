@@ -89,25 +89,29 @@ struct PhotoWidgetSettings: Codable, Equatable {
         }
     }
 
-    /// Where the text sits on the photo.
-    enum Placement: String, Codable, CaseIterable, Identifiable {
-        case topLeading
-        case top
-        case center
-        case bottom
-        case bottomLeading
+    /// Where the text sits on the photo, as a fraction of the widget: (0,0)
+    /// is the top-left corner and (1,1) the bottom-right. A fraction rather
+    /// than a corner because the user places it by dragging it, and what they
+    /// drag it to is rarely one of five corners.
+    struct Anchor: Codable, Equatable, Hashable {
+        var x: Double
+        var y: Double
 
-        var id: String { rawValue }
-
-        var title: String {
-            switch self {
-            case .topLeading: "Top Left"
-            case .top: "Top"
-            case .center: "Centre"
-            case .bottom: "Bottom"
-            case .bottomLeading: "Bottom Left"
-            }
+        init(x: Double, y: Double) {
+            self.x = x.clampedToUnit
+            self.y = y.clampedToUnit
         }
+
+        static let topLeading = Anchor(x: 0, y: 0)
+        static let center = Anchor(x: 0.5, y: 0.5)
+        static let bottomLeading = Anchor(x: 0, y: 1)
+        static let bottom = Anchor(x: 0.5, y: 1)
+
+        /// Which way the lines line up under each other. Text dragged to the
+        /// left edge reads as a left-aligned block; in the middle it reads as
+        /// a centred one.
+        var isLeading: Bool { x < 0.34 }
+        var isTrailing: Bool { x > 0.66 }
     }
 
     /// How the text is kept readable over a photo.
@@ -212,10 +216,21 @@ struct PhotoWidgetSettings: Codable, Equatable {
     /// `#RRGGBB`. Stored as a string because the file is read by two targets
     /// and neither should have to agree on a colour type.
     var textColorHex = "#FFFFFF"
-    var placement: Placement = .bottomLeading
+    /// Where the block of text sits, dragged by the user on the preview.
+    var anchor: Anchor = .bottomLeading
     var legibility: Legibility = .shadow
     /// 0…1 — how much the photo is dimmed under the whole widget.
     var photoDimming: Double = 0.1
+
+    /// How far the photo is zoomed past filling the widget, and where the
+    /// zoomed photo is held. The user sets both by pinching and dragging the
+    /// preview, and the widget applies the same numbers — the picture behind
+    /// the clock is the part of it they framed, not whatever the middle
+    /// happened to be.
+    var photoScale: Double = 1
+    /// -1…1 of the overflow in each direction; 0 keeps the photo centred.
+    var photoOffsetX: Double = 0
+    var photoOffsetY: Double = 0
 
     init() {}
 
@@ -250,9 +265,80 @@ struct PhotoWidgetSettings: Codable, Equatable {
         isBold = value(.isBold, defaults.isBold)
         usesMonospacedDigits = value(.usesMonospacedDigits, defaults.usesMonospacedDigits)
         textColorHex = value(.textColorHex, defaults.textColorHex)
-        placement = value(.placement, defaults.placement)
+        anchor = value(.anchor, defaults.anchor)
         legibility = value(.legibility, defaults.legibility)
         photoDimming = value(.photoDimming, defaults.photoDimming)
+        photoScale = max(1, min(value(.photoScale, defaults.photoScale), PhotoWidgetSettings.maximumPhotoScale))
+        photoOffsetX = value(.photoOffsetX, defaults.photoOffsetX).clampedToSigned
+        photoOffsetY = value(.photoOffsetY, defaults.photoOffsetY).clampedToSigned
+
+        // A file written before the text could be dragged named one of five
+        // corners; that corner is where the drag starts from.
+        if !container.contains(.anchor),
+           let legacy = try? container.decodeIfPresent(String.self, forKey: .placement),
+           let migrated = PhotoWidgetSettings.anchor(forLegacyPlacement: legacy) {
+            anchor = migrated
+        }
+    }
+
+    /// Written field by field, because `placement` is a key this type reads
+    /// and never writes: it belongs to the version whose text sat in a corner.
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(source, forKey: .source)
+        try container.encode(rotation, forKey: .rotation)
+        try container.encode(showsTime, forKey: .showsTime)
+        try container.encode(showsDate, forKey: .showsDate)
+        try container.encode(timeFormat, forKey: .timeFormat)
+        try container.encode(dateFormat, forKey: .dateFormat)
+        try container.encode(calendarStyle, forKey: .calendarStyle)
+        try container.encode(maximumEventCount, forKey: .maximumEventCount)
+        try container.encode(weekStartsOnMonday, forKey: .weekStartsOnMonday)
+        try container.encode(temperatureUnit, forKey: .temperatureUnit)
+        try container.encode(showsHighLow, forKey: .showsHighLow)
+        try container.encode(showsWeatherPlace, forKey: .showsWeatherPlace)
+        try container.encode(fontPostScriptName, forKey: .fontPostScriptName)
+        try container.encode(fontDisplayName, forKey: .fontDisplayName)
+        try container.encode(timeSize, forKey: .timeSize)
+        try container.encode(dateSize, forKey: .dateSize)
+        try container.encode(isBold, forKey: .isBold)
+        try container.encode(usesMonospacedDigits, forKey: .usesMonospacedDigits)
+        try container.encode(textColorHex, forKey: .textColorHex)
+        try container.encode(anchor, forKey: .anchor)
+        try container.encode(legibility, forKey: .legibility)
+        try container.encode(photoDimming, forKey: .photoDimming)
+        try container.encode(photoScale, forKey: .photoScale)
+        try container.encode(photoOffsetX, forKey: .photoOffsetX)
+        try container.encode(photoOffsetY, forKey: .photoOffsetY)
+    }
+
+    /// The keys, spelled out because one of them is only ever read: a file
+    /// from the version whose text sat in a corner still carries `placement`,
+    /// and that is what the first drag starts from.
+    enum CodingKeys: String, CodingKey {
+        case source, rotation, showsTime, showsDate, timeFormat, dateFormat
+        case calendarStyle, maximumEventCount, weekStartsOnMonday
+        case temperatureUnit, showsHighLow, showsWeatherPlace
+        case fontPostScriptName, fontDisplayName, timeSize, dateSize
+        case isBold, usesMonospacedDigits, textColorHex
+        case anchor, legibility, photoDimming
+        case photoScale, photoOffsetX, photoOffsetY
+        case placement
+    }
+
+    /// How far a photo may be zoomed in the preview. Past this a widget-sized
+    /// JPEG is being enlarged into mush.
+    static let maximumPhotoScale: Double = 3
+
+    static func anchor(forLegacyPlacement placement: String) -> Anchor? {
+        switch placement {
+        case "topLeading": Anchor(x: 0, y: 0)
+        case "top": Anchor(x: 0.5, y: 0)
+        case "center": .center
+        case "bottom": .bottom
+        case "bottomLeading": .bottomLeading
+        default: nil
+        }
     }
 
     static let `default` = PhotoWidgetSettings()
@@ -270,7 +356,7 @@ struct PhotoWidgetSettings: Codable, Equatable {
             settings.showsTime = false
             settings.showsDate = true
             settings.dateSize = 15
-            settings.placement = .bottom
+            settings.anchor = .bottom
         case .weather:
             settings.showsTime = false
             settings.showsDate = true
@@ -494,4 +580,11 @@ struct PhotoWidgetSnapshot: Codable, Equatable {
         return Self.directoryURL(for: kind, in: container)
             .appendingPathComponent(frames[index].fileName)
     }
+}
+
+private extension Double {
+    /// 0…1, for the fractions that say where something sits.
+    var clampedToUnit: Double { min(max(self, 0), 1) }
+    /// -1…1, for the ones that say how far it is pushed either way.
+    var clampedToSigned: Double { min(max(self, -1), 1) }
 }

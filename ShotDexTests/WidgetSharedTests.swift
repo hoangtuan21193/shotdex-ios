@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import Testing
 @testable import ShotDex
 
@@ -322,6 +323,57 @@ struct PhotoWidgetDataTests {
         // A day with only an all-day entry shows it at any hour.
         #expect(CalendarFormat.nextEvent(in: [allDay], at: date(2026, 9, 21, hour: 8))?.id == "all")
         #expect(CalendarFormat.nextEvent(in: [], at: date(2026, 9, 21)) == nil)
+    }
+
+    /// The anchor is a fraction of the space the text block can occupy, and
+    /// the offset is measured from the alignment stop it rounds to — that is
+    /// what keeps a block dragged to an edge inside the widget.
+    @Test func theAnchorPlacesTheTextInsideTheWidget() {
+        let size = CGSize(width: 300, height: 150)
+        let content = CGSize(width: 100, height: 40)
+        let inset: CGFloat = 4
+        // Top-left: sits at the stop, so no offset.
+        let topLeading = PhotoWidgetSettings.Anchor(x: 0, y: 0)
+        #expect(topLeading.offset(in: size, contentSize: content, inset: inset) == .zero)
+        #expect(topLeading.alignment == .topLeading)
+        // Bottom-right: also at a stop, and the alignment carries it.
+        let bottomTrailing = PhotoWidgetSettings.Anchor(x: 1, y: 1)
+        #expect(bottomTrailing.offset(in: size, contentSize: content, inset: inset) == .zero)
+        #expect(bottomTrailing.alignment == .bottomTrailing)
+        // A point between stops is offset from the nearest one, and never
+        // past the free space.
+        let middle = PhotoWidgetSettings.Anchor(x: 0.5, y: 0.5)
+        #expect(middle.offset(in: size, contentSize: content, inset: inset) == .zero)
+        let quarter = PhotoWidgetSettings.Anchor(x: 0.25, y: 0.25)
+        let offset = quarter.offset(in: size, contentSize: content, inset: inset)
+        #expect(offset.width > 0)
+        #expect(offset.height > 0)
+        #expect(offset.width <= size.width - content.width - inset * 2)
+    }
+
+    @Test func anchorsAreClampedAndReadAsAlignments() {
+        #expect(PhotoWidgetSettings.Anchor(x: -3, y: 9) == PhotoWidgetSettings.Anchor(x: 0, y: 1))
+        #expect(PhotoWidgetSettings.Anchor(x: 0.1, y: 0.5).isLeading)
+        #expect(PhotoWidgetSettings.Anchor(x: 0.9, y: 0.5).isTrailing)
+        #expect(!PhotoWidgetSettings.Anchor(x: 0.5, y: 0.5).isLeading)
+    }
+
+    /// A settings file from the version whose text sat in a corner opens where
+    /// that corner was, instead of jumping to the middle.
+    @Test func theOldCornerPlacementBecomesAnAnchor() throws {
+        let legacy = """
+        {"placement":"bottomLeading","showsTime":true,"timeSize":34}
+        """
+        let decoded = try JSONDecoder().decode(
+            PhotoWidgetSettings.self, from: Data(legacy.utf8)
+        )
+        #expect(decoded.anchor == .bottomLeading)
+        #expect(decoded.timeSize == 34)
+        // Fields the old file never had fall back to their defaults.
+        #expect(decoded.photoScale == 1)
+
+        #expect(PhotoWidgetSettings.anchor(forLegacyPlacement: "center") == .center)
+        #expect(PhotoWidgetSettings.anchor(forLegacyPlacement: "nonsense") == nil)
     }
 
     @Test func onlyTheWeatherAndCalendarReachTheLockScreen() {

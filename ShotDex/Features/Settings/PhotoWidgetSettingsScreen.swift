@@ -23,24 +23,25 @@ struct PhotoWidgetSettingsScreen: View {
     @State private var previewDate = Date.now
     @State private var weather: WeatherSnapshot?
     @State private var calendarSnapshot: CalendarSnapshot?
-    @State private var calendarAccess: CalendarSnapshotWriter.Access = .notDetermined
     @State private var isRefreshingWeather = false
+    @State private var previewFamily: PhotoWidgetPreviewFamily = .medium
+    @State private var calendarAccess: CalendarSnapshotWriter.Access = .notDetermined
+    @State private var previewImage: Image?
 
     private var store: PhotoWidgetSettingsStore { dependencies.photoWidgetSettings }
     private var settings: PhotoWidgetSettings { store.settings(for: kind) }
 
+    /// The preview is pinned above the options rather than scrolling with
+    /// them: it is what every row below is editing, and it is where the text
+    /// is dragged and the photo pinched — a control that scrolls out from
+    /// under the finger is not a control.
     var body: some View {
-        List {
-            previewSection
-            photoSection
-            timeSection
-            if kind.needsCalendarEvents { calendarSection }
-            if kind.needsWeather { weatherSection }
-            typefaceSection
-            colourSection
-            placementSection
+        VStack(spacing: 0) {
+            previewHeader
+            Divider()
+            optionsList
         }
-        .listStyle(.insetGrouped)
+        .background(Color(.systemGroupedBackground))
         .navigationTitle(kind.title)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $isPhotoPickerPresented) {
@@ -89,39 +90,100 @@ struct PhotoWidgetSettingsScreen: View {
             }
             calendarSnapshot = CalendarSnapshot.read()
         }
+        .task(id: PreviewLoadKey(source: settings.source, isRendering: store.isRendering(kind))) {
+            await loadPreviewImage()
+        }
         .onDisappear { store.saveNow() }
     }
 
-    // MARK: Preview
+    private struct PreviewLoadKey: Equatable {
+        let source: PhotoWidgetSettings.Source
+        let isRendering: Bool
+    }
 
-    private var previewSection: some View {
-        Section {
-            // 329 × 155 is the medium widget on a 6.1" iPhone, the size
-            // `PhotoWidgetSettings.scaledHeadlineSize` measures against.
+    /// Loads the same file the widget reads, so the preview is framed against
+    /// the picture the widget will actually show.
+    private func loadPreviewImage() async {
+        let snapshot = PhotoWidgetSnapshot.read(kind: kind)
+        let index = PhotoWidgetSnapshot.frameIndex(
+            at: .now, count: snapshot.frames.count, rotation: settings.rotation
+        )
+        guard let index, let url = snapshot.imageURL(at: index, kind: kind) else {
+            previewImage = nil
+            return
+        }
+        let loaded = await Task.detached(priority: .userInitiated) { () -> UIImage? in
+            guard let data = try? Data(contentsOf: url) else { return nil }
+            return UIImage(data: data)
+        }.value
+        previewImage = loaded.map { Image(uiImage: $0) }
+    }
+
+    // MARK: Preview header
+
+    private var previewHeader: some View {
+        VStack(spacing: 10) {
             PhotoWidgetPreview(
                 kind: kind,
                 settings: settings,
                 date: previewDate,
                 weather: weather,
                 calendarSnapshot: calendarSnapshot,
-                // Flips when a re-render finishes, so the preview picks up the
-                // new file instead of holding the one it loaded first.
-                reloadToken: store.isRendering(kind)
+                family: previewFamily,
+                image: previewImage,
+                onAnchorChange: { anchor in
+                    store.update(kind) { $0.anchor = anchor }
+                },
+                onPhotoTransformChange: { scale, offsetX, offsetY in
+                    store.update(kind) {
+                        $0.photoScale = scale
+                        $0.photoOffsetX = offsetX
+                        $0.photoOffsetY = offsetY
+                    }
+                }
             )
-            .frame(height: previewHeight)
-            .frame(maxWidth: .infinity)
-            .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
-            .listRowBackground(Color.clear)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Preview of the \(kind.title) widget")
+            .frame(height: previewFamily == .large ? 280 : 158)
+
+            Picker("Widget Size", selection: $previewFamily) {
+                ForEach(PhotoWidgetPreviewFamily.allCases) { family in
+                    Text(family.title).tag(family)
+                }
+            }
+            .pickerStyle(.segmented)
+            .frame(maxWidth: 329)
+
+            Text(hintText)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
         }
+        .padding(.horizontal, AppTheme.Spacing.lg)
+        .padding(.top, AppTheme.Spacing.md)
+        .padding(.bottom, AppTheme.Spacing.md)
+        .frame(maxWidth: .infinity)
+        .background(Color(.systemGroupedBackground))
     }
 
-    /// A month grid needs the height a tall family would give it; the others
-    /// are shown at the medium family's shape.
-    private var previewHeight: CGFloat {
-        kind.needsCalendarEvents && settings.calendarStyle.showsGrid ? 260 : 155
+    private var hintText: String {
+        isNoneSource
+            ? "Drag the text to place it. Choose a photo below to pinch and move it."
+            : "Drag the text to place it. Pinch with two fingers to zoom the photo, and drag with two to move it."
     }
+
+    private var optionsList: some View {
+        List {
+            photoSection
+            timeSection
+            if kind.needsCalendarEvents { calendarSection }
+            if kind.needsWeather { weatherSection }
+            typefaceSection
+            colourSection
+            arrangementSection
+        }
+        .listStyle(.insetGrouped)
+    }
+
+    // MARK: Preview
 
     // MARK: Photo
 
@@ -438,18 +500,42 @@ struct PhotoWidgetSettingsScreen: View {
         }
     }
 
-    // MARK: Placement
+    // MARK: Arrangement
 
-    private var placementSection: some View {
+    /// The two things the preview does by touch, with a way back when a drag
+    /// or a pinch went somewhere the user did not want.
+    private var arrangementSection: some View {
         Section {
-            Picker("Position", selection: placementBinding) {
-                ForEach(PhotoWidgetSettings.Placement.allCases) { placement in
-                    Text(placement.title).tag(placement)
+            LabeledContent("Text Position", value: anchorLabel)
+            Button("Centre the Text") {
+                store.update(kind) { $0.anchor = .center }
+            }
+            if !isNoneSource {
+                LabeledContent("Photo Zoom", value: "\(String(format: "%.1f", settings.photoScale))×")
+                    .monospacedDigit()
+                Button("Reset Photo Framing") {
+                    store.update(kind) {
+                        $0.photoScale = 1
+                        $0.photoOffsetX = 0
+                        $0.photoOffsetY = 0
+                    }
                 }
+                .disabled(settings.photoScale == 1 && settings.photoOffsetX == 0 && settings.photoOffsetY == 0)
             }
         } header: {
-            Text("Position")
+            Text("Arrangement")
+        } footer: {
+            Text("Drag the text on the preview to place it anywhere in the widget. Pinch the preview to zoom the photo behind it, and drag with two fingers to choose which part shows.")
         }
+    }
+
+    /// Where the text sits, in words: a fraction means nothing read aloud.
+    private var anchorLabel: String {
+        let horizontal = settings.anchor.isLeading
+            ? "Left" : (settings.anchor.isTrailing ? "Right" : "Centre")
+        let vertical = settings.anchor.y < 0.34
+            ? "Top" : (settings.anchor.y > 0.66 ? "Bottom" : "Middle")
+        return "\(vertical) \(horizontal)"
     }
 
     // MARK: Bindings and helpers
@@ -514,13 +600,6 @@ struct PhotoWidgetSettingsScreen: View {
         )
     }
 
-    private var placementBinding: Binding<PhotoWidgetSettings.Placement> {
-        Binding(
-            get: { settings.placement },
-            set: { value in store.update(kind) { $0.placement = value } }
-        )
-    }
-
     private var calendarStyleBinding: Binding<PhotoWidgetSettings.CalendarStyle> {
         Binding(
             get: { settings.calendarStyle },
@@ -558,90 +637,5 @@ struct PhotoWidgetSettingsScreen: View {
     private func openAppSettings() {
         guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
         UIApplication.shared.open(url)
-    }
-}
-
-/// The widget's own face over the widget's own background, at the medium
-/// family's proportions. Shares `PhotoWidgetFace` with the widget, so a change
-/// to one cannot leave the other behind.
-struct PhotoWidgetPreview: View {
-    let kind: PhotoWidgetKind
-    let settings: PhotoWidgetSettings
-    let date: Date
-    let weather: WeatherSnapshot?
-    let calendarSnapshot: CalendarSnapshot?
-    let reloadToken: Bool
-
-    /// The preview loads the same file the widget does.
-    @State private var image: Image?
-
-    var body: some View {
-        GeometryReader { proxy in
-            // The image is clipped to the preview's own size before anything
-            // is stacked on it: a `scaledToFill` image is larger than its
-            // frame, and a ZStack sized by it pushes the bottom-aligned text
-            // out through the bottom edge.
-            ZStack {
-                if let image {
-                    image
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: proxy.size.width, height: proxy.size.height)
-                        .clipped()
-                } else {
-                    LinearGradient(
-                        colors: [.gray.opacity(0.55), .gray.opacity(0.25)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                }
-                if settings.photoDimming > 0 {
-                    Color.black.opacity(settings.photoDimming)
-                }
-                if settings.legibility == .scrim {
-                    PhotoWidgetScrim(placement: settings.placement)
-                }
-                PhotoWidgetFace(
-                    date: date,
-                    settings: settings,
-                    kind: kind,
-                    width: proxy.size.width,
-                    weather: weather,
-                    calendarSnapshot: calendarSnapshot
-                )
-                .padding(16)
-                .frame(
-                    maxWidth: .infinity,
-                    maxHeight: .infinity,
-                    alignment: settings.placement.alignment
-                )
-            }
-            .frame(width: proxy.size.width, height: proxy.size.height)
-            .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.xxl, style: .continuous))
-        }
-        .task(id: PreviewLoadKey(source: settings.source, reloadToken: reloadToken)) {
-            await loadImage()
-        }
-    }
-
-    private struct PreviewLoadKey: Equatable {
-        let source: PhotoWidgetSettings.Source
-        let reloadToken: Bool
-    }
-
-    private func loadImage() async {
-        let snapshot = PhotoWidgetSnapshot.read(kind: kind)
-        let index = PhotoWidgetSnapshot.frameIndex(
-            at: .now, count: snapshot.frames.count, rotation: settings.rotation
-        )
-        guard let index, let url = snapshot.imageURL(at: index, kind: kind) else {
-            image = nil
-            return
-        }
-        let loaded = await Task.detached(priority: .userInitiated) { () -> UIImage? in
-            guard let data = try? Data(contentsOf: url) else { return nil }
-            return UIImage(data: data)
-        }.value
-        image = loaded.map { Image(uiImage: $0) }
     }
 }

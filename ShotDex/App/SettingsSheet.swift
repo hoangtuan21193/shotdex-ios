@@ -18,16 +18,19 @@ struct SettingsButton: View {
 }
 
 extension View {
-    /// Presents Settings as a bottom sheet (slides up, medium/large detents),
-    /// mirroring the photo-detail metadata panel. Keeps its own NavigationStack
-    /// so Camera Database (Unknown Cameras) can push.
+    /// Presents Settings as a full screen.
+    ///
+    /// It used to be a bottom sheet at medium/large detents, matching the
+    /// photo-detail metadata panel. It outgrew that: the screen now carries
+    /// ten sections and four widget editors, and a widget editor is a preview
+    /// that has to be dragged and pinched — a sheet that can be dragged away
+    /// by the same finger is the wrong container for it. It keeps its own
+    /// `NavigationStack` so Camera Database and the widget editors push.
     func settingsSheet(isPresented: Binding<Bool>, libraryModel: LibraryModel?) -> some View {
-        sheet(isPresented: isPresented) {
+        fullScreenCover(isPresented: isPresented) {
             NavigationStack {
                 SettingsScreen(libraryModel: libraryModel)
             }
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
         }
     }
 }

@@ -87,9 +87,9 @@ struct SettingsScreen: View {
         }
         .listStyle(.insetGrouped)
         .navigationTitle("Settings")
-        // A sheet dismisses by swipe, but the swipe is a shortcut and not the
-        // control: a sheet with a navigation bar and no way out of it reads as
-        // stuck, and on iPad the drag indicator is easy to miss entirely.
+        // A full screen has no swipe to dismiss at all, so Done is the only
+        // way out and has to be there. (It was already required as a sheet:
+        // the drag indicator was easy to miss on iPad.)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 Button("Done") { dismiss() }

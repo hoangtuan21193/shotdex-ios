@@ -171,16 +171,7 @@ struct PhotoWidgetBackground: View {
     var body: some View {
         ZStack {
             if let image = entry.image {
-                // Clipped because a filled image is bigger than its frame, and
-                // anything stacked on an unclipped one is laid out against the
-                // overflow.
-                GeometryReader { proxy in
-                    image
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: proxy.size.width, height: proxy.size.height)
-                        .clipped()
-                }
+                PhotoWidgetImageLayer(image: image, settings: entry.settings)
             } else {
                 Color.black
             }
@@ -188,7 +179,7 @@ struct PhotoWidgetBackground: View {
                 Color.black.opacity(entry.settings.photoDimming)
             }
             if entry.settings.legibility == .scrim {
-                PhotoWidgetScrim(placement: entry.settings.placement)
+                PhotoWidgetScrim(anchor: entry.settings.anchor)
             }
         }
     }
@@ -214,19 +205,10 @@ struct PhotoWidgetView: View {
                 .containerBackground(.clear, for: .widget)
         default:
             GeometryReader { proxy in
-                PhotoWidgetFace(
-                    date: entry.date,
-                    settings: entry.settings,
-                    kind: entry.kind,
-                    width: proxy.size.width,
-                    weather: entry.weather,
-                    calendarSnapshot: entry.calendarSnapshot,
+                PhotoWidgetPositionedFace(
+                    entry: entry,
+                    size: proxy.size,
                     isCompact: family == .systemSmall
-                )
-                .frame(
-                    maxWidth: .infinity,
-                    maxHeight: .infinity,
-                    alignment: entry.settings.placement.alignment
                 )
             }
             .containerBackground(for: .widget) {
@@ -242,5 +224,49 @@ struct PhotoWidgetView: View {
         case .photo(let assetId): WidgetDeepLink.photo(assetId: assetId).url
         case .album, .none: nil
         }
+    }
+}
+
+/// The face, placed where the user dragged it.
+///
+/// Measuring the block before offsetting it is what keeps a block dragged
+/// towards an edge inside the widget: the anchor says which fraction of the
+/// free space it sits at, and the free space is the widget less the block.
+struct PhotoWidgetPositionedFace: View {
+    let entry: PhotoWidgetEntry
+    let size: CGSize
+    let isCompact: Bool
+
+    @State private var contentSize: CGSize = .zero
+
+    /// The margin the text keeps from the widget's own edges.
+    private static let inset: CGFloat = 4
+
+    var body: some View {
+        PhotoWidgetFace(
+            date: entry.date,
+            settings: entry.settings,
+            kind: entry.kind,
+            width: size.width,
+            weather: entry.weather,
+            calendarSnapshot: entry.calendarSnapshot,
+            isCompact: isCompact
+        )
+        .background {
+            GeometryReader { proxy in
+                Color.clear.onAppear { contentSize = proxy.size }
+            }
+        }
+        .padding(Self.inset)
+        .offset(
+            entry.settings.anchor.offset(
+                in: size, contentSize: contentSize, inset: Self.inset
+            )
+        )
+        .frame(
+            maxWidth: .infinity,
+            maxHeight: .infinity,
+            alignment: entry.settings.anchor.alignment
+        )
     }
 }

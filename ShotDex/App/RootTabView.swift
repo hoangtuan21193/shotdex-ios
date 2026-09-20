@@ -212,6 +212,10 @@ struct RootTabView: View {
         }
         .tabViewSearchActivation(.searchTabSelection)
         .tabBarMinimizeBehavior(.never)
+        // Settings is presented here, before the selection overlay and its
+        // animation: a full-screen cover attached after them crashed SwiftUI in
+        // a preference-update loop (a bus error deep in HostPreferencesTransform).
+        .settingsSheet(isPresented: $navigation.isSettingsSheetPresented, libraryModel: libraryModel)
         // Selection chrome is one floating bottom bar above every tab's content
         // and the tab bar. The selecting screen hides only the tab bar and keeps
         // its navigation bar, which carries the selection ⋯ and ×.
@@ -222,7 +226,6 @@ struct RootTabView: View {
             }
         }
         .animation(.snappy(duration: 0.25), value: navigation.selectionBar != nil)
-        .settingsSheet(isPresented: $navigation.isSettingsSheetPresented, libraryModel: libraryModel)
         .keepScreenAwakeWhileIndexing(libraryModel: libraryModel)
         // Hosts the Adjust Date & Time / Adjust Location sheets and the error
         // alert for every grid, so the four selecting screens don't each carry
@@ -289,6 +292,8 @@ struct RootTabView: View {
         // overlay, hidden during selection; the selection chrome is then the same
         // full-screen `SelectionOverlay` used on iOS 26, layered above everything.
         tabContent
+            // Same as the iOS 26 path: presented before the overlays, not after.
+            .settingsSheet(isPresented: $navigation.isSettingsSheetPresented, libraryModel: libraryModel)
             .overlay(alignment: .bottom) {
                 if navigation.selectionBar == nil {
                     LiquidGlassTabBar(
@@ -314,7 +319,6 @@ struct RootTabView: View {
                 }
             }
             .animation(.snappy(duration: 0.25), value: navigation.selectionBar != nil)
-            .settingsSheet(isPresented: $navigation.isSettingsSheetPresented, libraryModel: libraryModel)
             .keepScreenAwakeWhileIndexing(libraryModel: libraryModel)
             .assetActionHost(assetActions ?? dependencies.assetActions)
             .environment(navigation)

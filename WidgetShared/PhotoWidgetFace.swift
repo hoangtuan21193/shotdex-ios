@@ -224,17 +224,15 @@ struct PhotoWidgetFace: View {
     }
 
     private var horizontalAlignment: HorizontalAlignment {
-        switch settings.placement {
-        case .topLeading, .bottomLeading: .leading
-        case .top, .center, .bottom: .center
-        }
+        if settings.anchor.isLeading { return .leading }
+        if settings.anchor.isTrailing { return .trailing }
+        return .center
     }
 
     private var textAlignment: TextAlignment {
-        switch settings.placement {
-        case .topLeading, .bottomLeading: .leading
-        case .top, .center, .bottom: .center
-        }
+        if settings.anchor.isLeading { return .leading }
+        if settings.anchor.isTrailing { return .trailing }
+        return .center
     }
 }
 
@@ -306,9 +304,10 @@ struct MonthGridView: View {
 }
 
 /// The gradient behind the text when a photo is too busy for a shadow. It
-/// follows the placement, so the dark end is always under the text.
+/// follows the text, so the dark end is always under it wherever it was
+/// dragged.
 struct PhotoWidgetScrim: View {
-    let placement: PhotoWidgetSettings.Placement
+    let anchor: PhotoWidgetSettings.Anchor
 
     var body: some View {
         LinearGradient(
@@ -318,33 +317,79 @@ struct PhotoWidgetScrim: View {
         )
     }
 
+    /// Text in the top third darkens downward, text in the bottom third
+    /// upward, and text in the middle gets an even wash — a gradient with both
+    /// ends in the middle would be a flat black band.
     private var start: UnitPoint {
-        switch placement {
-        case .topLeading, .top: .top
-        case .center: .center
-        case .bottom, .bottomLeading: .bottom
-        }
+        if anchor.y < 0.34 { return .top }
+        if anchor.y > 0.66 { return .bottom }
+        return .center
     }
 
     private var end: UnitPoint {
-        switch placement {
-        case .topLeading, .top: .center
-        case .center: .bottom
-        case .bottom, .bottomLeading: .center
-        }
+        if anchor.y < 0.34 { return .center }
+        if anchor.y > 0.66 { return .center }
+        return .bottom
     }
 }
 
-extension PhotoWidgetSettings.Placement {
-    /// The alignment this placement means, shared by the widget and the
-    /// Settings preview.
+extension PhotoWidgetSettings.Anchor {
+    /// The alignment this anchor rounds to, for the stack that holds the text.
+    /// The fine position is applied as an offset on top of it, so a block
+    /// dragged near an edge stays inside the widget rather than hanging off it.
     var alignment: Alignment {
-        switch self {
-        case .topLeading: .topLeading
-        case .top: .top
-        case .center: .center
-        case .bottom: .bottom
-        case .bottomLeading: .bottomLeading
+        let horizontal: HorizontalAlignment = isLeading ? .leading : (isTrailing ? .trailing : .center)
+        let vertical: VerticalAlignment = y < 0.34 ? .top : (y > 0.66 ? .bottom : .center)
+        return Alignment(horizontal: horizontal, vertical: vertical)
+    }
+
+    /// How far from that alignment the block actually sits, in points, given
+    /// the space it is placed in and the size it takes up. Pure arithmetic, so
+    /// the widget and the Settings preview cannot drift apart.
+    func offset(in size: CGSize, contentSize: CGSize, inset: CGFloat) -> CGSize {
+        let available = CGSize(
+            width: max(0, size.width - contentSize.width - inset * 2),
+            height: max(0, size.height - contentSize.height - inset * 2)
+        )
+        let targetX = available.width * x
+        let targetY = available.height * y
+        // The alignment already places the block at one of three stops; the
+        // offset is the distance from that stop to where it was dragged.
+        let stopX: CGFloat = isLeading ? 0 : (isTrailing ? available.width : available.width / 2)
+        let stopY: CGFloat = y < 0.34 ? 0 : (y > 0.66 ? available.height : available.height / 2)
+        return CGSize(width: targetX - stopX, height: targetY - stopY)
+    }
+}
+
+/// The photo behind a widget, filled, zoomed and shifted the way the user
+/// framed it in Settings.
+///
+/// Both processes draw it with this view: a photo that sits differently in the
+/// preview than in the widget makes the preview a lie, and the whole point of
+/// pinching it in Settings is to choose what the widget shows.
+struct PhotoWidgetImageLayer: View {
+    let image: Image
+    let settings: PhotoWidgetSettings
+
+    var body: some View {
+        GeometryReader { proxy in
+            let size = proxy.size
+            let scale = max(1, min(settings.photoScale, PhotoWidgetSettings.maximumPhotoScale))
+            // The overflow a zoomed photo has to give away in each direction,
+            // halved because it spills both ways.
+            let slackX = size.width * (scale - 1) / 2
+            let slackY = size.height * (scale - 1) / 2
+            image
+                .resizable()
+                .scaledToFill()
+                .frame(width: size.width, height: size.height)
+                .scaleEffect(scale)
+                .offset(
+                    x: slackX * settings.photoOffsetX,
+                    y: slackY * settings.photoOffsetY
+                )
+                .frame(width: size.width, height: size.height)
+                .clipped()
         }
     }
 }
