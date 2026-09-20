@@ -224,4 +224,24 @@ cover-display item above.
 - [x] **The Video Studio accepts drops** — media dropped on the timeline appends to it, importing first when it came from another app.
 - [x] **Apple Pencil pressure and double-tap.** Pressure varies the stroke width (`BrushStroke.pressures`, additive and back-compatible); double-tap swaps brush and eraser, honouring the system preference. Not verifiable in the simulator — no Pencil to press — so it is covered by tests and wants a look on a real iPad. Old note:  `EditorPaintTouchLayer` reads raw `UITouch` with no `.force`, so flow is uniform, and there is no double-tap tool switch. Carrying pressure means threading it through the touch arbiter and into ShotDexKit's brush rasterizer — a real change through the render core, not a modifier.
 - [x] **`EditorPaintTouchLayer` has a pointer shaped like the brush** — a ring at `brushCursorDiameter`, only while a brush is selected. A highlight would have lit up the photo being painted; what a trackpad user needs is the brush's size before they press. `EditorMaskGuides`' handles are composed views and take the system pointer as they are.
-- [ ] Info panel per-file headings: changed and unit-covered through the shared format dictionary, but **not photographed** — the section could not be reached on screen.
+- [x] Info panel per-file headings — **photographed**: Show All Raw Metadata on a Live Photo now reads `HEIC` and `Paired Video · MOV` where it used to say `Resource 1` and `Resource 2`. (They sit near the top of that sheet, not the bottom, which is why three earlier attempts scrolling down missed them.)
+
+
+---
+
+# Sweep 6 — Swift concurrency (2026-09-20)
+
+Agent: `swift-concurrency`, pointed at the code written in the last hour plus
+the long-running hot spots. All four findings were in the new code.
+
+- [x] **Collage's and the Video Studio's cross-app drop fired untracked tasks.** Leaving the tool mid-import kept writing to the user's library and then updated a model nobody was looking at — in the studio's case after `close()` had torn down the player. Both are held and cancelled now, and check `Task.isCancelled` before touching the model.
+- [x] **`PhotoDropImport`'s continuation ignored cancellation** — it keeps the `Progress` and cancels it from `withTaskCancellationHandler`.
+- [x] **The export pump hopped to the main actor once per sample buffer** — thirty times a second for the length of the video, to report a fraction finer than the bar can draw. Once per percent now.
+
+Read and found sound, recorded so the next pass does not redo it: `IndexPipeline`
+(cancellation at every batch, no reentrancy window), `PhotoLibraryService` (every
+PhotoKit completion either fires once or is documented as `.opportunistic` and
+hopped per call; `photoLibraryDidChange` hops before touching state),
+`BackgroundIndexService` (no `self` captured from the registration closure),
+`VideoExportWriter`'s continuation (single `DispatchGroup.notify`, every branch
+returns after resume), and the GRDB call sites.
