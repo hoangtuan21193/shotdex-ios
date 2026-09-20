@@ -3,9 +3,11 @@
 <plist version="1.0">
 <dict>
 	<!-- App Attest proves a support request came from this app on a real
-	     device. "development" covers Xcode and TestFlight, which attest against
-	     Apple's sandbox; switch to "production" for the App Store build, and
-	     change ATTEST_ENV on the Worker to match. -->
+	     device. This value applies only to a build installed from Xcode, which
+	     attests against Apple's sandbox; iOS ignores it once the app ships, and
+	     TestFlight and App Store builds always attest against production. The
+	     dev Worker therefore accepts both environments, and the production
+	     Worker accepts only production. -->
 	<key>com.apple.developer.devicecheck.appattest-environment</key>
 	<string>development</string>
 	<key>com.apple.security.application-groups</key>

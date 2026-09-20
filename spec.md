@@ -1307,11 +1307,23 @@ lần ký nên **request ký song song sẽ hỏng** — `SupportAttestation` l�
 giữ một vote một máy, mà không mang thông tin cá nhân nào. Gỡ app là mất khoá,
 mọi báo cáo cũ không còn liên kết với máy.
 
+**Hai môi trường, hai backend.** `api.shotdex.app` (D1 `shotdex`) chỉ phục vụ
+build App Store; `api.dev.shotdex.app` (D1 `shotdex-dev`) phục vụ build Xcode và
+TestFlight. Build Release phân biệt bằng receipt: `appStoreReceiptURL` tên
+`sandboxReceipt` nghĩa là TestFlight. Báo lỗi của beta tester vì thế không rơi
+vào hàng đợi thật.
+
+Entitlement `com.apple.developer.devicecheck.appattest-environment` **chỉ có tác
+dụng với build cài từ Xcode** — iOS bỏ qua nó sau khi phân phối, TestFlight và
+App Store luôn attest vào production. Nên Worker dev nhận **cả hai** aaguid
+(`appattestdevelop` và `appattest`), Worker production chỉ nhận production.
+
 Simulator không chạy được App Attest (`DCAppAttestService.isSupported == false`).
 Build Debug đọc `SUPPORT_DEV_BYPASS_TOKEN` và `SUPPORT_API_ORIGIN` từ biến môi
 trường — không bao giờ từ Info.plist, vì token nhúng trong bundle là token công
-khai. Máy thật không chạy được App Attest thì màn Support đổi nút thành soạn
-mail tới `support@shotdex.app`, không để lại nút bấm im lặng.
+khai. `DEV_BYPASS_TOKEN` chỉ đặt trên Worker dev, không bao giờ trên production.
+Máy thật không chạy được App Attest thì màn Support đổi nút thành soạn mail tới
+`support@shotdex.app`, không để lại nút bấm im lặng.
 
 **Màn hình** (tầng A, `List` `.insetGrouped`):
 

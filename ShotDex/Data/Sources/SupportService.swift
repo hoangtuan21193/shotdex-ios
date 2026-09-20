@@ -180,16 +180,33 @@ actor SupportService {
         #endif
     }
 
-    /// The live API, or whatever `SUPPORT_API_ORIGIN` points at in a Debug run,
-    /// which is how a simulator talks to a local `wrangler dev`.
+    /// Which backend this build talks to.
+    ///
+    /// Only an App Store build reaches production. A TestFlight build is routed
+    /// to the dev backend so a beta tester's report never lands in the real
+    /// ticket queue — and because the dev Worker is the one that accepts both
+    /// App Attest environments. (iOS ignores the appattest-environment
+    /// entitlement once an app is distributed: a build installed from Xcode
+    /// attests against Apple's sandbox, while TestFlight and the App Store
+    /// always attest against production.)
     static var defaultOrigin: URL {
         #if DEBUG
         if let override = ProcessInfo.processInfo.environment["SUPPORT_API_ORIGIN"],
            let url = URL(string: override) {
             return url
         }
+        return URL(string: "https://api.dev.shotdex.app")!
+        #else
+        return isTestFlightBuild
+            ? URL(string: "https://api.dev.shotdex.app")!
+            : URL(string: "https://api.shotdex.app")!
         #endif
-        return URL(string: "https://api.shotdex.app")!
+    }
+
+    /// TestFlight ships a sandbox receipt; the App Store ships a real one. This
+    /// is the only signal a Release build has to tell the two apart.
+    static var isTestFlightBuild: Bool {
+        Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
     }
 
     // MARK: Reading
