@@ -1027,7 +1027,7 @@ struct PhotoEditorScreen: View {
             Color.clear.frame(height: safeArea.top)
 
             HStack(spacing: 0) {
-                backButton(controller)
+                backButton(controller, side: AppTheme.Size.minTouch)
                 Spacer(minLength: 8)
                 Text("Edit")
                     .font(EditorTheme.sidebarTitle)
@@ -1407,7 +1407,7 @@ struct PhotoEditorScreen: View {
                 )
             HStack(spacing: 5) {
                 if showsDocumentControls {
-                    backButton(controller)
+                    backButton(controller, side: buttonSize)
                     if isSidebarHidden, sidebarEdge == .leading {
                         showSidebarCommand
                     }
@@ -1455,10 +1455,10 @@ struct PhotoEditorScreen: View {
                     if isSidebarHidden, sidebarEdge == .trailing {
                         showSidebarCommand
                     }
-                    saveButton(controller)
+                    saveButton(controller, side: buttonSize)
                 }
             }
-            .frame(height: showsDocumentControls ? 42 : buttonSize)
+            .frame(height: buttonSize)
             .padding(.horizontal, sideInset)
             .padding(.top, EditorLayoutMetrics.editorFloatingCommandRowTopInset)
             .frame(height: bandHeight, alignment: .top)
@@ -1845,9 +1845,14 @@ struct PhotoEditorScreen: View {
 
     // MARK: Back / Save (group-strip ends)
 
-    /// Back: a 38pt chevron on the leading end of the group strip, discard-guarded
+    /// Back: a chevron on the leading end of the group strip, discard-guarded
     /// when the session has changes.
-    private func backButton(_ controller: PhotoEditorController) -> some View {
+    ///
+    /// 38 is the phone's strip size. On a wide screen Back and Save move up into
+    /// the command band, where the circles beside them are 44 — so the caller
+    /// passes the band's own size rather than leaving two neighbours six points
+    /// apart, both of them under the 44pt minimum.
+    private func backButton(_ controller: PhotoEditorController, side: CGFloat = 38) -> some View {
         Button {
             if hasUnsavedWork {
                 isDiscardConfirmationPresented = true
@@ -1858,7 +1863,7 @@ struct PhotoEditorScreen: View {
             Image(systemName: "chevron.backward")
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(Color.white.opacity(0.6))
-                .frame(width: 38, height: 38)
+                .frame(width: side, height: side)
                 .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous))
                 .contentShape(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous))
         }
@@ -1866,10 +1871,10 @@ struct PhotoEditorScreen: View {
         .accessibilityLabel("Back")
     }
 
-    /// Save (✓): the one accent control on the screen, a 42pt filled circle on the
-    /// trailing end of the group strip. Commits a draft crop first, then opens the
-    /// save sheet.
-    private func saveButton(_ controller: PhotoEditorController) -> some View {
+    /// Save (✓): the one accent control on the screen, a filled circle on the
+    /// trailing end of the group strip (42) or of the command band (the band's
+    /// own size). Commits a draft crop first, then opens the save sheet.
+    private func saveButton(_ controller: PhotoEditorController, side: CGFloat = 42) -> some View {
         Button {
             controller.commitCropSession()
             isSaveSheetPresented = true
@@ -1877,7 +1882,7 @@ struct PhotoEditorScreen: View {
             Image(systemName: "checkmark")
                 .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(.black)
-                .frame(width: 42, height: 42)
+                .frame(width: side, height: side)
                 .background(EditorTheme.accent, in: Circle())
                 .contentShape(Circle())
         }
