@@ -389,7 +389,6 @@
     "Add photo or video": {},
     "Add photo slot": {},
     "Add shape or magnifier": {},
-    "Add to Album": {},
     "Add to Collection": {},
     "Added to the Collages smart album": {},
     "Adding image…": {},
@@ -1356,6 +1355,29 @@
           "stringUnit": {
             "state": "new",
             "value": "These %1$lld %2$@ will be added to the new album."
+          }
+        }
+      }
+    },
+    "These %lld photos will be added to the new album.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "This photo will be added to the new album."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "These %lld photos will be added to the new album."
+                }
+              }
+            }
           }
         }
       }

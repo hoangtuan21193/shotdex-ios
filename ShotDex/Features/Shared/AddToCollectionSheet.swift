@@ -85,7 +85,7 @@ struct AddToCollectionSheet: View {
                 Button("Create") { createAlbum() }
                     .disabled(newAlbumName.trimmingCharacters(in: .whitespaces).isEmpty)
             } message: {
-                Text("These \(assets.count) \(assets.count == 1 ? "item" : "items") will be added to the new album.")
+                Text("These \(assets.count) photos will be added to the new album.")
             }
             .alert(
                 "Couldn't Add to Collection",
