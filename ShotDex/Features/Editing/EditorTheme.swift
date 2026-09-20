@@ -21,6 +21,17 @@ enum EditorTheme {
     static let control = Color(white: 0.11)
     static let sliderTrack = Color(white: 0.165)
     static let hairline = Color.white.opacity(0.09)
+    /// The timeline's own faint white family, named so the same value stops
+    /// being retyped. Three jobs, three names, one place to change them.
+    ///
+    /// `trackBorder` outlines an unselected clip and rules the line under the
+    /// timeline's ruler; `trackChip` fills a neutral chip on the dark chrome
+    /// (the timecode, an unselected inspector pill); `emptyLane` is the rail
+    /// of a lane with nothing in it yet — quieter than a divider, because it
+    /// is a place rather than an edge.
+    static let trackBorder = Color.white.opacity(0.12)
+    static let trackChip = Color.white.opacity(0.08)
+    static let emptyLane = Color.white.opacity(0.04)
     static let secondaryText = Color.white.opacity(0.55)
     static let dimText = Color.white.opacity(0.35)
     static let clipping = Color(red: 1, green: 0.271, blue: 0.227)

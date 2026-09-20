@@ -115,7 +115,7 @@ struct TimelineRuler: View {
                     p.move(to: CGPoint(x: 0, y: size.height - 0.5))
                     p.addLine(to: CGPoint(x: size.width, y: size.height - 0.5))
                 },
-                with: .color(.white.opacity(0.12)),
+                with: .color(EditorTheme.trackBorder),
                 lineWidth: 1
             )
             let firstHalf = (visibleLeftTime * 2).rounded(.down) / 2
@@ -196,7 +196,7 @@ private struct VideoTrack: View {
                 .frame(width: VideoStudioMetrics.addMediaButtonWidth, height: lanes.clipCell)
                 .background(
                     RoundedRectangle(cornerRadius: VideoStudioMetrics.trackRadius, style: .continuous)
-                        .fill(Color.white.opacity(0.12))
+                        .fill(EditorTheme.trackBorder)
                 )
         }
         .buttonStyle(.plain)
@@ -275,7 +275,7 @@ private struct ClipBand: View {
         .overlay {
             RoundedRectangle(cornerRadius: VideoStudioMetrics.trackRadius, style: .continuous)
                 .strokeBorder(
-                    isSelected ? EditorTheme.timelineSelection : Color.white.opacity(0.12),
+                    isSelected ? EditorTheme.timelineSelection : EditorTheme.trackBorder,
                     lineWidth: isSelected ? 2.5 : 1
                 )
         }

@@ -69,9 +69,16 @@ enum VideoStudioMetrics {
     /// project's primary action in the top bar. ShotDex had it at the bottom,
     /// which is why the contextual panel could cover it.
     static func topBandHeight(usesToolRail: Bool, safeAreaTop: CGFloat) -> CGFloat {
-        usesToolRail
-            ? max(66, safeAreaTop + 18)
-            : max(EditorLayoutMetrics.editorTopBandHeight, safeAreaTop)
+        guard usesToolRail else {
+            return max(EditorLayoutMetrics.editorTopBandHeight, safeAreaTop)
+        }
+        // Derived, not picked: the row's own button plus its inset above and
+        // an equal breath below. Written out so it follows the button if the
+        // button ever changes, instead of drifting away from the row it is
+        // sized for.
+        let row = EditorLayoutMetrics.editorFloatingCommandButtonSize(isRegularWidth: true)
+        let inset = EditorLayoutMetrics.editorFloatingCommandRowTopInset
+        return max(row + inset * 2, safeAreaTop + inset)
     }
     /// Height of the contextual panel (selection + global tools), above the
     /// device's bottom safe inset. It slides over the bars, never displaces them.

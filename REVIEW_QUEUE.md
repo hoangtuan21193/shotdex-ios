@@ -298,3 +298,24 @@ Checked and found clean: the kit's public surface (everything newly public has a
 - [ ] **The full app renders full-extent mask/drawing/overlay layers monolithically too.** It has the memory to survive today; a 48MP RAW with several mask components is close to the edge.
 - [ ] `ShotDexKit/Render/PhotoRenderService+Drawing.swift` imports `PencilKit`, which is not on the kit's allowed list (UIKit is allowed for `UIImage`/`UIColor` bridging only). Pre-existing, from 2026-09-19.
 - [ ] **Reverse geocoding sends photo coordinates to Apple's geocoder** (`PlaceGeocodingService`, opt-out via `SettingsKeys.lookUpPlaces`). Not a privacy-manifest item — it is a system framework, not a server we control — but it belongs in the App Store Connect privacy questionnaire as Location, used but not linked and not for tracking.
+
+
+---
+
+# Sweep 9 — DESIGN.md compliance on today's chrome (2026-09-20)
+
+Agent: `design-reviewer`. It confirmed the three rules written into
+`DESIGN.md` today match what the code does — including the sub-clause about a
+filmstrip requesting its thumbnail at the cell's own pixel size — and then
+found where I worked from taste instead of tokens.
+
+- [x] **Three hand-picked faint whites.** `0.04` for the empty lane rail, `0.12` for the ruler baseline, `0.08` for the timecode pill — and the same values already retyped at six more sites. Now `EditorTheme.emptyLane` / `trackBorder` / `trackChip`, with the reasoning for each in the token, and `DESIGN.md` says to name rather than pick.
+- [x] **Back changed material when the window crossed 700pt** — a flat `0.08` disc in the bottom bar, `.editorGlass` in the top band, and widening an iPad window moves the button from one to the other. Both glass now, and the "one action, one place" principle in `DESIGN.md` extends to "and one material".
+- [x] **The centre play button was a hand-rolled colour plus `.ultraThinMaterial`** — a system material in tier D, which §9 permits through three entry points, none of them this. `.editorGlass(Circle())`, checked on screen. (It dated from the feature's first commit, not from a deliberate move away from glass — I checked the history before changing it.)
+- [x] `spacing: 5`, `padding(.horizontal, 14)`, and a `size: 11` font that was a near-copy of `EditorTheme.rowValue`. On the scale, and on the token.
+- [x] `topBandHeight`'s `max(66, safeTop + 18)` — derived from the button and its inset now, so it follows them instead of drifting.
+
+Read and found compliant: `ToolChromeEnvironment`, the hover additions in the
+editor and Collage, the `UIPointerInteraction` ring, Collage's height gate,
+the canvas-edge hairline, and the sizing constants in `VideoStudioMetrics`
+(the per-feature metrics file is the sanctioned home for them).

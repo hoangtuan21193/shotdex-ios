@@ -604,16 +604,21 @@ struct VideoStudioScreen: View {
                 )
             }
             if !model.isPlaying {
+                // `.editorGlass`, like every other round control this app
+                // floats over a photo. This was a hand-rolled colour plus
+                // `.ultraThinMaterial` from the feature's first commit —
+                // a system material in tier D, which DESIGN §9 allows through
+                // exactly three entry points and this was none of them.
                 Button { model.togglePlayback() } label: {
                     Image(systemName: "play.fill")
                         .font(.system(size: 22, weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(width: 56, height: 56)
-                        .background(Circle().fill(Color(red: 18 / 255, green: 18 / 255, blue: 20 / 255).opacity(0.55)))
-                        .background(.ultraThinMaterial.opacity(0.9), in: Circle())
+                        .background { Color.clear.editorGlass(Circle()) }
+                        .contentShape(Circle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Play")
+                .accessibilityLabel(Text("Play", comment: "Video Studio: starts preview playback"))
             }
         }
         .frame(maxWidth: .infinity)
@@ -904,7 +909,7 @@ struct VideoMusicChooserSheet: View {
         }
         .padding(.horizontal, 12)
         .frame(height: 44)
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(selected ? EditorTheme.activeRow : Color.white.opacity(0.04)))
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(selected ? EditorTheme.activeRow : EditorTheme.emptyLane))
     }
 }
 

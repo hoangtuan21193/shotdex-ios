@@ -56,15 +56,20 @@ struct VideoStudioBottomBar: View {
 
     var body: some View {
         HStack(spacing: 12) {
+            // The same Back the top band draws at rail width, drawn the same
+            // way: glass, not a flat disc. Widening an iPad window past the
+            // rail threshold moves this button into the top band, and it
+            // used to change material on the way.
             Button(action: actions.onBack) {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(width: 38, height: 38)
-                    .background(Circle().fill(Color.white.opacity(0.08)))
+                    .background { Color.clear.editorGlass(Circle()) }
+                    .contentShape(Circle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Back")
+            .accessibilityLabel(Text("Back", comment: "Video Studio: leaves the editor"))
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(VideoStudioMetrics.exportReadout(

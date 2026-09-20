@@ -137,7 +137,7 @@ struct VideoTimelineView: View {
 
     private func rail(height: CGFloat, top: CGFloat) -> some View {
         RoundedRectangle(cornerRadius: VideoStudioMetrics.trackRadius, style: .continuous)
-            .fill(Color.white.opacity(0.04))
+            .fill(EditorTheme.emptyLane)
             .frame(height: height)
             .frame(maxWidth: .infinity, alignment: .leading)
             .offset(y: top)

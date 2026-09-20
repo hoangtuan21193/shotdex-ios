@@ -24,7 +24,7 @@ struct VideoStudioTopBand: View {
     private let inset = EditorLayoutMetrics.editorFloatingCommandSideInset
 
     var body: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: AppTheme.Spacing.xs) {
             if let projectActions {
                 Button(action: projectActions.onBack) {
                     Image(systemName: "chevron.left")
@@ -82,7 +82,7 @@ struct VideoStudioTopBand: View {
             ))
             Text("~\(ByteCountFormatter.string(fromByteCount: model.estimatedExportBytes, countStyle: .file))")
         }
-        .font(.system(size: 11).monospacedDigit())
+        .font(EditorTheme.rowValue)
         .foregroundStyle(EditorTheme.dimText)
         .padding(.leading, 8)
         .accessibilityElement(children: .combine)
@@ -99,7 +99,7 @@ struct VideoStudioTopBand: View {
         .frame(height: 29)
         .background(
             RoundedRectangle(cornerRadius: VideoStudioMetrics.trackRadius, style: .continuous)
-                .fill(Color.white.opacity(0.08))
+                .fill(EditorTheme.trackChip)
         )
         .accessibilityLabel("\(timecode(model.currentTime)) of \(timecode(model.totalDuration))")
     }
@@ -185,7 +185,7 @@ struct VideoCommandBand: View {
         ) {
             ForEach(commands) { VideoCommandCell(command: $0) }
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, AppTheme.Spacing.lg)
     }
 
     private var row: some View {
@@ -193,7 +193,7 @@ struct VideoCommandBand: View {
             HStack(spacing: 8) {
                 ForEach(commands) { VideoCommandCell(command: $0) }
             }
-            .padding(.horizontal, 14)
+            .padding(.horizontal, AppTheme.Spacing.lg)
         }
         .frame(height: VideoStudioMetrics.sheetCommandHeight)
         .overlay(alignment: .trailing) {

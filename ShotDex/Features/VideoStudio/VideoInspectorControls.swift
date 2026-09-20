@@ -282,7 +282,7 @@ struct RatioStrip: View {
                         .foregroundStyle(selected ? .black : .white)
                         .padding(.horizontal, 10)
                         .frame(height: 28)
-                        .background(Capsule().fill(selected ? EditorTheme.accent : Color.white.opacity(0.08)))
+                        .background(Capsule().fill(selected ? EditorTheme.accent : EditorTheme.trackChip))
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(selected ? .isSelected : [])
@@ -345,7 +345,7 @@ struct FilterStrip: View {
                             .foregroundStyle(selected ? .black : .white)
                             .padding(.horizontal, 10)
                             .frame(height: 28)
-                            .background(Capsule().fill(selected ? EditorTheme.accent : Color.white.opacity(0.08)))
+                            .background(Capsule().fill(selected ? EditorTheme.accent : EditorTheme.trackChip))
                     }
                     .buttonStyle(.plain)
                 }
