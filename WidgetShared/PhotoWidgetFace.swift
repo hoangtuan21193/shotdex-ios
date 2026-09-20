@@ -154,9 +154,12 @@ struct PhotoWidgetFace: View {
                 .opacity(0.9)
         } else if let snapshot = calendarSnapshot, snapshot.hasAccess {
             if let events = snapshot.events(on: date), !events.isEmpty {
-                let visible = CalendarFormat.visibleEvents(
-                    events, limit: isCompact ? min(settings.maximumEventCount, 2) : settings.maximumEventCount
+                let limit = CalendarFormat.eventLimit(
+                    isCompact: isCompact,
+                    showsGrid: settings.calendarStyle.showsGrid,
+                    maximum: settings.maximumEventCount
                 )
+                let visible = CalendarFormat.visibleEvents(events, limit: limit)
                 VStack(alignment: .leading, spacing: 2) {
                     ForEach(visible.shown) { event in
                         HStack(spacing: 5) {

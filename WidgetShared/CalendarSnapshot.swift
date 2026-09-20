@@ -130,6 +130,15 @@ enum CalendarFormat {
         return formatter.string(from: event.startDate)
     }
 
+    /// How many events a family has room for. A small widget only gives up
+    /// rows when it is also drawing the month grid; on its own the list has
+    /// the whole widget, and cutting it short left blank space above a
+    /// "+2 more". Pure, so the rule is a test rather than a screenshot.
+    static func eventLimit(isCompact: Bool, showsGrid: Bool, maximum: Int) -> Int {
+        guard isCompact, showsGrid else { return maximum }
+        return min(maximum, 2)
+    }
+
     /// The events a widget lists, and how many were left over.
     static func visibleEvents(
         _ events: [CalendarSnapshot.Event],

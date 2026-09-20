@@ -280,6 +280,16 @@ struct PhotoWidgetDataTests {
         #expect(CalendarFormat.visibleEvents(events, limit: 9).remaining == 0)
     }
 
+    /// A small widget gives up rows for the month grid and for nothing else:
+    /// on its own the event list has the whole widget.
+    @Test func onlyTheGridCostsASmallWidgetItsEventRows() {
+        #expect(CalendarFormat.eventLimit(isCompact: true, showsGrid: true, maximum: 5) == 2)
+        #expect(CalendarFormat.eventLimit(isCompact: true, showsGrid: false, maximum: 5) == 5)
+        #expect(CalendarFormat.eventLimit(isCompact: false, showsGrid: true, maximum: 5) == 5)
+        // A user who asked for one event gets one, grid or no grid.
+        #expect(CalendarFormat.eventLimit(isCompact: true, showsGrid: true, maximum: 1) == 1)
+    }
+
     /// A widget left unrefreshed overnight must not show yesterday's meetings
     /// as today's.
     @Test func eventsAreOnlyOfferedForTheDayTheyWereReadFor() {
