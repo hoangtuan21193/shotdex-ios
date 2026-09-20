@@ -366,11 +366,13 @@ struct VideoStudioScreen: View {
                                 // the frame, so the band does not get its
                                 // width either.
                                 - meterWidth,
-                            // Only when nothing stands between the band and
-                            // the screen's rounded corner.
-                            trailingCornerClearance: usesInspectorColumn
-                                ? 0
-                                : VideoStudioMetrics.displayCornerClearance
+                            // Only on a desk window, and only when nothing
+                            // stands between the band and the screen's
+                            // rounded corner. The phone's band is left
+                            // exactly as it shipped.
+                            trailingCornerClearance: usesDeskChrome && !usesInspectorColumn
+                                ? VideoStudioMetrics.displayCornerClearance
+                                : 0
                         )
                         .frame(height: bandHeight, alignment: .top)
                         if usesDeskChrome {
