@@ -69,6 +69,14 @@ struct EditorPaintTouchLayer: UIViewRepresentable {
     /// eraser. Every drawing app on iPad maps the gesture to the same thing,
     /// and this is the only tool in the editor a Pencil stays in for minutes.
     var onPencilToggle: () -> Void = {}
+    /// Diameter the pointer should take over this canvas, in screen points —
+    /// the brush's own. Zero or less leaves the system arrow alone.
+    ///
+    /// A trackpad user gets nothing from a highlight here: the canvas is the
+    /// photo, and lighting it up would hide the thing being painted. What
+    /// they need is to see *how big the brush is* before they press, which is
+    /// exactly what the touch cursor shows a finger.
+    var pointerDiameter: CGFloat = 0
 
     func makeUIView(context: Context) -> UIView {
         let view = UIView()
@@ -106,6 +114,8 @@ struct EditorPaintTouchLayer: UIViewRepresentable {
         let pencil = UIPencilInteraction()
         pencil.delegate = context.coordinator
         view.addInteraction(pencil)
+
+        view.addInteraction(UIPointerInteraction(delegate: context.coordinator))
         return view
     }
 
@@ -119,7 +129,7 @@ struct EditorPaintTouchLayer: UIViewRepresentable {
         Coordinator(layer: self)
     }
 
-    final class Coordinator: NSObject, UIGestureRecognizerDelegate, UIPencilInteractionDelegate {
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate, UIPencilInteractionDelegate, UIPointerInteractionDelegate {
         var layer: EditorPaintTouchLayer
         private var arbiter = PaintTouchArbiter()
         /// First point of the stroke being painted, so every `Touch` can report
@@ -218,6 +228,27 @@ struct EditorPaintTouchLayer: UIViewRepresentable {
 
         private func stagePoint(_ point: CGPoint) -> CGPoint {
             CGPoint(x: point.x + layer.origin.x, y: point.y + layer.origin.y)
+        }
+
+        // MARK: Pointer
+
+        func pointerInteraction(
+            _ interaction: UIPointerInteraction,
+            styleFor region: UIPointerRegion
+        ) -> UIPointerStyle? {
+            let diameter = layer.pointerDiameter
+            guard diameter > 1 else { return nil }
+            // A ring the size of the brush, centred on the pointer, with the
+            // arrow hidden underneath it: the cursor *is* the brush, which is
+            // the same promise the touch cursor makes to a finger.
+            let rect = CGRect(
+                x: region.rect.midX - diameter / 2,
+                y: region.rect.midY - diameter / 2,
+                width: diameter,
+                height: diameter
+            )
+            let path = UIBezierPath(ovalIn: rect)
+            return UIPointerStyle(shape: .path(path), constrainedAxes: [])
         }
 
         // MARK: Pencil

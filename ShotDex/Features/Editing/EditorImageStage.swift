@@ -231,7 +231,14 @@ struct EditorImageStage: View {
                         onPanBegan: beginPhotoPan,
                         onPanChanged: { panPhoto($0, imageRect: imageRect, stage: stageSize) },
                         onPanEnded: endPhotoPan,
-                        onPencilToggle: { controller.brushIsEraser.toggle() }
+                        onPencilToggle: { controller.brushIsEraser.toggle() },
+                        pointerDiameter: controller.selectedComponent?.kind == .brush
+                            ? EditorLayoutMetrics.brushCursorDiameter(
+                                size: controller.brushSize,
+                                in: imageRect,
+                                zoomScale: chrome.zoomScale
+                            )
+                            : 0
                     )
                     .frame(width: imageRect.width, height: imageRect.height)
                     .position(x: imageRect.midX, y: imageRect.midY)
