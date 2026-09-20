@@ -183,6 +183,58 @@ struct VideoStudioLayoutTests {
         )
     }
 
+    /// The rail follows the same rule as the inspector: chrome spends the
+    /// dimension the stage has spare.
+    ///
+    /// A portrait tablet is where this bites. The frame there is limited by
+    /// width, not height — it is already letterboxed top and bottom — so a
+    /// 92pt rail comes straight off the picture and buys back nothing.
+    @Test func theToolRailStandsOnlyOnALandscapeTablet() {
+        #expect(VideoStudioMetrics.usesToolRail(size: CGSize(width: 1376, height: 1032)))
+        #expect(
+            !VideoStudioMetrics.usesToolRail(size: CGSize(width: 1032, height: 1376)),
+            "a portrait tablet puts the tools under the timeline"
+        )
+        #expect(!VideoStudioMetrics.usesToolRail(size: CGSize(width: 669, height: 951)), "the Duo's real scene")
+        #expect(!VideoStudioMetrics.usesToolRail(size: CGSize(width: 402, height: 874)), "the phone")
+        #expect(
+            !VideoStudioMetrics.usesToolRail(size: CGSize(width: 900, height: 450)),
+            "a short Stage Manager window has no height for a top band either"
+        )
+    }
+
+    /// Dropping the rail in portrait is worth 92pt of frame width, and the
+    /// bottom row it puts back costs height the window was not using.
+    @Test func portraitWithoutTheRailDrawsAWiderFrame() {
+        let screen = CGSize(width: 1032, height: 1376)
+        let canvas = CGSize(width: 3, height: 2)
+        let content = VideoStudioMetrics.timelineContentHeight(overlayLanes: 1, musicLanes: 1)
+        func frameHeight(usesToolRail: Bool) -> CGFloat {
+            let stageWidth = screen.width - (usesToolRail ? VideoStudioMetrics.railWidth : 0)
+            return stageWidth * canvas.height / canvas.width
+        }
+        #expect(frameHeight(usesToolRail: false) > frameHeight(usesToolRail: true))
+
+        // And the stack still fits: the row and the bottom band it brings
+        // back are cheaper than the height a portrait window has spare.
+        let layout = VideoStudioMetrics.stackLayout(
+            screen: screen, bandHeight: 24, bottomInset: 20,
+            canvas: canvas, presentsSheet: false,
+            timelineContentHeight: content,
+            usesToolRail: false, showsBottomBar: true
+        )
+        #expect(layout.preview >= frameHeight(usesToolRail: false))
+        #expect(layout.timeline == max(VideoStudioMetrics.timelineMinimumHeight, content))
+    }
+
+    /// The divider is about the window being a tablet, not about the rail:
+    /// portrait has no rail and the most slack to spend.
+    @Test func theTimelineDividerIsAvailableInBothOrientations() {
+        #expect(VideoStudioMetrics.usesResizableTimeline(size: CGSize(width: 1376, height: 1032)))
+        #expect(VideoStudioMetrics.usesResizableTimeline(size: CGSize(width: 1032, height: 1376)))
+        #expect(!VideoStudioMetrics.usesResizableTimeline(size: CGSize(width: 402, height: 874)))
+    }
+
     /// The column costs the stage width, and the drawer costs it height. On
     /// a landscape tablet the frame is height-limited, so the column is the
     /// one that leaves a bigger picture — the whole reason to build it.

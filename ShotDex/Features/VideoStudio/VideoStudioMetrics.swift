@@ -42,6 +42,37 @@ enum VideoStudioMetrics {
     /// hurt most, squeezing the frame to 266×150.
     static let minimumStageWidth: CGFloat = 400
 
+    /// Whether the tools stand in a rail down the leading edge instead of a
+    /// row under the timeline.
+    ///
+    /// Same rule as the inspector, and for the same reason: chrome spends the
+    /// dimension the stage has to spare. A landscape window is short of
+    /// height, so a 92pt rail is the cheap place to put nine tools. A
+    /// **portrait** tablet is the opposite — width is what the preview is
+    /// starved of and height is what it is drowning in — and a rail there
+    /// takes 92pt off the frame while leaving hundreds of points of black
+    /// above and below it. Measured on a 1032×1376 iPad: the rail costs the
+    /// preview 92pt of width and 61pt of height, and nothing fills the gap.
+    /// So portrait puts the tools back in the row under the timeline, where
+    /// they cost height the window is not using.
+    static func usesToolRail(size: CGSize) -> Bool {
+        size.width >= EditorLayoutMetrics.sidebarMinCanvasWidth
+            && size.height >= EditorLayoutMetrics.sidebarMinCanvasHeight
+            && size.width > size.height
+    }
+
+    /// Whether the divider between the frame and the lanes can be dragged.
+    ///
+    /// This is about the window being a tablet, not about which way it is
+    /// turned. A portrait tablet is where the slack actually is — the frame
+    /// is capped at its aspect-fit height, so everything past that is black —
+    /// and that is exactly where the drag was unavailable while it keyed on
+    /// the rail.
+    static func usesResizableTimeline(size: CGSize) -> Bool {
+        size.width >= EditorLayoutMetrics.sidebarMinCanvasWidth
+            && size.height >= EditorLayoutMetrics.sidebarMinCanvasHeight
+    }
+
     static func usesInspectorColumn(size: CGSize) -> Bool {
         size.width >= EditorLayoutMetrics.sidebarMinCanvasWidth
             && size.width > size.height

@@ -216,12 +216,15 @@ struct VideoStudioScreen: View {
             // The band spans the Dynamic Island: grow it to the device's top safe
             // inset (≈59 on Face-ID iPhones) so its 11pt-inset row lands level with
             // the island and the preview starts below it — mirrors the photo editor.
-            // Wide *and* tall enough. A Stage Manager window can be 900×450,
-            // where a permanent rail and a top band carrying Back and Export
-            // take height the stage has none of — the same pair of floors the
-            // photo editor's sidebar uses.
-            let usesRail = proxy.size.width >= EditorLayoutMetrics.sidebarMinCanvasWidth
-                && proxy.size.height >= EditorLayoutMetrics.sidebarMinCanvasHeight
+            // Wide, tall, and wider than it is tall — see `usesToolRail`. A
+            // Stage Manager window can be 900×450, where a permanent rail and
+            // a top band carrying Back and Export take height the stage has
+            // none of; a portrait tablet is the mirror image and cannot spare
+            // the width.
+            let usesRail = VideoStudioMetrics.usesToolRail(size: proxy.size)
+            // The drag follows the window being a tablet, not the rail: a
+            // portrait tablet has no rail and the most slack to spend.
+            let resizableTimeline = VideoStudioMetrics.usesResizableTimeline(size: proxy.size)
             let bandHeight = VideoStudioMetrics.topBandHeight(
                 usesToolRail: usesRail,
                 safeAreaTop: proxy.safeAreaInsets.top
@@ -271,7 +274,7 @@ struct VideoStudioScreen: View {
                 // so the bottom band is not drawn and costs no height.
                 showsBottomBar: !usesToolRail,
                 // Only where the divider exists to drag.
-                timelineExtraHeight: usesToolRail ? CGFloat(timelineExtraHeight) + timelineDragOffset : 0
+                timelineExtraHeight: resizableTimeline ? CGFloat(timelineExtraHeight) + timelineDragOffset : 0
             )
             // `usesRail` is measured on the window, not on the size class. An
             // iPad Split View half reports `.regular` at ~500pt, where a
@@ -299,7 +302,7 @@ struct VideoStudioScreen: View {
                         )
                         .frame(height: bandHeight, alignment: .top)
                         preview(model).frame(height: layout.preview)
-                        if usesRail {
+                        if resizableTimeline {
                             timelineDivider
                         } else {
                             Color.clear.frame(height: VideoStudioMetrics.previewTimelineGap)
