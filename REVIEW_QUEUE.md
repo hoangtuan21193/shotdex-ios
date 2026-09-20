@@ -150,7 +150,9 @@ the iPhone 17 and the iPad Pro 13" with the new `Tools/ui-drive`.
 
 ## Found by the driver, not yet chased
 
-- [ ] **The Video Studio's accessibility hierarchy cannot be snapshotted on the phone.** XCUITest times out enumerating it — even `app.buttons` never returns — while the same screen on the iPad dumps 172 elements fine. Something on the compact layout keeps the tree from settling (the horizontally scrolling tool row and the timeline's drag zones are the suspects). This is not only a tooling problem: a hierarchy that never settles is what VoiceOver walks too. Worth an `a11y-voiceover` pass aimed at it.
+- [ ] **The Video Studio's accessibility hierarchy cannot be snapshotted on the phone.** XCUITest times out enumerating it — even `app.buttons` never returns — while the same screen on the iPad dumps fine.
+  **Measured 2026-09-20, and the original theory is wrong.** Reproduced on iPhone 17 / iOS 26.5: the run reaches the screenshot step and then hangs on the first `dump`. But `sample` on the app while it sits on that screen shows the **main thread completely idle** — 2295 of 2295 samples in `mach_msg2_trap` on the run loop. Nothing is spinning, so "a hierarchy that never settles" is not what is happening, and the VoiceOver worry the item raised is not supported by anything measured.
+  What is left is the driver: `tree()` reads `label`, `identifier`, `value`, `isEnabled`, `isSelected` and `isHittable` off every element, and each of those is its own round trip into the app — `isHittable` the most expensive of them. The next step is a tool change (read fewer properties, bound the element count, make `isHittable` opt-in), not an app change. Re-file under the driver, not under accessibility.
 
 ## Still open from sweep 2
 

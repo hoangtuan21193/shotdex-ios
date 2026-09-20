@@ -1,0 +1,18 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "tap", "label": "Select", "type": "button" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "x": 0.2, "y": 0.25 },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "label": "More selection actions", "type": "button" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "label": "Create Video" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "screenshot", "name": "studio" },
+    { "action": "dump", "name": "studio-buttons", "type": "button" },
+    { "action": "dump", "name": "studio-text", "type": "staticText" },
+    { "action": "dump", "name": "studio-all" }
+  ]
+}

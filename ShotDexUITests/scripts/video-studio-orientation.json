@@ -1,0 +1,22 @@
+{
+  "steps": [
+    { "action": "orientation", "text": "portrait" },
+    { "action": "launch" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "tap", "label": "Select", "type": "button" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "x": 0.07, "y": 0.07 },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "label": "More selection actions", "type": "button" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "label": "Create Video" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "screenshot", "name": "01-portrait" },
+    { "action": "orientation", "text": "landscape" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "screenshot", "name": "02-landscape" },
+    { "action": "orientation", "text": "portrait" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "screenshot", "name": "03-portrait-again" }
+  ]
+}
