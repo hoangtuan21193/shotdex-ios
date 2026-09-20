@@ -43,6 +43,8 @@ Which agents for which area:
 
 Tell each agent the exact files and the device UDIDs it may use. Remind `device-layout` to check `df -h /System/Volumes/Data` first — a build is ~1GB.
 
+Two agents in `.claude/agents/` are deliberately not dispatched here: `prior-art` belongs to Phase 4 (it proposes fixes, it does not find problems), and `lightroom-parity` is feature planning, not review — run it on its own when deciding what to build next.
+
 ## Phase 3 — merge into the queue
 
 Write `REVIEW_QUEUE.md` at the repo root (append if it exists; never silently drop items already there).
@@ -88,15 +90,16 @@ where it stopped.
 For each item:
 
 1. Read the code around it. If the finding is wrong, mark it `~~struck~~` in the queue with the reason and move on — an agent being wrong is normal and must be recorded, not silently skipped.
-2. Make the smallest change that fixes it.
-3. `xcodebuild … build` and fix every error before continuing.
-4. **UI change → install, launch, screenshot, look at it.** Both `#available` branches when the code has them (iPhone 17 / iOS 26 and iPhone 16 Pro / iOS 18.6), and the iPad when the change is about layout.
-5. Update `spec.md` (and `DESIGN.md` if it is a rule) in the same step.
-6. Tick the box. Commit per item, or per small group of related items, with the reasoning in the message.
-7. Run the full test suite before the last commit of the batch.
-8. Re-read the item in the queue and tick it only when the fix is *observed*, not when the code compiles.
+2. **If the finding is clear but the fix is not, run `prior-art` on it first.** It answers "what should this look like instead" by reading how Photos, Lightroom, Halide, Darkroom, CapCut or Procreate solved the same thing, and comes back with numbers, the tier it lands in and what it costs. Use it when the item is about the *shape* of something — a control that is in the wrong place, an interaction with no obvious replacement, an empty state, a flow that needs restructuring — and batch every such item from the queue into one `prior-art` call rather than one per item. Skip it when the fix is mechanical (a missing accessibility label, a hardcoded constant that should be a token, an off-by-one frame).
+3. Make the smallest change that fixes it.
+4. `xcodebuild … build` and fix every error before continuing.
+5. **UI change → install, launch, screenshot, look at it.** Both `#available` branches when the code has them (iPhone 17 / iOS 26 and iPhone 16 Pro / iOS 18.6), and the iPad when the change is about layout.
+6. Update `spec.md` (and `DESIGN.md` if it is a rule) in the same step.
+7. Tick the box. Commit per item, or per small group of related items, with the reasoning in the message.
+8. Run the full test suite before the last commit of the batch.
+9. Re-read the item in the queue and tick it only when the fix is *observed*, not when the code compiles.
 
-Stop and ask only when: the fix needs a product decision, it would touch more than about six files, or two findings contradict each other.
+Stop and ask only when: the fix needs a product decision, it would touch more than about six files, or two findings contradict each other. A `prior-art` proposal that changes what the feature *is* — not just how it is drawn — goes to "Needs a decision", not straight into the code.
 
 ## Phase 5 — close the loop, with proof
 

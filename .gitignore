@@ -3,6 +3,7 @@ xcuserdata/
 *.xcuserstate
 DerivedData/
 build/
+!.claude/skills/build/
 .build/
 .swiftpm/
 .idea/
