@@ -355,19 +355,11 @@ Closing out `ios26-parity`, `copy-consistency` and `localization` leftovers.
 
 ## Needs a decision
 
-- **Is the destination an Album or a Collection?** The action is "Add to
-  Collection" (selection ⋯, viewer, tile context menu, sheet title, error
-  alert) but everything inside that sheet says Album — "Your Albums", "New
-  Album…", "Album Name", "…added to the new album" — and Import's own picker
-  says "Add to Album". `spec.md` §391 records the opposite call deliberately
-  ("viewer đổi `Add to Album` → `Add to Collection` cho khớp thanh chọn và
-  tiêu đề sheet"), and `DESIGN.md` §269 repeats it, so this is not mine to
-  flip. Either direction ends the split:
-  - **Album everywhere** (Photos' own word; 5 strings + spec + DESIGN change).
-    The tab stays "Collections" — that is the browsing container, a different
-    thing.
-  - **Collection everywhere** (2 strings inside the sheet + the empty state).
-    Costs the match with Import and with PhotoKit's own vocabulary.
+- [x] ~~**Is the destination an Album or a Collection?**~~ — **decided
+  2026-09-20 by the user: it stays "Collection"** ("để nguyên là collection").
+  The rename I had staged was reverted before it shipped. `spec.md` §391 and
+  `DESIGN.md` §269 already said so and stand. The split inside the sheet
+  ("Your Albums", "New Album…") is the accepted cost.
 
 ## Sweep 10, continued — the device-layout leftovers (2026-09-20)
 
@@ -379,4 +371,43 @@ file is the list below, and none of it is a layout number:
 - the two tiled-render items, which want Instruments on real hardware,
 - the Video Studio's accessibility tree not settling at compact width,
 - Album vs Collection (**Needs a decision**).
+
+---
+
+# Sweep 11 — the Collections tab rework (2026-09-20)
+
+Not an agent sweep: a run of user-directed changes to the Collections tab,
+landed across `fa80a2d`, `c093a2d` and the two commits before them. Listed
+here so the next sweep knows what is new and what was deliberately decided.
+
+## Landed
+
+- [x] Album groups browse by **cover tile** (112 compact / 168 regular) instead
+  of a 60pt settings-style row. Four near-identical token structs collapsed
+  into `AlbumCoverTile` + `AlbumCoverWell`.
+- [x] **Media Types and Utilities** are one-line cards, 190/240 wide, packed up
+  to three rows and scrolled sideways. Row count follows how many cards fit
+  (two on a phone, four on a 13" iPad), not a hardcoded three.
+- [x] **Folders removed** — the section, the model, and six PhotoKit calls.
+- [x] **Recents removed**; On This Day is a full-width hero at 180/260.
+- [x] **Creations** split into `Collages` and `Video Projects`, always present,
+  each also the place a new one starts.
+- [x] Recipes are Codable and live in a `creations` table, so a collage or
+  video reopens in the editor that made it.
+
+## Deliberate, do not "fix"
+
+- "Add to Collection" is the user's chosen wording. See above.
+- The Utilities row for made videos is "Video Projects" because Media Types
+  already has a PhotoKit-named "Videos".
+- Cover tiles growing at regular width is a written exception to
+  `DESIGN.md` §10.1c, argued in §10.1d.
+
+## Open
+
+- [ ] **Recently Deleted cannot be built.** No `PHAssetCollectionSubtype` for
+  it at all (iOS 26.1 SDK), and no public URL that opens Photos on it. Asked
+  for, and the answer is the platform's.
+- [ ] Reviewed today by `a11y-voiceover`, `copy-consistency` and
+  `design-reviewer`; their findings go below as they land.
 
