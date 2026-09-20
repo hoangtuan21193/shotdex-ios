@@ -125,6 +125,10 @@ struct VideoMediaPoolColumn: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                // A stable handle for the UI driver: "Text" and "Music" also
+                // name a timeline lane and an add-button, so a label match
+                // cannot tell them apart.
+                .accessibilityIdentifier("poolTab.\(candidate.rawValue)")
                 .accessibilityLabel(candidate.title)
                 .accessibilityAddTraits(candidate == tab ? .isSelected : [])
             }
@@ -272,6 +276,14 @@ struct VideoMediaPoolColumn: View {
                     title: String(localized: "Add Text", comment: "Video Studio media pool: adds a caption in the last-used font"),
                     action: { onAddText(nil) }
                 )
+                if model.fontRecents.isEmpty {
+                    Text("Fonts you use appear here, ready to reuse.", comment: "Video Studio media pool: empty state for the text tab")
+                        .font(.system(size: 11))
+                        .foregroundStyle(EditorTheme.dimText)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+                }
                 ForEach(model.fontRecents) { font in
                     Button { onAddText(font) } label: {
                         HStack(spacing: 8) {

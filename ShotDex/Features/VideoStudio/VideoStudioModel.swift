@@ -853,6 +853,58 @@ final class VideoStudioModel {
         schedulePreviewRebuild()
     }
 
+    /// Throw away everything in the clip under the playhead **before** the
+    /// playhead, or everything **after** it.
+    ///
+    /// Resolve's Cut page puts exactly this pair on the left of its transport
+    /// row — Trim Start to Playhead and Trim End to Playhead — because the
+    /// commonest trim is not "set both ends", it is "lose the run-up" or
+    /// "lose the tail", and it wants one tap. ShotDex had only the two-ended
+    /// Duration/Trim sliders in the panel.
+    ///
+    /// On a still it moves `photoDuration`; on a video it moves the trim
+    /// window. Either way the clip keeps its place on the track and the rest
+    /// of the project shifts to follow, which is what `clipPlacements`
+    /// already does for every other length change.
+    func trimToPlayhead(_ end: ClipEnd) {
+        let placements = clipPlacements
+        guard let index = VideoTimelineMath.clipIndex(at: currentTime, placements: placements),
+              index < placements.count,
+              !isLaneLocked(.video)
+        else { return }
+        let clip = recipe.clips[index]
+        let localTime = currentTime - placements[index].start
+        guard localTime > 0, localTime < placements[index].duration else { return }
+
+        switch clip.kind {
+        case .photo, .freeze:
+            let kept = end == .start ? placements[index].duration - localTime : localTime
+            guard kept >= VideoClip.photoDurationRange.lowerBound else { return }
+            pushUndo()
+            recipe.clips[index].photoDuration = kept
+        case .video:
+            guard let sourceDuration = clip.sourceDuration else { return }
+            // Local time runs at the clip's speed; the trim window does not.
+            let sourceTime = clip.trimStart + localTime * max(clip.speed, 0.01)
+            let start = end == .start ? sourceTime : clip.trimStart
+            let finish = end == .start ? (clip.trimEnd ?? sourceDuration) : sourceTime
+            guard finish - start >= VideoClip.minimumClipDuration else { return }
+            let clamped = VideoTimelineMath.clampedTrim(
+                start: start,
+                end: finish,
+                sourceDuration: sourceDuration
+            )
+            pushUndo()
+            recipe.clips[index].trimStart = clamped.start
+            recipe.clips[index].trimEnd = clamped.end
+        }
+        markEdited()
+        schedulePreviewRebuild()
+    }
+
+    /// Which end of a clip a command acts on.
+    enum ClipEnd { case start, end }
+
     /// Freeze the frame under the playhead: insert a held still right after the
     /// clip it lands in.
     func freezeUnderPlayhead() {

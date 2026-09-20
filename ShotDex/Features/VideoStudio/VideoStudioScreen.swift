@@ -116,7 +116,17 @@ struct VideoStudioScreen: View {
             Button("Discard", role: .destructive) { dismiss() }
             Button("Keep Editing", role: .cancel) {}
         }
-        .modifier(TransitionDialog(model: model))
+        .sheet(isPresented: Binding(
+            get: { model?.editingTransitionIndex != nil },
+            set: { if !$0 { model?.editingTransitionIndex = nil } }
+        )) {
+            if let model, let index = model.editingTransitionIndex {
+                VideoTransitionSheet(model: model, index: index) {
+                    model.editingTransitionIndex = nil
+                }
+                .presentationDetents([.height(300)])
+            }
+        }
         .alert(
             "Video Error",
             isPresented: Binding(
@@ -838,33 +848,6 @@ struct VideoStudioScreen: View {
 }
 
 /// The transition-kind chooser, driven by `model.editingTransitionIndex`.
-private struct TransitionDialog: ViewModifier {
-    let model: VideoStudioModel?
-
-    func body(content: Content) -> some View {
-        content.confirmationDialog(
-            "Transition",
-            isPresented: Binding(
-                get: { model?.editingTransitionIndex != nil },
-                set: { if !$0 { model?.editingTransitionIndex = nil } }
-            ),
-            titleVisibility: .visible
-        ) {
-            if let model, let index = model.editingTransitionIndex {
-                ForEach(VideoTransitionKind.allCases) { kind in
-                    Button(kind.displayName) {
-                        let duration = model.recipe.transitions[safe: index]?.duration ?? 0.5
-                        model.pushUndo()
-                        model.setTransition(VideoBoundaryTransition(kind: kind, duration: duration), at: index)
-                        model.editingTransitionIndex = nil
-                    }
-                }
-                Button("Cancel", role: .cancel) { model.editingTransitionIndex = nil }
-            }
-        }
-    }
-}
-
 private extension Array {
     subscript(safe index: Int) -> Element? {
         indices.contains(index) ? self[index] : nil

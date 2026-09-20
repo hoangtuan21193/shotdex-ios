@@ -227,6 +227,39 @@ struct VideoStudioDeskLayoutTests {
         #expect(VideoStudioModel.GlobalTool.allCases.contains(.background))
     }
 
+    // MARK: Transitions
+
+    /// The one transition control the maths always supported and nothing ever
+    /// exposed: `VideoBoundaryTransition.duration` had a range and a default
+    /// and no way to change it. The sheet's note has to tell the truth about
+    /// what the timeline will actually grant.
+    @Test func aTransitionIsClampedToHalfTheShorterNeighbour() {
+        // Two clips, the second only 0.6s: a 2s transition cannot fit.
+        let granted = VideoTimelineMath.effectiveOverlaps(
+            requested: [2.0],
+            durations: [5.0, 0.6]
+        )
+        #expect(granted.count == 1)
+        #expect(granted[0] <= 0.3 + 0.0001)
+        #expect(granted[0] < 2.0)
+    }
+
+    @Test func aTransitionThatFitsIsGrantedInFull() {
+        let granted = VideoTimelineMath.effectiveOverlaps(
+            requested: [0.5],
+            durations: [5.0, 4.0]
+        )
+        #expect(abs(granted[0] - 0.5) < 0.0001)
+    }
+
+    /// Every kind the sheet lists must be a kind the compositor can blend, or
+    /// the sheet is offering something the export cannot honour.
+    @Test func everyTransitionKindIsOfferedAndRenderable() {
+        #expect(VideoTransitionKind.allCases.contains(.none))
+        #expect(VideoTransitionKind.allCases.contains(.crossfade))
+        #expect(VideoTransitionKind.allCases.count >= 7)
+    }
+
     // MARK: Media pool cells
 
     @Test func theMediaPoolFitsThreeColumnsWideAndTwoNarrow() {

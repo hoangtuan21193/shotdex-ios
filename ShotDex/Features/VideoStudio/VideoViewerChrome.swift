@@ -140,6 +140,21 @@ struct VideoTransportBar: View {
             glyph("snowflake", label: Text("Freeze Frame", comment: "Video Studio transport: holds the frame under the playhead as a still")) {
                 model.freezeUnderPlayhead()
             }
+            // Resolve's Cut page keeps this pair here, to the left of the
+            // transport, for the same reason: the commonest trim is losing a
+            // run-up or a tail, and it should be one tap.
+            glyph(
+                "arrow.left.to.line",
+                label: Text("Trim Start to Playhead", comment: "Video Studio transport: throws away the part of the clip before the playhead")
+            ) {
+                model.trimToPlayhead(.start)
+            }
+            glyph(
+                "arrow.right.to.line",
+                label: Text("Trim End to Playhead", comment: "Video Studio transport: throws away the part of the clip after the playhead")
+            ) {
+                model.trimToPlayhead(.end)
+            }
             glyph(
                 "trash",
                 label: Text("Delete Clip", comment: "Video Studio transport: removes the selected clip"),

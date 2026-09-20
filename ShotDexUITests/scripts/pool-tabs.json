@@ -1,0 +1,30 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "tap", "label": "Library", "type": "button" },
+    { "action": "tap", "label": "Select", "type": "button" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "label": "More selection actions" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "tap", "label": "Select All" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "tap", "label": "More selection actions" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "tap", "label": "Create Video" },
+    { "action": "wait", "seconds": 14 },
+    { "action": "orientation", "text": "landscape" },
+    { "action": "wait", "seconds": 18 },
+    { "action": "tap", "label": "poolTab.stickers" },
+    { "action": "wait", "seconds": 16 },
+    { "action": "tap", "label": "poolTab.text" },
+    { "action": "wait", "seconds": 16 },
+    { "action": "tap", "label": "poolTab.music" },
+    { "action": "wait", "seconds": 16 },
+    { "action": "tap", "label": "poolTab.effects" },
+    { "action": "wait", "seconds": 20 },
+    { "action": "tap", "label": "Quick Adjust" },
+    { "action": "wait", "seconds": 16 },
+    { "action": "orientation", "text": "portrait" }
+  ]
+}

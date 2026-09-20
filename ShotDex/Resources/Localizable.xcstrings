@@ -528,6 +528,9 @@
     "A smart album named “%@” already exists." : {
 
     },
+    "Aa" : {
+
+    },
     "About" : {
 
     },
@@ -576,6 +579,9 @@
     "Add shape or magnifier" : {
 
     },
+    "Add Text" : {
+      "comment" : "Video Studio media pool: adds a caption in the last-used font"
+    },
     "Add Title" : {
 
     },
@@ -597,8 +603,14 @@
     "Adding to your library…" : {
 
     },
+    "Adds a caption in this font" : {
+      "comment" : "Video Studio media pool: what tapping a font row does"
+    },
     "Adds this to the end of the video track" : {
       "comment" : "Video Studio media pool: what tapping an item does"
+    },
+    "Adds this to the music track" : {
+      "comment" : "Video Studio media pool: what tapping a music row does"
     },
     "Adjust" : {
 
@@ -655,7 +667,7 @@
 
     },
     "All Media" : {
-      "comment" : "Video Studio media pool filter: everything in the library"
+      "comment" : "Video Studio media pool bin label\nVideo Studio media pool filter: everything in the library"
     },
     "All Time" : {
 
@@ -680,6 +692,9 @@
     },
     "Aperture" : {
       "comment" : "Info panel row label"
+    },
+    "Append at End" : {
+      "comment" : "Video Studio media pool: new media goes after the last clip"
     },
     "Applies the copied look — tone, colour, curve and film look. The crop, masks and markup of each photo are left alone." : {
 
@@ -765,6 +780,9 @@
     "Bring Forward" : {
 
     },
+    "Browse All Photos…" : {
+      "comment" : "Video Studio media pool: opens the system picker for anything older than the pool holds"
+    },
     "Buckets" : {
 
     },
@@ -845,6 +863,9 @@
     },
     "Chart Type" : {
 
+    },
+    "Choose a Sticker…" : {
+      "comment" : "Video Studio media pool: opens the picker for a sticker image"
     },
     "Choose Folder" : {
 
@@ -1230,7 +1251,7 @@
 
     },
     "Done" : {
-
+      "comment" : "Video Studio quick strip: closes the slider and shows the chips again"
     },
     "Done selecting" : {
 
@@ -1280,6 +1301,9 @@
     "Duplicates Error" : {
 
     },
+    "Duration" : {
+      "comment" : "Video Studio quick strip: how long the selected still stays on screen"
+    },
     "Edit" : {
 
     },
@@ -1298,11 +1322,14 @@
     "Editor Error" : {
 
     },
+    "Effects" : {
+      "comment" : "Video Studio media pool tab: looks to apply to the project"
+    },
     "Empty slot, double tap to choose a photo" : {
 
     },
     "End" : {
-
+      "comment" : "Video Studio media pool: short label for Append at End"
     },
     "Enter value" : {
 
@@ -1604,11 +1631,14 @@
     "Import from a Card or Drive" : {
 
     },
+    "Import from Files…" : {
+      "comment" : "Video Studio media pool: brings an audio file in from the Files app"
+    },
     "Import Photos" : {
 
     },
     "Imported" : {
-
+      "comment" : "Video Studio media pool bin label for the music tab"
     },
     "Imported %lld item" : {
       "extractionState" : "manual",
@@ -1697,6 +1727,12 @@
     },
     "Indexing, %lld percent" : {
 
+    },
+    "Insert" : {
+
+    },
+    "Insert at Playhead" : {
+      "comment" : "Video Studio media pool: new media is cut into the track where the playhead is"
     },
     "Inspector" : {
       "comment" : "Video Studio: shows or hides the controls column"
@@ -1818,6 +1854,9 @@
     "Looking through your photos…" : {
 
     },
+    "Looks" : {
+      "comment" : "Video Studio media pool bin label for the effects tab"
+    },
     "Looks through your photos for faces and for cats and dogs, then offers them as collections. This is the one thing ShotDex does that opens each photo in full, so it is slower than indexing and better left to a charger.\n\nIt all happens on this iPhone, and it counts faces without recognising anyone — iOS gives apps no way to tell one person from another." : {
 
     },
@@ -1866,6 +1905,9 @@
     "Masks" : {
 
     },
+    "Master" : {
+      "comment" : "Video Studio quick strip: the whole mix's level"
+    },
     "Match" : {
 
     },
@@ -1908,7 +1950,7 @@
 
     },
     "Media" : {
-      "comment" : "Video Studio: title of the library column beside the stage"
+      "comment" : "Video Studio media pool tab: photos and videos to add as clips"
     },
     "Media Pool" : {
       "comment" : "Video Studio: shows or hides the library column"
@@ -1977,7 +2019,10 @@
 
     },
     "Music" : {
-      "comment" : "Video Studio timeline lane: the music track"
+      "comment" : "Video Studio media pool tab: audio to add as a music bed\nVideo Studio timeline lane: the music track"
+    },
+    "Music you import is kept here for next time." : {
+      "comment" : "Video Studio media pool: empty state for the music tab"
     },
     "Music, %@, from second %lld to %lld" : {
       "localizations" : {
@@ -2252,6 +2297,9 @@
     "Opening…" : {
 
     },
+    "Opens a slider here, without covering the timeline" : {
+      "comment" : "Video Studio quick strip: what tapping a chip does"
+    },
     "Opens in the editor" : {
       "comment" : "VoiceOver hint on a row in the Creations list"
     },
@@ -2365,7 +2413,7 @@
       "comment" : "Video Studio media pool: VoiceOver label for a still — kind, capture date"
     },
     "Photos" : {
-      "comment" : "Video Studio media pool filter: still photos only"
+      "comment" : "Video Studio media pool bin label for the sticker tab\nVideo Studio media pool filter: still photos only"
     },
     "Photos and metadata never leave this device." : {
 
@@ -2448,6 +2496,9 @@
     "Playback Speed" : {
 
     },
+    "Playhead" : {
+      "comment" : "Video Studio media pool: short label for Insert at Playhead"
+    },
     "Playhead at %@" : {
       "comment" : "Video Studio transport: VoiceOver label for the timecode read-out"
     },
@@ -2511,8 +2562,14 @@
     "Project Overview" : {
       "comment" : "Video Studio: the whole-project strip above the timeline"
     },
+    "Project Tools" : {
+      "comment" : "Video Studio: opens ratio, look, adjustments, volume and background"
+    },
     "Quality" : {
 
+    },
+    "Quick Adjust" : {
+      "comment" : "Video Studio: shows or hides the quick slider strip under the frame"
     },
     "Ratio" : {
 
@@ -2575,6 +2632,9 @@
     },
     "RECENT" : {
 
+    },
+    "Recent Fonts" : {
+      "comment" : "Video Studio media pool bin label for the text tab"
     },
     "Recents" : {
 
@@ -2649,6 +2709,9 @@
     },
     "Reset" : {
 
+    },
+    "Reset %@" : {
+      "comment" : "Video Studio quick strip: puts one value back to its default"
     },
     "Reset All" : {
 
@@ -3072,6 +3135,9 @@
     "Source" : {
 
     },
+    "Speed" : {
+      "comment" : "Video Studio quick strip: playback rate of the selected clip"
+    },
     "Split" : {
 
     },
@@ -3098,6 +3164,9 @@
     },
     "Sticker" : {
 
+    },
+    "Stickers" : {
+      "comment" : "Video Studio media pool tab: photos to add as an overlay"
     },
     "Stop preview" : {
 
@@ -3169,7 +3238,7 @@
 
     },
     "Text" : {
-      "comment" : "Collage panel tab: captions drawn on the collage\nVideo Studio timeline lane: the text and sticker overlay track"
+      "comment" : "Collage panel tab: captions drawn on the collage\nVideo Studio media pool tab: captions to add over the frame\nVideo Studio timeline lane: the text and sticker overlay track"
     },
     "The capture date in the original file is left unchanged, the same as in Photos." : {
 
@@ -3432,6 +3501,9 @@
     },
     "When autoplay is off, a video waits for you to press play. Looping is a button on the player itself. Full HDR shows high-range photos at their real brightness, which makes everything around them look darker." : {
 
+    },
+    "Where new media lands" : {
+      "comment" : "Video Studio media pool: picks append-at-end or insert-at-playhead"
     },
     "Which camera?" : {
 
