@@ -33,10 +33,10 @@ final class VideoStudioModel {
 
     /// A project-wide tool, opened from the toolbar when nothing is selected.
     /// Each reskins the same bottom sheet.
-    enum GlobalTool: Equatable, Identifiable, CaseIterable {
+    enum GlobalTool: String, Equatable, Identifiable, CaseIterable {
         case ratio, filters, adjustments, color, masterVolume, background
 
-        var id: Self { self }
+        var id: String { rawValue }
 
         var title: String {
             switch self {

@@ -116,6 +116,9 @@ struct VideoStudioTopBand: View {
                 } label: {
                     Label(tool.title, systemImage: tool.systemImage)
                 }
+                // A stable handle for the UI driver: "Color" and "Volume"
+                // also name things elsewhere on this screen.
+                .accessibilityIdentifier("projectTool.\(tool.id)")
             }
         } label: {
             Image(systemName: "slider.horizontal.3")
