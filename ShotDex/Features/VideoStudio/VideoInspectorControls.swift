@@ -175,7 +175,12 @@ struct OverlayAnimationRow: View {
         return Button { set(kind) } label: {
             VStack(spacing: 4) {
                 Image(systemName: kind.systemImage).font(.system(size: 16, weight: .regular))
-                Text(kind.displayName).font(.system(size: 9, weight: .medium)).lineLimit(1)
+                // Same reason as the command cells: a 54pt chip fits the
+                // English word and not its translation.
+                Text(kind.displayName)
+                    .font(.system(size: 9, weight: .medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
             .foregroundStyle(isSelected ? EditorTheme.accent : .white)
             .frame(width: 54, height: 44)
@@ -219,7 +224,10 @@ struct ClipEffectRow: View {
         return Button { set(effect) } label: {
             VStack(spacing: 4) {
                 Image(systemName: effect.systemImage).font(.system(size: 16, weight: .regular))
-                Text(effect.displayName).font(.system(size: 9, weight: .medium)).lineLimit(1)
+                Text(effect.displayName)
+                    .font(.system(size: 9, weight: .medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
             .foregroundStyle(isSelected ? EditorTheme.accent : .white)
             .frame(width: 54, height: 44)
