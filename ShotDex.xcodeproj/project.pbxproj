@@ -810,7 +810,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ShotDex/Info.plist;
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "ShotDex analyzes the metadata of your photos (camera, lens, exposure settings) to help you explore your shooting habits. Your photos and metadata never leave your device.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "ShotDex reads your photos' camera, lens and exposure metadata to build your statistics, and saves the edits, favourites, albums and videos you make back to your library. Nothing leaves your device.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -841,7 +841,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ShotDex/Info.plist;
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "ShotDex analyzes the metadata of your photos (camera, lens, exposure settings) to help you explore your shooting habits. Your photos and metadata never leave your device.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "ShotDex reads your photos' camera, lens and exposure metadata to build your statistics, and saves the edits, favourites, albums and videos you make back to your library. Nothing leaves your device.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";

@@ -112,23 +112,34 @@ final class EditExtensionModel {
             formatVersion: PhotoEditRecipe.formatVersion,
             data: (try? JSONEncoder().encode(recipe)) ?? Data()
         )
-        guard let result = try? await renderer.render(source: source, recipe: recipe),
-              let data = Self.encodeJPEG(result)
-        else { return nil }
-        do {
-            try data.write(to: output.renderedContentURL, options: .atomic)
-            return output
-        } catch {
-            return nil
-        }
+        guard let result = try? await renderer.render(source: source, recipe: recipe) else { return nil }
+        return Self.writeJPEG(result, to: output) ? output : nil
     }
 
-    private nonisolated static func encodeJPEG(_ result: PhotoRenderResult) -> Data? {
+    /// Encodes straight to the output URL rather than into a `Data` the
+    /// process then has to hold and write.
+    ///
+    /// `jpegRepresentation(of:…)` materialises the whole compressed image in
+    /// memory beside the rendered one; `writeJPEGRepresentation(of:to:…)`
+    /// lets Core Image stream it. In an app that is a waste, in an *app
+    /// extension* — a fraction of an app's ceiling, rendering a 48MP source —
+    /// it is the difference between saving and being killed at the moment of
+    /// saving.
+    private nonisolated static func writeJPEG(
+        _ result: PhotoRenderResult,
+        to output: PHContentEditingOutput
+    ) -> Bool {
         let context = CIContext()
-        return context.jpegRepresentation(
-            of: result.image,
-            colorSpace: result.colorSpace,
-            options: [kCGImageDestinationLossyCompressionQuality as CIImageRepresentationOption: 0.95]
-        )
+        do {
+            try context.writeJPEGRepresentation(
+                of: result.image,
+                to: output.renderedContentURL,
+                colorSpace: result.colorSpace,
+                options: [kCGImageDestinationLossyCompressionQuality as CIImageRepresentationOption: 0.95]
+            )
+            return true
+        } catch {
+            return false
+        }
     }
 }

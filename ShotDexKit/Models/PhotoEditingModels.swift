@@ -1143,8 +1143,13 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
     /// source decode. An app doing that is close to the edge; an app
     /// *extension*, whose ceiling is a fraction of an app's, is over it.
     /// `ShotDexEdit` checks this before offering to continue an edit.
+    /// Counts only layers that would actually be drawn: a hidden mask or an
+    /// overlay with nothing visible in it costs the renderer nothing, and
+    /// declining those would lose the user a continuable edit for no reason.
     public var needsFullExtentLayers: Bool {
-        !masks.isEmpty || !overlays.isEmpty || !(drawing?.isEmpty ?? true)
+        masks.contains(where: \.isVisible)
+            || overlays.contains(where: \.hasVisibleEffect)
+            || (drawing?.hasVisibleEffect ?? false)
     }
 
     public var isIdentity: Bool {

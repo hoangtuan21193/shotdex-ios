@@ -213,8 +213,32 @@ import Testing
         #expect(drawn.needsFullExtentLayers)
 
         var captioned = PhotoEditRecipe.identity
-        captioned.overlays = [PhotoOverlay(kind: .text)]
+        var caption = PhotoOverlay(kind: .text)
+        // An overlay with no text in it draws nothing, so it does not count —
+        // the rule is about layers the renderer would actually rasterize.
+        caption.text = "Reykjavík, 2026"
+        captioned.overlays = [caption]
         #expect(captioned.needsFullExtentLayers)
+
+        var blankCaption = PhotoEditRecipe.identity
+        blankCaption.overlays = [PhotoOverlay(kind: .text)]
+        #expect(!blankCaption.needsFullExtentLayers, "an empty caption is not a layer")
+    }
+
+    /// A layer that would not be drawn costs the renderer nothing, so it must
+    /// not cost the user a continuable edit either.
+    @Test func hiddenLayersDoNotCount() {
+        var hiddenMask = PhotoEditRecipe.identity
+        var mask = PhotoMask(name: "Brush", component: PhotoMaskComponent(kind: .brush))
+        mask.isVisible = false
+        hiddenMask.masks = [mask]
+        #expect(!hiddenMask.needsFullExtentLayers)
+
+        var hiddenDrawing = PhotoEditRecipe.identity
+        var drawing = PhotoDrawing(data: Data("pk".utf8), canvasWidth: 100, canvasHeight: 100)
+        drawing.isVisible = false
+        hiddenDrawing.drawing = drawing
+        #expect(!hiddenDrawing.needsFullExtentLayers)
     }
 
     /// An empty drawing is not a drawing — reverting every stroke must not
