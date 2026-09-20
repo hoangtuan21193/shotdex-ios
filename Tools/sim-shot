@@ -1,0 +1,91 @@
+#!/bin/bash
+# Screenshot a booted simulator, naming the display explicitly.
+#
+#   Tools/sim-shot <udid-or-name> <out.png> [auto|inner|cover|<display-uuid>]
+#
+# Why this exists: on a dual-screen device (iPhone Duo) nothing else gets a
+# usable frame. `XCUIScreen.main.screenshot()` and `app.screenshot()` inside a
+# UI test both capture the display the system calls main — on a Duo that is
+# the one switched off — so every frame comes back black, and a plain
+# `xcrun simctl io <udid> screenshot` picks a default display that is not
+# always the one the app is on. Naming the display works, but the display
+# UUIDs are **regenerated on every boot**, so they cannot be written down;
+# this resolves them each time.
+#
+# The default, "auto", tries each real screen largest-first and keeps the
+# first frame that is not blank — which is what you want on a Duo, because
+# whether the inner or the cover screen is live depends on a fold state
+# `simctl` cannot read or set. "inner" (largest) and "cover" (smallest) name
+# a screen outright when you mean to check a specific one, blank or not.
+set -euo pipefail
+
+if [ $# -lt 2 ]; then
+    echo "usage: Tools/sim-shot <udid-or-name> <out.png> [auto|inner|cover|<display-uuid>]" >&2
+    exit 2
+fi
+
+device="$1"
+out="$2"
+which="${3:-auto}"
+
+# Real screens only: "Display class: 0" is a device screen; class 1 is a
+# capture/virtual port (720x480, 7680x4320) that never holds the app.
+displays=$(
+    xcrun simctl io "$device" enumerate 2>/dev/null | awk '
+        /UUID:/          { uuid = $2 }
+        /Display class:/ { isScreen = ($3 == "0") }
+        /Default width:/ { width = $3 }
+        /Default height:/ {
+            if (isScreen) { print width * $3, uuid }
+            isScreen = 0
+        }
+    ' | sort -rn
+)
+
+if [ -z "$displays" ]; then
+    echo "sim-shot: no displays on $device — is it booted?" >&2
+    exit 1
+fi
+
+shoot() {
+    xcrun simctl io "$device" screenshot --display "$1" "$out" >/dev/null 2>&1 || return 1
+    [ -s "$out" ]
+}
+
+# A display that is switched off still captures — as a solid dark frame.
+# There is no flag that says which half of a folded Duo is live: `enumerate`
+# reports "Power state: On" for the dark one too, and the dark frame is not
+# small enough for a size threshold to be safe (a 2007x2853 black PNG is
+# ~100KB). What is reliable is the *comparison*: a screen with a user
+# interface on it always compresses worse than a screen showing nothing. So
+# "auto" captures every real screen and keeps the largest file.
+case "$which" in
+    auto)
+        best=""
+        best_size=0
+        tmp="${out%.png}.probe.png"
+        for uuid in $(echo "$displays" | awk '{print $2}'); do
+            if xcrun simctl io "$device" screenshot --display "$uuid" "$tmp" >/dev/null 2>&1; then
+                size=$(stat -f%z "$tmp" 2>/dev/null || echo 0)
+                if [ "$size" -gt "$best_size" ]; then
+                    best_size=$size
+                    best=$uuid
+                fi
+            fi
+        done
+        rm -f "$tmp"
+        if [ -z "$best" ]; then
+            echo "sim-shot: no display on $device could be captured — is it booted?" >&2
+            exit 1
+        fi
+        shoot "$best"
+        echo "$out"
+        exit 0
+        ;;
+    inner) uuid=$(echo "$displays" | head -1 | awk '{print $2}') ;;
+    cover) uuid=$(echo "$displays" | tail -1 | awk '{print $2}') ;;
+    *)     uuid="$which" ;;
+esac
+
+shoot "$uuid"
+echo "$out"

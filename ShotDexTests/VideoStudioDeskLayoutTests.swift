@@ -10,9 +10,16 @@ import Testing
 struct VideoStudioDeskLayoutTests {
     // The four windows every one of these rules has to hold on.
     private let phone = CGSize(width: 402, height: 874)
-    /// The iPhone Duo's inner display, portrait: the device the desk bands
-    /// were lowered below the tool rail's 700pt threshold for.
-    private let duoInner = CGSize(width: 669, height: 951)
+    /// The iPhone Duo's inner display, **measured** 2026-09-20 from a host
+    /// screenshot of the open device: 951×669 landscape (2853×2007px at 3x).
+    /// `XCUIScreen` reports 669×951 there — the display in its own native
+    /// portrait, not the scene the app is handed — and an earlier reading of
+    /// this device came from that number.
+    private let duoInner = CGSize(width: 951, height: 669)
+    /// An iPad Split View half: 639pt on a portrait 12.9" iPad. This is the
+    /// window the 600pt desk threshold exists for — wide enough to want a
+    /// transport row and track headers, too narrow to spend 92pt on a rail.
+    private let splitHalf = CGSize(width: 639, height: 1376)
     private let iPadPortrait = CGSize(width: 1032, height: 1376)
     private let iPadLandscape = CGSize(width: 1376, height: 1032)
 
@@ -23,15 +30,26 @@ struct VideoStudioDeskLayoutTests {
         #expect(VideoStudioMetrics.deskChromeHeight(usesDeskChrome: false) == 0)
     }
 
-    /// The point of the 600pt threshold: the Duo's inner display never
-    /// reaches the tool rail's 700, and it is the window with the most to
-    /// gain from a transport row and track headers.
-    @Test func theDuoInnerDisplayGetsDeskChromeWithoutTheToolRail() {
+    /// The point of the 600pt threshold: a Split View half is wide enough to
+    /// want the desk bands — they cost height it has in abundance — and too
+    /// narrow to spend 92pt of its width on a tool rail.
+    @Test func aSplitViewHalfGetsDeskChromeWithoutTheToolRail() {
+        #expect(VideoStudioMetrics.usesDeskChrome(size: splitHalf))
+        #expect(!VideoStudioMetrics.usesToolRail(size: splitHalf))
+    }
+
+    /// The Duo's inner display is a landscape window wider than a phone and
+    /// shorter than a tablet: it earns the rail *and* the desk bands, and its
+    /// lanes stay at phone height because 669pt is under the 750 that tablet
+    /// lanes need.
+    @Test func theDuoInnerDisplayGetsTheRailAndTheDeskBands() {
         #expect(VideoStudioMetrics.usesDeskChrome(size: duoInner))
-        #expect(!VideoStudioMetrics.usesToolRail(size: duoInner))
+        #expect(VideoStudioMetrics.usesToolRail(size: duoInner))
+        #expect(VideoStudioMetrics.Lanes.for(size: duoInner) == .compact)
     }
 
     @Test func bothTabletOrientationsGetDeskChrome() {
+        #expect(VideoStudioMetrics.usesDeskChrome(size: splitHalf))
         #expect(VideoStudioMetrics.usesDeskChrome(size: iPadPortrait))
         #expect(VideoStudioMetrics.usesDeskChrome(size: iPadLandscape))
     }
@@ -42,12 +60,18 @@ struct VideoStudioDeskLayoutTests {
         #expect(!VideoStudioMetrics.canShowMediaPool(size: phone))
     }
 
-    /// It fits on the Duo, but only just, and only at the narrow width — so
-    /// it stays shut until the user asks for it.
+    /// The Duo can hold the pool — but at 951pt it is not the 1100 that opens
+    /// one unasked, so it stays shut until the user taps for it.
     @Test func theDuoCanOpenTheMediaPoolButDoesNotByDefault() {
         #expect(VideoStudioMetrics.canShowMediaPool(size: duoInner))
-        #expect(VideoStudioMetrics.mediaPoolWidth(size: duoInner) == VideoStudioMetrics.mediaPoolNarrowWidth)
         #expect(!VideoStudioMetrics.mediaPoolOpensByDefault(size: duoInner))
+    }
+
+    /// A Split View half is the window where the narrow pool earns its name:
+    /// 300pt of a 639pt window would leave the frame under its floor.
+    @Test func aNarrowWindowGetsTheNarrowPool() {
+        #expect(VideoStudioMetrics.mediaPoolWidth(size: splitHalf) == VideoStudioMetrics.mediaPoolNarrowWidth)
+        #expect(VideoStudioMetrics.mediaPoolWidth(size: duoInner) == VideoStudioMetrics.mediaPoolWideWidth)
     }
 
     @Test func aLandscapeTabletOpensTheWideMediaPoolFromTheStart() {
@@ -58,7 +82,7 @@ struct VideoStudioDeskLayoutTests {
     /// Whatever the window, opening every column the window allows must leave
     /// the frame at least the floor the pool rule promises.
     @Test func theStageKeepsItsFloorWithEveryColumnOpen() {
-        for size in [duoInner, iPadPortrait, iPadLandscape] {
+        for size in [duoInner, splitHalf, iPadPortrait, iPadLandscape] {
             guard VideoStudioMetrics.canShowMediaPool(size: size) else { continue }
             let columns = VideoStudioMetrics.mediaPoolWidth(size: size)
                 + VideoStudioMetrics.audioMeterWidth(size: size)

@@ -29,6 +29,25 @@ Run in simulator: build, then `xcrun simctl install <udid> <path/to/ShotDex.app>
 Tools/ui-drive <udid> ShotDexUITests/scripts/<script>.json [out-dir]
 ```
 
+```bash
+# Screenshot a booted simulator, naming the display (required on the Duo)
+Tools/sim-shot <udid> out.png [inner|cover]
+```
+
+`Tools/sim-shot` exists because nothing else gets a frame off a dual-screen
+device. Inside a UI test, `XCUIScreen.main.screenshot()` and
+`app.screenshot()` both capture the display the system calls main — on an
+iPhone Duo that is the one switched off — so every frame is black; and a
+plain `xcrun simctl io <udid> screenshot` picks a default display that is
+not always the one the app is on. Naming the display works, but the display
+UUIDs are regenerated on every boot, so `sim-shot` resolves them per call.
+It is also the way to photograph a `Tools/ui-drive` run: end the script with
+a long `wait` and burst `sim-shot` against the device while it holds.
+
+**Do not drive the Duo with the iOS-simulator MCP tool** — its `attach`
+reports 466×678 (the *cover*), so its taps land on a screen that is off.
+Use `Tools/ui-drive`, whose taps go to the right scene.
+
 `Tools/ui-drive` runs the `ShotDexUIDriver` scheme, whose only target is
 `ShotDexUITests/UIDriverTests` — a driver that replays a JSON list of steps
 (`tap` by accessibility label or normalized point, `swipe`, `typeText`,
