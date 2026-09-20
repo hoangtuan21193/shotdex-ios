@@ -290,6 +290,44 @@ struct PhotoWidgetDataTests {
         #expect(CalendarFormat.eventLimit(isCompact: true, showsGrid: true, maximum: 1) == 1)
     }
 
+    /// The Lock Screen strip has room for one event, so which one it picks is
+    /// the whole design: what is running or still to come, and an all-day
+    /// entry only when nothing timed is left.
+    @Test func theLockScreenPicksTheEventStillToCome() throws {
+        let allDay = CalendarSnapshot.Event(
+            id: "all", title: "Film scans due",
+            startDate: date(2026, 9, 21, hour: 0), endDate: date(2026, 9, 22, hour: 0),
+            isAllDay: true, colorHex: nil
+        )
+        let morning = CalendarSnapshot.Event(
+            id: "am", title: "Client shoot",
+            startDate: date(2026, 9, 21, hour: 9), endDate: date(2026, 9, 21, hour: 11),
+            isAllDay: false, colorHex: nil
+        )
+        let afternoon = CalendarSnapshot.Event(
+            id: "pm", title: "Lens pickup",
+            startDate: date(2026, 9, 21, hour: 14), endDate: date(2026, 9, 21, hour: 15),
+            isAllDay: false, colorHex: nil
+        )
+        let events = [allDay, morning, afternoon]
+
+        // Before anything starts: the first timed event.
+        #expect(CalendarFormat.nextEvent(in: events, at: date(2026, 9, 21, hour: 8))?.id == "am")
+        // While one is running: that one, not the next.
+        #expect(CalendarFormat.nextEvent(in: events, at: date(2026, 9, 21, hour: 10))?.id == "am")
+        // After it ends: the next one.
+        #expect(CalendarFormat.nextEvent(in: events, at: date(2026, 9, 21, hour: 12))?.id == "pm")
+        // Once the timed ones are over, the all-day entry is what is left.
+        #expect(CalendarFormat.nextEvent(in: events, at: date(2026, 9, 21, hour: 20))?.id == "all")
+        // A day with only an all-day entry shows it at any hour.
+        #expect(CalendarFormat.nextEvent(in: [allDay], at: date(2026, 9, 21, hour: 8))?.id == "all")
+        #expect(CalendarFormat.nextEvent(in: [], at: date(2026, 9, 21)) == nil)
+    }
+
+    @Test func onlyTheWeatherAndCalendarReachTheLockScreen() {
+        #expect(PhotoWidgetKind.allCases.filter(\.hasAccessoryFamilies) == [.calendar, .weather])
+    }
+
     /// A widget left unrefreshed overnight must not show yesterday's meetings
     /// as today's.
     @Test func eventsAreOnlyOfferedForTheDayTheyWereReadFor() {

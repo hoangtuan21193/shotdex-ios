@@ -47,6 +47,11 @@ enum PhotoWidgetKind: String, Codable, CaseIterable, Identifiable, Sendable {
 
     /// Whether it needs the calendar read.
     var needsCalendarEvents: Bool { self == .calendar || self == .combined }
+
+    /// Whether this widget is also offered on the Lock Screen. Only the two
+    /// that carry a fact worth reading without their photo: the weather, and
+    /// what is on today.
+    var hasAccessoryFamilies: Bool { self == .weather || self == .calendar }
 }
 
 /// Everything the user chose for one of those widgets, in a file both

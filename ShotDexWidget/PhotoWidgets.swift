@@ -132,14 +132,27 @@ struct CombinedPhotoWidget: Widget {
 enum PhotoWidgetConfiguration {
     static func make(kind: PhotoWidgetKind) -> some WidgetConfiguration {
         StaticConfiguration(kind: kind.widgetKind, provider: PhotoWidgetProvider(kind: kind)) { entry in
+            // The background is chosen inside the view, where the family is
+            // known: a Lock Screen accessory has no photo behind it, and
+            // painting one there would show as a grey block.
             PhotoWidgetView(entry: entry)
-                .containerBackground(for: .widget) {
-                    PhotoWidgetBackground(entry: entry)
-                }
         }
         .configurationDisplayName(kind.title)
         .description(description(for: kind))
-        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        .supportedFamilies(families(for: kind))
+    }
+
+    /// Home Screen for every kind; the Lock Screen only for the two whose
+    /// content survives being drawn without a photo, in one colour, in a strip
+    /// the size of a sentence. A clock there would duplicate the Lock Screen's
+    /// own clock, and the combined widget is three rows in a space with room
+    /// for one.
+    private static func families(for kind: PhotoWidgetKind) -> [WidgetFamily] {
+        var families: [WidgetFamily] = [.systemSmall, .systemMedium, .systemLarge]
+        if kind.hasAccessoryFamilies {
+            families += [.accessoryRectangular, .accessoryInline, .accessoryCircular]
+        }
+        return families
     }
 
     private static func description(for kind: PhotoWidgetKind) -> String {
@@ -186,23 +199,40 @@ struct PhotoWidgetView: View {
     @Environment(\.widgetFamily) private var family
 
     var body: some View {
-        GeometryReader { proxy in
-            PhotoWidgetFace(
-                date: entry.date,
-                settings: entry.settings,
-                kind: entry.kind,
-                width: proxy.size.width,
-                weather: entry.weather,
-                calendarSnapshot: entry.calendarSnapshot,
-                isCompact: family == .systemSmall
-            )
-            .frame(
-                maxWidth: .infinity,
-                maxHeight: .infinity,
-                alignment: entry.settings.placement.alignment
-            )
+        content
+            .widgetURL(widgetURL)
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch family {
+        case .accessoryRectangular, .accessoryInline, .accessoryCircular:
+            // The Lock Screen draws these in one colour on the wallpaper, so
+            // the typeface, colour, placement and photo the user set for the
+            // Home Screen have nothing to act on here; only the data does.
+            PhotoWidgetAccessoryView(entry: entry, family: family)
+                .containerBackground(.clear, for: .widget)
+        default:
+            GeometryReader { proxy in
+                PhotoWidgetFace(
+                    date: entry.date,
+                    settings: entry.settings,
+                    kind: entry.kind,
+                    width: proxy.size.width,
+                    weather: entry.weather,
+                    calendarSnapshot: entry.calendarSnapshot,
+                    isCompact: family == .systemSmall
+                )
+                .frame(
+                    maxWidth: .infinity,
+                    maxHeight: .infinity,
+                    alignment: entry.settings.placement.alignment
+                )
+            }
+            .containerBackground(for: .widget) {
+                PhotoWidgetBackground(entry: entry)
+            }
         }
-        .widgetURL(widgetURL)
     }
 
     /// A tap opens what the widget is showing: the photo itself when the user

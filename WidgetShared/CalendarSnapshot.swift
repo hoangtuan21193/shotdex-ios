@@ -139,6 +139,22 @@ enum CalendarFormat {
         return min(maximum, 2)
     }
 
+    /// The one event a Lock Screen strip has room for: the next one still to
+    /// start, or the one running now, and an all-day entry only when nothing
+    /// timed is left. Pure, so "what does the widget say at 09:31" is a test.
+    static func nextEvent(
+        in events: [CalendarSnapshot.Event],
+        at date: Date
+    ) -> CalendarSnapshot.Event? {
+        let timed = events.filter { !$0.isAllDay }
+        if let upcoming = timed
+            .filter({ $0.endDate > date })
+            .min(by: { $0.startDate < $1.startDate }) {
+            return upcoming
+        }
+        return events.first { $0.isAllDay }
+    }
+
     /// The events a widget lists, and how many were left over.
     static func visibleEvents(
         _ events: [CalendarSnapshot.Event],
