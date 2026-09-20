@@ -713,8 +713,14 @@ final class CollageEditorModel {
     private func addToCollagesAlbum(_ assetID: String) async {
         guard let asset = PhotoLibraryService.fetchAssets(ids: [assetID]).first else { return }
         do {
-            let existing = PhotoLibraryService.fetchUserAlbums()
-                .first { $0.localizedTitle == Self.collagesAlbumName }
+            // Adopt the album an earlier build made, if it is still there,
+            // so a user's existing collages and their new ones stay in one
+            // place. Only the *name we create* changed.
+            let titles = [Self.collagesAlbumName, Self.legacyCollagesAlbumName]
+            let albums = PhotoLibraryService.fetchUserAlbums()
+            let existing = titles.lazy
+                .compactMap { title in albums.first { $0.localizedTitle == title } }
+                .first
             let album: PHAssetCollection
             if let existing {
                 album = existing
@@ -727,7 +733,16 @@ final class CollageEditorModel {
         }
     }
 
-    private static let collagesAlbumName = "Collages"
+    /// **Not "Collages".** The Collections tab has a Utilities row called
+    /// Collages — the reopenable projects — and a plain user album of the
+    /// same name would sit under My Albums on the same screen meaning
+    /// something else: the flat exported pictures. One name, two things, one
+    /// screen. Prefixed with the app's name, the way an app-created album
+    /// usually is.
+    private static let collagesAlbumName = "ShotDex Collages"
+    /// What builds before 2026-09-20 created. Still filed into when it
+    /// exists, so nobody's collages split across two albums.
+    private static let legacyCollagesAlbumName = "Collages"
 
     /// One final (non-degraded) rendition, or nil on failure. Degraded
     /// callbacks are skipped — export must never bake a blurry rendition in.

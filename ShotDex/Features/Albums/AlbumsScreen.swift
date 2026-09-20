@@ -270,7 +270,7 @@ struct AlbumsScreen: View {
 
     private var albumGrid: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.xxl) {
                 if photoLibrary.authorizationState == .limited {
                     LimitedAccessBanner {
                         photoLibrary.presentLimitedLibraryPicker()
@@ -395,7 +395,7 @@ struct AlbumsScreen: View {
     /// before scrolling right, like the iOS Photos pinned-collections grid.
     /// Used for smart albums (no header), "My Albums", and "Shared Albums".
     private func albumTokenSection(title: String?, albums: [AlbumItem]) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
             if let title {
                 Text(title)
                     .font(.title2.bold())
@@ -445,7 +445,7 @@ struct AlbumsScreen: View {
     /// and offer Edit / Delete via context menu; system tokens push the normal
     /// `AlbumDetailScreen`.
     private func smartAlbumsSection() -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
             Text("Smart Albums")
                 .font(.title2.bold())
                 .padding(.horizontal)
@@ -523,7 +523,13 @@ extension AlbumsScreen {
                 CollectionListRow(
                     title: String(localized: "Duplicates"),
                     systemImage: "square.on.square",
-                    detail: duplicatesDetail
+                    detail: duplicatesCount?.formatted(),
+                    detailSpokenAs: duplicatesCount.map {
+                        String(
+                            localized: "\($0) groups",
+                            comment: "Detail on the Duplicates row in Collections: how many duplicate groups the last scan found"
+                        )
+                    }
                 )
             }
             .buttonStyle(.plain)
@@ -604,7 +610,7 @@ extension AlbumsScreen {
         @ViewBuilder rows: () -> some View
     ) -> some View {
         let rowCount = listRowCount(entryCount)
-        return VStack(alignment: .leading, spacing: 12) {
+        return VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
             Text(title)
                 .font(.title2.bold())
                 .padding(.horizontal)
@@ -646,16 +652,19 @@ extension AlbumsScreen {
         return max(1, min(3, (count + visibleColumns - 1) / visibleColumns))
     }
 
-    /// `2 groups` / `Library up to date` under the Duplicates row, from the
-    /// count the last scan wrote.
-    private var duplicatesDetail: String? {
+    /// How many duplicate groups the last scan found, as a bare number.
+    ///
+    /// The word used to be here — "2 groups" — and it does not fit: a 190pt
+    /// card holds "Duplicates" and a short detail, and measured on an iPhone
+    /// the name came out as "Duplica… 2 groups". Every other card in these
+    /// two bands shows a bare count beside the name, so this one does too,
+    /// and the word survives where it costs nothing: the VoiceOver label and
+    /// the screen it opens.
+    private var duplicatesCount: Int? {
         guard let count = UserDefaults.standard.object(forKey: SettingsKeys.duplicateGroupCount) as? Int,
               count > 0
         else { return nil }
-        return String(
-            localized: "\(count) groups",
-            comment: "Detail on the Duplicates row in Collections: how many duplicate groups the last scan found"
-        )
+        return count
     }
 }
 
@@ -669,6 +678,9 @@ struct CollectionListRow: View {
     let title: String
     let systemImage: String
     var detail: String?
+    /// What VoiceOver says in place of `detail`, where the drawn form had to
+    /// be shortened to fit — "2" on screen, "2 groups" out loud.
+    var detailSpokenAs: String?
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @ScaledMetric(relativeTo: .body) private var glyphWidth: CGFloat = 24
@@ -683,7 +695,9 @@ struct CollectionListRow: View {
         HStack(spacing: AppTheme.Spacing.sm) {
             Image(systemName: systemImage)
                 .font(.body)
-                .foregroundStyle(AppAccent.color)
+                // Not accent: `DESIGN.md` §10.6 keeps accent for active and
+                // selected state, and a row's identifying glyph is neither.
+                .foregroundStyle(.secondary)
                 .frame(width: glyphWidth)
 
             Text(title)
@@ -708,7 +722,7 @@ struct CollectionListRow: View {
             in: RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous)
         )
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(detail.map { "\(title), \($0)" } ?? title)
+        .accessibilityLabel((detailSpokenAs ?? detail).map { "\(title), \($0)" } ?? title)
         .accessibilityAddTraits(.isButton)
     }
 }
@@ -734,7 +748,7 @@ enum CollectionListRowMetrics {
 extension AlbumsScreen {
 
     fileprivate func subjectsSection() -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
             Text("People and Pets")
                 .font(.title2.bold())
                 .padding(.horizontal)
@@ -767,7 +781,7 @@ extension AlbumsScreen {
     /// Whatever the user pinned, in the order they pinned it, above everything
     /// the app decided to show.
     fileprivate func pinnedSection() -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
             Text("Pinned")
                 .font(.title2.bold())
                 .padding(.horizontal)
@@ -827,13 +841,13 @@ extension AlbumsScreen {
     /// The Memories row: wide cards the user scrolls sideways, each opening
     /// the photos it stands for.
     fileprivate func memoriesSection() -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
             Text("Memories")
                 .font(.title2.bold())
                 .padding(.horizontal)
 
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 12) {
+                LazyHStack(alignment: .top, spacing: tileSpacing) {
                     ForEach(model.memories) { memory in
                         NavigationLink {
                             PhotoListScreen(
@@ -1056,13 +1070,13 @@ struct OnThisDayCard: View {
                         .opacity(0.85)
                 }
                 .foregroundStyle(cover == nil ? Color(.label) : .white)
-                .padding(14)
+                .padding(AppTheme.Spacing.lg)
             }
             .overlay(alignment: .topTrailing) {
                 Image(systemName: "calendar.badge.clock")
                     .font(.title3)
                     .foregroundStyle(cover == nil ? Color(.secondaryLabel) : .white)
-                    .padding(14)
+                    .padding(AppTheme.Spacing.lg)
             }
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous))
             // `coverAsset` is filled asynchronously by AlbumsModel, so
@@ -1133,9 +1147,18 @@ struct MemoryCard: View {
     @State private var cover: UIImage?
 
     /// Wider and taller as the text grows: a memory card is mostly title and
-    /// date, and at accessibility sizes both were being cut in half.
-    @ScaledMetric(relativeTo: .headline) private var width: CGFloat = 260
-    @ScaledMetric(relativeTo: .headline) private var height: CGFloat = 150
+    /// date, and at accessibility sizes both were being cut in half. It also
+    /// grows with the window, on the same terms as the cover tiles beside it
+    /// (`DESIGN.md` §10.1d) — it is the same kind of thing.
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @ScaledMetric(relativeTo: .headline) private var typeScale = 1.0
+
+    private var size: CGSize {
+        let base = AlbumTileMetrics.memorySize(isRegularWidth: horizontalSizeClass == .regular)
+        return CGSize(width: base.width * typeScale, height: base.height * typeScale)
+    }
+    private var width: CGFloat { size.width }
+    private var height: CGFloat { size.height }
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {

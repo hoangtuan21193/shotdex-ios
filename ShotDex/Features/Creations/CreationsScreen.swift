@@ -137,7 +137,7 @@ struct CreationsScreen: View {
                         Button(role: .destructive) {
                             delete(creation)
                         } label: {
-                            Label("Remove from Creations", systemImage: "trash")
+                            Label(removeLabel, systemImage: "trash")
                         }
                     }
                 }
@@ -153,11 +153,11 @@ struct CreationsScreen: View {
         } description: {
             Text(emptyDescription)
         } actions: {
+            // System tint, not the app accent: `DESIGN.md` §10.6 leaves
+            // standard controls at their iOS default, and no other primary
+            // button in the app overrides it.
             Button(newLabel) { isPickerPresented = true }
                 .buttonStyle(.borderedProminent)
-                // The one primary action on the screen wears the app's
-                // accent, not the system blue a bordered button defaults to.
-                .tint(AppAccent.color)
         }
     }
 
@@ -172,6 +172,16 @@ struct CreationsScreen: View {
         switch kind {
         case .collage: String(localized: "Collages", comment: "Title of the list of collages this app made")
         case .video: String(localized: "Video Projects", comment: "Title of the list of videos this app made, distinct from the Videos media-type album of footage the user shot")
+        }
+    }
+
+    /// Named after the list it removes from, not after the type. "Creations"
+    /// was rejected as a word the user would recognise, so the one
+    /// destructive action here must not be the place it comes back.
+    private var removeLabel: String {
+        switch kind {
+        case .collage: String(localized: "Remove from Collages", comment: "Removes a saved collage from the Collages list — the exported photo stays in the library")
+        case .video: String(localized: "Remove from Video Projects", comment: "Removes a saved video project from the Video Projects list — the exported video stays in the library")
         }
     }
 
@@ -239,7 +249,7 @@ struct CreationsScreen: View {
         let ids = creation.sourceAssetIds
         guard !ids.isEmpty else {
             unopenableMessage = String(
-                localized: "This was made by an older version of ShotDex and its settings can't be read.",
+                localized: "This was made by an older version of ShotDex and its settings can't be read. Remove it from the list, or make a new one.",
                 comment: "Alert when a saved creation's stored recipe cannot be decoded"
             )
             return
@@ -247,7 +257,7 @@ struct CreationsScreen: View {
         let found = PhotoLibraryService.fetchAssets(ids: ids)
         guard found.count == ids.count else {
             unopenableMessage = String(
-                localized: "Some of the photos this was made from are no longer in your library.",
+                localized: "Some of the photos this was made from are no longer in your library. Remove it from the list, or start a new one with the photos you still have.",
                 comment: "Alert when reopening a creation whose source photos were deleted"
             )
             return
@@ -278,7 +288,7 @@ private struct CreationCard: View {
     private var kindLabel: String {
         switch creation.kind {
         case .collage: String(localized: "Collage", comment: "Kind of thing in the Creations list")
-        case .video: String(localized: "Video", comment: "Kind of thing in the Creations list")
+        case .video: String(localized: "Video Project", comment: "Kind of thing in the Creations list — said out loud by VoiceOver, so it must not collide with the Videos album of footage the user shot")
         }
     }
 
@@ -390,5 +400,8 @@ enum CreationCardMetrics {
     /// Narrowest a card may be, and so how many columns a window gets. Wider
     /// than a Collections row because this card carries a date and a count on
     /// its second line.
-    static let minimumWidth: CGFloat = 360
+    /// The same breakpoint `StatisticsScreen` uses for "how wide before this
+    /// gets its own column" (`DESIGN.md` §10.1c). One number for one
+    /// question, rather than a second one that reads like a typo later.
+    static let minimumWidth: CGFloat = 320
 }

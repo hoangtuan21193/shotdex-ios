@@ -167,7 +167,9 @@ struct CollageExportScreen: View {
 
     private var saveSection: some View {
         VStack(spacing: AppTheme.Spacing.sm) {
-            Label("Added to the Collages smart album", systemImage: "rectangle.stack.badge.plus")
+            // Not a "smart album": in this app that word means a saved rule
+            // query. This is a plain album the export files into.
+            Label("Added to your ShotDex Collages album", systemImage: "rectangle.stack.badge.plus")
                 .font(.footnote)
                 .foregroundStyle(EditorTheme.secondaryText)
 

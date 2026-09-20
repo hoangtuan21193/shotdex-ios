@@ -17,8 +17,20 @@ enum AlbumTileMetrics {
         isRegularWidth ? regularSide : compactSide
     }
 
-    /// Gap between the cover and its caption.
-    static let captionSpacing: CGFloat = 6
+    /// The memory card beside these tiles is the same kind of thing — a cover
+    /// you recognise a moment by, one of a row you scan — so it grows on the
+    /// same terms. It is wide rather than square, so only its width is the
+    /// axis the row reveals more of; the height follows to keep the shape.
+    static let compactMemory = CGSize(width: 260, height: 150)
+    static let regularMemory = CGSize(width: 360, height: 208)
+
+    static func memorySize(isRegularWidth: Bool) -> CGSize {
+        isRegularWidth ? regularMemory : compactMemory
+    }
+
+    /// Gap between the cover and its caption. On the spacing scale — 6 is
+    /// not (`DESIGN.md` §6 names it as one of the four that are out).
+    static let captionSpacing = AppTheme.Spacing.xs
     /// The glyph shown when a tile has no cover. Scaled to the tile, because a
     /// body-sized symbol in a 168pt square reads as an image that failed to
     /// load rather than as a deliberate icon.
