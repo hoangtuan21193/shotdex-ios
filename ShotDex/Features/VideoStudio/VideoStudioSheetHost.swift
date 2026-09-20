@@ -322,6 +322,7 @@ struct VideoStudioSheetHost: View {
                     RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
                         .fill(Color.white.opacity(0.06))
                 )
+                .contentShape(Rectangle().inset(by: VideoStudioMetrics.fontButtonHitInset))
             }
             .buttonStyle(.plain)
 
@@ -357,6 +358,7 @@ struct VideoStudioSheetHost: View {
                 RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous)
                     .fill(isOn ? EditorTheme.accent.opacity(0.18) : Color.white.opacity(0.05))
             )
+            .contentShape(Rectangle().inset(by: VideoStudioMetrics.fontToggleHitInset))
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isOn ? .isSelected : [])

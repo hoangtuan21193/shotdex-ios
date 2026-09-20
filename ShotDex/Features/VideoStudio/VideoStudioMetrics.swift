@@ -368,6 +368,12 @@ enum VideoStudioMetrics {
     static let musicBandHeight: CGFloat = 32
     /// Extended hit target for the 28pt chip bands (spec §8: ≥44).
     static let bandHitInset: CGFloat = -8
+    /// Inspector sheet rows: the typeface button (40) and the Bold/Italic
+    /// toggles (36) keep their drawn height — DESIGN.md §308 says a tier-D
+    /// control grows its target, not its box — and reach 44 through the hit
+    /// shape.
+    static let fontButtonHitInset: CGFloat = -2
+    static let fontToggleHitInset: CGFloat = -4
 
     static let commandCellWidth: CGFloat = 52
     static let commandCellHeight: CGFloat = 54
