@@ -152,8 +152,6 @@ final class AlbumsModel {
                 Self.loadSnapshot()
             }.value
             albums = snapshot.albums
-            collageCount = (try? deps?.creations.count(kind: .collage)) ?? 0
-            videoCount = (try? deps?.creations.count(kind: .video)) ?? 0
             onThisDayCount = snapshot.onThisDayCount
             onThisDayCover = snapshot.onThisDayCover
             if let deps {
@@ -168,11 +166,6 @@ final class AlbumsModel {
         }
     }
 
-    /// How many collages and how many videos ShotDex has made. The rows are
-    /// drawn either way — they are also where a new one is started — so a
-    /// zero just means no count is shown beside the name.
-    private(set) var collageCount = 0
-    private(set) var videoCount = 0
     /// Auto-curated collections for the Memories row.
     private(set) var memories: [Memory] = []
     /// Photos the opt-in subject scan found faces in. Empty until the user

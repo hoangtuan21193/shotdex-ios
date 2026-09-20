@@ -225,7 +225,7 @@ Ngoại lệ có phạm vi của §10.1c. Một phần tử **chỉ** được t
 2. nó là **một trong một tập** người ta lướt qua, nên to lên nghĩa là *thấy rõ hơn từng cái*, không phải thổi phồng một phần tử đơn độc;
 3. nó to lên theo **đúng một trục** — trục mà lưới vốn đã lộ thêm cột. Một banner đơn độc tỉ lệ cố định **không** đủ điều kiện để to cả hai chiều bằng mục này; muốn vậy thì phải tự lập luận riêng (xem §10.1e).
 
-**Danh sách đóng — token nào được dùng ngoại lệ này thì phải có tên ở đây:** `AlbumTileMetrics` (tile 112 → **168**; thẻ Memory 260×150 → **360×208**, rộng là trục, cao đi theo để giữ hình). Thêm một chỗ mới nghĩa là **thêm tên vào danh sách này**, không phải viết một comment trích dẫn mục này.
+**Danh sách đóng — token nào được dùng ngoại lệ này thì phải có tên ở đây:** `AlbumTileMetrics` (tile 132 → **192**; thẻ Memory 260×150 → **360×208**, rộng là trục, cao đi theo để giữ hình). Thêm một chỗ mới nghĩa là **thêm tên vào danh sách này**, không phải viết một comment trích dẫn mục này.
 
 Lý do: §10.1c cấm phóng to **cùng một layout**, và đúng — một hàng token 60pt kéo dài ra 1032pt chỉ là màn điện thoại bị thổi phồng. Nhưng cover thì khác: nó *là* nội dung. Một cover 168pt cho thấy **nhiều bức ảnh hơn** một cover 44pt, không phải cùng bức ảnh bị kéo giãn. Photos trên iPad cũng chọn vậy và còn đi xa hơn — cho user chọn Large / Small / Mixed Grid (đã đối chiếu Apple iPad user guide, `browse-your-photo-collections-ipad7b09d1cd`). ShotDex chọn **một cỡ cố định mỗi size class**, không thêm một setting: luật của dự án là "bớt một quyết định hơn là thêm một setting".
 
@@ -235,6 +235,13 @@ Kéo theo:
 - **Mỗi nhóm album một hàng, cuộn ngang.** Không xếp 3 hàng tile: 3 × 168 là 600pt chiều cao cho một heading. Photos cũng một hàng mỗi heading ("swipe left or right to see different collections").
 - **Nhóm không-có-cover (Media Types, Utilities) thì ngược lại**: thẻ **cao đúng một dòng text**, rộng 190 (compact) / 240 (regular), **xếp tối đa 3 hàng rồi cuộn ngang**. Chúng không có ảnh nào đáng nhận ra — "Panoramas" là một chữ, không phải một bức hình — nên đổi cover well lấy mật độ. Ba thẻ ngắn xếp chồng đọc ra một dải; một thẻ full-width trên iPad 13" đặt con số cách tên nó 800pt.
 - Glyph của tile không có cover phải **to theo tile** (30 → 44), nếu không một symbol cỡ body nằm giữa ô vuông 168pt đọc ra là ảnh tải hỏng chứ không phải icon cố ý.
+
+### 10.1d-bis Tên nằm trong cover, và scrim thì phải đo (2026-09-20)
+
+- **Tên album nằm *trong* tile**, đè lên đáy cover, không phải một dòng caption dưới tile. Caption dưới tile tốn chiều cao mỗi ô và để lại một cột chữ lơ lửng giữa hai hàng; nằm trong, cái tên thuộc về bức ảnh nó gọi tên, và chiều cao đó trả về cho chính cover (đó là chỗ 132/192 lấy thêm từ 112/168).
+- **Tối đa 2 dòng**, wrap chứ không cắt một dòng: một dòng cắt "Recently Added" làm đôi trên điện thoại; ba dòng thì che mất bức ảnh mà tile sinh ra để khoe.
+- **Không vẽ số đếm** ở tab này — không ở tile, không ở thẻ Media Types/Utilities. Một con số cạnh mọi cái tên là nhiễu trên một màn có mỗi việc "cái nào là cái nào", và màn nó mở ra vốn đã nói. **VoiceOver vẫn đọc số** (`accessibilityLabel`, `spokenDetail`): ở đó con số không tốn gì và trả lời đúng câu "có đáng mở không".
+- **Scrim sau chữ phải ĐO, không đặt sẵn.** Một lớp tối cố định trên mọi cover sai hai lần: nó làm bẩn tấm vốn đã tối ở đúng chỗ đó, và trên nền trời trắng thì không bao giờ đủ. `CoverTitleScrim` lấy **luma Rec.709 trung bình của dải đáy** (42% chiều cao, đúng dải chữ nằm) bằng một lần vẽ Core Graphics xuống **1 pixel**, một lần lúc cover về, và chỉ bật gradient khi trên ngưỡng **0.42**. Rec.709 chứ không phải trung bình RGB phẳng: kênh lục gánh phần lớn độ sáng cảm nhận, trung bình phẳng sẽ bảo nền trời xanh lam tối hơn thực tế. Đọc không được thì **bật scrim** — chữ không đọc được là cái hỏng nặng hơn. Chữ luôn có `shadow`, đậm hơn khi không có scrim.
 
 ### 10.1e Hàng hero trên cùng, và hai nhóm "cái app làm ra" (2026-09-20)
 

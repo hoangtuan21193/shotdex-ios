@@ -1,8 +1,9 @@
 import SwiftUI
+import UIKit
 
 /// Geometry for the Collections tab's cover tiles.
 ///
-/// One number, two values: a tile is **112pt on a phone and 168pt on a
+/// One number, two values: a tile is **132pt on a phone and 192pt on a
 /// regular-width window**. That is a deliberate exception to `DESIGN.md`
 /// §10.1c ("a wide screen gets more content, not bigger content"), argued in
 /// §10.1d: the tile is a *cover*, and a cover is the content — a bigger cover
@@ -10,8 +11,8 @@ import SwiftUI
 /// the same picture inflated. Photos on iPad makes the same call and goes
 /// further, letting the user pick Large, Small or Mixed tiles.
 enum AlbumTileMetrics {
-    static let compactSide: CGFloat = 112
-    static let regularSide: CGFloat = 168
+    static let compactSide: CGFloat = 132
+    static let regularSide: CGFloat = 192
 
     static func side(isRegularWidth: Bool) -> CGFloat {
         isRegularWidth ? regularSide : compactSide
@@ -28,33 +29,97 @@ enum AlbumTileMetrics {
         isRegularWidth ? regularMemory : compactMemory
     }
 
-    /// Gap between the cover and its caption. On the spacing scale — 6 is
-    /// not (`DESIGN.md` §6 names it as one of the four that are out).
-    static let captionSpacing = AppTheme.Spacing.xs
     /// The glyph shown when a tile has no cover. Scaled to the tile, because a
-    /// body-sized symbol in a 168pt square reads as an image that failed to
+    /// body-sized symbol in a 192pt square reads as an image that failed to
     /// load rather than as a deliberate icon.
     static func placeholderGlyphSize(isRegularWidth: Bool) -> CGFloat {
         isRegularWidth ? 44 : 30
     }
+
+    /// The bottom slice of a cover the title sits over, as a fraction of the
+    /// tile's height. Also the slice whose brightness decides whether that
+    /// title needs anything behind it.
+    static let titleBandFraction: CGFloat = 0.42
 }
 
-/// One tile on the Collections tab: a square cover with the name and a second
-/// line under it.
+/// Whether a cover needs darkening behind its title — measured, not assumed.
 ///
-/// Replaces the four near-identical row tokens this screen used to carry
-/// (album, smart album, utility, duplicates), which were the same layout
-/// written out four times and kept in sync by hand. The shape changed with
-/// them: a 60pt row with a 44pt thumbnail is a settings row, and this tab is
-/// for recognising a collection by its picture.
+/// A fixed scrim on every cover is the usual answer and it is wrong twice: it
+/// dirties a photo that was already dark down there, and on a white sky it is
+/// never quite enough. This reads the average brightness of the strip the
+/// title actually sits on and only asks for a scrim when that strip is
+/// bright.
+enum CoverTitleScrim {
+    /// Above this average luminance (0…1), white text stops being
+    /// comfortable and the scrim goes on.
+    static let brightnessThreshold: Double = 0.42
+
+    /// Average luminance of the bottom `fraction` of the image, or nil when
+    /// it cannot be read.
+    ///
+    /// One Core Graphics draw into a single pixel — the whole strip averaged
+    /// by the resampler — and it happens once, when the cover arrives, not
+    /// per frame.
+    static func bottomLuminance(
+        of image: UIImage,
+        fraction: CGFloat = AlbumTileMetrics.titleBandFraction
+    ) -> Double? {
+        guard let cgImage = image.cgImage else { return nil }
+        let stripHeight = max(1, Int(CGFloat(cgImage.height) * fraction))
+        guard let strip = cgImage.cropping(to: CGRect(
+            x: 0,
+            y: cgImage.height - stripHeight,
+            width: cgImage.width,
+            height: stripHeight
+        )) else { return nil }
+
+        var pixel: [UInt8] = [0, 0, 0, 0]
+        guard let context = CGContext(
+            data: &pixel,
+            width: 1,
+            height: 1,
+            bitsPerComponent: 8,
+            bytesPerRow: 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+        context.draw(strip, in: CGRect(x: 0, y: 0, width: 1, height: 1))
+
+        // Rec. 709 luma, not a plain RGB mean: green carries most of
+        // perceived brightness, so an even average calls a saturated blue sky
+        // darker than it reads.
+        let red = Double(pixel[0]) / 255
+        let green = Double(pixel[1]) / 255
+        let blue = Double(pixel[2]) / 255
+        return 0.2126 * red + 0.7152 * green + 0.0722 * blue
+    }
+
+    /// Bright covers get a scrim. A cover that cannot be read gets one too —
+    /// an unreadable name is the worse failure of the two.
+    static func isNeeded(for image: UIImage) -> Bool {
+        guard let luminance = bottomLuminance(of: image) else { return true }
+        return luminance > brightnessThreshold
+    }
+}
+
+/// One tile on the Collections tab: a square cover with its name **over** the
+/// bottom of it.
+///
+/// The name used to sit under the cover. Inside the tile it belongs to the
+/// picture it names, and the tile gets the caption's height back — which is
+/// where the extra size came from.
+///
+/// Counts are not drawn. They are still spoken (`accessibilityLabel` carries
+/// "42 photos"), but a number beside every name is noise on a screen whose
+/// whole job is "which one is this".
 struct AlbumCoverTile<Cover: View>: View {
     let title: String
-    let subtitle: String?
-    /// What VoiceOver says. Explicit rather than assembled from `title` and
-    /// `subtitle`, because the subtitle is usually a bare number: a tile
-    /// that forgot to pass this would read as "Vacation, 42" — forty-two
-    /// what? Callers pass the counted noun.
+    /// What VoiceOver says. Explicit rather than assembled from the title,
+    /// because the count it should mention is no longer drawn anywhere.
     let accessibilityLabel: String
+    /// Set when the cover is a photo bright enough to swallow white text.
+    /// A tile with no photo leaves it false and gets no scrim at all.
+    var needsScrim = false
     @ViewBuilder var cover: () -> Cover
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -64,36 +129,53 @@ struct AlbumCoverTile<Cover: View>: View {
     private var side: CGFloat { AlbumTileMetrics.side(isRegularWidth: isRegularWidth) * typeScale }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AlbumTileMetrics.captionSpacing) {
-            cover()
-                .frame(width: side, height: side)
-                .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous))
+        cover()
+            .frame(width: side, height: side)
+            .overlay(alignment: .bottom) { scrim }
+            .overlay(alignment: .bottomLeading) { name }
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous))
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(accessibilityLabel)
+            .accessibilityAddTraits(.isButton)
+    }
 
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color(.label))
-                    .lineLimit(1)
-                if let subtitle {
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-            }
-            // The caption is as wide as the cover and no wider, so a long
-            // album name truncates inside its own tile instead of pushing the
-            // next one sideways.
-            .frame(width: side, alignment: .leading)
+    @ViewBuilder
+    private var scrim: some View {
+        if needsScrim {
+            LinearGradient(
+                colors: [.clear, .black.opacity(0.55)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: side * AlbumTileMetrics.titleBandFraction)
+            .allowsHitTesting(false)
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityLabel)
-        .accessibilityAddTraits(.isButton)
+    }
+
+    private var name: some View {
+        Text(title)
+            .font(.subheadline.weight(.semibold))
+            // Two lines, then truncate: one line cut "Recently Added" in half
+            // on a phone, and three would cover the picture the tile exists
+            // to show.
+            .lineLimit(2)
+            .multilineTextAlignment(.leading)
+            .foregroundStyle(.white)
+            // A cover dark enough to skip the scrim can still have a bright
+            // speck behind one letter.
+            .shadow(color: .black.opacity(needsScrim ? 0.3 : 0.7), radius: 3, y: 1)
+            .padding(.horizontal, AppTheme.Spacing.sm)
+            .padding(.bottom, AppTheme.Spacing.sm)
+            .frame(width: side, alignment: .leading)
     }
 }
 
 /// The well a tile's cover sits in: the image if there is one, the glyph if
 /// there is not. Kept here so every tile's empty state looks the same.
+///
+/// The empty surface is a mid grey rather than `secondarySystemBackground`,
+/// because the title is drawn on top of it in white now and a tile with no
+/// cover must not read as a different component from one with a cover.
 struct AlbumCoverWell: View {
     let image: UIImage?
     let systemImage: String
@@ -101,13 +183,15 @@ struct AlbumCoverWell: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     var body: some View {
-        Color(.secondarySystemBackground)
-            .overlay {
-                if let image {
+        Group {
+            if let image {
+                Color.clear.overlay {
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFill()
-                } else {
+                }
+            } else {
+                Color(.systemGray3).overlay {
                     Image(systemName: systemImage)
                         .font(.system(
                             size: AlbumTileMetrics.placeholderGlyphSize(
@@ -115,8 +199,10 @@ struct AlbumCoverWell: View {
                             ),
                             weight: .light
                         ))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.white.opacity(0.7))
                 }
             }
+        }
+        .clipped()
     }
 }

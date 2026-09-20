@@ -508,7 +508,10 @@ extension AlbumsScreen {
                     CollectionListRow(
                         title: album.title,
                         systemImage: album.symbolName ?? "photo.on.rectangle",
-                        detail: album.count.formatted()
+                        spokenDetail: String(
+                            localized: "\(album.count) photos",
+                            comment: "VoiceOver detail on a Media Types row: how many photos it holds"
+                        )
                     )
                 }
                 .buttonStyle(.plain)
@@ -523,11 +526,10 @@ extension AlbumsScreen {
                 CollectionListRow(
                     title: String(localized: "Duplicates"),
                     systemImage: "square.on.square",
-                    detail: duplicatesCount?.formatted(),
-                    detailSpokenAs: duplicatesCount.map {
+                    spokenDetail: duplicatesCount.map {
                         String(
                             localized: "\($0) groups",
-                            comment: "Detail on the Duplicates row in Collections: how many duplicate groups the last scan found"
+                            comment: "VoiceOver detail on the Duplicates row: how many duplicate groups the last scan found"
                         )
                     }
                 )
@@ -536,21 +538,13 @@ extension AlbumsScreen {
             .contextMenu { pinButton(.duplicates) }
 
             NavigationLink(value: PlacesDestination()) {
-                CollectionListRow(
-                    title: String(localized: "Places"),
-                    systemImage: "map",
-                    detail: nil
-                )
+                CollectionListRow(title: String(localized: "Places"), systemImage: "map")
             }
             .buttonStyle(.plain)
             .contextMenu { pinButton(.places) }
 
             NavigationLink(value: TripsDestination()) {
-                CollectionListRow(
-                    title: String(localized: "Trips"),
-                    systemImage: "airplane",
-                    detail: nil
-                )
+                CollectionListRow(title: String(localized: "Trips"), systemImage: "airplane")
             }
             .buttonStyle(.plain)
             .contextMenu { pinButton(.trips) }
@@ -561,11 +555,7 @@ extension AlbumsScreen {
             // edited by different tools. Both rows are always here, empty or
             // not — each one is also where you start a new one.
             NavigationLink(value: CreationsDestination(kind: .collage)) {
-                CollectionListRow(
-                    title: String(localized: "Collages"),
-                    systemImage: "square.grid.2x2",
-                    detail: model.collageCount > 0 ? model.collageCount.formatted() : nil
-                )
+                CollectionListRow(title: String(localized: "Collages"), systemImage: "square.grid.2x2")
             }
             .buttonStyle(.plain)
 
@@ -575,8 +565,7 @@ extension AlbumsScreen {
             NavigationLink(value: CreationsDestination(kind: .video)) {
                 CollectionListRow(
                     title: String(localized: "Video Projects", comment: "Utilities row: videos made in the Video Studio"),
-                    systemImage: "film",
-                    detail: model.videoCount > 0 ? model.videoCount.formatted() : nil
+                    systemImage: "film"
                 )
             }
             .buttonStyle(.plain)
@@ -589,7 +578,10 @@ extension AlbumsScreen {
                     CollectionListRow(
                         title: album.title,
                         systemImage: album.symbolName ?? "wrench.and.screwdriver",
-                        detail: album.count.formatted()
+                        spokenDetail: String(
+                            localized: "\(album.count) photos",
+                            comment: "VoiceOver detail on a Utilities album row: how many photos it holds"
+                        )
                     )
                 }
                 .buttonStyle(.plain)
@@ -677,10 +669,11 @@ extension AlbumsScreen {
 struct CollectionListRow: View {
     let title: String
     let systemImage: String
-    var detail: String?
-    /// What VoiceOver says in place of `detail`, where the drawn form had to
-    /// be shortened to fit — "2" on screen, "2 groups" out loud.
-    var detailSpokenAs: String?
+    /// Said out loud but never drawn. Counts left this tab: a number beside
+    /// every name is noise on a screen whose job is "which one is this", and
+    /// the destination states it anyway. VoiceOver keeps it, because there
+    /// the count costs nothing and answers "is this worth opening".
+    var spokenDetail: String?
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     // Scaled against `.subheadline`, the card's own title style — not
@@ -709,15 +702,7 @@ struct CollectionListRow: View {
                 .foregroundStyle(Color(.label))
                 .lineLimit(1)
 
-            Spacer(minLength: AppTheme.Spacing.xs)
-
-            if let detail {
-                Text(detail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-                    .lineLimit(1)
-            }
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, AppTheme.Spacing.md)
         .frame(width: width, height: rowHeight, alignment: .leading)
@@ -726,7 +711,7 @@ struct CollectionListRow: View {
             in: RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous)
         )
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel((detailSpokenAs ?? detail).map { "\(title), \($0)" } ?? title)
+        .accessibilityLabel(spokenDetail.map { "\(title), \($0)" } ?? title)
         .accessibilityAddTraits(.isButton)
     }
 }
@@ -887,6 +872,7 @@ struct AlbumToken: View {
     let album: AlbumItem
 
     @State private var cover: UIImage?
+    @State private var needsScrim = false
     /// Assets warmed for this album's detail grid, so caching is cancelled
     /// again when the token scrolls away.
     @State private var prewarmedAssets: [PHAsset] = []
@@ -901,11 +887,11 @@ struct AlbumToken: View {
     var body: some View {
         AlbumCoverTile(
             title: album.title,
-            subtitle: album.count.formatted(),
             accessibilityLabel: String(
                 localized: "\(album.title), \(album.count) photos",
                 comment: "VoiceOver label for an album tile: its name and how many photos it holds"
-            )
+            ),
+            needsScrim: needsScrim
         ) {
             AlbumCoverWell(image: cover, systemImage: album.symbolName ?? "photo.on.rectangle")
         }
@@ -957,6 +943,7 @@ struct AlbumToken: View {
         ) { image in
             if let image {
                 cover = image
+                needsScrim = CoverTitleScrim.isNeeded(for: image)
             }
         }
     }
@@ -970,6 +957,7 @@ struct SmartAlbumToken: View {
     let item: SmartAlbumTokenItem
 
     @State private var cover: UIImage?
+    @State private var needsScrim = false
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
@@ -980,11 +968,11 @@ struct SmartAlbumToken: View {
     var body: some View {
         AlbumCoverTile(
             title: item.album.name,
-            subtitle: item.count.formatted(),
             accessibilityLabel: String(
                 localized: "\(item.album.name), \(item.count) photos",
                 comment: "VoiceOver label for a smart album tile: its name and how many photos match it"
-            )
+            ),
+            needsScrim: needsScrim
         ) {
             AlbumCoverWell(image: cover, systemImage: "line.3.horizontal.decrease.circle")
         }
@@ -1001,6 +989,7 @@ struct SmartAlbumToken: View {
         ) { image in
             if let image {
                 cover = image
+                needsScrim = CoverTitleScrim.isNeeded(for: image)
             }
         }
     }
@@ -1014,11 +1003,10 @@ struct UtilityToken: View {
     let systemImage: String
 
     var body: some View {
-        // These already carry a worded subtitle ("Browse on a map"), so the
-        // two read correctly side by side.
+        // The subtitle is no longer drawn, so it survives only where it
+        // still helps: out loud.
         AlbumCoverTile(
             title: title,
-            subtitle: subtitle,
             accessibilityLabel: "\(title), \(subtitle)"
         ) {
             AlbumCoverWell(image: nil, systemImage: systemImage)
