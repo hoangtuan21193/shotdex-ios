@@ -358,6 +358,20 @@ enum VideoStudioMode: Sendable {
     case singleVideo
 }
 
+/// The LUT a project is graded through, as stored in the recipe.
+struct VideoLUTReference: Equatable, Codable, Sendable {
+    /// `ImportedLUTStore` id — the on-disk filename stem.
+    var id: String
+    /// What to call it on screen. Held here as well as in the store so a
+    /// project opened after the file was deleted can still say which LUT is
+    /// missing.
+    var name: String
+    /// 0…1. A LUT at less than full strength is how a colourist uses a look
+    /// pack: the film print emulation goes on at 60 % and the grade does
+    /// the rest.
+    var intensity: Double = 1
+}
+
 struct VideoProjectRecipe: Equatable, Codable, Sendable {
     var clips: [VideoClip]
     /// One entry per boundary between adjacent clips: `transitions[i]` sits
@@ -389,6 +403,12 @@ struct VideoProjectRecipe: Equatable, Codable, Sendable {
     /// range or a colour range, each carrying its own adjustments. The photo
     /// editor's mask stage, applied to every frame.
     var masks: [PhotoMask] = []
+    /// A creative LUT the user imported, by store id, plus how much of it
+    /// to mix in. Only the reference is stored — the table itself lives on
+    /// disk and is loaded by the renderer — so a project stays small and a
+    /// LUT that has since been deleted degrades to no LUT instead of to a
+    /// corrupt grade.
+    var lut: VideoLUTReference?
     var overlays: [TimedOverlay] = []
     /// Single-video mode: user rotation in quarter turns (0–3).
     var quarterTurns = 0

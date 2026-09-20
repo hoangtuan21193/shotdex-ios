@@ -472,6 +472,9 @@
     "%lld photos without this info." : {
 
     },
+    "%lld points" : {
+      "comment" : "Video Studio colour: how many points the curve has"
+    },
     "%lld RAW hidden" : {
 
     },
@@ -479,6 +482,12 @@
 
     },
     "%lld saved to Photos" : {
+
+    },
+    "%lld unread replies" : {
+
+    },
+    "%lld votes" : {
 
     },
     "%lld%%" : {
@@ -491,6 +500,9 @@
 
     },
     "%llds per photo" : {
+
+    },
+    "+%lld more" : {
 
     },
     "~%@" : {
@@ -522,11 +534,23 @@
     "A daily reminder of what you shot on this date in past years, and how much space it takes. Days with nothing are skipped." : {
 
     },
+    "A date format pattern, like EEE d MMM." : {
+
+    },
+    "A date format pattern, like h:mm a. Seconds are removed — a widget is redrawn once a minute at best." : {
+
+    },
     "A mask limits Light, Color, Detail and Effects to one area." : {
+
+    },
+    "A message carries your words, the app and iOS version, the device model and roughly how many photos you have. Never a photo, a name or an email address." : {
 
     },
     "A smart album named “%@” already exists." : {
 
+    },
+    "A window grades part of the frame. Brush, subject and sky are photo-only — they need a pass per frame." : {
+      "comment" : "Video Studio colour: empty state for windows, and which kinds are absent"
     },
     "Aa" : {
 
@@ -549,6 +573,9 @@
     "Add %@" : {
 
     },
+    "Add %@ window" : {
+      "comment" : "Video Studio colour: adds one local grade"
+    },
     "Add a track from Files — it's saved here for reuse." : {
 
     },
@@ -560,6 +587,9 @@
     },
     "Add Condition" : {
 
+    },
+    "Add Marker" : {
+      "comment" : "Video Studio transport: pins a note at the playhead"
     },
     "Add Music from Files…" : {
 
@@ -591,7 +621,13 @@
     "Add to Collection" : {
 
     },
+    "Add to this message" : {
+
+    },
     "Add Track" : {
+
+    },
+    "Add widgets by touching and holding the Home Screen. Each of these draws over a photo or album you choose; On This Day needs no setting up." : {
 
     },
     "Added to your ShotDex Collages album" : {
@@ -654,7 +690,13 @@
     "Advanced Search" : {
 
     },
+    "Album" : {
+
+    },
     "Album Name" : {
+
+    },
+    "Albums you make in Photos or in ShotDex show up here." : {
 
     },
     "Align" : {
@@ -672,7 +714,16 @@
     "All Time" : {
 
     },
+    "Allow Calendar Access" : {
+
+    },
     "Allow photo access in the Library tab to browse albums." : {
+
+    },
+    "Already Reported" : {
+
+    },
+    "Also sent: the ShotDex and iOS versions, the device model, your language, and roughly how many photos you have." : {
 
     },
     "Alternate Photo" : {
@@ -682,6 +733,12 @@
       "comment" : "Info panel row label"
     },
     "Always" : {
+
+    },
+    "An approximation, for a curve this list does not name." : {
+      "comment" : "Video Studio colour: what Generic Log is"
+    },
+    "An email carries whatever you write, plus the app and iOS versions and the device model, which are filled in for you. Never a photo." : {
 
     },
     "Animate" : {
@@ -707,6 +764,9 @@
     },
     "Apply Previous" : {
 
+    },
+    "Apply to All" : {
+      "comment" : "Video Studio: puts this transition on every cut in the project"
     },
     "Armed" : {
 
@@ -777,13 +837,25 @@
     "Border" : {
 
     },
+    "Both clips are long enough for this." : {
+      "comment" : "Video Studio transition sheet: the requested length fits"
+    },
+    "Brightness against position across frame." : {
+      "comment" : "Video Studio scopes: waveform"
+    },
     "Bring Forward" : {
 
     },
     "Browse All Photos…" : {
       "comment" : "Video Studio media pool: opens the system picker for anything older than the pool holds"
     },
+    "BT.2100, as shot on iPhone and many broadcast cameras." : {
+      "comment" : "Video Studio colour: where HLG comes from"
+    },
     "Buckets" : {
+
+    },
+    "Bug" : {
 
     },
     "Built-in" : {
@@ -796,6 +868,15 @@
 
     },
     "Burst" : {
+
+    },
+    "Calendar" : {
+
+    },
+    "Calendar Access" : {
+
+    },
+    "Calendar access is off" : {
 
     },
     "Camera" : {
@@ -858,14 +939,29 @@
     "Change date" : {
 
     },
+    "Change Marker Colour" : {
+      "comment" : "Video Studio transport: cycles the colour of the marker at the playhead"
+    },
+    "Change Photo" : {
+
+    },
+    "Channel" : {
+
+    },
     "Chart" : {
 
     },
     "Chart Type" : {
 
     },
+    "Check your connection and send it again. Nothing was lost." : {
+      "comment" : "Support error recovery"
+    },
     "Choose a Sticker…" : {
       "comment" : "Video Studio media pool: opens the picker for a sticker image"
+    },
+    "Choose Album" : {
+
     },
     "Choose Folder" : {
 
@@ -937,13 +1033,19 @@
 
     },
     "Color" : {
-
+      "comment" : "Video Studio: the grading tool — de-log, primaries, curves"
+    },
+    "Color Mixer" : {
+      "comment" : "Video Studio colour: per-band HSL"
     },
     "Color Model" : {
       "comment" : "Info panel row label"
     },
     "Color Space" : {
       "comment" : "Info panel row label"
+    },
+    "Colour" : {
+
     },
     "Colour controls" : {
 
@@ -960,6 +1062,12 @@
     "Conditions" : {
 
     },
+    "Considering" : {
+
+    },
+    "Contact Support by Email" : {
+
+    },
     "Content" : {
 
     },
@@ -970,6 +1078,9 @@
 
     },
     "Continue Indexing (%@)" : {
+
+    },
+    "Conversation" : {
 
     },
     "Coordinate" : {
@@ -1016,6 +1127,9 @@
     },
     "Couldn't read metadata for this item." : {
 
+    },
+    "Couldn't read that LUT. ShotDex reads .cube files." : {
+      "comment" : "Video Studio colour: the imported LUT did not parse"
     },
     "Couldn't read the video frames." : {
 
@@ -1071,16 +1185,25 @@
     "Crossfade" : {
 
     },
+    "Curves" : {
+      "comment" : "Video Studio colour: the point tone curve"
+    },
     "Custom" : {
       "comment" : "Collage aspect ratio that matches no preset"
     },
     "Custom background colour" : {
 
     },
+    "Custom Date Format…" : {
+
+    },
     "Custom presets store a name, pixel dimensions, Fill or Fit behavior, quality and output format." : {
 
     },
     "Custom Range…" : {
+
+    },
+    "Custom Time Format…" : {
 
     },
     "Customize" : {
@@ -1107,6 +1230,9 @@
       "comment" : "Info panel section title"
     },
     "Date & Time" : {
+
+    },
+    "Date Format" : {
 
     },
     "Date Range" : {
@@ -1191,6 +1317,9 @@
     "Delete Look" : {
 
     },
+    "Delete LUT" : {
+      "comment" : "Video Studio colour: removes an imported .cube"
+    },
     "Delete Mask" : {
 
     },
@@ -1209,6 +1338,9 @@
     "Delete This Shape" : {
 
     },
+    "Delete window" : {
+      "comment" : "Video Studio colour"
+    },
     "Denied" : {
       "comment" : "Permission state.",
       "localizations" : {
@@ -1226,8 +1358,17 @@
     "Deselect All" : {
 
     },
+    "Diagnostic Log" : {
+
+    },
     "Digital Zoom" : {
       "comment" : "Info panel row label"
+    },
+    "Dim photo" : {
+
+    },
+    "Dim Photo" : {
+
     },
     "Dimensions" : {
       "comment" : "Info panel row label"
@@ -1322,6 +1463,9 @@
     "Editor Error" : {
 
     },
+    "EEE d MMM" : {
+
+    },
     "Effects" : {
       "comment" : "Video Studio media pool tab: looks to apply to the project"
     },
@@ -1341,6 +1485,9 @@
 
     },
     "Estimating size…" : {
+
+    },
+    "Events Listed: %lld" : {
 
     },
     "Every camera in your library has a known sensor format." : {
@@ -1387,6 +1534,9 @@
     },
     "Favorites" : {
       "comment" : "Video Studio media pool filter: items favorited in Photos"
+    },
+    "Feature Request" : {
+
     },
     "FF Equivalent" : {
 
@@ -1460,6 +1610,9 @@
     "Font" : {
 
     },
+    "Fonts you use appear here, ready to reuse." : {
+      "comment" : "Video Studio media pool: empty state for the text tab"
+    },
     "Format" : {
       "comment" : "Info panel row label"
     },
@@ -1502,6 +1655,9 @@
     "Gap" : {
 
     },
+    "Generic Log" : {
+      "comment" : "Video Studio colour: an approximate de-log for cameras whose curve is not listed"
+    },
     "Go to End" : {
       "comment" : "Video Studio transport"
     },
@@ -1518,6 +1674,9 @@
 
     },
     "Grouping duplicates…" : {
+
+    },
+    "h:mm a" : {
 
     },
     "HDR" : {
@@ -1568,14 +1727,23 @@
     "Hide Tools" : {
 
     },
+    "Histogram" : {
+      "comment" : "Video Studio scope: tonal distribution"
+    },
     "History" : {
 
     },
     "History covers this editing session. Recall last ShotDex edit restores the recipe stored in Photos instead." : {
 
     },
+    "HLG" : {
+      "comment" : "Video Studio colour: Hybrid Log-Gamma input transform"
+    },
     "Hold to see original" : {
 
+    },
+    "How many pixels at each tone." : {
+      "comment" : "Video Studio scopes: histogram"
     },
     "Hue %lld degrees, saturation %lld percent" : {
       "localizations" : {
@@ -1634,6 +1802,9 @@
     "Import from Files…" : {
       "comment" : "Video Studio media pool: brings an audio file in from the Files app"
     },
+    "Import LUT…" : {
+      "comment" : "Video Studio colour: brings a .cube in from Files"
+    },
     "Import Photos" : {
 
     },
@@ -1663,6 +1834,9 @@
         }
       }
     },
+    "Imported LUT" : {
+
+    },
     "Imported photos go into your library either way. An album here just files them as well." : {
 
     },
@@ -1677,6 +1851,12 @@
       }
     },
     "In" : {
+
+    },
+    "In Progress" : {
+
+    },
+    "Include Diagnostic Log" : {
 
     },
     "Include Location" : {
@@ -1728,6 +1908,9 @@
     "Indexing, %lld percent" : {
 
     },
+    "Input Transform" : {
+      "comment" : "Video Studio colour: undoing the camera's encoding"
+    },
     "Insert" : {
 
     },
@@ -1742,6 +1925,9 @@
     },
     "Invert Selection" : {
 
+    },
+    "Invert window" : {
+      "comment" : "Video Studio colour: grades outside the window instead of inside"
     },
     "ISO" : {
       "comment" : "Info panel row label"
@@ -1776,6 +1962,9 @@
     "Last Indexed" : {
 
     },
+    "Last Reading" : {
+
+    },
     "Last scan %@" : {
 
     },
@@ -1785,7 +1974,13 @@
     "Layout" : {
       "comment" : "Collage panel tab: template and slot count"
     },
+    "Leave the picture as recorded." : {
+      "comment" : "Video Studio colour: what None does"
+    },
     "left" : {
+
+    },
+    "Legibility" : {
 
     },
     "Lens" : {
@@ -1869,6 +2064,9 @@
     "Low Power Mode is slowing indexing down" : {
 
     },
+    "LUT" : {
+      "comment" : "Video Studio colour: an imported .cube lookup table"
+    },
     "Magnifier" : {
 
     },
@@ -1892,6 +2090,9 @@
     },
     "Mark for Deletion" : {
 
+    },
+    "Marker at %@" : {
+      "comment" : "Video Studio: a note pinned to a point on the timeline"
     },
     "Mask actions" : {
 
@@ -2003,6 +2204,12 @@
     "Modified" : {
       "comment" : "Info panel row label"
     },
+    "Monospaced Digits" : {
+
+    },
+    "Monospaced digits keep the numbers from shifting as they change. A typeface another app installed may not be available to the widget; it falls back to the system font." : {
+
+    },
     "More" : {
 
     },
@@ -2017,6 +2224,9 @@
     },
     "Move ellipse" : {
 
+    },
+    "Move the playhead over a clip" : {
+      "comment" : "Video Studio scopes: nothing to measure yet"
     },
     "Music" : {
       "comment" : "Video Studio media pool tab: audio to add as a music bed\nVideo Studio timeline lane: the music track"
@@ -2088,7 +2298,13 @@
     "Newest First" : {
       "comment" : "Video Studio media pool sort order"
     },
+    "Next Marker" : {
+      "comment" : "Video Studio transport"
+    },
     "No Access to Photos" : {
+
+    },
+    "No Albums" : {
 
     },
     "No albums yet. Create one to add these photos." : {
@@ -2102,6 +2318,9 @@
     },
     "No Collages Yet" : {
 
+    },
+    "No connection to support." : {
+      "comment" : "Support error: the request never reached the server"
     },
     "No data for this range." : {
 
@@ -2122,6 +2341,15 @@
 
     },
     "No location data. This item doesn't contain a saved capture location." : {
+
+    },
+    "No log entries in the last few minutes." : {
+      "comment" : "Support log is empty"
+    },
+    "No LUTs yet. Import a .cube file from a look pack you own." : {
+      "comment" : "Video Studio colour: the LUT list is empty"
+    },
+    "No mail account on this device" : {
 
     },
     "No masks yet" : {
@@ -2167,7 +2395,10 @@
 
     },
     "None" : {
-
+      "comment" : "Video Studio colour: grades without a LUT"
+    },
+    "None (Rec. 709)" : {
+      "comment" : "Video Studio colour: the footage needs no de-log"
     },
     "None of your indexed photos carry a location yet." : {
 
@@ -2181,10 +2412,19 @@
     "Not linked" : {
 
     },
+    "Not Planned" : {
+
+    },
     "Not Scanned Yet" : {
 
     },
     "nothing downloaded yet" : {
+
+    },
+    "Nothing here yet. Requests appear once they have been read." : {
+
+    },
+    "Nothing on today" : {
 
     },
     "Nothing to add" : {
@@ -2274,6 +2514,15 @@
     "One clip couldn't be loaded and was left out. It may still be in iCloud — check your connection and add it again." : {
 
     },
+    "One line: what went wrong" : {
+
+    },
+    "One line: what you want to do" : {
+
+    },
+    "One vote per device. The most wanted requests are built first." : {
+
+    },
     "Opacity" : {
 
     },
@@ -2290,6 +2539,12 @@
           }
         }
       }
+    },
+    "Open ShotDex for today" : {
+
+    },
+    "Open ShotDex to read today" : {
+
     },
     "Opening original…" : {
 
@@ -2351,8 +2606,14 @@
     "Pan Right" : {
 
     },
+    "Panasonic Lumix and Varicam." : {
+      "comment" : "Video Studio colour: where V-Log comes from"
+    },
     "Panoramas" : {
 
+    },
+    "Parade" : {
+      "comment" : "Video Studio scope: R, G and B waveforms side by side"
     },
     "Paste Edits" : {
 
@@ -2415,7 +2676,7 @@
     "Photos" : {
       "comment" : "Video Studio media pool bin label for the sticker tab\nVideo Studio media pool filter: still photos only"
     },
-    "Photos and metadata never leave this device." : {
+    "Photos and metadata never leave this device. The one exception is a support message you write yourself, which carries no photos." : {
 
     },
     "Photos and Videos" : {
@@ -2478,6 +2739,9 @@
     "Places" : {
 
     },
+    "Planned" : {
+
+    },
     "Play" : {
       "comment" : "Video Studio transport\nVideo Studio: starts preview playback"
     },
@@ -2526,6 +2790,9 @@
     "Portrait" : {
 
     },
+    "Position" : {
+
+    },
     "Preparing clips…" : {
 
     },
@@ -2552,6 +2819,15 @@
     },
     "Preview %@" : {
 
+    },
+    "Preview of the %@ widget" : {
+
+    },
+    "Previous Marker" : {
+      "comment" : "Video Studio transport"
+    },
+    "Primaries" : {
+      "comment" : "Video Studio colour: the three grading wheels"
     },
     "Privacy" : {
 
@@ -2587,6 +2863,9 @@
 
     },
     "Re-index Library" : {
+
+    },
+    "Read the Log" : {
 
     },
     "reading metadata %lld/%lld" : {
@@ -2630,6 +2909,9 @@
     "Recall Last ShotDex Edit" : {
 
     },
+    "Received" : {
+
+    },
     "RECENT" : {
 
     },
@@ -2639,10 +2921,19 @@
     "Recents" : {
 
     },
+    "Red, green and blue side by side — uneven feet mean a cast." : {
+      "comment" : "Video Studio scopes: parade"
+    },
     "Redo" : {
 
     },
     "Reference" : {
+
+    },
+    "Refresh Now" : {
+
+    },
+    "Region" : {
 
     },
     "Remind Me At" : {
@@ -2671,7 +2962,13 @@
     "Remove Location" : {
 
     },
+    "Remove Photo" : {
+
+    },
     "Remove photo slot" : {
+
+    },
+    "Remove your vote" : {
 
     },
     "Removes it from the selection" : {
@@ -2704,11 +3001,23 @@
     "Replace" : {
 
     },
+    "Replies arrive here in the app. There is no account and no email address to give." : {
+
+    },
+    "Report a Bug" : {
+
+    },
+    "Report a bug or ask for a feature. Replies come back here — there is no account and no email address to give." : {
+
+    },
+    "Request a Feature" : {
+
+    },
     "Rescan" : {
 
     },
     "Reset" : {
-
+      "comment" : "Video Studio colour: clears the shown band\nVideo Studio colour: puts the whole grade back to neutral\nVideo Studio colour: straightens the shown channel's curve"
     },
     "Reset %@" : {
       "comment" : "Video Studio quick strip: puts one value back to its default"
@@ -2781,6 +3090,9 @@
     },
     "Rotate 90°" : {
 
+    },
+    "S-Log3" : {
+      "comment" : "Video Studio colour: Sony S-Log3 input transform"
     },
     "Same as Original" : {
 
@@ -2904,6 +3216,9 @@
     "Scene" : {
       "comment" : "Info panel row label"
     },
+    "Scopes" : {
+      "comment" : "Video Studio colour: the measurement displays"
+    },
     "Screenshots" : {
 
     },
@@ -2955,10 +3270,19 @@
     "Selected photo" : {
 
     },
+    "Send" : {
+
+    },
     "Send Backward" : {
 
     },
+    "Send Reply" : {
+
+    },
     "Sensor Format" : {
+
+    },
+    "Sent" : {
 
     },
     "Series" : {
@@ -2968,6 +3292,9 @@
 
     },
     "Settings" : {
+
+    },
+    "Shadow suits most photos. Scrim darkens a band behind the text, for photos with a busy sky or bright detail under it." : {
 
     },
     "Shake" : {
@@ -2982,7 +3309,19 @@
     "Shift" : {
 
     },
+    "Shipped" : {
+
+    },
+    "Shortened to %@s — a transition can take at most half of the shorter clip." : {
+      "comment" : "Video Studio transition sheet: the timeline had to clamp the requested length"
+    },
     "ShotDex" : {
+
+    },
+    "ShotDex asks for your location once, rounds it to about a kilometre, and fetches the current conditions from Open-Meteo. It does this only while a weather widget is on your Home Screen, and it sends nothing else." : {
+
+    },
+    "ShotDex copies the photos into the widget's own storage, because a widget cannot read your library. An album is copied up to %lld photos deep; use Refresh Now after adding to it." : {
 
     },
     "ShotDex is reading the camera, lens and exposure info from each photo and video. For items kept in iCloud it downloads only the small part of the file holding that info — nothing is saved to this iPhone. The app may feel slow until this finishes." : {
@@ -3006,6 +3345,9 @@
     "Show All Raw Metadata" : {
 
     },
+    "Show Date" : {
+
+    },
     "Show Favorites" : {
 
     },
@@ -3013,6 +3355,9 @@
 
     },
     "Show Graph" : {
+
+    },
+    "Show High and Low" : {
 
     },
     "Show in All Photos" : {
@@ -3033,7 +3378,13 @@
     "Show Photos from a Camera" : {
 
     },
+    "Show Place" : {
+
+    },
     "Show Places" : {
+
+    },
+    "Show Time" : {
 
     },
     "Show Tools" : {
@@ -3044,6 +3395,9 @@
     },
     "Show Trips" : {
 
+    },
+    "Show window" : {
+      "comment" : "Video Studio colour: turns one window off without deleting it"
     },
     "Showing photos from %@" : {
 
@@ -3120,6 +3474,9 @@
     "Something Went Wrong" : {
 
     },
+    "Sony cinema and Alpha bodies." : {
+      "comment" : "Video Studio colour: where S-Log3 comes from"
+    },
     "Sort" : {
 
     },
@@ -3150,10 +3507,16 @@
     "Start" : {
 
     },
+    "Start Weeks on Monday" : {
+
+    },
     "Statistics" : {
 
     },
     "Statistics appear after your library has been indexed." : {
+
+    },
+    "Status" : {
 
     },
     "Step back one frame" : {
@@ -3174,6 +3537,9 @@
     "Stop Selecting in Photo" : {
 
     },
+    "Strength" : {
+      "comment" : "Video Studio colour: how much of the LUT to mix in"
+    },
     "Style" : {
       "comment" : "Collage panel tab: spacing, corners and background"
     },
@@ -3188,6 +3554,15 @@
     },
     "Summed from the file sizes the index has read. Photos still stored only in iCloud are counted at their full size." : {
 
+    },
+    "Support" : {
+
+    },
+    "Support is not answering." : {
+      "comment" : "Support error: the server returned a failure"
+    },
+    "Support needs a real iPhone or iPad. Email is the alternative for now." : {
+      "comment" : "Support error recovery"
     },
     "Switches between matching all and any" : {
 
@@ -3205,6 +3580,9 @@
 
     },
     "System" : {
+
+    },
+    "System follows the clock format in iOS Settings, including 24-hour time. Text Size sets every line under the headline — the month grid, the events and the weather with it. Sizes are for the medium widget; the small and large ones scale from them." : {
 
     },
     "Tab bar" : {
@@ -3228,6 +3606,9 @@
     "Tap the map to move the pin." : {
 
     },
+    "Tap to add a point, drag it off the plot to remove it." : {
+      "comment" : "Video Studio colour: how the curve plot is edited"
+    },
     "Tap to expand" : {
 
     },
@@ -3244,6 +3625,15 @@
 
     },
     "The crop applies when you leave this tab or save." : {
+
+    },
+    "The log could not be read on this device." : {
+      "comment" : "Support log unavailable"
+    },
+    "The log covers the last fifteen minutes of this session only — iOS does not keep it across launches. Reproduce the problem, then send. It holds no photos and no file names." : {
+
+    },
+    "The month is worked out on this iPhone and needs no permission. Listing today's events reads your calendars — only their titles, times and colours are copied for the widget, and only for today." : {
 
     },
     "The original stays in your library. Revert in Photos brings the whole clip back." : {
@@ -3293,6 +3683,12 @@
     "These photos are no longer in your library." : {
 
     },
+    "This build cannot use the in-app channel, so support runs by email. Replies go to wherever you write from." : {
+
+    },
+    "This device cannot reach support." : {
+      "comment" : "Support error: App Attest is unavailable"
+    },
     "This item doesn't contain a saved capture location." : {
 
     },
@@ -3317,6 +3713,12 @@
     "Thumbnail Metadata" : {
 
     },
+    "Time and Date" : {
+
+    },
+    "Time Format" : {
+
+    },
     "Time Zone" : {
       "comment" : "Info panel row label"
     },
@@ -3338,8 +3740,14 @@
     "Today" : {
 
     },
+    "Tone curve" : {
+      "comment" : "Video Studio colour: the draggable curve plot"
+    },
     "Tone curve, %@ channel" : {
 
+    },
+    "Too many messages for now." : {
+      "comment" : "Support error: rate limited"
     },
     "Tools Panel" : {
 
@@ -3350,8 +3758,11 @@
     "Top %lld series" : {
 
     },
+    "Transfer function only — a wide-gamut capture keeps its primaries." : {
+      "comment" : "Video Studio colour: what the input transform does not do"
+    },
     "Transition" : {
-
+      "comment" : "Video Studio: title of the sheet that edits one cut"
     },
     "Trim" : {
 
@@ -3359,14 +3770,26 @@
     "Trim end" : {
 
     },
+    "Trim End to Playhead" : {
+      "comment" : "Video Studio transport: throws away the part of the clip after the playhead"
+    },
     "Trim start" : {
 
+    },
+    "Trim Start to Playhead" : {
+      "comment" : "Video Studio transport: throws away the part of the clip before the playhead"
     },
     "Trip" : {
 
     },
     "Trips" : {
 
+    },
+    "Try again in a few minutes." : {
+      "comment" : "Support error recovery"
+    },
+    "Try again in an hour." : {
+      "comment" : "Support error recovery"
     },
     "Try: Fukuoka · f > 1.2 · ISO trên 3200 · trước 2020 · 85mm" : {
 
@@ -3378,6 +3801,9 @@
       "comment" : "Info panel row label"
     },
     "Type a caption" : {
+
+    },
+    "Typeface" : {
 
     },
     "Unable to Share" : {
@@ -3393,6 +3819,9 @@
 
     },
     "Unhide" : {
+
+    },
+    "Units" : {
 
     },
     "Unknown Cameras" : {
@@ -3425,6 +3854,9 @@
     "Unplaced photo, drag to place" : {
 
     },
+    "Update Now" : {
+
+    },
     "UPRIGHT" : {
 
     },
@@ -3437,14 +3869,32 @@
     "Use Cellular Data for Indexing" : {
 
     },
+    "Use the System Font" : {
+
+    },
+    "Use the System Format" : {
+
+    },
     "UTI" : {
       "comment" : "Info panel row label"
     },
     "Utilities" : {
 
     },
+    "V-Log" : {
+      "comment" : "Video Studio colour: Panasonic V-Log input transform"
+    },
     "Value" : {
 
+    },
+    "Vector" : {
+      "comment" : "Video Studio scope: short name for the vectorscope"
+    },
+    "Vectorscope" : {
+      "comment" : "Video Studio scope: hue and saturation"
+    },
+    "Vectorscope: hue and saturation. The diagonal line is where skin sits." : {
+      "comment" : "Video Studio scopes: vectorscope"
     },
     "Video" : {
       "comment" : "Info panel section title\nKind of timeline clip, read by VoiceOver\nName of one file behind a photo, as an Info panel heading\nVideo Studio timeline lane: the video and photo clip track"
@@ -3496,7 +3946,40 @@
     "Volume" : {
 
     },
+    "Vote for this request" : {
+
+    },
+    "Voting needs the in-app channel, which this build cannot use." : {
+
+    },
+    "Waveform" : {
+      "comment" : "Video Studio scope: luma against screen position"
+    },
+    "Weather" : {
+
+    },
+    "Weather not set up" : {
+
+    },
+    "Weather out of date" : {
+
+    },
+    "What happened" : {
+
+    },
+    "What People Asked For" : {
+
+    },
     "What should I look for?" : {
+
+    },
+    "What you are trying to achieve, and where in ShotDex you would look for it." : {
+
+    },
+    "What you did, what happened, and what you expected instead. Steps help most." : {
+
+    },
+    "What you would like" : {
 
     },
     "When autoplay is off, a video waits for you to press play. Looping is a button on the player itself. Full HDR shows high-range photos at their real brightness, which makes everything around them look darker." : {
@@ -3520,13 +4003,22 @@
     "Wi-Fi" : {
 
     },
+    "Widgets" : {
+
+    },
     "Width" : {
 
+    },
+    "Windows & Qualifiers" : {
+      "comment" : "Video Studio colour: masked, local grades"
     },
     "Wipe" : {
 
     },
     "Wired" : {
+
+    },
+    "Write to %@ from wherever you read your mail." : {
 
     },
     "Writes every photo in this run that has edits. One that fails keeps its edits so you can try it again." : {
@@ -3547,10 +4039,16 @@
     "Yesterday" : {
 
     },
+    "You" : {
+
+    },
     "Your Albums" : {
 
     },
     "Your iPhone is warm — indexing slowed down to cool it" : {
+
+    },
+    "Your Messages" : {
 
     },
     "Your photo library appears to be empty." : {

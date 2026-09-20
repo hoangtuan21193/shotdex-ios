@@ -196,14 +196,17 @@ actor SupportService {
            let url = URL(string: override) {
             return url
         }
-        return URL(string: "https://api.dev.shotdex.app")!
+        return URL(string: "https://dev-api.shotdex.app")!
         #else
         return isTestFlightBuild
-            ? URL(string: "https://api.dev.shotdex.app")!
+            ? URL(string: "https://dev-api.shotdex.app")!
             : URL(string: "https://api.shotdex.app")!
         #endif
     }
 
+    /// `dev-api`, not `api.dev`: Cloudflare's free Universal SSL covers the
+    /// apex and one level of subdomain, so a two-level host has no certificate.
+    ///
     /// TestFlight ships a sandbox receipt; the App Store ships a real one. This
     /// is the only signal a Release build has to tell the two apart.
     static var isTestFlightBuild: Bool {

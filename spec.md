@@ -1308,8 +1308,10 @@ giữ một vote một máy, mà không mang thông tin cá nhân nào. Gỡ app
 mọi báo cáo cũ không còn liên kết với máy.
 
 **Hai môi trường, hai backend.** `api.shotdex.app` (D1 `shotdex`) chỉ phục vụ
-build App Store; `api.dev.shotdex.app` (D1 `shotdex-dev`) phục vụ build Xcode và
-TestFlight. Build Release phân biệt bằng receipt: `appStoreReceiptURL` tên
+build App Store; `dev-api.shotdex.app` (D1 `shotdex-dev`) phục vụ build Xcode và
+TestFlight. Tên là `dev-api` chứ không phải `api.dev`: Universal SSL miễn phí
+của Cloudflare chỉ phủ apex và **một cấp** subdomain, tên hai cấp không có
+chứng chỉ nếu không mua Advanced Certificate Manager. Build Release phân biệt bằng receipt: `appStoreReceiptURL` tên
 `sandboxReceipt` nghĩa là TestFlight. Báo lỗi của beta tester vì thế không rơi
 vào hàng đợi thật.
 

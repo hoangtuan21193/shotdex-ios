@@ -297,6 +297,18 @@ struct VideoStudioScreen: View {
             // rail already opens by name.
             let hasInspectorContent = model.presentsSheet
             let usesInspectorColumn = fitsInspectorColumn && isInspectorOpen && hasInspectorContent
+            // The middle column's width, spent once and honoured. Without a
+            // hard frame the stage is the greedy one — the transport row and
+            // the timeline both want more than their share — and an HStack
+            // resolves that by letting the *last* view overflow: the
+            // inspector was laid out 320 wide starting 54pt from the right
+            // edge, with its trailing controls off the screen.
+            let stageColumnWidth = max(
+                0,
+                proxy.size.width
+                    - (usesInspectorColumn ? VideoStudioMetrics.inspectorColumnWidth : 0)
+                    - mediaPoolWidth
+            )
             let deskChromeHeight = VideoStudioMetrics.deskChromeHeight(usesDeskChrome: usesDeskChrome)
             let lanes = VideoStudioMetrics.Lanes
                 .for(size: proxy.size)
@@ -306,10 +318,7 @@ struct VideoStudioScreen: View {
                     // The preview is drawn in the column beside the rail, not
                     // across the window, so the aspect-fit height has to be
                     // computed from the width it actually gets.
-                    width: proxy.size.width
-                        - (usesInspectorColumn ? VideoStudioMetrics.inspectorColumnWidth : 0)
-                        - mediaPoolWidth
-                        - meterWidth,
+                    width: stageColumnWidth - meterWidth,
                     height: proxy.size.height + proxy.safeAreaInsets.top + proxy.safeAreaInsets.bottom
                 ),
                 bandHeight: bandHeight,
@@ -387,13 +396,9 @@ struct VideoStudioScreen: View {
                         VideoStudioTopBand(
                             model: model,
                             projectActions: usesRail ? actions(model) : nil,
-                            stageWidth: proxy.size.width
-                                - (usesInspectorColumn ? VideoStudioMetrics.inspectorColumnWidth : 0)
-                                - mediaPoolWidth
-                                // The meter sits inside this column, beside
-                                // the frame, so the band does not get its
-                                // width either.
-                                - meterWidth,
+                            // The meter sits inside this column, beside the
+                            // frame, so the band does not get its width.
+                            stageWidth: stageColumnWidth - meterWidth,
                             // Only on a desk window, and only when nothing
                             // stands between the band and the screen's
                             // rounded corner. The phone's band is left
@@ -484,6 +489,7 @@ struct VideoStudioScreen: View {
                         }
                         Color.clear.frame(height: proxy.safeAreaInsets.bottom)
                     }
+                    .frame(width: stageColumnWidth)
 
                     if usesInspectorColumn {
                         VideoStudioSheetHost(model: model, actions: actions(model), layout: .column)

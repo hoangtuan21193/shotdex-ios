@@ -15,6 +15,10 @@ struct VideoRenderRecipe: Sendable {
     let color: PhotoColorRecipe
     let curve: ToneCurveAdjustments
     let masks: [PhotoMask]
+    let lut: VideoLUTReference?
+    /// Resolved at build time from the LUT's id, because the compositor
+    /// cannot ask a main-actor store for it.
+    let lutURL: URL?
     let overlays: [TimedOverlay]
     let renderSize: CGSize
     let totalDuration: Double
@@ -38,6 +42,8 @@ struct VideoRenderRecipe: Sendable {
         self.color = recipe.color
         self.curve = recipe.curve
         self.masks = recipe.masks.filter(\.isVisible)
+        self.lut = recipe.lut
+        self.lutURL = recipe.lut.map { ImportedLUTStore.fileURL(for: $0.id) }
         self.overlays = recipe.overlays
         self.renderSize = renderSize
         self.totalDuration = totalDuration
@@ -57,6 +63,7 @@ struct VideoRenderRecipe: Sendable {
             || !color.isIdentity
             || curve != .identity
             || !masks.isEmpty
+            || lut != nil
     }
 
     /// The input transform as one `CIColorCurves` pass.
@@ -86,6 +93,33 @@ struct VideoRenderRecipe: Sendable {
         filter.setValue(CIVector(x: 0, y: 1), forKey: "inputCurvesDomain")
         filter.setValue(space, forKey: "inputColorSpace")
         return (filter.outputImage ?? input).cropped(to: input.extent)
+    }
+
+    /// The colour stage, start to finish, on one image.
+    ///
+    /// Order matters and this is the order: undo the camera's encoding
+    /// first, because every stage after it is dialled against a picture that
+    /// is supposed to have contrast in it; then exposure and the rest of the
+    /// primaries; then the point curve; then the local grades; then the
+    /// look, and last the imported LUT.
+    ///
+    /// The compositor runs it per frame. The scopes run it on one still, so
+    /// that what the waveform measures is the graded picture and not the
+    /// source — a scope reading the ungraded frame would be worse than no
+    /// scope at all.
+    func graded(_ input: CIImage) -> CIImage {
+        var image = VideoRenderRecipe.applyInputTransform(inputTransform, to: input)
+        image = PhotoRenderService.applyAdjustments(adjustments, to: image, appliesExposure: true)
+        image = PhotoRenderService.applyColor(color, to: image)
+        image = PhotoRenderService.applyCurve(curve, to: image)
+        if !masks.isEmpty {
+            image = VideoMaskRenderer.apply(masks, to: image)
+        }
+        image = PhotoRenderService.applyFilter(filter, intensity: filterIntensity, to: image)
+        // The imported LUT goes last: a look pack is authored to be the
+        // final word over a corrected picture, which is where a colourist
+        // puts it on a node tree too.
+        return VideoLUTRenderer.apply(lut, url: lutURL, to: image)
     }
 
     /// The overlays visible at `time`, in recipe (z) order — with their timing, so
@@ -336,29 +370,7 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
 
         let recipe = instruction.recipe
         if recipe.hasWork {
-            // Order matters and this is the order: undo the camera's
-            // encoding first, because every stage after it is dialled
-            // against a picture that is supposed to have contrast in it.
-            image = VideoRenderRecipe.applyInputTransform(recipe.inputTransform, to: image)
-            image = PhotoRenderService.applyAdjustments(
-                recipe.adjustments,
-                to: image,
-                appliesExposure: true
-            )
-            image = PhotoRenderService.applyColor(recipe.color, to: image)
-            image = PhotoRenderService.applyCurve(recipe.curve, to: image)
-            // Power windows and qualifiers, over the graded frame. The
-            // renderer is held for the whole composition so its mask caches
-            // survive between frames — a radial window's falloff does not
-            // change from one frame to the next, only the pixels under it do.
-            if !recipe.masks.isEmpty {
-                image = VideoMaskRenderer.apply(recipe.masks, to: image)
-            }
-            image = PhotoRenderService.applyFilter(
-                recipe.filter,
-                intensity: recipe.filterIntensity,
-                to: image
-            )
+            image = recipe.graded(image)
             if recipe.bakesOverlays {
                 for timed in recipe.activeTimedOverlays(at: seconds) where timed.overlay.hasVisibleEffect {
                     let anim = timed.animationTransform(at: seconds, total: recipe.totalDuration)

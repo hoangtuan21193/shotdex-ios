@@ -1254,6 +1254,55 @@ final class VideoStudioModel {
         applyVideoTier()
     }
 
+    func setMixer(_ band: ColorMixerBand, _ property: ColorMixerProperty, _ value: Double) {
+        recipe.color.mixer[band][property] = value
+        markEdited()
+        applyVideoTier()
+    }
+
+    func resetMixerBand(_ band: ColorMixerBand) {
+        pushUndo()
+        recipe.color.mixer[band] = .identity
+        markEdited()
+        applyVideoTier()
+    }
+
+    /// Replaces one channel's curve wholesale — the plot hands back the whole
+    /// point list after every drag, which is also what makes one undo step
+    /// per gesture the right granularity.
+    func setCurve(_ channel: ToneCurveChannel, points: [CurvePoint]) {
+        recipe.curve[channel] = points
+        markEdited()
+        applyVideoTier()
+    }
+
+    func resetCurve(_ channel: ToneCurveChannel) {
+        pushUndo()
+        recipe.curve[channel] = ToneCurveAdjustments.linear
+        markEdited()
+        applyVideoTier()
+    }
+
+    // MARK: Imported LUT
+
+    /// Grades through an imported `.cube`, or clears it when `nil`.
+    func setLUT(_ reference: VideoLUTReference?) {
+        guard recipe.lut != reference else { return }
+        pushUndo()
+        recipe.lut = reference
+        markEdited()
+        applyVideoTier()
+    }
+
+    /// How much of the LUT to mix in. No undo push per tick — the slider is
+    /// one continuous gesture and one step of undo, like the grading wheels.
+    func setLUTIntensity(_ value: Double) {
+        guard recipe.lut != nil else { return }
+        recipe.lut?.intensity = min(1, max(0, value))
+        markEdited()
+        applyVideoTier()
+    }
+
     // MARK: Power windows and qualifiers
 
     /// Which window the Color panel is editing.

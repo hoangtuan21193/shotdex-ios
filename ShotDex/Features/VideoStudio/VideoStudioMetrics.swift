@@ -32,6 +32,14 @@ enum VideoStudioMetrics {
     /// editor's sidebar was written to avoid.
     static let inspectorColumnWidth: CGFloat = 320
 
+    /// How tall a scope is drawn in the colour panel.
+    ///
+    /// A waveform needs enough vertical room that the gap between the black
+    /// point and the trace is readable; measured against the panel, 140
+    /// leaves the four scopes legible without pushing the primaries wheels
+    /// below the fold on a 13" iPad in landscape.
+    static let scopeHeight: CGFloat = 140
+
     // MARK: Desk chrome
 
     /// A window this wide gets the bands a desktop-shaped editor has and a

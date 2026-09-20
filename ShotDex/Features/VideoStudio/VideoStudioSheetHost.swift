@@ -540,7 +540,7 @@ struct VideoStudioSheetHost: View {
                 Spacer(minLength: 0)
             }
         case .color:
-            VideoColorPanel(model: model)
+            VideoColorPanel(model: model, showsScopes: layout == .column)
         case .masterVolume:
             VStack(spacing: 0) {
                 InspectorSlider(

@@ -1,37 +1,256 @@
 import SwiftUI
+import UniformTypeIdentifiers
 import ShotDexKit
 
 /// The grading stage, as one scrolling panel rather than a second page.
 ///
-/// Resolve puts this behind a whole Color page with a node graph, scopes,
-/// qualifier, power windows and a tracker. That is a colourist's workspace,
-/// and the node graph in particular only earns its screen once a grade has
-/// branches. What a photographer cutting a short film actually reaches for is
-/// the front of that page: undo the log, set the three primaries, bend the
-/// curve. Those are here, and the render maths behind them is the photo
-/// editor's — `PhotoRenderService.applyColor` and `.applyCurve`, already
-/// shipping, already unit-tested.
+/// Resolve puts this behind a whole Color page. What is here is that page's
+/// working order, top to bottom: read the frame on a scope, undo the log,
+/// set the three primaries, bend the curve, fix one colour on the mixer,
+/// lay a look pack over the top, then window off whatever is still wrong.
+/// The render maths behind most of it is the photo editor's —
+/// `PhotoRenderService.applyColor`, `.applyCurve`, `.applyFilter`, already
+/// shipping and already unit-tested.
 ///
-/// What is deliberately absent: nodes, windows, tracking, qualifier. Not
-/// because the hardware could not run them, but because each one is a tool
-/// for a job — isolating a face, following it across a shot — that this
-/// screen is not for.
+/// What is deliberately absent: the node graph and the tracker. A node
+/// graph only earns its screen once a grade has branches, and this chain is
+/// a fixed one; the tracker needs Vision and a per-frame mask transform,
+/// which is a feature, not a panel.
 struct VideoColorPanel: View {
     @Bindable var model: VideoStudioModel
+    /// Scopes only on the inspector column. On the phone's 264pt band a
+    /// 140pt scope is most of the panel, and the frame it measures is
+    /// already the biggest thing on that screen.
+    var showsScopes = false
 
+    @Environment(PhotoLibraryService.self) private var photoLibrary
+
+    @State private var scopes = VideoScopeModel()
+    @State private var luts = ImportedLUTStore()
+    @State private var isLUTImporterPresented = false
     @State private var region: ColorGradingRegion = .midtones
+    @State private var curveChannel: ToneCurveChannel = .rgb
+    @State private var band: ColorMixerBand = .red
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+                if showsScopes {
+                    scopesSection
+                    Divider().overlay(EditorTheme.panelDivider)
+                }
                 inputTransformSection
                 Divider().overlay(EditorTheme.panelDivider)
                 primariesSection
+                Divider().overlay(EditorTheme.panelDivider)
+                curvesSection
+                Divider().overlay(EditorTheme.panelDivider)
+                mixerSection
+                Divider().overlay(EditorTheme.panelDivider)
+                lutSection
                 Divider().overlay(EditorTheme.panelDivider)
                 windowsSection
             }
             .padding(.horizontal, AppTheme.Spacing.lg)
             .padding(.bottom, AppTheme.Spacing.lg)
+        }
+        // Named so the UI driver has one big element to swipe: the section
+        // headers are the only other labelled things in here, and swiping a
+        // 14pt label scrolls by 14pt.
+        .accessibilityIdentifier("colorPanel")
+        .task(id: model.clipIndexUnderPlayhead) {
+            guard showsScopes else { return }
+            scopes.refresh(for: model, photoLibrary: photoLibrary)
+        }
+        // The grade itself is the other thing that makes the picture stale,
+        // and it changes on every drag of a wheel. The model compares the
+        // whole colour chain and only recounts when something in it moved,
+        // so this can fire as often as SwiftUI likes.
+        .onChange(of: model.recipe) {
+            guard showsScopes else { return }
+            scopes.refresh(for: model, photoLibrary: photoLibrary)
+        }
+        .onDisappear { scopes.cancel() }
+        .fileImporter(
+            isPresented: $isLUTImporterPresented,
+            allowedContentTypes: [Self.cubeType]
+        ) { result in
+            guard case .success(let url) = result else { return }
+            do {
+                let imported = try luts.add(from: url)
+                model.setLUT(VideoLUTReference(id: imported.id, name: imported.displayName))
+            } catch {
+                model.errorMessage = String(
+                    localized: "Couldn't read that LUT. ShotDex reads .cube files.",
+                    comment: "Video Studio colour: the imported LUT did not parse"
+                )
+            }
+        }
+    }
+
+    /// `.cube` has no registered system type, so it is matched by extension
+    /// and falls back to plain data rather than to "any file" — which would
+    /// let the user pick a JPEG and be told nothing.
+    private static let cubeType = UTType(filenameExtension: "cube") ?? .data
+
+    // MARK: Imported LUT
+
+    /// A creative LUT from a look pack, at a strength.
+    ///
+    /// Resolve makes this a node in the tree; here it is the last stage of
+    /// the chain, which is the same place — a look pack is authored to be
+    /// the final word over a corrected picture. Bringing one in is a Files
+    /// import for the same reason the music is: the user owns the pack.
+    private var lutSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("LUT", comment: "Video Studio colour: an imported .cube lookup table")
+                    .font(EditorTheme.groupLabel)
+                    .foregroundStyle(EditorTheme.secondaryText)
+                Spacer(minLength: 0)
+                if model.recipe.lut != nil {
+                    Button { model.setLUT(nil) } label: {
+                        Text("None", comment: "Video Studio colour: grades without a LUT")
+                            .font(EditorTheme.pillLabel)
+                            .foregroundStyle(EditorTheme.accent)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            if luts.luts.isEmpty {
+                Text(
+                    "No LUTs yet. Import a .cube file from a look pack you own.",
+                    comment: "Video Studio colour: the LUT list is empty"
+                )
+                .font(.system(size: 10.5))
+                .foregroundStyle(EditorTheme.dimText)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(luts.luts) { lut in
+                            lutChip(lut)
+                        }
+                    }
+                }
+            }
+
+            Button { isLUTImporterPresented = true } label: {
+                Label {
+                    Text("Import LUT…", comment: "Video Studio colour: brings a .cube in from Files")
+                } icon: {
+                    Image(systemName: "square.and.arrow.down")
+                }
+                .font(EditorTheme.rowLabel)
+                .foregroundStyle(EditorTheme.accent)
+            }
+            .buttonStyle(.plain)
+
+            if let reference = model.recipe.lut {
+                InspectorSlider(
+                    label: String(localized: "Strength", comment: "Video Studio colour: how much of the LUT to mix in"),
+                    value: reference.intensity,
+                    range: 0...1,
+                    valueText: "\(Int((reference.intensity * 100).rounded()))%",
+                    model: model,
+                    set: { model.setLUTIntensity($0) },
+                    reset: { model.pushUndo(); model.setLUTIntensity(1) }
+                )
+            }
+        }
+    }
+
+    private func lutChip(_ lut: ImportedLUT) -> some View {
+        let isSelected = model.recipe.lut?.id == lut.id
+        return Button {
+            model.setLUT(
+                isSelected ? nil : VideoLUTReference(id: lut.id, name: lut.displayName)
+            )
+        } label: {
+            Text(lut.displayName)
+                .lineLimit(1)
+        }
+        .buttonStyle(EditorChipButtonStyle(isSelected: isSelected))
+        .contextMenu {
+            Button(role: .destructive) {
+                if isSelected { model.setLUT(nil) }
+                luts.delete(lut)
+            } label: {
+                Label {
+                    Text("Delete LUT", comment: "Video Studio colour: removes an imported .cube")
+                } icon: {
+                    Image(systemName: "trash")
+                }
+            }
+        }
+    }
+
+    // MARK: Scopes
+
+    /// The four readings, one at a time.
+    ///
+    /// Resolve floats these over the viewer and lets a colourist show all
+    /// four at once. On a 300pt column that would be four postage stamps, so
+    /// this shows the one being looked at, full width — the reading stays
+    /// legible, and switching is one tap.
+    private var scopesSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Scopes", comment: "Video Studio colour: the measurement displays")
+                .font(EditorTheme.groupLabel)
+                .foregroundStyle(EditorTheme.secondaryText)
+
+            Picker("", selection: $scopes.kind) {
+                ForEach(VideoScopeKind.allCases) { kind in
+                    Text(kind.pickerName).tag(kind)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+
+            ZStack {
+                RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous)
+                    .fill(Color.black)
+                if let picture = scopes.image {
+                    scopePicture(picture)
+                } else {
+                    Text("Move the playhead over a clip", comment: "Video Studio scopes: nothing to measure yet")
+                        .font(EditorTheme.maskSubtitle)
+                        .foregroundStyle(EditorTheme.secondaryText)
+                }
+            }
+            .frame(height: VideoStudioMetrics.scopeHeight)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
+
+            Text(scopeCaption)
+                .font(EditorTheme.maskSubtitle)
+                .foregroundStyle(EditorTheme.secondaryText)
+        }
+    }
+
+    /// `.none` interpolation on purpose: a waveform cell is one measurement,
+    /// and smoothing it invents trace where none was counted.
+    @ViewBuilder
+    private func scopePicture(_ picture: CGImage) -> some View {
+        let image = Image(decorative: picture, scale: 1)
+            .resizable()
+            .interpolation(.none)
+        if scopes.kind == .vectorscope {
+            image.aspectRatio(1, contentMode: .fit)
+        } else {
+            image
+        }
+    }
+
+    private var scopeCaption: String {
+        switch scopes.kind {
+        case .waveform:
+            String(localized: "Brightness against position across frame.", comment: "Video Studio scopes: waveform")
+        case .parade:
+            String(localized: "Red, green and blue side by side — uneven feet mean a cast.", comment: "Video Studio scopes: parade")
+        case .vectorscope:
+            String(localized: "Vectorscope: hue and saturation. The diagonal line is where skin sits.", comment: "Video Studio scopes: vectorscope")
+        case .histogram:
+            String(localized: "How many pixels at each tone.", comment: "Video Studio scopes: histogram")
         }
     }
 
@@ -137,6 +356,110 @@ struct VideoColorPanel: View {
 
     private var wheel: ColorGradingAdjustments.Wheel {
         model.recipe.color.grading[region]
+    }
+
+    // MARK: Curves
+
+    private var curvesSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Curves", comment: "Video Studio colour: the point tone curve")
+                    .font(EditorTheme.groupLabel)
+                    .foregroundStyle(EditorTheme.secondaryText)
+                Spacer(minLength: 0)
+                Button { model.resetCurve(curveChannel) } label: {
+                    Text("Reset", comment: "Video Studio colour: straightens the shown channel's curve")
+                        .font(EditorTheme.pillLabel)
+                        .foregroundStyle(EditorTheme.accent)
+                }
+                .buttonStyle(.plain)
+                .disabled(model.recipe.curve[curveChannel] == ToneCurveAdjustments.linear)
+            }
+
+            Picker("Channel", selection: $curveChannel) {
+                ForEach(ToneCurveChannel.allCases) { channel in
+                    Text(channel.displayName).tag(channel)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            VideoCurvePlot(model: model, channel: curveChannel)
+
+            Text(
+                "Tap to add a point, drag it off the plot to remove it.",
+                comment: "Video Studio colour: how the curve plot is edited"
+            )
+            .font(.system(size: 10.5))
+            .foregroundStyle(EditorTheme.dimText)
+        }
+    }
+
+    // MARK: Colour mixer
+
+    /// Per-band hue, saturation and luminance — the HSL wheel a colourist
+    /// reaches for when one colour in the frame is the problem and the rest
+    /// of the picture is fine.
+    private var mixerSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Color Mixer", comment: "Video Studio colour: per-band HSL")
+                    .font(EditorTheme.groupLabel)
+                    .foregroundStyle(EditorTheme.secondaryText)
+                Spacer(minLength: 0)
+                Button { model.resetMixerBand(band) } label: {
+                    Text("Reset", comment: "Video Studio colour: clears the shown band")
+                        .font(EditorTheme.pillLabel)
+                        .foregroundStyle(EditorTheme.accent)
+                }
+                .buttonStyle(.plain)
+                .disabled(model.recipe.color.mixer[band].isIdentity)
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(ColorMixerBand.allCases) { candidate in
+                        bandChip(candidate)
+                    }
+                }
+            }
+
+            ForEach(ColorMixerProperty.allCases) { property in
+                InspectorSlider(
+                    label: property.displayName,
+                    value: model.recipe.color.mixer[band][property],
+                    range: -1...1,
+                    valueText: String(format: "%+.0f", model.recipe.color.mixer[band][property] * 100),
+                    model: model,
+                    set: { model.setMixer(band, property, $0) },
+                    reset: { model.pushUndo(); model.setMixer(band, property, 0) }
+                )
+            }
+        }
+    }
+
+    private func bandChip(_ candidate: ColorMixerBand) -> some View {
+        let isOn = candidate == band
+        let touched = !model.recipe.color.mixer[candidate].isIdentity
+        return Button { band = candidate } label: {
+            Text(candidate.displayName)
+                .font(.system(size: 10.5, weight: .medium))
+                .foregroundStyle(isOn ? Color.black : Color.white)
+                .padding(.horizontal, 9)
+                .frame(height: 26)
+                .background(Capsule().fill(isOn ? EditorTheme.accent : EditorTheme.trackChip))
+                .overlay(alignment: .topTrailing) {
+                    // A dot on a band that has been dialled: without it the
+                    // only way to find your own edits is to tap all eight.
+                    if touched, !isOn {
+                        Circle()
+                            .fill(EditorTheme.accent)
+                            .frame(width: 5, height: 5)
+                            .offset(x: -3, y: 3)
+                    }
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 
     // MARK: Windows and qualifiers
