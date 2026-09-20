@@ -133,8 +133,8 @@ struct VideoStudioTopBand: View {
                     .onEnded { _ in model.setShowsOriginal(false) }
             )
             .allowsHitTesting(isEnabled)
-            .accessibilityLabel("Show original")
-            .accessibilityHint("Press and hold to see the clips without edits")
+            .accessibilityLabel(Text("Show original", comment: "Video Studio: press-and-hold control that previews the clips without edits"))
+            .accessibilityHint(Text("Press and hold to see the clips without edits", comment: "Hint for the Video Studio before/after control"))
             .accessibilityAddTraits(model.showsOriginal ? .isSelected : [])
     }
 

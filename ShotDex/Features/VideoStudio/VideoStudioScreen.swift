@@ -505,8 +505,8 @@ struct VideoStudioScreen: View {
                         timelineDragOffset = 0
                     }
             )
-            .accessibilityLabel("Timeline height")
-            .accessibilityHint("Drag up for a taller timeline, down for a bigger preview")
+            .accessibilityLabel(Text("Timeline height", comment: "Video Studio: the divider dragged to trade preview height for timeline height"))
+            .accessibilityHint(Text("Drag up for a taller timeline, down for a bigger preview", comment: "Hint for the Video Studio timeline divider"))
             .accessibilityAdjustableAction { direction in
                 let range = VideoStudioMetrics.timelineExtraRange
                 let step: CGFloat = 40

@@ -435,7 +435,7 @@ struct CompareScreen: View {
                     .contentShape(Circle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Close")
+            .accessibilityLabel(Text("Close", comment: "VoiceOver label for the Compare screen's dismiss button"))
 
             Spacer(minLength: AppTheme.Spacing.sm)
 
@@ -617,7 +617,14 @@ private struct CompareCard: View {
         .contextMenu {
             if canMarkOthers {
                 Button(role: .destructive, action: onMarkAllOthers) {
-                    Label("Keep Only This", systemImage: "checkmark.circle")
+                    Label {
+                        Text(
+                            "Keep Only This",
+                            comment: "Compare context menu: marks every other photo for deletion"
+                        )
+                    } icon: {
+                        Image(systemName: "checkmark.circle")
+                    }
                 }
             }
         }
@@ -632,11 +639,22 @@ private struct CompareCard: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityAddTraits(isMarked ? [.isButton, .isSelected] : .isButton)
+        // `Text(_:comment:)` rather than a bare literal: "Unmark" with no
+        // context translates as undoing a favourite just as easily as
+        // undoing a deletion mark, and the translator sees only the word.
         .accessibilityAction(
-            named: isMarked ? "Unmark" : "Mark for deletion",
+            named: isMarked
+                ? Text("Unmark", comment: "VoiceOver action on a Compare card: take back its deletion mark")
+                : Text("Mark for deletion", comment: "VoiceOver action on a Compare card: mark it to be deleted"),
             onToggleMark
         )
-        .accessibilityAction(named: "Keep only this", onMarkAllOthers)
+        .accessibilityAction(
+            named: Text(
+                "Keep only this",
+                comment: "VoiceOver action on a Compare card: mark every other photo for deletion"
+            ),
+            onMarkAllOthers
+        )
     }
 
     @ViewBuilder
