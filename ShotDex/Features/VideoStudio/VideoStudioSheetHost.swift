@@ -539,6 +539,8 @@ struct VideoStudioSheetHost: View {
                 RatioStrip(model: model).frame(height: 34)
                 Spacer(minLength: 0)
             }
+        case .color:
+            VideoColorPanel(model: model)
         case .masterVolume:
             VStack(spacing: 0) {
                 InspectorSlider(

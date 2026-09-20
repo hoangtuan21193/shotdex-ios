@@ -74,6 +74,7 @@ struct SettingsScreen: View {
         List {
             photoLibrarySection
             notificationsSection
+            widgetsSection
             displaySection
             playbackSection
             subjectScanSection
@@ -394,6 +395,25 @@ struct SettingsScreen: View {
             if !granted { isOnThisDayReminderEnabled = false }
         } else {
             await service.disable()
+        }
+    }
+
+    // MARK: Widgets
+
+    private var widgetsSection: some View {
+        Section {
+            NavigationLink {
+                ClockWidgetSettingsScreen()
+            } label: {
+                LabeledContent(
+                    "Clock Widget",
+                    value: dependencies.clockWidgetSettings.settings.sourceSummary
+                )
+            }
+        } header: {
+            Text("Widgets")
+        } footer: {
+            Text("Add widgets by touching and holding the Home Screen. ShotDex has three: Your Gear, On This Day, and a Clock over a photo you choose — the Clock is the one with settings.")
         }
     }
 

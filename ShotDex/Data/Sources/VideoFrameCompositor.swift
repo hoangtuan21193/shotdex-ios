@@ -8,9 +8,12 @@ import ShotDexKit
 /// A value snapshot: editing the recipe mid-preview swaps the whole
 /// `AVVideoComposition`, never mutates a live instruction.
 struct VideoRenderRecipe: Sendable {
+    let inputTransform: VideoInputTransform
     let filter: PhotoFilter
     let filterIntensity: Double
     let adjustments: PhotoAdjustments
+    let color: PhotoColorRecipe
+    let curve: ToneCurveAdjustments
     let overlays: [TimedOverlay]
     let renderSize: CGSize
     let totalDuration: Double
@@ -27,9 +30,12 @@ struct VideoRenderRecipe: Sendable {
         totalDuration: Double,
         bakesOverlays: Bool
     ) {
+        self.inputTransform = recipe.inputTransform
         self.filter = recipe.filter
         self.filterIntensity = recipe.filterIntensity
         self.adjustments = recipe.adjustments
+        self.color = recipe.color
+        self.curve = recipe.curve
         self.overlays = recipe.overlays
         self.renderSize = renderSize
         self.totalDuration = totalDuration
@@ -42,7 +48,41 @@ struct VideoRenderRecipe: Sendable {
     }
 
     var hasWork: Bool {
-        filter != .original || !adjustments.isIdentity || !overlays.isEmpty
+        filter != .original
+            || !adjustments.isIdentity
+            || !overlays.isEmpty
+            || !inputTransform.isIdentity
+            || !color.isIdentity
+            || curve != .identity
+    }
+
+    /// The input transform as one `CIColorCurves` pass.
+    ///
+    /// A transfer function is per-channel by definition, so the same table
+    /// goes to R, G and B. It runs in sRGB rather than the context's linear
+    /// working space for the same reason the film cubes do: the curve is
+    /// defined against the recorded code value, not against light.
+    static func applyInputTransform(
+        _ transform: VideoInputTransform,
+        to input: CIImage
+    ) -> CIImage {
+        guard !transform.isIdentity else { return input }
+        guard let space = CGColorSpace(name: CGColorSpace.sRGB),
+              let filter = CIFilter(name: "CIColorCurves")
+        else { return input }
+        let samples = transform.curveSamples()
+        // `CIColorCurves` wants three floats per sample, R G B — the same
+        // shape the kit's tone-curve pass builds.
+        var series = [Float]()
+        series.reserveCapacity(samples.count * 3)
+        for value in samples { series.append(contentsOf: [value, value, value]) }
+        let data = series.withUnsafeBufferPointer { Data(buffer: $0) }
+        let clamped = input.applyingFilter("CIColorClamp")
+        filter.setValue(clamped, forKey: kCIInputImageKey)
+        filter.setValue(data, forKey: "inputCurvesData")
+        filter.setValue(CIVector(x: 0, y: 1), forKey: "inputCurvesDomain")
+        filter.setValue(space, forKey: "inputColorSpace")
+        return (filter.outputImage ?? input).cropped(to: input.extent)
     }
 
     /// The overlays visible at `time`, in recipe (z) order — with their timing, so
@@ -279,11 +319,17 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
 
         let recipe = instruction.recipe
         if recipe.hasWork {
+            // Order matters and this is the order: undo the camera's
+            // encoding first, because every stage after it is dialled
+            // against a picture that is supposed to have contrast in it.
+            image = VideoRenderRecipe.applyInputTransform(recipe.inputTransform, to: image)
             image = PhotoRenderService.applyAdjustments(
                 recipe.adjustments,
                 to: image,
                 appliesExposure: true
             )
+            image = PhotoRenderService.applyColor(recipe.color, to: image)
+            image = PhotoRenderService.applyCurve(recipe.curve, to: image)
             image = PhotoRenderService.applyFilter(
                 recipe.filter,
                 intensity: recipe.filterIntensity,

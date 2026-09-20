@@ -23,6 +23,8 @@ final class IntentRouter {
         /// A photo handed over from another device, already translated into
         /// this device's own identifier.
         case photo(assetId: String)
+        /// The On This Day screen for one day, from a tapped widget.
+        case onThisDay(date: Date)
     }
 
     static let shared = IntentRouter()

@@ -17,7 +17,7 @@ struct GearSnapshotWriter {
     private static let coverPixels: CGFloat = 400
 
     func write() async {
-        guard let container = GearSnapshot.containerURL else { return }
+        guard let container = WidgetSharedContainer.url else { return }
 
         // The same queries the Statistics tab runs, so the widget can never
         // disagree with the screen it summarises.
@@ -43,7 +43,7 @@ struct GearSnapshotWriter {
             )
         }
         await writeCover(to: container)
-        WidgetCenter.shared.reloadAllTimelines()
+        WidgetCenter.shared.reloadTimelines(ofKind: GearSnapshot.widgetKind)
     }
 
     /// Newest photo, small, as the medium widget's cover.

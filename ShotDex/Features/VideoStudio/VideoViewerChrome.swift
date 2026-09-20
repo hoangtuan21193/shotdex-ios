@@ -132,6 +132,11 @@ struct VideoTransportBar: View {
     /// One frame at the rate the timecode is counted in.
     private var frame: Double { 1.0 / VideoStudioMetrics.timecodeFrameRate }
 
+    /// The marker the playhead is sitting on, if any — the button changes
+    /// from "add one" to "recolour this one" rather than stacking a second
+    /// dot on the same pixel.
+    private var markerHere: TimedMarker? { model.marker(near: model.currentTime) }
+
     var body: some View {
         HStack(spacing: 2) {
             glyph("scissors", label: Text("Split at Playhead", comment: "Video Studio transport: cuts the clip under the playhead in two")) {
@@ -198,6 +203,30 @@ struct VideoTransportBar: View {
                 isOn: model.loopsPlayback
             ) {
                 model.loopsPlayback.toggle()
+            }
+
+            Spacer(minLength: 0)
+
+            // Markers, the way Resolve's Cut page has them: drop one where
+            // you are, then step between them.
+            glyph("chevron.left.2", label: Text("Previous Marker", comment: "Video Studio transport")) {
+                model.seekToMarker(after: false)
+            }
+            glyph(
+                markerHere == nil ? "mappin" : "mappin.circle.fill",
+                label: markerHere == nil
+                    ? Text("Add Marker", comment: "Video Studio transport: pins a note at the playhead")
+                    : Text("Change Marker Colour", comment: "Video Studio transport: cycles the colour of the marker at the playhead"),
+                isOn: markerHere != nil
+            ) {
+                if let marker = markerHere {
+                    model.cycleMarkerColor(marker.id)
+                } else {
+                    model.addMarker()
+                }
+            }
+            glyph("chevron.right.2", label: Text("Next Marker", comment: "Video Studio transport")) {
+                model.seekToMarker(after: true)
             }
 
             Spacer(minLength: 0)
@@ -297,6 +326,21 @@ struct VideoTimelineOverview: View {
                         .offset(x: min(max(0, centre - windowWidth / 2), width - windowWidth))
                 }
 
+                // Markers ride the ruler, not the clips: trimming a shot
+                // must not drag every note along with it.
+                ForEach(model.recipe.markers) { marker in
+                    Circle()
+                        .fill(VideoMarkerPalette.color(marker.clampedColorIndex))
+                        .frame(width: 7, height: 7)
+                        .overlay(Circle().stroke(Color.black.opacity(0.45), lineWidth: 0.5))
+                        .offset(
+                            x: CGFloat(marker.time / total) * width - 3.5,
+                            y: -VideoStudioMetrics.timelineOverviewHeight / 2 + 3.5
+                        )
+                        .onTapGesture { model.seek(to: marker.time) }
+                        .accessibilityLabel(Text("Marker at \(VideoStudioMetrics.timecode(marker.time))", comment: "Video Studio: a note pinned to a point on the timeline"))
+                }
+
                 Rectangle()
                     .fill(EditorTheme.clipping)
                     .frame(width: 1.5)
@@ -352,5 +396,20 @@ struct VideoTimelineOverview: View {
     private func seconds(at x: CGFloat, width: CGFloat, total: Double) -> Double {
         guard width > 0 else { return 0 }
         return min(total, max(0, Double(x / width) * total))
+    }
+}
+
+/// The fixed marker colours. A marker colour is a category, and a colour
+/// picker would turn a category into a decision; Resolve offers a set, so
+/// does this.
+enum VideoMarkerPalette {
+    static func color(_ index: Int) -> Color {
+        switch TimedMarker.palette[min(max(0, index), TimedMarker.palette.count - 1)] {
+        case "green": EditorTheme.histogramGreen
+        case "yellow": .yellow
+        case "red": EditorTheme.clipping
+        case "purple": .purple
+        default: EditorTheme.histogramBlue
+        }
     }
 }

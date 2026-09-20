@@ -91,7 +91,9 @@ struct EditorFontPickerSheet: View {
     }
 }
 
-private struct FontPickerRepresentable: UIViewControllerRepresentable {
+/// The system font picker, wrapped. Shared with the Clock widget's settings
+/// (`ClockWidgetFontPicker`) so the app has one font list, not two.
+struct FontPickerRepresentable: UIViewControllerRepresentable {
     let onPick: (OverlayFontChoice) -> Void
 
     func makeCoordinator() -> Coordinator {

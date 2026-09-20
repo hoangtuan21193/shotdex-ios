@@ -182,6 +182,31 @@ struct VideoBoundaryTransition: Equatable, Codable, Sendable {
     static let durationRange: ClosedRange<Double> = 0.2...2
 }
 
+/// A note pinned to a point on the timeline.
+///
+/// Resolve's Cut page keeps markers on the ruler, attached to the **timeline
+/// position** rather than to a clip, so trimming one shot does not drag every
+/// note with it. Same here: a marker is a time, not a child of a clip.
+///
+/// Markers never reach the compositor — they are something the editor looks
+/// at, not something the export writes.
+struct TimedMarker: Equatable, Codable, Sendable, Identifiable {
+    var id = UUID()
+    /// Timeline seconds.
+    var time: Double
+    /// Index into `TimedMarker.palette`, so the stored value survives a
+    /// palette change and a colour never has to be encoded as a hex string.
+    var colorIndex: Int = 0
+    var note: String = ""
+
+    /// Resolve offers a fixed set of marker colours; so does this, for the
+    /// same reason — a marker colour is a category, and a colour picker turns
+    /// a category into a decision.
+    static let palette: [String] = ["blue", "green", "yellow", "red", "purple"]
+
+    var clampedColorIndex: Int { min(max(0, colorIndex), Self.palette.count - 1) }
+}
+
 /// A text overlay with the window it is visible in. `duration` nil means
 /// "until the end of the video" and stays nil until the user resizes it.
 struct TimedOverlay: Equatable, Codable, Sendable, Identifiable {
@@ -318,9 +343,21 @@ struct VideoProjectRecipe: Equatable, Codable, Sendable {
     /// Global volume for the clips' own audio (music has its own).
     var videoVolume: Double = 1
     /// One look for the whole video (deliberately not per-clip).
+    /// Notes on the ruler. Optional in the decoder so a project saved before
+    /// markers existed still opens.
+    var markers: [TimedMarker] = []
+    /// Undoing the camera's encoding, before anything else touches the
+    /// picture. Optional in the decoder: projects saved before this existed
+    /// decode as `.none`, which is what they were.
+    var inputTransform: VideoInputTransform = .none
     var filter: PhotoFilter = .original
     var filterIntensity: Double = 1
     var adjustments = PhotoAdjustments.zero
+    /// The grading stage the photo editor already had and the studio did
+    /// not: primaries (lift/gamma/gain), the HSL mixer and point colour.
+    var color = PhotoColorRecipe()
+    /// Point tone curve, master plus per channel.
+    var curve = ToneCurveAdjustments()
     var overlays: [TimedOverlay] = []
     /// Single-video mode: user rotation in quarter turns (0–3).
     var quarterTurns = 0

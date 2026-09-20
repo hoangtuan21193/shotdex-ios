@@ -80,6 +80,9 @@ final class AppDependencies {
     /// Photos opened and photos shared, for the Recently Viewed / Recently
     /// Shared collections. PhotoKit records neither.
     let recentActivity: RecentActivityStore
+    /// What the Clock widget shows and how it is styled, edited in Settings
+    /// and stored in the App Group the widget reads.
+    let clockWidgetSettings: ClockWidgetSettingsStore
 
     init(database: AppDatabase, photoLibrary: PhotoLibraryService) {
         let metadataStore = MetadataStore(database: database)
@@ -202,16 +205,25 @@ final class AppDependencies {
             libraryQueries: libraryQueries,
             smartAlbumStore: SmartAlbumStore(database: database)
         )
+        self.clockWidgetSettings = ClockWidgetSettingsStore(photoLibrary: photoLibrary)
     }
 
-    /// Refreshes the digest the Home and Lock Screen widgets read. Called
-    /// after an index run and on launch; a no-op when the App Group is not
-    /// reachable, which is how a build without the capability behaves.
+    /// Refreshes everything the Home and Lock Screen widgets read: the gear
+    /// digest, the next few On This Day days, and the Clock widget's pictures
+    /// when its album has changed under it. Called on launch and on every
+    /// return to the foreground; a no-op when the App Group is not reachable,
+    /// which is how a build without the capability behaves.
+    ///
+    /// Each writer decides for itself whether there is work: the gear digest
+    /// is four queries, On This Day skips unless a day is missing or stale,
+    /// and the Clock only re-renders when asked.
     func refreshWidgetSnapshot() async {
+        guard photoLibrary.authorizationState.canReadLibrary else { return }
         await GearSnapshotWriter(
             statisticsQueries: statisticsQueries,
             photoLibrary: photoLibrary
         ).write()
+        await OnThisDaySnapshotWriter(photoLibrary: photoLibrary).write()
     }
 
     /// Fills in the capture kind (screenshot, Live Photo, portrait, …) for

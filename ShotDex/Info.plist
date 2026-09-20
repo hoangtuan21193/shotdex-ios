@@ -16,6 +16,22 @@
 	     because a local identifier means nothing outside this device. -->
 	<!-- Handoff: the activity the viewer publishes so another device can open
 	     the same photo. Declared here or iOS delivers nothing. -->
+	<!-- The scheme a tapped widget opens the app with (`WidgetDeepLink`).
+	     Private to this device: the URLs carry a day key or a PhotoKit local
+	     identifier, neither of which means anything to another app. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.hoangtuan.shotdex.widget-link</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>shotdex</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>com.hoangtuan.shotdex.view-photo</string>

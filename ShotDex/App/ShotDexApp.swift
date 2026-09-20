@@ -52,6 +52,19 @@ struct ShotDexApp: App {
                         IntentRouter.shared.request(.photo(assetId: local))
                     }
                 }
+                // A widget tap. The URL is built by `WidgetDeepLink` in the
+                // widget process and parsed by the same type here, so the two
+                // cannot drift apart.
+                .onOpenURL { url in
+                    guard let link = WidgetDeepLink(url: url) else { return }
+                    switch link {
+                    case .onThisDay(let dayKey):
+                        guard let date = WidgetSharedContainer.date(fromDayKey: dayKey) else { return }
+                        IntentRouter.shared.request(.onThisDay(date: date))
+                    case .photo(let assetId):
+                        IntentRouter.shared.request(.photo(assetId: assetId))
+                    }
+                }
                 .task {
                     // Cheap: a few SELECT DISTINCTs and one Spotlight write.
                     await dependencies.backfillMediaSubtypes()

@@ -123,6 +123,8 @@ final class AppNavigation {
             selectedTab = .albums
         case .photo(let assetId):
             openPhoto(assetId: assetId)
+        case .onThisDay(let date):
+            openOnThisDay(date: date)
         }
     }
 }

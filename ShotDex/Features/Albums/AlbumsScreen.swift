@@ -705,6 +705,11 @@ struct CollectionListRow: View {
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(Color(.label))
                 .lineLimit(1)
+                // A width chosen from the longest *English* name cannot hold
+                // every translation of it — German's "Bildschirmaufnahmen"
+                // is half again as long. Shrink before truncating: a name
+                // one point smaller still reads, half a name does not.
+                .minimumScaleFactor(0.85)
 
             Spacer(minLength: 0)
         }
@@ -724,14 +729,21 @@ enum CollectionListRowMetrics {
     /// One line of text with room to breathe, and past the 44pt minimum
     /// target on its own.
     static let height: CGFloat = 52
-    /// Card width. 190 is what the two-line token this replaced already
-    /// needed, and it is the number that fits the longest pair the band
-    /// actually carries — measured on the phone, "Duplicates · 1 group" came
-    /// out as "Dupli… 1 group" at 170. Wider on a regular-width window for
-    /// the same reason the cover tiles are bigger there: the band is
-    /// horizontal, so width is what a wide screen has to give.
-    static let compactWidth: CGFloat = 190
-    static let regularWidth: CGFloat = 240
+    /// Card width, set from the longest name the band can actually carry.
+    ///
+    /// The card spends 64pt on chrome — 12pt of padding each side, a 24pt
+    /// glyph, and the `HStack`'s 8pt on both sides of the name — so the name
+    /// gets `width - 64`. Measured at `.subheadline` semibold, the longest
+    /// names this tab draws are "Screen Recordings" at **135pt** and
+    /// "Unable to Upload" at 123; at 190 the name had 126 and the first of
+    /// those lost its last letters. 215 gives it 151 — the measured worst
+    /// case plus room for a longer translation of a shorter word.
+    ///
+    /// Wider again on a regular-width window for the same reason the cover
+    /// tiles are bigger there: the band is horizontal, so width is what a
+    /// wide screen has to give.
+    static let compactWidth: CGFloat = 215
+    static let regularWidth: CGFloat = 270
 
     static func width(isRegularWidth: Bool) -> CGFloat {
         isRegularWidth ? regularWidth : compactWidth

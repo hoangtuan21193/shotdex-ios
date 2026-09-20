@@ -34,7 +34,7 @@ final class VideoStudioModel {
     /// A project-wide tool, opened from the toolbar when nothing is selected.
     /// Each reskins the same bottom sheet.
     enum GlobalTool: Equatable, Identifiable, CaseIterable {
-        case ratio, filters, adjustments, masterVolume, background
+        case ratio, filters, adjustments, color, masterVolume, background
 
         var id: Self { self }
 
@@ -43,6 +43,7 @@ final class VideoStudioModel {
             case .ratio: String(localized: "Ratio")
             case .filters: String(localized: "Filter")
             case .adjustments: String(localized: "Adjust")
+            case .color: String(localized: "Color", comment: "Video Studio: the grading tool — de-log, primaries, curves")
             case .masterVolume: String(localized: "Volume")
             case .background: String(localized: "Background")
             }
@@ -54,6 +55,7 @@ final class VideoStudioModel {
             case .ratio: "Ratio"
             case .filters: "Filter"
             case .adjustments: "Adjust"
+            case .color: "Color"
             case .masterVolume: "Volume"
             case .background: "Background"
             }
@@ -64,6 +66,7 @@ final class VideoStudioModel {
             case .ratio: "aspectratio"
             case .filters: "camera.filters"
             case .adjustments: "slider.horizontal.3"
+            case .color: "circle.lefthalf.filled"
             case .masterVolume: "speaker.wave.2"
             case .background: "square.fill"
             }
@@ -905,6 +908,88 @@ final class VideoStudioModel {
     /// Which end of a clip a command acts on.
     enum ClipEnd { case start, end }
 
+    // MARK: - Markers
+
+    /// A note at the playhead. Tapping the same spot twice does not stack two
+    /// dots on one pixel: a marker within half a second of an existing one is
+    /// treated as meaning that one.
+    @discardableResult
+    func addMarker() -> TimedMarker? {
+        let time = max(0, min(currentTime, totalDuration))
+        if let existing = marker(near: time) { return existing }
+        var marker = TimedMarker(time: time)
+        marker.colorIndex = recipe.markers.count % TimedMarker.palette.count
+        pushUndo()
+        recipe.markers.append(marker)
+        recipe.markers.sort { $0.time < $1.time }
+        markEdited()
+        return marker
+    }
+
+    func marker(near time: Double, tolerance: Double = 0.5) -> TimedMarker? {
+        recipe.markers.min { abs($0.time - time) < abs($1.time - time) }
+            .flatMap { abs($0.time - time) <= tolerance ? $0 : nil }
+    }
+
+    func removeMarker(_ id: UUID) {
+        guard recipe.markers.contains(where: { $0.id == id }) else { return }
+        pushUndo()
+        recipe.markers.removeAll { $0.id == id }
+        markEdited()
+    }
+
+    func setMarkerNote(_ note: String, for id: UUID) {
+        guard let index = recipe.markers.firstIndex(where: { $0.id == id }) else { return }
+        recipe.markers[index].note = note
+        markEdited()
+    }
+
+    func cycleMarkerColor(_ id: UUID) {
+        guard let index = recipe.markers.firstIndex(where: { $0.id == id }) else { return }
+        pushUndo()
+        recipe.markers[index].colorIndex =
+            (recipe.markers[index].clampedColorIndex + 1) % TimedMarker.palette.count
+        markEdited()
+    }
+
+    /// The next marker after (or before) the playhead — what a "jump to
+    /// marker" command needs, and what makes markers worth placing at all.
+    func seekToMarker(after: Bool) {
+        let candidates = after
+            ? recipe.markers.filter { $0.time > currentTime + 0.05 }
+            : recipe.markers.filter { $0.time < currentTime - 0.05 }.reversed().map { $0 }
+        guard let target = candidates.first else { return }
+        seek(to: target.time)
+    }
+
+    // MARK: - Snapping
+
+    /// Whether dragging a music bed or a caption sticks to the edits.
+    ///
+    /// Resolve calls its version the magnetic timeline. The **video** lane
+    /// here cannot hold a gap at all — `clipPlacements` lays clips end to end
+    /// from their durations, so deleting one closes the space by
+    /// construction, and there is nothing to make magnetic. What *can* sit
+    /// anywhere is a music bed's start and a caption's window, and those are
+    /// exactly what a user wants landing on a cut rather than 40ms past it.
+    var snapsToEdits = true
+
+    /// The nearest edit point to `time`, or nil when nothing is close enough.
+    /// Candidates are every clip boundary, every marker, and the playhead.
+    func snappedTime(_ time: Double, within tolerance: Double) -> Double {
+        guard snapsToEdits else { return time }
+        var candidates: [Double] = [0, totalDuration, currentTime]
+        for placement in clipPlacements {
+            candidates.append(placement.start)
+            candidates.append(placement.end)
+        }
+        candidates.append(contentsOf: recipe.markers.map(\.time))
+        guard let nearest = candidates.min(by: { abs($0 - time) < abs($1 - time) }),
+              abs(nearest - time) <= tolerance
+        else { return time }
+        return nearest
+    }
+
     /// Freeze the frame under the playhead: insert a held still right after the
     /// clip it lands in.
     func freezeUnderPlayhead() {
@@ -1132,6 +1217,48 @@ final class VideoStudioModel {
 
     func setFilterIntensity(_ intensity: Double) {
         recipe.filterIntensity = min(max(intensity, 0), 1)
+        markEdited()
+        applyVideoTier()
+    }
+
+    // MARK: - Colour (look tier)
+
+    /// Undoing the camera's encoding. Structural for the look but not for the
+    /// composition, so it rides the same `videoComposition` rebuild tier as
+    /// filters and adjustments — no full rebuild, playback uninterrupted.
+    func setInputTransform(_ transform: VideoInputTransform) {
+        guard recipe.inputTransform != transform else { return }
+        pushUndo()
+        recipe.inputTransform = transform
+        markEdited()
+        applyVideoTier()
+    }
+
+    func setGradingWheel(_ region: ColorGradingRegion, hue: Double, saturation: Double) {
+        recipe.color.grading[region].hue = hue
+        recipe.color.grading[region].saturation = saturation
+        markEdited()
+        applyVideoTier()
+    }
+
+    func setGradingLuminance(_ region: ColorGradingRegion, _ value: Double) {
+        recipe.color.grading[region].luminance = value
+        markEdited()
+        applyVideoTier()
+    }
+
+    func resetGrading(_ region: ColorGradingRegion) {
+        pushUndo()
+        recipe.color.grading[region] = ColorGradingAdjustments.Wheel()
+        markEdited()
+        applyVideoTier()
+    }
+
+    func resetColor() {
+        guard !recipe.color.isIdentity || recipe.curve != .identity else { return }
+        pushUndo()
+        recipe.color = .identity
+        recipe.curve = .identity
         markEdited()
         applyVideoTier()
     }

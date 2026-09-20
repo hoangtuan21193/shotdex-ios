@@ -219,10 +219,11 @@ struct VideoStudioDeskLayoutTests {
     /// Every project-wide tool the rail used to open is still reachable —
     /// they moved into one menu in the top band, so the set must be complete.
     @Test func everyGlobalToolIsInTheProjectMenu() {
-        #expect(VideoStudioModel.GlobalTool.allCases.count == 5)
+        #expect(VideoStudioModel.GlobalTool.allCases.count == 6)
         #expect(VideoStudioModel.GlobalTool.allCases.contains(.ratio))
         #expect(VideoStudioModel.GlobalTool.allCases.contains(.filters))
         #expect(VideoStudioModel.GlobalTool.allCases.contains(.adjustments))
+        #expect(VideoStudioModel.GlobalTool.allCases.contains(.color))
         #expect(VideoStudioModel.GlobalTool.allCases.contains(.masterVolume))
         #expect(VideoStudioModel.GlobalTool.allCases.contains(.background))
     }
@@ -258,6 +259,86 @@ struct VideoStudioDeskLayoutTests {
         #expect(VideoTransitionKind.allCases.contains(.none))
         #expect(VideoTransitionKind.allCases.contains(.crossfade))
         #expect(VideoTransitionKind.allCases.count >= 7)
+    }
+
+    // MARK: Markers
+
+    /// A marker is a time, not a child of a clip — Resolve pins them to the
+    /// ruler for the same reason: trimming a shot must not drag every note
+    /// along with it.
+    @Test func aMarkerKeepsItsColourIndexInRange() {
+        var marker = TimedMarker(time: 3)
+        marker.colorIndex = 99
+        #expect(marker.clampedColorIndex == TimedMarker.palette.count - 1)
+        marker.colorIndex = -4
+        #expect(marker.clampedColorIndex == 0)
+    }
+
+    @Test func theMarkerPaletteIsFixedAndNotEmpty() {
+        #expect(!TimedMarker.palette.isEmpty)
+        #expect(TimedMarker.palette.count == 5)
+    }
+
+    // MARK: Input transform (de-log)
+
+    /// Every profile must be monotonic and land on the ends: a transfer
+    /// function that dips is a curve that inverts tones somewhere in the
+    /// middle, and one that does not reach white clips the highlights.
+    @Test func everyInputTransformIsMonotonicFromBlackToWhite() {
+        for transform in VideoInputTransform.allCases where !transform.isIdentity {
+            let samples = transform.curveSamples()
+            #expect(samples.count == 256)
+            #expect(samples[0] <= 0.05, "\(transform.rawValue) should start near black")
+            #expect(samples[255] >= 0.95, "\(transform.rawValue) should reach white")
+            for index in 1..<samples.count {
+                #expect(
+                    samples[index] >= samples[index - 1] - 0.0001,
+                    "\(transform.rawValue) dips at \(index)"
+                )
+            }
+        }
+    }
+
+    /// The real anchor for a de-log curve is **18% grey**: each maker
+    /// publishes the code value their curve puts mid grey at, and the
+    /// transform has to land it back on 0.18 scene-linear. (An earlier
+    /// version of this test asserted the *mid code value* darkens, which is
+    /// not physics — S-Log3 encodes 18% grey at 420/1023, well below the
+    /// middle, so its mid code is supposed to come out bright.)
+    @Test func eachLogProfileLandsMidGreyWhereItsMakerSaysItIs() {
+        // Sony publishes 18% grey at code 420 of 1023.
+        #expect(abs(VideoInputTransform.sLog3.sceneLinear(420.0 / 1023.0) - 0.18) < 0.001)
+        // Panasonic publishes 18% grey at 0.42 in V-Log.
+        #expect(abs(VideoInputTransform.vLog.sceneLinear(0.42) - 0.18) < 0.01)
+    }
+
+    /// And the point of doing it at all: a log picture is flat, so the
+    /// transform has to *expand* the range — the gap between a shadow and a
+    /// highlight must come out wider than it went in.
+    @Test func aLogTransformExpandsTheRangeItWasGiven() {
+        for transform in [VideoInputTransform.sLog3, .vLog, .genericLog] {
+            let samples = transform.curveSamples()
+            let flatGap = Float(200 - 60) / 255
+            let gradedGap = samples[200] - samples[60]
+            #expect(gradedGap > flatGap, "\(transform.rawValue) did not expand contrast")
+        }
+    }
+
+    @Test func noneIsTheIdentityRamp() {
+        let samples = VideoInputTransform.none.curveSamples()
+        #expect(VideoInputTransform.none.isIdentity)
+        #expect(abs(samples[0]) < 0.0001)
+        #expect(abs(samples[255] - 1) < 0.0001)
+        #expect(abs(samples[128] - Float(128.0 / 255.0)) < 0.0001)
+    }
+
+    /// HLG's inverse OETF is defined piecewise at 0.5; the two halves have to
+    /// meet, or a mid-grey sky gets a visible step in it.
+    @Test func hlgIsContinuousAtItsBreakpoint() {
+        let hlg = VideoInputTransform.hlg
+        let below = hlg.sceneLinear(0.4999)
+        let above = hlg.sceneLinear(0.5001)
+        #expect(abs(above - below) < 0.001)
     }
 
     // MARK: Media pool cells

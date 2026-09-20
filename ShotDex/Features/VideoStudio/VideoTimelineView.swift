@@ -275,30 +275,36 @@ struct VideoTimelineView: View {
 
     private func commit(_ kind: TimelineDragZone.Kind, translationX: CGFloat) {
         let delta = Double(translationX) / Double(pps)
+        // What "close enough to stick" means in seconds depends on the zoom:
+        // 8pt of finger at any scale, so snapping feels the same whether the
+        // timeline shows four seconds or forty.
+        let snap = Double(8 / pps)
         switch kind {
         case .overlayBody(let id):
             guard let timed = model.recipe.overlays.first(where: { $0.id == id }) else { return }
             let base = timed.duration ?? max(0.1, model.totalDuration - timed.start)
             let limit = max(0, model.totalDuration - base)
             model.pushUndo()
-            model.setOverlayTiming(start: min(max(0, timed.start + delta), limit), duration: timed.duration, forOverlay: id)
+            let moved = model.snappedTime(timed.start + delta, within: snap)
+            model.setOverlayTiming(start: min(max(0, moved), limit), duration: timed.duration, forOverlay: id)
         case .overlayLeadingHandle(let id):
             guard let timed = model.recipe.overlays.first(where: { $0.id == id }) else { return }
             let base = timed.duration ?? max(0.1, model.totalDuration - timed.start)
             let end = timed.start + base
-            let newStart = min(max(0, timed.start + delta), end - 0.5)
+            let newStart = min(max(0, model.snappedTime(timed.start + delta, within: snap)), end - 0.5)
             model.pushUndo()
             model.setOverlayTiming(start: newStart, duration: end - newStart, forOverlay: id)
         case .overlayTrailingHandle(let id):
             guard let timed = model.recipe.overlays.first(where: { $0.id == id }) else { return }
             let base = timed.duration ?? max(0.1, model.totalDuration - timed.start)
-            let newDuration = min(max(0.5, base + delta), max(0.5, model.totalDuration - timed.start))
+            let snappedEnd = model.snappedTime(timed.start + base + delta, within: snap)
+            let newDuration = min(max(0.5, snappedEnd - timed.start), max(0.5, model.totalDuration - timed.start))
             model.pushUndo()
             model.setOverlayTiming(start: timed.start, duration: newDuration, forOverlay: id)
         case .musicBody(let id):
             guard let music = model.recipe.musicTracks.first(where: { $0.id == id }) else { return }
             model.pushUndo()
-            model.setMusicStart(music.start + delta, for: id)
+            model.setMusicStart(model.snappedTime(music.start + delta, within: snap), for: id)
         case .musicLeadingHandle(let id):
             // Head trim moves the source window and the placement together, in
             // one undo step, so the untouched tail stays where it plays.
