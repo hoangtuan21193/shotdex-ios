@@ -33,7 +33,7 @@ final class VideoStudioModel {
 
     /// A project-wide tool, opened from the toolbar when nothing is selected.
     /// Each reskins the same bottom sheet.
-    enum GlobalTool: Equatable, Identifiable {
+    enum GlobalTool: Equatable, Identifiable, CaseIterable {
         case ratio, filters, adjustments, masterVolume, background
 
         var id: Self { self }
@@ -881,11 +881,87 @@ final class VideoStudioModel {
         Task { await loadAndMerge([freeze]) }
     }
 
+    /// Where media the user adds lands on the Video track.
+    ///
+    /// Resolve names three (Smart Insert, Append at End, Place on Top); the
+    /// third needs a second video track, and this composition builder runs
+    /// one video lane on alternating A/B tracks so two clips can share a
+    /// transition window (spec §7.9). So there are two here, and they are the
+    /// two that a single track can honestly offer.
+    enum MediaInsertMode: String, CaseIterable, Identifiable, Sendable {
+        /// After everything, the way Add has always worked.
+        case appendAtEnd
+        /// Cut the clip under the playhead and drop the new media into the
+        /// seam — Resolve's Smart Insert, on one track.
+        case insertAtPlayhead
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .appendAtEnd:
+                String(localized: "Append at End", comment: "Video Studio media pool: new media goes after the last clip")
+            case .insertAtPlayhead:
+                String(localized: "Insert at Playhead", comment: "Video Studio media pool: new media is cut into the track where the playhead is")
+            }
+        }
+
+        var systemImage: String {
+            switch self {
+            case .appendAtEnd: "arrow.right.to.line"
+            case .insertAtPlayhead: "arrow.down.to.line"
+            }
+        }
+    }
+
+    /// Session state: how the user is working right now, not part of the
+    /// project.
+    var mediaInsertMode: MediaInsertMode = .appendAtEnd
+
     func appendMedia(_ picks: [VideoMediaPick]) {
         guard !picks.isEmpty else { return }
         let newClips = picks.map { VideoClip(assetID: $0.assetID, kind: $0.kind) }
         pushUndo()
         recipe.clips.append(contentsOf: newClips)
+        recipe.syncTransitionsWithClips()
+        markEdited()
+        Task { await loadAndMerge(newClips) }
+    }
+
+    /// Adds media the way `mediaInsertMode` says to.
+    ///
+    /// Insert-at-playhead splits the clip the playhead is inside first, so the
+    /// new media lands on a real boundary rather than on top of a frame the
+    /// user was looking at; landing exactly on a boundary (or past the end)
+    /// needs no split and just inserts at that index.
+    func insertMedia(_ picks: [VideoMediaPick]) {
+        guard !picks.isEmpty else { return }
+        guard mediaInsertMode == .insertAtPlayhead, !recipe.clips.isEmpty else {
+            appendMedia(picks)
+            return
+        }
+        let placements = clipPlacements
+        let newClips = picks.map { VideoClip(assetID: $0.assetID, kind: $0.kind) }
+        pushUndo()
+
+        var insertAt = recipe.clips.count
+        if let index = VideoTimelineMath.clipIndex(at: currentTime, placements: placements),
+           index < placements.count {
+            let localTime = currentTime - placements[index].start
+            if let (first, second) = VideoSplitMath.split(recipe.clips[index], atLocalTime: localTime) {
+                if let source = sources[recipe.clips[index].id] {
+                    sources[first.id] = source
+                    sources[second.id] = source
+                }
+                recipe.clips.replaceSubrange(index...index, with: [first, second])
+                insertAt = index + 1
+            } else {
+                // The playhead sits on this clip's own edge: nothing to cut,
+                // and the seam is already where the user is pointing.
+                insertAt = localTime <= 0 ? index : index + 1
+            }
+        }
+        recipe.clips.insert(contentsOf: newClips, at: min(insertAt, recipe.clips.count))
         recipe.syncTransitionsWithClips()
         markEdited()
         Task { await loadAndMerge(newClips) }

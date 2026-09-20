@@ -194,6 +194,39 @@ struct VideoStudioDeskLayoutTests {
         #expect(abs(level(9) - 0.5) < 0.0001)
     }
 
+    // MARK: No tool rail on a desk window
+
+    /// Resolve for iPad has no vertical tool rail: what you insert comes off
+    /// the library column, what you change lives in the inspector. ShotDex
+    /// matches, so the rail's own width must stop being charged to the stage
+    /// on every window that has a pool to carry the inserts.
+    @Test func theStageKeepsTheRailsWidthOnEveryDeskWindow() {
+        for size in [duoInner, splitHalf, iPadPortrait, iPadLandscape] {
+            let columns = (VideoStudioMetrics.mediaPoolOpensByDefault(size: size)
+                           ? VideoStudioMetrics.mediaPoolWidth(size: size) : 0)
+                + VideoStudioMetrics.audioMeterWidth(size: size)
+            // The rail is no longer one of the columns that can be charged.
+            #expect(size.width - columns >= VideoStudioMetrics.mediaPoolMinimumStageWidth)
+        }
+    }
+
+    /// The compact path is untouched: a phone has no pool to move the insert
+    /// commands onto, so it keeps all nine in its horizontal row.
+    @Test func aPhoneKeepsAllNineCommands() {
+        #expect(VideoStudioToolbar.commandKinds(poolCarriesInserts: false).count == 9)
+    }
+
+    /// Every project-wide tool the rail used to open is still reachable —
+    /// they moved into one menu in the top band, so the set must be complete.
+    @Test func everyGlobalToolIsInTheProjectMenu() {
+        #expect(VideoStudioModel.GlobalTool.allCases.count == 5)
+        #expect(VideoStudioModel.GlobalTool.allCases.contains(.ratio))
+        #expect(VideoStudioModel.GlobalTool.allCases.contains(.filters))
+        #expect(VideoStudioModel.GlobalTool.allCases.contains(.adjustments))
+        #expect(VideoStudioModel.GlobalTool.allCases.contains(.masterVolume))
+        #expect(VideoStudioModel.GlobalTool.allCases.contains(.background))
+    }
+
     // MARK: Media pool cells
 
     @Test func theMediaPoolFitsThreeColumnsWideAndTwoNarrow() {

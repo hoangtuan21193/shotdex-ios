@@ -61,6 +61,9 @@ struct VideoStudioScreen: View {
     /// viewer header — the same place Resolve and Final Cut put them.
     @State private var isMediaPoolOpen: Bool?
     @State private var isInspectorOpen = true
+    /// The quick-adjust strip under the frame. Off until asked for: on a
+    /// short window it is 44pt taken straight off the frame.
+    @State private var isToolStripOpen = false
     /// Seconds the timeline viewport is showing, reported up by the timeline
     /// so the project-overview strip can draw the window it stands for.
     @State private var timelineVisibleDuration: Double = 0
@@ -197,10 +200,17 @@ struct VideoStudioScreen: View {
 
     /// Adds a caption and drops straight into the keyboard — an overlay reading
     /// "Text" is never the goal.
-    private func addTextOverlay(_ model: VideoStudioModel) {
+    private func addTextOverlay(_ model: VideoStudioModel, font: OverlayFontChoice? = nil) {
         let overlay = model.addTextOverlay("", at: model.currentTime)
+        if let font {
+            model.selectOverlay(overlay.id)
+            model.updateSelectedOverlay { layer in
+                layer.fontPostScriptName = font.postScriptName
+                layer.fontFamilyName = font.familyName
+            }
+        }
         newOverlayID = overlay.id
-        editingOverlay = overlay
+        editingOverlay = model.selectedOverlay ?? overlay
     }
 
     /// Commits (or abandons) the inline editor. A caption that never got any
@@ -287,7 +297,6 @@ struct VideoStudioScreen: View {
                     // across the window, so the aspect-fit height has to be
                     // computed from the width it actually gets.
                     width: proxy.size.width
-                        - (usesToolRail ? VideoStudioMetrics.railWidth : 0)
                         - (usesInspectorColumn ? VideoStudioMetrics.inspectorColumnWidth : 0)
                         - mediaPoolWidth
                         - meterWidth,
@@ -308,16 +317,19 @@ struct VideoStudioScreen: View {
                     overlayLanes: max(1, model.overlayLaneCount),
                     musicLanes: max(1, model.musicLaneCount)
                 ),
-                usesToolRail: usesToolRail,
+                // The row is drawn only on compact width now; on a desk
+                // window the rail is gone and there is no row either.
+                usesToolRail: usesDeskChrome,
                 // The column never covers anything, so there is nothing for
                 // the stack to dock or lift out of the way of.
-                panelMayDock: usesToolRail && !usesInspectorColumn,
+                panelMayDock: usesDeskChrome && !usesInspectorColumn,
                 // Back, the read-out and Export move into the top band there,
                 // so the bottom band is not drawn and costs no height.
-                showsBottomBar: !usesToolRail,
+                showsBottomBar: !usesDeskChrome,
                 // Only where the divider exists to drag.
                 timelineExtraHeight: resizableTimeline ? CGFloat(timelineExtraHeight) + timelineDragOffset : 0,
                 deskChromeHeight: deskChromeHeight
+                    + (usesDeskChrome && isToolStripOpen ? VideoStudioMetrics.viewerToolStripHeight : 0)
             )
             // `usesRail` is measured on the window, not on the size class. An
             // iPad Split View half reports `.regular` at ~500pt, where a
@@ -330,17 +342,15 @@ struct VideoStudioScreen: View {
                     // row across the bottom spends 62pt of height — the thing
                     // a timeline editor is short of — to show nine cells in a
                     // bar that is 1032pt wide.
-                    if usesRail {
-                        VideoStudioToolRail(
-                            model: model,
-                            actions: actions(model),
-                            topInset: bandHeight,
-                            bottomInset: proxy.safeAreaInsets.bottom,
-                            availableHeight: proxy.size.height
-                                + proxy.safeAreaInsets.top
-                                + proxy.safeAreaInsets.bottom
-                        )
-                    }
+                    // No tool rail on a desk window. Resolve for iPad has no
+                    // vertical rail at all: what you *insert* comes off the
+                    // library column (its Media / Titles / Effects tabs),
+                    // and what you *change* lives in the inspector, reached
+                    // from the chrome. ShotDex now matches — the pool grew
+                    // those tabs and the top band grew the project-tools
+                    // menu, so the column that used to hold both kinds of
+                    // thing has nothing left to hold. The phone keeps its
+                    // horizontal toolbar: it has no pool to move them onto.
                     // The library, open beside the project the way it is in
                     // every desk-shaped editor: a clip is one tap or one drag
                     // from the timeline instead of a modal picker away.
@@ -349,9 +359,18 @@ struct VideoStudioScreen: View {
                             model: model,
                             photoLibrary: dependencies.photoLibrary,
                             width: mediaPoolWidth,
+                            importedMusic: importedMusic,
                             topInset: bandHeight,
                             bottomInset: proxy.safeAreaInsets.bottom,
-                            onClose: { isMediaPoolOpen = false }
+                            onClose: { isMediaPoolOpen = false },
+                            onBrowseAll: { mediaPickerMode = .add },
+                            onChooseSticker: { isStickerPickerPresented = true },
+                            onImportMusic: { isMusicImporterPresented = true },
+                            onAddSticker: { addSticker($0, to: model) },
+                            onAddText: { font in
+                                if let font { model.rememberFont(font) }
+                                addTextOverlay(model, font: font)
+                            }
                         )
                     }
                     VStack(spacing: 0) {
@@ -359,7 +378,6 @@ struct VideoStudioScreen: View {
                             model: model,
                             projectActions: usesRail ? actions(model) : nil,
                             stageWidth: proxy.size.width
-                                - (usesToolRail ? VideoStudioMetrics.railWidth : 0)
                                 - (usesInspectorColumn ? VideoStudioMetrics.inspectorColumnWidth : 0)
                                 - mediaPoolWidth
                                 // The meter sits inside this column, beside
@@ -372,7 +390,8 @@ struct VideoStudioScreen: View {
                             // exactly as it shipped.
                             trailingCornerClearance: usesDeskChrome && !usesInspectorColumn
                                 ? VideoStudioMetrics.displayCornerClearance
-                                : 0
+                                : 0,
+                            carriesProjectTools: usesDeskChrome
                         )
                         .frame(height: bandHeight, alignment: .top)
                         if usesDeskChrome {
@@ -382,8 +401,10 @@ struct VideoStudioScreen: View {
                                 isInspectorOpen: fitsInspectorColumn && hasInspectorContent
                                     ? isInspectorOpen
                                     : nil,
+                                isToolStripOpen: isToolStripOpen,
                                 onToggleMediaPool: { isMediaPoolOpen = !showsMediaPool },
-                                onToggleInspector: { isInspectorOpen.toggle() }
+                                onToggleInspector: { isInspectorOpen.toggle() },
+                                onToggleToolStrip: { isToolStripOpen.toggle() }
                             )
                         }
                         // The meter stands beside the frame, not beside the
@@ -402,6 +423,7 @@ struct VideoStudioScreen: View {
                         }
                         .frame(height: layout.preview)
                         if usesDeskChrome {
+                            if isToolStripOpen { VideoViewerToolStrip(model: model) }
                             VideoTransportBar(model: model)
                         }
                         if resizableTimeline {
@@ -446,10 +468,8 @@ struct VideoStudioScreen: View {
                             contextPanel(model, height: layout.dockedPanel)
                                 .transition(.move(edge: .bottom).combined(with: .opacity))
                         }
-                        if !usesRail {
+                        if !usesDeskChrome {
                             VideoStudioToolbar(model: model, actions: actions(model))
-                        }
-                        if !usesRail {
                             VideoStudioBottomBar(model: model, actions: actions(model))
                         }
                         Color.clear.frame(height: proxy.safeAreaInsets.bottom)
@@ -476,7 +496,7 @@ struct VideoStudioScreen: View {
                         // cannot reach without dismissing the panel is a tool
                         // row that costs a tap for nothing. The panel starts
                         // where the rail ends.
-                        .padding(.leading, (usesRail ? VideoStudioMetrics.railWidth : 0) + mediaPoolWidth)
+                        .padding(.leading, mediaPoolWidth)
                 }
             }
             .background { keyboardShortcuts(model) }
@@ -530,6 +550,28 @@ struct VideoStudioScreen: View {
             appendMedia(ids: result.ids, to: model, imported: result.ids.count, failed: result.failures)
         }
         return true
+    }
+
+    /// One library photo, added as a sticker overlay rather than a clip —
+    /// the Stickers tab of the media pool.
+    ///
+    /// Rasterized at a bounded size: an overlay is drawn over the frame at a
+    /// fraction of its width, and a 48-megapixel PNG held in an overlay store
+    /// is memory spent on pixels nobody sees.
+    @MainActor
+    private func addSticker(_ asset: PHAsset, to model: VideoStudioModel) {
+        _ = dependencies.photoLibrary.requestThumbnail(
+            for: asset,
+            targetSize: CGSize(width: 1024, height: 1024),
+            contentMode: .aspectFit
+        ) { image, delivery in
+            guard delivery.isFinal else { return }
+            guard let image, let data = image.pngData() else {
+                model.errorMessage = String(localized: "Couldn't add the sticker.")
+                return
+            }
+            model.addImageOverlay(pngData: data, assetIdentifier: asset.localIdentifier)
+        }
     }
 
     @MainActor

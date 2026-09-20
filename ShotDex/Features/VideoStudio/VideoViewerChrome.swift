@@ -14,8 +14,14 @@ struct VideoViewerHeader: View {
     /// a control that does nothing.
     var isMediaPoolOpen: Bool?
     var isInspectorOpen: Bool?
+    /// The quick-adjust strip under the frame. Resolve keeps its own behind a
+    /// tools icon in the viewer rather than always on, and for the reason
+    /// this screen just proved: on a 669pt-tall window every band that is
+    /// always there comes out of the frame.
+    var isToolStripOpen: Bool = false
     let onToggleMediaPool: () -> Void
     let onToggleInspector: () -> Void
+    let onToggleToolStrip: () -> Void
 
     var body: some View {
         HStack(spacing: 8) {
@@ -42,6 +48,13 @@ struct VideoViewerHeader: View {
             Text(VideoStudioMetrics.timecode(model.totalDuration))
                 .font(.system(size: 11, weight: .medium).monospacedDigit())
                 .foregroundStyle(EditorTheme.dimText)
+
+            toggle(
+                systemImage: "wand.and.rays",
+                isOn: isToolStripOpen,
+                label: Text("Quick Adjust", comment: "Video Studio: shows or hides the quick slider strip under the frame"),
+                action: onToggleToolStrip
+            )
 
             if let isInspectorOpen {
                 toggle(

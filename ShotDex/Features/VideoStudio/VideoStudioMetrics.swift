@@ -54,13 +54,20 @@ enum VideoStudioMetrics {
     static let viewerHeaderHeight: CGFloat = 32
     /// Cut tools, play controls, timecode.
     static let transportBarHeight: CGFloat = 44
+    /// The quick-adjust strip under the frame: the one or two values a user
+    /// changes constantly, editable without opening the 264pt panel. Resolve
+    /// states the reason for its own viewer tool strip plainly — the common
+    /// tweak should happen "without ever having to open the inspector".
+    static let viewerToolStripHeight: CGFloat = 44
     /// The whole-project strip above the ruler, its own padding included.
     static let timelineOverviewHeight: CGFloat = 22
     static var timelineOverviewBandHeight: CGFloat { timelineOverviewHeight + 8 }
 
     /// Total height the desk bands take out of the stack.
     static func deskChromeHeight(usesDeskChrome: Bool) -> CGFloat {
-        usesDeskChrome ? viewerHeaderHeight + transportBarHeight + timelineOverviewBandHeight : 0
+        usesDeskChrome
+            ? viewerHeaderHeight + transportBarHeight + timelineOverviewBandHeight
+            : 0
     }
 
     /// Extra trailing inset for a band that reaches the screen's own edge.
@@ -109,6 +116,9 @@ enum VideoStudioMetrics {
     /// pool but not for a wide one — the Duo's inner display.
     static let mediaPoolNarrowWidth: CGFloat = 236
     static let mediaPoolHeaderHeight: CGFloat = 34
+    /// Media · Stickers · Music. Resolve's top tab row, moved onto the column
+    /// it actually drives.
+    static let mediaPoolTabStripHeight: CGFloat = 38
     static let mediaPoolToolRowHeight: CGFloat = 32
     static let mediaPoolCellSpacing: CGFloat = 6
 

@@ -1,93 +1,40 @@
 {
-  "sourceLanguage": "en",
-  "strings": {
-    "": {},
-    " / %@": {},
-    " m": {},
-    "%@ %lld%%": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "%1$@ %2$lld%%"
-          }
-        }
-      }
+  "sourceLanguage" : "en",
+  "strings" : {
+    "" : {
+
     },
-    "%@ bar chart": {},
-    "%@ clip, from second %lld to %lld": {
-      "comment": "VoiceOver label for one clip on the Video Studio timeline: its kind and the seconds it spans",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "%1$@ clip, from second %2$lld to %3$lld"
-          }
-        }
-      }
+    " / %@" : {
+
     },
-    "%@ donut chart": {},
-    "%@ is on this video's timeline. Deleting it removes the file, and the track goes silent in the preview and the export.": {},
-    "%@ line chart": {},
-    "%@ of %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "%1$@ of %2$@"
-          }
-        }
-      }
+    " m" : {
+
     },
-    "%@ of %@ photos": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "%1$@ of %2$@ photos"
-          }
-        }
-      }
+    "—" : {
+      "comment" : "Video Studio level meter: the mix is silent at the playhead"
     },
-    "%@ of %@ photos and videos": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "%1$@ of %2$@ photos and videos"
-          }
-        }
-      }
+    "“%@”" : {
+
     },
-    "%@ options": {},
-    "%@ photos and videos": {
-      "comment": "Count phrase in the On This Day reminder body.",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ ảnh và video"
-          }
-        }
-      }
+    "%@ — coming soon" : {
+
     },
-    "%@ settings": {},
-    "%@ · %lld photo from previous years": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%1$@ · %2$lld photo from previous years"
+    "%@ · %lld photo from previous years" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%1$@ · %2$lld photo from previous years"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%1$@ · %2$lld photos from previous years"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%1$@ · %2$lld photos from previous years"
                 }
               }
             }
@@ -95,137 +42,236 @@
         }
       }
     },
-    "%@ · %lld photos": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "%1$@ · %2$lld photos"
+    "%@ · %lld photos" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$lld photos"
           }
         }
       }
     },
-    "%@ · No photos in previous years": {
-      "comment": "On This Day card subtitle when nothing matches today's date"
-    },
-    "%@ · at least %@": {
-      "comment": "On This Day reminder body when some matching items are not indexed yet, so the size is a lower bound. First placeholder is the count phrase, second is the formatted size.",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ · ít nhất %2$@"
+    "%@ · at least %@" : {
+      "comment" : "On This Day reminder body when some matching items are not indexed yet, so the size is a lower bound. First placeholder is the count phrase, second is the formatted size.",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · ít nhất %2$@"
           }
         }
       }
     },
-    "%@ — coming soon": {},
-    "%@, %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "%1$@, %2$@"
+    "%@ · No photos in previous years" : {
+      "comment" : "On This Day card subtitle when nothing matches today's date"
+    },
+    "%@ %lld%%" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$lld%%"
           }
         }
       }
     },
-    "%@, %@%@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "%1$@, %2$@%3$@"
+    "%@ bar chart" : {
+
+    },
+    "%@ clip, from second %lld to %lld" : {
+      "comment" : "VoiceOver label for one clip on the Video Studio timeline: its kind and the seconds it spans",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ clip, from second %2$lld to %3$lld"
           }
         }
       }
     },
-    "%@, %@, %lld photos": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "%1$@, %2$@, %3$lld photos"
+    "%@ donut chart" : {
+
+    },
+    "%@ is on this video's timeline. Deleting it removes the file, and the track goes silent in the preview and the export." : {
+
+    },
+    "%@ line chart" : {
+
+    },
+    "%@ of %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ of %2$@"
           }
         }
       }
     },
-    "%@, %lld photos": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "%1$@, %2$lld photos"
+    "%@ of %@ photos" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ of %2$@ photos"
           }
         }
       }
     },
-    "%@, from second %lld to %lld": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "%1$@, from second %2$lld to %3$lld"
+    "%@ of %@ photos and videos" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ of %2$@ photos and videos"
           }
         }
       }
     },
-    "%@. Marked for deletion": {
-      "comment": "VoiceOver label for a Compare card the user has marked to delete"
+    "%@ options" : {
+
     },
-    "%@s": {},
-    "%@×": {},
-    "%lld": {},
-    "%lld %@ deleted": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "%1$lld %2$@ deleted"
+    "%@ photos and videos" : {
+      "comment" : "Count phrase in the On This Day reminder body.",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ảnh và video"
           }
         }
       }
     },
-    "%lld %@ not scanned yet.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "%1$lld %2$@ not scanned yet."
+    "%@ settings" : {
+
+    },
+    "%@, %@" : {
+      "comment" : "Video Studio track header: VoiceOver label naming the track — its number badge and its kind",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@"
           }
         }
       }
     },
-    "%lld / %lld": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "%1$lld / %2$lld"
+    "%@, %@, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@, %3$@"
           }
         }
       }
     },
-    "%lld Photos": {},
-    "%lld RAW hidden": {},
-    "%lld clips couldn't be loaded and were left out. They may still be in iCloud — check your connection and add them again.": {},
-    "%lld failed": {},
-    "%lld file couldn't be imported.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld file couldn't be imported."
+    "%@, %@, %lld photos" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@, %3$lld photos"
+          }
+        }
+      }
+    },
+    "%@, %@%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@%3$@"
+          }
+        }
+      }
+    },
+    "%@, %lld photos" : {
+      "comment" : "VoiceOver label for a smart album tile: its name and how many photos match it\nVoiceOver label for an album tile: its name and how many photos it holds",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$lld photos"
+          }
+        }
+      }
+    },
+    "%@, from second %lld to %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, from second %2$lld to %3$lld"
+          }
+        }
+      }
+    },
+    "%@. Marked for deletion" : {
+      "comment" : "VoiceOver label for a Compare card the user has marked to delete"
+    },
+    "%@×" : {
+
+    },
+    "%@s" : {
+
+    },
+    "%lld" : {
+
+    },
+    "%lld / %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld / %2$lld"
+          }
+        }
+      }
+    },
+    "%lld %@ deleted" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld %2$@ deleted"
+          }
+        }
+      }
+    },
+    "%lld %@ not scanned yet." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld %2$@ not scanned yet."
+          }
+        }
+      }
+    },
+    "%lld clips couldn't be loaded and were left out. They may still be in iCloud — check your connection and add them again." : {
+
+    },
+    "%lld failed" : {
+
+    },
+    "%lld file couldn't be imported." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld file couldn't be imported."
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld files couldn't be imported."
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld files couldn't be imported."
                 }
               }
             }
@@ -233,23 +279,23 @@
         }
       }
     },
-    "%lld groups": {
-      "comment": "Detail on the Duplicates row in Collections: how many duplicate groups the last scan found",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "1 group"
+    "%lld groups" : {
+      "comment" : "Detail on the Duplicates row in Collections: how many duplicate groups the last scan found",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "1 group"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld groups"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld groups"
                 }
               }
             }
@@ -257,22 +303,22 @@
         }
       }
     },
-    "%lld item": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld item"
+    "%lld item" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld item"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld items"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld items"
                 }
               }
             }
@@ -280,22 +326,22 @@
         }
       }
     },
-    "%lld item added to your library and to the timeline": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld item added to your library and to the timeline"
+    "%lld item added to your library and to the timeline" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld item added to your library and to the timeline"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld items added to your library and to the timeline"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld items added to your library and to the timeline"
                 }
               }
             }
@@ -303,22 +349,22 @@
         }
       }
     },
-    "%lld item couldn't be imported.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld item couldn't be imported."
+    "%lld item couldn't be imported." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld item couldn't be imported."
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld items couldn't be imported."
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld items couldn't be imported."
                 }
               }
             }
@@ -326,37 +372,47 @@
         }
       }
     },
-    "%lld items are waiting. Indexing keeps retrying on its own — cellular or a different network usually helps too.": {},
-    "%lld items in iCloud left to read.": {},
-    "%lld items in iCloud will finish indexing once you're on Wi-Fi. Local metadata was read without using cellular data.": {},
-    "%lld items still waiting for iCloud.": {},
-    "%lld of %lld": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "%1$lld of %2$lld"
+    "%lld items are waiting. Indexing keeps retrying on its own — cellular or a different network usually helps too." : {
+
+    },
+    "%lld items in iCloud left to read." : {
+
+    },
+    "%lld items in iCloud will finish indexing once you're on Wi-Fi. Local metadata was read without using cellular data." : {
+
+    },
+    "%lld items still waiting for iCloud." : {
+
+    },
+    "%lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld"
           }
         }
       }
     },
-    "%lld of these files are already in your library, matched by name and exact size.": {},
-    "%lld photo": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld photo"
+    "%lld of these files are already in your library, matched by name and exact size." : {
+
+    },
+    "%lld photo" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld photo"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld photos"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld photos"
                 }
               }
             }
@@ -364,22 +420,22 @@
         }
       }
     },
-    "%lld photo added to your library": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld photo added to your library"
+    "%lld photo added to your library" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld photo added to your library"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld photos added to your library"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld photos added to your library"
                 }
               }
             }
@@ -387,22 +443,22 @@
         }
       }
     },
-    "%lld photos": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "1 photo"
+    "%lld photos" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "1 photo"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld photos"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld photos"
                 }
               }
             }
@@ -410,291 +466,659 @@
         }
       }
     },
-    "%lld photos without this info.": {},
-    "%lld saved as JPEG because HEIC wasn't supported": {},
-    "%lld saved to Photos": {},
-    "%lld%%": {},
-    "%llds": {},
-    "%llds per photo": {},
-    "0": {},
-    "1 photo": {},
-    "1 photo or video": {
-      "comment": "Count phrase in the On This Day reminder body when exactly one item matches.",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 ảnh hoặc video"
+    "%lld Photos" : {
+
+    },
+    "%lld photos without this info." : {
+
+    },
+    "%lld RAW hidden" : {
+
+    },
+    "%lld saved as JPEG because HEIC wasn't supported" : {
+
+    },
+    "%lld saved to Photos" : {
+
+    },
+    "%lld%%" : {
+
+    },
+    "%lld+" : {
+      "comment" : "Video Studio media pool: the column is showing its first N items and the library holds more"
+    },
+    "%llds" : {
+
+    },
+    "%llds per photo" : {
+
+    },
+    "~%@" : {
+
+    },
+    "0" : {
+
+    },
+    "1 photo" : {
+
+    },
+    "1 photo or video" : {
+      "comment" : "Count phrase in the On This Day reminder body when exactly one item matches.",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 ảnh hoặc video"
           }
         }
       }
     },
-    "255": {},
-    "35mm Equivalent": {
-      "comment": "Info panel row label"
+    "35mm Equivalent" : {
+      "comment" : "Info panel row label"
     },
-    "A daily reminder of what you shot on this date in past years, and how much space it takes. Days with nothing are skipped.": {},
-    "A mask limits Light, Color, Detail and Effects to one area.": {},
-    "A smart album named “%@” already exists.": {},
-    "About": {},
-    "Access": {},
-    "Actual": {},
-    "Actuations": {},
-    "Add": {},
-    "Add %@": {},
-    "Add Condition": {},
-    "Add Music from Files…": {},
-    "Add Preset": {},
-    "Add Title": {},
-    "Add Track": {},
-    "Add a track from Files — it's saved here for reuse.": {},
-    "Add caption": {},
-    "Add chart": {},
-    "Add photo": {},
-    "Add photo or video": {},
-    "Add photo slot": {},
-    "Add shape or magnifier": {},
-    "Add to Album": {},
-    "Add to Collection": {},
-    "Added to the Collages smart album": {},
-    "Adding image…": {},
-    "Adding to your library…": {},
-    "Adjust": {},
-    "Adjust %lld Photos": {},
-    "Adjust Date & Time": {},
-    "Adjust Location": {},
-    "Adjust the filter or turn off Hide RAW.": {},
-    "Adjust to resize the panel": {},
-    "Adjusting %lld photos. The earliest photo moves to this date and the rest shift by the same amount, keeping their order.": {},
-    "Adjustment Base Paired Video": {
-      "comment": "Name of one file behind a photo, as an Info panel heading"
+    "255" : {
+
     },
-    "Adjustment Base Photo": {
-      "comment": "Name of one file behind a photo, as an Info panel heading"
+    "A daily reminder of what you shot on this date in past years, and how much space it takes. Days with nothing are skipped." : {
+
     },
-    "Adjustment Base Video": {
-      "comment": "Name of one file behind a photo, as an Info panel heading"
+    "A mask limits Light, Color, Detail and Effects to one area." : {
+
     },
-    "Adjustment Data": {
-      "comment": "Name of one file behind a photo, as an Info panel heading"
+    "A smart album named “%@” already exists." : {
+
     },
-    "Advanced": {},
-    "Advanced Filter…": {},
-    "Advanced Search": {},
-    "Album Name": {},
-    "Align": {},
-    "All": {},
-    "All Items": {},
-    "All Time": {},
-    "Allow photo access in the Library tab to browse albums.": {},
-    "Alternate Photo": {
-      "comment": "Name of one file behind a photo, as an Info panel heading"
+    "About" : {
+
     },
-    "Altitude": {
-      "comment": "Info panel row label"
+    "Access" : {
+
     },
-    "Always": {},
-    "Animate": {},
-    "Any": {},
-    "Aperture": {
-      "comment": "Info panel row label"
+    "Actual" : {
+
     },
-    "Applies the copied look — tone, colour, curve and film look. The crop, masks and markup of each photo are left alone.": {},
-    "Apply": {},
-    "Apply Previous": {},
-    "Apply look %@": {},
-    "Armed": {},
-    "Artist": {
-      "comment": "Info panel row label"
+    "Actuations" : {
+
     },
-    "Aspect Ratio Grid": {},
-    "Audio": {
-      "comment": "Name of one file behind a photo, as an Info panel heading"
+    "Add" : {
+
     },
-    "Audio Track": {
-      "comment": "Info panel section title"
+    "Add %@" : {
+
     },
-    "Auto Enhance": {},
-    "Auto Sync": {},
-    "Autoplay Videos": {},
-    "BACKGROUND": {},
-    "Back": {
-      "comment": "Video Studio: leaves the editor"
+    "Add a track from Files — it's saved here for reuse." : {
+
     },
-    "Back a Frame": {},
-    "Back a Second": {},
-    "Background": {},
-    "Basic": {},
-    "Bit Depth": {
-      "comment": "Info panel row label"
+    "Add caption" : {
+
     },
-    "Black": {},
-    "Blur": {},
-    "Blur In": {},
-    "Blur Out": {},
-    "Blurred photo background": {},
-    "Bold": {},
-    "Border": {},
-    "Bring Forward": {},
-    "Buckets": {},
-    "Built-in": {},
-    "Built-in presets keep the original proportions. Add named presets for exact dimensions.": {},
-    "Bulk Fill presets use a centered crop for every photo.": {},
-    "Burst": {},
-    "Camera": {},
-    "Camera & Lens": {
-      "comment": "Info panel section title"
+    "Add chart" : {
+
     },
-    "Camera Database": {},
-    "Camera EXIF, date, location and orientation": {},
-    "Camera, lens and exposure filters become accurate once metadata finishes loading.": {},
-    "Cameras you matched to a sensor format by hand go back to what the sensor database says.": {},
-    "Cancel": {},
-    "Cancel Export": {},
-    "Cancel Export and Remove Copies": {},
-    "Cancel this export?": {},
-    "Cancellation Cleanup": {},
-    "Caption": {
-      "comment": "Info panel row label"
+    "Add Condition" : {
+
     },
-    "Captions": {},
-    "Capture Kind": {},
-    "Capture Settings": {
-      "comment": "Info panel section title"
+    "Add Music from Files…" : {
+
     },
-    "Captured": {
-      "comment": "Info panel row label"
+    "Add photo" : {
+
     },
-    "Category": {},
-    "Cellular": {},
-    "Change date": {},
-    "Chart": {},
-    "Chart Type": {},
-    "Choose Folder": {},
-    "Choose Image": {},
-    "Choose how to select the area. You can add and subtract several kinds inside one mask.": {},
-    "Cinematic": {},
-    "Clear": {},
-    "Clear Filters": {},
-    "Clear Index": {},
-    "Clear Local Metadata Index": {},
-    "Clear Reference": {},
-    "Clear Results": {},
-    "Clear Selection": {},
-    "Clear Strokes": {},
-    "Clear the People and Pets results?": {},
-    "Clear the local metadata index?": {},
-    "Close": {
-      "comment": "VoiceOver label for the Compare screen's dismiss button"
+    "Add photo or video" : {
+
     },
-    "Close slideshow": {},
-    "Codec": {
-      "comment": "Info panel row label"
+    "Add photo slot" : {
+
     },
-    "Collage Error": {},
-    "Collapse histogram": {},
-    "Color": {},
-    "Color Model": {
-      "comment": "Info panel row label"
+    "Add Preset" : {
+
     },
-    "Color Space": {
-      "comment": "Info panel row label"
+    "Add shape or magnifier" : {
+
     },
-    "Colour controls": {},
-    "Combine %lld Photos": {},
-    "Combine Photos": {},
-    "Compare": {},
-    "Conditions": {},
-    "Content": {},
-    "Continue": {},
-    "Continue Export": {},
-    "Continue Indexing (%@)": {},
-    "Coordinate": {
-      "comment": "Info panel row label"
+    "Add Title" : {
+
     },
-    "Coordinates": {},
-    "Copy": {},
-    "Copy Edits": {},
-    "Copyright": {
-      "comment": "Info panel row label"
+    "Add to Album" : {
+
     },
-    "Corners": {},
-    "Couldn't Add to Collection": {},
-    "Couldn't Combine": {},
-    "Couldn't Delete Photos": {},
-    "Couldn't Save Video": {},
-    "Couldn't Update Photos": {},
-    "Couldn't add the sticker.": {},
-    "Couldn't load the photos for this collage.": {},
-    "Couldn't load the selected items.": {},
-    "Couldn't prepare the video composition.": {},
-    "Couldn't prepare the video encoder.": {},
-    "Couldn't read metadata for this item.": {},
-    "Couldn't read the video frames.": {},
-    "Couldn't render the collage.": {},
-    "Couldn't start reading.": {},
-    "Couldn't start writing.": {},
-    "Couldn’t Trim": {},
-    "Counts as one of the conditions, so it widens the match rather than narrowing it.": {},
-    "Create": {},
-    "Create Collage": {},
-    "Create Video": {},
-    "Creation Date": {
-      "comment": "Info panel row label"
+    "Add to Collection" : {
+
     },
-    "Credit": {
-      "comment": "Info panel row label"
+    "Add Track" : {
+
     },
-    "Crop %@ corner": {},
-    "Crop %@ edge": {},
-    "Crop Mode": {},
-    "Crop frame": {},
-    "Crossfade": {},
-    "Custom": {
-      "comment": "Collage aspect ratio that matches no preset"
+    "Added to your ShotDex Collages album" : {
+
     },
-    "Custom Range…": {},
-    "Custom background colour": {},
-    "Custom presets store a name, pixel dimensions, Fill or Fit behavior, quality and output format.": {},
-    "Customize": {},
-    "Daily On This Day Reminder": {
-      "comment": "Settings toggle.",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nhắc Ngày này năm xưa hằng ngày"
+    "Adding image…" : {
+
+    },
+    "Adding to your library…" : {
+
+    },
+    "Adds this to the end of the video track" : {
+      "comment" : "Video Studio media pool: what tapping an item does"
+    },
+    "Adjust" : {
+
+    },
+    "Adjust %lld Photos" : {
+
+    },
+    "Adjust Date & Time" : {
+
+    },
+    "Adjust Location" : {
+
+    },
+    "Adjust the filter or turn off Hide RAW." : {
+
+    },
+    "Adjust to resize the panel" : {
+
+    },
+    "Adjusting %lld photos. The earliest photo moves to this date and the rest shift by the same amount, keeping their order." : {
+
+    },
+    "Adjustment Base Paired Video" : {
+      "comment" : "Name of one file behind a photo, as an Info panel heading"
+    },
+    "Adjustment Base Photo" : {
+      "comment" : "Name of one file behind a photo, as an Info panel heading"
+    },
+    "Adjustment Base Video" : {
+      "comment" : "Name of one file behind a photo, as an Info panel heading"
+    },
+    "Adjustment Data" : {
+      "comment" : "Name of one file behind a photo, as an Info panel heading"
+    },
+    "Advanced" : {
+
+    },
+    "Advanced Filter…" : {
+
+    },
+    "Advanced Search" : {
+
+    },
+    "Album Name" : {
+
+    },
+    "Align" : {
+
+    },
+    "All" : {
+
+    },
+    "All Items" : {
+
+    },
+    "All Media" : {
+      "comment" : "Video Studio media pool filter: everything in the library"
+    },
+    "All Time" : {
+
+    },
+    "Allow photo access in the Library tab to browse albums." : {
+
+    },
+    "Alternate Photo" : {
+      "comment" : "Name of one file behind a photo, as an Info panel heading"
+    },
+    "Altitude" : {
+      "comment" : "Info panel row label"
+    },
+    "Always" : {
+
+    },
+    "Animate" : {
+
+    },
+    "Any" : {
+
+    },
+    "Aperture" : {
+      "comment" : "Info panel row label"
+    },
+    "Applies the copied look — tone, colour, curve and film look. The crop, masks and markup of each photo are left alone." : {
+
+    },
+    "Apply" : {
+
+    },
+    "Apply look %@" : {
+
+    },
+    "Apply Previous" : {
+
+    },
+    "Armed" : {
+
+    },
+    "Artist" : {
+      "comment" : "Info panel row label"
+    },
+    "Aspect Ratio Grid" : {
+
+    },
+    "Audio" : {
+      "comment" : "Name of one file behind a photo, as an Info panel heading"
+    },
+    "Audio Levels" : {
+      "comment" : "Video Studio: the level meter beside the viewer"
+    },
+    "Audio Track" : {
+      "comment" : "Info panel section title"
+    },
+    "Auto Enhance" : {
+
+    },
+    "Auto Sync" : {
+
+    },
+    "Autoplay Videos" : {
+
+    },
+    "Back" : {
+      "comment" : "Video Studio: leaves the editor"
+    },
+    "Back a Frame" : {
+      "comment" : "Video Studio transport"
+    },
+    "Back a Second" : {
+
+    },
+    "Background" : {
+
+    },
+    "BACKGROUND" : {
+
+    },
+    "Basic" : {
+
+    },
+    "Bit Depth" : {
+      "comment" : "Info panel row label"
+    },
+    "Black" : {
+
+    },
+    "Blur" : {
+
+    },
+    "Blur In" : {
+
+    },
+    "Blur Out" : {
+
+    },
+    "Blurred photo background" : {
+
+    },
+    "Bold" : {
+
+    },
+    "Border" : {
+
+    },
+    "Bring Forward" : {
+
+    },
+    "Buckets" : {
+
+    },
+    "Built-in" : {
+
+    },
+    "Built-in presets keep the original proportions. Add named presets for exact dimensions." : {
+
+    },
+    "Bulk Fill presets use a centered crop for every photo." : {
+
+    },
+    "Burst" : {
+
+    },
+    "Camera" : {
+
+    },
+    "Camera & Lens" : {
+      "comment" : "Info panel section title"
+    },
+    "Camera Database" : {
+
+    },
+    "Camera EXIF, date, location and orientation" : {
+
+    },
+    "Camera, lens and exposure filters become accurate once metadata finishes loading." : {
+
+    },
+    "Cameras you matched to a sensor format by hand go back to what the sensor database says." : {
+
+    },
+    "Can't Reopen This" : {
+
+    },
+    "Cancel" : {
+
+    },
+    "Cancel Export" : {
+
+    },
+    "Cancel Export and Remove Copies" : {
+
+    },
+    "Cancel this export?" : {
+
+    },
+    "Cancellation Cleanup" : {
+
+    },
+    "Caption" : {
+      "comment" : "Info panel row label"
+    },
+    "Captions" : {
+
+    },
+    "Capture Kind" : {
+
+    },
+    "Capture Settings" : {
+      "comment" : "Info panel section title"
+    },
+    "Captured" : {
+      "comment" : "Info panel row label"
+    },
+    "Category" : {
+
+    },
+    "Cellular" : {
+
+    },
+    "Change date" : {
+
+    },
+    "Chart" : {
+
+    },
+    "Chart Type" : {
+
+    },
+    "Choose Folder" : {
+
+    },
+    "Choose how to select the area. You can add and subtract several kinds inside one mask." : {
+
+    },
+    "Choose Image" : {
+
+    },
+    "Cinematic" : {
+
+    },
+    "Clear" : {
+
+    },
+    "Clear Filters" : {
+
+    },
+    "Clear Index" : {
+
+    },
+    "Clear Local Metadata Index" : {
+
+    },
+    "Clear Reference" : {
+
+    },
+    "Clear Results" : {
+
+    },
+    "Clear Selection" : {
+
+    },
+    "Clear Strokes" : {
+
+    },
+    "Clear the local metadata index?" : {
+
+    },
+    "Clear the People and Pets results?" : {
+
+    },
+    "Clip %lld" : {
+      "comment" : "Video Studio viewer header: the video clip under the playhead, by its position on the track"
+    },
+    "Close" : {
+      "comment" : "VoiceOver label for the Compare screen's dismiss button"
+    },
+    "Close slideshow" : {
+
+    },
+    "Codec" : {
+      "comment" : "Info panel row label"
+    },
+    "Collage" : {
+      "comment" : "Kind of thing in the Creations list"
+    },
+    "Collage Error" : {
+
+    },
+    "Collages" : {
+      "comment" : "Title of the list of collages this app made"
+    },
+    "Collages you export show up here, with the photos and layout that made them — so you can open one again and change it." : {
+
+    },
+    "Collapse histogram" : {
+
+    },
+    "Color" : {
+
+    },
+    "Color Model" : {
+      "comment" : "Info panel row label"
+    },
+    "Color Space" : {
+      "comment" : "Info panel row label"
+    },
+    "Colour controls" : {
+
+    },
+    "Combine %lld Photos" : {
+
+    },
+    "Combine Photos" : {
+
+    },
+    "Compare" : {
+
+    },
+    "Conditions" : {
+
+    },
+    "Content" : {
+
+    },
+    "Continue" : {
+
+    },
+    "Continue Export" : {
+
+    },
+    "Continue Indexing (%@)" : {
+
+    },
+    "Coordinate" : {
+      "comment" : "Info panel row label"
+    },
+    "Coordinates" : {
+
+    },
+    "Copy" : {
+
+    },
+    "Copy Edits" : {
+
+    },
+    "Copyright" : {
+      "comment" : "Info panel row label"
+    },
+    "Corners" : {
+
+    },
+    "Couldn't add the sticker." : {
+
+    },
+    "Couldn't Add to Collection" : {
+
+    },
+    "Couldn't Combine" : {
+
+    },
+    "Couldn't Delete Photos" : {
+
+    },
+    "Couldn't load the photos for this collage." : {
+
+    },
+    "Couldn't load the selected items." : {
+
+    },
+    "Couldn't prepare the video composition." : {
+
+    },
+    "Couldn't prepare the video encoder." : {
+
+    },
+    "Couldn't read metadata for this item." : {
+
+    },
+    "Couldn't read the video frames." : {
+
+    },
+    "Couldn't render the collage." : {
+
+    },
+    "Couldn't Save Video" : {
+
+    },
+    "Couldn't start reading." : {
+
+    },
+    "Couldn't start writing." : {
+
+    },
+    "Couldn’t Trim" : {
+
+    },
+    "Couldn't Update Photos" : {
+
+    },
+    "Counts as one of the conditions, so it widens the match rather than narrowing it." : {
+
+    },
+    "Create" : {
+
+    },
+    "Create Collage" : {
+
+    },
+    "Create Video" : {
+
+    },
+    "Creation Date" : {
+      "comment" : "Info panel row label"
+    },
+    "Credit" : {
+      "comment" : "Info panel row label"
+    },
+    "Crop %@ corner" : {
+
+    },
+    "Crop %@ edge" : {
+
+    },
+    "Crop frame" : {
+
+    },
+    "Crop Mode" : {
+
+    },
+    "Crossfade" : {
+
+    },
+    "Custom" : {
+      "comment" : "Collage aspect ratio that matches no preset"
+    },
+    "Custom background colour" : {
+
+    },
+    "Custom presets store a name, pixel dimensions, Fill or Fit behavior, quality and output format." : {
+
+    },
+    "Custom Range…" : {
+
+    },
+    "Customize" : {
+
+    },
+    "Daily On This Day Reminder" : {
+      "comment" : "Settings toggle.",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nhắc Ngày này năm xưa hằng ngày"
           }
         }
       }
     },
-    "Darken": {},
-    "Data Rate": {
-      "comment": "Info panel row label"
+    "Darken" : {
+
     },
-    "Date": {
-      "comment": "Info panel section title"
+    "Data Rate" : {
+      "comment" : "Info panel row label"
     },
-    "Date & Time": {},
-    "Date Range": {},
-    "Delete": {},
-    "Delete %@": {},
-    "Delete %lld Photo": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Delete %lld Photo"
+    "Date" : {
+      "comment" : "Info panel section title"
+    },
+    "Date & Time" : {
+
+    },
+    "Date Range" : {
+
+    },
+    "days" : {
+
+    },
+    "Delete" : {
+
+    },
+    "Delete “%@”?" : {
+
+    },
+    "Delete %@" : {
+
+    },
+    "Delete %lld marked photo" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Delete %lld marked photo"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Delete %lld Photos"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Delete %lld marked photos"
                 }
               }
             }
@@ -702,23 +1126,22 @@
         }
       }
     },
-    "Delete %lld Photos": {},
-    "Delete %lld marked photo": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Delete %lld marked photo"
+    "Delete %lld Photo" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Delete %lld Photo"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Delete %lld marked photos"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Delete %lld Photos"
                 }
               }
             }
@@ -726,215 +1149,451 @@
         }
       }
     },
-    "Delete 1 Photo": {},
-    "Delete Album": {},
-    "Delete Folder": {},
-    "Delete Look": {},
-    "Delete Mask": {},
-    "Delete Music in Use?": {},
-    "Delete Originals": {},
-    "Delete Point": {},
-    "Delete Point Color": {},
-    "Delete This Shape": {},
-    "Delete condition": {},
-    "Delete layer": {},
-    "Delete “%@”?": {},
-    "Denied": {
-      "comment": "Permission state.",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bị từ chối"
+    "Delete %lld Photos" : {
+
+    },
+    "Delete 1 Photo" : {
+
+    },
+    "Delete Album" : {
+
+    },
+    "Delete Clip" : {
+      "comment" : "Video Studio transport: removes the selected clip"
+    },
+    "Delete condition" : {
+
+    },
+    "Delete layer" : {
+
+    },
+    "Delete Look" : {
+
+    },
+    "Delete Mask" : {
+
+    },
+    "Delete Music in Use?" : {
+
+    },
+    "Delete Originals" : {
+
+    },
+    "Delete Point" : {
+
+    },
+    "Delete Point Color" : {
+
+    },
+    "Delete This Shape" : {
+
+    },
+    "Denied" : {
+      "comment" : "Permission state.",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bị từ chối"
           }
         }
       }
     },
-    "Deselect": {},
-    "Deselect All": {},
-    "Digital Zoom": {
-      "comment": "Info panel row label"
+    "Deselect" : {
+
     },
-    "Dimensions": {
-      "comment": "Info panel row label"
+    "Deselect All" : {
+
     },
-    "Discard": {},
-    "Discard Changes": {},
-    "Discard this collage?": {},
-    "Discard this editing session?": {},
-    "Discard this video?": {},
-    "Divider, drag to resize, double tap to reset": {},
-    "Done": {},
-    "Done Selecting": {},
-    "Done selecting": {},
-    "Double tap to collapse": {},
-    "Downloading from iCloud": {},
-    "Drag on the graph to shape the curve": {},
-    "Drag on the photo — the loupe shows the pixel under your finger. Lift to pick it.": {},
-    "Drag to adjust": {},
-    "Drag to move the crop": {},
-    "Drag to resize the crop": {},
-    "Drag to shape · drag on empty graph to add · double-tap a point to remove": {},
-    "Drag up for a taller timeline, down for a bigger preview": {
-      "comment": "Hint for the Video Studio timeline divider"
+    "Digital Zoom" : {
+      "comment" : "Info panel row label"
     },
-    "Drop here to set aside": {},
-    "Duplicate": {},
-    "Duplicates": {},
-    "Duplicates Error": {},
-    "Duplicates, %@": {},
-    "Edit": {},
-    "Edit Chart": {},
-    "Edit Preset": {},
-    "Edit Smart Album": {},
-    "Edit text full screen": {},
-    "Editor Error": {},
-    "Empty slot, double tap to choose a photo": {},
-    "Empty. Move an album here from its own menu.": {},
-    "End": {},
-    "Enter Value…": {},
-    "Enter value": {},
-    "Estimated size": {},
-    "Estimating size…": {},
-    "Every camera in your library has a known sensor format.": {},
-    "Export": {},
-    "Export EXIF (CSV)": {},
-    "Export Video": {},
-    "Export cancelled": {},
-    "Exporting…": {},
-    "Exposure": {
-      "comment": "Info panel section title"
+    "Dimensions" : {
+      "comment" : "Info panel row label"
     },
-    "Exposure Compensation": {
-      "comment": "Info panel row label"
+    "Discard" : {
+
     },
-    "Exposure Mode": {
-      "comment": "Info panel row label"
+    "Discard Changes" : {
+
     },
-    "Exposure Program": {
-      "comment": "Info panel row label"
+    "Discard this collage?" : {
+
     },
-    "FF Equivalent": {},
-    "Fade": {},
-    "Fade Black": {},
-    "Failures": {},
-    "Favorite": {
-      "comment": "Info panel row label"
+    "Discard this editing session?" : {
+
     },
-    "Favorites": {},
-    "File": {
-      "comment": "Info panel section title"
+    "Discard this video?" : {
+
     },
-    "File Size": {
-      "comment": "Info panel row label"
+    "Divider, drag to resize, double tap to reset" : {
+
     },
-    "File Type": {},
-    "Filename": {
-      "comment": "Info panel row label"
+    "Done" : {
+
     },
-    "Fill Screen": {},
-    "Filled": {},
-    "Filter": {},
-    "Filter and sort": {},
-    "Filter:": {},
-    "Find People and Pets": {},
-    "Finding place name…": {},
-    "Finish configuring the chart to see a preview.": {},
-    "Finishing this photo…": {},
-    "Firmware / Software": {
-      "comment": "Info panel row label"
+    "Done selecting" : {
+
     },
-    "Fit Photo": {},
-    "Fit or Fill": {},
-    "Flash": {
-      "comment": "Info panel row label"
+    "Done Selecting" : {
+
     },
-    "Flip Horizontal": {},
-    "Focal Length": {
-      "comment": "Info panel row label"
+    "Double tap to collapse" : {
+
     },
-    "Focal Length Style": {},
-    "Folders": {},
-    "Font": {},
-    "Format": {
-      "comment": "Info panel row label"
+    "downloaded from iCloud" : {
+
     },
-    "Forward a Frame": {},
-    "Forward a Second": {},
-    "Frame": {},
-    "Frame Rate": {
-      "comment": "Info panel row label"
+    "Downloading from iCloud" : {
+
     },
-    "Frame Saved": {},
-    "Frames are lined up before stacking, so a handheld sequence still works — a tripod still works better.": {},
-    "Freeze": {
-      "comment": "Kind of timeline clip — a frozen frame — read by VoiceOver"
+    "Drag on the graph to shape the curve" : {
+
     },
-    "Full-size Paired Video": {
-      "comment": "Name of one file behind a photo, as an Info panel heading"
+    "Drag on the photo — the loupe shows the pixel under your finger. Lift to pick it." : {
+
     },
-    "Full-size Photo": {
-      "comment": "Name of one file behind a photo, as an Info panel heading"
+    "Drag to adjust" : {
+
     },
-    "Full-size Video": {
-      "comment": "Name of one file behind a photo, as an Info panel heading"
+    "Drag to move the crop" : {
+
     },
-    "Gap": {},
-    "Grey": {},
-    "Group by": {},
-    "Grouping duplicates…": {},
-    "HDR": {},
-    "HEIC": {},
-    "HEIC encoding isn't available on this device. ShotDex will save JPEG instead.": {},
-    "Headline": {
-      "comment": "Info panel row label"
+    "Drag to resize the crop" : {
+
     },
-    "Height": {},
-    "Hidden": {
-      "comment": "Info panel row label"
+    "Drag to shape · drag on empty graph to add · double-tap a point to remove" : {
+
     },
-    "Hide": {},
-    "Hide %@": {},
-    "Hide Graph": {},
-    "Hide Mask Overlay": {},
-    "Hide Photos Already Imported": {},
-    "Hide RAW files": {},
-    "Hide Tools": {},
-    "Hide or Show Tools": {},
-    "Hide this photo?": {},
-    "History": {},
-    "History covers this editing session. Recall last ShotDex edit restores the recipe stored in Photos instead.": {},
-    "Hold to see original": {},
-    "Hue %lld degrees, saturation %lld percent": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "Hue %1$lld degrees, saturation %2$lld percent"
+    "Drag up for a taller timeline, down for a bigger preview" : {
+      "comment" : "Hint for the Video Studio timeline divider"
+    },
+    "Drop here to set aside" : {
+
+    },
+    "Duplicate" : {
+
+    },
+    "Duplicates" : {
+
+    },
+    "Duplicates Error" : {
+
+    },
+    "Edit" : {
+
+    },
+    "Edit Chart" : {
+
+    },
+    "Edit Preset" : {
+
+    },
+    "Edit Smart Album" : {
+
+    },
+    "Edit text full screen" : {
+
+    },
+    "Editor Error" : {
+
+    },
+    "Empty slot, double tap to choose a photo" : {
+
+    },
+    "End" : {
+
+    },
+    "Enter value" : {
+
+    },
+    "Enter Value…" : {
+
+    },
+    "Estimated size" : {
+
+    },
+    "Estimating size…" : {
+
+    },
+    "Every camera in your library has a known sensor format." : {
+
+    },
+    "Export" : {
+
+    },
+    "Export cancelled" : {
+
+    },
+    "Export EXIF (CSV)" : {
+
+    },
+    "Export Video" : {
+
+    },
+    "Exporting…" : {
+
+    },
+    "Exposure" : {
+      "comment" : "Info panel section title"
+    },
+    "Exposure Compensation" : {
+      "comment" : "Info panel row label"
+    },
+    "Exposure Mode" : {
+      "comment" : "Info panel row label"
+    },
+    "Exposure Program" : {
+      "comment" : "Info panel row label"
+    },
+    "Fade" : {
+
+    },
+    "Fade Black" : {
+
+    },
+    "Failures" : {
+
+    },
+    "Favorite" : {
+      "comment" : "Info panel row label"
+    },
+    "Favorites" : {
+      "comment" : "Video Studio media pool filter: items favorited in Photos"
+    },
+    "FF Equivalent" : {
+
+    },
+    "File" : {
+      "comment" : "Info panel section title"
+    },
+    "File Size" : {
+      "comment" : "Info panel row label"
+    },
+    "File Type" : {
+
+    },
+    "Filename" : {
+      "comment" : "Info panel row label"
+    },
+    "Fill Screen" : {
+
+    },
+    "Filled" : {
+
+    },
+    "Filter" : {
+
+    },
+    "Filter and sort" : {
+
+    },
+    "Filter Media" : {
+      "comment" : "Video Studio media pool: picks which media the column lists"
+    },
+    "Filter:" : {
+
+    },
+    "Find People and Pets" : {
+
+    },
+    "Finding place name…" : {
+
+    },
+    "Finish configuring the chart to see a preview." : {
+
+    },
+    "Finishing this photo…" : {
+
+    },
+    "Firmware / Software" : {
+      "comment" : "Info panel row label"
+    },
+    "Fit or Fill" : {
+
+    },
+    "Fit Photo" : {
+
+    },
+    "Fit Timeline to Window" : {
+      "comment" : "Video Studio transport: rescales the timeline so the whole project fits"
+    },
+    "Flash" : {
+      "comment" : "Info panel row label"
+    },
+    "Flip Horizontal" : {
+
+    },
+    "Focal Length" : {
+      "comment" : "Info panel row label"
+    },
+    "Focal Length Style" : {
+
+    },
+    "Font" : {
+
+    },
+    "Format" : {
+      "comment" : "Info panel row label"
+    },
+    "Forward a Frame" : {
+      "comment" : "Video Studio transport"
+    },
+    "Forward a Second" : {
+
+    },
+    "Frame" : {
+
+    },
+    "Frame Rate" : {
+      "comment" : "Info panel row label"
+    },
+    "Frame Saved" : {
+
+    },
+    "Frames are lined up before stacking, so a handheld sequence still works — a tripod still works better." : {
+
+    },
+    "Freeze" : {
+      "comment" : "Kind of timeline clip — a frozen frame — read by VoiceOver"
+    },
+    "Freeze %lld" : {
+      "comment" : "Video Studio viewer header: the held frame under the playhead, by its position on the track"
+    },
+    "Freeze Frame" : {
+      "comment" : "Video Studio transport: holds the frame under the playhead as a still"
+    },
+    "Full-size Paired Video" : {
+      "comment" : "Name of one file behind a photo, as an Info panel heading"
+    },
+    "Full-size Photo" : {
+      "comment" : "Name of one file behind a photo, as an Info panel heading"
+    },
+    "Full-size Video" : {
+      "comment" : "Name of one file behind a photo, as an Info panel heading"
+    },
+    "Gap" : {
+
+    },
+    "Go to End" : {
+      "comment" : "Video Studio transport"
+    },
+    "Go to Start" : {
+      "comment" : "Video Studio transport"
+    },
+    "Grey" : {
+
+    },
+    "Grid" : {
+      "comment" : "Video Studio media pool: thumbnail grid layout"
+    },
+    "Group by" : {
+
+    },
+    "Grouping duplicates…" : {
+
+    },
+    "HDR" : {
+
+    },
+    "Headline" : {
+      "comment" : "Info panel row label"
+    },
+    "HEIC" : {
+
+    },
+    "HEIC encoding isn't available on this device. ShotDex will save JPEG instead." : {
+
+    },
+    "Height" : {
+
+    },
+    "Hidden" : {
+      "comment" : "Info panel row label"
+    },
+    "Hide" : {
+
+    },
+    "Hide %@" : {
+
+    },
+    "Hide Graph" : {
+
+    },
+    "Hide Mask Overlay" : {
+
+    },
+    "Hide Media" : {
+      "comment" : "Video Studio: closes the library column"
+    },
+    "Hide or Show Tools" : {
+
+    },
+    "Hide Photos Already Imported" : {
+
+    },
+    "Hide RAW files" : {
+
+    },
+    "Hide this photo?" : {
+
+    },
+    "Hide Tools" : {
+
+    },
+    "History" : {
+
+    },
+    "History covers this editing session. Recall last ShotDex edit restores the recipe stored in Photos instead." : {
+
+    },
+    "Hold to see original" : {
+
+    },
+    "Hue %lld degrees, saturation %lld percent" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hue %1$lld degrees, saturation %2$lld percent"
           }
         }
       }
     },
-    "ISO": {
-      "comment": "Info panel row label"
+    "iCloud download stalled" : {
+
     },
-    "Import": {},
-    "Import %lld item": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Import %lld item"
+    "iCloud isn't responding" : {
+
+    },
+    "iCloud isn't responding — trying again in" : {
+
+    },
+    "iCloud not responding" : {
+
+    },
+    "iCloud not responding, retrying automatically" : {
+
+    },
+    "Import" : {
+
+    },
+    "Import %lld item" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Import %lld item"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Import %lld items"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Import %lld items"
                 }
               }
             }
@@ -942,25 +1601,31 @@
         }
       }
     },
-    "Import Photos": {},
-    "Import from a Card or Drive": {},
-    "Imported": {},
-    "Imported %lld item": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Imported %lld item"
+    "Import from a Card or Drive" : {
+
+    },
+    "Import Photos" : {
+
+    },
+    "Imported" : {
+
+    },
+    "Imported %lld item" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Imported %lld item"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Imported %lld items"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Imported %lld items"
                 }
               }
             }
@@ -968,134 +1633,264 @@
         }
       }
     },
-    "Imported photos go into your library either way. An album here just files them as well.": {},
-    "Importing %lld of %lld…": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "Importing %1$lld of %2$lld…"
+    "Imported photos go into your library either way. An album here just files them as well." : {
+
+    },
+    "Importing %lld of %lld…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Importing %1$lld of %2$lld…"
           }
         }
       }
     },
-    "In": {},
-    "Include Location": {},
-    "Include Metadata": {},
-    "Includes identifiers, serial numbers, internal Exif/TIFF values, resources, and vendor-specific binary blocks.": {},
-    "Index your library from the Library tab, then come back to find duplicates.": {},
-    "Indexed Photos and Videos": {},
-    "Indexed photo info is ready. Detailed raw metadata is still being read in the background.": {},
-    "Indexing": {},
-    "Indexing %lld of %lld photos, %lld percent": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "Indexing %1$lld of %2$lld photos, %3$lld percent"
+    "In" : {
+
+    },
+    "Include Location" : {
+
+    },
+    "Include Metadata" : {
+
+    },
+    "Includes identifiers, serial numbers, internal Exif/TIFF values, resources, and vendor-specific binary blocks." : {
+
+    },
+    "Index your library from the Library tab, then come back to find duplicates." : {
+
+    },
+    "Indexed photo info is ready. Detailed raw metadata is still being read in the background." : {
+
+    },
+    "Indexed Photos and Videos" : {
+
+    },
+    "Indexing" : {
+
+    },
+    "Indexing %lld of %lld photos, %lld percent" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Indexing %1$lld of %2$lld photos, %3$lld percent"
           }
         }
       }
     },
-    "Indexing %lld%%": {},
-    "Indexing paused until your iPhone cools down": {},
-    "Indexing paused — waiting for Wi-Fi": {},
-    "Indexing paused, waiting for Wi-Fi": {},
-    "Indexing reads the camera, lens and exposure info out of each photo and video. Wi-Fi is always allowed; in Low Power Mode automatic indexing pauses.\n\nLook Up Place Names is the only step that leaves this device — one lookup per place, then remembered.": {},
-    "Indexing, %lld percent": {},
-    "Invert": {},
-    "Invert Selection": {},
-    "It moves to the Hidden album in Photos. ShotDex can't show hidden photos, so you'll need the Photos app to unhide it.": {},
-    "Italic": {},
-    "JPEG": {},
-    "Keep EXIF of first photo": {},
-    "Keep Editing": {},
-    "Keep Only This": {
-      "comment": "Compare context menu: marks every other photo for deletion"
+    "Indexing %lld%%" : {
+
     },
-    "Keep Screen Awake While Indexing": {},
-    "Keep only this": {
-      "comment": "VoiceOver action on a Compare card: mark every other photo for deletion"
+    "Indexing paused — waiting for Wi-Fi" : {
+
     },
-    "Keywords": {
-      "comment": "Info panel row label"
+    "Indexing paused until your iPhone cools down" : {
+
     },
-    "LIVE": {},
-    "Last Indexed": {},
-    "Last scan %@": {},
-    "Layers": {},
-    "Layout": {
-      "comment": "Collage panel tab: template and slot count"
+    "Indexing paused, waiting for Wi-Fi" : {
+
     },
-    "Lens": {
-      "comment": "Info panel row label"
+    "Indexing reads the camera, lens and exposure info out of each photo and video. Wi-Fi is always allowed; in Low Power Mode automatic indexing pauses.\n\nLook Up Place Names is the only step that leaves this device — one lookup per place, then remembered." : {
+
     },
-    "Lens Make": {
-      "comment": "Info panel row label"
+    "Indexing, %lld percent" : {
+
     },
-    "Lens Range": {
-      "comment": "Info panel row label"
+    "Inspector" : {
+      "comment" : "Video Studio: shows or hides the controls column"
     },
-    "Less than a minute left": {},
-    "Library": {},
-    "Library Size": {},
-    "Library up to date.": {},
-    "Light Source": {
-      "comment": "Info panel row label"
+    "Invert" : {
+
     },
-    "Limited Access": {},
-    "Limits how many bars/slices appear.": {},
-    "Link Zoom": {},
-    "Linked": {},
-    "Live Photos": {},
-    "Loading full-quality preview…": {},
-    "Local Identifier": {
-      "comment": "Info panel row label"
+    "Invert Selection" : {
+
     },
-    "Location": {
-      "comment": "Info panel section title"
+    "ISO" : {
+      "comment" : "Info panel row label"
     },
-    "Look Up Place Names": {},
-    "Looking through your photos…": {},
-    "Looks through your photos for faces and for cats and dogs, then offers them as collections. This is the one thing ShotDex does that opens each photo in full, so it is slower than indexing and better left to a charger.\n\nIt all happens on this iPhone, and it counts faces without recognising anyone — iOS gives apps no way to tell one person from another.": {},
-    "Loop": {},
-    "Low Power Mode is slowing indexing down": {},
-    "MID": {},
-    "Magnifier": {},
-    "Make": {
-      "comment": "Info panel row label"
+    "It moves to the Hidden album in Photos. ShotDex can't show hidden photos, so you'll need the Photos app to unhide it." : {
+
     },
-    "Make a video from these photos": {},
-    "Manage": {},
-    "Manage Selected Photos": {},
-    "Map showing where this item was captured": {},
-    "Mark for Deletion": {},
-    "Mark for deletion": {
-      "comment": "VoiceOver action on a Compare card: mark it to be deleted"
+    "Italic" : {
+
     },
-    "Mask actions": {},
-    "Mask effect": {},
-    "Mask name": {},
-    "Masks": {},
-    "Match": {},
-    "Match %@": {},
-    "Match %@ of the conditions": {},
-    "Matches %lld photo.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Matches %lld photo."
+    "JPEG" : {
+
+    },
+    "Keep Editing" : {
+
+    },
+    "Keep EXIF of first photo" : {
+
+    },
+    "Keep only this" : {
+      "comment" : "VoiceOver action on a Compare card: mark every other photo for deletion"
+    },
+    "Keep Only This" : {
+      "comment" : "Compare context menu: marks every other photo for deletion"
+    },
+    "Keep Screen Awake While Indexing" : {
+
+    },
+    "Keywords" : {
+      "comment" : "Info panel row label"
+    },
+    "Last Indexed" : {
+
+    },
+    "Last scan %@" : {
+
+    },
+    "Layers" : {
+
+    },
+    "Layout" : {
+      "comment" : "Collage panel tab: template and slot count"
+    },
+    "left" : {
+
+    },
+    "Lens" : {
+      "comment" : "Info panel row label"
+    },
+    "Lens Make" : {
+      "comment" : "Info panel row label"
+    },
+    "Lens Range" : {
+      "comment" : "Info panel row label"
+    },
+    "Less than a minute left" : {
+
+    },
+    "Library" : {
+
+    },
+    "Library Size" : {
+
+    },
+    "Library up to date." : {
+
+    },
+    "Light Source" : {
+      "comment" : "Info panel row label"
+    },
+    "Limited Access" : {
+
+    },
+    "Limits how many bars/slices appear." : {
+
+    },
+    "Link Zoom" : {
+
+    },
+    "Linked" : {
+
+    },
+    "List" : {
+      "comment" : "Video Studio media pool: one row per item layout"
+    },
+    "LIVE" : {
+
+    },
+    "Live Photos" : {
+
+    },
+    "Loading full-quality preview…" : {
+
+    },
+    "Local Identifier" : {
+      "comment" : "Info panel row label"
+    },
+    "Location" : {
+      "comment" : "Info panel section title"
+    },
+    "Lock Track" : {
+      "comment" : "Video Studio track header: stops the track being selected or dragged"
+    },
+    "Longest First" : {
+      "comment" : "Video Studio media pool sort order: longest video duration first"
+    },
+    "Look Up Place Names" : {
+
+    },
+    "Looking through your photos…" : {
+
+    },
+    "Looks through your photos for faces and for cats and dogs, then offers them as collections. This is the one thing ShotDex does that opens each photo in full, so it is slower than indexing and better left to a charger.\n\nIt all happens on this iPhone, and it counts faces without recognising anyone — iOS gives apps no way to tell one person from another." : {
+
+    },
+    "Loop" : {
+
+    },
+    "Loop Playback" : {
+      "comment" : "Video Studio transport: restarts the project when it reaches the end"
+    },
+    "Low Power Mode is slowing indexing down" : {
+
+    },
+    "Magnifier" : {
+
+    },
+    "Make" : {
+      "comment" : "Info panel row label"
+    },
+    "Make a video from these photos" : {
+
+    },
+    "Manage" : {
+
+    },
+    "Manage Selected Photos" : {
+
+    },
+    "Map showing where this item was captured" : {
+
+    },
+    "Mark for deletion" : {
+      "comment" : "VoiceOver action on a Compare card: mark it to be deleted"
+    },
+    "Mark for Deletion" : {
+
+    },
+    "Mask actions" : {
+
+    },
+    "Mask effect" : {
+
+    },
+    "Mask name" : {
+
+    },
+    "Masks" : {
+
+    },
+    "Match" : {
+
+    },
+    "Match %@" : {
+
+    },
+    "Match %@ of the conditions" : {
+
+    },
+    "Matches %lld photo." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Matches %lld photo."
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Matches %lld photos."
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Matches %lld photos."
                 }
               }
             }
@@ -1103,147 +1898,312 @@
         }
       }
     },
-    "Max": {},
-    "Measure": {},
-    "Measured": {},
-    "Media Subtypes": {
-      "comment": "Info panel row label"
+    "Max" : {
+
     },
-    "Media Type": {
-      "comment": "Info panel row label"
+    "Measure" : {
+
     },
-    "Megapixels": {
-      "comment": "Info panel row label"
+    "Measured" : {
+
     },
-    "Memories": {},
-    "Merge All Groups": {},
-    "Metadata": {
-      "comment": "Info panel section title"
+    "Media" : {
+      "comment" : "Video Studio: title of the library column beside the stage"
     },
-    "Metering": {
-      "comment": "Info panel row label"
+    "Media Pool" : {
+      "comment" : "Video Studio: shows or hides the library column"
     },
-    "Min": {},
-    "Mix": {},
-    "Mode": {},
-    "Model": {
-      "comment": "Info panel row label"
+    "Media Subtypes" : {
+      "comment" : "Info panel row label"
     },
-    "Modification Date": {
-      "comment": "Info panel row label"
+    "Media Type" : {
+      "comment" : "Info panel row label"
     },
-    "Modified": {
-      "comment": "Info panel row label"
+    "Media Types" : {
+
     },
-    "More": {},
-    "More actions": {},
-    "More editor actions": {},
-    "More selection actions": {},
-    "Move Out of Folder": {},
-    "Move ellipse": {},
-    "Move to Folder": {},
-    "Music": {
-      "comment": "Video Studio timeline lane: the music track"
+    "Megapixels" : {
+      "comment" : "Info panel row label"
     },
-    "Music, %@, from second %lld to %lld": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "Music, %1$@, from second %2$lld to %3$lld"
+    "Memories" : {
+
+    },
+    "Merge All Groups" : {
+
+    },
+    "Metadata" : {
+      "comment" : "Info panel section title"
+    },
+    "Metering" : {
+      "comment" : "Info panel row label"
+    },
+    "MID" : {
+
+    },
+    "Min" : {
+
+    },
+    "Mix" : {
+
+    },
+    "mm" : {
+
+    },
+    "Mode" : {
+
+    },
+    "Model" : {
+      "comment" : "Info panel row label"
+    },
+    "Modification Date" : {
+      "comment" : "Info panel row label"
+    },
+    "Modified" : {
+      "comment" : "Info panel row label"
+    },
+    "More" : {
+
+    },
+    "More actions" : {
+
+    },
+    "More editor actions" : {
+
+    },
+    "More selection actions" : {
+
+    },
+    "Move ellipse" : {
+
+    },
+    "Music" : {
+      "comment" : "Video Studio timeline lane: the music track"
+    },
+    "Music, %@, from second %lld to %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Music, %1$@, from second %2$lld to %3$lld"
           }
         }
       }
     },
-    "Mute": {},
-    "My Looks": {},
-    "My Music": {},
-    "Name": {},
-    "Network": {},
-    "New Album": {},
-    "New Album…": {},
-    "New Chart": {},
-    "New Folder": {},
-    "New Mask": {},
-    "New Preset": {},
-    "New Smart Album": {},
-    "New album, smart album or folder, or customize this tab": {},
-    "New photos appear in your library and are indexed automatically.": {},
-    "No Access to Photos": {},
-    "No Charts": {},
-    "No Date": {},
-    "No Duplicates": {},
-    "No Indexed Photos": {},
-    "No Metadata": {},
-    "No Photos": {},
-    "No Photos Match": {},
-    "No Photos on This Day": {},
-    "No Series": {},
-    "No Unknown Cameras": {},
-    "No albums yet. Create one to add these photos.": {},
-    "No data for this range.": {},
-    "No layers yet": {},
-    "No location data": {},
-    "No location data. This item doesn't contain a saved capture location.": {},
-    "No masks yet": {},
-    "No metadata": {
-      "comment": "Compare card caption when a photo or video carries no EXIF"
+    "Mute" : {
+
     },
-    "No music yet": {},
-    "No photos match these filters.": {},
-    "No photos were taken on %@ in previous years.": {},
-    "No presets yet": {},
-    "No trips yet. A trip is several days of photos taken well away from where you usually shoot.": {},
-    "None": {},
-    "None of your indexed photos carry a location yet.": {},
-    "Not Scanned Yet": {},
-    "Not available for this file": {},
-    "Not favorite": {},
-    "Not linked": {},
-    "Notifications": {
-      "comment": "Settings section header and permission row label.",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Thông báo"
+    "Mute Project" : {
+      "comment" : "Video Studio level meter: silences the whole mix"
+    },
+    "Mute Track" : {
+      "comment" : "Video Studio track header: silences this track"
+    },
+    "My Looks" : {
+
+    },
+    "My Music" : {
+
+    },
+    "Name" : {
+
+    },
+    "Network" : {
+
+    },
+    "New Album" : {
+
+    },
+    "New album or smart album, or customize this tab" : {
+
+    },
+    "New Album…" : {
+
+    },
+    "New Chart" : {
+
+    },
+    "New Collage" : {
+      "comment" : "Button that starts a new collage"
+    },
+    "New Mask" : {
+
+    },
+    "New photos appear in your library and are indexed automatically." : {
+
+    },
+    "New Preset" : {
+
+    },
+    "New Smart Album" : {
+
+    },
+    "New Video Project" : {
+      "comment" : "Button that starts a new video in the Video Studio"
+    },
+    "Newest First" : {
+      "comment" : "Video Studio media pool sort order"
+    },
+    "No Access to Photos" : {
+
+    },
+    "No albums yet. Create one to add these photos." : {
+
+    },
+    "No Charts" : {
+
+    },
+    "No Clip" : {
+      "comment" : "Video Studio viewer header: the playhead is past the end of the project"
+    },
+    "No Collages Yet" : {
+
+    },
+    "No data for this range." : {
+
+    },
+    "No Date" : {
+      "comment" : "Video Studio media pool: an item whose capture date the library does not carry"
+    },
+    "No Duplicates" : {
+
+    },
+    "No Indexed Photos" : {
+
+    },
+    "No layers yet" : {
+
+    },
+    "No location data" : {
+
+    },
+    "No location data. This item doesn't contain a saved capture location." : {
+
+    },
+    "No masks yet" : {
+
+    },
+    "No metadata" : {
+      "comment" : "Compare card caption when a photo or video carries no EXIF"
+    },
+    "No Metadata" : {
+
+    },
+    "No music yet" : {
+
+    },
+    "No Photos" : {
+
+    },
+    "No Photos Match" : {
+
+    },
+    "No photos match these filters." : {
+
+    },
+    "No Photos on This Day" : {
+
+    },
+    "No photos were taken on %@ in previous years." : {
+
+    },
+    "No presets yet" : {
+
+    },
+    "No Series" : {
+
+    },
+    "No trips yet. A trip is several days of photos taken well away from where you usually shoot." : {
+
+    },
+    "No Unknown Cameras" : {
+
+    },
+    "No Video Projects Yet" : {
+
+    },
+    "None" : {
+
+    },
+    "None of your indexed photos carry a location yet." : {
+
+    },
+    "Not available for this file" : {
+
+    },
+    "Not favorite" : {
+
+    },
+    "Not linked" : {
+
+    },
+    "Not Scanned Yet" : {
+
+    },
+    "nothing downloaded yet" : {
+
+    },
+    "Nothing to add" : {
+      "comment" : "Video Studio media pool: empty state title"
+    },
+    "Notifications" : {
+      "comment" : "Settings section header and permission row label.",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thông báo"
           }
         }
       }
     },
-    "OK": {},
-    "ON THIS PHOTO": {},
-    "Of": {},
-    "Off": {},
-    "Offline": {},
-    "On": {},
-    "On This Day": {
-      "comment": "Title of the daily reminder notification.",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ngày này năm xưa"
+    "Of" : {
+
+    },
+    "Off" : {
+
+    },
+    "Offline" : {
+
+    },
+    "OK" : {
+
+    },
+    "Oldest First" : {
+      "comment" : "Video Studio media pool sort order"
+    },
+    "On" : {
+
+    },
+    "On This Day" : {
+      "comment" : "Title of the daily reminder notification.",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ngày này năm xưa"
           }
         }
       }
     },
-    "On This Day, %lld photo from previous years": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "On This Day, %lld photo from previous years"
+    "On This Day, %@" : {
+
+    },
+    "On This Day, %lld photo from previous years" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "On This Day, %lld photo from previous years"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "On This Day, %lld photos from previous years"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "On This Day, %lld photos from previous years"
                 }
               }
             }
@@ -1251,419 +2211,1009 @@
         }
       }
     },
-    "Once a day ShotDex tells you how many photos and videos you shot on that date in previous years, and how much space they take, so you can go clear out what you no longer want. Days with nothing to show are skipped.\n\nSizes come from the local index: while indexing is still running the total is reported as a minimum and grows as more files are read.\n\nReminders are scheduled a week at a time and refilled whenever you open ShotDex.": {
-      "comment": "Footer of the Notifications settings section.",
-      "extractionState": "stale",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mỗi ngày một lần, ShotDex cho bạn biết ngày đó những năm trước bạn đã chụp bao nhiêu ảnh và video, và chúng chiếm bao nhiêu dung lượng, để bạn vào dọn những gì không còn muốn giữ. Ngày không có gì thì bỏ qua.\n\nDung lượng lấy từ index trên máy: trong lúc index còn chạy, tổng được báo là mức tối thiểu và tăng dần khi đọc thêm file.\n\nThông báo được đặt trước một tuần và nạp lại mỗi lần bạn mở ShotDex."
+    "ON THIS PHOTO" : {
+
+    },
+    "Once a day ShotDex tells you how many photos and videos you shot on that date in previous years, and how much space they take, so you can go clear out what you no longer want. Days with nothing to show are skipped.\n\nSizes come from the local index: while indexing is still running the total is reported as a minimum and grows as more files are read.\n\nReminders are scheduled a week at a time and refilled whenever you open ShotDex." : {
+      "comment" : "Footer of the Notifications settings section.",
+      "extractionState" : "stale",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mỗi ngày một lần, ShotDex cho bạn biết ngày đó những năm trước bạn đã chụp bao nhiêu ảnh và video, và chúng chiếm bao nhiêu dung lượng, để bạn vào dọn những gì không còn muốn giữ. Ngày không có gì thì bỏ qua.\n\nDung lượng lấy từ index trên máy: trong lúc index còn chạy, tổng được báo là mức tối thiểu và tăng dần khi đọc thêm file.\n\nThông báo được đặt trước một tuần và nạp lại mỗi lần bạn mở ShotDex."
           }
         }
       }
     },
-    "One clip couldn't be loaded and was left out. It may still be in iCloud — check your connection and add it again.": {},
-    "Opacity": {},
-    "Open Library": {},
-    "Open Settings": {
-      "comment": "Button opening the system Settings app for this app.",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mở Cài đặt"
+    "One clip couldn't be loaded and was left out. It may still be in iCloud — check your connection and add it again." : {
+
+    },
+    "Opacity" : {
+
+    },
+    "Open Library" : {
+
+    },
+    "Open Settings" : {
+      "comment" : "Button opening the system Settings app for this app.",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mở Cài đặt"
           }
         }
       }
     },
-    "Opening original…": {},
-    "Opening…": {},
-    "Opens the map of where you have shot.": {},
-    "Opens the new photo when done": {},
-    "Opens the photos taken with one camera body.": {},
-    "Opens the statistics for your cameras, lenses and focal lengths.": {},
-    "Opens the trips found in your library.": {},
-    "Opens your favorite photos.": {},
-    "Opens your photo library in ShotDex.": {},
-    "Or drop on another photo to swap": {},
-    "Original": {},
-    "Original Filename": {
-      "comment": "Info panel row label"
+    "Opening original…" : {
+
     },
-    "Originals couldn't be deleted": {},
-    "Out": {},
-    "Output": {},
-    "Paired Video": {
-      "comment": "Name of one file behind a photo, as an Info panel heading"
+    "Opening…" : {
+
     },
-    "Pan Left": {},
-    "Pan Right": {},
-    "Panoramas": {},
-    "Paste Edits": {},
-    "Paste onto %lld Photos": {},
-    "Pause": {},
-    "Paused — waiting for Wi-Fi": {},
-    "People": {},
-    "People and Pets": {},
-    "Period": {},
-    "Pets": {},
-    "Photo": {
-      "comment": "Info panel section title\nKind of timeline clip, read by VoiceOver\nName of one file behind a photo, as an Info panel heading"
+    "Opens in the editor" : {
+      "comment" : "VoiceOver hint on a row in the Creations list"
     },
-    "Photo %lld": {},
-    "Photo %lld of %lld": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "Photo %1$lld of %2$lld"
+    "Opens the map of where you have shot." : {
+
+    },
+    "Opens the new photo when done" : {
+
+    },
+    "Opens the photos taken with one camera body." : {
+
+    },
+    "Opens the statistics for your cameras, lenses and focal lengths." : {
+
+    },
+    "Opens the trips found in your library." : {
+
+    },
+    "Opens your favorite photos." : {
+
+    },
+    "Opens your photo library in ShotDex." : {
+
+    },
+    "Or drop on another photo to swap" : {
+
+    },
+    "Original" : {
+
+    },
+    "Original Filename" : {
+      "comment" : "Info panel row label"
+    },
+    "Originals couldn't be deleted" : {
+
+    },
+    "Out" : {
+
+    },
+    "Output" : {
+
+    },
+    "Paired Video" : {
+      "comment" : "Name of one file behind a photo, as an Info panel heading"
+    },
+    "Pan Left" : {
+
+    },
+    "Pan Right" : {
+
+    },
+    "Panoramas" : {
+
+    },
+    "Paste Edits" : {
+
+    },
+    "Paste onto %lld Photos" : {
+
+    },
+    "Pause" : {
+      "comment" : "Video Studio transport"
+    },
+    "Paused — waiting for Wi-Fi" : {
+
+    },
+    "People" : {
+
+    },
+    "People and Pets" : {
+
+    },
+    "Period" : {
+
+    },
+    "Pets" : {
+
+    },
+    "Photo" : {
+      "comment" : "Info panel section title\nKind of timeline clip, read by VoiceOver\nName of one file behind a photo, as an Info panel heading\nVideo Studio media pool: the kind of a still item"
+    },
+    "Photo %lld" : {
+      "comment" : "Video Studio viewer header: the still under the playhead, by its position on the track"
+    },
+    "Photo %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Photo %1$lld of %2$lld"
           }
         }
       }
     },
-    "Photo Info": {},
-    "Photo Library": {},
-    "Photo Location": {},
-    "Photo Proxy": {
-      "comment": "Name of one file behind a photo, as an Info panel heading"
+    "Photo Info" : {
+
     },
-    "Photo set aside": {},
-    "Photos Only": {},
-    "Photos and Videos": {},
-    "Photos and metadata never leave this device.": {},
-    "Photos doesn't support HEIC as the edited version of this photo, so ShotDex saved a maximum-quality JPEG instead.": {},
-    "Photos doesn't support an HEIC edited version of this photo. ShotDex will save a maximum-quality JPEG.": {},
-    "Photos must match at least one condition below.": {},
-    "Photos must match every condition below.": {},
-    "Photos taken with this camera": {},
-    "Photos taken with this lens": {},
-    "Pick Another Date": {},
-    "Pick a Color from the Photo": {},
-    "Pick a Date": {},
-    "Pick the sensor format for each camera to include it in statistics and equivalent focal length calculations.": {},
-    "Pin to Top": {},
-    "Pinch the photo grid to change how many columns it shows.": {},
-    "Pinned": {},
-    "Pixel Size": {
-      "comment": "Info panel row label"
+    "Photo Library" : {
+
     },
-    "Place name needs a network connection. The saved coordinate remains available offline.": {},
-    "Places": {},
-    "Play": {
-      "comment": "Video Studio: starts preview playback"
+    "Photo Location" : {
+
     },
-    "Play Live Photo": {},
-    "Play or Pause": {},
-    "Playback": {},
-    "Playback Speed": {},
-    "Playback speed": {},
-    "Playing Live Photo": {},
-    "Plug in your camera's SD card or a USB drive, then pick its folder (usually DCIM). RAW is skipped by default; JPEG, HEIC and videos import.": {},
-    "Point": {},
-    "Point color": {},
-    "Polaroid": {},
-    "Polaroid style": {},
-    "Pop": {},
-    "Portrait": {},
-    "Preparing clips…": {},
-    "Preparing original…": {},
-    "Preparing scan…": {},
-    "Preset": {},
-    "Preset %@": {},
-    "Presets": {},
-    "Press and hold to see the clips without edits": {
-      "comment": "Hint for the Video Studio before/after control"
+    "Photo Proxy" : {
+      "comment" : "Name of one file behind a photo, as an Info panel heading"
     },
-    "Preview": {},
-    "Preview %@": {},
-    "Privacy": {},
-    "Project": {},
-    "Quality": {},
-    "RATIO": {},
-    "RAW and DNG are hidden by default; JPEG, HEIC and videos import.": {},
-    "RECENT": {},
-    "RGB": {},
-    "RGB histogram": {},
-    "Ratio": {},
-    "Raw Metadata": {},
-    "Raw · Image": {
-      "comment": "Info panel section title"
+    "Photo set aside" : {
+
     },
-    "Re-index Library": {},
-    "Reading metadata %lld/%lld": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "Reading metadata %1$lld/%2$lld"
+    "Photo, %@" : {
+      "comment" : "Video Studio media pool: VoiceOver label for a still — kind, capture date"
+    },
+    "Photos" : {
+      "comment" : "Video Studio media pool filter: still photos only"
+    },
+    "Photos and metadata never leave this device." : {
+
+    },
+    "Photos and Videos" : {
+
+    },
+    "Photos and videos in your library appear here." : {
+      "comment" : "Video Studio media pool: empty state body"
+    },
+    "photos and videos per minute" : {
+
+    },
+    "Photos doesn't support an HEIC edited version of this photo. ShotDex will save a maximum-quality JPEG." : {
+
+    },
+    "Photos doesn't support HEIC as the edited version of this photo, so ShotDex saved a maximum-quality JPEG instead." : {
+
+    },
+    "Photos must match at least one condition below." : {
+
+    },
+    "Photos must match every condition below." : {
+
+    },
+    "Photos Only" : {
+
+    },
+    "Photos taken with this camera" : {
+
+    },
+    "Photos taken with this lens" : {
+
+    },
+    "Pick a Color from the Photo" : {
+
+    },
+    "Pick a Date" : {
+
+    },
+    "Pick Another Date" : {
+
+    },
+    "Pick the sensor format for each camera to include it in statistics and equivalent focal length calculations." : {
+
+    },
+    "Pin to Top" : {
+
+    },
+    "Pinch the photo grid to change how many columns it shows." : {
+
+    },
+    "Pinned" : {
+
+    },
+    "Pixel Size" : {
+      "comment" : "Info panel row label"
+    },
+    "Place name needs a network connection. The saved coordinate remains available offline." : {
+
+    },
+    "Places" : {
+
+    },
+    "Play" : {
+      "comment" : "Video Studio transport\nVideo Studio: starts preview playback"
+    },
+    "Play Live Photo" : {
+
+    },
+    "Play or Pause" : {
+
+    },
+    "Playback" : {
+
+    },
+    "Playback speed" : {
+
+    },
+    "Playback Speed" : {
+
+    },
+    "Playhead at %@" : {
+      "comment" : "Video Studio transport: VoiceOver label for the timecode read-out"
+    },
+    "Playing Live Photo" : {
+
+    },
+    "Plug in your camera's SD card or a USB drive, then pick its folder (usually DCIM). RAW is skipped by default; JPEG, HEIC and videos import." : {
+
+    },
+    "Point" : {
+
+    },
+    "Point color" : {
+
+    },
+    "Polaroid" : {
+
+    },
+    "Polaroid style" : {
+
+    },
+    "Pop" : {
+
+    },
+    "Portrait" : {
+
+    },
+    "Preparing clips…" : {
+
+    },
+    "Preparing original…" : {
+
+    },
+    "Preparing scan…" : {
+
+    },
+    "Preset" : {
+
+    },
+    "Preset %@" : {
+
+    },
+    "Presets" : {
+
+    },
+    "Press and hold to see the clips without edits" : {
+      "comment" : "Hint for the Video Studio before/after control"
+    },
+    "Preview" : {
+
+    },
+    "Preview %@" : {
+
+    },
+    "Privacy" : {
+
+    },
+    "Project" : {
+
+    },
+    "Project Overview" : {
+      "comment" : "Video Studio: the whole-project strip above the timeline"
+    },
+    "Quality" : {
+
+    },
+    "Ratio" : {
+
+    },
+    "RATIO" : {
+
+    },
+    "Raw · Image" : {
+      "comment" : "Info panel section title"
+    },
+    "RAW and DNG are hidden by default; JPEG, HEIC and videos import." : {
+
+    },
+    "Raw Metadata" : {
+
+    },
+    "Re-index Library" : {
+
+    },
+    "reading metadata %lld/%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "reading metadata %1$lld/%2$lld"
           }
         }
       }
     },
-    "Reading original…": {},
-    "Reading photo and video info · %lld%%": {},
-    "Reading photo and video info…": {},
-    "Reading photo info…": {},
-    "Reading the video failed.": {},
-    "Recall Last ShotDex Edit": {},
-    "Recall last ShotDex edit": {},
-    "Recently Shared": {},
-    "Recently Viewed": {},
-    "Recents": {},
-    "Redo": {},
-    "Reference": {},
-    "Remind Me At": {
-      "comment": "Settings time picker for the daily reminder.",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nhắc lúc"
+    "Reading metadata %lld/%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reading metadata %1$lld/%2$lld"
           }
         }
       }
     },
-    "Remove Invert": {},
-    "Remove Location": {},
-    "Remove from Album": {},
-    "Remove photo slot": {},
-    "Removes it from the selection": {},
-    "Removes this condition": {},
-    "Rename": {},
-    "Rename Album": {},
-    "Rename Folder": {},
-    "Rename Mask": {},
-    "Rename Preset": {},
-    "Rename Signature": {},
-    "Rendering full resolution…": {},
-    "Reorder charts": {},
-    "Replace": {},
-    "Rescan": {},
-    "Reset": {},
-    "Reset All": {},
-    "Reset Curve": {},
-    "Reset Custom Mappings": {},
-    "Reset Mappings": {},
-    "Reset all custom camera mappings?": {},
-    "Reset to Default Order": {},
-    "Resize": {},
-    "Resize %lld Photos": {},
-    "Resize Error": {},
-    "Resize Photo": {},
-    "Resize Presets": {},
-    "Retry": {},
-    "Retry Now": {},
-    "Retrying automatically in": {},
-    "Retrying in": {},
-    "Revert": {},
-    "Revert to Original": {},
-    "Revert to Original?": {},
-    "Rights & Description": {
-      "comment": "Info panel section title"
+    "Reading original…" : {
+
     },
-    "Rotate": {},
-    "Rotate 90°": {},
-    "Same as Original": {},
-    "Sample a color": {},
-    "Save": {},
-    "Save %lld Copies": {},
-    "Save Changes": {},
-    "Save Changes is non-destructive: Photos keeps the original and ShotDex reopens this photo with the saved crop, sliders and masks. A Live Photo keeps its motion. Save Copy creates a still image.": {},
-    "Save Changes to %lld Photos": {},
-    "Save Copy": {},
-    "Save Copy is full resolution at maximum quality. Turning off metadata strips EXIF and clears the Photos date/location on Save Changes. If Photos doesn't support HEIC for this photo, ShotDex falls back to JPEG and tells you.": {},
-    "Save Current": {},
-    "Save Edit": {},
-    "Save Look": {},
-    "Save Preset": {},
-    "Save an edit here and it can be put on any other photo.": {},
-    "Save as Copies": {},
-    "Save as Smart Album": {},
-    "Save as Video": {},
-    "Save preset": {},
-    "Save to Photos": {},
-    "Saved as JPEG": {},
-    "Saves every layer on this photo as a preset, so it can be stamped onto another one.": {},
-    "Saves the frame and style — not the photos or text.": {},
-    "Saves the tone, colour, curve and film look on this photo. The crop, masks and markup stay with the photo.": {},
-    "Save…": {},
-    "Saving %lld of %lld": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "Saving %1$lld of %2$lld"
+    "Reading photo and video info · %lld%%" : {
+
+    },
+    "Reading photo and video info…" : {
+
+    },
+    "Reading photo info…" : {
+
+    },
+    "Reading the video failed." : {
+
+    },
+    "Recall last ShotDex edit" : {
+
+    },
+    "Recall Last ShotDex Edit" : {
+
+    },
+    "RECENT" : {
+
+    },
+    "Recents" : {
+
+    },
+    "Redo" : {
+
+    },
+    "Reference" : {
+
+    },
+    "Remind Me At" : {
+      "comment" : "Settings time picker for the daily reminder.",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nhắc lúc"
           }
         }
       }
     },
-    "Saving Frame…": {},
-    "Saving to Photos…": {},
-    "Saving…": {},
-    "Scan Again": {},
-    "Scan Library": {},
-    "Scan your library once; the results are kept and you rescan whenever you like.": {},
-    "Scanned": {},
-    "Scanning %@…": {},
-    "Scanning %lld of %lld": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "Scanning %1$lld of %2$lld"
+    "Remove from Album" : {
+
+    },
+    "Remove from Collages" : {
+      "comment" : "Removes a saved collage from the Collages list — the exported photo stays in the library"
+    },
+    "Remove from Video Projects" : {
+      "comment" : "Removes a saved video project from the Video Projects list — the exported video stays in the library"
+    },
+    "Remove Invert" : {
+
+    },
+    "Remove Location" : {
+
+    },
+    "Remove photo slot" : {
+
+    },
+    "Removes it from the selection" : {
+
+    },
+    "Removes this condition" : {
+
+    },
+    "Rename" : {
+
+    },
+    "Rename Album" : {
+
+    },
+    "Rename Mask" : {
+
+    },
+    "Rename Preset" : {
+
+    },
+    "Rename Signature" : {
+
+    },
+    "Rendering full resolution…" : {
+
+    },
+    "Reorder charts" : {
+
+    },
+    "Replace" : {
+
+    },
+    "Rescan" : {
+
+    },
+    "Reset" : {
+
+    },
+    "Reset All" : {
+
+    },
+    "Reset all custom camera mappings?" : {
+
+    },
+    "Reset Curve" : {
+
+    },
+    "Reset Custom Mappings" : {
+
+    },
+    "Reset Mappings" : {
+
+    },
+    "Reset to Default Order" : {
+
+    },
+    "Resize" : {
+
+    },
+    "Resize %lld Photos" : {
+
+    },
+    "Resize Error" : {
+
+    },
+    "Resize Photo" : {
+
+    },
+    "Resize Presets" : {
+
+    },
+    "Retry" : {
+
+    },
+    "Retry Now" : {
+
+    },
+    "Retrying automatically in" : {
+
+    },
+    "Retrying in" : {
+
+    },
+    "Revert" : {
+
+    },
+    "Revert to Original" : {
+
+    },
+    "Revert to Original?" : {
+
+    },
+    "RGB" : {
+
+    },
+    "RGB histogram" : {
+
+    },
+    "Rights & Description" : {
+      "comment" : "Info panel section title"
+    },
+    "Rotate" : {
+
+    },
+    "Rotate 90°" : {
+
+    },
+    "Same as Original" : {
+
+    },
+    "Sample a color" : {
+
+    },
+    "Save" : {
+
+    },
+    "Save %lld Copies" : {
+
+    },
+    "Save an edit here and it can be put on any other photo." : {
+
+    },
+    "Save as Copies" : {
+
+    },
+    "Save as Smart Album" : {
+
+    },
+    "Save as Video" : {
+
+    },
+    "Save Changes" : {
+
+    },
+    "Save Changes is non-destructive: Photos keeps the original and ShotDex reopens this photo with the saved crop, sliders and masks. A Live Photo keeps its motion. Save Copy creates a still image." : {
+
+    },
+    "Save Changes to %lld Photos" : {
+
+    },
+    "Save Copy" : {
+
+    },
+    "Save Copy is full resolution at maximum quality. Turning off metadata strips EXIF and clears the Photos date/location on Save Changes. If Photos doesn't support HEIC for this photo, ShotDex falls back to JPEG and tells you." : {
+
+    },
+    "Save Current" : {
+
+    },
+    "Save Edit" : {
+
+    },
+    "Save Look" : {
+
+    },
+    "Save preset" : {
+
+    },
+    "Save Preset" : {
+
+    },
+    "Save to Photos" : {
+
+    },
+    "Save…" : {
+
+    },
+    "Saved as JPEG" : {
+
+    },
+    "Saves every layer on this photo as a preset, so it can be stamped onto another one." : {
+
+    },
+    "Saves the frame and style — not the photos or text." : {
+
+    },
+    "Saves the tone, colour, curve and film look on this photo. The crop, masks and markup stay with the photo." : {
+
+    },
+    "Saving %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Saving %1$lld of %2$lld"
           }
         }
       }
     },
-    "Scene": {
-      "comment": "Info panel row label"
+    "Saving Frame…" : {
+
     },
-    "Screenshots": {},
-    "Scroll by date": {},
-    "Search": {},
-    "Search Photos": {},
-    "Search ShotDex for ${query}": {},
-    "Search again for %@": {},
-    "Search for a place": {},
-    "Searches your library by camera, lens, exposure settings, place or date.": {},
-    "Seconds per photo": {},
-    "Select": {},
-    "Select All": {},
-    "Select Text or Subject": {},
-    "Select a start date": {},
-    "Select items to import": {},
-    "Select photos": {},
-    "Selected %lld": {},
-    "Selected photo": {},
-    "Send Backward": {},
-    "Sensor Format": {},
-    "Series": {},
-    "Set": {},
-    "Settings": {},
-    "Shake": {},
-    "Share": {},
-    "Sharing": {},
-    "Shift": {},
-    "ShotDex": {},
-    "ShotDex is reading the camera, lens and exposure info from each photo and video. For items kept in iCloud it downloads only the small part of the file holding that info — nothing is saved to this iPhone. The app may feel slow until this finishes.": {},
-    "ShotDex only analyzes the photos you selected.": {},
-    "ShotDex will ask Photos to remove every copy already exported.": {},
-    "Show %@": {},
-    "Show All Frames": {},
-    "Show All Raw Metadata": {},
-    "Show Favorites": {},
-    "Show Gear Statistics": {},
-    "Show Graph": {},
-    "Show Mask Overlay": {},
-    "Show Photos from a Camera": {},
-    "Show Places": {},
-    "Show Tools": {},
-    "Show Trips": {},
-    "Show in All Photos": {},
-    "Show on Map": {},
-    "Show original": {
-      "comment": "Video Studio: press-and-hold control that previews the clips without edits"
+    "Saving to Photos…" : {
+
     },
-    "Show photos from ${camera}": {},
-    "Show top %lld": {},
-    "Showing photos from %@": {},
-    "Shows a single value across the whole library.": {},
-    "Shows all photo info": {},
-    "Shows details about shutter count availability": {},
-    "Shows indexing details": {},
-    "Shows the top group by photo count.": {},
-    "Shutter Count": {},
-    "Shutter Speed": {
-      "comment": "Info panel row label"
+    "Saving…" : {
+
     },
-    "Size": {},
-    "Slide Left": {},
-    "Slide Right": {},
-    "Slide down": {},
-    "Slide left": {},
-    "Slide right": {},
-    "Slide up": {},
-    "Slideshow": {},
-    "Slo-mo": {},
-    "Smart Album Name": {},
-    "Smart Albums": {},
-    "Smart album in ShotDex": {},
-    "Soft Glow": {},
-    "Some Photos Didn't Save": {},
-    "Some exported copies may remain in Photos": {},
-    "Something Went Wrong": {},
-    "Sort By": {},
-    "Sort photos": {},
-    "Source": {},
-    "Split": {},
-    "Split into series by": {},
-    "Start": {},
-    "Statistics": {},
-    "Statistics appear after your library has been indexed.": {},
-    "Step back one frame": {},
-    "Step forward one frame": {},
-    "Sticker": {},
-    "Stop Selecting in Photo": {},
-    "Stop preview": {},
-    "Style": {
-      "comment": "Collage panel tab: spacing, corners and background"
+    "Scan Again" : {
+
     },
-    "Subject Distance": {
-      "comment": "Info panel row label"
+    "Scan library" : {
+      "comment" : "Duplicates tile subtitle before the first scan"
     },
-    "Subject Range": {
-      "comment": "Info panel row label"
+    "Scan Library" : {
+
     },
-    "Subtract": {},
-    "Summed from the file sizes the index has read. Photos still stored only in iCloud are counted at their full size.": {},
-    "Switches between matching all and any": {},
-    "Sync Everything": {},
-    "Sync Look": {},
-    "Sync to %lld Photos": {},
-    "Sync to 1 Photo": {},
-    "System": {},
-    "Tab bar": {},
-    "Tap + to add a chart to your dashboard.": {},
-    "Tap a mask to adjust that area on its own": {},
-    "Tap a photo to mark it for deletion": {
-      "comment": "Compare: the one instruction, shown until the first photo is marked"
+    "Scan your library once; the results are kept and you rescan whenever you like." : {
+
     },
-    "Tap a section to show or hide it, and Edit to drag them into the order you want. A section with nothing in it stays hidden whatever you choose here.": {},
-    "Tap the map or search to place this photo.": {},
-    "Tap the map to move the pin.": {},
-    "Tap to expand": {},
-    "Tap to fit the photo": {},
-    "Template %@": {},
-    "Text": {
-      "comment": "Collage panel tab: captions drawn on the collage\nVideo Studio timeline lane: the text and sticker overlay track"
+    "Scanned" : {
+
     },
-    "The albums inside move back to My Albums.": {},
-    "The capture date in the original file is left unchanged, the same as in Photos.": {},
-    "The crop applies when you leave this tab or save.": {},
-    "The original stays in your library. Revert in Photos brings the whole clip back.": {},
-    "The photos stay in your library.": {},
-    "The scan opens every photo in full, so building these again takes a while.": {},
-    "The size is a fast estimate and may change slightly when the full-resolution file is encoded.": {},
-    "The typical crop factor of the chosen format is used for full-frame equivalent focal lengths.": {},
-    "There are no clips to build a video from.": {},
-    "There is no video to export.": {},
-    "These %lld photos will be added to the new album.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "This photo will be added to the new album."
+    "Scanning %@…" : {
+
+    },
+    "Scanning %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Scanning %1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "Scene" : {
+      "comment" : "Info panel row label"
+    },
+    "Screenshots" : {
+
+    },
+    "Scroll by date" : {
+
+    },
+    "Search" : {
+
+    },
+    "Search again for %@" : {
+
+    },
+    "Search for a place" : {
+
+    },
+    "Search Photos" : {
+
+    },
+    "Search ShotDex for ${query}" : {
+
+    },
+    "Searches your library by camera, lens, exposure settings, place or date." : {
+
+    },
+    "Seconds per photo" : {
+
+    },
+    "Select" : {
+
+    },
+    "Select a start date" : {
+
+    },
+    "Select All" : {
+
+    },
+    "Select items to import" : {
+
+    },
+    "Select photos" : {
+
+    },
+    "Select Text or Subject" : {
+
+    },
+    "Selected %lld" : {
+
+    },
+    "Selected photo" : {
+
+    },
+    "Send Backward" : {
+
+    },
+    "Sensor Format" : {
+
+    },
+    "Series" : {
+
+    },
+    "Set" : {
+
+    },
+    "Settings" : {
+
+    },
+    "Shake" : {
+
+    },
+    "Share" : {
+
+    },
+    "Sharing" : {
+
+    },
+    "Shift" : {
+
+    },
+    "ShotDex" : {
+
+    },
+    "ShotDex is reading the camera, lens and exposure info from each photo and video. For items kept in iCloud it downloads only the small part of the file holding that info — nothing is saved to this iPhone. The app may feel slow until this finishes." : {
+
+    },
+    "ShotDex only analyzes the photos you selected." : {
+
+    },
+    "ShotDex will ask Photos to remove every copy already exported." : {
+
+    },
+    "Show" : {
+
+    },
+    "Show %@" : {
+
+    },
+    "Show All Frames" : {
+
+    },
+    "Show All Raw Metadata" : {
+
+    },
+    "Show Favorites" : {
+
+    },
+    "Show Gear Statistics" : {
+
+    },
+    "Show Graph" : {
+
+    },
+    "Show in All Photos" : {
+
+    },
+    "Show Mask Overlay" : {
+
+    },
+    "Show on Map" : {
+
+    },
+    "Show original" : {
+      "comment" : "Video Studio: press-and-hold control that previews the clips without edits"
+    },
+    "Show photos from ${camera}" : {
+
+    },
+    "Show Photos from a Camera" : {
+
+    },
+    "Show Places" : {
+
+    },
+    "Show Tools" : {
+
+    },
+    "Show top %lld" : {
+
+    },
+    "Show Trips" : {
+
+    },
+    "Showing photos from %@" : {
+
+    },
+    "Shows a single value across the whole library." : {
+
+    },
+    "Shows all photo info" : {
+
+    },
+    "Shows details about shutter count availability" : {
+
+    },
+    "Shows indexing details" : {
+
+    },
+    "Shows the top group by photo count." : {
+
+    },
+    "Shutter Count" : {
+
+    },
+    "Shutter Speed" : {
+      "comment" : "Info panel row label"
+    },
+    "Size" : {
+
+    },
+    "Slide down" : {
+
+    },
+    "Slide left" : {
+
+    },
+    "Slide Left" : {
+
+    },
+    "Slide right" : {
+
+    },
+    "Slide Right" : {
+
+    },
+    "Slide up" : {
+
+    },
+    "Slideshow" : {
+
+    },
+    "Slo-mo" : {
+
+    },
+    "Smart album in ShotDex" : {
+
+    },
+    "Smart Album Name" : {
+
+    },
+    "Smart Albums" : {
+
+    },
+    "Soft Glow" : {
+
+    },
+    "Some exported copies may remain in Photos" : {
+
+    },
+    "Some of the photos this was made from are no longer in your library. Remove it from the list, or start a new one with the photos you still have." : {
+      "comment" : "Alert when reopening a creation whose source photos were deleted"
+    },
+    "Some Photos Didn't Save" : {
+
+    },
+    "Something Went Wrong" : {
+
+    },
+    "Sort" : {
+
+    },
+    "Sort By" : {
+
+    },
+    "Sort Media" : {
+      "comment" : "Video Studio media pool: picks the order the column lists media in"
+    },
+    "Sort photos" : {
+
+    },
+    "Source" : {
+
+    },
+    "Split" : {
+
+    },
+    "Split at Playhead" : {
+      "comment" : "Video Studio transport: cuts the clip under the playhead in two"
+    },
+    "Split into series by" : {
+
+    },
+    "Start" : {
+
+    },
+    "Statistics" : {
+
+    },
+    "Statistics appear after your library has been indexed." : {
+
+    },
+    "Step back one frame" : {
+
+    },
+    "Step forward one frame" : {
+
+    },
+    "Sticker" : {
+
+    },
+    "Stop preview" : {
+
+    },
+    "Stop Selecting in Photo" : {
+
+    },
+    "Style" : {
+      "comment" : "Collage panel tab: spacing, corners and background"
+    },
+    "Subject Distance" : {
+      "comment" : "Info panel row label"
+    },
+    "Subject Range" : {
+      "comment" : "Info panel row label"
+    },
+    "Subtract" : {
+
+    },
+    "Summed from the file sizes the index has read. Photos still stored only in iCloud are counted at their full size." : {
+
+    },
+    "Switches between matching all and any" : {
+
+    },
+    "Sync Everything" : {
+
+    },
+    "Sync Look" : {
+
+    },
+    "Sync to %lld Photos" : {
+
+    },
+    "Sync to 1 Photo" : {
+
+    },
+    "System" : {
+
+    },
+    "Tab bar" : {
+
+    },
+    "Tap + to add a chart to your dashboard." : {
+
+    },
+    "Tap a mask to adjust that area on its own" : {
+
+    },
+    "Tap a photo to mark it for deletion" : {
+      "comment" : "Compare: the one instruction, shown until the first photo is marked"
+    },
+    "Tap a section to show or hide it, and Edit to drag them into the order you want. A section with nothing in it stays hidden whatever you choose here." : {
+
+    },
+    "Tap the map or search to place this photo." : {
+
+    },
+    "Tap the map to move the pin." : {
+
+    },
+    "Tap to expand" : {
+
+    },
+    "Tap to fit the photo" : {
+
+    },
+    "Template %@" : {
+
+    },
+    "Text" : {
+      "comment" : "Collage panel tab: captions drawn on the collage\nVideo Studio timeline lane: the text and sticker overlay track"
+    },
+    "The capture date in the original file is left unchanged, the same as in Photos." : {
+
+    },
+    "The crop applies when you leave this tab or save." : {
+
+    },
+    "The original stays in your library. Revert in Photos brings the whole clip back." : {
+
+    },
+    "The photos stay in your library." : {
+
+    },
+    "The scan opens every photo in full, so building these again takes a while." : {
+
+    },
+    "The size is a fast estimate and may change slightly when the full-resolution file is encoded." : {
+
+    },
+    "The typical crop factor of the chosen format is used for full-frame equivalent focal lengths." : {
+
+    },
+    "There are no clips to build a video from." : {
+
+    },
+    "There is no video to export." : {
+
+    },
+    "These %lld photos will be added to the new album." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "This photo will be added to the new album."
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "These %lld photos will be added to the new album."
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "These %lld photos will be added to the new album."
                 }
               }
             }
@@ -1671,126 +3221,284 @@
         }
       }
     },
-    "These photos are no longer in your library.": {},
-    "This Live Photo has no motion to save.": {},
-    "This Month": {},
-    "This Year": {},
-    "This item doesn't contain a saved capture location.": {},
-    "This photo hasn't been downloaded from iCloud yet.": {},
-    "This throws away every edit saved to this photo, including edits made in Photos.": {},
-    "Thumbnail Metadata": {},
-    "Time Zone": {
-      "comment": "Info panel row label"
+    "These photos are no longer in your library." : {
+
     },
-    "Time-lapse": {},
-    "Timeline height": {
-      "comment": "Video Studio: the divider dragged to trade preview height for timeline height"
+    "This item doesn't contain a saved capture location." : {
+
     },
-    "Tint wheel": {},
-    "Title": {},
-    "Today": {},
-    "Tone curve, %@ channel": {},
-    "Tools Panel": {},
-    "Tools panel width": {},
-    "Top %lld series": {},
-    "Transition": {},
-    "Trim": {},
-    "Trim end": {},
-    "Trim start": {},
-    "Trip": {},
-    "Trips": {},
-    "Try: Fukuoka · f > 1.2 · ISO trên 3200 · trước 2020 · 85mm": {},
-    "Turning this off removes where a photo was taken before it leaves the app. Everything else — camera, lens, exposure, date — still goes with it.\n\nVideos are unaffected: their location lives in the file itself, and removing it would mean re-encoding the whole clip.": {},
-    "Type": {
-      "comment": "Info panel row label"
+    "This Live Photo has no motion to save." : {
+
     },
-    "Type a caption": {},
-    "UNPLACED": {},
-    "UPRIGHT": {},
-    "UTI": {
-      "comment": "Info panel row label"
+    "This Month" : {
+
     },
-    "Unable to Share": {},
-    "Unavailable": {},
-    "Undo": {},
-    "Unfavorite": {},
-    "Unhide": {},
-    "Unknown Cameras": {},
-    "Unlink Zoom": {},
-    "Unmark": {
-      "comment": "VoiceOver action on a Compare card: take back its deletion mark"
+    "This photo hasn't been downloaded from iCloud yet." : {
+
     },
-    "Unmute": {},
-    "Unpin": {},
-    "Unplaced photo, drag to place": {},
-    "Use Cellular": {},
-    "Use Cellular Data for Indexing": {},
-    "Use as Reference": {},
-    "Utilities": {},
-    "Value": {},
-    "Video": {
-      "comment": "Info panel section title\nKind of timeline clip, read by VoiceOver\nName of one file behind a photo, as an Info panel heading\nVideo Studio timeline lane: the video and photo clip track"
+    "This throws away every edit saved to this photo, including edits made in Photos." : {
+
     },
-    "Video Error": {},
-    "Video Track %lld": {
-      "comment": "Info panel section title for one video track"
+    "This was made by an older version of ShotDex and its settings can't be read. Remove it from the list, or make a new one." : {
+      "comment" : "Alert when a saved creation's stored recipe cannot be decoded"
     },
-    "Video progress": {},
-    "Videos Only": {},
-    "View Full HDR": {},
-    "View Panorama": {},
-    "Vignette Pulse": {},
-    "Volume": {},
-    "What should I look for?": {},
-    "When autoplay is off, a video waits for you to press play. Looping is a button on the player itself. Full HDR shows high-range photos at their real brightness, which makes everything around them look darker.": {},
-    "Which camera?": {},
-    "White": {},
-    "White Balance": {
-      "comment": "Info panel row label"
+    "This Year" : {
+
     },
-    "Whole library": {},
-    "Wi-Fi": {},
-    "Width": {},
-    "Wipe": {},
-    "Wired": {},
-    "Writes every photo in this run that has edits. One that fails keeps its edits so you can try it again.": {},
-    "Writing the video failed.": {},
-    "X-Axis": {},
-    "X-Axis (time)": {},
-    "Y-Axis": {},
-    "Yesterday": {},
-    "Your Albums": {},
-    "Your iPhone is warm — indexing slowed down to cool it": {},
-    "Your photo library appears to be empty.": {},
-    "Your photos are not affected. ShotDex reads the camera and exposure data again the next time it scans your library.": {},
-    "Zoom": {},
-    "Zoom %lld percent": {},
-    "Zoom In": {},
-    "Zoom Out": {},
-    "days": {},
-    "downloaded from iCloud": {},
-    "iCloud download stalled": {},
-    "iCloud isn't responding": {},
-    "iCloud isn't responding — trying again in": {},
-    "iCloud not responding": {},
-    "iCloud not responding, retrying automatically": {},
-    "left": {},
-    "mm": {},
-    "nothing downloaded yet": {},
-    "photos and videos per minute": {},
-    "reading metadata %lld/%lld": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "reading metadata %1$lld/%2$lld"
+    "Thumbnail Metadata" : {
+
+    },
+    "Time Zone" : {
+      "comment" : "Info panel row label"
+    },
+    "Time-lapse" : {
+
+    },
+    "Timeline height" : {
+      "comment" : "Video Studio: the divider dragged to trade preview height for timeline height"
+    },
+    "Tint wheel" : {
+
+    },
+    "Title" : {
+
+    },
+    "to" : {
+
+    },
+    "Today" : {
+
+    },
+    "Tone curve, %@ channel" : {
+
+    },
+    "Tools Panel" : {
+
+    },
+    "Tools panel width" : {
+
+    },
+    "Top %lld series" : {
+
+    },
+    "Transition" : {
+
+    },
+    "Trim" : {
+
+    },
+    "Trim end" : {
+
+    },
+    "Trim start" : {
+
+    },
+    "Trip" : {
+
+    },
+    "Trips" : {
+
+    },
+    "Try: Fukuoka · f > 1.2 · ISO trên 3200 · trước 2020 · 85mm" : {
+
+    },
+    "Turning this off removes where a photo was taken before it leaves the app. Everything else — camera, lens, exposure, date — still goes with it.\n\nVideos are unaffected: their location lives in the file itself, and removing it would mean re-encoding the whole clip." : {
+
+    },
+    "Type" : {
+      "comment" : "Info panel row label"
+    },
+    "Type a caption" : {
+
+    },
+    "Unable to Share" : {
+
+    },
+    "Unavailable" : {
+
+    },
+    "Undo" : {
+
+    },
+    "Unfavorite" : {
+
+    },
+    "Unhide" : {
+
+    },
+    "Unknown Cameras" : {
+
+    },
+    "Unlink Zoom" : {
+
+    },
+    "Unlock Track" : {
+      "comment" : "Video Studio track header: lets the track be edited again"
+    },
+    "Unmark" : {
+      "comment" : "VoiceOver action on a Compare card: take back its deletion mark"
+    },
+    "Unmute" : {
+
+    },
+    "Unmute Project" : {
+      "comment" : "Video Studio level meter: restores the master volume"
+    },
+    "Unmute Track" : {
+      "comment" : "Video Studio track header: lets the track be heard again"
+    },
+    "Unpin" : {
+
+    },
+    "UNPLACED" : {
+
+    },
+    "Unplaced photo, drag to place" : {
+
+    },
+    "UPRIGHT" : {
+
+    },
+    "Use as Reference" : {
+
+    },
+    "Use Cellular" : {
+
+    },
+    "Use Cellular Data for Indexing" : {
+
+    },
+    "UTI" : {
+      "comment" : "Info panel row label"
+    },
+    "Utilities" : {
+
+    },
+    "Value" : {
+
+    },
+    "Video" : {
+      "comment" : "Info panel section title\nKind of timeline clip, read by VoiceOver\nName of one file behind a photo, as an Info panel heading\nVideo Studio timeline lane: the video and photo clip track"
+    },
+    "Video Error" : {
+
+    },
+    "Video progress" : {
+
+    },
+    "Video Project" : {
+      "comment" : "Kind of thing in the Creations list — said out loud by VoiceOver, so it must not collide with the Videos album of footage the user shot"
+    },
+    "Video Projects" : {
+      "comment" : "Title of the list of videos this app made, distinct from the Videos media-type album of footage the user shot\nUtilities row: videos made in the Video Studio"
+    },
+    "Video Track %lld" : {
+      "comment" : "Info panel section title for one video track"
+    },
+    "Video, %@, %@" : {
+      "comment" : "Video Studio media pool: VoiceOver label for a clip — kind, capture date, length",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Video, %1$@, %2$@"
           }
         }
       }
     },
-    "to": {},
-    "~%@": {},
-    "“%@”": {}
+    "Videos" : {
+      "comment" : "Video Studio media pool filter: video clips only"
+    },
+    "Videos Only" : {
+
+    },
+    "Videos you make in the Video Studio show up here, with the clips and edits behind them — so you can open one again and change it." : {
+
+    },
+    "View Full HDR" : {
+
+    },
+    "View Panorama" : {
+
+    },
+    "Vignette Pulse" : {
+
+    },
+    "Volume" : {
+
+    },
+    "What should I look for?" : {
+
+    },
+    "When autoplay is off, a video waits for you to press play. Looping is a button on the player itself. Full HDR shows high-range photos at their real brightness, which makes everything around them look darker." : {
+
+    },
+    "Which camera?" : {
+
+    },
+    "White" : {
+
+    },
+    "White Balance" : {
+      "comment" : "Info panel row label"
+    },
+    "Whole library" : {
+
+    },
+    "Wi-Fi" : {
+
+    },
+    "Width" : {
+
+    },
+    "Wipe" : {
+
+    },
+    "Wired" : {
+
+    },
+    "Writes every photo in this run that has edits. One that fails keeps its edits so you can try it again." : {
+
+    },
+    "Writing the video failed." : {
+
+    },
+    "X-Axis" : {
+
+    },
+    "X-Axis (time)" : {
+
+    },
+    "Y-Axis" : {
+
+    },
+    "Yesterday" : {
+
+    },
+    "Your Albums" : {
+
+    },
+    "Your iPhone is warm — indexing slowed down to cool it" : {
+
+    },
+    "Your photo library appears to be empty." : {
+
+    },
+    "Your photos are not affected. ShotDex reads the camera and exposure data again the next time it scans your library." : {
+
+    },
+    "Zoom" : {
+
+    },
+    "Zoom %lld percent" : {
+
+    },
+    "Zoom In" : {
+
+    },
+    "Zoom Out" : {
+
+    }
   },
-  "version": "1.0"
+  "version" : "1.0"
 }

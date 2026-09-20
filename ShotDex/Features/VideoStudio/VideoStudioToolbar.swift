@@ -20,20 +20,57 @@ struct VideoStudioToolbar: View {
         .overlay(alignment: .top) { Rectangle().fill(EditorTheme.panelTopHairline).frame(height: 1) }
     }
 
+    /// `true` where a media pool column stands beside the stage and can carry
+    /// the *insert* commands — Resolve puts them on the library, not on a
+    /// tool rail, because "add a clip" and "open the colour controls" are not
+    /// the same kind of thing and should not look alike.
+    var poolCarriesInserts = false
+
+    /// One cell's identity, apart from its action — so what the row holds is
+    /// decided by a pure function and can be asserted on.
+    enum CommandKind: Equatable {
+        case addMedia, addText, addSticker, addMusic
+        case global(VideoStudioModel.GlobalTool)
+    }
+
+    /// What the row holds, in order.
+    ///
+    /// With a media pool beside the stage the *insert* cells go onto the
+    /// pool, where Resolve keeps them: its Media and Titles tabs are the
+    /// place you take things from, and its Inspector is the place you change
+    /// things in. Text is the exception and stays — Resolve can put titles on
+    /// its library column because it has a title-template library to drag
+    /// from, and ShotDex has none; a pool tab holding one "Add text" button
+    /// is worse than the cell it replaced.
+    static func commandKinds(poolCarriesInserts: Bool) -> [CommandKind] {
+        var kinds: [CommandKind] = []
+        if !poolCarriesInserts { kinds.append(.addMedia) }
+        kinds.append(.addText)
+        if !poolCarriesInserts { kinds += [.addSticker, .addMusic] }
+        kinds += [
+            .global(.ratio), .global(.filters), .global(.adjustments),
+            .global(.masterVolume), .global(.background),
+        ]
+        return kinds
+    }
+
     var commands: [VideoCommand] {
-        [
+        Self.commandKinds(poolCarriesInserts: poolCarriesInserts).map { kind in
+            switch kind {
             // Plain like Text / Sticker / Music: accent marks the *open* global
             // tool, and Add is an action, not a mode.
-            VideoCommand(title: "Add", systemImage: "plus", action: actions.onAddMedia),
-            VideoCommand(title: "Text", systemImage: "textformat", action: actions.onAddText),
-            VideoCommand(title: "Sticker", systemImage: "photo.badge.plus", action: actions.onAddSticker),
-            VideoCommand(title: "Music", systemImage: "music.note", action: actions.onAddMusic),
-            globalCommand(.ratio),
-            globalCommand(.filters),
-            globalCommand(.adjustments),
-            globalCommand(.masterVolume),
-            globalCommand(.background),
-        ]
+            case .addMedia:
+                VideoCommand(title: "Add", systemImage: "plus", action: actions.onAddMedia)
+            case .addText:
+                VideoCommand(title: "Text", systemImage: "textformat", action: actions.onAddText)
+            case .addSticker:
+                VideoCommand(title: "Sticker", systemImage: "photo.badge.plus", action: actions.onAddSticker)
+            case .addMusic:
+                VideoCommand(title: "Music", systemImage: "music.note", action: actions.onAddMusic)
+            case .global(let tool):
+                globalCommand(tool)
+            }
+        }
     }
 
     private func globalCommand(_ tool: VideoStudioModel.GlobalTool) -> VideoCommand {
@@ -115,6 +152,8 @@ struct VideoStudioBottomBar: View {
 struct VideoStudioToolRail: View {
     @Bindable var model: VideoStudioModel
     let actions: VideoInspectorActions
+    /// See `VideoStudioToolbar.poolCarriesInserts`.
+    var poolCarriesInserts = false
     /// Clears the status bar and the command band, so the first cell starts
     /// level with the preview rather than under the clock.
     var topInset: CGFloat = 0
@@ -158,7 +197,7 @@ struct VideoStudioToolRail: View {
     }
 
     private var commands: [VideoCommand] {
-        VideoStudioToolbar(model: model, actions: actions).commands
+        VideoStudioToolbar(model: model, actions: actions, poolCarriesInserts: poolCarriesInserts).commands
     }
 }
 

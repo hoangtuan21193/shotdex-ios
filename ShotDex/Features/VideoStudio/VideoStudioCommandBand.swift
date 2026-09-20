@@ -23,6 +23,10 @@ struct VideoStudioTopBand: View {
     /// Extra room on the trailing edge when this band runs to the screen's
     /// own rounded corner — see `VideoStudioMetrics.displayCornerClearance`.
     var trailingCornerClearance: CGFloat = 0
+    /// `true` where the tool rail is gone and the project-wide tools need a
+    /// home in this band — Resolve keeps format and its like behind a
+    /// settings control in the chrome, not on a tool column.
+    var carriesProjectTools = false
 
     @Environment(\.usesRegularToolChrome) private var usesRegularToolChrome
 
@@ -33,8 +37,13 @@ struct VideoStudioTopBand: View {
     /// the pill is the one read-out on screen that is said twice. The export
     /// estimate goes second. Back and Export never go — they are the way out
     /// of the screen and the point of it.
-    private var showsTimecode: Bool { projectActions == nil || stageWidth >= 540 }
-    private var showsReadout: Bool { projectActions == nil || stageWidth >= 430 }
+    ///
+    /// The project-tools menu is a sixth control in a row that was already
+    /// budgeted, so when it is there both thresholds move up by more than its
+    /// own width: the row has to stay comfortable, not merely fit.
+    private var toolsBudget: CGFloat { carriesProjectTools ? 80 : 0 }
+    private var showsTimecode: Bool { projectActions == nil || stageWidth >= 540 + toolsBudget }
+    private var showsReadout: Bool { projectActions == nil || stageWidth >= 430 + toolsBudget }
     private var size: CGFloat {
         EditorLayoutMetrics.editorFloatingCommandButtonSize(
             isRegularWidth: usesRegularToolChrome
@@ -71,6 +80,8 @@ struct VideoStudioTopBand: View {
 
             if showsTimecode { timecodePill }
 
+            if carriesProjectTools { projectToolsMenu }
+
             if let projectActions {
                 if showsReadout { readout }
                 Button(action: projectActions.onExport) {
@@ -92,6 +103,37 @@ struct VideoStudioTopBand: View {
         .padding(.top, EditorLayoutMetrics.editorFloatingCommandRowTopInset)
     }
 
+    /// The project-wide tools, where Resolve keeps the equivalent: behind a
+    /// settings control in the chrome rather than on a column of their own.
+    /// Each one opens the inspector on that tool, which is where its controls
+    /// have always lived — this menu replaces the rail cell that used to open
+    /// the same panel, not the panel.
+    private var projectToolsMenu: some View {
+        Menu {
+            ForEach(VideoStudioModel.GlobalTool.allCases) { tool in
+                Button {
+                    model.showGlobalTool(model.activeGlobalTool == tool ? nil : tool)
+                } label: {
+                    Label(tool.title, systemImage: tool.systemImage)
+                }
+            }
+        } label: {
+            Image(systemName: "slider.horizontal.3")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(model.activeGlobalTool == nil ? .white : EditorTheme.accent)
+                .frame(width: size, height: size)
+                .background {
+                    if model.activeGlobalTool == nil {
+                        Color.clear.editorGlass(Circle())
+                    } else {
+                        Circle().fill(EditorTheme.accent.opacity(0.18))
+                    }
+                }
+                .contentShape(Circle())
+        }
+        .accessibilityLabel(Text("Project Tools", comment: "Video Studio: opens ratio, look, adjustments, volume and background"))
+    }
+
     /// Duration, preset and the size estimate — the same two lines the bottom
     /// band showed, beside Export rather than away from it.
     private var readout: some View {
@@ -104,6 +146,11 @@ struct VideoStudioTopBand: View {
         }
         .font(EditorTheme.rowValue)
         .foregroundStyle(EditorTheme.dimText)
+        // Never wrap: a read-out broken across three lines in a 48pt band is
+        // worse than no read-out, and the thresholds above are what decide
+        // whether it is shown at all.
+        .lineLimit(1)
+        .fixedSize()
         .padding(.leading, 8)
         .accessibilityElement(children: .combine)
     }
