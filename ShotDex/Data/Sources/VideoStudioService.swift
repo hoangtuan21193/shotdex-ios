@@ -42,7 +42,16 @@ final class VideoStudioService {
     /// Resolves every clip's media. Videos may hit iCloud — the model shows
     /// its loading phase for the whole pass. A clip whose media can't load is
     /// simply absent from the result (the builder skips it).
-    func loadSources(for clips: [VideoClip]) async -> LoadedSources {
+    /// `maximumStillSize` caps a freeze frame's decode. The composition
+    /// renders into the project's canvas, so a 4K frame lifted out of a 4K
+    /// video is downscaled the moment it is drawn — but held at native size
+    /// it is ~33MB of decoded image sitting there for the whole session, per
+    /// freeze clip. Extracting it at the canvas size costs nothing visible
+    /// and roughly quarters that.
+    func loadSources(
+        for clips: [VideoClip],
+        maximumStillSize: CGSize? = nil
+    ) async -> LoadedSources {
         var loaded = LoadedSources()
         // One fetch for every clip, not one per clip: a twenty-clip project
         // was twenty PHAsset fetches before it awaited anything.
@@ -74,7 +83,7 @@ final class VideoStudioService {
         // opening a project.
         await withTaskGroup(of: (UUID, VideoClipSource?, Double?).self) { group in
             for (clip, asset) in pending {
-                group.addTask { await Self.resolve(clip: clip, asset: asset) }
+                group.addTask { await Self.resolve(clip: clip, asset: asset, maximumStillSize: maximumStillSize) }
             }
             for await (id, source, duration) in group {
                 if let source { loaded.sources[id] = source }
@@ -88,7 +97,8 @@ final class VideoStudioService {
     /// put the results back in the right place whatever order they finish in.
     private static func resolve(
         clip: VideoClip,
-        asset: PHAsset
+        asset: PHAsset,
+        maximumStillSize: CGSize?
     ) async -> (UUID, VideoClipSource?, Double?) {
         do {
             switch clip.kind {
@@ -98,7 +108,9 @@ final class VideoStudioService {
                 // A frame lifted out of the source video at load time.
                 guard let avAsset = await PhotoLibraryService.requestAVAsset(for: asset),
                       let image = await Self.extractFrame(
-                          from: avAsset, at: clip.freezeSourceTime ?? 0
+                          from: avAsset,
+                          at: clip.freezeSourceTime ?? 0,
+                          maximumSize: maximumStillSize
                       )
                 else { return (clip.id, nil, nil) }
                 return (clip.id, .freeze(image: image, pixelSize: image.extent.size), nil)
@@ -134,9 +146,14 @@ final class VideoStudioService {
 
     /// A single frame out of a source video, oriented, for a freeze clip.
     /// Zero tolerance so the held frame is exactly the one under the playhead.
-    static func extractFrame(from avAsset: AVAsset, at seconds: Double) async -> CIImage? {
+    static func extractFrame(
+        from avAsset: AVAsset,
+        at seconds: Double,
+        maximumSize: CGSize? = nil
+    ) async -> CIImage? {
         let generator = AVAssetImageGenerator(asset: avAsset)
         generator.appliesPreferredTrackTransform = true
+        if let maximumSize { generator.maximumSize = maximumSize }
         generator.requestedTimeToleranceBefore = .zero
         generator.requestedTimeToleranceAfter = .zero
         let requested = CMTime(seconds: max(0, seconds), preferredTimescale: 600)

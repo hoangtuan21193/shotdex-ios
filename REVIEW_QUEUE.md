@@ -245,3 +245,34 @@ hopped per call; `photoLibraryDidChange` hops before touching state),
 `BackgroundIndexService` (no `self` captured from the registration closure),
 `VideoExportWriter`'s continuation (single `DispatchGroup.notify`, every branch
 returns after resume), and the GRDB call sites.
+
+
+---
+
+# Sweep 7 — memory and caches (2026-09-20)
+
+Agent: `memory-leak`, pointed at the two caches I added today plus the
+long-standing surfaces.
+
+- [x] **The photo-editing extension accepted recipes it cannot render.** `canHandle` checked the format identifier only, so a photo edited in the full app with a mask, a Markup drawing or a text overlay could be continued in ShotDexEdit — where each of those rasterizes a full-extent bitmap (~195MB of RGBA at 48MP for one layer) in a process with a fraction of an app's memory. It declines them now, so Photos offers Revert and the photo opens in the full app with its edit intact.
+- [x] **Scratch directories outlived the app.** Swept at launch, the one moment nothing can be using them, and tested to leave everything else in `/tmp` alone.
+- [x] **The prewarm task could refill a released cache.** Cancelled on disappear, and it checks cancellation before inserting.
+- [x] **A freeze clip held a full-native-resolution decoded frame for the session** — ~33MB per clip from a 4K source, when the composition renders into the project canvas anyway. Extracted at canvas size now.
+
+Read and found sound: `GridBadgeCache` (the cap and eviction are right, and
+`order` stays in step with `entries` because an existing key does not
+re-append), `PhotoDropImport`'s `defer` (runs on every path including
+cancellation), `PhotoGridCollectionView` cell reuse (both the thumbnail
+request and the metadata task are cancelled, and the task re-checks the
+cell's asset id), `PhotoLibraryService`'s three `NSCache`s (all capped, the
+change observer unregistered in `deinit`), and `PhotoEditHistory` (value
+structs, capped at 100).
+
+## Still open
+
+- [ ] The extension blocker's **other** half: the full app renders those same
+  full-extent layers monolithically too. It has the memory to survive it
+  today, but a 48MP RAW with several mask components is close to the edge,
+  and the honest fix is a tiled `CIContext` render rather than one
+  `CGContext` the size of the image. Needs Instruments on a real device with
+  a real 48MP file before anyone decides how much work it is worth.

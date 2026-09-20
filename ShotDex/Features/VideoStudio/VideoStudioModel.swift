@@ -321,7 +321,7 @@ final class VideoStudioModel {
 
     func load() async {
         phase = .loading
-        let loaded = await service.loadSources(for: recipe.clips)
+        let loaded = await service.loadSources(for: recipe.clips, maximumStillSize: recipe.canvasSize())
         guard !loaded.sources.isEmpty else {
             phase = .failed(String(localized: "Couldn't load the selected items."))
             return
@@ -799,7 +799,7 @@ final class VideoStudioModel {
 
     /// Loads sources for freshly-added clips and merges them in, then rebuilds.
     private func loadAndMerge(_ clips: [VideoClip]) async {
-        let loaded = await service.loadSources(for: clips)
+        let loaded = await service.loadSources(for: clips, maximumStillSize: recipe.canvasSize())
         for (id, source) in loaded.sources { sources[id] = source }
         for clip in clips where clip.kind == .video {
             guard let duration = loaded.durations[clip.id],
