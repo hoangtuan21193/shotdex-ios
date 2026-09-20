@@ -1,0 +1,44 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Collections",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "tap",
+      "label": "2012"
+    },
+    {
+      "action": "wait",
+      "seconds": 5
+    },
+    {
+      "action": "tap",
+      "label": "Make a video from these photos"
+    },
+    {
+      "action": "wait",
+      "seconds": 45
+    },
+    {
+      "action": "tap",
+      "label": "Media Pool"
+    },
+    {
+      "action": "wait",
+      "seconds": 120
+    }
+  ]
+}

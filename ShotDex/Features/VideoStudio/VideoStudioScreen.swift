@@ -271,7 +271,12 @@ struct VideoStudioScreen: View {
                 size: proxy.size,
                 otherColumns: mediaPoolWidth + meterWidth
             )
-            let usesInspectorColumn = fitsInspectorColumn && isInspectorOpen
+            // The column is drawn only when it has something to inspect. An
+            // idle inspector was 320pt of "Project · 48 clips · 16:9" over a
+            // ratio strip — width taken from the frame to repeat a tool the
+            // rail already opens by name.
+            let hasInspectorContent = model.presentsSheet
+            let usesInspectorColumn = fitsInspectorColumn && isInspectorOpen && hasInspectorContent
             let deskChromeHeight = VideoStudioMetrics.deskChromeHeight(usesDeskChrome: usesDeskChrome)
             let lanes = VideoStudioMetrics.Lanes
                 .for(size: proxy.size)
@@ -357,13 +362,19 @@ struct VideoStudioScreen: View {
                                 - (usesToolRail ? VideoStudioMetrics.railWidth : 0)
                                 - (usesInspectorColumn ? VideoStudioMetrics.inspectorColumnWidth : 0)
                                 - mediaPoolWidth
+                                // The meter sits inside this column, beside
+                                // the frame, so the band does not get its
+                                // width either.
+                                - meterWidth
                         )
                         .frame(height: bandHeight, alignment: .top)
                         if usesDeskChrome {
                             VideoViewerHeader(
                                 model: model,
                                 isMediaPoolOpen: canShowMediaPool ? showsMediaPool : nil,
-                                isInspectorOpen: fitsInspectorColumn ? isInspectorOpen : nil,
+                                isInspectorOpen: fitsInspectorColumn && hasInspectorContent
+                                    ? isInspectorOpen
+                                    : nil,
                                 onToggleMediaPool: { isMediaPoolOpen = !showsMediaPool },
                                 onToggleInspector: { isInspectorOpen.toggle() }
                             )

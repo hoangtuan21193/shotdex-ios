@@ -528,7 +528,13 @@ struct VideoStudioSheetHost: View {
     @ViewBuilder
     private var globalParams: some View {
         switch model.activeGlobalTool {
-        case .ratio, .none:
+        // No tool open and nothing selected: the inspector has nothing to
+        // say, and the screen does not draw it at all. It used to fall
+        // through to the ratio strip, which made a 320pt column out of one
+        // control that the tool rail already opens by name.
+        case .none:
+            EmptyView()
+        case .ratio:
             VStack(spacing: 0) {
                 RatioStrip(model: model).frame(height: 34)
                 Spacer(minLength: 0)
