@@ -78,7 +78,14 @@ struct CreationsScreen: View {
 
     private var list: some View {
         ScrollView {
-            LazyVStack(spacing: AppTheme.Spacing.md) {
+            // Columns rather than one very wide row, for the reason the
+            // Collections lists use a grid: a wide window gets more content,
+            // not a row stretched across it.
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: CreationCardMetrics.minimumWidth), spacing: AppTheme.Spacing.md)],
+                alignment: .leading,
+                spacing: AppTheme.Spacing.md
+            ) {
                 ForEach(creations) { creation in
                     Button {
                         reopen(creation)
@@ -268,4 +275,8 @@ enum CreationCardMetrics {
     /// Square cover, the same idea as an album token's well but big enough
     /// that a collage's layout is readable in it.
     static let coverSide: CGFloat = 64
+    /// Narrowest a card may be, and so how many columns a window gets. Wider
+    /// than a Collections row because this card carries a date and a count on
+    /// its second line.
+    static let minimumWidth: CGFloat = 360
 }

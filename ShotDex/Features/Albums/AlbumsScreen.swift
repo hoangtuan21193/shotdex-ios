@@ -598,8 +598,14 @@ extension AlbumsScreen {
         }
     }
 
-    /// Title, then the rows stacked full width. One shape for both sections so
-    /// they cannot drift apart.
+    /// Title, then the rows. One shape for both sections so they cannot drift
+    /// apart.
+    ///
+    /// A grid, not a stack: a row the full width of a 13" iPad puts the count
+    /// 800pt from the name it belongs to, which is the "phone layout blown
+    /// up" that `DESIGN.md` §10.1c rules out — a wide screen gets **more
+    /// content**, not bigger content. The adaptive minimum is a phone's own
+    /// row width, so a phone still gets exactly one column.
     @ViewBuilder
     private func listSection(
         _ title: LocalizedStringKey,
@@ -610,7 +616,11 @@ extension AlbumsScreen {
                 .font(.title2.bold())
                 .padding(.horizontal)
 
-            VStack(spacing: 8) {
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: CollectionListRowMetrics.minimumWidth), spacing: 8)],
+                alignment: .leading,
+                spacing: 8
+            ) {
                 rows()
             }
             .padding(.horizontal)
@@ -687,6 +697,10 @@ enum CollectionListRowMetrics {
     /// One line of body text with room to breathe, and past the 44pt minimum
     /// target on its own.
     static let height: CGFloat = 52
+    /// The narrowest a row may be, which is also what decides how many
+    /// columns a window gets. A phone's content width is about 370, so a
+    /// phone stays at one column and a 13" iPad lands on three.
+    static let minimumWidth: CGFloat = 320
 }
 
 extension AlbumsScreen {
