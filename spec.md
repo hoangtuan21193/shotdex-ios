@@ -1248,6 +1248,24 @@ Compact width **không đổi**: điện thoại không có pool để dời l�
 
 **Inspector là cột nhường chỗ**: `usesInspectorColumn(size:otherColumns:)` trừ thêm bề rộng pool + meter trước khi so với `minimumStageWidth` 400, và có nút bật/tắt riêng trong viewer header. Pool và meter là thứ user mở; inspector ép khung hình còn 200pt để bày điều khiển cho một clip user không còn nhìn thấy nữa là cuộc đổi chác mà luật này sinh ra để từ chối. Năm băng trên cộng lại lấy `deskChromeHeight` ra khỏi **băng preview**, không lấy của timeline (test `theDeskBandsCostThePreviewTheirHeight`) — timeline vốn chỉ nhận đúng phần lane cần. Compact width (điện thoại) **không đổi gì**: không có băng nào trong năm băng trên, gutter vẫn 30pt glyph, media vẫn qua `VideoMediaPicker`.
 
+**Cut-page parity Turn 2 — cắt, marker, fade (2026-09-20, sau khảo sát chi tiết `video-nle-survey` lần hai)**
+
+- **Độ dài transition** (`VideoTransitionSheet`). `VideoBoundaryTransition.duration` có `durationRange` và giá trị mặc định **từ ngày transition ra đời mà không UI nào chỉnh được** — `confirmationDialog` cũ chỉ chọn kiểu, và một dialog thì không chứa nổi slider; trên iOS 26 nó còn vẽ thành popover giấu mất nút `.cancel` (§10.5). Giờ là sheet: chip các kiểu, slider Duration, **Apply to All**, và một dòng nói **timeline thật sự cấp bao nhiêu** — `effectiveOverlaps` chặn transition ở nửa clip ngắn hơn, nên slider hứa 2s trên clip 0.6s là slider nói dối.
+- **Trim Start / End to Playhead** (`trimToPlayhead(_:)`), đặt bên trái hàng transport đúng chỗ Resolve để. Thao tác cắt hay dùng nhất không phải "đặt hai đầu" mà là "bỏ đoạn lấy đà" hoặc "bỏ đuôi". Ảnh tĩnh thì dời `photoDuration`; video thì dời trim window, **quy đổi qua `speed`** vì local time chạy theo tốc độ clip còn trim window thì không.
+- **Marker** (`TimedMarker` trên recipe: thời điểm, màu trong bảng 5 màu cố định, ghi chú). Ghim vào **ruler chứ không vào clip** — cắt một shot không được kéo theo mọi ghi chú. Chấm trên dải overview, chạm để nhảy tới; transport có add / prev / next, và nút add đổi thành "đổi màu" khi playhead đã nằm trên một marker (`marker(near:)`, dung sai 0.5s) thay vì chồng hai chấm lên một pixel. Marker **không bao giờ tới compositor**: nó là thứ người dựng nhìn, không phải thứ bản xuất ghi ra.
+- **Snapping** (`snapsToEdits`, `snappedTime(_:within:)`). Kéo music bed hoặc caption dính vào mép clip, marker, playhead và hai đầu; ngưỡng 8pt ngón tay quy ra giây theo zoom hiện tại, nên cảm giác như nhau ở mọi mức phóng. Resolve gọi là magnetic timeline và khảo sát đề xuất "khép khoảng trống khi xoá clip" — nhưng **lane video ở đây không thể có khoảng trống**: `clipPlacements` xếp clip nối đuôi từ duration, xoá một cái là tự khép. Thứ nằm tự do được là music và caption, nên đó mới là chỗ cần nam châm.
+- **Fade hai đầu clip** (`VideoClip.fadeIn/fadeOut`, kẹp ở nửa clip mỗi đầu để hai fade không bao giờ cắt nhau và để lại một shot không bao giờ hiện đủ). Clip đang chọn vẽ nêm mờ + nút tròn để kéo (`clipFadeInHandle` / `clipFadeOutHandle`). **Fade khác transition**: transition là thoả thuận giữa hai clip hàng xóm và sống ở ranh giới; fade là việc riêng của một clip — nó là thứ mở đầu và kết thúc một cuốn phim. Trong compositor nó đi cùng đường "recipe tươi" với effect per-clip (kéo nút không rebuild `AVComposition`) và **áp sau** effect: fade một khung đã blur là đúng, blur một khung đã fade là sai.
+- **Preview look thật** (`VideoFilterThumbnails`). Tab Effects từng hiện 49 look bằng 49 glyph giống hệt nhau. Giờ render đúng khung dưới playhead qua từng filter một lần, cỡ ô, ở priority nền, cache tới khi playhead sang clip khác.
+
+**Tầng màu (2026-09-20)** — `VideoProjectRecipe` nhận `color: PhotoColorRecipe`, `curve: ToneCurveAdjustments`, `masks: [PhotoMask]`, `inputTransform: VideoInputTransform`. Ba cái đầu **đã có sẵn model, đã có render, đã có unit test trong kit cho ảnh** và chỉ chưa bao giờ nối vào video; compositor giờ gọi `applyColor` + `applyCurve` cạnh `applyAdjustments` nó vốn đã gọi, cùng tier `applyVideoTier()` nên grading không ngắt playback.
+
+- **De-log** (`VideoInputTransform`) đặt ở **đầu chuỗi**, vì mọi look áp lên một ảnh log phẳng là đang chỉnh trên sai ảnh. Năm profile: None, HLG (BT.2100), S-Log3, V-Log, Generic Log — mỗi cái là hàm truyền đã công bố, nghịch đảo về scene-linear rồi mã hoá lại Rec.709, dựng thành 256 mẫu cho một lượt `CIColorCurves` (chạy trong sRGB chứ không phải working space tuyến tính, cùng lý do với film cube: đường cong định nghĩa trên code value, không trên ánh sáng). **Apple Log và C-Log3 cố ý vắng mặt** — hằng số của chúng không có ở đây, và một đường de-log *gần* đúng tệ hơn không có vì nó trông hợp lý mà sai ở vùng tối. Đây là **transfer function, không phải chuyển gamut**: footage wide-gamut giữ nguyên primaries, panel có nói câu đó. Test: đơn điệu đen→trắng, hai nhánh HLG gặp nhau tại 0.5, mỗi profile đưa 18% xám về đúng code nhà sản xuất công bố (S-Log3 ở 420/1023, V-Log ở 0.42), và transform nở dải tương phản.
+- **Primaries**: ba bánh xe shadows/midtones/highlights/global dùng lại `EditorColorWheel` của photo editor, kèm luminance từng vùng.
+- **Power window + qualifier** (`VideoMaskRenderer`). Bốn loại: window tròn, window tuyến tính, dải luminance, dải màu — mỗi cái mang adjustments riêng, đảo được, ẩn được, xoá được. Model là `PhotoMask`/`PhotoMaskComponent` của photo editor nên một window có cùng nghĩa ở cả hai màn. **Renderer thì không dùng chung**: mask stage của `PhotoRenderService` là actor-isolated và cache theo một tấm ảnh tĩnh, còn `AVVideoCompositing` chạy trên queue của AVFoundation, 30 khung/giây, mỗi khung một ảnh khác — gọi sang không type-check, và đánh dấu `nonisolated` là nói dối về cache. Nên `VideoMaskRenderer` dựng lại đúng ngữ nghĩa component bằng Core Image thuần, không state dùng chung. **Brush, subject và sky không có**, và panel nói ra thay vì liệt kê rồi không làm gì: brush vẽ theo hình học của một tấm ảnh tĩnh, còn subject và sky cần một lượt segmentation mỗi khung mà render 30fps không có ngân sách.
+- **Scopes** (`VideoScopeMath` thuần + `VideoScopeRenderer` + `VideoScopeModel`, 2026-09-21) — bốn máy đo ở **đầu** panel Color: Waveform (luma theo vị trí ngang), Parade (R/G/B cạnh nhau, chân lệch = ám màu), Vectorscope (hue/saturation, có graticule vòng tròn + I-line da người 123°), Histogram (phân bố tông từng kênh). Đo **ảnh đã grade**, không phải ảnh gốc: `VideoRenderRecipe.graded(_:)` được tách ra từ compositor (cùng một chuỗi, một chỗ định nghĩa) và scope chạy đúng chuỗi đó trên một khung tĩnh — scope đọc ảnh chưa grade thì đang kể về máy quay chứ không phải về grade. Đường đi: thumbnail của clip dưới playhead (giữ lại theo `assetID`, đổi grade không gọi lại PhotoKit) → `graded` → `CIContext.render(toBitmap:)` xuống 240×135 RGBA8 → đếm vào lưới → **ghi thẳng ra bitmap** chứ không `Canvas` (waveform là 256×128 ô; ba vạn lời gọi vẽ mỗi lần refresh không phải là cách vẽ). Lưới cộng dồn (additive) nên hai vệt chồng nhau đọc ra tổng, như máy đo thật. Refresh khi clip dưới playhead đổi **hoặc** khi `GradeKey` (toàn bộ input transform + filter + adjustments + color + curve + masks) đổi — so sánh `Equatable`, không hash, vì model trong kit chỉ có `Equatable`. Ngưỡng sáng của vệt = 1/6 chiều cao mẫu, nếu lấy nguyên chiều cao thì chỉ trời phẳng mới sáng. **Mỗi lần một scope, full width** (`VideoStudioMetrics.scopeHeight` = 140): Resolve cho bật cả bốn nổi trên viewer, trên cột 300pt thì đó là bốn con tem. **Chỉ hiện ở layout cột** (`showsScopes: layout == .column`) — trên band 264pt của điện thoại thì một scope 140pt chiếm gần hết panel, mà khung nó đo đã là thứ to nhất trên màn rồi. Test `VideoScopeMathTests`: mảng phẳng rơi đúng một mức, đen nằm **đáy** lưới, mọi pixel được đếm đúng một lần, ba kênh đo độc lập, xám trung tính rơi đúng tâm vectorscope ở mọi độ sáng, đỏ lệch phải / xanh lam lệch xuống, buffer thiếu byte thì đếm ra rỗng.
+- **LUT nhập từ Files** (`CubeLUT`/`CubeLUTParser` thuần + `ImportedLUTStore` + `VideoLUTRenderer`, 2026-09-21) — người dùng mang look pack `.cube` của mình vào, đúng ranh giới pháp lý đã dựng cho nhạc: Files-import chứ không phải kho có sẵn. Parser đọc Adobe `.cube`: `LUT_3D_SIZE` (2…64), `TITLE`, `DOMAIN_MIN/MAX` (chuẩn hoá về 0…1 — file khai 0…255 mà không chuẩn hoá thì cháy trắng hết), comment/dòng trống/tab/CRLF/keyword không phân biệt hoa thường. **`LUT_1D_SIZE` được nở thành cube** (mỗi trục tra chính nó) thay vì từ chối — file 1D là export hợp lệ, chỉ là không nói gì về tương tác giữa các kênh. Từ chối dứt khoát khi thiếu size, số dòng không khớp size, size quá lớn, hoặc một dòng không phải số — lỗi hiện **ngay lúc import**, khi người dùng còn đang nhìn picker và chọn lại được, chứ không phải im lặng rồi grade sai. Bảng đúng thứ tự `CIColorCubeWithColorSpace` (đỏ chạy nhanh nhất, RGBA float) nên đi thẳng từ file lên GPU. Render: một lượt cube **trong sRGB** (cùng lý do với film cube và de-log), **đặt cuối chuỗi** — look pack được viết để là lời cuối trên một ảnh đã hiệu chỉnh, đúng chỗ colourist đặt nó trên node tree. `Strength` 0…1 = mix bản đã LUT đè lên bản gốc, vì 60 % là cách người ta thực sự dùng một print emulation. Recipe chỉ giữ **tham chiếu** (`VideoLUTReference`: id + tên + strength), bảng nằm trên đĩa: project nhỏ, và LUT đã xoá thì thoái hoá về *không có LUT* chứ không thành grade hỏng. `ImportedLUTStore.fileURL(for:)` là `nonisolated static` — compositor chạy trên queue của AVFoundation, không hỏi được store `@MainActor`, và luồn URL qua bốn call site để nói lại điều mà id đã nói là tệ hơn thống nhất đường dẫn. Cache bảng (`VideoLUTTableCache`, 4 bảng, `NSLock`) để 30 khung/giây không đọc lại file text. Test `CubeLUTParserTests`.
+- **Không chép**: node graph và tracker. Không phải vì máy yếu — node graph chỉ đáng chỗ khi grade có nhánh, mà chuỗi render ở đây là chuỗi cố định; tracker cần Vision + một phép biến hình mask mỗi khung, đó là một tính năng chứ không phải một panel.
+
 - **Hàng lệnh nổi hai bên đảo** (`VideoStudioTopBand`, mirror Photo Editor Turn 31): cụm trái Undo · Redo · giữ-để-xem-gốc (nút tròn 34 dark `editorGlass`); cụm phải ô đọc `1080p · 30` (chạm mở cài đặt xuất) + ⋯. Không còn Cancel/Export chữ. "Xem bản gốc" = `setShowsOriginal` strip look (filter/adjustment/overlay) qua tier videoComposition, thả là khôi phục — không đụng recipe.
 - **Preview 221** nền đen, play tròn 56 (`rgba(18,18,20,.55)` + blur) giữa khi pause; content aspect-fit trong vùng (canvas non-16:9 đã letterbox sẵn từ compositor). **Transport 44**: play 34 · `0:03.0 / 0:06.0` mono (tổng dim) · **vừa khung** 32 (`fitToWindow` đổi pps để cả timeline lọt). Không nút zoom — pinch để zoom.
 - **Overlay chỉnh trực tiếp trên preview** (`VideoOverlayCanvas` / `VideoOverlayGuides.swift`, port từ `EditorOverlayGuides`): text/sticker vẽ **live bằng SwiftUI `Canvas` chạy `TextOverlayLayout`** đè trên player — **preview KHÔNG bake overlay** (`VideoRenderRecipe.bakesOverlays=false`; export=true), nên sửa overlay chỉ mutate recipe, proxy repaint, KHÔNG rebuild videoComposition (không giật, không ghost). `contentRect` = `VideoGeometry.stillFitRect(canvasSize, previewBounds)`, `center` normalized map thẳng vào đó. Cử chỉ như Photo Editor: **1 ngón chạm chọn + kéo di chuyển** (ngưỡng 4pt, snap tâm 0.012 + haptic + đường guide `timelineSelection`), **2 ngón pinch scale + xoay** (detent 45°); một undo/cả cử chỉ (`beginOverlayGesture/endOverlayGesture`). Chạm vùng trống = bỏ chọn. Nhiều text/sticker cùng lúc (mảng `overlays`, z-order = thứ tự).
@@ -1270,6 +1288,56 @@ Compact width **không đổi**: điện thoại không có pool để dời l�
 **Model** — `VideoProjectRecipe { clips, transitions, musicTracks: [MusicTrack], videoVolume, filter, filterIntensity, adjustments, overlays, quarterTurns, renderPreset, aspect: VideoAspect, masterVolume, background: OverlayColor }`. `VideoClip { id, assetID, kind photo/video/freeze, photoDuration, trimStart/trimEnd, isMuted, effect, speed, freezeSourceTime?, sourceDuration? }`. `TimedOverlay { overlay: PhotoOverlay, start, duration?, animateIn/animateOut: OverlayAnimation, inDuration/outDuration }` — `animationTransform(at:total:)` cho ra pose (opacity/translation/scale) mà **cả export compositor lẫn preview proxy dùng chung**; per-overlay compositor (rasterize từng overlay cache theo id, áp transform + alpha, composite theo z-order). `MusicTrack { id, source, start, trimStart/trimEnd?, sourceDuration?, volume, fadeIn, fadeOut }` — `effectiveDuration` = cửa sổ trim (tối thiểu 0.1s), `end` = start + đó. Domain math `VideoTimelineMath` + `VideoSplitMath` + `VideoEffectMath` + `OverlayAnimationMath` (enter/exit ease, slideOffset/popScale) + **`TimelineLaneLayout`** (xếp rãnh) — unit-tested (`VideoTimelineMathTests`, `VideoSplitMathTests`, `VideoEffectMathTests`, `OverlayAnimationMathTests`, `TimelineLaneLayoutTests`).
 
 **Giới hạn v1 (chủ ý)**: HDR/Dolby Vision tone-map SDR; audio đổi cao độ khi Speed (chưa time-stretch giữ pitch); không persist project qua launch; không progress tải iCloud per-clip; effect glitch/VHS chưa có. (Text: kéo/scale/xoay trên preview + màu/căn lề/viền-bóng + animation vào/ra — đã có.)
+
+### 7.10 Support (2026-09-21)
+
+Kênh liên hệ duy nhất giữa người dùng và developer, mở từ **Settings › Support**.
+Apple không cho app nhắn tin với user: trả lời review phải đợi họ viết review
+trước, TestFlight Feedback không tới được user App Store, và không có API nào
+khác. Nên ShotDex tự dựng, backend ở repo `shotdex-web` (Cloudflare Workers +
+D1, gói free).
+
+**Ẩn danh, và chỉ gọi được từ app.** Không tài khoản, không email, không mật
+khẩu. Mỗi request được ký bằng **Apple App Attest**: app tạo một khoá trong
+Secure Enclave, server xác minh attestation về Apple App Attest Root CA rồi lưu
+public key; mỗi lời gọi sau mang một assertion ký lên chuỗi
+`v1|METHOD|PATH|TIMESTAMP|SHA256(body)`. Counter trong Secure Enclave tăng mỗi
+lần ký nên **request ký song song sẽ hỏng** — `SupportAttestation` là `actor`
+để tuần tự hoá. `keyId` chính là danh tính install: đủ để nối thread trả lời và
+giữ một vote một máy, mà không mang thông tin cá nhân nào. Gỡ app là mất khoá,
+mọi báo cáo cũ không còn liên kết với máy.
+
+Simulator không chạy được App Attest (`DCAppAttestService.isSupported == false`).
+Build Debug đọc `SUPPORT_DEV_BYPASS_TOKEN` và `SUPPORT_API_ORIGIN` từ biến môi
+trường — không bao giờ từ Info.plist, vì token nhúng trong bundle là token công
+khai. Máy thật không chạy được App Attest thì màn Support đổi nút thành soạn
+mail tới `support@shotdex.app`, không để lại nút bấm im lặng.
+
+**Màn hình** (tầng A, `List` `.insetGrouped`):
+
+- *Report a Bug* / *Request a Feature* → sheet soạn (tiêu đề, nội dung, công tắc
+  log).
+- *Your Messages* — thread của chính install này, kèm badge số lời nhắn chưa đọc.
+  Mở thread là đánh dấu đã đọc.
+- *What People Asked For* — roadmap công khai, vote một máy một phiếu. Chỉ ticket
+  được đánh dấu `public` mới lên đây, và chỉ hiện tiêu đề: lời người báo lỗi
+  viết ra không bị công khai.
+
+**Gửi kèm gì**: nội dung người dùng gõ, phiên bản app/build, phiên bản iOS, model
+máy, ngôn ngữ, và số ảnh trong thư viện **làm tròn còn hai chữ số có nghĩa**
+(55.213 → 55.000) vì con số chính xác là một dấu vân tay. Không ảnh, không tên,
+không email, không định danh quảng cáo.
+
+**Log**: `SupportLogCollector` đọc `OSLogStore(scope: .currentProcessIdentifier)`
+lọc theo subsystem `com.hoangtuan.shotdex`, 15 phút gần nhất, cắt còn 48 KB và
+nói rõ đã bỏ bao nhiêu dòng. Mặc định **bật cho bug, tắt cho feature request**,
+và người dùng đọc được đúng văn bản sẽ gửi trước khi gửi. Giới hạn của iOS: chỉ
+lấy được log của tiến trình đang chạy — `scope: .system` cần entitlement Apple
+không cấp cho app bên thứ ba — nên log của lần chạy bị crash đã mất; phải tái
+hiện lỗi rồi mới gửi.
+
+**Không có đính kèm ảnh** trong v1: R2 phải gắn thẻ thanh toán mới bật được, mà
+hạ tầng đang giữ trong gói free.
 
 ## 8. Sensor Format và Crop Factor
 
@@ -1310,9 +1378,16 @@ Settings cho chọn hiển thị: Actual hoặc Full-frame equivalent.
 Local-only:
 
 - Không upload ảnh hoặc EXIF lên server
-- Không yêu cầu tài khoản, không cloud backend
+- Không yêu cầu tài khoản, không đăng nhập
 - Metadata index lưu local
 - Onboarding và Settings ghi rõ: *"Your photos and metadata never leave your device."*
+
+**Một ngoại lệ duy nhất, do người dùng chủ động**: tin nhắn Support (§7.10). Khi
+người dùng tự gõ và bấm gửi, máy chủ nhận nội dung họ viết, phiên bản app/iOS,
+model máy, ngôn ngữ, số ảnh đã làm tròn, và log chẩn đoán nếu họ bật công tắc và
+đọc trước. Không ảnh, không tên, không email. Danh tính là khoá App Attest của
+bản cài, gỡ app là mất. Câu trong Settings phải nói đúng ngoại lệ này chứ không
+được nói tuyệt đối.
 
 ## 11. Empty States và Error States
 

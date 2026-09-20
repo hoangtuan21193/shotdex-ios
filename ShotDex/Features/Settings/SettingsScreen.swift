@@ -82,6 +82,7 @@ struct SettingsScreen: View {
             sharingSection
             exportSection
             cameraDatabaseSection
+            supportSection
             privacySection
         }
         .listStyle(.insetGrouped)
@@ -518,11 +519,26 @@ struct SettingsScreen: View {
         }
     }
 
+    // MARK: Support
+
+    private var supportSection: some View {
+        Section {
+            NavigationLink("Support") {
+                SupportScreen(
+                    service: dependencies.support,
+                    metadataStore: dependencies.metadataStore
+                )
+            }
+        } footer: {
+            Text("Report a bug or ask for a feature. Replies come back here — there is no account and no email address to give.")
+        }
+    }
+
     // MARK: Privacy
 
     private var privacySection: some View {
         Section {
-            Text("Photos and metadata never leave this device.")
+            Text("Photos and metadata never leave this device. The one exception is a support message you write yourself, which carries no photos.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
             Button("Clear Local Metadata Index", role: .destructive) {

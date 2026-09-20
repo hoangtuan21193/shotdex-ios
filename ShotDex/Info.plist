@@ -6,61 +6,37 @@
 	<array>
 		<string>com.hoangtuan.shotdex.index</string>
 	</array>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>processing</string>
-	</array>
-	<!-- The drag payload that carries a photo's local identifier between the
-	     grid and an album inside this app. Declared so `UTType(exportedAs:)`
-	     resolves to a real, registered type; it is deliberately not public,
-	     because a local identifier means nothing outside this device. -->
-	<!-- Handoff: the activity the viewer publishes so another device can open
-	     the same photo. Declared here or iOS delivers nothing. -->
-	<!-- The scheme a tapped widget opens the app with (`WidgetDeepLink`).
-	     Private to this device: the URLs carry a day key or a PhotoKit local
-	     identifier, neither of which means anything to another app. -->
-	<!-- The calendar widget lists what is on today. Read-only, and only the
-	     title, time and colour of each event reach the widget's storage. -->
-	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>ShotDex reads today's events so the calendar widget can list them on your Home Screen. Only their titles, times and colours are copied, and only for today.</string>
-	<key>NSCalendarsUsageDescription</key>
-	<string>ShotDex reads today's events so the calendar widget can list them on your Home Screen.</string>
-	<!-- The weather widget needs a rough place to ask about. The fix is taken
-	     at reduced accuracy, rounded again before the request, and never
-	     stored. -->
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>ShotDex uses a rough location — about a kilometre — to fetch the weather for your weather widget. It is never stored and nothing else is sent.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
-			<key>CFBundleURLName</key>
-			<string>com.hoangtuan.shotdex.widget-link</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.hoangtuan.shotdex.widget-link</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>shotdex</string>
 			</array>
 		</dict>
 	</array>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>ShotDex reads today's events so the calendar widget can list them on your Home Screen. Only their titles, times and colours are copied, and only for today.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>ShotDex reads today's events so the calendar widget can list them on your Home Screen.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>ShotDex uses a rough location — about a kilometre — to fetch the weather for your weather widget. It is never stored and nothing else is sent.</string>
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>com.hoangtuan.shotdex.view-photo</string>
 	</array>
-	<key>UTExportedTypeDeclarations</key>
+	<key>UIBackgroundModes</key>
 	<array>
-		<dict>
-			<key>UTTypeIdentifier</key>
-			<string>com.hoangtuan.shotdex.asset-identifier</string>
-			<key>UTTypeDescription</key>
-			<string>ShotDex Photo Reference</string>
-			<key>UTTypeConformsTo</key>
-			<array>
-				<string>public.data</string>
-			</array>
-			<key>UTTypeTagSpecification</key>
-			<dict/>
-		</dict>
+		<string>processing</string>
 	</array>
 	<key>UILaunchScreen</key>
 	<dict>
@@ -71,5 +47,20 @@
 		<key>UIImageRespectsSafeAreaInsets</key>
 		<true/>
 	</dict>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>ShotDex Photo Reference</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.hoangtuan.shotdex.asset-identifier</string>
+			<key>UTTypeTagSpecification</key>
+			<dict/>
+		</dict>
+	</array>
 </dict>
 </plist>

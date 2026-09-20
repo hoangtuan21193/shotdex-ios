@@ -89,6 +89,9 @@ final class AppDependencies {
     /// One coarse fix for the weather widgets, asked for only when one is
     /// placed.
     let widgetLocation: WidgetLocationProvider
+    /// Bug reports and feature requests, anonymous and app-only. Apple offers
+    /// no user-to-developer channel, so this is it.
+    let support: SupportService
 
     init(database: AppDatabase, photoLibrary: PhotoLibraryService) {
         let metadataStore = MetadataStore(database: database)
@@ -214,6 +217,7 @@ final class AppDependencies {
         self.photoWidgetSettings = PhotoWidgetSettingsStore(photoLibrary: photoLibrary)
         self.calendarWidgetWriter = CalendarSnapshotWriter()
         self.widgetLocation = WidgetLocationProvider()
+        self.support = SupportService()
     }
 
     /// Refreshes everything the Home and Lock Screen widgets read: the next
