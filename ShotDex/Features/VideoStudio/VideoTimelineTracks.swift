@@ -380,7 +380,7 @@ struct ClipFilmstrip: View {
             // 88pt regular-width cell on a 3x screen wants 264px, and a 240px
             // thumbnail upscaled into it is the soft filmstrip the taller
             // lanes were supposed to fix.
-            let side = max(240, height * UIScreen.main.scale)
+            let side = max(240, height * ActiveDisplay.scale)
             _ = photoLibrary.requestThumbnail(
                 for: asset,
                 targetSize: CGSize(width: side, height: side),

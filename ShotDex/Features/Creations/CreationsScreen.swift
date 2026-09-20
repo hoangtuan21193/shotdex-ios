@@ -256,7 +256,7 @@ private struct CreationCard: View {
             thumbnail = nil
             return
         }
-        let side = CreationCardMetrics.coverSide * UIScreen.main.scale
+        let side = CreationCardMetrics.coverSide * ActiveDisplay.scale
         thumbnail = await withCheckedContinuation { continuation in
             var resumed = false
             _ = photoLibrary.requestThumbnail(
