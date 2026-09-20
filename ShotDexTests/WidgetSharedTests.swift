@@ -85,30 +85,30 @@ struct WidgetSharedTests {
     /// A widget is rebuilt once a minute at best, so a seconds field would sit
     /// frozen on a wrong value — it is removed when the format is stored.
     @Test func secondsAreStrippedFromAClockFormat() {
-        #expect(ClockWidgetFormat.sanitized(pattern: "HH:mm:ss") == "HH:mm:")
-        #expect(ClockWidgetFormat.sanitized(pattern: "  h:mm a  ") == "h:mm a")
-        #expect(ClockWidgetFormat.sanitized(pattern: "") == "")
+        #expect(PhotoWidgetFormat.sanitized(pattern: "HH:mm:ss") == "HH:mm:")
+        #expect(PhotoWidgetFormat.sanitized(pattern: "  h:mm a  ") == "h:mm a")
+        #expect(PhotoWidgetFormat.sanitized(pattern: "") == "")
     }
 
     @Test func customPatternsAreUsedAndEmptyOnesFollowTheRegion() {
-        var settings = ClockWidgetSettings.default
+        var settings = PhotoWidgetSettings.default
         settings.timeFormat = "HH:mm"
         settings.dateFormat = "yyyy-MM-dd"
         let moment = date(2026, 9, 20, hour: 9)
         let zone = calendar.timeZone
         #expect(
-            ClockWidgetFormat.timeString(
+            PhotoWidgetFormat.timeString(
                 for: moment, settings: settings, locale: Locale(identifier: "en_GB"), timeZone: zone
             ) == "09:00"
         )
         #expect(
-            ClockWidgetFormat.dateString(
+            PhotoWidgetFormat.dateString(
                 for: moment, settings: settings, locale: Locale(identifier: "en_GB"), timeZone: zone
             ) == "2026-09-20"
         )
 
         settings.timeFormat = ""
-        let systemTime = ClockWidgetFormat.timeString(
+        let systemTime = PhotoWidgetFormat.timeString(
             for: moment, settings: settings, locale: Locale(identifier: "en_GB"), timeZone: zone
         )
         // en_GB is a 24-hour region, so the short style has no AM/PM marker.
@@ -122,39 +122,39 @@ struct WidgetSharedTests {
         let laterHour = date(2026, 9, 20, hour: 13)
         let nextDay = date(2026, 9, 21, hour: 12)
 
-        let hourly = ClockWidgetSnapshot.frameIndex(
+        let hourly = PhotoWidgetSnapshot.frameIndex(
             at: noon, count: 4, rotation: .hourly, calendar: calendar
         )
-        let hourlyLater = ClockWidgetSnapshot.frameIndex(
+        let hourlyLater = PhotoWidgetSnapshot.frameIndex(
             at: laterHour, count: 4, rotation: .hourly, calendar: calendar
         )
         #expect(hourly != hourlyLater)
 
-        let daily = ClockWidgetSnapshot.frameIndex(
+        let daily = PhotoWidgetSnapshot.frameIndex(
             at: noon, count: 4, rotation: .daily, calendar: calendar
         )
         #expect(
-            ClockWidgetSnapshot.frameIndex(
+            PhotoWidgetSnapshot.frameIndex(
                 at: laterHour, count: 4, rotation: .daily, calendar: calendar
             ) == daily
         )
         #expect(
-            ClockWidgetSnapshot.frameIndex(
+            PhotoWidgetSnapshot.frameIndex(
                 at: nextDay, count: 4, rotation: .daily, calendar: calendar
             ) != daily
         )
 
         #expect(
-            ClockWidgetSnapshot.frameIndex(
+            PhotoWidgetSnapshot.frameIndex(
                 at: laterHour, count: 4, rotation: .never, calendar: calendar
             ) == 0
         )
     }
 
     @Test func rotationHasNoFrameWhenThereAreNoPictures() {
-        for rotation in ClockWidgetSettings.Rotation.allCases {
+        for rotation in PhotoWidgetSettings.Rotation.allCases {
             #expect(
-                ClockWidgetSnapshot.frameIndex(
+                PhotoWidgetSnapshot.frameIndex(
                     at: .now, count: 0, rotation: rotation, calendar: calendar
                 ) == nil
             )
@@ -183,12 +183,184 @@ struct WidgetSharedTests {
     // MARK: Scaling
 
     @Test func theMediumWidgetGetsExactlyTheSizeTheUserSet() {
-        var settings = ClockWidgetSettings.default
+        var settings = PhotoWidgetSettings.default
         settings.timeSize = 40
-        #expect(settings.scaledTimeSize(forWidgetWidth: 329) == 40)
-        #expect(settings.scaledTimeSize(forWidgetWidth: 158) < 40)
-        #expect(settings.scaledTimeSize(forWidgetWidth: 360) > 40)
+        #expect(settings.scaledHeadlineSize(forWidgetWidth: 329) == 40)
+        #expect(settings.scaledHeadlineSize(forWidgetWidth: 158) < 40)
+        #expect(settings.scaledHeadlineSize(forWidgetWidth: 360) > 40)
         // A clock is never scaled into illegibility, however narrow the family.
-        #expect(settings.scaledTimeSize(forWidgetWidth: 10) >= 40 * 0.6)
+        #expect(settings.scaledHeadlineSize(forWidgetWidth: 10) >= 40 * 0.6)
+    }
+}
+
+/// The calendar and weather the widgets draw: the month grid's arithmetic, the
+/// event list's cut-off, and the temperature conversion. All pure, so none of
+/// it waits for a particular month, a particular region or the weather.
+struct PhotoWidgetDataTests {
+    private var calendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Ho_Chi_Minh")!
+        calendar.firstWeekday = 1
+        return calendar
+    }
+
+    private func date(_ year: Int, _ month: Int, _ day: Int, hour: Int = 12) -> Date {
+        calendar.date(from: DateComponents(year: year, month: month, day: day, hour: hour))!
+    }
+
+    // MARK: Month grid
+
+    /// The grid follows the region's own first weekday unless the user asked
+    /// for Monday, so this is measured in a Sunday-first region.
+    @Test func monthGridPadsToWholeWeeksAndMarksToday() throws {
+        // September 2026 starts on a Tuesday and has 30 days.
+        let layout = MonthGrid.layout(
+            for: date(2026, 9, 20),
+            calendar: calendar,
+            locale: Locale(identifier: "en_US")
+        )
+        #expect(layout.days.count % 7 == 0)
+        #expect(layout.weekdaySymbols.count == 7)
+        // Two leading blanks: Sunday and Monday before Tuesday the 1st.
+        #expect(layout.days.prefix(2).allSatisfy { $0 == nil })
+        #expect(layout.days[2] == 1)
+        let todayIndex = try #require(layout.todayIndex)
+        #expect(layout.days[todayIndex] == 20)
+        #expect(layout.days.compactMap { $0 }.count == 30)
+    }
+
+    @Test func aMondayFirstGridShiftsEveryColumn() throws {
+        let sundayFirst = MonthGrid.layout(
+            for: date(2026, 9, 20),
+            calendar: calendar,
+            locale: Locale(identifier: "en_US"),
+            weekStartsOnMonday: false
+        )
+        let mondayFirst = MonthGrid.layout(
+            for: date(2026, 9, 20),
+            calendar: calendar,
+            locale: Locale(identifier: "en_US"),
+            weekStartsOnMonday: true
+        )
+        #expect(sundayFirst.weekdaySymbols != mondayFirst.weekdaySymbols)
+        // One fewer leading blank when the week starts on Monday and the month
+        // starts on Tuesday.
+        let sundayBlanks = sundayFirst.days.prefix { $0 == nil }.count
+        let mondayBlanks = mondayFirst.days.prefix { $0 == nil }.count
+        #expect(mondayBlanks == sundayBlanks - 1)
+        let todayIndex = try #require(mondayFirst.todayIndex)
+        #expect(mondayFirst.days[todayIndex] == 20)
+    }
+
+    @Test func februaryInALeapYearFillsTwentyNineDays() {
+        let layout = MonthGrid.layout(
+            for: date(2028, 2, 10),
+            calendar: calendar,
+            locale: Locale(identifier: "en_GB")
+        )
+        #expect(layout.days.compactMap { $0 }.count == 29)
+    }
+
+    // MARK: Events
+
+    @Test func theEventListCutsOffAndCountsWhatIsLeft() {
+        let events = (0..<5).map { index in
+            CalendarSnapshot.Event(
+                id: "\(index)",
+                title: "Event \(index)",
+                startDate: date(2026, 9, 20, hour: 9 + index),
+                endDate: date(2026, 9, 20, hour: 10 + index),
+                isAllDay: false,
+                colorHex: nil
+            )
+        }
+        let visible = CalendarFormat.visibleEvents(events, limit: 3)
+        #expect(visible.shown.count == 3)
+        #expect(visible.remaining == 2)
+        #expect(CalendarFormat.visibleEvents(events, limit: 9).remaining == 0)
+    }
+
+    /// A widget left unrefreshed overnight must not show yesterday's meetings
+    /// as today's.
+    @Test func eventsAreOnlyOfferedForTheDayTheyWereReadFor() {
+        let snapshot = CalendarSnapshot(
+            dayKey: WidgetSharedContainer.dayKey(for: date(2026, 9, 20), calendar: calendar),
+            events: [],
+            hasAccess: true,
+            generatedAt: date(2026, 9, 20)
+        )
+        #expect(snapshot.events(on: date(2026, 9, 20), calendar: calendar) != nil)
+        #expect(snapshot.events(on: date(2026, 9, 21), calendar: calendar) == nil)
+    }
+
+    @Test func anAllDayEventSaysSoInsteadOfATime() {
+        let allDay = CalendarSnapshot.Event(
+            id: "1", title: "Trip", startDate: date(2026, 9, 20, hour: 0),
+            endDate: date(2026, 9, 21, hour: 0), isAllDay: true, colorHex: nil
+        )
+        #expect(CalendarFormat.timeString(for: allDay) == "All day")
+    }
+
+    // MARK: Weather
+
+    @Test func temperatureFollowsTheUnitAsked() {
+        let us = Locale(identifier: "en_US")
+        let gb = Locale(identifier: "en_GB")
+        #expect(WeatherFormat.temperatureString(celsius: 21.4, unit: .celsius, locale: us) == "21°")
+        #expect(WeatherFormat.temperatureString(celsius: 100, unit: .fahrenheit, locale: gb) == "212°")
+        // System follows the region, not the setting.
+        #expect(WeatherFormat.temperatureString(celsius: 0, unit: .system, locale: gb) == "0°")
+        #expect(WeatherFormat.temperatureString(celsius: 0, unit: .system, locale: us) == "32°")
+    }
+
+    @Test func highAndLowNeedBothEnds() {
+        #expect(
+            WeatherFormat.highLowString(
+                highCelsius: 30, lowCelsius: 22, unit: .celsius
+            ) == "H 30°  L 22°"
+        )
+        #expect(WeatherFormat.highLowString(highCelsius: 30, lowCelsius: nil, unit: .celsius) == nil)
+    }
+
+    @Test func conditionCodesBecomeWordsAndNightSymbols() {
+        #expect(WeatherFormat.conditionName(code: 0) == "Clear")
+        #expect(WeatherFormat.conditionName(code: 95) == "Thunderstorms")
+        #expect(WeatherFormat.conditionName(code: 4242) == "—")
+        #expect(WeatherFormat.symbolName(code: 0, isNight: false) == "sun.max.fill")
+        #expect(WeatherFormat.symbolName(code: 0, isNight: true) == "moon.stars.fill")
+    }
+
+    @Test func aReadingGoesStaleRatherThanLying() {
+        let reading = WeatherSnapshot(
+            temperatureCelsius: 20, highCelsius: nil, lowCelsius: nil,
+            conditionCode: 0, placeName: nil, isNight: false,
+            updatedAt: date(2026, 9, 20, hour: 6)
+        )
+        #expect(!reading.isStale(at: date(2026, 9, 20, hour: 8)))
+        #expect(reading.isStale(at: date(2026, 9, 20, hour: 12)))
+    }
+
+    // MARK: Settings per widget
+
+    @Test func everyWidgetOpensOnTheRowsItIsNamedAfter() {
+        #expect(PhotoWidgetSettings.default(for: .clock).showsTime)
+        #expect(!PhotoWidgetSettings.default(for: .calendar).showsTime)
+        #expect(!PhotoWidgetSettings.default(for: .weather).showsTime)
+        #expect(PhotoWidgetSettings.default(for: .combined).showsTime)
+        #expect(PhotoWidgetKind.allCases.filter(\.needsWeather) == [.weather, .combined])
+        #expect(PhotoWidgetKind.allCases.filter(\.needsCalendarEvents) == [.calendar, .combined])
+        // The kinds are the identifiers WidgetKit stores against a placed
+        // widget: changing one orphans it.
+        #expect(PhotoWidgetKind.clock.widgetKind == "ShotDexClock")
+        #expect(Set(PhotoWidgetKind.allCases.map(\.widgetKind)).count == PhotoWidgetKind.allCases.count)
+    }
+
+    @Test func theSettingsFileKeepsOneEntryPerKind() {
+        var file = PhotoWidgetSettingsFile.default
+        #expect(file[.weather].showsHighLow)
+        file[.weather].showsHighLow = false
+        #expect(!file[.weather].showsHighLow)
+        // Other widgets are untouched by one widget's edit.
+        #expect(file[.combined].showsHighLow)
     }
 }

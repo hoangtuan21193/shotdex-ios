@@ -1,56 +1,65 @@
 import SwiftUI
 
-/// Everything the Clock widget shows, set here and written to the App Group
-/// the widget reads.
+/// Everything one photo widget shows — its picture, what is written over it,
+/// and how — written to the App Group the widget reads.
 ///
-/// The preview at the top is the widget's own `ClockWidgetFace` over the
+/// One screen for all four kinds. The sections that do not apply are simply
+/// not built: a Clock has no weather section, a Weather widget has no month
+/// grid. The preview at the top is the widget's own `PhotoWidgetFace` over the
 /// widget's own background, at the medium family's proportions — the size the
-/// point values are measured against — so the typeface, colour, format and
-/// placement are seen where they will land rather than described.
-struct ClockWidgetSettingsScreen: View {
+/// point values are measured against.
+struct PhotoWidgetSettingsScreen: View {
+    let kind: PhotoWidgetKind
+
     @Environment(AppDependencies.self) private var dependencies
-    @Environment(PhotoLibraryService.self) private var photoLibrary
 
     @State private var isPhotoPickerPresented = false
     @State private var isAlbumPickerPresented = false
     @State private var isFontPickerPresented = false
     @State private var isCustomTimeFormatPresented = false
     @State private var isCustomDateFormatPresented = false
-    /// Ticks the preview so it reads like a clock rather than a frozen label.
+    /// Ticks the preview so a clock reads like a clock rather than a frozen
+    /// label.
     @State private var previewDate = Date.now
+    @State private var weather: WeatherSnapshot?
+    @State private var calendarSnapshot: CalendarSnapshot?
+    @State private var calendarAccess: CalendarSnapshotWriter.Access = .notDetermined
+    @State private var isRefreshingWeather = false
 
-    private var store: ClockWidgetSettingsStore { dependencies.clockWidgetSettings }
-    private var settings: ClockWidgetSettings { store.settings }
+    private var store: PhotoWidgetSettingsStore { dependencies.photoWidgetSettings }
+    private var settings: PhotoWidgetSettings { store.settings(for: kind) }
 
     var body: some View {
         List {
             previewSection
             photoSection
-            contentSection
+            timeSection
+            if kind.needsCalendarEvents { calendarSection }
+            if kind.needsWeather { weatherSection }
             typefaceSection
             colourSection
             placementSection
         }
         .listStyle(.insetGrouped)
-        .navigationTitle("Clock Widget")
+        .navigationTitle(kind.title)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $isPhotoPickerPresented) {
-            ClockWidgetPhotoPicker { assetId in
-                store.update { $0.source = .photo(assetId: assetId) }
+            PhotoWidgetPhotoPicker { assetId in
+                store.update(kind) { $0.source = .photo(assetId: assetId) }
             }
             .ignoresSafeArea()
         }
         .sheet(isPresented: $isAlbumPickerPresented) {
             NavigationStack {
-                ClockWidgetAlbumPicker { collectionId, title in
-                    store.update { $0.source = .album(collectionId: collectionId, title: title) }
+                PhotoWidgetAlbumPicker { collectionId, title in
+                    store.update(kind) { $0.source = .album(collectionId: collectionId, title: title) }
                 }
             }
             .environment(dependencies)
         }
         .sheet(isPresented: $isFontPickerPresented) {
-            ClockWidgetFontPicker { choice in
-                store.update {
+            PhotoWidgetFontPicker { choice in
+                store.update(kind) {
                     $0.fontPostScriptName = choice.postScriptName
                     $0.fontDisplayName = choice.displayName
                 }
@@ -66,10 +75,19 @@ struct ClockWidgetSettingsScreen: View {
         } message: {
             Text("A date format pattern, like EEE d MMM.")
         }
-        // The preview is a clock, so it ticks. One second is fast enough to
-        // look alive and costs one view update.
         .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { date in
             previewDate = date
+        }
+        .task {
+            weather = WeatherSnapshot.read()
+            calendarAccess = dependencies.calendarWidgetWriter.access
+            // The preview shows today's events, so the events are read while
+            // it is on screen — a widget that is not placed yet has never had
+            // them read for it.
+            if kind.needsCalendarEvents, calendarAccess == .granted {
+                await dependencies.calendarWidgetWriter.write(force: true)
+            }
+            calendarSnapshot = CalendarSnapshot.read()
         }
         .onDisappear { store.saveNow() }
     }
@@ -79,21 +97,30 @@ struct ClockWidgetSettingsScreen: View {
     private var previewSection: some View {
         Section {
             // 329 × 155 is the medium widget on a 6.1" iPhone, the size
-            // `ClockWidgetSettings.scaledTimeSize` measures against.
-            ClockWidgetPreview(
+            // `PhotoWidgetSettings.scaledHeadlineSize` measures against.
+            PhotoWidgetPreview(
+                kind: kind,
                 settings: settings,
                 date: previewDate,
+                weather: weather,
+                calendarSnapshot: calendarSnapshot,
                 // Flips when a re-render finishes, so the preview picks up the
                 // new file instead of holding the one it loaded first.
-                reloadToken: store.isRenderingPhotos
+                reloadToken: store.isRendering(kind)
             )
-                .frame(height: 155)
-                .frame(maxWidth: .infinity)
-                .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
-                .listRowBackground(Color.clear)
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("Preview of the Clock widget")
+            .frame(height: previewHeight)
+            .frame(maxWidth: .infinity)
+            .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
+            .listRowBackground(Color.clear)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Preview of the \(kind.title) widget")
         }
+    }
+
+    /// A month grid needs the height a tall family would give it; the others
+    /// are shown at the medium family's shape.
+    private var previewHeight: CGFloat {
+        kind.needsCalendarEvents && settings.calendarStyle.showsGrid ? 260 : 155
     }
 
     // MARK: Photo
@@ -112,31 +139,31 @@ struct ClockWidgetSettingsScreen: View {
             }
             if case .album = settings.source {
                 Picker("Change Photo", selection: rotationBinding) {
-                    ForEach(ClockWidgetSettings.Rotation.allCases) { rotation in
+                    ForEach(PhotoWidgetSettings.Rotation.allCases) { rotation in
                         Text(rotation.title).tag(rotation)
                     }
                 }
             }
             if !isNoneSource {
                 Button {
-                    store.renderPhotos()
+                    store.renderPhotos(for: kind)
                 } label: {
                     LabeledContent("Refresh Now") {
-                        if store.isRenderingPhotos {
+                        if store.isRendering(kind) {
                             ProgressView()
                         }
                     }
                 }
-                .disabled(store.isRenderingPhotos)
+                .disabled(store.isRendering(kind))
                 Button("Remove Photo", role: .destructive) {
-                    store.update { $0.source = .none }
+                    store.update(kind) { $0.source = .none }
                 }
             }
             dimmingRow
         } header: {
             Text("Background")
         } footer: {
-            Text("ShotDex copies the photos into the widget's own storage, because a widget cannot read your library. An album is copied up to \(ClockWidgetSnapshot.maxFrames) photos deep; use Refresh Now after adding to it.")
+            Text("ShotDex copies the photos into the widget's own storage, because a widget cannot read your library. An album is copied up to \(PhotoWidgetSnapshot.maxFrames) photos deep; use Refresh Now after adding to it.")
         }
     }
 
@@ -147,7 +174,7 @@ struct ClockWidgetSettingsScreen: View {
             Slider(
                 value: Binding(
                     get: { settings.photoDimming },
-                    set: { value in store.update { $0.photoDimming = value } }
+                    set: { value in store.update(kind) { $0.photoDimming = value } }
                 ),
                 in: 0...0.7
             )
@@ -155,14 +182,14 @@ struct ClockWidgetSettingsScreen: View {
         }
     }
 
-    // MARK: Content
+    // MARK: Time and date
 
-    private var contentSection: some View {
+    private var timeSection: some View {
         Section {
             Toggle("Show Time", isOn: boolBinding(\.showsTime))
             if settings.showsTime {
                 Picker("Time Format", selection: timeFormatBinding) {
-                    ForEach(ClockWidgetFormat.timePresets, id: \.pattern) { preset in
+                    ForEach(PhotoWidgetFormat.timePresets, id: \.pattern) { preset in
                         Text(preset.title).tag(preset.pattern)
                     }
                     if isCustomTimePattern {
@@ -173,16 +200,16 @@ struct ClockWidgetSettingsScreen: View {
                 sizeRow(
                     title: "Time Size",
                     value: settings.timeSize,
-                    range: ClockWidgetSettings.timeSizeRange
+                    range: PhotoWidgetSettings.timeSizeRange
                 ) { value in
-                    store.update { $0.timeSize = value }
+                    store.update(kind) { $0.timeSize = value }
                 }
             }
 
             Toggle("Show Date", isOn: boolBinding(\.showsDate))
             if settings.showsDate {
                 Picker("Date Format", selection: dateFormatBinding) {
-                    ForEach(ClockWidgetFormat.datePresets, id: \.pattern) { preset in
+                    ForEach(PhotoWidgetFormat.datePresets, id: \.pattern) { preset in
                         Text(preset.title).tag(preset.pattern)
                     }
                     if isCustomDatePattern {
@@ -190,18 +217,18 @@ struct ClockWidgetSettingsScreen: View {
                     }
                 }
                 Button("Custom Date Format…") { isCustomDateFormatPresented = true }
-                sizeRow(
-                    title: "Date Size",
-                    value: settings.dateSize,
-                    range: ClockWidgetSettings.dateSizeRange
-                ) { value in
-                    store.update { $0.dateSize = value }
-                }
+            }
+            sizeRow(
+                title: "Text Size",
+                value: settings.dateSize,
+                range: PhotoWidgetSettings.dateSizeRange
+            ) { value in
+                store.update(kind) { $0.dateSize = value }
             }
         } header: {
             Text("Time and Date")
         } footer: {
-            Text("System follows the clock format in iOS Settings, including 24-hour time. Sizes are for the medium widget; the small and large ones scale from them.")
+            Text("System follows the clock format in iOS Settings, including 24-hour time. Text Size sets every line under the headline — the month grid, the events and the weather with it. Sizes are for the medium widget; the small and large ones scale from them.")
         }
     }
 
@@ -223,6 +250,97 @@ struct ClockWidgetSettingsScreen: View {
         }
     }
 
+    // MARK: Calendar
+
+    private var calendarSection: some View {
+        Section {
+            Picker("Show", selection: calendarStyleBinding) {
+                ForEach(PhotoWidgetSettings.CalendarStyle.allCases) { style in
+                    Text(style.title).tag(style)
+                }
+            }
+            if settings.calendarStyle.showsGrid {
+                Toggle("Start Weeks on Monday", isOn: boolBinding(\.weekStartsOnMonday))
+            }
+            if settings.calendarStyle.showsEvents {
+                Stepper(
+                    "Events Listed: \(settings.maximumEventCount)",
+                    value: Binding(
+                        get: { settings.maximumEventCount },
+                        set: { value in store.update(kind) { $0.maximumEventCount = value } }
+                    ),
+                    in: PhotoWidgetSettings.eventCountRange
+                )
+                .monospacedDigit()
+                if calendarAccess != .granted {
+                    LabeledContent("Calendar Access", value: calendarAccessLabel)
+                    Button(calendarAccess == .denied ? "Open Settings" : "Allow Calendar Access") {
+                        if calendarAccess == .denied {
+                            openAppSettings()
+                        } else {
+                            Task {
+                                _ = await dependencies.calendarWidgetWriter.requestAccess()
+                                calendarAccess = dependencies.calendarWidgetWriter.access
+                                await dependencies.calendarWidgetWriter.write(force: true)
+                                calendarSnapshot = CalendarSnapshot.read()
+                            }
+                        }
+                    }
+                }
+            }
+        } header: {
+            Text("Calendar")
+        } footer: {
+            Text("The month is worked out on this iPhone and needs no permission. Listing today's events reads your calendars — only their titles, times and colours are copied for the widget, and only for today.")
+        }
+    }
+
+    private var calendarAccessLabel: String {
+        switch calendarAccess {
+        case .granted: "Allowed"
+        case .denied: "Denied"
+        case .notDetermined: "Not Requested"
+        }
+    }
+
+    // MARK: Weather
+
+    private var weatherSection: some View {
+        Section {
+            Picker("Units", selection: temperatureUnitBinding) {
+                ForEach(PhotoWidgetSettings.TemperatureUnit.allCases) { unit in
+                    Text(unit.title).tag(unit)
+                }
+            }
+            Toggle("Show High and Low", isOn: boolBinding(\.showsHighLow))
+            Toggle("Show Place", isOn: boolBinding(\.showsWeatherPlace))
+            LabeledContent("Last Reading", value: weatherAgeLabel)
+            Button {
+                Task {
+                    isRefreshingWeather = true
+                    await WeatherSnapshotWriter(location: dependencies.widgetLocation)
+                        .write(force: true)
+                    weather = WeatherSnapshot.read()
+                    isRefreshingWeather = false
+                }
+            } label: {
+                LabeledContent("Update Now") {
+                    if isRefreshingWeather { ProgressView() }
+                }
+            }
+            .disabled(isRefreshingWeather)
+        } header: {
+            Text("Weather")
+        } footer: {
+            Text("ShotDex asks for your location once, rounds it to about a kilometre, and fetches the current conditions from Open-Meteo. It does this only while a weather widget is on your Home Screen, and it sends nothing else.")
+        }
+    }
+
+    private var weatherAgeLabel: String {
+        guard let weather else { return "None yet" }
+        return weather.updatedAt.formatted(date: .omitted, time: .shortened)
+    }
+
     // MARK: Typeface
 
     private var typefaceSection: some View {
@@ -234,7 +352,7 @@ struct ClockWidgetSettingsScreen: View {
             }
             if !settings.fontPostScriptName.isEmpty {
                 Button("Use the System Font") {
-                    store.update {
+                    store.update(kind) {
                         $0.fontPostScriptName = ""
                         $0.fontDisplayName = "System"
                     }
@@ -247,7 +365,7 @@ struct ClockWidgetSettingsScreen: View {
         } header: {
             Text("Typeface")
         } footer: {
-            Text("Monospaced digits keep the clock from shifting as the minutes change. A typeface another app installed may not be available to the widget; it falls back to the system font.")
+            Text("Monospaced digits keep the numbers from shifting as they change. A typeface another app installed may not be available to the widget; it falls back to the system font.")
         }
     }
 
@@ -258,9 +376,7 @@ struct ClockWidgetSettingsScreen: View {
             // Swatches rather than a picker menu: with colour, the colour is
             // the whole answer, and a menu hides every option behind a tap
             // (DESIGN.md §7.5, the same reason the accent row is swatches).
-            // Two rows of four rather than one row of eight: eight 44pt
-            // targets do not fit the width of a grouped row, and the ones at
-            // the ends were clipped by it.
+            // Two rows of four: eight 44pt targets do not fit one grouped row.
             LazyVGrid(
                 columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4),
                 spacing: 12
@@ -272,21 +388,21 @@ struct ClockWidgetSettingsScreen: View {
             .padding(.vertical, 6)
 
             Picker("Legibility", selection: legibilityBinding) {
-                ForEach(ClockWidgetSettings.Legibility.allCases) { option in
+                ForEach(PhotoWidgetSettings.Legibility.allCases) { option in
                     Text(option.title).tag(option)
                 }
             }
         } header: {
             Text("Colour")
         } footer: {
-            Text("Shadow suits most photos. Scrim darkens a band behind the clock, for photos with a busy sky or bright detail under the text.")
+            Text("Shadow suits most photos. Scrim darkens a band behind the text, for photos with a busy sky or bright detail under it.")
         }
     }
 
     private func swatch(hex: String) -> some View {
         let isSelected = settings.textColorHex.uppercased() == hex.uppercased()
         return Button {
-            store.update { $0.textColorHex = hex }
+            store.update(kind) { $0.textColorHex = hex }
         } label: {
             Circle()
                 .fill(WidgetTextColor.color(hex: hex))
@@ -327,7 +443,7 @@ struct ClockWidgetSettingsScreen: View {
     private var placementSection: some View {
         Section {
             Picker("Position", selection: placementBinding) {
-                ForEach(ClockWidgetSettings.Placement.allCases) { placement in
+                ForEach(PhotoWidgetSettings.Placement.allCases) { placement in
                     Text(placement.title).tag(placement)
                 }
             }
@@ -355,53 +471,67 @@ struct ClockWidgetSettingsScreen: View {
 
     private var isCustomTimePattern: Bool {
         !settings.timeFormat.isEmpty
-            && !ClockWidgetFormat.timePresets.contains { $0.pattern == settings.timeFormat }
+            && !PhotoWidgetFormat.timePresets.contains { $0.pattern == settings.timeFormat }
     }
 
     private var isCustomDatePattern: Bool {
         !settings.dateFormat.isEmpty
-            && !ClockWidgetFormat.datePresets.contains { $0.pattern == settings.dateFormat }
+            && !PhotoWidgetFormat.datePresets.contains { $0.pattern == settings.dateFormat }
     }
 
-    private func boolBinding(_ keyPath: WritableKeyPath<ClockWidgetSettings, Bool>) -> Binding<Bool> {
+    private func boolBinding(_ keyPath: WritableKeyPath<PhotoWidgetSettings, Bool>) -> Binding<Bool> {
         Binding(
             get: { settings[keyPath: keyPath] },
-            set: { value in store.update { $0[keyPath: keyPath] = value } }
+            set: { value in store.update(kind) { $0[keyPath: keyPath] = value } }
         )
     }
 
     private var timeFormatBinding: Binding<String> {
         Binding(
             get: { settings.timeFormat },
-            set: { value in store.update { $0.timeFormat = value } }
+            set: { value in store.update(kind) { $0.timeFormat = value } }
         )
     }
 
     private var dateFormatBinding: Binding<String> {
         Binding(
             get: { settings.dateFormat },
-            set: { value in store.update { $0.dateFormat = value } }
+            set: { value in store.update(kind) { $0.dateFormat = value } }
         )
     }
 
-    private var rotationBinding: Binding<ClockWidgetSettings.Rotation> {
+    private var rotationBinding: Binding<PhotoWidgetSettings.Rotation> {
         Binding(
             get: { settings.rotation },
-            set: { value in store.update { $0.rotation = value } }
+            set: { value in store.update(kind) { $0.rotation = value } }
         )
     }
 
-    private var legibilityBinding: Binding<ClockWidgetSettings.Legibility> {
+    private var legibilityBinding: Binding<PhotoWidgetSettings.Legibility> {
         Binding(
             get: { settings.legibility },
-            set: { value in store.update { $0.legibility = value } }
+            set: { value in store.update(kind) { $0.legibility = value } }
         )
     }
 
-    private var placementBinding: Binding<ClockWidgetSettings.Placement> {
+    private var placementBinding: Binding<PhotoWidgetSettings.Placement> {
         Binding(
             get: { settings.placement },
-            set: { value in store.update { $0.placement = value } }
+            set: { value in store.update(kind) { $0.placement = value } }
+        )
+    }
+
+    private var calendarStyleBinding: Binding<PhotoWidgetSettings.CalendarStyle> {
+        Binding(
+            get: { settings.calendarStyle },
+            set: { value in store.update(kind) { $0.calendarStyle = value } }
+        )
+    }
+
+    private var temperatureUnitBinding: Binding<PhotoWidgetSettings.TemperatureUnit> {
+        Binding(
+            get: { settings.temperatureUnit },
+            set: { value in store.update(kind) { $0.temperatureUnit = value } }
         )
     }
 
@@ -418,20 +548,28 @@ struct ClockWidgetSettingsScreen: View {
         Button("Done") {}
         Button("Use the System Format", role: .destructive) {
             if isTime {
-                store.update { $0.timeFormat = "" }
+                store.update(kind) { $0.timeFormat = "" }
             } else {
-                store.update { $0.dateFormat = "" }
+                store.update(kind) { $0.dateFormat = "" }
             }
         }
+    }
+
+    private func openAppSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
     }
 }
 
 /// The widget's own face over the widget's own background, at the medium
-/// family's proportions. Shares `ClockWidgetFace` with the widget, so a
-/// change to one cannot leave the other behind.
-struct ClockWidgetPreview: View {
-    let settings: ClockWidgetSettings
+/// family's proportions. Shares `PhotoWidgetFace` with the widget, so a change
+/// to one cannot leave the other behind.
+struct PhotoWidgetPreview: View {
+    let kind: PhotoWidgetKind
+    let settings: PhotoWidgetSettings
     let date: Date
+    let weather: WeatherSnapshot?
+    let calendarSnapshot: CalendarSnapshot?
     let reloadToken: Bool
 
     /// The preview loads the same file the widget does.
@@ -441,7 +579,7 @@ struct ClockWidgetPreview: View {
         GeometryReader { proxy in
             // The image is clipped to the preview's own size before anything
             // is stacked on it: a `scaledToFill` image is larger than its
-            // frame, and a ZStack sized by it pushes the bottom-aligned clock
+            // frame, and a ZStack sized by it pushes the bottom-aligned text
             // out through the bottom edge.
             ZStack {
                 if let image {
@@ -461,11 +599,22 @@ struct ClockWidgetPreview: View {
                     Color.black.opacity(settings.photoDimming)
                 }
                 if settings.legibility == .scrim {
-                    ClockWidgetScrim(placement: settings.placement)
+                    PhotoWidgetScrim(placement: settings.placement)
                 }
-                ClockWidgetFace(date: date, settings: settings, width: proxy.size.width)
-                    .padding(16)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: alignment)
+                PhotoWidgetFace(
+                    date: date,
+                    settings: settings,
+                    kind: kind,
+                    width: proxy.size.width,
+                    weather: weather,
+                    calendarSnapshot: calendarSnapshot
+                )
+                .padding(16)
+                .frame(
+                    maxWidth: .infinity,
+                    maxHeight: .infinity,
+                    alignment: settings.placement.alignment
+                )
             }
             .frame(width: proxy.size.width, height: proxy.size.height)
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.xxl, style: .continuous))
@@ -476,26 +625,16 @@ struct ClockWidgetPreview: View {
     }
 
     private struct PreviewLoadKey: Equatable {
-        let source: ClockWidgetSettings.Source
+        let source: PhotoWidgetSettings.Source
         let reloadToken: Bool
     }
 
-    private var alignment: Alignment {
-        switch settings.placement {
-        case .topLeading: .topLeading
-        case .top: .top
-        case .center: .center
-        case .bottom: .bottom
-        case .bottomLeading: .bottomLeading
-        }
-    }
-
     private func loadImage() async {
-        let snapshot = ClockWidgetSnapshot.read()
-        let index = ClockWidgetSnapshot.frameIndex(
+        let snapshot = PhotoWidgetSnapshot.read(kind: kind)
+        let index = PhotoWidgetSnapshot.frameIndex(
             at: .now, count: snapshot.frames.count, rotation: settings.rotation
         )
-        guard let index, let url = snapshot.imageURL(at: index) else {
+        guard let index, let url = snapshot.imageURL(at: index, kind: kind) else {
             image = nil
             return
         }

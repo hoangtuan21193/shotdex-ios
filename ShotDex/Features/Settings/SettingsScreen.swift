@@ -402,18 +402,20 @@ struct SettingsScreen: View {
 
     private var widgetsSection: some View {
         Section {
-            NavigationLink {
-                ClockWidgetSettingsScreen()
-            } label: {
-                LabeledContent(
-                    "Clock Widget",
-                    value: dependencies.clockWidgetSettings.settings.sourceSummary
-                )
+            ForEach(PhotoWidgetKind.allCases) { kind in
+                NavigationLink {
+                    PhotoWidgetSettingsScreen(kind: kind)
+                } label: {
+                    LabeledContent(
+                        kind.title,
+                        value: dependencies.photoWidgetSettings.settings(for: kind).sourceSummary
+                    )
+                }
             }
         } header: {
             Text("Widgets")
         } footer: {
-            Text("Add widgets by touching and holding the Home Screen. ShotDex has three: Your Gear, On This Day, and a Clock over a photo you choose — the Clock is the one with settings.")
+            Text("Add widgets by touching and holding the Home Screen. Each of these draws over a photo or album you choose; On This Day needs no setting up.")
         }
     }
 

@@ -164,6 +164,11 @@
 			path = ShotDexTests;
 			sourceTree = "<group>";
 		};
+		AB0001052D00000100000001 /* WidgetShared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = WidgetShared;
+			sourceTree = "<group>";
+		};
 		BB0001052D00000100000001 /* ShotDexWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -285,6 +290,7 @@
 			isa = PBXGroup;
 			children = (
 				AA0000012D00000100000001 /* ShotDex */,
+				AB0001052D00000100000001 /* WidgetShared */,
 				BB0001052D00000100000001 /* ShotDexWidget */,
 				CC0001052D00000100000001 /* ShotDexShare */,
 				AA0000222D00000100000001 /* ShotDexTests */,
@@ -330,6 +336,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				AA0000012D00000100000001 /* ShotDex */,
+				AB0001052D00000100000001 /* WidgetShared */,
 			);
 			name = ShotDex;
 			packageProductDependencies = (
@@ -376,6 +383,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				AB0001052D00000100000001 /* WidgetShared */,
 				BB0001052D00000100000001 /* ShotDexWidget */,
 			);
 			name = ShotDexWidget;

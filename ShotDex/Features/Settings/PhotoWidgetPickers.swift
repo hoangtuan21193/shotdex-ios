@@ -1,13 +1,13 @@
 import PhotosUI
 import SwiftUI
 
-/// Picks the single photo behind the Clock widget.
+/// Picks the single photo behind a photo widget.
 ///
 /// `PHPickerViewController`, like the editor's signature picker: it reads the
 /// library out of process, so choosing a picture needs no authorization of its
 /// own, and all that is wanted here is the asset's identifier — the picture
-/// itself is rendered later by `ClockWidgetSnapshotWriter`.
-struct ClockWidgetPhotoPicker: UIViewControllerRepresentable {
+/// itself is rendered later by `PhotoWidgetSnapshotWriter`.
+struct PhotoWidgetPhotoPicker: UIViewControllerRepresentable {
     let onPick: (String) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -47,12 +47,12 @@ struct ClockWidgetPhotoPicker: UIViewControllerRepresentable {
     }
 }
 
-/// Picks the album the Clock widget rotates through.
+/// Picks the album a photo widget rotates through.
 ///
 /// The app's own album list rather than a system picker: PhotosUI has no album
 /// picker, and `AlbumsModel` already knows every album with a cover and a
 /// count.
-struct ClockWidgetAlbumPicker: View {
+struct PhotoWidgetAlbumPicker: View {
     let onPick: (_ collectionId: String, _ title: String) -> Void
 
     @Environment(AppDependencies.self) private var dependencies

@@ -1,13 +1,12 @@
 import ShotDexKit
 import SwiftUI
 
-/// The Clock widget's typeface, picked from everything installed on the
-/// device.
+/// A photo widget's typeface, picked from everything installed on the device.
 ///
 /// Wraps the same `FontPickerRepresentable` the editor's font sheet uses —
 /// one font list in the app, not two — in Settings' own light chrome rather
 /// than the editor's dark panel.
-struct ClockWidgetFontPicker: View {
+struct PhotoWidgetFontPicker: View {
     let onPick: (OverlayFontChoice) -> Void
 
     @Environment(\.dismiss) private var dismiss
