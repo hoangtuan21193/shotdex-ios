@@ -56,7 +56,7 @@ Agents: `copy-consistency`, `data-migration` (done) · `component-consistency`, 
 - [x] `Data/Database/MetadataStore.swift:113` — `photo_cull` was never pruned: eight deletion paths all call `deleteAssets`, none called the cull store's own prune, so rate → reject → delete left the row and `culledCount()` counted it forever _(data-migration)_
 - [x] `Features/Settings/SettingsScreen.swift` — "on the next index run": `IndexPipeline`'s vocabulary on a user-facing alert _(copy-consistency)_
 - [x] `Data/Sources/AssetMetadataReader.swift` — Info panel section called "Asset" beside "Camera & Lens", "Exposure", "File" _(copy-consistency)_
-- [ ] `Features/Editing/PhotoEditorScreen.swift:165,2146,2153,2215` — four user-facing strings say "asset" instead of "photo", one of them in an alert _(copy-consistency)_ — deferred while the editor agents are still reading the file
+- [x] ~~`Features/Editing/PhotoEditorScreen.swift:165,2146,2153,2215` — four user-facing strings say "asset"~~ — re-checked 2026-09-20: no user-facing "asset" is left in that file, or anywhere else in the app. Fixed by an earlier commit in the editor batch.
 
 - [x] `Features/VideoStudio/VideoStudioScreen.swift` + `Features/Collage/CollageScreen.swift` — the iPad rail and inspector gated on `horizontalSizeClass`, so a ~500pt Split View half got a 92pt rail and a 320pt inspector; now measured on window width like the editor's sidebar _(challenger)_
 - [x] `Features/Import/ImportScreen.swift:311` — its own single-tone selection badge instead of the documented white-check-on-accent-disc _(component-consistency)_
@@ -66,8 +66,8 @@ Agents: `copy-consistency`, `data-migration` (done) · `component-consistency`, 
 
 ## Nits
 
-- [ ] `Data/Sources/AssetMetadataReader.swift:210` — "Resource 1 / Resource 2" in the Info panel for what a photographer calls the RAW and the JPEG _(copy-consistency)_
-- [ ] `Features/Import/ImportScreen.swift:381` — the import picker says "Add to Album"; its list really is PhotoKit albums, so this may be correct as-is _(copy-consistency)_
+- [x] ~~`Data/Sources/AssetMetadataReader.swift:210` — "Resource 1 / Resource 2"~~ — done: `resourceHeading` names each section by format (`RAW`, `HEIC`, `Paired Video · MOV`) and only appends an index when two headings would collide.
+- [x] ~~`Features/Import/ImportScreen.swift:381` — the import picker says "Add to Album"~~ — correct as-is; its list is PhotoKit user albums. But it points at a real split, now under Needs a decision below.
 
 ## Closed by spec.md
 
@@ -296,8 +296,8 @@ Checked and found clean: the kit's public surface (everything newly public has a
 
 - [ ] **The extension renders the base pipeline at full resolution even for a plain slider edit.** `EditExtensionModel.renderOutput` calls `render(source:recipe:)` with no bound: a 48MP source is ~195MB of RGBA before Core Image's own working space, against an extension's ceiling. Streaming the write helps the tail, not the peak. The honest fix is a tiled render, and it wants Instruments on a real device with a real 48MP file first — the same measurement the app-side blocker below needs.
 - [ ] **The full app renders full-extent mask/drawing/overlay layers monolithically too.** It has the memory to survive today; a 48MP RAW with several mask components is close to the edge.
-- [ ] `ShotDexKit/Render/PhotoRenderService+Drawing.swift` imports `PencilKit`, which is not on the kit's allowed list (UIKit is allowed for `UIImage`/`UIColor` bridging only). Pre-existing, from 2026-09-19.
-- [ ] **Reverse geocoding sends photo coordinates to Apple's geocoder** (`PlaceGeocodingService`, opt-out via `SettingsKeys.lookUpPlaces`). Not a privacy-manifest item — it is a system framework, not a server we control — but it belongs in the App Store Connect privacy questionnaire as Location, used but not linked and not for tracking.
+- [x] ~~`ShotDexKit/Render/PhotoRenderService+Drawing.swift` imports `PencilKit`~~ — struck 2026-09-20. The rule the kit actually carries is "no SwiftUI, no GRDB" (CLAUDE.md). PencilKit here is `PKDrawing(data:)` and `PKDrawing.image(from:scale:)` — a model type and a rasterizer, both available to app extensions, and the kit's whole job is rasterizing a recipe. Nothing to remove.
+- [x] **Reverse geocoding sends photo coordinates to Apple's geocoder** — and the photo-library permission string said "Nothing leaves your device." Fixed 2026-09-20: the string now says the photos stay put and a rounded location goes to Apple's map service. No manifest change (platform service, and CoreLocation is not a required-reason API). **Still to do at submission:** answer Location in the App Store Connect questionnaire as used-but-not-linked, not for tracking. Only the `PlaceCellKey` cell centre is ever sent (0.001 degrees, ~110 m), never the photo's own coordinate.
 
 
 ---
@@ -319,3 +319,51 @@ Read and found compliant: `ToolChromeEnvironment`, the hover additions in the
 editor and Collage, the `UIPointerInteraction` ring, Collage's height gate,
 the canvas-edge hairline, and the sizing constants in `VideoStudioMetrics`
 (the per-feature metrics file is the sanctioned home for them).
+
+---
+
+# Sweep 10 — parity nits and the strings behind them (2026-09-20)
+
+Closing out `ios26-parity`, `copy-consistency` and `localization` leftovers.
+
+## Done
+
+- [x] Five screens each carried their own `#available(iOS 26.0)` branch for the
+  bottom chrome clearance, four saying 100 and `DuplicatesScreen` saying 90 with
+  no reason. One token now: `AppTheme.Size.bottomChromeClearance`, documented in
+  `DESIGN.md` §6. Screenshotted on iOS 18.6 — Duplicates still clears the tab bar
+  with the extra 10pt.
+- [x] The two 54pt chip rows in `VideoInspectorControls` clipped a label longer
+  than English; `.minimumScaleFactor(0.7)`, same as the command cells.
+- [x] `NSPhotoLibraryUsageDescription` no longer claims nothing leaves the device.
+- [x] The new-album alert built its plural with a ternary; one catalogue key with
+  `one`/`other` now. Verified on device: singular reads "This photo will be
+  added to the new album."
+
+## Struck
+
+- [x] ~~A second `More` accessibility node beside `More selection actions`~~ —
+  driven and dumped on iOS 26.5. The extra node is the `Image(systemName:
+  "ellipsis")` inside the `Menu` label: `hittable: false`, 4.3pt tall, i.e. an
+  XCUITest-tree artifact, not something VoiceOver reaches — SwiftUI combines a
+  button's label content. The same dump shows one `circle` image node per grid
+  cell for the same reason, and the cell sets `isAccessibilityElement = true`,
+  so VoiceOver reads the cell alone. Nothing to fix; worth remembering when
+  reading a dump, because these nodes look like findings.
+
+## Needs a decision
+
+- **Is the destination an Album or a Collection?** The action is "Add to
+  Collection" (selection ⋯, viewer, tile context menu, sheet title, error
+  alert) but everything inside that sheet says Album — "Your Albums", "New
+  Album…", "Album Name", "…added to the new album" — and Import's own picker
+  says "Add to Album". `spec.md` §391 records the opposite call deliberately
+  ("viewer đổi `Add to Album` → `Add to Collection` cho khớp thanh chọn và
+  tiêu đề sheet"), and `DESIGN.md` §269 repeats it, so this is not mine to
+  flip. Either direction ends the split:
+  - **Album everywhere** (Photos' own word; 5 strings + spec + DESIGN change).
+    The tab stays "Collections" — that is the browsing container, a different
+    thing.
+  - **Collection everywhere** (2 strings inside the sheet + the empty state).
+    Costs the match with Import and with PhotoKit's own vocabulary.
+
