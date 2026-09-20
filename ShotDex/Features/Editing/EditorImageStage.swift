@@ -693,10 +693,14 @@ struct EditorImageStage: View {
         case .brush:
             brushLocation = touch.location
             if isDrawing {
-                controller.continueBrushStroke(at: point)
+                controller.continueBrushStroke(at: point, pressure: touch.pressure)
             } else {
                 isDrawing = true
-                controller.beginBrushStroke(at: point, zoomScale: chrome.zoomScale)
+                controller.beginBrushStroke(
+                    at: point,
+                    pressure: touch.pressure,
+                    zoomScale: chrome.zoomScale
+                )
             }
         case .linearGradient, .radialGradient:
             // Either way, nothing happens until the finger has clearly

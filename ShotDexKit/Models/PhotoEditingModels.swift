@@ -1010,12 +1010,14 @@ public struct BrushStroke: Codable, Equatable, Sendable {
         feather: Double,
         flow: Double,
         isEraser: Bool,
+        pressures: [Double] = [],
     ) {
         self.points = points
         self.size = size
         self.feather = feather
         self.flow = flow
         self.isEraser = isEraser
+        self.pressures = pressures
     }
 
     public var points: [NormalizedPoint]
@@ -1023,6 +1025,41 @@ public struct BrushStroke: Codable, Equatable, Sendable {
     public var feather: Double
     public var flow: Double
     public var isEraser: Bool
+
+    /// Apple Pencil force at each point, normalised to 0…1 against the
+    /// Pencil's maximum, and **empty for a finger** — a finger reports a
+    /// constant force that means nothing, so a stroke with no pressures is
+    /// drawn at its nominal size from end to end.
+    ///
+    /// Additive and defaulted, so a recipe written before pressure existed
+    /// decodes unchanged.
+    public var pressures: [Double] = []
+
+    private enum CodingKeys: String, CodingKey {
+        case points, size, feather, flow, isEraser, pressures
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        points = try container.decode([NormalizedPoint].self, forKey: .points)
+        size = try container.decode(Double.self, forKey: .size)
+        feather = try container.decode(Double.self, forKey: .feather)
+        flow = try container.decode(Double.self, forKey: .flow)
+        isEraser = try container.decode(Bool.self, forKey: .isEraser)
+        pressures = try container.decodeIfPresent([Double].self, forKey: .pressures) ?? []
+    }
+
+    /// How much a pressure reading may scale the nominal width. A Pencil at
+    /// rest still marks, and a hard press does not double the brush — the
+    /// range is the one Procreate and Notes both feel like.
+    public static let pressureWidthRange: ClosedRange<Double> = 0.45...1.25
+
+    /// Width multiplier for a normalised force.
+    public static func widthScale(forPressure pressure: Double) -> Double {
+        let clamped = min(max(pressure, 0), 1)
+        let range = pressureWidthRange
+        return range.lowerBound + (range.upperBound - range.lowerBound) * clamped
+    }
 }
 
 public struct PhotoMaskComponent: Codable, Identifiable, Equatable, Sendable {

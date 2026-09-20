@@ -32,6 +32,10 @@ struct EditorPaintTouchLayer: UIViewRepresentable {
     struct Touch {
         var location: CGPoint
         var startLocation: CGPoint
+        /// Apple Pencil force at this point, 0…1 against the Pencil's
+        /// maximum. `nil` for a finger, which reports a constant that means
+        /// nothing — the brush draws at its nominal width for those.
+        var pressure: Double?
 
         var translation: CGSize {
             CGSize(
@@ -113,6 +117,10 @@ struct EditorPaintTouchLayer: UIViewRepresentable {
         /// Where the finger was last seen, which is where a stroke cut short by a
         /// second finger has to end.
         private var lastPoint: CGPoint?
+        /// Force of the touch that produced the event being handled. The
+        /// arbiter deals in points and times only, so the pressure rides
+        /// alongside it rather than through it.
+        private var latestPressure: Double?
 
         init(layer: EditorPaintTouchLayer) {
             self.layer = layer
@@ -120,13 +128,15 @@ struct EditorPaintTouchLayer: UIViewRepresentable {
 
         func handle(_ event: PaintTouchObserver.Event) {
             switch event {
-            case .down(let activeTouches, let location, let time):
+            case .down(let activeTouches, let location, let pressure, let time):
+                latestPressure = pressure
                 apply(arbiter.touchDown(
                     activeTouches: activeTouches,
                     at: location,
                     time: time
                 ))
-            case .moved(let location, let time):
+            case .moved(let location, let pressure, let time):
+                latestPressure = pressure
                 apply(arbiter.touchMoved(to: location, time: time))
             case .up(let time):
                 // A tap confirms and ends in the same breath, so the stroke it
@@ -202,7 +212,8 @@ struct EditorPaintTouchLayer: UIViewRepresentable {
         private func touch(at point: CGPoint) -> Touch {
             Touch(
                 location: stagePoint(point),
-                startLocation: stagePoint(strokeStart ?? point)
+                startLocation: stagePoint(strokeStart ?? point),
+                pressure: latestPressure
             )
         }
 
@@ -227,8 +238,8 @@ final class PaintTouchObserver: UIGestureRecognizer {
         /// the layer including this one — `touches.count` from the event would
         /// count only the ones that arrived together, which is how a finger
         /// joining a two-finger pan used to read as the start of a fresh stroke.
-        case down(activeTouches: Int, location: CGPoint, time: TimeInterval)
-        case moved(location: CGPoint, time: TimeInterval)
+        case down(activeTouches: Int, location: CGPoint, pressure: Double?, time: TimeInterval)
+        case moved(location: CGPoint, pressure: Double?, time: TimeInterval)
         case up(time: TimeInterval)
         case extraFinger(time: TimeInterval)
         case systemCancel
@@ -241,6 +252,15 @@ final class PaintTouchObserver: UIGestureRecognizer {
     init(onEvent: @escaping (Event) -> Void) {
         self.onEvent = onEvent
         super.init(target: nil, action: nil)
+    }
+
+    /// Normalised Pencil force, or `nil` for anything else. A finger's
+    /// `force` is a constant on a non-3D-Touch display, so treating it as
+    /// pressure would make every finger stroke the same wrong width rather
+    /// than the right nominal one.
+    static func pressure(of touch: UITouch) -> Double? {
+        guard touch.type == .pencil, touch.maximumPossibleForce > 0 else { return nil }
+        return Double(touch.force / touch.maximumPossibleForce)
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
@@ -259,6 +279,7 @@ final class PaintTouchObserver: UIGestureRecognizer {
             onEvent(.down(
                 activeTouches: 1,
                 location: pencil.location(in: view),
+                pressure: Self.pressure(of: pencil),
                 time: event.timestamp
             ))
             return
@@ -280,13 +301,18 @@ final class PaintTouchObserver: UIGestureRecognizer {
         onEvent(.down(
             activeTouches: activeTouches(in: event, on: view),
             location: touch.location(in: view),
+            pressure: Self.pressure(of: touch),
             time: event.timestamp
         ))
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
         guard let view, let trackedTouch, touches.contains(trackedTouch) else { return }
-        onEvent(.moved(location: trackedTouch.location(in: view), time: event.timestamp))
+        onEvent(.moved(
+            location: trackedTouch.location(in: view),
+            pressure: Self.pressure(of: trackedTouch),
+            time: event.timestamp
+        ))
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {

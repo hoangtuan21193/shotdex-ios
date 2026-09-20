@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 import Testing
 @testable import ShotDexKit
 @testable import ShotDex
@@ -137,5 +138,56 @@ import Testing
         )
         #expect(huge.count == BrushStrokeRasterizer.maximumRings)
         #expect(abs(coverage(huge) - 1) < 0.0001)
+    }
+}
+
+/// Apple Pencil force, from the touch through the model to the width the
+/// rasterizer draws with.
+@Suite struct BrushPressureTests {
+    @Test func aStrokeWithNoPressuresIsDrawnAtItsNominalWidth() {
+        let stroke = BrushStroke(
+            points: [NormalizedPoint(x: 0.1, y: 0.1), NormalizedPoint(x: 0.9, y: 0.9)],
+            size: 0.2, feather: 0.3, flow: 1, isEraser: false
+        )
+        #expect(stroke.pressures.isEmpty, "a finger stroke carries none")
+    }
+
+    @Test func pressureScalesTheWidthWithinItsRange() {
+        let range = BrushStroke.pressureWidthRange
+        #expect(BrushStroke.widthScale(forPressure: 0) == range.lowerBound)
+        #expect(BrushStroke.widthScale(forPressure: 1) == range.upperBound)
+        #expect(BrushStroke.widthScale(forPressure: 0.5) > range.lowerBound)
+        #expect(BrushStroke.widthScale(forPressure: 0.5) < range.upperBound)
+        // A Pencil at rest still marks: the floor is not zero.
+        #expect(range.lowerBound > 0.2)
+    }
+
+    @Test func pressureIsClampedRatherThanTrusted() {
+        #expect(BrushStroke.widthScale(forPressure: -1) == BrushStroke.pressureWidthRange.lowerBound)
+        #expect(BrushStroke.widthScale(forPressure: 9) == BrushStroke.pressureWidthRange.upperBound)
+    }
+
+    /// Recipes written before pressure existed have to decode unchanged — a
+    /// mask is the user's work, not a cache.
+    @Test func aStrokeSavedBeforePressureExistedStillDecodes() throws {
+        let json = """
+        {"points":[{"x":0.1,"y":0.2}],"size":0.25,"feather":0.4,"flow":0.8,"isEraser":false}
+        """
+        let stroke = try JSONDecoder().decode(BrushStroke.self, from: Data(json.utf8))
+        #expect(stroke.pressures.isEmpty)
+        #expect(stroke.size == 0.25)
+        #expect(stroke.points.count == 1)
+    }
+
+    @Test func pressuresSurviveARoundTrip() throws {
+        let stroke = BrushStroke(
+            points: [NormalizedPoint(x: 0, y: 0), NormalizedPoint(x: 1, y: 1)],
+            size: 0.3, feather: 0.2, flow: 0.9, isEraser: true,
+            pressures: [0.2, 0.85]
+        )
+        let data = try JSONEncoder().encode(stroke)
+        let decoded = try JSONDecoder().decode(BrushStroke.self, from: data)
+        #expect(decoded == stroke)
+        #expect(decoded.pressures == [0.2, 0.85])
     }
 }

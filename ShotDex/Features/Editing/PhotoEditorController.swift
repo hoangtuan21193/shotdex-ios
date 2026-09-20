@@ -1532,7 +1532,7 @@ final class PhotoEditorController {
     /// `zoomScale` is what the photo is pinched to. The Size slider is a screen
     /// size, so the stroke records a proportionally smaller image-relative one —
     /// that is what lets a zoomed-in brush reach detail it could not otherwise.
-    func beginBrushStroke(at point: NormalizedPoint, zoomScale: CGFloat = 1) {
+    func beginBrushStroke(at point: NormalizedPoint, pressure: Double? = nil, zoomScale: CGFloat = 1) {
         guard selectedComponent?.kind == .brush,
               let maskIndex = selectedMaskIndex,
               let componentIndex = selectedComponentIndex
@@ -1544,7 +1544,11 @@ final class PhotoEditorController {
             size: EditorLayoutMetrics.paintedSize(brushSize, zoomScale: zoomScale),
             feather: brushFeather,
             flow: brushFlow,
-            isEraser: brushIsEraser
+            isEraser: brushIsEraser,
+            // Only a Pencil reports a force worth having. A stroke that
+            // starts without one stays without one for its whole length —
+            // the rasterizer draws a pressureless stroke at nominal width.
+            pressures: pressure.map { [$0] } ?? []
         )
         recipe.masks[maskIndex].components[componentIndex].brushStrokes.append(stroke)
         activeBrushStrokeIndex =
@@ -1552,7 +1556,7 @@ final class PhotoEditorController {
         scheduleRender(delay: .milliseconds(30))
     }
 
-    func continueBrushStroke(at point: NormalizedPoint) {
+    func continueBrushStroke(at point: NormalizedPoint, pressure: Double? = nil) {
         guard let maskIndex = selectedMaskIndex,
               let componentIndex = selectedComponentIndex,
               let activeBrushStrokeIndex,
@@ -1566,6 +1570,16 @@ final class PhotoEditorController {
             guard distance > 0.002 else { return }
         }
         stroke.points.append(point)
+        // Keep the two arrays the same length or drop pressure for the whole
+        // stroke: a half-filled `pressures` would make the rasterizer's
+        // segment weights line up with the wrong points.
+        if !stroke.pressures.isEmpty {
+            if let pressure {
+                stroke.pressures.append(pressure)
+            } else {
+                stroke.pressures = []
+            }
+        }
         recipe.masks[maskIndex].components[componentIndex]
             .brushStrokes[activeBrushStrokeIndex] = stroke
         scheduleRender(delay: .milliseconds(40))

@@ -120,20 +120,43 @@ public enum BrushStrokeRasterizer {
                 shortEdge: shortEdge
             )
             let mapped = stroke.points.map(point)
+            // A Pencil stroke carries a force per point and is drawn segment
+            // by segment so the line swells and thins with the hand. A finger
+            // stroke has no pressures and stays one polyline — one path per
+            // ring instead of one per segment, which is the cheap case and
+            // the common one.
+            let pressures = stroke.pressures.count == stroke.points.count ? stroke.pressures : []
+
             for ring in passes {
                 context.setStrokeColor(gray: gray, alpha: ring.alpha)
-                context.setLineWidth(ring.lineWidth)
-                context.beginPath()
-                context.move(to: mapped[0])
-                for next in mapped.dropFirst() {
-                    context.addLine(to: next)
+
+                guard !pressures.isEmpty, mapped.count > 1 else {
+                    context.setLineWidth(ring.lineWidth)
+                    context.beginPath()
+                    context.move(to: mapped[0])
+                    for next in mapped.dropFirst() {
+                        context.addLine(to: next)
+                    }
+                    if mapped.count == 1 {
+                        // A tap has to leave a dot, and a path with one point
+                        // strokes nothing.
+                        context.addLine(to: mapped[0])
+                    }
+                    context.strokePath()
+                    continue
                 }
-                if mapped.count == 1 {
-                    // A tap has to leave a dot, and a path with one point strokes
-                    // nothing.
-                    context.addLine(to: mapped[0])
+
+                for index in 1..<mapped.count {
+                    // The segment's own weight: the mean of the two ends, so
+                    // the width changes continuously rather than stepping at
+                    // every sample.
+                    let pressure = (pressures[index - 1] + pressures[index]) / 2
+                    context.setLineWidth(ring.lineWidth * BrushStroke.widthScale(forPressure: pressure))
+                    context.beginPath()
+                    context.move(to: mapped[index - 1])
+                    context.addLine(to: mapped[index])
+                    context.strokePath()
                 }
-                context.strokePath()
             }
         }
     }
