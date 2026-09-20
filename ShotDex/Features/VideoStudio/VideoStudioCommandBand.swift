@@ -14,8 +14,24 @@ struct VideoStudioTopBand: View {
     /// surveyed keeps the primary output action in the top bar; having it at
     /// the bottom is what let the contextual panel cover it.
     var projectActions: VideoInspectorActions?
+    /// Points the stage column actually has. The band shares that column with
+    /// the frame, so on a window carrying a rail, a media pool, a meter and
+    /// an inspector it can be half the window wide — measured 489pt on the
+    /// iPhone Duo's inner display, where the full row wrapped its timecode
+    /// onto two lines.
+    var stageWidth: CGFloat = .greatestFiniteMagnitude
 
     @Environment(\.usesRegularToolChrome) private var usesRegularToolChrome
+
+    /// What the row drops first when the column is too narrow for all of it.
+    ///
+    /// The timecode goes first: the viewer header prints the project's length
+    /// and the transport prints the playhead, both in full `hh:mm:ss:ff`, so
+    /// the pill is the one read-out on screen that is said twice. The export
+    /// estimate goes second. Back and Export never go — they are the way out
+    /// of the screen and the point of it.
+    private var showsTimecode: Bool { projectActions == nil || stageWidth >= 540 }
+    private var showsReadout: Bool { projectActions == nil || stageWidth >= 430 }
     private var size: CGFloat {
         EditorLayoutMetrics.editorFloatingCommandButtonSize(
             isRegularWidth: usesRegularToolChrome
@@ -50,10 +66,10 @@ struct VideoStudioTopBand: View {
 
             Spacer(minLength: 8)
 
-            timecodePill
+            if showsTimecode { timecodePill }
 
             if let projectActions {
-                readout
+                if showsReadout { readout }
                 Button(action: projectActions.onExport) {
                     Text("Export")
                         .font(.system(size: 14, weight: .bold))

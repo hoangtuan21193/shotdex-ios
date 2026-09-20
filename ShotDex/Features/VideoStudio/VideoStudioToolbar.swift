@@ -119,13 +119,33 @@ struct VideoStudioToolRail: View {
     /// level with the preview rather than under the clock.
     var topInset: CGFloat = 0
     var bottomInset: CGFloat = 0
+    /// The rail's own height, so a short window can stop paying for the
+    /// alignment inset.
+    var availableHeight: CGFloat = .greatestFiniteMagnitude
+
+    /// Nine cells plus their gaps.
+    private var contentHeight: CGFloat {
+        CGFloat(commands.count) * VideoStudioMetrics.railCellHeight
+            + CGFloat(max(0, commands.count - 1)) * 6
+    }
+
+    /// Lining the first cell up with the preview costs the band's height, and
+    /// on a short window that is what pushes the last tool off the bottom —
+    /// measured on the iPhone Duo's inner display (669pt), where Background
+    /// was drawn half-cut. Alignment is worth less than a tool you can see,
+    /// so the inset gives way first; the rail still scrolls either way.
+    private var effectiveTopInset: CGFloat {
+        let needed = contentHeight + 24 + bottomInset
+        let spare = availableHeight - needed
+        return max(0, min(topInset, spare))
+    }
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 6) {
                 ForEach(commands) { VideoToolbarCell(command: $0, isRegularWidth: true) }
             }
-            .padding(.top, topInset + 12)
+            .padding(.top, effectiveTopInset + 12)
             .padding(.bottom, bottomInset + 12)
             .frame(maxWidth: .infinity)
         }

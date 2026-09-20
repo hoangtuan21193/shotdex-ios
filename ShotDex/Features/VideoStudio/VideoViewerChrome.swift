@@ -180,6 +180,10 @@ struct VideoTransportBar: View {
             Text(VideoStudioMetrics.timecode(model.currentTime))
                 .font(.system(size: 12, weight: .semibold).monospacedDigit())
                 .foregroundStyle(.white)
+                // The one thing in this row that must never shrink: a
+                // truncated timecode ("00:0…") is worse than no timecode.
+                // The spacers either side give way instead.
+                .fixedSize()
                 .padding(.horizontal, 8)
                 .frame(height: 26)
                 .background(

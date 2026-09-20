@@ -330,7 +330,10 @@ struct VideoStudioScreen: View {
                             model: model,
                             actions: actions(model),
                             topInset: bandHeight,
-                            bottomInset: proxy.safeAreaInsets.bottom
+                            bottomInset: proxy.safeAreaInsets.bottom,
+                            availableHeight: proxy.size.height
+                                + proxy.safeAreaInsets.top
+                                + proxy.safeAreaInsets.bottom
                         )
                     }
                     // The library, open beside the project the way it is in
@@ -349,7 +352,11 @@ struct VideoStudioScreen: View {
                     VStack(spacing: 0) {
                         VideoStudioTopBand(
                             model: model,
-                            projectActions: usesRail ? actions(model) : nil
+                            projectActions: usesRail ? actions(model) : nil,
+                            stageWidth: proxy.size.width
+                                - (usesToolRail ? VideoStudioMetrics.railWidth : 0)
+                                - (usesInspectorColumn ? VideoStudioMetrics.inspectorColumnWidth : 0)
+                                - mediaPoolWidth
                         )
                         .frame(height: bandHeight, alignment: .top)
                         if usesDeskChrome {
