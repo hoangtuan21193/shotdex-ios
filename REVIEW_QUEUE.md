@@ -426,3 +426,20 @@ here so the next sweep knows what is new and what was deliberately decided.
   - The `MemoryCard` inconsistency was the useful finding: it showed the
     rule, not the code, was the thing that was wrong.
 
+## Cover tile — the two paths the first commit could not show (2026-09-20)
+
+`f0abd3f` said plainly that two paths were code rather than screenshots.
+Both are verified now, on iPhone 16 Pro / iOS 18.6:
+
+- **Scrim off over a dark cover.** Added a deliberately dark PNG to that
+  simulator with `simctl addmedia` so it became the newest photo and so the
+  Recently Added cover; the tile draws no gradient and the white name is
+  readable on the shadow alone.
+- **A name on two lines.** Made an album called "Iceland Winter Road Trip"
+  through the app's own Add to Collection → New Album flow; it wraps to two
+  lines inside the tile, over a bright cover with the scrim on.
+
+Both left behind on that simulator on purpose — they are the only fixtures
+there that exercise either path. The dark PNG also shows up in the library
+grid as a near-black frame; that is the fixture, not a bug.
+
