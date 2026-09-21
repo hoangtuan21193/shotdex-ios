@@ -439,7 +439,15 @@ struct VideoStudioScreen: View {
                         .frame(height: layout.preview)
                         if usesDeskChrome {
                             if isToolStripOpen { VideoViewerToolStrip(model: model) }
-                            VideoTransportBar(model: model)
+                            // Wide enough for all sixteen controls, or the
+                            // narrow shape: opening the inspector column
+                            // takes 320pt off the stage, and the full row
+                            // does not fit what is left on a 13" iPad.
+                            if VideoStudioMetrics.usesFullTransportRow(stageWidth: stageColumnWidth) {
+                                VideoTransportBar(model: model)
+                            } else {
+                                VideoCompactTransportBar(model: model)
+                            }
                         } else {
                             // Not "no transport" — the same commands in the
                             // shape a phone has room for. See

@@ -358,6 +358,91 @@ enum VideoStudioMode: Sendable {
     case singleVideo
 }
 
+/// One correction in the grade, and the order they run in is the order they
+/// are in.
+///
+/// This is Resolve's **serial node chain**, which is what a grade is most of
+/// the time: balance on one node, a look on the next, a window on a third.
+/// Three nodes each doing one thing is a grade you can reason about and turn
+/// off a piece of; one node doing three things is a pile of sliders.
+///
+/// What is deliberately not here is the rest of Resolve's node graph —
+/// parallel and layer mixers, outside nodes, keys routed between nodes. Those
+/// need a DAG with named inputs and outputs, and a canvas to wire it on; a
+/// serial chain needs a list. The chain covers the common grade honestly
+/// rather than covering the whole feature badly.
+struct ColorNode: Identifiable, Equatable, Codable, Sendable {
+    var id: UUID
+    /// What the node is called. Defaults to its position, renameable,
+    /// because "Node 2" tells a colourist nothing a week later and
+    /// "Skin" does.
+    var name: String
+    /// Bypassed nodes stay in the chain and do nothing — the whole point of
+    /// splitting a grade up is being able to switch one part off and look.
+    var isEnabled: Bool
+    var adjustments: PhotoAdjustments
+    var color: PhotoColorRecipe
+    var curve: ToneCurveAdjustments
+    /// Power windows and qualifiers that limit **this node** to part of the
+    /// frame. A node with no mask grades everything.
+    var masks: [PhotoMask]
+    /// Where each tracked window is over time, by mask id. A window with no
+    /// entry stays where it was drawn.
+    var tracks: [MaskTrack]
+
+    init(
+        id: UUID = UUID(),
+        name: String = "",
+        isEnabled: Bool = true,
+        adjustments: PhotoAdjustments = .zero,
+        color: PhotoColorRecipe = PhotoColorRecipe(),
+        curve: ToneCurveAdjustments = ToneCurveAdjustments(),
+        masks: [PhotoMask] = [],
+        tracks: [MaskTrack] = []
+    ) {
+        self.id = id
+        self.name = name
+        self.isEnabled = isEnabled
+        self.adjustments = adjustments
+        self.color = color
+        self.curve = curve
+        self.masks = masks
+        self.tracks = tracks
+    }
+
+    /// Nothing dialled in. A chain of these renders exactly as no chain at
+    /// all, which is what makes adding a node free.
+    var isIdentity: Bool {
+        adjustments.isIdentity && color.isIdentity && curve == .identity && masks.isEmpty
+    }
+
+    /// The windows, moved to where their tracks say they are at `time`.
+    /// An untracked window comes back untouched, so a node with no tracks
+    /// costs one array pass and nothing else.
+    func trackedMasks(at time: Double) -> [PhotoMask] {
+        guard !tracks.isEmpty else { return masks }
+        return masks.map { mask in
+            guard let track = tracks.first(where: { $0.maskID == mask.id }) else { return mask }
+            return MaskTrackMath.tracked(mask, by: track.keyframe(at: time))
+        }
+    }
+
+    /// The track for one window, if it has been tracked.
+    func track(for maskID: UUID) -> MaskTrack? {
+        tracks.first { $0.maskID == maskID }
+    }
+
+    /// The name to show when the user has not given it one.
+    func displayName(at index: Int) -> String {
+        name.isEmpty
+            ? String(
+                localized: "Node \(index + 1)",
+                comment: "Video Studio colour: the default name of a grading node, by its position in the chain"
+            )
+            : name
+    }
+}
+
 /// The LUT a project is graded through, as stored in the recipe.
 struct VideoLUTReference: Equatable, Codable, Sendable {
     /// `ImportedLUTStore` id — the on-disk filename stem.
@@ -393,16 +478,15 @@ struct VideoProjectRecipe: Equatable, Codable, Sendable {
     var inputTransform: VideoInputTransform = .none
     var filter: PhotoFilter = .original
     var filterIntensity: Double = 1
-    var adjustments = PhotoAdjustments.zero
-    /// The grading stage the photo editor already had and the studio did
-    /// not: primaries (lift/gamma/gain), the HSL mixer and point colour.
-    var color = PhotoColorRecipe()
-    /// Point tone curve, master plus per channel.
-    var curve = ToneCurveAdjustments()
-    /// Power windows and qualifiers: a radial or linear window, a luminance
-    /// range or a colour range, each carrying its own adjustments. The photo
-    /// editor's mask stage, applied to every frame.
-    var masks: [PhotoMask] = []
+    /// The grade, as a chain of corrections rather than one flat set.
+    ///
+    /// Every stage the photo editor has — exposure and the rest of the
+    /// adjustments, primaries, the HSL mixer, point colour, the tone curve,
+    /// power windows and qualifiers — belongs to a node, and the chain runs
+    /// in order. A project always has at least one; deleting the last one
+    /// puts a fresh empty node back, because a grade with no node is a state
+    /// with no controls.
+    var nodes: [ColorNode] = [ColorNode()]
     /// A creative LUT the user imported, by store id, plus how much of it
     /// to mix in. Only the reference is stored — the table itself lives on
     /// disk and is loaded by the renderer — so a project stays small and a
@@ -425,6 +509,29 @@ struct VideoProjectRecipe: Equatable, Codable, Sendable {
         let preset = renderPreset.renderSize
         let longEdge = max(preset.width, preset.height)
         return aspect.canvasSize(longEdge: longEdge)
+    }
+}
+
+extension VideoProjectRecipe {
+    /// The node at `id`, or the first one — a recipe is never without a node,
+    /// so this never has to answer nil.
+    func node(_ id: UUID?) -> ColorNode {
+        guard let id, let found = nodes.first(where: { $0.id == id }) else {
+            return nodes.first ?? ColorNode()
+        }
+        return found
+    }
+
+    /// Where `id` sits in the chain, for naming it and for reordering.
+    func nodeIndex(_ id: UUID?) -> Int {
+        guard let id, let index = nodes.firstIndex(where: { $0.id == id }) else { return 0 }
+        return index
+    }
+
+    /// Whether any node would change a pixel. The compositor asks before it
+    /// spends a Core Image pass on a chain of identities.
+    var hasGrade: Bool {
+        nodes.contains { $0.isEnabled && !$0.isIdentity }
     }
 }
 

@@ -582,7 +582,7 @@ struct VideoStudioSheetHost: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
                     ForEach([PhotoAdjustmentKind.exposure, .contrast, .saturation, .warmth, .brightness, .vignette], id: \.self) { kind in
-                        let value = model.recipe.adjustments[kind]
+                        let value = model.activeNode.adjustments[kind]
                         InspectorSlider(
                             label: kind.displayName, value: value, range: -1...1,
                             valueText: String(format: "%+.0f", value * 100), anchor: 0, notch: true, detent: 0, model: model,

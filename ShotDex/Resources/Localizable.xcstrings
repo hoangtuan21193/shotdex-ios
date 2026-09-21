@@ -546,6 +546,9 @@
     "A message carries your words, the app and iOS version, the device model and roughly how many photos you have. Never a photo, a name or an email address." : {
 
     },
+    "A qualifier picks by colour or brightness, not by place, so there is nothing to follow." : {
+      "comment" : "Video Studio colour: why a qualifier cannot be tracked"
+    },
     "A smart album named “%@” already exists." : {
 
     },
@@ -560,6 +563,9 @@
     },
     "Access" : {
 
+    },
+    "Active" : {
+      "comment" : "Video Studio colour: VoiceOver value for a node that is running"
     },
     "Actual" : {
 
@@ -593,6 +599,9 @@
     },
     "Add Music from Files…" : {
 
+    },
+    "Add Node" : {
+      "comment" : "Video Studio colour: adds a correction after the selected one"
     },
     "Add photo" : {
 
@@ -771,6 +780,9 @@
     "Armed" : {
 
     },
+    "Arrangement" : {
+
+    },
     "Artist" : {
       "comment" : "Info panel row label"
     },
@@ -785,6 +797,9 @@
     },
     "Audio Track" : {
       "comment" : "Info panel section title"
+    },
+    "Auto" : {
+
     },
     "Auto Enhance" : {
 
@@ -846,8 +861,14 @@
     "Bring Forward" : {
 
     },
+    "Browse" : {
+
+    },
     "Browse All Photos…" : {
       "comment" : "Video Studio media pool: opens the system picker for anything older than the pool holds"
+    },
+    "Browse Looks" : {
+
     },
     "BT.2100, as shot on iPhone and many broadcast cameras." : {
       "comment" : "Video Studio colour: where HLG comes from"
@@ -869,6 +890,12 @@
     },
     "Burst" : {
 
+    },
+    "Bypass" : {
+      "comment" : "Video Studio colour: switches a node off without deleting it"
+    },
+    "Bypassed" : {
+      "comment" : "Video Studio colour: VoiceOver value for a node that is switched off"
     },
     "Calendar" : {
 
@@ -901,7 +928,7 @@
 
     },
     "Cancel" : {
-
+      "comment" : "Video Studio colour: dismisses the node rename prompt"
     },
     "Cancel Export" : {
 
@@ -934,6 +961,9 @@
 
     },
     "Cellular" : {
+
+    },
+    "Centre the Text" : {
 
     },
     "Change date" : {
@@ -1004,6 +1034,9 @@
     },
     "Clear the People and Pets results?" : {
 
+    },
+    "Clear Track" : {
+      "comment" : "Video Studio colour: puts the window back where it was drawn"
     },
     "Clip %lld" : {
       "comment" : "Video Studio viewer header: the video clip under the playhead, by its position on the track"
@@ -1101,6 +1134,9 @@
     "Corners" : {
 
     },
+    "Corrections run left to right. Long-press a node to reorder, rename or bypass it." : {
+      "comment" : "Video Studio colour: how the node chain works"
+    },
     "Couldn't add the sticker." : {
 
     },
@@ -1112,6 +1148,9 @@
     },
     "Couldn't Delete Photos" : {
 
+    },
+    "Couldn't follow that window. Move the playhead to a frame where the subject is clear and try again." : {
+      "comment" : "Video Studio colour: the window tracker did not get a usable track"
     },
     "Couldn't load the photos for this collage." : {
 
@@ -1326,6 +1365,9 @@
     "Delete Music in Use?" : {
 
     },
+    "Delete Node" : {
+      "comment" : "Video Studio colour"
+    },
     "Delete Originals" : {
 
     },
@@ -1415,10 +1457,16 @@
     "Drag on the photo — the loupe shows the pixel under your finger. Lift to pick it." : {
 
     },
+    "Drag the text on the preview to place it anywhere in the widget. Pinch the preview to zoom the photo behind it, and drag with two fingers to choose which part shows." : {
+
+    },
     "Drag to adjust" : {
 
     },
     "Drag to move the crop" : {
+
+    },
+    "Drag to move the text. Pinch with two fingers to zoom the photo." : {
 
     },
     "Drag to resize the crop" : {
@@ -1434,7 +1482,7 @@
 
     },
     "Duplicate" : {
-
+      "comment" : "Video Studio colour: copies a node after itself"
     },
     "Duplicates" : {
 
@@ -1460,6 +1508,9 @@
     "Edit text full screen" : {
 
     },
+    "Edited" : {
+
+    },
     "Editor Error" : {
 
     },
@@ -1471,6 +1522,9 @@
     },
     "Empty slot, double tap to choose a photo" : {
 
+    },
+    "Enable" : {
+      "comment" : "Video Studio colour: switches a bypassed node back on"
     },
     "End" : {
       "comment" : "Video Studio media pool: short label for Append at End"
@@ -1606,6 +1660,9 @@
     },
     "Focal Length Style" : {
 
+    },
+    "Following the subject from the playhead." : {
+      "comment" : "Video Studio colour: the tracker is running"
     },
     "Font" : {
 
@@ -1974,6 +2031,9 @@
     "Layout" : {
       "comment" : "Collage panel tab: template and slot count"
     },
+    "Leave it empty to go back to its number." : {
+      "comment" : "Video Studio colour: what an empty node name does"
+    },
     "Leave the picture as recorded." : {
       "comment" : "Video Studio colour: what None does"
     },
@@ -1994,6 +2054,9 @@
     },
     "Less than a minute left" : {
 
+    },
+    "Levels" : {
+      "comment" : "Video Studio Volume panel: the meter over the faders"
     },
     "Library" : {
 
@@ -2037,11 +2100,17 @@
     "Location" : {
       "comment" : "Info panel section title"
     },
+    "Lock" : {
+      "comment" : "Video Studio track menu: stops the track being selected or dragged"
+    },
     "Lock Track" : {
       "comment" : "Video Studio track header: stops the track being selected or dragged"
     },
     "Longest First" : {
       "comment" : "Video Studio media pool sort order: longest video duration first"
+    },
+    "Look" : {
+
     },
     "Look Up Place Names" : {
 
@@ -2219,11 +2288,20 @@
     "More editor actions" : {
 
     },
+    "More Playhead Tools" : {
+      "comment" : "Video Studio transport: the overflow menu on a phone"
+    },
     "More selection actions" : {
 
     },
+    "Move Earlier" : {
+      "comment" : "Video Studio colour: runs this correction before the one on its left"
+    },
     "Move ellipse" : {
 
+    },
+    "Move Later" : {
+      "comment" : "Video Studio colour: runs this correction after the one on its right"
     },
     "Move the playhead over a clip" : {
       "comment" : "Video Studio scopes: nothing to measure yet"
@@ -2245,7 +2323,7 @@
       }
     },
     "Mute" : {
-
+      "comment" : "Video Studio track menu: silences the track"
     },
     "Mute Project" : {
       "comment" : "Video Studio level meter: silences the whole mix"
@@ -2260,7 +2338,7 @@
 
     },
     "Name" : {
-
+      "comment" : "Video Studio colour: the node name field"
     },
     "Network" : {
 
@@ -2394,6 +2472,12 @@
     "No Video Projects Yet" : {
 
     },
+    "Node %lld" : {
+      "comment" : "Video Studio colour: the default name of a grading node, by its position in the chain"
+    },
+    "Nodes" : {
+      "comment" : "Video Studio colour: the chain of corrections"
+    },
     "None" : {
       "comment" : "Video Studio colour: grades without a LUT"
     },
@@ -2514,6 +2598,9 @@
     "One clip couldn't be loaded and was left out. It may still be in iCloud — check your connection and add it again." : {
 
     },
+    "One correction. Add another to keep a look apart from the balance under it." : {
+      "comment" : "Video Studio colour: why a second node is useful"
+    },
     "One line: what went wrong" : {
 
     },
@@ -2615,6 +2702,9 @@
     "Parade" : {
       "comment" : "Video Studio scope: R, G and B waveforms side by side"
     },
+    "Park the playhead on a video clip to follow this window." : {
+      "comment" : "Video Studio colour: tracking needs moving footage under the playhead"
+    },
     "Paste Edits" : {
 
     },
@@ -2668,6 +2758,9 @@
       "comment" : "Name of one file behind a photo, as an Info panel heading"
     },
     "Photo set aside" : {
+
+    },
+    "Photo Zoom" : {
 
     },
     "Photo, %@" : {
@@ -2790,9 +2883,6 @@
     "Portrait" : {
 
     },
-    "Position" : {
-
-    },
     "Preparing clips…" : {
 
     },
@@ -2840,6 +2930,9 @@
     },
     "Project Tools" : {
       "comment" : "Video Studio: opens ratio, look, adjustments, volume and background"
+    },
+    "Put the window on the subject, then track forward. Position and size only." : {
+      "comment" : "Video Studio colour: how to start a window track"
     },
     "Quality" : {
 
@@ -2978,7 +3071,7 @@
 
     },
     "Rename" : {
-
+      "comment" : "Video Studio colour: confirms the new node name"
     },
     "Rename Album" : {
 
@@ -2986,11 +3079,17 @@
     "Rename Mask" : {
 
     },
+    "Rename Node" : {
+      "comment" : "Video Studio colour: title of the node rename prompt"
+    },
     "Rename Preset" : {
 
     },
     "Rename Signature" : {
 
+    },
+    "Rename…" : {
+      "comment" : "Video Studio colour: names a node"
     },
     "Rendering full resolution…" : {
 
@@ -3035,6 +3134,12 @@
 
     },
     "Reset Mappings" : {
+
+    },
+    "Reset Node" : {
+      "comment" : "Video Studio colour: clears this correction and keeps it in the chain"
+    },
+    "Reset Photo Framing" : {
 
     },
     "Reset to Default Order" : {
@@ -3459,6 +3564,9 @@
     "Smart Albums" : {
 
     },
+    "Snap to Edits" : {
+      "comment" : "Video Studio transport: the playhead settles on a cut instead of near it"
+    },
     "Soft Glow" : {
 
     },
@@ -3530,6 +3638,9 @@
     },
     "Stickers" : {
       "comment" : "Video Studio media pool tab: photos to add as an overlay"
+    },
+    "Stop" : {
+      "comment" : "Video Studio colour: abandons a window track in progress"
     },
     "Stop preview" : {
 
@@ -3620,6 +3731,9 @@
     },
     "Text" : {
       "comment" : "Collage panel tab: captions drawn on the collage\nVideo Studio media pool tab: captions to add over the frame\nVideo Studio timeline lane: the text and sticker overlay track"
+    },
+    "Text Position" : {
+
     },
     "The capture date in the original file is left unchanged, the same as in Photos." : {
 
@@ -3757,6 +3871,26 @@
     },
     "Top %lld series" : {
 
+    },
+    "Track Again" : {
+      "comment" : "Video Studio colour: replaces an existing window track"
+    },
+    "Track Forward" : {
+      "comment" : "Video Studio colour: follows the window through the rest of the clip"
+    },
+    "Tracked %@ to %@. Position and size only — a window cannot roll with the camera." : {
+      "comment" : "Video Studio colour: what the existing window track covers and what it does not",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Tracked %1$@ to %2$@. Position and size only — a window cannot roll with the camera."
+          }
+        }
+      }
+    },
+    "Tracks" : {
+      "comment" : "Video Studio transport menu: lock and mute, per track"
     },
     "Transfer function only — a wide-gamut capture keeps its primaries." : {
       "comment" : "Video Studio colour: what the input transform does not do"
@@ -4001,6 +4135,9 @@
 
     },
     "Wi-Fi" : {
+
+    },
+    "Widget Size" : {
 
     },
     "Widgets" : {

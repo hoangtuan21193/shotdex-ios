@@ -32,11 +32,15 @@ struct VideoColorPanel: View {
     @State private var region: ColorGradingRegion = .midtones
     @State private var curveChannel: ToneCurveChannel = .rgb
     @State private var band: ColorMixerBand = .red
+    @State private var renamingNodeID: UUID?
+    @State private var draftNodeName = ""
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
                 scopesSection
+                Divider().overlay(EditorTheme.panelDivider)
+                nodesSection
                 Divider().overlay(EditorTheme.panelDivider)
                 inputTransformSection
                 Divider().overlay(EditorTheme.panelDivider)
@@ -68,6 +72,34 @@ struct VideoColorPanel: View {
             scopes.refresh(for: model, photoLibrary: photoLibrary)
         }
         .onDisappear { scopes.cancel() }
+        .alert(
+            Text("Rename Node", comment: "Video Studio colour: title of the node rename prompt"),
+            isPresented: Binding(
+                get: { renamingNodeID != nil },
+                set: { if !$0 { renamingNodeID = nil } }
+            )
+        ) {
+            TextField(
+                String(localized: "Name", comment: "Video Studio colour: the node name field"),
+                text: $draftNodeName
+            )
+            Button {
+                if let id = renamingNodeID { model.renameNode(id, to: draftNodeName) }
+                renamingNodeID = nil
+            } label: {
+                Text("Rename", comment: "Video Studio colour: confirms the new node name")
+            }
+            Button(role: .cancel) {
+                renamingNodeID = nil
+            } label: {
+                Text("Cancel", comment: "Video Studio colour: dismisses the node rename prompt")
+            }
+        } message: {
+            Text(
+                "Leave it empty to go back to its number.",
+                comment: "Video Studio colour: what an empty node name does"
+            )
+        }
         .fileImporter(
             isPresented: $isLUTImporterPresented,
             allowedContentTypes: [Self.cubeType]
@@ -255,6 +287,171 @@ struct VideoColorPanel: View {
         }
     }
 
+    // MARK: The grading chain
+
+    /// The node chain, as a row read left to right — which is the order the
+    /// corrections run in.
+    ///
+    /// Resolve draws this as a graph on a canvas because its nodes branch.
+    /// These do not: a serial chain is a list, and a list on a 320pt column
+    /// is a row of chips with the selected one lit. Everything under this
+    /// section edits the selected node.
+    private var nodesSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("Nodes", comment: "Video Studio colour: the chain of corrections")
+                    .font(EditorTheme.groupLabel)
+                    .foregroundStyle(EditorTheme.secondaryText)
+                Spacer(minLength: 0)
+                Button { model.addNode() } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(EditorTheme.accent)
+                        .frame(width: 28, height: 24)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("Add Node", comment: "Video Studio colour: adds a correction after the selected one"))
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(Array(model.recipe.nodes.enumerated()), id: \.element.id) { index, node in
+                        nodeChip(node, at: index)
+                    }
+                }
+            }
+
+            Text(nodeHint)
+                .font(.system(size: 10.5))
+                .foregroundStyle(EditorTheme.dimText)
+        }
+    }
+
+    private var nodeHint: String {
+        model.recipe.nodes.count > 1
+            ? String(
+                localized: "Corrections run left to right. Long-press a node to reorder, rename or bypass it.",
+                comment: "Video Studio colour: how the node chain works"
+            )
+            : String(
+                localized: "One correction. Add another to keep a look apart from the balance under it.",
+                comment: "Video Studio colour: why a second node is useful"
+            )
+    }
+
+    private func nodeChip(_ node: ColorNode, at index: Int) -> some View {
+        let isSelected = model.activeNode.id == node.id
+        return Button {
+            model.selectedNodeID = node.id
+            // A window belongs to its node; keeping the old selection would
+            // point the mask controls at something that is not in this node.
+            model.selectedMaskID = node.masks.first?.id
+        } label: {
+            HStack(spacing: 4) {
+                if !node.isEnabled {
+                    Image(systemName: "eye.slash")
+                        .font(.system(size: 9, weight: .semibold))
+                }
+                Text(node.displayName(at: index))
+                    .lineLimit(1)
+                // A dot for "this node does something", so a chain of four
+                // says at a glance which of them is carrying the grade.
+                if !node.isIdentity {
+                    Circle()
+                        .fill(isSelected ? Color.black.opacity(0.55) : EditorTheme.accent)
+                        .frame(width: 5, height: 5)
+                }
+            }
+            .opacity(node.isEnabled ? 1 : 0.5)
+        }
+        .buttonStyle(EditorChipButtonStyle(isSelected: isSelected))
+        .contextMenu {
+            Button {
+                model.toggleNodeEnabled(node.id)
+            } label: {
+                Label {
+                    node.isEnabled
+                        ? Text("Bypass", comment: "Video Studio colour: switches a node off without deleting it")
+                        : Text("Enable", comment: "Video Studio colour: switches a bypassed node back on")
+                } icon: {
+                    Image(systemName: node.isEnabled ? "eye.slash" : "eye")
+                }
+            }
+            Button {
+                model.duplicateNode(node.id)
+            } label: {
+                Label {
+                    Text("Duplicate", comment: "Video Studio colour: copies a node after itself")
+                } icon: {
+                    Image(systemName: "plus.square.on.square")
+                }
+            }
+            Button {
+                renamingNodeID = node.id
+                draftNodeName = node.name
+            } label: {
+                Label {
+                    Text("Rename…", comment: "Video Studio colour: names a node")
+                } icon: {
+                    Image(systemName: "pencil")
+                }
+            }
+
+            Section {
+                Button {
+                    model.moveNode(node.id, by: -1)
+                } label: {
+                    Label {
+                        Text("Move Earlier", comment: "Video Studio colour: runs this correction before the one on its left")
+                    } icon: {
+                        Image(systemName: "arrow.left")
+                    }
+                }
+                .disabled(index == 0)
+                Button {
+                    model.moveNode(node.id, by: 1)
+                } label: {
+                    Label {
+                        Text("Move Later", comment: "Video Studio colour: runs this correction after the one on its right")
+                    } icon: {
+                        Image(systemName: "arrow.right")
+                    }
+                }
+                .disabled(index == model.recipe.nodes.count - 1)
+            }
+
+            Section {
+                Button {
+                    model.resetNode(node.id)
+                } label: {
+                    Label {
+                        Text("Reset Node", comment: "Video Studio colour: clears this correction and keeps it in the chain")
+                    } icon: {
+                        Image(systemName: "arrow.counterclockwise")
+                    }
+                }
+                .disabled(node.isIdentity)
+                Button(role: .destructive) {
+                    model.deleteNode(node.id)
+                } label: {
+                    Label {
+                        Text("Delete Node", comment: "Video Studio colour")
+                    } icon: {
+                        Image(systemName: "trash")
+                    }
+                }
+            }
+        }
+        .accessibilityLabel(Text(node.displayName(at: index)))
+        .accessibilityValue(
+            node.isEnabled
+                ? Text("Active", comment: "Video Studio colour: VoiceOver value for a node that is running")
+                : Text("Bypassed", comment: "Video Studio colour: VoiceOver value for a node that is switched off")
+        )
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
     // MARK: Input transform
 
     private var inputTransformSection: some View {
@@ -320,7 +517,7 @@ struct VideoColorPanel: View {
                         .foregroundStyle(EditorTheme.accent)
                 }
                 .buttonStyle(.plain)
-                .disabled(model.recipe.color.isIdentity)
+                .disabled(model.activeNode.color.isIdentity)
             }
 
             Picker("Region", selection: $region) {
@@ -356,7 +553,7 @@ struct VideoColorPanel: View {
     }
 
     private var wheel: ColorGradingAdjustments.Wheel {
-        model.recipe.color.grading[region]
+        model.activeNode.color.grading[region]
     }
 
     // MARK: Curves
@@ -374,7 +571,7 @@ struct VideoColorPanel: View {
                         .foregroundStyle(EditorTheme.accent)
                 }
                 .buttonStyle(.plain)
-                .disabled(model.recipe.curve[curveChannel] == ToneCurveAdjustments.linear)
+                .disabled(model.activeNode.curve[curveChannel] == ToneCurveAdjustments.linear)
             }
 
             Picker("Channel", selection: $curveChannel) {
@@ -413,7 +610,7 @@ struct VideoColorPanel: View {
                         .foregroundStyle(EditorTheme.accent)
                 }
                 .buttonStyle(.plain)
-                .disabled(model.recipe.color.mixer[band].isIdentity)
+                .disabled(model.activeNode.color.mixer[band].isIdentity)
             }
 
             ScrollView(.horizontal, showsIndicators: false) {
@@ -427,9 +624,9 @@ struct VideoColorPanel: View {
             ForEach(ColorMixerProperty.allCases) { property in
                 InspectorSlider(
                     label: property.displayName,
-                    value: model.recipe.color.mixer[band][property],
+                    value: model.activeNode.color.mixer[band][property],
                     range: -1...1,
-                    valueText: String(format: "%+.0f", model.recipe.color.mixer[band][property] * 100),
+                    valueText: String(format: "%+.0f", model.activeNode.color.mixer[band][property] * 100),
                     model: model,
                     set: { model.setMixer(band, property, $0) },
                     reset: { model.pushUndo(); model.setMixer(band, property, 0) }
@@ -440,7 +637,7 @@ struct VideoColorPanel: View {
 
     private func bandChip(_ candidate: ColorMixerBand) -> some View {
         let isOn = candidate == band
-        let touched = !model.recipe.color.mixer[candidate].isIdentity
+        let touched = !model.activeNode.color.mixer[candidate].isIdentity
         return Button { band = candidate } label: {
             Text(candidate.displayName)
                 .font(.system(size: 10.5, weight: .medium))
@@ -500,7 +697,7 @@ struct VideoColorPanel: View {
                 }
             }
 
-            if model.recipe.masks.isEmpty {
+            if model.activeNode.masks.isEmpty {
                 Text(
                     "A window grades part of the frame. Brush, subject and sky are photo-only — they need a pass per frame.",
                     comment: "Video Studio colour: empty state for windows, and which kinds are absent"
@@ -509,14 +706,106 @@ struct VideoColorPanel: View {
                 .foregroundStyle(EditorTheme.dimText)
             }
 
-            ForEach(model.recipe.masks) { mask in
+            ForEach(model.activeNode.masks) { mask in
                 maskRow(mask)
             }
 
             if let mask = model.selectedMask {
+                trackerRow(mask)
                 maskControls(mask)
             }
         }
+    }
+
+    /// Following a window across a shot.
+    ///
+    /// Resolve puts this on the window itself and so does this: the control
+    /// is next to the thing it moves. What it recovers is where the subject
+    /// is and how big — position and size — because that is what Vision's
+    /// tracker returns. A window that needs to roll with the camera is one
+    /// this cannot follow, and the note says so rather than leaving the user
+    /// to discover it on a shot.
+    @ViewBuilder
+    private func trackerRow(_ mask: PhotoMask) -> some View {
+        let isTracking = model.trackingMaskID == mask.id
+        let track = model.activeNode.track(for: mask.id)
+
+        VStack(alignment: .leading, spacing: 6) {
+            if isTracking {
+                HStack(spacing: 8) {
+                    ProgressView(value: model.trackingProgress)
+                        .tint(EditorTheme.accent)
+                    Button { model.cancelTracking() } label: {
+                        Text("Stop", comment: "Video Studio colour: abandons a window track in progress")
+                            .font(EditorTheme.pillLabel)
+                            .foregroundStyle(EditorTheme.timelineDestructive)
+                    }
+                    .buttonStyle(.plain)
+                }
+            } else if model.canTrack(mask) {
+                HStack(spacing: 8) {
+                    Button { model.trackWindow(mask.id) } label: {
+                        Label {
+                            track == nil
+                                ? Text("Track Forward", comment: "Video Studio colour: follows the window through the rest of the clip")
+                                : Text("Track Again", comment: "Video Studio colour: replaces an existing window track")
+                        } icon: {
+                            Image(systemName: "dot.viewfinder")
+                        }
+                        .font(EditorTheme.rowLabel)
+                        .foregroundStyle(EditorTheme.accent)
+                    }
+                    .buttonStyle(.plain)
+
+                    if track != nil {
+                        Spacer(minLength: 0)
+                        Button { model.clearTrack(mask.id) } label: {
+                            Text("Clear Track", comment: "Video Studio colour: puts the window back where it was drawn")
+                                .font(EditorTheme.pillLabel)
+                                .foregroundStyle(EditorTheme.secondaryText)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+
+            Text(trackerNote(mask, track: track))
+                .font(.system(size: 10.5))
+                .foregroundStyle(EditorTheme.dimText)
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func trackerNote(_ mask: PhotoMask, track: MaskTrack?) -> String {
+        guard let component = mask.components.first else { return "" }
+        guard MaskTrackMath.isTrackable(component.kind) else {
+            return String(
+                localized: "A qualifier picks by colour or brightness, not by place, so there is nothing to follow.",
+                comment: "Video Studio colour: why a qualifier cannot be tracked"
+            )
+        }
+        if model.trackingMaskID == mask.id {
+            return String(
+                localized: "Following the subject from the playhead.",
+                comment: "Video Studio colour: the tracker is running"
+            )
+        }
+        if let range = track?.timeRange {
+            return String(
+                localized: "Tracked \(VideoStudioMetrics.timecode(range.lowerBound)) to \(VideoStudioMetrics.timecode(range.upperBound)). Position and size only — a window cannot roll with the camera.",
+                comment: "Video Studio colour: what the existing window track covers and what it does not"
+            )
+        }
+        if !model.canTrack(mask) {
+            return String(
+                localized: "Park the playhead on a video clip to follow this window.",
+                comment: "Video Studio colour: tracking needs moving footage under the playhead"
+            )
+        }
+        return String(
+            localized: "Put the window on the subject, then track forward. Position and size only.",
+            comment: "Video Studio colour: how to start a window track"
+        )
     }
 
     private func maskRow(_ mask: PhotoMask) -> some View {

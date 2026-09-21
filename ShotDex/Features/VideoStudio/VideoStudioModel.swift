@@ -1188,9 +1188,10 @@ final class VideoStudioModel {
         applyAudioTier()
     }
 
-    /// Hold-for-original: while true the look (filter / adjustments / overlays)
-    /// is stripped from the preview via the cheap video-composition tier. Never
-    /// touches the recipe, so releasing restores the edit exactly.
+    /// Hold-for-original: while true the look (filter, the whole grading
+    /// chain, the imported LUT and the overlays) is stripped from the preview
+    /// via the cheap video-composition tier. Never touches the recipe, so
+    /// releasing restores the edit exactly.
     func setShowsOriginal(_ value: Bool) {
         showsOriginal = value
         guard let playerItem, let layout else { return }
@@ -1198,7 +1199,10 @@ final class VideoStudioModel {
         if value {
             preview.filter = .original
             preview.filterIntensity = 1
-            preview.adjustments = .zero
+            // The whole chain, not one stage: "show me the original" means
+            // the picture before the grade, and the grade is every node.
+            preview.nodes = [ColorNode()]
+            preview.lut = nil
             preview.overlays = []
         }
         service.applyVideoComposition(recipe: preview, layout: layout, to: playerItem)
@@ -1223,6 +1227,113 @@ final class VideoStudioModel {
 
     // MARK: - Colour (look tier)
 
+    // MARK: The grading chain
+
+    /// Which node the Color and Adjust panels are editing. Selection is
+    /// where the user is looking, not part of the grade, so it lives on the
+    /// model and never goes into undo.
+    var selectedNodeID: UUID?
+
+    /// The node being edited — the selected one, or the first if nothing is
+    /// selected or the selection has been deleted. Writing through this
+    /// writes into the recipe, so every existing grade mutator keeps its
+    /// one-line shape.
+    var activeNode: ColorNode {
+        get { recipe.node(selectedNodeID) }
+        set {
+            let id = newValue.id
+            guard let index = recipe.nodes.firstIndex(where: { $0.id == id }) else { return }
+            recipe.nodes[index] = newValue
+        }
+    }
+
+    var activeNodeIndex: Int { recipe.nodeIndex(selectedNodeID ?? recipe.nodes.first?.id) }
+
+    /// Adds an empty node after the selected one and selects it — the way a
+    /// grade grows: balance, then look, then the window.
+    func addNode() {
+        pushUndo()
+        let node = ColorNode()
+        let after = recipe.nodeIndex(selectedNodeID)
+        recipe.nodes.insert(node, at: min(after + 1, recipe.nodes.count))
+        selectedNodeID = node.id
+        markEdited()
+        applyVideoTier()
+    }
+
+    /// A copy of the node, right after it. Resolve's commonest node action
+    /// after adding one: take what works and push it further.
+    func duplicateNode(_ id: UUID) {
+        guard let index = recipe.nodes.firstIndex(where: { $0.id == id }) else { return }
+        pushUndo()
+        var copy = recipe.nodes[index]
+        copy.id = UUID()
+        copy.masks = copy.masks.map { mask in
+            var duplicate = mask
+            duplicate.id = UUID()
+            return duplicate
+        }
+        recipe.nodes.insert(copy, at: index + 1)
+        selectedNodeID = copy.id
+        markEdited()
+        applyVideoTier()
+    }
+
+    /// Deleting the last node leaves a fresh empty one: a grade with no node
+    /// is a panel with nothing to edit.
+    func deleteNode(_ id: UUID) {
+        guard recipe.nodes.contains(where: { $0.id == id }) else { return }
+        pushUndo()
+        recipe.nodes.removeAll { $0.id == id }
+        if recipe.nodes.isEmpty { recipe.nodes = [ColorNode()] }
+        if selectedNodeID == id { selectedNodeID = recipe.nodes.first?.id }
+        markEdited()
+        applyVideoTier()
+    }
+
+    /// Bypass. The node stays in the chain and stops doing anything, which is
+    /// how a colourist checks what a node is actually contributing.
+    func toggleNodeEnabled(_ id: UUID) {
+        guard let index = recipe.nodes.firstIndex(where: { $0.id == id }) else { return }
+        pushUndo()
+        recipe.nodes[index].isEnabled.toggle()
+        markEdited()
+        applyVideoTier()
+    }
+
+    func renameNode(_ id: UUID, to name: String) {
+        guard let index = recipe.nodes.firstIndex(where: { $0.id == id }) else { return }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard recipe.nodes[index].name != trimmed else { return }
+        pushUndo()
+        recipe.nodes[index].name = trimmed
+        markEdited()
+    }
+
+    /// Moves a node one place along the chain. Order **is** the grade — a
+    /// window before a contrast pass and after it are different pictures —
+    /// so this is a real edit, not a reshuffle of a list.
+    func moveNode(_ id: UUID, by offset: Int) {
+        guard let index = recipe.nodes.firstIndex(where: { $0.id == id }) else { return }
+        let target = index + offset
+        guard target >= 0, target < recipe.nodes.count else { return }
+        pushUndo()
+        let node = recipe.nodes.remove(at: index)
+        recipe.nodes.insert(node, at: target)
+        markEdited()
+        applyVideoTier()
+    }
+
+    /// Clears the node's grade without removing it from the chain.
+    func resetNode(_ id: UUID) {
+        guard let index = recipe.nodes.firstIndex(where: { $0.id == id }) else { return }
+        pushUndo()
+        let kept = recipe.nodes[index]
+        recipe.nodes[index] = ColorNode(id: kept.id, name: kept.name, isEnabled: kept.isEnabled)
+        markEdited()
+        applyVideoTier()
+    }
+
     /// Undoing the camera's encoding. Structural for the look but not for the
     /// composition, so it rides the same `videoComposition` rebuild tier as
     /// filters and adjustments — no full rebuild, playback uninterrupted.
@@ -1235,34 +1346,34 @@ final class VideoStudioModel {
     }
 
     func setGradingWheel(_ region: ColorGradingRegion, hue: Double, saturation: Double) {
-        recipe.color.grading[region].hue = hue
-        recipe.color.grading[region].saturation = saturation
+        activeNode.color.grading[region].hue = hue
+        activeNode.color.grading[region].saturation = saturation
         markEdited()
         applyVideoTier()
     }
 
     func setGradingLuminance(_ region: ColorGradingRegion, _ value: Double) {
-        recipe.color.grading[region].luminance = value
+        activeNode.color.grading[region].luminance = value
         markEdited()
         applyVideoTier()
     }
 
     func resetGrading(_ region: ColorGradingRegion) {
         pushUndo()
-        recipe.color.grading[region] = ColorGradingAdjustments.Wheel()
+        activeNode.color.grading[region] = ColorGradingAdjustments.Wheel()
         markEdited()
         applyVideoTier()
     }
 
     func setMixer(_ band: ColorMixerBand, _ property: ColorMixerProperty, _ value: Double) {
-        recipe.color.mixer[band][property] = value
+        activeNode.color.mixer[band][property] = value
         markEdited()
         applyVideoTier()
     }
 
     func resetMixerBand(_ band: ColorMixerBand) {
         pushUndo()
-        recipe.color.mixer[band] = .identity
+        activeNode.color.mixer[band] = .identity
         markEdited()
         applyVideoTier()
     }
@@ -1271,14 +1382,14 @@ final class VideoStudioModel {
     /// point list after every drag, which is also what makes one undo step
     /// per gesture the right granularity.
     func setCurve(_ channel: ToneCurveChannel, points: [CurvePoint]) {
-        recipe.curve[channel] = points
+        activeNode.curve[channel] = points
         markEdited()
         applyVideoTier()
     }
 
     func resetCurve(_ channel: ToneCurveChannel) {
         pushUndo()
-        recipe.curve[channel] = ToneCurveAdjustments.linear
+        activeNode.curve[channel] = ToneCurveAdjustments.linear
         markEdited()
         applyVideoTier()
     }
@@ -1308,8 +1419,9 @@ final class VideoStudioModel {
     /// Which window the Color panel is editing.
     var selectedMaskID: UUID?
 
+    /// Windows belong to the node they limit, so this is the active node's.
     var selectedMask: PhotoMask? {
-        recipe.masks.first { $0.id == selectedMaskID }
+        activeNode.masks.first { $0.id == selectedMaskID }
     }
 
     func addMask(_ kind: PhotoMaskComponentKind) {
@@ -1319,33 +1431,33 @@ final class VideoStudioModel {
             name: kind.displayName,
             component: PhotoMaskComponent(kind: kind)
         )
-        recipe.masks.append(mask)
+        activeNode.masks.append(mask)
         selectedMaskID = mask.id
         markEdited()
         applyVideoTier()
     }
 
     func removeMask(_ id: UUID) {
-        guard recipe.masks.contains(where: { $0.id == id }) else { return }
+        guard activeNode.masks.contains(where: { $0.id == id }) else { return }
         pushUndo()
-        recipe.masks.removeAll { $0.id == id }
-        if selectedMaskID == id { selectedMaskID = recipe.masks.last?.id }
+        activeNode.masks.removeAll { $0.id == id }
+        if selectedMaskID == id { selectedMaskID = activeNode.masks.last?.id }
         markEdited()
         applyVideoTier()
     }
 
     func toggleMaskVisible(_ id: UUID) {
-        guard let index = recipe.masks.firstIndex(where: { $0.id == id }) else { return }
+        guard let index = activeNode.masks.firstIndex(where: { $0.id == id }) else { return }
         pushUndo()
-        recipe.masks[index].isVisible.toggle()
+        activeNode.masks[index].isVisible.toggle()
         markEdited()
         applyVideoTier()
     }
 
     func toggleMaskInverted(_ id: UUID) {
-        guard let index = recipe.masks.firstIndex(where: { $0.id == id }) else { return }
+        guard let index = activeNode.masks.firstIndex(where: { $0.id == id }) else { return }
         pushUndo()
-        recipe.masks[index].isInverted.toggle()
+        activeNode.masks[index].isInverted.toggle()
         markEdited()
         applyVideoTier()
     }
@@ -1354,37 +1466,147 @@ final class VideoStudioModel {
     /// window, which keeps "what am I dragging" answerable.
     func updateSelectedMaskComponent(_ mutate: (inout PhotoMaskComponent) -> Void) {
         guard let id = selectedMaskID,
-              let index = recipe.masks.firstIndex(where: { $0.id == id }),
-              !recipe.masks[index].components.isEmpty
+              let index = activeNode.masks.firstIndex(where: { $0.id == id }),
+              !activeNode.masks[index].components.isEmpty
         else { return }
-        mutate(&recipe.masks[index].components[0])
+        var node = activeNode
+        mutate(&node.masks[index].components[0])
+        activeNode = node
         markEdited()
         applyVideoTier()
     }
 
     func updateSelectedMaskAdjustment(_ kind: PhotoAdjustmentKind, value: Double) {
         guard let id = selectedMaskID,
-              let index = recipe.masks.firstIndex(where: { $0.id == id })
+              let index = activeNode.masks.firstIndex(where: { $0.id == id })
         else { return }
-        recipe.masks[index].adjustments[kind] = value
+        activeNode.masks[index].adjustments[kind] = value
         markEdited()
         applyVideoTier()
     }
 
-    func resetColor() {
-        guard !recipe.color.isIdentity || recipe.curve != .identity || !recipe.masks.isEmpty
+    // MARK: Tracking a window
+
+    /// Which window is being tracked and how far it has got, 0…1. Nil when
+    /// nothing is tracking — the panel shows a button, then a bar.
+    private(set) var trackingMaskID: UUID?
+    private(set) var trackingProgress: Double = 0
+
+    private let tracker = VideoMaskTracker()
+    private var trackingTask: Task<Void, Never>?
+
+    /// Whether this window can be followed at all. Qualifiers select by
+    /// value, not by place, so there is nothing to follow.
+    func canTrack(_ mask: PhotoMask) -> Bool {
+        guard let component = mask.components.first else { return false }
+        guard MaskTrackMath.isTrackable(component.kind) else { return false }
+        // And there has to be moving footage under the playhead. Tracking a
+        // photo would run, succeed, and produce a flat track.
+        guard let index = clipIndexUnderPlayhead, index < recipe.clips.count else { return false }
+        return recipe.clips[index].kind == .video
+    }
+
+    /// Follows the window forward from the playhead through the clip it is
+    /// over. One track per window; running it again replaces the old one.
+    func trackWindow(_ maskID: UUID) {
+        guard trackingMaskID == nil,
+              let mask = activeNode.masks.first(where: { $0.id == maskID }),
+              canTrack(mask),
+              let index = clipIndexUnderPlayhead,
+              index < recipe.clips.count
+        else { return }
+
+        let clip = recipe.clips[index]
+        let clipStart = clipPlacements[index].start
+        // From the playhead, not from the clip's head: a colourist parks on
+        // the frame where the window is right and tracks forward from there.
+        let intoClip = max(0, currentTime - clipStart)
+        let remaining = max(0, clip.effectiveDuration - intoClip)
+        guard remaining > 0.1 else { return }
+
+        let nodeID = activeNode.id
+        let canvas = recipe.canvasSize()
+        trackingMaskID = maskID
+        trackingProgress = 0
+        trackingTask?.cancel()
+        trackingTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let track = try await tracker.track(
+                    mask: mask,
+                    assetID: clip.assetID,
+                    clipStart: currentTime,
+                    trimStart: clip.trimStart + intoClip,
+                    duration: remaining,
+                    renderSize: canvas,
+                    onProgress: { [weak self] value in
+                        Task { @MainActor [weak self] in self?.trackingProgress = value }
+                    }
+                )
+                await MainActor.run { [weak self] in
+                    self?.finishTracking(track, nodeID: nodeID)
+                }
+            } catch is CancellationError {
+                await MainActor.run { [weak self] in self?.endTracking() }
+            } catch {
+                await MainActor.run { [weak self] in
+                    self?.errorMessage = String(
+                        localized: "Couldn't follow that window. Move the playhead to a frame where the subject is clear and try again.",
+                        comment: "Video Studio colour: the window tracker did not get a usable track"
+                    )
+                    self?.endTracking()
+                }
+            }
+        }
+    }
+
+    func cancelTracking() {
+        trackingTask?.cancel()
+        trackingTask = nil
+        endTracking()
+    }
+
+    /// Throws away a window's track, putting it back where it was drawn.
+    func clearTrack(_ maskID: UUID) {
+        guard activeNode.tracks.contains(where: { $0.maskID == maskID }) else { return }
+        pushUndo()
+        activeNode.tracks.removeAll { $0.maskID == maskID }
+        markEdited()
+        applyVideoTier()
+    }
+
+    private func finishTracking(_ track: MaskTrack, nodeID: UUID) {
+        defer { endTracking() }
+        guard track.keyframes.count > 1,
+              let index = recipe.nodes.firstIndex(where: { $0.id == nodeID })
         else { return }
         pushUndo()
-        recipe.color = .identity
-        recipe.curve = .identity
-        recipe.masks = []
+        recipe.nodes[index].tracks.removeAll { $0.maskID == track.maskID }
+        recipe.nodes[index].tracks.append(track)
+        markEdited()
+        applyVideoTier()
+    }
+
+    private func endTracking() {
+        trackingMaskID = nil
+        trackingProgress = 0
+        trackingTask = nil
+    }
+
+    /// Clears the whole chain back to one empty node — "reset the grade",
+    /// not "reset this node", which is `resetNode(_:)`.
+    func resetColor() {
+        guard recipe.hasGrade else { return }
+        pushUndo()
+        recipe.nodes = [ColorNode()]
+        selectedNodeID = recipe.nodes.first?.id
         selectedMaskID = nil
         markEdited()
         applyVideoTier()
     }
 
     func setAdjustment(_ kind: PhotoAdjustmentKind, value: Double) {
-        recipe.adjustments[kind] = value
+        activeNode.adjustments[kind] = value
         markEdited()
         applyVideoTier()
     }

@@ -84,6 +84,22 @@ enum VideoStudioMetrics {
     /// and a tap on the stage pauses.
     static let compactTransportHeight: CGFloat = 40
 
+    /// What the desk transport row needs to lay all sixteen of its controls
+    /// out without clipping: five cut glyphs, four transport glyphs and the
+    /// play pill, loop, three marker glyphs, fit, the timecode and the row's
+    /// margins. Below this the row is the phone's — the same commands with
+    /// the chosen-once ones behind a menu.
+    ///
+    /// Measured against the case that broke it: a 13" iPad with the media
+    /// pool **and** the inspector column open leaves the stage 756pt, and
+    /// the full row wants 780. `Back a Frame` was laid out off the end of
+    /// it, which XCUITest reports as a button at `{inf, inf}`.
+    static let transportBarFullWidth: CGFloat = 780
+
+    static func usesFullTransportRow(stageWidth: CGFloat) -> Bool {
+        stageWidth >= transportBarFullWidth
+    }
+
     /// The look picker in the Filter panel: a 62pt tile, its name, and the
     /// gap between them.
     static let filterStripHeight: CGFloat = 82

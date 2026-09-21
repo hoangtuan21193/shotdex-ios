@@ -1,0 +1,81 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Library",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Select",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "label": "More selection actions"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Select All"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "More selection actions"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Create Video"
+    },
+    {
+      "action": "wait",
+      "seconds": 14
+    },
+    {
+      "action": "orientation",
+      "text": "landscape"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "tap",
+      "label": "Project Tools"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "projectTool.color"
+    },
+    {
+      "action": "wait",
+      "seconds": 40
+    }
+  ]
+}

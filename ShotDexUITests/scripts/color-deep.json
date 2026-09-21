@@ -75,6 +75,26 @@
     },
     {
       "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "tap",
+      "label": "Add Node"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "tap",
+      "label": "Add Node"
+    },
+    {
+      "action": "wait",
+      "seconds": 12
+    },
+    {
+      "action": "wait",
       "seconds": 5
     },
     {
@@ -128,9 +148,9 @@
     {
       "action": "swipe",
       "x": 0.79,
-      "y": 0.35,
+      "y": 0.3,
       "direction": "up",
-      "distance": 0.25
+      "distance": 0.22
     },
     {
       "action": "wait",
@@ -143,9 +163,9 @@
     {
       "action": "swipe",
       "x": 0.79,
-      "y": 0.35,
+      "y": 0.3,
       "direction": "up",
-      "distance": 0.25
+      "distance": 0.22
     },
     {
       "action": "wait",
@@ -158,9 +178,9 @@
     {
       "action": "swipe",
       "x": 0.79,
-      "y": 0.35,
+      "y": 0.3,
       "direction": "up",
-      "distance": 0.25
+      "distance": 0.22
     },
     {
       "action": "wait",
@@ -173,9 +193,9 @@
     {
       "action": "swipe",
       "x": 0.79,
-      "y": 0.35,
+      "y": 0.3,
       "direction": "up",
-      "distance": 0.25
+      "distance": 0.22
     },
     {
       "action": "wait",
@@ -188,9 +208,9 @@
     {
       "action": "swipe",
       "x": 0.79,
-      "y": 0.35,
+      "y": 0.3,
       "direction": "up",
-      "distance": 0.25
+      "distance": 0.22
     },
     {
       "action": "wait",
@@ -199,6 +219,49 @@
     {
       "action": "wait",
       "seconds": 12
+    },
+    {
+      "action": "tap",
+      "label": "Go to End"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Back a Frame"
+    },
+    {
+      "action": "tap",
+      "label": "Back a Frame"
+    },
+    {
+      "action": "tap",
+      "label": "Back a Frame"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "tap",
+      "label": "Add Radial Gradient window"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "swipe",
+      "x": 0.79,
+      "y": 0.3,
+      "direction": "up",
+      "distance": 0.22
+    },
+    {
+      "action": "wait",
+      "seconds": 16
     },
     {
       "action": "orientation",

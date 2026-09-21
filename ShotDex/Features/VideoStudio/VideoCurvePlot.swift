@@ -18,7 +18,7 @@ struct VideoCurvePlot: View {
     /// Index of the point under the finger, if any.
     @State private var grabbed: Int?
 
-    private var points: [CurvePoint] { model.recipe.curve[channel] }
+    private var points: [CurvePoint] { model.activeNode.curve[channel] }
 
     private var stroke: Color {
         switch channel {

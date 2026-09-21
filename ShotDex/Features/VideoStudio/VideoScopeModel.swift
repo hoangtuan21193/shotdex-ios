@@ -9,7 +9,7 @@ import ShotDexKit
 /// re-runs the colour chain and the counting, both on a background task, so
 /// dragging a wheel repaints the scope without touching PhotoKit.
 ///
-/// It measures the **graded** frame — `VideoRenderRecipe.graded(_:)`, the
+/// It measures the **graded** frame — `VideoRenderRecipe.graded(_:at:)`, the
 /// same chain the compositor runs — because a scope reading the source
 /// would tell the colourist about the camera, not about their grade.
 @MainActor
@@ -27,6 +27,7 @@ final class VideoScopeModel {
     private var renderedGrade: GradeKey?
     private var base: CIImage?
     private var pendingRecipe: VideoProjectRecipe?
+    private var playheadTime: Double = 0
     private var renderTask: Task<Void, Never>?
 
     private static let context = CIContext(options: [.useSoftwareRenderer: false])
@@ -44,6 +45,7 @@ final class VideoScopeModel {
         else { return }
         let assetID = model.recipe.clips[index].assetID
         pendingRecipe = model.recipe
+        playheadTime = model.currentTime
         guard assetID != baseAssetID else {
             rerenderIfGradeChanged()
             return
@@ -75,6 +77,9 @@ final class VideoScopeModel {
         renderedGrade = GradeKey(recipe)
         renderTask?.cancel()
         let kind = kind
+        // Read off the main actor before the task starts: the counting runs
+        // on a background priority and cannot reach back for it.
+        let time = playheadTime
         renderTask = Task(priority: .utility) { [weak self] in
             let render = VideoRenderRecipe(
                 recipe: recipe,
@@ -82,7 +87,9 @@ final class VideoScopeModel {
                 totalDuration: 1,
                 bakesOverlays: false
             )
-            let graded = render.hasWork ? render.graded(base) : base
+            // At the playhead, so a tracked window is measured where it
+            // actually is in this frame.
+            let graded = render.hasWork ? render.graded(base, at: time) : base
             guard !Task.isCancelled,
                   let sample = VideoScopeRenderer.sample(graded, context: Self.context),
                   !Task.isCancelled,
@@ -108,20 +115,14 @@ final class VideoScopeModel {
         let inputTransform: VideoInputTransform
         let filter: PhotoFilter
         let filterIntensity: Double
-        let adjustments: PhotoAdjustments
-        let color: PhotoColorRecipe
-        let curve: ToneCurveAdjustments
-        let masks: [PhotoMask]
+        let nodes: [ColorNode]
         let lut: VideoLUTReference?
 
         init(_ recipe: VideoProjectRecipe) {
             inputTransform = recipe.inputTransform
             filter = recipe.filter
             filterIntensity = recipe.filterIntensity
-            adjustments = recipe.adjustments
-            color = recipe.color
-            curve = recipe.curve
-            masks = recipe.masks
+            nodes = recipe.nodes
             lut = recipe.lut
         }
     }

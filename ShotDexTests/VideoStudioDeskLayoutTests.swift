@@ -294,6 +294,39 @@ struct VideoStudioDeskLayoutTests {
         #expect(controls + timecode <= 375)
     }
 
+    /// The desk transport row does not fit every desk window.
+    ///
+    /// On a 13" iPad with the media pool **and** the inspector column open
+    /// the stage is 756pt and the full row wants 780, so `Back a Frame` was
+    /// laid out past the end of it — XCUITest found the button at
+    /// `{inf, inf}` while it looked fine on a screenshot of the left half of
+    /// the row.
+    @Test func aStageSqueezedByBothColumnsGetsTheNarrowTransportRow() {
+        let stage = iPadLandscape.width
+            - VideoStudioMetrics.mediaPoolWidth(size: iPadLandscape)
+            - VideoStudioMetrics.inspectorColumnWidth
+        #expect(stage < VideoStudioMetrics.transportBarFullWidth)
+        #expect(!VideoStudioMetrics.usesFullTransportRow(stageWidth: stage))
+    }
+
+    /// And with the inspector shut it still gets the full row — the narrow
+    /// shape is for the squeeze, not for every desk window.
+    @Test func aStageWithOnlyThePoolKeepsTheFullTransportRow() {
+        let stage = iPadLandscape.width
+            - VideoStudioMetrics.mediaPoolWidth(size: iPadLandscape)
+        #expect(VideoStudioMetrics.usesFullTransportRow(stageWidth: stage))
+    }
+
+    /// The Duo's inner display is desk-shaped but narrow: 951pt is over the
+    /// threshold on its own, and the media pool alone takes it under. The
+    /// rule is about the **stage**, not the window.
+    @Test func theDuoInnerScreenTakesTheNarrowTransportRow() {
+        #expect(VideoStudioMetrics.usesDeskChrome(size: duoInner))
+        #expect(VideoStudioMetrics.usesFullTransportRow(stageWidth: duoInner.width))
+        let stage = duoInner.width - VideoStudioMetrics.mediaPoolWidth(size: duoInner)
+        #expect(!VideoStudioMetrics.usesFullTransportRow(stageWidth: stage))
+    }
+
     // MARK: Transitions
 
     /// The one transition control the maths always supported and nothing ever

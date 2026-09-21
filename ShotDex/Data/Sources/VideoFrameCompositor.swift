@@ -11,10 +11,9 @@ struct VideoRenderRecipe: Sendable {
     let inputTransform: VideoInputTransform
     let filter: PhotoFilter
     let filterIntensity: Double
-    let adjustments: PhotoAdjustments
-    let color: PhotoColorRecipe
-    let curve: ToneCurveAdjustments
-    let masks: [PhotoMask]
+    /// The grading chain, already stripped of the nodes that are switched
+    /// off or empty — the compositor should not re-decide that per frame.
+    let nodes: [ColorNode]
     let lut: VideoLUTReference?
     /// Resolved at build time from the LUT's id, because the compositor
     /// cannot ask a main-actor store for it.
@@ -38,10 +37,13 @@ struct VideoRenderRecipe: Sendable {
         self.inputTransform = recipe.inputTransform
         self.filter = recipe.filter
         self.filterIntensity = recipe.filterIntensity
-        self.adjustments = recipe.adjustments
-        self.color = recipe.color
-        self.curve = recipe.curve
-        self.masks = recipe.masks.filter(\.isVisible)
+        self.nodes = recipe.nodes
+            .filter { $0.isEnabled && !$0.isIdentity }
+            .map { node in
+                var live = node
+                live.masks = node.masks.filter(\.isVisible)
+                return live
+            }
         self.lut = recipe.lut
         self.lutURL = recipe.lut.map { ImportedLUTStore.fileURL(for: $0.id) }
         self.overlays = recipe.overlays
@@ -57,12 +59,9 @@ struct VideoRenderRecipe: Sendable {
 
     var hasWork: Bool {
         filter != .original
-            || !adjustments.isIdentity
             || !overlays.isEmpty
             || !inputTransform.isIdentity
-            || !color.isIdentity
-            || curve != .identity
-            || !masks.isEmpty
+            || !nodes.isEmpty
             || lut != nil
     }
 
@@ -100,20 +99,31 @@ struct VideoRenderRecipe: Sendable {
     /// Order matters and this is the order: undo the camera's encoding
     /// first, because every stage after it is dialled against a picture that
     /// is supposed to have contrast in it; then exposure and the rest of the
-    /// primaries; then the point curve; then the local grades; then the
-    /// look, and last the imported LUT.
+    /// primaries; then the point curve; then the local grades — and that
+    /// middle part once per node, in chain order. Then the look, and last
+    /// the imported LUT.
     ///
     /// The compositor runs it per frame. The scopes run it on one still, so
     /// that what the waveform measures is the graded picture and not the
     /// source — a scope reading the ungraded frame would be worse than no
     /// scope at all.
-    func graded(_ input: CIImage) -> CIImage {
+    func graded(_ input: CIImage, at seconds: Double) -> CIImage {
         var image = VideoRenderRecipe.applyInputTransform(inputTransform, to: input)
-        image = PhotoRenderService.applyAdjustments(adjustments, to: image, appliesExposure: true)
-        image = PhotoRenderService.applyColor(color, to: image)
-        image = PhotoRenderService.applyCurve(curve, to: image)
-        if !masks.isEmpty {
-            image = VideoMaskRenderer.apply(masks, to: image)
+        // Then the chain, in order. Each node is the photo editor's own
+        // colour stage over whatever the node before it produced — which is
+        // what "serial" means on a node tree and why the order is the grade.
+        for node in nodes {
+            image = PhotoRenderService.applyAdjustments(
+                node.adjustments, to: image, appliesExposure: true
+            )
+            image = PhotoRenderService.applyColor(node.color, to: image)
+            image = PhotoRenderService.applyCurve(node.curve, to: image)
+            if !node.masks.isEmpty {
+                // Tracked windows move per frame, which is why the chain
+                // needs the clock: a window that ignores its track is a
+                // window parked where the subject used to be.
+                image = VideoMaskRenderer.apply(node.trackedMasks(at: seconds), to: image)
+            }
         }
         image = PhotoRenderService.applyFilter(filter, intensity: filterIntensity, to: image)
         // The imported LUT goes last: a look pack is authored to be the
@@ -370,7 +380,7 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
 
         let recipe = instruction.recipe
         if recipe.hasWork {
-            image = recipe.graded(image)
+            image = recipe.graded(image, at: seconds)
             if recipe.bakesOverlays {
                 for timed in recipe.activeTimedOverlays(at: seconds) where timed.overlay.hasVisibleEffect {
                     let anim = timed.animationTransform(at: seconds, total: recipe.totalDuration)
