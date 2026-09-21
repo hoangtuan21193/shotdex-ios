@@ -329,10 +329,23 @@ final class PhotoEditorController {
     /// this is unchanged, the aspect is reused verbatim.
     @ObservationIgnored private var previewAspectSignature = ""
 
+    /// A fast, local, low-resolution frame of the photo, held only until the
+    /// real preview lands.
+    ///
+    /// Opening the editor used to replace the photo the user was looking at with
+    /// a centred spinner on black for as long as `beginSession` took — an iCloud
+    /// round trip for anything not local. The picture is the thing the screen is
+    /// for; it should not be the first thing to go.
+    private(set) var placeholderImage: UIImage?
+    /// The fast request came back empty because the original is in iCloud, so
+    /// the wait is a download and the screen should say so.
+    private(set) var isDownloadingFromCloud = false
+
     func load() async {
         guard session == nil else { return }
         isLoading = true
         errorMessage = nil
+        requestPlaceholder()
         do {
             let session = try await service.beginSession(for: asset)
             self.session = session
@@ -358,6 +371,36 @@ final class PhotoEditorController {
             errorMessage = error.localizedDescription
         }
         isLoading = false
+        // The real preview is on screen; a second full-frame bitmap is not
+        // something to keep for the rest of the session.
+        placeholderImage = nil
+        isDownloadingFromCloud = false
+    }
+
+    /// Local only, fast format, no network: the point is to have *something* on
+    /// screen this frame. If it comes back empty because the original lives in
+    /// iCloud, that is itself worth saying.
+    private func requestPlaceholder() {
+        let options = PHImageRequestOptions()
+        options.deliveryMode = .fastFormat
+        options.resizeMode = .fast
+        options.isNetworkAccessAllowed = false
+        PHImageManager.default().requestImage(
+            for: asset,
+            targetSize: CGSize(width: 1024, height: 1024),
+            contentMode: .aspectFit,
+            options: options
+        ) { [weak self] image, info in
+            let isInCloud = (info?[PHImageResultIsInCloudKey] as? Bool) ?? false
+            Task { @MainActor [weak self] in
+                guard let self, self.isLoading else { return }
+                if let image {
+                    self.placeholderImage = image
+                } else if isInCloud {
+                    self.isDownloadingFromCloud = true
+                }
+            }
+        }
     }
 
     func close() {

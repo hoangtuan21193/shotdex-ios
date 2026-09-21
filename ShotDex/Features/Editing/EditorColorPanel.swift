@@ -150,7 +150,16 @@ struct EditorPointColorSection: View {
                     if let point = controller.selectedPointColor {
                         pointSliders(point)
                     } else {
-                        Text("Drag on the photo — the loupe shows the pixel under your finger. Lift to pick it.")
+                        // Describes the state the user is actually in. Until
+                        // the eyedropper is armed a drag on the photo pans and
+                        // zooms it, so an instruction to drag on the photo was
+                        // a step ahead of itself; once armed, the on-photo pill
+                        // says the rest.
+                        Text(
+                            chrome.isEyedropperActive
+                                ? "Drag on the photo — the loupe shows the pixel under your finger. Lift to pick it."
+                                : "Tap Pick a Color, then drag on the photo to choose one."
+                        )
                             .font(EditorTheme.rowLabel)
                             .foregroundStyle(EditorTheme.secondaryText)
                             .multilineTextAlignment(.center)

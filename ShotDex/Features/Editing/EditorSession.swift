@@ -227,6 +227,7 @@ struct EditorFilmstrip: View {
                 .opacity(isCurrent ? 1 : 0.72)
         }
         .buttonStyle(.plain)
+        .hoverEffect(.highlight)
         .contextMenu {
             if let toggleReference {
                 Button {

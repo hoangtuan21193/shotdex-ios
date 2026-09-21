@@ -18,6 +18,9 @@ struct EditorCurveOverlay: View {
     let imageRect: CGRect
     /// The whole stage: the plot is sized to it and only centred on the photo.
     let stageRect: CGRect
+    /// True when the plot is drawn inside the sidebar's `ScrollView` instead of
+    /// over the photo. It changes how touches are claimed — see `dragGesture`.
+    var scrollsWithPanel = false
 
     @State private var grabbed: Int?
     /// A finger is on the graph: the plot steps back so the photo shows through.
@@ -63,6 +66,7 @@ struct EditorCurveOverlay: View {
         // off the photo behind it.
         .hoverEffect(.automatic)
         .highPriorityGesture(deleteGesture(local))
+        .gesture(insertGesture(local))
         .gesture(dragGesture(local))
         .animation(Self.fade, value: isShaping)
         .position(x: rect.midX, y: rect.midY)
@@ -185,15 +189,30 @@ struct EditorCurveOverlay: View {
 
     // MARK: Gestures
 
+    /// Drag to shape. Over the photo any drag works, including one on empty
+    /// graph, which drops a point where the finger went down — that is the
+    /// Snapseed model and there is nothing else competing for the touch.
+    ///
+    /// Inside the sidebar there is: the panel's own `ScrollView`. A plot that
+    /// claimed every drag inserted a control point and called `setCurve` on the
+    /// *first* change event — before any arbitration — so scrolling the
+    /// parameter list past the Curve section changed the photo's contrast.
+    /// Every other control in that panel goes through `EditorRowGestureCatcher`,
+    /// which fails itself off-axis and suspends the enclosing scroll; the plot
+    /// did not. So in the panel a drag only shapes when it starts **on a control
+    /// point**, and a new point comes from an explicit tap (`insertGesture`).
+    /// Claiming the touch also sets `activePlainSliderID`, which is what the
+    /// sidebar's `.scrollDisabled` reads, so once shaping starts the list holds
+    /// still.
     private func dragGesture(_ rect: CGRect) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
                 if grabbed == nil {
-                    isShaping = true
-                    controller.beginContinuousChange()
-                    if let index = nearestPointIndex(to: value.startLocation, in: rect) {
-                        grabbed = index
-                    } else {
+                    guard let index = nearestPointIndex(to: value.startLocation, in: rect) else {
+                        guard !scrollsWithPanel else { return }
+                        isShaping = true
+                        claimScroll()
+                        controller.beginContinuousChange()
                         var updated = points
                         let new = clamped(
                             index: nil,
@@ -204,7 +223,12 @@ struct EditorCurveOverlay: View {
                         updated.insert(new, at: insertion)
                         controller.setCurve(updated, for: channel)
                         grabbed = insertion
+                        return
                     }
+                    isShaping = true
+                    claimScroll()
+                    controller.beginContinuousChange()
+                    grabbed = index
                 }
                 guard let index = grabbed, index < points.count else { return }
                 var updated = points
@@ -216,10 +240,46 @@ struct EditorCurveOverlay: View {
                 controller.setCurve(updated, for: channel)
             }
             .onEnded { _ in
+                guard isShaping else { return }
                 controller.endContinuousChange()
                 grabbed = nil
                 isShaping = false
+                releaseScroll()
             }
+    }
+
+    /// In the panel, a tap on empty graph is what drops a new point — the drag
+    /// no longer does it, so that scrolling past the plot cannot.
+    private func insertGesture(_ rect: CGRect) -> some Gesture {
+        SpatialTapGesture()
+            .onEnded { value in
+                guard scrollsWithPanel else { return }
+                guard nearestPointIndex(to: value.location, in: rect) == nil else { return }
+                var updated = points
+                let new = clamped(
+                    index: nil,
+                    to: curvePoint(value.location, in: rect),
+                    in: updated
+                )
+                let insertion = updated.firstIndex { $0.x > new.x } ?? updated.count
+                updated.insert(new, at: insertion)
+                controller.beginContinuousChange()
+                controller.setCurve(updated, for: channel)
+                controller.endContinuousChange()
+            }
+    }
+
+    /// Tells the sidebar's scroll to hold still. `chrome.activePlainSliderID` is
+    /// what `.scrollDisabled` reads there; over the photo there is no scroll and
+    /// setting it is harmless.
+    private func claimScroll() {
+        chrome.activePlainSliderID = "curve.\(channel.rawValue)"
+    }
+
+    private func releaseScroll() {
+        if chrome.activePlainSliderID?.hasPrefix("curve.") == true {
+            chrome.activePlainSliderID = nil
+        }
     }
 
     private func deleteGesture(_ rect: CGRect) -> some Gesture {

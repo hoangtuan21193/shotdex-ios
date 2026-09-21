@@ -35,6 +35,39 @@ final class EditorDrawSession {
         clearToken += 1
     }
 
+    /// Adopts a new canvas size, carrying the strokes with it.
+    ///
+    /// `PKDrawing` stores strokes in **absolute canvas points**, and this size
+    /// used to be overwritten on every layout pass. So any relayout that changed
+    /// the canvas — an iPad rotation, and routinely a fold on the Duo, where the
+    /// `isWide` branch rebuilds the whole subtree — re-installed inner-sized
+    /// strokes (x up to ~890) into a 382pt-wide cover canvas and then let `Done`
+    /// bake those coordinates against the *new* size: strokes off-canvas, the
+    /// rest scaled by 2.3×. Scaling them here keeps a drawing on the part of the
+    /// photo it was drawn on. Uniform, and centred, because the photo is
+    /// aspect-fitted into the canvas and a non-uniform scale would shear it.
+    func reconcile(to newSize: CGSize) {
+        guard newSize.width > 0, newSize.height > 0 else { return }
+        guard canvasSize.width > 0, canvasSize.height > 0 else {
+            canvasSize = newSize
+            return
+        }
+        guard canvasSize != newSize else { return }
+        defer { canvasSize = newSize }
+        guard !drawing.strokes.isEmpty else { return }
+        let scale = min(newSize.width / canvasSize.width, newSize.height / canvasSize.height)
+        let transform = CGAffineTransform(scaleX: scale, y: scale)
+            .concatenating(
+                CGAffineTransform(
+                    translationX: (newSize.width - canvasSize.width * scale) / 2,
+                    y: (newSize.height - canvasSize.height * scale) / 2
+                )
+            )
+        drawing = drawing.transformed(using: transform)
+        // The canvas has to be told, or it keeps drawing the old strokes.
+        clearToken += 1
+    }
+
     var isEmpty: Bool { drawing.strokes.isEmpty }
 }
 
@@ -80,10 +113,18 @@ struct EditorDrawingCanvas: UIViewRepresentable {
             canvas.drawing = session.drawing
         }
         // Record the laid-out size so Done can scale the vector, even if the user
-        // never added a stroke this session (an existing drawing kept as-is).
+        // never added a stroke this session (an existing drawing kept as-is) —
+        // and carry any strokes across when the canvas changes shape under them.
         let size = canvas.bounds.size
         if size != .zero, session.canvasSize != size {
-            session.canvasSize = size
+            session.reconcile(to: size)
+            // `reconcile` may have rewritten the strokes; adopt them now rather
+            // than waiting for another update pass, which would leave a frame of
+            // the old geometry on screen.
+            if context.coordinator.appliedClearToken != session.clearToken {
+                context.coordinator.appliedClearToken = session.clearToken
+                canvas.drawing = session.drawing
+            }
         }
     }
 

@@ -462,4 +462,60 @@ struct EditorPanelLayoutTests {
         let topPlot = EditorLayoutMetrics.curvePlotRect(in: top, stage: stage)
         #expect(topPlot.minY == EditorLayoutMetrics.curvePlotInset)
     }
+
+    // MARK: Which windows get the sidebar
+
+    /// Asserted on the real windows ShotDex ships to, not on round numbers —
+    /// the whole point of the rule is which devices fall on which side of it.
+    private static let phone = CGSize(width: 402, height: 874)
+    private static let iPadLandscape = CGSize(width: 1376, height: 1032)
+    private static let iPadPortrait = CGSize(width: 1032, height: 1376)
+    /// The Duo's inner display, measured: 951×669 landscape.
+    private static let duoInner = CGSize(width: 951, height: 669)
+    private static let duoCover = CGSize(width: 466, height: 678)
+
+    /// A sidebar is paid for in width, so it is only worth it on a window with
+    /// width to spare. Portrait is the case the width-and-height gate missed: a
+    /// 13" iPad passes both numbers and then spends 378pt of a 1032pt window on
+    /// the panel, leaving a 3:2 frame 34% of the canvas height.
+    @Test func sidebarIsForLandscapeWindowsOnly() {
+        #expect(EditorLayoutMetrics.usesSidebar(width: Self.iPadLandscape.width, height: Self.iPadLandscape.height))
+        #expect(EditorLayoutMetrics.usesSidebar(width: Self.duoInner.width, height: Self.duoInner.height))
+
+        #expect(!EditorLayoutMetrics.usesSidebar(width: Self.iPadPortrait.width, height: Self.iPadPortrait.height))
+        #expect(!EditorLayoutMetrics.usesSidebar(width: Self.phone.width, height: Self.phone.height))
+        #expect(!EditorLayoutMetrics.usesSidebar(width: Self.duoCover.width, height: Self.duoCover.height))
+
+        // A phone in landscape is wider than it is tall and still nowhere near
+        // wide enough; a squat window clears the width and fails on height.
+        #expect(!EditorLayoutMetrics.usesSidebar(width: 874, height: 402))
+        #expect(!EditorLayoutMetrics.usesSidebar(width: 900, height: 560))
+    }
+
+    /// The Duo's inner display is the reason the short-column rule exists: it
+    /// passes the sidebar gate and then leaves the panel less than 600pt, of
+    /// which the histogram and the Look row would be 165.
+    @Test func duoInnerIsAShortColumnAndTheIPadIsNot() {
+        #expect(Self.duoInner.height < EditorLayoutMetrics.sidebarShortColumnHeight)
+        #expect(Self.iPadLandscape.height > EditorLayoutMetrics.sidebarShortColumnHeight)
+
+        // What the fold buys, in points: the fixed furniture without those two
+        // rows has to leave room for Light — a 44pt header and eight 46pt rows.
+        let barAndInsets: CGFloat = 52 + 24 + 24
+        let column = Self.duoInner.height - barAndInsets
+        let modeHeader = EditorLayoutMetrics.sidebarModeHeaderHeight
+        let footer = AppTheme.Size.primaryActionHeight + AppTheme.Spacing.md + 24
+        let foldedFurniture = modeHeader + footer + 2
+        let lightGroup = EditorLayoutMetrics.sidebarSectionHeaderHeight
+            + 8 * EditorLayoutMetrics.sidebarSliderRowHeight
+        #expect(column - foldedFurniture > lightGroup)
+
+        // And that it was not, before: histogram block plus Look row is what
+        // pushed the same column under the group it opens on.
+        let histogramBlock = EditorLayoutMetrics.sidebarHistogramHeight
+            + AppTheme.Spacing.md + AppTheme.Spacing.sm
+        let unfolded = foldedFurniture + histogramBlock
+            + EditorLayoutMetrics.sidebarLookRowHeight + 1
+        #expect(column - unfolded < lightGroup)
+    }
 }

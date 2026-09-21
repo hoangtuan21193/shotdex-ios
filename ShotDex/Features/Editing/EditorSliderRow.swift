@@ -28,6 +28,10 @@ struct EditorValueSlider: View {
     var showsAnchorNotch = false
     var detent: Double?
     var trackGradient: LinearGradient?
+    /// Draw a thin white trail from the anchor to the cursor even though the
+    /// track carries a gradient — for ramps that are not neutral where the
+    /// anchor is. See `EditorTheme.troughIsNeutralAtAnchor`.
+    var showsTrailOverGradient = false
     /// Overrides the spoken accessibility name; defaults to `label` (which is often
     /// an abbreviation like "TEMP").
     var accessibilityName: String?
@@ -126,6 +130,8 @@ struct EditorValueSlider: View {
 
                 if trackGradient == nil {
                     accentFill(width: width, fraction: frac, anchor: anchorFrac)
+                } else if showsTrailOverGradient {
+                    gradientTrail(width: width, fraction: frac, anchor: anchorFrac)
                 }
 
                 if showsAnchorNotch {
@@ -158,6 +164,14 @@ struct EditorValueSlider: View {
     private var gestureCatcher: some View {
         EditorRowGestureCatcher(
             valueColumnWidth: EditorLayoutMetrics.editorRowValueWidth + 14,
+            // Stacked, the value is on the first line and the **track runs the
+            // full width underneath it**, so an x-only test hands the trailing
+            // 54pt of the row — the top 13% of every parameter's range — to the
+            // keypad. The same press is how fine mode is armed, and the long
+            // press wins outright. So the keypad's region is the label line
+            // only; inline it stays the whole row height, where the value
+            // really is a column beside the track.
+            valueRowHeight: isStacked ? 18 : nil,
             onBegan: {
                 dragStartValue = value
                 dragStartDate = Date()
@@ -245,6 +259,19 @@ struct EditorValueSlider: View {
         return CGFloat((raw - range.lowerBound) / span)
     }
 
+    /// White, not accent, and thinner than the ramp it sits on: it has to read
+    /// as a measurement over the colour rather than as another colour.
+    @ViewBuilder
+    private func gradientTrail(width: CGFloat, fraction: CGFloat, anchor: CGFloat) -> some View {
+        let start = min(fraction, anchor)
+        let end = max(fraction, anchor)
+        Capsule()
+            .fill(.white)
+            .frame(width: max(0, (end - start) * width), height: 2)
+            .offset(x: start * width)
+            .shadow(color: .black.opacity(0.5), radius: 1)
+    }
+
     @ViewBuilder
     private func accentFill(width: CGFloat, fraction: CGFloat, anchor: CGFloat) -> some View {
         let start = min(fraction, anchor)
@@ -282,6 +309,7 @@ struct EditorSliderRow: View {
             showsAnchorNotch: EditorAdjustmentCatalog.isBipolar(kind),
             detent: identity,
             trackGradient: EditorTheme.troughGradient(for: kind),
+            showsTrailOverGradient: !EditorTheme.troughIsNeutralAtAnchor(for: kind),
             accessibilityName: kind.displayName,
             onBeginDrag: onBeginDrag,
             onDrag: onDrag,
@@ -324,6 +352,10 @@ private struct CursorGlow: ViewModifier {
 /// - a long press that lands in the value column opens the numeric keypad.
 struct EditorRowGestureCatcher: UIViewRepresentable {
     let valueColumnWidth: CGFloat
+    /// Height of the band, measured from the row's top, in which a long press
+    /// counts as "on the value". Nil means the whole row — the inline layout,
+    /// where the value column spans it.
+    var valueRowHeight: CGFloat?
     let onBegan: () -> Void
     let onChanged: (CGFloat, Bool) -> Void
     let onEnded: () -> Void
@@ -333,6 +365,7 @@ struct EditorRowGestureCatcher: UIViewRepresentable {
     func makeCoordinator() -> Coordinator {
         Coordinator(
             valueColumnWidth: valueColumnWidth,
+            valueRowHeight: valueRowHeight,
             onBegan: onBegan,
             onChanged: onChanged,
             onEnded: onEnded,
@@ -370,6 +403,7 @@ struct EditorRowGestureCatcher: UIViewRepresentable {
 
     func updateUIView(_: UIView, context: Context) {
         context.coordinator.valueColumnWidth = valueColumnWidth
+        context.coordinator.valueRowHeight = valueRowHeight
         context.coordinator.onBegan = onBegan
         context.coordinator.onChanged = onChanged
         context.coordinator.onEnded = onEnded
@@ -380,6 +414,7 @@ struct EditorRowGestureCatcher: UIViewRepresentable {
     @MainActor
     final class Coordinator: NSObject, UIGestureRecognizerDelegate {
         var valueColumnWidth: CGFloat
+        var valueRowHeight: CGFloat?
         var onBegan: () -> Void
         var onChanged: (CGFloat, Bool) -> Void
         var onEnded: () -> Void
@@ -393,6 +428,7 @@ struct EditorRowGestureCatcher: UIViewRepresentable {
 
         init(
             valueColumnWidth: CGFloat,
+            valueRowHeight: CGFloat?,
             onBegan: @escaping () -> Void,
             onChanged: @escaping (CGFloat, Bool) -> Void,
             onEnded: @escaping () -> Void,
@@ -400,6 +436,7 @@ struct EditorRowGestureCatcher: UIViewRepresentable {
             onEditValue: @escaping () -> Void
         ) {
             self.valueColumnWidth = valueColumnWidth
+            self.valueRowHeight = valueRowHeight
             self.onBegan = onBegan
             self.onChanged = onChanged
             self.onEnded = onEnded
@@ -440,10 +477,10 @@ struct EditorRowGestureCatcher: UIViewRepresentable {
 
         @objc func handleLongPress(_ recognizer: UILongPressGestureRecognizer) {
             guard recognizer.state == .began, let view = recognizer.view else { return }
-            let x = recognizer.location(in: view).x
-            if x >= view.bounds.width - valueColumnWidth {
-                onEditValue()
-            }
+            let point = recognizer.location(in: view)
+            guard point.x >= view.bounds.width - valueColumnWidth else { return }
+            if let valueRowHeight, point.y > valueRowHeight { return }
+            onEditValue()
         }
 
         private func suspendScrolling(from view: UIView) {
@@ -609,5 +646,109 @@ private final class HorizontalPanGestureRecognizer: UIPanGestureRecognizer {
             }
         }
         super.touchesMoved(touches, with: event)
+    }
+}
+
+/// A two-finger tap anywhere on the photo, which is how Lightroom and Procreate
+/// both spell Undo.
+///
+/// It exists because on a phone the undo disc is in the band's top-left corner —
+/// the one place a right thumb cannot reach without regripping — while the whole
+/// working surface (panel, wheel, Save) is glued to the bottom 246pt, and the
+/// only other route was ⌘Z on a keyboard the phone does not have.
+///
+/// The recogniser is installed on the **superview**, not on this zero-sized view,
+/// because a `.background` view that swallowed touches would take them from the
+/// stage. `cancelsTouchesInView = false` and simultaneous recognition keep every
+/// other gesture — pinch, pan, the hold-to-compare, the paint layer — working
+/// exactly as before; a two-finger *tap* needs both touches down and up in place,
+/// so a pinch (which moves) never satisfies it.
+struct EditorTwoFingerTapCatcher: UIViewRepresentable {
+    let action: () -> Void
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        view.isUserInteractionEnabled = false
+        context.coordinator.attach(from: view)
+        return view
+    }
+
+    func updateUIView(_: UIView, context: Context) {
+        context.coordinator.action = action
+    }
+
+    static func dismantleUIView(_: UIView, coordinator: Coordinator) {
+        coordinator.detach()
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(action: action) }
+
+    @MainActor
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        var action: () -> Void
+        private weak var host: UIView?
+        private var recognizer: UITapGestureRecognizer?
+
+        init(action: @escaping () -> Void) {
+            self.action = action
+        }
+
+        /// Installs on the editor's own hosting view — the top of the chain
+        /// below the window — rather than on this zero-sized carrier or its
+        /// immediate parent, either of which can be laid out to nothing.
+        ///
+        /// That means the tap is live over the panel as well as the photo,
+        /// which is what Procreate does and is the point: undo should not
+        /// depend on where the hand happens to be. It retries because a
+        /// representable's view is not in the hierarchy when `makeUIView`
+        /// returns, and one run-loop hop is not always enough.
+        func attach(from view: UIView, attempt: Int = 0) {
+            DispatchQueue.main.async { [weak self, weak view] in
+                guard let self, let view else { return }
+                guard let host = Self.hostingAncestor(of: view) else {
+                    guard attempt < 5 else { return }
+                    self.attach(from: view, attempt: attempt + 1)
+                    return
+                }
+                let tap = UITapGestureRecognizer(target: self, action: #selector(self.handleTap))
+                tap.numberOfTouchesRequired = 2
+                tap.numberOfTapsRequired = 1
+                tap.cancelsTouchesInView = false
+                tap.delaysTouchesBegan = false
+                tap.delaysTouchesEnded = false
+                tap.delegate = self
+                host.addGestureRecognizer(tap)
+                self.host = host
+                self.recognizer = tap
+            }
+        }
+
+        private static func hostingAncestor(of view: UIView) -> UIView? {
+            var candidate: UIView? = view.superview
+            var best: UIView?
+            while let current = candidate, !(current is UIWindow) {
+                best = current
+                candidate = current.superview
+            }
+            return best
+        }
+
+        func detach() {
+            if let recognizer { host?.removeGestureRecognizer(recognizer) }
+            recognizer = nil
+            host = nil
+        }
+
+        @objc private func handleTap() {
+            UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
+            action()
+        }
+
+        func gestureRecognizer(
+            _: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith _: UIGestureRecognizer
+        ) -> Bool {
+            true
+        }
     }
 }

@@ -91,6 +91,22 @@ enum EditorTheme {
     /// so it stays inside its circle (DESIGN.md §7.1 allows this exception).
     static let commandGlyph = Font.system(size: 15, weight: .medium)
 
+    /// Whether a coloured trough is **neutral where the slider's anchor is**.
+    ///
+    /// Temp and Tint are: their ramps are grey in the middle, which is where the
+    /// anchor sits, so "at rest" is legible from the track alone and the accent
+    /// fill can go. Saturation and Vibrance are not — their ramp is grey only at
+    /// the far left and brightest at the centre, exactly where the anchor is, so
+    /// with the fill suppressed a row at 0 and a row at +40 look the same and a
+    /// 4pt cursor is the whole readout. Those keep a thin white trail from the
+    /// anchor to the cursor.
+    static func troughIsNeutralAtAnchor(for kind: PhotoAdjustmentKind) -> Bool {
+        switch kind {
+        case .saturation, .vibrance: false
+        default: true
+        }
+    }
+
     /// The colour rows get a coloured trough instead of the grey one, so what
     /// the slider does is readable without moving the knob — the same four
     /// tracks Lightroom tints in its Color panel. Temp and Tint show the two

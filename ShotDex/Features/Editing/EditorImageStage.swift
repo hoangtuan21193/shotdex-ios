@@ -407,9 +407,30 @@ struct EditorImageStage: View {
                 including: hasPaintLayer ? .subviews : imageGestureMask
             )
         } else if controller.isLoading {
-            ProgressView("Loading full-quality preview…")
+            // The photo the user was looking at, not a black screen: a fast
+            // local frame sits under the spinner until the real preview lands.
+            // Dimmed and un-interactive so nobody mistakes it for something they
+            // can edit yet.
+            ZStack {
+                if let placeholder = controller.placeholderImage {
+                    Image(uiImage: placeholder)
+                        .resizable()
+                        .scaledToFit()
+                        .opacity(0.35)
+                        .allowsHitTesting(false)
+                        .transition(.opacity)
+                }
+                ProgressView(
+                    controller.isDownloadingFromCloud
+                        ? "Downloading from iCloud…"
+                        : "Loading full-quality preview…"
+                )
                 .tint(.white)
                 .foregroundStyle(.white)
+                .padding(AppTheme.Spacing.lg)
+                .background(EditorTheme.glass, in: RoundedRectangle.app(AppTheme.Radius.lg))
+            }
+            .animation(EditorTheme.animation, value: controller.placeholderImage == nil)
         }
     }
 

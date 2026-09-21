@@ -279,8 +279,22 @@ struct PhotoEditorScreen: View {
                 .keyboardShortcut("0", modifiers: .command)
             Button("Hide or Show Tools") { setSidebarHidden(!isSidebarHidden) }
                 .keyboardShortcut("\\", modifiers: .command)
-            Button("Back") {
-                if hasUnsavedWork {
+            // Esc unwinds one level, it does not leave. With a mode up — Crop,
+            // Mask, Markup, Presets — it backs out of the mode (and out of Crop
+            // *without* applying the frame, like the rail's repeat tap); only
+            // from plain Edit does it leave the editor. It was wired straight to
+            // Back, so on a Magic Keyboard iPad the key that means "cancel this"
+            // threw the whole session away from inside a crop.
+            Button("Cancel") {
+                if railMode != .edit {
+                    withAnimation(EditorTheme.animation) {
+                        selectGroup(
+                            .light,
+                            in: controller,
+                            discardingCrop: railMode == .crop
+                        )
+                    }
+                } else if hasUnsavedWork {
                     isDiscardConfirmationPresented = true
                 } else {
                     dismiss()
@@ -297,7 +311,7 @@ struct PhotoEditorScreen: View {
 
     /// Opens whichever photo the session points at, restoring the edit it was
     /// left with.
-    private func openCurrentPhoto() async {
+    private func openCurrentPhoto(replacing outgoing: PhotoEditorController? = nil) async {
         guard let session, let target = session.current else { return }
         let newController = PhotoEditorController(
             asset: target,
@@ -312,6 +326,9 @@ struct PhotoEditorScreen: View {
         // rarely the one they want on a different photo.
         newController.selectedTool = .adjust
         controller = newController
+        // Swapped out, so its original can go. After the assignment, not before:
+        // closing first is what left the screen with no controller to render.
+        outgoing?.close()
         await newController.load()
         // After load: `load()` reads the asset's own saved edit, and the draft
         // from this session is the newer of the two.
@@ -345,14 +362,19 @@ struct PhotoEditorScreen: View {
         guard let session, index != session.index, session.assets.indices.contains(index) else {
             return
         }
-        if let controller, let current = session.current {
-            controller.commitCropSession()
-            session.store(controller.recipe, for: current)
-            controller.close()
+        let outgoing = controller
+        if let outgoing, let current = session.current {
+            outgoing.commitCropSession()
+            session.store(outgoing.recipe, for: current)
         }
         session.moveToPhoto(at: index)
-        controller = nil
-        Task { await openCurrentPhoto() }
+        // The outgoing controller is *not* dropped here. The body renders
+        // `editor(controller)` only when the controller is non-nil, so nilling
+        // it unmounted the band, the filmstrip the user had just tapped and the
+        // panel — five frames of a walk were five full teardowns, for a wait
+        // the prewarm had already made short. `openCurrentPhoto` swaps the new
+        // controller in with one assignment and closes the old one after.
+        Task { await openCurrentPhoto(replacing: outgoing) }
     }
 
     /// How many photos a Save All would write: every parked draft, plus the photo
@@ -569,11 +591,13 @@ struct PhotoEditorScreen: View {
                 EditorLayoutMetrics.editorTopBandHeight,
                 proxy.safeAreaInsets.top
             )
-            // Width *and* height: the sidebar's own chrome — title, histogram,
-            // command row, tool strip, Save — is about 280pt before a single tool
-            // row, so a 700×400 window would be all panel and no tools.
-            let isWide = proxy.size.width >= EditorLayoutMetrics.sidebarMinCanvasWidth
-                && proxy.size.height >= EditorLayoutMetrics.sidebarMinCanvasHeight
+            // Width, height *and* orientation — see `usesSidebar`. A sidebar is
+            // paid for in width, so it is only worth it on a window that has
+            // width spare; a portrait iPad pays for it out of the photo.
+            let isWide = EditorLayoutMetrics.usesSidebar(
+                width: proxy.size.width,
+                height: proxy.size.height
+            )
             Group {
                 if isWide {
                     wideBody(
@@ -591,7 +615,8 @@ struct PhotoEditorScreen: View {
                     narrowBody(
                         controller,
                         bandHeight: bandHeight,
-                        panelHeight: panelHeight
+                        panelHeight: panelHeight,
+                        canvasHeight: proxy.size.height
                     )
                 }
             }
@@ -604,6 +629,12 @@ struct PhotoEditorScreen: View {
             // change lands here once it has settled, whatever made it.
             .onChange(of: controller.recipe) { _, _ in
                 propagateIfAutoSyncing(controller)
+                // Belt to the context-menu braces: whatever cancelled a
+                // hold-to-compare, a recipe write means the user is editing
+                // again and the canvas has to show what they are editing. A
+                // latched `showsOriginal` is otherwise invisible except as
+                // "the sliders do nothing".
+                if controller.showsOriginal { controller.showsOriginal = false }
             }
             .onChange(of: isWide, initial: true) { _, wide in
                 chrome.isWideLayout = wide
@@ -612,6 +643,16 @@ struct PhotoEditorScreen: View {
                 // hide for it), so a window dragged past the threshold while
                 // full-bleed would strand the session with no Back and no Save.
                 if wide { chrome.isFullBleed = false }
+                // And a pinned reference goes with the pane that showed it. The
+                // narrow layout never renders `referenceSplit`, and the only
+                // control that clears the badge is inside `if let
+                // toggleReference`, which is nil there — so a Duo folded with a
+                // reference pinned kept a badge on one filmstrip frame that
+                // nothing on screen could explain or remove.
+                if !wide { session?.referenceIndex = nil }
+            }
+            .onChange(of: proxy.safeAreaInsets.top, initial: true) { _, top in
+                windowTopInset = top
             }
             .ignoresSafeArea(.container, edges: [.top, .bottom])
             // The editor and its fixed panel never move for the keyboard: when the
@@ -622,7 +663,15 @@ struct PhotoEditorScreen: View {
         .overlay(alignment: .bottom) {
             if let toast = chrome.undoToast {
                 undoToastView(controller, toast: toast)
-                    .padding(.bottom, chrome.isFullBleed ? 40 : 24)
+                    // Above the panel, not on it. Bottom-aligned with 24pt it
+                    // sat at y 806–850 on a 402×874 phone and the group wheel
+                    // sits at 795–849 — a complete overlap, and the toast has
+                    // its own Undo button so it swallowed the taps rather than
+                    // passing them through. It is raised on drags under 250ms,
+                    // i.e. exactly the accidental flick, where the next move is
+                    // usually "get out of this group". The letterbox above the
+                    // panel is empty and hit-tests to nothing.
+                    .padding(.bottom, undoToastBottomInset)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
@@ -739,7 +788,8 @@ struct PhotoEditorScreen: View {
     private func narrowBody(
         _ controller: PhotoEditorController,
         bandHeight: CGFloat,
-        panelHeight: CGFloat
+        panelHeight: CGFloat,
+        canvasHeight: CGFloat
     ) -> some View {
         VStack(spacing: 0) {
             // Drawing is a full takeover, like Crop: the band steps aside and a
@@ -754,7 +804,7 @@ struct PhotoEditorScreen: View {
 
             imageStage(controller)
 
-            filmstrip(controller)
+            filmstrip(controller, canvasHeight: canvasHeight)
 
             // No bottom panel while drawing: the tool picker owns that space and
             // Clear / Done live in the top bar.
@@ -780,6 +830,10 @@ struct PhotoEditorScreen: View {
     ) -> some View {
         let showsPanel = !isSidebarHidden && !controller.isEditingDrawing
         let showsRail = !controller.isEditingDrawing
+        // A window too short to hold a parameter group in the panel. The panel
+        // gives up its histogram and its Look row there; the band takes the
+        // histogram back as its pill.
+        let isShortColumn = canvasHeight < EditorLayoutMetrics.sidebarShortColumnHeight
         // How much of the window the chrome on the tool side takes, for the
         // reference split's arithmetic.
         let toolsWidth = (showsPanel ? sidebarWidth(in: canvasWidth) : 0)
@@ -801,9 +855,15 @@ struct PhotoEditorScreen: View {
                     height: bandHeight,
                     showsDocumentControls: true,
                     // The panel carries the histogram — the pill would be the
-                    // same graph twice, 40pt apart.
-                    showsHistogram: !showsPanel,
+                    // same graph twice, 40pt apart. On a short column the panel
+                    // has handed it back.
+                    showsHistogram: !showsPanel || isShortColumn,
                     showsSave: !showsPanel,
+                    // The commands belong over the tools they act on. With the
+                    // panel on the leading edge that is the leading edge: an
+                    // undo disc 800pt away from the slider the hand is holding
+                    // is the measured cost of not mirroring this.
+                    mirrored: sidebarEdge == .leading,
                     topInset: safeArea.top + AppTheme.Spacing.xs
                 )
                 .transition(.opacity)
@@ -813,8 +873,13 @@ struct PhotoEditorScreen: View {
                 if sidebarEdge == .leading {
                     if showsRail { toolRail(controller, safeArea: safeArea) }
                     if showsPanel {
-                        sidebarColumn(controller, safeArea: safeArea, canvasWidth: canvasWidth)
-                            .transition(.move(edge: .leading))
+                        sidebarColumn(
+                            controller,
+                            safeArea: safeArea,
+                            canvasWidth: canvasWidth,
+                            isShortColumn: isShortColumn
+                        )
+                        .transition(.move(edge: .leading))
                         resizeHandle(canvasWidth: canvasWidth)
                     }
                 }
@@ -835,14 +900,19 @@ struct PhotoEditorScreen: View {
                         imageStage(controller)
                     }
 
-                    filmstrip(controller)
+                    filmstrip(controller, canvasHeight: canvasHeight)
                 }
 
                 if sidebarEdge == .trailing {
                     if showsPanel {
                         resizeHandle(canvasWidth: canvasWidth)
-                        sidebarColumn(controller, safeArea: safeArea, canvasWidth: canvasWidth)
-                            .transition(.move(edge: .trailing))
+                        sidebarColumn(
+                            controller,
+                            safeArea: safeArea,
+                            canvasWidth: canvasWidth,
+                            isShortColumn: isShortColumn
+                        )
+                        .transition(.move(edge: .trailing))
                     }
                     if showsRail { toolRail(controller, safeArea: safeArea) }
                 }
@@ -896,7 +966,10 @@ struct PhotoEditorScreen: View {
     /// nothing while a tool has taken the screen over (drawing, full bleed) —
     /// switching photos mid-stroke is not something anyone means to do.
     @ViewBuilder
-    private func filmstrip(_ controller: PhotoEditorController) -> some View {
+    private func filmstrip(
+        _ controller: PhotoEditorController,
+        canvasHeight: CGFloat
+    ) -> some View {
         if let session, session.isMultiPhoto, !chrome.isFullBleed, !controller.isEditingDrawing {
             EditorFilmstrip(
                 session: session,
@@ -909,7 +982,11 @@ struct PhotoEditorScreen: View {
                         }
                     }
                     : nil,
-                isCompact: chrome.isWideLayout
+                // Height, not layout. Tying this to `isWideLayout` gave the
+                // Duo's 644pt cover the phone's 124pt strip — a constant sized
+                // for an iPhone 17's 874 — which left the stage 226pt, 35% of
+                // the screen. The compact pair returns 52 of those.
+                isCompact: canvasHeight < EditorLayoutMetrics.sidebarShortColumnHeight
             ) { index in
                 selectPhoto(at: index)
             }
@@ -925,37 +1002,74 @@ struct PhotoEditorScreen: View {
             // button. Pointer users expect the canvas itself to answer; without
             // it a trackpad right-click on an iPad does nothing anywhere in the
             // editor.
-            .contextMenu {
-                Button {
-                    controller.applyAutoTone()
-                } label: {
-                    Label("Auto Enhance", systemImage: "wand.and.sparkles")
-                }
-                Button {
-                    dependencies.editClipboard.copy(from: controller.recipe)
-                } label: {
-                    Label("Copy Edits", systemImage: "doc.on.doc")
-                }
-                .disabled(controller.recipe.isIdentity)
-                Button {
-                    controller.pasteEdits(from: dependencies.editClipboard)
-                } label: {
-                    Label("Paste Edits", systemImage: "doc.on.clipboard")
-                }
-                .disabled(!dependencies.editClipboard.hasContent)
-                Divider()
-                Button {
-                    controller.reset()
-                } label: {
-                    Label("Reset All", systemImage: "arrow.counterclockwise")
-                }
-                .disabled(controller.recipe.isIdentity)
-                Button {
-                    chrome.isHistorySheetPresented = true
-                } label: {
-                    Label("History", systemImage: "clock.arrow.circlepath")
+            //
+            // Regular width only. On a touch phone `UIContextMenuInteraction`
+            // claims the same press at ~0.5s that `holdBeforeGesture` claimed at
+            // 0.3s, so the sequenced drag's `onEnded` never runs and
+            // `showsOriginal` latches on for the rest of the session — measured:
+            // one 1.2s press leaves the before/after disc accent-filled two
+            // screens later, and every slider after that moves nothing visible.
+            // The ⋯ menu carries all five commands anyway.
+            .contextMenu { stageContextMenu(controller) }
+            // Undo, within reach of the hand that is on the sliders. Compact
+            // width only: the wide layout's undo disc is already over the
+            // tools, and a two-finger tap there would fight the trackpad.
+            .background {
+                if horizontalSizeClass == .compact {
+                    EditorTwoFingerTapCatcher {
+                        guard controller.canUndo else { return }
+                        controller.undo()
+                    }
                 }
             }
+    }
+
+    /// The stage's secondary-click menu — the same commands as ⋯, where a
+    /// pointer user expects to find them.
+    ///
+    /// **Regular width only, and that is the fix for a measured bug.** On a
+    /// touch phone `UIContextMenuInteraction` claims the same press at ~0.5s
+    /// that `holdBeforeGesture` claimed at 0.3s, so the sequenced drag's
+    /// `onEnded` never runs and `controller.showsOriginal` latches on for the
+    /// rest of the session: one 1.2s press leaves the before/after disc
+    /// accent-filled two screens later and every slider after it moves nothing
+    /// visible. Emitting no items leaves the long press to the compare gesture,
+    /// which is what the phone wants anyway — the ⋯ menu already carries all
+    /// five commands, and `holdBeforeGesture` is the only thing on a phone that
+    /// wants a long press on the photo.
+    @ViewBuilder
+    private func stageContextMenu(_ controller: PhotoEditorController) -> some View {
+        if horizontalSizeClass == .regular {
+            Button {
+                controller.applyAutoTone()
+            } label: {
+                Label("Auto Enhance", systemImage: "wand.and.sparkles")
+            }
+            Button {
+                dependencies.editClipboard.copy(from: controller.recipe)
+            } label: {
+                Label("Copy Edits", systemImage: "doc.on.doc")
+            }
+            .disabled(controller.recipe.isIdentity)
+            Button {
+                controller.pasteEdits(from: dependencies.editClipboard)
+            } label: {
+                Label("Paste Edits", systemImage: "doc.on.clipboard")
+            }
+            .disabled(!dependencies.editClipboard.hasContent)
+            Divider()
+            Button {
+                controller.reset()
+            } label: {
+                Label("Reset All", systemImage: "arrow.counterclockwise")
+            }
+            .disabled(controller.recipe.isIdentity)
+            Button {
+                chrome.isHistorySheetPresented = true
+            } label: {
+                Label("History", systemImage: "clock.arrow.circlepath")
+            }
+        }
     }
 
     private func stageContent(_ controller: PhotoEditorController) -> some View {
@@ -987,17 +1101,31 @@ struct PhotoEditorScreen: View {
 
     // MARK: Wide-screen sidebar
 
+    /// Where the undo toast parks: clear of whatever chrome owns the bottom.
+    private var undoToastBottomInset: CGFloat {
+        if chrome.isFullBleed { return 40 }
+        if chrome.isWideLayout { return AppTheme.Spacing.xxl }
+        return EditorLayoutMetrics.editorPanelHeight + AppTheme.Spacing.md
+    }
+
     /// Whether the photo is currently filling the canvas rather than fitted into
     /// it. Read from the zoom the fill sets, with a margin for float error — a
     /// hand-pinched zoom reads as filled too, which is what the fit button should
     /// undo anyway.
     private var isFillingCanvas: Bool { chrome.zoomScale > 1.02 }
 
-    /// Whether this device has a Dynamic Island / notch worth routing the band
-    /// around. iPads have a 24pt status inset and no cutout.
-    private var hasTopCutout: Bool {
-        UIDevice.current.userInterfaceIdiom == .phone
-    }
+    /// Whether the *window* has a Dynamic Island / notch worth routing the band
+    /// around, read from the safe area rather than from the idiom.
+    ///
+    /// A cutout is what pushes the top inset past a plain status bar's 24pt, so
+    /// that is the test. The idiom is not: the iPhone Duo reports `.phone` on
+    /// both displays and its cover has a 24pt inset and no cutout there, so the
+    /// band reserved `editorHistogramPillLeading(bandWidth: 382)` − 20 − 112 =
+    /// **125pt of `Color.clear`** — a third of a 382pt band — for a cutout that
+    /// is not at that x, leaving the histogram pill about 37pt wide.
+    @State private var windowTopInset: CGFloat = 0
+
+    private var hasTopCutout: Bool { windowTopInset > 24 }
 
     /// Collapsed or not, persisted for the next window rather than pushed
     /// into the one already open.
@@ -1041,7 +1169,8 @@ struct PhotoEditorScreen: View {
     private func sidebarColumn(
         _ controller: PhotoEditorController,
         safeArea: EdgeInsets,
-        canvasWidth: CGFloat
+        canvasWidth: CGFloat,
+        isShortColumn: Bool
     ) -> some View {
         VStack(spacing: 0) {
             // The histogram is the first thing in the panel and it never leaves,
@@ -1050,25 +1179,35 @@ struct PhotoEditorScreen: View {
             // band mini) would be one tap per glance. Lightroom floats it over
             // the photo instead; this stays put, because a graph that moves is
             // a graph that has to be found again.
-            EditorHistogramSparkline(histogram: controller.histogram)
-                .padding(AppTheme.Spacing.sm)
-                .frame(height: EditorLayoutMetrics.sidebarHistogramHeight)
-                .background(
-                    EditorTheme.control,
-                    in: RoundedRectangle.app(AppTheme.Radius.lg)
-                )
-                .padding(.horizontal, AppTheme.Spacing.md)
-                .padding(.top, AppTheme.Spacing.md)
-                .padding(.bottom, AppTheme.Spacing.sm)
-                .accessibilityElement()
-                .accessibilityLabel("RGB histogram")
-                .accessibilityValue(histogramClippingSummary(controller))
+            //
+            // Except on a column too short to hold a parameter group at all,
+            // where 112pt of graph is bought with rows the user came for. There
+            // the band's pill takes it back — one tap per glance, but a list
+            // that fits.
+            if !isShortColumn {
+                EditorHistogramSparkline(histogram: controller.histogram)
+                    .padding(AppTheme.Spacing.sm)
+                    .frame(height: EditorLayoutMetrics.sidebarHistogramHeight)
+                    .background(
+                        EditorTheme.control,
+                        in: RoundedRectangle.app(AppTheme.Radius.lg)
+                    )
+                    .padding(.horizontal, AppTheme.Spacing.md)
+                    .padding(.top, AppTheme.Spacing.md)
+                    .padding(.bottom, AppTheme.Spacing.sm)
+                    .accessibilityElement()
+                    .accessibilityLabel("RGB histogram")
+                    .accessibilityValue(histogramClippingSummary(controller))
+            }
 
             sidebarModeHeader(controller)
 
             Rectangle().fill(EditorTheme.panelDivider).frame(height: 1)
 
-            if railMode == .edit {
+            // The Look row is the first thing to go on a short column: it is a
+            // second route to the rail's Presets stop, which is still one tap
+            // away and does not cost 53pt of every screenful.
+            if railMode == .edit, !isShortColumn {
                 sidebarLookRow(controller)
                 Rectangle().fill(EditorTheme.panelDivider).frame(height: 1)
             }
@@ -1146,12 +1285,18 @@ struct PhotoEditorScreen: View {
             select: { mode in
                 withAnimation(EditorTheme.animation) {
                     // Picking the mode already up puts the editor back to plain
-                    // adjusting — the only way out of Crop that does not commit
-                    // it. Picking any mode also opens the panel: a tap that
-                    // changed nothing visible would read as a dead control.
-                    let target = mode == railMode ? EditorRailMode.edit : mode
+                    // adjusting — and out of Crop *without* applying the frame,
+                    // which is the only route that does. Picking any mode also
+                    // opens the panel: a tap that changed nothing visible would
+                    // read as a dead control.
+                    let isRepeat = mode == railMode
+                    let target = isRepeat ? EditorRailMode.edit : mode
                     if isSidebarHidden { setSidebarHidden(false) }
-                    selectGroup(target.group, in: controller)
+                    selectGroup(
+                        target.group,
+                        in: controller,
+                        discardingCrop: isRepeat && railMode == .crop
+                    )
                 }
             },
             showHistory: { chrome.isHistorySheetPresented = true },
@@ -1424,7 +1569,8 @@ struct PhotoEditorScreen: View {
                 controller: controller,
                 chrome: chrome,
                 imageRect: rect,
-                stageRect: rect
+                stageRect: rect,
+                scrollsWithPanel: true
             )
         }
         .aspectRatio(1, contentMode: .fit)
@@ -1473,6 +1619,10 @@ struct PhotoEditorScreen: View {
         /// 300pt apart is one too many, and the panel's is the one that says
         /// what it will do.
         showsSave: Bool = true,
+        /// Swaps the two clusters: Back on the trailing edge, the commands on the
+        /// leading one. Follows `sidebarEdge`, so the commands always sit over the
+        /// tools they act on and Back always sits on the far side from them.
+        mirrored: Bool = false,
         /// Where the row of discs starts inside the band. 11 on the phone, which
         /// is what puts them level with the Dynamic Island. A wide window has no
         /// island but does have a top safe area the editor took for the photo,
@@ -1497,18 +1647,7 @@ struct PhotoEditorScreen: View {
                     EditorLayoutMetrics.editorHistogramPillLeading(bandWidth: geo.size.width)
                         - sideInset - leftClusterWidth
                 )
-            HStack(spacing: 5) {
-                if showsDocumentControls {
-                    backButton(controller, side: buttonSize)
-                    // Back stands alone on the leading edge, the way it does in
-                    // Lightroom and in Photos: everything else on this bar acts
-                    // on the edit, and grouping the one control that leaves with
-                    // the ones that change the photo is how a session gets
-                    // thrown away by a mis-tap. The panel's own show/hide lives
-                    // on the rail, which never collapses.
-                    Spacer(minLength: AppTheme.Spacing.md)
-                }
-
+            let undoRedo = HStack(spacing: 5) {
                 circleCommand(
                     "arrow.uturn.backward",
                     isEnabled: controller.canUndo
@@ -1539,38 +1678,63 @@ struct PhotoEditorScreen: View {
                     }
                     .accessibilityLabel(isFillingCanvas ? "Fit Photo" : "Fill Screen")
                 }
+            }
 
-                // Fixed reserve for the island; keeps the pill clear of the cutout.
-                Color.clear.frame(width: reserve)
-
-                // The pill (or, while the card floats, a clear stand-in so the ⋯
-                // does not shift) stretches from the island out to the ⋯, at the
-                // buttons' full height. With the panel drawing the graph there
-                // is no pill and no stand-in: a flexible gap here as well as the
-                // one after Back would split the bar's slack between them and
-                // leave the commands stranded in the middle.
-                if showsHistogram {
-                    Group {
-                        if chrome.isHistogramCollapsed {
-                            EditorHistogramPill(
-                                histogram: controller.histogram,
-                                namespace: histogramNamespace
-                            ) {
-                                withAnimation(EditorHistogramTransition.animation) {
-                                    chrome.isHistogramCollapsed = false
-                                }
-                            }
-                        } else {
-                            Color.clear
-                        }
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-
+            let trailingCommands = HStack(spacing: 5) {
                 overflowMenu(controller, showsSidebarControls: showsDocumentControls)
-
                 if showsDocumentControls, showsSave {
                     saveButton(controller, side: buttonSize)
+                }
+            }
+
+            // The pill, or a clear stand-in while the card floats so the ⋯ does
+            // not shift. It is the band's one flexible child — wherever a second
+            // flexible child exists, an `HStack` splits the slack between them
+            // and the commands end up stranded near the middle of a 1376pt bar.
+            let pill = Group {
+                if chrome.isHistogramCollapsed {
+                    EditorHistogramPill(
+                        histogram: controller.histogram,
+                        namespace: histogramNamespace
+                    ) {
+                        withAnimation(EditorHistogramTransition.animation) {
+                            chrome.isHistogramCollapsed = false
+                        }
+                    }
+                } else {
+                    Color.clear
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            HStack(spacing: 5) {
+                if showsDocumentControls, mirrored {
+                    // Every command in one cluster over the tools it acts on,
+                    // ⋯ and Save included.
+                    undoRedo
+                    trailingCommands
+                    if showsHistogram { pill } else { Spacer(minLength: AppTheme.Spacing.md) }
+                    // Back stands alone on the edge away from the tools: it is
+                    // the one control that *leaves*, and grouping it with the
+                    // ones that change the photo is how a session gets thrown
+                    // away by a mis-tap.
+                    Color.clear.frame(width: AppTheme.Spacing.md)
+                    backButton(controller, side: buttonSize)
+                } else {
+                    if showsDocumentControls {
+                        backButton(controller, side: buttonSize)
+                        Color.clear.frame(width: AppTheme.Spacing.md)
+                    }
+                    undoRedo
+                    if showsDocumentControls, !showsHistogram {
+                        Spacer(minLength: AppTheme.Spacing.md)
+                    }
+                    // Fixed reserve for the island; keeps the pill clear of the cutout.
+                    if !showsDocumentControls {
+                        Color.clear.frame(width: reserve)
+                    }
+                    if showsHistogram { pill }
+                    trailingCommands
                 }
             }
             .frame(height: buttonSize)
@@ -1598,6 +1762,7 @@ struct PhotoEditorScreen: View {
                 }
             }
             .contentShape(Circle())
+            .hoverEffect(.lift)
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { _ in controller.showsOriginal = true }
@@ -1641,6 +1806,11 @@ struct PhotoEditorScreen: View {
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
+        // `.buttonStyle(.plain)` gets no pointer effect of its own, so without
+        // this the whole top bar stayed dead under a trackpad while the panel
+        // 40pt away lit up — which reads as the bar being broken rather than as
+        // a missing nicety.
+        .hoverEffect(.lift)
     }
 
     /// The blurred near-black disc under every band button. The near-black tint
@@ -1694,7 +1864,72 @@ struct PhotoEditorScreen: View {
     ) -> some View {
         let size = EditorLayoutMetrics.editorFloatingCommandButtonSize(isRegularWidth: horizontalSizeClass == .regular)
         return Menu {
+            // Undo and Redo are *also* here, not only as the two discs in the
+            // band's corner. On a phone that corner is the one place a thumb
+            // cannot reach without regripping, 800pt from the slider the hand
+            // is on, and the only other route was ⌘Z. A named row costs no
+            // screen space; `EditorTwoFingerTapCatcher` on the stage covers the
+            // reach, the way Lightroom and Procreate both do it.
+            Button {
+                controller.undo()
+            } label: {
+                Label("Undo", systemImage: "arrow.uturn.backward")
+            }
+            .disabled(!controller.canUndo)
+
+            Button {
+                controller.redo()
+            } label: {
+                Label("Redo", systemImage: "arrow.uturn.forward")
+            }
+            .disabled(!controller.canRedo)
+
+            Divider()
+
+            // Pinning a reference had exactly one route: a context menu on a
+            // 56pt filmstrip thumbnail. HIG *Gestures* — a custom gesture must
+            // not be the only way to perform an important action — and
+            // `spec.md` calls the reference pane the reason the big screen
+            // exists.
+            if showsSidebarControls, let session, session.isMultiPhoto {
+                Button {
+                    withAnimation(EditorTheme.animation) {
+                        if session.referenceIndex == nil {
+                            session.toggleReference(at: session.index)
+                        } else {
+                            session.referenceIndex = nil
+                        }
+                    }
+                } label: {
+                    Label(
+                        session.referenceIndex == nil ? "Use as Reference" : "Clear Reference",
+                        systemImage: "rectangle.on.rectangle"
+                    )
+                }
+            }
+
+            // On the phone the double tap means full bleed and there is no
+            // named fit ⇄ fill anywhere; in the wide layout it means fit ⇄ fill
+            // and full bleed has the rail's Hide Tools. On the Duo one user
+            // meets both meanings in one sitting, so each needs a control with
+            // a name on it — this is the phone's missing half. (The wide layout
+            // already has the fit/fill disc in the band.)
+            if !showsSidebarControls {
+                Button {
+                    chrome.requestFillZoomToggle()
+                } label: {
+                    Label(
+                        isFillingCanvas ? "Fit Photo" : "Fill Screen",
+                        systemImage: isFillingCanvas
+                            ? "arrow.down.forward.and.arrow.up.backward"
+                            : "arrow.up.backward.and.arrow.down.forward"
+                    )
+                }
+            }
+
             if showsSidebarControls {
+                Divider()
+
                 Picker("Tools Panel", selection: $sidebarEdgeRaw) {
                     ForEach(EditorSidebarEdge.allCases) { edge in
                         Text(edge.title).tag(edge.rawValue)
@@ -1703,11 +1938,19 @@ struct PhotoEditorScreen: View {
                 .pickerStyle(.menu)
 
                 Button {
-                    isSidebarHidden.toggle()
+                    // Through `setSidebarHidden`, like the rail button and ⌘\ —
+                    // it is the only thing that writes the preference, so a
+                    // plain `toggle()` here hid the panel and then brought it
+                    // back on the next launch.
+                    withAnimation(EditorTheme.animation) {
+                        setSidebarHidden(!isSidebarHidden)
+                    }
                 } label: {
                     Label(
                         isSidebarHidden ? "Show Tools" : "Hide Tools",
-                        systemImage: sidebarEdge.collapseIcon
+                        systemImage: isSidebarHidden
+                            ? sidebarEdge.expandIcon
+                            : sidebarEdge.collapseIcon
                     )
                 }
 
@@ -1876,6 +2119,7 @@ struct PhotoEditorScreen: View {
                 .background { floatingCircleFill }
                 .contentShape(Circle())
         }
+        .hoverEffect(.lift)
         .accessibilityLabel("More editor actions")
     }
 
@@ -1971,6 +2215,7 @@ struct PhotoEditorScreen: View {
                 .contentShape(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous))
         }
         .buttonStyle(.plain)
+        .hoverEffect(.lift)
         .accessibilityLabel("Back")
     }
 
@@ -1991,6 +2236,7 @@ struct PhotoEditorScreen: View {
         }
         .buttonStyle(.plain)
         .disabled(controller.isLoading || controller.isSaving)
+        .hoverEffect(.lift)
         .accessibilityLabel("Save")
     }
 
@@ -2206,14 +2452,36 @@ struct PhotoEditorScreen: View {
     /// Switch the panel to a nav group and put the controller in the matching tool.
     /// The six adjustment groups all sit on the global `.adjust` tool and differ
     /// only in which rows `toolPanel` shows.
-    private func selectGroup(_ group: EditorGroup, in controller: PhotoEditorController) {
-        chrome.resetZoom()
+    private func selectGroup(
+        _ group: EditorGroup,
+        in controller: PhotoEditorController,
+        discardingCrop: Bool = false
+    ) {
         chrome.isEyedropperActive = false
+        // A cancelled hold-to-compare must not follow the user into the next
+        // tool. See `stageContextMenu`.
+        controller.showsOriginal = false
         // 30c has no crop Done: the crop stays live and is committed when its tab is
         // left (or when the edit is saved). Switching to any other group is that
         // moment. Leaving via Save commits too, so a double commit is harmless.
         if chrome.selectedGroup == .crop, group != .crop {
-            controller.commitCropSession()
+            // `discardingCrop` is the repeat-tap on the rail's Crop stop, which
+            // the rail advertises as the way out that does not apply the frame.
+            // It used to advertise it and then commit anyway — the claim was in
+            // the comment and in `spec.md`, and nothing implemented it.
+            if discardingCrop {
+                controller.cancelCropSession()
+            } else {
+                controller.commitCropSession()
+            }
+        }
+        // Zoom is state the user built up by hand, and only Crop needs it gone —
+        // the crop frame is laid out against the fitted photo. It used to reset
+        // on *every* group change, which in the wide layout is on the path of
+        // every rail tap, every accordion header and every Color segment: pinch
+        // to 400% to judge sharpening, reach for Detail, lose the eyelash.
+        if group == .crop || chrome.selectedGroup == .crop {
+            chrome.resetZoom()
         }
         withAnimation(EditorTheme.animation) {
             chrome.selectedGroup = group
@@ -2406,6 +2674,18 @@ private struct EditorGroupWheel: View {
     /// The chip the scroll view has snapped to the centre. Bound to
     /// `scrollPosition`, so it follows both drags and programmatic scrolls.
     @State private var centered: EditorGroup?
+    /// Waits for the wheel to stop moving before the panel changes.
+    ///
+    /// `centered` reports *every* chip that passes the middle, so acting on it
+    /// directly ran the full `selectGroup` — a crop commit, a tool change, a
+    /// `scheduleRender` — once per chip a flick went past, with a haptic
+    /// apiece. `spec.md` writes the intent as "vuốt → nhả → snap → đổi nhóm":
+    /// one switch, on release. A debounce rather than `onScrollPhaseChange`
+    /// because the deployment target is iOS 17, and it covers the tap route
+    /// too, which animates `centered` with no scroll phase at all. The tint
+    /// still follows the wheel chip by chip.
+    @State private var settleTask: Task<Void, Never>?
+    private static let settleDelay = Duration.milliseconds(140)
 
     var body: some View {
         GeometryReader { geo in
@@ -2431,9 +2711,17 @@ private struct EditorGroupWheel: View {
             .sensoryFeedback(.selection, trigger: centered)
             .onAppear { centered = chrome.selectedGroup }
             .onChange(of: centered) { _, new in
-                guard let new, new != chrome.selectedGroup else { return }
-                onSelect(new)
+                settleTask?.cancel()
+                guard let new else { return }
+                settleTask = Task {
+                    try? await Task.sleep(for: Self.settleDelay)
+                    guard !Task.isCancelled, centered == new,
+                          new != chrome.selectedGroup
+                    else { return }
+                    onSelect(new)
+                }
             }
+            .onDisappear { settleTask?.cancel() }
             .onChange(of: chrome.selectedGroup) { _, group in
                 // A group changed from outside the wheel (rare — Save's crop commit,
                 // a deep-link): keep the centred chip in step.

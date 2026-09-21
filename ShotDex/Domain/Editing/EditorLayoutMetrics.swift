@@ -63,6 +63,17 @@ enum EditorLayoutMetrics {
     static let sidebarMinCanvasWidth: CGFloat = 700
     /// And tall enough that the sidebar's fixed chrome is not the whole panel.
     static let sidebarMinCanvasHeight: CGFloat = 600
+    /// And wider than it is tall. A sidebar costs **width**, which is what a
+    /// landscape window has spare; in portrait width is the scarce dimension and
+    /// the same column is paid for out of the photo. Measured on a 13" iPad:
+    /// landscape 1376×1032 gives a 3:2 frame 70% of the canvas height, portrait
+    /// 1032×1376 gives it **34%** — two thirds of the canvas black — because the
+    /// photo is width-limited there and the panel takes 378 of the 1032. Portrait
+    /// therefore keeps the phone's slab, which spends height the letterboxed photo
+    /// is not using. The Duo's inner display (951×669) is landscape and unaffected.
+    static func usesSidebar(width: CGFloat, height: CGFloat) -> Bool {
+        width >= sidebarMinCanvasWidth && height >= sidebarMinCanvasHeight && width > height
+    }
     /// Sidebar width the user can drag between, and where it starts. 280 still
     /// fits a slider row with its value; past 420 the photo starts paying for
     /// space the rows cannot use.
@@ -79,6 +90,19 @@ enum EditorLayoutMetrics {
     static let sidebarSectionHeaderHeight: CGFloat = 44
     /// The always-on histogram at the top of the sidebar.
     static let sidebarHistogramHeight: CGFloat = 92
+
+    /// Below this window height the sidebar drops the two rows it can do
+    /// without, because the column can no longer hold a parameter group.
+    ///
+    /// The iPhone Duo's inner display is the case: 951×669 passes both wide-layout
+    /// gates and then leaves the panel `669 − 52 bar − 24 + 24 safe areas` = 593pt,
+    /// of which the fixed furniture — histogram 112, mode header 40, Look row 52,
+    /// dividers, footer 74 — is 293, **49%**. Light alone is 44 + 8 × 46 = 412pt
+    /// against the 300 that leaves: the default group does not fit, and neither do
+    /// eight collapsed headers. Folding the Look row and the histogram block
+    /// returns 165pt and the same column holds Light with room over. 800, not 700:
+    /// an iPad in a half-height Split View is in the same trouble.
+    static let sidebarShortColumnHeight: CGFloat = 800
 
     /// The vertical tool rail on the window's outer edge — Lightroom's own
     /// arrangement, and the reason the sidebar no longer carries a horizontal
@@ -192,8 +216,13 @@ enum EditorLayoutMetrics {
     /// regular stride and the chip nearest the centre is unambiguous.
     static let editorGroupChipWidth: CGFloat = 58
     static let editorGroupChipHeight: CGFloat = 42
-    /// The fade over each end of the wheel, dissolving chips into the panel colour.
-    static let editorGroupWheelEdgeFade: CGFloat = 26
+    /// The fade over each end of the wheel, dissolving chips into the panel
+    /// colour. **A whole chip wide, not 26.** Between Back (38) and Save (42)
+    /// with padding and gaps the wheel gets about 286pt on a 402pt phone, which
+    /// is 4.3 chips of 58 + 8 stride — so an edge chip is always part-visible.
+    /// At 26 the cut landed on the letters and the neighbour read as broken
+    /// text ("ight", "Point Co") rather than as "there is more here".
+    static let editorGroupWheelEdgeFade: CGFloat = editorGroupChipWidth
 
     // MARK: Legacy panel constants (Collage / Video Studio, draw takeover)
 
