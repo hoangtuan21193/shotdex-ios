@@ -27,6 +27,8 @@ struct PhotoWidgetSettingsScreen: View {
     @State private var previewFamily: PhotoWidgetPreviewFamily = .medium
     @State private var calendarAccess: CalendarSnapshotWriter.Access = .notDetermined
     @State private var previewImage: Image?
+    @State private var previewImageAspect: Double = 1
+    @State private var selectedComponent: PhotoWidgetComponent?
 
     private var store: PhotoWidgetSettingsStore { dependencies.photoWidgetSettings }
     private var settings: PhotoWidgetSettings { store.settings(for: kind) }
@@ -130,6 +132,9 @@ struct PhotoWidgetSettingsScreen: View {
             return UIImage(data: data)
         }.value
         previewImage = loaded.map { Image(uiImage: $0) }
+        previewImageAspect = loaded.map {
+            $0.size.height > 0 ? Double($0.size.width / $0.size.height) : 1
+        } ?? 1
     }
 
     // MARK: Preview header
@@ -144,8 +149,21 @@ struct PhotoWidgetSettingsScreen: View {
                 calendarSnapshot: calendarSnapshot,
                 family: previewFamily,
                 image: previewImage,
-                onAnchorChange: { anchor in
-                    store.update(kind) { $0.anchor = anchor }
+                imageAspectRatio: previewImageAspect,
+                selection: $selectedComponent,
+                onMove: { component, anchor in
+                    store.update(kind) {
+                        $0.setAnchor(
+                            anchor,
+                            for: component,
+                            in: PhotoWidgetComponent.components(for: kind, settings: $0)
+                        )
+                    }
+                },
+                onResize: { component, size in
+                    store.update(kind) {
+                        if component == .time { $0.timeSize = size } else { $0.dateSize = size }
+                    }
                 },
                 onPhotoTransformChange: { scale, offsetX, offsetY in
                     store.update(kind) {
@@ -177,10 +195,15 @@ struct PhotoWidgetSettingsScreen: View {
         .background(Color(.systemGroupedBackground))
     }
 
+    /// Says what the finger under it can do, and changes as the user selects
+    /// something — a preview with no instructions reads as a picture.
     private var hintText: String {
-        isNoneSource
-            ? "Drag the text to place it. Choose a photo below to pinch and move it."
-            : "Drag the text to place it. Pinch with two fingers to zoom the photo, and drag with two to move it."
+        if let selectedComponent {
+            return "\(selectedComponent.title) selected. Drag to move it, pinch to resize it."
+        }
+        return isNoneSource
+            ? "Tap a line to select it, then drag to move or pinch to resize. Choose a photo below to place it behind."
+            : "Tap a line to select it, then drag to move or pinch to resize. Two fingers move the photo behind."
     }
 
     private var optionsList: some View {
@@ -519,9 +542,27 @@ struct PhotoWidgetSettingsScreen: View {
     /// or a pinch went somewhere the user did not want.
     private var arrangementSection: some View {
         Section {
-            LabeledContent("Text Position", value: anchorLabel)
-            Button("Centre the Text") {
-                store.update(kind) { $0.anchor = .center }
+            if let selectedComponent {
+                LabeledContent("Selected", value: selectedComponent.title)
+                LabeledContent("Position", value: anchorLabel(for: selectedComponent))
+                Button("Centre \(selectedComponent.title)") {
+                    store.update(kind) {
+                        $0.setAnchor(
+                            .center,
+                            for: selectedComponent,
+                            in: PhotoWidgetComponent.components(for: kind, settings: $0)
+                        )
+                    }
+                }
+                Button("Deselect") { self.selectedComponent = nil }
+            } else {
+                LabeledContent("Text Position", value: anchorLabel(for: nil))
+            }
+            if !settings.componentAnchors.isEmpty {
+                Button("Stack Everything Together") {
+                    store.update(kind) { $0.resetComponentAnchors() }
+                    selectedComponent = nil
+                }
             }
             if !isNoneSource {
                 LabeledContent("Photo Zoom", value: "\(String(format: "%.1f", settings.photoScale))×")
@@ -538,16 +579,15 @@ struct PhotoWidgetSettingsScreen: View {
         } header: {
             Text("Arrangement")
         } footer: {
-            Text("Drag the text on the preview to place it anywhere in the widget. Pinch the preview to zoom the photo behind it, and drag with two fingers to choose which part shows.")
+            Text("Each line is placed on its own: tap it on the preview, then drag it anywhere or pinch to resize it. Guides appear when it lines up with the middle, an edge, or another line. Two fingers move and zoom the photo behind.")
         }
     }
 
-    /// Where the text sits, in words: a fraction means nothing read aloud.
-    private var anchorLabel: String {
-        let horizontal = settings.anchor.isLeading
-            ? "Left" : (settings.anchor.isTrailing ? "Right" : "Centre")
-        let vertical = settings.anchor.y < 0.34
-            ? "Top" : (settings.anchor.y > 0.66 ? "Bottom" : "Middle")
+    /// Where a piece sits, in words: a fraction means nothing read aloud.
+    private func anchorLabel(for component: PhotoWidgetComponent?) -> String {
+        let anchor = component.map { settings.anchor(for: $0) } ?? settings.anchor
+        let horizontal = anchor.isLeading ? "Left" : (anchor.isTrailing ? "Right" : "Centre")
+        let vertical = anchor.y < 0.34 ? "Top" : (anchor.y > 0.66 ? "Bottom" : "Middle")
         return "\(vertical) \(horizontal)"
     }
 

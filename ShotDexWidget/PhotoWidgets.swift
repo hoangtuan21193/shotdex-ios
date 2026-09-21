@@ -20,6 +20,9 @@ struct PhotoWidgetEntry: TimelineEntry {
     /// Set when this widget was pointed at an album on the Home Screen whose
     /// photos the app has not rendered yet.
     var pendingAlbum: WidgetAlbumCatalog.Album?
+    /// Width ÷ height of the picture, so a two-finger drag can reach the part
+    /// the fill cropped away.
+    var imageAspectRatio: Double = 1
 }
 
 struct PhotoWidgetProvider: AppIntentTimelineProvider {
@@ -105,7 +108,7 @@ struct PhotoWidgetProvider: AppIntentTimelineProvider {
         var settings = PhotoWidgetSettingsFile.read()
         let weather = WeatherSnapshot.read()
         let calendarSnapshot = CalendarSnapshot.read()
-        private var images: [String: Image] = [:]
+        private var images: [String: (image: Image, aspectRatio: Double)] = [:]
         private var snapshots: [String: PhotoWidgetSnapshot] = [:]
 
         /// Folds the Home Screen menu's answer into the shared settings — once
@@ -151,7 +154,7 @@ struct PhotoWidgetProvider: AppIntentTimelineProvider {
             directoryName: String,
             at date: Date,
             rotation: PhotoWidgetSettings.Rotation
-        ) -> Image? {
+        ) -> (image: Image, aspectRatio: Double)? {
             let snapshot = snapshot(named: directoryName)
             guard let index = PhotoWidgetSnapshot.frameIndex(
                 at: date, count: snapshot.frames.count, rotation: rotation
@@ -162,9 +165,12 @@ struct PhotoWidgetProvider: AppIntentTimelineProvider {
                   let data = try? Data(contentsOf: url),
                   let uiImage = UIImage(data: data)
             else { return nil }
-            let image = Image(uiImage: uiImage)
-            images[key] = image
-            return image
+            let aspect = uiImage.size.height > 0
+                ? Double(uiImage.size.width / uiImage.size.height)
+                : 1
+            let loaded = (image: Image(uiImage: uiImage), aspectRatio: aspect)
+            images[key] = loaded
+            return loaded
         }
 
         func snapshot(named directoryName: String) -> PhotoWidgetSnapshot {
@@ -182,20 +188,22 @@ struct PhotoWidgetProvider: AppIntentTimelineProvider {
         prepared: (settings: PhotoWidgetSettings, resolved: PhotoWidgetResolvedConfiguration)? = nil
     ) -> PhotoWidgetEntry {
         let prepared = prepared ?? payload.resolve(kind: kind, configuration: configuration)
+        let loaded = payload.image(
+            directoryName: prepared.resolved.frameDirectoryName,
+            at: date,
+            rotation: prepared.settings.rotation
+        )
         return PhotoWidgetEntry(
             date: date,
             kind: kind,
             settings: prepared.settings,
-            image: payload.image(
-                directoryName: prepared.resolved.frameDirectoryName,
-                at: date,
-                rotation: prepared.settings.rotation
-            ),
+            image: loaded?.image,
             weather: payload.weather,
             calendarSnapshot: payload.calendarSnapshot,
             pendingAlbum: prepared.resolved.pendingSource.map {
                 WidgetAlbumCatalog.Album(id: $0.id, title: $0.title, count: 0)
-            }
+            },
+            imageAspectRatio: loaded?.aspectRatio ?? 1
         )
     }
 }
@@ -344,33 +352,18 @@ struct PhotoWidgetPositionedFace: View {
     private static let inset: CGFloat = 4
 
     var body: some View {
-        PhotoWidgetFace(
+        PhotoWidgetArrangedFace(
             date: entry.date,
             settings: entry.settings,
             kind: entry.kind,
-            width: size.width,
+            size: size,
             weather: entry.weather,
             calendarSnapshot: entry.calendarSnapshot,
             isCompact: isCompact
-        )
-        .background {
-            GeometryReader { proxy in
-                Color.clear.onAppear { contentSize = proxy.size }
-            }
-        }
-        .padding(Self.inset)
-        .offset(
-            entry.settings.anchor.offset(
-                in: size, contentSize: contentSize, inset: Self.inset
-            )
-        )
-        .frame(
-            maxWidth: .infinity,
-            maxHeight: .infinity,
-            alignment: entry.settings.anchor.alignment
-        )
+        ) { _, _ in EmptyView() }
     }
 }
+
 
 /// Shown while an album picked in "Edit Widget" is waiting for the app to copy
 /// its photos across.

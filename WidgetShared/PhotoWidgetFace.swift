@@ -18,24 +18,27 @@ struct PhotoWidgetFace: View {
     /// Tall families get the grid and the event list; a small one has room for
     /// one of them.
     var isCompact = false
+    /// Which pieces this instance draws. Nil means all of them, which is what
+    /// a widget that has never been rearranged still does.
+    var components: [PhotoWidgetComponent]?
 
     private var headlineSize: CGFloat { settings.scaledHeadlineSize(forWidgetWidth: width) }
     private var supportingSize: CGFloat { settings.scaledSupportingSize(forWidgetWidth: width) }
 
     var body: some View {
         VStack(alignment: horizontalAlignment, spacing: 4) {
-            if settings.showsTime {
+            if draws(.time) {
                 Text(PhotoWidgetFormat.timeString(for: date, settings: settings))
                     .font(font(size: headlineSize, isBold: settings.isBold))
             }
-            if settings.showsDate {
+            if draws(.date) {
                 Text(PhotoWidgetFormat.dateString(for: date, settings: settings))
                     .font(font(size: supportingSize, isBold: false))
             }
-            if kind.needsWeather {
+            if draws(.weather) {
                 weatherRow
             }
-            if kind.needsCalendarEvents {
+            if draws(.calendar) {
                 calendarRows
             }
             if isEmpty {
@@ -55,9 +58,22 @@ struct PhotoWidgetFace: View {
         .multilineTextAlignment(textAlignment)
     }
 
+    /// Whether this instance draws a given piece: the widget's own rules
+    /// first, then the filter that lets one group be drawn on its own.
+    private func draws(_ component: PhotoWidgetComponent) -> Bool {
+        let isEnabled: Bool = switch component {
+        case .time: settings.showsTime
+        case .date: settings.showsDate
+        case .weather: kind.needsWeather
+        case .calendar: kind.needsCalendarEvents
+        }
+        guard isEnabled else { return false }
+        guard let components else { return true }
+        return components.contains(component)
+    }
+
     private var isEmpty: Bool {
-        !settings.showsTime && !settings.showsDate
-            && !kind.needsWeather && !kind.needsCalendarEvents
+        !PhotoWidgetComponent.allCases.contains(where: draws)
     }
 
     // MARK: Weather
@@ -370,26 +386,48 @@ extension PhotoWidgetSettings.Anchor {
 struct PhotoWidgetImageLayer: View {
     let image: Image
     let settings: PhotoWidgetSettings
+    /// Width ÷ height of the picture. Needed because a filled photo is
+    /// already cropped before any zoom: a 3:2 frame in a square widget hides a
+    /// third of itself, and that hidden part is what a two-finger drag should
+    /// be able to bring into view. Defaults to 1, which behaves as the old
+    /// zoom-only maths did.
+    var aspectRatio: Double = 1
 
     var body: some View {
         GeometryReader { proxy in
             let size = proxy.size
             let scale = max(1, min(settings.photoScale, PhotoWidgetSettings.maximumPhotoScale))
-            // The overflow a zoomed photo has to give away in each direction,
-            // halved because it spills both ways.
-            let slackX = size.width * (scale - 1) / 2
-            let slackY = size.height * (scale - 1) / 2
+            let slack = PhotoWidgetImageLayer.slack(
+                in: size, aspectRatio: aspectRatio, scale: scale
+            )
             image
                 .resizable()
                 .scaledToFill()
                 .frame(width: size.width, height: size.height)
                 .scaleEffect(scale)
                 .offset(
-                    x: slackX * settings.photoOffsetX,
-                    y: slackY * settings.photoOffsetY
+                    x: slack.width * settings.photoOffsetX,
+                    y: slack.height * settings.photoOffsetY
                 )
                 .frame(width: size.width, height: size.height)
                 .clipped()
         }
+    }
+
+    /// How far the picture can move in each direction before an edge shows.
+    ///
+    /// Half the overflow: the part the fill already cropped, plus whatever the
+    /// zoom added. Pure, so "can I still drag this at 1×" is a test.
+    static func slack(in size: CGSize, aspectRatio: Double, scale: Double) -> CGSize {
+        guard size.width > 0, size.height > 0, aspectRatio > 0 else { return .zero }
+        let frameAspect = size.width / size.height
+        // scaledToFill matches the short side, so the long side overflows.
+        let filled: CGSize = aspectRatio > frameAspect
+            ? CGSize(width: size.height * aspectRatio, height: size.height)
+            : CGSize(width: size.width, height: size.width / aspectRatio)
+        return CGSize(
+            width: max(0, (filled.width * scale - size.width) / 2),
+            height: max(0, (filled.height * scale - size.height) / 2)
+        )
     }
 }

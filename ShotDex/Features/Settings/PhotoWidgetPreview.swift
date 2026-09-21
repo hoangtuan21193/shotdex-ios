@@ -3,12 +3,13 @@ import SwiftUI
 /// The live preview at the top of a photo widget's settings — and the surface
 /// the user arranges the widget on.
 ///
-/// It draws the widget's own `PhotoWidgetFace` over the widget's own
+/// It draws the widget's own `PhotoWidgetArrangedFace` over the widget's own
 /// `PhotoWidgetImageLayer`, at the proportions of a real family, so what is
 /// set up here is what appears on the Home Screen. It is also where the
-/// arranging happens: one finger drags the text, two fingers pinch and pan the
-/// photo behind it. Sliders for those would be four more rows in a screen that
-/// already has thirty, and none of them would show where the words land.
+/// arranging happens: tap a piece to select it, drag it anywhere, pinch it to
+/// resize it, and move the photo behind with two fingers. Sliders for those
+/// would be six more rows in a screen that already has thirty, and none of
+/// them would show where the words land.
 struct PhotoWidgetPreview: View {
     let kind: PhotoWidgetKind
     let settings: PhotoWidgetSettings
@@ -17,19 +18,29 @@ struct PhotoWidgetPreview: View {
     let calendarSnapshot: CalendarSnapshot?
     let family: PhotoWidgetPreviewFamily
     let image: Image?
+    let imageAspectRatio: Double
+    /// Which piece is selected, so the outline and the size controls know.
+    @Binding var selection: PhotoWidgetComponent?
     /// Called **once, when a gesture ends**. While a finger is down the
     /// preview draws from its own state: writing every frame into the store
     /// fed an observable change back into the view that was measuring itself,
     /// and SwiftUI came apart in a preference-update loop.
-    let onAnchorChange: (PhotoWidgetSettings.Anchor) -> Void
+    let onMove: (PhotoWidgetComponent, PhotoWidgetSettings.Anchor) -> Void
+    let onResize: (PhotoWidgetComponent, Double) -> Void
     let onPhotoTransformChange: (_ scale: Double, _ offsetX: Double, _ offsetY: Double) -> Void
 
-    @State private var contentSize: CGSize = .zero
+    /// Where each group landed, for hit-testing a touch.
+    @State private var groupFrames: [String: (components: [PhotoWidgetComponent], rect: CGRect)] = [:]
+    @State private var dragging: PhotoWidgetComponent?
     @State private var dragStartAnchor: PhotoWidgetSettings.Anchor?
+    @State private var liveAnchor: PhotoWidgetSettings.Anchor?
+    @State private var guides = PhotoWidgetSnapping.Result(
+        anchor: .center, verticalGuides: [], horizontalGuides: []
+    )
+    @State private var resizeStartSize: Double?
+    @State private var liveSize: Double?
     @State private var pinchStartScale: Double?
     @State private var panStartOffset: CGPoint?
-    /// What the finger is doing right now, held here until it lifts.
-    @State private var liveAnchor: PhotoWidgetSettings.Anchor?
     @State private var livePhotoScale: Double?
     @State private var livePhotoOffset: CGPoint?
 
@@ -37,7 +48,12 @@ struct PhotoWidgetPreview: View {
     /// currently changing laid over them.
     private var live: PhotoWidgetSettings {
         var live = settings
-        if let liveAnchor { live.anchor = liveAnchor }
+        if let dragging, let liveAnchor {
+            live.setAnchor(liveAnchor, for: dragging, in: componentsShown)
+        }
+        if let selection, let liveSize {
+            if selection == .time { live.timeSize = liveSize } else { live.dateSize = liveSize }
+        }
         if let livePhotoScale { live.photoScale = livePhotoScale }
         if let livePhotoOffset {
             live.photoOffsetX = livePhotoOffset.x
@@ -46,29 +62,45 @@ struct PhotoWidgetPreview: View {
         return live
     }
 
-    /// The margin the text keeps from the widget's edges, matching
-    /// `PhotoWidgetPositionedFace` so the preview places it identically.
-    private static let inset: CGFloat = 4
+    private var componentsShown: [PhotoWidgetComponent] {
+        PhotoWidgetComponent.components(for: kind, settings: settings)
+    }
 
     var body: some View {
         GeometryReader { proxy in
             let size = proxy.size
             ZStack {
                 background(size: size)
-                face(size: size)
+                PhotoWidgetArrangedFace(
+                    date: date,
+                    settings: live,
+                    kind: kind,
+                    size: size,
+                    weather: weather,
+                    calendarSnapshot: calendarSnapshot,
+                    isCompact: family.isCompact,
+                    overlay: { components, contentSize in
+                        selectionOverlay(for: components, size: contentSize)
+                    },
+                    onLayout: { components, rect in
+                        groupFrames[PhotoWidgetLayout.key(for: live.anchor(for: components[0]))] =
+                            (components, rect)
+                    }
+                )
+                guideLines(size: size)
             }
             .frame(width: size.width, height: size.height)
             .clipShape(RoundedRectangle(cornerRadius: family.cornerRadius, style: .continuous))
             .contentShape(RoundedRectangle(cornerRadius: family.cornerRadius, style: .continuous))
-            .gesture(textDrag(in: size), including: .all)
-            .simultaneousGesture(photoPinch)
+            .gesture(moveGesture(in: size))
+            .simultaneousGesture(pinchGesture)
             .simultaneousGesture(photoPan(in: size))
         }
         .aspectRatio(family.aspectRatio, contentMode: .fit)
         .frame(maxWidth: family.maximumWidth)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Preview of the \(kind.title) widget")
-        .accessibilityHint("Drag to move the text. Pinch with two fingers to zoom the photo.")
+        .accessibilityHint("Drag a line of text to move it. Pinch it to resize. Two fingers move the photo.")
     }
 
     // MARK: Layers
@@ -77,7 +109,9 @@ struct PhotoWidgetPreview: View {
     private func background(size: CGSize) -> some View {
         ZStack {
             if let image {
-                PhotoWidgetImageLayer(image: image, settings: live)
+                PhotoWidgetImageLayer(
+                    image: image, settings: live, aspectRatio: imageAspectRatio
+                )
             } else {
                 LinearGradient(
                     colors: [.gray.opacity(0.55), .gray.opacity(0.25)],
@@ -95,78 +129,150 @@ struct PhotoWidgetPreview: View {
         .frame(width: size.width, height: size.height)
     }
 
-    private func face(size: CGSize) -> some View {
-        PhotoWidgetFace(
-            date: date,
-            settings: live,
-            kind: kind,
-            width: size.width,
-            weather: weather,
-            calendarSnapshot: calendarSnapshot,
-            isCompact: family.isCompact
-        )
-        .background {
-            GeometryReader { proxy in
-                Color.clear
-                    .onAppear { contentSize = proxy.size }
-                    .onChange(of: proxy.size) { _, new in contentSize = new }
-            }
+    /// A dashed outline and four corner dots on the selected piece: without
+    /// them nothing on the preview says it can be touched at all.
+    @ViewBuilder
+    private func selectionOverlay(for components: [PhotoWidgetComponent], size: CGSize) -> some View {
+        if let selection, components.contains(selection) {
+            let isMoving = dragging == selection
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .strokeBorder(
+                    Color.white.opacity(isMoving ? 0.95 : 0.8),
+                    style: StrokeStyle(lineWidth: 1, dash: isMoving ? [] : [4, 3])
+                )
+                .background(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(.white.opacity(isMoving ? 0.12 : 0.06))
+                )
+                .overlay { handles }
+                .padding(-3)
+                .allowsHitTesting(false)
         }
-        .padding(Self.inset)
-        .offset(live.anchor.offset(in: size, contentSize: contentSize, inset: Self.inset))
-        .frame(
-            maxWidth: .infinity,
-            maxHeight: .infinity,
-            alignment: live.anchor.alignment
-        )
+    }
+
+    /// Four corner dots. They are the "this can be grabbed" sign — the same
+    /// one every canvas app uses — not separate controls: resizing is the
+    /// pinch, because a 6pt dot on a 158pt preview is not a drag target.
+    private var handles: some View {
+        ZStack {
+            handleDot(.topLeading)
+            handleDot(.topTrailing)
+            handleDot(.bottomLeading)
+            handleDot(.bottomTrailing)
+        }
+    }
+
+    private func handleDot(_ alignment: Alignment) -> some View {
+        Circle()
+            .fill(.white)
+            .frame(width: 6, height: 6)
+            .shadow(color: .black.opacity(0.5), radius: 1)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: alignment)
+    }
+
+    /// The lines that appear when a dragged piece lands on the middle, an
+    /// edge, or in line with another piece.
+    @ViewBuilder
+    private func guideLines(size: CGSize) -> some View {
+        if dragging != nil {
+            ZStack(alignment: .topLeading) {
+                ForEach(guides.verticalGuides, id: \.self) { fraction in
+                    Rectangle()
+                        .fill(Color.yellow.opacity(0.9))
+                        .frame(width: 1, height: size.height)
+                        .offset(x: size.width * fraction)
+                }
+                ForEach(guides.horizontalGuides, id: \.self) { fraction in
+                    Rectangle()
+                        .fill(Color.yellow.opacity(0.9))
+                        .frame(width: size.width, height: 1)
+                        .offset(y: size.height * fraction)
+                }
+            }
+            .frame(width: size.width, height: size.height, alignment: .topLeading)
+            .allowsHitTesting(false)
+        }
     }
 
     // MARK: Gestures
 
-    /// One finger moves the text. The anchor is a fraction of the space the
-    /// block can occupy, so the drag is measured against that space rather
-    /// than the whole widget — otherwise the block would stop responding
-    /// before the finger reached the edge.
-    private func textDrag(in size: CGSize) -> some Gesture {
-        DragGesture(minimumDistance: 2)
+    /// One finger: picks up the piece under it, then moves that piece alone.
+    private func moveGesture(in size: CGSize) -> some Gesture {
+        DragGesture(minimumDistance: 0)
             .onChanged { value in
-                let start = dragStartAnchor ?? settings.anchor
-                if dragStartAnchor == nil { dragStartAnchor = start }
+                if dragging == nil {
+                    guard let hit = component(at: value.startLocation) else {
+                        selection = nil
+                        return
+                    }
+                    selection = hit
+                    dragging = hit
+                    dragStartAnchor = live.anchor(for: hit)
+                }
+                guard let dragging, let start = dragStartAnchor else { return }
+                let content = groupSize(containing: dragging)
                 let available = CGSize(
-                    width: max(1, size.width - contentSize.width - Self.inset * 2),
-                    height: max(1, size.height - contentSize.height - Self.inset * 2)
+                    width: max(1, size.width - content.width),
+                    height: max(1, size.height - content.height)
                 )
-                liveAnchor = PhotoWidgetSettings.Anchor(
+                let moved = PhotoWidgetSettings.Anchor(
                     x: start.x + value.translation.width / available.width,
                     y: start.y + value.translation.height / available.height
                 )
+                let others = componentsShown
+                    .filter { $0 != dragging }
+                    .map { live.anchor(for: $0) }
+                let snapped = PhotoWidgetSnapping.snap(moved, others: others)
+                guides = snapped
+                liveAnchor = snapped.anchor
             }
             .onEnded { _ in
+                if let dragging, let liveAnchor {
+                    onMove(dragging, liveAnchor)
+                }
+                dragging = nil
                 dragStartAnchor = nil
-                if let liveAnchor { onAnchorChange(liveAnchor) }
                 liveAnchor = nil
+                guides = PhotoWidgetSnapping.Result(
+                    anchor: .center, verticalGuides: [], horizontalGuides: []
+                )
             }
     }
 
-    private var photoPinch: some Gesture {
+    /// Pinch resizes the selected piece; with nothing selected it zooms the
+    /// photo. One gesture, two jobs, told apart by whether the user has picked
+    /// a piece to work on — which the outline makes visible.
+    private var pinchGesture: some Gesture {
         MagnifyGesture(minimumScaleDelta: 0.01)
             .onChanged { value in
-                let start = pinchStartScale ?? settings.photoScale
-                if pinchStartScale == nil { pinchStartScale = start }
-                livePhotoScale = min(
-                    max(start * value.magnification, 1),
-                    PhotoWidgetSettings.maximumPhotoScale
-                )
+                if let selection {
+                    let base = selection == .time ? settings.timeSize : settings.dateSize
+                    let start = resizeStartSize ?? base
+                    if resizeStartSize == nil { resizeStartSize = start }
+                    let range = selection == .time
+                        ? PhotoWidgetSettings.timeSizeRange
+                        : PhotoWidgetSettings.dateSizeRange
+                    liveSize = min(max(start * value.magnification, range.lowerBound), range.upperBound)
+                } else {
+                    let start = pinchStartScale ?? settings.photoScale
+                    if pinchStartScale == nil { pinchStartScale = start }
+                    livePhotoScale = min(
+                        max(start * value.magnification, 1),
+                        PhotoWidgetSettings.maximumPhotoScale
+                    )
+                }
             }
             .onEnded { _ in
+                if let selection, let liveSize {
+                    onResize(selection, liveSize)
+                }
+                resizeStartSize = nil
+                liveSize = nil
                 pinchStartScale = nil
                 commitPhotoTransform()
             }
     }
 
-    /// Two fingers move the photo under the text. It does nothing at 1×
-    /// because an unzoomed photo already fills the widget and has nothing to
-    /// give away.
     private func commitPhotoTransform() {
         guard livePhotoScale != nil || livePhotoOffset != nil else { return }
         let scale = livePhotoScale ?? settings.photoScale
@@ -176,24 +282,46 @@ struct PhotoWidgetPreview: View {
         onPhotoTransformChange(scale, offset.x, offset.y)
     }
 
+    /// Two fingers move the photo — including at 1×, where the fill has
+    /// already cropped part of it away and that part is what the drag brings
+    /// into view.
     private func photoPan(in size: CGSize) -> some Gesture {
         DragGesture(minimumDistance: 4)
             .simultaneously(with: MagnifyGesture(minimumScaleDelta: 0))
             .onChanged { value in
-                guard let drag = value.first, live.photoScale > 1 else { return }
+                guard let drag = value.first, image != nil else { return }
+                let slack = PhotoWidgetImageLayer.slack(
+                    in: size, aspectRatio: imageAspectRatio, scale: live.photoScale
+                )
+                guard slack.width > 0.5 || slack.height > 0.5 else { return }
                 let start = panStartOffset ?? CGPoint(x: live.photoOffsetX, y: live.photoOffsetY)
                 if panStartOffset == nil { panStartOffset = start }
-                let slackX = max(1, size.width * (live.photoScale - 1) / 2)
-                let slackY = max(1, size.height * (live.photoScale - 1) / 2)
                 livePhotoOffset = CGPoint(
-                    x: min(max(start.x + drag.translation.width / slackX, -1), 1),
-                    y: min(max(start.y + drag.translation.height / slackY, -1), 1)
+                    x: min(max(start.x + drag.translation.width / max(1, slack.width), -1), 1),
+                    y: min(max(start.y + drag.translation.height / max(1, slack.height), -1), 1)
                 )
             }
             .onEnded { _ in
                 panStartOffset = nil
                 commitPhotoTransform()
             }
+    }
+
+    // MARK: Hit testing
+
+    private func component(at point: CGPoint) -> PhotoWidgetComponent? {
+        // Last drawn wins, so a piece dragged on top of another is the one
+        // picked up.
+        for entry in groupFrames.values.sorted(by: { $0.rect.minY > $1.rect.minY }) {
+            if entry.rect.insetBy(dx: -6, dy: -6).contains(point) {
+                return entry.components.first
+            }
+        }
+        return nil
+    }
+
+    private func groupSize(containing component: PhotoWidgetComponent) -> CGSize {
+        groupFrames.values.first { $0.components.contains(component) }?.rect.size ?? .zero
     }
 }
 

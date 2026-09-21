@@ -216,8 +216,13 @@ struct PhotoWidgetSettings: Codable, Equatable {
     /// `#RRGGBB`. Stored as a string because the file is read by two targets
     /// and neither should have to agree on a colour type.
     var textColorHex = "#FFFFFF"
-    /// Where the block of text sits, dragged by the user on the preview.
+    /// Where the block of text sits, dragged by the user on the preview. Any
+    /// piece without a position of its own sits here, which is what keeps a
+    /// widget set up before the pieces could be separated looking the same.
     var anchor: Anchor = .bottomLeading
+    /// Per-piece positions, keyed by `PhotoWidgetComponent.rawValue`. Pieces
+    /// left out share `anchor` and stack together.
+    var componentAnchors: [String: Anchor] = [:]
     var legibility: Legibility = .shadow
     /// 0…1 — how much the photo is dimmed under the whole widget.
     var photoDimming: Double = 0.1
@@ -275,6 +280,7 @@ struct PhotoWidgetSettings: Codable, Equatable {
         usesMonospacedDigits = value(.usesMonospacedDigits, defaults.usesMonospacedDigits)
         textColorHex = value(.textColorHex, defaults.textColorHex)
         anchor = value(.anchor, defaults.anchor)
+        componentAnchors = value(.componentAnchors, defaults.componentAnchors)
         legibility = value(.legibility, defaults.legibility)
         photoDimming = value(.photoDimming, defaults.photoDimming)
         appliedIntentSignature = try? container.decodeIfPresent(String.self, forKey: .appliedIntentSignature)
@@ -315,6 +321,7 @@ struct PhotoWidgetSettings: Codable, Equatable {
         try container.encode(usesMonospacedDigits, forKey: .usesMonospacedDigits)
         try container.encode(textColorHex, forKey: .textColorHex)
         try container.encode(anchor, forKey: .anchor)
+        try container.encode(componentAnchors, forKey: .componentAnchors)
         try container.encode(legibility, forKey: .legibility)
         try container.encode(photoDimming, forKey: .photoDimming)
         try container.encode(photoScale, forKey: .photoScale)
@@ -332,7 +339,7 @@ struct PhotoWidgetSettings: Codable, Equatable {
         case temperatureUnit, showsHighLow, showsWeatherPlace
         case fontPostScriptName, fontDisplayName, timeSize, dateSize
         case isBold, usesMonospacedDigits, textColorHex
-        case anchor, legibility, photoDimming
+        case anchor, componentAnchors, legibility, photoDimming
         case photoScale, photoOffsetX, photoOffsetY
         case appliedIntentSignature
         case placement
@@ -351,6 +358,26 @@ struct PhotoWidgetSettings: Codable, Equatable {
         case "bottomLeading": .bottomLeading
         default: nil
         }
+    }
+
+    /// Where one piece sits: its own position, or the shared one.
+    func anchor(for component: PhotoWidgetComponent) -> Anchor {
+        componentAnchors[component.rawValue] ?? anchor
+    }
+
+    /// Moves one piece. The first piece moved away from the shared position
+    /// pins every other piece where it already was, so dragging the clock does
+    /// not drag the date along behind it.
+    mutating func setAnchor(_ newAnchor: Anchor, for component: PhotoWidgetComponent, in components: [PhotoWidgetComponent]) {
+        for other in components where componentAnchors[other.rawValue] == nil {
+            componentAnchors[other.rawValue] = anchor
+        }
+        componentAnchors[component.rawValue] = newAnchor
+    }
+
+    /// Back to one stack at the shared position.
+    mutating func resetComponentAnchors() {
+        componentAnchors = [:]
     }
 
     static let `default` = PhotoWidgetSettings()
