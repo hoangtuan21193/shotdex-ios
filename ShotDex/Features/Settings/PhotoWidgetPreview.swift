@@ -29,16 +29,18 @@ struct PhotoWidgetPreview: View {
     let onResize: (PhotoWidgetComponent, Double) -> Void
     let onPhotoTransformChange: (_ scale: Double, _ offsetX: Double, _ offsetY: Double) -> Void
 
-    /// Where each group landed, for hit-testing a touch.
-    @State private var groupFrames: [String: (components: [PhotoWidgetComponent], rect: CGRect)] = [:]
+    /// Where each individual line landed, for hit-testing a touch. Per line,
+    /// not per stack: hit-testing the stack meant tapping the date selected
+    /// the clock, and nothing below the first line could be reached at all.
+    @State private var componentFrames: [PhotoWidgetComponent: CGRect] = [:]
     @State private var dragging: PhotoWidgetComponent?
     @State private var dragStartAnchor: PhotoWidgetSettings.Anchor?
     @State private var liveAnchor: PhotoWidgetSettings.Anchor?
     @State private var guides = PhotoWidgetSnapping.Result(
         anchor: .center, verticalGuides: [], horizontalGuides: []
     )
-    @State private var resizeStartSize: Double?
-    @State private var liveSize: Double?
+    @State private var resizeStartScale: Double?
+    @State private var liveScale: Double?
     @State private var pinchStartScale: Double?
     @State private var panStartOffset: CGPoint?
     @State private var livePhotoScale: Double?
@@ -51,8 +53,8 @@ struct PhotoWidgetPreview: View {
         if let dragging, let liveAnchor {
             live.setAnchor(liveAnchor, for: dragging, in: componentsShown)
         }
-        if let selection, let liveSize {
-            if selection == .time { live.timeSize = liveSize } else { live.dateSize = liveSize }
+        if let selection, let liveScale {
+            live.setScale(liveScale, for: selection)
         }
         if let livePhotoScale { live.photoScale = livePhotoScale }
         if let livePhotoOffset {
@@ -79,14 +81,13 @@ struct PhotoWidgetPreview: View {
                     weather: weather,
                     calendarSnapshot: calendarSnapshot,
                     isCompact: family.isCompact,
-                    overlay: { components, contentSize in
-                        selectionOverlay(for: components, size: contentSize)
-                    },
-                    onLayout: { components, rect in
-                        groupFrames[PhotoWidgetLayout.key(for: live.anchor(for: components[0]))] =
-                            (components, rect)
-                    }
+                    overlay: { _, _ in EmptyView() }
                 )
+                .coordinateSpace(name: PhotoWidgetFaceSpace.name)
+                .onPreferenceChange(PhotoWidgetComponentFrames.self) { frames in
+                    componentFrames = frames
+                }
+                selectionOverlay()
                 guideLines(size: size)
             }
             .frame(width: size.width, height: size.height)
@@ -129,23 +130,27 @@ struct PhotoWidgetPreview: View {
         .frame(width: size.width, height: size.height)
     }
 
-    /// A dashed outline and four corner dots on the selected piece: without
-    /// them nothing on the preview says it can be touched at all.
+    /// A dashed outline and four corner dots around the selected line.
+    ///
+    /// Drawn from the line's measured frame rather than as an overlay inside
+    /// the stack, so it marks the one line the finger will move — which is
+    /// what makes "select this bit" believable.
     @ViewBuilder
-    private func selectionOverlay(for components: [PhotoWidgetComponent], size: CGSize) -> some View {
-        if let selection, components.contains(selection) {
+    private func selectionOverlay() -> some View {
+        if let selection, let rect = componentFrames[selection] {
             let isMoving = dragging == selection
             RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .strokeBorder(
-                    Color.white.opacity(isMoving ? 0.95 : 0.8),
+                    Color.white.opacity(isMoving ? 0.95 : 0.85),
                     style: StrokeStyle(lineWidth: 1, dash: isMoving ? [] : [4, 3])
                 )
                 .background(
                     RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(.white.opacity(isMoving ? 0.12 : 0.06))
+                        .fill(.white.opacity(isMoving ? 0.16 : 0.08))
                 )
                 .overlay { handles }
-                .padding(-3)
+                .frame(width: rect.width + 8, height: rect.height + 8)
+                .position(x: rect.midX, y: rect.midY)
                 .allowsHitTesting(false)
         }
     }
@@ -165,7 +170,7 @@ struct PhotoWidgetPreview: View {
     private func handleDot(_ alignment: Alignment) -> some View {
         Circle()
             .fill(.white)
-            .frame(width: 6, height: 6)
+            .frame(width: 7, height: 7)
             .shadow(color: .black.opacity(0.5), radius: 1)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: alignment)
     }
@@ -210,7 +215,7 @@ struct PhotoWidgetPreview: View {
                     dragStartAnchor = live.anchor(for: hit)
                 }
                 guard let dragging, let start = dragStartAnchor else { return }
-                let content = groupSize(containing: dragging)
+                let content = componentFrames[dragging]?.size ?? .zero
                 let available = CGSize(
                     width: max(1, size.width - content.width),
                     height: max(1, size.height - content.height)
@@ -246,13 +251,14 @@ struct PhotoWidgetPreview: View {
         MagnifyGesture(minimumScaleDelta: 0.01)
             .onChanged { value in
                 if let selection {
-                    let base = selection == .time ? settings.timeSize : settings.dateSize
-                    let start = resizeStartSize ?? base
-                    if resizeStartSize == nil { resizeStartSize = start }
-                    let range = selection == .time
-                        ? PhotoWidgetSettings.timeSizeRange
-                        : PhotoWidgetSettings.dateSizeRange
-                    liveSize = min(max(start * value.magnification, range.lowerBound), range.upperBound)
+                    // Every line resizes, not just the two with sliders: the
+                    // weather block and the calendar had no size of their own.
+                    let start = resizeStartScale ?? settings.scale(for: selection)
+                    if resizeStartScale == nil { resizeStartScale = start }
+                    let range = PhotoWidgetSettings.componentScaleRange
+                    liveScale = min(
+                        max(start * value.magnification, range.lowerBound), range.upperBound
+                    )
                 } else {
                     let start = pinchStartScale ?? settings.photoScale
                     if pinchStartScale == nil { pinchStartScale = start }
@@ -263,11 +269,11 @@ struct PhotoWidgetPreview: View {
                 }
             }
             .onEnded { _ in
-                if let selection, let liveSize {
-                    onResize(selection, liveSize)
+                if let selection, let liveScale {
+                    onResize(selection, liveScale)
                 }
-                resizeStartSize = nil
-                liveSize = nil
+                resizeStartScale = nil
+                liveScale = nil
                 pinchStartScale = nil
                 commitPhotoTransform()
             }
@@ -310,19 +316,9 @@ struct PhotoWidgetPreview: View {
     // MARK: Hit testing
 
     private func component(at point: CGPoint) -> PhotoWidgetComponent? {
-        // Last drawn wins, so a piece dragged on top of another is the one
-        // picked up.
-        for entry in groupFrames.values.sorted(by: { $0.rect.minY > $1.rect.minY }) {
-            if entry.rect.insetBy(dx: -6, dy: -6).contains(point) {
-                return entry.components.first
-            }
-        }
-        return nil
+        PhotoWidgetHitTest.component(at: point, frames: componentFrames)
     }
 
-    private func groupSize(containing component: PhotoWidgetComponent) -> CGSize {
-        groupFrames.values.first { $0.components.contains(component) }?.rect.size ?? .zero
-    }
 }
 
 /// The widget sizes the preview can be shown at. The point sizes are the ones

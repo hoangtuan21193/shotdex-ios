@@ -22,24 +22,31 @@ struct PhotoWidgetFace: View {
     /// a widget that has never been rearranged still does.
     var components: [PhotoWidgetComponent]?
 
-    private var headlineSize: CGFloat { settings.scaledHeadlineSize(forWidgetWidth: width) }
+    private var headlineSize: CGFloat {
+        settings.scaledHeadlineSize(forWidgetWidth: width) * settings.scale(for: .time)
+    }
     private var supportingSize: CGFloat { settings.scaledSupportingSize(forWidgetWidth: width) }
+    private func supportingSize(for component: PhotoWidgetComponent) -> CGFloat {
+        supportingSize * settings.scale(for: component)
+    }
 
     var body: some View {
         VStack(alignment: horizontalAlignment, spacing: 4) {
             if draws(.time) {
                 Text(PhotoWidgetFormat.timeString(for: date, settings: settings))
                     .font(font(size: headlineSize, isBold: settings.isBold))
+                    .reportsComponentFrame(.time)
             }
             if draws(.date) {
                 Text(PhotoWidgetFormat.dateString(for: date, settings: settings))
-                    .font(font(size: supportingSize, isBold: false))
+                    .font(font(size: supportingSize(for: .date), isBold: false))
+                    .reportsComponentFrame(.date)
             }
             if draws(.weather) {
-                weatherRow
+                weatherRow.reportsComponentFrame(.weather)
             }
             if draws(.calendar) {
-                calendarRows
+                calendarRows.reportsComponentFrame(.calendar)
             }
             if isEmpty {
                 // A widget with every row off would be an empty rectangle the
@@ -97,7 +104,7 @@ struct PhotoWidgetFace: View {
                     )
                     .font(font(size: weatherTemperatureSize, isBold: settings.isBold))
                     Text(WeatherFormat.conditionName(code: weather.conditionCode))
-                        .font(font(size: supportingSize, isBold: false))
+                        .font(font(size: supportingSize(for: .weather), isBold: false))
                         .lineLimit(1)
                 }
                 if settings.showsHighLow,
@@ -107,19 +114,19 @@ struct PhotoWidgetFace: View {
                        unit: settings.temperatureUnit
                    ) {
                     Text(highLow)
-                        .font(font(size: supportingSize * 0.9, isBold: false))
+                        .font(font(size: supportingSize(for: .weather) * 0.9, isBold: false))
                         .monospacedDigit()
                 }
                 if settings.showsWeatherPlace, let place = weather.placeName {
                     Text(place)
-                        .font(font(size: supportingSize * 0.9, isBold: false))
+                        .font(font(size: supportingSize(for: .weather) * 0.9, isBold: false))
                         .lineLimit(1)
                         .opacity(0.9)
                 }
             }
         } else {
             Text(weather == nil ? "Weather not set up" : "Weather out of date")
-                .font(font(size: supportingSize, isBold: false))
+                .font(font(size: supportingSize(for: .weather), isBold: false))
                 .opacity(0.9)
         }
     }
@@ -127,7 +134,9 @@ struct PhotoWidgetFace: View {
     /// The weather widget's own headline is the temperature, so it takes the
     /// headline size unless the clock is already using it.
     private var weatherTemperatureSize: CGFloat {
-        settings.showsTime ? supportingSize * 1.4 : headlineSize
+        settings.showsTime
+            ? supportingSize(for: .weather) * 1.4
+            : settings.scaledHeadlineSize(forWidgetWidth: width) * settings.scale(for: .weather)
     }
 
     // MARK: Calendar
@@ -144,7 +153,7 @@ struct PhotoWidgetFace: View {
             MonthGridView(
                 date: date,
                 settings: settings,
-                size: supportingSize,
+                size: supportingSize(for: .calendar),
                 fontPostScriptName: settings.fontPostScriptName,
                 accent: WidgetTextColor.color(hex: settings.textColorHex)
             )
@@ -161,7 +170,7 @@ struct PhotoWidgetFace: View {
 
     /// The grid is a table of digits, so it is sized by its content rather
     /// than stretched across a wide widget.
-    private var gridWidth: CGFloat { min(rowWidth, 7 * (supportingSize * 1.9)) }
+    private var gridWidth: CGFloat { min(rowWidth, 7 * (supportingSize(for: .calendar) * 1.9)) }
 
     /// Width available to a line of text: the widget less the margins the
     /// system gives its content, and less the preview's own padding.
@@ -191,7 +200,7 @@ struct PhotoWidgetFace: View {
                                 .fill(WidgetTextColor.color(hex: event.colorHex ?? settings.textColorHex))
                                 .frame(width: 5, height: 5)
                             Text(CalendarFormat.timeString(for: event))
-                                .font(font(size: supportingSize * 0.9, isBold: false))
+                                .font(font(size: supportingSize(for: .calendar) * 0.9, isBold: false))
                                 .monospacedDigit()
                                 .opacity(0.9)
                                 .fixedSize()
@@ -201,7 +210,7 @@ struct PhotoWidgetFace: View {
                             // past both edges of the widget, taking the
                             // colour dot off the left with it.
                             Text(event.title)
-                                .font(font(size: supportingSize * 0.9, isBold: false))
+                                .font(font(size: supportingSize(for: .calendar) * 0.9, isBold: false))
                                 .lineLimit(1)
                                 .truncationMode(.tail)
                         }
@@ -212,18 +221,18 @@ struct PhotoWidgetFace: View {
                     }
                     if visible.remaining > 0 {
                         Text("+\(visible.remaining) more")
-                            .font(font(size: supportingSize * 0.85, isBold: false))
+                            .font(font(size: supportingSize(for: .calendar) * 0.85, isBold: false))
                             .opacity(0.85)
                     }
                 }
             } else {
                 Text(snapshot.events(on: date) == nil ? "Open ShotDex for today" : "Nothing on today")
-                    .font(font(size: supportingSize * 0.9, isBold: false))
+                    .font(font(size: supportingSize(for: .calendar) * 0.9, isBold: false))
                     .opacity(0.9)
             }
         } else {
             Text("Calendar access is off")
-                .font(font(size: supportingSize * 0.9, isBold: false))
+                .font(font(size: supportingSize(for: .calendar) * 0.9, isBold: false))
                 .opacity(0.9)
         }
     }
@@ -429,5 +438,40 @@ struct PhotoWidgetImageLayer: View {
             width: max(0, (filled.width * scale - size.width) / 2),
             height: max(0, (filled.height * scale - size.height) / 2)
         )
+    }
+}
+
+/// Where each piece of the face ended up, so the editor can put a finger on
+/// the exact line rather than on the stack it belongs to.
+///
+/// Selecting used to hit-test against the group, which meant tapping the date
+/// selected the clock — the first piece in the stack — and there was no way to
+/// reach anything below the first line at all.
+struct PhotoWidgetComponentFrames: PreferenceKey {
+    static let defaultValue: [PhotoWidgetComponent: CGRect] = [:]
+
+    static func reduce(
+        value: inout [PhotoWidgetComponent: CGRect],
+        nextValue: () -> [PhotoWidgetComponent: CGRect]
+    ) {
+        value.merge(nextValue()) { _, new in new }
+    }
+}
+
+/// The coordinate space every reported frame is measured in.
+enum PhotoWidgetFaceSpace {
+    static let name = "photoWidgetFace"
+}
+
+extension View {
+    func reportsComponentFrame(_ component: PhotoWidgetComponent) -> some View {
+        background {
+            GeometryReader { proxy in
+                Color.clear.preference(
+                    key: PhotoWidgetComponentFrames.self,
+                    value: [component: proxy.frame(in: .named(PhotoWidgetFaceSpace.name))]
+                )
+            }
+        }
     }
 }

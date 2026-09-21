@@ -223,6 +223,10 @@ struct PhotoWidgetSettings: Codable, Equatable {
     /// Per-piece positions, keyed by `PhotoWidgetComponent.rawValue`. Pieces
     /// left out share `anchor` and stack together.
     var componentAnchors: [String: Anchor] = [:]
+    /// Per-piece size, as a multiplier on the type sizes. The weather block
+    /// and the calendar had no size of their own before this: the two sliders
+    /// only reached the clock and the supporting lines.
+    var componentScales: [String: Double] = [:]
     var legibility: Legibility = .shadow
     /// 0…1 — how much the photo is dimmed under the whole widget.
     var photoDimming: Double = 0.1
@@ -281,6 +285,7 @@ struct PhotoWidgetSettings: Codable, Equatable {
         textColorHex = value(.textColorHex, defaults.textColorHex)
         anchor = value(.anchor, defaults.anchor)
         componentAnchors = value(.componentAnchors, defaults.componentAnchors)
+        componentScales = value(.componentScales, defaults.componentScales)
         legibility = value(.legibility, defaults.legibility)
         photoDimming = value(.photoDimming, defaults.photoDimming)
         appliedIntentSignature = try? container.decodeIfPresent(String.self, forKey: .appliedIntentSignature)
@@ -322,6 +327,7 @@ struct PhotoWidgetSettings: Codable, Equatable {
         try container.encode(textColorHex, forKey: .textColorHex)
         try container.encode(anchor, forKey: .anchor)
         try container.encode(componentAnchors, forKey: .componentAnchors)
+        try container.encode(componentScales, forKey: .componentScales)
         try container.encode(legibility, forKey: .legibility)
         try container.encode(photoDimming, forKey: .photoDimming)
         try container.encode(photoScale, forKey: .photoScale)
@@ -339,7 +345,7 @@ struct PhotoWidgetSettings: Codable, Equatable {
         case temperatureUnit, showsHighLow, showsWeatherPlace
         case fontPostScriptName, fontDisplayName, timeSize, dateSize
         case isBold, usesMonospacedDigits, textColorHex
-        case anchor, componentAnchors, legibility, photoDimming
+        case anchor, componentAnchors, componentScales, legibility, photoDimming
         case photoScale, photoOffsetX, photoOffsetY
         case appliedIntentSignature
         case placement
@@ -375,10 +381,33 @@ struct PhotoWidgetSettings: Codable, Equatable {
         componentAnchors[component.rawValue] = newAnchor
     }
 
-    /// Back to one stack at the shared position.
+    /// Back to one stack at the shared position, at the sizes the sliders set.
     mutating func resetComponentAnchors() {
         componentAnchors = [:]
+        componentScales = [:]
     }
+
+    /// How much bigger or smaller one piece is drawn than the type sizes say.
+    func scale(for component: PhotoWidgetComponent) -> Double {
+        min(max(componentScales[component.rawValue] ?? 1, Self.componentScaleRange.lowerBound),
+            Self.componentScaleRange.upperBound)
+    }
+
+    mutating func setScale(_ scale: Double, for component: PhotoWidgetComponent) {
+        let clamped = min(max(scale, Self.componentScaleRange.lowerBound),
+                          Self.componentScaleRange.upperBound)
+        // A piece at its natural size stores nothing, so "reset" is a delete
+        // and the file does not fill with 1.0s.
+        if abs(clamped - 1) < 0.01 {
+            componentScales.removeValue(forKey: component.rawValue)
+        } else {
+            componentScales[component.rawValue] = clamped
+        }
+    }
+
+    /// Half size to double. Past that a line either cannot be read or cannot
+    /// fit in the widget it is on.
+    static let componentScaleRange: ClosedRange<Double> = 0.5...2
 
     static let `default` = PhotoWidgetSettings()
 

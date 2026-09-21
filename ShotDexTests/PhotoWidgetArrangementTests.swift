@@ -57,6 +57,73 @@ struct PhotoWidgetArrangementTests {
         #expect(apart.contains { $0.components == [.time] })
     }
 
+    // MARK: Picking a line
+
+    /// The complaint that started this: tapping the date selected the clock,
+    /// because the hit test ran against the stack and took its first line.
+    @Test func aTapPicksTheLineUnderIt() {
+        let frames: [PhotoWidgetComponent: CGRect] = [
+            .time: CGRect(x: 10, y: 10, width: 80, height: 30),
+            .date: CGRect(x: 10, y: 44, width: 90, height: 14),
+            .weather: CGRect(x: 10, y: 62, width: 120, height: 40),
+        ]
+        #expect(PhotoWidgetHitTest.component(at: CGPoint(x: 40, y: 20), frames: frames) == .time)
+        #expect(PhotoWidgetHitTest.component(at: CGPoint(x: 40, y: 50), frames: frames) == .date)
+        #expect(PhotoWidgetHitTest.component(at: CGPoint(x: 40, y: 80), frames: frames) == .weather)
+    }
+
+    /// A line of text is thin. A touch just off one still picks it, or
+    /// selecting the date on a 158pt preview is a game of darts.
+    @Test func aTapJustOffALinePicksTheNearestOne() {
+        let frames: [PhotoWidgetComponent: CGRect] = [
+            .date: CGRect(x: 10, y: 44, width: 90, height: 14),
+        ]
+        #expect(PhotoWidgetHitTest.component(at: CGPoint(x: 40, y: 62), frames: frames) == .date)
+        // Far away is still nothing: tapping the empty half of a widget
+        // deselects rather than grabbing whatever is closest.
+        #expect(PhotoWidgetHitTest.component(at: CGPoint(x: 40, y: 200), frames: frames) == nil)
+    }
+
+    /// Where a small line sits on top of a big block, the small one wins: it
+    /// is the harder target, and the block can be grabbed anywhere else.
+    @Test func theSmallerLineWinsWhereTwoOverlap() {
+        let frames: [PhotoWidgetComponent: CGRect] = [
+            .calendar: CGRect(x: 0, y: 0, width: 150, height: 120),
+            .time: CGRect(x: 20, y: 20, width: 60, height: 24),
+        ]
+        #expect(PhotoWidgetHitTest.component(at: CGPoint(x: 40, y: 30), frames: frames) == .time)
+        #expect(PhotoWidgetHitTest.component(at: CGPoint(x: 120, y: 100), frames: frames) == .calendar)
+    }
+
+    // MARK: Sizing one line
+
+    /// The two sliders only ever reached the clock and the supporting lines,
+    /// so the weather block and the calendar could not be resized at all.
+    @Test func everyLineHasASizeOfItsOwn() {
+        var settings = PhotoWidgetSettings.default(for: .combined)
+        #expect(settings.scale(for: .weather) == 1)
+
+        settings.setScale(1.4, for: .weather)
+        #expect(settings.scale(for: .weather) == 1.4)
+        #expect(settings.scale(for: .calendar) == 1)
+
+        // Out of range is clamped rather than refused.
+        settings.setScale(9, for: .calendar)
+        #expect(settings.scale(for: .calendar) == PhotoWidgetSettings.componentScaleRange.upperBound)
+        settings.setScale(0.01, for: .calendar)
+        #expect(settings.scale(for: .calendar) == PhotoWidgetSettings.componentScaleRange.lowerBound)
+    }
+
+    /// Back at its natural size, a line stores nothing — otherwise the file
+    /// fills with 1.0s and "has this been changed" stops being answerable.
+    @Test func aLineBackAtItsNaturalSizeStoresNothing() {
+        var settings = PhotoWidgetSettings.default(for: .clock)
+        settings.setScale(1.5, for: .time)
+        #expect(!settings.componentScales.isEmpty)
+        settings.setScale(1, for: .time)
+        #expect(settings.componentScales.isEmpty)
+    }
+
     // MARK: Guides
 
     @Test func theMiddlePullsAPieceThatIsNearlyThere() {

@@ -160,10 +160,8 @@ struct PhotoWidgetSettingsScreen: View {
                         )
                     }
                 },
-                onResize: { component, size in
-                    store.update(kind) {
-                        if component == .time { $0.timeSize = size } else { $0.dateSize = size }
-                    }
+                onResize: { component, scale in
+                    store.update(kind) { $0.setScale(scale, for: component) }
                 },
                 onPhotoTransformChange: { scale, offsetX, offsetY in
                     store.update(kind) {
@@ -183,6 +181,11 @@ struct PhotoWidgetSettingsScreen: View {
             .pickerStyle(.segmented)
             .frame(maxWidth: 329)
 
+            // Aiming at a line of text on a 158pt preview is a poor way to
+            // choose one. These chips select the same thing without aiming,
+            // and they double as the list of what a widget is made of.
+            elementChips
+
             Text(hintText)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
@@ -197,9 +200,37 @@ struct PhotoWidgetSettingsScreen: View {
 
     /// Says what the finger under it can do, and changes as the user selects
     /// something — a preview with no instructions reads as a picture.
+    private var elementChips: some View {
+        HStack(spacing: AppTheme.Spacing.sm) {
+            ForEach(PhotoWidgetComponent.components(for: kind, settings: settings)) { component in
+                let isSelected = selectedComponent == component
+                Button {
+                    selectedComponent = isSelected ? nil : component
+                } label: {
+                    Text(component.title)
+                        .font(.caption.weight(isSelected ? .semibold : .regular))
+                        .padding(.horizontal, 12)
+                        .frame(height: 32)
+                        .background(
+                            isSelected ? Color.accentColor.opacity(0.18) : Color(.secondarySystemFill),
+                            in: Capsule()
+                        )
+                        .overlay(
+                            Capsule().strokeBorder(
+                                isSelected ? Color.accentColor : .clear, lineWidth: 1
+                            )
+                        )
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
     private var hintText: String {
         if let selectedComponent {
-            return "\(selectedComponent.title) selected. Drag to move it, pinch to resize it."
+            return "\(selectedComponent.title) selected. Drag it on the preview, pinch to resize, or use the controls below."
         }
         return isNoneSource
             ? "Tap a line to select it, then drag to move or pinch to resize. Choose a photo below to place it behind."
@@ -545,20 +576,19 @@ struct PhotoWidgetSettingsScreen: View {
             if let selectedComponent {
                 LabeledContent("Selected", value: selectedComponent.title)
                 LabeledContent("Position", value: anchorLabel(for: selectedComponent))
+                nudgePad(for: selectedComponent)
+                sizeRow(for: selectedComponent)
                 Button("Centre \(selectedComponent.title)") {
-                    store.update(kind) {
-                        $0.setAnchor(
-                            .center,
-                            for: selectedComponent,
-                            in: PhotoWidgetComponent.components(for: kind, settings: $0)
-                        )
-                    }
+                    move(selectedComponent, to: .center)
                 }
                 Button("Deselect") { self.selectedComponent = nil }
             } else {
                 LabeledContent("Text Position", value: anchorLabel(for: nil))
+                Text("Pick a line above to move or resize it on its own.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
-            if !settings.componentAnchors.isEmpty {
+            if !settings.componentAnchors.isEmpty || !settings.componentScales.isEmpty {
                 Button("Stack Everything Together") {
                     store.update(kind) { $0.resetComponentAnchors() }
                     selectedComponent = nil
@@ -579,7 +609,77 @@ struct PhotoWidgetSettingsScreen: View {
         } header: {
             Text("Arrangement")
         } footer: {
-            Text("Each line is placed on its own: tap it on the preview, then drag it anywhere or pinch to resize it. Guides appear when it lines up with the middle, an edge, or another line. Two fingers move and zoom the photo behind.")
+            Text("Drag a line on the preview to move it, and pinch it to resize. Guides appear when it lines up with the middle, an edge, or another line. The arrows below move it a step at a time, for when a finger is not precise enough. Two fingers move and zoom the photo behind.")
+        }
+    }
+
+    /// Four arrows and a centre. A drag is faster; this is what makes the last
+    /// two percent reachable, and the only way to place a line with the
+    /// keyboard or with VoiceOver.
+    private func nudgePad(for component: PhotoWidgetComponent) -> some View {
+        let anchor = settings.anchor(for: component)
+        return VStack(spacing: 6) {
+            nudgeButton("chevron.up", "Move up") {
+                move(component, to: .init(x: anchor.x, y: anchor.y - Self.nudge))
+            }
+            HStack(spacing: 6) {
+                nudgeButton("chevron.left", "Move left") {
+                    move(component, to: .init(x: anchor.x - Self.nudge, y: anchor.y))
+                }
+                nudgeButton("scope", "Centre") { move(component, to: .center) }
+                nudgeButton("chevron.right", "Move right") {
+                    move(component, to: .init(x: anchor.x + Self.nudge, y: anchor.y))
+                }
+            }
+            nudgeButton("chevron.down", "Move down") {
+                move(component, to: .init(x: anchor.x, y: anchor.y + Self.nudge))
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 4)
+    }
+
+    /// A twentieth of the free space: small enough to be a correction, big
+    /// enough that reaching the far side does not take fifty taps.
+    private static let nudge: Double = 0.05
+
+    private func nudgeButton(
+        _ systemImage: String,
+        _ label: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .frame(width: 44, height: 36)
+                .background(Color(.secondarySystemFill), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+
+    private func sizeRow(for component: PhotoWidgetComponent) -> some View {
+        let scale = settings.scale(for: component)
+        return VStack(alignment: .leading, spacing: 4) {
+            LabeledContent("\(component.title) Size", value: "\(Int(scale * 100))%")
+                .monospacedDigit()
+            Slider(
+                value: Binding(
+                    get: { scale },
+                    set: { value in store.update(kind) { $0.setScale(value, for: component) } }
+                ),
+                in: PhotoWidgetSettings.componentScaleRange
+            )
+            .accessibilityLabel("\(component.title) size")
+        }
+    }
+
+    private func move(_ component: PhotoWidgetComponent, to anchor: PhotoWidgetSettings.Anchor) {
+        store.update(kind) {
+            $0.setAnchor(
+                anchor,
+                for: component,
+                in: PhotoWidgetComponent.components(for: kind, settings: $0)
+            )
         }
     }
 
