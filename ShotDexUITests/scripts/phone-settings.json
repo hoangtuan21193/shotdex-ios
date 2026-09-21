@@ -1,0 +1,14 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "tap", "label": "Settings", "type": "button" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "dump", "name": "01-top" },
+    { "action": "screenshot", "name": "01-top" },
+    { "action": "scrollTo", "label": "Support" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "dump", "name": "02-bottom" },
+    { "action": "screenshot", "name": "02-bottom" }
+  ]
+}

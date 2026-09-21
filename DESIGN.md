@@ -119,6 +119,7 @@ Thumbnail trong lưới ảnh: vuông, không bo (do `PhotoGridCollectionView` q
 - **Pill / token:** cao **28** (tầng D, `EditorPillLabel`) hoặc **32** (tầng A/B).
 - **Segmented control:** cao **32**, container `r-sm`+2.
 - **Khoảng trống đáy cho chrome nổi:** `AppTheme.Size.bottomChromeClearance` — **8** trên iOS 26 (thanh tab native tự chừa safe area), **100** trước 26 (tab bar tuỳ biến nổi đè lên nội dung). Màn hình cuộn nào cũng dùng token này, không tự viết nhánh `#available`.
+- **Sidebar màn cài đặt:** `AppTheme.Size.settingsSidebarWidth` = **320**, với `settingsSidebarWidthMin` = **280** và `settingsSidebarWidthMax` = **360** (dùng qua `.navigationSplitViewColumnWidth(min:ideal:max:)`). Cả ba đều có tên vì viết 280/360 thẳng trong file feature là đúng thứ mục này cấm. Con số đo từ Settings của iPadOS: 320pt ở cả iPad 11" dọc 834pt lẫn iPad 13" ngang 1376pt. Xem §10.1f.
 
 ---
 
@@ -249,6 +250,18 @@ Kéo theo:
 - **Thứ app tự làm ra thì để riêng theo công cụ, và luôn hiện**: `Collages` và `Video Projects` là hai hàng cố định trong Utilities, kể cả khi chưa có cái nào — chúng cũng là chỗ **bắt đầu** một cái mới (nút `+` trên toolbar + nút accent trong empty state), nên một hàng rỗng vẫn có việc để làm. Gộp thành một hàng "Creations" đã thử rồi bỏ: cái tên không nói trong đó có gì.
 - **Không đặt tên trùng với album hệ thống**: Media Types có album `Videos` do PhotoKit đặt tên, nghĩa là *cảnh người dùng quay*. Thứ app làm ra phải mang tên khác (`Video Projects`), vì hai hàng cùng chữ "Videos" trong một tab là hai thứ khác hẳn nhau đội cùng một cái tên.
 
+### 10.1f Màn cài đặt ở regular width: `NavigationSplitView` (2026-09-21)
+
+§10.1 mô tả bố cục cho **compact width**. Ở **regular width** thì màn cài đặt đổi vật chứa, không đổi nội dung:
+
+- **Điều kiện là size class, không phải một con số pt**: `horizontalSizeClass == .regular` → `NavigationSplitView` (sidebar + detail); `.compact` (và `nil`) → giữ nguyên `NavigationStack` → `List(.insetGrouped)` của §10.1. Chuẩn đối chiếu là **Settings của iPadOS**, đo trên máy ảo: nó đã hai cột ngay ở iPad 11" **dọc 834pt**, nên một ngưỡng 900pt sẽ để đúng máy đó ở lại layout điện thoại. Hệ quả đã biết và chấp nhận: Split View 1/2 trên iPad 13" (688pt) cũng vào split, detail còn ~368pt — đúng điều Settings hệ thống làm ở cùng bề rộng.
+- **Sidebar rộng 320** (`AppTheme.Size.settingsSidebarWidth`, §6), min 280 / max 360. Số đo từ Settings của iPadOS ở cả 834pt dọc lẫn 1376pt ngang.
+- **Detail không tự giới hạn bề rộng**: `List(.insetGrouped)` trong một pane rộng tự chừa lề (đo được: pane 1044pt → nội dung 844pt). Không viết `frame(maxWidth:)` cho detail pane.
+- **Một nguồn nội dung cho cả hai bố cục**: danh sách mục dựng từ một `CaseIterable`, không viết tay hai lần — cùng luật với `NF-05 §37` ("điện thoại có đủ mọi chức năng của iPad").
+- **Mỗi mục sidebar có một ký hiệu SF Symbols**, và **ô Search đứng đầu sidebar** (cả ở bố cục compact) — đó là hình dạng người dùng đã quen từ Settings hệ thống.
+- **Hàm quyết định bố cục là hàm thuần, có test** (`SettingsLayout.usesSplitView(horizontalSizeClass:)`), không phải một `if` nằm trong `body`: bốn cỡ màn không dựng được trong unit test, một hàm thì dựng được.
+- Mục con mở **trong detail pane** và mỗi pane có `NavigationStack` riêng, nên Back trong detail quay về màn trước **của chính mục đó**, không nhảy về sidebar.
+
 ### 10.2 Màn hình lưới ảnh (tầng B + C)
 Lưới tràn viền, không padding. **Không lưới ảnh nào chèn header ngày** (2026-09-19) — Library, Album, Smart Album và `PhotoListScreen` đều chạy `sectionMode: .flat`, ảnh trôi liền mạch. Ngày của ảnh đang ở mép trên viewport hiện ở **title giữa top bar** (Library) hoặc dòng phụ dưới tên album, do `PhotoGridCollectionView.onVisibleDateChange` đẩy lên. Cấp độ ngày/tháng/năm lấy theo density đã lưu, không theo số cột đã vẽ, để màn rộng không tự nhảy sang gom theo năm. `OnThisDayScreen` vẫn có header vì section của nó là "cùng ngày qua các năm", không phải chia ngày. Chrome nổi đè lên lưới bằng `safeAreaInset(edge:)` hoặc overlay, luôn dùng kính tầng C. Khi vào chế độ chọn: lưới mờ đi, selection bar trượt lên từ đáy.
 
@@ -330,6 +343,7 @@ Một mẫu duy nhất cho Library, Album Detail, Smart Album Detail, On This Da
 - **Lỗi:** `.alert` với tiêu đề danh từ (`"Compression Error"`), nội dung là `error.localizedDescription`, một nút `OK`.
 - **Xác nhận phá hủy:** `.confirmationDialog` với `titleVisibility: .visible`, nút phá hủy `role: .destructive` ghi rõ hậu quả, nút hủy `role: .cancel`.
 - **Animation:** `EditorTheme.animation` (easeOut 0.22) cho đổi trạng thái; `EditorTheme.panelSpring` (spring 0.32/0.85) cho panel trượt. Không tự viết duration khác.
+- **Nháy để chỉ chỗ:** `AppTheme.Motion.searchFlashDuration` = **1,2 s** — thời gian một hàng giữ nền sáng sau khi một kết quả tìm kiếm đưa người đọc tới nó. Đủ lâu để mắt tìm ra hàng trong một danh sách dài, đủ ngắn để không đọc thành trạng thái "đang chọn". Bản thân cú chuyển nền vẫn dùng `Motion.standard`.
 - **Haptic:** `.sensoryFeedback(.selection, trigger:)` khi đổi tab/preset; `.impact` khi kết thúc kéo slider; `.success` khi export xong.
 
 ---

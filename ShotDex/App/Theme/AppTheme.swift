@@ -51,6 +51,16 @@ enum AppTheme {
         static let pillHeightLight: CGFloat = 32
         /// Segmented control height (container radius `Radius.sm` + 2).
         static let segmentedHeight: CGFloat = 32
+        /// Sidebar of a settings-style `NavigationSplitView` (DESIGN.md §10.1f).
+        /// Measured from Settings on iPadOS: 320 at both iPad 11" portrait
+        /// (834pt wide) and iPad 13" landscape (1376pt).
+        static let settingsSidebarWidth: CGFloat = 320
+        /// Floor for the same sidebar. At the narrowest window that still
+        /// reports regular width — iPad 13" in a half Split View, 688pt — the
+        /// detail column keeps 368pt, above the 320pt phone-content floor.
+        static let settingsSidebarWidthMin: CGFloat = 280
+        /// Ceiling for the same sidebar.
+        static let settingsSidebarWidthMax: CGFloat = 360
         /// Clearance a scrolling screen leaves under its content for the
         /// bottom chrome. Pre-iOS 26 the custom tab bar floats over the
         /// content and needs the room; on 26 the native bar reserves its own
@@ -68,6 +78,10 @@ enum AppTheme {
         static let standard = Animation.easeOut(duration: 0.22)
         /// Sliding panels.
         static let panelSpring = Animation.spring(response: 0.32, dampingFraction: 0.85)
+        /// How long a row stays highlighted after a search result sends the
+        /// reader to it (DESIGN.md §11). Long enough for the eye to find the
+        /// row in a long list, short enough not to read as a selection.
+        static let searchFlashDuration: Duration = .milliseconds(1200)
     }
 }
 
