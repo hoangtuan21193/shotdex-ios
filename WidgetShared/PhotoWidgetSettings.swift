@@ -232,6 +232,15 @@ struct PhotoWidgetSettings: Codable, Equatable {
     var photoOffsetX: Double = 0
     var photoOffsetY: Double = 0
 
+    /// The Home Screen answer this widget has already taken in.
+    ///
+    /// The menu out there cannot be cleared by the app, so without this a
+    /// photo picked once would go on overriding every later change made in
+    /// ShotDex. Recorded when the menu's answer is applied, and compared on
+    /// every timeline build: an answer that has not changed is not applied
+    /// again, which leaves the app free to be the newer word.
+    var appliedIntentSignature: String?
+
     init() {}
 
     /// Decoded field by field, with every value falling back to its default.
@@ -268,6 +277,7 @@ struct PhotoWidgetSettings: Codable, Equatable {
         anchor = value(.anchor, defaults.anchor)
         legibility = value(.legibility, defaults.legibility)
         photoDimming = value(.photoDimming, defaults.photoDimming)
+        appliedIntentSignature = try? container.decodeIfPresent(String.self, forKey: .appliedIntentSignature)
         photoScale = max(1, min(value(.photoScale, defaults.photoScale), PhotoWidgetSettings.maximumPhotoScale))
         photoOffsetX = value(.photoOffsetX, defaults.photoOffsetX).clampedToSigned
         photoOffsetY = value(.photoOffsetY, defaults.photoOffsetY).clampedToSigned
@@ -310,6 +320,7 @@ struct PhotoWidgetSettings: Codable, Equatable {
         try container.encode(photoScale, forKey: .photoScale)
         try container.encode(photoOffsetX, forKey: .photoOffsetX)
         try container.encode(photoOffsetY, forKey: .photoOffsetY)
+        try container.encodeIfPresent(appliedIntentSignature, forKey: .appliedIntentSignature)
     }
 
     /// The keys, spelled out because one of them is only ever read: a file
@@ -323,6 +334,7 @@ struct PhotoWidgetSettings: Codable, Equatable {
         case isBold, usesMonospacedDigits, textColorHex
         case anchor, legibility, photoDimming
         case photoScale, photoOffsetX, photoOffsetY
+        case appliedIntentSignature
         case placement
     }
 
@@ -438,6 +450,16 @@ struct PhotoWidgetSettingsFile: Codable, Equatable {
         read()[kind]
     }
 
+    /// Both processes write this file now: the app when its Settings change,
+    /// and the widget when the Home Screen's menu says something new. Last
+    /// writer wins, which is what "change it in either place" means.
+    func write() {
+        guard let container = WidgetSharedContainer.url else { return }
+        try? WidgetSharedContainer.encode(
+            self, to: container.appendingPathComponent(Self.fileName)
+        )
+    }
+
     /// The first version of this feature shipped a clock and nothing else, in
     /// `clock-settings.json`. A user who set that clock up keeps it.
     private static func migratedFromClockOnlyFile(in container: URL) -> PhotoWidgetSettingsFile? {
@@ -537,6 +559,10 @@ struct PhotoWidgetSnapshot: Codable, Equatable {
     /// Longest edge these frames were rendered at. Missing on anything written
     /// before the size went up, which is exactly what marks it for redoing.
     var renderedPixels: Int?
+    /// The album or photo these frames are of. A widget's own folder is reused
+    /// only while it still holds the source the settings name; otherwise the
+    /// per-album or per-photo folder is the one to read.
+    var sourceId: String?
 
     static let empty = PhotoWidgetSnapshot(frames: [], generatedAt: .distantPast)
 

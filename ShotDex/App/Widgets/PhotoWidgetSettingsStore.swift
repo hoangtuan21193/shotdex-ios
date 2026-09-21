@@ -61,6 +61,19 @@ final class PhotoWidgetSettingsStore {
 
     func settings(for kind: PhotoWidgetKind) -> PhotoWidgetSettings { file[kind] }
 
+    /// Picks up what the Home Screen's widget menu wrote while the app was
+    /// away. The menu and this screen edit one set of settings, so the app has
+    /// to re-read them rather than trust the copy it loaded at launch.
+    ///
+    /// Anything being edited here right now wins: a pending save is the newer
+    /// word, and reloading over it would undo a slider mid-drag.
+    func reloadFromDisk() {
+        guard saveTask == nil else { return }
+        let onDisk = PhotoWidgetSettingsFile.read()
+        guard onDisk != file else { return }
+        file = onDisk
+    }
+
     func isRendering(_ kind: PhotoWidgetKind) -> Bool { renderingKind == kind }
 
     /// Applies a change and schedules the write. `rendersPhotos` is for the

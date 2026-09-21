@@ -64,31 +64,36 @@ struct PhotoWidgetProvider: AppIntentTimelineProvider {
         // distinct picture in it. Reading them per entry would decode the same
         // JPEG sixty times to draw sixty different minutes of the same photo.
         let payload = Payload()
-        let resolved = payload.resolve(kind: kind, configuration: configuration)
-        // An album chosen on the Home Screen has no pictures until the app has
+        let (settings, resolved) = payload.resolve(kind: kind, configuration: configuration)
+        // A source chosen on the Home Screen has no pictures until the app has
         // rendered them, so the ask is left where the app will find it.
-        if let pending = resolved.pendingAlbum {
+        if let pending = resolved.pendingSource {
             PhotoWidgetFrameRequests.request(
                 albumId: pending.id,
                 title: pending.title,
-                source: resolved.pendingSourceKind == .photo ? .photo : .album
+                source: pending.kind == .photo ? .photo : .album
             )
         }
 
-        let showsClock = resolved.settings.showsTime
+        let showsClock = settings.showsTime
         let count = showsClock ? Self.clockEntries : Self.quietEntries
         let step = showsClock ? 1 : Self.quietStep
 
         let entries = (0..<count).compactMap { index -> PhotoWidgetEntry? in
             guard let date = calendar.date(byAdding: .minute, value: index * step, to: start)
             else { return nil }
-            return entry(for: date, configuration: configuration, payload: payload, resolved: resolved)
+            return entry(
+                for: date,
+                configuration: configuration,
+                payload: payload,
+                prepared: (settings, resolved)
+            )
         }
         let end = entries.last?.date ?? .now
         // A widget waiting on the app checks back sooner: the pictures arrive
         // the moment ShotDex is next opened, and the app reloads it then, but
         // this keeps a missed reload from lasting an hour.
-        let policy: TimelineReloadPolicy = resolved.pendingAlbum == nil
+        let policy: TimelineReloadPolicy = resolved.pendingSource == nil
             ? .after(end)
             : .after(calendar.date(byAdding: .minute, value: 15, to: start) ?? end)
         return Timeline(entries: entries, policy: policy)
@@ -97,27 +102,49 @@ struct PhotoWidgetProvider: AppIntentTimelineProvider {
     /// Everything read off disk once per timeline build, with the pictures
     /// decoded lazily and kept.
     private final class Payload {
-        let settings = PhotoWidgetSettingsFile.read()
+        var settings = PhotoWidgetSettingsFile.read()
         let weather = WeatherSnapshot.read()
         let calendarSnapshot = CalendarSnapshot.read()
         private var images: [String: Image] = [:]
         private var snapshots: [String: PhotoWidgetSnapshot] = [:]
 
+        /// Folds the Home Screen menu's answer into the shared settings — once
+        /// per change — then says where this widget's pictures live.
         func resolve(
             kind: PhotoWidgetKind,
             configuration: ConfigurePhotoWidgetIntent
-        ) -> PhotoWidgetResolvedConfiguration {
-            PhotoWidgetResolvedConfiguration.resolve(
-                kind: kind,
-                settings: settings[kind],
+        ) -> (settings: PhotoWidgetSettings, resolved: PhotoWidgetResolvedConfiguration) {
+            var settings = self.settings[kind]
+            let signature = PhotoWidgetIntentApplication.signature(
+                photoId: configuration.photo?.id,
+                albumId: configuration.album?.id,
+                rotationRawValue: configuration.rotation.rotation?.rawValue,
+                dimming: configuration.dimming.dimming
+            )
+            let changed = PhotoWidgetIntentApplication.apply(
+                to: &settings,
                 photoId: configuration.photo?.id,
                 photoLabel: configuration.photo?.label,
                 albumId: configuration.album?.id,
                 albumTitle: configuration.album?.title,
                 rotation: configuration.rotation.rotation,
                 dimming: configuration.dimming.dimming,
-                frameCount: { directory in self.snapshot(named: directory).frames.count }
+                signature: signature
             )
+            if changed {
+                // Written back so ShotDex's own Settings screen shows what was
+                // chosen out here, and its preview matches the widget.
+                var file = self.settings
+                file[kind] = settings
+                file.write()
+                self.settings = file
+            }
+            let resolved = PhotoWidgetResolvedConfiguration.resolve(
+                kind: kind,
+                source: settings.source,
+                snapshot: { self.snapshot(named: $0) }
+            )
+            return (settings, resolved)
         }
 
         func image(
@@ -152,21 +179,23 @@ struct PhotoWidgetProvider: AppIntentTimelineProvider {
         for date: Date,
         configuration: ConfigurePhotoWidgetIntent,
         payload: Payload,
-        resolved: PhotoWidgetResolvedConfiguration? = nil
+        prepared: (settings: PhotoWidgetSettings, resolved: PhotoWidgetResolvedConfiguration)? = nil
     ) -> PhotoWidgetEntry {
-        let resolved = resolved ?? payload.resolve(kind: kind, configuration: configuration)
+        let prepared = prepared ?? payload.resolve(kind: kind, configuration: configuration)
         return PhotoWidgetEntry(
             date: date,
             kind: kind,
-            settings: resolved.settings,
+            settings: prepared.settings,
             image: payload.image(
-                directoryName: resolved.frameDirectoryName,
+                directoryName: prepared.resolved.frameDirectoryName,
                 at: date,
-                rotation: resolved.settings.rotation
+                rotation: prepared.settings.rotation
             ),
             weather: payload.weather,
             calendarSnapshot: payload.calendarSnapshot,
-            pendingAlbum: resolved.pendingAlbum
+            pendingAlbum: prepared.resolved.pendingSource.map {
+                WidgetAlbumCatalog.Album(id: $0.id, title: $0.title, count: 0)
+            }
         )
     }
 }

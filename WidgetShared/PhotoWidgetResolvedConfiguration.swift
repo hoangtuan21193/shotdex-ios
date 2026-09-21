@@ -1,79 +1,103 @@
 import Foundation
 
-/// What one placed widget ends up showing, once the menu's answers are laid
-/// over the settings the app holds.
+/// Where one widget reads its pictures from, once the settings say what its
+/// source is.
 ///
-/// Pure, and the only place the precedence is written down: the Home Screen
-/// wins where it said something, and says nothing by default.
+/// The settings are the single answer to "what is this widget showing" — the
+/// app writes them from its own screen, the widget writes them when the Home
+/// Screen's menu says something new — so this no longer merges two opinions.
+/// What is left is a lookup: which folder holds that source's frames, and
+/// whether they exist yet.
 struct PhotoWidgetResolvedConfiguration: Equatable {
-    var settings: PhotoWidgetSettings
     /// The folder the frames are read from.
     var frameDirectoryName: String
-    /// Set when the widget is pointed at an album whose photos the app has not
-    /// rendered yet.
-    var pendingAlbum: WidgetAlbumCatalog.Album?
+    /// Set when the source has no frames rendered yet, which is what makes the
+    /// widget ask the app for them and say so on screen.
+    var pendingSource: PendingSource?
 
-    /// What kind of thing the Home Screen pointed this widget at, for the ask
-    /// that goes back to the app.
-    enum PendingSource: Equatable {
-        case album
-        case photo
+    struct PendingSource: Equatable {
+        enum Kind: Equatable {
+            case album
+            case photo
+        }
+
+        var id: String
+        var title: String
+        var kind: Kind
     }
 
-    /// Set when a single photo was chosen there and its frame is not rendered.
-    var pendingSourceKind: PendingSource = .album
-
+    /// `snapshot` is passed in rather than read here so this stays pure and
+    /// testable; the widget hands it a cached read.
     static func resolve(
         kind: PhotoWidgetKind,
-        settings: PhotoWidgetSettings,
-        photoId: String? = nil,
-        photoLabel: String? = nil,
-        albumId: String?,
-        albumTitle: String?,
-        rotation: PhotoWidgetSettings.Rotation?,
-        dimming: Double?,
-        frameCount: (String) -> Int
+        source: PhotoWidgetSettings.Source,
+        snapshot: (String) -> PhotoWidgetSnapshot
     ) -> PhotoWidgetResolvedConfiguration {
-        var settings = settings
-        if let rotation { settings.rotation = rotation }
-        if let dimming { settings.photoDimming = dimming }
-
-        // One photo beats a whole album: it is the more specific answer, and
-        // the menu lists it first.
-        if let photoId, !photoId.isEmpty {
-            settings.source = .photo(assetId: photoId)
-            let directory = PhotoWidgetSnapshot.assetDirectoryName(assetId: photoId)
-            let isReady = frameCount(directory) > 0
+        switch source {
+        case .none:
             return PhotoWidgetResolvedConfiguration(
-                settings: settings,
-                frameDirectoryName: directory,
-                pendingAlbum: isReady
-                    ? nil
-                    : WidgetAlbumCatalog.Album(
-                        id: photoId, title: photoLabel ?? "Photo", count: 0
-                    ),
-                pendingSourceKind: .photo
-            )
-        }
-
-        guard let albumId, !albumId.isEmpty else {
-            return PhotoWidgetResolvedConfiguration(
-                settings: settings,
                 frameDirectoryName: kind.directoryName,
-                pendingAlbum: nil
+                pendingSource: nil
+            )
+
+        case .photo(let assetId):
+            return resolve(
+                kind: kind,
+                sourceId: assetId,
+                title: "Photo",
+                pendingKind: .photo,
+                ownDirectoryName: PhotoWidgetSnapshot.assetDirectoryName(assetId: assetId),
+                snapshot: snapshot
+            )
+
+        case .album(let collectionId, let title):
+            return resolve(
+                kind: kind,
+                sourceId: collectionId,
+                title: title,
+                pendingKind: .album,
+                ownDirectoryName: PhotoWidgetSnapshot.albumDirectoryName(albumId: collectionId),
+                snapshot: snapshot
             )
         }
+    }
 
-        let title = albumTitle ?? "Album"
-        settings.source = .album(collectionId: albumId, title: title)
-        let directory = PhotoWidgetSnapshot.albumDirectoryName(albumId: albumId)
-        let isReady = frameCount(directory) > 0
+    /// The widget's own folder is preferred while it still holds this source —
+    /// that is the one the app renders into when the source was chosen in the
+    /// app, and it costs no second copy. Otherwise the per-source folder.
+    private static func resolve(
+        kind: PhotoWidgetKind,
+        sourceId: String,
+        title: String,
+        pendingKind: PendingSource.Kind,
+        ownDirectoryName: String,
+        snapshot: (String) -> PhotoWidgetSnapshot
+    ) -> PhotoWidgetResolvedConfiguration {
+        let own = snapshot(kind.directoryName)
+        if !own.frames.isEmpty, own.sourceId == sourceId {
+            return PhotoWidgetResolvedConfiguration(
+                frameDirectoryName: kind.directoryName,
+                pendingSource: nil
+            )
+        }
+        let shared = snapshot(ownDirectoryName)
+        if !shared.frames.isEmpty {
+            return PhotoWidgetResolvedConfiguration(
+                frameDirectoryName: ownDirectoryName,
+                pendingSource: nil
+            )
+        }
+        // A folder written before snapshots recorded what they were of: trust
+        // it rather than blanking a widget that has been working all along.
+        if !own.frames.isEmpty, own.sourceId == nil {
+            return PhotoWidgetResolvedConfiguration(
+                frameDirectoryName: kind.directoryName,
+                pendingSource: nil
+            )
+        }
         return PhotoWidgetResolvedConfiguration(
-            settings: settings,
-            frameDirectoryName: directory,
-            pendingAlbum: isReady
-                ? nil
-                : WidgetAlbumCatalog.Album(id: albumId, title: title, count: 0)
+            frameDirectoryName: ownDirectoryName,
+            pendingSource: PendingSource(id: sourceId, title: title, kind: pendingKind)
         )
     }
 }

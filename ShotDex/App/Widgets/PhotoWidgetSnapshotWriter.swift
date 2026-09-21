@@ -37,7 +37,8 @@ struct PhotoWidgetSnapshotWriter {
         let snapshot = PhotoWidgetSnapshot(
             frames: frames,
             generatedAt: .now,
-            renderedPixels: Int(WidgetImageRenderer.maxPixels)
+            renderedPixels: Int(WidgetImageRenderer.maxPixels),
+            sourceId: Self.sourceId(of: settings.source)
         )
         try? WidgetSharedContainer.encode(
             snapshot,
@@ -72,7 +73,7 @@ struct PhotoWidgetSnapshotWriter {
             // slugged), so the assets are found from the frames themselves.
             let assets = PhotoLibraryService.fetchAssets(ids: snapshot.frames.map(\.assetId))
             guard !assets.isEmpty else { continue }
-            await write(assets: assets, to: folder)
+            await write(assets: assets, to: folder, sourceId: snapshot.sourceId)
         }
         for kind in PhotoWidgetKind.allCases {
             WidgetCenter.shared.reloadTimelines(ofKind: kind.widgetKind)
@@ -100,13 +101,14 @@ struct PhotoWidgetSnapshotWriter {
             case .photo: .photo(assetId: request.albumId)
             }
             let assets = Self.assets(for: source)
+            let sourceId = Self.sourceId(of: source)
             // An album that no longer exists still counts as answered: leaving
             // the ask queued would have the widget re-request it for ever.
             guard !assets.isEmpty else {
                 fulfilled.insert(request.albumId)
                 continue
             }
-            await write(assets: assets, to: directory)
+            await write(assets: assets, to: directory, sourceId: sourceId)
             fulfilled.insert(request.albumId)
         }
 
@@ -119,7 +121,7 @@ struct PhotoWidgetSnapshotWriter {
     }
 
     /// Renders a set of assets into one folder and writes its snapshot.
-    private func write(assets: [PHAsset], to directory: URL) async {
+    private func write(assets: [PHAsset], to directory: URL, sourceId: String? = nil) async {
         let renderer = WidgetImageRenderer(photoLibrary: photoLibrary)
         var frames: [PhotoWidgetSnapshot.Frame] = []
         for (index, asset) in assets.enumerated() {
@@ -137,7 +139,8 @@ struct PhotoWidgetSnapshotWriter {
             PhotoWidgetSnapshot(
                 frames: frames,
                 generatedAt: .now,
-                renderedPixels: Int(WidgetImageRenderer.maxPixels)
+                renderedPixels: Int(WidgetImageRenderer.maxPixels),
+                sourceId: sourceId
             ),
             to: directory.appendingPathComponent(PhotoWidgetSnapshot.fileName)
         )
@@ -182,6 +185,15 @@ struct PhotoWidgetSnapshotWriter {
         // oldest go.
         for folder in albumFolders.dropFirst(6) {
             try? manager.removeItem(at: folder)
+        }
+    }
+
+    /// What a source is, as the one identifier a snapshot records.
+    static func sourceId(of source: PhotoWidgetSettings.Source) -> String? {
+        switch source {
+        case .none: nil
+        case .photo(let assetId): assetId
+        case .album(let collectionId, _): collectionId
         }
     }
 

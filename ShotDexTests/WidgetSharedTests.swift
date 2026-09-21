@@ -378,134 +378,197 @@ struct PhotoWidgetDataTests {
 
     // MARK: Home Screen configuration
 
-    /// What the Home Screen's menu says wins where it said something, and says
-    /// nothing by default — the widget then shows what ShotDex is set to.
-    @Test func theHomeScreenMenuOverridesOnlyWhatItAnswers() {
-        var stored = PhotoWidgetSettings.default(for: .clock)
-        stored.rotation = .daily
-        stored.photoDimming = 0.1
-        stored.source = .photo(assetId: "ABC/L0/001")
-
-        let untouched = PhotoWidgetResolvedConfiguration.resolve(
-            kind: .clock, settings: stored,
-            albumId: nil, albumTitle: nil, rotation: nil, dimming: nil,
-            frameCount: { _ in 3 }
+    private func snapshot(
+        frames: Int,
+        sourceId: String?,
+        pixels: Int? = 1_600
+    ) -> PhotoWidgetSnapshot {
+        PhotoWidgetSnapshot(
+            frames: (0..<frames).map {
+                .init(assetId: "asset-\($0)", fileName: "frame-\($0).jpg")
+            },
+            generatedAt: .now,
+            renderedPixels: pixels,
+            sourceId: sourceId
         )
-        #expect(untouched.settings.rotation == .daily)
-        #expect(untouched.settings.photoDimming == 0.1)
-        #expect(untouched.frameDirectoryName == PhotoWidgetKind.clock.directoryName)
-        #expect(untouched.pendingAlbum == nil)
+    }
 
-        let configured = PhotoWidgetResolvedConfiguration.resolve(
-            kind: .clock, settings: stored,
-            albumId: "9F98/L0/040", albumTitle: "Iceland",
+    /// The menu out there and the screen in the app edit one set of settings,
+    /// so an answer is taken in once. After that the app is free to change the
+    /// same thing without a menu that has not moved undoing it.
+    @Test func theHomeScreenAnswerIsAppliedOnceAndThenLetsTheAppWin() {
+        var settings = PhotoWidgetSettings.default(for: .clock)
+        let signature = PhotoWidgetIntentApplication.signature(
+            photoId: nil, albumId: "ALB/L0/040", rotationRawValue: "hourly", dimming: 0.3
+        )
+
+        let firstApply = PhotoWidgetIntentApplication.apply(
+            to: &settings,
+            photoId: nil, photoLabel: nil,
+            albumId: "ALB/L0/040", albumTitle: "Iceland",
             rotation: .hourly, dimming: 0.3,
-            frameCount: { _ in 5 }
+            signature: signature
         )
-        #expect(configured.settings.rotation == .hourly)
-        #expect(configured.settings.photoDimming == 0.3)
-        #expect(configured.settings.source == .album(collectionId: "9F98/L0/040", title: "Iceland"))
-        #expect(configured.frameDirectoryName == PhotoWidgetSnapshot.albumDirectoryName(albumId: "9F98/L0/040"))
-        #expect(configured.pendingAlbum == nil)
+        #expect(firstApply)
+        #expect(settings.source == .album(collectionId: "ALB/L0/040", title: "Iceland"))
+        #expect(settings.rotation == .hourly)
+        #expect(settings.photoDimming == 0.3)
+
+        // The app then points the same widget at a photo.
+        settings.source = .photo(assetId: "PIC/L0/001")
+
+        // The menu still says the album, but it has not changed, so it is not
+        // applied again and the app's newer word stands.
+        let secondApply = PhotoWidgetIntentApplication.apply(
+            to: &settings,
+            photoId: nil, photoLabel: nil,
+            albumId: "ALB/L0/040", albumTitle: "Iceland",
+            rotation: .hourly, dimming: 0.3,
+            signature: signature
+        )
+        #expect(!secondApply)
+        #expect(settings.source == .photo(assetId: "PIC/L0/001"))
+
+        // Changing the menu is a new answer, and that wins in turn.
+        let newSignature = PhotoWidgetIntentApplication.signature(
+            photoId: "PIC/L0/009", albumId: nil, rotationRawValue: nil, dimming: nil
+        )
+        #expect(
+            PhotoWidgetIntentApplication.apply(
+                to: &settings,
+                photoId: "PIC/L0/009", photoLabel: "Sep 21",
+                albumId: nil, albumTitle: nil,
+                rotation: nil, dimming: nil,
+                signature: newSignature
+            )
+        )
+        #expect(settings.source == .photo(assetId: "PIC/L0/009"))
+        // "As Set in ShotDex" answers nothing, so these are untouched.
+        #expect(settings.rotation == .hourly)
+        #expect(settings.photoDimming == 0.3)
     }
 
-    /// An album with no frames yet is reported as pending, which is what makes
-    /// the widget ask the app for it instead of drawing black.
-    @Test func anAlbumWithoutPicturesIsPending() throws {
-        let resolved = PhotoWidgetResolvedConfiguration.resolve(
-            kind: .weather, settings: .default(for: .weather),
-            albumId: "AAA/L0/001", albumTitle: "Trips",
+    /// One photo beats a whole album when the menu answers both — the more
+    /// specific answer is the one the user just gave.
+    @Test func aChosenPhotoBeatsAChosenAlbum() {
+        var settings = PhotoWidgetSettings.default(for: .clock)
+        PhotoWidgetIntentApplication.apply(
+            to: &settings,
+            photoId: "PIC/L0/001", photoLabel: "Sep 21",
+            albumId: "ALB/L0/040", albumTitle: "Iceland",
             rotation: nil, dimming: nil,
-            frameCount: { _ in 0 }
+            signature: "photo-wins"
         )
-        let pending = try #require(resolved.pendingAlbum)
-        #expect(pending.id == "AAA/L0/001")
-        #expect(pending.title == "Trips")
+        #expect(settings.source == .photo(assetId: "PIC/L0/001"))
     }
 
-    /// PhotoKit identifiers carry slashes, which are path separators.
-    /// One photo is the more specific answer, so it wins over an album set on
-    /// the same widget.
-    @Test func aChosenPhotoBeatsAChosenAlbum() throws {
-        let resolved = PhotoWidgetResolvedConfiguration.resolve(
+    /// A widget's own folder is used while it holds the source the settings
+    /// name; otherwise the folder keyed by that album or photo.
+    @Test func framesAreReadFromTheFolderThatHoldsTheSource() {
+        let own = PhotoWidgetKind.clock.directoryName
+        let albumFolder = PhotoWidgetSnapshot.albumDirectoryName(albumId: "ALB/L0/040")
+
+        let fromOwn = PhotoWidgetResolvedConfiguration.resolve(
             kind: .clock,
-            settings: .default(for: .clock),
-            photoId: "PIC/L0/001",
-            photoLabel: "Sep 21, 2026 at 09:30",
-            albumId: "ALB/L0/040",
-            albumTitle: "Iceland",
-            rotation: nil,
-            dimming: nil,
-            frameCount: { _ in 1 }
+            source: .album(collectionId: "ALB/L0/040", title: "Iceland"),
+            snapshot: { name in
+                name == own ? self.snapshot(frames: 3, sourceId: "ALB/L0/040") : .empty
+            }
         )
-        #expect(resolved.settings.source == .photo(assetId: "PIC/L0/001"))
-        #expect(resolved.frameDirectoryName == PhotoWidgetSnapshot.assetDirectoryName(assetId: "PIC/L0/001"))
-        #expect(resolved.pendingAlbum == nil)
+        #expect(fromOwn.frameDirectoryName == own)
+        #expect(fromOwn.pendingSource == nil)
+
+        // The widget's own folder holds something else now, so the shared one
+        // is read instead.
+        let fromShared = PhotoWidgetResolvedConfiguration.resolve(
+            kind: .clock,
+            source: .album(collectionId: "ALB/L0/040", title: "Iceland"),
+            snapshot: { name in
+                switch name {
+                case own: self.snapshot(frames: 1, sourceId: "PIC/L0/001")
+                case albumFolder: self.snapshot(frames: 4, sourceId: "ALB/L0/040")
+                default: .empty
+                }
+            }
+        )
+        #expect(fromShared.frameDirectoryName == albumFolder)
+        #expect(fromShared.pendingSource == nil)
     }
 
-    @Test func aChosenPhotoWithoutAFrameAsksForOne() throws {
+    @Test func aSourceWithoutFramesIsPending() throws {
         let resolved = PhotoWidgetResolvedConfiguration.resolve(
             kind: .weather,
-            settings: .default(for: .weather),
-            photoId: "PIC/L0/002",
-            photoLabel: "Yesterday",
-            albumId: nil,
-            albumTitle: nil,
-            rotation: nil,
-            dimming: nil,
-            frameCount: { _ in 0 }
+            source: .photo(assetId: "PIC/L0/002"),
+            snapshot: { _ in .empty }
         )
-        let pending = try #require(resolved.pendingAlbum)
+        let pending = try #require(resolved.pendingSource)
         #expect(pending.id == "PIC/L0/002")
-        #expect(resolved.pendingSourceKind == .photo)
+        #expect(pending.kind == .photo)
+        #expect(resolved.frameDirectoryName == PhotoWidgetSnapshot.assetDirectoryName(assetId: "PIC/L0/002"))
     }
 
-    /// A photo's folder and an album's folder never collide, even when the two
-    /// identifiers slug to the same thing.
-    @Test func aPhotoFolderIsNotAnAlbumFolder() {
-        let identifier = "9F98-3C/L0/040"
-        let album = PhotoWidgetSnapshot.albumDirectoryName(albumId: identifier)
-        let asset = PhotoWidgetSnapshot.assetDirectoryName(assetId: identifier)
-        #expect(album != asset)
-        #expect(!asset.contains("/"))
-    }
-
-    /// The queue was album-only before single photos existed, and a queue
-    /// written by that build still decodes.
-    @Test func anOlderQueueEntryIsReadAsAnAlbumAsk() throws {
-        let legacy = """
-        {"requests":[{"albumId":"A/L0/1","title":"Trips","requestedAt":0}]}
-        """
-        let decoded = try JSONDecoder().decode(
-            PhotoWidgetFrameRequests.self, from: Data(legacy.utf8)
+    /// Frames written before snapshots recorded their source keep working
+    /// rather than blanking a widget that has been fine all along.
+    @Test func framesFromBeforeSourcesWereRecordedAreTrusted() {
+        let resolved = PhotoWidgetResolvedConfiguration.resolve(
+            kind: .calendar,
+            source: .album(collectionId: "ALB/L0/040", title: "Iceland"),
+            snapshot: { name in
+                name == PhotoWidgetKind.calendar.directoryName
+                    ? self.snapshot(frames: 2, sourceId: nil)
+                    : .empty
+            }
         )
-        #expect(decoded.requests.first?.source == .album)
-        #expect(decoded.requests.first?.frameDirectoryName.hasPrefix("photo-widget-album-") == true)
+        #expect(resolved.frameDirectoryName == PhotoWidgetKind.calendar.directoryName)
+        #expect(resolved.pendingSource == nil)
     }
 
-    /// Frames from the build that rendered at 1000 px are marked for redoing;
-    /// the ones written since are left alone.
-    @Test func framesRenderedSmallerThanTodayAreStale() {
-        let old = PhotoWidgetSnapshot(frames: [], generatedAt: .now, renderedPixels: nil)
-        #expect(old.isBelow(pixels: 1_600))
-        let smaller = PhotoWidgetSnapshot(frames: [], generatedAt: .now, renderedPixels: 1_000)
-        #expect(smaller.isBelow(pixels: 1_600))
-        let current = PhotoWidgetSnapshot(frames: [], generatedAt: .now, renderedPixels: 1_600)
-        #expect(!current.isBelow(pixels: 1_600))
-    }
+    /// Two widgets of the same kind share one set of settings, so a second
+    /// one with an untouched menu must not overwrite what the first chose —
+    /// or the two would take turns rewriting the file for ever.
+    @Test func anUntouchedMenuChangesNothing() {
+        var settings = PhotoWidgetSettings.default(for: .weather)
+        settings.source = .photo(assetId: "PIC/L0/001")
+        settings.appliedIntentSignature = "PIC/L0/001|-|-|-"
 
-    @Test func thePhotoCatalogSearchesItsLabels() {
-        let catalog = WidgetPhotoCatalog(
-            photos: [
-                .init(id: "1", label: "Sep 21, 2026 at 09:30", thumbnailFileName: "a.jpg"),
-                .init(id: "2", label: "Aug 8, 2012 at 23:55", thumbnailFileName: "b.jpg"),
-            ],
-            generatedAt: .now
+        let changed = PhotoWidgetIntentApplication.apply(
+            to: &settings,
+            photoId: nil, photoLabel: nil,
+            albumId: nil, albumTitle: nil,
+            rotation: nil, dimming: nil,
+            signature: "-|-|-|-"
         )
-        #expect(catalog.matching("sep").map(\.id) == ["1"])
-        #expect(catalog.matching("2012").map(\.id) == ["2"])
-        #expect(catalog.matching("").count == 2)
-        #expect(catalog.photo(id: "2")?.label.hasPrefix("Aug") == true)
+        #expect(!changed)
+        #expect(settings.source == .photo(assetId: "PIC/L0/001"))
+        #expect(settings.appliedIntentSignature == "PIC/L0/001|-|-|-")
+    }
+
+    @Test func aSignatureChangesWithEveryAnswer() {
+        let base = PhotoWidgetIntentApplication.signature(
+            photoId: nil, albumId: "A", rotationRawValue: nil, dimming: nil
+        )
+        #expect(base != PhotoWidgetIntentApplication.signature(
+            photoId: nil, albumId: "B", rotationRawValue: nil, dimming: nil
+        ))
+        #expect(base != PhotoWidgetIntentApplication.signature(
+            photoId: nil, albumId: "A", rotationRawValue: "daily", dimming: nil
+        ))
+        #expect(base != PhotoWidgetIntentApplication.signature(
+            photoId: nil, albumId: "A", rotationRawValue: nil, dimming: 0.3
+        ))
+        #expect(base == PhotoWidgetIntentApplication.signature(
+            photoId: nil, albumId: "A", rotationRawValue: nil, dimming: nil
+        ))
+    }
+
+    /// The signature travels in the settings file, so the answer is not taken
+    /// in twice across launches.
+    @Test func theAppliedSignatureSurvivesAWriteAndRead() throws {
+        var settings = PhotoWidgetSettings.default(for: .weather)
+        settings.appliedIntentSignature = "photo|-|-|-"
+        let data = try JSONEncoder().encode(settings)
+        let decoded = try JSONDecoder().decode(PhotoWidgetSettings.self, from: data)
+        #expect(decoded.appliedIntentSignature == "photo|-|-|-")
     }
 
     @Test func anAlbumFolderNameIsSafeToPutOnDisk() {

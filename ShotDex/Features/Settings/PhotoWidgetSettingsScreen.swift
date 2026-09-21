@@ -80,6 +80,10 @@ struct PhotoWidgetSettingsScreen: View {
             previewDate = date
         }
         .task {
+            // The Home Screen's own menu writes the same settings, so the
+            // screen re-reads them on the way in rather than showing a copy
+            // from launch.
+            store.reloadFromDisk()
             weather = WeatherSnapshot.read()
             calendarAccess = dependencies.calendarWidgetWriter.access
             // The preview shows today's events, so the events are read while
@@ -104,11 +108,20 @@ struct PhotoWidgetSettingsScreen: View {
     /// Loads the same file the widget reads, so the preview is framed against
     /// the picture the widget will actually show.
     private func loadPreviewImage() async {
-        let snapshot = PhotoWidgetSnapshot.read(kind: kind)
+        // The same rule the widget uses to find its frames, so the preview
+        // cannot show one picture while the Home Screen shows another.
+        let resolved = PhotoWidgetResolvedConfiguration.resolve(
+            kind: kind,
+            source: settings.source,
+            snapshot: { PhotoWidgetSnapshot.read(directoryName: $0) }
+        )
+        let snapshot = PhotoWidgetSnapshot.read(directoryName: resolved.frameDirectoryName)
         let index = PhotoWidgetSnapshot.frameIndex(
             at: .now, count: snapshot.frames.count, rotation: settings.rotation
         )
-        guard let index, let url = snapshot.imageURL(at: index, kind: kind) else {
+        guard let index,
+              let url = snapshot.imageURL(at: index, directoryName: resolved.frameDirectoryName)
+        else {
             previewImage = nil
             return
         }

@@ -232,6 +232,10 @@ final class AppDependencies {
     /// its last reading is half an hour old, and the calendar skips unless a
     /// widget lists events.
     func refreshWidgetSnapshot() async {
+        // The widgets write these settings too, so whatever was chosen on the
+        // Home Screen while the app was away is read back before anything acts
+        // on the app's own copy.
+        photoWidgetSettings.reloadFromDisk()
         guard photoLibrary.authorizationState.canReadLibrary else { return }
         await OnThisDaySnapshotWriter(photoLibrary: photoLibrary).write()
         // The Home Screen's own widget menu picks albums from this list, and
