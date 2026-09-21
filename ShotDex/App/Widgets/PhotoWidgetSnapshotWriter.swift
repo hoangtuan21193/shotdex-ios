@@ -38,6 +38,7 @@ struct PhotoWidgetSnapshotWriter {
             frames: frames,
             generatedAt: .now,
             renderedPixels: Int(WidgetImageRenderer.maxPixels),
+            rendererVersion: WidgetImageRenderer.version,
             sourceId: Self.sourceId(of: settings.source)
         )
         try? WidgetSharedContainer.encode(
@@ -68,7 +69,9 @@ struct PhotoWidgetSnapshotWriter {
             let isAsset = name.hasPrefix("photo-widget-asset-")
             guard isAlbum || isAsset else { continue }
             let snapshot = PhotoWidgetSnapshot.read(directoryName: name)
-            guard !snapshot.frames.isEmpty, snapshot.isBelow(pixels: target) else { continue }
+            guard !snapshot.frames.isEmpty,
+                  snapshot.isBelow(pixels: target, rendererVersion: WidgetImageRenderer.version)
+            else { continue }
             // The identifier is not recoverable from the folder name (it was
             // slugged), so the assets are found from the frames themselves.
             let assets = PhotoLibraryService.fetchAssets(ids: snapshot.frames.map(\.assetId))
@@ -140,6 +143,7 @@ struct PhotoWidgetSnapshotWriter {
                 frames: frames,
                 generatedAt: .now,
                 renderedPixels: Int(WidgetImageRenderer.maxPixels),
+                rendererVersion: WidgetImageRenderer.version,
                 sourceId: sourceId
             ),
             to: directory.appendingPathComponent(PhotoWidgetSnapshot.fileName)

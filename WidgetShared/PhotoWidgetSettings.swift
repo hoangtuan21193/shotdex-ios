@@ -559,6 +559,9 @@ struct PhotoWidgetSnapshot: Codable, Equatable {
     /// Longest edge these frames were rendered at. Missing on anything written
     /// before the size went up, which is exactly what marks it for redoing.
     var renderedPixels: Int?
+    /// Which renderer wrote them. A frame from an older renderer is redone
+    /// even when its size is right — version 1 wrote the blurred preview.
+    var rendererVersion: Int?
     /// The album or photo these frames are of. A widget's own folder is reused
     /// only while it still holds the source the settings name; otherwise the
     /// per-album or per-photo folder is the one to read.
@@ -566,8 +569,10 @@ struct PhotoWidgetSnapshot: Codable, Equatable {
 
     static let empty = PhotoWidgetSnapshot(frames: [], generatedAt: .distantPast)
 
-    /// True when these frames are smaller than what is drawn today.
-    func isBelow(pixels: Int) -> Bool { (renderedPixels ?? 0) < pixels }
+    /// True when these frames are smaller, or older, than what is drawn today.
+    func isBelow(pixels: Int, rendererVersion current: Int = 0) -> Bool {
+        (renderedPixels ?? 0) < pixels || (rendererVersion ?? 0) < current
+    }
     static let fileName = "snapshot.json"
     /// How many album photos are kept on disk per widget. Twelve covers half a
     /// day of hourly rotation and costs about a megabyte.

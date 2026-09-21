@@ -53,7 +53,8 @@ final class PhotoWidgetSettingsStore {
         let target = Int(WidgetImageRenderer.maxPixels)
         for kind in PhotoWidgetKind.allCases where file[kind].source != .none {
             let snapshot = PhotoWidgetSnapshot.read(kind: kind)
-            if snapshot.frames.isEmpty || snapshot.isBelow(pixels: target) {
+            if snapshot.frames.isEmpty
+                || snapshot.isBelow(pixels: target, rendererVersion: WidgetImageRenderer.version) {
                 renderPhotos(for: kind)
             }
         }

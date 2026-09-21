@@ -295,6 +295,19 @@ final class PhotoLibraryService: NSObject {
         allowNetwork: Bool = true,
         completion: @escaping (UIImage?, ThumbnailDelivery) -> Void
     ) -> PHImageRequestID {
+        // A network pass is only started when few are already running. On a
+        // library kept in iCloud, a screenful of Optimize-Storage proxies used
+        // to start a download each the moment scrolling stopped — dozens at
+        // once, competing with each other and with whatever the user does
+        // next. The tile stays soft until a slot frees up and the next
+        // scroll-stop asks again, which is the same thing Photos does.
+        if allowNetwork, !Self.networkThumbnailGate.tryAcquire() {
+            Task { @MainActor in
+                completion(nil, ThumbnailDelivery(isDegraded: false, isSharp: false))
+            }
+            return PHInvalidImageRequestID
+        }
+
         let options = PHImageRequestOptions()
         options.deliveryMode = .opportunistic
         options.resizeMode = resizeMode
@@ -310,7 +323,17 @@ final class PhotoLibraryService: NSObject {
             let isSharp = !isDegraded && image.map {
                 Self.hasThumbnailResolution($0, for: asset, targetSize: targetSize, contentMode: contentMode)
             } ?? false
+            if !isDegraded, allowNetwork {
+                Self.networkThumbnailGate.release()
+            }
             if !isDegraded {
+                // A download that genuinely failed — offline, signed out of
+                // iCloud, asset gone — reads the same as "still not sharp"
+                // otherwise, and the tile would stay soft for the session with
+                // nothing recorded.
+                if info?[PHImageErrorKey] != nil {
+                    Self.thumbnailProbe.recordNetworkFailure()
+                }
                 Self.thumbnailProbe.recordFinal(
                     latency: requestedAt.duration(to: .now),
                     resizeMode: resizeMode,
@@ -344,6 +367,13 @@ final class PhotoLibraryService: NSObject {
     /// ms) and how often tiles fall through to the exact and network passes.
     private static let thumbnailProbe = ThumbnailLatencyProbe()
 
+    /// How many iCloud thumbnail downloads may be in flight at once.
+    ///
+    /// Four, not one: a single slot makes a screenful of cloud-only photos
+    /// fill in one at a time, and not unbounded because a wide iPad grid can
+    /// have forty proxies visible at a scroll-stop.
+    private static let networkThumbnailGate = ConcurrencyGate(limit: 4)
+
     private final class ThumbnailLatencyProbe: @unchecked Sendable {
         private struct Bucket {
             var count = 0
@@ -364,8 +394,18 @@ final class PhotoLibraryService: NSObject {
         private var fastLocal = Bucket()
         private var exactLocal = Bucket()
         private var network = Bucket()
+        /// Downloads that came back with an error rather than an image. Kept
+        /// apart from "not sharp": one is a tile waiting for a slot, the other
+        /// is a tile that will never sharpen until the network changes.
+        private var networkFailures = 0
         private var sinceLog = 0
         private static let logger = Logger(subsystem: "com.hoangtuan.shotdex", category: "thumbnails")
+
+        func recordNetworkFailure() {
+            lock.lock()
+            defer { lock.unlock() }
+            networkFailures += 1
+        }
 
         func recordFinal(
             latency: Duration,
@@ -392,7 +432,7 @@ final class PhotoLibraryService: NSObject {
             guard sinceLog >= 100 else { return }
             sinceLog = 0
             Self.logger.debug(
-                "thumbnail finals — fast/local: \(self.fastLocal.summary, privacy: .public); exact/local: \(self.exactLocal.summary, privacy: .public); network: \(self.network.summary, privacy: .public)"
+                "thumbnail finals — fast/local: \(self.fastLocal.summary, privacy: .public); exact/local: \(self.exactLocal.summary, privacy: .public); network: \(self.network.summary, privacy: .public); network errors: \(self.networkFailures, privacy: .public)"
             )
         }
     }

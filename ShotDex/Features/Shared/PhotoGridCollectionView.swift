@@ -1249,9 +1249,38 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         func collectionView(
             _ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]
         ) {
-            parent.photoLibrary.startCachingThumbnails(
-                for: assets(at: indexPaths), targetSize: thumbnailTargetSize
-            )
+            // Warmed at the size each cell will actually ask for, grouped so
+            // one `startCachingImages` covers each distinct shape.
+            //
+            // A square warm-up was wasted work in the two modes where a cell
+            // is not square — one column, and the aspect grid — because
+            // PHCachingImageManager keys its cache on the exact target size:
+            // the grid then paid a cold fetch for every tile in the very modes
+            // the prefetch exists for.
+            let columns = resolvedColumns(parent.columnCount)
+            let scale = ActiveDisplay.scale
+            var byTarget: [CGSize: [PHAsset]] = [:]
+            for indexPath in indexPaths {
+                guard let flatIndex = flatIndex(for: indexPath),
+                      parent.photos.indices.contains(flatIndex)
+                else { continue }
+                let item = parent.photos[flatIndex]
+                let size = itemSize(width: contentWidth, columns: columns, flatIndex: flatIndex)
+                // Rounded to whole pixels, and shapes within a pixel of each
+                // other share one warm-up: a hundred slightly different widths
+                // would be a hundred cache buckets and no hits.
+                let target = CGSize(
+                    width: (size.width * scale).rounded(),
+                    height: (size.height * scale).rounded()
+                )
+                // A cache miss here resolves nothing: prefetch is opportunistic
+                // and the cell will fetch its own asset when it appears.
+                guard let asset = parent.assetProvider(flatIndex, item) else { continue }
+                byTarget[target, default: []].append(asset)
+            }
+            for (target, assets) in byTarget {
+                parent.photoLibrary.startCachingThumbnails(for: assets, targetSize: target)
+            }
         }
 
         func collectionView(

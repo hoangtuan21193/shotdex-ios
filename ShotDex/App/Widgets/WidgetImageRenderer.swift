@@ -23,39 +23,32 @@ struct WidgetImageRenderer {
     static let maxPixels: CGFloat = 1_600
     static let compressionQuality: CGFloat = 0.85
 
+    /// Bumped when the way a frame is produced changes, so files written by an
+    /// older build are rendered again instead of staying as they are. Version 2
+    /// is "waits for the final, sharp rendition"; version 1 wrote whatever
+    /// arrived first, which with `.opportunistic` delivery is the blurred
+    /// preview.
+    static let version = 2
+
     /// Renders `asset` into `url`, returning false when PhotoKit had nothing to
     /// give (an iCloud-only asset with no network, a deleted one).
     @discardableResult
     func write(asset: PHAsset, to url: URL, allowNetwork: Bool = true) async -> Bool {
         let size = CGSize(width: Self.maxPixels, height: Self.maxPixels)
-        let image: UIImage? = await withCheckedContinuation { continuation in
-            var hasResumed = false
-            _ = photoLibrary.requestThumbnail(
-                for: asset,
-                targetSize: size,
-                contentMode: .aspectFit,
-                allowNetwork: allowNetwork
-            ) { image in
-                // `.opportunistic` fires twice; the degraded preview is not
-                // worth writing over a good file, so only the first non-nil
-                // result of a finished request is taken.
-                guard !hasResumed, let image else { return }
-                hasResumed = true
-                continuation.resume(returning: image)
-            }
+        var image = await finalImage(
+            for: asset, targetSize: size, contentMode: .aspectFit, allowNetwork: false
+        )
+        // An on-device copy that is not the size that was asked for is an
+        // Optimize Storage proxy, whatever PhotoKit says about being final.
+        // The user chose this picture, so it is worth the download.
+        if allowNetwork, image?.isSharp != true {
+            image = await finalImage(
+                for: asset, targetSize: size, contentMode: .aspectFit, allowNetwork: true
+            ) ?? image
         }
-        guard let data = image?.jpegData(compressionQuality: Self.compressionQuality) else {
-            return false
-        }
-        do {
-            try FileManager.default.createDirectory(
-                at: url.deletingLastPathComponent(), withIntermediateDirectories: true
-            )
-            try data.write(to: url, options: .atomic)
-            return true
-        } catch {
-            return false
-        }
+        guard let data = image?.image.jpegData(compressionQuality: Self.compressionQuality)
+        else { return false }
+        return Self.write(data, to: url)
     }
 
     /// A small copy for a menu row, where the widget's own size would be a
@@ -63,20 +56,49 @@ struct WidgetImageRenderer {
     @discardableResult
     func writeThumbnail(for asset: PHAsset, to url: URL, maxPixels: CGFloat) async -> Bool {
         let size = CGSize(width: maxPixels, height: maxPixels)
-        let image: UIImage? = await withCheckedContinuation { continuation in
+        // Local only: a menu row is not worth a download, and at 180 px even a
+        // proxy has the pixels.
+        let image = await finalImage(
+            for: asset, targetSize: size, contentMode: .aspectFill, allowNetwork: false
+        )
+        guard let data = image?.image.jpegData(compressionQuality: 0.7) else { return false }
+        return Self.write(data, to: url)
+    }
+
+    /// The **last** rendition PhotoKit sends, not the first.
+    ///
+    /// `.opportunistic` delivery calls back twice: a fast blurred preview, then
+    /// the real thing. Taking the first non-nil image — which this renderer did
+    /// until now — means every widget picture on disk was the preview, and it
+    /// stayed that way until the file was rewritten hours later.
+    private func finalImage(
+        for asset: PHAsset,
+        targetSize: CGSize,
+        contentMode: PHImageContentMode,
+        allowNetwork: Bool
+    ) async -> (image: UIImage, isSharp: Bool)? {
+        await withCheckedContinuation { continuation in
             var hasResumed = false
+            var latest: UIImage?
             _ = photoLibrary.requestThumbnail(
                 for: asset,
-                targetSize: size,
-                contentMode: .aspectFill,
-                allowNetwork: false
-            ) { image in
-                guard !hasResumed, let image else { return }
+                targetSize: targetSize,
+                contentMode: contentMode,
+                allowNetwork: allowNetwork
+            ) { image, delivery in
+                if let image { latest = image }
+                guard delivery.isFinal, !hasResumed else { return }
                 hasResumed = true
-                continuation.resume(returning: image)
+                guard let result = latest else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                continuation.resume(returning: (result, delivery.isSharp))
             }
         }
-        guard let data = image?.jpegData(compressionQuality: 0.7) else { return false }
+    }
+
+    private static func write(_ data: Data, to url: URL) -> Bool {
         do {
             try FileManager.default.createDirectory(
                 at: url.deletingLastPathComponent(), withIntermediateDirectories: true
