@@ -187,20 +187,37 @@ struct SettingsScreen: View {
         .navigationSplitViewStyle(.balanced)
     }
 
+    /// The sidebar.
+    ///
+    /// The `List` is the **direct** child of the split view's sidebar column,
+    /// and search swaps the rows inside it rather than replacing the list.
+    /// Measured on an iPad: wrapped in a conditional, the same list stopped
+    /// selecting — a tap on an item did nothing at all, because SwiftUI only
+    /// gives a sidebar's own list the single-tap selection behaviour.
     private var sidebar: some View {
         @Bindable var navigation = navigation
-        return settingsOrResults {
-            List(SettingsSection.allCases, selection: $navigation.selection) { item in
-                Label {
-                    Text(item.title)
-                } icon: {
-                    Image(systemName: item.systemImage)
-                        .symbolRenderingMode(.hierarchical)
+        return List(selection: $navigation.selection) {
+            if navigation.isSearching {
+                searchResultRows
+            } else {
+                ForEach(SettingsSection.allCases) { item in
+                    Label {
+                        Text(item.title)
+                    } icon: {
+                        Image(systemName: item.systemImage)
+                            .symbolRenderingMode(.hierarchical)
+                    }
+                    // "Support" is a sidebar item, a pane title and a row on the
+                    // phone's list all at once, so the driver cannot pick this
+                    // one out by label.
+                    .accessibilityIdentifier("settings.sidebar.\(item.rawValue)")
+                    .tag(item)
                 }
-                // "Support" is a sidebar item, a pane title and a row on the
-                // phone's list all at once, so the driver cannot pick this one
-                // out by label.
-                .accessibilityIdentifier("settings.sidebar.\(item.rawValue)")
+            }
+        }
+        .overlay {
+            if navigation.isSearching, SettingsSearchIndex.results(for: navigation.query).isEmpty {
+                ContentUnavailableView.search(text: navigation.query)
             }
         }
         .navigationTitle("Settings")
@@ -240,6 +257,17 @@ struct SettingsScreen: View {
     }
 
     // MARK: Shared pieces
+
+    /// Results as rows of the sidebar's own list, so the list keeps being the
+    /// sidebar's list — see the note on `sidebar`.
+    @ViewBuilder
+    private var searchResultRows: some View {
+        ForEach(SettingsSearchIndex.results(for: navigation.query)) { entry in
+            SettingsSearchResultRow(entry: entry) {
+                navigation.open(entry, usesSplitView: usesSplitView)
+            }
+        }
+    }
 
     /// The settings themselves, or the search results when something is typed.
     @ViewBuilder

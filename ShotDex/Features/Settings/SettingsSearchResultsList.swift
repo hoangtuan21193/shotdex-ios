@@ -18,35 +18,41 @@ struct SettingsSearchResultsList: View {
             ContentUnavailableView.search(text: query)
         } else {
             List(results) { entry in
-                Button {
-                    onSelect(entry)
-                } label: {
-                    row(entry)
-                }
-                .buttonStyle(.plain)
+                SettingsSearchResultRow(entry: entry) { onSelect(entry) }
             }
             .listStyle(.insetGrouped)
             .accessibilityIdentifier("settings.search.results")
         }
     }
+}
 
-    private func row(_ entry: SettingsSearchEntry) -> some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-            Text(entry.text)
-            Text(entry.sectionTitle)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            // The index knows every row the screen can draw, including the ones
-            // that appear only under a condition. Saying so here is what keeps a
-            // result from being a tap that visibly does nothing.
-            if let explanation = entry.explanation {
-                Text(explanation)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+/// One result, as a row of whichever list is showing it — the phone's settings
+/// list or the iPad's sidebar. Shared so a result reads the same in both.
+struct SettingsSearchResultRow: View {
+    let entry: SettingsSearchEntry
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                Text(entry.text)
+                Text(entry.sectionTitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                // The index knows every row the screen can draw, including the
+                // ones that appear only under a condition. Saying so here is
+                // what keeps a result from being a tap that visibly does
+                // nothing.
+                if let explanation = entry.explanation {
+                    Text(explanation)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(.rect)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .contentShape(.rect)
+        .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("settings.searchResult.\(entry.label.rawValue)")
     }
