@@ -28,6 +28,7 @@ struct PhotoWidgetSettingsScreen: View {
     @State private var calendarAccess: CalendarSnapshotWriter.Access = .notDetermined
     @State private var previewImage: Image?
     @State private var previewImageAspect: Double = 1
+    @State private var previewLuma: PhotoWidgetLumaGrid?
     @State private var selectedComponent: PhotoWidgetComponent?
 
     private var store: PhotoWidgetSettingsStore { dependencies.photoWidgetSettings }
@@ -125,16 +126,23 @@ struct PhotoWidgetSettingsScreen: View {
               let url = snapshot.imageURL(at: index, directoryName: resolved.frameDirectoryName)
         else {
             previewImage = nil
+            previewLuma = nil
             return
         }
-        let loaded = await Task.detached(priority: .userInitiated) { () -> UIImage? in
-            guard let data = try? Data(contentsOf: url) else { return nil }
-            return UIImage(data: data)
+        // Decoded and measured off the main actor: the brightness grid is one
+        // 16×16 draw, but the decode that feeds it is not.
+        let loaded = await Task.detached(priority: .userInitiated) {
+            () -> (image: UIImage, luma: PhotoWidgetLumaGrid?)? in
+            guard let data = try? Data(contentsOf: url),
+                  let image = UIImage(data: data)
+            else { return nil }
+            return (image, image.cgImage.flatMap(PhotoWidgetLumaGrid.make(from:)))
         }.value
-        previewImage = loaded.map { Image(uiImage: $0) }
+        previewImage = loaded.map { Image(uiImage: $0.image) }
         previewImageAspect = loaded.map {
-            $0.size.height > 0 ? Double($0.size.width / $0.size.height) : 1
+            $0.image.size.height > 0 ? Double($0.image.size.width / $0.image.size.height) : 1
         } ?? 1
+        previewLuma = loaded?.luma
     }
 
     // MARK: Preview header
@@ -150,6 +158,7 @@ struct PhotoWidgetSettingsScreen: View {
                 family: previewFamily,
                 image: previewImage,
                 imageAspectRatio: previewImageAspect,
+                lumaGrid: previewLuma,
                 selection: $selectedComponent,
                 onMove: { component, anchor in
                     store.update(kind) {
@@ -200,32 +209,63 @@ struct PhotoWidgetSettingsScreen: View {
 
     /// Says what the finger under it can do, and changes as the user selects
     /// something — a preview with no instructions reads as a picture.
+    ///
+    /// The **Photo** chip is the background itself. It is a chip rather than a
+    /// hidden rule because "drag moves the photo when nothing is selected" is
+    /// true but invisible, and because it is how the user gets back to the
+    /// picture without hunting for a gap between two lines of text.
     private var elementChips: some View {
-        HStack(spacing: AppTheme.Spacing.sm) {
-            ForEach(PhotoWidgetComponent.components(for: kind, settings: settings)) { component in
-                let isSelected = selectedComponent == component
-                Button {
-                    selectedComponent = isSelected ? nil : component
-                } label: {
-                    Text(component.title)
-                        .font(.caption.weight(isSelected ? .semibold : .regular))
-                        .padding(.horizontal, 12)
-                        .frame(height: 32)
-                        .background(
-                            isSelected ? Color.accentColor.opacity(0.18) : Color(.secondarySystemFill),
-                            in: Capsule()
-                        )
-                        .overlay(
-                            Capsule().strokeBorder(
-                                isSelected ? Color.accentColor : .clear, lineWidth: 1
-                            )
-                        )
-                }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+        // Five chips at an accessibility text size do not fit a phone's width,
+        // and a clipped chip row hides the piece the user came to select.
+        ViewThatFits(in: .horizontal) {
+            chipRow.frame(maxWidth: .infinity)
+            ScrollView(.horizontal, showsIndicators: false) {
+                chipRow.padding(.horizontal, AppTheme.Spacing.xs)
             }
         }
-        .frame(maxWidth: .infinity)
+    }
+
+    private var chipRow: some View {
+        HStack(spacing: AppTheme.Spacing.sm) {
+            chip(title: "Photo", isSelected: selectedComponent == nil) {
+                selectedComponent = nil
+            }
+            ForEach(PhotoWidgetComponent.components(for: kind, settings: settings)) { component in
+                chip(
+                    title: component.title,
+                    isSelected: selectedComponent == component
+                ) {
+                    selectedComponent = selectedComponent == component ? nil : component
+                }
+            }
+        }
+    }
+
+    /// The capsule reads at 32pt; the button is 44pt so it can be hit.
+    private func chip(
+        title: String,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.caption.weight(isSelected ? .semibold : .regular))
+                .padding(.horizontal, 12)
+                .frame(height: AppTheme.Size.pillHeightLight)
+                .background(
+                    isSelected ? Color.accentColor.opacity(0.18) : Color(.secondarySystemFill),
+                    in: Capsule()
+                )
+                .overlay(
+                    Capsule().strokeBorder(
+                        isSelected ? Color.accentColor : .clear, lineWidth: 1
+                    )
+                )
+                .frame(height: AppTheme.Size.minTouch)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 
     private var hintText: String {
@@ -233,22 +273,42 @@ struct PhotoWidgetSettingsScreen: View {
             return "\(selectedComponent.title) selected. Drag it on the preview, pinch to resize, or use the controls below."
         }
         return isNoneSource
-            ? "Tap a line to select it, then drag to move or pinch to resize. Choose a photo below to place it behind."
-            : "Tap a line to select it, then drag to move or pinch to resize. Two fingers move the photo behind."
+            ? "Photo selected — choose one below to place it behind. Tap a line on the preview to move or resize it instead."
+            : "Photo selected. Drag the preview to reframe it, pinch to zoom. Tap a line to move or resize that line instead."
     }
 
+    /// Picking a line is also a request to go where that line is edited.
+    ///
+    /// Arrangement is the last of seven sections, so selecting the weather
+    /// block on the preview used to leave its nudge pad and size slider five
+    /// sections below the fold, with nothing saying they were there. Widgy
+    /// names the same move "Quick Assignment: assign directly from Preview";
+    /// the History panel in the photo editor already does it here.
     private var optionsList: some View {
-        List {
-            photoSection
-            timeSection
-            if kind.needsCalendarEvents { calendarSection }
-            if kind.needsWeather { weatherSection }
-            typefaceSection
-            colourSection
-            arrangementSection
+        ScrollViewReader { proxy in
+            List {
+                photoSection
+                timeSection
+                if kind.needsCalendarEvents { calendarSection }
+                if kind.needsWeather { weatherSection }
+                typefaceSection
+                colourSection
+                arrangementSection
+                    .id(Self.arrangementAnchor)
+            }
+            .listStyle(.insetGrouped)
+            .onChange(of: selectedComponent) { previous, current in
+                // Only on the way *into* a selection. Deselecting — which a
+                // tap on the photo does — must not yank the list anywhere.
+                guard previous == nil, current != nil else { return }
+                withAnimation(AppTheme.Motion.standard) {
+                    proxy.scrollTo(Self.arrangementAnchor, anchor: .top)
+                }
+            }
         }
-        .listStyle(.insetGrouped)
     }
+
+    private static let arrangementAnchor = "arrangement"
 
     // MARK: Preview
 
@@ -505,11 +565,15 @@ struct PhotoWidgetSettingsScreen: View {
             // Swatches rather than a picker menu: with colour, the colour is
             // the whole answer, and a menu hides every option behind a tap
             // (DESIGN.md §7.5, the same reason the accent row is swatches).
-            // Two rows of four: eight 44pt targets do not fit one grouped row.
+            // Three rows of three: nine 44pt targets do not fit one grouped
+            // row, and four columns left Purple alone on a row of its own.
             LazyVGrid(
-                columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4),
+                columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3),
                 spacing: 12
             ) {
+                // Smart first, because it is the one answer that is right on
+                // more than one photo, and an album rotates its photos.
+                swatch(hex: WidgetTextColor.smartHex)
                 ForEach(WidgetTextColor.swatches, id: \.self) { hex in
                     swatch(hex: hex)
                 }
@@ -524,17 +588,16 @@ struct PhotoWidgetSettingsScreen: View {
         } header: {
             Text("Colour")
         } footer: {
-            Text("Shadow suits most photos. Scrim darkens a band behind the text, for photos with a busy sky or bright detail under it.")
+            Text("Smart measures the part of the photo under each line and paints it white or black to suit — worth having on an album, where the photo changes under the same text. Shadow suits most photos; Scrim darkens a band behind the text, for photos with a busy sky or bright detail under it.")
         }
     }
 
     private func swatch(hex: String) -> some View {
-        let isSelected = settings.textColorHex.uppercased() == hex.uppercased()
+        let isSelected = settings.textColorHex.caseInsensitiveCompare(hex) == .orderedSame
         return Button {
             store.update(kind) { $0.textColorHex = hex }
         } label: {
-            Circle()
-                .fill(WidgetTextColor.color(hex: hex))
+            swatchFill(hex: hex)
                 .frame(width: 30, height: 30)
                 .overlay(
                     Circle().strokeBorder(.secondary.opacity(0.35), lineWidth: 1)
@@ -544,17 +607,47 @@ struct PhotoWidgetSettingsScreen: View {
                         .strokeBorder(Color.primary, lineWidth: isSelected ? 2 : 0)
                         .padding(-4)
                 )
+                // Inside the label, not around the button: a plain button is
+                // only hittable where its label draws, so a 30pt disc in a
+                // 44pt slot was a 38pt target (measured).
+                .frame(maxWidth: .infinity, minHeight: AppTheme.Size.minTouch)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .frame(maxWidth: .infinity, minHeight: 44)
         .accessibilityLabel(colourName(hex: hex))
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 
     /// A colour needs a name a screen reader can say; a hex code read out
     /// digit by digit is not one.
+    /// Smart is drawn as a disc split white over black: it is not one colour,
+    /// it is the choice between the two, and a grey circle would read as a
+    /// colour in its own right.
+    @ViewBuilder
+    private func swatchFill(hex: String) -> some View {
+        if WidgetTextColor.isSmart(hex: hex) {
+            Circle()
+                .fill(
+                    // Two hard stops, not a blend: the swatch stands for a
+                    // choice between two colours, and a grey middle would read
+                    // as a third one.
+                    LinearGradient(
+                        stops: [
+                            .init(color: .white, location: 0.5),
+                            .init(color: .black, location: 0.5),
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        } else {
+            Circle().fill(WidgetTextColor.color(hex: hex))
+        }
+    }
+
     private func colourName(hex: String) -> String {
-        switch hex.uppercased() {
+        if WidgetTextColor.isSmart(hex: hex) { return "Smart" }
+        return switch hex.uppercased() {
         case "#FFFFFF": "White"
         case "#000000": "Black"
         case "#EB9526": "Amber"
@@ -589,7 +682,7 @@ struct PhotoWidgetSettingsScreen: View {
                     .foregroundStyle(.secondary)
             }
             if !settings.componentAnchors.isEmpty || !settings.componentScales.isEmpty {
-                Button("Stack Everything Together") {
+                Button("Stack Everything Together", role: .destructive) {
                     store.update(kind) { $0.resetComponentAnchors() }
                     selectedComponent = nil
                 }
@@ -597,7 +690,7 @@ struct PhotoWidgetSettingsScreen: View {
             if !isNoneSource {
                 LabeledContent("Photo Zoom", value: "\(String(format: "%.1f", settings.photoScale))×")
                     .monospacedDigit()
-                Button("Reset Photo Framing") {
+                Button("Reset Photo Framing", role: .destructive) {
                     store.update(kind) {
                         $0.photoScale = 1
                         $0.photoOffsetX = 0
@@ -609,7 +702,7 @@ struct PhotoWidgetSettingsScreen: View {
         } header: {
             Text("Arrangement")
         } footer: {
-            Text("Drag a line on the preview to move it, and pinch it to resize. Guides appear when it lines up with the middle, an edge, or another line. The arrows below move it a step at a time, for when a finger is not precise enough. Two fingers move and zoom the photo behind.")
+            Text("Drag a line on the preview to move it, and pinch it to resize. Guides appear when it lines up with the middle, an edge, or another line. The arrows below move it a step at a time, for when a finger is not precise enough. Drag the photo itself — or tap the Photo chip first — to reframe it.")
         }
     }
 

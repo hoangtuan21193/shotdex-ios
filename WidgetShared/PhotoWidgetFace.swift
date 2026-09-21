@@ -21,6 +21,14 @@ struct PhotoWidgetFace: View {
     /// Which pieces this instance draws. Nil means all of them, which is what
     /// a widget that has never been rearranged still does.
     var components: [PhotoWidgetComponent]?
+    /// Set when the colour was worked out from the picture under *this* block
+    /// — the Smart swatch. Nil means the user chose a fixed colour, and the
+    /// hex in the settings is the answer.
+    var textColor: Color?
+
+    private var resolvedColor: Color {
+        textColor ?? WidgetTextColor.color(hex: settings.textColorHex)
+    }
 
     private var headlineSize: CGFloat {
         settings.scaledHeadlineSize(forWidgetWidth: width) * settings.scale(for: .time)
@@ -55,7 +63,7 @@ struct PhotoWidgetFace: View {
                     .font(font(size: supportingSize, isBold: false))
             }
         }
-        .foregroundStyle(WidgetTextColor.color(hex: settings.textColorHex))
+        .foregroundStyle(resolvedColor)
         .shadow(
             color: .black.opacity(settings.legibility == .shadow ? 0.55 : 0),
             radius: 4,
@@ -155,7 +163,7 @@ struct PhotoWidgetFace: View {
                 settings: settings,
                 size: supportingSize(for: .calendar),
                 fontPostScriptName: settings.fontPostScriptName,
-                accent: WidgetTextColor.color(hex: settings.textColorHex)
+                accent: resolvedColor
             )
             .frame(maxWidth: gridWidth)
         }
@@ -197,7 +205,7 @@ struct PhotoWidgetFace: View {
                     ForEach(visible.shown) { event in
                         HStack(spacing: 5) {
                             Circle()
-                                .fill(WidgetTextColor.color(hex: event.colorHex ?? settings.textColorHex))
+                                .fill(event.colorHex.map { WidgetTextColor.color(hex: $0) } ?? resolvedColor)
                                 .frame(width: 5, height: 5)
                             Text(CalendarFormat.timeString(for: event))
                                 .font(font(size: supportingSize(for: .calendar) * 0.9, isBold: false))

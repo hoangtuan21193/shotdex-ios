@@ -94,7 +94,7 @@ final class PhotoWidgetSettingsStore {
             max(updated.maximumEventCount, PhotoWidgetSettings.eventCountRange.lowerBound),
             PhotoWidgetSettings.eventCountRange.upperBound
         )
-        if !WidgetTextColor.isValid(hex: updated.textColorHex) {
+        if !WidgetTextColor.isStorable(hex: updated.textColorHex) {
             updated.textColorHex = WidgetTextColor.fallbackHex
         }
         guard updated != file[kind] else { return }

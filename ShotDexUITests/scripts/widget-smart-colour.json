@@ -1,0 +1,379 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Settings",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "swipe",
+      "direction": "up",
+      "x": 0.5,
+      "y": 0.6
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "swipe",
+      "direction": "up",
+      "x": 0.5,
+      "y": 0.6
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "swipe",
+      "direction": "up",
+      "x": 0.5,
+      "y": 0.6
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "label": "Clock",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "swipe",
+      "direction": "up",
+      "x": 0.5,
+      "y": 0.8
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "swipe",
+      "direction": "up",
+      "x": 0.5,
+      "y": 0.8
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "swipe",
+      "direction": "up",
+      "x": 0.5,
+      "y": 0.8
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "swipe",
+      "direction": "up",
+      "x": 0.5,
+      "y": 0.8
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "swipe",
+      "direction": "up",
+      "x": 0.5,
+      "y": 0.8
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "swipe",
+      "direction": "up",
+      "x": 0.5,
+      "y": 0.8
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "swipe",
+      "direction": "up",
+      "x": 0.5,
+      "y": 0.8
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "screenshot",
+      "name": "01-colour-section"
+    },
+    {
+      "action": "dump",
+      "name": "01-colour-section"
+    },
+    {
+      "action": "tap",
+      "label": "Smart",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "02-smart-on"
+    },
+    {
+      "action": "dump",
+      "name": "02-smart-on"
+    },
+    {
+      "action": "tap",
+      "label": "Time",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Move up",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move up",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move up",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move up",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move up",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move up",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move left",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move left",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move left",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move left",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move left",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move left",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "03-time-top-left"
+    },
+    {
+      "action": "dump",
+      "name": "03-time-top-left"
+    },
+    {
+      "action": "tap",
+      "label": "Move right",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move right",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move right",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move right",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move right",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move right",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move right",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move right",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move right",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move right",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move right",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move right",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "04-time-top-right"
+    },
+    {
+      "action": "dump",
+      "name": "04-time-top-right"
+    },
+    {
+      "action": "tap",
+      "label": "Move down",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move down",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move down",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move down",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move down",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move down",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move down",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move down",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move down",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move down",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move down",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Move down",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "05-time-bottom-right"
+    },
+    {
+      "action": "dump",
+      "name": "05-time-bottom-right"
+    }
+  ]
+}

@@ -1,0 +1,95 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Settings",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "swipe",
+      "direction": "up",
+      "x": 0.5,
+      "y": 0.6
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "swipe",
+      "direction": "up",
+      "x": 0.5,
+      "y": 0.6
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "swipe",
+      "direction": "up",
+      "x": 0.5,
+      "y": 0.6
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "label": "Clock",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "tap",
+      "label": "Time",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "01-before"
+    },
+    {
+      "action": "dump",
+      "name": "01-before"
+    },
+    {
+      "action": "swipe",
+      "direction": "down",
+      "x": 0.58,
+      "y": 0.2,
+      "distance": 0.09
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "02-line-moved"
+    },
+    {
+      "action": "dump",
+      "name": "02-line-moved"
+    }
+  ]
+}

@@ -146,6 +146,12 @@
     "%@ settings" : {
 
     },
+    "%@ size" : {
+
+    },
+    "%@ Size" : {
+
+    },
     "%@, %@" : {
       "comment" : "Video Studio track header: VoiceOver label naming the track — its number badge and its kind",
       "localizations" : {
@@ -963,7 +969,7 @@
     "Cellular" : {
 
     },
-    "Centre the Text" : {
+    "Centre %@" : {
 
     },
     "Change date" : {
@@ -1454,22 +1460,22 @@
     "Downloading from iCloud…" : {
 
     },
+    "Drag a line of text to move it, or drag the background to move the photo. Pinch to resize whatever is selected." : {
+
+    },
+    "Drag a line on the preview to move it, and pinch it to resize. Guides appear when it lines up with the middle, an edge, or another line. The arrows below move it a step at a time, for when a finger is not precise enough. Drag the photo itself — or tap the Photo chip first — to reframe it." : {
+
+    },
     "Drag on the graph to shape the curve" : {
 
     },
     "Drag on the photo — the loupe shows the pixel under your finger. Lift to pick it." : {
 
     },
-    "Drag the text on the preview to place it anywhere in the widget. Pinch the preview to zoom the photo behind it, and drag with two fingers to choose which part shows." : {
-
-    },
     "Drag to adjust" : {
 
     },
     "Drag to move the crop" : {
-
-    },
-    "Drag to move the text. Pinch with two fingers to zoom the photo." : {
 
     },
     "Drag to resize the crop" : {
@@ -2820,6 +2826,9 @@
     "Pick a Date" : {
 
     },
+    "Pick a line above to move or resize it on its own." : {
+
+    },
     "Pick Another Date" : {
 
     },
@@ -2893,6 +2902,9 @@
 
     },
     "Portrait" : {
+
+    },
+    "Position" : {
 
     },
     "Preparing clips…" : {
@@ -3384,6 +3396,9 @@
     "Select Text or Subject" : {
 
     },
+    "Selected" : {
+
+    },
     "Selected %lld" : {
 
     },
@@ -3628,6 +3643,9 @@
       "comment" : "Video Studio transport: cuts the clip under the playhead in two"
     },
     "Split into series by" : {
+
+    },
+    "Stack Everything Together" : {
 
     },
     "Start" : {

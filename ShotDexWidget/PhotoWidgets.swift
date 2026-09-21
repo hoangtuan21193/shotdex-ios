@@ -23,6 +23,10 @@ struct PhotoWidgetEntry: TimelineEntry {
     /// Width ÷ height of the picture, so a two-finger drag can reach the part
     /// the fill cropped away.
     var imageAspectRatio: Double = 1
+    /// How bright that picture is, cell by cell. Measured once when it is
+    /// decoded and carried with it, because the Smart colour asks a different
+    /// question of it for every block of text.
+    var lumaGrid: PhotoWidgetLumaGrid?
 }
 
 struct PhotoWidgetProvider: AppIntentTimelineProvider {
@@ -108,7 +112,7 @@ struct PhotoWidgetProvider: AppIntentTimelineProvider {
         var settings = PhotoWidgetSettingsFile.read()
         let weather = WeatherSnapshot.read()
         let calendarSnapshot = CalendarSnapshot.read()
-        private var images: [String: (image: Image, aspectRatio: Double)] = [:]
+        private var images: [String: LoadedImage] = [:]
         private var snapshots: [String: PhotoWidgetSnapshot] = [:]
 
         /// Folds the Home Screen menu's answer into the shared settings — once
@@ -150,16 +154,23 @@ struct PhotoWidgetProvider: AppIntentTimelineProvider {
             return (settings, resolved)
         }
 
+        struct LoadedImage {
+            let image: Image
+            let aspectRatio: Double
+            let lumaGrid: PhotoWidgetLumaGrid?
+        }
+
         func image(
             directoryName: String,
             at date: Date,
-            rotation: PhotoWidgetSettings.Rotation
-        ) -> (image: Image, aspectRatio: Double)? {
+            rotation: PhotoWidgetSettings.Rotation,
+            measuresLuma: Bool
+        ) -> LoadedImage? {
             let snapshot = snapshot(named: directoryName)
             guard let index = PhotoWidgetSnapshot.frameIndex(
                 at: date, count: snapshot.frames.count, rotation: rotation
             ) else { return nil }
-            let key = "\(directoryName)-\(index)"
+            let key = "\(directoryName)-\(index)-\(measuresLuma)"
             if let cached = images[key] { return cached }
             guard let url = snapshot.imageURL(at: index, directoryName: directoryName),
                   let data = try? Data(contentsOf: url),
@@ -168,7 +179,16 @@ struct PhotoWidgetProvider: AppIntentTimelineProvider {
             let aspect = uiImage.size.height > 0
                 ? Double(uiImage.size.width / uiImage.size.height)
                 : 1
-            let loaded = (image: Image(uiImage: uiImage), aspectRatio: aspect)
+            let loaded = LoadedImage(
+                image: Image(uiImage: uiImage),
+                aspectRatio: aspect,
+                // Only when the user asked for it: one 16×16 draw is cheap,
+                // but a widget extension pays for every pass it does not need,
+                // and a fixed swatch never asks this question.
+                lumaGrid: measuresLuma
+                    ? uiImage.cgImage.flatMap(PhotoWidgetLumaGrid.make(from:))
+                    : nil
+            )
             images[key] = loaded
             return loaded
         }
@@ -191,7 +211,8 @@ struct PhotoWidgetProvider: AppIntentTimelineProvider {
         let loaded = payload.image(
             directoryName: prepared.resolved.frameDirectoryName,
             at: date,
-            rotation: prepared.settings.rotation
+            rotation: prepared.settings.rotation,
+            measuresLuma: WidgetTextColor.isSmart(hex: prepared.settings.textColorHex)
         )
         return PhotoWidgetEntry(
             date: date,
@@ -203,7 +224,8 @@ struct PhotoWidgetProvider: AppIntentTimelineProvider {
             pendingAlbum: prepared.resolved.pendingSource.map {
                 WidgetAlbumCatalog.Album(id: $0.id, title: $0.title, count: 0)
             },
-            imageAspectRatio: loaded?.aspectRatio ?? 1
+            imageAspectRatio: loaded?.aspectRatio ?? 1,
+            lumaGrid: loaded?.lumaGrid
         )
     }
 }
@@ -359,7 +381,9 @@ struct PhotoWidgetPositionedFace: View {
             size: size,
             weather: entry.weather,
             calendarSnapshot: entry.calendarSnapshot,
-            isCompact: isCompact
+            isCompact: isCompact,
+            lumaGrid: entry.lumaGrid,
+            imageAspectRatio: entry.imageAspectRatio
         ) { _, _ in EmptyView() }
     }
 }

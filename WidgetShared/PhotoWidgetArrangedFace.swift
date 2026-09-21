@@ -14,6 +14,14 @@ struct PhotoWidgetArrangedFace<Overlay: View>: View {
     var weather: WeatherSnapshot?
     var calendarSnapshot: CalendarSnapshot?
     var isCompact = false
+    /// How bright the picture is behind the text, so the **Smart** colour can
+    /// be worked out per block rather than once for the whole widget: a clock
+    /// dragged onto a bright sky and a date left on dark rock want opposite
+    /// answers, and one colour for both is how the old fixed swatches failed.
+    var lumaGrid: PhotoWidgetLumaGrid?
+    /// Width ÷ height of that picture — needed to know which part of it the
+    /// widget is actually showing.
+    var imageAspectRatio: Double = 1
     /// Drawn over each group, given the group's pieces: the editor uses it for
     /// the selection outline and handles; the widget passes nothing.
     @ViewBuilder var overlay: ([PhotoWidgetComponent], CGSize) -> Overlay
@@ -40,7 +48,8 @@ struct PhotoWidgetArrangedFace<Overlay: View>: View {
                 PhotoWidgetFace(
                     date: date, settings: settings, kind: kind, width: size.width,
                     weather: weather, calendarSnapshot: calendarSnapshot,
-                    isCompact: isCompact, components: []
+                    isCompact: isCompact, components: [],
+                    textColor: smartColor(forRect: CGRect(origin: .zero, size: size))
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: settings.anchor.alignment)
             }
@@ -55,12 +64,33 @@ struct PhotoWidgetArrangedFace<Overlay: View>: View {
                     isCompact: isCompact,
                     anchor: group.anchor,
                     components: group.components,
+                    smartColor: smartColor(forRect:),
                     overlay: overlay,
                     onLayout: onLayout
                 )
             }
         }
         .frame(width: size.width, height: size.height, alignment: .topLeading)
+    }
+
+    /// The Smart colour for one block, or nil when the user picked a fixed
+    /// swatch (then the hex decides) or when there is nothing to measure.
+    private func smartColor(forRect rect: CGRect) -> Color? {
+        guard WidgetTextColor.isSmart(hex: settings.textColorHex) else { return nil }
+        guard let lumaGrid else { return .white }
+        let imageRect = PhotoWidgetImageLayer.normalizedImageRect(
+            for: rect,
+            in: size,
+            aspectRatio: imageAspectRatio,
+            scale: settings.photoScale,
+            offsetX: settings.photoOffsetX,
+            offsetY: settings.photoOffsetY
+        )
+        // Dimming is drawn over the photo, so it is part of what the text
+        // stands on — a picture dimmed to 60% is a dark background whatever
+        // the pixels underneath say.
+        let luma = lumaGrid.luma(inNormalizedRect: imageRect) * (1 - settings.photoDimming)
+        return WidgetTextColor.smartColor(luma: luma)
     }
 }
 
@@ -75,6 +105,9 @@ private struct PhotoWidgetPlacedGroup<Overlay: View>: View {
     var isCompact: Bool
     let anchor: PhotoWidgetSettings.Anchor
     let components: [PhotoWidgetComponent]
+    /// Asked once the block has been measured and placed, because the answer
+    /// depends on where it ended up.
+    let smartColor: (CGRect) -> Color?
     @ViewBuilder var overlay: ([PhotoWidgetComponent], CGSize) -> Overlay
     var onLayout: ([PhotoWidgetComponent], CGRect) -> Void
 
@@ -91,7 +124,8 @@ private struct PhotoWidgetPlacedGroup<Overlay: View>: View {
             weather: weather,
             calendarSnapshot: calendarSnapshot,
             isCompact: isCompact,
-            components: components
+            components: components,
+            textColor: smartColor(placedRect)
         )
         .background {
             GeometryReader { proxy in
@@ -119,16 +153,19 @@ private struct PhotoWidgetPlacedGroup<Overlay: View>: View {
         return CGSize(width: available.width * anchor.x, height: available.height * anchor.y)
     }
 
-    private func report() {
-        onLayout(
-            components,
-            CGRect(
-                x: origin.width,
-                y: origin.height,
-                width: contentSize.width + inset * 2,
-                height: contentSize.height + inset * 2
-            )
+    /// Where this block sits inside the widget, inset included — the same
+    /// rectangle `report()` hands the editor.
+    private var placedRect: CGRect {
+        CGRect(
+            x: origin.width,
+            y: origin.height,
+            width: contentSize.width + inset * 2,
+            height: contentSize.height + inset * 2
         )
+    }
+
+    private func report() {
+        onLayout(components, placedRect)
     }
 }
 
