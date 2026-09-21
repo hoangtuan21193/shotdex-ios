@@ -36,6 +36,7 @@ Which agents for which area:
 - **Any UI area**: `hig-components` (tier A/B only), `component-consistency`, `a11y-voiceover`.
 - **Anything with a layout that is not a plain list**: `device-layout`. It builds and screenshots, so it is slow — give it its own wave.
 - **New or reworked flows**: `ux-reviewer`, and `challenger` on the two or three biggest decisions.
+- **Anything with a custom gesture, a new sheet or push, an animation, a loading state, or a first-run/permission moment**: the platform-feel trio — `iphone-ux-review`, `ipad-ux-review`, `duo-ux-review`. One per screen size, and they are cheap to run together because each reads the same doctrine and then only its own device. Pair them with `ux-reviewer` rather than instead of it — they judge the act, it judges the consequence — but give them different files in the same wave.
 - **Grid, layout, index, anything in a scroll path**: `perf-profiler`.
 - **Anything touching PHAsset**: `photokit-guard`.
 - **Any migration or new stored field**: `data-migration`.
