@@ -23,6 +23,12 @@ final class SettingsNavigation {
     /// results.
     var query: String = ""
 
+    /// Whether the search field holds the screen. Bound rather than left to
+    /// SwiftUI so that picking a result can put the keyboard away — a result
+    /// that scrolls the list behind a keyboard has answered the question in a
+    /// place the reader cannot see.
+    var isSearchPresented: Bool = false
+
     /// The row a search result asked for, waiting for its list to appear.
     private(set) var pendingScrollTarget: SettingsRowLabel?
 
@@ -47,6 +53,7 @@ final class SettingsNavigation {
         }
         pendingScrollTarget = entry.label
         query = ""
+        isSearchPresented = false
     }
 
     /// Hands the pending row to whichever list is ready to scroll, once.

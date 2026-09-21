@@ -156,7 +156,11 @@ struct SettingsScreen: View {
                     detailRoot(for: item)
                         .toolbar { doneToolbarItem }
                 }
-                .searchable(text: $navigation.query, prompt: Text("Search Settings"))
+                .searchable(
+                    text: $navigation.query,
+                    isPresented: $navigation.isSearchPresented,
+                    prompt: Text("Search Settings")
+                )
         }
     }
 
@@ -209,6 +213,7 @@ struct SettingsScreen: View {
         .toolbar { doneToolbarItem }
         .searchable(
             text: $navigation.query,
+            isPresented: $navigation.isSearchPresented,
             placement: .navigationBarDrawer(displayMode: .always),
             prompt: Text("Search Settings")
         )
