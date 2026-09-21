@@ -61,6 +61,12 @@ enum AppTheme {
         static let settingsSidebarWidthMin: CGFloat = 280
         /// Ceiling for the same sidebar.
         static let settingsSidebarWidthMax: CGFloat = 360
+        /// How wide the rows inside a settings detail pane are allowed to get.
+        /// Measured from Settings on iPadOS: a 1044pt pane there holds 844pt of
+        /// content. Left to fill the pane, a row on a 13" iPad puts a label and
+        /// its value 900pt apart, which is the phone layout stretched — the
+        /// thing §10.1c forbids.
+        static let settingsDetailContentMaxWidth: CGFloat = 840
         /// Clearance a scrolling screen leaves under its content for the
         /// bottom chrome. Pre-iOS 26 the custom tab bar floats over the
         /// content and needs the room; on 26 the native bar reserves its own

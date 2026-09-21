@@ -44,7 +44,9 @@ enum SettingsSection: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .widgets: "square.grid.2x2"
         case .display: "text.below.photo"
         case .playback: "play.rectangle"
-        case .subjectScan: "sparkle.magnifyingglass"
+        // Not a magnifying glass: the search field sits four rows above, and two
+        // magnifiers in one sidebar read as two searches.
+        case .subjectScan: "person.2"
         case .sharingAndExport: "square.and.arrow.up"
         case .cameraDatabase: "camera"
         case .support: "questionmark.circle"

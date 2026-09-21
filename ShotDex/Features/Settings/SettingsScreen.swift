@@ -4,7 +4,11 @@ import SwiftUI
 /// index controls, display options, camera database, statistics options,
 /// privacy.
 struct SettingsScreen: View {
+    /// Shorthand for the row labels, which every section reads from.
+    private typealias Row = SettingsRowLabel
+
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(AppDependencies.self) private var dependencies
 
@@ -52,10 +56,18 @@ struct SettingsScreen: View {
     /// one scroll would otherwise trigger dozens of full reschedules.
     @State private var notifyTimeRefreshTask: Task<Void, Never>?
 
+    /// Where the reader is: the selected sidebar item, what the compact layout
+    /// has pushed, the search query and the row a result is sending them to.
+    /// Created here, so closing Settings forgets all four.
+    @State private var navigation = SettingsNavigation()
+    /// The sidebar stays out while a detail screen is pushed — a bound value
+    /// rather than a constant, which SwiftUI resolves into an update loop.
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
+
     var body: some View {
-        // Split in two so the type-checker can keep up: the list with its
+        // Split in three so the type-checker can keep up: the container, its
         // lifecycle modifiers, then the three destructive alerts.
-        settingsList
+        lifecycleBody
             .destructiveAlerts(
                 clearIndex: $isClearIndexConfirmationPresented,
                 resetMappings: $isResetMappingsConfirmationPresented,
@@ -70,55 +82,242 @@ struct SettingsScreen: View {
             )
     }
 
+    /// Everything that has to outlive a pane.
+    ///
+    /// All of it sits **above** the container branch, not inside a pane, and
+    /// each one has a reason: the three alerts fire from two different panes;
+    /// the index counts are three `COUNT(*)` over the whole library and would
+    /// otherwise re-run on every sidebar tap while going stale on the panes the
+    /// reader is not looking at; the reminder toggle rolls itself back when
+    /// permission is refused, and a cancelled pane would leave a preference
+    /// stored that can never fire; the time picker's debounce would be cancelled
+    /// the same way; and Import is a full-screen cover, which has to cover the
+    /// window rather than one column of it.
+    private var lifecycleBody: some View {
+        layoutRoot
+            .environment(navigation)
+            .fullScreenCover(isPresented: $isImportPresented) {
+                ImportScreen(
+                    service: dependencies.importService,
+                    libraryQueries: dependencies.libraryQueries,
+                    photoLibrary: dependencies.photoLibrary
+                )
+            }
+            .task(id: libraryModel?.isIndexing) {
+                await refreshIndexInfo()
+            }
+            .task {
+                notificationAuthorization = await dependencies.onThisDayNotifications.authorizationState()
+            }
+            .onChange(of: isOnThisDayReminderEnabled) { _, isEnabled in
+                Task { await applyReminderToggle(isEnabled) }
+            }
+            .onChange(of: onThisDayNotifyMinutes) {
+                notifyTimeRefreshTask?.cancel()
+                notifyTimeRefreshTask = Task {
+                    try? await Task.sleep(for: .milliseconds(500))
+                    guard !Task.isCancelled else { return }
+                    await dependencies.onThisDayNotifications.refresh()
+                }
+            }
+            .onChange(of: usesSplitView) { _, isSplit in
+                navigation.layoutChanged(usesSplitView: isSplit)
+            }
+    }
+
+    /// Which container Settings is: a sidebar and a detail pane at regular
+    /// width, the single list everywhere else (`DESIGN.md` §10.1f).
+    ///
+    /// No animation or transition wraps this branch on purpose. Animating a
+    /// swap of navigation containers is the shape of the preference-loop crash
+    /// this screen has hit twice; if the swap ever needs taming, the answer is
+    /// to remove animation from it, not to add some.
+    @ViewBuilder
+    private var layoutRoot: some View {
+        if usesSplitView { splitLayout } else { compactLayout }
+    }
+
+    private var usesSplitView: Bool {
+        SettingsLayout.usesSplitView(horizontalSizeClass: horizontalSizeClass)
+    }
+
+    // MARK: Compact — one list, unchanged
+
+    private var compactLayout: some View {
+        @Bindable var navigation = navigation
+        return NavigationStack(path: $navigation.compactPath) {
+            settingsList
+                .navigationTitle("Settings")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar { doneToolbarItem }
+                // Only reached by a window that shrank out of the split view;
+                // nothing on this list pushes a section.
+                .navigationDestination(for: SettingsSection.self) { item in
+                    detailRoot(for: item)
+                        .toolbar { doneToolbarItem }
+                }
+                .searchable(text: $navigation.query, prompt: Text("Search Settings"))
+        }
+    }
+
     private var settingsList: some View {
-        List {
-            photoLibrarySection
-            notificationsSection
-            widgetsSection
-            displaySection
-            playbackSection
-            subjectScanSection
-            storageSection
-            sharingSection
-            exportSection
-            cameraDatabaseSection
-            supportSection
-            privacySection
+        settingsOrResults { groupedList(SettingsGroup.allCases) }
+    }
+
+    // MARK: Regular — sidebar and detail
+
+    private var splitLayout: some View {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
+            sidebar
+        } detail: {
+            // A stack per pane, keyed to the item. Keyed so a pushed screen
+            // cannot survive into another item's pane; a real stack because
+            // Save in the sensor mapping screen pops with `dismiss()` — with no
+            // stack here it would close Settings — and because the widget
+            // designs screen declares a `navigationDestination` that needs one.
+            NavigationStack {
+                detailRoot(for: navigation.selection ?? .photoLibrary)
+            }
+            .id(navigation.selection ?? .photoLibrary)
         }
-        .listStyle(.insetGrouped)
+        .navigationSplitViewStyle(.balanced)
+    }
+
+    private var sidebar: some View {
+        @Bindable var navigation = navigation
+        return settingsOrResults {
+            List(SettingsSection.allCases, selection: $navigation.selection) { item in
+                Label {
+                    Text(item.title)
+                } icon: {
+                    Image(systemName: item.systemImage)
+                        .symbolRenderingMode(.hierarchical)
+                }
+                // "Support" is a sidebar item, a pane title and a row on the
+                // phone's list all at once, so the driver cannot pick this one
+                // out by label.
+                .accessibilityIdentifier("settings.sidebar.\(item.rawValue)")
+            }
+        }
         .navigationTitle("Settings")
-        // A full screen has no swipe to dismiss at all, so Done is the only
-        // way out and has to be there. (It was already required as a sheet:
-        // the drag indicator was easy to miss on iPad.)
-        .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Done") { dismiss() }
-            }
-        }
         .navigationBarTitleDisplayMode(.inline)
-        .fullScreenCover(isPresented: $isImportPresented) {
-            ImportScreen(
-                service: dependencies.importService,
-                libraryQueries: dependencies.libraryQueries,
-                photoLibrary: dependencies.photoLibrary
+        .navigationSplitViewColumnWidth(
+            min: AppTheme.Size.settingsSidebarWidthMin,
+            ideal: AppTheme.Size.settingsSidebarWidth,
+            max: AppTheme.Size.settingsSidebarWidthMax
+        )
+        .toolbar { doneToolbarItem }
+        .searchable(
+            text: $navigation.query,
+            placement: .navigationBarDrawer(displayMode: .always),
+            prompt: Text("Search Settings")
+        )
+    }
+
+    /// One sidebar item's content.
+    ///
+    /// Support is the one item that is a whole screen rather than a group of
+    /// sections: its threads are the point, and putting them behind one more
+    /// row would be a pane whose only content is a link.
+    @ViewBuilder
+    private func detailRoot(for item: SettingsSection) -> some View {
+        switch item {
+        case .support:
+            SupportScreen(
+                service: dependencies.support,
+                metadataStore: dependencies.metadataStore
             )
+        default:
+            groupedList(item.groups)
+                .navigationTitle(item.title)
+                .navigationBarTitleDisplayMode(.inline)
         }
-        .task(id: libraryModel?.isIndexing) {
-            await refreshIndexInfo()
-        }
-        .task {
-            notificationAuthorization = await dependencies.onThisDayNotifications.authorizationState()
-        }
-        .onChange(of: isOnThisDayReminderEnabled) { _, isEnabled in
-            Task { await applyReminderToggle(isEnabled) }
-        }
-        .onChange(of: onThisDayNotifyMinutes) {
-            notifyTimeRefreshTask?.cancel()
-            notifyTimeRefreshTask = Task {
-                try? await Task.sleep(for: .milliseconds(500))
-                guard !Task.isCancelled else { return }
-                await dependencies.onThisDayNotifications.refresh()
+    }
+
+    // MARK: Shared pieces
+
+    /// The settings themselves, or the search results when something is typed.
+    @ViewBuilder
+    private func settingsOrResults(@ViewBuilder content: () -> some View) -> some View {
+        if navigation.isSearching {
+            SettingsSearchResultsList(query: navigation.query) { entry in
+                navigation.open(entry, usesSplitView: usesSplitView)
             }
+        } else {
+            content()
+        }
+    }
+
+    /// A list of sections, able to be sent to one of its rows by a search result.
+    private func groupedList(_ groups: [SettingsGroup]) -> some View {
+        ScrollViewReader { proxy in
+            List {
+                ForEach(groups) { group($0) }
+            }
+            .listStyle(.insetGrouped)
+            // Held to a readable width and centred, with the grouped grey put
+            // back behind the whole pane. Measured on a 13" iPad: a row left to
+            // fill the pane is 1006pt across and stands "Access" 900pt from
+            // "Full Access" — the phone layout stretched, which §10.1c forbids.
+            // Settings on iPadOS holds the same content to 844pt.
+            .scrollContentBackground(.hidden)
+            .frame(maxWidth: AppTheme.Size.settingsDetailContentMaxWidth)
+            .frame(maxWidth: .infinity)
+            .background(Color(.systemGroupedBackground))
+            .task(id: navigation.pendingScrollTarget) {
+                await revealPendingRow(in: groups, proxy: proxy)
+            }
+        }
+    }
+
+    /// Scrolls to the row a search result asked for and lights it up briefly.
+    ///
+    /// The row is claimed only by the list that actually draws it — in the split
+    /// view the other panes do not exist yet, but the compact list and a detail
+    /// pane must not both answer for the same target.
+    private func revealPendingRow(in groups: [SettingsGroup], proxy: ScrollViewProxy) async {
+        guard let target = navigation.pendingScrollTarget, groups.contains(target.group) else { return }
+        _ = navigation.consumeScrollTarget()
+        withAnimation(AppTheme.Motion.standard) {
+            proxy.scrollTo(target, anchor: .center)
+        }
+        navigation.flash(target)
+    }
+
+    /// A full screen has no swipe to dismiss at all, so Done is the only way out
+    /// and has to be there. (It was already required as a sheet: the drag
+    /// indicator was easy to miss on iPad.)
+    @ToolbarContentBuilder
+    private var doneToolbarItem: some ToolbarContent {
+        ToolbarItem(placement: .confirmationAction) {
+            Button("Done") { dismiss() }
+        }
+    }
+
+    // MARK: The twelve sections, addressed by name
+
+    /// One `Section`, picked by its case.
+    ///
+    /// Both layouts render their sections through here, so the phone's list and
+    /// an iPad detail pane are drawing the same views off the same state — this
+    /// screen keeps owning every `@AppStorage` and `@State` it always had.
+    /// No `AnyView`: erasing the type would blur the row identity `List`
+    /// animates against, which is the diff bug `indexControls` documents below.
+    @ViewBuilder
+    private func group(_ group: SettingsGroup) -> some View {
+        switch group {
+        case .photoLibrary: photoLibrarySection
+        case .notifications: notificationsSection
+        case .widgets: widgetsSection
+        case .display: displaySection
+        case .playback: playbackSection
+        case .subjectScan: subjectScanSection
+        case .libraryStorage: storageSection
+        case .sharing: sharingSection
+        case .export: exportSection
+        case .cameraDatabase: cameraDatabaseSection
+        case .support: supportSection
+        case .privacy: privacySection
         }
     }
 
@@ -126,25 +325,30 @@ struct SettingsScreen: View {
 
     private var photoLibrarySection: some View {
         Section {
-            LabeledContent("Access", value: authorizationLabel)
+            LabeledContent(Row.access.title, value: authorizationLabel)
+                .settingsRow(.access)
             if photoLibrary.authorizationState == .limited {
-                Button("Manage Selected Photos") {
+                Button(Row.manageSelectedPhotos.title) {
                     photoLibrary.presentLimitedLibraryPicker()
                 }
+                .settingsRow(.manageSelectedPhotos)
             }
             if photoLibrary.authorizationState == .denied {
-                Button("Open Settings") { openAppSettings() }
+                Button(Row.openPhotoSettings.title) { openAppSettings() }
+                    .settingsRow(.openPhotoSettings)
             }
 
             // The pair, not a single number: the fast pass writes a row for every
             // asset within seconds, so a plain row count sat at the library total
             // from the first run and read as 100 % done forever.
-            LabeledContent("Indexed Photos and Videos", value: readCountLabel)
+            LabeledContent(Row.indexedPhotosAndVideos.title, value: readCountLabel)
+                .settingsRow(.indexedPhotosAndVideos)
             if let lastIndexedAt {
                 LabeledContent(
-                    "Last Indexed",
+                    Row.lastIndexed.title,
                     value: lastIndexedAt.formatted(date: .abbreviated, time: .shortened)
                 )
+                .settingsRow(.lastIndexed)
             }
 
             if let model = libraryModel {
@@ -155,13 +359,17 @@ struct SettingsScreen: View {
                 Button {
                     isImportPresented = true
                 } label: {
-                    Label("Import Photos", systemImage: "square.and.arrow.down")
+                    Label(Row.importPhotos.title, systemImage: "square.and.arrow.down")
                 }
+                .settingsRow(.importPhotos)
             }
 
-            Toggle("Use Cellular Data for Indexing", isOn: $allowCellularIndexing)
-            Toggle("Keep Screen Awake While Indexing", isOn: $keepScreenAwake)
-            Toggle("Look Up Place Names", isOn: $looksUpPlaces)
+            Toggle(Row.useCellularData.title, isOn: $allowCellularIndexing)
+                .settingsRow(.useCellularData)
+            Toggle(Row.keepScreenAwake.title, isOn: $keepScreenAwake)
+                .settingsRow(.keepScreenAwake)
+            Toggle(Row.lookUpPlaceNames.title, isOn: $looksUpPlaces)
+                .settingsRow(.lookUpPlaceNames)
         } header: {
             Text("Photo Library")
         } footer: {
@@ -193,16 +401,21 @@ struct SettingsScreen: View {
     private func indexControls(_ model: LibraryModel) -> some View {
         if photoLibrary.authorizationState.canReadLibrary {
             if unfinishedCount > 0 {
+                // The count rides inside the localized string, not appended to
+                // it: "Continue Indexing (%@)" is one phrase to translate, and
+                // splitting it would leave the brackets to English word order.
                 Button("Continue Indexing (\(unfinishedCount.formatted()))") {
                     model.continueIndexing()
                 }
                 .disabled(model.isIndexing)
+                .settingsRow(.continueIndexing)
             }
 
-            Button("Re-index Library") {
+            Button(Row.reindexLibrary.title) {
                 model.startIndexing(fullReindex: true, manual: true)
             }
             .disabled(model.isIndexing)
+            .settingsRow(.reindexLibrary)
         }
 
         if model.isIndexing {
@@ -257,7 +470,7 @@ struct SettingsScreen: View {
 
     private var sharingSection: some View {
         Section {
-            Toggle("Include Location", isOn: $shareIncludesLocation)
+            Toggle(Row.includeLocation.title, isOn: $shareIncludesLocation).settingsRow(.includeLocation)
         } header: {
             Text("Sharing")
         } footer: {
@@ -279,24 +492,27 @@ struct SettingsScreen: View {
     private var subjectScanSection: some View {
         @Bindable var scan = dependencies.subjectScan
         Section {
-            LabeledContent("Scanned", value: subjectScanCountLabel)
+            LabeledContent(Row.scanned.title, value: subjectScanCountLabel)
                 .monospacedDigit()
+                .settingsRow(.scanned)
 
             if scan.isScanning {
                 subjectScanProgressRow(scan)
                     .transaction { $0.animation = nil }
             } else {
-                Button(scan.isComplete ? "Scan Again" : "Find People and Pets") {
+                Button(scan.isComplete ? Row.scanAgain.title : Row.findPeopleAndPets.title) {
                     scan.start()
                 }
                 .disabled(!photoLibrary.authorizationState.canReadLibrary)
+                .settingsRow(scan.isComplete ? .scanAgain : .findPeopleAndPets)
                 if scan.scannedCount > 0 {
                     // Confirmed like the other two destructive rows on this
                     // screen: the scan it throws away is the slowest thing the
                     // app does.
-                    Button("Clear Results", role: .destructive) {
+                    Button(Row.clearScanResults.title, role: .destructive) {
                         isClearScanConfirmationPresented = true
                     }
+                    .settingsRow(.clearScanResults)
                 }
             }
         } header: {
@@ -345,17 +561,21 @@ struct SettingsScreen: View {
 
     private var notificationsSection: some View {
         Section {
-            Toggle("Daily On This Day Reminder", isOn: $isOnThisDayReminderEnabled)
+            Toggle(Row.dailyOnThisDayReminder.title, isOn: $isOnThisDayReminderEnabled)
+                .settingsRow(.dailyOnThisDayReminder)
             if isOnThisDayReminderEnabled, notificationAuthorization.canNotify {
                 DatePicker(
-                    "Remind Me At",
+                    Row.remindMeAt.title,
                     selection: notifyTimeBinding,
                     displayedComponents: .hourAndMinute
                 )
+                .settingsRow(.remindMeAt)
             }
             if notificationAuthorization == .denied {
-                LabeledContent("Notifications") { Text("Denied") }
-                Button("Open Settings") { openAppSettings() }
+                LabeledContent(Row.notificationsDenied.title) { Text("Denied") }
+                    .settingsRow(.notificationsDenied)
+                Button(Row.openNotificationSettings.title) { openAppSettings() }
+                    .settingsRow(.openNotificationSettings)
             }
         } header: {
             Text("Notifications")
@@ -401,22 +621,27 @@ struct SettingsScreen: View {
 
     // MARK: Widgets
 
+    /// How many designs there are, because the row leads to a list rather
+    /// than to one widget's settings.
+    private var photoWidgetSummary: String {
+        let count = dependencies.photoWidgetSettings.designs.count
+        return count == 1
+            ? dependencies.photoWidgetSettings.designs[0].name
+            : "\(count) designs"
+    }
+
     private var widgetsSection: some View {
         Section {
-            ForEach(PhotoWidgetKind.allCases) { kind in
-                NavigationLink {
-                    PhotoWidgetSettingsScreen(kind: kind)
-                } label: {
-                    LabeledContent(
-                        kind.title,
-                        value: dependencies.photoWidgetSettings.settings(for: kind).sourceSummary
-                    )
-                }
+            NavigationLink {
+                PhotoWidgetDesignsScreen()
+            } label: {
+                LabeledContent(Row.photoWidget.title, value: photoWidgetSummary)
             }
+            .settingsRow(.photoWidget)
         } header: {
             Text("Widgets")
         } footer: {
-            Text("Add widgets by touching and holding the Home Screen. Each of these draws over a photo or album you choose; On This Day needs no setting up.")
+            Text("Add widgets by touching and holding the Home Screen. A photo widget draws the time, the date, the month, today's events or the weather over a photo you choose — make a design for each one you want. On This Day needs no setting up.")
         }
     }
 
@@ -424,17 +649,18 @@ struct SettingsScreen: View {
 
     private var displaySection: some View {
         Section {
-            Toggle("File Type", isOn: $showsFileTypeBadge)
-            Toggle("ISO", isOn: $showsISO)
-            Toggle("Aperture", isOn: $showsAperture)
-            Toggle("Shutter Speed", isOn: $showsShutter)
-            Toggle("Focal Length", isOn: $showsFocal)
-            Picker("Focal Length Style", selection: $showsEquivalentFocalLength) {
+            Toggle(Row.fileTypeBadge.title, isOn: $showsFileTypeBadge).settingsRow(.fileTypeBadge)
+            Toggle(Row.iso.title, isOn: $showsISO).settingsRow(.iso)
+            Toggle(Row.aperture.title, isOn: $showsAperture).settingsRow(.aperture)
+            Toggle(Row.shutterSpeed.title, isOn: $showsShutter).settingsRow(.shutterSpeed)
+            Toggle(Row.focalLength.title, isOn: $showsFocal).settingsRow(.focalLength)
+            Picker(Row.focalLengthStyle.title, selection: $showsEquivalentFocalLength) {
                 Text("Actual").tag(false)
                 Text("FF Equivalent").tag(true)
             }
-            Toggle("Megapixels", isOn: $showsMegapixels)
-            Toggle("File Size", isOn: $showsFileSize)
+            .settingsRow(.focalLengthStyle)
+            Toggle(Row.megapixels.title, isOn: $showsMegapixels).settingsRow(.megapixels)
+            Toggle(Row.fileSize.title, isOn: $showsFileSize).settingsRow(.fileSize)
         } header: {
             Text("Thumbnail Metadata")
         } footer: {
@@ -444,8 +670,8 @@ struct SettingsScreen: View {
 
     private var playbackSection: some View {
         Section {
-            Toggle("Autoplay Videos", isOn: $autoplayVideos)
-            Toggle("View Full HDR", isOn: $viewFullHDR)
+            Toggle(Row.autoplayVideos.title, isOn: $autoplayVideos).settingsRow(.autoplayVideos)
+            Toggle(Row.viewFullHDR.title, isOn: $viewFullHDR).settingsRow(.viewFullHDR)
         } header: {
             Text("Playback")
         } footer: {
@@ -458,13 +684,15 @@ struct SettingsScreen: View {
     /// app it is one of the more interesting numbers there is.
     private var storageSection: some View {
         Section {
-            LabeledContent("Photos and Videos", value: storageTotalLabel)
+            LabeledContent(Row.photosAndVideos.title, value: storageTotalLabel)
+                .settingsRow(.photosAndVideos)
             if let storage, storage.knownCount < storage.totalCount {
                 LabeledContent(
-                    "Measured",
+                    Row.measured.title,
                     value: "\(storage.knownCount.formatted()) of \(storage.totalCount.formatted())"
                 )
                 .monospacedDigit()
+                .settingsRow(.measured)
             }
         } header: {
             Text("Library Size")
@@ -495,10 +723,11 @@ struct SettingsScreen: View {
                 CompressionPresetsScreen()
             } label: {
                 LabeledContent(
-                    "Resize Presets",
+                    Row.resizePresets.title,
                     value: "\(dependencies.compressionPresets.customPresets.count) custom"
                 )
             }
+            .settingsRow(.resizePresets)
         } header: {
             Text("Export")
         } footer: {
@@ -510,12 +739,14 @@ struct SettingsScreen: View {
 
     private var cameraDatabaseSection: some View {
         Section("Camera Database") {
-            NavigationLink("Unknown Cameras") {
+            NavigationLink(Row.unknownCameras.title) {
                 CameraDatabaseScreen(libraryModel: libraryModel)
             }
-            Button("Reset Custom Mappings", role: .destructive) {
+            .settingsRow(.unknownCameras)
+            Button(Row.resetCustomMappings.title, role: .destructive) {
                 isResetMappingsConfirmationPresented = true
             }
+            .settingsRow(.resetCustomMappings)
         }
     }
 
@@ -523,12 +754,13 @@ struct SettingsScreen: View {
 
     private var supportSection: some View {
         Section {
-            NavigationLink("Support") {
+            NavigationLink(Row.support.title) {
                 SupportScreen(
                     service: dependencies.support,
                     metadataStore: dependencies.metadataStore
                 )
             }
+            .settingsRow(.support)
         } footer: {
             Text("Report a bug or ask for a feature. Replies come back here — there is no account and no email address to give.")
         }
@@ -541,9 +773,10 @@ struct SettingsScreen: View {
             Text("Photos and metadata never leave this device. The one exception is a support message you write yourself, which carries no photos.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-            Button("Clear Local Metadata Index", role: .destructive) {
+            Button(Row.clearLocalMetadataIndex.title, role: .destructive) {
                 isClearIndexConfirmationPresented = true
             }
+            .settingsRow(.clearLocalMetadataIndex)
         } header: {
             Text("Privacy")
         }
@@ -605,11 +838,11 @@ struct SettingsScreen: View {
 
 #Preview {
     let dependencies = AppDependencies.preview()
-    return NavigationStack {
-        SettingsScreen(libraryModel: nil)
-    }
-    .environment(dependencies)
-    .environment(dependencies.photoLibrary)
+    // No `NavigationStack` here: the screen brings its own container, and which
+    // one depends on the size class.
+    return SettingsScreen(libraryModel: nil)
+        .environment(dependencies)
+        .environment(dependencies.photoLibrary)
 }
 
 /// The three destructive confirmations Settings owns.

@@ -1,0 +1,53 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Settings",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "dump",
+      "name": "01-cells",
+      "type": "cell"
+    },
+    {
+      "action": "dump",
+      "name": "01-text",
+      "type": "staticText"
+    },
+    {
+      "action": "dump",
+      "name": "01-images",
+      "type": "image"
+    },
+    {
+      "action": "wait",
+      "seconds": 12
+    },
+    {
+      "action": "tap",
+      "label": "Done",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "dump",
+      "name": "02-dismissed",
+      "type": "cell"
+    }
+  ]
+}
