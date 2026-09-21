@@ -103,6 +103,9 @@ struct EditorToolRail: View {
     /// headers mark theirs.
     let editedModes: Set<EditorRailMode>
     let isPanelHidden: Bool
+    /// History is a panel here, not a sheet, so its rail stop is a selectable
+    /// mode like the five above it rather than a button that opens something.
+    let isHistoryActive: Bool
     let edge: EditorSidebarEdge
     var select: (EditorRailMode) -> Void
     var showHistory: () -> Void
@@ -114,7 +117,9 @@ struct EditorToolRail: View {
                 railButton(
                     icon: mode.icon,
                     title: mode.title,
-                    isActive: mode == selected,
+                    // History takes the panel over, so nothing above it is the
+                    // thing on screen while it is up.
+                    isActive: mode == selected && !isHistoryActive,
                     hasEdits: editedModes.contains(mode)
                 ) {
                     select(mode)
@@ -126,7 +131,7 @@ struct EditorToolRail: View {
             railButton(
                 icon: "clock.arrow.circlepath",
                 title: "History",
-                isActive: false,
+                isActive: isHistoryActive,
                 hasEdits: false,
                 action: showHistory
             )

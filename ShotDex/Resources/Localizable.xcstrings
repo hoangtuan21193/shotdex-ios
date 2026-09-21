@@ -188,7 +188,7 @@
       }
     },
     "%@, %lld photos" : {
-      "comment" : "VoiceOver label for a smart album tile: its name and how many photos match it\nVoiceOver label for an album tile: its name and how many photos it holds",
+      "comment" : "VoiceOver label for a smart album tile: its name and how many photos match it\nVoiceOver label for an album tile in the widget's album picker\nVoiceOver label for an album tile: its name and how many photos it holds",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1451,6 +1451,9 @@
     "Downloading from iCloud" : {
 
     },
+    "Downloading from iCloud…" : {
+
+    },
     "Drag on the graph to shape the curve" : {
 
     },
@@ -2331,6 +2334,9 @@
     "Mute Track" : {
       "comment" : "Video Studio track header: silences this track"
     },
+    "My Albums" : {
+
+    },
     "My Looks" : {
 
     },
@@ -2382,6 +2388,9 @@
     "No Access to Photos" : {
 
     },
+    "No album is called that." : {
+
+    },
     "No Albums" : {
 
     },
@@ -2431,6 +2440,9 @@
 
     },
     "No masks yet" : {
+
+    },
+    "No Matches" : {
 
     },
     "No metadata" : {
@@ -3336,6 +3348,9 @@
     "Search again for %@" : {
 
     },
+    "Search Albums" : {
+
+    },
     "Search for a place" : {
 
     },
@@ -3406,6 +3421,9 @@
 
     },
     "Share" : {
+
+    },
+    "Shared" : {
 
     },
     "Sharing" : {
@@ -3663,6 +3681,9 @@
     "Subtract" : {
 
     },
+    "Suggested" : {
+
+    },
     "Summed from the file sizes the index has read. Photos still stored only in iCloud are counted at their full size." : {
 
     },
@@ -3709,6 +3730,9 @@
       "comment" : "Compare: the one instruction, shown until the first photo is marked"
     },
     "Tap a section to show or hide it, and Edit to drag them into the order you want. A section with nothing in it stays hidden whatever you choose here." : {
+
+    },
+    "Tap Pick a Color, then drag on the photo to choose one." : {
 
     },
     "Tap the map or search to place this photo." : {

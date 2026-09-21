@@ -71,7 +71,15 @@ final class EditorChromeModel {
     var activeSlider: PhotoAdjustmentKind?
 
     var isNewMaskSheetPresented = false
+    /// The phone's route to History: a sheet, because there is no panel to put
+    /// a list in. The wide layout uses `showsHistoryPanel` instead.
     var isHistorySheetPresented = false
+    /// History as a column in the tools panel, which is where it belongs on a
+    /// window wide enough to have one: a history step is picked by looking at
+    /// the photo it produces, and a sheet covers the photo — completely, on a
+    /// regular-width/compact-height window like the Duo's inner display, where
+    /// UIKit ignores `presentationDetents` and every detent is full screen.
+    var showsHistoryPanel = false
     var isMaskPickerPresented = false
     var numericEntryKind: PhotoAdjustmentKind?
     var numericEntryText = ""

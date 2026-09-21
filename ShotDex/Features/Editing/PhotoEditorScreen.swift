@@ -1065,7 +1065,7 @@ struct PhotoEditorScreen: View {
             }
             .disabled(controller.recipe.isIdentity)
             Button {
-                chrome.isHistorySheetPresented = true
+                showHistory()
             } label: {
                 Label("History", systemImage: "clock.arrow.circlepath")
             }
@@ -1207,14 +1207,16 @@ struct PhotoEditorScreen: View {
             // The Look row is the first thing to go on a short column: it is a
             // second route to the rail's Presets stop, which is still one tap
             // away and does not cost 53pt of every screenful.
-            if railMode == .edit, !isShortColumn {
+            if railMode == .edit, !chrome.showsHistoryPanel, !isShortColumn {
                 sidebarLookRow(controller)
                 Rectangle().fill(EditorTheme.panelDivider).frame(height: 1)
             }
 
             ScrollView(.vertical) {
                 LazyVStack(spacing: 0) {
-                    if railMode == .edit {
+                    if chrome.showsHistoryPanel {
+                        EditorHistoryPanel(controller: controller)
+                    } else if railMode == .edit {
                         ForEach(Self.sidebarParameterGroups) { group in
                             EditorSidebarSection(
                                 group: group,
@@ -1262,6 +1264,20 @@ struct PhotoEditorScreen: View {
         .background(EditorTheme.panelSolid)
     }
 
+    /// History goes to the panel on a window that has one and to a sheet on one
+    /// that does not — the stage menu, the ⋯ menu and the rail all come here so
+    /// there is one answer to that question.
+    private func showHistory() {
+        guard chrome.isWideLayout else {
+            chrome.isHistorySheetPresented = true
+            return
+        }
+        withAnimation(EditorTheme.animation) {
+            chrome.showsHistoryPanel = true
+            if isSidebarHidden { setSidebarHidden(false) }
+        }
+    }
+
     /// Which rail stop the panel is showing, derived from the selected group so
     /// there is one source of truth — a mask opened from the photo's own context
     /// menu moves the rail too.
@@ -1281,9 +1297,11 @@ struct PhotoEditorScreen: View {
                 }
             ),
             isPanelHidden: isSidebarHidden,
+            isHistoryActive: chrome.showsHistoryPanel,
             edge: sidebarEdge,
             select: { mode in
                 withAnimation(EditorTheme.animation) {
+                    chrome.showsHistoryPanel = false
                     // Picking the mode already up puts the editor back to plain
                     // adjusting — and out of Crop *without* applying the frame,
                     // which is the only route that does. Picking any mode also
@@ -1299,7 +1317,14 @@ struct PhotoEditorScreen: View {
                     )
                 }
             },
-            showHistory: { chrome.isHistorySheetPresented = true },
+            showHistory: {
+                // The rail stop toggles, the way the five mode stops above it do.
+                if chrome.showsHistoryPanel {
+                    withAnimation(EditorTheme.animation) { chrome.showsHistoryPanel = false }
+                } else {
+                    showHistory()
+                }
+            },
             togglePanel: {
                 withAnimation(EditorTheme.animation) {
                     setSidebarHidden(!isSidebarHidden)
@@ -1313,12 +1338,26 @@ struct PhotoEditorScreen: View {
     /// one-press tone pass, which lived in the ⋯ menu and so was never found.
     private func sidebarModeHeader(_ controller: PhotoEditorController) -> some View {
         HStack(spacing: AppTheme.Spacing.sm) {
-            Text(railMode.title.uppercased())
+            Text((chrome.showsHistoryPanel ? "History" : railMode.title).uppercased())
                 .font(EditorTheme.groupLabel)
                 .tracking(1.1)
                 .foregroundStyle(EditorTheme.secondaryText)
             Spacer(minLength: 8)
-            if railMode == .edit {
+            if chrome.showsHistoryPanel {
+                Button {
+                    withAnimation(EditorTheme.animation) { chrome.showsHistoryPanel = false }
+                } label: {
+                    Text("Done")
+                        .font(EditorTheme.pillLabel)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, AppTheme.Spacing.md)
+                        .frame(height: AppTheme.Size.pillHeightDark)
+                        .background(EditorTheme.control, in: Capsule())
+                        .overlay { Capsule().strokeBorder(EditorTheme.hairline, lineWidth: 1) }
+                }
+                .buttonStyle(.plain)
+                .hoverEffect(.highlight)
+            } else if railMode == .edit {
                 Button {
                     controller.applyAutoTone()
                 } label: {
@@ -2080,7 +2119,7 @@ struct PhotoEditorScreen: View {
             }
 
             Button {
-                chrome.isHistorySheetPresented = true
+                showHistory()
             } label: {
                 Label("History", systemImage: "clock.arrow.circlepath")
             }
