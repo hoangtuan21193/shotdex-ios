@@ -46,7 +46,7 @@ root ra đi cùng, hoặc được nêu rõ lý do giữ lại.
   được index như mọi ảnh khác — bỏ lối vào không xoá gì. Cần xác nhận lại điều này ở
   giai đoạn Design trước khi gỡ code.
 - **Tài liệu**: `docs/02-functional-spec/FS-10-import.md` (6.0K) phải được gỡ hoặc đổi
-  thành ghi chú "đã bỏ", và `FS-08-settings.md` bỏ mục Import.
+  thành ghi chú "đã bỏ", và `FS-08-settings/README.md` bỏ mục Import.
 
 ## Constraints — ràng buộc
 

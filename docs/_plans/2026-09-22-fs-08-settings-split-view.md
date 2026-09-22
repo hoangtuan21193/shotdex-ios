@@ -4,7 +4,7 @@
 
 Settings hôm nay là **một `List(.insetGrouped)` phẳng trải hết bề ngang ở mọi thiết bị**. Đo trên iPad Pro 13" ngang 1376×1032: hàng **Access** để nhãn ở x≈40pt và giá trị "Full Access" ở x≈1339pt — cách nhau ~1250pt; hàng "Use Cellular Data for Indexing" để ~1025pt trống giữa chữ và công tắc. Đó là layout điện thoại bị phóng to, thứ `DESIGN.md` §10.1c cấm, và là màn duy nhất trong app còn sót lại như vậy (Statistics, lưới ảnh, Collections, editor đều đã có nhánh regular width).
 
-Nguồn: [intent 2026-09-21-ipad-settings-layout](../../Project/shotdex-ios/docs/_intents/2026-09-21-ipad-settings-layout.md) → spec [FS-08](../../Project/shotdex-ios/docs/02-functional-spec/FS-08-settings.md) (21 AC) → `DESIGN.md` §10.1f + §6 (đã sửa).
+Nguồn: [intent 2026-09-21-ipad-settings-layout](../_intents/2026-09-21-ipad-settings-layout.md) → spec [FS-08](../02-functional-spec/FS-08-settings/README.md) (21 AC) → `DESIGN.md` §10.1f + §6 (đã sửa).
 
 Kết quả mong muốn: ở regular width, Settings là `NavigationSplitView` giống Settings của iPadOS — sidebar 9 mục có icon và ô Search, detail pane mang nội dung; ở compact **không đổi một dòng nào**.
 
@@ -49,7 +49,7 @@ Một enum 9 mục sẽ đảo thứ tự compact (Library Size và Privacy nh�
 | `ShotDex/App/SettingsSheet.swift:29-35` | bỏ `NavigationStack`; sửa doc comment :20-28 |
 | `ShotDex/Features/Settings/SettingsScreen.swift` | phần lớn công việc — xem dưới |
 | `DESIGN.md` §6 và §11 | tên hai token anh em của sidebar + `searchFlashDuration` |
-| `docs/02-functional-spec/FS-08-settings.md` | cột "chứng minh bằng" của 21 AC |
+| `docs/02-functional-spec/FS-08-settings/README.md` | cột "chứng minh bằng" của 21 AC |
 
 **Cố ý KHÔNG sửa:** `ShotDex/App/RootTabView.swift` — **không một dòng nào**. Thứ tự modifier quanh `settingsSheet` (:218, :296) là thứ đã từng gây SIGBUS; một commit có `RootTabView.swift` trong `git diff --stat` là sai theo cấu trúc. Cũng không đụng `CameraDatabaseScreen`, `PhotoWidgetDesignsScreen`, `PhotoWidgetSettingsScreen`, `CompressionPresetsScreen`, `SupportScreen` — cả năm đều dựa vào `NavigationStack` của tổ tiên, và thiết kế cho mỗi detail pane một stack riêng nên không cái nào phải đổi. Nếu một trong năm cái đó cần sửa thì thiết kế vật chứa sai.
 

@@ -38,7 +38,7 @@ Việc này đi ngược đúng luật của dự án: `DESIGN.md` §10.1c — "
 dung hơn**, không phải nội dung to hơn" — và §13 đã áp luật đó cho danh sách điểm-đến
 (`LazyVGrid` `.adaptive(minimum: 320)`, "một hàng trải hết 1032pt là layout điện thoại
 bị phóng to: số đứng cách tên nó 800pt"). Statistics, lưới ảnh, Collections, editor đều
-đã có nhánh regular width; Settings là màn sót lại. `docs/02-functional-spec/FS-08-settings.md`
+đã có nhánh regular width; Settings là màn sót lại. `docs/02-functional-spec/FS-08-settings/README.md`
 **không nhắc một chữ nào** về iPad hay size class — đặc tả im lặng nên code im lặng theo.
 
 Ai bị ảnh hưởng: mọi người dùng iPad (11" và 13", dọc lẫn ngang) và **màn trong iPhone
@@ -71,7 +71,7 @@ Trên iPhone không đổi gì: vẫn đúng `List` `.insetGrouped` một cột 
   extension nào.
 - **Dữ liệu đã lưu**: không. Mọi setting nằm ở `@AppStorage`/`SettingsKeys`; đây thuần
   là bố cục. Không cần migration.
-- **Tài liệu**: `docs/02-functional-spec/FS-08-settings.md` phải thêm phần regular width;
+- **Tài liệu**: `docs/02-functional-spec/FS-08-settings/README.md` phải thêm phần regular width;
   `DESIGN.md` §10.1a (đang ghi Settings = `NavigationStack` → `List` `.insetGrouped`)
   phải nói rõ nhánh màn rộng.
 
@@ -103,7 +103,7 @@ Trên iPhone không đổi gì: vẫn đúng `List` `.insetGrouped` một cột 
    Design (2026-09-21)**: ngưỡng là **`horizontalSizeClass == .regular`**, giống hệt
    Settings của iPadOS — đo trên máy ảo thấy iPadOS đã split ngay ở iPad 11" dọc (834pt),
    nên 900pt sẽ để đúng máy đó ở lại layout điện thoại. Xem
-   [FS-08 — Bố cục theo bề rộng cửa sổ](../02-functional-spec/FS-08-settings.md).
+   [FS-08 — Bố cục theo bề rộng cửa sổ](../02-functional-spec/FS-08-settings/README.md).
 4. **Support kéo vào cùng cấu trúc** — thành một mục trong sidebar chứ không còn là
    `NavigationLink` cuối danh sách. **Import bị bỏ hẳn khỏi Settings** — xem mục dưới.
 
