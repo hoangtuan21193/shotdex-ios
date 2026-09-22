@@ -975,6 +975,9 @@ public enum PhotoMaskComponentKind: String, Codable, CaseIterable, Identifiable,
     case sky
     case luminanceRange
     case colorRange
+    /// A band of distance from the camera, read off the depth map a Portrait
+    /// capture carries. Only offered on photos that have one.
+    case depthRange
 
     public var id: String { rawValue }
 
@@ -987,6 +990,7 @@ public enum PhotoMaskComponentKind: String, Codable, CaseIterable, Identifiable,
         case .sky: "Sky"
         case .luminanceRange: "Luminance Range"
         case .colorRange: "Color Range"
+        case .depthRange: "Depth Range"
         }
     }
 
@@ -999,6 +1003,7 @@ public enum PhotoMaskComponentKind: String, Codable, CaseIterable, Identifiable,
         case .sky: "cloud.sun"
         case .luminanceRange: "circle.lefthalf.striped.horizontal"
         case .colorRange: "eyedropper"
+        case .depthRange: "square.3.layers.3d.down.right"
         }
     }
 }
@@ -1082,6 +1087,11 @@ public struct PhotoMaskComponent: Codable, Identifiable, Equatable, Sendable {
     public var sampledGreen = 0.5
     public var sampledBlue = 0.5
     public var colorTolerance = 0.2
+    /// Depth Range bounds on the normalized disparity map: 0 is the farthest
+    /// thing in the frame, 1 the nearest. The default picks the near half —
+    /// "the subject", which is what a depth mask is usually reached for.
+    public var depthMinimum = 0.5
+    public var depthMaximum = 1.0
 
     public init(kind: PhotoMaskComponentKind, operation: MaskBlendOperation = .add) {
         self.kind = kind

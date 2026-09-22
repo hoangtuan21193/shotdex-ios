@@ -1471,6 +1471,16 @@ final class PhotoEditorController {
 
     // MARK: Masks
 
+    /// A mask from the New Mask sheet. Background is Subject turned inside out,
+    /// named for what the user asked for.
+    func addMask(option: EditorNewMaskOption) {
+        addMask(kind: option.componentKind)
+        guard option.startsInverted, let index = recipe.masks.indices.last else { return }
+        recipe.masks[index].isInverted = true
+        recipe.masks[index].name = "\(option.title) \(recipe.masks.count)"
+        scheduleRender()
+    }
+
     func addMask(kind: PhotoMaskComponentKind) {
         recordHistory()
         let component = PhotoMaskComponent(kind: kind)

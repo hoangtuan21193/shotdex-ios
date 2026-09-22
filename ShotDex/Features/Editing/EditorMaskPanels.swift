@@ -466,6 +466,14 @@ struct EditorMaskDetailPanel: View {
                 componentSlider("Range", keyPath: \.colorTolerance, range: 0.01...1)
                 shapeFeatherRow(component)
                 componentSlider("Opacity", keyPath: \.opacity, range: 0.01...1)
+            case .depthRange:
+                // Disparity runs 1 at the lens to 0 at the horizon, so "Near"
+                // is the top of the band and "Far" the bottom.
+                hint("Pick how near and how far the mask reaches")
+                componentSlider("Near", keyPath: \.depthMaximum, range: 0...1)
+                componentSlider("Far", keyPath: \.depthMinimum, range: 0...1)
+                shapeFeatherRow(component)
+                componentSlider("Opacity", keyPath: \.opacity, range: 0.01...1)
             }
         }
     }
@@ -635,25 +643,13 @@ struct EditorNewMaskSheet: View {
     /// than a stock one: Lightroom illustrates its mask kinds with a stranger's
     /// landscape, which tells you what the tool did to someone else's picture.
     var previewImage: UIImage?
-    let onSelect: (PhotoMaskComponentKind) -> Void
+    /// Whether the photo carries a depth map. Depth Range is listed either way,
+    /// greyed out with the reason when there is nothing to read.
+    var hasDepth = false
+    let onSelect: (EditorNewMaskOption) -> Void
 
-    /// The kind the user has tapped but not yet created.
-    @State private var pending: PhotoMaskComponentKind?
-
-    private let descriptions: [PhotoMaskComponentKind: String] = [
-        .subject: "Isolates the subject on device",
-        .sky: "Finds the sky automatically",
-        .radialGradient: "Elliptical area, drag to place",
-        .linearGradient: "Straight transition across the frame",
-        .colorRange: "Tap a colour on the photo",
-        .luminanceRange: "Follows a band of brightness",
-        .brush: "Paint by hand · size, flow, feather",
-    ]
-
-    private let order: [PhotoMaskComponentKind] = [
-        .subject, .sky, .brush, .radialGradient, .linearGradient, .colorRange,
-        .luminanceRange,
-    ]
+    /// The option the user has tapped but not yet created.
+    @State private var pending: EditorNewMaskOption?
 
     var body: some View {
         NavigationStack {
@@ -667,7 +663,7 @@ struct EditorNewMaskSheet: View {
     }
 
     /// What this kind will do, on the photo in hand, before it is made.
-    private func explainer(for kind: PhotoMaskComponentKind) -> some View {
+    private func explainer(for option: EditorNewMaskOption) -> some View {
         VStack(spacing: 16) {
             ZStack {
                 if let previewImage {
@@ -677,7 +673,7 @@ struct EditorNewMaskSheet: View {
                 } else {
                     EditorTheme.control
                 }
-                EditorMaskKindSketch(kind: kind)
+                EditorMaskKindSketch(option: option)
             }
             .frame(height: 200)
             .clipShape(RoundedRectangle.app(AppTheme.Radius.lg))
@@ -686,7 +682,7 @@ struct EditorNewMaskSheet: View {
                     .strokeBorder(EditorTheme.hairline, lineWidth: 1)
             }
 
-            Text(descriptions[kind] ?? "")
+            Text(option.description)
                 .font(.system(size: 13))
                 .foregroundStyle(EditorTheme.secondaryText)
                 .multilineTextAlignment(.center)
@@ -694,7 +690,7 @@ struct EditorNewMaskSheet: View {
             Spacer(minLength: 0)
 
             Button {
-                onSelect(kind)
+                onSelect(option)
                 dismiss()
             } label: {
                 Text("Create")
@@ -709,7 +705,7 @@ struct EditorNewMaskSheet: View {
         .padding(16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(EditorTheme.panel)
-        .navigationTitle(kind.displayName)
+        .navigationTitle(option.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -731,8 +727,8 @@ struct EditorNewMaskSheet: View {
                     // line counts, so every card was a different size and the
                     // sheet ate the screen.
                     VStack(spacing: 8) {
-                        ForEach(order) { kind in
-                            row(kind)
+                        ForEach(EditorNewMaskOption.allCases) { option in
+                            row(option)
                         }
                     }
                 }
@@ -748,22 +744,23 @@ struct EditorNewMaskSheet: View {
             }
     }
 
-    private func row(_ kind: PhotoMaskComponentKind) -> some View {
-        Button {
-            pending = kind
+    private func row(_ option: EditorNewMaskOption) -> some View {
+        let reason = option.unavailableReason(hasDepth: hasDepth)
+        return Button {
+            pending = option
         } label: {
             HStack(spacing: 12) {
-                Image(systemName: kind.systemImage)
+                Image(systemName: option.systemImage)
                     .font(.system(size: 18))
                     .foregroundStyle(EditorTheme.accent)
                     // Fixed slot so the text column lines up across rows no
                     // matter how wide the glyph is.
                     .frame(width: 30)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(kind.displayName)
+                    Text(option.title)
                         .font(.system(size: 14.5, weight: .semibold))
                         .foregroundStyle(.white)
-                    Text(descriptions[kind] ?? "")
+                    Text(reason ?? option.description)
                         .font(EditorTheme.maskSubtitle)
                         .foregroundStyle(EditorTheme.secondaryText)
                         .lineLimit(1)
@@ -774,8 +771,10 @@ struct EditorNewMaskSheet: View {
             // The height is the row's, not the text's: every card identical.
             .frame(height: 54)
             .background(EditorTheme.maskRow, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .opacity(reason == nil ? 1 : EditorTheme.rowDisabled)
         }
         .buttonStyle(.plain)
+        .disabled(reason != nil)
     }
 }
 
@@ -837,13 +836,13 @@ struct EditorMaskPickerSheet: View {
 /// it takes on a 48MP frame — on a picture they may be about to back out of.
 /// The sketch says *where* the kind works; pressing Create says what it finds.
 struct EditorMaskKindSketch: View {
-    let kind: PhotoMaskComponentKind
+    let option: EditorNewMaskOption
 
     var body: some View {
         GeometryReader { geo in
             let rect = CGRect(origin: .zero, size: geo.size)
             ZStack {
-                switch kind {
+                switch option {
                 case .sky:
                     tint.frame(height: rect.height * 0.42)
                         .frame(maxHeight: .infinity, alignment: .top)
@@ -851,6 +850,23 @@ struct EditorMaskKindSketch: View {
                     Capsule()
                         .fill(EditorTheme.accent.opacity(0.35))
                         .frame(width: rect.width * 0.3, height: rect.height * 0.66)
+                case .background:
+                    // The Subject sketch's capsule punched out of a full tint,
+                    // drawn even-odd so the hole is exactly that shape.
+                    let hole = CGRect(
+                        x: rect.midX - rect.width * 0.15,
+                        y: rect.midY - rect.height * 0.33,
+                        width: rect.width * 0.3,
+                        height: rect.height * 0.66
+                    )
+                    Path { path in
+                        path.addRect(rect)
+                        path.addRoundedRect(
+                            in: hole,
+                            cornerSize: CGSize(width: hole.width / 2, height: hole.width / 2)
+                        )
+                    }
+                    .fill(EditorTheme.accent.opacity(0.35), style: FillStyle(eoFill: true))
                 case .brush:
                     Capsule()
                         .fill(EditorTheme.accent.opacity(0.35))
@@ -887,6 +903,16 @@ struct EditorMaskKindSketch: View {
                             colors: [.white, .clear],
                             startPoint: .bottom,
                             endPoint: .top
+                        )
+                    }
+                case .depthRange:
+                    // Near things sit low in most frames: a band that fades as
+                    // it climbs toward the horizon.
+                    tint.mask {
+                        LinearGradient(
+                            colors: [.white, .white, .clear],
+                            startPoint: .bottom,
+                            endPoint: .center
                         )
                     }
                 }

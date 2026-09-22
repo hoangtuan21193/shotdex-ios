@@ -733,8 +733,11 @@ struct PhotoEditorScreen: View {
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $chrome.isNewMaskSheetPresented) {
-            EditorNewMaskSheet(previewImage: controller.previewImage) { kind in
-                controller.addMask(kind: kind)
+            EditorNewMaskSheet(
+                previewImage: controller.previewImage,
+                hasDepth: controller.hasDepthSource
+            ) { option in
+                controller.addMask(option: option)
                 controller.editSelectedMaskAdjustments()
             }
             .presentationDetents([.medium, .large])

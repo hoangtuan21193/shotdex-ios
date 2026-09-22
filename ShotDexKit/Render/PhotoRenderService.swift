@@ -87,6 +87,9 @@ public actor PhotoRenderService {
     private var interactiveBaseCache: InteractiveBaseCache?
     private var skyModel: MLModel?
     private var automaticMaskCache: [String: CIImage] = [:]
+    /// Normalized depth maps, by file. One entry per photo the Depth Range mask
+    /// has been used on in this session; cleared with the rest of the caches.
+    private var disparityCache: [String: CIImage] = [:]
     private var automaticMaskCacheOrder: [String] = []
     private static let automaticMaskCacheCapacity = 8
 
@@ -273,6 +276,7 @@ public actor PhotoRenderService {
                mask,
                over: result.image,
                rawSkyMatte: nil,
+               disparity: alignedDisparity(source: source, recipe: recipe, to: result.image.extent),
                cacheIdentity: maskCacheIdentity(source: source, recipe: recipe)
            ) {
             // The tint answers "where is the mask", not "is its effect on" — it
@@ -402,12 +406,14 @@ public actor PhotoRenderService {
             Self.applyCrop(recipe.crop, to: $0)
         }
         let cacheIdentity = maskCacheIdentity(source: source, recipe: recipe)
+        let maskDisparity = alignedDisparity(source: source, recipe: recipe, to: image.extent)
 
         for mask in recipe.masks where mask.isVisible {
             guard let maskImage = try renderMask(
                 mask,
                 over: image,
                 rawSkyMatte: croppedRawSkyMatte,
+                disparity: maskDisparity,
                 cacheIdentity: cacheIdentity
             ) else { continue }
             let adjusted = Self.applyAdjustments(
@@ -761,12 +767,17 @@ public actor PhotoRenderService {
         }
         let cacheIdentity = maskCacheIdentity(source: source, recipe: recipe)
         var images: [UUID: CGImage] = [:]
+        // Depth Range rides with Subject and Sky here: all three read something
+        // the motion frames do not carry (a model's answer, the still's depth
+        // map), so they are resolved once on the still and scaled across.
+        let stillDisparity = alignedDisparity(source: source, recipe: recipe, to: image.extent)
         for component in recipe.masks.flatMap(\.components)
-        where component.kind == .subject || component.kind == .sky {
+        where component.kind == .subject || component.kind == .sky || component.kind == .depthRange {
             guard let mask = try componentMask(
                 component,
                 image: image,
                 rawSkyMatte: croppedRawSkyMatte,
+                disparity: stillDisparity,
                 cacheIdentity: cacheIdentity
             ), let cgImage = context.createCGImage(
                 mask,
@@ -805,11 +816,13 @@ public actor PhotoRenderService {
         let fill = CIImage(color: CIColor(red: 1, green: 0.08, blue: 0.13))
             .cropped(to: extent)
         var images: [UUID: CGImage] = [:]
+        let thumbnailDisparity = alignedDisparity(source: source, recipe: recipe, to: result.image.extent)
         for mask in recipe.masks {
             guard let matte = try renderMask(
                 mask,
                 over: result.image,
                 rawSkyMatte: nil,
+                disparity: thumbnailDisparity,
                 cacheIdentity: cacheIdentity
             ), let cgImage = context.createCGImage(
                 blend(adjusted: fill, original: backdrop, mask: matte),
@@ -953,6 +966,76 @@ public actor PhotoRenderService {
             disparity: baseResult.disparity,
             portraitMatte: baseResult.portraitMatte
         )
+    }
+
+    /// The photo's depth, normalized to 0 (farthest) … 1 (nearest), cropped the
+    /// way the recipe crops the picture and scaled onto `targetExtent` — or nil
+    /// when no mask asks for depth or the photo has none.
+    ///
+    /// Normalized per photo because raw disparity has no fixed range: a
+    /// landscape and a close portrait put "near" at completely different
+    /// numbers, and a Depth Range slider has to mean the same thing on both.
+    /// Geometry corrections are not replayed on the map; a keystone of a few
+    /// degrees moves the mask edge by a sliver of a low-resolution depth map,
+    /// which the feather already covers.
+    private func alignedDisparity(
+        source: PhotoRenderSourceInfo,
+        recipe: PhotoEditRecipe,
+        to targetExtent: CGRect
+    ) -> CIImage? {
+        let wantsDepth = recipe.masks.contains { mask in
+            mask.components.contains { $0.kind == .depthRange }
+        }
+        guard wantsDepth, let normalized = normalizedDisparity(at: source.url) else { return nil }
+        let cropped = Self.applyCrop(recipe.crop, to: normalized)
+        guard cropped.extent.width > 0, cropped.extent.height > 0 else { return nil }
+        let scale = CGAffineTransform(translationX: -cropped.extent.minX, y: -cropped.extent.minY)
+            .concatenating(CGAffineTransform(
+                scaleX: targetExtent.width / cropped.extent.width,
+                y: targetExtent.height / cropped.extent.height
+            ))
+            .concatenating(CGAffineTransform(translationX: targetExtent.minX, y: targetExtent.minY))
+        return cropped
+            .transformed(by: scale)
+            .clampedToExtent()
+            .cropped(to: targetExtent)
+    }
+
+    /// The disparity map stretched to 0…1 using its own min and max, kept per
+    /// file — reading and reducing it again on every slider frame would be a
+    /// second decode per render.
+    private func normalizedDisparity(at url: URL) -> CIImage? {
+        let key = url.path
+        if let cached = disparityCache[key] { return cached }
+        guard let disparity = DepthImageReader.disparity(at: url) else { return nil }
+        let reduced = disparity.applyingFilter(
+            "CIAreaMinMaxRed",
+            parameters: [kCIInputExtentKey: CIVector(cgRect: disparity.extent)]
+        )
+        var pixels = [Float](repeating: 0, count: 8)
+        context.render(
+            reduced,
+            toBitmap: &pixels,
+            rowBytes: 8 * MemoryLayout<Float>.size,
+            bounds: CGRect(x: 0, y: 0, width: 2, height: 1),
+            format: .RGBAf,
+            colorSpace: nil
+        )
+        let minimum = CGFloat(pixels[0])
+        let maximum = CGFloat(pixels[4])
+        let span = max(0.0001, maximum - minimum)
+        let normalized = disparity.applyingFilter(
+            "CIColorMatrix",
+            parameters: [
+                "inputRVector": CIVector(x: 1 / span, y: 0, z: 0, w: 0),
+                "inputGVector": CIVector(x: 1 / span, y: 0, z: 0, w: 0),
+                "inputBVector": CIVector(x: 1 / span, y: 0, z: 0, w: 0),
+                "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
+                "inputBiasVector": CIVector(x: -minimum / span, y: -minimum / span, z: -minimum / span, w: 0),
+            ]
+        )
+        disparityCache[key] = normalized
+        return normalized
     }
 
     /// The depth maps this render needs, or nothing when the recipe asks for
@@ -1811,6 +1894,7 @@ public actor PhotoRenderService {
         _ mask: PhotoMask,
         over image: CIImage,
         rawSkyMatte: CIImage?,
+        disparity: CIImage? = nil,
         cacheIdentity: String
     ) throws -> CIImage? {
         let extent = image.extent.integral
@@ -1820,6 +1904,7 @@ public actor PhotoRenderService {
                 component,
                 image: image,
                 rawSkyMatte: rawSkyMatte,
+                disparity: disparity,
                 cacheIdentity: cacheIdentity
             ) else { continue }
             incoming = incoming.cropped(to: extent)
@@ -1862,13 +1947,38 @@ public actor PhotoRenderService {
         return accumulated.cropped(to: extent)
     }
 
+    /// The Depth Range band over a disparity map already normalized to 0…1
+    /// (1 = nearest). Internal so the band maths can be tested on a synthetic
+    /// map — no simulator photo carries depth.
+    static func depthRangeMask(
+        _ component: PhotoMaskComponent,
+        disparity: CIImage,
+        extent: CGRect
+    ) -> CIImage? {
+        luminanceMaskKernel?.apply(
+            extent: extent,
+            arguments: [
+                disparity,
+                component.depthMinimum,
+                component.depthMaximum,
+                max(0.005, component.feather * 0.25),
+            ]
+        )
+    }
+
     private func componentMask(
         _ component: PhotoMaskComponent,
         image: CIImage,
         rawSkyMatte: CIImage?,
+        disparity: CIImage?,
         cacheIdentity: String
     ) throws -> CIImage? {
         switch component.kind {
+        case .depthRange:
+            // The same band test Luminance Range runs, on the normalized depth
+            // map instead of the picture — nearness is just another channel.
+            guard let disparity else { return nil }
+            return Self.depthRangeMask(component, disparity: disparity, extent: image.extent)
         case .brush:
             return brushMask(component.brushStrokes, extent: image.extent)
         case .linearGradient:
