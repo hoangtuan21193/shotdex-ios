@@ -54,10 +54,22 @@ Cộng chip chọn vùng khi mask có nhiều hình.
   hoặc recipe cũ.
 - Dùng chữ **Shape** thay cho Region — "Region" đứng cạnh "Mask" đọc như hai tên cho cùng một thứ.
 
-## 4. Bảy loại vùng
+## 4. Mười một loại vùng
 
-Brush · Linear Gradient · Radial Gradient · Subject · Sky · Luminance Range · Color Range. Mỗi vùng là
-**Add hoặc Subtract** và có opacity riêng, nên cộng/trừ nhiều vùng vào cùng một mask được.
+Brush · Linear Gradient · Radial Gradient · Subject · Sky · Luminance Range · Color Range · **Depth Range** ·
+**Face Skin · Eyes · Lips** (FS-03.11). Mỗi vùng là **Add hoặc Subtract** và có opacity riêng, nên cộng/trừ
+nhiều vùng vào cùng một mask được.
+
+- Sheet New Mask liệt kê **hàng**, không phải loại (`EditorNewMaskOption`): thêm hàng **Background** — là
+  Subject với `isInverted`, đặt tên "Background N", không phải loại mới.
+- **Depth Range**: phép dải của Luminance Range chạy trên bản đồ disparity, chuẩn hoá theo từng ảnh về
+  0 (xa) … 1 (gần), cắt/scale theo khung render. Slider Near/Far. Ảnh không có depth thì hàng **mờ** kèm lý
+  do.
+- **Face Skin / Eyes / Lips**: đa giác từ `VNDetectFaceLandmarksRequest`, dựng bằng
+  `FaceLandmarkMaskBuilder` (hình học thuần, test được): Skin = elip hộp mặt nâng lên trán **trừ** mắt, chân
+  mày, môi; Eyes = hai mắt nở ×1.6; Lips = môi ngoài nở ×1.12. Mọi khuôn mặt trong khung. Feather theo
+  khung. Kiểm tra có mặt chạy **một lần mỗi ảnh** trên preview (`VNDetectFaceRectanglesRequest`); không có
+  mặt thì ba hàng mờ "No face found in this photo", đang kiểm thì vẫn sáng.
 
 - **Subject** dùng phân tách foreground của hệ thống (iOS 17+). Thấy nhiều đối tượng thì cú chạm của người
   dùng đọc đúng đối tượng tại điểm đó; chạm nền thì lấy tất cả.

@@ -310,6 +310,9 @@ final class PhotoEditorController {
     /// Blur row in Effects. Resolved once when the source loads: the check
     /// opens the file, so it must not run per panel rebuild.
     private(set) var hasDepthSource = false
+    /// Whether the photo has a face, for the three face-part masks. Nil until
+    /// the check has run on the first preview; once per photo, not per sheet.
+    private(set) var hasFaces: Bool?
     var supportsHEICEditOutput: Bool {
         guard let session else { return false }
         return service.supportsEditOutputFormat(.heic, in: session)
@@ -451,6 +454,18 @@ final class PhotoEditorController {
         recipe.sourceFilename = option.filename
         await renderOriginal()
         if renders { await renderNow() }
+        await detectFaces()
+    }
+
+    /// Runs the face check once, on the unedited preview `renderOriginal` just
+    /// made — the edited one does not exist yet on first load. Off the main
+    /// actor: Vision on a preview is tens of milliseconds, not nothing.
+    private func detectFaces() async {
+        guard hasFaces == nil, let cgImage = originalPreviewImage?.cgImage else { return }
+        let count = await Task.detached(priority: .utility) {
+            PhotoRenderService.faceCount(in: cgImage)
+        }.value
+        hasFaces = count > 0
     }
 
     func recallLastEdit() {

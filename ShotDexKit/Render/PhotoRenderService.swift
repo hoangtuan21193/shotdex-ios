@@ -764,12 +764,14 @@ public actor PhotoRenderService {
         }
         let cacheIdentity = maskCacheIdentity(source: source, recipe: recipe)
         var images: [UUID: CGImage] = [:]
-        // Depth Range rides with Subject and Sky here: all three read something
-        // the motion frames do not carry (a model's answer, the still's depth
-        // map), so they are resolved once on the still and scaled across.
+        // Depth Range and the face parts ride with Subject and Sky here: all
+        // read something the motion frames do not carry (a model's answer, the
+        // still's depth map, Vision's landmarks), so they are resolved once on
+        // the still and scaled across.
         let stillDisparity = alignedDisparity(source: source, recipe: recipe, to: image.extent)
         for component in recipe.masks.flatMap(\.components)
-        where component.kind == .subject || component.kind == .sky || component.kind == .depthRange {
+        where component.kind == .subject || component.kind == .sky || component.kind == .depthRange
+            || component.kind.isFacePart {
             guard let mask = try componentMask(
                 component,
                 image: image,
@@ -2113,6 +2115,17 @@ public actor PhotoRenderService {
             // map instead of the picture — nearness is just another channel.
             guard let disparity else { return nil }
             return Self.depthRangeMask(component, disparity: disparity, extent: image.extent)
+        case .faceSkin, .eyes, .lips:
+            let kind = component.kind
+            guard let hard = try cachedAutomaticMask(
+                key: "\(cacheIdentity)|face|\(kind.rawValue)",
+                image: image,
+                build: { try faceMask(kind, image: image) }
+            ) else { return nil }
+            // Feather relative to the frame, like the gradients: a face part is
+            // small, so the range tops out at a few percent of the short edge.
+            let radius = component.feather * 0.015 * min(image.extent.width, image.extent.height)
+            return Self.blurred(hard, radius: radius)
         case .brush:
             return brushMask(component.brushStrokes, extent: image.extent)
         case .linearGradient:
@@ -2347,6 +2360,55 @@ public actor PhotoRenderService {
                 )
             )
             .cropped(to: image.extent)
+    }
+
+    /// A face-part mask over every face Vision finds in `image`.
+    private func faceMask(_ kind: PhotoMaskComponentKind, image: CIImage) throws -> CIImage? {
+        let normalizedImage = image.transformed(by:
+            CGAffineTransform(translationX: -image.extent.minX, y: -image.extent.minY)
+        )
+        let faces = try Self.faceLandmarks(in: normalizedImage)
+        guard !faces.isEmpty,
+              let cgImage = FaceLandmarkMaskBuilder.mask(kind, faces: faces, size: image.extent.size)
+        else { return nil }
+        return CIImage(cgImage: cgImage)
+            .transformed(by: CGAffineTransform(translationX: image.extent.minX, y: image.extent.minY))
+            .cropped(to: image.extent)
+    }
+
+    /// Vision's face landmarks as normalized, bottom-left-origin polygons.
+    static func faceLandmarks(in image: CIImage) throws -> [FaceLandmarks] {
+        let request = VNDetectFaceLandmarksRequest()
+        let handler = VNImageRequestHandler(ciImage: image)
+        try handler.perform([request])
+        let size = image.extent.size
+        guard size.width > 0, size.height > 0 else { return [] }
+        return (request.results ?? []).compactMap { face in
+            guard let landmarks = face.landmarks else { return nil }
+            func points(_ region: VNFaceLandmarkRegion2D?) -> [CGPoint] {
+                (region?.pointsInImage(imageSize: size) ?? []).map {
+                    CGPoint(x: $0.x / size.width, y: $0.y / size.height)
+                }
+            }
+            return FaceLandmarks(
+                boundingBox: face.boundingBox,
+                leftEye: points(landmarks.leftEye),
+                rightEye: points(landmarks.rightEye),
+                leftEyebrow: points(landmarks.leftEyebrow),
+                rightEyebrow: points(landmarks.rightEyebrow),
+                outerLips: points(landmarks.outerLips)
+            )
+        }
+    }
+
+    /// How many faces a picture has — the gate that greys out the three face
+    /// masks before they are made, rather than after they come back empty.
+    /// Rectangles only, on the small preview: a fraction of the landmark pass.
+    public static func faceCount(in image: CGImage) -> Int {
+        let request = VNDetectFaceRectanglesRequest()
+        let handler = VNImageRequestHandler(cgImage: image, options: [:])
+        try? handler.perform([request])
+        return request.results?.count ?? 0
     }
 
     private func instanceIndex(at point: NormalizedPoint, in buffer: CVPixelBuffer) -> Int {

@@ -37,6 +37,40 @@ struct MaskKindParityTests {
         #expect(controller.recipe.masks.last?.isInverted == false)
     }
 
+    /// AC-10. The inverted mask and the one it inverts cover the frame
+    /// exactly once between them — Background is the complement of Subject.
+    @Test func invertedMaskIsTheComplement() throws {
+        let extent = CGRect(x: 0, y: 0, width: 64, height: 1)
+        let subject = CIFilter(
+            name: "CILinearGradient",
+            parameters: [
+                "inputPoint0": CIVector(x: 0, y: 0),
+                "inputPoint1": CIVector(x: 64, y: 0),
+                "inputColor0": CIColor(red: 0, green: 0, blue: 0),
+                "inputColor1": CIColor(red: 1, green: 1, blue: 1),
+            ]
+        )!.outputImage!.cropped(to: extent)
+        let kernel = try #require(PhotoRenderService.invertMaskKernel)
+        let background = try #require(kernel.apply(extent: extent, arguments: [subject]))
+
+        let context = CIContext(options: [.workingColorSpace: NSNull(), .outputColorSpace: NSNull()])
+        func row(_ image: CIImage) -> [Float] {
+            var pixels = [Float](repeating: 0, count: 64 * 4)
+            context.render(
+                image,
+                toBitmap: &pixels,
+                rowBytes: 64 * 4 * MemoryLayout<Float>.size,
+                bounds: extent,
+                format: .RGBAf,
+                colorSpace: nil
+            )
+            return stride(from: 0, to: pixels.count, by: 4).map { pixels[$0] }
+        }
+        for (a, b) in zip(row(subject), row(background)) {
+            #expect(abs(a + b - 1) < 0.01)
+        }
+    }
+
     /// AC-11. Every mask kind is reachable from the sheet — a kind added to the
     /// model and forgotten in the chooser is a feature nobody can find.
     @Test func everyComponentKindHasASheetRow() {

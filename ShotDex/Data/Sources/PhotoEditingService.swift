@@ -909,7 +909,7 @@ private final class LivePhotoFrameRenderer: @unchecked Sendable {
                     )
                 )
                 .cropped(to: extent) ?? blackMask(extent)
-        case .subject, .sky, .depthRange:
+        case .subject, .sky, .depthRange, .faceSkin, .eyes, .lips:
             guard let mask = automaticMasks[component.id] else {
                 return blackMask(extent)
             }

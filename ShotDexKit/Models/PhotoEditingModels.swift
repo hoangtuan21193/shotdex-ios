@@ -992,8 +992,18 @@ public enum PhotoMaskComponentKind: String, Codable, CaseIterable, Identifiable,
     /// A band of distance from the camera, read off the depth map a Portrait
     /// capture carries. Only offered on photos that have one.
     case depthRange
+    /// Face parts from Vision's landmarks, every face in the frame. Only
+    /// offered on photos where a face was found.
+    case faceSkin
+    case eyes
+    case lips
 
     public var id: String { rawValue }
+
+    /// Face Skin, Eyes or Lips — the kinds read off face landmarks.
+    public var isFacePart: Bool {
+        self == .faceSkin || self == .eyes || self == .lips
+    }
 
     public var displayName: String {
         switch self {
@@ -1005,6 +1015,9 @@ public enum PhotoMaskComponentKind: String, Codable, CaseIterable, Identifiable,
         case .luminanceRange: "Luminance Range"
         case .colorRange: "Color Range"
         case .depthRange: "Depth Range"
+        case .faceSkin: "Face Skin"
+        case .eyes: "Eyes"
+        case .lips: "Lips"
         }
     }
 
@@ -1018,6 +1031,9 @@ public enum PhotoMaskComponentKind: String, Codable, CaseIterable, Identifiable,
         case .luminanceRange: "circle.lefthalf.striped.horizontal"
         case .colorRange: "eyedropper"
         case .depthRange: "square.3.layers.3d.down.right"
+        case .faceSkin: "face.smiling"
+        case .eyes: "eye"
+        case .lips: "mouth"
         }
     }
 }

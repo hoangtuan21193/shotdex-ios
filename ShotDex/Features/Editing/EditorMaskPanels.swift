@@ -321,7 +321,10 @@ struct EditorMaskDetailPanel: View {
     /// effect switch and its own menu. The action row above carries the *shape*
     /// controls instead.
     private var navigationRow: some View {
-        HStack(spacing: 8) {
+        // No spacers: at the 320pt sidebar every point of spacing came out of
+        // the mask's name, which was left as "B…". The name takes what the
+        // fixed-width controls leave.
+        HStack(spacing: 4) {
             Button {
                 chrome.resetZoom()
                 controller.closeSelectedMaskAdjustments()
@@ -338,13 +341,13 @@ struct EditorMaskDetailPanel: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-
-            Spacer(minLength: 0)
+            // The way back keeps its word; the name gives way, not this.
+            .fixedSize()
 
             Button {
                 chrome.isMaskPickerPresented = true
             } label: {
-                HStack(spacing: 8) {
+                HStack(spacing: 4) {
                     if let id = controller.selectedMaskID,
                        let thumbnail = controller.maskThumbnails[id] {
                         Image(uiImage: thumbnail)
@@ -357,19 +360,24 @@ struct EditorMaskDetailPanel: View {
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
-                    Text(maskIndexLabel)
-                        .font(.system(size: 12))
-                        .foregroundStyle(EditorTheme.secondaryText)
+                        .minimumScaleFactor(0.85)
+                    // "1/1" says nothing; the count only earns its width once
+                    // there is something to count.
+                    if controller.recipe.masks.count > 1 {
+                        Text(maskIndexLabel)
+                            .font(.system(size: 12))
+                            .foregroundStyle(EditorTheme.secondaryText)
+                            .fixedSize()
+                    }
                     Image(systemName: "chevron.down")
                         .font(.system(size: 9, weight: .semibold))
                         .foregroundStyle(EditorTheme.secondaryText)
                 }
-                .frame(height: 44)
+                .frame(maxWidth: .infinity, minHeight: 44, maxHeight: 44)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-
-            Spacer(minLength: 0)
+            .layoutPriority(1)
 
             // One-tap undo, because the thing most likely to need taking back in
             // here is a brush stroke and a menu is two taps too many. Redo is
@@ -464,6 +472,10 @@ struct EditorMaskDetailPanel: View {
             case .colorRange:
                 hint("Tap a colour on the photo")
                 componentSlider("Range", keyPath: \.colorTolerance, range: 0.01...1)
+                shapeFeatherRow(component)
+                componentSlider("Opacity", keyPath: \.opacity, range: 0.01...1)
+            case .faceSkin, .eyes, .lips:
+                hint("Every face in the photo, found on device")
                 shapeFeatherRow(component)
                 componentSlider("Opacity", keyPath: \.opacity, range: 0.01...1)
             case .depthRange:
@@ -646,6 +658,8 @@ struct EditorNewMaskSheet: View {
     /// Whether the photo carries a depth map. Depth Range is listed either way,
     /// greyed out with the reason when there is nothing to read.
     var hasDepth = false
+    /// Whether a face was found; nil while the check runs.
+    var hasFaces: Bool?
     let onSelect: (EditorNewMaskOption) -> Void
 
     /// The option the user has tapped but not yet created.
@@ -745,7 +759,7 @@ struct EditorNewMaskSheet: View {
     }
 
     private func row(_ option: EditorNewMaskOption) -> some View {
-        let reason = option.unavailableReason(hasDepth: hasDepth)
+        let reason = option.unavailableReason(hasDepth: hasDepth, hasFaces: hasFaces)
         return Button {
             pending = option
         } label: {
@@ -905,6 +919,22 @@ struct EditorMaskKindSketch: View {
                             endPoint: .top
                         )
                     }
+                case .faceSkin:
+                    Ellipse()
+                        .fill(EditorTheme.accent.opacity(0.35))
+                        .frame(width: rect.width * 0.18, height: rect.height * 0.5)
+                case .eyes:
+                    HStack(spacing: rect.width * 0.04) {
+                        Ellipse().fill(EditorTheme.accent.opacity(0.5))
+                        Ellipse().fill(EditorTheme.accent.opacity(0.5))
+                    }
+                    .frame(width: rect.width * 0.12, height: rect.height * 0.05)
+                    .offset(y: -rect.height * 0.06)
+                case .lips:
+                    Ellipse()
+                        .fill(EditorTheme.accent.opacity(0.5))
+                        .frame(width: rect.width * 0.07, height: rect.height * 0.06)
+                        .offset(y: rect.height * 0.12)
                 case .depthRange:
                     // Near things sit low in most frames: a band that fades as
                     // it climbs toward the horizon.

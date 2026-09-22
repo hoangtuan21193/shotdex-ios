@@ -735,7 +735,8 @@ struct PhotoEditorScreen: View {
         .sheet(isPresented: $chrome.isNewMaskSheetPresented) {
             EditorNewMaskSheet(
                 previewImage: controller.previewImage,
-                hasDepth: controller.hasDepthSource
+                hasDepth: controller.hasDepthSource,
+                hasFaces: controller.hasFaces
             ) { option in
                 controller.addMask(option: option)
                 controller.editSelectedMaskAdjustments()
