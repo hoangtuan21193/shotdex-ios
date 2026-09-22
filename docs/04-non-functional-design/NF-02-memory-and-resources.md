@@ -1,6 +1,6 @@
 # NF-02 — Bộ nhớ và tài nguyên
 
-`NF-02` · `ShotDexKit/` · `ShotDexEdit/` · `Data/Sources/PhotoRenderService.swift` · cập nhật 2026-09-22
+`NF-02` · `ShotDexKit/` · `Data/Sources/PhotoRenderService.swift` · cập nhật 2026-09-22
 
 **Một câu:** trần bộ nhớ theo từng target, vòng đời bộ nhớ đệm, và luật cho những thứ nặng nhất.
 

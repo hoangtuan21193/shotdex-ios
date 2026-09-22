@@ -1,6 +1,6 @@
 ---
 name: extension-boundary
-description: Guards the line between the ShotDexKit framework and the three extensions (ShotDexEdit photo editing, ShotDexShare, ShotDexWidget) — no SwiftUI or GRDB inside the kit, everything an extension needs marked public, no app-only singletons or PhotoKit calls reached from an extension, render paths that fit an extension's memory ceiling, and app-group storage for anything shared. Use for any change in ShotDexKit or an extension folder, and any time a type moves between targets.
+description: Guards the line between the ShotDexKit framework and the two extensions (ShotDexShare, ShotDexWidget) — no SwiftUI or GRDB inside the kit, everything an extension needs marked public, no app-only singletons or PhotoKit calls reached from an extension, render paths that fit an extension's memory ceiling, and app-group storage for anything shared. Use for any change in ShotDexKit or an extension folder, and any time a type moves between targets.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
@@ -31,7 +31,7 @@ GRDB, Photos/PhotoKit, Observation-for-UI, anything from `ShotDex/`.
 For each extension, what does it call in the kit?
 
 ```bash
-for T in ShotDexEdit ShotDexShare ShotDexWidget; do
+for T in ShotDexShare ShotDexWidget; do
   echo "== $T"; grep -rhoE "\b[A-Z][A-Za-z0-9]+(\.[a-z][A-Za-z0-9]*)?\b" $T --include='*.swift' | sort -u \
   | while read s; do grep -rqE "(struct|class|enum|actor|protocol|typealias) ${s%%.*}\b" ShotDexKit && echo "$s"; done
 done
@@ -41,7 +41,7 @@ Each named type must be `public`, and the members used must be `public`. A
 `public struct` with `internal` init is unusable outside the module — the
 compile error appears only when the extension is built, which `/build` on
 the `ShotDex` scheme does (it is a dependency), but the kit scheme alone does
-not. Verify by building `ShotDexEdit` explicitly.
+not. Verify by building each extension explicitly.
 
 Conversely: `public` on something no extension or test uses is surface area
 the kit must keep stable forever. Flag it, do not remove it without asking.
@@ -52,9 +52,6 @@ the kit must keep stable forever. Flag it, do not remove it without asking.
   app. An extension that needs a user setting reads it from an **app group**
   `UserDefaults(suiteName:)` or a file in the group container, written by the
   app. Grep the extension folders for `AppDatabase`, `GRDB`, `AppDependencies`.
-- `PHPhotoLibrary` in `ShotDexEdit`: the editing extension gets a
-  `PHContentEditingInput`; it must not open the library. `ShotDexShare` gets
-  `NSItemProvider`s; same rule.
 - `UIApplication.shared` — unavailable in extensions; compile error on some,
   runtime nil on others.
 - Singletons or `static` caches from the app target.
@@ -63,7 +60,7 @@ the kit must keep stable forever. Flag it, do not remove it without asking.
 
 ### 4. Memory and time in the extension
 
-- `ShotDexEdit` ~120MB, `ShotDexShare` ~120MB, `ShotDexWidget` ~30MB, all
+- `ShotDexShare` ~120MB, `ShotDexWidget` ~30MB, both
   killed silently. Preview renders must be at display size
   (`PHContentEditingInput.displaySizeImage`), the full-size render only in
   `finishContentEditing`, and via `CIContext.writeJPEGRepresentation`/`writeHEIF`
@@ -81,7 +78,7 @@ the kit must keep stable forever. Flag it, do not remove it without asking.
 Build each extension scheme; the kit's boundary errors only appear there:
 
 ```bash
-for S in ShotDexKit ShotDexEdit ShotDexShare ShotDexWidget; do
+for S in ShotDexKit ShotDexShare ShotDexWidget; do
   echo "== $S"; xcodebuild -project ShotDex.xcodeproj -scheme $S \
     -destination 'platform=iOS Simulator,name=iPhone 17' -derivedDataPath build/sim build 2>&1 \
     | grep -E "error:|BUILD (SUCCEEDED|FAILED)" | sort -u

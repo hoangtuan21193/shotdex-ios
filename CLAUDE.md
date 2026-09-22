@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-ShotDex — native iOS app (SwiftUI, Swift Concurrency) for photographers: browse photo library, filter by camera/lens/exposure metadata, view gear-usage statistics. Full product spec in `spec.md`. Only third-party dependency: GRDB.swift (SPM). Min deployment target iOS 17; iOS 26 gets native Liquid Glass UI via `#available` branches.
+ShotDex — native iOS app (SwiftUI, Swift Concurrency) for photographers: browse photo library, filter by camera/lens/exposure metadata, view gear-usage statistics. Full product spec lives in `docs/` (split from the old `spec.md` on 2026-09-21): `docs/README.md` is the index, `docs/PROCESS.md` is the development process. Only third-party dependency: GRDB.swift (SPM). Min deployment target iOS 17; iOS 26 gets native Liquid Glass UI via `#available` branches.
 
 ## Commands
 
@@ -79,7 +79,7 @@ bundle because the test itself runs inside the simulator.
 
 Layered, composition root at `ShotDex/App/AppDependencies.swift` — built once in `ShotDexApp`, injected via SwiftUI environment (`@Observable` + `.environment`). No singletons except `AppDatabase.makeShared()`.
 
-**Targets.** `ShotDexKit` (framework) holds the render core — the edit recipe models, `PhotoRenderService` and its extensions, and the pure editing math (film looks, tone curve, colour, text/shape overlay layout, brush rasterizer). The app, the tests and the **ShotDexEdit** photo-editing extension all link it; nothing in it imports SwiftUI or GRDB. Everything else stays in the app target. Adding a type to the kit means marking it and its members `public` — that is the cost of the boundary, and the reason the kit is the renderer and not the whole editor.
+**Targets.** `ShotDexKit` (framework) holds the render core — the edit recipe models, `PhotoRenderService` and its extensions, and the pure editing math (film looks, tone curve, colour, text/shape overlay layout, brush rasterizer). The app, the tests, the widget and the share extension all link it; nothing in it imports SwiftUI or GRDB. Everything else stays in the app target. Adding a type to the kit means marking it and its members `public` — that is the cost of the boundary, and the reason the kit is the renderer and not the whole editor.
 
 **Data flow:** PhotoKit assets → `IndexPipeline` (actor, batches of 200) reads EXIF via `ExifReader` (ImageIO, no image decode) → `MetadataComposer` normalizes (camera/lens names, sensor lookup) → GRDB SQLite rows → the store/query types serve UI queries.
 
@@ -101,16 +101,24 @@ Layered, composition root at `ShotDex/App/AppDependencies.swift` — built once 
 - Unclear or ambiguous request: ask back to confirm scope before acting. Never decide alone on unstated requirement.
 - **Always build after code changes** (`xcodebuild ... build`, quiet output: pipe through `grep -E "error:|warning: unused|BUILD"` or `xcbeautify -q` if available) and fix every error before reporting done. Never hand an unbuilt change to the user.
 - **UI change: build, run in the simulator, screenshot, and inspect before reporting done.** Any change that touches a view, layout, tab/toolbar chrome, sheet, or overlay must be verified visually, not just compiled: install and launch the build on a booted simulator (iOS Simulator tools or `xcrun simctl`), navigate to every screen and state the change affects (both iOS 26 and pre-26 paths when the code branches on `#available`), and take a screenshot of each. Look at every screenshot for anything wrong — overlapping or clipped buttons, controls hidden behind tab/nav bars, misaligned or truncated text, wrong colors or spacing versus `DESIGN.md`, blank or half-rendered content, layout that differs from what the code intended. If a screenshot shows a problem, fix it in the same turn and re-screenshot until it is clean; never report a UI change done with a known visual defect, and never describe a screenshot you did not take. Mention in the final message which screens were checked.
-- Code change alters behavior/architecture described in `spec.md`: update `spec.md` too, same turn.
-- **`/review-sweep` runs the agents for you** (`.claude/skills/review-sweep/`): scopes an area, fans the right agents out in parallel, merges their findings into `REVIEW_QUEUE.md` (deduped, ranked, with anything `spec.md` already answers closed off), then works down the queue — build, test and screenshot behind each fix, one commit per item. Say "review the whole app", "review the editor", or "continue" to resume a half-finished queue.
+- **Development process: `docs/PROCESS.md`** — the AI-native SDLC playbook (<https://claude.com/blog/the-ai-native-sdlc-playbook>) applied to this repo, in its six stages: **Plan → Design → Build → Test → Deploy → Maintain**. New feature or behaviour change: `/intent` (why, into `docs/_intents/`) → `/spec` (`FS-*` doc with acceptance criteria) → `/plan` (plan mode, AC↔code reconciliation) → implement one AC per commit → `/verify` → review against `REVIEW.md`. A feature is not done until `/verify` can point at proof for every acceptance criterion.
+- **Agent configuration is software too**: `CLAUDE.md`, `.claude/skills/**`, `.claude/agents/**` and the hooks are regression-tested by `Tools/evals` (local, uses `claude -p`). Touch any of them → run it. A mistake repeated a second time becomes a `CLAUDE.md` entry; an incident becomes a permanent eval in `evals/`.
+- **Hooks are the approval gates** (`.claude/settings.json` + `.claude/hooks/`): pushing past the gate is blocked, archive/upload needs `RELEASE_APPROVAL`, and `SHOTDEX_FREEZE_TESTS=1` freezes test files while fixing a bug (write the failing test first).
+- Code change alters behaviour/architecture described in the design docs: update the matching `docs/**/FS-*` or `docs/**/BD-*` in the same turn. `spec.md` is now only a redirect stub — never write content back into it.
+- **Gate is local, not CI**: `Tools/install-hooks` installs a pre-push hook that runs `Tools/gate` (build + full unit test; it logs one sample to `build/metrics/gate.jsonl`). `Tools/bands-check` reads those samples against `bands.yaml` and turns a 3σ breach into a fresh `intent.md` — that is the Maintain loop closing.
+- **`/review-sweep` runs the agents for you** (`.claude/skills/review-sweep/`): scopes an area, fans the right agents out in parallel, merges their findings into `REVIEW_QUEUE.md` (deduped, ranked, with anything the `docs/` design docs already answer closed off), then works down the queue — build, test and screenshot behind each fix, one commit per item. Say "review the whole app", "review the editor", or "continue" to resume a half-finished queue.
 - **Workflow skills** (`.claude/skills/`) — use these instead of retyping the commands:
+  - `/intent <slug>` — stage 1 (Plan): capture the problem and the why into `docs/_intents/`; no spec, no code.
+  - `/spec <FS-xx>` — stage 2 (Design): write or update the `FS-*` doc **with acceptance criteria**, flagging every policy conflict; no code.
+  - `/plan <FS-xx>` — stage 3 (Build): plan mode — reconcile each acceptance criterion against the code (already met / diverges / missing, with file:line), write `docs/_plans/`, stop for approval.
+  - `/verify <FS-xx>` — stage 4 (Test): run the tests behind each acceptance criterion, screenshot every state, report which criteria are still unproven.
   - `/build [scheme] [device]` — quiet simulator build into `build/sim`; the step every code change ends with.
   - `/test [Class[/method]]` — unit tests with only failures and the verdict printed; a filter that matches zero tests is not a pass.
   - `/sim [device]` — install, grant photos, launch, first screenshot; plus the blind-tap and transient-UI rules.
   - `/screens <feature>` — the "UI change: build, run, screenshot, inspect" rule as a checklist: every state, both `#available` paths, every device class, named files, inspected.
   - `/ui-drive <script>` — write and run a `Tools/ui-drive` JSON route; screenshots plus measured element dumps.
   - `/release-check` — versions, privacy manifest, usage strings, entitlements, localization completeness, archive.
-  - `/spec-sync [range|path|all]` — code vs `spec.md`/`DESIGN.md` drift, with replacement text, applied.
+  - `/spec-sync [range|path|all]` — code vs `docs/`/`DESIGN.md` drift, with replacement text, applied.
   - `/new-screen <Name> [tier]` — scaffold `Features/<Name>/` the way the codebase expects.
 - **Review agents live in `.claude/agents/`** — run the one that matches the work and act on its findings rather than re-deriving them:
   - `hig-components` — standard-iOS surfaces against Apple's HIG *Components* pages (fetches the page, never quotes from memory). Toolbars, menus, sheets, alerts, pickers, lists. Tier D is exempt except for target sizes, clipped text, accessibility labels, unconfirmed destructive actions and controls that misstate their state.
