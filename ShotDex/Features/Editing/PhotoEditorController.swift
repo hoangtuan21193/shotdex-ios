@@ -65,7 +65,10 @@ enum EditorGroup: String, CaseIterable, Identifiable {
     case detail
     case optics
     case geo
-    case crop
+    /// Crop **and** geometry: the frame, and the six sliders that shape the same
+    /// rectangle. Renamed from `crop` on 2026-09-22 when Geometry moved in with
+    /// it; `EditorGroupMigration` converts the stored raw value.
+    case cropGeometry = "cropGeometry"
     case mask
     case markup
     case presets
@@ -85,10 +88,20 @@ enum EditorGroup: String, CaseIterable, Identifiable {
         case .detail: "Detail"
         case .optics: "Optics"
         case .geo: "Geometry"
-        case .crop: "Crop"
+        case .cropGeometry: "Crop"
         case .mask: "Mask"
         case .markup: "Markup"
         case .presets: "Presets"
+        }
+    }
+
+    /// What the wide panel calls it. Only Crop differs: the sidebar's Crop stop
+    /// carries the geometry sliders too, while the phone's wheel still has a
+    /// separate Geo chip and would be lying if it said otherwise.
+    var wideTitle: String {
+        switch self {
+        case .cropGeometry: "Crop & Geometry"
+        default: title
         }
     }
 
@@ -105,7 +118,7 @@ enum EditorGroup: String, CaseIterable, Identifiable {
         case .detail: "wand.and.rays"
         case .optics: "camera.aperture"
         case .geo: "grid"
-        case .crop: "crop"
+        case .cropGeometry: "crop"
         case .mask: "circle.dashed"
         case .markup: "pencil.tip.crop.circle"
         case .presets: "camera.filters"
@@ -120,7 +133,7 @@ enum EditorGroup: String, CaseIterable, Identifiable {
         case .light, .curve, .color, .colorMix, .effects, .detail, .optics, .geo: .adjust
         case .pointColor: .pointColor
         case .grade: .colorGrading
-        case .crop: .crop
+        case .cropGeometry: .crop
         case .mask: .masks
         case .markup: .markup
         case .presets: .filters

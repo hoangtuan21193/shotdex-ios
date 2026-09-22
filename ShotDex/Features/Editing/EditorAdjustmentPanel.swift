@@ -76,6 +76,10 @@ struct EditorAdjustmentGroupsView<Footer: View>: View {
                 controller.setAdjustment(kind, value: isOn ? 1 : 0)
             }
         } else {
+            // A dependent row stays in place and goes quiet until its parent has
+            // a value: a vignette's midpoint means nothing at vignette 0, and
+            // hiding the row would make the group's shape change under the hand.
+            let isLive = EditorAdjustmentCatalog.isEnabled(kind, in: controller.recipe.adjustments)
             EditorSliderRow(
                 kind: kind,
                 value: controller.adjustmentValue(kind),
@@ -94,7 +98,16 @@ struct EditorAdjustmentGroupsView<Footer: View>: View {
                     )
                 }
             )
+            .opacity(isLive ? 1 : EditorTheme.rowDisabled)
+            .disabled(!isLive)
+            .accessibilityHint(isLive ? "" : dependencyHint(for: kind))
         }
+    }
+
+    /// Why a row cannot be dragged, for the people who cannot see that it is dim.
+    private func dependencyHint(for kind: PhotoAdjustmentKind) -> String {
+        guard let parent = EditorAdjustmentCatalog.parentKind(of: kind) else { return "" }
+        return "Needs \(EditorAdjustmentCatalog.shortTitle(of: parent)) above zero"
     }
 
     private func beginDrag(_ kind: PhotoAdjustmentKind) {

@@ -42,6 +42,11 @@ enum EditorTheme {
     static let meterPeak = Color.white.opacity(0.75)
     static let secondaryText = Color.white.opacity(0.55)
     static let dimText = Color.white.opacity(0.35)
+    /// A whole slider row waiting on the slider above it — midpoint before
+    /// there is a vignette, grain size before there is grain. Its own name
+    /// because it is not the glyph opacity (0.28, where a 2pt track disappears)
+    /// and not text (`dimText` happens to share the number, not the meaning).
+    static let rowDisabled = 0.35
     static let clipping = Color(red: 1, green: 0.271, blue: 0.227)
     static let maskRow = Color(white: 0.102)
     static var activeRow: Color { accent.opacity(0.1) }

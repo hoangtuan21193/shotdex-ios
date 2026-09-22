@@ -65,7 +65,7 @@ enum EditorRailMode: String, CaseIterable, Identifiable {
         switch self {
         case .edit: .light
         case .presets: .presets
-        case .crop: .crop
+        case .crop: .cropGeometry
         case .mask: .mask
         case .markup: .markup
         }
@@ -74,7 +74,7 @@ enum EditorRailMode: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .edit: "Edit"
-        default: group.title
+        default: group.wideTitle
         }
     }
 
@@ -109,7 +109,6 @@ struct EditorToolRail: View {
     let edge: EditorSidebarEdge
     var select: (EditorRailMode) -> Void
     var showHistory: () -> Void
-    var togglePanel: () -> Void
 
     var body: some View {
         VStack(spacing: AppTheme.Spacing.xs) {
@@ -117,9 +116,10 @@ struct EditorToolRail: View {
                 railButton(
                     icon: mode.icon,
                     title: mode.title,
-                    // History takes the panel over, so nothing above it is the
-                    // thing on screen while it is up.
-                    isActive: mode == selected && !isHistoryActive,
+                    // Lit means "this mode's panel is open" — not "this mode is
+                    // selected". With the panel folded away nothing is lit, so
+                    // the rail never claims to be showing something it is not.
+                    isActive: mode == selected && !isHistoryActive && !isPanelHidden,
                     hasEdits: editedModes.contains(mode)
                 ) {
                     select(mode)
@@ -134,13 +134,6 @@ struct EditorToolRail: View {
                 isActive: isHistoryActive,
                 hasEdits: false,
                 action: showHistory
-            )
-            railButton(
-                icon: isPanelHidden ? edge.expandIcon : edge.collapseIcon,
-                title: isPanelHidden ? "Show Tools" : "Hide Tools",
-                isActive: false,
-                hasEdits: false,
-                action: togglePanel
             )
         }
         .padding(.vertical, AppTheme.Spacing.sm)

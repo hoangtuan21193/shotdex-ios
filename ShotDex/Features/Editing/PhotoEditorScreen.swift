@@ -1205,6 +1205,7 @@ struct PhotoEditorScreen: View {
 
             sidebarModeHeader(controller)
 
+            ScrollViewReader { proxy in
             ScrollView(.vertical) {
                 LazyVStack(spacing: 0) {
                     if chrome.showsHistoryPanel {
@@ -1224,6 +1225,7 @@ struct PhotoEditorScreen: View {
                             ) {
                                 sidebarSectionBody(group, controller: controller)
                             }
+                            .id(group)
                         }
                     } else {
                         // A stage tool takes the panel over rather than sitting
@@ -1243,6 +1245,14 @@ struct PhotoEditorScreen: View {
             // Same rule as the phone panel: a finger that owns a slider must not
             // also be scrolling the list under it.
             .scrollDisabled(chrome.activeSlider != nil)
+            .onChange(of: chrome.sectionToScrollTo) { _, group in
+                guard let group else { return }
+                withAnimation(EditorTheme.animation) {
+                    proxy.scrollTo(group, anchor: .top)
+                }
+                chrome.sectionToScrollTo = nil
+            }
+            }
 
             // Only the three stage modes have a foot. Edit and Presets end with
             // the list, and Save lives in the command band with the rest of the
@@ -1303,20 +1313,19 @@ struct PhotoEditorScreen: View {
             edge: sidebarEdge,
             select: { mode in
                 withAnimation(EditorTheme.animation) {
+                    // Tapping the open mode folds the panel away and leaves the
+                    // rail — Lightroom's own toggle, and the only way to get the
+                    // photo the whole window now that there is no Hide Tools
+                    // button. Tapping it again brings the same mode back.
+                    let isRepeat = mode == railMode && !chrome.showsHistoryPanel
+                    if isRepeat, !isSidebarHidden {
+                        setSidebarHidden(true)
+                        return
+                    }
                     chrome.showsHistoryPanel = false
-                    // Picking the mode already up puts the editor back to plain
-                    // adjusting — and out of Crop *without* applying the frame,
-                    // which is the only route that does. Picking any mode also
-                    // opens the panel: a tap that changed nothing visible would
-                    // read as a dead control.
-                    let isRepeat = mode == railMode
-                    let target = isRepeat ? EditorRailMode.edit : mode
                     if isSidebarHidden { setSidebarHidden(false) }
-                    selectGroup(
-                        target.group,
-                        in: controller,
-                        discardingCrop: isRepeat && railMode == .crop
-                    )
+                    guard mode != railMode else { return }
+                    selectGroup(mode.group, in: controller)
                 }
             },
             showHistory: {
@@ -1325,11 +1334,6 @@ struct PhotoEditorScreen: View {
                     withAnimation(EditorTheme.animation) { chrome.showsHistoryPanel = false }
                 } else {
                     showHistory()
-                }
-            },
-            togglePanel: {
-                withAnimation(EditorTheme.animation) {
-                    setSidebarHidden(!isSidebarHidden)
                 }
             }
         )
@@ -1527,13 +1531,16 @@ struct PhotoEditorScreen: View {
     /// bar: a frame, a set of masks, a stack of markup layers.
     private static let stageModes: [EditorRailMode] = [.crop, .mask, .markup]
 
+    /// The five sections the panel lists, in the catalog's order. Curve rides
+    /// inside Light, Mix / Point / Grade are tabs inside Color, and Geometry
+    /// went to Crop with the frame it shapes.
     private static let sidebarParameterGroups: [EditorGroup] = [
-        .light, .curve, .color, .grade, .effects, .detail, .optics, .geo
+        .light, .color, .effects, .detail, .optics
     ]
 
     /// The three ways to work on colour, shown as segments inside one section
     /// the way Lightroom nests HSL under Color.
-    private static let colorSegments: [EditorGroup] = [.color, .colorMix, .pointColor]
+    private static let colorSegments: [EditorGroup] = [.color, .colorMix, .pointColor, .grade]
 
     /// What the histogram says out loud. The shape is not describable; what a
     /// photographer reads it for is whether the ends are against the wall.
@@ -1573,7 +1580,7 @@ struct PhotoEditorScreen: View {
             for region in ColorGradingRegion.allCases {
                 controller.resetColorGrading(region: region)
             }
-        case .crop:
+        case .cropGeometry:
             controller.resetCrop()
         case .mask, .markup, .presets:
             // These are stage modes with their own commit bar; their reset lives
@@ -1603,7 +1610,7 @@ struct PhotoEditorScreen: View {
             return recipe.color.grading != identity.color.grading
         case .presets:
             return recipe.filter != identity.filter
-        case .crop:
+        case .cropGeometry:
             return recipe.crop != identity.crop
         case .mask:
             return !recipe.masks.isEmpty
@@ -1623,35 +1630,57 @@ struct PhotoEditorScreen: View {
         controller: PhotoEditorController
     ) -> some View {
         VStack(spacing: 0) {
-            // Grade acts on one tonal region at a time, so the region picker has
-            // to come with it — without it the section quietly edits only
-            // shadows.
-            if group == .grade {
-                targetStrip(for: group, controller: controller)
-                    .frame(height: EditorLayoutMetrics.editorTargetStripHeight)
-            }
-
             if group == .color {
+                // Four ways to work on colour, one section — Lightroom's own
+                // arrangement. Grade used to be a ninth header of its own, which
+                // put "colour" in two places in the same list.
                 Picker("Colour controls", selection: colorSegmentBinding(controller)) {
                     Text("Basic").tag(EditorGroup.color)
                     Text("Mix").tag(EditorGroup.colorMix)
                     Text("Point").tag(EditorGroup.pointColor)
+                    Text("Grade").tag(EditorGroup.grade)
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
                 .padding(.horizontal, AppTheme.Spacing.md)
                 .padding(.bottom, AppTheme.Spacing.sm)
 
+                // Grade acts on one tonal region at a time, so the region picker
+                // has to come with it — without it the tab quietly edits only
+                // shadows.
+                if colorSegment == .grade {
+                    targetStrip(for: .grade, controller: controller)
+                        .frame(height: EditorLayoutMetrics.editorTargetStripHeight)
+                }
+
                 toolPanelContent(for: colorSegment, controller: controller)
+            } else if group == .cropGeometry {
+                // Crop & Geometry: the frame first, then the six geometry
+                // sliders and Upright under a hairline. Both shape the same
+                // rectangle, and keeping them two rail stops apart meant
+                // straightening a building was a tool change.
+                toolPanelContent(for: .cropGeometry, controller: controller)
+                Rectangle()
+                    .fill(EditorTheme.panelDivider)
+                    .frame(height: 1)
+                    .padding(.vertical, AppTheme.Spacing.sm)
+                toolPanelContent(for: .geo, controller: controller)
             } else {
                 toolPanelContent(for: group, controller: controller)
-            }
 
-            // The graph goes in the panel, not on the photo: the sidebar is wide
-            // enough for a usable plot, and a picture with a grid drawn across it
-            // is not what a big screen is for.
-            if group == .curve {
-                sidebarCurveGraph(controller)
+                // Light carries the tone curve at its foot: the same tonal
+                // decision by another instrument, and Lightroom keeps them in
+                // one place too. The graph goes in the panel, not on the photo —
+                // a picture with a grid drawn across it is not what a big screen
+                // is for.
+                if group == .light {
+                    Rectangle()
+                        .fill(EditorTheme.panelDivider)
+                        .frame(height: 1)
+                        .padding(.vertical, AppTheme.Spacing.sm)
+                    toolPanelContent(for: .curve, controller: controller)
+                    sidebarCurveGraph(controller)
+                }
             }
         }
     }
@@ -1701,6 +1730,10 @@ struct PhotoEditorScreen: View {
                 // about closing a live crop frame. Colour keeps whichever
                 // segment was last showing.
                 selectGroup(group == .color ? colorSegment : group, in: controller)
+                // And bring it to the top of the scroll: a section opened from
+                // the bottom of the list otherwise unfolds off-screen, and the
+                // user scrolls to find the rows their own tap just produced.
+                chrome.sectionToScrollTo = group
             }
         }
     }
@@ -1828,19 +1861,20 @@ struct PhotoEditorScreen: View {
                     // away by a mis-tap.
                     Color.clear.frame(width: AppTheme.Spacing.md)
                     backButton(controller, side: buttonSize)
-                } else {
-                    if showsDocumentControls {
-                        backButton(controller, side: buttonSize)
-                        Color.clear.frame(width: AppTheme.Spacing.md)
-                    }
+                } else if showsDocumentControls {
+                    // Same rule the other way round: Back alone on the far edge,
+                    // everything that changes the photo gathered over the panel.
+                    // Split across a 1210pt bar, the undo disc sat 869pt from the
+                    // slider the hand was holding.
+                    backButton(controller, side: buttonSize)
+                    Color.clear.frame(width: AppTheme.Spacing.md)
+                    if showsHistogram { pill } else { Spacer(minLength: AppTheme.Spacing.md) }
                     undoRedo
-                    if showsDocumentControls, !showsHistogram {
-                        Spacer(minLength: AppTheme.Spacing.md)
-                    }
+                    trailingCommands
+                } else {
+                    undoRedo
                     // Fixed reserve for the island; keeps the pill clear of the cutout.
-                    if !showsDocumentControls {
-                        Color.clear.frame(width: reserve)
-                    }
+                    Color.clear.frame(width: reserve)
                     if showsHistogram { pill }
                     trailingCommands
                 }
@@ -2421,7 +2455,7 @@ struct PhotoEditorScreen: View {
                     }
                 )
             }
-        case .crop:
+        case .cropGeometry:
             EditorCropPanel(controller: controller)
         case .mask:
             if controller.editingMaskAdjustments {
@@ -2581,7 +2615,7 @@ struct PhotoEditorScreen: View {
         // 30c has no crop Done: the crop stays live and is committed when its tab is
         // left (or when the edit is saved). Switching to any other group is that
         // moment. Leaving via Save commits too, so a double commit is harmless.
-        if chrome.selectedGroup == .crop, group != .crop {
+        if chrome.selectedGroup == .cropGeometry, group != .cropGeometry {
             // `discardingCrop` is the repeat-tap on the rail's Crop stop, which
             // the rail advertises as the way out that does not apply the frame.
             // It used to advertise it and then commit anyway — the claim was in
@@ -2597,13 +2631,13 @@ struct PhotoEditorScreen: View {
         // on *every* group change, which in the wide layout is on the path of
         // every rail tap, every accordion header and every Color segment: pinch
         // to 400% to judge sharpening, reach for Detail, lose the eyelash.
-        if group == .crop || chrome.selectedGroup == .crop {
+        if group == .cropGeometry || chrome.selectedGroup == .cropGeometry {
             chrome.resetZoom()
         }
         // A stage mode is a session with a way out: snapshot on the way in so
         // Cancel has somewhere to return to, and drop the snapshot on the way
         // out so Apply's work is not still pending a rewind.
-        if [.crop, .mask, .markup].contains(group) {
+        if [EditorGroup.cropGeometry, .mask, .markup].contains(group) {
             controller.beginStageSession()
         } else {
             controller.clearStageEntry()
@@ -2628,7 +2662,7 @@ struct PhotoEditorScreen: View {
             controller.selectOverlay(nil)
             controller.selectedTool = .markup
             controller.closeSelectedMaskAdjustments()
-        case .pointColor, .grade, .crop, .presets:
+        case .pointColor, .grade, .cropGeometry, .presets:
             controller.selectedTool = group.tool
             controller.selectOverlay(nil)
             controller.closeSelectedMaskAdjustments()

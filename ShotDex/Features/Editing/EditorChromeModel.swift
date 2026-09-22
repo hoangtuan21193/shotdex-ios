@@ -42,6 +42,12 @@ final class EditorChromeModel {
     /// once and the first tap is a choice rather than a scroll.
     var expandedSidebarGroups: Set<EditorGroup> = []
 
+    /// The section the list should bring to the top, set the moment one is
+    /// opened and cleared as soon as the scroll runs. A section opened from the
+    /// bottom of the panel otherwise unfolds below the fold, and the person
+    /// scrolls to find rows their own tap just made.
+    var sectionToScrollTo: EditorGroup?
+
     /// Which colour band the wide sidebar's Mix section is working on, or nil
     /// for the all-channels list. The swatch row is Lightroom's arrangement and
     /// the reason it fits: eight bands × three properties is twenty-four rows,
