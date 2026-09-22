@@ -9,10 +9,15 @@ khung hình.
 
 | Chép | Không chép |
 |---|---|
-| tone · màu · curve · look phim · cường độ look | crop · mask · nét vẽ · overlay |
+| tone · màu · curve · look phim / LUT · cường độ look | crop · mask · nét vẽ · overlay · **vết heal/clone** |
 
 **Vì sao**: dán crop là cắt lại một tấm ảnh người ta chưa từng cắt; dán mask là làm sáng một vùng mà trên
-ảnh này là mặt người. Photos và Lightroom cũng chia đúng chỗ này, cùng một lý do.
+ảnh này là mặt người; dán một vết heal là vá một chỗ mà trên ảnh này không có bụi. Photos và Lightroom cũng
+chia đúng chỗ này, cùng một lý do.
+
+Chép là **danh sách cho phép** (`EditClipboard.look(of:)`, `paste(onto:)`, `EditorSyncScope.look`): một
+trường mới của recipe không tự đi theo; muốn nó được chép thì phải thêm tên vào đó. `PhotoHealingTests.
+healingIsNeverCopied` khoá điều này cho healing.
 
 ## 2. Hành vi
 

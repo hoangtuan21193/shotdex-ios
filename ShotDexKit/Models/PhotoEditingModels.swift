@@ -1198,6 +1198,10 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
     /// Freehand Markup drawing, composited just under the overlays (so a caption
     /// stays legible over a scribble). `nil` when nothing is drawn.
     public var drawing: PhotoDrawing?
+    /// Heal and clone spots, applied right after the crop so the masks and
+    /// everything after them work on the repaired picture. Belongs to this
+    /// frame: never copied, synced or saved into a look (FS-03.10).
+    public var healing: [PhotoHealingSpot] = []
 
     public static let identity = PhotoEditRecipe()
 
@@ -1228,6 +1232,7 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
             && curve.isIdentity
             && overlays.isEmpty
             && (drawing?.isEmpty ?? true)
+            && healing.isEmpty
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -1244,6 +1249,7 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
         case curve
         case overlays
         case drawing
+        case healing
     }
 
     public init() {}
@@ -1284,6 +1290,9 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
         ) ?? .identity
         overlays = try container.decodeLossyArrayIfPresent(PhotoOverlay.self, forKey: .overlays) ?? []
         drawing = try container.decodeIfPresent(PhotoDrawing.self, forKey: .drawing)
+        // Spot by spot, like the masks: a spot in a mode this build does not
+        // know is dropped, not the recipe.
+        healing = try container.decodeLossyArrayIfPresent(PhotoHealingSpot.self, forKey: .healing) ?? []
     }
 
     /// Written by hand so an untouched Color tab adds no key at all — a recipe
@@ -1303,6 +1312,7 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
         if !curve.isIdentity { try container.encode(curve, forKey: .curve) }
         if !overlays.isEmpty { try container.encode(overlays, forKey: .overlays) }
         if let drawing, !drawing.isEmpty { try container.encode(drawing, forKey: .drawing) }
+        if !healing.isEmpty { try container.encode(healing, forKey: .healing) }
     }
 }
 

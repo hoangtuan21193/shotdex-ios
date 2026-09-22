@@ -783,6 +783,7 @@ private final class LivePhotoFrameRenderer: @unchecked Sendable {
         // motion frames cannot drift from its key frame.
         image = PhotoRenderService.applyLook(of: recipe, to: image)
         image = PhotoRenderService.applyCrop(recipe.crop, to: image)
+        image = PhotoRenderService.applyHealing(recipe.healing, to: image)
         for mask in recipe.masks where mask.isVisible {
             let maskImage = renderMask(mask, over: image)
             let adjusted = PhotoRenderService.applyAdjustments(

@@ -403,6 +403,7 @@ public actor PhotoRenderService {
         image = Self.applyGeo(recipe.adjustments, to: image)
         image = Self.applyLook(of: recipe, to: image)
         image = Self.applyCrop(recipe.crop, to: image)
+        image = Self.applyHealing(recipe.healing, to: image)
         let croppedRawSkyMatte = baseResult.rawSkyMatte.map {
             Self.applyCrop(recipe.crop, to: $0)
         }
@@ -759,6 +760,7 @@ public actor PhotoRenderService {
         image = Self.applyGeo(recipe.adjustments, to: image)
         image = Self.applyLook(of: recipe, to: image)
         image = Self.applyCrop(recipe.crop, to: image)
+        image = Self.applyHealing(recipe.healing, to: image)
         let croppedRawSkyMatte = base.rawSkyMatte.map {
             Self.applyCrop(recipe.crop, to: $0)
         }
