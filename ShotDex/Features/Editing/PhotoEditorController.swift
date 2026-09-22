@@ -635,20 +635,6 @@ final class PhotoEditorController {
         }
     }
 
-    /// `Auto` in the Light header. The suggestion comes from the histogram the
-    /// editor already has, so it costs no extra render.
-    func applyAutoTone() {
-        recordHistory()
-        let suggestion = EditorAutoTone.suggestion(
-            for: currentAdjustments,
-            histogram: histogram
-        )
-        for kind in [PhotoAdjustmentKind.exposure, .contrast, .whites] {
-            writeAdjustment(kind, value: suggestion[kind])
-        }
-        scheduleRender()
-    }
-
     /// Lightroom's Upright: find the frame's own lines and set the geo
     /// controls that put them back where the eye expects them.
     ///
@@ -1021,6 +1007,56 @@ final class PhotoEditorController {
     /// it — puts the framing back. A crop the user never confirmed must not ride
     /// along into the saved image. Only `crop` is restored: anything else the session
     /// touched (an undo that reached back past the frame) is the user's, not ours.
+    // MARK: Stage-mode sessions
+
+    /// What the recipe looked like when the current stage mode opened, with the
+    /// undo depth to rewind to. Mask and Markup write straight into the recipe
+    /// as the user paints, so Cancel needs the picture of the world from before
+    /// — the same trick the crop session already plays with the frame.
+    @ObservationIgnored private var stageEntry: (recipe: PhotoEditRecipe, undoDepth: Int)?
+
+    /// Called as a stage mode opens. Harmless to call twice: the first snapshot
+    /// is the one Cancel should return to.
+    func beginStageSession() {
+        guard stageEntry == nil else { return }
+        stageEntry = (recipe, history.undoDepth)
+    }
+
+    /// Apply — the work stays, the snapshot goes.
+    func clearStageEntry() {
+        stageEntry = nil
+    }
+
+    /// Cancel — put back what the mode found, and take its steps out of History
+    /// so undo does not walk back through work the user just discarded.
+    func restoreStageEntry() {
+        guard let entry = stageEntry else { return }
+        stageEntry = nil
+        history.rewind(toUndoDepth: entry.undoDepth)
+        guard recipe != entry.recipe else { return }
+        recipe = entry.recipe
+        scheduleRender()
+    }
+
+    /// Every mask off the photo, one history step.
+    func removeAllMasks() {
+        guard !recipe.masks.isEmpty else { return }
+        recordHistory()
+        recipe.masks.removeAll()
+        selectedMaskID = nil
+        scheduleRender()
+    }
+
+    /// Every markup layer and every stroke off the photo, one history step.
+    func removeAllOverlays() {
+        let identity = PhotoEditRecipe.identity
+        guard !recipe.overlays.isEmpty || recipe.drawing != identity.drawing else { return }
+        recordHistory()
+        recipe.overlays.removeAll()
+        recipe.drawing = identity.drawing
+        scheduleRender()
+    }
+
     func cancelCropSession() {
         guard let session = cropSession else { return }
         cropSession = nil

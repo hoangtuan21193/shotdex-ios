@@ -26,7 +26,6 @@ struct EditorAdjustmentGroup: Identifiable, Equatable, Sendable {
     let id: Identity
     let title: String
     let kinds: [PhotoAdjustmentKind]
-    let hasAuto: Bool
 }
 
 /// Single source of truth for how Adjust is grouped and how values read. The
@@ -119,14 +118,12 @@ enum EditorAdjustmentCatalog {
                     .blackPoint,
                     .brilliance,
                     .brightness,
-                ],
-                hasAuto: true
+                ]
             ),
             EditorAdjustmentGroup(
                 id: .color,
                 title: "Color",
-                kinds: [.warmth, .tint, .vibrance, .saturation, .blackAndWhite],
-                hasAuto: false
+                kinds: [.warmth, .tint, .vibrance, .saturation, .blackAndWhite]
             ),
             EditorAdjustmentGroup(
                 id: .detail,
@@ -135,8 +132,7 @@ enum EditorAdjustmentCatalog {
                     .sharpness, .sharpenRadius, .sharpenDetail, .sharpenMasking,
                     .definition,
                     .noiseReduction, .colorNoiseReduction,
-                ],
-                hasAuto: false
+                ]
             ),
             EditorAdjustmentGroup(
                 id: .effects,
@@ -150,8 +146,7 @@ enum EditorAdjustmentCatalog {
                     // First in the group, not last: on a portrait it is the
                     // adjustment people came for, and the one that changes the
                     // picture most.
-                    .prepending(hasDepth && scope == .global ? [.depthBlur] : []),
-                hasAuto: false
+                    .prepending(hasDepth && scope == .global ? [.depthBlur] : [])
             ),
         ]
         // Optics and Geo act on the whole frame's geometry / lens, so they are
@@ -161,8 +156,7 @@ enum EditorAdjustmentCatalog {
                 EditorAdjustmentGroup(
                     id: .optics,
                     title: "Optics",
-                    kinds: [.chromaticAberration, .defringe],
-                    hasAuto: false
+                    kinds: [.chromaticAberration, .defringe]
                 )
             )
             groups.append(
@@ -172,8 +166,7 @@ enum EditorAdjustmentCatalog {
                     kinds: [
                         .geoVertical, .geoHorizontal, .geoRotate,
                         .geoScale, .geoOffsetX, .geoOffsetY,
-                    ],
-                    hasAuto: false
+                    ]
                 )
             )
         }
@@ -191,8 +184,7 @@ enum EditorAdjustmentCatalog {
                         .rawLuminanceNoise,
                         .rawColorNoise,
                         .lensCorrection,
-                    ],
-                    hasAuto: false
+                    ]
                 )
             )
         }

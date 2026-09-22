@@ -140,47 +140,6 @@ struct EditorHistoryAndSummaryTests {
         )
     }
 
-    @Test func autoToneBrightensAndOpensUpAFlatDarkHistogram() {
-        // Everything bunched into the low quarter: needs exposure, whites and
-        // contrast.
-        let dark = PhotoHistogram(
-            red: bins(populated: 0..<8, count: 64),
-            green: bins(populated: 0..<8, count: 64),
-            blue: bins(populated: 0..<8, count: 64)
-        )
-        let suggestion = EditorAutoTone.suggestion(for: .zero, histogram: dark)
-        #expect(suggestion.exposure > 0.3)
-        #expect(suggestion.whites > 0.3)
-        #expect(suggestion.contrast > 0)
-
-        // A full-range, centred histogram is left alone.
-        let even = PhotoHistogram(
-            red: bins(populated: 0..<64, count: 64),
-            green: bins(populated: 0..<64, count: 64),
-            blue: bins(populated: 0..<64, count: 64)
-        )
-        let neutral = EditorAutoTone.suggestion(for: .zero, histogram: even)
-        #expect(abs(neutral.exposure) < 0.2)
-        #expect(neutral.whites == 0)
-        #expect(neutral.contrast == 0)
-    }
-
-    @Test func autoToneKeepsOtherSlidersUntouched() {
-        var current = PhotoAdjustments.zero
-        current.saturation = 0.4
-        current.grain = 0.25
-        let suggestion = EditorAutoTone.suggestion(
-            for: current,
-            histogram: PhotoHistogram(
-                red: bins(populated: 10..<40, count: 64),
-                green: bins(populated: 10..<40, count: 64),
-                blue: bins(populated: 10..<40, count: 64)
-            )
-        )
-        #expect(suggestion.saturation == 0.4)
-        #expect(suggestion.grain == 0.25)
-    }
-
     @Test func histogramReportsClippingSeparatelyFromBins() {
         var histogram = PhotoHistogram(red: [], green: [], blue: [])
         #expect(!histogram.hasClippedHighlights)

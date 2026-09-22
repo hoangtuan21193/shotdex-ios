@@ -209,7 +209,14 @@ struct EditorSidebarSection<Content: View>: View {
     /// without opening every one of them — the same job Lightroom's per-panel
     /// switch does.
     var hasEdits = false
+    /// Gap and inset the card draws with. 6 on a short column, 8 elsewhere —
+    /// the caller reads it from the metrics so one column has one answer.
+    var spacing: CGFloat = 8
     var toggle: () -> Void
+    /// Puts this group — and only this group — back to its defaults. Absent
+    /// when the group has nothing to reset, which is also when the button
+    /// would be a lie.
+    var reset: (() -> Void)?
     @ViewBuilder var content: () -> Content
 
     var body: some View {
@@ -237,7 +244,8 @@ struct EditorSidebarSection<Content: View>: View {
                     }
                     Spacer(minLength: 8)
                 }
-                .padding(.horizontal, AppTheme.Spacing.lg)
+                .padding(.leading, AppTheme.Spacing.md)
+                .padding(.trailing, hasEdits && reset != nil ? 0 : AppTheme.Spacing.md)
                 .frame(height: headerHeight)
                 .contentShape(Rectangle())
             }
@@ -249,17 +257,39 @@ struct EditorSidebarSection<Content: View>: View {
                     .compactMap { $0 }
                     .joined(separator: ", ")
             )
-            .accessibilityAddTraits(isActive ? [.isSelected, .isButton] : .isButton)
+            .accessibilityAddTraits(isExpanded ? [.isSelected, .isButton] : .isButton)
+            .overlay(alignment: .trailing) {
+                // Reset belongs to the group it resets, next to the name that
+                // says what it will undo — not to a button at the foot of the
+                // panel that wipes the whole photo. It only appears once there
+                // is something to put back.
+                if hasEdits, let reset {
+                    Button(action: reset) {
+                        Image(systemName: "arrow.counterclockwise")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(EditorTheme.secondaryText)
+                            .frame(width: 32, height: 32)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .hoverEffect(.highlight)
+                    .padding(.trailing, AppTheme.Spacing.xs)
+                    .accessibilityLabel("Reset \(group.title)")
+                }
+            }
 
             if isExpanded {
                 content()
                     .padding(.bottom, AppTheme.Spacing.sm)
             }
-
-            Rectangle()
-                .fill(EditorTheme.panelDivider)
-                .frame(height: 1)
         }
+        // A card, not a slice of one long list: each group reads as its own
+        // block the way the histogram above them already does. The hairline
+        // between sections went with it — a divider inside a card separates
+        // rows that belong together, and between cards the gap does the job.
+        .background(EditorTheme.control, in: RoundedRectangle.app(AppTheme.Radius.lg))
+        .padding(.horizontal, spacing)
+        .padding(.top, spacing)
     }
 }
 

@@ -7,7 +7,6 @@ struct EditorAdjustmentCatalogTests {
         let groups = EditorAdjustmentCatalog.groups(isRAWSource: false, scope: .global)
         let light = groups.first
         #expect(light?.id == .light)
-        #expect(light?.hasAuto == true)
         #expect(
             Array(light?.kinds.prefix(6) ?? []) == [
                 .exposure, .contrast, .highlights, .shadows, .whites, .blackPoint,

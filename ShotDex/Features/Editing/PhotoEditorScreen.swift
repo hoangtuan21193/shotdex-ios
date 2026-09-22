@@ -854,11 +854,14 @@ struct PhotoEditorScreen: View {
                     controller,
                     height: bandHeight,
                     showsDocumentControls: true,
-                    // The panel carries the histogram — the pill would be the
-                    // same graph twice, 40pt apart. On a short column the panel
-                    // has handed it back.
-                    showsHistogram: !showsPanel || isShortColumn,
-                    showsSave: !showsPanel,
+                    // The panel carries the histogram whenever it is up — on a
+                    // short column too, at 56pt. The pill only comes back when
+                    // there is no panel to hold it.
+                    showsHistogram: !showsPanel,
+                    // Save lives in the band on a wide window whether the panel
+                    // is up or not: the panel's foot is gone, and a document
+                    // command belongs with the document commands.
+                    showsSave: true,
                     // The commands belong over the tools they act on. With the
                     // panel on the leading edge that is the leading edge: an
                     // undo disc 800pt away from the slider the hand is holding
@@ -877,6 +880,7 @@ struct PhotoEditorScreen: View {
                             controller,
                             safeArea: safeArea,
                             canvasWidth: canvasWidth,
+                            canvasHeight: canvasHeight,
                             isShortColumn: isShortColumn
                         )
                         .transition(.move(edge: .leading))
@@ -910,6 +914,7 @@ struct PhotoEditorScreen: View {
                             controller,
                             safeArea: safeArea,
                             canvasWidth: canvasWidth,
+                            canvasHeight: canvasHeight,
                             isShortColumn: isShortColumn
                         )
                         .transition(.move(edge: .trailing))
@@ -1041,11 +1046,6 @@ struct PhotoEditorScreen: View {
     private func stageContextMenu(_ controller: PhotoEditorController) -> some View {
         if horizontalSizeClass == .regular {
             Button {
-                controller.applyAutoTone()
-            } label: {
-                Label("Auto Enhance", systemImage: "wand.and.sparkles")
-            }
-            Button {
                 dependencies.editClipboard.copy(from: controller.recipe)
             } label: {
                 Label("Copy Edits", systemImage: "doc.on.doc")
@@ -1170,6 +1170,7 @@ struct PhotoEditorScreen: View {
         _ controller: PhotoEditorController,
         safeArea: EdgeInsets,
         canvasWidth: CGFloat,
+        canvasHeight: CGFloat,
         isShortColumn: Bool
     ) -> some View {
         VStack(spacing: 0) {
@@ -1180,37 +1181,29 @@ struct PhotoEditorScreen: View {
             // the photo instead; this stays put, because a graph that moves is
             // a graph that has to be found again.
             //
-            // Except on a column too short to hold a parameter group at all,
-            // where 112pt of graph is bought with rows the user came for. There
-            // the band's pill takes it back — one tap per glance, but a list
-            // that fits.
-            if !isShortColumn {
-                EditorHistogramSparkline(histogram: controller.histogram)
-                    .padding(AppTheme.Spacing.sm)
-                    .frame(height: EditorLayoutMetrics.sidebarHistogramHeight)
-                    .background(
-                        EditorTheme.control,
-                        in: RoundedRectangle.app(AppTheme.Radius.lg)
+            // A short column keeps it too and pays by shrinking it to the graph
+            // band alone: 56pt instead of 92. Handing it back to the command
+            // band — which is what this used to do — cost a tap per glance on
+            // the one device where the glance matters most.
+            EditorHistogramSparkline(histogram: controller.histogram)
+                .padding(isShortColumn ? AppTheme.Spacing.xs : AppTheme.Spacing.sm)
+                .frame(
+                    height: EditorLayoutMetrics.sidebarHistogramHeight(
+                        forColumnHeight: canvasHeight
                     )
-                    .padding(.horizontal, AppTheme.Spacing.md)
-                    .padding(.top, AppTheme.Spacing.md)
-                    .padding(.bottom, AppTheme.Spacing.sm)
-                    .accessibilityElement()
-                    .accessibilityLabel("RGB histogram")
-                    .accessibilityValue(histogramClippingSummary(controller))
-            }
+                )
+                .background(
+                    EditorTheme.control,
+                    in: RoundedRectangle.app(AppTheme.Radius.lg)
+                )
+                .padding(.horizontal, AppTheme.Spacing.md)
+                .padding(.top, AppTheme.Spacing.md)
+                .padding(.bottom, AppTheme.Spacing.sm)
+                .accessibilityElement()
+                .accessibilityLabel("RGB histogram")
+                .accessibilityValue(histogramClippingSummary(controller))
 
             sidebarModeHeader(controller)
-
-            Rectangle().fill(EditorTheme.panelDivider).frame(height: 1)
-
-            // The Look row is the first thing to go on a short column: it is a
-            // second route to the rail's Presets stop, which is still one tap
-            // away and does not cost 53pt of every screenful.
-            if railMode == .edit, !chrome.showsHistoryPanel, !isShortColumn {
-                sidebarLookRow(controller)
-                Rectangle().fill(EditorTheme.panelDivider).frame(height: 1)
-            }
 
             ScrollView(.vertical) {
                 LazyVStack(spacing: 0) {
@@ -1221,10 +1214,13 @@ struct PhotoEditorScreen: View {
                             EditorSidebarSection(
                                 group: group,
                                 isExpanded: chrome.expandedSidebarGroups.contains(group),
-                                isActive: chrome.selectedGroup == group
-                                    || (group == .color && Self.colorSegments.contains(chrome.selectedGroup)),
+                                isActive: chrome.expandedSidebarGroups.contains(group),
                                 hasEdits: groupHasEdits(group, controller: controller),
-                                toggle: { toggleSidebarSection(group, in: controller) }
+                                spacing: EditorLayoutMetrics.sidebarCardSpacing(
+                                    forColumnHeight: canvasHeight
+                                ),
+                                toggle: { toggleSidebarSection(group, in: controller) },
+                                reset: { resetSection(group, in: controller) }
                             ) {
                                 sidebarSectionBody(group, controller: controller)
                             }
@@ -1248,9 +1244,15 @@ struct PhotoEditorScreen: View {
             // also be scrolling the list under it.
             .scrollDisabled(chrome.activeSlider != nil)
 
-            Rectangle().fill(EditorTheme.panelDivider).frame(height: 1)
-
-            sidebarActionRow(controller, safeArea: safeArea)
+            // Only the three stage modes have a foot. Edit and Presets end with
+            // the list, and Save lives in the command band with the rest of the
+            // document commands.
+            if Self.stageModes.contains(railMode), !chrome.showsHistoryPanel {
+                Rectangle().fill(EditorTheme.panelDivider).frame(height: 1)
+                sidebarCommitBar(controller, safeArea: safeArea)
+            } else {
+                Color.clear.frame(height: safeArea.bottom)
+            }
         }
         // Every slider in the panel puts its track on its own line. The switch
         // is here rather than at each call site so the mask, grade, curve and
@@ -1357,24 +1359,7 @@ struct PhotoEditorScreen: View {
                 }
                 .buttonStyle(.plain)
                 .hoverEffect(.highlight)
-            } else if railMode == .edit {
-                Button {
-                    controller.applyAutoTone()
-                } label: {
-                    Text("Auto")
-                        .font(EditorTheme.pillLabel)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, AppTheme.Spacing.md)
-                        .frame(height: AppTheme.Size.pillHeightDark)
-                        .background(EditorTheme.control, in: Capsule())
-                        .overlay {
-                            Capsule().strokeBorder(EditorTheme.hairline, lineWidth: 1)
-                        }
-                }
-                .buttonStyle(.plain)
-                .hoverEffect(.highlight)
-                .accessibilityLabel("Auto Enhance")
-            }
+        }
         }
         .padding(.horizontal, AppTheme.Spacing.lg)
         .frame(height: EditorLayoutMetrics.sidebarModeHeaderHeight)
@@ -1421,61 +1406,109 @@ struct PhotoEditorScreen: View {
     /// The panel's foot: Reset on the leading edge, Save filling the rest.
     /// Lightroom parks its reset in exactly this corner; Save has no Lightroom
     /// counterpart because Lightroom has nothing to save to.
-    private func sidebarActionRow(
+    /// The foot of a stage mode: undo this mode's work, drop it, or keep it.
+    /// Only Crop & Geometry, Mask and Markup have one — they are the modes that
+    /// build something on the photo, and a thing being built needs a way out
+    /// that is not "undo enough times". Edit and Presets have no foot at all,
+    /// which is 74pt the parameter list keeps.
+    ///
+    /// Told apart by colour, not by size: Apply is an accent pill only as wide
+    /// as its word, Cancel is bare text, ↺ is a 32pt disc at the far end.
+    private func sidebarCommitBar(
         _ controller: PhotoEditorController,
         safeArea: EdgeInsets
     ) -> some View {
         HStack(spacing: AppTheme.Spacing.md) {
             Button {
-                controller.reset()
+                resetStageMode(controller)
             } label: {
                 Image(systemName: "arrow.counterclockwise")
                     .font(EditorTheme.commandGlyph)
-                    .foregroundStyle(
-                        controller.recipe.isIdentity ? EditorTheme.dimText : .white
-                    )
+                    .foregroundStyle(stageModeHasWork(controller) ? .white : EditorTheme.dimText)
                     .frame(
-                        width: AppTheme.Size.minTouch,
-                        height: AppTheme.Size.primaryActionHeight
+                        width: EditorLayoutMetrics.editorPrimaryButtonHeight,
+                        height: EditorLayoutMetrics.editorPrimaryButtonHeight
                     )
+                    .background(EditorTheme.control, in: Circle())
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .disabled(!stageModeHasWork(controller))
+            .hoverEffect(.highlight)
+            .accessibilityLabel("Reset \(railMode.title)")
+
+            Spacer(minLength: 8)
+
+            Button {
+                cancelStageMode(controller)
+            } label: {
+                Text("Cancel")
+                    .font(EditorTheme.pillLabel)
+                    .foregroundStyle(.white.opacity(0.9))
+                    .frame(height: EditorLayoutMetrics.editorPrimaryButtonHeight)
+                    .padding(.horizontal, AppTheme.Spacing.sm)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .disabled(controller.recipe.isIdentity)
             .hoverEffect(.highlight)
-            .accessibilityLabel("Reset All")
 
             Button {
-                controller.commitCropSession()
-                isSaveSheetPresented = true
+                applyStageMode(controller)
             } label: {
-                Group {
-                    if controller.isSaving {
-                        HStack(spacing: AppTheme.Spacing.sm) {
-                            ProgressView().tint(.black)
-                            Text("Saving\u{2026}")
-                        }
-                    } else if controller.isLoading {
-                        Text("Opening\u{2026}")
-                    } else {
-                        Text("Save\u{2026}")
-                    }
-                }
-                .font(EditorTheme.sidebarActionLabel)
-                .foregroundStyle(.black)
-                .frame(maxWidth: .infinity)
-                .frame(height: AppTheme.Size.primaryActionHeight)
-                .background(
-                    EditorTheme.accent,
-                    in: RoundedRectangle.app(AppTheme.Radius.md)
-                )
+                Text("Apply")
+                    .font(EditorTheme.pillLabel)
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, AppTheme.Spacing.md)
+                    .frame(height: EditorLayoutMetrics.editorPrimaryButtonHeight)
+                    .frame(maxWidth: EditorLayoutMetrics.editorPrimaryButtonMaxWidth)
+                    .background(EditorTheme.accent, in: Capsule())
             }
             .buttonStyle(.plain)
-            .disabled(controller.isLoading || controller.isSaving)
+            .hoverEffect(.highlight)
         }
         .padding(.horizontal, AppTheme.Spacing.md)
-        .padding(.top, AppTheme.Spacing.md)
-        .padding(.bottom, max(safeArea.bottom, AppTheme.Spacing.md))
+        .frame(height: EditorLayoutMetrics.sidebarCommitBarHeight)
+        .padding(.bottom, safeArea.bottom)
+        .background(EditorTheme.panelSolid)
+    }
+
+    /// Whether the mode on screen has anything to put back.
+    private func stageModeHasWork(_ controller: PhotoEditorController) -> Bool {
+        groupHasEdits(railMode.group, controller: controller)
+    }
+
+    /// ↺ in the commit bar: this mode's own reset, one history step.
+    private func resetStageMode(_ controller: PhotoEditorController) {
+        switch railMode {
+        case .crop: controller.resetCrop()
+        case .mask: controller.removeAllMasks()
+        case .markup: controller.removeAllOverlays()
+        default: break
+        }
+    }
+
+    /// Cancel: leave the mode having kept nothing it built.
+    private func cancelStageMode(_ controller: PhotoEditorController) {
+        withAnimation(EditorTheme.animation) {
+            switch railMode {
+            case .crop:
+                controller.cancelCropSession()
+            case .mask, .markup:
+                controller.restoreStageEntry()
+            default:
+                break
+            }
+            selectGroup(EditorRailMode.edit.group, in: controller)
+        }
+    }
+
+    /// Apply: keep it and go back to adjusting.
+    private func applyStageMode(_ controller: PhotoEditorController) {
+        withAnimation(EditorTheme.animation) {
+            if railMode == .crop { controller.commitCropSession() }
+            controller.clearStageEntry()
+            selectGroup(EditorRailMode.edit.group, in: controller)
+        }
     }
 
     /// The parameter panels, in pipeline order — the order Lightroom's develop
@@ -1490,6 +1523,10 @@ struct PhotoEditorScreen: View {
     /// not fit even with everything closed. Optics and Geo came back once they
     /// had controls to show — Geo now carries Upright, which is the reason to
     /// open it.
+    /// The three modes that build something on the photo, and so have a commit
+    /// bar: a frame, a set of masks, a stack of markup layers.
+    private static let stageModes: [EditorRailMode] = [.crop, .mask, .markup]
+
     private static let sidebarParameterGroups: [EditorGroup] = [
         .light, .curve, .color, .grade, .effects, .detail, .optics, .geo
     ]
@@ -1513,6 +1550,38 @@ struct PhotoEditorScreen: View {
     /// Whether this group holds anything on this photo, for the header's dot.
     /// Compared against an untouched recipe rather than tracked separately, so
     /// undo and Reset All put the dots back on their own.
+    /// Puts one section back to its defaults, in one history step — the ↺ on a
+    /// card's header. It is deliberately narrower than the old Reset All at the
+    /// foot of the panel: that button sat under whatever the person was working
+    /// on and undid all of it, and its name did not say so.
+    private func resetSection(_ group: EditorGroup, in controller: PhotoEditorController) {
+        switch group {
+        case .light, .effects, .detail, .optics:
+            let kinds = catalogGroups(for: group, controller: controller).flatMap(\.kinds)
+            controller.resetAdjustments(kinds)
+        case .geo:
+            let kinds = catalogGroups(for: .geo, controller: controller).flatMap(\.kinds)
+            controller.resetAdjustments(kinds)
+            controller.resetUpright()
+        case .curve:
+            controller.resetAllCurves()
+        case .color, .colorMix, .pointColor:
+            // Colour is one recipe: basic, mixer and point colour all live in
+            // it, and the section shows all three.
+            controller.resetColor()
+        case .grade:
+            for region in ColorGradingRegion.allCases {
+                controller.resetColorGrading(region: region)
+            }
+        case .crop:
+            controller.resetCrop()
+        case .mask, .markup, .presets:
+            // These are stage modes with their own commit bar; their reset lives
+            // there, next to Cancel and Apply.
+            break
+        }
+    }
+
     private func groupHasEdits(_ group: EditorGroup, controller: PhotoEditorController) -> Bool {
         let recipe = controller.recipe
         let identity = PhotoEditRecipe.identity
@@ -2043,11 +2112,6 @@ struct PhotoEditorScreen: View {
                 Divider()
             }
 
-            Button {
-                controller.applyAutoTone()
-            } label: {
-                Label("Auto Enhance", systemImage: "wand.and.stars")
-            }
 
             // Tone, colour, curve and filter only — see `EditClipboard`.
             Button {
@@ -2266,12 +2330,26 @@ struct PhotoEditorScreen: View {
             controller.commitCropSession()
             isSaveSheetPresented = true
         } label: {
-            Image(systemName: "checkmark")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(.black)
-                .frame(width: side, height: side)
-                .background(EditorTheme.accent, in: Circle())
-                .contentShape(Circle())
+            if chrome.isWideLayout {
+                // A word, not a slab. The panel's old Save was 240×50 of accent
+                // sitting beside a photograph whose colour the user is judging;
+                // the pill says the same thing in 32pt and lets the picture be
+                // the brightest thing on screen.
+                Text("Save")
+                    .font(EditorTheme.pillLabel)
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, AppTheme.Spacing.md)
+                    .frame(height: EditorLayoutMetrics.editorPrimaryButtonHeight)
+                    .frame(maxWidth: EditorLayoutMetrics.editorPrimaryButtonMaxWidth)
+                    .background(EditorTheme.accent, in: Capsule())
+            } else {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.black)
+                    .frame(width: side, height: side)
+                    .background(EditorTheme.accent, in: Circle())
+                    .contentShape(Circle())
+            }
         }
         .buttonStyle(.plain)
         .disabled(controller.isLoading || controller.isSaving)
@@ -2521,6 +2599,14 @@ struct PhotoEditorScreen: View {
         // to 400% to judge sharpening, reach for Detail, lose the eyelash.
         if group == .crop || chrome.selectedGroup == .crop {
             chrome.resetZoom()
+        }
+        // A stage mode is a session with a way out: snapshot on the way in so
+        // Cancel has somewhere to return to, and drop the snapshot on the way
+        // out so Apply's work is not still pending a rewind.
+        if [.crop, .mask, .markup].contains(group) {
+            controller.beginStageSession()
+        } else {
+            controller.clearStageEntry()
         }
         withAnimation(EditorTheme.animation) {
             chrome.selectedGroup = group
