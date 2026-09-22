@@ -1103,6 +1103,27 @@ public struct PhotoMask: Codable, Identifiable, Equatable, Sendable {
     }
 }
 
+extension PhotoMask {
+    /// Written by hand only to read `components` element by element — one
+    /// component kind this build does not know drops that component, not the
+    /// mask and not the recipe. Encoding stays synthesized.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        isVisible = try container.decodeIfPresent(Bool.self, forKey: .isVisible) ?? true
+        isInverted = try container.decodeIfPresent(Bool.self, forKey: .isInverted) ?? false
+        components = try container.decodeLossyArrayIfPresent(
+            PhotoMaskComponent.self,
+            forKey: .components
+        ) ?? []
+        adjustments = try container.decodeIfPresent(
+            PhotoAdjustments.self,
+            forKey: .adjustments
+        ) ?? .zero
+    }
+}
+
 public struct PhotoEditRecipe: Codable, Equatable, Sendable {
     public static let formatIdentifier = "com.hoangtuan.shotdex.photo-edit"
     public static let formatVersion = "1.0"
@@ -1195,19 +1216,25 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
             PhotoAdjustments.self,
             forKey: .adjustments
         ) ?? .zero
-        filter = try container.decodeIfPresent(PhotoFilter.self, forKey: .filter) ?? .original
+        // A look this build does not ship falls back to no look rather than
+        // taking the rest of the recipe down with it.
+        filter = (try? container.decodeIfPresent(PhotoFilter.self, forKey: .filter)) ?? .original
         filterIntensity = try container.decodeIfPresent(
             Double.self,
             forKey: .filterIntensity
         ) ?? 1
         crop = try container.decodeIfPresent(PhotoCropRecipe.self, forKey: .crop) ?? .identity
-        masks = try container.decodeIfPresent([PhotoMask].self, forKey: .masks) ?? []
+        // Element by element: a mask this build cannot read is dropped on its
+        // own, and a mask whose every component was unreadable goes with it —
+        // an empty mask would otherwise sit in the list adjusting nothing.
+        masks = (try container.decodeLossyArrayIfPresent(PhotoMask.self, forKey: .masks) ?? [])
+            .filter { !$0.components.isEmpty }
         color = try container.decodeIfPresent(PhotoColorRecipe.self, forKey: .color) ?? .identity
         curve = try container.decodeIfPresent(
             ToneCurveAdjustments.self,
             forKey: .curve
         ) ?? .identity
-        overlays = try container.decodeIfPresent([PhotoOverlay].self, forKey: .overlays) ?? []
+        overlays = try container.decodeLossyArrayIfPresent(PhotoOverlay.self, forKey: .overlays) ?? []
         drawing = try container.decodeIfPresent(PhotoDrawing.self, forKey: .drawing)
     }
 

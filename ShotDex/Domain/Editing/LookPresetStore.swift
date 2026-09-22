@@ -46,7 +46,9 @@ final class LookPresetStore {
 
     func reload() {
         guard let data = defaults.data(forKey: SettingsKeys.lookPresets),
-              let decoded = try? JSONDecoder().decode([LookPreset].self, from: data)
+              // One preset this build cannot read is dropped on its own; it
+              // used to empty the whole list.
+              let decoded = try? JSONDecoder().decode(LossyArray<LookPreset>.self, from: data).elements
         else {
             presets = []
             return
