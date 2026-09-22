@@ -1,5 +1,6 @@
 import Testing
 @testable import ShotDex
+import ShotDexKit
 
 /// Reading `.cube` files, which is the format every look pack on sale ships.
 ///

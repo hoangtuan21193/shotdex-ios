@@ -166,6 +166,10 @@ final class PhotoEditorController {
     /// time — fifty swatches means fifty lookup tables, and only one strip is ever
     /// on screen.
     private(set) var filterThumbnails: [PhotoFilter: UIImage] = [:]
+    /// Swatches for the My LUTs row, keyed by LUT id. Cleared with the film
+    /// swatches whenever what is under the look changes.
+    private(set) var lutThumbnails: [String: UIImage] = [:]
+    @ObservationIgnored private var lutThumbnailTask: Task<Void, Never>?
     @ObservationIgnored private var colorSamplingImage: CGImage?
     @ObservationIgnored private var maskThumbnailSignature = ""
     @ObservationIgnored private var maskThumbnailTask: Task<Void, Never>?
@@ -421,6 +425,7 @@ final class PhotoEditorController {
         interactiveRenderTask?.cancel()
         maskThumbnailTask?.cancel()
         filterThumbnailTask?.cancel()
+        lutThumbnailTask?.cancel()
         if let session {
             service.endSession(session)
         }
@@ -544,9 +549,21 @@ final class PhotoEditorController {
     }
 
     func chooseFilter(_ filter: PhotoFilter) {
-        guard recipe.filter != filter else { return }
+        guard recipe.filter != filter || recipe.lutID != nil else { return }
         recordHistory()
         recipe.filter = filter
+        // A film look and a LUT are one choice of look, not two layers.
+        recipe.lutID = nil
+        scheduleRender()
+    }
+
+    /// An imported LUT as the look. Replaces the film look rather than
+    /// stacking on it: two looks at once is a grade nobody asked for.
+    func chooseLUT(_ id: String) {
+        guard recipe.lutID != id else { return }
+        recordHistory()
+        recipe.filter = .original
+        recipe.lutID = id
         scheduleRender()
     }
 
@@ -2079,6 +2096,7 @@ final class PhotoEditorController {
             // Tone, colour or framing moved, so every swatch already rendered —
             // including the strips not on screen — describes an older photo.
             filterThumbnails = [:]
+            lutThumbnails = [:]
         }
         // The Presets tab shows every look at once now, so all 49 need a swatch.
         // Rendered one category at a time inside the task: each batch is ≤24 looks
@@ -2111,6 +2129,34 @@ final class PhotoEditorController {
                     // look as a two-tone gradient instead.
                 }
             }
+        }
+    }
+
+    /// Swatches for the imported LUTs on screen, missing ones only.
+    func refreshLUTThumbnails(ids: [String]) {
+        guard let loadedSource else { return }
+        let signature = filterThumbnailBaseSignature(for: recipe)
+        if signature != filterThumbnailSignature {
+            filterThumbnailSignature = signature
+            filterThumbnails = [:]
+            lutThumbnails = [:]
+        }
+        let missing = ids.filter { lutThumbnails[$0] == nil }
+        guard !missing.isEmpty else { return }
+        lutThumbnailTask?.cancel()
+        let recipe = recipe
+        let info = loadedSource.info
+        lutThumbnailTask = Task { [weak self] in
+            guard let self else { return }
+            guard let resolved = try? await service.renderer.lutThumbnails(
+                source: info,
+                recipe: recipe,
+                lutIDs: missing
+            ), !Task.isCancelled, signature == filterThumbnailSignature else { return }
+            lutThumbnails.merge(
+                resolved.images.mapValues { UIImage(cgImage: $0) },
+                uniquingKeysWith: { _, rendered in rendered }
+            )
         }
     }
 

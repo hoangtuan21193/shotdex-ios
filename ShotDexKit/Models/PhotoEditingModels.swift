@@ -1147,9 +1147,14 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
     public var sourceAssetIdentifier: String?
     public var adjustments = PhotoAdjustments.zero
     public var filter: PhotoFilter = .original
-    /// How much of the chosen filter is mixed over the unfiltered image. Only
-    /// meaningful when `filter != .original`.
+    /// How much of the chosen look is mixed over the unfiltered image — the
+    /// film look, or the imported LUT when `lutID` is set.
     public var filterIntensity = 1.0
+    /// An imported `.cube` LUT used as the look, by its `ImportedLUTFiles` id.
+    /// Stored as an id, not the table: a 33³ table is ~140KB per edited photo.
+    /// Mutually exclusive with `filter` — choosing one clears the other. When
+    /// the file has been deleted the id stays and the render skips the step.
+    public var lutID: String?
     public var crop = PhotoCropRecipe.identity
     public var masks: [PhotoMask] = []
     public var color = PhotoColorRecipe.identity
@@ -1186,6 +1191,7 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
     public var isIdentity: Bool {
         adjustments.isIdentity
             && filter == .original
+            && lutID == nil
             && crop == .identity
             && masks.isEmpty
             && color.isIdentity
@@ -1201,6 +1207,7 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
         case adjustments
         case filter
         case filterIntensity
+        case lutID
         case crop
         case masks
         case color
@@ -1233,6 +1240,7 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
             Double.self,
             forKey: .filterIntensity
         ) ?? 1
+        lutID = try? container.decodeIfPresent(String.self, forKey: .lutID)
         crop = try container.decodeIfPresent(PhotoCropRecipe.self, forKey: .crop) ?? .identity
         // Element by element: a mask this build cannot read is dropped on its
         // own, and a mask whose every component was unreadable goes with it —
@@ -1258,6 +1266,7 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
         try container.encode(adjustments, forKey: .adjustments)
         try container.encode(filter, forKey: .filter)
         try container.encode(filterIntensity, forKey: .filterIntensity)
+        try container.encodeIfPresent(lutID, forKey: .lutID)
         try container.encode(crop, forKey: .crop)
         try container.encode(masks, forKey: .masks)
         if !color.isIdentity { try container.encode(color, forKey: .color) }

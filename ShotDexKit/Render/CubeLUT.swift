@@ -7,16 +7,22 @@ import Foundation
 /// **red varying fastest** — the same ordering
 /// `CIColorCubeWithColorSpace` reads, which is why the table can go
 /// straight from the file to the GPU without being transposed.
-struct CubeLUT: Equatable, Sendable {
+public struct CubeLUT: Equatable, Sendable {
     /// Edge length of the cube. 33 is the usual export; 17, 25, 64 happen.
-    let dimension: Int
+    public let dimension: Int
     /// Float RGBA, red fastest, `dimension³ × 4` values — ready for
     /// `inputCubeData`.
-    let table: [Float]
+    public let table: [Float]
     /// `TITLE` from the file, when it carries one.
-    let title: String?
+    public let title: String?
 
-    var data: Data {
+    public init(dimension: Int, table: [Float], title: String?) {
+        self.dimension = dimension
+        self.table = table
+        self.title = title
+    }
+
+    public var data: Data {
         table.withUnsafeBufferPointer { Data(buffer: $0) }
     }
 }
@@ -28,8 +34,8 @@ struct CubeLUT: Equatable, Sendable {
 /// declared domain — and deliberately relaxed about the things that vary
 /// between exporters: comments, blank lines, tabs, `\r\n`, keywords in any
 /// case, and a domain other than 0…1.
-enum CubeLUTParser {
-    enum Failure: Error, Equatable {
+public enum CubeLUTParser {
+    public enum Failure: Error, Equatable {
         case noSize
         case unsupportedSize(Int)
         case wrongRowCount(expected: Int, found: Int)
@@ -38,10 +44,10 @@ enum CubeLUTParser {
 
     /// Core Image will not take a cube bigger than this, and a 64³ table is
     /// already 4 MB of floats.
-    static let maximumDimension = 64
-    static let minimumDimension = 2
+    public static let maximumDimension = 64
+    public static let minimumDimension = 2
 
-    static func parse(_ text: String) throws -> CubeLUT {
+    public static func parse(_ text: String) throws -> CubeLUT {
         var title: String?
         var size3D: Int?
         var size1D: Int?

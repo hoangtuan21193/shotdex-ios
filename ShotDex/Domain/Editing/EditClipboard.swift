@@ -53,6 +53,7 @@ final class EditClipboard {
         result.color = copied.color
         result.curve = copied.curve
         result.filter = copied.filter
+        result.lutID = copied.lutID
         result.filterIntensity = copied.filterIntensity
         return result
     }
@@ -70,6 +71,7 @@ final class EditClipboard {
         look.color = recipe.color
         look.curve = recipe.curve
         look.filter = recipe.filter
+        look.lutID = recipe.lutID
         look.filterIntensity = recipe.filterIntensity
         return look
     }
@@ -100,6 +102,7 @@ enum EditorSyncScope {
             result.color = source.color
             result.curve = source.curve
             result.filter = source.filter
+            result.lutID = source.lutID
             result.filterIntensity = source.filterIntensity
             return result
         }

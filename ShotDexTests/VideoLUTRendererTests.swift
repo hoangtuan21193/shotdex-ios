@@ -1,6 +1,7 @@
 import CoreImage
 import Testing
 @testable import ShotDex
+import ShotDexKit
 
 /// The LUT actually reaching the GPU in the right order.
 ///

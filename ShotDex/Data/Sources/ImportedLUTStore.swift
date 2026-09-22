@@ -1,4 +1,5 @@
 import Foundation
+import ShotDexKit
 
 /// One user-imported `.cube` LUT that persists across sessions.
 struct ImportedLUT: Identifiable, Equatable, Sendable {
@@ -26,23 +27,15 @@ final class ImportedLUTStore {
     private let manifestURL: URL
     private var names: [String: String] = [:]
 
-    /// Where a LUT lives, from its id alone.
-    ///
-    /// Static and nonisolated on purpose: the compositor runs on
-    /// AVFoundation's queue and cannot ask a main-actor store anything, and
-    /// threading a URL through four call sites to say what the id already
-    /// says is worse than agreeing on the path.
+    /// Where a LUT lives, from its id alone — `ImportedLUTFiles` in the kit,
+    /// so the compositor and the photo renderer, which cannot ask a main-actor
+    /// store anything, agree on the path.
     nonisolated static func fileURL(for id: String) -> URL {
-        storageDirectory().appendingPathComponent(id).appendingPathExtension("cube")
-    }
-
-    nonisolated private static func storageDirectory() -> URL {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        return base.appendingPathComponent("ImportedLUTs", isDirectory: true)
+        ImportedLUTFiles.fileURL(for: id)
     }
 
     init() {
-        directory = Self.storageDirectory()
+        directory = ImportedLUTFiles.directory()
         manifestURL = directory.appendingPathComponent("names.json")
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         loadManifest()
@@ -96,7 +89,7 @@ final class ImportedLUTStore {
     func delete(_ lut: ImportedLUT) {
         try? FileManager.default.removeItem(at: lut.url)
         names.removeValue(forKey: lut.id)
-        VideoLUTTableCache.shared.forget(lut.id)
+        LUTTableCache.shared.forget(lut.id)
         saveManifest()
         reload()
     }

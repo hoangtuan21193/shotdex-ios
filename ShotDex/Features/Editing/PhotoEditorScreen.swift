@@ -2495,6 +2495,7 @@ struct PhotoEditorScreen: View {
                 controller: controller,
                 chrome: chrome,
                 lookPresets: dependencies.lookPresets,
+                luts: dependencies.importedLUTs,
                 saveLook: {
                     lookName = dependencies.lookPresets.suggestedName()
                     isSaveLookPresented = true

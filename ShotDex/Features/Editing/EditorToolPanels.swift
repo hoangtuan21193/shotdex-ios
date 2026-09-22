@@ -12,14 +12,32 @@ struct EditorFiltersPanel: View {
     /// The user's own saved looks. Nil where the panel is shown without them
     /// (previews).
     var lookPresets: LookPresetStore?
+    /// `.cube` files imported from Files. Nil in previews.
+    var luts: ImportedLUTStore?
     /// Asks the screen to name and save the current edit as a look.
     var saveLook: (() -> Void)?
+
+    @State private var isLUTImporterPresented = false
+    @State private var lutImportError: String?
+
+    /// The recipe names a LUT whose file is gone: the photo renders without
+    /// it and the panel says so, instead of quietly showing no look selected.
+    private var usesDeletedLUT: Bool {
+        guard let id = controller.recipe.lutID, let luts else { return false }
+        return luts.url(for: id) == nil
+    }
+
+    private var hasActiveLook: Bool {
+        controller.recipe.lutID != nil ? !usesDeletedLUT : controller.recipe.filter != .original
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             myLooks
 
-            if controller.recipe.filter != .original {
+            myLUTs
+
+            if hasActiveLook {
                 amountRow
                     .padding(.top, 8)
                 Rectangle()
@@ -90,6 +108,153 @@ struct EditorFiltersPanel: View {
         }
     }
 
+    /// Imported `.cube` LUTs, in the same list as the film looks but their
+    /// own group — a look pack the user bought is theirs, like My Looks.
+    @ViewBuilder
+    private var myLUTs: some View {
+        if let luts {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("My LUTs")
+                        .font(EditorTheme.groupLabel)
+                        .tracking(1.1)
+                        .foregroundStyle(EditorTheme.secondaryText)
+                    Spacer(minLength: 8)
+                    Button {
+                        isLUTImporterPresented = true
+                    } label: {
+                        Label("Import .cube", systemImage: "square.and.arrow.down")
+                            .font(EditorTheme.maskSubtitle)
+                            .foregroundStyle(EditorTheme.accent)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 14)
+                .padding(.top, 10)
+
+                if usesDeletedLUT {
+                    Label(
+                        "LUT deleted · this photo renders without it",
+                        systemImage: "exclamationmark.triangle"
+                    )
+                    .font(EditorTheme.maskSubtitle)
+                    .foregroundStyle(EditorTheme.secondaryText)
+                    .padding(.horizontal, 14)
+                }
+
+                if luts.luts.isEmpty {
+                    Text("Import a .cube file from Files to use it as a look.")
+                        .font(EditorTheme.maskSubtitle)
+                        .foregroundStyle(EditorTheme.dimText)
+                        .padding(.horizontal, 14)
+                        .padding(.bottom, 10)
+                } else {
+                    ScrollView(.horizontal) {
+                        LazyHStack(spacing: 8) {
+                            ForEach(luts.luts) { lut in
+                                lutCard(lut, store: luts)
+                            }
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.bottom, 10)
+                    }
+                    .scrollIndicators(.hidden)
+                    .task(id: luts.luts.map(\.id)) {
+                        controller.refreshLUTThumbnails(ids: luts.luts.map(\.id))
+                    }
+                }
+
+                Rectangle()
+                    .fill(EditorTheme.hairline)
+                    .frame(height: 0.5)
+                    .padding(.horizontal, 14)
+            }
+            .fileImporter(
+                isPresented: $isLUTImporterPresented,
+                allowedContentTypes: [LUTImportMessage.cubeType]
+            ) { result in
+                guard case .success(let url) = result else { return }
+                do {
+                    let imported = try luts.add(from: url)
+                    controller.chooseLUT(imported.id)
+                } catch {
+                    lutImportError = LUTImportMessage.text(for: error)
+                }
+            }
+            .alert(
+                "Couldn't Import LUT",
+                isPresented: Binding(
+                    get: { lutImportError != nil },
+                    set: { if !$0 { lutImportError = nil } }
+                )
+            ) {
+                Button("OK", role: .cancel) { lutImportError = nil }
+            } message: {
+                Text(lutImportError ?? "")
+            }
+        }
+    }
+
+    private func lutCard(_ lut: ImportedLUT, store: ImportedLUTStore) -> some View {
+        let isSelected = controller.recipe.lutID == lut.id
+        return Button {
+            controller.chooseLUT(lut.id)
+        } label: {
+            VStack(spacing: 5) {
+                Group {
+                    if let image = controller.lutThumbnails[lut.id] {
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } else {
+                        ZStack {
+                            EditorTheme.control
+                            Image(systemName: "cube")
+                                .font(.system(size: 18))
+                                .foregroundStyle(EditorTheme.dimText)
+                        }
+                    }
+                }
+                .frame(width: 62, height: 62)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(
+                            isSelected ? EditorTheme.accent : .white.opacity(0.10),
+                            lineWidth: isSelected ? 2 : 0.5
+                        )
+                }
+                .overlay(alignment: .topTrailing) {
+                    if isSelected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 15))
+                            .foregroundStyle(EditorTheme.accent)
+                            .background(Circle().fill(.black.opacity(0.5)))
+                            .padding(4)
+                    }
+                }
+
+                Text(lut.displayName)
+                    .font(.system(size: 10, weight: isSelected ? .semibold : .regular))
+                    .foregroundStyle(isSelected ? EditorTheme.accent : EditorTheme.secondaryText)
+                    .lineLimit(1)
+                    .frame(width: 66)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            Button(role: .destructive) {
+                store.delete(lut)
+                controller.scheduleRender()
+            } label: {
+                Label("Delete LUT", systemImage: "trash")
+            }
+        }
+        .accessibilityLabel(lut.displayName)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
     private func lookChip(_ preset: LookPreset, store: LookPresetStore) -> some View {
         Button {
             controller.apply(EditorSyncScope.look.apply(preset.recipe, onto: controller.recipe))
@@ -153,7 +318,7 @@ struct EditorFiltersPanel: View {
     }
 
     private func filterCard(_ filter: PhotoFilter) -> some View {
-        let isSelected = controller.recipe.filter == filter
+        let isSelected = controller.recipe.lutID == nil && controller.recipe.filter == filter
         return Button {
             controller.chooseFilter(filter)
         } label: {

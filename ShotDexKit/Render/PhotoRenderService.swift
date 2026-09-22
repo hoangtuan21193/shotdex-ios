@@ -51,6 +51,11 @@ public struct ResolvedFilterThumbnails: @unchecked Sendable {
     public let images: [PhotoFilter: CGImage]
 }
 
+/// Swatches for imported LUTs, keyed by LUT id.
+public struct ResolvedLUTThumbnails: @unchecked Sendable {
+    public let images: [String: CGImage]
+}
+
 public struct PhotoRenderPreview: @unchecked Sendable {
     public let displayImage: CGImage
     public let cleanImage: CGImage
@@ -396,11 +401,7 @@ public actor PhotoRenderService {
         image = Self.applyCurve(recipe.curve, to: image)
         image = Self.applyOptics(recipe.adjustments, to: image)
         image = Self.applyGeo(recipe.adjustments, to: image)
-        image = Self.applyFilter(
-            recipe.filter,
-            intensity: recipe.filterIntensity,
-            to: image
-        )
+        image = Self.applyLook(of: recipe, to: image)
         image = Self.applyCrop(recipe.crop, to: image)
         let croppedRawSkyMatte = baseResult.rawSkyMatte.map {
             Self.applyCrop(recipe.crop, to: $0)
@@ -756,11 +757,7 @@ public actor PhotoRenderService {
         image = Self.applyCurve(recipe.curve, to: image)
         image = Self.applyOptics(recipe.adjustments, to: image)
         image = Self.applyGeo(recipe.adjustments, to: image)
-        image = Self.applyFilter(
-            recipe.filter,
-            intensity: recipe.filterIntensity,
-            to: image
-        )
+        image = Self.applyLook(of: recipe, to: image)
         image = Self.applyCrop(recipe.crop, to: image)
         let croppedRawSkyMatte = base.rawSkyMatte.map {
             Self.applyCrop(recipe.crop, to: $0)
@@ -853,6 +850,7 @@ public actor PhotoRenderService {
         guard !filters.isEmpty else { return ResolvedFilterThumbnails(images: [:]) }
         var base = recipe
         base.filter = .original
+        base.lutID = nil
         base.filterIntensity = 1
         base.masks = []
         base.overlays = []
@@ -885,6 +883,45 @@ public actor PhotoRenderService {
             images[filter] = cgImage
         }
         return ResolvedFilterThumbnails(images: images)
+    }
+
+    /// The photo through each imported LUT at full strength, for the My LUTs
+    /// row. Same flatten-once shape as `filterThumbnails`; a LUT whose file is
+    /// gone gets no swatch.
+    public func lutThumbnails(
+        source: PhotoRenderSourceInfo,
+        recipe: PhotoEditRecipe,
+        lutIDs: [String],
+        maximumDimension: CGFloat = 150
+    ) throws -> ResolvedLUTThumbnails {
+        guard !lutIDs.isEmpty else { return ResolvedLUTThumbnails(images: [:]) }
+        var base = recipe
+        base.filter = .original
+        base.lutID = nil
+        base.filterIntensity = 1
+        base.masks = []
+        base.overlays = []
+        let result = try renderPhoto(source: source, recipe: base, maximumDimension: maximumDimension)
+        guard let flattened = context.createCGImage(
+            result.image,
+            from: result.image.extent,
+            format: .RGBA8,
+            colorSpace: result.colorSpace
+        ) else { return ResolvedLUTThumbnails(images: [:]) }
+        let unfiltered = CIImage(cgImage: flattened)
+        var images: [String: CGImage] = [:]
+        for id in lutIDs {
+            guard let table = ImportedLUTFiles.table(for: id),
+                  let cgImage = context.createCGImage(
+                      Self.applyLUT(table, intensity: 1, to: unfiltered),
+                      from: unfiltered.extent,
+                      format: .RGBA8,
+                      colorSpace: result.colorSpace
+                  )
+            else { continue }
+            images[id] = cgImage
+        }
+        return ResolvedLUTThumbnails(images: images)
     }
 
     public func resolvedOutputFormat(
@@ -1732,6 +1769,17 @@ public actor PhotoRenderService {
 
     /// Mixes the filtered image back over the unfiltered one so a preset can be
     /// dialled in instead of being all-or-nothing.
+    /// The recipe's look: its imported LUT when it has one, else its film look.
+    /// A LUT whose file is gone renders as no look at all — not as the film
+    /// look underneath it, which the user replaced when they chose the LUT.
+    public static func applyLook(of recipe: PhotoEditRecipe, to image: CIImage) -> CIImage {
+        if let lutID = recipe.lutID {
+            guard let table = ImportedLUTFiles.table(for: lutID) else { return image }
+            return applyLUT(table, intensity: recipe.filterIntensity, to: image)
+        }
+        return applyFilter(recipe.filter, intensity: recipe.filterIntensity, to: image)
+    }
+
     public static func applyFilter(
         _ filter: PhotoFilter,
         intensity: Double,

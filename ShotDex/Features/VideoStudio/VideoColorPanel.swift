@@ -27,7 +27,8 @@ struct VideoColorPanel: View {
     @Environment(PhotoLibraryService.self) private var photoLibrary
 
     @State private var scopes = VideoScopeModel()
-    @State private var luts = ImportedLUTStore()
+    @Environment(AppDependencies.self) private var dependencies
+    private var luts: ImportedLUTStore { dependencies.importedLUTs }
     @State private var isLUTImporterPresented = false
     @State private var region: ColorGradingRegion = .midtones
     @State private var curveChannel: ToneCurveChannel = .rgb
