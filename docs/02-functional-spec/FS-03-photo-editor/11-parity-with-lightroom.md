@@ -121,7 +121,7 @@ khung rỗng.
 | AC-1 | **Cho** ảnh JPG có một vết bụi trên nền trời · **Khi** chạm vết đó bằng công cụ **Heal** · **Thì** vùng vá lấy mẫu từ nền quanh nó, sai lệch màu trung bình ≤ **2/255**, và không có mép cứng ở zoom 100% | ⚠️ chưa có |
 | AC-2 | **Cho** một vết heal đã tạo · **Khi** kéo núm nguồn sang chỗ khác · **Thì** vùng vá cập nhật theo, và cả thao tác là **một** bước Undo | ⚠️ chưa có |
 | AC-3 | **Cho** ảnh A có lớp healing · **Khi** Copy Edits rồi Paste sang ảnh B · **Thì** B **không** nhận lớp healing (cùng luật với crop/mask/markup) | ⚠️ chưa có |
-| AC-4 | **Cho** recipe có lớp healing lưu bằng bản mới · **Khi** mở bằng bản app cũ · **Thì** ảnh vẫn dựng được, lớp healing bị bỏ qua, và **không** mất các chỉnh sửa khác | ⚠️ chưa có — cần `data-migration` duyệt |
+| AC-4 | **Cho** recipe có lớp healing hoặc một **loại mask mà build đang chạy không biết** · **Khi** mở bằng bản app cũ · **Thì** ảnh vẫn dựng được, phần lạ bị bỏ qua, và **không** mất crop, màu, curve, filter, các mask khác hay markup | ⚠️ chưa có — `data-migration` 2026-09-23 xác nhận hôm nay **một mask lạ làm mất cả recipe**; fix ở task 0b của kế hoạch |
 | AC-5 | **Cho** ảnh có đúng một khuôn mặt · **Khi** tạo mask **Face Skin** · **Thì** mask phủ vùng da mặt và **không** phủ mắt, môi, chân mày | ⚠️ chưa có |
 | AC-6 | **Cho** ảnh **không có** khuôn mặt nào · **Khi** mở danh sách tạo mask · **Thì** ba loại khuôn mặt **mờ** và nói vì sao, không phải tạo xong mới báo rỗng | ⚠️ chưa có |
 | AC-7 | **Cho** một file `.cube` 33³ hợp lệ · **Khi** nhập qua Files ở chặng Presets · **Thì** nó xuất hiện trong nhóm "My LUTs" và áp được với cường độ 0…100% | ⚠️ chưa có |
@@ -134,6 +134,18 @@ khung rỗng.
 | AC-14 | **Cho** ảnh JPG chụp bằng ống kính **có** trong bảng hồ sơ · **Khi** bật Lens Corrections · **Thì** méo hình được nắn theo hệ số của ống kính đó | ⚠️ chưa có |
 | AC-15 | **Cho** ảnh JPG chụp bằng ống kính **không** có trong bảng · **Khi** mở Optics · **Thì** nói rõ "chưa có hồ sơ cho ống kính này", không có nút chết | ⚠️ chưa có |
 | AC-16 | **Cho** bản dựng bất kỳ · **Khi** tìm trong giao diện · **Thì** **không** có chữ "AI" ở bất cứ đâu thuộc khử nhiễu | ⚠️ chưa có — grep trong `Tools/gate` |
+
+## 9b. Tương thích recipe (duyệt 2026-09-23)
+
+- **Không bump `formatVersion`.** Nó là cổng khớp tuyệt đối trong `canHandleAdjustmentData`, không phải cơ
+  chế tương thích; mọi trường mới đi dạng khoá cộng thêm như `curve`, `overlays`, `drawing`, `color` đã đi.
+- **Enum trong mảng phải decode khoan dung** trước khi thêm bất kỳ loại mask nào: giá trị lạ thành
+  `.unknown`, một phần tử hỏng bị bỏ chứ không kéo cả mảng. Áp cho `PhotoMaskComponentKind`, `PhotoFilter`,
+  `mode` của lớp healing, và mảng `[LookPreset]`.
+- **Quy đổi `noiseReduction`** trong `PhotoAdjustments.init(from:)`, zero khoá cũ để không quy đổi hai lần.
+- **Ghi chú phát hành phải nói hai điều**: ảnh cũ có cả sharpening lẫn khử nhiễu sẽ render khác (thứ tự
+  pipeline đổi), và mở ảnh sửa bằng bản mới trên một thiết bị còn bản cũ rồi lưu thì mất giá trị khử nhiễu
+  mới.
 
 ## 10. Việc còn treo
 
