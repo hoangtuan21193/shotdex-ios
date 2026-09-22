@@ -1,0 +1,26 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "orientation", "text": "landscape" },
+    { "action": "wait", "seconds": 5 },
+    { "action": "tap", "label": "Continue" },
+    { "action": "systemTap", "label": "Allow Full Access", "seconds": 20 },
+    { "action": "wait", "seconds": 18 },
+    { "action": "tap", "label": "Photo, file type", "type": "cell", "index": 2 },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Edit" },
+    { "action": "wait", "seconds": 16 },
+    { "action": "dump", "name": "open" },
+    { "action": "tap", "label": "rail.edit" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "dump", "name": "folded" },
+    { "action": "tap", "label": "rail.edit" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "dump", "name": "reopened" },
+    { "action": "tap", "label": "rail.crop" },
+    { "action": "wait", "seconds": 10 },
+    { "action": "dump", "name": "crop" },
+    { "action": "wait", "seconds": 12 }
+  ]
+}

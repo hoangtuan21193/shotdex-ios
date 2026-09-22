@@ -116,6 +116,7 @@ struct EditorToolRail: View {
                 railButton(
                     icon: mode.icon,
                     title: mode.title,
+                    identifier: "rail.\(mode.rawValue)",
                     // Lit means "this mode's panel is open" — not "this mode is
                     // selected". With the panel folded away nothing is lit, so
                     // the rail never claims to be showing something it is not.
@@ -131,6 +132,7 @@ struct EditorToolRail: View {
             railButton(
                 icon: "clock.arrow.circlepath",
                 title: "History",
+                identifier: "rail.history",
                 isActive: isHistoryActive,
                 hasEdits: false,
                 action: showHistory
@@ -147,6 +149,7 @@ struct EditorToolRail: View {
     private func railButton(
         icon: String,
         title: String,
+        identifier: String,
         isActive: Bool,
         hasEdits: Bool,
         action: @escaping () -> Void
@@ -176,6 +179,10 @@ struct EditorToolRail: View {
         }
         .buttonStyle(.plain)
         .hoverEffect(.highlight)
+        // The label is what a person hears; the identifier is what a script
+        // aims at. Both matter here because the photo underneath the editor has
+        // an "Edit" button of its own, and a test that taps by name has hit it.
+        .accessibilityIdentifier(identifier)
         .accessibilityLabel(title)
         .accessibilityAddTraits(isActive ? [.isSelected, .isButton] : .isButton)
     }
