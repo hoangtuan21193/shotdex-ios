@@ -63,6 +63,11 @@ mọi bản sửa đã lưu lên ảnh**, kể cả bản sửa trong app Photos
 
 - **Save** là dấu tick 42×42 **tròn, nền accent, biểu tượng đen** — nút chính duy nhất; nó chốt khung cắt
   rồi mở bảng lưu.
+> ⚠️ **CẦN QUYẾT (2026-09-22):** [FS-03.09](09-wide-screen-and-batch-editing.md) §5 đã gom panel màn rộng
+> còn **5 nhóm** (Curve vào Light; Mix/Point/Grade vào Color; Geometry vào Crop). Bánh xe 14 chip dưới đây
+> là **mô hình cũ**. Hoặc bánh xe còn 9 chip (5 nhóm + Crop · Mask · Markup · Presets), hoặc hai khổ màn
+> kể hai câu chuyện khác nhau. Xem [FS-03.09 §10](09-wide-screen-and-batch-editing.md#10-cần-quyết-trước-khi-sang-build).
+
 - **Bánh xe nhóm** là một dải cuộn ngang có điểm dừng, gồm 14 chip: Light · Curve · Color · Mix · Point ·
   Grade · Effects · Detail · Optics · Geo · Crop · Mask · Markup · Presets (mỗi chip rộng 58, cao 42).
 - **Chip nằm giữa khung là nhóm đang mở**: vuốt → nhả → dừng → đổi nhóm ngay (một thao tác); chạm một chip

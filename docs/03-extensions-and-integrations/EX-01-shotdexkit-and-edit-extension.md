@@ -1,9 +1,17 @@
-# EX-01 — ShotDexKit và ShotDexEdit
+# EX-01 — ShotDexKit (và ShotDexEdit, đã bỏ)
 
 `EX-01` · `ShotDexKit/` · `ShotDexEdit/` · cập nhật 2026-09-22
 
-**Một câu:** cái gì thuộc framework render dùng chung, cái gì ở lại app, và extension sửa ảnh trong Photos
-được phép làm gì.
+**Một câu:** cái gì thuộc framework render dùng chung, cái gì ở lại app.
+
+> **2026-09-22 — bỏ `ShotDexEdit`.** Extension sửa ảnh tại chỗ trong Photos bị gỡ khỏi dự án. Thay bằng một
+> dòng **Edit in ShotDex** trong share sheet, mở thẳng app tại ảnh đó: [EX-05](EX-05-edit-action-extension.md).
+> Lý do: bề mặt bốn slider ấy không phải thứ người dùng cần, mà nó kéo theo trần bộ nhớ ~120MB và luật
+> **từ chối mọi ảnh có mask / nét vẽ / markup** — càng dùng mask nhiều thì Photos càng hay hiện "Revert"
+> thay vì "ShotDex". §3 và §4 dưới đây giữ lại làm **hồ sơ**, không còn là đặc tả của thứ đang chạy.
+>
+> **Ranh giới của framework không đổi**: `ShotDexKit` vẫn không được đụng SwiftUI và GRDB, vì widget, share
+> extension và action extension mới vẫn link vào nó.
 
 ## 1. Quy tắc
 
@@ -34,7 +42,7 @@ Hai chỗ đã phải **gỡ phụ thuộc ngược** để framework đứng m�
 
 Test dùng cách nhập module cho phép chạm vào phần nội bộ — chúng vốn đã chạm vào phần nội bộ của app.
 
-## 3. Extension sửa ảnh
+## 3. Extension sửa ảnh — hồ sơ (đã bỏ 2026-09-22)
 
 Mở ShotDex **ngay trong app Photos**.
 
@@ -47,7 +55,7 @@ Mở ShotDex **ngay trong app Photos**.
   chỉ có thể mục nát.
 - **Chỉ ảnh tĩnh**: renderer làm việc trên ảnh, còn video cần cả pipeline của Video Studio.
 
-## 4. Hai luật bộ nhớ của extension
+## 4. Hai luật bộ nhớ của extension — hồ sơ (đã bỏ 2026-09-22)
 
 - **Ghi file nén thẳng ra đĩa**, không dựng cả khối dữ liệu trong bộ nhớ rồi mới ghi: bản cũ giữ **cả ảnh
   nén trong bộ nhớ cạnh ảnh đã render** — ở app là lãng phí, ở một extension đang render nguồn 48MP thì là

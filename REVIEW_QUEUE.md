@@ -443,3 +443,16 @@ Both left behind on that simulator on purpose — they are the only fixtures
 there that exercise either path. The dark PNG also shows up in the library
 grid as a near-black frame; that is the fixture, not a bug.
 
+
+## Sweep 2026-09-22 — tìm thấy trong lúc `/plan FS-03.09` task 0
+
+- [ ] **Deep link tới một ảnh không có trong lưới thất bại lặng lẽ.**
+  [`LibraryScreen.swift:319`](ShotDex/Features/Library/LibraryScreen.swift:319) — `openSavedPhoto` dò
+  **25 lần × 0,12s = 3 giây** tìm asset trong lưới, không thấy thì `return`, không nói gì. Người dùng chạm
+  widget (hoặc kết quả Spotlight), app mở ra tab Library và **không có gì xảy ra**: không lỗi, không lý do,
+  không lối đi tiếp. Ba đường dẫn tới đây đều có thật: quyền `.limited` mà ảnh nằm ngoài tập được chọn, ảnh
+  đã xoá kể từ lúc widget chụp snapshot, và bộ lọc/sắp xếp hiện tại loại ảnh đó khỏi lưới. Action extension
+  *Edit in ShotDex* ([EX-05](docs/03-extensions-and-integrations/EX-05-edit-action-extension.md)) sẽ là
+  đường thứ tư và là đường hay trượt nhất, vì nó **dò ngược** ra assetId.
+  Cần: sau khi hết vòng dò thì nói rõ vì sao và cho một lối đi (bỏ lọc, hoặc mở Manage của limited access).
+  _(phát hiện khi đối chiếu AC-15; là lỗi có sẵn, không do FS-03.09 đẻ ra)_
