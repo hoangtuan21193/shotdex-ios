@@ -779,11 +779,9 @@ private final class LivePhotoFrameRenderer: @unchecked Sendable {
         image = PhotoRenderService.applyCurve(recipe.curve, to: image)
         image = PhotoRenderService.applyOptics(recipe.adjustments, to: image)
         image = PhotoRenderService.applyGeo(recipe.adjustments, to: image)
-        image = PhotoRenderService.applyFilter(
-            recipe.filter,
-            intensity: recipe.filterIntensity,
-            to: image
-        )
+        // The look, LUT included — same call as the still, so a Live Photo's
+        // motion frames cannot drift from its key frame.
+        image = PhotoRenderService.applyLook(of: recipe, to: image)
         image = PhotoRenderService.applyCrop(recipe.crop, to: image)
         for mask in recipe.masks where mask.isVisible {
             let maskImage = renderMask(mask, over: image)
