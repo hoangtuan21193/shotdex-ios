@@ -398,6 +398,17 @@ enum EditorLayoutMetrics {
     /// And this far before a claimed slider actually writes a value, so a tap or
     /// a flick across the panel never nudges an adjustment.
     static let sliderActivationDistance: CGFloat = 6
+    /// What a **pencil or a pointer** has to travel instead. Those two do not
+    /// drift: a finger resting on a track wanders a few points on its own, which
+    /// is what the 6 is guarding against, while a pencil tip that moves 2pt
+    /// moved because the hand meant it to. Holding both to the finger's number
+    /// is why a small deliberate nudge felt like the control had missed.
+    static let sliderPreciseActivationDistance: CGFloat = 2
+
+    /// The activation threshold for the input doing the dragging.
+    static func sliderActivationDistance(isPrecise: Bool) -> CGFloat {
+        isPrecise ? sliderPreciseActivationDistance : sliderActivationDistance
+    }
     /// How far off the horizontal a pan may be and still belong to a slider.
     /// Comparing |dy| against |dx| was far too generous — a 40° diagonal flick
     /// counted as horizontal — so a list of sliders was hard to scroll.

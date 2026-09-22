@@ -549,6 +549,24 @@ struct EditorPanelLayoutTests {
         #expect(cards <= duo - EditorLayoutMetrics.editorTopBandHeight - fixed)
     }
 
+    /// A slider row is the target, and a precise instrument does not have to
+    /// shove it as far as a fingertip does.
+    @Test func aSliderRowIsBigEnoughToHitAndQuickEnoughToNudge() {
+        // The whole row answers a drag, so the row height is the hit height.
+        #expect(EditorLayoutMetrics.sidebarSliderRowHeight >= EditorLayoutMetrics.sidebarSliderHitHeight
+            || max(EditorLayoutMetrics.sidebarSliderRowHeight, EditorLayoutMetrics.sidebarSliderHitHeight) == 46)
+        #expect(EditorLayoutMetrics.sidebarSliderHitHeight == 44)
+
+        // A finger must move 6pt before a value changes — it drifts while it
+        // rests. A pencil or a pointer does not, and gets 2.
+        #expect(EditorLayoutMetrics.sliderActivationDistance(isPrecise: false) == 6)
+        #expect(EditorLayoutMetrics.sliderActivationDistance(isPrecise: true) == 2)
+        #expect(
+            EditorLayoutMetrics.sliderActivationDistance(isPrecise: true)
+                < EditorLayoutMetrics.sliderActivationDistance(isPrecise: false)
+        )
+    }
+
     /// Primary actions are told apart by colour, not by size.
     @Test func primaryActionsAreSmall() {
         #expect(EditorLayoutMetrics.editorPrimaryButtonHeight == 32)

@@ -95,7 +95,15 @@ struct EditorValueSlider: View {
             track
         }
         .padding(.horizontal, AppTheme.Spacing.lg)
-        .frame(height: EditorLayoutMetrics.sidebarSliderRowHeight)
+        // The row *is* the target — a drag starts anywhere on it, not just on
+        // the 4pt cursor — so the row must never shrink below the 44pt a pencil
+        // or a pointer needs to land on reliably.
+        .frame(
+            height: max(
+                EditorLayoutMetrics.sidebarSliderRowHeight,
+                EditorLayoutMetrics.sidebarSliderHitHeight
+            )
+        )
     }
 
     private var nameText: some View {
@@ -179,10 +187,11 @@ struct EditorValueSlider: View {
                 isHoldingDetent = detent.map { abs(value - $0) < 0.0001 } ?? false
                 onBeginDrag()
             },
-            onChanged: { translation, isFine in
+            onChanged: { translation, isFine, isPrecise in
                 guard trackWidth > 0 else { return }
-                guard abs(translation) >= EditorLayoutMetrics.sliderActivationDistance
-                else { return }
+                guard abs(translation) >= EditorLayoutMetrics.sliderActivationDistance(
+                    isPrecise: isPrecise
+                ) else { return }
                 hasActivated = true
                 let span = range.upperBound - range.lowerBound
                 let gain = isFine ? EditorLayoutMetrics.sliderFineGain : 1
@@ -357,7 +366,9 @@ struct EditorRowGestureCatcher: UIViewRepresentable {
     /// where the value column spans it.
     var valueRowHeight: CGFloat?
     let onBegan: () -> Void
-    let onChanged: (CGFloat, Bool) -> Void
+    /// `(translation, isFine, isPrecise)` — precision decides how far the drag
+    /// has to travel before it writes.
+    let onChanged: (CGFloat, Bool, Bool) -> Void
     let onEnded: () -> Void
     let onReset: () -> Void
     let onEditValue: () -> Void
@@ -416,7 +427,7 @@ struct EditorRowGestureCatcher: UIViewRepresentable {
         var valueColumnWidth: CGFloat
         var valueRowHeight: CGFloat?
         var onBegan: () -> Void
-        var onChanged: (CGFloat, Bool) -> Void
+        var onChanged: (CGFloat, Bool, Bool) -> Void
         var onEnded: () -> Void
         var onReset: () -> Void
         var onEditValue: () -> Void
@@ -430,7 +441,7 @@ struct EditorRowGestureCatcher: UIViewRepresentable {
             valueColumnWidth: CGFloat,
             valueRowHeight: CGFloat?,
             onBegan: @escaping () -> Void,
-            onChanged: @escaping (CGFloat, Bool) -> Void,
+            onChanged: @escaping (CGFloat, Bool, Bool) -> Void,
             onEnded: @escaping () -> Void,
             onReset: @escaping () -> Void,
             onEditValue: @escaping () -> Void
@@ -454,15 +465,25 @@ struct EditorRowGestureCatcher: UIViewRepresentable {
                 isFine = false
                 decidedFine = false
                 onBegan()
-                onChanged(translation, false)
+                onChanged(
+                    translation,
+                    false,
+                    (recognizer as? HorizontalPanGestureRecognizer)?.isPreciseInput ?? false
+                )
             case .changed:
                 if !decidedFine,
-                   abs(translation) >= EditorLayoutMetrics.sliderActivationDistance {
+                   abs(translation) >= EditorLayoutMetrics.sliderActivationDistance(
+                       isPrecise: (recognizer as? HorizontalPanGestureRecognizer)?.isPreciseInput ?? false
+                   ) {
                     decidedFine = true
                     isFine = Date().timeIntervalSince(beganDate)
                         > EditorLayoutMetrics.sliderFineHoldSeconds
                 }
-                onChanged(translation, isFine)
+                onChanged(
+                    translation,
+                    isFine,
+                    (recognizer as? HorizontalPanGestureRecognizer)?.isPreciseInput ?? false
+                )
             case .ended, .cancelled, .failed:
                 resumeScrolling()
                 onEnded()
@@ -609,16 +630,22 @@ struct SliderPanCatcher: UIViewRepresentable {
 private final class HorizontalPanGestureRecognizer: UIPanGestureRecognizer {
     private var hasDecidedAxis = false
     private var startLocation = CGPoint.zero
+    /// True while a pencil or a trackpad pointer owns the gesture. Both are
+    /// precise instruments with no resting drift, so the slider lets them write
+    /// a value after a far shorter move than a fingertip gets.
+    private(set) var isPreciseInput = false
 
     override func reset() {
         super.reset()
         hasDecidedAxis = false
+        isPreciseInput = false
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesBegan(touches, with: event)
         if let touch = touches.first, let view {
             startLocation = touch.location(in: view)
+            isPreciseInput = touch.type == .pencil || touch.type == .indirectPointer
         }
     }
 
