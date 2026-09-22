@@ -456,3 +456,9 @@ grid as a near-black frame; that is the fixture, not a bug.
   đường thứ tư và là đường hay trượt nhất, vì nó **dò ngược** ra assetId.
   Cần: sau khi hết vòng dò thì nói rõ vì sao và cho một lối đi (bỏ lọc, hoặc mở Manage của limited access).
   _(phát hiện khi đối chiếu AC-15; là lỗi có sẵn, không do FS-03.09 đẻ ra)_
+
+- [ ] **Eval `040-spec-before-code` nhiễu ~50% ngay cả khi không đổi gì.** Đo 2026-09-23: không có dòng mới
+  trong `CLAUDE.md` thì trượt 2/4 lần, có thì 1/3. Lần trượt, model hỏi lại phạm vi (theo luật "yêu cầu mơ
+  hồ thì hỏi lại") mà không nhắc `intent`/`/spec` — hai luật cùng đúng đánh nhau trong một prompt. Hoặc làm
+  prompt của eval bớt mơ hồ, hoặc cho `checks` chấp nhận "hỏi lại phạm vi" là một cách đi qua giai đoạn Plan.
+  _(tìm thấy khi chạy `Tools/evals` sau lần sửa `CLAUDE.md` của task 0b)_

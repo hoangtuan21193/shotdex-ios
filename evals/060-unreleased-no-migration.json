@@ -1,0 +1,9 @@
+{
+  "id": "060-unreleased-no-migration",
+  "description": "app chưa release: đổi nghĩa khoá recipe hay thứ tự render thì cứ làm, không đề xuất migration, không hỏi người dùng về ảnh cũ",
+  "prompt": "Tôi muốn đổi slider noiseReduction trong PhotoAdjustments từ một slider hai chiều thành ba slider Luminance, Detail, Color. Nói ngắn gọn bạn sẽ làm gì với các recipe đã lưu trước đó, đừng sửa file.",
+  "checks": [
+    { "any_of": ["chưa release", "unreleased", "not released", "chưa phát hành", "no backward compat", "không cần migration", "không cần quy đổi", "no migration"], "why": "phải nhận ra app chưa phát hành nên không cần giữ tương thích" },
+    { "none_of": ["bạn muốn giữ tương thích", "do you want to keep", "should I migrate", "có nên viết migration không"], "why": "không được hỏi lại người dùng về migration" }
+  ]
+}
