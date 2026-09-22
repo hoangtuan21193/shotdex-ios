@@ -6,7 +6,7 @@
 | Ngày | 2026-09-22 |
 | Trạng thái | draft |
 | Nguồn | phản hồi người dùng (chủ sở hữu sản phẩm) · bảng đối chiếu từ agent `lightroom-parity` (2026-09-22) |
-| Spec sinh ra từ đây | (điền khi sang Design — dự kiến `FS-03.*`) |
+| Spec sinh ra từ đây | [`FS-03.11`](../02-functional-spec/FS-03-photo-editor/11-parity-with-lightroom.md) — 16 AC, viết 2026-09-23 |
 
 ## Problem — vấn đề
 
@@ -148,8 +148,9 @@ Dưới cả sáu: **tự động dò bụi cảm biến** (phải có mục 1 t
    (đã có sẵn), LUT import chen lên hạng 3, hồ sơ ống kính rớt xuống đáy. → người dùng chốt.
 2. **Nhập `.xmp` preset và profile `.dng` của bên thứ ba** có làm không? Khác `.cube` hoàn toàn: schema XMP
    của Adobe và định dạng ma trận/đường tông độc quyền. → người dùng; nếu có thì tách spec riêng.
-3. **Khử nhiễu bằng mô hình: tự huấn luyện hay bỏ?** Đây là quyết định nhiều tuần công, không phải một
-   sprint. Nếu bỏ thì phải nói thẳng với người dùng rằng ảnh ISO rất cao vẫn nên qua Lightroom. → người dùng.
+3. ~~Khử nhiễu bằng mô hình~~ — **chốt 2026-09-23: không tự huấn luyện.** Giữ bộ lọc có sẵn và tiêu chỉnh
+   nó (thêm Detail cho đường luminance, khử nhiễu chạy trước sharpening), nói thật là ở ISO rất cao không
+   bằng Denoise AI, và không có chữ "AI" nào trong giao diện. Xem `FS-03.11` §6.
 4. **HDR có nhận không?** Ghép HDR khả thi (đã có đường nạp nhiều khung của `PhotoStackRenderer`); panorama
    thì đắt hơn hẳn. → người dùng.
 5. **Recipe đổi cấu trúc thì di trú thế nào?** Tầng healing là thay đổi lớn nhất. → `data-migration` phải trả

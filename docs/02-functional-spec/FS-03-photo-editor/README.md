@@ -22,6 +22,7 @@ render với extension sửa ảnh và các màn khác.
 | 09 | [Màn rộng](09-wide-screen-and-batch-editing.md) | rail + panel + canvas, cột ngắn, History trong panel |
 | 09b | [Sửa nhiều ảnh](09b-batch-editing-and-reference.md) | nháp theo ảnh, Sync, Save All, Reference View |
 | 10 | [Copy / Paste edits](10-copy-paste-edits.md) | chép "cái nhìn", không chép crop và mask |
+| 11 | [Đuổi kịp Lightroom](11-parity-with-lightroom.md) | xoá vết, mask khuôn mặt, LUT, background/depth, khử nhiễu, hồ sơ ống kính |
 
 ## Quy tắc chung
 
