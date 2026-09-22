@@ -1,0 +1,16 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 10 },
+    { "action": "tap", "label": "Photo, file type", "type": "cell", "index": 20 },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Edit" },
+    { "action": "wait", "seconds": 18 },
+    { "action": "dump", "name": "editor" },
+    { "action": "wait", "seconds": 50 },
+    { "action": "tap", "label": "Light" },
+    { "action": "wait", "seconds": 14 },
+    { "action": "dump", "name": "collapsed" },
+    { "action": "wait", "seconds": 45 }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "orientation", "text": "landscape" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "tap", "label": "Continue" },
+    { "action": "systemTap", "label": "Allow Full Access", "seconds": 20 },
+    { "action": "wait", "seconds": 22 },
+    { "action": "tap", "label": "Photo, file type", "type": "cell", "index": 2 },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Edit" },
+    { "action": "wait", "seconds": 18 },
+    { "action": "dump", "name": "editor" },
+    { "action": "wait", "seconds": 60 },
+    { "action": "tap", "label": "Light" },
+    { "action": "wait", "seconds": 14 },
+    { "action": "dump", "name": "collapsed" },
+    { "action": "wait", "seconds": 40 }
+  ]
+}

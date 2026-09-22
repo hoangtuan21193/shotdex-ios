@@ -176,6 +176,20 @@ final class UIDriverTests: XCTestCase {
                 attempts += 1
             }
             guard target.isHittable else { throw DriverError.notHittable(step.label ?? "?") }
+        case "systemTap":
+            // A permission alert belongs to Springboard, not to the app: it is
+            // absent from the app's element tree, and a coordinate tap at its
+            // buttons goes to the app *underneath* it. So the photo-access
+            // prompt — which every fresh install shows, because installing the
+            // app resets its privacy grant — can only be answered through
+            // Springboard's own query.
+            guard let label = step.label else { throw DriverError.missing("label") }
+            let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+            let button = springboard.buttons[label]
+            guard button.waitForExistence(timeout: step.seconds ?? 15) else {
+                throw DriverError.notFound("system button '\(label)'")
+            }
+            button.tap()
         case "wait":
             Thread.sleep(forTimeInterval: step.seconds ?? 1.0)
         case "screenshot":

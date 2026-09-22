@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 import Testing
 @testable import ShotDexKit
 @testable import ShotDex
@@ -467,6 +468,9 @@ struct EditorPanelLayoutTests {
 
     /// Asserted on the real windows ShotDex ships to, not on round numbers —
     /// the whole point of the rule is which devices fall on which side of it.
+    /// The 11" iPad in landscape, the window the 2026-09-22 panel rebuild was
+    /// measured on.
+    private static let iPad11Landscape = CGSize(width: 1210, height: 834)
     private static let phone = CGSize(width: 402, height: 874)
     private static let iPadLandscape = CGSize(width: 1376, height: 1032)
     private static let iPadPortrait = CGSize(width: 1032, height: 1376)
@@ -490,6 +494,43 @@ struct EditorPanelLayoutTests {
         // wide enough; a squat window clears the width and fails on height.
         #expect(!EditorLayoutMetrics.usesSidebar(width: 874, height: 402))
         #expect(!EditorLayoutMetrics.usesSidebar(width: 900, height: 560))
+    }
+
+    // MARK: Panel rebuild 2026-09-22 — what already works and must keep working
+
+    /// Which sections are open is a property of the editing *session*, not of
+    /// the photo: it never reaches the recipe, so it cannot reach History or a
+    /// saved edit either. Locked here because the rebuild makes the open/closed
+    /// state visible enough to be mistaken for an edit.
+    @Test func openSectionsNeverReachTheRecipe() throws {
+        var recipe = PhotoEditRecipe()
+        recipe.adjustments.exposure = 0.4
+        let json = try JSONEncoder().encode(recipe)
+        let text = try #require(String(data: json, encoding: .utf8))
+
+        for key in ["expanded", "sidebar", "section", "collapsed", "panel", "rail"] {
+            #expect(!text.lowercased().contains(key), "recipe carries panel state: \(key)")
+        }
+    }
+
+    /// The canvas the photo gets on an 11" iPad in landscape, measured on
+    /// 2026-09-22: 842 wide (window minus panel minus rail) by 786 tall (window
+    /// minus the command band). A 3:2 frame fills 553 of those 786pt — 71%, so
+    /// the rebuild's job is not to grow that number but to **not shrink it**.
+    /// Cards, the footer move and the Save pill must all come out of chrome the
+    /// panel already had.
+    @Test func theCanvasDoesNotShrinkBelowTheMeasuredBaseline() {
+        let canvasWidth = Self.iPad11Landscape.width
+            - EditorLayoutMetrics.sidebarDefaultWidth
+            - EditorLayoutMetrics.sidebarRailWidth
+        let canvasHeight = Self.iPad11Landscape.height - EditorLayoutMetrics.editorTopBandHeight
+
+        #expect(canvasWidth >= 842)
+        #expect(canvasHeight >= 782)
+
+        // And the panel is still paid for in width, never in canvas height: the
+        // sidebar range has not crept upwards.
+        #expect(EditorLayoutMetrics.sidebarWidthRange.upperBound <= 420)
     }
 
     /// The Duo's inner display is the reason the short-column rule exists: it
