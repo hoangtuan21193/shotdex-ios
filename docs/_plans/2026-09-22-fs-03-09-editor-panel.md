@@ -124,6 +124,15 @@ Nguyên tắc: ✅ trước (khoá lại bằng test) → số học Domain → 
 
 Task 15 và 16 **tách khỏi lượt panel** được — nếu muốn ship panel trước thì dừng ở task 14.
 
+## 5b. Tìm thấy khi chụp màn (task 3)
+
+- **Ảnh không nằm giữa canvas ở khổ dọc.** iPad 11" dọc: ảnh 3:2 chiếm y≈395…650pt trong canvas 52…1194pt,
+  tức **lệch lên trên tâm ~100pt**. Ngang thì không thấy lệch. Nghi ngờ canvas vẫn chừa chỗ cho filmstrip
+  (72pt) dù filmstrip không hiện. Kiểm ở task 5 hoặc 9b.
+- **`Light` trông như đang được chọn dù đã gập.** Header vẫn dùng accent của `isActive` (nhóm đang giữ stage)
+  trong khi panel gập hết — hai nghĩa trên một dấu hiệu. Task 5b đổi nghĩa "sáng" cho rail; header phải đổi
+  cùng lúc, nếu không người dùng đọc `Light` là "đang mở".
+
 ## 6. Rủi ro và đánh đổi
 
 | Rủi ro | Xác suất | Xử lý |

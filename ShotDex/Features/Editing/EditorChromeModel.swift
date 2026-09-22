@@ -34,7 +34,13 @@ final class EditorChromeModel {
     /// Lightroom's develop panels stack — unlike the phone's group wheel, where
     /// the screen only has room for one group at a time. Session state: which
     /// panels a photo needs is a property of the edit, not of the app.
-    var expandedSidebarGroups: Set<EditorGroup> = [.light]
+    ///
+    /// Starts **empty** (2026-09-22). Opening on Light looked helpful and was
+    /// not: Light alone is 441pt, which on an 834pt window pushed six of the
+    /// other seven headers past the bottom of the panel, so the editor opened
+    /// having hidden most of itself. Closed, every section name is on screen at
+    /// once and the first tap is a choice rather than a scroll.
+    var expandedSidebarGroups: Set<EditorGroup> = []
 
     /// Which colour band the wide sidebar's Mix section is working on, or nil
     /// for the all-channels list. The swatch row is Lightroom's arrangement and
