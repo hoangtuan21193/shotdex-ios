@@ -67,6 +67,40 @@ enum EditorAdjustmentCatalog {
     /// `hasDepth` adds the portrait Depth Blur row. Off by default so every
     /// existing caller keeps the catalog it had, and so the row never appears
     /// on a photo with no depth map to blur by.
+    /// The sections the wide-screen panel lists, in order. Five, the way
+    /// Lightroom's own Edit panel lists them — Curve folds into Light, Mix,
+    /// Point and Grade become tabs inside Color, and Geometry goes with the crop
+    /// frame it belongs to. Eight flat groups meant that opening the first one
+    /// pushed six of the other seven off a 834pt screen.
+    ///
+    /// RAW has no section of its own: its rows ride inside Detail when the source
+    /// is RAW, which is where a photographer looks for them anyway.
+    static let sidebarSections: [EditorAdjustmentGroup.Identity] = [
+        .light, .color, .effects, .detail, .optics,
+    ]
+
+    /// The slider a dependent row waits for. Midpoint, roundness, feather and
+    /// the highlight roll-off do nothing until there is a vignette to shape;
+    /// grain size and roughness do nothing until there is grain. Lightroom dims
+    /// them, and dimming is honest: the row is still there, still in its place,
+    /// and says why it cannot be dragged.
+    static func parentKind(of kind: PhotoAdjustmentKind) -> PhotoAdjustmentKind? {
+        switch kind {
+        case .vignetteMidpoint, .vignetteFeather, .vignetteRoundness, .vignetteHighlights:
+            return .vignette
+        case .grainSize, .grainRoughness:
+            return .grain
+        default:
+            return nil
+        }
+    }
+
+    /// Whether a row is live given the values around it.
+    static func isEnabled(_ kind: PhotoAdjustmentKind, in adjustments: PhotoAdjustments) -> Bool {
+        guard let parent = parentKind(of: kind) else { return true }
+        return adjustments[parent] != 0
+    }
+
     static func groups(
         isRAWSource: Bool,
         scope: Scope,

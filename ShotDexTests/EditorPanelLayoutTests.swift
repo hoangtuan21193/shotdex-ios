@@ -478,22 +478,84 @@ struct EditorPanelLayoutTests {
     private static let duoInner = CGSize(width: 951, height: 669)
     private static let duoCover = CGSize(width: 466, height: 678)
 
-    /// A sidebar is paid for in width, so it is only worth it on a window with
-    /// width to spare. Portrait is the case the width-and-height gate missed: a
-    /// 13" iPad passes both numbers and then spends 378pt of a 1032pt window on
-    /// the panel, leaving a 3:2 frame 34% of the canvas height.
-    @Test func sidebarIsForLandscapeWindowsOnly() {
+    /// Every window with room for a panel gets one, portrait included: rotating
+    /// an iPad must not swap five collapsible sections for a fourteen-chip
+    /// wheel. What still fails the gate fails on a number — a phone is too
+    /// narrow in both directions, the Duo's cover too narrow, a squat window too
+    /// short.
+    @Test func everyWindowWithRoomGetsTheSidebar() {
         #expect(EditorLayoutMetrics.usesSidebar(width: Self.iPadLandscape.width, height: Self.iPadLandscape.height))
+        #expect(EditorLayoutMetrics.usesSidebar(width: Self.iPad11Landscape.width, height: Self.iPad11Landscape.height))
         #expect(EditorLayoutMetrics.usesSidebar(width: Self.duoInner.width, height: Self.duoInner.height))
+        // The change of 2026-09-22: portrait is in.
+        #expect(EditorLayoutMetrics.usesSidebar(width: Self.iPadPortrait.width, height: Self.iPadPortrait.height))
+        #expect(EditorLayoutMetrics.usesSidebar(width: 834, height: 1194))
 
-        #expect(!EditorLayoutMetrics.usesSidebar(width: Self.iPadPortrait.width, height: Self.iPadPortrait.height))
         #expect(!EditorLayoutMetrics.usesSidebar(width: Self.phone.width, height: Self.phone.height))
         #expect(!EditorLayoutMetrics.usesSidebar(width: Self.duoCover.width, height: Self.duoCover.height))
-
-        // A phone in landscape is wider than it is tall and still nowhere near
-        // wide enough; a squat window clears the width and fails on height.
+        // A phone in landscape is nowhere near wide enough; a squat window
+        // clears the width and fails on height.
         #expect(!EditorLayoutMetrics.usesSidebar(width: 874, height: 402))
         #expect(!EditorLayoutMetrics.usesSidebar(width: 900, height: 560))
+    }
+
+    /// Five sections, and the panel says so in one place: the catalog. A screen
+    /// that hand-listed them is how Color went missing from one device once.
+    @Test func thePanelListsFiveSections() {
+        #expect(EditorAdjustmentCatalog.sidebarSections == [.light, .color, .effects, .detail, .optics])
+    }
+
+    /// A dependent row is dead until the slider it belongs to has a value.
+    @Test func dependentRowsWaitForTheirParent() {
+        var adjustments = PhotoAdjustments.zero
+        for kind in [PhotoAdjustmentKind.vignetteMidpoint, .vignetteFeather, .vignetteRoundness, .vignetteHighlights] {
+            #expect(EditorAdjustmentCatalog.parentKind(of: kind) == .vignette)
+            #expect(!EditorAdjustmentCatalog.isEnabled(kind, in: adjustments))
+        }
+        for kind in [PhotoAdjustmentKind.grainSize, .grainRoughness] {
+            #expect(EditorAdjustmentCatalog.parentKind(of: kind) == .grain)
+            #expect(!EditorAdjustmentCatalog.isEnabled(kind, in: adjustments))
+        }
+        // Exposure answers to nobody.
+        #expect(EditorAdjustmentCatalog.parentKind(of: .exposure) == nil)
+        #expect(EditorAdjustmentCatalog.isEnabled(.exposure, in: adjustments))
+
+        adjustments.vignette = -0.2
+        #expect(EditorAdjustmentCatalog.isEnabled(.vignetteMidpoint, in: adjustments))
+        #expect(!EditorAdjustmentCatalog.isEnabled(.grainSize, in: adjustments))
+    }
+
+    /// The short column keeps the histogram and pays for it by shrinking it, and
+    /// buys another 20pt back across five cards by tightening their spacing.
+    @Test func theShortColumnShrinksChromeInsteadOfDroppingIt() {
+        let duo = Self.duoInner.height
+        let iPad = Self.iPad11Landscape.height
+
+        #expect(EditorLayoutMetrics.isShortColumn(duo))
+        #expect(!EditorLayoutMetrics.isShortColumn(iPad))
+
+        #expect(EditorLayoutMetrics.sidebarHistogramHeight(forColumnHeight: duo) == 56)
+        #expect(EditorLayoutMetrics.sidebarHistogramHeight(forColumnHeight: iPad) == 92)
+        #expect(EditorLayoutMetrics.sidebarCardSpacing(forColumnHeight: duo) == 6)
+        #expect(EditorLayoutMetrics.sidebarCardSpacing(forColumnHeight: iPad) == 8)
+
+        // Five collapsed cards still fit the Duo's scroll area with room over:
+        // 5 × (44 header + 6 gap) against the column left after the fixed parts.
+        let fixed = EditorLayoutMetrics.sidebarHistogramHeight(forColumnHeight: duo)
+            + EditorLayoutMetrics.sidebarModeHeaderHeight
+        let cards = 5 * (EditorLayoutMetrics.sidebarSectionHeaderHeight
+            + EditorLayoutMetrics.sidebarCardSpacing(forColumnHeight: duo))
+        #expect(fixed <= 180)
+        #expect(cards <= duo - EditorLayoutMetrics.editorTopBandHeight - fixed)
+    }
+
+    /// Primary actions are told apart by colour, not by size.
+    @Test func primaryActionsAreSmall() {
+        #expect(EditorLayoutMetrics.editorPrimaryButtonHeight == 32)
+        #expect(EditorLayoutMetrics.editorPrimaryButtonMaxWidth <= 96)
+        #expect(EditorLayoutMetrics.sidebarCommitBarHeight == 48)
+        // And a slider's target is a full 44 even though its cursor is a 2pt bar.
+        #expect(EditorLayoutMetrics.sidebarSliderHitHeight == 44)
     }
 
     // MARK: Panel rebuild 2026-09-22 — what already works and must keep working

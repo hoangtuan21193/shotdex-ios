@@ -63,16 +63,20 @@ enum EditorLayoutMetrics {
     static let sidebarMinCanvasWidth: CGFloat = 700
     /// And tall enough that the sidebar's fixed chrome is not the whole panel.
     static let sidebarMinCanvasHeight: CGFloat = 600
-    /// And wider than it is tall. A sidebar costs **width**, which is what a
-    /// landscape window has spare; in portrait width is the scarce dimension and
-    /// the same column is paid for out of the photo. Measured on a 13" iPad:
-    /// landscape 1376×1032 gives a 3:2 frame 70% of the canvas height, portrait
-    /// 1032×1376 gives it **34%** — two thirds of the canvas black — because the
-    /// photo is width-limited there and the panel takes 378 of the 1032. Portrait
-    /// therefore keeps the phone's slab, which spends height the letterboxed photo
-    /// is not using. The Duo's inner display (951×669) is landscape and unaffected.
+    /// Portrait used to fail a third test — wider than it is tall — and fall back
+    /// to the phone's slab. That test is gone (2026-09-22): rotating an iPad must
+    /// not change the editor's vocabulary, and it did. Landscape showed five
+    /// collapsible sections, portrait showed a fourteen-chip wheel, on the same
+    /// device, and a person had to learn both.
+    ///
+    /// The price is real and was measured before the swap, with a 3:2 landscape
+    /// frame: 11" portrait 834×1194 leaves the canvas 466 wide, so the photo is
+    /// 311 of 1194pt — **27%** — against 62% under the old bottom slab; 13"
+    /// portrait is 34% against 64%. Landscape is unaffected (11" 1210×834 keeps
+    /// the photo at 71% of the canvas). The way out of a small photo is the rail:
+    /// tapping the open mode's icon folds the panel away and gives the width back.
     static func usesSidebar(width: CGFloat, height: CGFloat) -> Bool {
-        width >= sidebarMinCanvasWidth && height >= sidebarMinCanvasHeight && width > height
+        width >= sidebarMinCanvasWidth && height >= sidebarMinCanvasHeight
     }
     /// Sidebar width the user can drag between, and where it starts. 280 still
     /// fits a slider row with its value; past 420 the photo starts paying for
@@ -90,6 +94,48 @@ enum EditorLayoutMetrics {
     static let sidebarSectionHeaderHeight: CGFloat = 44
     /// The always-on histogram at the top of the sidebar.
     static let sidebarHistogramHeight: CGFloat = 92
+    /// What it shrinks to on a short column: the graph band alone, without the
+    /// padding and the labels around it. The histogram **never leaves the panel**
+    /// — a graph read continuously while a slider moves cannot cost a tap per
+    /// glance — so the short column pays for it by making it smaller, not by
+    /// handing it back to the command band.
+    static let sidebarShortColumnHistogramHeight: CGFloat = 56
+
+    /// The histogram block for a column of this height.
+    static func sidebarHistogramHeight(forColumnHeight height: CGFloat) -> CGFloat {
+        isShortColumn(height) ? sidebarShortColumnHistogramHeight : sidebarHistogramHeight
+    }
+
+    /// Gap between two section cards, and the padding inside one. 8 everywhere
+    /// except a short column, where 6 buys back ~20pt across five cards — the
+    /// difference between the Light card fitting the Duo's scroll area and not.
+    static func sidebarCardSpacing(forColumnHeight height: CGFloat) -> CGFloat {
+        isShortColumn(height) ? 6 : 8
+    }
+
+    /// The commit bar at the foot of the three stage modes — Crop & Geometry,
+    /// Mask, Markup — carrying `[↺] [Cancel] [Apply]`. Edit and Presets have no
+    /// foot at all. 48 = a 32pt control with 8pt above and below.
+    static let sidebarCommitBarHeight: CGFloat = 48
+    /// A primary action in the editor's chrome — `Save` in the command band,
+    /// `Apply` in the commit bar. Distinguished by **colour**, not by size: an
+    /// accent pill this tall and only as wide as its word, against the 240×50
+    /// slab it replaces, which was the largest block of colour on a screen whose
+    /// job is judging colour.
+    static let editorPrimaryButtonHeight: CGFloat = 32
+    static let editorPrimaryButtonMaxWidth: CGFloat = 96
+
+    /// How tall a slider row's touch target is, whatever the row itself measures.
+    /// The cursor stays a 2pt bar — a round knob was ruled out when this slider
+    /// was built, and every surface in the editor draws through it — but a bar
+    /// that thin is nothing to aim at with a pencil or a pointer, so the target
+    /// around it is a full 44.
+    static let sidebarSliderHitHeight: CGFloat = 44
+
+    /// True for a column that can no longer hold a parameter group whole.
+    static func isShortColumn(_ height: CGFloat) -> Bool {
+        height < sidebarShortColumnHeight
+    }
 
     /// Below this window height the sidebar drops the two rows it can do
     /// without, because the column can no longer hold a parameter group.
@@ -113,7 +159,9 @@ enum EditorLayoutMetrics {
     static let sidebarRailWidth: CGFloat = 48
     /// The panel's own mode header — the group's name and the Auto button.
     static let sidebarModeHeaderHeight: CGFloat = 40
-    /// The Look row under it: a two-line label and Browse.
+    /// The Look row under it: a two-line label and Browse. **Being removed**
+    /// (2026-09-22): the film look has one way in, the rail's Presets stop, and
+    /// the row cost 52pt of every screenful to say the same thing twice.
     static let sidebarLookRowHeight: CGFloat = 52
     /// One stacked slider row in the sidebar: name and value on the first line,
     /// the track full width underneath. 46, against the phone's 34, because the
