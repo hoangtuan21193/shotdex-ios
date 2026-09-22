@@ -35,9 +35,8 @@ hình dạng của bộ rasterize nét cọ cùng tầng `PhotoDrawing` đã có
 - Vẽ ở **độ phân giải của preview**, áp lại ở độ phân giải đầy đủ lúc lưu; preview **không** hạ độ phân giải
   ([FS-03.04](04-raw-and-render-graph.md)).
 
-⚠️ **CẦN QUYẾT — ngưỡng "chỉn chu".** Một vết xoá đạt hay không đạt phải đo được, nếu không thì mỗi lần
-review là một cuộc cãi. Đề xuất: trên ảnh thử có bụi cảm biến trên nền trời chuyển màu, sai lệch màu trung
-bình trong vùng vá ≤ 2/255 so với nền quanh nó, và không có mép cứng nhìn thấy ở 100%.
+**Ngưỡng "chỉn chu" (chốt 2026-09-23):** trên ảnh thử có bụi cảm biến trên nền trời chuyển màu, sai lệch màu
+trung bình trong vùng vá **≤ 2/255** so với nền quanh nó, và **không có mép cứng** nhìn thấy ở 100%.
 
 ## 3. Mask bộ phận khuôn mặt
 
@@ -63,8 +62,9 @@ hai. Thêm: một bước render trong `PhotoRenderService` và một lối vào
 - Recipe lưu **định danh LUT**, không lưu cả bảng tra: một LUT 33³ là ~140KB, nhân với mỗi ảnh đã sửa là
   một cách làm phình cơ sở dữ liệu. File LUT sống trong `ImportedLUTStore`.
 
-⚠️ **CẦN QUYẾT:** ảnh đã sửa bằng một LUT rồi người dùng **xoá LUT đó** thì render ra gì? Đề xuất: giữ
-recipe nguyên vẹn, ảnh render **không có** bước LUT, và panel nói "LUT đã bị xoá" ngay tại hàng Look.
+**Xoá một LUT đang được ảnh dùng (chốt 2026-09-23):** recipe giữ nguyên, ảnh render **không có** bước LUT,
+và panel nói "LUT đã bị xoá" ngay tại hàng Look. `ImportedLUTStore.url(for:)` đã trả `nil` khi không còn file,
+nên bước render chỉ cần bỏ qua chứ không ném.
 
 ## 5. Mask Background và Depth Range
 
@@ -88,17 +88,19 @@ cỡ mô hình tách bầu trời 41MB là thứ phải nuôi mãi. Thay vào đ
 
 ## 7. Hồ sơ ống kính cho ảnh JPEG
 
-Apple không phát hành cơ sở dữ liệu hệ số méo; Adobe có một bộ đo được cấp phép. Nên phạm vi là **bó hẹp và
-thành thật**:
+Apple không phát hành cơ sở dữ liệu hệ số méo, và `.lcp` của Adobe là tài sản của họ. Nguồn dùng được là
+**Lensfun** (chốt 2026-09-23):
 
-- Một bảng hệ số **đo tay** cho một số ống kính phổ biến, khoá bằng tên ống kính đã chuẩn hoá
-  (`LensNormalizer` + `sensor_database.json` đã biết ảnh chụp bằng gì).
-- Ống kính **không có trong bảng** thì mục Optics vẫn hiện nhưng nói rõ "chưa có hồ sơ cho ống kính này" —
-  không lặng lẽ không làm gì.
+- **Nhúng toàn bộ** cơ sở dữ liệu Lensfun (nguồn mở, **CC-BY-SA 3.0**), đổi XML sang JSON lúc build. Mô hình
+  méo `poly3` / `poly5` / `ptlens` theo từng tiêu cự.
+- **Ghi công** CC-BY-SA trong màn Giới thiệu. Không sửa dữ liệu tại chỗ — mọi chỉnh của ta nằm ở lớp khớp
+  tên bên ngoài, để khỏi phải chia sẻ lại một bản dữ liệu đã sửa.
+- **Rủi ro thật nằm ở khớp tên**, không ở hệ số: Lensfun khoá bằng chuỗi maker/model trong EXIF, mà mỗi hãng
+  viết một kiểu. Khớp qua `LensNormalizer` + `sensor_database.json`.
+- Ống **không khớp** thì nói rõ "chưa có hồ sơ cho ống kính này" **và cho chọn tay** từ danh sách.
+- Lensfun gần như không có ống điện thoại — ảnh điện thoại đã được camera nắn sẵn, nên nhánh "chưa có hồ sơ"
+  là câu trả lời đúng.
 - RAW giữ nguyên đường cũ qua `CIRAWFilter`.
-
-⚠️ **CẦN QUYẾT:** ai đo và đo bao nhiêu ống kính cho lần đầu? Không có câu trả lời thì mục này chỉ là một
-khung rỗng.
 
 ## 8. Cố ý không đuổi theo
 
@@ -132,7 +134,7 @@ khung rỗng.
 | AC-12 | **Cho** ảnh ISO 6400 · **Khi** đặt Luminance 60 và Detail 50 · **Thì** nhiễu hạt giảm đo được mà vân da **không** mất hẳn (so bằng phương sai cục bộ trên hai vùng) | ⚠️ chưa có |
 | AC-13 | **Cho** một ảnh bất kỳ · **Khi** đọc chuỗi render · **Thì** khử nhiễu chạy **trước** sharpening | ⚠️ chưa có — test thuần trên thứ tự pipeline |
 | AC-14 | **Cho** ảnh JPG chụp bằng ống kính **có** trong bảng hồ sơ · **Khi** bật Lens Corrections · **Thì** méo hình được nắn theo hệ số của ống kính đó | ⚠️ chưa có |
-| AC-15 | **Cho** ảnh JPG chụp bằng ống kính **không** có trong bảng · **Khi** mở Optics · **Thì** nói rõ "chưa có hồ sơ cho ống kính này", không có nút chết | ⚠️ chưa có |
+| AC-15 | **Cho** ảnh JPG chụp bằng ống kính **không** khớp Lensfun · **Khi** mở Optics · **Thì** nói rõ "chưa có hồ sơ cho ống kính này" **và** có lối chọn ống thủ công, không có nút chết | ⚠️ chưa có |
 | AC-16 | **Cho** bản dựng bất kỳ · **Khi** tìm trong giao diện · **Thì** **không** có chữ "AI" ở bất cứ đâu thuộc khử nhiễu | ⚠️ chưa có — grep trong `Tools/gate` |
 
 ## 9b. Tương thích recipe (duyệt 2026-09-23)
@@ -149,8 +151,5 @@ khung rỗng.
 
 ## 10. Việc còn treo
 
-- ⚠️ Ngưỡng "chỉn chu" của xoá vết (§2) — số đề xuất đã có, cần người dùng chốt.
-- ⚠️ Xoá LUT đang được một ảnh dùng (§4).
-- ⚠️ Ai đo hồ sơ ống kính, và bao nhiêu ống cho lần đầu (§7).
 - ⚠️ **Versions** có làm không (§8) — bản iPad của Lightroom có, ta chưa xếp vào đâu.
 - ⚠️ Thứ tự ship sáu mục: làm tuần tự 1→6, hay gộp 3+4 (đều rẻ) lên trước mục 2?
