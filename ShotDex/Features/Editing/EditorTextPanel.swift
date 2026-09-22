@@ -31,46 +31,67 @@ struct EditorTextPanel: View {
         }
     }
 
-    /// The ways to add a layer. Separate "add" buttons rather than one joined
-    /// segmented control: the joined control read as a mode *picker* — "which of
-    /// these is selected" — when every tap actually *creates* a layer. A leading
-    /// accent `+` on each button says so outright.
-    ///
-    /// Shapes and the magnifier share a menu rather than taking a button each:
-    /// five styles plus a loupe would be seven targets on a 375pt row, and
-    /// grouping them is also how Photos' own Markup `+` presents them.
+    /// One `+`, one list. Four 67×28 buttons sat below the 44pt target the HIG
+    /// asks for, crowded the Duo's panel, and spelled out four words the menu
+    /// says better — and "add a thing to the photo" is now one gesture whether
+    /// the thing is a mask or a layer.
     private var addBar: some View {
         HStack(spacing: 8) {
-            addButton("Text", icon: "textformat", action: addText)
-            addButton("Image", icon: "photo", action: addImage)
-            shapeMenu
-            addButton("Draw", icon: "scribble.variable", action: startDrawing)
+            Menu {
+                Button { addText() } label: { Label("Text", systemImage: "textformat") }
+                Button { addImage() } label: { Label("Image", systemImage: "photo") }
+                Menu("Shape") {
+                    ForEach(OverlayShapeStyle.allCases) { style in
+                        Button { addShape(style) } label: {
+                            Label(style.displayName, systemImage: style.systemImage)
+                        }
+                    }
+                    Button { addMagnifier() } label: {
+                        Label("Magnifier", systemImage: "plus.magnifyingglass")
+                    }
+                }
+                Button { startDrawing() } label: {
+                    Label("Draw", systemImage: "scribble.variable")
+                }
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 12, weight: .bold))
+                    Text("Add Layer")
+                        .font(.system(size: 12, weight: .medium))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, AppTheme.Spacing.md)
+                .frame(height: AppTheme.Size.minTouch)
+                .background(EditorTheme.control, in: Capsule())
+                .contentShape(Capsule())
+            }
+            .accessibilityLabel("Add layer")
+
+            Spacer(minLength: 0)
+
+            Button {
+                controller.removeAllOverlays()
+            } label: {
+                Image(systemName: "arrow.counterclockwise")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(hasLayers ? EditorTheme.secondaryText : EditorTheme.dimText)
+                    .frame(width: AppTheme.Size.minTouch, height: AppTheme.Size.minTouch)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(!hasLayers)
+            .accessibilityLabel("Remove all layers")
         }
         .padding(.horizontal, 14)
         .padding(.top, 10)
         .padding(.bottom, 2)
     }
 
-    private var shapeMenu: some View {
-        Menu {
-            ForEach(OverlayShapeStyle.allCases) { style in
-                Button {
-                    addShape(style)
-                } label: {
-                    Label(style.displayName, systemImage: style.systemImage)
-                }
-            }
-            Divider()
-            Button {
-                addMagnifier()
-            } label: {
-                Label("Magnifier", systemImage: "plus.magnifyingglass")
-            }
-        } label: {
-            addButtonLabel("Shape", icon: "square.on.circle")
-        }
-        .accessibilityLabel("Add shape or magnifier")
+    private var hasLayers: Bool {
+        !controller.recipe.overlays.isEmpty || controller.hasDrawing
     }
+
 
     /// Matches the shared chip language of every other tab (`EditorChipButtonStyle`):
     /// RoundedRectangle bo 7, cao 28, chữ 12, nền `control` — not the old 44pt

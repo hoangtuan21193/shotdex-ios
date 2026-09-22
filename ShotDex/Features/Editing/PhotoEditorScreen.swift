@@ -733,7 +733,7 @@ struct PhotoEditorScreen: View {
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $chrome.isNewMaskSheetPresented) {
-            EditorNewMaskSheet { kind in
+            EditorNewMaskSheet(previewImage: controller.previewImage) { kind in
                 controller.addMask(kind: kind)
                 controller.editSelectedMaskAdjustments()
             }
@@ -828,8 +828,12 @@ struct PhotoEditorScreen: View {
         canvasWidth: CGFloat,
         canvasHeight: CGFloat
     ) -> some View {
-        let showsPanel = !isSidebarHidden && !controller.isEditingDrawing
-        let showsRail = !controller.isEditingDrawing
+        // Drawing keeps the panel and the rail on a wide window: there is room
+        // beside the photo for Clear and Done, and a bar floating over the
+        // picture while a stroke is being drawn covers the one thing being
+        // worked on. The phone, with no panel to put them in, still floats them.
+        let showsPanel = !isSidebarHidden
+        let showsRail = true
         // A window too short to hold a parameter group in the panel. The panel
         // gives up its histogram and its Look row there; the band takes the
         // histogram back as its pill.
@@ -846,11 +850,7 @@ struct PhotoEditorScreen: View {
             // but the panel was then paying for the same controls twice over,
             // in a title row and a command row it could not scroll, which is
             // 88pt of the dimension the parameter list is actually short of.
-            if controller.isEditingDrawing {
-                drawTopBar(controller)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-            } else {
-                commandBand(
+            commandBand(
                     controller,
                     height: bandHeight,
                     showsDocumentControls: true,
@@ -870,7 +870,6 @@ struct PhotoEditorScreen: View {
                     topInset: safeArea.top + AppTheme.Spacing.xs
                 )
                 .transition(.opacity)
-            }
 
             HStack(spacing: 0) {
                 if sidebarEdge == .leading {
@@ -1232,8 +1231,36 @@ struct PhotoEditorScreen: View {
                         // on top of the adjustment stack: the rail already says
                         // which mode the editor is in, and the eight headers
                         // underneath were a list of things this tool is not.
-                        sidebarSectionBody(railMode.group, controller: controller)
-                            .padding(.top, AppTheme.Spacing.sm)
+                        if controller.isEditingDrawing {
+                            sidebarDrawControls(controller)
+                        } else {
+                            sidebarSectionBody(railMode.group, controller: controller)
+                                .padding(.top, AppTheme.Spacing.sm)
+                        }
+
+                        // Mask with nothing masked yet shows the five sections
+                        // greyed under the empty state. It answers the question
+                        // the empty panel raises — *adjust what, exactly?* —
+                        // without a sentence, and it is why the `+` above is the
+                        // only live control on the panel.
+                        if railMode == .mask, controller.recipe.masks.isEmpty {
+                            ForEach(Self.sidebarParameterGroups) { group in
+                                EditorSidebarSection(
+                                    group: group,
+                                    isExpanded: false,
+                                    isActive: false,
+                                    spacing: EditorLayoutMetrics.sidebarCardSpacing(
+                                        forColumnHeight: canvasHeight
+                                    ),
+                                    toggle: {}
+                                ) {
+                                    EmptyView()
+                                }
+                            }
+                            .opacity(EditorTheme.rowDisabled)
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                        }
                     }
                     Color.clear.frame(height: AppTheme.Spacing.xxl)
                 }
@@ -1965,6 +1992,48 @@ struct PhotoEditorScreen: View {
     /// The drawing sub-mode's own top bar: Clear and Done sit up here, level with
     /// the Dynamic Island, because the `PKToolPicker` owns the bottom of the screen
     /// and would otherwise cover a bottom action row.
+    /// Clear and Done for a drawing session, in the panel rather than floating
+    /// over the photo. PencilKit's own palette still floats — it is the system's
+    /// and cannot be re-parented — but the two decisions that end the session
+    /// now sit beside the picture instead of on top of it.
+    private func sidebarDrawControls(_ controller: PhotoEditorController) -> some View {
+        VStack(spacing: AppTheme.Spacing.md) {
+            Text("Draw on the photo. The pencil palette is the system's; it can be dragged out of the way.")
+                .font(EditorTheme.maskSubtitle)
+                .foregroundStyle(EditorTheme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: AppTheme.Spacing.md) {
+                Button("Clear") { drawSession.clear() }
+                    .font(EditorTheme.pillLabel)
+                    .foregroundStyle(
+                        drawSession.isEmpty ? EditorTheme.dimText : Color.white.opacity(0.9)
+                    )
+                    .disabled(drawSession.isEmpty)
+                    .frame(height: EditorLayoutMetrics.editorPrimaryButtonHeight)
+
+                Spacer(minLength: 0)
+
+                Button {
+                    controller.commitDrawing(
+                        data: drawSession.drawing.dataRepresentation(),
+                        canvasSize: drawSession.canvasSize
+                    )
+                } label: {
+                    Text("Done")
+                        .font(EditorTheme.pillLabel)
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, AppTheme.Spacing.md)
+                        .frame(height: EditorLayoutMetrics.editorPrimaryButtonHeight)
+                        .background(EditorTheme.accent, in: Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, AppTheme.Spacing.md)
+        .padding(.top, AppTheme.Spacing.md)
+    }
+
     private func drawTopBar(_ controller: PhotoEditorController) -> some View {
         HStack(spacing: 8) {
             Button("Clear") {

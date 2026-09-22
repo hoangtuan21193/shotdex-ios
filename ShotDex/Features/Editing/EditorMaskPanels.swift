@@ -631,7 +631,14 @@ struct EditorMaskDetailPanel: View {
 /// Range` means nothing to someone who has not used it before.
 struct EditorNewMaskSheet: View {
     @Environment(\.dismiss) private var dismiss
+    /// The photo being edited. The explainer card draws on **this** frame rather
+    /// than a stock one: Lightroom illustrates its mask kinds with a stranger's
+    /// landscape, which tells you what the tool did to someone else's picture.
+    var previewImage: UIImage?
     let onSelect: (PhotoMaskComponentKind) -> Void
+
+    /// The kind the user has tapped but not yet created.
+    @State private var pending: PhotoMaskComponentKind?
 
     private let descriptions: [PhotoMaskComponentKind: String] = [
         .subject: "Isolates the subject on device",
@@ -650,6 +657,68 @@ struct EditorNewMaskSheet: View {
 
     var body: some View {
         NavigationStack {
+            if let pending {
+                explainer(for: pending)
+            } else {
+                chooser
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    /// What this kind will do, on the photo in hand, before it is made.
+    private func explainer(for kind: PhotoMaskComponentKind) -> some View {
+        VStack(spacing: 16) {
+            ZStack {
+                if let previewImage {
+                    Image(uiImage: previewImage)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    EditorTheme.control
+                }
+                EditorMaskKindSketch(kind: kind)
+            }
+            .frame(height: 200)
+            .clipShape(RoundedRectangle.app(AppTheme.Radius.lg))
+            .overlay {
+                RoundedRectangle.app(AppTheme.Radius.lg)
+                    .strokeBorder(EditorTheme.hairline, lineWidth: 1)
+            }
+
+            Text(descriptions[kind] ?? "")
+                .font(.system(size: 13))
+                .foregroundStyle(EditorTheme.secondaryText)
+                .multilineTextAlignment(.center)
+
+            Spacer(minLength: 0)
+
+            Button {
+                onSelect(kind)
+                dismiss()
+            } label: {
+                Text("Create")
+                    .font(EditorTheme.pillLabel)
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, AppTheme.Spacing.lg)
+                    .frame(height: EditorLayoutMetrics.editorPrimaryButtonHeight)
+                    .background(EditorTheme.accent, in: Capsule())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(EditorTheme.panel)
+        .navigationTitle(kind.displayName)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Back") { pending = nil }
+            }
+        }
+    }
+
+    private var chooser: some View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Choose how to select the area. You can add and subtract several kinds inside one mask.")
@@ -677,14 +746,11 @@ struct EditorNewMaskSheet: View {
                     Button("Cancel") { dismiss() }
                 }
             }
-        }
-        .preferredColorScheme(.dark)
     }
 
     private func row(_ kind: PhotoMaskComponentKind) -> some View {
         Button {
-            onSelect(kind)
-            dismiss()
+            pending = kind
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: kind.systemImage)
@@ -761,5 +827,76 @@ struct EditorMaskPickerSheet: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .preferredColorScheme(.dark)
+    }
+}
+
+/// The shape a mask kind makes, drawn over the photo in the explainer card.
+///
+/// A sketch, not a computed mask: running subject detection to illustrate a
+/// button the user has not pressed yet would spend a Vision pass — and the ~2s
+/// it takes on a 48MP frame — on a picture they may be about to back out of.
+/// The sketch says *where* the kind works; pressing Create says what it finds.
+struct EditorMaskKindSketch: View {
+    let kind: PhotoMaskComponentKind
+
+    var body: some View {
+        GeometryReader { geo in
+            let rect = CGRect(origin: .zero, size: geo.size)
+            ZStack {
+                switch kind {
+                case .sky:
+                    tint.frame(height: rect.height * 0.42)
+                        .frame(maxHeight: .infinity, alignment: .top)
+                case .subject:
+                    Capsule()
+                        .fill(EditorTheme.accent.opacity(0.35))
+                        .frame(width: rect.width * 0.3, height: rect.height * 0.66)
+                case .brush:
+                    Capsule()
+                        .fill(EditorTheme.accent.opacity(0.35))
+                        .frame(width: rect.width * 0.55, height: rect.height * 0.22)
+                        .rotationEffect(.degrees(-18))
+                case .radialGradient:
+                    Ellipse()
+                        .fill(
+                            RadialGradient(
+                                colors: [EditorTheme.accent.opacity(0.5), .clear],
+                                center: .center,
+                                startRadius: 0,
+                                endRadius: rect.width * 0.28
+                            )
+                        )
+                        .frame(width: rect.width * 0.55, height: rect.height * 0.62)
+                case .linearGradient:
+                    LinearGradient(
+                        colors: [EditorTheme.accent.opacity(0.5), .clear],
+                        startPoint: .top,
+                        endPoint: .center
+                    )
+                case .colorRange:
+                    tint.mask {
+                        LinearGradient(
+                            colors: [.clear, .white, .clear],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    }
+                case .luminanceRange:
+                    tint.mask {
+                        LinearGradient(
+                            colors: [.white, .clear],
+                            startPoint: .bottom,
+                            endPoint: .top
+                        )
+                    }
+                }
+            }
+            .frame(width: rect.width, height: rect.height)
+        }
+        .allowsHitTesting(false)
+    }
+
+    private var tint: some View {
+        EditorTheme.accent.opacity(0.35)
     }
 }
