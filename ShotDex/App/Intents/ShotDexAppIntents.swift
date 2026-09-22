@@ -22,7 +22,7 @@ final class IntentRouter {
         case trips
         /// A photo handed over from another device, already translated into
         /// this device's own identifier.
-        case photo(assetId: String)
+        case photo(assetId: String, opensEditor: Bool = false)
         /// The On This Day screen for one day, from a tapped widget.
         case onThisDay(date: Date)
     }

@@ -42,11 +42,24 @@ final class AppNavigation {
     /// Bumped with it, so handing over the same photo twice still opens it.
     private(set) var pendingPhotoToken = 0
 
+    /// True when the handover asked for the editor rather than the viewer — the
+    /// share sheet's **Edit in ShotDex**. Read once by the detail screen as it
+    /// appears, then cleared, so a later visit to the same photo is a plain view.
+    private(set) var pendingPhotoOpensEditor = false
+
     /// Switch to Library and open this photo's viewer.
-    func openPhoto(assetId: String) {
+    func openPhoto(assetId: String, opensEditor: Bool = false) {
         pendingPhotoAssetId = assetId
+        pendingPhotoOpensEditor = opensEditor
         pendingPhotoToken &+= 1
         selectedTab = .library
+    }
+
+    /// The detail screen taking the request: it opens the editor once and the
+    /// flag does not survive to the next photo.
+    func consumePendingEditorRequest() -> Bool {
+        defer { pendingPhotoOpensEditor = false }
+        return pendingPhotoOpensEditor
     }
 
     /// Bumped when the user taps the Library tab while it's already selected;
@@ -121,8 +134,8 @@ final class AppNavigation {
         case .trips:
             albumsPath = NavigationPath([TripsDestination()])
             selectedTab = .albums
-        case .photo(let assetId):
-            openPhoto(assetId: assetId)
+        case .photo(let assetId, let opensEditor):
+            openPhoto(assetId: assetId, opensEditor: opensEditor)
         case .onThisDay(let date):
             openOnThisDay(date: date)
         }

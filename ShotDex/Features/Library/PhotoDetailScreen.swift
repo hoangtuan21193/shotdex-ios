@@ -323,6 +323,16 @@ struct PhotoDetailScreen: View {
         }
         .onAppear {
             recordCurrentAsViewed()
+            // The share sheet's "Edit in ShotDex" lands here and means the
+            // editor, not the viewer. Consumed once, so paging to the next photo
+            // is a plain view again.
+            if navigation.consumePendingEditorRequest(), let currentAsset {
+                editorTarget = PhotoDetailActionTarget(
+                    id: currentAsset.localIdentifier,
+                    asset: currentAsset,
+                    sourceAlbum: model.sourceAlbum
+                )
+            }
         }
         .sheet(isPresented: $isMetadataPresented) {
             MetadataPanel(

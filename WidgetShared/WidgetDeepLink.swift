@@ -11,8 +11,10 @@ enum WidgetDeepLink: Equatable {
     /// Open the On This Day screen for the day named by `dayKey`
     /// (`WidgetSharedContainer.dayKey`).
     case onThisDay(dayKey: String)
-    /// Open one photo in the viewer.
-    case photo(assetId: String)
+    /// Open one photo in the viewer. `opensEditor` comes from the share sheet's
+    /// **Edit in ShotDex** action, which means "take me straight to the editor"
+    /// rather than "show me this photo" — the widget's own taps leave it false.
+    case photo(assetId: String, opensEditor: Bool = false)
 
     static let scheme = "shotdex"
 
@@ -28,9 +30,12 @@ enum WidgetDeepLink: Equatable {
         case .onThisDay(let dayKey):
             components.host = Host.onThisDay
             components.queryItems = [URLQueryItem(name: "day", value: dayKey)]
-        case .photo(let assetId):
+        case .photo(let assetId, let opensEditor):
             components.host = Host.photo
             components.queryItems = [URLQueryItem(name: "id", value: assetId)]
+            if opensEditor {
+                components.queryItems?.append(URLQueryItem(name: "edit", value: "1"))
+            }
         }
         // Every field above is a fixed literal or a percent-encoded query
         // value, so the only way this fails is a programming error.
@@ -51,7 +56,7 @@ enum WidgetDeepLink: Equatable {
             self = .onThisDay(dayKey: day)
         case Host.photo:
             guard let id = value("id") else { return nil }
-            self = .photo(assetId: id)
+            self = .photo(assetId: id, opensEditor: value("edit") == "1")
         default:
             return nil
         }

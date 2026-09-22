@@ -69,8 +69,10 @@ struct ShotDexApp: App {
                     case .onThisDay(let dayKey):
                         guard let date = WidgetSharedContainer.date(fromDayKey: dayKey) else { return }
                         IntentRouter.shared.request(.onThisDay(date: date))
-                    case .photo(let assetId):
-                        IntentRouter.shared.request(.photo(assetId: assetId))
+                    case .photo(let assetId, let opensEditor):
+                        IntentRouter.shared.request(
+                            .photo(assetId: assetId, opensEditor: opensEditor)
+                        )
                     }
                 }
                 .task {
