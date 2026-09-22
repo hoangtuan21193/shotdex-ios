@@ -22,7 +22,7 @@ Bố cục panel: [FS-03.01](01-scope-and-panel.md).
 |---|---|
 | LIGHT | Exposure · Contrast · Highlights · Shadows · Whites · Blacks · Brilliance · Brightness |
 | COLOR | Temp · Tint · Vibrance · Saturation · **công tắc đen trắng** |
-| DETAIL | Sharpen · Sharpen Radius · Sharpen Detail · Sharpen Masking · Definition · Noise · Color Noise |
+| DETAIL | Sharpen · Sharpen Radius · Sharpen Detail · Sharpen Masking · Definition · Lum NR · NR Detail · Color NR |
 | EFFECTS | Texture · Clarity · Dehaze · Vignette (mức, tâm, độ mềm, độ tròn, giữ vùng sáng) · Grain (mức, cỡ hạt, độ thô) |
 | OPTICS | khử viền tím · giảm quầng màu |
 | GEO | xoay · phóng · dịch ngang/dọc · nắn phối cảnh dọc/ngang · **Upright** |
@@ -45,8 +45,14 @@ Bố cục panel: [FS-03.01](01-scope-and-panel.md).
   (không có Amount thì Detail vô hiệu) · **Masking** giới hạn toàn bộ việc làm nét **vào vùng rìa** bằng một
   bản đồ rìa mềm, nên kéo cao thì chỉ còn rìa mạnh nhất được làm nét. Đây là **xấp xỉ** cách Lightroom chống
   quầng sáng, **không phải** giải chập thật.
-- **Noise** kéo âm là khử nhiễu, kéo dương là thêm hạt — slider đọc là "ảnh có bao nhiêu nhiễu", nên ít nằm
-  bên trái. **Color Noise** khử nhiễu màu mà ít làm mềm chi tiết.
+- **Khử nhiễu là ba slider một chiều** (FS-03.11 §6): **Lum NR** (0…1) khử nhiễu độ sáng · **NR Detail**
+  (0…1, mặc định 0,5 như Detail 50 của Lightroom, mờ khi Lum NR = 0) giữ lại vân nằm trên ngưỡng nhiễu —
+  phần bị lọc mất được làm mờ 1px (hạt nhiễu cỡ một pixel triệt tiêu, vân vài pixel còn lại) rồi cộng trả
+  theo mức Detail; đầu vào sharpness của `CINoiseReduction` bỏ vì nó làm nét cả hạt · **Color NR** khử nhiễu màu mà ít làm mềm chi tiết.
+  Nửa "kéo dương là thêm hạt" cũ đã bỏ: hạt ở Grain.
+- **Khử nhiễu chạy trước mọi thứ làm nét** — Sharpen, Definition, Texture, Clarity đều là unsharp mask, chạy
+  chúng trên ảnh còn nhiễu là khuếch đại nhiễu rồi mới xoá. Thứ tự là dữ liệu
+  (`PhotoRenderService.detailPassOrder`) để test đọc được.
 - **Texture** là làm nét bán kính nhỏ (1–2,5px); **Clarity** là bán kính lớn (8–28px), tức tương phản vùng
   trung gian. **Dehaze** kéo dương thì tăng tương phản và màu, hạ điểm đen, thêm một lượt bán kính lớn; kéo
   âm thì phủ mờ về xám sáng. **Xấp xỉ bằng các phép có sẵn, không phải thuật toán khử mù thật.**
@@ -61,7 +67,7 @@ Bố cục panel: [FS-03.01](01-scope-and-panel.md).
 - **Geo** chạy sau phần curve và trước film look, cắt và mask; ảnh được **kéo giãn mép ra** nên không lộ góc
   trong suốt. **Không quy đổi lại toạ độ của mask** — một phép nắn mạnh đi kèm mask có thể làm mask lệch;
   trường hợp thường (nắn mà không có mask) thì đúng.
-- **Chưa làm**: hai nút mịn của phần khử nhiễu — chúng cần một bản đồ rìa riêng.
+- **Chưa làm**: Contrast của khử nhiễu độ sáng và Smoothness của khử nhiễu màu — chúng cần một bản đồ rìa riêng.
 
 ## 5. Upright
 

@@ -1326,102 +1326,11 @@ public actor PhotoRenderService {
         // Detail and Effects are two-way. Dragging right does the obvious thing;
         // dragging left does its opposite, which is what a photographer expects
         // from a slider with a centre tick.
-        image = applySharpen(adjustments, to: image)
-        if adjustments.definition > 0 {
-            image = filtered(
-                "CIUnsharpMask",
-                image: image,
-                values: [
-                    kCIInputRadiusKey: 2 + adjustments.definition * 4,
-                    kCIInputIntensityKey: adjustments.definition,
-                ]
-            )
-        } else if adjustments.definition < 0 {
-            // Negative definition flattens local contrast by mixing in a blurred
-            // copy — the inverse of an unsharp mask rather than a plain blur.
-            let amount = -adjustments.definition
-            image = filtered(
-                "CIMix",
-                image: blurred(image, radius: 1 + amount * 3),
-                values: [
-                    kCIInputBackgroundImageKey: image,
-                    "inputAmount": amount * 0.7,
-                ]
-            ).cropped(to: image.extent)
-        }
-        // Texture: fine-detail local contrast — a small-radius unsharp mask one way,
-        // a light smooth of the same band the other.
-        if adjustments.texture > 0 {
-            image = filtered(
-                "CIUnsharpMask",
-                image: image,
-                values: [
-                    kCIInputRadiusKey: 1 + adjustments.texture * 1.5,
-                    kCIInputIntensityKey: adjustments.texture * 0.8,
-                ]
-            )
-        } else if adjustments.texture < 0 {
-            let amount = -adjustments.texture
-            image = filtered(
-                "CIMix",
-                image: blurred(image, radius: 0.5 + amount * 1.5),
-                values: [
-                    kCIInputBackgroundImageKey: image,
-                    "inputAmount": amount * 0.5,
-                ]
-            ).cropped(to: image.extent)
-        }
-        // Clarity: midtone local contrast — the same idea at a much larger radius,
-        // so it shapes broad regions rather than fine grain.
-        if adjustments.clarity > 0 {
-            image = filtered(
-                "CIUnsharpMask",
-                image: image,
-                values: [
-                    kCIInputRadiusKey: 8 + adjustments.clarity * 20,
-                    kCIInputIntensityKey: adjustments.clarity * 0.7,
-                ]
-            )
-        } else if adjustments.clarity < 0 {
-            let amount = -adjustments.clarity
-            image = filtered(
-                "CIMix",
-                image: blurred(image, radius: 4 + amount * 10),
-                values: [
-                    kCIInputBackgroundImageKey: image,
-                    "inputAmount": amount * 0.6,
-                ]
-            ).cropped(to: image.extent)
+        for pass in detailPassOrder {
+            image = apply(pass, adjustments, to: image)
         }
         if abs(adjustments.dehaze) > 0.0001 {
             image = applyDehaze(adjustments.dehaze, to: image)
-        }
-        if adjustments.noiseReduction < 0 {
-            // Left of centre removes noise; the slider reads as "how much noise
-            // the photo has", so less is to the left.
-            image = filtered(
-                "CINoiseReduction",
-                image: image,
-                values: [
-                    "inputNoiseLevel": -adjustments.noiseReduction * 0.08,
-                    "inputSharpness": max(0, adjustments.sharpness * 0.4),
-                ]
-            )
-        } else if adjustments.noiseReduction > 0 {
-            image = applyGrain(adjustments.noiseReduction * 0.6, to: image)
-        }
-        if adjustments.colorNoiseReduction > 0 {
-            // `CINoiseReduction` with zero luminance sharpening leans on its chroma
-            // smoothing, which is what colour-noise reduction wants — clean up the
-            // speckle without softening detail.
-            image = filtered(
-                "CINoiseReduction",
-                image: image,
-                values: [
-                    "inputNoiseLevel": adjustments.colorNoiseReduction * 0.05,
-                    "inputSharpness": 0.4,
-                ]
-            )
         }
         image = applyVignette(adjustments, to: image)
         if adjustments.grain > 0 {
@@ -1431,6 +1340,183 @@ public actor PhotoRenderService {
                 roughness: adjustments.grainRoughness,
                 to: image
             )
+        }
+        return image
+    }
+
+    /// Luminance noise reduction with a Detail control.
+    ///
+    /// `CINoiseReduction`'s noise level is a threshold: differences under it
+    /// are smoothed, and grain and skin texture are both small differences, so
+    /// at a strength that clears ISO 6400 grain it waxes faces. Its own
+    /// sharpness input is no help — it sharpens the grain back too.
+    ///
+    /// Detail tells the two apart by **size** instead of strength. What the
+    /// filter took away (`original − denoised`) is grain plus the texture it
+    /// flattened; grain is pixel-sized and averages out under a 1px blur,
+    /// texture is a few pixels across and survives it. So the blurred residual
+    /// is mostly texture, and Detail adds that much of it back. Tuned on a
+    /// synthetic frame (±0.08 grain, ±0.12 texture): Luminance 60 · Detail 50
+    /// leaves ~9% of the grain variance and ~70% of the texture. A classic
+    /// filter, not a model (FS-03.11 §6).
+    public static func applyLuminanceNoiseReduction(
+        amount: Double,
+        detail: Double,
+        to image: CIImage
+    ) -> CIImage {
+        guard amount > 0.001 else { return image }
+        let denoised = filtered(
+            "CINoiseReduction",
+            image: image,
+            values: [
+                "inputNoiseLevel": min(1, amount) * 0.2,
+                "inputSharpness": 0,
+            ]
+        ).cropped(to: image.extent)
+        let detail = min(1, max(0, detail))
+        guard detail > 0.001,
+              let residualKernel = noiseResidualKernel,
+              let addKernel = noiseDetailKernel,
+              let residual = residualKernel.apply(extent: image.extent, arguments: [image, denoised])
+        else { return denoised }
+        let texture = blurred(residual, radius: 1)
+        return addKernel.apply(extent: image.extent, arguments: [denoised, texture, detail])
+            ?? denoised
+    }
+
+    /// What noise reduction removed, kept signed.
+    private static let noiseResidualKernel = CIColorKernel(source: """
+        kernel vec4 noiseResidual(__sample original, __sample denoised) {
+            return vec4(original.rgb - denoised.rgb, 1.0);
+        }
+        """)
+
+    /// Denoised plus `amount` of the (blurred) residual.
+    private static let noiseDetailKernel = CIColorKernel(source: """
+        kernel vec4 noiseDetail(__sample denoised, __sample texture, float amount) {
+            return vec4(denoised.rgb + amount * texture.rgb, denoised.a);
+        }
+        """)
+
+    /// The detail passes, in the order they run.
+    ///
+    /// Noise reduction is **first**, before anything that sharpens: sharpening
+    /// and the three local-contrast passes are unsharp masks, and an unsharp
+    /// mask run on a noisy frame amplifies the noise it is about to be asked
+    /// to remove. Lightroom and every raw converter run it in this order. Data
+    /// rather than a sequence of statements so the order is something a test
+    /// can read (FS-03.11 AC-13).
+    public enum DetailPass: CaseIterable, Sendable {
+        case noiseReduction
+        case sharpen
+        case definition
+        case texture
+        case clarity
+    }
+
+    public static let detailPassOrder: [DetailPass] = [
+        .noiseReduction, .sharpen, .definition, .texture, .clarity,
+    ]
+
+    private static func apply(
+        _ pass: DetailPass,
+        _ adjustments: PhotoAdjustments,
+        to input: CIImage
+    ) -> CIImage {
+        var image = input
+        switch pass {
+        case .noiseReduction:
+            if adjustments.noiseReduction > 0 {
+                image = applyLuminanceNoiseReduction(
+                    amount: adjustments.noiseReduction,
+                    detail: adjustments.noiseDetail,
+                    to: image
+                )
+            }
+            if adjustments.colorNoiseReduction > 0 {
+                // `CINoiseReduction` with zero luminance sharpening leans on its chroma
+                // smoothing, which is what colour-noise reduction wants — clean up the
+                // speckle without softening detail.
+                image = filtered(
+                    "CINoiseReduction",
+                    image: image,
+                    values: [
+                        "inputNoiseLevel": adjustments.colorNoiseReduction * 0.05,
+                        "inputSharpness": 0.4,
+                    ]
+                )
+            }
+        case .sharpen:
+            image = applySharpen(adjustments, to: image)
+        case .definition:
+            if adjustments.definition > 0 {
+                image = filtered(
+                    "CIUnsharpMask",
+                    image: image,
+                    values: [
+                        kCIInputRadiusKey: 2 + adjustments.definition * 4,
+                        kCIInputIntensityKey: adjustments.definition,
+                    ]
+                )
+            } else if adjustments.definition < 0 {
+                // Negative definition flattens local contrast by mixing in a blurred
+                // copy — the inverse of an unsharp mask rather than a plain blur.
+                let amount = -adjustments.definition
+                image = filtered(
+                    "CIMix",
+                    image: blurred(image, radius: 1 + amount * 3),
+                    values: [
+                        kCIInputBackgroundImageKey: image,
+                        "inputAmount": amount * 0.7,
+                    ]
+                ).cropped(to: image.extent)
+            }
+        case .texture:
+            // Texture: fine-detail local contrast — a small-radius unsharp mask one way,
+            // a light smooth of the same band the other.
+            if adjustments.texture > 0 {
+                image = filtered(
+                    "CIUnsharpMask",
+                    image: image,
+                    values: [
+                        kCIInputRadiusKey: 1 + adjustments.texture * 1.5,
+                        kCIInputIntensityKey: adjustments.texture * 0.8,
+                    ]
+                )
+            } else if adjustments.texture < 0 {
+                let amount = -adjustments.texture
+                image = filtered(
+                    "CIMix",
+                    image: blurred(image, radius: 0.5 + amount * 1.5),
+                    values: [
+                        kCIInputBackgroundImageKey: image,
+                        "inputAmount": amount * 0.5,
+                    ]
+                ).cropped(to: image.extent)
+            }
+        case .clarity:
+            // Clarity: midtone local contrast — the same idea at a much larger radius,
+            // so it shapes broad regions rather than fine grain.
+            if adjustments.clarity > 0 {
+                image = filtered(
+                    "CIUnsharpMask",
+                    image: image,
+                    values: [
+                        kCIInputRadiusKey: 8 + adjustments.clarity * 20,
+                        kCIInputIntensityKey: adjustments.clarity * 0.7,
+                    ]
+                )
+            } else if adjustments.clarity < 0 {
+                let amount = -adjustments.clarity
+                image = filtered(
+                    "CIMix",
+                    image: blurred(image, radius: 4 + amount * 10),
+                    values: [
+                        kCIInputBackgroundImageKey: image,
+                        "inputAmount": amount * 0.6,
+                    ]
+                ).cropped(to: image.extent)
+            }
         }
         return image
     }

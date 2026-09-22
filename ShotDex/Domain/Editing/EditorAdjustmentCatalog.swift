@@ -41,8 +41,9 @@ enum EditorAdjustmentCatalog {
     /// left instead of from the centre and the negative half is not offered.
     ///
     /// Detail and Effects are deliberately *not* in here — dragging left has a
-    /// real meaning for each of them (soften, blur, denoise, brighten the
-    /// corners). Grain and the RAW decode controls are the genuine one-way ones:
+    /// real meaning for most of them (soften, blur, brighten the corners).
+    /// Noise reduction is the exception: it used to add grain to the right,
+    /// and that half moved to Grain, so it is a plain strength now. Grain and the RAW decode controls are the genuine one-way ones:
     /// there is no negative amount of film grain, and the RAW parameters are 0…1
     /// strengths inside `CIRAWFilter`.
     static let unipolarKinds: Set<PhotoAdjustmentKind> = [
@@ -54,6 +55,8 @@ enum EditorAdjustmentCatalog {
         .sharpenRadius,
         .sharpenDetail,
         .sharpenMasking,
+        .noiseReduction,
+        .noiseDetail,
         .colorNoiseReduction,
         .vignetteHighlights,
         .defringe,
@@ -89,6 +92,8 @@ enum EditorAdjustmentCatalog {
             return .vignette
         case .grainSize, .grainRoughness:
             return .grain
+        case .noiseDetail:
+            return .noiseReduction
         default:
             return nil
         }
@@ -131,7 +136,7 @@ enum EditorAdjustmentCatalog {
                 kinds: [
                     .sharpness, .sharpenRadius, .sharpenDetail, .sharpenMasking,
                     .definition,
-                    .noiseReduction, .colorNoiseReduction,
+                    .noiseReduction, .noiseDetail, .colorNoiseReduction,
                 ]
             ),
             EditorAdjustmentGroup(
@@ -217,7 +222,8 @@ enum EditorAdjustmentCatalog {
         switch kind {
         case .blackPoint: "Blacks"
         case .warmth: "Temp"
-        case .noiseReduction: "Noise"
+        case .noiseReduction: "Lum NR"
+        case .noiseDetail: "NR Detail"
         case .sharpness: "Sharpen"
         case .sharpenRadius: "Radius"
         case .sharpenDetail: "Detail"
@@ -249,6 +255,10 @@ enum EditorAdjustmentCatalog {
             guard abs(value) > 0.0001 else { return "0" }
             return typographic(String(format: "%+.2f", value))
         case .percent:
+            // A one-way strength has no direction to announce: "50", not "+50".
+            guard !unipolarKinds.contains(kind) else {
+                return "\(Int((value * 100).rounded()))"
+            }
             return signedInteger(value * 100)
         case .kelvinOffset:
             return signedInteger((value * 3_000 / 10).rounded() * 10)

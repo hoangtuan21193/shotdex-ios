@@ -53,6 +53,7 @@ struct EditorAdjustmentCatalogTests {
             .vignetteMidpoint, .vignetteFeather, .sharpenRadius,
             .sharpenDetail, .sharpenMasking,
             .colorNoiseReduction, .vignetteHighlights, .defringe, .rawLuminanceNoise,
+            .noiseReduction, .noiseDetail,
         ] {
             #expect(EditorAdjustmentCatalog.sliderRange(of: kind) == 0...1)
             #expect(EditorAdjustmentCatalog.isBipolar(kind) == false)
@@ -62,10 +63,10 @@ struct EditorAdjustmentCatalogTests {
     }
 
     @Test func detailAndEffectsSlidersGoBothWays() {
-        // Left of centre has a real meaning for each of these: soften, denoise,
+        // Left of centre has a real meaning for each of these: soften,
         // flatten local contrast, brighten the corners, smooth texture/clarity.
         for kind in [
-            PhotoAdjustmentKind.sharpness, .noiseReduction, .definition, .vignette,
+            PhotoAdjustmentKind.sharpness, .definition, .vignette,
             .texture, .clarity, .dehaze,
         ] {
             #expect(EditorAdjustmentCatalog.isBipolar(kind))
@@ -102,7 +103,7 @@ struct EditorAdjustmentCatalogTests {
             .first { $0.id == .detail }
         #expect(detail?.kinds == [
             .sharpness, .sharpenRadius, .sharpenDetail, .sharpenMasking,
-            .definition, .noiseReduction, .colorNoiseReduction,
+            .definition, .noiseReduction, .noiseDetail, .colorNoiseReduction,
         ])
         // Detail and Masking are one-way strengths, like Radius.
         #expect(EditorAdjustmentCatalog.shortTitle(of: .sharpenDetail) == "Detail")

@@ -395,7 +395,11 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
     case sharpenDetail
     case sharpenMasking
     case definition
+    /// Luminance noise reduction, 0…1. One-way: the old right half that added
+    /// grain is gone — Grain has its own sliders in Effects.
     case noiseReduction
+    /// How much fine texture luminance noise reduction keeps, 0…1, default 0.5.
+    case noiseDetail
     case colorNoiseReduction
     case texture
     case clarity
@@ -451,7 +455,8 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         case .sharpenDetail: "Sharpen Detail"
         case .sharpenMasking: "Sharpen Masking"
         case .definition: "Definition"
-        case .noiseReduction: "Noise"
+        case .noiseReduction: "Luminance Noise"
+        case .noiseDetail: "Noise Detail"
         case .colorNoiseReduction: "Color Noise"
         case .texture: "Texture"
         case .clarity: "Clarity"
@@ -503,6 +508,7 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         case .sharpenMasking: "theatermask.and.paintbrush"
         case .definition: "circle.dotted"
         case .noiseReduction: "aqi.medium"
+        case .noiseDetail: "circle.dotted"
         case .colorNoiseReduction: "drop.halffull"
         case .texture: "circle.grid.2x2"
         case .clarity: "circle.hexagonpath"
@@ -538,6 +544,7 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         case .lensCorrection, .grain, .grainSize, .grainRoughness,
              .vignetteMidpoint, .vignetteFeather, .blackAndWhite,
              .sharpenRadius, .sharpenDetail, .sharpenMasking, .colorNoiseReduction,
+             .noiseReduction, .noiseDetail,
              .vignetteHighlights, .chromaticAberration, .defringe, .depthBlur: 0...1
         case .exposure: -2...2
         default: -1...1
@@ -580,6 +587,7 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
         sharpenMasking: Double = 0.0,
         definition: Double = 0.0,
         noiseReduction: Double = 0.0,
+        noiseDetail: Double = 0.5,
         colorNoiseReduction: Double = 0.0,
         texture: Double = 0.0,
         clarity: Double = 0.0,
@@ -627,6 +635,7 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
         self.sharpenMasking = sharpenMasking
         self.definition = definition
         self.noiseReduction = noiseReduction
+        self.noiseDetail = noiseDetail
         self.colorNoiseReduction = colorNoiseReduction
         self.texture = texture
         self.clarity = clarity
@@ -675,6 +684,9 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
     public var sharpenMasking = 0.0
     public var definition = 0.0
     public var noiseReduction = 0.0
+    /// Default 0.5 like Lightroom's Detail 50 — neutral, so part of `.zero` and
+    /// no key until touched. Does nothing while `noiseReduction` is 0.
+    public var noiseDetail = 0.5
     public var colorNoiseReduction = 0.0
     public var texture = 0.0
     public var clarity = 0.0
@@ -733,6 +745,7 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .sharpenMasking: sharpenMasking
             case .definition: definition
             case .noiseReduction: noiseReduction
+            case .noiseDetail: noiseDetail
             case .colorNoiseReduction: colorNoiseReduction
             case .texture: texture
             case .clarity: clarity
@@ -783,6 +796,7 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .sharpenMasking: sharpenMasking = newValue
             case .definition: definition = newValue
             case .noiseReduction: noiseReduction = newValue
+            case .noiseDetail: noiseDetail = newValue
             case .colorNoiseReduction: colorNoiseReduction = newValue
             case .texture: texture = newValue
             case .clarity: clarity = newValue
