@@ -38,6 +38,9 @@ final class PhotoStackModel {
     private(set) var isWorking = false
     private(set) var statusText: String?
     var failure: Failure?
+    /// Frames the last combine left out because they would not line up
+    /// (focus stack only), as indices into `assets`.
+    private(set) var excludedFrames: [Int] = []
     /// Set once the new asset is saved, indexed and visible to the grid.
     private(set) var savedAssetID: String?
 
@@ -59,6 +62,16 @@ final class PhotoStackModel {
     }
 
     var canSave: Bool { preview != nil && !isWorking }
+
+    /// "2 of 40 frames couldn't be lined up and were left out." — nil when every
+    /// frame made it in (FS-01.10 §4).
+    var excludedFramesMessage: String? {
+        guard !excludedFrames.isEmpty else { return nil }
+        return String(
+            localized: "\(excludedFrames.count) of \(previewFrames.count) frames couldn't be lined up and were left out.",
+            comment: "Focus Stack panel: frames dropped because alignment failed. First number is dropped frames, second is all frames."
+        )
+    }
 
     /// Loads every frame once at preview resolution. Full resolution is left
     /// until Save: a thirty-frame macro stack at 48 megapixels is gigabytes, and
@@ -95,10 +108,11 @@ final class PhotoStackModel {
         statusText = workingText
         defer { isWorking = false }
         do {
-            let combined = try await renderer.combine(images: previewFrames, mode: mode)
-            let cgImage = try await renderer.render(combined)
+            let result = try await renderer.combineReportingFrames(images: previewFrames, mode: mode)
+            let cgImage = try await renderer.render(result.image)
             guard !Task.isCancelled else { return }
             preview = UIImage(cgImage: cgImage)
+            excludedFrames = result.excludedFrames
         } catch {
             failure = .load(error.localizedDescription)
         }

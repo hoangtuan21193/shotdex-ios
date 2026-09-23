@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-23 |
 | Trạng thái | accepted |
-| Tiến độ | **đang làm** (2026-09-24) — FS-01.10 task 1/9 (bộ căn có co giãn, chưa nối vào renderer); 0/14 AC xanh |
+| Tiến độ | **đang làm** (2026-09-24) — FS-01.10 task 2/9; 1/14 AC xanh (AC-2), AC-1 và AC-4 một nửa |
 | Nguồn | phản hồi người dùng — *"tôi chỉ cần focus stack thôi, tôi muốn làm như app Helicon Focus"* |
 | Spec sinh ra từ đây | [FS-01.10](../02-functional-spec/FS-01-library/10-focus-stack.md) |
 

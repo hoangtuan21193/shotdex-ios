@@ -1,7 +1,6 @@
 import CoreImage
 import CoreImage.CIFilterBuiltins
 import Foundation
-import Vision
 
 /// How several frames of the same subject are combined into one.
 public enum PhotoStackMode: String, CaseIterable, Identifiable, Sendable {
@@ -24,6 +23,13 @@ public enum PhotoStackMode: String, CaseIterable, Identifiable, Sendable {
     /// a little drift (it reads as motion); a focus stack does not — a two-pixel
     /// shift turns the sharpness comparison into noise.
     public var needsAlignment: Bool { self == .focusStack }
+}
+
+/// A combined image and the frames that did not make it in.
+public struct PhotoStackResult: @unchecked Sendable {
+    public var image: CIImage
+    /// Indices into the input frames that were left out, in order.
+    public var excludedFrames: [Int]
 }
 
 public enum PhotoStackError: LocalizedError {
@@ -61,26 +67,80 @@ public actor PhotoStackRenderer {
         mode: PhotoStackMode,
         alignmentProgress: (@Sendable (Int, Int) -> Void)? = nil
     ) throws -> CIImage {
+        try combineReportingFrames(images: images, mode: mode, alignmentProgress: alignmentProgress).image
+    }
+
+    /// Like `combine`, and also says which frames were left out.
+    ///
+    /// A focus stack drops every frame it cannot line up (FS-01.10 §4): a frame
+    /// stacked unaligned smears its sharp detail across the others, which is
+    /// worse than not having it. The other modes use every frame.
+    public func combineReportingFrames(
+        images: [CIImage],
+        mode: PhotoStackMode,
+        alignmentProgress: (@Sendable (Int, Int) -> Void)? = nil
+    ) throws -> PhotoStackResult {
         guard images.count >= 2 else { throw PhotoStackError.needsTwoImages }
         let base = images[0]
         let extent = base.extent
         guard extent.width > 0, extent.height > 0 else { throw PhotoStackError.renderFailed }
 
+        let fittedFrames = [base] + images.dropFirst().map { Self.fitted($0, to: extent) }
         var frames: [CIImage] = [base]
-        for (offset, image) in images.dropFirst().enumerated() {
-            var frame = Self.fitted(image, to: extent)
-            if mode.needsAlignment {
-                frame = align(frame, to: base) ?? frame
+        var excluded: [Int] = []
+        let maps: [CGAffineTransform?] = mode.needsAlignment
+            ? alignedMaps(fittedFrames, extent: extent)
+            : Array(repeating: .identity, count: fittedFrames.count)
+        for index in fittedFrames.indices.dropFirst() {
+            alignmentProgress?(index, fittedFrames.count - 1)
+            guard let map = maps[index] else {
+                excluded.append(index)
+                continue
             }
-            alignmentProgress?(offset + 1, images.count - 1)
-            frames.append(frame)
+            if map == .identity {
+                frames.append(fittedFrames[index])
+            } else {
+                // Clamped before cropping: a shift of a few pixels leaves that
+                // much of the frame uncovered, and transparent edges composite
+                // as a white border around the whole stack. Clamping repeats the
+                // edge pixel instead, invisible at the scale alignment moves.
+                frames.append(fittedFrames[index].transformed(by: map).clampedToExtent().cropped(to: extent))
+            }
         }
+        guard frames.count >= 2 else { throw PhotoStackError.needsTwoImages }
 
+        let image: CIImage
         switch mode {
-        case .average: return Self.averaged(frames)
-        case .lighten: return Self.reduced(frames, using: CIFilter.lightenBlendMode())
-        case .darken: return Self.reduced(frames, using: CIFilter.darkenBlendMode())
-        case .focusStack: return focusStacked(frames)
+        case .average: image = Self.averaged(frames)
+        case .lighten: image = Self.reduced(frames, using: CIFilter.lightenBlendMode())
+        case .darken: image = Self.reduced(frames, using: CIFilter.darkenBlendMode())
+        case .focusStack: image = focusStacked(frames)
+        }
+        return PhotoStackResult(image: image, excludedFrames: excluded)
+    }
+
+    /// Focus-bracket alignment (`FocusStackAligner`) on small renders of the
+    /// frames, handed back as Core Image transforms moving each frame onto the
+    /// base, or nil for a frame that would not line up.
+    private func alignedMaps(_ frames: [CIImage], extent: CGRect) -> [CGAffineTransform?] {
+        let scale = min(1, CGFloat(PanoramaImage.workingEdge) / max(extent.width, extent.height))
+        let shrink = CGAffineTransform(scaleX: scale, y: scale)
+        let small: [CGImage] = frames.compactMap { frame in
+            let scaled = frame.transformed(by: shrink)
+            return context.createCGImage(scaled, from: scaled.extent.integral)
+        }
+        guard small.count == frames.count else {
+            return [.identity] + Array(repeating: nil, count: max(0, frames.count - 1))
+        }
+        // The aligner answers in working pixels, top-left origin. Core Image
+        // wants full-resolution pixels, bottom-left origin: shrink, apply, grow
+        // back — each side of that flipped about the frame's height.
+        let flip = CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: extent.height)
+        return FocusStackAligner.align(small).map { working in
+            working.map { map in
+                let topLeftFull = shrink.concatenating(map).concatenating(shrink.inverted())
+                return flip.concatenating(topLeftFull).concatenating(flip)
+            }
         }
     }
 
@@ -207,33 +267,6 @@ public actor PhotoStackRenderer {
             y: extent.height / image.extent.height
         )
         return image.transformed(by: scale).clampedToExtent().cropped(to: extent)
-    }
-
-    /// Lines a frame up with the base using Vision's translational registration.
-    ///
-    /// Translation only, not homography: a focus stack is shot on a tripod or a
-    /// rail, so what drifts is a few pixels of shift, and fitting a perspective
-    /// warp to that mostly fits the noise. Returns nil when Vision cannot
-    /// register the pair, and the caller keeps the unaligned frame rather than
-    /// dropping it.
-    private func align(_ image: CIImage, to base: CIImage) -> CIImage? {
-        let request = VNTranslationalImageRegistrationRequest(targetedCIImage: image)
-        let handler = VNImageRequestHandler(ciImage: base)
-        do {
-            try handler.perform([request])
-        } catch {
-            return nil
-        }
-        guard let observation = request.results?.first as? VNImageTranslationAlignmentObservation
-        else { return nil }
-        // Clamped before cropping: a shift of a few pixels leaves that much of
-        // the frame uncovered, and transparent edges composite as a white border
-        // around the whole stack. Clamping repeats the edge pixel instead, which
-        // is invisible at the scale the alignment actually moves things.
-        return image
-            .transformed(by: observation.alignmentTransform)
-            .clampedToExtent()
-            .cropped(to: base.extent)
     }
 
     /// Renders a combined image to a CGImage for saving or display.

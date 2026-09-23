@@ -137,7 +137,12 @@ struct PhotoStackScreen: View {
                 .foregroundStyle(EditorTheme.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
 
-            if model.mode.needsAlignment {
+            if let message = model.excludedFramesMessage {
+                Label(message, systemImage: "exclamationmark.triangle")
+                    .font(EditorTheme.maskSubtitle)
+                    .foregroundStyle(EditorTheme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if model.mode.needsAlignment {
                 Label(
                     "Frames are lined up before stacking, so a handheld sequence still works — a tripod still works better.",
                     systemImage: "info.circle"

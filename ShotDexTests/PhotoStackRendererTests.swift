@@ -39,7 +39,11 @@ struct PhotoStackRendererTests {
             for x in 0..<side {
                 state = state &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
                 let noise = UInt8(truncatingIfNeeded: state >> 56)
-                let isSharp = (x < side / 2) == sharpOnLeft
+                // The top quarter is sharp in every frame, as the nearest or
+                // farthest plane of a real bracket is shared by its neighbours:
+                // it is what the frames are lined up on.
+                let isShared = y < side / 4
+                let isSharp = isShared || (x < side / 2) == sharpOnLeft
                 let value: UInt8 = isSharp ? noise : 128
                 let i = (y * side + x) * 4
                 bytes[i] = value; bytes[i + 1] = value; bytes[i + 2] = value
@@ -68,10 +72,11 @@ struct PhotoStackRendererTests {
             return (Double(bytes[i]) / 255, Double(bytes[i + 1]) / 255, Double(bytes[i + 2]) / 255)
         }
 
-        /// Standard deviation of the red channel over a column range.
+        /// Standard deviation of the red channel over a column range, below the
+        /// band every frame shares.
         func spread(columns: Range<Int>) -> Double {
             var values: [Double] = []
-            for y in 0..<height { for x in columns { values.append(rgb(x, y).0) } }
+            for y in (height / 4 + 8)..<height { for x in columns { values.append(rgb(x, y).0) } }
             let mean = values.reduce(0, +) / Double(values.count)
             return (values.map { ($0 - mean) * ($0 - mean) }.reduce(0, +) / Double(values.count)).squareRoot()
         }
@@ -132,7 +137,7 @@ struct PhotoStackRendererTests {
     }
 
     @Test func focusStackKeepsTheDetailedHalfOfEachFrame() async throws {
-        let size = 128
+        let size = 256
         let leftSharp = halfSharp(side: size, sharpOnLeft: true)
         let rightSharp = halfSharp(side: size, sharpOnLeft: false)
         let pixels = try await render([leftSharp, rightSharp], .focusStack)
@@ -143,6 +148,22 @@ struct PhotoStackRendererTests {
         #expect(left > 0.15, "left half lost its detail: \(left)")
         #expect(right > 0.15, "right half lost its detail: \(right)")
         #expect(flat < 0.02, "a half that is flat in every frame stays flat: \(flat)")
+    }
+
+    @Test func aFocusStackLeavesOutAFrameItCannotLineUp() async throws {
+        // FS-01.10 AC-4: a frame of another scene is dropped and named, not
+        // stacked unaligned.
+        let size = 256
+        let a = halfSharp(side: size, sharpOnLeft: true), b = halfSharp(side: size, sharpOnLeft: false)
+        let stranger = solid(0.3, 0.3, 0.3, side: size)
+        let result = try await PhotoStackRenderer().combineReportingFrames(images: [a, stranger, b], mode: .focusStack)
+        #expect(result.excludedFrames == [1])
+    }
+
+    @Test func blendModesUseEveryFrame() async throws {
+        let result = try await PhotoStackRenderer().combineReportingFrames(
+            images: [solid(0.2, 0.2, 0.2), solid(0.8, 0.1, 0.4), solid(0.5, 0.5, 0.5)], mode: .lighten)
+        #expect(result.excludedFrames.isEmpty)
     }
 
     // MARK: Frame handling
