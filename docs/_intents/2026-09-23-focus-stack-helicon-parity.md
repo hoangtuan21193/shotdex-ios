@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-23 |
 | Trạng thái | accepted |
-| Tiến độ | **chưa làm** (2026-09-23) — chờ spike trước `/spec` |
+| Tiến độ | **chưa làm** (2026-09-24) — spike xong ([báo cáo](2026-09-24-focus-stack-spike.md)); chưa có spec |
 | Nguồn | phản hồi người dùng — *"tôi chỉ cần focus stack thôi, tôi muốn làm như app Helicon Focus"* |
 | Spec sinh ra từ đây | (điền khi sang Design) |
 
@@ -80,8 +80,11 @@ dùng tự nêu ra.
 4. **Dữ liệu thử**: panorama dựng được khung ảo có đáp án từ ảnh 360°. Focus stack cần một chuỗi có độ
    sâu thật. Mặc định đề xuất: dựng khung ảo từ một ảnh CC0 kèm bản đồ độ sâu (làm mờ theo độ sâu từng
    khung + co giãn giả lập focus breathing), cộng một chuỗi thật có giấy phép mở nếu tìm được. → spike.
+   **2026-09-24:** chỉ có khung ảo; chưa tìm được chuỗi thật có giấy phép mở — ghi ở §6 của spike.
 5. ~~Spike~~ — **chốt 2026-09-23: có, chặn trước `/spec`** — đo căn khung có co giãn, các cách ghép đã chốt
    ở câu 1, và bộ nhớ ở 100 khung. Dữ liệu theo câu 4.
+   **Kết quả 2026-09-24:** [2026-09-24-focus-stack-spike.md](2026-09-24-focus-stack-spike.md) — căn có co giãn là bắt
+   buộc (chỉ dịch: 17,7 dB, kém khung đơn; có co giãn: 35 dB ở breathing 2%); hai cách ghép và bộ nhớ phẳng theo số khung làm được.
 6. ~~Thứ tự với intent menu mục đích~~ — **chốt 2026-09-23: menu làm trước**
    ([2026-09-23-combine-photos-purpose-menu.md](2026-09-23-combine-photos-purpose-menu.md)).
 
