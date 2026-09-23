@@ -462,3 +462,14 @@ grid as a near-black frame; that is the fixture, not a bug.
   hồ thì hỏi lại") mà không nhắc `intent`/`/spec` — hai luật cùng đúng đánh nhau trong một prompt. Hoặc làm
   prompt của eval bớt mơ hồ, hoặc cho `checks` chấp nhận "hỏi lại phạm vi" là một cách đi qua giai đoạn Plan.
   _(tìm thấy khi chạy `Tools/evals` sau lần sửa `CLAUDE.md` của task 0b)_
+
+## Sweep 2026-09-23 — tìm thấy trong lúc làm FS-03.11 tasks 2–13
+
+- [ ] **iPad 18.6: mở sheet New Mask thì ảnh trên canvas phía sau phóng to (~2×).** Đóng sheet thì chưa chụp
+  được (driver kẹt ở nút Cancel của sheet trên 18.6 — xem dưới). 26.5 không bị. Sheet có từ FS-03.09, không
+  do FS-03.11 đẻ ra; chưa điều tra nguyên nhân (nghi `presentationDetents` trên iPad 18 đổi kích thước
+  container của stage, và zoom được giữ theo tỷ lệ).
+- [ ] **`Tools/ui-drive` trên iPad 18.6 kẹt vô hạn ở hai chỗ**: bước `dump` màn Presets (cây phần tử lớn — 49
+  thẻ film look có ảnh) và `tap` "Cancel" khi sheet đang mở (hai phần tử cùng nhãn: nút sheet và nút thanh
+  commit). Không có timeout, lượt chạy bị cắt ở mốc 10 phút của Bash và chồng lên lượt sau. Cần timeout cho
+  từng bước và ưu tiên phần tử trong sheet đang trình bày.
