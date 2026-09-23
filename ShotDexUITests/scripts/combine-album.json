@@ -1,0 +1,124 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Collections",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "tap",
+      "label": "Recently Added, 13 photos"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "tap",
+      "label": "Select photos",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 0
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 1
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 2
+    },
+    {
+      "action": "tap",
+      "label": "More selection actions"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "screenshot",
+      "name": "01-album-menu"
+    },
+    {
+      "action": "dump",
+      "name": "01-album-menu"
+    },
+    {
+      "action": "tap",
+      "label": "Combine Photos"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "screenshot",
+      "name": "02-album-submenu"
+    },
+    {
+      "action": "dump",
+      "name": "02-album-submenu"
+    },
+    {
+      "action": "tap",
+      "label": "Stack Exposures"
+    },
+    {
+      "action": "wait",
+      "seconds": 10
+    },
+    {
+      "action": "tap",
+      "label": "Lighten"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "screenshot",
+      "name": "03-lighten"
+    },
+    {
+      "action": "tap",
+      "label": "Save",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 25
+    },
+    {
+      "action": "screenshot",
+      "name": "04-after-save"
+    },
+    {
+      "action": "dump",
+      "name": "04-after-save"
+    }
+  ]
+}

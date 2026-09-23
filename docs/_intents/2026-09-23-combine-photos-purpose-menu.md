@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-23 |
 | Trạng thái | accepted |
-| Tiến độ | **gần xong** (2026-09-24) — 9/9 task đã commit; 8/15 AC xanh (1, 2, 3, 4, 5, 6, 7, 10); còn AC-8 (Duo), 9, 11–15 |
+| Tiến độ | **gần xong** (2026-09-24) — 9/9 task đã commit; 9/15 AC xanh (1–7, 10, 11), AC-12 và AC-13 một nửa; còn AC-8 (Duo), 9 (VoiceOver), 14 (album người dùng), 15 (smart album) |
 | Nguồn | phản hồi người dùng (trong lúc soạn FS-14 panorama) |
 | Spec sinh ra từ đây | [FS-01.09](../02-functional-spec/FS-01-library/09-photo-stacking.md) |
 
