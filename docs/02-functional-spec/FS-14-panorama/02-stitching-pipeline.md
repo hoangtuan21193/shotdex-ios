@@ -48,11 +48,13 @@
 - Bù sáng: một hệ số gain mỗi khung, giải **trong miền log** bằng bình phương tối thiểu. Dạng tuyến tính
   Brown–Lowe lệch 10–19% khi có vignette; dạng log lệch 1,3–2,7%. Tính trên giá trị tuyến tính.
 - **Không gian màu**: Display P3 khi có ít nhất một khung P3, sRGB khi không.
-- **Giữ HDR gain map**: khung nào có gain map thì gain map của nó được chiếu, bù và trộn theo **cùng**
-  hình học, cùng đường nối với ảnh chính; khung không có gain map góp gain map trung tính. Ảnh ra mang
-  một gain map. Không khung nào có thì ảnh ra là SDR.
-  - Gain map được ghi ở độ phân giải thấp hơn ảnh chính (như khung gốc của iPhone), nên giữ trong RAM được.
-  - Chưa đo: bộ ghi JPEG có còn ghi theo luồng khi kèm gain map không (spike chỉ đo ảnh không gain map).
+- **Ảnh ra là SDR** (chốt 2026-09-23, sau khi đo). Gain map của khung gốc không đi theo.
+
+  Đặc tả cũ đòi giữ gain map. Phép đo cho thấy **không làm được**: gắn dữ liệu phụ vào bộ ghi làm
+  footprint tăng **theo số pixel ảnh chính** — +92 MB ở 24 MP, +369 MB ở 96 MP, **+1 230 MB ở 300 MP** —
+  tức là mất đúng cái ghi-theo-luồng mà cả đường xuất dựa vào ([kế hoạch §Task 0](../../_plans/2026-09-23-fs-14-panorama.md)).
+  Chi tiết ở [§2 mục Cố ý không có](README.md#2-phạm-vi).
+
 
 ## 5. Trộn và mép
 

@@ -31,6 +31,12 @@ khi dò sai · không trần số khung, không trần kích thước (Size 25�
 **Cố ý không có:**
 - Fill Edges (lấp mép bằng nội dung bịa) — không nằm trong câu 6 của intent; là ảnh do app vẽ ra.
 - Ghép HDR — chuyện của intent Lightroom parity, câu 4.
+- **Giữ HDR gain map của khung gốc** (bỏ 2026-09-23, sau khi đo). Ảnh ghép ra là **SDR**; không gian
+  màu vẫn là Display P3 khi có khung P3. Lý do là một con số, không phải một ưu tiên: gắn dữ liệu phụ
+  vào bộ ghi JPEG làm bộ nhớ tăng **theo số pixel ảnh chính** — +92 MB ở 24 MP, +369 MB ở 96 MP,
+  **+1 230 MB ở 300 MP** — nên cái ghi-theo-luồng mà cả tính năng dựa vào biến mất đúng ở cỡ ảnh mà
+  tính năng này sinh ra để phục vụ. Hệ quả người dùng thấy: panorama ghép từ ảnh iPhone HDR trông
+  nhạt hơn ảnh gốc khi xem cạnh nhau.
 - Lối vào trong Edit extension — trần ~120 MB ([NF-02](../../04-non-functional-design/NF-02-memory-and-resources.md)).
 - Điểm khống chế tay kiểu PTGui — sửa tay chỉ ở mức kéo cả khung ([01 §5](01-screen-and-flow.md)).
 
@@ -91,7 +97,7 @@ test dựng chúng từ một ảnh 360° nhỏ đóng trong test bundle. "Thờ
 | AC-28 | s2 đã ghép, preview nét đang hiện | kéo Boundary Warp 0 → 100 trong 2 s | preview đổi theo tay ≥ 15 khung/giây; thả tay ≤ 1,5 s có bản nét; mép bản nháp và bản nét lệch ≤ 2 px (ở 1536) | ⚠️ chưa có — `PanoramaRenderTests` (hình học) + đo tay máy thật |
 | AC-29 | s1, preview nét đang hiện | chạm Cylindrical | ≤ 150 ms có bản nháp Cylindrical; không chạy lại bước căn ảnh | ⚠️ chưa có — `PanoramaRenderTests` + đo tay |
 | AC-23 | s1, một người có mặt ở vùng chồng của khung 2 nhưng không có ở khung 3 | ghép | người đó hiện trọn vẹn hoặc không hiện; không vết cắt đôi, không hai bản | ⚠️ chưa có — `PanoramaRenderTests` |
-| AC-24 | 3 khung iPhone HDR (P3 + gain map) + 1 khung SDR | Save | ảnh ra P3, có một gain map; gain map lấy mẫu ở vùng HDR của một khung lệch ≤ 5% so với gain map gốc của khung đó | ⚠️ chưa có — `PanoramaExportTests` + máy thật |
+| AC-24 | 3 khung iPhone HDR (P3 + gain map) + 1 khung SDR | Save | ảnh ra **P3 và SDR**, không có gain map | ✅ `PanoramaExportTests` — tiêu chí đã đổi 2026-09-23: giữ gain map là **không làm được**, xem §2 |
 
 **Chưa chứng minh được:** cả 29 — chưa có dòng code nào. Thời gian và footprint (AC-12, AC-28, AC-29) là **mục tiêu đề xuất**,
 spike chỉ đo trên Mac.
@@ -101,7 +107,7 @@ spike chỉ đo trên Mac.
 Đã chốt 2026-09-23: luôn JPEG · vượt 65535 px thì thu nhỏ và báo trước · vào nền vẫn lưu tiếp + màn luôn
 sáng · lưu xong mở ảnh trong viewer · màn rộng dùng cột phải · "panorama" = cờ hệ thống hoặc thẻ XMP của
 ShotDex, cho cả viewer, bộ lọc và bộ sưu tập · không trần số khung, trên 50 thì báo ước lượng thời gian ·
-P3 khi có khung P3 và **giữ HDR gain map** · đường nối tránh vật chuyển động · AC-12 là mục tiêu, chốt ở `/verify` · Size là slider 25–100% trong panel, một dòng ước lượng px · MP · MB · thời gian · preview hai tầng: nháp khi kéo, nét khi thả.
+P3 khi có khung P3, ảnh ra SDR (gain map: xem §2) · đường nối tránh vật chuyển động · AC-12 là mục tiêu, chốt ở `/verify` · Size là slider 25–100% trong panel, một dòng ước lượng px · MP · MB · thời gian · preview hai tầng: nháp khi kéo, nét khi thả.
 **Không còn câu treo.**
 
 ## 7. Tài liệu phải sửa khi Build
@@ -118,7 +124,7 @@ P3 khi có khung P3 và **giữ HDR gain map** · đường nối tránh vật c
 |---|---|
 | Khung thử không có thị sai, vật chuyển động → spike lạc quan | `/verify` chạy thêm trên chuỗi chụp tay thật |
 | PhotoKit có thể từ chối JPEG 200–700 MP | đo ở đầu `/plan`, trước khi viết đường xuất |
-| Ghi JPEG kèm gain map có thể không còn ghi theo luồng | đo ở đầu `/plan` cùng lượt trên |
+| ~~Ghi JPEG kèm gain map có thể không còn ghi theo luồng~~ | **đã đo, đúng như lo**: +1 230 MB ở 300 MP. Gain map bị bỏ khỏi phạm vi (§2) |
 | Đường nối tránh vật chuyển động chưa đo chi phí | đo ở `/plan`; AC-23 là cổng |
 | Spike dựng preview 8 MP mất 1–2 s trên CPU Mac — chưa đạt 15 khung/giây | bản nháp phải chạy GPU (Core Image/Metal); `/plan` đo trước tiên |
 | Boundary Warp giữ đường thẳng chưa viết lần nào (spike chỉ có bản không có ràng buộc đường thẳng) | làm sau cùng; AC-11 là cổng |
