@@ -253,11 +253,15 @@ final class UIDriverTests: XCTestCase {
     private func element(for step: UIDriverStep) throws -> XCUIElement {
         if let label = step.label {
             let query = queryForType(step.type)
-            let predicate = NSPredicate(
-                format: "label ==[c] %@ OR identifier ==[c] %@ OR label BEGINSWITH[c] %@",
-                label, label, label
-            )
-            let matches = query.matching(predicate)
+            // An exact label or identifier wins over a prefix: "Photo, file type
+            // JPG" names the one photo with no EXIF line, and as a prefix it
+            // would match every JPEG in the grid.
+            let exact = query.matching(NSPredicate(
+                format: "label ==[c] %@ OR identifier ==[c] %@", label, label
+            ))
+            let matches = exact.firstMatch.exists
+                ? exact
+                : query.matching(NSPredicate(format: "label BEGINSWITH[c] %@", label))
             let wanted = step.index ?? 0
             let candidate = matches.element(boundBy: wanted)
             guard candidate.waitForExistence(timeout: step.seconds ?? 10) else {

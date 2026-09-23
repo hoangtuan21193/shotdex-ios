@@ -465,12 +465,11 @@ grid as a near-black frame; that is the fixture, not a bug.
 
 ## Sweep 2026-09-23 — tìm thấy trong lúc làm FS-03.11 tasks 2–13
 
-- [ ] **iPad 18.6: mở sheet New Mask thì ảnh trên canvas phía sau phóng to (~2×).** Đóng sheet thì chưa chụp
-  được (driver kẹt ở nút Cancel của sheet trên 18.6 — xem dưới). 26.5 không bị. Sheet có từ FS-03.09, không
-  do FS-03.11 đẻ ra; chưa điều tra nguyên nhân (nghi `presentationDetents` trên iPad 18 đổi kích thước
-  container của stage, và zoom được giữ theo tỷ lệ).
-  Cũng thấy trên **iPhone Duo inner, iOS 27.1** (script `duo-parity-tour.json`) — vậy không riêng iOS 18;
-  iPad 26.5 không bị.
+- [x] ~~**iPad 18.6 / Duo 27.1: mở sheet New Mask thì ảnh phía sau phóng to (~2×)**~~ — **không phải lỗi**
+  (kiểm lại 2026-09-23). Cắt cùng một vùng ảnh ở khung trước và sau khi mở sheet, full-res qua
+  `Tools/sim-shot`: trùng khít từng pixel, cả iPad Pro 11 (M4) 18.6 (`ipad-newmask-zoom.json`, ảnh chân dung
+  CC0) lẫn Duo inner 27.1 (`duo-newmask.json`) — chỉ khác lớp dim của sheet. Báo cáo cũ đến từ việc so ảnh
+  thu nhỏ: sheet che nửa dưới và làm tối, nên phần trên trông như to ra.
 - [ ] **`Tools/ui-drive` trên iPad 18.6 kẹt vô hạn ở hai chỗ**: bước `dump` màn Presets (cây phần tử lớn — 49
   thẻ film look có ảnh) và `tap` "Cancel" khi sheet đang mở (hai phần tử cùng nhãn: nút sheet và nút thanh
   commit). Không có timeout, lượt chạy bị cắt ở mốc 10 phút của Bash và chồng lên lượt sau. Cần timeout cho

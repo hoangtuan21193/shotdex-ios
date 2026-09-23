@@ -19,7 +19,7 @@ Read `ShotDexUITests/UIDriver.swift` for the authoritative list; today:
 |---|---|---|
 | `launch` | — | fresh launch of `com.hoangtuan.shotdex` |
 | `wait` | `seconds` | first screen needs ~4s; studio/editor open ~6s |
-| `tap` | `label` [, `type`] **or** `x`,`y` (0–1 normalized) | label = accessibility label; `type` = `button`, `cell`, `staticText`… disambiguates |
+| `tap` | `label` [, `type`, `index`] **or** `x`,`y` (0–1 normalized) | label = accessibility label or identifier, **exact match first**, prefix only when nothing matches exactly (`"Photo, file type"` + `index` walks the grid); `type` = `button`, `cell`, `staticText`… disambiguates |
 | `longPress` | same as tap, `seconds` | |
 | `swipe` | `direction`, optional `x`,`y` | |
 | `typeText` | `text` | into the focused field |
