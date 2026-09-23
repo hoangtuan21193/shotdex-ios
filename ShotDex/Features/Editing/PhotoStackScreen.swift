@@ -25,6 +25,10 @@ struct PhotoStackScreen: View {
     @Environment(AppDependencies.self) private var dependencies
 
     let presentation: PhotoStackPresentation
+    /// Called with the new asset's id once it is saved and indexed, just
+    /// before the screen closes. Cancel does not call it, so the host keeps the
+    /// selection and the user can try another row on the same frames.
+    var onSaved: (String) -> Void = { _ in }
 
     @State private var model: PhotoStackModel?
 
@@ -58,7 +62,10 @@ struct PhotoStackScreen: View {
             panel(model)
         }
         .onChange(of: model.savedAssetID) { _, id in
-            if id != nil { dismiss() }
+            if let id {
+                onSaved(id)
+                dismiss()
+            }
         }
         .alert(
             model.failure?.title ?? "",
@@ -150,12 +157,15 @@ struct PhotoStackScreen: View {
 }
 
 extension View {
+    /// Presents a Combine Photos screen. There is no onDismiss on purpose:
+    /// Cancel leaves the selection as it was (FS-01.09 §3); only a save reports
+    /// back, through `onSaved`.
     func photoStackCover(
         _ presentation: Binding<PhotoStackPresentation?>,
-        onDismiss: @escaping () -> Void
+        onSaved: @escaping (String) -> Void
     ) -> some View {
-        fullScreenCover(item: presentation, onDismiss: onDismiss) { presentation in
-            PhotoStackScreen(presentation: presentation)
+        fullScreenCover(item: presentation) { presentation in
+            PhotoStackScreen(presentation: presentation, onSaved: onSaved)
         }
     }
 }

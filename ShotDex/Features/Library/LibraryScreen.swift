@@ -158,7 +158,10 @@ struct LibraryScreen: View {
         }
         .multiEditCover($multiEditPresentation, sourceAlbum: nil, onDismiss: stopSelecting)
         .pasteEditsSheet($pasteEditsPresentation, onDismiss: stopSelecting)
-        .photoStackCover($stackPresentation, onDismiss: stopSelecting)
+        .photoStackCover($stackPresentation, onSaved: { assetID in
+            stopSelecting()
+            openSavedPhoto(assetID)
+        })
         .fullScreenCover(item: $compressionPresentation, onDismiss: stopSelecting) { presentation in
             CompressionScreen(
                 assets: presentation.assets,
