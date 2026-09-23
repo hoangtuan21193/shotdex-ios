@@ -1,52 +1,55 @@
-# FS-10 — Import từ thẻ nhớ và folder ngoài
+# FS-10 — Import (đã bỏ)
 
-`FS-10` · tier B · `Features/Import/` · `Data/Sources/ImportService.swift` · cập nhật 2026-09-22
+`FS-10` · đã bỏ · cập nhật 2026-09-24 · nguồn
+[intent](../_intents/2026-09-21-remove-import-entry-point.md)
 
-**Một câu:** nhập ảnh và video từ thẻ SD, USB hay một folder ngoài **có lọc RAW** — thứ app Photos không làm
-được lúc nhập.
+**Một câu:** ShotDex **không có màn Import**. Ảnh vào máy bằng Photos (thẻ nhớ qua Photos, AirDrop, cáp,
+iCloud) hoặc qua Share sheet ([EX-03](../03-extensions-and-integrations/EX-03-share-extension.md)); ShotDex
+index những gì đã có trong thư viện.
 
-## 1. Ràng buộc của iOS định hình thiết kế
+> Trạng thái: **spec, chưa build** (2026-09-24). Hôm nay "Import Photos" vẫn là một hàng trong Settings →
+> Photo Library, mở màn nhập từ folder ngoài có lọc RAW.
 
-- **Không nhập trực tiếp từ thân máy ảnh qua USB** như mục Devices của Photos — việc đó cần quyền riêng mà
-  Apple không cấp cho app bên thứ ba. App **chỉ đọc được ổ đã gắn qua Files**.
-- **Không tự phát hiện lúc cắm thiết bị**: hệ thống không cho app thấy ổ USB hay thẻ SD, và cũng không có
-  thông báo khi gắn ổ. Muốn đọc thì **người dùng phải tự chọn folder**.
-- Vì vậy nút Import nằm trong **Settings → Photo Library**, không tự ẩn/hiện theo thiết bị; chỉ hiện khi đã
-  có quyền đọc thư viện.
-- **Không có "xoá sau khi nhập"** — thẻ được đối xử **chỉ-đọc**.
+## 1. Vì sao bỏ
 
-## 2. Luồng
+Settings là nơi chỉnh cách app cư xử; Import là một hành động lên thư viện, đứng lạc giữa các công tắc index.
+Người dùng chốt: ShotDex là app **đọc** thư viện ảnh của hệ thống, không phải app quản lý file — một lối Import
+riêng tạo cảm giác ShotDex có kho ảnh riêng, mà nó không có. Không thay bằng lối vào nào khác (menu ⋯ của
+Library và nút ở Collections đều đã bị bác).
 
-Màn Import mở toàn màn từ Settings, có ngăn xếp điều hướng riêng.
+## 2. Cái gì ra đi, cái gì ở lại
 
-| # | Bước | Chi tiết |
-|---|---|---|
-| 1 | Chọn folder | ô chọn folder của hệ thống; quyền truy cập folder được **giữ suốt phiên** rồi trả lại lúc đóng màn |
-| 2 | Quét nhanh | duyệt đệ quy ngoài luồng chính, phân loại theo đuôi file: ảnh theo bảng định dạng của app, video theo danh sách đuôi (mov/mp4/m4v/avi/mts…), file lạ bỏ. Mỗi file thành một **ứng viên** kèm metadata giữ chỗ để lọc theo định dạng và ngày chạy được ngay. Mới nhất trước |
-| 3 | Lưới | thumbnail ảnh giải mã thẳng từ file, video lấy khung đại diện. **RAW ẩn mặc định**, kèm nhãn đếm số RAW đang ẩn; video có nhãn play |
-| 4 | Đọc EXIF nền | 8 file song song, dùng **đúng bộ chuẩn hoá tên máy và tra cảm biến** của lượt index; **video không có EXIF**. Xong thì mở khoá lọc theo máy, ống kính và ISO |
-| 5 | Lọc | dùng **bộ dựng điều kiện chung**, nhưng đánh giá **trong bộ nhớ** bằng một bản song song của bộ dịch sang SQL — có test giữ hai bên đồng bộ |
-| 6 | Nhập | phần giao giữa "đã chọn" và "đang hiện" được chép vào thư viện, **giữ nguyên tên file gốc**. Chạy tuần tự, xong thì tổng kết đã nhập / thất bại |
-| 7 | Index | ảnh mới làm thư viện phát tín hiệu thay đổi cấu trúc, và lượt index tăng dần tự nhặt. **Không gọi index thủ công** |
+| Ra đi | Vì chỉ Import dùng |
+|---|---|
+| Hàng **Import Photos** và `fullScreenCover` của nó trong `SettingsScreen`, case `.importPhotos` của `SettingsRowLabel` | lối vào duy nhất |
+| `Features/Import/` (`ImportScreen`, `ImportModel`) | chỉ Settings mở |
+| `Data/Sources/ImportService.swift`, `AppDependencies.importService` | chỉ `ImportModel` gọi |
+| `Domain/Import/ImportCandidate.swift` | chỉ Import dùng |
+| `SmartAlbumQuery+Matching.swift` (bộ đánh giá điều kiện trong bộ nhớ) và phần test của nó | tồn tại để lọc ứng viên chưa có dòng DB — chỉ `ImportModel` gọi |
+| `LibraryQueries.importedFingerprints()` | chỉ để đánh dấu ảnh "đã nhập" |
+| Chuỗi trong String Catalog chỉ phục vụ các màn trên | không để rác dịch |
 
-## 3. Bỏ qua ảnh đã nhập
+| Ở lại | Vì |
+|---|---|
+| `PhotoLibraryService.importFile(at:isVideo:)` | Video Studio, Photo Detail, kéo-thả (`PhotoDropImport`) cùng dùng để ghi file vào thư viện |
+| Share extension (`ShotDexShare`, EX-03) | lối của hệ thống, không phải lối trong app; có model riêng, không gọi `ImportService` |
+| Shortcuts/Siri (EX-04) | không có intent nào gọi Import (đã kiểm) |
+| `PhotoFileType` và test phân loại đuôi file | Library, bộ lọc và index cùng dùng |
 
-- App lấy sẵn tập **tên file kèm đúng số byte** của mọi ảnh đã có trong index, rồi đánh dấu ứng viên trùng.
-- Công tắc **Hide Photos Already Imported** (mặc định bật); chân màn nói rõ có bao nhiêu cái.
-- **Dùng tên + đúng số byte chứ không băm nội dung**: màn nhập phải trả lời **trước khi** người dùng chọn gì,
-  mà băm cả một thẻ RAW qua USB thì mất vài phút. Hai ảnh khác nhau mà trùng cả tên lẫn số byte chính xác là
-  đủ hiếm để chấp nhận.
+- **Không xoá dữ liệu:** ảnh đã nhập trước đây nằm trong thư viện Photos như mọi ảnh khác và vẫn được index.
+  Import không có bảng hay cột riêng trong database — không có gì để migrate.
+- App chưa phát hành: không cần ghi chú thay đổi.
 
-## 4. Thêm vào album
+## 3. Tiêu chí nghiệm thu
 
-Ô chọn **Add to Album** thêm mọi ảnh vừa nhập vào một album — chạy **sau cả mẻ** (một lượt ghi thay vì N,
-và một mẻ nhập dở vẫn bỏ được phần đã xong vào album).
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-1 | quyền thư viện đầy đủ | mở Settings → Photo Library (iPhone và iPad) | không có hàng Import; các hàng còn lại đúng thứ tự cũ | ⚠️ chưa có — `settings-photo-library.json` dump + ảnh |
+| AC-2 | mã nguồn app và mọi extension | `grep -rn "ImportScreen\|ImportService\|ImportModel\|ImportCandidate\|importedFingerprints"` | không còn dòng nào | ⚠️ chưa có — lệnh grep trong `/verify` |
+| AC-3 | toàn bộ project | build scheme `ShotDex` (app + widget + share + edit action) | `BUILD SUCCEEDED`, không cảnh báo mới | ⚠️ chưa có — build |
+| AC-4 | bộ test đầy đủ | chạy `ShotDexTests` | xanh; test phân loại đuôi file vẫn còn và xanh | ⚠️ chưa có — test |
+| AC-5 | một ảnh đã có trong thư viện (kể cả ảnh từng nhập bằng Import) | mở lại app sau bản build mới | ảnh vẫn trong lưới Library, metadata còn | ⚠️ chưa có — ảnh lưới |
+| AC-6 | Video Studio xuất video, Photo Detail lưu khung video, kéo-thả ảnh vào Library | làm từng việc | vẫn ghi được asset mới (`importFile` còn nguyên) | ⚠️ chưa có — build + `PhotoDropImport` gọi `importFile` |
+| AC-7 | String Catalog | tìm các khoá chỉ Import dùng ("Import Photos", "Hide Photos Already Imported"…) | không còn khoá nào chỉ phục vụ Import | ⚠️ chưa có — grep catalog |
 
-## 5. Ràng buộc còn treo
-
-Có [ý định bỏ lối vào Import khỏi Settings](../_intents/2026-09-21-remove-import-entry-point.md) — trạng
-thái **nháp**, và code hiện vẫn giữ nút.
-
-## 6. Tiêu chí nghiệm thu
-
-**Chưa viết.** Xem [README — Việc còn nợ](../README.md#6-việc-còn-nợ).
+**Chưa chứng minh được:** cả 7 — chưa build.

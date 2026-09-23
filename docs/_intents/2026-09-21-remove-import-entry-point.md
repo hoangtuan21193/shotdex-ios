@@ -4,10 +4,10 @@
 |---|---|
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-21 |
-| Trạng thái | draft |
-| Tiến độ | **chưa làm** (2026-09-23) — Import vẫn ở Settings; chưa có spec |
+| Trạng thái | accepted — theo lệnh người dùng 2026-09-24 "làm all intent còn lại … đừng hỏi"; câu treo trả lời trong FS-10 §2 |
+| Tiến độ | **chưa làm** (2026-09-24) — spec FS-10 (bỏ), 7 AC |
 | Nguồn | phản hồi người dùng (tách ra từ intent layout Settings trên iPad) |
-| Spec sinh ra từ đây | (điền khi sang Design) |
+| Spec sinh ra từ đây | [FS-10 — Import (đã bỏ)](../02-functional-spec/FS-10-import.md) |
 
 ## Problem — vấn đề
 
