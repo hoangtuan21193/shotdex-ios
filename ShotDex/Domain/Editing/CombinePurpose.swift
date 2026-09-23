@@ -40,7 +40,7 @@ enum CombinePurpose: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .focusStack: "camera.macro"
         case .panorama: "pano"
-        case .stackExposures: "square.stack.3d.up"
+        case .stackExposures: "camera.filters"
         }
     }
 

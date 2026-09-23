@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-23 |
 | Trạng thái | accepted |
-| Tiến độ | **đang làm** (2026-09-23) — task 7/9, 1/15 AC xanh (AC-4), AC-12 một nửa; bốn lưới đã nối — chưa chụp màn |
+| Tiến độ | **gần xong** (2026-09-24) — 9/9 task đã commit; 8/15 AC xanh (1, 2, 3, 4, 5, 6, 7, 10); còn AC-8 (Duo), 9, 11–15 |
 | Nguồn | phản hồi người dùng (trong lúc soạn FS-14 panorama) |
 | Spec sinh ra từ đây | [FS-01.09](../02-functional-spec/FS-01-library/09-photo-stacking.md) |
 

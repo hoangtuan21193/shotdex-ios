@@ -1,0 +1,193 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "screenshot",
+      "name": "00-launch"
+    },
+    {
+      "action": "dump",
+      "name": "00-launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Library",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Select photos",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 2
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 3
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 4
+    },
+    {
+      "action": "tap",
+      "label": "More selection actions"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "label": "Combine Photos"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "screenshot",
+      "name": "03-submenu-three-photos"
+    },
+    {
+      "action": "dump",
+      "name": "03-submenu-three-photos"
+    },
+    {
+      "action": "tap",
+      "label": "Stack Exposures"
+    },
+    {
+      "action": "wait",
+      "seconds": 7
+    },
+    {
+      "action": "screenshot",
+      "name": "04-stack-exposures-average"
+    },
+    {
+      "action": "dump",
+      "name": "04-stack-exposures-average"
+    },
+    {
+      "action": "tap",
+      "label": "Lighten"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "screenshot",
+      "name": "05-stack-exposures-lighten"
+    },
+    {
+      "action": "dump",
+      "name": "05-stack-exposures-lighten"
+    },
+    {
+      "action": "tap",
+      "label": "Darken"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "dump",
+      "name": "06-stack-exposures-darken"
+    },
+    {
+      "action": "tap",
+      "label": "Cancel",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "07-after-cancel"
+    },
+    {
+      "action": "dump",
+      "name": "07-after-cancel"
+    },
+    {
+      "action": "tap",
+      "label": "More selection actions"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "label": "Combine Photos"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "label": "Focus Stack"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "screenshot",
+      "name": "08-focus-stack"
+    },
+    {
+      "action": "dump",
+      "name": "08-focus-stack"
+    },
+    {
+      "action": "tap",
+      "label": "Cancel",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Done Selecting"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    }
+  ]
+}
