@@ -6,7 +6,7 @@
 | Ngày | 2026-09-23 |
 | Trạng thái | accepted |
 | Nguồn | tự nghĩ ra (người dùng yêu cầu trực tiếp) |
-| Spec sinh ra từ đây | (điền khi sang Design) |
+| Spec sinh ra từ đây | [FS-14](../02-functional-spec/FS-14-panorama/README.md) |
 
 ## Problem — vấn đề
 
