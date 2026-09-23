@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-23 |
 | Trạng thái | accepted |
-| Tiến độ | **đang làm** (2026-09-23) — task 1/9, 0/15 AC xanh (AC-4 mới khoá phần renderer: `PhotoStackRendererTests`, 8 test) |
+| Tiến độ | **đang làm** (2026-09-23) — task 2/9, 1/15 AC xanh (AC-4) |
 | Nguồn | phản hồi người dùng (trong lúc soạn FS-14 panorama) |
 | Spec sinh ra từ đây | [FS-01.09](../02-functional-spec/FS-01-library/09-photo-stacking.md) |
 

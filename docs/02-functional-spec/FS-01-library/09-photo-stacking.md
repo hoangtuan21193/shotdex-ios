@@ -82,7 +82,7 @@ Frame sau align phải kéo giãn mép ra vô hạn **trước khi** crop, nếu
 | AC-1 | Library, chọn 4 ảnh | mở ⋯ | có **một** dòng Combine Photos; không dòng Focus Stack/Panorama nào đứng riêng ở cấp ngoài | ⚠️ chưa có — `combine-menu.json` + dump |
 | AC-2 | chọn 4 ảnh | ⋯ → Combine Photos | menu con ghi đúng ba dòng Focus Stack · Panorama · Stack Exposures, không dòng Average/Lighten/Darken nào (Panorama chỉ khi FS-14 đã build) | ⚠️ chưa có — `combine-menu.json` + dump |
 | AC-3 | chọn 1 ảnh + 3 video | ⋯ → Combine Photos | mở được; mọi dòng mờ | ⚠️ chưa có — `combine-menu.json` |
-| AC-4 | 4 khung cố định, cùng một bộ | chạy Focus Stack, rồi Stack Exposures ở cả ba mode | ảnh ra trùng từng pixel với mode Focus Stack, Average, Lighten, Darken cũ | ⚠️ chưa có — `PhotoStackRendererTests` |
+| AC-4 | 4 khung cố định, cùng một bộ | chạy Focus Stack, rồi Stack Exposures ở cả ba mode | ảnh ra trùng từng pixel với mode Focus Stack, Average, Lighten, Darken cũ | ✅ `PhotoStackRendererTests` (renderer không đổi, 8 test) + `CombinePurposeTests.everyStackModeIsReachableFromExactlyOneRow` |
 | AC-5 | chọn 6 ảnh + 2 video | ⋯ → Combine Photos ▸ Stack Exposures | màn mở với 6 khung, tiêu đề `Stack Exposures`, bộ chọn `Average · Lighten · Darken` đang ở `Average`; không có Focus Stack trong bộ chọn | ⚠️ chưa có — `combine-menu.json` + ảnh |
 | AC-6 | màn Stack Exposures, rồi màn Focus Stack | chạm lần lượt ba mode; mở màn Focus Stack | mỗi mode hiện đúng câu giải thích ở bảng §2; đổi mode không nạp lại khung; màn Focus Stack không có bộ chọn | ⚠️ chưa có — dump + ảnh |
 | AC-7 | iOS 26.5 và iOS 18.6 | mở menu con trên cả hai | cùng các dòng, cùng thứ tự, cùng trạng thái mờ | ⚠️ chưa có — `combine-menu.json` chạy hai máy |
@@ -95,7 +95,7 @@ Frame sau align phải kéo giãn mép ra vô hạn **trước khi** crop, nếu
 | AC-14 | album người dùng tạo có 8 ảnh, chọn cả 8 | Focus Stack → Save | album có 9 ảnh; viewer mở ảnh mới ngay trong album | ⚠️ chưa có — `combine-menu.json` + ảnh |
 | AC-15 | Smart Album, chọn 3 ảnh | Stack Exposures, `Lighten` → Save | tab Library được chọn, viewer mở ảnh mới; smart album không đổi | ⚠️ chưa có — `combine-menu.json` + ảnh |
 
-**Chưa chứng minh được:** cả 15 — chưa build.
+**Chưa chứng minh được:** 14/15 — còn mọi AC trừ AC-4.
 
 Quyết định 2026-09-23: ba dòng Focus Stack · Panorama · Stack Exposures; Stack Exposures là một màn có bộ chọn `Average · Lighten · Darken` (mặc định Average), kèm câu giải thích từng mode · cả bốn lưới · tiêu đề chỉ tên việc · lỗi chung · Cancel giữ lựa chọn · Save mở viewer; từ album người dùng thì thêm ảnh vào album, từ Smart Album / On This Day thì sang Library.
 Không còn `⚠️ CẦN QUYẾT`.
