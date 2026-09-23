@@ -105,3 +105,74 @@ public enum PanoramaXMP {
         return false
     }
 }
+
+/// What the stitched file says it was shot with.
+///
+/// The rule, from FS-14.02 §7: identity comes from the first frame, and
+/// anything that describes *this exposure* survives only if every frame agrees
+/// about it. A panorama shot across a bright sky and a dark street has no one
+/// shutter speed, and claiming the first frame's would make the library lie —
+/// these are the columns the whole app filters and charts on.
+public enum PanoramaMetadataRule {
+
+    /// Keys under `{Exif}` that describe one exposure rather than the camera.
+    static let exposureKeys: [CFString] = [
+        kCGImagePropertyExifExposureTime,
+        kCGImagePropertyExifFNumber,
+        kCGImagePropertyExifISOSpeedRatings,
+        kCGImagePropertyExifShutterSpeedValue,
+        kCGImagePropertyExifApertureValue,
+        kCGImagePropertyExifExposureBiasValue,
+        kCGImagePropertyExifBrightnessValue,
+    ]
+
+    /// Builds the properties for the stitched file out of the frames' own.
+    ///
+    /// - Parameter frames: image properties of each frame, in stitching order —
+    ///   the first is the top-left one, which is the one the panorama inherits
+    ///   its identity from.
+    /// - Parameter pixelWidth: the size actually written.
+    public static func merge(
+        frames: [[CFString: Any]],
+        pixelWidth: Int,
+        pixelHeight: Int
+    ) -> [CFString: Any] {
+        guard let first = frames.first else { return [:] }
+        var merged = first
+
+        // The picture's own facts are about the picture, not about the frame it
+        // borrowed the rest from.
+        merged[kCGImagePropertyPixelWidth] = pixelWidth
+        merged[kCGImagePropertyPixelHeight] = pixelHeight
+        // Stood upright at render time, so any rotation the first frame carried
+        // would rotate a picture that is already the right way up.
+        merged[kCGImagePropertyOrientation] = 1
+
+        var exif = (first[kCGImagePropertyExifDictionary] as? [CFString: Any]) ?? [:]
+        for key in exposureKeys where !allAgree(frames, key: key) {
+            exif.removeValue(forKey: key)
+        }
+        if exif.isEmpty {
+            merged.removeValue(forKey: kCGImagePropertyExifDictionary)
+        } else {
+            merged[kCGImagePropertyExifDictionary] = exif
+        }
+        return merged
+    }
+
+    /// Whether every frame reports the same value for one exposure key.
+    ///
+    /// Compared as text because these arrive as numbers, arrays and CFNumbers
+    /// depending on the camera, and the question is only "are they the same".
+    static func allAgree(_ frames: [[CFString: Any]], key: CFString) -> Bool {
+        var seen: String?
+        for frame in frames {
+            let exif = (frame[kCGImagePropertyExifDictionary] as? [CFString: Any]) ?? [:]
+            guard let value = exif[key] else { return false }
+            let text = String(describing: value)
+            if let seen, seen != text { return false }
+            seen = text
+        }
+        return seen != nil
+    }
+}
