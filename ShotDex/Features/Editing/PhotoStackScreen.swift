@@ -31,6 +31,9 @@ struct PhotoStackScreen: View {
     var onSaved: (String) -> Void = { _ in }
 
     @State private var model: PhotoStackModel?
+    /// The stroke under the finger, in normalized picture coordinates, drawn
+    /// live until it lifts and becomes a real stroke.
+    @State private var liveStroke: [NormalizedPoint] = []
 
     var body: some View {
         ZStack {
@@ -104,6 +107,9 @@ struct PhotoStackScreen: View {
                 Image(uiImage: preview)
                     .resizable()
                     .scaledToFit()
+                if model.isRetouching {
+                    retouchCanvas(model, imageSize: preview.size)
+                }
             }
             if model.isWorking {
                 VStack(spacing: AppTheme.Spacing.md) {
@@ -117,6 +123,139 @@ struct PhotoStackScreen: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Paints over the preview. Points are kept normalized to the picture —
+    /// top-left origin, like every other brush in the editor — so the stroke
+    /// replays at full resolution on Save.
+    private func retouchCanvas(_ model: PhotoStackModel, imageSize: CGSize) -> some View {
+        GeometryReader { geometry in
+            let rect = Self.fittedRect(imageSize, in: geometry.size)
+            let width = CGFloat(model.brushSize) * min(rect.width, rect.height)
+            Path { path in
+                let points = liveStroke.map { CGPoint(x: rect.minX + $0.x * rect.width, y: rect.minY + $0.y * rect.height) }
+                guard let first = points.first else { return }
+                path.move(to: first)
+                for point in points.dropFirst() { path.addLine(to: point) }
+                if points.count == 1 { path.addLine(to: first) }
+            }
+            .stroke(EditorTheme.accent.opacity(0.45), style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        let x = (value.location.x - rect.minX) / rect.width
+                        let y = (value.location.y - rect.minY) / rect.height
+                        liveStroke.append(NormalizedPoint(x: min(1, max(0, x)), y: min(1, max(0, y))))
+                    }
+                    .onEnded { _ in
+                        model.addRetouchStroke(points: liveStroke)
+                        liveStroke = []
+                    }
+            )
+        }
+        .accessibilityLabel("Retouch canvas")
+        .accessibilityHint("Paint to take this area from the selected frame.")
+    }
+
+    static func fittedRect(_ size: CGSize, in bounds: CGSize) -> CGRect {
+        guard size.width > 0, size.height > 0 else { return CGRect(origin: .zero, size: bounds) }
+        let scale = min(bounds.width / size.width, bounds.height / size.height)
+        let fitted = CGSize(width: size.width * scale, height: size.height * scale)
+        return CGRect(x: (bounds.width - fitted.width) / 2, y: (bounds.height - fitted.height) / 2,
+                      width: fitted.width, height: fitted.height)
+    }
+
+    /// The brush, the frame it paints from, Undo and Done (FS-01.10 §5).
+    @ViewBuilder
+    private func retouchControls(_ model: PhotoStackModel) -> some View {
+        Text(model.picksFrameAutomatically
+             ? "Paint where the stack went wrong. Each stroke takes that area from the frame sharpest where it starts."
+             : "Paint where the stack went wrong. Strokes take that area from the frame picked below.")
+            .font(EditorTheme.maskSubtitle)
+            .foregroundStyle(EditorTheme.dimText)
+            .fixedSize(horizontal: false, vertical: true)
+
+        EditorValueSlider(
+            label: String(localized: "Brush", comment: "Focus Stack retouch slider: brush width"),
+            value: model.brushSize * 100,
+            range: (PhotoStackModel.brushSizeRange.lowerBound * 100)...(PhotoStackModel.brushSizeRange.upperBound * 100),
+            valueText: "\(Int((model.brushSize * 100).rounded()))",
+            accessibilityName: String(localized: "Brush size", comment: "Focus Stack retouch slider: brush width, accessibility name"),
+            onBeginDrag: {},
+            onDrag: { model.brushSize = $0 / 100 },
+            onReset: { model.brushSize = 0.06 }
+        )
+
+        retouchFrameStrip(model)
+
+        HStack {
+            Button {
+                model.undoRetouchStroke()
+            } label: {
+                Label("Undo", systemImage: "arrow.uturn.backward")
+            }
+            .disabled(!model.canUndoRetouch)
+            .foregroundStyle(model.canUndoRetouch ? .white : EditorTheme.dimText)
+            Spacer()
+            Button("Done") { model.endRetouch() }
+                .fontWeight(.semibold)
+                .foregroundStyle(EditorTheme.accent)
+        }
+        .font(EditorTheme.rowLabel)
+        .frame(minHeight: AppTheme.Size.minTouch)
+    }
+
+    /// Auto, then every frame that lined up, in stacking order — the editor's
+    /// filmstrip thumbnails at their compact size.
+    private func retouchFrameStrip(_ model: PhotoStackModel) -> some View {
+        let side = EditorLayoutMetrics.wideFilmstripThumbnailSide
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: AppTheme.Spacing.sm) {
+                Button {
+                    model.pickRetouchFrame(nil)
+                } label: {
+                    Text("Auto")
+                        .font(EditorTheme.rowLabel.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: side, height: side)
+                        .background(EditorTheme.control, in: RoundedRectangle.app(AppTheme.Radius.sm))
+                        .overlay {
+                            RoundedRectangle.app(AppTheme.Radius.sm)
+                                .strokeBorder(model.picksFrameAutomatically ? EditorTheme.accent : Color.clear, lineWidth: 2)
+                        }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Pick the sharpest frame automatically")
+                .accessibilityAddTraits(model.picksFrameAutomatically ? [.isSelected, .isButton] : .isButton)
+
+                ForEach(model.retouchableFrames, id: \.self) { index in
+                    let isCurrent = model.retouchFrame == index
+                    Button {
+                        model.pickRetouchFrame(index)
+                    } label: {
+                        EditorFilmstripThumbnail(asset: model.loadedAssets[index], photoLibrary: dependencies.photoLibrary)
+                            .frame(width: side, height: side)
+                            .clipShape(RoundedRectangle.app(AppTheme.Radius.sm))
+                            .overlay {
+                                // Accent for a frame the user picked; grey for
+                                // the one Auto last chose, so the two never look
+                                // like the same choice.
+                                RoundedRectangle.app(AppTheme.Radius.sm)
+                                    .strokeBorder(
+                                        isCurrent ? (model.picksFrameAutomatically ? EditorTheme.secondaryText : EditorTheme.accent) : Color.clear,
+                                        lineWidth: 2
+                                    )
+                            }
+                            .opacity(isCurrent ? 1 : 0.72)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Frame \(index + 1) of \(model.loadedAssets.count)")
+                    .accessibilityAddTraits(isCurrent ? [.isSelected, .isButton] : .isButton)
+                }
+            }
+        }
+        .frame(height: side)
     }
 
     /// Method, and the two sliders Helicon and Zerene both expose (FS-01.10 §3).
@@ -148,12 +287,12 @@ struct PhotoStackScreen: View {
             onDrag: { value in
                 let radius = Int(value.rounded())
                 if radius != model.focusOptions.radius {
-                    model.focusOptions = FocusStackOptions(method: options.method, radius: radius, smoothing: model.focusOptions.smoothing)
+                    model.requestFocusOptions(FocusStackOptions(method: options.method, radius: radius, smoothing: model.focusOptions.smoothing))
                 }
             },
             onReset: {
                 let defaults = FocusStackOptions.defaults(for: options.method)
-                model.focusOptions = FocusStackOptions(method: options.method, radius: defaults.radius, smoothing: model.focusOptions.smoothing)
+                model.requestFocusOptions(FocusStackOptions(method: options.method, radius: defaults.radius, smoothing: model.focusOptions.smoothing))
             }
         )
         EditorValueSlider(
@@ -166,14 +305,25 @@ struct PhotoStackScreen: View {
             onDrag: { value in
                 let smoothing = Int(value.rounded())
                 if smoothing != model.focusOptions.smoothing {
-                    model.focusOptions = FocusStackOptions(method: options.method, radius: model.focusOptions.radius, smoothing: smoothing)
+                    model.requestFocusOptions(FocusStackOptions(method: options.method, radius: model.focusOptions.radius, smoothing: smoothing))
                 }
             },
             onReset: {
                 let defaults = FocusStackOptions.defaults(for: options.method)
-                model.focusOptions = FocusStackOptions(method: options.method, radius: model.focusOptions.radius, smoothing: defaults.smoothing)
+                model.requestFocusOptions(FocusStackOptions(method: options.method, radius: model.focusOptions.radius, smoothing: defaults.smoothing))
             }
         )
+
+        Button {
+            model.beginRetouch()
+        } label: {
+            Label(model.retouchStrokes.isEmpty ? "Retouch" : "Retouch (\(model.retouchStrokes.count))",
+                  systemImage: "paintbrush.pointed")
+                .font(EditorTheme.rowLabel.weight(.semibold))
+        }
+        .foregroundStyle(model.canRetouch ? EditorTheme.accent : EditorTheme.dimText)
+        .disabled(!model.canRetouch)
+        .frame(minHeight: AppTheme.Size.minTouch)
     }
 
     private func panel(_ model: PhotoStackModel) -> some View {
@@ -195,7 +345,11 @@ struct PhotoStackScreen: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             if model.mode == .focusStack {
-                focusControls(model)
+                if model.isRetouching {
+                    retouchControls(model)
+                } else {
+                    focusControls(model)
+                }
             }
 
             if let message = model.missingFramesMessage {
@@ -233,6 +387,18 @@ struct PhotoStackScreen: View {
         .background(EditorTheme.panelSolid)
         .overlay(alignment: .top) {
             Rectangle().fill(EditorTheme.panelTopHairline).frame(height: 1)
+        }
+        // On the panel, not beside the screen's alert: two presentations on
+        // one view and the alert never shows.
+        .confirmationDialog(
+            "Clear Retouch?",
+            isPresented: Binding(get: { model.pendingFocusOptions != nil }, set: { if !$0 { model.pendingFocusOptions = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button("Clear Retouch and Change", role: .destructive) { model.confirmPendingFocusOptions() }
+            Button("Keep Retouch", role: .cancel) { model.pendingFocusOptions = nil }
+        } message: {
+            Text("Your retouch strokes were painted over this stack. Changing Method, Radius or Smoothing clears them.")
         }
     }
 }

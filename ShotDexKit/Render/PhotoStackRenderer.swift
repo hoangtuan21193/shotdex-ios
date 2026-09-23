@@ -71,6 +71,16 @@ public struct PreparedFocusStack: @unchecked Sendable {
     public var frames: [CIImage]
     /// Indices into the input frames that would not line up and were left out.
     public var excludedFrames: [Int]
+    /// For each of `frames`, its index among the input frames. A retouch
+    /// stroke names its frame this way, so the same stroke finds the same
+    /// frame at preview size and at full resolution.
+    public var inputIndices: [Int]
+
+    public init(frames: [CIImage], excludedFrames: [Int], inputIndices: [Int]) {
+        self.frames = frames
+        self.excludedFrames = excludedFrames
+        self.inputIndices = inputIndices
+    }
 }
 
 /// A combined image and the frames that did not make it in.
@@ -110,6 +120,9 @@ public actor PhotoStackRenderer {
     public init(context: CIContext = CIContext(options: [.useSoftwareRenderer: false])) {
         self.context = context
     }
+
+    /// The context, for the renderer's extensions in other files.
+    var renderingContext: CIContext { context }
 
     /// Combines `images` in the given mode. The first image sets the frame:
     /// every other one is scaled to it, because a stack shot on one camera is
@@ -172,6 +185,7 @@ public actor PhotoStackRenderer {
         let fittedFrames = [base] + images.dropFirst().map { Self.fitted($0, to: extent) }
         let maps = alignedMaps(fittedFrames, extent: extent)
         var frames: [CIImage] = [base]
+        var kept: [Int] = [0]
         var excluded: [Int] = []
         for index in fittedFrames.indices.dropFirst() {
             alignmentProgress?(index, fittedFrames.count - 1)
@@ -179,6 +193,7 @@ public actor PhotoStackRenderer {
                 excluded.append(index)
                 continue
             }
+            kept.append(index)
             if map == .identity {
                 frames.append(fittedFrames[index])
             } else {
@@ -190,7 +205,7 @@ public actor PhotoStackRenderer {
             }
         }
         guard frames.count >= 2 else { throw PhotoStackError.framesDoNotLineUp }
-        return PreparedFocusStack(frames: frames, excludedFrames: excluded)
+        return PreparedFocusStack(frames: frames, excludedFrames: excluded, inputIndices: kept)
     }
 
     /// Stacks a prepared bracket with the given method and parameters.

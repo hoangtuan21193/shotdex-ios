@@ -64,6 +64,9 @@ final class PhotoStackModel {
     /// The preview bracket, lined up once; every method or slider change
     /// re-stacks it instead of registering the frames again.
     private var preparedFocus: PreparedFocusStack?
+    /// The stack for the current options, rendered once, so a retouch stroke
+    /// only blends over it instead of re-stacking every frame.
+    private var stackedBase: (options: FocusStackOptions, image: CGImage)?
     private var renderTask: Task<Void, Never>?
     private let renderer = PhotoStackRenderer()
     private let photoLibrary: PhotoLibraryService
@@ -123,6 +126,9 @@ final class PhotoStackModel {
         loadedAssets = loaded
         missingFrameCount = assets.count - loaded.count
         preparedFocus = nil
+        stackedBase = nil
+        retouchStrokes = []
+        retouchFrame = nil
         excludedFrames = []
         guard frames.count >= CombinePurpose.minimumPhotoCount else {
             preview = nil
@@ -146,7 +152,98 @@ final class PhotoStackModel {
     /// Switches method and puts Radius and Smoothing back to its defaults.
     func selectFocusMethod(_ method: FocusStackOptions.Method) {
         guard method != focusOptions.method else { return }
-        focusOptions = .defaults(for: method)
+        requestFocusOptions(.defaults(for: method))
+    }
+
+    /// Applies new Method, Radius or Smoothing — unless there are retouch
+    /// strokes, which were painted over the stack those options made. Then it
+    /// waits for the user to agree to lose them (FS-01.10 §5).
+    func requestFocusOptions(_ options: FocusStackOptions) {
+        guard options != focusOptions else { return }
+        if retouchStrokes.isEmpty {
+            focusOptions = options
+        } else {
+            pendingFocusOptions = options
+        }
+    }
+
+    func confirmPendingFocusOptions() {
+        guard let pendingFocusOptions else { return }
+        self.pendingFocusOptions = nil
+        retouchStrokes = []
+        focusOptions = pendingFocusOptions
+    }
+
+    // MARK: Retouch
+
+    /// Painting over the stack from one frame (FS-01.10 §5).
+    private(set) var isRetouching = false
+    /// In painting order. Only for this session: they are not saved anywhere
+    /// but into the photo.
+    private(set) var retouchStrokes: [FocusStackRetouchStroke] = []
+    /// The frame the brush paints from, as an index into `loadedAssets`. Nil
+    /// until the first stroke picks one.
+    private(set) var retouchFrame: Int?
+    /// True once the user picked a frame in the strip; until then every
+    /// stroke paints from the frame sharpest where it starts.
+    private(set) var picksFrameAutomatically = true
+    /// Brush width as a fraction of the picture's short edge.
+    var brushSize = 0.06
+    /// Options waiting on "this clears your retouch" (see `requestFocusOptions`).
+    var pendingFocusOptions: FocusStackOptions?
+
+    static let brushSizeRange = 0.01...0.25
+
+    /// The frames a stroke can paint from — the ones that lined up — as
+    /// indices into `loadedAssets`.
+    var retouchableFrames: [Int] { preparedFocus?.inputIndices ?? [] }
+
+    var canRetouch: Bool { mode == .focusStack && preparedFocus != nil && preview != nil }
+
+    func beginRetouch() {
+        guard canRetouch else { return }
+        isRetouching = true
+    }
+
+    /// Leaves the brush; the strokes stay in the picture.
+    func endRetouch() { isRetouching = false }
+
+    func pickRetouchFrame(_ index: Int?) {
+        if let index {
+            retouchFrame = index
+            picksFrameAutomatically = false
+        } else {
+            picksFrameAutomatically = true
+        }
+    }
+
+    /// Adds one stroke, painted through `points` (normalized, top-left
+    /// origin), and re-renders.
+    func addRetouchStroke(points: [NormalizedPoint]) {
+        guard let first = points.first, let prepared = preparedFocus else { return }
+        renderTask?.cancel()
+        renderTask = Task {
+            let frame: Int
+            if !picksFrameAutomatically, let retouchFrame {
+                frame = retouchFrame
+            } else {
+                frame = await renderer.sharpestFrame(in: prepared, at: first, radius: focusOptions.radius)
+                retouchFrame = frame
+            }
+            retouchStrokes.append(FocusStackRetouchStroke(
+                frame: frame,
+                brush: BrushStroke(points: points, size: brushSize, feather: 0.3, flow: 1, isEraser: false)
+            ))
+            await render()
+        }
+    }
+
+    var canUndoRetouch: Bool { !retouchStrokes.isEmpty }
+
+    func undoRetouchStroke() {
+        guard !retouchStrokes.isEmpty else { return }
+        retouchStrokes.removeLast()
+        renderPreview()
     }
 
     private func renderPreview() {
@@ -160,7 +257,7 @@ final class PhotoStackModel {
         statusText = workingText
         defer { isWorking = false }
         do {
-            let image: CIImage
+            let cgImage: CGImage
             if mode == .focusStack {
                 let prepared: PreparedFocusStack
                 if let preparedFocus {
@@ -169,12 +266,24 @@ final class PhotoStackModel {
                     prepared = try await renderer.prepareFocusStack(images: previewFrames)
                     preparedFocus = prepared
                 }
-                image = await renderer.focusStack(prepared, options: focusOptions)
                 excludedFrames = prepared.excludedFrames
+                let base: CGImage
+                if let stackedBase, stackedBase.options == focusOptions {
+                    base = stackedBase.image
+                } else {
+                    base = try await renderer.render(renderer.focusStack(prepared, options: focusOptions))
+                    guard !Task.isCancelled else { return }
+                    stackedBase = (focusOptions, base)
+                }
+                if retouchStrokes.isEmpty {
+                    cgImage = base
+                } else {
+                    let retouched = await renderer.retouched(CIImage(cgImage: base), prepared: prepared, strokes: retouchStrokes)
+                    cgImage = try await renderer.render(retouched)
+                }
             } else {
-                image = try await renderer.combine(images: previewFrames, mode: mode)
+                cgImage = try await renderer.render(renderer.combine(images: previewFrames, mode: mode))
             }
-            let cgImage = try await renderer.render(image)
             guard !Task.isCancelled else { return }
             preview = UIImage(cgImage: cgImage)
         } catch {
@@ -233,7 +342,18 @@ final class PhotoStackModel {
 
                 try Task.checkCancellation()
                 statusText = workingText
-                let combined = try await renderer.combine(images: frames, mode: mode, focus: focusOptions)
+                let combined: CIImage
+                if mode == .focusStack {
+                    // Same frames, same order as the preview, so every stroke's
+                    // frame index names the same photo at full resolution.
+                    let prepared = try await renderer.prepareFocusStack(images: frames)
+                    let stacked = await renderer.focusStack(prepared, options: focusOptions)
+                    combined = retouchStrokes.isEmpty
+                        ? stacked
+                        : await renderer.retouched(stacked, prepared: prepared, strokes: retouchStrokes)
+                } else {
+                    combined = try await renderer.combine(images: frames, mode: mode)
+                }
                 let cgImage = try await renderer.render(combined)
 
                 try Task.checkCancellation()

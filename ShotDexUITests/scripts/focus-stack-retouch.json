@@ -1,0 +1,254 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Library",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Select photos",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 4
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 5
+    },
+    {
+      "action": "tap",
+      "label": "More selection actions"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "label": "Combine Photos"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "label": "Focus Stack"
+    },
+    {
+      "action": "wait",
+      "seconds": 14
+    },
+    {
+      "action": "screenshot",
+      "name": "00-frames-do-not-line-up"
+    },
+    {
+      "action": "dump",
+      "name": "00-frames-do-not-line-up"
+    },
+    {
+      "action": "tap",
+      "label": "OK"
+    },
+    {
+      "action": "tap",
+      "label": "Cancel",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 4
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 5
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 3
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 6
+    },
+    {
+      "action": "tap",
+      "label": "More selection actions"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "label": "Combine Photos"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "label": "Focus Stack"
+    },
+    {
+      "action": "wait",
+      "seconds": 16
+    },
+    {
+      "action": "tap",
+      "label": "Retouch"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "01-retouch-open"
+    },
+    {
+      "action": "dump",
+      "name": "01-retouch-open"
+    },
+    {
+      "action": "swipe",
+      "x": 0.2,
+      "y": 0.36,
+      "direction": "right",
+      "distance": 0.45
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "screenshot",
+      "name": "02-after-stroke"
+    },
+    {
+      "action": "dump",
+      "name": "02-after-stroke"
+    },
+    {
+      "action": "tap",
+      "label": "Frame 2 of 2"
+    },
+    {
+      "action": "swipe",
+      "x": 0.2,
+      "y": 0.48,
+      "direction": "right",
+      "distance": 0.45
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "screenshot",
+      "name": "03-second-stroke-frame-2"
+    },
+    {
+      "action": "dump",
+      "name": "03-second-stroke-frame-2"
+    },
+    {
+      "action": "tap",
+      "label": "Undo"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "screenshot",
+      "name": "04-after-undo"
+    },
+    {
+      "action": "dump",
+      "name": "04-after-undo"
+    },
+    {
+      "action": "tap",
+      "label": "Done"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "label": "Depth Map"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "05-clear-retouch-dialog"
+    },
+    {
+      "action": "dump",
+      "name": "05-clear-retouch-dialog"
+    },
+    {
+      "action": "tap",
+      "x": 0.5,
+      "y": 0.12
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "06-kept"
+    },
+    {
+      "action": "tap",
+      "label": "Cancel",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Done Selecting"
+    }
+  ]
+}

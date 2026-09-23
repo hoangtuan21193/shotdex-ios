@@ -25,13 +25,13 @@
       "action": "tap",
       "label": "Photo, file type",
       "type": "cell",
-      "index": 2
+      "index": 3
     },
     {
       "action": "tap",
       "label": "Photo, file type",
       "type": "cell",
-      "index": 5
+      "index": 6
     },
     {
       "action": "tap",

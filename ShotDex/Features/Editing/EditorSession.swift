@@ -248,7 +248,7 @@ struct EditorFilmstrip: View {
 /// One filmstrip thumbnail. Its own view so the request is cancelled when the
 /// cell scrolls away, rather than every photo in a long selection being fetched
 /// the moment the editor opens.
-private struct EditorFilmstripThumbnail: View {
+struct EditorFilmstripThumbnail: View {
     let asset: PHAsset
     let photoLibrary: PhotoLibraryService
 

@@ -46,4 +46,28 @@ struct PhotoStackModelTests {
         #expect(model.focusOptions == FocusStackOptions(method: .weighted, radius: 2, smoothing: 0))
         #expect(model.mode == .focusStack)
     }
+
+    @MainActor
+    @Test func withNoStrokesNewOptionsApplyAtOnce() {
+        let dependencies = AppDependencies.preview()
+        let model = PhotoStackModel(purpose: .focusStack, assets: [], photoLibrary: dependencies.photoLibrary,
+                                    indexPipeline: dependencies.indexPipeline)
+        model.requestFocusOptions(FocusStackOptions(method: .weighted, radius: 5, smoothing: 1))
+        #expect(model.focusOptions.radius == 5)
+        #expect(model.pendingFocusOptions == nil)
+    }
+
+    @MainActor
+    @Test func retouchStartsOnAutoAndAFramePickTurnsItOff() {
+        let dependencies = AppDependencies.preview()
+        let model = PhotoStackModel(purpose: .focusStack, assets: [], photoLibrary: dependencies.photoLibrary,
+                                    indexPipeline: dependencies.indexPipeline)
+        #expect(model.picksFrameAutomatically)
+        #expect(!model.canRetouch)   // nothing stacked yet
+        model.pickRetouchFrame(3)
+        #expect(!model.picksFrameAutomatically && model.retouchFrame == 3)
+        model.pickRetouchFrame(nil)
+        #expect(model.picksFrameAutomatically)
+        #expect(!model.canUndoRetouch)
+    }
 }

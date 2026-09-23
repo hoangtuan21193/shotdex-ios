@@ -62,8 +62,15 @@ Tầng D như FS-01.09 §3: `Cancel` · `Focus Stack` · `Save`; stage đen; m�
   **nét nhất ở chỗ vừa chạm** (như "auto-pick" của Helicon).
 - Mỗi nét tô là một bước **Undo**. Rời Retouch giữ nguyên các nét; đổi cách ghép hay tham số thì hỏi trước khi
   xoá chúng.
-- Nét tô ghi vào bản đồ "khung nào thắng" (2 byte/điểm ảnh, không phụ thuộc số khung) — Save dùng đúng bản
-  đồ đó ở độ phân giải gốc.
+- ⚠️ CẦN QUYẾT (tạm chốt khi build, 2026-09-24): nét tô **ghi dưới dạng nét** (điểm chuẩn hoá 0…1 + khung
+  nguồn theo chỉ số khung đầu vào), không phải bản đồ "khung nào thắng" 2 byte/điểm ảnh. *Vì* nét không phụ thuộc
+  độ phân giải — cùng nét tô trên preview được phát lại y hệt lúc Save ở độ phân giải gốc, không phải phóng một
+  bitmap 1600px lên 48 MP. Các nét liền nhau cùng khung dùng chung một mặt nạ, vẽ ở cạnh dài ≤ 2048px bằng
+  `BrushStrokeRasterizer` của editor (cùng mép mềm với bút mask), nên bộ nhớ theo số lần đổi khung, không theo số
+  nét (`FocusStackRetouch.swift`).
+- Bút: một slider **Brush** (1–25% cạnh ngắn, mặc định 6%), mép mềm cố định. Dải khung mở đầu bằng ô **Auto**
+  (mặc định): mỗi nét lấy khung nét nhất tại điểm bắt đầu; chạm một khung trong dải thì mọi nét sau lấy khung đó.
+- Đổi Method/Radius/Smoothing khi còn nét → hộp "Clear Retouch?" (Clear Retouch and Change / Keep Retouch).
 - Bút tô chỉ sống trong phiên; không lưu.
 
 ## 6. Lưu
@@ -91,9 +98,9 @@ trong test bundle. PSNR so với ảnh nét hoàn toàn, bỏ viền 60 px.
 | AC-5 | cùng chuỗi | chạy Depth Map rồi Weighted | cả hai ≥ 33 dB; Weighted ≥ Depth Map ở vùng mép độ sâu | ⚠️ một nửa: `FocusStackMethodTests.eachMethodBeatsEveryFrameItWasMadeFrom` — trên chuỗi 2 khung, Weighted 41,5 dB, Depth Map 37,7 dB, khung đơn 14,6 dB; chuỗi 16 khung và vùng mép chưa đo trong test |
 | AC-6 | màn Focus Stack đang mở | đổi Method, Radius, Smoothing | preview dựng lại, không nạp lại khung (số lần đọc khung không đổi) | ✅ `FocusStackMethodTests.preparingOnceThenStackingMatchesCombine` (căn một lần, ghép lại cho ra cùng điểm ảnh); model giữ khung đã căn |
 | AC-7 | mở màn Focus Stack | nhìn panel | Weighted chọn sẵn, Radius 2, Smoothing 0; chọn Depth Map thì Radius 4, Smoothing 4 | ✅ `PhotoStackModelTests.aFocusStackOpensOnWeighted`, `pickingAMethodResetsItsSliders` + `focus-stack-panel.json` ảnh `01`/`02` (iPhone 17 Pro 26.5) |
-| AC-8 | ảnh ghép có một vùng lấy sai khung | Retouch: chọn khung 5, tô vùng đó | điểm ảnh trong vùng tô trùng khung 5 (sai ≤ 1/255); ngoài vùng không đổi | ⚠️ chưa có — `FocusStackRetouchTests` |
-| AC-9 | vừa tô 3 nét | Undo 3 lần | ảnh ghép trùng từng điểm ảnh với trước khi tô | ⚠️ chưa có — `FocusStackRetouchTests` |
-| AC-10 | chạm một điểm trong Retouch | — | khung được chọn sẵn là khung có độ nét cao nhất tại điểm đó | ⚠️ chưa có — `FocusStackRetouchTests` |
+| AC-8 | ảnh ghép có một vùng lấy sai khung | Retouch: chọn khung 5, tô vùng đó | điểm ảnh trong vùng tô trùng khung 5 (sai ≤ 1/255); ngoài vùng không đổi | ✅ `FocusStackRetouchTests.aStrokePutsBackItsFramesPixelsAndNothingElse` (lõi nét ≤ 1/255 so khung, ngoài nét không đổi) + `focus-stack-retouch.json` ảnh `01`–`03` (iPhone 17 Pro 26.5) |
+| AC-9 | vừa tô 3 nét | Undo 3 lần | ảnh ghép trùng từng điểm ảnh với trước khi tô | ✅ `FocusStackRetouchTests.undoingEveryStrokeGivesBackTheStackPixelForPixel` + ảnh `04` (2 nét, Undo, còn `Retouch (1)` ở ảnh `05`) |
+| AC-10 | chạm một điểm trong Retouch | — | khung được chọn sẵn là khung có độ nét cao nhất tại điểm đó | ✅ `FocusStackRetouchTests.theFrameOfferedIsTheSharpestWhereTheUserTouched` + `PhotoStackModelTests.retouchStartsOnAutoAndAFramePickTurnsItOff` + ảnh `02` (Auto, khung vừa chọn viền xám) |
 | AC-11 | 100 khung × 24 MP | Save | footprint đỉnh ≤ 500 MB, và như nhau (± 10%) ở 10 khung | ⚠️ chưa có — đo tay máy thật + `FocusStackExportTests` |
 | AC-12 | 3 khung chỉ trên iCloud, máy mất mạng | mở màn | báo "3 photos couldn't be downloaded" + Retry; không ghép với số khung thiếu mà không báo | ⚠️ một nửa: code có (`PhotoStackModel.missingFramesMessage`, `retryMissingFrames`; Save thiếu khung gốc thì dừng với `StackSaveError.framesMissing`, không lưu); simulator không giả được iCloud mất mạng — ảnh chụp chờ máy thật |
 | AC-13 | đang lưu | Cancel | không asset nào được tạo; thư mục tạm của phiên rỗng | ⚠️ một nửa: `PhotoStackSessionTests` (thư mục phiên mất khi remove và khi phiên bị bỏ); Save kiểm `Task.checkCancellation()` trước mỗi khung, trước ghép và trước ghi asset; chưa có test Cancel giữa lúc lưu |
