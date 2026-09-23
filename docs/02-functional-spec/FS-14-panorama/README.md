@@ -74,7 +74,7 @@ test dựng chúng từ một ảnh 360° nhỏ đóng trong test bundle. "Thờ
 | AC-3 | s1, s2, s3, s6 (thứ tự chọn xáo) | ghép | mọi khung vào panorama; xoay tương đối lệch ≤ 0,1° so với đáp án; đổi thứ tự chọn ra cùng kết quả | ⚠️ chưa có — `PanoramaSolverTests` |
 | AC-4 | s5: 5 khung một cảnh + 1 ảnh khác cảnh | ghép | 5 khung vào panorama; ảnh lạc nằm ở dải **Not Placed (1)**; không cặp nào ghép nhầm | ⚠️ chưa có — `PanoramaRegistrationTests` |
 | AC-5 | 2 ảnh không chồng mép | ghép | không có preview; thông báo nói khung phải chồng nhau ~30% · Save mờ | ⚠️ chưa có — `PanoramaRegistrationTests` + ảnh |
-| AC-6 | một khung ở Not Placed, thả lệch chỗ đúng ≤ 20% bề rộng khung | kéo thả lên stage | khung được căn lại với khung kề, lệch ≤ 1 px ở ảnh 1024; rời Not Placed | ⚠️ chưa có — `PanoramaRegistrationTests` |
+| AC-6 | một khung ở Not Placed, thả lệch chỗ đúng ≤ 20% bề rộng khung | kéo thả lên stage | khung được căn lại với khung kề, lệch ≤ 1 px ở ảnh 1024; rời Not Placed | ✅ `PanoramaArrangeTests` (8 test; thả lệch 20% về đúng chỗ ≤ 1 px) + ảnh iPhone 17 Pro: kéo khung ra (2,236 → 1,716 px), kéo từ dải trở lại (về 2,236 px), thả chỗ không khớp thì ảnh giữ nguyên và báo lý do |
 | AC-7 | s1 (tổng ~260° ngang) | mở panel phép chiếu | Spherical, Cylindrical bật; Perspective mờ kèm một dòng lý do | ⚠️ chưa có — `PanoramaRenderTests` + ảnh |
 | AC-8 | s4 (cột dọc 4 khung) | ghép Cylindrical | ảnh ra cao hơn rộng; phần có ảnh ≥ 90% khung bao | ⚠️ chưa có — `PanoramaRenderTests` |
 | AC-9 | s1, gain từng khung 0,8–1,25 | ghép | chênh sáng trung bình hai bên mỗi đường nối ≤ 2% | ⚠️ chưa có — `PanoramaRenderTests` |
