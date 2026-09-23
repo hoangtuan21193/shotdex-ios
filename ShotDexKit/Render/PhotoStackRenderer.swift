@@ -25,6 +25,45 @@ public enum PhotoStackMode: String, CaseIterable, Identifiable, Sendable {
     public var needsAlignment: Bool { self == .focusStack }
 }
 
+/// How a focus stack picks its pixels (FS-01.10 §3).
+public struct FocusStackOptions: Sendable, Equatable {
+    public enum Method: String, CaseIterable, Identifiable, Sendable {
+        /// Each point from the frame that is sharpest there, with the choice
+        /// smoothed like a depth map — Helicon's B, Zerene's DMap. Smooth, keeps
+        /// colour, good on long stacks and smooth surfaces.
+        case depthMap
+        /// Every frame, weighted by how sharp it is at that point — Helicon's
+        /// A, Zerene's PMax. Holds fine crossing detail: hair, bristles.
+        case weighted
+        public var id: String { rawValue }
+    }
+
+    public var method: Method
+    /// Size of the neighbourhood sharpness is judged over, 1…10 pixels of the
+    /// working image. Small keeps fine detail and can add noise.
+    public var radius: Int
+    /// How much the choice between frames is blurred, 0…10. Low is sharper
+    /// and can show artefacts.
+    public var smoothing: Int
+
+    public init(method: Method, radius: Int, smoothing: Int) {
+        self.method = method
+        self.radius = min(10, max(1, radius))
+        self.smoothing = min(10, max(0, smoothing))
+    }
+
+    /// Starting values per method. No vendor publishes defaults; these are the
+    /// spike's ([2026-09-24](../../docs/_intents/2026-09-24-focus-stack-spike.md) §3).
+    public static func defaults(for method: Method) -> FocusStackOptions {
+        switch method {
+        case .weighted: FocusStackOptions(method: .weighted, radius: 2, smoothing: 0)
+        case .depthMap: FocusStackOptions(method: .depthMap, radius: 4, smoothing: 4)
+        }
+    }
+
+    public static let standard = defaults(for: .weighted)
+}
+
 /// A combined image and the frames that did not make it in.
 public struct PhotoStackResult: @unchecked Sendable {
     public var image: CIImage
@@ -65,9 +104,10 @@ public actor PhotoStackRenderer {
     public func combine(
         images: [CIImage],
         mode: PhotoStackMode,
+        focus: FocusStackOptions = .standard,
         alignmentProgress: (@Sendable (Int, Int) -> Void)? = nil
     ) throws -> CIImage {
-        try combineReportingFrames(images: images, mode: mode, alignmentProgress: alignmentProgress).image
+        try combineReportingFrames(images: images, mode: mode, focus: focus, alignmentProgress: alignmentProgress).image
     }
 
     /// Like `combine`, and also says which frames were left out.
@@ -78,6 +118,7 @@ public actor PhotoStackRenderer {
     public func combineReportingFrames(
         images: [CIImage],
         mode: PhotoStackMode,
+        focus: FocusStackOptions = .standard,
         alignmentProgress: (@Sendable (Int, Int) -> Void)? = nil
     ) throws -> PhotoStackResult {
         guard images.count >= 2 else { throw PhotoStackError.needsTwoImages }
@@ -114,9 +155,21 @@ public actor PhotoStackRenderer {
         case .average: image = Self.averaged(frames)
         case .lighten: image = Self.reduced(frames, using: CIFilter.lightenBlendMode())
         case .darken: image = Self.reduced(frames, using: CIFilter.darkenBlendMode())
-        case .focusStack: image = focusStacked(frames)
+        case .focusStack:
+            switch focus.method {
+            case .depthMap: image = focusStacked(frames, options: focus)
+            case .weighted: image = Self.weightedFocusStack(frames, options: focus)
+            }
         }
         return PhotoStackResult(image: image, excludedFrames: excluded)
+    }
+
+    /// How far `map` moves the farthest corner of `extent`, in pixels.
+    static func largestShift(of map: CGAffineTransform, in extent: CGRect) -> CGFloat {
+        [CGPoint(x: extent.minX, y: extent.minY), CGPoint(x: extent.maxX, y: extent.minY),
+         CGPoint(x: extent.minX, y: extent.maxY), CGPoint(x: extent.maxX, y: extent.maxY)]
+            .map { p in let q = p.applying(map); return hypot(q.x - p.x, q.y - p.y) }
+            .max() ?? 0
     }
 
     /// Focus-bracket alignment (`FocusStackAligner`) on small renders of the
@@ -139,7 +192,11 @@ public actor PhotoStackRenderer {
         return FocusStackAligner.align(small).map { working in
             working.map { map in
                 let topLeftFull = shrink.concatenating(map).concatenating(shrink.inverted())
-                return flip.concatenating(topLeftFull).concatenating(flip)
+                let ci = flip.concatenating(topLeftFull).concatenating(flip)
+                // A frame that moves less than a third of a pixel anywhere is left
+                // where it is: resampling it would soften every pixel to correct
+                // an error nobody could see — the tripod case, and the common one.
+                return Self.largestShift(of: ci, in: extent) < 0.33 ? .identity : ci
             }
         }
     }
@@ -179,22 +236,21 @@ public actor PhotoStackRenderer {
     /// sharpness, and for each new frame build a mask of "this frame is sharper
     /// here" and blend through it. That keeps memory flat in the number of
     /// frames, which matters — a macro stack is routinely thirty exposures.
-    private func focusStacked(_ frames: [CIImage]) -> CIImage {
+    private func focusStacked(_ frames: [CIImage], options: FocusStackOptions) -> CIImage {
         var result = frames[0]
-        var bestSharpness = Self.sharpnessMap(of: frames[0])
+        var bestSharpness = Self.sharpnessMap(of: frames[0], radius: options.radius)
 
         for frame in frames.dropFirst() {
-            let sharpness = Self.sharpnessMap(of: frame)
+            let sharpness = Self.sharpnessMap(of: frame, radius: options.radius)
             // Where this frame beats the incumbent, the difference is positive;
             // everywhere else it clamps to black, which is exactly the mask.
-            let difference = CIFilter.subtractBlendMode()
-            difference.inputImage = sharpness
-            difference.backgroundImage = bestSharpness
-            guard let raw = difference.outputImage else { continue }
-
-            // Harden the mask and soften its edges: a per-pixel winner-takes-all
-            // mask speckles on noise, and the seams read as grain that moves.
-            let mask = Self.smoothed(Self.hardened(raw))
+            // 1 where this frame is sharper than every frame so far, 0 where it
+            // is not, kept inside 0…1: a mask outside that range makes the blend
+            // below extrapolate, and the picture comes out unlike any frame.
+            // Then softened, so the choice does not speckle on noise.
+            guard let decision = Self.decisionKernel?.apply(extent: frame.extent, arguments: [sharpness, bestSharpness])
+            else { continue }
+            let mask = Self.smoothed(decision, radius: options.smoothing).applyingFilter("CIColorClamp")
 
             let blend = CIFilter.blendWithMask()
             blend.inputImage = frame
@@ -210,49 +266,113 @@ public actor PhotoStackRenderer {
         return result
     }
 
+    /// "This frame is sharper here", as a clean 0 or 1 with a narrow ramp so a
+    /// near tie does not flip on noise.
+    private static let decisionKernel = CIColorKernel(source: """
+        kernel vec4 focusDecision(__sample candidate, __sample best) {
+            float m = clamp((candidate.r - best.r) * 200.0, 0.0, 1.0);
+            return vec4(m, m, m, 1.0);
+        }
+        """)
+
+    /// Every frame at every point, weighted by its sharpness there relative to
+    /// the sharpest frame at that point, to the fourth power: the sharpest frame
+    /// dominates without the others being cut off, so detail that crosses
+    /// between frames survives. Relative, because a sharpness map's scale
+    /// depends on the picture — a fixed gain either saturates every frame or
+    /// none. Two passes over frames already in hand, running totals only, so
+    /// memory stays flat in the number of frames.
+    private static func weightedFocusStack(_ frames: [CIImage], options: FocusStackOptions) -> CIImage {
+        let extent = frames[0].extent
+        let sharpness = frames.map { smoothed(sharpnessMap(of: $0, radius: options.radius), radius: options.smoothing) }
+        var peak = sharpness[0]
+        for map in sharpness.dropFirst() {
+            peak = peakKernel?.apply(extent: extent, arguments: [peak, map]) ?? peak
+        }
+        var colour = CIImage(color: .black).cropped(to: extent)
+        var weight = colour
+        for (frame, map) in zip(frames, sharpness) {
+            colour = weightedColourKernel?.apply(extent: extent, arguments: [colour, frame, map, peak]) ?? colour
+            weight = weightedTotalKernel?.apply(extent: extent, arguments: [weight, map, peak]) ?? weight
+        }
+        return weightedResolveKernel?.apply(extent: extent, arguments: [colour, weight]) ?? frames[0]
+    }
+
+    private static let peakKernel = CIColorKernel(source: """
+        kernel vec4 focusPeak(__sample a, __sample b) {
+            float m = max(a.r, b.r);
+            return vec4(m, m, m, 1.0);
+        }
+        """)
+
+    // The floor on w keeps every term inside a half float's normal range —
+    // Core Image's working format. Below it the sums lose precision and the
+    // divide drifts the picture's brightness.
+    private static let weightedColourKernel = CIColorKernel(source: """
+        kernel vec4 focusWeightedColour(__sample total, __sample frame, __sample sharp, __sample peak) {
+            float r = sharp.r / max(peak.r, 0.0000001);
+            float w = r * r * r * r + 0.001;
+            return vec4(total.rgb + frame.rgb * w, 1.0);
+        }
+        """)
+
+    private static let weightedTotalKernel = CIColorKernel(source: """
+        kernel vec4 focusWeightedTotal(__sample total, __sample sharp, __sample peak) {
+            float r = sharp.r / max(peak.r, 0.0000001);
+            float w = r * r * r * r + 0.001;
+            return vec4(total.rgb + vec3(w, w, w), 1.0);
+        }
+        """)
+
+    private static let weightedResolveKernel = CIColorKernel(source: """
+        kernel vec4 focusWeightedResolve(__sample colour, __sample weight) {
+            return vec4(colour.rgb / max(weight.r, 0.001), 1.0);
+        }
+        """)
+
     // MARK: Pieces
 
     /// How much local detail each point has: luminance, a Laplacian, then the
     /// magnitude of the response blurred into a neighbourhood. High where the
     /// image has edges to resolve, low where it is out of focus.
-    private static func sharpnessMap(of image: CIImage) -> CIImage {
-        let mono = CIFilter.photoEffectMono()
-        mono.inputImage = image
-        let grey = mono.outputImage ?? image
-
-        let laplacian = CIFilter.convolution3X3()
-        laplacian.inputImage = grey
-        laplacian.weights = CIVector(values: [0, 1, 0, 1, -4, 1, 0, 1, 0], count: 9)
-        laplacian.bias = 0
-        guard let edges = laplacian.outputImage else { return grey }
-
-        // A Laplacian is signed; what matters is the size of the response.
-        let magnitude = CIFilter.colorAbsoluteDifference()
-        magnitude.inputImage = edges
-        magnitude.inputImage2 = CIImage(color: .black).cropped(to: edges.extent)
-        let response = magnitude.outputImage ?? edges
-
+    static func sharpnessMap(of image: CIImage, radius: Int) -> CIImage {
+        let extent = image.extent
+        // Edges clamped outward first, so neither the Laplacian nor the blur
+        // reads past the frame: outside it Core Image returns transparent
+        // black, and a Laplacian across that step is the largest response in
+        // the picture — the frame border would outvote every real detail.
+        guard let laplacian = laplacianKernel?.apply(
+            extent: extent,
+            roiCallback: { _, rect in rect.insetBy(dx: -1, dy: -1) },
+            arguments: [image.clampedToExtent()]
+        ) else { return image }
         let blur = CIFilter.boxBlur()
-        blur.inputImage = response
-        blur.radius = 6
-        return (blur.outputImage ?? response).cropped(to: image.extent)
+        blur.inputImage = laplacian.clampedToExtent()
+        blur.radius = Float(radius)
+        return (blur.outputImage ?? laplacian).cropped(to: extent)
     }
 
-    /// Pushes a near-zero difference to black and anything real to white, so the
-    /// mask is a decision rather than a weighting.
-    private static func hardened(_ image: CIImage) -> CIImage {
-        let controls = CIFilter.colorControls()
-        controls.inputImage = image
-        controls.contrast = 12
-        controls.brightness = 0
-        controls.saturation = 0
-        return controls.outputImage ?? image
-    }
+    /// |Laplacian| of luminance, never negative, opaque — a sharpness score
+    /// every later blend can read as a plain number.
+    private static let laplacianKernel = CIKernel(source: """
+        kernel vec4 focusLaplacian(sampler image) {
+            vec2 p = destCoord();
+            vec3 luma = vec3(0.299, 0.587, 0.114);
+            float c = dot(sample(image, samplerTransform(image, p)).rgb, luma);
+            float n = dot(sample(image, samplerTransform(image, p + vec2(0.0, 1.0))).rgb, luma);
+            float s = dot(sample(image, samplerTransform(image, p - vec2(0.0, 1.0))).rgb, luma);
+            float e = dot(sample(image, samplerTransform(image, p + vec2(1.0, 0.0))).rgb, luma);
+            float w = dot(sample(image, samplerTransform(image, p - vec2(1.0, 0.0))).rgb, luma);
+            float m = abs(n + s + e + w - 4.0 * c);
+            return vec4(m, m, m, 1.0);
+        }
+        """)
 
-    private static func smoothed(_ image: CIImage) -> CIImage {
+    private static func smoothed(_ image: CIImage, radius: Int) -> CIImage {
+        guard radius > 0 else { return image }
         let blur = CIFilter.gaussianBlur()
         blur.inputImage = image
-        blur.radius = 3
+        blur.radius = Float(radius)
         return (blur.outputImage ?? image).cropped(to: image.extent)
     }
 
