@@ -1,14 +1,52 @@
 {
   "steps": [
-    { "action": "launch" },
-    { "action": "wait", "seconds": 20 },
-    { "action": "tap", "label": "Photo, file type JPG", "type": "cell" },
-    { "action": "wait", "seconds": 8 },
-    { "action": "tap", "label": "Edit" },
-    { "action": "wait", "seconds": 20 },
-    { "action": "tap", "label": "rail.mask" },
-    { "action": "wait", "seconds": 20 },
-    { "action": "tap", "label": "New Mask" },
-    { "action": "wait", "seconds": 25 }
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 20
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type JPG",
+      "type": "cell"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "tap",
+      "label": "Edit"
+    },
+    {
+      "action": "wait",
+      "seconds": 20
+    },
+    {
+      "action": "tap",
+      "label": "rail.mask"
+    },
+    {
+      "action": "wait",
+      "seconds": 20
+    },
+    {
+      "action": "tap",
+      "label": "New Mask"
+    },
+    {
+      "action": "wait",
+      "seconds": 12
+    },
+    {
+      "action": "tap",
+      "label": "Cancel"
+    },
+    {
+      "action": "wait",
+      "seconds": 20
+    }
   ]
 }

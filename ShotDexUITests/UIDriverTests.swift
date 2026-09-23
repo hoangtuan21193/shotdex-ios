@@ -262,12 +262,24 @@ final class UIDriverTests: XCTestCase {
             let matches = exact.firstMatch.exists
                 ? exact
                 : query.matching(NSPredicate(format: "label BEGINSWITH[c] %@", label))
-            let wanted = step.index ?? 0
-            let candidate = matches.element(boundBy: wanted)
-            guard candidate.waitForExistence(timeout: step.seconds ?? 10) else {
+            let first = matches.element(boundBy: step.index ?? 0)
+            guard first.waitForExistence(timeout: step.seconds ?? 10) else {
                 throw DriverError.notFound("'\(label)'\(step.type.map { " of type \($0)" } ?? "")")
             }
-            return candidate
+            // An explicit index is the script choosing; otherwise, of several
+            // matches, take the one a finger can reach. A sheet's Cancel and
+            // the commit bar's Cancel behind its dimming view share a label,
+            // and the covered one can come first: tapping it lands on the dim
+            // (Duo 27.1: nothing happens) or waits for hittability forever
+            // (iPad 18.6). Capped, because every `isHittable` is a hit test.
+            guard step.index == nil else { return first }
+            let count = min(matches.count, 8)
+            guard count > 1 else { return first }
+            for index in 0..<count {
+                let candidate = matches.element(boundBy: index)
+                if candidate.isHittable { return candidate }
+            }
+            return first
         }
         throw DriverError.ambiguousCoordinates
     }

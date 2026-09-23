@@ -470,10 +470,15 @@ grid as a near-black frame; that is the fixture, not a bug.
   `Tools/sim-shot`: trùng khít từng pixel, cả iPad Pro 11 (M4) 18.6 (`ipad-newmask-zoom.json`, ảnh chân dung
   CC0) lẫn Duo inner 27.1 (`duo-newmask.json`) — chỉ khác lớp dim của sheet. Báo cáo cũ đến từ việc so ảnh
   thu nhỏ: sheet che nửa dưới và làm tối, nên phần trên trông như to ra.
-- [ ] **`Tools/ui-drive` trên iPad 18.6 kẹt vô hạn ở hai chỗ**: bước `dump` màn Presets (cây phần tử lớn — 49
-  thẻ film look có ảnh) và `tap` "Cancel" khi sheet đang mở (hai phần tử cùng nhãn: nút sheet và nút thanh
-  commit). Không có timeout, lượt chạy bị cắt ở mốc 10 phút của Bash và chồng lên lượt sau. Cần timeout cho
-  từng bước và ưu tiên phần tử trong sheet đang trình bày.
+- [x] ~~**`Tools/ui-drive`: `tap` "Cancel" khi sheet đang mở**~~ — sửa 2026-09-23. Nút Cancel của thanh commit, nằm
+  dưới lớp dim, đứng **trước** Cancel của sheet trong cây phần tử (dump trên Duo: `hittable` false ở (729,595)
+  rồi true ở (169,298)). Driver lấy phần tử đầu tiên, nên trên Duo 27.1 tap rơi vào lớp dim và không có gì xảy ra,
+  còn trên iPad 18.6 thì chờ hittable mãi. Giờ một nhãn khớp nhiều phần tử mà script không ghi `index` thì driver
+  lấy phần tử **hittable** đầu tiên (xét tối đa 8). Đã kiểm: `ipad-newmask-zoom.json` trên iPad 18.6 đóng sheet
+  và vẫn ở chặng Mask; `duo-newmask.json` trên Duo đóng sheet (dump sau Cancel không còn các dòng của sheet).
+- [ ] **`Tools/ui-drive` trên iPad 18.6 kẹt ở bước `dump` màn Presets** (cây phần tử lớn — 49 thẻ film look có
+  ảnh). Không có timeout, lượt chạy bị cắt ở mốc 10 phút của Bash và chồng lên lượt sau. Cần timeout cho từng
+  bước.
 
 ## FS-14 sweep (2026-09-23)
 
