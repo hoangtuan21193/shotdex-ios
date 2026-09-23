@@ -1017,6 +1017,34 @@ final class PhotoLibraryService: NSObject {
         }
     }
 
+    /// Saves a file that is already on disk as a new library asset, and moves
+    /// it rather than copying.
+    ///
+    /// Separate from `saveImage(_:filename:)`, which takes bytes, because a
+    /// panorama is not something that can be held as bytes: a couple of hundred
+    /// megapixels is a file that was written a strip at a time and must never
+    /// be read back into memory whole just to hand it over
+    /// ([FS-14.02 §6](../../../docs/02-functional-spec/FS-14-panorama/02-stitching-pipeline.md)).
+    ///
+    /// `shouldMoveFile` is true here and false in `importFile`, and the
+    /// difference is whose file it is: an import is reading somebody's memory
+    /// card, which must be left alone, while this is our own scratch file and
+    /// letting PhotoKit take it saves copying a few hundred megabytes and
+    /// deleting them afterwards.
+    func saveImageFile(at url: URL, filename: String) async throws -> String {
+        var placeholderId: String?
+        try await PHPhotoLibrary.shared().performChanges {
+            let request = PHAssetCreationRequest.forAsset()
+            let options = PHAssetResourceCreationOptions()
+            options.originalFilename = filename
+            options.shouldMoveFile = true
+            request.addResource(with: .photo, fileURL: url, options: options)
+            placeholderId = request.placeholderForCreatedAsset?.localIdentifier
+        }
+        guard let placeholderId else { throw PhotoImportError.creationFailed }
+        return placeholderId
+    }
+
     func saveImage(_ data: Data, filename: String) async throws -> String {
         var placeholderId: String?
         try await PHPhotoLibrary.shared().performChanges {

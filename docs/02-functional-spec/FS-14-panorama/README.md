@@ -123,7 +123,7 @@ P3 khi có khung P3, ảnh ra SDR (gain map: xem §2) · đường nối tránh 
 | Rủi ro | Xử lý |
 |---|---|
 | Khung thử không có thị sai, vật chuyển động → spike lạc quan | `/verify` chạy thêm trên chuỗi chụp tay thật |
-| PhotoKit có thể từ chối JPEG 200–700 MP | đo ở đầu `/plan`, trước khi viết đường xuất |
+| ~~PhotoKit có thể từ chối JPEG 200–700 MP~~ | **đã đo, không từ chối**: 300 MP (30 000 × 10 000, 110,9 MB) vào thư viện qua đường file, `PHAsset` trả đúng kích thước (`PanoramaLibrarySaveTests`) |
 | ~~Ghi JPEG kèm gain map có thể không còn ghi theo luồng~~ | **đã đo, đúng như lo**: +1 230 MB ở 300 MP. Gain map bị bỏ khỏi phạm vi (§2) |
 | Đường nối tránh vật chuyển động chưa đo chi phí | đo ở `/plan`; AC-23 là cổng |
 | Spike dựng preview 8 MP mất 1–2 s trên CPU Mac — chưa đạt 15 khung/giây | bản nháp phải chạy GPU (Core Image/Metal); `/plan` đo trước tiên |
