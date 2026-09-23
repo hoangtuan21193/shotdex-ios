@@ -90,7 +90,7 @@ Frame sau align phải kéo giãn mép ra vô hạn **trước khi** crop, nếu
 | AC-9 | VoiceOver bật | vuốt tới dòng Combine Photos | đọc tên kèm "menu"; mỗi dòng con đọc đúng tên | ⚠️ chưa có — dump nhãn a11y |
 | AC-10 | chọn 5 ảnh, màn Stack Exposures đang mở | Cancel | về lưới, vẫn đúng 5 ảnh được chọn; mở tiếp Combine Photos ▸ Focus Stack được ngay | ⚠️ chưa có — `combine-menu.json` + dump |
 | AC-11 | Save thành công | xong lưu | màn đóng, chế độ chọn tắt, viewer mở đúng ảnh vừa lưu | ⚠️ chưa có — `combine-menu.json` + ảnh |
-| AC-12 | Save hỏng giữa chừng | cảnh báo hiện | tiêu đề `Couldn't Save`; không còn `Couldn't Combine` ở đâu | ⚠️ chưa có — ảnh + String Catalog |
+| AC-12 | Save hỏng giữa chừng | cảnh báo hiện | tiêu đề `Couldn't Save`; không còn `Couldn't Combine` ở đâu | ⚠️ một nửa: `PhotoStackModelTests` (4 test, hai tiêu đề theo pha); `Couldn't Combine` đã rời code và String Catalog; còn thiếu ảnh chụp cảnh báo |
 | AC-13 | Album Detail, Smart Album Detail, On This Day, mỗi màn chọn 3 ảnh | mở ⋯ | có dòng Combine Photos với cùng menu con như Library | ⚠️ chưa có — `combine-menu.json` |
 | AC-14 | album người dùng tạo có 8 ảnh, chọn cả 8 | Focus Stack → Save | album có 9 ảnh; viewer mở ảnh mới ngay trong album | ⚠️ chưa có — `combine-menu.json` + ảnh |
 | AC-15 | Smart Album, chọn 3 ảnh | Stack Exposures, `Lighten` → Save | tab Library được chọn, viewer mở ảnh mới; smart album không đổi | ⚠️ chưa có — `combine-menu.json` + ảnh |

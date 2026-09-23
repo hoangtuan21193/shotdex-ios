@@ -782,10 +782,12 @@
     },
     "Couldn't add the sticker.": {},
     "Couldn't Add to Collection": {},
-    "Couldn't Combine": {},
     "Couldn't Delete Photos": {},
     "Couldn't follow that window. Move the playhead to a frame where the subject is clear and try again.": {
       "comment": "Video Studio colour: the window tracker did not get a usable track"
+    },
+    "Couldn't Load Photos": {
+      "comment": "Alert title: the frames for a stack could not be loaded or combined for the preview"
     },
     "Couldn't load the photos for this collage.": {},
     "Couldn't load the selected items.": {},
@@ -797,6 +799,9 @@
     },
     "Couldn't read the video frames.": {},
     "Couldn't render the collage.": {},
+    "Couldn't Save": {
+      "comment": "Alert title: the combined photo could not be rendered or saved"
+    },
     "Couldn't Save Video": {},
     "Couldn't start reading.": {},
     "Couldn't start writing.": {},
