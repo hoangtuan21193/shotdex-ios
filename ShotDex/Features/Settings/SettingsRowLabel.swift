@@ -28,7 +28,6 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
     case lastIndexed
     case continueIndexing
     case reindexLibrary
-    case importPhotos
     case useCellularData
     case keepScreenAwake
     case lookUpPlaceNames
@@ -99,7 +98,6 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
         // indexes the name without the count, which is what anyone types.
         case .continueIndexing: "Continue Indexing"
         case .reindexLibrary: "Re-index Library"
-        case .importPhotos: "Import Photos"
         case .useCellularData: "Use Cellular Data for Indexing"
         case .keepScreenAwake: "Keep Screen Awake While Indexing"
         case .lookUpPlaceNames: "Look Up Place Names"
@@ -141,7 +139,7 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
     var group: SettingsGroup {
         switch self {
         case .access, .manageSelectedPhotos, .openPhotoSettings, .indexedPhotosAndVideos,
-             .lastIndexed, .continueIndexing, .reindexLibrary, .importPhotos,
+             .lastIndexed, .continueIndexing, .reindexLibrary,
              .useCellularData, .keepScreenAwake, .lookUpPlaceNames:
             .photoLibrary
         case .dailyOnThisDayReminder, .remindMeAt, .notificationsDenied, .openNotificationSettings:

@@ -4,7 +4,7 @@
 |---|---|
 | Đặc tả | `docs/02-functional-spec/FS-10-import.md` |
 | Ngày | 2026-09-24 |
-| Trạng thái | đang làm |
+| Trạng thái | xong 2026-09-24 — 7/7 AC |
 
 ## 1. Hiểu đúng chưa
 

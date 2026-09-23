@@ -23,10 +23,12 @@
 | **Keep Screen Awake While Indexing** | mặc định **tắt** |
 | Tiến độ | một hàng riêng, **không chạy hoạt ảnh** |
 | Lần index gần nhất | — |
-| **Import…** | mở màn nhập ảnh ([FS-10](../FS-10-import.md)); chỉ hiện khi đã có quyền đọc thư viện |
 | **Indexed Photos and Videos** | `12,495 of 54,971`, gọn lại còn một số khi đã đọc hết; đang chạy thì lấy số sống từ tiến độ |
 | Library Size | tổng dung lượng đã biết; chưa biết hết thì in kèm `~` vì con số mới là **sàn** |
 | Privacy | giải thích xử lý cục bộ + **Clear local metadata index** (phá huỷ, có hộp xác nhận) |
+
+- **Không có hàng Import** (bỏ 2026-09-24, [FS-10](../FS-10-import.md)): ShotDex đọc thư viện Photos, không
+  nhập file.
 
 - **Vì sao không đếm theo số dòng**: lượt index nhanh ghi một dòng giữ chỗ cho **mọi** ảnh trong vài giây,
   nên số dòng bằng cỡ thư viện ngay từ lần chạy đầu — hàng cũ vì thế luôn đọc thành 100% dù mới index 23%.

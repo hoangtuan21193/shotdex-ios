@@ -49,7 +49,6 @@ struct SettingsScreen: View {
     @State private var isClearIndexConfirmationPresented = false
     @State private var isResetMappingsConfirmationPresented = false
     @State private var isClearScanConfirmationPresented = false
-    @State private var isImportPresented = false
     @State private var notificationAuthorization: NotificationAuthorizationState = .notDetermined
     /// Debounces the reminder-time picker: `.hourAndMinute` publishes on every
     /// detent, and each refresh is seven queries plus seven scheduling calls, so
@@ -91,18 +90,10 @@ struct SettingsScreen: View {
     /// reader is not looking at; the reminder toggle rolls itself back when
     /// permission is refused, and a cancelled pane would leave a preference
     /// stored that can never fire; the time picker's debounce would be cancelled
-    /// the same way; and Import is a full-screen cover, which has to cover the
-    /// window rather than one column of it.
+    /// the same way.
     private var lifecycleBody: some View {
         layoutRoot
             .environment(navigation)
-            .fullScreenCover(isPresented: $isImportPresented) {
-                ImportScreen(
-                    service: dependencies.importService,
-                    libraryQueries: dependencies.libraryQueries,
-                    photoLibrary: dependencies.photoLibrary
-                )
-            }
             .task(id: libraryModel?.isIndexing) {
                 await refreshIndexInfo()
             }
@@ -386,15 +377,6 @@ struct SettingsScreen: View {
 
             if let model = libraryModel {
                 indexControls(model)
-            }
-
-            if photoLibrary.authorizationState.canReadLibrary {
-                Button {
-                    isImportPresented = true
-                } label: {
-                    Label(Row.importPhotos.title, systemImage: "square.and.arrow.down")
-                }
-                .settingsRow(.importPhotos)
             }
 
             Toggle(Row.useCellularData.title, isOn: $allowCellularIndexing)

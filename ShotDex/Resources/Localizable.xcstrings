@@ -226,29 +226,6 @@
     },
     "%lld clips couldn't be loaded and were left out. They may still be in iCloud — check your connection and add them again.": {},
     "%lld failed": {},
-    "%lld file couldn't be imported.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld file couldn't be imported."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld files couldn't be imported."
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "%lld groups": {
       "comment": "Detail on the Duplicates row in Collections: how many duplicate groups the last scan found",
       "extractionState": "manual",
@@ -356,7 +333,6 @@
         }
       }
     },
-    "%lld of these files are already in your library, matched by name and exact size.": {},
     "%lld photo": {
       "extractionState": "manual",
       "localizations": {
@@ -431,7 +407,6 @@
     "%lld points": {
       "comment": "Video Studio colour: how many points the curve has"
     },
-    "%lld RAW hidden": {},
     "%lld saved as JPEG because HEIC wasn't supported": {},
     "%lld saved to Photos": {},
     "%lld unread replies": {},
@@ -507,7 +482,6 @@
       "comment": "Video Studio media pool: adds a caption in the last-used font"
     },
     "Add Title": {},
-    "Add to Album": {},
     "Add to Collection": {},
     "Add to this message": {},
     "Add Track": {},
@@ -528,7 +502,6 @@
     "Adjust %lld Photos": {},
     "Adjust Date & Time": {},
     "Adjust Location": {},
-    "Adjust the filter or turn off Hide RAW.": {},
     "Adjust to resize the panel": {},
     "Adjusting %lld photos. The earliest photo moves to this date and the rest shift by the same amount, keeping their order.": {},
     "Adjustment Base Paired Video": {
@@ -664,7 +637,6 @@
     },
     "Camera Database": {},
     "Camera EXIF, date, location and orientation": {},
-    "Camera, lens and exposure filters become accurate once metadata finishes loading.": {},
     "Cameras you matched to a sensor format by hand go back to what the sensor database says.": {},
     "Can't Reopen This": {},
     "Cancel": {
@@ -703,7 +675,6 @@
       "comment": "Video Studio media pool: opens the picker for a sticker image"
     },
     "Choose Album": {},
-    "Choose Folder": {},
     "Choose how to select the area. You can add and subtract several kinds inside one mask.": {},
     "Choose Image": {},
     "Cinematic": {},
@@ -1154,8 +1125,6 @@
       "comment": "Video Studio: closes the library column"
     },
     "Hide or Show Tools": {},
-    "Hide Photos Already Imported": {},
-    "Hide RAW files": {},
     "Hide this photo?": {},
     "Hide Tools": {},
     "Histogram": {
@@ -1185,76 +1154,16 @@
     "iCloud isn't responding — trying again in": {},
     "iCloud not responding": {},
     "iCloud not responding, retrying automatically": {},
-    "Import": {},
-    "Import %lld item": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Import %lld item"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Import %lld items"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "Import from a Card or Drive": {},
     "Import from Files…": {
       "comment": "Video Studio media pool: brings an audio file in from the Files app"
     },
     "Import LUT…": {
       "comment": "Video Studio colour: brings a .cube in from Files"
     },
-    "Import Photos": {},
     "Imported": {
       "comment": "Video Studio media pool bin label for the music tab"
     },
-    "Imported %lld item": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Imported %lld item"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Imported %lld items"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "Imported LUT": {},
-    "Imported photos go into your library either way. An album here just files them as well.": {},
-    "Importing %lld of %lld…": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "Importing %1$lld of %2$lld…"
-          }
-        }
-      }
-    },
     "In": {},
     "In Progress": {},
     "Include Diagnostic Log": {},
@@ -1546,7 +1455,6 @@
       "comment": "Button that starts a new collage"
     },
     "New Mask": {},
-    "New photos appear in your library and are indexed automatically.": {},
     "New Preset": {},
     "New Smart Album": {},
     "New Video Project": {
@@ -1594,7 +1502,6 @@
     "No Metadata": {},
     "No music yet": {},
     "No Photos": {},
-    "No Photos Match": {},
     "No photos match these filters.": {},
     "No Photos on This Day": {},
     "No photos were taken on %@ in previous years.": {},
@@ -1840,7 +1747,6 @@
       "comment": "Video Studio transport: VoiceOver label for the timecode read-out"
     },
     "Playing Live Photo": {},
-    "Plug in your camera's SD card or a USB drive, then pick its folder (usually DCIM). RAW is skipped by default; JPEG, HEIC and videos import.": {},
     "Point": {},
     "Point color": {},
     "Polaroid": {},
@@ -1886,30 +1792,9 @@
     "Raw · Image": {
       "comment": "Info panel section title"
     },
-    "RAW and DNG are hidden by default; JPEG, HEIC and videos import.": {},
     "Raw Metadata": {},
     "Re-index Library": {},
     "Read the Log": {},
-    "reading metadata %lld/%lld": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "reading metadata %1$lld/%2$lld"
-          }
-        }
-      }
-    },
-    "Reading metadata %lld/%lld": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "Reading metadata %1$lld/%2$lld"
-          }
-        }
-      }
-    },
     "Reading original…": {},
     "Reading photo and video info · %lld%%": {},
     "Reading photo and video info…": {},
@@ -2062,7 +1947,6 @@
     "Scan Library": {},
     "Scan your library once; the results are kept and you rescan whenever you like.": {},
     "Scanned": {},
-    "Scanning %@…": {},
     "Scanning %lld of %lld": {
       "localizations": {
         "en": {
@@ -2093,7 +1977,6 @@
     "Select": {},
     "Select a start date": {},
     "Select All": {},
-    "Select items to import": {},
     "Select photos": {},
     "Select Text or Subject": {},
     "Selected": {},

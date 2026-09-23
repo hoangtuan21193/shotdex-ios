@@ -22,7 +22,6 @@ final class AppDependencies {
     let overlayFontRecents: OverlayFontRecentsStore
     let collagePresets: CollagePresetStore
     let overlayImages: OverlayImageStore
-    let importService: ImportService
     let videoStudio: VideoStudioService
     /// Joins overlapping frames into one photo (FS-14).
     let panoramaStitchService: PanoramaStitchService
@@ -146,7 +145,6 @@ final class AppDependencies {
         self.signaturePresets = SignaturePresetStore(images: overlayImages)
         self.overlayFontRecents = OverlayFontRecentsStore()
         self.collagePresets = CollagePresetStore()
-        self.importService = ImportService(photoLibrary: photoLibrary, metadataStore: metadataStore)
         self.videoStudio = VideoStudioService(
             importFile: { url, isVideo in
                 try await photoLibrary.importFile(at: url, isVideo: isVideo)

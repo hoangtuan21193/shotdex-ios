@@ -73,7 +73,7 @@ struct SettingsSearchTests {
     /// `SettingsRowLabel`, this is what says so.
     @Test func eachSectionIndexesEveryRowItDraws() {
         let expected: [SettingsSection: Int] = [
-            .photoLibrary: 14,      // SettingsScreen.swift:127 (11) + :463 (2) + :543 (1)
+            .photoLibrary: 13,      // SettingsScreen.swift:127 (10) + :463 (2) + :543 (1); Import gone (FS-10)
             .notifications: 4,      // :346
             .widgets: 1,            // :413
             .display: 8,            // :429
@@ -89,7 +89,7 @@ struct SettingsSearchTests {
                 "\(section) indexes \(SettingsSearchIndex.entries(in: section).count) rows"
             )
         }
-        #expect(SettingsSearchIndex.entries.count == 38)
+        #expect(SettingsSearchIndex.entries.count == 37)
     }
 
     /// One case, one entry — a copy-pasted case that forgot to change its text

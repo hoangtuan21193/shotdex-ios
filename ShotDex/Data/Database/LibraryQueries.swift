@@ -100,29 +100,6 @@ struct LibraryQueries: Sendable {
         }
     }
 
-    /// Fingerprints of everything already in the library, as
-    /// `filename|byteCount`, for spotting a card's photos that were imported
-    /// on an earlier trip.
-    ///
-    /// Filename plus size rather than a hash: the importer must answer before
-    /// the user picks anything, and hashing a card full of RAWs over USB would
-    /// take minutes. Two genuinely different photos sharing a name *and* an
-    /// exact byte count is rare enough to accept.
-    func importedFingerprints() async throws -> Set<String> {
-        try await database.reader.read { db in
-            let rows = try Row.fetchAll(db, sql: """
-                SELECT originalFilename, fileSize FROM photo_metadata
-                WHERE originalFilename IS NOT NULL AND fileSize IS NOT NULL
-                """)
-            return Set(rows.compactMap { row -> String? in
-                guard let name: String = row["originalFilename"],
-                      let size: Int = row["fileSize"]
-                else { return nil }
-                return "\(name)|\(size)"
-            })
-        }
-    }
-
     /// Full row for the detail viewer / metadata panel, fetched on demand.
     func metadata(assetId: String) throws -> PhotoMetadata? {
         try database.reader.read { db in

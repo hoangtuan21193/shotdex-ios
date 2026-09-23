@@ -23,7 +23,7 @@ lại đúng số pt mà chrome che.
 
 - **Không còn nút Filter nhanh kiểu cũ** — Advanced Search đảm nhận lọc ad-hoc. Bộ lọc đơn giản vẫn tồn tại
   cho đường drill-down từ Statistics và cho chip đang bật.
-- **Import không còn ở toolbar** — nó nằm trong Settings ([FS-10](../FS-10-import.md)).
+- **Không có Import** — ở toolbar lẫn ở Settings; ShotDex đọc thư viện Photos, không nhập file ([FS-10](../FS-10-import.md)).
 
 ## 3. Thanh điều kiện
 
