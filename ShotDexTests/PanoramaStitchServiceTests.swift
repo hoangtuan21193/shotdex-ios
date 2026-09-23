@@ -96,6 +96,33 @@ struct PanoramaStitchServiceTests {
         }
     }
 
+    /// Exactly `count` photos, or a failure that says how to get them.
+    ///
+    /// A `PHAsset` cannot be constructed, so these tests borrow whatever the
+    /// simulator's library holds; the loader is stubbed, so the pixels never
+    /// matter. A bare count check fails on a clean simulator with nothing to
+    /// act on, which is how this suite greeted another session — hence the
+    /// instructions in the message.
+    private func requirePhotos(_ count: Int) throws -> [PHAsset] {
+        let assets = libraryPhotos(count)
+        guard assets.count == count else {
+            let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+            throw PanoramaTestPrecondition(description: """
+                needs \(count) photos in the simulator library, found \(assets.count) \
+                (photo authorization status \(status.rawValue); 3 or 4 is access). Seed it with \
+                `xcrun simctl addmedia <udid> <any three jpegs>`, grant photo access to \
+                ShotDex on that simulator, then run again. Skipping would prove nothing.
+                """)
+        }
+        return assets
+    }
+
+    /// Carries its own sentence so the failure reads as instructions rather
+    /// than as a case name.
+    private struct PanoramaTestPrecondition: Error, CustomStringConvertible {
+        let description: String
+    }
+
     /// Any images from the library — the service only reads their media type
     /// and capture date, because the loader is what actually provides pixels.
     private func libraryPhotos(_ count: Int) -> [PHAsset] {
@@ -147,8 +174,7 @@ struct PanoramaStitchServiceTests {
     /// Frames that will not come down from iCloud are counted and named, never
     /// silently left out of the picture.
     @Test func framesThatWillNotLoadAreCountedNotDropped() async throws {
-        let assets = libraryPhotos(3)
-        try #require(assets.count == 3)
+        let assets = try requirePhotos(3)
         let service = PanoramaStitchService(
             loadFrame: { _ in nil },
             saveFile: { _, _ in "unused" },
@@ -161,8 +187,7 @@ struct PanoramaStitchServiceTests {
 
     /// Cancelling before anything is written produces nothing at all.
     @Test func cancellingStopsBeforeAnythingIsSaved() async throws {
-        let assets = libraryPhotos(3)
-        try #require(assets.count == 3)
+        let assets = try requirePhotos(3)
         let saves = Counter()
         let service = service(frames: frames(count: 3), saved: { _, _ in
             saves.increment()
@@ -185,8 +210,7 @@ struct PanoramaStitchServiceTests {
     /// the panorama tag on it and the camera it was shot with, and the phases
     /// arrive in the order the screen shows them.
     @Test func threeFramesBecomeOneSavedPanorama() async throws {
-        let assets = libraryPhotos(3)
-        try #require(assets.count == 3, "this test needs three photos in the simulator library")
+        let assets = try requirePhotos(3)
 
         let phases = PhaseLog()
         let written = WrittenFile()
