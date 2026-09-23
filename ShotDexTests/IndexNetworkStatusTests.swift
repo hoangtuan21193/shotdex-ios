@@ -91,19 +91,19 @@ struct IndexTrafficMonitorTests {
     }
 
     @Test func breakerHalfOpensAfterCooldown() async throws {
-        let monitor = IndexTrafficMonitor(cooldown: .milliseconds(50))
+        let monitor = IndexTrafficMonitor(cooldown: .milliseconds(300))
         trip(monitor)
         #expect(monitor.isNetworkTripped)
-        try await Task.sleep(for: .milliseconds(80))
+        try await Task.sleep(for: .milliseconds(400))
         // Cooldown elapsed — reads may probe the network again.
         #expect(!monitor.isNetworkTripped)
         #expect(monitor.breakerCooldownRemaining == nil)
     }
 
     @Test func stalledProbeReTrips() async throws {
-        let monitor = IndexTrafficMonitor(cooldown: .milliseconds(50))
+        let monitor = IndexTrafficMonitor(cooldown: .milliseconds(300))
         trip(monitor)
-        try await Task.sleep(for: .milliseconds(80))
+        try await Task.sleep(for: .milliseconds(400))
         #expect(!monitor.isNetworkTripped)
         // The half-open probe stalled — re-trip for another cooldown.
         #expect(monitor.recordNetworkStall() == true)
@@ -111,9 +111,9 @@ struct IndexTrafficMonitorTests {
     }
 
     @Test func progressClosesBreakerFully() async throws {
-        let monitor = IndexTrafficMonitor(cooldown: .milliseconds(50))
+        let monitor = IndexTrafficMonitor(cooldown: .milliseconds(300))
         trip(monitor)
-        try await Task.sleep(for: .milliseconds(80))
+        try await Task.sleep(for: .milliseconds(400))
         monitor.recordNetworkProgress()
         #expect(!monitor.isNetworkTripped)
         // Fully closed: the next stall starts a fresh streak, no re-trip.
@@ -169,11 +169,11 @@ struct IndexTrafficMonitorTests {
     }
 
     @Test func halfOpenAllowsExactlyOneProbe() async throws {
-        let monitor = IndexTrafficMonitor(cooldown: .milliseconds(50))
+        let monitor = IndexTrafficMonitor(cooldown: .milliseconds(300))
         #expect(monitor.shouldSkipNetworkRead() == false)   // closed — reads flow
         trip(monitor)
         #expect(monitor.shouldSkipNetworkRead())            // cooling — everyone skips
-        try await Task.sleep(for: .milliseconds(80))
+        try await Task.sleep(for: .milliseconds(400))
         #expect(monitor.shouldSkipNetworkRead() == false)   // first caller claims the probe
         #expect(monitor.shouldSkipNetworkRead())            // the rest stay blocked
         monitor.recordNetworkStall()                        // probe stalled — re-trip
@@ -182,9 +182,9 @@ struct IndexTrafficMonitorTests {
     }
 
     @Test func probeSuccessUnblocksAllReads() async throws {
-        let monitor = IndexTrafficMonitor(cooldown: .milliseconds(50))
+        let monitor = IndexTrafficMonitor(cooldown: .milliseconds(300))
         trip(monitor)
-        try await Task.sleep(for: .milliseconds(80))
+        try await Task.sleep(for: .milliseconds(400))
         #expect(monitor.shouldSkipNetworkRead() == false)   // probe out
         monitor.recordNetworkProgress()                     // probe delivered bytes
         #expect(monitor.shouldSkipNetworkRead() == false)   // breaker closed — all flow
