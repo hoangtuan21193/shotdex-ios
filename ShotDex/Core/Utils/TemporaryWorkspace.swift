@@ -21,6 +21,7 @@ enum TemporaryWorkspace {
         "ShotDexDrag-",
         "ShotDexDrop-",
         "ShotDexVideo-",
+        "ShotDexPano-",
         "ShotDex-Video-",
     ]
 
