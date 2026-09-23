@@ -160,6 +160,14 @@ struct PhotoStackRendererTests {
         #expect(result.excludedFrames == [1])
     }
 
+    @Test func aFocusStackOfUnrelatedPhotosSaysSo() async {
+        let size = 256
+        await #expect(throws: PhotoStackError.framesDoNotLineUp) {
+            _ = try await PhotoStackRenderer().combine(
+                images: [halfSharp(side: size, sharpOnLeft: true), solid(0.3, 0.3, 0.3, side: size)], mode: .focusStack)
+        }
+    }
+
     @Test func blendModesUseEveryFrame() async throws {
         let result = try await PhotoStackRenderer().combineReportingFrames(
             images: [solid(0.2, 0.2, 0.2), solid(0.8, 0.1, 0.4), solid(0.5, 0.5, 0.5)], mode: .lighten)

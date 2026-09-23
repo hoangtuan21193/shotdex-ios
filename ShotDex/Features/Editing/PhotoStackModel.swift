@@ -34,6 +34,11 @@ final class PhotoStackModel {
     var mode: PhotoStackMode {
         didSet { if mode != oldValue { renderPreview() } }
     }
+    /// Method, Radius and Smoothing of a focus stack. Picking a method resets
+    /// the two sliders to that method's starting values (FS-01.10 §3).
+    var focusOptions = FocusStackOptions.standard {
+        didSet { if focusOptions != oldValue { renderPreview() } }
+    }
     private(set) var preview: UIImage?
     private(set) var isWorking = false
     private(set) var statusText: String?
@@ -48,6 +53,9 @@ final class PhotoStackModel {
     /// mode change — reloading eight originals per picker tap is the difference
     /// between instant and unusable.
     private var previewFrames: [CIImage] = []
+    /// The preview bracket, lined up once; every method or slider change
+    /// re-stacks it instead of registering the frames again.
+    private var preparedFocus: PreparedFocusStack?
     private var renderTask: Task<Void, Never>?
     private let renderer = PhotoStackRenderer()
     private let photoLibrary: PhotoLibraryService
@@ -99,6 +107,12 @@ final class PhotoStackModel {
 
     func cancel() { renderTask?.cancel() }
 
+    /// Switches method and puts Radius and Smoothing back to its defaults.
+    func selectFocusMethod(_ method: FocusStackOptions.Method) {
+        guard method != focusOptions.method else { return }
+        focusOptions = .defaults(for: method)
+    }
+
     private func renderPreview() {
         renderTask?.cancel()
         renderTask = Task { await render() }
@@ -110,11 +124,23 @@ final class PhotoStackModel {
         statusText = workingText
         defer { isWorking = false }
         do {
-            let result = try await renderer.combineReportingFrames(images: previewFrames, mode: mode)
-            let cgImage = try await renderer.render(result.image)
+            let image: CIImage
+            if mode == .focusStack {
+                let prepared: PreparedFocusStack
+                if let preparedFocus {
+                    prepared = preparedFocus
+                } else {
+                    prepared = try await renderer.prepareFocusStack(images: previewFrames)
+                    preparedFocus = prepared
+                }
+                image = await renderer.focusStack(prepared, options: focusOptions)
+                excludedFrames = prepared.excludedFrames
+            } else {
+                image = try await renderer.combine(images: previewFrames, mode: mode)
+            }
+            let cgImage = try await renderer.render(image)
             guard !Task.isCancelled else { return }
             preview = UIImage(cgImage: cgImage)
-            excludedFrames = result.excludedFrames
         } catch {
             failure = .load(error.localizedDescription)
         }
@@ -148,7 +174,7 @@ final class PhotoStackModel {
                 guard frames.count >= CombinePurpose.minimumPhotoCount else { throw PhotoStackError.needsTwoImages }
 
                 statusText = workingText
-                let combined = try await renderer.combine(images: frames, mode: mode)
+                let combined = try await renderer.combine(images: frames, mode: mode, focus: focusOptions)
                 let cgImage = try await renderer.render(combined)
 
                 statusText = String(localized: "Saving…", comment: "Stack screen status while the new photo is written")

@@ -1,5 +1,6 @@
 import Testing
 @testable import ShotDex
+@testable import ShotDexKit
 
 /// FS-01.09 AC-12: the alert says which step failed. A preview that could not
 /// be built has nothing to save yet, so it must not say "Couldn't Save".
@@ -22,5 +23,27 @@ struct PhotoStackModelTests {
         for failure in [PhotoStackModel.Failure.load(""), .save("")] {
             #expect(!failure.title.contains("Combine"))
         }
+    }
+
+    @MainActor
+    @Test func pickingAMethodResetsItsSliders() {
+        let dependencies = AppDependencies.preview()
+        let model = PhotoStackModel(purpose: .focusStack, assets: [], photoLibrary: dependencies.photoLibrary,
+                                    indexPipeline: dependencies.indexPipeline)
+        #expect(model.focusOptions == .standard)
+        model.focusOptions = FocusStackOptions(method: .weighted, radius: 9, smoothing: 7)
+        model.selectFocusMethod(.depthMap)
+        #expect(model.focusOptions == .defaults(for: .depthMap))
+        model.selectFocusMethod(.weighted)
+        #expect(model.focusOptions == .defaults(for: .weighted))
+    }
+
+    @MainActor
+    @Test func aFocusStackOpensOnWeighted() {
+        let dependencies = AppDependencies.preview()
+        let model = PhotoStackModel(purpose: .focusStack, assets: [], photoLibrary: dependencies.photoLibrary,
+                                    indexPipeline: dependencies.indexPipeline)
+        #expect(model.focusOptions == FocusStackOptions(method: .weighted, radius: 2, smoothing: 0))
+        #expect(model.mode == .focusStack)
     }
 }

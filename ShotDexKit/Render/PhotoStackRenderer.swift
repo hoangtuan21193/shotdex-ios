@@ -64,6 +64,15 @@ public struct FocusStackOptions: Sendable, Equatable {
     public static let standard = defaults(for: .weighted)
 }
 
+/// A focus bracket already fitted and lined up, ready to be stacked any
+/// number of times: changing method or a slider re-stacks it without
+/// registering the frames again.
+public struct PreparedFocusStack: @unchecked Sendable {
+    public var frames: [CIImage]
+    /// Indices into the input frames that would not line up and were left out.
+    public var excludedFrames: [Int]
+}
+
 /// A combined image and the frames that did not make it in.
 public struct PhotoStackResult: @unchecked Sendable {
     public var image: CIImage
@@ -74,11 +83,16 @@ public struct PhotoStackResult: @unchecked Sendable {
 public enum PhotoStackError: LocalizedError {
     case needsTwoImages
     case renderFailed
+    /// A focus stack where fewer than two frames lined up: they are not one
+    /// bracket, and saying "pick two photos" to someone who picked eight is a
+    /// wrong answer (FS-01.10 §4).
+    case framesDoNotLineUp
 
     public var errorDescription: String? {
         switch self {
         case .needsTwoImages: "Pick at least two photos to combine."
         case .renderFailed: "Those photos couldn't be combined."
+        case .framesDoNotLineUp: "These photos couldn't be lined up. A focus stack needs frames of one scene, shot from one spot."
         }
     }
 }
@@ -126,12 +140,39 @@ public actor PhotoStackRenderer {
         let extent = base.extent
         guard extent.width > 0, extent.height > 0 else { throw PhotoStackError.renderFailed }
 
+        if mode == .focusStack {
+            let prepared = try prepareFocusStack(images: images, alignmentProgress: alignmentProgress)
+            return PhotoStackResult(image: focusStack(prepared, options: focus), excludedFrames: prepared.excludedFrames)
+        }
+        var frames: [CIImage] = [base]
+        for (offset, image) in images.dropFirst().enumerated() {
+            alignmentProgress?(offset + 1, images.count - 1)
+            frames.append(Self.fitted(image, to: extent))
+        }
+        let image: CIImage
+        switch mode {
+        case .average: image = Self.averaged(frames)
+        case .lighten: image = Self.reduced(frames, using: CIFilter.lightenBlendMode())
+        case .darken: image = Self.reduced(frames, using: CIFilter.darkenBlendMode())
+        case .focusStack: image = frames[0]
+        }
+        return PhotoStackResult(image: image, excludedFrames: [])
+    }
+
+    /// Fits every frame to the first and lines the bracket up, dropping frames
+    /// that will not line up (FS-01.10 §4).
+    public func prepareFocusStack(
+        images: [CIImage],
+        alignmentProgress: (@Sendable (Int, Int) -> Void)? = nil
+    ) throws -> PreparedFocusStack {
+        guard images.count >= 2 else { throw PhotoStackError.needsTwoImages }
+        let base = images[0]
+        let extent = base.extent
+        guard extent.width > 0, extent.height > 0 else { throw PhotoStackError.renderFailed }
         let fittedFrames = [base] + images.dropFirst().map { Self.fitted($0, to: extent) }
+        let maps = alignedMaps(fittedFrames, extent: extent)
         var frames: [CIImage] = [base]
         var excluded: [Int] = []
-        let maps: [CGAffineTransform?] = mode.needsAlignment
-            ? alignedMaps(fittedFrames, extent: extent)
-            : Array(repeating: .identity, count: fittedFrames.count)
         for index in fittedFrames.indices.dropFirst() {
             alignmentProgress?(index, fittedFrames.count - 1)
             guard let map = maps[index] else {
@@ -148,20 +189,16 @@ public actor PhotoStackRenderer {
                 frames.append(fittedFrames[index].transformed(by: map).clampedToExtent().cropped(to: extent))
             }
         }
-        guard frames.count >= 2 else { throw PhotoStackError.needsTwoImages }
+        guard frames.count >= 2 else { throw PhotoStackError.framesDoNotLineUp }
+        return PreparedFocusStack(frames: frames, excludedFrames: excluded)
+    }
 
-        let image: CIImage
-        switch mode {
-        case .average: image = Self.averaged(frames)
-        case .lighten: image = Self.reduced(frames, using: CIFilter.lightenBlendMode())
-        case .darken: image = Self.reduced(frames, using: CIFilter.darkenBlendMode())
-        case .focusStack:
-            switch focus.method {
-            case .depthMap: image = focusStacked(frames, options: focus)
-            case .weighted: image = Self.weightedFocusStack(frames, options: focus)
-            }
+    /// Stacks a prepared bracket with the given method and parameters.
+    public func focusStack(_ prepared: PreparedFocusStack, options: FocusStackOptions) -> CIImage {
+        switch options.method {
+        case .depthMap: focusStacked(prepared.frames, options: options)
+        case .weighted: Self.weightedFocusStack(prepared.frames, options: options)
         }
-        return PhotoStackResult(image: image, excludedFrames: excluded)
     }
 
     /// How far `map` moves the farthest corner of `extent`, in pixels.
@@ -176,7 +213,7 @@ public actor PhotoStackRenderer {
     /// frames, handed back as Core Image transforms moving each frame onto the
     /// base, or nil for a frame that would not line up.
     private func alignedMaps(_ frames: [CIImage], extent: CGRect) -> [CGAffineTransform?] {
-        let scale = min(1, CGFloat(PanoramaImage.workingEdge) / max(extent.width, extent.height))
+        let scale = min(1, CGFloat(FocusStackAligner.workingEdge) / max(extent.width, extent.height))
         let shrink = CGAffineTransform(scaleX: scale, y: scale)
         let small: [CGImage] = frames.compactMap { frame in
             let scaled = frame.transformed(by: shrink)

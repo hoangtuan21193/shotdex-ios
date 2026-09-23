@@ -24,6 +24,13 @@ public enum FocusStackAligner {
     /// 25% between two neighbouring frames, and nobody rotates a rail.
     public static let scaleRange: ClosedRange<Double> = 0.85...1.18
     public static let maximumRotationDegrees = 4.0
+    /// Long edge frames are registered at. Smaller than a panorama's 1024: a
+    /// bracket drifts a few pixels, not a third of a frame, and the preview has
+    /// to come back while the user is still looking at it.
+    public static let workingEdge = 768
+    /// Corners kept per frame — enough for hundreds of agreeing points between
+    /// neighbours, few enough that matching them stays cheap.
+    public static let featureCount = 1_200
 
     /// For each frame, the map taking its pixels (top-left origin, at the
     /// frames' own resolution) onto the first frame's, or nil when the frame
@@ -33,11 +40,11 @@ public enum FocusStackAligner {
     /// the last frame that succeeded.
     public static func align(_ frames: [CGImage]) -> [CGAffineTransform?] {
         guard let first = frames.first else { return [] }
-        let working = frames.map { PanoramaImage.luminance(of: $0) }
+        let working = frames.map { PanoramaImage.luminance(of: $0, maximumEdge: workingEdge) }
         // Working images all share the first frame's scale factor; frames of one
         // bracket are one size (the renderer fits any that are not).
         let scale = Double(first.width) / Double(working[0]?.width ?? first.width)
-        let features = working.map { image in image.map { PanoramaFeatureDetector.features(in: $0, maximumCount: 2_000) } ?? [] }
+        let features = working.map { image in image.map { PanoramaFeatureDetector.features(in: $0, maximumCount: featureCount) } ?? [] }
 
         var result: [CGAffineTransform?] = [.identity]
         var lastGood = 0

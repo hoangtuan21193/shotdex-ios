@@ -101,4 +101,18 @@ struct FocusStackMethodTests {
         let options = FocusStackOptions(method: .weighted, radius: 40, smoothing: -3)
         #expect(options.radius == 10 && options.smoothing == 0)
     }
+
+    @Test func preparingOnceThenStackingMatchesCombine() async throws {
+        // AC-6 at the renderer: the model lines the bracket up once and
+        // re-stacks it on every slider change; that must equal a fresh combine.
+        let frames = bracket().frames
+        let renderer = PhotoStackRenderer()
+        let prepared = try await renderer.prepareFocusStack(images: frames)
+        for method in FocusStackOptions.Method.allCases {
+            let options = FocusStackOptions.defaults(for: method)
+            let direct = try await pixels(renderer.combine(images: frames, mode: .focusStack, focus: options))
+            let restacked = try await pixels(renderer.focusStack(prepared, options: options))
+            #expect(direct == restacked, "\(method)")
+        }
+    }
 }

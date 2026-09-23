@@ -89,3 +89,20 @@ extension PhotoStackMode {
         }
     }
 }
+
+extension FocusStackOptions.Method {
+    var displayName: String {
+        switch self {
+        case .depthMap: String(localized: "Depth Map", comment: "Focus Stack method: pick each point from its sharpest frame, smoothed like a depth map")
+        case .weighted: String(localized: "Weighted", comment: "Focus Stack method: blend every frame by how sharp it is")
+        }
+    }
+
+    /// What the method is good at, in the photographer's terms (FS-01.10 §3).
+    var purposeDescription: String {
+        switch self {
+        case .depthMap: String(localized: "Smooth and true to colour — long stacks and smooth surfaces.", comment: "Focus Stack: when to use Depth Map")
+        case .weighted: String(localized: "Holds fine crossing detail — hair, bristles, fur.", comment: "Focus Stack: when to use Weighted")
+        }
+    }
+}

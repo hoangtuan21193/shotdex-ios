@@ -119,6 +119,63 @@ struct PhotoStackScreen: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    /// Method, and the two sliders Helicon and Zerene both expose (FS-01.10 §3).
+    @ViewBuilder
+    private func focusControls(_ model: PhotoStackModel) -> some View {
+        Picker("Method", selection: Binding(
+            get: { model.focusOptions.method },
+            set: { model.selectFocusMethod($0) }
+        )) {
+            ForEach(FocusStackOptions.Method.allCases) { method in
+                Text(method.displayName).tag(method)
+            }
+        }
+        .pickerStyle(.segmented)
+
+        Text(model.focusOptions.method.purposeDescription)
+            .font(EditorTheme.maskSubtitle)
+            .foregroundStyle(EditorTheme.dimText)
+            .fixedSize(horizontal: false, vertical: true)
+
+        let options = model.focusOptions
+        EditorValueSlider(
+            label: String(localized: "Radius", comment: "Focus Stack slider: size of the area sharpness is judged over"),
+            value: Double(options.radius),
+            range: 1...10,
+            valueText: "\(options.radius)",
+            accessibilityName: String(localized: "Radius", comment: "Focus Stack slider: size of the area sharpness is judged over"),
+            onBeginDrag: {},
+            onDrag: { value in
+                let radius = Int(value.rounded())
+                if radius != model.focusOptions.radius {
+                    model.focusOptions = FocusStackOptions(method: options.method, radius: radius, smoothing: model.focusOptions.smoothing)
+                }
+            },
+            onReset: {
+                let defaults = FocusStackOptions.defaults(for: options.method)
+                model.focusOptions = FocusStackOptions(method: options.method, radius: defaults.radius, smoothing: model.focusOptions.smoothing)
+            }
+        )
+        EditorValueSlider(
+            label: String(localized: "Smoothing", comment: "Focus Stack slider: how much the choice between frames is blurred"),
+            value: Double(options.smoothing),
+            range: 0...10,
+            valueText: "\(options.smoothing)",
+            accessibilityName: String(localized: "Smoothing", comment: "Focus Stack slider: how much the choice between frames is blurred"),
+            onBeginDrag: {},
+            onDrag: { value in
+                let smoothing = Int(value.rounded())
+                if smoothing != model.focusOptions.smoothing {
+                    model.focusOptions = FocusStackOptions(method: options.method, radius: model.focusOptions.radius, smoothing: smoothing)
+                }
+            },
+            onReset: {
+                let defaults = FocusStackOptions.defaults(for: options.method)
+                model.focusOptions = FocusStackOptions(method: options.method, radius: model.focusOptions.radius, smoothing: defaults.smoothing)
+            }
+        )
+    }
+
     private func panel(_ model: PhotoStackModel) -> some View {
         @Bindable var model = model
         return VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
@@ -136,6 +193,10 @@ struct PhotoStackScreen: View {
                 .font(EditorTheme.rowLabel)
                 .foregroundStyle(EditorTheme.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
+
+            if model.mode == .focusStack {
+                focusControls(model)
+            }
 
             if let message = model.excludedFramesMessage {
                 Label(message, systemImage: "exclamationmark.triangle")
