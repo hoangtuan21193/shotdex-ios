@@ -6,8 +6,8 @@
 **Một câu:** chọn ≥ 2 ảnh → ⋯ → **Combine Photos ▸** → **Focus Stack**, **Panorama** hoặc **Stack Exposures**
 → một màn cho việc đó.
 
-> Trạng thái: **spec đã duyệt intent, chưa build.** Code hiện tại vẫn là một dòng Combine Photos và bộ chọn
-> bốn mode `Average · Lighten · Darken · Focus Stack` trong một màn.
+> Trạng thái: **đã build** (2026-09-23, plan [fs-01-09-combine-menu](../../_plans/2026-09-23-fs-01-09-combine-menu.md));
+> bằng chứng từng AC ở §5.
 
 ## 1. Quy tắc
 
@@ -39,7 +39,7 @@ Bộ chọn trong màn Stack Exposures, **mặc định `Average`**:
 - Tên mode giữ tên phép toán quen trong Photoshop và app chụp đêm; **câu giải thích nói dùng để làm gì** — tên
   và câu cùng hiện, không cái nào thiếu.
 - Dòng mở menu con giữ tên **Combine Photos**, icon như hiện nay.
-- **Panorama** chỉ xuất hiện khi FS-14 đã build; trước đó menu con có hai dòng.
+- **Panorama** mở màn của [FS-14](../FS-14-panorama/README.md); một dòng chỉ nằm trong menu khi màn phía sau nó đã có.
 - Cả ba dòng **mờ** khi lựa chọn có < 2 ảnh; dòng Combine Photos vẫn mở được để thấy có những việc gì.
 - Video trong lựa chọn bị bỏ qua, không làm mờ dòng nào.
 - Mỗi dòng một icon SF Symbols có từ iOS 17 — chọn ở `/plan`, theo DESIGN §8.

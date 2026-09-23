@@ -34,9 +34,11 @@ hai nhánh iOS, mờ dần theo việc có đang chọn hay không.
 | Nav bar | **Compare** và **Edit** là hai nút chữ bên trái (Compare mờ khi chưa đủ số ảnh, Edit mờ khi không có ảnh nào) · **⋯** · rồi **×** đứng riêng một viên kính |
 | Thanh đáy | `[ Share tròn 48 · pill đếm · Delete tròn 48 ]` |
 
-- **Menu ⋯**: Create Collage (bật khi số ảnh nằm trong tập template hỗ trợ) · Create Video · Resize ·
-  Add to Collection · Export EXIF (CSV) · Duplicate. Màn không cấp hành động nào thì dòng đó **không hiện**;
-  ngoài khoảng hợp lệ thì **mờ**.
+- **Menu ⋯**: Paste Edits (chỉ khi có bản sửa đã copy) · **Combine Photos ▸** (menu con Focus Stack ·
+  Panorama · Stack Exposures, [FS-01.09](09-photo-stacking.md)) · Create Collage (bật khi số ảnh nằm trong tập
+  template hỗ trợ) · Create Video · Resize · Add to Collection · Export EXIF (CSV) · Duplicate. Màn không cấp
+  hành động nào thì dòng đó **không hiện**; ngoài khoảng hợp lệ thì **mờ** — ở Combine Photos là từng dòng con
+  mờ, dòng cha vẫn mở được.
 - Compare và Edit **không** nằm trong menu — hai thứ người ta chọn ảnh *để làm*, còn menu là chỗ tìm những
   thứ còn lại.
 - Share đổi thành vòng quay khi đang gom ảnh. Delete **không tô đỏ** (hệ thống đã hỏi xác nhận). Không dùng

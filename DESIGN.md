@@ -309,7 +309,7 @@ Tiến trình dài chạy: `safeAreaInset(edge: .bottom)` với `ProgressView` +
 ### 10.3b Ghép ảnh (2026-09-19)
 
 - **Không còn cull** (gỡ 2026-09-20). Cờ pick/reject rồi sao 0–5 đều đã bỏ, bảng `photo_cull` drop ở `v16-dropCull`. Ảnh chỉ mang **favorite của PhotoKit** — một bit, đồng bộ sang Photos. Ba trục trả lời cùng một câu hỏi "tấm này có được không" là hai trục thừa. Việc *chọn* thuộc về màn Compare (`Keep Only This`), không phải một thang điểm rải khắp app.
-- **Combine Photos** (`PhotoStackScreen`) theo đúng khung tầng D §10.3: Cancel/tiêu đề/Save · stage đen · một panel. Mỗi mode kèm **một câu nói mode đó dùng để làm gì**, không mô tả phép toán — phép toán đã nằm ngay trong preview.
+- **Combine Photos** là một menu con trong ⋯ (FS-01.09): **Focus Stack · Panorama · Stack Exposures**. Tên dòng là việc người chụp làm, không tên phép toán nào nằm trong menu. Focus Stack và Stack Exposures dùng `PhotoStackScreen`, Panorama dùng màn riêng của FS-14; cả ba theo đúng khung tầng D §10.3: Cancel/tiêu đề/Save · stage đen · một panel. Chỉ **Stack Exposures** có bộ chọn (`Average · Lighten · Darken`); mỗi mode kèm **một câu nói mode đó dùng để làm gì**, không mô tả phép toán — phép toán đã nằm ngay trong preview. Cancel giữ lựa chọn; Save mở ảnh vừa lưu.
 
 ### 10.4 Sheet
 - Sheet nhập liệu ngắn → `.presentationDetents([.medium])`.
@@ -327,7 +327,7 @@ Tiến trình dài chạy: `safeAreaInset(edge: .bottom)` với `ProgressView` +
 ### 10.6 Chế độ chọn nhiều ảnh
 Một mẫu duy nhất cho Library, Album Detail, Smart Album Detail, On This Day — **bắt chước app Photos** (2026-09-18):
 - **Nav bar không ẩn khi chọn**: tiêu đề màn hình (và dòng ngày dưới nó ở Library) đứng nguyên vị trí như lúc duyệt; header ngày dính của lưới cũng không nhảy lên. Chỉ tab bar ẩn.
-- Nav bar khi chọn: các nút duyệt (Settings/Sort/Select) ẩn; leading là button chữ **`Compare`**, trailing là **⋯** (Collage, Video, Compare, Resize & Compress, Add to Collection, Export EXIF, Duplicate — dòng nào screen không cấp thì không hiện) và **×** (thoát chọn). Nút vào chế độ chọn ghi **chữ `Select`**, không dùng icon.
+- Nav bar khi chọn: các nút duyệt (Settings/Sort/Select) ẩn; leading là button chữ **`Compare`**, trailing là **⋯** (Paste Edits, Combine Photos ▸, Collage, Video, Resize & Compress, Add to Collection, Export EXIF, Duplicate — dòng nào screen không cấp thì không hiện) và **×** (thoát chọn). Nút vào chế độ chọn ghi **chữ `Select`**, không dùng icon.
 - Thanh nổi duy nhất ở đáy (`SelectionOverlay`): `[ Share (tròn kính) · pill đếm · Delete (tròn kính) ]`. Pill đếm ghi `N selected・{dung lượng}`, chưa chọn gì thì ghi `Select Items`; **pill là button cao 48pt, cùng kính/hiệu ứng với nút tròn**, nhãn `Show Selected (N・{size})` — chạm mở `SelectedItemsSheet` liệt kê ảnh đã chọn (chạm ô = bỏ chọn, có `Deselect All`).
 - Nút **Filter** đứng đầu nhóm trailing (vẫn hiện khi đang chọn, kiểu Photos); `Select` (lúc duyệt) và `×` (lúc chọn) **tách sang capsule kính riêng** bằng `ToolbarSpacer(.fixed)`. Không có nút Sort riêng — sort nằm trong menu filter.
 - Icon chrome ở mọi tab dùng `.tint(.primary)`, kể cả tab Collections (Settings, `+`, calendar) — accent chỉ cho trạng thái active/selected.
