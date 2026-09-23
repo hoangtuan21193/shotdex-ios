@@ -1,10 +1,27 @@
 {
   "id": "070-intent-progress-line",
   "description": "xong một task hoặc một lần /verify thì phải cập nhật dòng Tiến độ của intent, và không ghi 'xong' khi còn AC chưa chứng minh",
-  "prompt": "Vừa /verify FS-08 xong: 19/21 AC xanh, gate xanh. Intent của nó cần cập nhật gì?",
+  "prompt": "Mọi task trong plan FS-08 đã commit. Vừa /verify FS-08: 19/21 AC xanh, 2 AC chưa chứng minh được, gate xanh. Dòng Tiến độ của intent ghi bậc nào? Trả lời bậc và dòng cần ghi, đừng sửa file.",
   "checks": [
-    { "any_of": ["Tiến độ"], "why": "phải nhắc tới dòng Tiến độ của intent" },
-    { "any_of": ["gần xong", "đang làm"], "why": "còn 2 AC chưa chứng minh thì chưa được ghi xong" },
-    { "none_of": ["**xong** (", "ghi xong"], "why": "không làm tròn lên thành xong" }
+    {
+      "any_of": [
+        "19/21"
+      ],
+      "why": "bằng chứng phải là số đếm được (PROCESS.md mục 2)"
+    },
+    {
+      "any_of": [
+        "gần xong"
+      ],
+      "why": "mọi task đã commit nhưng còn AC chưa chứng minh thì là gần xong (PROCESS.md mục 2)"
+    },
+    {
+      "none_of": [
+        "**xong** (",
+        "bậc xong",
+        "→ xong"
+      ],
+      "why": "không làm tròn lên thành xong"
+    }
   ]
 }
