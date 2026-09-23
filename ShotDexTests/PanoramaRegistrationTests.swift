@@ -139,6 +139,88 @@ struct PanoramaRegistrationTests {
 
     // MARK: The tests
 
+    /// Renders what a camera pointed `degrees` away would have seen of a wider
+    /// scene, so a run of frames really does overlap the way a sweep does.
+    private func frame(of scene: PanoramaImage, degrees: Double, width: Int, height: Int) -> PanoramaImage {
+        let focal = 700.0
+        let offset = focal * Foundation.tan(degrees * .pi / 180)
+        var pixels = [Float](repeating: 0, count: width * height)
+        let originX = Double(scene.width - width) / 2 + offset
+        let originY = Double(scene.height - height) / 2
+        for y in 0..<height {
+            for x in 0..<width {
+                pixels[y * width + x] = sample(scene, x: originX + Double(x), y: originY + Double(y))
+            }
+        }
+        return PanoramaImage(width: width, height: height, pixels: pixels)
+    }
+
+    // MARK: Whole sets
+
+    /// AC-4: a run of frames from one sweep all land in the panorama, and the
+    /// one from somewhere else is named rather than dropped.
+    @Test func aStrayFrameComesBackAsNotPlaced() throws {
+        let width = 520, height = 400
+        let wide = scene(width: 1_400, height: 520)
+        var frames = [-12.0, -4.0, 4.0, 12.0].map {
+            frame(of: wide, degrees: $0, width: width, height: height)
+        }
+        // A picture of something else entirely.
+        var noise = SplitMix64(seed: 0x0DD_0FF)
+        var pixels = [Float](repeating: 0, count: width * height)
+        for index in pixels.indices { pixels[index] = Float(Double(noise.next() % 1_000) / 1_000) }
+        frames.append(PanoramaImage(width: width, height: height, pixels: pixels).blurred())
+
+        let registration = try PanoramaRegistrar.register(images: frames)
+        #expect(registration.solution.cameras.count == 4)
+        #expect(registration.solution.unplaced == [4])
+        // Five frames is under the exhaustive limit, so every pair was tried:
+        // nothing was skipped on a guess.
+        #expect(registration.comparedPairs == 10)
+    }
+
+    /// AC-5: two frames that do not overlap are not a panorama, and saying so
+    /// is the answer — not a picture made of one of them.
+    @Test func framesThatDoNotOverlapAreRefused() {
+        let width = 520, height = 400
+        let wide = scene(width: 2_600, height: 520)
+        let frames = [-60.0, 60.0].map { frame(of: wide, degrees: $0, width: width, height: height) }
+        #expect(throws: PanoramaRegistrationError.noOverlappingFrames) {
+            _ = try PanoramaRegistrar.register(images: frames)
+        }
+    }
+
+    @Test func oneFrameIsNotAPanorama() {
+        let single = [scene(width: 200, height: 160)]
+        #expect(throws: PanoramaRegistrationError.needsTwoImages) {
+            _ = try PanoramaRegistrar.register(images: single)
+        }
+    }
+
+    /// Above a dozen frames every-pair comparison stops being free, so pairs
+    /// are filtered first. The filter must cut work without cutting the run.
+    @Test func aBigSetSkipsThePairsItHasNoReasonToTry() {
+        let related = [Float](repeating: 0.5, count: 64)
+        // Far enough away that the filter has a reason: the limit is an average
+        // of 0.35 per cell, and this is 0.45 in every one of them.
+        let different = [Float](repeating: 0.95, count: 64)
+        let thumbnails = Array(repeating: related, count: 13) + [different]
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        let dates: [Date?] = (0..<14).map { start.addingTimeInterval(Double($0)) }
+
+        let everything = PanoramaRegistrar.candidatePairs(
+            count: 14, thumbnails: thumbnails, captureDates: nil
+        )
+        #expect(everything.count < 14 * 13 / 2, "the odd frame out should not be compared to all")
+
+        // Shot seconds apart, so the time signal keeps the pair even though the
+        // thumbnails disagree: a sweep across a sky is still one sweep.
+        let withDates = PanoramaRegistrar.candidatePairs(
+            count: 14, thumbnails: thumbnails, captureDates: dates
+        )
+        #expect(withDates.count == 14 * 13 / 2)
+    }
+
     @Test func theLinearSolverAnswersASystemItKnows() throws {
         // x + 2y = 5, 3x - y = 1  →  x = 1, y = 2.
         let solution = try #require(PanoramaMatcher.solve([[1, 2, 5], [3, -1, 1]]))
