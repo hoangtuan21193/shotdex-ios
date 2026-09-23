@@ -22,6 +22,7 @@ struct SmartAlbumDetailScreen: View {
     @State private var selectedIds: [String] = []
     @State private var isComparePresented = false
     @State private var compressionPresentation: CompressionPresentation?
+    @State private var stackPresentation: PhotoStackPresentation?
     @State private var multiEditPresentation: MultiEditPresentation?
     @State private var collagePresentation: CollagePresentation?
     @State private var videoStudioPresentation: VideoStudioPresentation?
@@ -119,6 +120,12 @@ struct SmartAlbumDetailScreen: View {
             }
         }
         .multiEditCover($multiEditPresentation, sourceAlbum: nil, onDismiss: stopSelecting)
+        .photoStackCover($stackPresentation, onSaved: { assetID in
+            // A smart album is a query the new photo may not match: open it in
+            // Library (FS-01.09 §3).
+            stopSelecting()
+            navigation.openPhoto(assetId: assetID)
+        })
         .fullScreenCover(item: $compressionPresentation, onDismiss: stopSelecting) { presentation in
             CompressionScreen(
                 assets: presentation.assets,
@@ -276,6 +283,19 @@ struct SmartAlbumDetailScreen: View {
         collagePresentation = CollagePresentation(assets: assets)
     }
 
+    /// Opens the Combine Photos row the user picked on the selection's photos.
+    private func presentCombine(_ purpose: CombinePurpose, _ model: SmartAlbumDetailModel) {
+        let assets = selectedImageIDs(model).compactMap { model.asset(for: $0) }
+        guard assets.count >= CombinePurpose.minimumPhotoCount else { return }
+        switch purpose {
+        case .focusStack, .stackExposures:
+            stackPresentation = PhotoStackPresentation(assets: assets, purpose: purpose)
+        case .panorama:
+            // TODO(FS-14): the panorama merge screen opens here.
+            break
+        }
+    }
+
     private func presentVideoStudio(_ model: SmartAlbumDetailModel) {
         let assets = selectedIds.compactMap { model.asset(for: $0) }
         guard !assets.isEmpty else { return }
@@ -364,6 +384,7 @@ struct SmartAlbumDetailScreen: View {
             onCompare: { isComparePresented = true },
             onCompress: { presentCompression(model) },
             onEdit: { presentMultiEdit(model) },
+            onCombine: { presentCombine($0, model) },
             onDelete: { deleteSelected(model) },
             onAddToCollection: { addToCollection(model) },
             onExportEXIF: { exportEXIF(model) },

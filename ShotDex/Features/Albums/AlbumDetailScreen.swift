@@ -24,6 +24,7 @@ struct AlbumDetailScreen: View {
     @State private var compressionPresentation: CompressionPresentation?
     @State private var multiEditPresentation: MultiEditPresentation?
     @State private var collagePresentation: CollagePresentation?
+    @State private var stackPresentation: PhotoStackPresentation?
     @State private var videoStudioPresentation: VideoStudioPresentation?
     @State private var addToCollectionPresentation: AddToCollectionPresentation?
     @State private var swipeBaseline: [String] = []
@@ -121,6 +122,7 @@ struct AlbumDetailScreen: View {
         .fullScreenCover(item: $collagePresentation) { presentation in
             CollageScreen(assets: presentation.assets)
         }
+        .photoStackCover($stackPresentation, onSaved: showSavedCombine)
         .fullScreenCover(item: $videoStudioPresentation) { presentation in
             VideoStudioScreen(
                 assets: presentation.assets,
@@ -279,6 +281,59 @@ struct AlbumDetailScreen: View {
         collagePresentation = CollagePresentation(assets: assets)
     }
 
+    /// Opens the Combine Photos row the user picked on the selection's photos.
+    private func presentCombine(_ purpose: CombinePurpose, _ model: AlbumDetailModel) {
+        let assets = selectedImageIDs(model).compactMap { model.assetsById[$0] }
+        guard assets.count >= CombinePurpose.minimumPhotoCount else { return }
+        switch purpose {
+        case .focusStack, .stackExposures:
+            stackPresentation = PhotoStackPresentation(assets: assets, purpose: purpose)
+        case .panorama:
+            // TODO(FS-14): the panorama merge screen opens here.
+            break
+        }
+    }
+
+    /// Where a freshly combined photo opens (FS-01.09 §3). It lands in the
+    /// library, not in this album: a user album takes it in and opens it
+    /// here, beside the frames it was made from; anything the photo cannot be
+    /// put into hands it to the Library tab.
+    private func showSavedCombine(_ assetID: String) {
+        stopSelecting()
+        let album = model?.sourceAlbum
+        var opensHere = album != nil
+        if case .allPhotos = self.album.kind { opensHere = true }
+        Task { @MainActor in
+            if let album, let asset = PhotoLibraryService.fetchAssets(ids: [assetID]).first {
+                do {
+                    try await photoLibrary.addAssets([asset], to: album)
+                } catch {
+                    actionErrorMessage = String(
+                        localized: "The photo was saved to your library, but it couldn't be added to this album.",
+                        comment: "Combine Photos: saved, but adding the new photo to the open album failed"
+                    )
+                    navigation.openPhoto(assetId: assetID)
+                    return
+                }
+            }
+            guard opensHere else {
+                navigation.openPhoto(assetId: assetID)
+                return
+            }
+            // The album reloads on the library change the save and the add
+            // caused; wait for the new photo to be in it before opening.
+            for _ in 0..<25 {
+                if let model, let index = model.index(of: assetID) {
+                    viewerTarget = PhotoViewerTarget(id: assetID, startIndex: index)
+                    return
+                }
+                try? await Task.sleep(for: .seconds(0.12))
+            }
+            // Not on a loaded page yet (a long album): open it in Library.
+            navigation.openPhoto(assetId: assetID)
+        }
+    }
+
     private func presentVideoStudio(_ model: AlbumDetailModel) {
         let assets = selectedIds.compactMap { model.assetsById[$0] }
         guard !assets.isEmpty else { return }
@@ -383,6 +438,7 @@ struct AlbumDetailScreen: View {
             onCompare: { isComparePresented = true },
             onCompress: { presentCompression(model) },
             onEdit: { presentMultiEdit(model) },
+            onCombine: { presentCombine($0, model) },
             onDelete: { deleteSelected(model) },
             onAddToCollection: { addToCollection(model) },
             onExportEXIF: { exportEXIF(model) },

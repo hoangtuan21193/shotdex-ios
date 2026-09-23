@@ -23,6 +23,7 @@ struct OnThisDayScreen: View {
     @State private var isSelecting = false
     @State private var isComparePresented = false
     @State private var compressionPresentation: CompressionPresentation?
+    @State private var stackPresentation: PhotoStackPresentation?
     @State private var multiEditPresentation: MultiEditPresentation?
     @State private var selectedIds: [String] = []
     @State private var swipeBaseline: [String] = []
@@ -96,6 +97,12 @@ struct OnThisDayScreen: View {
             }
         }
         .multiEditCover($multiEditPresentation, sourceAlbum: nil, onDismiss: stopSelecting)
+        .photoStackCover($stackPresentation, onSaved: { assetID in
+            // On This Day is a query by date: open the new photo in Library
+            // (FS-01.09 §3).
+            stopSelecting()
+            navigation.openPhoto(assetId: assetID)
+        })
         .fullScreenCover(item: $compressionPresentation, onDismiss: stopSelecting) { presentation in
             CompressionScreen(
                 assets: presentation.assets,
@@ -255,6 +262,23 @@ struct OnThisDayScreen: View {
         )
     }
 
+    /// Opens the Combine Photos row the user picked on the selection's photos.
+    private func presentCombine(_ purpose: CombinePurpose) {
+        guard let model else { return }
+        let assets: [PHAsset] = selectedIds.compactMap { id -> PHAsset? in
+            guard let asset = model.assetsById[id], asset.mediaType == .image else { return nil }
+            return asset
+        }
+        guard assets.count >= CombinePurpose.minimumPhotoCount else { return }
+        switch purpose {
+        case .focusStack, .stackExposures:
+            stackPresentation = PhotoStackPresentation(assets: assets, purpose: purpose)
+        case .panorama:
+            // TODO(FS-14): the panorama merge screen opens here.
+            break
+        }
+    }
+
     private func stopSelecting() {
         isSelecting = false
         selectedIds = []
@@ -277,8 +301,8 @@ struct OnThisDayScreen: View {
     }
 
     /// The model the floating `SelectionOverlay` renders. On This Day stays
-    /// action-lean — Share, Compare (2–4), Resize/Compress and Delete — so the
-    /// Create cluster and ⋯ menu are absent (their closures left `nil`).
+    /// action-lean — Share, Compare (2–4), Resize/Compress, Combine Photos and
+    /// Delete; Collage, Video and the collection actions are left `nil`.
     private func selectionBarModel() -> SelectionBarModel {
         let imageCount = selectedIds.filter { model?.assetsById[$0]?.mediaType == .image }.count
         return SelectionBarModel(
@@ -296,6 +320,7 @@ struct OnThisDayScreen: View {
             onCompare: { isComparePresented = true },
             onCompress: presentCompression,
             onEdit: presentMultiEdit,
+            onCombine: presentCombine,
             onDelete: deleteSelected,
             assetActions: dependencies.assetActions,
             onSelectAll: { selectedIds = (model?.photos ?? []).map(\.assetId) }

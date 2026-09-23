@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-23 |
 | Trạng thái | accepted |
-| Tiến độ | **đang làm** (2026-09-23) — task 6/9, 1/15 AC xanh (AC-4), AC-12 một nửa; Library: Cancel giữ chọn, Save mở viewer — chưa chụp màn |
+| Tiến độ | **đang làm** (2026-09-23) — task 7/9, 1/15 AC xanh (AC-4), AC-12 một nửa; bốn lưới đã nối — chưa chụp màn |
 | Nguồn | phản hồi người dùng (trong lúc soạn FS-14 panorama) |
 | Spec sinh ra từ đây | [FS-01.09](../02-functional-spec/FS-01-library/09-photo-stacking.md) |
 
