@@ -115,7 +115,47 @@ struct PanoramaMergeScreen: View {
         .frame(height: AppTheme.Size.minTouch + AppTheme.Spacing.md)
     }
 
+    /// The stage measures itself once and hands the picture's rectangle to
+    /// both halves of Arrange. An outline dragged off the picture and a photo
+    /// dragged up from the strip below it have to arrive at the same numbers,
+    /// which they only do if both are told where the picture is by the same
+    /// measurement, in the same coordinate space.
     private func stage(_ model: PanoramaMergeModel) -> some View {
+        GeometryReader { proxy in
+            let imageRect = model.preview.map { preview in
+                PanoramaMergeModel.fittedRect(
+                    imageSize: CGSize(width: preview.width, height: preview.height),
+                    in: CGRect(origin: .zero, size: proxy.size)
+                )
+            } ?? .zero
+            stageContent(model, imageRect: imageRect)
+                .coordinateSpace(name: PanoramaArrangeSpace.name)
+                // Where a photo lifted out of the Not Placed strip lands. The
+                // whole stage takes the drop, not just the picture: aiming at
+                // a panorama one finger-width tall is not a thing to ask of
+                // anyone, and a drop beside it still says which end was meant.
+                .dropDestination(for: String.self) { items, location in
+                    guard model.isArranging,
+                          let token = items.first,
+                          let frame = PanoramaFrameDrag.frame(from: token),
+                          imageRect.width > 0
+                    else { return false }
+                    model.place(
+                        frame: frame,
+                        at: CGPoint(
+                            x: (location.x - imageRect.minX) / imageRect.width,
+                            y: (location.y - imageRect.minY) / imageRect.height
+                        )
+                    )
+                    return true
+                }
+                .overlay(alignment: .topTrailing) { refiningBadge(model) }
+                .overlay(alignment: .bottom) { notPlaced(model, imageRect: imageRect) }
+        }
+        .background(Color.black)
+    }
+
+    private func stageContent(_ model: PanoramaMergeModel, imageRect: CGRect) -> some View {
         ZStack {
             Color.black
             if let preview = model.preview {
@@ -123,6 +163,9 @@ struct PanoramaMergeScreen: View {
                     .resizable()
                     .scaledToFit()
                     .accessibilityLabel("Panorama preview")
+            }
+            if model.isArranging {
+                PanoramaArrangeOverlay(model: model, imageRect: imageRect)
             }
             switch model.state {
             case .loading(let done, let total):
@@ -146,8 +189,6 @@ struct PanoramaMergeScreen: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .overlay(alignment: .topTrailing) { refiningBadge(model) }
-        .overlay(alignment: .bottom) { notPlaced(model) }
     }
 
     @ViewBuilder
@@ -164,10 +205,27 @@ struct PanoramaMergeScreen: View {
     }
 
     /// Frames that could not be joined. Named, never dropped in silence
-    /// (FS-14.01 §2).
+    /// (FS-14.01 §2), and once Arrange is on, draggable back in.
     @ViewBuilder
-    private func notPlaced(_ model: PanoramaMergeModel) -> some View {
-        if !model.unplaced.isEmpty {
+    private func notPlaced(_ model: PanoramaMergeModel, imageRect: CGRect) -> some View {
+        if model.isArranging {
+            VStack(spacing: AppTheme.Spacing.sm) {
+                if let message = model.arrangeMessage {
+                    Text(message)
+                        .font(EditorTheme.maskSubtitle)
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, AppTheme.Spacing.md)
+                        .padding(.vertical, AppTheme.Spacing.sm)
+                        .background(.ultraThinMaterial, in: Capsule())
+                        .padding(.horizontal, AppTheme.Spacing.md)
+                }
+                if !model.unplaced.isEmpty {
+                    PanoramaNotPlacedStrip(model: model, imageRect: imageRect)
+                }
+            }
+            .padding(.bottom, AppTheme.Spacing.md)
+        } else if !model.unplaced.isEmpty {
             Label(
                 "^[\(model.unplaced.count) photo](inflect: true) not placed",
                 systemImage: "exclamationmark.triangle"

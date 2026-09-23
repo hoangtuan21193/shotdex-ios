@@ -60,7 +60,20 @@ final class PanoramaMergeModel {
 
     /// Frames at preview resolution, and what registration made of them.
     private var previewSources: [PanoramaCISource] = []
+    /// What Arrange needs to put a frame back: the working-size frames the
+    /// registration ran on, every overlap it found, and the full-size sources
+    /// in frame order (`previewSources` holds only the placed ones).
+    private var workingImages: [PanoramaImage] = []
+    private var pairs: [PanoramaPairObservation] = []
+    private var solution: PanoramaCameraSolution?
+    private var thumbnails: [Int: CGImage] = [:]
+    private var allSources: [PanoramaCISource] = []
     private var previewFocal: Double = 0
+    /// Working-size frames to preview-size frames: registration runs small,
+    /// everything the screen shows is the proxy's own resolution.
+    private var previewScale: Double = 1
+    private var previewWidth = 0
+    private var previewHeight = 0
     private var cameras: [Int: PanoramaCamera] = [:]
     private var previewTask: Task<Void, Never>?
     private var refineTask: Task<Void, Never>?
@@ -78,6 +91,10 @@ final class PanoramaMergeModel {
     /// what the JPEG edge limit applies to.
     private var fullCanvasWidth = 0
     private var fullCanvasHeight = 0
+    /// The canvas the preview on screen was built with, and the part of it
+    /// that is showing — what turns a point on the stage into a direction.
+    private var previewCanvas: PanoramaCanvas?
+    private var previewCrop: PanoramaCropRect?
     /// Measured on the sharp preview, not assumed (FS-14.01 §4b).
     private var bytesPerPixel: Double?
     private var secondsPerMegapixel: Double?
@@ -238,26 +255,43 @@ final class PanoramaMergeModel {
         }
 
         state = .stitching(String(localized: "Aligning…"))
-        let solution = registration.solution
-        guard solution.cameras.count >= 2 else {
+        guard registration.solution.cameras.count >= 2 else {
             state = .noOverlap
             return
         }
-        unplaced = solution.unplaced
-
+        workingImages = images
+        allSources = sources
         // Registration ran on the luminance image; the preview frames are the
         // proxy's own size, so the focal length comes back up with them.
-        let scale = Double(pixelWidth) / Double(images[0].width)
-        previewFocal = solution.focal * scale
+        previewScale = Double(pixelWidth) / Double(images[0].width)
+        previewWidth = pixelWidth
+        previewHeight = pixelHeight
+        adopt(solution: registration.solution, pairs: registration.pairs)
+
+        state = .stitching(String(localized: "Blending…"))
+        await renderPreview(quality: .draft)
+        state = .ready
+        schedulePreview(immediate: false)
+    }
+
+    /// Takes a solution as the one the screen is showing: which frames are in,
+    /// what each one's exposure has to be corrected by, and which projections
+    /// that geometry can still be built with. Run once when the panorama is
+    /// first solved, and again after every Arrange.
+    private func adopt(solution: PanoramaCameraSolution, pairs: [PanoramaPairObservation]) {
+        self.solution = solution
+        self.pairs = pairs
         cameras = solution.cameras
+        unplaced = solution.unplaced
+        previewFocal = solution.focal * previewScale
 
         let gains = PanoramaGainSolver.gains(
-            frameCount: images.count,
-            overlaps: PanoramaGainMeasurement.overlaps(pairs: registration.pairs, images: images)
+            frameCount: workingImages.count,
+            overlaps: PanoramaGainMeasurement.overlaps(pairs: pairs, images: workingImages)
         )
         previewSources = solution.cameras.keys.sorted().compactMap { index in
-            guard index < sources.count, let camera = solution.cameras[index] else { return nil }
-            var source = sources[index]
+            guard index < allSources.count, let camera = solution.cameras[index] else { return nil }
+            var source = allSources[index]
             source.camera = camera
             source.gain = index < gains.count ? gains[index] : 1
             return source
@@ -266,18 +300,13 @@ final class PanoramaMergeModel {
         availability = PanoramaProjection.availability(
             cameras: previewSources.map(\.camera),
             focal: previewFocal,
-            imageWidth: pixelWidth,
-            imageHeight: pixelHeight
+            imageWidth: previewWidth,
+            imageHeight: previewHeight
         )
         if availability.first(where: { $0.kind == projection })?.isAvailable != true,
            let fallback = availability.first(where: \.isAvailable) {
             projection = fallback.kind
         }
-
-        state = .stitching(String(localized: "Blending…"))
-        await renderPreview(quality: .draft)
-        state = .ready
-        schedulePreview(immediate: false)
     }
 
     // MARK: Preview
@@ -348,15 +377,18 @@ final class PanoramaMergeModel {
             }
             guard let image else { return nil }
 
-            var extent = CGRect(x: 0, y: 0, width: canvas.width, height: canvas.height)
+            var region = PanoramaCropRect(x: 0, y: 0, width: canvas.width, height: canvas.height)
             if cropping, let crop = Self.cropRect(for: image, canvas: canvas, context: context) {
-                extent = CGRect(
-                    x: crop.x,
-                    y: canvas.height - crop.y - crop.height,
-                    width: crop.width,
-                    height: crop.height
-                )
+                region = crop
             }
+            // Core Image counts from the bottom; the crop, like everything
+            // else that indexes rows, counts from the top.
+            let extent = CGRect(
+                x: region.x,
+                y: canvas.height - region.y - region.height,
+                width: region.width,
+                height: region.height
+            )
             guard let cgImage = context.createCGImage(image, from: extent) else { return nil }
             // The size the photo would be saved at: the full-resolution canvas
             // with the same crop taken off it. Measured here rather than
@@ -371,7 +403,9 @@ final class PanoramaMergeModel {
                 fullWidth: Int((Double(full.width) * fraction.width).rounded()),
                 fullHeight: Int((Double(full.height) * fraction.height).rounded()),
                 canvasWidth: full.width,
-                canvasHeight: full.height
+                canvasHeight: full.height,
+                canvas: canvas,
+                crop: region
             )
         }.value
 
@@ -381,6 +415,8 @@ final class PanoramaMergeModel {
         fullOutputHeight = rendered.fullHeight
         fullCanvasWidth = rendered.canvasWidth
         fullCanvasHeight = rendered.canvasHeight
+        previewCanvas = rendered.canvas
+        previewCrop = rendered.crop
         if quality == .sharp {
             // Only the sharp tier is the work Save does, so only it can say
             // how long Save will take. The draft is a different renderer.
@@ -413,14 +449,17 @@ final class PanoramaMergeModel {
         bytesPerPixel = Double(data.length) / pixels
     }
 
-    /// One render's product: the picture, and how big that picture would be at
-    /// the frames' own resolution.
-    private struct Render: Sendable {
+    /// One render's product: the picture, how big that picture would be at the
+    /// frames' own resolution, and the geometry the stage needs to turn a
+    /// point under a finger into a direction in the panorama.
+    private struct Render: @unchecked Sendable {
         let image: CGImage
         let fullWidth: Int
         let fullHeight: Int
         let canvasWidth: Int
         let canvasHeight: Int
+        let canvas: PanoramaCanvas
+        let crop: PanoramaCropRect
     }
 
     /// The Auto Crop rectangle, read off the preview's own coverage.
@@ -450,6 +489,159 @@ final class PanoramaMergeModel {
             }
         }
         return PanoramaAutoCrop.largestRectangle(coverage: coverage, width: width, height: height)
+    }
+
+
+    // MARK: Arranging (FS-14.01 §5)
+
+    /// One frame as Arrange shows it: where its outline sits on the stage and
+    /// whether it is in the picture at all.
+    struct ArrangedFrame: Identifiable, Equatable {
+        let id: Int
+        /// The frame's four corners in the preview image's own unit square,
+        /// clockwise from the top left. Empty for a frame that is not placed.
+        var outline: [CGPoint]
+        var isPlaced: Bool
+
+        /// "Photo 3 of 10, placed" — what VoiceOver reads for the outline.
+        func accessibilityLabel(of total: Int) -> String {
+            isPlaced
+                ? String(localized: "Photo \(id + 1) of \(total), placed")
+                : String(localized: "Photo \(id + 1) of \(total), not placed")
+        }
+    }
+
+    /// Whether the stage is showing frame outlines and taking drags.
+    private(set) var isArranging = false
+    /// Why the last drag did not take. Cleared by the next one.
+    private(set) var arrangeMessage: String?
+    /// True while a drop is being matched, which takes long enough to say so.
+    private(set) var isArrangingFrame = false
+    private var arrangeTask: Task<Void, Never>?
+
+    /// Arrange is only worth entering once there is a picture to correct.
+    var canArrange: Bool { hasPicture && !isSaving }
+
+    func toggleArrange() {
+        guard canArrange else { return }
+        isArranging.toggle()
+        arrangeMessage = nil
+    }
+
+    /// A small colour picture of one frame, for the Not Placed strip. Taken
+    /// from the proxy the stitch already loaded, so it costs no PhotoKit round
+    /// trip and shows the frame as the panorama sees it.
+    func thumbnail(for frame: Int) -> CGImage? {
+        if let cached = thumbnails[frame] { return cached }
+        guard frame < allSources.count else { return nil }
+        let source = allSources[frame]
+        let edge = 96.0
+        let scale = edge / Double(max(source.width, source.height, 1))
+        let scaled = source.image.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+        guard let image = context.createCGImage(scaled, from: scaled.extent) else { return nil }
+        thumbnails[frame] = image
+        return image
+    }
+
+    /// Every frame, placed or not, with the outline the stage draws.
+    var arrangedFrames: [ArrangedFrame] {
+        (0..<assets.count).map { index in
+            ArrangedFrame(
+                id: index,
+                outline: outline(of: index) ?? [],
+                isPlaced: cameras[index] != nil
+            )
+        }
+    }
+
+    /// The frame's corners projected onto the preview, in unit coordinates of
+    /// the image as it is displayed — which is what a SwiftUI overlay can
+    /// scale into place without knowing anything about panoramas.
+    private func outline(of frame: Int) -> [CGPoint]? {
+        guard let camera = cameras[frame], let canvas = previewCanvas, let crop = previewCrop,
+              crop.width > 0, crop.height > 0, previewFocal > 0
+        else { return nil }
+        let width = Double(previewWidth), height = Double(previewHeight)
+        let corners = [(0.0, 0.0), (width, 0.0), (width, height), (0.0, height)]
+        var points: [CGPoint] = []
+        let inverse = PanoramaRotation.transposed(camera.rotation)
+        for corner in corners {
+            let ray = (
+                (corner.0 - width / 2) / previewFocal,
+                (corner.1 - height / 2) / previewFocal,
+                1.0
+            )
+            let length = (ray.0 * ray.0 + ray.1 * ray.1 + ray.2 * ray.2).squareRoot()
+            let direction = PanoramaRotation.apply(
+                inverse, to: (ray.0 / length, ray.1 / length, ray.2 / length)
+            )
+            guard let projected = canvas.project(direction) else { return nil }
+            points.append(
+                CGPoint(
+                    x: (projected.x - Double(crop.x)) / Double(crop.width),
+                    y: (projected.y - Double(crop.y)) / Double(crop.height)
+                )
+            )
+        }
+        return points
+    }
+
+    /// Puts `frame` where the finger let go — `point` is in the preview
+    /// image's unit square.
+    ///
+    /// The drop is a hint, not an answer: the frame still has to match what it
+    /// landed among, and when it cannot the picture is left exactly as it was
+    /// and the screen says so.
+    func place(frame: Int, at point: CGPoint) {
+        guard let canvas = previewCanvas, let crop = previewCrop, let solution else { return }
+        let canvasX = Double(crop.x) + Double(crop.width) * point.x
+        let canvasY = Double(crop.y) + Double(crop.height) * point.y
+        guard let direction = canvas.direction(atX: canvasX, y: canvasY) else { return }
+
+        arrangeMessage = nil
+        arrangeTask?.cancel()
+        isArrangingFrame = true
+        let images = workingImages
+        let pairs = pairs
+        arrangeTask = Task { [weak self] in
+            let outcome = await Task.detached(priority: .userInitiated) {
+                try? PanoramaArranger.place(
+                    frame: frame,
+                    towards: direction,
+                    images: images,
+                    pairs: pairs,
+                    solution: solution
+                )
+            }.value
+            guard let self, !Task.isCancelled else { return }
+            isArrangingFrame = false
+            guard let outcome else {
+                arrangeMessage = String(
+                    localized: "That photo doesn't match what's there. Try dropping it where it overlaps.",
+                    comment: "Panorama Arrange: the dropped frame could not be matched"
+                )
+                return
+            }
+            adopt(solution: outcome.solution, pairs: outcome.pairs)
+            schedulePreview(immediate: true)
+        }
+    }
+
+    /// Takes a frame out of the picture — the drag into Not Placed.
+    func removeFromPanorama(frame: Int) {
+        guard let solution, cameras[frame] != nil else { return }
+        arrangeMessage = nil
+        guard let outcome = try? PanoramaArranger.remove(
+            frame: frame, images: workingImages, pairs: pairs, solution: solution
+        ) else {
+            arrangeMessage = String(
+                localized: "A panorama needs at least two photos.",
+                comment: "Panorama Arrange: refusing to remove the second-to-last frame"
+            )
+            return
+        }
+        adopt(solution: outcome.solution, pairs: outcome.pairs)
+        schedulePreview(immediate: true)
     }
 
     // MARK: Saving

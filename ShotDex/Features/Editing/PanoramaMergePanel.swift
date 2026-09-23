@@ -16,8 +16,48 @@ struct PanoramaMergePanel: View {
             }
             Divider().overlay(EditorTheme.panelDivider)
             size
+            Divider().overlay(EditorTheme.panelDivider)
+            arrange
         }
         .disabled(model.isSaving)
+    }
+
+    // MARK: Arrange
+
+    /// The way out when the automatic placement got a frame wrong. Last in the
+    /// panel because it is the exception, not the setting (FS-14.01 §3).
+    private var arrange: some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+            Button {
+                model.toggleArrange()
+            } label: {
+                HStack {
+                    Label(
+                        model.isArranging ? "Done Arranging" : "Arrange",
+                        systemImage: "square.on.square.dashed"
+                    )
+                    .font(EditorTheme.rowLabel)
+                    Spacer()
+                    if model.isArrangingFrame {
+                        ProgressView().controlSize(.small).tint(.white)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, AppTheme.Spacing.sm)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(model.isArranging ? EditorTheme.accent : .white)
+            .disabled(!model.canArrange)
+            Text(
+                model.isArranging
+                    ? "Drag a photo to where it belongs, or off the panorama to set it aside."
+                    : "Move a photo the automatic placement got wrong."
+            )
+            .font(EditorTheme.maskSubtitle)
+            .foregroundStyle(EditorTheme.dimText)
+            .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     // MARK: Projection
