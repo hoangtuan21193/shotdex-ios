@@ -5,6 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-23 |
 | Trạng thái | accepted |
+| Tiến độ | **đang làm** (2026-09-23) — FS-14 do phiên `shotdex-ios-1` build, 0/29 AC có bằng chứng; plan bỏ Boundary Warp, tự ước lượng méo, HDR gain map khỏi v1 (`449b539`) |
 | Nguồn | tự nghĩ ra (người dùng yêu cầu trực tiếp) |
 | Spec sinh ra từ đây | [FS-14](../02-functional-spec/FS-14-panorama/README.md) |
 

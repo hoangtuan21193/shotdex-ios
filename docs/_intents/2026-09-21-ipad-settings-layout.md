@@ -4,9 +4,10 @@
 |---|---|
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-21 |
-| Trạng thái | draft |
+| Trạng thái | accepted |
+| Tiến độ | **gần xong** (2026-09-23) — FS-08 đã build; 10/21 AC có bằng chứng, 11 còn thiếu cách đo (Slide Over, đổi cỡ cửa sổ, Duo) |
 | Nguồn | phản hồi người dùng (quan sát trực tiếp trên iPad) |
-| Spec sinh ra từ đây | (điền khi sang Design) |
+| Spec sinh ra từ đây | [FS-08](../02-functional-spec/FS-08-settings/README.md) |
 
 ## Problem — vấn đề
 

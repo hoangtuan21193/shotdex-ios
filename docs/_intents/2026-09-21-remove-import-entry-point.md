@@ -5,6 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-21 |
 | Trạng thái | draft |
+| Tiến độ | **chưa làm** (2026-09-23) — Import vẫn ở Settings; chưa có spec |
 | Nguồn | phản hồi người dùng (tách ra từ intent layout Settings trên iPad) |
 | Spec sinh ra từ đây | (điền khi sang Design) |
 

@@ -5,6 +5,7 @@
 | Tác giả | |
 | Ngày | YYYY-MM-DD |
 | Trạng thái | draft / accepted / dismissed |
+| Tiến độ | chưa làm / đang làm / gần xong / xong (YYYY-MM-DD) — kèm bằng chứng: bao nhiêu AC đã chứng minh, commit nào |
 | Nguồn | tự nghĩ ra / phản hồi người dùng / crash log / vượt control band / kết quả quét bảo mật |
 | Spec sinh ra từ đây | (điền khi sang Design) |
 

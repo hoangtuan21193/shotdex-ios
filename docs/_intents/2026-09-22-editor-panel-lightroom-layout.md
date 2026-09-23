@@ -4,9 +4,10 @@
 |---|---|
 | Tác giả | hat.tuan |
 | Ngày | 2026-09-22 |
-| Trạng thái | draft |
+| Trạng thái | accepted |
+| Tiến độ | **đang làm** (2026-09-23) — FS-03.09: 10 commit; cột chứng minh mới có AC-16, 17, 20, chưa cập nhật theo code |
 | Nguồn | phản hồi người dùng (chủ sở hữu sản phẩm) |
-| Spec sinh ra từ đây | (điền khi sang Design — dự kiến `FS-03.09`, `FS-03.01`) |
+| Spec sinh ra từ đây | [FS-03.09](../02-functional-spec/FS-03-photo-editor/09-wide-screen-and-batch-editing.md) |
 
 **Phạm vi thiết bị: iPad và iPhone Duo màn trong (lúc mở). iPhone nằm ngoài intent này** — panel 246pt và
 bánh xe chip của phone giữ nguyên, không đụng tới trong lượt này.

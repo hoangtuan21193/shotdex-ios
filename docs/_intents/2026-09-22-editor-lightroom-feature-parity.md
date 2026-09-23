@@ -4,7 +4,8 @@
 |---|---|
 | Tác giả | hat.tuan |
 | Ngày | 2026-09-22 |
-| Trạng thái | draft |
+| Trạng thái | accepted |
+| Tiến độ | **xong phần FS-03.11** (2026-09-23) — 16/16 AC có test; câu treo 2 (`.xmp`/`.dng`) và 4 (HDR) chưa chốt |
 | Nguồn | phản hồi người dùng (chủ sở hữu sản phẩm) · bảng đối chiếu từ agent `lightroom-parity` (2026-09-22) |
 | Spec sinh ra từ đây | [`FS-03.11`](../02-functional-spec/FS-03-photo-editor/11-parity-with-lightroom.md) — 16 AC, viết 2026-09-23 |
 

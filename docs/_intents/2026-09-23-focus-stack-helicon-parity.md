@@ -5,6 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-23 |
 | Trạng thái | accepted |
+| Tiến độ | **chưa làm** (2026-09-23) — chờ spike trước `/spec` |
 | Nguồn | phản hồi người dùng — *"tôi chỉ cần focus stack thôi, tôi muốn làm như app Helicon Focus"* |
 | Spec sinh ra từ đây | (điền khi sang Design) |
 
