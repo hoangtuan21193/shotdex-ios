@@ -474,7 +474,9 @@ final class PhotoEditorController {
         let count = await Task.detached(priority: .utility) {
             PhotoRenderService.faceCount(in: cgImage)
         }.value
-        hasFaces = count > 0
+        // Nil = Vision could not run; leave the rows live rather than claim
+        // there is no face.
+        hasFaces = count.map { $0 > 0 }
     }
 
     func recallLastEdit() {

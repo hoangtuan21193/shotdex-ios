@@ -11,6 +11,8 @@ public struct FaceLandmarks: Equatable, Sendable {
     public var leftEyebrow: [CGPoint]
     public var rightEyebrow: [CGPoint]
     public var outerLips: [CGPoint]
+    /// The jaw line, ear to chin to ear. Empty when Vision gave none.
+    public var faceContour: [CGPoint]
 
     public init(
         boundingBox: CGRect,
@@ -18,7 +20,8 @@ public struct FaceLandmarks: Equatable, Sendable {
         rightEye: [CGPoint],
         leftEyebrow: [CGPoint],
         rightEyebrow: [CGPoint],
-        outerLips: [CGPoint]
+        outerLips: [CGPoint],
+        faceContour: [CGPoint] = []
     ) {
         self.boundingBox = boundingBox
         self.leftEye = leftEye
@@ -26,6 +29,7 @@ public struct FaceLandmarks: Equatable, Sendable {
         self.leftEyebrow = leftEyebrow
         self.rightEyebrow = rightEyebrow
         self.outerLips = outerLips
+        self.faceContour = faceContour
     }
 }
 
@@ -35,9 +39,12 @@ public struct FaceLandmarks: Equatable, Sendable {
 /// hands them here, so what each mask covers can be tested on a face drawn by
 /// hand. Hard-edged; the renderer feathers.
 ///
-/// - **Face Skin** is an ellipse over the face box, raised a little for the
-///   forehead Vision's box stops short of, **minus** the eyes, the brows and
-///   the lips — the parts a skin smoothing must not touch.
+/// - **Face Skin** is the jaw line closed across the face, with a half
+///   ellipse on top for the forehead Vision's box stops short of, **minus** the
+///   eyes, the brows and the lips — the parts a skin smoothing must not touch.
+///   (An ellipse over the whole box, the first version, spilled past the
+///   cheeks onto the background.) Without a jaw line it falls back to that
+///   ellipse.
 /// - **Eyes** are the two eye polygons grown about their centres, so the lids
 ///   and the whites' edge come with them.
 /// - **Lips** is the outer lip polygon, grown slightly.
@@ -83,14 +90,38 @@ public enum FaceLandmarkMaskBuilder {
             )
             switch kind {
             case .faceSkin:
-                let lifted = CGRect(
-                    x: box.minX,
-                    y: box.minY,
-                    width: box.width,
-                    height: box.height * (1 + foreheadLift)
-                )
                 context.setFillColor(gray: 1, alpha: 1)
-                context.fillEllipse(in: lifted)
+                let contour = face.faceContour.map(pixel)
+                if contour.count >= 5, let first = contour.first, let last = contour.last {
+                    fill(contour, in: context)
+                    // Forehead: the upper half of an ellipse spanning the two
+                    // ends of the jaw line, reaching the lifted top of the box.
+                    let center = CGPoint(x: (first.x + last.x) / 2, y: (first.y + last.y) / 2)
+                    let radiusX = abs(last.x - first.x) / 2
+                    let top = box.maxY + box.height * foreheadLift
+                    let radiusY = max(1, top - center.y)
+                    context.saveGState()
+                    // Starts a few pixels below the jaw line's ends so the two
+                    // shapes overlap: butted edge to edge, antialiasing left a
+                    // hairline seam across the cheeks.
+                    let overlap = max(2, box.height * 0.01)
+                    context.clip(to: CGRect(
+                        x: center.x - radiusX, y: center.y - overlap,
+                        width: radiusX * 2, height: radiusY + overlap
+                    ))
+                    context.fillEllipse(in: CGRect(
+                        x: center.x - radiusX, y: center.y - radiusY,
+                        width: radiusX * 2, height: radiusY * 2
+                    ))
+                    context.restoreGState()
+                } else {
+                    context.fillEllipse(in: CGRect(
+                        x: box.minX,
+                        y: box.minY,
+                        width: box.width,
+                        height: box.height * (1 + foreheadLift)
+                    ))
+                }
                 context.setFillColor(gray: 0, alpha: 1)
                 fill(grown(face.leftEye.map(pixel), by: eyeGrowth), in: context)
                 fill(grown(face.rightEye.map(pixel), by: eyeGrowth), in: context)

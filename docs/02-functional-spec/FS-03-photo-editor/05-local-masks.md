@@ -63,13 +63,21 @@ nhiều vùng vào cùng một mask được.
 - Sheet New Mask liệt kê **hàng**, không phải loại (`EditorNewMaskOption`): thêm hàng **Background** — là
   Subject với `isInverted`, đặt tên "Background N", không phải loại mới.
 - **Depth Range**: phép dải của Luminance Range chạy trên bản đồ disparity, chuẩn hoá theo từng ảnh về
-  0 (xa) … 1 (gần), cắt/scale theo khung render. Slider Near/Far. Ảnh không có depth thì hàng **mờ** kèm lý
+  0 (xa) … 1 (gần) — min/max đọc từ **một** pixel của `CIAreaMinMaxRed` (R = min, G = max) — cắt/scale
+  theo khung render, rồi làm mờ khoảng một pixel bản đồ (bản đồ chỉ ~¼ độ phân giải ảnh, phóng lên bị
+  bậc thang). Slider Near/Far. Ảnh không có depth thì hàng **mờ** kèm lý
   do.
 - **Face Skin / Eyes / Lips**: đa giác từ `VNDetectFaceLandmarksRequest`, dựng bằng
-  `FaceLandmarkMaskBuilder` (hình học thuần, test được): Skin = elip hộp mặt nâng lên trán **trừ** mắt, chân
-  mày, môi; Eyes = hai mắt nở ×1.6; Lips = môi ngoài nở ×1.12. Mọi khuôn mặt trong khung. Feather theo
+  `FaceLandmarkMaskBuilder` (hình học thuần, test được): Skin = **đường hàm** (`faceContour`) khép lại + nửa elip
+  cho trán, **trừ** mắt, chân mày, môi (bản đầu dùng elip cả hộp mặt thì tràn ra nền hai bên má); không có
+  đường hàm thì lùi về elip; Eyes = hai mắt nở ×1.6; Lips = môi ngoài nở ×1.12. Mọi khuôn mặt trong khung. Feather theo
   khung. Kiểm tra có mặt chạy **một lần mỗi ảnh** trên preview (`VNDetectFaceRectanglesRequest`); không có
-  mặt thì ba hàng mờ "No face found in this photo", đang kiểm thì vẫn sáng.
+  mặt thì ba hàng mờ "No face found in this photo", đang kiểm **hoặc Vision lỗi** thì vẫn sáng — lỗi là
+  "chưa biết", không được nói với người dùng là "không có mặt".
+- **Simulator**: không có Neural Engine, Vision mặc định báo "Could not create inference context". Request
+  nào liệt kê CPU cho stage của nó thì bị ghim CPU (chỉ trên simulator); tách chủ thể không hỗ trợ CPU nên
+  Subject/Background **không chạy được trên simulator** — kiểm trên máy thật hoặc Vision của Mac. Landmark
+  khuôn mặt chạy trên CPU của simulator nhưng lệch vị trí; trên Mac/máy thật thì đúng.
 
 - **Subject** dùng phân tách foreground của hệ thống (iOS 17+). Thấy nhiều đối tượng thì cú chạm của người
   dùng đọc đúng đối tượng tại điểm đó; chạm nền thì lấy tất cả.

@@ -68,6 +68,22 @@ struct FaceMaskTests {
         #expect(value(mask, at: outside) < 0.1)
     }
 
+    /// With a jaw line the skin follows it: the background beside the cheek,
+    /// inside the face box but outside the jaw, is not skin.
+    @Test func faceSkinFollowsTheJawLine() throws {
+        var withJaw = face
+        // A narrow U from ear (0.36, 0.55) down to the chin and back.
+        withJaw.faceContour = (0...8).map { index in
+            let angle = Double.pi * Double(index) / 8
+            return CGPoint(x: 0.5 - 0.14 * cos(angle), y: 0.55 - 0.27 * sin(angle))
+        }
+        let mask = try #require(FaceLandmarkMaskBuilder.mask(.faceSkin, faces: [withJaw], size: size))
+        #expect(value(mask, at: CGPoint(x: 0.5, y: 0.45)) > 0.9, "inside the jaw")
+        #expect(value(mask, at: forehead) > 0.9, "forehead above the jaw's ends")
+        #expect(value(mask, at: CGPoint(x: 0.33, y: 0.35)) < 0.1, "inside the box, outside the jaw")
+        #expect(value(mask, at: eye) < 0.1)
+    }
+
     @Test func eyesAndLipsCoverTheirPartOnly() throws {
         let eyes = try #require(FaceLandmarkMaskBuilder.mask(.eyes, faces: [face], size: size))
         #expect(value(eyes, at: eye) > 0.9)

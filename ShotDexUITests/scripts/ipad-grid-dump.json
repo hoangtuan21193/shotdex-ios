@@ -1,0 +1,12 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "orientation", "text": "landscape" },
+    { "action": "wait", "seconds": 5 },
+    { "action": "tap", "label": "Continue" },
+    { "action": "systemTap", "label": "Allow Full Access", "seconds": 20 },
+    { "action": "wait", "seconds": 25 },
+    { "action": "dump", "name": "grid" }
+  ]
+}

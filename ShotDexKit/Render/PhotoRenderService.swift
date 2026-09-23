@@ -1038,10 +1038,16 @@ public actor PhotoRenderService {
                 y: targetExtent.height / cropped.extent.height
             ))
             .concatenating(CGAffineTransform(translationX: targetExtent.minX, y: targetExtent.minY))
-        return cropped
+        // A depth map is a fraction of the photo's resolution (a Portrait
+        // capture's is about a quarter), so scaled up it steps: blur by about
+        // one map pixel at output size so a Depth Range edge is a slope, not
+        // a staircase.
+        let upscale = max(targetExtent.width / cropped.extent.width, targetExtent.height / cropped.extent.height)
+        let scaled = cropped
             .transformed(by: scale)
             .clampedToExtent()
             .cropped(to: targetExtent)
+        return upscale > 1.5 ? Self.blurred(scaled, radius: upscale * 0.6) : scaled
     }
 
     /// The disparity map stretched to 0…1 using its own min and max, kept per
@@ -1051,23 +1057,35 @@ public actor PhotoRenderService {
         let key = url.path
         if let cached = disparityCache[key] { return cached }
         guard let disparity = DepthImageReader.disparity(at: url) else { return nil }
+        let normalized = Self.normalizedDisparity(disparity, context: context)
+        disparityCache[key] = normalized
+        return normalized
+    }
+
+    /// `disparity` stretched to 0…1 by its own minimum and maximum.
+    ///
+    /// `CIAreaMinMaxRed` answers with **one** pixel: the minimum in red, the
+    /// maximum in green. (A first version read the maximum from a second
+    /// pixel that does not exist, got 0, and stretched every value off the
+    /// top of the band — the Depth Range mask came out empty on a real file.)
+    static func normalizedDisparity(_ disparity: CIImage, context: CIContext) -> CIImage {
         let reduced = disparity.applyingFilter(
             "CIAreaMinMaxRed",
             parameters: [kCIInputExtentKey: CIVector(cgRect: disparity.extent)]
         )
-        var pixels = [Float](repeating: 0, count: 8)
+        var pixel = [Float](repeating: 0, count: 4)
         context.render(
             reduced,
-            toBitmap: &pixels,
-            rowBytes: 8 * MemoryLayout<Float>.size,
-            bounds: CGRect(x: 0, y: 0, width: 2, height: 1),
+            toBitmap: &pixel,
+            rowBytes: 4 * MemoryLayout<Float>.size,
+            bounds: CGRect(origin: reduced.extent.origin, size: CGSize(width: 1, height: 1)),
             format: .RGBAf,
             colorSpace: nil
         )
-        let minimum = CGFloat(pixels[0])
-        let maximum = CGFloat(pixels[4])
+        let minimum = CGFloat(pixel[0])
+        let maximum = CGFloat(pixel[1])
         let span = max(0.0001, maximum - minimum)
-        let normalized = disparity.applyingFilter(
+        return disparity.applyingFilter(
             "CIColorMatrix",
             parameters: [
                 "inputRVector": CIVector(x: 1 / span, y: 0, z: 0, w: 0),
@@ -1077,8 +1095,6 @@ public actor PhotoRenderService {
                 "inputBiasVector": CIVector(x: -minimum / span, y: -minimum / span, z: -minimum / span, w: 0),
             ]
         )
-        disparityCache[key] = normalized
-        return normalized
     }
 
     /// The depth maps this render needs, or nothing when the recipe asks for
@@ -2363,6 +2379,7 @@ public actor PhotoRenderService {
             )
         )
         let request = VNGenerateForegroundInstanceMaskRequest()
+        Self.preferCPUOnSimulator(request)
         let handler = VNImageRequestHandler(ciImage: normalizedImage)
         try handler.perform([request])
         guard let observation = request.results?.first else { return nil }
@@ -2404,15 +2421,20 @@ public actor PhotoRenderService {
     /// Vision's face landmarks as normalized, bottom-left-origin polygons.
     static func faceLandmarks(in image: CIImage) throws -> [FaceLandmarks] {
         let request = VNDetectFaceLandmarksRequest()
+        Self.preferCPUOnSimulator(request)
         let handler = VNImageRequestHandler(ciImage: image)
         try handler.perform([request])
-        let size = image.extent.size
-        guard size.width > 0, size.height > 0 else { return [] }
         return (request.results ?? []).compactMap { face in
             guard let landmarks = face.landmarks else { return nil }
+            // Landmark points are normalised to the face's bounding box, the
+            // box to the image: composed here into image-normalised points.
+            // (On the simulator's CPU path Vision's landmarks come back
+            // clustered mid-face whichever way they are read; on a Mac and on
+            // device they land on the eyes and lips — checked 2026-09-23.)
+            let box = face.boundingBox
             func points(_ region: VNFaceLandmarkRegion2D?) -> [CGPoint] {
-                (region?.pointsInImage(imageSize: size) ?? []).map {
-                    CGPoint(x: $0.x / size.width, y: $0.y / size.height)
+                (region?.normalizedPoints ?? []).map {
+                    CGPoint(x: box.minX + $0.x * box.width, y: box.minY + $0.y * box.height)
                 }
             }
             return FaceLandmarks(
@@ -2421,7 +2443,8 @@ public actor PhotoRenderService {
                 rightEye: points(landmarks.rightEye),
                 leftEyebrow: points(landmarks.leftEyebrow),
                 rightEyebrow: points(landmarks.rightEyebrow),
-                outerLips: points(landmarks.outerLips)
+                outerLips: points(landmarks.outerLips),
+                faceContour: points(landmarks.faceContour)
             )
         }
     }
@@ -2429,11 +2452,38 @@ public actor PhotoRenderService {
     /// How many faces a picture has — the gate that greys out the three face
     /// masks before they are made, rather than after they come back empty.
     /// Rectangles only, on the small preview: a fraction of the landmark pass.
-    public static func faceCount(in image: CGImage) -> Int {
+    /// Nil when Vision could not run: that is "don't know", and must not be
+    /// told to the user as "no face found".
+    public static func faceCount(in image: CGImage) -> Int? {
         let request = VNDetectFaceRectanglesRequest()
+        preferCPUOnSimulator(request)
         let handler = VNImageRequestHandler(cgImage: image, options: [:])
-        try? handler.perform([request])
+        do {
+            try handler.perform([request])
+        } catch {
+            return nil
+        }
         return request.results?.count ?? 0
+    }
+
+    /// The simulator has no Neural Engine, and Vision's default device there
+    /// fails with "Could not create inference context" — which read as no
+    /// subject and no face. On device the default stays; on the simulator the
+    /// request is pinned to the CPU so the feature can actually be tried.
+    static func preferCPUOnSimulator(_ request: VNRequest) {
+        #if targetEnvironment(simulator)
+        // Only where the request lists the CPU for that stage: subject
+        // segmentation does not, and pinning it anyway turned "no inference
+        // context" into "unsupported compute device".
+        guard let stages = try? request.supportedComputeStageDevices else { return }
+        for (stage, devices) in stages {
+            guard let cpu = devices.first(where: {
+                if case .cpu = $0 { return true }
+                return false
+            }) else { continue }
+            try? request.setComputeDevice(cpu, for: stage)
+        }
+        #endif
     }
 
     private func instanceIndex(at point: NormalizedPoint, in buffer: CVPixelBuffer) -> Int {

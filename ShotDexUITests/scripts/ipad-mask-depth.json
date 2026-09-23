@@ -1,0 +1,24 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "orientation", "text": "landscape" },
+    { "action": "wait", "seconds": 5 },
+    { "action": "tap", "label": "Continue" },
+    { "action": "systemTap", "label": "Allow Full Access", "seconds": 20 },
+    { "action": "wait", "seconds": 18 },
+    { "action": "tap", "label": "Photo, file type", "type": "cell", "index": 2 },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Edit" },
+    { "action": "wait", "seconds": 16 },
+    { "action": "tap", "label": "rail.mask" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "tap", "label": "New Mask" },
+    { "action": "wait", "seconds": 14 },
+    { "action": "tap", "label": "Depth Range" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "tap", "label": "Create" },
+    { "action": "wait", "seconds": 22 },
+    { "action": "wait", "seconds": 4 }
+  ]
+}

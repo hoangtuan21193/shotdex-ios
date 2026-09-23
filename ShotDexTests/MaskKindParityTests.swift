@@ -88,6 +88,27 @@ struct MaskKindParityTests {
         }
     }
 
+    /// AC-11. The raw map is stretched to 0…1 by its own range first: a map
+    /// that only spans 0.3…0.8 still has its nearest point at 1.
+    @Test func disparityIsStretchedToItsOwnRange() throws {
+        let extent = CGRect(x: 0, y: 0, width: 100, height: 1)
+        let raw = CIFilter(
+            name: "CILinearGradient",
+            parameters: [
+                "inputPoint0": CIVector(x: 0, y: 0),
+                "inputPoint1": CIVector(x: 100, y: 0),
+                "inputColor0": CIColor(red: 0.3, green: 0.3, blue: 0.3),
+                "inputColor1": CIColor(red: 0.8, green: 0.8, blue: 0.8),
+            ]
+        )!.outputImage!.cropped(to: extent)
+        let context = CIContext(options: [.workingColorSpace: NSNull(), .outputColorSpace: NSNull()])
+        let normalized = PhotoRenderService.normalizedDisparity(raw, context: context)
+        var pixels = [Float](repeating: 0, count: 100 * 4)
+        context.render(normalized, toBitmap: &pixels, rowBytes: 100 * 16, bounds: extent, format: .RGBAf, colorSpace: nil)
+        #expect(pixels[0] < 0.03, "far end at 0: \(pixels[0])")
+        #expect(pixels[99 * 4] > 0.97, "near end at 1: \(pixels[99 * 4])")
+    }
+
     /// AC-11. The band selects what lies inside Near…Far on the normalized map
     /// and nothing outside it.
     @Test func depthRangeSelectsTheBand() throws {
