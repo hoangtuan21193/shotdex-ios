@@ -235,10 +235,9 @@ struct LibraryScreen: View {
         }
     }
 
-    /// Opens the combine tool on the selection — multiple exposure and focus
-    /// stacking, which are the two reasons a photographer shoots the same frame
-    /// several times.
-    private func presentStack(_ model: LibraryModel) {
+    /// Opens the Combine Photos row the user picked on the selection's photos
+    /// (videos are left out).
+    private func presentCombine(_ purpose: CombinePurpose, _ model: LibraryModel) {
         let selected = Set(selectedIds)
         let photoIDs = model.items
             .filter { selected.contains($0.assetId) && $0.mediaType == PHAssetMediaType.image.rawValue }
@@ -246,8 +245,14 @@ struct LibraryScreen: View {
         let fetched = PhotoLibraryService.fetchAssets(ids: photoIDs)
         let byID = Dictionary(uniqueKeysWithValues: fetched.map { ($0.localIdentifier, $0) })
         let assets: [PHAsset] = photoIDs.compactMap { byID[$0] }
-        guard assets.count >= 2 else { return }
-        stackPresentation = PhotoStackPresentation(assets: assets)
+        guard assets.count >= CombinePurpose.minimumPhotoCount else { return }
+        switch purpose {
+        case .focusStack, .stackExposures:
+            stackPresentation = PhotoStackPresentation(assets: assets, purpose: purpose)
+        case .panorama:
+            // TODO(FS-14): the panorama merge screen opens here.
+            break
+        }
     }
 
     /// Writes the copied look onto every selected photo without opening the
@@ -525,7 +530,7 @@ struct LibraryScreen: View {
             onPasteEdits: dependencies.editClipboard.hasContent
                 ? { pasteEditsToSelection(model) }
                 : nil,
-            onCombine: { presentStack(model) },
+            onCombine: { presentCombine($0, model) },
             onDelete: { deleteSelected(model) },
             onAddToCollection: { addToCollection() },
             onExportEXIF: { exportEXIF(model) },

@@ -5,6 +5,9 @@ import SwiftUI
 /// What a combine was opened with.
 struct PhotoStackPresentation: Identifiable {
     let assets: [PHAsset]
+    /// The Combine Photos row that opened it — decides the title, the modes on
+    /// offer and the one it starts on.
+    let purpose: CombinePurpose
 
     var id: String { assets.first?.localIdentifier ?? UUID().uuidString }
 }
@@ -22,7 +25,7 @@ struct PhotoStackScreen: View {
 
     let presentation: PhotoStackPresentation
 
-    @State private var mode: PhotoStackMode = .average
+    @State private var mode: PhotoStackMode
     @State private var preview: UIImage?
     @State private var isWorking = false
     @State private var statusText: String?
@@ -35,6 +38,11 @@ struct PhotoStackScreen: View {
     @State private var renderTask: Task<Void, Never>?
 
     private let renderer = PhotoStackRenderer()
+
+    init(presentation: PhotoStackPresentation) {
+        self.presentation = presentation
+        _mode = State(initialValue: presentation.purpose.defaultMode ?? .average)
+    }
 
     var body: some View {
         ZStack {

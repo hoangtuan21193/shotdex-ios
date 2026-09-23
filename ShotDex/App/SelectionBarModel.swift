@@ -59,8 +59,9 @@ struct SelectionBarModel {
     /// Writes the copied look onto every selected photo without opening the
     /// editor. Nil where there is nothing on the clipboard to paste.
     var onPasteEdits: (() -> Void)? = nil
-    /// Combines the selection into one photo — multiple exposure, focus stack.
-    var onCombine: (() -> Void)? = nil
+    /// Combines the selection into one photo — one row of the Combine Photos
+    /// submenu (`CombinePurpose`): focus stack, panorama, stacked exposures.
+    var onCombine: ((CombinePurpose) -> Void)? = nil
     /// Trailing standalone button — delete the selection (confirmed by PhotoKit).
     var onDelete: () -> Void
 

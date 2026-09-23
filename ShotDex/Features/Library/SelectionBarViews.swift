@@ -167,7 +167,7 @@ struct SelectionToolbarItems: ToolbarContent {
     let model: SelectionBarModel
 
     private var hasMenu: Bool {
-        model.onCollage != nil || model.onVideo != nil || model.onCompress != nil
+        model.onCollage != nil || model.onVideo != nil || model.onCompress != nil || model.onCombine != nil
             || model.onAddToCollection != nil || model.onExportEXIF != nil
             || model.onDuplicate != nil || model.assetActions != nil
             || model.onSelectAll != nil || model.onRemoveFromAlbum != nil
@@ -209,10 +209,21 @@ struct SelectionToolbarItems: ToolbarContent {
                         .disabled(model.imageSelectionCount < 1)
                     }
                     if let onCombine = model.onCombine {
-                        Button(action: onCombine) {
+                        // A submenu, not a row per purpose: one entry in ⋯, and the
+                        // purposes inside it dim — never vanish — below two photos,
+                        // so the row still says what it can do (FS-01.09 §2).
+                        Menu {
+                            ForEach(CombinePurpose.menuRows) { purpose in
+                                Button {
+                                    onCombine(purpose)
+                                } label: {
+                                    Label(purpose.title, systemImage: purpose.systemImage)
+                                }
+                                .disabled(!purpose.isEnabled(imageCount: model.imageSelectionCount))
+                            }
+                        } label: {
                             Label("Combine Photos", systemImage: "square.3.layers.3d")
                         }
-                        .disabled(model.imageSelectionCount < 2)
                     }
                     if let onCollage = model.onCollage {
                         Button(action: onCollage) {
