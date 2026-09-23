@@ -87,10 +87,24 @@ struct MetadataComposerTests {
     /// FS-14: the composer does not decide what a panorama is — it is handed
     /// the answer, because resolving it needs both PhotoKit and the file, and
     /// this layer knows neither.
-    @Test func panoramaFlagIsCarriedThrough() {
-        var pano = assetInfo
-        pano.isPanorama = true
-        #expect(composer.compose(asset: pano, exif: .empty, exifStatus: .indexed).isPanorama == true)
+    @Test func eitherPanoramaSourceIsEnough() {
+        var systemFlagged = assetInfo
+        systemFlagged.hasSystemPanoramaFlag = true
+        let tagged = RawExif(make: "Canon", hasPanoramaTag: true)
+
+        #expect(composer.compose(asset: systemFlagged, exif: .empty, exifStatus: .indexed).isPanorama == true)
+        #expect(composer.compose(asset: assetInfo, exif: tagged, exifStatus: .indexed).isPanorama == true)
         #expect(composer.compose(asset: assetInfo, exif: .empty, exifStatus: .indexed).isPanorama == false)
+    }
+
+    /// The tag says what the picture is, not what the exposure was. A file with
+    /// the tag and no EXIF still has nothing to put in the camera columns, so
+    /// it must not come out as `indexed`.
+    @Test func panoramaTagAloneIsStillNoExif() {
+        let record = composer.compose(
+            asset: assetInfo, exif: RawExif(hasPanoramaTag: true), exifStatus: .indexed
+        )
+        #expect(record.resolvedExifStatus == .noExif)
+        #expect(record.isPanorama == true)
     }
 }

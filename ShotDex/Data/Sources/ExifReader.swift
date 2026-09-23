@@ -1,6 +1,7 @@
 import Foundation
 import ImageIO
 import Photos
+import ShotDexKit
 import os
 
 /// Outcome of trying to read EXIF for one asset.
@@ -383,7 +384,7 @@ struct ExifReader: Sendable {
                     // original is unreadable (not a download problem).
                     if let source = CGImageSourceCreateWithData(data as CFData, sourceOptions),
                        let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, sourceOptions) as? [CFString: Any] {
-                        continuation.resume(returning: .success(Self.parse(properties: properties)))
+                        continuation.resume(returning: .success(Self.parse(properties: properties, source: source)))
                     } else {
                         continuation.resume(returning: .unreadable)
                     }
@@ -492,9 +493,9 @@ struct ExifReader: Sendable {
                     // iCloud download short the moment the metadata box lands
                     // saves real bandwidth, and the chunks are large enough that
                     // the attempt count stays low.
-                    if useNetwork, let properties = Self.metadataProperties(fromPartial: s.buffer) {
+                    if useNetwork, let exif = Self.exif(fromPartial: s.buffer) {
                         s.resumed = true
-                        return .success(Self.parse(properties: properties))
+                        return .success(exif)
                     }
                     // Local reads parse at **thresholds**, not per chunk. Per
                     // chunk is what the old code refused to do, for a real
@@ -508,9 +509,9 @@ struct ExifReader: Sendable {
                     // each while the parse of it cost 2 ms, so the bytes were
                     // nearly the entire cost of the read.
                     if !useNetwork, s.buffer.count >= s.nextLocalParseThreshold {
-                        if let properties = Self.metadataProperties(fromPartial: s.buffer) {
+                        if let exif = Self.exif(fromPartial: s.buffer) {
                             s.resumed = true
-                            return .success(Self.parse(properties: properties))
+                            return .success(exif)
                         }
                         s.nextLocalParseThreshold *= 4
                     }
@@ -525,8 +526,8 @@ struct ExifReader: Sendable {
                         // big local original here instead of dropping to the
                         // slower editing-input fallback (which can itself fail,
                         // e.g. PHPhotosError 3164).
-                        if !useNetwork, let properties = Self.metadataProperties(fromPartial: s.buffer) {
-                            return .success(Self.parse(properties: properties))
+                        if !useNetwork, let exif = Self.exif(fromPartial: s.buffer) {
+                            return .success(exif)
                         }
                         return .overBudget
                     }
@@ -565,12 +566,14 @@ struct ExifReader: Sendable {
                 // Whole (small) file arrived before the incremental parse
                 // succeeded — parse it as a complete image.
                 let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
-                let properties = Self.timingParse { () -> [CFString: Any]? in
-                    guard let source = CGImageSourceCreateWithData(buffer as CFData, sourceOptions) else { return nil }
-                    return CGImageSourceCopyPropertiesAtIndex(source, 0, sourceOptions) as? [CFString: Any]
+                let exif = Self.timingParse { () -> RawExif? in
+                    guard let source = CGImageSourceCreateWithData(buffer as CFData, sourceOptions),
+                          let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, sourceOptions) as? [CFString: Any]
+                    else { return nil }
+                    return Self.parse(properties: properties, source: source)
                 }
-                if let properties {
-                    continuation.resume(returning: .success(Self.parse(properties: properties)))
+                if let exif {
+                    continuation.resume(returning: .success(exif))
                 } else {
                     // Bytes fully arrived (no error) but unparseable — the
                     // original is unreadable, not a transport failure.
@@ -699,7 +702,7 @@ struct ExifReader: Sendable {
     /// Attempts to parse metadata from a file prefix. Only accepts the result
     /// once an EXIF or TIFF section is present — partial data can yield a
     /// dictionary before the metadata sections have arrived.
-    private static func metadataProperties(fromPartial data: Data) -> [CFString: Any]? {
+    private static func exif(fromPartial data: Data) -> RawExif? {
         timingParse {
             let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
             let source = CGImageSourceCreateIncremental(sourceOptions)
@@ -708,7 +711,9 @@ struct ExifReader: Sendable {
                   properties[kCGImagePropertyExifDictionary] != nil
                     || properties[kCGImagePropertyTIFFDictionary] != nil
             else { return nil }
-            return properties
+            // Parsed here rather than by the caller because the panorama tag
+            // needs this source, and it does not outlive the closure.
+            return parse(properties: properties, source: source)
         }
     }
 
@@ -723,12 +728,18 @@ struct ExifReader: Sendable {
             // is unreadable, not a download problem.
             return .unreadable
         }
-        return .success(parse(properties: properties))
+        return .success(parse(properties: properties, source: source))
     }
 
     /// Extracts the standard tags from the ImageIO properties dictionary
-    /// ({Exif}, {TIFF}, {ExifAux}). Maker notes are out of scope for MVP.
-    static func parse(properties: [CFString: Any]) -> RawExif {
+    /// ({Exif}, {TIFF}, {ExifAux}), and — when the source is at hand — whether
+    /// the file carries ShotDex's panorama tag. Maker notes are out of scope
+    /// for MVP.
+    ///
+    /// The tag is not in `properties`: XMP is a separate object in ImageIO,
+    /// reached through `CGImageSourceCopyMetadataAtIndex`, so it needs the
+    /// source rather than the dictionary that came out of it.
+    static func parse(properties: [CFString: Any], source: CGImageSource? = nil) -> RawExif {
         let exif = properties[kCGImagePropertyExifDictionary] as? [CFString: Any] ?? [:]
         let tiff = properties[kCGImagePropertyTIFFDictionary] as? [CFString: Any] ?? [:]
         let exifAux = properties[kCGImagePropertyExifAuxDictionary] as? [CFString: Any] ?? [:]
@@ -751,7 +762,8 @@ struct ExifReader: Sendable {
             fNumber: positiveDouble(exif[kCGImagePropertyExifFNumber]),
             exposureTimeSeconds: positiveDouble(exif[kCGImagePropertyExifExposureTime]),
             focalLength: positiveDouble(exif[kCGImagePropertyExifFocalLength]),
-            focalLengthIn35mm: positiveDouble(exif[kCGImagePropertyExifFocalLenIn35mmFilm])
+            focalLengthIn35mm: positiveDouble(exif[kCGImagePropertyExifFocalLenIn35mmFilm]),
+            hasPanoramaTag: source.map(PanoramaXMP.isStitchedPanorama) ?? false
         )
     }
 

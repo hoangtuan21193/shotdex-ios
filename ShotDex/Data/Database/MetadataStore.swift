@@ -58,6 +58,11 @@ struct MetadataStore: Sendable {
 
     /// Writes only what a failed read genuinely knows: the PHAsset facts (read
     /// off the asset, never from the file) plus the new status/attempt counter.
+    ///
+    /// `isPanorama` is the one column here that is only *half* an asset fact:
+    /// the system flag is, ShotDex's tag in the file is not, and this path did
+    /// not read the file. So a yes is never taken back — a failed read can turn
+    /// the flag on from the subtype mask, never off.
     /// Every EXIF-derived column keeps its current value, and `modificationDate`
     /// deliberately stays stale — advancing it would let an edit be forgotten
     /// before its metadata was ever read.
@@ -67,7 +72,7 @@ struct MetadataStore: Sendable {
                 UPDATE photo_metadata SET
                     exifStatus = ?, readAttempts = ?, indexedAt = ?,
                     creationDate = ?, mediaType = ?, mediaSubtypes = ?,
-                    isPanorama = ?,
+                    isPanorama = MAX(?, COALESCE(isPanorama, 0)),
                     width = ?, height = ?, fileSize = ?,
                     originalFilename = COALESCE(?, originalFilename),
                     latitude = ?, longitude = ?, isFavorite = ?

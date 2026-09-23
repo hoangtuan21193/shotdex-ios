@@ -11,6 +11,10 @@ struct RawExif: Equatable, Sendable {
     var exposureTimeSeconds: Double?
     var focalLength: Double?
     var focalLengthIn35mm: Double?
+    /// ShotDex's panorama tag was found in the file (FS-14.02 §7). Not an EXIF
+    /// value — it rides here because it comes from the same read of the same
+    /// file, and nothing else opens that file.
+    var hasPanoramaTag: Bool = false
 
     static let empty = RawExif()
 
@@ -23,7 +27,8 @@ struct RawExif: Equatable, Sendable {
         fNumber: Double? = nil,
         exposureTimeSeconds: Double? = nil,
         focalLength: Double? = nil,
-        focalLengthIn35mm: Double? = nil
+        focalLengthIn35mm: Double? = nil,
+        hasPanoramaTag: Bool = false
     ) {
         self.make = make
         self.model = model
@@ -34,9 +39,18 @@ struct RawExif: Equatable, Sendable {
         self.exposureTimeSeconds = exposureTimeSeconds
         self.focalLength = focalLength
         self.focalLengthIn35mm = focalLengthIn35mm
+        self.hasPanoramaTag = hasPanoramaTag
     }
 
-    var isEmpty: Bool { self == .empty }
+    /// Whether the read found **no EXIF**. The panorama tag is deliberately not
+    /// part of this: it is not an exposure value, and a file that has only the
+    /// tag still has nothing for the camera and lens columns — calling that
+    /// "indexed" would leave a row claiming EXIF it does not have.
+    var isEmpty: Bool {
+        make == nil && model == nil && lensMake == nil && lensModel == nil
+            && iso == nil && fNumber == nil && exposureTimeSeconds == nil
+            && focalLength == nil && focalLengthIn35mm == nil
+    }
 }
 
 /// Asset-level facts coming from PhotoKit (not EXIF).
@@ -47,11 +61,10 @@ struct AssetInfo: Equatable, Sendable {
     var mediaType: Int
     /// Raw `PHAssetMediaSubtype` bitmask, straight off the asset.
     var mediaSubtypes: Int = 0
-    /// Whether the app treats this photo as a panorama: the system's pano bit
-    /// in `mediaSubtypes`, or ShotDex's XMP tag in the file (FS-14 §7).
-    /// Resolved by the caller, which is the layer that knows both PhotoKit and
-    /// the file — this type stays free of Photos.
-    var isPanorama: Bool = false
+    /// The system's own pano flag, pulled out of `mediaSubtypes` by the caller
+    /// so this type stays free of Photos. It is half the answer; the other half
+    /// is `RawExif.hasPanoramaTag`, and `compose` joins them.
+    var hasSystemPanoramaFlag: Bool = false
     var width: Int?
     var height: Int?
     var fileSize: Int?
@@ -91,7 +104,10 @@ struct MetadataComposer: Sendable {
             modificationDate: asset.modificationDate.map { Int($0.timeIntervalSince1970) },
             mediaType: asset.mediaType,
             mediaSubtypes: asset.mediaSubtypes,
-            isPanorama: asset.isPanorama,
+            // Either source makes it one (FS-14 §7): Camera's own panoramas
+            // carry the system flag, and the ones ShotDex stitched carry the
+            // tag in the file.
+            isPanorama: asset.hasSystemPanoramaFlag || exif.hasPanoramaTag,
             cameraManufacturer: exif.make,
             cameraModel: exif.model,
             normalizedCameraModel: normalizedModel,
