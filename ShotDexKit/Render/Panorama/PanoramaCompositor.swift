@@ -340,3 +340,35 @@ public enum PanoramaCompositor {
         return output
     }
 }
+
+extension PanoramaCompositor {
+    /// Stands a turned panorama back up.
+    ///
+    /// A column of frames is projected about an axis turned a quarter turn,
+    /// because that is the only way it does not come out pinched like an
+    /// hourglass — but the picture that gets saved has to be the way round the
+    /// photographer shot it. This is the undo, applied once at the end rather
+    /// than by turning every sample as it is warped.
+    public static func standUpright(_ image: PanoramaRGBImage) -> PanoramaRGBImage {
+        var output = PanoramaRGBImage(width: image.height, height: image.width)
+        for y in 0..<image.height {
+            for x in 0..<image.width {
+                // A quarter turn the other way: what was at (x, y) belongs at
+                // (y, width − 1 − x).
+                let source = y * image.width + x
+                let target = (image.width - 1 - x) * output.width + y
+                for channel in 0..<3 {
+                    output.pixels[3 * target + channel] = image.pixels[3 * source + channel]
+                }
+                output.coverage[target] = image.coverage[source]
+            }
+        }
+        return output
+    }
+}
+
+extension PanoramaCanvas {
+    /// Whether this canvas was laid out about a turned axis, and so needs
+    /// standing back up before it is shown or saved.
+    public var isTurned: Bool { frame != PanoramaRotation.identity }
+}
