@@ -65,6 +65,7 @@ Tầng D (DESIGN §10.3, §10.3b): `Cancel` · tiêu đề · `Save`; stage đen
   - **Album do người dùng tạo** (thêm ảnh được): **thêm ảnh mới vào album đó**, rồi mở viewer tại chỗ — ảnh
     ghép nằm cạnh các khung gốc của nó.
   - **Smart Album, On This Day** (và album không cho thêm ảnh): chuyển sang tab Library và mở ảnh ở đó.
+- Ảnh lưu là JPEG 0,95 mang EXIF của khung đầu (máy, ống kính, ngày, vị trí) — chung cho cả ba dòng, luật ở FS-01.10 §6.
 
 ## 4. Focus stack (thuật toán hiện tại — sẽ thay theo [FS-01.10](10-focus-stack.md))
 
@@ -89,7 +90,7 @@ Frame sau align phải kéo giãn mép ra vô hạn **trước khi** crop, nếu
 | AC-8 | iPhone 402×874, iPad 1376×1032, Duo trong 951×669 | mở menu con | cùng số dòng trên cả ba | ⚠️ hai phần ba: iPhone và iPad ✅; Duo chưa — màn trong không chụp được trên máy này (không có lệnh gập mở) |
 | AC-9 | VoiceOver bật | vuốt tới dòng Combine Photos | đọc tên kèm "menu"; mỗi dòng con đọc đúng tên | ⚠️ chưa có — dump nhãn a11y |
 | AC-10 | chọn 5 ảnh, màn Stack Exposures đang mở | Cancel | về lưới, vẫn đúng 5 ảnh được chọn; mở tiếp Combine Photos ▸ Focus Stack được ngay | ✅ `combine-menu.json` với 3 ảnh: dump `07-after-cancel` còn `Show Selected (3…)`, rồi mở Focus Stack (`08`) |
-| AC-11 | Save thành công | xong lưu | màn đóng, chế độ chọn tắt, viewer mở đúng ảnh vừa lưu | ⚠️ chưa có — `combine-menu.json` + ảnh |
+| AC-11 | Save thành công | xong lưu | màn đóng, chế độ chọn tắt, viewer mở đúng ảnh vừa lưu | ✅ `focus-stack-save.json` ảnh `02` (iPhone 17 Pro 26.5, lưới Library): màn đóng, dump có `Select photos` chứ không còn `Done selecting`, viewer mở ảnh mới (EXIF khung đầu, 1,9 MB) |
 | AC-12 | Save hỏng giữa chừng | cảnh báo hiện | tiêu đề `Couldn't Save`; không còn `Couldn't Combine` ở đâu | ⚠️ một nửa: `PhotoStackModelTests` (4 test, hai tiêu đề theo pha); `Couldn't Combine` đã rời code và String Catalog; còn thiếu ảnh chụp cảnh báo |
 | AC-13 | Album Detail, Smart Album Detail, On This Day, mỗi màn chọn 3 ảnh | mở ⋯ | có dòng Combine Photos với cùng menu con như Library | ⚠️ chưa có — `combine-menu.json` |
 | AC-14 | album người dùng tạo có 8 ảnh, chọn cả 8 | Focus Stack → Save | album có 9 ảnh; viewer mở ảnh mới ngay trong album | ⚠️ chưa có — `combine-menu.json` + ảnh |

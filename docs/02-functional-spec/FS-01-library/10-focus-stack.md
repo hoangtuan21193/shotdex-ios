@@ -70,6 +70,11 @@ Tầng D như FS-01.09 §3: `Cancel` · `Focus Stack` · `Save`; stage đen; m�
 
 - Như FS-01.09 §3: Save → ảnh mới, Cancel giữ lựa chọn, lưu xong mở viewer theo màn đang đứng.
 - Full-res **theo dải**, khung giữ trên đĩa và ánh xạ vào bộ nhớ — cùng cách FS-14.02 §6. JPEG chất lượng 0,95.
+  Hôm nay (task 6): từng khung gốc ghi vào thư mục phiên (`PhotoStackSession`) rồi đọc lười từ đĩa, có áp hướng
+  EXIF; chỉ một khung gốc nằm trong RAM lúc nạp. Render theo dải là task 8.
+- EXIF của ảnh ghép là của **khung đầu** (theo thứ tự chụp): máy, ống kính, ngày, vị trí. Bỏ cỡ ảnh, hướng và
+  khoảng cách lấy nét — chúng không còn tả ảnh ghép (`StackedPhotoMetadata`).
+- Save lấy đúng các khung preview đã nạp; khung gốc nào tải hỏng lúc lưu thì dừng và báo, không lưu ảnh thiếu khung.
 - Bộ nhớ **không tăng theo số khung** và **không tăng theo cỡ ảnh**.
 
 ## 7. Tiêu chí nghiệm thu
@@ -90,9 +95,9 @@ trong test bundle. PSNR so với ảnh nét hoàn toàn, bỏ viền 60 px.
 | AC-9 | vừa tô 3 nét | Undo 3 lần | ảnh ghép trùng từng điểm ảnh với trước khi tô | ⚠️ chưa có — `FocusStackRetouchTests` |
 | AC-10 | chạm một điểm trong Retouch | — | khung được chọn sẵn là khung có độ nét cao nhất tại điểm đó | ⚠️ chưa có — `FocusStackRetouchTests` |
 | AC-11 | 100 khung × 24 MP | Save | footprint đỉnh ≤ 500 MB, và như nhau (± 10%) ở 10 khung | ⚠️ chưa có — đo tay máy thật + `FocusStackExportTests` |
-| AC-12 | 3 khung chỉ trên iCloud, máy mất mạng | mở màn | báo "3 photos couldn't be downloaded" + Retry; không ghép với số khung thiếu mà không báo | ⚠️ chưa có — ảnh |
-| AC-13 | đang lưu | Cancel | không asset nào được tạo; thư mục tạm của phiên rỗng | ⚠️ chưa có — `FocusStackExportTests` |
-| AC-14 | ảnh ghép đã lưu | xem EXIF trong viewer | máy, ống kính, ngày của khung đầu; không tiêu cự lấy nét | ⚠️ chưa có — `FocusStackExportTests` |
+| AC-12 | 3 khung chỉ trên iCloud, máy mất mạng | mở màn | báo "3 photos couldn't be downloaded" + Retry; không ghép với số khung thiếu mà không báo | ⚠️ một nửa: code có (`PhotoStackModel.missingFramesMessage`, `retryMissingFrames`; Save thiếu khung gốc thì dừng với `StackSaveError.framesMissing`, không lưu); simulator không giả được iCloud mất mạng — ảnh chụp chờ máy thật |
+| AC-13 | đang lưu | Cancel | không asset nào được tạo; thư mục tạm của phiên rỗng | ⚠️ một nửa: `PhotoStackSessionTests` (thư mục phiên mất khi remove và khi phiên bị bỏ); Save kiểm `Task.checkCancellation()` trước mỗi khung, trước ghép và trước ghi asset; chưa có test Cancel giữa lúc lưu |
+| AC-14 | ảnh ghép đã lưu | xem EXIF trong viewer | máy, ống kính, ngày của khung đầu; không tiêu cự lấy nét | ✅ `StackedPhotoMetadataTests` (giữ máy/ống/ngày/GPS, bỏ SubjectDistance, cỡ và hướng) + `StackedPhotoJPEGTests` (JPEG đọc lại đúng) + `focus-stack-save.json` ảnh `02`/`03` (iPhone 17 Pro 26.5: viewer mở ảnh mới với "D800E · 16mm f/10", ngày và vị trí của khung đầu) |
 
 **Chưa chứng minh được:** cả 14 — chưa build. AC-11 là mục tiêu, đo trên máy thật mới chốt.
 

@@ -198,6 +198,21 @@ struct PhotoStackScreen: View {
                 focusControls(model)
             }
 
+            if let message = model.missingFramesMessage {
+                HStack(alignment: .firstTextBaseline, spacing: AppTheme.Spacing.md) {
+                    Label(message, systemImage: "icloud.slash")
+                        .font(EditorTheme.maskSubtitle)
+                        .foregroundStyle(EditorTheme.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    Button("Retry") { model.retryMissingFrames() }
+                        .font(EditorTheme.rowLabel.weight(.semibold))
+                        .foregroundStyle(EditorTheme.accent)
+                        .disabled(model.isWorking)
+                        .frame(minHeight: AppTheme.Size.minTouch)
+                }
+            }
+
             if let message = model.excludedFramesMessage {
                 Label(message, systemImage: "exclamationmark.triangle")
                     .font(EditorTheme.maskSubtitle)

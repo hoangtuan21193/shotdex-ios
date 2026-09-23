@@ -1,3 +1,4 @@
+import ImageIO
 import Photos
 import ShotDexKit
 import SwiftUI
@@ -44,8 +45,15 @@ final class PhotoStackModel {
     private(set) var statusText: String?
     var failure: Failure?
     /// Frames the last combine left out because they would not line up
-    /// (focus stack only), as indices into `assets`.
+    /// (focus stack only), as indices into `loadedAssets`.
     private(set) var excludedFrames: [Int] = []
+    /// How many of `assets` could not be loaded — an iCloud-only original with
+    /// no network, most often. Said on the panel with a Retry, never dropped
+    /// quietly (FS-01.10 §4, AC-12).
+    private(set) var missingFrameCount = 0
+    /// The assets whose preview did load, in stacking order. Save combines
+    /// these and no others, so it saves what the preview showed.
+    private(set) var loadedAssets: [PHAsset] = []
     /// Set once the new asset is saved, indexed and visible to the grid.
     private(set) var savedAssetID: String?
 
@@ -83,26 +91,54 @@ final class PhotoStackModel {
         )
     }
 
+    /// "3 photos couldn't be downloaded." — nil when every frame loaded.
+    var missingFramesMessage: String? {
+        guard missingFrameCount > 0 else { return nil }
+        return String(
+            localized: "\(missingFrameCount) photos couldn't be downloaded.",
+            comment: "Stack screen: frames that could not be loaded, usually iCloud originals with no network. Shown with a Retry button."
+        )
+    }
+
     /// Loads every frame once at preview resolution. Full resolution is left
     /// until Save: a thirty-frame macro stack at 48 megapixels is gigabytes, and
     /// nobody needs that to choose between Average and Lighten.
+    ///
+    /// Also what Retry calls: it starts over from every selected photo.
     func loadFrames() async {
+        renderTask?.cancel()
         isWorking = true
         statusText = String(localized: "Loading \(assets.count) photos…", comment: "Stack screen status while the preview frames load")
         defer { isWorking = false }
 
         var frames: [CIImage] = []
+        var loaded: [PHAsset] = []
         for asset in assets {
             guard let image = await Self.previewImage(for: asset, photoLibrary: photoLibrary),
                   let ciImage = CIImage(image: image) else { continue }
             frames.append(ciImage)
+            loaded.append(asset)
         }
         previewFrames = frames
+        loadedAssets = loaded
+        missingFrameCount = assets.count - loaded.count
+        preparedFocus = nil
+        excludedFrames = []
         guard frames.count >= CombinePurpose.minimumPhotoCount else {
-            failure = .load(PhotoStackError.needsTwoImages.localizedDescription)
+            preview = nil
+            // A missing frame is already on the panel with its Retry; an alert
+            // on top would say the same thing twice.
+            if missingFrameCount == 0 {
+                failure = .load(PhotoStackError.needsTwoImages.localizedDescription)
+            }
             return
         }
         await render()
+    }
+
+    func retryMissingFrames() {
+        renderTask?.cancel()
+        renderTask = Task { await loadFrames() }
     }
 
     func cancel() { renderTask?.cancel() }
@@ -152,43 +188,89 @@ final class PhotoStackModel {
             : String(localized: "Combining…", comment: "Stack screen status while frames are combined")
     }
 
+    /// JPEG quality of a saved combine (FS-01.10 §6).
+    static let jpegQuality = 0.95
+
     /// Re-runs the combine at full resolution and writes a new asset, then
     /// indexes it and tells the grid, so the viewer can open it straight away.
     /// The preview is not saved: it is a 1600pt proxy, and a photographer
     /// stacking macro frames wants every pixel they shot.
+    ///
+    /// Originals go to a session folder one at a time and are read back lazily
+    /// from there, so only one original's bytes are in memory while they load.
+    /// The folder is gone when the save ends, cancelled or not.
     func save() {
         renderTask?.cancel()
+        let assets = loadedAssets
         renderTask = Task {
             isWorking = true
             statusText = String(localized: "Loading full-resolution frames…", comment: "Stack screen status while originals load for saving")
             defer { isWorking = false }
+            var session: PhotoStackSession?
+            defer { session?.remove() }
             do {
+                session = try PhotoStackSession()
                 var frames: [CIImage] = []
+                var firstFrameProperties: [String: Any] = [:]
+                var missing = 0
                 for (index, asset) in assets.enumerated() {
+                    try Task.checkCancellation()
                     statusText = String(localized: "Loading \(index + 1) of \(assets.count)…", comment: "Stack screen status while originals load, one by one")
                     guard let data = await Self.originalData(for: asset),
-                          let image = CIImage(data: data)
-                    else { continue }
+                          let url = try session?.store(data, index: index),
+                          let image = CIImage(contentsOf: url, options: [.applyOrientationProperty: true])
+                    else { missing += 1; continue }
+                    if frames.isEmpty, let source = CGImageSourceCreateWithURL(url as CFURL, nil) {
+                        firstFrameProperties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any] ?? [:]
+                    }
                     frames.append(image)
                 }
-                guard frames.count >= CombinePurpose.minimumPhotoCount else { throw PhotoStackError.needsTwoImages }
+                // The preview had these frames; a save with fewer would not be
+                // the picture the user chose to keep.
+                guard missing == 0 else {
+                    throw StackSaveError.framesMissing(missing)
+                }
 
+                try Task.checkCancellation()
                 statusText = workingText
                 let combined = try await renderer.combine(images: frames, mode: mode, focus: focusOptions)
                 let cgImage = try await renderer.render(combined)
 
+                try Task.checkCancellation()
                 statusText = String(localized: "Saving…", comment: "Stack screen status while the new photo is written")
-                guard let data = UIImage(cgImage: cgImage).jpegData(compressionQuality: 0.98) else {
+                guard let data = StackedPhotoMetadata.jpegData(
+                    cgImage,
+                    properties: StackedPhotoMetadata.properties(fromFirstFrame: firstFrameProperties),
+                    quality: Self.jpegQuality
+                ) else {
                     throw PhotoStackError.renderFailed
                 }
+                try Task.checkCancellation()
                 let name = "ShotDex-\(mode.rawValue)-\(Int(Date().timeIntervalSince1970)).jpg"
                 let assetID = try await photoLibrary.saveImage(data, filename: name)
                 _ = await indexPipeline.indexSingle(assetId: assetID)
                 photoLibrary.publishAppCreatedAsset()
                 savedAssetID = assetID
+            } catch is CancellationError {
+                // Cancel closed the screen; nothing to report and nothing saved.
             } catch {
                 failure = .save(error.localizedDescription)
             }
+        }
+    }
+}
+
+/// Why a save stopped before it wrote anything.
+enum StackSaveError: LocalizedError, Equatable {
+    case framesMissing(Int)
+
+    var errorDescription: String? {
+        switch self {
+        case .framesMissing(let count):
+            String(
+                localized: "\(count) photos couldn't be downloaded. Check the connection and try again.",
+                comment: "Stack save failed: some full-resolution originals could not be downloaded (usually iCloud)."
+            )
         }
     }
 }
