@@ -13,21 +13,23 @@ xoá người qua đường, vệt sáng, giảm nhiễu) → một màn làm đ
 
 - Tên dòng là **việc người chụp muốn làm**, không phải tên phép toán. Không chữ `Average`, `Lighten`,
   `Darken` nào hiện trên màn hình.
-- Menu con **một cấp**, năm dòng, thứ tự cố định. Mỗi dòng mở **một màn làm một việc**; trong màn không có
-  bộ chọn mode.
+- Menu con **một cấp**, năm dòng, thứ tự cố định, chia hai phần: Focus Stack và Panorama đứng riêng, rồi
+  một nhóm có **tiêu đề `Stack Exposures`** gồm ba việc cùng một cách chụp — nhiều lần bấm một khung cảnh, máy
+  đứng yên. Tiêu đề nhóm không bấm được; nhóm không phải menu lồng. Mỗi dòng mở **một màn làm một việc**;
+  trong màn không có bộ chọn mode.
 - Đổi tên không đổi ảnh: cùng khung vào thì ra **đúng từng pixel** như mode tương ứng trước đây.
 - Renderer là **actor trong ShotDexKit** vì nó là render thuần. **Ghép lũy tiến** ở mọi việc → bộ nhớ phẳng
   theo số frame. Preview dựng ở 1600pt và dùng lại; chỉ khi Save mới nạp full-res.
 
 ## 2. Menu con
 
-| # | Dòng | Làm gì | Bên dưới | Câu giải thích trong màn |
-|---|---|---|---|---|
-| 1 | **Focus Stack** | lấy nét toàn cảnh — macro, phong cảnh gần-xa | điểm nét nhất (§4) | Keeps the sharpest part of every frame, for depth of field no single shot can reach. |
-| 2 | **Panorama** | nối khung cạnh nhau | [FS-14](../FS-14-panorama/README.md) | (màn riêng của FS-14) |
-| 3 | **Remove Moving People** | xoá người, xe đi qua trong chuỗi chụp tripod | điểm tối nhất | Clears people and cars that moved between frames. Shoot from a tripod. |
-| 4 | **Light Trails** | vệt sao, đèn xe, pháo hoa | điểm sáng nhất | Keeps the brightest light from every frame — star trails, traffic, fireworks. |
-| 5 | **Reduce Noise** | giảm nhiễu; giả phơi sáng dài | trung bình đều | Averages the frames to clean up noise, or to smooth water and clouds like a long exposure. |
+| # | Dòng | Nhóm | Làm gì | Bên dưới | Câu giải thích trong màn |
+|---|---|---|---|---|---|
+| 1 | **Focus Stack** | — | lấy nét toàn cảnh — macro, phong cảnh gần-xa | điểm nét nhất (§4) | Keeps the sharpest part of every frame, for depth of field no single shot can reach. |
+| 2 | **Panorama** | — | nối khung cạnh nhau | [FS-14](../FS-14-panorama/README.md) | (màn riêng của FS-14) |
+| 3 | **Remove Moving People** | Stack Exposures | xoá người, xe đi qua trong chuỗi chụp tripod | điểm tối nhất | Clears people and cars that moved between frames. Shoot from a tripod. |
+| 4 | **Light Trails** | Stack Exposures | vệt sao, đèn xe, pháo hoa | điểm sáng nhất | Keeps the brightest light from every frame — star trails, traffic, fireworks. |
+| 5 | **Reduce Noise** | Stack Exposures | giảm nhiễu; giả phơi sáng dài | trung bình đều | Averages the frames to clean up noise, or to smooth water and clouds like a long exposure. |
 
 - Dòng mở menu con giữ tên **Combine Photos**, icon như hiện nay.
 - **Panorama** chỉ xuất hiện khi FS-14 đã build; trước đó menu con có bốn dòng.
@@ -69,12 +71,12 @@ Frame sau align phải kéo giãn mép ra vô hạn **trước khi** crop, nếu
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
 | AC-1 | Library, chọn 4 ảnh | mở ⋯ | có **một** dòng Combine Photos; không dòng Focus Stack/Panorama nào đứng riêng ở cấp ngoài | ⚠️ chưa có — `combine-menu.json` + dump |
-| AC-2 | chọn 4 ảnh | ⋯ → Combine Photos | menu con ghi đúng thứ tự Focus Stack · Panorama · Remove Moving People · Light Trails · Reduce Noise (Panorama chỉ khi FS-14 đã build) | ⚠️ chưa có — `combine-menu.json` + dump |
+| AC-2 | chọn 4 ảnh | ⋯ → Combine Photos | menu con ghi đúng thứ tự Focus Stack · Panorama, rồi tiêu đề nhóm `Stack Exposures` và Remove Moving People · Light Trails · Reduce Noise bên dưới (Panorama chỉ khi FS-14 đã build) | ⚠️ chưa có — `combine-menu.json` + dump |
 | AC-3 | chọn 1 ảnh + 3 video | ⋯ → Combine Photos | mở được; cả năm dòng mờ | ⚠️ chưa có — `combine-menu.json` |
 | AC-4 | 4 khung cố định, cùng một bộ | chạy từng việc 1, 3, 4, 5 | ảnh ra trùng từng pixel với mode Focus Stack, Darken, Lighten, Average cũ | ⚠️ chưa có — `PhotoStackRendererTests` |
 | AC-5 | chọn 6 ảnh + 2 video | ⋯ → Combine Photos ▸ Light Trails | màn mở với 6 khung, tiêu đề `Light Trails`, **không** có bộ chọn mode | ⚠️ chưa có — `combine-menu.json` + ảnh |
 | AC-6 | từng màn trong năm việc | mở | câu giải thích đúng bảng §2; không chữ Average/Lighten/Darken nào trên màn | ⚠️ chưa có — dump + ảnh |
-| AC-7 | iOS 26.5 và iOS 18.6 | mở menu con trên cả hai | cùng năm dòng, cùng thứ tự, cùng trạng thái mờ | ⚠️ chưa có — `combine-menu.json` chạy hai máy |
+| AC-7 | iOS 26.5 và iOS 18.6 | mở menu con trên cả hai | cùng năm dòng, cùng thứ tự, cùng trạng thái mờ, tiêu đề `Stack Exposures` hiện ở cả hai | ⚠️ chưa có — `combine-menu.json` chạy hai máy |
 | AC-8 | iPhone 402×874, iPad 1376×1032, Duo trong 951×669 | mở menu con | cùng số dòng trên cả ba | ⚠️ chưa có — `combine-menu.json` + `Tools/sim-shot` |
 | AC-9 | VoiceOver bật | vuốt tới dòng Combine Photos | đọc tên kèm "menu"; mỗi dòng con đọc đúng tên | ⚠️ chưa có — dump nhãn a11y |
 | AC-10 | chọn 5 ảnh, màn Reduce Noise đang mở | Cancel | về lưới, vẫn đúng 5 ảnh được chọn; mở tiếp Combine Photos ▸ Light Trails được ngay | ⚠️ chưa có — `combine-menu.json` + dump |
@@ -86,7 +88,7 @@ Frame sau align phải kéo giãn mép ra vô hạn **trước khi** crop, nếu
 
 **Chưa chứng minh được:** cả 15 — chưa build.
 
-Quyết định 2026-09-23: cả bốn lưới · tiêu đề chỉ tên việc · lỗi chung · Cancel giữ lựa chọn · Save mở viewer; từ album người dùng thì thêm ảnh vào album, từ Smart Album / On This Day thì sang Library.
+Quyết định 2026-09-23: nhóm `Stack Exposures` cho ba việc chụp nhiều lần một khung cảnh · cả bốn lưới · tiêu đề chỉ tên việc · lỗi chung · Cancel giữ lựa chọn · Save mở viewer; từ album người dùng thì thêm ảnh vào album, từ Smart Album / On This Day thì sang Library.
 Không còn `⚠️ CẦN QUYẾT`.
 
 ## 6. Tài liệu phải sửa khi Build
