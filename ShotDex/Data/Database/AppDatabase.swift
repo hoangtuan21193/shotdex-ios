@@ -9,7 +9,7 @@ final class AppDatabase: Sendable {
 
     init(_ writer: any DatabaseWriter) throws {
         self.writer = writer
-        try migrator.migrate(writer)
+        try Self.migrator.migrate(writer)
     }
 
     /// Opens (or creates) the on-disk database in Application Support.
@@ -28,7 +28,11 @@ final class AppDatabase: Sendable {
         try AppDatabase(DatabaseQueue())
     }
 
-    private var migrator: DatabaseMigrator {
+    /// Static, and not private, so a test can migrate a database **to a
+    /// chosen version**, write the rows an older build would have left, and
+    /// then run the next migration over them. A migration that rewrites data
+    /// is only proven by being run against data.
+    static var migrator: DatabaseMigrator {
         var migrator = DatabaseMigrator()
 
         #if DEBUG
@@ -400,6 +404,36 @@ final class AppDatabase: Sendable {
             // The list is "most recently edited first", which is the only sort
             // this table is ever read in.
             try db.create(index: "creations_updatedAt", on: "creations", columns: ["updatedAt"])
+        }
+
+        // Whether the app treats this photo as a panorama (FS-14 §7). Two
+        // things can make it true and they do not live in the same place: the
+        // system's own pano flag, which is already in `mediaSubtypes`, and
+        // ShotDex's XMP tag in the file, which only the EXIF pass can read.
+        // One column answers both, so the filter, the viewer and the
+        // Panoramas collection all ask the same question.
+        //
+        // Not a bit OR'd into `mediaSubtypes`: that column is documented as
+        // PhotoKit's mask straight off the asset, and writing a value the app
+        // invented into it would make every later reader wrong about what it
+        // holds.
+        //
+        // The system half backfills here, in SQL, off the mask already
+        // indexed — no PhotoKit walk and no reindex. The XMP half arrives
+        // when a row is next read: photos ShotDex stitches are indexed at
+        // save time, and nothing else writes that tag.
+        migrator.registerMigration("v18-panoramaFlag") { db in
+            try db.alter(table: "photo_metadata") { t in
+                t.add(column: "isPanorama", .boolean)
+            }
+            // 4 is `PHAssetMediaSubtype.photoPanorama`, written as a literal
+            // on purpose: a migration has to keep meaning the same thing for
+            // ever, and a named constant is free to change under it.
+            try db.execute(sql: """
+                UPDATE photo_metadata
+                SET isPanorama = ((mediaSubtypes & 4) != 0)
+                WHERE mediaSubtypes IS NOT NULL
+                """)
         }
 
         return migrator

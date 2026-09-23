@@ -40,7 +40,7 @@ khi dò sai · không trần số khung, không trần kích thước (Size 25�
 |---|---|
 | Đọc từ | PhotoKit: bản render hiện tại của từng khung (đã gồm chỉnh sửa), tải từ iCloud khi cần |
 | Ghi vào | **một asset mới** qua đường lưu ảnh mới, từ **file trên đĩa** — không qua bộ nhớ |
-| Database | không đổi schema; ảnh mới được index như mọi ảnh ([BD-03](../../01-basic-design/BD-03-metadata-indexing-flow/README.md)) |
+| Database | thêm **một cột** `photo_metadata.isPanorama` ở `v18-panoramaFlag` — cờ hệ thống **hoặc** thẻ XMP của ShotDex, một câu trả lời cho viewer, bộ lọc và bộ sưu tập (§7 của [01](01-screen-and-flow.md)); ảnh mới được index như mọi ảnh ([BD-03](../../01-basic-design/BD-03-metadata-indexing-flow/README.md)) |
 | Người dùng tự nhập? | không — vị trí khung sửa tay chỉ sống trong phiên, không lưu |
 
 ## 4. Ràng buộc

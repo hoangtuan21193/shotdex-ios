@@ -20,6 +20,12 @@ struct PhotoMetadata: Codable, Equatable, Identifiable, Sendable {
     /// Raw `PHAssetMediaSubtype` bitmask. Nil for rows written before the
     /// column existed, until the next index pass reaches them.
     var mediaSubtypes: Int?
+    /// Whether the app treats this photo as a panorama: the system's pano flag
+    /// **or** ShotDex's own XMP tag in the file (FS-14 §7). One answer for the
+    /// viewer, the capture-kind filter and the Panoramas collection, so they
+    /// cannot disagree. Nil only for rows written before the column existed
+    /// that have no subtype mask either.
+    var isPanorama: Bool?
 
     var cameraManufacturer: String?
     var cameraModel: String?

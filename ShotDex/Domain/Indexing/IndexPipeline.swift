@@ -1228,13 +1228,21 @@ actor IndexPipeline {
         return doneCount
     }
 
-    private static func assetInfo(for asset: PHAsset, fileSize: Int?, originalFilename: String? = nil) -> AssetInfo {
+    private static func assetInfo(
+        for asset: PHAsset,
+        fileSize: Int?,
+        originalFilename: String? = nil,
+        hasPanoramaTag: Bool = false
+    ) -> AssetInfo {
         AssetInfo(
             assetId: asset.localIdentifier,
             creationDate: asset.creationDate,
             modificationDate: asset.modificationDate,
             mediaType: asset.mediaType.rawValue,
             mediaSubtypes: Int(asset.mediaSubtypes.rawValue),
+            // Either source makes it one: the system's flag, which Camera's
+            // own panoramas carry, or ShotDex's tag in a file it stitched.
+            isPanorama: asset.mediaSubtypes.contains(.photoPanorama) || hasPanoramaTag,
             width: asset.pixelWidth > 0 ? asset.pixelWidth : nil,
             height: asset.pixelHeight > 0 ? asset.pixelHeight : nil,
             fileSize: fileSize,

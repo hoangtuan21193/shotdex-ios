@@ -67,6 +67,7 @@ struct MetadataStore: Sendable {
                 UPDATE photo_metadata SET
                     exifStatus = ?, readAttempts = ?, indexedAt = ?,
                     creationDate = ?, mediaType = ?, mediaSubtypes = ?,
+                    isPanorama = ?,
                     width = ?, height = ?, fileSize = ?,
                     originalFilename = COALESCE(?, originalFilename),
                     latitude = ?, longitude = ?, isFavorite = ?
@@ -75,6 +76,7 @@ struct MetadataStore: Sendable {
             arguments: [
                 record.exifStatus, record.readAttempts, record.indexedAt,
                 record.creationDate, record.mediaType, record.mediaSubtypes,
+                record.isPanorama,
                 record.width, record.height, record.fileSize,
                 record.originalFilename,
                 record.latitude, record.longitude, record.isFavorite,

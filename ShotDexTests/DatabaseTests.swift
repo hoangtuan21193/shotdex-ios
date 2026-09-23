@@ -1,4 +1,5 @@
 import Foundation
+import GRDB
 import Testing
 @testable import ShotDex
 
@@ -60,6 +61,59 @@ struct DatabaseTests {
         let store = MetadataStore(database: database)
         #expect(try store.rowCount() == 0)
         #expect(try store.indexState() == .initial)
+    }
+
+    // FS-14 — the panorama flag. Two sources answer into one column, so the
+    // viewer, the capture-kind filter and the Panoramas collection cannot
+    // disagree about what a panorama is.
+
+    @Test func panoramaFlagRoundTrips() throws {
+        let database = try AppDatabase.makeEmpty()
+        let store = MetadataStore(database: database)
+        var pano = makeRecord(assetId: "pano")
+        pano.isPanorama = true
+        var plain = makeRecord(assetId: "plain")
+        plain.isPanorama = false
+        try store.saveBatch([pano, plain], cursorAssetId: nil)
+
+        let rows = try database.reader.read { try PhotoMetadata.fetchAll($0) }
+        #expect(rows.first { $0.assetId == "pano" }?.isPanorama == true)
+        #expect(rows.first { $0.assetId == "plain" }?.isPanorama == false)
+    }
+
+    /// The v18 migration has to answer for photos indexed by an older build:
+    /// Camera's own panoramas already carry the system bit in `mediaSubtypes`,
+    /// so the flag is derivable in SQL and no reindex is owed.
+    @Test func v18BackfillsThePanoramaFlagFromTheSubtypeMask() throws {
+        let queue = try DatabaseQueue()
+        var migrator = AppDatabase.migrator
+        // The debug erase-on-change guard would wipe the rows this test writes
+        // between the two migrate calls, which is the whole experiment.
+        migrator.eraseDatabaseOnSchemaChange = false
+        try migrator.migrate(queue, upTo: "v17-creations")
+
+        try queue.write { db in
+            for (id, subtypes) in [("camera-pano", 4), ("portrait", 8), ("unindexed", nil as Int?)] {
+                try db.execute(
+                    sql: """
+                        INSERT INTO photo_metadata (assetId, mediaType, mediaSubtypes, isFavorite, indexedAt, exifStatus)
+                        VALUES (?, ?, ?, 0, 0, 'indexed')
+                        """,
+                    arguments: [id, MediaKind.photo.storedValue, subtypes]
+                )
+            }
+        }
+
+        try migrator.migrate(queue)
+
+        let flags = try queue.read { db in
+            try Row.fetchAll(db, sql: "SELECT assetId, isPanorama FROM photo_metadata")
+                .reduce(into: [String: Bool?]()) { $0[$1["assetId"]] = $1["isPanorama"] }
+        }
+        #expect(flags["camera-pano"] == true)
+        #expect(flags["portrait"] == false)
+        // Never indexed, so the app has not been told what it is — not "no".
+        #expect(flags["unindexed"] == Bool?.none)
     }
 
     @Test func batchSaveAndCursor() throws {

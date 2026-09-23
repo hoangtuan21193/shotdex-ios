@@ -47,6 +47,11 @@ struct AssetInfo: Equatable, Sendable {
     var mediaType: Int
     /// Raw `PHAssetMediaSubtype` bitmask, straight off the asset.
     var mediaSubtypes: Int = 0
+    /// Whether the app treats this photo as a panorama: the system's pano bit
+    /// in `mediaSubtypes`, or ShotDex's XMP tag in the file (FS-14 §7).
+    /// Resolved by the caller, which is the layer that knows both PhotoKit and
+    /// the file — this type stays free of Photos.
+    var isPanorama: Bool = false
     var width: Int?
     var height: Int?
     var fileSize: Int?
@@ -86,6 +91,7 @@ struct MetadataComposer: Sendable {
             modificationDate: asset.modificationDate.map { Int($0.timeIntervalSince1970) },
             mediaType: asset.mediaType,
             mediaSubtypes: asset.mediaSubtypes,
+            isPanorama: asset.isPanorama,
             cameraManufacturer: exif.make,
             cameraModel: exif.model,
             normalizedCameraModel: normalizedModel,

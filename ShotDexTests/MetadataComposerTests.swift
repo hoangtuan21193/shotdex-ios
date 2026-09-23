@@ -83,4 +83,14 @@ struct MetadataComposerTests {
         #expect(record.cropFactor == nil)
         #expect(record.equivalentFocalLength == nil)
     }
+
+    /// FS-14: the composer does not decide what a panorama is — it is handed
+    /// the answer, because resolving it needs both PhotoKit and the file, and
+    /// this layer knows neither.
+    @Test func panoramaFlagIsCarriedThrough() {
+        var pano = assetInfo
+        pano.isPanorama = true
+        #expect(composer.compose(asset: pano, exif: .empty, exifStatus: .indexed).isPanorama == true)
+        #expect(composer.compose(asset: assetInfo, exif: .empty, exifStatus: .indexed).isPanorama == false)
+    }
 }
