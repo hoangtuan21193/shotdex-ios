@@ -66,7 +66,7 @@ Tầng D (DESIGN §10.3, §10.3b): `Cancel` · tiêu đề · `Save`; stage đen
     ghép nằm cạnh các khung gốc của nó.
   - **Smart Album, On This Day** (và album không cho thêm ảnh): chuyển sang tab Library và mở ảnh ở đó.
 
-## 4. Focus stack (thuật toán hiện tại)
+## 4. Focus stack (thuật toán hiện tại — sẽ thay theo [FS-01.10](10-focus-stack.md))
 
 1. Align mỗi frame bằng bộ căn ảnh theo tịnh tiến của hệ thống — **chỉ tịnh tiến**. Sẽ đổi theo
    [intent Helicon](../../_intents/2026-09-23-focus-stack-helicon-parity.md) (co giãn + xoay).

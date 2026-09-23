@@ -5,9 +5,9 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-23 |
 | Trạng thái | accepted |
-| Tiến độ | **chưa làm** (2026-09-24) — spike xong ([báo cáo](2026-09-24-focus-stack-spike.md)); chưa có spec |
+| Tiến độ | **chưa làm** (2026-09-24) — spec FS-01.10, 14 AC; spike xong |
 | Nguồn | phản hồi người dùng — *"tôi chỉ cần focus stack thôi, tôi muốn làm như app Helicon Focus"* |
-| Spec sinh ra từ đây | (điền khi sang Design) |
+| Spec sinh ra từ đây | [FS-01.10](../02-functional-spec/FS-01-library/10-focus-stack.md) |
 
 ## Problem — vấn đề
 

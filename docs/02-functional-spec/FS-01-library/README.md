@@ -21,6 +21,7 @@ bằng rule, chọn hàng loạt rồi làm gì đó với chúng.
 | 07 | [Khôi phục trạng thái](07-state-restoration.md) | cái gì là scene state, cái gì là preference |
 | 08 | [Compare](08-compare.md) | nhiều card cùng zoom, chạm để đánh dấu xoá |
 | 09 | [Ghép nhiều ảnh](09-photo-stacking.md) | menu Combine Photos: Focus Stack · Panorama · Stack Exposures (Average/Lighten/Darken) |
+| 10 | [Focus Stack](10-focus-stack.md) | căn có co giãn, hai cách ghép, Radius/Smoothing, tô sửa từ một khung |
 
 ## Quy tắc chung
 
