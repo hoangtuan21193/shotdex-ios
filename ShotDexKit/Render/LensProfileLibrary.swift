@@ -60,6 +60,12 @@ public struct LensfunLens: Codable, Equatable, Identifiable, Sendable {
     /// calibration body (a DX and an FX measurement of one Nikkor).
     public var id: String { "\(maker)|\(model)|\(cropFactor)" }
 
+    /// The name to show: Lensfun's model string, with the maker in front when
+    /// the model does not already start with it ("XF23mmF1.4 R" is a Fujifilm).
+    public var displayName: String {
+        model.lowercased().hasPrefix(maker.lowercased()) ? model : "\(maker) \(model)"
+    }
+
     /// Long side over short side of the frame the lens was calibrated on —
     /// Lensfun's `<aspect-ratio>`, 3:2 when the database does not say.
     public var calibrationAspect: Double {

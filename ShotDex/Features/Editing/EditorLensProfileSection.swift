@@ -56,10 +56,10 @@ struct EditorLensProfileSection: View {
     private var statusText: String {
         if let lens = controller.lensProfileLens {
             let how = controller.recipe.lensProfile?.isAutomatic == true ? "Found from EXIF" : "Chosen by you"
-            return "\(lens.model) · \(how)"
+            return "\(lens.displayName) · \(how)"
         }
         if let match = controller.lensProfileMatch {
-            return match.lens.model
+            return match.lens.displayName
         }
         return "No profile for this lens yet. Choose yours from the list."
     }
@@ -89,7 +89,7 @@ struct EditorLensPickerSheet: View {
         guard !query.isEmpty else { return lenses }
         let words = query.lowercased().split(separator: " ")
         return lenses.filter { lens in
-            let name = "\(lens.maker) \(lens.model)".lowercased()
+            let name = lens.displayName.lowercased()
             return words.allSatisfy { name.contains($0) }
         }
     }
@@ -137,9 +137,9 @@ struct EditorLensPickerSheet: View {
         } label: {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(lens.model)
+                    Text(lens.displayName)
                         .foregroundStyle(.white)
-                    Text(Self.detail(lens))
+                    Text(Self.detail(lens, cameraMount: cameraMount))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -156,10 +156,14 @@ struct EditorLensPickerSheet: View {
     }
 
     /// Mount and the crop the profile was measured at — what tells two rows
-    /// with the same name apart.
-    private static func detail(_ lens: LensfunLens) -> String {
+    /// with the same name apart. A lens made for several mounts shows the
+    /// body's when it has it: under "Fits Fujifilm X" a row saying "Sony E"
+    /// reads as a mistake.
+    private static func detail(_ lens: LensfunLens, cameraMount: String?) -> String {
         let crop = lens.cropFactor == 1 ? "full frame" : String(format: "crop %.2g×", lens.cropFactor)
-        return ([lens.mounts.first].compactMap { $0 } + [crop]).joined(separator: " · ")
+        let mount = cameraMount.flatMap { lens.mounts.contains($0) ? $0 : nil } ?? lens.mounts.first
+        let more = lens.mounts.count > 1 ? " +\(lens.mounts.count - 1)" : ""
+        return ([mount.map { $0 + more }].compactMap { $0 } + [crop]).joined(separator: " · ")
     }
 
     private static func grouped(_ lenses: [LensfunLens]) -> [(maker: String, lenses: [LensfunLens])] {

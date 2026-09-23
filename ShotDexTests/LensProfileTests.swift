@@ -136,6 +136,13 @@ struct LensProfileTests {
         #expect(unspecified.calibrationAspect == 1.5)
     }
 
+    @Test func displayNameCarriesTheMaker() throws {
+        let fuji = try #require(LensProfileLibrary.shared.lenses.first { $0.model == "XF23mmF1.4 R" })
+        #expect(fuji.displayName.hasPrefix(fuji.maker))
+        let nikon = try #require(LensProfileLibrary.shared.lenses.first { $0.model == "Nikon AF-S Nikkor 16-35mm f/4G ED VR" })
+        #expect(nikon.displayName == nikon.model, "no doubled maker")
+    }
+
     @Test func profileRoundTripsInTheRecipe() throws {
         var recipe = PhotoEditRecipe()
         recipe.lensProfile = PhotoLensProfileChoice(lensID: "Nikon|Nikon AF-S Nikkor 16-35mm f/4G ED VR|1.0", cameraCropFactor: 1, isAutomatic: true)
