@@ -252,3 +252,59 @@ struct PanoramaStitchService {
         return coverage
     }
 }
+
+extension PanoramaStitchService {
+    /// The service as the app runs it.
+    ///
+    /// The loader is the only part that touches PhotoKit, and it reads each
+    /// original **once**: the full-resolution image for the picture, a
+    /// downscaled luminance copy for finding the overlaps, and the properties
+    /// for the metadata rule all come out of the same bytes.
+    static func live(
+        photoLibrary: PhotoLibraryService,
+        indexAsset: @escaping @Sendable (String) async -> Void
+    ) -> PanoramaStitchService {
+        PanoramaStitchService(
+            loadFrame: { asset in await frame(for: asset) },
+            saveFile: { url, name in
+                try await photoLibrary.saveImageFile(at: url, filename: name)
+            },
+            indexAsset: indexAsset
+        )
+    }
+
+    private static func frame(for asset: PHAsset) async -> PanoramaStitchFrame? {
+        guard let data = await originalData(for: asset) else { return nil }
+        let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
+        guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions),
+              let full = CGImageSourceCreateImageAtIndex(source, 0, sourceOptions)
+        else { return nil }
+        let properties = (CGImageSourceCopyPropertiesAtIndex(source, 0, sourceOptions)
+            as? [CFString: Any]) ?? [:]
+        guard let working = PanoramaImage.luminance(of: full) else { return nil }
+        return PanoramaStitchFrame(
+            image: CIImage(cgImage: full),
+            width: full.width,
+            height: full.height,
+            working: working,
+            properties: properties
+        )
+    }
+
+    /// The original's bytes. Network allowed, because a frame that lives only
+    /// in iCloud is still one the photographer selected — and when it cannot be
+    /// fetched the caller counts it rather than leaving it out.
+    private static func originalData(for asset: PHAsset) async -> Data? {
+        await withCheckedContinuation { continuation in
+            let options = PHImageRequestOptions()
+            options.isNetworkAccessAllowed = true
+            options.deliveryMode = .highQualityFormat
+            options.isSynchronous = false
+            PHImageManager.default().requestImageDataAndOrientation(
+                for: asset, options: options
+            ) { data, _, _, _ in
+                continuation.resume(returning: data)
+            }
+        }
+    }
+}

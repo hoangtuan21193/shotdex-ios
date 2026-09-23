@@ -24,6 +24,8 @@ final class AppDependencies {
     let overlayImages: OverlayImageStore
     let importService: ImportService
     let videoStudio: VideoStudioService
+    /// Joins overlapping frames into one photo (FS-14).
+    let panoramaStitchService: PanoramaStitchService
     let indexPipeline: IndexPipeline
     let backgroundIndex: BackgroundIndexService
     let networkStatus: NetworkMonitor
@@ -154,6 +156,13 @@ final class AppDependencies {
             },
             publishCreatedAsset: {
                 photoLibrary.publishAppCreatedAsset()
+            }
+        )
+        self.panoramaStitchService = PanoramaStitchService.live(
+            photoLibrary: photoLibrary,
+            indexAsset: { assetID in
+                _ = await indexPipeline.indexSingle(assetId: assetID)
+                await MainActor.run { photoLibrary.publishAppCreatedAsset() }
             }
         )
         self.indexPipeline = indexPipeline
