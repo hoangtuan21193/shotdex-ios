@@ -770,7 +770,15 @@ struct SettingsScreen: View {
 
     // MARK: Camera Database
 
+    /// The camera database, then the credit for the lens data beside it —
+    /// the same pane on iPad and the same stretch of list on the phone.
+    @ViewBuilder
     private var cameraDatabaseSection: some View {
+        cameraDatabaseRows
+        acknowledgementsSection
+    }
+
+    private var cameraDatabaseRows: some View {
         Section("Camera Database") {
             NavigationLink(Row.unknownCameras.title) {
                 CameraDatabaseScreen(libraryModel: libraryModel)
@@ -801,12 +809,6 @@ struct SettingsScreen: View {
 
     // MARK: Privacy
 
-    @ViewBuilder
-    private var privacySection: some View {
-        privacyRows
-        acknowledgementsSection
-    }
-
     /// Credit for the data ShotDex ships with. Lensfun's licence (CC-BY-SA)
     /// asks for it; GRDB's (MIT) asks for the notice to travel with the app.
     private var acknowledgementsSection: some View {
@@ -830,7 +832,7 @@ struct SettingsScreen: View {
         }
     }
 
-    private var privacyRows: some View {
+    private var privacySection: some View {
         Section {
             Text("Photos and metadata never leave this device. The one exception is a support message you write yourself, which carries no photos.")
                 .font(.footnote)

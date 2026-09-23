@@ -125,7 +125,7 @@ Apple không phát hành cơ sở dữ liệu hệ số méo, và `.lcp` của A
 - **Panel** (Optics › Lens Profile): công tắc; tên ống + "Found from EXIF"/"Chosen by you" + **Change**; không
   khớp thì "No profile for this lens yet. Choose yours from the list." + **Choose Lens**; RAW thì nói đã do bộ
   giải RAW nắn. Danh sách chọn tay tìm được, nhóm "Fits <ngàm>" lên đầu, ghi công Lensfun ở cuối.
-- **Ghi công** CC-BY-SA 3.0 ở Settings › Acknowledgements (cùng GRDB).
+- **Ghi công** CC-BY-SA 3.0 ở Settings › Camera Database › Acknowledgements (cùng GRDB).
 
 ## 8. Cố ý không đuổi theo
 
