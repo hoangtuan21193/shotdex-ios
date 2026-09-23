@@ -55,7 +55,9 @@ final class PhotoStackModel {
 
     init(purpose: CombinePurpose, assets: [PHAsset], photoLibrary: PhotoLibraryService, indexPipeline: IndexPipeline) {
         self.purpose = purpose
-        self.assets = assets
+        // A focus stack registers neighbour to neighbour, so it runs in the
+        // order the bracket was shot; the blend modes do not care.
+        self.assets = purpose == .focusStack ? Self.shootingOrder(assets) : assets
         self.mode = purpose.defaultMode ?? .average
         self.photoLibrary = photoLibrary
         self.indexPipeline = indexPipeline
@@ -166,6 +168,19 @@ final class PhotoStackModel {
 }
 
 extension PhotoStackModel {
+    /// Capture time, then original file name (FS-01.10 §4).
+    static func shootingOrder(_ assets: [PHAsset]) -> [PHAsset] {
+        let frames = assets.map { asset in
+            FocusStackOrder.Frame(
+                id: asset.localIdentifier,
+                captureDate: asset.creationDate,
+                fileName: PHAssetResource.assetResources(for: asset).first?.originalFilename
+            )
+        }
+        let byID = Dictionary(uniqueKeysWithValues: assets.map { ($0.localIdentifier, $0) })
+        return FocusStackOrder.sorted(frames).compactMap { byID[$0] }
+    }
+
     /// One frame at proxy resolution, through the viewer's own request path so
     /// an iCloud-only original is fetched rather than skipped.
     static func previewImage(for asset: PHAsset, photoLibrary: PhotoLibraryService) async -> UIImage? {

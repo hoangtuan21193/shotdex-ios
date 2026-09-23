@@ -81,7 +81,7 @@ trong test bundle. PSNR so với ảnh nét hoàn toàn, bỏ viền 60 px.
 |---|---|---|---|---|
 | AC-1 | chuỗi 16 khung, breathing 2% | ghép Weighted | PSNR ≥ 33 dB, và ≥ khung đơn tốt nhất + 2 dB | ⚠️ bộ căn đạt (≤ 1 px, `FocusStackAlignmentTests`); PSNR của cả chuỗi chưa đo trong test |
 | AC-2 | chuỗi breathing 5% | căn | sai lệch trung bình của phép căn ≤ 1 px | ✅ `FocusStackAlignmentTests.breathingBracketLinesUpWithinAPixel` (0, 2, 5%) |
-| AC-3 | chuỗi 16 khung, đảo thứ tự chọn | ghép | cùng kết quả như thứ tự đúng (sắp theo thời điểm chụp) | ⚠️ chưa có — `FocusStackAlignmentTests` |
+| AC-3 | chuỗi 16 khung, đảo thứ tự chọn | ghép | cùng kết quả như thứ tự đúng (sắp theo thời điểm chụp) | ✅ `FocusStackOrderTests` (5 test: thời điểm chụp, cùng giây theo số file, số so như số, không ngày đi cuối, đảo thứ tự chọn) |
 | AC-4 | chuỗi có 1 khung ảnh khác cảnh chen vào giữa | ghép | khung đó bị loại; panel ghi "1 of 17 frames couldn't be lined up…" | ⚠️ một nửa: `FocusStackAlignmentTests.aFrameFromAnotherSceneIsLeftOutAndTheChainGoesOn`, `PhotoStackRendererTests.aFocusStackLeavesOutAFrameItCannotLineUp`; chưa có ảnh panel |
 | AC-5 | cùng chuỗi | chạy Depth Map rồi Weighted | cả hai ≥ 33 dB; Weighted ≥ Depth Map ở vùng mép độ sâu | ⚠️ chưa có — `FocusStackMethodTests` |
 | AC-6 | màn Focus Stack đang mở | đổi Method, Radius, Smoothing | preview dựng lại, không nạp lại khung (số lần đọc khung không đổi) | ⚠️ chưa có — `PhotoStackModelTests` |
