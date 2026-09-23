@@ -41,6 +41,28 @@ Bảng đối chiếu của `/plan` có bốn trạng thái:
 | ❌ | chưa có gì | viết mới kèm test |
 | ❓ | chưa đọc đủ để kết luận | nói thẳng, cấm đoán |
 
+### Dòng "Tiến độ" của intent
+
+Mỗi intent có một dòng `Tiến độ` ngay dưới `Trạng thái`. `Trạng thái` là **người dùng duyệt chưa**
+(draft / accepted / dismissed — chỉ người dùng đổi); `Tiến độ` là **việc đi tới đâu** — skill tự ghi, mỗi
+lần công việc đổi bậc. Một luật, bốn skill cùng dùng:
+
+| Bậc | Khi nào | Ai ghi |
+|---|---|---|
+| **chưa làm** | chưa có commit code nào cho spec của intent | `/intent` (lúc tạo), `/spec`, `/plan` |
+| **đang làm** | có ít nhất một commit code, còn task trong plan chưa xong | task đầu tiên sau khi plan được duyệt; `/verify` |
+| **gần xong** | mọi task đã commit, còn AC chưa chứng minh được | `/verify` |
+| **xong** | **mọi** AC xanh ở lần `/verify` gần nhất và `Tools/gate` xanh | chỉ `/verify` |
+
+Dạng ghi: `**<bậc>** (YYYY-MM-DD) — <bằng chứng>`. Bằng chứng là số đếm được, không phải tính từ:
+`spec FS-01.09, 15 AC` · `plan chờ duyệt` · `task 3/9, 4/15 AC xanh, commit abc1234` ·
+`15/15 AC xanh, gate xanh`. Còn một AC chưa chứng minh thì không được ghi `xong` — không làm tròn lên.
+
+- Tìm intent của một spec: dòng "nguồn intent" ở đầu `FS-*`, hoặc intent nào có `Spec sinh ra từ đây` trỏ tới nó.
+- Một intent nhiều spec: bậc là bậc **thấp nhất** trong các spec, bằng chứng ghi từng spec.
+- Sửa dòng `Tiến độ` đi chung commit với việc làm nó đổi bậc — không commit riêng.
+- Không có intent (việc nhỏ đi đường tắt ở mục 4) thì bỏ qua.
+
 ## 3. Một vòng, rút gọn
 
 ```
