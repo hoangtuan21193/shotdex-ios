@@ -12,72 +12,10 @@ struct FocusStackAlignmentTests {
 
     // MARK: Fixture
 
-    /// A scene with plenty of corners: seeded rectangles and discs on noise.
-    private func scene(seed: UInt64) -> [UInt8] {
-        let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width,
-                                space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue)!
-        var generator = SplitMix64(seed: seed)
-        func unit() -> CGFloat { CGFloat(generator.next() % 10_000) / 10_000 }
-        context.setFillColor(gray: 0.5, alpha: 1)
-        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
-        for _ in 0..<180 {
-            context.setFillColor(gray: unit(), alpha: 1)
-            let rect = CGRect(x: unit() * CGFloat(width), y: unit() * CGFloat(height), width: 6 + unit() * 40, height: 6 + unit() * 40)
-            if generator.next() % 2 == 0 { context.fill(rect) } else { context.fillEllipse(in: rect) }
-        }
-        let data = context.data!.assumingMemoryBound(to: UInt8.self)
-        return Array(UnsafeBufferPointer(start: data, count: width * height))
-    }
-
-    private func blurred(_ pixels: [UInt8], radius: Int) -> [UInt8] {
-        var a = pixels.map(Float.init), b = a
-        for _ in 0..<3 {
-            for y in 0..<height { for x in 0..<width {
-                var s: Float = 0
-                for d in -radius...radius { s += a[y * width + min(width - 1, max(0, x + d))] }
-                b[y * width + x] = s / Float(2 * radius + 1)
-            } }
-            for y in 0..<height { for x in 0..<width {
-                var s: Float = 0
-                for d in -radius...radius { s += b[min(height - 1, max(0, y + d)) * width + x] }
-                a[y * width + x] = s / Float(2 * radius + 1)
-            } }
-        }
-        return a.map { UInt8(max(0, min(255, $0.rounded()))) }
-    }
-
-    /// Frame k shows the scene at `sceneFromFrame[k]` (frame pixel → scene
-    /// pixel), sharp only in its own band of rows.
     private func bracket(count: Int, breathing: Double, seed: UInt64 = 1)
         -> (frames: [CGImage], sceneFromFrame: [CGAffineTransform]) {
-        let sharp = scene(seed: seed)
-        let soft = blurred(sharp, radius: 3)
-        var generator = SplitMix64(seed: seed &+ 99)
-        func jitter(_ amount: Double) -> Double { (Double(generator.next() % 10_000) / 10_000 * 2 - 1) * amount }
-        var frames: [CGImage] = [], maps: [CGAffineTransform] = []
-        for k in 0..<count {
-            let t = Double(k) / Double(max(1, count - 1))
-            let s = 1 / (1 + breathing * t)            // the picture grows: frame pixels sample a smaller scene region
-            let angle = jitter(0.15) * .pi / 180
-            let cx = Double(width) / 2, cy = Double(height) / 2
-            let map = CGAffineTransform(translationX: cx + jitter(2), y: cy + jitter(2))
-                .rotated(by: angle).scaledBy(x: s, y: s).translatedBy(x: -cx, y: -cy)
-            let bandTop = Double(height) * (t * 0.8), bandBottom = bandTop + Double(height) * 0.35
-            var bytes = [UInt8](repeating: 0, count: width * height)
-            for y in 0..<height { for x in 0..<width {
-                let p = CGPoint(x: x, y: y).applying(map)
-                let xi = Int(p.x.rounded()), yi = Int(p.y.rounded())
-                guard xi >= 0, yi >= 0, xi < width, yi < height else { continue }
-                let inBand = Double(yi) >= bandTop && Double(yi) < bandBottom
-                bytes[y * width + x] = (inBand ? sharp : soft)[yi * width + xi]
-            } }
-            let provider = CGDataProvider(data: Data(bytes) as CFData)!
-            frames.append(CGImage(width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 8, bytesPerRow: width,
-                                  space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGBitmapInfo(rawValue: 0),
-                                  provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent)!)
-            maps.append(map)
-        }
-        return (frames, maps)
+        let bracket = FocusStackFixture(width: width, height: height, seed: seed).bracket(count: count, breathing: breathing)
+        return (bracket.frames, bracket.sceneFromFrame)
     }
 
     /// Mean distance, over a grid inside the frame, between where the aligner

@@ -43,7 +43,7 @@ struct PhotoStackModelTests {
         let dependencies = AppDependencies.preview()
         let model = PhotoStackModel(purpose: .focusStack, assets: [], photoLibrary: dependencies.photoLibrary,
                                     indexPipeline: dependencies.indexPipeline)
-        #expect(model.focusOptions == FocusStackOptions(method: .weighted, radius: 2, smoothing: 0))
+        #expect(model.focusOptions == FocusStackOptions(method: .weighted, radius: 4, smoothing: 4))
         #expect(model.mode == .focusStack)
     }
 

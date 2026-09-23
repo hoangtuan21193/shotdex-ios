@@ -389,11 +389,12 @@ struct PhotoStackScreen: View {
             Rectangle().fill(EditorTheme.panelTopHairline).frame(height: 1)
         }
         // On the panel, not beside the screen's alert: two presentations on
-        // one view and the alert never shows.
-        .confirmationDialog(
+        // one view and the alert never shows. An alert, not a confirmation
+        // dialog: iOS 26 draws that as a popover with its Cancel hidden
+        // (REVIEW_QUEUE 2026-09-19, the Settings blocker).
+        .alert(
             "Clear Retouch?",
-            isPresented: Binding(get: { model.pendingFocusOptions != nil }, set: { if !$0 { model.pendingFocusOptions = nil } }),
-            titleVisibility: .visible
+            isPresented: Binding(get: { model.pendingFocusOptions != nil }, set: { if !$0 { model.pendingFocusOptions = nil } })
         ) {
             Button("Clear Retouch and Change", role: .destructive) { model.confirmPendingFocusOptions() }
             Button("Keep Retouch", role: .cancel) { model.pendingFocusOptions = nil }

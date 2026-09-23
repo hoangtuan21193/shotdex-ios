@@ -93,7 +93,7 @@ struct FocusStackMethodTests {
     }
 
     @Test func defaultsFollowTheSpike() {
-        #expect(FocusStackOptions.standard == FocusStackOptions(method: .weighted, radius: 2, smoothing: 0))
+        #expect(FocusStackOptions.standard == FocusStackOptions(method: .weighted, radius: 4, smoothing: 4))
         #expect(FocusStackOptions.defaults(for: .depthMap) == FocusStackOptions(method: .depthMap, radius: 4, smoothing: 4))
     }
 

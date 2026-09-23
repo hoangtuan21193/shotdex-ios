@@ -8,8 +8,8 @@
 suốt chiều sâu, ngang Helicon Focus ở bốn thứ người chụp macro cần: căn đúng khi ống kính đổi độ phóng, hai
 cách ghép, hai tham số, và tô sửa từ một khung.
 
-> Trạng thái: **spec, chưa build.** Hôm nay màn Focus Stack (FS-01.09) căn chỉ theo phép dịch, một cách ghép,
-> không tham số, khung căn hỏng bị ghép chưa căn mà không báo.
+> Trạng thái: **đã build** (2026-09-24, plan `docs/_plans/2026-09-24-fs-01-10-focus-stack.md`, 9 task).
+> 11/14 AC xanh; còn thiếu xem mục 7.
 > Các dòng `⚠️ CẦN QUYẾT (tạm chốt)` được chốt theo mặc định đề xuất lúc người dùng vắng (2026-09-24) —
 > người dùng xem lại khi duyệt.
 
@@ -38,8 +38,10 @@ Tầng D như FS-01.09 §3: `Cancel` · `Focus Stack` · `Save`; stage đen; m�
 3. **Retouch** — nút vào chế độ tô sửa (§5).
 4. Dòng nhắc căn khung như hôm nay; khi có khung không căn được thì thay bằng dòng báo (§4).
 
-- ⚠️ CẦN QUYẾT (tạm chốt): **cách ghép mặc định** — **Weighted**, Radius 2, Smoothing 0; chọn Depth Map thì
-  Radius 4, Smoothing 4. Spike: Weighted nhỉnh hơn 0,3–0,4 dB ở mép độ sâu, bằng nhau ở toàn ảnh.
+- ⚠️ CẦN QUYẾT (tạm chốt, sửa theo số đo 2026-09-24): **cách ghép mặc định** — **Weighted**, **Radius 4,
+  Smoothing 4**; chọn Depth Map thì Radius 4, Smoothing 4. Bản tạm chốt đầu (Weighted R2 S0, theo spike) đo trên
+  chuỗi 16 khung của `FocusStackBracketTests` chỉ được 30,0 dB, R4 S4 được 35,5 dB. Trọng số của Weighted là
+  (độ nét tương đối)⁸ — hơn bậc 4 1,3 dB trên cùng chuỗi.
 - Đổi cách ghép hay tham số **không nạp lại khung**: dựng lại từ khung preview đã căn.
 - Mở ra với > 50 khung: ước lượng thời gian trước khi ghép, như FS-14.01 §1.
 
@@ -70,7 +72,8 @@ Tầng D như FS-01.09 §3: `Cancel` · `Focus Stack` · `Save`; stage đen; m�
   nét (`FocusStackRetouch.swift`).
 - Bút: một slider **Brush** (1–25% cạnh ngắn, mặc định 6%), mép mềm cố định. Dải khung mở đầu bằng ô **Auto**
   (mặc định): mỗi nét lấy khung nét nhất tại điểm bắt đầu; chạm một khung trong dải thì mọi nét sau lấy khung đó.
-- Đổi Method/Radius/Smoothing khi còn nét → hộp "Clear Retouch?" (Clear Retouch and Change / Keep Retouch).
+- Đổi Method/Radius/Smoothing khi còn nét → alert "Clear Retouch?" (Clear Retouch and Change / Keep Retouch) —
+  alert chứ không phải confirmation dialog, vì iOS 26 vẽ dialog thành popover giấu Cancel.
 - Bút tô chỉ sống trong phiên; không lưu.
 
 ## 6. Lưu
@@ -96,17 +99,19 @@ Tầng D như FS-01.09 §3: `Cancel` · `Focus Stack` · `Save`; stage đen; m�
 ## 7. Tiêu chí nghiệm thu
 
 Chuỗi thử là khung ảo có đáp án như spike §1 (16 khung, breathing 0/2/5%), dựng trong test từ ảnh nhỏ đóng
-trong test bundle. PSNR so với ảnh nét hoàn toàn, bỏ viền 60 px.
+trong test bundle. PSNR so với ảnh nét hoàn toàn, bỏ viền 60 px. Đã dựng: `FocusStackFixture.depthBracket` —
+cảnh sinh bằng seed (không phải ảnh đóng gói), giới hạn băng tần, bản đồ độ sâu nền 12 m / dải 5 m / đĩa 1,2 m và
+0,6 m, 5 mức mờ theo độ lệch diop, lấy mẫu bilinear qua phép breathing + lệch + xoay. Khung đơn tốt nhất 24,9 dB.
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | chuỗi 16 khung, breathing 2% | ghép Weighted | PSNR ≥ 33 dB, và ≥ khung đơn tốt nhất + 2 dB | ⚠️ bộ căn đạt (≤ 1 px, `FocusStackAlignmentTests`); PSNR của cả chuỗi chưa đo trong test |
+| AC-1 | chuỗi 16 khung, breathing 2% | ghép Weighted | PSNR ≥ 33 dB, và ≥ khung đơn tốt nhất + 2 dB | ✅ `FocusStackBracketTests.weightedRebuildsTheBracket` — Weighted 35,5 dB, khung đơn tốt nhất 24,9 dB; bộ căn ≤ 1 px (`FocusStackAlignmentTests`) |
 | AC-2 | chuỗi breathing 5% | căn | sai lệch trung bình của phép căn ≤ 1 px | ✅ `FocusStackAlignmentTests.breathingBracketLinesUpWithinAPixel` (0, 2, 5%) |
 | AC-3 | chuỗi 16 khung, đảo thứ tự chọn | ghép | cùng kết quả như thứ tự đúng (sắp theo thời điểm chụp) | ✅ `FocusStackOrderTests` (5 test: thời điểm chụp, cùng giây theo số file, số so như số, không ngày đi cuối, đảo thứ tự chọn) |
-| AC-4 | chuỗi có 1 khung ảnh khác cảnh chen vào giữa | ghép | khung đó bị loại; panel ghi "1 of 17 frames couldn't be lined up…" | ⚠️ một nửa: `FocusStackAlignmentTests.aFrameFromAnotherSceneIsLeftOutAndTheChainGoesOn`, `PhotoStackRendererTests.aFocusStackLeavesOutAFrameItCannotLineUp`; chưa có ảnh panel |
-| AC-5 | cùng chuỗi | chạy Depth Map rồi Weighted | cả hai ≥ 33 dB; Weighted ≥ Depth Map ở vùng mép độ sâu | ⚠️ một nửa: `FocusStackMethodTests.eachMethodBeatsEveryFrameItWasMadeFrom` — trên chuỗi 2 khung, Weighted 41,5 dB, Depth Map 37,7 dB, khung đơn 14,6 dB; chuỗi 16 khung và vùng mép chưa đo trong test |
+| AC-4 | chuỗi có 1 khung ảnh khác cảnh chen vào giữa | ghép | khung đó bị loại; panel ghi "1 of 17 frames couldn't be lined up…" | ✅ `FocusStackAlignmentTests.aFrameFromAnotherSceneIsLeftOutAndTheChainGoesOn`, `PhotoStackRendererTests.aFocusStackLeavesOutAFrameItCannotLineUp` + `focus-stack-excluded.json` ảnh `01` (iPhone 17 Pro 26.5: "1 of 3 frames couldn't be lined up and were left out.") |
+| AC-5 | cùng chuỗi | chạy Depth Map rồi Weighted | cả hai ≥ 33 dB; Weighted ≥ Depth Map ở vùng mép độ sâu | ⚠️ một nửa: `FocusStackBracketTests.bothMethodsHoldAndWeightedHoldsTheEdges` — Weighted 35,5 dB ✅, Weighted ≥ Depth Map ở mép độ sâu ✅; **Depth Map 32,3 dB < 33** (tốt nhất 33,0 ở Radius 8) — ghi `withKnownIssue`, chưa sửa |
 | AC-6 | màn Focus Stack đang mở | đổi Method, Radius, Smoothing | preview dựng lại, không nạp lại khung (số lần đọc khung không đổi) | ✅ `FocusStackMethodTests.preparingOnceThenStackingMatchesCombine` (căn một lần, ghép lại cho ra cùng điểm ảnh); model giữ khung đã căn |
-| AC-7 | mở màn Focus Stack | nhìn panel | Weighted chọn sẵn, Radius 2, Smoothing 0; chọn Depth Map thì Radius 4, Smoothing 4 | ✅ `PhotoStackModelTests.aFocusStackOpensOnWeighted`, `pickingAMethodResetsItsSliders` + `focus-stack-panel.json` ảnh `01`/`02` (iPhone 17 Pro 26.5) |
+| AC-7 | mở màn Focus Stack | nhìn panel | Weighted chọn sẵn, Radius 4, Smoothing 4; chọn Depth Map thì Radius 4, Smoothing 4 | ✅ `PhotoStackModelTests.aFocusStackOpensOnWeighted`, `pickingAMethodResetsItsSliders`, `FocusStackMethodTests.defaultsFollowTheSpike` + `focus-stack-panel.json` ảnh `01` (iPhone 17 Pro 26.5) |
 | AC-8 | ảnh ghép có một vùng lấy sai khung | Retouch: chọn khung 5, tô vùng đó | điểm ảnh trong vùng tô trùng khung 5 (sai ≤ 1/255); ngoài vùng không đổi | ✅ `FocusStackRetouchTests.aStrokePutsBackItsFramesPixelsAndNothingElse` (lõi nét ≤ 1/255 so khung, ngoài nét không đổi) + `focus-stack-retouch.json` ảnh `01`–`03` (iPhone 17 Pro 26.5) |
 | AC-9 | vừa tô 3 nét | Undo 3 lần | ảnh ghép trùng từng điểm ảnh với trước khi tô | ✅ `FocusStackRetouchTests.undoingEveryStrokeGivesBackTheStackPixelForPixel` + ảnh `04` (2 nét, Undo, còn `Retouch (1)` ở ảnh `05`) |
 | AC-10 | chạm một điểm trong Retouch | — | khung được chọn sẵn là khung có độ nét cao nhất tại điểm đó | ✅ `FocusStackRetouchTests.theFrameOfferedIsTheSharpestWhereTheUserTouched` + `PhotoStackModelTests.retouchStartsOnAutoAndAFramePickTurnsItOff` + ảnh `02` (Auto, khung vừa chọn viền xám) |
@@ -115,7 +120,11 @@ trong test bundle. PSNR so với ảnh nét hoàn toàn, bỏ viền 60 px.
 | AC-13 | đang lưu | Cancel | không asset nào được tạo; thư mục tạm của phiên rỗng | ✅ `PhotoStackSessionTests` (thư mục phiên mất khi remove và khi phiên bị bỏ) + `FocusStackStreamingTests.aCancelledStackStopsBeforeItFinishes` (huỷ thì ném `CancellationError`, không trả ảnh); Save kiểm huỷ trước mỗi khung, trong từng khung khi ghép, trước ghi asset, và xoá thư mục phiên ở `defer` |
 | AC-14 | ảnh ghép đã lưu | xem EXIF trong viewer | máy, ống kính, ngày của khung đầu; không tiêu cự lấy nét | ✅ `StackedPhotoMetadataTests` (giữ máy/ống/ngày/GPS, bỏ SubjectDistance, cỡ và hướng) + `StackedPhotoJPEGTests` (JPEG đọc lại đúng) + `focus-stack-save.json` ảnh `02`/`03` (iPhone 17 Pro 26.5: viewer mở ảnh mới với "D800E · 16mm f/10", ngày và vị trí của khung đầu) |
 
-**Chưa chứng minh được:** cả 14 — chưa build. AC-11 là mục tiêu, đo trên máy thật mới chốt.
+**Chưa chứng minh được** (sau `/verify` 2026-09-24): AC-5 (Depth Map thiếu 0,7 dB), AC-11 (100 khung trên máy
+thật), AC-12 (iCloud mất mạng — cần máy thật). AC-11 là mục tiêu, đo trên máy thật mới chốt.
+
+**Lệch spec đã biết** (REVIEW_QUEUE 2026-09-24): §4 "kèm cách xem đó là khung nào" chưa có — panel chỉ nói số
+khung; câu số ít ("1 of 3 … were") cần biến thể số nhiều trong String Catalog.
 
 ## 8. Rủi ro đã biết
 

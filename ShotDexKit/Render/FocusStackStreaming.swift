@@ -88,11 +88,11 @@ final class StackBuffer {
 
 extension PhotoStackRenderer {
     /// Weighted's running sums in one pixel: colour × weight in RGB, the
-    /// weight itself in alpha. Same weight as `weightedColourKernel`.
+    /// weight itself in alpha. Same weight as `weightedColourKernel` (r⁸).
     static let weightedAccumulateKernel = CIColorKernel(source: """
         kernel vec4 focusWeightedAccumulate(__sample total, __sample frame, __sample sharp, __sample peak) {
             float r = sharp.r / max(peak.r, 0.0000001);
-            float w = r * r * r * r + 0.001;
+            float r2 = r * r; float r4 = r2 * r2; float w = r4 * r4 + 0.001;
             return vec4(total.rgb + frame.rgb * w, total.a + w);
         }
         """)

@@ -487,6 +487,21 @@ grid as a near-black frame; that is the fixture, not a bug.
 - `PhotoStackScreen.save()` (`ShotDex/Features/Editing/PhotoStackScreen.swift:210`) saves the new asset
   and dismisses, without `indexPipeline.indexSingle(assetId:)` or `photoLibrary.publishAppCreatedAsset()`.
   Collage does both (`CollageEditorModel.swift:683`), so a combined photo is missing from the index until
-  the next incremental pass.
+  the next incremental pass. **Fixed** (FS-01.09, 2026-09-24): the save moved to `PhotoStackModel.save()`,
+  which calls both.
 - `import Accelerate` at `ShotDexKit/Render/PhotoRenderService.swift:1` is unused — no vImage, vDSP,
   BNNS or simd symbol appears anywhere in the repo.
+
+## Found while building FS-01.09 / FS-01.10 (2026-09-24, shotdex-ios-2)
+
+### Should fix
+
+- [ ] `ShotDex/Features/Editing/PhotoStackModel.swift` `excludedFramesMessage` — "1 of 3 frames couldn't be lined up and were left out." reads wrong in the singular; needs a plural variant in `Localizable.xcstrings` (not added: the catalog has a large uncommitted rewrite from another session) _(built, seen on `focus-stack-excluded.json`)_
+- [ ] FS-01.10 §4 — the panel says how many frames were left out but not **which**; the spec asks for a way to see them (mark them in the Retouch strip, or list their file names) _(spec gap)_
+- [ ] FS-01.10 AC-5 — Depth Map reaches 32.3 dB on the 16-frame bracket (33.0 at best, Radius 8) against a 33 dB target; Weighted is 35.5. Recorded as `withKnownIssue` in `FocusStackBracketTests` _(measured)_
+- [ ] Combine results (Focus Stack, Stack Exposures) are not added to the Creations album the way panoramas and collages are _(ux)_
+
+### Nits
+
+- [ ] iPad Pro 13" iOS 18.6: after a reinstall the Library grid showed a single row of tiny tiles until relaunch _(seen during FS-01.09 UI proof, not reproduced)_
+- [ ] Stack Exposures (Average / Lighten / Darken) combines frames without aligning them — fine on a tripod, ghosts on a handheld sequence; say so on the panel or align like Focus Stack _(ux)_

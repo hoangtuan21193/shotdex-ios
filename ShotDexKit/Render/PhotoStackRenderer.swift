@@ -52,11 +52,14 @@ public struct FocusStackOptions: Sendable, Equatable {
         self.smoothing = min(10, max(0, smoothing))
     }
 
-    /// Starting values per method. No vendor publishes defaults; these are the
-    /// spike's ([2026-09-24](../../docs/_intents/2026-09-24-focus-stack-spike.md) §3).
+    /// Starting values per method. No vendor publishes defaults. Depth Map's
+    /// are the spike's ([2026-09-24](../../docs/_intents/2026-09-24-focus-stack-spike.md) §3);
+    /// Weighted's were too (Radius 2, Smoothing 0) until the 16-frame bracket
+    /// in `FocusStackBracketTests` measured them: 30.0 dB there against 35.5
+    /// at Radius 4, Smoothing 4.
     public static func defaults(for method: Method) -> FocusStackOptions {
         switch method {
-        case .weighted: FocusStackOptions(method: .weighted, radius: 2, smoothing: 0)
+        case .weighted: FocusStackOptions(method: .weighted, radius: 4, smoothing: 4)
         case .depthMap: FocusStackOptions(method: .depthMap, radius: 4, smoothing: 4)
         }
     }
@@ -338,7 +341,8 @@ public actor PhotoStackRenderer {
         """)
 
     /// Every frame at every point, weighted by its sharpness there relative to
-    /// the sharpest frame at that point, to the fourth power: the sharpest frame
+    /// the sharpest frame at that point, to the eighth power (1.3 dB over the
+    /// fourth on the 16-frame bracket): the sharpest frame
     /// dominates without the others being cut off, so detail that crosses
     /// between frames survives. Relative, because a sharpness map's scale
     /// depends on the picture — a fixed gain either saturates every frame or
@@ -373,7 +377,7 @@ public actor PhotoStackRenderer {
     static let weightedColourKernel = CIColorKernel(source: """
         kernel vec4 focusWeightedColour(__sample total, __sample frame, __sample sharp, __sample peak) {
             float r = sharp.r / max(peak.r, 0.0000001);
-            float w = r * r * r * r + 0.001;
+            float r2 = r * r; float r4 = r2 * r2; float w = r4 * r4 + 0.001;
             return vec4(total.rgb + frame.rgb * w, 1.0);
         }
         """)
@@ -381,7 +385,7 @@ public actor PhotoStackRenderer {
     static let weightedTotalKernel = CIColorKernel(source: """
         kernel vec4 focusWeightedTotal(__sample total, __sample sharp, __sample peak) {
             float r = sharp.r / max(peak.r, 0.0000001);
-            float w = r * r * r * r + 0.001;
+            float r2 = r * r; float r4 = r2 * r2; float w = r4 * r4 + 0.001;
             return vec4(total.rgb + vec3(w, w, w), 1.0);
         }
         """)

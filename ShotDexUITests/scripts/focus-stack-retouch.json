@@ -25,13 +25,13 @@
       "action": "tap",
       "label": "Photo, file type",
       "type": "cell",
-      "index": 4
+      "index": 1
     },
     {
       "action": "tap",
       "label": "Photo, file type",
       "type": "cell",
-      "index": 5
+      "index": 6
     },
     {
       "action": "tap",
@@ -82,25 +82,25 @@
       "action": "tap",
       "label": "Photo, file type",
       "type": "cell",
-      "index": 4
-    },
-    {
-      "action": "tap",
-      "label": "Photo, file type",
-      "type": "cell",
-      "index": 5
-    },
-    {
-      "action": "tap",
-      "label": "Photo, file type",
-      "type": "cell",
-      "index": 3
+      "index": 1
     },
     {
       "action": "tap",
       "label": "Photo, file type",
       "type": "cell",
       "index": 6
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 2
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 3
     },
     {
       "action": "tap",
@@ -226,8 +226,7 @@
     },
     {
       "action": "tap",
-      "x": 0.5,
-      "y": 0.12
+      "label": "Keep Retouch"
     },
     {
       "action": "wait",
