@@ -1,5 +1,7 @@
 import CoreImage
+import ImageIO
 import Foundation
+import Photos
 import Testing
 @testable import ShotDex
 @testable import ShotDexKit
@@ -98,6 +100,148 @@ struct PhotoHealingTests {
         #expect(measured.worst <= 3, "no hard edge: worst \(measured.worst)/255")
     }
 
+    /// The full preview path, not just the pass: a spot changes its own
+    /// neighbourhood and nothing else. (A first build smeared the whole frame
+    /// into streaks around the spot on device while the pass-level test above
+    /// stayed green, because it only looked near the spot and read pixels one at
+    /// a time: Core Image evaluated the blend kernel over the whole frame unless
+    /// its output was cropped before the composite.)
+    @Test func spotsLeaveTheRestOfTheFrameAlone() async throws {
+        let width = 600, height = 400
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let context = try #require(CGContext(
+            data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+            space: colorSpace, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
+        ))
+        for y in 0..<height {
+            for x in stride(from: 0, to: width, by: 20) {
+                context.setFillColor(red: CGFloat(x) / CGFloat(width), green: CGFloat(y) / CGFloat(height), blue: 0.5, alpha: 1)
+                context.fill(CGRect(x: x, y: y, width: 20, height: 1))
+            }
+        }
+        let cgImage = try #require(context.makeImage())
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("heal-\(UUID().uuidString).jpg")
+        let destination = try #require(CGImageDestinationCreateWithURL(url as CFURL, "public.jpeg" as CFString, 1, nil))
+        CGImageDestinationAddImage(destination, cgImage, [kCGImageDestinationLossyCompressionQuality: 1.0] as CFDictionary)
+        #expect(CGImageDestinationFinalize(destination))
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let renderer = PhotoRenderService()
+        let info = try await renderer.inspectSource(at: url)
+        let plain = try await renderer.renderPreview(source: info, recipe: PhotoEditRecipe(), maximumDimension: 600)
+        var recipe = PhotoEditRecipe()
+        recipe.healing = [
+            PhotoHealingSpot(center: NormalizedPoint(x: 0.3, y: 0.5), source: NormalizedPoint(x: 0.4, y: 0.5)),
+            PhotoHealingSpot(center: NormalizedPoint(x: 0.7, y: 0.3), source: NormalizedPoint(x: 0.8, y: 0.3)),
+        ]
+        let healed = try await renderer.renderPreview(source: info, recipe: recipe, maximumDimension: 600)
+        #expect(healed.width == plain.width && healed.height == plain.height)
+
+        func bytes(_ image: CGImage) -> [UInt8] {
+            var data = [UInt8](repeating: 0, count: image.width * image.height * 4)
+            let context = CGContext(
+                data: &data, width: image.width, height: image.height, bitsPerComponent: 8,
+                bytesPerRow: image.width * 4, space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )!
+            context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+            return data
+        }
+        let a = bytes(plain), b = bytes(healed)
+        // Corners and a band far from both spots, plus the rows just outside
+        // each spot's working region, where a fractional edge drew a hairline.
+        for (x, y) in [(5, 5), (590, 5), (5, 390), (590, 390), (300, 380), (100, 100),
+                       (180, 166), (180, 167), (180, 233), (180, 234), (420, 87), (420, 153)] {
+            let index = (y * plain.width + x) * 4
+            for channel in 0..<3 {
+                #expect(abs(Int(a[index + channel]) - Int(b[index + channel])) <= 2, "(\(x),\(y)) changed")
+            }
+        }
+    }
+
+    /// Clone puts the source's own pixels in the spot — asserted by value, on
+    /// the pass and through a preview render that downsizes the frame (the
+    /// case where a first build cloned black on device).
+    @Test func cloneCopiesTheSourcePixels() async throws {
+        let width = 600, height = 400
+        let context = try #require(CGContext(
+            data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
+        ))
+        for y in 0..<height {
+            for x in stride(from: 0, to: width, by: 20) {
+                context.setFillColor(red: CGFloat(x) / CGFloat(width), green: CGFloat(y) / CGFloat(height), blue: 0.5, alpha: 1)
+                context.fill(CGRect(x: x, y: y, width: 20, height: 1))
+            }
+        }
+        let cgImage = try #require(context.makeImage())
+        let spot = PhotoHealingSpot(mode: .clone, center: NormalizedPoint(x: 0.3, y: 0.5), source: NormalizedPoint(x: 0.4, y: 0.5))
+
+        func pixel(_ image: CGImage, _ nx: Double, _ ny: Double) -> [Int] {
+            var data = [UInt8](repeating: 0, count: image.width * image.height * 4)
+            let c = CGContext(
+                data: &data, width: image.width, height: image.height, bitsPerComponent: 8,
+                bytesPerRow: image.width * 4, space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )!
+            c.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+            let x = Int(nx * Double(image.width)), y = Int(ny * Double(image.height))
+            let index = (y * image.width + x) * 4
+            return (0..<3).map { Int(data[index + $0]) }
+        }
+
+        let ciContext = CIContext()
+        let direct = PhotoRenderService.applyHealing([spot], to: CIImage(cgImage: cgImage))
+        let directImage = try #require(ciContext.createCGImage(direct, from: direct.extent))
+        let expected = pixel(cgImage, 0.4, 0.5)
+        #expect(zip(pixel(directImage, 0.3, 0.5), expected).allSatisfy { abs($0 - $1) <= 3 },
+                "direct clone \(pixel(directImage, 0.3, 0.5)) vs source \(expected)")
+
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("clone-\(UUID().uuidString).png")
+        let destination = try #require(CGImageDestinationCreateWithURL(url as CFURL, "public.png" as CFString, 1, nil))
+        CGImageDestinationAddImage(destination, cgImage, nil)
+        #expect(CGImageDestinationFinalize(destination))
+        defer { try? FileManager.default.removeItem(at: url) }
+        let renderer = PhotoRenderService()
+        let info = try await renderer.inspectSource(at: url)
+        var recipe = PhotoEditRecipe()
+        recipe.healing = [spot]
+        for dimension in [600.0, 300.0] {
+            let plain = try await renderer.renderPreview(source: info, recipe: PhotoEditRecipe(), maximumDimension: dimension)
+            let cloned = try await renderer.renderPreview(source: info, recipe: recipe, maximumDimension: dimension)
+            let want = pixel(plain, 0.4, 0.5), got = pixel(cloned, 0.3, 0.5)
+            #expect(zip(got, want).allSatisfy { abs($0 - $1) <= 4 }, "preview \(dimension): clone \(got) vs source \(want)")
+        }
+
+        // Two spots, heal then clone — the second spot is where a nested
+        // kernel graph cloned black on device.
+        var pair = PhotoEditRecipe()
+        pair.healing = [
+            PhotoHealingSpot(mode: .heal, center: NormalizedPoint(x: 0.2, y: 0.7), source: NormalizedPoint(x: 0.25, y: 0.7)),
+            spot,
+        ]
+        for dimension in [600.0, 300.0] {
+            let plain = try await renderer.renderPreview(source: info, recipe: PhotoEditRecipe(), maximumDimension: dimension)
+            let cloned = try await renderer.renderPreview(source: info, recipe: pair, maximumDimension: dimension)
+            let want = pixel(plain, 0.4, 0.5), got = pixel(cloned, 0.3, 0.5)
+            #expect(zip(got, want).allSatisfy { abs($0 - $1) <= 4 }, "two spots \(dimension): clone \(got) vs source \(want)")
+        }
+
+        // The slider/drag path: a cached base, re-rendered interactively.
+        let identity = try await renderer.renderPreview(source: info, recipe: PhotoEditRecipe(), maximumDimension: 600)
+        await renderer.installInteractiveBase(identity, source: info, recipe: PhotoEditRecipe())
+        for dimension in [600.0, 427.0] {
+            let plain = try await renderer.renderInteractivePreviewImages(
+                source: info, recipe: PhotoEditRecipe(), maximumDimension: dimension, cachesBase: false
+            ).cleanImage
+            let cloned = try await renderer.renderInteractivePreviewImages(
+                source: info, recipe: recipe, maximumDimension: dimension, cachesBase: false
+            ).cleanImage
+            let want = pixel(plain, 0.4, 0.5), got = pixel(cloned, 0.3, 0.5)
+            #expect(zip(got, want).allSatisfy { abs($0 - $1) <= 4 }, "interactive \(dimension): clone \(got) vs source \(want)")
+        }
+    }
+
     /// Clone copies the source as it is, so from paler sky it shows — which is
     /// the reason Heal exists.
     @Test func cloneFromDifferentGroundShows() {
@@ -136,6 +280,50 @@ struct PhotoHealingTests {
         json = json.replacingOccurrences(of: "\"heal\"", with: "\"future-mode\"")
         let degraded = try JSONDecoder().decode(PhotoEditRecipe.self, from: Data(json.utf8))
         #expect(degraded.healing.isEmpty, "the unreadable spot is dropped, not the recipe")
+    }
+
+    /// AC-2. Dragging a spot's source moves the fill, and the whole drag is
+    /// one undo step, not one per frame.
+    @MainActor @Test func draggingTheSourceIsOneUndoStep() throws {
+        let controller = PhotoEditorController(
+            asset: PHAsset(),
+            sourceAlbum: nil,
+            service: PhotoEditingService()
+        )
+        controller.addHealingSpot(at: NormalizedPoint(x: 0.4, y: 0.4))
+        let spot = try #require(controller.recipe.healing.first)
+        #expect(controller.selectedHealingSpotID == spot.id)
+        #expect(spot.source != spot.center, "a source is proposed beside the spot")
+
+        controller.beginContinuousChange()
+        for step in 1...5 {
+            controller.updateHealingSpot(spot.id) {
+                $0.source = NormalizedPoint(x: 0.4, y: 0.4 + Double(step) * 0.05)
+            }
+        }
+        controller.endContinuousChange()
+        #expect(controller.recipe.healing.first?.source == NormalizedPoint(x: 0.4, y: 0.4 + 5 * 0.05))
+
+        controller.undo()
+        #expect(controller.recipe.healing.first?.source == spot.source, "one undo puts the source back")
+        controller.undo()
+        #expect(controller.recipe.healing.isEmpty, "and the next removes the spot")
+    }
+
+    @MainActor @Test func panelSlidersEditTheSelectedSpot() throws {
+        let controller = PhotoEditorController(
+            asset: PHAsset(),
+            sourceAlbum: nil,
+            service: PhotoEditingService()
+        )
+        controller.addHealingSpot(at: NormalizedPoint(x: 0.5, y: 0.5))
+        controller.setHealingMode(.clone)
+        controller.setHealingRadius(0.08)
+        let spot = try #require(controller.recipe.healing.first)
+        #expect(spot.mode == .clone)
+        #expect(spot.radius == 0.08)
+        controller.deleteSelectedHealingSpot()
+        #expect(controller.recipe.healing.isEmpty)
     }
 
     /// AC-3. Healing belongs to one frame: Copy Edits, Paste, Sync Look and a

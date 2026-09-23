@@ -1516,6 +1516,7 @@ struct PhotoEditorScreen: View {
     private func resetStageMode(_ controller: PhotoEditorController) {
         switch railMode {
         case .crop: controller.resetCrop()
+        case .heal: controller.removeAllHealingSpots()
         case .mask: controller.removeAllMasks()
         case .markup: controller.removeAllOverlays()
         default: break
@@ -1528,7 +1529,7 @@ struct PhotoEditorScreen: View {
             switch railMode {
             case .crop:
                 controller.cancelCropSession()
-            case .mask, .markup:
+            case .heal, .mask, .markup:
                 controller.restoreStageEntry()
             default:
                 break
@@ -1558,9 +1559,10 @@ struct PhotoEditorScreen: View {
     /// not fit even with everything closed. Optics and Geo came back once they
     /// had controls to show — Geo now carries Upright, which is the reason to
     /// open it.
-    /// The three modes that build something on the photo, and so have a commit
-    /// bar: a frame, a set of masks, a stack of markup layers.
-    private static let stageModes: [EditorRailMode] = [.crop, .mask, .markup]
+    /// The four modes that build something on the photo, and so have a commit
+    /// bar: a frame, a set of healing spots, a set of masks, a stack of markup
+    /// layers.
+    private static let stageModes: [EditorRailMode] = [.crop, .heal, .mask, .markup]
 
     /// The five sections the panel lists, in the catalog's order. Curve rides
     /// inside Light, Mix / Point / Grade are tabs inside Color, and Geometry
@@ -1613,7 +1615,7 @@ struct PhotoEditorScreen: View {
             }
         case .cropGeometry:
             controller.resetCrop()
-        case .mask, .markup, .presets:
+        case .heal, .mask, .markup, .presets:
             // These are stage modes with their own commit bar; their reset lives
             // there, next to Cancel and Apply.
             break
@@ -1643,6 +1645,8 @@ struct PhotoEditorScreen: View {
             return recipe.filter != identity.filter
         case .cropGeometry:
             return recipe.crop != identity.crop
+        case .heal:
+            return !recipe.healing.isEmpty
         case .mask:
             return !recipe.masks.isEmpty
         case .markup:
@@ -2531,6 +2535,8 @@ struct PhotoEditorScreen: View {
             }
         case .cropGeometry:
             EditorCropPanel(controller: controller)
+        case .heal:
+            EditorHealPanel(controller: controller)
         case .mask:
             if controller.editingMaskAdjustments {
                 EditorMaskDetailPanel(
@@ -2711,7 +2717,7 @@ struct PhotoEditorScreen: View {
         // A stage mode is a session with a way out: snapshot on the way in so
         // Cancel has somewhere to return to, and drop the snapshot on the way
         // out so Apply's work is not still pending a rewind.
-        if [EditorGroup.cropGeometry, .mask, .markup].contains(group) {
+        if [EditorGroup.cropGeometry, .heal, .mask, .markup].contains(group) {
             controller.beginStageSession()
         } else {
             controller.clearStageEntry()
@@ -2736,6 +2742,10 @@ struct PhotoEditorScreen: View {
             controller.selectOverlay(nil)
             controller.selectedTool = .markup
             controller.closeSelectedMaskAdjustments()
+        case .heal:
+            controller.selectOverlay(nil)
+            controller.closeSelectedMaskAdjustments()
+            controller.selectedTool = .heal
         case .pointColor, .grade, .cropGeometry, .presets:
             controller.selectedTool = group.tool
             controller.selectOverlay(nil)

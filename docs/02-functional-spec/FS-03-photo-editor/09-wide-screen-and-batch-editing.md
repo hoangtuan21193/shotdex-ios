@@ -105,6 +105,7 @@ Ba thứ **bỏ khỏi panel** (chốt 2026-09-22):
   | **Color** | Basic (Temp/Tint/Vibrance/Saturation/B&W) · **Mix** · **Point** · **Grade** — bốn tab trong một section |
   | **Effects** · **Detail** · **Optics** | như cũ |
   | **Crop & Geometry** (mode trên rail) | khung cắt, tỷ lệ, xoay, lật — rồi một nét `panelDivider` — rồi sáu slider hình học và Upright, **trong cùng một danh sách cuộn**, không tab |
+  | **Heal** (mode trên rail, giữa Crop và Mask như Lightroom; thêm 2026-09-23, FS-03.11 §2) | Heal · Clone, Size, Feather, "Spot n of m" + Delete Spot; chạm ảnh để thêm vết, kéo vòng nét đứt để đổi nguồn; có thanh ↺ · Cancel · Apply như Crop/Mask/Markup |
 
   **Curve vẫn vẽ trong panel**, không bao giờ là lớp phủ trên ảnh, và **không nấp sau một nút** — mở thẻ
   Light ra là thấy cả tone lẫn curve. Luật chạm của plot ở cuối §5 giữ nguyên.

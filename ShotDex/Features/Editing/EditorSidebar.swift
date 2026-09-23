@@ -54,6 +54,7 @@ enum EditorRailMode: String, CaseIterable, Identifiable {
     case edit
     case presets
     case crop
+    case heal
     case mask
     case markup
 
@@ -66,6 +67,7 @@ enum EditorRailMode: String, CaseIterable, Identifiable {
         case .edit: .light
         case .presets: .presets
         case .crop: .cropGeometry
+        case .heal: .heal
         case .mask: .mask
         case .markup: .markup
         }

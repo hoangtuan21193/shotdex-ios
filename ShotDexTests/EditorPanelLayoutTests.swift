@@ -19,8 +19,9 @@ struct EditorPanelLayoutTests {
         #expect(EditorLayoutMetrics.editorPanelSafeAreaInset == 25)
 
         // Light · Curve · Color · Mix · Point · Grade · Effects · Detail · Optics ·
-        // Geo · Crop · Mask · Markup · Presets — all in the wheel, each with an icon.
-        #expect(EditorGroup.allCases.count == 14)
+        // Geo · Crop · Heal · Mask · Markup · Presets — all in the wheel, each with
+        // an icon. Heal joined in FS-03.11; the phone gets it like the iPad.
+        #expect(EditorGroup.allCases.count == 15)
         #expect(EditorGroup.allCases.allSatisfy { !$0.title.isEmpty })
         #expect(EditorGroup.allCases.allSatisfy { !$0.icon.isEmpty })
 

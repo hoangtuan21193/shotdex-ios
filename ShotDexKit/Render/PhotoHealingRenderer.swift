@@ -18,8 +18,14 @@ import Foundation
 /// the spot 0.5/255 and at most 1.9/255 near it, against the FS-03.11 bar of
 /// 2/255 mean and no hard edge.
 extension PhotoRenderService {
-    /// `image` with every spot repaired, in order — a later spot sees the
-    /// repairs of the ones before it.
+    /// `image` with every spot repaired. Every spot samples the frame as it
+    /// came in, not the frame with the earlier spots already applied: feeding
+    /// one spot's kernel output into the next spot's kernel is a nested colour
+    /// kernel, and Core Image folded those wrongly on device (the second spot
+    /// cloned black). The repairs only stack through source-over composites.
+    /// A spot whose source overlaps an earlier repair therefore copies the
+    /// unrepaired pixels there — Lightroom would copy the repaired ones, a
+    /// difference that only shows when a spot is filled from another spot.
     public static func applyHealing(_ spots: [PhotoHealingSpot], to input: CIImage) -> CIImage {
         guard !spots.isEmpty,
               let ringKernel = healingRingKernel,
@@ -40,16 +46,44 @@ extension PhotoRenderService {
                 y: destination.y - radius * 2.8,
                 width: radius * 5.6,
                 height: radius * 5.6
-            ).intersection(extent)
+            )
+            // Whole pixels: a fractional edge leaves a row of half-covered
+            // pixels, which the composite drew as a hairline across the photo.
+            .integral
+            .intersection(extent)
             guard !region.isNull, region.width > 0, region.height > 0 else { continue }
 
-            let shifted = image.clampedToExtent()
-                .transformed(by: CGAffineTransform(
-                    translationX: destination.x - source.x,
-                    y: destination.y - source.y
-                ))
+            // Only the patch the spot reads is lifted out, clamped and moved,
+            // not the whole frame.
+            let offset = CGAffineTransform(
+                translationX: destination.x - source.x,
+                y: destination.y - source.y
+            )
+            let sourceRegion = region
+                .applying(offset.inverted())
+                .intersection(extent)
+            guard !sourceRegion.isNull, sourceRegion.width > 0, sourceRegion.height > 0 else { continue }
+            let shifted = input.cropped(to: sourceRegion)
+                .clampedToExtent()
+                .transformed(by: offset)
                 .cropped(to: region)
-            let center = CIVector(x: destination.x, y: destination.y)
+            // Distance from the spot's centre as an image rather than
+            // `destCoord()`, so the colour kernels below stay position-free —
+            // what Core Image assumes a colour kernel is when it rearranges the
+            // graph. Linear 0…1 over `distanceSpan`, and deliberately **not**
+            // cropped: Core Image may evaluate these kernels outside their
+            // extent, and there the map must read "far" (1), never "centre" (0).
+            let distanceSpan = radius * 3
+            guard let distance = CIFilter(
+                name: "CIRadialGradient",
+                parameters: [
+                    kCIInputCenterKey: CIVector(x: destination.x, y: destination.y),
+                    "inputRadius0": 0,
+                    "inputRadius1": distanceSpan,
+                    "inputColor0": CIColor(red: 0, green: 0, blue: 0),
+                    "inputColor1": CIColor(red: 1, green: 1, blue: 1),
+                ]
+            )?.outputImage else { continue }
             let heals: Float = spot.mode == .heal ? 1 : 0
 
             var numerator = shifted
@@ -57,20 +91,31 @@ extension PhotoRenderService {
             if spot.mode == .heal,
                let difference = ringKernel.apply(
                    extent: region,
-                   arguments: [image, shifted, center, radius]
+                   arguments: [input, shifted, distance, radius, distanceSpan]
                ),
-               let weight = weightKernel.apply(extent: region, arguments: [center, radius]) {
-                numerator = blurred(difference, radius: radius)
-                denominator = blurred(weight, radius: radius)
+               let weight = weightKernel.apply(
+                   extent: region,
+                   arguments: [distance, radius, distanceSpan]
+               ) {
+                numerator = blurred(difference.cropped(to: region), radius: radius)
+                denominator = blurred(weight.cropped(to: region), radius: radius)
             }
             guard let repaired = blendKernel.apply(
                 extent: region,
                 arguments: [
-                    image, shifted, numerator, denominator, center, radius,
+                    shifted, numerator, denominator, distance, radius, distanceSpan,
                     Float(min(1, max(0, spot.feather))), Float(min(1, max(0, spot.opacity))), heals,
                 ]
             ) else { continue }
-            image = repaired.composited(over: image).cropped(to: extent)
+            // The repair is a premultiplied layer whose alpha is its coverage,
+            // laid over the photo. It has to be: Core Image folds a colour
+            // kernel into the composite as a per-pixel op and may evaluate it
+            // over the whole frame, ignoring the extent the kernel was given
+            // (measured — an opaque kernel here replaced every pixel of the
+            // photo, and cropping first only helped when the crop was not a
+            // no-op). With coverage in alpha, anywhere outside the spot the
+            // layer is clear whether or not it is evaluated there.
+            image = repaired.cropped(to: region).composited(over: image).cropped(to: extent)
         }
         return image
     }
@@ -85,31 +130,33 @@ extension PhotoRenderService {
         """
 
     static let healingRingKernel = CIColorKernel(source: healingRingSource + """
-        kernel vec4 healRing(__sample target, __sample shifted, vec2 center, float radius) {
-            float w = healRingWeight(distance(destCoord(), center), radius);
+        kernel vec4 healRing(__sample target, __sample shifted, __sample dist, float radius, float span) {
+            float w = healRingWeight(dist.r * span, radius);
             return vec4((target.rgb - shifted.rgb) * w, 1.0);
         }
         """)
 
     static let healingWeightKernel = CIColorKernel(source: healingRingSource + """
-        kernel vec4 healWeight(vec2 center, float radius) {
-            float w = healRingWeight(distance(destCoord(), center), radius);
+        kernel vec4 healWeight(__sample dist, float radius, float span) {
+            float w = healRingWeight(dist.r * span, radius);
             return vec4(w, w, w, 1.0);
         }
         """)
 
-    /// The copy, corrected when healing, blended in under a soft edge.
+    /// The copy, corrected when healing, as a premultiplied layer: colour
+    /// times coverage, coverage in alpha. Source-over then gives
+    /// `mix(photo, repair, coverage)` inside the spot and the photo outside.
     static let healingBlendKernel = CIColorKernel(source: """
         kernel vec4 healBlend(
-            __sample target, __sample shifted, __sample numerator, __sample denominator,
-            vec2 center, float radius, float feather, float opacity, float heals
+            __sample shifted, __sample numerator, __sample denominator,
+            __sample distanceMap, float radius, float span, float feather, float opacity, float heals
         ) {
-            float dist = distance(destCoord(), center);
+            float dist = distanceMap.r * span;
             vec3 correction = heals * numerator.rgb / max(denominator.r, 0.0001);
             vec3 repaired = shifted.rgb + correction;
             float inner = radius * (1.0 - 0.7 * feather);
             float amount = (1.0 - smoothstep(inner, radius, dist)) * opacity;
-            return vec4(mix(target.rgb, repaired, amount), target.a);
+            return vec4(repaired * amount, amount);
         }
         """)
 }

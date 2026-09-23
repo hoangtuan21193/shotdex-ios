@@ -1,0 +1,30 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "orientation", "text": "landscape" },
+    { "action": "wait", "seconds": 5 },
+    { "action": "tap", "label": "Continue" },
+    { "action": "systemTap", "label": "Allow Full Access", "seconds": 20 },
+    { "action": "wait", "seconds": 18 },
+    { "action": "tap", "label": "Photo, file type", "type": "cell" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Edit" },
+    { "action": "wait", "seconds": 16 },
+    { "action": "tap", "label": "rail.heal" },
+    { "action": "wait", "seconds": 14 },
+    { "action": "dump", "name": "heal-empty" },
+    { "action": "tap", "x": 0.30, "y": 0.50 },
+    { "action": "wait", "seconds": 3 },
+    { "action": "tap", "x": 0.50, "y": 0.34 },
+    { "action": "wait", "seconds": 14 },
+    { "action": "dump", "name": "heal-spots" },
+    { "action": "tap", "label": "Clone" },
+    { "action": "wait", "seconds": 12 },
+    { "action": "dump", "name": "heal-clone" },
+    { "action": "tap", "label": "Apply" },
+    { "action": "wait", "seconds": 12 },
+    { "action": "dump", "name": "applied" },
+    { "action": "wait", "seconds": 6 }
+  ]
+}

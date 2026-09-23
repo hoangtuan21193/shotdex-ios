@@ -19,6 +19,8 @@ enum PhotoEditorTool: String, CaseIterable, Identifiable {
     /// to be "Text" before it grew image layers and a pencil.
     case markup
     case crop
+    /// Heal and clone spots (FS-03.11 §2).
+    case heal
     case masks
 
     var id: String { rawValue }
@@ -32,6 +34,7 @@ enum PhotoEditorTool: String, CaseIterable, Identifiable {
         case .filters: "Filters"
         case .markup: "Markup"
         case .crop: "Crop"
+        case .heal: "Heal"
         case .masks: "Masks"
         }
     }
@@ -45,6 +48,7 @@ enum PhotoEditorTool: String, CaseIterable, Identifiable {
         case .filters: "camera.filters"
         case .markup: "pencil.tip.crop.circle"
         case .crop: "crop.rotate"
+        case .heal: "bandage"
         case .masks: "circle.dashed"
         }
     }
@@ -69,6 +73,7 @@ enum EditorGroup: String, CaseIterable, Identifiable {
     /// rectangle. Renamed from `crop` on 2026-09-22 when Geometry moved in with
     /// it; `EditorGroupMigration` converts the stored raw value.
     case cropGeometry = "cropGeometry"
+    case heal
     case mask
     case markup
     case presets
@@ -89,6 +94,7 @@ enum EditorGroup: String, CaseIterable, Identifiable {
         case .optics: "Optics"
         case .geo: "Geometry"
         case .cropGeometry: "Crop"
+        case .heal: "Heal"
         case .mask: "Mask"
         case .markup: "Markup"
         case .presets: "Presets"
@@ -119,6 +125,7 @@ enum EditorGroup: String, CaseIterable, Identifiable {
         case .optics: "camera.aperture"
         case .geo: "grid"
         case .cropGeometry: "crop"
+        case .heal: "bandage"
         case .mask: "circle.dashed"
         case .markup: "pencil.tip.crop.circle"
         case .presets: "camera.filters"
@@ -134,6 +141,7 @@ enum EditorGroup: String, CaseIterable, Identifiable {
         case .pointColor: .pointColor
         case .grade: .colorGrading
         case .cropGeometry: .crop
+        case .heal: .heal
         case .mask: .masks
         case .markup: .markup
         case .presets: .filters
@@ -1080,6 +1088,97 @@ final class PhotoEditorController {
         history.rewind(toUndoDepth: entry.undoDepth)
         guard recipe != entry.recipe else { return }
         recipe = entry.recipe
+        scheduleRender()
+    }
+
+    // MARK: Healing
+
+    /// The spot the panel's sliders and Delete act on.
+    var selectedHealingSpotID: UUID?
+    /// What a new spot is made with. Changing either also changes the selected
+    /// spot, so the panel reads as "this spot" once one is picked.
+    var healingMode: PhotoHealingMode = .heal
+    var healingRadius = 0.03
+    var healingFeather = 0.5
+
+    var selectedHealingSpot: PhotoHealingSpot? {
+        guard let id = selectedHealingSpotID else { return nil }
+        return recipe.healing.first { $0.id == id }
+    }
+
+    /// A spot where the user tapped, filled from beside it. One history step.
+    func addHealingSpot(at center: NormalizedPoint) {
+        recordHistory()
+        let source = PhotoHealingSpot.suggestedSource(
+            for: center,
+            radius: healingRadius,
+            aspectRatio: Double(previewAspectRatio)
+        )
+        let spot = PhotoHealingSpot(
+            mode: healingMode,
+            center: center,
+            source: source,
+            radius: healingRadius,
+            feather: healingFeather
+        )
+        recipe.healing.append(spot)
+        selectedHealingSpotID = spot.id
+        scheduleRender()
+    }
+
+    /// Edits one spot. During a drag the caller brackets this with
+    /// `beginContinuousChange` / `endContinuousChange`, so the whole drag is
+    /// one undo step (FS-03.11 AC-2).
+    func updateHealingSpot(_ id: UUID, _ change: (inout PhotoHealingSpot) -> Void) {
+        guard let index = recipe.healing.firstIndex(where: { $0.id == id }) else { return }
+        if !isContinuousChange { recordHistory() }
+        change(&recipe.healing[index])
+        scheduleRender(delay: isContinuousChange ? .milliseconds(30) : .milliseconds(90))
+    }
+
+    func selectHealingSpot(_ id: UUID?) {
+        selectedHealingSpotID = id
+        guard let spot = selectedHealingSpot else { return }
+        // The panel follows the spot, so its sliders say what the spot is.
+        healingMode = spot.mode
+        healingRadius = spot.radius
+        healingFeather = spot.feather
+    }
+
+    func setHealingMode(_ mode: PhotoHealingMode) {
+        healingMode = mode
+        guard let id = selectedHealingSpotID else { return }
+        updateHealingSpot(id) { $0.mode = mode }
+    }
+
+    func setHealingRadius(_ radius: Double) {
+        healingRadius = radius
+        guard let id = selectedHealingSpotID else { return }
+        updateHealingSpot(id) { $0.radius = radius }
+    }
+
+    func setHealingFeather(_ feather: Double) {
+        healingFeather = feather
+        guard let id = selectedHealingSpotID else { return }
+        updateHealingSpot(id) { $0.feather = feather }
+    }
+
+    func deleteSelectedHealingSpot() {
+        guard let id = selectedHealingSpotID,
+              let index = recipe.healing.firstIndex(where: { $0.id == id })
+        else { return }
+        recordHistory()
+        recipe.healing.remove(at: index)
+        selectedHealingSpotID = recipe.healing.last?.id
+        scheduleRender()
+    }
+
+    /// Every spot off the photo, one history step.
+    func removeAllHealingSpots() {
+        guard !recipe.healing.isEmpty else { return }
+        recordHistory()
+        recipe.healing.removeAll()
+        selectedHealingSpotID = nil
         scheduleRender()
     }
 

@@ -204,6 +204,15 @@ struct EditorImageStage: View {
                     EditorCropOverlay(controller: controller, imageRect: imageRect)
                 }
 
+                // Heal spots: tap empty photo to add, drag a circle to move it.
+                if controller.selectedTool == .heal, !chrome.isFullBleed {
+                    EditorHealGuideOverlay(
+                        controller: controller,
+                        imageRect: imageRect,
+                        zoomScale: chrome.zoomScale
+                    )
+                }
+
                 // The Markup drawing canvas fits the photo exactly. Zoom is reset on
                 // entry and suspended while drawing, so canvas points map straight to
                 // the fitted rect and the strokes land where the finger is.
