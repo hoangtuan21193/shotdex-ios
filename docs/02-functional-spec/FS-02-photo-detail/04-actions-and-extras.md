@@ -85,7 +85,10 @@ Mở từ menu ⋯ (mờ khi nguồn < 2 ảnh), toàn màn nền đen.
 
 ## 8. Panorama
 
-⋯ → **View Panorama** (chỉ với ảnh panorama) mở một màn riêng, nền đen.
+⋯ → **View Panorama** mở một màn riêng, nền đen. "Ảnh panorama" ở đây là **một định nghĩa dùng chung
+cho cả app**: ảnh mang cờ panorama của hệ thống (Pano của Camera) **hoặc** ảnh ShotDex ghép ra, nhận
+qua thẻ XMP của nó ([FS-14 §7](../FS-14-panorama/01-screen-and-flow.md)). Không theo tỉ lệ khung: ảnh
+crop 21:9 không phải panorama.
 
 - Ảnh **cao bằng màn hình**, bề ngang chạy ra ngoài hai mép, cuộn ngang. Viewer thường fit cả khung nên ảnh
   9000×1200 thành một dải cao vài trăm pixel — vứt đi đúng lý do người ta chụp panorama.

@@ -1,6 +1,6 @@
 # BD-02 — Thiết kế database
 
-`BD-02` · `ShotDex/Data/Database/` · `ShotDexTests/DatabaseTests.swift` · cập nhật 2026-09-22
+`BD-02` · `ShotDex/Data/Database/` · `ShotDexTests/DatabaseTests.swift` · cập nhật 2026-09-23
 
 **Một câu:** bảng nào giữ gì, và luật giữ cho dữ liệu người dùng không bị lượt index xoá mất.
 
@@ -12,6 +12,11 @@
 - Favorite: **thư viện ảnh là nguồn thật**; cột trong database chỉ để lọc nhanh và được đồng bộ lại khi thư
   viện báo thay đổi.
 - **Số megapixel không lưu** — nó tính ra từ chiều rộng và chiều cao.
+- Cột **suy ra được từ ảnh** thì ở lại bảng chính, dù lượt index có ghi đè: ghi lại nó chỉ tốn công
+  đọc, không mất gì. `isPanorama` là ca mẫu — nó là "cờ panorama của hệ thống **hoặc** thẻ XMP ShotDex
+  ghi vào file khi ghép" ([FS-14 §7](../02-functional-spec/FS-14-panorama/01-screen-and-flow.md)), cả
+  hai đều đọc lại được từ asset và từ file. Luật bảng riêng là cho thứ **không** đọc lại được: cái
+  người dùng gõ vào, và kết quả quét đắt tiền.
 
 ## 2. Bảng metadata chính
 
@@ -35,6 +40,8 @@ placeCountry, placeCountryCode, placeAddress TEXT
 placeSearchText TEXT             -- viết thường + bỏ dấu; cột DUY NHẤT tìm theo địa điểm
 placeCellKey TEXT, placeResolvedAt INTEGER   -- ô lưới ~110m, ghi bằng đường riêng
 isFavorite INTEGER
+mediaSubtypes INTEGER            -- mặt nạ bit kiểu chụp, lấy thẳng từ thư viện hệ thống
+isPanorama INTEGER               -- cờ hệ thống HOẶC thẻ XMP của ShotDex; xem quy tắc dưới
 indexedAt INTEGER
 exifStatus TEXT                  -- đã đọc / không có EXIF / chưa đọc / chờ iCloud / lỗi
 indexerVersion INTEGER           -- phiên bản bộ index đã ghi dòng này

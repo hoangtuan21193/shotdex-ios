@@ -13,7 +13,7 @@ Quản lý album, Creations, sắp xếp và kéo thả: [FS-06.01b](01b-album-m
 - Tab này liệt kê **album**. **Không vẽ Folder** — một tầng hộp phải mở ra trước khi thấy album là một tầng
   chẳng chứa thông tin gì. Album nằm trong folder của Photos hiện thẳng ở "My Albums".
 - **Không vẽ số đếm** ở bất kỳ tile nào — VoiceOver vẫn đọc được qua nhãn trợ năng.
-- Album rỗng bị loại khỏi danh sách: thư viện không có panorama thì không có mục Panoramas.
+- Album rỗng bị loại khỏi danh sách: thư viện không có ảnh chụp màn hình thì không có mục Screenshots.
 - **Cover để duyệt, hàng để chọn**: thứ người ta nhận ra bằng ảnh thì làm tile; thứ chọn từ một danh sách
   biết trước thì làm hàng.
 
@@ -82,8 +82,15 @@ Hai mục cuối tab, **hàng full-width cao đúng một dòng chữ (52pt)**: 
 
 **Media Types** = mọi album hệ thống có phân loại công khai, khai trong **một danh mục duy nhất** (mỗi mục
 gồm phân loại, thuộc nhóm nào, glyph và tên đè tuỳ chọn; thứ tự trong danh mục là thứ tự hiển thị): Videos ·
-Selfies · Live Photos · Portrait · Panoramas · Time-lapse · Slo-mo · Cinematic · Bursts · Screenshots ·
+Selfies · Live Photos · Portrait · Time-lapse · Slo-mo · Cinematic · Bursts · Screenshots ·
 Screen Recordings · Animated · Long Exposures · RAW · Spatial (iOS 18 trở lên).
+
+**Panoramas là ngoại lệ, và không nằm trong danh mục đó.** Album Panoramas của Photos không bao giờ chứa
+một tấm ShotDex ghép ra — tấm đó không mang cờ panorama của hệ thống — nên mục này lấy từ **index của
+ShotDex**, dùng đúng điều kiện mà bộ lọc Capture Kind dùng ([FS-14 §7](../FS-14-panorama/01-screen-and-flow.md)).
+Nó vẫn đứng nguyên chỗ cũ trong hàng Media Types, vẫn mở ra màn album quen thuộc kèm Select, sắp xếp và
+menu ⋯. Hệ quả đã chấp nhận: trên một thư viện **chưa index xong** mục này rỗng, nên bị ẩn, trong khi các
+mục cạnh nó do PhotoKit cấp đã có số.
 
 **Utilities** = Places · Trips · Duplicates (kèm số nhóm của lần gom cuối, **số nhiều dịch đúng trong bộ
 chuỗi**) · **Collages** · **Video Projects** · và các smart album nhóm tiện ích (hiện chỉ Unable to Upload).

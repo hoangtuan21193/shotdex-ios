@@ -40,6 +40,9 @@ trên toolbar.
   một điều kiện** nên biên dịch qua cùng một đường và hiện chip như mọi điều kiện khác; nó **không** nằm
   trong menu chọn trường của dòng điều kiện.
 - Trong bộ lọc đơn giản, chọn **cả hai** loại hoặc **không chọn gì** đều nghĩa là không ràng buộc.
+- **Panoramas** là mục duy nhất không chỉ hỏi mặt nạ bit của hệ thống: nó hỏi `mediaSubtypes` **hoặc**
+  cột `isPanorama`, vì panorama do ShotDex ghép không mang cờ của hệ thống
+  ([FS-14 §7](../FS-14-panorama/01-screen-and-flow.md)). Mọi kiểu chụp khác vẫn do hệ thống định nghĩa.
 - **Kiểu chụp** là một menu con trong menu lọc: Screenshots · Live Photos · Portrait · Panoramas · HDR ·
   Time-lapse · Slo-mo · Cinematic. Là **menu con** chứ không phải tám hàng phẳng, vì tám hàng sẽ chôn mất
   mục "Advanced Filter…".

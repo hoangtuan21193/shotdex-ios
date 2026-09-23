@@ -1,7 +1,7 @@
 # BD-03.02 — Đọc EXIF
 
 `BD-03.02` · `Data/Sources/ExifReader.swift` · `Domain/Indexing/IndexPipeline.swift`
-· `Data/Database/MetadataStore.swift` · cập nhật 2026-09-22
+· `Data/Database/MetadataStore.swift` · cập nhật 2026-09-23
 
 **Một câu:** hai pha của một lượt chạy, thang cách lấy dữ liệu, và ba kết cục có thể xảy ra khi đọc một ảnh.
 
@@ -11,6 +11,13 @@
 - Hỏi hệ thống "ảnh này gồm những file nào" **đúng một lần cho mỗi ảnh** — không lặp lại lời gọi liên tiến trình.
 - Luôn đọc **file gốc**, kể cả với ảnh đã chỉnh sửa.
 - **Đọc hỏng không được đè lên EXIF đã có.**
+- Cùng một lần mở file đó còn trả lời **"đây có phải panorama ShotDex ghép không"**: thẻ XMP trong file,
+  đọc qua đối tượng metadata của ImageIO chứ không phải từ dict thuộc tính (XMP không nằm trong đó).
+  Kết quả gộp với cờ panorama của hệ thống thành cột `isPanorama`
+  ([FS-14 §7](../../02-functional-spec/FS-14-panorama/01-screen-and-flow.md)). Hai điều đi kèm:
+  thẻ **không** làm một file không EXIF thành "đã đọc EXIF" — nó nói ảnh là gì, không nói phơi sáng bao
+  nhiêu; và đường ghi của lần **đọc hỏng** chỉ được bật cờ lên, không bao giờ tắt, vì đường đó không mở
+  file nên không thể biết thẻ còn hay mất.
 
 ## 2. Hai pha mỗi lượt chạy
 
