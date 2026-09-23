@@ -60,6 +60,17 @@ public struct LensfunLens: Codable, Equatable, Identifiable, Sendable {
     /// calibration body (a DX and an FX measurement of one Nikkor).
     public var id: String { "\(maker)|\(model)|\(cropFactor)" }
 
+    /// Long side over short side of the frame the lens was calibrated on —
+    /// Lensfun's `<aspect-ratio>`, 3:2 when the database does not say.
+    public var calibrationAspect: Double {
+        guard let aspectRatio else { return 1.5 }
+        let parts = aspectRatio.split(separator: ":").compactMap { Double($0) }
+        if parts.count == 2, parts[0] > 0, parts[1] > 0 {
+            return max(parts[0], parts[1]) / min(parts[0], parts[1])
+        }
+        return Double(aspectRatio).map { max($0, 1 / $0) } ?? 1.5
+    }
+
     /// The calibration for `focal`, interpolated linearly between the two
     /// nearest measured focal lengths of the same model — a zoom is rarely
     /// calibrated at the exact millimetre a photo was taken at.
@@ -148,26 +159,47 @@ extension PhotoRenderService {
         return (exif?[kCGImagePropertyExifFocalLength] as? NSNumber)?.doubleValue
     }
 
-    /// Corrects lens distortion with a Lensfun profile, for sources the RAW
-    /// decoder does not already correct.
+    /// How many pixels of this photo one unit of Lensfun radius is.
     ///
-    /// The profile's radius is normalised to half the short side of the frame
-    /// it was calibrated on; a body with a different crop factor sees a
-    /// different part of that field, so the pixel radius scales by
-    /// camera crop / lens crop. The corrected frame is zoomed just enough that
-    /// no corner or edge samples outside the photo — the "constrain crop"
-    /// Lightroom applies — so a barrel correction never shows empty corners.
+    /// Lensfun keeps Hugin's convention: r = 1 is half the **short side of the
+    /// calibration frame** — a sensor of the lens's crop factor at the
+    /// calibration aspect ratio (Lensfun's `rescale_polynomial_coefficients`).
+    /// Measured in millimetres through the diagonal, so a body with another
+    /// crop factor, or a photo with another aspect ratio (a 4:3 frame against a
+    /// 3:2 calibration), lands on the right part of the calibrated field:
+    /// halfDiagonal(px) · cameraCrop / (lensCrop · hypot(calibrationAspect, 1)).
+    public static func lensNormalizationRadius(
+        extent: CGRect,
+        lensCropFactor: Double,
+        cameraCropFactor: Double,
+        calibrationAspect: Double
+    ) -> Double {
+        let halfDiagonal = (extent.width * extent.width + extent.height * extent.height).squareRoot() / 2
+        return halfDiagonal * max(0.1, cameraCropFactor)
+            / (max(0.1, lensCropFactor) * (calibrationAspect * calibrationAspect + 1).squareRoot())
+    }
+
+    /// Corrects lens distortion with a Lensfun profile, for sources the RAW
+    /// decoder does not already correct. The corrected frame is zoomed just
+    /// enough that no corner or edge samples outside the photo — the
+    /// "constrain crop" Lightroom applies — so a barrel correction never shows
+    /// empty corners.
     public static func applyLensProfile(
         _ term: LensDistortionTerm,
         lensCropFactor: Double,
         cameraCropFactor: Double,
+        calibrationAspect: Double = 1.5,
         to input: CIImage
     ) -> CIImage {
         guard let kernel = lensWarpKernel else { return input }
         let extent = input.extent
         let center = CGPoint(x: extent.midX, y: extent.midY)
-        let norm = min(extent.width, extent.height) / 2
-            * max(0.1, cameraCropFactor) / max(0.1, lensCropFactor)
+        let norm = lensNormalizationRadius(
+            extent: extent,
+            lensCropFactor: lensCropFactor,
+            cameraCropFactor: cameraCropFactor,
+            calibrationAspect: calibrationAspect
+        )
         let zoom = fillZoom(term, extent: extent, norm: norm)
         let model: Float = switch term.model {
         case .poly3: 0

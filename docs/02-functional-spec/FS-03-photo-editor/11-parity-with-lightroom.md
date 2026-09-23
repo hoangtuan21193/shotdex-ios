@@ -118,10 +118,13 @@ Apple không phát hành cơ sở dữ liệu hệ số méo, và `.lcp` của A
   khẩu độ lớn nhất** trước, rồi **ngàm của thân máy**, rồi **hãng**, cuối cùng mới để token tên phân xử
   ("EF24-70mm f/2.8L II USM" → bản Mark II). Kết quả lưu **đã giải** trong recipe
   (`PhotoLensProfileChoice`: id ống, crop factor thân máy, tự khớp hay tự chọn) — renderer chỉ tra theo id.
-- **Pass nắn** (`PhotoRenderService.applyLensProfile`): `CIWarpKernel` với poly3 / poly5 / ptlens, bán kính chuẩn
-  hoá theo quy ước PTLens (r = 1 là nửa cạnh ngắn của khung hiệu chuẩn, nhân crop thân máy / crop ống), hệ số
-  nội suy tuyến tính giữa hai tiêu cự đã đo gần nhất, và **tự phóng vừa đủ** để góc/cạnh không lộ khoảng trống
-  (tối đa 1,5×). Chưa xử lý khác biệt tỉ lệ khung (hiệu chuẩn 3:2 so với ảnh 4:3) — xấp xỉ.
+- **Pass nắn** (`PhotoRenderService.applyLensProfile`): `CIWarpKernel` với poly3 / poly5 / ptlens theo quy ước
+  Hugin mà Lensfun giữ (`rescale_polynomial_coefficients`): r = 1 là nửa cạnh ngắn của **khung hiệu chuẩn** — cảm
+  biến có crop của ống, ở tỉ lệ `<aspect-ratio>` của ống (mặc định 3:2). Quy qua milimét trên đường chéo:
+  bán kính đơn vị (px) = nửa đường chéo ảnh · crop thân máy / (crop ống · hypot(tỉ lệ hiệu chuẩn, 1)), nên thân
+  máy crop khác hay ảnh 4:3 so với hiệu chuẩn 3:2 đều rơi đúng phần trường đã đo. Hệ số nội suy tuyến tính giữa
+  hai tiêu cự đã đo gần nhất, và **tự phóng vừa đủ** để góc/cạnh không lộ khoảng trống (tối đa 1,5×). Tâm quang
+  học lệch (`<center>` của Lensfun) chưa dùng — coi tâm ảnh là tâm quang học.
 - **Panel** (Optics › Lens Profile): công tắc; tên ống + "Found from EXIF"/"Chosen by you" + **Change**; không
   khớp thì "No profile for this lens yet. Choose yours from the list." + **Choose Lens**; RAW thì nói đã do bộ
   giải RAW nắn. Danh sách chọn tay tìm được, nhóm "Fits <ngàm>" lên đầu, ghi công Lensfun ở cuối.

@@ -99,6 +99,43 @@ struct LensProfileTests {
         #expect(corrected.extent == extent)
     }
 
+    /// Hugin's convention: r = 1 is half the short side of the calibration
+    /// frame. A 3:2 photo from the calibration body gets exactly its own half
+    /// short side; a 4:3 photo, a larger crop body and a 4:3 calibration each
+    /// move it the way the millimetres say.
+    @Test func normalizationFollowsTheCalibrationFrame() {
+        let threeTwo = CGRect(x: 0, y: 0, width: 3000, height: 2000)
+        let same = PhotoRenderService.lensNormalizationRadius(
+            extent: threeTwo, lensCropFactor: 1, cameraCropFactor: 1, calibrationAspect: 1.5
+        )
+        #expect(abs(same - 1000) < 0.01)
+
+        let dx = PhotoRenderService.lensNormalizationRadius(
+            extent: threeTwo, lensCropFactor: 1, cameraCropFactor: 1.5, calibrationAspect: 1.5
+        )
+        #expect(abs(dx - 1500) < 0.01, "a crop body sees the middle of the field")
+
+        // 4:3 photo, 3:2 calibration, same body: same diagonal in millimetres,
+        // so the radius unit follows the diagonal, not the short side.
+        let fourThree = CGRect(x: 0, y: 0, width: 3000, height: 2250)
+        let mixed = PhotoRenderService.lensNormalizationRadius(
+            extent: fourThree, lensCropFactor: 1, cameraCropFactor: 1, calibrationAspect: 1.5
+        )
+        let halfDiagonal: Double = 3750 / 2          // 3000 × 2250 has a 3750 diagonal
+        let calibrationDiagonal: Double = (3.25 as Double).squareRoot()
+        let expected = halfDiagonal / calibrationDiagonal
+        #expect(abs(mixed - expected) < 0.01)
+        #expect(abs(mixed - 1125) > 50, "not simply half the 4:3 short side")
+    }
+
+    @Test func calibrationAspectIsReadFromTheTable() throws {
+        let lenses = LensProfileLibrary.shared.lenses
+        let fourThirds = try #require(lenses.first { $0.aspectRatio == "4:3" })
+        #expect(abs(fourThirds.calibrationAspect - 4.0 / 3) < 0.001)
+        let unspecified = try #require(lenses.first { $0.aspectRatio == nil })
+        #expect(unspecified.calibrationAspect == 1.5)
+    }
+
     @Test func profileRoundTripsInTheRecipe() throws {
         var recipe = PhotoEditRecipe()
         recipe.lensProfile = PhotoLensProfileChoice(lensID: "Nikon|Nikon AF-S Nikkor 16-35mm f/4G ED VR|1.0", cameraCropFactor: 1, isAutomatic: true)

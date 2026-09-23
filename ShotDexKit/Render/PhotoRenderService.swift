@@ -1877,6 +1877,7 @@ public actor PhotoRenderService {
             term,
             lensCropFactor: lens.cropFactor,
             cameraCropFactor: choice.cameraCropFactor,
+            calibrationAspect: lens.calibrationAspect,
             to: image
         )
     }
