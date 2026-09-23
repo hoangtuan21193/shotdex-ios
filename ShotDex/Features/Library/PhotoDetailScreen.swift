@@ -754,8 +754,8 @@ struct PhotoDetailScreen: View {
                         Label("Show in All Photos", systemImage: "photo.on.rectangle.angled")
                     }
                 }
-                if currentAsset?.mediaSubtypes.contains(.photoPanorama) == true,
-                   let currentAsset {
+                if let currentAsset,
+                   PanoramaRecognition.isPanorama(asset: currentAsset, metadata: currentMetadata) {
                     Button {
                         panoramaTarget = PanoramaPresentation(asset: currentAsset)
                     } label: {

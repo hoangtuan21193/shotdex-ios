@@ -116,6 +116,39 @@ struct DatabaseTests {
         #expect(flags["unindexed"] == Bool?.none)
     }
 
+    /// AC-21: a panorama ShotDex stitched has no system flag, so the filter
+    /// has to find it by the indexed column instead — and the one Camera made
+    /// has to keep working.
+    @Test func panoramasFilterFindsBothKinds() async throws {
+        let database = try AppDatabase.makeEmpty()
+        let metadataStore = MetadataStore(database: database)
+        let libraryQueries = LibraryQueries(database: database)
+
+        var cameraPano = makeRecord(assetId: "camera-pano")
+        cameraPano.mediaSubtypes = PhotoMediaSubtype.panorama.bit
+        cameraPano.isPanorama = true
+        var stitched = makeRecord(assetId: "stitched")
+        stitched.mediaSubtypes = 0
+        stitched.isPanorama = true
+        var ordinary = makeRecord(assetId: "ordinary")
+        ordinary.mediaSubtypes = 0
+        ordinary.isPanorama = false
+        var screenshot = makeRecord(assetId: "screenshot")
+        screenshot.mediaSubtypes = PhotoMediaSubtype.screenshot.bit
+        screenshot.isPanorama = false
+        try metadataStore.saveBatch([cameraPano, stitched, ordinary, screenshot], cursorAssetId: nil)
+
+        var criteria = FilterCriteria()
+        criteria.mediaSubtypes = [.panorama]
+        let panoramas = try await libraryQueries.gridItems(matching: criteria, sort: .default)
+        #expect(Set(panoramas.map(\.assetId)) == ["camera-pano", "stitched"])
+
+        // The other kinds still answer off the mask alone.
+        criteria.mediaSubtypes = [.screenshot]
+        let screenshots = try await libraryQueries.gridItems(matching: criteria, sort: .default)
+        #expect(screenshots.map(\.assetId) == ["screenshot"])
+    }
+
     @Test func batchSaveAndCursor() throws {
         let database = try AppDatabase.makeEmpty()
         let store = MetadataStore(database: database)

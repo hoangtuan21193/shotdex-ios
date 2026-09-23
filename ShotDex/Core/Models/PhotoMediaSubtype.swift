@@ -31,6 +31,18 @@ enum PhotoMediaSubtype: String, CaseIterable, Codable, Identifiable, Sendable {
         }
     }
 
+    /// The SQL that decides whether a row is this kind.
+    ///
+    /// Panoramas are the one kind the mask cannot answer on its own: a photo
+    /// ShotDex stitched has no system flag, and its own tag is recorded in
+    /// `isPanorama` (FS-14 §7). Every other kind is PhotoKit's to define.
+    var sqlTest: String {
+        switch self {
+        case .panorama: "((mediaSubtypes & \(bit)) != 0 OR isPanorama = 1)"
+        default: "(mediaSubtypes & \(bit)) != 0"
+        }
+    }
+
     var title: String {
         switch self {
         case .screenshot: String(localized: "Screenshots")
@@ -55,5 +67,22 @@ enum PhotoMediaSubtype: String, CaseIterable, Codable, Identifiable, Sendable {
         case .slowMotion: "slowmo"
         case .cinematic: "video.badge.waveform"
         }
+    }
+}
+
+/// One definition of "panorama" for the whole app (FS-14 §7).
+///
+/// Lives beside `PhotoMediaSubtype.sqlTest`, which is the same rule written
+/// for SQLite, so the two cannot drift: the viewer must offer View Panorama
+/// for exactly the photos the Panoramas filter returns.
+///
+/// Not aspect ratio. A 21:9 crop is a crop.
+enum PanoramaRecognition {
+    /// `metadata` is the indexed row, which carries `isPanorama` — the system
+    /// flag folded together with ShotDex's tag in the file. It is nil while a
+    /// photo is still unindexed, and then the live asset answers alone.
+    static func isPanorama(asset: PHAsset, metadata: PhotoMetadata?) -> Bool {
+        if metadata?.isPanorama == true { return true }
+        return asset.mediaSubtypes.contains(.photoPanorama)
     }
 }

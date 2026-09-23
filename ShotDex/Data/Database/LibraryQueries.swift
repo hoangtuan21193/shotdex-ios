@@ -334,11 +334,14 @@ struct LibraryQueries: Sendable {
         // Subtypes are bits in one mask, so "any of these" is an OR of ANDs.
         // Rows written before the column existed hold NULL and match nothing,
         // which is right: the index has not yet said what they are.
+        //
+        // Each kind writes its own test (`sqlTest`) because Panoramas is no
+        // longer only a bit: a stitched panorama has `isPanorama` and no system
+        // flag, and the filter has to find it (FS-14 §7).
         if !criteria.mediaSubtypes.isEmpty {
             let tests = criteria.mediaSubtypes
-                .map(\.bit)
-                .sorted()
-                .map { "(mediaSubtypes & \($0)) != 0" }
+                .sorted { $0.bit < $1.bit }
+                .map(\.sqlTest)
             conditions.append("(\(tests.joined(separator: " OR ")))")
         }
 
