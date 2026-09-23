@@ -29,6 +29,14 @@ hình dạng của bộ rasterize nét cọ cùng tầng `PhotoDrawing` đã có
 - **Một lớp mới trong recipe**, không nhét vào `drawing`: mỗi vết mang **độ lệch nguồn** — thứ mask và nét
   vẽ không có. `PhotoHealingLayer` gồm danh sách vết, mỗi vết có đường bút, cỡ, độ mềm, độ lệch nguồn, và
   chế độ `heal` hay `clone`.
+- **Bản v1 (2026-09-23) là vết tròn**, không phải nét bút: tâm, bán kính, độ mềm, độ mờ, nguồn. Toạ độ
+  chuẩn hoá theo **khung sau crop** như mask và nét vẽ, nên — giống mask — đổi crop sau khi vá thì vết lệch.
+  Pass vá chạy **ngay sau crop**, trước mask. Trường sửa màu của Heal là normalized convolution trên một vành
+  quanh vết (`PhotoHealingRenderer`), không cần giải Poisson.
+- **Công cụ trên canvas** (chặng **Heal** trên rail, cũng có trên bánh xe điện thoại): chạm ảnh là một vết
+  mới với Size/Feather đang đặt; vết đang chọn hiện vòng nguồn nét đứt nối bằng một đường, kéo vòng nào thì
+  dời vòng đó, **cả lần kéo là một bước Undo**; Size, Feather, Heal/Clone áp lên vết đang chọn; Delete Spot
+  ở panel; ↺ ở thanh commit gỡ mọi vết.
 - **Nguồn tự chọn rồi cho sửa**: chạm là ShotDex đoán một vùng nguồn gần đó; kéo núm nguồn để đổi.
 - **Thuộc về một khung hình cụ thể** nên **không chép sang ảnh khác** — vào đúng danh sách loại trừ của
   [FS-03.10](10-copy-paste-edits.md) cùng crop, mask, markup.
@@ -120,22 +128,22 @@ Apple không phát hành cơ sở dữ liệu hệ số méo, và `.lcp` của A
 
 | # | Cho / Khi / Thì | Chứng minh |
 |---|---|---|
-| AC-1 | **Cho** ảnh JPG có một vết bụi trên nền trời · **Khi** chạm vết đó bằng công cụ **Heal** · **Thì** vùng vá lấy mẫu từ nền quanh nó, sai lệch màu trung bình ≤ **2/255**, và không có mép cứng ở zoom 100% | ⚠️ chưa có |
-| AC-2 | **Cho** một vết heal đã tạo · **Khi** kéo núm nguồn sang chỗ khác · **Thì** vùng vá cập nhật theo, và cả thao tác là **một** bước Undo | ⚠️ chưa có |
-| AC-3 | **Cho** ảnh A có lớp healing · **Khi** Copy Edits rồi Paste sang ảnh B · **Thì** B **không** nhận lớp healing (cùng luật với crop/mask/markup) | ⚠️ chưa có |
+| AC-1 | **Cho** ảnh JPG có một vết bụi trên nền trời · **Khi** chạm vết đó bằng công cụ **Heal** · **Thì** vùng vá lấy mẫu từ nền quanh nó, sai lệch màu trung bình ≤ **2/255**, và không có mép cứng ở zoom 100% | ✅ `PhotoHealingTests.healMatchesTheSurroundingSky` (3 nguồn, kể cả nguồn lệch dọc sang vùng trời nhạt hơn): trung bình ~0.5/255, tệ nhất ~1.9/255 quanh vết |
+| AC-2 | **Cho** một vết heal đã tạo · **Khi** kéo núm nguồn sang chỗ khác · **Thì** vùng vá cập nhật theo, và cả thao tác là **một** bước Undo | ✅ `PhotoHealingTests.draggingTheSourceIsOneUndoStep`, `panelSlidersEditTheSelectedSpot`; ảnh chụp công cụ Heal (iPad 26.5) |
+| AC-3 | **Cho** ảnh A có lớp healing · **Khi** Copy Edits rồi Paste sang ảnh B · **Thì** B **không** nhận lớp healing (cùng luật với crop/mask/markup) | ✅ `PhotoHealingTests.healingIsNeverCopied`; bảng loại trừ ở FS-03.10 |
 | AC-4 | **Cho** một recipe có một phần tử không đọc được (loại mask, loại component, film look lạ) · **Khi** decode · **Thì** chỉ mất đúng phần tử đó; crop, màu, curve, filter, các mask khác và markup **còn nguyên**; một preset hỏng không xoá cả My Looks | ✅ `RecipeLossyDecodingTests` (4 test) |
-| AC-5 | **Cho** ảnh có đúng một khuôn mặt · **Khi** tạo mask **Face Skin** · **Thì** mask phủ vùng da mặt và **không** phủ mắt, môi, chân mày | ⚠️ chưa có |
-| AC-6 | **Cho** ảnh **không có** khuôn mặt nào · **Khi** mở danh sách tạo mask · **Thì** ba loại khuôn mặt **mờ** và nói vì sao, không phải tạo xong mới báo rỗng | ⚠️ chưa có |
-| AC-7 | **Cho** một file `.cube` 33³ hợp lệ · **Khi** nhập qua Files ở chặng Presets · **Thì** nó xuất hiện trong nhóm "My LUTs" và áp được với cường độ 0…100% | ⚠️ chưa có |
-| AC-8 | **Cho** một file `.cube` **hỏng** (thiếu `LUT_3D_SIZE`) · **Khi** nhập · **Thì** hiện lý do cụ thể và **không** thêm mục rỗng nào vào danh sách | ⚠️ chưa có — `CubeLUTParser` đã nghiêm, cần test ở tầng UI |
-| AC-9 | **Cho** ảnh đã sửa bằng một LUT · **Khi** xoá LUT đó khỏi thư viện · **Thì** ảnh render không có bước LUT, recipe giữ nguyên, và hàng Look nói "LUT đã bị xoá" | ⚠️ chưa có |
-| AC-10 | **Cho** ảnh có chủ thể rõ · **Khi** tạo mask **Background** · **Thì** vùng chọn là phần bù của Subject, kiểm bằng tổng hai mask phủ kín khung | ⚠️ chưa có |
-| AC-11 | **Cho** ảnh **không có** bản đồ độ sâu · **Khi** mở danh sách tạo mask · **Thì** **Depth Range** mờ — cùng cổng `hasDepth` mà `depthBlur` dùng | ⚠️ chưa có |
-| AC-12 | **Cho** ảnh ISO 6400 · **Khi** đặt Luminance 60 và Detail 50 · **Thì** nhiễu hạt giảm đo được mà vân da **không** mất hẳn (so bằng phương sai cục bộ trên hai vùng) | ⚠️ chưa có |
-| AC-13 | **Cho** một ảnh bất kỳ · **Khi** đọc chuỗi render · **Thì** khử nhiễu chạy **trước** sharpening | ⚠️ chưa có — test thuần trên thứ tự pipeline |
+| AC-5 | **Cho** ảnh có đúng một khuôn mặt · **Khi** tạo mask **Face Skin** · **Thì** mask phủ vùng da mặt và **không** phủ mắt, môi, chân mày | ✅ `FaceMaskTests.faceSkinCoversSkinOnly`, `eyesAndLipsCoverTheirPartOnly` (khuôn mặt vẽ tay, hình học thuần). ⚠️ Vision trên ảnh người thật chưa chụp — thư viện simulator không có ảnh chân dung |
+| AC-6 | **Cho** ảnh **không có** khuôn mặt nào · **Khi** mở danh sách tạo mask · **Thì** ba loại khuôn mặt **mờ** và nói vì sao, không phải tạo xong mới báo rỗng | ✅ `FaceMaskTests.faceRowsAreGatedOnFaces`; ba hàng mờ "No face found in this photo" trong New Mask |
+| AC-7 | **Cho** một file `.cube` 33³ hợp lệ · **Khi** nhập qua Files ở chặng Presets · **Thì** nó xuất hiện trong nhóm "My LUTs" và áp được với cường độ 0…100% | ✅ `PhotoLUTTests.recipeLUTIsAppliedAtItsIntensity`, `lutIDRoundTrips`, `lutAndFilmLookReplaceEachOther`; nhóm **My LUTs** ở Presets (`EditorFiltersPanel.myLUTs`) |
+| AC-8 | **Cho** một file `.cube` **hỏng** (thiếu `LUT_3D_SIZE`) · **Khi** nhập · **Thì** hiện lý do cụ thể và **không** thêm mục rỗng nào vào danh sách | ✅ `PhotoLUTTests.brokenCubeNamesTheProblem`, `brokenCubeIsNotAdded`; lý do từ `LUTImportMessage` |
+| AC-9 | **Cho** ảnh đã sửa bằng một LUT · **Khi** xoá LUT đó khỏi thư viện · **Thì** ảnh render không có bước LUT, recipe giữ nguyên, và hàng Look nói "LUT đã bị xoá" | ✅ `PhotoLUTTests.deletedLUTRendersWithoutALook`; hàng "LUT deleted · this photo renders without it" ở My LUTs |
+| AC-10 | **Cho** ảnh có chủ thể rõ · **Khi** tạo mask **Background** · **Thì** vùng chọn là phần bù của Subject, kiểm bằng tổng hai mask phủ kín khung | ✅ `MaskKindParityTests.backgroundIsSubjectInverted`, `addingBackgroundMaskInvertsSubject`, `invertedMaskIsTheComplement` |
+| AC-11 | **Cho** ảnh **không có** bản đồ độ sâu · **Khi** mở danh sách tạo mask · **Thì** **Depth Range** mờ — cùng cổng `hasDepth` mà `depthBlur` dùng | ✅ `MaskKindParityTests.depthRangeIsGatedOnDepth`, `depthRangeSelectsTheBand`; hàng mờ trong New Mask khi `!hasDepthSource` |
+| AC-12 | **Cho** ảnh ISO 6400 · **Khi** đặt Luminance 60 và Detail 50 · **Thì** nhiễu hạt giảm đo được mà vân da **không** mất hẳn (so bằng phương sai cục bộ trên hai vùng) | ✅ `NoiseReductionSplitTests` (ảnh tổng hợp: nhiễu ±0.08 trên nền phẳng và vân ±0.12 — phương sai nhiễu còn <25%, vân giữ >60%; đo thực ~9% và ~70%) |
+| AC-13 | **Cho** một ảnh bất kỳ · **Khi** đọc chuỗi render · **Thì** khử nhiễu chạy **trước** sharpening | ✅ `DetailPassOrderTests` trên `PhotoRenderService.detailPassOrder` |
 | AC-14 | **Cho** ảnh JPG chụp bằng ống kính **có** trong bảng hồ sơ · **Khi** bật Lens Corrections · **Thì** méo hình được nắn theo hệ số của ống kính đó | ⚠️ chưa có |
 | AC-15 | **Cho** ảnh JPG chụp bằng ống kính **không** khớp Lensfun · **Khi** mở Optics · **Thì** nói rõ "chưa có hồ sơ cho ống kính này" **và** có lối chọn ống thủ công, không có nút chết | ⚠️ chưa có |
-| AC-16 | **Cho** bản dựng bất kỳ · **Khi** tìm trong giao diện · **Thì** **không** có chữ "AI" ở bất cứ đâu thuộc khử nhiễu | ⚠️ chưa có — grep trong `Tools/gate` |
+| AC-16 | **Cho** bản dựng bất kỳ · **Khi** tìm trong giao diện · **Thì** **không** có chữ "AI" ở bất cứ đâu thuộc khử nhiễu | ✅ `EditorParityTests.noiseReductionNeverClaimsToBeAI` (tên nhóm, tên ngắn, tên đầy đủ của mọi slider Detail/RAW) |
 
 ## 9b. Tương thích recipe
 
