@@ -98,6 +98,8 @@ Mọi câu đã chốt 2026-09-23. Việc còn chặn `/spec` là **spike** ở 
    Warp, trộn đường nối, bù phơi sáng, bộ nhớ khi render theo tile. Mục nào đã chốt ở câu 6 mà spike
    không làm nổi thì quay lại người dùng trước khi viết AC. **Ảnh thử: bộ dữ liệu panorama giấy phép mở
    (CC0/CC-BY)**, cả một hàng lẫn lưới; ghi nguồn và giấy phép cạnh dữ liệu test.
+   **Kết quả 2026-09-23:** [2026-09-23-panorama-stitch-spike.md](2026-09-23-panorama-stitch-spike.md) — khả thi,
+   với ba điều kiện: tự viết dò điểm đặc trưng (Vision không dùng được), xuất JPEG (HEIC ngốn RAM), render theo dải.
 5. ~~Tấm ghép có được viewer panorama không?~~ — **chốt 2026-09-23: mở lối View Panorama theo tỉ lệ
    khung** (ngưỡng cụ thể, ví dụ ≥ 2:1, để `/spec` chốt), áp cho mọi ảnh rộng chứ không riêng tấm ghép.
 6. ~~Chất lượng "đủ tốt"~~ — **chốt 2026-09-23: kiểu Lightroom đầy đủ**: ba phép chiếu (Spherical,
