@@ -475,3 +475,14 @@ grid as a near-black frame; that is the fixture, not a bug.
   thẻ film look có ảnh) và `tap` "Cancel" khi sheet đang mở (hai phần tử cùng nhãn: nút sheet và nút thanh
   commit). Không có timeout, lượt chạy bị cắt ở mốc 10 phút của Bash và chồng lên lượt sau. Cần timeout cho
   từng bước và ưu tiên phần tử trong sheet đang trình bày.
+
+## FS-14 sweep (2026-09-23)
+
+- `CLAUDE.md:82` says the widget and share extension link `ShotDexKit`. `ShotDex.xcodeproj/project.pbxproj`
+  shows only the app and `ShotDexTests` link it. One of the two is wrong; fix whichever it is.
+- `PhotoStackScreen.save()` (`ShotDex/Features/Editing/PhotoStackScreen.swift:210`) saves the new asset
+  and dismisses, without `indexPipeline.indexSingle(assetId:)` or `photoLibrary.publishAppCreatedAsset()`.
+  Collage does both (`CollageEditorModel.swift:683`), so a combined photo is missing from the index until
+  the next incremental pass.
+- `import Accelerate` at `ShotDexKit/Render/PhotoRenderService.swift:1` is unused — no vImage, vDSP,
+  BNNS or simd symbol appears anywhere in the repo.
