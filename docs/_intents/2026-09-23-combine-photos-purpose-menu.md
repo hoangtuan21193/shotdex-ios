@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-23 |
 | Trạng thái | accepted |
-| Tiến độ | **đang làm** (2026-09-23) — task 3/9, 1/15 AC xanh (AC-4); menu con đã build, chưa chụp màn |
+| Tiến độ | **đang làm** (2026-09-23) — task 4/9, 1/15 AC xanh (AC-4); menu con và màn theo việc đã build, chưa chụp màn |
 | Nguồn | phản hồi người dùng (trong lúc soạn FS-14 panorama) |
 | Spec sinh ra từ đây | [FS-01.09](../02-functional-spec/FS-01-library/09-photo-stacking.md) |
 

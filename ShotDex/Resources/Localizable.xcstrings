@@ -605,6 +605,9 @@
     "Auto": {},
     "Auto Sync": {},
     "Autoplay Videos": {},
+    "Average": {
+      "comment": "Stack Exposures picker: equal-weight average of every frame"
+    },
     "Back": {
       "comment": "Video Studio: leaves the editor"
     },
@@ -717,6 +720,9 @@
     "Clear Track": {
       "comment": "Video Studio colour: puts the window back where it was drawn"
     },
+    "Clears people and cars that moved between frames. Shoot from a tripod.": {
+      "comment": "Stack Exposures: what Darken is for"
+    },
     "Clip %lld": {
       "comment": "Video Studio viewer header: the video clip under the playhead, by its position on the track"
     },
@@ -750,7 +756,6 @@
     },
     "Colour": {},
     "Colour controls": {},
-    "Combine %lld Photos": {},
     "Combine Photos": {},
     "Compare": {},
     "Conditions": {},
@@ -835,7 +840,9 @@
         }
       }
     },
-    "Darken": {},
+    "Darken": {
+      "comment": "Stack Exposures picker: keep the darkest pixel"
+    },
     "Data Rate": {
       "comment": "Info panel row label"
     },
@@ -1066,6 +1073,9 @@
       "comment": "Info panel row label"
     },
     "Focal Length Style": {},
+    "Focus Stack": {
+      "comment": "Combine Photos submenu row and screen title: focus stacking"
+    },
     "Following the subject from the playhead.": {
       "comment": "Video Studio colour: the tracker is running"
     },
@@ -1296,6 +1306,12 @@
       "comment": "Compare context menu: marks every other photo for deletion"
     },
     "Keep Screen Awake While Indexing": {},
+    "Keeps the brightest light from every frame — star trails, traffic, fireworks.": {
+      "comment": "Stack Exposures: what Lighten is for"
+    },
+    "Keeps the sharpest part of every frame, for depth of field no single shot can reach.": {
+      "comment": "Focus Stack: what the screen does"
+    },
     "Keywords": {
       "comment": "Info panel row label"
     },
@@ -1332,6 +1348,9 @@
     "Library up to date.": {},
     "Light Source": {
       "comment": "Info panel row label"
+    },
+    "Lighten": {
+      "comment": "Stack Exposures picker: keep the brightest pixel"
     },
     "Limited Access": {},
     "Limits how many bars/slices appear.": {},
@@ -1723,6 +1742,9 @@
     "Panasonic Lumix and Varicam.": {
       "comment": "Video Studio colour: where V-Log comes from"
     },
+    "Panorama": {
+      "comment": "Combine Photos submenu row: stitch a panorama"
+    },
     "Panoramas": {},
     "Parade": {
       "comment": "Video Studio scope: R, G and B waveforms side by side"
@@ -1900,6 +1922,9 @@
       "comment": "Video Studio scopes: parade"
     },
     "Redo": {},
+    "Reduces noise, or smooths water and clouds like a long exposure.": {
+      "comment": "Stack Exposures: what Average is for"
+    },
     "Reference": {},
     "Refresh Now": {},
     "Region": {},
@@ -2182,6 +2207,9 @@
     },
     "Split into series by": {},
     "Stack Everything Together": {},
+    "Stack Exposures": {
+      "comment": "Combine Photos submenu row and screen title: average, lighten or darken a sequence of one scene"
+    },
     "Start": {},
     "Start Weeks on Monday": {},
     "Statistics": {},

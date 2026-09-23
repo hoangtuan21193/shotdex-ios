@@ -20,26 +20,6 @@ public enum PhotoStackMode: String, CaseIterable, Identifiable, Sendable {
 
     public var id: String { rawValue }
 
-    public var title: String {
-        switch self {
-        case .average: "Average"
-        case .lighten: "Lighten"
-        case .darken: "Darken"
-        case .focusStack: "Focus Stack"
-        }
-    }
-
-    /// One line under the picker. Says what the mode is *for*, not what it does
-    /// arithmetically — the arithmetic is visible in the preview.
-    public var explanation: String {
-        switch self {
-        case .average: "Every frame at equal weight, like a film double exposure."
-        case .lighten: "Keeps the brightest pixel of each spot — light trails and fireworks."
-        case .darken: "Keeps the darkest — clears people out of a tripod sequence."
-        case .focusStack: "Keeps the sharpest pixel of each spot, for macro depth of field."
-        }
-    }
-
     /// Whether the mode needs the frames lined up first. Blending modes tolerate
     /// a little drift (it reads as motion); a focus stack does not — a two-pixel
     /// shift turns the sharpness comparison into noise.

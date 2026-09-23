@@ -74,7 +74,7 @@ struct PhotoStackScreen: View {
             Button("Cancel") { dismiss() }
                 .foregroundStyle(.white)
             Spacer()
-            Text("Combine \(presentation.assets.count) Photos")
+            Text(presentation.purpose.title)
                 .font(EditorTheme.sidebarTitle)
                 .foregroundStyle(.white)
             Spacer()
@@ -111,15 +111,18 @@ struct PhotoStackScreen: View {
 
     private var panel: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
-            Picker("Mode", selection: $mode) {
-                ForEach(PhotoStackMode.allCases) { mode in
-                    Text(mode.title).tag(mode)
+            // Only Stack Exposures has a choice to make; Focus Stack is one job.
+            if presentation.purpose.showsModePicker {
+                Picker("Mode", selection: $mode) {
+                    ForEach(presentation.purpose.stackModes) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
                 }
+                .pickerStyle(.segmented)
+                .onChange(of: mode) { _, _ in renderPreview() }
             }
-            .pickerStyle(.segmented)
-            .onChange(of: mode) { _, _ in renderPreview() }
 
-            Text(mode.explanation)
+            Text(mode.purposeDescription)
                 .font(EditorTheme.rowLabel)
                 .foregroundStyle(EditorTheme.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
