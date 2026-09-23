@@ -320,6 +320,7 @@ final class PhotoStackModel {
             do {
                 session = try PhotoStackSession()
                 var frames: [CIImage] = []
+                var urls: [URL] = []
                 var firstFrameProperties: [String: Any] = [:]
                 var missing = 0
                 for (index, asset) in assets.enumerated() {
@@ -333,6 +334,7 @@ final class PhotoStackModel {
                         firstFrameProperties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any] ?? [:]
                     }
                     frames.append(image)
+                    urls.append(url)
                 }
                 // The preview had these frames; a save with fewer would not be
                 // the picture the user chose to keep.
@@ -342,19 +344,35 @@ final class PhotoStackModel {
 
                 try Task.checkCancellation()
                 statusText = workingText
-                let combined: CIImage
+                let cgImage: CGImage
                 if mode == .focusStack {
-                    // Same frames, same order as the preview, so every stroke's
-                    // frame index names the same photo at full resolution.
-                    let prepared = try await renderer.prepareFocusStack(images: frames)
-                    let stacked = await renderer.focusStack(prepared, options: focusOptions)
-                    combined = retouchStrokes.isEmpty
-                        ? stacked
-                        : await renderer.retouched(stacked, prepared: prepared, strokes: retouchStrokes)
+                    // Streamed from the session folder, one frame decoded at a
+                    // time, so a long bracket costs no more memory than a short
+                    // one (FS-01.10 §6). Same frames, same order as the
+                    // preview, so every stroke's frame index names the same
+                    // photo at full resolution.
+                    frames = []
+                    let files = urls
+                    let stacked = try await renderer.streamedFocusStack(
+                        frameCount: files.count,
+                        frame: { CIImage(contentsOf: files[$0], options: [.applyOrientationProperty: true]) },
+                        options: focusOptions,
+                        strokes: retouchStrokes,
+                        progress: { [weak self] done, total in
+                            Task { @MainActor in
+                                // A percentage, not "frame N of M": Weighted
+                                // reads every frame twice.
+                                self?.statusText = String(
+                                    localized: "Stacking… \(done * 100 / max(1, total))%",
+                                    comment: "Focus Stack status while saving: how far the full-resolution stack has got, as a percentage"
+                                )
+                            }
+                        }
+                    )
+                    cgImage = stacked.image
                 } else {
-                    combined = try await renderer.combine(images: frames, mode: mode)
+                    cgImage = try await renderer.render(renderer.combine(images: frames, mode: mode))
                 }
-                let cgImage = try await renderer.render(combined)
 
                 try Task.checkCancellation()
                 statusText = String(localized: "Saving…", comment: "Stack screen status while the new photo is written")

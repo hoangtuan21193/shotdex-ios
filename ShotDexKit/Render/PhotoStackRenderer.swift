@@ -228,15 +228,25 @@ public actor PhotoStackRenderer {
     /// frames, handed back as Core Image transforms moving each frame onto the
     /// base, or nil for a frame that would not line up.
     private func alignedMaps(_ frames: [CIImage], extent: CGRect) -> [CGAffineTransform?] {
-        let scale = min(1, CGFloat(FocusStackAligner.workingEdge) / max(extent.width, extent.height))
-        let shrink = CGAffineTransform(scaleX: scale, y: scale)
-        let small: [CGImage] = frames.compactMap { frame in
-            let scaled = frame.transformed(by: shrink)
-            return context.createCGImage(scaled, from: scaled.extent.integral)
-        }
+        let small: [CGImage] = frames.compactMap { workingImage(of: $0, extent: extent, context: context) }
         guard small.count == frames.count else {
             return [.identity] + Array(repeating: nil, count: max(0, frames.count - 1))
         }
+        return Self.alignedMaps(working: small, extent: extent)
+    }
+
+    /// One frame at the aligner's working size.
+    func workingImage(of frame: CIImage, extent: CGRect, context: CIContext) -> CGImage? {
+        let scale = min(1, CGFloat(FocusStackAligner.workingEdge) / max(extent.width, extent.height))
+        let scaled = frame.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+        return context.createCGImage(scaled, from: scaled.extent.integral)
+    }
+
+    /// `FocusStackAligner` on frames already at working size, as Core Image
+    /// transforms at full size.
+    static func alignedMaps(working small: [CGImage], extent: CGRect) -> [CGAffineTransform?] {
+        let scale = min(1, CGFloat(FocusStackAligner.workingEdge) / max(extent.width, extent.height))
+        let shrink = CGAffineTransform(scaleX: scale, y: scale)
         // The aligner answers in working pixels, top-left origin. Core Image
         // wants full-resolution pixels, bottom-left origin: shrink, apply, grow
         // back — each side of that flipped about the frame's height.
@@ -320,7 +330,7 @@ public actor PhotoStackRenderer {
 
     /// "This frame is sharper here", as a clean 0 or 1 with a narrow ramp so a
     /// near tie does not flip on noise.
-    private static let decisionKernel = CIColorKernel(source: """
+    static let decisionKernel = CIColorKernel(source: """
         kernel vec4 focusDecision(__sample candidate, __sample best) {
             float m = clamp((candidate.r - best.r) * 200.0, 0.0, 1.0);
             return vec4(m, m, m, 1.0);
@@ -350,7 +360,7 @@ public actor PhotoStackRenderer {
         return weightedResolveKernel?.apply(extent: extent, arguments: [colour, weight]) ?? frames[0]
     }
 
-    private static let peakKernel = CIColorKernel(source: """
+    static let peakKernel = CIColorKernel(source: """
         kernel vec4 focusPeak(__sample a, __sample b) {
             float m = max(a.r, b.r);
             return vec4(m, m, m, 1.0);
@@ -360,7 +370,7 @@ public actor PhotoStackRenderer {
     // The floor on w keeps every term inside a half float's normal range —
     // Core Image's working format. Below it the sums lose precision and the
     // divide drifts the picture's brightness.
-    private static let weightedColourKernel = CIColorKernel(source: """
+    static let weightedColourKernel = CIColorKernel(source: """
         kernel vec4 focusWeightedColour(__sample total, __sample frame, __sample sharp, __sample peak) {
             float r = sharp.r / max(peak.r, 0.0000001);
             float w = r * r * r * r + 0.001;
@@ -368,7 +378,7 @@ public actor PhotoStackRenderer {
         }
         """)
 
-    private static let weightedTotalKernel = CIColorKernel(source: """
+    static let weightedTotalKernel = CIColorKernel(source: """
         kernel vec4 focusWeightedTotal(__sample total, __sample sharp, __sample peak) {
             float r = sharp.r / max(peak.r, 0.0000001);
             float w = r * r * r * r + 0.001;
@@ -376,7 +386,7 @@ public actor PhotoStackRenderer {
         }
         """)
 
-    private static let weightedResolveKernel = CIColorKernel(source: """
+    static let weightedResolveKernel = CIColorKernel(source: """
         kernel vec4 focusWeightedResolve(__sample colour, __sample weight) {
             return vec4(colour.rgb / max(weight.r, 0.001), 1.0);
         }
@@ -420,7 +430,7 @@ public actor PhotoStackRenderer {
         }
         """)
 
-    private static func smoothed(_ image: CIImage, radius: Int) -> CIImage {
+    static func smoothed(_ image: CIImage, radius: Int) -> CIImage {
         guard radius > 0 else { return image }
         let blur = CIFilter.gaussianBlur()
         blur.inputImage = image
@@ -430,7 +440,7 @@ public actor PhotoStackRenderer {
 
     /// Scales a frame onto the base frame's extent. Same-size stacks — the
     /// normal case — pass straight through.
-    private static func fitted(_ image: CIImage, to extent: CGRect) -> CIImage {
+    static func fitted(_ image: CIImage, to extent: CGRect) -> CIImage {
         guard image.extent != extent, image.extent.width > 0, image.extent.height > 0 else {
             return image
         }
