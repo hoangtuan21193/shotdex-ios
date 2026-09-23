@@ -99,6 +99,8 @@ Mọi thay đổi setting hiện lên preview **ngay**, chất lượng thấp t
 - Save chạy đường full-res ([02](02-stitching-pipeline.md)): tải bản gốc cỡ đầy đủ, ghép theo dải, ghi
   file, tạo asset mới. Dung lượng trống đã kiểm từ lúc chỉnh (§4b); kiểm lại một lần khi bấm Save.
 - Cancel lúc đang lưu: không asset nào được tạo, thư mục tạm của phiên bị xoá.
+- Cancel trên top bar (chưa lưu): về lưới, **giữ nguyên lựa chọn** — như mọi việc trong menu Combine Photos
+  ([FS-01.09 §3](../FS-01-library/09-photo-stacking.md)).
 - **Lưu xong**: đóng màn, thoát chế độ chọn, **mở ảnh vừa lưu trong viewer** — ảnh mới nằm theo ngày chụp
   của khung đầu, có thể cách chỗ đang cuộn hàng nghìn ảnh; không mở ra thì người dùng phải đi tìm nó.
 - **Màn hình luôn sáng** suốt lúc lưu (tắt khoá tự động), bật lại ngay khi xong, lỗi hoặc Cancel.

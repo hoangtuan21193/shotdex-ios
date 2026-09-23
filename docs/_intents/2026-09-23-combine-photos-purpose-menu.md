@@ -6,7 +6,7 @@
 | Ngày | 2026-09-23 |
 | Trạng thái | accepted |
 | Nguồn | phản hồi người dùng (trong lúc soạn FS-14 panorama) |
-| Spec sinh ra từ đây | (điền khi sang Design) |
+| Spec sinh ra từ đây | [FS-01.09](../02-functional-spec/FS-01-library/09-photo-stacking.md) |
 
 ## Problem — vấn đề
 
