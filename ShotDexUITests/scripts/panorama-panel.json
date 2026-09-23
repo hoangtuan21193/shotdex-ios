@@ -1,0 +1,21 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Select" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "tapIndex", "label": "Photo, file type PHOTO", "type": "cell", "index": 0 },
+    { "action": "tapIndex", "label": "Photo, file type PHOTO", "type": "cell", "index": 1 },
+    { "action": "tapIndex", "label": "Photo, file type PHOTO", "type": "cell", "index": 2 },
+    { "action": "wait", "seconds": 2 },
+    { "action": "tap", "label": "More selection actions" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "tap", "label": "Combine Photos" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "dump", "name": "submenu" },
+    { "action": "tap", "label": "Panorama" },
+    { "action": "wait", "seconds": 40 },
+    { "action": "dump", "name": "panorama" },
+    { "action": "wait", "seconds": 150 }
+  ]
+}
