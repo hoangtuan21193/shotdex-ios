@@ -95,6 +95,163 @@ public enum PanoramaCIBlender {
         return resolveKernel.apply(extent: canvasExtent, arguments: [colourTotal, weightTotal])
     }
 
+    /// The blend that gets saved: detail split by scale, each scale joined with
+    /// a mask of matching softness.
+    ///
+    /// Same idea as the reference, arranged the way Core Image wants it. The
+    /// bands come from blurring the warped frame at doubling radii rather than
+    /// from a chain of five-tap passes — the same pyramid, a fifth of the
+    /// nodes, and Core Image's own Gaussian is the part of this it is best at.
+    ///
+    /// Needs a float working format. Band detail is a difference and is
+    /// routinely negative, and in an eight-bit context every one of those
+    /// becomes zero — which looks like a blend that simply does not work.
+    public static func sharp(
+        canvas: PanoramaCanvas,
+        sources: [PanoramaCISource],
+        focal: Double,
+        bandCount: Int = PanoramaCompositor.bandCount
+    ) -> CIImage? {
+        guard canvas.width > 0, canvas.height > 0, !sources.isEmpty, bandCount >= 1 else { return nil }
+        guard let maximumKernel, let maskKernel, let bandKernel,
+              let bandWeightKernel, let resolveKernel, let differenceKernel
+        else { return nil }
+
+        let canvasExtent = CGRect(x: 0, y: 0, width: canvas.width, height: canvas.height)
+        var colours: [CIImage] = []
+        var weights: [CIImage] = []
+        for source in sources {
+            guard let pair = warped(canvas: canvas, source: source, focal: focal) else { continue }
+            colours.append(pair.colour)
+            weights.append(pair.weight)
+        }
+        guard !colours.isEmpty else { return nil }
+
+        // Which frame owns each pixel: the one that saw it most squarely. Found
+        // in two passes because a per-pixel argmax across N images is not a
+        // thing one kernel can do — first the running maximum, then each
+        // frame's own claim against it.
+        var runningMaximum = weights[0]
+        for weight in weights.dropFirst() {
+            guard let next = maximumKernel.apply(
+                extent: canvasExtent, arguments: [runningMaximum, weight]
+            ) else { return nil }
+            runningMaximum = next
+        }
+        var masks: [CIImage] = []
+        for weight in weights {
+            guard let mask = maskKernel.apply(
+                extent: canvasExtent, arguments: [weight, runningMaximum]
+            ) else { return nil }
+            masks.append(mask)
+        }
+
+        // How wide the coarsest band may reach.
+        //
+        // Doubling from one pixel is the textbook pyramid, but the top of it
+        // has to stay *local*: a band that blurs across the whole picture is no
+        // longer the lowest frequency of a place, it is the average of
+        // everything, and the blend then pulls every frame towards one level —
+        // two frames a stop apart come out the same grey. A sixteenth of the
+        // shorter side keeps the coarsest band wider than any seam and far
+        // narrower than the panorama.
+        let coarsestSigma = max(2.0, Double(min(canvas.width, canvas.height)) / 16)
+
+        var accumulated: CIImage?
+        for band in 0..<bandCount {
+            let last = band == bandCount - 1
+            let radius = Float(min(Double(1 << band), coarsestSigma))
+            var bandTotal: CIImage?
+            var maskTotal: CIImage?
+
+            for index in colours.indices {
+                // Clamped before blurring: a blur that reaches past a frame's
+                // edge otherwise pulls in nothing and rings the panorama with a
+                // dark halo. Repeating the edge is the cheap stand-in for the
+                // reference's fill.
+                let base = colours[index].clampedToExtent()
+                let coarse = base.applyingGaussianBlur(sigma: Double(radius))
+                let detail: CIImage
+                if last {
+                    detail = coarse.cropped(to: canvasExtent)
+                } else {
+                    let finerSigma = min(Double(1 << band) / 2, coarsestSigma)
+                    let finer = band == 0 ? base : base.applyingGaussianBlur(sigma: finerSigma)
+                    guard let difference = differenceKernel.apply(
+                        extent: canvasExtent,
+                        arguments: [finer.cropped(to: canvasExtent), coarse.cropped(to: canvasExtent)]
+                    ) else { return nil }
+                    detail = difference
+                }
+                let softMask = masks[index].clampedToExtent()
+                    .applyingGaussianBlur(sigma: Double(radius))
+                    .cropped(to: canvasExtent)
+
+                guard let nextBand = bandKernel.apply(
+                    extent: canvasExtent,
+                    arguments: [bandTotal ?? transparent(canvasExtent), detail, softMask]
+                ), let nextMask = bandWeightKernel.apply(
+                    extent: canvasExtent,
+                    arguments: [maskTotal ?? transparent(canvasExtent), softMask]
+                ) else { return nil }
+                bandTotal = nextBand
+                maskTotal = nextMask
+            }
+
+            guard let bandTotal, let maskTotal,
+                  let resolved = resolveKernel.apply(extent: canvasExtent, arguments: [bandTotal, maskTotal])
+            else { return nil }
+            if let running = accumulated {
+                guard let sum = sumKernel?.apply(extent: canvasExtent, arguments: [running, resolved])
+                else { return nil }
+                accumulated = sum
+            } else {
+                accumulated = resolved
+            }
+        }
+
+        // Coverage comes from the draft's own answer: the bands carry detail,
+        // not the question of where the panorama is.
+        guard let accumulated, let coverage = draft(canvas: canvas, sources: sources, focal: focal),
+              let masked = coverageKernel?.apply(extent: canvasExtent, arguments: [accumulated, coverage])
+        else { return accumulated }
+        return masked
+    }
+
+    private static func transparent(_ extent: CGRect) -> CIImage {
+        CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 1)).cropped(to: extent)
+    }
+
+    /// One frame, warped onto the canvas, with its say beside it.
+    static func warped(
+        canvas: PanoramaCanvas,
+        source: PanoramaCISource,
+        focal: Double
+    ) -> (colour: CIImage, weight: CIImage)? {
+        guard let warpKernel, let rampKernel, let gainKernel else { return nil }
+        let canvasExtent = CGRect(x: 0, y: 0, width: canvas.width, height: canvas.height)
+        let sourceExtent = CGRect(x: 0, y: 0, width: source.width, height: source.height)
+        let arguments = warpArguments(canvas: canvas, source: source, focal: focal)
+        guard let ramp = rampKernel.apply(
+            extent: sourceExtent,
+            roiCallback: { _, rect in rect },
+            arguments: [Float(source.width), Float(source.height)]
+        ), let colour = warpKernel.apply(
+            extent: canvasExtent,
+            roiCallback: { _, rect in sourceRegion(for: rect, canvas: canvas, source: source, focal: focal) },
+            image: source.image,
+            arguments: arguments
+        ), let weight = warpKernel.apply(
+            extent: canvasExtent,
+            roiCallback: { _, rect in sourceRegion(for: rect, canvas: canvas, source: source, focal: focal) },
+            image: ramp,
+            arguments: arguments
+        ), let gained = gainKernel.apply(
+            extent: canvasExtent, arguments: [colour, Float(source.gain)]
+        ) else { return nil }
+        return (gained, weight)
+    }
+
     // MARK: Arguments
 
     /// Everything the warp kernel needs, worked out once per frame on the CPU.
@@ -276,6 +433,70 @@ public enum PanoramaCIBlender {
             if (colour.a <= 0.0) { return total; }
             float w = weight.r * colour.a;
             return vec4(total.rgb + vec3(w, w, w), 1.0);
+        }
+        """)
+
+    /// Running maximum of two weight images, for finding which frame owns a
+    /// pixel without a kernel that takes them all at once.
+    static let maximumKernel = CIColorKernel(source: """
+        kernel vec4 panoramaMaximum(__sample a, __sample b) {
+            float wa = a.r * a.a;
+            float wb = b.r * b.a;
+            float w = max(wa, wb);
+            return vec4(w, w, w, 1.0);
+        }
+        """)
+
+    /// One frame's claim: it owns the pixel if its say is the largest there.
+    ///
+    /// A hard claim, softened per band afterwards. Starting soft instead blurs
+    /// fine detail from two frames together, which is the double image
+    /// multi-band blending exists to avoid.
+    static let maskKernel = CIColorKernel(source: """
+        kernel vec4 panoramaMask(__sample weight, __sample maximum) {
+            float w = weight.r * weight.a;
+            float m = (w > 0.0 && w >= maximum.r - 0.000001) ? 1.0 : 0.0;
+            return vec4(m, m, m, 1.0);
+        }
+        """)
+
+    static let differenceKernel = CIColorKernel(source: """
+        kernel vec4 panoramaDifference(__sample fine, __sample coarse) {
+            return vec4(fine.rgb - coarse.rgb, 1.0);
+        }
+        """)
+
+    static let gainKernel = CIColorKernel(source: """
+        kernel vec4 panoramaGain(__sample colour, float gain) {
+            if (colour.a <= 0.0) { return vec4(0.0, 0.0, 0.0, 0.0); }
+            return vec4(colour.rgb / colour.a * gain, colour.a);
+        }
+        """)
+
+    static let bandKernel = CIColorKernel(source: """
+        kernel vec4 panoramaBand(__sample total, __sample detail, __sample mask) {
+            return vec4(total.rgb + detail.rgb * mask.r, 1.0);
+        }
+        """)
+
+    static let bandWeightKernel = CIColorKernel(source: """
+        kernel vec4 panoramaBandWeight(__sample total, __sample mask) {
+            return vec4(total.rgb + vec3(mask.r, mask.r, mask.r), 1.0);
+        }
+        """)
+
+    static let sumKernel = CIColorKernel(source: """
+        kernel vec4 panoramaSum(__sample a, __sample b) {
+            return vec4(a.rgb + b.rgb, 1.0);
+        }
+        """)
+
+    /// Puts the draft's coverage back on the banded result, so the crop that
+    /// follows reads the same shape either way.
+    static let coverageKernel = CIColorKernel(source: """
+        kernel vec4 panoramaCoverage(__sample colour, __sample reference) {
+            if (reference.a <= 0.0) { return vec4(0.0, 0.0, 0.0, 0.0); }
+            return vec4(colour.rgb, 1.0);
         }
         """)
 

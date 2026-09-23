@@ -233,6 +233,100 @@ struct PanoramaCIBlenderTests {
         #expect(result.mean < 0.03, "mean difference \(result.mean)")
     }
 
+    // MARK: The sharp blend
+
+    /// The biggest jump between two side-by-side pixels along the middle row.
+    private func worstHorizontalStep(_ image: PanoramaRGBImage) -> Float {
+        let y = image.height / 2
+        var worst: Float = 0
+        for x in 1..<image.width {
+            let index = y * image.width + x
+            guard image.coverage[index] > 0, image.coverage[index - 1] > 0 else { continue }
+            worst = max(worst, abs(image.pixels[3 * index] - image.pixels[3 * (index - 1)]))
+        }
+        return worst
+    }
+
+    /// What multi-band blending is for: two frames that disagree about
+    /// brightness must not leave a step where they meet. The same property the
+    /// reference is held to, asked of the path that ships.
+    @Test func theSharpBlendTakesOutTheStep() throws {
+        let yaws = [-9.0, 9.0]
+        let cameras = yaws.map { camera(yaw: $0) }
+        let canvas = try #require(
+            PanoramaProjection.canvas(
+                kind: .spherical, cameras: cameras, focal: focal,
+                imageWidth: frameWidth, imageHeight: frameHeight
+            )
+        )
+        // Flat frames, one clearly brighter: a step and nothing else, so the
+        // measurement is about the join.
+        func flat(_ level: Float) -> PanoramaRGBImage {
+            var image = PanoramaRGBImage(width: frameWidth, height: frameHeight)
+            for index in 0..<(frameWidth * frameHeight) {
+                for channel in 0..<3 { image.pixels[3 * index + channel] = level }
+                image.coverage[index] = 1
+            }
+            return image
+        }
+        let frames = [flat(0.35), flat(0.65)]
+        let sources = yaws.indices.map {
+            PanoramaCISource(
+                image: ciImage(from: frames[$0]), width: frameWidth, height: frameHeight,
+                camera: cameras[$0]
+            )
+        }
+
+        let sharp = readBack(
+            try #require(PanoramaCIBlender.sharp(canvas: canvas, sources: sources, focal: focal)),
+            width: canvas.width, height: canvas.height
+        )
+        let draft = readBack(
+            try #require(PanoramaCIBlender.draft(canvas: canvas, sources: sources, focal: focal)),
+            width: canvas.width, height: canvas.height
+        )
+
+        // Joined hard, these two frames leave a step of 0.30. Both blends have
+        // to take nearly all of that out; neither is required to be smoother
+        // than the other, and the sharp one will not be — a weighted average is
+        // as smooth as a join can get, and multi-band deliberately keeps more
+        // local structure than that.
+        #expect(worstHorizontalStep(sharp) < 0.1, "sharp step \(worstHorizontalStep(sharp))")
+        #expect(worstHorizontalStep(draft) < 0.1, "draft step \(worstHorizontalStep(draft))")
+
+        // And the brightness has to survive: the middle of each frame keeps its
+        // own level rather than drifting towards the average of the two, which
+        // is what happens when the coarsest band blurs across the whole
+        // picture instead of staying local.
+        //
+        // The camera turned to negative yaw looks to the *right* of the canvas,
+        // so frame 0 — the darker one — is on the right.
+        let leftIndex = (canvas.height / 2) * canvas.width + canvas.width / 8
+        let rightIndex = (canvas.height / 2) * canvas.width + canvas.width * 7 / 8
+        #expect(abs(sharp.pixels[3 * leftIndex] - 0.65) < 0.08, "left \(sharp.pixels[3 * leftIndex])")
+        #expect(abs(sharp.pixels[3 * rightIndex] - 0.35) < 0.08, "right \(sharp.pixels[3 * rightIndex])")
+    }
+
+    /// The sharp blend must land on the same picture as the draft — same size,
+    /// same coverage — or a control adjusted against one would move the picture
+    /// when the other arrived.
+    @Test func sharpAndDraftShareTheirGeometry() throws {
+        let (canvas, _, sources, _) = try #require(scene(yaws: [-8, 8]))
+        let sharp = readBack(
+            try #require(PanoramaCIBlender.sharp(canvas: canvas, sources: sources, focal: focal)),
+            width: canvas.width, height: canvas.height
+        )
+        let draft = readBack(
+            try #require(PanoramaCIBlender.draft(canvas: canvas, sources: sources, focal: focal)),
+            width: canvas.width, height: canvas.height
+        )
+        var disagreements = 0
+        for index in 0..<(canvas.width * canvas.height) where (sharp.coverage[index] > 0.5) != (draft.coverage[index] > 0.5) {
+            disagreements += 1
+        }
+        #expect(disagreements == 0, "coverage differed on \(disagreements) pixels")
+    }
+
     @Test func bothPathsCoverTheSamePicture() throws {
         let (canvas, frames, sources, placed) = try #require(scene(yaws: [-8, 8]))
         let reference = try #require(
