@@ -23,6 +23,7 @@ struct SmartAlbumDetailScreen: View {
     @State private var isComparePresented = false
     @State private var compressionPresentation: CompressionPresentation?
     @State private var stackPresentation: PhotoStackPresentation?
+    @State private var panoramaPresentation: PanoramaMergePresentation?
     @State private var multiEditPresentation: MultiEditPresentation?
     @State private var collagePresentation: CollagePresentation?
     @State private var videoStudioPresentation: VideoStudioPresentation?
@@ -120,6 +121,10 @@ struct SmartAlbumDetailScreen: View {
             }
         }
         .multiEditCover($multiEditPresentation, sourceAlbum: nil, onDismiss: stopSelecting)
+        .panoramaMergeCover($panoramaPresentation, onSaved: { assetID in
+            stopSelecting()
+            navigation.openPhoto(assetId: assetID)
+        })
         .photoStackCover($stackPresentation, onSaved: { assetID in
             // A smart album is a query the new photo may not match: open it in
             // Library (FS-01.09 §3).
@@ -291,8 +296,7 @@ struct SmartAlbumDetailScreen: View {
         case .focusStack, .stackExposures:
             stackPresentation = PhotoStackPresentation(assets: assets, purpose: purpose)
         case .panorama:
-            // TODO(FS-14): the panorama merge screen opens here.
-            break
+            panoramaPresentation = PanoramaMergePresentation(assets: assets)
         }
     }
 

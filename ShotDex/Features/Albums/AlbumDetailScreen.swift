@@ -25,6 +25,7 @@ struct AlbumDetailScreen: View {
     @State private var multiEditPresentation: MultiEditPresentation?
     @State private var collagePresentation: CollagePresentation?
     @State private var stackPresentation: PhotoStackPresentation?
+    @State private var panoramaPresentation: PanoramaMergePresentation?
     @State private var videoStudioPresentation: VideoStudioPresentation?
     @State private var addToCollectionPresentation: AddToCollectionPresentation?
     @State private var swipeBaseline: [String] = []
@@ -123,6 +124,7 @@ struct AlbumDetailScreen: View {
             CollageScreen(assets: presentation.assets)
         }
         .photoStackCover($stackPresentation, onSaved: showSavedCombine)
+        .panoramaMergeCover($panoramaPresentation, onSaved: showSavedCombine)
         .fullScreenCover(item: $videoStudioPresentation) { presentation in
             VideoStudioScreen(
                 assets: presentation.assets,
@@ -289,8 +291,7 @@ struct AlbumDetailScreen: View {
         case .focusStack, .stackExposures:
             stackPresentation = PhotoStackPresentation(assets: assets, purpose: purpose)
         case .panorama:
-            // TODO(FS-14): the panorama merge screen opens here.
-            break
+            panoramaPresentation = PanoramaMergePresentation(assets: assets)
         }
     }
 

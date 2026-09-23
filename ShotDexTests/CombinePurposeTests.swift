@@ -12,10 +12,13 @@ struct CombinePurposeTests {
         #expect(CombinePurpose.allCases.map(\.title) == ["Focus Stack", "Panorama", "Stack Exposures"])
     }
 
-    @Test func panoramaWaitsForItsScreen() {
-        // FS-14 turns it on; until then the menu shows the two rows that work.
-        #expect(!CombinePurpose.panorama.isAvailable)
-        #expect(CombinePurpose.menuRows == [.focusStack, .stackExposures])
+    @Test func everyPurposeHasAScreenBehindIt() {
+        // FS-14 landed the panorama screen, so the submenu is complete: a row
+        // is listed only when the thing it opens exists.
+        for purpose in CombinePurpose.allCases {
+            #expect(purpose.isAvailable, "\(purpose.title)")
+        }
+        #expect(CombinePurpose.menuRows == [.focusStack, .panorama, .stackExposures])
     }
 
     @Test func noRowIsNamedAfterABlend() {

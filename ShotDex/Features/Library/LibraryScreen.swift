@@ -40,6 +40,7 @@ struct LibraryScreen: View {
     @State private var multiEditPresentation: MultiEditPresentation?
     @State private var pasteEditsPresentation: PasteEditsPresentation?
     @State private var stackPresentation: PhotoStackPresentation?
+    @State private var panoramaPresentation: PanoramaMergePresentation?
     /// Measured height of the limited-access banner plus the filter-token bar,
     /// handed to the grid as its top content inset (see `photoGrid`).
     @State private var topAccessoryHeight: CGFloat = 0
@@ -162,6 +163,10 @@ struct LibraryScreen: View {
             stopSelecting()
             openSavedPhoto(assetID)
         })
+        .panoramaMergeCover($panoramaPresentation, onSaved: { assetID in
+            stopSelecting()
+            openSavedPhoto(assetID)
+        })
         .fullScreenCover(item: $compressionPresentation, onDismiss: stopSelecting) { presentation in
             CompressionScreen(
                 assets: presentation.assets,
@@ -253,8 +258,7 @@ struct LibraryScreen: View {
         case .focusStack, .stackExposures:
             stackPresentation = PhotoStackPresentation(assets: assets, purpose: purpose)
         case .panorama:
-            // TODO(FS-14): the panorama merge screen opens here.
-            break
+            panoramaPresentation = PanoramaMergePresentation(assets: assets)
         }
     }
 

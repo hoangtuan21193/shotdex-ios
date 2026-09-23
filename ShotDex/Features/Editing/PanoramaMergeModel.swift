@@ -1,8 +1,10 @@
 import CoreImage
+import ImageIO
 import os
 import Photos
 import ShotDexKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// What the panorama screen is doing, and what it can say about it.
 enum PanoramaMergeState: Equatable {
@@ -68,6 +70,18 @@ final class PanoramaMergeModel {
     /// to be assumed.
     private let isCancelledFlag = OSAllocatedUnfairLock(initialState: false)
 
+    /// The picture at the frames' own resolution, Auto Crop already taken off
+    /// — the size Size is a percentage of.
+    private var fullOutputWidth = 0
+    private var fullOutputHeight = 0
+    /// The same picture before Auto Crop — what the renderer draws, and so
+    /// what the JPEG edge limit applies to.
+    private var fullCanvasWidth = 0
+    private var fullCanvasHeight = 0
+    /// Measured on the sharp preview, not assumed (FS-14.01 §4b).
+    private var bytesPerPixel: Double?
+    private var secondsPerMegapixel: Double?
+
     /// The long edge a preview is built at. The sharp tier of FS-14.01 §4.
     static let previewEdge = 1_536
 
@@ -89,8 +103,76 @@ final class PanoramaMergeModel {
     }
 
     var canSave: Bool {
-        if case .ready = state { return saveProgress == nil }
-        return false
+        guard case .ready = state, saveProgress == nil else { return false }
+        return spaceShortfall == nil
+    }
+
+    // MARK: What it will cost
+
+    /// The size, file and wait the current settings produce, or nil until a
+    /// sharp preview has been measured.
+    var sizeEstimate: PanoramaSizeEstimate? {
+        guard let bytesPerPixel, let secondsPerMegapixel else { return nil }
+        return PanoramaSizeEstimator.estimate(
+            fullWidth: fullOutputWidth,
+            fullHeight: fullOutputHeight,
+            canvasWidth: fullCanvasWidth,
+            canvasHeight: fullCanvasHeight,
+            sizeScale: sizeScale,
+            bytesPerPixel: bytesPerPixel,
+            secondsPerMegapixel: secondsPerMegapixel
+        )
+    }
+
+    /// How many bytes short the device is, or nil when there is room (or when
+    /// the volume cannot be read, in which case no warning is better than a
+    /// wrong one).
+    var spaceShortfall: Int64? {
+        guard let sizeEstimate, let available = DiskSpace.availableBytes() else { return nil }
+        let needed = PanoramaSizeEstimator.requiredFreeBytes(for: sizeEstimate)
+        return needed > available ? needed - available : nil
+    }
+
+    /// The one line under the Size slider (FS-14.01 §4b).
+    var estimateText: String? {
+        guard let sizeEstimate else { return nil }
+        let pixels = sizeEstimate.isClamped
+            ? String(
+                localized: "Will save at \(Self.count(sizeEstimate.width)) × \(Self.count(sizeEstimate.height))",
+                comment: "Shown when a panorama is too wide for the JPEG format and has to come down"
+            )
+            : "\(Self.count(sizeEstimate.width)) × \(Self.count(sizeEstimate.height)) px"
+        let size = ByteCountFormatter.string(
+            fromByteCount: Int64(sizeEstimate.bytes), countStyle: .file
+        )
+        if let shortfall = spaceShortfall {
+            let more = ByteCountFormatter.string(fromByteCount: shortfall, countStyle: .file)
+            return String(
+                localized: "~\(size) — not enough free space (need \(more) more)",
+                comment: "Panorama size estimate when the device is full"
+            )
+        }
+        return "\(pixels) · \(Self.megapixels(sizeEstimate.megapixels)) MP · ~\(size) · ~\(Self.duration(sizeEstimate.seconds))"
+    }
+
+    private static func count(_ value: Int) -> String {
+        value.formatted(.number.grouping(.automatic))
+    }
+
+    /// Whole megapixels once there are enough of them to round without lying,
+    /// one decimal below that — a small panorama reading "0 MP" says the tool
+    /// produced nothing.
+    private static func megapixels(_ value: Double) -> String {
+        value.formatted(.number.precision(.fractionLength(value < 10 ? 1 : 0)))
+    }
+
+    /// Rounded the way a wait is spoken: seconds under a minute, then minutes
+    /// and seconds. Never "0 s" — a save that fast still deserves a number.
+    private static func duration(_ seconds: Double) -> String {
+        let total = max(1, Int(seconds.rounded()))
+        let allowed: Set<Duration.UnitsFormatStyle.Unit> =
+            total < 60 ? [.seconds] : [.minutes, .seconds]
+        return Duration.seconds(total).formatted(.units(allowed: allowed, width: .narrow))
     }
 
     var isSaving: Bool { saveProgress != nil }
@@ -236,7 +318,8 @@ final class PanoramaMergeModel {
         let cropping = autoCrop
         let context = context
 
-        let rendered: CGImage? = await Task.detached(priority: .userInitiated) {
+        let started = ContinuousClock.now
+        let rendered: Render? = await Task.detached(priority: .userInitiated) {
             guard let full = PanoramaProjection.canvas(
                 kind: kind,
                 cameras: sources.map(\.camera),
@@ -274,11 +357,70 @@ final class PanoramaMergeModel {
                     height: crop.height
                 )
             }
-            return context.createCGImage(image, from: extent)
+            guard let cgImage = context.createCGImage(image, from: extent) else { return nil }
+            // The size the photo would be saved at: the full-resolution canvas
+            // with the same crop taken off it. Measured here rather than
+            // guessed, because the crop is read off the coverage and only this
+            // render knows it.
+            let fraction = (
+                width: Double(extent.width) / Double(canvas.width),
+                height: Double(extent.height) / Double(canvas.height)
+            )
+            return Render(
+                image: cgImage,
+                fullWidth: Int((Double(full.width) * fraction.width).rounded()),
+                fullHeight: Int((Double(full.height) * fraction.height).rounded()),
+                canvasWidth: full.width,
+                canvasHeight: full.height
+            )
         }.value
 
         guard !Task.isCancelled, let rendered else { return }
-        preview = rendered
+        preview = rendered.image
+        fullOutputWidth = rendered.fullWidth
+        fullOutputHeight = rendered.fullHeight
+        fullCanvasWidth = rendered.canvasWidth
+        fullCanvasHeight = rendered.canvasHeight
+        if quality == .sharp {
+            // Only the sharp tier is the work Save does, so only it can say
+            // how long Save will take. The draft is a different renderer.
+            let elapsed = started.duration(to: .now)
+            let seconds = Double(elapsed.components.seconds)
+                + Double(elapsed.components.attoseconds) * 1e-18
+            let megapixels = Double(rendered.image.width) * Double(rendered.image.height) / 1_000_000
+            if megapixels > 0 {
+                secondsPerMegapixel = seconds / megapixels
+            }
+            measureBytesPerPixel(of: rendered.image)
+        }
+    }
+
+    /// What a pixel of this picture costs as JPEG, taken by compressing the
+    /// preview at the quality the save uses — the Resize screen's method, and
+    /// the only one that accounts for how busy this particular picture is.
+    private func measureBytesPerPixel(of image: CGImage) {
+        let data = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(
+            data, UTType.jpeg.identifier as CFString, 1, nil
+        ) else { return }
+        CGImageDestinationAddImage(
+            destination, image,
+            [kCGImageDestinationLossyCompressionQuality: PanoramaExporter.jpegQuality] as CFDictionary
+        )
+        guard CGImageDestinationFinalize(destination) else { return }
+        let pixels = Double(image.width) * Double(image.height)
+        guard pixels > 0 else { return }
+        bytesPerPixel = Double(data.length) / pixels
+    }
+
+    /// One render's product: the picture, and how big that picture would be at
+    /// the frames' own resolution.
+    private struct Render: Sendable {
+        let image: CGImage
+        let fullWidth: Int
+        let fullHeight: Int
+        let canvasWidth: Int
+        let canvasHeight: Int
     }
 
     /// The Auto Crop rectangle, read off the preview's own coverage.

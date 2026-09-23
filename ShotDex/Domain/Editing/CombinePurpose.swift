@@ -21,11 +21,9 @@ enum CombinePurpose: String, CaseIterable, Identifiable, Sendable {
     /// never go missing on one device and not another.
     static var menuRows: [CombinePurpose] { allCases.filter(\.isAvailable) }
 
-    /// Whether the screen behind this row ships in this build.
-    ///
-    /// TODO(FS-14): Panorama opens the panorama merge screen, which the FS-14
-    /// session is building; it switches this on and wires the row there.
-    var isAvailable: Bool { self != .panorama }
+    /// Whether the screen behind this row ships in this build. Every row does
+    /// now that Panorama has its screen (FS-14).
+    var isAvailable: Bool { true }
 
     var title: String {
         switch self {

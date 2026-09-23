@@ -140,13 +140,27 @@ struct PanoramaStitchService {
         guard availability.first(where: { $0.kind == options.projection })?.isAvailable == true else {
             throw PanoramaStitchError.projectionUnavailable
         }
+        // The Size the user chose, brought down if it would put a side past
+        // what a JPEG can hold. The screen says so under the slider before
+        // Save; here it is enforced, so no route reaches the exporter with a
+        // canvas it can only refuse.
+        guard let full = PanoramaProjection.canvas(
+            kind: options.projection,
+            cameras: cameras,
+            focal: fullFocal,
+            imageWidth: frames[0].width,
+            imageHeight: frames[0].height
+        ) else { throw PanoramaStitchError.renderFailed }
+        let writableScale = PanoramaSizeEstimator.writableScale(
+            fullWidth: full.width, fullHeight: full.height, sizeScale: options.sizeScale
+        )
         guard let canvas = PanoramaProjection.canvas(
             kind: options.projection,
             cameras: cameras,
             focal: fullFocal,
             imageWidth: frames[0].width,
             imageHeight: frames[0].height,
-            scale: options.sizeScale
+            scale: writableScale
         ) else { throw PanoramaStitchError.renderFailed }
 
         let sources = placed.enumerated().compactMap { position, frameIndex -> PanoramaCISource? in

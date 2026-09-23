@@ -267,12 +267,15 @@ struct PanoramaMergeScreen: View {
 }
 
 extension View {
+    /// Cancel leaves the selection where it was — the photographer who backs
+    /// out of a stitch usually wants to try a different set of frames, not to
+    /// pick all of them again (FS-01.09 §3, FS-14.01 §6). Only a save ends
+    /// selection, through `onSaved`.
     func panoramaMergeCover(
         _ presentation: Binding<PanoramaMergePresentation?>,
-        onDismiss: @escaping () -> Void,
         onSaved: @escaping (String) -> Void
     ) -> some View {
-        fullScreenCover(item: presentation, onDismiss: onDismiss) { presentation in
+        fullScreenCover(item: presentation) { presentation in
             PanoramaMergeScreen(presentation: presentation, onSaved: onSaved)
         }
     }

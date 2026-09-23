@@ -24,6 +24,7 @@ struct OnThisDayScreen: View {
     @State private var isComparePresented = false
     @State private var compressionPresentation: CompressionPresentation?
     @State private var stackPresentation: PhotoStackPresentation?
+    @State private var panoramaPresentation: PanoramaMergePresentation?
     @State private var multiEditPresentation: MultiEditPresentation?
     @State private var selectedIds: [String] = []
     @State private var swipeBaseline: [String] = []
@@ -97,6 +98,10 @@ struct OnThisDayScreen: View {
             }
         }
         .multiEditCover($multiEditPresentation, sourceAlbum: nil, onDismiss: stopSelecting)
+        .panoramaMergeCover($panoramaPresentation, onSaved: { assetID in
+            stopSelecting()
+            navigation.openPhoto(assetId: assetID)
+        })
         .photoStackCover($stackPresentation, onSaved: { assetID in
             // On This Day is a query by date: open the new photo in Library
             // (FS-01.09 §3).
@@ -274,8 +279,7 @@ struct OnThisDayScreen: View {
         case .focusStack, .stackExposures:
             stackPresentation = PhotoStackPresentation(assets: assets, purpose: purpose)
         case .panorama:
-            // TODO(FS-14): the panorama merge screen opens here.
-            break
+            panoramaPresentation = PanoramaMergePresentation(assets: assets)
         }
     }
 

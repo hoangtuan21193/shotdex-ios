@@ -78,9 +78,13 @@ struct PanoramaMergePanel: View {
                 onDrag: { model.sizeScale = min(1, max(0.25, $0 / 100)) },
                 onReset: { model.sizeScale = 1 }
             )
-            Text("Full size keeps every pixel the frames had.")
+            // One line, the size the photo will be: pixels and megapixels are
+            // exact, file and wait are measured off the preview (FS-14.01 §4b).
+            Text(model.estimateText ?? String(localized: "Full size keeps every pixel the frames had."))
                 .font(EditorTheme.maskSubtitle)
-                .foregroundStyle(EditorTheme.dimText)
+                .foregroundStyle(model.spaceShortfall == nil ? AnyShapeStyle(EditorTheme.dimText) : AnyShapeStyle(Color.red))
+                .fixedSize(horizontal: false, vertical: true)
+                .animation(nil, value: model.sizeScale)
         }
     }
 }
