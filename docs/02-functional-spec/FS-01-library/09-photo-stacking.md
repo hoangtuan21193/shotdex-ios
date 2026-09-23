@@ -48,7 +48,12 @@ của việc đó và, riêng Focus Stack, dòng nhắc căn khung ("Frames are 
   dựng preview. Thân cảnh báo nói lý do cụ thể.
 - **Cancel giữ lựa chọn**: về lưới vẫn còn nguyên các ảnh đã chọn, để thử việc khác ngay trên cùng chuỗi —
   màn không còn bộ chọn mode nên đây là đường đổi việc. **Save** thì thoát chế độ chọn.
-- **Save xong mở ảnh vừa lưu trong viewer**, như FS-14 — một hành vi cho cả menu con.
+- **Save xong mở ảnh vừa lưu trong viewer**, như FS-14 — một hành vi cho cả menu con. Ảnh mới nằm ở thư
+  viện chung, không tự nằm trong album đang mở, nên theo màn đang đứng:
+  - **Library**: mở viewer tại chỗ.
+  - **Album do người dùng tạo** (thêm ảnh được): **thêm ảnh mới vào album đó**, rồi mở viewer tại chỗ — ảnh
+    ghép nằm cạnh các khung gốc của nó.
+  - **Smart Album, On This Day** (và album không cho thêm ảnh): chuyển sang tab Library và mở ảnh ở đó.
 
 ## 4. Focus stack (thuật toán hiện tại)
 
@@ -76,10 +81,12 @@ Frame sau align phải kéo giãn mép ra vô hạn **trước khi** crop, nếu
 | AC-11 | Save thành công | xong lưu | màn đóng, chế độ chọn tắt, viewer mở đúng ảnh vừa lưu | ⚠️ chưa có — `combine-menu.json` + ảnh |
 | AC-12 | Save hỏng giữa chừng | cảnh báo hiện | tiêu đề `Couldn't Save`; không còn `Couldn't Combine` ở đâu | ⚠️ chưa có — ảnh + String Catalog |
 | AC-13 | Album Detail, Smart Album Detail, On This Day, mỗi màn chọn 3 ảnh | mở ⋯ | có dòng Combine Photos với cùng menu con như Library | ⚠️ chưa có — `combine-menu.json` |
+| AC-14 | album người dùng tạo có 8 ảnh, chọn cả 8 | Focus Stack → Save | album có 9 ảnh; viewer mở ảnh mới ngay trong album | ⚠️ chưa có — `combine-menu.json` + ảnh |
+| AC-15 | Smart Album, chọn 3 ảnh | Light Trails → Save | tab Library được chọn, viewer mở ảnh mới; smart album không đổi | ⚠️ chưa có — `combine-menu.json` + ảnh |
 
-**Chưa chứng minh được:** cả 13 — chưa build.
+**Chưa chứng minh được:** cả 15 — chưa build.
 
-Quyết định 2026-09-23: cả bốn lưới · tiêu đề chỉ tên việc · lỗi chung · Cancel giữ lựa chọn · Save mở viewer.
+Quyết định 2026-09-23: cả bốn lưới · tiêu đề chỉ tên việc · lỗi chung · Cancel giữ lựa chọn · Save mở viewer; từ album người dùng thì thêm ảnh vào album, từ Smart Album / On This Day thì sang Library.
 Không còn `⚠️ CẦN QUYẾT`.
 
 ## 6. Tài liệu phải sửa khi Build

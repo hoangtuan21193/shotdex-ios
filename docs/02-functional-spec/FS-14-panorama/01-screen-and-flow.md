@@ -103,6 +103,8 @@ Mọi thay đổi setting hiện lên preview **ngay**, chất lượng thấp t
   ([FS-01.09 §3](../FS-01-library/09-photo-stacking.md)).
 - **Lưu xong**: đóng màn, thoát chế độ chọn, **mở ảnh vừa lưu trong viewer** — ảnh mới nằm theo ngày chụp
   của khung đầu, có thể cách chỗ đang cuộn hàng nghìn ảnh; không mở ra thì người dùng phải đi tìm nó.
+  Mở từ album thì theo đúng luật của menu con ([FS-01.09 §3](../FS-01-library/09-photo-stacking.md)):
+  album người dùng tạo → thêm ảnh vào album rồi mở tại chỗ; Smart Album / On This Day → sang tab Library.
 - **Màn hình luôn sáng** suốt lúc lưu (tắt khoá tự động), bật lại ngay khi xong, lỗi hoặc Cancel.
 - **Vào nền vẫn lưu tiếp**, mọi bản iOS:
   - iOS 26: xin chạy tiếp ở nền, tiến trình hiện trong giao diện của hệ thống.
