@@ -1,0 +1,16 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 20 },
+    { "action": "tap", "label": "Photo, file type", "type": "cell", "index": 2 },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Edit" },
+    { "action": "wait", "seconds": 16 },
+    { "action": "tap", "label": "Presets", "type": "button" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "screenshot", "name": "presets-top" },
+    { "action": "swipe", "x": 0.5, "y": 0.78, "direction": "up", "distance": 0.08 },
+    { "action": "wait", "seconds": 4 },
+    { "action": "screenshot", "name": "presets-scrolled" }
+  ]
+}

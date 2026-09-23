@@ -66,6 +66,9 @@ Dùng lại **nguyên** `CubeLUTParser` và `ImportedLUTStore` đang chạy cho 
 hai. Thêm: một bước render trong `PhotoRenderService` và một lối vào ở chặng **Presets** của rail.
 
 - LUT đã nhập nằm **cạnh** 48 film look, cùng một danh sách, nhóm riêng "My LUTs".
+- Trên iPhone, vùng tham số cao cố định 167pt: panel Presets tự cuộn dọc, và khi My Looks / My LUTs còn
+  trống thì chỉ hiện tiêu đề + nút (Save Current / Import .cube), bỏ câu giải thích — để dải film look
+  vừa trọn khi mở chặng. Sidebar iPad/Duo vẫn hiện câu giải thích và không lồng thêm scroll view.
 - LUT có **cường độ** như film look (`filterIntensity`), vì một LUT áp 100% thường là quá tay.
 - Recipe lưu **định danh LUT**, không lưu cả bảng tra: một LUT 33³ là ~140KB, nhân với mỗi ảnh đã sửa là
   một cách làm phình cơ sở dữ liệu. File LUT sống trong `ImportedLUTStore`.

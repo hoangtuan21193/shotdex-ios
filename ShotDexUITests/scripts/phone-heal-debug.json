@@ -1,0 +1,16 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 10 },
+    { "action": "tap", "label": "Photo, file type", "type": "cell", "index": 2 },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Edit" },
+    { "action": "wait", "seconds": 14 },
+    { "action": "tap", "label": "Heal", "type": "button" },
+    { "action": "wait", "seconds": 5 },
+    { "action": "dump", "name": "heal" },
+    { "action": "tap", "label": "Photo", "type": "other" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "dump", "name": "after" }
+  ]
+}

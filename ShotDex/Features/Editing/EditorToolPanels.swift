@@ -16,6 +16,16 @@ struct EditorFiltersPanel: View {
     var luts: ImportedLUTStore?
     /// Asks the screen to name and save the current edit as a look.
     var saveLook: (() -> Void)?
+    /// Scrolls itself when the host gives it a fixed height — the phone's
+    /// 167pt parameter zone, where My Looks and My LUTs above the film strip
+    /// no longer fit. The wide sidebar already scrolls, and a scroll view
+    /// nested in it would claim no height, so there it stays a plain stack.
+    var scrolls = false
+
+    /// Space above each group header: tighter in the phone's fixed zone,
+    /// where 12pt is the difference between the film strip's names showing
+    /// and being cut at the baseline.
+    private var headerTopPadding: CGFloat { scrolls ? 4 : 10 }
 
     @State private var isLUTImporterPresented = false
     @State private var lutImportError: String?
@@ -32,6 +42,18 @@ struct EditorFiltersPanel: View {
     }
 
     var body: some View {
+        if scrolls {
+            ScrollView(.vertical) {
+                content
+            }
+            .scrollIndicators(.hidden)
+            .scrollBounceBehavior(.basedOnSize)
+        } else {
+            content
+        }
+    }
+
+    private var content: some View {
         VStack(spacing: 0) {
             myLooks
 
@@ -79,14 +101,21 @@ struct EditorFiltersPanel: View {
                     }
                 }
                 .padding(.horizontal, 14)
-                .padding(.top, 10)
+                .padding(.top, headerTopPadding)
 
                 if lookPresets.presets.isEmpty {
-                    Text("Save an edit here and it can be put on any other photo.")
-                        .font(EditorTheme.maskSubtitle)
-                        .foregroundStyle(EditorTheme.dimText)
-                        .padding(.horizontal, 14)
-                        .padding(.bottom, 10)
+                    // The phone's 167pt zone has no line to spare: the
+                    // sentence there pushed the film strip off the bottom,
+                    // and the header's own button already says what to do.
+                    if !scrolls {
+                        Text("Save an edit here and it can be put on any other photo.")
+                            .font(EditorTheme.maskSubtitle)
+                            .foregroundStyle(EditorTheme.dimText)
+                            .padding(.horizontal, 14)
+                            .padding(.bottom, 10)
+                    } else {
+                        Color.clear.frame(height: 2)
+                    }
                 } else {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
@@ -130,7 +159,7 @@ struct EditorFiltersPanel: View {
                     .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 14)
-                .padding(.top, 10)
+                .padding(.top, headerTopPadding)
 
                 if usesDeletedLUT {
                     Label(
@@ -143,11 +172,18 @@ struct EditorFiltersPanel: View {
                 }
 
                 if luts.luts.isEmpty {
-                    Text("Import a .cube file from Files to use it as a look.")
-                        .font(EditorTheme.maskSubtitle)
-                        .foregroundStyle(EditorTheme.dimText)
-                        .padding(.horizontal, 14)
-                        .padding(.bottom, 10)
+                    // The phone's 167pt zone has no line to spare: the
+                    // sentence there pushed the film strip off the bottom,
+                    // and the header's own button already says what to do.
+                    if !scrolls {
+                        Text("Import a .cube file from Files to use it as a look.")
+                            .font(EditorTheme.maskSubtitle)
+                            .foregroundStyle(EditorTheme.dimText)
+                            .padding(.horizontal, 14)
+                            .padding(.bottom, 10)
+                    } else {
+                        Color.clear.frame(height: 2)
+                    }
                 } else {
                     ScrollView(.horizontal) {
                         LazyHStack(spacing: 8) {

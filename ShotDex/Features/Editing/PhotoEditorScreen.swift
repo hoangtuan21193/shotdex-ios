@@ -2504,7 +2504,8 @@ struct PhotoEditorScreen: View {
                 saveLook: {
                     lookName = dependencies.lookPresets.suggestedName()
                     isSaveLookPresented = true
-                }
+                },
+                scrolls: isScrollable ?? !chrome.isWideLayout
             )
         case .markup:
             // The detail panel shows only when explicitly opened. A merely selected

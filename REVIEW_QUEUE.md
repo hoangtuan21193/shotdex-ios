@@ -469,6 +469,8 @@ grid as a near-black frame; that is the fixture, not a bug.
   được (driver kẹt ở nút Cancel của sheet trên 18.6 — xem dưới). 26.5 không bị. Sheet có từ FS-03.09, không
   do FS-03.11 đẻ ra; chưa điều tra nguyên nhân (nghi `presentationDetents` trên iPad 18 đổi kích thước
   container của stage, và zoom được giữ theo tỷ lệ).
+  Cũng thấy trên **iPhone Duo inner, iOS 27.1** (script `duo-parity-tour.json`) — vậy không riêng iOS 18;
+  iPad 26.5 không bị.
 - [ ] **`Tools/ui-drive` trên iPad 18.6 kẹt vô hạn ở hai chỗ**: bước `dump` màn Presets (cây phần tử lớn — 49
   thẻ film look có ảnh) và `tap` "Cancel" khi sheet đang mở (hai phần tử cùng nhãn: nút sheet và nút thanh
   commit). Không có timeout, lượt chạy bị cắt ở mốc 10 phút của Bash và chồng lên lượt sau. Cần timeout cho
