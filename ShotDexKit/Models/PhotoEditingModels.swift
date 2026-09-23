@@ -1202,6 +1202,9 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
     /// everything after them work on the repaired picture. Belongs to this
     /// frame: never copied, synced or saved into a look (FS-03.10).
     public var healing: [PhotoHealingSpot] = []
+    /// A Lensfun lens profile for distortion correction on sources the RAW
+    /// decoder does not correct (JPEG, HEIC). Nil = no profile correction.
+    public var lensProfile: PhotoLensProfileChoice?
 
     public static let identity = PhotoEditRecipe()
 
@@ -1233,6 +1236,7 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
             && overlays.isEmpty
             && (drawing?.isEmpty ?? true)
             && healing.isEmpty
+            && lensProfile == nil
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -1250,6 +1254,7 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
         case overlays
         case drawing
         case healing
+        case lensProfile
     }
 
     public init() {}
@@ -1293,6 +1298,7 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
         // Spot by spot, like the masks: a spot in a mode this build does not
         // know is dropped, not the recipe.
         healing = try container.decodeLossyArrayIfPresent(PhotoHealingSpot.self, forKey: .healing) ?? []
+        lensProfile = try? container.decodeIfPresent(PhotoLensProfileChoice.self, forKey: .lensProfile)
     }
 
     /// Written by hand so an untouched Color tab adds no key at all — a recipe
@@ -1313,6 +1319,7 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
         if !overlays.isEmpty { try container.encode(overlays, forKey: .overlays) }
         if let drawing, !drawing.isEmpty { try container.encode(drawing, forKey: .drawing) }
         if !healing.isEmpty { try container.encode(healing, forKey: .healing) }
+        try container.encodeIfPresent(lensProfile, forKey: .lensProfile)
     }
 }
 

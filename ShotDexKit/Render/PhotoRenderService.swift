@@ -399,6 +399,7 @@ public actor PhotoRenderService {
         )
         image = Self.applyColor(recipe.color, to: image)
         image = Self.applyCurve(recipe.curve, to: image)
+        image = Self.applyLensProfile(of: recipe, source: source, to: image)
         image = Self.applyOptics(recipe.adjustments, to: image)
         image = Self.applyGeo(recipe.adjustments, to: image)
         image = Self.applyLook(of: recipe, to: image)
@@ -756,6 +757,7 @@ public actor PhotoRenderService {
         )
         image = Self.applyColor(recipe.color, to: image)
         image = Self.applyCurve(recipe.curve, to: image)
+        image = Self.applyLensProfile(of: recipe, source: source, to: image)
         image = Self.applyOptics(recipe.adjustments, to: image)
         image = Self.applyGeo(recipe.adjustments, to: image)
         image = Self.applyLook(of: recipe, to: image)
@@ -1859,6 +1861,26 @@ public actor PhotoRenderService {
 
     /// Mixes the filtered image back over the unfiltered one so a preset can be
     /// dialled in instead of being all-or-nothing.
+    /// The recipe's lens profile, if it has one and the source is not RAW
+    /// (the RAW decoder corrects its own lenses). First of the geometry passes,
+    /// so Geometry, the crop and the masks all work on the corrected frame.
+    public static func applyLensProfile(
+        of recipe: PhotoEditRecipe,
+        source: PhotoRenderSourceInfo,
+        to image: CIImage
+    ) -> CIImage {
+        guard let choice = recipe.lensProfile, !source.isRAW,
+              let lens = LensProfileLibrary.shared.lens(id: choice.lensID),
+              let term = lens.distortion(atFocal: exifFocalLength(source.properties) ?? lens.distortion.first?.focal ?? 0)
+        else { return image }
+        return applyLensProfile(
+            term,
+            lensCropFactor: lens.cropFactor,
+            cameraCropFactor: choice.cameraCropFactor,
+            to: image
+        )
+    }
+
     /// The recipe's look: its imported LUT when it has one, else its film look.
     /// A LUT whose file is gone renders as no look at all — not as the film
     /// look underneath it, which the user replaced when they chose the LUT.

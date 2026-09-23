@@ -110,6 +110,23 @@ Apple không phát hành cơ sở dữ liệu hệ số méo, và `.lcp` của A
   là câu trả lời đúng.
 - RAW giữ nguyên đường cũ qua `CIRAWFilter`.
 
+**Đã làm (2026-09-23):**
+
+- `Tools/lensfun-to-json.py` đổi 56 file XML của Lensfun (`data/db`) sang `ShotDexKit/Resources/lensfun-distortion.json`
+  (~840KB): 1527 ống có dữ liệu méo, 1054 thân máy (ngàm + crop factor). Chuỗi và hệ số chép nguyên văn.
+- **Khớp** (`LensProfileMatcher`): EXIF Nikon chỉ ghi "16.0-35.0 mm f/4.0", nên thu hẹp theo **dải tiêu cự +
+  khẩu độ lớn nhất** trước, rồi **ngàm của thân máy**, rồi **hãng**, cuối cùng mới để token tên phân xử
+  ("EF24-70mm f/2.8L II USM" → bản Mark II). Kết quả lưu **đã giải** trong recipe
+  (`PhotoLensProfileChoice`: id ống, crop factor thân máy, tự khớp hay tự chọn) — renderer chỉ tra theo id.
+- **Pass nắn** (`PhotoRenderService.applyLensProfile`): `CIWarpKernel` với poly3 / poly5 / ptlens, bán kính chuẩn
+  hoá theo quy ước PTLens (r = 1 là nửa cạnh ngắn của khung hiệu chuẩn, nhân crop thân máy / crop ống), hệ số
+  nội suy tuyến tính giữa hai tiêu cự đã đo gần nhất, và **tự phóng vừa đủ** để góc/cạnh không lộ khoảng trống
+  (tối đa 1,5×). Chưa xử lý khác biệt tỉ lệ khung (hiệu chuẩn 3:2 so với ảnh 4:3) — xấp xỉ.
+- **Panel** (Optics › Lens Profile): công tắc; tên ống + "Found from EXIF"/"Chosen by you" + **Change**; không
+  khớp thì "No profile for this lens yet. Choose yours from the list." + **Choose Lens**; RAW thì nói đã do bộ
+  giải RAW nắn. Danh sách chọn tay tìm được, nhóm "Fits <ngàm>" lên đầu, ghi công Lensfun ở cuối.
+- **Ghi công** CC-BY-SA 3.0 ở Settings › Acknowledgements (cùng GRDB).
+
 ## 8. Cố ý không đuổi theo
 
 | Thứ | Vì sao không |
@@ -141,8 +158,8 @@ Apple không phát hành cơ sở dữ liệu hệ số méo, và `.lcp` của A
 | AC-11 | **Cho** ảnh **không có** bản đồ độ sâu · **Khi** mở danh sách tạo mask · **Thì** **Depth Range** mờ — cùng cổng `hasDepth` mà `depthBlur` dùng | ✅ `MaskKindParityTests.depthRangeIsGatedOnDepth`, `depthRangeSelectsTheBand`; hàng mờ trong New Mask khi `!hasDepthSource` |
 | AC-12 | **Cho** ảnh ISO 6400 · **Khi** đặt Luminance 60 và Detail 50 · **Thì** nhiễu hạt giảm đo được mà vân da **không** mất hẳn (so bằng phương sai cục bộ trên hai vùng) | ✅ `NoiseReductionSplitTests` (ảnh tổng hợp: nhiễu ±0.08 trên nền phẳng và vân ±0.12 — phương sai nhiễu còn <25%, vân giữ >60%; đo thực ~9% và ~70%) |
 | AC-13 | **Cho** một ảnh bất kỳ · **Khi** đọc chuỗi render · **Thì** khử nhiễu chạy **trước** sharpening | ✅ `DetailPassOrderTests` trên `PhotoRenderService.detailPassOrder` |
-| AC-14 | **Cho** ảnh JPG chụp bằng ống kính **có** trong bảng hồ sơ · **Khi** bật Lens Corrections · **Thì** méo hình được nắn theo hệ số của ống kính đó | ⚠️ chưa có |
-| AC-15 | **Cho** ảnh JPG chụp bằng ống kính **không** khớp Lensfun · **Khi** mở Optics · **Thì** nói rõ "chưa có hồ sơ cho ống kính này" **và** có lối chọn ống thủ công, không có nút chết | ⚠️ chưa có |
+| AC-14 | **Cho** ảnh JPG chụp bằng ống kính **có** trong bảng hồ sơ · **Khi** bật Lens Corrections · **Thì** méo hình được nắn theo hệ số của ống kính đó | ✅ `LensProfileTests.nikonGenericExifFindsTheRightLens` (EXIF thật của ảnh D800E trong thư viện sim → "Nikon AF-S Nikkor 16-35mm f/4G ED VR"), `canonNameTokensPickTheMarkII`, `warpMovesEdgesAndFillsCorners`; ảnh chụp Optics bật profile (iPad 26.5) |
+| AC-15 | **Cho** ảnh JPG chụp bằng ống kính **không** khớp Lensfun · **Khi** mở Optics · **Thì** nói rõ "chưa có hồ sơ cho ống kính này" **và** có lối chọn ống thủ công, không có nút chết | ✅ `LensProfileTests.noLensDataMeansNoMatch`; ảnh chụp D90 không có dữ liệu ống: "No profile for this lens yet" + Choose Lens, và danh sách chọn tay |
 | AC-16 | **Cho** bản dựng bất kỳ · **Khi** tìm trong giao diện · **Thì** **không** có chữ "AI" ở bất cứ đâu thuộc khử nhiễu | ✅ `EditorParityTests.noiseReductionNeverClaimsToBeAI` (tên nhóm, tên ngắn, tên đầy đủ của mọi slider Detail/RAW) |
 
 ## 9b. Tương thích recipe

@@ -740,6 +740,7 @@ final class PhotoEditingService {
         )
         let frameRenderer = LivePhotoFrameRenderer(
             recipe: recipe,
+            source: source.info,
             automaticMasks: automaticMasks.images
         )
         context.frameProcessor = { frame, _ in
@@ -754,6 +755,9 @@ final class PhotoEditingService {
 /// across the motion resource; geometric and range masks remain frame-aware.
 private final class LivePhotoFrameRenderer: @unchecked Sendable {
     private let recipe: PhotoEditRecipe
+    /// The still's source, for its EXIF focal length: the lens profile of a
+    /// motion frame is the still's, since it is the same lens at the same focal.
+    private let source: PhotoRenderSourceInfo
     private let automaticMasks: [UUID: CGImage]
     /// The overlay layer, rasterized on the first frame and reused for the rest.
     /// Every frame of the motion resource is the same size, so laying out Core Text
@@ -763,9 +767,11 @@ private final class LivePhotoFrameRenderer: @unchecked Sendable {
 
     init(
         recipe: PhotoEditRecipe,
+        source: PhotoRenderSourceInfo,
         automaticMasks: [UUID: CGImage]
     ) {
         self.recipe = recipe
+        self.source = source
         self.automaticMasks = automaticMasks
     }
 
@@ -777,6 +783,7 @@ private final class LivePhotoFrameRenderer: @unchecked Sendable {
         )
         image = PhotoRenderService.applyColor(recipe.color, to: image)
         image = PhotoRenderService.applyCurve(recipe.curve, to: image)
+        image = PhotoRenderService.applyLensProfile(of: recipe, source: source, to: image)
         image = PhotoRenderService.applyOptics(recipe.adjustments, to: image)
         image = PhotoRenderService.applyGeo(recipe.adjustments, to: image)
         // The look, LUT included — same call as the still, so a Live Photo's

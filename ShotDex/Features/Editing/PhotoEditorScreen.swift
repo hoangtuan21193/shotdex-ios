@@ -2567,6 +2567,18 @@ struct PhotoEditorScreen: View {
         let groups = catalogGroups(for: group, controller: controller)
         if groups.isEmpty {
             placeholderContent(group)
+        } else if group == .optics {
+            // The profile first: it is the correction the other two sliders
+            // clean up after, and Lightroom lists it first for that reason.
+            VStack(spacing: 0) {
+                EditorLensProfileSection(controller: controller)
+                EditorAdjustmentGroupsView(
+                    controller: controller,
+                    chrome: chrome,
+                    groups: groups,
+                    isScrollable: isScrollable
+                )
+            }
         } else if group == .geo {
             // Upright sits above the sliders, the way Lightroom orders them:
             // it is the thing that sets those sliders, so reading it after

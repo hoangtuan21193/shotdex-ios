@@ -801,7 +801,36 @@ struct SettingsScreen: View {
 
     // MARK: Privacy
 
+    @ViewBuilder
     private var privacySection: some View {
+        privacyRows
+        acknowledgementsSection
+    }
+
+    /// Credit for the data ShotDex ships with. Lensfun's licence (CC-BY-SA)
+    /// asks for it; GRDB's (MIT) asks for the notice to travel with the app.
+    private var acknowledgementsSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Lensfun")
+                Text("Lens profiles for distortion correction. Lensfun database, CC-BY-SA 3.0.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            Link("lensfun.github.io", destination: URL(string: "https://lensfun.github.io")!)
+                .font(.footnote)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("GRDB.swift")
+                Text("SQLite toolkit by Gwendal Roué. MIT License.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("Acknowledgements")
+        }
+    }
+
+    private var privacyRows: some View {
         Section {
             Text("Photos and metadata never leave this device. The one exception is a support message you write yourself, which carries no photos.")
                 .font(.footnote)

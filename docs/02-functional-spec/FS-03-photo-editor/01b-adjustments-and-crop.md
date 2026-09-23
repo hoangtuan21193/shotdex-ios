@@ -62,8 +62,9 @@ Bố cục panel: [FS-03.01](01-scope-and-panel.md).
   góc** thay vì tối góc.
 - **Grain** sinh nhiễu rồi khử màu và trộn vào ảnh, **tất định theo toạ độ pixel** nên nó **không "sôi"**
   khi kéo slider. Grain là một chiều — không có "grain âm".
-- **Optics là xấp xỉ**: không có thư viện hồ sơ ống kính, không nhận biết rìa. Phần sửa méo ống kính thật sự
-  vẫn nằm ở nhóm RAW.
+- **Optics › Lens Profile** (FS-03.11 §7): ảnh JPEG/HEIC nắn méo theo hồ sơ **Lensfun** nhúng trong kit
+  (`lensfun-distortion.json`, 1527 ống, CC-BY-SA 3.0) — pass đầu tiên của nhóm hình học, trước Geo, crop và
+  mask. Ảnh RAW vẫn do `CIRAWFilter` tự nắn. Khử viền tím / quầng màu vẫn là **xấp xỉ**, không nhận biết rìa.
 - **Geo** chạy sau phần curve và trước film look, cắt và mask; ảnh được **kéo giãn mép ra** nên không lộ góc
   trong suốt. **Không quy đổi lại toạ độ của mask** — một phép nắn mạnh đi kèm mask có thể làm mask lệch;
   trường hợp thường (nắn mà không có mask) thì đúng.

@@ -463,6 +463,7 @@ final class PhotoEditorController {
         await renderOriginal()
         if renders { await renderNow() }
         await detectFaces()
+        await resolveLensProfile(for: loaded.info)
     }
 
     /// Runs the face check once, on the unedited preview `renderOriginal` just
@@ -1088,6 +1089,66 @@ final class PhotoEditorController {
         history.rewind(toUndoDepth: entry.undoDepth)
         guard recipe != entry.recipe else { return }
         recipe = entry.recipe
+        scheduleRender()
+    }
+
+    // MARK: Lens profile
+
+    /// What EXIF says about the lens, read once when the source loads.
+    @ObservationIgnored private var lensQuery = LensQuery()
+    /// The Lensfun row EXIF points to, or nil when nothing fits (FS-03.11 AC-15).
+    private(set) var lensProfileMatch: LensProfileMatch?
+    /// The mount of the body the photo came from, for the picker's first section.
+    private(set) var lensCameraMount: String?
+
+    /// The lens the recipe is corrected with, if any.
+    var lensProfileLens: LensfunLens? {
+        recipe.lensProfile.flatMap { LensProfileLibrary.shared.lens(id: $0.lensID) }
+    }
+
+    /// Off the main actor: the first call decodes the ~800KB table.
+    private func resolveLensProfile(for info: PhotoRenderSourceInfo) async {
+        guard !info.isRAW else {
+            lensProfileMatch = nil
+            lensCameraMount = nil
+            return
+        }
+        let query = LensQuery(properties: info.properties)
+        lensQuery = query
+        let (match, mount) = await Task.detached(priority: .utility) {
+            let library = LensProfileLibrary.shared
+            return (
+                LensProfileMatcher(library: library).match(query),
+                library.camera(make: query.cameraMake, model: query.cameraModel)?.mount
+            )
+        }.value
+        lensProfileMatch = match
+        lensCameraMount = mount
+    }
+
+    /// On uses the lens found from EXIF; off removes the correction. One step.
+    func setLensProfileEnabled(_ isOn: Bool) {
+        recordHistory()
+        if isOn, let match = lensProfileMatch {
+            recipe.lensProfile = PhotoLensProfileChoice(
+                lensID: match.lens.id,
+                cameraCropFactor: match.cameraCropFactor,
+                isAutomatic: true
+            )
+        } else {
+            recipe.lensProfile = nil
+        }
+        scheduleRender()
+    }
+
+    /// A lens the user picked, for when EXIF found none or the wrong one.
+    func chooseLensProfile(_ lens: LensfunLens) {
+        recordHistory()
+        recipe.lensProfile = PhotoLensProfileChoice(
+            lensID: lens.id,
+            cameraCropFactor: LensProfileMatcher().cameraCropFactor(lensQuery),
+            isAutomatic: lens.id == lensProfileMatch?.lens.id
+        )
         scheduleRender()
     }
 
