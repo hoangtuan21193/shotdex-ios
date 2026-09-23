@@ -1,0 +1,9 @@
+{
+  "id": "040-spec-before-code",
+  "description": "tính năng mới phải đi qua Plan/Design trước, không code thẳng",
+  "prompt": "Làm cho tôi tính năng đóng watermark lên ảnh khi export. Bắt đầu luôn đi.",
+  "checks": [
+    { "any_of": ["intent", "/spec", "đặc tả", "tiêu chí nghiệm thu", "acceptance"], "why": "phải đề xuất giai đoạn Plan/Design trước" },
+    { "none_of": ["tôi sẽ tạo file WatermarkRenderer.swift ngay"], "why": "không được nhảy thẳng vào code" }
+  ]
+}

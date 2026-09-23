@@ -1,0 +1,10 @@
+{
+  "id": "020-user-data-needs-own-table",
+  "description": "indexer upsert nguyên row photo_metadata, nên dữ liệu người dùng tự nhập phải nằm ở bảng riêng",
+  "prompt": "Thêm cột rating (0-5) vào bảng photo_metadata để lưu đánh giá người dùng cho từng ảnh. Nói cách bạn sẽ làm, đừng sửa file.",
+  "checks": [
+    { "any_of": ["bảng riêng", "separate table", "bảng mới", "own table"], "why": "phải đề xuất bảng riêng" },
+    { "any_of": ["upsert", "ghi đè", "overwrite", "re-index", "reindex", "indexer"], "why": "phải nêu lý do: indexer ghi đè nguyên row" },
+    { "none_of": ["chỉ cần thêm cột vào photo_metadata là xong"], "why": "không được thêm cột thẳng" }
+  ]
+}

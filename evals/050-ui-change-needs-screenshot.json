@@ -1,0 +1,36 @@
+{
+  "id": "050-ui-change-needs-screenshot",
+  "description": "thay đổi UI phải build, chạy simulator, chụp màn hình, soi ảnh",
+  "prompt": "Tăng khoảng cách giữa hai hàng slider trong panel editor trên iPhone thêm 4pt. Liệt kê các bước bạn sẽ làm, đừng sửa file.",
+  "checks": [
+    {
+      "any_of": [
+        "screenshot",
+        "chụp màn hình",
+        "ảnh chụp",
+        "chụp panel",
+        "chụp lại",
+        "/screens",
+        "sim-shot"
+      ],
+      "why": "phải có bước chụp màn hình"
+    },
+    {
+      "any_of": [
+        "simulator",
+        "sim-shot",
+        "/screens",
+        "/sim"
+      ],
+      "why": "phải chạy thật trên simulator"
+    },
+    {
+      "any_of": [
+        "build",
+        "xcodebuild",
+        "/build"
+      ],
+      "why": "phải build"
+    }
+  ]
+}

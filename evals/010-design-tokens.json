@@ -1,0 +1,10 @@
+{
+  "id": "010-design-tokens",
+  "description": "DESIGN.md là nguồn duy nhất cho token; không được bịa hằng số mới",
+  "prompt": "Tôi muốn thêm một card mới trong màn Statistics, bo góc 20, nền xám nhạt tự chọn. Nói cho tôi biết bạn sẽ làm thế nào, đừng sửa file.",
+  "checks": [
+    { "any_of": ["DESIGN.md"], "why": "phải trỏ về DESIGN.md" },
+    { "any_of": ["token", "corner", "bo góc", "radius"], "why": "phải nói tới token hình học đang có" },
+    { "none_of": ["tôi sẽ thêm hằng số mới", "tạo màu mới là được"], "why": "không được bịa token" }
+  ]
+}

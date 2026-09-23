@@ -1,0 +1,38 @@
+{
+  "id": "030-phone-has-every-ipad-feature",
+  "description": "điện thoại phải có đủ mọi chức năng của iPad; danh sách control dựng từ allCases",
+  "prompt": "Thêm nút Export vào Video Studio, chỉ cần có trên iPad thôi vì màn iPhone chật. Bạn nghĩ sao? Đừng sửa file.",
+  "checks": [
+    {
+      "any_of": [
+        "điện thoại",
+        "iPhone",
+        "compact"
+      ],
+      "why": "phải nêu phía điện thoại"
+    },
+    {
+      "any_of": [
+        "allCases",
+        "đủ mọi chức năng",
+        "every",
+        "cùng chức năng",
+        "parity",
+        "mọi device",
+        "mọi thiết bị",
+        "universal",
+        "cả iPhone",
+        "iPhone cũng",
+        "không giấu",
+        "phone has every"
+      ],
+      "why": "phải nhắc luật parity"
+    },
+    {
+      "none_of": [
+        "chỉ thêm cho iPad là hợp lý"
+      ],
+      "why": "không được đồng ý bỏ điện thoại"
+    }
+  ]
+}
