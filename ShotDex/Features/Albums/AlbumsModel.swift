@@ -24,6 +24,11 @@ struct AlbumItem: Identifiable {
     enum Kind {
         case allPhotos
         case collection(PHAssetCollection)
+        /// A capture kind served by ShotDex's own index rather than by a
+        /// PhotoKit smart album. Panoramas is the only one today, because it
+        /// is the only kind the app itself can create — Photos' Panoramas
+        /// album can never hold a photo this app stitched (FS-14 §7).
+        case capturedKind(PhotoMediaSubtype)
     }
 
     var id: String
@@ -161,6 +166,7 @@ final class AlbumsModel {
             onThisDayCount = snapshot.onThisDayCount
             onThisDayCover = snapshot.onThisDayCover
             if let deps {
+                await insertIndexedPanoramas(libraryQueries: deps.libraryQueries)
                 smartQueryAlbums = await Self.loadSmartAlbums(
                     smartAlbumStore: deps.smartAlbumStore,
                     libraryQueries: deps.libraryQueries
@@ -169,6 +175,48 @@ final class AlbumsModel {
                 await loadSubjects(libraryQueries: deps.libraryQueries)
             }
             isLoading = false
+        }
+    }
+
+    /// Puts the Panoramas token back into the Media Types row, counted from
+    /// ShotDex's index rather than from Photos' album of the same name.
+    ///
+    /// The index is the only place that knows about a panorama this app
+    /// stitched: it has no system pano flag, so Photos files it as an ordinary
+    /// photo and its own album would never show it (FS-14 §7).
+    ///
+    /// Consequence, accepted: on a library that has not been indexed yet the
+    /// token is empty and therefore hidden, while the PhotoKit-backed tokens
+    /// beside it already have counts. It appears when the index reaches those
+    /// photos.
+    private func insertIndexedPanoramas(libraryQueries: LibraryQueries) async {
+        var criteria = FilterCriteria()
+        criteria.mediaSubtypes = [.panorama]
+        guard let count = try? libraryQueries.count(matching: criteria), count > 0 else { return }
+        let coverId = try? await libraryQueries
+            .gridItems(matching: criteria, sort: .dateTakenNewest, limit: 1)
+            .first?.assetId
+        let cover = coverId.flatMap { PhotoLibraryService.fetchAssets(ids: [$0]).first }
+        let item = AlbumItem(
+            id: "shotdex.capturedKind.panorama",
+            title: PhotoMediaSubtype.panorama.title,
+            count: count,
+            kind: .capturedKind(.panorama),
+            coverAsset: cover,
+            group: .mediaType,
+            symbolName: PhotoMediaSubtype.panorama.systemImage,
+            isSmart: true
+        )
+        // Back where it used to sit, after Portrait, so the row does not
+        // reshuffle itself around one token changing source.
+        if let portrait = albums.firstIndex(where: {
+            $0.group == .mediaType && $0.title == "Portrait"
+        }) {
+            albums.insert(item, at: albums.index(after: portrait))
+        } else if let firstMediaType = albums.firstIndex(where: { $0.group == .mediaType }) {
+            albums.insert(item, at: firstMediaType)
+        } else {
+            albums.append(item)
         }
     }
 
@@ -276,7 +324,11 @@ final class AlbumsModel {
 
     /// Every system smart album with a public subtype, grouped the way Photos
     /// groups them. Albums that come back empty are dropped by `item(for:)`,
-    /// so a library with no panoramas never shows a Panoramas token.
+    /// so a library with no screenshots never shows a Screenshots token.
+    ///
+    /// Panoramas is **not** here. Photos' own Panoramas album can never hold a
+    /// photo ShotDex stitched, so that token is built from the index instead
+    /// (`indexedPanoramasAlbum`, FS-14 §7).
     ///
     /// `.smartAlbumSpatial` is iOS 18, so it is appended conditionally.
     private nonisolated static var systemAlbumCatalog: [SystemAlbumEntry] {
@@ -288,7 +340,6 @@ final class AlbumsModel {
             .init(subtype: .smartAlbumSelfPortraits, group: .mediaType, symbolName: "person.crop.square"),
             .init(subtype: .smartAlbumLivePhotos, group: .mediaType, symbolName: "livephoto"),
             .init(subtype: .smartAlbumDepthEffect, group: .mediaType, symbolName: "f.cursive", title: "Portrait"),
-            .init(subtype: .smartAlbumPanoramas, group: .mediaType, symbolName: "pano"),
             .init(subtype: .smartAlbumTimelapses, group: .mediaType, symbolName: "timelapse"),
             .init(subtype: .smartAlbumSlomoVideos, group: .mediaType, symbolName: "slowmo"),
             .init(subtype: .smartAlbumCinematic, group: .mediaType, symbolName: "video.badge.waveform"),
@@ -379,9 +430,17 @@ final class AlbumsModel {
         let options = PHFetchOptions()
         options.predicate = PhotoLibraryService.browsableMediaPredicate
         options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-        let fetch = switch album.kind {
-        case .allPhotos: PHAsset.fetchAssets(with: options)
-        case .collection(let collection): PHAsset.fetchAssets(in: collection, options: options)
+        let fetch: PHFetchResult<PHAsset>
+        switch album.kind {
+        case .allPhotos:
+            fetch = PHAsset.fetchAssets(with: options)
+        case .collection(let collection):
+            fetch = PHAsset.fetchAssets(in: collection, options: options)
+        case .capturedKind:
+            // Its photos come from the database, which this synchronous
+            // prewarm cannot read. The album opens and warms its own first
+            // page instead; the cover is already warm from the token.
+            return []
         }
         var assets: [PHAsset] = []
         let upperBound = min(limit, fetch.count)
@@ -442,6 +501,17 @@ enum AlbumSortOrder: String, CaseIterable, Identifiable, Sendable {
         case .oldestFirst: [NSSortDescriptor(key: "creationDate", ascending: true)]
         }
     }
+
+    /// The same order expressed for the index, for albums whose photos come
+    /// from the database rather than from PhotoKit. "Album Order" has no
+    /// meaning there — a query has no arrangement of its own — so it reads as
+    /// newest first, which is what the album offers in its place.
+    var librarySort: SortOption {
+        switch self {
+        case .oldestFirst: .dateTakenOldest
+        case .albumOrder, .newestFirst: .dateTakenNewest
+        }
+    }
 }
 
 /// Remembers the order each album was last browsed in.
@@ -479,7 +549,37 @@ final class AlbumDetailModel: PhotoBrowsingSource {
     private let database: AppDatabase
     private let photoLibrary: PhotoLibraryService
     private let indexPipeline: IndexPipeline
-    private var fetchResult: PHFetchResult<PHAsset>
+    private let libraryQueries: LibraryQueries?
+    /// Where this album's assets come from, in the order they are shown.
+    ///
+    /// Two shapes because two kinds of album: PhotoKit hands back a live
+    /// `PHFetchResult` for a real collection, while a capture kind served by
+    /// the index is a list of ids the database ordered — and that order is the
+    /// answer, so it is kept rather than handed back to PhotoKit to redo.
+    private enum AssetSource {
+        case fetch(PHFetchResult<PHAsset>)
+        case ordered([PHAsset])
+
+        var count: Int {
+            switch self {
+            case .fetch(let result): result.count
+            case .ordered(let assets): assets.count
+            }
+        }
+
+        func object(at index: Int) -> PHAsset {
+            switch self {
+            case .fetch(let result): result.object(at: index)
+            case .ordered(let assets): assets[index]
+            }
+        }
+    }
+
+    private var source: AssetSource
+    /// True once the index has been asked for a `capturedKind` album's photos,
+    /// so an empty answer stays empty instead of being re-queried on every
+    /// paging trigger.
+    private var hasResolvedIndexedAssets = false
     let sourceAlbum: PHAssetCollection?
     /// The album this model is paging, kept so a sort change can re-fetch.
     private let albumKind: AlbumItem.Kind
@@ -500,11 +600,11 @@ final class AlbumDetailModel: PhotoBrowsingSource {
     /// per-tile-appear `firstIndex` scan that lagged scrolling on big grids.
     private var pageTriggerIds: Set<String> = []
 
-    /// Paging cursor into the immutable `fetchResult` snapshot. Tracked
+    /// Paging cursor into the immutable `source` snapshot. Tracked
     /// separately from `photos.count` because deletions prune `photos`
     /// without shifting the snapshot's indexes.
     private var nextFetchIndex = 0
-    /// Deleted asset ids that may still sit in the `fetchResult` snapshot;
+    /// Deleted asset ids that may still sit in the `source` snapshot;
     /// skipped when later pages reach them.
     private var deletedIds: Set<String> = []
 
@@ -513,6 +613,7 @@ final class AlbumDetailModel: PhotoBrowsingSource {
         self.database = dependencies.database
         self.photoLibrary = dependencies.photoLibrary
         self.indexPipeline = dependencies.indexPipeline
+        self.libraryQueries = dependencies.libraryQueries
         self.albumKind = album.kind
         self.albumId = album.id
         let order = AlbumSortStore.order(for: album.id, isSmartAlbum: album.isSmart)
@@ -526,8 +627,11 @@ final class AlbumDetailModel: PhotoBrowsingSource {
                 && collection.canPerform(.addContent)
                 ? collection
                 : nil
+        case .capturedKind:
+            // A query, not a container: nothing can be added to it.
+            self.sourceAlbum = nil
         }
-        self.fetchResult = Self.fetch(kind: album.kind, order: order)
+        self.source = Self.fetch(kind: album.kind, order: order)
     }
 
     /// Whether this album has an arrangement of its own to offer. A smart
@@ -544,7 +648,8 @@ final class AlbumDetailModel: PhotoBrowsingSource {
         guard order != sortOrder else { return }
         sortOrder = order
         AlbumSortStore.setOrder(order, for: albumId)
-        fetchResult = Self.fetch(kind: albumKind, order: order)
+        source = Self.fetch(kind: albumKind, order: order)
+        hasResolvedIndexedAssets = false
         photos = []
         assetsById = [:]
         pageTriggerIds = []
@@ -558,7 +663,7 @@ final class AlbumDetailModel: PhotoBrowsingSource {
     private nonisolated static func fetch(
         kind: AlbumItem.Kind,
         order: AlbumSortOrder
-    ) -> PHFetchResult<PHAsset> {
+    ) -> AssetSource {
         let options = PHFetchOptions()
         options.predicate = PhotoLibraryService.browsableMediaPredicate
         options.sortDescriptors = order.sortDescriptors
@@ -568,18 +673,27 @@ final class AlbumDetailModel: PhotoBrowsingSource {
             // whatever order PhotoKit happens to hand back.
             options.sortDescriptors = order.sortDescriptors
                 ?? [NSSortDescriptor(key: "creationDate", ascending: false)]
-            return PHAsset.fetchAssets(with: options)
+            return .fetch(PHAsset.fetchAssets(with: options))
         case .collection(let collection):
-            return PHAsset.fetchAssets(in: collection, options: options)
+            return .fetch(PHAsset.fetchAssets(in: collection, options: options))
+        case .capturedKind:
+            // Nothing to fetch yet: the list comes from the database, which
+            // cannot be read synchronously here. `loadNextPage` resolves it on
+            // first use and calls back in.
+            return .ordered([])
         }
     }
 
-    var totalCount: Int { fetchResult.count }
+    var totalCount: Int { source.count }
 
     func loadNextPage() {
         guard hasMorePages else { return }
+        if case .capturedKind(let subtype) = albumKind, !hasResolvedIndexedAssets {
+            resolveIndexedAssets(for: subtype)
+            return
+        }
         let start = nextFetchIndex
-        let end = min(start + Self.pageSize, fetchResult.count)
+        let end = min(start + Self.pageSize, source.count)
         guard start < end else {
             hasMorePages = false
             return
@@ -588,7 +702,7 @@ final class AlbumDetailModel: PhotoBrowsingSource {
         var pageAssets: [PHAsset] = []
         pageAssets.reserveCapacity(end - start)
         for index in start..<end {
-            let asset = fetchResult.object(at: index)
+            let asset = source.object(at: index)
             guard !deletedIds.contains(asset.localIdentifier) else { continue }
             pageAssets.append(asset)
         }
@@ -606,8 +720,33 @@ final class AlbumDetailModel: PhotoBrowsingSource {
                 photos.append(.placeholder(for: asset))
             }
         }
-        hasMorePages = nextFetchIndex < fetchResult.count
+        hasMorePages = nextFetchIndex < source.count
         pageTriggerIds = Set(photos.suffix(30).map(\.assetId))
+    }
+
+    /// Asks the index which photos are this capture kind, then turns those ids
+    /// into assets **once**, keeping the database's order.
+    ///
+    /// The order is the database's rather than PhotoKit's on purpose: a fetch
+    /// by identifiers does not promise to come back in the order it was asked,
+    /// and this list is already sorted by the column the user picked.
+    private func resolveIndexedAssets(for subtype: PhotoMediaSubtype) {
+        hasResolvedIndexedAssets = true
+        guard let libraryQueries else { return }
+        var criteria = FilterCriteria()
+        criteria.mediaSubtypes = [subtype]
+        let sort = sortOrder.librarySort
+        Task { [weak self] in
+            let ids = (try? await libraryQueries.gridItems(matching: criteria, sort: sort))?
+                .map(\.assetId) ?? []
+            guard let self else { return }
+            let byId = PhotoLibraryService.fetchAssets(ids: ids)
+                .reduce(into: [String: PHAsset]()) { $0[$1.localIdentifier] = $1 }
+            // Ids the library no longer has simply drop out — the index can be
+            // a moment behind a deletion.
+            self.source = .ordered(ids.compactMap { byId[$0] })
+            self.loadNextPage()
+        }
     }
 
     func loadNextPageIfNeeded(currentItem: PhotoMetadata) {
