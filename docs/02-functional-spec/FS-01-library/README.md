@@ -20,7 +20,7 @@ bằng rule, chọn hàng loạt rồi làm gì đó với chúng.
 | 06 | [Chọn nhiều ảnh](06-multi-select.md) | overlay toàn màn, vuốt chọn, context menu, bộ điều phối hành động ảnh |
 | 07 | [Khôi phục trạng thái](07-state-restoration.md) | cái gì là scene state, cái gì là preference |
 | 08 | [Compare](08-compare.md) | nhiều card cùng zoom, chạm để đánh dấu xoá |
-| 09 | [Ghép nhiều ảnh](09-photo-stacking.md) | menu Combine Photos theo việc: focus stack, panorama, xoá người, vệt sáng, giảm nhiễu |
+| 09 | [Ghép nhiều ảnh](09-photo-stacking.md) | menu Combine Photos: Focus Stack · Panorama · Stack Exposures (Average/Lighten/Darken) |
 
 ## Quy tắc chung
 

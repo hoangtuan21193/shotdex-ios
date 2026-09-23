@@ -8,9 +8,9 @@
 
 ## 1. Hiểu đúng chưa
 
-Menu ⋯ giữ **một** dòng Combine Photos, giờ là menu con gồm năm việc (Focus Stack · Panorama · Remove Moving
-People · Light Trails · Reduce Noise). Mỗi việc mở màn stack đã chốt sẵn một mode, không còn bộ chọn mode,
-không còn chữ Average/Lighten/Darken. Ảnh ra không đổi một pixel. Menu có ở cả bốn lưới. Cancel giữ lựa chọn;
+Menu ⋯ giữ **một** dòng Combine Photos, giờ là menu con ba dòng (Focus Stack · Panorama · Stack Exposures).
+Focus Stack là màn một việc; Stack Exposures là màn có bộ chọn `Average · Lighten · Darken` (mặc định Average)
+kèm câu giải thích từng mode; menu không còn tên phép toán. Ảnh ra không đổi một pixel. Menu có ở cả bốn lưới. Cancel giữ lựa chọn;
 Save thoát chọn và mở ảnh vừa lưu. Panorama chỉ hiện khi FS-14 đã build — plan này **không** build Panorama.
 
 ## 2. Đối chiếu AC ↔ code
@@ -18,11 +18,11 @@ Save thoát chọn và mở ảnh vừa lưu. Panorama chỉ hiện khi FS-14 đ
 | AC | Trạng thái | Bằng chứng | Việc |
 |---|---|---|---|
 | AC-1 một dòng ở cấp ngoài | ✅ đạt hôm nay | một row `Combine Photos` ở `SelectionBarViews.swift:211-216` | test khoá lại khi đổi sang menu con. **Nhưng** plan FS-14 task 4 sắp thêm `Create Panorama` cạnh nó — đã sửa, §4.2 |
-| AC-2 năm dòng đúng thứ tự | ❌ | chỉ có một `Button`, không menu con | menu con dựng từ danh sách việc (`allCases`), không viết tay từng dòng |
-| AC-3 < 2 ảnh: mở được, năm dòng mờ | ❌ lệch cấu trúc | hôm nay cả dòng mờ khi `imageSelectionCount < 2` (`:215`) | cha luôn bật, con `.disabled` |
+| AC-2 ba dòng đúng thứ tự | ❌ | chỉ có một `Button`, không menu con | menu con dựng từ danh sách việc (`allCases`), không viết tay từng dòng |
+| AC-3 < 2 ảnh: mở được, mọi dòng mờ | ❌ lệch cấu trúc | hôm nay cả dòng mờ khi `imageSelectionCount < 2` (`:215`) | cha luôn bật, con `.disabled` |
 | AC-4 trùng từng pixel | ❌ chưa có test | renderer không đổi (`PhotoStackRenderer.swift:79`); **không có test nào** cho renderer trong `ShotDexTests` | map việc → mode 1:1 + test so pixel + test giá trị đã biết cho average/lighten/darken |
-| AC-5 mở với N ảnh, không bộ chọn | ❌ | `Picker("Mode")` ở `PhotoStackScreen.swift:106`, mode mặc định `.average` ở `:25`; lọc video đã có ở `LibraryScreen.swift:241-250` | mode vào qua presentation; xoá picker |
-| AC-6 câu giải thích, không chữ phép toán | ❌ | tên và câu hiện nằm trong kit `PhotoStackRenderer.swift:23-41` (chuỗi thường, **không** qua String Catalog) | chuyển tên + câu sang kiểu việc ở app, qua String Catalog; bỏ `title`/`explanation` khỏi kit (không ai khác dùng) |
+| AC-5 Stack Exposures mở với N ảnh, bộ chọn ba mode ở Average | ❌ gần có (người dùng đã chốt tài liệu) | `Picker("Mode")` ở `PhotoStackScreen.swift:106` có **bốn** mode, mặc định `.average` ở `:25`; lọc video đã có ở `LibraryScreen.swift:241-250` | việc vào qua presentation; bộ chọn chỉ còn ba mode ở Stack Exposures, không có ở Focus Stack |
+| AC-6 câu giải thích từng mode, Focus Stack không bộ chọn | ❌ | tên và câu nằm trong kit `PhotoStackRenderer.swift:23-41` (chuỗi thường, **không** qua String Catalog); câu hiện tại nói phép toán, không theo bảng §2 | chuyển tên + câu sang app qua String Catalog, câu mới theo §2; bỏ `title`/`explanation` khỏi kit (không ai khác dùng) |
 | AC-7 iOS 26.5 = 18.6 | ❓ | menu con trong `Menu` của toolbar chưa thử trên 18.6 ở app này | đo bằng ui-drive: iPhone 17 (26.5) và iPad Pro 13 (18.6 — máy 18.6 duy nhất có) |
 | AC-8 ba cỡ màn cùng số dòng | ❌ | theo AC-2 | dựng từ `allCases` là đủ; chụp ba máy |
 | AC-9 VoiceOver đọc "menu" | ❓ | chưa có dump | dump nhãn a11y sau AC-2 |
@@ -37,14 +37,14 @@ Save thoát chọn và mở ảnh vừa lưu. Panorama chỉ hiện khi FS-14 đ
 
 | File | Đụng gì | Mới / sửa |
 |---|---|---|
-| `ShotDex/Domain/Editing/CombinePurpose.swift` | năm việc: thứ tự, nhóm (`Stack Exposures` cho ba việc cuối), tên, câu giải thích, icon, mode tương ứng, có sẵn chưa (Panorama = chưa) | **mới**, thuần, test được |
+| `ShotDex/Domain/Editing/CombinePurpose.swift` | ba dòng: thứ tự, tên, icon, có sẵn chưa (Panorama = chưa), các mode của màn (Focus Stack → một; Stack Exposures → Average · Lighten · Darken, mặc định Average), tên + câu giải thích của từng mode | **mới**, thuần, test được |
 | `ShotDexKit/Render/PhotoStackRenderer.swift` | bỏ `title`/`explanation` (tên phép toán); renderer giữ nguyên | sửa |
 | `ShotDex/App/SelectionBarModel.swift` | `onCombine` nhận một việc | sửa |
 | `ShotDex/Features/Library/SelectionBarViews.swift` | `Menu("Combine Photos")` con, dòng từ danh sách việc | sửa |
 | `ShotDex/Features/Editing/PhotoStackModel.swift` | tải khung, preview, lưu → index → publish → báo đã lưu; lỗi theo pha | **mới** — logic ra khỏi View (plan FS-14 cũng chỉ ra đây là chỗ Combine làm sai) |
-| `ShotDex/Features/Editing/PhotoStackScreen.swift` | nhận việc, bỏ picker, tiêu đề = tên việc, hai tiêu đề lỗi, `onSaved` | sửa |
+| `ShotDex/Features/Editing/PhotoStackScreen.swift` | nhận việc; bộ chọn chỉ khi việc có > 1 mode; tiêu đề = tên dòng; hai tiêu đề lỗi; `onSaved` | sửa |
 | `LibraryScreen` · `AlbumDetailScreen` · `SmartAlbumDetailScreen` · `OnThisDayScreen` | trình bày cover; Cancel giữ chọn; Save → thoát chọn + mở viewer theo §4.1 (album người dùng: thêm ảnh vào album trước) | sửa |
-| `Localizable.xcstrings` | 5 tên + 5 câu mới; bỏ `Combine %lld Photos`, `Couldn't Combine` | sửa |
+| `Localizable.xcstrings` | 3 tên dòng, 3 tên mode, 4 câu giải thích; bỏ `Combine %lld Photos`, `Couldn't Combine` | sửa |
 | `ShotDexTests/CombinePurposeTests.swift` · `PhotoStackRendererTests.swift` | AC-2, AC-4, AC-6 | **mới** |
 | `ShotDexUITests/scripts/combine-menu.json` | AC-1…3, 5, 7–11, 13–15 | **mới** |
 
@@ -66,9 +66,9 @@ Mỗi task một commit, build sau mỗi commit, task đụng UI thì chụp mà
 | # | Task | AC | Test kèm theo |
 |---|---|---|---|
 | 1 | Test renderer: giá trị đã biết cho average/lighten/darken trên ảnh 2×2, focus stack chọn khung nét | AC-4 (khoá hành vi trước khi đụng) | `PhotoStackRendererTests` |
-| 2 | `CombinePurpose` + test thứ tự, nhóm, map mode, không chữ phép toán, Panorama chưa có | AC-2, AC-4, AC-6 | `CombinePurposeTests` |
-| 3 | Menu con ở Library, cha luôn bật, con mờ < 2 ảnh, nhóm `Stack Exposures` có tiêu đề | AC-1, AC-2, AC-3 | `combine-menu.json` + dump |
-| 4 | Màn nhận việc, bỏ picker, tiêu đề, câu giải thích, bỏ tên khỏi kit, String Catalog | AC-5, AC-6 | `CombinePurposeTests` + ảnh 4 màn |
+| 2 | `CombinePurpose` + test thứ tự ba dòng, mode của từng màn, mặc định Average, không tên phép toán ở tên dòng, Panorama chưa có | AC-2, AC-4, AC-6 | `CombinePurposeTests` |
+| 3 | Menu con ba dòng ở Library, cha luôn bật, con mờ < 2 ảnh | AC-1, AC-2, AC-3 | `combine-menu.json` + dump |
+| 4 | Màn nhận việc: Focus Stack không bộ chọn, Stack Exposures bộ chọn ba mode; tiêu đề, câu giải thích theo §2, bỏ tên khỏi kit, String Catalog | AC-5, AC-6 | `CombinePurposeTests` + ảnh 4 màn |
 | 5 | `PhotoStackModel`: lỗi theo pha | AC-12 | `PhotoStackModelTests` (lỗi theo pha) + ảnh |
 | 6 | Cancel giữ chọn, Save → index → publish → thoát chọn → viewer (Library) | AC-10, AC-11 | `combine-menu.json` + ảnh |
 | 7 | Nối ba lưới còn lại; Save từ album người dùng → thêm vào album + mở tại chỗ; Smart Album / On This Day → Library | AC-13, AC-14, AC-15 | `combine-menu.json` ba màn |
@@ -79,7 +79,7 @@ Mỗi task một commit, build sau mỗi commit, task đụng UI thì chụp mà
 
 | Rủi ro | Xác suất | Xử lý |
 |---|---|---|
-| Menu con trong `Menu` của toolbar không mở, hoặc tiêu đề nhóm không hiện, trên iOS 18.6 hoặc Duo | thấp | task 8 đo sớm; nếu hỏng thì dùng `Section` có tiêu đề thay menu con — báo lại người dùng, không tự đổi |
+| Menu con trong `Menu` của toolbar không mở trên iOS 18.6 hoặc Duo | thấp | task 8 đo sớm; nếu hỏng thì dùng `Section` có tiêu đề thay menu con — báo lại người dùng, không tự đổi |
 | Thêm dòng vào ba lưới làm menu ⋯ ở đó dài hơn Library | thấp | chỉ thêm một dòng (menu con), đúng luật "một dòng" |
 | Save chưa index thì viewer không thấy ảnh (hôm nay Combine lưu mà không index) | cao nếu quên | task 6 bắt buộc `indexSingle` + `publishAppCreatedAsset` như Collage |
 | Bỏ `title`/`explanation` khỏi kit là đổi API public | thấp | chỉ `PhotoStackScreen` dùng; extension không dùng (đã grep) |

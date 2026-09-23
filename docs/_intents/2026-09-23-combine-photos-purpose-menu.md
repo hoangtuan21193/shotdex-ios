@@ -64,6 +64,9 @@ Mức độ: không phải lỗi, chức năng vẫn chạy. Nhưng thao tác n�
    việc giả phơi sáng dài.
 3. ~~Bộ chọn mode trong màn~~ — **chốt 2026-09-23: không.** Mỗi màn một việc, tiêu đề là tên mục đích;
    muốn việc khác thì quay lại menu.
+   **Đổi lại 2026-09-23, sau khi viết spec:** menu con còn ba dòng Focus Stack · Panorama · **Stack Exposures**.
+   Stack Exposures mở một màn có bộ chọn `Average · Lighten · Darken` (mặc định Average), mỗi mode kèm câu nói
+   dùng để làm gì. Menu vẫn không mang tên phép toán; tên phép toán chỉ nằm trong màn, luôn đi kèm câu giải thích.
 4. ~~Tên dòng mở menu con~~ — **chốt 2026-09-23: giữ `Combine Photos`.**
 5. ~~Thứ tự~~ — **chốt 2026-09-23: intent này làm trước**, intent focus stack thay phần bên trong sau.
    FS-14 đổi lối vào từ dòng riêng `Create Panorama` sang dòng `Panorama` trong menu con.
