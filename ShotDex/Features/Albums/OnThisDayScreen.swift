@@ -11,6 +11,9 @@ struct OnThisDayScreen: View {
     var initialDate: Date = .now
 
     @Environment(AppDependencies.self) private var dependencies
+    /// The coordinator whose sheets are attached above this screen — the
+    /// window root's, not `dependencies.assetActions`.
+    @Environment(\.assetActions) private var assetActions
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(AppNavigation.self) private var navigation
 
@@ -201,7 +204,8 @@ struct OnThisDayScreen: View {
 
     /// The long-press menu for one tile.
     private func tileMenu(assetId: String) -> PhotoTileContextMenu {
-        let actions = dependencies.assetActions
+        // The shared instance only when nothing hosts this screen (previews).
+        let actions = assetActions ?? dependencies.assetActions
         let isVideo = model?.assetsById[assetId]?.mediaType == .video
         return PhotoTileContextMenu(
             assetId: assetId,
@@ -326,7 +330,7 @@ struct OnThisDayScreen: View {
             onEdit: presentMultiEdit,
             onCombine: presentCombine,
             onDelete: deleteSelected,
-            assetActions: dependencies.assetActions,
+            assetActions: assetActions,
             onSelectAll: { selectedIds = (model?.photos ?? []).map(\.assetId) }
         )
     }

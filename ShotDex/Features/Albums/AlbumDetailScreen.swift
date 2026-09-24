@@ -6,6 +6,9 @@ import SwiftUI
 /// Compare (2–4 photos) and Delete.
 struct AlbumDetailScreen: View {
     @Environment(AppDependencies.self) private var dependencies
+    /// The coordinator whose sheets are attached above this screen — the
+    /// window root's, not `dependencies.assetActions`.
+    @Environment(\.assetActions) private var assetActions
     @Environment(\.presentServerUpload) private var presentServerUpload
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(AppNavigation.self) private var navigation
@@ -446,7 +449,7 @@ struct AlbumDetailScreen: View {
             onExportEXIF: { exportEXIF(model) },
             onDuplicate: { duplicateSelected(model) },
             onUploadToServer: presentServerUpload.map { present in { present(selectedIds) } },
-            assetActions: dependencies.assetActions,
+            assetActions: assetActions,
             onSelectAll: { selectedIds = model.photos.map(\.assetId) },
             // Only a real, mutable user album offers this; "All Photos" and
             // smart albums have no membership to remove from.
@@ -464,7 +467,8 @@ struct AlbumDetailScreen: View {
     /// The long-press menu for one tile. Album Detail is the only screen that
     /// can also take a photo out of the album it is showing.
     private func tileMenu(_ model: AlbumDetailModel, assetId: String) -> PhotoTileContextMenu {
-        let actions = dependencies.assetActions
+        // The shared instance only when nothing hosts this screen (previews).
+        let actions = assetActions ?? dependencies.assetActions
         let isVideo = model.assetsById[assetId]?.mediaType == .video
         return PhotoTileContextMenu(
             assetId: assetId,

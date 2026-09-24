@@ -5,6 +5,9 @@ import SwiftUI
 struct LibraryScreen: View {
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(AppDependencies.self) private var dependencies
+    /// The coordinator whose sheets are attached above this screen — the
+    /// window root's, not `dependencies.assetActions`.
+    @Environment(\.assetActions) private var assetActions
     @Environment(\.presentServerUpload) private var presentServerUpload
     /// The grid's shape mode, shared with every other grid in the app.
     @AppStorage(SettingsKeys.aspectRatioGrid) private var showsAspectTiles = false
@@ -571,7 +574,7 @@ struct LibraryScreen: View {
             onExportEXIF: { exportEXIF(model) },
             onDuplicate: { duplicateSelected() },
             onUploadToServer: presentServerUpload.map { present in { present(selectedIds) } },
-            assetActions: dependencies.assetActions,
+            assetActions: assetActions,
             onSelectAll: { selectedIds = model.items.map(\.assetId) }
         )
     }
@@ -599,7 +602,8 @@ struct LibraryScreen: View {
     }
 
     private func tileMenu(assetId: String) -> PhotoTileContextMenu {
-        let actions = dependencies.assetActions
+        // The shared instance only when nothing hosts this screen (previews).
+        let actions = assetActions ?? dependencies.assetActions
         let isVideo = PhotoLibraryService.fetchAssets(ids: [assetId])
             .first?.mediaType == .video
         return PhotoTileContextMenu(

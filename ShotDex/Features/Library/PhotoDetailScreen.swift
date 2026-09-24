@@ -288,12 +288,16 @@ struct PhotoDetailScreen: View {
         // Its own coordinator, not the root's: see `viewerAssetActions`.
         .assetActionHost(dependencies.viewerAssetActions)
         .sheet(item: $burstList) { presentation in
-            NavigationStack {
-                PhotoListScreen(
-                    title: String(localized: "Burst"),
-                    subtitle: "\(presentation.assetIds.count) frames",
-                    assetIds: presentation.assetIds
-                )
+            // Neither the root nor this viewer can present over this sheet,
+            // so its tile menu gets a coordinator and host of its own.
+            AssetActionScope(dependencies: dependencies) {
+                NavigationStack {
+                    PhotoListScreen(
+                        title: String(localized: "Burst"),
+                        subtitle: "\(presentation.assetIds.count) frames",
+                        assetIds: presentation.assetIds
+                    )
+                }
             }
             .environment(dependencies)
             .environment(photoLibrary)

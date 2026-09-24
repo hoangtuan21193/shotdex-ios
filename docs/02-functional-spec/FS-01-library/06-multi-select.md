@@ -78,8 +78,18 @@ Menu dựng **một lần** cho cả bốn lưới.
 Một nơi duy nhất giữ cả trạng thái trình bày (yêu cầu sửa ngày, sửa vị trí, thêm vào album, thông báo lỗi,
 toast), nên bốn màn lưới không phải cài lại từng cái.
 
-Sheet được gắn ở **hai** chỗ: màn gốc (phủ mọi lưới) và màn xem ảnh (viewer là lớp phủ toàn màn nên sheet từ
-gốc không với tới — [FS-02](../FS-02-photo-detail/README.md)).
+Sheet được gắn ở chỗ **có thể trình bày** lên màn người dùng đang xem, mỗi chỗ một bộ điều phối riêng:
+
+- **Màn gốc của mỗi cửa sổ** — phủ mọi lưới trong cửa sổ đó. Mỗi cửa sổ (iPad nhiều scene) có bộ riêng: dùng
+  chung một bộ thì sheet mở ở cửa sổ này bị cửa sổ kia cũng giành trình bày.
+- **Màn xem ảnh** — viewer là lớp phủ toàn màn nên sheet từ gốc không với tới
+  ([FS-02](../FS-02-photo-detail/README.md)).
+- **Sheet Burst mở từ viewer** — cả gốc lẫn viewer đều không trình bày chồng lên được sheet đang mở, nên danh
+  sách Burst có bộ riêng.
+
+Màn lưới **lấy bộ điều phối của nơi gắn sheet phía trên nó** (qua environment), không lấy bộ dùng chung trong
+`AppDependencies` — gửi hành động vào bộ không ai gắn sheet thì Adjust Date & Time / Adjust Location / Add to
+Collection bấm xong **không mở gì**, lỗi và toast cũng không hiện.
 
 | Hành động | Chi tiết |
 |---|---|

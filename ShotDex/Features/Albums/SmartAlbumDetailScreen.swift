@@ -8,6 +8,9 @@ import SwiftUI
 /// PhotoKit collection.
 struct SmartAlbumDetailScreen: View {
     @Environment(AppDependencies.self) private var dependencies
+    /// The coordinator whose sheets are attached above this screen — the
+    /// window root's, not `dependencies.assetActions`.
+    @Environment(\.assetActions) private var assetActions
     @Environment(\.presentServerUpload) private var presentServerUpload
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(AppNavigation.self) private var navigation
@@ -395,7 +398,7 @@ struct SmartAlbumDetailScreen: View {
             onExportEXIF: { exportEXIF(model) },
             onDuplicate: { duplicateSelected(model) },
             onUploadToServer: presentServerUpload.map { present in { present(selectedIds) } },
-            assetActions: dependencies.assetActions,
+            assetActions: assetActions,
             onSelectAll: { selectedIds = model.items.map(\.assetId) }
         )
     }
@@ -407,7 +410,8 @@ struct SmartAlbumDetailScreen: View {
 
     /// The long-press menu for one tile.
     private func tileMenu(assetId: String) -> PhotoTileContextMenu {
-        let actions = dependencies.assetActions
+        // The shared instance only when nothing hosts this screen (previews).
+        let actions = assetActions ?? dependencies.assetActions
         let isVideo = PhotoLibraryService.fetchAssets(ids: [assetId])
             .first?.mediaType == .video
         return PhotoTileContextMenu(

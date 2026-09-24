@@ -231,7 +231,8 @@ struct RootTabView: View {
         .keepScreenAwakeWhileIndexing(libraryModel: libraryModel)
         // Hosts the Adjust Date & Time / Adjust Location sheets and the error
         // alert for every grid, so the four selecting screens don't each carry
-        // their own copy.
+        // their own copy. The host also hands this coordinator down as
+        // `\.assetActions`, which is how the screens reach it.
         .assetActionHost(assetActions ?? dependencies.assetActions)
         .sheet(item: $uploadRequest) { ServerUploadHost(request: $0) }
         .environment(\.presentServerUpload) { uploadRequest = ServerUploadRequest(assetIds: $0) }

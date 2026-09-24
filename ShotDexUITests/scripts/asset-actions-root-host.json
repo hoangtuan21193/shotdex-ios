@@ -1,0 +1,23 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "tap", "label": "Select photos", "type": "button" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "label": "Photo, file type", "type": "cell", "index": 0 },
+    { "action": "tap", "label": "More selection actions" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "label": "Adjust Date & Time" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "screenshot", "name": "01-selection-adjust-date" },
+    { "action": "dump", "name": "01-selection-adjust-date" },
+    { "action": "launch" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "longPress", "label": "Photo, file type", "type": "cell", "index": 0, "seconds": 1.2 },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "label": "Adjust Location" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "screenshot", "name": "02-tile-adjust-location" },
+    { "action": "dump", "name": "02-tile-adjust-location" }
+  ]
+}

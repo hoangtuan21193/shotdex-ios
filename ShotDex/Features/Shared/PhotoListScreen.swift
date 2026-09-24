@@ -14,6 +14,10 @@ struct PhotoListScreen: View {
     let assetIds: [String]
 
     @Environment(AppDependencies.self) private var dependencies
+    /// The coordinator whose sheets are attached above this screen — the
+    /// window root's when pushed, the sheet's own `AssetActionScope` when shown
+    /// over the viewer — never `dependencies.assetActions`.
+    @Environment(\.assetActions) private var assetActions
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @AppStorage(SettingsKeys.gridColumns) private var storedColumns = 3
 
@@ -157,7 +161,8 @@ struct PhotoListScreen: View {
     }
 
     private func tileMenu(_ model: PhotoListModel, assetId: String) -> PhotoTileContextMenu {
-        let actions = dependencies.assetActions
+        // The shared instance only when nothing hosts this screen (previews).
+        let actions = assetActions ?? dependencies.assetActions
         return PhotoTileContextMenu(
             assetId: assetId,
             isVideo: model.assetsById[assetId]?.mediaType == .video,

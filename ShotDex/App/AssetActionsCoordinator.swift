@@ -13,9 +13,11 @@ import UIKit
 /// PhotoKit call, the progress flag and the error alert. Presentation state
 /// lives here; a host attaches the actual sheets with `.assetActionHost(_:)`.
 ///
-/// Two hosts exist because the detail viewer is a `fullScreenCover` and cannot
-/// be reached by a sheet presented from the root — `RootTabView` covers every
-/// grid, `PhotoDetailScreen` covers itself.
+/// Several hosts exist because a sheet can only be presented from a view that is
+/// not already presenting one — `RootTabView` covers every grid in its window,
+/// `PhotoDetailScreen` (a `fullScreenCover`) covers itself, and a sheet over the
+/// viewer gets an `AssetActionScope`. Screens read the coordinator of the host
+/// above them from `\.assetActions`, never from `AppDependencies`.
 @MainActor
 @Observable
 final class AssetActionsCoordinator {
@@ -283,8 +285,41 @@ extension View {
     /// Attaches the sheets, error alert and confirmation toast the coordinator
     /// drives. Applied by every surface that can present over the user's current
     /// context: the root tab view for the grids, the detail viewer for itself.
+    ///
+    /// Also publishes `coordinator` as `\.assetActions` to everything under
+    /// it, so a screen triggers actions on the coordinator whose sheets are
+    /// actually attached above it.
     func assetActionHost(_ coordinator: AssetActionsCoordinator) -> some View {
         modifier(AssetActionHost(coordinator: coordinator))
+            .environment(\.assetActions, coordinator)
+    }
+}
+
+extension EnvironmentValues {
+    /// The coordinator of the nearest `.assetActionHost(_:)` above this view —
+    /// the one screens must send favorite / hide / date / location / add to
+    /// collection to. A window's root hosts its own (see
+    /// `AppDependencies.assetActions`), so a screen that reached for the shared
+    /// instance instead raised sheets nothing presented. Nil with no host above
+    /// (previews); the selection menu then leaves those rows out.
+    @Entry var assetActions: AssetActionsCoordinator? = nil
+}
+
+/// A coordinator and host of its own for content presented where no existing
+/// host can reach: a sheet over the detail viewer, which the root cannot
+/// present over (the viewer is a cover) and the viewer cannot either (it is
+/// already presenting this sheet).
+struct AssetActionScope<Content: View>: View {
+    @State private var coordinator: AssetActionsCoordinator
+    private let content: Content
+
+    init(dependencies: AppDependencies, @ViewBuilder content: () -> Content) {
+        _coordinator = State(initialValue: dependencies.makeAssetActions())
+        self.content = content()
+    }
+
+    var body: some View {
+        content.assetActionHost(coordinator)
     }
 }
 

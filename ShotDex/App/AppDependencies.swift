@@ -50,6 +50,10 @@ final class AppDependencies {
     /// coordinator carries presentation state, and one instance hosted by two
     /// windows means an Adjust Date sheet raised in one of them is bound to
     /// state the other is also hosting.
+    ///
+    /// So screens never call this one: they read `\.assetActions`, which
+    /// `.assetActionHost(_:)` sets to the coordinator it hosts. Sending an
+    /// action here from a grid raises a sheet no host presents.
     let assetActions: AssetActionsCoordinator
     /// A second, independent coordinator for the detail viewer.
     ///
