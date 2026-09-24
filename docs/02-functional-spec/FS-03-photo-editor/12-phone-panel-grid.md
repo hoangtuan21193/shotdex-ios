@@ -101,10 +101,10 @@ Máy: iPhone 17 (402pt, iOS 26.5) và iPhone 16 Pro (iOS 18.6) · iPhone SE 3rd 
 | AC-6 | Exposure 0 | kéo lên +0,50 rồi chạm đôi | vệt trắng hiện lúc +0,50, mất khi về 0; nhãn và số không đổi màu lúc kéo | ảnh iPhone 17 26.5, 2026-09-24 (kéo Exposure); `valuesSnapOntoTheirDetentWithinAFixedPointDistance` |
 | AC-7 | nhóm Color, B&W tắt | bật B&W | rãnh công tắc trắng đặc, không pixel accent | ảnh iPhone 17 26.5, 2026-09-24 (Color · B&W bật) |
 | AC-8 | Dynamic Type `.accessibility1` | mở Light | mọi hàng vẫn 40, không nhãn nào bị cắt thành "…" | ⚠️ chưa có `iphone-panel-a11y.json` |
-| AC-9 | đang giữ nút xem bản gốc | chụp băng | đĩa trắng, icon đen | ⚠️ chưa có |
+| AC-9 | đang giữ nút xem bản gốc | chụp băng | đĩa trắng, icon đen | `iphone-hold-and-import.json` + chụp liên tục từ host, iPhone 17 Pro 26.5, 2026-09-25: lúc giữ 14s đĩa nút = (255,255,255), glyph hai ô vuông đen |
 | AC-10 | Crop mở | dump panel | đủ mọi tỉ lệ Free…9:16, có Rotate · Flip · Reset và footnote; **không** có hàng Vertical / Horizontal | ảnh iPhone 17 26.5, 2026-09-24; dump `iphone-panel-grid.json` (crop) iPhone 17 Pro 26.5, 2026-09-25: Free · Original · 1:1 · 4:3 · 3:2 · 16:9 · 4:5 · 9:16, Straighten, Rotate · Flip · Reset, footnote; không có Vertical / Horizontal |
 | AC-11 | Presets, có look đang chọn | dump vùng thông số | dải nguồn, hàng thumbnail và Amount nằm trọn trong 185pt, không cần cuộn | ảnh iPhone 17 26.5, 2026-09-24 (Presets) |
-| AC-12 | Presets, tab LUTs | chạm ô đầu | mở bộ chọn file .cube | ảnh iPhone 17 26.5, 2026-09-24 (tab LUTs, ô Import .cube); ⚠️ chưa mở bộ chọn file |
+| AC-12 | Presets, tab LUTs | chạm ô đầu | mở bộ chọn file .cube | `iphone-hold-and-import.json`, iPhone 17 Pro 26.5, 2026-09-25: LUTs → Import .cube mở bộ chọn tài liệu hệ thống (Recents · Shared · Browse) |
 | AC-13 | Duo ngoài | mở Light rồi Mask | panel 264, không nút nào dưới rail 84pt | ⚠️ chưa có — `duo-editor-panel.json` + `Tools/sim-shot` |
 | AC-14 | iPad, sidebar Light | dump Exposure | núm tròn 18, nhãn chữ thường, hàng ≥44 | `aSliderRowIsBigEnoughToHitAndQuickEnoughToNudge` + ⚠️ ảnh |
 | AC-15 | cả hai nhánh iOS 26.5 và 18.6 | chạy AC-2, AC-3 | kết quả như nhau | AC-2 và AC-3 chạy trên iPhone 17 Pro 26.5 và SE 18.6, 2026-09-25: lưới 40 như nhau, 0 px accent ở 11 nhóm cả hai (`Tools/accent-check`) |
@@ -116,7 +116,7 @@ Mask: AC-17…AC-25 ở [FS-03.05 §9](05-local-masks.md#9-tiêu-chí-nghiệm-t
 Không mạng / ảnh chỉ có trên iCloud: panel không đọc mạng, đường tải ảnh giữ như [FS-03](README.md) — không
 có AC riêng ở đây.
 
-**Chưa chứng minh được:** AC-8 (Dynamic Type), AC-9 (ảnh lúc giữ), AC-12 (mở bộ chọn file), AC-13 (Duo ngoài), AC-14 (ảnh iPad), AC-16 (hàng lớp Image, chip shape của mask nhiều shape).
+**Chưa chứng minh được:** AC-8 (Dynamic Type), AC-13 (Duo ngoài), AC-14 (ảnh iPad), AC-16 (hàng lớp Image, chip shape của mask nhiều shape).
 
 ## 9. Rủi ro đã biết
 
