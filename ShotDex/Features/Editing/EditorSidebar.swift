@@ -399,6 +399,21 @@ extension EnvironmentValues {
     }
 }
 
+/// True inside the photo editor's own panel (phone slab and wide sidebar): sliders,
+/// chips and switches draw in the FS-03.12 style — round knob, white fill, no
+/// accent. Off everywhere else, so Collage, Video Studio and the other tier-D tools
+/// keep the look they were built with.
+private struct EditorUsesPanelStyleKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    var editorUsesPanelStyle: Bool {
+        get { self[EditorUsesPanelStyleKey.self] }
+        set { self[EditorUsesPanelStyleKey.self] = newValue }
+    }
+}
+
 extension EnvironmentValues {
     var editorPanelScrolls: Bool {
         get { self[EditorPanelScrollsKey.self] }

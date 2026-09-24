@@ -6,17 +6,20 @@ import Testing
 
 struct EditorPanelLayoutTests {
 
-    /// The Turn 31 panel is one fixed 246pt slab: a parameter zone, the group
-    /// strip (a wheel flanked by Back and Save) and a bare home-indicator inset.
-    /// There is no in-panel command row — it moved to the band — and the panel is
-    /// the same height on every tab, the target strip eating into the parameter
-    /// zone rather than adding to the panel.
-    @Test func theTurn31PanelIsAFixed246SlabOfThreeTiers() {
-        #expect(EditorLayoutMetrics.editorPanelHeight == 246)
-        #expect(EditorLayoutMetrics.editorParamZoneHeight == 167)
+    /// The phone panel (FS-03.12 AC-1) is one fixed 264pt slab: a parameter zone on
+    /// a 40pt row grid, the group strip (a wheel flanked by Back and Save) and a bare
+    /// home-indicator inset. The target strip is exactly one grid row and eats into
+    /// the zone rather than adding to the panel, so the panel is one height on
+    /// every tab and row n of every group lands on the same y.
+    @Test func thePhonePanelIsA264SlabOnA40PointGrid() {
+        #expect(EditorLayoutMetrics.editorPanelHeight == 264)
+        #expect(EditorLayoutMetrics.editorParamZoneHeight == 185)
+        #expect(EditorLayoutMetrics.editorParamZoneTopInset == 8)
         #expect(EditorLayoutMetrics.editorGroupStripHeight == 54)
-        #expect(EditorLayoutMetrics.editorTargetStripHeight == 36)
         #expect(EditorLayoutMetrics.editorPanelSafeAreaInset == 25)
+        #expect(EditorLayoutMetrics.editorPanelRowHeight == 40)
+        #expect(EditorLayoutMetrics.editorTargetStripHeight == EditorLayoutMetrics.editorPanelRowHeight)
+        #expect(EditorLayoutMetrics.editorPanelCornerRadius == 22)
 
         // Light · Curve · Color · Mix · Point · Grade · Effects · Detail · Optics ·
         // Geo · Crop · Heal · Mask · Markup · Presets — all in the wheel, each with
@@ -33,17 +36,14 @@ struct EditorPanelLayoutTests {
                 == EditorLayoutMetrics.editorPanelHeight
         )
 
-        // The parameter *rows* get the zone, less the target strip when one shows —
-        // but the panel height is unchanged either way.
+        // The rows get the zone less its inset, and less one grid row when a target
+        // strip shows — the panel height is unchanged either way, and the first row
+        // of a strip-less group starts exactly where the strip would have been.
         let plain = EditorLayoutMetrics.editorParamAreaHeight(hasTargetStrip: false)
         let withTarget = EditorLayoutMetrics.editorParamAreaHeight(hasTargetStrip: true)
-        #expect(plain == 167)
-        #expect(withTarget == 131)
-        #expect(plain == EditorLayoutMetrics.editorParamZoneHeight)
-        #expect(
-            withTarget + EditorLayoutMetrics.editorTargetStripHeight
-                == EditorLayoutMetrics.editorParamZoneHeight
-        )
+        #expect(plain == 177)
+        #expect(withTarget == 137)
+        #expect(plain - withTarget == EditorLayoutMetrics.editorPanelRowHeight)
     }
 
     /// The floating histogram card snaps to whichever corner it is dropped in and

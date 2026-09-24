@@ -1299,6 +1299,7 @@ struct PhotoEditorScreen: View {
         // is here rather than at each call site so the mask, grade, curve and
         // markup panels get it without knowing they are in a sidebar.
         .environment(\.editorSliderStacked, true)
+        .environment(\.editorUsesPanelStyle, true)
         // And no panel draws its own title: the mode header two rows up already
         // says "MASK", and the panel repeating it in a larger font 40pt below
         // was the same name twice.
@@ -1685,7 +1686,7 @@ struct PhotoEditorScreen: View {
                 // shadows.
                 if colorSegment == .grade {
                     targetStrip(for: .grade, controller: controller)
-                        .frame(height: EditorLayoutMetrics.editorTargetStripHeight)
+                        .frame(height: EditorLayoutMetrics.sidebarTargetStripHeight)
                 }
 
                 toolPanelContent(for: colorSegment, controller: controller)
@@ -2339,21 +2340,28 @@ struct PhotoEditorScreen: View {
 
     // MARK: Panel
 
-    /// The Turn 31 panel: one opaque slab of fixed height. Top to bottom — the
-    /// parameter zone (its first row is the Grade target strip when shown, so the
-    /// zone, and the panel, stay one height on every tab), then the group strip (a
-    /// snap wheel flanked by Back and Save), then a bare home-indicator inset. No
-    /// command row: it moved to the band. No blur, no glass; the image never shows
-    /// through it.
+    /// The phone panel (FS-03.12): one opaque slab of fixed height, top corners
+    /// rounded, no hairline. Top to bottom — the parameter zone on a 40pt row grid
+    /// (its first row is the target strip when the group has one, so the zone, and
+    /// the panel, stay one height on every tab), then the group strip (a snap wheel
+    /// flanked by Back and Save), then a bare home-indicator inset. No blur, no
+    /// glass; the image never shows through it.
     private func panel(_ controller: PhotoEditorController, height: CGFloat) -> some View {
         let hasTarget = panelHasTargetStrip(controller)
         let rowsHeight = EditorLayoutMetrics.editorParamAreaHeight(
             hasTargetStrip: hasTarget
         )
+        let slab = UnevenRoundedRectangle(
+            topLeadingRadius: EditorLayoutMetrics.editorPanelCornerRadius,
+            topTrailingRadius: EditorLayoutMetrics.editorPanelCornerRadius,
+            style: .continuous
+        )
         return VStack(spacing: 0) {
-            // Parameter zone: fixed total height, the target strip eating into it
-            // rather than adding to the panel.
+            // Parameter zone: fixed total height — an 8pt inset, the target strip
+            // (one grid row) when the group has one, then the rows. Row n of every
+            // group therefore sits at the same y.
             VStack(spacing: 0) {
+                Color.clear.frame(height: EditorLayoutMetrics.editorParamZoneTopInset)
                 if hasTarget {
                     targetStrip(controller)
                         .frame(height: EditorLayoutMetrics.editorTargetStripHeight)
@@ -2362,6 +2370,16 @@ struct PhotoEditorScreen: View {
                     .frame(height: rowsHeight)
             }
             .frame(height: EditorLayoutMetrics.editorParamZoneHeight)
+            .overlay(alignment: .bottom) {
+                LinearGradient(
+                    colors: [EditorTheme.panelSolid.opacity(0), EditorTheme.panelSolid],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: EditorLayoutMetrics.editorParamZoneFadeHeight)
+                .allowsHitTesting(false)
+            }
+            .clipShape(slab)
 
             groupStripRow(controller)
                 .frame(height: EditorLayoutMetrics.editorGroupStripHeight)
@@ -2370,10 +2388,8 @@ struct PhotoEditorScreen: View {
             Color.clear.frame(height: EditorLayoutMetrics.editorPanelSafeAreaInset)
         }
         .frame(height: height)
-        .background(EditorTheme.panelSolid)
-        .overlay(alignment: .top) {
-            Rectangle().fill(EditorTheme.panelTopHairline).frame(height: 1)
-        }
+        .background(EditorTheme.panelSolid, in: slab)
+        .environment(\.editorUsesPanelStyle, true)
     }
 
     /// The target strip — which area of the photo the controls act on — shows only
@@ -2396,9 +2412,6 @@ struct PhotoEditorScreen: View {
         case .grade:
             EditorGradeRegionStrip(controller: controller, chrome: chrome)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .overlay(alignment: .bottom) {
-                    Rectangle().fill(Color.white.opacity(0.07)).frame(height: 1)
-                }
         default:
             EmptyView()
         }

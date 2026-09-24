@@ -28,20 +28,38 @@ enum EditorLayoutMetrics {
     /// a tier of its own, so the panel is the same height on every tab), the group
     /// strip — a snap wheel flanked by Back and Save — and a bare home-indicator
     /// inset. There is no in-panel command row: everything that used to sit there
-    /// moved onto the band or into the ⋯ menu.
-    static let editorPanelHeight: CGFloat = 246
-    /// The parameter zone: the scrolling rows. Fixed, so the panel stays 246 on
-    /// every tab. When a target strip shows it is the zone's first 36pt and the rows
-    /// take the rest — the panel height itself does not change.
-    /// 167 = 246 − 54 group strip − 25 safe-area inset.
-    static let editorParamZoneHeight: CGFloat = 167
+    /// moved onto the band or into the ⋯ menu. (FS-03.12)
+    static let editorPanelHeight: CGFloat = 264
+    /// The parameter zone: the scrolling rows. Fixed, so the panel stays 264 on
+    /// every tab. It opens with an 8pt inset, then — when the group picks a
+    /// target — a 40pt strip, then the rows. Every row is 40pt, so row *n* of every
+    /// group lands on the same y whether or not a strip is showing.
+    /// 185 = 264 − 54 group strip − 25 safe-area inset.
+    static let editorParamZoneHeight: CGFloat = 185
+    static let editorParamZoneTopInset: CGFloat = 8
+    /// One row of the phone panel's grid: slider, switch, colour, font, hint, and the
+    /// target strip. The fixed height is a tier-D exemption from sizing rows to the
+    /// text (NF-06) — the grid is the point — so labels shrink instead (0.85 floor).
+    static let editorPanelRowHeight: CGFloat = 40
+    static let editorPanelRowLabelWidth: CGFloat = 78
+    static let editorPanelRowValueWidth: CGFloat = 44
+    static let editorPanelRowMinimumScale: CGFloat = 0.85
+    /// The rows scroll under a fade to the panel colour, so the last visible row
+    /// reads as "there is more" rather than as clipped.
+    static let editorParamZoneFadeHeight: CGFloat = 22
+    /// Top corners of the panel slab (`r-xl`); the photo sits above them.
+    static let editorPanelCornerRadius: CGFloat = AppTheme.Radius.xl
+    /// The slider's round knob.
+    static let editorSliderThumbDiameter: CGFloat = 18
     /// The group-strip tier: `[Back 38] [wheel] [Save 42]`. Taller than the old chip
     /// row (54, not 40) because the wheel's chips are an icon over a label.
     static let editorGroupStripHeight: CGFloat = 54
     /// Target strip — "which area does this act on" — the first row *inside* the
-    /// parameter zone (not a tier of its own). Only Grade shows it; Color Mix keeps
-    /// its all-channels scroll and Mask keeps its own list / detail panels.
-    static let editorTargetStripHeight: CGFloat = 36
+    /// parameter zone (not a tier of its own): exactly one grid row.
+    static let editorTargetStripHeight: CGFloat = editorPanelRowHeight
+    /// The sidebar's own Grade strip keeps its size — the sidebar layout is not
+    /// part of the phone-panel rebuild.
+    static let sidebarTargetStripHeight: CGFloat = 36
     /// Bare home-indicator zone under the group strip. 25pt, not the full 34: the
     /// wheel above it takes only horizontal swipes, which the system's bottom-edge
     /// (vertical) gesture does not claim.
@@ -274,8 +292,8 @@ enum EditorLayoutMetrics {
 
     // MARK: Legacy panel constants (Collage / Video Studio, draw takeover)
 
-    /// Still used by the Collage and Video Studio panels and the drawing top bar —
-    /// left in place so this change stays inside the photo editor.
+    /// Still used by the Collage and Video Studio panels, the other tier-D tools and
+    /// the drawing top bar — the photo editor's own panel uses the 40pt grid above.
     static let editorPanelFixedHeight: CGFloat = 240
     static let editorActionBarHeight: CGFloat = 40
     static let editorGroupNavHeight: CGFloat = 48
@@ -288,10 +306,11 @@ enum EditorLayoutMetrics {
     /// card over the photo.
     static let editorMiniHistogramSize = CGSize(width: 56, height: 29)
 
-    /// Height the parameter-row list gets: the whole parameter zone, less the target
-    /// strip when one is shown. The panel height is unaffected either way.
+    /// Height the parameter-row list gets: the whole parameter zone, less its top
+    /// inset and the target strip when one is shown. The panel height is unaffected.
     static func editorParamAreaHeight(hasTargetStrip: Bool) -> CGFloat {
-        editorParamZoneHeight - (hasTargetStrip ? editorTargetStripHeight : 0)
+        editorParamZoneHeight - editorParamZoneTopInset
+            - (hasTargetStrip ? editorTargetStripHeight : 0)
     }
 
     // MARK: On-photo curve graph
