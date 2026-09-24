@@ -62,7 +62,18 @@
   ảnh (không lấp thì biên panorama có quầng tối). Spike: 100% không thấy đường nối trên bộ tĩnh.
 - **Đường nối tránh vùng hai khung khác nhau**: trong vùng chồng, đường nối đi qua chỗ hai khung giống
   nhau nhất, để người hay xe qua lại giữa hai lần bấm hiện **trọn một lần hoặc không hiện**, không bị cắt
-  đôi hay hiện hai lần. Tìm trên bản thu nhỏ rồi phóng lên cho dải full-res. Chi phí chưa đo — đo ở `/plan`.
+  đôi hay hiện hai lần. Tìm trên bản thu nhỏ (cạnh dài 512) rồi phóng lên cho dải full-res.
+  Làm xong 2026-09-24 (`PanoramaSeamFinder` + `PanoramaSeamPlanner`), chạy ở **tầng nét** của cả preview
+  lẫn xuất file. Ba điều học được khi dựng, vì cả ba đều không hiển nhiên:
+  - Đường nối tìm **trong hộp bao của vùng chồng**, không phải cả canvas: chạy cả canvas thì đường đi buộc
+    nối hai mép đối diện, nên ở cặp khung chỉ chồng một phần chiều cao, phần còn lại của đường đi lang
+    thang ở vùng không liên quan.
+  - Chi phí có thêm một số hạng **phạt việc rời khỏi giữa vùng chồng** (`balance`): hai khung chụp cùng
+    một mảng trời không khác nhau ở đâu cả, mọi đường đi đều giá 0, và đường nối rơi vào chỗ số học
+    nghiêng — kể cả sát mép khung, nơi tối góc và lệch sáng nặng nhất.
+  - Đường nối chỉ nói **chỗ nào**, không nói **bên nào của ai**. Khung đánh số theo thứ tự bấm máy, nên
+    quét từ phải sang trái thì khung số nhỏ nằm bên phải; lấy "bên thứ nhất" làm "khung thứ nhất" là tráo
+    hai khung trong mọi vùng chồng. Bên được chọn theo khung nào có tiếng nói lớn hơn ở đó.
 - **Auto Crop**: hình chữ nhật lớn nhất nằm trọn trong vùng có ảnh (spike: giữ 79–90%).
 - **Boundary Warp** 0–100: lưới giữ hình kéo biên về chữ nhật — mỗi ô giữ gần một phép đồng dạng của ô
   gốc, **đường thẳng giữ thẳng**, biên nằm trên cạnh chữ nhật. Mức giữa trộn tuyến tính giữa không warp và

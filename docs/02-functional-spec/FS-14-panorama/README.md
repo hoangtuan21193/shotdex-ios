@@ -67,35 +67,41 @@ Bộ khung thử `s1…s8` là khung ảo có đáp án dựng từ ảnh 360° 
 test dựng chúng từ một ảnh 360° nhỏ đóng trong test bundle. "Thời gian" và "footprint" đo trên
 **iPhone 17 thật**, bản Release.
 
+**Trạng thái 2026-09-24** — 11 tiêu chí ✅, 14 ⚠️ một nửa, 4 ❌ chưa làm. Bốn việc còn nguyên là
+Boundary Warp (AC-11), tự ước lượng méo (AC-16), lưu khi vào nền (AC-20) và ngưỡng 50 khung (AC-22);
+phần lớn ⚠️ là thiếu **ảnh chụp**, không thiếu code. Ba thứ không chụp được trên máy đang có, và lý do
+là của máy chứ không phải của app: màn trong của Duo (máy đang gập, `simctl` không mở được), câu
+"not enough free space" (máy thử còn 11 GB trống), và quyền `.limited`.
+
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | chọn 1 ảnh + 2 video | mở ⋯ → Combine Photos | dòng Panorama hiện nhưng mờ (cần ≥ 2 ảnh) | ⚠️ chưa có — `panorama-entry.json` |
-| AC-2 | chọn 6 ảnh s1 + 1 video | ⋯ → Combine Photos ▸ Panorama | màn mở với **6** khung, video bị bỏ, tiêu đề ghi 6 | ⚠️ chưa có — `panorama-entry.json` |
-| AC-3 | s1, s2, s3, s6 (thứ tự chọn xáo) | ghép | mọi khung vào panorama; xoay tương đối lệch ≤ 0,1° so với đáp án; đổi thứ tự chọn ra cùng kết quả | ⚠️ chưa có — `PanoramaSolverTests` |
-| AC-4 | s5: 5 khung một cảnh + 1 ảnh khác cảnh | ghép | 5 khung vào panorama; ảnh lạc nằm ở dải **Not Placed (1)**; không cặp nào ghép nhầm | ⚠️ chưa có — `PanoramaRegistrationTests` |
-| AC-5 | 2 ảnh không chồng mép | ghép | không có preview; thông báo nói khung phải chồng nhau ~30% · Save mờ | ⚠️ chưa có — `PanoramaRegistrationTests` + ảnh |
+| AC-1 | chọn 1 ảnh + 2 video | mở ⋯ → Combine Photos | dòng Panorama hiện nhưng mờ (cần ≥ 2 ảnh) | ⚠️ luật có (`CombinePurpose.minimumPhotoCount` + `.disabled(imageSelectionCount < 2)` ở `SelectionBarViews`), **chưa có ảnh** |
+| AC-2 | chọn 6 ảnh s1 + 1 video | ⋯ → Combine Photos ▸ Panorama | màn mở với **6** khung, video bị bỏ, tiêu đề ghi 6 | ⚠️ lọc video có ở `presentCombine` của cả bốn lưới; **chưa có ảnh** với 6 khung + 1 video |
+| AC-3 | s1, s2, s3, s6 (thứ tự chọn xáo) | ghép | mọi khung vào panorama; xoay tương đối lệch ≤ 0,1° so với đáp án; đổi thứ tự chọn ra cùng kết quả | ✅ `PanoramaSolverTests.aRowOfFramesComesBackWithTheRotationsItWasBuiltFrom` (xoay ≤ 0,1°) + `.theOrderTheFramesArriveInDoesNotChangeTheAnswer` |
+| AC-4 | s5: 5 khung một cảnh + 1 ảnh khác cảnh | ghép | 5 khung vào panorama; ảnh lạc nằm ở dải **Not Placed (1)**; không cặp nào ghép nhầm | ✅ `PanoramaRegistrationTests.aStrayFrameComesBackAsNotPlaced` (4 khung + 1 ảnh lạc, đặc tả nói 5) + `PanoramaSolverTests.aFrameFromAnotherSceneIsReportedAsNotPlaced` |
+| AC-5 | 2 ảnh không chồng mép | ghép | không có preview; thông báo nói khung phải chồng nhau ~30% · Save mờ | ✅ `PanoramaRegistrationTests.framesThatDoNotOverlapAreRefused` + ảnh iPhone 17 Pro: "These photos don't overlap", Save mờ, panel ẩn |
 | AC-6 | một khung ở Not Placed, thả lệch chỗ đúng ≤ 20% bề rộng khung | kéo thả lên stage | khung được căn lại với khung kề, lệch ≤ 1 px ở ảnh 1024; rời Not Placed | ✅ `PanoramaArrangeTests` (8 test; thả lệch 20% về đúng chỗ ≤ 1 px) + ảnh iPhone 17 Pro: kéo khung ra (2,236 → 1,716 px), kéo từ dải trở lại (về 2,236 px), thả chỗ không khớp thì ảnh giữ nguyên và báo lý do |
-| AC-7 | s1 (tổng ~260° ngang) | mở panel phép chiếu | Spherical, Cylindrical bật; Perspective mờ kèm một dòng lý do | ⚠️ chưa có — `PanoramaRenderTests` + ảnh |
-| AC-8 | s4 (cột dọc 4 khung) | ghép Cylindrical | ảnh ra cao hơn rộng; phần có ảnh ≥ 90% khung bao | ⚠️ chưa có — `PanoramaRenderTests` |
-| AC-9 | s1, gain từng khung 0,8–1,25 | ghép | chênh sáng trung bình hai bên mỗi đường nối ≤ 2% | ⚠️ chưa có — `PanoramaRenderTests` |
-| AC-10 | s2, Auto Crop bật, Boundary Warp 0 | Save | ảnh ra không có pixel trống; diện tích ≥ 80% vùng có ảnh | ⚠️ chưa có — `PanoramaRenderTests` |
-| AC-11 | s2, Boundary Warp 100 | Save | ảnh ra chữ nhật, 0 pixel trống; mọi đoạn thẳng ≥ 200 px của cảnh cong ≤ 3 px | ⚠️ chưa có — `PanoramaRenderTests` |
-| AC-12 | s2 ở 6000×4000/khung (10 × 24 MP) | Save | JPEG ở độ phân giải gốc; footprint đỉnh ≤ 500 MB; xong ≤ 120 s | ⚠️ chưa có — đo tay + `PanoramaExportTests` |
-| AC-13 | 10 khung cùng máy, cùng ống kính, phơi sáng khác nhau | Save rồi index xong | ảnh mới mang máy, ống kính, ngày, vị trí của khung đầu; không có tốc độ/khẩu/ISO; hiện khi lọc theo máy đó | ⚠️ chưa có — `PanoramaMetadataTests` |
-| AC-14 | 3 khung chỉ có trên iCloud, máy mất mạng | ghép | thông báo "3 photos couldn't be downloaded" + Retry; không lưu gì | ⚠️ chưa có — ảnh (sim, mạng tắt) |
-| AC-15 | đang lưu ở 60% | Cancel | thư viện không thêm ảnh; thư mục tạm của phiên rỗng | ⚠️ chưa có — `PanoramaExportTests` |
-| AC-16 | s8 (méo thùng, không có hồ sơ ống kính) | ghép | hệ số méo ước lượng lệch ≤ 0,01; xoay lệch ≤ 0,2° | ⚠️ chưa có — `PanoramaSolverTests` |
-| AC-17 | panorama ShotDex vừa lưu, và một ảnh crop 21:9 | mở ⋯ trong viewer từng ảnh | panorama có View Panorama; ảnh 21:9 không có | ⚠️ chưa có — `panorama-viewer.json` |
-| AC-18 | quyền `.limited` | Save | ảnh mới hiện trong lưới Library | ⚠️ chưa có — ảnh (sim, limited) |
-| AC-19 | Save thành công | xong lưu | màn đóng, chế độ chọn tắt, viewer mở đúng ảnh vừa lưu | ⚠️ chưa có — `panorama-save.json` |
-| AC-20 | đang lưu ở 30% | về màn hình chính 60 s rồi quay lại | lưu chạy tiếp, không bắt đầu lại; ra đúng 1 asset | ⚠️ chưa có — máy thật, iOS 26 và 18 |
-| AC-21 | 1 panorama ShotDex + 1 panorama Camera trong thư viện | mở bộ sưu tập Panoramas, rồi lọc Capture Kind → Panoramas | cả hai ảnh có mặt ở cả hai chỗ | ⚠️ chưa có — `PanoramaMetadataTests` + ảnh |
-| AC-22 | chọn 120 khung | ⋯ → Combine Photos ▸ Panorama | ước lượng thời gian hiện trước khi ghép; Cancel đóng màn, không làm gì | ⚠️ chưa có — ảnh |
+| AC-7 | s1 (tổng ~260° ngang) | mở panel phép chiếu | Spherical, Cylindrical bật; Perspective mờ kèm một dòng lý do | ⚠️ một nửa — `PanoramaRenderTests.aWideSweepRulesOutPerspective` · `.aTallSweepRulesOutCylindrical` · `.aNarrowPairKeepsEveryProjection` + ảnh panel ba chip; **chưa chụp** chip mờ kèm câu lý do |
+| AC-8 | s4 (cột dọc 4 khung) | ghép Cylindrical | ảnh ra cao hơn rộng; phần có ảnh ≥ 90% khung bao | ✅ `PanoramaRenderTests.aColumnOfFramesTurnsTheProjectionOnItsSide` + `PanoramaCropTests.aColumnOfFramesFillsItsCanvasOnlyWhenTheAxisIsTurned` (phủ ≥ 90%) |
+| AC-9 | s1, gain từng khung 0,8–1,25 | ghép | chênh sáng trung bình hai bên mỗi đường nối ≤ 2% | ✅ `PanoramaRenderTests.exposureIsMatchedAcrossEverySeam` |
+| AC-10 | s2, Auto Crop bật, Boundary Warp 0 | Save | ảnh ra không có pixel trống; diện tích ≥ 80% vùng có ảnh | ✅ `PanoramaCropTests.theCropIsTheBiggestRectangleWithNoHoleInIt` (giữ ≥ 80%) + `.croppingReturnsExactlyThatRectangle` |
+| AC-11 | s2, Boundary Warp 100 | Save | ảnh ra chữ nhật, 0 pixel trống; mọi đoạn thẳng ≥ 200 px của cảnh cong ≤ 3 px | ❌ **chưa làm** — Boundary Warp là Task 20 của kế hoạch, chưa viết dòng nào |
+| AC-12 | s2 ở 6000×4000/khung (10 × 24 MP) | Save | JPEG ở độ phân giải gốc; footprint đỉnh ≤ 500 MB; xong ≤ 120 s | ⚠️ đường xuất theo dải có test (`PanoramaExportTests`); **footprint và 120 s chưa đo trên máy thật** |
+| AC-13 | 10 khung cùng máy, cùng ống kính, phơi sáng khác nhau | Save rồi index xong | ảnh mới mang máy, ống kính, ngày, vị trí của khung đầu; không có tốc độ/khẩu/ISO; hiện khi lọc theo máy đó | ⚠️ một nửa — `PanoramaMetadataTests` (máy/ống kính/ngày lấy khung đầu, phơi sáng chỉ giữ khi mọi khung khớp); **chưa chụp** phần lọc theo máy tìm ra ảnh ghép |
+| AC-14 | 3 khung chỉ có trên iCloud, máy mất mạng | ghép | thông báo "3 photos couldn't be downloaded" + Retry; không lưu gì | ⚠️ một nửa — `PanoramaStitchServiceTests.framesThatWillNotLoadAreCountedNotDropped` đếm và nêu tên; **nút Retry chưa có** |
+| AC-15 | đang lưu ở 60% | Cancel | thư viện không thêm ảnh; thư mục tạm của phiên rỗng | ✅ `PanoramaExportTests.cancellingLeavesNothingBehind` + `PanoramaStitchServiceTests.cancellingStopsBeforeAnythingIsSaved` |
+| AC-16 | s8 (méo thùng, không có hồ sơ ống kính) | ghép | hệ số méo ước lượng lệch ≤ 0,01; xoay lệch ≤ 0,2° | ❌ **chưa làm** — tự ước lượng méo nằm ngoài v1 theo kế hoạch |
+| AC-17 | panorama ShotDex vừa lưu, và một ảnh crop 21:9 | mở ⋯ trong viewer từng ảnh | panorama có View Panorama; ảnh 21:9 không có | ⚠️ một nửa — cờ có test (`DatabaseTests.panoramaFlagRoundTrips`, `.v18BackfillsThePanoramaFlagFromTheSubtypeMask`) và `PhotoDetailScreen` đã đổi sang định nghĩa mới; **chưa chụp** hai ảnh cạnh nhau |
+| AC-18 | quyền `.limited` | Save | ảnh mới hiện trong lưới Library | ⚠️ chưa kiểm ở quyền `.limited` |
+| AC-19 | Save thành công | xong lưu | màn đóng, chế độ chọn tắt, viewer mở đúng ảnh vừa lưu | ⚠️ một nửa — `onSaved` nối `openSavedPhoto` ở cả bốn lưới (album người dùng thì thêm vào album rồi mở tại chỗ); **chưa chụp** lúc viewer mở |
+| AC-20 | đang lưu ở 30% | về màn hình chính 60 s rồi quay lại | lưu chạy tiếp, không bắt đầu lại; ra đúng 1 asset | ❌ **chưa làm** — màn luôn sáng + chạy nền là Task 18 |
+| AC-21 | 1 panorama ShotDex + 1 panorama Camera trong thư viện | mở bộ sưu tập Panoramas, rồi lọc Capture Kind → Panoramas | cả hai ảnh có mặt ở cả hai chỗ | ⚠️ một nửa — `DatabaseTests.panoramasFilterFindsBothKinds` chứng minh bộ lọc thấy cả hai loại; **chưa chụp** bộ sưu tập Panoramas lấy từ index |
+| AC-22 | chọn 120 khung | ⋯ → Combine Photos ▸ Panorama | ước lượng thời gian hiện trước khi ghép; Cancel đóng màn, không làm gì | ❌ **chưa làm** — ngưỡng 50 khung và ước lượng trước khi ghép là Task 4 còn dở |
 | AC-25 | s2 ghép xong, Size 100% ghi `W × H px` | kéo Size về 50% | dòng ước lượng ghi `round(W/2) × round(H/2)` (±1 px), MP còn ¼; ảnh lưu ra đúng kích thước đó | ✅ `PanoramaSizeEstimateTests` (9 test) + ảnh iPhone 17 Pro: 100% `2,236 × 796 px · 1.8 MP · ~176 KB · ~2s`, 46% `1,025 × 365 px · 0.4 MP · ~37 KB · ~1s` |
-| AC-26 | dung lượng trống 500 MB, ảnh ra ước ~2 GB tạm + ảnh | mở panel | dòng ước lượng báo thiếu và thiếu bao nhiêu; Save mờ | ⚠️ một nửa — luật có (`DiskSpace` + `PanoramaSizeEstimator.requiredFreeBytes`, `canSave` tắt khi thiếu) và test phần tính; **câu trên màn chưa chụp được**: simulator còn 11 GB trống và panorama thử chỉ 176 KB, cần máy gần đầy hoặc chuỗi khung lớn |
-| AC-27 | panel đang hiện đủ 5 mục | mở trên Duo trong (951×669) và iPhone (402×874) | không mục nào bị cắt, stage còn ≥ 50% chiều cao màn | ⚠️ chưa có — `panorama-panel.json` + `Tools/sim-shot` |
-| AC-28 | s2 đã ghép, preview nét đang hiện | kéo Boundary Warp 0 → 100 trong 2 s | preview đổi theo tay ≥ 15 khung/giây; thả tay ≤ 1,5 s có bản nét; mép bản nháp và bản nét lệch ≤ 2 px (ở 1536) | ⚠️ chưa có — `PanoramaRenderTests` (hình học) + đo tay máy thật |
-| AC-29 | s1, preview nét đang hiện | chạm Cylindrical | ≤ 150 ms có bản nháp Cylindrical; không chạy lại bước căn ảnh | ⚠️ chưa có — `PanoramaRenderTests` + đo tay |
+| AC-26 | dung lượng trống 500 MB, ảnh ra ước ~2 GB tạm + ảnh | mở panel | dòng ước lượng báo thiếu và thiếu bao nhiêu; Save mờ | ⚠️ một nửa — `PanoramaSizeEstimateTests.requiredSpaceCoversTheScratchFileAsWellAsThePhoto` + `DiskSpace`, `canSave` tắt khi thiếu; **câu trên màn chưa chụp được**: máy thử còn 11 GB trống và panorama thử 176 KB |
+| AC-27 | panel đang hiện đủ 5 mục | mở trên Duo trong (951×669) và iPhone (402×874) | không mục nào bị cắt, stage còn ≥ 50% chiều cao màn | ⚠️ một nửa — ảnh iPhone 17 Pro 402×874, iPad Pro 13" (dump đo cột phải 1072→1376pt) và **Duo ngoài** 466×678 (nội dung dừng ở 376pt, không đè rail); **Duo trong chưa chụp được** — máy đang gập, `simctl` không mở được |
+| AC-28 | s2 đã ghép, preview nét đang hiện | kéo Boundary Warp 0 → 100 trong 2 s | preview đổi theo tay ≥ 15 khung/giây; thả tay ≤ 1,5 s có bản nét; mép bản nháp và bản nét lệch ≤ 2 px (ở 1536) | ⚠️ một nửa — `PanoramaCIBlenderTests.sharpAndDraftShareTheirGeometry` (nháp và nét trùng hình học); **khung/giây và 1,5 s chưa đo** |
+| AC-29 | s1, preview nét đang hiện | chạm Cylindrical | ≤ 150 ms có bản nháp Cylindrical; không chạy lại bước căn ảnh | ⚠️ một nửa — cùng test hình học, và đổi phép chiếu không chạy lại bước căn ảnh (`schedulePreview` dùng lại `cameras`); **150 ms chưa đo** |
 | AC-23 | s1, một người có mặt ở vùng chồng của khung 2 nhưng không có ở khung 3 | ghép | người đó hiện trọn vẹn hoặc không hiện; không vết cắt đôi, không hai bản | ✅ `PanoramaSeamTests` (buffer) + `PanoramaSeamBlendTests.theJoinGoesRoundTheFigureRatherThanThroughIt` (trên canvas, có kiểm chứng test cắn) + ảnh iPhone 17 Pro: chuỗi 3 khung mượt, không bậc |
 | AC-24 | 3 khung iPhone HDR (P3 + gain map) + 1 khung SDR | Save | ảnh ra **P3 và SDR**, không có gain map | ✅ `PanoramaExportTests` — tiêu chí đã đổi 2026-09-23: giữ gain map là **không làm được**, xem §2 |
 

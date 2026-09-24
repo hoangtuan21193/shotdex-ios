@@ -39,7 +39,7 @@ stage đen, một panel đáy `panelSolid`. Không token mới.
 Panel, từ trên xuống:
 1. **Projection** — ba lựa chọn Spherical · Cylindrical · Perspective, dưới là **một câu nói phép chiếu
    đó hợp với cảnh nào** (không mô tả phép toán). Lựa chọn không dựng được thì mờ và câu đó nói vì sao.
-2. **Boundary Warp** — slider 0–100, mặc định 0.
+2. **Boundary Warp** — slider 0–100, mặc định 0. **Chưa có trong bản dựng** (AC-11, Task 20 của kế hoạch): panel hiện có bốn mục, không phải năm.
 3. **Auto Crop** — công tắc, mặc định bật.
 4. **Size** — slider **25–100%** của độ phân giải gốc, bước 5, **hít ở 100%**, mặc định 100%. Không phóng quá
    100% — pixel phóng to là pixel bịa. Dưới track **một dòng** ước lượng, cập nhật khi đổi bất kỳ mục nào ở trên:
@@ -83,6 +83,8 @@ Mọi thay đổi setting hiện lên preview **ngay**, chất lượng thấp t
 - **Không đủ dung lượng trống** cho file tạm + ảnh ra: cả dòng đổi thành `~34 MB — not enough free space
   (need 1.2 GB more)`, Save mờ. Người dùng thấy trước, không phải bấm Save rồi mới biết.
 - Cập nhật sau khi ngừng kéo ~150 ms; không chạy lại đường ghép, chỉ tính lại con số.
+  **Bản dựng không cần hoãn**: pixel và MP là số học trên hình học đã giải, byte và thời gian là hệ số
+  đo sẵn từ bản nét, nên dòng này tính lại trong cùng một khung hình và đi thẳng theo tay kéo.
 
 ## 5. Sắp khung tay (Arrange)
 
