@@ -75,7 +75,7 @@ Mỗi lớp nét vẽ ghép **theo thứ tự của nó trong dải lớp**, nh�
   Text · Image · Sign / Pen · Marker / Rectangle · Oval · Speech bubble · Arrow · Line · Magnifier.
   **Sign** mở thư viện chữ ký như hôm nay.
 - **Có lớp**: dải 40pt — thumbnail 40×30 mỗi lớp (nền tối + icon loại lớp, lớp chữ tô theo màu chữ; lớp ẩn mờ
-  35%) · `+` · tên lớp · `⋯`. **Giữ rồi kéo** thumbnail thả lên thumbnail khác để đổi thứ tự (lớp kéo lấy chỗ lớp bị thả lên; một bước Undo — `MarkupPhonePanelTests.dragOntoATileRestacksTheLayer`, ảnh iPhone 17 26.5, 2026-09-25).
+  35%) · `+` · tên lớp · `⋯`. Tên lớp không bao giờ hẹp dưới 72pt: từ lớp thứ 5 (402pt) dải thumbnail cuộn thay vì ép tên còn một chữ. **Giữ rồi kéo** thumbnail thả lên thumbnail khác để đổi thứ tự (lớp kéo lấy chỗ lớp bị thả lên; một bước Undo — `MarkupPhonePanelTests.dragOntoATileRestacksTheLayer`, ảnh iPhone 17 26.5, 2026-09-25).
 - `⋯`: Rename · Duplicate · Hide / Show · Bring Forward · Send Backward · Save as Preset · Delete · Remove All
   Layers (+ Clear Strokes với lớp nét vẽ, Replace Image với lớp ảnh).
 - Hàng thuộc tính của từng loại, theo thứ tự:
@@ -103,9 +103,9 @@ Tiếp số của [FS-03.12](../FS-03-photo-editor/12-phone-panel-grid.md). Máy
 | AC-32 | lớp chữ đang chọn | chạm vùng trống trên ảnh | khung chọn trên ảnh mất; panel vẫn là hàng của lớp chữ đó | `MarkupPhonePanelTests.tapOnEmptyPhotoKeepsThePanelLayer` |
 | AC-33 | lớp chữ, hàng Color | dump hàng | 6 ô màu = 4 mức xám + 2 màu như hôm nay, cộng ô custom | ảnh iPhone 17 26.5, 2026-09-24 (hàng màu); ⚠️ chưa có dump |
 | AC-34 | lớp chữ, hàng Color | chạm ô custom, rồi `‹` | bảng màu hiện rồi đóng; panel 264 suốt hai bước | ảnh iPhone 17 26.5, 2026-09-24 (bảng màu + ống hút); `MarkupPhonePanelTests.recentColorsAreNewestFirstAndCapped` |
-| AC-35 | 8 lớp, dải cuộn ở đầu | chạm lớp thứ 8 trên ảnh | lớp 8 được chọn, thumbnail của nó nằm trọn trong dải | ⚠️ chưa có |
+| AC-35 | 8 lớp, dải cuộn ở đầu | chạm lớp thứ 8 trên ảnh | lớp 8 được chọn, thumbnail của nó nằm trọn trong dải | ảnh iPhone 17 26.5, 2026-09-25: 8 lớp, lớp 1 kéo ra góc trên-trái, chạm nó trên ảnh → dải cuộn tới cuối, thumbnail có vòng chọn nằm trọn |
 | AC-36 | 1 lớp | chạm `+` rồi `‹` | vẫn 1 lớp, lớp cũ vẫn chọn | `MarkupPhonePanelTests.plusThenBackMakesNothing` |
 | AC-37 | 1 lớp | `⋯` → Delete | 0 lớp, panel về "Add a layer", không có `‹` | `MarkupPhonePanelTests.deletingTheLastLayerShowsTheChooser` |
 | AC-38 | ảnh 48MP, 10 lớp nét vẽ, mỗi lớp 50 nét | lưu bản full-res | lưu xong; bộ nhớ đỉnh của lượt render nét vẽ < 400MB | `PhotoDrawingModelsTests.aDrawingRastersOnlyItsBoundingBox` (khung bao nhỏ < 8MB), `aFullFrameDrawingIsPlannedInBoundedBands` (lớp phủ cả khung 48MP vẽ theo dải ≤ 24MB, không tạo bitmap thứ hai cả khung), `bandedDrawingHasNoSeams`; ⚠️ chưa đo bộ nhớ đỉnh cả lượt lưu trên máy |
 
-**Chưa chứng minh được:** AC-33 (dump hàng), AC-35 (dải cuộn theo lớp chọn trên ảnh), AC-38 (bộ nhớ đỉnh cả lượt lưu).
+**Chưa chứng minh được:** AC-33 (dump hàng), AC-38 (bộ nhớ đỉnh cả lượt lưu).

@@ -57,6 +57,10 @@ enum EditorLayoutMetrics {
     /// Target strip — "which area does this act on" — the first row *inside* the
     /// parameter zone (not a tier of its own): exactly one grid row.
     static let editorTargetStripHeight: CGFloat = editorPanelRowHeight
+    /// The name beside the Mask / Markup thumbnail strip never gets less than
+    /// this: with six or more thumbnails the strip scrolls rather than squeezing
+    /// the name to one letter ("Rectangle" is ~68pt at 13pt semibold).
+    static let editorThumbnailStripNameMinWidth: CGFloat = 72
     /// The sidebar's own Grade strip keeps its size — the sidebar layout is not
     /// part of the phone-panel rebuild.
     static let sidebarTargetStripHeight: CGFloat = 36

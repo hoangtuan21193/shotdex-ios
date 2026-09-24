@@ -546,6 +546,12 @@ general-purpose (sliders/curve/grade/heal/crop/shell), challenger (scope, Pencil
 ## Build-time findings (2026-09-25, while coding FS-03.12)
 - [x] Wheel tap could leave Grade centred over a Point Color panel (SE 375 / iOS 18.6, 2 of 4 runs, only without logging): the tap's debounced select was cancelled by a scroll write-back that `onChange` then coalesced away → a tap now selects at once and ignores write-backs until the target lands; settle reads the current chip; iOS 18 selects on scroll idle too (`PhotoEditorScreen.swift`, `EditorGroupWheel`)
 - [x] Grade chip strip showed a glyph on three chips and none on "Highlights" → the strip drops glyphs together (`EditorStripLayout.showsIcons`)
+- [x] 48MP drawing layer spanning the frame built a ~192MB stamp beside the ~192MB overlay bitmap → bands ≤ 24MB (`PhotoRenderService+Drawing.swift`) _(memory-leak)_
+- [x] Markup swatches Cream / Red both read "Colour swatch", Recent colours indistinguishable, palette eyedropper stateless → named, numbered + hex, Armed/Off _(a11y-voiceover)_
+- [x] Mask deleted mid-detection left its id in `detectingMaskComponentIDs` → pruned to live components on resolve _(swift-concurrency)_
+- [ ] `PhotoRenderService.emptyAutomaticComponents` / `foundAutomaticComponents` grow for the life of the actor (`PhotoRenderService.swift:106`) → evict with `automaticMaskCacheOrder` _(swift-concurrency, nit)_
+- [ ] `DrawingLayerCache` (192MB) and the full-frame overlay bitmap (~192MB at 48MP) are not scaled for an extension's ~120MB ceiling; nothing gates `render(maximumDimension: nil)` there (`PhotoRenderService+Drawing.swift:20`, `+Overlay.swift:161`) — predates this work; run `extension-boundary` before any extension renders markup _(memory-leak)_
+- [ ] Tone curve points cannot be moved with VoiceOver — presets and Reset are reachable, points are not (`EditorCurveOverlay.swift:73`); predates this work _(a11y-voiceover)_
 
 ### Needs a decision
 - **On-photo selection frame is still accent** (dashed amber box round a selected layer, `EditorOverlayGuides.swift:176` via `EditorImageStage.swift:361`; mask pins `EditorOverlayGuides.swift:317,323`). DESIGN.md says "accent chỉ trên Save trong toàn photo editor" but lists only wheel, band, chip, slider and switch, and AC-3 measures the band and panel only. Options: (a) leave — the stage guides are not panel chrome, and amber reads well over any photo; (b) white dashed frame like Photos' markup, costs contrast over bright skies. Not changed while the scope is "look and layout of the panel".

@@ -188,8 +188,12 @@ struct EditorMaskStrip: View {
                 .foregroundStyle(.white)
                 .lineLimit(1)
                 .truncationMode(.tail)
+                .frame(
+                    minWidth: EditorLayoutMetrics.editorThumbnailStripNameMinWidth,
+                    maxWidth: .infinity,
+                    alignment: .leading
+                )
                 .padding(.leading, AppTheme.Spacing.xs)
-                .frame(maxWidth: .infinity, alignment: .leading)
 
             EditorMaskActionsMenu(controller: controller, rename: rename) {
                 controller.deleteSelectedMask()

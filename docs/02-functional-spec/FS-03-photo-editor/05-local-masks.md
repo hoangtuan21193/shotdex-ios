@@ -43,7 +43,7 @@ Vẽ, tranh chấp chạm và zoom: [FS-03.05b](05b-mask-painting-and-zoom.md).
 ## 3. Chỉnh mask đang chọn
 
 - **Dải đầu 40pt**: thumbnail 40×30 của mọi mask (matte đỏ trên nền xám phẳng — đỏ đè lên ảnh ở cỡ này không
-  đọc nổi hình mask; chạm để chọn, đó là lối nhảy nhanh) · `+` · tên mask · `⋯`. Mask đổi mà không qua chạm thumbnail (vừa tạo, Duplicate, Undo) thì dải **tự cuộn
+  đọc nổi hình mask; chạm để chọn, đó là lối nhảy nhanh) · `+` · tên mask (không hẹp dưới 72pt — nhiều mask thì dải cuộn) · `⋯`. Mask đổi mà không qua chạm thumbnail (vừa tạo, Duplicate, Undo) thì dải **tự cuộn
   tới thumbnail đó**.
 - Mask đang **tắt hiệu ứng** thì thumbnail mờ 35%.
 - **Hàng đầu dưới dải**: chip chọn hình (chỉ khi mask có ≥2 hình) · công tắc **Add / Subtract** (chế độ cho
