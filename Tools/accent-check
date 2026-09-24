@@ -1,0 +1,14 @@
+#!/bin/sh
+# FS-03.12 AC-3: Tools/accent-check shot.png [more.png …]
+# Counts accent-coloured pixels in the photo editor's command band and phone
+# panel, Save button excluded; exits non-zero when any shot has one.
+# The checker is Swift (Tools/src/accent-check.swift), compiled -O on first use.
+set -e
+root=$(cd "$(dirname "$0")/.." && pwd)
+src="$root/Tools/src/accent-check.swift"
+bin="$root/build/tools/accent-check"
+if [ ! -x "$bin" ] || [ "$src" -nt "$bin" ]; then
+  mkdir -p "$root/build/tools"
+  swiftc -O "$src" -o "$bin"
+fi
+exec "$bin" "$@"

@@ -274,7 +274,7 @@ Lưới tràn viền, không padding. **Không lưới ảnh nào chèn header n
 
 - **264pt = 185 vùng thông số + 54 dải nhóm + 25 vùng home**, bo `r-xl` 22 hai góc trên, không nét mảnh. Vùng thông số: đệm 8, dải chọn 40 (khi nhóm có), rồi hàng.
 - **Lưới 40pt**: slider, công tắc, màu, font, hint, dải chọn đều cao 40 — hàng thứ n của mọi nhóm cùng một y. **Miễn trừ tầng D có tên** khỏi luật "hàng cao theo cỡ chữ" (NF-06) và chạm 44: chữ co tối đa 0,85, không cắt ở `.accessibility1`. Chỉ hai chỗ được lệch lưới: bảng màu custom (36 · 32 · 36×3) và hàng thumbnail Presets.
-- **Một chip**: cao 30, `r-sm` 8, đệm ngang 8 (4 khi chia đều), icon 15pt cách chữ 4, chữ 13pt trắng; chọn = trắng 20% chữ đậm, không chọn = trắng 6%. Dải ≤5 chip chia đều, >5 cuộn; dải swatch luôn chia đều. Chip cách nhau 8, dải cách mép 12.
+- **Một chip**: cao 30, `r-sm` 8, đệm ngang 8 (4 khi chia đều), icon 15pt cách chữ 4, chữ 13pt trắng; chọn = trắng 20% chữ đậm, không chọn = trắng 6%. Dải ≤5 chip chia đều, >5 cuộn; dải swatch luôn chia đều. Chip chia đều không đủ chỗ cho icon + chữ ở một nhãn thì cả dải bỏ icon (không thu chữ, không bỏ icon lẻ một chip). Chip cách nhau 8, dải cách mép 12.
 - **Swatch** (băng màu, điểm màu, thumbnail mask / lớp bo `r-sm`) là ngoại lệ duy nhất của chip: chọn = vòng trắng 1,5pt cách 2pt, không chọn = mờ 70%.
 - **Một slider**: nhãn 78 chữ thường 12pt trắng 60%, số 44 mono trắng 60%, rãnh 3pt (4pt 80% khi có màu), khe mốc 1×7 trắng 22%, núm **tròn trắng 18pt** có bóng, vệt trắng 50% chỉ khi khác mặc định. Đang kéo không đổi màu gì. Sidebar dùng cùng kiểu vẽ, xếp dọc, cao ≥44.
 - **Công tắc bật = rãnh trắng đặc**, núm tối.

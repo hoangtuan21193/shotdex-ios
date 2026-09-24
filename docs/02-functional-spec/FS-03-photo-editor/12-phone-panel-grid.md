@@ -44,6 +44,7 @@ và chip cũ); thêm hay bớt chức năng nào (luật của intent).
 - **Swatch** (băng màu, điểm màu, thumbnail mask/layer) là ngoại lệ duy nhất: chọn = vòng trắng cách 2pt;
   không chọn = mờ 70%.
 - Chip trong dải cách nhau 8, dải đệm ngang 12. Dải chữ **≤5 mục chia đều bề ngang, không cuộn**; >5 mục cuộn ngang, bề rộng tự nhiên. Dải swatch chia đều.
+  Chip chia đều mà một nhãn không đủ chỗ cho icon + chữ thì **cả dải** bỏ icon, giữ chữ 13pt (`EditorStripLayout.showsIcons`) — một chip thiếu icon cạnh ba chip có icon đọc như một loại chip khác. Grade (4 chip, "Highlights" ~65pt) vì vậy chỉ có chữ trên cả 402 và 375.
 
 | Nhóm | Dải chọn | Hàng (thứ tự) |
 |---|---|---|
@@ -92,18 +93,18 @@ Máy: iPhone 17 (402pt, iOS 26.5) và iPhone 16 Pro (iOS 18.6) · iPhone SE 3rd 
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | màn 402×874 | dựng panel | panel 264 = 185 + 54 + 25, mọi loại hàng 40, dải chọn 40 | `EditorPanelLayoutTests` — ⚠️ chưa có (thay test 246) |
+| AC-1 | màn 402×874 | dựng panel | panel 264 = 185 + 54 + 25, mọi loại hàng 40, dải chọn 40 | `EditorPanelLayoutTests.thePhonePanelIsA264SlabOnA40PointGrid` |
 | AC-2 | một ảnh, lần lượt Light · Curve · Mix · Grade · Effects | dump khung slider hàng 1 | cùng y ±0,5pt ở cả năm nhóm | ⚠️ chưa có `iphone-panel-grid.json` |
-| AC-3 | từng nhóm trong bánh xe, không đang giữ nút nào | chụp panel + băng | không pixel nào mang màu accent ±8 ngoài nút Save | ⚠️ chưa có — ảnh từ `iphone-panel-grid.json` |
-| AC-4 | màn 375pt | mở Curve, Grade, Presets, Color Mix | mọi dải ≤5 mục và dải 9 swatch nằm trọn trong màn, không cuộn | ⚠️ chưa có `se-panel-strips.json` |
-| AC-5 | màn 402pt, nhóm Grade | dump dải vùng | chip cách nhau 8 ±0,5, dải cách mép 12, icon cách chữ 4 | ⚠️ chưa có `iphone-panel-grid.json` |
-| AC-6 | Exposure 0 | kéo lên +0,50 rồi chạm đôi | vệt trắng hiện lúc +0,50, mất khi về 0; nhãn và số không đổi màu lúc kéo | ⚠️ chưa có + `valuesSnapOntoTheirDetentWithinAFixedPointDistance` |
-| AC-7 | nhóm Color, B&W tắt | bật B&W | rãnh công tắc trắng đặc, không pixel accent | ⚠️ chưa có |
+| AC-3 | từng nhóm trong bánh xe, không đang giữ nút nào | chụp panel + băng | không pixel nào mang màu accent ±8 ngoài nút Save | `Tools/accent-check` trên 15 ảnh iPhone 17 26.5, 2026-09-25 (Light…Markup + Presets): 0 px; `KEEP_SAVE=1` bắt 11 508 px ở Save |
+| AC-4 | màn 375pt | mở Curve, Grade, Presets, Color Mix | mọi dải ≤5 mục và dải 9 swatch nằm trọn trong màn, không cuộn | dump SE 375 iOS 18.6, 2026-09-25: Curve 4 chip, Grade 4 chip, Presets 3 chip, Mix 9 swatch, tất cả trong x 12…363 |
+| AC-5 | màn 402pt, nhóm Grade rồi Presets | dump hai dải | chip cách nhau 8 ±0,5, dải cách mép 12; Grade không chip nào có icon; Presets icon cách chữ 4 | ⚠️ chưa có `iphone-panel-grid.json` |
+| AC-6 | Exposure 0 | kéo lên +0,50 rồi chạm đôi | vệt trắng hiện lúc +0,50, mất khi về 0; nhãn và số không đổi màu lúc kéo | ảnh iPhone 17 26.5, 2026-09-24 (kéo Exposure); `valuesSnapOntoTheirDetentWithinAFixedPointDistance` |
+| AC-7 | nhóm Color, B&W tắt | bật B&W | rãnh công tắc trắng đặc, không pixel accent | ảnh iPhone 17 26.5, 2026-09-24 (Color · B&W bật) |
 | AC-8 | Dynamic Type `.accessibility1` | mở Light | mọi hàng vẫn 40, không nhãn nào bị cắt thành "…" | ⚠️ chưa có `iphone-panel-a11y.json` |
 | AC-9 | đang giữ nút xem bản gốc | chụp băng | đĩa trắng, icon đen | ⚠️ chưa có |
-| AC-10 | Crop mở | dump panel | đủ mọi tỉ lệ Free…9:16, có Rotate · Flip · Reset và footnote; **không** có hàng Vertical / Horizontal | ⚠️ chưa có `iphone-crop-panel.json` |
-| AC-11 | Presets, có look đang chọn | dump vùng thông số | dải nguồn, hàng thumbnail và Amount nằm trọn trong 185pt, không cần cuộn | ⚠️ chưa có |
-| AC-12 | Presets, tab LUTs | chạm ô đầu | mở bộ chọn file .cube | ⚠️ chưa có |
+| AC-10 | Crop mở | dump panel | đủ mọi tỉ lệ Free…9:16, có Rotate · Flip · Reset và footnote; **không** có hàng Vertical / Horizontal | ảnh iPhone 17 26.5, 2026-09-24 (Crop); ⚠️ chưa có dump |
+| AC-11 | Presets, có look đang chọn | dump vùng thông số | dải nguồn, hàng thumbnail và Amount nằm trọn trong 185pt, không cần cuộn | ảnh iPhone 17 26.5, 2026-09-24 (Presets) |
+| AC-12 | Presets, tab LUTs | chạm ô đầu | mở bộ chọn file .cube | ảnh iPhone 17 26.5, 2026-09-24 (tab LUTs, ô Import .cube); ⚠️ chưa mở bộ chọn file |
 | AC-13 | Duo ngoài | mở Light rồi Mask | panel 264, không nút nào dưới rail 84pt | ⚠️ chưa có — `duo-editor-panel.json` + `Tools/sim-shot` |
 | AC-14 | iPad, sidebar Light | dump Exposure | núm tròn 18, nhãn chữ thường, hàng ≥44 | `aSliderRowIsBigEnoughToHitAndQuickEnoughToNudge` + ⚠️ ảnh |
 | AC-15 | cả hai nhánh iOS 26.5 và 18.6 | chạy AC-2, AC-3 | kết quả như nhau | ⚠️ chưa có |
@@ -115,7 +116,7 @@ Mask: AC-17…AC-25 ở [FS-03.05 §9](05-local-masks.md#9-tiêu-chí-nghiệm-t
 Không mạng / ảnh chỉ có trên iCloud: panel không đọc mạng, đường tải ảnh giữ như [FS-03](README.md) — không
 có AC riêng ở đây.
 
-**Chưa chứng minh được:** tất cả — chưa có code.
+**Chưa chứng minh được:** AC-2 và AC-5 (dump 402pt), AC-8 (Dynamic Type), AC-9 (ảnh lúc giữ), AC-10 (dump Crop), AC-12 (mở bộ chọn file), AC-13 (Duo ngoài), AC-14 (ảnh iPad), AC-15 (AC-3 trên 18.6), AC-16 (tồn kê).
 
 ## 9. Rủi ro đã biết
 

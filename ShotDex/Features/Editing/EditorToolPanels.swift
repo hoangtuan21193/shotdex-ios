@@ -909,17 +909,25 @@ struct EditorPanelChipLabel: View {
     let title: String
     var systemImage: String?
     var dot: Color?
+    /// Cleared by the strip for all its chips at once (`EditorStripLayout.showsIcons`).
+    var showsIcon = true
 
     var body: some View {
         HStack(spacing: EditorStripLayout.chipIconSpacing) {
-            if let systemImage {
+            if showsIcon, let systemImage {
                 Image(systemName: systemImage)
                     .font(.system(size: 15, weight: .regular))
-            } else if let dot {
+            } else if showsIcon, let dot {
                 Circle().fill(dot).frame(width: 8, height: 8)
             }
-            Text(title)
+            Text(title).lineLimit(1)
         }
+    }
+
+    /// The title's width at the selected (widest) weight.
+    var titleWidth: CGFloat {
+        let font = UIFont.systemFont(ofSize: 13, weight: .semibold)
+        return ceil((title as NSString).size(withAttributes: [.font: font]).width)
     }
 }
 
@@ -932,6 +940,7 @@ struct EditorPanelChipStrip<Item: Identifiable>: View {
     let label: (Item) -> EditorPanelChipLabel
     let accessibilityName: (Item) -> String
     let onSelect: (Item) -> Void
+    @State private var width: CGFloat = 0
 
     var body: some View {
         if EditorStripLayout.sharesWidth(itemCount: items.count, kind: .text) {
@@ -940,6 +949,7 @@ struct EditorPanelChipStrip<Item: Identifiable>: View {
             }
             .padding(.horizontal, EditorStripLayout.horizontalInset)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .onGeometryChange(for: CGFloat.self, of: \.size.width) { width = $0 }
         } else {
             ScrollViewReader { proxy in
                 ScrollView(.horizontal) {
@@ -962,10 +972,15 @@ struct EditorPanelChipStrip<Item: Identifiable>: View {
     private func chip(_ item: Item) -> some View {
         let selected = isSelected(item)
         let sharesWidth = EditorStripLayout.sharesWidth(itemCount: items.count, kind: .text)
+        var chipLabel = label(item)
+        chipLabel.showsIcon = !sharesWidth || width == 0 || EditorStripLayout.showsIcons(
+            titleWidths: items.map { label($0).titleWidth },
+            in: width
+        )
         return Button {
             onSelect(item)
         } label: {
-            label(item)
+            chipLabel
                 .frame(maxWidth: sharesWidth ? .infinity : nil)
         }
         .buttonStyle(EditorChipButtonStyle(

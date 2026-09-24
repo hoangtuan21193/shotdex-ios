@@ -28,4 +28,13 @@ struct EditorStripLayoutTests {
         #expect(EditorStripLayout.chipIconSpacing == 4)
         #expect(EditorStripLayout.equalItemWidth(itemCount: 0, in: 375) == 0)
     }
+
+    /// A strip keeps or drops its glyphs as one: a single title too wide for
+    /// glyph + title turns every glyph off, and a scrolling strip always keeps them.
+    @Test func glyphsGoForTheWholeStripOrNotAtAll() {
+        // 402pt, four chips: 88.5 each, 80.5 inside — room for a 60pt title plus a glyph.
+        #expect(EditorStripLayout.showsIcons(titleWidths: [52, 58, 60, 44], in: 402))
+        #expect(!EditorStripLayout.showsIcons(titleWidths: [52, 58, 64, 44], in: 402))
+        #expect(EditorStripLayout.showsIcons(titleWidths: Array(repeating: 200, count: 6), in: 375))
+    }
 }

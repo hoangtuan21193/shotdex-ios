@@ -38,4 +38,17 @@ enum EditorStripLayout {
         let usable = width - horizontalInset * 2 - chipSpacing * CGFloat(itemCount - 1)
         return max(0, usable / CGFloat(itemCount))
     }
+
+    /// Room a chip glyph takes: a 15pt symbol plus the gap to its title.
+    static let chipIconAllowance: CGFloat = 20
+
+    /// Whether an equal-width strip keeps its glyphs. The title is what a chip
+    /// means, so when any title plus glyph overflows its share, **every** chip in
+    /// the strip drops its glyph — one chip without an icon beside three with one
+    /// reads as a different kind of chip (Grade's "Highlights" at 402pt).
+    static func showsIcons(titleWidths: [CGFloat], in width: CGFloat) -> Bool {
+        guard sharesWidth(itemCount: titleWidths.count, kind: .text) else { return true }
+        let room = equalItemWidth(itemCount: titleWidths.count, in: width) - equalChipHorizontalPadding * 2
+        return titleWidths.allSatisfy { $0 + chipIconAllowance <= room }
+    }
 }
