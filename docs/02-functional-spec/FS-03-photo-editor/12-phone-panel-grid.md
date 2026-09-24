@@ -56,7 +56,8 @@ và chip cũ); thêm hay bớt chức năng nào (luật của intent).
 | Mask, Markup | xem FS-03.05, FS-05.01 | |
 
 - Presets: ô đầu tab My Looks là **+ Save Current**, ô đầu tab LUTs là **Import .cube**; giữ lâu ô vẫn ra menu xoá.
-- Point Color đang pick và đã có điểm: pill trên ảnh "Tap the photo to add a point".
+- Point Color: pill lấy mẫu trên ảnh ("Drag on the photo · Lift to pick") chỉ hiện khi đã có điểm; chưa có
+  điểm thì dòng hướng dẫn trong panel thay nó.
 
 ## 5. Slider
 

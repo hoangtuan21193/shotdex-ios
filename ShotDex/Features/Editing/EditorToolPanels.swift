@@ -662,15 +662,19 @@ struct EditorUprightRow: View {
 /// it keeps the 28pt accent chip those screens were built with.
 struct EditorChipButtonStyle: ButtonStyle {
     let isSelected: Bool
+    /// Equal-width chips in a strip give the title the room instead: at 88pt a
+    /// four-chip strip cannot also spend 16pt on padding ("Highlights" clipped).
+    var horizontalPadding = EditorStripLayout.chipHorizontalPadding
 
     func makeBody(configuration: Configuration) -> some View {
-        EditorChipBody(configuration: configuration, isSelected: isSelected)
+        EditorChipBody(configuration: configuration, isSelected: isSelected, horizontalPadding: horizontalPadding)
     }
 }
 
 private struct EditorChipBody: View {
     let configuration: ButtonStyleConfiguration
     let isSelected: Bool
+    let horizontalPadding: CGFloat
     @Environment(\.editorUsesPanelStyle) private var usesPanelStyle
 
     var body: some View {
@@ -681,7 +685,7 @@ private struct EditorChipBody: View {
                 .foregroundStyle(.white)
                 .lineLimit(1)
                 .minimumScaleFactor(EditorLayoutMetrics.editorPanelRowMinimumScale)
-                .padding(.horizontal, EditorStripLayout.chipHorizontalPadding)
+                .padding(.horizontal, horizontalPadding)
                 .frame(height: EditorStripLayout.chipHeight)
                 .background(isSelected ? EditorTheme.chipSelected : EditorTheme.chipIdle, in: shape)
                 .opacity(configuration.isPressed ? 0.7 : 1)
@@ -761,13 +765,17 @@ struct EditorPanelChipStrip<Item: Identifiable>: View {
 
     private func chip(_ item: Item) -> some View {
         let selected = isSelected(item)
+        let sharesWidth = EditorStripLayout.sharesWidth(itemCount: items.count, kind: .text)
         return Button {
             onSelect(item)
         } label: {
             label(item)
-                .frame(maxWidth: EditorStripLayout.sharesWidth(itemCount: items.count, kind: .text) ? .infinity : nil)
+                .frame(maxWidth: sharesWidth ? .infinity : nil)
         }
-        .buttonStyle(EditorChipButtonStyle(isSelected: selected))
+        .buttonStyle(EditorChipButtonStyle(
+            isSelected: selected,
+            horizontalPadding: sharesWidth ? EditorStripLayout.equalChipHorizontalPadding : EditorStripLayout.chipHorizontalPadding
+        ))
         .accessibilityLabel(accessibilityName(item))
         .accessibilityAddTraits(selected ? .isSelected : [])
     }

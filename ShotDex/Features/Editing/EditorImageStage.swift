@@ -488,7 +488,9 @@ struct EditorImageStage: View {
                     .position(x: imageRect.midX, y: imageRect.maxY - 24)
             }
 
-            if isSamplingColor {
+            // On the phone the empty Point Color panel already says what to do, so
+            // the pill only joins once there is a point (FS-03.12 §4).
+            if isSamplingColor, chrome.isWideLayout || !controller.pointColors.isEmpty {
                 EditorPillLabel(
                     text: "DRAG ON THE PHOTO · LIFT TO PICK",
                     systemImage: "eyedropper"

@@ -29,9 +29,23 @@ struct EditorColorMixerSection: View {
     var body: some View {
         if chrome.isWideLayout {
             bandedMix
+        } else if let band = chrome.sidebarMixBand {
+            // Phone with a band picked in the target strip: that band's three rows.
+            VStack(spacing: 0) {
+                ForEach(ColorMixerProperty.allCases) { property in
+                    mixerRow(band: band, property: property, title: property.displayName)
+                }
+                Spacer(minLength: 0)
+            }
         } else {
             allChannelsScroll
         }
+    }
+
+    /// Bands holding a shift on this photo — spoken as "Edited" on each swatch.
+    static func editedBands(of controller: PhotoEditorController) -> Set<ColorMixerBand> {
+        let mixer = controller.recipe.color.mixer
+        return Set(ColorMixerBand.allCases.filter { !mixer[$0].isIdentity })
     }
 
     // MARK: Banded (wide sidebar)
@@ -59,8 +73,7 @@ struct EditorColorMixerSection: View {
 
     /// Bands holding a shift on this photo, for the swatch's ring.
     private var editedBands: Set<ColorMixerBand> {
-        let mixer = controller.recipe.color.mixer
-        return Set(ColorMixerBand.allCases.filter { !mixer[$0].isIdentity })
+        Self.editedBands(of: controller)
     }
 
     private var allChannelsScroll: some View {
@@ -143,6 +156,50 @@ struct EditorPointColorSection: View {
     @Bindable var chrome: EditorChromeModel
 
     var body: some View {
+        if chrome.isWideLayout {
+            stackedBody
+        } else {
+            phoneBody
+        }
+    }
+
+    /// Phone (FS-03.12): the swatches and the eyedropper are the target strip
+    /// (`EditorPointColorStrip`). With no point yet there is no strip — the zone is
+    /// a 40pt eyedropper disc over one line, and the photo is already armed, so the
+    /// first tap on it is the pick.
+    @ViewBuilder
+    private var phoneBody: some View {
+        if controller.pointColors.isEmpty {
+            VStack(spacing: AppTheme.Spacing.md) {
+                Image(systemName: "eyedropper")
+                    .font(.system(size: 19, weight: .medium))
+                    .foregroundStyle(.white)
+                    .frame(width: 40, height: 40)
+                    .background(EditorTheme.trackChip, in: Circle())
+                    .accessibilityHidden(true)
+                Text("Tap the photo to pick a color, then adjust only that color")
+                    .font(.system(size: 13))
+                    .foregroundStyle(EditorTheme.secondaryText)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 36)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .onAppear {
+                if controller.canAddPointColor { chrome.isEyedropperActive = true }
+            }
+        } else {
+            VStack(spacing: 0) {
+                if let point = controller.selectedPointColor {
+                    pointSliders(point)
+                }
+                Color.clear.frame(height: 16)
+            }
+            .editorPanelScroll(panelScrolls)
+            .scrollDisabled(chrome.activePlainSliderID != nil)
+        }
+    }
+
+    private var stackedBody: some View {
         VStack(spacing: 0) {
             swatchRow
                 .padding(.top, 6)
@@ -318,14 +375,26 @@ struct EditorPointColorSection: View {
         }
         HStack {
             Spacer()
-            Button("Delete Point") {
-                if let id = controller.selectedPointColorID {
-                    controller.removePointColor(id: id)
+            if chrome.isWideLayout {
+                Button("Delete Point") {
+                    if let id = controller.selectedPointColorID {
+                        controller.removePointColor(id: id)
+                    }
                 }
+                .buttonStyle(EditorTextButtonStyle())
+            } else {
+                Button {
+                    if let id = controller.selectedPointColorID {
+                        controller.removePointColor(id: id)
+                    }
+                } label: {
+                    EditorPanelChipLabel(title: "Delete Point", systemImage: "trash")
+                }
+                .buttonStyle(EditorChipButtonStyle(isSelected: false))
             }
-            .buttonStyle(EditorTextButtonStyle())
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, chrome.isWideLayout ? 14 : AppTheme.Spacing.lg)
+        .frame(minHeight: chrome.isWideLayout ? 0 : EditorLayoutMetrics.editorPanelRowHeight)
     }
 
     private func pointRow(
@@ -371,7 +440,8 @@ struct EditorColorGradingSection: View {
     @Bindable var chrome: EditorChromeModel
 
     var body: some View {
-        VStack(spacing: 8) {
+        // Phone: rows sit on the 40pt grid with nothing between them (FS-03.12).
+        VStack(spacing: chrome.isWideLayout ? 8 : 0) {
                 // The region picker moved to the panel's target strip (30c), so the
                 // scroll is just the rows for whichever region is selected there.
                 // Grade is three rows per region — Hue / Saturation / Luminance —
@@ -421,10 +491,12 @@ struct EditorColorGradingSection: View {
                 ) { value in
                     controller.setGradingLuminance(region: chrome.gradingRegion, value / 100)
                 }
-                Rectangle()
-                    .fill(EditorTheme.hairline)
-                    .frame(height: 0.5)
-                    .padding(.horizontal, 14)
+                if chrome.isWideLayout {
+                    Rectangle()
+                        .fill(EditorTheme.hairline)
+                        .frame(height: 0.5)
+                        .padding(.horizontal, 14)
+                }
                 gradingRow(
                     id: "grading.blending",
                     title: "Blending",
@@ -447,7 +519,7 @@ struct EditorColorGradingSection: View {
                 }
                 Color.clear.frame(height: 12)
         }
-        .padding(.top, 6)
+        .padding(.top, chrome.isWideLayout ? 6 : 0)
         .editorPanelScroll(panelScrolls)
         .scrollDisabled(chrome.activePlainSliderID != nil)
     }
@@ -496,6 +568,67 @@ struct EditorColorGradingSection: View {
 /// panel, touching the photo, because it names an area the grade applies to.
 /// Capsule-chip language shared with the Filters and Crop strips, each chip
 /// carrying a leading dot in the region's current tint so the readout is not lost.
+/// The phone panel's Point Color target strip: one 20pt swatch per sampled point
+/// (white ring on the selected one) and the eyedropper chip at the end, white 20%
+/// while armed. Long-press a swatch to delete it.
+struct EditorPointColorStrip: View {
+    @Bindable var controller: PhotoEditorController
+    @Bindable var chrome: EditorChromeModel
+
+    var body: some View {
+        let isEnabled = controller.canAddPointColor || chrome.isEyedropperActive
+        HStack(spacing: EditorStripLayout.chipSpacing) {
+            ForEach(controller.pointColors) { point in
+                let isSelected = controller.selectedPointColorID == point.id
+                Button {
+                    controller.selectedPointColorID = point.id
+                    chrome.isEyedropperActive = false
+                } label: {
+                    Circle()
+                        .fill(EditorColorMixerStyle.referenceColor(of: point))
+                        .frame(width: 20, height: 20)
+                        .padding(2)
+                        .overlay {
+                            if isSelected {
+                                Circle().strokeBorder(.white, lineWidth: 1.5)
+                            }
+                        }
+                        .opacity(isSelected ? 1 : EditorTheme.swatchIdle)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .contextMenu {
+                    Button(role: .destructive) {
+                        withAnimation(EditorTheme.animation) {
+                            controller.removePointColor(id: point.id)
+                        }
+                    } label: {
+                        Label("Delete Point Color", systemImage: "trash")
+                    }
+                }
+                .accessibilityLabel("Point color")
+                .accessibilityAddTraits(isSelected ? .isSelected : [])
+            }
+            Button {
+                withAnimation(EditorTheme.animation) {
+                    chrome.isEyedropperActive.toggle()
+                }
+            } label: {
+                Image(systemName: "eyedropper")
+                    .frame(width: 24)
+            }
+            .buttonStyle(EditorChipButtonStyle(isSelected: chrome.isEyedropperActive))
+            .disabled(!isEnabled)
+            .opacity(isEnabled ? 1 : EditorTheme.rowDisabled)
+            .accessibilityLabel("Sample a color")
+            .accessibilityValue(chrome.isEyedropperActive ? "Armed" : "Off")
+        }
+        .padding(.horizontal, EditorStripLayout.horizontalInset)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
 struct EditorGradeRegionStrip: View {
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
@@ -646,6 +779,10 @@ enum EditorColorMixerStyle {
 struct EditorColorMixBandPicker: View {
     let selection: ColorMixerBand?
     let editedBands: Set<ColorMixerBand>
+    /// The phone panel draws no visible "edited" dot (FS-03.12 §6); VoiceOver still
+    /// says "Edited".
+    var showsEditedMarks = true
+    var rowHeight: CGFloat = AppTheme.Size.minTouch
     var select: (ColorMixerBand?) -> Void
 
     var body: some View {
@@ -673,7 +810,7 @@ struct EditorColorMixBandPicker: View {
                 select(nil)
             }
         }
-        .frame(height: AppTheme.Size.minTouch)
+        .frame(height: rowHeight)
     }
 
     private func swatch(
@@ -697,7 +834,7 @@ struct EditorColorMixBandPicker: View {
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(EditorTheme.secondaryText)
                 }
-                if hasEdits, !isSelected {
+                if hasEdits, !isSelected, showsEditedMarks {
                     Circle()
                         .fill(.white)
                         .frame(width: 4, height: 4)
@@ -716,7 +853,7 @@ struct EditorColorMixBandPicker: View {
             // an equal share and the gaps close rather than the circles
             // shrinking — a swatch below about 20pt stops reading as a colour.
             .frame(maxWidth: .infinity)
-            .frame(height: AppTheme.Size.minTouch)
+            .frame(height: rowHeight)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

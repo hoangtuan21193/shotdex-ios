@@ -163,6 +163,12 @@ extension EditorAdjustmentGroupsView where Footer == EmptyView {
 struct EditorGroupHeader: View {
     let title: String
     var isFirst = false
+    @Environment(\.editorUsesPanelStyle) private var usesPanelStyle
+    @Environment(\.editorSliderStacked) private var isStacked
+
+    /// On the phone panel a header is one 40pt grid row (FS-03.12), so the rows
+    /// under it stay on the grid.
+    private var isGridRow: Bool { usesPanelStyle && !isStacked }
 
     var body: some View {
         if title.isEmpty {
@@ -180,10 +186,14 @@ struct EditorGroupHeader: View {
                 .foregroundStyle(EditorTheme.secondaryText)
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, isGridRow ? AppTheme.Spacing.lg : 14)
         .frame(maxWidth: .infinity)
-        .frame(height: 36)
-        .background(isFirst ? EditorTheme.panel : EditorTheme.stickyHeader)
+        .frame(height: isGridRow ? EditorLayoutMetrics.editorPanelRowHeight : 36)
+        .background(
+            isGridRow
+                ? EditorTheme.panelSolid
+                : (isFirst ? EditorTheme.panel : EditorTheme.stickyHeader)
+        )
         .overlay(alignment: .top) {
             if !isFirst {
                 Rectangle().fill(EditorTheme.hairline).frame(height: 0.5)

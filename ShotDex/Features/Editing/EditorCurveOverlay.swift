@@ -344,13 +344,19 @@ struct EditorCurveOverlay: View {
     }
 }
 
-/// The Curve group's panel: channel chips (RGB master, Red, Green, Blue — a dot
-/// marks a channel that is no longer the straight line), a Reset for the shown
-/// channel, the how-to line, and a row of preset shapes for the shown channel.
-/// The graph itself is on the photo.
+/// The Curve group's panel: channel chips (RGB master, Red, Green, Blue), a Reset
+/// for the shown channel, the how-to line, and a row of preset shapes for the
+/// shown channel. The graph itself is on the photo.
+///
+/// On the phone (FS-03.12) the channel chips are the panel's target strip
+/// (`EditorCurveChannelStrip`), and below it every row sits on the 40pt grid:
+/// the preset row, the hint with Reset at its trailing end, and Show Graph when
+/// the graph is hidden. The sidebar keeps the stacked layout it was built with.
 struct EditorCurvePanel: View {
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
+    @Environment(\.editorUsesPanelStyle) private var usesPanelStyle
+    @Environment(\.editorSliderStacked) private var isStacked
 
     private var channel: ToneCurveChannel { chrome.curveChannel }
     private var isLinear: Bool {
@@ -358,6 +364,54 @@ struct EditorCurvePanel: View {
     }
 
     var body: some View {
+        if usesPanelStyle && !isStacked {
+            phoneRows
+        } else {
+            stackedBody
+        }
+    }
+
+    private var phoneRows: some View {
+        VStack(spacing: 0) {
+            presetRow
+                .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
+            HStack(spacing: AppTheme.Spacing.sm) {
+                Text("Drag to shape · drag on empty graph to add · double-tap to remove")
+                    .font(EditorTheme.rowLabel)
+                    .foregroundStyle(EditorTheme.panelHint)
+                    .lineLimit(2)
+                    .minimumScaleFactor(EditorLayoutMetrics.editorPanelRowMinimumScale)
+                Spacer(minLength: 0)
+                Button("Reset") {
+                    controller.resetCurve(channel)
+                }
+                .buttonStyle(EditorChipButtonStyle(isSelected: false))
+                .disabled(isLinear)
+                .opacity(isLinear ? EditorTheme.rowDisabled : 1)
+            }
+            .padding(.horizontal, AppTheme.Spacing.lg)
+            .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
+            if chrome.isCurveGraphHidden {
+                HStack {
+                    Button {
+                        withAnimation(EditorTheme.animation) {
+                            chrome.isCurveGraphHidden = false
+                        }
+                    } label: {
+                        EditorPanelChipLabel(title: "Show Graph", systemImage: "chart.xyaxis.line")
+                    }
+                    .buttonStyle(EditorChipButtonStyle(isSelected: false))
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, AppTheme.Spacing.lg)
+                .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    private var stackedBody: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 ForEach(ToneCurveChannel.allCases) { option in
@@ -418,7 +472,8 @@ struct EditorCurvePanel: View {
     /// Starting shapes for the shown channel. The chip whose points the channel
     /// currently matches is lit; dragging any point unlights it.
     private var presetRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+        let inset: CGFloat = usesPanelStyle && !isStacked ? EditorStripLayout.horizontalInset : 14
+        return ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(ToneCurveAdjustments.presets) { preset in
                     Button(preset.name) {
@@ -429,9 +484,38 @@ struct EditorCurvePanel: View {
                     ))
                 }
             }
+            .frame(maxHeight: .infinity)
         }
         // Bleed the scroll to the panel edges so the row does not clip mid-chip.
-        .padding(.horizontal, -14)
-        .contentMargins(.horizontal, 14, for: .scrollContent)
+        .padding(.horizontal, usesPanelStyle && !isStacked ? 0 : -14)
+        .contentMargins(.horizontal, inset, for: .scrollContent)
+    }
+}
+
+/// The phone panel's Curve target strip: four equal channel chips, each with its
+/// channel's colour dot. No "edited" dot (FS-03.12 §6).
+struct EditorCurveChannelStrip: View {
+    @Bindable var chrome: EditorChromeModel
+
+    var body: some View {
+        EditorPanelChipStrip(
+            items: ToneCurveChannel.allCases,
+            isSelected: { chrome.curveChannel == $0 },
+            label: { EditorPanelChipLabel(title: $0.displayName, dot: $0.stripDot) },
+            accessibilityName: \.displayName,
+            onSelect: { chrome.curveChannel = $0 }
+        )
+    }
+}
+
+extension ToneCurveChannel {
+    /// The channel's own colour: light grey for the RGB master, then red, green, blue.
+    var stripDot: Color {
+        switch self {
+        case .rgb: Color(white: 0.91)
+        case .red: EditorTheme.histogramRed
+        case .green: EditorTheme.histogramGreen
+        case .blue: EditorTheme.histogramBlue
+        }
     }
 }

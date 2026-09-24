@@ -2396,7 +2396,11 @@ struct PhotoEditorScreen: View {
     /// where there is one to pick: Grade's tonal region. (Mask keeps its own list /
     /// detail panels for now.)
     private func panelHasTargetStrip(_ controller: PhotoEditorController) -> Bool {
-        chrome.selectedGroup == .grade
+        switch chrome.selectedGroup {
+        case .curve, .colorMix, .grade: true
+        case .pointColor: !controller.pointColors.isEmpty
+        default: false
+        }
     }
 
     private func targetStrip(_ controller: PhotoEditorController) -> some View {
@@ -2412,6 +2416,20 @@ struct PhotoEditorScreen: View {
         case .grade:
             EditorGradeRegionStrip(controller: controller, chrome: chrome)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+        case .curve:
+            EditorCurveChannelStrip(chrome: chrome)
+        case .colorMix:
+            EditorColorMixBandPicker(
+                selection: chrome.sidebarMixBand,
+                editedBands: EditorColorMixerSection.editedBands(of: controller),
+                showsEditedMarks: false,
+                rowHeight: EditorLayoutMetrics.editorTargetStripHeight
+            ) { band in
+                chrome.sidebarMixBand = band
+            }
+            .padding(.horizontal, EditorStripLayout.horizontalInset)
+        case .pointColor:
+            EditorPointColorStrip(controller: controller, chrome: chrome)
         default:
             EmptyView()
         }

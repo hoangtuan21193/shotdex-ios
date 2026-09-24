@@ -18,7 +18,8 @@ struct EditorStripLayoutTests {
     /// swatch needs. Spacing sits on the DESIGN.md scale.
     @Test func equalWidthItemsFitTheNarrowestPhone() {
         let four = EditorStripLayout.equalItemWidth(itemCount: 4, in: 375)
-        #expect(four == (375 - 24 - 24) / 4)
+        let expectedFour: CGFloat = (375 - 12 * 2 - 8 * 3) / 4
+        #expect(abs(four - expectedFour) < 0.001)
         #expect(four > 75)
         let nine = EditorStripLayout.equalItemWidth(itemCount: 9, in: 375)
         #expect(nine > 30)

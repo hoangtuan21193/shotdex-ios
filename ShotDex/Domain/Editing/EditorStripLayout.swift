@@ -17,6 +17,8 @@ enum EditorStripLayout {
     /// Icon (or colour dot) to title, inside a chip.
     static let chipIconSpacing: CGFloat = 4
     static let chipHorizontalPadding: CGFloat = 8
+    /// Padding inside an equal-width chip — the width is fixed, so the title gets it.
+    static let equalChipHorizontalPadding: CGFloat = 4
 
     enum Kind: Sendable {
         case text
