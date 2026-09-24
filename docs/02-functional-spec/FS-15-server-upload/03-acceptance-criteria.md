@@ -19,11 +19,15 @@ lệch, huỷ) kiểm được mà không cần mạng. Phần chỉ máy thật
 | AC-9 | file trên server trùng tên **và** trùng SHA-256 | đẩy | không hỏi, không ghi, có dòng lịch sử, tính là đã lên | `ServerUploadConflictTests.identicalFileCountsAsUploaded` |
 | AC-10 | lô 2 asset: A (1 file RAW, lên ổn), B (RAW+JPEG, Only RAW) | xem kết quả | đề nghị xoá **1** tấm (A); B nằm ngoài kèm lý do "JPEG not on a server" | `ServerUploadEligibilityTests.pairNeedsBothFiles` |
 | AC-11 | 1 server có 7 dòng lịch sử | xoá server | 7 dòng vẫn còn, giữ tên server, id server rỗng; mật khẩu trong Keychain bị xoá | `ServerUploadStoreTests.deletingServerKeepsHistory` |
-| AC-12 | thư viện có 3 ảnh đã upload trong 50 ảnh | mở Utilities | có hàng Uploaded to Server; mở ra thấy đúng 3 ảnh; 3 ô trên Library có dấu, 47 ô không | `ServerUploadStoreTests.uploadedIdsQuery` + `scripts/server-upload-badges.json` + ảnh ⚠️ chưa có |
-| AC-13 | form SFTP, host mới | Test Connection lần đầu | hộp Trust hiện dấu vân tay `SHA256:…`; Trust thì lưu; lần sau dấu vân tay khác → bị chặn với câu "identity … changed" | `FileServerHostKeyTests.trustThenMismatchBlocks` |
-| AC-14 | chọn 4 ảnh, đã có 2 server, lần trước dùng "NAS" | ⋯ → Upload to Server | sheet mở ở bước chuẩn bị, server là "NAS", Files là All Originals; cả nhánh iOS 26.5 và 18.6 | `scripts/server-upload-entry.json` + ảnh iPhone, iPad, Duo ⚠️ chưa có |
+| AC-12 | thư viện có 3 ảnh đã upload trong 50 ảnh | mở Utilities | có hàng Uploaded to Server; mở ra thấy đúng 3 ảnh; 3 ô trên Library có dấu, 47 ô không | `ServerUploadStoreTests.uploadedIdsQuery` + `scripts/server-upload-run.json` (glyph trên 3 ô) + `scripts/server-upload-sftp-conflict.json` (hàng **On Server**, lưới 3 ảnh) + `scripts/server-upload-info.json` (dòng Photo Info), iPhone 17 iOS 26.5 |
+| AC-13 | form SFTP, host mới | Test Connection lần đầu | hộp Trust hiện dấu vân tay `SHA256:…`; Trust thì lưu; lần sau dấu vân tay khác → bị chặn với câu "identity … changed" | `FileServerHostKeyTests.trustThenMismatchBlocks` + `scripts/server-upload-sftp-conflict.json` (hộp Trust hiện đúng dấu vân tay `ssh-keygen -lf` của server) |
+| AC-14 | chọn 4 ảnh, đã có 2 server, lần trước dùng "NAS" | ⋯ → Upload to Server | sheet mở ở bước chuẩn bị, server là "NAS", Files là All Originals; cả nhánh iOS 26.5 và 18.6 | `ServerUploadModelTests.startsOnTheLastServerWithAllOriginals` + `scripts/server-upload-run.json` (iPhone 17 iOS 26.5); iOS 18.6, iPad, Duo ⚠️ chưa có |
 | AC-15 | đang đẩy | app ra nền, hoặc lô xong, hoặc huỷ | màn hình tự khoá lại được (không còn bị giữ sáng) ở cả ba lối | `ServerUploadModelTests.idleTimerRestoredOnEveryExit` |
-| AC-16 | iPhone thật + Mac này (SMB và SFTP), 20 RAW ProRAW, một phần chỉ có trên iCloud | đẩy rồi Delete | 20 file trên Mac khớp `shasum -a 256`; hộp Local Network hiện đúng lúc Test Connection; ảnh vào Recently Deleted | ⚠️ chưa có — cần máy thật |
+| AC-16 | iPhone thật + Mac này (SMB và SFTP), 20 RAW ProRAW, một phần chỉ có trên iCloud | đẩy rồi Delete | 20 file trên Mac khớp `shasum -a 256`; hộp Local Network hiện đúng lúc Test Connection; ảnh vào Recently Deleted | một phần: simulator → SMB/SFTP giả lập trên Mac, CR3 32 MB khớp `shasum -a 256`, Keep Both ra `IMG_0001 (2).JPG`; máy thật, iCloud-only, hộp Local Network, Delete ⚠️ chưa có |
 
-**Chưa chứng minh được:** AC-12 (ảnh), AC-14 (ảnh ba thiết bị), AC-16 (máy thật). AC-16 cần người dùng bật
-**File Sharing** và **Remote Login** trên Mac — ShotDex không tự bật được.
+**Chưa chứng minh được:** AC-14 trên iOS 18.6, iPad và Duo; AC-16 trên máy thật (iCloud-only, hộp Local
+Network, Delete tới Recently Deleted). AC-16 cần người dùng bật **File Sharing** và **Remote Login** trên Mac —
+ShotDex không tự bật được. Màn tiến độ chưa có ảnh: trên localhost 38 MB đẩy xong trước lần chụp đầu.
+
+**Server giả lập cho các script** (chỉ nghe 127.0.0.1): `smbserver.py -smb2support -username tester -password
+secret -port 4450 -ip 127.0.0.1 photos <thư mục>` (impacket) và một SFTP asyncssh ở cổng 2222, user `tester`.

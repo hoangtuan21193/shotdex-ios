@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-24 |
 | Trạng thái | accepted — theo lệnh người dùng 2026-09-24 "chạy spec … plan rồi code auto luôn" |
-| Tiến độ | **đang làm** (2026-09-24) — task 8/10, 13/16 AC xanh (AC-1…AC-11, AC-13, AC-15) |
+| Tiến độ | **gần xong** (2026-09-25) — 10/10 task, 15/16 AC có bằng chứng; AC-14 thiếu iOS 18.6/iPad/Duo, AC-16 thiếu máy thật |
 | Nguồn | phản hồi người dùng |
 | Spec sinh ra từ đây | [FS-15 — Upload lên file server](../02-functional-spec/FS-15-server-upload/README.md) |
 
