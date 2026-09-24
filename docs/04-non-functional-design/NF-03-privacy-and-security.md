@@ -1,18 +1,18 @@
 # NF-03 — Quyền riêng tư và bảo mật
 
-`NF-03` · `ShotDex/Features/Support/` · `PrivacyInfo.xcprivacy` · cập nhật 2026-09-22
+`NF-03` · `ShotDex/Features/Support/` · `PrivacyInfo.xcprivacy` · cập nhật 2026-09-24
 
-**Một câu:** cam kết xử lý cục bộ, ngoại lệ duy nhất, và luật gỡ vị trí khi chia sẻ.
+**Một câu:** cam kết xử lý cục bộ, hai ngoại lệ, và luật gỡ vị trí khi chia sẻ.
 
 ## 1. Quy tắc
 
 - Không tải ảnh hay EXIF lên máy chủ. Không tài khoản, không đăng nhập. Dữ liệu index nằm trên máy.
-- Onboarding và Settings ghi rõ: *"Your photos and metadata never leave your device."*
-- Câu đó phải **nói kèm ngoại lệ dưới đây**, không được viết tuyệt đối.
+- Onboarding ghi: *"Your photos and metadata stay on this device. They leave it only when you upload them
+  to a server you set up."* Câu đó **nói kèm ngoại lệ**, không được viết tuyệt đối.
 - **Quyền khai mà không dùng là bề mặt thừa** — extension chia sẻ **không** khai vùng chia sẻ với app, vì
   nó chỉ ghi ảnh vào thư viện.
 
-## 2. Ngoại lệ duy nhất — tin nhắn hỗ trợ
+## 2. Ngoại lệ thứ nhất — tin nhắn hỗ trợ
 
 Do người dùng chủ động gõ và bấm gửi ([FS-13](../02-functional-spec/FS-13-support.md)).
 
@@ -24,6 +24,20 @@ Do người dùng chủ động gõ và bấm gửi ([FS-13](../02-functional-sp
 | log chẩn đoán **nếu** họ tự bật và đọc trước | — |
 
 Danh tính là **khoá chứng thực của bản cài** — gỡ app là mất.
+
+## 2b. Ngoại lệ thứ hai — upload lên file server của người dùng
+
+[FS-15](../02-functional-spec/FS-15-server-upload/README.md). Chỉ khi người dùng tự chọn ảnh và bấm Upload.
+
+| Gửi đi | Không gửi |
+|---|---|
+| file gốc của ảnh được chọn, tới **đúng** server người dùng khai (SMB/SFTP) | bất cứ thứ gì tới máy chủ của ShotDex — không có máy chủ nào |
+| tên file, thư mục theo ngày chụp | database index, lịch sử upload |
+
+- Mật khẩu server ở **Keychain**, chỉ trên máy này, không vào bản sao lưu; không bao giờ vào database hay log.
+- SFTP xác minh host key lần đầu và **chặn** khi nó đổi. SMB không có cơ chế tương đương — ghi rõ ở FS-15.
+- Upload **không** gỡ vị trí (Include Location là luật của Share sheet): đây là bản lưu trữ của chính người
+  dùng, gỡ toạ độ là làm hỏng bản gốc.
 
 ## 3. Chia sẻ không kèm vị trí
 

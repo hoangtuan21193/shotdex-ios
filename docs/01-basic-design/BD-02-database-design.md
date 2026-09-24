@@ -64,11 +64,15 @@ Có chỉ mục trên: tên máy và tên ống kính đã chuẩn hoá · ISO �
 | Smart album | truy vấn đã lưu |
 | Biểu đồ thống kê | id · đặc tả dạng JSON · vị trí |
 | Sản phẩm đã tạo | collage và project video mở lại được ([FS-06.01b](../02-functional-spec/FS-06-collections/01b-album-management-and-creations.md)) |
+| File server | server người dùng khai: giao thức · host · cổng · user · share · thư mục · host key đã tin ([FS-15](../02-functional-spec/FS-15-server-upload/README.md)); mật khẩu ở Keychain |
+| Lịch sử upload | id ảnh · file nào của ảnh · server (id + **tên lúc đẩy**) · đường dẫn · số byte · SHA-256 · lúc nào |
 
 - Dấu vân tay có **ngày sửa lúc tính**: lệch với ngày sửa hiện tại thì tính lại (ảnh vừa được chỉnh). Video
   không có dòng.
 - Bảng quét chủ thể: **có dòng nghĩa là "đã nhìn qua"**, và **số khuôn mặt bằng 0 là một câu trả lời thật**,
   không phải "chưa biết". Danh sách việc = ảnh tĩnh **chưa có dòng**.
+- **Lịch sử upload sống lâu hơn server và hơn ảnh**: xoá server thì id về rỗng, tên ở lại; xoá ảnh thì dòng
+  ở lại. Nó là bằng chứng một file an toàn ở nơi khác — đúng lúc xoá thứ nó mô tả là lúc cần nó nhất.
 - Mở màn ảnh trùng **chỉ đọc hai bảng cache** rồi ghép với dữ kiện hiện tại — **không** tính lại dấu vân
   tay, **không** gom lại nhóm.
 

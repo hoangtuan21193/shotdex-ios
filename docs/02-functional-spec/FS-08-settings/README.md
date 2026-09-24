@@ -33,9 +33,9 @@ compact và bố cục hai cột của hệ thống ở regular.
   ([BD-04](../../01-basic-design/BD-04-design-language.md)).
 - Lưu bằng `UserDefaults` / cài đặt lưu sẵn, key khai trong một chỗ khai khoá duy nhất.
 
-## 12 section (bố cục compact, đúng thứ tự)
+## 13 section (bố cục compact, đúng thứ tự)
 
-Photo Library · Notifications · Display · Widgets · People and Pets · Sharing · Export ·
+Photo Library · Notifications · Display · Widgets · People and Pets · Sharing · Export · File Servers ·
 Camera Database · Support · Privacy · Playback · Library Size.
 
 **Appearance đã bỏ** — dãy swatch accent không còn trong code và không dựng lại

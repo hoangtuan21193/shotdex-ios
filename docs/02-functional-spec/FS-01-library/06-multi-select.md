@@ -36,7 +36,8 @@ hai nhánh iOS, mờ dần theo việc có đang chọn hay không.
 
 - **Menu ⋯**: Paste Edits (chỉ khi có bản sửa đã copy) · **Combine Photos ▸** (menu con Focus Stack ·
   Panorama · Stack Exposures, [FS-01.09](09-photo-stacking.md)) · Create Collage (bật khi số ảnh nằm trong tập
-  template hỗ trợ) · Create Video · Resize · Add to Collection · Export EXIF (CSV) · Duplicate. Màn không cấp
+  template hỗ trợ) · Create Video · Resize · Add to Collection · Export EXIF (CSV) · **Upload to Server**
+  ([FS-15](../FS-15-server-upload/README.md)) · Duplicate. Màn không cấp
   hành động nào thì dòng đó **không hiện**; ngoài khoảng hợp lệ thì **mờ** — ở Combine Photos là từng dòng con
   mờ, dòng cha vẫn mở được.
 - Compare và Edit **không** nằm trong menu — hai thứ người ta chọn ảnh *để làm*, còn menu là chỗ tìm những

@@ -66,7 +66,7 @@ struct LibraryScreen: View {
             case .denied:
                 PermissionEmptyState(
                     title: "No Access to Photos",
-                    message: "ShotDex needs access to your photo library to read camera and lens metadata. Your photos never leave your device.",
+                    message: "ShotDex needs access to your photo library to read camera and lens metadata. Your photos stay on this device unless you upload them to your own server.",
                     actionTitle: "Open Settings",
                     action: openAppSettings
                 )

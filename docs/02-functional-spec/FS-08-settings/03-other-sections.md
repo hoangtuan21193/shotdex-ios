@@ -50,6 +50,12 @@ Mật độ lưới **không phải công tắc** — chỉ có một dòng chú
 **Resize Presets**: luôn hiện bốn preset dựng sẵn, và cho tạo, sửa, xoá preset riêng (tên, Fill/Fit, rộng,
 cao, chất lượng, JPEG/HEIC). Preset riêng lưu **cục bộ trong cài đặt của app**, không đồng bộ.
 
+## 5b. File Servers
+
+Một hàng **File Servers** kèm số server (`None` khi chưa có) mở danh sách server SMB/SFTP — đặc tả ở
+[FS-15.01](../FS-15-server-upload/01-servers-and-settings.md). Ở bố cục rộng nằm trong mục **Sharing and
+Export**; search tìm được bằng "server", "SMB", "SFTP", "NAS".
+
 ## 6. People and Pets
 
 Điều khiển lượt quét chủ thể — xem [FS-06.04](../FS-06-collections/04-people-and-pets.md).

@@ -1,13 +1,19 @@
 # OV-02 — Nền tảng và công nghệ
 
-`OV-02` · `ShotDex.xcodeproj` · cập nhật 2026-09-22
+`OV-02` · `ShotDex.xcodeproj` · cập nhật 2026-09-24
 
 **Một câu:** framework nào dùng cho việc gì, và ba quyết định nền không được đảo.
 
 ## 1. Quy tắc
 
 - **Tối thiểu iOS 17** — cần bộ biểu đồ, cơ chế quan sát trạng thái mới, và bảng trượt nhiều nấc.
-- **Chỉ một thư viện bên thứ ba: GRDB** (qua trình quản lý gói của Swift). Còn lại là framework hệ thống.
+- **Ba thư viện bên thứ ba**, qua trình quản lý gói của Swift: **GRDB** (database), **SMBClient** và
+  **Citadel** (upload lên file server, [FS-15](../02-functional-spec/FS-15-server-upload/README.md)). Còn lại là
+  framework hệ thống. Thêm một thư viện là quyết định có tên, không phải tiện tay.
+- Thư viện mới phải có giấy phép **MIT/Apache/BSD** — bọc libsmb2/libssh (LGPL/GPL) bị loại — và chỉ app chính
+  link; kit và extension không thấy chúng.
+- **swift-collections ghim ở 1.3**: bản 1.7 (SwiftNIO kéo vào) gọi một hàm runtime mà iOS 26.5 chưa có — app
+  chết ngay lúc mở. Nâng bản thì chạy thử trên iOS 17/18/26 trước.
 - **Kích thước màn và cửa sổ luôn hỏi qua một lớp riêng của app**, không hỏi thẳng "màn hình chính" của hệ
   thống.
 - **Không đọc lại metadata cả thư viện mỗi lần mở app** — xem

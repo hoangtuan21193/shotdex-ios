@@ -65,7 +65,7 @@ struct OnboardingScreen: View {
                 onboardingRow(
                     icon: "lock.shield",
                     title: "Your photos stay on your device",
-                    detail: "Your photos and metadata never leave your device."
+                    detail: "Your photos and metadata stay on this device. They leave it only when you upload them to a server you set up."
                 )
             }
             .padding(.horizontal, 28)

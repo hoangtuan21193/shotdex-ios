@@ -38,7 +38,8 @@
 Mở bằng nút Info hoặc vuốt lên.
 
 **Thứ tự**: Location → Camera & Lens → Exposure → Capture Settings → Date → File → (Rights/Description) →
-Shutter Count → nút xem dữ liệu thô.
+Shutter Count → **Uploaded to Server** (một dòng mỗi server kèm ngày, chỉ khi có —
+[FS-15.02 §8](../FS-15-server-upload/02-upload-flow.md)) → nút xem dữ liệu thô.
 
 | Nhóm | Gồm |
 |---|---|

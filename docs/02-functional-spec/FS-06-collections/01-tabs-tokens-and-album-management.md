@@ -93,7 +93,9 @@ menu ⋯. Hệ quả đã chấp nhận: trên một thư viện **chưa index x
 mục cạnh nó do PhotoKit cấp đã có số.
 
 **Utilities** = Places · Trips · Duplicates (kèm số nhóm của lần gom cuối, **số nhiều dịch đúng trong bộ
-chuỗi**) · **Collages** · **Video Projects** · và các smart album nhóm tiện ích (hiện chỉ Unable to Upload).
+chuỗi**) · **Collages** · **Video Projects** · **Uploaded to Server** (chỉ hiện khi đã có ít nhất một ảnh lên
+server, [FS-15.02 §8](../FS-15-server-upload/02-upload-flow.md)) · và các smart album nhóm tiện ích (hiện chỉ
+Unable to Upload).
 
 **Không có album Hidden và không có Recently Deleted**: từ iOS 16 hệ thống không cho app bên thứ ba đọc ảnh
 ẩn (đo trên iOS 26: album đó trả về 0 ảnh); còn Recently Deleted **không phải bị chặn quyền mà là không có

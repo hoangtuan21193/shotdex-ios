@@ -32,7 +32,7 @@ dùng ngày tạo asset. Bản đã sửa: `<tên gốc>_edited.<đuôi của b�
 
 ## 4. Đẩy một file
 
-1. Chép file gốc ra thư mục tạm của app (tải từ iCloud nếu cần) — tính SHA-256 trong lúc chép.
+1. Chép file gốc ra thư mục tạm của app (tải từ iCloud nếu cần), rồi tính SHA-256 của file tạm theo khối 1 MB.
 2. Có file cùng tên ở đích → sang bước trùng tên (§5) **trước khi** ghi gì.
 3. Ghi lên server dưới tên `<tên>.shotdex-part`, theo khối.
 4. Đọc lại file `.shotdex-part` từ server theo khối, tính SHA-256.
@@ -46,8 +46,8 @@ dùng ngày tạo asset. Bản đã sửa: `<tên gốc>_edited.<đuôi của b�
 
 ## 5. Trùng tên
 
-- Hiện **hai ảnh cạnh nhau**: *On iPhone* (thumbnail từ thư viện) và *On Server* (tải file về đĩa, dựng
-  thumbnail từ file, không giải mã cả ảnh). Dưới mỗi ảnh: dung lượng và ngày sửa.
+- Hiện **hai ảnh cạnh nhau**: *On This Device* và *On Server* — cả hai dựng thumbnail 400px thẳng từ file
+  (bản bên server tải về đĩa trước), không giải mã cả ảnh. Dưới mỗi ảnh: dung lượng.
 - Ba nút: **Replace** · **Keep Both** · **Skip**, và công tắc **Apply to remaining conflicts** (mặc định tắt).
 - **Keep Both** đặt tên `<tên> (2).<đuôi>`, rồi `(3)`… cho tới tên chưa có.
 - File trên server trùng **cả SHA-256** với file sắp đẩy → coi như đã có: ghi lịch sử, không hỏi, không đẩy.
@@ -67,7 +67,7 @@ dùng ngày tạo asset. Bản đã sửa: `<tên gốc>_edited.<đuôi của b�
 
 | Trường hợp | Hiển thị |
 |---|---|
-| có tấm xoá được | "Uploaded N photos (X GB) to <server>." + nút đỏ **Delete N from iPhone** + **Done** |
+| có tấm xoá được | "Uploaded N photos (X GB) to <server>." + nút đỏ **Delete N from This Device** + **Done** |
 | có lỗi | danh sách file lỗi kèm lý do + **Upload Remaining** |
 | 0 tấm lên | chỉ lỗi + **Try Again**; không có nút xoá |
 
@@ -81,7 +81,8 @@ dùng ngày tạo asset. Bản đã sửa: `<tên gốc>_edited.<đuôi của b�
 ## 8. Sau khi đẩy
 
 - **Collections → Utilities → Uploaded to Server**: lưới mọi ảnh còn trong thư viện đã lên ít nhất một
-  server, mới nhất trước. Hàng chỉ hiện khi có ít nhất một ảnh.
+  server, mới nhất trước. Hàng chỉ hiện khi có ít nhất một ảnh. Menu **⋯ → Delete N from This Device** xoá
+  đúng những ảnh qua được luật §7, cùng hai hộp xác nhận.
 - **Dấu trên lưới**: glyph nhỏ ở góc dưới-trái ô, trên mọi lưới. Nhãn VoiceOver "Uploaded to server".
 - **Photo Info**: dòng "Uploaded to <tên server> · <ngày>" cho mỗi server, mới nhất trước.
 - Ảnh bị xoá khỏi thư viện → dòng lịch sử **ở lại** (bảng giữ bằng chứng); nó chỉ không còn hiện ở đâu.
