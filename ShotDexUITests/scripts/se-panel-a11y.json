@@ -1,0 +1,87 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 20
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.35
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Edit"
+  },
+  {
+   "action": "wait",
+   "seconds": 12
+  },
+  {
+   "action": "screenshot",
+   "name": "light"
+  },
+  {
+   "action": "dump",
+   "name": "light"
+  },
+  {
+   "action": "tap",
+   "label": "Grade",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "grade"
+  },
+  {
+   "action": "dump",
+   "name": "grade"
+  },
+  {
+   "action": "tap",
+   "label": "Mask",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "mask"
+  },
+  {
+   "action": "dump",
+   "name": "mask"
+  },
+  {
+   "action": "tap",
+   "label": "Markup",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "markup"
+  },
+  {
+   "action": "dump",
+   "name": "markup"
+  }
+ ]
+}

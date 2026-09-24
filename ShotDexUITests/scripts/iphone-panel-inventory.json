@@ -1,0 +1,256 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 20
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.35
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Edit"
+  },
+  {
+   "action": "wait",
+   "seconds": 12
+  },
+  {
+   "action": "tap",
+   "label": "Mask",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "mask-chooser"
+  },
+  {
+   "action": "dump",
+   "name": "mask-chooser"
+  },
+  {
+   "action": "tap",
+   "label": "Depth",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "mask-depth-reason"
+  },
+  {
+   "action": "dump",
+   "name": "mask-depth-reason"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Radial",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "mask-radial"
+  },
+  {
+   "action": "dump",
+   "name": "mask-radial"
+  },
+  {
+   "action": "tap",
+   "label": "Mask actions"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "mask-menu"
+  },
+  {
+   "action": "dump",
+   "name": "mask-menu"
+  },
+  {
+   "action": "tap",
+   "label": "Hide"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Mask actions"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "mask-menu-hidden"
+  },
+  {
+   "action": "tap",
+   "label": "Show"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Markup",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "markup-chooser"
+  },
+  {
+   "action": "dump",
+   "name": "markup-chooser"
+  },
+  {
+   "action": "tap",
+   "label": "Add Text"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "typeText",
+   "text": "Hi"
+  },
+  {
+   "action": "tap",
+   "label": "Done"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "text-1"
+  },
+  {
+   "action": "dump",
+   "name": "text-1"
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.8,
+   "direction": "up",
+   "distance": 0.12
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "dump",
+   "name": "text-2"
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.8,
+   "direction": "up",
+   "distance": 0.12
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "dump",
+   "name": "text-3"
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.8,
+   "direction": "up",
+   "distance": 0.12
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "text-4"
+  },
+  {
+   "action": "dump",
+   "name": "text-4"
+  },
+  {
+   "action": "tap",
+   "label": "Add a layer"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Add Rectangle"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "shape-1"
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.8,
+   "direction": "up",
+   "distance": 0.12
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "dump",
+   "name": "shape-2"
+  }
+ ]
+}

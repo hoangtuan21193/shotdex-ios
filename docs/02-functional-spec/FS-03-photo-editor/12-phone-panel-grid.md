@@ -108,7 +108,7 @@ Máy: iPhone 17 (402pt, iOS 26.5) và iPhone 16 Pro (iOS 18.6) · iPhone SE 3rd 
 | AC-13 | Duo ngoài | mở Light rồi Mask | panel 264, không nút nào dưới rail 84pt | ⚠️ chưa có — `duo-editor-panel.json` + `Tools/sim-shot` |
 | AC-14 | iPad, sidebar Light | dump Exposure | núm tròn 18, nhãn chữ thường, hàng ≥44 | `aSliderRowIsBigEnoughToHitAndQuickEnoughToNudge` + ⚠️ ảnh |
 | AC-15 | cả hai nhánh iOS 26.5 và 18.6 | chạy AC-2, AC-3 | kết quả như nhau | AC-2 và AC-3 chạy trên iPhone 17 Pro 26.5 và SE 18.6, 2026-09-25: lưới 40 như nhau, 0 px accent ở 11 nhóm cả hai (`Tools/accent-check`) |
-| AC-16 | mọi dòng "Chỗ ở mới" của intent | đi tới từng chức năng | tới được, dùng được | ⚠️ chưa có `iphone-panel-inventory.json` |
+| AC-16 | mọi dòng "Chỗ ở mới" của intent | đi tới từng chức năng | tới được, dùng được | `iphone-panel-inventory.json` + `-2.json`, iPhone 17 Pro 26.5, 2026-09-25 — tới được và có mặt: Text (Font · Size · Color · Content · B/I/Align · Opacity · Outline · Shadow · Width · Leading · Tracking · Rotate · Across · Down), Shape (kiểu · Color · Filled · Thickness · Height · Opacity · vị trí), Magnifier (Zoom · Rim · Opacity · vị trí), `⋯` lớp (8 mục), Draw (Draw · Erase · Select · Ruler · 7 mực · Size · Opacity · Color), Sign → thư viện, Mask (Add/Subtract · Undo · `⋯` Rename · Invert · Duplicate · Hide/Show · Delete · lý do Depth), Presets (Save Current · Import .cube), Optics (Lens Profile · Change · Remove CA · Defringe); ⚠️ chưa đi: hàng lớp Image (cần chọn ảnh qua PHPicker), chip shape khi mask ≥2 shape |
 
 Mask: AC-17…AC-25 ở [FS-03.05 §9](05-local-masks.md#9-tiêu-chí-nghiệm-thu-panel-phone) · Markup: AC-26…AC-38 ở
 [FS-05.01 §7](../FS-05-markup/01-layers-and-draw.md#7-tiêu-chí-nghiệm-thu-panel-phone).
@@ -116,7 +116,7 @@ Mask: AC-17…AC-25 ở [FS-03.05 §9](05-local-masks.md#9-tiêu-chí-nghiệm-t
 Không mạng / ảnh chỉ có trên iCloud: panel không đọc mạng, đường tải ảnh giữ như [FS-03](README.md) — không
 có AC riêng ở đây.
 
-**Chưa chứng minh được:** AC-8 (Dynamic Type), AC-9 (ảnh lúc giữ), AC-12 (mở bộ chọn file), AC-13 (Duo ngoài), AC-14 (ảnh iPad), AC-16 (tồn kê).
+**Chưa chứng minh được:** AC-8 (Dynamic Type), AC-9 (ảnh lúc giữ), AC-12 (mở bộ chọn file), AC-13 (Duo ngoài), AC-14 (ảnh iPad), AC-16 (hàng lớp Image, chip shape của mask nhiều shape).
 
 ## 9. Rủi ro đã biết
 

@@ -1,0 +1,221 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 20
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.35
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Edit"
+  },
+  {
+   "action": "wait",
+   "seconds": 12
+  },
+  {
+   "action": "tap",
+   "label": "Markup",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "swipe",
+   "x": 0.7,
+   "y": 0.867,
+   "direction": "left",
+   "distance": 0.5
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Add Magnifier"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "magnifier-1"
+  },
+  {
+   "action": "dump",
+   "name": "magnifier-1"
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.8,
+   "direction": "up",
+   "distance": 0.12
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "dump",
+   "name": "magnifier-2"
+  },
+  {
+   "action": "tap",
+   "label": "Layer actions"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "layer-menu"
+  },
+  {
+   "action": "dump",
+   "name": "layer-menu"
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.12
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Add a layer"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Add Pen"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "draw-rows"
+  },
+  {
+   "action": "dump",
+   "name": "draw-rows"
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.8,
+   "direction": "up",
+   "distance": 0.12
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "dump",
+   "name": "draw-rows-2"
+  },
+  {
+   "action": "tap",
+   "label": "Add a layer"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Add Sign"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "sign-library"
+  },
+  {
+   "action": "dump",
+   "name": "sign-library"
+  },
+  {
+   "action": "tap",
+   "label": "Done"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Presets",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "My Looks"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "presets-mylooks"
+  },
+  {
+   "action": "tap",
+   "label": "LUTs"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "presets-luts"
+  },
+  {
+   "action": "tap",
+   "label": "Optics",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "optics"
+  }
+ ]
+}
