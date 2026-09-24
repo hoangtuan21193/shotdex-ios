@@ -656,21 +656,119 @@ struct EditorUprightRow: View {
     }
 }
 
+/// The editor's one chip. Inside the photo editor (`editorUsesPanelStyle`,
+/// FS-03.12 §4) it is 30pt, white text, white 20% when selected and 6% otherwise —
+/// no accent, no border. Everywhere else (Collage, Video Studio, the other tools)
+/// it keeps the 28pt accent chip those screens were built with.
 struct EditorChipButtonStyle: ButtonStyle {
     let isSelected: Bool
 
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 12, weight: .medium))
-            .foregroundStyle(isSelected ? .white : EditorTheme.secondaryText)
-            .padding(.horizontal, 10)
-            .frame(height: 28)
-            .background(
-                isSelected
-                    ? EditorTheme.accent
-                    : EditorTheme.control.opacity(configuration.isPressed ? 0.6 : 1),
-                in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous)
-            )
-            .contentShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
+        EditorChipBody(configuration: configuration, isSelected: isSelected)
+    }
+}
+
+private struct EditorChipBody: View {
+    let configuration: ButtonStyleConfiguration
+    let isSelected: Bool
+    @Environment(\.editorUsesPanelStyle) private var usesPanelStyle
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous)
+        if usesPanelStyle {
+            configuration.label
+                .font(isSelected ? EditorTheme.chipLabelSelected : EditorTheme.chipLabel)
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(EditorLayoutMetrics.editorPanelRowMinimumScale)
+                .padding(.horizontal, EditorStripLayout.chipHorizontalPadding)
+                .frame(height: EditorStripLayout.chipHeight)
+                .background(isSelected ? EditorTheme.chipSelected : EditorTheme.chipIdle, in: shape)
+                .opacity(configuration.isPressed ? 0.7 : 1)
+                .contentShape(shape)
+        } else {
+            configuration.label
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(isSelected ? .white : EditorTheme.secondaryText)
+                .padding(.horizontal, 10)
+                .frame(height: 28)
+                .background(
+                    isSelected
+                        ? EditorTheme.accent
+                        : EditorTheme.control.opacity(configuration.isPressed ? 0.6 : 1),
+                    in: shape
+                )
+                .contentShape(shape)
+        }
+    }
+}
+
+/// A chip's content: an SF Symbol at 15pt (or an 8pt colour dot) and the title,
+/// 4pt apart.
+struct EditorPanelChipLabel: View {
+    let title: String
+    var systemImage: String?
+    var dot: Color?
+
+    var body: some View {
+        HStack(spacing: EditorStripLayout.chipIconSpacing) {
+            if let systemImage {
+                Image(systemName: systemImage)
+                    .font(.system(size: 15, weight: .regular))
+            } else if let dot {
+                Circle().fill(dot).frame(width: 8, height: 8)
+            }
+            Text(title)
+        }
+    }
+}
+
+/// A row of chips on the panel's grid: equal widths up to five, a horizontal
+/// scroll past that (`EditorStripLayout`). One implementation for every target
+/// strip — Curve channels, Grade regions, Presets sources, Crop ratios.
+struct EditorPanelChipStrip<Item: Identifiable>: View {
+    let items: [Item]
+    let isSelected: (Item) -> Bool
+    let label: (Item) -> EditorPanelChipLabel
+    let accessibilityName: (Item) -> String
+    let onSelect: (Item) -> Void
+
+    var body: some View {
+        if EditorStripLayout.sharesWidth(itemCount: items.count, kind: .text) {
+            HStack(spacing: EditorStripLayout.chipSpacing) {
+                ForEach(items) { item in chip(item).frame(maxWidth: .infinity) }
+            }
+            .padding(.horizontal, EditorStripLayout.horizontalInset)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal) {
+                    HStack(spacing: EditorStripLayout.chipSpacing) {
+                        ForEach(items) { item in chip(item).id(item.id) }
+                    }
+                    .padding(.horizontal, EditorStripLayout.horizontalInset)
+                    .frame(maxHeight: .infinity)
+                }
+                .scrollIndicators(.hidden)
+                .onAppear {
+                    if let selected = items.first(where: isSelected) {
+                        proxy.scrollTo(selected.id, anchor: .center)
+                    }
+                }
+            }
+        }
+    }
+
+    private func chip(_ item: Item) -> some View {
+        let selected = isSelected(item)
+        return Button {
+            onSelect(item)
+        } label: {
+            label(item)
+                .frame(maxWidth: EditorStripLayout.sharesWidth(itemCount: items.count, kind: .text) ? .infinity : nil)
+        }
+        .buttonStyle(EditorChipButtonStyle(isSelected: selected))
+        .accessibilityLabel(accessibilityName(item))
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }

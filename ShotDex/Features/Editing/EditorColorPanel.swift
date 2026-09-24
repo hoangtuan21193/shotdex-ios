@@ -501,38 +501,28 @@ struct EditorGradeRegionStrip: View {
     @Bindable var chrome: EditorChromeModel
 
     var body: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 8) {
-                ForEach(ColorGradingRegion.allCases) { region in
-                    let isSelected = chrome.gradingRegion == region
-                    Button {
-                        withAnimation(EditorTheme.animation) {
-                            chrome.gradingRegion = region
-                        }
-                    } label: {
-                        HStack(spacing: 8) {
-                            Circle()
-                                .fill(EditorColorMixerStyle.regionTint(
-                                    controller.gradingWheel(region)
-                                ))
-                                .frame(width: 10, height: 10)
-                                .overlay {
-                                    Circle().strokeBorder(
-                                        Color.white.opacity(0.3),
-                                        lineWidth: 0.5
-                                    )
-                                }
-                            Text(region.displayName)
-                        }
-                    }
-                    .buttonStyle(EditorChipButtonStyle(isSelected: isSelected))
-                    .accessibilityLabel(region.displayName)
-                    .accessibilityAddTraits(isSelected ? .isSelected : [])
-                }
+        EditorPanelChipStrip(
+            items: ColorGradingRegion.allCases,
+            isSelected: { chrome.gradingRegion == $0 },
+            label: { EditorPanelChipLabel(title: $0.displayName, systemImage: $0.stripSymbol) },
+            accessibilityName: \.displayName,
+            onSelect: { region in
+                withAnimation(EditorTheme.animation) { chrome.gradingRegion = region }
             }
-            .padding(.horizontal, 14)
+        )
+    }
+}
+
+extension ColorGradingRegion {
+    /// Half-filled circle, circle with a dot, sun, globe — the tonal band read as a
+    /// shape rather than as the tint the region carries (FS-03.12 drops the tint dot).
+    var stripSymbol: String {
+        switch self {
+        case .shadows: "circle.lefthalf.filled"
+        case .midtones: "smallcircle.filled.circle"
+        case .highlights: "sun.max"
+        case .global: "globe"
         }
-        .scrollIndicators(.hidden)
     }
 }
 
