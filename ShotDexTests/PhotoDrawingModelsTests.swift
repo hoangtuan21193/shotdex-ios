@@ -170,5 +170,54 @@ struct PhotoDrawingModelsTests {
             #expect(data[offset] > 200, "row \(row) is not red")
         }
     }
+
+    /// AC-38 (memory), measured: ten frame-spanning drawing layers of fifty
+    /// strokes each, composited at 48MP the way a full-resolution save does. The
+    /// rise in the process's peak footprint stays under 400MB — the ~195MB
+    /// overlay bitmap plus one band, not a second full frame per layer.
+    @Test func tenFullFrameLayersAt48MPStayUnder400MB() throws {
+        func point(_ x: CGFloat, _ y: CGFloat) -> PKStrokePoint {
+            PKStrokePoint(location: CGPoint(x: x, y: y), timeOffset: 0, size: CGSize(width: 6, height: 6),
+                          opacity: 1, force: 1, azimuth: 0, altitude: .pi / 2)
+        }
+        let ink = PKInk(.pen, color: .red)
+        let layers: [PhotoOverlay] = (0..<10).map { layer in
+            let strokes = (0..<50).map { index -> PKStroke in
+                let y = CGFloat(4 + (index * 191 + layer * 7) % 192)
+                return PKStroke(ink: ink, path: PKStrokePath(
+                    controlPoints: [point(4, y), point(296, 196 - y)], creationDate: Date()
+                ))
+            }
+            return .drawing(PhotoDrawing(
+                data: PKDrawing(strokes: strokes).dataRepresentation(),
+                canvasWidth: 300, canvasHeight: 200
+            ))
+        }
+        let before = try #require(Self.footprint())
+        let image = PhotoRenderService.rasterizedOverlayImage(
+            layers, extent: CGRect(x: 0, y: 0, width: 8064, height: 6048)
+        )
+        #expect(image != nil)
+        let after = try #require(Self.footprint())
+        // The peak is a high-water mark for the whole process: when an earlier
+        // test already set it higher, this pass cannot be read from it.
+        let rise = Int64(after.peak) - Int64(max(before.peak, before.current))
+        print("AC-38 peak rise \(rise / 1_048_576)MB (before \(before.peak / 1_048_576)MB, after \(after.peak / 1_048_576)MB)")
+        if after.peak > before.peak {
+            #expect(rise < 400 * 1024 * 1024, "peak rose \(rise / 1_048_576)MB")
+        }
+    }
+
+    private static func footprint() -> (current: UInt64, peak: UInt64)? {
+        var info = task_vm_info_data_t()
+        var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size)
+        let result = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count)
+            }
+        }
+        guard result == KERN_SUCCESS else { return nil }
+        return (info.phys_footprint, UInt64(max(0, info.ledger_phys_footprint_peak)))
+    }
 }
 

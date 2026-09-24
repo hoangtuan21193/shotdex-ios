@@ -101,11 +101,11 @@ Tiếp số của [FS-03.12](../FS-03-photo-editor/12-phone-panel-grid.md). Máy
 | AC-30 | lớp nét vẽ có 3 nét | Undo một lần | còn 2 nét, lớp vẫn còn và vẫn chọn | `EditorDrawLayerTests.eachStrokeIsOneUndoStep` + ảnh iPhone 17 26.5, 2026-09-24 |
 | AC-31 | 2 lớp: chữ trên, nét vẽ dưới | `⋯` của nét vẽ → Bring Forward | nét vẽ ghép trên chữ ở bản xuất | `PhotoDrawingModelsTests.aDrawingLayerComposesInStackOrder` |
 | AC-32 | lớp chữ đang chọn | chạm vùng trống trên ảnh | khung chọn trên ảnh mất; panel vẫn là hàng của lớp chữ đó | `MarkupPhonePanelTests.tapOnEmptyPhotoKeepsThePanelLayer` |
-| AC-33 | lớp chữ, hàng Color | dump hàng | 6 ô màu = 4 mức xám + 2 màu như hôm nay, cộng ô custom | ảnh iPhone 17 26.5, 2026-09-24 (hàng màu); ⚠️ chưa có dump |
+| AC-33 | lớp chữ, hàng Color | dump hàng | 6 ô màu = 4 mức xám + 2 màu như hôm nay, cộng ô custom | dump `iphone-panel-inventory.json` (text-1) iPhone 17 Pro 26.5, 2026-09-25: White · Grey 72 percent · Grey 40 percent · Black · Cream · Red + Custom color |
 | AC-34 | lớp chữ, hàng Color | chạm ô custom, rồi `‹` | bảng màu hiện rồi đóng; panel 264 suốt hai bước | ảnh iPhone 17 26.5, 2026-09-24 (bảng màu + ống hút); `MarkupPhonePanelTests.recentColorsAreNewestFirstAndCapped` |
 | AC-35 | 8 lớp, dải cuộn ở đầu | chạm lớp thứ 8 trên ảnh | lớp 8 được chọn, thumbnail của nó nằm trọn trong dải | ảnh iPhone 17 26.5, 2026-09-25: 8 lớp, lớp 1 kéo ra góc trên-trái, chạm nó trên ảnh → dải cuộn tới cuối, thumbnail có vòng chọn nằm trọn |
 | AC-36 | 1 lớp | chạm `+` rồi `‹` | vẫn 1 lớp, lớp cũ vẫn chọn | `MarkupPhonePanelTests.plusThenBackMakesNothing` |
 | AC-37 | 1 lớp | `⋯` → Delete | 0 lớp, panel về "Add a layer", không có `‹` | `MarkupPhonePanelTests.deletingTheLastLayerShowsTheChooser` |
-| AC-38 | ảnh 48MP, 10 lớp nét vẽ, mỗi lớp 50 nét | lưu bản full-res | lưu xong; bộ nhớ đỉnh của lượt render nét vẽ < 400MB | `PhotoDrawingModelsTests.aDrawingRastersOnlyItsBoundingBox` (khung bao nhỏ < 8MB), `aFullFrameDrawingIsPlannedInBoundedBands` (lớp phủ cả khung 48MP vẽ theo dải ≤ 24MB, không tạo bitmap thứ hai cả khung), `bandedDrawingHasNoSeams`; ⚠️ chưa đo bộ nhớ đỉnh cả lượt lưu trên máy |
+| AC-38 | ảnh 48MP, 10 lớp nét vẽ, mỗi lớp 50 nét | lưu bản full-res | lưu xong; bộ nhớ đỉnh của lượt render nét vẽ < 400MB | `PhotoDrawingModelsTests.tenFullFrameLayersAt48MPStayUnder400MB` — iPhone 17 26.5, 2026-09-25: đỉnh footprint tăng 213MB (84 → 298MB; bitmap lớp phủ ~195MB + một dải); `aFullFrameDrawingIsPlannedInBoundedBands`, `bandedDrawingHasNoSeams`, `aDrawingRastersOnlyItsBoundingBox` |
 
-**Chưa chứng minh được:** AC-33 (dump hàng), AC-38 (bộ nhớ đỉnh cả lượt lưu).
+**Chưa chứng minh được:** không còn — AC-26…AC-38 đều có test hoặc ảnh.
