@@ -166,10 +166,10 @@ Tiếp số của [FS-03.12](12-phone-panel-grid.md). Máy: iPhone 17, iOS 26.5 
 | AC-18 | như AC-17 | chạm Radial một lần | có đúng 1 mask, dải hiện 1 thumbnail + tên "Radial 1", hàng Feather · Opacity có | `MaskPhonePanelTests.oneTapOnRadialMakesOneShortNamedMask` + ảnh iPhone 17 26.5, 2026-09-24 |
 | AC-19 | ảnh không có depth | chạm Depth | không tạo mask; tiêu đề thành "This photo has no depth map. Portrait mode photos do." rồi trở lại sau 3s | `MaskPhonePanelTests.depthWithoutADepthMapGivesItsReason` + ảnh iPhone 17 26.5, 2026-09-24 |
 | AC-20 | 1 mask đang bật | `⋯` → Hide | ảnh mất tác dụng mask, thumbnail mờ 35%, lớp đỏ tắt; Show trả lại cả ba | `MaskPhonePanelTests.hideAndShowToggleTheEffect` |
-| AC-21 | 6 mask, dải cuộn tới cuối, mask 6 đang chọn, rồi chạm thumbnail mask 1 | `⋯` → Duplicate | bản sao nằm ngay sau mask 1, được chọn, thumbnail của nó nằm trọn trong dải | `MaskPhonePanelTests.duplicateLandsRightAfterItsSource`; ⚠️ cuộn dải chưa chụp |
+| AC-21 | 6 mask, dải cuộn tới cuối, mask 6 đang chọn, rồi chạm thumbnail mask 1 | `⋯` → Duplicate | bản sao nằm ngay sau mask 1, được chọn, thumbnail của nó nằm trọn trong dải | `MaskPhonePanelTests.duplicateLandsRightAfterItsSource` + ảnh iPhone 17 26.5, 2026-09-25 (6 mask Radial, chạm mask 1, `⋯` → Duplicate: bản sao ở vị trí 2, được chọn, nằm trọn trong dải) |
 | AC-22 | 1 mask đang chọn | chạm `+` rồi `‹` | vẫn 1 mask, mask cũ vẫn chọn, không có mask rỗng | `MaskPhonePanelTests.plusThenBackMakesNothing` |
 | AC-23 | simulator (Vision không chạy được Subject) | chạm Subject | vòng quay dừng, pill "Couldn't find a subject" 3s, mask rỗng vẫn trong dải, không có alert lỗi | ảnh `iPhone 17 26.5` 2026-09-24 (chụp tay, `simctl io` ngay sau chạm); ⚠️ chưa có script |
 | AC-24 | ảnh chưa có mask | chạm Sky rồi Undo một lần | 0 mask, panel về màn chọn loại | `MaskPhonePanelTests.undoAfterCreatingReturnsToTheChooser` |
 | AC-25 | 1 mask | `⋯` → Delete | 0 mask, panel về màn chọn loại, không có `‹` | `MaskPhonePanelTests.deletingTheLastMaskReturnsToTheChooser` |
 
-**Chưa chứng minh được:** AC-17…AC-25.
+**Chưa chứng minh được:** AC-23 chưa có script (chỉ ảnh chụp tay).
