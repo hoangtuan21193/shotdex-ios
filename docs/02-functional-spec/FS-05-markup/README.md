@@ -1,7 +1,7 @@
 # FS-05 — Markup
 
 `FS-05` · tier D · `Features/Editing/EditorTextPanel.swift` · `EditorDrawingCanvas.swift`
-· `ShotDexKit` (render overlay và nét vẽ) · `Domain/Editing/TextOverlayLayout.swift` · cập nhật 2026-09-22
+· `ShotDexKit` (render overlay và nét vẽ) · `Domain/Editing/TextOverlayLayout.swift` · cập nhật 2026-09-24
 
 **Một câu:** đặt chữ, ảnh, hình và nét vẽ lên trên ảnh — và **token EXIF** là lý do tab này thuộc về **app
 này** chứ không phải một app markup bất kỳ.
@@ -35,7 +35,7 @@ này** chứ không phải một app markup bất kỳ.
 | **ảnh** | một ảnh PNG trong suốt chọn từ thư viện, có độ mờ, cỡ, xoay, vị trí |
 | **hình** | chữ nhật · elip · bong bóng thoại · mũi tên · đường thẳng |
 | **kính lúp** | vòng tròn phóng chính ảnh bên dưới |
-| **nét vẽ** | một lớp vẽ tay, ghép **dưới** mọi lớp khác |
+| **nét vẽ** | mỗi lần vẽ một lớp, xếp thứ tự như mọi lớp khác |
 
 Tab tên **Markup** (cũ là "Text") — nó thêm được cả ảnh và nét vẽ, không chỉ chữ.
 
@@ -50,25 +50,20 @@ loại như một, và thêm một trường là một dòng.
 - Nét vẽ lưu ở **dạng vector** kèm kích thước khung lúc vẽ, không phải ảnh bẹt: mở lại vẽ tiếp được, và
   renderer vẽ **sắc ở đúng độ phân giải xuất**.
 
-## Panel — danh sách lớp
+## Panel — dải lớp
 
-- Đầu danh sách là **bốn nút thêm rời nhau**: ＋Text · ＋Image · ＋Shape · ＋Draw, mỗi nút một dấu `+` accent.
-  Cố ý **không** phải một dải chọn chế độ — dải liền đọc thành "đang chọn chế độ nào", trong khi mỗi lần
-  chạm thực ra **tạo** một lớp. **＋Shape là một menu**: 5 kiểu + kính lúp = 7 mục tiêu trên hàng 375pt thì
-  quá chật.
-- **Presets** tách riêng ở tiêu đề danh sách — nó mở thư viện preset chứ không thêm lớp.
-- Mỗi dòng là một **thẻ**: tay nắm kéo bên trái, ô icon, tên + mô tả phụ, **con mắt** và mũi tên bên phải.
-- **Chạm thẻ = mở phần chi tiết** · con mắt = ẩn/hiện (theo id nên không đổi lớp đang chọn) · **vuốt trái =
-  xoá** · **giữ rồi kéo = đổi thứ tự** (không dùng menu giữ-lâu vì nó xung đột với kéo).
-- Dòng đặt tên bằng **chữ đã thay giá trị**; lớp ảnh mất file thì mô tả phụ ghi **"Missing file"**.
-- Lớp vẽ cũng là một dòng (dưới cùng, không kéo được).
-- Danh sách hiển thị **ngược** với thứ tự vẽ, vì renderer vẽ từ dưới lên.
+Cùng mẫu với mask ([FS-03.05 §2–3](../FS-03-photo-editor/05-local-masks.md#2-chọn-loại-mask)); khung panel và
+lưới 40pt: [FS-03.12](../FS-03-photo-editor/12-phone-panel-grid.md). Chi tiết: [FS-05.01 §6](01-layers-and-draw.md#6-dải-lớp-trong-panel).
+
+- Chưa có lớp, hoặc vừa chạm `+`: tiêu đề **"Add a layer"** + ba hàng chip, **một chạm tạo lớp**.
+- Có lớp: dải thumbnail · `+` · tên · `⋯`; các hàng dưới là thuộc tính của lớp đang chọn.
+- Dòng đặt tên bằng **chữ đã thay giá trị**; lớp ảnh mất file thì tên kèm **"Missing file"**.
 
 ## Chi tiết một lớp — thứ tự mục
 
-**TEXT** (nội dung → mở ô gõ trên ảnh · font → sheet · **một hàng** gộp đậm/nghiêng và căn lề) → **FILL**
-(màu, cỡ, độ mờ) → **OUTLINE & SHADOW** (chung một mục vì cùng tồn tại cho một lý do: chữ trắng trên trời
-sáng) → **LAYOUT** (bề rộng, giãn dòng, giãn chữ) → **PLACEMENT** (xoay, dịch ngang, dịch dọc, đổi thứ tự).
+**TEXT** (font → sheet · cỡ · màu · **một hàng** gộp đậm/nghiêng và căn lề · độ mờ) → **OUTLINE & SHADOW** (chung một mục vì cùng tồn tại cho một lý do: chữ trắng trên trời
+sáng) → **LAYOUT** (bề rộng, giãn dòng, giãn chữ) → **PLACEMENT** (xoay, dịch ngang, dịch dọc).
+Đổi thứ tự nằm trong `⋯` và kéo thumbnail. Nội dung chữ sửa bằng chạm vào chữ trên ảnh.
 
 Mọi slider lưu dạng phân số nhưng hiển thị ra phần trăm.
 

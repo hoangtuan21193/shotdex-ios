@@ -1,7 +1,7 @@
 # FS-03.01b — Các thông số chỉnh và Crop
 
 `FS-03.01b` · `ShotDexKit` (render) · `Domain/Editing/EditorAdjustmentCatalog.swift`
-· `Domain/Editing/UprightAnalyzer.swift` · test `UprightAnalyzerTests` · cập nhật 2026-09-22
+· `Domain/Editing/UprightAnalyzer.swift` · test `UprightAnalyzerTests` · cập nhật 2026-09-24
 
 **Một câu:** từng nhóm slider thật sự làm gì với bức ảnh, và khung cắt được chốt lúc nào.
 
@@ -99,6 +99,8 @@ tìm đường thẳng** từ pixel.
 ## 6. Crop
 
 Tự do · nắn nghiêng −45…45° · xoay 90° · lật · và các tỉ lệ Free / Original / 1:1 / 4:3 / 3:2 / 16:9 / 4:5 / 9:16.
+
+Panel trên phone: dải tỉ lệ có icon → Straighten → Rotate · Flip · Reset → dòng chú ([FS-03.12 §4](12-phone-panel-grid.md#4-chip-và-dải-chọn)).
 
 - Khung có viền mảnh, lưới chia ba, và **bốn núm tròn 18pt** (vùng chạm 44pt).
 - **Cả ba cách chỉnh khung của Photos**: kéo góc · **kéo cạnh** (bốn thanh ở giữa mỗi cạnh, vùng chạm vươn

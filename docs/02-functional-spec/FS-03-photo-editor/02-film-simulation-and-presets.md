@@ -1,7 +1,7 @@
 # FS-03.02 — Film simulation và preset
 
 `FS-03.02` · `Domain/Editing/FilmSimulation.swift` · `LookPresetStore` · `EditorFiltersPanel`
-· test `FilmSimulationTests` · `LookPresetStoreTests` · cập nhật 2026-09-22
+· test `FilmSimulationTests` · `LookPresetStoreTests` · cập nhật 2026-09-24
 
 **Một câu:** 49 look màu, năm cái được **đo** từ ảnh tham chiếu và phần còn lại chỉnh tay — tài liệu ghi rõ
 cái nào là cái nào.
@@ -109,18 +109,19 @@ simulation" của chính hãng máy.
 ## 8. Panel Presets
 
 - **Bỏ hàng chip category** — gộp cả 49 look vào **một dải cuộn ngang**, mở ra tự cuộn tới look đang chọn.
-- Trên cùng là dòng **Amount** (chỉ khi có look, 0…100%, có mốc 100).
-- Mỗi look là **card dọc**: thumbnail 62×62 (ảnh đang sửa qua look đó) + tên dưới; chọn = viền accent 2pt
-  + dấu tick góc trên-phải.
+- Trên cùng là dải chọn nguồn **Presets · My Looks · LUTs** ([FS-03.12 §4](12-phone-panel-grid.md#4-chip-và-dải-chọn)).
+- Mỗi look là **card dọc**: thumbnail 62×62 (ảnh đang sửa qua look đó) + tên dưới; chọn = vòng trắng, tên
+  trắng.
+- Dưới dải thumbnail là dòng **Amount** (chỉ khi có look, 0…100%, có mốc 100).
 - Thumbnail render **lần lượt từng category** (mỗi batch ≤ 24 look nên không làm tràn cache bảng), **bỏ
   mask** nhưng **giữ tone/màu/crop** nên luôn dự báo đúng. Dựng lại khi tone/màu/crop/nguồn đổi, **không**
   khi đổi look hay Amount. Chưa có thumbnail thì vẽ gradient hai tông sinh từ chính look.
 
 ## 9. My Looks
 
-Nằm **trên cùng** panel Presets, trước dải 49 film look. Lưu JSON trong `UserDefaults`.
+Là tab **My Looks** của dải chọn nguồn. Lưu JSON trong `UserDefaults`.
 
-- Header **My Looks** + nút **＋ Save Current** (tắt khi recipe là identity — tile không làm gì đọc như
+- Ô đầu tab là **＋ Save Current** (tắt khi recipe là identity — tile không làm gì đọc như
   tile hỏng). Chưa có preset nào thì thay dải chip bằng dòng *"Save an edit here and it can be put on any
   photo."*
 - Chạm = áp look lên ảnh đang mở; giữ = Delete.

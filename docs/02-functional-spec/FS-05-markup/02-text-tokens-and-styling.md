@@ -1,7 +1,7 @@
 # FS-05.02 — Chữ, token và kiểu
 
 `FS-05.02` · `Domain/Editing/OverlayTokenResolver.swift` · `TextOverlayLayout.swift`
-· `Features/Editing/EditorInlineTextEditor.swift` · cập nhật 2026-09-22
+· `Features/Editing/EditorInlineTextEditor.swift` · cập nhật 2026-09-24
 
 **Một câu:** token EXIF thay giá trị theo từng ảnh, gõ chữ ngay trên ảnh, và toán đặt chữ nằm ở **một** hàm.
 
@@ -71,8 +71,13 @@ trong framework dùng chung không gọi được.
 
 ## 6. Màu
 
-Hàng ô màu (4 mức xám + 2 màu) + nút **Custom** bung bánh xe màu (hue và saturation) kèm slider **Brightness**
-— bánh xe không đổi độ sáng, slider không đổi màu. Không thêm dòng cử chỉ nào: bánh xe đã có sẵn.
+Hàng màu 40pt: 6 ô màu · vạch ngăn · ô **custom** (vòng hue, lõi là màu custom hiện tại).
+
+- Chạm ô custom: vùng thông số đổi thành bảng màu **ngay trong panel, panel không đổi chiều cao** — hàng đầu
+  `‹ · Color · mã hex · ống hút`, hàng **Recent** (6 màu, chỉ sống trong phiên sửa), rồi ba slider **Hue ·
+  Saturation · Brightness** có rãnh màu. Bảng này miễn lưới 40pt (36 · 32 · 36×3). `‹` quay lại.
+- Ống hút lấy màu từ **chính tấm ảnh đang sửa**.
+- 6 ô màu giữ bộ hôm nay: **4 mức xám + 2 màu** — màu hay dùng cho watermark.
 
 ## 7. Tiêu chí nghiệm thu
 

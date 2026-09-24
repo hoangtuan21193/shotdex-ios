@@ -1,7 +1,7 @@
 # FS-05.03 — Cử chỉ, render và preset
 
 `FS-05.03` · `Features/Editing/EditorOverlayGuides.swift` · `ShotDexKit` (ghép lớp)
-· `Domain/Editing/SignaturePresetStore.swift` · cập nhật 2026-09-22
+· `Domain/Editing/SignaturePresetStore.swift` · cập nhật 2026-09-24
 
 **Một câu:** khi có lớp đang chọn, chính khung dựng vẽ nó live — và đó là điều kiện để kéo một dòng chữ
 không phải chạy lại cả chuỗi xử lý ảnh.
@@ -54,14 +54,15 @@ Thay bằng cử chỉ kiểu công cụ chữ của Snapseed, cộng slider c�
 - **Khung chọn do chính bản vẽ sống vẽ**, dưới đúng phép đặt chữ — vẽ bằng một lớp riêng thì nó lệch khỏi
   chữ, vì chỉ số đo của thư viện chữ mới đặt đúng.
 
-## 4. Chọn tách khỏi phần chi tiết
+## 4. Chọn là mở thuộc tính
 
-"Đang chọn để thao tác trên ảnh" và "panel chi tiết đang mở" là **hai trạng thái khác nhau**. Panel chỉ mở
-chi tiết khi trạng thái thứ hai bật, không phải mỗi khi có lớp được chọn.
+Lớp đang chọn (trên ảnh hoặc trên dải) **luôn** là lớp mà các hàng trong panel đang chỉnh — không còn trạng thái
+"chọn nhưng chưa mở chi tiết", vì panel không còn danh sách để quay về.
 
-- **Danh sách** là nơi mở chi tiết, đổi thứ tự, ẩn/hiện, xoá. **Ảnh** là nơi chọn và thao tác.
-- Nút `‹ Layers` đóng phần chi tiết nhưng **giữ lớp đang chọn**, khung vẫn còn.
-- Thêm ảnh hoặc dán preset thì **không** mở chi tiết (đặt trên ảnh luôn); thêm chữ thì mở thẳng ô gõ trên ảnh.
+- **Dải lớp** là nơi chọn, đổi thứ tự, ẩn/hiện, xoá (qua `⋯`). **Ảnh** là nơi chọn và thao tác. Chọn trên
+  ảnh thì dải tự cuộn tới thumbnail của lớp đó.
+- Chạm vùng trống trên ảnh: **khung chọn trên ảnh mất, panel vẫn giữ lớp vừa chọn** — panel không nhảy.
+- Thêm ảnh hoặc dán preset thì đặt trên ảnh luôn; thêm chữ thì mở thẳng ô gõ trên ảnh.
 
 ## 5. Không chạy vòng render
 

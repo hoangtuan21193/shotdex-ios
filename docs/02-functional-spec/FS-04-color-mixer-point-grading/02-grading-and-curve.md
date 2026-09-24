@@ -1,13 +1,13 @@
 # FS-04.02 — Grading và Tone Curve
 
 `FS-04.02` · `Features/Editing/EditorColorPanel.swift` · `EditorCurveOverlay` · `EditorCurvePanel`
-· `Domain/Editing/ToneCurveMath.swift` · cập nhật 2026-09-22
+· `Domain/Editing/ToneCurveMath.swift` · cập nhật 2026-09-24
 
 **Một câu:** bốn vùng sáng × ba slider, và một đồ thị curve nằm **đè lên chính tấm ảnh nó đang sửa**.
 
 ## 1. Quy tắc
 
-- **Không dùng bánh xe màu trong panel** — panel cao cố định 246pt không đủ chỗ, và cả panel nên nói cùng
+- **Không dùng bánh xe màu trong panel** — panel cao cố định 264pt không đủ chỗ, và cả panel nên nói cùng
   một ngôn ngữ: dòng slider.
 - Đồ thị curve **đè lên ảnh**, không phải một màn riêng — bản chỉnh mù không thấy ảnh đã bị xoá.
 - Curve dựng bảng tra bằng nội suy **giữ tính đơn điệu**, nên đường không tự đảo chiều giữa hai điểm.
@@ -15,7 +15,7 @@
 
 ## 2. Grading
 
-Hàng chọn vùng là **dải viên nang cuộn ngang** (accent khi chọn, kèm một chấm màu đọc ra màu của vùng):
+Dải chọn vùng **chia đều, có icon** (kiểu chip chung của [FS-03.12](../FS-03-photo-editor/12-phone-panel-grid.md#4-chip-và-dải-chọn)):
 **Shadows · Midtones · Highlights · Global**.
 
 Mỗi vùng ba dòng:
@@ -66,8 +66,8 @@ Chọn chip **Curve** (ngay sau Light) → đồ thị vẽ lên ảnh, ở lớ
 
 ## 5. Panel Curve
 
-Hàng chip kênh **RGB / Red / Green / Blue** — chip nào có curve khác đường thẳng thì mang một chấm nhỏ, và
-**chấm chỉ vẽ trên chip không được chọn** — cộng nút Reset cho kênh đang chọn và một dòng nhắc. Kênh đang
+Dải chọn kênh **RGB / Red / Green / Blue**, mỗi chip một chấm màu của kênh — cộng nút Reset cho kênh đang
+chọn và một dòng nhắc (hàng hint). Kênh đang
 chọn dùng chung giữa panel và đồ thị.
 
 **Preset** (có test): Linear · Soft S · Strong S · Brighten · Darken · Fade · Matte. Áp vào kênh đang chọn

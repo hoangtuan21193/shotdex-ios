@@ -1,12 +1,13 @@
 # FS-04.01 — Mixer và Point Color
 
-`FS-04.01` · `Features/Editing/EditorColorPanel.swift` · `EditorColorLoupe` · cập nhật 2026-09-22
+`FS-04.01` · `Features/Editing/EditorColorPanel.swift` · `EditorColorLoupe` · cập nhật 2026-09-24
 
 **Một câu:** 24 slider theo băng màu, và tám điểm màu lấy trực tiếp từ ảnh bằng một kính lúp soi từng pixel.
 
 ## 1. Quy tắc
 
-- **Không có dải chip chọn kênh** — slider đã mang màu của chính nó, chip màu là thừa.
+- Mixer trên phone có dải **All + 8 băng màu** (9 swatch chia đều): All là danh sách 24 slider, một băng là ba
+  slider của băng đó ([FS-03.12 §4](../FS-03-photo-editor/12-phone-panel-grid.md#4-chip-và-dải-chọn)).
 - Trọng số của **mọi** điểm màu tính từ **màu gốc của pixel** rồi cộng dồn và áp **một lần** — nên thứ tự
   các điểm không ảnh hưởng kết quả.
 - Màu tham chiếu lưu **tại thời điểm lấy mẫu, từ bản xem trước đã chỉnh** (đúng cách Lightroom làm: chọn màu
@@ -30,12 +31,12 @@ thức **tự giới hạn** ở hai đầu. Một **ngưỡng độ tinh khiế
 
 ## 3. Point Color — panel
 
-- Hàng trên: nút ống hút màu + dải chip tròn 28pt màu tham chiếu (vòng accent cho chip đang chọn).
+- Dải chọn: swatch 20pt màu tham chiếu (vòng trắng cho điểm đang chọn) + chip ống hút ở cuối dải.
 - **Nút ống hút co giãn theo việc đã có màu nào chưa** — vẫn là **một** nút, chỉ nhãn và bề rộng đổi, nên cú
   thu lại đọc như nút *nhường chỗ* chứ không phải bị thay bằng nút khác:
-  - chưa có điểm nào → **viên nang accent trải hết bề ngang, chữ "Pick a Color from the Photo"** (mục rỗng
-    thì đây là việc duy nhất để làm; một icon 44pt ở góc là mục tiêu quá nhỏ cho hành động duy nhất);
-  - có điểm đầu tiên → thu về **đúng icon ống hút**, nền tối, chỉ sáng accent khi đang chờ lấy mẫu.
+  - chưa có điểm nào → không có dải; giữa vùng thông số là đĩa ống hút 40pt + dòng *"Tap the photo to pick a
+    color, then adjust only that color"*, và ảnh đã ở sẵn chế độ lấy mẫu;
+  - có điểm → chip ống hút cuối dải, **nền trắng 20% khi đang chờ lấy mẫu**, kèm pill trên ảnh.
 - Tắt khi đủ **8 điểm**.
 - **Giữ lâu một chip là ra menu `Delete Point Color`**: chip là một chấm 28pt, ngoài chọn ra thì việc duy
   nhất làm với nó là vứt đi — nên giữ lâu đi thẳng tới đó. Nút Delete ở cuối các slider vẫn còn.

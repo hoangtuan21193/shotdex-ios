@@ -1,15 +1,16 @@
-# FS-05.01 — Bốn loại lớp và Draw
+# FS-05.01 — Các loại lớp, Draw và dải lớp
 
 `FS-05.01` · `Domain/Editing/ShapeOverlayGeometry.swift` · `Features/Editing/EditorDrawingCanvas.swift`
-· cập nhật 2026-09-22
+· cập nhật 2026-09-24
 
-**Một câu:** hình và kính lúp hoạt động thế nào, và vì sao vẽ tay là một chế độ chiếm trọn khung.
+**Một câu:** hình và kính lúp hoạt động thế nào, vẽ tay chạy trong panel ra sao, và dải lớp sắp xếp mọi thứ.
 
 ## 1. Quy tắc
 
 - Hình học của hình vẽ là **một bộ toán thuần**, dùng chung cho renderer và cho bản vẽ sống trên ảnh.
 - **Kính lúp ghép trước, vành vẽ sau** — nó là lớp duy nhất mà hình dạng phụ thuộc ảnh bên dưới.
-- Vào Draw là **chiếm trọn màn**: lối ra duy nhất là Clear hoặc Done (giống chế độ cắt ảnh, không có Cancel).
+- Vẽ tay dùng **khung vẽ của PencilKit**, nhưng công cụ, cỡ, độ mờ và màu nằm **trong panel ShotDex** — bảng
+  công cụ của hệ thống không bao giờ hiện.
 
 ## 2. Hình
 
@@ -33,32 +34,75 @@ Năm kiểu: **chữ nhật · elip · bong bóng thoại · mũi tên · đư�
 
 ## 4. Draw
 
-Chip **Draw** mở một chế độ chiếm trọn khung.
+Chip **Pen** hoặc **Marker** trong màn "Add a layer" tạo **một lớp nét vẽ mới** và bắt đầu vẽ ngay. Chọn lại
+một lớp nét vẽ rồi vẽ thì nét vào **chính lớp đó**.
 
-| Mục | Chi tiết |
+| Hàng (thứ tự) | Nội dung |
 |---|---|
-| Canvas | khung vẽ của hệ thống + bảng công cụ của nó (bút, bút dạ, tẩy, màu), nhận **cả ngón tay lẫn Apple Pencil** |
-| Chrome | **Clear · Done ở hàng trên** — bảng công cụ của hệ thống nổi ở **đáy**, nên đáy đã bị chiếm; panel và tab bar ẩn hẳn |
-| Khung | canvas vừa khít ảnh, **không cuộn, không phóng trong chế độ vẽ** (v1) nên điểm trên canvas ánh xạ thẳng vào ảnh; vào Draw là đặt lại mức phóng |
-| Chốt | Done ghi cả phiên vẽ thành **một** bước hoàn tác; nét rỗng thì coi như không có |
+| 1 | chip **Draw · Erase · Select** + nút **Ruler** |
+| 2 | chip loại mực, cuộn: Pen · Marker · Pencil · Fountain · Monoline · Watercolor · Crayon |
+| 3–5 | Size (trong khoảng cỡ của loại mực đó) · Opacity · Color |
+| cuối | Rotate · Across · Down như mọi lớp |
 
-- Trạng thái vẽ có một **mã thay đổi** để canvas dựng lại khi Clear hoặc khi nạp — cơ chế quan sát tinh vi
-  của SwiftUI không tự bắn cho một khối dữ liệu thô.
-- Nét vẽ là **một dòng trong danh sách lớp** (dưới cùng vì nó ghép dưới mọi lớp khác): chạm để mở lại canvas
-  vẽ tiếp, con mắt để ẩn/hiện (ẩn vẫn **giữ nét**), vuốt để xoá.
-- Chỉ canvas và renderer biết tới thư viện vẽ; phần dữ liệu trong công thức chỉ là một khối byte.
+- Erase có hai kiểu: xoá **cả nét** hoặc xoá **theo điểm**. Select là lasso: chọn · dời · xoá nét **trong lớp
+  đang chọn**.
+- Double-tap / bóp Apple Pencil đổi sang Erase như ở app hệ thống. Nhận cả ngón tay lẫn Pencil như hôm nay.
+- Đang ở một lớp nét vẽ với Draw / Erase / Select: **một ngón trên ảnh là vẽ**; chọn lớp khác qua dải.
+  Khung vẽ vừa khít ảnh, không phóng (v1); chọn lớp nét vẽ là đặt lại mức phóng.
+- `⋯` của lớp nét vẽ có **Clear Strokes** (thay nút Clear của chế độ chiếm màn cũ).
+- **Mỗi nét là một bước hoàn tác**: Undo trên băng lùi từng nét, như Photos (thay "một phiên vẽ = một bước").
+- Lớp nét vẽ **không được chọn** hiển thị bằng bản raster đã cache; chỉ lớp đang chọn có khung vẽ sống.
+- Công thức lưu mỗi lớp nét vẽ một khối vector riêng. Công thức cũ chỉ có một khối nét vẽ không được đọc (app
+  chưa phát hành, không migration).
 
 ## 5. Render nét vẽ
 
-Nét vẽ ghép **ngay trước** các lớp còn lại — nét ở dưới, chữ ở trên để chữ vẫn đọc được.
+Mỗi lớp nét vẽ ghép **theo thứ tự của nó trong dải lớp**, như mọi lớp khác.
 
 - Có trong đường render chính và trong **bản chỉ để hiển thị** của bản xem trước; bản sạch dùng cho ống hút
   màu và histogram thì **bỏ qua nét** (như với mọi lớp khác); thumbnail và mặt nạ mask cũng sạch.
 - Live Photo raster **một lần** rồi ghép cho mọi khung.
 - Raster theo đúng tỉ lệ giữa khung xuất và khung lúc vẽ, vẽ theo chiều bottom-up đúng quy ước của lớp ảnh,
-  và **cache** theo nội dung + kích thước — nét chỉ đổi lúc bấm Done nên không raster mỗi khung.
+  và **cache** theo từng lớp, theo nội dung + kích thước — lớp không đổi thì không raster lại.
 - Bản xem trước khi đang cắt ảnh **bỏ cả lớp markup lẫn nét vẽ**.
 
-## 6. Tiêu chí nghiệm thu
+## 6. Dải lớp trong panel
 
-**Chưa viết.** Xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ).
+- **"Add a layer"** (chưa có lớp, hoặc vừa chạm `+`; có `‹` khi đã có lớp) — ba hàng chip, mỗi hàng cuộn ngang:
+  Text · Image · Sign / Pen · Marker / Rectangle · Oval · Speech bubble · Arrow · Line · Magnifier.
+  **Sign** mở thư viện chữ ký như hôm nay.
+- **Có lớp**: dải 40pt — thumbnail 40×30 mỗi lớp (nền tối + icon loại lớp, lớp chữ tô theo màu chữ; lớp ẩn mờ
+  35%) · `+` · tên lớp · `⋯`. **Giữ rồi kéo** thumbnail để đổi thứ tự.
+- `⋯`: Rename · Duplicate · Hide / Show · Bring Forward · Send Backward · Save as Preset · Delete · Remove All
+  Layers (+ Clear Strokes với lớp nét vẽ, Replace Image với lớp ảnh).
+- Hàng thuộc tính của từng loại, theo thứ tự:
+
+| Loại | Hàng |
+|---|---|
+| chữ | Font · Size · Color · Bold / Italic / Align (một hàng chip) · Opacity · Outline · Shadow · Width · Leading · Tracking |
+| hình | chip kiểu hình · Color · Filled · Thickness · Height · Opacity |
+| ảnh | chip Choose Image · Opacity |
+| kính lúp | Zoom · Rim Color · Rim Width · Opacity |
+| mọi lớp | cuối cùng: Rotate · Across · Down |
+
+## 7. Tiêu chí nghiệm thu panel phone
+
+Tiếp số của [FS-03.12](../FS-03-photo-editor/12-phone-panel-grid.md). Máy: iPhone 17, iOS 26.5 và 18.6.
+
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-26 | ảnh chưa có lớp | mở Markup | "Add a layer" + ba hàng chip; panel 264 | ⚠️ chưa có `iphone-markup-layers.json` |
+| AC-27 | như AC-26 | chạm Text | có 1 lớp chữ, bàn phím mở, dải hiện 1 thumbnail | ⚠️ chưa có `iphone-markup-layers.json` |
+| AC-28 | ảnh chưa có lớp | chạm Pen, vẽ 1 nét, chạm `+`, chạm Pen, vẽ 1 nét | 2 lớp nét vẽ, mỗi lớp 1 nét; bảng công cụ hệ thống không hiện lần nào | ⚠️ chưa có — test công thức + ảnh |
+| AC-29 | lớp nét vẽ, Marker, Size 20, Opacity 50% | vẽ 1 nét | nét ghi loại mực marker, bề rộng 20, alpha 0,5 | ⚠️ chưa có (`EditorDrawSessionTests`) |
+| AC-30 | lớp nét vẽ có 3 nét | Undo một lần | còn 2 nét, lớp vẫn còn và vẫn chọn | ⚠️ chưa có (`EditorDrawSessionTests`) |
+| AC-31 | 2 lớp: chữ trên, nét vẽ dưới | `⋯` của nét vẽ → Bring Forward | nét vẽ ghép trên chữ ở bản xuất | ⚠️ chưa có (`PhotoOverlayModelsTests`) |
+| AC-32 | lớp chữ đang chọn | chạm vùng trống trên ảnh | khung chọn trên ảnh mất; panel vẫn là hàng của lớp chữ đó | ⚠️ chưa có |
+| AC-33 | lớp chữ, hàng Color | dump hàng | 6 ô màu = 4 mức xám + 2 màu như hôm nay, cộng ô custom | ⚠️ chưa có |
+| AC-34 | lớp chữ, hàng Color | chạm ô custom, rồi `‹` | bảng màu hiện rồi đóng; panel 264 suốt hai bước | ⚠️ chưa có `iphone-markup-color.json` |
+| AC-35 | 8 lớp, dải cuộn ở đầu | chạm lớp thứ 8 trên ảnh | lớp 8 được chọn, thumbnail của nó nằm trọn trong dải | ⚠️ chưa có |
+| AC-36 | 1 lớp | chạm `+` rồi `‹` | vẫn 1 lớp, lớp cũ vẫn chọn | ⚠️ chưa có |
+| AC-37 | 1 lớp | `⋯` → Delete | 0 lớp, panel về "Add a layer", không có `‹` | ⚠️ chưa có |
+| AC-38 | ảnh 48MP, 10 lớp nét vẽ, mỗi lớp 50 nét | lưu bản full-res | lưu xong; bộ nhớ đỉnh của lượt render nét vẽ < 400MB | ⚠️ chưa có |
+
+**Chưa chứng minh được:** AC-26…AC-38.

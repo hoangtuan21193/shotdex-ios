@@ -1,7 +1,7 @@
 # FS-03 — Photo Editor
 
 `FS-03` · tier D · `ShotDex/Features/Editing/` · `Domain/Editing/` · render core ở `ShotDexKit`
-· cập nhật 2026-09-22
+· cập nhật 2026-09-24
 
 **Một câu:** editor ảnh đầy đủ — tone, màu, curve, look phim, mask cục bộ, markup — chạy trên cùng một lõi
 render với extension sửa ảnh và các màn khác.
@@ -23,6 +23,7 @@ render với extension sửa ảnh và các màn khác.
 | 09b | [Sửa nhiều ảnh](09b-batch-editing-and-reference.md) | nháp theo ảnh, Sync, Save All, Reference View |
 | 10 | [Copy / Paste edits](10-copy-paste-edits.md) | chép "cái nhìn", không chép crop và mask |
 | 11 | [Đuổi kịp Lightroom](11-parity-with-lightroom.md) | xoá vết, mask khuôn mặt, LUT, background/depth, khử nhiễu, hồ sơ ống kính |
+| 12 | [Panel phone: lưới 40pt](12-phone-panel-grid.md) | panel 264, một kiểu chip/slider, accent chỉ trên Save, tiêu chí nghiệm thu của đợt làm lại panel |
 
 ## Quy tắc chung
 

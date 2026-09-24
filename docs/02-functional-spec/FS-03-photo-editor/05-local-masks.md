@@ -1,7 +1,7 @@
 # FS-03.05 — Mask cục bộ
 
 `FS-03.05` · `Features/Editing/EditorMaskPanels.swift` · `EditorMaskGuides.swift`
-· `ShotDexKit` (matte và overlay) · cập nhật 2026-09-22
+· `ShotDexKit` (matte và overlay) · cập nhật 2026-09-24
 
 **Một câu:** một ảnh có nhiều mask, mỗi mask có đủ bộ chỉnh riêng — và hình dạng của nó luôn nhìn thấy
 được, sờ được.
@@ -10,7 +10,8 @@ Vẽ, tranh chấp chạm và zoom: [FS-03.05b](05b-mask-painting-and-zoom.md).
 
 ## 1. Quy tắc
 
-- **UI mask có đúng hai tầng**: danh sách, và chỉnh một mask. Không có tầng thứ ba.
+- **UI mask có hai trạng thái, cùng trong panel**: chọn loại (chưa có mask, hoặc vừa chạm `+`) và chỉnh mask
+  đang chọn. Không sheet, không tầng thứ ba. Khung panel và lưới 40pt: [FS-03.12](12-phone-panel-grid.md).
 - Mask có **đủ bộ chỉnh chuẩn** (Light/Color/Detail/Effects). Các control decode RAW là **mức nguồn** nên
   chỉ có ở Adjust toàn cục.
 - **Overlay đỏ bật theo việc người dùng đang làm**, không theo timer.
@@ -18,22 +19,34 @@ Vẽ, tranh chấp chạm và zoom: [FS-03.05b](05b-mask-painting-and-zoom.md).
   cho cử chỉ ai cũng thử.
 - Nét vẽ lưu theo toạ độ chuẩn hoá của ảnh **sau crop**, nên preview và bản full-res dùng chung một recipe.
 
-## 2. Tầng danh sách
+## 2. Chọn loại mask
 
-- Tiêu đề + một hành động chính **＋ New Mask**.
-- Mỗi hàng: thumbnail 42pt vẽ **matte kiểu Lightroom — hình mask màu đỏ trên nền xám phẳng, KHÔNG có ảnh
-  thật phía dưới** (đỏ đè lên ảnh ở 42pt thì không đọc nổi hình mask), tên, phụ đề tóm tắt chỉnh sửa, nút
-  ẩn/hiện, chevron, vuốt để xoá, context menu Duplicate/Rename/Invert/Delete.
-- Matte chỉ render lại **khi hình dạng mask đổi**, không phải mỗi frame slider.
-- Sheet **＋ New Mask** là **một cột hàng gọn cao 54pt**: icon trái trong slot cố định 30pt (cột chữ thẳng
-  hàng giữa các hàng), tên + mô tả một dòng. Lưới tile hai cột cũ để mô tả wrap số dòng khác nhau nên card
-  to nhỏ lệch nhau và sheet chiếm cả màn hình.
+- Tiêu đề **"Choose an area to adjust"** (có `‹` quay lại khi đã có mask), rồi ba hàng chip 40pt, mỗi hàng
+  cuộn ngang, không nhãn hàng:
 
-## 3. Tầng chỉnh một mask
+| Hàng | Chip |
+|---|---|
+| nhận diện | Subject · Sky · Background · Face Skin · Eyes · Lips |
+| vẽ | Brush · Linear · Radial |
+| dải | Color · Luminance · Depth |
 
-- Panel có **viền trên 2pt accent** và **hàng nav riêng 44pt** — `‹ Masks` bên trái; thumbnail + tên mask
-  + `n/m ⌄` (mở picker nhảy nhanh) ở giữa; toggle hiệu ứng + ⋯ bên phải. Nhìn là biết không phải toàn cục.
-- Vùng cuộn có đủ LIGHT / COLOR / DETAIL / EFFECTS, cộng nhóm cuối **MASK · SHAPE** — **toàn dòng slider**:
+- **Một chạm là tạo mask**, chọn luôn nó và chuyển sang chỉnh.
+- Loại không dùng được (ảnh không có depth, không có mặt) **mờ 35%**; chạm vào thì tiêu đề đổi thành **lý do**
+  trong 3s, không tạo mask.
+- Đang nhận diện: thumbnail mới có vòng quay, ảnh có viền trắng mảnh quanh vùng dự đoán + pill "Detecting
+  subject…", các hàng chỉnh mờ và không nhận chạm.
+- Nhận diện lỗi hoặc không thấy gì: vòng quay dừng, pill 3s **"Couldn't find a subject"** (sky, face tương tự),
+  **mask rỗng vẫn giữ** trong dải để Undo, Delete hoặc vẽ thêm.
+
+## 3. Chỉnh mask đang chọn
+
+- **Dải đầu 40pt**: thumbnail 40×30 của mọi mask (matte đỏ trên nền xám phẳng — đỏ đè lên ảnh ở cỡ này không
+  đọc nổi hình mask; chạm để chọn, đó là lối nhảy nhanh) · `+` · tên mask · `⋯`. Mask đổi mà không qua chạm thumbnail (vừa tạo, Duplicate, Undo) thì dải **tự cuộn
+  tới thumbnail đó**.
+- Mask đang **tắt hiệu ứng** thì thumbnail mờ 35%.
+- **Hàng đầu dưới dải**: chip chọn hình (chỉ khi mask có ≥2 hình) · công tắc **Add / Subtract** (chế độ cho
+  hình kế tiếp) · Undo.
+- Rồi LIGHT / COLOR / DETAIL / EFFECTS và nhóm **MASK · SHAPE**, toàn dòng slider 40pt:
 
 | Loại | Dòng |
 |---|---|
@@ -42,16 +55,11 @@ Vẽ, tranh chấp chạm và zoom: [FS-03.05b](05b-mask-painting-and-zoom.md).
 | Luminance | Min · Max · Feather · Opacity |
 | Color | Range · Feather · Opacity |
 
-Cộng chip chọn vùng khi mask có nhiều hình.
-
-- **Số đọc của mọi control brush là số trần 0–100, không có dấu `%`** (đúng cách Lightroom viết): thứ mà
-  mỗi control là phần trăm *của* lại khác nhau và không cái nào là bức ảnh — Size là phần cạnh ngắn,
-  Feather là phần của dấu cọ, Flow là phần của độ đục đầy đủ. Số hiển thị đơn giản là **vị trí núm trên
-  chính thanh của nó**, nên đỉnh của mọi control đều là 100 và liếc là so sánh được.
-- Menu ⋯ cạnh tên mask chỉ còn housekeeping: **Rename · Duplicate · Delete This Shape** (chỉ khi mask
-  nhiều hình). "Delete Mask" đã là nút thùng rác trên hàng lệnh nên không lặp lại.
-- **"Add Shape to Mask" bỏ hẳn**: mask tạo mới luôn một hình; mask nhiều hình chỉ còn đến từ Duplicate
-  hoặc recipe cũ.
+- **Số đọc của mọi control brush là số trần 0–100, không có dấu `%`** (đúng cách Lightroom viết): mỗi control
+  là phần trăm của một thứ khác nhau, nên số hiển thị là **vị trí núm trên chính thanh của nó**.
+- Menu `⋯`: **Hide / Show** (tắt/bật hiệu ứng — thay con mắt trên hàng nav cũ) · Rename · Invert · Duplicate ·
+  Delete This Shape (khi ≥2 hình) · Delete.
+- Không còn viền accent trên panel: dải thumbnail đã nói "đang ở trong một mask".
 - Dùng chữ **Shape** thay cho Region — "Region" đứng cạnh "Mask" đọc như hai tên cho cùng một thứ.
 
 ## 4. Mười một loại vùng
@@ -60,8 +68,8 @@ Brush · Linear Gradient · Radial Gradient · Subject · Sky · Luminance Range
 **Face Skin · Eyes · Lips** (FS-03.11). Mỗi vùng là **Add hoặc Subtract** và có opacity riêng, nên cộng/trừ
 nhiều vùng vào cùng một mask được.
 
-- Sheet New Mask liệt kê **hàng**, không phải loại (`EditorNewMaskOption`): thêm hàng **Background** — là
-  Subject với `isInverted`, đặt tên "Background N", không phải loại mới.
+- Màn chọn loại liệt kê **mục**, không phải loại: **Background** là Subject đảo, đặt tên "Background N",
+  không phải loại mới.
 - **Depth Range**: phép dải của Luminance Range chạy trên bản đồ disparity, chuẩn hoá theo từng ảnh về
   0 (xa) … 1 (gần) — min/max đọc từ **một** pixel của `CIAreaMinMaxRed` (R = min, G = max) — cắt/scale
   theo khung render, rồi làm mờ khoảng một pixel bản đồ (bản đồ chỉ ~¼ độ phân giải ảnh, phóng lên bị
@@ -128,20 +136,38 @@ Sau khi đặt mask, hình dạng **phải nhìn thấy được và có tay n�
 - **Chạm vào ảnh khi đang ở mask detail = "mask đâu?"** → bật lại lớp đỏ và guide. Gradient chỉ đặt lại sau
   khi ngón kéo ≥ 8pt, nên một cú chạm không làm radial sập về ellipse tối thiểu.
 
-## 7. Hai công tắc, hai icon theo chuẩn ngành
+## 7. Hai công tắc
 
 | Công tắc | Icon | Nghĩa |
 |---|---|---|
-| Hiệu ứng của mask | con mắt / mắt gạch | bật/tắt **tác dụng** — Lightroom và Photoshop đều dạy bản năng này |
+| Hiệu ứng của mask | `⋯` Hide / Show, thumbnail mờ khi tắt | bật/tắt **tác dụng** |
 | Lớp phủ đỏ | chấm tròn đỏ / chấm gạch | hiện/ẩn **hình mask** |
 
 - Pill lớp phủ mang glyph **là chính cái nó bật**; nền pill giữ kính, không accent — chấm đỏ tự mang trạng
   thái.
 - Overlay **tô đỏ bất kể hiệu ứng đang bật hay tắt**: nó trả lời "mask ở đâu". Bản có guard theo hiệu ứng
   làm nút overlay thỉnh thoảng bấm không ra gì.
-- Quan hệ giữa hai công tắc xử lý **tại lúc gạt con mắt**: tắt hiệu ứng → tắt luôn overlay (không còn đỏ
+- Quan hệ giữa hai công tắc xử lý **tại lúc Hide / Show**: tắt hiệu ứng → tắt luôn overlay (không còn đỏ
   lởn vởn, và trả lời được "gạt ăn chưa"); bật lại → hiện lại hình mask.
 
 ## 8. Tiêu chí nghiệm thu
 
-**Chưa viết.** Xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ).
+Phần còn lại của FS-03.05 **chưa viết**. Xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ).
+
+## 9. Tiêu chí nghiệm thu panel phone
+
+Tiếp số của [FS-03.12](12-phone-panel-grid.md). Máy: iPhone 17, iOS 26.5 và 18.6.
+
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-17 | ảnh chưa có mask | mở Mask | ba hàng chip hiện trong panel, không sheet; panel vẫn 264 | ⚠️ chưa có `iphone-mask-inline.json` |
+| AC-18 | như AC-17 | chạm Radial một lần | có đúng 1 mask, dải hiện 1 thumbnail + tên "Radial 1", hàng Feather · Opacity có | ⚠️ chưa có `iphone-mask-inline.json` |
+| AC-19 | ảnh không có depth | chạm Depth | không tạo mask; tiêu đề thành "This photo has no depth map. Portrait mode photos do." rồi trở lại sau 3s | ⚠️ chưa có |
+| AC-20 | 1 mask đang bật | `⋯` → Hide | ảnh mất tác dụng mask, thumbnail mờ 35%, lớp đỏ tắt; Show trả lại cả ba | ⚠️ chưa có |
+| AC-21 | 6 mask, dải cuộn tới cuối, mask 6 đang chọn, rồi chạm thumbnail mask 1 | `⋯` → Duplicate | bản sao nằm ngay sau mask 1, được chọn, thumbnail của nó nằm trọn trong dải | ⚠️ chưa có |
+| AC-22 | 1 mask đang chọn | chạm `+` rồi `‹` | vẫn 1 mask, mask cũ vẫn chọn, không có mask rỗng | ⚠️ chưa có |
+| AC-23 | simulator (Vision không chạy được Subject) | chạm Subject | vòng quay dừng, pill "Couldn't find a subject" 3s, mask rỗng vẫn trong dải | ⚠️ chưa có `iphone-mask-detect-fail.json` |
+| AC-24 | ảnh chưa có mask | chạm Sky rồi Undo một lần | 0 mask, panel về màn chọn loại | ⚠️ chưa có |
+| AC-25 | 1 mask | `⋯` → Delete | 0 mask, panel về màn chọn loại, không có `‹` | ⚠️ chưa có |
+
+**Chưa chứng minh được:** AC-17…AC-25.

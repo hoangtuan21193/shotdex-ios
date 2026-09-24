@@ -1,9 +1,11 @@
 # FS-03.01 — Phạm vi và bố cục panel
 
 `FS-03.01` · `Features/Editing/PhotoEditorScreen.swift` · `Domain/Editing/EditorLayoutMetrics.swift`
-· cập nhật 2026-09-22
+· cập nhật 2026-09-24
 
-**Một câu:** editor toàn màn nền đen, một hàng lệnh nổi ngang tai thỏ, và một panel cao **đúng 246pt ở mọi tab**.
+**Một câu:** editor toàn màn nền đen, một hàng lệnh nổi ngang tai thỏ, và một panel cao **đúng 264pt ở mọi tab**.
+
+Khung panel, lưới hàng, chip và slider: [FS-03.12](12-phone-panel-grid.md).
 
 Các thông số chỉnh và Crop: [FS-03.01b](01b-adjustments-and-crop.md).
 
@@ -12,7 +14,7 @@ Các thông số chỉnh và Crop: [FS-03.01b](01b-adjustments-and-crop.md).
 - Chỉ sửa được **ảnh**; video không hiện nút Edit.
 - **Ảnh không bao giờ bị panel đè.** Thứ tự dọc: băng trên → ảnh (vừa khung) → panel.
 - **Không có kính mờ hay khối nổi trên ảnh** — ngoại lệ duy nhất là thẻ histogram khi bung to.
-- **Panel cao đúng 246pt ở mọi tab** — dải chọn đối tượng ăn **vào trong** vùng thông số, không cộng thêm.
+- **Panel cao đúng 264pt ở mọi tab** — dải chọn đối tượng ăn **vào trong** vùng thông số, không cộng thêm.
 - **Một kiểu slider dùng chung cho cả editor** — sửa kiểu dáng chỉ sửa một chỗ.
 
 ## 2. Ba tầng theo chiều dọc
@@ -21,7 +23,7 @@ Các thông số chỉnh và Crop: [FS-03.01b](01b-adjustments-and-crop.md).
 |---|---|---|
 | Băng trên | **48pt hoặc bằng vùng an toàn trên**, lấy cái lớn hơn | hàng lệnh nổi |
 | Ảnh | phần còn lại, vừa khung | khung dựng |
-| Panel | **246** = 167 vùng thông số + 54 dải nhóm + 25 vùng an toàn dưới | tấm đặc, có một nét mảnh ở mép trên |
+| Panel | **264** = 185 vùng thông số + 54 dải nhóm + 25 vùng an toàn dưới | tấm đặc, bo 22 hai góc trên, không nét mảnh |
 
 48pt chỉ là **sàn thiết kế**: băng nở tới hết vùng an toàn (~59pt trên máy có tai thỏ) để một tấm ảnh dọc
 bắt đầu **dưới đáy tai thỏ**, không bị nó cắt mép. Hàng nút vẫn cách mép trên 11pt nên luôn ngang tai thỏ
@@ -32,7 +34,7 @@ dù băng cao hơn.
 Cao 37pt, nút tròn **34pt** (đĩa gần đen mờ, biểu tượng trắng), cách mép màn **20pt** — đủ để nút ngoài cùng
 không bị **góc bo của màn** cắt. Tai thỏ chia đôi băng:
 
-- **Cụm trái**: hoàn tác · làm lại · **giữ để xem bản gốc** (đang giữ thì đĩa chuyển màu accent, biểu tượng đen).
+- **Cụm trái**: hoàn tác · làm lại · **giữ để xem bản gốc** (đang giữ thì đĩa trắng, biểu tượng đen).
 - **Cụm phải**: **histogram thu nhỏ** (nở từ sát mép phải tai thỏ ra tới nút ⋯) rồi nút **⋯**.
 
 **Menu ⋯** gom mọi lệnh không đủ chỗ cạnh tai thỏ, và **đổi theo tab đang mở**:
@@ -72,35 +74,23 @@ mọi bản sửa đã lưu lên ảnh**, kể cả bản sửa trong app Photos
   Grade · Effects · Detail · Optics · Geo · Crop · Mask · Markup · Presets (mỗi chip rộng 58, cao 42).
 - **Chip nằm giữa khung là nhóm đang mở**: vuốt → nhả → dừng → đổi nhóm ngay (một thao tác); chạm một chip
   lệch tâm thì nó cuộn vào giữa rồi mới đổi. Có haptic khi đổi.
-- **Dấu hiệu đang chọn là màu chữ**, chip giữa dùng màu accent, chip thường xám. **Không có thanh hay hõm
-  màu accent** — một đường vàng chạy ngang panel là nhiễu. Hai mép dải mờ dần 26pt.
+- **Dấu hiệu đang chọn là màu chữ**: chip giữa trắng đậm, chip thường trắng 32%, cộng một vạch trắng 16×2
+  dưới tâm. **Không accent** — accent chỉ còn trên Save. Hai mép dải mờ dần 58pt.
 - Đây là **tầng cuộn ngang duy nhất**, và nó nằm ngay trên vùng vạch home: vùng đó nuốt vuốt **dọc**, nên
   vuốt ngang ở đây không xung đột.
 
 ## 6. Vùng thông số
 
-167pt; hoặc **36pt dải chọn + 131pt cuộn** khi tab có dải chọn — chỉ **Grade** dùng (chip Shadows /
-Midtones / Highlights / Global, mỗi chip có một chấm màu của vùng).
+185pt trên lưới hàng 40pt, dải chọn 40pt khi nhóm có — xem [FS-03.12 §3–4](12-phone-panel-grid.md#3-khung-panel).
 
-- Nội dung một nhóm là **danh sách dòng cuộn dọc**; không có dải chọn mục con.
+- Nội dung một nhóm là **danh sách dòng cuộn dọc**.
 - **Không còn nút Auto hay Reset trên tiêu đề nhóm nào.** Tiêu đề nhóm chỉ còn chữ, và **chỉ hiện khi một
   tab có nhiều hơn một nhóm** (Detail khi ảnh là RAW, và trình sửa mask); tiêu đề rỗng thì thu về **không
-  chiếm chỗ**. Tiêu đề **nằm trên** phần cuộn, nếu không slider trượt đè lên làm nó đọc như đang trôi mất.
-- Nút riêng của từng tab nằm **trong panel và trong menu ⋯**: Crop có hàng Rotate · Flip · Reset ở đầu
-  panel; mask có nút cộng/trừ vùng ngay trong phần hình dạng, và nút xoá mask trong menu của nó.
+  chiếm chỗ**.
 
 ## 7. Dòng slider
 
-Cao **34pt**: `[nhãn 88pt][rãnh][số 40pt]`, lề ngang 14pt.
-
-| Thành phần | Chi tiết |
-|---|---|
-| Nhãn | tiếng Anh in hoa, cỡ nhỏ, xám; đang chỉnh thì trắng đặc; **co chữ tối đa 0,75** |
-| Số | chữ số đều bề rộng, trắng; đang chỉnh thì màu accent |
-| Rãnh trung tính | cao 4pt, xám mờ |
-| Rãnh có màu (Temp/Tint) | cao 6pt, **không tô accent đè lên** |
-| Con trỏ | **một vạch trắng 4×14 có quầng sáng** — **không có núm tròn, không dùng slider của hệ thống** |
-| Khe mốc 0 | **chỉ vẽ cho thông số hai chiều** |
+Kiểu vẽ: [FS-03.12 §5](12-phone-panel-grid.md#5-slider).
 
 **Cử chỉ** (gom trong một lớp nhận chạm duy nhất):
 
