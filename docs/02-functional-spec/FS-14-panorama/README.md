@@ -96,7 +96,7 @@ test dựng chúng từ một ảnh 360° nhỏ đóng trong test bundle. "Thờ
 | AC-27 | panel đang hiện đủ 5 mục | mở trên Duo trong (951×669) và iPhone (402×874) | không mục nào bị cắt, stage còn ≥ 50% chiều cao màn | ⚠️ chưa có — `panorama-panel.json` + `Tools/sim-shot` |
 | AC-28 | s2 đã ghép, preview nét đang hiện | kéo Boundary Warp 0 → 100 trong 2 s | preview đổi theo tay ≥ 15 khung/giây; thả tay ≤ 1,5 s có bản nét; mép bản nháp và bản nét lệch ≤ 2 px (ở 1536) | ⚠️ chưa có — `PanoramaRenderTests` (hình học) + đo tay máy thật |
 | AC-29 | s1, preview nét đang hiện | chạm Cylindrical | ≤ 150 ms có bản nháp Cylindrical; không chạy lại bước căn ảnh | ⚠️ chưa có — `PanoramaRenderTests` + đo tay |
-| AC-23 | s1, một người có mặt ở vùng chồng của khung 2 nhưng không có ở khung 3 | ghép | người đó hiện trọn vẹn hoặc không hiện; không vết cắt đôi, không hai bản | ⚠️ chưa có — `PanoramaRenderTests` |
+| AC-23 | s1, một người có mặt ở vùng chồng của khung 2 nhưng không có ở khung 3 | ghép | người đó hiện trọn vẹn hoặc không hiện; không vết cắt đôi, không hai bản | ⚠️ một nửa — `PanoramaSeamTests` chứng minh đường nối đi vòng qua người trên buffer; **đường trộn thật chưa dùng nó** (bật lên thì ảnh có 4 bậc dọc, xem `fc92f09`) |
 | AC-24 | 3 khung iPhone HDR (P3 + gain map) + 1 khung SDR | Save | ảnh ra **P3 và SDR**, không có gain map | ✅ `PanoramaExportTests` — tiêu chí đã đổi 2026-09-23: giữ gain map là **không làm được**, xem §2 |
 
 **Chưa chứng minh được:** cả 29 — chưa có dòng code nào. Thời gian và footprint (AC-12, AC-28, AC-29) là **mục tiêu đề xuất**,
