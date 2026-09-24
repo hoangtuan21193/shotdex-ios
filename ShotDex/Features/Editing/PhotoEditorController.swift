@@ -2347,7 +2347,14 @@ final class PhotoEditorController {
     /// computed, and says so when one came back empty — the mask stays, empty, so
     /// the user can Undo, delete it or paint instead.
     private func resolveMaskDetection() async {
+        // A mask deleted mid-detection is never resolved by a render; drop its id
+        // here so the set only ever holds components that still exist.
         guard !detectingMaskComponentIDs.isEmpty else { return }
+        let live = Set(recipe.masks.flatMap(\.components).map(\.id))
+        if !detectingMaskComponentIDs.isSubset(of: live) {
+            detectingMaskComponentIDs.formIntersection(live)
+            guard !detectingMaskComponentIDs.isEmpty else { return }
+        }
         let resolved = await service.renderer.resolvedAutomaticMaskComponentIDs()
         let empty = await service.renderer.emptyAutomaticMaskComponentIDs()
         let finished = detectingMaskComponentIDs.intersection(resolved)
