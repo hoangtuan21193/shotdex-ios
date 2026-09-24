@@ -12,7 +12,7 @@
 | AC-2 | **hẹp** và **chưa xác định** | gọi hàm quyết định bố cục | chọn một cột cho cả hai — chưa xác định thì không đoán | ✅ test bố cục: hẹp và chưa xác định → một cột |
 | AC-3 | iPad 13" ngang 1376×1032, Settings đóng | chạm gear | sidebar trái + detail "Photo Library" phải; hàng detail rộng **≤ 860pt** | ✅ kịch bản `ipad-settings-split` — sidebar `x=26 w=288`, detail từ `x=350`, hàng `x=453 w=800`; [ảnh](../assets/2026-09-22-settings-split-ipad13-landscape.png) |
 | AC-3b | iPad 11" **dọc** 834×1210, iOS 18.6 | mở Settings | vẫn split view, không rơi về một cột | ✅ [ảnh](../assets/2026-09-22-settings-split-ipad11-portrait.png) — sidebar 320pt, đủ 9 mục |
-| AC-4 | iPhone 402×874 | mở Settings | đúng **12 section** theo thứ tự Photo Library → Privacy, không sidebar | ⚠️ một nửa: thứ tự khoá bằng test khoá thứ tự mục ở bố cục hẹp + [ảnh](../assets/2026-09-22-settings-compact-iphone16.png); không có dump baseline |
+| AC-4 | iPhone 402×874 | mở Settings | đúng **12 section** theo thứ tự Photo Library → Privacy, không sidebar | ⚠️ một nửa — thứ tự khoá bằng test; ảnh iPhone 17 Pro 402×874 cho thấy **một cột, không sidebar**, mở đúng ở Photo Library. **Chưa chụp** đủ 12 section (phải cuộn nhiều màn) |
 | AC-4b | iPad 13", Settings ở Slide Over (compact) | chụp màn | một cột, không sidebar | ⚠️ chưa có — `Tools/ui-drive` không dựng được Slide Over |
 | AC-5 | danh sách mục đầy đủ | dựng danh sách cho cả hai bố cục | hai danh sách **cùng một tập**, không mục nào chỉ có một bên | ✅ test: hai bố cục phủ cùng một tập mục |
 | AC-6 | Duo màn trong 951×669, mục Photo Library | chụp màn | sidebar hiện **cả 9 mục không phải cuộn** (mép dưới của Support ≤ 669 − safe area) | ⚠️ chưa có — `Tools/sim-shot` + một kịch bản cho Duo |
@@ -25,9 +25,9 @@
 | AC-13 | iPad 13" ngang, cỡ chữ `.accessibility1` | mở Settings | không nhãn sidebar nào bị cắt, mọi hàng cao ≥ 44pt | ⚠️ chưa có |
 | AC-14 | VoiceOver bật, iPad 13" ngang | quét qua sidebar | mỗi mục đọc ra tên + trạng thái "đang chọn" cho mục đang chọn; detail có heading đúng tên mục | ⚠️ chưa có — không có đường tự động |
 | AC-15 | Settings mở | gõ `hdr` | kết quả có hàng **"View Full HDR"** kèm dòng phụ "Playback"; `HDR` và `hdr` cho cùng kết quả | ✅ test tìm kiếm không phân biệt hoa thường + test kết quả mang tên mục ở dòng phụ + [ảnh](../assets/2026-09-22-settings-search-iphone16.png) |
-| AC-16 | iPhone 402×874, Settings mở | gõ một từ rồi chạm kết quả | cuộn tới đúng hàng, ô tìm kiếm đóng, hàng nháy nền 1,2s | ⚠️ hai phần ba: cuộn đo được (hàng cellular dịch từ y=428 lên y=374), đóng ô thấy trong [ảnh](../assets/2026-09-22-settings-search-result-opened-iphone16.png); nháy chỉ chứng minh ở tầng model |
+| AC-16 | iPhone 402×874, Settings mở | gõ một từ rồi chạm kết quả | cuộn tới đúng hàng, ô tìm kiếm đóng, hàng nháy nền 1,2s | ⚠️ hai phần ba — ảnh iPhone 17 Pro: gõ `hdr` ra hàng "View Full HDR / Playback", chạm vào thì **cuộn tới đúng hàng** trong section Playback và **ô tìm kiếm đóng**. Cái nháy nền 1,2 s vẫn chưa bắt được trên ảnh |
 | AC-17 | chỉ mục tìm kiếm của Settings và các section thật | đếm nhãn hàng ở hai nơi | mỗi section có số mục index **bằng** số hàng nó dựng | ✅ test mọi mục đều có chỉ mục + test mỗi mục khai đủ hàng nó vẽ (38 hàng) + test mỗi nhãn hàng cho đúng một mục chỉ mục |
-| AC-18 | Settings mở, bố cục bất kỳ | gõ `zzzz` | màn rỗng chuẩn của hệ thống, không phải danh sách rỗng | ⚠️ chưa có |
+| AC-18 | Settings mở, bố cục bất kỳ | gõ `zzzz` | màn rỗng chuẩn của hệ thống, không phải danh sách rỗng | ✅ ảnh iPhone 17 Pro: gõ `zzzz` cho màn rỗng chuẩn của hệ thống — kính lúp, "No Results for “zzzz”", "Check the spelling or try a new search." |
 | AC-19 | iPad 13" ngang | chụp sidebar | 9 mục có đúng ký hiệu, mỗi hàng ≥ 44pt | ✅ kịch bản `ipad-settings-split` (hàng cao **53pt**) + test mỗi mục có biểu tượng riêng |
 
 ## 2. Chưa chứng minh được

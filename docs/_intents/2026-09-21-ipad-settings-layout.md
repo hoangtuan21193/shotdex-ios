@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-21 |
 | Trạng thái | accepted |
-| Tiến độ | **gần xong** (2026-09-23) — FS-08 đã build; 10/21 AC có bằng chứng, 11 còn thiếu cách đo (Slide Over, đổi cỡ cửa sổ, Duo) |
+| Tiến độ | **gần xong** (2026-09-24) — FS-08 đã build; 11/21 AC có bằng chứng. 10 cái còn lại **không thiếu code, thiếu cách đo**: Slide Over và Stage Manager thì `Tools/ui-drive` không dựng được, màn trong Duo thì máy đang gập và `simctl` không mở được, `.limited` thì quyền ảnh trên simulator này không cấp được bằng lệnh, VoiceOver thì không lái được. Ba cái vừa chụp xong: AC-18 (màn rỗng của tìm kiếm), AC-16 (cuộn tới hàng + đóng ô tìm kiếm), AC-4 (một cột trên iPhone) |
 | Nguồn | phản hồi người dùng (quan sát trực tiếp trên iPad) |
 | Spec sinh ra từ đây | [FS-08](../02-functional-spec/FS-08-settings/README.md) |
 

@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan |
 | Ngày | 2026-09-22 |
 | Trạng thái | accepted |
-| Tiến độ | **đang làm** (2026-09-23) — FS-03.09: 10 commit; cột chứng minh mới có AC-16, 17, 20, chưa cập nhật theo code |
+| Tiến độ | **đang làm** (2026-09-24) — FS-03.09: cột chứng minh đã đối chiếu với `EditorPanelLayoutTests` (27 test, xanh). 11/37 AC có bằng chứng thật, trong đó AC-3, AC-4, AC-6, AC-7, AC-8, AC-19, AC-25 vốn đã có test từ trước mà tài liệu chưa ghi. Phần lớn số còn lại cần **ảnh chụp**, và nhóm Duo màn trong thì chưa chụp được (máy đang gập) |
 | Nguồn | phản hồi người dùng (chủ sở hữu sản phẩm) |
 | Spec sinh ra từ đây | [FS-03.09](../02-functional-spec/FS-03-photo-editor/09-wide-screen-and-batch-editing.md) |
 

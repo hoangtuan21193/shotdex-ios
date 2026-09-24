@@ -1,0 +1,60 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "tap",
+      "label": "Settings",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "dump",
+      "name": "sections"
+    },
+    {
+      "action": "tap",
+      "label": "Search"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "typeText",
+      "text": "hdr"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "dump",
+      "name": "results"
+    },
+    {
+      "action": "tap",
+      "label": "View Full HDR"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "dump",
+      "name": "afterTap"
+    },
+    {
+      "action": "wait",
+      "seconds": 60
+    }
+  ]
+}

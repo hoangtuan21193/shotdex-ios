@@ -1,0 +1,60 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "tap",
+      "label": "Settings",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "tap",
+      "label": "Camera Database"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "dump",
+      "name": "before-rotation"
+    },
+    {
+      "action": "orientation",
+      "text": "landscape"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "dump",
+      "name": "after-rotation"
+    },
+    {
+      "action": "tap",
+      "label": "Support"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "dump",
+      "name": "support"
+    },
+    {
+      "action": "wait",
+      "seconds": 40
+    }
+  ]
+}
