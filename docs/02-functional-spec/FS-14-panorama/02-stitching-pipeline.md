@@ -75,10 +75,16 @@
     quét từ phải sang trái thì khung số nhỏ nằm bên phải; lấy "bên thứ nhất" làm "khung thứ nhất" là tráo
     hai khung trong mọi vùng chồng. Bên được chọn theo khung nào có tiếng nói lớn hơn ở đó.
 - **Auto Crop**: hình chữ nhật lớn nhất nằm trọn trong vùng có ảnh (spike: giữ 79–90%).
-- **Boundary Warp** 0–100: lưới giữ hình kéo biên về chữ nhật — mỗi ô giữ gần một phép đồng dạng của ô
-  gốc, **đường thẳng giữ thẳng**, biên nằm trên cạnh chữ nhật. Mức giữa trộn tuyến tính giữa không warp và
-  warp đầy đủ; phần còn trống thì Auto Crop cắt.
+- **Boundary Warp** 0–100: lưới kéo biên về chữ nhật. Đỉnh lưới ở mép đọc từ chính đường biên của ảnh;
+  phần trong giải bằng bản đồ điều hoà, nên phần kéo giãn trải đều khắp ảnh thay vì dồn vào mép. Mức giữa
+  trộn tuyến tính giữa không warp và warp đầy đủ; phần còn trống thì Auto Crop cắt.
   Bản kéo từng cột **không đạt**: bẻ cong xe và nhà ở mép (spike, ảnh 04 so với 05).
+- **Đường thẳng cong bao nhiêu là một đánh đổi, không phải một lỗi** (đo 2026-09-24): lấp kín chữ nhật
+  đúng nghĩa là mép lưới bám sát đường lượn, và độ cong ấy phải hiện ra trong ảnh. Trên khung thử lượn
+  12% chiều cao, đoạn 200 px cong 3 px ở mức 25 và 4,7 px ở mức 100. Thanh trượt tồn tại chính vì thế.
+- **Lưới được kiểm chứ không được suy**: sau khi giải, mọi đỉnh, mọi cạnh lưới và mọi lòng ô đều lấy mẫu
+  so với vùng có ảnh; đỉnh nào có lân cận đọc ra ngoài ảnh thì bị đẩy vào trong cho tới khi hết. Ba lần
+  lập luận cho rằng mép "chắc chắn nằm trong" đều sai ở cùng một góc, qua ba cửa sổ khác nhau.
 
 ## 6. Xuất file
 

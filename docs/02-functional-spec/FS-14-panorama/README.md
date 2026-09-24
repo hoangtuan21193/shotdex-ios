@@ -67,8 +67,15 @@ Bộ khung thử `s1…s8` là khung ảo có đáp án dựng từ ảnh 360° 
 test dựng chúng từ một ảnh 360° nhỏ đóng trong test bundle. "Thời gian" và "footprint" đo trên
 **iPhone 17 thật**, bản Release.
 
-**Trạng thái 2026-09-24** — 11 tiêu chí ✅, 14 ⚠️ một nửa, 4 ❌ chưa làm. Bốn việc còn nguyên là
-Boundary Warp (AC-11), tự ước lượng méo (AC-16), lưu khi vào nền (AC-20) và ngưỡng 50 khung (AC-22);
+**AC-11 sửa 2026-09-24, sau khi đo.** Bản gốc đòi ở mức 100 vừa lấp kín chữ nhật vừa cong ≤ 3 px.
+Hai vế đó chống nhau và không phải vì cách cài: lấp kín đúng nghĩa là mép của phép biến đổi phải bám
+sát đường lượn của ảnh, và độ cong của đường lượn ấy phải hiện ra đâu đó bên trong ảnh. Đo trên khung
+thử lượn 12% chiều cao (suy từ spike: Auto Crop giữ 79–90%): đoạn 200 px cong **3 px ở mức 25** và
+**4,7 px ở mức 100**. Người dùng chốt: giữ thanh trượt 0–100 và cho phép cong nhiều hơn ở mức cao —
+người chụp tự chọn đổi bao nhiêu độ thẳng lấy bao nhiêu khung hình, đúng cách Lightroom làm.
+
+**Trạng thái 2026-09-24** — 12 tiêu chí ✅, 14 ⚠️ một nửa, 3 ❌ chưa làm. Ba việc còn nguyên là
+tự ước lượng méo (AC-16), lưu khi vào nền (AC-20) và ngưỡng 50 khung (AC-22);
 phần lớn ⚠️ là thiếu **ảnh chụp**, không thiếu code. Ba thứ không chụp được trên máy đang có, và lý do
 là của máy chứ không phải của app: màn trong của Duo (máy đang gập, `simctl` không mở được), câu
 "not enough free space" (máy thử còn 11 GB trống), và quyền `.limited`.
@@ -85,7 +92,7 @@ là của máy chứ không phải của app: màn trong của Duo (máy đang g
 | AC-8 | s4 (cột dọc 4 khung) | ghép Cylindrical | ảnh ra cao hơn rộng; phần có ảnh ≥ 90% khung bao | ✅ `PanoramaRenderTests.aColumnOfFramesTurnsTheProjectionOnItsSide` + `PanoramaCropTests.aColumnOfFramesFillsItsCanvasOnlyWhenTheAxisIsTurned` (phủ ≥ 90%) |
 | AC-9 | s1, gain từng khung 0,8–1,25 | ghép | chênh sáng trung bình hai bên mỗi đường nối ≤ 2% | ✅ `PanoramaRenderTests.exposureIsMatchedAcrossEverySeam` |
 | AC-10 | s2, Auto Crop bật, Boundary Warp 0 | Save | ảnh ra không có pixel trống; diện tích ≥ 80% vùng có ảnh | ✅ `PanoramaCropTests.theCropIsTheBiggestRectangleWithNoHoleInIt` (giữ ≥ 80%) + `.croppingReturnsExactlyThatRectangle` |
-| AC-11 | s2, Boundary Warp 100 | Save | ảnh ra chữ nhật, 0 pixel trống; mọi đoạn thẳng ≥ 200 px của cảnh cong ≤ 3 px | ❌ **chưa làm** — Boundary Warp là Task 20 của kế hoạch, chưa viết dòng nào |
+| AC-11 | s2, Boundary Warp 100 | Save | ảnh ra chữ nhật, 0 pixel trống; mọi đoạn thẳng ≥ 200 px của cảnh cong **≤ 3 px ở mức 25, ≤ 6 px ở mức 100** (sửa 2026-09-24, xem dưới) | ✅ `PanoramaBoundaryWarpTests` (7 test: lấp kín ở 100, cong tăng theo thanh trượt, ≤ 3 px ở 25) + ảnh iPhone 17 Pro ở mức 0 và 86 |
 | AC-12 | s2 ở 6000×4000/khung (10 × 24 MP) | Save | JPEG ở độ phân giải gốc; footprint đỉnh ≤ 500 MB; xong ≤ 120 s | ⚠️ đường xuất theo dải có test (`PanoramaExportTests`); **footprint và 120 s chưa đo trên máy thật** |
 | AC-13 | 10 khung cùng máy, cùng ống kính, phơi sáng khác nhau | Save rồi index xong | ảnh mới mang máy, ống kính, ngày, vị trí của khung đầu; không có tốc độ/khẩu/ISO; hiện khi lọc theo máy đó | ⚠️ một nửa — `PanoramaMetadataTests` (máy/ống kính/ngày lấy khung đầu, phơi sáng chỉ giữ khi mọi khung khớp); **chưa chụp** phần lọc theo máy tìm ra ảnh ghép |
 | AC-14 | 3 khung chỉ có trên iCloud, máy mất mạng | ghép | thông báo "3 photos couldn't be downloaded" + Retry; không lưu gì | ⚠️ một nửa — `PanoramaStitchServiceTests.framesThatWillNotLoadAreCountedNotDropped` đếm và nêu tên; **nút Retry chưa có** |
