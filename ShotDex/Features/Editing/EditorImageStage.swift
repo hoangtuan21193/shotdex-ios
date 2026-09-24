@@ -228,7 +228,8 @@ struct EditorImageStage: View {
                 if controller.isEditingDrawing {
                     EditorDrawingCanvas(
                         session: drawSession,
-                        clearSignal: drawSession.clearToken
+                        clearSignal: drawSession.clearToken,
+                        usesSystemToolPicker: chrome.isWideLayout
                     )
                     .frame(width: imageRect.width, height: imageRect.height)
                     .position(x: imageRect.midX, y: imageRect.midY)
@@ -289,7 +290,9 @@ struct EditorImageStage: View {
                 // this draws them instead — re-running the whole Core Image graph
                 // per drag frame to move a caption is not affordable. Both paths
                 // call the same rasterizer, so deselecting does not shift anything.
-                if controller.selectedTool == .markup {
+                // While drawing, the canvas owns every touch on the photo: the layer
+                // move / pinch targets would swallow the strokes.
+                if controller.selectedTool == .markup, !controller.isEditingDrawing {
                     // At the list level, a tap on empty photo drops the selection —
                     // clearing the box and handing zoom/pan back. Bottom-most, so the
                     // tap targets and box above it win a tap that lands on a layer.

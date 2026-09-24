@@ -1512,6 +1512,32 @@ final class PhotoEditorController {
         updateSelectedOverlay { $0.isVisible.toggle() }
     }
 
+    func renameSelectedOverlay(_ name: String) {
+        guard let index = selectedOverlayIndex else { return }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        recordHistory()
+        recipe.overlays[index].name = trimmed
+        scheduleRender()
+    }
+
+    /// A layer's name in the panel: what the user renamed it to, else its content
+    /// — a text layer by what it says, resolved ("{camera}" tells nobody which
+    /// caption it is), the rest by kind.
+    func displayName(of overlay: PhotoOverlay) -> String {
+        if !overlay.name.isEmpty { return overlay.name }
+        switch overlay.kind {
+        case .text:
+            let resolved = resolvedText(for: overlay)
+                .replacingOccurrences(of: "\n", with: " ")
+                .trimmingCharacters(in: .whitespaces)
+            return resolved.isEmpty ? "Empty text" : resolved
+        case .image: return "Image"
+        case .shape: return overlay.shapeStyle.displayName
+        case .magnifier: return "Magnifier"
+        case .drawing: return "Drawing"
+        }
+    }
+
     /// Layers are drawn back to front, so "forward" is later in the array.
     func moveSelectedOverlayForward() {
         guard let index = selectedOverlayIndex, index < recipe.overlays.count - 1 else { return }
@@ -1662,11 +1688,15 @@ final class PhotoEditorController {
             canvasWidth: Double(canvasSize.width),
             canvasHeight: Double(canvasSize.height)
         )
+        let stored: PhotoDrawing? = next.isEmpty ? nil : next
         if let id = editingDrawingLayerID,
            let index = recipe.overlays.firstIndex(where: { $0.id == id }) {
-            guard recipe.overlays[index].drawing != next else { return }
+            // The canvas reports a change when it is *given* a drawing too (an
+            // undo reloading it); that is not a new step, and recording one would
+            // throw away the redo it just made possible.
+            guard recipe.overlays[index].drawing?.data != stored?.data else { return }
             recordHistory()
-            recipe.overlays[index].drawing = next.isEmpty ? nil : next
+            recipe.overlays[index].drawing = stored
         } else {
             guard !next.isEmpty else { return }
             recordHistory()
@@ -1674,6 +1704,34 @@ final class PhotoEditorController {
             recipe.overlays.append(layer)
             editingDrawingLayerID = layer.id
             selectedOverlayID = layer.id
+        }
+        scheduleRender()
+    }
+
+    /// Pen / Marker in the phone's "Add a layer": a new, empty drawing layer at the
+    /// top, selected, so its rows show and the first stroke lands in it. No
+    /// history step until that stroke.
+    func addDrawingLayer() {
+        let layer = PhotoOverlay.drawing(nil)
+        recipe.overlays.append(layer)
+        selectedOverlayID = layer.id
+        showsOverlayDetail = true
+        selectedTool = .markup
+    }
+
+    /// Leaves drawing (the phone panel moved to another layer or tab). A drawing
+    /// layer that never got a stroke is dropped — it would be an invisible layer
+    /// nobody made on purpose.
+    func endDrawing() {
+        isEditingDrawing = false
+        editingDrawingLayerID = nil
+        let emptyIDs = recipe.overlays
+            .filter { $0.kind == .drawing && $0.drawing == nil }
+            .map(\.id)
+        guard !emptyIDs.isEmpty else { return }
+        recipe.overlays.removeAll { emptyIDs.contains($0.id) }
+        if let selectedOverlayID, emptyIDs.contains(selectedOverlayID) {
+            self.selectedOverlayID = recipe.overlays.last?.id
         }
         scheduleRender()
     }

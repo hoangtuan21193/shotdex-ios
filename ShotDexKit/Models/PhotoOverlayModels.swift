@@ -134,6 +134,8 @@ public struct OverlayColor: Codable, Equatable, Sendable {
 public struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
     public var id = UUID()
     public var kind: PhotoOverlayKind
+    /// What the user renamed the layer to; empty means "named by its content".
+    public var name = ""
     public var isVisible = true
     public var opacity = 1.0
     /// Anchor point of the layer, and the point it rotates about.
@@ -283,6 +285,7 @@ public struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case id
         case kind
+        case name
         case isVisible
         case opacity
         case center
@@ -324,6 +327,7 @@ public struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
         let defaults = self
 
         id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? defaults.id
+        name = try container.decodeIfPresent(String.self, forKey: .name) ?? ""
         isVisible = try container.decodeIfPresent(Bool.self, forKey: .isVisible)
             ?? defaults.isVisible
         opacity = try container.decodeIfPresent(Double.self, forKey: .opacity) ?? defaults.opacity
@@ -388,6 +392,7 @@ public struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
         let defaults = PhotoOverlay(kind: kind)
         try container.encode(id, forKey: .id)
         try container.encode(kind, forKey: .kind)
+        if !name.isEmpty { try container.encode(name, forKey: .name) }
         if isVisible != defaults.isVisible {
             try container.encode(isVisible, forKey: .isVisible)
         }

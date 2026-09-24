@@ -55,6 +55,7 @@ struct PhotoEditorScreen: View {
     @State private var isRevertConfirmationPresented = false
     @State private var isFallbackNoticePresented = false
     @State private var isRenamePresented = false
+    @State private var isLayerRenamePresented = false
     @State private var renameText = ""
     /// Set while the text field opened on a layer that was created for it, so
     /// cancelling out of a caption that was never typed drops the empty layer rather
@@ -173,6 +174,13 @@ struct PhotoEditorScreen: View {
             Button("Cancel", role: .cancel) {}
             Button("Rename") {
                 controller?.renameSelectedMask(renameText)
+            }
+        }
+        .alert("Rename Layer", isPresented: $isLayerRenamePresented) {
+            TextField("Layer name", text: $renameText)
+            Button("Cancel", role: .cancel) {}
+            Button("Rename") {
+                controller?.renameSelectedOverlay(renameText)
             }
         }
         .alert(
@@ -635,7 +643,11 @@ struct PhotoEditorScreen: View {
                 // latched `showsOriginal` is otherwise invisible except as
                 // "the sliders do nothing".
                 if controller.showsOriginal { controller.showsOriginal = false }
+                // An undo that rewrote the drawing layer being drawn on.
+                syncDrawing(controller)
             }
+            .onChange(of: controller.selectedOverlayID) { _, _ in syncDrawing(controller) }
+            .onChange(of: chrome.selectedGroup) { _, _ in syncDrawing(controller) }
             .onChange(of: isWide, initial: true) { _, wide in
                 chrome.isWideLayout = wide
                 // Full bleed is a phone answer to a phone problem — no room. It
@@ -798,7 +810,7 @@ struct PhotoEditorScreen: View {
         VStack(spacing: 0) {
             // Drawing is a full takeover, like Crop: the band steps aside and a
             // Clear / Done bar takes the top, clear of the tool picker below.
-            if controller.isEditingDrawing {
+            if controller.isEditingDrawing, chrome.isWideLayout {
                 drawTopBar(controller)
                     .transition(.move(edge: .top).combined(with: .opacity))
             } else if !chrome.isFullBleed {
@@ -812,7 +824,7 @@ struct PhotoEditorScreen: View {
 
             // No bottom panel while drawing: the tool picker owns that space and
             // Clear / Done live in the top bar.
-            if !chrome.isFullBleed, !controller.isEditingDrawing {
+            if !chrome.isFullBleed, !controller.isEditingDrawing || !chrome.isWideLayout {
                 panel(controller, height: panelHeight)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
@@ -2401,6 +2413,7 @@ struct PhotoEditorScreen: View {
         case .curve, .colorMix, .grade, .cropGeometry, .presets: true
         case .pointColor: !controller.pointColors.isEmpty
         case .mask: !EditorMaskPhonePanel.showsChooser(controller: controller, chrome: chrome)
+        case .markup: !EditorMarkupPhonePanel.showsChooser(controller: controller, chrome: chrome)
         default: false
         }
     }
@@ -2438,6 +2451,17 @@ struct PhotoEditorScreen: View {
             EditorPresetSourceStrip(chrome: chrome)
         case .mask:
             EditorMaskStrip(controller: controller, chrome: chrome, rename: { presentRename(controller) })
+        case .markup:
+            EditorLayerStrip(
+                controller: controller,
+                chrome: chrome,
+                rename: { presentLayerRename(controller) },
+                replaceImage: { isImagePickerPresented = true },
+                saveSignature: {
+                    signatureName = defaultSignatureName(controller)
+                    isSignatureNamePresented = true
+                }
+            )
         default:
             EmptyView()
         }
@@ -2545,6 +2569,33 @@ struct PhotoEditorScreen: View {
                     isSaveLookPresented = true
                 },
                 scrolls: isScrollable ?? !chrome.isWideLayout
+            )
+        case .markup where !chrome.isWideLayout:
+            EditorMarkupPhonePanel(
+                controller: controller,
+                chrome: chrome,
+                addText: { startTextEntry(controller, isNew: true) },
+                addImage: { isImagePickerPresented = true },
+                startDrawing: { ink in startDrawing(controller, ink: ink, newLayer: true) },
+                openSignatures: { isSignatureLibraryPresented = true },
+                layerRows: {
+                    if controller.selectedOverlay?.kind == .drawing {
+                        return AnyView(EditorDrawRows(session: drawSession, controller: controller, chrome: chrome))
+                    }
+                    return AnyView(
+                        EditorTextDetailPanel(
+                            controller: controller,
+                            chrome: chrome,
+                            editText: { startTextEntry(controller, isNew: false) },
+                            pickFont: { isFontPickerPresented = true },
+                            replaceImage: { isImagePickerPresented = true },
+                            saveSignature: {
+                                signatureName = defaultSignatureName(controller)
+                                isSignatureNamePresented = true
+                            }
+                        )
+                    )
+                }
             )
         case .markup:
             // The detail panel shows only when explicitly opened. A merely selected
@@ -2810,10 +2861,65 @@ struct PhotoEditorScreen: View {
 
     /// Loads the current drawing into the canvas and enters the draw sub-mode. Zoom
     /// is reset so canvas points map straight to the fitted photo rect.
-    private func startDrawing(_ controller: PhotoEditorController) {
+    private func startDrawing(
+        _ controller: PhotoEditorController,
+        ink: EditorDrawInk? = nil,
+        newLayer: Bool = false
+    ) {
         chrome.resetZoom()
-        drawSession.load(data: controller.drawingData)
+        if let ink { drawSession.ink = ink; drawSession.mode = .draw }
+        if newLayer, !chrome.isWideLayout {
+            controller.addDrawingLayer()
+        } else if newLayer {
+            controller.selectOverlay(nil)
+        }
         controller.beginDrawing()
+        drawSession.load(data: controller.drawingData)
+        armStrokeCommits(controller)
+    }
+
+    /// Phone: every finished stroke is written into the layer at once, one undo
+    /// step each (FS-05.01 §4) — there is no Done.
+    private func armStrokeCommits(_ controller: PhotoEditorController) {
+        guard !chrome.isWideLayout else {
+            drawSession.onStrokeCommitted = nil
+            return
+        }
+        drawSession.onStrokeCommitted = { [weak controller, drawSession] in
+            guard let controller, controller.isEditingDrawing else { return }
+            let data = drawSession.drawing.dataRepresentation()
+            guard data != (controller.drawingData ?? Data()) || !drawSession.isEmpty else { return }
+            controller.commitDrawing(
+                data: drawSession.isEmpty ? Data() : data,
+                canvasSize: drawSession.canvasSize,
+                endsSession: false
+            )
+        }
+    }
+
+    /// Phone: a selected drawing layer *is* drawing mode; selecting anything else,
+    /// or leaving Markup, ends it. Undo that rewrites the layer reloads the canvas.
+    private func syncDrawing(_ controller: PhotoEditorController) {
+        guard !chrome.isWideLayout else { return }
+        let selected = controller.selectedOverlay
+        if chrome.selectedGroup == .markup, let selected, selected.kind == .drawing {
+            if !controller.isEditingDrawing || controller.editingDrawingLayerID != selected.id {
+                chrome.resetZoom()
+                controller.beginDrawing()
+                drawSession.load(data: controller.drawingData)
+                armStrokeCommits(controller)
+            } else if (controller.drawingData ?? Data()) != (drawSession.isEmpty ? Data() : drawSession.drawing.dataRepresentation()) {
+                drawSession.load(data: controller.drawingData)
+            }
+        } else if controller.isEditingDrawing {
+            drawSession.onStrokeCommitted = nil
+            controller.endDrawing()
+        }
+    }
+
+    private func presentLayerRename(_ controller: PhotoEditorController) {
+        renameText = controller.selectedOverlay?.name ?? ""
+        isLayerRenamePresented = true
     }
 
     /// Names a new signature after what it says, so the library is browsable

@@ -16,12 +16,19 @@ struct EditorTextDetailPanel: View {
     let replaceImage: () -> Void
     let saveSignature: () -> Void
 
+    /// Phone (FS-05.01 §6): the layer strip above already names the layer and
+    /// carries delete / save preset / order in its `⋯`, so there is no header, no
+    /// section titles, and the rows sit on the 40pt grid.
+    private var isPhone: Bool { !chrome.isWideLayout }
+
     var body: some View {
         VStack(spacing: 0) {
-            header
+            if !isPhone { header }
             if let overlay = controller.selectedOverlay {
                 LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
                         switch overlay.kind {
+                        case .text where isPhone:
+                            phoneTextRows(overlay)
                         case .text:
                             textSections(overlay)
                         case .image:
@@ -37,7 +44,7 @@ struct EditorTextDetailPanel: View {
                             Section {
                                 placementRows(overlay)
                             } header: {
-                                EditorGroupHeader(title: "Placement")
+                                EditorGroupHeader(title: isPhone ? "" : "Placement")
                             }
                         }
                     Color.clear.frame(height: 16)
@@ -224,6 +231,65 @@ struct EditorTextDetailPanel: View {
         }
     }
 
+    /// The text layer on the phone, in the order people reach for things: face,
+    /// size, colour first; then what it says and how it is set; then the finer
+    /// controls. Every control of the stacked layout is here.
+    @ViewBuilder
+    private func phoneTextRows(_ overlay: PhotoOverlay) -> some View {
+        fontRow(overlay)
+        slider(
+            overlay, "Size", id: "overlay.size", keyPath: \.size, range: 1...30,
+            defaultValue: PhotoOverlay.text().size, text: { String(format: "%.1f%%", $0 * 100) }
+        )
+        colorControl(idPrefix: "overlay.fill", color: overlay.fill, keyPath: \.fill)
+        contentRow(overlay)
+        styleAlignmentRow(overlay)
+        slider(
+            overlay, "Opacity", id: "overlay.opacity", keyPath: \.opacity, range: 0...100,
+            detent: 100, defaultValue: 1, text: percent
+        )
+        slider(
+            overlay, "Outline", id: "overlay.outline", keyPath: \.outlineWidth, range: 0...12,
+            defaultValue: 0, text: { String(format: "%.1f", $0 * 100) }
+        )
+        if overlay.hasOutline {
+            colorControl(idPrefix: "overlay.outlineColor", color: overlay.outlineColor, keyPath: \.outlineColor)
+        }
+        slider(
+            overlay, "Shadow", id: "overlay.shadow", keyPath: \.shadowOpacity, range: 0...100,
+            defaultValue: 0, text: percent,
+            after: { layer in
+                guard layer.shadowOpacity > 0.001 else { return }
+                if layer.shadowRadius == 0, layer.shadowOffsetY == 0 {
+                    layer.shadowRadius = 0.12
+                    layer.shadowOffsetY = 0.06
+                }
+            }
+        )
+        if overlay.hasShadow {
+            slider(
+                overlay, "Blur", id: "overlay.shadowRadius", keyPath: \.shadowRadius, range: 0...50,
+                defaultValue: 0.12, text: { String(format: "%.0f", $0 * 100) }
+            )
+            slider(
+                overlay, "Offset", id: "overlay.shadowOffset", keyPath: \.shadowOffsetY, range: -40...40,
+                isBipolar: true, detent: 0, defaultValue: 0.06, text: { String(format: "%.0f", $0 * 100) }
+            )
+        }
+        slider(
+            overlay, "Width", id: "overlay.width", keyPath: \.maximumWidth, range: 10...100,
+            defaultValue: 0.9, text: percent
+        )
+        slider(
+            overlay, "Leading", id: "overlay.lineSpacing", keyPath: \.lineSpacing, range: 0...100,
+            defaultValue: 0.15, text: { String(format: "%.0f", $0 * 100) }
+        )
+        slider(
+            overlay, "Tracking", id: "overlay.tracking", keyPath: \.tracking, range: -10...40,
+            isBipolar: true, detent: 0, defaultValue: 0, text: { String(format: "%.0f", $0 * 100) }
+        )
+    }
+
     private func contentRow(_ overlay: PhotoOverlay) -> some View {
         Button(action: editText) {
             HStack(spacing: 8) {
@@ -241,8 +307,8 @@ struct EditorTextDetailPanel: View {
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(EditorTheme.dimText)
             }
-            .padding(.horizontal, 14)
-            .frame(height: 44)
+            .padding(.horizontal, isPhone ? AppTheme.Spacing.lg : 14)
+            .frame(height: isPhone ? EditorLayoutMetrics.editorPanelRowHeight : 44)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -256,8 +322,9 @@ struct EditorTextDetailPanel: View {
                     .font(EditorTheme.rowLabel)
                     .foregroundStyle(EditorTheme.secondaryText)
                     .frame(width: EditorLayoutMetrics.sliderLabelWidth, alignment: .leading)
+                // Phone: the name is set in the face it names (FS-05.02).
                 Text(fontName(overlay))
-                    .font(EditorTheme.rowLabel)
+                    .font(isPhone ? Font(TextOverlayLayout.resolvedFont(for: overlay, pointSize: 16).font) : EditorTheme.rowLabel)
                     .foregroundStyle(.white)
                     .lineLimit(1)
                 if resolved.didSubstitute {
@@ -276,8 +343,8 @@ struct EditorTextDetailPanel: View {
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(EditorTheme.dimText)
             }
-            .padding(.horizontal, 14)
-            .frame(height: 44)
+            .padding(.horizontal, isPhone ? AppTheme.Spacing.lg : 14)
+            .frame(height: isPhone ? EditorLayoutMetrics.editorPanelRowHeight : 44)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -319,7 +386,7 @@ struct EditorTextDetailPanel: View {
                             .foregroundStyle(isSelected ? .white : EditorTheme.secondaryText)
                             .frame(maxWidth: .infinity)
                             .frame(height: 30)
-                            .background(isSelected ? EditorTheme.accent : .clear, in: Capsule())
+                            .background(isSelected ? EditorTheme.chipSelected : .clear, in: Capsule())
                             .contentShape(Capsule())
                     }
                     .buttonStyle(.plain)
@@ -376,7 +443,7 @@ struct EditorTextDetailPanel: View {
                 text: percent
             )
         } header: {
-            EditorGroupHeader(title: "Image", isFirst: true)
+            EditorGroupHeader(title: isPhone ? "" : "Image", isFirst: true)
         }
     }
 
@@ -432,7 +499,7 @@ struct EditorTextDetailPanel: View {
                 text: percent
             )
         } header: {
-            EditorGroupHeader(title: "Shape", isFirst: true)
+            EditorGroupHeader(title: isPhone ? "" : "Shape", isFirst: true)
         }
     }
 
@@ -505,7 +572,7 @@ struct EditorTextDetailPanel: View {
                 text: percent
             )
         } header: {
-            EditorGroupHeader(title: "Magnifier", isFirst: true)
+            EditorGroupHeader(title: isPhone ? "" : "Magnifier", isFirst: true)
         }
     }
 
@@ -546,16 +613,19 @@ struct EditorTextDetailPanel: View {
             defaultValue: overlay.kind == .text ? 0.9 : 0.88,
             text: percent
         )
-        HStack(spacing: 8) {
-            Button("Send Backward") { controller.moveSelectedOverlayBackward() }
-                .buttonStyle(EditorChipButtonStyle(isSelected: false))
-            Button("Bring Forward") { controller.moveSelectedOverlayForward() }
-                .buttonStyle(EditorChipButtonStyle(isSelected: false))
-            Spacer(minLength: 0)
+        // On the phone these live in the layer strip's `⋯`.
+        if !isPhone {
+            HStack(spacing: 8) {
+                Button("Send Backward") { controller.moveSelectedOverlayBackward() }
+                    .buttonStyle(EditorChipButtonStyle(isSelected: false))
+                Button("Bring Forward") { controller.moveSelectedOverlayForward() }
+                    .buttonStyle(EditorChipButtonStyle(isSelected: false))
+                Spacer(minLength: 0)
+            }
+            .font(.system(size: 13, weight: .medium))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 4)
         }
-        .font(.system(size: 13, weight: .medium))
-        .padding(.horizontal, 14)
-        .padding(.vertical, 4)
     }
 
     // MARK: Helpers

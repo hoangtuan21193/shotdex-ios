@@ -85,6 +85,8 @@ final class EditorChromeModel {
     var isNewMaskSheetPresented = false
     /// Phone panel: the mask chooser is showing although masks exist (after `+`).
     var isChoosingMaskKind = false
+    /// Phone panel: the "Add a layer" chooser is showing although layers exist.
+    var isChoosingLayerKind = false
     /// Phone panel: a line that stands in for the chooser's title for 3s — why a
     /// dimmed kind is off, or what a kind does.
     var maskChooserNotice: String?

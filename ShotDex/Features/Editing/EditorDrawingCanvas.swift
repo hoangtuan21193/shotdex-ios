@@ -1,5 +1,6 @@
 import PencilKit
 import SwiftUI
+import ShotDexKit
 
 /// The live state of a drawing session, shared between the canvas that owns the
 /// strokes and the action row's Clear / Done buttons.
@@ -17,6 +18,76 @@ final class EditorDrawSession {
     /// Bumped whenever `drawing` is replaced from the outside (load or clear), so
     /// the canvas knows to adopt it rather than treating it as its own edit.
     private(set) var clearToken = 0
+
+    // MARK: Tool (phone panel, FS-05.01 §4)
+
+    enum Mode: String, CaseIterable, Identifiable {
+        case draw, erase, select
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .draw: "Draw"
+            case .erase: "Erase"
+            case .select: "Select"
+            }
+        }
+        var systemImage: String {
+            switch self {
+            case .draw: "scribble"
+            case .erase: "eraser"
+            case .select: "lasso"
+            }
+        }
+    }
+
+    /// Whole strokes or the part under the eraser.
+    enum EraserKind: String, CaseIterable, Identifiable {
+        case strokes, pixels
+        var id: String { rawValue }
+        var title: String { self == .strokes ? "Strokes" : "Pixels" }
+    }
+
+    var mode: Mode = .draw
+    var ink: EditorDrawInk = .pen {
+        didSet { width = min(max(width, widthRange.lowerBound), widthRange.upperBound) }
+    }
+    var width: CGFloat = PKInkingTool.InkType.pen.defaultWidth
+    var opacity: Double = 1
+    var color = OverlayColor(red: 0.92, green: 0.27, blue: 0.24)
+    var eraserKind: EraserKind = .strokes
+    var isRulerActive = false
+    /// Called after every stroke the canvas finishes — the phone panel commits
+    /// each one as its own undo step.
+    var onStrokeCommitted: (() -> Void)?
+
+    var widthRange: ClosedRange<CGFloat> { ink.pkType.validWidthRange }
+
+    /// The PencilKit tool the canvas draws with, built from the panel's rows.
+    var tool: PKTool {
+        switch mode {
+        case .draw:
+            PKInkingTool(
+                ink.pkType,
+                color: UIColor(
+                    red: color.red, green: color.green, blue: color.blue,
+                    alpha: CGFloat(min(max(opacity, 0.05), 1))
+                ),
+                width: width
+            )
+        case .erase:
+            eraserKind == .strokes
+                ? PKEraserTool(.vector)
+                : PKEraserTool(.bitmap, width: max(width, 8))
+        case .select:
+            PKLassoTool()
+        }
+    }
+
+    /// Pencil double-tap / squeeze: flips between drawing and erasing, the way the
+    /// system tool picker does.
+    func togglePencilEraser() {
+        mode = mode == .erase ? .draw : .erase
+    }
 
     /// Called by the canvas as the user draws.
     func adopt(from canvas: PKDrawing) {
@@ -71,8 +142,9 @@ final class EditorDrawSession {
     var isEmpty: Bool { drawing.strokes.isEmpty }
 }
 
-/// Hosts a `PKCanvasView` and its `PKToolPicker` over the photo — the iOS Photos
-/// Markup drawing surface. Finger and Pencil both draw (`.anyInput`); the canvas is
+/// Hosts a `PKCanvasView` over the photo — the iOS Photos Markup drawing surface.
+/// On the wide sidebar it brings the system `PKToolPicker`; on the phone panel
+/// (FS-05.01 §4) the picker never shows and the panel's rows set the tool. Finger and Pencil both draw (`.anyInput`); the canvas is
 /// transparent so the photo shows through, and scrolling/zoom is off so canvas
 /// points map straight to the fitted photo rect.
 struct EditorDrawingCanvas: UIViewRepresentable {
@@ -81,6 +153,7 @@ struct EditorDrawingCanvas: UIViewRepresentable {
     /// and re-invokes `updateUIView` when Clear (or the initial load) replaces the
     /// drawing — fine-grained `@Observable` tracking would not fire otherwise.
     let clearSignal: Int
+    var usesSystemToolPicker = true
 
     func makeUIView(context: Context) -> PKCanvasView {
         let canvas = PKCanvasView()
@@ -96,17 +169,35 @@ struct EditorDrawingCanvas: UIViewRepresentable {
         canvas.delegate = context.coordinator
         context.coordinator.appliedClearToken = session.clearToken
 
-        let picker = PKToolPicker()
-        picker.addObserver(canvas)
-        picker.setVisible(true, forFirstResponder: canvas)
-        context.coordinator.toolPicker = picker
-
-        // First responder can only be taken once the view is in a window.
-        DispatchQueue.main.async { canvas.becomeFirstResponder() }
+        if usesSystemToolPicker {
+            let picker = PKToolPicker()
+            picker.addObserver(canvas)
+            picker.setVisible(true, forFirstResponder: canvas)
+            context.coordinator.toolPicker = picker
+            // First responder can only be taken once the view is in a window.
+            DispatchQueue.main.async { canvas.becomeFirstResponder() }
+        } else {
+            // No picker: the canvas takes touches without being first responder,
+            // and the tool comes from the panel.
+            // Any input: without the picker there is no "draw with finger" switch,
+            // and `.default` then refuses the finger outright.
+            canvas.drawingPolicy = .anyInput
+            canvas.tool = session.tool
+            canvas.isRulerActive = session.isRulerActive
+            let pencil = UIPencilInteraction()
+            pencil.delegate = context.coordinator
+            canvas.addInteraction(pencil)
+        }
         return canvas
     }
 
     func updateUIView(_ canvas: PKCanvasView, context: Context) {
+        if !usesSystemToolPicker {
+            canvas.tool = session.tool
+            if canvas.isRulerActive != session.isRulerActive {
+                canvas.isRulerActive = session.isRulerActive
+            }
+        }
         // Adopt an externally replaced drawing (Clear, or the initial load).
         if context.coordinator.appliedClearToken != session.clearToken {
             context.coordinator.appliedClearToken = session.clearToken
@@ -138,7 +229,7 @@ struct EditorDrawingCanvas: UIViewRepresentable {
     }
 
     @MainActor
-    final class Coordinator: NSObject, PKCanvasViewDelegate {
+    final class Coordinator: NSObject, PKCanvasViewDelegate, UIPencilInteractionDelegate {
         let session: EditorDrawSession
         var appliedClearToken = 0
         /// Held so the tool picker outlives `makeUIView`.
@@ -152,6 +243,11 @@ struct EditorDrawingCanvas: UIViewRepresentable {
             session.adopt(from: canvasView.drawing)
             let size = canvasView.bounds.size
             if size != .zero { session.canvasSize = size }
+            session.onStrokeCommitted?()
+        }
+
+        func pencilInteractionDidTap(_ interaction: UIPencilInteraction) {
+            session.togglePencilEraser()
         }
     }
 }
