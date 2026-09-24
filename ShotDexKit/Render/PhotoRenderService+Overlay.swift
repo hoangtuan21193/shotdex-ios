@@ -216,13 +216,14 @@ public extension PhotoRenderService {
             case .drawing:
                 // Stack order is the point of a drawing *layer*: it is drawn here,
                 // between the layers below and above it, not under everything.
-                guard let drawing = overlay.drawing,
-                      let stamp = drawingStamp(drawing, pixelWidth: width, pixelHeight: height)
-                else { continue }
-                context.saveGState()
-                context.setAlpha(CGFloat(min(max(overlay.opacity, 0), 1)))
-                context.draw(stamp.image, in: stamp.rect)
-                context.restoreGState()
+                guard let drawing = overlay.drawing else { continue }
+                drawDrawingLayer(
+                    drawing,
+                    opacity: overlay.opacity,
+                    in: context,
+                    pixelWidth: width,
+                    pixelHeight: height
+                )
             case .image:
                 // A signature whose cache file is gone is skipped rather than
                 // drawn as a placeholder — the panel is where the user is told.

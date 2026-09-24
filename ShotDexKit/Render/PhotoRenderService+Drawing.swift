@@ -93,4 +93,74 @@ extension PhotoRenderService {
         )
         return (image, rect)
     }
+
+    /// A stamp bigger than this is not built whole: a layer whose strokes span a
+    /// 48MP frame would be a second ~192MB bitmap on top of the overlay bitmap it
+    /// is drawn into (FS-05.01 AC-38). It is drawn band by band instead.
+    static let largestDrawingStampBytes = 24 * 1024 * 1024
+
+    /// The canvas-space bands a drawing is rasterized in, top to bottom: one band
+    /// (its bounding box) when that fits `largestDrawingStampBytes` at this size,
+    /// otherwise horizontal slices that each do. Pure, so the plan is testable
+    /// without rasterizing 48 megapixels.
+    static func drawingBands(bounds: CGRect, scale: CGFloat) -> [CGRect] {
+        guard bounds.width > 0, bounds.height > 0, scale > 0 else { return [] }
+        let rowBytes = max(1, Int((bounds.width * scale).rounded(.up))) * 4
+        let rowsPerBand = max(1, largestDrawingStampBytes / rowBytes)
+        let bandHeight = CGFloat(rowsPerBand) / scale
+        guard bounds.height > bandHeight else { return [bounds] }
+        var bands: [CGRect] = []
+        var top = bounds.minY
+        while top < bounds.maxY {
+            let height = min(bandHeight, bounds.maxY - top)
+            bands.append(CGRect(x: bounds.minX, y: top, width: bounds.width, height: height))
+            top += height
+        }
+        return bands
+    }
+
+    /// Draws one drawing layer into the overlay bitmap. Small drawings go through
+    /// the cached `drawingStamp`; large ones are rasterized one band at a time and
+    /// each band is released before the next is built, so the extra memory is one
+    /// band (≤ `largestDrawingStampBytes`), never a second full frame.
+    static func drawDrawingLayer(
+        _ drawing: PhotoDrawing,
+        opacity: Double,
+        in context: CGContext,
+        pixelWidth: Int,
+        pixelHeight: Int
+    ) {
+        guard drawing.hasVisibleEffect, pixelWidth > 0, pixelHeight > 0,
+              drawing.canvasWidth > 0, drawing.canvasHeight > 0,
+              let pkDrawing = try? PKDrawing(data: drawing.data)
+        else { return }
+        let canvas = CGRect(x: 0, y: 0, width: drawing.canvasWidth, height: drawing.canvasHeight)
+        let bounds = pkDrawing.bounds.intersection(canvas).integral
+        guard !bounds.isNull, bounds.width > 0, bounds.height > 0 else { return }
+        let scale = CGFloat(pixelWidth) / CGFloat(drawing.canvasWidth)
+
+        context.saveGState()
+        defer { context.restoreGState() }
+        context.setAlpha(CGFloat(min(max(opacity, 0), 1)))
+
+        let bands = drawingBands(bounds: bounds, scale: scale)
+        if bands.count <= 1 {
+            guard let stamp = drawingStamp(drawing, pixelWidth: pixelWidth, pixelHeight: pixelHeight)
+            else { return }
+            context.draw(stamp.image, in: stamp.rect)
+            return
+        }
+        for band in bands {
+            autoreleasepool {
+                guard let image = pkDrawing.image(from: band, scale: scale).cgImage else { return }
+                // Canvas y runs down from the top; the overlay bitmap's runs up.
+                context.draw(image, in: CGRect(
+                    x: band.minX * scale,
+                    y: CGFloat(pixelHeight) - band.maxY * scale,
+                    width: band.width * scale,
+                    height: band.height * scale
+                ))
+            }
+        }
+    }
 }

@@ -119,4 +119,56 @@ struct PhotoDrawingModelsTests {
         // Near the top of the canvas, so near the top (high y) of the bottom-up bitmap.
         #expect(stamp.rect.midY > 6048 * 0.8)
     }
+
+    /// AC-38 (memory). A drawing whose strokes span the whole frame is not built
+    /// as one ~195MB bitmap at 48MP: it is planned as bands of at most 24MB that
+    /// tile its bounding box top to bottom with no gap and no overlap.
+    @Test func aFullFrameDrawingIsPlannedInBoundedBands() {
+        let bounds = CGRect(x: 0, y: 0, width: 300, height: 200)
+        let scale: CGFloat = 8064 / 300
+        let bands = PhotoRenderService.drawingBands(bounds: bounds, scale: scale)
+        #expect(bands.count > 1)
+        for band in bands {
+            let bytes = Int((band.width * scale).rounded(.up)) * 4 * Int((band.height * scale).rounded(.up))
+            #expect(bytes <= PhotoRenderService.largestDrawingStampBytes + Int(band.width * scale) * 4)
+        }
+        #expect(bands.first?.minY == bounds.minY)
+        #expect(abs((bands.last?.maxY ?? 0) - bounds.maxY) < 0.001)
+        for (upper, lower) in zip(bands, bands.dropFirst()) {
+            #expect(abs(upper.maxY - lower.minY) < 0.001)
+        }
+        // A signature-sized drawing stays one band — the cached stamp path.
+        #expect(PhotoRenderService.drawingBands(bounds: CGRect(x: 10, y: 10, width: 30, height: 10), scale: scale).count == 1)
+    }
+
+    /// The banded path draws the same marks: a vertical stroke crossing every
+    /// band seam is unbroken in the composite.
+    @Test func bandedDrawingHasNoSeams() throws {
+        func point(_ x: CGFloat, _ y: CGFloat) -> PKStrokePoint {
+            PKStrokePoint(location: CGPoint(x: x, y: y), timeOffset: 0, size: CGSize(width: 12, height: 12),
+                          opacity: 1, force: 1, azimuth: 0, altitude: .pi / 2)
+        }
+        let ink = PKInk(.pen, color: .red)
+        let across = PKStroke(ink: ink, path: PKStrokePath(controlPoints: [point(30, 12), point(270, 12)], creationDate: Date()))
+        let down = PKStroke(ink: ink, path: PKStrokePath(controlPoints: [point(150, 12), point(150, 190)], creationDate: Date()))
+        let drawing = PhotoDrawing(
+            data: PKDrawing(strokes: [across, down]).dataRepresentation(),
+            canvasWidth: 300, canvasHeight: 200
+        )
+        let extent = CGRect(x: 0, y: 0, width: 3600, height: 2400)
+        let scale = extent.width / 300
+        let pk = try PKDrawing(data: drawing.data)
+        let bands = PhotoRenderService.drawingBands(bounds: pk.bounds.integral, scale: scale)
+        try #require(bands.count > 1)
+
+        let image = try #require(PhotoRenderService.rasterizedOverlayImage([.drawing(drawing)], extent: extent))
+        let data = try #require(image.dataProvider?.data as Data?)
+        let column = Int(150 * scale)
+        // Every 8 rows from just below the top stroke to just above the end cap.
+        for row in stride(from: Int(24 * scale), to: Int(185 * scale), by: 8) {
+            let offset = row * image.bytesPerRow + column * 4
+            #expect(data[offset] > 200, "row \(row) is not red")
+        }
+    }
 }
+
