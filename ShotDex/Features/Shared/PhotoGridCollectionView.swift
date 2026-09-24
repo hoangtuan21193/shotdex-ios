@@ -22,6 +22,10 @@ import UIKit
 /// `SwipeSelectEvent`) matches the old `DensityPhotoGrid`, so the screens'
 /// selection/compare/delete logic is unchanged.
 struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable {
+    /// Photos with a verified copy on a file server get a glyph (FS-15.02
+    /// §8). Read from the environment so no screen has to thread it through;
+    /// absent in previews, where nothing is uploaded.
+    @Environment(ServerUploadIndex.self) private var uploadIndex: ServerUploadIndex?
     let photos: [Item]
     let assetProvider: (_ flatIndex: Int, _ item: Item) -> PHAsset?
     /// Sectioning + header contract: grid-grouped by date, one flat headerless
@@ -187,7 +191,11 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 collectionView.contentOffset.y = -collectionView.adjustedContentInset.top
             }
         }
+        let uploadsChanged = context.coordinator.updateUploaded(
+            uploadIndex?.assetIds ?? [], version: uploadIndex?.version ?? 0
+        )
         context.coordinator.apply(self, isInitial: false)
+        if uploadsChanged { context.coordinator.refreshVisibleCells() }
     }
 
     static func dismantleUIView(_ uiView: UICollectionView, coordinator: Coordinator) {
@@ -571,6 +579,27 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             let bottom = collectionView.collectionViewLayout.collectionViewContentSize.height
                 - height + collectionView.adjustedContentInset.bottom
             return bottom - collectionView.contentOffset.y <= height
+        }
+
+        /// Uploaded asset ids, and the index version they came from — the
+        /// version is what is compared, so a 55k set is never diffed.
+        private(set) var uploadedAssetIds: Set<String> = []
+        private var uploadedVersion = -1
+
+        /// Returns whether the set changed since the last update.
+        func updateUploaded(_ ids: Set<String>, version: Int) -> Bool {
+            guard version != uploadedVersion else { return false }
+            let isFirst = uploadedVersion == -1
+            uploadedVersion = version
+            uploadedAssetIds = ids
+            // The first read can already hold ids if the index loaded before
+            // this grid appeared; the cells configured in makeUIView lack them.
+            return !(isFirst && ids.isEmpty)
+        }
+
+        func refreshVisibleCells() {
+            guard let collectionView else { return }
+            reconfigureVisibleCells(collectionView)
         }
 
         private func reconfigureVisibleCells(_ collectionView: UICollectionView) {
@@ -974,7 +1003,8 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 isSelected: appliedSelectedIds.contains(item.assetId),
                 photoLibrary: parent.photoLibrary,
                 displayOptions: displayOptions,
-                lazyMetadataProvider: parent.lazyMetadataProvider
+                lazyMetadataProvider: parent.lazyMetadataProvider,
+                isUploaded: uploadedAssetIds.contains(item.assetId)
             )
         }
 
@@ -1963,6 +1993,7 @@ final class PhotoGridCell: UICollectionViewCell {
     private var configuredAssetId: String?
     private var badgeFetchTask: Task<Void, Never>?
     private var accessibilityMediaLabel = "Photo"
+    private var accessibilityUploaded = false
     private var accessibilityMetadataLine: String?
     private var accessibilityFileType: String?
 
@@ -2114,7 +2145,8 @@ final class PhotoGridCell: UICollectionViewCell {
         isSelected: Bool,
         photoLibrary: PhotoLibraryService,
         displayOptions: GridMetadataDisplayOptions,
-        lazyMetadataProvider: ((String) async -> (any PhotoGridDisplayable)?)? = nil
+        lazyMetadataProvider: ((String) async -> (any PhotoGridDisplayable)?)? = nil,
+        isUploaded: Bool = false
     ) {
         self.photoLibrary = photoLibrary
         configuredAssetId = item.assetId
@@ -2148,7 +2180,7 @@ final class PhotoGridCell: UICollectionViewCell {
             }
         }
 
-        applyStatusBadges(for: asset)
+        applyStatusBadges(for: asset, isUploaded: isUploaded)
 
         if let asset, asset.mediaType == .video {
             videoBadge.text = asset.duration > 0
@@ -2206,11 +2238,13 @@ final class PhotoGridCell: UICollectionViewCell {
     /// No "edited" glyph: PhotoKit exposes no adjustment flag on `PHAsset`, and
     /// the only way to tell is to enumerate `PHAssetResource`s per asset, which
     /// is far too expensive per cell.
-    private func applyStatusBadges(for asset: PHAsset?) {
+    private func applyStatusBadges(for asset: PHAsset?, isUploaded: Bool) {
         for view in statusBadges.arrangedSubviews {
             statusBadges.removeArrangedSubview(view)
             view.removeFromSuperview()
         }
+        accessibilityUploaded = isUploaded && asset != nil
+        updateAccessibilityLabel()
         guard let asset else {
             statusBadges.isHidden = statusBadges.arrangedSubviews.isEmpty
             return
@@ -2224,6 +2258,8 @@ final class PhotoGridCell: UICollectionViewCell {
         if subtypes.contains(.photoHDR) { symbols.append("sparkles") }
         if subtypes.contains(.videoHighFrameRate) { symbols.append("slowmo") }
         if subtypes.contains(.videoTimelapse) { symbols.append("timelapse") }
+        // Last, after what the photo *is*: this is where a copy of it lives.
+        if isUploaded { symbols.append("externaldrive.fill.badge.checkmark") }
 
         guard !symbols.isEmpty else {
             statusBadges.isHidden = statusBadges.arrangedSubviews.isEmpty
@@ -2270,6 +2306,7 @@ final class PhotoGridCell: UICollectionViewCell {
             accessibilityMediaLabel,
             accessibilityFileType.map { "file type \($0)" },
             accessibilityMetadataLine,
+            accessibilityUploaded ? String(localized: "Uploaded to server", comment: "VoiceOver: grid tile of a photo with a copy on a file server") : nil,
         ]
         accessibilityLabel = components.compactMap { $0 }.joined(separator: ", ")
     }

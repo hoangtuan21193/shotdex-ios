@@ -8,6 +8,9 @@ import Observation
 @Observable
 final class ServerUploadIndex {
     private(set) var assetIds: Set<String> = []
+    /// Bumped on every change, so the grid can tell "new set" without
+    /// comparing two sets of 55k ids.
+    private(set) var version = 0
     private let store: ServerUploadStore
     private var hasLoaded = false
 
@@ -28,11 +31,20 @@ final class ServerUploadIndex {
         Task {
             let ids = await Task.detached(priority: .utility) { (try? store.uploadedAssetIds()) ?? [] }.value
             self.assetIds = ids
+            self.version += 1
         }
+    }
+
+    /// One photo's history, newest first — the Photo Info section.
+    func uploads(assetId: String) -> [ServerUploadRecord] {
+        guard assetIds.contains(assetId) else { return [] }
+        return (try? store.uploads(assetId: assetId)) ?? []
     }
 
     /// A batch just verified these — no need to go back to the database.
     func insert(_ ids: some Sequence<String>) {
+        let before = assetIds.count
         assetIds.formUnion(ids)
+        if assetIds.count != before { version += 1 }
     }
 }

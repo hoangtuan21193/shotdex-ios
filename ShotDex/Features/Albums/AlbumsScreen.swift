@@ -174,6 +174,9 @@ struct AlbumsScreen: View {
         .navigationDestination(for: PlacesDestination.self) { _ in
             PlacesMapScreen()
         }
+        .navigationDestination(for: UploadedToServerDestination.self) { _ in
+            UploadedToServerScreen()
+        }
         .navigationDestination(for: TripsDestination.self) { _ in
             TripsScreen()
         }
@@ -574,6 +577,18 @@ extension AlbumsScreen {
             }
             .buttonStyle(.plain)
 
+            // Only once something has gone up: before that it is a door to
+            // an empty room, and the feature starts from a selection anyway.
+            if !dependencies.serverUploadIndex.assetIds.isEmpty {
+                NavigationLink(value: UploadedToServerDestination()) {
+                    CollectionListRow(
+                        title: String(localized: "Uploaded to Server", comment: "Utilities row: photos with a verified copy on a file server"),
+                        systemImage: "server.rack"
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+
             // Recently Deleted and Unable to Upload: library housekeeping
             // rather than browsing, so they sit with Duplicates the way
             // Photos groups its own utilities.
@@ -631,7 +646,7 @@ extension AlbumsScreen {
     /// system utility albums come and go, and the packing has to count what
     /// is actually there.
     private var utilityEntryCount: Int {
-        5 + model.utilityAlbums.count
+        5 + model.utilityAlbums.count + (dependencies.serverUploadIndex.assetIds.isEmpty ? 0 : 1)
     }
 
     /// How many rows the band stacks before it starts scrolling sideways.

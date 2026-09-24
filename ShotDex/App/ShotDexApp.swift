@@ -17,6 +17,7 @@ struct ShotDexApp: App {
         // delivered to nobody unless the delegate is already in place.
         dependencies.onThisDayNotifications.registerDelegate()
         dependencies.resolveNewlyKnownCameras()
+        dependencies.serverUploadIndex.loadIfNeeded()
     }
 
     var body: some Scene {
@@ -24,6 +25,7 @@ struct ShotDexApp: App {
             RootTabView()
                 .environment(dependencies)
                 .environment(dependencies.photoLibrary)
+                .environment(dependencies.serverUploadIndex)
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .background {
                         dependencies.backgroundIndex.scheduleContinuationIfNeeded()

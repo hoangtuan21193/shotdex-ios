@@ -9,6 +9,8 @@ import SwiftUI
 struct MetadataPanel: View {
     let asset: PHAsset?
     let indexedMetadata: PhotoMetadata?
+    /// Absent in previews; there the section simply never shows.
+    @Environment(ServerUploadIndex.self) private var uploadIndex: ServerUploadIndex?
 
     @State private var report: AssetMetadataReport?
     @State private var isLoading = true
@@ -65,6 +67,8 @@ struct MetadataPanel: View {
 
             shutterCountSection
 
+            serverUploadsSection
+
             Section {
                 NavigationLink {
                     RawMetadataView(sections: report.rawSections)
@@ -88,6 +92,31 @@ struct MetadataPanel: View {
             }
         }
         .listStyle(.insetGrouped)
+    }
+
+    /// Where copies of this photo are (FS-15.02 §8): one line per server,
+    /// newest first. A photo with files on one server twice shows it once.
+    @ViewBuilder
+    private var serverUploadsSection: some View {
+        let lines = serverUploadLines
+        if !lines.isEmpty {
+            Section {
+                ForEach(lines, id: \.server) { line in
+                    LabeledContent(line.server, value: line.date.formatted(date: .abbreviated, time: .omitted))
+                }
+            } header: {
+                Label("Uploaded to Server", systemImage: "server.rack")
+            }
+        }
+    }
+
+    private var serverUploadLines: [(server: String, date: Date)] {
+        guard let id = asset?.localIdentifier, let uploadIndex else { return [] }
+        var seen = Set<String>()
+        return uploadIndex.uploads(assetId: id).compactMap { record in
+            guard seen.insert(record.serverName).inserted else { return nil }
+            return (record.serverName, Date(timeIntervalSince1970: TimeInterval(record.uploadedAt)))
+        }
     }
 
     @ViewBuilder
