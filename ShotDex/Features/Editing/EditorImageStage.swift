@@ -49,6 +49,15 @@ struct EditorImageStage: View {
     }
 
     /// The point-color eyedropper is armed: the next touch samples the photo.
+    /// "subject", "sky" or "face" — what the selected mask's detection looks for.
+    private var detectingNoun: String {
+        switch controller.selectedMask?.components.first?.kind {
+        case .sky: "sky"
+        case .faceSkin, .eyes, .lips: "face"
+        default: "subject"
+        }
+    }
+
     private var isSamplingColor: Bool {
         controller.selectedTool == .pointColor && chrome.isEyedropperActive
     }
@@ -486,6 +495,20 @@ struct EditorImageStage: View {
             if chrome.isFullBleed {
                 EditorPillLabel(text: "DOUBLE TAP TO EXIT · PINCH TO ZOOM")
                     .position(x: imageRect.midX, y: imageRect.maxY - 24)
+            }
+
+            // Mask detection (FS-03.05 §2): "Detecting…" while Vision runs on a new
+            // automatic mask, then — only if it found nothing — why the mask is empty.
+            if chrome.selectedGroup == .mask {
+                if controller.isDetectingSelectedMask {
+                    EditorPillLabel(text: "DETECTING \(detectingNoun.uppercased())…")
+                        .position(x: imageRect.midX, y: imageRect.minY + 24)
+                        .transition(.opacity)
+                } else if let notice = controller.maskDetectionNotice {
+                    EditorPillLabel(text: notice.uppercased())
+                        .position(x: imageRect.midX, y: imageRect.minY + 24)
+                        .transition(.opacity)
+                }
             }
 
             // On the phone the empty Point Color panel already says what to do, so

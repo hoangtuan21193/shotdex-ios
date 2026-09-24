@@ -321,6 +321,23 @@ final class PhotoEditorController {
     /// Whether the photo has a face, for the three face-part masks. Nil until
     /// the check has run on the first preview; once per photo, not per sheet.
     private(set) var hasFaces: Bool?
+    /// Automatic-mask shapes (subject, sky, face parts) waiting on their first
+    /// Vision pass. The phone panel shows a spinner on their thumbnail, a pill on
+    /// the photo, and dims the rows until it ends (FS-03.05 §2).
+    private(set) var detectingMaskComponentIDs: Set<UUID> = []
+    /// Set for 3s when a detection came back empty: "Couldn't find a subject".
+    private(set) var maskDetectionNotice: String?
+    private var maskDetectionNoticeTask: Task<Void, Never>?
+
+    /// True while the selected mask's shape is still being found.
+    var isDetectingSelectedMask: Bool {
+        guard let selectedMask else { return false }
+        return selectedMask.components.contains { detectingMaskComponentIDs.contains($0.id) }
+    }
+
+    func isDetecting(mask: PhotoMask) -> Bool {
+        mask.components.contains { detectingMaskComponentIDs.contains($0.id) }
+    }
     var supportsHEICEditOutput: Bool {
         guard let session else { return false }
         return service.supportsEditOutputFormat(.heic, in: session)
@@ -1681,6 +1698,9 @@ final class PhotoEditorController {
     func addMask(kind: PhotoMaskComponentKind) {
         recordHistory()
         let component = PhotoMaskComponent(kind: kind)
+        if kind == .subject || kind == .sky || kind.isFacePart {
+            detectingMaskComponentIDs.insert(component.id)
+        }
         let number = recipe.masks.count + 1
         let mask = PhotoMask(name: "\(kind.displayName) \(number)", component: component)
         recipe.masks.append(mask)
@@ -2212,6 +2232,7 @@ final class PhotoEditorController {
             editedPreviewImage = image
             colorSamplingImage = preview.cleanImage
             await updateHistogram()
+            await resolveMaskDetection()
             if !isContinuousChange {
                 refreshMaskThumbnails()
                 refreshFilterThumbnails()
@@ -2222,6 +2243,43 @@ final class PhotoEditorController {
         }
         if generation == renderGeneration {
             isRendering = false
+        }
+    }
+
+    /// Ends the "detecting" state of every shape whose automatic mask has now been
+    /// computed, and says so when one came back empty — the mask stays, empty, so
+    /// the user can Undo, delete it or paint instead.
+    private func resolveMaskDetection() async {
+        guard !detectingMaskComponentIDs.isEmpty else { return }
+        let resolved = await service.renderer.resolvedAutomaticMaskComponentIDs()
+        let empty = await service.renderer.emptyAutomaticMaskComponentIDs()
+        let finished = detectingMaskComponentIDs.intersection(resolved)
+        guard !finished.isEmpty else { return }
+        detectingMaskComponentIDs.subtract(finished)
+        let failedKinds = recipe.masks
+            .flatMap(\.components)
+            .filter { finished.contains($0.id) && empty.contains($0.id) }
+            .map(\.kind)
+        if let kind = failedKinds.first {
+            showMaskDetectionNotice(Self.detectionFailureText(for: kind))
+        }
+    }
+
+    static func detectionFailureText(for kind: PhotoMaskComponentKind) -> String {
+        switch kind {
+        case .sky: "Couldn't find the sky"
+        case .faceSkin, .eyes, .lips: "Couldn't find a face"
+        default: "Couldn't find a subject"
+        }
+    }
+
+    private func showMaskDetectionNotice(_ text: String) {
+        maskDetectionNoticeTask?.cancel()
+        maskDetectionNotice = text
+        maskDetectionNoticeTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(3))
+            guard !Task.isCancelled else { return }
+            self?.maskDetectionNotice = nil
         }
     }
 

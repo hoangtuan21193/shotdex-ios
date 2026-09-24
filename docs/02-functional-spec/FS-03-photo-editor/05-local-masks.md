@@ -33,10 +33,12 @@ Vẽ, tranh chấp chạm và zoom: [FS-03.05b](05b-mask-painting-and-zoom.md).
 - **Một chạm là tạo mask**, chọn luôn nó và chuyển sang chỉnh.
 - Loại không dùng được (ảnh không có depth, không có mặt) **mờ 35%**; chạm vào thì tiêu đề đổi thành **lý do**
   trong 3s, không tạo mask.
-- Đang nhận diện: thumbnail mới có vòng quay, ảnh có viền trắng mảnh quanh vùng dự đoán + pill "Detecting
-  subject…", các hàng chỉnh mờ và không nhận chạm.
+- Đang nhận diện: thumbnail mới có vòng quay, pill "Detecting subject…" trên ảnh, các hàng chỉnh mờ và không
+  nhận chạm. (Không có viền "vùng dự đoán": trước khi Vision trả lời thì chưa có vùng nào để vẽ.)
 - Nhận diện lỗi hoặc không thấy gì: vòng quay dừng, pill 3s **"Couldn't find a subject"** (sky, face tương tự),
   **mask rỗng vẫn giữ** trong dải để Undo, Delete hoặc vẽ thêm.
+  Lỗi Vision **không** làm hỏng cả lượt render, và kết quả rỗng được nhớ theo khung nên Vision không chạy lại ở
+  mỗi lượt render.
 
 ## 3. Chỉnh mask đang chọn
 
@@ -166,7 +168,7 @@ Tiếp số của [FS-03.12](12-phone-panel-grid.md). Máy: iPhone 17, iOS 26.5 
 | AC-20 | 1 mask đang bật | `⋯` → Hide | ảnh mất tác dụng mask, thumbnail mờ 35%, lớp đỏ tắt; Show trả lại cả ba | ⚠️ chưa có |
 | AC-21 | 6 mask, dải cuộn tới cuối, mask 6 đang chọn, rồi chạm thumbnail mask 1 | `⋯` → Duplicate | bản sao nằm ngay sau mask 1, được chọn, thumbnail của nó nằm trọn trong dải | ⚠️ chưa có |
 | AC-22 | 1 mask đang chọn | chạm `+` rồi `‹` | vẫn 1 mask, mask cũ vẫn chọn, không có mask rỗng | ⚠️ chưa có |
-| AC-23 | simulator (Vision không chạy được Subject) | chạm Subject | vòng quay dừng, pill "Couldn't find a subject" 3s, mask rỗng vẫn trong dải | ⚠️ chưa có `iphone-mask-detect-fail.json` |
+| AC-23 | simulator (Vision không chạy được Subject) | chạm Subject | vòng quay dừng, pill "Couldn't find a subject" 3s, mask rỗng vẫn trong dải, không có alert lỗi | ảnh `iPhone 17 26.5` 2026-09-24 (chụp tay, `simctl io` ngay sau chạm); ⚠️ chưa có script |
 | AC-24 | ảnh chưa có mask | chạm Sky rồi Undo một lần | 0 mask, panel về màn chọn loại | ⚠️ chưa có |
 | AC-25 | 1 mask | `⋯` → Delete | 0 mask, panel về màn chọn loại, không có `‹` | ⚠️ chưa có |
 

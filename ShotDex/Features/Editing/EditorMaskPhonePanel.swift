@@ -224,6 +224,13 @@ struct EditorMaskStrip: View {
                     }
                 }
                 .opacity(mask.isVisible ? 1 : EditorTheme.rowDisabled)
+                .overlay {
+                    if controller.isDetecting(mask: mask) {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(.white)
+                    }
+                }
                 .padding(3.5)
                 .overlay {
                     if isSelected {

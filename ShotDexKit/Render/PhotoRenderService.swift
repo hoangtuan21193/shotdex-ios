@@ -97,6 +97,26 @@ public actor PhotoRenderService {
     private var disparityCache: [String: CIImage] = [:]
     private var automaticMaskCacheOrder: [String] = []
     private static let automaticMaskCacheCapacity = 8
+    /// Automatic masks (subject, sky, face parts) that came back with nothing —
+    /// Vision found no subject, or threw. Remembered by size key so the next render
+    /// does not run Vision again on the same frame, and so a failure costs one
+    /// empty matte rather than the whole render (it used to throw up to the
+    /// editor's error alert, once per render, for as long as the mask existed).
+    private var emptyAutomaticMaskKeys: Set<String> = []
+    private var emptyAutomaticComponents: Set<UUID> = []
+    private var foundAutomaticComponents: Set<UUID> = []
+
+    /// Components whose automatic mask came back empty on the last render that
+    /// asked for them. The editor reads it to say "Couldn't find a subject".
+    public func emptyAutomaticMaskComponentIDs() -> Set<UUID> {
+        emptyAutomaticComponents
+    }
+
+    /// Components whose automatic mask has been computed (found or empty) at
+    /// least once — the editor's "detecting" state ends when its id is here.
+    public func resolvedAutomaticMaskComponentIDs() -> Set<UUID> {
+        emptyAutomaticComponents.union(foundAutomaticComponents)
+    }
 
     public static let addMaskKernel = CIColorKernel(source: """
         kernel vec4 addMask(__sample current, __sample incoming) {
@@ -2160,6 +2180,7 @@ public actor PhotoRenderService {
             let kind = component.kind
             guard let hard = try cachedAutomaticMask(
                 key: "\(cacheIdentity)|face|\(kind.rawValue)",
+                componentID: component.id,
                 image: image,
                 build: { try faceMask(kind, image: image) }
             ) else { return nil }
@@ -2176,6 +2197,7 @@ public actor PhotoRenderService {
         case .subject:
             return try cachedAutomaticMask(
                 key: "\(cacheIdentity)|subject|\(component.id)|\(component.subjectPoint.x)|\(component.subjectPoint.y)",
+                componentID: component.id,
                 image: image
             ) {
                 try subjectMask(at: component.subjectPoint, image: image)
@@ -2193,6 +2215,7 @@ public actor PhotoRenderService {
             }
             return try cachedAutomaticMask(
                 key: "\(cacheIdentity)|sky|\(component.id)",
+                componentID: component.id,
                 image: image
             ) {
                 try coreMLSkyMask(image: image)
@@ -2245,32 +2268,54 @@ public actor PhotoRenderService {
 
     private func cachedAutomaticMask(
         key: String,
+        componentID: UUID,
         image: CIImage,
         build: () throws -> CIImage?
     ) throws -> CIImage? {
         let extent = image.extent.integral
         let sizedKey = "\(key)|\(Int(extent.width))x\(Int(extent.height))"
+        /// Vision failing, or finding nothing, is an empty matte — never a failed
+        /// render.
+        func attempt() -> CIImage? {
+            do { return try build() } catch { return nil }
+        }
+        func markEmpty() -> CIImage? {
+            emptyAutomaticComponents.insert(componentID)
+            foundAutomaticComponents.remove(componentID)
+            return nil
+        }
+        func markFound(_ mask: CIImage) -> CIImage {
+            emptyAutomaticComponents.remove(componentID)
+            foundAutomaticComponents.insert(componentID)
+            return mask
+        }
+        if emptyAutomaticMaskKeys.contains(sizedKey) { return markEmpty() }
         guard max(extent.width, extent.height) <= 3_000 else {
-            return try build()
+            guard let mask = attempt() else { return markEmpty() }
+            return markFound(mask)
         }
         if let cached = automaticMaskCache[sizedKey] {
-            return cached
+            return markFound(cached
                 .transformed(
                     by: CGAffineTransform(
                         translationX: extent.minX - cached.extent.minX,
                         y: extent.minY - cached.extent.minY
                     )
                 )
-                .cropped(to: extent)
+                .cropped(to: extent))
         }
-        guard let mask = try build(),
+        guard let mask = attempt(),
               let cgImage = context.createCGImage(
                   mask,
                   from: extent,
                   format: .L8,
                   colorSpace: CGColorSpaceCreateDeviceGray()
               )
-        else { return nil }
+        else {
+            if emptyAutomaticMaskKeys.count > 64 { emptyAutomaticMaskKeys.removeAll() }
+            emptyAutomaticMaskKeys.insert(sizedKey)
+            return markEmpty()
+        }
         let detached = CIImage(cgImage: cgImage)
         automaticMaskCache[sizedKey] = detached
         automaticMaskCacheOrder.append(sizedKey)
@@ -2278,14 +2323,14 @@ public actor PhotoRenderService {
             let evicted = automaticMaskCacheOrder.removeFirst()
             automaticMaskCache.removeValue(forKey: evicted)
         }
-        return detached
+        return markFound(detached
             .transformed(
                 by: CGAffineTransform(
                     translationX: extent.minX,
                     y: extent.minY
                 )
             )
-            .cropped(to: extent)
+            .cropped(to: extent))
     }
 
     private func combineMask(

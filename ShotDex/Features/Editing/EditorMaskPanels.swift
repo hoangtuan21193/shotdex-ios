@@ -336,6 +336,9 @@ struct EditorMaskDetailPanel: View {
                 ),
                 footer: { maskShapeSection }
             )
+            // Nothing to adjust until the shape is found (FS-03.05 §2).
+            .disabled(controller.isDetectingSelectedMask)
+            .opacity(controller.isDetectingSelectedMask ? EditorTheme.rowDisabled : 1)
         }
         .overlay(alignment: .top) {
             if !isPhone {
