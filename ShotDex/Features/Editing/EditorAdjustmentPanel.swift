@@ -219,16 +219,59 @@ struct EditorToggleRow: View {
     let title: String
     let isOn: Bool
     let onChange: (Bool) -> Void
+    @Environment(\.editorUsesPanelStyle) private var usesPanelStyle
+    @Environment(\.editorSliderStacked) private var isStacked
 
     var body: some View {
-        Toggle(
-            title,
-            isOn: Binding(get: { isOn }, set: onChange)
-        )
-        .font(EditorTheme.rowLabel)
-        .tint(EditorTheme.accent)
-        .padding(.horizontal, 14)
-        .frame(height: EditorLayoutMetrics.sliderRowTotalHeight)
+        if usesPanelStyle {
+            Toggle(isOn: Binding(get: { isOn }, set: onChange)) {
+                Text(title)
+                    .font(EditorTheme.rowLabel)
+                    .foregroundStyle(EditorTheme.panelText)
+            }
+            .toggleStyle(EditorSwitchToggleStyle())
+            .padding(.horizontal, AppTheme.Spacing.lg)
+            .frame(height: isStacked ? EditorLayoutMetrics.sidebarSliderHitHeight : EditorLayoutMetrics.editorPanelRowHeight)
+        } else {
+            Toggle(
+                title,
+                isOn: Binding(get: { isOn }, set: onChange)
+            )
+            .font(EditorTheme.rowLabel)
+            .tint(EditorTheme.accent)
+            .padding(.horizontal, 14)
+            .frame(height: EditorLayoutMetrics.sliderRowTotalHeight)
+        }
+    }
+}
+
+/// The photo editor's switch (FS-03.12): on is a solid white track with a dark
+/// knob, off a faint track with a white knob — "on" reads without accent. The
+/// whole row toggles, so the target is the row, not the 44×26 switch.
+struct EditorSwitchToggleStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Button {
+            withAnimation(EditorTheme.animation) { configuration.isOn.toggle() }
+        } label: {
+            HStack(spacing: AppTheme.Spacing.sm) {
+                configuration.label
+                Spacer(minLength: 0)
+                ZStack(alignment: configuration.isOn ? .trailing : .leading) {
+                    Capsule()
+                        .fill(configuration.isOn ? Color.white : EditorTheme.sliderNeutralTrack)
+                        .frame(width: 44, height: 26)
+                    Circle()
+                        .fill(configuration.isOn ? EditorTheme.panelSolid : Color.white)
+                        .frame(width: 22, height: 22)
+                        .padding(2)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityRepresentation {
+            Toggle(isOn: configuration.$isOn) { configuration.label }
+        }
     }
 }
 

@@ -384,16 +384,9 @@ struct EditorTextDetailPanel: View {
             styleRow(overlay)
             colorControl(idPrefix: "overlay.fill", color: overlay.fill, keyPath: \.fill)
             if overlay.shapeStyle.supportsFill {
-                Toggle("Filled", isOn: Binding(
-                    get: { overlay.isFilled },
-                    set: { filled in
-                        controller.updateSelectedOverlay { $0.isFilled = filled }
-                    }
-                ))
-                .font(.system(size: 13, weight: .medium))
-                .tint(EditorTheme.accent)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 4)
+                EditorToggleRow(title: "Filled", isOn: overlay.isFilled) { filled in
+                    controller.updateSelectedOverlay { $0.isFilled = filled }
+                }
             }
             if !overlay.isFilled || !overlay.shapeStyle.supportsFill {
                 slider(
