@@ -275,11 +275,25 @@ struct EditorSwitchToggleStyle: ToggleStyle {
     }
 }
 
+/// A text-only action in a panel row ("Choose Lens", "Delete Point"). White inside
+/// the photo editor (accent is Save's alone, FS-03.12); accent in the other tools.
 struct EditorTextButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
+        EditorTextButtonBody(configuration: configuration)
+    }
+}
+
+private struct EditorTextButtonBody: View {
+    let configuration: ButtonStyleConfiguration
+    @Environment(\.editorUsesPanelStyle) private var usesPanelStyle
+
+    var body: some View {
         configuration.label
             .font(.system(size: 13, weight: .semibold))
-            .foregroundStyle(EditorTheme.accent.opacity(configuration.isPressed ? 0.6 : 1))
+            .foregroundStyle(
+                (usesPanelStyle ? Color.white : EditorTheme.accent)
+                    .opacity(configuration.isPressed ? 0.6 : 1)
+            )
             .padding(.horizontal, 6)
             .frame(minWidth: 44, minHeight: 44)
             .contentShape(Rectangle())
