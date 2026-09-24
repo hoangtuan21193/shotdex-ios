@@ -107,7 +107,7 @@ Máy: iPhone 17 (402pt, iOS 26.5) và iPhone 16 Pro (iOS 18.6) · iPhone SE 3rd 
 | AC-12 | Presets, tab LUTs | chạm ô đầu | mở bộ chọn file .cube | ảnh iPhone 17 26.5, 2026-09-24 (tab LUTs, ô Import .cube); ⚠️ chưa mở bộ chọn file |
 | AC-13 | Duo ngoài | mở Light rồi Mask | panel 264, không nút nào dưới rail 84pt | ⚠️ chưa có — `duo-editor-panel.json` + `Tools/sim-shot` |
 | AC-14 | iPad, sidebar Light | dump Exposure | núm tròn 18, nhãn chữ thường, hàng ≥44 | `aSliderRowIsBigEnoughToHitAndQuickEnoughToNudge` + ⚠️ ảnh |
-| AC-15 | cả hai nhánh iOS 26.5 và 18.6 | chạy AC-2, AC-3 | kết quả như nhau | ⚠️ chưa có |
+| AC-15 | cả hai nhánh iOS 26.5 và 18.6 | chạy AC-2, AC-3 | kết quả như nhau | AC-3 trên SE 375 iOS 18.6, 2026-09-25: 0 px ở 11 nhóm (`Tools/accent-check`, Save bắt 5 049 px); AC-2 SE 18.6 xem AC-2; ⚠️ AC-2 ở 26.5 chưa chạy |
 | AC-16 | mọi dòng "Chỗ ở mới" của intent | đi tới từng chức năng | tới được, dùng được | ⚠️ chưa có `iphone-panel-inventory.json` |
 
 Mask: AC-17…AC-25 ở [FS-03.05 §9](05-local-masks.md#9-tiêu-chí-nghiệm-thu-panel-phone) · Markup: AC-26…AC-38 ở
