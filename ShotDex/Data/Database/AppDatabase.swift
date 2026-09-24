@@ -436,6 +436,45 @@ final class AppDatabase: Sendable {
                 """)
         }
 
+        // File servers and what reached them (FS-15). Two tables of their
+        // own: both are things the user made — a server they typed in, a file
+        // they sent — and the indexer blanks anything in `photo_metadata` it
+        // does not know about.
+        //
+        // An upload row keeps the server's *name* and lets its id go null
+        // when the server is deleted: the row is the evidence that a file is
+        // safe elsewhere, and forgetting a server in Settings does not make
+        // the files on it any less there. No foreign key to `photo_metadata`
+        // either, for the same reason in the other direction.
+        migrator.registerMigration("v19-fileServers") { db in
+            try db.create(table: "file_servers") { t in
+                t.primaryKey("id", .text)
+                t.column("name", .text).notNull()
+                t.column("transferProtocol", .text).notNull()
+                t.column("host", .text).notNull()
+                t.column("port", .integer).notNull()
+                t.column("username", .text).notNull()
+                t.column("share", .text).notNull()
+                t.column("folder", .text).notNull()
+                t.column("hostKeyFingerprint", .text)
+                t.column("lastUsedAt", .integer)
+                t.column("createdAt", .integer).notNull()
+            }
+            try db.create(table: "server_uploads") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("assetId", .text).notNull()
+                t.column("fileKey", .text).notNull()
+                t.column("serverId", .text)
+                    .references("file_servers", onDelete: .setNull)
+                t.column("serverName", .text).notNull()
+                t.column("remotePath", .text).notNull()
+                t.column("byteCount", .integer).notNull()
+                t.column("sha256", .text).notNull()
+                t.column("uploadedAt", .integer).notNull()
+            }
+            try db.create(index: "server_uploads_assetId", on: "server_uploads", columns: ["assetId"])
+        }
+
         return migrator
     }
 }
