@@ -5,9 +5,9 @@
 | Tác giả | hat.tuan |
 | Ngày | 2026-09-24 |
 | Trạng thái | accepted |
-| Tiến độ | **chưa làm** (2026-09-24) — chưa có spec |
+| Tiến độ | **chưa làm** (2026-09-24) — plan [2026-09-24-fs-03-12-phone-panel](../_plans/2026-09-24-fs-03-12-phone-panel.md) đã duyệt, 22 task |
 | Nguồn | phản hồi người dùng (chủ sở hữu sản phẩm) — bản bàn giao từ Claude Design |
-| Spec sinh ra từ đây | (điền khi sang Design) |
+| Spec sinh ra từ đây | [FS-03.12](../02-functional-spec/FS-03-photo-editor/12-phone-panel-grid.md) (+ FS-03.01, 01b, 02, 05 · FS-04.01, 02 · FS-05 README, 01, 02, 03) |
 
 Tham chiếu: [bản bàn giao](assets/2026-09-24-editor-phone-panel/design-handoff.md) và
 [prototype](assets/2026-09-24-editor-phone-panel/ShotDex%20Editor%20Prototype.dc.html) (không chạy được vì thiếu
