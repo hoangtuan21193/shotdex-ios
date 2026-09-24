@@ -762,7 +762,7 @@ struct SettingsScreen: View {
             }
             .settingsRow(.fileServers)
         } header: {
-            Text("File Servers")
+            Text("Upload")
         } footer: {
             Text("Upload originals to your NAS or computer over SMB or SFTP, then free up space on this device.")
         }

@@ -48,7 +48,7 @@ dùng ngày tạo asset. Bản đã sửa: `<tên gốc>_edited.<đuôi của b�
 
 - Hiện **hai ảnh cạnh nhau**: *On This Device* và *On Server* — cả hai dựng thumbnail 400px thẳng từ file
   (bản bên server tải về đĩa trước), không giải mã cả ảnh. Dưới mỗi ảnh: dung lượng.
-- Ba nút: **Replace** · **Keep Both** · **Skip**, và công tắc **Apply to remaining conflicts** (mặc định tắt).
+- Ba nút: **Replace** (đỏ — ghi đè file trên server) · **Keep Both** · **Skip**, và công tắc **Apply to remaining conflicts** (mặc định tắt).
 - **Keep Both** đặt tên `<tên> (2).<đuôi>`, rồi `(3)`… cho tới tên chưa có.
 - File trên server trùng **cả SHA-256** với file sắp đẩy → coi như đã có: ghi lịch sử, không hỏi, không đẩy.
 
@@ -80,7 +80,8 @@ dùng ngày tạo asset. Bản đã sửa: `<tên gốc>_edited.<đuôi của b�
 
 ## 8. Sau khi đẩy
 
-- **Collections → Utilities → Uploaded to Server**: lưới mọi ảnh còn trong thư viện đã lên ít nhất một
+- **Collections → Utilities → On Server** (màn mở ra tên **Uploaded to Server**; thẻ Utilities rộng 190pt
+  không chứa nổi tên dài): lưới mọi ảnh còn trong thư viện đã lên ít nhất một
   server, mới nhất trước. Hàng chỉ hiện khi có ít nhất một ảnh. Menu **⋯ → Delete N from This Device** xoá
   đúng những ảnh qua được luật §7, cùng hai hộp xác nhận.
 - **Dấu trên lưới**: glyph nhỏ ở góc dưới-trái ô, trên mọi lưới. Nhãn VoiceOver "Uploaded to server".

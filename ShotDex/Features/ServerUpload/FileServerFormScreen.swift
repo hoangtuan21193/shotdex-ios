@@ -9,8 +9,10 @@ struct FileServerDraft: Identifiable {
     /// Whether a password is already saved — the field then reads "Saved"
     /// and leaving it empty keeps it.
     var hasSavedPassword = false
-    /// The port was typed by hand, so switching protocol leaves it alone.
-    var portEdited = false
+    /// What is in the Port field. Empty means the protocol's default, which
+    /// the field shows as its placeholder — nobody has to delete a 445 to
+    /// type a 4450.
+    var portText = ""
 
     var id: String { server.id }
 
@@ -22,13 +24,19 @@ struct FileServerDraft: Identifiable {
     init(server: FileServer) {
         self.server = server
         isNew = false
-        portEdited = server.port != server.transferProtocol.defaultPort
+        portText = server.port == server.transferProtocol.defaultPort ? "" : String(server.port)
+    }
+
+    /// The port the form stands for: typed, or the protocol's default.
+    var port: Int? {
+        let text = portText.trimmingCharacters(in: .whitespaces)
+        return text.isEmpty ? server.transferProtocol.defaultPort : Int(text)
     }
 
     var canSave: Bool {
         !server.host.trimmingCharacters(in: .whitespaces).isEmpty
             && !server.username.trimmingCharacters(in: .whitespaces).isEmpty
-            && (1...65_535).contains(server.port)
+            && port.map { (1...65_535).contains($0) } == true
             && (server.transferProtocol == .sftp || !server.share.trimmingCharacters(in: .whitespaces).isEmpty)
     }
 
@@ -36,6 +44,7 @@ struct FileServerDraft: Identifiable {
     /// share is dropped for SFTP.
     var normalized: FileServer {
         var row = server
+        row.port = port ?? row.transferProtocol.defaultPort
         row.host = row.host.trimmingCharacters(in: .whitespaces)
         row.username = row.username.trimmingCharacters(in: .whitespaces)
         row.share = row.transferProtocol == .smb ? row.share.trimmingCharacters(in: .whitespaces) : ""
@@ -55,9 +64,15 @@ struct FileServerFormScreen: View {
     @State private var test: TestState = .idle
     @State private var untrustedFingerprint: String?
     @State private var saveError: String?
+    @FocusState private var focus: Field?
     /// Called after a save, with the saved row — the upload sheet uses it to
     /// select a server it just made.
     var onSaved: ((FileServer) -> Void)?
+
+    /// Return moves to the next field, in the order they are drawn.
+    enum Field: Hashable {
+        case name, host, port, username, password, share, folder
+    }
 
     enum TestState: Equatable {
         case idle
@@ -74,41 +89,48 @@ struct FileServerFormScreen: View {
     var body: some View {
         NavigationStack {
             Form {
+                // Every field says what it is on the left, the way Settings
+                // does: a placeholder alone is gone the moment you type, and
+                // "Photos" in an empty box reads as a value, not a hint.
                 Section {
-                    TextField("Name", text: $draft.server.name, prompt: Text(draft.server.host.isEmpty ? "My NAS" : draft.server.host))
+                    field("Name", text: $draft.server.name, prompt: draft.server.host.isEmpty ? "My NAS" : draft.server.host, focus: .name)
                     Picker("Protocol", selection: protocolBinding) {
                         ForEach(FileServer.TransferProtocol.allCases) { Text($0.title).tag($0) }
                     }
-                    TextField("Host", text: $draft.server.host, prompt: Text("nas.local or 192.168.1.10"))
+                    field("Host", text: $draft.server.host, prompt: "nas.local", focus: .host)
                         .textContentType(.URL)
                         .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
                     LabeledContent("Port") {
-                        TextField("Port", value: portBinding, format: .number.grouping(.never))
+                        TextField("Port", text: $draft.portText, prompt: Text(verbatim: String(draft.server.transferProtocol.defaultPort)))
                             .keyboardType(.numberPad)
                             .multilineTextAlignment(.trailing)
+                            .focused($focus, equals: .port)
                     }
                 }
                 Section {
-                    TextField("Username", text: $draft.server.username)
+                    field("Username", text: $draft.server.username, prompt: "Required", focus: .username)
                         .textContentType(.username)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    SecureField("Password", text: $draft.password, prompt: Text(draft.hasSavedPassword ? "Saved" : "Required"))
-                        .textContentType(.password)
+                    // Not LabeledContent: an empty SecureField there collapses to
+                    // no width on iOS 26 — no prompt, nothing to tap.
+                    HStack {
+                        Text("Password")
+                        SecureField("Password", text: $draft.password, prompt: Text(draft.hasSavedPassword ? "Saved" : "Required"))
+                            .textContentType(.password)
+                            .multilineTextAlignment(.trailing)
+                            .focused($focus, equals: .password)
+                            .submitLabel(.next)
+                            .onSubmit { focus = next(after: .password) }
+                    }
                 }
                 Section {
                     if draft.server.transferProtocol == .smb {
-                        TextField("Share", text: $draft.server.share, prompt: Text("Photos"))
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
+                        field("Share", text: $draft.server.share, prompt: "Required", focus: .share)
                     }
-                    TextField("Folder", text: $draft.server.folder, prompt: Text("Optional, e.g. RAW/iPhone"))
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
+                    field("Folder", text: $draft.server.folder, prompt: "Optional", focus: .folder)
                 } footer: {
-                    Text("Photos go into year and day folders inside this folder, by the date they were taken.")
+                    Text(draft.server.transferProtocol == .smb
+                         ? "The share is the shared folder's name on the server. Photos go into year and day folders inside Folder, by the date they were taken."
+                         : "Folder is relative to your home folder on the server. Photos go into year and day folders inside it, by the date they were taken.")
                 }
                 Section {
                     Button {
@@ -177,6 +199,32 @@ struct FileServerFormScreen: View {
         }
     }
 
+    /// A labelled text row: the name on the left, the value typed on the right.
+    private func field(_ title: LocalizedStringKey, text: Binding<String>, prompt: String, focus field: Field) -> some View {
+        LabeledContent(title) {
+            TextField(title, text: text, prompt: Text(prompt))
+                .multilineTextAlignment(.trailing)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .focused($focus, equals: field)
+                .submitLabel(field == .folder ? .done : .next)
+                .onSubmit { focus = next(after: field) }
+        }
+    }
+
+    /// The field after `field` on screen; Share is skipped for SFTP.
+    private func next(after field: Field) -> Field? {
+        switch field {
+        case .name: .host
+        case .host: .port
+        case .port: .username
+        case .username: .password
+        case .password: draft.server.transferProtocol == .smb ? .share : .folder
+        case .share: .folder
+        case .folder: nil
+        }
+    }
+
     // MARK: Bindings
 
     private var protocolBinding: Binding<FileServer.TransferProtocol> {
@@ -184,16 +232,8 @@ struct FileServerFormScreen: View {
             get: { draft.server.transferProtocol },
             set: { newValue in
                 draft.server.transferProtocol = newValue
-                if !draft.portEdited { draft.server.port = newValue.defaultPort }
                 test = .idle
             }
-        )
-    }
-
-    private var portBinding: Binding<Int> {
-        Binding(
-            get: { draft.server.port },
-            set: { draft.server.port = $0; draft.portEdited = true }
         )
     }
 

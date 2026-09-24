@@ -581,9 +581,12 @@ extension AlbumsScreen {
             // an empty room, and the feature starts from a selection anyway.
             if !dependencies.serverUploadIndex.assetIds.isEmpty {
                 NavigationLink(value: UploadedToServerDestination()) {
+                    // "On Server", not the screen's full title: a Utilities card
+                    // is 190pt, and "Uploaded to Server" ran off it.
                     CollectionListRow(
-                        title: String(localized: "Uploaded to Server", comment: "Utilities row: photos with a verified copy on a file server"),
-                        systemImage: "server.rack"
+                        title: String(localized: "On Server", comment: "Utilities row: photos with a verified copy on a file server"),
+                        systemImage: "server.rack",
+                        spokenDetail: String(localized: "Uploaded to Server", comment: "VoiceOver detail on the On Server utilities row")
                     )
                 }
                 .buttonStyle(.plain)

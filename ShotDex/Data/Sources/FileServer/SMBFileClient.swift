@@ -83,7 +83,16 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
         for component in path.split(separator: "/") {
             current = ServerUploadPath.join(current, String(component))
             do {
-                if try await client.existDirectory(path: current) { continue }
+                // A missing folder comes back as STATUS_NO_SUCH_FILE from some
+                // servers rather than as `false` — measured against Samba-style
+                // servers; either answer means "make it".
+                let exists: Bool
+                do {
+                    exists = try await client.existDirectory(path: current)
+                } catch where Self.isNotFound(error) {
+                    exists = false
+                }
+                if exists { continue }
                 try await client.createDirectory(path: current)
             } catch {
                 throw Self.map(error, host: server.host, path: current)
@@ -173,7 +182,7 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
             let status = NTStatus(response.header.status)
             if status == .logonFailure { return RemoteFileError.authenticationFailed }
             if status == .accessDenied { return RemoteFileError.permissionDenied(path) }
-            if status == .badNetworkName || status == .objectPathNotFound || status == .objectNameNotFound {
+            if status == .badNetworkName || status == .objectPathNotFound || status == .objectNameNotFound || status == .noSuchFile {
                 return RemoteFileError.folderMissing(path)
             }
             if response.header.status == diskFull { return RemoteFileError.serverFull }

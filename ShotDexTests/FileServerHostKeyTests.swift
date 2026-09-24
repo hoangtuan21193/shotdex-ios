@@ -47,3 +47,41 @@ import Testing
         }
     }
 }
+
+/// The server form (FS-15.01 §3): an empty Port means the protocol's
+/// default, and the saved row is trimmed.
+@Suite struct FileServerDraftTests {
+    @Test func emptyPortFollowsTheProtocol() {
+        var draft = FileServerDraft()
+        draft.server.host = " nas.local "
+        draft.server.username = "me"
+        draft.server.share = "photo"
+        #expect(draft.canSave)
+        #expect(draft.normalized.port == 445)
+        draft.server.transferProtocol = .sftp
+        #expect(draft.normalized.port == 22)
+        #expect(draft.normalized.share == "")
+        #expect(draft.normalized.host == "nas.local")
+        #expect(draft.normalized.name == "nas.local")
+    }
+
+    @Test func typedPortIsKeptAndChecked() {
+        var draft = FileServerDraft()
+        draft.server.host = "127.0.0.1"
+        draft.server.username = "tester"
+        draft.server.share = "photos"
+        draft.portText = "4450"
+        #expect(draft.normalized.port == 4450)
+        draft.portText = "4450445"
+        #expect(!draft.canSave)
+        draft.portText = "abc"
+        #expect(!draft.canSave)
+    }
+
+    @Test func editingAServerOnItsDefaultPortShowsAnEmptyField() {
+        let server = FileServer(name: "NAS", transferProtocol: .smb, host: "nas", username: "me", share: "s")
+        #expect(FileServerDraft(server: server).portText == "")
+        let custom = FileServer(name: "NAS", transferProtocol: .smb, host: "nas", port: 4450, username: "me", share: "s")
+        #expect(FileServerDraft(server: custom).portText == "4450")
+    }
+}

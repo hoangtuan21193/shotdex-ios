@@ -299,6 +299,7 @@ final class UIDriverTests: XCTestCase {
         case "image": app.images
         case "staticText": app.staticTexts
         case "textField": app.textFields
+        case "secureTextField": app.secureTextFields
         case "searchField": app.searchFields
         case "switch": app.switches
         case "slider": app.sliders

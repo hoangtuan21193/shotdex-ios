@@ -8,6 +8,7 @@ import SwiftUI
 /// PhotoKit collection.
 struct SmartAlbumDetailScreen: View {
     @Environment(AppDependencies.self) private var dependencies
+    @Environment(\.presentServerUpload) private var presentServerUpload
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(AppNavigation.self) private var navigation
 
@@ -393,7 +394,7 @@ struct SmartAlbumDetailScreen: View {
             onAddToCollection: { addToCollection(model) },
             onExportEXIF: { exportEXIF(model) },
             onDuplicate: { duplicateSelected(model) },
-            onUploadToServer: { dependencies.assetActions.presentUpload(ids: selectedIds) },
+            onUploadToServer: presentServerUpload.map { present in { present(selectedIds) } },
             assetActions: dependencies.assetActions,
             onSelectAll: { selectedIds = model.items.map(\.assetId) }
         )

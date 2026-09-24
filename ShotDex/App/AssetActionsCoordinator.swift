@@ -55,8 +55,6 @@ final class AssetActionsCoordinator {
     /// Album picker raised from a tile's context menu. The selection bar keeps
     /// its own copy because it also has to leave selection mode afterwards.
     var addToCollectionRequest: AddToCollectionPresentation?
-    /// Selection ⋯ → Upload to Server (FS-15.02).
-    var uploadRequest: ServerUploadRequest?
     var errorMessage: String?
     /// Short confirmation for actions with no visible result of their own
     /// (Copy, Hide). Cleared by the host after it fades.
@@ -142,11 +140,6 @@ final class AssetActionsCoordinator {
         let assets = PhotoLibraryService.fetchAssets(ids: ids)
         guard !assets.isEmpty else { return }
         addToCollectionRequest = AddToCollectionPresentation(assets: assets)
-    }
-
-    func presentUpload(ids: [String]) {
-        guard !ids.isEmpty else { return }
-        uploadRequest = ServerUploadRequest(assetIds: ids)
     }
 
     func presentAdjustLocation(ids: [String]) {
@@ -311,9 +304,6 @@ private struct AssetActionHost: ViewModifier {
                     photoLibrary: coordinator.photoLibrary,
                     onAdded: {}
                 )
-            }
-            .sheet(item: $coordinator.uploadRequest) { request in
-                ServerUploadHost(request: request)
             }
             .sheet(item: $coordinator.locationRequest) { request in
                 AdjustLocationSheet(request: request) { coordinate in

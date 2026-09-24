@@ -42,6 +42,8 @@ struct RootTabView: View {
     /// windows sharing one instance means a sheet raised in this window is
     /// bound to state the other window is also hosting.
     @State private var assetActions: AssetActionsCoordinator?
+    /// Upload to Server for this window (FS-15.02).
+    @State private var uploadRequest: ServerUploadRequest?
 
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(\.scenePhase) private var scenePhase
@@ -231,6 +233,8 @@ struct RootTabView: View {
         // alert for every grid, so the four selecting screens don't each carry
         // their own copy.
         .assetActionHost(assetActions ?? dependencies.assetActions)
+        .sheet(item: $uploadRequest) { ServerUploadHost(request: $0) }
+        .environment(\.presentServerUpload) { uploadRequest = ServerUploadRequest(assetIds: $0) }
         .environment(navigation)
         .task {
             if libraryModel == nil {
@@ -321,6 +325,8 @@ struct RootTabView: View {
             .animation(.snappy(duration: 0.25), value: navigation.selectionBar != nil)
             .keepScreenAwakeWhileIndexing(libraryModel: libraryModel)
             .assetActionHost(assetActions ?? dependencies.assetActions)
+            .sheet(item: $uploadRequest) { ServerUploadHost(request: $0) }
+            .environment(\.presentServerUpload) { uploadRequest = ServerUploadRequest(assetIds: $0) }
             .environment(navigation)
             .task {
                 if libraryModel == nil {

@@ -248,6 +248,9 @@ struct ServerUploadSheet: View {
                     } label: {
                         HStack {
                             Label("Delete \(summary.deletableAssetIds.count) from This Device", systemImage: "trash")
+                                // The glyph otherwise keeps the list's blue
+                                // beside the red text.
+                                .foregroundStyle(.red)
                             if model.isDeleting { Spacer(); ProgressView() }
                         }
                     }
@@ -316,13 +319,14 @@ private struct ServerUploadConflictView: View {
                 .padding(.vertical, 4)
             }
             Section {
-                Button("Replace") { answer(.replace) }
+                // Red: it overwrites the file already on the server.
+                Button("Replace", role: .destructive) { answer(.replace) }
                 Button("Keep Both") { answer(.keepBoth) }
                 Button("Skip") { answer(.skip) }
                 Toggle("Apply to Remaining Conflicts", isOn: $appliesToRemaining)
             } footer: {
-                Text("Keep Both saves the new file as \(ServerUploadPath.nextFreeName(for: conflict.item.file.filename, existing: [conflict.item.file.filename])).",
-                     comment: "Upload to Server conflict: the name Keep Both will use")
+                Text("Keep Both saves the new file under the next free name, such as \(ServerUploadPath.nextFreeName(for: conflict.item.file.filename, existing: [conflict.item.file.filename])).",
+                     comment: "Upload to Server conflict: how Keep Both names the new file")
             }
         }
         .task(id: conflict.id) {
@@ -380,7 +384,15 @@ private struct ServerUploadConflictView: View {
     }
 }
 
-/// What the coordinator presents: the picked ids, frozen at the tap.
+extension EnvironmentValues {
+    /// Selection ⋯ → Upload to Server. Set by each window's root, which owns
+    /// the sheet: the ids travel up to the window they were picked in, never
+    /// to a shared coordinator another window could also be presenting from.
+    /// Nil outside a root (previews), and the menu row is then left out.
+    @Entry var presentServerUpload: (([String]) -> Void)? = nil
+}
+
+/// The picked ids, frozen at the tap.
 struct ServerUploadRequest: Identifiable {
     let id = UUID()
     let assetIds: [String]
