@@ -29,6 +29,12 @@ struct EditorFiltersPanel: View {
 
     @State private var isLUTImporterPresented = false
     @State private var lutImportError: String?
+    @Environment(\.editorUsesPanelStyle) private var usesPanelStyle
+    @Environment(\.editorSliderStacked) private var isStacked
+
+    /// Phone (FS-03.12): the source strip picks one shelf, the zone is that
+    /// shelf's thumbnail row with Amount under it.
+    private var isPhonePanel: Bool { usesPanelStyle && !isStacked }
 
     /// The recipe names a LUT whose file is gone: the photo renders without
     /// it and the panel says so, instead of quietly showing no look selected.
@@ -42,7 +48,10 @@ struct EditorFiltersPanel: View {
     }
 
     var body: some View {
-        if scrolls {
+        if isPhonePanel {
+            phoneContent
+                .lutImporter(isPresented: $isLUTImporterPresented, error: $lutImportError, luts: luts, controller: controller)
+        } else if scrolls {
             ScrollView(.vertical) {
                 content
             }
@@ -51,6 +60,131 @@ struct EditorFiltersPanel: View {
         } else {
             content
         }
+    }
+
+    private var phoneContent: some View {
+        VStack(spacing: 0) {
+            ScrollViewReader { scroller in
+                ScrollView(.horizontal) {
+                    LazyHStack(alignment: .top, spacing: EditorStripLayout.chipSpacing) {
+                        shelf
+                    }
+                    .padding(.horizontal, AppTheme.Spacing.lg)
+                    .padding(.top, 2)
+                    .padding(.bottom, AppTheme.Spacing.sm)
+                }
+                .scrollIndicators(.hidden)
+                .onAppear {
+                    if chrome.presetSource == .presets {
+                        scroller.scrollTo(controller.recipe.filter, anchor: .center)
+                    }
+                }
+            }
+            if chrome.presetSource == .luts, usesDeletedLUT {
+                Label("LUT deleted · this photo renders without it", systemImage: "exclamationmark.triangle")
+                    .font(EditorTheme.rowLabel)
+                    .foregroundStyle(EditorTheme.secondaryText)
+                    .padding(.horizontal, AppTheme.Spacing.lg)
+                    .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
+            } else if hasActiveLook {
+                amountRow
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity)
+        .task { controller.refreshFilterThumbnails() }
+    }
+
+    @ViewBuilder
+    private var shelf: some View {
+        switch chrome.presetSource {
+        case .presets:
+            ForEach(PhotoFilter.allCases) { filter in
+                filterCard(filter).id(filter)
+            }
+        case .myLooks:
+            if let saveLook {
+                actionTile("Save Current", systemImage: "plus", isEnabled: !controller.recipe.isIdentity, action: saveLook)
+            }
+            if let lookPresets {
+                ForEach(lookPresets.presets) { preset in
+                    lookTile(preset, store: lookPresets)
+                }
+            }
+        case .luts:
+            if luts != nil {
+                actionTile("Import .cube", systemImage: "square.and.arrow.down", isEnabled: true) {
+                    isLUTImporterPresented = true
+                }
+            }
+            if let luts {
+                ForEach(luts.luts) { lut in
+                    lutCard(lut, store: luts)
+                }
+                .task(id: luts.luts.map(\.id)) {
+                    controller.refreshLUTThumbnails(ids: luts.luts.map(\.id))
+                }
+            }
+        }
+    }
+
+    /// First tile of a shelf that makes something rather than picks it.
+    private func actionTile(
+        _ title: String,
+        systemImage: String,
+        isEnabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            VStack(spacing: 5) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(.white)
+                    .frame(width: 62, height: 62)
+                    .background(EditorTheme.chipIdle, in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
+                Text(title)
+                    .font(EditorTheme.tabLabel)
+                    .foregroundStyle(EditorTheme.secondaryText)
+                    .lineLimit(1)
+                    .frame(width: 66)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .opacity(isEnabled ? 1 : EditorTheme.rowDisabled)
+        .accessibilityLabel(title)
+    }
+
+    /// A saved look as a tile: the look's name over a plain square (looks carry
+    /// no thumbnail of their own). Long-press still deletes it.
+    private func lookTile(_ preset: LookPreset, store: LookPresetStore) -> some View {
+        Button {
+            controller.apply(EditorSyncScope.look.apply(preset.recipe, onto: controller.recipe))
+        } label: {
+            VStack(spacing: 5) {
+                Image(systemName: "camera.filters")
+                    .font(.system(size: 18))
+                    .foregroundStyle(EditorTheme.secondaryText)
+                    .frame(width: 62, height: 62)
+                    .background(EditorTheme.control, in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
+                Text(preset.name)
+                    .font(EditorTheme.tabLabel)
+                    .foregroundStyle(EditorTheme.secondaryText)
+                    .lineLimit(1)
+                    .frame(width: 66)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            Button(role: .destructive) {
+                store.delete(preset)
+            } label: {
+                Label("Delete Look", systemImage: "trash")
+            }
+        }
+        .accessibilityLabel("Apply look \(preset.name)")
     }
 
     private var content: some View {
@@ -253,26 +387,11 @@ struct EditorFiltersPanel: View {
                 }
                 .frame(width: 62, height: 62)
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(
-                            isSelected ? EditorTheme.accent : .white.opacity(0.10),
-                            lineWidth: isSelected ? 2 : 0.5
-                        )
-                }
-                .overlay(alignment: .topTrailing) {
-                    if isSelected {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 15))
-                            .foregroundStyle(EditorTheme.accent)
-                            .background(Circle().fill(.black.opacity(0.5)))
-                            .padding(4)
-                    }
-                }
+                .modifier(EditorTileSelection(isSelected: isSelected, usesRing: isPhonePanel))
 
                 Text(lut.displayName)
                     .font(.system(size: 10, weight: isSelected ? .semibold : .regular))
-                    .foregroundStyle(isSelected ? EditorTheme.accent : EditorTheme.secondaryText)
+                    .foregroundStyle(isSelected ? (isPhonePanel ? .white : EditorTheme.accent) : EditorTheme.secondaryText)
                     .lineLimit(1)
                     .frame(width: 66)
             }
@@ -362,26 +481,11 @@ struct EditorFiltersPanel: View {
                 thumbnail(filter)
                     .frame(width: 62, height: 62)
                     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(
-                                isSelected ? EditorTheme.accent : .white.opacity(0.10),
-                                lineWidth: isSelected ? 2 : 0.5
-                            )
-                    }
-                    .overlay(alignment: .topTrailing) {
-                        if isSelected {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 15))
-                                .foregroundStyle(EditorTheme.accent)
-                                .background(Circle().fill(.black.opacity(0.5)))
-                                .padding(4)
-                        }
-                    }
+                    .modifier(EditorTileSelection(isSelected: isSelected, usesRing: isPhonePanel))
 
                 Text(filter.displayName)
                     .font(.system(size: 10, weight: isSelected ? .semibold : .regular))
-                    .foregroundStyle(isSelected ? EditorTheme.accent : EditorTheme.secondaryText)
+                    .foregroundStyle(isSelected ? (isPhonePanel ? .white : EditorTheme.accent) : EditorTheme.secondaryText)
                     .lineLimit(1)
                     .frame(width: 66)
             }
@@ -449,27 +553,88 @@ struct EditorFiltersPanel: View {
 /// commits when the tab is left or the edit is saved.
 struct EditorCropPanel: View {
     @Bindable var controller: PhotoEditorController
+    @Environment(\.editorUsesPanelStyle) private var usesPanelStyle
+    @Environment(\.editorSliderStacked) private var isStacked
 
     var body: some View {
+        if usesPanelStyle && !isStacked {
+            phoneRows
+        } else {
+            stackedBody
+        }
+    }
+
+    /// Phone (FS-03.12): the ratios are the target strip (`EditorCropAspectStrip`);
+    /// under it Straighten, the Rotate · Flip · Reset chips, and the footnote as a
+    /// hint row — every one a 40pt grid row.
+    private var phoneRows: some View {
+        VStack(spacing: 0) {
+            straightenRow
+            HStack(spacing: EditorStripLayout.chipSpacing) {
+                phoneAction("Rotate", icon: "rotate.right", isEnabled: true) { controller.rotate() }
+                phoneAction(
+                    "Flip",
+                    icon: "arrow.left.and.right.righttriangle.left.righttriangle.right",
+                    isEnabled: true
+                ) { controller.flip() }
+                phoneAction("Reset", icon: "arrow.counterclockwise", isEnabled: controller.recipe.crop != .identity) {
+                    controller.resetCrop()
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, EditorStripLayout.horizontalInset)
+            .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
+            Text("The crop applies when you leave this tab or save.")
+                .font(EditorTheme.rowLabel)
+                .foregroundStyle(EditorTheme.panelHint)
+                .lineLimit(1)
+                .minimumScaleFactor(EditorLayoutMetrics.editorPanelRowMinimumScale)
+                .padding(.horizontal, AppTheme.Spacing.lg)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func phoneAction(
+        _ title: String,
+        icon: String,
+        isEnabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            EditorPanelChipLabel(title: title, systemImage: icon)
+        }
+        .buttonStyle(EditorChipButtonStyle(isSelected: false))
+        .disabled(!isEnabled)
+        .opacity(isEnabled ? 1 : EditorTheme.rowDisabled)
+        .accessibilityLabel(title)
+    }
+
+    private var straightenRow: some View {
+        EditorPlainSliderRow(
+            title: "Straighten",
+            value: controller.recipe.crop.straightenDegrees,
+            range: -45...45,
+            isBipolar: true,
+            valueText: String(
+                format: "%.1f°",
+                controller.recipe.crop.straightenDegrees
+            ),
+            isActive: false,
+            detent: 0,
+            onBeginDrag: { controller.beginContinuousChange() },
+            onDrag: { controller.setStraighten($0) },
+            onEndDrag: { controller.endContinuousChange() },
+            onReset: { controller.setStraighten(0) }
+        )
+    }
+
+    private var stackedBody: some View {
         VStack(alignment: .leading, spacing: 12) {
             actionRow
 
-            EditorPlainSliderRow(
-                title: "Straighten",
-                value: controller.recipe.crop.straightenDegrees,
-                range: -45...45,
-                isBipolar: true,
-                valueText: String(
-                    format: "%.1f°",
-                    controller.recipe.crop.straightenDegrees
-                ),
-                isActive: false,
-                detent: 0,
-                onBeginDrag: { controller.beginContinuousChange() },
-                onDrag: { controller.setStraighten($0) },
-                onEndDrag: { controller.endContinuousChange() },
-                onReset: { controller.setStraighten(0) }
-            )
+            straightenRow
 
             ScrollView(.horizontal) {
                 HStack(spacing: 8) {
@@ -548,6 +713,37 @@ struct EditorCropPanel: View {
         .buttonStyle(.plain)
         .disabled(!isEnabled)
         .accessibilityLabel(title)
+    }
+}
+
+/// The phone panel's Crop target strip: every ratio, each with a frame glyph,
+/// scrolling (eight chips). The selected ratio is the white-20% chip, not accent.
+struct EditorCropAspectStrip: View {
+    @Bindable var controller: PhotoEditorController
+
+    var body: some View {
+        EditorPanelChipStrip(
+            items: CropAspect.allCases,
+            isSelected: { controller.recipe.crop.aspect == $0 },
+            label: { EditorPanelChipLabel(title: $0.displayName, systemImage: $0.stripSymbol) },
+            accessibilityName: \.displayName,
+            onSelect: { controller.chooseCropAspect($0, imageAspect: nil) }
+        )
+    }
+}
+
+extension CropAspect {
+    var stripSymbol: String {
+        switch self {
+        case .free: "crop"
+        case .original: "photo"
+        case .square: "square"
+        case .fourThree: "rectangle.ratio.4.to.3"
+        case .threeTwo: "rectangle"
+        case .sixteenNine: "rectangle.ratio.16.to.9"
+        case .fourFive: "rectangle.portrait"
+        case .nineSixteen: "rectangle.ratio.9.to.16"
+        }
     }
 }
 
@@ -780,3 +976,94 @@ struct EditorPanelChipStrip<Item: Identifiable>: View {
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
+
+/// How a look / LUT tile shows it is chosen. On the phone panel: a white ring 2pt
+/// clear of the tile (FS-03.12 swatch rule). Elsewhere: the accent outline and tick.
+struct EditorTileSelection: ViewModifier {
+    let isSelected: Bool
+    let usesRing: Bool
+
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous)
+        if usesRing {
+            content
+                .overlay {
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: AppTheme.Radius.sm + 3, style: .continuous)
+                            .strokeBorder(.white, lineWidth: 1.5)
+                            .padding(-3.5)
+                    } else {
+                        shape.stroke(.white.opacity(0.10), lineWidth: 0.5)
+                    }
+                }
+        } else {
+            content
+                .overlay {
+                    shape.stroke(
+                        isSelected ? EditorTheme.accent : .white.opacity(0.10),
+                        lineWidth: isSelected ? 2 : 0.5
+                    )
+                }
+                .overlay(alignment: .topTrailing) {
+                    if isSelected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 15))
+                            .foregroundStyle(EditorTheme.accent)
+                            .background(Circle().fill(.black.opacity(0.5)))
+                            .padding(4)
+                    }
+                }
+        }
+    }
+}
+
+/// The phone Presets panel's Files importer for `.cube`, with the same error alert
+/// the stacked panel shows.
+private extension View {
+    func lutImporter(
+        isPresented: Binding<Bool>,
+        error message: Binding<String?>,
+        luts: ImportedLUTStore?,
+        controller: PhotoEditorController
+    ) -> some View {
+        fileImporter(
+            isPresented: isPresented,
+            allowedContentTypes: [LUTImportMessage.cubeType]
+        ) { result in
+            guard let luts, case .success(let url) = result else { return }
+            do {
+                let imported = try luts.add(from: url)
+                controller.chooseLUT(imported.id)
+            } catch {
+                message.wrappedValue = LUTImportMessage.text(for: error)
+            }
+        }
+        .alert(
+            "Couldn't Import LUT",
+            isPresented: Binding(
+                get: { message.wrappedValue != nil },
+                set: { if !$0 { message.wrappedValue = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) { message.wrappedValue = nil }
+        } message: {
+            Text(message.wrappedValue ?? "")
+        }
+    }
+}
+
+/// The phone panel's Presets target strip: Presets · My Looks · LUTs.
+struct EditorPresetSourceStrip: View {
+    @Bindable var chrome: EditorChromeModel
+
+    var body: some View {
+        EditorPanelChipStrip(
+            items: EditorPresetSource.allCases,
+            isSelected: { chrome.presetSource == $0 },
+            label: { EditorPanelChipLabel(title: $0.title, systemImage: $0.systemImage) },
+            accessibilityName: \.title,
+            onSelect: { chrome.presetSource = $0 }
+        )
+    }
+}
+

@@ -107,6 +107,8 @@ final class EditorChromeModel {
 
     // Color tool presentation state.
     var gradingRegion: ColorGradingRegion = .midtones
+    /// Which shelf the phone's Presets panel shows (its target strip, FS-03.12).
+    var presetSource: EditorPresetSource = .presets
     /// The eyedropper is armed: the next tap on the photo samples a point color.
     var isEyedropperActive = false
     /// Finger-owned color control that is not a `PhotoAdjustmentKind` slider —
@@ -158,5 +160,30 @@ final class EditorChromeModel {
     func dismissUndoToast() {
         toastTask?.cancel()
         undoToast = nil
+    }
+}
+
+/// The three shelves of the phone's Presets panel.
+enum EditorPresetSource: String, CaseIterable, Identifiable {
+    case presets
+    case myLooks
+    case luts
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .presets: "Presets"
+        case .myLooks: "My Looks"
+        case .luts: "LUTs"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .presets: "camera.filters"
+        case .myLooks: "person.crop.square"
+        case .luts: "cube"
+        }
     }
 }

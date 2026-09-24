@@ -2398,7 +2398,7 @@ struct PhotoEditorScreen: View {
     /// detail panels for now.)
     private func panelHasTargetStrip(_ controller: PhotoEditorController) -> Bool {
         switch chrome.selectedGroup {
-        case .curve, .colorMix, .grade: true
+        case .curve, .colorMix, .grade, .cropGeometry, .presets: true
         case .pointColor: !controller.pointColors.isEmpty
         default: false
         }
@@ -2431,6 +2431,10 @@ struct PhotoEditorScreen: View {
             .padding(.horizontal, EditorStripLayout.horizontalInset)
         case .pointColor:
             EditorPointColorStrip(controller: controller, chrome: chrome)
+        case .cropGeometry:
+            EditorCropAspectStrip(controller: controller)
+        case .presets:
+            EditorPresetSourceStrip(chrome: chrome)
         default:
             EmptyView()
         }
