@@ -14,7 +14,7 @@ lệch, huỷ) kiểm được mà không cần mạng. Phần chỉ máy thật
 | AC-4 | server giả trả sai 1 byte khi đọc lại file thứ 2 | đẩy 3 file | file 2 báo lỗi checksum, **không** có tên thật và không có `.part` trên server, không có dòng lịch sử; file 1 và 3 thành công | `ServerUploadSessionTests.checksumMismatchLeavesNoFile` |
 | AC-5 | server giả rớt kết nối giữa file 2 của 4 | đẩy | lô dừng; file 1 đã lên; file 3, 4 là "chưa đẩy"; Upload Remaining chỉ đẩy lại 2, 3, 4 | `ServerUploadSessionTests.connectionLossStopsBatch` |
 | AC-6 | lô 5 file, đang ở file 3 | huỷ | file 1, 2 ở lại trên server kèm lịch sử; `.part` của file 3 bị xoá; file tạm trên máy bị xoá | `ServerUploadSessionTests.cancelCleansPartAndTemp` |
-| AC-7 | server có `IMG_1.CR3` và `IMG_1 (2).CR3` khác nội dung | chọn Keep Both | file mới thành `IMG_1 (3).CR3` | `ServerUploadConflictTests.keepBothPicksNextFreeName` |
+| AC-7 | server có `IMG_1.CR3` và `IMG_1 (2).CR3` khác nội dung | chọn Keep Both | file mới thành `IMG_1 (3).CR3` | `ServerUploadPathTests.keepBothPicksNextFreeName` |
 | AC-8 | 3 file trùng tên, khác nội dung | chọn Skip + bật Apply to remaining ở file đầu | hỏi đúng 1 lần; 0 file bị ghi đè; 3 file là "skipped" | `ServerUploadConflictTests.applyToRemainingAsksOnce` |
 | AC-9 | file trên server trùng tên **và** trùng SHA-256 | đẩy | không hỏi, không ghi, có dòng lịch sử, tính là đã lên | `ServerUploadConflictTests.identicalFileCountsAsUploaded` |
 | AC-10 | lô 2 asset: A (1 file RAW, lên ổn), B (RAW+JPEG, Only RAW) | xem kết quả | đề nghị xoá **1** tấm (A); B nằm ngoài kèm lý do "JPEG not on a server" | `ServerUploadEligibilityTests.pairNeedsBothFiles` |

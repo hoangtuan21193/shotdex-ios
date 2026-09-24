@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-24 |
 | Trạng thái | accepted — theo lệnh người dùng 2026-09-24 "chạy spec … plan rồi code auto luôn" |
-| Tiến độ | **chưa làm** (2026-09-24) — [plan](../_plans/2026-09-24-fs-15-server-upload.md) đã duyệt theo lệnh "code auto", 10 task |
+| Tiến độ | **đang làm** (2026-09-24) — task 1/10, 2/16 AC xanh (AC-1, AC-2) |
 | Nguồn | phản hồi người dùng |
 | Spec sinh ra từ đây | [FS-15 — Upload lên file server](../02-functional-spec/FS-15-server-upload/README.md) |
 
