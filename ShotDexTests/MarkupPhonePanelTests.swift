@@ -59,4 +59,16 @@ struct MarkupPhonePanelTests {
         controller.renameSelectedOverlay("")
         #expect(controller.displayName(of: try #require(controller.selectedOverlay)) == "Arrow")
     }
+
+    /// AC-32. A tap on empty photo hides the box but keeps the layer — the panel
+    /// does not jump; tapping the layer again brings the box back.
+    @Test func tapOnEmptyPhotoKeepsThePanelLayer() throws {
+        let controller = makeController()
+        controller.addTextOverlay()
+        let id = try #require(controller.selectedOverlayID)
+        controller.isOverlayBoxHidden = true
+        #expect(controller.selectedOverlayID == id)
+        controller.selectOverlay(id)
+        #expect(!controller.isOverlayBoxHidden)
+    }
 }

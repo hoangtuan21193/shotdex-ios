@@ -72,6 +72,9 @@ struct EditorOverlayProxyLayer: View {
     /// its glyphs. Drawn as a separate SwiftUI view it drifted off the text: the
     /// layout is Core Text's and only Core Text's numbers place it correctly.
     let selectedID: UUID?
+    /// False after a tap on empty photo on the phone: the layer stays selected in
+    /// the panel, only its dashed box goes.
+    var showsOutline = true
     let accent: CGColor
 
     var body: some View {
@@ -150,7 +153,7 @@ struct EditorOverlayProxyLayer: View {
                 // layers that move with a finger.
                 continue
             }
-            guard overlay.id == selectedID else { continue }
+            guard overlay.id == selectedID, showsOutline else { continue }
             drawOutline(overlay, contentSize: contentSize, in: context, point: point)
         }
     }

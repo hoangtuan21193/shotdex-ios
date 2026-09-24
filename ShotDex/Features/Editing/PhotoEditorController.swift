@@ -1436,7 +1436,13 @@ final class PhotoEditorController {
     /// with it. Selecting does *not* open the detail panel — that is
     /// `openOverlayDetail(_:)` — so a tap on the photo picks a layer up for moving
     /// and resizing while the list stays on screen.
+    /// Phone panel: a tap on empty photo hides the selected layer's box but keeps
+    /// the layer in the panel (FS-05.03 §4) — the panel does not jump. Any new
+    /// selection shows the box again.
+    var isOverlayBoxHidden = false
+
     func selectOverlay(_ id: UUID?) {
+        if id != nil { isOverlayBoxHidden = false }
         guard selectedOverlayID != id else { return }
         selectedOverlayID = id
         if id == nil { showsOverlayDetail = false }
@@ -1445,6 +1451,7 @@ final class PhotoEditorController {
 
     /// Selects a layer and opens its detail panel (content, font, sliders).
     func openOverlayDetail(_ id: UUID) {
+        isOverlayBoxHidden = false
         selectedOverlayID = id
         showsOverlayDetail = true
         scheduleRender()

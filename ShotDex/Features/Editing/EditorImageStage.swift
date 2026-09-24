@@ -304,6 +304,13 @@ struct EditorImageStage: View {
                             .frame(width: imageRect.width, height: imageRect.height)
                             .position(x: imageRect.midX, y: imageRect.midY)
                             .onTapGesture { controller.selectOverlay(nil) }
+                    } else if isEditingOverlay, !chrome.isWideLayout {
+                        // Phone: the panel keeps the layer; the tap only hides its box.
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .frame(width: imageRect.width, height: imageRect.height)
+                            .position(x: imageRect.midX, y: imageRect.midY)
+                            .onTapGesture { controller.isOverlayBoxHidden = true }
                     }
 
                     // Bottom-most, so the move targets above it still get one-finger
@@ -349,6 +356,7 @@ struct EditorImageStage: View {
                             imageRect: imageRect,
                             images: overlayImages,
                             selectedID: controller.selectedOverlayID,
+                            showsOutline: !controller.isOverlayBoxHidden,
                             accent: UIColor(EditorTheme.accent).cgColor
                         )
                     }
