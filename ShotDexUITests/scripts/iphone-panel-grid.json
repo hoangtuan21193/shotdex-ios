@@ -13,9 +13,8 @@
   },
   {
    "action": "tap",
-   "label": "Photo, file type",
-   "type": "cell",
-   "index": 0
+   "x": 0.5,
+   "y": 0.35
   },
   {
    "action": "wait",
