@@ -258,7 +258,9 @@ struct EditorOverlayColorControl: View {
         if color.red == color.green, color.green == color.blue {
             return "Grey \(Int(color.red * 100)) percent"
         }
-        return "Colour swatch"
+        if isClose(color, Self.swatches[4]) { return "Cream" }
+        if isClose(color, Self.swatches[5]) { return "Red" }
+        return "Custom color"
     }
 }
 
@@ -355,6 +357,7 @@ struct EditorColorPalettePanel: View {
             }
             .buttonStyle(EditorChipButtonStyle(isSelected: chrome.markupColorSampler != nil))
             .accessibilityLabel("Pick a color from the photo")
+            .accessibilityValue(chrome.markupColorSampler != nil ? "Armed" : "Off")
         }
         .padding(.horizontal, AppTheme.Spacing.sm)
         .frame(height: 36)
@@ -383,7 +386,8 @@ struct EditorColorPalettePanel: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Recent color")
+                .accessibilityLabel("Recent color \(pair.offset + 1)")
+                .accessibilityValue(Self.hex(of: pair.element))
             }
             Spacer(minLength: 0)
         }
@@ -413,7 +417,9 @@ struct EditorColorPalettePanel: View {
         .clipped()
     }
 
-    private var hex: String {
+    private var hex: String { Self.hex(of: color) }
+
+    private static func hex(of color: OverlayColor) -> String {
         let r = Int((color.red * 255).rounded()), g = Int((color.green * 255).rounded()), b = Int((color.blue * 255).rounded())
         return String(format: "%02X%02X%02X", r, g, b)
     }
