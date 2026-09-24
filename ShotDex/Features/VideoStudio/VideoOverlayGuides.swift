@@ -162,7 +162,7 @@ private struct VideoOverlayProxyLayer: View {
                         shortEdge: shortEdge
                     )
                 }
-            case .shape, .magnifier:
+            case .shape, .magnifier, .drawing:
                 // Photo-editor markup. The studio never creates these and the
                 // export compositor does not draw them, so the preview must not
                 // either — showing one here would promise an export that does

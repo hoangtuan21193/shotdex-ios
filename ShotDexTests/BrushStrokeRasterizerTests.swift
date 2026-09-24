@@ -209,7 +209,7 @@ import Testing
         #expect(masked.needsFullExtentLayers)
 
         var drawn = PhotoEditRecipe.identity
-        drawn.drawing = PhotoDrawing(data: Data("pk".utf8), canvasWidth: 100, canvasHeight: 100)
+        drawn.overlays = [.drawing(PhotoDrawing(data: Data("pk".utf8), canvasWidth: 100, canvasHeight: 100))]
         #expect(drawn.needsFullExtentLayers)
 
         var captioned = PhotoEditRecipe.identity
@@ -235,9 +235,9 @@ import Testing
         #expect(!hiddenMask.needsFullExtentLayers)
 
         var hiddenDrawing = PhotoEditRecipe.identity
-        var drawing = PhotoDrawing(data: Data("pk".utf8), canvasWidth: 100, canvasHeight: 100)
+        var drawing = PhotoOverlay.drawing(PhotoDrawing(data: Data("pk".utf8), canvasWidth: 100, canvasHeight: 100))
         drawing.isVisible = false
-        hiddenDrawing.drawing = drawing
+        hiddenDrawing.overlays = [drawing]
         #expect(!hiddenDrawing.needsFullExtentLayers)
     }
 
@@ -245,7 +245,7 @@ import Testing
     /// leave the photo locked out of the extension forever.
     @Test func anEmptyDrawingDoesNotCount() {
         var recipe = PhotoEditRecipe.identity
-        recipe.drawing = PhotoDrawing(data: Data(), canvasWidth: 100, canvasHeight: 100)
+        recipe.overlays = [.drawing(PhotoDrawing(data: Data(), canvasWidth: 100, canvasHeight: 100))]
         #expect(!recipe.needsFullExtentLayers)
     }
 }

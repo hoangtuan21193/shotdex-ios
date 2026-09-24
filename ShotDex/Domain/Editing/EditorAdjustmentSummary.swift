@@ -63,9 +63,6 @@ enum EditorAdjustmentSummary {
         if previous.overlays != current.overlays {
             return describeOverlayChange(from: previous.overlays, to: current.overlays)
         }
-        if previous.drawing != current.drawing {
-            return describeDrawingChange(from: previous.drawing, to: current.drawing)
-        }
         if let change = firstChange(from: previous.adjustments, to: current.adjustments) {
             return change
         }
@@ -141,6 +138,7 @@ enum EditorAdjustmentSummary {
             case .image: return "Added Image"
             case .shape: return "Added \(added.first?.shapeStyle.displayName ?? "Shape")"
             case .magnifier: return "Added Magnifier"
+            case .drawing: return "Added Drawing"
             case nil: return "Text"
             }
         }
@@ -151,6 +149,7 @@ enum EditorAdjustmentSummary {
             case .image: return "Deleted Image"
             case .shape: return "Deleted \(removed?.shapeStyle.displayName ?? "Shape")"
             case .magnifier: return "Deleted Magnifier"
+            case .drawing: return "Deleted Drawing"
             default: return "Deleted Text"
             }
         }
@@ -171,6 +170,9 @@ enum EditorAdjustmentSummary {
         to current: PhotoOverlay
     ) -> String {
         let name = label(for: current)
+        if previous.drawing != current.drawing {
+            return describeDrawingChange(from: previous.drawing, to: current.drawing)
+        }
         if previous.text != current.text { return "\(name) · Content" }
         if previous.isVisible != current.isVisible {
             return "\(name) · \(current.isVisible ? "Show" : "Hide")"
@@ -232,6 +234,7 @@ enum EditorAdjustmentSummary {
         case .shape: return overlay.shapeStyle.displayName
         case .magnifier: return "Magnifier"
         case .image: return "Image"
+        case .drawing: return "Drawing"
         case .text: break
         }
         let line = overlay.text

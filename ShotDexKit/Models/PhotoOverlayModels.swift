@@ -14,6 +14,10 @@ public enum PhotoOverlayKind: String, Codable, CaseIterable, Identifiable, Senda
     /// loupe does. The only overlay whose appearance depends on the picture
     /// under it, which is why the renderer handles it apart from the rest.
     case magnifier
+    /// Freehand strokes — one PencilKit drawing per layer, so a scribble is a layer
+    /// like any other: it has a place in the stack, can go above a caption, be
+    /// hidden, duplicated or deleted on its own (FS-05.01 §4).
+    case drawing
 
     public var id: String { rawValue }
 
@@ -23,6 +27,7 @@ public enum PhotoOverlayKind: String, Codable, CaseIterable, Identifiable, Senda
         case .image: "Image"
         case .shape: "Shape"
         case .magnifier: "Magnifier"
+        case .drawing: "Drawing"
         }
     }
 
@@ -32,6 +37,7 @@ public enum PhotoOverlayKind: String, Codable, CaseIterable, Identifiable, Senda
         case .image: "photo"
         case .shape: "square.on.circle"
         case .magnifier: "plus.magnifyingglass"
+        case .drawing: "scribble.variable"
         }
     }
 }
@@ -192,6 +198,12 @@ public struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
     /// to a reinstall can be fetched again rather than silently dropping the layer.
     public var imageAssetIdentifier: String?
 
+    // MARK: Drawing
+
+    /// The strokes of a drawing layer: PencilKit's vector data plus the canvas it
+    /// was drawn on. Covers the whole frame — a drawing layer has no box of its own.
+    public var drawing: PhotoDrawing?
+
     /// Per-kind defaults: a caption belongs across the bottom, a signature in the
     /// bottom-right corner, and a signature needs to be far bigger than a font's
     /// point size to read as a mark.
@@ -212,7 +224,16 @@ public struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
         case .magnifier:
             center = NormalizedPoint(x: 0.5, y: 0.5)
             size = 0.35
+        case .drawing:
+            center = NormalizedPoint(x: 0.5, y: 0.5)
+            size = 1
         }
+    }
+
+    public static func drawing(_ drawing: PhotoDrawing?) -> PhotoOverlay {
+        var overlay = PhotoOverlay(kind: .drawing)
+        overlay.drawing = drawing
+        return overlay
     }
 
     public static func text() -> PhotoOverlay {
@@ -249,6 +270,7 @@ public struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
         case .image: return imageID != nil
         case .shape: return size > 0.001
         case .magnifier: return size > 0.001 && magnification > 1.001
+        case .drawing: return drawing.map { !$0.isEmpty } ?? false
         }
     }
 
@@ -288,6 +310,7 @@ public struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
         case strokeWidth
         case heightRatio
         case magnification
+        case drawing
     }
 
     /// Hand-written for the same reason as `PhotoEditRecipe`: these recipes live
@@ -354,6 +377,7 @@ public struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
             ?? defaults.heightRatio
         magnification = try container.decodeIfPresent(Double.self, forKey: .magnification)
             ?? defaults.magnification
+        drawing = try? container.decodeIfPresent(PhotoDrawing.self, forKey: .drawing)
     }
 
     /// Only what differs from the kind's default is written — a plain white
@@ -424,6 +448,7 @@ public struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
         if magnification != defaults.magnification {
             try container.encode(magnification, forKey: .magnification)
         }
+        if let drawing, !drawing.isEmpty { try container.encode(drawing, forKey: .drawing) }
     }
 }
 

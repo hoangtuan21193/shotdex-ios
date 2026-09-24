@@ -4,39 +4,47 @@ import Foundation
 import PencilKit
 import UIKit
 
-/// Rasterized Markup drawings, keyed by the drawing's data plus the render size.
+/// Rasterized drawing layers, keyed by the drawing's data plus the render size.
 ///
-/// Same shape and reasoning as `OverlayImageCache`: rasterizing a `PKDrawing` is
-/// CPU work that must not run per gesture frame, so the composite is a `static`
-/// step with its own lock rather than actor state, shared by the editor, the
-/// exporter and the Live Photo frame processor. A drawing changes only on Done, so
-/// a handful of entries (one per resolution — preview, settle, export) is plenty.
+/// Rasterizing a `PKDrawing` is CPU work that must not run per gesture frame, so
+/// the composite keeps its own lock rather than actor state, shared by the editor,
+/// the exporter and the Live Photo frame processor.
+///
+/// Bounded by **bytes**, not entries: a photo can carry many drawing layers now,
+/// and a full-frame raster at 48MP is ~195MB. Each entry is only the strokes'
+/// bounding box, and anything bigger than a third of the budget is drawn and
+/// dropped rather than kept.
 private final class DrawingLayerCache: @unchecked Sendable {
-    public static let shared = DrawingLayerCache()
+    static let shared = DrawingLayerCache()
 
-    private static let capacity = 6
+    private static let costLimit = 192 * 1024 * 1024
     private let lock = NSLock()
-    private var images: [String: CGImage] = [:]
+    private var entries: [String: (image: CGImage, cost: Int)] = [:]
     private var order: [String] = []
+    private var totalCost = 0
 
-    public func image(forKey key: String, build: () -> CGImage?) -> CGImage? {
+    func image(forKey key: String, build: () -> CGImage?) -> CGImage? {
         lock.lock()
-        if let cached = images[key] {
+        if let cached = entries[key] {
             lock.unlock()
-            return cached
+            return cached.image
         }
         lock.unlock()
 
         // Rasterized outside the lock: holding it through a `PKDrawing.image` pass
         // would stall every other render waiting on a different size.
         guard let built = build() else { return nil }
+        let cost = built.bytesPerRow * built.height
+        guard cost <= Self.costLimit / 3 else { return built }
 
         lock.lock()
-        if images[key] == nil {
-            images[key] = built
+        if entries[key] == nil {
+            entries[key] = (built, cost)
             order.append(key)
-            while order.count > Self.capacity {
-                images.removeValue(forKey: order.removeFirst())
+            totalCost += cost
+            while totalCost > Self.costLimit, !order.isEmpty {
+                let evicted = order.removeFirst()
+                totalCost -= entries.removeValue(forKey: evicted)?.cost ?? 0
             }
         }
         lock.unlock()
@@ -44,80 +52,45 @@ private final class DrawingLayerCache: @unchecked Sendable {
     }
 }
 
-public extension PhotoRenderService {
-    /// Draws the Markup layer over a finished photo. Like `applyOverlays`, this runs
-    /// after the tone/colour/film chain and after the downscale, so nothing tints
-    /// the marks and a Lanczos pass never softens them. Called *before* the text and
-    /// signature overlays, so a caption stays legible over a scribble.
-    static func applyDrawing(_ drawing: PhotoDrawing?, to input: CIImage) -> CIImage {
-        guard let layer = drawingLayer(drawing, extent: input.extent) else { return input }
-        return layer.composited(over: input).cropped(to: input.extent)
-    }
-
-    /// The drawing alone, on transparent pixels, positioned on `extent`. Exposed
-    /// separately for the Live Photo frame processor, which composites the same
-    /// rasterized layer over every frame rather than re-rasterizing per frame.
-    static func drawingLayer(_ drawing: PhotoDrawing?, extent: CGRect) -> CIImage? {
-        guard let drawing, drawing.hasVisibleEffect, !extent.isInfinite, !extent.isEmpty
-        else { return nil }
-        let width = Int(extent.width.rounded())
-        let height = Int(extent.height.rounded())
-        guard width > 0, height > 0 else { return nil }
-
-        // In-process cache only, so the data hash need not be stable across launches.
-        let key = "\(drawing.data.hashValue)|\(width)x\(height)"
-        guard let raster = DrawingLayerCache.shared.image(forKey: key, build: {
-            rasterizeDrawing(drawing, pixelWidth: width, pixelHeight: height)
-        }) else { return nil }
-
-        return CIImage(cgImage: raster)
-            .transformed(by: CGAffineTransform(translationX: extent.minX, y: extent.minY))
-    }
-
-    /// Decodes the vector and rasterizes it to fill `pixelWidth`×`pixelHeight`.
+extension PhotoRenderService {
+    /// One drawing layer's strokes, rasterized for a `pixelWidth`×`pixelHeight`
+    /// frame: the image and the rect it goes in, in the bottom-up pixel space of
+    /// the overlay bitmap. Only the strokes' bounding box is rasterized, so a
+    /// signature-sized scribble on a 48MP photo costs a few megabytes, not 195.
     ///
     /// The strokes are scaled from their capture canvas by `pixelWidth /
-    /// canvasWidth`, so the same vector serves every resolution crisply. The result
-    /// is drawn into a bottom-up sRGB context — the same convention
-    /// `TextOverlayLayout` uses for signature images — so `CIImage(cgImage:)` lands
-    /// upright against the rest of the pipeline.
-    private static func rasterizeDrawing(
+    /// canvasWidth`, so the same vector serves every resolution crisply.
+    static func drawingStamp(
         _ drawing: PhotoDrawing,
         pixelWidth: Int,
         pixelHeight: Int
-    ) -> CGImage? {
-        guard drawing.canvasWidth > 0, drawing.canvasHeight > 0,
+    ) -> (image: CGImage, rect: CGRect)? {
+        guard drawing.hasVisibleEffect, pixelWidth > 0, pixelHeight > 0,
+              drawing.canvasWidth > 0, drawing.canvasHeight > 0,
               let pkDrawing = try? PKDrawing(data: drawing.data)
         else { return nil }
 
-        let canvasRect = CGRect(
-            x: 0,
-            y: 0,
-            width: drawing.canvasWidth,
-            height: drawing.canvasHeight
-        )
+        let canvas = CGRect(x: 0, y: 0, width: drawing.canvasWidth, height: drawing.canvasHeight)
+        let bounds = pkDrawing.bounds.intersection(canvas).integral
+        guard !bounds.isNull, bounds.width > 0, bounds.height > 0 else { return nil }
         let scale = CGFloat(pixelWidth) / CGFloat(drawing.canvasWidth)
+
+        // In-process cache only, so the data hash need not be stable across launches.
+        let key = "\(drawing.data.hashValue)|\(pixelWidth)x\(pixelHeight)"
         // `PKDrawing.image(from:scale:)` renders the vector at any scale — this is
         // what keeps the marks sharp on a full-resolution export instead of
         // upscaling a bitmap.
-        guard let stamped = pkDrawing.image(from: canvasRect, scale: scale).cgImage,
-              let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
-              let context = CGContext(
-                  data: nil,
-                  width: pixelWidth,
-                  height: pixelHeight,
-                  bitsPerComponent: 8,
-                  bytesPerRow: 0,
-                  space: colorSpace,
-                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-              )
-        else { return nil }
+        guard let image = DrawingLayerCache.shared.image(forKey: key, build: {
+            pkDrawing.image(from: bounds, scale: scale).cgImage
+        }) else { return nil }
 
-        context.interpolationQuality = .high
-        context.draw(
-            stamped,
-            in: CGRect(x: 0, y: 0, width: pixelWidth, height: pixelHeight)
+        // Canvas y runs down from the top; the overlay bitmap's runs up.
+        let rect = CGRect(
+            x: bounds.minX * scale,
+            y: CGFloat(pixelHeight) - bounds.maxY * scale,
+            width: bounds.width * scale,
+            height: bounds.height * scale
         )
-        return context.makeImage()
+        return (image, rect)
     }
 }

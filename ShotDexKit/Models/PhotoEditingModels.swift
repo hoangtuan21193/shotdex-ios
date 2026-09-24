@@ -1195,9 +1195,6 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
     /// front. Composited last of everything, so nothing in the tone or colour
     /// pipeline can tint them and the downscale cannot soften them.
     public var overlays: [PhotoOverlay] = []
-    /// Freehand Markup drawing, composited just under the overlays (so a caption
-    /// stays legible over a scribble). `nil` when nothing is drawn.
-    public var drawing: PhotoDrawing?
     /// Heal and clone spots, applied right after the crop so the masks and
     /// everything after them work on the repaired picture. Belongs to this
     /// frame: never copied, synced or saved into a look (FS-03.10).
@@ -1222,7 +1219,6 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
     public var needsFullExtentLayers: Bool {
         masks.contains(where: \.isVisible)
             || overlays.contains(where: \.hasVisibleEffect)
-            || (drawing?.hasVisibleEffect ?? false)
     }
 
     public var isIdentity: Bool {
@@ -1234,7 +1230,6 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
             && color.isIdentity
             && curve.isIdentity
             && overlays.isEmpty
-            && (drawing?.isEmpty ?? true)
             && healing.isEmpty
             && lensProfile == nil
     }
@@ -1252,6 +1247,9 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
         case color
         case curve
         case overlays
+        /// Written by builds before drawing layers joined the overlay stack: one
+        /// drawing under every other layer. Read into a drawing layer at the
+        /// bottom; never written.
         case drawing
         case healing
         case lensProfile
@@ -1294,7 +1292,12 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
             forKey: .curve
         ) ?? .identity
         overlays = try container.decodeLossyArrayIfPresent(PhotoOverlay.self, forKey: .overlays) ?? []
-        drawing = try container.decodeIfPresent(PhotoDrawing.self, forKey: .drawing)
+        if let legacy = try? container.decodeIfPresent(PhotoDrawing.self, forKey: .drawing),
+           !legacy.isEmpty {
+            var layer = PhotoOverlay.drawing(legacy)
+            layer.isVisible = legacy.isVisible
+            overlays.insert(layer, at: 0)
+        }
         // Spot by spot, like the masks: a spot in a mode this build does not
         // know is dropped, not the recipe.
         healing = try container.decodeLossyArrayIfPresent(PhotoHealingSpot.self, forKey: .healing) ?? []
@@ -1317,7 +1320,6 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
         if !color.isIdentity { try container.encode(color, forKey: .color) }
         if !curve.isIdentity { try container.encode(curve, forKey: .curve) }
         if !overlays.isEmpty { try container.encode(overlays, forKey: .overlays) }
-        if let drawing, !drawing.isEmpty { try container.encode(drawing, forKey: .drawing) }
         if !healing.isEmpty { try container.encode(healing, forKey: .healing) }
         try container.encodeIfPresent(lensProfile, forKey: .lensProfile)
     }

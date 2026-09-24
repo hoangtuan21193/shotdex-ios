@@ -807,18 +807,8 @@ private final class LivePhotoFrameRenderer: @unchecked Sendable {
                 ]
             )
         }
-        image = applyDrawing(to: image)
+        // Drawing layers are overlays now, rasterized in stack order with the rest.
         return applyOverlays(to: image)
-    }
-
-    private func applyDrawing(to input: CIImage) -> CIImage {
-        guard recipe.drawing?.hasVisibleEffect == true else { return input }
-        let extent = input.extent
-        // `PhotoRenderService.drawingLayer` caches by data + size, so the vector is
-        // rasterized once for the clip and composited over every frame.
-        guard let layer = PhotoRenderService.drawingLayer(recipe.drawing, extent: extent)
-        else { return input }
-        return layer.composited(over: input).cropped(to: extent)
     }
 
     private func applyOverlays(to input: CIImage) -> CIImage {

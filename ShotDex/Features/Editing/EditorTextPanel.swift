@@ -205,24 +205,6 @@ struct EditorTextPanel: View {
             }
             .onMove { controller.moveOverlays(fromDisplay: $0, toDisplay: $1) }
 
-            if controller.hasDrawing {
-                EditorLayerRow(
-                    icon: "scribble",
-                    title: "Drawing",
-                    subtitle: "Freehand",
-                    isVisible: controller.drawingIsVisible,
-                    isSelected: false,
-                    showsHandle: false,
-                    onOpen: startDrawing,
-                    onDetail: startDrawing,
-                    onToggleVisibility: { controller.toggleDrawingVisibility() },
-                    onDelete: { controller.clearDrawing() }
-                )
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 3, leading: 14, bottom: 3, trailing: 14))
-                .moveDisabled(true)
-            }
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
@@ -244,6 +226,8 @@ struct EditorTextPanel: View {
             return overlay.shapeStyle.displayName
         case .magnifier:
             return "Magnifier"
+        case .drawing:
+            return "Drawing"
         }
     }
 
@@ -258,6 +242,8 @@ struct EditorTextPanel: View {
             return overlay.isFilled && overlay.shapeStyle.supportsFill ? "Filled shape" : "Shape"
         case .magnifier:
             return String(format: "%.1f× zoom", overlay.magnification)
+        case .drawing:
+            return "Freehand"
         }
     }
 }

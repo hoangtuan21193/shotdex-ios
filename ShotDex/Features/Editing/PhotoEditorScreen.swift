@@ -1651,7 +1651,7 @@ struct PhotoEditorScreen: View {
         case .mask:
             return !recipe.masks.isEmpty
         case .markup:
-            return !recipe.overlays.isEmpty || recipe.drawing != identity.drawing
+            return !recipe.overlays.isEmpty
         case .colorMix:
             return recipe.color.mixer != identity.color.mixer
         case .pointColor:

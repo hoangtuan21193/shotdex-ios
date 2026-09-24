@@ -40,6 +40,9 @@ struct EditorOverlayFrame {
             )
         case .shape, .magnifier:
             size = ShapeOverlayLayout.contentSize(for: overlay, shortEdge: shortEdge)
+        case .drawing:
+            // A drawing layer covers the frame; it has no box to drag.
+            return nil
         }
         guard size.width > 0, size.height > 0 else { return nil }
         return EditorOverlayFrame(
@@ -142,6 +145,10 @@ struct EditorOverlayProxyLayer: View {
                 ShapeOverlayLayout.drawMagnifierRim(
                     overlay, in: context, shortEdge: shortEdge, point: point
                 )
+            case .drawing:
+                // Drawing layers stay in the baked image; the proxy only carries
+                // layers that move with a finger.
+                continue
             }
             guard overlay.id == selectedID else { continue }
             drawOutline(overlay, contentSize: contentSize, in: context, point: point)

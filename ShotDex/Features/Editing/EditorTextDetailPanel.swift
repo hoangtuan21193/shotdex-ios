@@ -30,11 +30,15 @@ struct EditorTextDetailPanel: View {
                             shapeSections(overlay)
                         case .magnifier:
                             magnifierSections(overlay)
+                        case .drawing:
+                            EmptyView()
                         }
-                        Section {
-                            placementRows(overlay)
-                        } header: {
-                            EditorGroupHeader(title: "Placement")
+                        if overlay.kind != .drawing {
+                            Section {
+                                placementRows(overlay)
+                            } header: {
+                                EditorGroupHeader(title: "Placement")
+                            }
                         }
                     Color.clear.frame(height: 16)
                 }

@@ -1273,11 +1273,10 @@ final class PhotoEditorController {
 
     /// Every markup layer and every stroke off the photo, one history step.
     func removeAllOverlays() {
-        let identity = PhotoEditRecipe.identity
-        guard !recipe.overlays.isEmpty || recipe.drawing != identity.drawing else { return }
+        guard !recipe.overlays.isEmpty else { return }
         recordHistory()
         recipe.overlays.removeAll()
-        recipe.drawing = identity.drawing
+        selectedOverlayID = nil
         scheduleRender()
     }
 
@@ -1625,53 +1624,69 @@ final class PhotoEditorController {
     /// only ways out.
     var isEditingDrawing = false
 
-    var hasDrawing: Bool { !(recipe.drawing?.isEmpty ?? true) }
+    var hasDrawing: Bool { recipe.overlays.contains { $0.kind == .drawing } }
 
-    /// The strokes the canvas should open with — the current drawing, so reopening
-    /// the tool continues the same drawing rather than starting a blank one.
-    var drawingData: Data? { recipe.drawing?.data }
+    /// The drawing layer the canvas is working on — the selected layer when it is a
+    /// drawing. Nil means the next strokes start a new layer.
+    private(set) var editingDrawingLayerID: UUID?
 
-    /// Enters the drawing sub-mode. No history step: nothing changes until Done.
+    /// The strokes the canvas should open with — the layer being drawn on, so
+    /// drawing again continues that layer rather than starting a blank one.
+    var drawingData: Data? {
+        guard let editingDrawingLayerID else { return nil }
+        return recipe.overlays.first { $0.id == editingDrawingLayerID }?.drawing?.data
+    }
+
+    /// Enters drawing on the selected drawing layer, or on a new one when the
+    /// selection is not a drawing. No history step: nothing changes until strokes
+    /// are committed.
     func beginDrawing() {
-        selectOverlay(nil)
+        if let selected = selectedOverlay, selected.kind == .drawing {
+            editingDrawingLayerID = selected.id
+        } else {
+            editingDrawingLayerID = nil
+            selectOverlay(nil)
+        }
         selectedTool = .markup
         isEditingDrawing = true
     }
 
-    /// Leaves the drawing sub-mode, keeping whatever the canvas ended on.
-    ///
-    /// `data` is `PKDrawing.dataRepresentation()` and `canvasSize` the points the
-    /// canvas used, so the renderer can scale the vector to any resolution. An empty
-    /// drawing becomes `nil`, so it adds no key to the recipe. One history step for
-    /// the whole session, like a crop's Done.
-    func commitDrawing(data: Data, canvasSize: CGSize) {
-        let next: PhotoDrawing? = data.isEmpty ? nil : PhotoDrawing(
+    /// Writes the canvas into its drawing layer — creating the layer on the first
+    /// strokes. `data` is `PKDrawing.dataRepresentation()` and `canvasSize` the
+    /// points the canvas used, so the renderer can scale the vector to any
+    /// resolution. One history step per commit.
+    func commitDrawing(data: Data, canvasSize: CGSize, endsSession: Bool = true) {
+        if endsSession { isEditingDrawing = false }
+        let next = PhotoDrawing(
             data: data,
             canvasWidth: Double(canvasSize.width),
             canvasHeight: Double(canvasSize.height)
         )
-        isEditingDrawing = false
-        guard next != recipe.drawing else { return }
-        recordHistory()
-        recipe.drawing = next
+        if let id = editingDrawingLayerID,
+           let index = recipe.overlays.firstIndex(where: { $0.id == id }) {
+            guard recipe.overlays[index].drawing != next else { return }
+            recordHistory()
+            recipe.overlays[index].drawing = next.isEmpty ? nil : next
+        } else {
+            guard !next.isEmpty else { return }
+            recordHistory()
+            let layer = PhotoOverlay.drawing(next)
+            recipe.overlays.append(layer)
+            editingDrawingLayerID = layer.id
+            selectedOverlayID = layer.id
+        }
         scheduleRender()
     }
 
-    /// Drops the drawing entirely. Used by the layer row's Delete and by Clear.
+    /// Clears the strokes of the layer being drawn on. The layer stays (empty), so
+    /// the next strokes land in the same place in the stack.
     func clearDrawing() {
-        guard recipe.drawing != nil else { return }
+        guard let id = editingDrawingLayerID ?? selectedOverlay.flatMap({ $0.kind == .drawing ? $0.id : nil }),
+              let index = recipe.overlays.firstIndex(where: { $0.id == id }),
+              recipe.overlays[index].drawing != nil
+        else { return }
         recordHistory()
-        recipe.drawing = nil
-        scheduleRender()
-    }
-
-    var drawingIsVisible: Bool { recipe.drawing?.isVisible ?? false }
-
-    /// The drawing layer's eye toggle. The strokes stay in the recipe when hidden.
-    func toggleDrawingVisibility() {
-        guard recipe.drawing != nil else { return }
-        recordHistory()
-        recipe.drawing?.isVisible.toggle()
+        recipe.overlays[index].drawing = nil
         scheduleRender()
     }
 
@@ -2176,7 +2191,6 @@ final class PhotoEditorController {
                 // Overlays and the drawing are normalized against the cropped frame
                 // too, and would only be in the way over the framing grid.
                 previewRecipe.overlays = []
-                previewRecipe.drawing = nil
             }
             // A selected layer is drawn live by the stage instead, so the bake
             // steps aside — otherwise the caption appears twice while it is being
@@ -2192,12 +2206,15 @@ final class PhotoEditorController {
             if isEditingOverlay {
                 let selected = selectedOverlayID
                 previewRecipe.overlays = previewRecipe.overlays.filter {
-                    $0.kind == .magnifier && $0.id != selected
+                    // Drawing layers have no live proxy, so they stay baked too.
+                    ($0.kind == .magnifier && $0.id != selected) || $0.kind == .drawing
                 }
             }
             // The canvas draws its own strokes live while a drawing is being made,
             // so the baked drawing steps aside to avoid a doubled image.
-            if isEditingDrawing { previewRecipe.drawing = nil }
+            if isEditingDrawing, let editingDrawingLayerID {
+                previewRecipe.overlays.removeAll { $0.id == editingDrawingLayerID }
+            }
             previewRecipe = renderReady(previewRecipe)
             // Only inside the single-mask editor: the list level is for choosing
             // a mask, and `selectMask` flips `showsMaskOverlay` on for the row

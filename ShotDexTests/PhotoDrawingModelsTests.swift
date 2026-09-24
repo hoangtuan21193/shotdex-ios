@@ -1,9 +1,12 @@
+import CoreGraphics
 import Foundation
+import PencilKit
 import Testing
 @testable import ShotDexKit
 
 @testable import ShotDex
 
+/// Drawing layers (FS-05.01 §4–5): each drawing is a layer in the overlay stack.
 struct PhotoDrawingModelsTests {
 
     /// Top-level keys a recipe writes, order-independent.
@@ -17,53 +20,103 @@ struct PhotoDrawingModelsTests {
         PhotoDrawing(data: Data(bytes), canvasWidth: 300, canvasHeight: 200)
     }
 
+    /// A real PencilKit drawing: one red stroke across `rect` of a 300×200 canvas.
+    private func stroke(across rect: CGRect, color: UIColor = .red, width: CGFloat = 12) -> PhotoDrawing {
+        let ink = PKInk(.pen, color: color)
+        let points = [
+            PKStrokePoint(location: CGPoint(x: rect.minX, y: rect.midY), timeOffset: 0,
+                          size: CGSize(width: width, height: width), opacity: 1, force: 1,
+                          azimuth: 0, altitude: .pi / 2),
+            PKStrokePoint(location: CGPoint(x: rect.maxX, y: rect.midY), timeOffset: 0.1,
+                          size: CGSize(width: width, height: width), opacity: 1, force: 1,
+                          azimuth: 0, altitude: .pi / 2),
+        ]
+        let path = PKStrokePath(controlPoints: points, creationDate: Date())
+        let pk = PKDrawing(strokes: [PKStroke(ink: ink, path: path)])
+        return PhotoDrawing(data: pk.dataRepresentation(), canvasWidth: 300, canvasHeight: 200)
+    }
+
     @Test func emptyDrawingReadsAsIdentity() {
         #expect(PhotoDrawing(data: Data(), canvasWidth: 300, canvasHeight: 200).isEmpty)
         #expect(PhotoDrawing(data: Data([1]), canvasWidth: 0, canvasHeight: 200).isEmpty)
         #expect(!drawing().isEmpty)
     }
 
-    @Test func recipeWithADrawingRoundTrips() throws {
+    /// A drawing layer round-trips inside `overlays`; there is no top-level
+    /// `drawing` key any more.
+    @Test func aDrawingLayerRoundTripsInTheStack() throws {
         var recipe = PhotoEditRecipe.identity
-        recipe.drawing = drawing()
+        recipe.overlays = [.text(), .drawing(drawing())]
         #expect(!recipe.isIdentity)
+        #expect(!(try keys(of: recipe)).contains("drawing"))
 
-        let data = try JSONEncoder().encode(recipe)
+        let decoded = try JSONDecoder().decode(
+            PhotoEditRecipe.self,
+            from: JSONEncoder().encode(recipe)
+        )
+        #expect(decoded.overlays.map(\.kind) == [.text, .drawing])
+        #expect(decoded.overlays.last?.drawing == drawing())
+    }
+
+    /// A recipe written with the old single `drawing` key reads it back as one
+    /// drawing layer at the bottom of the stack (a wrap, not a migration).
+    @Test func theOldSingleDrawingReadsAsTheBottomLayer() throws {
+        var object = try JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(PhotoEditRecipe.identity)
+        ) as? [String: Any] ?? [:]
+        object["drawing"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(drawing()))
+        object["overlays"] = try JSONSerialization.jsonObject(
+            with: JSONEncoder().encode([PhotoOverlay.text()])
+        )
+        let data = try JSONSerialization.data(withJSONObject: object)
         let decoded = try JSONDecoder().decode(PhotoEditRecipe.self, from: data)
-        #expect(decoded.drawing == recipe.drawing)
+        #expect(decoded.overlays.map(\.kind) == [.drawing, .text])
     }
 
-    @Test func anEmptyDrawingAddsNoKeyAndStaysIdentity() throws {
-        var recipe = PhotoEditRecipe.identity
-        recipe.drawing = PhotoDrawing(data: Data(), canvasWidth: 300, canvasHeight: 200)
-        #expect(recipe.isIdentity)
-
-        // The same keys as a recipe that never touched the drawing at all.
-        //
-        // Compared as parsed objects, not as bytes: `JSONEncoder` makes no
-        // promise about key order, and two encodes of the same value really do
-        // come out in different orders.
-        let withEmpty = try keys(of: recipe)
-        let untouched = try keys(of: .identity)
-        #expect(withEmpty == untouched)
-        #expect(!withEmpty.contains("drawing"))
+    @Test func anEmptyDrawingLayerDrawsNothing() {
+        let layer = PhotoOverlay.drawing(PhotoDrawing(data: Data(), canvasWidth: 300, canvasHeight: 200))
+        #expect(!layer.hasVisibleEffect)
+        var hidden = PhotoOverlay.drawing(drawing())
+        hidden.isVisible = false
+        #expect(!hidden.hasVisibleEffect)
     }
 
-    @Test func aRecipeSavedBeforeDrawingExistedDecodesWithNoDrawing() throws {
-        // An identity recipe never writes the `drawing` key — the same wire shape a
-        // build from before the feature produced. It must decode with `drawing` nil.
-        let json = try JSONEncoder().encode(PhotoEditRecipe.identity)
-        let object = try JSONSerialization.jsonObject(with: json) as? [String: Any]
-        #expect(object?["drawing"] == nil)
-        let decoded = try JSONDecoder().decode(PhotoEditRecipe.self, from: json)
-        #expect(decoded.drawing == nil)
+    /// AC-31. A drawing layer is composited in stack order: moved above a filled
+    /// shape it covers the shape where they overlap; below, the shape covers it.
+    @Test func aDrawingLayerComposesInStackOrder() throws {
+        var box = PhotoOverlay.shape(.rectangle)
+        box.isFilled = true
+        box.fill = OverlayColor(red: 0, green: 0, blue: 1)
+        box.size = 0.8
+        box.heightRatio = 0.5
+        // The stroke runs across the middle of the frame, through the box.
+        let scribble = PhotoOverlay.drawing(stroke(across: CGRect(x: 30, y: 90, width: 240, height: 20)))
+        let extent = CGRect(x: 0, y: 0, width: 300, height: 200)
+
+        func centrePixel(_ overlays: [PhotoOverlay]) throws -> (r: UInt8, b: UInt8) {
+            let image = try #require(PhotoRenderService.rasterizedOverlayImage(overlays, extent: extent))
+            let data = try #require(image.dataProvider?.data as Data?)
+            let row = image.bytesPerRow
+            let offset = (image.height / 2) * row + (image.width / 2) * 4
+            return (data[offset], data[offset + 2])
+        }
+
+        let drawingOnTop = try centrePixel([box, scribble])
+        #expect(drawingOnTop.r > 200 && drawingOnTop.b < 60)
+        let shapeOnTop = try centrePixel([scribble, box])
+        #expect(shapeOnTop.b > 200 && shapeOnTop.r < 60)
     }
 
-    @Test func addingADrawingIsNotIdentity() {
-        var recipe = PhotoEditRecipe.identity
-        recipe.drawing = drawing()
-        #expect(!recipe.isIdentity)
-        recipe.drawing = nil
-        #expect(recipe.isIdentity)
+    /// AC-38 (memory). A drawing is rasterized to its strokes' bounding box, not
+    /// the whole frame: a stroke across a tenth of the canvas at 48MP export size
+    /// costs a fraction of the ~195MB a full-frame raster would.
+    @Test func aDrawingRastersOnlyItsBoundingBox() throws {
+        let small = stroke(across: CGRect(x: 10, y: 10, width: 30, height: 10), width: 4)
+        let stamp = try #require(PhotoRenderService.drawingStamp(small, pixelWidth: 8064, pixelHeight: 6048))
+        let bytes = stamp.image.bytesPerRow * stamp.image.height
+        #expect(bytes < 8 * 1024 * 1024)
+        #expect(stamp.rect.minX >= 0 && stamp.rect.maxX <= 8064)
+        // Near the top of the canvas, so near the top (high y) of the bottom-up bitmap.
+        #expect(stamp.rect.midY > 6048 * 0.8)
     }
 }

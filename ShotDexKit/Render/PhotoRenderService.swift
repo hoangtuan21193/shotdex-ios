@@ -314,14 +314,10 @@ public actor PhotoRenderService {
             isDisplayDistinct = true
         }
 
-        // The drawing and overlays land on the display copy only, and after the
-        // mask tint: the clean copy is what the eyedropper samples and what the
-        // histogram is built from, and neither a scribble nor a caption is part of
-        // the photo's exposure. Drawing first so a caption stays legible over it.
-        if recipe.drawing?.hasVisibleEffect == true {
-            display = Self.applyDrawing(recipe.drawing, to: display)
-            isDisplayDistinct = true
-        }
+        // Overlays — drawing layers included — land on the display copy only, and
+        // after the mask tint: the clean copy is what the eyedropper samples and
+        // what the histogram is built from, and neither a scribble nor a caption is
+        // part of the photo's exposure.
         if !recipe.overlays.isEmpty {
             display = Self.applyOverlays(recipe.overlays, to: display)
             isDisplayDistinct = true
@@ -364,11 +360,9 @@ public actor PhotoRenderService {
             recipe: recipe,
             maximumDimension: maximumDimension
         )
-        let hasDrawing = recipe.drawing?.hasVisibleEffect ?? false
-        guard hasDrawing || !recipe.overlays.isEmpty else { return result }
-        // Drawing first, then the text/signature overlays on top of it.
-        var image = Self.applyDrawing(recipe.drawing, to: result.image)
-        image = Self.applyOverlays(recipe.overlays, to: image)
+        guard !recipe.overlays.isEmpty else { return result }
+        // Every layer, drawings included, in stack order.
+        let image = Self.applyOverlays(recipe.overlays, to: result.image)
         return PhotoRenderResult(
             image: image,
             colorSpace: result.colorSpace,

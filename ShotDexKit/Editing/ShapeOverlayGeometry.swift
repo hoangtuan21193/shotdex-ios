@@ -217,7 +217,7 @@ public enum ShapeOverlayLayout {
         case .magnifier:
             let diameter = CGFloat(overlay.size) * shortEdge
             return CGSize(width: diameter, height: diameter)
-        case .text, .image:
+        case .text, .image, .drawing:
             return .zero
         }
     }
