@@ -1,0 +1,49 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 20
+  },
+  {
+   "action": "tap",
+   "x": 0.4,
+   "y": 0.35
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "tap",
+   "label": "Edit"
+  },
+  {
+   "action": "wait",
+   "seconds": 14
+  },
+  {
+   "action": "dump",
+   "name": "cover-light"
+  },
+  {
+   "action": "tap",
+   "label": "Mask",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "dump",
+   "name": "cover-mask"
+  },
+  {
+   "action": "wait",
+   "seconds": 40
+  }
+ ]
+}
