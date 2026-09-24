@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-23 |
 | Trạng thái | accepted |
-| Tiến độ | **đang làm** (2026-09-24) — 11/29 AC có bằng chứng đầy đủ, 14 một nửa (phần lớn thiếu ảnh chụp), 4 chưa làm: Boundary Warp, tự ước lượng méo, lưu khi vào nền, ngưỡng 50 khung. Gain map đã bỏ hẳn sau khi đo (ảnh ra SDR) |
+| Tiến độ | **gần xong** (2026-09-24) — **mọi tiêu chí đều đã có code**: 14/29 AC có bằng chứng đầy đủ, 15 một nửa. Thứ còn thiếu ở 15 cái kia gần như chỉ là **ảnh chụp**, và ba trong số đó cần máy mà chỗ này không có (màn trong Duo đang gập, máy gần đầy đĩa, quyền `.limited`). Hai tiêu chí đã sửa sau khi đo: gain map bỏ hẳn (ảnh ra SDR), và AC-11 nhận rằng lấp kín khung với giữ đường thẳng là hai đầu của một thanh trượt |
 | Nguồn | tự nghĩ ra (người dùng yêu cầu trực tiếp) |
 | Spec sinh ra từ đây | [FS-14](../02-functional-spec/FS-14-panorama/README.md) |
 
@@ -116,6 +116,26 @@ Mọi câu đã chốt 2026-09-23. Việc còn chặn `/spec` là **spike** ở 
    edit), tải bản gốc từ iCloud khi máy chỉ có proxy, có tiến trình. `photokit-guard` rà ở `/spec`.
 10. ~~Quan hệ với HDR~~ — **chốt theo câu 1**: panorama là lệnh riêng, không chung lối "Merge" với HDR.
     HDR vẫn treo ở câu 4 của intent Lightroom parity, ngoài phạm vi intent này.
+
+## Kết quả — cái gì thực sự ra đời
+
+Dựng xong trong `ShotDexKit/Render/Panorama/` (13 file) và `Features/Editing/` (4 file), không thêm
+dependency nào. Ba chỗ **đặc tả phải sửa vì phép đo nói khác**, và cả ba đều đáng ghi lại:
+
+- **HDR gain map bỏ hẳn.** Gắn dữ liệu phụ vào bộ ghi JPEG làm bộ nhớ tăng theo số pixel ảnh chính —
+  +1 230 MB ở 300 MP — nên cái ghi-theo-luồng mà cả tính năng dựa vào biến mất đúng ở cỡ ảnh tính năng
+  này sinh ra để phục vụ. Ảnh ra là SDR.
+- **Trộn bằng Swift thuần không dùng được.** Đo ở Task 9: bản nét 6 tầng không xong trong 25 phút cho
+  0,1 MP. Tầng trộn viết lại bằng Core Image; `PanoramaCompositor` ở lại làm bản tham chiếu đúng-đắn
+  cho test chứ không phải thứ chạy khi người dùng bấm Save.
+- **AC-11 đòi hai thứ chống nhau.** Lấp kín chữ nhật đúng nghĩa là mép của phép biến đổi phải bám sát
+  đường lượn của ảnh, và độ cong ấy phải hiện ra đâu đó bên trong. Đo được: đoạn 200 px cong 3 px ở
+  mức 25 và 4,7 px ở mức 100. Người dùng chốt giữ thanh trượt 0–100.
+
+Ba bài học kỹ thuật đã thành memory vì chúng sẽ quay lại: `MainActor.assumeIsolated` trong callback
+đồng bộ của actor là một cú trap; `DragGesture` chết trong `ScrollView` ngang nên chip kéo-thả phải
+dùng drag-and-drop của hệ thống; và một bản đồ hình học thì **kiểm** chứ đừng **suy** — ba lần lập luận
+"mép chắc chắn nằm trong ảnh" đều sai ở cùng một góc.
 
 ---
 

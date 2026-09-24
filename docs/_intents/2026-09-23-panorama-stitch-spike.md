@@ -7,6 +7,7 @@
 | Máy đo | MacBook Pro M1 Max 64 GB, macOS 27, Swift 6.4 — **chưa đo trên iPhone/iPad** |
 | Code | Swift package macOS trong scratchpad của phiên, **không giữ lại** (người dùng chọn) |
 | Kết luận | **Khả thi cho mọi mục đã chốt ở câu 6 và 8**, với ba điều kiện: tự viết phần dò điểm đặc trưng (Vision không dùng được), xuất JPEG chứ không HEIC, render theo dải |
+| Đối chiếu sau khi dựng (2026-09-24) | Ba điều kiện đều đúng. Hai chỗ spike **chưa nhìn ra**, cả hai chỉ lộ ra ở cỡ thật: trộn đa dải viết bằng Swift thuần chậm hơn dùng được vài bậc (phải viết lại bằng Core Image), và gắn HDR gain map phá mất chính cái ghi-theo-luồng mà spike chứng minh. Xem `docs/_plans/2026-09-23-fs-14-panorama.md` §Task 0 |
 
 ## 1. Dữ liệu thử
 
