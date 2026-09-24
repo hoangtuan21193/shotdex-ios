@@ -425,7 +425,7 @@ private struct KeepScreenAwakeModifier: ViewModifier {
 
     @AppStorage(SettingsKeys.keepScreenAwake) private var keepScreenAwake = false
     @Environment(\.scenePhase) private var scenePhase
-    @State private var model = ScreenAwakeCoordinator()
+    @State private var model = ScreenAwakeCoordinator.shared
 
     private var isIndexing: Bool {
         libraryModel?.isIndexing == true

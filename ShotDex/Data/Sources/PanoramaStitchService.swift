@@ -179,7 +179,8 @@ struct PanoramaStitchService {
                 width: frames[frameIndex].width,
                 height: frames[frameIndex].height,
                 camera: camera,
-                gain: frameIndex < gains.count ? gains[frameIndex] : 1
+                gain: frameIndex < gains.count ? gains[frameIndex] : 1,
+                distortion: solution.distortion
             )
         }
         guard !sources.isEmpty else { throw PanoramaStitchError.renderFailed }

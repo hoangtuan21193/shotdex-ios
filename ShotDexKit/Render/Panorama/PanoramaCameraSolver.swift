@@ -43,17 +43,27 @@ public struct PanoramaCameraSolution: Sendable {
     public var unplaced: [Int]
     /// Root-mean-square reprojection error after the solve, in working pixels.
     public var reprojectionError: Double
+    /// The lens's radial distortion, as `r_distorted = r(1 + k·r²)` with `r`
+    /// in units of the focal length (FS-14.02 §3).
+    ///
+    /// Estimated rather than looked up: the frames that reach this app have
+    /// often already been corrected by the RAW decoder, and the ones that have
+    /// not may be from a lens nothing has a profile for. Zero is the common
+    /// answer and costs nothing to carry.
+    public var distortion: Double
 
     public init(
         focal: Double,
         cameras: [Int: PanoramaCamera],
         unplaced: [Int],
-        reprojectionError: Double
+        reprojectionError: Double,
+        distortion: Double = 0
     ) {
         self.focal = focal
         self.cameras = cameras
         self.unplaced = unplaced
         self.reprojectionError = reprojectionError
+        self.distortion = distortion
     }
 }
 
@@ -159,7 +169,8 @@ public enum PanoramaCameraSolver {
         imageWidth: Int,
         imageHeight: Int,
         pairs: [PanoramaPairObservation],
-        knownFocal: Double? = nil
+        knownFocal: Double? = nil,
+        estimatesDistortion: Bool = true
     ) -> PanoramaCameraSolution? {
         guard frameCount > 0 else { return nil }
         let centreX = Double(imageWidth) / 2, centreY = Double(imageHeight) / 2
@@ -177,18 +188,36 @@ public enum PanoramaCameraSolver {
             from: usable, placed: placed, focal: focal, centreX: centreX, centreY: centreY
         )
 
+        // Two passes: rotations alone first, because a distortion estimate
+        // made from badly placed frames is a number fitted to the wrong
+        // mistake, and then everything together.
+        var distortion = 0.0
+        _ = refine(
+            cameras: &cameras,
+            pairs: usable,
+            focal: focal,
+            centreX: centreX,
+            centreY: centreY,
+            distortion: &distortion
+        )
         let error = refine(
             cameras: &cameras,
             pairs: usable,
             focal: focal,
             centreX: centreX,
-            centreY: centreY
+            centreY: centreY,
+            solveDistortion: estimatesDistortion,
+            distortion: &distortion
         )
         levelHorizon(&cameras)
 
         let unplaced = (0..<frameCount).filter { !placedSet.contains($0) }
         return PanoramaCameraSolution(
-            focal: focal, cameras: cameras, unplaced: unplaced, reprojectionError: error
+            focal: focal,
+            cameras: cameras,
+            unplaced: unplaced,
+            reprojectionError: error,
+            distortion: distortion
         )
     }
 
@@ -372,6 +401,15 @@ public enum PanoramaCameraSolver {
     ///
     /// The first camera is held fixed. Without that the whole set can rotate
     /// together at no cost to the error, and the optimiser will happily wander.
+    /// The largest distortion the solver will believe.
+    ///
+    /// Beyond this a homography is telling a story about something other than
+    /// a lens: a fisheye is not a rotating pinhole camera with a correction,
+    /// and letting the parameter run would fit the wrong model beautifully.
+    static let distortionLimit = 0.4
+
+    /// `solveDistortion` adds the lens's radial term to the unknowns (AC-16).
+    /// Off by default so the existing callers and tests keep their meaning.
     @discardableResult
     static func refine(
         cameras: inout [Int: PanoramaCamera],
@@ -379,17 +417,24 @@ public enum PanoramaCameraSolver {
         focal: Double,
         centreX: Double,
         centreY: Double,
-        iterations: Int = 60
+        iterations: Int = 60,
+        solveDistortion: Bool = false,
+        distortion: inout Double
     ) -> Double {
         let indices = cameras.keys.sorted()
         guard indices.count >= 2 else { return 0 }
         let free = Array(indices.dropFirst())
-        let parameterCount = free.count * 3
+        let rotationCount = free.count * 3
+        let parameterCount = rotationCount + (solveDistortion ? 1 : 0)
         guard parameterCount > 0 else { return 0 }
 
         var base = cameras
+        var baseDistortion = distortion
         var lambda = 1e-3
-        var current = residuals(cameras: base, pairs: pairs, focal: focal, centreX: centreX, centreY: centreY)
+        var current = residuals(
+            cameras: base, pairs: pairs, focal: focal,
+            centreX: centreX, centreY: centreY, distortion: baseDistortion
+        )
         var currentCost = current.reduce(0) { $0 + $1 * $1 }
 
         for _ in 0..<iterations {
@@ -410,10 +455,21 @@ public enum PanoramaCameraSolver {
                         rotation: PanoramaRotation.multiply(base[frame]!.rotation, nudge)
                     )
                     let moved = residuals(
-                        cameras: perturbed, pairs: pairs, focal: focal, centreX: centreX, centreY: centreY
+                        cameras: perturbed, pairs: pairs, focal: focal,
+                        centreX: centreX, centreY: centreY, distortion: baseDistortion
                     )
                     jacobian[slot * 3 + axis] = zip(moved, current).map { ($0 - $1) / step }
                 }
+            }
+            if solveDistortion {
+                // A bigger step for the lens term: it moves points by a few
+                // thousandths of a frame, so a millionth of it is noise.
+                let distortionStep = 1e-4
+                let moved = residuals(
+                    cameras: base, pairs: pairs, focal: focal,
+                    centreX: centreX, centreY: centreY, distortion: baseDistortion + distortionStep
+                )
+                jacobian[rotationCount] = zip(moved, current).map { ($0 - $1) / distortionStep }
             }
 
             // Normal equations with the damping term on the diagonal.
@@ -445,13 +501,18 @@ public enum PanoramaCameraSolver {
                     )
                 )
             }
+            let candidateDistortion = solveDistortion
+                ? max(-distortionLimit, min(distortionLimit, baseDistortion + stepVector[rotationCount]))
+                : baseDistortion
             let candidateResiduals = residuals(
-                cameras: candidate, pairs: pairs, focal: focal, centreX: centreX, centreY: centreY
+                cameras: candidate, pairs: pairs, focal: focal,
+                centreX: centreX, centreY: centreY, distortion: candidateDistortion
             )
             let candidateCost = candidateResiduals.reduce(0) { $0 + $1 * $1 }
             if candidateCost < currentCost {
                 let improvement = (currentCost - candidateCost) / max(currentCost, 1e-12)
                 base = candidate
+                baseDistortion = candidateDistortion
                 current = candidateResiduals
                 currentCost = candidateCost
                 lambda = max(lambda / 3, 1e-9)
@@ -463,6 +524,7 @@ public enum PanoramaCameraSolver {
         }
 
         cameras = base
+        distortion = baseDistortion
         let count = max(current.count, 1)
         return (currentCost / Double(count)).squareRoot()
     }
@@ -470,12 +532,36 @@ public enum PanoramaCameraSolver {
     /// Reprojection error of every matched point, as x and y residuals: take
     /// the point seen in `a`, ask where frame `b`'s camera would have put it,
     /// and compare with where `b` actually saw it.
+    /// How much a radius grows under the lens: `r(1 + k·r²)`, `r` in focal
+    /// lengths.
+    static func distort(_ x: Double, _ y: Double, k: Double) -> (Double, Double) {
+        guard k != 0 else { return (x, y) }
+        let scale = 1 + k * (x * x + y * y)
+        return (x * scale, y * scale)
+    }
+
+    /// The other way round, by three rounds of fixed point. The model has no
+    /// closed-form inverse and three rounds is far inside a thousandth of a
+    /// pixel for any distortion a photograph can carry.
+    static func undistort(_ x: Double, _ y: Double, k: Double) -> (Double, Double) {
+        guard k != 0 else { return (x, y) }
+        var ux = x, uy = y
+        for _ in 0..<3 {
+            let scale = 1 + k * (ux * ux + uy * uy)
+            guard abs(scale) > 1e-9 else { break }
+            ux = x / scale
+            uy = y / scale
+        }
+        return (ux, uy)
+    }
+
     static func residuals(
         cameras: [Int: PanoramaCamera],
         pairs: [PanoramaPairObservation],
         focal: Double,
         centreX: Double,
-        centreY: Double
+        centreY: Double,
+        distortion: Double = 0
     ) -> [Double] {
         var out: [Double] = []
         for pair in pairs {
@@ -485,21 +571,23 @@ public enum PanoramaCameraSolver {
                 PanoramaRotation.transposed(cb.rotation), ca.rotation
             )
             for point in pair.correspondences {
-                let ray = (
-                    (point.ax - centreX) / focal,
-                    (point.ay - centreY) / focal,
-                    1.0
+                // The measured point comes off a lens, so it is straightened
+                // before it is treated as a ray, and the prediction is bent
+                // again before it is compared with the other measured point.
+                // Doing only one of the two would fit the distortion into the
+                // rotation and call the answer converged.
+                let straight = undistort(
+                    (point.ax - centreX) / focal, (point.ay - centreY) / focal, k: distortion
                 )
-                let turned = PanoramaRotation.apply(relative, to: ray)
+                let turned = PanoramaRotation.apply(relative, to: (straight.0, straight.1, 1.0))
                 guard abs(turned.2) > 1e-9 else {
                     out.append(0)
                     out.append(0)
                     continue
                 }
-                let x = centreX + focal * turned.0 / turned.2
-                let y = centreY + focal * turned.1 / turned.2
-                out.append(x - point.bx)
-                out.append(y - point.by)
+                let bent = distort(turned.0 / turned.2, turned.1 / turned.2, k: distortion)
+                out.append(centreX + focal * bent.0 - point.bx)
+                out.append(centreY + focal * bent.1 - point.by)
             }
         }
         return out

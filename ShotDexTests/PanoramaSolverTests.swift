@@ -65,6 +65,100 @@ struct PanoramaSolverTests {
         )
     }
 
+    // MARK: AC-16 — a lens with no profile
+
+    /// The same grid, but seen through a lens that bends: each point is pushed
+    /// out from the centre by `r(1 + k·r²)` in both frames, which is what a
+    /// barrel-distorted pair of photographs hands the matcher.
+    private func distortedCorrespondences(
+        from a: [Double],
+        to b: [Double],
+        k: Double
+    ) -> [(ax: Double, ay: Double, bx: Double, by: Double)] {
+        correspondences(from: a, to: b).compactMap { point in
+            let first = bend(x: point.ax, y: point.ay, k: k)
+            let second = bend(x: point.bx, y: point.by, k: k)
+            guard first.x > 0, first.y > 0, first.x < Double(width), first.y < Double(height),
+                  second.x > 0, second.y > 0, second.x < Double(width), second.y < Double(height)
+            else { return nil }
+            return (first.x, first.y, second.x, second.y)
+        }
+    }
+
+    private func bend(x: Double, y: Double, k: Double) -> (x: Double, y: Double) {
+        let nx = (x - centreX) / focal, ny = (y - centreY) / focal
+        let scale = 1 + k * (nx * nx + ny * ny)
+        return (centreX + focal * nx * scale, centreY + focal * ny * scale)
+    }
+
+    /// AC-16: with no lens profile to look the answer up in, the solver has to
+    /// find the distortion itself — close enough that correcting for it is
+    /// worth doing, and without letting it eat the rotations.
+    @Test func aLensWithNoProfileHasItsDistortionEstimated() throws {
+        let truth = -0.12
+        let yaws = [-20.0, -7.0, 7.0, 20.0]
+        let cameras = yaws.map { camera(yaw: $0) }
+        var pairs: [PanoramaPairObservation] = []
+        for a in 0..<cameras.count {
+            for b in (a + 1)..<cameras.count {
+                let points = distortedCorrespondences(from: cameras[a], to: cameras[b], k: truth)
+                guard points.count >= 8 else { continue }
+                pairs.append(
+                    PanoramaPairObservation(
+                        a: a, b: b,
+                        homography: homography(from: cameras[a], to: cameras[b]),
+                        correspondences: points
+                    )
+                )
+            }
+        }
+        let solution = try #require(
+            PanoramaCameraSolver.solve(
+                frameCount: cameras.count,
+                imageWidth: width,
+                imageHeight: height,
+                pairs: pairs,
+                knownFocal: focal
+            )
+        )
+        #expect(
+            abs(solution.distortion - truth) <= 0.01,
+            "estimated \(solution.distortion) for a lens of \(truth)"
+        )
+
+        // And the rotations are still the rotations: a distortion parameter
+        // that soaked up the turning would fit beautifully and be useless.
+        for index in 1..<cameras.count {
+            let solved = try #require(solution.cameras[index])
+            let relativeTruth = PanoramaRotation.multiply(
+                PanoramaRotation.transposed(cameras[0]), cameras[index]
+            )
+            let relativeSolved = PanoramaRotation.multiply(
+                PanoramaRotation.transposed(try #require(solution.cameras[0]).rotation),
+                solved.rotation
+            )
+            let apart = PanoramaRotation.angleBetween(relativeTruth, relativeSolved) * 180 / .pi
+            #expect(apart <= 0.2, "frame \(index) is \(apart)° out")
+        }
+    }
+
+    /// A lens that does not bend is reported as one that does not bend, rather
+    /// than as a small correction the optimiser found in the noise.
+    @Test func aStraightLensIsLeftAtZero() throws {
+        let cameras = [-14.0, 0.0, 14.0].map { camera(yaw: $0) }
+        let pairs = [(0, 1), (1, 2), (0, 2)].compactMap { observation($0.0, $0.1, cameras) }
+        let solution = try #require(
+            PanoramaCameraSolver.solve(
+                frameCount: cameras.count,
+                imageWidth: width,
+                imageHeight: height,
+                pairs: pairs,
+                knownFocal: focal
+            )
+        )
+        #expect(abs(solution.distortion) <= 0.005, "invented \(solution.distortion)")
+    }
+
     // MARK: Focal length
 
     @Test func theFocalLengthIsRecoveredFromTheOverlapsAlone() throws {

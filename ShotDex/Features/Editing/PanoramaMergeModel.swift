@@ -8,6 +8,9 @@ import UniformTypeIdentifiers
 
 /// What the panorama screen is doing, and what it can say about it.
 enum PanoramaMergeState: Equatable {
+    /// Enough frames that the wait is worth warning about before it starts
+    /// (FS-14.01 §1). Carries the sentence the screen shows.
+    case confirming(String)
     case loading(done: Int, total: Int)
     case stitching(String)
     /// A picture is on the stage.
@@ -114,6 +117,29 @@ final class PanoramaMergeModel {
         self.stitch = stitch
     }
 
+    /// The photographer said go ahead to the long wait.
+    private var hasConfirmed = false
+
+    func confirmLongStitch() {
+        hasConfirmed = true
+        Task { await load() }
+    }
+
+    /// Roughly how long a set this size takes, as a duration on its own.
+    ///
+    /// From the frame count alone, because that is all that is known before
+    /// anything is loaded — and it is the thing that dominates: the pairs to
+    /// compare grow with the square of it. The screen puts the sentence round
+    /// it, because the sentence needs the photo count to agree with itself
+    /// and that only works in a literal the catalogue can see.
+    static func waitEstimate(frames: Int) -> String {
+        let seconds = max(30.0, Double(frames) * Double(frames) * 0.02)
+        let rounded = seconds < 90
+            ? Duration.seconds(Int(seconds / 15) * 15)
+            : Duration.seconds(Int((seconds / 60).rounded()) * 60)
+        return rounded.formatted(.units(allowed: [.minutes, .seconds], width: .wide))
+    }
+
     /// Whether there is a panorama to adjust.
     ///
     /// The controls are hidden without one. A projection picker above a message
@@ -206,9 +232,21 @@ final class PanoramaMergeModel {
     ///
     /// Everything expensive happens here once. What the panel does afterwards
     /// is re-project an answer that is already known.
+    /// Above this many frames, the stitch is long enough that starting it
+    /// without asking is a surprise rather than a service.
+    ///
+    /// Not a limit: the photographer can go on and the picture will be made.
+    /// It is the difference between a wait someone chose and a wait that
+    /// happened to them.
+    static let confirmThreshold = 50
+
     func load() async {
         guard assets.count >= 2 else {
             state = .noOverlap
+            return
+        }
+        if assets.count > Self.confirmThreshold, !hasConfirmed {
+            state = .confirming(Self.waitEstimate(frames: assets.count))
             return
         }
         state = .loading(done: 0, total: assets.count)
@@ -300,6 +338,7 @@ final class PanoramaMergeModel {
             var source = allSources[index]
             source.camera = camera
             source.gain = index < gains.count ? gains[index] : 1
+            source.distortion = solution.distortion
             return source
         }
 
@@ -702,8 +741,23 @@ final class PanoramaMergeModel {
             autoCrop: autoCrop,
             boundaryWarp: boundaryWarp
         )
+        // The screen stays lit and the work keeps its footing in the
+        // background (FS-14.01 §6). The assertion's expiry handler is the
+        // pre-iOS-26 half of that story: the system takes the time back after
+        // about thirty seconds, and what it takes has to look like a cancel
+        // rather than a hang.
+        ScreenAwakeCoordinator.shared.beginHold()
+        PanoramaSaveRecord.begin(assetIDs: assets.map(\.localIdentifier))
+        let assertion = UIApplication.shared.beginBackgroundTask(withName: "panorama-save") {
+            [weak self] in
+            Task { @MainActor in self?.cancelSave() }
+        }
         saveTask = Task { [weak self] in
             guard let self else { return }
+            defer {
+                ScreenAwakeCoordinator.shared.endHold()
+                if assertion != .invalid { UIApplication.shared.endBackgroundTask(assertion) }
+            }
             do {
                 let identifier = try await stitch.stitch(
                     assets: assets,
@@ -716,10 +770,13 @@ final class PanoramaMergeModel {
                     }
                 )
                 savedAssetID = identifier
+                PanoramaSaveRecord.finish()
             } catch PanoramaStitchError.cancelled {
                 // Nothing was created, and nothing needs saying.
+                PanoramaSaveRecord.finish()
             } catch {
                 errorMessage = Self.message(for: error)
+                PanoramaSaveRecord.finish()
             }
             saveProgress = nil
         }

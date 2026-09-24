@@ -41,6 +41,8 @@ struct LibraryScreen: View {
     @State private var pasteEditsPresentation: PasteEditsPresentation?
     @State private var stackPresentation: PhotoStackPresentation?
     @State private var panoramaPresentation: PanoramaMergePresentation?
+    @State private var showsInterruptedPanorama = false
+    @State private var interruptedPanoramaFrames: [String]?
     /// Measured height of the limited-access banner plus the filter-token bar,
     /// handed to the grid as its top content inset (see `photoGrid`).
     @State private var topAccessoryHeight: CGFloat = 0
@@ -167,6 +169,31 @@ struct LibraryScreen: View {
             stopSelecting()
             openSavedPhoto(assetID)
         })
+        // A panorama save that the system interrupted left no photo behind,
+        // and the photographer has no way of knowing that (FS-14.01 §6). The
+        // offer is to open the same frames again, not to retry silently:
+        // the save takes a minute and it is theirs to start.
+        .alert(
+            "Saving was interrupted",
+            isPresented: $showsInterruptedPanorama,
+            presenting: interruptedPanoramaFrames
+        ) { frames in
+            Button("Try Again") {
+                PanoramaSaveRecord.finish()
+                let assets = PhotoLibraryService.fetchAssets(ids: frames)
+                if assets.count >= 2 {
+                    panoramaPresentation = PanoramaMergePresentation(assets: assets)
+                }
+            }
+            Button("Not Now", role: .cancel) { PanoramaSaveRecord.finish() }
+        } message: { frames in
+            Text("^[\(frames.count) photo](inflect: true) were being joined when ShotDex closed. Nothing was saved.")
+        }
+        .task {
+            guard let frames = PanoramaSaveRecord.interrupted, frames.count >= 2 else { return }
+            interruptedPanoramaFrames = frames
+            showsInterruptedPanorama = true
+        }
         .fullScreenCover(item: $compressionPresentation, onDismiss: stopSelecting) { presentation in
             CompressionScreen(
                 assets: presentation.assets,

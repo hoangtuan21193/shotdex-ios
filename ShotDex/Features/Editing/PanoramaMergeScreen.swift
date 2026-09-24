@@ -168,6 +168,8 @@ struct PanoramaMergeScreen: View {
                 PanoramaArrangeOverlay(model: model, imageRect: imageRect)
             }
             switch model.state {
+            case .confirming(let estimate):
+                confirmation(model, estimate: estimate)
             case .loading(let done, let total):
                 working("Loading \(done + 1) of \(total)…")
             case .stitching(let message):
@@ -181,7 +183,14 @@ struct PanoramaMergeScreen: View {
                 message(
                     "^[\(count) photo](inflect: true) couldn't be downloaded",
                     detail: "They're stored in iCloud. Check your connection and try again."
-                )
+                ) {
+                    Button("Retry") { Task { await model.load() } }
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, AppTheme.Spacing.lg)
+                        .frame(height: AppTheme.Size.minTouch)
+                        .background(EditorTheme.accent, in: Capsule())
+                }
             case .failed(let text):
                 message("Couldn't build the panorama", detail: text)
             case .ready:
@@ -189,6 +198,37 @@ struct PanoramaMergeScreen: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// The one screen that asks before it starts. Continue is the accented
+    /// choice because the photographer picked these photos on purpose; Cancel
+    /// is a plain button beside it, and the top bar's Cancel does the same
+    /// thing (FS-14.01 §1).
+    private func confirmation(_ model: PanoramaMergeModel, estimate: String) -> some View {
+        VStack(spacing: AppTheme.Spacing.md) {
+            Image(systemName: "pano")
+                .font(.system(size: 32))
+                .foregroundStyle(EditorTheme.dimText)
+            Text("This will take a while")
+                .font(EditorTheme.sidebarTitle)
+                .foregroundStyle(.white)
+            Text("About \(estimate) for ^[\(model.assets.count) photo](inflect: true).")
+                .font(EditorTheme.maskSubtitle)
+                .foregroundStyle(EditorTheme.secondaryText)
+                .multilineTextAlignment(.center)
+            HStack(spacing: AppTheme.Spacing.md) {
+                Button("Cancel") { dismiss() }
+                    .foregroundStyle(.white)
+                Button("Continue") { model.confirmLongStitch() }
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, AppTheme.Spacing.lg)
+                    .frame(height: AppTheme.Size.minTouch)
+                    .background(EditorTheme.accent, in: Capsule())
+            }
+            .padding(.top, AppTheme.Spacing.sm)
+        }
+        .padding(AppTheme.Spacing.xl)
     }
 
     @ViewBuilder
@@ -248,7 +288,11 @@ struct PanoramaMergeScreen: View {
         }
     }
 
-    private func message(_ title: String, detail: String) -> some View {
+    private func message(
+        _ title: String,
+        detail: String,
+        @ViewBuilder action: () -> some View = { EmptyView() }
+    ) -> some View {
         VStack(spacing: AppTheme.Spacing.sm) {
             Image(systemName: "pano")
                 .font(.system(size: 32))
@@ -260,6 +304,8 @@ struct PanoramaMergeScreen: View {
                 .font(EditorTheme.maskSubtitle)
                 .foregroundStyle(EditorTheme.secondaryText)
                 .multilineTextAlignment(.center)
+            action()
+                .padding(.top, AppTheme.Spacing.sm)
         }
         .padding(AppTheme.Spacing.xl)
     }

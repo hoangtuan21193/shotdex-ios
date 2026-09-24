@@ -16,6 +16,14 @@ import UIKit
 @MainActor
 @Observable
 final class ScreenAwakeCoordinator {
+    /// One coordinator, because there is one screen.
+    ///
+    /// The indexing view owns the setting side of it and a save holds it
+    /// awake from somewhere else entirely; two instances would each write
+    /// `isIdleTimerDisabled` and the last one to speak would win, which is how
+    /// a screen locks in the middle of a save.
+    static let shared = ScreenAwakeCoordinator()
+
     /// Idle time with no user touch before the screen dims. iOS exposes no API
     /// for the system Auto-Lock value, so this is a fixed 1-minute stand-in.
     static let idleDimDelay: Duration = .seconds(60)
@@ -32,11 +40,43 @@ final class ScreenAwakeCoordinator {
 
     private var isEnabled = false
     private var isIndexing = false
+    /// How many pieces of work are holding the screen awake regardless of the
+    /// setting.
+    ///
+    /// The setting is about *indexing*, which runs on its own and can be
+    /// turned off by someone who would rather have the battery. A save the
+    /// user started and is watching is a different thing: the screen going
+    /// dark mid-way looks like the app stopped, and the auto-lock that
+    /// follows suspends the work (FS-14.01 §6). A count rather than a flag,
+    /// because two of them can overlap.
+    private var holds = 0
     private var dimTask: Task<Void, Never>?
     /// Brightness captured just before dimming, restored on wake.
     private var restoreBrightness: CGFloat?
 
-    private var isActive: Bool { isEnabled && isIndexing }
+    private var isActive: Bool { (isEnabled && isIndexing) || holds > 0 }
+
+    /// Holds the screen awake until the matching `endHold`, whatever the
+    /// setting says. Dimming stays off for the duration: a progress bar the
+    /// user is watching is not an idle screen.
+    func beginHold() {
+        holds += 1
+        wake()
+        dimTask?.cancel()
+        dimTask = nil
+        UIApplication.shared.isIdleTimerDisabled = true
+    }
+
+    func endHold() {
+        holds = max(0, holds - 1)
+        guard holds == 0 else { return }
+        if isActive {
+            UIApplication.shared.isIdleTimerDisabled = true
+            scheduleDim()
+        } else {
+            deactivate()
+        }
+    }
 
     /// Recompute active state from the setting toggle and the indexing flag.
     func update(enabled: Bool, indexing: Bool) {
@@ -52,7 +92,7 @@ final class ScreenAwakeCoordinator {
 
     /// A user touch arrived: wake the screen and restart the idle countdown.
     func registerActivity() {
-        guard isActive else { return }
+        guard isActive, holds == 0 else { return }
         wake()
         scheduleDim()
     }
@@ -63,7 +103,9 @@ final class ScreenAwakeCoordinator {
         dimTask?.cancel()
         dimTask = nil
         wake()
-        UIApplication.shared.isIdleTimerDisabled = false
+        // A hold outlives a trip to the background: the save is still running
+        // and the user is coming back to it.
+        UIApplication.shared.isIdleTimerDisabled = holds > 0
     }
 
     private func deactivate() {

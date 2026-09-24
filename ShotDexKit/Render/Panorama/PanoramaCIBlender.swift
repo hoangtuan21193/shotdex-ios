@@ -9,13 +9,26 @@ public struct PanoramaCISource {
     public var camera: PanoramaCamera
     /// Exposure multiplier from the gain solve.
     public var gain: Double
+    /// The lens's radial distortion from the solve, `r(1 + k·r²)` in focal
+    /// lengths (AC-16). The warp bends the ray by it before sampling, so the
+    /// panorama is built from straightened frames without a separate pass
+    /// over every pixel of every one of them.
+    public var distortion: Double
 
-    public init(image: CIImage, width: Int, height: Int, camera: PanoramaCamera, gain: Double = 1) {
+    public init(
+        image: CIImage,
+        width: Int,
+        height: Int,
+        camera: PanoramaCamera,
+        gain: Double = 1,
+        distortion: Double = 0
+    ) {
         self.image = image
         self.width = width
         self.height = height
         self.camera = camera
         self.gain = gain
+        self.distortion = distortion
     }
 }
 
@@ -291,6 +304,7 @@ public enum PanoramaCIBlender {
             Float(focal),
             CIVector(x: CGFloat(source.width) / 2, y: CGFloat(source.height) / 2),
             CIVector(x: CGFloat(source.width), y: CGFloat(source.height)),
+            Float(source.distortion),
         ]
     }
 
@@ -360,7 +374,8 @@ public enum PanoramaCIBlender {
     static let warpKernel = CIWarpKernel(source: """
         kernel vec2 panoramaWarp(vec2 origin, float canvasHeight, float canvasFocal, float kind,
                                  vec3 m0, vec3 m1, vec3 m2,
-                                 float sourceFocal, vec2 sourceCentre, vec2 sourceSize) {
+                                 float sourceFocal, vec2 sourceCentre, vec2 sourceSize,
+                                 float distortion) {
             vec2 d = destCoord();
             float u = d.x + origin.x;
             float v = (canvasHeight - d.y) + origin.y;
@@ -382,8 +397,14 @@ public enum PanoramaCIBlender {
             if (local.z <= 0.000000001) {
                 return vec2(-100000.0, -100000.0);
             }
-            float sx = sourceCentre.x + sourceFocal * local.x / local.z;
-            float sy = sourceCentre.y + sourceFocal * local.y / local.z;
+            // The lens, put back: the ray is where the point would have
+            // landed through a pinhole, and the photograph has it pushed out
+            // by the glass.
+            float nx = local.x / local.z;
+            float ny = local.y / local.z;
+            float bend = 1.0 + distortion * (nx * nx + ny * ny);
+            float sx = sourceCentre.x + sourceFocal * nx * bend;
+            float sy = sourceCentre.y + sourceFocal * ny * bend;
             if (sx < 0.0 || sy < 0.0 || sx > sourceSize.x - 1.0 || sy > sourceSize.y - 1.0) {
                 return vec2(-100000.0, -100000.0);
             }
