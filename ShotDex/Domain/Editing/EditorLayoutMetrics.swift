@@ -144,10 +144,8 @@ enum EditorLayoutMetrics {
     static let editorPrimaryButtonMaxWidth: CGFloat = 96
 
     /// How tall a slider row's touch target is, whatever the row itself measures.
-    /// The cursor stays a 2pt bar — a round knob was ruled out when this slider
-    /// was built, and every surface in the editor draws through it — but a bar
-    /// that thin is nothing to aim at with a pencil or a pointer, so the target
-    /// around it is a full 44.
+    /// The knob is 18pt (FS-03.12), still well short of what a pencil or a pointer
+    /// needs, so the target around it is a full 44.
     static let sidebarSliderHitHeight: CGFloat = 44
 
     /// True for a column that can no longer hold a parameter group whole.

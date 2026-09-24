@@ -47,6 +47,23 @@ enum EditorTheme {
     /// because it is not the glyph opacity (0.28, where a 2pt track disappears)
     /// and not text (`dimText` happens to share the number, not the meaning).
     static let rowDisabled = 0.35
+    /// The phone panel's white family (FS-03.12). Accent is spent on Save alone, so
+    /// every "selected / on / filled" state in the panel is one of these whites.
+    ///
+    /// `panelText` is a row's label and number; `panelHint` a hint row and an
+    /// unselected wheel chip; `sliderFill` the trail from the rest point to the
+    /// value; `sliderNotch` the rest-point tick; `chipSelected` / `chipIdle` a
+    /// panel chip's fill; `swatchIdle` an unselected swatch's opacity.
+    static let panelText = Color.white.opacity(0.6)
+    static let panelHint = Color.white.opacity(0.32)
+    static let sliderFill = Color.white.opacity(0.5)
+    static let sliderNotch = Color.white.opacity(0.22)
+    static let sliderNeutralTrack = Color.white.opacity(0.14)
+    static let chipSelected = Color.white.opacity(0.2)
+    static let chipIdle = Color.white.opacity(0.06)
+    static let swatchIdle = 0.7
+    static let chipLabel = Font.system(size: 13, weight: .medium)
+    static let chipLabelSelected = Font.system(size: 13, weight: .semibold)
     static let clipping = Color(red: 1, green: 0.271, blue: 0.227)
     static let maskRow = Color(white: 0.102)
     static var activeRow: Color { accent.opacity(0.1) }

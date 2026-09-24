@@ -5,12 +5,16 @@ import ShotDexKit
 /// The one slider used everywhere in the editor.
 ///
 /// Light / Color / Effects / Detail rows, the colour mixer, grading, point colour,
-/// crop straighten — all render through this, so the whole look (white cursor bar,
-/// accent fill, colour tracks, the zero notch) and the whole-row gesture (drag
-/// anywhere, 300ms-hold fine mode, vertical-pan scrolls, double-tap reset, long-
-/// press the value for the keypad) live in exactly one place. Callers pass data
-/// and a few switches; nobody re-implements the style. There is no round knob and
-/// no system `Slider`.
+/// crop straighten — all render through this, so the whole look (colour tracks,
+/// the zero notch, the cursor, the fill) and the whole-row gesture (drag anywhere,
+/// 300ms-hold fine mode, vertical-pan scrolls, double-tap reset, long-press the
+/// value for the keypad) live in exactly one place. Callers pass data and a few
+/// switches; nobody re-implements the style. No system `Slider`.
+///
+/// Inside the photo editor's panel (`editorUsesPanelStyle`, FS-03.12) it draws a
+/// round white knob, a white fill only when the value is off its rest point, and no
+/// accent anywhere — dragging does not recolour the row. Everywhere else (Collage,
+/// Video Studio, the other tier-D tools) it keeps the white bar and accent fill.
 ///
 /// - `range` sets min/max. `anchor` is where the accent fill starts and the notch
 ///   sits — the centre for a two-way row, the left end for a one-way one.
@@ -47,12 +51,13 @@ struct EditorValueSlider: View {
     @State private var isHoldingDetent = false
     @State private var trackWidth: CGFloat = 1
     @Environment(\.editorSliderStacked) private var isStacked
+    @Environment(\.editorUsesPanelStyle) private var usesPanelStyle
 
     var body: some View {
         Group {
             if isStacked { stackedRow } else { inlineRow }
         }
-        .background(isActive ? Color.white.opacity(0.05) : .clear)
+        .background(isActive && !usesPanelStyle ? Color.white.opacity(0.05) : .clear)
         .contentShape(Rectangle())
         .overlay { gestureCatcher }
         .accessibilityElement(children: .combine)
@@ -67,19 +72,32 @@ struct EditorValueSlider: View {
         }
     }
 
-    /// Phone: name, track and number on one 34pt line.
+    /// Phone: name, track and number on one line — 40pt on the panel's grid, 34pt
+    /// in the tools that keep the older look.
     private var inlineRow: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: AppTheme.Spacing.sm) {
             nameText
-                .frame(width: EditorLayoutMetrics.editorRowLabelWidth, alignment: .leading)
+                .frame(width: inlineLabelWidth, alignment: .leading)
 
             track
 
             valueTextView
-                .frame(width: EditorLayoutMetrics.editorRowValueWidth, alignment: .trailing)
+                .frame(width: inlineValueWidth, alignment: .trailing)
         }
-        .padding(.horizontal, 14)
-        .frame(height: EditorLayoutMetrics.editorRowHeight)
+        .padding(.horizontal, usesPanelStyle ? AppTheme.Spacing.lg : 14)
+        .frame(height: inlineRowHeight)
+    }
+
+    private var inlineRowHeight: CGFloat {
+        usesPanelStyle ? EditorLayoutMetrics.editorPanelRowHeight : EditorLayoutMetrics.editorRowHeight
+    }
+
+    private var inlineLabelWidth: CGFloat {
+        usesPanelStyle ? EditorLayoutMetrics.editorPanelRowLabelWidth : EditorLayoutMetrics.editorRowLabelWidth
+    }
+
+    private var inlineValueWidth: CGFloat {
+        usesPanelStyle ? EditorLayoutMetrics.editorPanelRowValueWidth : EditorLayoutMetrics.editorRowValueWidth
     }
 
     /// Wide sidebar: name and number on the first line, the track full width
@@ -106,27 +124,102 @@ struct EditorValueSlider: View {
         )
     }
 
+    @ViewBuilder
     private var nameText: some View {
-        Text(isStacked ? label : label.uppercased())
-            .font(
-                isStacked
-                    ? .system(size: 12, weight: .regular)
-                    : .system(size: 10.5, weight: .semibold)
-            )
-            .tracking(isStacked ? 0 : 0.5)
-            .foregroundStyle(isActive ? .white : EditorTheme.secondaryText)
-            .lineLimit(1)
-            .minimumScaleFactor(0.75)
+        if usesPanelStyle {
+            Text(label)
+                .font(EditorTheme.rowLabel)
+                .foregroundStyle(EditorTheme.panelText)
+                .lineLimit(1)
+                .minimumScaleFactor(EditorLayoutMetrics.editorPanelRowMinimumScale)
+        } else {
+            Text(isStacked ? label : label.uppercased())
+                .font(
+                    isStacked
+                        ? .system(size: 12, weight: .regular)
+                        : .system(size: 10.5, weight: .semibold)
+                )
+                .tracking(isStacked ? 0 : 0.5)
+                .foregroundStyle(isActive ? .white : EditorTheme.secondaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
     }
 
+    @ViewBuilder
     private var valueTextView: some View {
-        Text(valueText)
-            .font(.system(size: 11.5, weight: .semibold).monospacedDigit())
-            .foregroundStyle(isActive ? EditorTheme.accent : Color.white.opacity(0.85))
-            .lineLimit(1)
+        if usesPanelStyle {
+            Text(valueText)
+                .font(EditorTheme.rowValue)
+                .foregroundStyle(EditorTheme.panelText)
+                .lineLimit(1)
+        } else {
+            Text(valueText)
+                .font(.system(size: 11.5, weight: .semibold).monospacedDigit())
+                .foregroundStyle(isActive ? EditorTheme.accent : Color.white.opacity(0.85))
+                .lineLimit(1)
+        }
     }
 
+    @ViewBuilder
     private var track: some View {
+        if usesPanelStyle { panelTrack } else { legacyTrack }
+    }
+
+    /// FS-03.12: 3pt neutral track (4pt, 80% when it carries its own colour), a 1×7
+    /// white notch at the rest point, a white 50% trail from the rest point to the
+    /// value only when the two differ, and an 18pt round white knob.
+    private var panelTrack: some View {
+        GeometryReader { proxy in
+            let width = proxy.size.width
+            let knob = EditorLayoutMetrics.editorSliderThumbDiameter
+            let frac = fraction(of: value)
+            let anchorFrac = fraction(of: anchor)
+            let isOffRest = abs(value - anchor) > (range.upperBound - range.lowerBound) * 0.0005
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(trackGradient ?? neutralPanelTrack)
+                    .opacity(trackGradient == nil ? 1 : 0.8)
+                    .frame(height: trackGradient == nil ? 3 : 4)
+
+                if isOffRest, trackGradient == nil || showsTrailOverGradient {
+                    let start = min(frac, anchorFrac)
+                    let end = max(frac, anchorFrac)
+                    Capsule()
+                        .fill(EditorTheme.sliderFill)
+                        .frame(width: max(0, (end - start) * width), height: 3)
+                        .offset(x: start * width)
+                }
+
+                if showsAnchorNotch {
+                    Rectangle()
+                        .fill(EditorTheme.sliderNotch)
+                        .frame(width: 1, height: 7)
+                        .offset(x: anchorFrac * width - 0.5)
+                }
+
+                Circle()
+                    .fill(.white)
+                    .frame(width: knob, height: knob)
+                    .shadow(color: .black.opacity(0.55), radius: 4, y: 1)
+                    .offset(x: min(max(0, width - knob), max(0, frac * width - knob / 2)))
+            }
+            .frame(maxHeight: .infinity)
+            .onAppear { trackWidth = max(1, width) }
+            .onChange(of: width) { trackWidth = max(1, $0) }
+        }
+        .frame(height: isStacked ? 20 : EditorLayoutMetrics.editorPanelRowHeight)
+    }
+
+    private var neutralPanelTrack: LinearGradient {
+        LinearGradient(
+            colors: [EditorTheme.sliderNeutralTrack, EditorTheme.sliderNeutralTrack],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+    }
+
+    private var legacyTrack: some View {
         GeometryReader { proxy in
             let width = proxy.size.width
             let frac = fraction(of: value)
@@ -171,7 +264,7 @@ struct EditorValueSlider: View {
 
     private var gestureCatcher: some View {
         EditorRowGestureCatcher(
-            valueColumnWidth: EditorLayoutMetrics.editorRowValueWidth + 14,
+            valueColumnWidth: inlineValueWidth + (usesPanelStyle ? AppTheme.Spacing.lg : 14),
             // Stacked, the value is on the first line and the **track runs the
             // full width underneath it**, so an x-only test hands the trailing
             // 54pt of the row — the top 13% of every parameter's range — to the
