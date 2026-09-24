@@ -505,3 +505,40 @@ grid as a near-black frame; that is the fixture, not a bug.
 
 - [ ] iPad Pro 13" iOS 18.6: after a reinstall the Library grid showed a single row of tiny tiles until relaunch _(seen during FS-01.09 UI proof, not reproduced)_
 - [ ] Stack Exposures (Average / Lighten / Darken) combines frames without aligning them — fine on a tripod, ghosts on a handheld sequence; say so on the panel or align like Focus Stack _(ux)_
+
+# Sweep — intent 2026-09-24-editor-phone-panel (2026-09-24)
+
+Scope: `docs/_intents/2026-09-24-editor-phone-panel.md` + its design handoff, read against today's editor
+code. Rule from the product owner: **no function may be lost — only look and layout change.** No code exists
+yet, so every fix is a sentence in the intent. Agents: ux-reviewer ×2 (mask/point/presets; markup),
+general-purpose (sliders/curve/grade/heal/crop/shell), challenger (scope, PencilKit).
+
+## Blockers — functions the intent/handoff would drop
+- [x] Markup text rows = "Font · Size · Color" only; drops Opacity, Outline, Shadow, Width, Leading, Tracking, Bold, Italic, Alignment (`EditorTextDetailPanel.swift:98-330`) → intent: rows keep every property, scrolling under the first three _(ux-reviewer)_
+- [x] Markup shape/image/magnifier rows = "Size · Opacity · Color"; drops shape style switch, fill, Filled, Thickness, Height; Choose Image; magnifier **Zoom**, rim colour/width (`EditorTextDetailPanel.swift:347-509`) → intent: per-kind row list _(ux-reviewer)_
+- [x] Placement sliders Rotate / Across / Down have no home (`EditorTextDetailPanel.swift:520-551`) → intent: last rows of every layer _(ux-reviewer)_
+- [x] Layer Hide/Show missing from the new ⋯ (`EditorTextPanel.swift:199`) → add to ⋯ _(ux-reviewer)_
+- [x] Signature preset library + "Save Preset" have no entry point; "Sign" chip undefined (`EditorSignatureSheet.swift`, `EditorTextDetailPanel.swift:68`) → Sign chip opens the library; ⋯ "Save as Preset" _(ux-reviewer)_
+- [x] Mask rows = "Light/Color" only; masks carry Light/Color/Detail/Effects (`EditorMaskPanels.swift:303-311`) → all four _(ux-reviewer)_
+- [x] Mask component picker, "Delete This Shape", Add/Subtract as a live mode, one-tap Undo in the mask nav row (`EditorMaskPanels.swift:264-270,494-544`, `:382-400`) → a shape row inside the zone _(ux-reviewer)_
+- [x] Inline mask chips lose `unavailableReason` text shown in the sheet (`EditorMaskPanels.swift:762`) → tap a dimmed chip shows the reason _(challenger, ux-reviewer)_
+- [x] Presets source strip: Save Current, Import .cube, per-item delete, deleted-LUT banner unplaced (`EditorToolPanels.swift:89-231`) → leading tile per source + context menu kept _(ux-reviewer)_
+
+## Should fix
+- [x] "Optics / Geometry: rows only" would drop Lens Profile section and Upright chips + note (`EditorLensProfileSection.swift`, `EditorToolPanels.swift:601-660`) → named in intent _(general-purpose)_
+- [x] Switches (B&W, Chromatic Aberration, Lens Correction) tinted accent; RAW header in Detail; dependent rows dimmed with VoiceOver hint (`EditorAdjustmentPanel.swift:52-102,221`) → kept, "on" state visible without accent _(general-purpose)_
+- [x] Edited markers carry VoiceOver "Edited" and sidebar dots / per-section ↺ (`EditorColorPanel.swift:710,735`, `EditorSidebar.swift:170-268`) → removal is phone-panel visual only _(general-purpose, challenger)_
+- [x] Sidebar slider 44pt min + label-only keypad zone (`EditorSliderRow.swift:95-103,176-183`) → kept _(general-purpose)_
+- [x] Command band accent (Before/After held) — "accent only on Save" ambiguous → band out of scope _(general-purpose)_
+- [x] Handoff §5 Curve still says Input/Output + remove Reset/hint/presets, contradicting chốt #9 → banner of overrides at the top of the handoff _(challenger)_
+- [x] Ink variety (Pencil, Fountain, Watercolor, Crayon, Monoline), Ruler, finger-vs-Pencil policy unplaced (`EditorDrawingCanvas.swift:91-101`) → ink row + ruler in draw rows _(ux-reviewer, challenger)_
+
+- [x] Re-check pass (challenger): Point Color "Delete Point" + swatch menu missing from the keep-table (`EditorColorPanel.swift:138-260`); RAW header placement → both added _(challenger, re-run)_
+
+## Needs a decision
+- **Chốt #5/#13 — replace PencilKit with a custom kit brush.** Engine + data-model change, not UI; loses prediction, ink physics, pixel/vector eraser, ruler, Scribble, Pencil double-tap/squeeze unless each is rebuilt. Alternative (challenger): keep PencilKit, hide `PKToolPicker`, drive `canvas.tool` from the panel rows. **Asked 2026-09-24: owner keeps "bỏ PencilKit".** Resolved by widening chốt #13 into a full parity gate (every ink, both erasers, lasso, ruler, prediction, Pencil double-tap/squeeze, finger policy, vector export) — "thiếu một thứ = chưa được bỏ PencilKit". **Revised same day: owner switched to keep PencilKit** — chốt #5 now hides `PKToolPicker` and the panel drives `canvas.tool`; chốt #13 is the panel→PencilKit mapping. No new renderer.
+
+## Closed / not a finding
+- Grade colour wheel — none today; replaced by rows in 30c (`EditorColorPanel.swift:371-376`).
+- `isActive` — only "finger is dragging this row"; no VoiceOver or edited meaning. Losing its tint loses nothing else.
+- Aside: `PhotoEditorController.duplicateSelectedOverlay()` (`:1471`) is unreachable in the photo editor today; the new layer ⋯ Duplicate would wire it.

@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><style>
+body{margin:0;background:#ecebe7;font-family:-apple-system,'SF Pro Text','Helvetica Neue',system-ui,sans-serif}
+a{color:#1a1a1a}a:hover{color:#6b6660}
+[data-noscroll]{scrollbar-width:none}[data-noscroll]::-webkit-scrollbar{display:none}
+</style></helmet>
+<div style="min-height:100vh;display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start;justify-content:center;padding:36px 24px;box-sizing:border-box">
+
+<div style="width:413px;height:872px;padding:10px;box-sizing:border-box;background:#111;border-radius:56px;box-shadow:0 24px 60px rgba(0,0,0,.3);flex:none">
+<div data-screen-label="Prototype" style="position:relative;width:393px;height:852px;border-radius:46px;overflow:hidden;background:#000;color:#fff;display:flex;flex-direction:column;user-select:none;-webkit-user-select:none">
+
+<div style="flex:none;height:59px;position:relative;z-index:10">
+<div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:124px;height:36px;background:#000;border-radius:20px"></div>
+<div style="position:absolute;top:12px;left:20px;display:flex;gap:8px">
+<div onClick="{{ undo }}" style="width:34px;height:34px;border-radius:17px;background:rgba(18,18,20,.6);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16);display:grid;place-items:center;cursor:pointer;opacity:{{ undoOp }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5 4 10l5 5M4 10h10a5 5 0 0 1 0 10h-3"></path></svg></div>
+<div onClick="{{ redo }}" style="width:34px;height:34px;border-radius:17px;background:rgba(18,18,20,.6);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16);display:grid;place-items:center;cursor:pointer;opacity:{{ redoOp }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l5 5-5 5M20 10H10a5 5 0 0 0 0 10h3"></path></svg></div>
+<div onPointerDown="{{ compareDown }}" onPointerUp="{{ compareUp }}" onPointerLeave="{{ compareUp }}" style="width:34px;height:34px;border-radius:17px;background:{{ compareBg }};box-shadow:inset 0 0 0 1px rgba(255,255,255,.16);display:grid;place-items:center;cursor:pointer"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="{{ compareFg }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3ZM12 4v16"></path></svg></div>
+</div>
+<div style="position:absolute;top:12px;right:20px;display:flex;gap:8px;align-items:center">
+<div style="width:56px;height:29px;border-radius:15px;background:rgba(18,18,20,.6);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16);overflow:hidden;position:relative"><svg width="56" height="29" viewBox="0 0 56 29" style="position:absolute;inset:0"><path d="M4 26C9 24 11 12 17 16S25 5 32 11 41 19 46 13 52 20 52 26Z" fill="rgba(255,255,255,.4)"></path></svg></div>
+<div onClick="{{ resetAll }}" title="Reset all" style="width:34px;height:34px;border-radius:17px;background:rgba(18,18,20,.6);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16);display:grid;place-items:center;cursor:pointer"><svg width="17" height="17" viewBox="0 0 24 24" fill="#fff"><circle cx="6" cy="12" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="18" cy="12" r="1.5"></circle></svg></div>
+</div>
+</div>
+
+<div style="flex:1;min-height:0;position:relative;display:grid;place-items:center">
+<div onClick="{{ photoClick }}" style="position:relative;width:{{ photoW }}px;height:{{ photoH }}px;overflow:hidden;flex:none;cursor:{{ photoCursor }};transition:width .25s,height .25s">
+<div style="position:absolute;inset:0;background:#161616 url(assets/photo.png) center/cover;filter:{{ photoFilter }};transform:{{ photoTransform }};transition:transform .15s"></div>
+<div style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 45%,{{ vignetteColor }} 100%)"></div>
+
+<sc-if value="{{ showMaskOv }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:{{ mo.left }};top:{{ mo.top }};width:{{ mo.w }};height:{{ mo.h }};border-radius:{{ mo.r }};background:{{ mo.bg }};filter:blur(6px);pointer-events:none"></div>
+</sc-if>
+<sc-if value="{{ detecting }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:{{ mo.left }};top:{{ mo.top }};width:{{ mo.w }};height:{{ mo.h }};border-radius:{{ mo.r }};box-shadow:0 0 0 1.5px rgba(255,255,255,.75);background:rgba(255,255,255,.08);pointer-events:none"></div>
+</sc-if>
+
+<sc-if value="{{ isCrop }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:{{ cf.left }}px;top:{{ cf.top }}px;width:{{ cf.w }}px;height:{{ cf.h }}px;box-shadow:0 0 0 999px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.85);transition:all .25s;pointer-events:none">
+<div style="position:absolute;left:33.33%;top:0;bottom:0;width:1px;background:rgba(255,255,255,.3)"></div>
+<div style="position:absolute;left:66.66%;top:0;bottom:0;width:1px;background:rgba(255,255,255,.3)"></div>
+<div style="position:absolute;top:33.33%;left:0;right:0;height:1px;background:rgba(255,255,255,.3)"></div>
+<div style="position:absolute;top:66.66%;left:0;right:0;height:1px;background:rgba(255,255,255,.3)"></div>
+<div style="position:absolute;left:-3px;top:-3px;width:20px;height:20px;border-left:3px solid #fff;border-top:3px solid #fff"></div>
+<div style="position:absolute;right:-3px;top:-3px;width:20px;height:20px;border-right:3px solid #fff;border-top:3px solid #fff"></div>
+<div style="position:absolute;left:-3px;bottom:-3px;width:20px;height:20px;border-left:3px solid #fff;border-bottom:3px solid #fff"></div>
+<div style="position:absolute;right:-3px;bottom:-3px;width:20px;height:20px;border-right:3px solid #fff;border-bottom:3px solid #fff"></div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showCurve }}" hint-placeholder-val="{{ false }}">
+<svg width="300" height="300" viewBox="0 0 300 300" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none"><rect x=".5" y=".5" width="299" height="299" fill="rgba(0,0,0,.3)" stroke="rgba(255,255,255,.35)"></rect><path d="M75 0V300M150 0V300M225 0V300M0 75H300M0 150H300M0 225H300" stroke="rgba(255,255,255,.14)"></path><path d="M0 300L300 0" stroke="rgba(255,255,255,.18)" stroke-dasharray="3 4"></path><path d="{{ curvePath }}" fill="none" stroke="{{ curveColor }}" stroke-width="2"></path><circle cx="{{ curvePt.x }}" cy="{{ curvePt.y }}" r="6" fill="#fff"></circle></svg>
+</sc-if>
+
+<sc-if value="{{ showText }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:50%;top:20%;transform:translateX(-50%);padding:4px 12px;box-shadow:0 0 0 1px rgba(255,255,255,.9);border-radius:3px;font-family:'Snell Roundhand','Savoye LET',cursive;font-size:{{ textSize }}px;white-space:nowrap;color:{{ textColor }};opacity:{{ textOpacity }};text-shadow:0 2px 10px rgba(0,0,0,.4);pointer-events:none">Golden hour</div>
+</sc-if>
+
+<sc-for list="{{ pins }}" as="p" hint-placeholder-count="0">
+<div onClick="{{ p.onClick }}" style="position:absolute;left:{{ p.x }}%;top:{{ p.y }}%;width:{{ p.size }}px;height:{{ p.size }}px;margin-left:{{ p.m }}px;margin-top:{{ p.m }}px;border-radius:50%;background:{{ p.c }};box-shadow:0 0 0 2px #fff,0 0 0 3px rgba(0,0,0,.4);cursor:pointer"></div>
+</sc-for>
+</div>
+
+<sc-if value="{{ pillText }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:50%;top:14px;transform:translateX(-50%);height:30px;padding:0 13px;border-radius:15px;background:rgba(18,18,20,.72);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16);display:flex;align-items:center;font-size:12.5px;white-space:nowrap;pointer-events:none">{{ pillText }}</div>
+</sc-if>
+</div>
+
+<div style="flex:none;height:264px;background:#0F1012;border-radius:22px 22px 0 0;display:flex;flex-direction:column;position:relative">
+<div style="flex:none;height:185px;overflow:hidden;position:relative;border-radius:22px 22px 0 0;display:flex;flex-direction:column;padding-top:8px;box-sizing:border-box">
+
+<sc-if value="{{ stripDots }}" hint-placeholder-val="{{ false }}">
+<div style="flex:none;height:40px;display:flex;align-items:center;padding:0 10px">
+<sc-for list="{{ stripDots }}" as="d" hint-placeholder-count="8">
+<div onClick="{{ d.onClick }}" style="flex:1;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer">
+<div style="position:relative;width:{{ d.size }}px;height:{{ d.size }}px;border-radius:50%;background:{{ d.c }};opacity:{{ d.op }};box-shadow:{{ d.shadow }}">
+<sc-if value="{{ d.edited }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;right:-3px;top:-3px;width:6px;height:6px;border-radius:3px;background:#fff;box-shadow:0 0 0 1.5px #0F1012"></div></sc-if>
+</div>
+</div>
+</sc-for>
+<sc-if value="{{ stripDotsAdd }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ toggleArm }}" style="flex:none;width:40px;height:30px;display:grid;place-items:center;color:{{ armColor }};border-radius:8px;box-shadow:{{ armShadow }};cursor:pointer"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6.5l3.5 3.5M16 4.5a2.1 2.1 0 0 1 3 3l-2 2-3-3ZM14.5 8 6 16.5 5 20l3.5-1L17 10.5"></path></svg></div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ stripText }}" hint-placeholder-val="{{ false }}">
+<div data-noscroll="1" style="flex:none;height:40px;display:flex;align-items:center;gap:6px;padding:0 12px;overflow-x:auto;white-space:nowrap">
+<sc-for list="{{ stripText }}" as="t" hint-placeholder-count="4">
+<div onClick="{{ t.onClick }}" style="flex:{{ t.flex }};min-width:{{ t.minW }};height:30px;padding:0 8px;display:flex;align-items:center;justify-content:center;gap:5px;font-size:13px;font-weight:{{ t.weight }};color:{{ t.color }};background:{{ t.bg }};border-radius:8px;cursor:pointer;white-space:nowrap">
+<sc-if value="{{ t.d }}" hint-placeholder-val="{{ false }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="{{ t.d }}"></path></svg></sc-if>
+<sc-if value="{{ t.dot }}" hint-placeholder-val="{{ false }}"><div style="width:{{ t.ds }}px;height:{{ t.ds }}px;border-radius:50%;background:{{ t.dot }};box-shadow:{{ t.dsh }};margin-right:3px;flex:none"></div></sc-if>
+{{ t.t }}
+<sc-if value="{{ t.edited }}" hint-placeholder-val="{{ false }}"><div style="width:4px;height:4px;border-radius:2px;background:rgba(255,255,255,.55)"></div></sc-if>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ stripIcons }}" hint-placeholder-val="{{ false }}">
+<div style="flex:none;height:40px;display:flex;align-items:center;gap:6px;padding:0 12px">
+<sc-for list="{{ stripIcons }}" as="t" hint-placeholder-count="5">
+<div onClick="{{ t.onClick }}" style="flex:{{ t.flex }};height:30px;padding:{{ t.pad }};display:flex;align-items:center;justify-content:center;gap:6px;color:{{ t.color }};background:{{ t.bg }};border-radius:8px;cursor:pointer">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="{{ t.d }}"></path></svg>
+<sc-if value="{{ t.sel }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;font-weight:600">{{ t.l }}</div></sc-if>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ stripMasks }}" hint-placeholder-val="{{ false }}">
+<div style="flex:none;height:40px;display:flex;align-items:center;padding:0 10px;gap:2px">
+<sc-for list="{{ stripMasks }}" as="m" hint-placeholder-count="1">
+<div onClick="{{ m.onClick }}" style="flex:none;width:48px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer">
+<div style="width:40px;height:30px;border-radius:6px;background:#161616 url(assets/photo.png) center/cover;position:relative;overflow:hidden;opacity:{{ m.op }};box-shadow:{{ m.shadow }}">
+<div style="position:absolute;inset:0;background:rgba(0,0,0,.45)"></div>
+<sc-if value="{{ m.busy }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px;border-radius:50%;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;box-sizing:border-box"></div></sc-if>
+<sc-if value="{{ m.done }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:{{ m.left }};top:{{ m.top }};width:{{ m.w }};height:{{ m.h }};border-radius:{{ m.r }};background:rgba(255,69,58,.85);filter:blur(1.5px)"></div></sc-if>
+</div>
+</div>
+</sc-for>
+<div onClick="{{ addMask }}" style="flex:none;width:44px;height:40px;display:grid;place-items:center;color:rgba(255,255,255,.55);cursor:pointer"><div style="width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.06);color:#fff;display:grid;place-items:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></div></div>
+<div style="flex:1;min-width:0;font-size:13px;font-weight:600;color:#fff;padding-left:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ maskStatus }}</div>
+<div onClick="{{ deleteMask }}" title="Delete mask" style="flex:none;width:30px;height:30px;display:grid;place-items:center;color:rgba(255,255,255,.55);cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.4"></circle><circle cx="12" cy="12" r="1.4"></circle><circle cx="18" cy="12" r="1.4"></circle></svg></div>
+</div>
+</sc-if>
+
+<sc-if value="{{ zonePresets }}" hint-placeholder-val="{{ false }}">
+<div data-noscroll="1" style="flex:none;display:flex;gap:8px;padding:2px 16px 8px;overflow-x:auto">
+<sc-for list="{{ presets }}" as="p" hint-placeholder-count="6">
+<div onClick="{{ p.onClick }}" style="flex:none;width:62px;display:flex;flex-direction:column;gap:5px;align-items:center;cursor:pointer">
+<div style="width:62px;height:62px;border-radius:8px;background:#161616 url(assets/photo.png) center/cover;filter:{{ p.f }};box-shadow:{{ p.shadow }}"></div>
+<div style="font-size:10.5px;white-space:nowrap;color:{{ p.color }}">{{ p.l }}</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ stripLayers }}" hint-placeholder-val="{{ false }}">
+<div style="flex:none;height:40px;display:flex;align-items:center;padding:0 10px;gap:2px">
+<sc-for list="{{ stripLayers }}" as="l" hint-placeholder-count="1">
+<div onClick="{{ l.onClick }}" style="flex:none;width:48px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer">
+<div style="width:40px;height:30px;border-radius:6px;background:#1f2023;display:grid;place-items:center;color:{{ l.c }};opacity:{{ l.op }};box-shadow:{{ l.shadow }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ l.d }}"></path></svg></div>
+</div>
+</sc-for>
+<div onClick="{{ addLayer }}" style="flex:none;width:44px;height:40px;display:grid;place-items:center;cursor:pointer"><div style="width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.06);color:#fff;display:grid;place-items:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></div></div>
+<div style="flex:1;min-width:0;font-size:13px;font-weight:600;color:#fff;padding-left:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ layerName }}</div>
+<div onClick="{{ deleteLayer }}" title="Delete layer" style="flex:none;width:30px;height:30px;display:grid;place-items:center;color:rgba(255,255,255,.55);cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.4"></circle><circle cx="12" cy="12" r="1.4"></circle><circle cx="18" cy="12" r="1.4"></circle></svg></div>
+</div>
+</sc-if>
+
+<sc-if value="{{ zoneRows }}" hint-placeholder-val="{{ true }}">
+<div data-noscroll="1" style="flex:1;min-height:0;overflow-y:auto;padding-top:0;padding-bottom:18px">
+<sc-for list="{{ rows }}" as="r" hint-placeholder-count="4">
+<sc-if value="{{ r.isSlider }}" hint-placeholder-val="{{ true }}">
+<div style="height:40px;display:flex;align-items:center;gap:8px;padding:0 16px;opacity:{{ r.op }}">
+<div onDoubleClick="{{ r.onReset }}" style="flex:none;width:78px;font-size:12px;color:{{ r.labelColor }};white-space:nowrap;cursor:default">{{ r.label }}</div>
+<div onPointerDown="{{ r.onDown }}" onPointerMove="{{ r.onMove }}" onPointerUp="{{ r.onUp }}" onDoubleClick="{{ r.onReset }}" style="flex:1;position:relative;height:30px;display:flex;align-items:center;touch-action:none;cursor:ew-resize">
+<div style="height:3px;width:100%;border-radius:2px;background:{{ r.track }};opacity:{{ r.trackOp }}"></div>
+<sc-if value="{{ r.bipolar }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;left:50%;width:1px;height:7px;background:rgba(255,255,255,.22)"></div></sc-if>
+<sc-if value="{{ r.fill }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:{{ r.fillL }}%;width:{{ r.fillW }}%;height:3px;border-radius:2px;background:rgba(255,255,255,.5)"></div></sc-if>
+<div style="position:absolute;left:{{ r.pos }}%;transform:translateX(-50%);width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.55)"></div>
+</div>
+<div onDoubleClick="{{ r.onReset }}" style="flex:none;width:44px;text-align:right;font-size:11.5px;font-variant-numeric:tabular-nums;color:{{ r.valColor }}">{{ r.val }}</div>
+</div>
+</sc-if>
+<sc-if value="{{ r.isColor }}" hint-placeholder-val="{{ false }}">
+<div style="height:40px;display:flex;align-items:center;gap:8px;padding:0 16px">
+<div style="flex:none;width:78px;font-size:12px;color:rgba(255,255,255,.55)">Color</div>
+<div style="flex:1;display:flex;justify-content:space-between;align-items:center">
+<sc-for list="{{ r.swatches }}" as="s" hint-placeholder-count="6">
+<div onClick="{{ s.onClick }}" style="width:20px;height:20px;border-radius:50%;background:{{ s.c }};box-shadow:{{ s.shadow }};cursor:pointer"></div>
+</sc-for>
+<div style="width:1px;height:18px;background:rgba(255,255,255,.12)"></div>
+<div onClick="{{ openPicker }}" style="position:relative;width:22px;height:22px;border-radius:50%;background:conic-gradient(#ff453a,#ffd60a,#30d158,#64d2ff,#0a84ff,#bf5af2,#ff453a);box-shadow:{{ r.customShadow }};cursor:pointer"><div style="position:absolute;inset:4px;border-radius:50%;background:{{ r.customCore }};box-shadow:0 0 0 1px #0F1012"></div></div>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ r.isFont }}" hint-placeholder-val="{{ false }}">
+<div style="height:40px;display:flex;align-items:center;gap:8px;padding:0 16px">
+<div style="flex:none;width:78px;font-size:12px;color:rgba(255,255,255,.55)">Font</div>
+<div style="flex:1;font-family:'Snell Roundhand',cursive;font-size:16px">Snell Roundhand</div>
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.32)" stroke-width="2" stroke-linecap="round"><path d="M9.5 6l6 6-6 6"></path></svg>
+</div>
+</sc-if>
+<sc-if value="{{ r.isHint }}" hint-placeholder-val="{{ false }}">
+<div style="height:40px;display:flex;align-items:center;padding:0 16px;font-size:12px;color:rgba(255,255,255,.32)">{{ r.label }}</div>
+</sc-if>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ zoneMaskTypes }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;padding-top:4px">
+<div style="flex:none;height:34px;display:flex;align-items:center;gap:6px;padding:0 16px;font-size:13px;color:rgba(255,255,255,.55)">
+<sc-if value="{{ canCancelAdd }}" hint-placeholder-val="{{ false }}"><div onClick="{{ cancelAdd }}" style="width:26px;height:26px;margin-left:-6px;display:grid;place-items:center;color:#fff;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6 8.5 12l6 6"></path></svg></div></sc-if>
+{{ typesTitle }}
+</div>
+<sc-for list="{{ maskGroups }}" as="g" hint-placeholder-count="3">
+<div style="height:40px;display:flex;align-items:center;gap:6px;padding:0 16px">
+
+<div data-noscroll="1" style="display:flex;gap:6px;overflow-x:auto">
+<sc-for list="{{ g.items }}" as="it" hint-placeholder-count="3">
+<div onClick="{{ it.onClick }}" style="flex:none;height:30px;padding:0 10px;display:flex;align-items:center;gap:6px;font-size:13px;border-radius:8px;background:rgba(255,255,255,.06);cursor:pointer;white-space:nowrap">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="{{ it.d }}"></path></svg>{{ it.l }}
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ zonePointEmpty }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:0 36px;text-align:center">
+<div style="width:40px;height:40px;border-radius:20px;background:rgba(255,255,255,.08);color:#fff;display:grid;place-items:center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6.5l3.5 3.5M16 4.5a2.1 2.1 0 0 1 3 3l-2 2-3-3ZM14.5 8 6 16.5 5 20l3.5-1L17 10.5"></path></svg></div>
+<div style="font-size:13px;line-height:1.4;color:rgba(255,255,255,.55);text-wrap:pretty">Tap the photo to pick a color, then adjust only that color</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ zonePicker }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column">
+<div style="flex:none;height:36px;display:flex;align-items:center;gap:8px;padding:0 10px 0 8px">
+<div onClick="{{ closePicker }}" style="width:32px;height:32px;display:grid;place-items:center;cursor:pointer"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6 8.5 12l6 6"></path></svg></div>
+<div style="flex:1;font-size:14px;font-weight:600">Color</div>
+<div style="height:26px;padding:0 9px;display:flex;align-items:center;gap:6px;font-size:12px;font-family:ui-monospace,monospace;box-shadow:inset 0 0 0 1px rgba(255,255,255,.4);border-radius:8px"><div style="width:10px;height:10px;border-radius:50%;background:{{ customHex }}"></div>{{ customHexLabel }}</div>
+</div>
+<div style="flex:none;height:32px;display:flex;align-items:center;gap:10px;padding:0 16px">
+<div style="flex:none;width:78px;font-size:12px;color:rgba(255,255,255,.55)">Recent</div>
+<sc-for list="{{ recents }}" as="c" hint-placeholder-count="6">
+<div onClick="{{ c.onClick }}" style="width:18px;height:18px;border-radius:50%;background:{{ c.c }};box-shadow:inset 0 0 0 1px rgba(255,255,255,.2);cursor:pointer"></div>
+</sc-for>
+</div>
+<sc-for list="{{ pickerRows }}" as="r" hint-placeholder-count="3">
+<div style="height:36px;display:flex;align-items:center;gap:8px;padding:0 16px">
+<div style="flex:none;width:78px;font-size:12px;color:#fff">{{ r.label }}</div>
+<div onPointerDown="{{ r.onDown }}" onPointerMove="{{ r.onMove }}" onPointerUp="{{ r.onUp }}" style="flex:1;position:relative;height:30px;display:flex;align-items:center;touch-action:none;cursor:ew-resize">
+<div style="height:3px;width:100%;border-radius:2px;background:{{ r.track }}"></div>
+<div style="position:absolute;left:{{ r.pos }}%;transform:translateX(-50%);width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.55)"></div>
+</div>
+<div style="flex:none;width:44px;text-align:right;font-size:11.5px;font-variant-numeric:tabular-nums">{{ r.val }}</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<div style="position:absolute;left:0;right:0;bottom:0;height:22px;background:linear-gradient(transparent,#0F1012);pointer-events:none"></div>
+</div>
+
+<div style="flex:none;height:54px;display:flex;align-items:center;gap:8px;padding:0 16px">
+<div onClick="{{ prevGroup }}" style="flex:none;width:38px;height:38px;border-radius:19px;background:rgba(255,255,255,.08);display:grid;place-items:center;cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6 8.5 12l6 6"></path></svg></div>
+<div style="flex:1;min-width:0;height:54px;position:relative;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 58px,#000 calc(100% - 58px),transparent);mask-image:linear-gradient(90deg,transparent,#000 58px,#000 calc(100% - 58px),transparent)">
+<div style="position:absolute;left:0;top:6px;display:flex;gap:8px;transform:translateX({{ wheelX }}px);transition:transform .3s cubic-bezier(.2,.8,.3,1)">
+<sc-for list="{{ groups }}" as="g" hint-placeholder-count="5">
+<div onClick="{{ g.onClick }}" style="flex:none;width:58px;height:42px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:{{ g.color }};cursor:pointer">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="{{ g.sw }}" stroke-linecap="round" stroke-linejoin="round"><path d="{{ g.d }}"></path></svg>
+<div style="font-size:10.5px;font-weight:{{ g.weight }};white-space:nowrap">{{ g.l }}</div>
+</div>
+</sc-for>
+</div>
+<div style="position:absolute;left:50%;margin-left:-8px;bottom:3px;width:16px;height:2px;border-radius:1px;background:#fff"></div>
+</div>
+<div onClick="{{ save }}" style="flex:none;width:42px;height:38px;border-radius:19px;background:{{ accent }};display:grid;place-items:center;cursor:pointer"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17l9-10"></path></svg></div>
+</div>
+<div style="flex:none;height:25px;display:grid;place-items:center"><div style="width:134px;height:5px;border-radius:3px;background:rgba(255,255,255,.5)"></div></div>
+</div>
+
+<sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:50%;bottom:280px;transform:translateX(-50%);height:34px;padding:0 16px;border-radius:17px;background:rgba(40,40,44,.92);box-shadow:0 8px 24px rgba(0,0,0,.5);display:flex;align-items:center;font-size:13px;white-space:nowrap;z-index:30">{{ toast }}</div>
+</sc-if>
+</div>
+</div>
+
+<div style="width:300px;display:flex;flex-direction:column;gap:18px;padding-top:12px;color:#1a1a1a">
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:#a09a8e">PROTOTYPE</div>
+<div style="font-size:22px;font-weight:600;letter-spacing:-.01em">ShotDex Editor · 8a</div>
+<div style="font-size:13px;line-height:1.5;color:#6b6660;text-wrap:pretty">Bản tương tác của Turn 8. Ảnh phản hồi thô với Light, Color, Effects để cảm nhận nhịp chỉnh.</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;font-size:13px;line-height:1.45;color:#3a3a3a">
+<div style="font-size:11px;font-weight:700;letter-spacing:.1em;color:#8a6a1f">THỬ</div>
+<div><b>Wheel:</b> chạm nhóm ở hàng dưới cùng, hoặc nút ‹ để lùi.</div>
+<div><b>Slider:</b> kéo trên track. Double-click nhãn hoặc track để reset.</div>
+<div><b>Color Mix / Grade:</b> đổi band, vùng; chấm nhỏ hiện khi mục đã chỉnh.</div>
+<div><b>Crop:</b> đổi tỉ lệ, kéo Straighten.</div>
+<div><b>Mask:</b> lần đầu hiện danh sách loại mask. Chọn một loại, chờ “Detecting”, rồi chỉnh. + để thêm, ⋯ để xoá.</div>
+<div><b>Point Color:</b> chạm ảnh để lấy màu; eyedropper ở cuối dải để thêm điểm.</div>
+<div><b>Markup:</b> chọn công cụ; ô phổ màu mở bộ chọn HSB ngay trong panel.</div>
+<div><b>Band trên cùng:</b> undo / redo, giữ nút so sánh để xem ảnh gốc, ⋯ để reset tất cả.</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#57BFD1&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#57BFD1&quot;,&quot;#FFD60A&quot;,&quot;#0A84FF&quot;,&quot;#FF9F0A&quot;]},&quot;livePreview&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const c = (x, y, r) => `M${x - r} ${y}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0`;
+    this.I = {
+      presets: c(9,10,5)+c(15,10,5)+c(12,15,5),
+      light: c(12,12,4)+'M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4',
+      curve: 'M4 20V4M4 20h16M5 18c5 0 5-11 14-13',
+      color: 'M12 3.5c3.2 4 5.5 7 5.5 10a5.5 5.5 0 0 1-11 0c0-3 2.3-6 5.5-10Z',
+      mix: c(12,6.5,2.4)+c(6.5,12,2.4)+c(17.5,12,2.4)+c(12,17.5,2.4)+c(12,12,2.4),
+      point: 'M14 6.5l3.5 3.5M16 4.5a2.1 2.1 0 0 1 3 3l-2 2-3-3ZM14.5 8 6 16.5 5 20l3.5-1L17 10.5',
+      grade: 'M12 3.5a8.5 8.5 0 0 0 0 17c1.3 0 1.8-.8 1.5-1.8-.4-1.3.3-2.2 1.6-2.2H17a3.5 3.5 0 0 0 3.5-3.5c0-5-3.8-9.5-8.5-9.5Z',
+      effects: 'M10 3.5 11.6 8 16 9.6l-4.4 1.6L10 15.7l-1.6-4.5L4 9.6 8.4 8ZM17.5 14l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8Z',
+      detail: 'M4 20 14.5 9.5M16 3.5v3M17.5 5h-3M19.5 9.5v2M20.5 10.5h-2',
+      optics: c(12,12,8.5)+'M12 3.5 14.5 12M20.5 12l-8 2.2M12 20.5 9.5 12M3.5 12l8-2.2',
+      geo: 'M6 4h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2ZM9.3 4v16M14.7 4v16M4 9.3h16M4 14.7h16',
+      crop: 'M7 3v14h14M3 7h14v14',
+      mask: c(12,12,8)+c(12,12,3),
+      markup: c(12,12,8.5)+'M9 15.5l.6-2.3 4.8-4.8 1.7 1.7-4.8 4.8Z',
+      pen: 'M4.5 19.5l1-4.2L16 4.8l3.2 3.2L8.7 18.5Z', marker: 'M14 4l6 6-8.5 8.5H6v-5.5ZM4 21h7', text: 'M6 6h12M12 6v13',
+      shape: 'M5.5 3.5h6a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2Z'+c(15,15,5.5),
+      sign: 'M3 17c3-7 5.5-10 6.5-7.5S7 17 9.5 17s3-4.5 5-4.5 1 4.5 3 4.5H21',
+      subject: c(12,8,3.5)+'M5 20c1-4 4-6 7-6s6 2 7 6', sky: 'M7 17.5h10a4 4 0 0 0 .4-8 5.2 5.2 0 0 0-10 1.3A3.4 3.4 0 0 0 7 17.5Z',
+      background: 'M6 4.5h12a2.5 2.5 0 0 1 2.5 2.5v10a2.5 2.5 0 0 1-2.5 2.5H6A2.5 2.5 0 0 1 3.5 17V7A2.5 2.5 0 0 1 6 4.5Z'+c(12,12,3.5),
+      people: c(9,8.5,3)+c(16.5,9.5,2.5)+'M3.5 19c.8-3.4 3-5 5.5-5s4.7 1.6 5.5 5M14.5 14.2c2.6-.4 4.8 1.2 5.5 4.3',
+      brush: 'M19 4 10 13M10 13c-3 0-4 2-4.5 5.5C9 18 11 17 11 14Z', linear: 'M4 7h16M4 12h16M4 17h16',
+      radial: c(12,12,8)+c(12,12,3.5), crange: c(12,12,8)+'M12 4v16', lrange: 'M4 18h16M6 18V9M10 18V6M14 18v-8M18 18v-5'
+    };
+    this.G = [
+      ['presets','Presets'],['light','Light'],['curve','Curve'],['color','Color'],['mix','Color Mix'],['point','Point Color'],
+      ['grade','Grade'],['effects','Effects'],['detail','Detail'],['optics','Optics'],['geo','Geometry'],['crop','Crop'],['mask','Mask'],['markup','Markup']
+    ];
+    this.HUE = 'linear-gradient(90deg,#ff453a,#ffd60a,#30d158,#64d2ff,#0a84ff,#bf5af2,#ff453a)';
+    this.BANDS = [['red','#ff453a'],['orange','#ff9f0a'],['yellow','#ffd60a'],['green','#30d158'],['aqua','#64d2ff'],['blue','#0a84ff'],['purple','#bf5af2'],['magenta','#ff375f']];
+    this.REGIONS = ['Shadows','Midtones','Highlights','Global'];
+    this.CH = [['RGB','#e8e8e8','#fff'],['Red','#ff453a','#ff6a5e'],['Green','#30d158','#4fdc75'],['Blue','#0a84ff','#4aa3ff']];
+    this.ASPECTS = [['Original',1.2],['1:1',1],['4:5',.8],['16:9',16/9],['3:2',1.5]];
+    this.TOOLS = [['pen','Pen'],['marker','Marker'],['text','Text'],['shape','Shape'],['sign','Signature']];
+    this.SW = ['#ffffff','#000000','#ff453a','#ffd60a','#30d158','#0a84ff'];
+    this.PRESETS = [['None','none'],['Warm Film','sepia(.35) saturate(1.2)'],['Soft Fade','contrast(.85) brightness(1.08)'],['Coast','hue-rotate(-12deg) saturate(1.15)'],['Mono','grayscale(1) contrast(1.1)'],['Night','brightness(.8) hue-rotate(18deg) saturate(.9)']];
+    this.MTYPES = [
+      ['DETECT',[['subject','Subject'],['sky','Sky'],['background','Background'],['people','People']]],
+      ['DRAW',[['brush','Brush'],['linear','Linear'],['radial','Radial']]],
+      ['RANGE',[['crange','Color'],['lrange','Luminance']]]
+    ];
+    this.SHAPES = {
+      subject:['34%','18%','34%','76%','45% 45% 20% 20%'], people:['22%','20%','56%','74%','40% 40% 18% 18%'],
+      sky:['0%','0%','100%','38%','0'], background:['0%','0%','100%','100%','0'], brush:['12%','58%','40%','26%','50%'],
+      linear:['0%','62%','100%','38%','0'], radial:['26%','16%','48%','64%','50%'], crange:['52%','24%','30%','40%','40%'], lrange:['10%','4%','80%','30%','30%']
+    };
+    this.PTC = ['#c8784a','#6f8fa8','#4f6a3a','#b9a47a','#8a5a6a'];
+    this.state = {
+      g: 1, v: { 'light.exposure': .175, 'light.highlights': -.4, 'mix.orange.sat': -.18, 'mix.aqua.sat': .25, 'grade.Highlights.hue': .12, 'grade.Highlights.sat': .2 },
+      hist: [], fut: [], band: 1, ch: 0, region: 2, aspect: 0, tool: 2, color: 0, picker: false, preset: 0,
+      masks: [], maskSel: null, maskAdding: false, detecting: null, points: [], ptSel: null, armed: true,
+      comparing: false, toast: null, layers: [{ id: 'l1', tool: 2, name: 'Text 1' }], layerSel: 'l1', layerAdding: false
+    };
+    this.drag = null;
+  }
+  def(k) {
+    if (k.endsWith('.size')) return .34;
+    if (k.endsWith('.opacity')) return 1;
+    if (k.endsWith('.input')) return .75;
+    if (k.endsWith('.output')) return .75;
+    if (k.endsWith('.range')) return .4;
+    if (k === 'grade.blending') return .5;
+    if (k === 'detail.radius') return .33;
+    if (k === 'presets.amount') return .8;
+    if (k === 'pick.h') return .12; if (k === 'pick.s') return .68; if (k === 'pick.b') return .95;
+    return 0;
+  }
+  val(k) { const v = this.state.v[k]; return v === undefined ? this.def(k) : v; }
+  edited(k) { return Math.abs(this.val(k) - this.def(k)) > 0.004; }
+  snap() { this.setState(s => ({ hist: [...s.hist.slice(-40), s.v], fut: [] })); }
+  set(k, x) { this.setState(s => ({ v: { ...s.v, [k]: x } })); }
+  flash(t) { clearTimeout(this.tt); this.setState({ toast: t }); this.tt = setTimeout(() => this.setState({ toast: null }), 1600); }
+  fmt(f, x) {
+    const sg = (n) => (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n);
+    switch (f) {
+      case 'stops': { const n = x * 2; return Math.abs(n) < .005 ? '0' : (n > 0 ? '+' : '−') + Math.abs(n).toFixed(2); }
+      case 'uni': return String(Math.round(x * 100));
+      case 'deg': { const n = +(x * 10).toFixed(1); return (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n) + '°'; }
+      case 'hue': return Math.round(x * 360) + '°';
+      case 'kelvin': return sg(Math.round(x * 300) * 10);
+      case 'lvl': return String(Math.round(x * 255));
+      default: return sg(Math.round(x * 100));
+    }
+  }
+  slider(k, label, o = {}) {
+    const x = this.val(k); const uni = !!o.uni; const ch = this.edited(k);
+    const pos = uni ? x * 100 : 50 + x * 50;
+    const d = this.def(k);
+    const base = uni ? d * 100 : 50 + d * 50;
+    const fill = !o.grad && ch;
+    const onDown = (e) => {
+      const el = e.currentTarget; el.setPointerCapture && el.setPointerCapture(e.pointerId);
+      this.snap(); this.drag = { k, uni, rect: el.getBoundingClientRect() }; this.move(e);
+    };
+    return {
+      isSlider: true, label, val: this.fmt(o.f || (uni ? 'uni' : 'pct'), x),
+      labelColor: 'rgba(255,255,255,.6)', valColor: 'rgba(255,255,255,.6)',
+      track: o.grad || '#2a2a2a', trackOp: o.grad ? .8 : 1, bipolar: !uni, fill,
+      fillL: Math.min(pos, base), fillW: Math.abs(pos - base), pos, op: o.dim ? .35 : 1,
+      onDown: o.dim ? null : onDown, onMove: (e) => this.move(e), onUp: () => { this.drag = null; },
+      onReset: () => { this.snap(); this.set(k, d); }
+    };
+  }
+  move(e) {
+    const dr = this.drag; if (!dr) return;
+    let t = (e.clientX - dr.rect.left) / dr.rect.width; t = Math.max(0, Math.min(1, t));
+    let x = dr.uni ? t : t * 2 - 1;
+    const d = this.def(dr.k);
+    if (Math.abs(x - d) < .025) x = d;
+    this.set(dr.k, x);
+  }
+  hex() {
+    const h = this.val('pick.h') * 360, s = this.val('pick.s'), v = this.val('pick.b');
+    const f = (n) => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); };
+    return '#' + [f(5), f(3), f(1)].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('').toUpperCase();
+  }
+  addMask(type, label) {
+    const st = this.state; const id = 'm' + Date.now();
+    const n = st.masks.filter(m => m.type === type).length;
+    const base = ['brush','linear','radial','crange','lrange'].includes(type);
+    const name = base ? `${label} ${n + 1}` : (n ? `${label} ${n + 1}` : label);
+    this.setState({ masks: [...st.masks, { id, type, name }], maskSel: id, maskAdding: false, detecting: id });
+    clearTimeout(this.dt); this.dt = setTimeout(() => this.setState({ detecting: null }), 1100);
+  }
+  renderVals() {
+    const st = this.state; const I = this.I; const gid = this.G[st.g][0];
+    const accent = this.props.accent ?? '#57BFD1';
+    const live = this.props.livePreview ?? true;
+    const W1 = '#fff', W2 = 'rgba(255,255,255,.55)', W3 = 'rgba(255,255,255,.32)';
+    const ring = '0 0 0 2px #0F1012,0 0 0 3.5px #fff', box = 'inset 0 0 0 1px rgba(255,255,255,.4)';
+    const S = (k, l, o) => this.slider(k, l, o);
+    let stripDots = null, stripDotsAdd = false, stripText = null, stripIcons = null, stripMasks = null, stripLayers = null, layerName = '';
+    const textColorOf = () => (st.color === -1 ? this.hex() : this.SW[st.color]);
+    let rows = [], zoneRows = true, zonePresets = false, zoneMaskTypes = false, zonePointEmpty = false, zonePicker = false, rowsTop = 6;
+    let pillText = st.comparing ? 'Original' : null;
+    const txt = (arr, sel, on) => arr.map((t, i) => ({ t: t.t || t, dot: t.dot || null, d: t.d || null, weight: i === sel ? 600 : 500, color: W1, bg: i === sel ? 'rgba(255,255,255,.2)' : 'rgba(255,255,255,.06)', edited: false, flex: arr.length <= 5 ? '1 1 0' : 'none', minW: arr.length <= 5 ? '0' : 'auto', onClick: () => on(i) }));
+    const rr = (w, hh) => `M${12 - w / 2} ${12 - hh / 2}h${w}v${hh}h${-w}Z`;
+    const AI = [I.crop, rr(14,14), rr(12,15), rr(18,10), rr(18,12)];
+    const RI = ['M12 4a8 8 0 0 0 0 16Z M20 12a8 8 0 1 1-16 0a8 8 0 1 1 16 0', 'M20 12a8 8 0 1 1-16 0a8 8 0 1 1 16 0M15 12a3 3 0 1 1-6 0a3 3 0 1 1 6 0', 'M17 12a5 5 0 1 1-10 0a5 5 0 1 1 10 0M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2', I.optics];
+    switch (gid) {
+      case 'presets':
+        zonePresets = true; rowsTop = 0;
+        rows = [S('presets.amount', 'Amount', { uni: 1 })]; break;
+      case 'light':
+        rows = [S('light.exposure','Exposure',{f:'stops'}),S('light.contrast','Contrast'),S('light.highlights','Highlights'),S('light.shadows','Shadows'),S('light.whites','Whites'),S('light.blacks','Blacks'),S('light.brilliance','Brilliance'),S('light.brightness','Brightness')]; break;
+      case 'curve': {
+        const c = this.CH[st.ch][0];
+        stripText = txt(this.CH.map(([t, d]) => ({ t, dot: d })), st.ch, (i) => this.setState({ ch: i })).map((it) => ({ ...it, ds: 8, dsh: 'none' }));
+        rows = [S(`curve.${c}.input`,'Input',{uni:1,f:'lvl'}),S(`curve.${c}.output`,'Output',{uni:1,f:'lvl'})]; rowsTop = 0; break; }
+      case 'color':
+        rows = [S('color.temp','Temp',{f:'kelvin',grad:'linear-gradient(90deg,#3d8cff,#8a8a8a,#ff9a33)'}),S('color.tint','Tint',{grad:'linear-gradient(90deg,#33cc66,#8a8a8a,#b85cff)'}),S('color.vibrance','Vibrance'),S('color.saturation','Saturation')]; break;
+      case 'mix': {
+        const b = this.BANDS[st.band][0];
+        stripDots = this.BANDS.map(([n, c], i) => ({ c, size: 18, op: i === st.band ? 1 : .7, shadow: i === st.band ? ring : 'none', edited: false, onClick: () => this.setState({ band: i }) }));
+        rows = [S(`mix.${b}.hue`,'Hue',{grad:this.HUE}),S(`mix.${b}.sat`,'Saturation'),S(`mix.${b}.lum`,'Luminance',{grad:'linear-gradient(90deg,#222,#999,#fff)'})]; rowsTop = 0; break; }
+      case 'point': {
+        if (!st.points.length) { zoneRows = false; zonePointEmpty = true; break; }
+        stripDots = st.points.map((p) => ({ c: p.c, size: 20, op: 1, shadow: p.id === st.ptSel ? ring : 'none', edited: false, onClick: () => this.setState({ ptSel: p.id, armed: false }) }));
+        stripDotsAdd = true;
+        if (st.armed) pillText = pillText || 'Tap the photo to add a point';
+        const p = st.ptSel;
+        rows = [S(`pt.${p}.hue`,'Hue shift'),S(`pt.${p}.sat`,'Sat shift'),S(`pt.${p}.lum`,'Lum shift'),S(`pt.${p}.range`,'Range',{uni:1})]; rowsTop = 0; break; }
+      case 'grade': {
+        const r = this.REGIONS[st.region];
+        stripText = txt(this.REGIONS.map((t, i) => ({ t, d: RI[i] })), st.region, (i) => this.setState({ region: i }), (i) => ['hue','sat','lum'].some(k => this.edited(`grade.${this.REGIONS[i]}.${k}`)));
+        rows = [S(`grade.${r}.hue`,'Hue',{grad:this.HUE,uni:1,f:'hue'}),S(`grade.${r}.sat`,'Saturation',{uni:1}),S(`grade.${r}.lum`,'Luminance'),S('grade.blending','Blending',{uni:1}),S('grade.balance','Balance')]; rowsTop = 0; break; }
+      case 'effects':
+        rows = [S('effects.texture','Texture'),S('effects.clarity','Clarity'),S('effects.dehaze','Dehaze'),S('effects.vignette','Vignette'),S('effects.grain','Grain',{uni:1})]; break;
+      case 'detail':
+        rows = [S('detail.sharpen','Sharpen',{uni:1}),S('detail.radius','Radius',{uni:1}),S('detail.definition','Definition'),S('detail.noise','Noise',{uni:1})]; break;
+      case 'optics':
+        rows = [S('optics.ca','Remove CA',{uni:1}),S('optics.defringe','Defringe',{uni:1}),S('optics.lens','Lens',{uni:1})]; break;
+      case 'geo':
+        rows = [S('geo.vertical','Vertical'),S('geo.horizontal','Horizontal'),S('geo.rotate','Rotate',{f:'deg'}),S('geo.scale','Scale')]; break;
+      case 'crop':
+        stripText = txt(this.ASPECTS.map((a, i) => ({ t: a[0], d: AI[i] })), st.aspect, (i) => this.setState({ aspect: i })).map(it => ({ ...it, flex: '1 1 auto', minW: 'auto' }));
+        rows = [S('crop.straighten','Straighten',{f:'deg'}),S('crop.vertical','Vertical'),S('crop.horizontal','Horizontal')]; rowsTop = 0; break;
+      case 'mask': {
+        if (!st.masks.length || st.maskAdding) {
+          zoneRows = false; zoneMaskTypes = true; break;
+        }
+        stripMasks = st.masks.map(m => { const sh = this.SHAPES[m.type]; const sel = m.id === st.maskSel; const busy = st.detecting === m.id;
+          return { op: sel ? 1 : .7, shadow: sel ? ring : 'none', busy, done: !busy, left: sh[0], top: sh[1], w: sh[2], h: sh[3], r: sh[4], onClick: () => this.setState({ maskSel: m.id }) }; });
+        const cur = st.masks.find(m => m.id === st.maskSel);
+        const dim = st.detecting === st.maskSel;
+        if (dim) pillText = pillText || `Detecting ${cur.name.toLowerCase()}…`;
+        const k = `mask.${st.maskSel}`;
+        rows = [S(`${k}.exposure`,'Exposure',{f:'stops',dim}),S(`${k}.contrast`,'Contrast',{dim}),S(`${k}.highlights`,'Highlights',{dim}),S(`${k}.shadows`,'Shadows',{dim}),S(`${k}.temp`,'Temp',{dim,f:'kelvin',grad:'linear-gradient(90deg,#3d8cff,#8a8a8a,#ff9a33)'}),S(`${k}.saturation`,'Saturation',{dim})];
+        rowsTop = 0; break; }
+      case 'markup': {
+        if (st.picker) { zoneRows = false; zonePicker = true; break; }
+        if (!st.layers.length || st.layerAdding) { zoneRows = false; zoneMaskTypes = true; break; }
+        const L = st.layers.find(l => l.id === st.layerSel) || st.layers[st.layers.length - 1];
+        const t = this.TOOLS[L.tool][0];
+        stripLayers = st.layers.map(l => { const sel = l.id === L.id; return { d: I[this.TOOLS[l.tool][0]], c: l.tool === 2 ? textColorOf(l) : '#fff', op: sel ? 1 : .7, shadow: sel ? ring : 'none', onClick: () => this.setState({ layerSel: l.id }) }; });
+        layerName = L.name;
+        const colorRow = { isColor: true, swatches: this.SW.map((c, i) => ({ c, shadow: st.color === i ? ring : 'inset 0 0 0 1px rgba(255,255,255,.2)', onClick: () => this.setState({ color: i }) })), customShadow: st.color === -1 ? ring : 'none', customCore: st.color === -1 ? this.hex() : '#0F1012' };
+        rows = t === 'text' ? [{ isFont: true }, S(`mark.${L.id}.size`,'Size',{uni:1}), colorRow] : [S(`mark.${L.id}.size`,'Size',{uni:1}), S(`mark.${L.id}.opacity`,'Opacity',{uni:1}), colorRow];
+        rowsTop = 0; break; }
+    }
+    // stage
+    const isCrop = gid === 'crop';
+    const photoW = isCrop ? 333 : 393, photoH = isCrop ? 278 : 328;
+    let cf = { left: 0, top: 0, w: photoW, h: photoH };
+    if (isCrop) { const r = this.ASPECTS[st.aspect][1]; let w = photoW, h = photoH; if (r > photoW / photoH) h = w / r; else w = h * r; cf = { left: (photoW - w) / 2, top: (photoH - h) / 2, w, h }; }
+    const v = (k) => this.val(k);
+    let filter = 'none';
+    if (live && !st.comparing) {
+      const br = 1 + v('light.exposure') * .45 + v('light.brightness') * .2 + v('light.shadows') * .08 + v('light.whites') * .08 - v('light.blacks') * .08 + v('light.brilliance') * .05;
+      const co = 1 + v('light.contrast') * .45 + v('effects.clarity') * .15 + v('effects.dehaze') * .2 - v('light.highlights') * .05 + v('effects.texture') * .05;
+      const sa = Math.max(0, 1 + v('color.saturation') * .9 + v('color.vibrance') * .5);
+      const temp = v('color.temp');
+      const sep = Math.max(0, temp) * .35;
+      const hr = v('color.tint') * 20 + Math.min(0, temp) * 15;
+      const pf = this.PRESETS[st.preset][1];
+      filter = `brightness(${br.toFixed(3)}) contrast(${co.toFixed(3)}) saturate(${sa.toFixed(3)}) sepia(${sep.toFixed(3)}) hue-rotate(${hr.toFixed(1)}deg)` + (pf !== 'none' && v('presets.amount') > .2 ? ' ' + pf : '');
+    }
+    const rot = isCrop ? v('crop.straighten') * 10 : v('geo.rotate') * 10;
+    const photoTransform = `rotate(${rot}deg) scale(${1 + Math.abs(rot) * .025})`;
+    const vig = v('effects.vignette');
+    const vignetteColor = live && !st.comparing ? (vig < 0 ? `rgba(0,0,0,${-vig * .85})` : `rgba(255,255,255,${vig * .5})`) : 'transparent';
+    const cur = st.masks.find(m => m.id === st.maskSel);
+    const sh = cur ? this.SHAPES[cur.type] : this.SHAPES.subject;
+    const mo = { left: sh[0], top: sh[1], w: sh[2], h: sh[3], r: sh[4], bg: 'rgba(255,69,58,.42)' };
+    const showMaskOv = gid === 'mask' && !!cur && !st.maskAdding && st.detecting !== cur.id && !st.comparing;
+    const detecting = gid === 'mask' && !!cur && st.detecting === cur.id && !st.maskAdding;
+    const cx = this.CH[st.ch][0];
+    const inp = v(`curve.${cx}.input`), out = v(`curve.${cx}.output`);
+    const px = inp * 300, py = 300 - out * 300;
+    const curvePath = `M0 300Q${(px * .5).toFixed(1)} ${(300 - out * 150 - (300 - py) * .3 + 0).toFixed(1)} ${px.toFixed(1)} ${py.toFixed(1)}T300 0`;
+    const curL = st.layers.find(l => l.id === st.layerSel);
+    const markT = curL ? this.TOOLS[curL.tool][0] : 'text';
+    const textColor = st.color === -1 ? this.hex() : this.SW[st.color];
+    const pins = gid === 'point' ? st.points.map(p => { const s = p.id === st.ptSel; return { x: p.x, y: p.y, c: p.c, size: s ? 26 : 18, m: s ? -13 : -9, onClick: (e) => { e.stopPropagation(); this.setState({ ptSel: p.id, armed: false }); } }; }) : [];
+    const wW = 393 - 32 - 38 - 42 - 16;
+    const groups = this.G.map(([id, l], i) => ({ d: I[id], l, color: i === st.g ? W1 : W3, weight: i === st.g ? 600 : 500, sw: i === st.g ? 1.9 : 1.6, onClick: () => this.setState({ g: i, picker: false, maskAdding: false, layerAdding: false }) }));
+    const presets = this.PRESETS.map(([l, f], i) => ({ l, f: f === 'none' ? 'none' : f, color: i === st.preset ? W1 : W2, shadow: i === st.preset ? ring : 'none', onClick: () => this.setState({ preset: i }) }));
+    const addLayerOf = (ti) => { const id = 'l' + Date.now(); const n = st.layers.filter(l => l.tool === ti).length + 1; this.setState({ layers: [...st.layers, { id, tool: ti, name: `${this.TOOLS[ti][1]} ${n}` }], layerSel: id, layerAdding: false }); };
+    const maskGroups = gid === 'markup'
+      ? [{ label: 'DRAW', items: [0, 1, 4].map(i => ({ d: I[this.TOOLS[i][0]], l: this.TOOLS[i][1], onClick: () => addLayerOf(i) })) }, { label: 'ADD', items: [2, 3].map(i => ({ d: I[this.TOOLS[i][0]], l: this.TOOLS[i][1], onClick: () => addLayerOf(i) })) }]
+      : this.MTYPES.map(([label, items]) => ({ label, items: items.map(([t, l]) => ({ d: I[t], l, onClick: () => this.addMask(t, l) })) }));
+    const hx = this.hex();
+    const pickerRows = [
+      this.slider('pick.h', 'Hue', { uni: 1, grad: this.HUE, f: 'hue' }),
+      this.slider('pick.s', 'Saturation', { uni: 1, grad: `linear-gradient(90deg,#888,${hx})` }),
+      this.slider('pick.b', 'Brightness', { uni: 1, grad: `linear-gradient(90deg,#000,${hx})` })
+    ];
+    const RC = [['#F2C14E',.12,.68,.95],['#E86A4A',.03,.68,.91],['#3A6EA8',.59,.65,.66],['#9AC27A',.26,.37,.76],['#F5E6D0',.1,.15,.96],['#BF5AF2',.78,.63,.95]];
+    const recents = RC.map(([c, h, s, b]) => ({ c, onClick: () => { this.snap(); this.setState(p => ({ v: { ...p.v, 'pick.h': h, 'pick.s': s, 'pick.b': b } })); } }));
+    return {
+      accent, undoOp: st.hist.length ? 1 : .4, redoOp: st.fut.length ? 1 : .4,
+      compareBg: st.comparing ? '#fff' : 'rgba(18,18,20,.6)', compareFg: st.comparing ? '#000' : '#fff',
+      undo: () => this.setState(s => s.hist.length ? { v: s.hist[s.hist.length - 1], hist: s.hist.slice(0, -1), fut: [s.v, ...s.fut] } : null),
+      redo: () => this.setState(s => s.fut.length ? { v: s.fut[0], fut: s.fut.slice(1), hist: [...s.hist, s.v] } : null),
+      compareDown: () => this.setState({ comparing: true }), compareUp: () => st.comparing && this.setState({ comparing: false }),
+      resetAll: () => { this.snap(); this.setState({ v: {}, preset: 0 }); this.flash('All adjustments reset'); },
+      save: () => this.flash('Saved to Photos'),
+      prevGroup: () => this.setState(s => ({ g: Math.max(0, s.g - 1), picker: false, maskAdding: false })),
+      photoW, photoH, photoFilter: filter, photoTransform, vignetteColor,
+      photoCursor: gid === 'point' && (st.armed || !st.points.length) ? 'crosshair' : 'default',
+      photoClick: (e) => {
+        if (gid !== 'point' || !(st.armed || !st.points.length)) return;
+        const r = e.currentTarget.getBoundingClientRect();
+        const id = 'p' + Date.now();
+        const c = this.PTC[st.points.length % this.PTC.length];
+        this.setState(s => ({ points: [...s.points, { id, c, x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100 }], ptSel: id, armed: false }));
+      },
+      isCrop, cf, showMaskOv, detecting, mo,
+      showCurve: gid === 'curve' && !st.comparing, curvePath, curveColor: this.CH[st.ch][2], curvePt: { x: px, y: py },
+      showText: gid === 'markup' && st.layers.some(l => l.tool === 2), textColor, textSize: Math.round(18 + v(`mark.${(st.layers.find(l => l.tool === 2) || {}).id}.size`) * 40), textOpacity: 1,
+      pins, pillText,
+      stripDots, stripDotsAdd, toggleArm: () => this.setState(s => ({ armed: !s.armed })), armColor: st.armed ? '#fff' : W2, armShadow: st.armed ? box : 'none',
+      stripText, stripIcons, stripMasks, stripLayers, layerName,
+      typesTitle: gid === 'markup' ? 'Add a layer' : 'Choose an area to adjust',
+      addLayer: () => this.setState({ layerAdding: true, picker: false }),
+      deleteLayer: () => { const rest = st.layers.filter(l => l.id !== st.layerSel); this.setState({ layers: rest, layerSel: rest.length ? rest[rest.length - 1].id : null }); this.flash('Layer deleted'); },
+      maskStatus: cur ? cur.name : '', addMask: () => this.setState({ maskAdding: true }),
+      deleteMask: () => { const rest = st.masks.filter(m => m.id !== st.maskSel); this.setState({ masks: rest, maskSel: rest.length ? rest[rest.length - 1].id : null }); this.flash('Mask deleted'); },
+      canCancelAdd: gid === 'markup' ? st.layers.length > 0 : st.masks.length > 0, cancelAdd: () => this.setState({ maskAdding: false, layerAdding: false }),
+      zoneRows, zonePresets, zoneMaskTypes, zonePointEmpty, zonePicker, rows, rowsTop,
+      presets, maskGroups, pickerRows, recents, customHex: hx, customHexLabel: hx.slice(1),
+      openPicker: () => this.setState({ picker: true, color: -1 }), closePicker: () => this.setState({ picker: false }),
+      groups, wheelX: wW / 2 - (st.g * 66 + 29),
+      toast: st.toast
+    };
+  }
+}
+</script>
+</body>
+</html>
