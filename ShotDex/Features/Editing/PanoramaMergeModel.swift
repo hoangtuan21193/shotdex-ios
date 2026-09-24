@@ -375,10 +375,15 @@ final class PanoramaMergeModel {
             case .draft:
                 image = PanoramaCIBlender.draft(canvas: canvas, sources: sources, focal: focal)
             case .sharp:
-                // TODO(FS-14 AC-23): the preview shows the joins once the
-                // planner's masks are good enough to save with — the two have
-                // to agree, so neither switches on alone.
-                image = PanoramaCIBlender.sharp(canvas: canvas, sources: sources, focal: focal)
+                // The sharp tier is where the joins are found, so the preview
+                // makes the same decision the saved photo will about anyone
+                // who walked through the overlap (FS-14.02 §5).
+                let seams = PanoramaSeamPlanner.masks(
+                    canvas: canvas, sources: sources, focal: focal, context: context
+                )
+                image = PanoramaCIBlender.sharp(
+                    canvas: canvas, sources: sources, focal: focal, seamMasks: seams
+                )
             }
             guard let image else { return nil }
 

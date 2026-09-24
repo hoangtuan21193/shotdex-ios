@@ -63,10 +63,18 @@ public enum PanoramaExporter {
         case .draft:
             blended = PanoramaCIBlender.draft(canvas: canvas, sources: sources, focal: focal)
         case .sharp:
-            // TODO(FS-14 AC-23): `PanoramaSeamPlanner.masks` goes here, once
-            // its masks stop putting visible steps in the picture — see the
-            // planner's own note.
-            blended = PanoramaCIBlender.sharp(canvas: canvas, sources: sources, focal: focal)
+            // The joins are found here and not in the draft: the search costs
+            // more than one frame of a slider is worth, and this is the
+            // picture that gets kept (FS-14.02 §5).
+            let seams = PanoramaSeamPlanner.masks(
+                canvas: canvas,
+                sources: sources,
+                focal: focal,
+                context: context ?? CIContext(options: [.cacheIntermediates: false])
+            )
+            blended = PanoramaCIBlender.sharp(
+                canvas: canvas, sources: sources, focal: focal, seamMasks: seams
+            )
         }
         guard let blended else { throw PanoramaExportError.cannotEncode }
 

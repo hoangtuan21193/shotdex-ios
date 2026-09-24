@@ -40,28 +40,60 @@ public enum PanoramaSeamFinder {
     /// choice.
     public static let outsideCost: Float = 4
 
+    /// How much the join pays for leaving the middle of the overlap.
+    ///
+    /// Without this the join is free to wander: across a plain sky two frames
+    /// of the same thing differ by nothing anywhere in the overlap, every path
+    /// costs zero, and the one that comes back is whichever way the arithmetic
+    /// happened to lean. That join can end up against a frame's own edge,
+    /// where vignetting and a stop of exposure drift are at their worst, and
+    /// it shows as a step. Paying to move keeps the join where the two frames
+    /// have the most equal say — the place the plain blend would have put it —
+    /// unless something real is in the way.
+    ///
+    /// Half: a pixel where the frames disagree by a tenth is worth moving
+    /// about a fifth of the overlap to avoid, which is the size of a person
+    /// and not the size of a sky.
+    public static let balance: Float = 0.5
+
     /// What a pixel costs to cut through: how differently the two frames saw
-    /// it inside the overlap, and `outsideCost` where there is no overlap.
+    /// it, plus what it costs to be there rather than in the middle of the
+    /// overlap, and `outsideCost` where there is no overlap at all.
     ///
     /// Difference is measured on luminance rather than per channel: a person
     /// against a wall differs in brightness at every edge of them, and
     /// summing channels only triples the same signal.
+    ///
+    /// `rampA`/`rampB` are how much say each frame has at that pixel — the
+    /// blend's own weighting. Leaving them out drops the second term, which
+    /// is what the pure-difference tests want.
     public static func cost(
         a: [Float],
         b: [Float],
         coverageA: [Float],
         coverageB: [Float],
         width: Int,
-        height: Int
+        height: Int,
+        rampA: [Float]? = nil,
+        rampB: [Float]? = nil
     ) -> [Float]? {
         let count = width * height
         guard count > 0, a.count >= count, b.count >= count,
               coverageA.count >= count, coverageB.count >= count
         else { return nil }
+        if let rampA, let rampB, rampA.count < count || rampB.count < count { return nil }
         var cost = [Float](repeating: 0, count: count)
         for index in 0..<count {
             let shared = min(coverageA[index], coverageB[index])
-            cost[index] = shared > 0.01 ? abs(a[index] - b[index]) : outsideCost
+            guard shared > 0.01 else {
+                cost[index] = outsideCost
+                continue
+            }
+            var value = abs(a[index] - b[index])
+            if let rampA, let rampB {
+                value += balance * abs(rampA[index] - rampB[index])
+            }
+            cost[index] = value
         }
         return cost
     }
@@ -176,11 +208,14 @@ public enum PanoramaSeamFinder {
         coverageB: [Float],
         width: Int,
         height: Int,
-        axis: Axis? = nil
+        axis: Axis? = nil,
+        rampA: [Float]? = nil,
+        rampB: [Float]? = nil
     ) -> [Bool]? {
         let axis = axis ?? Axis.across(width: width, height: height)
         guard let cost = cost(
-            a: a, b: b, coverageA: coverageA, coverageB: coverageB, width: width, height: height
+            a: a, b: b, coverageA: coverageA, coverageB: coverageB,
+            width: width, height: height, rampA: rampA, rampB: rampB
         ), let seam = path(cost: cost, width: width, height: height, axis: axis) else { return nil }
         return ownership(
             seam: seam,

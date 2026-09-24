@@ -54,9 +54,10 @@ struct PanoramaSeamBlendTests {
         return image
     }
 
-    /// Where the figure stands in the left frame: near its right edge, which
-    /// is the half that overlaps the other frame.
-    private var figureColumns: Range<Int> { 82..<100 }
+    /// Where the figure stands in the first frame: in the half that overlaps
+    /// the other one. Which half that is, is a fact about the projection and
+    /// not a guess — `theFigureStandsInTheOverlap` fails loudly if this moves.
+    private var figureColumns: Range<Int> { 22..<40 }
     private var figureRows: Range<Int> { 25..<80 }
 
     private func ciImage(from image: PanoramaRGBImage) -> CIImage {
@@ -148,13 +149,44 @@ struct PanoramaSeamBlendTests {
 
     // MARK: AC-23
 
-    // The end-to-end proof of AC-23 — a figure that the default blend would
-    // cut, coming out whole once the joins are found — is **not here yet**.
-    // Two fixtures were tried and neither put the figure where the blend's own
-    // boundary falls, so the test passed whether the joins were used or not,
-    // which is worse than no test. `PanoramaSeamTests` proves the join goes
-    // round a figure on buffers; proving it on the picture needs a fixture
-    // whose figure demonstrably straddles the boundary, and that is owed.
+    /// AC-23 on the canvas: the figure stands inside the overlap, where the
+    /// join has to run, and every pixel of it belongs to one frame.
+    ///
+    /// Ownership rather than pixels, because the multi-band blend feathers
+    /// every edge and a cut figure comes out as a smear — "how dark is this
+    /// pixel" cannot tell a cut from an absence, and who owns it can.
+    @Test func theJoinGoesRoundTheFigureRatherThanThroughIt() throws {
+        let scene = try #require(scene())
+        let masks = try #require(
+            PanoramaSeamPlanner.masks(
+                canvas: scene.canvas, sources: scene.sources, focal: focal, context: context
+            )
+        )
+        // Each frame on its own: where it reaches, and what the figure looks
+        // like when nothing is competing with it.
+        let soloA = try #require(
+            PanoramaCIBlender.sharp(canvas: scene.canvas, sources: [scene.sources[0]], focal: focal)
+        )
+        let soloB = try #require(
+            PanoramaCIBlender.sharp(canvas: scene.canvas, sources: [scene.sources[1]], focal: focal)
+        )
+        let lumA = read(soloA, canvas: scene.canvas)
+        let lumB = read(soloB, canvas: scene.canvas)
+
+        let footprint = lumA.indices.filter { lumA[$0] > 0.005 && lumA[$0] < 0.25 }
+        try #require(footprint.count > 200, "the fixture has no figure to lose")
+
+        // The figure is in the overlap — the only place a join can cut it.
+        let inOverlap = footprint.count { lumB[$0] > 0.02 }
+        #expect(
+            Double(inOverlap) / Double(footprint.count) > 0.5,
+            "only \(inOverlap) of \(footprint.count) figure pixels are in the overlap, so this proves nothing"
+        )
+
+        let first = read(masks[0], canvas: scene.canvas)
+        let owners = Set(footprint.map { first[$0] > 0.5 })
+        #expect(owners.count == 1, "the join runs through the figure")
+    }
 
     /// The planner gives one mask per frame, they cover the panorama, and no
     /// pixel is claimed by two frames — otherwise the blend would double it.

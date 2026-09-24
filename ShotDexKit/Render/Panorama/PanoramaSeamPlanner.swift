@@ -10,17 +10,6 @@ import Foundation
 /// panorama and hands back one mask per frame, in the blend's own shape, so
 /// the multi-band blend still does the fading — only the question of *who*
 /// changes.
-/// **Not yet wired into the blend.** Measured on the simulator, 2026-09-24:
-/// with these masks a three-frame sweep comes out with four visible vertical
-/// steps that the blend's own weighting does not have. Two leads, neither
-/// chased yet: the greedy pass lets a barely-overlapping pair (the first and
-/// last frame of a sweep) re-assign a strip in the middle of a region another
-/// frame already owns, and the ramp boundary the blend uses sits where the
-/// frames agree on exposure while a seam boundary can land next to a frame
-/// edge where they do not. Until that is understood the export and the
-/// preview keep the old weighting — a panorama with a soft join through a
-/// moving subject is a better picture than one with four hard steps in the
-/// sky.
 public enum PanoramaSeamPlanner {
 
     /// The long edge the joins are found at.
@@ -95,23 +84,63 @@ public enum PanoramaSeamPlanner {
                     if owner[index] == a || owner[index] == b { contested.append(index) }
                 }
                 guard contested.count >= minimumSharedPixels else { continue }
+                // The join is found inside the overlap's own rectangle, not
+                // across the whole panorama. Over the whole canvas the path
+                // has to start at the top edge and finish at the bottom one,
+                // so where an overlap covers only part of the height the rest
+                // of the path is wandering through country that has nothing to
+                // do with this pair — and in a sweep, the first and last frame
+                // barely touch, which is exactly that case.
+                let box = bounds(of: contested, width: width)
+                let boxWidth = box.maxX - box.minX + 1
+                let boxHeight = box.maxY - box.minY + 1
+                guard boxWidth > 1, boxHeight > 1 else { continue }
 
-                var maskA = [Float](repeating: 0, count: count)
-                var maskB = [Float](repeating: 0, count: count)
+                var lumA = [Float](repeating: 0, count: boxWidth * boxHeight)
+                var lumB = lumA, maskA = lumA, maskB = lumA, rampA = lumA, rampB = lumA
                 for index in contested {
-                    maskA[index] = coverageA[index]
-                    maskB[index] = coverageB[index]
+                    let x = index % width - box.minX, y = index / width - box.minY
+                    let at = y * boxWidth + x
+                    lumA[at] = luminance[a][index]
+                    lumB[at] = luminance[b][index]
+                    maskA[at] = coverageA[index]
+                    maskB[at] = coverageB[index]
+                    rampA[at] = coverageA[index]
+                    rampB[at] = coverageB[index]
                 }
                 guard let owned = PanoramaSeamFinder.ownership(
-                    a: luminance[a],
-                    b: luminance[b],
+                    a: lumA,
+                    b: lumB,
                     coverageA: maskA,
                     coverageB: maskB,
-                    width: width,
-                    height: height,
-                    axis: axis(for: contested, width: width)
+                    width: boxWidth,
+                    height: boxHeight,
+                    axis: PanoramaSeamFinder.Axis.across(width: boxWidth, height: boxHeight),
+                    rampA: rampA,
+                    rampB: rampB
                 ) else { continue }
-                for index in contested { owner[index] = owned[index] ? a : b }
+                // Which side belongs to whom is not the seam's to say. The
+                // path finds *where* the join runs; `ownership` calls one side
+                // first and the other second, and "first" is the left or the
+                // top of the box, which has nothing to do with frame order —
+                // a sweep's frames are numbered in the order they were shot,
+                // and a photographer panning right to left numbers them from
+                // the right. Getting this backwards swaps the two frames
+                // inside every overlap, which is a band down the picture at
+                // each join and was exactly the first symptom.
+                var asFound = 0.0, flipped = 0.0
+                for index in contested {
+                    let x = index % width - box.minX, y = index / width - box.minY
+                    let first = owned[y * boxWidth + x]
+                    asFound += Double(first ? coverageA[index] : coverageB[index])
+                    flipped += Double(first ? coverageB[index] : coverageA[index])
+                }
+                let flip = flipped > asFound
+                for index in contested {
+                    let x = index % width - box.minX, y = index / width - box.minY
+                    let first = owned[y * boxWidth + x] != flip
+                    owner[index] = first ? a : b
+                }
             }
         }
 
@@ -122,17 +151,19 @@ public enum PanoramaSeamPlanner {
         }
     }
 
-    /// Which way the join across this overlap should run, from the shape of
-    /// the overlap itself rather than from the canvas.
-    static func axis(for contested: [Int], width: Int) -> PanoramaSeamFinder.Axis {
+    /// The rectangle a set of canvas pixels sits in.
+    static func bounds(
+        of pixels: [Int],
+        width: Int
+    ) -> (minX: Int, minY: Int, maxX: Int, maxY: Int) {
         var minX = Int.max, maxX = 0, minY = Int.max, maxY = 0
-        for index in contested {
+        for index in pixels {
             let x = index % width, y = index / width
             minX = min(minX, x); maxX = max(maxX, x)
             minY = min(minY, y); maxY = max(maxY, y)
         }
-        guard minX <= maxX, minY <= maxY else { return .vertical }
-        return PanoramaSeamFinder.Axis.across(width: maxX - minX + 1, height: maxY - minY + 1)
+        guard minX <= maxX, minY <= maxY else { return (0, 0, 0, 0) }
+        return (minX, minY, maxX, maxY)
     }
 
     // MARK: Reading Core Image back into arrays
