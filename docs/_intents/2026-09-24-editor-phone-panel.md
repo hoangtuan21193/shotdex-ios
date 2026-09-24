@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan |
 | Ngày | 2026-09-24 |
 | Trạng thái | accepted |
-| Tiến độ | **chưa làm** (2026-09-24) — plan [2026-09-24-fs-03-12-phone-panel](../_plans/2026-09-24-fs-03-12-phone-panel.md) đã duyệt, 22 task |
+| Tiến độ | **đang làm** (2026-09-25) — plan [2026-09-24-fs-03-12-phone-panel](../_plans/2026-09-24-fs-03-12-phone-panel.md): task 21/22, 27/38 AC xanh (còn AC-8, 9, 12, 13, 14, 16, 21, 23, 33, 35, 38) |
 | Nguồn | phản hồi người dùng (chủ sở hữu sản phẩm) — bản bàn giao từ Claude Design |
 | Spec sinh ra từ đây | [FS-03.12](../02-functional-spec/FS-03-photo-editor/12-phone-panel-grid.md) (+ FS-03.01, 01b, 02, 05 · FS-04.01, 02 · FS-05 README, 01, 02, 03) |
 
