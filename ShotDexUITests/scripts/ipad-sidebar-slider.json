@@ -25,12 +25,20 @@
    "seconds": 14
   },
   {
-   "action": "screenshot",
-   "name": "sidebar-light"
+   "action": "tap",
+   "label": "Light"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
   },
   {
    "action": "dump",
    "name": "sidebar-light"
+  },
+  {
+   "action": "wait",
+   "seconds": 30
   }
  ]
 }
