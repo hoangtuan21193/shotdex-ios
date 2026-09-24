@@ -1925,7 +1925,8 @@ struct PhotoEditorScreen: View {
     }
 
     /// Hold-to-see-original, mirroring the photo's own press-and-hold. Down shows
-    /// the original, up restores the edit; the circle turns accent while it is held.
+    /// the original, up restores the edit; the circle turns white (black glyph)
+    /// while it is held — accent is spent on Save alone (FS-03.12 §6).
     private func beforeAfterButton(_ controller: PhotoEditorController) -> some View {
         let size = EditorLayoutMetrics.editorFloatingCommandButtonSize(isRegularWidth: horizontalSizeClass == .regular)
         return Image(systemName: "rectangle.split.2x1")
@@ -1934,7 +1935,7 @@ struct PhotoEditorScreen: View {
             .frame(width: size, height: size)
             .background {
                 if controller.showsOriginal {
-                    Circle().fill(EditorTheme.accent)
+                    Circle().fill(.white)
                 } else {
                     floatingCircleFill
                 }
@@ -1956,7 +1957,7 @@ struct PhotoEditorScreen: View {
     }
 
     /// A 34pt circular band button: a blurred near-black disc, white glyph. Dims
-    /// when disabled; goes accent when `isActive`.
+    /// when disabled; goes white with a black glyph when `isActive`.
     private func circleCommand(
         _ systemName: String,
         isEnabled: Bool,
@@ -1975,7 +1976,7 @@ struct PhotoEditorScreen: View {
                 .frame(width: size, height: size)
                 .background {
                     if isActive {
-                        Circle().fill(EditorTheme.accent)
+                        Circle().fill(.white)
                     } else {
                         floatingCircleFill
                     }
@@ -2454,10 +2455,10 @@ struct PhotoEditorScreen: View {
         } label: {
             Image(systemName: "chevron.backward")
                 .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(Color.white.opacity(0.6))
+                .foregroundStyle(.white)
                 .frame(width: side, height: side)
-                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous))
-                .contentShape(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous))
+                .background(EditorTheme.trackChip, in: Circle())
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .hoverEffect(.lift)
@@ -2695,11 +2696,8 @@ struct PhotoEditorScreen: View {
             .frame(maxWidth: .infinity)
             saveButton(controller)
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, AppTheme.Spacing.lg)
         .frame(height: EditorLayoutMetrics.editorGroupStripHeight)
-        .overlay(alignment: .top) {
-            Rectangle().fill(Color.white.opacity(0.07)).frame(height: 1)
-        }
     }
 
     private func undoToastView(
@@ -2717,7 +2715,7 @@ struct PhotoEditorScreen: View {
                 chrome.dismissUndoToast()
             }
             .font(.system(size: 13, weight: .semibold))
-            .foregroundStyle(EditorTheme.accent)
+            .foregroundStyle(.white)
         }
         .padding(.horizontal, 14)
         .frame(height: 44)
@@ -2949,9 +2947,9 @@ private struct PhotoEditorSaveSheet: View {
 /// centre and switches to it — one gesture, no second tap; tapping an off-centre chip
 /// scrolls it to the centre and switches too. Half-viewport margins on both ends let
 /// the first and last groups reach the centre; a fade dissolves each edge into the
-/// panel colour. The centred chip is accent-tinted; the rest are dim — that tint is
-/// the whole selection indicator (the accent notch rail that used to frame the
-/// centred chip was dropped as visual noise). Every change gives a selection haptic.
+/// panel colour. The centred chip is white and heavier, the rest white 32%, and a
+/// 16×2 white bar sits under the centre — no accent (FS-03.12 §6: accent is spent on
+/// Save alone). Every change gives a selection haptic.
 private struct EditorGroupWheel: View {
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
@@ -3016,6 +3014,13 @@ private struct EditorGroupWheel: View {
                 withAnimation(EditorTheme.animation) { centered = group }
             }
             .overlay { edgeFades }
+            .overlay(alignment: .bottom) {
+                Capsule()
+                    .fill(.white)
+                    .frame(width: 16, height: 2)
+                    .padding(.bottom, 3)
+                    .allowsHitTesting(false)
+            }
         }
     }
 
@@ -3031,7 +3036,7 @@ private struct EditorGroupWheel: View {
                     .font(.system(size: 9.5, weight: isCenter ? .semibold : .regular))
                     .lineLimit(1)
             }
-            .foregroundStyle(isCenter ? EditorTheme.accent : Color.white.opacity(0.5))
+            .foregroundStyle(isCenter ? Color.white : EditorTheme.panelHint)
             .frame(
                 width: EditorLayoutMetrics.editorGroupChipWidth,
                 height: EditorLayoutMetrics.editorGroupChipHeight
