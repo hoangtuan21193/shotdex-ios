@@ -444,6 +444,7 @@ struct AlbumDetailScreen: View {
             onAddToCollection: { addToCollection(model) },
             onExportEXIF: { exportEXIF(model) },
             onDuplicate: { duplicateSelected(model) },
+            onUploadToServer: { dependencies.assetActions.presentUpload(ids: selectedIds) },
             assetActions: dependencies.assetActions,
             onSelectAll: { selectedIds = model.photos.map(\.assetId) },
             // Only a real, mutable user album offers this; "All Photos" and

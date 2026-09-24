@@ -169,7 +169,7 @@ struct SelectionToolbarItems: ToolbarContent {
     private var hasMenu: Bool {
         model.onCollage != nil || model.onVideo != nil || model.onCompress != nil || model.onCombine != nil
             || model.onAddToCollection != nil || model.onExportEXIF != nil
-            || model.onDuplicate != nil || model.assetActions != nil
+            || model.onDuplicate != nil || model.onUploadToServer != nil || model.assetActions != nil
             || model.onSelectAll != nil || model.onRemoveFromAlbum != nil
     }
 
@@ -254,6 +254,12 @@ struct SelectionToolbarItems: ToolbarContent {
                             Label("Export EXIF (CSV)", systemImage: "doc.badge.arrow.up")
                         }
                         .disabled(model.imageSelectionCount < 1)
+                    }
+                    if let onUploadToServer = model.onUploadToServer {
+                        Button(action: onUploadToServer) {
+                            Label("Upload to Server", systemImage: "server.rack")
+                        }
+                        .disabled(model.selectionCount < 1)
                     }
                     if let onDuplicate = model.onDuplicate {
                         Button(action: onDuplicate) {

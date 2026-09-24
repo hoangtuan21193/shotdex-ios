@@ -69,6 +69,8 @@ struct SelectionBarModel {
     var onAddToCollection: (() -> Void)? = nil
     var onExportEXIF: (() -> Void)? = nil
     var onDuplicate: (() -> Void)? = nil
+    /// Sends the originals to a file server (FS-15.02).
+    var onUploadToServer: (() -> Void)? = nil
 
     /// Favorite / Hide / Adjust Date & Time / Adjust Location / Copy. One
     /// object instead of five closures: every screen offers the identical set

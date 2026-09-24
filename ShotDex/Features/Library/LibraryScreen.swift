@@ -569,6 +569,7 @@ struct LibraryScreen: View {
             onAddToCollection: { addToCollection() },
             onExportEXIF: { exportEXIF(model) },
             onDuplicate: { duplicateSelected() },
+            onUploadToServer: { dependencies.assetActions.presentUpload(ids: selectedIds) },
             assetActions: dependencies.assetActions,
             onSelectAll: { selectedIds = model.items.map(\.assetId) }
         )
