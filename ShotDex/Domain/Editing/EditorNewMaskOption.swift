@@ -50,6 +50,38 @@ enum EditorNewMaskOption: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    /// The name on a chip and the start of a new mask's name ("Radial 1"): the
+    /// panel's chips are 30pt and the strip shows the name beside four thumbnails.
+    var shortTitle: String {
+        switch self {
+        case .radialGradient: "Radial"
+        case .linearGradient: "Linear"
+        case .colorRange: "Color"
+        case .luminanceRange: "Luminance"
+        case .depthRange: "Depth"
+        default: title
+        }
+    }
+
+    /// The phone panel's three chip rows (FS-03.05 §2): what Vision finds, what the
+    /// user draws, and what a range of values selects. Every case is in exactly
+    /// one row, in `allCases` order.
+    enum Row: CaseIterable {
+        case detect, draw, range
+    }
+
+    var row: Row {
+        switch self {
+        case .subject, .sky, .background, .faceSkin, .eyes, .lips: .detect
+        case .brush, .linearGradient, .radialGradient: .draw
+        case .colorRange, .luminanceRange, .depthRange: .range
+        }
+    }
+
+    static func options(in row: Row) -> [EditorNewMaskOption] {
+        allCases.filter { $0.row == row }
+    }
+
     var systemImage: String {
         switch self {
         case .background: "person.and.background.dotted"

@@ -1669,9 +1669,12 @@ final class PhotoEditorController {
     /// named for what the user asked for.
     func addMask(option: EditorNewMaskOption) {
         addMask(kind: option.componentKind)
-        guard option.startsInverted, let index = recipe.masks.indices.last else { return }
+        guard let index = recipe.masks.indices.last else { return }
+        // "Radial 1", not "Radial Gradient 1": the name sits beside the thumbnails
+        // in a 40pt strip (FS-03.05 §2).
+        recipe.masks[index].name = "\(option.shortTitle) \(recipe.masks.count)"
+        guard option.startsInverted else { return }
         recipe.masks[index].isInverted = true
-        recipe.masks[index].name = "\(option.title) \(recipe.masks.count)"
         scheduleRender()
     }
 

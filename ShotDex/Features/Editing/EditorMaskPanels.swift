@@ -250,8 +250,27 @@ struct EditorMaskActionsMenu: View {
             }
             .disabled(!controller.canRedo)
             Divider()
+            // The effect switch: on the phone it moved here from the gone nav row's
+            // eye (FS-03.05 §3); the strip dims the thumbnail while it is off.
+            Button {
+                controller.toggleSelectedMaskVisibility()
+            } label: {
+                if controller.selectedMask?.isVisible == false {
+                    Label("Show", systemImage: "eye")
+                } else {
+                    Label("Hide", systemImage: "eye.slash")
+                }
+            }
             Button(action: rename) {
                 Label("Rename", systemImage: "pencil")
+            }
+            Button {
+                controller.invertSelectedMask()
+            } label: {
+                Label(
+                    controller.selectedMask?.isInverted == true ? "Remove Invert" : "Invert",
+                    systemImage: "circle.righthalf.filled"
+                )
             }
             Button {
                 controller.duplicateSelectedMask()
@@ -297,9 +316,17 @@ struct EditorMaskDetailPanel: View {
         return "\(index + 1)/\(controller.recipe.masks.count)"
     }
 
+    /// Phone: the thumbnail strip above is the navigation, so there is no nav row
+    /// and no accent edge — the first row is the shape row.
+    private var isPhone: Bool { !chrome.isWideLayout }
+
     var body: some View {
         VStack(spacing: 0) {
-            navigationRow
+            if isPhone {
+                phoneShapeRow
+            } else {
+                navigationRow
+            }
             EditorAdjustmentGroupsView(
                 controller: controller,
                 chrome: chrome,
@@ -311,10 +338,66 @@ struct EditorMaskDetailPanel: View {
             )
         }
         .overlay(alignment: .top) {
-            Rectangle()
-                .fill(EditorTheme.accent.opacity(0.6))
-                .frame(height: 2)
+            if !isPhone {
+                Rectangle()
+                    .fill(EditorTheme.accent.opacity(0.6))
+                    .frame(height: 2)
+            }
         }
+    }
+
+    /// First row under the strip on the phone: which shape of a multi-shape mask
+    /// (chips, only when there are two or more), Add / Subtract for the next stroke
+    /// or shape — still a mode, not a one-shot command — and one-tap Undo.
+    private var phoneShapeRow: some View {
+        HStack(spacing: EditorStripLayout.chipSpacing) {
+            ScrollView(.horizontal) {
+                HStack(spacing: EditorStripLayout.chipSpacing) {
+                    ForEach(MaskBlendOperation.allCases) { operation in
+                        Button {
+                            controller.maskOperation = operation
+                        } label: {
+                            EditorPanelChipLabel(
+                                title: operation == .add ? "Add" : "Subtract",
+                                systemImage: operation == .add ? "plus.circle" : "minus.circle"
+                            )
+                        }
+                        .buttonStyle(EditorChipButtonStyle(isSelected: controller.maskOperation == operation))
+                    }
+                    if (controller.selectedMask?.components.count ?? 0) > 1 {
+                        Rectangle().fill(EditorTheme.trackBorder).frame(width: 1, height: 18)
+                        ForEach(controller.selectedMask?.components ?? []) { component in
+                            Button {
+                                controller.selectComponent(component.id)
+                            } label: {
+                                EditorPanelChipLabel(
+                                    title: component.kind.displayName,
+                                    systemImage: component.operation == .add ? "plus.circle" : "minus.circle"
+                                )
+                            }
+                            .buttonStyle(EditorChipButtonStyle(
+                                isSelected: component.id == controller.selectedComponentID
+                            ))
+                        }
+                    }
+                }
+                .padding(.leading, EditorStripLayout.horizontalInset)
+                .frame(maxHeight: .infinity)
+            }
+            .scrollIndicators(.hidden)
+            Button {
+                controller.undo()
+            } label: {
+                Image(systemName: "arrow.uturn.backward")
+                    .frame(width: 24)
+            }
+            .buttonStyle(EditorChipButtonStyle(isSelected: false))
+            .disabled(!controller.canUndo)
+            .opacity(controller.canUndo ? 1 : EditorTheme.rowDisabled)
+            .accessibilityLabel("Undo")
+            .padding(.trailing, EditorStripLayout.horizontalInset)
+        }
+        .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
     }
 
     /// Second level of the Masks tab: back to the list, which mask this is, its
@@ -440,11 +523,13 @@ struct EditorMaskDetailPanel: View {
 
             // Add / Subtract for new strokes and shapes. Turn 31 moved it off the
             // command row into the shape section, where it is in reach while
-            // painting.
-            addSubtractRow
+            // painting. On the phone both sit in the first row instead.
+            if !isPhone {
+                addSubtractRow
 
-            if (controller.selectedMask?.components.count ?? 0) > 1 {
-                componentPicker
+                if (controller.selectedMask?.components.count ?? 0) > 1 {
+                    componentPicker
+                }
             }
 
             switch component.kind {
@@ -633,13 +718,25 @@ struct EditorMaskDetailPanel: View {
         )
     }
 
+    @ViewBuilder
     private func hint(_ text: String) -> some View {
-        Text(text)
-            .font(EditorTheme.maskSubtitle)
-            .foregroundStyle(EditorTheme.dimText)
-            .padding(.horizontal, 14)
-            .frame(height: 32, alignment: .leading)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        if isPhone {
+            Text(text)
+                .font(EditorTheme.rowLabel)
+                .foregroundStyle(EditorTheme.panelHint)
+                .lineLimit(2)
+                .minimumScaleFactor(EditorLayoutMetrics.editorPanelRowMinimumScale)
+                .padding(.horizontal, AppTheme.Spacing.lg)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
+        } else {
+            Text(text)
+                .font(EditorTheme.maskSubtitle)
+                .foregroundStyle(EditorTheme.dimText)
+                .padding(.horizontal, 14)
+                .frame(height: 32, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 
     private func percent(_ value: Double) -> String {

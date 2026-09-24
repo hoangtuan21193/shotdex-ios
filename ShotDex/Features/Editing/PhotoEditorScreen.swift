@@ -2400,6 +2400,7 @@ struct PhotoEditorScreen: View {
         switch chrome.selectedGroup {
         case .curve, .colorMix, .grade, .cropGeometry, .presets: true
         case .pointColor: !controller.pointColors.isEmpty
+        case .mask: !EditorMaskPhonePanel.showsChooser(controller: controller, chrome: chrome)
         default: false
         }
     }
@@ -2435,6 +2436,8 @@ struct PhotoEditorScreen: View {
             EditorCropAspectStrip(controller: controller)
         case .presets:
             EditorPresetSourceStrip(chrome: chrome)
+        case .mask:
+            EditorMaskStrip(controller: controller, chrome: chrome, rename: { presentRename(controller) })
         default:
             EmptyView()
         }
@@ -2574,6 +2577,12 @@ struct PhotoEditorScreen: View {
             EditorCropPanel(controller: controller)
         case .heal:
             EditorHealPanel(controller: controller)
+        case .mask where !chrome.isWideLayout:
+            EditorMaskPhonePanel(
+                controller: controller,
+                chrome: chrome,
+                rename: { presentRename(controller) }
+            )
         case .mask:
             if controller.editingMaskAdjustments {
                 EditorMaskDetailPanel(

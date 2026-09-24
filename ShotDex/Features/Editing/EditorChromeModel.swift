@@ -83,6 +83,11 @@ final class EditorChromeModel {
     var activeSlider: PhotoAdjustmentKind?
 
     var isNewMaskSheetPresented = false
+    /// Phone panel: the mask chooser is showing although masks exist (after `+`).
+    var isChoosingMaskKind = false
+    /// Phone panel: a line that stands in for the chooser's title for 3s — why a
+    /// dimmed kind is off, or what a kind does.
+    var maskChooserNotice: String?
     /// The phone's route to History: a sheet, because there is no panel to put
     /// a list in. The wide layout uses `showsHistoryPanel` instead.
     var isHistorySheetPresented = false
