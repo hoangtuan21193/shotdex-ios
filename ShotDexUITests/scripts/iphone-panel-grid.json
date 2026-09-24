@@ -1,0 +1,247 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "wait",
+   "seconds": 20
+  },
+  {
+   "action": "tap",
+   "label": "Photo, file type",
+   "type": "cell",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Edit"
+  },
+  {
+   "action": "wait",
+   "seconds": 12
+  },
+  {
+   "action": "screenshot",
+   "name": "light"
+  },
+  {
+   "action": "dump",
+   "name": "light"
+  },
+  {
+   "action": "tap",
+   "label": "Curve",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "curve"
+  },
+  {
+   "action": "dump",
+   "name": "curve"
+  },
+  {
+   "action": "tap",
+   "label": "Color",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "color"
+  },
+  {
+   "action": "dump",
+   "name": "color"
+  },
+  {
+   "action": "tap",
+   "label": "Color Mix",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "mix"
+  },
+  {
+   "action": "dump",
+   "name": "mix"
+  },
+  {
+   "action": "tap",
+   "label": "Point Color",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "point"
+  },
+  {
+   "action": "dump",
+   "name": "point"
+  },
+  {
+   "action": "tap",
+   "label": "Grade",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "grade"
+  },
+  {
+   "action": "dump",
+   "name": "grade"
+  },
+  {
+   "action": "tap",
+   "label": "Effects",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "effects"
+  },
+  {
+   "action": "dump",
+   "name": "effects"
+  },
+  {
+   "action": "tap",
+   "label": "Detail",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Optics",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Geometry",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Crop",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "crop"
+  },
+  {
+   "action": "dump",
+   "name": "crop"
+  },
+  {
+   "action": "tap",
+   "label": "Heal",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Mask",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "mask"
+  },
+  {
+   "action": "dump",
+   "name": "mask"
+  },
+  {
+   "action": "tap",
+   "label": "Markup",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "markup"
+  },
+  {
+   "action": "dump",
+   "name": "markup"
+  },
+  {
+   "action": "tap",
+   "label": "Presets",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "presets"
+  },
+  {
+   "action": "dump",
+   "name": "presets"
+  }
+ ]
+}

@@ -3086,11 +3086,20 @@ private struct EditorGroupWheel: View {
     /// `scheduleRender` — once per chip a flick went past, with a haptic
     /// apiece. `spec.md` writes the intent as "vuốt → nhả → snap → đổi nhóm":
     /// one switch, on release. A debounce rather than `onScrollPhaseChange`
-    /// because the deployment target is iOS 17, and it covers the tap route
-    /// too, which animates `centered` with no scroll phase at all. The tint
-    /// still follows the wheel chip by chip.
+    /// because the deployment target is iOS 17 (18 adds the phase as a
+    /// backstop, `EditorWheelIdleSelect`). A tap does not wait for it — see
+    /// `tapTarget`. The tint still follows the wheel chip by chip.
     @State private var settleTask: Task<Void, Never>?
     private static let settleDelay = Duration.milliseconds(140)
+    /// The chip a tap is scrolling to. While it is set, the positions the scroll
+    /// view writes back on the way there are not choices: on iOS 18 it can write
+    /// the chip it is leaving and then the target inside one update, `onChange`
+    /// sees no change, and a debounced select for the target never ran — the
+    /// wheel showed Grade over a Point Color panel (FS-03.12, SE / 18.6). A tap
+    /// is a release already, so it selects at once and the scroll just follows.
+    @State private var tapTarget: EditorGroup?
+    @State private var tapTargetExpiry: Task<Void, Never>?
+    private static let tapScrollAllowance = Duration.milliseconds(600)
 
     var body: some View {
         GeometryReader { geo in
@@ -3116,17 +3125,23 @@ private struct EditorGroupWheel: View {
             .sensoryFeedback(.selection, trigger: centered)
             .onAppear { centered = chrome.selectedGroup }
             .onChange(of: centered) { _, new in
+                if let target = tapTarget {
+                    if new == target { tapTarget = nil }
+                    return
+                }
                 settleTask?.cancel()
-                guard let new else { return }
+                guard new != nil else { return }
                 settleTask = Task {
                     try? await Task.sleep(for: Self.settleDelay)
-                    guard !Task.isCancelled, centered == new,
-                          new != chrome.selectedGroup
-                    else { return }
-                    onSelect(new)
+                    guard !Task.isCancelled else { return }
+                    selectCentered()
                 }
             }
-            .onDisappear { settleTask?.cancel() }
+            .modifier(EditorWheelIdleSelect { if tapTarget == nil { selectCentered() } })
+            .onDisappear {
+                settleTask?.cancel()
+                tapTargetExpiry?.cancel()
+            }
             .onChange(of: chrome.selectedGroup) { _, group in
                 // A group changed from outside the wheel (rare — Save's crop commit,
                 // a deep-link): keep the centred chip in step.
@@ -3144,10 +3159,27 @@ private struct EditorGroupWheel: View {
         }
     }
 
+    /// Reads the wheel as it is now, not as the change that scheduled this saw it.
+    private func selectCentered() {
+        guard let current = centered, current != chrome.selectedGroup else { return }
+        onSelect(current)
+    }
+
     private func chip(_ group: EditorGroup) -> some View {
         let isCenter = centered == group
         return Button {
+            settleTask?.cancel()
+            tapTargetExpiry?.cancel()
+            tapTarget = centered == group ? nil : group
             withAnimation(EditorTheme.animation) { centered = group }
+            if group != chrome.selectedGroup { onSelect(group) }
+            // A write-back that never lands on the target must not leave the wheel
+            // deaf to the next drag.
+            tapTargetExpiry = Task {
+                try? await Task.sleep(for: Self.tapScrollAllowance)
+                guard !Task.isCancelled else { return }
+                tapTarget = nil
+            }
         } label: {
             VStack(spacing: 4) {
                 Image(systemName: group.icon)
@@ -3190,3 +3222,18 @@ private struct EditorGroupWheel: View {
     }
 }
 
+/// On iOS 18 the wheel also selects when its scroll comes to rest — a backstop
+/// for the debounce, which only runs when `scrollPosition` reports a change.
+private struct EditorWheelIdleSelect: ViewModifier {
+    let action: () -> Void
+
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.onScrollPhaseChange { _, phase in
+                if phase == .idle { action() }
+            }
+        } else {
+            content
+        }
+    }
+}

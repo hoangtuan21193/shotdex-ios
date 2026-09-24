@@ -542,3 +542,10 @@ general-purpose (sliders/curve/grade/heal/crop/shell), challenger (scope, Pencil
 - Grade colour wheel — none today; replaced by rows in 30c (`EditorColorPanel.swift:371-376`).
 - `isActive` — only "finger is dragging this row"; no VoiceOver or edited meaning. Losing its tint loses nothing else.
 - Aside: `PhotoEditorController.duplicateSelectedOverlay()` (`:1471`) is unreachable in the photo editor today; the new layer ⋯ Duplicate would wire it.
+
+## Build-time findings (2026-09-25, while coding FS-03.12)
+- [x] Wheel tap could leave Grade centred over a Point Color panel (SE 375 / iOS 18.6, 2 of 4 runs, only without logging): the tap's debounced select was cancelled by a scroll write-back that `onChange` then coalesced away → a tap now selects at once and ignores write-backs until the target lands; settle reads the current chip; iOS 18 selects on scroll idle too (`PhotoEditorScreen.swift`, `EditorGroupWheel`)
+- [x] Grade chip strip showed a glyph on three chips and none on "Highlights" → the strip drops glyphs together (`EditorStripLayout.showsIcons`)
+
+### Needs a decision
+- **On-photo selection frame is still accent** (dashed amber box round a selected layer, `EditorOverlayGuides.swift:176` via `EditorImageStage.swift:361`; mask pins `EditorOverlayGuides.swift:317,323`). DESIGN.md says "accent chỉ trên Save trong toàn photo editor" but lists only wheel, band, chip, slider and switch, and AC-3 measures the band and panel only. Options: (a) leave — the stage guides are not panel chrome, and amber reads well over any photo; (b) white dashed frame like Photos' markup, costs contrast over bright skies. Not changed while the scope is "look and layout of the panel".

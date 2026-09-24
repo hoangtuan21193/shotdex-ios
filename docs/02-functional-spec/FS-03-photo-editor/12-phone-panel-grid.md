@@ -94,7 +94,7 @@ Máy: iPhone 17 (402pt, iOS 26.5) và iPhone 16 Pro (iOS 18.6) · iPhone SE 3rd 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
 | AC-1 | màn 402×874 | dựng panel | panel 264 = 185 + 54 + 25, mọi loại hàng 40, dải chọn 40 | `EditorPanelLayoutTests.thePhonePanelIsA264SlabOnA40PointGrid` |
-| AC-2 | một ảnh, lần lượt Light · Curve · Mix · Grade · Effects | dump khung slider hàng 1 | cùng y ±0,5pt ở cả năm nhóm | ⚠️ chưa có `iphone-panel-grid.json` |
+| AC-2 | một ảnh, lần lượt Light · Curve · Mix · Grade · Effects | dump khung slider hàng 1 | cùng y ±0,5pt ở cả năm nhóm | `iphone-panel-grid.json` trên SE 375 iOS 18.6, 2026-09-25: tâm hàng 1 = 431 (Exposure · dải Curve · swatch Mix · dải Grade · Texture), hàng 2 = 471 ở cả năm; ⚠️ chưa chạy ở 402 |
 | AC-3 | từng nhóm trong bánh xe, không đang giữ nút nào | chụp panel + băng | không pixel nào mang màu accent ±8 ngoài nút Save | `Tools/accent-check` trên 15 ảnh iPhone 17 26.5, 2026-09-25 (Light…Markup + Presets): 0 px; `KEEP_SAVE=1` bắt 11 508 px ở Save |
 | AC-4 | màn 375pt | mở Curve, Grade, Presets, Color Mix | mọi dải ≤5 mục và dải 9 swatch nằm trọn trong màn, không cuộn | dump SE 375 iOS 18.6, 2026-09-25: Curve 4 chip, Grade 4 chip, Presets 3 chip, Mix 9 swatch, tất cả trong x 12…363 |
 | AC-5 | màn 402pt, nhóm Grade rồi Presets | dump hai dải | chip cách nhau 8 ±0,5, dải cách mép 12; Grade không chip nào có icon; Presets icon cách chữ 4 | ⚠️ chưa có `iphone-panel-grid.json` |
