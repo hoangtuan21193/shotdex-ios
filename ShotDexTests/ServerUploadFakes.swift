@@ -38,6 +38,10 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
         lock.withLock { storage[path].map { Int64($0.count) } }
     }
 
+    func directoryExists(_ path: String) async throws -> Bool {
+        lock.withLock { directories.contains(path) }
+    }
+
     func fileNames(in directory: String) async throws -> Set<String> {
         lock.withLock {
             Set(storage.keys.filter { ServerUploadPath.parent(of: $0) == directory }.map(ServerUploadPath.lastComponent(of:)))

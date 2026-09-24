@@ -318,7 +318,7 @@ struct SettingsScreen: View {
         }
     }
 
-    // MARK: The twelve sections, addressed by name
+    // MARK: The thirteen sections, addressed by name
 
     /// One `Section`, picked by its case.
     ///
@@ -339,6 +339,7 @@ struct SettingsScreen: View {
         case .libraryStorage: storageSection
         case .sharing: sharingSection
         case .export: exportSection
+        case .fileServers: fileServersSection
         case .cameraDatabase: cameraDatabaseSection
         case .support: supportSection
         case .privacy: privacySection
@@ -748,6 +749,30 @@ struct SettingsScreen: View {
         } footer: {
             Text("Built-in presets keep the original proportions. Add named presets for exact dimensions.")
         }
+    }
+
+    // MARK: File Servers
+
+    private var fileServersSection: some View {
+        Section {
+            NavigationLink {
+                FileServerListScreen()
+            } label: {
+                LabeledContent(Row.fileServers.title, value: fileServerCountText)
+            }
+            .settingsRow(.fileServers)
+        } header: {
+            Text("File Servers")
+        } footer: {
+            Text("Upload originals to your NAS or computer over SMB or SFTP, then free up space on this device.")
+        }
+    }
+
+    private var fileServerCountText: String {
+        let count = (try? dependencies.fileServers.count()) ?? 0
+        return count == 0
+            ? String(localized: "None", comment: "Settings → File Servers: no server set up yet")
+            : count.formatted()
     }
 
     // MARK: Camera Database

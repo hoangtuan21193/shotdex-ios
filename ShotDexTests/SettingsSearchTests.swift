@@ -79,7 +79,7 @@ struct SettingsSearchTests {
             .display: 8,            // :429
             .playback: 2,           // :449
             .subjectScan: 4,        // :279
-            .sharingAndExport: 2,   // :258 (1) + :496 (1)
+            .sharingAndExport: 3,   // :258 (1) + :496 (1) + File Servers (1, FS-15)
             .cameraDatabase: 2,     // :515
             .support: 1,            // :528
         ]
@@ -89,7 +89,7 @@ struct SettingsSearchTests {
                 "\(section) indexes \(SettingsSearchIndex.entries(in: section).count) rows"
             )
         }
-        #expect(SettingsSearchIndex.entries.count == 37)
+        #expect(SettingsSearchIndex.entries.count == 38)
     }
 
     /// One case, one entry — a copy-pasted case that forgot to change its text

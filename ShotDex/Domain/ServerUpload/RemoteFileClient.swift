@@ -13,6 +13,7 @@ protocol RemoteFileClient: AnyObject, Sendable {
     func disconnect() async
     /// Size of the file at `path`, nil when nothing is there.
     func fileSize(at path: String) async throws -> Int64?
+    func directoryExists(_ path: String) async throws -> Bool
     /// Names in `directory`; empty when the directory does not exist.
     func fileNames(in directory: String) async throws -> Set<String>
     /// Creates `path` and every missing parent.

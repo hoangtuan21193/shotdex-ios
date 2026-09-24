@@ -22,13 +22,13 @@ struct SettingsLayoutTests {
 
     // MARK: the two orders and the mapping between them
 
-    /// Nine sidebar items cover all twelve groups, and no group is shown twice.
+    /// Nine sidebar items cover all thirteen groups, and no group is shown twice.
     @Test func bothLayoutsCoverEverySection() {
         let mapped = SettingsSection.allCases.flatMap(\.groups)
         #expect(Set(mapped) == Set(SettingsGroup.allCases))
         #expect(mapped.count == SettingsGroup.allCases.count)
         #expect(SettingsSection.allCases.count == 9)
-        #expect(SettingsGroup.allCases.count == 12)
+        #expect(SettingsGroup.allCases.count == 13)
     }
 
     /// The sidebar reads in the order FS-08 lists it.
@@ -39,12 +39,12 @@ struct SettingsLayoutTests {
         ])
     }
 
-    /// The compact list keeps the order it shipped with — this is the order the
-    /// baseline dump was taken in, and the reason `SettingsGroup` exists.
+    /// The compact list keeps the order it shipped with, File Servers added
+    /// after Export (FS-15) — the reason `SettingsGroup` exists.
     @Test func compactOrderIsUnchangedFromBeforeTheSplitView() {
         #expect(SettingsGroup.allCases == [
             .photoLibrary, .notifications, .widgets, .display, .playback,
-            .subjectScan, .libraryStorage, .sharing, .export,
+            .subjectScan, .libraryStorage, .sharing, .export, .fileServers,
             .cameraDatabase, .support, .privacy,
         ])
     }
@@ -53,7 +53,9 @@ struct SettingsLayoutTests {
     /// with the photo library.
     @Test func libraryStorageAndPrivacyBelongToPhotoLibrary() {
         #expect(SettingsSection.photoLibrary.groups == [.photoLibrary, .libraryStorage, .privacy])
-        #expect(SettingsSection.sharingAndExport.groups == [.sharing, .export])
+        // File Servers joins them rather than taking a tenth item: nine is what
+        // fits the Duo's 669pt without scrolling (FS-15.01 §1).
+        #expect(SettingsSection.sharingAndExport.groups == [.sharing, .export, .fileServers])
     }
 
     /// Every sidebar item names an SF Symbol, and no two share one.

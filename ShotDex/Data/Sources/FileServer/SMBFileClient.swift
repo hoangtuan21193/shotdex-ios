@@ -57,6 +57,16 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
         }
     }
 
+    func directoryExists(_ path: String) async throws -> Bool {
+        guard !path.isEmpty else { return true }
+        do {
+            return try await connected().existDirectory(path: path)
+        } catch {
+            if Self.isNotFound(error) { return false }
+            throw Self.map(error, host: server.host, path: path)
+        }
+    }
+
     func fileNames(in directory: String) async throws -> Set<String> {
         do {
             let files = try await connected().listDirectory(path: directory)

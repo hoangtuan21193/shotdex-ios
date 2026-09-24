@@ -67,14 +67,14 @@ enum SettingsSection: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .display: [.display]
         case .playback: [.playback]
         case .subjectScan: [.subjectScan]
-        case .sharingAndExport: [.sharing, .export]
+        case .sharingAndExport: [.sharing, .export, .fileServers]
         case .cameraDatabase: [.cameraDatabase]
         case .support: [.support]
         }
     }
 }
 
-/// One `Section` of the Settings list — the twelve the screen has always drawn,
+/// One `Section` of the Settings list — the thirteen the screen draws,
 /// **in the order the compact layout draws them**.
 ///
 /// This is why there are two enums rather than one. The sidebar groups Library
@@ -93,6 +93,7 @@ enum SettingsGroup: String, CaseIterable, Identifiable, Hashable, Sendable {
     case libraryStorage
     case sharing
     case export
+    case fileServers
     case cameraDatabase
     case support
     case privacy

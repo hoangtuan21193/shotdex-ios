@@ -96,6 +96,12 @@ final class AppDependencies {
     /// Bug reports and feature requests, anonymous and app-only. Apple offers
     /// no user-to-developer channel, so this is it.
     let support: SupportService
+    /// The SMB/SFTP servers originals are uploaded to (FS-15.01).
+    let fileServers: FileServerStore
+    /// Which files are verified on a server (FS-15.02 §8).
+    let serverUploads: ServerUploadStore
+    /// The set of uploaded asset ids the grid badge reads, kept in memory.
+    let serverUploadIndex: ServerUploadIndex
 
     init(database: AppDatabase, photoLibrary: PhotoLibraryService) {
         let metadataStore = MetadataStore(database: database)
@@ -229,6 +235,10 @@ final class AppDependencies {
         self.calendarWidgetWriter = CalendarSnapshotWriter()
         self.widgetLocation = WidgetLocationProvider()
         self.support = SupportService()
+        self.fileServers = FileServerStore(database: database, passwords: KeychainPasswordStore())
+        let serverUploads = ServerUploadStore(database: database)
+        self.serverUploads = serverUploads
+        self.serverUploadIndex = ServerUploadIndex(store: serverUploads)
     }
 
     /// Refreshes everything the Home and Lock Screen widgets read: the next

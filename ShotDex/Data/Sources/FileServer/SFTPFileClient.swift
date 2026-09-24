@@ -71,6 +71,17 @@ final class SFTPFileClient: RemoteFileClient, @unchecked Sendable {
         }
     }
 
+    func directoryExists(_ path: String) async throws -> Bool {
+        guard !path.isEmpty else { return true }
+        do {
+            let attributes = try await connected().getAttributes(at: path)
+            return attributes.permissions.map { $0 & 0o170000 == 0o040000 } ?? true
+        } catch {
+            if Self.isNotFound(error) { return false }
+            throw Self.map(error, host: server.host, path: path)
+        }
+    }
+
     func fileNames(in directory: String) async throws -> Set<String> {
         do {
             let listing = try await connected().listDirectory(atPath: directory.isEmpty ? "." : directory)

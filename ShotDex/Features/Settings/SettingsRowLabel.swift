@@ -71,6 +71,9 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
     // Export
     case resizePresets
 
+    // File Servers
+    case fileServers
+
     // Camera Database
     case unknownCameras
     case resetCustomMappings
@@ -123,6 +126,7 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .measured: "Measured"
         case .includeLocation: "Include Location"
         case .resizePresets: "Resize Presets"
+        case .fileServers: "File Servers"
         case .unknownCameras: "Unknown Cameras"
         case .resetCustomMappings: "Reset Custom Mappings"
         case .support: "Support"
@@ -159,12 +163,24 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
             .sharing
         case .resizePresets:
             .export
+        case .fileServers:
+            .fileServers
         case .unknownCameras, .resetCustomMappings:
             .cameraDatabase
         case .support:
             .support
         case .clearLocalMetadataIndex:
             .privacy
+        }
+    }
+
+    /// Words someone types for this row that are not in its title — the
+    /// protocol names and the box people call it. Not localized: nobody
+    /// translates "SMB".
+    var searchAliases: [String] {
+        switch self {
+        case .fileServers: ["SMB", "SFTP", "NAS", "upload"]
+        default: []
         }
     }
 

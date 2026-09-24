@@ -74,7 +74,10 @@ enum SettingsSearchIndex {
     /// would be work for nothing, and the answer only changes with the app's
     /// language.
     private static let table: [(normalized: String, entry: SettingsSearchEntry)] =
-        entries.map { (WidgetAlbumCatalog.normalized($0.text), $0) }
+        entries.map { entry in
+            let words = ([entry.text] + entry.label.searchAliases).joined(separator: " ")
+            return (WidgetAlbumCatalog.normalized(words), entry)
+        }
 
     private static func entry(for label: SettingsRowLabel) -> SettingsSearchEntry {
         let section = section(for: label)

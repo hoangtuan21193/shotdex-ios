@@ -24,3 +24,26 @@ import Testing
             .localizedDescription.contains("identity of mac.local changed"))
     }
 }
+
+/// Test Connection stops at the first step that fails (FS-15.01 §3).
+@Suite struct FileServerConnectionCheckTests {
+    @Test func missingFolderIsReportedAsTheFolder() async {
+        let client = InMemoryRemoteFileClient()
+        let outcome = await FileServerConnectionCheck.run(client: client, folder: "/Photos/RAW/")
+        #expect(outcome == .failed(.folder, .folderMissing("Photos/RAW")))
+    }
+
+    @Test func existingFolderPassesAndLeavesNoProbe() async {
+        let client = InMemoryRemoteFileClient()
+        try? await client.createDirectory("Photos")
+        let outcome = await FileServerConnectionCheck.run(client: client, folder: "Photos")
+        #expect(outcome == .connected)
+        #expect(client.files.isEmpty)
+    }
+
+    @Test func searchFindsServersByProtocolName() {
+        for query in ["smb", "SFTP", "nas", "server"] {
+            #expect(SettingsSearchIndex.results(for: query).contains { $0.label == .fileServers }, "\(query)")
+        }
+    }
+}
