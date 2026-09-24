@@ -59,7 +59,8 @@ struct EditorImageStage: View {
     }
 
     private var isSamplingColor: Bool {
-        controller.selectedTool == .pointColor && chrome.isEyedropperActive
+        (controller.selectedTool == .pointColor && chrome.isEyedropperActive)
+            || chrome.markupColorSampler != nil
     }
 
     /// An `EditorPaintTouchLayer` is installed over the photo, so it owns both the
@@ -871,9 +872,15 @@ struct EditorImageStage: View {
                 defer { sampleLocation = nil }
                 let anchor = clamped(value.location, in: imageRect)
                 guard let point = pinnedNormalized(anchor, in: imageRect) else { return }
-                controller.addPointColor(sampledAt: point)
-                withAnimation(EditorTheme.animation) {
-                    chrome.isEyedropperActive = false
+                if let sampler = chrome.markupColorSampler {
+                    // The Markup palette's eyedropper: the photo's colour, into the layer.
+                    if let picked = controller.sampledOverlayColor(at: point) { sampler(picked) }
+                    chrome.markupColorSampler = nil
+                } else {
+                    controller.addPointColor(sampledAt: point)
+                    withAnimation(EditorTheme.animation) {
+                        chrome.isEyedropperActive = false
+                    }
                 }
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
             }

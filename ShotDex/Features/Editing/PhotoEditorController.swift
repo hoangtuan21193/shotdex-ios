@@ -2631,6 +2631,12 @@ final class PhotoEditorController {
         return recipe.crop.aspect == .original ? effectiveImageAspect : nil
     }
 
+    /// The Markup colour eyedropper: the photo's own colour under the finger (the
+    /// clean preview — no layer is sampled back into itself).
+    func sampledOverlayColor(at point: NormalizedPoint) -> OverlayColor? {
+        samplePreviewColor(at: point).map { OverlayColor(red: $0.red, green: $0.green, blue: $0.blue) }
+    }
+
     private func samplePreviewColor(at point: NormalizedPoint)
         -> (red: Double, green: Double, blue: Double)? {
         guard let cgImage = colorSamplingImage else { return nil }

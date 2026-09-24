@@ -20,14 +20,25 @@ struct EditorMarkupPhonePanel: View {
 
     var body: some View {
         Group {
-            if Self.showsChooser(controller: controller, chrome: chrome) {
+            if let palette = chrome.colorPalette {
+                EditorColorPalettePanel(chrome: chrome, request: palette)
+            } else if Self.showsChooser(controller: controller, chrome: chrome) {
                 chooser
             } else {
                 layerRows()
             }
         }
         .onAppear(perform: keepALayerOpen)
-        .onDisappear { chrome.isChoosingLayerKind = false }
+        .onDisappear {
+            chrome.isChoosingLayerKind = false
+            chrome.colorPalette = nil
+            chrome.markupColorSampler = nil
+        }
+        // A different layer, or none: the palette was for the old one.
+        .onChange(of: controller.selectedOverlayID) { _, _ in
+            chrome.colorPalette = nil
+            chrome.markupColorSampler = nil
+        }
         .onChange(of: controller.recipe.overlays.map(\.id)) { keepALayerOpen() }
         .onChange(of: controller.selectedOverlayID) { keepALayerOpen() }
     }

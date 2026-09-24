@@ -2414,6 +2414,7 @@ struct PhotoEditorScreen: View {
         case .pointColor: !controller.pointColors.isEmpty
         case .mask: !EditorMaskPhonePanel.showsChooser(controller: controller, chrome: chrome)
         case .markup: !EditorMarkupPhonePanel.showsChooser(controller: controller, chrome: chrome)
+            && chrome.colorPalette == nil
         default: false
         }
     }

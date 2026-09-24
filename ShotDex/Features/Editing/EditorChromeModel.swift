@@ -87,6 +87,22 @@ final class EditorChromeModel {
     var isChoosingMaskKind = false
     /// Phone panel: the "Add a layer" chooser is showing although layers exist.
     var isChoosingLayerKind = false
+    /// Phone panel: the custom colour palette, open over the parameter zone
+    /// (FS-05.02 §6). Nil when closed.
+    var colorPalette: EditorColorPaletteRequest?
+    /// Colours picked in the palette this session, newest first, at most six.
+    /// Session-only by design: not stored anywhere.
+    private(set) var recentColors: [OverlayColor] = []
+    /// Set while the palette's eyedropper waits for a tap on the photo.
+    var markupColorSampler: ((OverlayColor) -> Void)?
+
+    func rememberRecentColor(_ color: OverlayColor) {
+        recentColors.removeAll {
+            abs($0.red - color.red) < 0.01 && abs($0.green - color.green) < 0.01 && abs($0.blue - color.blue) < 0.01
+        }
+        recentColors.insert(color, at: 0)
+        if recentColors.count > 6 { recentColors.removeLast(recentColors.count - 6) }
+    }
     /// Phone panel: a line that stands in for the chooser's title for 3s — why a
     /// dimmed kind is off, or what a kind does.
     var maskChooserNotice: String?
@@ -193,4 +209,13 @@ enum EditorPresetSource: String, CaseIterable, Identifiable {
         case .luts: "cube"
         }
     }
+}
+
+/// What the phone's colour palette is editing: the colour now, and how to write it.
+struct EditorColorPaletteRequest {
+    let id: String
+    let color: () -> OverlayColor
+    let onBegin: () -> Void
+    let onChange: (OverlayColor) -> Void
+    let onEnd: () -> Void
 }

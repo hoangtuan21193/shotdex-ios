@@ -71,4 +71,17 @@ struct MarkupPhonePanelTests {
         controller.selectOverlay(id)
         #expect(!controller.isOverlayBoxHidden)
     }
+
+    /// AC-34 (Recent). Newest first, no duplicates, at most six — and only in the
+    /// session's chrome, nothing stored.
+    @Test func recentColorsAreNewestFirstAndCapped() {
+        let chrome = EditorChromeModel()
+        for step in 0..<8 {
+            chrome.rememberRecentColor(OverlayColor(white: Double(step) / 10))
+        }
+        chrome.rememberRecentColor(OverlayColor(white: 0.5))
+        #expect(chrome.recentColors.count == 6)
+        #expect(chrome.recentColors.first == OverlayColor(white: 0.5))
+        #expect(chrome.recentColors.filter { $0 == OverlayColor(white: 0.5) }.count == 1)
+    }
 }
