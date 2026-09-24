@@ -8,9 +8,17 @@ struct PanoramaStitchOptions: Sendable {
     var projection: PanoramaProjectionKind = .spherical
     /// The Size control, 0.25…1 of the frames' own resolution.
     var sizeScale: Double = 1
+    /// FS-14.02 §5, 0…1.
+    var boundaryWarp: Double = 0
     var autoCrop = true
 
-    init(projection: PanoramaProjectionKind = .spherical, sizeScale: Double = 1, autoCrop: Bool = true) {
+    init(
+        projection: PanoramaProjectionKind = .spherical,
+        sizeScale: Double = 1,
+        autoCrop: Bool = true,
+        boundaryWarp: Double = 0
+    ) {
+        self.boundaryWarp = boundaryWarp
         self.projection = projection
         self.sizeScale = sizeScale
         self.autoCrop = autoCrop
@@ -178,9 +186,20 @@ struct PanoramaStitchService {
 
         if isCancelled() { throw PanoramaStitchError.cancelled }
         progress(.blending)
-        let crop = options.autoCrop
+        let mask = coverage(canvas: canvas, sources: sources, focal: fullFocal)
+        // Boundary Warp stretches the picture out to the rectangle, so what is
+        // left for Auto Crop to take is what the stretch could not reach.
+        let warp = options.boundaryWarp > 0
+            ? PanoramaBoundaryWarp.mesh(
+                coverage: mask,
+                width: canvas.width,
+                height: canvas.height,
+                strength: options.boundaryWarp
+            )
+            : nil
+        let crop = (options.autoCrop && options.boundaryWarp < 1)
             ? PanoramaAutoCrop.largestRectangle(
-                coverage: coverage(canvas: canvas, sources: sources, focal: fullFocal),
+                coverage: mask,
                 width: canvas.width,
                 height: canvas.height
             )
@@ -211,6 +230,7 @@ struct PanoramaStitchService {
                 focal: fullFocal,
                 quality: .sharp,
                 crop: crop,
+                warp: warp,
                 to: url,
                 properties: properties,
                 metadata: metadata,

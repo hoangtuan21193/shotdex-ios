@@ -51,6 +51,12 @@ final class PanoramaMergeModel {
     /// The Size control, 0.25…1. Does not change the picture, only what will be
     /// written — so it never redraws the stage.
     var sizeScale: Double = 1
+    /// How hard the picture is stretched out to the rectangle, 0…1
+    /// (FS-14.02 §5). Zero by default: a stretch is a change to the
+    /// photograph, and the photographer asks for it.
+    var boundaryWarp: Double = 0 {
+        didSet { if boundaryWarp != oldValue { schedulePreview(immediate: true) } }
+    }
 
     private(set) var availability: [PanoramaProjectionAvailability] = []
 
@@ -345,6 +351,7 @@ final class PanoramaMergeModel {
         let focal = previewFocal
         let kind = projection
         let cropping = autoCrop
+        let warp = boundaryWarp
         let context = context
 
         let started = ContinuousClock.now
@@ -385,10 +392,27 @@ final class PanoramaMergeModel {
                     canvas: canvas, sources: sources, focal: focal, seamMasks: seams
                 )
             }
-            guard let image else { return nil }
+            guard var image else { return nil }
+
+            let coverage = (cropping || warp > 0)
+                ? Self.coverage(for: image, canvas: canvas, context: context)
+                : nil
+
+            // The warp comes before the crop: it is what makes the crop small,
+            // and cropping first would throw away the very edge it pulls on.
+            if warp > 0, let coverage,
+               let mesh = PanoramaBoundaryWarp.mesh(
+                   coverage: coverage, width: canvas.width, height: canvas.height, strength: warp
+               ),
+               let warped = PanoramaBoundaryWarp.apply(
+                   mesh, to: image, width: canvas.width, height: canvas.height
+               ) {
+                image = warped
+            }
 
             var region = PanoramaCropRect(x: 0, y: 0, width: canvas.width, height: canvas.height)
-            if cropping, let crop = Self.cropRect(for: image, canvas: canvas, context: context) {
+            if cropping, let coverage, warp < 1,
+               let crop = Self.cropRect(for: coverage, canvas: canvas) {
                 region = crop
             }
             // Core Image counts from the bottom; the crop, like everything
@@ -474,10 +498,22 @@ final class PanoramaMergeModel {
 
     /// The Auto Crop rectangle, read off the preview's own coverage.
     private nonisolated static func cropRect(
+        for coverage: [Float],
+        canvas: PanoramaCanvas
+    ) -> PanoramaCropRect? {
+        PanoramaAutoCrop.largestRectangle(
+            coverage: coverage, width: canvas.width, height: canvas.height
+        )
+    }
+
+    /// Where the panorama has picture, one value per canvas pixel. Read once
+    /// and used twice — Boundary Warp needs to know where the edge is, and so
+    /// does Auto Crop.
+    private nonisolated static func coverage(
         for image: CIImage,
         canvas: PanoramaCanvas,
         context: CIContext
-    ) -> PanoramaCropRect? {
+    ) -> [Float]? {
         let width = canvas.width, height = canvas.height
         guard width > 0, height > 0 else { return nil }
         var rgba = [UInt8](repeating: 0, count: width * height * 4)
@@ -498,7 +534,7 @@ final class PanoramaMergeModel {
                 coverage[y * width + x] = rgba[4 * (source + x) + 3] > 0 ? 1 : 0
             }
         }
-        return PanoramaAutoCrop.largestRectangle(coverage: coverage, width: width, height: height)
+        return coverage
     }
 
 
@@ -661,7 +697,10 @@ final class PanoramaMergeModel {
         isCancelledFlag.withLock { $0 = false }
         saveProgress = 0
         let options = PanoramaStitchOptions(
-            projection: projection, sizeScale: sizeScale, autoCrop: autoCrop
+            projection: projection,
+            sizeScale: sizeScale,
+            autoCrop: autoCrop,
+            boundaryWarp: boundaryWarp
         )
         saveTask = Task { [weak self] in
             guard let self else { return }

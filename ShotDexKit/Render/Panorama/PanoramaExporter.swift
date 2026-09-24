@@ -45,6 +45,7 @@ public enum PanoramaExporter {
         focal: Double,
         quality: PanoramaBlendQuality = .sharp,
         crop: PanoramaCropRect? = nil,
+        warp: PanoramaWarpMesh? = nil,
         to url: URL,
         properties: [CFString: Any] = [:],
         metadata: CGImageMetadata? = nil,
@@ -76,7 +77,12 @@ public enum PanoramaExporter {
                 canvas: canvas, sources: sources, focal: focal, seamMasks: seams
             )
         }
-        guard let blended else { throw PanoramaExportError.cannotEncode }
+        guard var blended else { throw PanoramaExportError.cannotEncode }
+        if let warp, let stretched = PanoramaBoundaryWarp.apply(
+            warp, to: blended, width: canvas.width, height: canvas.height
+        ) {
+            blended = stretched
+        }
 
         // A float working space: band detail is a difference and is routinely
         // negative, and in an eight-bit context every one of those is silently

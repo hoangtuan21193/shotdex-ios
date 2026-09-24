@@ -11,6 +11,8 @@ struct PanoramaMergePanel: View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
             projection
             Divider().overlay(EditorTheme.panelDivider)
+            boundaryWarp
+            Divider().overlay(EditorTheme.panelDivider)
             EditorToggleRow(title: String(localized: "Auto Crop"), isOn: model.autoCrop) {
                 model.autoCrop = $0
             }
@@ -99,6 +101,30 @@ struct PanoramaMergePanel: View {
         let availability = model.availability.first { $0.kind == model.projection }
         if let reason = availability?.reason { return reason.sentence }
         return model.projection.explanation
+    }
+
+    // MARK: Boundary Warp
+
+    /// Stretch rather than crop. Above Auto Crop because it decides how much
+    /// there is left to crop (FS-14.01 §3).
+    private var boundaryWarp: some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+            EditorValueSlider(
+                label: String(localized: "Boundary Warp"),
+                value: model.boundaryWarp * 100,
+                range: 0...100,
+                valueText: "\(Int((model.boundaryWarp * 100).rounded()))",
+                detent: 0,
+                accessibilityName: String(localized: "Boundary Warp"),
+                onBeginDrag: {},
+                onDrag: { model.boundaryWarp = min(1, max(0, $0 / 100)) },
+                onReset: { model.boundaryWarp = 0 }
+            )
+            Text("Stretches the curved edges out to the frame instead of cropping them off.")
+                .font(EditorTheme.maskSubtitle)
+                .foregroundStyle(EditorTheme.dimText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     // MARK: Size

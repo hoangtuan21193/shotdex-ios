@@ -39,7 +39,7 @@ stage đen, một panel đáy `panelSolid`. Không token mới.
 Panel, từ trên xuống:
 1. **Projection** — ba lựa chọn Spherical · Cylindrical · Perspective, dưới là **một câu nói phép chiếu
    đó hợp với cảnh nào** (không mô tả phép toán). Lựa chọn không dựng được thì mờ và câu đó nói vì sao.
-2. **Boundary Warp** — slider 0–100, mặc định 0. **Chưa có trong bản dựng** (AC-11, Task 20 của kế hoạch): panel hiện có bốn mục, không phải năm.
+2. **Boundary Warp** — slider 0–100, mặc định 0.
 3. **Auto Crop** — công tắc, mặc định bật.
 4. **Size** — slider **25–100%** của độ phân giải gốc, bước 5, **hít ở 100%**, mặc định 100%. Không phóng quá
    100% — pixel phóng to là pixel bịa. Dưới track **một dòng** ước lượng, cập nhật khi đổi bất kỳ mục nào ở trên:
