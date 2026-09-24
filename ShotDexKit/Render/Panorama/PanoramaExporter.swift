@@ -60,8 +60,13 @@ public enum PanoramaExporter {
 
         let blended: CIImage?
         switch quality {
-        case .draft: blended = PanoramaCIBlender.draft(canvas: canvas, sources: sources, focal: focal)
-        case .sharp: blended = PanoramaCIBlender.sharp(canvas: canvas, sources: sources, focal: focal)
+        case .draft:
+            blended = PanoramaCIBlender.draft(canvas: canvas, sources: sources, focal: focal)
+        case .sharp:
+            // TODO(FS-14 AC-23): `PanoramaSeamPlanner.masks` goes here, once
+            // its masks stop putting visible steps in the picture — see the
+            // planner's own note.
+            blended = PanoramaCIBlender.sharp(canvas: canvas, sources: sources, focal: focal)
         }
         guard let blended else { throw PanoramaExportError.cannotEncode }
 

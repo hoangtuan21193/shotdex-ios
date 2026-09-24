@@ -106,11 +106,15 @@ public enum PanoramaCIBlender {
     /// Needs a float working format. Band detail is a difference and is
     /// routinely negative, and in an eight-bit context every one of those
     /// becomes zero — which looks like a blend that simply does not work.
+    /// `seamMasks`, when given, replaces the "whichever frame saw it most
+    /// squarely" answer with one that puts the joins where the frames agree
+    /// (`PanoramaSeamPlanner`). One image per source, in the same order.
     public static func sharp(
         canvas: PanoramaCanvas,
         sources: [PanoramaCISource],
         focal: Double,
-        bandCount: Int = PanoramaCompositor.bandCount
+        bandCount: Int = PanoramaCompositor.bandCount,
+        seamMasks: [CIImage]? = nil
     ) -> CIImage? {
         guard canvas.width > 0, canvas.height > 0, !sources.isEmpty, bandCount >= 1 else { return nil }
         guard let maximumKernel, let maskKernel, let bandKernel,
@@ -139,11 +143,15 @@ public enum PanoramaCIBlender {
             runningMaximum = next
         }
         var masks: [CIImage] = []
-        for weight in weights {
-            guard let mask = maskKernel.apply(
-                extent: canvasExtent, arguments: [weight, runningMaximum]
-            ) else { return nil }
-            masks.append(mask)
+        if let seamMasks, seamMasks.count == colours.count {
+            masks = seamMasks
+        } else {
+            for weight in weights {
+                guard let mask = maskKernel.apply(
+                    extent: canvasExtent, arguments: [weight, runningMaximum]
+                ) else { return nil }
+                masks.append(mask)
+            }
         }
 
         // How wide the coarsest band may reach.

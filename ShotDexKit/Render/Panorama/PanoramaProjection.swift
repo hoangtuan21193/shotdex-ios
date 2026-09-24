@@ -74,6 +74,29 @@ public struct PanoramaCanvas: Sendable {
         return (uv.u - originU, uv.v - originV)
     }
 
+    /// The same canvas at a fraction of the size.
+    ///
+    /// Every number in a canvas is in pixels — the focal length, the origin,
+    /// the extent — so a smaller copy is one multiplication each. Rebuilding
+    /// it from the cameras instead would apply `scale` to the *full* canvas
+    /// rather than to this one, which is the difference between a small copy
+    /// of a preview and something three times bigger than it.
+    public func scaled(by factor: Double) -> PanoramaCanvas? {
+        guard factor > 0, factor <= 1 else { return nil }
+        let scaledWidth = Int((Double(width) * factor).rounded())
+        let scaledHeight = Int((Double(height) * factor).rounded())
+        guard scaledWidth > 1, scaledHeight > 1 else { return nil }
+        return PanoramaCanvas(
+            kind: kind,
+            width: scaledWidth,
+            height: scaledHeight,
+            focal: focal * factor,
+            frame: frame,
+            originU: originU * factor,
+            originV: originV * factor
+        )
+    }
+
     /// The direction a canvas pixel looks in — the question the renderer asks
     /// for every output pixel.
     public func direction(atX x: Double, y: Double) -> (Double, Double, Double)? {

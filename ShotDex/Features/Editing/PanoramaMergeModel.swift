@@ -372,8 +372,13 @@ final class PanoramaMergeModel {
 
             let image: CIImage?
             switch quality {
-            case .draft: image = PanoramaCIBlender.draft(canvas: canvas, sources: sources, focal: focal)
-            case .sharp: image = PanoramaCIBlender.sharp(canvas: canvas, sources: sources, focal: focal)
+            case .draft:
+                image = PanoramaCIBlender.draft(canvas: canvas, sources: sources, focal: focal)
+            case .sharp:
+                // TODO(FS-14 AC-23): the preview shows the joins once the
+                // planner's masks are good enough to save with — the two have
+                // to agree, so neither switches on alone.
+                image = PanoramaCIBlender.sharp(canvas: canvas, sources: sources, focal: focal)
             }
             guard let image else { return nil }
 
