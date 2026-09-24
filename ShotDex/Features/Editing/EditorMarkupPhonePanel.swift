@@ -165,6 +165,7 @@ struct EditorLayerStrip: View {
     let rename: () -> Void
     let replaceImage: () -> Void
     let saveSignature: () -> Void
+    @State private var dropTarget: UUID?
 
     var body: some View {
         HStack(spacing: 0) {
@@ -251,6 +252,29 @@ struct EditorLayerStrip: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        // Touch and hold, then drag onto another tile to restack (FS-05.01 §3).
+        .draggable(overlay.id.uuidString) {
+            Image(systemName: overlay.kind == .shape ? overlay.shapeStyle.systemImage : overlay.kind.systemImage)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(.white)
+                .frame(width: 40, height: 30)
+                .background(EditorTheme.control, in: shape)
+        }
+        .dropDestination(for: String.self) { items, _ in
+            guard let dragged = items.first.flatMap(UUID.init(uuidString:)) else { return false }
+            controller.moveOverlay(id: dragged, ontoOverlay: overlay.id)
+            return true
+        } isTargeted: { targeted in
+            dropTarget = targeted ? overlay.id : (dropTarget == overlay.id ? nil : dropTarget)
+        }
+        .overlay {
+            if dropTarget == overlay.id {
+                RoundedRectangle(cornerRadius: AppTheme.Radius.sm + 3.5, style: .continuous)
+                    .strokeBorder(.white.opacity(0.5), lineWidth: 1.5)
+                    .frame(width: 47, height: 37)
+                    .allowsHitTesting(false)
+            }
+        }
         .accessibilityLabel(controller.displayName(of: overlay))
         .accessibilityValue(overlay.isVisible ? "" : "Hidden")
         .accessibilityAddTraits(isSelected ? .isSelected : [])

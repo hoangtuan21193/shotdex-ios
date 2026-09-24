@@ -84,4 +84,22 @@ struct MarkupPhonePanelTests {
         #expect(chrome.recentColors.first == OverlayColor(white: 0.5))
         #expect(chrome.recentColors.filter { $0 == OverlayColor(white: 0.5) }.count == 1)
     }
+
+    /// Chốt #6. Hold-and-drag on the strip: the strip is front-to-back, so
+    /// dropping the back layer on the front tile brings it to the front, and
+    /// dropping it back on the last tile sends it to the back again.
+    @Test func dragOntoATileRestacksTheLayer() {
+        let controller = makeController()
+        controller.addTextOverlay()
+        controller.addShapeOverlay(.rectangle)
+        controller.addMagnifierOverlay()
+        let back = controller.recipe.overlays[0].id
+        let front = controller.recipe.overlays[2].id
+        controller.moveOverlay(id: back, ontoOverlay: front)
+        #expect(controller.recipe.overlays.map(\.kind) == [.shape, .magnifier, .text])
+        controller.moveOverlay(id: back, ontoOverlay: controller.recipe.overlays[0].id)
+        #expect(controller.recipe.overlays.map(\.kind) == [.text, .shape, .magnifier])
+        controller.undo()
+        #expect(controller.recipe.overlays.map(\.kind) == [.shape, .magnifier, .text])
+    }
 }

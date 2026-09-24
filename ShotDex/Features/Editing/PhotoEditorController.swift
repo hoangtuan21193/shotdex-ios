@@ -1608,6 +1608,21 @@ final class PhotoEditorController {
         scheduleRender()
     }
 
+    /// Hold-and-drag on the phone layer strip: the dragged layer takes the place
+    /// of the one it is dropped on. The strip shows the stack front-to-back, so
+    /// dropping on a tile to the right lands the layer after it there.
+    func moveOverlay(id: UUID, ontoOverlay target: UUID) {
+        let displayed = recipe.overlays.reversed().map(\.id)
+        guard id != target,
+              let source = displayed.firstIndex(of: id),
+              let destination = displayed.firstIndex(of: target)
+        else { return }
+        moveOverlays(
+            fromDisplay: IndexSet(integer: source),
+            toDisplay: source < destination ? destination + 1 : destination
+        )
+    }
+
     /// Nudges the selected layer by a normalized delta. Clamped to the frame: a
     /// layer dragged off the photo would be unreachable afterwards.
     func moveSelectedOverlay(dx: Double, dy: Double) {
