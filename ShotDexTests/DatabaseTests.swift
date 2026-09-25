@@ -678,4 +678,73 @@ struct DatabaseTests {
         #expect(refreshed.brands == ["Canon", "Sony"])
         #expect(refreshed.bodies == ["A6700", "EOS R6"])
     }
+
+    // MARK: Album filters (FS-06.09)
+
+    /// AC-6: a smart album narrowed by the Filter menu is its saved query AND
+    /// the quick filter — the saved query itself is untouched.
+    @Test func smartAlbumQueryAndCriteria() async throws {
+        let database = try AppDatabase.makeEmpty()
+        let metadataStore = MetadataStore(database: database)
+        let libraryQueries = LibraryQueries(database: database)
+        var records: [PhotoMetadata] = []
+        for index in 0..<20 {
+            records.append(makeRecord(assetId: "high-\(index)", iso: 3200, favorite: index < 6))
+        }
+        for index in 0..<10 {
+            records.append(makeRecord(assetId: "low-\(index)", iso: 100, favorite: true))
+        }
+        try metadataStore.saveBatch(records, cursorAssetId: nil)
+
+        let highISO = SmartAlbumQuery(matchMode: .all, rules: [
+            SmartAlbumRule(field: .iso, op: .greaterThan, number: 1599),
+        ])
+        var favorites = FilterCriteria()
+        favorites.favoritesOnly = true
+
+        #expect(try await libraryQueries.count(matchingAll: [.query(highISO)]) == 20)
+        let narrowed = try await libraryQueries.gridItems(
+            matchingAll: [.query(highISO), .criteria(favorites)],
+            sort: .default
+        )
+        #expect(narrowed.count == 6)
+        #expect(narrowed.allSatisfy { $0.assetId.hasPrefix("high-") })
+        // An empty quick filter adds no condition.
+        #expect(try await libraryQueries.count(matchingAll: [.query(highISO), .criteria(.empty)]) == 20)
+    }
+
+    /// AC-11: an album's Advanced Filter counts inside the album only, and an
+    /// album of 20,000 ids still binds as one parameter.
+    @Test func queryRestrictedToAssetIds() async throws {
+        let database = try AppDatabase.makeEmpty()
+        let metadataStore = MetadataStore(database: database)
+        let libraryQueries = LibraryQueries(database: database)
+        var records: [PhotoMetadata] = []
+        for index in 0..<500 {
+            records.append(makeRecord(assetId: "lib-\(index)", iso: 3200))
+        }
+        for index in 0..<32 {
+            records.append(makeRecord(assetId: "album-\(index)", iso: index < 8 ? 3200 : 200))
+        }
+        try metadataStore.saveBatch(records, cursorAssetId: nil)
+
+        let iso3200 = SmartAlbumQuery(matchMode: .all, rules: [
+            SmartAlbumRule(field: .iso, op: .greaterThan, number: 3199),
+        ])
+        let albumIds = (0..<32).map { "album-\($0)" }
+        #expect(try await libraryQueries.count(matchingAll: [.query(iso3200)]) == 508)
+        #expect(try await libraryQueries.count(matchingAll: [.query(iso3200)], restrictedTo: albumIds) == 8)
+
+        // 20,000 ids, most of them not in the index at all.
+        let huge = albumIds + (0..<19_968).map { "missing-\($0)" }
+        #expect(huge.count == 20_000)
+        let rows = try await libraryQueries.gridItems(
+            matchingAll: [.query(iso3200)],
+            restrictedTo: huge,
+            sort: .dateTakenNewest
+        )
+        #expect(rows.count == 8)
+        // An empty id list matches nothing, not everything.
+        #expect(try await libraryQueries.count(matchingAll: [], restrictedTo: []) == 0)
+    }
 }

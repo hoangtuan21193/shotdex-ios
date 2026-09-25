@@ -24,6 +24,10 @@ struct AlbumDetailScreen: View {
     /// follow it).
     @State private var isSelecting = false
     @State private var selectedIds: [String] = []
+    /// The Filter menu's choice (FS-06.09). Screen state, not the model's: the
+    /// model is rebuilt when the library changes and must get it back, and the
+    /// next visit to the album starts from All Items.
+    @State private var filter = AlbumFilter()
     @State private var isComparePresented = false
     @State private var compressionPresentation: CompressionPresentation?
     @State private var multiEditPresentation: MultiEditPresentation?
@@ -101,16 +105,22 @@ struct AlbumDetailScreen: View {
             navigation.hidesTabBar = false
             if isSelecting { navigation.selectionBar = nil }
         }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            topAccessories
+        }
+        .onChange(of: filter) {
+            model?.setFilter(filter)
+        }
         .task {
             if model == nil {
-                let newModel = AlbumDetailModel(album: album, dependencies: dependencies)
+                let newModel = AlbumDetailModel(album: album, dependencies: dependencies, filter: filter)
                 newModel.loadNextPage()
                 model = newModel
             }
         }
         .onChange(of: photoLibrary.assetChangeToken) {
             guard !isSelecting else { return }
-            let refreshed = AlbumDetailModel(album: album, dependencies: dependencies)
+            let refreshed = AlbumDetailModel(album: album, dependencies: dependencies, filter: filter)
             refreshed.loadNextPage()
             model = refreshed
         }
@@ -219,12 +229,31 @@ struct AlbumDetailScreen: View {
             onNearEnd: { model.loadNextPage() },
             onUserScroll: {},
             onVisibleDateChange: { visibleDate = $0 },
+            // Only while filtering: how much of the album the filter left.
+            trailingFooterText: filter.isActive ? filteredCountFooter(model) : nil,
             removal: model.lastRemoval,
             contextMenuProvider: { metadata in
                 tileMenu(model, assetId: metadata.assetId).makeMenu()
             }
         )
         .ignoresSafeArea(edges: .bottom)
+    }
+
+    private func filteredCountFooter(_ model: AlbumDetailModel) -> String {
+        let total = model.unfilteredCount
+        return "\(model.totalCount.formatted()) of \(total.formatted()) \(total == 1 ? "Item" : "Items")"
+    }
+
+    /// The Filter menu's chips, pinned under the navigation bar while a
+    /// filter is on (FS-06.09 §4). Empty — zero height — otherwise.
+    @ViewBuilder
+    private var topAccessories: some View {
+        if !filter.criteria.isEmpty {
+            FilterTokenBar(criteria: Binding(
+                get: { filter.criteria },
+                set: { filter.setCriteria($0) }
+            ))
+        }
     }
 
     // MARK: Selection
@@ -553,9 +582,12 @@ struct AlbumDetailScreen: View {
     /// remembered per album.
     private func filterMenu(_ model: AlbumDetailModel) -> some View {
         PhotoFilterMenu(
-            criteria: nil,
-            isShowingAllItems: true,
-            onShowAllItems: {},
+            criteria: Binding(
+                get: { filter.criteria },
+                set: { filter.setCriteria($0) }
+            ),
+            isShowingAllItems: !filter.isActive,
+            onShowAllItems: { filter.clear() },
             onAdvancedFilter: nil
         ) {
             Picker("Sort By", selection: Binding(
@@ -576,7 +608,9 @@ struct AlbumDetailScreen: View {
         // Filter leads the trailing group and stays while selecting, as in
         // Library; the selection's ⋯ joins its capsule.
         ToolbarItem(placement: .topBarTrailing) {
-            if let model, !model.photos.isEmpty {
+            // On the album's size, not what is showing: a filter that leaves
+            // nothing must still be undoable from here.
+            if let model, model.unfilteredCount > 0 {
                 filterMenu(model)
             }
         }

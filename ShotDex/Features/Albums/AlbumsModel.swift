@@ -585,6 +585,13 @@ final class AlbumDetailModel: PhotoBrowsingSource {
     private let albumKind: AlbumItem.Kind
     private let albumId: String
     private(set) var sortOrder: AlbumSortOrder
+    /// What the Filter menu narrows the album to (FS-06.09). Owned by the
+    /// screen and handed back when the model is rebuilt, so a library change
+    /// does not drop it.
+    private(set) var filter: AlbumFilter
+    /// The album's size before filtering — the "of 40" in "12 of 40", and
+    /// whether the Filter menu has anything to act on.
+    private(set) var unfilteredCount = 0
     /// Bumped when the order changes. The grid reloads on a content-version
     /// change; a re-sort keeps the same photos and the same count, so nothing
     /// else would tell it the list it is showing is no longer the list.
@@ -608,7 +615,7 @@ final class AlbumDetailModel: PhotoBrowsingSource {
     /// skipped when later pages reach them.
     private var deletedIds: Set<String> = []
 
-    init(album: AlbumItem, dependencies: AppDependencies) {
+    init(album: AlbumItem, dependencies: AppDependencies, filter: AlbumFilter = AlbumFilter()) {
         self.metadataStore = dependencies.metadataStore
         self.database = dependencies.database
         self.photoLibrary = dependencies.photoLibrary
@@ -618,6 +625,7 @@ final class AlbumDetailModel: PhotoBrowsingSource {
         self.albumId = album.id
         let order = AlbumSortStore.order(for: album.id, isSmartAlbum: album.isSmart)
         self.sortOrder = order
+        self.filter = filter
 
         switch album.kind {
         case .allPhotos:
@@ -631,7 +639,9 @@ final class AlbumDetailModel: PhotoBrowsingSource {
             // A query, not a container: nothing can be added to it.
             self.sourceAlbum = nil
         }
-        self.source = Self.fetch(kind: album.kind, order: order)
+        self.source = .ordered([])
+        self.source = makeSource()
+        self.unfilteredCount = countUnfiltered()
     }
 
     /// Whether this album has an arrangement of its own to offer. A smart
@@ -648,7 +658,21 @@ final class AlbumDetailModel: PhotoBrowsingSource {
         guard order != sortOrder else { return }
         sortOrder = order
         AlbumSortStore.setOrder(order, for: albumId)
-        source = Self.fetch(kind: albumKind, order: order)
+        restart()
+    }
+
+    /// Narrows the album and starts its paging again from the top.
+    func setFilter(_ newValue: AlbumFilter) {
+        guard newValue != filter else { return }
+        filter = newValue
+        restart()
+    }
+
+    /// Rebuilds the source for the current order and filter and pages from
+    /// the top. The content version tells the grid the list is a new list,
+    /// which a same-count re-sort would not otherwise say.
+    private func restart() {
+        source = makeSource()
         hasResolvedIndexedAssets = false
         photos = []
         assetsById = [:]
@@ -656,16 +680,78 @@ final class AlbumDetailModel: PhotoBrowsingSource {
         nextFetchIndex = 0
         hasMorePages = true
         lastRemoval = nil
+        deletedIds = []
         contentVersion += 1
         loadNextPage()
     }
 
+    /// The Photos fetch for the current order, narrowed by the quick filters
+    /// Photos can answer itself. A capture-kind album's list comes from the
+    /// index instead and resolves on first page.
+    private func makeSource() -> AssetSource {
+        let criteria = filter.criteria
+        var stitched: [String] = []
+        if criteria.mediaSubtypes.contains(.panorama) {
+            stitched = (try? libraryQueries?.stitchedPanoramaIds()) ?? []
+        }
+        let predicate = AlbumFilterPredicate.predicate(for: criteria, stitchedPanoramaIds: stitched)
+        return Self.fetch(kind: albumKind, order: sortOrder, filter: predicate)
+    }
+
+    private func countUnfiltered() -> Int {
+        switch albumKind {
+        case .capturedKind(let subtype):
+            var criteria = FilterCriteria()
+            criteria.mediaSubtypes = [subtype]
+            return (try? libraryQueries?.count(matching: criteria)) ?? 0
+        default:
+            guard filter.isActive else { return source.count }
+            return Self.fetch(kind: albumKind, order: sortOrder, filter: nil).count
+        }
+    }
+
+    /// Of `ids`, the ones the current filter still shows — how a selection
+    /// sheds the photos a new filter hides (FS-01.06 §2). Asks Photos for just
+    /// those ids rather than walking the whole album.
+    func matchingIds(among ids: [String]) -> Set<String> {
+        guard !ids.isEmpty else { return [] }
+        switch source {
+        case .ordered(let assets):
+            let wanted = Set(ids)
+            return Set(assets.lazy.map(\.localIdentifier).filter { wanted.contains($0) })
+        case .fetch:
+            let narrowed = Self.fetch(
+                kind: albumKind,
+                order: sortOrder,
+                filter: AlbumFilterPredicate.predicate(
+                    for: filter.criteria,
+                    stitchedPanoramaIds: filter.criteria.mediaSubtypes.contains(.panorama)
+                        ? ((try? libraryQueries?.stitchedPanoramaIds()) ?? [])
+                        : []
+                ),
+                restrictedTo: ids
+            )
+            var result = Set<String>()
+            if case .fetch(let fetched) = narrowed {
+                fetched.enumerateObjects { asset, _, _ in result.insert(asset.localIdentifier) }
+            }
+            return result.subtracting(deletedIds)
+        }
+    }
+
     private nonisolated static func fetch(
         kind: AlbumItem.Kind,
-        order: AlbumSortOrder
+        order: AlbumSortOrder,
+        filter: NSPredicate?,
+        restrictedTo ids: [String]? = nil
     ) -> AssetSource {
         let options = PHFetchOptions()
-        options.predicate = PhotoLibraryService.browsableMediaPredicate
+        var predicates = [PhotoLibraryService.browsableMediaPredicate]
+        if let filter { predicates.append(filter) }
+        if let ids { predicates.append(NSPredicate(format: "localIdentifier IN %@", ids)) }
+        options.predicate = predicates.count == 1
+            ? predicates[0]
+            : NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
         options.sortDescriptors = order.sortDescriptors
         switch kind {
         case .allPhotos:
@@ -736,10 +822,15 @@ final class AlbumDetailModel: PhotoBrowsingSource {
         var criteria = FilterCriteria()
         criteria.mediaSubtypes = [subtype]
         let sort = sortOrder.librarySort
+        let quick = filter.criteria
+        let requestedFilter = filter
         Task { [weak self] in
-            let ids = (try? await libraryQueries.gridItems(matching: criteria, sort: sort))?
-                .map(\.assetId) ?? []
-            guard let self else { return }
+            let ids = (try? await libraryQueries.gridItems(
+                matchingAll: [.criteria(criteria), .criteria(quick)],
+                sort: sort
+            ))?.map(\.assetId) ?? []
+            // A newer filter or order has started its own lookup.
+            guard let self, self.filter == requestedFilter, self.sortOrder.librarySort == sort else { return }
             let byId = PhotoLibraryService.fetchAssets(ids: ids)
                 .reduce(into: [String: PHAsset]()) { $0[$1.localIdentifier] = $1 }
             // Ids the library no longer has simply drop out — the index can be
@@ -794,6 +885,7 @@ final class AlbumDetailModel: PhotoBrowsingSource {
         guard !assets.isEmpty else { return }
         try await photoLibrary.removeAssets(assets, from: sourceAlbum)
         deletedIds.formUnion(ids)
+        unfilteredCount = max(0, unfilteredCount - ids.count)
         lastRemoval = .next(after: lastRemoval, removing: ids)
         photos.removeAll { ids.contains($0.assetId) }
         pageTriggerIds = Set(photos.suffix(30).map(\.assetId))
@@ -810,6 +902,7 @@ final class AlbumDetailModel: PhotoBrowsingSource {
         // the grid doesn't show stale entries until the next index run.
         try? metadataStore.deleteAssets(ids: Array(ids))
         deletedIds.formUnion(ids)
+        unfilteredCount = max(0, unfilteredCount - ids.count)
         lastRemoval = .next(after: lastRemoval, removing: ids)
         photos.removeAll { ids.contains($0.assetId) }
         pageTriggerIds = Set(photos.suffix(30).map(\.assetId))

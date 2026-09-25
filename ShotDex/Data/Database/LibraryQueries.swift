@@ -179,6 +179,85 @@ struct LibraryQueries: Sendable {
         }
     }
 
+    // MARK: Combined filters (album screens, FS-06.09)
+
+    /// One condition set for `gridItems(matchingAll:)`: quick-filter criteria
+    /// or a rule query.
+    enum IndexFilter: Sendable {
+        case criteria(FilterCriteria)
+        case query(SmartAlbumQuery)
+    }
+
+    /// Rows matching **every** filter (AND), optionally only among the given
+    /// asset ids — how a smart album narrows its saved query by the Filter
+    /// menu, and how an album's Advanced Filter stays inside the album.
+    ///
+    /// The ids travel as one JSON array read by `json_each`, not one `?` each:
+    /// an album of 20,000 photos would blow SQLite's bound-parameter limit.
+    func gridItems(
+        matchingAll filters: [IndexFilter],
+        restrictedTo assetIds: [String]? = nil,
+        sort: SortOption
+    ) async throws -> [LibraryGridItem] {
+        let (whereSQL, arguments) = try Self.combinedWhere(filters, restrictedTo: assetIds)
+        let sql = """
+            SELECT assetId, creationDate, mediaType, originalFilename,
+                   iso, aperture, shutterSpeedDisplay,
+                   focalLength, equivalentFocalLength, width, height, fileSize
+            FROM photo_metadata
+            \(whereSQL)
+            ORDER BY \(Self.orderClause(for: sort))
+            """
+        return try await database.reader.read { db in
+            try LibraryGridItem.fetchAll(db, sql: sql, arguments: arguments)
+        }
+    }
+
+    /// Count for `gridItems(matchingAll:restrictedTo:sort:)`.
+    func count(
+        matchingAll filters: [IndexFilter],
+        restrictedTo assetIds: [String]? = nil
+    ) async throws -> Int {
+        let (whereSQL, arguments) = try Self.combinedWhere(filters, restrictedTo: assetIds)
+        let sql = "SELECT COUNT(*) FROM photo_metadata \(whereSQL)"
+        return try await database.reader.read { db in
+            try Int.fetchOne(db, sql: sql, arguments: arguments) ?? 0
+        }
+    }
+
+    /// Photos ShotDex stitched into a panorama. They carry no system flag, so
+    /// a Photos fetch can only find them by identifier.
+    func stitchedPanoramaIds() throws -> [String] {
+        try database.reader.read { db in
+            try String.fetchAll(db, sql: "SELECT assetId FROM photo_metadata WHERE isPanorama = 1")
+        }
+    }
+
+    static func combinedWhere(
+        _ filters: [IndexFilter],
+        restrictedTo assetIds: [String]?
+    ) throws -> (sql: String, arguments: StatementArguments) {
+        var conditions: [String] = []
+        var arguments = StatementArguments()
+        for filter in filters {
+            let (sql, filterArguments) = switch filter {
+            case .criteria(let criteria): whereClause(for: criteria)
+            case .query(let query): whereClause(for: query)
+            }
+            let condition = sql.hasPrefix("WHERE ") ? String(sql.dropFirst(6)) : sql
+            guard !condition.isEmpty else { continue }
+            conditions.append("(\(condition))")
+            arguments += filterArguments
+        }
+        if let assetIds {
+            let json = String(decoding: try JSONEncoder().encode(assetIds), as: UTF8.self)
+            conditions.append("assetId IN (SELECT value FROM json_each(?))")
+            arguments += [json]
+        }
+        let sql = conditions.isEmpty ? "" : "WHERE " + conditions.joined(separator: " AND ")
+        return (sql, arguments)
+    }
+
     /// Distinct normalized camera manufacturers, for the filter sheet.
     func distinctCameraBrands() throws -> [String] {
         try distinctValues(column: "normalizedCameraManufacturer")
