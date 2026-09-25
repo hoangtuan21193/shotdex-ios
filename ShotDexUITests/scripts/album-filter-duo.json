@@ -1,0 +1,16 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "tap", "label": "Collections", "type": "button" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "tap", "label": "Recently Added" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "tap", "label": "Filter and sort" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "label": "Photos Only" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "dump", "name": "01-filtered" },
+    { "action": "wait", "seconds": 25 }
+  ]
+}

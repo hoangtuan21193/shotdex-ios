@@ -21,12 +21,12 @@ Bố cục tab: [FS-06.01](01-tabs-tokens-and-album-management.md).
 - Chế độ chọn đầy đủ như Library; menu giữ-lâu có thêm **Remove from Album**.
 - **Con trỏ phân trang** giữ riêng, nên sau khi xoá ảnh thì trang kế **bỏ qua** những ảnh đã mất thay vì
   nối lại trùng.
-- Có biểu ngữ quyền giới hạn + nút Manage khi quyền ảnh bị giới hạn.
+- Có biểu ngữ quyền giới hạn + nút Manage khi quyền ảnh bị giới hạn (dùng chung với Library).
 
 ## 3. Sắp xếp trong Album Detail
 
-Nút sắp xếp cạnh Select: **Album Order · Newest First · Oldest First**. Sắp chuyển vào menu Filter
-giống Library: [FS-06.09](09-album-filter-menu.md) (spec, chưa làm).
+`Sort By ▸` trong menu Filter dùng chung với Library ([FS-06.09](09-album-filter-menu.md)):
+**Album Order · Newest First · Oldest First**.
 
 - **Album Order = không sắp gì cả** — đó là cách thư viện trả về thứ tự riêng của album (thứ tự thêm vào,
   hoặc thứ tự người dùng tự kéo trong Photos).

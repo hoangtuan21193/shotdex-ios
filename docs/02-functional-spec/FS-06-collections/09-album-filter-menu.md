@@ -101,10 +101,10 @@ Nút Filter đã có ở Library thì phải có ở mọi lưới ảnh, và c�
 | AC-12 | album đang lọc Advanced ISO ≥ 3200 | bật Favorites | điều kiện Advanced bị xoá, chỉ còn chip `Favorite` | `AlbumFilterTests.quickAndAdvancedAreExclusive` + chụp tay 26.5 `t12-advanced-then-favorites-26.png` |
 | AC-13 | album đang lọc Favorites | chạm `x` trên chip | về All Items, hàng chip biến mất, hàng ảnh đầu không bị thanh trên che | chụp tay 26.5 `t6-chip-removed-26.png` |
 | AC-14 | quyền `.limited`, 5 trong 40 ảnh được cấp, 2 favorite | Favorites | 2 ô; biểu ngữ Manage vẫn hiện | ⚠️ chưa có ảnh — sim không đặt được quyền `.limited` bằng lệnh; code dùng chung biểu ngữ của Library |
-| AC-15 | Album, Smart Album, On This Day, Memories | chụp thanh trên, cả lúc chọn và không chọn | Album và Smart Album có nút Filter; On This Day và Memories không có | ⚠️ chưa có (ui-drive) |
-| AC-16 | iOS 26.5 và 18.6, Duo trong | dump menu Filter và hàng chip của album đang lọc | cùng danh sách mục; hàng ảnh đầu nằm trọn dưới hàng chip | ⚠️ chưa có (`ios26-parity`, `device-layout`) |
+| AC-15 | Album, Smart Album, On This Day, Memories | chụp thanh trên, cả lúc chọn và không chọn | Album và Smart Album có nút Filter; On This Day và Memories không có | chụp tay 26.5 `t2-album-menu-26.png`, `t7-selecting-26.png`, `t13-on-this-day-26.png`; Memories: không có trên sim, màn dùng `PhotoListScreen` không có menu (đọc code) |
+| AC-16 | iOS 26.5 và 18.6, Duo trong | dump menu Filter và hàng chip của album đang lọc | cùng danh sách mục; hàng ảnh đầu nằm trọn dưới hàng chip | 18.6 `t14-album-menu-18.png`, `t14-album-selecting-18.png`; Duo ngoài `ShotDexUITests/scripts/album-filter-duo.json` + `Tools/sim-shot cover`. ⚠️ Duo trong chưa chụp — sim đang gập, không có lệnh mở |
 
-**Chưa chứng minh được:** tất cả — spec mới, chưa có code.
+**Chưa chứng minh được:** AC-14 (không đặt được `.limited` trên sim), phần Duo trong của AC-16 (sim gập), phần Memories của AC-15 (sim không có memory). Số trong AC chứng minh bằng test với dữ liệu dựng sẵn; ảnh chụp dùng đúng 5–12 ảnh có trên sim.
 
 ## 8. Rủi ro đã biết
 

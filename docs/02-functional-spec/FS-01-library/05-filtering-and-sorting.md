@@ -69,7 +69,8 @@ Nhóm góc nhìn (theo tiêu cự tương đương): < 20mm Ultra-wide · 20–3
 
 ## 5. Menu lọc trên toolbar
 
-Nút lọc là một mục riêng, **tách khỏi Select**; **không còn nút Sort riêng**.
+Nút lọc là một mục riêng, **tách khỏi Select**; **không còn nút Sort riêng**. Menu này **dùng chung** với
+Album Detail và Smart Album ([FS-06.09](../FS-06-collections/09-album-filter-menu.md)) — một chỗ định nghĩa các dòng.
 
 - Phần `Filter:` — All Items · Favorites · Photos Only / Videos Only (hai công tắc **loại trừ nhau**) ·
   **Advanced Filter…**

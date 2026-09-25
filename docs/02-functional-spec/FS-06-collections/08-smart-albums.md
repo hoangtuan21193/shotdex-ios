@@ -72,7 +72,7 @@ chuyển sang điều kiện (chế độ khớp tất cả), để album lưu t
   hơn một điều kiện, và một chip mô tả từng điều kiện), rồi tới lưới. Model của nó soi gương model Library
   nên dùng chung viewer, chế độ chọn, Compare và xoá.
 - Giữ lâu trên tile → menu Edit / Delete.
-- Menu Filter / Sort trên thanh trên: [FS-06.09](09-album-filter-menu.md) (spec, chưa làm).
+- Menu Filter / Sort trên thanh trên, lọc chồng lên điều kiện đã lưu: [FS-06.09](09-album-filter-menu.md).
 
 ## 7. Tiêu chí nghiệm thu
 
