@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan |
 | Ngày | 2026-09-25 |
 | Trạng thái | accepted (2026-09-25) |
-| Tiến độ | **gần xong** (2026-09-26) — task 7/8, 40/40 kernel Metal, chờ `/verify` |
+| Tiến độ | **xong** (2026-09-26) — 14/14 AC xanh, gate xanh (575 s, 0 lỗi) |
 | Nguồn | Issue navigator của Xcode (45 warning `init(source:)` deprecated) + hook `build-check.py` |
 | Spec sinh ra từ đây | [FS-16](../02-functional-spec/FS-16-metal-kernels.md) |
 

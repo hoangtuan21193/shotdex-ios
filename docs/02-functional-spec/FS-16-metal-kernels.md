@@ -91,7 +91,7 @@ Người chụp không được thấy khác biệt nào sau khi chuyển.
 **Đường hỏng không áp dụng**: mạng, iCloud-only, quyền `.limited`, huỷ giữa chừng, undo — spec không đổi
 đường đọc ảnh, lịch sử sửa hay luồng export; ba luồng đó giữ test đang có (AC-11).
 
-**Chưa chứng minh được:** không còn — xem `/verify`. AC-10 dựng 3 khung ở pha 1/60/120 thay vì phát cả 120 khung.
+**Chưa chứng minh được:** không còn (`/verify` 2026-09-26, gate xanh). AC-10 dựng 3 khung ở pha 1/60/120 thay vì phát cả 120 khung; AC-4 chứng minh bằng một lần phá thử, không có test tự động.
 
 ## 7. Rủi ro đã biết
 
