@@ -557,3 +557,18 @@ general-purpose (sliders/curve/grade/heal/crop/shell), challenger (scope, Pencil
 - **Multi-shape masks cannot be made in the photo editor** (found by `/verify` FS-03.12 AC-16). `addMask(kind:)` is the only thing that creates a `PhotoMaskComponent`, and it always makes a new one-shape mask — true before this work too (`0e3c58a`). So the shape chips in the mask row, "Delete This Shape" in ⋯, and Add/Subtract as "mode for the next shape" are reachable only from a recipe written elsewhere. Add/Subtract still steers the brush (erase), so it is not dead. Options: (a) add "Add shape" to the mask ⋯ (reuses the chooser, appends a component with `maskOperation`) — a new capability, needs its own intent; (b) drop the multi-shape UI as dead code; (c) leave as is and strike the AC-16 sub-item.
 - Detection-failure pill ("Couldn't find a subject") is drawn but not announced to VoiceOver (absent from the element dump) → post an `AccessibilityNotification.Announcement` with the same text _(verify, a11y nit)_
 - **On-photo selection frame is still accent** (dashed amber box round a selected layer, `EditorOverlayGuides.swift:176` via `EditorImageStage.swift:361`; mask pins `EditorOverlayGuides.swift:317,323`). DESIGN.md says "accent chỉ trên Save trong toàn photo editor" but lists only wheel, band, chip, slider and switch, and AC-3 measures the band and panel only. Options: (a) leave — the stage guides are not panel chrome, and amber reads well over any photo; (b) white dashed frame like Photos' markup, costs contrast over bright skies. Not changed while the scope is "look and layout of the panel".
+
+# Review queue — 2026-09-25 (FS-06.09 album Filter menu, left over)
+
+Sources: `perf-profiler`, `component-consistency`, `swift-concurrency` on `2bad9ec..ea0736f`. Everything else those
+agents raised was fixed in the follow-up commit.
+
+- [ ] `ShotDex/Data/Database/AppDatabase.swift` — `photo_metadata` has no secondary index; FS-06.09 now runs
+  `combinedWhere` on every Filter-menu change (criteria scan over 55k rows). Candidate indexes: `iso`,
+  `normalizedCameraManufacturer`, `normalizedLensModel`, `isPanorama`. Schema change → `data-migration` first _(perf-profiler)_
+- [ ] `ShotDex/Features/Albums/OnThisDayScreen.swift:60` — while selecting, Back stays tappable; Album Detail and
+  Smart Album now hide it (× leaves). User asked to leave On This Day as it is (2026-09-25) — decide before changing _(component-consistency)_
+- [ ] `ShotDex/Features/Library/LibraryScreen.swift` (`onChange(of: model.contentGeneration)`) — builds a 55k-entry
+  `Set` to prune a handful of picks; bounded (only on content replacement while selecting). Nit _(perf-profiler)_
+- [ ] Measure `AlbumDetailModel.resolveAdvancedAssets` on a device with a 20k-photo album against the FS-06.09 §6
+  300 ms first-page budget (now chunked at 2,000 ids; simulator only measured) _(perf-profiler)_

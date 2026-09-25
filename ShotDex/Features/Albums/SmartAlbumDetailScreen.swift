@@ -220,8 +220,10 @@ struct SmartAlbumDetailScreen: View {
                     )
                 }
             }
-            .onChange(of: filter) {
-                Task { await model?.setFilter(filter) }
+            // SwiftUI cancels the previous call when the filter changes again
+            // or the screen goes away.
+            .task(id: filter) {
+                await model?.setFilter(filter)
             }
             .onChange(of: model?.contentGeneration) {
                 guard isSelecting, !selectedIds.isEmpty, let model else { return }
@@ -316,7 +318,7 @@ struct SmartAlbumDetailScreen: View {
         ) {
             Picker("Sort By", selection: Binding(
                 get: { model.sortOrder },
-                set: { order in Task { await model.setSortOrder(order) } }
+                set: { order in Task { [weak model] in await model?.setSortOrder(order) } }
             )) {
                 ForEach(AlbumSortOrder.allCases.filter { $0 != .albumOrder }) { order in
                     Text(order.displayName).tag(order)

@@ -58,8 +58,8 @@ enum AlbumFilterPredicate {
             var kinds: [NSPredicate] = criteria.mediaSubtypes
                 .sorted { $0.bit < $1.bit }
                 .map { NSPredicate(format: "(mediaSubtypes & %d) != 0", $0.bit) }
-            if criteria.mediaSubtypes.contains(.panorama), !stitchedPanoramaIds.isEmpty {
-                kinds.append(NSPredicate(format: "localIdentifier IN %@", stitchedPanoramaIds))
+            if criteria.mediaSubtypes.contains(.panorama), let byId = identifierPredicate(stitchedPanoramaIds) {
+                kinds.append(byId)
             }
             parts.append(NSCompoundPredicate(orPredicateWithSubpredicates: kinds))
         }
@@ -71,9 +71,28 @@ enum AlbumFilterPredicate {
         }
     }
 
+    /// Largest id list one `IN` clause carries. Photos documents no ceiling,
+    /// so a selection of 20,000 or a library of stitched panoramas is split
+    /// rather than handed over as one array.
+    static let identifierChunkSize = 500
+
+    /// `localIdentifier IN …` for `ids`, split into ORed chunks of at most
+    /// `identifierChunkSize`. Nil for no ids.
+    static func identifierPredicate(_ ids: [String]) -> NSPredicate? {
+        guard !ids.isEmpty else { return nil }
+        let chunks = stride(from: 0, to: ids.count, by: identifierChunkSize).map { start in
+            NSPredicate(
+                format: "localIdentifier IN %@",
+                Array(ids[start..<min(start + identifierChunkSize, ids.count)])
+            )
+        }
+        return chunks.count == 1 ? chunks[0] : NSCompoundPredicate(orPredicateWithSubpredicates: chunks)
+    }
+
     /// Whether the criteria hold anything Photos cannot answer — camera, lens,
-    /// exposure, search text. The Filter menu never sets these, but a criteria
-    /// value carrying them must go to the index instead.
+    /// exposure, search text. `predicate(for:)` silently ignores those, so an
+    /// album asserts this is false before building a fetch; the Filter menu
+    /// never sets them.
     static func needsIndex(_ criteria: FilterCriteria) -> Bool {
         var photosOnly = FilterCriteria()
         photosOnly.favoritesOnly = criteria.favoritesOnly

@@ -60,6 +60,22 @@ struct AlbumFilterTests {
         #expect(format.contains(" OR "))
     }
 
+    /// A long id list is split so no single `IN` carries more than the cap.
+    @Test func identifiersAreChunked() {
+        let ids = (0..<1_203).map { "id-\($0)" }
+        let predicate = AlbumFilterPredicate.identifierPredicate(ids)
+        let compound = predicate as? NSCompoundPredicate
+        #expect(compound?.compoundPredicateType == .or)
+        #expect(compound?.subpredicates.count == 3)
+        #expect(AlbumFilterPredicate.identifierPredicate([]) == nil)
+        #expect(AlbumFilterPredicate.identifierPredicate(["one"]) is NSComparisonPredicate)
+    }
+
+    @Test func filteredCountWording() {
+        #expect(FilteredCountLabel.text(shown: 1, of: 5) == "1 of 5 Items")
+        #expect(FilteredCountLabel.text(shown: 0, of: 1) == "0 of 1 Item")
+    }
+
     @Test func rowsCombineWithAnd() {
         var criteria = FilterCriteria()
         criteria.favoritesOnly = true

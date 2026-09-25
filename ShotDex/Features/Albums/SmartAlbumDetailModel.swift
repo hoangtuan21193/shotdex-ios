@@ -91,7 +91,6 @@ final class SmartAlbumDetailModel {
 
     func load() async {
         isLoading = true
-        defer { isLoading = false }
         var filters: [LibraryQueries.IndexFilter] = [.query(query)]
         if let advanced = filter.advancedQuery {
             filters.append(.query(advanced))
@@ -106,8 +105,10 @@ final class SmartAlbumDetailModel {
         let total = filter.isActive
             ? ((try? await libraryQueries.count(matchingAll: [.query(query)])) ?? 0)
             : rows.count
-        // A newer filter or order has started its own load.
+        // A newer filter or order has started its own load, and that load —
+        // not this one — says when loading is over.
         guard requested == (filter, sortOrder) else { return }
+        isLoading = false
         unfilteredCount = total
         // The library-change reload after our own delete returns the list we
         // already pruned: refresh tiles in place, keep the scroll position.

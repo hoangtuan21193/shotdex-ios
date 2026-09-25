@@ -227,8 +227,8 @@ struct LibraryQueries: Sendable {
 
     /// Photos ShotDex stitched into a panorama. They carry no system flag, so
     /// a Photos fetch can only find them by identifier.
-    func stitchedPanoramaIds() throws -> [String] {
-        try database.reader.read { db in
+    func stitchedPanoramaIds() async throws -> [String] {
+        try await database.reader.read { db in
             try String.fetchAll(db, sql: "SELECT assetId FROM photo_metadata WHERE isPanorama = 1")
         }
     }

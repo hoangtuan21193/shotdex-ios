@@ -14,3 +14,12 @@ struct FilterEmptyState: View {
         }
     }
 }
+
+/// "12 of 40 Items" — how much of an album a filter left. One wording for the
+/// album grid's footer and the smart album's conditions bar (FS-06.09 §3);
+/// "Items" because an album holds videos too.
+enum FilteredCountLabel {
+    static func text(shown: Int, of total: Int) -> String {
+        "\(shown.formatted()) of \(total.formatted()) \(total == 1 ? "Item" : "Items")"
+    }
+}

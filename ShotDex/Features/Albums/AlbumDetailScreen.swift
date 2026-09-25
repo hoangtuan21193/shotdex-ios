@@ -194,8 +194,8 @@ struct AlbumDetailScreen: View {
             model?.setFilter(filter)
             pruneSelectionToFilter()
         }
-        // A capture-kind album's filtered list arrives later from the index.
-        .onChange(of: model?.totalCount) {
+        // An index-served list (capture kind, Advanced) arrives later.
+        .onChange(of: model?.isFilterSettled) {
             pruneSelectionToFilter()
         }
         .task {
@@ -268,8 +268,7 @@ struct AlbumDetailScreen: View {
     }
 
     private func filteredCountFooter(_ model: AlbumDetailModel) -> String {
-        let total = model.unfilteredCount
-        return "\(model.totalCount.formatted()) of \(total.formatted()) \(total == 1 ? "Item" : "Items")"
+        FilteredCountLabel.text(shown: model.totalCount, of: model.unfilteredCount)
     }
 
     /// Library's Limited Access banner, then the Filter menu's chips while a

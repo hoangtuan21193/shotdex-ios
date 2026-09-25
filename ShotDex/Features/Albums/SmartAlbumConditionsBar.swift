@@ -31,7 +31,7 @@ struct SmartAlbumConditionsBar: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 if let unfilteredCount {
-                    Text("\(matchCount) of \(unfilteredCount) photos")
+                    Text(FilteredCountLabel.text(shown: matchCount, of: unfilteredCount))
                         .font(.subheadline.weight(.semibold))
                 } else {
                     Text("\(matchCount) photo")
@@ -39,6 +39,7 @@ struct SmartAlbumConditionsBar: View {
                 }
                 Spacer()
                 if let onClearFilter {
+                    // The same capsule as AdvancedSearchBar's Edit/Clear.
                     HStack(spacing: 16) {
                         if let onEditFilter {
                             Button("Edit", action: onEditFilter)
@@ -47,6 +48,10 @@ struct SmartAlbumConditionsBar: View {
                     }
                     .font(.footnote.weight(.medium))
                     .tint(.primary)
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: 34)
+                    .glassBackground(Capsule())
+                    .fixedSize(horizontal: true, vertical: false)
                 }
                 if rules.count > 1 {
                     Text("Match \(query.matchMode.word)")
