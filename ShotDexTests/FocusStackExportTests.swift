@@ -39,6 +39,51 @@ final class FootprintSampler: @unchecked Sendable {
         lock.lock(); running = false; let peak = peakBytes; lock.unlock()
         return peak
     }
+
+    /// CPU seconds the whole process has used so far, every thread counted.
+    static func processCPUSeconds() -> Double {
+        var usage = rusage()
+        getrusage(RUSAGE_SELF, &usage)
+        func seconds(_ time: timeval) -> Double { Double(time.tv_sec) + Double(time.tv_usec) / 1_000_000 }
+        return seconds(usage.ru_utime) + seconds(usage.ru_stime)
+    }
+
+    /// Waits until nothing else in the test process is working: `quietSeconds`
+    /// seconds in a row with the process using under a quarter of a core and
+    /// its footprint moving under 8 MB.
+    ///
+    /// Footprint is per process, and every other suite runs in this process
+    /// alongside this one. Measured on a full run: while they were still going,
+    /// the baseline swung 157–229 MB inside one test and a stack's delta read
+    /// 72 MB one time and 271 MB another; once they had finished, the baseline
+    /// sat at 100 MB and repeat runs agreed to the megabyte. A suite runs once,
+    /// so a process that has gone quiet stays quiet. Returns how long it waited,
+    /// or nil if it never went quiet — the caller measures anyway.
+    static func waitForQuietProcess(
+        quietSeconds: Int = 3,
+        timeout: Duration = .seconds(420)
+    ) async -> Duration? {
+        let clock = ContinuousClock()
+        let start = clock.now
+        var quietInARow = 0
+        var lastCPU = processCPUSeconds()
+        var lastFootprint = current()
+        while clock.now - start < timeout {
+            try? await Task.sleep(for: .seconds(1))
+            let cpu = processCPUSeconds()
+            let footprint = current()
+            let moved = footprint > lastFootprint ? footprint - lastFootprint : lastFootprint - footprint
+            if cpu - lastCPU < 0.25, moved < 8 * 1_048_576 {
+                quietInARow += 1
+                if quietInARow >= quietSeconds { return clock.now - start }
+            } else {
+                quietInARow = 0
+            }
+            lastCPU = cpu
+            lastFootprint = footprint
+        }
+        return nil
+    }
 }
 
 /// Serialized: footprint is per process, and two stacks measured at once
@@ -70,9 +115,20 @@ struct FocusStackExportTests {
         return urls
     }
 
-    /// The lower of two measurements. Other suites run in the same process
-    /// and only ever add to the footprint, so the quieter run is the truer one
-    /// — a single run went red while the simulator was indexing 36 photos.
+    /// Holds a footprint test until the rest of the test process has finished
+    /// (see `FootprintSampler.waitForQuietProcess`), and says how long that took.
+    static func waitForQuiet(_ method: FocusStackOptions.Method) async {
+        if let waited = await FootprintSampler.waitForQuietProcess() {
+            print("FOOTPRINT \(method): process quiet after \(waited)")
+        } else {
+            print("FOOTPRINT \(method): process never went quiet; measuring anyway")
+        }
+    }
+
+    /// The lower of two measurements — a single run went red while the
+    /// simulator was indexing 36 photos. It is no guard against other suites:
+    /// they move the baseline both ways (a delta read low as often as high), so
+    /// every test here first waits for the process to go quiet.
     static func quietPeakFootprint(frames count: Int, width: Int, height: Int, method: FocusStackOptions.Method) async throws -> UInt64 {
         let first = try await peakFootprint(frames: count, width: width, height: height, method: method, streamed: true)
         let second = try await peakFootprint(frames: count, width: width, height: height, method: method, streamed: true)
@@ -109,6 +165,7 @@ struct FocusStackExportTests {
     /// measured on a device.
     @Test(arguments: [FocusStackOptions.Method.weighted, .depthMap])
     func memoryDoesNotGrowWithTheNumberOfFrames(method: FocusStackOptions.Method) async throws {
+        await Self.waitForQuiet(method)
         // Warm-up: the first stack compiles kernels and builds Metal
         // pipelines, which is not memory a longer bracket costs.
         _ = try await Self.peakFootprint(frames: 2, width: 4000, height: 3000, method: method, streamed: true)
@@ -116,7 +173,8 @@ struct FocusStackExportTests {
         let many = try await Self.quietPeakFootprint(frames: 12, width: 4000, height: 3000, method: method)
         print("FOOTPRINT streamed \(method) 4 frames: \(few / 1_048_576) MB, 12 frames: \(many / 1_048_576) MB")
         // The in-memory stack grew by 200–280 MB over the same eight extra
-        // frames; 64 MB of slack absorbs other suites running alongside.
+        // frames; 64 MB of slack absorbs what is left of the noise once the
+        // process is quiet.
         #expect(Double(many) <= Double(few) * 1.10 + 64 * 1_048_576, "\(method): \(few / 1_048_576) MB → \(many / 1_048_576) MB")
     }
 }
@@ -127,6 +185,7 @@ extension FocusStackExportTests {
     /// number that closes AC-11 is still the one measured on a device.
     @Test(arguments: [FocusStackOptions.Method.weighted, .depthMap])
     func a24MegapixelStackStaysUnderBudget(method: FocusStackOptions.Method) async throws {
+        await Self.waitForQuiet(method)
         _ = try await Self.peakFootprint(frames: 2, width: 6000, height: 4000, method: method, streamed: true)
         let peak = try await Self.quietPeakFootprint(frames: 4, width: 6000, height: 4000, method: method)
         print("FOOTPRINT streamed \(method) 24 MP × 4: \(peak / 1_048_576) MB")
