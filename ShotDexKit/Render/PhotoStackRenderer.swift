@@ -333,12 +333,7 @@ public actor PhotoStackRenderer {
 
     /// "This frame is sharper here", as a clean 0 or 1 with a narrow ramp so a
     /// near tie does not flip on noise.
-    static let decisionKernel = CIColorKernel(source: """
-        kernel vec4 focusDecision(__sample candidate, __sample best) {
-            float m = clamp((candidate.r - best.r) * 200.0, 0.0, 1.0);
-            return vec4(m, m, m, 1.0);
-        }
-        """)
+    static let decisionKernel = CoreImageKernelLibrary.kit.colorKernel(named: "focusDecision")
 
     /// Every frame at every point, weighted by its sharpness there relative to
     /// the sharpest frame at that point, to the eighth power (1.3 dB over the
@@ -364,37 +359,16 @@ public actor PhotoStackRenderer {
         return weightedResolveKernel?.apply(extent: extent, arguments: [colour, weight]) ?? frames[0]
     }
 
-    static let peakKernel = CIColorKernel(source: """
-        kernel vec4 focusPeak(__sample a, __sample b) {
-            float m = max(a.r, b.r);
-            return vec4(m, m, m, 1.0);
-        }
-        """)
+    static let peakKernel = CoreImageKernelLibrary.kit.colorKernel(named: "focusPeak")
 
     // The floor on w keeps every term inside a half float's normal range —
     // Core Image's working format. Below it the sums lose precision and the
     // divide drifts the picture's brightness.
-    static let weightedColourKernel = CIColorKernel(source: """
-        kernel vec4 focusWeightedColour(__sample total, __sample frame, __sample sharp, __sample peak) {
-            float r = sharp.r / max(peak.r, 0.0000001);
-            float r2 = r * r; float r4 = r2 * r2; float w = r4 * r4 + 0.001;
-            return vec4(total.rgb + frame.rgb * w, 1.0);
-        }
-        """)
+    static let weightedColourKernel = CoreImageKernelLibrary.kit.colorKernel(named: "focusWeightedColour")
 
-    static let weightedTotalKernel = CIColorKernel(source: """
-        kernel vec4 focusWeightedTotal(__sample total, __sample sharp, __sample peak) {
-            float r = sharp.r / max(peak.r, 0.0000001);
-            float r2 = r * r; float r4 = r2 * r2; float w = r4 * r4 + 0.001;
-            return vec4(total.rgb + vec3(w, w, w), 1.0);
-        }
-        """)
+    static let weightedTotalKernel = CoreImageKernelLibrary.kit.colorKernel(named: "focusWeightedTotal")
 
-    static let weightedResolveKernel = CIColorKernel(source: """
-        kernel vec4 focusWeightedResolve(__sample colour, __sample weight) {
-            return vec4(colour.rgb / max(weight.r, 0.001), 1.0);
-        }
-        """)
+    static let weightedResolveKernel = CoreImageKernelLibrary.kit.colorKernel(named: "focusWeightedResolve")
 
     // MARK: Pieces
 
@@ -420,19 +394,7 @@ public actor PhotoStackRenderer {
 
     /// |Laplacian| of luminance, never negative, opaque — a sharpness score
     /// every later blend can read as a plain number.
-    static let laplacianKernel = CIKernel(source: """
-        kernel vec4 focusLaplacian(sampler image) {
-            vec2 p = destCoord();
-            vec3 luma = vec3(0.299, 0.587, 0.114);
-            float c = dot(sample(image, samplerTransform(image, p)).rgb, luma);
-            float n = dot(sample(image, samplerTransform(image, p + vec2(0.0, 1.0))).rgb, luma);
-            float s = dot(sample(image, samplerTransform(image, p - vec2(0.0, 1.0))).rgb, luma);
-            float e = dot(sample(image, samplerTransform(image, p + vec2(1.0, 0.0))).rgb, luma);
-            float w = dot(sample(image, samplerTransform(image, p - vec2(1.0, 0.0))).rgb, luma);
-            float m = abs(n + s + e + w - 4.0 * c);
-            return vec4(m, m, m, 1.0);
-        }
-        """)
+    static let laplacianKernel = CoreImageKernelLibrary.kit.kernel(named: "focusLaplacian")
 
     static func smoothed(_ image: CIImage, radius: Int) -> CIImage {
         guard radius > 0 else { return image }
