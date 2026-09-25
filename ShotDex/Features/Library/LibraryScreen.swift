@@ -440,6 +440,15 @@ struct LibraryScreen: View {
     @ViewBuilder
     private func gridContent(_ model: LibraryModel) -> some View {
         gridBody(model)
+            // A new filter or query replaced the grid: picks it no longer
+            // shows leave the selection, so Delete and Share never act on
+            // photos the user cannot see (FS-01.06 §2).
+            .onChange(of: model.contentGeneration) {
+                guard isSelecting, !selectedIds.isEmpty else { return }
+                let showing = Set(model.items.lazy.map(\.assetId))
+                let kept = selectedIds.filter(showing.contains)
+                if kept.count != selectedIds.count { selectedIds = kept }
+            }
             // Banner + tokens ride in the top safe-area inset (not a VStack)
             // so the grid stays the root scroll view: photos scroll under the
             // translucent nav bar chrome edge-to-edge, matching Album Detail.
@@ -838,14 +847,9 @@ struct LibraryScreen: View {
             // while the first load is in flight.
             ProgressView()
         } else if model.hasActiveQuery {
-            ContentUnavailableView {
-                Label("No photos match these filters.", systemImage: "camera.filters")
-            } actions: {
-                Button("Clear Filters") {
-                    model.criteria = .empty
-                    model.advancedQuery = nil
-                }
-                .buttonStyle(.borderedProminent)
+            FilterEmptyState {
+                model.criteria = .empty
+                model.advancedQuery = nil
             }
         } else {
             ContentUnavailableView(

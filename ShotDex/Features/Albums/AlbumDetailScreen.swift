@@ -48,82 +48,7 @@ struct AlbumDetailScreen: View {
     @AppStorage(SettingsKeys.gridColumns) private var storedColumns = 3
 
     var body: some View {
-        Group {
-            if let model {
-                photoGrid(model)
-            } else {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                    .padding(.top, 80)
-            }
-        }
-        // Empty while selecting, or the bar falls back to it once the
-        // principal title below is cleared.
-        .navigationTitle(isSelecting ? "" : album.title)
-        .navigationBarTitleDisplayMode(.inline)
-        // Title plus the date of what is on screen. The grid draws no date
-        // headers any more, so this is where "when am I" lives.
-        .toolbar {
-            // Cleared while selecting, as in Library: the selection's own
-            // Compare / Edit / ⋯ / × need the width, and on the pre-26 bar the
-            // title otherwise lands against Edit and reads as part of it.
-            ToolbarItem(placement: .principal) {
-                if !isSelecting {
-                    VStack(spacing: 0) {
-                        Text(album.title)
-                            .font(.headline)
-                            .lineLimit(1)
-                        if let visibleDate {
-                            Text(visibleDate)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .monospacedDigit()
-                                .lineLimit(1)
-                                .contentTransition(.numericText())
-                                .animation(.easeInOut(duration: 0.18), value: visibleDate)
-                        }
-                    }
-                    .accessibilityElement(children: .combine)
-                }
-            }
-        }
-
-        .toolbar { toolbarContent }
-        // Selection keeps the navigation bar (its ⋯ and × live there, Photos
-        // style) so the title and the grid's pinned date header stay put; only
-        // the tab bar hides, clearing the bottom for `SelectionOverlay`.
-        .toolbar(isSelecting ? .hidden : .automatic, for: .tabBar)
-        .disablesBackSwipe(isSelecting)
-        .onChange(of: isSelecting) { navigation.hidesTabBar = isSelecting }
-        .onChange(of: selectionSnapshot) {
-            navigation.selectionBar = isSelecting ? selectionBarModel() : nil
-        }
-        .onAppear {
-            if isSelecting { navigation.selectionBar = selectionBarModel() }
-        }
-        .onDisappear {
-            navigation.hidesTabBar = false
-            if isSelecting { navigation.selectionBar = nil }
-        }
-        .safeAreaInset(edge: .top, spacing: 0) {
-            topAccessories
-        }
-        .onChange(of: filter) {
-            model?.setFilter(filter)
-        }
-        .task {
-            if model == nil {
-                let newModel = AlbumDetailModel(album: album, dependencies: dependencies, filter: filter)
-                newModel.loadNextPage()
-                model = newModel
-            }
-        }
-        .onChange(of: photoLibrary.assetChangeToken) {
-            guard !isSelecting else { return }
-            let refreshed = AlbumDetailModel(album: album, dependencies: dependencies, filter: filter)
-            refreshed.loadNextPage()
-            model = refreshed
-        }
+        screenChrome(gridContent)
         .fullScreenCover(item: $viewerTarget) { target in
             if let model {
                 PhotoDetailScreen(model: model, currentIndex: target.startIndex)
@@ -185,6 +110,108 @@ struct AlbumDetailScreen: View {
         .sensoryFeedback(.selection, trigger: selectedIds.count)
     }
 
+    /// The grid, or a spinner until the model exists; the empty-filter state
+    /// sits over the grid.
+    @ViewBuilder
+    private var gridContent: some View {
+        if let model {
+            photoGrid(model)
+                .overlay {
+                    // Only once the lookup has finished, so a capture-kind
+                    // album resolving from the index does not flash it.
+                    if filter.isActive, model.photos.isEmpty, !model.hasMorePages {
+                        FilterEmptyState { filter.clear() }
+                    }
+                }
+        } else {
+            ProgressView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .padding(.top, 80)
+        }
+    }
+
+    /// Title, toolbar, selection and filter wiring, and the model's lifecycle —
+    /// split from `body` so the compiler can type-check each half.
+    private func screenChrome(_ content: some View) -> some View {
+        content
+        // Empty while selecting, or the bar falls back to it once the
+        // principal title below is cleared.
+        .navigationTitle(isSelecting ? "" : album.title)
+        .navigationBarTitleDisplayMode(.inline)
+        // Title plus the date of what is on screen. The grid draws no date
+        // headers any more, so this is where "when am I" lives.
+        .toolbar {
+            // Cleared while selecting, as in Library: the selection's own
+            // Compare / Edit / ⋯ / × need the width, and on the pre-26 bar the
+            // title otherwise lands against Edit and reads as part of it.
+            ToolbarItem(placement: .principal) {
+                if !isSelecting {
+                    VStack(spacing: 0) {
+                        Text(album.title)
+                            .font(.headline)
+                            .lineLimit(1)
+                        if let visibleDate {
+                            Text(visibleDate)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .monospacedDigit()
+                                .lineLimit(1)
+                                .contentTransition(.numericText())
+                                .animation(.easeInOut(duration: 0.18), value: visibleDate)
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                }
+            }
+        }
+
+        .toolbar { toolbarContent }
+        // Selection keeps the navigation bar (its ⋯ and × live there, Photos
+        // style) so the title and the grid's pinned date header stay put; only
+        // the tab bar hides, clearing the bottom for `SelectionOverlay`.
+        .toolbar(isSelecting ? .hidden : .automatic, for: .tabBar)
+        .disablesBackSwipe(isSelecting)
+        // Selection is left with ×, as in Photos: Back would walk out
+        // mid-selection, and without it the bar holds exactly Library's
+        // Compare · Edit · Filter · ⋯ · × — with it, × is pushed off a 402pt bar.
+        .navigationBarBackButtonHidden(isSelecting)
+        .onChange(of: isSelecting) { navigation.hidesTabBar = isSelecting }
+        .onChange(of: selectionSnapshot) {
+            navigation.selectionBar = isSelecting ? selectionBarModel() : nil
+        }
+        .onAppear {
+            if isSelecting { navigation.selectionBar = selectionBarModel() }
+        }
+        .onDisappear {
+            navigation.hidesTabBar = false
+            if isSelecting { navigation.selectionBar = nil }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            topAccessories
+        }
+        .onChange(of: filter) {
+            model?.setFilter(filter)
+            pruneSelectionToFilter()
+        }
+        // A capture-kind album's filtered list arrives later from the index.
+        .onChange(of: model?.totalCount) {
+            pruneSelectionToFilter()
+        }
+        .task {
+            if model == nil {
+                let newModel = AlbumDetailModel(album: album, dependencies: dependencies, filter: filter)
+                newModel.loadNextPage()
+                model = newModel
+            }
+        }
+        .onChange(of: photoLibrary.assetChangeToken) {
+            guard !isSelecting else { return }
+            let refreshed = AlbumDetailModel(album: album, dependencies: dependencies, filter: filter)
+            refreshed.loadNextPage()
+            model = refreshed
+        }
+    }
+
     // MARK: Grid
 
     private func photoGrid(_ model: AlbumDetailModel) -> some View {
@@ -244,19 +271,39 @@ struct AlbumDetailScreen: View {
         return "\(model.totalCount.formatted()) of \(total.formatted()) \(total == 1 ? "Item" : "Items")"
     }
 
-    /// The Filter menu's chips, pinned under the navigation bar while a
-    /// filter is on (FS-06.09 §4). Empty — zero height — otherwise.
-    @ViewBuilder
+    /// Library's Limited Access banner, then the Filter menu's chips while a
+    /// filter is on (FS-06.09 §3–4). Empty — zero height — when neither applies.
     private var topAccessories: some View {
-        if !filter.criteria.isEmpty {
-            FilterTokenBar(criteria: Binding(
-                get: { filter.criteria },
-                set: { filter.setCriteria($0) }
-            ))
+        VStack(spacing: 0) {
+            // An album can only show the photos the user granted; without the
+            // banner a short album — shorter still once filtered — reads as
+            // missing photos.
+            if photoLibrary.authorizationState == .limited {
+                LimitedAccessBanner {
+                    photoLibrary.presentLimitedLibraryPicker()
+                }
+                .padding(.top, 4)
+            }
+            if !filter.criteria.isEmpty {
+                FilterTokenBar(criteria: Binding(
+                    get: { filter.criteria },
+                    set: { filter.setCriteria($0) }
+                ))
+            }
         }
     }
 
     // MARK: Selection
+
+    /// Picks the filter now hides leave the selection, so Delete and Share
+    /// never act on photos the user cannot see (FS-01.06 §2).
+    private func pruneSelectionToFilter() {
+        guard isSelecting, !selectedIds.isEmpty,
+              let kept = model?.matchingIds(among: selectedIds)
+        else { return }
+        let pruned = selectedIds.filter(kept.contains)
+        if pruned.count != selectedIds.count { selectedIds = pruned }
+    }
 
     private func isPhotoSelected(_ assetId: String) -> Bool {
         selectedIds.contains(assetId)

@@ -580,6 +580,9 @@ final class AlbumDetailModel: PhotoBrowsingSource {
     /// so an empty answer stays empty instead of being re-queried on every
     /// paging trigger.
     private var hasResolvedIndexedAssets = false
+    /// True between asking the index for a capture-kind album's list and the
+    /// answer arriving.
+    private var isAwaitingIndex = false
     let sourceAlbum: PHAssetCollection?
     /// The album this model is paging, kept so a sort change can re-fetch.
     private let albumKind: AlbumItem.Kind
@@ -713,8 +716,12 @@ final class AlbumDetailModel: PhotoBrowsingSource {
     /// Of `ids`, the ones the current filter still shows — how a selection
     /// sheds the photos a new filter hides (FS-01.06 §2). Asks Photos for just
     /// those ids rather than walking the whole album.
-    func matchingIds(among ids: [String]) -> Set<String> {
+    ///
+    /// Nil while a capture-kind album is still waiting on the index: the list
+    /// is not known yet, and an empty answer would clear the selection.
+    func matchingIds(among ids: [String]) -> Set<String>? {
         guard !ids.isEmpty else { return [] }
+        if case .capturedKind = albumKind, !hasResolvedIndexedAssets || isAwaitingIndex { return nil }
         switch source {
         case .ordered(let assets):
             let wanted = Set(ids)
@@ -819,6 +826,7 @@ final class AlbumDetailModel: PhotoBrowsingSource {
     private func resolveIndexedAssets(for subtype: PhotoMediaSubtype) {
         hasResolvedIndexedAssets = true
         guard let libraryQueries else { return }
+        isAwaitingIndex = true
         var criteria = FilterCriteria()
         criteria.mediaSubtypes = [subtype]
         let sort = sortOrder.librarySort
@@ -835,6 +843,7 @@ final class AlbumDetailModel: PhotoBrowsingSource {
                 .reduce(into: [String: PHAsset]()) { $0[$1.localIdentifier] = $1 }
             // Ids the library no longer has simply drop out — the index can be
             // a moment behind a deletion.
+            self.isAwaitingIndex = false
             self.source = .ordered(ids.compactMap { byId[$0] })
             self.loadNextPage()
         }

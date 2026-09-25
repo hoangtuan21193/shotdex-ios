@@ -14,7 +14,8 @@ Nút Filter đã có ở Library thì phải có ở mọi lưới ảnh, và c�
 ## 2. Phạm vi
 
 **Có:**
-- Menu Filter ở vị trí nút Sort cũ, cạnh `Select`. Vẫn hiện khi đang chọn, như Library.
+- Menu Filter ở vị trí nút Sort cũ, cạnh `Select`. Vẫn hiện khi đang chọn, như Library. Khi đang chọn thì
+  **ẩn nút Back** (thoát bằng ×, như Photos): có Back thì thanh 402pt không còn chỗ cho ×.
 - Phần `Filter:`: All Items · Favorites · Photos Only / Videos Only (loại trừ nhau) · **Capture Kind ▸** ·
   **Advanced Filter…** (chỉ lọc trong album, §4).
 - `Sort By ▸`: album người dùng **Album Order** · Newest First · Oldest First. Album không có thứ tự riêng
@@ -91,13 +92,13 @@ Nút Filter đã có ở Library thì phải có ở mọi lưới ảnh, và c�
 | AC-5 | album hệ thống Recently Added | mở Sort By | chỉ có Newest First · Oldest First, không có Album Order | chụp tay 26.5 `t1-recently-added-sort-26.png` |
 | AC-6 | smart album ISO ≥ 1600 khớp 20 ảnh, 6 favorite | Favorites | lưới 6 ô; chip điều kiện đã lưu không có `x`, chip `Favorite` có `x` | ⚠️ chưa có |
 | AC-7 | smart album bất kỳ | Sort By → Oldest First, thoát, mở lại | ô đầu là ảnh cũ nhất; vẫn Oldest First | ⚠️ chưa có |
-| AC-8 | album không có video | Videos Only | câu `No photos match these filters.` + `Clear Filters`; chạm `Clear Filters` → đủ ảnh | ⚠️ chưa có |
-| AC-9 | album đang lọc Favorites | quay lại Collections rồi mở lại album | All Items, không có hàng chip; Sort giữ nguyên | ⚠️ chưa có |
-| AC-10 | đang chọn 3 ảnh, 1 ảnh không favorite | bật Favorites | pill đếm còn 2 | ⚠️ chưa có |
+| AC-8 | album không có video | Videos Only | câu `No photos match these filters.` + `Clear Filters`; chạm `Clear Filters` → đủ ảnh | chụp tay 26.5 `t5-empty-26.png` (Recently Added, Videos Only) |
+| AC-9 | album đang lọc Favorites | quay lại Collections rồi mở lại album | All Items, không có hàng chip; Sort giữ nguyên | chụp tay 26.5: mở lại album sau khi lọc → menu đánh dấu All Items |
+| AC-10 | đang chọn 3 ảnh, 1 ảnh không favorite | bật Favorites | pill đếm còn 2 | chụp tay 26.5 `t7-prune-26.png` (2 → 1); Library `t7b-library-prune-26.png` |
 | AC-11 | album 40 ảnh, 8 ảnh ISO ≥ 3200; thư viện có 500 ảnh ISO ≥ 3200 | Advanced Filter… → ISO ≥ 3200 → Apply | sheet đếm 8; lưới 8 ô; vẫn ở màn album | ⚠️ chưa có |
 | AC-12 | album đang lọc Advanced ISO ≥ 3200 | bật Favorites | điều kiện Advanced bị xoá, chỉ còn chip `Favorite` | ⚠️ chưa có |
-| AC-13 | album đang lọc Favorites | chạm `x` trên chip | về All Items, hàng chip biến mất, hàng ảnh đầu không bị thanh trên che | ⚠️ chưa có |
-| AC-14 | quyền `.limited`, 5 trong 40 ảnh được cấp, 2 favorite | Favorites | 2 ô; biểu ngữ Manage vẫn hiện | ⚠️ chưa có |
+| AC-13 | album đang lọc Favorites | chạm `x` trên chip | về All Items, hàng chip biến mất, hàng ảnh đầu không bị thanh trên che | chụp tay 26.5 `t6-chip-removed-26.png` |
+| AC-14 | quyền `.limited`, 5 trong 40 ảnh được cấp, 2 favorite | Favorites | 2 ô; biểu ngữ Manage vẫn hiện | ⚠️ chưa có ảnh — sim không đặt được quyền `.limited` bằng lệnh; code dùng chung biểu ngữ của Library |
 | AC-15 | Album, Smart Album, On This Day, Memories | chụp thanh trên, cả lúc chọn và không chọn | Album và Smart Album có nút Filter; On This Day và Memories không có | ⚠️ chưa có (ui-drive) |
 | AC-16 | iOS 26.5 và 18.6, Duo trong | dump menu Filter và hàng chip của album đang lọc | cùng danh sách mục; hàng ảnh đầu nằm trọn dưới hàng chip | ⚠️ chưa có (`ios26-parity`, `device-layout`) |
 

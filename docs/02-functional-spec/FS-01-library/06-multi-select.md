@@ -37,8 +37,8 @@ hai nhánh iOS, mờ dần theo việc có đang chọn hay không.
 | Thanh đáy | `[ Share tròn 48 · pill đếm · Delete tròn 48 ]` |
 
 - Nav bar này **giống nhau ở Library, album thường và smart album**. Khi đang chọn, tiêu đề (tên album,
-  ngày) **tạm ẩn** như Photos, chỉ còn nút Back và các nút của thanh chọn. Nếu không ẩn, trên nhánh trước
-  iOS 26 tên album bị kẹp sát Edit và đọc thành một cụm chữ.
+  ngày) **tạm ẩn** như Photos, và ở album **nút Back cũng ẩn** — thoát bằng ×. Nếu không ẩn, trên nhánh
+  trước iOS 26 tên album bị kẹp sát Edit, và với nút Filter thêm vào thì × bị đẩy ra khỏi thanh 402pt.
 
 - **Menu ⋯**: Paste Edits (chỉ khi có bản sửa đã copy) · **Combine Photos ▸** (menu con Focus Stack ·
   Panorama · Stack Exposures, [FS-01.09](09-photo-stacking.md)) · Create Collage (bật khi số ảnh nằm trong tập

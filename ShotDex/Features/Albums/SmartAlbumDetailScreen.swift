@@ -89,6 +89,10 @@ struct SmartAlbumDetailScreen: View {
         // the tab bar hides, clearing the bottom for `SelectionOverlay`.
         .toolbar(isSelecting ? .hidden : .automatic, for: .tabBar)
         .disablesBackSwipe(isSelecting)
+        // Selection is left with ×, as in Photos: Back would walk out
+        // mid-selection, and without it the bar holds exactly Library's
+        // Compare · Edit · Filter · ⋯ · × — with it, × is pushed off a 402pt bar.
+        .navigationBarBackButtonHidden(isSelecting)
         .onChange(of: isSelecting) { navigation.hidesTabBar = isSelecting }
         .onChange(of: selectionSnapshot) {
             navigation.selectionBar = isSelecting ? selectionBarModel() : nil
