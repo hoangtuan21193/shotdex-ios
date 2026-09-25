@@ -120,43 +120,13 @@ extension PhotoRenderService {
         return image
     }
 
-    /// The ring just outside the spot where the colour match is measured.
-    /// Starts a little past the radius so the dust's own soft tail stays out.
-    private static let healingRingSource = """
-        float healRingWeight(float dist, float radius) {
-            return smoothstep(radius * 1.05, radius * 1.2, dist)
-                * (1.0 - smoothstep(radius * 1.5, radius * 1.7, dist));
-        }
-        """
+    // Kernels: `Kernels/HealingKernels.ci.metal`.
+    static let healingRingKernel = CoreImageKernelLibrary.kit.colorKernel(named: "healRing")
 
-    static let healingRingKernel = CIColorKernel(source: healingRingSource + """
-        kernel vec4 healRing(__sample target, __sample shifted, __sample dist, float radius, float span) {
-            float w = healRingWeight(dist.r * span, radius);
-            return vec4((target.rgb - shifted.rgb) * w, 1.0);
-        }
-        """)
-
-    static let healingWeightKernel = CIColorKernel(source: healingRingSource + """
-        kernel vec4 healWeight(__sample dist, float radius, float span) {
-            float w = healRingWeight(dist.r * span, radius);
-            return vec4(w, w, w, 1.0);
-        }
-        """)
+    static let healingWeightKernel = CoreImageKernelLibrary.kit.colorKernel(named: "healWeight")
 
     /// The copy, corrected when healing, as a premultiplied layer: colour
     /// times coverage, coverage in alpha. Source-over then gives
     /// `mix(photo, repair, coverage)` inside the spot and the photo outside.
-    static let healingBlendKernel = CIColorKernel(source: """
-        kernel vec4 healBlend(
-            __sample shifted, __sample numerator, __sample denominator,
-            __sample distanceMap, float radius, float span, float feather, float opacity, float heals
-        ) {
-            float dist = distanceMap.r * span;
-            vec3 correction = heals * numerator.rgb / max(denominator.r, 0.0001);
-            vec3 repaired = shifted.rgb + correction;
-            float inner = radius * (1.0 - 0.7 * feather);
-            float amount = (1.0 - smoothstep(inner, radius, dist)) * opacity;
-            return vec4(repaired * amount, amount);
-        }
-        """)
+    static let healingBlendKernel = CoreImageKernelLibrary.kit.colorKernel(named: "healBlend")
 }
