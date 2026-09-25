@@ -74,24 +74,24 @@ Người chụp không được thấy khác biệt nào sau khi chuyển.
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
 | AC-1 | 40 kernel chuỗi hôm nay, commit nhóm 0 | chạy bộ chụp golden | có golden cho mỗi kernel × mỗi ảnh vào ở §4, tổng ≤ 2 MB, commit trước mọi commit port | `KernelGoldenTests.matchesItsGolden` (45 ca × 2), `everyKernelHasACase`; 95 file, 1,0 MB |
-| AC-2 | golden của một kernel đã port | render cùng ảnh vào bằng bản Metal | mọi pixel lệch ≤ 1/255 mỗi kênh; lặp cho cả 40 kernel | `KernelGoldenTests.matchesItsGolden` — Metal 38/40 (mọi nhóm trừ video) |
+| AC-2 | golden của một kernel đã port | render cùng ảnh vào bằng bản Metal | mọi pixel lệch ≤ 1/255 mỗi kênh; lặp cho cả 40 kernel | `KernelGoldenTests.matchesItsGolden` — Metal 40/40 |
 | AC-3 | ảnh 256×256, 2 mask ở ô 64×64 góc trên trái, 1 color edit ở giữa | render nhóm 1+2 bằng Metal | khối 32×32 quanh (0,875; 0,875) bằng bản chỉ có color edit ± 1/255, góc có mask đổi > 8/255, khớp golden | `KernelPipelineGoldenTests.editsInOneCornerLeaveTheFarCornerAlone` |
 | AC-4 | một kernel Metal cố ý viết sai cú pháp | build scheme ShotDex | build đỏ, lỗi trỏ đúng file:dòng; hoàn lại thì build xanh | thử 2026-09-26: `MaskKernels.ci.metal:19:32: error: illegal vector component name 'q'`, TEST BUILD FAILED |
-| AC-5 | build đủ 4 nhóm | chạy test nạp kernel | 40/40 nạp được; đổi tên một hàm kernel thì test đỏ | `KernelLibraryTests.everyKernelLoads` (Metal: 38/40 sau nhóm 6/8) |
+| AC-5 | build đủ 4 nhóm | chạy test nạp kernel | 40/40 nạp được; đổi tên một hàm kernel thì test đỏ | `KernelLibraryTests.everyKernelLoads` — 40/40 Metal |
 | AC-6 | metallib của kit nằm trong framework | test nạp một kernel kit | nạp từ bundle framework; bundle chính của app không có metallib của kit | `KernelLibraryTests.kitKernelsComeFromTheFrameworkBundle` |
 | AC-7 | bản release, kernel không nạp được | render ảnh có mask | ảnh ra bằng ảnh vào, không crash | `KernelLibraryTests.aMissingKernelIsNilNotACrash` + các nơi gọi trả ảnh vào khi kernel `nil` |
 | AC-8 | point color với 8 điểm (tối đa của model) | render | điểm thứ 8 đổi màu đúng như golden 8 điểm | ca `pointColorLastSlot` + `KernelLibraryTests.pointColorSlotsMatchTheModel` |
 | AC-9 | ảnh thử 512×512, recipe bật mọi kernel nhóm 1–2 cùng lúc | render qua renderer đầy đủ | khớp golden toàn pipeline ≤ 1/255 | `KernelPipelineGoldenTests.groupsOneAndTwoMatchTheirGolden` |
-| AC-10 | clip 1080p 120 khung, key theo độ sáng bật | render 120 khung | khung 1, 60, 120 khớp golden; kernel được tạo 1 lần | ⚠️ chưa có |
+| AC-10 | clip 1080p 120 khung, key theo độ sáng bật | render 120 khung | khung 1, 60, 120 khớp golden; kernel được tạo 1 lần | `KernelPipelineGoldenTests.videoMaskFrameMatchesItsGolden` (3 khung dựng sẵn, pha 1/60/120); kernel là thuộc tính tĩnh, nạp một lần |
 | AC-11 | các test render đang có (mask, color, lens, heal, stack, focus, panorama) | chạy sau mỗi nhóm | xanh **không sửa assertion nào** | `Tools/gate` |
 | AC-12 | test footprint panorama / focus stack đang có | chạy sau nhóm 3b, 3c | xanh với ngưỡng không đổi | `Tools/gate` |
 | AC-13 | một file golden bị xoá | chạy test so pixel | test đỏ, không bỏ qua | `KernelGoldenTests.aMissingGoldenIsAFailure` |
-| AC-14 | sau nhóm 4 | build + grep toàn repo | 0 khởi tạo kernel từ chuỗi, 0 define tắt warning, Issue navigator 0 warning | hook `build-check.py` + grep |
+| AC-14 | sau nhóm 4 | build + grep toàn repo | 0 khởi tạo kernel từ chuỗi, 0 define tắt warning, Issue navigator 0 warning | grep 2026-09-26: 0 chuỗi kernel, 0 define; hook `build-check.py` |
 
 **Đường hỏng không áp dụng**: mạng, iCloud-only, quyền `.limited`, huỷ giữa chừng, undo — spec không đổi
 đường đọc ảnh, lịch sử sửa hay luồng export; ba luồng đó giữ test đang có (AC-11).
 
-**Chưa chứng minh được:** AC-2 (2/40 kernel chưa port), AC-5 (đủ 40 bằng Metal), AC-10, AC-12, AC-14.
+**Chưa chứng minh được:** không còn — xem `/verify`. AC-10 dựng 3 khung ở pha 1/60/120 thay vì phát cả 120 khung.
 
 ## 7. Rủi ro đã biết
 

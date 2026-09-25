@@ -145,23 +145,12 @@ enum VideoMaskRenderer {
     }
 
     /// Built once per process, not once per frame: the compositor calls the
-    /// two qualifiers thirty times a second.
-    static let luminanceKeyKernel = CIColorKernel(source: """
-        kernel vec4 luminanceKey(__sample s, float low, float high, float soft) {
-            float y = dot(s.rgb, vec3(0.2126, 0.7152, 0.0722));
-            float m = smoothstep(low - soft, low + soft, y)
-                    * (1.0 - smoothstep(high - soft, high + soft, y));
-            return vec4(m, m, m, 1.0);
-        }
-        """)
+    /// two qualifiers thirty times a second. `VideoMaskKernels.ci.metal`, in
+    /// the app's own metallib — they are the app's, not the kit's.
+    private static let appKernels = CoreImageKernelLibrary(bundle: .main)
+    static let luminanceKeyKernel = appKernels.colorKernel(named: "luminanceKey")
 
-    static let colorKeyKernel = CIColorKernel(source: """
-        kernel vec4 colorKey(__sample s, vec3 target, float tolerance) {
-            float d = distance(s.rgb, target);
-            float m = 1.0 - smoothstep(tolerance * 0.5, tolerance, d);
-            return vec4(m, m, m, 1.0);
-        }
-        """)
+    static let colorKeyKernel = appKernels.colorKernel(named: "colorKey")
 
     // MARK: Combining
 
