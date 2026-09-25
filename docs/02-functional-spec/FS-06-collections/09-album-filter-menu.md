@@ -88,7 +88,7 @@ Nút Filter đã có ở Library thì phải có ở mọi lưới ảnh, và c�
 | AC-2 | album 30 ảnh + 10 video | Videos Only | 10 ô; chọn tiếp Photos Only → 30 và Videos Only tự tắt | ⚠️ chưa có |
 | AC-3 | album 40 ảnh, 5 Live Photo | Capture Kind ▸ Live Photos | 5 ô | ⚠️ chưa có |
 | AC-4 | album người dùng, Sort đang là Album Order | Sort By → Oldest First, thoát rồi mở lại | ô đầu là ảnh chụp sớm nhất; mở lại vẫn Oldest First | ⚠️ chưa có |
-| AC-5 | album hệ thống Recently Added | mở Sort By | chỉ có Newest First · Oldest First, không có Album Order | ⚠️ chưa có (ui-drive + dump) |
+| AC-5 | album hệ thống Recently Added | mở Sort By | chỉ có Newest First · Oldest First, không có Album Order | chụp tay 26.5 `t1-recently-added-sort-26.png` |
 | AC-6 | smart album ISO ≥ 1600 khớp 20 ảnh, 6 favorite | Favorites | lưới 6 ô; chip điều kiện đã lưu không có `x`, chip `Favorites` có `x` | ⚠️ chưa có |
 | AC-7 | smart album bất kỳ | Sort By → Oldest First, thoát, mở lại | ô đầu là ảnh cũ nhất; vẫn Oldest First | ⚠️ chưa có |
 | AC-8 | album không có video | Videos Only | câu `No photos match these filters.` + `Clear Filters`; chạm `Clear Filters` → đủ ảnh | ⚠️ chưa có |

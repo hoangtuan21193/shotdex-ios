@@ -548,49 +548,56 @@ struct AlbumDetailScreen: View {
         }
     }
 
-    /// Newest / oldest / the album's own order, remembered per album.
-    private func sortMenu(_ model: AlbumDetailModel) -> some View {
-        Menu {
-            ForEach(AlbumSortOrder.allCases) { order in
-                if order != .albumOrder || model.supportsAlbumOrder {
-                    Button {
-                        model.setSortOrder(order)
-                    } label: {
-                        if order == model.sortOrder {
-                            Label(order.displayName, systemImage: "checkmark")
-                        } else {
-                            Label(order.displayName, systemImage: order.systemImage)
-                        }
+    /// The shared filter menu (FS-06.09). Sort By offers Album Order only
+    /// where the album has an arrangement of its own; the order is still
+    /// remembered per album.
+    private func filterMenu(_ model: AlbumDetailModel) -> some View {
+        PhotoFilterMenu(
+            criteria: nil,
+            isShowingAllItems: true,
+            onShowAllItems: {},
+            onAdvancedFilter: nil
+        ) {
+            Picker("Sort By", selection: Binding(
+                get: { model.sortOrder },
+                set: { model.setSortOrder($0) }
+            )) {
+                ForEach(AlbumSortOrder.allCases) { order in
+                    if order != .albumOrder || model.supportsAlbumOrder {
+                        Text(order.displayName).tag(order)
                     }
                 }
             }
-        } label: {
-            Image(systemName: "arrow.up.arrow.down")
         }
-        .tint(.primary)
-        .accessibilityLabel("Sort photos")
     }
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        // Browsing: just Select. Selecting: the shared ⋯ + × items below.
+        // Filter leads the trailing group and stays while selecting, as in
+        // Library; the selection's ⋯ joins its capsule.
         ToolbarItem(placement: .topBarTrailing) {
-            if let model, !model.photos.isEmpty, !isSelecting {
-                sortMenu(model)
-            }
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-            if model?.photos.isEmpty == false, !isSelecting {
-                // Spelled out, like Photos.
-                Button("Select") {
-                    isSelecting = true
-                }
-                .tint(.primary)
-                .accessibilityLabel("Select photos")
+            if let model, !model.photos.isEmpty {
+                filterMenu(model)
             }
         }
         if isSelecting, let selectionModel = selectionBarModel() {
             SelectionToolbarItems(model: selectionModel)
+        }
+        // Select gets its own Liquid Glass capsule, split off from the filter.
+        if !isSelecting {
+            if #available(iOS 26.0, *) {
+                ToolbarSpacer(.fixed, placement: .topBarTrailing)
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                if model?.photos.isEmpty == false {
+                    // Spelled out, like Photos.
+                    Button("Select") {
+                        isSelecting = true
+                    }
+                    .tint(.primary)
+                    .accessibilityLabel("Select photos")
+                }
+            }
         }
     }
 }

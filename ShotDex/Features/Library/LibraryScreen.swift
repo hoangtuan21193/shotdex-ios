@@ -10,7 +10,6 @@ struct LibraryScreen: View {
     @Environment(\.assetActions) private var assetActions
     @Environment(\.presentServerUpload) private var presentServerUpload
     /// The grid's shape mode, shared with every other grid in the app.
-    @AppStorage(SettingsKeys.aspectRatioGrid) private var showsAspectTiles = false
     @Environment(AppNavigation.self) private var navigation
 
     /// Owned by RootTabView so the search sheet shares the same state.
@@ -583,24 +582,6 @@ struct LibraryScreen: View {
     /// The long-press menu for one tile. Share, delete and duplicate route
     /// through the shared coordinator so they behave exactly as they do from
     /// the selection bar.
-    /// One capture kind on or off. Several on means "any of these", which is
-    /// how the rest of the multi-selects behave.
-    private func mediaSubtypeBinding(
-        _ model: LibraryModel,
-        subtype: PhotoMediaSubtype
-    ) -> Binding<Bool> {
-        Binding(
-            get: { model.criteria.mediaSubtypes.contains(subtype) },
-            set: { isOn in
-                if isOn {
-                    model.criteria.mediaSubtypes.insert(subtype)
-                } else {
-                    model.criteria.mediaSubtypes.remove(subtype)
-                }
-            }
-        )
-    }
-
     private func tileMenu(assetId: String) -> PhotoTileContextMenu {
         // The shared instance only when nothing hosts this screen (previews).
         let actions = assetActions ?? dependencies.assetActions
@@ -1168,88 +1149,31 @@ struct LibraryScreen: View {
         }
     }
 
-    /// Photos' filter menu, ShotDex's filters: the quick filters under a
-    /// `Filter:` header, then Sort By. Only the date orders are offered here —
-    /// the metric orders (ISO, focal length, aperture, shutter) stay in
-    /// `SortOption` for the queries, but not in this menu.
+    /// The shared filter menu (FS-01.05 §5), wired to the Library's query.
+    /// Only the date orders are offered — the metric orders (ISO, focal
+    /// length, aperture, shutter) stay in `SortOption` for the queries, but
+    /// not in this menu.
     private func filterMenu(_ model: LibraryModel) -> some View {
-        Menu {
-            Section("Filter:") {
-                Toggle(isOn: Binding(
-                    get: { model.criteria.isEmpty },
-                    set: { _ in model.criteria = FilterCriteria() }
-                )) {
-                    Label("All Items", systemImage: "square.grid.3x3")
-                }
-                Toggle(isOn: Binding(
-                    get: { model.criteria.favoritesOnly },
-                    set: { model.criteria.favoritesOnly = $0 }
-                )) {
-                    Label("Favorites", systemImage: "heart")
-                }
-                // One row per kind rather than a submenu: the whole filter list
-                // reads as one column, the way Photos lays it out.
-                Toggle(isOn: mediaKindBinding(model, kind: .photo)) {
-                    Label("Photos Only", systemImage: "photo")
-                }
-                Toggle(isOn: mediaKindBinding(model, kind: .video)) {
-                    Label("Videos Only", systemImage: "video")
-                }
-                // A submenu, unlike the rows above: eight capture kinds would
-                // bury Advanced Filter under a wall of toggles.
-                Menu {
-                    ForEach(PhotoMediaSubtype.allCases) { subtype in
-                        Toggle(isOn: mediaSubtypeBinding(model, subtype: subtype)) {
-                            Label(subtype.title, systemImage: subtype.systemImage)
-                        }
-                    }
-                } label: {
-                    Label("Capture Kind", systemImage: "square.stack.3d.down.right")
-                }
-                Button {
-                    isAdvancedSearchPresented = true
-                } label: {
-                    Label("Advanced Filter…", systemImage: "slider.horizontal.3")
+        PhotoFilterMenu(
+            criteria: Binding(
+                get: { model.criteria },
+                set: { model.criteria = $0 }
+            ),
+            isShowingAllItems: model.criteria.isEmpty,
+            onShowAllItems: { model.criteria = FilterCriteria() },
+            onAdvancedFilter: { isAdvancedSearchPresented = true }
+        ) {
+            Picker("Sort By", selection: Binding(
+                get: {
+                    SortOption.menuOrders.contains(model.sort) ? model.sort : .dateTakenNewest
+                },
+                set: { model.sort = $0 }
+            )) {
+                ForEach(SortOption.menuOrders) { option in
+                    Text(option.displayName).tag(option)
                 }
             }
-
-            Section {
-                Menu {
-                    Picker("Sort By", selection: Binding(
-                        get: {
-                            SortOption.menuOrders.contains(model.sort) ? model.sort : .dateTakenNewest
-                        },
-                        set: { model.sort = $0 }
-                    )) {
-                        ForEach(SortOption.menuOrders) { option in
-                            Text(option.displayName).tag(option)
-                        }
-                    }
-                } label: {
-                    Label("Sort By", systemImage: "arrow.up.arrow.down")
-                }
-                // Photos' aspect toggle, in the same menu as the order: both
-                // are "how the grid is laid out", not "which photos are in
-                // it", which is what the section above answers.
-                Toggle(isOn: $showsAspectTiles) {
-                    Label("Aspect Ratio Grid", systemImage: "rectangle.3.group")
-                }
-            }
-        } label: {
-            Image(systemName: "line.3.horizontal.decrease")
         }
-        .tint(.primary)
-        .accessibilityLabel("Filter and sort")
-    }
-
-    /// "Photos Only" / "Videos Only": turning one on replaces the kind set, so
-    /// the two rows behave as mutually exclusive filters and turning the active
-    /// one off goes back to showing everything.
-    private func mediaKindBinding(_ model: LibraryModel, kind: MediaKind) -> Binding<Bool> {
-        Binding(
-            get: { model.criteria.mediaKinds == [kind] },
-            set: { isOn in model.criteria.mediaKinds = isOn ? [kind] : [] }
-        )
     }
 
     // MARK: Permission states
