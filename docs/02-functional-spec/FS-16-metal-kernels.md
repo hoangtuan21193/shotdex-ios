@@ -36,8 +36,9 @@ Người chụp không được thấy khác biệt nào sau khi chuyển.
 - Kernel nằm trong file Metal, biên dịch lúc build cho Core Image. Kernel sai cú pháp là **build đỏ**.
 - Kernel của kit đóng gói trong framework và nạp từ bundle của framework; kernel video đóng gói trong app.
 - Kernel được nạp **một lần mỗi tiến trình**. Key video hôm nay dựng lại kernel mỗi khung — hết.
-- Hằng số hôm nay chèn từ Swift vào chuỗi (8 slot point color, biên dải hue của HSL) đi vào kernel
-  **làm tham số**, không chép tay vào file Metal. *Vì chép tay là hai nguồn, sớm muộn lệch nhau.*
+- Biên dải hue của HSL hôm nay chèn từ Swift vào chuỗi; sang Metal nó đi vào kernel **làm tham số**,
+  không chép tay vào file Metal. *Vì chép tay là hai nguồn, sớm muộn lệch nhau.*
+- Số slot point color (8) là chữ ký của kernel, không truyền được; một test khoá nó bằng tối đa của model.
 - Nạp kernel thất bại (sai tên, thiếu metallib): bản debug dừng bằng assertion nêu tên kernel; bản release
   trả ảnh vào không đổi như hôm nay. Chặn chính là test nạp đủ 40 kernel (AC-5).
 - Một kernel thay được bằng filter có sẵn của Apple (ví dụ cộng mask, đảo mask) thì thay — **chỉ khi**
@@ -47,13 +48,14 @@ Người chụp không được thấy khác biệt nào sau khi chuyển.
 ## 4. Ảnh golden
 
 - Chụp ở commit nhóm 0, **trước** commit port đầu tiên, bằng chính kernel chuỗi hôm nay.
-- Ảnh vào dựng trong code test, cố định seed: dải xám 0→1, đen, trắng, 6 màu bão hoà, alpha 0 và 0,5,
-  và một ảnh giống ảnh chụp (dải + nhiễu). Kernel nhiều đầu vào nhận các ảnh vào khác nhau.
-- Mỗi kernel × mỗi ảnh vào một file golden, lưu ở định dạng float để không mất bit trước khi so.
+- Ảnh vào 48×48, dựng trong code: một lưới 16 ô (đen, trắng, 6 màu bão hoà, alpha 0 và 0,5, gần đen,
+  gần trắng, dải xám, dải hue, dải bão hoà, ô cờ) và ảnh thật thu nhỏ. Đầu vào thứ hai trở đi xoay/lật.
+- Mỗi kernel × mỗi bộ ảnh vào một file golden half-float nén; ảnh toàn pipeline và video lưu PNG 8-bit.
 - Thêm một ảnh thật: crop vuông 512×512 JPEG sRGB, ≤ 150 KB, của chính tác giả, không người, đã xoá
   metadata (chốt 2026-09-25). Nó có cạnh sắc, trời chuyển mượt, màu bão hoà nhiều hue, bóng tối có nhiễu,
   vùng cháy sáng. *Vì ảnh dựng bằng code không có kết cấu thật cho cạnh, nhiễu và heal.*
-- So: đưa cả golden và ảnh mới về 8-bit, lệch ≤ **1/255 mỗi kênh** là giống (đã chốt 2026-09-25).
+- So: lệch ≤ **1/255 mỗi kênh** là giống (đã chốt 2026-09-25). Giá trị ngoài 0…1 (kernel cộng dồn,
+  hiệu có dấu) so tương đối: ≤ 1/255 × độ lớn của golden.
 
 ## 5. Ràng buộc
 
@@ -71,7 +73,7 @@ Người chụp không được thấy khác biệt nào sau khi chuyển.
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | 40 kernel chuỗi hôm nay, commit nhóm 0 | chạy bộ chụp golden | có golden cho mỗi kernel × mỗi ảnh vào ở §4, tổng ≤ 2 MB, commit trước mọi commit port | ⚠️ chưa có |
+| AC-1 | 40 kernel chuỗi hôm nay, commit nhóm 0 | chạy bộ chụp golden | có golden cho mỗi kernel × mỗi ảnh vào ở §4, tổng ≤ 2 MB, commit trước mọi commit port | `KernelGoldenTests.matchesItsGolden` (45 ca × 2), `everyKernelHasACase`; 95 file, 1,0 MB |
 | AC-2 | golden của một kernel đã port | render cùng ảnh vào bằng bản Metal | mọi pixel lệch ≤ 1/255 mỗi kênh; lặp cho cả 40 kernel | ⚠️ chưa có |
 | AC-3 | ảnh 256×256, 2 mask ở ô 64×64 góc trên trái, 1 color edit ở giữa | render nhóm 1+2 bằng Metal | pixel (240, 240) bằng ảnh gốc ± 1/255 và khớp golden | ⚠️ chưa có |
 | AC-4 | một kernel Metal cố ý viết sai cú pháp | build scheme ShotDex | build đỏ, lỗi trỏ đúng file:dòng; hoàn lại thì build xanh | ⚠️ chưa có — thử một lần, log vào `/verify` |
@@ -83,13 +85,13 @@ Người chụp không được thấy khác biệt nào sau khi chuyển.
 | AC-10 | clip 1080p 120 khung, key theo độ sáng bật | render 120 khung | khung 1, 60, 120 khớp golden; kernel được tạo 1 lần | ⚠️ chưa có |
 | AC-11 | các test render đang có (mask, color, lens, heal, stack, focus, panorama) | chạy sau mỗi nhóm | xanh **không sửa assertion nào** | `Tools/gate` |
 | AC-12 | test footprint panorama / focus stack đang có | chạy sau nhóm 3b, 3c | xanh với ngưỡng không đổi | `Tools/gate` |
-| AC-13 | một file golden bị xoá | chạy test so pixel | test đỏ, không bỏ qua | ⚠️ chưa có |
+| AC-13 | một file golden bị xoá | chạy test so pixel | test đỏ, không bỏ qua | `KernelGoldenTests.aMissingGoldenIsAFailure` |
 | AC-14 | sau nhóm 4 | build + grep toàn repo | 0 khởi tạo kernel từ chuỗi, 0 define tắt warning, Issue navigator 0 warning | hook `build-check.py` + grep |
 
 **Đường hỏng không áp dụng**: mạng, iCloud-only, quyền `.limited`, huỷ giữa chừng, undo — spec không đổi
 đường đọc ảnh, lịch sử sửa hay luồng export; ba luồng đó giữ test đang có (AC-11).
 
-**Chưa chứng minh được:** AC-1 → AC-10, AC-13.
+**Chưa chứng minh được:** AC-2 → AC-10.
 
 ## 7. Rủi ro đã biết
 

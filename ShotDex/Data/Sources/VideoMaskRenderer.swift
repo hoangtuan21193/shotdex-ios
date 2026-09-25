@@ -117,15 +117,7 @@ enum VideoMaskRenderer {
         let low = min(component.luminanceMinimum, component.luminanceMaximum)
         let high = max(component.luminanceMinimum, component.luminanceMaximum)
         let feather = max(0.01, component.feather * 0.25)
-        let kernelSource = """
-            kernel vec4 luminanceKey(__sample s, float low, float high, float soft) {
-                float y = dot(s.rgb, vec3(0.2126, 0.7152, 0.0722));
-                float m = smoothstep(low - soft, low + soft, y)
-                        * (1.0 - smoothstep(high - soft, high + soft, y));
-                return vec4(m, m, m, 1.0);
-            }
-            """
-        guard let kernel = CIColorKernel(source: kernelSource) else { return nil }
+        guard let kernel = luminanceKeyKernel else { return nil }
         return kernel.apply(
             extent: extent,
             arguments: [source.cropped(to: extent), Float(low), Float(high), Float(feather)]
@@ -140,14 +132,7 @@ enum VideoMaskRenderer {
         source: CIImage
     ) -> CIImage? {
         let tolerance = max(0.01, component.colorTolerance)
-        let kernelSource = """
-            kernel vec4 colorKey(__sample s, vec3 target, float tolerance) {
-                float d = distance(s.rgb, target);
-                float m = 1.0 - smoothstep(tolerance * 0.5, tolerance, d);
-                return vec4(m, m, m, 1.0);
-            }
-            """
-        guard let kernel = CIColorKernel(source: kernelSource) else { return nil }
+        guard let kernel = colorKeyKernel else { return nil }
         let target = CIVector(
             x: component.sampledRed,
             y: component.sampledGreen,
@@ -158,6 +143,25 @@ enum VideoMaskRenderer {
             arguments: [source.cropped(to: extent), target, Float(tolerance)]
         )
     }
+
+    /// Built once per process, not once per frame: the compositor calls the
+    /// two qualifiers thirty times a second.
+    static let luminanceKeyKernel = CIColorKernel(source: """
+        kernel vec4 luminanceKey(__sample s, float low, float high, float soft) {
+            float y = dot(s.rgb, vec3(0.2126, 0.7152, 0.0722));
+            float m = smoothstep(low - soft, low + soft, y)
+                    * (1.0 - smoothstep(high - soft, high + soft, y));
+            return vec4(m, m, m, 1.0);
+        }
+        """)
+
+    static let colorKeyKernel = CIColorKernel(source: """
+        kernel vec4 colorKey(__sample s, vec3 target, float tolerance) {
+            float d = distance(s.rgb, target);
+            float m = 1.0 - smoothstep(tolerance * 0.5, tolerance, d);
+            return vec4(m, m, m, 1.0);
+        }
+        """)
 
     // MARK: Combining
 

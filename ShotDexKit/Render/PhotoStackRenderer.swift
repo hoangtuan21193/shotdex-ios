@@ -420,7 +420,7 @@ public actor PhotoStackRenderer {
 
     /// |Laplacian| of luminance, never negative, opaque — a sharpness score
     /// every later blend can read as a plain number.
-    private static let laplacianKernel = CIKernel(source: """
+    static let laplacianKernel = CIKernel(source: """
         kernel vec4 focusLaplacian(sampler image) {
             vec2 p = destCoord();
             vec3 luma = vec3(0.299, 0.587, 0.114);

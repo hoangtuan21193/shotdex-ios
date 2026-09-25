@@ -1,0 +1,2 @@
+# FS-16 kernel goldens: compressed half floats, never text.
+*.rgbah.zlib binary

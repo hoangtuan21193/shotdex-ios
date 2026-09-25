@@ -34,6 +34,10 @@ gỡ một ảnh thì nhóm còn một ảnh tan đi, số việc còn lại đ�
 
 Phần đọc EXIF được test trên **ảnh mẫu nhỏ có EXIF** đi kèm bộ test.
 
+**Kernel Core Image so với golden** ([FS-16](../02-functional-spec/FS-16-metal-kernels.md)): cả 40 kernel
+chạy trên ảnh vào 48×48 dựng bằng code và trên ảnh thật thu nhỏ, lệch ≤ 1/255 so với ảnh đã chụp trước.
+Chụp lại chỉ bằng file đánh dấu trong `build/`, và lần chụp nào cũng cố ý đỏ để không lọt qua cổng.
+
 ## 4. Chưa phủ
 
 | Vùng | Trạng thái |

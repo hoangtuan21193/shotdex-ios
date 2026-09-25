@@ -1421,14 +1421,14 @@ public actor PhotoRenderService {
     }
 
     /// What noise reduction removed, kept signed.
-    private static let noiseResidualKernel = CIColorKernel(source: """
+    static let noiseResidualKernel = CIColorKernel(source: """
         kernel vec4 noiseResidual(__sample original, __sample denoised) {
             return vec4(original.rgb - denoised.rgb, 1.0);
         }
         """)
 
     /// Denoised plus `amount` of the (blurred) residual.
-    private static let noiseDetailKernel = CIColorKernel(source: """
+    static let noiseDetailKernel = CIColorKernel(source: """
         kernel vec4 noiseDetail(__sample denoised, __sample texture, float amount) {
             return vec4(denoised.rgb + amount * texture.rgb, denoised.a);
         }
@@ -1881,7 +1881,7 @@ public actor PhotoRenderService {
         ).cropped(to: extent)
     }
 
-    private static let edgeMaskKernel = CIColorKernel(source: """
+    static let edgeMaskKernel = CIColorKernel(source: """
     kernel vec4 shotdexEdgeMask(__sample s, float lo, float hi) {
         float e = max(s.r, max(s.g, s.b));
         float m = smoothstep(lo, hi, e);
