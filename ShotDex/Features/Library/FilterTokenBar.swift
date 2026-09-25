@@ -141,7 +141,9 @@ struct FilterTokenBar: View {
         // scroll behind it.
     }
 
-    private struct FilterToken: Identifiable {
+    /// One active condition as a removable chip. Shared with the smart
+    /// album's conditions bar, which appends these after its saved rules.
+    struct FilterToken: Identifiable {
         var id: String
         var label: String
         var removalAccessibilityLabel: String
@@ -154,7 +156,9 @@ struct FilterTokenBar: View {
         criteria = updated
     }
 
-    private var tokens: [FilterToken] {
+    private var tokens: [FilterToken] { Self.tokens(for: criteria) }
+
+    static func tokens(for criteria: FilterCriteria) -> [FilterToken] {
         var result: [FilterToken] = []
         for brand in criteria.cameraBrands.sorted() {
             result.append(
@@ -307,7 +311,7 @@ struct FilterTokenBar: View {
         return result
     }
 
-    private func rangeLabel(
+    private static func rangeLabel(
         _ prefix: String,
         _ range: NumericRangeFilter,
         format: (Double) -> String

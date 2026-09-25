@@ -4,17 +4,50 @@ import SwiftUI
 /// count, the match mode when there is more than one rule, and each condition
 /// rendered as a token. The editable counterpart is `SmartAlbumRuleRow`.
 struct SmartAlbumConditionsBar: View {
+    /// A condition the Filter menu added on top of the saved query (FS-06.09).
+    struct FilterChip: Identifiable {
+        var id: String
+        var label: String
+        var removalAccessibilityLabel: String
+        var onRemove: () -> Void
+    }
+
     let query: SmartAlbumQuery
     let matchCount: Int
+    /// The saved query's own count, set while the Filter menu narrows the
+    /// album: the header then reads "6 of 20 photos".
+    var unfilteredCount: Int?
+    /// Appended after the saved rules on the same row. They are glass and
+    /// removable where the saved rules are flat and fixed — deliberately two
+    /// looks on one line, so what belongs to the album and what is a passing
+    /// filter can be told apart at a glance.
+    var filterChips: [FilterChip] = []
+    var onEditFilter: (() -> Void)?
+    var onClearFilter: (() -> Void)?
 
     private var rules: [SmartAlbumRule] { query.validRules }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("\(matchCount) photo")
-                    .font(.subheadline.weight(.semibold))
+                if let unfilteredCount {
+                    Text("\(matchCount) of \(unfilteredCount) photos")
+                        .font(.subheadline.weight(.semibold))
+                } else {
+                    Text("\(matchCount) photo")
+                        .font(.subheadline.weight(.semibold))
+                }
                 Spacer()
+                if let onClearFilter {
+                    HStack(spacing: 16) {
+                        if let onEditFilter {
+                            Button("Edit", action: onEditFilter)
+                        }
+                        Button("Clear", action: onClearFilter)
+                    }
+                    .font(.footnote.weight(.medium))
+                    .tint(.primary)
+                }
                 if rules.count > 1 {
                     Text("Match \(query.matchMode.word)")
                         .font(.caption.weight(.medium))
@@ -34,6 +67,13 @@ struct SmartAlbumConditionsBar: View {
                             .padding(.vertical, 5)
                             .background(Color(.secondarySystemFill), in: Capsule())
                             .foregroundStyle(Color(.label))
+                    }
+                    ForEach(filterChips) { chip in
+                        ActiveConditionChip(
+                            label: chip.label,
+                            removalAccessibilityLabel: chip.removalAccessibilityLabel,
+                            onRemove: chip.onRemove
+                        )
                     }
                 }
             }

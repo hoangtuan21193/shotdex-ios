@@ -14,6 +14,16 @@ final class SmartAlbumDetailModel {
     private let photoLibrary: PhotoLibraryService
     private let pipeline: IndexPipeline
     private let query: SmartAlbumQuery
+    private let albumId: String
+
+    /// Newest or oldest first, remembered per album (FS-06.01b §3). A smart
+    /// album is a query, so there is no album order to offer.
+    private(set) var sortOrder: AlbumSortOrder
+    /// The Filter menu's narrowing (FS-06.09): ANDed onto the saved query,
+    /// never written into it.
+    private(set) var filter = AlbumFilter()
+    /// Matches of the saved query alone — the "of 20" while filtering.
+    private(set) var unfilteredCount = 0
 
     /// Matching rows in display sort order (newest first = top of the grid;
     /// top-anchored, so no reverse — unlike the bottom-anchored Library grid).
@@ -41,6 +51,8 @@ final class SmartAlbumDetailModel {
         self.photoLibrary = dependencies.photoLibrary
         self.pipeline = dependencies.indexPipeline
         self.query = album.query
+        self.albumId = album.id
+        self.sortOrder = AlbumSortStore.order(for: album.id, isSmartAlbum: true)
         let assetCache = AsyncChunkedLookupCache<PHAsset>(
             chunkSize: 120,
             maxChunks: 6,
@@ -58,10 +70,39 @@ final class SmartAlbumDetailModel {
         }
     }
 
+    func setSortOrder(_ order: AlbumSortOrder) async {
+        guard order != sortOrder, order != .albumOrder else { return }
+        sortOrder = order
+        AlbumSortStore.setOrder(order, for: albumId)
+        await load()
+    }
+
+    func setFilter(_ newValue: AlbumFilter) async {
+        guard newValue != filter else { return }
+        filter = newValue
+        await load()
+    }
+
     func load() async {
         isLoading = true
         defer { isLoading = false }
-        let rows = (try? await libraryQueries.gridItems(matching: query, sort: .default)) ?? []
+        var filters: [LibraryQueries.IndexFilter] = [.query(query)]
+        if let advanced = filter.advancedQuery {
+            filters.append(.query(advanced))
+        } else if !filter.criteria.isEmpty {
+            filters.append(.criteria(filter.criteria))
+        }
+        let requested = (filter, sortOrder)
+        let rows = (try? await libraryQueries.gridItems(
+            matchingAll: filters,
+            sort: sortOrder.librarySort
+        )) ?? []
+        let total = filter.isActive
+            ? ((try? await libraryQueries.count(matchingAll: [.query(query)])) ?? 0)
+            : rows.count
+        // A newer filter or order has started its own load.
+        guard requested == (filter, sortOrder) else { return }
+        unfilteredCount = total
         // The library-change reload after our own delete returns the list we
         // already pruned: refresh tiles in place, keep the scroll position.
         let sameList = rows.count == items.count

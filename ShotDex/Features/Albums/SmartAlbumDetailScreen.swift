@@ -24,6 +24,9 @@ struct SmartAlbumDetailScreen: View {
 
     @State private var isSelecting = false
     @State private var selectedIds: [String] = []
+    /// The Filter menu's narrowing (FS-06.09) — screen state, so the next
+    /// visit starts from the whole album.
+    @State private var filter = AlbumFilter()
     @State private var isComparePresented = false
     @State private var compressionPresentation: CompressionPresentation?
     @State private var stackPresentation: PhotoStackPresentation?
@@ -43,15 +46,7 @@ struct SmartAlbumDetailScreen: View {
     @AppStorage(SettingsKeys.gridColumns) private var storedColumns = 3
 
     var body: some View {
-        Group {
-            if let model {
-                photoGrid(model)
-            } else {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                    .padding(.top, 80)
-            }
-        }
+        filterWiring(content)
         // Empty while selecting, or the bar falls back to it once the
         // principal title below is cleared.
         .navigationTitle(isSelecting ? "" : album.name)
@@ -105,12 +100,7 @@ struct SmartAlbumDetailScreen: View {
             if isSelecting { navigation.selectionBar = nil }
         }
         .safeAreaInset(edge: .top) {
-            if !album.query.isEmpty {
-                SmartAlbumConditionsBar(
-                    query: album.query,
-                    matchCount: model?.matchCount ?? 0
-                )
-            }
+            topAccessories
         }
         .task {
             if model == nil {
@@ -195,6 +185,101 @@ struct SmartAlbumDetailScreen: View {
     }
 
     // MARK: Grid
+
+    @ViewBuilder
+    private var content: some View {
+        if let model {
+            photoGrid(model)
+                .overlay {
+                    if filter.isActive, model.items.isEmpty, !model.isLoading {
+                        FilterEmptyState { filter.clear() }
+                    }
+                }
+        } else {
+            ProgressView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .padding(.top, 80)
+        }
+    }
+
+    /// Filter state into the model, and picks the new filter hides out of the
+    /// selection (FS-01.06 §2) — kept out of `body` so it type-checks.
+    private func filterWiring(_ content: some View) -> some View {
+        content
+            .onChange(of: filter) {
+                Task { await model?.setFilter(filter) }
+            }
+            .onChange(of: model?.contentGeneration) {
+                guard isSelecting, !selectedIds.isEmpty, let model else { return }
+                let showing = Set(model.items.lazy.map(\.assetId))
+                let kept = selectedIds.filter(showing.contains)
+                if kept.count != selectedIds.count { selectedIds = kept }
+            }
+    }
+
+    /// Library's Limited Access banner, then the saved conditions with the
+    /// Filter menu's chips on the same row (FS-06.09 §4).
+    private var topAccessories: some View {
+        VStack(spacing: 0) {
+            if photoLibrary.authorizationState == .limited {
+                LimitedAccessBanner {
+                    photoLibrary.presentLimitedLibraryPicker()
+                }
+                .padding(.top, 4)
+            }
+            if !album.query.isEmpty {
+                SmartAlbumConditionsBar(
+                    query: album.query,
+                    matchCount: model?.matchCount ?? 0,
+                    unfilteredCount: filter.isActive ? model?.unfilteredCount : nil,
+                    filterChips: filterChips,
+                    onEditFilter: nil,
+                    onClearFilter: filter.isActive ? { filter.clear() } : nil
+                )
+            } else if !filter.criteria.isEmpty {
+                FilterTokenBar(criteria: Binding(
+                    get: { filter.criteria },
+                    set: { filter.setCriteria($0) }
+                ))
+            }
+        }
+    }
+
+    private var filterChips: [SmartAlbumConditionsBar.FilterChip] {
+        FilterTokenBar.tokens(for: filter.criteria).map { token in
+            SmartAlbumConditionsBar.FilterChip(
+                id: token.id,
+                label: token.label,
+                removalAccessibilityLabel: token.removalAccessibilityLabel,
+                onRemove: {
+                    var criteria = filter.criteria
+                    token.clear(&criteria)
+                    filter.setCriteria(criteria)
+                }
+            )
+        }
+    }
+
+    private func filterMenu(_ model: SmartAlbumDetailModel) -> some View {
+        PhotoFilterMenu(
+            criteria: Binding(
+                get: { filter.criteria },
+                set: { filter.setCriteria($0) }
+            ),
+            isShowingAllItems: !filter.isActive,
+            onShowAllItems: { filter.clear() },
+            onAdvancedFilter: nil
+        ) {
+            Picker("Sort By", selection: Binding(
+                get: { model.sortOrder },
+                set: { order in Task { await model.setSortOrder(order) } }
+            )) {
+                ForEach(AlbumSortOrder.allCases.filter { $0 != .albumOrder }) { order in
+                    Text(order.displayName).tag(order)
+                }
+            }
+        }
+    }
 
     private func photoGrid(_ model: SmartAlbumDetailModel) -> some View {
         PhotoGridCollectionView(
@@ -493,19 +578,30 @@ struct SmartAlbumDetailScreen: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        // Browsing: just Select. Selecting: the shared ⋯ + × items below.
+        // Filter leads the trailing group and stays while selecting, as in
+        // Library; the selection's ⋯ joins its capsule.
         ToolbarItem(placement: .topBarTrailing) {
-            if model?.items.isEmpty == false, !isSelecting {
-                // Spelled out, like Photos.
-                Button("Select") {
-                    isSelecting = true
-                }
-                .tint(.primary)
-                .accessibilityLabel("Select photos")
+            if let model, model.unfilteredCount > 0 || filter.isActive || !model.items.isEmpty {
+                filterMenu(model)
             }
         }
         if isSelecting, let selectionModel = selectionBarModel() {
             SelectionToolbarItems(model: selectionModel)
+        }
+        if !isSelecting {
+            if #available(iOS 26.0, *) {
+                ToolbarSpacer(.fixed, placement: .topBarTrailing)
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                if model?.items.isEmpty == false {
+                    // Spelled out, like Photos.
+                    Button("Select") {
+                        isSelecting = true
+                    }
+                    .tint(.primary)
+                    .accessibilityLabel("Select photos")
+                }
+            }
         }
     }
 }
