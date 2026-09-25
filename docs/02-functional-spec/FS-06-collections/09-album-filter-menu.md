@@ -87,7 +87,7 @@ Nút Filter đã có ở Library thì phải có ở mọi lưới ảnh, và c�
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | album người dùng 40 ảnh, 12 favorite | Filter → Favorites | lưới 12 ô, chip `Favorite` hiện, chân lưới `12 of 40 Items`; tắt → 40 ô, hết chip | `AlbumFilterTests.favorites` + chụp tay 26.5 `t2-favorites-26.png` (1 of 5 Items) |
+| AC-1 | album người dùng 40 ảnh, 12 favorite | Filter → Favorites | lưới 12 ô, chip `Favorite` hiện, chân lưới `12 of 40 Items`; tắt → 40 ô, hết chip | `AlbumFilterTests.favorites`, `.filteredCountWording` + chụp tay 26.5 `t2-favorites-26.png` (1 of 5 Items) |
 | AC-2 | album 30 ảnh + 10 video | Videos Only | 10 ô; chọn tiếp Photos Only → 30 và Videos Only tự tắt | `AlbumFilterTests.mediaKinds` |
 | AC-3 | album 40 ảnh, 5 Live Photo | Capture Kind ▸ Live Photos | 5 ô | `AlbumFilterTests.captureKinds` |
 | AC-4 | album người dùng, Sort đang là Album Order | Sort By → Oldest First, thoát rồi mở lại | ô đầu là ảnh chụp sớm nhất; mở lại vẫn Oldest First | ⚠️ chưa có |
@@ -97,7 +97,7 @@ Nút Filter đã có ở Library thì phải có ở mọi lưới ảnh, và c�
 | AC-8 | album không có video | Videos Only | câu `No photos match these filters.` + `Clear Filters`; chạm `Clear Filters` → đủ ảnh | chụp tay 26.5 `t5-empty-26.png` (Recently Added, Videos Only) |
 | AC-9 | album đang lọc Favorites | quay lại Collections rồi mở lại album | All Items, không có hàng chip; Sort giữ nguyên | chụp tay 26.5: mở lại album sau khi lọc → menu đánh dấu All Items |
 | AC-10 | đang chọn 3 ảnh, 1 ảnh không favorite | bật Favorites | pill đếm còn 2 | chụp tay 26.5 `t7-prune-26.png` (2 → 1); Library `t7b-library-prune-26.png` |
-| AC-11 | album 40 ảnh, 8 ảnh ISO ≥ 3200; thư viện có 500 ảnh ISO ≥ 3200 | Advanced Filter… → ISO ≥ 3200 → Apply | sheet đếm 8; lưới 8 ô; vẫn ở màn album | `DatabaseTests.queryRestrictedToAssetIds` + chụp tay 26.5 `t11-advanced-sheet-26.png`, `t11-advanced-applied-26.png` |
+| AC-11 | album 40 ảnh, 8 ảnh ISO ≥ 3200; thư viện có 500 ảnh ISO ≥ 3200 | Advanced Filter… → ISO ≥ 3200 → Apply | sheet đếm 8; lưới 8 ô; vẫn ở màn album | `DatabaseTests.queryRestrictedToAssetIds` + chụp tay 26.5 `t11-advanced-sheet-26.png`, `t11-advanced-applied-26.png`; sau khi chuyển sang chia khối: `r-advanced-streamed-prune-26.png` |
 | AC-12 | album đang lọc Advanced ISO ≥ 3200 | bật Favorites | điều kiện Advanced bị xoá, chỉ còn chip `Favorite` | `AlbumFilterTests.quickAndAdvancedAreExclusive` + chụp tay 26.5 `t12-advanced-then-favorites-26.png` |
 | AC-13 | album đang lọc Favorites | chạm `x` trên chip | về All Items, hàng chip biến mất, hàng ảnh đầu không bị thanh trên che | chụp tay 26.5 `t6-chip-removed-26.png` |
 | AC-14 | quyền `.limited`, 5 trong 40 ảnh được cấp, 2 favorite | Favorites | 2 ô; biểu ngữ Manage vẫn hiện | ⚠️ chưa có ảnh — sim không đặt được quyền `.limited` bằng lệnh; code dùng chung biểu ngữ của Library |

@@ -4,7 +4,7 @@
 |---|---|
 | Đặc tả | `docs/02-functional-spec/FS-06-collections/09-album-filter-menu.md` |
 | Ngày | 2026-09-25 |
-| Trạng thái | gần xong — 14/14 task, còn AC-14 và Duo trong chưa chụp (xem FS-06.09 §7) |
+| Trạng thái | **gần xong** (2026-09-25, `/verify`) — 14/14 task + sửa sau review (`fbaddd2`); 13/16 AC xanh đủ, AC-14/15/16 thiếu một phần; gate: 1331/1332, đỏ ở test bộ nhớ focus stack (FS-01.10, chạy riêng xanh — tách việc riêng) |
 
 ## 1. Hiểu đúng chưa
 
