@@ -118,46 +118,12 @@ public actor PhotoRenderService {
         emptyAutomaticComponents.union(foundAutomaticComponents)
     }
 
-    public static let addMaskKernel = CIColorKernel(source: """
-        kernel vec4 addMask(__sample current, __sample incoming) {
-            float value = max(current.r, incoming.r * incoming.a);
-            return vec4(value, value, value, 1.0);
-        }
-        """)
-
-    public static let subtractMaskKernel = CIColorKernel(source: """
-        kernel vec4 subtractMask(__sample current, __sample incoming) {
-            float value = max(0.0, current.r - incoming.r * incoming.a);
-            return vec4(value, value, value, 1.0);
-        }
-        """)
-
-    public static let invertMaskKernel = CIColorKernel(source: """
-        kernel vec4 invertMask(__sample value) {
-            float result = 1.0 - value.r;
-            return vec4(result, result, result, 1.0);
-        }
-        """)
-
-    public static let luminanceMaskKernel = CIColorKernel(source: """
-        kernel vec4 luminanceMask(__sample color, float lower, float upper, float feather) {
-            float luminance = dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));
-            float edge = max(0.001, feather);
-            float low = smoothstep(lower - edge, lower + edge, luminance);
-            float high = 1.0 - smoothstep(upper - edge, upper + edge, luminance);
-            float value = clamp(low * high, 0.0, 1.0);
-            return vec4(value, value, value, 1.0);
-        }
-        """)
-
-    public static let colorMaskKernel = CIColorKernel(source: """
-        kernel vec4 colorMask(__sample color, vec3 target, float tolerance, float feather) {
-            float distance = length(color.rgb - target);
-            float edge = max(0.001, feather);
-            float value = 1.0 - smoothstep(tolerance - edge, tolerance + edge, distance);
-            return vec4(value, value, value, 1.0);
-        }
-        """)
+    // Mask kernels: `Kernels/MaskKernels.ci.metal`.
+    public static let addMaskKernel = CoreImageKernelLibrary.kit.colorKernel(named: "addMask")
+    public static let subtractMaskKernel = CoreImageKernelLibrary.kit.colorKernel(named: "subtractMask")
+    public static let invertMaskKernel = CoreImageKernelLibrary.kit.colorKernel(named: "invertMask")
+    public static let luminanceMaskKernel = CoreImageKernelLibrary.kit.colorKernel(named: "luminanceMask")
+    public static let colorMaskKernel = CoreImageKernelLibrary.kit.colorKernel(named: "colorMask")
 
     public func inspectSource(at url: URL, typeHint: UTType? = nil) throws -> PhotoRenderSourceInfo {
         let options = [kCGImageSourceShouldCache: false] as CFDictionary
@@ -1881,13 +1847,7 @@ public actor PhotoRenderService {
         ).cropped(to: extent)
     }
 
-    static let edgeMaskKernel = CIColorKernel(source: """
-    kernel vec4 shotdexEdgeMask(__sample s, float lo, float hi) {
-        float e = max(s.r, max(s.g, s.b));
-        float m = smoothstep(lo, hi, e);
-        return vec4(m, m, m, 1.0);
-    }
-    """)
+    static let edgeMaskKernel = CoreImageKernelLibrary.kit.colorKernel(named: "edgeMask")
 
     /// Mixes the filtered image back over the unfiltered one so a preset can be
     /// dialled in instead of being all-or-nothing.

@@ -74,12 +74,12 @@ Người chụp không được thấy khác biệt nào sau khi chuyển.
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
 | AC-1 | 40 kernel chuỗi hôm nay, commit nhóm 0 | chạy bộ chụp golden | có golden cho mỗi kernel × mỗi ảnh vào ở §4, tổng ≤ 2 MB, commit trước mọi commit port | `KernelGoldenTests.matchesItsGolden` (45 ca × 2), `everyKernelHasACase`; 95 file, 1,0 MB |
-| AC-2 | golden của một kernel đã port | render cùng ảnh vào bằng bản Metal | mọi pixel lệch ≤ 1/255 mỗi kênh; lặp cho cả 40 kernel | ⚠️ chưa có |
+| AC-2 | golden của một kernel đã port | render cùng ảnh vào bằng bản Metal | mọi pixel lệch ≤ 1/255 mỗi kênh; lặp cho cả 40 kernel | `KernelGoldenTests.matchesItsGolden` — Metal 6/40 (mask) |
 | AC-3 | ảnh 256×256, 2 mask ở ô 64×64 góc trên trái, 1 color edit ở giữa | render nhóm 1+2 bằng Metal | pixel (240, 240) bằng ảnh gốc ± 1/255 và khớp golden | ⚠️ chưa có |
-| AC-4 | một kernel Metal cố ý viết sai cú pháp | build scheme ShotDex | build đỏ, lỗi trỏ đúng file:dòng; hoàn lại thì build xanh | ⚠️ chưa có — thử một lần, log vào `/verify` |
-| AC-5 | build đủ 4 nhóm | chạy test nạp kernel | 40/40 nạp được; đổi tên một hàm kernel thì test đỏ | ⚠️ chưa có |
-| AC-6 | metallib của kit nằm trong framework | test nạp một kernel kit | nạp từ bundle framework; bundle chính của app không có metallib của kit | ⚠️ chưa có |
-| AC-7 | bản release, kernel không nạp được | render ảnh có mask | ảnh ra bằng ảnh vào, không crash | ⚠️ chưa có |
+| AC-4 | một kernel Metal cố ý viết sai cú pháp | build scheme ShotDex | build đỏ, lỗi trỏ đúng file:dòng; hoàn lại thì build xanh | thử 2026-09-26: `MaskKernels.ci.metal:19:32: error: illegal vector component name 'q'`, TEST BUILD FAILED |
+| AC-5 | build đủ 4 nhóm | chạy test nạp kernel | 40/40 nạp được; đổi tên một hàm kernel thì test đỏ | `KernelLibraryTests.everyKernelLoads` (Metal: 6/40 sau nhóm 1) |
+| AC-6 | metallib của kit nằm trong framework | test nạp một kernel kit | nạp từ bundle framework; bundle chính của app không có metallib của kit | `KernelLibraryTests.kitKernelsComeFromTheFrameworkBundle` |
+| AC-7 | bản release, kernel không nạp được | render ảnh có mask | ảnh ra bằng ảnh vào, không crash | `KernelLibraryTests.aMissingKernelIsNilNotACrash` + các nơi gọi trả ảnh vào khi kernel `nil` |
 | AC-8 | point color với 8 điểm (tối đa của model) | render | điểm thứ 8 đổi màu đúng như golden 8 điểm | ⚠️ chưa có |
 | AC-9 | ảnh thử 512×512, recipe bật mọi kernel nhóm 1–2 cùng lúc | render qua renderer đầy đủ | khớp golden toàn pipeline ≤ 1/255 | ⚠️ chưa có |
 | AC-10 | clip 1080p 120 khung, key theo độ sáng bật | render 120 khung | khung 1, 60, 120 khớp golden; kernel được tạo 1 lần | ⚠️ chưa có |
@@ -91,7 +91,7 @@ Người chụp không được thấy khác biệt nào sau khi chuyển.
 **Đường hỏng không áp dụng**: mạng, iCloud-only, quyền `.limited`, huỷ giữa chừng, undo — spec không đổi
 đường đọc ảnh, lịch sử sửa hay luồng export; ba luồng đó giữ test đang có (AC-11).
 
-**Chưa chứng minh được:** AC-2 → AC-10.
+**Chưa chứng minh được:** AC-2 (34/40 kernel chưa port), AC-3, AC-5 (đủ 40 bằng Metal), AC-8, AC-9, AC-10.
 
 ## 7. Rủi ro đã biết
 

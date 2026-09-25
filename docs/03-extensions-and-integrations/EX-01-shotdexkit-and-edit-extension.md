@@ -28,7 +28,7 @@
 | Nhóm | Nội dung |
 |---|---|
 | Model công thức (5 file) | công thức sửa ảnh, bộ thông số chỉnh, lớp markup, màu, curve, nét vẽ |
-| Render (9 file) | renderer ảnh và các phần mở rộng của nó, kho ảnh overlay, bộ đọc bản đồ độ sâu |
+| Render | renderer ảnh và các phần mở rộng của nó, kho ảnh overlay, bộ đọc bản đồ độ sâu, bộ nạp kernel và các file kernel Metal ([FS-16](../02-functional-spec/FS-16-metal-kernels.md)) |
 | Toán thuần (7 file) | mô phỏng film, tone curve, toán màu, đặt chữ, hình học hình vẽ, quy đổi token, raster nét cọ |
 
 App, target test và extension **đều dùng** framework này. **Ở lại app**: panel, danh mục slider, số đo bố
@@ -72,6 +72,8 @@ Mở ShotDex **ngay trong app Photos**.
 |---|---|---|
 | Extension mở lên trắng trơn, log báo không tìm thấy lớp ngữ cảnh | thư viện giao diện ảnh của hệ thống **không tự được kéo vào** | khai link tường minh |
 | Build lỗi "hai lệnh cùng tạo ra Info.plist" | file đó vừa được sinh tự động vừa bị chép như tài nguyên | khai nó là ngoại lệ của nhóm file đồng bộ |
+| Shader Metal thường thêm vào kit không build hoặc không chạy | target kit biên dịch **mọi** file Metal thành kernel Core Image, và tắt fast math để khớp golden | shader thường đặt ở target khác |
+| Kernel kit nạp nil trong app | tìm metallib ở bundle của app thay vì bundle của framework | bộ nạp của kit đọc bundle framework; app có metallib riêng |
 
 ## 6. Tiêu chí nghiệm thu
 

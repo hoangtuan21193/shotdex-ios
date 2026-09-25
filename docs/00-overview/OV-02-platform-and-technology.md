@@ -1,6 +1,6 @@
 # OV-02 — Nền tảng và công nghệ
 
-`OV-02` · `ShotDex.xcodeproj` · cập nhật 2026-09-24
+`OV-02` · `ShotDex.xcodeproj` · cập nhật 2026-09-26
 
 **Một câu:** framework nào dùng cho việc gì, và ba quyết định nền không được đảo.
 
@@ -14,6 +14,8 @@
   link; kit và extension không thấy chúng.
 - **swift-collections ghim ở 1.3**: bản 1.7 (SwiftNIO kéo vào) gọi một hàm runtime mà iOS 26.5 chưa có — app
   chết ngay lúc mở. Nâng bản thì chạy thử trên iOS 17/18/26 trước.
+- **Máy build cần Metal Toolchain** (Xcode 26 trở lên tách nó ra, cài bằng
+  `xcodebuild -downloadComponent MetalToolchain`): thiếu nó thì 40 kernel Core Image không build được.
 - **Kích thước màn và cửa sổ luôn hỏi qua một lớp riêng của app**, không hỏi thẳng "màn hình chính" của hệ
   thống.
 - **Không đọc lại metadata cả thư viện mỗi lần mở app** — xem
@@ -26,7 +28,7 @@
 | Giao diện | SwiftUI; dùng UIKit ở chỗ cần hiệu năng và phân trang — lưới ảnh, khung phóng, và bộ lật trang của viewer |
 | Thư viện ảnh | PhotoKit: xin quyền, lấy ảnh, cache thumbnail, theo dõi thay đổi |
 | Đọc EXIF | ImageIO — đọc thuộc tính, **không giải mã ảnh** |
-| Render editor | Core Image; PencilKit cho phần vẽ tay ([FS-05](../02-functional-spec/FS-05-markup/README.md)) |
+| Render editor | Core Image, kernel tự viết bằng Metal ([FS-16](../02-functional-spec/FS-16-metal-kernels.md)); PencilKit cho phần vẽ tay ([FS-05](../02-functional-spec/FS-05-markup/README.md)) |
 | Database | GRDB trên SQLite — tổng hợp bằng SQL cho phần lọc và thống kê |
 | Biểu đồ | Swift Charts (cột, phân bố, vành khuyên) |
 | Trạng thái và tiêm phụ thuộc | cơ chế quan sát của Swift + môi trường của SwiftUI |
