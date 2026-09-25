@@ -19,6 +19,7 @@ dùng tự lưu.
 | 06 | [Duplicates](06-duplicates.md) | perceptual hash, ba mức, cache, merge, xoá |
 | 07 | [On This Day](07-on-this-day.md) | hero, màn chi tiết, reminder 7 ngày |
 | 08 | [Smart Album](08-smart-albums.md) | model rule, editor, compile SQL, tương thích ngược |
+| 09 | [Menu Filter trong album](09-album-filter-menu.md) | Filter/Sort giống Library ở Album Detail và Smart Album — **spec, chưa làm** |
 
 ## Quy tắc chung
 

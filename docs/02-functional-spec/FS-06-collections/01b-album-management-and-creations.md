@@ -25,7 +25,8 @@ Bố cục tab: [FS-06.01](01-tabs-tokens-and-album-management.md).
 
 ## 3. Sắp xếp trong Album Detail
 
-Nút sắp xếp cạnh Select: **Album Order · Newest First · Oldest First**.
+Nút sắp xếp cạnh Select: **Album Order · Newest First · Oldest First**. Sắp chuyển vào menu Filter
+giống Library: [FS-06.09](09-album-filter-menu.md) (spec, chưa làm).
 
 - **Album Order = không sắp gì cả** — đó là cách thư viện trả về thứ tự riêng của album (thứ tự thêm vào,
   hoặc thứ tự người dùng tự kéo trong Photos).

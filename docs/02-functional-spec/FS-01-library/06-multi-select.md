@@ -21,6 +21,8 @@ hành động lên thư viện.
   đang chọn.
 - Hai cử chỉ giữ-lâu trên cùng một lưới sẽ tranh nhau → cử chỉ giữ-lâu để quét chọn **chỉ bật** khi màn
   không có menu ngữ cảnh, hoặc khi **đang** ở chế độ chọn (lúc đó giữ-rồi-kéo vẫn quét cả dải không cần nhả tay).
+- **Đổi bộ lọc hoặc truy vấn khi đang chọn**: ảnh đã chọn mà không còn trong lưới **bị bỏ khỏi lựa chọn**,
+  pill đếm cập nhật ngay — Delete/Share không tác động lên ảnh không nhìn thấy. Áp cho Library và album.
 - Tile được chọn: **dấu tick trắng trên đĩa accent** + **viền accent 3pt** + ảnh mờ nhẹ; tile chưa chọn là
   một vòng tròn viền trắng.
 
