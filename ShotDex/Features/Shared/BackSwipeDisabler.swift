@@ -1,9 +1,14 @@
 import SwiftUI
 import UIKit
 
-/// Disables the enclosing navigation stack's interactive pop (edge-swipe back)
-/// gesture while `isDisabled` is true. Used so an accidental right-swipe during
-/// multi-select doesn't pop the pushed screen out from under the selection.
+/// Disables the enclosing navigation stack's interactive pop gestures while
+/// `isDisabled` is true. Used so a right-swipe during multi-select (swipe to
+/// select a range) doesn't pop the pushed screen out from under the selection.
+///
+/// iOS 26 has two: the edge swipe (`interactivePopGestureRecognizer`) and the
+/// swipe-back-from-anywhere-in-content one
+/// (`interactiveContentPopGestureRecognizer`). The second is the one that
+/// fights swipe-select, since that drag starts mid-grid.
 private struct BackSwipeDisabler: UIViewControllerRepresentable {
     var isDisabled: Bool
 
@@ -30,12 +35,20 @@ private struct BackSwipeDisabler: UIViewControllerRepresentable {
             // Restore the gesture when this view leaves the hierarchy so the
             // shared recognizer isn't left disabled for the screen underneath.
             if parent == nil {
-                navigationController?.interactivePopGestureRecognizer?.isEnabled = true
+                setPopGesturesEnabled(true)
             }
         }
 
         private func applyState() {
-            navigationController?.interactivePopGestureRecognizer?.isEnabled = !isDisabled
+            setPopGesturesEnabled(!isDisabled)
+        }
+
+        private func setPopGesturesEnabled(_ isEnabled: Bool) {
+            guard let navigationController else { return }
+            navigationController.interactivePopGestureRecognizer?.isEnabled = isEnabled
+            if #available(iOS 26.0, *) {
+                navigationController.interactiveContentPopGestureRecognizer?.isEnabled = isEnabled
+            }
         }
     }
 }
