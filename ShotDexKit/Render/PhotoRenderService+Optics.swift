@@ -49,17 +49,7 @@ public extension PhotoRenderService {
         return output ?? input
     }
 
-    internal static let vignetteKernel = CIColorKernel(source: """
-    kernel vec4 shotdexVignette(__sample s, vec2 center, vec2 halfExtent, float inner, float outer, float amount, float roundExponent, float highlights) {
-        vec2 d = (destCoord() - center) / halfExtent;
-        float dist = pow(pow(abs(d.x), roundExponent) + pow(abs(d.y), roundExponent), 1.0 / roundExponent);
-        float w = smoothstep(inner, outer, dist);
-        float luma = dot(s.rgb, vec3(0.2126, 0.7152, 0.0722));
-        w *= mix(1.0, 1.0 - luma, highlights);
-        float factor = 1.0 - w * amount;
-        return vec4(s.rgb * factor, s.a);
-    }
-    """)
+    internal static let vignetteKernel = CoreImageKernelLibrary.kit.colorKernel(named: "vignette")
 
     // MARK: Optics
 

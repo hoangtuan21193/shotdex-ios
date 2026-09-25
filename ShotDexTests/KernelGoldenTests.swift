@@ -109,6 +109,7 @@ extension KernelGoldenCase {
                 CIVector(x: 0.5, y: -0.3, z: 0.8, w: -1), CIVector(x: 0.2, y: 0.6, z: -0.4, w: 1),
                 CIVector(x: 0.4, y: -0.5, z: 0.3, w: 0.9), CIVector(x: -0.8, y: 0.2, z: 0.5, w: -0.3),
                 CIVector(x: 0.3, y: -0.2, z: 0.6, w: -0.7), CIVector(x: 0.1, y: 0.5, z: -0.4, w: 0.8),
+                PhotoRenderService.mixerBandCentres.a, PhotoRenderService.mixerBandCentres.b,
             ]
         },
         color("pointColor", { PhotoRenderService.pointColorKernel }) {

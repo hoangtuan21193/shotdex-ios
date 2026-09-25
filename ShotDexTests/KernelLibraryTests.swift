@@ -59,6 +59,12 @@ struct KernelLibraryTests {
         }
     }
 
+    /// AC-8. The point-color kernel has eight slots written into its
+    /// signature; the model may not offer a ninth it cannot render.
+    @Test func pointColorSlotsMatchTheModel() {
+        #expect(PointColorAdjustment.maximumCount == 8)
+    }
+
     /// AC-6. The kit's kernels ship inside the framework, and the app's own
     /// bundle cannot stand in for them.
     @Test func kitKernelsComeFromTheFrameworkBundle() throws {

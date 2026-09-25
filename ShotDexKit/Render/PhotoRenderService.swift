@@ -1387,18 +1387,10 @@ public actor PhotoRenderService {
     }
 
     /// What noise reduction removed, kept signed.
-    static let noiseResidualKernel = CIColorKernel(source: """
-        kernel vec4 noiseResidual(__sample original, __sample denoised) {
-            return vec4(original.rgb - denoised.rgb, 1.0);
-        }
-        """)
+    static let noiseResidualKernel = CoreImageKernelLibrary.kit.colorKernel(named: "noiseResidual")
 
     /// Denoised plus `amount` of the (blurred) residual.
-    static let noiseDetailKernel = CIColorKernel(source: """
-        kernel vec4 noiseDetail(__sample denoised, __sample texture, float amount) {
-            return vec4(denoised.rgb + amount * texture.rgb, denoised.a);
-        }
-        """)
+    static let noiseDetailKernel = CoreImageKernelLibrary.kit.colorKernel(named: "noiseDetail")
 
     /// The detail passes, in the order they run.
     ///

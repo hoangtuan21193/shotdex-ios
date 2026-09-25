@@ -248,20 +248,5 @@ extension PhotoRenderService {
         return min(zoom, 1.5)
     }
 
-    static let lensWarpKernel = CIWarpKernel(source: """
-        kernel vec2 lensWarp(vec2 center, float norm, float zoom, float model,
-                             float k1, float k2, float a, float b, float c) {
-            vec2 d = (destCoord() - center) / (norm * zoom);
-            float r = length(d);
-            float g;
-            if (model < 0.5) {
-                g = 1.0 - k1 + k1 * r * r;
-            } else if (model < 1.5) {
-                g = 1.0 + k1 * r * r + k2 * r * r * r * r;
-            } else {
-                g = a * r * r * r + b * r * r + c * r + 1.0 - a - b - c;
-            }
-            return center + d * g * norm;
-        }
-        """)
+    static let lensWarpKernel = CoreImageKernelLibrary.kit.warpKernel(named: "lensWarp")
 }
