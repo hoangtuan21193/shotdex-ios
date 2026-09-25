@@ -53,27 +53,34 @@ struct AlbumDetailScreen: View {
                     .padding(.top, 80)
             }
         }
-        .navigationTitle(album.title)
+        // Empty while selecting, or the bar falls back to it once the
+        // principal title below is cleared.
+        .navigationTitle(isSelecting ? "" : album.title)
         .navigationBarTitleDisplayMode(.inline)
         // Title plus the date of what is on screen. The grid draws no date
         // headers any more, so this is where "when am I" lives.
         .toolbar {
+            // Cleared while selecting, as in Library: the selection's own
+            // Compare / Edit / ⋯ / × need the width, and on the pre-26 bar the
+            // title otherwise lands against Edit and reads as part of it.
             ToolbarItem(placement: .principal) {
-                VStack(spacing: 0) {
-                    Text(album.title)
-                        .font(.headline)
-                        .lineLimit(1)
-                    if let visibleDate {
-                        Text(visibleDate)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
+                if !isSelecting {
+                    VStack(spacing: 0) {
+                        Text(album.title)
+                            .font(.headline)
                             .lineLimit(1)
-                            .contentTransition(.numericText())
-                            .animation(.easeInOut(duration: 0.18), value: visibleDate)
+                        if let visibleDate {
+                            Text(visibleDate)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .monospacedDigit()
+                                .lineLimit(1)
+                                .contentTransition(.numericText())
+                                .animation(.easeInOut(duration: 0.18), value: visibleDate)
+                        }
                     }
+                    .accessibilityElement(children: .combine)
                 }
-                .accessibilityElement(children: .combine)
             }
         }
 
