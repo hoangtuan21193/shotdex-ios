@@ -25,10 +25,17 @@ enum VideoMaskRenderer {
         .radialGradient, .linearGradient, .luminanceRange, .colorRange,
     ]
 
-    static func apply(_ masks: [PhotoMask], to image: CIImage) -> CIImage {
+    /// The two qualifier kernels, passed down so a test can hand in `nil` —
+    /// what a release build gets when the metallib does not load (FS-16 AC-7).
+    struct Kernels {
+        var luminanceKey: CIColorKernel? = VideoMaskRenderer.luminanceKeyKernel
+        var colorKey: CIColorKernel? = VideoMaskRenderer.colorKeyKernel
+    }
+
+    static func apply(_ masks: [PhotoMask], to image: CIImage, kernels: Kernels = Kernels()) -> CIImage {
         var output = image
         for mask in masks where mask.isVisible {
-            guard let matte = matte(for: mask, extent: image.extent, source: output) else { continue }
+            guard let matte = matte(for: mask, extent: image.extent, source: output, kernels: kernels) else { continue }
             let adjusted = PhotoRenderService.applyAdjustments(
                 mask.adjustments,
                 to: output,
@@ -41,10 +48,15 @@ enum VideoMaskRenderer {
 
     // MARK: Matte
 
-    private static func matte(for mask: PhotoMask, extent: CGRect, source: CIImage) -> CIImage? {
+    private static func matte(
+        for mask: PhotoMask,
+        extent: CGRect,
+        source: CIImage,
+        kernels: Kernels
+    ) -> CIImage? {
         var accumulated: CIImage?
         for component in mask.components where supportedKinds.contains(component.kind) {
-            guard var incoming = componentMatte(component, extent: extent, source: source) else { continue }
+            guard var incoming = componentMatte(component, extent: extent, source: source, kernels: kernels) else { continue }
             if component.opacity < 0.999 {
                 incoming = scaled(incoming, by: component.opacity, extent: extent)
             }
@@ -61,7 +73,8 @@ enum VideoMaskRenderer {
     private static func componentMatte(
         _ component: PhotoMaskComponent,
         extent: CGRect,
-        source: CIImage
+        source: CIImage,
+        kernels: Kernels
     ) -> CIImage? {
         switch component.kind {
         case .radialGradient:
@@ -69,9 +82,9 @@ enum VideoMaskRenderer {
         case .linearGradient:
             return linear(component, extent: extent)
         case .luminanceRange:
-            return luminanceRange(component, extent: extent, source: source)
+            return luminanceRange(component, extent: extent, source: source, kernel: kernels.luminanceKey)
         case .colorRange:
-            return colorRange(component, extent: extent, source: source)
+            return colorRange(component, extent: extent, source: source, kernel: kernels.colorKey)
         default:
             return nil
         }
@@ -112,12 +125,13 @@ enum VideoMaskRenderer {
     private static func luminanceRange(
         _ component: PhotoMaskComponent,
         extent: CGRect,
-        source: CIImage
+        source: CIImage,
+        kernel: CIColorKernel?
     ) -> CIImage? {
         let low = min(component.luminanceMinimum, component.luminanceMaximum)
         let high = max(component.luminanceMinimum, component.luminanceMaximum)
         let feather = max(0.01, component.feather * 0.25)
-        guard let kernel = luminanceKeyKernel else { return nil }
+        guard let kernel else { return nil }
         return kernel.apply(
             extent: extent,
             arguments: [source.cropped(to: extent), Float(low), Float(high), Float(feather)]
@@ -129,10 +143,11 @@ enum VideoMaskRenderer {
     private static func colorRange(
         _ component: PhotoMaskComponent,
         extent: CGRect,
-        source: CIImage
+        source: CIImage,
+        kernel: CIColorKernel?
     ) -> CIImage? {
         let tolerance = max(0.01, component.colorTolerance)
-        guard let kernel = colorKeyKernel else { return nil }
+        guard let kernel else { return nil }
         let target = CIVector(
             x: component.sampledRed,
             y: component.sampledGreen,

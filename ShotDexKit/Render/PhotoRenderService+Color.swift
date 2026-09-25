@@ -6,15 +6,16 @@ import Foundation
 /// — the band centres reach the kernel as arguments, from the same constants
 /// the unit tests cover.
 public extension PhotoRenderService {
-    // Kernels: `Kernels/ColorKernels.ci.metal`.
-    static let hslMixerKernel = CoreImageKernelLibrary.kit.colorKernel(named: "hslMixer")
-    static let pointColorKernel = CoreImageKernelLibrary.kit.colorKernel(named: "pointColor")
-    static let colorGradeKernel = CoreImageKernelLibrary.kit.colorKernel(named: "colorGrade")
+    // Kernels: `Kernels/ColorKernels.ci.metal`. Internal: this extension is
+    // public, and its members would be too without saying so.
+    internal static let hslMixerKernel = CoreImageKernelLibrary.kit.colorKernel(named: "hslMixer")
+    internal static let pointColorKernel = CoreImageKernelLibrary.kit.colorKernel(named: "pointColor")
+    internal static let colorGradeKernel = CoreImageKernelLibrary.kit.colorKernel(named: "colorGrade")
 
     /// The eight mixer bands' centres, in degrees, as the HSL kernel takes
     /// them — from `ColorMixerBand.centerDegrees`, the constants
     /// `ColorRenderMath.bandWeights` uses, so the GPU cannot drift from it.
-    static let mixerBandCentres: (a: CIVector, b: CIVector) = {
+    internal static let mixerBandCentres: (a: CIVector, b: CIVector) = {
         let centres = ColorMixerBand.allCases.map { CGFloat($0.centerDegrees) }
         return (
             CIVector(x: centres[0], y: centres[1], z: centres[2], w: centres[3]),
@@ -35,11 +36,14 @@ public extension PhotoRenderService {
         )
     }
 
-    private static func applyMixer(
+    /// `kernel` is a parameter so a test can hand in `nil` — what a release
+    /// build gets when the metallib does not load (FS-16 AC-7).
+    internal static func applyMixer(
         _ mixer: ColorMixerAdjustments,
-        to input: CIImage
+        to input: CIImage,
+        kernel: CIColorKernel? = hslMixerKernel
     ) -> CIImage {
-        guard !mixer.isIdentity, let kernel = hslMixerKernel else { return input }
+        guard !mixer.isIdentity, let kernel else { return input }
         let hue = mixerVectors(mixer, property: .hue)
         let sat = mixerVectors(mixer, property: .saturation)
         let lum = mixerVectors(mixer, property: .luminance)
@@ -52,12 +56,13 @@ public extension PhotoRenderService {
         ) ?? input
     }
 
-    private static func applyPointColors(
+    internal static func applyPointColors(
         _ points: [PointColorAdjustment],
-        to input: CIImage
+        to input: CIImage,
+        kernel: CIColorKernel? = pointColorKernel
     ) -> CIImage {
         let active = points.filter(\.hasVisibleEffect)
-        guard !active.isEmpty, let kernel = pointColorKernel else { return input }
+        guard !active.isEmpty, let kernel else { return input }
         var arguments: [Any] = [input]
         for index in 0..<PointColorAdjustment.maximumCount {
             if index < active.count {
@@ -91,11 +96,12 @@ public extension PhotoRenderService {
         )
     }
 
-    private static func applyGrading(
+    internal static func applyGrading(
         _ grading: ColorGradingAdjustments,
-        to input: CIImage
+        to input: CIImage,
+        kernel: CIColorKernel? = colorGradeKernel
     ) -> CIImage {
-        guard !grading.isIdentity, let kernel = colorGradeKernel else { return input }
+        guard !grading.isIdentity, let kernel else { return input }
         return kernel.apply(
             extent: input.extent,
             arguments: [

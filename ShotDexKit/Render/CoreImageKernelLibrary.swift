@@ -11,8 +11,9 @@ import Foundation
 /// in". A test loads every kernel by name, so neither case reaches a release.
 public struct CoreImageKernelLibrary: Sendable {
     /// The kit's own kernels, from the framework's bundle — not the app's,
-    /// which has a metallib of its own.
-    public static let kit = CoreImageKernelLibrary(bundle: Bundle(for: KitBundleToken.self))
+    /// which has a metallib of its own. Internal: outside the kit, only the
+    /// type is reused, for the app's own bundle.
+    static let kit = CoreImageKernelLibrary(bundle: Bundle(for: KitBundleToken.self))
 
     /// The whole metallib, read once. Core Image compiles each function out
     /// of it on first use.

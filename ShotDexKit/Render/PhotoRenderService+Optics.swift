@@ -9,6 +9,15 @@ public extension PhotoRenderService {
     /// highlights. If the kernel fails to compile it degrades to leaving the image
     /// untouched rather than crashing.
     static func applyVignette(_ adjustments: PhotoAdjustments, to input: CIImage) -> CIImage {
+        applyVignette(adjustments, to: input, kernel: vignetteKernel)
+    }
+
+    /// `kernel` is a parameter so a test can hand in `nil` (FS-16 AC-7).
+    internal static func applyVignette(
+        _ adjustments: PhotoAdjustments,
+        to input: CIImage,
+        kernel: CIColorKernel?
+    ) -> CIImage {
         guard abs(adjustments.vignette) > 0.0001 else { return input }
         let extent = input.extent
         let minDimension = min(extent.width, extent.height)
@@ -26,7 +35,7 @@ public extension PhotoRenderService {
             )
         }
 
-        guard let kernel = vignetteKernel else { return input }
+        guard let kernel else { return input }
         // Distance is measured in half-extent units: an ellipse's corner sits at
         // ~1.41, its edge midpoints at 1.0.
         let base = 0.4 + adjustments.vignetteMidpoint * 0.9

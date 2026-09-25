@@ -8,7 +8,9 @@ namespace coreimage {
 
 // Canvas pixel to source pixel: undo the projection, turn the ray into the
 // frame's own view, put it back on the sensor. Anything the frame did not see
-// goes far outside its extent, where Core Image samples transparent.
+// goes far outside its extent. Core Image's sampler reads the frame's border
+// there, not transparent — what makes it vanish is the ramp warped alongside,
+// which is 0 at the border (`KernelBranchTests`).
 float2 panoramaWarp(float2 origin, float canvasHeight, float canvasFocal, float kind,
                     float3 m0, float3 m1, float3 m2,
                     float sourceFocal, float2 sourceCentre, float2 sourceSize,
