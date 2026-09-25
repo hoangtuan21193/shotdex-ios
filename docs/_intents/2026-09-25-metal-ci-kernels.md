@@ -4,10 +4,10 @@
 |---|---|
 | Tác giả | hat.tuan |
 | Ngày | 2026-09-25 |
-| Trạng thái | draft |
-| Tiến độ | **chưa làm** (2026-09-25) — chưa có spec |
+| Trạng thái | accepted (2026-09-25) |
+| Tiến độ | **chưa làm** (2026-09-25) — spec FS-16, 14 AC |
 | Nguồn | Issue navigator của Xcode (45 warning `init(source:)` deprecated) + hook `build-check.py` |
-| Spec sinh ra từ đây | |
+| Spec sinh ra từ đây | [FS-16](../02-functional-spec/FS-16-metal-kernels.md) |
 
 ## Problem — vấn đề
 
@@ -75,13 +75,13 @@ dùng đầu mỗi phiên; Metal biên dịch lúc build nên bỏ luôn bước
 
 ## Open questions — câu hỏi còn treo
 
-1. **Có kernel nào thay được bằng filter có sẵn của Apple không?** (ví dụ cộng/trừ mask so với
-   `CIAdditionCompositing` / `CIMinimumCompositing`). Bớt được kernel nào thì đỡ phải port. *Ai:* spike.
-2. **Thứ tự ưu tiên:** đề xuất mặc định là mask trước (dùng nhiều nhất, đang có `MaskKindParityTests`),
-   rồi Color/Optics, rồi Panorama/Stack/Heal, cuối cùng là Video. *Ai:* hat.tuan.
-3. **Ngưỡng sai số pixel** coi là "giống": đề xuất mặc định ≤ 1/255 mỗi kênh trên ảnh 8-bit. *Ai:* hat.tuan.
-4. **Share/edit extension** nạp metallib của framework có vướng gì không (bundle lookup trong extension)?
-   *Ai:* spike, kèm agent `extension-boundary`.
+Đã chốt 2026-09-25 (trong lúc soạn FS-16):
+
+1. **Filter có sẵn của Apple**: thay kernel bằng filter có sẵn chỉ khi qua golden; không qua thì port.
+2. **Thứ tự**: Mask → Color/Optics → Heal/Stack/Panorama → Video.
+3. **Ngưỡng**: ≤ 1/255 mỗi kênh trên ảnh 8-bit, so với ảnh golden chụp trước khi port.
+4. **Extension**: không extension nào link kit renderer (grep 2026-09-25), nên không có metallib nào phải
+   nạp trong extension. Dòng "kể cả widget và share/edit extension" ở phạm vi ảnh hưởng là sai.
 
 ---
 
