@@ -28,6 +28,7 @@ struct AlbumDetailScreen: View {
     /// model is rebuilt when the library changes and must get it back, and the
     /// next visit to the album starts from All Items.
     @State private var filter = AlbumFilter()
+    @State private var isAdvancedFilterPresented = false
     @State private var isComparePresented = false
     @State private var compressionPresentation: CompressionPresentation?
     @State private var multiEditPresentation: MultiEditPresentation?
@@ -48,7 +49,7 @@ struct AlbumDetailScreen: View {
     @AppStorage(SettingsKeys.gridColumns) private var storedColumns = 3
 
     var body: some View {
-        screenChrome(gridContent)
+        advancedFilterSheet(screenChrome(gridContent))
         .fullScreenCover(item: $viewerTarget) { target in
             if let model {
                 PhotoDetailScreen(model: model, currentIndex: target.startIndex)
@@ -284,11 +285,44 @@ struct AlbumDetailScreen: View {
                 }
                 .padding(.top, 4)
             }
-            if !filter.criteria.isEmpty {
+            if let advanced = filter.advancedQuery {
+                AdvancedSearchBar(
+                    query: advanced,
+                    onEdit: { isAdvancedFilterPresented = true },
+                    onRemoveRule: { ruleId in
+                        var updated = advanced
+                        updated.rules.removeAll { $0.id == ruleId }
+                        filter.setAdvancedQuery(updated)
+                    },
+                    onClear: { filter.clear() },
+                    onToggleMatchMode: {
+                        var updated = advanced
+                        updated.matchMode = updated.matchMode == .all ? .any : .all
+                        filter.setAdvancedQuery(updated)
+                    }
+                )
+            } else if !filter.criteria.isEmpty {
                 FilterTokenBar(criteria: Binding(
                     get: { filter.criteria },
                     set: { filter.setCriteria($0) }
                 ))
+            }
+        }
+    }
+
+    /// Advanced Filter inside the album (FS-06.09 §4): Library's sheet, with
+    /// Apply, the album's own count, and no Save as Smart Album.
+    private func advancedFilterSheet(_ content: some View) -> some View {
+        content.sheet(isPresented: $isAdvancedFilterPresented) {
+            if let model {
+                AdvancedSearchSheet(
+                    initialQuery: filter.advancedQuery,
+                    dependencies: dependencies,
+                    confirmTitle: "Apply",
+                    allowsSaveAsSmartAlbum: false,
+                    countMatches: { query in await model.countMatching(query) },
+                    onApply: { query in filter.setAdvancedQuery(query) }
+                )
             }
         }
     }
@@ -635,7 +669,7 @@ struct AlbumDetailScreen: View {
             ),
             isShowingAllItems: !filter.isActive,
             onShowAllItems: { filter.clear() },
-            onAdvancedFilter: nil
+            onAdvancedFilter: { isAdvancedFilterPresented = true }
         ) {
             Picker("Sort By", selection: Binding(
                 get: { model.sortOrder },

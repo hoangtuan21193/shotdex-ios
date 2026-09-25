@@ -1,33 +1,69 @@
 import SwiftUI
 
-/// Advanced search for the Library: the same rule builder used to create a
-/// smart album (`RuleBuilderSections`), but applied as a transient query over
-/// the grid instead of a saved album. Applying sets
-/// `LibraryModel.advancedQuery` (mutually exclusive with the normal
-/// search/filter); "Save as Smart Album" hands the same rules to the editor.
+/// Advanced search: the same rule builder used to create a smart album
+/// (`RuleBuilderSections`), applied as a transient query over a grid instead
+/// of a saved album.
+///
+/// Library applies it to the whole library (mutually exclusive with its quick
+/// filters) and offers "Save as Smart Album". An album applies it inside the
+/// album only (FS-06.09): the confirm button says Apply, the live count is the
+/// album's, and there is no Save — a smart album saved from here would match
+/// the whole library, not the album.
 struct AdvancedSearchSheet: View {
-    let model: LibraryModel
     let dependencies: AppDependencies
-    /// Called after applying so the caller can switch to the Library tab.
-    var onApply: () -> Void
+    var confirmTitle: LocalizedStringKey = "Search"
+    var allowsSaveAsSmartAlbum = true
+    /// How many photos a query would show where it is being applied.
+    var countMatches: @MainActor (SmartAlbumQuery) async -> Int
+    var onApply: (SmartAlbumQuery) -> Void
+    /// Library refreshes its own suggestion lists when the sheet opens.
+    var onPresent: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
 
     @State private var query: SmartAlbumQuery
     @State private var matchCount: Int?
     @State private var isSaveAsAlbumPresented = false
+    @State private var suggestions = FilterSuggestionCatalog(brands: [], bodies: [], lenses: [], places: [])
 
-    init(model: LibraryModel, dependencies: AppDependencies, onApply: @escaping () -> Void) {
-        self.model = model
+    init(
+        initialQuery: SmartAlbumQuery?,
+        dependencies: AppDependencies,
+        confirmTitle: LocalizedStringKey = "Search",
+        allowsSaveAsSmartAlbum: Bool = true,
+        countMatches: @escaping @MainActor (SmartAlbumQuery) async -> Int,
+        onApply: @escaping (SmartAlbumQuery) -> Void,
+        onPresent: (() -> Void)? = nil
+    ) {
         self.dependencies = dependencies
+        self.onPresent = onPresent
+        self.confirmTitle = confirmTitle
+        self.allowsSaveAsSmartAlbum = allowsSaveAsSmartAlbum
+        self.countMatches = countMatches
         self.onApply = onApply
-        // Resume the active advanced query if there is one, else open on a
-        // single blank condition to fill (matching the album editor).
-        var initial = model.advancedQuery ?? .empty
+        // Resume the active query if there is one, else open on a single
+        // blank condition to fill (matching the album editor).
+        var initial = initialQuery ?? .empty
         if initial.rules.isEmpty {
             initial.rules = [SmartAlbumRule()]
         }
         _query = State(initialValue: initial)
+    }
+
+    /// Library's sheet: applies to `LibraryModel.advancedQuery`, then calls
+    /// `onApplied` so the caller can switch to the Library tab.
+    init(model: LibraryModel, dependencies: AppDependencies, onApplied: @escaping () -> Void) {
+        let queries = dependencies.libraryQueries
+        self.init(
+            initialQuery: model.advancedQuery,
+            dependencies: dependencies,
+            countMatches: { query in (try? await queries.count(matching: query)) ?? 0 },
+            onApply: { query in
+                model.advancedQuery = query
+                onApplied()
+            },
+            onPresent: { model.refreshFilterOptions() }
+        )
     }
 
     /// Rules complete enough to compile — the query actually applied/saved.
@@ -42,20 +78,22 @@ struct AdvancedSearchSheet: View {
             List {
                 RuleBuilderSections(
                     query: $query,
-                    brands: model.availableBrands,
-                    bodies: model.availableBodies,
-                    lenses: model.availableLenses,
-                    places: model.availablePlaces,
+                    brands: suggestions.brands,
+                    bodies: suggestions.bodies,
+                    lenses: suggestions.lenses,
+                    places: suggestions.places,
                     matchCount: matchCount
                 )
 
-                Section {
-                    Button {
-                        isSaveAsAlbumPresented = true
-                    } label: {
-                        Label("Save as Smart Album", systemImage: "plus.rectangle.on.rectangle")
+                if allowsSaveAsSmartAlbum {
+                    Section {
+                        Button {
+                            isSaveAsAlbumPresented = true
+                        } label: {
+                            Label("Save as Smart Album", systemImage: "plus.rectangle.on.rectangle")
+                        }
+                        .disabled(!canApply)
                     }
-                    .disabled(!canApply)
                 }
             }
             .listStyle(.insetGrouped)
@@ -66,7 +104,7 @@ struct AdvancedSearchSheet: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Search", action: apply)
+                    Button(confirmTitle, action: apply)
                         .fontWeight(.semibold)
                         .disabled(!canApply)
                 }
@@ -80,16 +118,18 @@ struct AdvancedSearchSheet: View {
                 )
             }
         }
-        .onAppear {
-            model.refreshFilterOptions()
+        .task {
+            onPresent?()
+            // Shared actor cache: the DISTINCT scans never block the sheet,
+            // and every presentation after the first reuses the catalog.
+            suggestions = await dependencies.filterSuggestions.load()
         }
         .task(id: query) { await recomputeCount(for: query) }
     }
 
     private func apply() {
         guard canApply else { return }
-        model.advancedQuery = cleaned
-        onApply()
+        onApply(cleaned)
         dismiss()
     }
 
@@ -104,10 +144,9 @@ struct AdvancedSearchSheet: View {
             matchCount = nil
             return
         }
-        let queries = dependencies.libraryQueries
         try? await Task.sleep(for: .milliseconds(300))
         guard !Task.isCancelled else { return }
-        let count = (try? await queries.count(matching: cleanedSnapshot)) ?? 0
+        let count = await countMatches(cleanedSnapshot)
         guard !Task.isCancelled, query == snapshot else { return }
         matchCount = count
     }

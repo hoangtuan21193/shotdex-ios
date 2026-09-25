@@ -83,6 +83,12 @@ final class SmartAlbumDetailModel {
         await load()
     }
 
+    /// How many of the album's photos a query would leave — the Advanced
+    /// sheet's live count, on top of the saved query.
+    func countMatching(_ advanced: SmartAlbumQuery) async -> Int {
+        (try? await libraryQueries.count(matchingAll: [.query(query), .query(advanced)])) ?? 0
+    }
+
     func load() async {
         isLoading = true
         defer { isLoading = false }

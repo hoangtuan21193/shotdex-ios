@@ -147,7 +147,7 @@ struct LibraryScreen: View {
         }
         .sheet(isPresented: $isAdvancedSearchPresented) {
             if let model {
-                AdvancedSearchSheet(model: model, dependencies: dependencies) {}
+                AdvancedSearchSheet(model: model, dependencies: dependencies, onApplied: {})
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }

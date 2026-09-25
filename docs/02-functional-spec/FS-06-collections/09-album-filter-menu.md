@@ -52,7 +52,9 @@ Nút Filter đã có ở Library thì phải có ở mọi lưới ảnh, và c�
     giữ kiểu chip nền phẳng, không có `x`; chip lọc là kính, có `x`. Hai kiểu trên một dòng là **cố ý**:
     nhìn là biết cái nào thuộc album, cái nào là bộ lọc tạm.
 - **Advanced Filter…** mở đúng sheet Advanced Search của Library. Nút xác nhận là **Apply** thay cho
-  Search; kết quả **chỉ tính trong album** và ở lại màn album, không chuyển sang tab Library.
+  Search; kết quả **chỉ tính trong album** và ở lại màn album, không chuyển sang tab Library. **Không có**
+  Save as Smart Album: smart album lưu từ đây sẽ khớp cả thư viện, không phải album.
+  - Lưới giữ **thứ tự của album** (kể cả Album Order), chỉ bỏ ảnh không khớp.
   - Advanced và lọc nhanh **loại trừ nhau trong một album**, như luật một nguồn của Library.
   - Số ảnh khớp trong sheet đếm **trong album**, không đếm cả thư viện.
 - **Smart Album: lọc chồng lên điều kiện đã lưu** — lọc nhanh hoặc Advanced đều **thu hẹp thêm** (VÀ) và
@@ -90,13 +92,13 @@ Nút Filter đã có ở Library thì phải có ở mọi lưới ảnh, và c�
 | AC-3 | album 40 ảnh, 5 Live Photo | Capture Kind ▸ Live Photos | 5 ô | `AlbumFilterTests.captureKinds` |
 | AC-4 | album người dùng, Sort đang là Album Order | Sort By → Oldest First, thoát rồi mở lại | ô đầu là ảnh chụp sớm nhất; mở lại vẫn Oldest First | ⚠️ chưa có |
 | AC-5 | album hệ thống Recently Added | mở Sort By | chỉ có Newest First · Oldest First, không có Album Order | chụp tay 26.5 `t1-recently-added-sort-26.png` |
-| AC-6 | smart album ISO ≥ 1600 khớp 20 ảnh, 6 favorite | Favorites | lưới 6 ô; chip điều kiện đã lưu không có `x`, chip `Favorite` có `x` | ⚠️ chưa có |
-| AC-7 | smart album bất kỳ | Sort By → Oldest First, thoát, mở lại | ô đầu là ảnh cũ nhất; vẫn Oldest First | ⚠️ chưa có |
+| AC-6 | smart album ISO ≥ 1600 khớp 20 ảnh, 6 favorite | Favorites | lưới 6 ô; chip điều kiện đã lưu không có `x`, chip `Favorite` có `x` | `DatabaseTests.smartAlbumQueryAndCriteria` + chụp tay 26.5 `t10-smart-favorites-26.png` (1 of 11) |
+| AC-7 | smart album bất kỳ | Sort By → Oldest First, thoát, mở lại | ô đầu là ảnh cũ nhất; vẫn Oldest First | chụp tay 26.5 `t9-smart-oldest-reopened-26.png` |
 | AC-8 | album không có video | Videos Only | câu `No photos match these filters.` + `Clear Filters`; chạm `Clear Filters` → đủ ảnh | chụp tay 26.5 `t5-empty-26.png` (Recently Added, Videos Only) |
 | AC-9 | album đang lọc Favorites | quay lại Collections rồi mở lại album | All Items, không có hàng chip; Sort giữ nguyên | chụp tay 26.5: mở lại album sau khi lọc → menu đánh dấu All Items |
 | AC-10 | đang chọn 3 ảnh, 1 ảnh không favorite | bật Favorites | pill đếm còn 2 | chụp tay 26.5 `t7-prune-26.png` (2 → 1); Library `t7b-library-prune-26.png` |
-| AC-11 | album 40 ảnh, 8 ảnh ISO ≥ 3200; thư viện có 500 ảnh ISO ≥ 3200 | Advanced Filter… → ISO ≥ 3200 → Apply | sheet đếm 8; lưới 8 ô; vẫn ở màn album | ⚠️ chưa có |
-| AC-12 | album đang lọc Advanced ISO ≥ 3200 | bật Favorites | điều kiện Advanced bị xoá, chỉ còn chip `Favorite` | ⚠️ chưa có |
+| AC-11 | album 40 ảnh, 8 ảnh ISO ≥ 3200; thư viện có 500 ảnh ISO ≥ 3200 | Advanced Filter… → ISO ≥ 3200 → Apply | sheet đếm 8; lưới 8 ô; vẫn ở màn album | `DatabaseTests.queryRestrictedToAssetIds` + chụp tay 26.5 `t11-advanced-sheet-26.png`, `t11-advanced-applied-26.png` |
+| AC-12 | album đang lọc Advanced ISO ≥ 3200 | bật Favorites | điều kiện Advanced bị xoá, chỉ còn chip `Favorite` | `AlbumFilterTests.quickAndAdvancedAreExclusive` + chụp tay 26.5 `t12-advanced-then-favorites-26.png` |
 | AC-13 | album đang lọc Favorites | chạm `x` trên chip | về All Items, hàng chip biến mất, hàng ảnh đầu không bị thanh trên che | chụp tay 26.5 `t6-chip-removed-26.png` |
 | AC-14 | quyền `.limited`, 5 trong 40 ảnh được cấp, 2 favorite | Favorites | 2 ô; biểu ngữ Manage vẫn hiện | ⚠️ chưa có ảnh — sim không đặt được quyền `.limited` bằng lệnh; code dùng chung biểu ngữ của Library |
 | AC-15 | Album, Smart Album, On This Day, Memories | chụp thanh trên, cả lúc chọn và không chọn | Album và Smart Album có nút Filter; On This Day và Memories không có | ⚠️ chưa có (ui-drive) |

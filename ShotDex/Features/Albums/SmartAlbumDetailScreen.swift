@@ -27,6 +27,7 @@ struct SmartAlbumDetailScreen: View {
     /// The Filter menu's narrowing (FS-06.09) — screen state, so the next
     /// visit starts from the whole album.
     @State private var filter = AlbumFilter()
+    @State private var isAdvancedFilterPresented = false
     @State private var isComparePresented = false
     @State private var compressionPresentation: CompressionPresentation?
     @State private var stackPresentation: PhotoStackPresentation?
@@ -206,6 +207,19 @@ struct SmartAlbumDetailScreen: View {
     /// selection (FS-01.06 §2) — kept out of `body` so it type-checks.
     private func filterWiring(_ content: some View) -> some View {
         content
+            .sheet(isPresented: $isAdvancedFilterPresented) {
+                if let model {
+                    // Inside the album: Apply, the album's own count, no Save.
+                    AdvancedSearchSheet(
+                        initialQuery: filter.advancedQuery,
+                        dependencies: dependencies,
+                        confirmTitle: "Apply",
+                        allowsSaveAsSmartAlbum: false,
+                        countMatches: { query in await model.countMatching(query) },
+                        onApply: { query in filter.setAdvancedQuery(query) }
+                    )
+                }
+            }
             .onChange(of: filter) {
                 Task { await model?.setFilter(filter) }
             }
@@ -233,8 +247,24 @@ struct SmartAlbumDetailScreen: View {
                     matchCount: model?.matchCount ?? 0,
                     unfilteredCount: filter.isActive ? model?.unfilteredCount : nil,
                     filterChips: filterChips,
-                    onEditFilter: nil,
+                    onEditFilter: filter.advancedQuery != nil ? { isAdvancedFilterPresented = true } : nil,
                     onClearFilter: filter.isActive ? { filter.clear() } : nil
+                )
+            } else if let advanced = filter.advancedQuery {
+                AdvancedSearchBar(
+                    query: advanced,
+                    onEdit: { isAdvancedFilterPresented = true },
+                    onRemoveRule: { ruleId in
+                        var updated = advanced
+                        updated.rules.removeAll { $0.id == ruleId }
+                        filter.setAdvancedQuery(updated)
+                    },
+                    onClear: { filter.clear() },
+                    onToggleMatchMode: {
+                        var updated = advanced
+                        updated.matchMode = updated.matchMode == .all ? .any : .all
+                        filter.setAdvancedQuery(updated)
+                    }
                 )
             } else if !filter.criteria.isEmpty {
                 FilterTokenBar(criteria: Binding(
@@ -246,7 +276,21 @@ struct SmartAlbumDetailScreen: View {
     }
 
     private var filterChips: [SmartAlbumConditionsBar.FilterChip] {
-        FilterTokenBar.tokens(for: filter.criteria).map { token in
+        if let advanced = filter.advancedQuery {
+            return advanced.validRules.map { rule in
+                SmartAlbumConditionsBar.FilterChip(
+                    id: rule.id.uuidString,
+                    label: rule.compactDisplaySummary,
+                    removalAccessibilityLabel: "Remove condition: \(rule.displaySummary)",
+                    onRemove: {
+                        var updated = advanced
+                        updated.rules.removeAll { $0.id == rule.id }
+                        filter.setAdvancedQuery(updated)
+                    }
+                )
+            }
+        }
+        return FilterTokenBar.tokens(for: filter.criteria).map { token in
             SmartAlbumConditionsBar.FilterChip(
                 id: token.id,
                 label: token.label,
@@ -268,7 +312,7 @@ struct SmartAlbumDetailScreen: View {
             ),
             isShowingAllItems: !filter.isActive,
             onShowAllItems: { filter.clear() },
-            onAdvancedFilter: nil
+            onAdvancedFilter: { isAdvancedFilterPresented = true }
         ) {
             Picker("Sort By", selection: Binding(
                 get: { model.sortOrder },

@@ -580,9 +580,15 @@ final class AlbumDetailModel: PhotoBrowsingSource {
     /// so an empty answer stays empty instead of being re-queried on every
     /// paging trigger.
     private var hasResolvedIndexedAssets = false
-    /// True between asking the index for a capture-kind album's list and the
-    /// answer arriving.
+    /// True between asking the index for a list (a capture-kind album's, or an
+    /// advanced query's) and the answer arriving.
     private var isAwaitingIndex = false
+    /// True once an advanced query's list has been asked for since the last
+    /// restart.
+    private var hasResolvedAdvanced = false
+    /// The album's ids, for counting a query inside it while the Advanced
+    /// sheet is being filled. Order does not matter for a count.
+    private var cachedAlbumIds: [String]?
     let sourceAlbum: PHAssetCollection?
     /// The album this model is paging, kept so a sort change can re-fetch.
     private let albumKind: AlbumItem.Kind
@@ -677,6 +683,7 @@ final class AlbumDetailModel: PhotoBrowsingSource {
     private func restart() {
         source = makeSource()
         hasResolvedIndexedAssets = false
+        hasResolvedAdvanced = false
         photos = []
         assetsById = [:]
         pageTriggerIds = []
@@ -692,6 +699,9 @@ final class AlbumDetailModel: PhotoBrowsingSource {
     /// Photos can answer itself. A capture-kind album's list comes from the
     /// index instead and resolves on first page.
     private func makeSource() -> AssetSource {
+        // An advanced query is answered by the index: the list arrives on the
+        // first page, like a capture-kind album's.
+        if filter.advancedQuery != nil { return .ordered([]) }
         let criteria = filter.criteria
         var stitched: [String] = []
         if criteria.mediaSubtypes.contains(.panorama) {
@@ -721,7 +731,9 @@ final class AlbumDetailModel: PhotoBrowsingSource {
     /// is not known yet, and an empty answer would clear the selection.
     func matchingIds(among ids: [String]) -> Set<String>? {
         guard !ids.isEmpty else { return [] }
-        if case .capturedKind = albumKind, !hasResolvedIndexedAssets || isAwaitingIndex { return nil }
+        if isAwaitingIndex { return nil }
+        if case .capturedKind = albumKind, !hasResolvedIndexedAssets { return nil }
+        if filter.advancedQuery != nil, !hasResolvedAdvanced { return nil }
         switch source {
         case .ordered(let assets):
             let wanted = Set(ids)
@@ -785,6 +797,12 @@ final class AlbumDetailModel: PhotoBrowsingSource {
             resolveIndexedAssets(for: subtype)
             return
         }
+        if filter.advancedQuery != nil, !hasResolvedAdvanced {
+            if case .capturedKind = albumKind {} else {
+                resolveAdvancedAssets()
+                return
+            }
+        }
         let start = nextFetchIndex
         let end = min(start + Self.pageSize, source.count)
         guard start < end else {
@@ -826,15 +844,16 @@ final class AlbumDetailModel: PhotoBrowsingSource {
     private func resolveIndexedAssets(for subtype: PhotoMediaSubtype) {
         hasResolvedIndexedAssets = true
         guard let libraryQueries else { return }
-        isAwaitingIndex = true
         var criteria = FilterCriteria()
         criteria.mediaSubtypes = [subtype]
         let sort = sortOrder.librarySort
-        let quick = filter.criteria
+        let narrowing: LibraryQueries.IndexFilter = filter.advancedQuery.map { .query($0) }
+            ?? .criteria(filter.criteria)
         let requestedFilter = filter
+        isAwaitingIndex = true
         Task { [weak self] in
             let ids = (try? await libraryQueries.gridItems(
-                matchingAll: [.criteria(criteria), .criteria(quick)],
+                matchingAll: [.criteria(criteria), narrowing],
                 sort: sort
             ))?.map(\.assetId) ?? []
             // A newer filter or order has started its own lookup.
@@ -847,6 +866,70 @@ final class AlbumDetailModel: PhotoBrowsingSource {
             self.source = .ordered(ids.compactMap { byId[$0] })
             self.loadNextPage()
         }
+    }
+
+    /// An album's Advanced Filter (FS-06.09): the album's ids in its current
+    /// order, the index asked which of those match, and the album's order
+    /// kept — so Album Order still means the album's own arrangement.
+    private func resolveAdvancedAssets() {
+        hasResolvedAdvanced = true
+        guard let libraryQueries, let advanced = filter.advancedQuery else { return }
+        isAwaitingIndex = true
+        let kind = albumKind
+        let order = sortOrder
+        let requestedFilter = filter
+        Task { [weak self] in
+            let ids = await Task.detached(priority: .userInitiated) {
+                Self.orderedIds(kind: kind, order: order)
+            }.value
+            let matching = Set((try? await libraryQueries.gridItems(
+                matchingAll: [.query(advanced)],
+                restrictedTo: ids,
+                sort: .default
+            ))?.map(\.assetId) ?? [])
+            // A newer filter or order has started its own lookup.
+            guard let self, self.filter == requestedFilter, self.sortOrder == order else { return }
+            let kept = ids.filter(matching.contains)
+            let byId = PhotoLibraryService.fetchAssets(ids: kept)
+                .reduce(into: [String: PHAsset]()) { $0[$1.localIdentifier] = $1 }
+            self.cachedAlbumIds = ids
+            self.isAwaitingIndex = false
+            self.source = .ordered(kept.compactMap { byId[$0] })
+            self.loadNextPage()
+        }
+    }
+
+    /// How many of the album's photos a query matches — the Advanced sheet's
+    /// live count, inside the album rather than across the library.
+    func countMatching(_ query: SmartAlbumQuery) async -> Int {
+        guard let libraryQueries else { return 0 }
+        if case .capturedKind(let subtype) = albumKind {
+            var criteria = FilterCriteria()
+            criteria.mediaSubtypes = [subtype]
+            return (try? await libraryQueries.count(matchingAll: [.criteria(criteria), .query(query)])) ?? 0
+        }
+        let ids: [String]
+        if let cachedAlbumIds {
+            ids = cachedAlbumIds
+        } else {
+            let kind = albumKind
+            let order = sortOrder
+            ids = await Task.detached(priority: .userInitiated) {
+                Self.orderedIds(kind: kind, order: order)
+            }.value
+            cachedAlbumIds = ids
+        }
+        return (try? await libraryQueries.count(matchingAll: [.query(query)], restrictedTo: ids)) ?? 0
+    }
+
+    /// Every id in the album, in display order. Walks the whole fetch, so it
+    /// runs off the main thread.
+    private nonisolated static func orderedIds(kind: AlbumItem.Kind, order: AlbumSortOrder) -> [String] {
+        guard case .fetch(let result) = fetch(kind: kind, order: order, filter: nil) else { return [] }
+        var ids: [String] = []
+        ids.reserveCapacity(result.count)
+        result.enumerateObjects { asset, _, _ in ids.append(asset.localIdentifier) }
+        return ids
     }
 
     func loadNextPageIfNeeded(currentItem: PhotoMetadata) {
