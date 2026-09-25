@@ -371,68 +371,11 @@ public enum PanoramaCIBlender {
     /// Anything the frame did not see is sent far outside its extent, where
     /// Core Image samples transparent — so "this frame has nothing here" needs
     /// no branch anywhere downstream.
-    static let warpKernel = CIWarpKernel(source: """
-        kernel vec2 panoramaWarp(vec2 origin, float canvasHeight, float canvasFocal, float kind,
-                                 vec3 m0, vec3 m1, vec3 m2,
-                                 float sourceFocal, vec2 sourceCentre, vec2 sourceSize,
-                                 float distortion) {
-            vec2 d = destCoord();
-            float u = d.x + origin.x;
-            float v = (canvasHeight - d.y) + origin.y;
-
-            vec3 dir;
-            if (kind < 0.5) {
-                float theta = u / canvasFocal;
-                float phi = v / canvasFocal;
-                float c = cos(phi);
-                dir = vec3(c * sin(theta), sin(phi), c * cos(theta));
-            } else if (kind < 1.5) {
-                float theta = u / canvasFocal;
-                dir = vec3(sin(theta), v / canvasFocal, cos(theta));
-            } else {
-                dir = vec3(u / canvasFocal, v / canvasFocal, 1.0);
-            }
-
-            vec3 local = vec3(dot(m0, dir), dot(m1, dir), dot(m2, dir));
-            if (local.z <= 0.000000001) {
-                return vec2(-100000.0, -100000.0);
-            }
-            // The lens, put back: the ray is where the point would have
-            // landed through a pinhole, and the photograph has it pushed out
-            // by the glass.
-            float nx = local.x / local.z;
-            float ny = local.y / local.z;
-            float bend = 1.0 + distortion * (nx * nx + ny * ny);
-            float sx = sourceCentre.x + sourceFocal * nx * bend;
-            float sy = sourceCentre.y + sourceFocal * ny * bend;
-            if (sx < 0.0 || sy < 0.0 || sx > sourceSize.x - 1.0 || sy > sourceSize.y - 1.0) {
-                return vec2(-100000.0, -100000.0);
-            }
-            // Half a pixel, and it matters: the reference measures a frame in
-            // index space, where 0 is the centre of the first pixel, while
-            // Core Image measures in continuous space, where that centre is at
-            // 0.5 — and its y runs the other way. Getting this wrong shifts
-            // every sample by half a pixel, which is invisible on a gradient
-            // and glaring on anything with fine detail.
-            return vec2(sx + 0.5, sourceSize.y - 0.5 - sy);
-        }
-        """)
+    static let warpKernel = CoreImageKernelLibrary.kit.warpKernel(named: "panoramaWarp")
 
     /// How far inside its own frame a sample is, 0 at the border and 1 in the
     /// middle. The same ramp the CPU reference uses.
-    static let rampKernel = CIColorKernel(source: """
-        kernel vec4 panoramaRamp(float width, float height) {
-            vec2 d = destCoord();
-            // Back to the index space the reference works in, same half pixel
-            // as the warp.
-            float x = d.x - 0.5;
-            float y = height - 0.5 - d.y;
-            float dx = min(x, width - 1.0 - x) / (width * 0.5);
-            float dy = min(y, height - 1.0 - y) / (height * 0.5);
-            float w = max(0.0001, min(dx, dy));
-            return vec4(w, w, w, 1.0);
-        }
-        """)
+    static let rampKernel = CoreImageKernelLibrary.kit.colorKernel(named: "panoramaRamp")
 
     /// Running colour total: the frame's colour times its say.
     ///
@@ -442,99 +385,37 @@ public enum PanoramaCIBlender {
     /// own alpha is not multiplied in again, because a `__sample` is already
     /// premultiplied and doing it twice makes the ramp fall off twice as fast
     /// at every frame border.
-    static let accumulateColourKernel = CIColorKernel(source: """
-        kernel vec4 panoramaAccumulateColour(__sample total, __sample colour, __sample weight, float gain) {
-            if (colour.a <= 0.0) { return total; }
-            // A sample straddling the frame's border comes back premultiplied
-            // by a fraction of coverage. Undoing that recovers the colour the
-            // frame actually has there, and lets the weight alone decide how
-            // much of it to take — otherwise the border darkens or lightens
-            // depending on which way the sampler fell.
-            vec3 unpremultiplied = colour.rgb / colour.a;
-            float w = weight.r * colour.a;
-            return vec4(total.rgb + unpremultiplied * gain * w, 1.0);
-        }
-        """)
+    static let accumulateColourKernel = CoreImageKernelLibrary.kit.colorKernel(named: "panoramaAccumulateColour")
 
     /// Running weight total, in the same units, so the divide is exact.
-    static let accumulateWeightKernel = CIColorKernel(source: """
-        kernel vec4 panoramaAccumulateWeight(__sample total, __sample colour, __sample weight) {
-            if (colour.a <= 0.0) { return total; }
-            float w = weight.r * colour.a;
-            return vec4(total.rgb + vec3(w, w, w), 1.0);
-        }
-        """)
+    static let accumulateWeightKernel = CoreImageKernelLibrary.kit.colorKernel(named: "panoramaAccumulateWeight")
 
     /// Running maximum of two weight images, for finding which frame owns a
     /// pixel without a kernel that takes them all at once.
-    static let maximumKernel = CIColorKernel(source: """
-        kernel vec4 panoramaMaximum(__sample a, __sample b) {
-            float wa = a.r * a.a;
-            float wb = b.r * b.a;
-            float w = max(wa, wb);
-            return vec4(w, w, w, 1.0);
-        }
-        """)
+    static let maximumKernel = CoreImageKernelLibrary.kit.colorKernel(named: "panoramaMaximum")
 
     /// One frame's claim: it owns the pixel if its say is the largest there.
     ///
     /// A hard claim, softened per band afterwards. Starting soft instead blurs
     /// fine detail from two frames together, which is the double image
     /// multi-band blending exists to avoid.
-    static let maskKernel = CIColorKernel(source: """
-        kernel vec4 panoramaMask(__sample weight, __sample maximum) {
-            float w = weight.r * weight.a;
-            float m = (w > 0.0 && w >= maximum.r - 0.000001) ? 1.0 : 0.0;
-            return vec4(m, m, m, 1.0);
-        }
-        """)
+    static let maskKernel = CoreImageKernelLibrary.kit.colorKernel(named: "panoramaMask")
 
-    static let differenceKernel = CIColorKernel(source: """
-        kernel vec4 panoramaDifference(__sample fine, __sample coarse) {
-            return vec4(fine.rgb - coarse.rgb, 1.0);
-        }
-        """)
+    static let differenceKernel = CoreImageKernelLibrary.kit.colorKernel(named: "panoramaDifference")
 
-    static let gainKernel = CIColorKernel(source: """
-        kernel vec4 panoramaGain(__sample colour, float gain) {
-            if (colour.a <= 0.0) { return vec4(0.0, 0.0, 0.0, 0.0); }
-            return vec4(colour.rgb / colour.a * gain, colour.a);
-        }
-        """)
+    static let gainKernel = CoreImageKernelLibrary.kit.colorKernel(named: "panoramaGain")
 
-    static let bandKernel = CIColorKernel(source: """
-        kernel vec4 panoramaBand(__sample total, __sample detail, __sample mask) {
-            return vec4(total.rgb + detail.rgb * mask.r, 1.0);
-        }
-        """)
+    static let bandKernel = CoreImageKernelLibrary.kit.colorKernel(named: "panoramaBand")
 
-    static let bandWeightKernel = CIColorKernel(source: """
-        kernel vec4 panoramaBandWeight(__sample total, __sample mask) {
-            return vec4(total.rgb + vec3(mask.r, mask.r, mask.r), 1.0);
-        }
-        """)
+    static let bandWeightKernel = CoreImageKernelLibrary.kit.colorKernel(named: "panoramaBandWeight")
 
-    static let sumKernel = CIColorKernel(source: """
-        kernel vec4 panoramaSum(__sample a, __sample b) {
-            return vec4(a.rgb + b.rgb, 1.0);
-        }
-        """)
+    static let sumKernel = CoreImageKernelLibrary.kit.colorKernel(named: "panoramaSum")
 
     /// Puts the draft's coverage back on the banded result, so the crop that
     /// follows reads the same shape either way.
-    static let coverageKernel = CIColorKernel(source: """
-        kernel vec4 panoramaCoverage(__sample colour, __sample reference) {
-            if (reference.a <= 0.0) { return vec4(0.0, 0.0, 0.0, 0.0); }
-            return vec4(colour.rgb, 1.0);
-        }
-        """)
+    static let coverageKernel = CoreImageKernelLibrary.kit.colorKernel(named: "panoramaCoverage")
 
     /// Divide the totals back out. Where nothing landed, stay transparent —
     /// that is the coverage the crop later reads.
-    static let resolveKernel = CIColorKernel(source: """
-        kernel vec4 panoramaResolve(__sample colourTotal, __sample weightTotal) {
-            if (weightTotal.r <= 0.0) { return vec4(0.0, 0.0, 0.0, 0.0); }
-            return vec4(colourTotal.rgb / weightTotal.r, 1.0);
-        }
-        """)
+    static let resolveKernel = CoreImageKernelLibrary.kit.colorKernel(named: "panoramaResolve")
 }

@@ -596,12 +596,5 @@ public enum PanoramaBoundaryWarp {
     /// The y flip is the usual one: the map was built with rows counted from
     /// the top and Core Image counts them from the bottom, and the
     /// coordinates stored in it are in the same top-down space.
-    static let warpKernel = CIKernel(source: """
-        kernel vec4 panoramaBoundaryWarp(sampler picture, sampler map, float height) {
-            vec2 d = destCoord();
-            vec4 where = sample(map, samplerTransform(map, d));
-            vec2 source = vec2(where.r + 0.5, height - 0.5 - where.g);
-            return sample(picture, samplerTransform(picture, source));
-        }
-        """)
+    static let warpKernel = CoreImageKernelLibrary.kit.kernel(named: "panoramaBoundaryWarp")
 }

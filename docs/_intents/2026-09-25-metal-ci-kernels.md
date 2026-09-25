@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan |
 | Ngày | 2026-09-25 |
 | Trạng thái | accepted (2026-09-25) |
-| Tiến độ | **đang làm** (2026-09-26) — task 5/8 (stack/focus), 24/40 kernel Metal, 9/14 AC xanh, footprint stack xanh |
+| Tiến độ | **đang làm** (2026-09-26) — task 6/8 (panorama), 38/40 kernel Metal, 10/14 AC xanh |
 | Nguồn | Issue navigator của Xcode (45 warning `init(source:)` deprecated) + hook `build-check.py` |
 | Spec sinh ra từ đây | [FS-16](../02-functional-spec/FS-16-metal-kernels.md) |
 
