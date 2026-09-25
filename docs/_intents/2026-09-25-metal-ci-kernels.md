@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan |
 | Ngày | 2026-09-25 |
 | Trạng thái | accepted (2026-09-25) |
-| Tiến độ | **chưa làm** (2026-09-25) — spec FS-16, 14 AC |
+| Tiến độ | **chưa làm** (2026-09-25) — spec FS-16, 14 AC; plan [2026-09-25-fs-16-metal-kernels](../_plans/2026-09-25-fs-16-metal-kernels.md) đã duyệt, 9 task |
 | Nguồn | Issue navigator của Xcode (45 warning `init(source:)` deprecated) + hook `build-check.py` |
 | Spec sinh ra từ đây | [FS-16](../02-functional-spec/FS-16-metal-kernels.md) |
 
