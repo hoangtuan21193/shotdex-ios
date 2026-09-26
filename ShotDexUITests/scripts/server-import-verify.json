@@ -1,0 +1,347 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Continue",
+   "type": "button",
+   "seconds": 4
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "systemTap",
+   "label": "Allow Full Access",
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "screenshot",
+   "name": "00-launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "00b-prompt"
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "screenshot",
+   "name": "01-library"
+  },
+  {
+   "action": "tap",
+   "label": "Settings",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.7,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.7,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.7,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.7,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.7,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "screenshot",
+   "name": "02-settings-row"
+  },
+  {
+   "action": "tap",
+   "label": "File Servers",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "03-servers-empty"
+  },
+  {
+   "action": "dump",
+   "name": "03-servers-empty",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "label": "Add Connection",
+   "type": "button",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "04-form-empty"
+  },
+  {
+   "action": "typeText",
+   "label": "Host",
+   "type": "textField",
+   "text": "127.0.0.1"
+  },
+  {
+   "action": "typeText",
+   "label": "Port",
+   "type": "textField",
+   "text": "4450"
+  },
+  {
+   "action": "screenshot",
+   "name": "04-port"
+  },
+  {
+   "action": "typeText",
+   "label": "Username",
+   "type": "textField",
+   "text": "tester\n"
+  },
+  {
+   "action": "typeText",
+   "text": "secret\n"
+  },
+  {
+   "action": "screenshot",
+   "name": "04-password"
+  },
+  {
+   "action": "typeText",
+   "text": "photos\n"
+  },
+  {
+   "action": "typeText",
+   "text": "Photos\n"
+  },
+  {
+   "action": "tap",
+   "label": "Test Connection",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "screenshot",
+   "name": "05-test-connection"
+  },
+  {
+   "action": "dump",
+   "name": "05-test-connection",
+   "type": "staticText"
+  },
+  {
+   "action": "tap",
+   "label": "Save",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "06-servers-list"
+  },
+  {
+   "action": "back"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Done",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Collections",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "screenshot",
+   "name": "90-utilities"
+  },
+  {
+   "action": "tap",
+   "label": "On Server"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "91-on-server"
+  },
+  {
+   "action": "tap",
+   "label": "127.0.0.1"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "tap",
+   "label": "Import"
+  },
+  {
+   "action": "wait",
+   "seconds": 25
+  },
+  {
+   "action": "screenshot",
+   "name": "92-grid"
+  },
+  {
+   "action": "tap",
+   "label": "Select",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "HAT_8841.JPG"
+  },
+  {
+   "action": "tap",
+   "label": "DSC_0750.NEF"
+  },
+  {
+   "action": "screenshot",
+   "name": "93-selected"
+  },
+  {
+   "action": "tap",
+   "label": "Download 2"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "94-sheet"
+  },
+  {
+   "action": "tap",
+   "label": "Download",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 25
+  },
+  {
+   "action": "screenshot",
+   "name": "95-result"
+  },
+  {
+   "action": "tap",
+   "label": "Done",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "96-in-library"
+  }
+ ]
+}

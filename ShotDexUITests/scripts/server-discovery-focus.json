@@ -1,0 +1,133 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "screenshot",
+   "name": "00-launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "00b-prompt"
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "screenshot",
+   "name": "01-library"
+  },
+  {
+   "action": "tap",
+   "label": "Settings",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "02-settings-row"
+  },
+  {
+   "action": "tap",
+   "label": "Sharing and Export"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "02b-sharing-export"
+  },
+  {
+   "action": "tap",
+   "label": "File Servers"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "03-servers-empty"
+  },
+  {
+   "action": "dump",
+   "name": "03-servers-empty",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "label": "Add Connection",
+   "type": "button",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "typeText",
+   "label": "Host",
+   "type": "textField",
+   "text": "12"
+  },
+  {
+   "action": "screenshot",
+   "name": "F0-typing"
+  },
+  {
+   "action": "wait",
+   "seconds": 12
+  },
+  {
+   "action": "screenshot",
+   "name": "F1-after-scan"
+  },
+  {
+   "action": "typeText",
+   "text": "7.0.0.1"
+  },
+  {
+   "action": "screenshot",
+   "name": "F2-kept-typing"
+  }
+ ]
+}

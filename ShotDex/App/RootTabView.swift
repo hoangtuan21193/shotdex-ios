@@ -300,7 +300,10 @@ struct RootTabView: View {
             // Same as the iOS 26 path: presented before the overlays, not after.
             .settingsSheet(isPresented: $navigation.isSettingsSheetPresented, libraryModel: libraryModel)
             .overlay(alignment: .bottom) {
-                if navigation.selectionBar == nil {
+                // `hidesTabBar` too: a screen with its own selection bar (the
+                // server browser's Download) needs the slot without publishing
+                // a `selectionBar`.
+                if navigation.selectionBar == nil, !navigation.hidesTabBar {
                     LiquidGlassTabBar(
                         selection: legacyTabSelection,
                         onReselect: { tab in

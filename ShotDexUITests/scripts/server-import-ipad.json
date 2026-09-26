@@ -1,0 +1,316 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Continue",
+   "type": "button",
+   "seconds": 4
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "systemTap",
+   "label": "Allow Full Access",
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "screenshot",
+   "name": "00-launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "00b-prompt"
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "screenshot",
+   "name": "01-library"
+  },
+  {
+   "action": "tap",
+   "label": "Settings",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "02-settings-row"
+  },
+  {
+   "action": "tap",
+   "label": "Sharing and Export"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "02b-sharing-export"
+  },
+  {
+   "action": "tap",
+   "label": "File Servers"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "03-servers-empty"
+  },
+  {
+   "action": "dump",
+   "name": "03-servers-empty",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "label": "Add Connection",
+   "type": "button",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "04-form-empty"
+  },
+  {
+   "action": "typeText",
+   "label": "Host",
+   "type": "textField",
+   "text": "127.0.0.1"
+  },
+  {
+   "action": "typeText",
+   "label": "Port",
+   "type": "textField",
+   "text": "4450"
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.29
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "04-port"
+  },
+  {
+   "action": "typeText",
+   "label": "Username",
+   "type": "textField",
+   "text": "tester"
+  },
+  {
+   "action": "typeText",
+   "label": "Password",
+   "text": "secret\n"
+  },
+  {
+   "action": "typeText",
+   "text": "photos\n"
+  },
+  {
+   "action": "typeText",
+   "text": "Photos\n"
+  },
+  {
+   "action": "screenshot",
+   "name": "04-password"
+  },
+  {
+   "action": "tap",
+   "label": "Save",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "06-servers-list"
+  },
+  {
+   "action": "tap",
+   "label": "Done",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Collections",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "screenshot",
+   "name": "A0-utilities"
+  },
+  {
+   "action": "tap",
+   "label": "On Server"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "A1-on-server"
+  },
+  {
+   "action": "tap",
+   "label": "127.0.0.1"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "tap",
+   "label": "Import"
+  },
+  {
+   "action": "wait",
+   "seconds": 25
+  },
+  {
+   "action": "screenshot",
+   "name": "A2-grid"
+  },
+  {
+   "action": "tap",
+   "label": "Select",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "HAT_8841.JPG"
+  },
+  {
+   "action": "tap",
+   "label": "DSC_0750.NEF"
+  },
+  {
+   "action": "screenshot",
+   "name": "A3-selected"
+  },
+  {
+   "action": "tap",
+   "label": "Download 2"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "A4-sheet"
+  },
+  {
+   "action": "tap",
+   "label": "Download",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 25
+  },
+  {
+   "action": "screenshot",
+   "name": "A5-result"
+  },
+  {
+   "action": "tap",
+   "label": "Done"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "A6-in-library"
+  }
+ ]
+}

@@ -13,9 +13,9 @@ final class AppNavigation {
 
     /// Set while a screen is in photo multi-select mode. The iOS 26 native tab
     /// bar is hidden per-screen via `.toolbar(.hidden, for: .tabBar)`.
-    /// Legacy: the pre-26 tab chrome used to gate its custom tab bar on this, but
-    /// it now swaps to the selection bar on `selectionBar != nil` instead. Kept
-    /// as a harmless signal; screens still set it.
+    /// Legacy: the pre-26 custom tab bar hides on this as well as on
+    /// `selectionBar != nil` — the server browser (FS-17) picks photos with its
+    /// own Download bar and sets only this.
     var hidesTabBar = false
 
     /// Published by the screen currently in multi-select so the root tab view

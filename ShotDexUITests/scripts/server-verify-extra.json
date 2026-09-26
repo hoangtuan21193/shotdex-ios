@@ -1,0 +1,143 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Settings",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.7,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.7,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.7,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.7,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.7,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "tap",
+   "label": "File Servers",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Add Connection",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 7
+  },
+  {
+   "action": "tap",
+   "label": "Protocol",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "WebDAV",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "typeText",
+   "label": "Name",
+   "type": "textField",
+   "text": "DAV HTTPS"
+  },
+  {
+   "action": "typeText",
+   "label": "Host",
+   "type": "textField",
+   "text": "127.0.0.1\n"
+  },
+  {
+   "action": "typeText",
+   "text": "8443"
+  },
+  {
+   "action": "typeText",
+   "label": "Username",
+   "type": "textField",
+   "text": "tester\n"
+  },
+  {
+   "action": "typeText",
+   "text": "secret\n"
+  },
+  {
+   "action": "typeText",
+   "text": "dav\n"
+  },
+  {
+   "action": "typeText",
+   "text": "Photos\n"
+  },
+  {
+   "action": "tap",
+   "x": 0.86,
+   "y": 0.29
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "80-http-warning"
+  },
+  {
+   "action": "dump",
+   "name": "80-http-warning",
+   "type": "staticText"
+  }
+ ]
+}

@@ -1,0 +1,525 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "screenshot",
+   "name": "00-launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "00b-prompt"
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "screenshot",
+   "name": "01-library"
+  },
+  {
+   "action": "tap",
+   "label": "Settings",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.7,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.7,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.7,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.7,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.7,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "screenshot",
+   "name": "02-settings-row"
+  },
+  {
+   "action": "tap",
+   "label": "File Servers",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "03-servers-empty"
+  },
+  {
+   "action": "dump",
+   "name": "03-servers-empty",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "label": "Add Connection",
+   "type": "button",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "04-form-empty"
+  },
+  {
+   "action": "typeText",
+   "label": "Host",
+   "type": "textField",
+   "text": "127.0.0.1"
+  },
+  {
+   "action": "typeText",
+   "label": "Port",
+   "type": "textField",
+   "text": "4450"
+  },
+  {
+   "action": "screenshot",
+   "name": "04-port"
+  },
+  {
+   "action": "typeText",
+   "label": "Username",
+   "type": "textField",
+   "text": "tester\n"
+  },
+  {
+   "action": "typeText",
+   "text": "secret\n"
+  },
+  {
+   "action": "screenshot",
+   "name": "04-password"
+  },
+  {
+   "action": "typeText",
+   "text": "photos\n"
+  },
+  {
+   "action": "typeText",
+   "text": "Photos\n"
+  },
+  {
+   "action": "tap",
+   "label": "Test Connection",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "screenshot",
+   "name": "05-test-connection"
+  },
+  {
+   "action": "dump",
+   "name": "05-test-connection",
+   "type": "staticText"
+  },
+  {
+   "action": "tap",
+   "label": "Save",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "06-servers-list"
+  },
+  {
+   "action": "tap",
+   "label": "Add Connection",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 7
+  },
+  {
+   "action": "tap",
+   "label": "Protocol",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "WebDAV",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "typeText",
+   "label": "Name",
+   "type": "textField",
+   "text": "DAV HTTPS"
+  },
+  {
+   "action": "typeText",
+   "label": "Host",
+   "type": "textField",
+   "text": "127.0.0.1\n"
+  },
+  {
+   "action": "typeText",
+   "text": "8443"
+  },
+  {
+   "action": "typeText",
+   "label": "Username",
+   "type": "textField",
+   "text": "tester\n"
+  },
+  {
+   "action": "typeText",
+   "text": "secret\n"
+  },
+  {
+   "action": "typeText",
+   "text": "dav\n"
+  },
+  {
+   "action": "typeText",
+   "text": "Photos\n"
+  },
+  {
+   "action": "screenshot",
+   "name": "70-webdav-form"
+  },
+  {
+   "action": "dump",
+   "name": "70-webdav-form"
+  },
+  {
+   "action": "tap",
+   "label": "Test Connection",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "screenshot",
+   "name": "71-trust"
+  },
+  {
+   "action": "dump",
+   "name": "71-trust",
+   "type": "staticText"
+  },
+  {
+   "action": "tap",
+   "label": "Trust",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "screenshot",
+   "name": "72-connected"
+  },
+  {
+   "action": "tap",
+   "label": "Save",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "back"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Done",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Select photos",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Photo, file type",
+   "type": "cell",
+   "index": 0
+  },
+  {
+   "action": "tap",
+   "label": "Photo, file type",
+   "type": "cell",
+   "index": 1
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Upload to"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "81-submenu-three"
+  },
+  {
+   "action": "tap",
+   "label": "DAV HTTPS"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "screenshot",
+   "name": "82-dav-prepare"
+  },
+  {
+   "action": "tap",
+   "label": "Upload",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 20
+  },
+  {
+   "action": "screenshot",
+   "name": "83-dav-result"
+  },
+  {
+   "action": "tap",
+   "label": "Done",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Collections",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "tap",
+   "label": "On Server"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "127.0.0.1"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "tap",
+   "label": "Import"
+  },
+  {
+   "action": "wait",
+   "seconds": 20
+  },
+  {
+   "action": "tap",
+   "label": "Select",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "scan.png"
+  },
+  {
+   "action": "tap",
+   "label": "PB290154.ORF"
+  },
+  {
+   "action": "tap",
+   "label": "Download 2"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "New Album\u2026"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "typeText",
+   "text": "Picks"
+  },
+  {
+   "action": "tap",
+   "label": "Create",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "84-new-album"
+  },
+  {
+   "action": "tap",
+   "label": "Download",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 25
+  },
+  {
+   "action": "screenshot",
+   "name": "85-album-result"
+  },
+  {
+   "action": "tap",
+   "label": "Done",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "86-grid-after-album"
+  }
+ ]
+}

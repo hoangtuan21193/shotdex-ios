@@ -23,6 +23,15 @@ struct ServerBrowserScreen: View {
             }
             .task { await model.load() }
             .refreshable { await model.load(force: true) }
+            // The Download bar takes the tab bar's place while picking, as the
+            // Library's selection does; before iOS 26 the tab bar is drawn over
+            // the content and would hide the bar (seen on 18.6).
+            .onChange(of: model.isSelecting) { _, selecting in navigation.hidesTabBar = selecting }
+            .toolbar(model.isSelecting ? .hidden : .automatic, for: .tabBar)
+            .onDisappear {
+                if model.isSelecting { model.isSelecting = false }
+                navigation.hidesTabBar = false
+            }
             .sheet(item: Binding(get: { downloadModel.map(DownloadSheetItem.init) }, set: { if $0 == nil { downloadModel = nil } })) { item in
                 ServerDownloadSheet(model: item.model, onShow: { destination in
                     if destination == .library {
@@ -116,6 +125,10 @@ struct ServerBrowserScreen: View {
                             }
                         }
                         footer
+                    }
+                    // Before iOS 26 the floating tab bar sits over the scroll view.
+                    if #unavailable(iOS 26.0) {
+                        Color.clear.frame(height: 90)
                     }
                 }
             }
