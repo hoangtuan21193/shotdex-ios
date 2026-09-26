@@ -32,7 +32,7 @@ Tất cả là tính năng mới; không AC nào đã đạt. Cột "Bằng ch�
 | 15.AC-31, 32, 36 | ❌ | — | `WebDAVFileClient` trên `URLSession` + `PropfindParser` (Domain, test bằng XML mẫu) |
 | 15.AC-33 | ❌ | host key SFTP đã có `HostKeyTrust` (`Domain/ServerUpload/HostKeyTrust.swift`) | tổng quát thành `TrustedFingerprint` dùng cho cả chứng chỉ TLS; đổi cột `hostKeyFingerprint` → `trustedFingerprint` |
 | 15.AC-34 | ❌ | `FileServerFormScreen` chưa có ô theo giao thức | ô Path/Use HTTPS/TLS Mode + câu cảnh báo |
-| 15.AC-35 | ❌ | iOS không có API FTP | ⚠️ thư viện FTP/FTPS — chờ khảo sát (§Rủi ro) |
+| 15.AC-35 | ❌ | iOS không có API FTP; khảo sát: không thư viện Swift nào đạt | ⚠️ người dùng chọn: tự viết (Secure Transport) / libcurl+OpenSSL / FTP thường trước — FS-15.05 §5 |
 
 Không có dòng ⚠️ "lệch" (tài liệu và code không mâu thuẫn — chỉ thiếu). Các ⚠️ CẦN QUYẾT trong spec giữ nguyên để
 người dùng chốt khi duyệt plan.
@@ -86,7 +86,7 @@ Sau mỗi task: build, test của task, sửa cột "Chứng minh bằng" và d�
 | **Preview nhúng theo hãng**: mới đo được CR3 (và JPEG). NEF/ARW/RAF/ORF/RW2/DNG chưa có file mẫu | task 5 cần file mẫu — tải vài file từ raw.pixls.us (CC0) **cần người dùng cho phép tải**; không có thì kích thước đoạn đọc chốt 512 KB và AC-5 (icon) là đường lùi |
 | Hộp Local Network **không hiện trên simulator** (quyền mạng nội bộ chỉ áp trên máy thật) | 15.AC-27 chỉ chứng minh được trên iPhone thật; simulator chứng minh phần tìm máy |
 | Bonjour trên simulator dùng mạng của Mac | `dns-sd -R` quảng bá server giả lập được — đủ cho 15.AC-28 |
-| **Thư viện FTP/FTPS** chưa chọn; TLS kênh dữ liệu cần tái dùng phiên | chờ khảo sát; không có thư viện đạt → task 14 thành tự viết trên Network framework, ước lượng lớn nhất trong plan — có thể tách thành plan riêng |
+| **FTP/FTPS**: không thư viện Swift đạt; server phổ biến đòi tái dùng phiên TLS ở kênh dữ liệu, Network framework không làm được | đề xuất: task 14 tách thành plan riêng sau khi người dùng chọn đường (FS-15.05 §5); nếu tự viết thì bọc TLS sau protocol, test với vsftpd `require_ssl_reuse=YES`, FileZilla Server, pure-ftpd |
 | Photos từ chối WebP/AVIF/GIF động | đo ở task 8 trên simulator; từ chối thì lỗi theo file (spec đã cho phép) |
 | Migration v21 (bảng mới) và v22 (thêm cột, **đổi tên cột**) | app chưa phát hành: đổi tên cột bằng `ALTER TABLE … RENAME COLUMN`, không cần đường lùi; `photo_metadata` không đụng |
 | Lưới server hàng nghìn file | liệt kê một lần, thumbnail chỉ cho ô sắp hiện, tối đa 4 luồng, huỷ khi cuộn qua; `perf-profiler` soát |

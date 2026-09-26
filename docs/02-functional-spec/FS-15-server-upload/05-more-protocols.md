@@ -60,9 +60,19 @@ Cùng một danh sách thao tác `RemoteFileClient` (FS-15.02 §4, FS-15.02 §2a
 ## 5. Thư viện
 
 - WebDAV: `URLSession`, không thêm gì.
-- FTP/FTPS: iOS không còn API FTP. ⚠️ CẦN QUYẾT: thư viện nào — chờ kết quả khảo sát (giấy phép MIT/BSD/Apache,
-  iOS 17+, passive, stream, `REST`, TLS kênh dữ liệu có **tái dùng phiên TLS** — vsftpd/FileZilla Server bắt buộc).
-  Không có thư viện đạt thì tự viết trên Network framework, và điểm khó nhất là tái dùng phiên TLS ở kênh dữ liệu.
+- FTP/FTPS: iOS không còn API FTP. Khảo sát 2026-09-26: **không có thư viện Swift nào đạt** — FileProvider (MIT)
+  bỏ từ 2019, Rebekka dựa trên CFFTPStream đã bỏ, SwiftFTPClient chỉ upload không TLS, FTPClientLib là GPL.
+- Điểm khó: vsftpd (`require_ssl_reuse=YES` mặc định), pure-ftpd, proftpd, FileZilla Server **từ chối kênh dữ liệu**
+  nếu nó không tái dùng phiên TLS của kênh lệnh. Network framework **không làm được** (không lộ session, không
+  bật TLS giữa chừng cho `AUTH TLS` — Apple DTS, developer.apple.com/forums/thread/759316). SwiftNIO-SSL không có API
+  tái dùng phiên.
+- ⚠️ CẦN QUYẾT — ba đường:
+
+  | Đường | Được | Mất |
+  |---|---|---|
+  | **Tự viết**: TCP thường + Secure Transport (`SSLSetPeerID` chung cho kênh lệnh và dữ liệu) | không thêm dependency; đủ FTP + FTPS explicit/implicit, `REST`, MLSD; ~1 500 dòng | Secure Transport **deprecated** từ iOS 13, chỉ TLS 1.2; phải bọc sau protocol để thay được |
+  | **libcurl + OpenSSL** (xcframework tự build) | đủ mọi thứ, TLS 1.3, tái dùng phiên sẵn | thêm vài MB, lớp C, tự build/cập nhật OpenSSL; privacy manifest |
+  | **Chỉ FTP thường trước** (Network framework, không TLS), FTPS sau | nhỏ nhất (~800 dòng) | FTPS để sau; FTP thường không mã hoá |
 
 ## 6. Dữ liệu
 
