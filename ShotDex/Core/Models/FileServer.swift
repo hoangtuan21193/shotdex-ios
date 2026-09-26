@@ -146,3 +146,46 @@ extension ServerUploadRecord: FetchableRecord, MutablePersistableRecord {
         id = inserted.rowID
     }
 }
+
+/// One server file saved into the library as (part of) an asset (FS-17 §4).
+/// Like `ServerUploadRecord`, it keeps the server's name so it survives the
+/// server being deleted.
+struct ServerDownloadRecord: Codable, Hashable, Sendable {
+    var id: Int64?
+    var assetId: String
+    var serverId: String?
+    var serverName: String
+    var remotePath: String
+    var byteCount: Int64
+    /// Lowercase hex, of what was written to the library.
+    var sha256: String
+    var downloadedAt: Int
+
+    init(
+        id: Int64? = nil,
+        assetId: String,
+        serverId: String?,
+        serverName: String,
+        remotePath: String,
+        byteCount: Int64,
+        sha256: String,
+        downloadedAt: Int = Int(Date().timeIntervalSince1970)
+    ) {
+        self.id = id
+        self.assetId = assetId
+        self.serverId = serverId
+        self.serverName = serverName
+        self.remotePath = remotePath
+        self.byteCount = byteCount
+        self.sha256 = sha256
+        self.downloadedAt = downloadedAt
+    }
+}
+
+extension ServerDownloadRecord: FetchableRecord, MutablePersistableRecord {
+    static let databaseTableName = "server_downloads"
+
+    mutating func didInsert(_ inserted: InsertionSuccess) {
+        id = inserted.rowID
+    }
+}

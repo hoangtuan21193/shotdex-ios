@@ -484,6 +484,25 @@ final class AppDatabase: Sendable {
             }
         }
 
+        // FS-17: files brought down from a server into the library. Its own
+        // table for the same reason as `server_uploads` — the user made these
+        // rows — and it outlives both the server and the photo.
+        migrator.registerMigration("v21-serverDownloads") { db in
+            try db.create(table: "server_downloads") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("assetId", .text).notNull()
+                t.column("serverId", .text)
+                    .references("file_servers", onDelete: .setNull)
+                t.column("serverName", .text).notNull()
+                t.column("remotePath", .text).notNull()
+                t.column("byteCount", .integer).notNull()
+                t.column("sha256", .text).notNull()
+                t.column("downloadedAt", .integer).notNull()
+            }
+            try db.create(index: "server_downloads_server_path", on: "server_downloads", columns: ["serverId", "remotePath"])
+            try db.create(index: "server_uploads_server_path", on: "server_uploads", columns: ["serverId", "remotePath"])
+        }
+
         return migrator
     }
 }
