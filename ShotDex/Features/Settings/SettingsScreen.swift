@@ -841,7 +841,7 @@ struct SettingsScreen: View {
 
     private var privacySection: some View {
         Section {
-            Text("Photos and metadata never leave this device. The one exception is a support message you write yourself, which carries no photos.")
+            Text("Photos and metadata stay on this device. They leave it only when you upload them to a server you set up, or in a support message you write yourself, which carries no photos.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
             Button(Row.clearLocalMetadataIndex.title, role: .destructive) {
