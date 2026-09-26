@@ -10,11 +10,12 @@ enum RemoteFolderListing {
             .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
     }
 
-    /// A typed New Folder name, trimmed; nil when empty or when it holds a
-    /// `/`, which would make it a path.
+    /// A typed New Folder or Rename name, trimmed; nil when empty, when it
+    /// holds a `/` (a path), or when it starts with `.` — the browser hides
+    /// dot files, so the new item would vanish (FS-17.01 §2c).
     static func validatedName(_ typed: String) -> String? {
         let name = typed.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty, !name.contains("/"), name != ".", name != ".." else { return nil }
+        guard !name.isEmpty, !name.contains("/"), !name.hasPrefix(".") else { return nil }
         return name
     }
 }

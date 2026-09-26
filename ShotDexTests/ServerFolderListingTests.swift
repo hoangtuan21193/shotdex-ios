@@ -28,6 +28,16 @@ import Testing
         #expect(contents.hiddenFileCount == 2)
     }
 
+    /// AC-23: the files that are not photos are kept, in Finder order, for
+    /// Show All Files.
+    @Test func showAllFilesKeepsOthersDimmed() {
+        let entries = [file("b.JPG"), file("notes.txt"), file("D.MOV"), file(".DS_Store"), file("clip10.mp4"), file("clip2.mp4")]
+        let contents = ServerFolderListing.contents(of: entries)
+        #expect(contents.photos.map(\.id) == ["b.JPG"])
+        #expect(contents.others.map(\.name) == ["clip2.mp4", "clip10.mp4", "D.MOV", "notes.txt"])
+        #expect(contents.hiddenFileCount == 4)
+    }
+
     /// AC-2: the image set comes from ImageIO, not a hand list.
     @Test func formatsFromImageIO() {
         for name in ["a.heic", "a.dng", "a.cr3", "a.arw", "a.raf", "a.tif", "a.webp", "a.jpg", "a.png"] {

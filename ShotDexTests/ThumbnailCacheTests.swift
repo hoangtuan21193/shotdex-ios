@@ -90,6 +90,25 @@ import Testing
         #expect(ServerPhotoSort.dateModified.sorted(photos, ascending: false).map(\.id) == ["IMG_10.CR3", "IMG_2.JPG", "scan.png"])
     }
 
+    /// FS-17 AC-22: Size (a pair counts both files) and Files' starting
+    /// directions.
+    @Test func sizeAndFilesStyleDirection() {
+        func entry(_ name: String, _ megabytes: Int64) -> RemoteEntry {
+            RemoteEntry(name: name, isDirectory: false, size: megabytes * 1_000_000, modified: nil)
+        }
+        let photos = [
+            ServerPhoto(files: [entry("a.JPG", 3)]),
+            ServerPhoto(files: [entry("b.CR3", 12)]),
+            ServerPhoto(files: [entry("c.JPG", 4), entry("c.CR3", 20)]),
+        ]
+        #expect(ServerPhotoSort.size.sorted(photos, ascending: false).map(\.id) == ["c.JPG", "b.CR3", "a.JPG"])
+        #expect(ServerPhotoSort.size.sorted(photos, ascending: true).map(\.id) == ["a.JPG", "b.CR3", "c.JPG"])
+        #expect(ServerPhotoSort.name.defaultAscending)
+        #expect(!ServerPhotoSort.size.defaultAscending)
+        #expect(!ServerPhotoSort.dateModified.defaultAscending)
+        #expect(!ServerPhotoSort.dateTaken.defaultAscending)
+    }
+
     @Test func undatedGoLast() {
         let photos = [ServerPhoto(files: [RemoteEntry(name: "b.png", isDirectory: false, size: 1, modified: nil)]), photo("a.jpg", modified: "2026-01-01")]
         #expect(ServerPhotoSort.dateModified.sorted(photos, ascending: false).map(\.id) == ["a.jpg", "b.png"])

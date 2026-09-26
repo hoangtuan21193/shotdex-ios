@@ -16,7 +16,7 @@ final class ServerFolderModel {
     let session: ServerBrowseSession
     let folder: String
     private(set) var listing: Listing = .loading
-    private(set) var contents = ServerFolderContents(folders: [], photos: [], hiddenFileCount: 0)
+    private(set) var contents = ServerFolderContents.empty
     /// `contents.photos` in the chosen order.
     private(set) var photos: [ServerPhoto] = []
     private(set) var sort: ServerPhotoSort

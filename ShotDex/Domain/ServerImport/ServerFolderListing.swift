@@ -41,13 +41,22 @@ struct ServerPhoto: Identifiable, Hashable, Sendable {
     var modified: Date? { files.compactMap(\.modified).max() }
 }
 
-/// What a folder shows: subfolders, photos, and how many files were left out.
+/// What a folder shows: subfolders, photos, and the files that are not
+/// photos.
 struct ServerFolderContents: Equatable, Sendable {
     var folders: [String]
     var photos: [ServerPhoto]
-    /// Files that are neither images nor hidden (videos, sidecars, documents)
-    /// — the "M other files hidden" line.
-    var hiddenFileCount: Int
+    /// Files that are neither images nor dot files (videos, sidecars,
+    /// documents): hidden unless Show All Files is on (FS-17.01 §2c), in
+    /// Finder order.
+    var others: [RemoteEntry] = []
+    /// Folder write times, for the List view's second line.
+    var folderModified: [String: Date] = [:]
+
+    /// The "M other files hidden" line.
+    var hiddenFileCount: Int { others.count }
+
+    static let empty = ServerFolderContents(folders: [], photos: [])
 }
 
 /// Turns a raw listing into what the browser shows (FS-17.01 §2): images
@@ -81,14 +90,16 @@ enum ServerFolderListing {
     static func contents(of entries: [RemoteEntry], imageExtensions: Set<String> = imageExtensions) -> ServerFolderContents {
         var folders: [String] = []
         var images: [RemoteEntry] = []
-        var hidden = 0
+        var others: [RemoteEntry] = []
+        var folderModified: [String: Date] = [:]
         for entry in entries where !entry.name.hasPrefix(".") && entry.name != "." && entry.name != ".." {
             if entry.isDirectory {
                 folders.append(entry.name)
+                folderModified[entry.name] = entry.modified
             } else if isImage(entry.name, extensions: imageExtensions) {
                 images.append(entry)
             } else {
-                hidden += 1
+                others.append(entry)
             }
         }
 
@@ -108,7 +119,8 @@ enum ServerFolderListing {
         return ServerFolderContents(
             folders: RemoteFolderListing.visible(folders),
             photos: photos.sorted { $0.id.localizedStandardCompare($1.id) == .orderedAscending },
-            hiddenFileCount: hidden
+            others: others.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending },
+            folderModified: folderModified
         )
     }
 }
