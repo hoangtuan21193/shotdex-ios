@@ -5,7 +5,7 @@
 | Spec | [FS-15.04](../02-functional-spec/FS-15-server-upload/04-find-servers.md) AC-24…30 · [FS-17](../02-functional-spec/FS-17-import-from-server/README.md) AC-1…16 · [FS-15.05](../02-functional-spec/FS-15-server-upload/05-more-protocols.md) AC-31…36 |
 | Intent | [server-discovery](../_intents/2026-09-26-server-discovery.md) · [import-from-server](../_intents/2026-09-26-import-from-server.md) · [more-file-protocols](../_intents/2026-09-26-more-file-protocols.md) |
 | Ngày | 2026-09-26 |
-| Duyệt | người dùng: "tự động làm spec và plan" — **dừng ở đây chờ duyệt**, chưa code |
+| Duyệt | người dùng duyệt 2026-09-26 ("duyệt plan") |
 
 Ba khối, làm theo thứ tự **A → B → C**: A nhỏ và dùng ngay trong form; B cần range read, thêm vào hai client đang
 có; C thêm client mới — lúc đó client mới chỉ việc làm đủ hợp đồng `RemoteFileClient` (gồm range read) là B chạy
