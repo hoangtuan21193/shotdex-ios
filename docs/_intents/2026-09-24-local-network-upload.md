@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-24 |
 | Trạng thái | accepted — theo lệnh người dùng 2026-09-24 "chạy spec … plan rồi code auto luôn" |
-| Tiến độ | **gần xong** (2026-09-26) — phản hồi 2026-09-26 (connection trong menu, chọn folder, folder theo ngày tuỳ chọn) xong 5/5 task; 21/23 AC có bằng chứng — AC-14/20–22 thiếu iOS 18.6/iPad/Duo, AC-16 thiếu máy thật |
+| Tiến độ | **gần xong** (2026-09-26, /verify) — 21/23 AC xanh; thiếu AC-14 trên Duo, AC-16 trên máy thật; gate chưa xanh trọn: 1357/1358 test qua, `IndexTrafficMonitorTests.halfOpenAllowsExactlyOneProbe` hỏng do thời gian khi máy tải (chạy riêng xanh, ngoài FS-15) |
 | Nguồn | phản hồi người dùng |
 | Spec sinh ra từ đây | [FS-15 — Upload lên file server](../02-functional-spec/FS-15-server-upload/README.md) |
 
