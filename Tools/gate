@@ -44,17 +44,21 @@ log_metric() {
 }
 
 GREEN_FILE="build/metrics/gate-last-green"
+# The first `git` on PATH may not run on this machine (an x86 build on Apple
+# silicon without Rosetta fails with "Bad CPU type"); fall back to Apple's.
+GIT=git
+if ! git --version >/dev/null 2>&1; then GIT=/usr/bin/git; fi
 
 # Commit xanh gần nhất vẫn đúng cho HEAD không?
 already_green() {
   [ "$FORCE" = 1 ] && return 1
   [ -f "$GREEN_FILE" ] || return 1
   local green; green="$(cat "$GREEN_FILE")"
-  git cat-file -e "$green^{commit}" 2>/dev/null || return 1
+  "$GIT" cat-file -e "$green^{commit}" 2>/dev/null || return 1
   # Mọi thay đổi chưa commit — kể cả file mới — đều vào build.
-  [ -z "$(git status --porcelain --untracked-files=normal)" ] || return 1
-  git merge-base --is-ancestor "$green" HEAD || return 1
-  local changed; changed="$(git diff --name-only "$green" HEAD)"
+  [ -z "$("$GIT" status --porcelain --untracked-files=normal)" ] || return 1
+  "$GIT" merge-base --is-ancestor "$green" HEAD || return 1
+  local changed; changed="$("$GIT" diff --name-only "$green" HEAD)"
   [ -z "$changed" ] && return 0
   ! printf '%s\n' "$changed" | grep -qvE '^docs/|\.md$|^Tools/|^ShotDexUITests/scripts/'
 }
@@ -70,8 +74,8 @@ if ! run build build; then log_metric 1 $((SECONDS - START)); exit 1; fi
 if ! run test test;  then log_metric 1 $((SECONDS - START)); exit 1; fi
 log_metric 0 $((SECONDS - START))
 # Chỉ ghi khi cây sạch: build vừa chạy đúng là HEAD, không kèm sửa chưa commit.
-if [ -z "$(git status --porcelain --untracked-files=normal)" ]; then
+if [ -z "$("$GIT" status --porcelain --untracked-files=normal)" ]; then
   mkdir -p build/metrics
-  git rev-parse HEAD > "$GREEN_FILE"
+  "$GIT" rev-parse HEAD > "$GREEN_FILE"
 fi
 echo "gate: xanh ($((SECONDS - START))s)"
