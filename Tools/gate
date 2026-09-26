@@ -1,11 +1,18 @@
 #!/bin/bash
 # Cổng chặn trước khi push: build + unit test. Đỏ là dừng.
 #
-#   Tools/gate [device-name]
+#   Tools/gate [device-name]          (--force: chạy lại dù đã xanh)
+#
+# Bỏ qua build + test khi commit này đã xanh: cây làm việc sạch và từ commit xanh
+# gần nhất chỉ đổi thứ không vào app hay unit test (docs/, *.md, Tools/, script
+# ui-drive trong ShotDexUITests/scripts/). Lượt bỏ qua không ghi mẫu vào
+# gate.jsonl — Tools/bands-check đo thời gian chạy thật.
 #
 # Cài thành pre-push hook: Tools/install-hooks
 set -uo pipefail
 
+FORCE=0
+if [ "${1:-}" = "--force" ]; then FORCE=1; shift; fi
 DEVICE="${1:-iPhone 17}"
 PROJECT="ShotDex.xcodeproj"
 SCHEME="ShotDex"
@@ -36,9 +43,35 @@ log_metric() {
     "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" "$2" >> build/metrics/gate.jsonl
 }
 
+GREEN_FILE="build/metrics/gate-last-green"
+
+# Commit xanh gần nhất vẫn đúng cho HEAD không?
+already_green() {
+  [ "$FORCE" = 1 ] && return 1
+  [ -f "$GREEN_FILE" ] || return 1
+  local green; green="$(cat "$GREEN_FILE")"
+  git cat-file -e "$green^{commit}" 2>/dev/null || return 1
+  # Mọi thay đổi chưa commit — kể cả file mới — đều vào build.
+  [ -z "$(git status --porcelain --untracked-files=normal)" ] || return 1
+  git merge-base --is-ancestor "$green" HEAD || return 1
+  local changed; changed="$(git diff --name-only "$green" HEAD)"
+  [ -z "$changed" ] && return 0
+  ! printf '%s\n' "$changed" | grep -qvE '^docs/|\.md$|^Tools/|^ShotDexUITests/scripts/'
+}
+
+if already_green; then
+  echo "gate: xanh (đã chạy cho $(cut -c1-7 "$GREEN_FILE"); từ đó không đổi code) — bỏ qua. Chạy lại: Tools/gate --force"
+  exit 0
+fi
+
 START=$SECONDS
 echo "gate: $SCHEME trên $DEVICE"
 if ! run build build; then log_metric 1 $((SECONDS - START)); exit 1; fi
 if ! run test test;  then log_metric 1 $((SECONDS - START)); exit 1; fi
 log_metric 0 $((SECONDS - START))
+# Chỉ ghi khi cây sạch: build vừa chạy đúng là HEAD, không kèm sửa chưa commit.
+if [ -z "$(git status --porcelain --untracked-files=normal)" ]; then
+  mkdir -p build/metrics
+  git rev-parse HEAD > "$GREEN_FILE"
+fi
 echo "gate: xanh ($((SECONDS - START))s)"
