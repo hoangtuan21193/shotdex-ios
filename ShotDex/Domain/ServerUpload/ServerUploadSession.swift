@@ -132,7 +132,7 @@ actor ServerUploadSession {
     /// The conflict preview's "On Server" side: the remote file on local disk.
     func downloadForPreview(_ remotePath: String) async throws -> URL {
         let url = workDirectory.appendingPathComponent("preview-\(UUID().uuidString)-\(ServerUploadPath.lastComponent(of: remotePath))")
-        try await client.download(remotePath, to: url)
+        try await client.download(remotePath, to: url, progress: { _ in })
         return url
     }
 

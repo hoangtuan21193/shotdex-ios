@@ -97,9 +97,49 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
         return FileChecksum.hex(SHA256.hash(data: data))
     }
 
-    func download(_ path: String, to localURL: URL) async throws {
-        guard let data = lock.withLock({ storage[path] }) else { throw RemoteFileError.other("missing") }
+    /// Write times by path; files without one list a nil date.
+    var modified: [String: Date] = [:]
+    /// Bytes handed out by `readRange` and `download` — how a test proves a
+    /// thumbnail read only the head of a file.
+    private(set) var bytesRead = 0
+    /// Paths whose download comes back one byte short.
+    var truncateDownload: Set<String> = []
+    /// Download number (1-based) that loses the connection.
+    var dropConnectionOnDownload: Int?
+    private(set) var downloadCount = 0
+
+    func entries(in directory: String) async throws -> [RemoteEntry] {
+        lock.withLock {
+            let files = storage.filter { ServerUploadPath.parent(of: $0.key) == directory }.map { path, data in
+                RemoteEntry(name: ServerUploadPath.lastComponent(of: path), isDirectory: false, size: Int64(data.count), modified: modified[path])
+            }
+            let folders = directories.filter { !$0.isEmpty && ServerUploadPath.parent(of: $0) == directory }.map {
+                RemoteEntry(name: ServerUploadPath.lastComponent(of: $0), isDirectory: true, size: 0, modified: nil)
+            }
+            return files + folders
+        }
+    }
+
+    func readRange(_ path: String, offset: Int64, length: Int) async throws -> Data {
+        try lock.withLock {
+            guard let data = storage[path] else { throw RemoteFileError.other("missing \(path)") }
+            let start = min(Int(offset), data.count)
+            let slice = data.subdata(in: start..<min(data.count, start + length))
+            bytesRead += slice.count
+            return slice
+        }
+    }
+
+    func download(_ path: String, to localURL: URL, progress: @escaping @Sendable (Int64) -> Void) async throws -> String {
+        let number = lock.withLock { downloadCount += 1; return downloadCount }
+        try Task.checkCancellation()
+        if dropConnectionOnDownload == number { throw RemoteFileError.connectionLost }
+        guard var data = lock.withLock({ storage[path] }) else { throw RemoteFileError.other("missing") }
+        if truncateDownload.contains(path) { data = data.dropLast() }
+        lock.withLock { bytesRead += data.count }
         try data.write(to: localURL)
+        progress(Int64(data.count))
+        return FileChecksum.hex(SHA256.hash(data: data))
     }
 
     func move(_ source: String, to destination: String) async throws {

@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-26 |
 | Trạng thái | accepted — người dùng duyệt 2026-09-26 |
-| Tiến độ | **chưa làm** (2026-09-26) — spec xong, plan [2026-09-26](../_plans/2026-09-26-server-discovery-protocols-import.md) |
+| Tiến độ | **đang làm** (2026-09-26) — task 4/10 của plan (1/7 khối B), 2/17 AC xanh |
 | Nguồn | phản hồi người dùng (2026-09-26) |
 | Spec sinh ra từ đây | [FS-17](../02-functional-spec/FS-17-import-from-server/README.md) — 16 AC |
 

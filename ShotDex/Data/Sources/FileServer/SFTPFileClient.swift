@@ -183,21 +183,75 @@ final class SFTPFileClient: RemoteFileClient, @unchecked Sendable {
         }
     }
 
-    func download(_ path: String, to localURL: URL) async throws {
+    func entries(in directory: String) async throws -> [RemoteEntry] {
+        do {
+            let listing = try await connected().listDirectory(atPath: directory.isEmpty ? "." : directory)
+            return listing.flatMap(\.components)
+                .filter { $0.filename != "." && $0.filename != ".." }
+                .map { component in
+                    RemoteEntry(
+                        name: component.filename,
+                        isDirectory: Self.isDirectory(component),
+                        size: Int64(component.attributes.size ?? 0),
+                        modified: component.attributes.accessModificationTime?.modificationTime
+                    )
+                }
+        } catch {
+            if Self.isNotFound(error) { return [] }
+            throw Self.map(error, host: server.host, path: directory)
+        }
+    }
+
+    func readRange(_ path: String, offset: Int64, length: Int) async throws -> Data {
+        do {
+            let file = try await connected().openFile(filePath: path, flags: .read)
+            var result = Data()
+            do {
+                var position = UInt64(offset)
+                while result.count < length {
+                    try Task.checkCancellation()
+                    var buffer = try await file.read(from: position, length: UInt32(min(length - result.count, Self.chunk * 8)))
+                    guard buffer.readableBytes > 0, let bytes = buffer.readBytes(length: buffer.readableBytes) else { break }
+                    result.append(contentsOf: bytes)
+                    position += UInt64(bytes.count)
+                }
+                try? await file.close()
+            } catch {
+                try? await file.close()
+                throw error
+            }
+            return result
+        } catch let error as CancellationError {
+            throw error
+        } catch {
+            throw Self.map(error, host: server.host, path: path)
+        }
+    }
+
+    func download(_ path: String, to localURL: URL, progress: @escaping @Sendable (Int64) -> Void) async throws -> String {
         do {
             FileManager.default.createFile(atPath: localURL.path, contents: nil)
             let out = try FileHandle(forWritingTo: localURL)
             defer { try? out.close() }
             let file = try await connected().openFile(filePath: path, flags: .read)
+            var hasher = SHA256()
             var offset: UInt64 = 0
-            while true {
-                try Task.checkCancellation()
-                var buffer = try await file.read(from: offset, length: UInt32(Self.chunk * 8))
-                guard buffer.readableBytes > 0, let bytes = buffer.readBytes(length: buffer.readableBytes) else { break }
-                try out.write(contentsOf: bytes)
-                offset += UInt64(bytes.count)
+            do {
+                while true {
+                    try Task.checkCancellation()
+                    var buffer = try await file.read(from: offset, length: UInt32(Self.chunk * 8))
+                    guard buffer.readableBytes > 0, let bytes = buffer.readBytes(length: buffer.readableBytes) else { break }
+                    try out.write(contentsOf: bytes)
+                    hasher.update(data: bytes)
+                    offset += UInt64(bytes.count)
+                    progress(Int64(offset))
+                }
+                try? await file.close()
+            } catch {
+                try? await file.close()
+                throw error
             }
-            try? await file.close()
+            return FileChecksum.hex(hasher.finalize())
         } catch let error as CancellationError {
             throw error
         } catch {

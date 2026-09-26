@@ -27,8 +27,17 @@ protocol RemoteFileClient: AnyObject, Sendable {
     /// Reads the file back from the server in chunks and hashes it — the
     /// check that what landed is what was sent.
     func sha256(of path: String, progress: @escaping @Sendable (Int64) -> Void) async throws -> String
-    /// Writes the remote file to a local one (the conflict preview).
-    func download(_ path: String, to localURL: URL) async throws
+    /// Files and folders in `directory` with size and write time — the
+    /// photo browser (FS-17.01). Empty when the directory does not exist.
+    func entries(in directory: String) async throws -> [RemoteEntry]
+    /// Up to `length` bytes from `offset` — the embedded-preview read of
+    /// FS-17.01 §3. Shorter at the end of the file.
+    func readRange(_ path: String, offset: Int64, length: Int) async throws -> Data
+    /// Writes the remote file to a local one in chunks, hashing on the way;
+    /// returns the SHA-256 (lowercase hex). The conflict preview ignores it,
+    /// the download to the library checks it (FS-17.02 §2).
+    @discardableResult
+    func download(_ path: String, to localURL: URL, progress: @escaping @Sendable (Int64) -> Void) async throws -> String
     /// Renames within the server. The destination must not exist.
     func move(_ source: String, to destination: String) async throws
     func remove(_ path: String) async throws

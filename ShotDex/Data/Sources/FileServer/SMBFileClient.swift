@@ -167,9 +167,63 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
         }
     }
 
-    func download(_ path: String, to localURL: URL) async throws {
+    func entries(in directory: String) async throws -> [RemoteEntry] {
         do {
-            try await connected().download(path: path, localPath: localURL, overwrite: true)
+            let files = try await connected().listDirectory(path: directory)
+            return files
+                .filter { $0.name != "." && $0.name != ".." }
+                .map { RemoteEntry(name: $0.name, isDirectory: $0.isDirectory, size: Int64($0.size), modified: $0.lastWriteTime) }
+        } catch {
+            if Self.isNotFound(error) { return [] }
+            throw Self.map(error, host: server.host, path: directory)
+        }
+    }
+
+    func readRange(_ path: String, offset: Int64, length: Int) async throws -> Data {
+        do {
+            let reader = try connected().fileReader(path: path)
+            defer { Task { try? await reader.close() } }
+            var result = Data()
+            var position = UInt64(offset)
+            while result.count < length {
+                try Task.checkCancellation()
+                let want = min(length - result.count, FileChecksum.chunkSize)
+                let chunk = try await reader.read(offset: position, length: UInt32(want))
+                guard !chunk.isEmpty else { break }
+                result.append(chunk)
+                position += UInt64(chunk.count)
+            }
+            return result
+        } catch let error as CancellationError {
+            throw error
+        } catch {
+            throw Self.map(error, host: server.host, path: path)
+        }
+    }
+
+    func download(_ path: String, to localURL: URL, progress: @escaping @Sendable (Int64) -> Void) async throws -> String {
+        do {
+            let client = try connected()
+            let size = try await client.fileStat(path: path).size
+            let reader = client.fileReader(path: path)
+            FileManager.default.createFile(atPath: localURL.path, contents: nil)
+            let out = try FileHandle(forWritingTo: localURL)
+            defer { try? out.close() }
+            var hasher = SHA256()
+            var offset: UInt64 = 0
+            while offset < size {
+                try Task.checkCancellation()
+                let chunk = try await reader.read(offset: offset, length: UInt32(FileChecksum.chunkSize))
+                guard !chunk.isEmpty else { break }
+                try out.write(contentsOf: chunk)
+                hasher.update(data: chunk)
+                offset += UInt64(chunk.count)
+                progress(Int64(offset))
+            }
+            try? await reader.close()
+            return FileChecksum.hex(hasher.finalize())
+        } catch let error as CancellationError {
+            throw error
         } catch {
             throw Self.map(error, host: server.host, path: path)
         }

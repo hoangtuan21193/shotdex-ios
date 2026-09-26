@@ -8,8 +8,8 @@ trên simulator với server giả lập 127.0.0.1.
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | folder có `A.CR3`, `A.JPG`, `B.heic`, `C.png`, `D.MOV`, `notes.txt`, `.DS_Store`, `E.NEF`, `e.jpeg`, folder `2025`, `.snapshots` | liệt kê | 1 folder (`2025`); 4 ô: `A` (RAW+JPG), `B` (HEIC), `C` (PNG), `E` (RAW+JPG, ghép không phân biệt hoa thường); dòng cuối "4 photos · 2 other files hidden" | `ServerFolderListingTests.imagesOnlyAndPairs` ⚠️ chưa có |
-| AC-2 | danh sách đuôi | phân loại | đuôi ảnh lấy từ `CGImageSourceCopyTypeIdentifiers` ∩ `UTType.image`; `heic`, `dng`, `cr3`, `arw`, `raf`, `tif`, `webp` là ảnh; `mov`, `txt`, `xmp` không | `ServerFolderListingTests.formatsFromImageIO` ⚠️ chưa có |
+| AC-1 | folder có `A.CR3`, `A.JPG`, `B.heic`, `C.png`, `D.MOV`, `notes.txt`, `.DS_Store`, `E.NEF`, `e.jpeg`, folder `2025`, `.snapshots` | liệt kê | 1 folder (`2025`); 4 ô: `A` (RAW+JPG), `B` (HEIC), `C` (PNG), `E` (RAW+JPG, ghép không phân biệt hoa thường); dòng cuối "4 photos · 2 other files hidden" | `ServerFolderListingTests.imagesOnlyAndPairs` |
+| AC-2 | danh sách đuôi | phân loại | đuôi ảnh lấy từ `CGImageSourceCopyTypeIdentifiers` ∩ `UTType.image`; `heic`, `dng`, `cr3`, `arw`, `raf`, `tif`, `webp` là ảnh; `mov`, `txt`, `xmp` không | `ServerFolderListingTests.formatsFromImageIO` |
 | AC-3 | file CR3 mẫu 31.9 MB (`HAT_8841.CR3`) | làm thumbnail với đoạn 512 KB đầu | ra ảnh ≥ 320 px từ JPEG `PRVW` nhúng; chỉ đọc 512 KB (đếm byte client giả) | `RemoteThumbnailTests.cr3EmbeddedPreview` ⚠️ chưa có |
 | AC-4 | JPEG 6.1 MB có EXIF thumbnail 160×120 | làm thumbnail | ảnh 160 px dùng tạm; vì < 320 px và file không phải RAW ≤ 25 MB → tải trọn, thumbnail cuối 400 px | `RemoteThumbnailTests.smallExifThumbUpgrades` ⚠️ chưa có |
 | AC-5 | RAW 60 MB không có preview trong 512 KB đầu | làm thumbnail | không tải trọn; ô hiện icon định dạng + tên | `RemoteThumbnailTests.rawWithoutPreviewStaysIcon` ⚠️ chưa có |
