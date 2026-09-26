@@ -77,6 +77,16 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
         }
     }
 
+    func folderNames(in directory: String) async throws -> Set<String> {
+        do {
+            let files = try await connected().listDirectory(path: directory)
+            return Set(files.filter { $0.isDirectory && $0.name != "." && $0.name != ".." }.map(\.name))
+        } catch {
+            if Self.isNotFound(error) { return [] }
+            throw Self.map(error, host: server.host, path: directory)
+        }
+    }
+
     func createDirectory(_ path: String) async throws {
         let client = try connected()
         var current = ""

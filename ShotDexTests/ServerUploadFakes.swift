@@ -31,7 +31,14 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
         }
     }
 
-    func connect() async throws {}
+    /// What `connect()` throws — a server that turns the login away.
+    var connectError: RemoteFileError?
+    private(set) var connectCount = 0
+
+    func connect() async throws {
+        lock.withLock { connectCount += 1 }
+        if let connectError { throw connectError }
+    }
     func disconnect() async {}
 
     func fileSize(at path: String) async throws -> Int64? {
@@ -45,6 +52,12 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
     func fileNames(in directory: String) async throws -> Set<String> {
         lock.withLock {
             Set(storage.keys.filter { ServerUploadPath.parent(of: $0) == directory }.map(ServerUploadPath.lastComponent(of:)))
+        }
+    }
+
+    func folderNames(in directory: String) async throws -> Set<String> {
+        lock.withLock {
+            Set(directories.filter { !$0.isEmpty && ServerUploadPath.parent(of: $0) == directory }.map(ServerUploadPath.lastComponent(of:)))
         }
     }
 

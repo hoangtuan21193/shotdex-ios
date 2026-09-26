@@ -16,6 +16,9 @@ protocol RemoteFileClient: AnyObject, Sendable {
     func directoryExists(_ path: String) async throws -> Bool
     /// Names in `directory`; empty when the directory does not exist.
     func fileNames(in directory: String) async throws -> Set<String>
+    /// Folders directly inside `directory` — the folder browser. Empty when
+    /// the directory does not exist.
+    func folderNames(in directory: String) async throws -> Set<String>
     /// Creates `path` and every missing parent.
     func createDirectory(_ path: String) async throws
     /// Streams the local file up in chunks. `progress` receives bytes sent so

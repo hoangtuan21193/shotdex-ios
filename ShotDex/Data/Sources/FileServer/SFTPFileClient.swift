@@ -92,6 +92,26 @@ final class SFTPFileClient: RemoteFileClient, @unchecked Sendable {
         }
     }
 
+    func folderNames(in directory: String) async throws -> Set<String> {
+        do {
+            let listing = try await connected().listDirectory(atPath: directory.isEmpty ? "." : directory)
+            return Set(listing.flatMap(\.components).filter(Self.isDirectory).map(\.filename).filter { $0 != "." && $0 != ".." })
+        } catch {
+            if Self.isNotFound(error) { return [] }
+            throw Self.map(error, host: server.host, path: directory)
+        }
+    }
+
+    /// The mode's file-type bits when the server sends them, else the `d` that
+    /// starts an `ls -l` line. Symlinks count as neither: following one could
+    /// leave the share.
+    private static func isDirectory(_ component: SFTPPathComponent) -> Bool {
+        if let permissions = component.attributes.permissions {
+            return permissions & 0o170000 == 0o040000
+        }
+        return component.longname.hasPrefix("d")
+    }
+
     func createDirectory(_ path: String) async throws {
         let sftp = try connected()
         var current = ""
