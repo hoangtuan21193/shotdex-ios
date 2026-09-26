@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-26 |
 | Trạng thái | accepted — người dùng duyệt 2026-09-26 |
-| Tiến độ | **gần xong** (2026-09-27, /verify) — 16/18 AC xanh; thiếu: AC-15 trên iPad/Duo; Show cho đích album chưa làm |
+| Tiến độ | **đang làm** (2026-09-27) — spec đổi: màn duyệt kiểu Files (FS-17.01 §2, §4b, §5, AC-19…29); plan [2026-09-27-files-browser-connect-as](../_plans/2026-09-27-files-browser-connect-as.md) đã duyệt, task 0/11. Trước đó 16/18 AC xanh |
 | Nguồn | phản hồi người dùng (2026-09-26) |
 | Spec sinh ra từ đây | [FS-17](../02-functional-spec/FS-17-import-from-server/README.md) — 16 AC |
 

@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-26 |
 | Trạng thái | accepted — người dùng duyệt 2026-09-26 |
-| Tiến độ | **gần xong** (2026-09-27, /verify) — 9/12 AC xanh, AC-41 một phần (sim iPad quét ra PC Windows thật "WIN"); thiếu: AC-27, 37 (hộp Local Network thật), 41 trên iPhone thật |
+| Tiến độ | **đang làm** (2026-09-27) — spec đổi: Connect As + bỏ Share (FS-15.04 §3, §5, AC-42…48); plan [2026-09-27-files-browser-connect-as](../_plans/2026-09-27-files-browser-connect-as.md) đã duyệt. Trước đó 9/12 AC xanh |
 | Nguồn | phản hồi người dùng (2026-09-26, sau khi dùng FS-15) |
 | Spec sinh ra từ đây | [FS-15.04](../02-functional-spec/FS-15-server-upload/04-find-servers.md) — AC-24…AC-30 |
 
