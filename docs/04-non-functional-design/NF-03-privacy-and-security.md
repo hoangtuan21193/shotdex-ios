@@ -31,11 +31,15 @@ Danh tính là **khoá chứng thực của bản cài** — gỡ app là mất.
 
 | Gửi đi | Không gửi |
 |---|---|
-| file gốc của ảnh được chọn, tới **đúng** server người dùng khai (SMB/SFTP) | bất cứ thứ gì tới máy chủ của ShotDex — không có máy chủ nào |
+| file gốc của ảnh được chọn, tới **đúng** server người dùng khai (SMB/SFTP/WebDAV/FTPS/FTP) | bất cứ thứ gì tới máy chủ của ShotDex — không có máy chủ nào |
 | tên file, thư mục theo ngày chụp | database index, lịch sử upload |
 
 - Mật khẩu server ở **Keychain**, chỉ trên máy này, không vào bản sao lưu; không bao giờ vào database hay log.
-- SFTP xác minh host key lần đầu và **chặn** khi nó đổi. SMB không có cơ chế tương đương — ghi rõ ở FS-15.
+- FTP và WebDAV qua HTTP gửi mật khẩu và ảnh **không mã hoá** — chỉ khi người dùng tự chọn, form cảnh báo
+  ([FS-15.05 §3](../02-functional-spec/FS-15-server-upload/05-more-protocols.md)).
+- Tải ảnh **về** từ server ([FS-17](../02-functional-spec/FS-17-import-from-server/README.md)) chỉ nhận dữ liệu; không
+  gửi gì ngoài lệnh đăng nhập và đọc file.
+- SFTP xác minh host key lần đầu và **chặn** khi nó đổi; WebDAV HTTPS/FTPS làm y hệt với chứng chỉ tự ký. SMB không có cơ chế tương đương — ghi rõ ở FS-15.
 - Upload **không** gỡ vị trí (Include Location là luật của Share sheet): đây là bản lưu trữ của chính người
   dùng, gỡ toạ độ là làm hỏng bản gốc.
 

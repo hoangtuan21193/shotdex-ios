@@ -31,7 +31,7 @@ chúng ở menu ⋯ (FS-15.02 §1).
 | Ô | Mặc định | Luật |
 |---|---|---|
 | Name | host | không bắt buộc; bỏ trống thì lấy host. Trùng tên connection khác (không phân biệt hoa thường) thì thêm ` (2)`, ` (3)`… lúc lưu |
-| Protocol | SMB | SMB / SFTP; đổi giao thức thì cổng mặc định đổi theo nếu người dùng chưa gõ cổng |
+| Protocol | SMB | SMB / SFTP / WebDAV / FTPS / FTP ([FS-15.05](05-more-protocols.md)); đổi giao thức thì cổng mặc định đổi theo nếu người dùng chưa gõ cổng |
 | Host | — | bắt buộc; tên, IPv4 hoặc tên `.local` |
 | Port | 445 (SMB) · 22 (SFTP) | 1–65535 |
 | Username / Password | — | mật khẩu che, lưu Keychain |
@@ -63,6 +63,6 @@ chúng ở menu ⋯ (FS-15.02 §1).
 
 ## 5. Quyền Local Network
 
-- Khai lý do dùng trong Info.plist; hệ thống tự hỏi **ở kết nối đầu tiên** tới một địa chỉ trong LAN
-  (thử kết nối hoặc upload), không phải lúc mở app.
+- Khai lý do dùng trong Info.plist. Hệ thống hỏi **khi mở form Add Connection**, vì form bắt đầu tìm server
+  trong mạng ngay lúc đó ([FS-15.04](04-find-servers.md)) — không phải lúc mở app, cũng không đợi tới Test Connection.
 - Server ngoài LAN (qua internet) không cần quyền này, và không bị chặn.

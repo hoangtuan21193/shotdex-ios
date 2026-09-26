@@ -93,8 +93,8 @@ menu ⋯. Hệ quả đã chấp nhận: trên một thư viện **chưa index x
 mục cạnh nó do PhotoKit cấp đã có số.
 
 **Utilities** = Places · Trips · Duplicates (kèm số nhóm của lần gom cuối, **số nhiều dịch đúng trong bộ
-chuỗi**) · **Collages** · **Video Projects** · **On Server** (chỉ hiện khi đã có ít nhất một ảnh lên
-server, [FS-15.02 §8](../FS-15-server-upload/02-upload-flow.md)) · và các smart album nhóm tiện ích (hiện chỉ
+chuỗi**) · **Collages** · **Video Projects** · **On Server** (hiện khi có ít nhất một connection; mở ra danh sách connection để duyệt và tải ảnh về —
+[FS-17.01](../FS-17-import-from-server/01-browse.md) — và hàng ảnh đã upload, [FS-15.02 §8](../FS-15-server-upload/02-upload-flow.md)) · và các smart album nhóm tiện ích (hiện chỉ
 Unable to Upload).
 
 **Không có album Hidden và không có Recently Deleted**: từ iOS 16 hệ thống không cho app bên thứ ba đọc ảnh

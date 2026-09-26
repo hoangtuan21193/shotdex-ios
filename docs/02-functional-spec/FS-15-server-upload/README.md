@@ -15,7 +15,9 @@ Nguồn: [intent](../../_intents/2026-09-24-local-network-upload.md).
 |---|---|---|
 | 01 | [Server và Settings](01-servers-and-settings.md) | danh sách connection, form, tên, thử kết nối, host key, quyền Local Network |
 | 02 | [Luồng upload](02-upload-flow.md) | menu connection, chọn folder, folder theo ngày, chọn file, trùng tên, checksum, tiến độ, huỷ, xoá |
-| 03 | [Tiêu chí nghiệm thu](03-acceptance-criteria.md) | 23 AC và cái nào chưa chứng minh |
+| 03 | [Tiêu chí nghiệm thu](03-acceptance-criteria.md) | 36 AC và cái nào chưa chứng minh |
+| 04 | [Tự tìm server, chọn share](04-find-servers.md) | Bonjour, mục Servers Found on This Network, hỏi quyền Local Network, danh sách share SMB |
+| 05 | [WebDAV, FTPS, FTP](05-more-protocols.md) | ô form, thao tác từng client, cảnh báo không mã hoá, chứng chỉ tự ký |
 
 ## 1. Người dùng cần gì
 
@@ -25,14 +27,15 @@ nằm nguyên vẹn trên đó.
 
 ## 2. Phạm vi
 
-**Có:** SMB 2/3 và SFTP · nhiều connection, cùng server nhiều lần, có tên · chọn connection trong menu ⋯ ·
+**Có:** SMB 2/3, SFTP, WebDAV, FTPS, FTP · tự tìm server trong mạng · nhiều connection, cùng server nhiều lần, có tên · chọn connection trong menu ⋯ ·
 chọn và tạo folder đích trên server, nhớ theo connection · thư mục theo ngày chụp là **tuỳ chọn** · chọn loại
 file mỗi lần đẩy · hỏi khi
 trùng tên, có so hai ảnh · kiểm SHA-256 sau khi ghi · hỏi xoá khi xong · hàng **Uploaded to Server** trong
 Utilities · dấu trên lưới · lịch sử upload trong Photo Info.
 
 **Cố ý không có:**
-- FTP — không mã hoá, và hệ thống đã bỏ FTP khỏi tầng mạng.
+- NFS — không có thư viện iOS, NAS hay chặn theo IP/UID (người dùng bỏ 2026-09-26).
+- Tải ảnh **về** từ server: tài liệu riêng [FS-17](../FS-17-import-from-server/README.md).
 - Đẩy từ thẻ nhớ / ổ ngoài — ShotDex đọc thư viện, không quản lý file ([FS-10](../FS-10-import.md)).
 - Upload chạy nền — hệ thống chỉ cho vài chục giây; người dùng giữ app mở, màn hình không tự khoá.
 - Đăng nhập SFTP bằng khoá SSH — v1 chỉ mật khẩu.

@@ -10,6 +10,10 @@ index những gì đã có trong thư viện.
 > Trạng thái: **đã gỡ** (2026-09-24). Trước đó "Import Photos" là một hàng trong Settings → Photo Library, mở
 > màn nhập từ folder ngoài có lọc RAW.
 
+> **Ngoại lệ (2026-09-26):** tải ảnh từ file server của chính người dùng —
+> [FS-17](FS-17-import-from-server/README.md) — ở Collections → Utilities → On Server. Người dùng chốt lại: đó là
+> chiều ngược của upload FS-15, không phải một màn Import chung; ảnh vẫn chỉ vào thư viện hệ thống qua PhotoKit.
+
 ## 1. Vì sao bỏ
 
 Settings là nơi chỉnh cách app cư xử; Import là một hành động lên thư viện, đứng lạc giữa các công tắc index.

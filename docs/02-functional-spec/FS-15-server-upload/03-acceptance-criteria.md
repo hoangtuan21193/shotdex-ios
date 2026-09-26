@@ -32,7 +32,31 @@ lệch, huỷ) kiểm được mà không cần mạng. Phần chỉ máy thật
 | AC-22 | server có `Photos/RAW`, `Photos/.snapshots`, `Photos/10`, `Photos/2` và file `Photos/a.CR3` | mở duyệt ở `Photos`; rồi New Folder `Trip` | liệt kê đúng `2`, `10`, `RAW` (không file, không folder chấm); `Photos/Trip` được tạo và mở, danh sách của nó rỗng; Use This Folder đặt Folder = `Photos/Trip` | `RemoteFolderBrowserTests.listsSubfoldersSortedWithoutHidden` + `RemoteFolderBrowserTests.newFolderIsCreatedAndOpened` + `scripts/server-upload-menu.json` (SMB giả lập: `Photos` liệt kê 2009/2011/2022/RAW, `.snapshots` ẩn; New Folder tạo folder thật trên server; ảnh lên `…/Trip/Trip/2009/2009-10-10/` khi bật Date Folders) + `scripts/server-upload-verify.json` (iOS 18.6: mở ở Archive, Back lên gốc share, Use This Folder, ảnh lên đúng folder) |
 | AC-23 | server từ chối mật khẩu | mở duyệt folder | câu "The username or password was rejected." + Try Again; Back về bước chuẩn bị, Folder giữ nguyên | `RemoteFolderBrowserTests.failureShowsReasonAndRetries` |
 
-**Chưa chứng minh được** (verify 2026-09-26): AC-14 trên Duo; AC-16 trên máy thật (iCloud-only, hộp Local
+
+### Tự tìm server và chọn share (FS-15.04)
+
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-24 | bản ghi Bonjour: `Hoang's MacBook` có `_smb._tcp` (445) + `_sftp-ssh._tcp` (22) + `_device-info` model `MacBookPro18,3`; `DS920` có `_smb._tcp` (445) + `_webdavs._tcp` (5006) | gộp thành danh sách | 2 hàng, theo tên: `DS920` (SMB · WebDAV, icon NAS), `Hoang's MacBook` (SMB · SFTP, icon laptop) | `DiscoveredServerTests.servicesMergePerMachine` ⚠️ chưa có |
+| AC-25 | máy chỉ có `_ssh._tcp`, máy khác có cả `_ssh._tcp` và `_sftp-ssh._tcp` | gộp | máy 1 ra SFTP; máy 2 ra đúng **một** SFTP, cổng của `_sftp-ssh` | `DiscoveredServerTests.sshCountsOnlyWithoutSftpSsh` ⚠️ chưa có |
+| AC-26 | chọn `DS920` giao thức WebDAV (HTTPS), cổng 5006, host phân giải `DS920.local`; đã có connection tên `DS920` | chạm | Name `DS920 (2)` lúc lưu, Protocol WebDAV, Use HTTPS bật, Host `DS920.local`, Port `5006`; chọn SMB 445 thì Port để trống | `DiscoveredServerTests.fillsDraft` + `ServerUploadStoreTests.saveNumbersDuplicateName` ⚠️ chưa có |
+| AC-27 | mở Add Connection lần đầu sau khi cài | form hiện | hộp Local Network của hệ thống hiện ngay (không đợi Test Connection); từ chối → section hiện câu "Local Network access is off" + Open Settings | `scripts/server-discovery.json` (sim reset quyền) ⚠️ chưa có |
+| AC-28 | server SMB giả lập quảng bá bằng `dns-sd -R "ShotDex Test" _smb._tcp local 4450` | mở Add Connection | hàng `ShotDex Test` hiện trong ≤ 5 s; chạm → Host/Port điền đúng; tắt quảng bá → hàng biến mất | `scripts/server-discovery.json` ⚠️ chưa có |
+| AC-29 | không có máy nào quảng bá | chờ 5 s | "No servers found. Enter the address below."; các ô nhập tay dùng được | `LocalServerBrowserTests.emptyAfterTimeout` (browser giả) ⚠️ chưa có |
+| AC-30 | server SMB có share `photos`, `IPC$`, `backup`, `ADMIN$` | Choose… | danh sách `backup`, `photos` (không share `$`); chọn `photos` → ô Share = `photos`; sai mật khẩu → câu "The username or password was rejected." dưới hàng Share | `ShareListTests.hidesSystemShares` + `scripts/server-discovery.json` ⚠️ chưa có |
+
+### WebDAV, FTPS, FTP (FS-15.05)
+
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-31 | server WebDAV giả (trong bộ nhớ, phản hồi PROPFIND/PUT/GET/MOVE/MKCOL/DELETE) | chạy bộ test phiên upload của AC-3…AC-9 trên client WebDAV | cùng kết quả: file tên thật + checksum khớp, không `.shotdex-part` sót, trùng tên hỏi đúng | `WebDAVFileClientTests.sessionContract` ⚠️ chưa có |
+| AC-32 | PROPFIND trả 3 `collection` + 5 file, có `%20` và UTF-8 trong href | liệt kê | 3 folder và 5 tên file đã giải mã; không có chính folder đang liệt kê | `WebDAVFileClientTests.propfindParsing` ⚠️ chưa có |
+| AC-33 | chứng chỉ tự ký, lần đầu | Test Connection (WebDAV HTTPS hoặc FTPS) | hộp Trust hiện dấu vân tay SHA-256 chứng chỉ lá; Trust → lưu; lần sau chứng chỉ khác → chặn "identity … changed" | `TLSTrustTests.trustThenMismatchBlocks` + `scripts/server-protocols.json` ⚠️ chưa có |
+| AC-34 | chọn FTP, hoặc WebDAV tắt Use HTTPS | form | câu "Passwords and photos are sent unencrypted…" hiện; SMB/SFTP/WebDAV HTTPS/FTPS không hiện | `FileServerDraftTests.unencryptedWarning` + ảnh form ⚠️ chưa có |
+| AC-35 | server FTP giả lập (pyftpdlib, 127.0.0.1) và FTPS explicit | upload 3 file, rồi đọc 512 KB đầu một file bằng `REST` | 3 file khớp `shasum -a 256`; đoạn đọc đúng 512 KB đầu | `scripts/server-protocols.json` + `FTPFileClientTests.restRangeRead` ⚠️ chưa có |
+| AC-36 | server WebDAV giả lập (wsgidav, 127.0.0.1) | upload 3 file, duyệt folder, tạo folder | như AC-35; màn duyệt FS-15.02 §2a liệt kê folder đúng | `scripts/server-protocols.json` ⚠️ chưa có |
+
+**Chưa chứng minh được** (verify 2026-09-26, trước khi thêm AC-24…36): AC-14 trên Duo; AC-16 trên máy thật (iCloud-only, hộp Local
 Network, Delete tới Recently Deleted). AC-20…AC-22 có ảnh trên iPhone 26.5, iPhone 18.6 và iPad nhưng chưa có trên Duo.
 AC-16 cần người dùng bật **File Sharing** và **Remote Login** trên Mac — ShotDex không tự bật được. Màn tiến độ chưa
 có ảnh: trên localhost vài MB đẩy xong trước lần chụp đầu. Duyệt folder qua SFTP mới có unit test (server giả), chưa

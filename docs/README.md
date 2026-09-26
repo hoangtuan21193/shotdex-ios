@@ -47,8 +47,8 @@ docs/
 │                             FS-04 Màu (3) · FS-05 Markup (3) · FS-06 Collections (10)
 │                             FS-07 Statistics · FS-08 Settings (5) · FS-09 Onboarding
 │                             FS-10 Import (đã bỏ) · FS-11 Collage · FS-12 Video Studio (9) · FS-13 Support
-│                             FS-14 Panorama (2) · FS-15 Upload lên file server (3)
-│                             FS-16 Kernel render bằng Metal
+│                             FS-14 Panorama (2) · FS-15 Upload lên file server (5)
+│                             FS-16 Kernel render bằng Metal · FS-17 Tải ảnh từ file server (3)
 ├── 03-extensions-and-integrations/  EX-01 Kit · EX-02 Widget · EX-03 Share · EX-04 Shortcuts · EX-05 Edit action
 ├── 04-non-functional-design/ NF-01 hiệu năng · NF-02 bộ nhớ · NF-03 riêng tư
 │                             NF-04 trạng thái lỗi · NF-05 thiết bị · NF-06 truy cập & ngôn ngữ
