@@ -77,10 +77,17 @@ enum EmbeddedPreview {
     static func captureDate(from head: Data, timeZone: TimeZone = .current) -> Date? {
         let source = CGImageSourceCreateIncremental(nil)
         CGImageSourceUpdateData(source, head as CFData, false)
-        guard let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
-              let exif = properties[kCGImagePropertyExifDictionary] as? [CFString: Any],
-              let original = exif[kCGImagePropertyExifDateTimeOriginal] as? String
-        else { return firstEXIFDateString(in: head).flatMap { parseEXIFDate($0, timeZone: timeZone) } }
+        if let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+           let exif = properties[kCGImagePropertyExifDictionary] as? [CFString: Any],
+           let date = captureDate(fromEXIF: exif, timeZone: timeZone) {
+            return date
+        }
+        return firstEXIFDateString(in: head).flatMap { parseEXIFDate($0, timeZone: timeZone) }
+    }
+
+    /// `DateTimeOriginal` of an EXIF dictionary, with its offset when written.
+    static func captureDate(fromEXIF exif: [CFString: Any], timeZone: TimeZone = .current) -> Date? {
+        guard let original = exif[kCGImagePropertyExifDateTimeOriginal] as? String else { return nil }
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         if let offset = exif[kCGImagePropertyExifOffsetTimeOriginal] as? String {

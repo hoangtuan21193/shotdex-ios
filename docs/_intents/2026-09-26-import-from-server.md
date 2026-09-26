@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-26 |
 | Trạng thái | accepted — người dùng duyệt 2026-09-26 |
-| Tiến độ | **đang làm** (2026-09-26) — task 7 của plan (4/7 khối B), 8/17 AC xanh |
+| Tiến độ | **đang làm** (2026-09-26) — task 8 của plan (5/7 khối B), 12/17 AC xanh (AC-12 mới một nửa) |
 | Nguồn | phản hồi người dùng (2026-09-26) |
 | Spec sinh ra từ đây | [FS-17](../02-functional-spec/FS-17-import-from-server/README.md) — 16 AC |
 
