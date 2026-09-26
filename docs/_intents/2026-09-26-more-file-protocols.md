@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-26 |
 | Trạng thái | accepted — người dùng duyệt 2026-09-26 |
-| Tiến độ | **đang làm** (2026-09-26) — task 11/14 của plan (1/4 khối C), 1/6 AC xanh |
+| Tiến độ | **đang làm** (2026-09-26) — task 13/14 của plan (3/4 khối C), 4/6 AC có bằng chứng (WebDAV); AC-35 FTP/FTPS chờ task 14, AC-36 thiếu upload qua WebDAV thật |
 | Nguồn | phản hồi người dùng (2026-09-26) |
 | Spec sinh ra từ đây | [FS-15.05](../02-functional-spec/FS-15-server-upload/05-more-protocols.md) — AC-31…AC-36 |
 

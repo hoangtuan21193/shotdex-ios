@@ -26,8 +26,10 @@ import Testing
         #expect(all[1].kind == .laptop)
         #expect(all[1].offers.first == .init(service: .smb, host: "Hoangs-MacBook.local", port: 445))
 
-        // Until ShotDex speaks WebDAV, DS920 offers SMB alone.
-        #expect(DiscoveredServerMerge.merge(records)[0].protocolSummary == "SMB")
+        #expect(DiscoveredServerMerge.merge(records)[0].protocolSummary == "SMB · WebDAV (HTTPS)")
+        // A protocol with no client yet (FTP) is left out.
+        let ftp = [record("Router", "_ftp._tcp", host: "router.local.", port: 21)]
+        #expect(DiscoveredServerMerge.merge(ftp).isEmpty == !RemoteFileClientFactory.supports(.ftp))
     }
 
     /// AC-25.

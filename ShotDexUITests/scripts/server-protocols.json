@@ -1,0 +1,258 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Settings",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.7,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.7,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.7,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.7,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.7,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "tap",
+   "label": "File Servers",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Add Connection",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 7
+  },
+  {
+   "action": "tap",
+   "label": "Protocol",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "WebDAV",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "typeText",
+   "label": "Name",
+   "type": "textField",
+   "text": "DAV HTTPS"
+  },
+  {
+   "action": "typeText",
+   "label": "Host",
+   "type": "textField",
+   "text": "127.0.0.1\n"
+  },
+  {
+   "action": "typeText",
+   "text": "8443"
+  },
+  {
+   "action": "typeText",
+   "label": "Username",
+   "type": "textField",
+   "text": "tester\n"
+  },
+  {
+   "action": "typeText",
+   "text": "secret\n"
+  },
+  {
+   "action": "typeText",
+   "text": "dav\n"
+  },
+  {
+   "action": "typeText",
+   "text": "Photos\n"
+  },
+  {
+   "action": "screenshot",
+   "name": "70-webdav-form"
+  },
+  {
+   "action": "dump",
+   "name": "70-webdav-form"
+  },
+  {
+   "action": "tap",
+   "label": "Test Connection",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "screenshot",
+   "name": "71-trust"
+  },
+  {
+   "action": "dump",
+   "name": "71-trust",
+   "type": "staticText"
+  },
+  {
+   "action": "tap",
+   "label": "Trust",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "screenshot",
+   "name": "72-connected"
+  },
+  {
+   "action": "tap",
+   "label": "Save",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "back"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Done",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Collections",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "tap",
+   "label": "On Server"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "DAV HTTPS"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "screenshot",
+   "name": "73-dav-root"
+  },
+  {
+   "action": "tap",
+   "label": "Photos"
+  },
+  {
+   "action": "wait",
+   "seconds": 12
+  },
+  {
+   "action": "screenshot",
+   "name": "74-dav-grid"
+  }
+ ]
+}

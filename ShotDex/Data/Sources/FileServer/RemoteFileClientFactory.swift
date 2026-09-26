@@ -6,15 +6,16 @@ enum RemoteFileClientFactory {
         switch server.transferProtocol {
         case .smb: SMBFileClient(server: server, password: password)
         case .sftp: SFTPFileClient(server: server, password: password)
-        case .webdav, .ftps, .ftp: UnavailableFileClient(transferProtocol: server.transferProtocol)
+        case .webdav: WebDAVFileClient(server: server, password: password)
+        case .ftps, .ftp: UnavailableFileClient(transferProtocol: server.transferProtocol)
         }
     }
 
     /// Whether a real client stands behind `transferProtocol` yet.
     static func supports(_ transferProtocol: FileServer.TransferProtocol) -> Bool {
         switch transferProtocol {
-        case .smb, .sftp: true
-        case .webdav, .ftps, .ftp: false
+        case .smb, .sftp, .webdav: true
+        case .ftps, .ftp: false
         }
     }
 }
