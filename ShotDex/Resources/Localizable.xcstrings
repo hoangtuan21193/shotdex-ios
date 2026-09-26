@@ -654,10 +654,10 @@
     "Add %@ window" : {
       "comment" : "Video Studio colour: adds one local grade"
     },
-    "Add a layer" : {
+    "Add a connection to upload originals to your NAS or computer. Add the same server more than once to keep a connection per folder." : {
 
     },
-    "Add a server to upload originals to your NAS or computer." : {
+    "Add a layer" : {
 
     },
     "Add a track from Files — it's saved here for reuse." : {
@@ -670,6 +670,12 @@
 
     },
     "Add Condition" : {
+
+    },
+    "Add Connection" : {
+
+    },
+    "Add Connection…" : {
 
     },
     "Add Design" : {
@@ -700,12 +706,6 @@
 
     },
     "Add Preset" : {
-
-    },
-    "Add Server" : {
-
-    },
-    "Add Server…" : {
 
     },
     "Add Text" : {
@@ -1125,6 +1125,9 @@
     "Choose Lens" : {
 
     },
+    "Choose or create a folder on the server" : {
+
+    },
     "Cinematic" : {
 
     },
@@ -1236,6 +1239,9 @@
     "Connected. Ready to upload." : {
       "comment" : "File server Test Connection succeeded"
     },
+    "Connection" : {
+
+    },
     "Considering" : {
 
     },
@@ -1287,6 +1293,9 @@
     "Couldn't Add to Collection" : {
 
     },
+    "Couldn't Create Folder" : {
+
+    },
     "Couldn't Delete Photos" : {
 
     },
@@ -1326,7 +1335,7 @@
     "Couldn't Save" : {
       "comment" : "Alert title: the combined photo could not be rendered or saved"
     },
-    "Couldn't Save Server" : {
+    "Couldn't Save Connection" : {
 
     },
     "Couldn't save the password: %@" : {
@@ -1433,6 +1442,9 @@
     "Date & Time" : {
 
     },
+    "Date Folders" : {
+
+    },
     "Date Format" : {
 
     },
@@ -1521,6 +1533,9 @@
     "Delete condition" : {
 
     },
+    "Delete Connection" : {
+
+    },
     "Delete layer" : {
 
     },
@@ -1546,9 +1561,6 @@
 
     },
     "Delete Point Color" : {
-
-    },
-    "Delete Server" : {
 
     },
     "Delete Spot" : {
@@ -1706,10 +1718,10 @@
     "Edit Chart" : {
 
     },
-    "Edit Preset" : {
+    "Edit Connection" : {
 
     },
-    "Edit Server" : {
+    "Edit Preset" : {
 
     },
     "Edit Smart Album" : {
@@ -1895,7 +1907,10 @@
     "Folder" : {
 
     },
-    "Folder is relative to your home folder on the server. Photos go into year and day folders inside it, by the date they were taken." : {
+    "Folder is relative to your home folder on the server. It is where uploads start; you can pick another each time." : {
+
+    },
+    "Folders" : {
 
     },
     "Following the subject from the playhead." : {
@@ -2054,6 +2069,9 @@
     },
     "Holds fine crossing detail — hair, bristles, fur." : {
       "comment" : "Focus Stack: when to use Weighted"
+    },
+    "Home" : {
+      "comment" : "Upload to Server: the SFTP login's home folder, the top of the folder browser"
     },
     "Host" : {
 
@@ -2359,6 +2377,9 @@
     "Loading %lld photos…" : {
       "comment" : "Stack screen status while the preview frames load"
     },
+    "Loading Folders…" : {
+
+    },
     "Loading full-quality preview…" : {
 
     },
@@ -2647,6 +2668,9 @@
     "New Collage" : {
       "comment" : "Button that starts a new collage"
     },
+    "New Folder" : {
+
+    },
     "New mask" : {
 
     },
@@ -2699,6 +2723,9 @@
       "comment" : "Video Studio media pool: an item whose capture date the library does not carry"
     },
     "No Duplicates" : {
+
+    },
+    "No folders inside." : {
 
     },
     "No Indexed Photos" : {
@@ -3147,7 +3174,7 @@
     "Photos" : {
       "comment" : "Video Studio media pool bin label for the sticker tab\nVideo Studio media pool filter: still photos only"
     },
-    "Photos and metadata never leave this device. The one exception is a support message you write yourself, which carries no photos." : {
+    "Photos and metadata stay on this device. They leave it only when you upload them to a server you set up, or in a support message you write yourself, which carries no photos." : {
 
     },
     "Photos and Videos" : {
@@ -3164,6 +3191,12 @@
     },
     "Photos doesn't support HEIC as the edited version of this photo, so ShotDex saved a maximum-quality JPEG instead." : {
 
+    },
+    "Photos go into year and day folders inside this folder, by the date they were taken — such as %@." : {
+      "comment" : "Upload to Server: Date Folders on"
+    },
+    "Photos go straight into this folder." : {
+      "comment" : "Upload to Server: Date Folders off"
     },
     "Photos must match at least one condition below." : {
 
@@ -3829,9 +3862,6 @@
     "Series" : {
 
     },
-    "Server" : {
-
-    },
     "Set" : {
 
     },
@@ -4311,6 +4341,9 @@
     "The folder %@ doesn't exist on the server." : {
       "comment" : "File server error"
     },
+    "The folder is created on the server inside %@." : {
+      "comment" : "Upload to Server: New Folder alert message"
+    },
     "The identity of %@ changed. If you didn't reinstall the server, someone may be intercepting the connection." : {
       "comment" : "File server error: SFTP host key differs from the saved one"
     },
@@ -4347,7 +4380,7 @@
     "The server offered a key ShotDex can't read." : {
       "comment" : "SFTP: unreadable host key"
     },
-    "The share is the shared folder's name on the server. Photos go into year and day folders inside Folder, by the date they were taken." : {
+    "The share is the shared folder's name on the server. Folder is where uploads start; you can pick another each time." : {
 
     },
     "The size is a fast estimate and may change slightly when the full-resolution file is encoded." : {
@@ -4664,7 +4697,16 @@
     "Upload stopped. Files already uploaded stay on the server." : {
       "comment" : "Upload to Server result after Cancel"
     },
+    "Upload to" : {
+
+    },
+    "Upload to %@" : {
+      "comment" : "Selection menu: upload to the only saved connection, by its name"
+    },
     "Upload to Server" : {
+
+    },
+    "Upload to Server…" : {
 
     },
     "Uploaded %lld photos (%@) to %@" : {
@@ -4717,6 +4759,9 @@
 
     },
     "Use the System Format" : {
+
+    },
+    "Use This Folder" : {
 
     },
     "Username" : {
