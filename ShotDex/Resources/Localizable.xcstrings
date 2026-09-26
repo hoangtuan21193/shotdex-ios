@@ -86,6 +86,12 @@
         }
       }
     },
+    "%@ already exists on the server." : {
+      "comment" : "WebDAV: move refused because the destination exists"
+    },
+    "%@ arrived incomplete." : {
+      "comment" : "Download from server: size check failed"
+    },
     "%@ bar chart" : {
 
     },
@@ -100,6 +106,9 @@
         }
       }
     },
+    "%@ doesn't match the copy uploaded from this device." : {
+      "comment" : "Download from server: checksum differs from history"
+    },
     "%@ donut chart" : {
 
     },
@@ -109,11 +118,14 @@
     "%@ is on this video's timeline. Deleting it removes the file, and the track goes silent in the preview and the export." : {
 
     },
+    "%@ isn't an image ShotDex can read." : {
+      "comment" : "Download from server: ImageIO could not open the file"
+    },
     "%@ line chart" : {
 
     },
     "%@ of %@" : {
-      "comment" : "Upload to Server: bytes sent of total",
+      "comment" : "Download from server: bytes received of total\nUpload to Server: bytes sent of total",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -124,7 +136,7 @@
       }
     },
     "%@ of %@ · about %@ left" : {
-      "comment" : "Upload to Server: bytes sent of total, and time left",
+      "comment" : "Download from server: bytes received of total, and time left\nUpload to Server: bytes sent of total, and time left",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -422,6 +434,9 @@
         }
       }
     },
+    "%lld of the selected photos" : {
+      "comment" : "Download from server: how many picked photos are already in the library"
+    },
     "%lld photo" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -495,7 +510,7 @@
 
     },
     "%lld photos · %lld files · ~%@" : {
-      "comment" : "Upload to Server prepare summary: photos, files and estimated size",
+      "comment" : "Download from server summary: photos, files and estimated size\nUpload to Server prepare summary: photos, files and estimated size",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -505,11 +520,28 @@
         }
       }
     },
+    "%lld photos · %lld other files hidden" : {
+      "comment" : "Server browser footer: photos shown and files left out",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld photos · %2$lld other files hidden"
+          }
+        }
+      }
+    },
     "%lld photos couldn't be downloaded." : {
       "comment" : "Panorama save failed because iCloud originals were unavailable\nStack screen: frames that could not be loaded, usually iCloud originals with no network. Shown with a Retry button."
     },
     "%lld photos couldn't be downloaded. Check the connection and try again." : {
       "comment" : "Stack save failed: some full-resolution originals could not be downloaded (usually iCloud)."
+    },
+    "%lld photos not downloaded yet." : {
+      "comment" : "Download from server result: photos the stopped batch never reached"
+    },
+    "%lld photos skipped — already in your library." : {
+      "comment" : "Download from server result: photos skipped because they were already in the library"
     },
     "%lld photos without this info." : {
 
@@ -522,6 +554,9 @@
     },
     "%lld saved to Photos" : {
 
+    },
+    "%lld Selected" : {
+      "comment" : "Server browser title: how many photos are picked"
     },
     "%lld unread replies" : {
 
@@ -654,6 +689,9 @@
     "Add %@ window" : {
       "comment" : "Video Studio colour: adds one local grade"
     },
+    "Add a connection to browse and download photos from your NAS or computer." : {
+
+    },
     "Add a connection to upload originals to your NAS or computer. Add the same server more than once to keep a connection per folder." : {
 
     },
@@ -784,7 +822,7 @@
 
     },
     "Album" : {
-
+      "comment" : "Download from server: an album whose name is unknown"
     },
     "Album Name" : {
 
@@ -814,6 +852,9 @@
 
     },
     "Allow Calendar Access" : {
+
+    },
+    "Allow full access to Photos to save into an album." : {
 
     },
     "Allow Location Access" : {
@@ -884,6 +925,9 @@
     },
     "Artist" : {
       "comment" : "Info panel row label"
+    },
+    "Ascending" : {
+
     },
     "Aspect Ratio Grid" : {
 
@@ -980,6 +1024,9 @@
     },
     "Browse All Photos…" : {
       "comment" : "Video Studio media pool: opens the system picker for anything older than the pool holds"
+    },
+    "Browse and download from your file servers" : {
+      "comment" : "VoiceOver detail on the On Server utilities row"
     },
     "Browse Looks" : {
 
@@ -1110,6 +1157,12 @@
     "Check your connection and send it again. Nothing was lost." : {
       "comment" : "Support error recovery"
     },
+    "Checking" : {
+      "comment" : "Download from server: checking the received file"
+    },
+    "Choose a Share" : {
+
+    },
     "Choose a Sticker…" : {
       "comment" : "Video Studio media pool: opens the picker for a sticker image"
     },
@@ -1126,6 +1179,9 @@
 
     },
     "Choose or create a folder on the server" : {
+
+    },
+    "Choose…" : {
 
     },
     "Cinematic" : {
@@ -1230,6 +1286,9 @@
     "Compare" : {
 
     },
+    "Computers and NAS drives sharing files on the same network as this device. Tap one to fill in its address." : {
+
+    },
     "Conditions" : {
 
     },
@@ -1240,6 +1299,12 @@
       "comment" : "File server Test Connection succeeded"
     },
     "Connection" : {
+
+    },
+    "Connection Removed" : {
+
+    },
+    "Connections" : {
 
     },
     "Considering" : {
@@ -1293,6 +1358,9 @@
     "Couldn't Add to Collection" : {
 
     },
+    "Couldn't Create Album" : {
+
+    },
     "Couldn't Create Folder" : {
 
     },
@@ -1312,6 +1380,9 @@
 
     },
     "Couldn't load the selected items." : {
+
+    },
+    "Couldn't Open Folder" : {
 
     },
     "Couldn't prepare the video composition." : {
@@ -1448,8 +1519,14 @@
     "Date Format" : {
 
     },
+    "Date Modified" : {
+      "comment" : "Server photo browser sort: file write date"
+    },
     "Date Range" : {
 
+    },
+    "Date Taken" : {
+      "comment" : "Server photo browser sort: EXIF capture date"
     },
     "days" : {
 
@@ -1586,6 +1663,9 @@
     "Depth Map" : {
       "comment" : "Focus Stack method: pick each point from its sharpest frame, smoothed like a depth map"
     },
+    "Descending" : {
+
+    },
     "Deselect" : {
 
     },
@@ -1640,8 +1720,37 @@
     "Double tap to collapse" : {
 
     },
+    "Download" : {
+      "comment" : "Server browser: download the picked photos"
+    },
+    "Download %lld" : {
+      "comment" : "Server browser: download the picked photos, with their count"
+    },
+    "Download Finished" : {
+      "comment" : "Download from server sheet title when done"
+    },
+    "Download progress" : {
+
+    },
+    "Download stopped. Photos already saved stay in your library." : {
+      "comment" : "Download from server result after Cancel"
+    },
     "downloaded from iCloud" : {
 
+    },
+    "Downloading" : {
+      "comment" : "Download from server sheet title while running\nDownload from server: receiving the file"
+    },
+    "Downloading %lld of %lld" : {
+      "comment" : "Download from server progress headline",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Downloading %1$lld of %2$lld"
+          }
+        }
+      }
     },
     "Downloading from iCloud" : {
 
@@ -2071,7 +2180,7 @@
       "comment" : "Focus Stack: when to use Weighted"
     },
     "Home" : {
-      "comment" : "Upload to Server: the SFTP login's home folder, the top of the folder browser"
+      "comment" : "Server browser: the SFTP login's home folder\nUpload to Server: the SFTP login's home folder, the top of the folder browser"
     },
     "Host" : {
 
@@ -2127,6 +2236,9 @@
     },
     "In" : {
 
+    },
+    "In Library" : {
+      "comment" : "Server browser tile: the photo is already in the library"
     },
     "In Progress" : {
 
@@ -2222,6 +2334,9 @@
     "Keep Both saves the new file under the next free name, such as %@." : {
       "comment" : "Upload to Server conflict: how Keep Both names the new file"
     },
+    "Keep Downloading" : {
+
+    },
     "Keep Editing" : {
 
     },
@@ -2238,6 +2353,9 @@
 
     },
     "Keep Screen Awake While Indexing" : {
+
+    },
+    "Keep ShotDex open until the download finishes. The screen stays on." : {
 
     },
     "Keep ShotDex open until the upload finishes. The screen stays on." : {
@@ -2322,7 +2440,7 @@
       "comment" : "Video Studio Volume panel: the meter over the faders"
     },
     "Library" : {
-
+      "comment" : "Download from server: save into the library, no album"
     },
     "Library Size" : {
 
@@ -2408,6 +2526,9 @@
 
     },
     "Look Up Place Names" : {
+
+    },
+    "Looking for servers…" : {
 
     },
     "Looking through your photos…" : {
@@ -2648,7 +2769,7 @@
 
     },
     "Name" : {
-      "comment" : "Video Studio colour: the node name field"
+      "comment" : "Server photo browser sort: file name\nVideo Studio colour: the node name field"
     },
     "Network" : {
 
@@ -2767,6 +2888,9 @@
     "No Photos" : {
 
     },
+    "No photos in this folder." : {
+
+    },
     "No photos match these filters." : {
 
     },
@@ -2780,6 +2904,9 @@
 
     },
     "No Series" : {
+
+    },
+    "No servers found. Enter the address below." : {
 
     },
     "No trips yet. A trip is several days of photos taken well away from where you usually shoot." : {
@@ -2811,6 +2938,12 @@
     },
     "Not available for this file" : {
 
+    },
+    "Not Downloaded" : {
+
+    },
+    "Not enough space on this device — about %@ more needed." : {
+      "comment" : "Download from server: free space too low"
     },
     "Not enough space on this device to prepare the file." : {
       "comment" : "Upload to Server: no room to stage one original"
@@ -2851,6 +2984,9 @@
     "Nothing to add" : {
       "comment" : "Video Studio media pool: empty state title"
     },
+    "Nothing was saved." : {
+
+    },
     "Nothing was uploaded." : {
 
     },
@@ -2884,7 +3020,7 @@
 
     },
     "On Server" : {
-      "comment" : "Utilities row: photos with a verified copy on a file server"
+      "comment" : "Utilities row: browse file servers and the photos uploaded to them"
     },
     "On This Day" : {
       "comment" : "Title of the daily reminder notification.",
@@ -3024,6 +3160,9 @@
     "Or drop on another photo to swap" : {
 
     },
+    "Order" : {
+
+    },
     "Original" : {
 
     },
@@ -3084,10 +3223,19 @@
     "Password" : {
 
     },
+    "Passwords and photos are sent unencrypted. Use this only on your home network." : {
+
+    },
     "Paste Edits" : {
 
     },
     "Paste onto %lld Photos" : {
+
+    },
+    "Path" : {
+
+    },
+    "Path is the WebDAV address on the server, such as remote.php/dav/files/you for Nextcloud. Folder is where uploads start, inside Path." : {
 
     },
     "Pause" : {
@@ -3174,6 +3322,9 @@
     "Photos" : {
       "comment" : "Video Studio media pool bin label for the sticker tab\nVideo Studio media pool filter: still photos only"
     },
+    "Photos already saved stay in your library." : {
+
+    },
     "Photos and metadata stay on this device. They leave it only when you upload them to a server you set up, or in a support message you write yourself, which carries no photos." : {
 
     },
@@ -3185,6 +3336,12 @@
     },
     "photos and videos per minute" : {
 
+    },
+    "Photos can't store this format (%@)." : {
+      "comment" : "Download from server: Photos rejected the file type"
+    },
+    "Photos didn't create the photo." : {
+      "comment" : "Download from server: PhotoKit returned no asset"
     },
     "Photos doesn't support an HEIC edited version of this photo. ShotDex will save a maximum-quality JPEG." : {
 
@@ -3392,6 +3549,17 @@
     },
     "Read the Log" : {
 
+    },
+    "Reading dates… %lld of %lld" : {
+      "comment" : "Server browser: reading capture dates for Date Taken sort",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reading dates… %1$lld of %2$lld"
+          }
+        }
+      }
     },
     "Reading files…" : {
 
@@ -3710,11 +3878,25 @@
     "Save Preset" : {
 
     },
-    "Save to Photos" : {
+    "Save To" : {
 
+    },
+    "Save to Photos" : {
+      "comment" : "Download from server sheet title"
     },
     "Saved" : {
 
+    },
+    "Saved %lld photos to %@." : {
+      "comment" : "Download from server result headline",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Saved %1$lld photos to %2$@."
+          }
+        }
+      }
     },
     "Saved as JPEG" : {
 
@@ -3727,6 +3909,9 @@
     },
     "Saves the tone, colour, curve and film look on this photo. The crop, masks and markup stay with the photo." : {
 
+    },
+    "Saving" : {
+      "comment" : "Download from server: writing into Photos"
     },
     "Saving %lld of %lld" : {
       "localizations" : {
@@ -3832,6 +4017,9 @@
     "Select photos" : {
 
     },
+    "Select Photos" : {
+      "comment" : "Server browser title while selecting, nothing picked"
+    },
     "Select Text or Subject" : {
 
     },
@@ -3860,6 +4048,9 @@
 
     },
     "Series" : {
+
+    },
+    "Servers Found on This Network" : {
 
     },
     "Set" : {
@@ -3902,6 +4093,9 @@
 
     },
     "ShotDex asks for your location only when you allow it here, rounds it to about a kilometre, and fetches the current conditions from Open-Meteo. It does this only while a weather widget is on your Home Screen, and it sends nothing else." : {
+
+    },
+    "ShotDex can't look for servers because Local Network access is off." : {
 
     },
     "ShotDex copies the photos into the widget's own storage, because a widget cannot read your library. An album is copied up to %lld photos deep; use Refresh Now after adding to it." : {
@@ -4058,6 +4252,9 @@
     "Skip" : {
 
     },
+    "Skip Photos Already in Library" : {
+
+    },
     "Slide down" : {
 
     },
@@ -4199,6 +4396,9 @@
     },
     "Stop" : {
       "comment" : "Video Studio colour: abandons a window track in progress"
+    },
+    "Stop Downloading?" : {
+
     },
     "Stop preview" : {
 
@@ -4380,7 +4580,7 @@
     "The server offered a key ShotDex can't read." : {
       "comment" : "SFTP: unreadable host key"
     },
-    "The share is the shared folder's name on the server. Folder is where uploads start; you can pick another each time." : {
+    "The share is the shared folder on the server — Choose… lists them once the username and password are in. Folder is where uploads start; you can pick another each time." : {
 
     },
     "The size is a fast estimate and may change slightly when the full-resolution file is encoded." : {
@@ -4477,6 +4677,9 @@
 
     },
     "This photo hasn't been downloaded from iCloud yet." : {
+
+    },
+    "This server doesn't share any folders with this account." : {
 
     },
     "This server hasn't been trusted yet." : {
@@ -4720,6 +4923,9 @@
         }
       }
     },
+    "Uploaded from This Device" : {
+
+    },
     "Uploaded to server" : {
       "comment" : "VoiceOver: grid tile of a photo with a copy on a file server"
     },
@@ -4753,6 +4959,9 @@
 
     },
     "Use Cellular Data for Indexing" : {
+
+    },
+    "Use HTTPS" : {
 
     },
     "Use the System Font" : {
