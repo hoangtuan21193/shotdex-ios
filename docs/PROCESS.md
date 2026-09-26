@@ -97,10 +97,12 @@ Tools/install-hooks
 ```
 
 Từ đó mỗi `git push` chạy `Tools/gate` = build + toàn bộ unit test. Đỏ thì không push được.
+Commit đã xanh thì gate bỏ qua: cây làm việc sạch và từ lần xanh gần nhất chỉ đổi `docs/`, `*.md`, `Tools/` hoặc
+script ui-drive — lượt bỏ qua không ghi mẫu vào `gate.jsonl`. Muốn chạy lại dù đã xanh: `Tools/gate --force`.
 
 | Lệnh | Khi nào | Thấy gì |
 |---|---|---|
-| `Tools/gate` | trước khi push (tự động), hoặc gõ tay | `gate: xanh (92s)` hoặc danh sách lỗi |
+| `Tools/gate` | trước khi push (tự động), hoặc gõ tay | `gate: xanh (92s)`, `gate: xanh (đã chạy cho …) — bỏ qua`, hoặc danh sách lỗi |
 | `Tools/evals` | khi đụng `CLAUDE.md` hoặc `.claude/**` | `4/5 eval xanh` — chạy từ terminal đã đăng nhập `claude` |
 | `Tools/bands-check` | định kỳ, hoặc khi thấy chậm/đỏ bất thường | bảng metric + cảnh báo khi vượt band |
 
