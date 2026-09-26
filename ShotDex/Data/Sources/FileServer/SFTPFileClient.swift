@@ -276,6 +276,15 @@ final class SFTPFileClient: RemoteFileClient, @unchecked Sendable {
         }
     }
 
+    func removeEmptyDirectory(_ path: String) async throws {
+        do {
+            try await connected().rmdir(at: path)
+        } catch {
+            if Self.isNotFound(error) { return }
+            throw Self.map(error, host: server.host, path: path)
+        }
+    }
+
     // MARK: - Errors
 
     private static func isNotFound(_ error: Error) -> Bool {

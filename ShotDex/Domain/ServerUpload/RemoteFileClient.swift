@@ -38,9 +38,34 @@ protocol RemoteFileClient: AnyObject, Sendable {
     /// the download to the library checks it (FS-17.02 §2).
     @discardableResult
     func download(_ path: String, to localURL: URL, progress: @escaping @Sendable (Int64) -> Void) async throws -> String
-    /// Renames within the server. The destination must not exist.
+    /// Renames a file or folder within the server. The destination must not
+    /// exist.
     func move(_ source: String, to destination: String) async throws
+    /// Deletes a file; a missing one is not an error.
     func remove(_ path: String) async throws
+    /// Deletes a folder that has nothing in it; a missing one is not an
+    /// error.
+    func removeEmptyDirectory(_ path: String) async throws
+    /// Deletes a folder and everything in it (FS-17.01 §4b), stopping at the
+    /// first failure. WebDAV does it in one request; the others walk it.
+    func removeFolderTree(_ path: String) async throws
+}
+
+extension RemoteFileClient {
+    /// Depth first: files, then subfolders, then the emptied folder. Dot
+    /// files count — they are in the folder even if the browser hides them.
+    func removeFolderTree(_ path: String) async throws {
+        for entry in try await entries(in: path) {
+            try Task.checkCancellation()
+            let child = ServerUploadPath.join(path, entry.name)
+            if entry.isDirectory {
+                try await removeFolderTree(child)
+            } else {
+                try await remove(child)
+            }
+        }
+        try await removeEmptyDirectory(path)
+    }
 }
 
 /// Why a server operation failed, in the terms the user can act on.

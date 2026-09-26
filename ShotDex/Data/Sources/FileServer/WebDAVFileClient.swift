@@ -170,6 +170,19 @@ final class WebDAVFileClient: NSObject, RemoteFileClient, URLSessionDelegate, UR
         try check(response, path: path, allow: [200, 204, 404])
     }
 
+    func removeEmptyDirectory(_ path: String) async throws {
+        let (_, response) = try await send(request("DELETE", url(path, isDirectory: true)))
+        try check(response, path: path, allow: [200, 204, 404])
+    }
+
+    /// A collection's DELETE takes everything in it (RFC 4918 §9.6.1); 207
+    /// means part of it stayed.
+    func removeFolderTree(_ path: String) async throws {
+        let (_, response) = try await send(request("DELETE", url(path, isDirectory: true)))
+        if (response as? HTTPURLResponse)?.statusCode == 207 { throw RemoteFileError.permissionDenied(path) }
+        try check(response, path: path, allow: [200, 204, 404])
+    }
+
     // MARK: Requests
 
     private func propfind(_ url: URL, depth: Int) -> URLRequest {

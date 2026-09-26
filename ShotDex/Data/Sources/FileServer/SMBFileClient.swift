@@ -2,8 +2,9 @@ import CryptoKit
 import Foundation
 import SMBClient
 
-/// `RemoteFileClient` over SMB 2/3 (SMBClient, MIT). Paths are relative to
-/// the share.
+/// `RemoteFileClient` over SMB 2/3 (SMBClient, MIT). Paths start at the
+/// machine: the first component is the shared folder (FS-15.01 §3a), so
+/// one login browses every share and the root lists them.
 ///
 /// `@unchecked Sendable` because SMBClient's session is a plain class: the
 /// upload session calls one method at a time and awaits each, so nothing
@@ -12,6 +13,8 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
     private let server: FileServer
     private let password: String
     private var client: SMBClient?
+    /// The share the session's tree is connected to.
+    private var connectedShare: String?
 
     init(server: FileServer, password: String) {
         self.server = server
@@ -27,16 +30,11 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
         } catch {
             throw Self.map(error, host: server.host, path: "")
         }
-        do {
-            try await client.connectShare(server.share)
-        } catch {
-            throw RemoteFileError.folderMissing(server.share)
-        }
         self.client = client
+        connectedShare = nil
     }
 
-    /// The shares `host` offers this login (FS-15.04 §5), before any share
-    /// is picked — the Choose… button of the form.
+    /// The shares `host` offers this login, system shares left out.
     static func shareNames(host: String, port: Int, username: String, password: String) async throws -> [String] {
         let client = SMBClient(host: host, port: port)
         do {
@@ -55,7 +53,8 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
     func disconnect() async {
         guard let client else { return }
         self.client = nil
-        _ = try? await client.disconnectShare()
+        if connectedShare != nil { _ = try? await client.disconnectShare() }
+        connectedShare = nil
         _ = try? await client.logoff()
     }
 
@@ -64,50 +63,82 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
         return client
     }
 
+    /// The client with `path`'s share connected, and the path inside that
+    /// share; nil for the machine's root. Moving to another share swaps the
+    /// tree within the same login.
+    private func open(_ path: String) async throws -> (client: SMBClient, rest: String)? {
+        let client = try connected()
+        guard let (share, rest) = SMBPath.split(path) else { return nil }
+        if share != connectedShare {
+            if connectedShare != nil { _ = try? await client.disconnectShare() }
+            connectedShare = nil
+            do {
+                try await client.connectShare(share)
+            } catch {
+                let mapped = Self.map(error, host: server.host, path: share)
+                if case RemoteFileError.other = mapped { throw RemoteFileError.folderMissing(share) }
+                throw mapped
+            }
+            connectedShare = share
+        }
+        return (client, rest)
+    }
+
+    /// Like `open`, for work that needs a share: nothing but the share list
+    /// lives at the root, so a file there is refused.
+    private func openInShare(_ path: String) async throws -> (client: SMBClient, rest: String) {
+        guard let opened = try await open(path) else { throw RemoteFileError.permissionDenied("/") }
+        return opened
+    }
+
+    private func shareEntries() async throws -> [RemoteEntry] {
+        do {
+            let shares = try await connected().listShares()
+            return SMBShareNames.visible(shares.map(\.name)).map {
+                RemoteEntry(name: $0, isDirectory: true, size: 0, modified: nil)
+            }
+        } catch {
+            throw Self.map(error, host: server.host, path: "")
+        }
+    }
+
     func fileSize(at path: String) async throws -> Int64? {
         do {
-            let stat = try await connected().fileStat(path: path)
+            guard let (client, rest) = try await open(path), !rest.isEmpty else { return nil }
+            let stat = try await client.fileStat(path: rest)
             return stat.isDirectory ? nil : Int64(stat.size)
         } catch {
             if Self.isNotFound(error) { return nil }
+            if case RemoteFileError.folderMissing = error { return nil }
             throw Self.map(error, host: server.host, path: path)
         }
     }
 
     func directoryExists(_ path: String) async throws -> Bool {
-        guard !path.isEmpty else { return true }
         do {
-            return try await connected().existDirectory(path: path)
+            guard let (client, rest) = try await open(path) else { return true }
+            if rest.isEmpty { return true }
+            return try await client.existDirectory(path: rest)
         } catch {
             if Self.isNotFound(error) { return false }
+            if case RemoteFileError.folderMissing = error { return false }
             throw Self.map(error, host: server.host, path: path)
         }
     }
 
     func fileNames(in directory: String) async throws -> Set<String> {
-        do {
-            let files = try await connected().listDirectory(path: directory)
-            return Set(files.filter { !$0.isDirectory && $0.name != "." && $0.name != ".." }.map(\.name))
-        } catch {
-            if Self.isNotFound(error) { return [] }
-            throw Self.map(error, host: server.host, path: directory)
-        }
+        Set(try await entries(in: directory).filter { !$0.isDirectory }.map(\.name))
     }
 
     func folderNames(in directory: String) async throws -> Set<String> {
-        do {
-            let files = try await connected().listDirectory(path: directory)
-            return Set(files.filter { $0.isDirectory && $0.name != "." && $0.name != ".." }.map(\.name))
-        } catch {
-            if Self.isNotFound(error) { return [] }
-            throw Self.map(error, host: server.host, path: directory)
-        }
+        Set(try await entries(in: directory).filter(\.isDirectory).map(\.name))
     }
 
     func createDirectory(_ path: String) async throws {
-        let client = try connected()
+        // A share cannot be made from here; opening it proves it is there.
+        guard let (client, rest) = try await open(path) else { return }
         var current = ""
-        for component in path.split(separator: "/") {
+        for component in rest.split(separator: "/") {
             current = ServerUploadPath.join(current, String(component))
             do {
                 // A missing folder comes back as STATUS_NO_SUCH_FILE from some
@@ -122,7 +153,7 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
                 if exists { continue }
                 try await client.createDirectory(path: current)
             } catch {
-                throw Self.map(error, host: server.host, path: current)
+                throw Self.map(error, host: server.host, path: ServerUploadPath.join(SMBPath.split(path)?.share ?? "", current))
             }
         }
     }
@@ -133,7 +164,8 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
         let total = (try? handle.seekToEnd()).map { Int64($0) } ?? 0
         try handle.seek(toOffset: 0)
         do {
-            try await connected().upload(fileHandle: handle, path: path) { fraction in
+            let (client, rest) = try await openInShare(path)
+            try await client.upload(fileHandle: handle, path: rest) { fraction in
                 progress(Int64(fraction * Double(total)))
             }
         } catch {
@@ -145,9 +177,9 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
 
     func sha256(of path: String, progress: @escaping @Sendable (Int64) -> Void) async throws -> String {
         do {
-            let client = try connected()
-            let size = try await client.fileStat(path: path).size
-            let reader = client.fileReader(path: path)
+            let (client, rest) = try await openInShare(path)
+            let size = try await client.fileStat(path: rest).size
+            let reader = client.fileReader(path: rest)
             var hasher = SHA256()
             var offset: UInt64 = 0
             while offset < size {
@@ -169,7 +201,8 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
 
     func entries(in directory: String) async throws -> [RemoteEntry] {
         do {
-            let files = try await connected().listDirectory(path: directory)
+            guard let (client, rest) = try await open(directory) else { return try await shareEntries() }
+            let files = try await client.listDirectory(path: rest)
             return files
                 .filter { $0.name != "." && $0.name != ".." }
                 .map { RemoteEntry(name: $0.name, isDirectory: $0.isDirectory, size: Int64($0.size), modified: $0.lastWriteTime) }
@@ -181,7 +214,8 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
 
     func readRange(_ path: String, offset: Int64, length: Int) async throws -> Data {
         do {
-            let reader = try connected().fileReader(path: path)
+            let (client, rest) = try await openInShare(path)
+            let reader = client.fileReader(path: rest)
             defer { Task { try? await reader.close() } }
             var result = Data()
             var position = UInt64(offset)
@@ -203,9 +237,9 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
 
     func download(_ path: String, to localURL: URL, progress: @escaping @Sendable (Int64) -> Void) async throws -> String {
         do {
-            let client = try connected()
-            let size = try await client.fileStat(path: path).size
-            let reader = client.fileReader(path: path)
+            let (client, rest) = try await openInShare(path)
+            let size = try await client.fileStat(path: rest).size
+            let reader = client.fileReader(path: rest)
             FileManager.default.createFile(atPath: localURL.path, contents: nil)
             let out = try FileHandle(forWritingTo: localURL)
             defer { try? out.close() }
@@ -230,8 +264,16 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
     }
 
     func move(_ source: String, to destination: String) async throws {
+        guard let from = SMBPath.split(source), let to = SMBPath.split(destination),
+              !from.rest.isEmpty, !to.rest.isEmpty else {
+            throw RemoteFileError.permissionDenied(source)
+        }
+        guard from.share == to.share else {
+            throw RemoteFileError.other(String(localized: "Items can't be moved between shared folders.", comment: "File server error: SMB rename across shares"))
+        }
         do {
-            try await connected().move(from: source, to: destination)
+            let (client, _) = try await openInShare(source)
+            try await client.move(from: from.rest, to: to.rest)
         } catch {
             throw Self.map(error, host: server.host, path: destination)
         }
@@ -239,7 +281,21 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
 
     func remove(_ path: String) async throws {
         do {
-            try await connected().deleteFile(path: path)
+            let (client, rest) = try await openInShare(path)
+            guard !rest.isEmpty else { throw RemoteFileError.permissionDenied(path) }
+            try await client.deleteFile(path: rest)
+        } catch {
+            if Self.isNotFound(error) { return }
+            throw Self.map(error, host: server.host, path: path)
+        }
+    }
+
+    func removeEmptyDirectory(_ path: String) async throws {
+        do {
+            let (client, rest) = try await openInShare(path)
+            // A share is the computer's to remove, not ShotDex's.
+            guard !rest.isEmpty else { throw RemoteFileError.permissionDenied(path) }
+            try await client.deleteDirectory(path: rest)
         } catch {
             if Self.isNotFound(error) { return }
             throw Self.map(error, host: server.host, path: path)

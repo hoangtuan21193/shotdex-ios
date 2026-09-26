@@ -142,15 +142,47 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
         return FileChecksum.hex(SHA256.hash(data: data))
     }
 
+    /// Paths `remove` / `removeEmptyDirectory` refuse, as a server without
+    /// delete permission does.
+    var refuseRemoving: Set<String> = []
+    /// Every path removed, in order.
+    private(set) var removed: [String] = []
+
     func move(_ source: String, to destination: String) async throws {
         try lock.withLock {
-            guard storage[destination] == nil else { throw RemoteFileError.other("exists") }
-            storage[destination] = storage.removeValue(forKey: source)
+            guard storage[destination] == nil, !directories.contains(destination) else { throw RemoteFileError.other("exists") }
+            if directories.contains(source) {
+                let prefix = source + "/"
+                for key in storage.keys where key.hasPrefix(prefix) {
+                    storage[destination + "/" + key.dropFirst(prefix.count)] = storage.removeValue(forKey: key)
+                }
+                for dir in directories where dir == source || dir.hasPrefix(prefix) {
+                    directories.remove(dir)
+                    directories.insert(destination + dir.dropFirst(source.count))
+                }
+            } else {
+                storage[destination] = storage.removeValue(forKey: source)
+            }
         }
     }
 
     func remove(_ path: String) async throws {
-        _ = lock.withLock { storage.removeValue(forKey: path) }
+        try lock.withLock {
+            if refuseRemoving.contains(path) { throw RemoteFileError.permissionDenied(path) }
+            if storage.removeValue(forKey: path) != nil { removed.append(path) }
+        }
+    }
+
+    func removeEmptyDirectory(_ path: String) async throws {
+        try lock.withLock {
+            if refuseRemoving.contains(path) { throw RemoteFileError.permissionDenied(path) }
+            let prefix = path + "/"
+            guard !storage.keys.contains(where: { $0.hasPrefix(prefix) }),
+                  !directories.contains(where: { $0.hasPrefix(prefix) }) else {
+                throw RemoteFileError.other("not empty")
+            }
+            if directories.remove(path) != nil { removed.append(path) }
+        }
     }
 }
 
