@@ -49,7 +49,7 @@ struct FileServerStore: Sendable {
                 // A different host or port is a different machine: the key
                 // the user trusted for the old one says nothing about it.
                 if existing.host != server.host || existing.port != server.port {
-                    row.hostKeyFingerprint = nil
+                    row.trustedFingerprint = nil
                 }
                 // The upload sheet owns these; the form only carries what it
                 // read, which may be older than the last upload.
@@ -70,7 +70,7 @@ struct FileServerStore: Sendable {
     func setHostKeyFingerprint(_ fingerprint: String?, for serverId: String) throws {
         try database.writer.write { db in
             try db.execute(
-                sql: "UPDATE file_servers SET hostKeyFingerprint = ? WHERE id = ?",
+                sql: "UPDATE file_servers SET trustedFingerprint = ? WHERE id = ?",
                 arguments: [fingerprint, serverId]
             )
         }

@@ -80,15 +80,15 @@ import Testing
     @Test func changingHostForgetsTrustedKey() throws {
         let stores = try makeStores()
         var server = FileServer(name: "Mac", transferProtocol: .sftp, host: "mac.local", username: "u",
-                                hostKeyFingerprint: "SHA256:abc")
+                                trustedFingerprint: "SHA256:abc")
         try stores.servers.save(server, password: nil)
         server.name = "My Mac"
         try stores.servers.save(server, password: nil)
-        #expect(try stores.servers.fetch(id: server.id)?.hostKeyFingerprint == "SHA256:abc")
+        #expect(try stores.servers.fetch(id: server.id)?.trustedFingerprint == "SHA256:abc")
 
         server.host = "other.local"
         try stores.servers.save(server, password: nil)
-        #expect(try stores.servers.fetch(id: server.id)?.hostKeyFingerprint == nil)
+        #expect(try stores.servers.fetch(id: server.id)?.trustedFingerprint == nil)
     }
 
     /// AC-18: the same server added twice gets a second name, and editing a

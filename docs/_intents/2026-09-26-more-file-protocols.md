@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-26 |
 | Trạng thái | accepted — người dùng duyệt 2026-09-26 |
-| Tiến độ | **chưa làm** (2026-09-26) — spec xong, plan [2026-09-26](../_plans/2026-09-26-server-discovery-protocols-import.md) |
+| Tiến độ | **đang làm** (2026-09-26) — task 11/14 của plan (1/4 khối C), 1/6 AC xanh |
 | Nguồn | phản hồi người dùng (2026-09-26) |
 | Spec sinh ra từ đây | [FS-15.05](../02-functional-spec/FS-15-server-upload/05-more-protocols.md) — AC-31…AC-36 |
 

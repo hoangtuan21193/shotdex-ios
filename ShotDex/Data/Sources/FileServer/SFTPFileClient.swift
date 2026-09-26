@@ -27,7 +27,7 @@ final class SFTPFileClient: RemoteFileClient, @unchecked Sendable {
     }
 
     func connect() async throws {
-        let validator = HostKeyCheck(saved: server.hostKeyFingerprint, host: server.host)
+        let validator = HostKeyCheck(saved: server.trustedFingerprint, host: server.host)
         do {
             let ssh = try await withConnectTimeout(host: server.host) {
                 try await SSHClient.connect(

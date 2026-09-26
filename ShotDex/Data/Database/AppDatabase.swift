@@ -503,6 +503,16 @@ final class AppDatabase: Sendable {
             try db.create(index: "server_uploads_server_path", on: "server_uploads", columns: ["serverId", "remotePath"])
         }
 
+        // FS-15.05: WebDAV, FTPS, FTP. The trusted fingerprint now covers TLS
+        // certificates as well as SSH host keys, so the column says so.
+        migrator.registerMigration("v22-moreFileProtocols") { db in
+            try db.alter(table: "file_servers") { t in
+                t.rename(column: "hostKeyFingerprint", to: "trustedFingerprint")
+                t.add(column: "usesTLS", .boolean).notNull().defaults(to: true)
+                t.add(column: "tlsMode", .text).notNull().defaults(to: "explicit")
+            }
+        }
+
         return migrator
     }
 }

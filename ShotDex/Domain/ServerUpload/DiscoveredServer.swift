@@ -59,7 +59,8 @@ struct DiscoveredServer: Identifiable, Hashable, Sendable {
             switch self {
             case .smb: .smb
             case .sftp: .sftp
-            case .webdavHTTPS, .webdav, .ftp: nil
+            case .webdavHTTPS, .webdav: RemoteFileClientFactory.supports(.webdav) ? .webdav : nil
+            case .ftp: RemoteFileClientFactory.supports(.ftp) ? .ftp : nil
             }
         }
     }
@@ -149,7 +150,8 @@ extension FileServerDraft {
         self.server.name = server.name
         self.server.transferProtocol = transferProtocol
         self.server.host = offer.host
-        portText = offer.port == transferProtocol.defaultPort ? "" : String(offer.port)
+        if transferProtocol == .webdav { self.server.usesTLS = offer.service == .webdavHTTPS }
+        portText = offer.port == self.server.defaultPort ? "" : String(offer.port)
     }
 }
 

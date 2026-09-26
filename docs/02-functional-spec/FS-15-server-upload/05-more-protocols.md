@@ -18,7 +18,7 @@ Nguồn: [intent](../../_intents/2026-09-26-more-file-protocols.md). **NFS bị 
 | **FTPS** | 21 (explicit) · 990 (implicit) | **TLS Mode**: Explicit (mặc định) / Implicit | chỉ passive (EPSV → PASV) |
 | **FTP** | 21 | — | không mã hoá, cảnh báo §3 |
 
-- Picker Protocol liệt kê theo thứ tự trên. Đổi giao thức thì ô riêng đổi theo, cổng để trống là cổng mặc định
+- Picker Protocol liệt kê theo thứ tự trên, **chỉ những giao thức đã có client** (`RemoteFileClientFactory.supports`). Đổi giao thức thì ô riêng đổi theo, cổng để trống là cổng mặc định
   của lựa chọn hiện tại.
 - Folder vẫn là đường dẫn tương đối: trong share (SMB), trong home (SFTP), dưới Path (WebDAV), từ thư mục đăng nhập
   (FTP/FTPS).
@@ -54,8 +54,7 @@ Cùng một danh sách thao tác `RemoteFileClient` (FS-15.02 §4, FS-15.02 §2a
 - Chứng chỉ tự ký / không khớp tên (NAS nhà rất hay) → hộp **Trust This Server?** như host key SFTP (FS-15.01 §4),
   hiện dấu vân tay SHA-256 của chứng chỉ lá. Trust → lưu; lần sau khác → chặn, câu "The identity of <host>
   changed…" + **Forget Saved Key**.
-- Dùng chung cột dấu vân tay đã tin (`hostKeyFingerprint`) — ⚠️ CẦN QUYẾT: đổi tên cột thành
-  `trustedFingerprint` (app chưa phát hành, không cần giữ tương thích).
+- Dùng chung cột dấu vân tay đã tin, **đổi tên thành `trustedFingerprint`** ở migration v22 (app chưa phát hành).
 
 ## 5. Thư viện
 

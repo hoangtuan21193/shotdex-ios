@@ -24,30 +24,34 @@ struct FileServerDraft: Identifiable {
     init(server: FileServer) {
         self.server = server
         isNew = false
-        portText = server.port == server.transferProtocol.defaultPort ? "" : String(server.port)
+        portText = server.port == server.defaultPort ? "" : String(server.port)
     }
 
     /// The port the form stands for: typed, or the protocol's default.
     var port: Int? {
         let text = portText.trimmingCharacters(in: .whitespaces)
-        return text.isEmpty ? server.transferProtocol.defaultPort : Int(text)
+        return text.isEmpty ? server.defaultPort : Int(text)
     }
 
     var canSave: Bool {
         !server.host.trimmingCharacters(in: .whitespaces).isEmpty
             && !server.username.trimmingCharacters(in: .whitespaces).isEmpty
             && port.map { (1...65_535).contains($0) } == true
-            && (server.transferProtocol == .sftp || !server.share.trimmingCharacters(in: .whitespaces).isEmpty)
+            && (server.transferProtocol != .smb || !server.share.trimmingCharacters(in: .whitespaces).isEmpty)
     }
 
     /// The row as saved: trimmed, a blank name falls back to the host, the
     /// share is dropped for SFTP.
     var normalized: FileServer {
         var row = server
-        row.port = port ?? row.transferProtocol.defaultPort
+        row.port = port ?? row.defaultPort
         row.host = row.host.trimmingCharacters(in: .whitespaces)
         row.username = row.username.trimmingCharacters(in: .whitespaces)
-        row.share = row.transferProtocol == .smb ? row.share.trimmingCharacters(in: .whitespaces) : ""
+        switch row.transferProtocol {
+        case .smb: row.share = row.share.trimmingCharacters(in: .whitespaces)
+        case .webdav: row.share = ServerUploadPath.normalizedFolder(row.share)
+        case .sftp, .ftps, .ftp: row.share = ""
+        }
         row.folder = ServerUploadPath.normalizedFolder(row.folder)
         let name = row.name.trimmingCharacters(in: .whitespaces)
         row.name = name.isEmpty ? row.host : name
@@ -106,13 +110,14 @@ struct FileServerFormScreen: View {
                 Section {
                     field("Name", text: $draft.server.name, prompt: draft.server.host.isEmpty ? "My NAS" : draft.server.host, focus: .name)
                     Picker("Protocol", selection: protocolBinding) {
-                        ForEach(FileServer.TransferProtocol.allCases) { Text($0.title).tag($0) }
+                        ForEach(FileServer.TransferProtocol.selectable) { Text($0.title).tag($0) }
                     }
+                    protocolOptions
                     field("Host", text: $draft.server.host, prompt: "nas.local", focus: .host)
                         .textContentType(.URL)
                         .keyboardType(.URL)
                     LabeledContent("Port") {
-                        TextField("Port", text: $draft.portText, prompt: Text(verbatim: String(draft.server.transferProtocol.defaultPort)))
+                        TextField("Port", text: $draft.portText, prompt: Text(verbatim: String(draft.server.defaultPort)))
                             .keyboardType(.numberPad)
                             .multilineTextAlignment(.trailing)
                             .focused($focus, equals: .port)
@@ -137,11 +142,12 @@ struct FileServerFormScreen: View {
                     if draft.server.transferProtocol == .smb {
                         shareRow
                     }
+                    if draft.server.transferProtocol == .webdav {
+                        field("Path", text: $draft.server.share, prompt: "Optional", focus: .share)
+                    }
                     field("Folder", text: $draft.server.folder, prompt: "Optional", focus: .folder)
                 } footer: {
-                    Text(draft.server.transferProtocol == .smb
-                         ? "The share is the shared folder on the server — Choose… lists them once the username and password are in. Folder is where uploads start; you can pick another each time."
-                         : "Folder is relative to your home folder on the server. It is where uploads start; you can pick another each time.")
+                    Text(folderFooter)
                 }
                 Section {
                     Button {
@@ -168,7 +174,7 @@ struct FileServerFormScreen: View {
                         Button("Forget Saved Key", role: .destructive) { forgetKey() }
                     }
                 } footer: {
-                    if let fingerprint = draft.server.hostKeyFingerprint, draft.server.transferProtocol == .sftp {
+                    if let fingerprint = draft.server.trustedFingerprint, draft.server.hasTrustedIdentity {
                         Text("Trusted key \(fingerprint)")
                             .font(.caption.monospaced())
                     }
@@ -382,6 +388,41 @@ struct FileServerFormScreen: View {
         }
     }
 
+    // MARK: Protocol options
+
+    /// The rows only some protocols have (FS-15.05 §1, §3).
+    @ViewBuilder
+    private var protocolOptions: some View {
+        switch draft.server.transferProtocol {
+        case .webdav:
+            Toggle("Use HTTPS", isOn: Binding(get: { draft.server.usesTLS }, set: { draft.server.usesTLS = $0; test = .idle }))
+        case .ftps:
+            Picker("TLS Mode", selection: Binding(get: { draft.server.tlsMode }, set: { draft.server.tlsMode = $0; test = .idle })) {
+                ForEach(FileServer.TLSMode.allCases) { Text($0.title).tag($0) }
+            }
+        case .smb, .sftp, .ftp:
+            EmptyView()
+        }
+        if draft.server.isUnencrypted {
+            Label("Passwords and photos are sent unencrypted. Use this only on your home network.", systemImage: "exclamationmark.triangle.fill")
+                .font(.footnote)
+                .foregroundStyle(.orange)
+        }
+    }
+
+    private var folderFooter: String {
+        switch draft.server.transferProtocol {
+        case .smb:
+            String(localized: "The share is the shared folder on the server — Choose… lists them once the username and password are in. Folder is where uploads start; you can pick another each time.")
+        case .sftp:
+            String(localized: "Folder is relative to your home folder on the server. It is where uploads start; you can pick another each time.")
+        case .webdav:
+            String(localized: "Path is the WebDAV address on the server, such as remote.php/dav/files/you for Nextcloud. Folder is where uploads start, inside Path.")
+        case .ftps, .ftp:
+            String(localized: "Folder is relative to the folder you land in when you log in. It is where uploads start; you can pick another each time.")
+        }
+    }
+
     /// A labelled text row: the name on the left, the value typed on the right.
     private func field(_ title: LocalizedStringKey, text: Binding<String>, prompt: String, focus field: Field) -> some View {
         LabeledContent(title) {
@@ -402,7 +443,7 @@ struct FileServerFormScreen: View {
         case .host: .port
         case .port: .username
         case .username: .password
-        case .password: draft.server.transferProtocol == .smb ? .share : .folder
+        case .password: [.smb, .webdav].contains(draft.server.transferProtocol) ? .share : .folder
         case .share: .folder
         case .folder: nil
         }
@@ -468,7 +509,7 @@ struct FileServerFormScreen: View {
     }
 
     private func trust(_ fingerprint: String) {
-        draft.server.hostKeyFingerprint = fingerprint
+        draft.server.trustedFingerprint = fingerprint
         if !draft.isNew {
             try? dependencies.fileServers.setHostKeyFingerprint(fingerprint, for: draft.server.id)
         }
@@ -476,7 +517,7 @@ struct FileServerFormScreen: View {
     }
 
     private func forgetKey() {
-        draft.server.hostKeyFingerprint = nil
+        draft.server.trustedFingerprint = nil
         if !draft.isNew {
             try? dependencies.fileServers.setHostKeyFingerprint(nil, for: draft.server.id)
         }

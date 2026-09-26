@@ -52,7 +52,7 @@ lệch, huỷ) kiểm được mà không cần mạng. Phần chỉ máy thật
 | AC-31 | server WebDAV giả (trong bộ nhớ, phản hồi PROPFIND/PUT/GET/MOVE/MKCOL/DELETE) | chạy bộ test phiên upload của AC-3…AC-9 trên client WebDAV | cùng kết quả: file tên thật + checksum khớp, không `.shotdex-part` sót, trùng tên hỏi đúng | `WebDAVFileClientTests.sessionContract` ⚠️ chưa có |
 | AC-32 | PROPFIND trả 3 `collection` + 5 file, có `%20` và UTF-8 trong href | liệt kê | 3 folder và 5 tên file đã giải mã; không có chính folder đang liệt kê | `WebDAVFileClientTests.propfindParsing` ⚠️ chưa có |
 | AC-33 | chứng chỉ tự ký, lần đầu | Test Connection (WebDAV HTTPS hoặc FTPS) | hộp Trust hiện dấu vân tay SHA-256 chứng chỉ lá; Trust → lưu; lần sau chứng chỉ khác → chặn "identity … changed" | `TLSTrustTests.trustThenMismatchBlocks` + `scripts/server-protocols.json` ⚠️ chưa có |
-| AC-34 | chọn FTP, hoặc WebDAV tắt Use HTTPS | form | câu "Passwords and photos are sent unencrypted…" hiện; SMB/SFTP/WebDAV HTTPS/FTPS không hiện | `FileServerDraftTests.unencryptedWarning` + ảnh form ⚠️ chưa có |
+| AC-34 | chọn FTP, hoặc WebDAV tắt Use HTTPS | form | câu "Passwords and photos are sent unencrypted…" hiện; SMB/SFTP/WebDAV HTTPS/FTPS không hiện | `FileServerProtocolTests.unencryptedWarning` + ảnh form ⚠️ chưa chụp |
 | AC-35 | server FTP giả lập (pyftpdlib, 127.0.0.1) và FTPS explicit | upload 3 file, rồi đọc 512 KB đầu một file bằng `REST` | 3 file khớp `shasum -a 256`; đoạn đọc đúng 512 KB đầu | `scripts/server-protocols.json` + `FTPFileClientTests.restRangeRead` ⚠️ chưa có |
 | AC-36 | server WebDAV giả lập (wsgidav, 127.0.0.1) | upload 3 file, duyệt folder, tạo folder | như AC-35; màn duyệt FS-15.02 §2a liệt kê folder đúng | `scripts/server-protocols.json` ⚠️ chưa có |
 

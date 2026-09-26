@@ -85,3 +85,36 @@ import Testing
         #expect(FileServerDraft(server: custom).portText == "4450")
     }
 }
+
+/// FS-15.05 §1, §3: ports follow the protocol's TLS setting, and the form
+/// warns about cleartext.
+@Suite struct FileServerProtocolTests {
+    /// AC-34.
+    @Test func unencryptedWarning() {
+        func server(_ transferProtocol: FileServer.TransferProtocol, usesTLS: Bool = true) -> FileServer {
+            FileServer(name: "x", transferProtocol: transferProtocol, host: "h", username: "u", usesTLS: usesTLS)
+        }
+        #expect(server(.ftp).isUnencrypted)
+        #expect(server(.webdav, usesTLS: false).isUnencrypted)
+        for safe in [server(.smb), server(.sftp), server(.webdav), server(.ftps)] {
+            #expect(!safe.isUnencrypted)
+        }
+    }
+
+    @Test func defaultPortsFollowTLS() {
+        #expect(FileServer(name: "x", transferProtocol: .webdav, host: "h", username: "u").port == 443)
+        #expect(FileServer(name: "x", transferProtocol: .webdav, host: "h", username: "u", usesTLS: false).port == 80)
+        #expect(FileServer(name: "x", transferProtocol: .ftps, host: "h", username: "u", tlsMode: .implicit).port == 990)
+        #expect(FileServer(name: "x", transferProtocol: .ftps, host: "h", username: "u").port == 21)
+
+        var draft = FileServerDraft()
+        draft.server.transferProtocol = .webdav
+        draft.server.share = "/remote.php/dav/files/me/"
+        draft.server.host = "cloud.example.com"
+        draft.server.username = "me"
+        #expect(draft.canSave)
+        #expect(draft.normalized.share == "remote.php/dav/files/me")
+        #expect(draft.normalized.port == 443)
+    }
+}
+

@@ -7,6 +7,9 @@ struct FileServer: Codable, Identifiable, Hashable, Sendable {
     enum TransferProtocol: String, Codable, CaseIterable, Identifiable, Sendable {
         case smb
         case sftp
+        case webdav
+        case ftps
+        case ftp
 
         var id: String { rawValue }
 
@@ -14,13 +17,39 @@ struct FileServer: Codable, Identifiable, Hashable, Sendable {
             switch self {
             case .smb: "SMB"
             case .sftp: "SFTP"
+            case .webdav: "WebDAV"
+            case .ftps: "FTPS"
+            case .ftp: "FTP"
             }
         }
 
+        /// The port at this protocol's default TLS setting.
         var defaultPort: Int {
             switch self {
             case .smb: 445
             case .sftp: 22
+            case .webdav: 443
+            case .ftps, .ftp: 21
+            }
+        }
+
+        /// Protocols the form offers — those with a client behind them.
+        static var selectable: [TransferProtocol] {
+            allCases.filter { RemoteFileClientFactory.supports($0) }
+        }
+    }
+
+    /// FTPS: TLS from the first byte (990) or after `AUTH TLS` (21).
+    enum TLSMode: String, Codable, CaseIterable, Identifiable, Sendable {
+        case explicit
+        case implicit
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .explicit: String(localized: "Explicit", comment: "FTPS TLS mode: AUTH TLS on port 21")
+            case .implicit: String(localized: "Implicit", comment: "FTPS TLS mode: TLS from the start on port 990")
             }
         }
     }
@@ -31,7 +60,8 @@ struct FileServer: Codable, Identifiable, Hashable, Sendable {
     var host: String
     var port: Int
     var username: String
-    /// The SMB share. Empty for SFTP, which has no such level.
+    /// The SMB share, or the WebDAV base path (`remote.php/dav/files/me`).
+    /// Empty for SFTP and FTP, which have no such level.
     var share: String
     /// Destination folder inside the share (SMB) or relative to the login's
     /// home (SFTP). Empty means the top.
@@ -43,9 +73,14 @@ struct FileServer: Codable, Identifiable, Hashable, Sendable {
     /// Whether the last upload sorted into year/day folders. Off for a new
     /// connection.
     var usesDateFolders: Bool
-    /// SFTP only: the host key the user trusted, `SHA256:<base64>`. Cleared
+    /// The identity the user trusted: the SFTP host key or the TLS
+    /// certificate (WebDAV over HTTPS, FTPS), `SHA256:<base64>`. Cleared
     /// whenever the host or port changes.
-    var hostKeyFingerprint: String?
+    var trustedFingerprint: String?
+    /// WebDAV: HTTPS (default) or plain HTTP.
+    var usesTLS: Bool
+    /// FTPS only.
+    var tlsMode: TLSMode
     /// Epoch seconds of the last upload — the prepare step picks the most
     /// recent one.
     var lastUsedAt: Int?
@@ -62,7 +97,9 @@ struct FileServer: Codable, Identifiable, Hashable, Sendable {
         folder: String = "",
         uploadFolder: String? = nil,
         usesDateFolders: Bool = false,
-        hostKeyFingerprint: String? = nil,
+        trustedFingerprint: String? = nil,
+        usesTLS: Bool = true,
+        tlsMode: TLSMode = .explicit,
         lastUsedAt: Int? = nil,
         createdAt: Int = Int(Date().timeIntervalSince1970)
     ) {
@@ -70,15 +107,43 @@ struct FileServer: Codable, Identifiable, Hashable, Sendable {
         self.name = name
         self.transferProtocol = transferProtocol
         self.host = host
-        self.port = port ?? transferProtocol.defaultPort
+        self.usesTLS = usesTLS
+        self.tlsMode = tlsMode
+        self.port = port ?? Self.defaultPort(transferProtocol, usesTLS: usesTLS, tlsMode: tlsMode)
         self.username = username
         self.share = share
         self.folder = folder
         self.uploadFolder = uploadFolder
         self.usesDateFolders = usesDateFolders
-        self.hostKeyFingerprint = hostKeyFingerprint
+        self.trustedFingerprint = trustedFingerprint
         self.lastUsedAt = lastUsedAt
         self.createdAt = createdAt
+    }
+
+    /// The port this connection uses when none is typed.
+    var defaultPort: Int { Self.defaultPort(transferProtocol, usesTLS: usesTLS, tlsMode: tlsMode) }
+
+    static func defaultPort(_ transferProtocol: TransferProtocol, usesTLS: Bool, tlsMode: TLSMode) -> Int {
+        switch transferProtocol {
+        case .webdav: usesTLS ? 443 : 80
+        case .ftps: tlsMode == .implicit ? 990 : 21
+        default: transferProtocol.defaultPort
+        }
+    }
+
+    /// Passwords and photos cross the network in the clear (FS-15.05 §3).
+    var isUnencrypted: Bool {
+        transferProtocol == .ftp || (transferProtocol == .webdav && !usesTLS)
+    }
+
+    /// Whether the connection has a server identity to trust: an SSH host
+    /// key, or a TLS certificate.
+    var hasTrustedIdentity: Bool {
+        switch transferProtocol {
+        case .sftp, .ftps: true
+        case .webdav: usesTLS
+        case .smb, .ftp: false
+        }
     }
 
     /// Where the upload sheet starts: the last folder used, else the form's.
