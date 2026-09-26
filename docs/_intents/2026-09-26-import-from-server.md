@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-26 |
 | Trạng thái | accepted — người dùng duyệt 2026-09-26 |
-| Tiến độ | **gần xong** (2026-09-26) — 7/7 task khối B, 15/17 AC có bằng chứng đủ; AC-12 thiếu ảnh album thật, AC-15 thiếu iOS 18.6/iPad; Show cho đích album chưa làm |
+| Tiến độ | **gần xong** (2026-09-27, /verify) — 16/18 AC xanh; thiếu: AC-15 trên iPad/Duo; Show cho đích album chưa làm |
 | Nguồn | phản hồi người dùng (2026-09-26) |
 | Spec sinh ra từ đây | [FS-17](../02-functional-spec/FS-17-import-from-server/README.md) — 16 AC |
 

@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-26 |
 | Trạng thái | accepted — người dùng duyệt 2026-09-26 |
-| Tiến độ | **gần xong** (2026-09-27) — thêm quét cổng 445 cho Windows (người dùng chốt) và sửa quét lại sau hộp quyền; 9/12 AC có bằng chứng; AC-27, 37 (hộp quyền thật), 41 (PC Windows thật) cần máy thật |
+| Tiến độ | **gần xong** (2026-09-27, /verify) — 9/12 AC xanh, AC-41 một phần (sim iPad quét ra PC Windows thật "WIN"); thiếu: AC-27, 37 (hộp Local Network thật), 41 trên iPhone thật |
 | Nguồn | phản hồi người dùng (2026-09-26, sau khi dùng FS-15) |
 | Spec sinh ra từ đây | [FS-15.04](../02-functional-spec/FS-15-server-upload/04-find-servers.md) — AC-24…AC-30 |
 

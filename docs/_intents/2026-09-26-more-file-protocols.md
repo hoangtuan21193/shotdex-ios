@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-26 |
 | Trạng thái | accepted — người dùng duyệt 2026-09-26 |
-| Tiến độ | **gần xong** (2026-09-26) — WebDAV xong (AC-31…34, 36); FTP/FTPS **bỏ** theo người dùng 2026-09-26; AC-36 thiếu upload qua WebDAV thật |
+| Tiến độ | **xong phần WebDAV** (2026-09-27, /verify) — AC-31…34, 36 xanh (upload qua WebDAV thật khớp SHA-256); FTP/FTPS bỏ theo người dùng |
 | Nguồn | phản hồi người dùng (2026-09-26) |
 | Spec sinh ra từ đây | [FS-15.05](../02-functional-spec/FS-15-server-upload/05-more-protocols.md) — AC-31…AC-36 |
 
