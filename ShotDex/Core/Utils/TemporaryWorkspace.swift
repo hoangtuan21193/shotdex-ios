@@ -24,10 +24,16 @@ enum TemporaryWorkspace {
         "ShotDexPano-",
         "ShotDex-Video-",
         serverUploadPrefix,
+        serverDownloadPrefix,
+        thumbnailPrefix,
     ]
 
     /// The upload's one-file-at-a-time copy of an original (FS-15.02 §4).
     static let serverUploadPrefix = "ShotDexUpload-"
+    /// The download's one-photo-at-a-time work folder (FS-17.02 §2).
+    static let serverDownloadPrefix = "ShotDexDownload-"
+    /// A small image fetched whole to thumbnail it (FS-17.01 §3).
+    static let thumbnailPrefix = "ShotDexThumb-"
 
     /// Removes every leftover scratch directory. Safe to call only at launch,
     /// before any session exists — it cannot tell a live directory from a
