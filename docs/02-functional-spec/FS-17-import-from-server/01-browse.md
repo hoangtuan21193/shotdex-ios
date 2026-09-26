@@ -53,15 +53,24 @@ nhúng, chọn nhiều như Library.
 
 ## 3. Thumbnail
 
-Thứ tự thử, dừng ở bước đầu tiên ra ảnh ≥ 320 px cạnh dài (ảnh nhỏ hơn giữ làm tạm, tiếp tục thử):
+Thứ tự thử, dừng ở bước đầu tiên ra ảnh ≥ 320 px cạnh dài (ảnh nhỏ hơn giữ làm tạm, tiếp tục thử). Cặp RAW+JPEG
+thử **file RAW trước** — đoạn đầu RAW rẻ hơn tải trọn JPEG.
 
-1. **Đọc đoạn đầu** file (mặc định 512 KB — con số chốt sau spike) bằng range read.
-2. ImageIO incremental trên đoạn đó → thumbnail có sẵn (JPEG/HEIC/TIFF có EXIF thumbnail, DNG/NEF nhiều máy).
-3. Tách **JPEG nhúng lớn nhất giải mã được** trong đoạn đó (SOI…EOI) — cách lấy preview `PRVW` của CR3 và
-   `JpgFromRaw` của các RAW dạng TIFF.
-4. File **không phải RAW** và ≤ 25 MB → tải trọn, ImageIO thumbnail.
-5. Không được → icon định dạng.
+1. Đọc **256 KB đầu** file (range read).
+2. ImageIO trên đoạn đó (JPEG/HEIC có EXIF thumbnail, NEF, DNG iPhone), rồi tách **JPEG nhúng có đủ byte** — tìm điểm
+   kết thúc bằng cách đi qua marker, vì ImageIO gọi một JPEG bị cắt là "complete" khi mới đọc header; chọn JPEG nhỏ
+   nhất mà ≥ 320 px.
+3. RAF: đọc JPEG preview theo con trỏ ở byte 84–91 của header nếu ≤ 8 MB.
+4. RAW khác: đọc tiếp tới **1 MB**.
+5. File **không phải RAW** và ≤ 25 MB → tải trọn, ImageIO thumbnail.
+6. Không được → icon định dạng.
 
+Đo 2026-09-26 (một file mỗi hãng, raw.pixls.us + CR3 Canon R6 II): NEF 640 px, PEF/DNG Pentax 720 px, DNG iPhone 400
+px trong 256 KB; CR3 1620 px, ARW 1616 px, ORF 3200 px, RW2 trong 1 MB; RAF 4416 px qua con trỏ (5.7 MB). Mười file
+đều ra thumbnail ≥ 320 px.
+
+- **Ngày chụp** (Date Taken) đọc từ 64 KB đầu: EXIF qua ImageIO; không được (CR3, RAF, PEF, ARW, RW2) thì chuỗi ngày
+  EXIF đầu tiên trong đoạn đó — máy ảnh ghi DateTime và DateTimeOriginal bằng nhau; đúng cả 10 file mẫu.
 - Kết quả thu về 400 px (cạnh dài), lưu cache đĩa (FS-17 §4). Mở lại folder: thumbnail từ cache, không đọc mạng.
 - Chỉ làm cho ô **đang hiện hoặc sắp hiện** (một màn phía trước); cuộn qua thì huỷ; tối đa 4 luồng mỗi connection.
 - Một connection dùng chung cho liệt kê + thumbnail của cả lượt duyệt; rời màn On Server thì đóng.
