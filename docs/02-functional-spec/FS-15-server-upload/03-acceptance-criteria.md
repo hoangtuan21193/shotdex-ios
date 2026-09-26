@@ -44,6 +44,7 @@ lệch, huỷ) kiểm được mà không cần mạng. Phần chỉ máy thật
 | AC-28 | server SMB giả lập quảng bá bằng `dns-sd -R "ShotDex Test" _smb._tcp local 4450` | mở Add Connection | hàng `ShotDex Test` hiện trong ≤ 5 s; chạm → Host/Port điền đúng; tắt quảng bá → hàng biến mất | `scripts/server-discovery.json` (iPhone 17 iOS 26.5; quảng bá bằng `dns-sd -P "ShotDex Test" _smb._tcp local 4450 shotdex-test.local 127.0.0.1`: hàng hiện với icon laptop, chạm → `shotdex-test.local`:4450) + `ServerDiscoveryModelTests.serverLeavingEmptiesTheList` |
 | AC-29 | không có máy nào quảng bá | chờ 5 s | "No servers found. Enter the address below."; các ô nhập tay dùng được | `ServerDiscoveryModelTests.emptyAfterTimeout` (browser giả) |
 | AC-30 | server SMB có share `photos`, `IPC$`, `backup`, `ADMIN$` | Choose… | danh sách `backup`, `photos` (không share `$`); chọn `photos` → ô Share = `photos`; sai mật khẩu → câu "The username or password was rejected." dưới hàng Share | `ShareListTests.hidesSystemShares` + `scripts/server-discovery.json` (Choose… liệt kê `PHOTOS`, chọn → ô Share điền; `IPC$` ẩn) |
+| AC-37 | lần đầu mở Add Connection, hộp Local Network đang hiện | bấm Allow, hộp đóng | form tìm lại ngay, máy trong mạng hiện ra mà không phải đóng mở form; bấm Don't Allow → câu "Local Network access is off" + Open Settings; quay về từ Settings đã bật → tìm lại | `ServerDiscoveryModelTests.searchesAgainAfterThePermissionPrompt` + `.deniedAfterThePromptIsShown`; hộp quyền thật ⚠️ máy thật |
 
 ### WebDAV (FS-15.05)
 

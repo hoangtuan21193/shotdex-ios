@@ -64,6 +64,7 @@ struct FileServerFormScreen: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
+    @Environment(\.scenePhase) private var scenePhase
     @State private var draft: FileServerDraft
     @State private var test: TestState = .idle
     @State private var untrustedFingerprint: String?
@@ -230,6 +231,11 @@ struct FileServerFormScreen: View {
             // for Local Network access, with the reason on screen.
             .onAppear { discovery?.start() }
             .onDisappear { discovery?.stop() }
+            // The Local Network prompt (or a trip to Settings) takes the app
+            // out of active; coming back is when to search again.
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { discovery?.appBecameActive() }
+            }
         }
     }
 

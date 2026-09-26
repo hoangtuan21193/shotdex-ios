@@ -12,6 +12,9 @@ Nguồn: [intent](../../_intents/2026-09-26-server-discovery.md).
 
 - Chỉ ở form **Add Connection** (Settings và sheet upload). Form **Edit Connection** không tìm — địa chỉ đã có.
 - Bắt đầu tìm ngay khi form hiện; đóng form là dừng. Không tìm nền, không tìm ở nơi khác.
+- NWBrowser báo "bị từ chối" **ngay khi** hộp Local Network hiện, trước khi người dùng trả lời. Lần từ chối đầu coi là
+  "đang hỏi": giữ spinner. App active lại (hộp đóng, hoặc quay về từ Settings) → **tìm lại**; bị từ chối sau lần đó mới
+  hiện câu "Local Network access is off" (lỗi 2026-09-27: bấm Allow xong danh sách không tự quét lại).
 - Lần đầu tìm là lúc hệ thống bật hộp **Local Network** (FS-15.01 §5 đổi theo: hỏi khi mở Add Connection, không
   còn đợi Test Connection). Câu giải thích trong hộp là `NSLocalNetworkUsageDescription` hiện có.
 

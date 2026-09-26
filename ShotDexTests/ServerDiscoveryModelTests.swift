@@ -7,9 +7,11 @@ import Testing
     final class ScriptedBrowser: LocalServerBrowsing {
         var onEvent: (@MainActor (LocalServerBrowserEvent) -> Void)?
         var isRunning = false
+        var startCount = 0
         func start(onEvent: @escaping @MainActor (LocalServerBrowserEvent) -> Void) {
             self.onEvent = onEvent
             isRunning = true
+            startCount += 1
         }
         func stop() { isRunning = false }
     }
@@ -38,13 +40,36 @@ import Testing
         #expect(!browser.isRunning)
     }
 
-    @Test func deniedWins() {
+    /// The browser reports "denied" while the system is still asking; the
+    /// form keeps looking, and searches again once the prompt is gone
+    /// (bug 2026-09-27: allowing access left the list empty until reopened).
+    @Test func searchesAgainAfterThePermissionPrompt() {
         let browser = ScriptedBrowser()
         let model = ServerDiscoveryModel(browser: browser, giveUpAfter: .seconds(60))
         model.start()
         browser.onEvent?(.denied)
+        #expect(model.state == .searching)
+
+        // The prompt closes (Allow): the app is active again.
+        model.appBecameActive()
+        #expect(browser.startCount == 2)
         browser.onEvent?(.records([smb]))
+        guard case .found = model.state else { Issue.record("expected found"); return }
+        model.stop()
+    }
+
+    @Test func deniedAfterThePromptIsShown() {
+        let browser = ScriptedBrowser()
+        let model = ServerDiscoveryModel(browser: browser, giveUpAfter: .seconds(60))
+        model.start()
+        browser.onEvent?(.denied)
+        model.appBecameActive()
+        browser.onEvent?(.denied)
         #expect(model.state == .denied)
+        // Coming back from Settings with access on: look again.
+        model.appBecameActive()
+        #expect(browser.startCount == 3)
+        #expect(model.state == .searching)
         model.stop()
     }
 

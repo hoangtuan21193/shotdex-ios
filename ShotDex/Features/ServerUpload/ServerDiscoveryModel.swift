@@ -20,6 +20,11 @@ final class ServerDiscoveryModel {
     private let browser: any LocalServerBrowsing
     private let giveUpAfter: Duration
     private var timeout: Task<Void, Never>?
+    /// The browser reports "denied" the moment the system shows its Local
+    /// Network prompt, before the user answers. The first denial is that
+    /// prompt; only a denial after the app is active again is an answer.
+    private var hasSeenPrompt = false
+    private var isRunning = false
 
     init(browser: any LocalServerBrowsing, giveUpAfter: Duration = .seconds(5)) {
         self.browser = browser
@@ -29,6 +34,7 @@ final class ServerDiscoveryModel {
     func start() {
         state = .searching
         isSearching = true
+        isRunning = true
         browser.start { [weak self] event in self?.handle(event) }
         let giveUpAfter = giveUpAfter
         timeout = Task { [weak self] in
@@ -44,13 +50,35 @@ final class ServerDiscoveryModel {
         timeout = nil
         browser.stop()
         isSearching = false
+        isRunning = false
     }
+
+    /// The app is active again — the permission prompt closed, or the user
+    /// came back from Settings. A browser that was refused stays refused, so
+    /// look again (FS-15.04 §2).
+    func appBecameActive() {
+        guard isRunning else { return }
+        let wasDenied = state == .denied || !hasSeenPrompt && deniedWhilePrompting
+        guard wasDenied else { return }
+        hasSeenPrompt = true
+        deniedWhilePrompting = false
+        timeout?.cancel()
+        browser.stop()
+        start()
+    }
+
+    private var deniedWhilePrompting = false
 
     private func handle(_ event: LocalServerBrowserEvent) {
         switch event {
         case .denied:
-            state = .denied
-            isSearching = false
+            if hasSeenPrompt {
+                state = .denied
+                isSearching = false
+            } else {
+                // The system is asking right now; keep the spinner.
+                deniedWhilePrompting = true
+            }
         case .records(let records):
             guard state != .denied else { return }
             let servers = DiscoveredServerMerge.merge(records)
