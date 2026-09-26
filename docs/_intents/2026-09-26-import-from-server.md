@@ -11,8 +11,8 @@
 
 ## Problem — vấn đề
 
-Chiều ngược của FS-15. Kho RAW nặng nằm trên NAS/Mac; người chụp muốn lấy **vài tấm** về iPhone/iPad để sửa
-trong ShotDex. Hôm nay phải: mở Files (chỉ SMB), mò theo tên file vì không thấy ảnh (Files hiện icon RAW, không
+Chiều ngược của FS-15. Kho ảnh — RAW nặng, và cả JPEG, HEIC, TIFF, PNG… — nằm trên NAS/Mac; người chụp muốn lấy
+**vài tấm** về iPhone/iPad để sửa trong ShotDex. RAW là trường hợp nặng nhất, không phải trường hợp duy nhất. Hôm nay phải: mở Files (chỉ SMB), mò theo tên file vì không thấy ảnh (Files hiện icon RAW, không
 thu nhỏ được nhiều định dạng), tải từng file, lưu vào Photos bằng tay — RAW và JPEG cùng tên thành **hai ảnh
 riêng**, ngày trong thư viện thành ngày tải về, và không biết tấm nào mình đã có sẵn.
 
@@ -25,11 +25,12 @@ là một lối import mới — người dùng chốt 2026-09-26 đặt nó ở
 
 - Collections → Utilities → **On Server** mở ra danh sách connection (cùng hàng "ảnh đã upload" hiện nay). Chọn
   một connection → duyệt folder.
-- Mỗi folder hiện như **lưới Library**: chỉ file ảnh (RAW, JPEG, HEIC… — không file khác), thu nhỏ thật, folder
-  con ở trên. Ảnh RAW+JPEG cùng tên hiện **một ô** có nhãn RAW+JPEG như Library.
+- Mỗi folder hiện như **lưới Library**: **mọi file ảnh** iOS đọc được và Photos nhận — RAW mọi hãng và DNG, JPEG,
+  HEIC/HEIF, PNG, TIFF, GIF, WebP, AVIF… (không video, không file khác); thu nhỏ thật, nhãn định dạng trên ô như
+  Library; folder con ở trên. RAW + JPEG hoặc RAW + HEIC cùng tên hiện **một ô** có nhãn RAW+JPEG / RAW+HEIC.
 - Chọn nhiều (giống chế độ chọn của Library) → **Download** → chọn **Library** hoặc **một album** (có sẵn hoặc tạo
   mới).
-- Ảnh vào Photos: RAW+JPEG gộp thành **một ảnh**; **giữ ngày chụp gốc** trong EXIF; file được **kiểm SHA-256** sau
+- Ảnh vào Photos: mỗi file ảnh thành một ảnh; RAW + JPEG/HEIC cùng tên gộp thành **một ảnh**; **giữ ngày chụp gốc** trong EXIF; file được **kiểm SHA-256** sau
   khi tải, lệch thì không ghi vào Photos.
 - Ảnh **đã có** (đã upload từ máy này và còn trong thư viện — lịch sử FS-15 khớp đường dẫn và checksum) có dấu
   **In Library**, mặc định không tải lại.
@@ -50,8 +51,11 @@ là một lối import mới — người dùng chốt 2026-09-26 đặt nó ở
 
 ## Constraints — ràng buộc
 
-- Thumbnail: **đọc preview JPEG nhúng** bằng range read vài trăm KB đầu file; chỉ tải trọn khi không lấy được
-  (người dùng chốt 2026-09-26). Không tải trọn 200 file RAW chỉ để xem lưới.
+- Thumbnail: **đọc preview nhúng** bằng range read vài trăm KB đầu file (RAW, và JPEG/HEIC/TIFF có thumbnail
+  EXIF); chỉ tải trọn khi không lấy được (người dùng chốt 2026-09-26). Không tải trọn 200 file RAW chỉ để xem lưới;
+  ảnh nhỏ (PNG, GIF, JPEG không thumbnail) tải trọn là chấp nhận được, có giới hạn dung lượng mỗi file.
+- "File ảnh" = đuôi mà ImageIO đọc được (`CGImageSourceCopyTypeIdentifiers`) và thuộc `UTType.image` — lấy từ
+  hệ thống, không tự liệt kê tay; định dạng Photos từ chối khi ghi thì báo lỗi theo từng file, không hỏng cả lô.
 - Bộ nhớ: không giải mã RAW full-res để làm thumbnail; không giữ cả file trong RAM (NF-02).
 - Chỉ ghi vào Photos bằng PhotoKit (không kho riêng) — đúng tinh thần FS-10: ShotDex không có thư viện riêng.
 - Quyền `.limited`: ảnh vừa tạo vẫn thấy được; ghi vào album cần quyền đọc-ghi đầy đủ → nói rõ khi thiếu.
@@ -66,4 +70,6 @@ là một lối import mới — người dùng chốt 2026-09-26 đặt nó ở
   quyết định kích thước đoạn đọc.
 - "Đã có" với ảnh **không** đi qua upload của ShotDex (chụp bằng máy này, rồi tự chép lên NAS) — có đối chiếu theo
   tên + ngày chụp + kích thước không? (đề xuất: v1 chỉ dựa lịch sử ShotDex; `/spec` chốt).
+- ~~Định dạng~~ → **mọi file ảnh**, không riêng RAW (người dùng chốt 2026-09-26).
 - Video trên server có hiện/tải không? (đề xuất: v1 chỉ ảnh, đúng yêu cầu "chỉ show file ảnh").
+- WebP, AVIF, GIF động: Photos có nhận qua `PHAssetCreationRequest` trên iOS 17 không? — đo khi spike.
