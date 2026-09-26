@@ -8,7 +8,8 @@ nhúng, chọn nhiều như Library.
 
 ## 1. Lối vào
 
-- Collections → Utilities → thẻ **On Server** (hiện khi có ít nhất một connection, FS-17 §6). Mở màn **On Server**:
+- Collections → Utilities → thẻ **On Server** (luôn hiện, FS-17 §6). Mở màn **On Server** — chưa có connection thì
+  màn trống "Add a connection to browse and download photos from your NAS or computer." + **Add Connection**:
 
 | Section | Nội dung |
 |---|---|

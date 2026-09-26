@@ -28,11 +28,11 @@ Tất cả là tính năng mới; không AC nào đã đạt. Cột "Bằng ch�
 | 17.AC-8…11 | ❌ | tạo asset từ file đã có ở `PhotoLibraryService.importFile` (`PhotoLibraryService.swift:977`), chỉ một resource | `ServerDownloadSession` (actor, khuôn `ServerUploadSession`) + protocol `AssetCreating` (thật: PhotoKit `.photo` + `.alternatePhoto` + `creationDate` + album; giả: ghi lại yêu cầu) |
 | 17.AC-12 | ❌ | tạo album có sẵn trong app (Selection overlay Turn 10A, `createAlbum/addAssets`) | tái dùng đường tạo album, thêm vào album trong cùng `performChanges` |
 | 17.AC-13, 14, 16 | ❌ | khuôn `ServerUploadModel` (hold màn hình, huỷ, ra nền) | `ServerDownloadModel` cùng khuôn; `ScreenHolding` tái dùng |
-| 17.AC-15 | ❌ | Utilities chỉ hiện khi có ảnh đã upload (`AlbumsScreen.swift:582`) | đổi điều kiện → có connection; màn `OnServerScreen`, `ServerBrowserScreen` (lưới dựng trên `PhotoGridLayout`), ui-drive |
+| 17.AC-15 | ❌ | Utilities chỉ hiện khi có ảnh đã upload (`AlbumsScreen.swift:582`) | thẻ **luôn hiện** (người dùng chốt); màn `OnServerScreen`, `ServerBrowserScreen` (lưới dựng trên `PhotoGridLayout`), ui-drive |
 | 15.AC-31, 32, 36 | ❌ | — | `WebDAVFileClient` trên `URLSession` + `PropfindParser` (Domain, test bằng XML mẫu) |
 | 15.AC-33 | ❌ | host key SFTP đã có `HostKeyTrust` (`Domain/ServerUpload/HostKeyTrust.swift`) | tổng quát thành `TrustedFingerprint` dùng cho cả chứng chỉ TLS; đổi cột `hostKeyFingerprint` → `trustedFingerprint` |
 | 15.AC-34 | ❌ | `FileServerFormScreen` chưa có ô theo giao thức | ô Path/Use HTTPS/TLS Mode + câu cảnh báo |
-| 15.AC-35 | ❌ | iOS không có API FTP; khảo sát: không thư viện Swift nào đạt | ⚠️ người dùng chọn: tự viết (Secure Transport) / libcurl+OpenSSL / FTP thường trước — FS-15.05 §5 |
+| 15.AC-35 | ❌ | iOS không có API FTP; khảo sát: không thư viện Swift nào đạt | libcurl + OpenSSL (người dùng chốt) — xcframework, lớp C bọc `curl_easy_setopt`, `FTPFileClient` |
 
 Không có dòng ⚠️ "lệch" (tài liệu và code không mâu thuẫn — chỉ thiếu). Các ⚠️ CẦN QUYẾT trong spec giữ nguyên để
 người dùng chốt khi duyệt plan.
@@ -74,7 +74,7 @@ byte, ETA 30 s, hold màn hình, huỷ khi ra nền) · `RemoteFileError` (câu 
 11. Model + migration v22 + form theo giao thức + cảnh báo — 15.AC-34.
 12. `PropfindParser` + `WebDAVFileClient` + bộ test hợp đồng dùng chung — 15.AC-31, 32; ui-drive với wsgidav — 15.AC-36.
 13. `TrustedFingerprint` cho chứng chỉ TLS — 15.AC-33.
-14. `FTPFileClient` (FTP + FTPS) — 15.AC-35 với pyftpdlib.
+14. libcurl + OpenSSL xcframework (14a) rồi `FTPFileClient` FTP + FTPS (14b) — 15.AC-35 với pyftpdlib/vsftpd.
 
 Sau mỗi task: build, test của task, sửa cột "Chứng minh bằng" và dòng Tiến độ của intent tương ứng. Đụng UI thì chụp
 (`/screens`). Kết thúc mỗi khối: `/verify`.
@@ -83,10 +83,10 @@ Sau mỗi task: build, test của task, sửa cột "Chứng minh bằng" và d�
 
 | Rủi ro | Xử lý |
 |---|---|
-| **Preview nhúng theo hãng**: mới đo được CR3 (và JPEG). NEF/ARW/RAF/ORF/RW2/DNG chưa có file mẫu | task 5 cần file mẫu — tải vài file từ raw.pixls.us (CC0) **cần người dùng cho phép tải**; không có thì kích thước đoạn đọc chốt 512 KB và AC-5 (icon) là đường lùi |
+| **Preview nhúng theo hãng**: mới đo được CR3 (và JPEG). NEF/ARW/RAF/ORF/RW2/DNG chưa có file mẫu | task 5: tải mỗi hãng một file từ raw.pixls.us (CC0) vào scratchpad — người dùng đã cho phép 2026-09-26; AC-5 (icon) là đường lùi |
 | Hộp Local Network **không hiện trên simulator** (quyền mạng nội bộ chỉ áp trên máy thật) | 15.AC-27 chỉ chứng minh được trên iPhone thật; simulator chứng minh phần tìm máy |
 | Bonjour trên simulator dùng mạng của Mac | `dns-sd -R` quảng bá server giả lập được — đủ cho 15.AC-28 |
-| **FTP/FTPS**: không thư viện Swift đạt; server phổ biến đòi tái dùng phiên TLS ở kênh dữ liệu, Network framework không làm được | đề xuất: task 14 tách thành plan riêng sau khi người dùng chọn đường (FS-15.05 §5); nếu tự viết thì bọc TLS sau protocol, test với vsftpd `require_ssl_reuse=YES`, FileZilla Server, pure-ftpd |
+| **libcurl + OpenSSL** (chốt): phải build xcframework cho iOS device + simulator (arm64), giữ OpenSSL cập nhật, +vài MB binary | task 14 chia 14a (build xcframework bằng script có kiểm checksum nguồn, commit script chứ không commit binary nếu được — hỏi lại khi tới) và 14b (`FTPFileClient`); test với vsftpd `require_ssl_reuse=YES` + pyftpdlib TLS |
 | Photos từ chối WebP/AVIF/GIF động | đo ở task 8 trên simulator; từ chối thì lỗi theo file (spec đã cho phép) |
 | Migration v21 (bảng mới) và v22 (thêm cột, **đổi tên cột**) | app chưa phát hành: đổi tên cột bằng `ALTER TABLE … RENAME COLUMN`, không cần đường lùi; `photo_metadata` không đụng |
 | Lưới server hàng nghìn file | liệt kê một lần, thumbnail chỉ cho ô sắp hiện, tối đa 4 luồng, huỷ khi cuộn qua; `perf-profiler` soát |

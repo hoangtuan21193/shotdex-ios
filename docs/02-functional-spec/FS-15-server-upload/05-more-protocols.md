@@ -66,13 +66,20 @@ Cùng một danh sách thao tác `RemoteFileClient` (FS-15.02 §4, FS-15.02 §2a
   nếu nó không tái dùng phiên TLS của kênh lệnh. Network framework **không làm được** (không lộ session, không
   bật TLS giữa chừng cho `AUTH TLS` — Apple DTS, developer.apple.com/forums/thread/759316). SwiftNIO-SSL không có API
   tái dùng phiên.
-- ⚠️ CẦN QUYẾT — ba đường:
+- **Chốt (người dùng 2026-09-26): libcurl + OpenSSL.** Ba đường đã cân:
 
   | Đường | Được | Mất |
   |---|---|---|
   | **Tự viết**: TCP thường + Secure Transport (`SSLSetPeerID` chung cho kênh lệnh và dữ liệu) | không thêm dependency; đủ FTP + FTPS explicit/implicit, `REST`, MLSD; ~1 500 dòng | Secure Transport **deprecated** từ iOS 13, chỉ TLS 1.2; phải bọc sau protocol để thay được |
   | **libcurl + OpenSSL** (xcframework tự build) | đủ mọi thứ, TLS 1.3, tái dùng phiên sẵn | thêm vài MB, lớp C, tự build/cập nhật OpenSSL; privacy manifest |
   | **Chỉ FTP thường trước** (Network framework, không TLS), FTPS sau | nhỏ nhất (~800 dòng) | FTPS để sau; FTP thường không mã hoá |
+
+- Cách dùng libcurl: `ftp://` / `ftps://` (implicit) / `CURLOPT_USE_SSL` (explicit), `CURLOPT_RANGE` cho đọc một đoạn,
+  bộ nhớ đệm phiên TLS bật sẵn (kênh dữ liệu tái dùng phiên), dấu vân tay chứng chỉ qua `CURLOPT_SSL_VERIFYPEER` tắt +
+  đọc chứng chỉ lá rồi so với dấu đã tin (§4); MLSD gửi như lệnh tuỳ chỉnh, không có thì LIST.
+- Build: xcframework curl + OpenSSL (không wolfSSL — GPL; không Secure Transport — curl 8.15 đã bỏ), chỉ app chính link;
+  một lớp C nhỏ bọc `curl_easy_setopt` (hàm variadic Swift không gọi thẳng được). Thêm privacy manifest nếu thư viện
+  cần, và giấy phép curl + OpenSSL (Apache 2.0) vào Acknowledgements.
 
 ## 6. Dữ liệu
 

@@ -64,9 +64,9 @@ kho riêng. FS-10 ghi thêm dòng ngoại lệ này.
 
 ## 6. Chỗ đã quyết thay người dùng (theo lệnh "tự động làm spec và plan", 2026-09-26)
 
-- ⚠️ CẦN QUYẾT: thẻ **On Server** ở Utilities hiện khi có **ít nhất một connection** (hôm nay: khi có ít nhất một ảnh
-  đã upload). Mở ra: danh sách connection + hàng **Uploaded from This Device**.
-- ⚠️ CẦN QUYẾT: **kiểm file** — SHA-256 chỉ so được khi đã biết (file từng upload qua ShotDex, có trong lịch sử).
+- **Chốt (người dùng 2026-09-26):** thẻ **On Server** ở Utilities **luôn hiện**. Mở ra: danh sách connection + hàng
+  **Uploaded from This Device**; chưa có connection thì màn trống có nút **Add Connection**.
+- **Chốt (người dùng 2026-09-26): kiểm file** — SHA-256 chỉ so được khi đã biết (file từng upload qua ShotDex, có trong lịch sử).
   Các file khác: kiểm **số byte khớp server** + ImageIO **mở được** file. Đọc file hai lần để có SHA thật thì gấp
   đôi thời gian — không làm.
 - ⚠️ CẦN QUYẾT: chạm một ô (không ở chế độ chọn) → xem lớn bằng preview nhúng, có nút Download cho riêng tấm đó.
