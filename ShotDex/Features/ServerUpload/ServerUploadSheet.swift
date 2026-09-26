@@ -12,22 +12,30 @@ struct ServerUploadSheet: View {
     @State private var isAddingServer = false
     @State private var isConfirmingCancel = false
     @State private var isConfirmingDelete = false
+    /// The folder browser's screens, root first (FS-15.02 §2a).
+    @State private var folderPath: [RemoteFolderRoute] = []
+    /// ⋯ → Add Connection…: the sheet opens on the form.
+    private let startsAddingConnection: Bool
 
-    init(model: ServerUploadModel) {
+    init(model: ServerUploadModel, startsAddingConnection: Bool = false) {
         _model = State(initialValue: model)
+        self.startsAddingConnection = startsAddingConnection
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $folderPath) {
             content
                 .navigationTitle(title)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar { toolbar }
+                .navigationDestination(for: RemoteFolderRoute.self) { route in
+                    folderScreen(route)
+                }
         }
         .interactiveDismissDisabled(model.stage == .uploading)
         .task {
             await model.load()
-            if model.servers.isEmpty { isAddingServer = true }
+            if model.servers.isEmpty || startsAddingConnection { isAddingServer = true }
         }
         .sheet(isPresented: $isAddingServer) {
             FileServerFormScreen(draft: FileServerDraft()) { saved in
@@ -118,21 +126,30 @@ struct ServerUploadSheet: View {
 
     private var prepareForm: some View {
         Form {
-            Section("Server") {
+            Section {
                 if model.servers.isEmpty {
-                    Button("Add Server…") { isAddingServer = true }
+                    Button("Add Connection…") { isAddingServer = true }
                 } else {
-                    Picker("Server", selection: Binding(get: { model.selectedServerId }, set: { model.select($0) })) {
-                        ForEach(model.servers) { server in
-                            Text(server.name).tag(Optional(server.id))
+                    if model.servers.count > 1 {
+                        Picker("Connection", selection: Binding(get: { model.selectedServerId }, set: { model.select($0) })) {
+                            ForEach(model.servers) { server in
+                                Text(server.name).tag(Optional(server.id))
+                            }
                         }
+                    } else if let server = model.selectedServer {
+                        LabeledContent("Connection", value: server.name)
                     }
                     if let server = model.selectedServer {
-                        LabeledContent("Folder", value: "\(server.transferProtocol.title) · \(server.locationDescription)")
-                            .lineLimit(1)
-                            .truncationMode(.middle)
+                        folderRow(server)
+                        Toggle("Date Folders", isOn: $model.usesDateFolders)
                     }
-                    Button("Add Server…") { isAddingServer = true }
+                    Button("Add Connection…") { isAddingServer = true }
+                }
+            } footer: {
+                if model.selectedServer != nil {
+                    Text(model.usesDateFolders
+                         ? String(localized: "Photos go into year and day folders inside this folder, by the date they were taken — such as \(Self.dateFolderExample).", comment: "Upload to Server: Date Folders on")
+                         : String(localized: "Photos go straight into this folder.", comment: "Upload to Server: Date Folders off"))
                 }
             }
             Section {
@@ -151,6 +168,67 @@ struct ServerUploadSheet: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
+        }
+    }
+
+    /// Today's year and day folders, as the footer's example.
+    private static var dateFolderExample: String {
+        ServerUploadPath.dayFolder(folder: "", captureDate: Date())
+    }
+
+    /// Folder, with where it is on the server; opens the browser at it.
+    private func folderRow(_ server: FileServer) -> some View {
+        Button {
+            guard model.openFolderBrowser() != nil else { return }
+            folderPath = RemoteFolderRoute.chain(to: model.folder)
+        } label: {
+            HStack {
+                Text("Folder")
+                    .foregroundStyle(.primary)
+                Spacer()
+                Text(Self.displayPath(model.folder, on: server))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.head)
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .contentShape(Rectangle())
+        }
+        // A row that opens a screen, like a navigation link — not the
+        // form's blue action text.
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityHint("Choose or create a folder on the server")
+    }
+
+    /// `share/folder` for SMB; `Home/folder` for SFTP, whose paths start at
+    /// the login's home folder.
+    private static func displayPath(_ folder: String, on server: FileServer) -> String {
+        let root = rootTitle(of: server)
+        return folder.isEmpty ? root : "\(root)/\(folder)"
+    }
+
+    private static func rootTitle(of server: FileServer) -> String {
+        server.transferProtocol == .smb && !server.share.isEmpty
+            ? server.share
+            : String(localized: "Home", comment: "Upload to Server: the SFTP login's home folder, the top of the folder browser")
+    }
+
+    @ViewBuilder
+    private func folderScreen(_ route: RemoteFolderRoute) -> some View {
+        if let browser = model.folderBrowser, let server = model.selectedServer {
+            RemoteFolderScreen(
+                path: route.path,
+                title: route.path.isEmpty ? Self.rootTitle(of: server) : ServerUploadPath.lastComponent(of: route.path),
+                browser: browser,
+                onOpen: { folderPath.append(RemoteFolderRoute(path: $0)) },
+                onChoose: { chosen in
+                    model.folder = chosen
+                    folderPath = []
+                }
+            )
         }
     }
 
@@ -400,17 +478,18 @@ extension EnvironmentValues {
 /// Each of those closures only sets that root's own `@State`, so any two do
 /// the same thing — equal by definition.
 struct PresentServerUploadAction: Equatable {
-    let handler: ([String]) -> Void
+    let handler: ([String], ServerUploadTarget) -> Void
 
-    func callAsFunction(_ assetIds: [String]) { handler(assetIds) }
+    func callAsFunction(_ assetIds: [String], _ target: ServerUploadTarget) { handler(assetIds, target) }
 
     static func == (lhs: Self, rhs: Self) -> Bool { true }
 }
 
-/// The picked ids, frozen at the tap.
+/// The picked ids, frozen at the tap, and the menu row that was chosen.
 struct ServerUploadRequest: Identifiable {
     let id = UUID()
     let assetIds: [String]
+    let target: ServerUploadTarget
 }
 
 /// Builds the model from the environment the sheet is presented in.
@@ -419,6 +498,9 @@ struct ServerUploadHost: View {
     let request: ServerUploadRequest
 
     var body: some View {
-        ServerUploadSheet(model: ServerUploadModel(assetIds: request.assetIds, initialServerId: nil, dependencies: dependencies))
+        ServerUploadSheet(
+            model: ServerUploadModel(assetIds: request.assetIds, initialServerId: request.target.connectionId, dependencies: dependencies),
+            startsAddingConnection: request.target == .addConnection
+        )
     }
 }

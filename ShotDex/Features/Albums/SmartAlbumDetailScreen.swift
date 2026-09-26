@@ -525,7 +525,7 @@ struct SmartAlbumDetailScreen: View {
             onAddToCollection: { addToCollection(model) },
             onExportEXIF: { exportEXIF(model) },
             onDuplicate: { duplicateSelected(model) },
-            onUploadToServer: presentServerUpload.map { present in { present(selectedIds) } },
+            onUploadToServer: presentServerUpload.map { present in { present(selectedIds, $0) } },
             assetActions: assetActions,
             onSelectAll: { selectedIds = model.items.map(\.assetId) }
         )

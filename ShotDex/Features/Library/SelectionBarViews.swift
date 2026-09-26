@@ -256,10 +256,8 @@ struct SelectionToolbarItems: ToolbarContent {
                         .disabled(model.imageSelectionCount < 1)
                     }
                     if let onUploadToServer = model.onUploadToServer {
-                        Button(action: onUploadToServer) {
-                            Label("Upload to Server", systemImage: "server.rack")
-                        }
-                        .disabled(model.selectionCount < 1)
+                        UploadToServerMenuRow(onPick: onUploadToServer)
+                            .disabled(model.selectionCount < 1)
                     }
                     if let onDuplicate = model.onDuplicate {
                         Button(action: onDuplicate) {
@@ -450,4 +448,48 @@ struct BottomScrim: View {
         SelectionOverlay(model: model(3, ["a", "b", "c"]))
     }
     .environment(dependencies.photoLibrary)
+}
+
+/// Selection ⋯ → the upload row (FS-15.02 §1): "Upload to Server…" with no
+/// connection yet, "Upload to <name>" with one, and an "Upload to" submenu of
+/// names with more. Names only, because one NAS may be saved several times
+/// and the name is what the user gave each one.
+private struct UploadToServerMenuRow: View {
+    /// Absent outside the app's window (previews): the row falls back to the
+    /// no-connection form, which still works.
+    @Environment(FileServerCatalog.self) private var catalog: FileServerCatalog?
+    let onPick: (ServerUploadTarget) -> Void
+
+    var body: some View {
+        switch ServerUploadMenu.row(for: catalog?.servers ?? []) {
+        case .addFirst:
+            Button { onPick(.addConnection) } label: {
+                Label("Upload to Server…", systemImage: "server.rack")
+            }
+        case .single(let item):
+            Button { onPick(.connection(item.id)) } label: {
+                Label {
+                    Text("Upload to \(item.name)", comment: "Selection menu: upload to the only saved connection, by its name")
+                    Text(item.detail)
+                } icon: {
+                    Image(systemName: "server.rack")
+                }
+            }
+        case .list(let items):
+            Menu {
+                ForEach(items) { item in
+                    Button { onPick(.connection(item.id)) } label: {
+                        Text(item.name)
+                        Text(item.detail)
+                    }
+                }
+                Divider()
+                Button { onPick(.addConnection) } label: {
+                    Label("Add Connection…", systemImage: "plus")
+                }
+            } label: {
+                Label("Upload to", systemImage: "server.rack")
+            }
+        }
+    }
 }

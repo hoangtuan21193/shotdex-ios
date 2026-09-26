@@ -1,0 +1,194 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Select photos",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Photo, file type",
+   "type": "cell",
+   "index": 0
+  },
+  {
+   "action": "tap",
+   "label": "Photo, file type",
+   "type": "cell",
+   "index": 1
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "20-menu"
+  },
+  {
+   "action": "tap",
+   "label": "Upload to"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "21-submenu"
+  },
+  {
+   "action": "dump",
+   "name": "21-submenu"
+  },
+  {
+   "action": "tap",
+   "label": "Mac SFTP"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "22-prepare-sftp"
+  },
+  {
+   "action": "tap",
+   "label": "Cancel"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Upload to"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "127.0.0.1"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "23-prepare-smb"
+  },
+  {
+   "action": "dump",
+   "name": "23-prepare-smb"
+  },
+  {
+   "action": "tap",
+   "label": "Folder"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "screenshot",
+   "name": "24-browse-photos"
+  },
+  {
+   "action": "dump",
+   "name": "24-browse-photos"
+  },
+  {
+   "action": "tap",
+   "label": "New Folder"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "typeText",
+   "text": "Trip"
+  },
+  {
+   "action": "screenshot",
+   "name": "25-new-folder"
+  },
+  {
+   "action": "tap",
+   "label": "Create"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "26-browse-trip"
+  },
+  {
+   "action": "tap",
+   "label": "Use This Folder"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "x": 0.848,
+   "y": 0.345
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "27-prepare-trip-dated"
+  },
+  {
+   "action": "dump",
+   "name": "27-prepare-trip-dated"
+  },
+  {
+   "action": "tap",
+   "label": "Upload",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 12
+  },
+  {
+   "action": "screenshot",
+   "name": "28-result"
+  }
+ ]
+}

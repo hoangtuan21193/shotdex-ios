@@ -44,7 +44,15 @@
   },
   {
    "action": "tap",
-   "label": "Upload to Server"
+   "label": "Upload to"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "127.0.0.1"
   },
   {
    "action": "wait",

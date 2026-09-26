@@ -18,6 +18,7 @@ struct ShotDexApp: App {
         dependencies.onThisDayNotifications.registerDelegate()
         dependencies.resolveNewlyKnownCameras()
         dependencies.serverUploadIndex.loadIfNeeded()
+        dependencies.fileServerCatalog.reload()
     }
 
     var body: some Scene {
@@ -26,6 +27,7 @@ struct ShotDexApp: App {
                 .environment(dependencies)
                 .environment(dependencies.photoLibrary)
                 .environment(dependencies.serverUploadIndex)
+                .environment(dependencies.fileServerCatalog)
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .background {
                         dependencies.backgroundIndex.scheduleContinuationIfNeeded()

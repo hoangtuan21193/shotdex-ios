@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Settings → File Servers (FS-15.01 §2): the servers originals can be
-/// uploaded to. Tier A.
+/// Settings → File Servers (FS-15.01 §2): the connections originals can
+/// be uploaded to. Tier A.
 struct FileServerListScreen: View {
     @Environment(AppDependencies.self) private var dependencies
     @State private var servers: [FileServer] = []
@@ -13,12 +13,12 @@ struct FileServerListScreen: View {
             if servers.isEmpty {
                 Section {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Add a server to upload originals to your NAS or computer.")
+                        Text("Add a connection to upload originals to your NAS or computer. Add the same server more than once to keep a connection per folder.")
                             .foregroundStyle(.secondary)
                         Button {
                             editing = FileServerDraft()
                         } label: {
-                            Label("Add Server", systemImage: "plus.circle.fill")
+                            Label("Add Connection", systemImage: "plus.circle.fill")
                         }
                     }
                     .padding(.vertical, 4)
@@ -50,7 +50,7 @@ struct FileServerListScreen: View {
                 } label: {
                     Image(systemName: "plus")
                 }
-                .accessibilityLabel("Add Server")
+                .accessibilityLabel("Add Connection")
             }
         }
         .sheet(item: $editing, onDismiss: reload) { draft in
@@ -62,8 +62,9 @@ struct FileServerListScreen: View {
             titleVisibility: .visible,
             presenting: pendingDelete
         ) { server in
-            Button("Delete Server", role: .destructive) {
+            Button("Delete Connection", role: .destructive) {
                 try? dependencies.fileServers.delete(id: server.id)
+                dependencies.fileServerCatalog.reload()
                 reload()
             }
             Button("Cancel", role: .cancel) {}

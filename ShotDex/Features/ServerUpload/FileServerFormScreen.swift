@@ -55,7 +55,7 @@ struct FileServerDraft: Identifiable {
     }
 }
 
-/// Add or edit one server (FS-15.01 §3), with Test Connection.
+/// Add or edit one connection (FS-15.01 §3), with Test Connection.
 struct FileServerFormScreen: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(\.dismiss) private var dismiss
@@ -129,8 +129,8 @@ struct FileServerFormScreen: View {
                     field("Folder", text: $draft.server.folder, prompt: "Optional", focus: .folder)
                 } footer: {
                     Text(draft.server.transferProtocol == .smb
-                         ? "The share is the shared folder's name on the server. Photos go into year and day folders inside Folder, by the date they were taken."
-                         : "Folder is relative to your home folder on the server. Photos go into year and day folders inside it, by the date they were taken.")
+                         ? "The share is the shared folder's name on the server. Folder is where uploads start; you can pick another each time."
+                         : "Folder is relative to your home folder on the server. It is where uploads start; you can pick another each time.")
                 }
                 Section {
                     Button {
@@ -163,7 +163,7 @@ struct FileServerFormScreen: View {
                     }
                 }
             }
-            .navigationTitle(draft.isNew ? "Add Server" : "Edit Server")
+            .navigationTitle(draft.isNew ? "Add Connection" : "Edit Connection")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -185,7 +185,7 @@ struct FileServerFormScreen: View {
                 Text("ShotDex hasn't connected to \(draft.server.host) before. Check that this fingerprint matches the one your server shows:\n\n\(fingerprint)")
             }
             .alert(
-                "Couldn't Save Server",
+                "Couldn't Save Connection",
                 isPresented: Binding(get: { saveError != nil }, set: { if !$0 { saveError = nil } }),
                 presenting: saveError
             ) { _ in
@@ -304,6 +304,7 @@ struct FileServerFormScreen: View {
         let row = draft.normalized
         do {
             try dependencies.fileServers.save(row, password: draft.password.isEmpty ? nil : draft.password)
+            dependencies.fileServerCatalog.reload()
             onSaved?((try? dependencies.fileServers.fetch(id: row.id)) ?? row)
             dismiss()
         } catch {

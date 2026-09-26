@@ -95,7 +95,7 @@
   },
   {
    "action": "tap",
-   "label": "Add Server",
+   "label": "Add Connection",
    "type": "button",
    "index": 0
   },
@@ -234,7 +234,7 @@
   },
   {
    "action": "tap",
-   "label": "Upload to Server"
+   "label": "Upload to"
   },
   {
    "action": "wait",

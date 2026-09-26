@@ -106,6 +106,8 @@ final class AppDependencies {
     let serverUploads: ServerUploadStore
     /// The set of uploaded asset ids the grid badge reads, kept in memory.
     let serverUploadIndex: ServerUploadIndex
+    /// The connections the selection ⋯ menu lists by name.
+    let fileServerCatalog: FileServerCatalog
 
     init(database: AppDatabase, photoLibrary: PhotoLibraryService) {
         let metadataStore = MetadataStore(database: database)
@@ -239,7 +241,9 @@ final class AppDependencies {
         self.calendarWidgetWriter = CalendarSnapshotWriter()
         self.widgetLocation = WidgetLocationProvider()
         self.support = SupportService()
-        self.fileServers = FileServerStore(database: database, passwords: KeychainPasswordStore())
+        let fileServers = FileServerStore(database: database, passwords: KeychainPasswordStore())
+        self.fileServers = fileServers
+        self.fileServerCatalog = FileServerCatalog(store: fileServers)
         let serverUploads = ServerUploadStore(database: database)
         self.serverUploads = serverUploads
         self.serverUploadIndex = ServerUploadIndex(store: serverUploads)

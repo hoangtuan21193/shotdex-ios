@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-24 |
 | Trạng thái | accepted — theo lệnh người dùng 2026-09-24 "chạy spec … plan rồi code auto luôn" |
-| Tiến độ | **đang làm** (2026-09-26) — phản hồi: connection trong menu, chọn folder, folder theo ngày tuỳ chọn; plan [2026-09-26](../_plans/2026-09-26-fs-15-connections-folders.md) task 3/5, 20/23 AC có bằng chứng |
+| Tiến độ | **gần xong** (2026-09-26) — phản hồi 2026-09-26 (connection trong menu, chọn folder, folder theo ngày tuỳ chọn) xong 5/5 task; 21/23 AC có bằng chứng — AC-14/20–22 thiếu iOS 18.6/iPad/Duo, AC-16 thiếu máy thật |
 | Nguồn | phản hồi người dùng |
 | Spec sinh ra từ đây | [FS-15 — Upload lên file server](../02-functional-spec/FS-15-server-upload/README.md) |
 

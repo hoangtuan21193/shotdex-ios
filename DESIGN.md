@@ -164,6 +164,7 @@ Mọi con số thay đổi theo thời gian thực (%, MB, đếm tiến trình,
 | Duplicates (utility) | `square.on.square` |
 | Upload to Server / Uploaded to Server | `server.rack` |
 | Đã lên server (glyph trên ô lưới) | `externaldrive.fill.badge.checkmark` |
+| Folder trên server / New Folder (duyệt folder upload) | `folder` / `folder.badge.plus` |
 | Rescan / làm lại | `arrow.clockwise` |
 
 Adjustment icon lấy từ `PhotoAdjustmentKind.systemImage`; mask icon từ `PhotoMaskComponentKind.systemImage`. Không tự chọn lại.

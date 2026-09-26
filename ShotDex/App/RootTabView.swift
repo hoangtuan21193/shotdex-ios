@@ -235,7 +235,7 @@ struct RootTabView: View {
         // `\.assetActions`, which is how the screens reach it.
         .assetActionHost(assetActions ?? dependencies.assetActions)
         .sheet(item: $uploadRequest) { ServerUploadHost(request: $0) }
-        .environment(\.presentServerUpload, PresentServerUploadAction { uploadRequest = ServerUploadRequest(assetIds: $0) })
+        .environment(\.presentServerUpload, PresentServerUploadAction { uploadRequest = ServerUploadRequest(assetIds: $0, target: $1) })
         .environment(navigation)
         .task {
             if libraryModel == nil {
@@ -327,7 +327,7 @@ struct RootTabView: View {
             .keepScreenAwakeWhileIndexing(libraryModel: libraryModel)
             .assetActionHost(assetActions ?? dependencies.assetActions)
             .sheet(item: $uploadRequest) { ServerUploadHost(request: $0) }
-            .environment(\.presentServerUpload, PresentServerUploadAction { uploadRequest = ServerUploadRequest(assetIds: $0) })
+            .environment(\.presentServerUpload, PresentServerUploadAction { uploadRequest = ServerUploadRequest(assetIds: $0, target: $1) })
             .environment(navigation)
             .task {
                 if libraryModel == nil {

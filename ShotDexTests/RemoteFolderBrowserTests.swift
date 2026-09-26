@@ -60,4 +60,10 @@ import Testing
         #expect(client.connectCount == 2)
         #expect(browser.listing(for: "Photos") == .loaded(["2", "10", "RAW"]))
     }
+
+    /// The browser opens at the chosen folder, Back walking up to the root.
+    @Test func routeChainWalksDownFromTheRoot() {
+        #expect(RemoteFolderRoute.chain(to: "/Photos//Trip/").map(\.path) == ["", "Photos", "Photos/Trip"])
+        #expect(RemoteFolderRoute.chain(to: "").map(\.path) == [""])
+    }
 }
