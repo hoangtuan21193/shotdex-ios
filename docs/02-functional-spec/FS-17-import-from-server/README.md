@@ -27,7 +27,7 @@ rồi sửa trong ShotDex.
 
 ## 2. Phạm vi
 
-**Có:** mọi giao thức của FS-15 (SMB, SFTP, WebDAV, FTPS, FTP) · mọi định dạng ảnh iOS đọc được · lưới có
+**Có:** mọi giao thức của FS-15 (SMB, SFTP, WebDAV) · mọi định dạng ảnh iOS đọc được · lưới có
 thumbnail từ preview nhúng · folder con · chọn nhiều, chọn tất cả · tải vào Library hoặc album (có sẵn / mới) ·
 gộp RAW + JPEG/HEIC · giữ ngày chụp · dấu "In Library" · kiểm file · tiến độ, huỷ, giữ màn hình sáng.
 
