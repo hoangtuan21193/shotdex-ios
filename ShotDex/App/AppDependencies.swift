@@ -110,6 +110,7 @@ final class AppDependencies {
     let fileServerCatalog: FileServerCatalog
     /// Files brought down from a server (FS-17 §4).
     let serverDownloads: ServerDownloadStore
+    let serverFileHistory: ServerFileHistory
     /// Server photo thumbnails and capture dates on disk (FS-17 §4).
     let serverThumbnails: RemoteThumbnailCache
 
@@ -252,6 +253,7 @@ final class AppDependencies {
         self.serverUploads = serverUploads
         self.serverUploadIndex = ServerUploadIndex(store: serverUploads)
         self.serverDownloads = ServerDownloadStore(database: database)
+        self.serverFileHistory = ServerFileHistory(database: database)
         self.serverThumbnails = RemoteThumbnailCache.standard
     }
 
