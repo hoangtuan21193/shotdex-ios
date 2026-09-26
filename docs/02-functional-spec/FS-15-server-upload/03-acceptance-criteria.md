@@ -45,6 +45,10 @@ lệch, huỷ) kiểm được mà không cần mạng. Phần chỉ máy thật
 | AC-29 | không có máy nào quảng bá | chờ 5 s | "No servers found. Enter the address below."; các ô nhập tay dùng được | `ServerDiscoveryModelTests.emptyAfterTimeout` (browser giả) |
 | AC-30 | server SMB có share `photos`, `IPC$`, `backup`, `ADMIN$` | Choose… | danh sách `backup`, `photos` (không share `$`); chọn `photos` → ô Share = `photos`; sai mật khẩu → câu "The username or password was rejected." dưới hàng Share | `ShareListTests.hidesSystemShares` + `scripts/server-discovery.json` (Choose… liệt kê `PHOTOS`, chọn → ô Share điền; `IPC$` ẩn) |
 | AC-37 | lần đầu mở Add Connection, hộp Local Network đang hiện | bấm Allow, hộp đóng | form tìm lại ngay, máy trong mạng hiện ra mà không phải đóng mở form; bấm Don't Allow → câu "Local Network access is off" + Open Settings; quay về từ Settings đã bật → tìm lại | `ServerDiscoveryModelTests.searchesAgainAfterThePermissionPrompt` + `.deniedAfterThePromptIsShown`; hộp quyền thật ⚠️ máy thật |
+| AC-38 | IPv4 `192.168.1.37`, mask `255.255.255.0`; và `10.0.5.9` mask `255.255.0.0` | liệt kê địa chỉ quét | `192.168.1.1…254` trừ `.37` (253 địa chỉ); dải /16 chỉ quét `10.0.5.1…254` trừ `.9` | `LocalNetworkScanTests.hostsInSubnet` |
+| AC-39 | gói trả lời NetBIOS Node Status có `DESKTOP-7KQ2 <00>`, `WORKGROUP <00> GROUP`, `DESKTOP-7KQ2 <20>` | đọc tên | `DESKTOP-7KQ2`; gói ngắn/hỏng → nil, không crash | `LocalNetworkScanTests.netbiosNodeStatus` |
+| AC-40 | Bonjour có `Hoang's MacBook` (host phân giải ra `192.168.1.20`); quét thấy `192.168.1.20` và `192.168.1.50` (`DESKTOP-7KQ2`) | gộp | 2 hàng: `DESKTOP-7KQ2` (icon `pc`, SMB, host `192.168.1.50`) và `Hoang's MacBook`; không có hàng trùng cho `.20` | `LocalNetworkScanTests.mergeSkipsBonjourHosts` |
+| AC-41 | iPhone thật + PC Windows chia sẻ folder trong cùng Wi-Fi | mở Add Connection | hàng tên máy Windows hiện trong ≤ 10 s; chạm → Host = IP, Choose… liệt kê share | ⚠️ máy thật (simulator dùng mạng của Mac: `scripts/server-discovery.json` nếu LAN có máy SMB) |
 
 ### WebDAV (FS-15.05)
 

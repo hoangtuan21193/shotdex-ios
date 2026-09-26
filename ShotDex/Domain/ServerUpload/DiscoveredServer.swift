@@ -23,6 +23,8 @@ struct DiscoveredServer: Identifiable, Hashable, Sendable {
         case laptop
         case desktop
         case nas
+        /// Found by the port-445 sweep — a Windows PC, most likely.
+        case pc
     }
 
     /// One way in, in the order the row's protocol menu lists them.

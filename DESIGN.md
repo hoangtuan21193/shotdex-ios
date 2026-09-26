@@ -165,7 +165,7 @@ Mọi con số thay đổi theo thời gian thực (%, MB, đếm tiến trình,
 | Upload to Server / Uploaded to Server | `server.rack` |
 | Đã lên server (glyph trên ô lưới) | `externaldrive.fill.badge.checkmark` |
 | Folder trên server / New Folder (duyệt folder upload) | `folder` / `folder.badge.plus` |
-| Máy tìm thấy trong mạng: laptop / Mac để bàn / NAS | `laptopcomputer` / `desktopcomputer` / `externaldrive.connected.to.line.below` |
+| Máy tìm thấy trong mạng: laptop / Mac để bàn / NAS / PC (quét cổng 445) | `laptopcomputer` / `desktopcomputer` / `externaldrive.connected.to.line.below` / `pc` |
 | Rescan / làm lại | `arrow.clockwise` |
 
 Adjustment icon lấy từ `PhotoAdjustmentKind.systemImage`; mask icon từ `PhotoMaskComponentKind.systemImage`. Không tự chọn lại.

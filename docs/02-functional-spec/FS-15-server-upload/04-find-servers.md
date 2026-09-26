@@ -57,6 +57,21 @@ Section đầu tiên của form, trên các ô nhập tay.
 
 Tất cả khai trong `NSBonjourServices` của Info.plist; loại không khai thì iOS không trả về.
 
+## 4b. Quét cổng 445 — máy Windows và NAS không bật Bonjour
+
+Windows không quảng bá Bonjour; Finder tìm nó bằng WS-Discovery/NetBIOS — multicast/broadcast, mà iOS chỉ cho khi Apple
+cấp entitlement multicast. Người dùng chốt 2026-09-27: **quét unicast**, không xin entitlement.
+
+- Song song với Bonjour, khi form mở: lấy IPv4 + netmask của Wi-Fi (`getifaddrs`), liệt kê các địa chỉ trong dải —
+  **tối đa /24** (254 địa chỉ, dải lớn hơn thì chỉ /24 chứa máy này), trừ chính máy này.
+- Mở TCP tới cổng **445** từng địa chỉ, tối đa **32** cùng lúc, chờ **1 s**; mở được = có SMB.
+- Tên máy: gói **NetBIOS Node Status** unicast tới UDP 137 (RFC 1002 §4.2.18), lấy tên máy (loại `0x20` server, else
+  `0x00` workstation, không phải group); không trả lời trong 1 s → hiện **địa chỉ IP**.
+- Bỏ địa chỉ đã có trong Bonjour (tên `.local` của Bonjour phân giải ra IP để so) — Mac bật File Sharing chỉ hiện một
+  hàng.
+- Hàng quét được: icon `pc`, dòng phụ `SMB`; Host điền **địa chỉ IP** (tên NetBIOS không phân giải được qua DNS trên iOS).
+- "No servers found" chỉ hiện khi đã hết 5 s **và** quét xong.
+
 ## 5. Chọn share (SMB)
 
 - Hàng **Share** có nút **Choose…**, bật khi Host, Username, Password đã có.
@@ -70,4 +85,4 @@ Tất cả khai trong `NSBonjourServices` của Info.plist; loại không khai t
 - Không thư viện mới: Bonjour qua `NWBrowser` (Network framework); share qua `SMBClient.listShares()`.
 - Không đọc tên Wi-Fi (cần quyền vị trí).
 - Không gửi gì ra ngoài mạng nội bộ; tìm máy không phải một ngoại lệ mới của NF-03.
-- Windows (NetBIOS/WS-Discovery) và server qua internet: không tìm được, nhập tay.
+- Server qua internet: không tìm được, nhập tay. Windows tìm qua quét cổng 445 (§4b).

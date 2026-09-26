@@ -95,7 +95,7 @@ struct FileServerFormScreen: View {
         _draft = State(initialValue: draft)
         self.onSaved = onSaved
         if draft.isNew {
-            _discovery = State(initialValue: ServerDiscoveryModel(browser: BonjourServerBrowser()))
+            _discovery = State(initialValue: ServerDiscoveryModel(browser: BonjourServerBrowser(), scanner: SubnetSMBScanner()))
         }
     }
 
@@ -332,6 +332,7 @@ struct FileServerFormScreen: View {
         case .laptop: "laptopcomputer"
         case .desktop: "desktopcomputer"
         case .nas: "externaldrive.connected.to.line.below"
+        case .pc: "pc"
         }
     }
 

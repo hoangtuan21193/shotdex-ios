@@ -25,9 +25,19 @@ final class ServerDiscoveryModel {
     /// prompt; only a denial after the app is active again is an answer.
     private var hasSeenPrompt = false
     private var isRunning = false
+    /// The port-445 sweep for machines without Bonjour (FS-15.04 §4b).
+    private let scanner: (any LocalNetworkScanning)?
+    private var scanTask: Task<Void, Never>?
+    private var records: [BonjourRecord] = []
+    private var scanned: [ScannedHost] = []
+    private var bonjourAddresses: Set<String> = []
+    private var resolvedHosts: Set<String> = []
+    private var hasTimedOut = false
+    private var isScanFinished = true
 
-    init(browser: any LocalServerBrowsing, giveUpAfter: Duration = .seconds(5)) {
+    init(browser: any LocalServerBrowsing, scanner: (any LocalNetworkScanning)? = nil, giveUpAfter: Duration = .seconds(5)) {
         self.browser = browser
+        self.scanner = scanner
         self.giveUpAfter = giveUpAfter
     }
 
@@ -35,19 +45,48 @@ final class ServerDiscoveryModel {
         state = .searching
         isSearching = true
         isRunning = true
+        hasTimedOut = false
+        records = []
+        scanned = []
         browser.start { [weak self] event in self?.handle(event) }
         let giveUpAfter = giveUpAfter
         timeout = Task { [weak self] in
             try? await Task.sleep(for: giveUpAfter)
             guard !Task.isCancelled, let self else { return }
-            self.isSearching = false
-            if self.state == .searching { self.state = .none }
+            self.hasTimedOut = true
+            self.settleIfDone()
         }
+        if let scanner {
+            isScanFinished = false
+            scanTask = Task { [weak self] in
+                await scanner.scan { host in
+                    Task { @MainActor in self?.found(host) }
+                }
+                guard !Task.isCancelled else { return }
+                self?.isScanFinished = true
+                self?.settleIfDone()
+            }
+        }
+    }
+
+    /// Searching ends once the wait is over and the sweep is done.
+    private func settleIfDone() {
+        guard hasTimedOut, isScanFinished else { return }
+        isSearching = false
+        if state == .searching { state = .none }
+    }
+
+    private func found(_ host: ScannedHost) {
+        guard isRunning, !scanned.contains(host) else { return }
+        scanned.append(host)
+        refresh()
     }
 
     func stop() {
         timeout?.cancel()
         timeout = nil
+        scanTask?.cancel()
+        scanTask = nil
         browser.stop()
         isSearching = false
         isRunning = false
@@ -80,15 +119,36 @@ final class ServerDiscoveryModel {
                 deniedWhilePrompting = true
             }
         case .records(let records):
-            guard state != .denied else { return }
-            let servers = DiscoveredServerMerge.merge(records)
-            if !servers.isEmpty {
-                state = .found(servers)
-            } else if case .found = state {
-                // Everything went away: back to the empty message once the
-                // first look is over, else keep searching.
-                state = isSearching ? .searching : .none
-            }
+            self.records = records
+            resolveBonjourAddresses()
+            refresh()
+        }
+    }
+
+    /// Recomputes the rows from Bonjour and the sweep.
+    private func refresh() {
+        guard state != .denied else { return }
+        let servers = DiscoveredServerMerge.merge(records, scanned: scanned, bonjourAddresses: bonjourAddresses)
+        if !servers.isEmpty {
+            state = .found(servers)
+        } else if case .found = state {
+            // Everything went away: back to the empty message once the
+            // first look is over, else keep searching.
+            state = isSearching ? .searching : .none
+        }
+    }
+
+    /// Bonjour hosts' IPv4 addresses, so a Mac found both ways shows once.
+    private func resolveBonjourAddresses() {
+        guard let scanner else { return }
+        let hosts = Set(records.compactMap { $0.host.map(DiscoveredServerMerge.normalizedHost) }).subtracting(resolvedHosts)
+        guard !hosts.isEmpty else { return }
+        resolvedHosts.formUnion(hosts)
+        Task { [weak self] in
+            let addresses = await scanner.addresses(of: Array(hosts))
+            guard let self else { return }
+            self.bonjourAddresses.formUnion(addresses)
+            self.refresh()
         }
     }
 }

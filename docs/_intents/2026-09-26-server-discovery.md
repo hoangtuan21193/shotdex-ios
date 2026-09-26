@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-26 |
 | Trạng thái | accepted — người dùng duyệt 2026-09-26 |
-| Tiến độ | **gần xong** (2026-09-26) — 3/3 task, 6/7 AC có bằng chứng; AC-27 (hộp Local Network) chỉ chứng minh được trên máy thật |
+| Tiến độ | **gần xong** (2026-09-27) — thêm quét cổng 445 cho Windows (người dùng chốt) và sửa quét lại sau hộp quyền; 9/12 AC có bằng chứng; AC-27, 37 (hộp quyền thật), 41 (PC Windows thật) cần máy thật |
 | Nguồn | phản hồi người dùng (2026-09-26, sau khi dùng FS-15) |
 | Spec sinh ra từ đây | [FS-15.04](../02-functional-spec/FS-15-server-upload/04-find-servers.md) — AC-24…AC-30 |
 
@@ -46,7 +46,8 @@ FS-15.01 §5) — giữa một thao tác, không ai giải thích trước.
 - Chỉ tìm khi form đang mở; đóng form là dừng. Không quét nền, không gửi gì ra ngoài mạng nội bộ (NF-03).
 - Lưu host dạng tên `.local` chứ không lưu IP (DHCP đổi IP).
 - Không đọc tên Wi-Fi — trên iOS cần quyền vị trí (người dùng chọn tiêu đề không có tên Wi-Fi).
-- Nhập tay vẫn là đường chính cho server qua internet và máy Windows.
+- Nhập tay vẫn là đường chính cho server qua internet. Windows: quét unicast cổng 445 + tên NetBIOS unicast, không xin
+  entitlement multicast (người dùng chốt 2026-09-27).
 
 ## Open questions — câu hỏi còn treo
 
