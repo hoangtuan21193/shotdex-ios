@@ -36,7 +36,7 @@ Phần đọc EXIF được test trên **ảnh mẫu nhỏ có EXIF** đi kèm b
 
 **Kernel Core Image so với golden** ([FS-16](../02-functional-spec/FS-16-metal-kernels.md)): cả 40 kernel
 chạy trên ảnh vào 48×48 dựng bằng code và trên ảnh thật thu nhỏ, lệch ≤ 1/255 so với ảnh đã chụp trước.
-Chụp lại chỉ bằng file đánh dấu trong `build/`, và lần chụp nào cũng cố ý đỏ để không lọt qua cổng.
+Chụp lại chỉ bằng file đánh dấu trong `build/`, và lần chụp nào cũng cố ý đỏ để không lọt qua cổng. Ảnh chạy qua cả pipeline (có filter của Apple) giữ golden riêng cho từng bản iOS lớn; đổi runtime simulator thì phải chụp thêm bản mới.
 
 ## 4. Chưa phủ
 

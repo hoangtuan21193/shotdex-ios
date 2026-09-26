@@ -256,12 +256,20 @@ enum KernelGolden {
     }
 
     /// Records the picture as a PNG, or checks it to one 8-bit step a channel.
+    /// `perSystem`: the picture went through Apple's own filters (noise
+    /// reduction, sharpening, the plain vignette), whose output changes
+    /// between iOS releases — iOS 27 moves the full pipeline by up to
+    /// 117/255 with every kernel still matching. Those goldens are kept per
+    /// major version, so the check stays at 1/255 on each.
     static func checkPicture(
         _ image: CGImage,
         named name: String,
+        perSystem: Bool = false,
         sourceLocation: SourceLocation = #_sourceLocation
     ) throws {
-        let url = directory.appendingPathComponent("\(name).png")
+        let major = ProcessInfo.processInfo.operatingSystemVersion.majorVersion
+        let file = perSystem ? "\(name)-ios\(major)" : name
+        let url = directory.appendingPathComponent("\(file).png")
         if isRecording {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             let destination = try #require(

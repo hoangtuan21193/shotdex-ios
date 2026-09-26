@@ -367,7 +367,7 @@ struct KernelPipelineGoldenTests {
     /// AC-9.
     @Test func groupsOneAndTwoMatchTheirGolden() async throws {
         let picture = try await render(Self.groupsOneAndTwo, size: 512)
-        try KernelGolden.checkPicture(picture, named: "pipeline-groups-1-2")
+        try KernelGolden.checkPicture(picture, named: "pipeline-groups-1-2", perSystem: true)
     }
 
     /// AC-3. Two masks in the top-left corner and a colour edit in the middle
@@ -425,7 +425,7 @@ struct KernelPipelineGoldenTests {
             }
         }
         #expect(near > 8, "the corner masks did nothing")
-        try KernelGolden.checkPicture(edited, named: "pipeline-far-corner")
+        try KernelGolden.checkPicture(edited, named: "pipeline-far-corner", perSystem: true)
     }
 
     /// A synthetic 1080p frame: a hue sweep across, brightness down in 32
