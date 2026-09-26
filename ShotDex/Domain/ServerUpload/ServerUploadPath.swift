@@ -7,15 +7,18 @@ enum ServerUploadPath {
     /// matched. Nothing under its real name is ever unverified.
     static let partSuffix = ".shotdex-part"
 
-    /// `<folder>/<yyyy>/<yyyy-MM-dd>/<filename>`, the day in the device's
-    /// time zone — the day the photographer remembers shooting.
+    /// `<folder>/<filename>`, or with Date Folders on
+    /// `<folder>/<yyyy>/<yyyy-MM-dd>/<filename>` — the day in the device's
+    /// time zone, the day the photographer remembers shooting.
     static func remotePath(
         folder: String,
         captureDate: Date,
         filename: String,
+        usesDateFolders: Bool,
         timeZone: TimeZone = .current
     ) -> String {
-        join(dayFolder(folder: folder, captureDate: captureDate, timeZone: timeZone), filename)
+        guard usesDateFolders else { return join(normalizedFolder(folder), filename) }
+        return join(dayFolder(folder: folder, captureDate: captureDate, timeZone: timeZone), filename)
     }
 
     static func dayFolder(folder: String, captureDate: Date, timeZone: TimeZone = .current) -> String {

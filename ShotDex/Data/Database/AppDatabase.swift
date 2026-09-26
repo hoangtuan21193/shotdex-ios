@@ -475,6 +475,15 @@ final class AppDatabase: Sendable {
             try db.create(index: "server_uploads_assetId", on: "server_uploads", columns: ["assetId"])
         }
 
+        // FS-15.02 §2: the folder and the Date Folders switch each connection
+        // last uploaded with, so the next upload starts where this one went.
+        migrator.registerMigration("v20-fileServerUploadOptions") { db in
+            try db.alter(table: "file_servers") { t in
+                t.add(column: "uploadFolder", .text)
+                t.add(column: "usesDateFolders", .boolean).notNull().defaults(to: false)
+            }
+        }
+
         return migrator
     }
 }

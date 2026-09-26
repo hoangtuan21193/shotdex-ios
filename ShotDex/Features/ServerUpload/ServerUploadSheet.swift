@@ -122,7 +122,7 @@ struct ServerUploadSheet: View {
                 if model.servers.isEmpty {
                     Button("Add Server…") { isAddingServer = true }
                 } else {
-                    Picker("Server", selection: $model.selectedServerId) {
+                    Picker("Server", selection: Binding(get: { model.selectedServerId }, set: { model.select($0) })) {
                         ForEach(model.servers) { server in
                             Text(server.name).tag(Optional(server.id))
                         }
@@ -419,6 +419,6 @@ struct ServerUploadHost: View {
     let request: ServerUploadRequest
 
     var body: some View {
-        ServerUploadSheet(model: ServerUploadModel(assetIds: request.assetIds, dependencies: dependencies))
+        ServerUploadSheet(model: ServerUploadModel(assetIds: request.assetIds, initialServerId: nil, dependencies: dependencies))
     }
 }

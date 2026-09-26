@@ -16,23 +16,36 @@ import Testing
 
     @Test func pathFollowsCaptureDate() {
         let shot = date("2026-09-24T14:05:00+09:00")
-        #expect(ServerUploadPath.remotePath(folder: "Photos", captureDate: shot, filename: "IMG_1234.CR3", timeZone: tokyo)
+        #expect(ServerUploadPath.remotePath(folder: "Photos", captureDate: shot, filename: "IMG_1234.CR3", usesDateFolders: true, timeZone: tokyo)
             == "Photos/2026/2026-09-24/IMG_1234.CR3")
         #expect(ServerUploadPath.editedFilename(original: "IMG_1234.CR3", rendered: "FullSizeRender.JPG")
             == "IMG_1234_edited.JPG")
+    }
+
+    /// AC-17: Date Folders off — straight into the chosen folder, the
+    /// edited render beside its original.
+    @Test func flatPathWithoutDateFolders() {
+        let shot = date("2026-09-24T14:05:00+09:00")
+        #expect(ServerUploadPath.remotePath(folder: "Photos", captureDate: shot, filename: "IMG_1234.CR3", usesDateFolders: false, timeZone: tokyo)
+            == "Photos/IMG_1234.CR3")
+        let edited = ServerUploadPath.editedFilename(original: "IMG_1234.CR3", rendered: "FullSizeRender.JPG")
+        #expect(ServerUploadPath.remotePath(folder: "/Photos/", captureDate: shot, filename: edited, usesDateFolders: false, timeZone: tokyo)
+            == "Photos/IMG_1234_edited.JPG")
+        #expect(ServerUploadPath.remotePath(folder: "", captureDate: shot, filename: "a.dng", usesDateFolders: false, timeZone: tokyo)
+            == "a.dng")
     }
 
     @Test func dayIsTheDeviceTimeZoneDay() {
         // 08:30 in Tokyo on the 24th is still the 23rd in UTC — the folder
         // follows the device's day, not UTC's.
         let early = date("2026-09-24T08:30:00+09:00")
-        #expect(ServerUploadPath.remotePath(folder: "", captureDate: early, filename: "a.dng", timeZone: tokyo)
+        #expect(ServerUploadPath.remotePath(folder: "", captureDate: early, filename: "a.dng", usesDateFolders: true, timeZone: tokyo)
             == "2026/2026-09-24/a.dng")
     }
 
     @Test func folderIsNormalized() {
         let shot = date("2026-01-02T10:00:00+09:00")
-        #expect(ServerUploadPath.remotePath(folder: "/Photos//Raw/", captureDate: shot, filename: "x.nef", timeZone: tokyo)
+        #expect(ServerUploadPath.remotePath(folder: "/Photos//Raw/", captureDate: shot, filename: "x.nef", usesDateFolders: true, timeZone: tokyo)
             == "Photos/Raw/2026/2026-01-02/x.nef")
     }
 

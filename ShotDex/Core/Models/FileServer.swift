@@ -36,6 +36,13 @@ struct FileServer: Codable, Identifiable, Hashable, Sendable {
     /// Destination folder inside the share (SMB) or relative to the login's
     /// home (SFTP). Empty means the top.
     var folder: String
+    /// The folder the last upload through this connection went to; nil
+    /// until the first one, and again after the form's Folder changes — the
+    /// sheet then starts at `folder`.
+    var uploadFolder: String?
+    /// Whether the last upload sorted into year/day folders. Off for a new
+    /// connection.
+    var usesDateFolders: Bool
     /// SFTP only: the host key the user trusted, `SHA256:<base64>`. Cleared
     /// whenever the host or port changes.
     var hostKeyFingerprint: String?
@@ -53,6 +60,8 @@ struct FileServer: Codable, Identifiable, Hashable, Sendable {
         username: String,
         share: String = "",
         folder: String = "",
+        uploadFolder: String? = nil,
+        usesDateFolders: Bool = false,
         hostKeyFingerprint: String? = nil,
         lastUsedAt: Int? = nil,
         createdAt: Int = Int(Date().timeIntervalSince1970)
@@ -65,9 +74,16 @@ struct FileServer: Codable, Identifiable, Hashable, Sendable {
         self.username = username
         self.share = share
         self.folder = folder
+        self.uploadFolder = uploadFolder
+        self.usesDateFolders = usesDateFolders
         self.hostKeyFingerprint = hostKeyFingerprint
         self.lastUsedAt = lastUsedAt
         self.createdAt = createdAt
+    }
+
+    /// Where the upload sheet starts: the last folder used, else the form's.
+    var startingUploadFolder: String {
+        ServerUploadPath.normalizedFolder(uploadFolder ?? folder)
     }
 
     /// `host/share/folder` for the list row.

@@ -17,14 +17,21 @@ import Testing
         let hold: CountingHold
         let client: InMemoryRemoteFileClient
         let deleted: DeletedBox
+        let servers: FileServerStore
+        let nas: FileServer
     }
 
     final class DeletedBox { var ids: [String] = [] }
 
-    private func makeSetup(fixture: UploadFixture) throws -> Setup {
-        let database = try AppDatabase.makeEmpty()
+    private func makeSetup(
+        fixture: UploadFixture,
+        database: AppDatabase? = nil,
+        initialServerId: String? = nil
+    ) throws -> Setup {
+        let database = try database ?? AppDatabase.makeEmpty()
         let servers = FileServerStore(database: database, passwords: InMemoryPasswordStore())
-        let nas = FileServer(name: "NAS", transferProtocol: .smb, host: "nas.local", username: "me", share: "photo", folder: "Photos")
+        let nas = try servers.fetchAll().first { $0.name == "NAS" }
+            ?? FileServer(name: "NAS", transferProtocol: .smb, host: "nas.local", username: "me", share: "photo", folder: "Photos")
         try servers.save(nas, password: "pw")
         let hold = CountingHold()
         let client = InMemoryRemoteFileClient()
@@ -38,6 +45,7 @@ import Testing
         }
         let model = ServerUploadModel(
             assetIds: entries.map(\.assetId),
+            initialServerId: initialServerId,
             fileServers: servers,
             uploads: ServerUploadStore(database: database),
             index: nil,
@@ -47,7 +55,7 @@ import Testing
             exporter: fixture.exporter,
             deleteAssets: { deleted.ids = $0 }
         )
-        return Setup(model: model, hold: hold, client: client, deleted: deleted)
+        return Setup(model: model, hold: hold, client: client, deleted: deleted, servers: servers, nas: nas)
     }
 
     private func waitUntilFinished(_ model: ServerUploadModel) async {
@@ -108,8 +116,8 @@ import Testing
         await waitUntilFinished(setup.model)
         #expect(Set(setup.model.summary.deletableAssetIds) == ["A0", "A1"])
         #expect(setup.model.summary.uploadedPhotoCount == 2)
-        // Paths landed under the server's folder, by capture day.
-        #expect(setup.client.files.keys.allSatisfy { $0.hasPrefix("Photos/20") })
+        // Date Folders start off: straight into the connection's folder.
+        #expect(Set(setup.client.files.keys) == ["Photos/IMG_0.CR3", "Photos/IMG_1.CR3"])
 
         await setup.model.deleteUploaded()
         #expect(Set(setup.deleted.ids) == ["A0", "A1"])
@@ -133,5 +141,47 @@ import Testing
         #expect(setup.client.files.count == 3)
         // The photo the first run finished is still offered after the retry.
         #expect(Set(setup.model.summary.deletableAssetIds) == ["A0", "A1", "A2"])
+    }
+
+    /// AC-19: the folder and Date Folders switch an upload used come back
+    /// the next time that connection is picked — and only that connection.
+    @Test func remembersFolderAndDateFoldersPerConnection() async throws {
+        let database = try AppDatabase.makeEmpty()
+        let first = try makeSetup(fixture: UploadFixture(count: 1, bytes: 10), database: database)
+        await first.model.load()
+        #expect(first.model.folder == "Photos")
+        #expect(!first.model.usesDateFolders)
+        first.model.folder = "Photos/Trip"
+        first.model.usesDateFolders = true
+        first.model.start()
+        await waitUntilFinished(first.model)
+        #expect(first.client.files.keys.allSatisfy { $0.hasPrefix("Photos/Trip/20") })
+
+        let office = FileServer(name: "Office", transferProtocol: .sftp, host: "office", username: "me", folder: "Inbox")
+        try first.servers.save(office, password: "pw")
+
+        let again = try makeSetup(fixture: UploadFixture(count: 1, bytes: 10), database: database)
+        await again.model.load()
+        #expect(again.model.selectedServer?.name == "NAS")
+        #expect(again.model.folder == "Photos/Trip")
+        #expect(again.model.usesDateFolders)
+
+        again.model.select(office.id)
+        #expect(again.model.folder == "Inbox")
+        #expect(!again.model.usesDateFolders)
+    }
+
+    /// AC-21: a name picked in the ⋯ menu beats the last used connection.
+    @Test func opensOnTheConnectionPickedInTheMenu() async throws {
+        let database = try AppDatabase.makeEmpty()
+        let servers = FileServerStore(database: database, passwords: InMemoryPasswordStore())
+        let office = FileServer(name: "Office", transferProtocol: .sftp, host: "office", username: "me", folder: "Inbox")
+        try servers.save(office, password: "pw")
+        let setup = try makeSetup(fixture: UploadFixture(count: 1, bytes: 10), database: database, initialServerId: office.id)
+        try servers.markUsed(setup.nas.id, folder: "Photos", usesDateFolders: false)
+
+        await setup.model.load()
+        #expect(setup.model.selectedServer?.name == "Office")
+        #expect(setup.model.folder == "Inbox")
     }
 }

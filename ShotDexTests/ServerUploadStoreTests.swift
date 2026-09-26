@@ -73,7 +73,7 @@ import Testing
         try stores.servers.save(second, password: nil)
         #expect(try stores.servers.mostRecentlyUsed()?.id == first.id)
 
-        try stores.servers.markUsed(second.id, at: Date(timeIntervalSince1970: 5_000))
+        try stores.servers.markUsed(second.id, folder: "", usesDateFolders: false, at: Date(timeIntervalSince1970: 5_000))
         #expect(try stores.servers.mostRecentlyUsed()?.id == second.id)
     }
 
@@ -89,5 +89,54 @@ import Testing
         server.host = "other.local"
         try stores.servers.save(server, password: nil)
         #expect(try stores.servers.fetch(id: server.id)?.hostKeyFingerprint == nil)
+    }
+
+    /// AC-18: the same server added twice gets a second name, and editing a
+    /// connection does not number it against itself.
+    @Test func saveNumbersDuplicateName() throws {
+        let stores = try makeStores()
+        let first = FileServer(name: "nas.local", transferProtocol: .smb, host: "nas.local", username: "u", share: "s")
+        let named = FileServer(name: "NAS", transferProtocol: .smb, host: "nas.local", username: "u", share: "s")
+        try stores.servers.save(first, password: nil)
+        try stores.servers.save(named, password: nil)
+
+        let again = FileServer(name: "nas.local", transferProtocol: .smb, host: "nas.local", username: "v", share: "s")
+        let lower = FileServer(name: "nas", transferProtocol: .sftp, host: "nas.local", username: "u")
+        try stores.servers.save(again, password: nil)
+        try stores.servers.save(lower, password: nil)
+        #expect(try stores.servers.fetch(id: again.id)?.name == "nas.local (2)")
+        #expect(try stores.servers.fetch(id: lower.id)?.name == "nas (2)")
+
+        var edited = named
+        edited.username = "someone"
+        try stores.servers.save(edited, password: nil)
+        #expect(try stores.servers.fetch(id: named.id)?.name == "NAS")
+    }
+
+    /// AC-19, store half: an upload remembers its folder and switch; a new
+    /// default folder typed in the form forgets the folder but not the switch.
+    @Test func editingFolderForgetsRememberedFolder() throws {
+        let stores = try makeStores()
+        var server = FileServer(name: "A", transferProtocol: .smb, host: "a", username: "u", share: "s", folder: "Photos")
+        try stores.servers.save(server, password: nil)
+        #expect(try stores.servers.fetch(id: server.id)?.startingUploadFolder == "Photos")
+        #expect(try stores.servers.fetch(id: server.id)?.usesDateFolders == false)
+
+        try stores.servers.markUsed(server.id, folder: "/Photos/Trip/", usesDateFolders: true)
+        var saved = try #require(try stores.servers.fetch(id: server.id))
+        #expect(saved.startingUploadFolder == "Photos/Trip")
+        #expect(saved.usesDateFolders)
+
+        // A form opened before that upload still saves without undoing it.
+        server.username = "other"
+        try stores.servers.save(server, password: nil)
+        saved = try #require(try stores.servers.fetch(id: server.id))
+        #expect(saved.startingUploadFolder == "Photos/Trip")
+
+        server.folder = "Archive"
+        try stores.servers.save(server, password: nil)
+        saved = try #require(try stores.servers.fetch(id: server.id))
+        #expect(saved.startingUploadFolder == "Archive")
+        #expect(saved.usesDateFolders)
     }
 }

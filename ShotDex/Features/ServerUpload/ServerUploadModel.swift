@@ -58,7 +58,13 @@ final class ServerUploadModel {
     let assetIds: [String]
     private(set) var stage: Stage = .preparing
     private(set) var servers: [FileServer] = []
-    var selectedServerId: String?
+    /// Change it through `select(_:)`, which also brings the connection's
+    /// remembered folder and Date Folders switch.
+    private(set) var selectedServerId: String?
+    /// Destination inside the share (SMB) or home (SFTP), normalized.
+    var folder = ""
+    /// Year/day subfolders by capture date (FS-15.02 §3).
+    var usesDateFolders = false
     var fileKind: ServerUploadFileKind = .allOriginals
     private(set) var entries: [AssetUploadEntry]?
     private(set) var progress = Progress()
@@ -83,9 +89,12 @@ final class ServerUploadModel {
     private var lastItems: [ServerUploadItem] = []
     private var lastOutcomes: [ServerUploadOutcome] = []
     private var samples: [(time: Date, bytes: Int64)] = []
+    /// The connection picked in the ⋯ menu — it wins over the last used.
+    private let initialServerId: String?
 
     init(
         assetIds: [String],
+        initialServerId: String? = nil,
         fileServers: FileServerStore,
         uploads: ServerUploadStore,
         index: ServerUploadIndex?,
@@ -96,6 +105,7 @@ final class ServerUploadModel {
         deleteAssets: @escaping ([String]) async throws -> Void
     ) {
         self.assetIds = assetIds
+        self.initialServerId = initialServerId
         self.fileServers = fileServers
         self.uploads = uploads
         self.index = index
@@ -106,11 +116,12 @@ final class ServerUploadModel {
         self.deleteAssets = deleteAssets
     }
 
-    convenience init(assetIds: [String], dependencies: AppDependencies) {
+    convenience init(assetIds: [String], initialServerId: String?, dependencies: AppDependencies) {
         let library = dependencies.photoLibrary
         let metadata = dependencies.metadataStore
         self.init(
             assetIds: assetIds,
+            initialServerId: initialServerId,
             fileServers: dependencies.fileServers,
             uploads: dependencies.serverUploads,
             index: dependencies.serverUploadIndex,
@@ -148,15 +159,26 @@ final class ServerUploadModel {
         }
     }
 
-    /// Reads the server list again (after Add Server), keeping the pick — or
-    /// taking `select` when the form just saved one.
-    func reloadServers(select: String? = nil) {
+    /// Reads the connection list again (after Add Connection), keeping the
+    /// pick — or taking `select` when the form just saved one. The first read
+    /// starts on the connection the menu named, else the last one used.
+    func reloadServers(select id: String? = nil) {
         servers = (try? fileServers.fetchAll()) ?? []
-        if let select {
-            selectedServerId = select
+        if let id {
+            select(id)
         } else if selectedServer == nil {
-            selectedServerId = (try? fileServers.mostRecentlyUsed())?.id ?? servers.first?.id
+            let initial = initialServerId.flatMap { id in servers.first { $0.id == id } }
+            let fallback = (try? fileServers.mostRecentlyUsed()) ?? servers.first
+            if let server = initial ?? fallback { select(server.id) }
         }
+    }
+
+    /// Switches connection and starts from where its last upload went.
+    func select(_ serverId: String?) {
+        selectedServerId = serverId
+        guard let server = selectedServer else { return }
+        folder = server.startingUploadFolder
+        usesDateFolders = server.usesDateFolders
     }
 
     // MARK: Upload
@@ -169,11 +191,13 @@ final class ServerUploadModel {
                     assetId: entry.assetId,
                     file: file,
                     remotePath: ServerUploadPath.remotePath(
-                        folder: server.folder, captureDate: entry.captureDate, filename: file.filename
+                        folder: folder, captureDate: entry.captureDate, filename: file.filename,
+                        usesDateFolders: usesDateFolders
                     )
                 )
             }
         }
+        try? fileServers.markUsed(server.id, folder: folder, usesDateFolders: usesDateFolders)
         run(items, on: server)
     }
 
@@ -197,7 +221,6 @@ final class ServerUploadModel {
 
     private func run(_ items: [ServerUploadItem], on server: FileServer) {
         guard task == nil else { return }
-        try? fileServers.markUsed(server.id)
         lastItems = items
         stage = .uploading
         progress = Progress(fileCount: items.count)
