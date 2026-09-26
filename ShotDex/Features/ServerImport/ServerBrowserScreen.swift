@@ -199,10 +199,10 @@ struct ServerBrowserScreen: View {
 
     private var sortMenu: some View {
         Menu {
-            Picker("Sort", selection: Binding(get: { model.sort }, set: { model.setSort($0) })) {
+            Picker("Sort", selection: Binding(get: { model.sort }, set: { model.apply(sort: $0, ascending: model.ascending) })) {
                 ForEach(ServerPhotoSort.allCases) { Text($0.title).tag($0) }
             }
-            Picker("Order", selection: Binding(get: { model.ascending }, set: { model.setAscending($0) })) {
+            Picker("Order", selection: Binding(get: { model.ascending }, set: { model.apply(sort: model.sort, ascending: $0) })) {
                 Text("Ascending").tag(true)
                 Text("Descending").tag(false)
             }

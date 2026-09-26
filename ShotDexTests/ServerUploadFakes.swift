@@ -31,6 +31,17 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
         }
     }
 
+    /// A folder and its parents, set up before a test.
+    func addDirectory(_ path: String) {
+        lock.withLock {
+            var dir = path
+            while !dir.isEmpty {
+                directories.insert(dir)
+                dir = ServerUploadPath.parent(of: dir)
+            }
+        }
+    }
+
     /// What `connect()` throws — a server that turns the login away.
     var connectError: RemoteFileError?
     private(set) var connectCount = 0

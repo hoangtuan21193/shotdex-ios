@@ -11,6 +11,10 @@ final class ServerFolderModel {
         case loading
         case loaded
         case failed(RemoteFileError)
+
+        var failure: RemoteFileError? {
+            if case .failed(let error) = self { error } else { nil }
+        }
     }
 
     let session: ServerBrowseSession
@@ -37,7 +41,6 @@ final class ServerFolderModel {
     private let cache: RemoteThumbnailCache
     private let downloads: ServerDownloadStore
     private let existingAssetIds: @Sendable ([String]) -> Set<String>
-    private let defaults: UserDefaults
     private var captureDates: [String: Date] = [:]
     private var thumbnailTasks: [String: Task<Void, Never>] = [:]
     private var dateTask: Task<Void, Never>?
@@ -48,21 +51,17 @@ final class ServerFolderModel {
         cache: RemoteThumbnailCache,
         downloads: ServerDownloadStore,
         existingAssetIds: @escaping @Sendable ([String]) -> Set<String>,
-        defaults: UserDefaults = .standard
+        sort: ServerPhotoSort = .name,
+        ascending: Bool = true
     ) {
         self.session = session
         self.folder = folder
         self.cache = cache
         self.downloads = downloads
         self.existingAssetIds = existingAssetIds
-        self.defaults = defaults
-        let serverId = session.server.id
-        sort = defaults.string(forKey: Self.sortKey(serverId)).flatMap(ServerPhotoSort.init(rawValue:)) ?? .name
-        ascending = defaults.object(forKey: Self.ascendingKey(serverId)) as? Bool ?? true
+        self.sort = sort
+        self.ascending = ascending
     }
-
-    private static func sortKey(_ serverId: String) -> String { "serverBrowser.sort.\(serverId)" }
-    private static func ascendingKey(_ serverId: String) -> String { "serverBrowser.ascending.\(serverId)" }
 
     // MARK: Listing
 
@@ -108,23 +107,23 @@ final class ServerFolderModel {
 
     // MARK: Sort
 
-    func setSort(_ newSort: ServerPhotoSort) {
-        guard newSort != sort else { return }
+    /// The order the browser chose (FS-17.01 §2c); the browser owns the
+    /// choice and hands it to every folder it shows.
+    func apply(sort newSort: ServerPhotoSort, ascending newAscending: Bool) {
+        guard newSort != sort || newAscending != ascending else { return }
+        let sortChanged = newSort != sort
         sort = newSort
-        defaults.set(newSort.rawValue, forKey: Self.sortKey(session.server.id))
-        dateTask?.cancel()
-        dateProgress = nil
-        if newSort == .dateTaken {
+        ascending = newAscending
+        if sortChanged {
+            dateTask?.cancel()
+            dateProgress = nil
+        }
+        guard listing == .loaded else { return }
+        if newSort == .dateTaken, sortChanged {
             readDates()
-        } else {
+        } else if dateProgress == nil {
             applyOrder()
         }
-    }
-
-    func setAscending(_ value: Bool) {
-        ascending = value
-        defaults.set(value, forKey: Self.ascendingKey(session.server.id))
-        if dateProgress == nil { applyOrder() }
     }
 
     private func applyOrder() {
