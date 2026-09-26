@@ -29,20 +29,20 @@ struct PhotoWidgetResolvedConfiguration: Equatable {
     /// `snapshot` is passed in rather than read here so this stays pure and
     /// testable; the widget hands it a cached read.
     static func resolve(
-        kind: PhotoWidgetKind,
+        designId: String,
         source: PhotoWidgetSettings.Source,
         snapshot: (String) -> PhotoWidgetSnapshot
     ) -> PhotoWidgetResolvedConfiguration {
         switch source {
         case .none:
             return PhotoWidgetResolvedConfiguration(
-                frameDirectoryName: kind.directoryName,
+                frameDirectoryName: PhotoWidgetDesign.directoryName(id: designId),
                 pendingSource: nil
             )
 
         case .photo(let assetId):
             return resolve(
-                kind: kind,
+                designId: designId,
                 sourceId: assetId,
                 title: "Photo",
                 pendingKind: .photo,
@@ -52,7 +52,7 @@ struct PhotoWidgetResolvedConfiguration: Equatable {
 
         case .album(let collectionId, let title):
             return resolve(
-                kind: kind,
+                designId: designId,
                 sourceId: collectionId,
                 title: title,
                 pendingKind: .album,
@@ -66,17 +66,17 @@ struct PhotoWidgetResolvedConfiguration: Equatable {
     /// that is the one the app renders into when the source was chosen in the
     /// app, and it costs no second copy. Otherwise the per-source folder.
     private static func resolve(
-        kind: PhotoWidgetKind,
+        designId: String,
         sourceId: String,
         title: String,
         pendingKind: PendingSource.Kind,
         ownDirectoryName: String,
         snapshot: (String) -> PhotoWidgetSnapshot
     ) -> PhotoWidgetResolvedConfiguration {
-        let own = snapshot(kind.directoryName)
+        let own = snapshot(PhotoWidgetDesign.directoryName(id: designId))
         if !own.frames.isEmpty, own.sourceId == sourceId {
             return PhotoWidgetResolvedConfiguration(
-                frameDirectoryName: kind.directoryName,
+                frameDirectoryName: PhotoWidgetDesign.directoryName(id: designId),
                 pendingSource: nil
             )
         }
@@ -91,7 +91,7 @@ struct PhotoWidgetResolvedConfiguration: Equatable {
         // it rather than blanking a widget that has been working all along.
         if !own.frames.isEmpty, own.sourceId == nil {
             return PhotoWidgetResolvedConfiguration(
-                frameDirectoryName: kind.directoryName,
+                frameDirectoryName: PhotoWidgetDesign.directoryName(id: designId),
                 pendingSource: nil
             )
         }

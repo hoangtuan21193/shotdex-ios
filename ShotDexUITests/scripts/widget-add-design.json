@@ -1,0 +1,20 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "tap", "label": "Settings", "type": "button" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "swipe", "direction": "up", "x": 0.5, "y": 0.6 },
+    { "action": "wait", "seconds": 1 },
+    { "action": "swipe", "direction": "up", "x": 0.5, "y": 0.6 },
+    { "action": "wait", "seconds": 1 },
+    { "action": "swipe", "direction": "up", "x": 0.5, "y": 0.6 },
+    { "action": "wait", "seconds": 2 },
+    { "action": "tap", "label": "Photo Widget", "type": "button" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "tap", "label": "Add Design", "type": "button" },
+    { "action": "wait", "seconds": 5 },
+    { "action": "screenshot", "name": "04-added-design" },
+    { "action": "dump", "name": "04-added-design" }
+  ]
+}

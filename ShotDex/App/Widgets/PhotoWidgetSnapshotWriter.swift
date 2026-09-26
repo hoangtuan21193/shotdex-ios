@@ -12,9 +12,11 @@ import WidgetKit
 struct PhotoWidgetSnapshotWriter {
     let photoLibrary: PhotoLibraryService
 
-    func write(kind: PhotoWidgetKind, settings: PhotoWidgetSettings) async {
+    func write(designId: String, settings: PhotoWidgetSettings) async {
         guard let container = WidgetSharedContainer.url else { return }
-        let directory = PhotoWidgetSnapshot.directoryURL(for: kind, in: container)
+        let directory = PhotoWidgetSnapshot.directoryURL(
+            named: PhotoWidgetDesign.directoryName(id: designId), in: container
+        )
         let assets = Self.assets(for: settings.source)
 
         let renderer = WidgetImageRenderer(photoLibrary: photoLibrary)
@@ -49,7 +51,7 @@ struct PhotoWidgetSnapshotWriter {
             directory: directory,
             keeping: Set(frames.map(\.fileName) + [PhotoWidgetSnapshot.fileName])
         )
-        WidgetCenter.shared.reloadTimelines(ofKind: kind.widgetKind)
+        WidgetCenter.shared.reloadTimelines(ofKind: PhotoWidgetIdentity.widgetKind)
     }
 
     /// Redoes the album and single-photo folders that were rendered at the old
@@ -78,9 +80,7 @@ struct PhotoWidgetSnapshotWriter {
             guard !assets.isEmpty else { continue }
             await write(assets: assets, to: folder, sourceId: snapshot.sourceId)
         }
-        for kind in PhotoWidgetKind.allCases {
-            WidgetCenter.shared.reloadTimelines(ofKind: kind.widgetKind)
-        }
+        WidgetCenter.shared.reloadTimelines(ofKind: PhotoWidgetIdentity.widgetKind)
     }
 
     /// Renders the albums that widgets asked for from the Home Screen.
@@ -117,9 +117,7 @@ struct PhotoWidgetSnapshotWriter {
 
         PhotoWidgetFrameRequests.clear(albumIds: fulfilled)
         Self.pruneAlbumFolders(in: container, keeping: fulfilled)
-        for kind in PhotoWidgetKind.allCases {
-            WidgetCenter.shared.reloadTimelines(ofKind: kind.widgetKind)
-        }
+        WidgetCenter.shared.reloadTimelines(ofKind: PhotoWidgetIdentity.widgetKind)
         return fulfilled.count
     }
 

@@ -1,0 +1,22 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "tap", "label": "Settings", "type": "button" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "swipe", "direction": "up", "x": 0.5, "y": 0.6 },
+    { "action": "wait", "seconds": 1 },
+    { "action": "swipe", "direction": "up", "x": 0.5, "y": 0.6 },
+    { "action": "wait", "seconds": 1 },
+    { "action": "swipe", "direction": "up", "x": 0.5, "y": 0.6 },
+    { "action": "wait", "seconds": 2 },
+    { "action": "screenshot", "name": "01-settings-widgets" },
+    { "action": "tap", "label": "Photo Widget", "type": "button" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "screenshot", "name": "02-designs-list" },
+    { "action": "tap", "label": "Weather", "type": "button" },
+    { "action": "wait", "seconds": 5 },
+    { "action": "screenshot", "name": "03-design-editor" },
+    { "action": "dump", "name": "03-design-editor" }
+  ]
+}

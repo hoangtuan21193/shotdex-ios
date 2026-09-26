@@ -16,6 +16,12 @@ struct ConfigurePhotoWidgetIntent: WidgetConfigurationIntent {
     )
 
     @Parameter(
+        title: "Design",
+        description: "Which of your saved designs this widget wears. Leave empty for your first one."
+    )
+    var design: WidgetDesignEntity?
+
+    @Parameter(
         title: "Photo",
         description: "One of your recent photos. Takes precedence over Album."
     )
@@ -35,11 +41,59 @@ struct ConfigurePhotoWidgetIntent: WidgetConfigurationIntent {
 
     static var parameterSummary: some ParameterSummary {
         Summary {
+            \.$design
             \.$photo
             \.$album
             \.$rotation
             \.$dimming
         }
+    }
+}
+
+/// One saved design, as the configuration menu lists it.
+///
+/// This is what makes two photo widgets on one Home Screen able to look
+/// nothing alike: the answer is stored per placed widget by WidgetKit, while
+/// the design it names lives in the shared file both processes read.
+struct WidgetDesignEntity: AppEntity, Identifiable, Hashable {
+    static let typeDisplayRepresentation = TypeDisplayRepresentation(name: "Design")
+    static let defaultQuery = WidgetDesignQuery()
+
+    var id: String
+    var name: String
+    var summary: String
+
+    var displayRepresentation: DisplayRepresentation {
+        DisplayRepresentation(title: "\(name)", subtitle: "\(summary)")
+    }
+
+    init(design: PhotoWidgetDesign) {
+        id = design.id
+        name = design.name
+        summary = PhotoWidgetComponent.components(settings: design.settings)
+            .map(\.title)
+            .joined(separator: " · ")
+    }
+}
+
+/// Answers the menu from the settings file the app wrote. Runs inside the
+/// widget extension, so it reads the file rather than asking the app.
+struct WidgetDesignQuery: EntityQuery {
+    func entities(for identifiers: [String]) async throws -> [WidgetDesignEntity] {
+        let designs = PhotoWidgetSettingsFile.read().designs
+        return identifiers.compactMap { id in
+            designs.first { $0.id == id }.map(WidgetDesignEntity.init)
+        }
+    }
+
+    func suggestedEntities() async throws -> [WidgetDesignEntity] {
+        PhotoWidgetSettingsFile.read().designs.map(WidgetDesignEntity.init)
+    }
+
+    /// The first design, so a widget dropped on the Home Screen and never
+    /// opened still names something rather than reading "Choose".
+    func defaultResult() async -> WidgetDesignEntity? {
+        PhotoWidgetSettingsFile.read().designs.first.map(WidgetDesignEntity.init)
     }
 }
 

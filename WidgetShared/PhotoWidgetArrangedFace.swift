@@ -9,7 +9,6 @@ import SwiftUI
 struct PhotoWidgetArrangedFace<Overlay: View>: View {
     let date: Date
     let settings: PhotoWidgetSettings
-    let kind: PhotoWidgetKind
     let size: CGSize
     var weather: WeatherSnapshot?
     var calendarSnapshot: CalendarSnapshot?
@@ -34,7 +33,7 @@ struct PhotoWidgetArrangedFace<Overlay: View>: View {
 
     private var groups: [(anchor: PhotoWidgetSettings.Anchor, components: [PhotoWidgetComponent])] {
         PhotoWidgetLayout.groups(
-            PhotoWidgetComponent.components(for: kind, settings: settings),
+            PhotoWidgetComponent.components(settings: settings),
             anchors: settings.componentAnchorsByComponent,
             blockAnchor: settings.anchor
         )
@@ -46,7 +45,7 @@ struct PhotoWidgetArrangedFace<Overlay: View>: View {
             // and that line has no group of its own.
             if groups.isEmpty {
                 PhotoWidgetFace(
-                    date: date, settings: settings, kind: kind, width: size.width,
+                    date: date, settings: settings, width: size.width,
                     weather: weather, calendarSnapshot: calendarSnapshot,
                     isCompact: isCompact, components: [],
                     textColor: smartColor(forRect: CGRect(origin: .zero, size: size))
@@ -57,7 +56,6 @@ struct PhotoWidgetArrangedFace<Overlay: View>: View {
                 PhotoWidgetPlacedGroup(
                     date: date,
                     settings: settings,
-                    kind: kind,
                     size: size,
                     weather: weather,
                     calendarSnapshot: calendarSnapshot,
@@ -98,7 +96,6 @@ struct PhotoWidgetArrangedFace<Overlay: View>: View {
 private struct PhotoWidgetPlacedGroup<Overlay: View>: View {
     let date: Date
     let settings: PhotoWidgetSettings
-    let kind: PhotoWidgetKind
     let size: CGSize
     var weather: WeatherSnapshot?
     var calendarSnapshot: CalendarSnapshot?
@@ -119,7 +116,6 @@ private struct PhotoWidgetPlacedGroup<Overlay: View>: View {
         PhotoWidgetFace(
             date: date,
             settings: settings,
-            kind: kind,
             width: size.width,
             weather: weather,
             calendarSnapshot: calendarSnapshot,

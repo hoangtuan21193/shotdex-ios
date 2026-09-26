@@ -3,13 +3,13 @@ import SwiftUI
 /// Everything one photo widget shows — its picture, what is written over it,
 /// and how — written to the App Group the widget reads.
 ///
-/// One screen for all four kinds. The sections that do not apply are simply
-/// not built: a Clock has no weather section, a Weather widget has no month
-/// grid. The preview at the top is the widget's own `PhotoWidgetFace` over the
+/// One screen for one design. Every row is offered to every design — the
+/// weather and the calendar are toggles, not a property of which widget this
+/// is. The preview at the top is the widget's own `PhotoWidgetFace` over the
 /// widget's own background, at the medium family's proportions — the size the
 /// point values are measured against.
 struct PhotoWidgetSettingsScreen: View {
-    let kind: PhotoWidgetKind
+    let designId: String
 
     @Environment(AppDependencies.self) private var dependencies
 
@@ -26,13 +26,15 @@ struct PhotoWidgetSettingsScreen: View {
     @State private var isRefreshingWeather = false
     @State private var previewFamily: PhotoWidgetPreviewFamily = .medium
     @State private var calendarAccess: CalendarSnapshotWriter.Access = .notDetermined
+    @State private var locationAccess: WidgetLocationProvider.Access = .notDetermined
     @State private var previewImage: Image?
     @State private var previewImageAspect: Double = 1
     @State private var previewLuma: PhotoWidgetLumaGrid?
     @State private var selectedComponent: PhotoWidgetComponent?
 
     private var store: PhotoWidgetSettingsStore { dependencies.photoWidgetSettings }
-    private var settings: PhotoWidgetSettings { store.settings(for: kind) }
+    private var designName: String { store.design(id: designId).name }
+    private var settings: PhotoWidgetSettings { store.settings(for: designId) }
 
     /// The preview is pinned above the options rather than scrolling with
     /// them: it is what every row below is editing, and it is where the text
@@ -45,25 +47,25 @@ struct PhotoWidgetSettingsScreen: View {
             optionsList
         }
         .background(Color(.systemGroupedBackground))
-        .navigationTitle(kind.title)
+        .navigationTitle(designName)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $isPhotoPickerPresented) {
             PhotoWidgetPhotoPicker { assetId in
-                store.update(kind) { $0.source = .photo(assetId: assetId) }
+                store.update(designId) { $0.source = .photo(assetId: assetId) }
             }
             .ignoresSafeArea()
         }
         .sheet(isPresented: $isAlbumPickerPresented) {
             NavigationStack {
                 PhotoWidgetAlbumPicker { collectionId, title in
-                    store.update(kind) { $0.source = .album(collectionId: collectionId, title: title) }
+                    store.update(designId) { $0.source = .album(collectionId: collectionId, title: title) }
                 }
             }
             .environment(dependencies)
         }
         .sheet(isPresented: $isFontPickerPresented) {
             PhotoWidgetFontPicker { choice in
-                store.update(kind) {
+                store.update(designId) {
                     $0.fontPostScriptName = choice.postScriptName
                     $0.fontDisplayName = choice.displayName
                 }
@@ -89,15 +91,16 @@ struct PhotoWidgetSettingsScreen: View {
             store.reloadFromDisk()
             weather = WeatherSnapshot.read()
             calendarAccess = dependencies.calendarWidgetWriter.access
+            locationAccess = dependencies.widgetLocation.access
             // The preview shows today's events, so the events are read while
             // it is on screen — a widget that is not placed yet has never had
             // them read for it.
-            if kind.needsCalendarEvents, calendarAccess == .granted {
+            if settings.showsCalendar, calendarAccess == .granted {
                 await dependencies.calendarWidgetWriter.write(force: true)
             }
             calendarSnapshot = CalendarSnapshot.read()
         }
-        .task(id: PreviewLoadKey(source: settings.source, isRendering: store.isRendering(kind))) {
+        .task(id: PreviewLoadKey(source: settings.source, isRendering: store.isRendering(designId))) {
             await loadPreviewImage()
         }
         .onDisappear { store.saveNow() }
@@ -114,7 +117,7 @@ struct PhotoWidgetSettingsScreen: View {
         // The same rule the widget uses to find its frames, so the preview
         // cannot show one picture while the Home Screen shows another.
         let resolved = PhotoWidgetResolvedConfiguration.resolve(
-            kind: kind,
+            designId: designId,
             source: settings.source,
             snapshot: { PhotoWidgetSnapshot.read(directoryName: $0) }
         )
@@ -150,7 +153,7 @@ struct PhotoWidgetSettingsScreen: View {
     private var previewHeader: some View {
         VStack(spacing: 10) {
             PhotoWidgetPreview(
-                kind: kind,
+                designName: designName,
                 settings: settings,
                 date: previewDate,
                 weather: weather,
@@ -161,19 +164,19 @@ struct PhotoWidgetSettingsScreen: View {
                 lumaGrid: previewLuma,
                 selection: $selectedComponent,
                 onMove: { component, anchor in
-                    store.update(kind) {
+                    store.update(designId) {
                         $0.setAnchor(
                             anchor,
                             for: component,
-                            in: PhotoWidgetComponent.components(for: kind, settings: $0)
+                            in: PhotoWidgetComponent.components(settings: $0)
                         )
                     }
                 },
                 onResize: { component, scale in
-                    store.update(kind) { $0.setScale(scale, for: component) }
+                    store.update(designId) { $0.setScale(scale, for: component) }
                 },
                 onPhotoTransformChange: { scale, offsetX, offsetY in
-                    store.update(kind) {
+                    store.update(designId) {
                         $0.photoScale = scale
                         $0.photoOffsetX = offsetX
                         $0.photoOffsetY = offsetY
@@ -230,7 +233,7 @@ struct PhotoWidgetSettingsScreen: View {
             chip(title: "Photo", isSelected: selectedComponent == nil) {
                 selectedComponent = nil
             }
-            ForEach(PhotoWidgetComponent.components(for: kind, settings: settings)) { component in
+            ForEach(PhotoWidgetComponent.components(settings: settings)) { component in
                 chip(
                     title: component.title,
                     isSelected: selectedComponent == component
@@ -289,8 +292,8 @@ struct PhotoWidgetSettingsScreen: View {
             List {
                 photoSection
                 timeSection
-                if kind.needsCalendarEvents { calendarSection }
-                if kind.needsWeather { weatherSection }
+                calendarSection
+                weatherSection
                 typefaceSection
                 colourSection
                 arrangementSection
@@ -335,17 +338,17 @@ struct PhotoWidgetSettingsScreen: View {
             }
             if !isNoneSource {
                 Button {
-                    store.renderPhotos(for: kind)
+                    store.renderPhotos(for: designId)
                 } label: {
                     LabeledContent("Refresh Now") {
-                        if store.isRendering(kind) {
+                        if store.isRendering(designId) {
                             ProgressView()
                         }
                     }
                 }
-                .disabled(store.isRendering(kind))
+                .disabled(store.isRendering(designId))
                 Button("Remove Photo", role: .destructive) {
-                    store.update(kind) { $0.source = .none }
+                    store.update(designId) { $0.source = .none }
                 }
             }
             dimmingRow
@@ -363,7 +366,7 @@ struct PhotoWidgetSettingsScreen: View {
             Slider(
                 value: Binding(
                     get: { settings.photoDimming },
-                    set: { value in store.update(kind) { $0.photoDimming = value } }
+                    set: { value in store.update(designId) { $0.photoDimming = value } }
                 ),
                 in: 0...0.7
             )
@@ -391,7 +394,7 @@ struct PhotoWidgetSettingsScreen: View {
                     value: settings.timeSize,
                     range: PhotoWidgetSettings.timeSizeRange
                 ) { value in
-                    store.update(kind) { $0.timeSize = value }
+                    store.update(designId) { $0.timeSize = value }
                 }
             }
 
@@ -412,7 +415,7 @@ struct PhotoWidgetSettingsScreen: View {
                 value: settings.dateSize,
                 range: PhotoWidgetSettings.dateSizeRange
             ) { value in
-                store.update(kind) { $0.dateSize = value }
+                store.update(designId) { $0.dateSize = value }
             }
         } header: {
             Text("Time and Date")
@@ -443,6 +446,8 @@ struct PhotoWidgetSettingsScreen: View {
 
     private var calendarSection: some View {
         Section {
+            Toggle("Show Calendar", isOn: boolBinding(\.showsCalendar))
+            if settings.showsCalendar {
             Picker("Show", selection: calendarStyleBinding) {
                 ForEach(PhotoWidgetSettings.CalendarStyle.allCases) { style in
                     Text(style.title).tag(style)
@@ -456,13 +461,13 @@ struct PhotoWidgetSettingsScreen: View {
                     "Events Listed: \(settings.maximumEventCount)",
                     value: Binding(
                         get: { settings.maximumEventCount },
-                        set: { value in store.update(kind) { $0.maximumEventCount = value } }
+                        set: { value in store.update(designId) { $0.maximumEventCount = value } }
                     ),
                     in: PhotoWidgetSettings.eventCountRange
                 )
                 .monospacedDigit()
+                LabeledContent("Calendar Access", value: calendarAccessLabel)
                 if calendarAccess != .granted {
-                    LabeledContent("Calendar Access", value: calendarAccessLabel)
                     Button(calendarAccess == .denied ? "Open Settings" : "Allow Calendar Access") {
                         if calendarAccess == .denied {
                             openAppSettings()
@@ -475,12 +480,16 @@ struct PhotoWidgetSettingsScreen: View {
                             }
                         }
                     }
+                    accessExplanation(
+                        "Listing today's events needs permission to read your calendars. ShotDex asks only when you tap this, and reads nothing until you allow it."
+                    )
                 }
+            }
             }
         } header: {
             Text("Calendar")
         } footer: {
-            Text("The month is worked out on this iPhone and needs no permission. Listing today's events reads your calendars — only their titles, times and colours are copied for the widget, and only for today.")
+            Text("The month is worked out on this iPhone and needs no permission. Listing today's events reads your calendars — only their titles, times and colours are copied for the widget, and only for today. Nothing is read until you allow it here.")
         }
     }
 
@@ -496,6 +505,8 @@ struct PhotoWidgetSettingsScreen: View {
 
     private var weatherSection: some View {
         Section {
+            Toggle("Show Weather", isOn: boolBinding(\.showsWeather))
+            if settings.showsWeather {
             Picker("Units", selection: temperatureUnitBinding) {
                 ForEach(PhotoWidgetSettings.TemperatureUnit.allCases) { unit in
                     Text(unit.title).tag(unit)
@@ -503,31 +514,67 @@ struct PhotoWidgetSettingsScreen: View {
             }
             Toggle("Show High and Low", isOn: boolBinding(\.showsHighLow))
             Toggle("Show Place", isOn: boolBinding(\.showsWeatherPlace))
+            LabeledContent("Location Access", value: locationAccessLabel)
+            if locationAccess != .granted {
+                Button(locationAccess == .denied ? "Open Settings" : "Allow Location Access") {
+                    if locationAccess == .denied {
+                        openAppSettings()
+                    } else {
+                        Task {
+                            await dependencies.widgetLocation.requestAuthorization()
+                            locationAccess = dependencies.widgetLocation.access
+                            guard locationAccess == .granted else { return }
+                            await refreshWeather()
+                        }
+                    }
+                }
+                accessExplanation(
+                    "The weather is for wherever you are, so fetching it needs your location. ShotDex asks only when you tap this, rounds the coordinate to about a kilometre, and never stores it."
+                )
+            }
             LabeledContent("Last Reading", value: weatherAgeLabel)
             Button {
-                Task {
-                    isRefreshingWeather = true
-                    await WeatherSnapshotWriter(location: dependencies.widgetLocation)
-                        .write(force: true)
-                    weather = WeatherSnapshot.read()
-                    isRefreshingWeather = false
-                }
+                Task { await refreshWeather() }
             } label: {
                 LabeledContent("Update Now") {
                     if isRefreshingWeather { ProgressView() }
                 }
             }
-            .disabled(isRefreshingWeather)
+            .disabled(isRefreshingWeather || locationAccess != .granted)
+            }
         } header: {
             Text("Weather")
         } footer: {
-            Text("ShotDex asks for your location once, rounds it to about a kilometre, and fetches the current conditions from Open-Meteo. It does this only while a weather widget is on your Home Screen, and it sends nothing else.")
+            Text("ShotDex asks for your location only when you allow it here, rounds it to about a kilometre, and fetches the current conditions from Open-Meteo. It does this only while a weather widget is on your Home Screen, and it sends nothing else.")
         }
     }
 
     private var weatherAgeLabel: String {
         guard let weather else { return "None yet" }
         return weather.updatedAt.formatted(date: .omitted, time: .shortened)
+    }
+
+    private var locationAccessLabel: String {
+        switch locationAccess {
+        case .granted: "Allowed"
+        case .denied: "Denied"
+        case .notDetermined: "Not Requested"
+        }
+    }
+
+    private func refreshWeather() async {
+        isRefreshingWeather = true
+        await WeatherSnapshotWriter(location: dependencies.widgetLocation).write(force: true)
+        weather = WeatherSnapshot.read()
+        isRefreshingWeather = false
+    }
+
+    /// The sentence that sits above an Allow button, so the permission is
+    /// explained where it is granted rather than only in a section footer.
+    private func accessExplanation(_ text: String) -> some View {
+        Text(text)
+            .font(.footnote)
+            .foregroundStyle(.secondary)
     }
 
     // MARK: Typeface
@@ -541,7 +588,7 @@ struct PhotoWidgetSettingsScreen: View {
             }
             if !settings.fontPostScriptName.isEmpty {
                 Button("Use the System Font") {
-                    store.update(kind) {
+                    store.update(designId) {
                         $0.fontPostScriptName = ""
                         $0.fontDisplayName = "System"
                     }
@@ -595,7 +642,7 @@ struct PhotoWidgetSettingsScreen: View {
     private func swatch(hex: String) -> some View {
         let isSelected = settings.textColorHex.caseInsensitiveCompare(hex) == .orderedSame
         return Button {
-            store.update(kind) { $0.textColorHex = hex }
+            store.update(designId) { $0.textColorHex = hex }
         } label: {
             swatchFill(hex: hex)
                 .frame(width: 30, height: 30)
@@ -683,7 +730,7 @@ struct PhotoWidgetSettingsScreen: View {
             }
             if !settings.componentAnchors.isEmpty || !settings.componentScales.isEmpty {
                 Button("Stack Everything Together", role: .destructive) {
-                    store.update(kind) { $0.resetComponentAnchors() }
+                    store.update(designId) { $0.resetComponentAnchors() }
                     selectedComponent = nil
                 }
             }
@@ -691,7 +738,7 @@ struct PhotoWidgetSettingsScreen: View {
                 LabeledContent("Photo Zoom", value: "\(String(format: "%.1f", settings.photoScale))×")
                     .monospacedDigit()
                 Button("Reset Photo Framing", role: .destructive) {
-                    store.update(kind) {
+                    store.update(designId) {
                         $0.photoScale = 1
                         $0.photoOffsetX = 0
                         $0.photoOffsetY = 0
@@ -758,7 +805,7 @@ struct PhotoWidgetSettingsScreen: View {
             Slider(
                 value: Binding(
                     get: { scale },
-                    set: { value in store.update(kind) { $0.setScale(value, for: component) } }
+                    set: { value in store.update(designId) { $0.setScale(value, for: component) } }
                 ),
                 in: PhotoWidgetSettings.componentScaleRange
             )
@@ -767,11 +814,11 @@ struct PhotoWidgetSettingsScreen: View {
     }
 
     private func move(_ component: PhotoWidgetComponent, to anchor: PhotoWidgetSettings.Anchor) {
-        store.update(kind) {
+        store.update(designId) {
             $0.setAnchor(
                 anchor,
                 for: component,
-                in: PhotoWidgetComponent.components(for: kind, settings: $0)
+                in: PhotoWidgetComponent.components(settings: $0)
             )
         }
     }
@@ -814,49 +861,49 @@ struct PhotoWidgetSettingsScreen: View {
     private func boolBinding(_ keyPath: WritableKeyPath<PhotoWidgetSettings, Bool>) -> Binding<Bool> {
         Binding(
             get: { settings[keyPath: keyPath] },
-            set: { value in store.update(kind) { $0[keyPath: keyPath] = value } }
+            set: { value in store.update(designId) { $0[keyPath: keyPath] = value } }
         )
     }
 
     private var timeFormatBinding: Binding<String> {
         Binding(
             get: { settings.timeFormat },
-            set: { value in store.update(kind) { $0.timeFormat = value } }
+            set: { value in store.update(designId) { $0.timeFormat = value } }
         )
     }
 
     private var dateFormatBinding: Binding<String> {
         Binding(
             get: { settings.dateFormat },
-            set: { value in store.update(kind) { $0.dateFormat = value } }
+            set: { value in store.update(designId) { $0.dateFormat = value } }
         )
     }
 
     private var rotationBinding: Binding<PhotoWidgetSettings.Rotation> {
         Binding(
             get: { settings.rotation },
-            set: { value in store.update(kind) { $0.rotation = value } }
+            set: { value in store.update(designId) { $0.rotation = value } }
         )
     }
 
     private var legibilityBinding: Binding<PhotoWidgetSettings.Legibility> {
         Binding(
             get: { settings.legibility },
-            set: { value in store.update(kind) { $0.legibility = value } }
+            set: { value in store.update(designId) { $0.legibility = value } }
         )
     }
 
     private var calendarStyleBinding: Binding<PhotoWidgetSettings.CalendarStyle> {
         Binding(
             get: { settings.calendarStyle },
-            set: { value in store.update(kind) { $0.calendarStyle = value } }
+            set: { value in store.update(designId) { $0.calendarStyle = value } }
         )
     }
 
     private var temperatureUnitBinding: Binding<PhotoWidgetSettings.TemperatureUnit> {
         Binding(
             get: { settings.temperatureUnit },
-            set: { value in store.update(kind) { $0.temperatureUnit = value } }
+            set: { value in store.update(designId) { $0.temperatureUnit = value } }
         )
     }
 
@@ -873,9 +920,9 @@ struct PhotoWidgetSettingsScreen: View {
         Button("Done") {}
         Button("Use the System Format", role: .destructive) {
             if isTime {
-                store.update(kind) { $0.timeFormat = "" }
+                store.update(designId) { $0.timeFormat = "" }
             } else {
-                store.update(kind) { $0.dateFormat = "" }
+                store.update(designId) { $0.dateFormat = "" }
             }
         }
     }

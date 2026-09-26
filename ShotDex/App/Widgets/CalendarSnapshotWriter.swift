@@ -4,10 +4,10 @@ import WidgetKit
 
 /// Reads today's events out of the user's calendars for the widgets.
 ///
-/// Access is asked for only when a placed widget lists events (the month grid
-/// is arithmetic and needs nothing), and what crosses into the App Group is a
-/// title, a time and a colour — never a calendar identifier, never a note,
-/// never an attendee.
+/// Access is never asked for on its own: the user grants it from the calendar
+/// widget's settings section, and the month grid is arithmetic and needs
+/// nothing at all. What crosses into the App Group is a title, a time and a
+/// colour — never a calendar identifier, never a note, never an attendee.
 @MainActor
 final class CalendarSnapshotWriter {
     private let store = EKEventStore()
@@ -27,8 +27,8 @@ final class CalendarSnapshotWriter {
         }
     }
 
-    /// Asks for access the first time a widget that needs it is placed. iOS 17
-    /// splits calendar access in two and this is the read side.
+    /// Asks for access, and only from the settings button the user taps. iOS
+    /// 17 splits calendar access in two and this is the read side.
     func requestAccess() async -> Bool {
         (try? await store.requestFullAccessToEvents()) ?? false
     }
@@ -39,15 +39,10 @@ final class CalendarSnapshotWriter {
         let settings = PhotoWidgetSettingsFile.read()
         let isNeeded = await InstalledWidgets.needsCalendarEvents(settings: settings)
         guard force || isNeeded else { return false }
-        if access == .notDetermined, await requestAccess() == false {
-            write(CalendarSnapshot(
-                dayKey: WidgetSharedContainer.dayKey(for: now, calendar: calendar),
-                events: [],
-                hasAccess: false,
-                generatedAt: now
-            ), to: container)
-            return true
-        }
+        // Never prompts. Access is asked for in the calendar widget's own
+        // settings, behind a button that says what it is for; until then the
+        // widget shows "calendar access is off" rather than a dialog the user
+        // did not ask for.
         guard access == .granted else {
             write(CalendarSnapshot(
                 dayKey: WidgetSharedContainer.dayKey(for: now, calendar: calendar),
@@ -94,9 +89,7 @@ final class CalendarSnapshotWriter {
             snapshot,
             to: container.appendingPathComponent(CalendarSnapshot.fileName)
         )
-        for kind in PhotoWidgetKind.allCases where kind.needsCalendarEvents {
-            WidgetCenter.shared.reloadTimelines(ofKind: kind.widgetKind)
-        }
+        WidgetCenter.shared.reloadTimelines(ofKind: PhotoWidgetIdentity.widgetKind)
     }
 
     /// A calendar's colour as the hex the snapshot carries. sRGB components,

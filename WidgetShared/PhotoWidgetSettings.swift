@@ -1,57 +1,45 @@
 import Foundation
 
-/// The four widgets that draw something over a photo the user picked: a clock,
-/// a calendar, the weather, and one that carries all three.
+/// One saved look for the photo widget: a name, and everything that look sets.
 ///
-/// They are one family rather than four unrelated widgets because they differ
-/// only in which rows they draw: every one of them needs a picture, a
-/// typeface, a colour, a position and the same legibility treatment, and a
-/// user who set up one expects the next to work the same way.
-enum PhotoWidgetKind: String, Codable, CaseIterable, Identifiable, Sendable {
-    case clock
-    case calendar
-    case weather
-    case combined
+/// This replaced four fixed widget kinds (Clock, Calendar, Weather, and one
+/// that carried all three). They were never four widgets — they differed only
+/// in which rows they started switched on, and the split actively took
+/// something away, because a "Clock" could not be given the weather even
+/// though the face draws it fine. A design can carry any of the rows, and a
+/// user can keep as many designs as they have widgets.
+///
+/// The `id` is what a placed widget remembers, so renaming a design does not
+/// orphan the widget showing it, and it is also the name of the folder that
+/// design's rendered pictures live in.
+struct PhotoWidgetDesign: Codable, Equatable, Identifiable, Sendable {
+    var id: String
+    var name: String
+    var settings: PhotoWidgetSettings
 
-    var id: String { rawValue }
-
-    /// Shown in Settings and in the widget gallery.
-    var title: String {
-        switch self {
-        case .clock: "Clock"
-        case .calendar: "Calendar"
-        case .weather: "Weather"
-        case .combined: "Time, Date and Weather"
-        }
+    init(id: String = UUID().uuidString, name: String, settings: PhotoWidgetSettings) {
+        self.id = id
+        self.name = name
+        self.settings = settings
     }
 
-    /// WidgetKit's `kind`. Stable strings — changing one orphans every widget
-    /// a user has already placed.
-    var widgetKind: String {
-        switch self {
-        case .clock: "ShotDexClock"
-        case .calendar: "ShotDexCalendar"
-        case .weather: "ShotDexWeather"
-        case .combined: "ShotDexCombined"
-        }
+    /// Folder inside the App Group holding this design's rendered pictures.
+    var directoryName: String { PhotoWidgetDesign.directoryName(id: id) }
+
+    static func directoryName(id: String) -> String { "photo-widget-\(id)" }
+
+    /// What a design starts as: the time and the date over a photo. That is
+    /// the widget people place most, and the weather and the calendar are one
+    /// toggle away.
+    static func makeDefault(name: String = "My Widget") -> PhotoWidgetDesign {
+        PhotoWidgetDesign(name: name, settings: PhotoWidgetSettings())
     }
+}
 
-    /// Folder inside the App Group holding this widget's rendered pictures.
-    var directoryName: String { "photo-widget-\(rawValue)" }
-
-    /// Whether this widget ever needs the weather fetched for it. The app only
-    /// asks for a location, and only talks to a weather service, when one of
-    /// these is configured — the network call is the user's choice, made by
-    /// setting the widget up.
-    var needsWeather: Bool { self == .weather || self == .combined }
-
-    /// Whether it needs the calendar read.
-    var needsCalendarEvents: Bool { self == .calendar || self == .combined }
-
-    /// Whether this widget is also offered on the Lock Screen. Only the two
-    /// that carry a fact worth reading without their photo: the weather, and
-    /// what is on today.
-    var hasAccessoryFamilies: Bool { self == .weather || self == .calendar }
+/// WidgetKit's `kind` for the one photo widget. A stable string — changing it
+/// orphans every widget already placed.
+enum PhotoWidgetIdentity {
+    static let widgetKind = "ShotDexPhoto"
 }
 
 /// Everything the user chose for one of those widgets, in a file both
@@ -186,6 +174,15 @@ struct PhotoWidgetSettings: Codable, Equatable {
     /// A `DateFormatter` pattern, or empty for `dateStyle = .medium`.
     var dateFormat = ""
 
+    /// Whether the design carries the weather at all. Before designs this was
+    /// implied by the widget's kind, which is exactly the restriction designs
+    /// remove: a clock could not be given the weather even though the face
+    /// draws it perfectly well.
+    var showsWeather = false
+    /// Whether it carries the month grid or today's events at all.
+    /// `calendarStyle` then says which of the two.
+    var showsCalendar = false
+
     var calendarStyle: CalendarStyle = .monthGrid
     /// How many of today's events are listed before the row says "+N more".
     var maximumEventCount = 3
@@ -268,6 +265,8 @@ struct PhotoWidgetSettings: Codable, Equatable {
         rotation = value(.rotation, defaults.rotation)
         showsTime = value(.showsTime, defaults.showsTime)
         showsDate = value(.showsDate, defaults.showsDate)
+        showsWeather = value(.showsWeather, defaults.showsWeather)
+        showsCalendar = value(.showsCalendar, defaults.showsCalendar)
         timeFormat = value(.timeFormat, defaults.timeFormat)
         dateFormat = value(.dateFormat, defaults.dateFormat)
         calendarStyle = value(.calendarStyle, defaults.calendarStyle)
@@ -310,6 +309,8 @@ struct PhotoWidgetSettings: Codable, Equatable {
         try container.encode(rotation, forKey: .rotation)
         try container.encode(showsTime, forKey: .showsTime)
         try container.encode(showsDate, forKey: .showsDate)
+        try container.encode(showsWeather, forKey: .showsWeather)
+        try container.encode(showsCalendar, forKey: .showsCalendar)
         try container.encode(timeFormat, forKey: .timeFormat)
         try container.encode(dateFormat, forKey: .dateFormat)
         try container.encode(calendarStyle, forKey: .calendarStyle)
@@ -341,6 +342,7 @@ struct PhotoWidgetSettings: Codable, Equatable {
     /// and that is what the first drag starts from.
     enum CodingKeys: String, CodingKey {
         case source, rotation, showsTime, showsDate, timeFormat, dateFormat
+        case showsWeather, showsCalendar
         case calendarStyle, maximumEventCount, weekStartsOnMonday
         case temperatureUnit, showsHighLow, showsWeatherPlace
         case fontPostScriptName, fontDisplayName, timeSize, dateSize
@@ -411,12 +413,37 @@ struct PhotoWidgetSettings: Codable, Equatable {
 
     static let `default` = PhotoWidgetSettings()
 
-    /// The defaults each widget opens on. A calendar with the time on it is
-    /// not what "Calendar" means, and a weather widget whose headline is the
-    /// clock would be a clock — so each kind starts with the rows it is named
-    /// after, and the user can still turn the others on.
-    static func `default`(for kind: PhotoWidgetKind) -> PhotoWidgetSettings {
+    /// The four kinds this feature shipped as before designs, kept only so a
+    /// file written by that version can be read once and turned into designs.
+    /// Nothing outside `PhotoWidgetSettingsFile.migrated(from:)` should use it.
+    enum LegacyKind: String, CaseIterable {
+        case clock
+        case calendar
+        case weather
+        case combined
+
+        var title: String {
+            switch self {
+            case .clock: "Clock"
+            case .calendar: "Calendar"
+            case .weather: "Weather"
+            case .combined: "Time, Date and Weather"
+            }
+        }
+
+        var directoryName: String { "photo-widget-\(rawValue)" }
+
+        /// What the kind used to imply, now that the two are stored flags.
+        var showsWeather: Bool { self == .weather || self == .combined }
+        var showsCalendar: Bool { self == .calendar || self == .combined }
+    }
+
+    /// The defaults the old kinds opened on, applied when their settings are
+    /// turned into designs so a migrated design looks like what it replaced.
+    static func `default`(for kind: LegacyKind) -> PhotoWidgetSettings {
         var settings = PhotoWidgetSettings()
+        settings.showsWeather = kind.showsWeather
+        settings.showsCalendar = kind.showsCalendar
         switch kind {
         case .clock:
             break
@@ -468,47 +495,82 @@ struct PhotoWidgetSettings: Codable, Equatable {
     }
 }
 
-/// Every widget's settings in one file, keyed by kind.
+/// Every design the user has made, in one file, in the order the Settings
+/// list shows them.
 ///
-/// One file rather than four: Settings writes them all through the same store,
-/// and a widget reading a file that a half-finished write left behind is a
-/// class of bug worth not having four times.
+/// An array rather than a dictionary: this is a list a person reorders and
+/// renames, and a dictionary would have to carry the order alongside anyway.
+/// One file rather than one per design, because a widget reading a file that a
+/// half-finished write left behind is a class of bug worth not having twice.
 struct PhotoWidgetSettingsFile: Codable, Equatable {
-    var byKind: [String: PhotoWidgetSettings]
+    var designs: [PhotoWidgetDesign]
 
     static let fileName = "photo-widgets.json"
 
+    /// A file with nothing in it still has to answer a placed widget, so it
+    /// answers with one default design.
     static var `default`: PhotoWidgetSettingsFile {
-        PhotoWidgetSettingsFile(
-            byKind: Dictionary(
-                uniqueKeysWithValues: PhotoWidgetKind.allCases.map {
-                    ($0.rawValue, PhotoWidgetSettings.default(for: $0))
-                }
-            )
-        )
+        PhotoWidgetSettingsFile(designs: [.makeDefault()])
     }
 
-    subscript(kind: PhotoWidgetKind) -> PhotoWidgetSettings {
-        get { byKind[kind.rawValue] ?? .default(for: kind) }
-        set { byKind[kind.rawValue] = newValue }
+    /// The design a widget falls back to: the first one. A widget whose design
+    /// was deleted, and one placed before it was ever configured, both land
+    /// here rather than drawing nothing.
+    var firstDesign: PhotoWidgetDesign { designs.first ?? .makeDefault() }
+
+    func design(id: String?) -> PhotoWidgetDesign {
+        guard let id, let match = designs.first(where: { $0.id == id }) else {
+            return firstDesign
+        }
+        return match
     }
 
+    subscript(id: String) -> PhotoWidgetSettings {
+        get { design(id: id).settings }
+        set {
+            guard let index = designs.firstIndex(where: { $0.id == id }) else { return }
+            designs[index].settings = newValue
+        }
+    }
+
+    /// Reads the file, migrating an older one **and writing the result back**
+    /// before returning it.
+    ///
+    /// Persisting the migration here is not tidiness, it is correctness: a
+    /// design's `id` is a fresh UUID, so a migration that stayed in memory
+    /// would mint different ids on every read. The store compares what it
+    /// holds against what is on disk to pick up edits made in the Home
+    /// Screen's menu, and two reads that never agree made that comparison
+    /// always true — an observable change on every pass, an app that never
+    /// went idle, and frames rendered into a folder named after an id that
+    /// was already stale.
     static func read() -> PhotoWidgetSettingsFile {
         guard let container = WidgetSharedContainer.url else { return .default }
         let url = container.appendingPathComponent(fileName)
-        if let file = WidgetSharedContainer.decode(PhotoWidgetSettingsFile.self, at: url) {
+        guard let data = try? Data(contentsOf: url) else {
+            let file = PhotoWidgetSettingsFile.default
+            file.write()
             return file
         }
-        return migratedFromClockOnlyFile(in: container) ?? .default
+        if let file = try? JSONDecoder().decode(PhotoWidgetSettingsFile.self, from: data),
+           !file.designs.isEmpty {
+            return file
+        }
+        // A file from before designs, or one whose design list came back
+        // empty: rebuild it rather than hand back defaults over the top of
+        // settings the user spent time on.
+        let file = migrated(from: data) ?? .default
+        file.write()
+        return file
     }
 
-    static func settings(for kind: PhotoWidgetKind) -> PhotoWidgetSettings {
-        read()[kind]
+    static func settings(id: String?) -> PhotoWidgetSettings {
+        read().design(id: id).settings
     }
 
-    /// Both processes write this file now: the app when its Settings change,
-    /// and the widget when the Home Screen's menu says something new. Last
-    /// writer wins, which is what "change it in either place" means.
+    /// Both processes write this file: the app when its Settings change, and
+    /// the widget when the Home Screen's menu says something new. Last writer
+    /// wins, which is what "change it in either place" means.
     func write() {
         guard let container = WidgetSharedContainer.url else { return }
         try? WidgetSharedContainer.encode(
@@ -516,15 +578,41 @@ struct PhotoWidgetSettingsFile: Codable, Equatable {
         )
     }
 
-    /// The first version of this feature shipped a clock and nothing else, in
-    /// `clock-settings.json`. A user who set that clock up keeps it.
-    private static func migratedFromClockOnlyFile(in container: URL) -> PhotoWidgetSettingsFile? {
-        let legacy = container.appendingPathComponent("clock-settings.json")
-        guard let clock = WidgetSharedContainer.decode(PhotoWidgetSettings.self, at: legacy)
-        else { return nil }
-        var file = PhotoWidgetSettingsFile.default
-        file[.clock] = clock
-        return file
+    // MARK: Migration
+
+    /// The shape this file had while there were four fixed widget kinds.
+    private struct LegacyFile: Decodable {
+        var byKind: [String: PhotoWidgetSettings]
+    }
+
+    /// Turns a pre-designs file into designs.
+    ///
+    /// Only the kinds the user actually set a photo on become designs — the
+    /// other three were defaults nobody chose, and carrying them in would
+    /// hand someone four list rows they never made. Each keeps the name its
+    /// kind had, so a widget that said "Weather" is still called Weather, and
+    /// the weather and calendar flags the kind used to imply become stored.
+    static func migrated(from data: Data) -> PhotoWidgetSettingsFile? {
+        guard let legacy = try? JSONDecoder().decode(LegacyFile.self, from: data) else {
+            return nil
+        }
+        var designs: [PhotoWidgetDesign] = []
+        for kind in PhotoWidgetSettings.LegacyKind.allCases {
+            guard var settings = legacy.byKind[kind.rawValue], settings.source != .none else {
+                continue
+            }
+            settings.showsWeather = kind.showsWeather
+            settings.showsCalendar = kind.showsCalendar
+            designs.append(PhotoWidgetDesign(name: kind.title, settings: settings))
+        }
+        guard !designs.isEmpty else { return .default }
+        return PhotoWidgetSettingsFile(designs: designs)
+    }
+
+    /// Folders the pre-designs version rendered into. Nothing reads them once
+    /// the designs exist, and each design re-renders into its own.
+    static var legacyDirectoryNames: [String] {
+        PhotoWidgetSettings.LegacyKind.allCases.map(\.directoryName)
     }
 }
 
@@ -638,8 +726,8 @@ struct PhotoWidgetSnapshot: Codable, Equatable {
         container.appendingPathComponent(name, isDirectory: true)
     }
 
-    static func directoryURL(for kind: PhotoWidgetKind, in container: URL) -> URL {
-        directoryURL(named: kind.directoryName, in: container)
+    static func directoryURL(for design: PhotoWidgetDesign, in container: URL) -> URL {
+        directoryURL(named: design.directoryName, in: container)
     }
 
     /// Where an album's frames live when a widget was pointed at it from the
@@ -675,8 +763,8 @@ struct PhotoWidgetSnapshot: Codable, Equatable {
         ) ?? .empty
     }
 
-    static func read(kind: PhotoWidgetKind) -> PhotoWidgetSnapshot {
-        read(directoryName: kind.directoryName)
+    static func read(designId: String) -> PhotoWidgetSnapshot {
+        read(directoryName: PhotoWidgetDesign.directoryName(id: designId))
     }
 
     /// Which frame is showing at `date`. Pure, so the rotation is tested
@@ -707,8 +795,8 @@ struct PhotoWidgetSnapshot: Codable, Equatable {
             .appendingPathComponent(frames[index].fileName)
     }
 
-    func imageURL(at index: Int, kind: PhotoWidgetKind) -> URL? {
-        imageURL(at: index, directoryName: kind.directoryName)
+    func imageURL(at index: Int, designId: String) -> URL? {
+        imageURL(at: index, directoryName: PhotoWidgetDesign.directoryName(id: designId))
     }
 }
 

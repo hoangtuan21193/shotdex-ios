@@ -10,7 +10,6 @@ import SwiftUI
 struct PhotoWidgetFace: View {
     let date: Date
     let settings: PhotoWidgetSettings
-    let kind: PhotoWidgetKind
     /// Widget width in points; every size scales from it.
     let width: Double
     var weather: WeatherSnapshot?
@@ -76,13 +75,7 @@ struct PhotoWidgetFace: View {
     /// Whether this instance draws a given piece: the widget's own rules
     /// first, then the filter that lets one group be drawn on its own.
     private func draws(_ component: PhotoWidgetComponent) -> Bool {
-        let isEnabled: Bool = switch component {
-        case .time: settings.showsTime
-        case .date: settings.showsDate
-        case .weather: kind.needsWeather
-        case .calendar: kind.needsCalendarEvents
-        }
-        guard isEnabled else { return false }
+        guard component.isOn(in: settings) else { return false }
         guard let components else { return true }
         return components.contains(component)
     }

@@ -12,7 +12,7 @@ import SwiftUI
 /// screen that already has thirty, and none of them would show where the words
 /// land.
 struct PhotoWidgetPreview: View {
-    let kind: PhotoWidgetKind
+    let designName: String
     let settings: PhotoWidgetSettings
     let date: Date
     let weather: WeatherSnapshot?
@@ -79,7 +79,7 @@ struct PhotoWidgetPreview: View {
     }
 
     private var componentsShown: [PhotoWidgetComponent] {
-        PhotoWidgetComponent.components(for: kind, settings: settings)
+        PhotoWidgetComponent.components(settings: settings)
     }
 
     var body: some View {
@@ -90,7 +90,6 @@ struct PhotoWidgetPreview: View {
                 PhotoWidgetArrangedFace(
                     date: date,
                     settings: live,
-                    kind: kind,
                     size: size,
                     weather: weather,
                     calendarSnapshot: calendarSnapshot,
@@ -115,7 +114,7 @@ struct PhotoWidgetPreview: View {
         .aspectRatio(family.aspectRatio, contentMode: .fit)
         .frame(maxWidth: family.maximumWidth)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Preview of the \(kind.title) widget")
+        .accessibilityLabel("Preview of \(designName)")
         .accessibilityHint("Drag a line of text to move it, or drag the background to move the photo. Pinch to resize whatever is selected.")
     }
 

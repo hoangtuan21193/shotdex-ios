@@ -12,9 +12,6 @@ import WidgetKit
 struct ShotDexWidgetBundle: WidgetBundle {
     var body: some Widget {
         OnThisDayWidget()
-        ClockPhotoWidget()
-        CalendarPhotoWidget()
-        WeatherPhotoWidget()
-        CombinedPhotoWidget()
+        PhotoWidget()
     }
 }

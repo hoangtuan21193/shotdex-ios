@@ -1,7 +1,7 @@
 import SwiftUI
 import WidgetKit
 
-/// The Lock Screen faces of the Weather and Calendar widgets.
+/// The Lock Screen face of a photo widget.
 ///
 /// Separate from `PhotoWidgetFace` on purpose. That view's whole job is to lay
 /// a chosen typeface, colour and position over a photo, and the Lock Screen
@@ -13,26 +13,26 @@ struct PhotoWidgetAccessoryView: View {
     let entry: PhotoWidgetEntry
     let family: WidgetFamily
 
+    /// The design decides, in the order of what is worth a Lock Screen strip:
+    /// the weather, then what is on today, then the date. **Never the time** —
+    /// the Lock Screen already has a clock, and a second one is the reason the
+    /// old Clock widget was not offered here at all.
     var body: some View {
-        switch entry.kind {
-        case .weather:
+        if entry.settings.showsWeather {
             WeatherAccessoryView(
                 weather: entry.weather,
                 settings: entry.settings,
                 date: entry.date,
                 family: family
             )
-        case .calendar:
+        } else if entry.settings.showsCalendar {
             CalendarAccessoryView(
                 snapshot: entry.calendarSnapshot,
                 date: entry.date,
                 family: family
             )
-        case .clock, .combined:
-            // Not offered on the Lock Screen; drawn only so the switch is
-            // total and a future family change cannot ship a blank widget.
-            Text(entry.kind.title)
-                .font(.caption)
+        } else {
+            DateAccessoryView(date: entry.date, settings: entry.settings, family: family)
         }
     }
 }
@@ -243,5 +243,47 @@ struct CalendarAccessoryView: View {
 
     private var dayText: String {
         date.formatted(.dateTime.day())
+    }
+}
+
+// MARK: - Date
+
+/// What a design with neither the weather nor the calendar has left worth
+/// putting on a Lock Screen: the day. Drawn in the design's own date format,
+/// so the strip reads the way the Home Screen widget does.
+struct DateAccessoryView: View {
+    let date: Date
+    let settings: PhotoWidgetSettings
+    let family: WidgetFamily
+
+    private var text: String {
+        PhotoWidgetFormat.dateString(for: date, settings: settings)
+    }
+
+    var body: some View {
+        switch family {
+        case .accessoryInline:
+            Label {
+                Text(text)
+            } icon: {
+                Image(systemName: "photo")
+            }
+        case .accessoryCircular:
+            ZStack {
+                AccessoryWidgetBackground()
+                VStack(spacing: -2) {
+                    Text(date, format: .dateTime.month(.abbreviated))
+                        .font(.caption2)
+                        .textCase(.uppercase)
+                    Text(date, format: .dateTime.day())
+                        .font(.title2.weight(.medium))
+                        .monospacedDigit()
+                }
+            }
+        default:
+            Text(text)
+                .font(.headline)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        }
     }
 }

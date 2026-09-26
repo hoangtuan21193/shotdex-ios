@@ -22,15 +22,20 @@ enum PhotoWidgetComponent: String, Codable, CaseIterable, Identifiable, Sendable
         }
     }
 
-    /// Which pieces this widget draws at all, in the order they stack when
+    /// Whether a design has this piece switched on.
+    func isOn(in settings: PhotoWidgetSettings) -> Bool {
+        switch self {
+        case .time: settings.showsTime
+        case .date: settings.showsDate
+        case .weather: settings.showsWeather
+        case .calendar: settings.showsCalendar
+        }
+    }
+
+    /// Which pieces this design draws at all, in the order they stack when
     /// they share a position.
-    static func components(for kind: PhotoWidgetKind, settings: PhotoWidgetSettings) -> [PhotoWidgetComponent] {
-        var components: [PhotoWidgetComponent] = []
-        if settings.showsTime { components.append(.time) }
-        if settings.showsDate { components.append(.date) }
-        if kind.needsWeather { components.append(.weather) }
-        if kind.needsCalendarEvents { components.append(.calendar) }
-        return components
+    static func components(settings: PhotoWidgetSettings) -> [PhotoWidgetComponent] {
+        allCases.filter { $0.isOn(in: settings) }
     }
 }
 

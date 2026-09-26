@@ -12,9 +12,10 @@ struct PhotoWidgetArrangementTests {
     /// Moving one piece pins the others where they already were, instead of
     /// dragging them along behind it.
     @Test func movingOnePieceLeavesTheOthersWhereTheyWere() {
-        var settings = PhotoWidgetSettings.default(for: .combined)
+        var settings = PhotoWidgetSettings()
+        settings.showsWeather = true
         settings.anchor = .bottomLeading
-        let components = PhotoWidgetComponent.components(for: .combined, settings: settings)
+        let components = PhotoWidgetComponent.components(settings: settings)
         #expect(components.contains(.time))
         #expect(components.contains(.weather))
 
@@ -27,8 +28,8 @@ struct PhotoWidgetArrangementTests {
     }
 
     @Test func stackingEverythingTogetherUndoesTheArrangement() {
-        var settings = PhotoWidgetSettings.default(for: .clock)
-        let components = PhotoWidgetComponent.components(for: .clock, settings: settings)
+        var settings = PhotoWidgetSettings()
+        let components = PhotoWidgetComponent.components(settings: settings)
         settings.setAnchor(.center, for: .time, in: components)
         #expect(!settings.componentAnchors.isEmpty)
 
@@ -40,8 +41,10 @@ struct PhotoWidgetArrangementTests {
     /// Pieces at the same spot are one stack — that is what keeps a widget
     /// nobody has rearranged looking exactly as it did.
     @Test func piecesAtTheSameSpotAreDrawnAsOneStack() {
-        var settings = PhotoWidgetSettings.default(for: .combined)
-        let components = PhotoWidgetComponent.components(for: .combined, settings: settings)
+        var settings = PhotoWidgetSettings()
+        settings.showsWeather = true
+        settings.showsCalendar = true
+        let components = PhotoWidgetComponent.components(settings: settings)
 
         let together = PhotoWidgetLayout.groups(
             components, anchors: settings.componentAnchorsByComponent, blockAnchor: settings.anchor
@@ -100,7 +103,7 @@ struct PhotoWidgetArrangementTests {
     /// The two sliders only ever reached the clock and the supporting lines,
     /// so the weather block and the calendar could not be resized at all.
     @Test func everyLineHasASizeOfItsOwn() {
-        var settings = PhotoWidgetSettings.default(for: .combined)
+        var settings = PhotoWidgetSettings()
         #expect(settings.scale(for: .weather) == 1)
 
         settings.setScale(1.4, for: .weather)
@@ -117,7 +120,7 @@ struct PhotoWidgetArrangementTests {
     /// Back at its natural size, a line stores nothing — otherwise the file
     /// fills with 1.0s and "has this been changed" stops being answerable.
     @Test func aLineBackAtItsNaturalSizeStoresNothing() {
-        var settings = PhotoWidgetSettings.default(for: .clock)
+        var settings = PhotoWidgetSettings()
         settings.setScale(1.5, for: .time)
         #expect(!settings.componentScales.isEmpty)
         settings.setScale(1, for: .time)

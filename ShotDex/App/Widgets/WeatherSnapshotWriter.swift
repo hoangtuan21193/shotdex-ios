@@ -26,7 +26,9 @@ struct WeatherSnapshotWriter {
     @discardableResult
     func write(now: Date = .now, force: Bool = false) async -> Bool {
         guard let container = WidgetSharedContainer.url else { return false }
-        let isNeeded = await InstalledWidgets.needsWeather()
+        let isNeeded = await InstalledWidgets.needsWeather(
+            settings: PhotoWidgetSettingsFile.read()
+        )
         guard force || isNeeded else { return false }
         if !force, let existing = WeatherSnapshot.read(),
            now.timeIntervalSince(existing.updatedAt) < Self.refreshAfter {
@@ -52,9 +54,7 @@ struct WeatherSnapshotWriter {
             snapshot,
             to: container.appendingPathComponent(WeatherSnapshot.fileName)
         )
-        for kind in PhotoWidgetKind.allCases where kind.needsWeather {
-            WidgetCenter.shared.reloadTimelines(ofKind: kind.widgetKind)
-        }
+        WidgetCenter.shared.reloadTimelines(ofKind: PhotoWidgetIdentity.widgetKind)
         return true
     }
 

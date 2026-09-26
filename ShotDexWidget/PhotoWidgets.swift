@@ -2,17 +2,19 @@ import AppIntents
 import SwiftUI
 import WidgetKit
 
-/// The four widgets that draw over a photo the user chose: a clock, a
-/// calendar, the weather, and one carrying all three.
+/// The one widget that draws over a photo the user chose.
 ///
-/// They share a provider and a view, and differ only in their `kind`: the
-/// settings file says what each one draws, and everything it draws — the
+/// Which design it wears is answered in the Home Screen's own Edit Widget
+/// menu, so two of them can sit side by side looking nothing alike. The
+/// settings file says what each design draws, and everything it draws — the
 /// picture, the events, the weather — was written into the App Group by the
 /// app. The extension reads files and nothing else. No PhotoKit, no EventKit,
 /// no network, no location.
 struct PhotoWidgetEntry: TimelineEntry {
     let date: Date
-    let kind: PhotoWidgetKind
+    /// The design this placed widget wears, so the view can name it when
+    /// there is nothing else to show.
+    let designName: String
     let settings: PhotoWidgetSettings
     let image: Image?
     let weather: WeatherSnapshot?
@@ -30,8 +32,6 @@ struct PhotoWidgetEntry: TimelineEntry {
 }
 
 struct PhotoWidgetProvider: AppIntentTimelineProvider {
-    let kind: PhotoWidgetKind
-
     /// One entry a minute for an hour when a clock is on show. A widget cannot
     /// redraw on its own, and `Text(date, style: .time)` — the free live clock
     /// — cannot honour a custom format, which is the point of these widgets.
@@ -45,8 +45,8 @@ struct PhotoWidgetProvider: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> PhotoWidgetEntry {
         PhotoWidgetEntry(
             date: .now,
-            kind: kind,
-            settings: PhotoWidgetSettings.default(for: kind),
+            designName: "",
+            settings: PhotoWidgetSettings(),
             image: nil,
             weather: nil,
             calendarSnapshot: nil
@@ -71,7 +71,8 @@ struct PhotoWidgetProvider: AppIntentTimelineProvider {
         // distinct picture in it. Reading them per entry would decode the same
         // JPEG sixty times to draw sixty different minutes of the same photo.
         let payload = Payload()
-        let (settings, resolved) = payload.resolve(kind: kind, configuration: configuration)
+        let prepared = payload.resolve(configuration: configuration)
+        let (settings, resolved) = (prepared.settings, prepared.resolved)
         // A source chosen on the Home Screen has no pictures until the app has
         // rendered them, so the ask is left where the app will find it.
         if let pending = resolved.pendingSource {
@@ -93,7 +94,7 @@ struct PhotoWidgetProvider: AppIntentTimelineProvider {
                 for: date,
                 configuration: configuration,
                 payload: payload,
-                prepared: (settings, resolved)
+                prepared: prepared
             )
         }
         let end = entries.last?.date ?? .now
@@ -118,10 +119,17 @@ struct PhotoWidgetProvider: AppIntentTimelineProvider {
         /// Folds the Home Screen menu's answer into the shared settings — once
         /// per change — then says where this widget's pictures live.
         func resolve(
-            kind: PhotoWidgetKind,
             configuration: ConfigurePhotoWidgetIntent
-        ) -> (settings: PhotoWidgetSettings, resolved: PhotoWidgetResolvedConfiguration) {
-            var settings = self.settings[kind]
+        ) -> (
+            design: PhotoWidgetDesign,
+            settings: PhotoWidgetSettings,
+            resolved: PhotoWidgetResolvedConfiguration
+        ) {
+            // A widget placed before it was configured, or one whose design
+            // the user deleted, falls back to the first design rather than
+            // drawing nothing.
+            let design = self.settings.design(id: configuration.design?.id)
+            var settings = design.settings
             let signature = PhotoWidgetIntentApplication.signature(
                 photoId: configuration.photo?.id,
                 albumId: configuration.album?.id,
@@ -142,16 +150,16 @@ struct PhotoWidgetProvider: AppIntentTimelineProvider {
                 // Written back so ShotDex's own Settings screen shows what was
                 // chosen out here, and its preview matches the widget.
                 var file = self.settings
-                file[kind] = settings
+                file[design.id] = settings
                 file.write()
                 self.settings = file
             }
             let resolved = PhotoWidgetResolvedConfiguration.resolve(
-                kind: kind,
+                designId: design.id,
                 source: settings.source,
                 snapshot: { self.snapshot(named: $0) }
             )
-            return (settings, resolved)
+            return (design, settings, resolved)
         }
 
         struct LoadedImage {
@@ -205,9 +213,13 @@ struct PhotoWidgetProvider: AppIntentTimelineProvider {
         for date: Date,
         configuration: ConfigurePhotoWidgetIntent,
         payload: Payload,
-        prepared: (settings: PhotoWidgetSettings, resolved: PhotoWidgetResolvedConfiguration)? = nil
+        prepared: (
+            design: PhotoWidgetDesign,
+            settings: PhotoWidgetSettings,
+            resolved: PhotoWidgetResolvedConfiguration
+        )? = nil
     ) -> PhotoWidgetEntry {
-        let prepared = prepared ?? payload.resolve(kind: kind, configuration: configuration)
+        let prepared = prepared ?? payload.resolve(configuration: configuration)
         let loaded = payload.image(
             directoryName: prepared.resolved.frameDirectoryName,
             at: date,
@@ -216,7 +228,7 @@ struct PhotoWidgetProvider: AppIntentTimelineProvider {
         )
         return PhotoWidgetEntry(
             date: date,
-            kind: kind,
+            designName: prepared.design.name,
             settings: prepared.settings,
             image: loaded?.image,
             weather: payload.weather,
@@ -230,61 +242,29 @@ struct PhotoWidgetProvider: AppIntentTimelineProvider {
     }
 }
 
-/// One widget per kind. Declared separately because WidgetKit needs a distinct
-/// type and a distinct `kind` string for each.
-struct ClockPhotoWidget: Widget {
-    var body: some WidgetConfiguration { PhotoWidgetConfiguration.make(kind: .clock) }
-}
-
-struct CalendarPhotoWidget: Widget {
-    var body: some WidgetConfiguration { PhotoWidgetConfiguration.make(kind: .calendar) }
-}
-
-struct WeatherPhotoWidget: Widget {
-    var body: some WidgetConfiguration { PhotoWidgetConfiguration.make(kind: .weather) }
-}
-
-struct CombinedPhotoWidget: Widget {
-    var body: some WidgetConfiguration { PhotoWidgetConfiguration.make(kind: .combined) }
-}
-
-enum PhotoWidgetConfiguration {
-    static func make(kind: PhotoWidgetKind) -> some WidgetConfiguration {
+/// The one photo widget. Which design it wears is a per-instance answer given
+/// in the Home Screen's Edit Widget menu, so two of them can look nothing
+/// alike — which is the thing four fixed kinds could never do.
+struct PhotoWidget: Widget {
+    var body: some WidgetConfiguration {
         AppIntentConfiguration(
-            kind: kind.widgetKind,
+            kind: PhotoWidgetIdentity.widgetKind,
             intent: ConfigurePhotoWidgetIntent.self,
-            provider: PhotoWidgetProvider(kind: kind)
+            provider: PhotoWidgetProvider()
         ) { entry in
             // The background is chosen inside the view, where the family is
             // known: a Lock Screen accessory has no photo behind it, and
             // painting one there would show as a grey block.
             PhotoWidgetView(entry: entry)
         }
-        .configurationDisplayName(kind.title)
-        .description(description(for: kind))
-        .supportedFamilies(families(for: kind))
-    }
-
-    /// Home Screen for every kind; the Lock Screen only for the two whose
-    /// content survives being drawn without a photo, in one colour, in a strip
-    /// the size of a sentence. A clock there would duplicate the Lock Screen's
-    /// own clock, and the combined widget is three rows in a space with room
-    /// for one.
-    private static func families(for kind: PhotoWidgetKind) -> [WidgetFamily] {
-        var families: [WidgetFamily] = [.systemSmall, .systemMedium, .systemLarge]
-        if kind.hasAccessoryFamilies {
-            families += [.accessoryRectangular, .accessoryInline, .accessoryCircular]
-        }
-        return families
-    }
-
-    private static func description(for kind: PhotoWidgetKind) -> String {
-        switch kind {
-        case .clock: "The time over a photo or album you choose, in the style you set in ShotDex."
-        case .calendar: "The month, or what is on today, over a photo or album you choose."
-        case .weather: "The weather where you are, over a photo or album you choose."
-        case .combined: "The time, the day and the weather, over a photo or album you choose."
-        }
+        .configurationDisplayName("Photo Widget")
+        .description(
+            "The time, the date, the month, today's events or the weather — over a photo or album you choose. Pick which of your designs this one wears."
+        )
+        .supportedFamilies([
+            .systemSmall, .systemMedium, .systemLarge,
+            .accessoryRectangular, .accessoryInline, .accessoryCircular,
+        ])
     }
 }
 
@@ -377,7 +357,6 @@ struct PhotoWidgetPositionedFace: View {
         PhotoWidgetArrangedFace(
             date: entry.date,
             settings: entry.settings,
-            kind: entry.kind,
             size: size,
             weather: entry.weather,
             calendarSnapshot: entry.calendarSnapshot,

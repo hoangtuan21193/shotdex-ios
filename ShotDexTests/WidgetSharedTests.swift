@@ -397,7 +397,7 @@ struct PhotoWidgetDataTests {
     /// so an answer is taken in once. After that the app is free to change the
     /// same thing without a menu that has not moved undoing it.
     @Test func theHomeScreenAnswerIsAppliedOnceAndThenLetsTheAppWin() {
-        var settings = PhotoWidgetSettings.default(for: .clock)
+        var settings = PhotoWidgetSettings()
         let signature = PhotoWidgetIntentApplication.signature(
             photoId: nil, albumId: "ALB/L0/040", rotationRawValue: "hourly", dimming: 0.3
         )
@@ -451,7 +451,7 @@ struct PhotoWidgetDataTests {
     /// One photo beats a whole album when the menu answers both — the more
     /// specific answer is the one the user just gave.
     @Test func aChosenPhotoBeatsAChosenAlbum() {
-        var settings = PhotoWidgetSettings.default(for: .clock)
+        var settings = PhotoWidgetSettings()
         PhotoWidgetIntentApplication.apply(
             to: &settings,
             photoId: "PIC/L0/001", photoLabel: "Sep 21",
@@ -465,11 +465,11 @@ struct PhotoWidgetDataTests {
     /// A widget's own folder is used while it holds the source the settings
     /// name; otherwise the folder keyed by that album or photo.
     @Test func framesAreReadFromTheFolderThatHoldsTheSource() {
-        let own = PhotoWidgetKind.clock.directoryName
+        let own = PhotoWidgetDesign.directoryName(id: "D1")
         let albumFolder = PhotoWidgetSnapshot.albumDirectoryName(albumId: "ALB/L0/040")
 
         let fromOwn = PhotoWidgetResolvedConfiguration.resolve(
-            kind: .clock,
+            designId: "D1",
             source: .album(collectionId: "ALB/L0/040", title: "Iceland"),
             snapshot: { name in
                 name == own ? self.snapshot(frames: 3, sourceId: "ALB/L0/040") : .empty
@@ -481,7 +481,7 @@ struct PhotoWidgetDataTests {
         // The widget's own folder holds something else now, so the shared one
         // is read instead.
         let fromShared = PhotoWidgetResolvedConfiguration.resolve(
-            kind: .clock,
+            designId: "D1",
             source: .album(collectionId: "ALB/L0/040", title: "Iceland"),
             snapshot: { name in
                 switch name {
@@ -497,7 +497,7 @@ struct PhotoWidgetDataTests {
 
     @Test func aSourceWithoutFramesIsPending() throws {
         let resolved = PhotoWidgetResolvedConfiguration.resolve(
-            kind: .weather,
+            designId: "D2",
             source: .photo(assetId: "PIC/L0/002"),
             snapshot: { _ in .empty }
         )
@@ -511,23 +511,23 @@ struct PhotoWidgetDataTests {
     /// rather than blanking a widget that has been fine all along.
     @Test func framesFromBeforeSourcesWereRecordedAreTrusted() {
         let resolved = PhotoWidgetResolvedConfiguration.resolve(
-            kind: .calendar,
+            designId: "D3",
             source: .album(collectionId: "ALB/L0/040", title: "Iceland"),
             snapshot: { name in
-                name == PhotoWidgetKind.calendar.directoryName
+                name == PhotoWidgetDesign.directoryName(id: "D3")
                     ? self.snapshot(frames: 2, sourceId: nil)
                     : .empty
             }
         )
-        #expect(resolved.frameDirectoryName == PhotoWidgetKind.calendar.directoryName)
+        #expect(resolved.frameDirectoryName == PhotoWidgetDesign.directoryName(id: "D3"))
         #expect(resolved.pendingSource == nil)
     }
 
-    /// Two widgets of the same kind share one set of settings, so a second
-    /// one with an untouched menu must not overwrite what the first chose —
-    /// or the two would take turns rewriting the file for ever.
+    /// Two widgets wearing one design share its settings, so a second one
+    /// with an untouched menu must not overwrite what the first chose — or
+    /// the two would take turns rewriting the file for ever.
     @Test func anUntouchedMenuChangesNothing() {
-        var settings = PhotoWidgetSettings.default(for: .weather)
+        var settings = PhotoWidgetSettings()
         settings.source = .photo(assetId: "PIC/L0/001")
         settings.appliedIntentSignature = "PIC/L0/001|-|-|-"
 
@@ -564,7 +564,7 @@ struct PhotoWidgetDataTests {
     /// The signature travels in the settings file, so the answer is not taken
     /// in twice across launches.
     @Test func theAppliedSignatureSurvivesAWriteAndRead() throws {
-        var settings = PhotoWidgetSettings.default(for: .weather)
+        var settings = PhotoWidgetSettings()
         settings.appliedIntentSignature = "photo|-|-|-"
         let data = try JSONEncoder().encode(settings)
         let decoded = try JSONDecoder().decode(PhotoWidgetSettings.self, from: data)
@@ -623,8 +623,17 @@ struct PhotoWidgetDataTests {
         #expect(catalog.album(id: "nope") == nil)
     }
 
-    @Test func onlyTheWeatherAndCalendarReachTheLockScreen() {
-        #expect(PhotoWidgetKind.allCases.filter(\.hasAccessoryFamilies) == [.calendar, .weather])
+    /// Every design reaches the Lock Screen now, and which face it wears
+    /// there follows what it carries — never the clock, because the Lock
+    /// Screen already has one.
+    @Test func theLockScreenFaceFollowsWhatTheDesignCarries() {
+        var settings = PhotoWidgetSettings()
+        #expect(!settings.showsWeather)
+        #expect(!settings.showsCalendar)
+        settings.showsCalendar = true
+        #expect(PhotoWidgetComponent.components(settings: settings).contains(.calendar))
+        settings.showsWeather = true
+        #expect(PhotoWidgetComponent.components(settings: settings).contains(.weather))
     }
 
     /// A widget left unrefreshed overnight must not show yesterday's meetings
@@ -687,27 +696,112 @@ struct PhotoWidgetDataTests {
         #expect(reading.isStale(at: date(2026, 9, 20, hour: 12)))
     }
 
-    // MARK: Settings per widget
+    // MARK: Designs
 
-    @Test func everyWidgetOpensOnTheRowsItIsNamedAfter() {
-        #expect(PhotoWidgetSettings.default(for: .clock).showsTime)
-        #expect(!PhotoWidgetSettings.default(for: .calendar).showsTime)
-        #expect(!PhotoWidgetSettings.default(for: .weather).showsTime)
-        #expect(PhotoWidgetSettings.default(for: .combined).showsTime)
-        #expect(PhotoWidgetKind.allCases.filter(\.needsWeather) == [.weather, .combined])
-        #expect(PhotoWidgetKind.allCases.filter(\.needsCalendarEvents) == [.calendar, .combined])
-        // The kinds are the identifiers WidgetKit stores against a placed
-        // widget: changing one orphans it.
-        #expect(PhotoWidgetKind.clock.widgetKind == "ShotDexClock")
-        #expect(Set(PhotoWidgetKind.allCases.map(\.widgetKind)).count == PhotoWidgetKind.allCases.count)
+    @Test func aNewDesignCarriesTheTimeAndDateAndNothingElse() {
+        let design = PhotoWidgetDesign.makeDefault()
+        #expect(design.settings.showsTime)
+        #expect(design.settings.showsDate)
+        #expect(!design.settings.showsWeather)
+        #expect(!design.settings.showsCalendar)
+        #expect(PhotoWidgetComponent.components(settings: design.settings) == [.time, .date])
     }
 
-    @Test func theSettingsFileKeepsOneEntryPerKind() {
-        var file = PhotoWidgetSettingsFile.default
-        #expect(file[.weather].showsHighLow)
-        file[.weather].showsHighLow = false
-        #expect(!file[.weather].showsHighLow)
-        // Other widgets are untouched by one widget's edit.
-        #expect(file[.combined].showsHighLow)
+    /// The id, not the name, is what a placed widget remembers — so renaming
+    /// a design must not move its pictures or orphan the widget wearing it.
+    @Test func aDesignsFolderFollowsItsIdNotItsName() {
+        var design = PhotoWidgetDesign(id: "ABC", name: "Morning", settings: PhotoWidgetSettings())
+        let before = design.directoryName
+        design.name = "Evening"
+        #expect(design.directoryName == before)
+        #expect(design.directoryName == "photo-widget-ABC")
     }
+
+    @Test func theFileKeepsOneEntryPerDesign() {
+        var file = PhotoWidgetSettingsFile(designs: [
+            PhotoWidgetDesign(id: "A", name: "A", settings: PhotoWidgetSettings()),
+            PhotoWidgetDesign(id: "B", name: "B", settings: PhotoWidgetSettings()),
+        ])
+        #expect(file["A"].showsHighLow)
+        file["A"].showsHighLow = false
+        #expect(!file["A"].showsHighLow)
+        // One design's edit leaves the others alone.
+        #expect(file["B"].showsHighLow)
+    }
+
+    /// A widget placed before it was configured, and one whose design was
+    /// deleted, both have to draw something rather than nothing.
+    @Test func anUnknownDesignIdFallsBackToTheFirst() {
+        let file = PhotoWidgetSettingsFile(designs: [
+            PhotoWidgetDesign(id: "A", name: "First", settings: PhotoWidgetSettings()),
+            PhotoWidgetDesign(id: "B", name: "Second", settings: PhotoWidgetSettings()),
+        ])
+        #expect(file.design(id: nil).name == "First")
+        #expect(file.design(id: "gone").name == "First")
+        #expect(file.design(id: "B").name == "Second")
+    }
+
+    // MARK: Migration off the four kinds
+
+    /// Only the kinds the user actually put a photo on become designs. The
+    /// other three were defaults nobody chose, and carrying them in would
+    /// hand someone four rows they never made.
+    @Test func onlyConfiguredKindsBecomeDesigns() throws {
+        let data = Data("""
+        {"byKind":{
+          "clock":{"source":{"photo":{"assetId":"PIC/L0/001"}}},
+          "weather":{"source":{"album":{"collectionId":"ALB/L0/040","title":"Iceland"}}},
+          "calendar":{"source":{"none":{}}},
+          "combined":{"source":{"none":{}}}
+        }}
+        """.utf8)
+        let file = try #require(PhotoWidgetSettingsFile.migrated(from: data))
+        #expect(file.designs.map(\.name) == ["Clock", "Weather"])
+        #expect(file.designs[0].settings.source == .photo(assetId: "PIC/L0/001"))
+    }
+
+    /// What the kind used to imply becomes a stored flag, so a migrated
+    /// Weather design still shows the weather.
+    @Test func migrationStoresWhatTheKindUsedToImply() throws {
+        let data = Data("""
+        {"byKind":{
+          "weather":{"source":{"photo":{"assetId":"P1"}}},
+          "combined":{"source":{"photo":{"assetId":"P2"}}}
+        }}
+        """.utf8)
+        let file = try #require(PhotoWidgetSettingsFile.migrated(from: data))
+        let weather = try #require(file.designs.first { $0.name == "Weather" })
+        #expect(weather.settings.showsWeather)
+        #expect(!weather.settings.showsCalendar)
+        let combined = try #require(file.designs.first { $0.name == "Time, Date and Weather" })
+        #expect(combined.settings.showsWeather)
+        #expect(combined.settings.showsCalendar)
+    }
+
+    /// A file where nothing was ever set up still has to answer a placed
+    /// widget, so it comes back with one design rather than none.
+    @Test func anEmptyLegacyFileStillYieldsOneDesign() throws {
+        let data = Data(#"{"byKind":{}}"#.utf8)
+        let file = try #require(PhotoWidgetSettingsFile.migrated(from: data))
+        #expect(file.designs.count == 1)
+    }
+
+    @Test func aFileThatIsNotTheLegacyShapeDoesNotMigrate() {
+        #expect(PhotoWidgetSettingsFile.migrated(from: Data("not json".utf8)) == nil)
+    }
+
+    /// A design's id is a fresh UUID, so a migration that is not written back
+    /// mints different ids on every read. The store compares what it holds
+    /// against what is on disk to pick up edits made in the Home Screen's
+    /// menu; two reads that never agree made that comparison always true, and
+    /// the app never went idle.
+    @Test func migratingTwiceFromTheSameFileGivesTheSameIds() throws {
+        let data = Data(#"{"byKind":{"clock":{"source":{"photo":{"assetId":"P1"}}}}}"#.utf8)
+        let first = try #require(PhotoWidgetSettingsFile.migrated(from: data))
+        let encoded = try JSONEncoder().encode(first)
+        let reread = try JSONDecoder().decode(PhotoWidgetSettingsFile.self, from: encoded)
+        #expect(reread == first)
+        #expect(reread.designs.map(\.id) == first.designs.map(\.id))
+    }
+
 }

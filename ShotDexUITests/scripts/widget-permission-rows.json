@@ -1,0 +1,28 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "tap", "label": "Settings", "type": "button" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "swipe", "direction": "up", "x": 0.5, "y": 0.6 },
+    { "action": "wait", "seconds": 1 },
+    { "action": "swipe", "direction": "up", "x": 0.5, "y": 0.6 },
+    { "action": "wait", "seconds": 1 },
+    { "action": "swipe", "direction": "up", "x": 0.5, "y": 0.6 },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "label": "Weather", "type": "button" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "swipe", "direction": "up", "x": 0.5, "y": 0.8 },
+    { "action": "wait", "seconds": 1 },
+    { "action": "swipe", "direction": "up", "x": 0.5, "y": 0.8 },
+    { "action": "wait", "seconds": 1 },
+    { "action": "swipe", "direction": "up", "x": 0.5, "y": 0.8 },
+    { "action": "wait", "seconds": 2 },
+    { "action": "screenshot", "name": "01-weather-location-row" },
+    { "action": "dump", "name": "01-weather-location-row" },
+    { "action": "tap", "label": "Allow Location Access", "type": "button" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "screenshot", "name": "02-location-prompt" },
+    { "action": "dump", "name": "02-location-prompt" }
+  ]
+}
