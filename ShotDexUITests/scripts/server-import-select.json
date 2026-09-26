@@ -1,0 +1,105 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Collections",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "screenshot",
+   "name": "90-utilities"
+  },
+  {
+   "action": "tap",
+   "label": "On Server"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "91-on-server"
+  },
+  {
+   "action": "tap",
+   "label": "127.0.0.1"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "tap",
+   "label": "Import"
+  },
+  {
+   "action": "wait",
+   "seconds": 25
+  },
+  {
+   "action": "screenshot",
+   "name": "92-grid"
+  },
+  {
+   "action": "tap",
+   "label": "Select",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "HAT_8841.JPG"
+  },
+  {
+   "action": "tap",
+   "label": "DSC_0750.NEF"
+  },
+  {
+   "action": "screenshot",
+   "name": "93-selected"
+  }
+ ]
+}
