@@ -24,7 +24,7 @@ final class VideoLevelMeterModel {
     private(set) var peakRight: Double = floorDB
 
     /// Bottom of the scale. Below this the bar is empty.
-    static let floorDB: Double = -54
+    nonisolated static let floorDB: Double = -54
     /// Where the bar turns from green to yellow, and from yellow to red. The
     /// same two landmarks Resolve marks: -18 dBFS is broadcast reference and
     /// -6 is the last stop before the ceiling.

@@ -273,7 +273,6 @@ struct VideoStudioScreen: View {
             // stay visible above it.
             // The reader sits inside the safe area while the stack below ignores it,
             // so the stack's real height is the reader's plus both insets.
-            let usesToolRail = usesRail
             // The bands a desk-shaped window can afford and a phone cannot:
             // the viewer header, the transport row, the project overview and
             // track headers on the lanes.

@@ -58,7 +58,8 @@ enum PhotoDragItem {
 
     /// Asset ids carried by a drop that came from inside ShotDex, in drop
     /// order. Empty for a drag from another app, which is how a caller tells
-    /// the two apart.
+    /// the two apart. Main actor because UIKit's drop session is.
+    @MainActor
     static func assetIdentifiers(in session: any UIDropSession) async -> [String] {
         let providers = session.items.map(\.itemProvider)
             .filter { $0.hasItemConformingToTypeIdentifier(assetIdentifierType) }

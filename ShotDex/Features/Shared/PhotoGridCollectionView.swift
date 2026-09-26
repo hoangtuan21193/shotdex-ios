@@ -653,7 +653,9 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         }
 
         func refreshScrubberAfterLayout() {
-            guard parent.scrubber != nil else { return }
+            // The visible date too: a grid without a scrubber (an album) would
+            // otherwise publish its first date only once the user scrolls.
+            guard parent.scrubber != nil || parent.onVisibleDateChange != nil else { return }
             // Out of the current layout pass: content size is only final once
             // UIKit has finished laying the sections out.
             Task { @MainActor [weak self] in
@@ -1289,7 +1291,9 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             // the prefetch exists for.
             let columns = resolvedColumns(parent.columnCount)
             let scale = ActiveDisplay.scale
-            var byTarget: [CGSize: [PHAsset]] = [:]
+            // Keyed by whole pixels as SIMD2, not CGSize: CGSize is only
+            // Hashable from iOS 18, and this ships to 17.
+            var byTarget: [SIMD2<Double>: [PHAsset]] = [:]
             for indexPath in indexPaths {
                 guard let flatIndex = flatIndex(for: indexPath),
                       parent.photos.indices.contains(flatIndex)
@@ -1299,9 +1303,9 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 // Rounded to whole pixels, and shapes within a pixel of each
                 // other share one warm-up: a hundred slightly different widths
                 // would be a hundred cache buckets and no hits.
-                let target = CGSize(
-                    width: (size.width * scale).rounded(),
-                    height: (size.height * scale).rounded()
+                let target = SIMD2(
+                    (size.width * scale).rounded(),
+                    (size.height * scale).rounded()
                 )
                 // A cache miss here resolves nothing: prefetch is opportunistic
                 // and the cell will fetch its own asset when it appears.
@@ -1309,7 +1313,9 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 byTarget[target, default: []].append(asset)
             }
             for (target, assets) in byTarget {
-                parent.photoLibrary.startCachingThumbnails(for: assets, targetSize: target)
+                parent.photoLibrary.startCachingThumbnails(
+                    for: assets, targetSize: CGSize(width: target.x, height: target.y)
+                )
             }
         }
 

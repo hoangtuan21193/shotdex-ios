@@ -147,21 +147,7 @@ struct AlbumDetailScreen: View {
             // title otherwise lands against Edit and reads as part of it.
             ToolbarItem(placement: .principal) {
                 if !isSelecting {
-                    VStack(spacing: 0) {
-                        Text(album.title)
-                            .font(.headline)
-                            .lineLimit(1)
-                        if let visibleDate {
-                            Text(visibleDate)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .monospacedDigit()
-                                .lineLimit(1)
-                                .contentTransition(.numericText())
-                                .animation(.easeInOut(duration: 0.18), value: visibleDate)
-                        }
-                    }
-                    .accessibilityElement(children: .combine)
+                    GridNavigationTitle(title: album.title, subtitle: visibleDate)
                 }
             }
         }

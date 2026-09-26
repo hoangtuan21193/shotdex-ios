@@ -2,6 +2,7 @@ import CoreGraphics
 import CoreImage
 import Foundation
 import ImageIO
+import os
 import Testing
 @testable import ShotDexKit
 
@@ -84,14 +85,15 @@ struct PanoramaExportTests {
         let url = temporaryURL()
         defer { try? FileManager.default.removeItem(at: url) }
 
-        var lastProgress = 0.0
+        // The callback is @Sendable, so the last value lands in a lock.
+        let lastProgress = OSAllocatedUnfairLock(initialState: 0.0)
         try PanoramaExporter.write(
             canvas: canvas, sources: sources, focal: focal, quality: .draft, to: url,
-            progress: { lastProgress = $0 }
+            progress: { value in lastProgress.withLock { $0 = value } }
         )
 
         #expect(FileManager.default.fileExists(atPath: url.path))
-        #expect(lastProgress == 1)
+        #expect(lastProgress.withLock { $0 } == 1)
 
         let source = try #require(CGImageSourceCreateWithURL(url as CFURL, nil))
         let properties = try #require(

@@ -358,11 +358,11 @@ final class PhotoStackModel {
                         frame: { CIImage(contentsOf: files[$0], options: [.applyOrientationProperty: true]) },
                         options: focusOptions,
                         strokes: retouchStrokes,
-                        progress: { [weak self] done, total in
+                        progress: { done, total in
                             Task { @MainActor in
                                 // A percentage, not "frame N of M": Weighted
                                 // reads every frame twice.
-                                self?.statusText = String(
+                                self.statusText = String(
                                     localized: "Stacking… \(done * 100 / max(1, total))%",
                                     comment: "Focus Stack status while saving: how far the full-resolution stack has got, as a percentage"
                                 )

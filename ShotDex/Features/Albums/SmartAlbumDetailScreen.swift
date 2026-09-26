@@ -60,21 +60,7 @@ struct SmartAlbumDetailScreen: View {
             // title otherwise lands against Edit and reads as part of it.
             ToolbarItem(placement: .principal) {
                 if !isSelecting {
-                    VStack(spacing: 0) {
-                        Text(album.name)
-                            .font(.headline)
-                            .lineLimit(1)
-                        if let visibleDate {
-                            Text(visibleDate)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .monospacedDigit()
-                                .lineLimit(1)
-                                .contentTransition(.numericText())
-                                .animation(.easeInOut(duration: 0.18), value: visibleDate)
-                        }
-                    }
-                    .accessibilityElement(children: .combine)
+                    GridNavigationTitle(title: album.name, subtitle: visibleDate)
                 }
             }
         }
@@ -318,7 +304,7 @@ struct SmartAlbumDetailScreen: View {
         ) {
             Picker("Sort By", selection: Binding(
                 get: { model.sortOrder },
-                set: { order in Task { [weak model] in await model?.setSortOrder(order) } }
+                set: { order in Task { await model.setSortOrder(order) } }
             )) {
                 ForEach(AlbumSortOrder.allCases.filter { $0 != .albumOrder }) { order in
                     Text(order.displayName).tag(order)

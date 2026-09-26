@@ -114,7 +114,7 @@ struct PanoramaLibrarySaveTests {
             .appendingPathComponent("ShotDexPano-\(UUID().uuidString).jpg")
         try writeStreamedJPEG(width: width, height: height, to: url)
         let bytes = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int) ?? 0
-        print("wrote \(width)x\(height) = \(width * height / 1_000_000) MP, \(Double(bytes ?? 0) / 1_048_576) MB")
+        print("wrote \(width)x\(height) = \(width * height / 1_000_000) MP, \(Double(bytes) / 1_048_576) MB")
 
         let service = PhotoLibraryService()
         let identifier = try await service.saveImageFile(at: url, filename: url.lastPathComponent)

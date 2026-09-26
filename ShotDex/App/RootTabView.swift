@@ -235,7 +235,7 @@ struct RootTabView: View {
         // `\.assetActions`, which is how the screens reach it.
         .assetActionHost(assetActions ?? dependencies.assetActions)
         .sheet(item: $uploadRequest) { ServerUploadHost(request: $0) }
-        .environment(\.presentServerUpload) { uploadRequest = ServerUploadRequest(assetIds: $0) }
+        .environment(\.presentServerUpload, PresentServerUploadAction { uploadRequest = ServerUploadRequest(assetIds: $0) })
         .environment(navigation)
         .task {
             if libraryModel == nil {
@@ -327,7 +327,7 @@ struct RootTabView: View {
             .keepScreenAwakeWhileIndexing(libraryModel: libraryModel)
             .assetActionHost(assetActions ?? dependencies.assetActions)
             .sheet(item: $uploadRequest) { ServerUploadHost(request: $0) }
-            .environment(\.presentServerUpload) { uploadRequest = ServerUploadRequest(assetIds: $0) }
+            .environment(\.presentServerUpload, PresentServerUploadAction { uploadRequest = ServerUploadRequest(assetIds: $0) })
             .environment(navigation)
             .task {
                 if libraryModel == nil {
@@ -424,9 +424,8 @@ struct RootTabView: View {
     }
 }
 
-/// Keeps the screen awake — and auto-dims on idle — while indexing runs, gated
-/// on the `index.keepScreenAwake` setting. Mounts an invisible touch probe only
-/// when active so it never interferes otherwise.
+/// Keeps the screen awake while indexing runs, gated on the
+/// `index.keepScreenAwake` setting.
 private struct KeepScreenAwakeModifier: ViewModifier {
     let libraryModel: LibraryModel?
 
@@ -451,15 +450,6 @@ private struct KeepScreenAwakeModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .overlay {
-                if isActive {
-                    // Passive, non-blocking probe that resets the idle timer
-                    // on any touch. Dimming is done via screen brightness
-                    // (see ScreenAwakeCoordinator), so nothing is drawn here.
-                    IdleActivityReporterView { model.registerActivity() }
-                        .allowsHitTesting(false)
-                }
-            }
             .onChange(of: keepScreenAwake) { sync() }
             .onChange(of: isIndexing) { sync() }
             .onChange(of: isLowPowerMode) { sync() }
@@ -479,8 +469,8 @@ private struct KeepScreenAwakeModifier: ViewModifier {
 }
 
 extension View {
-    /// Keep the display awake and auto-dim on idle while `libraryModel` is
-    /// indexing, honoring the user's `index.keepScreenAwake` setting.
+    /// Keep the display awake while `libraryModel` is indexing, honoring the
+    /// user's `index.keepScreenAwake` setting.
     func keepScreenAwakeWhileIndexing(libraryModel: LibraryModel?) -> some View {
         modifier(KeepScreenAwakeModifier(libraryModel: libraryModel))
     }

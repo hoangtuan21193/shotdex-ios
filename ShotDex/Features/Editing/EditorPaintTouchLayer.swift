@@ -16,13 +16,13 @@ import UIKit
 /// reasons are documented there. This file only turns UIKit's callbacks into the
 /// arbiter's vocabulary and the arbiter's verdicts into the closures below.
 ///
-/// The paint recogniser deliberately stays `.possible` for its whole life, like
-/// `ActivityRecognizer` in `ScreenAwakeCoordinator`. It never needs to *own* a
-/// touch: it only watches. That buys two things a recognising recogniser could
-/// not. It never competes with the pinch above it, so there is no arbitration to
-/// lose. And it keeps receiving touches after refusing one — a recogniser that
-/// has failed is cut off until every finger lifts, which is precisely the
-/// bookkeeping the arbiter needs to spot a finger joining a two-finger pan.
+/// The paint recogniser deliberately stays `.possible` for its whole life. It
+/// never needs to *own* a touch: it only watches. That buys two things a
+/// recognising recogniser could not. It never competes with the pinch above
+/// it, so there is no arbitration to lose. And it keeps receiving touches
+/// after refusing one — a recogniser that has failed is cut off until every
+/// finger lifts, which is precisely the bookkeeping the arbiter needs to spot
+/// a finger joining a two-finger pan.
 ///
 /// Points arrive in the coordinate space the caller positions in: the recogniser
 /// reads the finger in this view's own bounds — untouched by the `scaleEffect`

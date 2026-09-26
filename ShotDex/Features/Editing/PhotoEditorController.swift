@@ -2453,7 +2453,7 @@ final class PhotoEditorController {
             guard let self else { return }
             for category in FilmLookCategory.allCases {
                 let filters = PhotoFilter.all(in: category)
-                    .filter { filterThumbnails[$0] == nil }
+                    .filter { self.filterThumbnails[$0] == nil }
                 guard !filters.isEmpty else { continue }
                 do {
                     let resolved = try await service.renderer.filterThumbnails(

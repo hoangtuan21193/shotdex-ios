@@ -109,7 +109,7 @@ final class PanoramaMergeModel {
     private var secondsPerMegapixel: Double?
 
     /// The long edge a preview is built at. The sharp tier of FS-14.01 §4.
-    static let previewEdge = 1_536
+    nonisolated static let previewEdge = 1_536
 
     init(assets: [PHAsset], photoLibrary: PhotoLibraryService, stitch: PanoramaStitchService) {
         self.assets = assets.filter { $0.mediaType == .image }

@@ -13,6 +13,26 @@ enum VideoExportWriter {
         let errorDescription: String?
     }
 
+    /// The reader, writer and their outputs/inputs, handed to the pump
+    /// closures. AVFoundation does not mark these `Sendable`, but this is the
+    /// pattern it documents for them: each input is fed only on the queue
+    /// given to `requestMediaDataWhenReady`, and the reader and writer are
+    /// otherwise only asked for their status, cancelled, or finished once
+    /// both pumps have drained.
+    private struct Pipeline: @unchecked Sendable {
+        let reader: AVAssetReader
+        let writer: AVAssetWriter
+        let videoOutput: AVAssetReaderVideoCompositionOutput
+        let videoInput: AVAssetWriterInput
+        let audio: AudioPump?
+    }
+
+    /// The audio half of `Pipeline`, present only when there is real audio.
+    private struct AudioPump: @unchecked Sendable {
+        let output: AVAssetReaderAudioMixOutput
+        let input: AVAssetWriterInput
+    }
+
     static func write(
         composition: AVComposition,
         videoComposition: AVVideoComposition,
@@ -120,6 +140,12 @@ enum VideoExportWriter {
 
         let denominator = max(totalDuration, 0.01)
 
+        let pipe = Pipeline(reader: reader, writer: writer,
+                            videoOutput: videoOutput, videoInput: videoInput,
+                            audio: audioOutput.flatMap { output in
+                                audioInput.map { AudioPump(output: output, input: $0) }
+                            })
+
         // Pump each output→input on its own queue; finish when both drain.
         try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
@@ -133,11 +159,11 @@ enum VideoExportWriter {
                 // competing with the UI for the whole export. A percent is
                 // finer than the progress bar can draw.
                 var reportedFraction = -1.0
-                videoInput.requestMediaDataWhenReady(on: videoQueue) {
-                    while videoInput.isReadyForMoreMediaData {
-                        guard reader.status == .reading,
-                              let sample = videoOutput.copyNextSampleBuffer() else {
-                            videoInput.markAsFinished()
+                pipe.videoInput.requestMediaDataWhenReady(on: videoQueue) {
+                    while pipe.videoInput.isReadyForMoreMediaData {
+                        guard pipe.reader.status == .reading,
+                              let sample = pipe.videoOutput.copyNextSampleBuffer() else {
+                            pipe.videoInput.markAsFinished()
                             group.leave()
                             return
                         }
@@ -149,53 +175,53 @@ enum VideoExportWriter {
                                 Task { @MainActor in progress(fraction) }
                             }
                         }
-                        videoInput.append(sample)
+                        pipe.videoInput.append(sample)
                     }
                 }
 
-                if let audioInput, let audioOutput {
+                if let audio = pipe.audio {
                     group.enter()
                     let audioQueue = DispatchQueue(label: "shotdex.export.audio")
-                    audioInput.requestMediaDataWhenReady(on: audioQueue) {
-                        while audioInput.isReadyForMoreMediaData {
-                            guard reader.status == .reading,
-                                  let sample = audioOutput.copyNextSampleBuffer() else {
-                                audioInput.markAsFinished()
+                    audio.input.requestMediaDataWhenReady(on: audioQueue) {
+                        while audio.input.isReadyForMoreMediaData {
+                            guard pipe.reader.status == .reading,
+                                  let sample = audio.output.copyNextSampleBuffer() else {
+                                audio.input.markAsFinished()
                                 group.leave()
                                 return
                             }
-                            audioInput.append(sample)
+                            audio.input.append(sample)
                         }
                     }
                 }
 
                 group.notify(queue: .global(qos: .userInitiated)) {
-                    if reader.status == .failed {
-                        writer.cancelWriting()
-                        continuation.resume(throwing: reader.error
+                    if pipe.reader.status == .failed {
+                        pipe.writer.cancelWriting()
+                        continuation.resume(throwing: pipe.reader.error
                             ?? ExportError(errorDescription: String(localized: "Reading the video failed.")))
                         return
                     }
-                    if reader.status == .cancelled {
-                        writer.cancelWriting()
+                    if pipe.reader.status == .cancelled {
+                        pipe.writer.cancelWriting()
                         continuation.resume(throwing: CancellationError())
                         return
                     }
-                    writer.finishWriting {
-                        switch writer.status {
+                    pipe.writer.finishWriting {
+                        switch pipe.writer.status {
                         case .completed:
                             continuation.resume()
                         case .cancelled:
                             continuation.resume(throwing: CancellationError())
                         default:
-                            continuation.resume(throwing: writer.error
+                            continuation.resume(throwing: pipe.writer.error
                                 ?? ExportError(errorDescription: String(localized: "Writing the video failed.")))
                         }
                     }
                 }
             }
         } onCancel: {
-            reader.cancelReading()
+            pipe.reader.cancelReading()
         }
 
         await progress(1)

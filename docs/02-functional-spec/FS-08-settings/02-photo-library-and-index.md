@@ -1,7 +1,7 @@
 # FS-08.02 — Photo Library và index
 
 `FS-08.02` · `Features/Settings/SettingsScreen.swift` · `App/ScreenAwakeCoordinator.swift`
-· `Data/Sources/PowerMonitor.swift` · cập nhật 2026-09-22
+· `Data/Sources/PowerMonitor.swift` · cập nhật 2026-09-25
 
 **Một câu:** mục điều khiển việc đọc thư viện — quyền, chạy tiếp, mạng, giữ màn sáng, và chế độ tiết kiệm pin.
 
@@ -45,17 +45,12 @@
 
 Bật **và** đang index thì màn không tự tắt.
 
-- Sau **1 phút** không chạm thì **hạ độ sáng màn về 0**. **Không phủ một lớp đen** — nội dung app vẫn hiển
-  thị, chỉ tối đi. Chạm lại thì khôi phục độ sáng đã lưu và đặt lại đồng hồ.
-- Độ sáng **luôn được khôi phục** khi chạm, khi app mất tiêu điểm, và khi app vào nền — không bao giờ kẹt tối.
-- **Đồng hồ được đặt lại suốt cả cử chỉ, không chỉ lúc chạm đầu**: bộ nhận chạm báo hoạt động ở **cả lúc
-  chạm xuống lẫn lúc di ngón**, và chỉ kết thúc khi nhả tay. Nhờ vậy kéo, giữ hay phóng liên tục hơn một
-  phút không bị tối giữa lúc đang thao tác — bản cũ chỉ tính cú chạm đầu.
-- 1 phút là **hằng số cố định**: iOS không có cách đọc thời gian tự khoá của hệ thống, nên không có thiết
-  lập riêng cho nó.
-- Bắt chạm bằng một lớp phủ toàn màn **không nuốt touch**, gắn ở màn gốc cho cả hai nhánh iOS.
-- **Đánh đổi**: tự động chỉnh sáng của iOS có thể đẩy độ sáng lên lại khi ánh sáng môi trường đổi — chấp
-  nhận, để không phải che UI.
+- **App không bao giờ đổi độ sáng màn** — giữ nguyên độ sáng người dùng đã chọn suốt lúc index.
+- **Bỏ tự hạ sáng** (2026-09-25): bản cũ hạ độ sáng về 0.15 sau 1 phút không chạm. "Không chạm" không có
+  nghĩa là "không dùng": gõ phím, share sheet (chạy ở process khác), video đang phát, slideshow đều bị tính
+  là nhàn rỗi, nên màn tối ngay lúc người dùng đang nhìn. Ai muốn tiết kiệm pin thì tắt thiết lập này — màn
+  sẽ ngủ theo Auto-Lock của hệ thống.
+- Một lượt lưu người dùng đang chờ (FS-14.01 §6) vẫn giữ màn sáng bất kể thiết lập, như trước.
 
 ## 4. Chế độ tiết kiệm pin
 
@@ -65,7 +60,7 @@ App theo dõi cả trạng thái tiết kiệm pin lẫn trạng thái sạc.
 |---|---|
 | Vào chế độ tiết kiệm pin | **dừng** lượt index đang chạy và **chặn mọi lượt tự động** |
 | Lượt tự động trong chế độ đó | không giữ màn sáng — để màn ngủ theo hệ thống |
-| Người dùng tự bấm chạy | vẫn chạy, vẫn giữ màn sáng và vẫn tự hạ sáng như thường |
+| Người dùng tự bấm chạy | vẫn chạy và vẫn giữ màn sáng |
 | Cắm sạc khi đang tiết kiệm pin | **tự chạy tiếp** — ngoại lệ tự-chạy duy nhất, và chạy không giữ màn sáng |
 
 ## 5. Tiêu chí nghiệm thu

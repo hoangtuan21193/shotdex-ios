@@ -1,18 +1,14 @@
 import SwiftUI
 import UIKit
 
-/// Keeps the display awake while indexing runs and, after an idle period with
-/// no user touch, lowers the screen brightness to save battery. A touch
-/// restores the brightness and resets the idle timer.
+/// Keeps the display awake while indexing runs (when the setting is on) and
+/// while a save the user is watching holds it.
 ///
-/// `@Observable` for parity with the rest of the app's state holders; the work
-/// here is all side effects (idle timer + screen brightness).
-///
-/// Unlike a full-screen black overlay, dimming the brightness leaves the app
-/// content visible (just dark). iOS auto-brightness can nudge the value back up
-/// on an ambient-light change; that is an accepted trade-off for not covering
-/// the UI. Brightness is always restored on wake, on deactivate, and when the
-/// app leaves the foreground, so it can never get stuck dark.
+/// It never touches the screen brightness. An earlier version lowered it after
+/// a minute with no touch, but "no touch" is not "not in use": typing, a share
+/// sheet (another process), a playing video or a slideshow all read as idle,
+/// so the screen went dark under someone who was looking at it. The user who
+/// turned the setting on asked for an awake screen at the brightness they chose.
 @MainActor
 @Observable
 final class ScreenAwakeCoordinator {
@@ -23,20 +19,6 @@ final class ScreenAwakeCoordinator {
     /// `isIdleTimerDisabled` and the last one to speak would win, which is how
     /// a screen locks in the middle of a save.
     static let shared = ScreenAwakeCoordinator()
-
-    /// Idle time with no user touch before the screen dims. iOS exposes no API
-    /// for the system Auto-Lock value, so this is a fixed 1-minute stand-in.
-    static let idleDimDelay: Duration = .seconds(60)
-
-    /// Brightness applied while idle-dimmed. Deliberately low but **not zero**:
-    /// at absolute 0 the display reads as fully off and iOS auto-brightness
-    /// takes control, so the programmatic restore on wake gets ignored and the
-    /// screen stays dark. A small non-zero floor keeps the screen visibly alive
-    /// and lets `wake()` restore reliably.
-    private static let dimmedBrightness: CGFloat = 0.15
-
-    /// True while the screen is held at the dimmed brightness.
-    private(set) var isDimmed = false
 
     private var isEnabled = false
     private var isIndexing = false
@@ -50,189 +32,35 @@ final class ScreenAwakeCoordinator {
     /// follows suspends the work (FS-14.01 §6). A count rather than a flag,
     /// because two of them can overlap.
     private var holds = 0
-    private var dimTask: Task<Void, Never>?
-    /// Brightness captured just before dimming, restored on wake.
-    private var restoreBrightness: CGFloat?
 
     private var isActive: Bool { (isEnabled && isIndexing) || holds > 0 }
 
     /// Holds the screen awake until the matching `endHold`, whatever the
-    /// setting says. Dimming stays off for the duration: a progress bar the
-    /// user is watching is not an idle screen.
+    /// setting says.
     func beginHold() {
         holds += 1
-        wake()
-        dimTask?.cancel()
-        dimTask = nil
-        UIApplication.shared.isIdleTimerDisabled = true
+        apply()
     }
 
     func endHold() {
         holds = max(0, holds - 1)
-        guard holds == 0 else { return }
-        if isActive {
-            UIApplication.shared.isIdleTimerDisabled = true
-            scheduleDim()
-        } else {
-            deactivate()
-        }
+        apply()
     }
 
     /// Recompute active state from the setting toggle and the indexing flag.
     func update(enabled: Bool, indexing: Bool) {
         isEnabled = enabled
         isIndexing = indexing
-        if isActive {
-            UIApplication.shared.isIdleTimerDisabled = true
-            scheduleDim()
-        } else {
-            deactivate()
-        }
+        apply()
     }
 
-    /// A user touch arrived: wake the screen and restart the idle countdown.
-    func registerActivity() {
-        guard isActive, holds == 0 else { return }
-        wake()
-        scheduleDim()
-    }
-
-    /// App left the foreground: never leave the display dimmed or awake for
-    /// whatever the user switches to.
+    /// App left the foreground. A hold outlives a trip to the background: the
+    /// save is still running and the user is coming back to it.
     func handleBackground() {
-        dimTask?.cancel()
-        dimTask = nil
-        wake()
-        // A hold outlives a trip to the background: the save is still running
-        // and the user is coming back to it.
         UIApplication.shared.isIdleTimerDisabled = holds > 0
     }
 
-    private func deactivate() {
-        dimTask?.cancel()
-        dimTask = nil
-        wake()
-        UIApplication.shared.isIdleTimerDisabled = false
-    }
-
-    private func scheduleDim() {
-        dimTask?.cancel()
-        dimTask = Task { [weak self] in
-            try? await Task.sleep(for: Self.idleDimDelay)
-            guard !Task.isCancelled else { return }
-            self?.dim()
-        }
-    }
-
-    private func dim() {
-        guard !isDimmed, let screen = ActiveDisplay.screen else { return }
-        isDimmed = true
-        restoreBrightness = screen.brightness
-        screen.brightness = Self.dimmedBrightness
-    }
-
-    private func wake() {
-        guard isDimmed else { return }
-        isDimmed = false
-        if let restoreBrightness {
-            ActiveDisplay.screen?.brightness = restoreBrightness
-        }
-        restoreBrightness = nil
-    }
-}
-
-/// Invisible probe that observes every touch on the window without consuming or
-/// delaying it, reporting activity so `ScreenAwakeCoordinator` can reset its idle
-/// timer. Standard app-wide inactivity detection — no `AppDelegate` needed.
-struct IdleActivityReporterView: UIViewRepresentable {
-    let onActivity: () -> Void
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(onActivity: onActivity)
-    }
-
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView(frame: .zero)
-        view.isUserInteractionEnabled = false
-        let coordinator = context.coordinator
-        // The view isn't in the window yet during makeUIView; attach the
-        // recognizer once it is.
-        DispatchQueue.main.async {
-            guard let window = view.window else { return }
-            coordinator.attach(to: window)
-        }
-        return view
-    }
-
-    func updateUIView(_ uiView: UIView, context: Context) {
-        context.coordinator.onActivity = onActivity
-    }
-
-    static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
-        coordinator.detach()
-    }
-
-    @MainActor
-    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
-        var onActivity: () -> Void
-        private weak var recognizer: ActivityRecognizer?
-
-        init(onActivity: @escaping () -> Void) {
-            self.onActivity = onActivity
-        }
-
-        func attach(to window: UIWindow) {
-            let recognizer = ActivityRecognizer { [weak self] in self?.onActivity() }
-            recognizer.cancelsTouchesInView = false
-            recognizer.delaysTouchesBegan = false
-            recognizer.delaysTouchesEnded = false
-            recognizer.delegate = self
-            window.addGestureRecognizer(recognizer)
-            self.recognizer = recognizer
-        }
-
-        func detach() {
-            guard let recognizer else { return }
-            recognizer.view?.removeGestureRecognizer(recognizer)
-            self.recognizer = nil
-        }
-
-        func gestureRecognizer(
-            _ gestureRecognizer: UIGestureRecognizer,
-            shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
-        ) -> Bool {
-            true
-        }
-    }
-}
-
-/// Reports touches for the whole gesture then fails once it ends, so it never
-/// consumes, cancels, or delays the real gestures underneath. Staying
-/// `.possible` (rather than failing on the first touch) is what lets it keep
-/// receiving `touchesMoved`: a long continuous drag registers activity the
-/// whole time, so the idle timer never fires mid-interaction.
-private final class ActivityRecognizer: UIGestureRecognizer {
-    private let onTouch: () -> Void
-
-    init(onTouch: @escaping () -> Void) {
-        self.onTouch = onTouch
-        super.init(target: nil, action: nil)
-    }
-
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
-        onTouch()
-    }
-
-    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
-        onTouch()
-    }
-
-    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
-        // Reset to `.possible` for the next touch sequence.
-        state = .failed
-    }
-
-    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
-        state = .failed
+    private func apply() {
+        UIApplication.shared.isIdleTimerDisabled = isActive
     }
 }

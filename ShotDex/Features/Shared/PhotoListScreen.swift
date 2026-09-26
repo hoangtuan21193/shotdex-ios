@@ -52,24 +52,10 @@ struct PhotoListScreen: View {
                 }
             }
             ToolbarItem(placement: .principal) {
-                VStack(spacing: 0) {
-                    Text(title)
-                        .font(.headline)
-                        .lineLimit(1)
-                    // The date of what is on screen once there is one, since
-                    // the grid draws no headers; the caller's own subtitle
-                    // (a photo count, a trip's dates) holds the spot until then.
-                    if let line = visibleDate ?? subtitle {
-                        Text(line)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
-                            .lineLimit(1)
-                            .contentTransition(.numericText())
-                            .animation(.easeInOut(duration: 0.18), value: line)
-                    }
-                }
-                .accessibilityElement(children: .combine)
+                // The date of what is on screen once there is one; the
+                // caller's own subtitle (a photo count, a trip's dates) holds
+                // the spot until then.
+                GridNavigationTitle(title: title, subtitle: visibleDate ?? subtitle)
             }
         }
         .task {

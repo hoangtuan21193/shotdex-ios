@@ -1,0 +1,27 @@
+{
+ "steps": [
+  {"action": "launch"},
+  {"action": "wait", "seconds": 25},
+  {"action": "tap", "x": 0.5, "y": 0.35},
+  {"action": "wait", "seconds": 6},
+  {"action": "tap", "label": "Edit"},
+  {"action": "wait", "seconds": 12},
+  {"action": "tap", "label": "Mask", "type": "button"},
+  {"action": "wait", "seconds": 3},
+  {"action": "screenshot", "name": "1-chooser"},
+  {"action": "tap", "label": "Brush", "type": "button"},
+  {"action": "wait", "seconds": 4},
+  {"action": "screenshot", "name": "2-brush-top"},
+  {"action": "dump", "name": "2-brush-top"},
+  {"action": "swipe", "x": 0.15, "y": 0.86, "direction": "up", "distance": 0.08},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "3-brush-scrolled"},
+  {"action": "dump", "name": "3-brush-scrolled"},
+  {"action": "tap", "label": "New mask"},
+  {"action": "wait", "seconds": 3},
+  {"action": "tap", "label": "Linear Gradient", "type": "button"},
+  {"action": "wait", "seconds": 4},
+  {"action": "screenshot", "name": "4-linear-top"},
+  {"action": "dump", "name": "4-linear-top"}
+ ]
+}

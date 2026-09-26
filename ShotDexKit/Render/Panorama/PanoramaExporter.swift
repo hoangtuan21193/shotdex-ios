@@ -225,7 +225,7 @@ public enum PanoramaExporter {
                 let available = bytesPerRow - columnByte
                 let chunk = min(available, wanted - written)
                 strip.withUnsafeBufferPointer { source in
-                    memcpy(
+                    _ = memcpy(
                         output.advanced(by: written),
                         source.baseAddress!.advanced(by: rowInStrip * bytesPerRow + columnByte),
                         chunk

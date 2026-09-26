@@ -98,7 +98,7 @@ struct PhotoEditingModelsTests {
 
     @Test func historyUndoRedo() {
         var history = PhotoEditHistory()
-        var initial = PhotoEditRecipe.identity
+        let initial = PhotoEditRecipe.identity
         var changed = initial
         changed.adjustments.exposure = 1
 

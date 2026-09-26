@@ -2472,7 +2472,7 @@ public actor PhotoRenderService {
                 if case .cpu = $0 { return true }
                 return false
             }) else { continue }
-            try? request.setComputeDevice(cpu, for: stage)
+            request.setComputeDevice(cpu, for: stage)
         }
         #endif
     }

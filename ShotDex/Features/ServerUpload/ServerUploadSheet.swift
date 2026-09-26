@@ -389,7 +389,22 @@ extension EnvironmentValues {
     /// the sheet: the ids travel up to the window they were picked in, never
     /// to a shared coordinator another window could also be presenting from.
     /// Nil outside a root (previews), and the menu row is then left out.
-    @Entry var presentServerUpload: (([String]) -> Void)? = nil
+    @Entry var presentServerUpload: PresentServerUploadAction? = nil
+}
+
+/// The value behind `presentServerUpload`: call it with the picked ids.
+///
+/// A struct rather than a bare closure so SwiftUI can compare it. A root
+/// hands in a fresh closure on every body pass, and a closure never compares
+/// equal, so every screen reading the key re-rendered whenever the root did.
+/// Each of those closures only sets that root's own `@State`, so any two do
+/// the same thing — equal by definition.
+struct PresentServerUploadAction: Equatable {
+    let handler: ([String]) -> Void
+
+    func callAsFunction(_ assetIds: [String]) { handler(assetIds) }
+
+    static func == (lhs: Self, rhs: Self) -> Bool { true }
 }
 
 /// The picked ids, frozen at the tap.

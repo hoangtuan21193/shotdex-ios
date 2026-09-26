@@ -78,13 +78,13 @@ struct EditorAdjustmentCatalogTests {
     /// family, then grain. Asserted as order-and-membership rather than an
     /// exact list: the vignette family has grown twice (roundness, highlights)
     /// and freezing the list only records what it looked like on one day.
-    @Test func effectsGroupCarriesTheExpandedSet() {
-        let effects = try? #require(
+    @Test func effectsGroupCarriesTheExpandedSet() throws {
+        let effects = try #require(
             EditorAdjustmentCatalog
                 .groups(isRAWSource: false, scope: .global)
-                .first { $0.id == .effects }
+                .first(where: { $0.id == .effects })
         )
-        let kinds = effects?.kinds ?? []
+        let kinds = effects.kinds
         #expect(kinds.prefix(3) == [.texture, .clarity, .dehaze])
         for kind in [
             PhotoAdjustmentKind.vignette, .vignetteMidpoint, .vignetteFeather,

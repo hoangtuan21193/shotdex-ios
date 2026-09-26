@@ -206,7 +206,7 @@ struct EditorValueSlider: View {
             }
             .frame(maxHeight: .infinity)
             .onAppear { trackWidth = max(1, width) }
-            .onChange(of: width) { trackWidth = max(1, $0) }
+            .onChange(of: width) { _, newWidth in trackWidth = max(1, newWidth) }
         }
         .frame(height: isStacked ? 20 : EditorLayoutMetrics.editorPanelRowHeight)
     }
@@ -247,7 +247,7 @@ struct EditorValueSlider: View {
             }
             .frame(maxHeight: .infinity)
             .onAppear { trackWidth = max(1, width) }
-            .onChange(of: width) { trackWidth = max(1, $0) }
+            .onChange(of: width) { _, newWidth in trackWidth = max(1, newWidth) }
         }
         // Inline, the track is the row and takes its whole height so a drag can
         // start anywhere on it. Stacked, the label line above already owns
