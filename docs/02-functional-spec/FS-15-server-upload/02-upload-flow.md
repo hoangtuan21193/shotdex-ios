@@ -1,7 +1,7 @@
 # FS-15.02 — Luồng upload
 
 `FS-15.02` · `Features/ServerUpload/ServerUploadSheet.swift` · `ServerUploadModel` · `RemoteFolderBrowser`
-· `Domain/ServerUpload/` · `Data/Database/ServerUploadStore.swift` · cập nhật 2026-09-26
+· `Domain/ServerUpload/` · `Data/Database/ServerUploadStore.swift` · cập nhật 2026-09-27
 
 **Một câu:** chọn connection ngay trong menu ⋯, chọn folder đích (nhớ lần trước), rồi một sheet đi bốn bước —
 chuẩn bị → đang đẩy → (trùng tên) → kết quả — và chỉ đề nghị xoá những tấm đã khớp checksum.
@@ -16,7 +16,7 @@ connection (một **connection** = một dòng đã khai trong Settings → File
 |---|---|---|
 | 0 | **Upload to Server…** | sheet mở thẳng form **Add Connection**; lưu xong vào bước chuẩn bị với connection vừa tạo |
 | 1 | **Upload to <tên>** | sheet mở ở bước chuẩn bị với connection đó |
-| ≥ 2 | menu con **Upload to** ▸ | liệt kê **tên** từng connection, sắp theo tên, dòng phụ `SMB · host/share/folder`; cuối menu là **Add Connection…** |
+| ≥ 2 | menu con **Upload to** ▸ | liệt kê **tên** từng connection, sắp theo tên, dòng phụ `SMB · host/folder`; cuối menu là **Add Connection…** |
 
 - Chọn một tên trong menu con → sheet mở với **đúng connection đó**, không phải connection dùng lần trước.
 - **Add Connection…** trong menu con → form; lưu xong vào bước chuẩn bị với connection mới.
@@ -40,15 +40,17 @@ connection (một **connection** = một dòng đã khai trong Settings → File
 
 ## 2a. Duyệt folder trên server
 
-- Đẩy trong sheet, mở ở folder đang chọn; **Back** đi lên từng folder cha tới gốc (gốc share với SMB, thư mục
-  home với SFTP).
-- Mỗi màn: các **folder con** (bỏ tên bắt đầu bằng `.`), sắp theo tên kiểu Finder (`2` trước `10`). Hàng đầu
-  **Use This Folder** chọn folder đang mở và quay về bước chuẩn bị. Toolbar có **New Folder**: hỏi tên, tạo trên
-  server, rồi mở luôn folder đó.
-- Tên folder mới: không rỗng, không chứa `/`. Trùng folder đã có thì mở folder đó, không báo lỗi.
+Đổi 2026-09-27: dùng **màn duyệt kiểu Files của FS-17.01** ở chế độ chọn folder (FS-17.01 §5) — một giao diện cho
+cả xem ảnh và chọn folder.
+
+- Đẩy trong sheet, mở ở folder đang chọn; ‹ › đi theo lịch sử, tiêu đề mở menu folder cha tới gốc (gốc = các folder
+  máy tính chia sẻ với SMB, thư mục home với SFTP, gốc Path với WebDAV).
+- Ảnh trong folder hiện mờ để người dùng biết mình đang ở đúng chỗ; không chọn được. Nút dưới **Choose “<folder>”**
+  chọn folder đang mở và quay về bước chuẩn bị. ⋯ → **New Folder**: hỏi tên, tạo trên server, mở luôn folder đó.
+- Tên folder mới: không rỗng, không chứa `/`, không bắt đầu bằng `.`. Trùng folder đã có thì mở folder đó, không báo lỗi.
 - Đang nối: spinner. Hỏng (không tới được máy, sai mật khẩu, host key chưa tin…) → câu lỗi của FS-15.01 §3 +
-  **Try Again**; màn không kẹt, Back vẫn về được. Folder gõ tay trong form không còn trên server thì bước đẩy tự
-  tạo lại (§3) — duyệt không bắt buộc.
+  **Try Again**; ‹ vẫn về được. Folder gõ tay trong form không còn trên server thì bước đẩy tự tạo lại (§3) — duyệt
+  không bắt buộc.
 - Một kết nối dùng cho cả lượt duyệt; đóng khi đóng sheet.
 
 ## 3. Đường dẫn trên server

@@ -13,13 +13,13 @@ Nguồn: [intent](../../_intents/2026-09-26-more-file-protocols.md). **NFS bị 
 
 | Giao thức | Cổng mặc định | Ô riêng | Ghi chú |
 |---|---|---|---|
-| SMB | 445 | Share | như cũ |
+| SMB | 445 | — (share là cấp đầu của Folder, FS-15.01 §3a) | như cũ |
 | SFTP | 22 | — | như cũ, host key |
 | **WebDAV** | 443 (HTTPS) · 80 (HTTP) | **Path** (đường dẫn gốc, ví dụ `/remote.php/dav/files/me`), công tắc **Use HTTPS** (mặc định bật) | Nextcloud, ownCloud, Synology, QNAP |
 
 - Picker Protocol liệt kê theo thứ tự trên. Đổi giao thức thì ô riêng đổi theo, cổng để trống là cổng mặc định
   của lựa chọn hiện tại.
-- Folder vẫn là đường dẫn tương đối: trong share (SMB), trong home (SFTP), dưới Path (WebDAV).
+- Folder vẫn là đường dẫn tương đối: từ gốc máy, cấp đầu là share (SMB), trong home (SFTP), dưới Path (WebDAV).
 
 ## 2. Việc từng client phải làm
 

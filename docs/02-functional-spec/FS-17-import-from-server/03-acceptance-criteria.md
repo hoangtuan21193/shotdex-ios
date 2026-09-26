@@ -1,6 +1,6 @@
 # FS-17.03 — Tiêu chí nghiệm thu
 
-`FS-17.03` · `ShotDexTests/ServerImport*Tests.swift` · `ShotDexUITests/scripts/server-import*.json` · cập nhật 2026-09-26
+`FS-17.03` · `ShotDexTests/ServerImport*Tests.swift` · `ShotDexUITests/scripts/server-import*.json` · cập nhật 2026-09-27
 
 Như FS-15: phần lớn chạy trên **server giả trong bộ nhớ** (`InMemoryRemoteFileClient` thêm range read) và
 **PhotoKit giả** (bộ ghi asset nhận yêu cầu tạo), nên đường hỏng kiểm được không cần mạng; phần Photos thật chạy
@@ -26,6 +26,23 @@ trên simulator với server giả lập 127.0.0.1.
 | AC-16 | quyền `.limited` | mở sheet tải về | Save To chỉ có Library + câu "Allow full access to Photos to save into an album." | `ServerDownloadModelTests.limitedAccessOnlyLibrary` |
 | AC-17 | folder: `IMG_10.CR3` (chụp 2026-01-03, sửa 2026-09-01), `IMG_2.JPG` (chụp 2026-01-05, sửa 2026-08-01), `scan.png` (không EXIF, sửa 2026-07-01) | Sort Name / Date Taken / Date Modified, rồi Descending | Name: `IMG_2`, `IMG_10`, `scan`; Date Taken: `IMG_10`, `IMG_2`, `scan` (scan dùng ngày sửa 07-01); Date Modified: `scan`, `IMG_2`, `IMG_10`; Descending đảo từng thứ tự; Date Taken chỉ sắp lại **một lần**, sau khi đọc xong cả folder | `ServerFolderSortTests.threeOrders` + `scripts/server-import.json` (Date Taken sắp lại một lần sau thanh Reading dates) |
 | AC-18 | iOS 18.6 (tab bar tự vẽ), folder có 5 ảnh | Select, chọn 2 | tab bar ẩn, thanh **Download 2** hiện và bấm được; thoát chọn → tab bar trở lại (lỗi 2026-09-27: thanh nằm sau tab bar, bấm không ăn) | `scripts/server-import-verify-rerun.json` (iPhone 16 Pro iOS 18.6: `93-selected` thanh Download rõ, `95-result` "Saved 2 photos to Library.", `96-in-library` tab bar trở lại) |
+
+
+### Màn duyệt kiểu Files (FS-17.01 §2, §4b, §5) — thêm 2026-09-27
+
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-19 | mở ở `A` | mở `A/B`, rồi `A/B/C`; Back ×2; Forward; mở `A/D` | Back ×2 → `A`; Forward → `A/B`; sau khi mở `A/D` Forward mờ; Back ở `A` (đầu lịch sử) → rời màn | `ServerBrowserHistoryTests.backForwardLikeABrowser` ⚠️ chưa có |
+| AC-20 | đang ở `photos/2026/Trip` của connection `NAS` (SMB) | chạm tiêu đề | menu `2026`, `photos`, `NAS` theo thứ tự; chọn `photos` → đang ở `photos`, Back → `photos/2026/Trip` | `ServerBrowserHistoryTests.titleMenuListsAncestors` ⚠️ chưa có |
+| AC-21 | folder có 2 folder + 3 ảnh | ⋯ → List, rồi Icons; mở connection khác; quay lại | List: 5 hàng, 2 folder trước; Icons: **5 ô trong một lưới**, 2 ô folder trước (không có hàng folder riêng); connection khác vẫn Icons; quay lại connection đầu nhớ lựa chọn | `ServerBrowserModelTests.viewModeSharedByFoldersAndPhotos` + ảnh `scripts/server-files-browser.json` ⚠️ chưa có |
+| AC-22 | `a.JPG` 3 MB, `b.CR3` 25 MB, cặp `c.CR3`+`c.JPG` 20+4 MB | Sort By Size; chọn Size lần nữa | giảm dần `c` (24 MB), `b`, `a`; lần hai tăng dần; Date Modified mặc định giảm dần, Name tăng dần | `ServerFolderSortTests.sizeAndFilesStyleDirection` ⚠️ chưa có |
+| AC-23 | folder có ảnh + `notes.txt` + `D.MOV` | bật Show All Files | `notes.txt`, `D.MOV` hiện mờ glyph `doc`, chạm không mở, Select không chọn được; dòng cuối không còn "other files hidden" | `ServerFolderListingTests.showAllFilesKeepsOthersDimmed` ⚠️ chưa có |
+| AC-24 | đang ở `photos` | New Folder `Trip`; rồi thử `""`, `a/b`, `.x`; ở gốc SMB | `photos/Trip` tạo và mở (vào lịch sử); ba tên kia không bấm Create được; ở gốc SMB New Folder mờ | `ServerBrowserModelTests.newFolderOpensIt` + `RemoteFolderListingTests.validatedName` ⚠️ chưa có |
+| AC-25 | cặp `A.CR3`+`A.JPG`, có `B.JPG`; lịch sử upload + tải về trỏ `photos/A.CR3` | Rename `A` → `Beach`; rồi `Beach` → `B` | `Beach.CR3`, `Beach.JPG`; lịch sử đổi thành `photos/Beach.CR3`, dấu In Library còn; lần hai báo "An item named “B” already exists.", không đổi gì | `ServerBrowserEditTests.renamePairMovesHistory` ⚠️ chưa có |
+| AC-26 | folder `2024` có `a.CR3`, `x/b.JPG`; lịch sử upload `2024/a.CR3` ở connection A và B (cùng host SMB), `2024/a.CR3` ở connection C (host khác) | Delete `2024` → xác nhận | server không còn `2024`; dòng lịch sử của A, B bị xoá, của C còn; không gọi PhotoKit; Cancel ở hộp xác nhận → không xoá gì | `ServerBrowserEditTests.deleteFolderIsRecursiveAndDropsProof` ⚠️ chưa có |
+| AC-27 | chọn 3 ảnh, server từ chối xoá ảnh thứ 2 | Delete 3 → xác nhận | ảnh 1 bị xoá; dừng ở ảnh 2 với "You don't have permission…"; ảnh 3 còn; folder được liệt kê lại | `ServerBrowserEditTests.deleteStopsAtFirstFailure` ⚠️ chưa có |
+| AC-28 | chế độ chọn folder, gốc SMB rồi `photos` | xem | gốc: nút Choose mờ + "Open one of the shared folders first."; `photos`: ảnh mờ không chọn được, không có Select/Rename/Delete, nút **Choose “photos”** bật | `ServerBrowserModelTests.chooseModeRules` + ảnh `scripts/server-connect-as.json` ⚠️ chưa có |
+| AC-29 | simulator iOS 26.5 + 18.6 + iPad, server SMB giả lập | Icons, List, ⋯, Sort By, menu tiêu đề, nhấn giữ, Select + thanh Download/Delete, hộp xác nhận xoá | ảnh từng trạng thái, không control bị che/cắt; ‹ › ở toolbar trái trên cả hai nhánh iOS | `scripts/server-files-browser.json` ⚠️ chưa có |
 
 **Chưa chứng minh được** (verify 2026-09-27): AC-15 trên iPad và Duo; máy thật (iCloud, LAN thật). Các dòng RAW khác
 đã đo trên 10 file mẫu (AC-3).

@@ -1,7 +1,7 @@
 # FS-15.01 — Server và Settings
 
 `FS-15.01` · `Features/ServerUpload/FileServerListScreen.swift` · `FileServerFormScreen.swift`
-· `Data/Database/FileServerStore.swift` · `Domain/ServerUpload/FileServerNaming.swift` · cập nhật 2026-09-26
+· `Data/Database/FileServerStore.swift` · `Domain/ServerUpload/FileServerNaming.swift` · cập nhật 2026-09-27
 
 **Một câu:** danh sách connection trong Settings, form khai một connection, và nút thử kết nối nói rõ chỗ hỏng.
 
@@ -35,8 +35,7 @@ chúng ở menu ⋯ (FS-15.02 §1).
 | Host | — | bắt buộc; tên, IPv4 hoặc tên `.local` |
 | Port | 445 (SMB) · 22 (SFTP) | 1–65535 |
 | Username / Password | — | mật khẩu che, lưu Keychain |
-| Share | — | **chỉ SMB**, bắt buộc |
-| Folder | rỗng = gốc share / thư mục home | folder **mặc định**; sheet upload đổi được mỗi lần. Đường dẫn tương đối, dấu `/` thừa bị bỏ |
+| Folder | SMB: bắt buộc · SFTP: rỗng = home · WebDAV: rỗng = gốc Path | folder **mặc định**; sheet upload đổi được mỗi lần. Đường dẫn tương đối, dấu `/` thừa bị bỏ. Nút **Choose…** mở màn chọn folder (FS-17.01 §5). SMB: cấp đầu là một folder máy tính chia sẻ (`Photos/2024`) — không còn ô Share riêng (§3a) |
 
 - Tiêu đề form: **Add Connection** / **Edit Connection**. Chân section Folder không nhắc thư mục theo ngày — đó là
   công tắc ở sheet upload.
@@ -48,10 +47,25 @@ chúng ở menu ⋯ (FS-15.02 §1).
 |---|---|
 | tìm máy / hết giờ 10 s | "Can't reach <host>. Check that it's on and on the same network." |
 | đăng nhập | "The username or password was rejected." |
-| thư mục | "The folder <path> doesn't exist on <share>." |
+| thư mục | "The folder <path> doesn't exist on the server." |
 | ghi thử | "You don't have permission to write to <path>." |
 | quyền Local Network bị tắt | "ShotDex needs Local Network access." + nút mở Settings của hệ thống |
 | xong | "Connected. Ready to upload." |
+
+## 3a. Không còn "Share"
+
+Đổi 2026-09-27. Người dùng: "mục share hơi khó hiểu, nó khác gì folder". Share của SMB là **folder cấp đầu mà máy
+tính chia sẻ ra** (`Photos` trên Windows); Folder là đường dẫn bên trong nó. Hai ô cho một đường dẫn là hai khái niệm
+người dùng phải học, trong khi Files và Finder cho thấy share như folder bình thường.
+
+- Form SMB chỉ có **Folder**; `Photos/2024` nghĩa là share `Photos`, folder `2024`. Chân section SMB: "Choose… signs
+  in and shows the folders this computer shares."
+- Dữ liệu: connection SMB lưu `share` rỗng, cả đường dẫn trong `folder` / `uploadFolder`. Migration v23 gộp các dòng
+  cũ: `folder = share/folder`, `uploadFolder = share/uploadFolder`, đường dẫn trong lịch sử upload và tải về của
+  connection SMB đó được thêm `share/` ở đầu (để dấu In Library và luật xoá vẫn khớp).
+- Client SMB coi cấp đầu của mọi đường dẫn là share: liệt kê gốc = danh sách share hiện được (bỏ share tên kết thúc
+  `$`), mở share khi cần, đổi share trong cùng phiên đăng nhập. Ghi file ở gốc: không được.
+- WebDAV giữ ô **Path** (địa chỉ WebDAV như `remote.php/dav/files/you` là một phần của URL, không duyệt được từ gốc).
 
 ## 4. Host key (SFTP)
 

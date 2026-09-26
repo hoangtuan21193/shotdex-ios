@@ -16,7 +16,7 @@ Nguồn: [intent](../../_intents/2026-09-24-local-network-upload.md).
 | 01 | [Server và Settings](01-servers-and-settings.md) | danh sách connection, form, tên, thử kết nối, host key, quyền Local Network |
 | 02 | [Luồng upload](02-upload-flow.md) | menu connection, chọn folder, folder theo ngày, chọn file, trùng tên, checksum, tiến độ, huỷ, xoá |
 | 03 | [Tiêu chí nghiệm thu](03-acceptance-criteria.md) | 40 AC (AC-35 bỏ cùng FTP; AC-37 từ lỗi 2026-09-27; AC-38…41 quét cổng 445) và cái nào chưa chứng minh |
-| 04 | [Tự tìm server, chọn share](04-find-servers.md) | Bonjour + quét cổng 445 (Windows), mục Servers Found on This Network, hỏi quyền Local Network, danh sách share SMB |
+| 04 | [Tự tìm server, Connect As](04-find-servers.md) | Bonjour + quét cổng 445 (Windows), mục Servers Found on This Network, hỏi quyền Local Network, danh sách share SMB |
 | 05 | [WebDAV](05-more-protocols.md) | ô form, thao tác, cảnh báo HTTP, chứng chỉ tự ký |
 
 ## 1. Người dùng cần gì
@@ -59,7 +59,7 @@ Utilities · dấu trên lưới · lịch sử upload trong Photo Info.
 
 | | |
 |---|---|
-| Bảng server | tên · giao thức · host · cổng · user · share (SMB) · folder mặc định · folder dùng lần trước · Date Folders lần trước · dấu vân tay host (SFTP) · lần dùng cuối |
+| Bảng server | tên · giao thức · host · cổng · user · share (SMB: luôn rỗng từ v23; WebDAV: Path) · folder mặc định · folder dùng lần trước · Date Folders lần trước · dấu vân tay host (SFTP) · lần dùng cuối |
 | Mật khẩu | **Keychain**, khoá theo id server; không bao giờ vào database hay log |
 | Bảng lịch sử upload | id ảnh · id server + **tên server lúc đẩy** · loại file · đường dẫn trên server · số byte · SHA-256 · thời điểm |
 | Người dùng tự nhập? | có → **hai bảng riêng**, không cột nào trong bảng metadata ([BD-02](../../01-basic-design/BD-02-database-design.md)) |

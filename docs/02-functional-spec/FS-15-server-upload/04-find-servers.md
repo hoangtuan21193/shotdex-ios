@@ -1,10 +1,10 @@
-# FS-15.04 — Tự tìm server trong mạng, chọn share
+# FS-15.04 — Tự tìm server trong mạng, Connect As
 
 `FS-15.04` · `Data/Sources/FileServer/LocalServerBrowser.swift` · `Domain/ServerUpload/DiscoveredServer.swift`
-· `Features/ServerUpload/FileServerFormScreen.swift` · cập nhật 2026-09-26
+· `Features/ServerUpload/FileServerFormScreen.swift` · cập nhật 2026-09-27
 
 **Một câu:** mở Add Connection là hệ thống hỏi quyền Local Network, form liệt kê các máy đang chia sẻ file trong
-cùng mạng; chạm một máy là địa chỉ được điền sẵn, và share SMB chọn từ danh sách thay vì gõ.
+cùng mạng; chạm một máy là đăng nhập ngay tại đó (Connect As), rồi chọn folder bằng màn duyệt.
 
 Nguồn: [intent](../../_intents/2026-09-26-server-discovery.md).
 
@@ -37,13 +37,26 @@ Section đầu tiên của form, trên các ô nhập tay.
   biến mất.
 - Sắp xếp theo tên. Tên máy lấy từ tên dịch vụ Bonjour ("Hoang's MacBook Pro").
 
-## 3. Chạm một máy
+## 3. Chạm một máy — Connect As
 
-- Một giao thức → điền luôn. Nhiều giao thức → menu chọn giao thức (thứ tự: SMB, SFTP, WebDAV (HTTPS), WebDAV).
-- Điền: **Name** = tên máy (vẫn qua luật đánh số trùng tên, FS-15.01 §3), **Protocol**, **Host** = tên `.local`
-  phân giải được (không lưu IP), **Port** = cổng trong bản ghi dịch vụ (để trống nếu bằng cổng mặc định).
-- Hàng vừa chọn có dấu ✓. Người dùng vẫn sửa được mọi ô sau khi điền.
-- ⚠️ CẦN QUYẾT: nhiều giao thức thì hỏi bằng menu (đề xuất) hay mỗi giao thức một hàng riêng.
+Đổi 2026-09-27. Người dùng: "click vào một server có sẵn trong local network thì nên để test connection sau khi nhập
+user pass". Trước đây chạm chỉ điền Host/Port rồi để người dùng tự tìm ô Username, Password, Share và Test Connection
+ở dưới. Giờ theo Finder ("Connect As…") và Files ("Connect to Server"):
+
+1. Chạm hàng → đẩy màn **Connect to “<tên máy>”** trong form: đầu màn icon loại máy + tên + host; **Connect Using**
+   (chỉ khi máy mở nhiều giao thức, thứ tự SMB, SFTP, WebDAV (HTTPS), WebDAV; mặc định cái đầu); **Username**,
+   **Password**; nút **Connect** (mờ khi thiếu một trong hai).
+2. **Connect** = đăng nhập thật (10 s). Đang nối: spinner trong nút, ô bị khoá. SFTP/WebDAV tự ký lần đầu: hộp Trust
+   của FS-15.01 §4 rồi nối tiếp.
+3. **Hỏng → báo ngay dưới ô Password**, bằng câu FS-15.01 §3 ("The username or password was rejected.", "Can't reach
+   …"); giữ nguyên chữ đã gõ, focus về Password khi sai mật khẩu. Không rời màn.
+4. **Được → đẩy màn chọn folder** (FS-17.01 §5) ở gốc: SMB = các folder máy chia sẻ, SFTP = Home. Choose → quay về
+   form với mọi ô đã điền (Name = tên máy qua luật đánh số FS-15.01 §3, Protocol, Host = tên `.local` phân giải được
+   hoặc IP với máy tìm bằng quét 445, Port = để trống nếu bằng mặc định, Username, Password, Folder) và hàng Test
+   Connection hiện ✓ "Signed in." Người dùng bấm **Save**.
+5. ‹ ở màn chọn folder về Connect As; ‹ ở Connect As về form không đổi gì.
+
+- Hàng vừa dùng có dấu ✓. Mọi ô vẫn sửa được sau khi điền. Server nhập tay đi thẳng các ô của form như cũ.
 
 ## 4. Loại dịch vụ nghe
 
@@ -72,17 +85,18 @@ cấp entitlement multicast. Người dùng chốt 2026-09-27: **quét unicast**
 - Hàng quét được: icon `pc`, dòng phụ `SMB`; Host điền **địa chỉ IP** (tên NetBIOS không phân giải được qua DNS trên iOS).
 - "No servers found" chỉ hiện khi đã hết 5 s **và** quét xong.
 
-## 5. Chọn share (SMB)
+## 5. Chọn folder trong form
 
-- Hàng **Share** có nút **Choose…**, bật khi Host, Username, Password đã có.
-- Chạm → đăng nhập, lấy danh sách share của máy, hiện dạng danh sách; bỏ share hệ thống (tên kết thúc bằng `$`,
-  như `IPC$`, `ADMIN$`). Chọn một share → điền ô Share.
-- Hỏng (sai mật khẩu, không tới được máy) → câu lỗi của FS-15.01 §3 ngay dưới hàng Share; ô vẫn gõ tay được.
-- Folder chọn bằng màn duyệt của FS-15.02 §2a (sheet upload); form vẫn giữ ô Folder gõ tay.
+- Không còn hàng Share (FS-15.01 §3a). Hàng **Folder** có ô gõ tay và nút **Choose…**, bật khi Host, Username, Password
+  đã có (mật khẩu đã lưu cũng tính).
+- Choose… → đăng nhập, mở màn chọn folder (FS-17.01 §5) ở folder đang gõ (rỗng = gốc). SMB: gốc liệt kê các folder
+  máy chia sẻ (bỏ tên kết thúc `$`, như `IPC$`, `ADMIN$`).
+- Hỏng (sai mật khẩu, không tới được máy) → câu lỗi FS-15.01 §3 **ngay dưới hàng Folder**, màu đỏ, không mở màn chọn;
+  ô vẫn gõ tay được. Sửa Username/Password/Host thì câu lỗi mất.
 
 ## 6. Ràng buộc
 
-- Không thư viện mới: Bonjour qua `NWBrowser` (Network framework); share qua `SMBClient.listShares()`.
+- Không thư viện mới: Bonjour qua `NWBrowser` (Network framework); folder chia sẻ qua `SMBClient.listShares()`.
 - Không đọc tên Wi-Fi (cần quyền vị trí).
 - Không gửi gì ra ngoài mạng nội bộ; tìm máy không phải một ngoại lệ mới của NF-03.
 - Server qua internet: không tìm được, nhập tay. Windows tìm qua quét cổng 445 (§4b).
