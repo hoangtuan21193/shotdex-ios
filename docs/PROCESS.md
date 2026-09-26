@@ -104,13 +104,14 @@ Từ đó mỗi `git push` chạy `Tools/gate` = build + toàn bộ unit test. �
 | `Tools/evals` | khi đụng `CLAUDE.md` hoặc `.claude/**` | `4/5 eval xanh` — chạy từ terminal đã đăng nhập `claude` |
 | `Tools/bands-check` | định kỳ, hoặc khi thấy chậm/đỏ bất thường | bảng metric + cảnh báo khi vượt band |
 
-Ba hook chặn tự động (`.claude/hooks/`):
+Bốn hook chặn tự động (`.claude/hooks/`):
 
 | Hook chặn | Vì sao |
 |---|---|
 | `git push --no-verify` | đó là cách đi vòng qua gate |
 | `xcodebuild archive`, `altool`, `notarytool` khi thiếu `RELEASE_APPROVAL` | nộp App Store phải có người chấp thuận |
 | sửa file trong `ShotDexTests/` khi `SHOTDEX_FREEZE_TESTS=1` | sửa bug thì không được làm test xanh bằng cách sửa test |
+| agent dừng sau khi sửa code mà build còn error **hoặc warning** (Stop hook `build-check.py`, tối đa 3 lượt rồi nhả; tắt bằng `SHOTDEX_BUILD_HOOK=0`) | build incremental giấu warning của file không compile lại; hook đọc `.dia` nên thấy đúng Issue navigator của Xcode |
 
 ## 6. Tiêu chí nghiệm thu viết thế nào
 

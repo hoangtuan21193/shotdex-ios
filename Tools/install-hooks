@@ -1,0 +1,12 @@
+#!/bin/bash
+# Cài git hook cho repo này. Chạy một lần sau khi clone.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+HOOK=.git/hooks/pre-push
+cat > "$HOOK" <<'HOOKEOF'
+#!/bin/bash
+# Chặn push khi build hoặc test đỏ. Bỏ qua: git push --no-verify
+exec Tools/gate
+HOOKEOF
+chmod +x "$HOOK"
+echo "đã cài $HOOK — mỗi git push sẽ chạy Tools/gate"

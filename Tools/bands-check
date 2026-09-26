@@ -1,0 +1,128 @@
+#!/usr/bin/env python3
+"""Giai đoạn Maintain: phát hiện vượt control band, ĐỊNH ĐOẠT bằng số học.
+
+    Tools/bands-check            # in bảng trạng thái
+    Tools/bands-check --intent   # vượt 3σ thì sinh sẵn intent.md nháp
+
+Model KHÔNG tham gia bước phát hiện. Bậc (1σ/2σ/3σ) trong bands.yaml quy định
+khi vượt thì được phép làm gì. Xem docs/PROCESS.md mục 8 (giai đoạn Maintain).
+"""
+import json, pathlib, re, statistics, sys, datetime
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+BANDS = ROOT / "bands.yaml"
+
+
+def parse_bands(text: str) -> dict:
+    """Đọc đúng hình dạng của bands.yaml trong repo này (không cần pyyaml)."""
+    cfg = {"baseline": "rolling_30", "min_samples": 8, "metrics": []}
+    m = re.search(r"^min_samples:\s*(\d+)", text, re.M)
+    if m:
+        cfg["min_samples"] = int(m.group(1))
+    m = re.search(r"^baseline:\s*rolling_(\d+)", text, re.M)
+    cfg["window"] = int(m.group(1)) if m else 30
+    for block in re.findall(r"^  - name: .*?(?=^  - name: |^\S|\Z)", text, re.M | re.S):
+        metric = {}
+        for key in ("name", "source", "field", "direction"):
+            mm = re.search(rf"^\s*(?:- )?{key}:\s*(\S+)", block, re.M)
+            if mm:
+                metric[key] = mm.group(1)
+        metric["tiers"] = {t: re.search(rf"{t}:\s*{{\s*action:\s*(\w+)", block).group(1)
+                           for t in ("1sigma", "2sigma", "3sigma")
+                           if re.search(rf"{t}:\s*{{\s*action:\s*(\w+)", block)}
+        if metric.get("name"):
+            cfg["metrics"].append(metric)
+    return cfg
+
+
+def samples(metric: dict, window: int) -> list[float]:
+    src = ROOT / metric["source"]
+    if not src.exists():
+        return []
+    if src.suffix == ".jsonl":
+        rows = [json.loads(l) for l in src.read_text().splitlines() if l.strip()]
+        return [float(r[metric["field"]]) for r in rows[-window:] if metric["field"] in r]
+    if metric["field"] == "unchecked_boxes":
+        return [float(len(re.findall(r"^- \[ \]", src.read_text(), re.M)))]
+    return []
+
+
+def main() -> int:
+    if not BANDS.exists():
+        print("thiếu bands.yaml", file=sys.stderr)
+        return 2
+    cfg = parse_bands(BANDS.read_text())
+    want_intent = "--intent" in sys.argv
+    breaches = []
+    print(f"{'metric':<28} {'mẫu':>4} {'mới nhất':>10} {'trung bình':>11} {'σ':>8}  bậc")
+    for metric in cfg["metrics"]:
+        data = samples(metric, cfg["window"])
+        name = metric["name"]
+        if len(data) < cfg["min_samples"]:
+            print(f"{name:<28} {len(data):>4} {'—':>10} {'—':>11} {'—':>8}  chưa đủ dữ liệu")
+            continue
+        latest, hist = data[-1], data[:-1]
+        mean = statistics.fmean(hist)
+        sd = statistics.pstdev(hist)
+        z = 0.0 if sd == 0 else (latest - mean) / sd
+        if metric.get("direction") == "higher_is_worse":
+            z = max(z, 0.0)
+        tier = "3sigma" if z >= 3 else "2sigma" if z >= 2 else "1sigma" if z >= 1 else "trong band"
+        action = metric["tiers"].get(tier, "—") if tier != "trong band" else "—"
+        print(f"{name:<28} {len(data):>4} {latest:>10.2f} {mean:>11.2f} {sd:>8.2f}  "
+              f"{tier} ({z:.1f}σ) → {action}")
+        if tier in ("2sigma", "3sigma"):
+            breaches.append((name, tier, action, latest, mean, sd))
+
+    if not breaches:
+        print("\nkhông metric nào vượt band.")
+        return 0
+
+    print("\nVƯỢT BAND:")
+    for name, tier, action, latest, mean, sd in breaches:
+        print(f"  {name}: {tier} → {action}  (mới nhất {latest:.2f}, baseline {mean:.2f} ± {sd:.2f})")
+
+    if want_intent:
+        day = datetime.date.today().isoformat()
+        for name, tier, action, latest, mean, sd in breaches:
+            if action != "propose":
+                continue
+            out = ROOT / "docs" / "_intents" / f"{day}-band-{name.replace('_','-')}.md"
+            out.write_text(f"""# Intent: {name} vượt control band ({tier})
+
+| Trường | Giá trị |
+|---|---|
+| Tác giả | Tools/bands-check |
+| Ngày | {day} |
+| Trạng thái | draft |
+| Nguồn | vượt control band |
+
+## Problem
+
+Metric `{name}` mới nhất là **{latest:.2f}**, baseline {mean:.2f} ± {sd:.2f} trên
+{cfg['window']} mẫu gần nhất. Vượt ngưỡng {tier}.
+
+## Proposed outcome
+
+Metric trở lại trong band, và nguyên nhân được khoá lại bằng một test hoặc một eval.
+
+## Affected users and systems
+
+(điền)
+
+## Constraints
+
+(điền)
+
+## Open questions
+
+- Nguyên nhân là thay đổi code, thay đổi cấu hình agent, hay môi trường máy?
+""")
+            print(f"  đã viết {out.relative_to(ROOT)}")
+    else:
+        print("\nchạy lại với --intent để sinh intent.md nháp cho các mục 'propose'.")
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

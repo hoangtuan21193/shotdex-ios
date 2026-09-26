@@ -1,0 +1,44 @@
+#!/bin/bash
+# Cổng chặn trước khi push: build + unit test. Đỏ là dừng.
+#
+#   Tools/gate [device-name]
+#
+# Cài thành pre-push hook: Tools/install-hooks
+set -uo pipefail
+
+DEVICE="${1:-iPhone 17}"
+PROJECT="ShotDex.xcodeproj"
+SCHEME="ShotDex"
+DERIVED="build/sim"
+
+cd "$(dirname "$0")/.." || exit 1
+
+run() {
+  local phase="$1"; shift
+  local log; log="$(mktemp -t shotdex-gate)"
+  if xcodebuild -project "$PROJECT" -scheme "$SCHEME" \
+       -destination "platform=iOS Simulator,name=$DEVICE" \
+       -derivedDataPath "$DERIVED" "$@" >"$log" 2>&1; then
+    echo "  ✓ $phase"
+    rm -f "$log"
+    return 0
+  fi
+  echo "  ✗ $phase — hỏng:"
+  grep -E "error:|failed|XCTAssert|Test Case .* failed" "$log" | head -30 | sed 's/^/      /'
+  echo "      log đầy đủ: $log"
+  return 1
+}
+
+log_metric() {
+  # ghi một mẫu cho Tools/bands-check (giai đoạn Maintain)
+  mkdir -p build/metrics
+  printf '{"ts":"%s","failed":%s,"duration":%s}\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" "$2" >> build/metrics/gate.jsonl
+}
+
+START=$SECONDS
+echo "gate: $SCHEME trên $DEVICE"
+if ! run build build; then log_metric 1 $((SECONDS - START)); exit 1; fi
+if ! run test test;  then log_metric 1 $((SECONDS - START)); exit 1; fi
+log_metric 0 $((SECONDS - START))
+echo "gate: xanh ($((SECONDS - START))s)"

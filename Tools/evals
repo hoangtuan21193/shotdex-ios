@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+"""Chạy bộ eval cho cấu hình agent (CLAUDE.md, skills, agents, hooks).
+
+    Tools/evals            # tất cả
+    Tools/evals design     # lọc theo id
+
+Mỗi eval gọi `claude -p` với quyền chỉ-đọc. Exit code != 0 nếu có eval trượt.
+"""
+import json, os, pathlib, subprocess, sys, time
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+EVALS = ROOT / "evals"
+READ_ONLY = "Read,Grep,Glob"
+TIMEOUT = 300
+
+
+def run_one(spec: dict) -> tuple[bool, list[str], str]:
+    cmd = ["claude", "-p", spec["prompt"], "--allowedTools", READ_ONLY]
+    try:
+        out = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True,
+                             timeout=TIMEOUT).stdout
+    except subprocess.TimeoutExpired:
+        return False, [f"quá {TIMEOUT}s"], ""
+    except FileNotFoundError:
+        print("không tìm thấy lệnh `claude` trong PATH", file=sys.stderr)
+        sys.exit(2)
+    low = out.lower()
+    if not out.strip() or "failed to authenticate" in low or "oauth session" in low:
+        return False, [f"LỖI MÔI TRƯỜNG: `claude -p` không chạy được ({out.strip()[:80] or 'không có output'}). "
+                       "Chạy Tools/evals từ terminal của bạn, nơi `claude` đã đăng nhập."], out
+    fails = []
+    for check in spec.get("checks", []):
+        why = check.get("why", "")
+        if "any_of" in check and not any(k.lower() in low for k in check["any_of"]):
+            fails.append(f"thiếu ({why}): cần một trong {check['any_of']}")
+        if "none_of" in check:
+            hit = [k for k in check["none_of"] if k.lower() in low]
+            if hit:
+                fails.append(f"cấm ({why}): thấy {hit}")
+    return not fails, fails, out
+
+
+def main() -> int:
+    needle = sys.argv[1] if len(sys.argv) > 1 else ""
+    specs = sorted(p for p in EVALS.glob("*.json") if needle in p.stem)
+    if not specs:
+        print(f"không có eval nào khớp {needle!r}")
+        return 1
+    logdir = ROOT / "build" / "evals"
+    logdir.mkdir(parents=True, exist_ok=True)
+    passed = 0
+    for path in specs:
+        spec = json.loads(path.read_text())
+        t0 = time.time()
+        ok, fails, out = run_one(spec)
+        dt = time.time() - t0
+        (logdir / f"{spec['id']}.txt").write_text(out)
+        print(f"{'✓' if ok else '✗'} {spec['id']}  ({dt:.0f}s)  {spec['description']}")
+        for f in fails:
+            print(f"      {f}")
+        if not ok:
+            print(f"      output: build/evals/{spec['id']}.txt")
+        passed += ok
+    total = len(specs)
+    print(f"\n{passed}/{total} eval xanh")
+    return 0 if passed == total else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

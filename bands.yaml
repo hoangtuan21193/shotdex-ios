@@ -1,0 +1,48 @@
+# bands.yaml — control band cho giai đoạn Maintain
+#
+# Phát hiện là ĐỊNH ĐOẠT: Tools/bands-check tính bằng số học, không hỏi model.
+# Model chỉ được gọi khi đã vượt band, và bậc quy định nó được làm gì.
+# Xem docs/PROCESS.md mục 5 và mục 8 (giai đoạn Maintain).
+
+baseline: rolling_30        # 30 mẫu gần nhất
+min_samples: 8              # ít hơn thì chỉ báo "chưa đủ dữ liệu", không kết luận
+
+metrics:
+
+  - name: gate_failure_rate
+    source: build/metrics/gate.jsonl     # Tools/gate ghi mỗi lần chạy
+    field: failed
+    direction: higher_is_worse
+    tiers:
+      1sigma: { action: log }
+      2sigma: { action: diagnose, tools: "Read,Grep,Bash(git log *)" }
+      3sigma: { action: propose, route: intent }
+
+  - name: gate_duration_seconds
+    source: build/metrics/gate.jsonl
+    field: duration
+    direction: higher_is_worse
+    tiers:
+      1sigma: { action: log }
+      2sigma: { action: diagnose, tools: "Read,Grep" }
+      3sigma: { action: propose, route: intent }
+
+  - name: review_queue_open_items
+    source: REVIEW_QUEUE.md
+    field: unchecked_boxes               # đếm dòng "- [ ]"
+    direction: higher_is_worse
+    tiers:
+      1sigma: { action: log }
+      2sigma: { action: diagnose, tools: "Read,Grep" }
+      3sigma: { action: propose, route: intent }
+
+# Metric chưa nối được, cần nhập tay hoặc nối App Store Connect sau:
+#   crash_free_rate          — từ App Store Connect
+#   crash_class_count        — nhóm từ file .ips
+#   eval_pass_rate           — từ Tools/evals
+
+routes:
+  intent:
+    # vượt 3σ thì viết một intent.md theo đúng định dạng giai đoạn Plan
+    template: docs/_templates/TEMPLATE-intent.md
+    dir: docs/_intents
