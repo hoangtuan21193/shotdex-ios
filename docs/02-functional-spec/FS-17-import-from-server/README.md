@@ -17,7 +17,7 @@ Nguồn: [intent](../../_intents/2026-09-26-import-from-server.md). Chiều ngư
 |---|---|---|
 | 01 | [Duyệt ảnh trên server](01-browse.md) | lối vào, danh sách connection, lưới ảnh, thumbnail, cache, chọn nhiều |
 | 02 | [Tải về thư viện](02-download.md) | đích, ghép cặp, kiểm file, ngày chụp, "đã có", tiến độ, lỗi |
-| 03 | [Tiêu chí nghiệm thu](03-acceptance-criteria.md) | 16 AC |
+| 03 | [Tiêu chí nghiệm thu](03-acceptance-criteria.md) | 17 AC |
 
 ## 1. Người dùng cần gì
 
@@ -32,7 +32,7 @@ thumbnail từ preview nhúng · folder con · chọn nhiều, chọn tất cả
 gộp RAW + JPEG/HEIC · giữ ngày chụp · dấu "In Library" · kiểm file · tiến độ, huỷ, giữ màn hình sáng.
 
 **Cố ý không có:** video (v1 chỉ ảnh) · tải nền · đồng bộ hai chiều · xoá/đổi tên/chuyển file trên server từ màn
-duyệt · tìm kiếm trong server · sắp theo EXIF khi chưa đọc (v1 sắp theo tên hoặc ngày sửa file).
+duyệt · tìm kiếm trong server · sắp theo EXIF mà không đọc file (Date Taken phải đọc đoạn đầu của cả folder).
 
 ## 3. Quan hệ với FS-10 (Import đã bỏ)
 
@@ -70,7 +70,8 @@ kho riêng. FS-10 ghi thêm dòng ngoại lệ này.
   Các file khác: kiểm **số byte khớp server** + ImageIO **mở được** file. Đọc file hai lần để có SHA thật thì gấp
   đôi thời gian — không làm.
 - ⚠️ CẦN QUYẾT: chạm một ô (không ở chế độ chọn) → xem lớn bằng preview nhúng, có nút Download cho riêng tấm đó.
-- ⚠️ CẦN QUYẾT: sắp xếp mặc định theo **tên file** (cùng thứ tự máy ảnh đặt tên), có menu đổi sang **ngày sửa file**.
+- **Chốt (người dùng 2026-09-26):** sắp mặc định theo **tên file**; menu Sort có Name · Date Taken · Date Modified,
+  Ascending/Descending (FS-17.01 §2).
 
 ## 7. Rủi ro đã biết
 

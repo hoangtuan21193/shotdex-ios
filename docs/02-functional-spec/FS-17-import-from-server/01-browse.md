@@ -32,7 +32,16 @@ nhúng, chọn nhiều như Library.
 - Nhãn định dạng trên ô: cùng kiểu nhãn Library (`RAW`, `JPG`, `HEIC`, `PNG`, `TIFF`, `DNG`…).
 - Dấu **In Library** (glyph `checkmark.circle.fill` nhỏ góc dưới-trái, VoiceOver "In Library") khi ảnh đã có (FS-17
   §4).
-- Sắp xếp: menu toolbar **Name** (mặc định) / **Date Modified**, nhớ theo connection.
+- **Sort** (menu toolbar), nhớ theo connection:
+
+  | Lựa chọn | Nguồn | Khi chọn |
+  |---|---|---|
+  | **Name** (mặc định) | tên file, so kiểu Finder (`IMG_2` trước `IMG_10`) | tức thì |
+  | **Date Taken** | EXIF `DateTimeOriginal` đọc từ đoạn đầu file (cùng lượt đọc với thumbnail, §3) | đọc EXIF **cả folder** (không chỉ ô đang hiện), thanh "Reading dates… 120 of 500" trên lưới, **sắp lại một lần** khi đọc xong — không nhảy ô từng cái; file không có EXIF dùng ngày sửa |
+  | **Date Modified** | ngày sửa file server trả khi liệt kê | tức thì |
+
+  Phần hai của menu: **Ascending** (mặc định) / **Descending**. Ngày chụp đã đọc được cache cùng thumbnail (khoá
+  FS-17 §4), mở lại folder không đọc lại. Ảnh ghép cặp lấy ngày của file không-RAW, thiếu thì của RAW.
 
 | Trạng thái | Hiển thị |
 |---|---|

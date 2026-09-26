@@ -28,6 +28,7 @@ Tất cả là tính năng mới; không AC nào đã đạt. Cột "Bằng ch�
 | 17.AC-8…11 | ❌ | tạo asset từ file đã có ở `PhotoLibraryService.importFile` (`PhotoLibraryService.swift:977`), chỉ một resource | `ServerDownloadSession` (actor, khuôn `ServerUploadSession`) + protocol `AssetCreating` (thật: PhotoKit `.photo` + `.alternatePhoto` + `creationDate` + album; giả: ghi lại yêu cầu) |
 | 17.AC-12 | ❌ | tạo album có sẵn trong app (Selection overlay Turn 10A, `createAlbum/addAssets`) | tái dùng đường tạo album, thêm vào album trong cùng `performChanges` |
 | 17.AC-13, 14, 16 | ❌ | khuôn `ServerUploadModel` (hold màn hình, huỷ, ra nền) | `ServerDownloadModel` cùng khuôn; `ScreenHolding` tái dùng |
+| 17.AC-17 | ❌ | — | `Domain/ServerImport/ServerFolderSort.swift` (Name kiểu Finder / Date Taken / Date Modified, chiều); đọc EXIF cả folder dùng chung hàng đợi đọc đoạn đầu của thumbnail, cache ngày cùng thumbnail |
 | 17.AC-15 | ❌ | Utilities chỉ hiện khi có ảnh đã upload (`AlbumsScreen.swift:582`) | thẻ **luôn hiện** (người dùng chốt); màn `OnServerScreen`, `ServerBrowserScreen` (lưới dựng trên `PhotoGridLayout`), ui-drive |
 | 15.AC-31, 32, 36 | ❌ | — | `WebDAVFileClient` trên `URLSession` + `PropfindParser` (Domain, test bằng XML mẫu) |
 | 15.AC-33 | ❌ | host key SFTP đã có `HostKeyTrust` (`Domain/ServerUpload/HostKeyTrust.swift`) | tổng quát thành `TrustedFingerprint` dùng cho cả chứng chỉ TLS; đổi cột `hostKeyFingerprint` → `trustedFingerprint` |
@@ -64,7 +65,7 @@ byte, ETA 30 s, hold màn hình, huỷ khi ra nền) · `RemoteFileError` (câu 
 **B — tải về**
 4. `listEntries` + `readRange` trên SMB/SFTP/fake; `ServerFolderListing` — 17.AC-1, 2.
 5. `EmbeddedPreview` + spike đo theo hãng (xem Rủi ro) — 17.AC-3, 4, 5.
-6. `RemoteThumbnailCache` — 17.AC-6.
+6. `RemoteThumbnailCache` (thumbnail + ngày chụp) + `ServerFolderSort` — 17.AC-6, 17.AC-17.
 7. `server_downloads` + `ServerImportIndex` — 17.AC-7.
 8. `ServerDownloadSession` + `PhotoKitAssetCreator` — 17.AC-8…12.
 9. `ServerDownloadModel` + sheet — 17.AC-13, 14, 16.
