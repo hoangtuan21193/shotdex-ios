@@ -35,6 +35,23 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
         self.client = client
     }
 
+    /// The shares `host` offers this login (FS-15.04 §5), before any share
+    /// is picked — the Choose… button of the form.
+    static func shareNames(host: String, port: Int, username: String, password: String) async throws -> [String] {
+        let client = SMBClient(host: host, port: port)
+        do {
+            _ = try await withConnectTimeout(host: host) {
+                try await client.login(username: username, password: password)
+            }
+            let shares = try await client.listShares()
+            _ = try? await client.logoff()
+            return SMBShareNames.visible(shares.map(\.name))
+        } catch {
+            _ = try? await client.logoff()
+            throw map(error, host: host, path: "")
+        }
+    }
+
     func disconnect() async {
         guard let client else { return }
         self.client = nil
@@ -204,7 +221,7 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
         if let connection = error as? ConnectionError {
             switch connection {
             case .cancelled: return CancellationError()
-            case .disconnected, .noData, .unknown: return RemoteFileError.connectionLost
+            case .disconnected, .unknown: return RemoteFileError.connectionLost
             }
         }
         return mapNetworkError(error, host: host)

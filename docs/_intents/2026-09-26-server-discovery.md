@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-26 |
 | Trạng thái | accepted — người dùng duyệt 2026-09-26 |
-| Tiến độ | **đang làm** (2026-09-26) — task 2/3, 4/7 AC xanh |
+| Tiến độ | **gần xong** (2026-09-26) — 3/3 task, 6/7 AC có bằng chứng; AC-27 (hộp Local Network) chỉ chứng minh được trên máy thật |
 | Nguồn | phản hồi người dùng (2026-09-26, sau khi dùng FS-15) |
 | Spec sinh ra từ đây | [FS-15.04](../02-functional-spec/FS-15-server-upload/04-find-servers.md) — AC-24…AC-30 |
 

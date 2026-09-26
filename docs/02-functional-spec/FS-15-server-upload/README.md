@@ -48,6 +48,9 @@ Utilities · dấu trên lưới · lịch sử upload trong Photo Info.
 | SMBClient | SMB 2/3 | MIT | Swift thuần, không C; ghi/đọc theo khối từ file |
 | Citadel (trên SwiftNIO SSH của Apple) | SFTP | MIT / Apache 2 | SSH viết bằng Swift; có hàm kiểm host key |
 
+- **SMBClient ghim vào commit `66eafaa` của nhánh main** (2026-09-26), không dùng bản 0.3.1: 0.3.1 kiểm độ dài gói
+  thiếu 4 byte ở nhánh STATUS_PENDING, nên có lúc phân tích một gói chưa nhận đủ và **trap** (app chết) — tái hiện
+  bằng Choose… share trên simulator; main đã sửa nhưng chưa có bản phát hành. Có bản mới thì quay về ghim theo phiên bản.
 - Loại các thư viện bọc libsmb2 / libssh: LGPL, không hợp phân phối qua App Store.
 - Cả hai chỉ app chính link; kit và extension không thấy chúng ([EX-01](../../03-extensions-and-integrations/EX-01-shotdexkit-and-edit-extension.md)).
 

@@ -152,3 +152,13 @@ extension FileServerDraft {
         portText = offer.port == transferProtocol.defaultPort ? "" : String(offer.port)
     }
 }
+
+/// The shares an SMB server lists, as the Choose… list shows them
+/// (FS-15.04 §5): no administrative `$` shares, Finder order.
+enum SMBShareNames {
+    static func visible(_ names: some Sequence<String>) -> [String] {
+        names
+            .filter { !$0.hasSuffix("$") && !$0.isEmpty }
+            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+    }
+}

@@ -64,6 +64,11 @@ struct FileServerFormScreen: View {
     @State private var test: TestState = .idle
     @State private var untrustedFingerprint: String?
     @State private var saveError: String?
+    /// Add Connection only: the servers found on the network (FS-15.04).
+    @State private var discovery: ServerDiscoveryModel?
+    @State private var shares: [String]?
+    @State private var isLoadingShares = false
+    @State private var shareError: String?
     @FocusState private var focus: Field?
     /// Called after a save, with the saved row — the upload sheet uses it to
     /// select a server it just made.
@@ -84,11 +89,17 @@ struct FileServerFormScreen: View {
     init(draft: FileServerDraft, onSaved: ((FileServer) -> Void)? = nil) {
         _draft = State(initialValue: draft)
         self.onSaved = onSaved
+        if draft.isNew {
+            _discovery = State(initialValue: ServerDiscoveryModel(browser: BonjourServerBrowser()))
+        }
     }
 
     var body: some View {
         NavigationStack {
             Form {
+                if let discovery {
+                    foundServersSection(discovery)
+                }
                 // Every field says what it is on the left, the way Settings
                 // does: a placeholder alone is gone the moment you type, and
                 // "Photos" in an empty box reads as a value, not a hint.
@@ -124,12 +135,12 @@ struct FileServerFormScreen: View {
                 }
                 Section {
                     if draft.server.transferProtocol == .smb {
-                        field("Share", text: $draft.server.share, prompt: "Required", focus: .share)
+                        shareRow
                     }
                     field("Folder", text: $draft.server.folder, prompt: "Optional", focus: .folder)
                 } footer: {
                     Text(draft.server.transferProtocol == .smb
-                         ? "The share is the shared folder's name on the server. Folder is where uploads start; you can pick another each time."
+                         ? "The share is the shared folder on the server — Choose… lists them once the username and password are in. Folder is where uploads start; you can pick another each time."
                          : "Folder is relative to your home folder on the server. It is where uploads start; you can pick another each time.")
                 }
                 Section {
@@ -191,10 +202,182 @@ struct FileServerFormScreen: View {
             ) { _ in
                 Button("OK", role: .cancel) {}
             } message: { Text($0) }
+            .confirmationDialog(
+                "Choose a Share",
+                isPresented: Binding(get: { shares != nil }, set: { if !$0 { shares = nil } }),
+                titleVisibility: .visible,
+                presenting: shares
+            ) { names in
+                ForEach(names, id: \.self) { name in
+                    Button(name) { draft.server.share = name }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: { names in
+                if names.isEmpty { Text("This server doesn't share any folders with this account.") }
+            }
             .task {
                 if !draft.isNew {
                     draft.hasSavedPassword = dependencies.fileServers.password(for: draft.server.id) != nil
                 }
+            }
+            // Opening the form is what starts the search — and so what asks
+            // for Local Network access, with the reason on screen.
+            .onAppear { discovery?.start() }
+            .onDisappear { discovery?.stop() }
+        }
+    }
+
+    // MARK: Found servers
+
+    /// "Servers Found on This Network" (FS-15.04 §2): the header and footer
+    /// are what say these are machines the app just found nearby, not a list
+    /// it came with.
+    @ViewBuilder
+    private func foundServersSection(_ discovery: ServerDiscoveryModel) -> some View {
+        Section {
+            switch discovery.state {
+            case .searching:
+                HStack(spacing: 8) {
+                    ProgressView()
+                    Text("Looking for servers…")
+                        .foregroundStyle(.secondary)
+                }
+            case .found(let servers):
+                ForEach(servers) { server in
+                    foundServerRow(server)
+                }
+            case .none:
+                Text("No servers found. Enter the address below.")
+                    .foregroundStyle(.secondary)
+            case .denied:
+                Text("ShotDex can't look for servers because Local Network access is off.")
+                    .foregroundStyle(.secondary)
+                Button("Open Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+                }
+            }
+        } header: {
+            HStack(spacing: 6) {
+                Text("Servers Found on This Network")
+                if case .found = discovery.state, discovery.isSearching {
+                    ProgressView().controlSize(.mini)
+                }
+            }
+        } footer: {
+            Text("Computers and NAS drives sharing files on the same network as this device. Tap one to fill in its address.")
+        }
+    }
+
+    @ViewBuilder
+    private func foundServerRow(_ server: DiscoveredServer) -> some View {
+        let label = HStack(spacing: 12) {
+            Image(systemName: Self.symbol(for: server.kind))
+                .font(.title3)
+                .foregroundStyle(.secondary)
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(server.name)
+                    .foregroundStyle(.primary)
+                Text(server.protocolSummary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            if isFilled(from: server) {
+                Image(systemName: "checkmark")
+                    .foregroundStyle(.tint)
+                    .accessibilityLabel("Selected")
+            }
+        }
+        .contentShape(Rectangle())
+        if server.offers.count == 1, let offer = server.offers.first {
+            Button { fill(offer, from: server) } label: { label }
+                .buttonStyle(.plain)
+        } else {
+            Menu {
+                ForEach(server.offers, id: \.self) { offer in
+                    Button(offer.service.title) { fill(offer, from: server) }
+                }
+            } label: { label }
+                .buttonStyle(.plain)
+        }
+    }
+
+    private func fill(_ offer: DiscoveredServer.Offer, from server: DiscoveredServer) {
+        draft.apply(offer, from: server)
+        test = .idle
+        focus = .username
+    }
+
+    private func isFilled(from server: DiscoveredServer) -> Bool {
+        server.offers.contains { offer in
+            offer.host == draft.server.host && offer.service.transferProtocol == draft.server.transferProtocol
+        }
+    }
+
+    private static func symbol(for kind: DiscoveredServer.Kind) -> String {
+        switch kind {
+        case .laptop: "laptopcomputer"
+        case .desktop: "desktopcomputer"
+        case .nas: "externaldrive.connected.to.line.below"
+        }
+    }
+
+    // MARK: Share
+
+    /// Share, typed or picked from the server's own list (FS-15.04 §5).
+    private var shareRow: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            // Not LabeledContent: it merges its children into one
+            // accessibility element, and Choose… could not be reached on its
+            // own — by VoiceOver or by a UI test.
+            HStack(spacing: 8) {
+                Text("Share")
+                TextField("Share", text: $draft.server.share, prompt: Text("Required"))
+                    .multilineTextAlignment(.trailing)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .focused($focus, equals: .share)
+                    .submitLabel(.next)
+                    .onSubmit { focus = next(after: .share) }
+                if isLoadingShares {
+                    ProgressView()
+                } else {
+                    Button("Choose…") { loadShares() }
+                        // A button in a row with a text field: only the
+                        // button's own frame answers the tap.
+                        .buttonStyle(.borderless)
+                        .disabled(!canListShares)
+                }
+            }
+            if let shareError {
+                Text(shareError)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+            }
+        }
+    }
+
+    private var canListShares: Bool {
+        !draft.server.host.trimmingCharacters(in: .whitespaces).isEmpty
+            && !draft.server.username.trimmingCharacters(in: .whitespaces).isEmpty
+            && !effectivePassword.isEmpty
+            && draft.port != nil
+    }
+
+    private func loadShares() {
+        let server = draft.normalized
+        let password = effectivePassword
+        isLoadingShares = true
+        shareError = nil
+        Task {
+            defer { isLoadingShares = false }
+            do {
+                shares = try await SMBFileClient.shareNames(
+                    host: server.host, port: server.port, username: server.username, password: password
+                )
+            } catch {
+                shareError = error.localizedDescription
             }
         }
     }

@@ -1268,8 +1268,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/kishikawakatsumi/SMBClient";
 			requirement = {
-				kind = upToNextMinorVersion;
-				minimumVersion = 0.3.1;
+				kind = revision;
+				revision = 66eafaa6d17e034e8036dee4b3ebc1b52cb53919;
 			};
 		};
 		AA0000182D00000100000001 /* XCRemoteSwiftPackageReference "Citadel" */ = {
