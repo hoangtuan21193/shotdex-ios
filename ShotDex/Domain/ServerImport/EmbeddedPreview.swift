@@ -1,6 +1,7 @@
 import CoreGraphics
 import Foundation
 import ImageIO
+import UniformTypeIdentifiers
 
 /// Pulls a thumbnail out of the head of an image file — the embedded JPEG
 /// previews cameras write into RAW files, or a JPEG/HEIC's EXIF thumbnail
@@ -35,9 +36,11 @@ enum EmbeddedPreview {
     /// The best preview in `head`: ImageIO's own thumbnail when it has one,
     /// else the smallest embedded JPEG that is sharp enough (cheapest to
     /// decode), else the largest there is.
-    static func thumbnail(from head: Data) -> Thumbnail? {
+    /// `isWholeFile` says `head` is the entire file — only then does a PNG,
+    /// GIF, BMP or WebP count (FS-17.01 §3).
+    static func thumbnail(from head: Data, isWholeFile: Bool = false, maxPixelSize: Int = maxPixelSize, sharpEnough: Int = sharpEnough) -> Thumbnail? {
         var best: Thumbnail?
-        if let fromImageIO = imageIOThumbnail(head) {
+        if let fromImageIO = imageIOThumbnail(head, isWholeFile: isWholeFile, maxPixelSize: maxPixelSize) {
             best = fromImageIO
             if fromImageIO.sourceLongSide >= sharpEnough { return fromImageIO }
         }
@@ -45,14 +48,14 @@ enum EmbeddedPreview {
         let pick = spans.filter { $0.longSide >= sharpEnough }.min { $0.longSide < $1.longSide }
             ?? spans.max { $0.longSide < $1.longSide }
         if let pick, pick.longSide > (best?.sourceLongSide ?? 0),
-           let image = decode(head.subdata(in: pick.range)) {
+           let image = decode(head.subdata(in: pick.range), maxPixelSize: maxPixelSize) {
             best = Thumbnail(image: image, sourceLongSide: pick.longSide)
         }
         return best
     }
 
     /// A whole small file (a PNG, or a JPEG whose EXIF thumbnail is 160 px).
-    static func thumbnail(ofFileAt url: URL) -> Thumbnail? {
+    static func thumbnail(ofFileAt url: URL, maxPixelSize: Int = maxPixelSize) -> Thumbnail? {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
@@ -206,7 +209,7 @@ enum EmbeddedPreview {
 
     // MARK: ImageIO
 
-    private static func imageIOThumbnail(_ head: Data) -> Thumbnail? {
+    private static func imageIOThumbnail(_ head: Data, isWholeFile: Bool, maxPixelSize: Int) -> Thumbnail? {
         let source = CGImageSourceCreateIncremental(nil)
         CGImageSourceUpdateData(source, head as CFData, false)
         let options: [CFString: Any] = [
@@ -215,6 +218,15 @@ enum EmbeddedPreview {
             kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
         ]
         guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
+        // PNG, GIF, BMP and WebP carry no embedded thumbnail, and from a cut-off
+        // head ImageIO hands back the part of the image it decoded — the top
+        // rows, the rest transparent. Measured: a blank tile for a 1 MB PNG.
+        // (The source's own status can't tell: the simulator calls it complete.)
+        if !isWholeFile,
+           let identifier = CGImageSourceGetType(source) as String?, let type = UTType(identifier),
+           [UTType.png, .gif, .bmp, .webP].contains(where: { type.conforms(to: $0) }) {
+            return nil
+        }
         return Thumbnail(image: image, sourceLongSide: max(image.width, image.height))
     }
 
@@ -227,7 +239,7 @@ enum EmbeddedPreview {
         return max(width, height)
     }
 
-    private static func decode(_ jpeg: Data) -> CGImage? {
+    private static func decode(_ jpeg: Data, maxPixelSize: Int) -> CGImage? {
         guard let source = CGImageSourceCreateWithData(jpeg as CFData, nil) else { return nil }
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,

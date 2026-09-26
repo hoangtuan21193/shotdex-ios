@@ -17,6 +17,9 @@ struct RemoteThumbnailer: Sendable {
     /// held no usable preview.
     var wholeFileLimit: Int64 = 25 * 1024 * 1024
     var workDirectory: URL = FileManager.default.temporaryDirectory
+    /// 400 for a grid tile; the large view asks for more.
+    var maxPixelSize = EmbeddedPreview.maxPixelSize
+    var sharpEnough = EmbeddedPreview.sharpEnough
 
     func thumbnail(for photo: ServerPhoto, in folder: String) async throws -> RemoteThumbnailResult {
         var best: EmbeddedPreview.Thumbnail?
@@ -31,7 +34,7 @@ struct RemoteThumbnailer: Sendable {
             if let thumbnail = found.thumbnail, thumbnail.sourceLongSide > (best?.sourceLongSide ?? 0) {
                 best = thumbnail
             }
-            if let best, best.sourceLongSide >= EmbeddedPreview.sharpEnough { break }
+            if let best, best.sourceLongSide >= sharpEnough { break }
         }
         return RemoteThumbnailResult(thumbnail: best, captureDate: date)
     }
@@ -47,12 +50,12 @@ struct RemoteThumbnailer: Sendable {
         let isRAW = ServerFolderListing.isRAW(file.name)
         var head = try await client.readRange(path, offset: 0, length: EmbeddedPreview.firstRead)
         let date = EmbeddedPreview.captureDate(from: head)
-        var best = EmbeddedPreview.thumbnail(from: head)
-        func sharp() -> Bool { (best?.sourceLongSide ?? 0) >= EmbeddedPreview.sharpEnough }
+        var best = EmbeddedPreview.thumbnail(from: head, isWholeFile: Int64(head.count) >= file.size, maxPixelSize: maxPixelSize, sharpEnough: sharpEnough)
+        func sharp() -> Bool { (best?.sourceLongSide ?? 0) >= self.sharpEnough }
 
         if !sharp(), let raf = EmbeddedPreview.rafPreviewRange(header: head), raf.length <= EmbeddedPreview.rafPreviewLimit {
             let jpeg = try await client.readRange(path, offset: raf.offset, length: raf.length)
-            if let found = EmbeddedPreview.thumbnail(from: jpeg), found.sourceLongSide > (best?.sourceLongSide ?? 0) {
+            if let found = EmbeddedPreview.thumbnail(from: jpeg, maxPixelSize: maxPixelSize, sharpEnough: sharpEnough), found.sourceLongSide > (best?.sourceLongSide ?? 0) {
                 best = found
             }
         }
@@ -60,15 +63,15 @@ struct RemoteThumbnailer: Sendable {
             head.append(try await client.readRange(
                 path, offset: Int64(head.count), length: EmbeddedPreview.secondRead - head.count
             ))
-            if let found = EmbeddedPreview.thumbnail(from: head), found.sourceLongSide > (best?.sourceLongSide ?? 0) {
+            if let found = EmbeddedPreview.thumbnail(from: head, maxPixelSize: maxPixelSize, sharpEnough: sharpEnough), found.sourceLongSide > (best?.sourceLongSide ?? 0) {
                 best = found
             }
         }
         if !sharp(), !isRAW, file.size <= wholeFileLimit {
-            let url = workDirectory.appendingPathComponent("ShotDexThumb-\(UUID().uuidString)-\(file.name)")
+            let url = workDirectory.appendingPathComponent("\(TemporaryWorkspace.thumbnailPrefix)\(UUID().uuidString)-\(file.name)")
             defer { try? FileManager.default.removeItem(at: url) }
             try await client.download(path, to: url, progress: { _ in })
-            if let found = EmbeddedPreview.thumbnail(ofFileAt: url), found.sourceLongSide > (best?.sourceLongSide ?? 0) {
+            if let found = EmbeddedPreview.thumbnail(ofFileAt: url, maxPixelSize: maxPixelSize), found.sourceLongSide > (best?.sourceLongSide ?? 0) {
                 best = found
             }
         }

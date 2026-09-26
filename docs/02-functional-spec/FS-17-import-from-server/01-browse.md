@@ -13,7 +13,7 @@ nhúng, chọn nhiều như Library.
 
 | Section | Nội dung |
 |---|---|
-| Connections | mỗi connection một hàng: tên · `SMB · host/share/folder` (`FileServerRow`) · chạm → duyệt, mở ở folder dùng lần trước của connection (FS-15.02 §2) |
+| Connections | mỗi connection một hàng: tên · `SMB · host/share/folder` (`FileServerRow`) · chạm → duyệt, mở ở **gốc** connection (gốc share / home) để Back đi lên được từng cấp |
 | (không tiêu đề) | **Uploaded from This Device** · số ảnh → màn Uploaded to Server hiện có (FS-15.02 §8); ẩn khi 0 |
 
 - Toolbar màn On Server: **+** → Add Connection (FS-15.04).
@@ -57,7 +57,8 @@ Thứ tự thử, dừng ở bước đầu tiên ra ảnh ≥ 320 px cạnh dà
 thử **file RAW trước** — đoạn đầu RAW rẻ hơn tải trọn JPEG.
 
 1. Đọc **256 KB đầu** file (range read).
-2. ImageIO trên đoạn đó (JPEG/HEIC có EXIF thumbnail, NEF, DNG iPhone), rồi tách **JPEG nhúng có đủ byte** — tìm điểm
+2. ImageIO trên đoạn đó (JPEG/HEIC có EXIF thumbnail, NEF, DNG iPhone) — **trừ PNG/GIF/BMP/WebP chưa đọc trọn**: ImageIO
+   trả về phần ảnh đã giải mã (dải trên, còn lại trong suốt) như thể thumbnail; đo được: ô trống với PNG 1 MB; rồi tách **JPEG nhúng có đủ byte** — tìm điểm
    kết thúc bằng cách đi qua marker, vì ImageIO gọi một JPEG bị cắt là "complete" khi mới đọc header; chọn JPEG nhỏ
    nhất mà ≥ 320 px.
 3. RAF: đọc JPEG preview theo con trỏ ở byte 84–91 của header nếu ≤ 8 MB.
@@ -72,7 +73,8 @@ px trong 256 KB; CR3 1620 px, ARW 1616 px, ORF 3200 px, RW2 trong 1 MB; RAF 4416
 - **Ngày chụp** (Date Taken) đọc từ 64 KB đầu: EXIF qua ImageIO; không được (CR3, RAF, PEF, ARW, RW2) thì chuỗi ngày
   EXIF đầu tiên trong đoạn đó — máy ảnh ghi DateTime và DateTimeOriginal bằng nhau; đúng cả 10 file mẫu.
 - Kết quả thu về 400 px (cạnh dài), lưu cache đĩa (FS-17 §4). Mở lại folder: thumbnail từ cache, không đọc mạng.
-- Chỉ làm cho ô **đang hiện hoặc sắp hiện** (một màn phía trước); cuộn qua thì huỷ; tối đa 4 luồng mỗi connection.
+- Chỉ làm cho ô **đang hiện**; cuộn qua thì huỷ. **Một lệnh tới server một lúc** mỗi connection — phiên SMB của
+  SMBClient không an toàn khi hai lệnh chạy song song, và mạng mới là giới hạn (đổi từ "tối đa 4 luồng" lúc làm).
 - Một connection dùng chung cho liệt kê + thumbnail của cả lượt duyệt; rời màn On Server thì đóng.
 
 ## 4. Chọn nhiều

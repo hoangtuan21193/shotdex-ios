@@ -177,6 +177,9 @@ struct AlbumsScreen: View {
         .navigationDestination(for: UploadedToServerDestination.self) { _ in
             UploadedToServerScreen()
         }
+        .navigationDestination(for: OnServerDestination.self) { _ in
+            OnServerScreen()
+        }
         .navigationDestination(for: TripsDestination.self) { _ in
             TripsScreen()
         }
@@ -577,20 +580,16 @@ extension AlbumsScreen {
             }
             .buttonStyle(.plain)
 
-            // Only once something has gone up: before that it is a door to
-            // an empty room, and the feature starts from a selection anyway.
-            if !dependencies.serverUploadIndex.assetIds.isEmpty {
-                NavigationLink(value: UploadedToServerDestination()) {
-                    // "On Server", not the screen's full title: a Utilities card
-                    // is 190pt, and "Uploaded to Server" ran off it.
-                    CollectionListRow(
-                        title: String(localized: "On Server", comment: "Utilities row: photos with a verified copy on a file server"),
-                        systemImage: "server.rack",
-                        spokenDetail: String(localized: "Uploaded to Server", comment: "VoiceOver detail on the On Server utilities row")
-                    )
-                }
-                .buttonStyle(.plain)
+            // Always there (FS-17 §6): the door to the file servers — browse
+            // and download — with the uploaded photos one row inside.
+            NavigationLink(value: OnServerDestination()) {
+                CollectionListRow(
+                    title: String(localized: "On Server", comment: "Utilities row: browse file servers and the photos uploaded to them"),
+                    systemImage: "server.rack",
+                    spokenDetail: String(localized: "Browse and download from your file servers", comment: "VoiceOver detail on the On Server utilities row")
+                )
             }
+            .buttonStyle(.plain)
 
             // Recently Deleted and Unable to Upload: library housekeeping
             // rather than browsing, so they sit with Duplicates the way

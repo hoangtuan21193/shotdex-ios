@@ -82,6 +82,8 @@ struct FileServerListScreen: View {
 /// One server in a list: name, protocol, where.
 struct FileServerRow: View {
     let server: FileServer
+    /// Off inside a `NavigationLink`, which draws its own.
+    var showsChevron = true
 
     var body: some View {
         HStack {
@@ -95,9 +97,11 @@ struct FileServerRow: View {
                     .truncationMode(.middle)
             }
             Spacer()
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.tertiary)
+            if showsChevron {
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
         }
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)

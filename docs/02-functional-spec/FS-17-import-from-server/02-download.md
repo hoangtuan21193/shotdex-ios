@@ -6,7 +6,7 @@
 **Một câu:** chọn đích (Library hoặc album), tải từng ảnh ra đĩa tạm, kiểm, ghi vào Photos đúng một asset mỗi ảnh
 với ngày chụp gốc, ghi lịch sử — cùng khuôn tiến độ/huỷ/lỗi với upload FS-15.
 
-## 1. Bước chuẩn bị (sheet)
+## 1. Bước chuẩn bị (sheet "Save to Photos")
 
 | Hàng | Nội dung |
 |---|---|
@@ -49,7 +49,7 @@ ra; app ra nền = huỷ.
 
 | Trường hợp | Hiển thị |
 |---|---|
-| có ảnh lưu được | "Saved N photos to <Library / tên album>." + **Show** (mở Library hoặc album, cuộn tới ảnh mới) + **Done** |
+| có ảnh lưu được | "Saved N photos to <Library / tên album>." + **Show** (đích Library: chuyển sang tab Library) + **Done**. ⚠️ Show cho đích album chưa làm — mở album từ stack server cần dựng lại mục album của Collections |
 | có lỗi | danh sách file lỗi kèm lý do + **Try Again** (chỉ những ảnh lỗi/chưa tải) |
 | bỏ qua | "M photos skipped — already in your library." |
 

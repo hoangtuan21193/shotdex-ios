@@ -108,6 +108,10 @@ final class AppDependencies {
     let serverUploadIndex: ServerUploadIndex
     /// The connections the selection ⋯ menu lists by name.
     let fileServerCatalog: FileServerCatalog
+    /// Files brought down from a server (FS-17 §4).
+    let serverDownloads: ServerDownloadStore
+    /// Server photo thumbnails and capture dates on disk (FS-17 §4).
+    let serverThumbnails: RemoteThumbnailCache
 
     init(database: AppDatabase, photoLibrary: PhotoLibraryService) {
         let metadataStore = MetadataStore(database: database)
@@ -247,6 +251,8 @@ final class AppDependencies {
         let serverUploads = ServerUploadStore(database: database)
         self.serverUploads = serverUploads
         self.serverUploadIndex = ServerUploadIndex(store: serverUploads)
+        self.serverDownloads = ServerDownloadStore(database: database)
+        self.serverThumbnails = RemoteThumbnailCache.standard
     }
 
     /// Refreshes everything the Home and Lock Screen widgets read: the next

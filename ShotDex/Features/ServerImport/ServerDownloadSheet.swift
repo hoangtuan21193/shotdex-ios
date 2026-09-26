@@ -57,7 +57,7 @@ struct ServerDownloadSheet: View {
 
     private var title: String {
         switch model.stage {
-        case .preparing: String(localized: "Download to Photos", comment: "Download from server sheet title")
+        case .preparing: String(localized: "Save to Photos", comment: "Download from server sheet title")
         case .downloading: String(localized: "Downloading", comment: "Download from server sheet title while running")
         case .finished: String(localized: "Download Finished", comment: "Download from server sheet title when done")
         }
@@ -205,7 +205,9 @@ struct ServerDownloadSheet: View {
                 if summary.savedCount > 0 {
                     Text("Saved \(summary.savedCount) photos to \(model.destinationTitle).", comment: "Download from server result headline")
                         .font(.headline)
-                    if let onShow {
+                    // Library only: opening an album from here would mean
+                    // rebuilding the Collections album entry (FS-17.02 §4).
+                    if let onShow, model.destination == .library {
                         Button("Show") {
                             onShow(model.destination)
                             dismiss()

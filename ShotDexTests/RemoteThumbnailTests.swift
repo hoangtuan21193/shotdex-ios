@@ -131,4 +131,29 @@ import UniformTypeIdentifiers
         #expect(date == Date(timeIntervalSince1970: 1_621_051_525))
         #expect(EmbeddedPreview.firstEXIFDateString(in: Data("2021:05:15 13:05:25X".utf8)) == nil)
     }
+
+    /// A cut-off PNG is not a thumbnail: ImageIO would hand back its top
+    /// rows over transparency. The whole (small) file is fetched instead.
+    @Test func partialPNGIsNotAThumbnail() async throws {
+        // Noise, so the PNG stays far bigger than the first read.
+        var generator = SystemRandomNumberGenerator()
+        let pixels = Data((0..<(1600 * 1200 * 4)).map { _ in UInt8.random(in: 0...255, using: &generator) })
+        let provider = CGDataProvider(data: pixels as CFData)!
+        let image = CGImage(width: 1600, height: 1200, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: 1600 * 4,
+                            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue),
+                            provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent)!
+        let data = NSMutableData()
+        let destination = CGImageDestinationCreateWithData(data, UTType.png.identifier as CFString, 1, nil)!
+        CGImageDestinationAddImage(destination, image, nil)
+        CGImageDestinationFinalize(destination)
+        let png = data as Data
+        #expect(png.count > EmbeddedPreview.firstRead)
+        #expect(EmbeddedPreview.thumbnail(from: png.prefix(EmbeddedPreview.firstRead)) == nil)
+
+        let client = InMemoryRemoteFileClient()
+        client.put("P/scan.png", png)
+        let photo = ServerPhoto(files: [RemoteEntry(name: "scan.png", isDirectory: false, size: Int64(png.count), modified: nil)])
+        let result = try await RemoteThumbnailer(client: client).thumbnail(for: photo, in: "P")
+        #expect(result.thumbnail?.sourceLongSide == 1600)
+    }
 }

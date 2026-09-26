@@ -48,4 +48,19 @@ struct PhotoKitAssetCreator: AssetCreating {
         }
         return AssetCreationError.failed(error.localizedDescription)
     }
+
+    /// Which of these assets are still in the library — "In Library" only
+    /// counts a copy that is still there (FS-17 §4).
+    static func existingAssetIds(_ ids: [String]) -> Set<String> {
+        guard !ids.isEmpty else { return [] }
+        let result = PHAsset.fetchAssets(withLocalIdentifiers: ids, options: nil)
+        var present = Set<String>()
+        result.enumerateObjects { asset, _, _ in present.insert(asset.localIdentifier) }
+        return present
+    }
+
+    /// `.limited` access: the sheet cannot offer albums (FS-17.02 §1).
+    static var isLimitedAccess: Bool {
+        PHPhotoLibrary.authorizationStatus(for: .readWrite) == .limited
+    }
 }

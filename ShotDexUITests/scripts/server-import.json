@@ -1,0 +1,187 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Collections",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "screenshot",
+   "name": "50-utilities"
+  },
+  {
+   "action": "tap",
+   "label": "On Server"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "51-on-server"
+  },
+  {
+   "action": "dump",
+   "name": "51-on-server"
+  },
+  {
+   "action": "tap",
+   "label": "127.0.0.1"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "screenshot",
+   "name": "52-root"
+  },
+  {
+   "action": "tap",
+   "label": "Import"
+  },
+  {
+   "action": "wait",
+   "seconds": 25
+  },
+  {
+   "action": "screenshot",
+   "name": "53-import-grid"
+  },
+  {
+   "action": "dump",
+   "name": "53-import-grid"
+  },
+  {
+   "action": "tap",
+   "label": "Sort"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "54-sort-menu"
+  },
+  {
+   "action": "tap",
+   "label": "Date Taken"
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "screenshot",
+   "name": "55-date-taken"
+  },
+  {
+   "action": "tap",
+   "label": "Select",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "HAT_8841.JPG"
+  },
+  {
+   "action": "tap",
+   "label": "DSC_0750.NEF"
+  },
+  {
+   "action": "tap",
+   "label": "IMG_0003.heic"
+  },
+  {
+   "action": "screenshot",
+   "name": "56-selected"
+  },
+  {
+   "action": "tap",
+   "label": "Download 3"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "57-download-sheet"
+  },
+  {
+   "action": "dump",
+   "name": "57-download-sheet"
+  },
+  {
+   "action": "tap",
+   "label": "Download",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 30
+  },
+  {
+   "action": "screenshot",
+   "name": "58-result"
+  },
+  {
+   "action": "tap",
+   "label": "Done",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "59-in-library"
+  }
+ ]
+}
