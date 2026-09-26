@@ -42,7 +42,7 @@ lệch, huỷ) kiểm được mà không cần mạng. Phần chỉ máy thật
 | AC-26 | chọn `DS920` giao thức WebDAV (HTTPS), cổng 5006, host phân giải `DS920.local`; đã có connection tên `DS920` | chạm | Name `DS920 (2)` lúc lưu, Protocol WebDAV, Use HTTPS bật, Host `DS920.local`, Port `5006`; chọn SMB 445 thì Port để trống | `DiscoveredServerTests.fillsDraft` + `ServerUploadStoreTests.saveNumbersDuplicateName` (WebDAV: sau khối C) |
 | AC-27 | mở Add Connection lần đầu sau khi cài | form hiện | hộp Local Network của hệ thống hiện ngay (không đợi Test Connection); từ chối → section hiện câu "Local Network access is off" + Open Settings | `scripts/server-discovery.json` (sim reset quyền) ⚠️ chưa có |
 | AC-28 | server SMB giả lập quảng bá bằng `dns-sd -R "ShotDex Test" _smb._tcp local 4450` | mở Add Connection | hàng `ShotDex Test` hiện trong ≤ 5 s; chạm → Host/Port điền đúng; tắt quảng bá → hàng biến mất | `scripts/server-discovery.json` ⚠️ chưa có |
-| AC-29 | không có máy nào quảng bá | chờ 5 s | "No servers found. Enter the address below."; các ô nhập tay dùng được | `LocalServerBrowserTests.emptyAfterTimeout` (browser giả) ⚠️ chưa có |
+| AC-29 | không có máy nào quảng bá | chờ 5 s | "No servers found. Enter the address below."; các ô nhập tay dùng được | `ServerDiscoveryModelTests.emptyAfterTimeout` (browser giả) |
 | AC-30 | server SMB có share `photos`, `IPC$`, `backup`, `ADMIN$` | Choose… | danh sách `backup`, `photos` (không share `$`); chọn `photos` → ô Share = `photos`; sai mật khẩu → câu "The username or password was rejected." dưới hàng Share | `ShareListTests.hidesSystemShares` + `scripts/server-discovery.json` ⚠️ chưa có |
 
 ### WebDAV, FTPS, FTP (FS-15.05)
