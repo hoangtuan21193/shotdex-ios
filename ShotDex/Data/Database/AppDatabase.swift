@@ -512,6 +512,31 @@ final class AppDatabase: Sendable {
             }
         }
 
+        // FS-15.01 §3a: no separate Share for SMB. The share becomes the
+        // first folder of every SMB path — the connection's folders and the
+        // paths in both histories, so In Library marks and the upload proof
+        // still match what the browser lists. Data only: no schema change.
+        migrator.registerMigration("v23-smbShareInFolder") { db in
+            let smb = "SELECT id FROM file_servers WHERE transferProtocol = 'smb' AND share != ''"
+            for table in ["server_uploads", "server_downloads"] {
+                try db.execute(sql: """
+                    UPDATE \(table)
+                    SET remotePath = (SELECT share FROM file_servers WHERE file_servers.id = \(table).serverId) || '/' || remotePath
+                    WHERE serverId IN (\(smb))
+                    """)
+            }
+            try db.execute(sql: """
+                UPDATE file_servers SET
+                    folder = CASE WHEN folder = '' THEN share ELSE share || '/' || folder END,
+                    uploadFolder = CASE
+                        WHEN uploadFolder IS NULL THEN NULL
+                        WHEN uploadFolder = '' THEN share
+                        ELSE share || '/' || uploadFolder END,
+                    share = ''
+                WHERE id IN (\(smb))
+                """)
+        }
+
         return migrator
     }
 }

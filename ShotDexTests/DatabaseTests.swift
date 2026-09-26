@@ -116,6 +116,63 @@ struct DatabaseTests {
         #expect(flags["unindexed"] == Bool?.none)
     }
 
+    /// FS-15 AC-46: the SMB share folds into every path of that connection;
+    /// other protocols keep theirs.
+    @Test func v23FoldsShareIntoFolder() throws {
+        let queue = try DatabaseQueue()
+        var migrator = AppDatabase.migrator
+        migrator.eraseDatabaseOnSchemaChange = false
+        try migrator.migrate(queue, upTo: "v22-moreFileProtocols")
+
+        try queue.write { db in
+            let servers: [[DatabaseValueConvertible?]] = [
+                ["nas", "smb", "photos", "RAW", "RAW/Trip"],
+                ["bare", "smb", "photos", "", nil],
+                ["mac", "sftp", "", "Pics", nil],
+                ["dav", "webdav", "remote.php/dav", "Pics", "Pics/x"],
+            ]
+            for row in servers {
+                try db.execute(
+                    sql: """
+                        INSERT INTO file_servers (id, name, transferProtocol, host, port, username, share, folder, uploadFolder, createdAt)
+                        VALUES (?, ?, ?, 'h', 1, 'u', ?, ?, ?, 0)
+                        """,
+                    arguments: [row[0], row[0], row[1], row[2], row[3], row[4]]
+                )
+            }
+            try db.execute(sql: """
+                INSERT INTO server_uploads (assetId, fileKey, serverId, serverName, remotePath, byteCount, sha256, uploadedAt)
+                VALUES ('a', 'k', 'nas', 'nas', 'RAW/a.CR3', 1, 's', 0), ('b', 'k', 'mac', 'mac', 'Pics/b.CR3', 1, 's', 0),
+                       ('c', 'k', NULL, 'gone', 'x/c.CR3', 1, 's', 0)
+                """)
+            try db.execute(sql: """
+                INSERT INTO server_downloads (assetId, serverId, serverName, remotePath, byteCount, sha256, downloadedAt)
+                VALUES ('d', 'nas', 'nas', 'RAW/b.JPG', 1, 's', 0)
+                """)
+        }
+
+        try migrator.migrate(queue)
+
+        try queue.read { db in
+            let servers = try Row.fetchAll(db, sql: "SELECT id, share, folder, uploadFolder FROM file_servers")
+                .reduce(into: [String: Row]()) { $0[$1["id"]] = $1 }
+            #expect(servers["nas"]?["share"] == "")
+            #expect(servers["nas"]?["folder"] == "photos/RAW")
+            #expect(servers["nas"]?["uploadFolder"] == "photos/RAW/Trip")
+            #expect(servers["bare"]?["folder"] == "photos")
+            #expect(servers["bare"]?["uploadFolder"] == String?.none)
+            #expect(servers["mac"]?["folder"] == "Pics")
+            #expect(servers["dav"]?["share"] == "remote.php/dav")
+            #expect(servers["dav"]?["uploadFolder"] == "Pics/x")
+
+            let uploads = try Row.fetchAll(db, sql: "SELECT assetId, remotePath FROM server_uploads")
+                .reduce(into: [String: String]()) { $0[$1["assetId"]] = $1["remotePath"] }
+            #expect(uploads == ["a": "photos/RAW/a.CR3", "b": "Pics/b.CR3", "c": "x/c.CR3"])
+            let download: String? = try String.fetchOne(db, sql: "SELECT remotePath FROM server_downloads")
+            #expect(download == "photos/RAW/b.JPG")
+        }
+    }
+
     /// AC-21: a panorama ShotDex stitched has no system flag, so the filter
     /// has to find it by the indexed column instead — and the one Camera made
     /// has to keep working.
