@@ -31,7 +31,7 @@ chúng ở menu ⋯ (FS-15.02 §1).
 | Ô | Mặc định | Luật |
 |---|---|---|
 | Name | host | không bắt buộc; bỏ trống thì lấy host. Trùng tên connection khác (không phân biệt hoa thường) thì thêm ` (2)`, ` (3)`… lúc lưu |
-| Protocol | SMB | SMB / SFTP / WebDAV / FTPS / FTP ([FS-15.05](05-more-protocols.md)); đổi giao thức thì cổng mặc định đổi theo nếu người dùng chưa gõ cổng |
+| Protocol | SMB | SMB / SFTP / WebDAV ([FS-15.05](05-more-protocols.md)); đổi giao thức thì cổng mặc định đổi theo nếu người dùng chưa gõ cổng |
 | Host | — | bắt buộc; tên, IPv4 hoặc tên `.local` |
 | Port | 445 (SMB) · 22 (SFTP) | 1–65535 |
 | Username / Password | — | mật khẩu che, lưu Keychain |

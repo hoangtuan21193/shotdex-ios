@@ -75,7 +75,7 @@ byte, ETA 30 s, hold màn hình, huỷ khi ra nền) · `RemoteFileError` (câu 
 11. Model + migration v22 + form theo giao thức + cảnh báo — 15.AC-34.
 12. `PropfindParser` + `WebDAVFileClient` + bộ test hợp đồng dùng chung — 15.AC-31, 32; ui-drive với wsgidav — 15.AC-36.
 13. `TrustedFingerprint` cho chứng chỉ TLS — 15.AC-33.
-14. libcurl + OpenSSL xcframework (14a) rồi `FTPFileClient` FTP + FTPS (14b) — 15.AC-35 với pyftpdlib/vsftpd.
+14. ~~FTP/FTPS~~ — **bỏ** (người dùng 2026-09-26); AC-35 xoá khỏi FS-15.
 
 Sau mỗi task: build, test của task, sửa cột "Chứng minh bằng" và dòng Tiến độ của intent tương ứng. Đụng UI thì chụp
 (`/screens`). Kết thúc mỗi khối: `/verify`.

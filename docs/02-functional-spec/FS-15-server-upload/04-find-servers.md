@@ -36,8 +36,7 @@ Section đầu tiên của form, trên các ô nhập tay.
 
 ## 3. Chạm một máy
 
-- Một giao thức → điền luôn. Nhiều giao thức → menu chọn giao thức (thứ tự: SMB, SFTP, WebDAV (HTTPS), WebDAV,
-  FTP).
+- Một giao thức → điền luôn. Nhiều giao thức → menu chọn giao thức (thứ tự: SMB, SFTP, WebDAV (HTTPS), WebDAV).
 - Điền: **Name** = tên máy (vẫn qua luật đánh số trùng tên, FS-15.01 §3), **Protocol**, **Host** = tên `.local`
   phân giải được (không lưu IP), **Port** = cổng trong bản ghi dịch vụ (để trống nếu bằng cổng mặc định).
 - Hàng vừa chọn có dấu ✓. Người dùng vẫn sửa được mọi ô sau khi điền.
@@ -51,7 +50,6 @@ Section đầu tiên của form, trên các ô nhập tay.
 | `_sftp-ssh._tcp`, `_ssh._tcp` | SFTP (`_ssh` chỉ khi không có `_sftp-ssh` cùng máy) |
 | `_webdavs._tcp` | WebDAV qua HTTPS |
 | `_webdav._tcp` | WebDAV qua HTTP |
-| `_ftp._tcp` | FTP (người dùng tự đổi sang FTPS nếu server có TLS) |
 | `_device-info._tcp` | không phải giao thức — chỉ lấy model cho icon |
 
 Tất cả khai trong `NSBonjourServices` của Info.plist; loại không khai thì iOS không trả về.

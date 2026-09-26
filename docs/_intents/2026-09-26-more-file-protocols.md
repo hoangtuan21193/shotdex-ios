@@ -1,11 +1,11 @@
-# Intent: Nối được với nhiều loại server file hơn (WebDAV, FTPS, FTP)
+# Intent: Nối được với nhiều loại server file hơn (WebDAV)
 
 | Trường | Giá trị |
 |---|---|
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-26 |
 | Trạng thái | accepted — người dùng duyệt 2026-09-26 |
-| Tiến độ | **đang làm** (2026-09-26) — task 13/14 của plan (3/4 khối C), 4/6 AC có bằng chứng (WebDAV); AC-35 FTP/FTPS chờ task 14, AC-36 thiếu upload qua WebDAV thật |
+| Tiến độ | **gần xong** (2026-09-26) — WebDAV xong (AC-31…34, 36); FTP/FTPS **bỏ** theo người dùng 2026-09-26; AC-36 thiếu upload qua WebDAV thật |
 | Nguồn | phản hồi người dùng (2026-09-26) |
 | Spec sinh ra từ đây | [FS-15.05](../02-functional-spec/FS-15-server-upload/05-more-protocols.md) — AC-31…AC-36 |
 
@@ -42,6 +42,8 @@ Những người này hôm nay không dùng được upload FS-15, và sẽ khô
 ## Constraints — ràng buộc
 
 - **Bỏ NFS** — người dùng chốt 2026-09-26 (không có thư viện iOS, NAS hay chặn theo IP/UID).
+- **Bỏ FTP và FTPS** — người dùng chốt 2026-09-26, sau khảo sát thư viện (không có thư viện Swift đạt; libcurl + OpenSSL
+  phải tự build).
 - WebDAV: dùng `URLSession` có sẵn, không thêm thư viện.
 - FTP/FTPS: iOS không còn API FTP (CFFTP bị gỡ) → cần thư viện hoặc tự viết client. Giấy phép phải hợp App Store
   (MIT/BSD/Apache, không GPL/LGPL) — cùng luật khi chọn SMBClient/Citadel.

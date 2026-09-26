@@ -32,14 +32,12 @@ struct DiscoveredServer: Identifiable, Hashable, Sendable {
         let port: Int
     }
 
-    /// The protocols the network can advertise — more than ShotDex may speak
-    /// yet; `transferProtocol` says which ones it does.
+    /// The protocols ShotDex looks for on the network.
     enum Service: Int, Hashable, Sendable, Comparable {
         case smb
         case sftp
         case webdavHTTPS
         case webdav
-        case ftp
 
         static func < (lhs: Self, rhs: Self) -> Bool { lhs.rawValue < rhs.rawValue }
 
@@ -49,25 +47,22 @@ struct DiscoveredServer: Identifiable, Hashable, Sendable {
             case .sftp: "SFTP"
             case .webdavHTTPS: "WebDAV (HTTPS)"
             case .webdav: "WebDAV"
-            case .ftp: "FTP"
             }
         }
 
-        /// The connection type this service fills in, nil while ShotDex has
-        /// no client for it.
-        var transferProtocol: FileServer.TransferProtocol? {
+        /// The connection type this service fills in.
+        var transferProtocol: FileServer.TransferProtocol {
             switch self {
             case .smb: .smb
             case .sftp: .sftp
-            case .webdavHTTPS, .webdav: RemoteFileClientFactory.supports(.webdav) ? .webdav : nil
-            case .ftp: RemoteFileClientFactory.supports(.ftp) ? .ftp : nil
+            case .webdavHTTPS, .webdav: .webdav
             }
         }
     }
 
     let name: String
     let kind: Kind
-    /// Supported offers only, best first.
+    /// Best first.
     let offers: [Offer]
 
     var id: String { name }
@@ -81,23 +76,17 @@ struct DiscoveredServer: Identifiable, Hashable, Sendable {
 /// Folds raw Bonjour records into one row per machine (FS-15.04 §2, §4).
 enum DiscoveredServerMerge {
     static let serviceTypes = [
-        "_smb._tcp", "_sftp-ssh._tcp", "_ssh._tcp", "_webdavs._tcp", "_webdav._tcp", "_ftp._tcp",
+        "_smb._tcp", "_sftp-ssh._tcp", "_ssh._tcp", "_webdavs._tcp", "_webdav._tcp",
     ]
     static let deviceInfoType = "_device-info._tcp"
 
-    /// `supports` drops services ShotDex has no client for yet — by default
-    /// those without a `transferProtocol`.
-    static func merge(
-        _ records: some Sequence<BonjourRecord>,
-        supports: (DiscoveredServer.Service) -> Bool = { $0.transferProtocol != nil }
-    ) -> [DiscoveredServer] {
+    static func merge(_ records: some Sequence<BonjourRecord>) -> [DiscoveredServer] {
         let byName = Dictionary(grouping: records, by: \.name)
         return byName.compactMap { name, records in
             let types = Set(records.map(\.type))
             var offers: [DiscoveredServer.Offer] = []
             for record in records {
                 guard let service = service(for: record.type, alongside: types),
-                      supports(service),
                       let host = record.host.map(normalizedHost), !host.isEmpty,
                       let port = record.port
                 else { continue }
@@ -121,7 +110,6 @@ enum DiscoveredServerMerge {
         case "_ssh._tcp": types.contains("_sftp-ssh._tcp") ? nil : .sftp
         case "_webdavs._tcp": .webdavHTTPS
         case "_webdav._tcp": .webdav
-        case "_ftp._tcp": .ftp
         default: nil
         }
     }
@@ -146,7 +134,7 @@ extension FileServerDraft {
     /// Tapping a found server (FS-15.04 §3): name, protocol, host and port
     /// filled in; a default port stays empty, the way the form shows it.
     mutating func apply(_ offer: DiscoveredServer.Offer, from server: DiscoveredServer) {
-        guard let transferProtocol = offer.service.transferProtocol else { return }
+        let transferProtocol = offer.service.transferProtocol
         self.server.name = server.name
         self.server.transferProtocol = transferProtocol
         self.server.host = offer.host

@@ -94,9 +94,8 @@ import Testing
         func server(_ transferProtocol: FileServer.TransferProtocol, usesTLS: Bool = true) -> FileServer {
             FileServer(name: "x", transferProtocol: transferProtocol, host: "h", username: "u", usesTLS: usesTLS)
         }
-        #expect(server(.ftp).isUnencrypted)
         #expect(server(.webdav, usesTLS: false).isUnencrypted)
-        for safe in [server(.smb), server(.sftp), server(.webdav), server(.ftps)] {
+        for safe in [server(.smb), server(.sftp), server(.webdav)] {
             #expect(!safe.isUnencrypted)
         }
     }
@@ -104,8 +103,6 @@ import Testing
     @Test func defaultPortsFollowTLS() {
         #expect(FileServer(name: "x", transferProtocol: .webdav, host: "h", username: "u").port == 443)
         #expect(FileServer(name: "x", transferProtocol: .webdav, host: "h", username: "u", usesTLS: false).port == 80)
-        #expect(FileServer(name: "x", transferProtocol: .ftps, host: "h", username: "u", tlsMode: .implicit).port == 990)
-        #expect(FileServer(name: "x", transferProtocol: .ftps, host: "h", username: "u").port == 21)
 
         var draft = FileServerDraft()
         draft.server.transferProtocol = .webdav

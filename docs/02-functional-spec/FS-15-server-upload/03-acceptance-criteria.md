@@ -45,16 +45,15 @@ lệch, huỷ) kiểm được mà không cần mạng. Phần chỉ máy thật
 | AC-29 | không có máy nào quảng bá | chờ 5 s | "No servers found. Enter the address below."; các ô nhập tay dùng được | `ServerDiscoveryModelTests.emptyAfterTimeout` (browser giả) |
 | AC-30 | server SMB có share `photos`, `IPC$`, `backup`, `ADMIN$` | Choose… | danh sách `backup`, `photos` (không share `$`); chọn `photos` → ô Share = `photos`; sai mật khẩu → câu "The username or password was rejected." dưới hàng Share | `ShareListTests.hidesSystemShares` + `scripts/server-discovery.json` (Choose… liệt kê `PHOTOS`, chọn → ô Share điền; `IPC$` ẩn) |
 
-### WebDAV, FTPS, FTP (FS-15.05)
+### WebDAV (FS-15.05)
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
 | AC-31 | server WebDAV giả (trong bộ nhớ, phản hồi PROPFIND/PUT/GET/MOVE/MKCOL/DELETE) | chạy bộ test phiên upload của AC-3…AC-9 trên client WebDAV | cùng kết quả: file tên thật + checksum khớp, không `.shotdex-part` sót, trùng tên hỏi đúng | `WebDAVFileClientTests.sessionContract` (server WebDAV giả sau URLProtocol) |
 | AC-32 | PROPFIND trả 3 `collection` + 5 file, có `%20` và UTF-8 trong href | liệt kê | 3 folder và 5 tên file đã giải mã; không có chính folder đang liệt kê | `WebDAVFileClientTests.propfindParsing` |
-| AC-33 | chứng chỉ tự ký, lần đầu | Test Connection (WebDAV HTTPS hoặc FTPS) | hộp Trust hiện dấu vân tay SHA-256 chứng chỉ lá; Trust → lưu; lần sau chứng chỉ khác → chặn "identity … changed" | `FileServerHostKeyTests.trustThenMismatchBlocks` (cùng luật `HostKeyTrust.evaluate`) + `WebDAVFileClientTests.certificateFingerprintIsOpenSSLHex` + `scripts/server-protocols.json` (wsgidav HTTPS chứng chỉ tự ký: hộp Trust hiện `SHA-256 DD:F3:…:A4:22` = `openssl x509 -fingerprint -sha256`; Trust → Connected); FTPS ⚠️ chờ task 14 |
-| AC-34 | chọn FTP, hoặc WebDAV tắt Use HTTPS | form | câu "Passwords and photos are sent unencrypted…" hiện; SMB/SFTP/WebDAV HTTPS/FTPS không hiện | `FileServerProtocolTests.unencryptedWarning` + ảnh form ⚠️ chưa chụp |
-| AC-35 | server FTP giả lập (pyftpdlib, 127.0.0.1) và FTPS explicit | upload 3 file, rồi đọc 512 KB đầu một file bằng `REST` | 3 file khớp `shasum -a 256`; đoạn đọc đúng 512 KB đầu | `scripts/server-protocols.json` + `FTPFileClientTests.restRangeRead` ⚠️ chưa có |
-| AC-36 | server WebDAV giả lập (wsgidav, 127.0.0.1) | upload 3 file, duyệt folder, tạo folder | như AC-35; màn duyệt FS-15.02 §2a liệt kê folder đúng | một phần: `scripts/server-protocols.json` (wsgidav 127.0.0.1:8443 — Test Connection ghi thử được, On Server duyệt `Photos` ra lưới JPG/HEIC có thumbnail); upload 3 file qua WebDAV thật ⚠️ mới có ở server giả (AC-31) |
+| AC-33 | chứng chỉ tự ký, lần đầu | Test Connection (WebDAV HTTPS) | hộp Trust hiện dấu vân tay SHA-256 chứng chỉ lá; Trust → lưu; lần sau chứng chỉ khác → chặn "identity … changed" | `FileServerHostKeyTests.trustThenMismatchBlocks` (cùng luật `HostKeyTrust.evaluate`) + `WebDAVFileClientTests.certificateFingerprintIsOpenSSLHex` + `scripts/server-protocols.json` (wsgidav HTTPS chứng chỉ tự ký: hộp Trust hiện `SHA-256 DD:F3:…:A4:22` = `openssl x509 -fingerprint -sha256`; Trust → Connected) |
+| AC-34 | chọn WebDAV tắt Use HTTPS | form | câu "Passwords and photos are sent unencrypted…" hiện; SMB/SFTP/WebDAV HTTPS không hiện | `FileServerProtocolTests.unencryptedWarning` + ảnh form ⚠️ chưa chụp |
+| AC-36 | server WebDAV giả lập (wsgidav, 127.0.0.1) | upload 3 file, duyệt folder, tạo folder | 3 file khớp `shasum -a 256`; màn duyệt FS-15.02 §2a liệt kê folder đúng | một phần: `scripts/server-protocols.json` (wsgidav 127.0.0.1:8443 — Test Connection ghi thử được, On Server duyệt `Photos` ra lưới JPG/HEIC có thumbnail); upload 3 file qua WebDAV thật ⚠️ mới có ở server giả (AC-31) |
 
 **Chưa chứng minh được** (verify 2026-09-26, trước khi thêm AC-24…36): AC-14 trên Duo; AC-16 trên máy thật (iCloud-only, hộp Local
 Network, Delete tới Recently Deleted). AC-20…AC-22 có ảnh trên iPhone 26.5, iPhone 18.6 và iPad nhưng chưa có trên Duo.

@@ -35,7 +35,6 @@
 		<string>_ssh._tcp</string>
 		<string>_webdavs._tcp</string>
 		<string>_webdav._tcp</string>
-		<string>_ftp._tcp</string>
 		<string>_device-info._tcp</string>
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>

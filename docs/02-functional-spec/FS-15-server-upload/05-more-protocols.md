@@ -1,12 +1,13 @@
-# FS-15.05 — WebDAV, FTPS, FTP
+# FS-15.05 — WebDAV
 
-`FS-15.05` · `Data/Sources/FileServer/WebDAVFileClient.swift` · `FTPFileClient.swift` · `Core/Models/FileServer.swift`
+`FS-15.05` · `Data/Sources/FileServer/WebDAVFileClient.swift` · `Domain/ServerUpload/PropfindParser.swift` · `Core/Models/FileServer.swift`
 · cập nhật 2026-09-26
 
-**Một câu:** ba giao thức mới đi sau cùng giao thức `RemoteFileClient`, nên upload có kiểm SHA-256, trùng tên,
+**Một câu:** WebDAV đi sau cùng giao thức `RemoteFileClient`, nên upload có kiểm SHA-256, trùng tên,
 duyệt folder và tải về (FS-17) chạy y như SMB/SFTP; giao thức không mã hoá thì cảnh báo.
 
-Nguồn: [intent](../../_intents/2026-09-26-more-file-protocols.md). **NFS bị bỏ** (người dùng chốt 2026-09-26).
+Nguồn: [intent](../../_intents/2026-09-26-more-file-protocols.md). **NFS bị bỏ**, rồi **FTP và FTPS cũng bị bỏ** (người dùng chốt
+2026-09-26, sau khảo sát: không có thư viện Swift nào đạt, còn libcurl + OpenSSL thì phải tự build và giữ cập nhật).
 
 ## 1. Giao thức và ô của form
 
@@ -15,79 +16,56 @@ Nguồn: [intent](../../_intents/2026-09-26-more-file-protocols.md). **NFS bị 
 | SMB | 445 | Share | như cũ |
 | SFTP | 22 | — | như cũ, host key |
 | **WebDAV** | 443 (HTTPS) · 80 (HTTP) | **Path** (đường dẫn gốc, ví dụ `/remote.php/dav/files/me`), công tắc **Use HTTPS** (mặc định bật) | Nextcloud, ownCloud, Synology, QNAP |
-| **FTPS** | 21 (explicit) · 990 (implicit) | **TLS Mode**: Explicit (mặc định) / Implicit | chỉ passive (EPSV → PASV) |
-| **FTP** | 21 | — | không mã hoá, cảnh báo §3 |
 
-- Picker Protocol liệt kê theo thứ tự trên, **chỉ những giao thức đã có client** (`RemoteFileClientFactory.supports`). Đổi giao thức thì ô riêng đổi theo, cổng để trống là cổng mặc định
+- Picker Protocol liệt kê theo thứ tự trên. Đổi giao thức thì ô riêng đổi theo, cổng để trống là cổng mặc định
   của lựa chọn hiện tại.
-- Folder vẫn là đường dẫn tương đối: trong share (SMB), trong home (SFTP), dưới Path (WebDAV), từ thư mục đăng nhập
-  (FTP/FTPS).
+- Folder vẫn là đường dẫn tương đối: trong share (SMB), trong home (SFTP), dưới Path (WebDAV).
 
 ## 2. Việc từng client phải làm
 
 Cùng một danh sách thao tác `RemoteFileClient` (FS-15.02 §4, FS-15.02 §2a, FS-17):
 
-| Thao tác | WebDAV | FTP/FTPS |
-|---|---|---|
-| liệt kê file / folder | `PROPFIND` Depth 1 | `MLSD`, không có thì `LIST` |
-| kích thước | `PROPFIND` getcontentlength / `HEAD` | `SIZE` |
-| tạo folder | `MKCOL` từng cấp | `MKD` từng cấp |
-| ghi theo khối từ file | `PUT` stream từ file | `STOR` qua kênh dữ liệu |
-| đọc theo khối (checksum, tải về) | `GET` stream | `RETR` stream |
-| đọc một đoạn (thumbnail FS-17) | `GET` + `Range` | `REST` + `RETR`, huỷ sau N byte |
-| đổi tên `.shotdex-part` → tên thật | `MOVE` + `Overwrite: F` | `RNFR`/`RNTO` |
-| xoá | `DELETE` | `DELE` |
+| Thao tác | WebDAV |
+|---|---|
+| liệt kê file / folder | `PROPFIND` Depth 1 |
+| kích thước | `PROPFIND` getcontentlength / `HEAD` |
+| tạo folder | `MKCOL` từng cấp |
+| ghi theo khối từ file | `PUT` luồng từ file, có `Content-Length` (không chunked) |
+| đọc theo khối (checksum, tải về) | `GET` stream |
+| đọc một đoạn (thumbnail FS-17) | `GET` + `Range` |
+| đổi tên `.shotdex-part` → tên thật | `MOVE` + `Overwrite: F` |
+| xoá | `DELETE` |
 
-- Kiểm SHA-256 bằng đọc lại vẫn bắt buộc (FS-15.02 §4). Server từ chối `Range`/`REST` → tải về vẫn chạy, chỉ
+- Kiểm SHA-256 bằng đọc lại vẫn bắt buộc (FS-15.02 §4). Server bỏ qua `Range` → tải về vẫn chạy, chỉ
   thumbnail FS-17 phải tải trọn file.
 - Đăng nhập WebDAV: Basic hoặc Digest qua `URLCredential`, **không bao giờ** gửi Basic qua HTTP mà chưa cảnh báo.
 
 ## 3. Cảnh báo không mã hoá
 
-- Chọn **FTP**, hoặc **WebDAV** tắt Use HTTPS → dưới picker hiện: "Passwords and photos are sent unencrypted. Use
+- **WebDAV** tắt Use HTTPS → dưới picker hiện: "Passwords and photos are sent unencrypted. Use
   this only on your home network." (màu cảnh báo của hệ thống, không phải đỏ).
 - Không chặn lưu. Không cảnh báo lại mỗi lần upload.
 
-## 4. Chứng chỉ TLS (WebDAV HTTPS, FTPS)
+## 4. Chứng chỉ TLS (WebDAV HTTPS)
 
 - Chứng chỉ hợp lệ theo hệ thống → không hỏi.
 - Chứng chỉ tự ký / không khớp tên (NAS nhà rất hay) → hộp **Trust This Server?** như host key SFTP (FS-15.01 §4),
-  hiện dấu vân tay SHA-256 của chứng chỉ lá. Trust → lưu; lần sau khác → chặn, câu "The identity of <host>
+  hiện dấu vân tay SHA-256 của chứng chỉ lá, dạng hex có dấu `:` như `openssl x509 -fingerprint -sha256`. Trust → lưu; lần sau khác → chặn, câu "The identity of <host>
   changed…" + **Forget Saved Key**.
 - Dùng chung cột dấu vân tay đã tin, **đổi tên thành `trustedFingerprint`** ở migration v22 (app chưa phát hành).
 
 ## 5. Thư viện
 
 - WebDAV: `URLSession`, không thêm gì.
-- FTP/FTPS: iOS không còn API FTP. Khảo sát 2026-09-26: **không có thư viện Swift nào đạt** — FileProvider (MIT)
-  bỏ từ 2019, Rebekka dựa trên CFFTPStream đã bỏ, SwiftFTPClient chỉ upload không TLS, FTPClientLib là GPL.
-- Điểm khó: vsftpd (`require_ssl_reuse=YES` mặc định), pure-ftpd, proftpd, FileZilla Server **từ chối kênh dữ liệu**
-  nếu nó không tái dùng phiên TLS của kênh lệnh. Network framework **không làm được** (không lộ session, không
-  bật TLS giữa chừng cho `AUTH TLS` — Apple DTS, developer.apple.com/forums/thread/759316). SwiftNIO-SSL không có API
-  tái dùng phiên.
-- **Chốt (người dùng 2026-09-26): libcurl + OpenSSL.** Ba đường đã cân:
-
-  | Đường | Được | Mất |
-  |---|---|---|
-  | **Tự viết**: TCP thường + Secure Transport (`SSLSetPeerID` chung cho kênh lệnh và dữ liệu) | không thêm dependency; đủ FTP + FTPS explicit/implicit, `REST`, MLSD; ~1 500 dòng | Secure Transport **deprecated** từ iOS 13, chỉ TLS 1.2; phải bọc sau protocol để thay được |
-  | **libcurl + OpenSSL** (xcframework tự build) | đủ mọi thứ, TLS 1.3, tái dùng phiên sẵn | thêm vài MB, lớp C, tự build/cập nhật OpenSSL; privacy manifest |
-  | **Chỉ FTP thường trước** (Network framework, không TLS), FTPS sau | nhỏ nhất (~800 dòng) | FTPS để sau; FTP thường không mã hoá |
-
-- Cách dùng libcurl: `ftp://` / `ftps://` (implicit) / `CURLOPT_USE_SSL` (explicit), `CURLOPT_RANGE` cho đọc một đoạn,
-  bộ nhớ đệm phiên TLS bật sẵn (kênh dữ liệu tái dùng phiên), dấu vân tay chứng chỉ qua `CURLOPT_SSL_VERIFYPEER` tắt +
-  đọc chứng chỉ lá rồi so với dấu đã tin (§4); MLSD gửi như lệnh tuỳ chỉnh, không có thì LIST.
-- Build: xcframework curl + OpenSSL (không wolfSSL — GPL; không Secure Transport — curl 8.15 đã bỏ), chỉ app chính link;
-  một lớp C nhỏ bọc `curl_easy_setopt` (hàm variadic Swift không gọi thẳng được). Thêm privacy manifest nếu thư viện
-  cần, và giấy phép curl + OpenSSL (Apache 2.0) vào Acknowledgements.
 
 ## 6. Dữ liệu
 
-- `transferProtocol` thêm `webdav`, `ftps`, `ftp`.
-- Cột mới: `tlsMode` (FTPS: `explicit`/`implicit`), `usesTLS` (WebDAV). Path của WebDAV dùng cột `share` hiện có
+- `transferProtocol` thêm `webdav`.
+- Cột mới `usesTLS` (WebDAV); `hostKeyFingerprint` đổi tên thành `trustedFingerprint` (migration v22). Path của WebDAV dùng cột `share` hiện có
   (cùng vai "gốc bên dưới host").
 - Migration thêm cột có mặc định; không đụng `photo_metadata`.
 
 ## 7. Riêng tư
 
-- NF-03 §2b ghi thêm: FTP và WebDAV qua HTTP gửi mật khẩu và ảnh **không mã hoá**, chỉ khi người dùng tự chọn, có
+- NF-03 §2b ghi thêm: WebDAV qua HTTP gửi mật khẩu và ảnh **không mã hoá**, chỉ khi người dùng tự chọn, có
   cảnh báo §3.

@@ -18,7 +18,7 @@ import Testing
             record("DS920", "_webdavs._tcp", host: "DS920.local.", port: 5006),
             record("DS920", "_smb._tcp", host: "DS920.local.", port: 445),
         ]
-        let all = DiscoveredServerMerge.merge(records, supports: { _ in true })
+        let all = DiscoveredServerMerge.merge(records)
         #expect(all.map(\.name) == ["DS920", "Hoang's MacBook"])
         #expect(all[0].protocolSummary == "SMB · WebDAV (HTTPS)")
         #expect(all[0].kind == .nas)
@@ -26,10 +26,8 @@ import Testing
         #expect(all[1].kind == .laptop)
         #expect(all[1].offers.first == .init(service: .smb, host: "Hoangs-MacBook.local", port: 445))
 
-        #expect(DiscoveredServerMerge.merge(records)[0].protocolSummary == "SMB · WebDAV (HTTPS)")
-        // A protocol with no client yet (FTP) is left out.
-        let ftp = [record("Router", "_ftp._tcp", host: "router.local.", port: 21)]
-        #expect(DiscoveredServerMerge.merge(ftp).isEmpty == !RemoteFileClientFactory.supports(.ftp))
+        // A service ShotDex does not speak (FTP) is not a row.
+        #expect(DiscoveredServerMerge.merge([record("Router", "_ftp._tcp", host: "router.local.", port: 21)]).isEmpty)
     }
 
     /// AC-25.

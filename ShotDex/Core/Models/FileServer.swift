@@ -8,8 +8,6 @@ struct FileServer: Codable, Identifiable, Hashable, Sendable {
         case smb
         case sftp
         case webdav
-        case ftps
-        case ftp
 
         var id: String { rawValue }
 
@@ -18,8 +16,6 @@ struct FileServer: Codable, Identifiable, Hashable, Sendable {
             case .smb: "SMB"
             case .sftp: "SFTP"
             case .webdav: "WebDAV"
-            case .ftps: "FTPS"
-            case .ftp: "FTP"
             }
         }
 
@@ -29,27 +25,6 @@ struct FileServer: Codable, Identifiable, Hashable, Sendable {
             case .smb: 445
             case .sftp: 22
             case .webdav: 443
-            case .ftps, .ftp: 21
-            }
-        }
-
-        /// Protocols the form offers — those with a client behind them.
-        static var selectable: [TransferProtocol] {
-            allCases.filter { RemoteFileClientFactory.supports($0) }
-        }
-    }
-
-    /// FTPS: TLS from the first byte (990) or after `AUTH TLS` (21).
-    enum TLSMode: String, Codable, CaseIterable, Identifiable, Sendable {
-        case explicit
-        case implicit
-
-        var id: String { rawValue }
-
-        var title: String {
-            switch self {
-            case .explicit: String(localized: "Explicit", comment: "FTPS TLS mode: AUTH TLS on port 21")
-            case .implicit: String(localized: "Implicit", comment: "FTPS TLS mode: TLS from the start on port 990")
             }
         }
     }
@@ -74,13 +49,11 @@ struct FileServer: Codable, Identifiable, Hashable, Sendable {
     /// connection.
     var usesDateFolders: Bool
     /// The identity the user trusted: the SFTP host key or the TLS
-    /// certificate (WebDAV over HTTPS, FTPS), `SHA256:<base64>`. Cleared
+    /// certificate (WebDAV over HTTPS). Cleared
     /// whenever the host or port changes.
     var trustedFingerprint: String?
     /// WebDAV: HTTPS (default) or plain HTTP.
     var usesTLS: Bool
-    /// FTPS only.
-    var tlsMode: TLSMode
     /// Epoch seconds of the last upload — the prepare step picks the most
     /// recent one.
     var lastUsedAt: Int?
@@ -99,7 +72,6 @@ struct FileServer: Codable, Identifiable, Hashable, Sendable {
         usesDateFolders: Bool = false,
         trustedFingerprint: String? = nil,
         usesTLS: Bool = true,
-        tlsMode: TLSMode = .explicit,
         lastUsedAt: Int? = nil,
         createdAt: Int = Int(Date().timeIntervalSince1970)
     ) {
@@ -108,8 +80,7 @@ struct FileServer: Codable, Identifiable, Hashable, Sendable {
         self.transferProtocol = transferProtocol
         self.host = host
         self.usesTLS = usesTLS
-        self.tlsMode = tlsMode
-        self.port = port ?? Self.defaultPort(transferProtocol, usesTLS: usesTLS, tlsMode: tlsMode)
+        self.port = port ?? Self.defaultPort(transferProtocol, usesTLS: usesTLS)
         self.username = username
         self.share = share
         self.folder = folder
@@ -121,28 +92,24 @@ struct FileServer: Codable, Identifiable, Hashable, Sendable {
     }
 
     /// The port this connection uses when none is typed.
-    var defaultPort: Int { Self.defaultPort(transferProtocol, usesTLS: usesTLS, tlsMode: tlsMode) }
+    var defaultPort: Int { Self.defaultPort(transferProtocol, usesTLS: usesTLS) }
 
-    static func defaultPort(_ transferProtocol: TransferProtocol, usesTLS: Bool, tlsMode: TLSMode) -> Int {
-        switch transferProtocol {
-        case .webdav: usesTLS ? 443 : 80
-        case .ftps: tlsMode == .implicit ? 990 : 21
-        default: transferProtocol.defaultPort
-        }
+    static func defaultPort(_ transferProtocol: TransferProtocol, usesTLS: Bool) -> Int {
+        transferProtocol == .webdav && !usesTLS ? 80 : transferProtocol.defaultPort
     }
 
     /// Passwords and photos cross the network in the clear (FS-15.05 §3).
     var isUnencrypted: Bool {
-        transferProtocol == .ftp || (transferProtocol == .webdav && !usesTLS)
+        transferProtocol == .webdav && !usesTLS
     }
 
     /// Whether the connection has a server identity to trust: an SSH host
     /// key, or a TLS certificate.
     var hasTrustedIdentity: Bool {
         switch transferProtocol {
-        case .sftp, .ftps: true
+        case .sftp: true
         case .webdav: usesTLS
-        case .smb, .ftp: false
+        case .smb: false
         }
     }
 
