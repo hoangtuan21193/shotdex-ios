@@ -4,7 +4,7 @@
 |---|---|
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-26 |
-| Trạng thái | draft |
+| Trạng thái | accepted — người dùng duyệt 2026-09-26 |
 | Tiến độ | **chưa làm** (2026-09-26) — chưa có spec |
 | Nguồn | phản hồi người dùng (2026-09-26) |
 | Spec sinh ra từ đây | (điền khi sang Design) — dự kiến FS-17, hoặc FS-15.04 |

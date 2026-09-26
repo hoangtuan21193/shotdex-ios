@@ -4,7 +4,7 @@
 |---|---|
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-26 |
-| Trạng thái | draft |
+| Trạng thái | accepted — người dùng duyệt 2026-09-26 |
 | Tiến độ | **chưa làm** (2026-09-26) — chưa có spec |
 | Nguồn | phản hồi người dùng (2026-09-26, sau khi dùng FS-15) |
 | Spec sinh ra từ đây | (điền khi sang Design) — dự kiến bổ sung [FS-15.01](../02-functional-spec/FS-15-server-upload/01-servers-and-settings.md) |
