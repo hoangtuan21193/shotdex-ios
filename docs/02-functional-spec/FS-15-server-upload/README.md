@@ -2,10 +2,10 @@
 
 `FS-15` · tier A (Settings, sheet upload) + B (dấu trên lưới) · `ShotDex/Features/ServerUpload/`
 · `Data/Sources/FileServer/` · `Domain/ServerUpload/` · test `ShotDexTests/ServerUpload*Tests.swift`
-· cập nhật 2026-09-24
+· cập nhật 2026-09-26
 
-**Một câu:** khai file server SMB/SFTP trong Settings, chọn ảnh → ⋯ → **Upload to Server**, nhận bản gốc
-trên server đã kiểm checksum, rồi được hỏi có xoá khỏi máy không.
+**Một câu:** khai connection SMB/SFTP trong Settings, chọn ảnh → ⋯ → **Upload to** ▸ tên connection, chọn folder,
+nhận bản gốc trên server đã kiểm checksum, rồi được hỏi có xoá khỏi máy không.
 
 Nguồn: [intent](../../_intents/2026-09-24-local-network-upload.md).
 
@@ -13,9 +13,9 @@ Nguồn: [intent](../../_intents/2026-09-24-local-network-upload.md).
 
 | # | Phần | Trả lời |
 |---|---|---|
-| 01 | [Server và Settings](01-servers-and-settings.md) | danh sách server, form, thử kết nối, host key, quyền Local Network |
-| 02 | [Luồng upload](02-upload-flow.md) | lối vào, chọn file, đường dẫn, trùng tên, checksum, tiến độ, huỷ, xoá |
-| 03 | [Tiêu chí nghiệm thu](03-acceptance-criteria.md) | 16 AC và cái nào chưa chứng minh |
+| 01 | [Server và Settings](01-servers-and-settings.md) | danh sách connection, form, tên, thử kết nối, host key, quyền Local Network |
+| 02 | [Luồng upload](02-upload-flow.md) | menu connection, chọn folder, folder theo ngày, chọn file, trùng tên, checksum, tiến độ, huỷ, xoá |
+| 03 | [Tiêu chí nghiệm thu](03-acceptance-criteria.md) | 23 AC và cái nào chưa chứng minh |
 
 ## 1. Người dùng cần gì
 
@@ -25,7 +25,9 @@ nằm nguyên vẹn trên đó.
 
 ## 2. Phạm vi
 
-**Có:** SMB 2/3 và SFTP · nhiều server · chọn loại file mỗi lần đẩy · thư mục theo ngày chụp · hỏi khi
+**Có:** SMB 2/3 và SFTP · nhiều connection, cùng server nhiều lần, có tên · chọn connection trong menu ⋯ ·
+chọn và tạo folder đích trên server, nhớ theo connection · thư mục theo ngày chụp là **tuỳ chọn** · chọn loại
+file mỗi lần đẩy · hỏi khi
 trùng tên, có so hai ảnh · kiểm SHA-256 sau khi ghi · hỏi xoá khi xong · hàng **Uploaded to Server** trong
 Utilities · dấu trên lưới · lịch sử upload trong Photo Info.
 
@@ -50,7 +52,7 @@ Utilities · dấu trên lưới · lịch sử upload trong Photo Info.
 
 | | |
 |---|---|
-| Bảng server | tên · giao thức · host · cổng · user · share (SMB) · thư mục đích · dấu vân tay host (SFTP) · lần dùng cuối |
+| Bảng server | tên · giao thức · host · cổng · user · share (SMB) · folder mặc định · folder dùng lần trước · Date Folders lần trước · dấu vân tay host (SFTP) · lần dùng cuối |
 | Mật khẩu | **Keychain**, khoá theo id server; không bao giờ vào database hay log |
 | Bảng lịch sử upload | id ảnh · id server + **tên server lúc đẩy** · loại file · đường dẫn trên server · số byte · SHA-256 · thời điểm |
 | Người dùng tự nhập? | có → **hai bảng riêng**, không cột nào trong bảng metadata ([BD-02](../../01-basic-design/BD-02-database-design.md)) |
@@ -79,6 +81,10 @@ Utilities · dấu trên lưới · lịch sử upload trong Photo Info.
 - ⚠️ CẦN QUYẾT: **ở "chỉ RAW"**, cặp RAW+JPEG chỉ được đề nghị xoá khi JPEG cũng đã có trên một server
   — xoá asset là mất cả hai file.
 - ⚠️ CẦN QUYẾT: tên bản đã sửa trên server là `<tên gốc>_edited.<đuôi>`, cùng thư mục với bản gốc.
+
+- ⚠️ CẦN QUYẾT (2026-09-26): **chữ "Connection"** cho dòng đã khai (Add / Edit / Delete Connection, menu con
+  "Upload to"), còn hàng Settings và tiêu đề danh sách vẫn là **File Servers**, hàng Utilities vẫn **On Server** —
+  server là nơi, connection là cách tới đó.
 
 ## 7. Rủi ro đã biết
 

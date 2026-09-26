@@ -1,34 +1,64 @@
 # FS-15.02 — Luồng upload
 
-`FS-15.02` · `Features/ServerUpload/ServerUploadSheet.swift` · `ServerUploadModel` · `Domain/ServerUpload/`
-· `Data/Database/ServerUploadStore.swift` · cập nhật 2026-09-24
+`FS-15.02` · `Features/ServerUpload/ServerUploadSheet.swift` · `ServerUploadModel` · `RemoteFolderBrowser`
+· `Domain/ServerUpload/` · `Data/Database/ServerUploadStore.swift` · cập nhật 2026-09-26
 
-**Một câu:** một sheet đi bốn bước — chuẩn bị → đang đẩy → (trùng tên) → kết quả — và chỉ đề nghị xoá
-những tấm đã khớp checksum.
+**Một câu:** chọn connection ngay trong menu ⋯, chọn folder đích (nhớ lần trước), rồi một sheet đi bốn bước —
+chuẩn bị → đang đẩy → (trùng tên) → kết quả — và chỉ đề nghị xoá những tấm đã khớp checksum.
 
 ## 1. Lối vào
 
-- Chế độ chọn → **⋯ → Upload to Server** ở Library, album thường, smart album (không ở On This Day —
-  [FS-01.06](../FS-01-library/06-multi-select.md)). Mờ khi chưa chọn ảnh.
-- Chưa có server nào: dòng vẫn bật, sheet mở thẳng vào form **Add Server**, lưu xong quay về bước chuẩn bị.
+Chế độ chọn → **⋯** ở Library, album thường, smart album (không ở On This Day —
+[FS-01.06](../FS-01-library/06-multi-select.md)). Dòng upload mờ khi chưa chọn ảnh, và đổi dạng theo số
+connection (một **connection** = một dòng đã khai trong Settings → File Servers, FS-15.01):
+
+| Số connection | Dòng trong ⋯ | Chạm vào |
+|---|---|---|
+| 0 | **Upload to Server…** | sheet mở thẳng form **Add Connection**; lưu xong vào bước chuẩn bị với connection vừa tạo |
+| 1 | **Upload to <tên>** | sheet mở ở bước chuẩn bị với connection đó |
+| ≥ 2 | menu con **Upload to** ▸ | liệt kê **tên** từng connection, sắp theo tên, dòng phụ `SMB · host/share/folder`; cuối menu là **Add Connection…** |
+
+- Chọn một tên trong menu con → sheet mở với **đúng connection đó**, không phải connection dùng lần trước.
+- **Add Connection…** trong menu con → form; lưu xong vào bước chuẩn bị với connection mới.
 
 ## 2. Bước chuẩn bị
 
 | Hàng | Nội dung |
 |---|---|
-| Server | server dùng lần trước; chạm để chọn server khác |
+| Connection | ≥ 2 connection: picker theo tên, đổi được mà không phải mở lại menu. 1 connection: hàng chỉ đọc |
+| Folder | folder đích; chạm để duyệt (§2a). Mở sẵn **folder dùng lần trước với connection này**; chưa đẩy lần nào thì folder khai trong form (rỗng = gốc) |
+| Date Folders | công tắc; bật thì chia `năm/năm-tháng-ngày` theo ngày chụp bên trong Folder (§3) |
 | Files | **Only RAW** · **All Originals** (mặc định) · **Originals + Edited** |
 | Tóm tắt | `N photos · X files · ~Y GB`; ở Only RAW thêm `M have no RAW and will be skipped` |
 | Ghi chú | "Keep ShotDex open until the upload finishes. The screen stays on." |
 
 - Nút **Upload** mờ khi 0 file sẽ đẩy. Loại file **không** lưu sang lần sau — mỗi lần đều chọn.
+- **Folder** và **Date Folders** nhớ **theo từng connection**, ghi lại lúc bấm Upload. Connection mới: Date
+  Folders **tắt**. Sửa ô Folder trong form connection thì quên folder đã nhớ — form thắng.
 - **All Originals** = mọi file gốc của asset (RAW, JPEG kèm, đoạn video Live Photo, video). **Originals +
   Edited** thêm bản đã sửa nếu ảnh có chỉnh trong Photos.
 
+## 2a. Duyệt folder trên server
+
+- Đẩy trong sheet, mở ở folder đang chọn; **Back** đi lên từng folder cha tới gốc (gốc share với SMB, thư mục
+  home với SFTP).
+- Mỗi màn: các **folder con** (bỏ tên bắt đầu bằng `.`), sắp theo tên kiểu Finder (`2` trước `10`). Hàng đầu
+  **Use This Folder** chọn folder đang mở và quay về bước chuẩn bị. Toolbar có **New Folder**: hỏi tên, tạo trên
+  server, rồi mở luôn folder đó.
+- Tên folder mới: không rỗng, không chứa `/`. Trùng folder đã có thì mở folder đó, không báo lỗi.
+- Đang nối: spinner. Hỏng (không tới được máy, sai mật khẩu, host key chưa tin…) → câu lỗi của FS-15.01 §3 +
+  **Try Again**; màn không kẹt, Back vẫn về được. Folder gõ tay trong form không còn trên server thì bước đẩy tự
+  tạo lại (§3) — duyệt không bắt buộc.
+- Một kết nối dùng cho cả lượt duyệt; đóng khi đóng sheet.
+
 ## 3. Đường dẫn trên server
 
-`<thư mục đích>/<năm>/<năm-tháng-ngày>/<tên file gốc>` — ngày chụp theo giờ máy. Ảnh không có ngày chụp
-dùng ngày tạo asset. Bản đã sửa: `<tên gốc>_edited.<đuôi của bản sửa>`. Thư mục thiếu thì tạo.
+| Date Folders | Đường dẫn |
+|---|---|
+| tắt | `<folder>/<tên file gốc>` |
+| bật | `<folder>/<năm>/<năm-tháng-ngày>/<tên file gốc>` — ngày chụp theo giờ máy; không có ngày chụp thì dùng ngày tạo asset |
+
+Bản đã sửa: `<tên gốc>_edited.<đuôi của bản sửa>`, cạnh bản gốc. Thư mục thiếu thì tạo.
 
 ## 4. Đẩy một file
 

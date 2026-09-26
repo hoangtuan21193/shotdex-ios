@@ -1,9 +1,13 @@
 # FS-15.01 — Server và Settings
 
 `FS-15.01` · `Features/ServerUpload/FileServerListScreen.swift` · `FileServerFormScreen.swift`
-· `Data/Database/FileServerStore.swift` · cập nhật 2026-09-24
+· `Data/Database/FileServerStore.swift` · `Domain/ServerUpload/FileServerNaming.swift` · cập nhật 2026-09-26
 
-**Một câu:** danh sách server trong Settings, form khai một server, và nút thử kết nối nói rõ chỗ hỏng.
+**Một câu:** danh sách connection trong Settings, form khai một connection, và nút thử kết nối nói rõ chỗ hỏng.
+
+**Connection** = một dòng đã khai: một server + tài khoản + folder mặc định, có **tên riêng**. Cùng một server
+thêm được nhiều lần (ví dụ "NAS – RAW" và "NAS – Phone", khác folder hoặc khác user); tên là thứ phân biệt
+chúng ở menu ⋯ (FS-15.02 §1).
 
 ## 1. Lối vào
 
@@ -12,28 +16,30 @@
 - Bố cục rộng: cùng hàng đó nằm trong mục **Sharing and Export**. Sidebar giữ 9 mục.
 - Search của Settings tìm được hàng này bằng "server", "SMB", "SFTP", "NAS".
 
-## 2. Danh sách server
+## 2. Danh sách connection
 
 | Trạng thái | Hiển thị |
 |---|---|
-| rỗng | câu "Add a server to upload originals to your NAS or computer." + nút **Add Server** |
-| có server | mỗi hàng: tên · `SMB` hoặc `SFTP` · `host/đường dẫn`; chạm để sửa, vuốt để xoá |
+| rỗng | câu "Add a connection to upload originals to your NAS or computer." + nút **Add Connection** |
+| có connection | mỗi hàng: tên · `SMB` hoặc `SFTP` · `host/đường dẫn`; chạm để sửa, vuốt để xoá |
 
-- Nút **+** trên toolbar thêm server.
-- Xoá server: hộp xác nhận có nút Huỷ; câu nói rõ **lịch sử upload vẫn giữ**, ảnh không bị đụng.
+- Nút **+** trên toolbar thêm connection (nhãn VoiceOver "Add Connection").
+- Xoá connection (**Delete Connection**): hộp xác nhận có nút Huỷ; câu nói rõ **lịch sử upload vẫn giữ**, ảnh không bị đụng.
 
-## 3. Form server
+## 3. Form connection
 
 | Ô | Mặc định | Luật |
 |---|---|---|
-| Name | host | bắt buộc sau khi bỏ trống thì lấy host |
+| Name | host | không bắt buộc; bỏ trống thì lấy host. Trùng tên connection khác (không phân biệt hoa thường) thì thêm ` (2)`, ` (3)`… lúc lưu |
 | Protocol | SMB | SMB / SFTP; đổi giao thức thì cổng mặc định đổi theo nếu người dùng chưa gõ cổng |
 | Host | — | bắt buộc; tên, IPv4 hoặc tên `.local` |
 | Port | 445 (SMB) · 22 (SFTP) | 1–65535 |
 | Username / Password | — | mật khẩu che, lưu Keychain |
 | Share | — | **chỉ SMB**, bắt buộc |
-| Folder | rỗng = gốc share / thư mục home | đường dẫn tương đối, dấu `/` thừa bị bỏ |
+| Folder | rỗng = gốc share / thư mục home | folder **mặc định**; sheet upload đổi được mỗi lần. Đường dẫn tương đối, dấu `/` thừa bị bỏ |
 
+- Tiêu đề form: **Add Connection** / **Edit Connection**. Chân section Folder không nhắc thư mục theo ngày — đó là
+  công tắc ở sheet upload.
 - **Save** mờ khi thiếu ô bắt buộc. Lưu **không** bắt buộc thử kết nối trước — server có thể đang tắt.
 - Hàng **Test Connection** chạy bốn bước và dừng ở bước hỏng đầu tiên: tìm thấy máy → đăng nhập → mở thư
   mục → ghi thử rồi xoá một file nhỏ.
