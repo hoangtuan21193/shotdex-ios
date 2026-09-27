@@ -159,7 +159,7 @@ final class FilesFolderClient: RemoteFileClient, @unchecked Sendable {
 
     func upload(_ localURL: URL, to path: String, progress: @escaping @Sendable (Int64) -> Void) async throws {
         let url = try url(path)
-        let size = (try? localURL.resourceValues(forKeys: [.fileSizeKey]).fileSize).map { Int64($0 ?? 0) } ?? 0
+        let size = Int64((try? localURL.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
         try await coordinated {
             try Self.write(url, options: .forReplacing) { url in
                 guard FileManager.default.fileExists(atPath: url.deletingLastPathComponent().path) else {
@@ -203,7 +203,7 @@ final class FilesFolderClient: RemoteFileClient, @unchecked Sendable {
                 return try FileChecksum.sha256(of: localURL)
             }
         }
-        progress((try? localURL.resourceValues(forKeys: [.fileSizeKey]).fileSize).map { Int64($0 ?? 0) } ?? 0)
+        progress(Int64((try? localURL.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0))
         return hash
     }
 
