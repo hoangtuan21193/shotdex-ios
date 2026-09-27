@@ -31,11 +31,11 @@ struct ServerDownloadSheet: View {
             if phase == .background, model.stage == .downloading { model.cancel() }
         }
         .onDisappear { model.tearDown() }
-        .alert("Stop Downloading?", isPresented: $isConfirmingCancel) {
+        .alert("Stop Importing?", isPresented: $isConfirmingCancel) {
             Button("Stop", role: .destructive) { model.cancel() }
-            Button("Keep Downloading", role: .cancel) {}
+            Button("Keep Importing", role: .cancel) {}
         } message: {
-            Text("Photos already saved stay in your library.")
+            Text("Photos already imported stay in your library.")
         }
         .alert("New Album", isPresented: $isNamingAlbum) {
             TextField("Name", text: $newAlbumName)
@@ -57,9 +57,9 @@ struct ServerDownloadSheet: View {
 
     private var title: String {
         switch model.stage {
-        case .preparing: String(localized: "Save to Photos", comment: "Download from server sheet title")
-        case .downloading: String(localized: "Downloading", comment: "Download from server sheet title while running")
-        case .finished: String(localized: "Download Finished", comment: "Download from server sheet title when done")
+        case .preparing: String(localized: "Import to Library", comment: "Import from server sheet title")
+        case .downloading: String(localized: "Importing", comment: "Import from server sheet title while running")
+        case .finished: String(localized: "Import Finished", comment: "Import from server sheet title when done")
         }
     }
 
@@ -71,7 +71,7 @@ struct ServerDownloadSheet: View {
                 Button("Cancel") { dismiss() }
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button("Download") { model.start() }
+                Button("Import") { model.start() }
                     .disabled(!model.canStart)
             }
         case .downloading:
@@ -100,19 +100,62 @@ struct ServerDownloadSheet: View {
         Form {
             Section {
                 if model.isLimitedAccess {
-                    LabeledContent("Save To", value: model.destinationTitle)
+                    destinationRow("Library Only", isChosen: true) {}
                 } else {
-                    Picker("Save To", selection: $model.destination) {
-                        Text("Library").tag(ServerDownloadModel.Destination.library)
-                        ForEach(model.albums) { album in
-                            Text(album.title).tag(ServerDownloadModel.Destination.album(id: album.id))
+                    // Three plain choices (FS-17.02 §1): library only, an
+                    // album that exists, or one made here.
+                    destinationRow("Library Only", isChosen: model.choice == .libraryOnly) {
+                        model.destination = .library
+                    }
+                    NavigationLink {
+                        AlbumChoiceList(model: model)
+                    } label: {
+                        HStack {
+                            chosenMark(model.choice == .existingAlbum)
+                            Text("Existing Album")
+                            Spacer()
+                            if model.choice == .existingAlbum {
+                                Text(model.destinationTitle)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
                         }
                     }
-                    Button("New Album…") {
+                    .disabled(model.albums.isEmpty)
+                    Button {
                         newAlbumName = ""
                         isNamingAlbum = true
+                    } label: {
+                        HStack {
+                            chosenMark(model.choice == .newAlbum)
+                            Text("New Album…")
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            if model.choice == .newAlbum {
+                                Text(model.destinationTitle)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            } header: {
+                Text("Import To")
+            } footer: {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(model.destinationSentence)
+                    if model.isLimitedAccess {
+                        Text("Allow full access to Photos to add them to an album too.")
+                        Button("Open Settings") {
+                            if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+                        }
+                        .font(.footnote)
                     }
                 }
+            }
+            Section {
                 if model.inLibraryCount > 0 {
                     Toggle(isOn: $model.skipsInLibrary) {
                         VStack(alignment: .leading, spacing: 2) {
@@ -123,19 +166,9 @@ struct ServerDownloadSheet: View {
                         }
                     }
                 }
-            } footer: {
-                if model.isLimitedAccess {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Allow full access to Photos to save into an album.")
-                        Button("Open Settings") {
-                            if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
-                        }
-                        .font(.footnote)
-                    }
-                }
             }
             Section {
-                Label("Keep ShotDex open until the download finishes. The screen stays on.", systemImage: "iphone")
+                Label("Keep ShotDex open until the import finishes. The screen stays on.", systemImage: "iphone")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             } footer: {
@@ -158,10 +191,10 @@ struct ServerDownloadSheet: View {
         Form {
             Section {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Downloading \(model.progress.index + 1) of \(model.progress.count)", comment: "Download from server progress headline")
+                    Text("Importing \(model.progress.index + 1) of \(model.progress.count)", comment: "Download from server progress headline")
                         .font(.headline)
                     ProgressView(value: model.progress.fraction)
-                        .accessibilityLabel("Download progress")
+                        .accessibilityLabel("Import progress")
                         .accessibilityValue(Text(model.progress.fraction, format: .percent.precision(.fractionLength(0))))
                     Text(byteLine)
                         .font(.subheadline)
@@ -203,7 +236,9 @@ struct ServerDownloadSheet: View {
         return Form {
             Section {
                 if summary.savedCount > 0 {
-                    Text("Saved \(summary.savedCount) photos to \(model.destinationTitle).", comment: "Download from server result headline")
+                    Text(model.destination == .library
+                         ? String(localized: "Imported \(summary.savedCount) photos into your library.", comment: "Import from server result headline, library only")
+                         : String(localized: "Imported \(summary.savedCount) photos into your library and “\(model.destinationTitle)”.", comment: "Import from server result headline, with an album"))
                         .font(.headline)
                     // Library only: opening an album from here would mean
                     // rebuilding the Collections album entry (FS-17.02 §4).
@@ -214,7 +249,7 @@ struct ServerDownloadSheet: View {
                         }
                     }
                 } else {
-                    Text("Nothing was saved.")
+                    Text("Nothing was imported.")
                         .font(.headline)
                 }
                 if let stop = summary.stopMessage {
@@ -236,16 +271,70 @@ struct ServerDownloadSheet: View {
                         }
                     }
                     if summary.notAttemptedCount > 0 {
-                        Text("\(summary.notAttemptedCount) photos not downloaded yet.", comment: "Download from server result: photos the stopped batch never reached")
+                        Text("\(summary.notAttemptedCount) photos not imported yet.", comment: "Download from server result: photos the stopped batch never reached")
                             .foregroundStyle(.secondary)
                     }
                     if model.hasRemaining {
                         Button("Try Again") { model.tryAgain() }
                     }
                 } header: {
-                    Text("Not Downloaded")
+                    Text("Not Imported")
                 }
             }
         }
+    }
+
+    private func destinationRow(_ title: LocalizedStringKey, isChosen: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                chosenMark(isChosen)
+                Text(title)
+                    .foregroundStyle(.primary)
+                Spacer()
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isChosen ? .isSelected : [])
+    }
+
+    /// The check in front of the chosen way in, blank space otherwise so
+    /// the three titles line up.
+    private func chosenMark(_ isChosen: Bool) -> some View {
+        Image(systemName: "checkmark")
+            .font(.body.weight(.semibold))
+            .foregroundStyle(.tint)
+            .opacity(isChosen ? 1 : 0)
+            .frame(width: 22)
+            .accessibilityHidden(true)
+    }
+}
+
+/// Existing Album: the user's albums, the chosen one checked (FS-17.02 §1).
+private struct AlbumChoiceList: View {
+    @Environment(\.dismiss) private var dismiss
+    let model: ServerDownloadModel
+
+    var body: some View {
+        List(model.albums) { album in
+            Button {
+                model.destination = .album(id: album.id)
+                dismiss()
+            } label: {
+                HStack {
+                    Text(album.title)
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    if model.destination == .album(id: album.id) {
+                        Image(systemName: "checkmark")
+                            .foregroundStyle(.tint)
+                    }
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+        .navigationTitle("Choose Album")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }

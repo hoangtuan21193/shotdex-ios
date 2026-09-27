@@ -108,6 +108,26 @@ import Testing
         #expect(setup.creator.requests.first?.albumId == "album-2")
     }
 
+    /// FS-17 AC-30: three plain ways in, and a sentence saying where the
+    /// photos end up.
+    @Test func threeDestinationChoices() async throws {
+        let setup = try makeSetup(count: 1)
+        let model = setup.model
+        #expect(model.choice == .libraryOnly)
+        #expect(model.destinationSentence == "Photos are added to your library only, not to any album.")
+
+        model.destination = .album(id: "album-1")
+        #expect(model.choice == .existingAlbum)
+        #expect(model.destinationSentence == "Photos are added to your library and to the album “Trip”.")
+
+        await model.createAlbum(named: "Picks")
+        #expect(model.choice == .newAlbum)
+        #expect(model.destinationTitle == "Picks")
+
+        model.destination = .library
+        #expect(model.choice == .libraryOnly)
+    }
+
     @Test func notEnoughSpaceBlocksStart() throws {
         let setup = try makeSetup(count: 2, freeSpace: 500_000_000)
         #expect(setup.model.spaceShortfall != nil)

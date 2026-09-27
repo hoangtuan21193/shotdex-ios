@@ -15,7 +15,7 @@ với ngày chụp gốc, ghi lịch sử — cùng khuôn tiến độ/huỷ/l�
 | Tóm tắt | `N photos · X files · ~Y GB` |
 | Ghi chú | "Keep ShotDex open until the download finishes. The screen stays on." |
 
-- Nút **Download** mờ khi 0 ảnh sẽ tải, hoặc khi dung lượng ước tính + 1 GB > chỗ trống trên máy (câu "Not enough
+- Nút **Save** (sheet "Save to Photos"; lối vào là nút **Save to Photos**, FS-17.01 §4a) mờ khi 0 ảnh sẽ tải, hoặc khi dung lượng ước tính + 1 GB > chỗ trống trên máy (câu "Not enough
   space on this device — about Y GB needed.").
 - Quyền `.limited`: Save To chỉ còn **Library**, dòng phụ "Allow full access to Photos to save into an album." + Open
   Settings.
@@ -40,7 +40,7 @@ với ngày chụp gốc, ghi lịch sử — cùng khuôn tiến độ/huỷ/l�
 
 ## 3. Tiến độ, huỷ, rời app
 
-Giống FS-15.02 §6: `Downloading 3 of 12`, thanh theo byte, `1.2 of 3.4 GB · about 2 min left`, tên file và bước
+Giống FS-15.02 §6: `Saving 3 of 12` (tiêu đề sheet "Saving to Photos", xong: "Saved to Photos"), thanh theo byte, `1.2 of 3.4 GB · about 2 min left`, tên file và bước
 (*Downloading* · *Checking* · *Saving*); sheet không kéo xuống đóng được; **Cancel** hỏi xác nhận ("Stop
 downloading? Photos already saved stay in your library."); màn hình không tự khoá trong lúc tải, bật lại ở mọi lối
 ra; app ra nền = huỷ.

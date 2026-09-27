@@ -5,7 +5,7 @@
 · cập nhật 2026-09-26
 
 **Một câu:** Collections → Utilities → **On Server** → chọn connection → duyệt folder như lưới Library (chỉ file
-ảnh, thumbnail thật) → chọn nhiều → **Download** vào Library hoặc một album, RAW+JPEG gộp một ảnh, giữ ngày chụp,
+ảnh, thumbnail thật) → chọn nhiều → **Save to Photos** vào Library hoặc một album, RAW+JPEG gộp một ảnh, giữ ngày chụp,
 kiểm file trước khi ghi vào Photos.
 
 Nguồn: [intent](../../_intents/2026-09-26-import-from-server.md). Chiều ngược của

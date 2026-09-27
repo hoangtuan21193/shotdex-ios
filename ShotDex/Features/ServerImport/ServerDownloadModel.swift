@@ -133,6 +133,34 @@ final class ServerDownloadModel {
 
     var canStart: Bool { stage == .preparing && !photosToDownload.isEmpty && spaceShortfall == nil }
 
+    /// The album this sheet made with New Album…, so that row, not
+    /// Existing Album, carries the check.
+    private(set) var createdAlbumId: String?
+
+    /// The three ways in (FS-17.02 §1).
+    enum Choice {
+        case libraryOnly
+        case existingAlbum
+        case newAlbum
+    }
+
+    var choice: Choice {
+        switch destination {
+        case .library: .libraryOnly
+        case .album(let id): id == createdAlbumId ? .newAlbum : .existingAlbum
+        }
+    }
+
+    /// Photos always land in the library; an album is where else they show.
+    var destinationSentence: String {
+        switch destination {
+        case .library:
+            String(localized: "Photos are added to your library only, not to any album.", comment: "Import from server: what Library Only does")
+        case .album:
+            String(localized: "Photos are added to your library and to the album “\(destinationTitle)”.", comment: "Import from server: what an album destination does")
+        }
+    }
+
     var destinationTitle: String {
         switch destination {
         case .library: String(localized: "Library", comment: "Download from server: save into the library, no album")
@@ -147,6 +175,7 @@ final class ServerDownloadModel {
             let id = try await createAlbumNamed(trimmed)
             albums = listAlbums()
             if !albums.contains(where: { $0.id == id }) { albums.append(Album(id: id, title: trimmed)) }
+            createdAlbumId = id
             destination = .album(id: id)
         } catch {
             albumError = error.localizedDescription
@@ -265,7 +294,7 @@ final class ServerDownloadModel {
         }
         summary.savedCount += saved.count
         switch result.stopReason {
-        case .cancelled: summary.stopMessage = String(localized: "Download stopped. Photos already saved stay in your library.", comment: "Download from server result after Cancel")
+        case .cancelled: summary.stopMessage = String(localized: "Stopped. Photos already imported stay in your library.", comment: "Download from server result after Cancel")
         case .error(let error): summary.stopMessage = error.localizedDescription
         case nil: break
         }
