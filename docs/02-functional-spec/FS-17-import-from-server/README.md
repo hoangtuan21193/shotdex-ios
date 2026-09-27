@@ -19,6 +19,7 @@ Nguồn: [intent](../../_intents/2026-09-26-import-from-server.md). Chiều ngư
 | 02 | [Tải về thư viện](02-download.md) | đích, ghép cặp, kiểm file, ngày chụp, "đã có", tiến độ, lỗi |
 | 03 | [Tiêu chí nghiệm thu](03-acceptance-criteria.md) | AC-1…30 (AC-18 từ lỗi 2026-09-27) |
 | 04 | [Folder trong Collections (Network)](04-network-shortcuts.md) | thêm folder thành ô, mục Network, bìa lưu trên máy, AC-31…40 |
+| 05 | [On Local Network, On Cloud](05-cloud-folders.md) | tách Utilities, folder Dropbox/Google Drive… qua app Files, duyệt + upload, AC-45…51 |
 
 ## 1. Người dùng cần gì
 
