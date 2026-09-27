@@ -37,22 +37,23 @@ struct FileServerDraft: Identifiable {
         !server.host.trimmingCharacters(in: .whitespaces).isEmpty
             && !server.username.trimmingCharacters(in: .whitespaces).isEmpty
             && port.map { (1...65_535).contains($0) } == true
-            && (server.transferProtocol != .smb || !server.share.trimmingCharacters(in: .whitespaces).isEmpty)
+            // SMB files live inside a shared folder: the first folder of the
+            // path (FS-15.01 §3a).
+            && (server.transferProtocol != .smb || !ServerUploadPath.normalizedFolder(server.folder.trimmingCharacters(in: .whitespaces)).isEmpty)
     }
 
-    /// The row as saved: trimmed, a blank name falls back to the host, the
-    /// share is dropped for SFTP.
+    /// The row as saved: trimmed, a blank name falls back to the host; only
+    /// WebDAV keeps the share column, as its Path.
     var normalized: FileServer {
         var row = server
         row.port = port ?? row.defaultPort
         row.host = row.host.trimmingCharacters(in: .whitespaces)
         row.username = row.username.trimmingCharacters(in: .whitespaces)
         switch row.transferProtocol {
-        case .smb: row.share = row.share.trimmingCharacters(in: .whitespaces)
         case .webdav: row.share = ServerUploadPath.normalizedFolder(row.share)
-        case .sftp: row.share = ""
+        case .smb, .sftp: row.share = ""
         }
-        row.folder = ServerUploadPath.normalizedFolder(row.folder)
+        row.folder = ServerUploadPath.normalizedFolder(row.folder.trimmingCharacters(in: .whitespaces))
         let name = row.name.trimmingCharacters(in: .whitespaces)
         row.name = name.isEmpty ? row.host : name
         return row
@@ -71,13 +72,46 @@ struct FileServerFormScreen: View {
     @State private var saveError: String?
     /// Add Connection only: the servers found on the network (FS-15.04).
     @State private var discovery: ServerDiscoveryModel?
-    @State private var shares: [String]?
-    @State private var isLoadingShares = false
-    @State private var shareError: String?
+    @State private var path: [Route] = []
+    /// The folder picker's login, closed with the form.
+    @State private var pickerSession: ServerBrowseSession?
+    /// Choose… signs in first; its failure shows under the Folder row.
+    @State private var folderSignIn = ServerSignIn()
+    /// Choose… stopped at the Trust alert and resumes after it.
+    @State private var resumesChooseAfterTrust = false
     @FocusState private var focus: Field?
     /// Called after a save, with the saved row — the upload sheet uses it to
     /// select a server it just made.
     var onSaved: ((FileServer) -> Void)?
+
+    /// The screens the form pushes carry their models: a destination
+    /// closure reading `@State` outside `body` gets a stale value.
+    enum Route: Hashable {
+        case connectAs(ConnectAsModel)
+        case folderPicker(ServerBrowserModel, feeds: PickerFeeds)
+
+        static func == (lhs: Self, rhs: Self) -> Bool {
+            switch (lhs, rhs) {
+            case (.connectAs(let a), .connectAs(let b)): a === b
+            case (.folderPicker(let a, _), .folderPicker(let b, _)): a === b
+            default: false
+            }
+        }
+
+        func hash(into hasher: inout Hasher) {
+            switch self {
+            case .connectAs(let model): hasher.combine(ObjectIdentifier(model))
+            case .folderPicker(let model, _): hasher.combine(ObjectIdentifier(model))
+            }
+        }
+    }
+
+    /// Where the picked folder goes: a whole form filled from Connect As,
+    /// or just the Folder field.
+    enum PickerFeeds {
+        case connectAs(ConnectAsModel)
+        case form
+    }
 
     /// Return moves to the next field, in the order they are drawn.
     enum Field: Hashable {
@@ -88,6 +122,8 @@ struct FileServerFormScreen: View {
         case idle
         case running
         case passed
+        /// Connect As logged in; the write test has not run.
+        case signedIn
         case failed(RemoteFileError)
     }
 
@@ -100,7 +136,7 @@ struct FileServerFormScreen: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             Form {
                 if let discovery {
                     foundServersSection(discovery)
@@ -140,13 +176,10 @@ struct FileServerFormScreen: View {
                     }
                 }
                 Section {
-                    if draft.server.transferProtocol == .smb {
-                        shareRow
-                    }
                     if draft.server.transferProtocol == .webdav {
                         field("Path", text: $draft.server.share, prompt: "Optional", focus: .share)
                     }
-                    field("Folder", text: $draft.server.folder, prompt: "Optional", focus: .folder)
+                    folderRow
                 } footer: {
                     Text(folderFooter)
                 }
@@ -164,7 +197,7 @@ struct FileServerFormScreen: View {
                     if let message = testMessage {
                         Text(message)
                             .font(.footnote)
-                            .foregroundStyle(test == .passed ? Color.secondary : Color.red)
+                            .foregroundStyle(test == .passed || test == .signedIn ? Color.secondary : Color.red)
                     }
                     if case .failed(.localNetworkDenied) = test {
                         Button("Open Settings") {
@@ -209,19 +242,22 @@ struct FileServerFormScreen: View {
             ) { _ in
                 Button("OK", role: .cancel) {}
             } message: { Text($0) }
-            .confirmationDialog(
-                "Choose a Share",
-                isPresented: Binding(get: { shares != nil }, set: { if !$0 { shares = nil } }),
-                titleVisibility: .visible,
-                presenting: shares
-            ) { names in
-                ForEach(names, id: \.self) { name in
-                    Button(name) { draft.server.share = name }
+            .navigationDestination(for: Route.self) { route in
+                switch route {
+                case .connectAs(let model):
+                    ConnectAsScreen(model: model) { session in
+                        openPicker(session, at: "", feeding: .connectAs(model))
+                    }
+                case .folderPicker(let picker, let feeds):
+                    ServerBrowserScreen(model: picker) { chosen in choose(chosen, feeds: feeds) }
                 }
-                Button("Cancel", role: .cancel) {}
-            } message: { names in
-                if names.isEmpty { Text("This server doesn't share any folders with this account.") }
             }
+            // What the Choose… error is about changed: it no longer applies.
+            .onChange(of: draft.server.host) { folderSignIn.error = nil }
+            .onChange(of: draft.server.username) { folderSignIn.error = nil }
+            .onChange(of: draft.password) { folderSignIn.error = nil }
+            .onChange(of: draft.portText) { folderSignIn.error = nil }
+            .onChange(of: draft.server.transferProtocol) { folderSignIn.error = nil }
             .task {
                 if !draft.isNew {
                     draft.hasSavedPassword = dependencies.fileServers.password(for: draft.server.id) != nil
@@ -230,7 +266,10 @@ struct FileServerFormScreen: View {
             // Opening the form is what starts the search — and so what asks
             // for Local Network access, with the reason on screen.
             .onAppear { discovery?.start() }
-            .onDisappear { discovery?.stop() }
+            .onDisappear {
+                discovery?.stop()
+                if let pickerSession { Task { await pickerSession.close() } }
+            }
             // The Local Network prompt (or a trip to Settings) takes the app
             // out of active; coming back is when to search again.
             .onChange(of: scenePhase) { _, phase in
@@ -276,7 +315,7 @@ struct FileServerFormScreen: View {
                 }
             }
         } footer: {
-            Text("Computers and NAS drives sharing files on the same network as this device. Tap one to fill in its address.")
+            Text("Computers and NAS drives sharing files on the same network as this device. Tap one to sign in.")
         }
     }
 
@@ -302,23 +341,16 @@ struct FileServerFormScreen: View {
             }
         }
         .contentShape(Rectangle())
-        if server.offers.count == 1, let offer = server.offers.first {
-            Button { fill(offer, from: server) } label: { label }
-                .buttonStyle(.plain)
-        } else {
-            Menu {
-                ForEach(server.offers, id: \.self) { offer in
-                    Button(offer.service.title) { fill(offer, from: server) }
-                }
-            } label: { label }
-                .buttonStyle(.plain)
-        }
+        Button { startConnectAs(server) } label: { label }
+            .buttonStyle(.plain)
+            .accessibilityHint("Sign in to this server")
     }
 
-    private func fill(_ offer: DiscoveredServer.Offer, from server: DiscoveredServer) {
-        draft.apply(offer, from: server)
-        test = .idle
-        focus = .username
+    /// Tapping a found server signs in there, the way Finder's Connect As
+    /// does (FS-15.04 §3).
+    private func startConnectAs(_ server: DiscoveredServer) {
+        focus = nil
+        path = [.connectAs(ConnectAsModel(found: server))]
     }
 
     private func isFilled(from server: DiscoveredServer) -> Bool {
@@ -327,7 +359,7 @@ struct FileServerFormScreen: View {
         }
     }
 
-    private static func symbol(for kind: DiscoveredServer.Kind) -> String {
+    static func symbol(for kind: DiscoveredServer.Kind) -> String {
         switch kind {
         case .laptop: "laptopcomputer"
         case .desktop: "desktopcomputer"
@@ -336,63 +368,99 @@ struct FileServerFormScreen: View {
         }
     }
 
-    // MARK: Share
+    // MARK: Folder
 
-    /// Share, typed or picked from the server's own list (FS-15.04 §5).
-    private var shareRow: some View {
+    /// Folder, typed or picked on the server after signing in (FS-15.04 §5).
+    /// For SMB its first folder is the shared folder (FS-15.01 §3a).
+    private var folderRow: some View {
         VStack(alignment: .leading, spacing: 4) {
             // Not LabeledContent: it merges its children into one
             // accessibility element, and Choose… could not be reached on its
             // own — by VoiceOver or by a UI test.
             HStack(spacing: 8) {
-                Text("Share")
-                TextField("Share", text: $draft.server.share, prompt: Text("Required"))
+                Text("Folder")
+                TextField("Folder", text: $draft.server.folder, prompt: Text(draft.server.transferProtocol == .smb ? "Required" : "Optional"))
                     .multilineTextAlignment(.trailing)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
-                    .focused($focus, equals: .share)
-                    .submitLabel(.next)
-                    .onSubmit { focus = next(after: .share) }
-                if isLoadingShares {
+                    .focused($focus, equals: .folder)
+                    .submitLabel(.done)
+                    .onSubmit { focus = nil }
+                if folderSignIn.isConnecting {
                     ProgressView()
                 } else {
-                    Button("Choose…") { loadShares() }
+                    Button("Choose…") { chooseFolder() }
                         // A button in a row with a text field: only the
                         // button's own frame answers the tap.
                         .buttonStyle(.borderless)
-                        .disabled(!canListShares)
+                        .disabled(!canBrowse)
                 }
             }
-            if let shareError {
-                Text(shareError)
+            if let error = folderSignIn.error {
+                Text(error)
                     .font(.footnote)
                     .foregroundStyle(.red)
             }
         }
     }
 
-    private var canListShares: Bool {
+    private var canBrowse: Bool {
         !draft.server.host.trimmingCharacters(in: .whitespaces).isEmpty
             && !draft.server.username.trimmingCharacters(in: .whitespaces).isEmpty
             && !effectivePassword.isEmpty
             && draft.port != nil
     }
 
-    private func loadShares() {
+    /// Signs in with what the form holds, then opens the picker at the typed
+    /// folder; a failure stays under the row.
+    private func chooseFolder() {
+        focus = nil
         let server = draft.normalized
         let password = effectivePassword
-        isLoadingShares = true
-        shareError = nil
         Task {
-            defer { isLoadingShares = false }
-            do {
-                shares = try await SMBFileClient.shareNames(
-                    host: server.host, port: server.port, username: server.username, password: password
-                )
-            } catch {
-                shareError = error.localizedDescription
+            if let session = await folderSignIn.signIn(to: server, password: password) {
+                openPicker(session, at: server.folder, feeding: .form)
+            } else if let fingerprint = folderSignIn.untrustedFingerprint {
+                resumesChooseAfterTrust = true
+                untrustedFingerprint = fingerprint
             }
         }
+    }
+
+    private func openPicker(_ session: ServerBrowseSession, at folder: String, feeding: PickerFeeds) {
+        if let old = pickerSession, old !== session { Task { await old.close() } }
+        pickerSession = session
+        let dependencies = dependencies
+        let picker = ServerBrowserModel(session: session, start: folder, mode: .chooseFolder) { path in
+            ServerFolderModel(
+                session: session,
+                folder: path,
+                cache: dependencies.serverThumbnails,
+                downloads: dependencies.serverDownloads,
+                existingAssetIds: { PhotoKitAssetCreator.existingAssetIds($0) }
+            )
+        }
+        path.append(.folderPicker(picker, feeds: feeding))
+    }
+
+    /// The picker's Choose: from Connect As it saves the connection; from
+    /// Choose… it fills the Folder field.
+    private func choose(_ folder: String, feeds: PickerFeeds) {
+        switch feeds {
+        case .connectAs(let model):
+            // Signed in and a folder picked: that is a whole connection.
+            // Save it and close, rather than send the user back to a form
+            // to press Save again (FS-15.04 §3). A failed save leaves the
+            // filled form showing, with the reason.
+            draft = model.draft(folder: folder)
+            test = .signedIn
+            path = []
+            save()
+            return
+        case .form:
+            draft.server.folder = folder
+        }
+        path = []
     }
 
     // MARK: Protocol options
@@ -416,7 +484,7 @@ struct FileServerFormScreen: View {
     private var folderFooter: String {
         switch draft.server.transferProtocol {
         case .smb:
-            String(localized: "The share is the shared folder on the server — Choose… lists them once the username and password are in. Folder is where uploads start; you can pick another each time.")
+            String(localized: "Choose… signs in and shows the folders this computer shares. The first folder is the shared folder, such as Photos. Uploads start in Folder; you can pick another each time.")
         case .sftp:
             String(localized: "Folder is relative to your home folder on the server. It is where uploads start; you can pick another each time.")
         case .webdav:
@@ -437,14 +505,14 @@ struct FileServerFormScreen: View {
         }
     }
 
-    /// The field after `field` on screen; Share is skipped for SFTP.
+    /// The field after `field` on screen; Path is WebDAV's only.
     private func next(after field: Field) -> Field? {
         switch field {
         case .name: .host
         case .host: .port
         case .port: .username
         case .username: .password
-        case .password: [.smb, .webdav].contains(draft.server.transferProtocol) ? .share : .folder
+        case .password: draft.server.transferProtocol == .webdav ? .share : .folder
         case .share: .folder
         case .folder: nil
         }
@@ -469,7 +537,7 @@ struct FileServerFormScreen: View {
         switch test {
         case .idle: EmptyView()
         case .running: ProgressView()
-        case .passed:
+        case .passed, .signedIn:
             Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
                 .accessibilityLabel("Connected")
         case .failed:
@@ -482,6 +550,7 @@ struct FileServerFormScreen: View {
         switch test {
         case .idle, .running: nil
         case .passed: String(localized: "Connected. Ready to upload.", comment: "File server Test Connection succeeded")
+        case .signedIn: String(localized: "Signed in.", comment: "File server form: Connect As logged in; the write test has not run")
         case .failed(let error): error.localizedDescription
         }
     }
@@ -514,7 +583,12 @@ struct FileServerFormScreen: View {
         if !draft.isNew {
             try? dependencies.fileServers.setHostKeyFingerprint(fingerprint, for: draft.server.id)
         }
-        runTest()
+        if resumesChooseAfterTrust {
+            resumesChooseAfterTrust = false
+            chooseFolder()
+        } else {
+            runTest()
+        }
     }
 
     private func forgetKey() {

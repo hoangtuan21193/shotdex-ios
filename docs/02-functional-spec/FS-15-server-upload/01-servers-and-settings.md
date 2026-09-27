@@ -21,7 +21,7 @@ chúng ở menu ⋯ (FS-15.02 §1).
 | Trạng thái | Hiển thị |
 |---|---|
 | rỗng | câu "Add a connection to upload originals to your NAS or computer." + nút **Add Connection** |
-| có connection | mỗi hàng: tên · `SMB` hoặc `SFTP` · `host/đường dẫn`; chạm để sửa, vuốt để xoá |
+| có connection | mỗi hàng: **tên** và dưới nó **đường dẫn folder** (`PHOTOS/Import`; SFTP `Home/…`) — không giao thức, không host (đổi 2026-09-27: tên + folder là thứ phân biệt hai connection); chạm để sửa, vuốt để xoá |
 
 - Nút **+** trên toolbar thêm connection (nhãn VoiceOver "Add Connection").
 - Xoá connection (**Delete Connection**): hộp xác nhận có nút Huỷ; câu nói rõ **lịch sử upload vẫn giữ**, ảnh không bị đụng.

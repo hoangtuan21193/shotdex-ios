@@ -43,18 +43,21 @@ Section đầu tiên của form, trên các ô nhập tay.
 user pass". Trước đây chạm chỉ điền Host/Port rồi để người dùng tự tìm ô Username, Password, Share và Test Connection
 ở dưới. Giờ theo Finder ("Connect As…") và Files ("Connect to Server"):
 
-1. Chạm hàng → đẩy màn **Connect to “<tên máy>”** trong form: đầu màn icon loại máy + tên + host; **Connect Using**
-   (chỉ khi máy mở nhiều giao thức, thứ tự SMB, SFTP, WebDAV (HTTPS), WebDAV; mặc định cái đầu); **Username**,
-   **Password**; nút **Connect** (mờ khi thiếu một trong hai).
+1. Chạm hàng → đẩy màn **Connect to “<tên máy>”** trong form: đầu màn icon loại máy + tên + host; **Name** (điền sẵn
+   tên máy, sửa được); **Connect Using** (chỉ khi máy mở nhiều giao thức, thứ tự SMB, SFTP, WebDAV (HTTPS), WebDAV;
+   mặc định cái đầu); **Username**, **Password**. Không có câu giải thích (người dùng 2026-09-27: "ai cũng hiểu").
+   Nút **Connect** là nút lớn đầy chiều ngang ở đáy màn — cùng kiểu nút **Choose** của bước sau; mờ khi thiếu
+   Username/Password. Return ở ô Password cũng là Connect.
 2. **Connect** = đăng nhập thật (10 s). Đang nối: spinner trong nút, ô bị khoá. SFTP/WebDAV tự ký lần đầu: hộp Trust
    của FS-15.01 §4 rồi nối tiếp.
 3. **Hỏng → báo ngay dưới ô Password**, bằng câu FS-15.01 §3 ("The username or password was rejected.", "Can't reach
    …"); giữ nguyên chữ đã gõ, focus về Password khi sai mật khẩu. Không rời màn.
-4. **Được → đẩy màn chọn folder** (FS-17.01 §5) ở gốc: SMB = các folder máy chia sẻ, SFTP = Home. Choose → quay về
-   form với mọi ô đã điền (Name = tên máy qua luật đánh số FS-15.01 §3, Protocol, Host = tên `.local` phân giải được
-   hoặc IP với máy tìm bằng quét 445, Port = để trống nếu bằng mặc định, Username, Password, Folder) và hàng Test
-   Connection hiện ✓ "Signed in." Người dùng bấm **Save**.
-5. ‹ ở màn chọn folder về Connect As; ‹ ở Connect As về form không đổi gì.
+4. **Được → đẩy màn chọn folder** (FS-17.01 §5) ở gốc: SMB = các folder máy chia sẻ, SFTP = Home. **Choose = lưu
+   connection và đóng form** (đổi 2026-09-27: trước đó quay về form đã điền, bắt bấm Save lần nữa — "hơi loạn"). Lưu:
+   Name (qua luật đánh số FS-15.01 §3), Protocol, Host = tên `.local` phân giải được hoặc IP với máy tìm bằng quét 445,
+   Port, Username, mật khẩu vào Keychain, Folder. Lưu hỏng → hiện form đã điền cùng câu lỗi, không mất gì đã gõ.
+   Sửa sau bằng **Edit Connection** (FS-17.01 §1).
+5. ‹ ở màn chọn folder về Connect As; ‹ ở Connect As về form không đổi gì. Chân mục Servers Found: "Tap one to sign in."
 
 - Hàng vừa dùng có dấu ✓. Mọi ô vẫn sửa được sau khi điền. Server nhập tay đi thẳng các ô của form như cũ.
 

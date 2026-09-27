@@ -1,0 +1,215 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Collections",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "tap",
+   "label": "On Server"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Add Connection",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "screenshot",
+   "name": "10-found"
+  },
+  {
+   "action": "tap",
+   "label": "ShotDex Test"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "15-connect-as"
+  },
+  {
+   "action": "typeText",
+   "text": "tester\n"
+  },
+  {
+   "action": "typeText",
+   "text": "wrong\n"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "screenshot",
+   "name": "20-wrong-password"
+  },
+  {
+   "action": "dump",
+   "name": "20-wrong-password"
+  },
+  {
+   "action": "typeText",
+   "text": "\b\b\b\b\bsecret"
+  },
+  {
+   "action": "tap",
+   "label": "Connect",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Not Now",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "30-picker-shares"
+  },
+  {
+   "action": "dump",
+   "name": "30-picker-shares"
+  },
+  {
+   "action": "tap",
+   "label": "PHOTOS, Folder"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "screenshot",
+   "name": "35-picker-photos"
+  },
+  {
+   "action": "tap",
+   "label": "Choose “PHOTOS”"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "40-saved-on-server"
+  },
+  {
+   "action": "dump",
+   "name": "40-saved-on-server"
+  },
+  {
+   "action": "longPress",
+   "label": "ShotDex Test",
+   "seconds": 1.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "45-row-menu"
+  },
+  {
+   "action": "tap",
+   "label": "Edit Connection"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "50-edit-form"
+  },
+  {
+   "action": "tap",
+   "label": "Username",
+   "type": "textField"
+  },
+  {
+   "action": "typeText",
+   "text": "\nx"
+  },
+  {
+   "action": "tap",
+   "label": "Choose…",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "screenshot",
+   "name": "55-choose-wrong"
+  },
+  {
+   "action": "tap",
+   "label": "Cancel",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  }
+ ]
+}

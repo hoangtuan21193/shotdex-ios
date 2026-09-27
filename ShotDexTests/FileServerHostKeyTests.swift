@@ -55,7 +55,8 @@ import Testing
         var draft = FileServerDraft()
         draft.server.host = " nas.local "
         draft.server.username = "me"
-        draft.server.share = "photo"
+        // SMB needs a folder, whose first level is the share (FS-15.01 §3a).
+        draft.server.folder = "photo"
         #expect(draft.canSave)
         #expect(draft.normalized.port == 445)
         draft.server.transferProtocol = .sftp
@@ -69,7 +70,7 @@ import Testing
         var draft = FileServerDraft()
         draft.server.host = "127.0.0.1"
         draft.server.username = "tester"
-        draft.server.share = "photos"
+        draft.server.folder = "photos"
         draft.portText = "4450"
         #expect(draft.normalized.port == 4450)
         draft.portText = "4450445"
@@ -112,6 +113,26 @@ import Testing
         #expect(draft.canSave)
         #expect(draft.normalized.share == "remote.php/dav/files/me")
         #expect(draft.normalized.port == 443)
+    }
+
+    /// FS-15 AC-47: SMB files live in a shared folder, the first folder of
+    /// the path — no Share field, and no saving without a folder.
+    @Test func smbNeedsAFolder() {
+        var draft = FileServerDraft()
+        draft.server.host = "nas.local"
+        draft.server.username = "me"
+        #expect(!draft.canSave)
+        draft.server.folder = " / "
+        #expect(!draft.canSave)
+        draft.server.folder = "/photos/2024/"
+        #expect(draft.canSave)
+        draft.server.share = "leftover"
+        #expect(draft.normalized.share == "")
+        #expect(draft.normalized.folder == "photos/2024")
+
+        draft.server.transferProtocol = .sftp
+        draft.server.folder = ""
+        #expect(draft.canSave)
     }
 }
 
