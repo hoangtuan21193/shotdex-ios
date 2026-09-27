@@ -27,7 +27,12 @@ import Testing
         // Unresolved records are not rows yet.
         browser.onEvent?(.records([BonjourRecord(name: "Mac", type: "_smb._tcp")]))
         #expect(model.state == .searching)
-        try? await Task.sleep(for: .milliseconds(200))
+        // Wait for the give-up, not a fixed 200 ms: with every suite
+        // running in parallel the main actor can be busy well past it (the
+        // gate failed here 2026-09-27 while nothing was wrong).
+        for _ in 0..<500 where model.state != .none {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
         #expect(model.state == .none)
         #expect(!model.isSearching)
 
