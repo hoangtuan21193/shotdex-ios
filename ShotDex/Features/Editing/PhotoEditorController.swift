@@ -2719,6 +2719,21 @@ extension PhotoEditorController {
         scheduleRender()
     }
 
+    /// Edits the region curve. During a slider drag the caller brackets this
+    /// with `beginContinuousChange` / `endContinuousChange`: one undo step.
+    func updateCurveRegion(_ change: (inout ParametricCurve) -> Void) {
+        if !isContinuousChange { recordHistory() }
+        change(&recipe.curve.region)
+        scheduleRender(delay: isContinuousChange ? .milliseconds(30) : .milliseconds(90))
+    }
+
+    func resetCurveRegion() {
+        guard recipe.curve.region != .identity else { return }
+        recordHistory()
+        recipe.curve.region = .identity
+        scheduleRender()
+    }
+
     /// Straighten one channel back to the identity line.
     func resetCurve(_ channel: ToneCurveChannel) {
         beginContinuousChange()

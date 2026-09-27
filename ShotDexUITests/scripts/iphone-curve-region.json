@@ -1,0 +1,17 @@
+{
+ "steps": [
+  {"action": "launch"},
+  {"action": "wait", "seconds": 25},
+  {"action": "tap", "x": 0.5, "y": 0.35},
+  {"action": "wait", "seconds": 6},
+  {"action": "tap", "label": "Edit"},
+  {"action": "wait", "seconds": 12},
+  {"action": "tap", "label": "Curve", "type": "button"},
+  {"action": "wait", "seconds": 3},
+  {"action": "screenshot", "name": "1-curve-point"},
+  {"action": "tap", "label": "Region", "type": "button"},
+  {"action": "wait", "seconds": 3},
+  {"action": "screenshot", "name": "2-curve-region"},
+  {"action": "dump", "name": "2-curve-region"}
+ ]
+}

@@ -124,6 +124,8 @@ final class EditorChromeModel {
     /// Which series the on-photo graph shows and edits: the RGB master or one
     /// channel. Shared by the panel's chips and the overlay on the stage.
     var curveChannel: ToneCurveChannel = .rgb
+    /// Point curves or the RGB region curve (FS-03.15a §1).
+    var curveMode: EditorCurveMode = .point
     /// The ⋯ menu's Hide Graph: the photo is shown bare while the Curve group is
     /// open, and the photo's own gestures come back. Session-only.
     var isCurveGraphHidden = false
@@ -218,4 +220,18 @@ struct EditorColorPaletteRequest {
     let onBegin: () -> Void
     let onChange: (OverlayColor) -> Void
     let onEnd: () -> Void
+}
+
+/// The Curve tool's two ways of shaping tone.
+enum EditorCurveMode: String, CaseIterable, Identifiable {
+    case point, region
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .point: "Point"
+        case .region: "Region"
+        }
+    }
 }

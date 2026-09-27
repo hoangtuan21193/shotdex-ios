@@ -1,3 +1,4 @@
+import CoreImage
 import Foundation
 import Testing
 @testable import ShotDexKit
@@ -59,5 +60,51 @@ struct ParametricCurveTests {
         for (index, value) in table.enumerated() {
             #expect(abs(Double(value) - Double(index) / 255) <= 1e-6)
         }
+    }
+
+    /// AC-9. The region curve and the RGB point curve are baked into the one
+    /// curve pass: a grey ramp through it matches the hand-made "region, then
+    /// point" table to 1/255.
+    @Test func regionThenPointIsOneTable() throws {
+        var curve = ToneCurveAdjustments()
+        curve.region.lights = 0.3
+        curve.rgb = try #require(ToneCurveAdjustments.presets.first { $0.id == "softS" }).points
+
+        let width = 256
+        var ramp = [UInt8](repeating: 255, count: width * 4)
+        for x in 0..<width {
+            ramp[x * 4] = UInt8(x); ramp[x * 4 + 1] = UInt8(x); ramp[x * 4 + 2] = UInt8(x)
+        }
+        let sRGB = try #require(CGColorSpace(name: CGColorSpace.sRGB))
+        let input = CIImage(
+            bitmapData: Data(ramp),
+            bytesPerRow: width * 4,
+            size: CGSize(width: width, height: 1),
+            format: .RGBA8,
+            colorSpace: sRGB
+        )
+        let output = PhotoRenderService.applyCurve(curve, to: input)
+        var result = [UInt8](repeating: 0, count: width * 4)
+        CIContext().render(
+            output, toBitmap: &result, rowBytes: width * 4,
+            bounds: CGRect(x: 0, y: 0, width: width, height: 1),
+            format: .RGBA8, colorSpace: sRGB
+        )
+
+        let expected = ParametricCurveMath.combinedLUT(region: curve.region, points: curve.rgb)
+        var worst = 0
+        for x in 0..<width {
+            worst = max(worst, abs(Int(result[x * 4]) - Int((expected[x] * 255).rounded())))
+        }
+        #expect(worst <= 1, "curve pass differs from region-then-point by \(worst)/255")
+
+        // One pass: the curve stage builds a single colour-curves filter.
+        let source = try String(
+            contentsOf: URL(fileURLWithPath: #filePath)
+                .deletingLastPathComponent().deletingLastPathComponent()
+                .appendingPathComponent("ShotDexKit/Render/PhotoRenderService+Curve.swift"),
+            encoding: .utf8
+        )
+        #expect(source.components(separatedBy: "\"CIColorCurves\"").count - 1 == 1)
     }
 }

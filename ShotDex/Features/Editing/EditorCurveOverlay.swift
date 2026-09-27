@@ -28,6 +28,8 @@ struct EditorCurveOverlay: View {
 
     private var channel: ToneCurveChannel { chrome.curveChannel }
     private var points: [CurvePoint] { controller.recipe.curve[channel] }
+    /// Region mode draws the whole curve that is applied and has nothing to grab.
+    private var showsRegion: Bool { chrome.curveMode == .region }
 
     /// Opacity of the chrome that is not being touched — scrim, grid, diagonal,
     /// histogram, the other points — while a drag is in progress.
@@ -53,12 +55,15 @@ struct EditorCurveOverlay: View {
                 )
                 .shadow(color: .black.opacity(0.6), radius: 1.5)
                 .opacity(curveOpacity)
-            ForEach(points.indices, id: \.self) { index in
-                controlPoint(isGrabbed: grabbed == index)
-                    .position(viewPoint(points[index], in: local))
-                    .opacity(grabbed == index ? curveOpacity : chromeOpacity)
+            if !showsRegion {
+                ForEach(points.indices, id: \.self) { index in
+                    controlPoint(isGrabbed: grabbed == index)
+                        .position(viewPoint(points[index], in: local))
+                        .opacity(grabbed == index ? curveOpacity : chromeOpacity)
+                }
             }
         }
+        .allowsHitTesting(!showsRegion)
         .frame(width: rect.width, height: rect.height)
         .contentShape(Rectangle())
         // A curve is grabbed at points a pointer cannot see. `.automatic`
@@ -157,7 +162,9 @@ struct EditorCurveOverlay: View {
     }
 
     private func curvePath(_ rect: CGRect) -> Path {
-        let lut = ToneCurveMath.lut(points: points, count: 128)
+        let lut = showsRegion
+            ? ParametricCurveMath.combinedLUT(region: controller.recipe.curve.region, points: controller.recipe.curve.rgb, count: 128)
+            : ToneCurveMath.lut(points: points, count: 128)
         return Path { path in
             for (index, value) in lut.enumerated() {
                 let x = rect.width * CGFloat(index) / CGFloat(lut.count - 1)
@@ -373,6 +380,95 @@ struct EditorCurvePanel: View {
 
     private var phoneRows: some View {
         VStack(spacing: 0) {
+            modeRow
+                .padding(.horizontal, EditorStripLayout.horizontalInset)
+                .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
+            if chrome.curveMode == .region {
+                ScrollView(.vertical, showsIndicators: false) {
+                    regionRows
+                }
+            } else {
+                pointRows
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    /// Point · Region. Region shapes the RGB master only, as in Lightroom.
+    private var modeRow: some View {
+        HStack(spacing: 8) {
+            ForEach(EditorCurveMode.allCases) { mode in
+                Button(mode.displayName) {
+                    chrome.curveMode = mode
+                    if mode == .region { chrome.curveChannel = .rgb }
+                }
+                .buttonStyle(EditorChipButtonStyle(isSelected: chrome.curveMode == mode))
+                .accessibilityAddTraits(chrome.curveMode == mode ? .isSelected : [])
+            }
+            Spacer(minLength: 0)
+            if chrome.curveMode == .region {
+                Button("Reset") { controller.resetCurveRegion() }
+                    .buttonStyle(EditorChipButtonStyle(isSelected: false))
+                    .disabled(controller.recipe.curve.region == .identity)
+                    .opacity(controller.recipe.curve.region == .identity ? EditorTheme.rowDisabled : 1)
+            }
+        }
+    }
+
+    /// Four regions and the three splits between them.
+    private var regionRows: some View {
+        VStack(spacing: 0) {
+            regionSlider("Highlights", value: controller.recipe.curve.region.highlights) { $0.highlights = $1 }
+            regionSlider("Lights", value: controller.recipe.curve.region.lights) { $0.lights = $1 }
+            regionSlider("Darks", value: controller.recipe.curve.region.darks) { $0.darks = $1 }
+            regionSlider("Shadows", value: controller.recipe.curve.region.shadows) { $0.shadows = $1 }
+            splitSlider("Shadow Split", value: controller.recipe.curve.region.shadowSplit, reset: 0.25) { $0.shadowSplit = $1 }
+            splitSlider("Midtone Split", value: controller.recipe.curve.region.midtoneSplit, reset: 0.5) { $0.midtoneSplit = $1 }
+            splitSlider("Highlight Split", value: controller.recipe.curve.region.highlightSplit, reset: 0.75) { $0.highlightSplit = $1 }
+        }
+    }
+
+    private func regionSlider(
+        _ title: String,
+        value: Double,
+        _ set: @escaping (inout ParametricCurve, Double) -> Void
+    ) -> some View {
+        EditorPlainSliderRow(
+            title: title,
+            value: value,
+            range: -1...1,
+            isBipolar: true,
+            valueText: "\(Int((value * 100).rounded()))",
+            isActive: false,
+            onBeginDrag: { controller.beginContinuousChange() },
+            onDrag: { new in controller.updateCurveRegion { set(&$0, new) } },
+            onEndDrag: { controller.endContinuousChange() },
+            onReset: { controller.updateCurveRegion { set(&$0, 0) } }
+        )
+    }
+
+    private func splitSlider(
+        _ title: String,
+        value: Double,
+        reset: Double,
+        _ set: @escaping (inout ParametricCurve, Double) -> Void
+    ) -> some View {
+        EditorPlainSliderRow(
+            title: title,
+            value: value,
+            range: 0.05...0.95,
+            isBipolar: false,
+            valueText: "\(Int((value * 100).rounded()))",
+            isActive: false,
+            onBeginDrag: { controller.beginContinuousChange() },
+            onDrag: { new in controller.updateCurveRegion { set(&$0, new) } },
+            onEndDrag: { controller.endContinuousChange() },
+            onReset: { controller.updateCurveRegion { set(&$0, reset) } }
+        )
+    }
+
+    private var pointRows: some View {
+        VStack(spacing: 0) {
             presetRow
                 .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
             HStack(spacing: AppTheme.Spacing.sm) {
@@ -412,6 +508,22 @@ struct EditorCurvePanel: View {
     }
 
     private var stackedBody: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            modeRow
+            if chrome.curveMode == .region {
+                regionRows
+                    .padding(.horizontal, -14)
+            } else {
+                stackedPointBody
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.top, 14)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private var stackedPointBody: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 ForEach(ToneCurveChannel.allCases) { option in
@@ -461,12 +573,7 @@ struct EditorCurvePanel: View {
                 }
                 .buttonStyle(.plain)
             }
-
-            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 14)
-        .padding(.top, 14)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     /// Starting shapes for the shown channel. The chip whose points the channel
@@ -503,7 +610,11 @@ struct EditorCurveChannelStrip: View {
             isSelected: { chrome.curveChannel == $0 },
             label: { EditorPanelChipLabel(title: $0.displayName, dot: $0.stripDot) },
             accessibilityName: \.displayName,
-            onSelect: { chrome.curveChannel = $0 }
+            onSelect: { channel in
+                chrome.curveChannel = channel
+                // The region curve is RGB-only: a colour channel means points.
+                if channel != .rgb { chrome.curveMode = .point }
+            }
         )
     }
 }

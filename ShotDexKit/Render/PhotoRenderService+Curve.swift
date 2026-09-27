@@ -2,7 +2,7 @@ import CoreImage
 import CoreGraphics
 
 public extension PhotoRenderService {
-    /// One `CIColorCurves` pass for the point tone curve. Like the film cube, the
+    /// One `CIColorCurves` pass for the region and point tone curves. Like the film cube, the
     /// curve was dialled against gamma-encoded values, so it runs in sRGB rather
     /// than the context's linear working space, and the input is clamped first
     /// because a cube/curve says nothing about values outside 0…1.
@@ -19,7 +19,8 @@ public extension PhotoRenderService {
         }
 
         let sampleCount = 256
-        let master = ToneCurveMath.lut(points: curve.rgb, count: sampleCount)
+        // The region curve first, then the RGB point curve — one table, one pass.
+        let master = ParametricCurveMath.combinedLUT(region: curve.region, points: curve.rgb, count: sampleCount)
         let red = ToneCurveMath.lut(points: curve.red, count: sampleCount)
         let green = ToneCurveMath.lut(points: curve.green, count: sampleCount)
         let blue = ToneCurveMath.lut(points: curve.blue, count: sampleCount)

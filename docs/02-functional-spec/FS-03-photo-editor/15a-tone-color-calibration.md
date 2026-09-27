@@ -18,7 +18,8 @@ Tổng quan và thứ tự render: [FS-03.15](15-lightroom-parameter-parity.md).
   **không đổi**, đường luôn đơn điệu kể cả khi cả bốn slider ở ±100.
 - **Control**: trong trình sửa Curve (✕ · Curve · ✓, FS-03.13) có hai chế độ **Point · Region** ở đầu cột
   chọn kênh. Region: đồ thị vẫn hiện, tô bốn vùng; bốn slider là hàng 40pt dưới đồ thị, panel tự cuộn.
-- Ba điểm chia là ba núm trên cạnh đáy đồ thị, vùng chạm 44pt; kéo một núm không vượt núm kề.
+- Ba điểm chia là ba núm trên cạnh đáy đồ thị, vùng chạm 44pt; kéo một núm không vượt núm kề. *Hôm nay (2026-09-28)
+  là ba slider dưới bốn slider vùng; núm trên đồ thị làm cùng trình sửa Curve trong panel của FS-03.13.*
 - Đồ thị ở Region vẽ **đường tổng** (vùng rồi điểm), nên người dùng thấy đúng cái được áp.
 - Curve vùng nướng **vào cùng** bảng tra 256 mức của curve RGB đang có: vùng trước, điểm sau — một lượt curve,
   đúng thứ tự Lightroom, không thêm pass nào.
@@ -75,7 +76,7 @@ Tổng quan và thứ tự render: [FS-03.15](15-lightroom-parameter-parity.md).
 |---|---|---|---|---|
 | AC-7 | dải xám, curve điểm thẳng | đặt Shadows +50 (điểm chia mặc định) | đầu ra ở mức vào 0,15 tăng 0,02…0,08; mức 0 và 1 lệch ≤ 1/255; mức ≥ 0,85 lệch ≤ 2/255 | `ParametricCurveTests.shadowsLiftTheDarkQuarterOnly` |
 | AC-8 | dải xám | đặt cả bốn vùng lần lượt ±100 (16 tổ hợp dấu) và điểm chia 10/50/90 | mọi bảng tra đơn điệu không giảm, hai đầu giữ nguyên | `ParametricCurveTests.everyExtremeStaysMonotone` |
-| AC-9 | curve vùng Lights +30, curve điểm RGB Soft S | render dải xám | bằng bảng tra "vùng rồi điểm" tính tay ± 1/255, và chỉ một lượt curve trong chuỗi | ⚠️ chưa có (dự kiến `ParametricCurveTests.regionThenPointIsOneTable`) |
+| AC-9 | curve vùng Lights +30, curve điểm RGB Soft S | render dải xám | bằng bảng tra "vùng rồi điểm" tính tay ± 1/255, và chỉ một lượt curve trong chuỗi | `ParametricCurveTests.regionThenPointIsOneTable` · chế độ Region: `ShotDexUITests/scripts/iphone-curve-region.json` |
 | AC-10 | bảng 24 ô, B&W bật, mixer 0 | đặt Blue −60 | ô Blue tối đi ≥ 15% độ sáng; ô Yellow và Neutral 5 lệch ≤ 2/255; mọi ô R = G = B ± 1/255 | ⚠️ chưa có (dự kiến `GrayMixerTests.blueDarkensOnlyBlue`) |
 | AC-11 | bảng 24 ô, B&W bật, HSL Blue Luminance +50 | render | HSL không áp (bằng bản HSL 0 ± 1/255); hàng Mixer ghi "Off while Black & White is on" | ⚠️ chưa có (dự kiến `GrayMixerTests.hslIsOffInBlackAndWhite`) + ảnh Edit › Color, iPhone 17 26.5 |
 | AC-12 | bảng 24 ô | đặt Calibration Red Hue +30 | hue ô Red dịch về phía cam +4°…+12°; ô Neutral 5 lệch ≤ 1/255; ô Blue dịch ≤ 2° | ⚠️ chưa có (dự kiến `CalibrationTests.redHueMovesRedTowardOrange`) |
