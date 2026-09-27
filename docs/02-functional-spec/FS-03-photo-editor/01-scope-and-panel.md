@@ -41,7 +41,7 @@ không bị **góc bo của màn** cắt. Tai thỏ chia đôi băng:
 
 | Phần | Mục |
 |---|---|
-| Luôn có | Reset All (mờ khi chưa sửa gì) · History · gọi lại bản đã lưu / đổi nguồn (khi có) · **Auto Enhance** · **Revert to Original** |
+| Luôn có | Reset All (mờ khi chưa sửa gì) · History · gọi lại bản đã lưu / đổi nguồn (khi có) · **Revert to Original** |
 | Khi ở Crop | Rotate 90° · Flip Horizontal |
 | Khi đang sửa mask | hiện/ẩn lớp phủ đỏ · đảo vùng chọn |
 

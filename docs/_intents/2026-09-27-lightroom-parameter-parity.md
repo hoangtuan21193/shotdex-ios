@@ -5,15 +5,23 @@
 | Tác giả | hat.tuan |
 | Ngày | 2026-09-27 |
 | Trạng thái | accepted |
-| Tiến độ | **chưa làm** (2026-09-27) — chưa có spec |
+| Tiến độ | **chưa làm** (2026-09-27) — spec FS-03.15, 60 AC |
 | Nguồn | phản hồi người dùng (chủ sở hữu sản phẩm) — "tôi muốn phản ánh được all thông số từ xmp của lightroom" |
-| Spec sinh ra từ đây | (điền khi sang Design) |
+| Spec sinh ra từ đây | [FS-03.15](../02-functional-spec/FS-03-photo-editor/15-lightroom-parameter-parity.md) (+ 15a–15e) |
 
 Liên quan: [lightroom-preset-exchange](2026-09-27-lightroom-preset-exchange.md) (lý do trực tiếp: preset nhập
 vào phải có chỗ đặt từng thông số) · [editor-iphone-layout](2026-09-27-editor-iphone-layout.md) (Transform,
 Heal, Mask đã vẽ chỗ cho các control mới) · [lens-correction-sources](2026-09-27-lens-correction-sources.md)
 (phần Lens profile tách riêng) · nối tiếp FS-03.11
 ([11-parity-with-lightroom.md](../02-functional-spec/FS-03-photo-editor/11-parity-with-lightroom.md)).
+
+## Cập nhật 2026-09-28 (sau khi duyệt các điểm cần quyết của FS-03.15)
+
+Quyết định đầy đủ: `.planboard/editor-specs-decisions/DECISIONS.md`. Đổi so với phần trên:
+
+- **Remove (xoá vật kiểu content-aware) tạm bỏ** cho tới khi Apple có API/model hỗ trợ.
+- **Kèm model Depth Anything (~50MB)** để Lens Blur chạy cả trên ảnh không có bản đồ độ sâu (không còn là cổng thử nghiệm).
+- Red Eye: chạm từng mắt và có nút tự dò. Lưới mask 4×4 thêm Object, People.
 
 ## Problem — vấn đề
 

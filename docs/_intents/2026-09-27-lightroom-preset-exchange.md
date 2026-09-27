@@ -5,14 +5,23 @@
 | Tác giả | hat.tuan |
 | Ngày | 2026-09-27 |
 | Trạng thái | accepted |
-| Tiến độ | **chưa làm** (2026-09-27) — chưa có spec |
+| Tiến độ | **chưa làm** (2026-09-27) — spec FS-03.14, 33 AC |
 | Nguồn | phản hồi người dùng (chủ sở hữu sản phẩm) — phiên thiết kế 2026-09-27 |
-| Spec sinh ra từ đây | (điền khi sang Design) |
+| Spec sinh ra từ đây | [FS-03.14](../02-functional-spec/FS-03-photo-editor/14-lightroom-preset-exchange.md) (+ 14a, 14b, 14c) |
 
 Canvas, hàng "Presets" (màn PR1–PR9): <https://claude.ai/artifact/T4tEUQrJtxBbi48HokiL9F>.
 Liên quan: [editor-iphone-layout](2026-09-27-editor-iphone-layout.md) (chỗ đặt các nút) ·
 [lightroom-parameter-parity](2026-09-27-lightroom-parameter-parity.md) (thông số để preset nhập vào có chỗ
 đặt) · trả lời câu treo số 2 của [editor-lightroom-feature-parity](2026-09-22-editor-lightroom-feature-parity.md).
+
+## Cập nhật 2026-09-28 (sau khi duyệt các điểm cần quyết của FS-03.14)
+
+Quyết định đầy đủ: `.planboard/editor-specs-decisions/DECISIONS.md`. Đổi so với phần trên:
+
+- **Chia sẻ mỗi lần một look**; không có file gói nhiều look; **không nhận zip**.
+- Không có Manage Looks; quản lý qua menu giữ lâu (Delete ẩn với preset có sẵn).
+- Nhãn "Import XMP Preset" / "Export XMP Preset" kèm một câu giải thích; look nhập mang nhãn "Imported"; không nhúng ảnh xem trước; bỏ mọi mask trong preset.
+- Không đặt cổng pháp lý chặn bản phát hành.
 
 ## Problem — vấn đề
 

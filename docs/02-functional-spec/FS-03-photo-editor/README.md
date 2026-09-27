@@ -24,6 +24,10 @@ render với extension sửa ảnh và các màn khác.
 | 10 | [Copy / Paste edits](10-copy-paste-edits.md) | chép "cái nhìn", không chép crop và mask |
 | 11 | [Đuổi kịp Lightroom](11-parity-with-lightroom.md) | xoá vết, mask khuôn mặt, LUT, background/depth, khử nhiễu, hồ sơ ống kính |
 | 12 | [Panel phone: lưới 40pt](12-phone-panel-grid.md) | panel 264, một kiểu chip/slider, accent chỉ trên Save, tiêu chí nghiệm thu của đợt làm lại panel |
+| 13 | [Editor iPhone](13-iphone-editor-layout.md) | thanh 6 công cụ cố định, panel 344/264, Edit một danh sách, Transform, danh sách mask/lớp, filmstrip 56, xoay ngang, Duo màn ngoài |
+| 14 | [Trao đổi preset Lightroom](14-lightroom-preset-exchange.md) | nhập .xmp/.lrtemplate/DNG, xuất .shotdexlook/.xmp/.cube, quản lý và chia sẻ look |
+| 15 | [Đủ thông số Lightroom](15-lightroom-parameter-parity.md) | calibration, curve vùng, B&W mixer, Upright, Remove, Red Eye, thông số riêng của mask, Lens Blur |
+| 16 | [Nguồn sửa ống kính](16-lens-correction-sources.md) | ba slider độ mạnh, dữ liệu nhúng trong RAW → Lensfun → Apple, làm mới dữ liệu mỗi bản phát hành |
 
 ## Quy tắc chung
 

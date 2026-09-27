@@ -5,9 +5,9 @@
 | Tác giả | hat.tuan |
 | Ngày | 2026-09-27 |
 | Trạng thái | accepted |
-| Tiến độ | **chưa làm** (2026-09-27) — chưa có spec |
+| Tiến độ | **chưa làm** (2026-09-27) — spec FS-03.16, 37 AC |
 | Nguồn | phản hồi người dùng (chủ sở hữu sản phẩm) — phiên thiết kế 2026-09-27 |
-| Spec sinh ra từ đây | (điền khi sang Design) |
+| Spec sinh ra từ đây | [FS-03.16](../02-functional-spec/FS-03-photo-editor/16-lens-correction-sources.md) (+ 16a, 16b) |
 
 Liên quan: [lightroom-preset-exchange](2026-09-27-lightroom-preset-exchange.md) (preset ghi
 `LensProfileDistortionScale/VignettingScale/ChromaticAberrationScale`) ·

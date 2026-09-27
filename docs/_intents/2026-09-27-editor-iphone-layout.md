@@ -5,9 +5,9 @@
 | Tác giả | hat.tuan |
 | Ngày | 2026-09-27 |
 | Trạng thái | accepted |
-| Tiến độ | **chưa làm** (2026-09-27) — chưa có spec |
+| Tiến độ | **chưa làm** (2026-09-27) — spec FS-03.13, 45 AC |
 | Nguồn | phản hồi người dùng (chủ sở hữu sản phẩm) — phiên thiết kế 2026-09-27, mọi quyết định chốt trên canvas |
-| Spec sinh ra từ đây | (điền khi sang Design) |
+| Spec sinh ra từ đây | [FS-03.13](../02-functional-spec/FS-03-photo-editor/13-iphone-editor-layout.md) (+ 13a–13d) |
 
 Canvas thiết kế (mọi màn đã chốt, đánh dấu "ĐÃ CHỌN" / hàng "Bản chốt"):
 <https://claude.ai/artifact/T4tEUQrJtxBbi48HokiL9F> — private, chủ sở hữu mở được.
@@ -17,6 +17,15 @@ intent này). Anh em cùng phiên:
 [lightroom-preset-exchange](2026-09-27-lightroom-preset-exchange.md) ·
 [lightroom-parameter-parity](2026-09-27-lightroom-parameter-parity.md) ·
 [lens-correction-sources](2026-09-27-lens-correction-sources.md).
+
+## Cập nhật 2026-09-28 (sau khi duyệt các điểm cần quyết của FS-03.13)
+
+Quyết định đầy đủ: `.planboard/editor-specs-decisions/DECISIONS.md`. Đổi so với phần trên:
+
+- **iPhone khoá dọc, editor không xoay** — bỏ bố cục iPhone ngang.
+- **Không có màn Manage Looks**: giữ lâu bất kỳ ô nào ở Presets / My Looks / LUTs → Rename · Share · Export As · Delete; Delete không hiện với preset có sẵn; không sắp xếp kéo thả.
+- Duo màn ngoài: đang trong công cụ thì ✕ / ✓ nằm trong cột công cụ dọc.
+- Heal không có Remove (tạm bỏ, xem parameter-parity). Lưới chọn loại mask 4×4. Sync chỉ ở cuối filmstrip.
 
 ## Problem — vấn đề
 

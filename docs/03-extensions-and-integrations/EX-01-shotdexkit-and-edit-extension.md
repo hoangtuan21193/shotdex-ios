@@ -20,6 +20,8 @@
   của ranh giới module.
 - Kiểu dữ liệu trong framework phải **khai hàm khởi tạo công khai tường minh** (hàm khởi tạo mặc định của
   Swift chỉ dùng được trong cùng module).
+- **Trần bộ nhớ extension chưa ràng buộc các pass render mới của FS-03.15** (Calibration, Lens Blur, mask sinh
+  tự động…) — hoãn theo quyết định D60 (2026-09-28). Extension nào render qua kit phải kiểm lại trước khi dùng.
 - Extension **chỉ nhận đúng định danh chỉnh sửa của chính nó** — nhận bừa dữ liệu chỉnh sửa của app khác là
   vứt công sức của họ lúc lưu.
 
