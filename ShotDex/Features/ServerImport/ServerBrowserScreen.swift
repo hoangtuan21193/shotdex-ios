@@ -32,6 +32,7 @@ struct ServerBrowserScreen: View {
             .toolbar { toolbar }
             .safeAreaInset(edge: .bottom) { bottomBar }
             .task(id: model.path) { await folder.load() }
+            .onChange(of: folder.thumbnails.count) { model.refreshCover() }
             .refreshable { await folder.load(force: true) }
             // The bottom bar takes the tab bar's place while picking, as the
             // Library's selection does; before iOS 26 the tab bar is drawn over
@@ -273,9 +274,13 @@ struct ServerBrowserScreen: View {
             switch item {
             case .folder(let name):
                 Button { model.open(folder: name) } label: { Label("Open", systemImage: "folder") }
+                let folderPath = ServerUploadPath.join(model.path, name)
+                if model.canAddShortcut(at: folderPath) {
+                    shortcutButton(for: folderPath)
+                }
             case .photo(let photo):
                 if model.canSelect {
-                    Button { presentDownload([photo]) } label: { Label("Import to Library", systemImage: "square.and.arrow.down") }
+                    Button { presentDownload([photo]) } label: { Label("Import to Library", systemImage: "arrow.down.circle") }
                 }
             case .file:
                 EmptyView()
@@ -376,6 +381,9 @@ struct ServerBrowserScreen: View {
                     Label("New Folder", systemImage: "folder.badge.plus")
                 }
                 .disabled(!model.canCreateFolder || model.isWorking)
+                if model.canAddShortcut(at: model.path) {
+                    shortcutButton(for: model.path)
+                }
             }
             Section {
                 Picker("View", selection: Binding(get: { model.layout }, set: { model.setLayout($0) })) {
@@ -413,6 +421,19 @@ struct ServerBrowserScreen: View {
         .accessibilityLabel("More")
     }
 
+    /// Add to / Remove from Collections for a folder (FS-17.04 §1).
+    private func shortcutButton(for path: String) -> some View {
+        Button {
+            model.toggleShortcut(at: path)
+        } label: {
+            if model.isShortcut(path) {
+                Label("Remove from Collections", systemImage: "folder.badge.minus")
+            } else {
+                Label("Add to Collections", systemImage: "plus.rectangle.on.folder")
+            }
+        }
+    }
+
     // MARK: Bottom bars
 
     @ViewBuilder
@@ -426,7 +447,7 @@ struct ServerBrowserScreen: View {
                         folder.selected.isEmpty
                             ? String(localized: "Import to Library", comment: "Server browser: copy the picked photos into the library")
                             : String(localized: "Import \(folder.selected.count) to Library", comment: "Server browser: copy the picked photos into the library, with their count"),
-                        systemImage: "square.and.arrow.down"
+                        systemImage: "arrow.down.circle"
                     )
                     .frame(maxWidth: .infinity)
                 }
@@ -799,7 +820,7 @@ struct ServerPhotoViewer: View {
                     dismiss()
                     onDownload()
                 } label: {
-                    Label("Import to Library", systemImage: "square.and.arrow.down")
+                    Label("Import to Library", systemImage: "arrow.down.circle")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)

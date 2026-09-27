@@ -164,7 +164,11 @@ Mọi con số thay đổi theo thời gian thực (%, MB, đếm tiến trình,
 | Duplicates (utility) | `square.on.square` |
 | Upload to Server / Uploaded to Server | `server.rack` |
 | Đã lên server (glyph trên ô lưới) | `externaldrive.fill.badge.checkmark` |
-| Folder trên server / New Folder (duyệt folder upload) | `folder` / `folder.badge.plus` |
+| Folder trên server / New Folder (màn duyệt server) | `folder` (ô: `folder.fill` tint) / `folder.badge.plus` |
+| Import to Library (ảnh trên server → Photos) | `arrow.down.circle` (cùng "Lưu về Photos") |
+| Icons / List (màn duyệt server) | `square.grid.2x2` / `list.bullet` |
+| Add to / Remove from Collections (folder server thành ô Network) | `plus.rectangle.on.folder` / `folder.badge.minus` |
+| Ô Network trong Collections (dấu "đây là folder trên server") | `externaldrive.connected.to.line.below` trong đĩa tối góc trên-phải bìa |
 | Máy tìm thấy trong mạng: laptop / Mac để bàn / NAS / PC (quét cổng 445) | `laptopcomputer` / `desktopcomputer` / `externaldrive.connected.to.line.below` / `pc` |
 | Rescan / làm lại | `arrow.clockwise` |
 

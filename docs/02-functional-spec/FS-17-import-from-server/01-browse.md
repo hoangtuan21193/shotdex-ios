@@ -131,17 +131,17 @@ px trong 256 KB; CR3 1620 px, ARW 1616 px, ORF 3200 px, RW2 trong 1 MB; RAF 4416
 - ⋯ → **Select** → chế độ chọn giống Library: chạm để chọn/bỏ, vuốt để chọn dải, **Select All** / **Deselect All**
   (trái toolbar, như Files; phải là **Done**), số đã chọn ở tiêu đề. Ảnh ghép cặp = một lựa chọn. Folder và file không
   phải ảnh không chọn được và hiện mờ trong lúc chọn; menu tiêu đề tắt.
-- Thanh dưới: **Save to Photos** (`square.and.arrow.down`; có số: "Save 3 to Photos") và **Delete** (`trash`, đỏ) — cả hai mờ khi 0. Ảnh "In Library" chọn được nhưng
+- Thanh dưới: **Import to Library** (`arrow.down.circle`; có số: "Import 3 to Library") và **Delete** (`trash`, đỏ) — cả hai mờ khi 0. Ảnh "In Library" chọn được nhưng
   sheet tải về mặc định bỏ qua chúng (FS-17.02 §1).
 - Không ở chế độ chọn: chạm ô → xem lớn (preview nhúng, fit màn hình), tên, dung lượng, ngày sửa, camera/ống kính
-  nếu EXIF đọc được từ đoạn đầu; nút **Save to Photos** cho riêng tấm đó (FS-17 §6).
+  nếu EXIF đọc được từ đoạn đầu; nút **Import to Library** cho riêng tấm đó (FS-17 §6).
 
 ### 4b. Nhấn giữ — Rename, Delete
 
 | Mục | Menu |
 |---|---|
 | folder | Open · Rename · Delete |
-| ảnh | Save to Photos · Rename · Delete |
+| ảnh | Import to Library · Rename · Delete |
 | file khác (Show All Files) | Rename · Delete |
 | folder chia sẻ ở gốc SMB | Open (không đổi tên, không xoá được) |
 
@@ -158,8 +158,8 @@ px trong 256 KB; CR3 1620 px, ARW 1616 px, ORF 3200 px, RW2 trong 1 MB; RAF 4416
   lịch sử upload và lịch sử tải về, để dấu In Library và luật xoá vẫn đúng. Lệch về phía an toàn: khớp thừa chỉ làm bớt
   ảnh được đề nghị xoá.
 
-Tên nút đổi 2026-09-27 (người dùng: "download không biết là về đâu"): **Save to Photos** — đúng tên sheet phía sau, đích
-có thể là Library hoặc album nên không gọi "Import to Library"; cùng chữ iOS dùng ở share sheet.
+Tên nút đổi 2026-09-27 (người dùng: "download không biết là về đâu", chốt **Import to Library**): ảnh luôn vào thư
+viện; chọn thêm album nằm trong sheet (FS-17.02 §1).
 
 ## 5. Chế độ chọn folder
 

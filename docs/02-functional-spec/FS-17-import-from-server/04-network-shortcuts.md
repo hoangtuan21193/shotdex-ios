@@ -55,8 +55,8 @@ server qua ShotDex sửa/xoá `path` của ô trùng hoặc nằm dưới (cùng
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-31 | connection NAS, folder `photos/Trip` | ⋯ → Add to Collections; rồi mở ⋯ lại | 1 dòng `server_shortcuts` (NAS, `photos/Trip`, tên `Trip`); ⋯ giờ là Remove from Collections; thêm lần hai không tạo dòng mới | `ServerShortcutStoreTests.addIsIdempotent` + `ServerBrowserModelTests.shortcutToggle` ⚠️ nửa sau chưa có |
-| AC-32 | gốc SMB; gốc SFTP | ⋯ | gốc SMB không có Add to Collections; gốc SFTP có, tên ô = tên connection | `ServerBrowserModelTests.shortcutToggle` ⚠️ chưa có |
+| AC-31 | connection NAS, folder `photos/Trip` | ⋯ → Add to Collections; rồi mở ⋯ lại | 1 dòng `server_shortcuts` (NAS, `photos/Trip`, tên `Trip`); ⋯ giờ là Remove from Collections; thêm lần hai không tạo dòng mới | `ServerShortcutStoreTests.addIsIdempotent` + `ServerBrowserModelTests.shortcutToggle` + ảnh ⚠️ chưa có |
+| AC-32 | gốc SMB; gốc SFTP | ⋯ | gốc SMB không có Add to Collections; gốc SFTP có, tên ô = tên connection | `ServerBrowserModelTests.shortcutToggle` |
 | AC-33 | 0 ô; rồi 2 ô | mở Collections | 0: không có mục Network; 2: mục Network sau Shared Albums, 2 ô theo thứ tự thêm, glyph server góc trên-phải | `ServerShortcutStoreTests.orderedByCreation` + ảnh `scripts/network-shortcuts.json` |
 | AC-34 | ô `Trip` | chạm | màn duyệt mở ở `photos/Trip` của NAS; menu tiêu đề có `photos`, NAS | ảnh `scripts/network-shortcuts.json` |
 | AC-35 | ô chưa có bìa, folder có 3 ảnh | mở ô, quay lại Collections | ô có bìa là thumbnail ảnh đầu; tắt server → bìa vẫn hiện | `ServerShortcutStoreTests.coverIsStored` + ảnh |

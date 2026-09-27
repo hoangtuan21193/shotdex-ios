@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import UIKit
 
 /// One thing the browser lists (FS-17.01 §2b), in the order it is drawn:
 /// folders, then photos, then — with Show All Files — everything else.
@@ -73,6 +74,10 @@ final class ServerBrowserModel {
     @ObservationIgnored private var folders: [String: ServerFolderModel] = [:]
     private let makeFolderModel: (String) -> ServerFolderModel
     private let fileHistory: ServerFileHistory?
+    /// Collections → Network (FS-17.04); nil where tiles are not offered.
+    private let shortcuts: ServerShortcutCatalog?
+    /// Folders whose tile cover was refreshed this visit.
+    @ObservationIgnored private var coveredPaths: Set<String> = []
     private let onUploadsForgotten: () -> Void
     private let defaults: UserDefaults
 
@@ -81,6 +86,7 @@ final class ServerBrowserModel {
         start: String,
         mode: Mode = .browse,
         fileHistory: ServerFileHistory? = nil,
+        shortcuts: ServerShortcutCatalog? = nil,
         defaults: UserDefaults = .standard,
         onUploadsForgotten: @escaping () -> Void = {},
         makeFolderModel: @escaping (String) -> ServerFolderModel
@@ -88,6 +94,7 @@ final class ServerBrowserModel {
         self.session = session
         self.mode = mode
         self.fileHistory = fileHistory
+        self.shortcuts = shortcuts
         self.defaults = defaults
         self.onUploadsForgotten = onUploadsForgotten
         self.makeFolderModel = makeFolderModel
@@ -206,6 +213,46 @@ final class ServerBrowserModel {
     var canCreateFolder: Bool { !isAtSMBRoot }
 
     var canChoose: Bool { mode == .chooseFolder && !isAtSMBRoot }
+
+    // MARK: Collections tiles (FS-17.04)
+
+    /// Add to Collections: browsing only, and never an SMB root, which only
+    /// lists shared folders.
+    func canAddShortcut(at path: String) -> Bool {
+        shortcuts != nil && mode == .browse && !(server.transferProtocol == .smb && ServerUploadPath.normalizedFolder(path).isEmpty)
+    }
+
+    func isShortcut(_ path: String) -> Bool {
+        shortcuts?.shortcut(serverId: server.id, path: path) != nil
+    }
+
+    /// Adds the folder as a tile, or removes the one it has. Nothing is
+    /// written to the server.
+    func toggleShortcut(at path: String) {
+        guard let shortcuts, canAddShortcut(at: path) else { return }
+        if let existing = shortcuts.shortcut(serverId: server.id, path: path) {
+            shortcuts.remove(existing.id)
+        } else {
+            // At a root the folder has no name of its own; the connection's
+            // says more than "Home" (FS-17.04 §1).
+            let name = ServerUploadPath.normalizedFolder(path).isEmpty ? server.name : title(for: path)
+            shortcuts.add(serverId: server.id, path: path, name: name)
+        }
+    }
+
+    /// A tile's cover is the folder's first photo, in the order on screen,
+    /// once its thumbnail has arrived — at most once a visit per folder.
+    func refreshCover() {
+        guard let shortcuts, !coveredPaths.contains(path),
+              let tile = shortcuts.shortcut(serverId: server.id, path: path) else { return }
+        let model = current
+        guard model.listing == .loaded, let first = model.photos.first,
+              let image = model.thumbnails[first.id] else { return }
+        coveredPaths.insert(path)
+        if let jpeg = UIImage(cgImage: image).jpegData(compressionQuality: 0.7) {
+            shortcuts.setCover(jpeg, for: tile.id)
+        }
+    }
 
     // MARK: Changes on the server
 

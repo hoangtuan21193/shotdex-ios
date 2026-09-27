@@ -11,6 +11,7 @@ struct BrowserFixture {
     let uploads: ServerUploadStore
     let defaults: UserDefaults
     let server: FileServer
+    let shortcuts: ServerShortcutCatalog
 
     init(transferProtocol: FileServer.TransferProtocol = .smb, host: String = "nas.local") throws {
         database = try AppDatabase.makeEmpty()
@@ -19,6 +20,7 @@ struct BrowserFixture {
         defaults = UserDefaults(suiteName: "ServerBrowserModelTests-\(UUID().uuidString)")!
         server = FileServer(name: "NAS", transferProtocol: transferProtocol, host: host, username: "me", folder: "photos")
         try servers.save(server, password: "p")
+        shortcuts = ServerShortcutCatalog(store: ServerShortcutStore(database: database))
     }
 
     func model(start: String = "photos", mode: ServerBrowserModel.Mode = .browse, onForgot: @escaping () -> Void = {}) -> ServerBrowserModel {
@@ -27,7 +29,7 @@ struct BrowserFixture {
         let downloads = ServerDownloadStore(database: database)
         return ServerBrowserModel(
             session: session, start: start, mode: mode,
-            fileHistory: ServerFileHistory(database: database), defaults: defaults,
+            fileHistory: ServerFileHistory(database: database), shortcuts: mode == .browse ? shortcuts : nil, defaults: defaults,
             onUploadsForgotten: onForgot
         ) { path in
             ServerFolderModel(session: session, folder: path, cache: cache, downloads: downloads, existingAssetIds: { _ in [] })
@@ -126,6 +128,32 @@ struct BrowserFixture {
         await model.current.load(force: true)
         #expect(model.current.listing == .loaded)
         #expect(model.current.contents.folders == ["RAW"])
+    }
+
+    /// FS-17.04 AC-31, 32: Add to Collections toggles a tile for the folder
+    /// on screen or a folder in it; never at an SMB root, never while
+    /// choosing a folder.
+    @Test func shortcutToggle() async throws {
+        let fixture = try BrowserFixture()
+        fixture.client.addDirectory("photos/Trip")
+        let model = fixture.model(start: "photos/Trip")
+
+        #expect(model.canAddShortcut(at: model.path))
+        #expect(!model.isShortcut(model.path))
+        model.toggleShortcut(at: model.path)
+        #expect(model.isShortcut("photos/Trip"))
+        #expect(fixture.shortcuts.shortcuts.map(\.name) == ["Trip"])
+        model.toggleShortcut(at: "photos/Trip")
+        #expect(fixture.shortcuts.shortcuts.isEmpty)
+
+        #expect(!model.canAddShortcut(at: ""))
+        #expect(!fixture.model(mode: .chooseFolder).canAddShortcut(at: "photos"))
+
+        let sftp = try BrowserFixture(transferProtocol: .sftp)
+        let home = sftp.model(start: "")
+        #expect(home.canAddShortcut(at: ""))
+        home.toggleShortcut(at: "")
+        #expect(sftp.shortcuts.shortcuts.map(\.name) == ["NAS"])
     }
 
     /// AC-22, remembered: Files' Sort By flips on a second pick and is kept

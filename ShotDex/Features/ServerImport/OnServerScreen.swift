@@ -157,6 +157,7 @@ struct ServerBrowserHost: View {
                 session: session,
                 start: server.folder,
                 fileHistory: dependencies.serverFileHistory,
+                shortcuts: dependencies.serverShortcuts,
                 onUploadsForgotten: { dependencies.serverUploadIndex.reload() }
             ) { path in
                 ServerFolderModel(
