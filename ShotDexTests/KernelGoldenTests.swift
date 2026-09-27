@@ -48,7 +48,7 @@ struct KernelGoldenTests {
     /// AC-2 counts forty kernels; every one of them has a case.
     @Test func everyKernelHasACase() {
         let kernels = Set(KernelGoldenCase.all.map(\.kernel))
-        #expect(kernels.count == 40)
+        #expect(kernels.count == 41)
         #expect(Set(KernelGoldenCase.all.map(\.name)).count == KernelGoldenCase.all.count)
     }
 
@@ -114,6 +114,13 @@ extension KernelGoldenCase {
         },
         color("pointColor", { PhotoRenderService.pointColorKernel }) {
             [$0(0)] + pointSlots(active: 0..<PointColorAdjustment.maximumCount)
+        },
+        color("grayMixer", { PhotoRenderService.grayMixerKernel }) {
+            [
+                $0(0),
+                CIVector(x: 0.5, y: -0.3, z: 0.8, w: -1), CIVector(x: 0.2, y: -0.6, z: -0.4, w: 1),
+                PhotoRenderService.mixerBandCentres.a, PhotoRenderService.mixerBandCentres.b,
+            ]
         },
         // AC-8: only the last slot does anything, so a kernel that dropped it shows.
         KernelGoldenCase(name: "pointColorLastSlot", kernel: "pointColor") { input in

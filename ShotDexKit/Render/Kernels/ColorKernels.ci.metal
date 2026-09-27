@@ -91,6 +91,36 @@ float4 hslMixer(sample_t s,
     return premultiply(float4(hsv2rgb(hsv), color.a));
 }
 
+// Black & White mix (FS-03.15 AC-10): the same eight-band weights as the HSL
+// mixer brighten or darken each colour, in stops, before the pixel turns to
+// luminance. Near-neutral pixels are left alone; the result is always grey.
+float4 grayMixer(sample_t s, float4 mixA, float4 mixB, float4 centresA, float4 centresB) {
+    float4 color = unpremultiply(s);
+    float3 hsv = rgb2hsv(color.rgb);
+    float hueDegrees = hsv.x * 360.0f;
+    float centres[8] = {
+        centresA.x, centresA.y, centresA.z, centresA.w,
+        centresB.x, centresB.y, centresB.z, centresB.w,
+    };
+    float w[8] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
+    for (int index = 0; index < 8; index++) {
+        int next = (index + 1) % 8;
+        float lower = centres[index];
+        float upper = next == 0 ? 360.0f : centres[next];
+        if (hueDegrees >= lower && hueDegrees < upper) {
+            float t = smoothstep(0.0f, 1.0f, (hueDegrees - lower) / (upper - lower));
+            w[index] = 1.0f - t;
+            w[next] = t;
+            break;
+        }
+    }
+    float total = dot(float4(w[0], w[1], w[2], w[3]), mixA) + dot(float4(w[4], w[5], w[6], w[7]), mixB);
+    float purity = smoothstep(0.03f, 0.12f, hsv.y);
+    float luma = dot(color.rgb, float3(0.2126f, 0.7152f, 0.0722f));
+    float grey = clamp(luma * exp2(total * purity * 1.5f), 0.0f, 1.0f);
+    return premultiply(float4(float3(grey), color.a));
+}
+
 // Eight slots: `PointColorAdjustment.maximumCount`, which a test holds to 8.
 float4 pointColor(sample_t s,
                   float4 ref0, float4 shift0, float4 ref1, float4 shift1,

@@ -11,6 +11,7 @@ public extension PhotoRenderService {
     internal static let hslMixerKernel = CoreImageKernelLibrary.kit.colorKernel(named: "hslMixer")
     internal static let pointColorKernel = CoreImageKernelLibrary.kit.colorKernel(named: "pointColor")
     internal static let colorGradeKernel = CoreImageKernelLibrary.kit.colorKernel(named: "colorGrade")
+    internal static let grayMixerKernel = CoreImageKernelLibrary.kit.colorKernel(named: "grayMixer")
 
     /// The eight mixer bands' centres, in degrees, as the HSL kernel takes
     /// them — from `ColorMixerBand.centerDegrees`, the constants
@@ -51,6 +52,28 @@ public extension PhotoRenderService {
             extent: input.extent,
             arguments: [
                 input, hue.a, hue.b, sat.a, sat.b, lum.a, lum.b,
+                mixerBandCentres.a, mixerBandCentres.b,
+            ]
+        ) ?? input
+    }
+
+    /// Black & White with the eight-band mix. Without the kernel it still
+    /// turns the picture grey, just without the per-band mix.
+    internal static func applyGrayMixer(
+        _ mixer: GrayMixerAdjustments,
+        to input: CIImage,
+        kernel: CIColorKernel? = grayMixerKernel
+    ) -> CIImage {
+        guard let kernel else {
+            return filtered("CIColorControls", image: input, values: [kCIInputSaturationKey: 0])
+        }
+        let values = ColorMixerBand.allCases.map { CGFloat(mixer[$0]) }
+        return kernel.apply(
+            extent: input.extent,
+            arguments: [
+                input,
+                CIVector(x: values[0], y: values[1], z: values[2], w: values[3]),
+                CIVector(x: values[4], y: values[5], z: values[6], w: values[7]),
                 mixerBandCentres.a, mixerBandCentres.b,
             ]
         ) ?? input
@@ -118,19 +141,24 @@ public extension PhotoRenderService {
     /// Mixer → point colors → grading, matching Lightroom's stage order.
     /// Global-only by construction: only the whole-image call sites invoke it,
     /// never the per-mask adjustment pass.
-    /// Mixer, then Black & White when it is on, then point colour and grading
-    /// — grey first, so the Grade wheels can split-tone it (FS-03.15 §3 pass 8).
+    /// HSL mixer and point colour — or, with Black & White on, the B&W mix in
+    /// their place — then grading, which can split-tone the grey (FS-03.15 §3
+    /// pass 8).
     static func applyColor(
         _ color: PhotoColorRecipe,
         blackAndWhite: Bool = false,
         to input: CIImage
     ) -> CIImage {
         guard !color.isIdentity || blackAndWhite else { return input }
-        var image = applyMixer(color.mixer, to: input)
+        var image: CIImage
         if blackAndWhite {
-            image = filtered("CIColorControls", image: image, values: [kCIInputSaturationKey: 0])
+            // The B&W mix takes the place of the HSL mixer and point colour,
+            // which Lightroom also switches off in black and white.
+            image = applyGrayMixer(color.grayMixer, to: input)
+        } else {
+            image = applyMixer(color.mixer, to: input)
+            image = applyPointColors(color.points, to: image)
         }
-        image = applyPointColors(color.points, to: image)
         image = applyGrading(color.grading, to: image)
         return image.cropped(to: input.extent)
     }
