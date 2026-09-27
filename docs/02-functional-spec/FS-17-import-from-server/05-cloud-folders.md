@@ -51,7 +51,7 @@ Cả hai luôn hiện, kể cả khi chưa có gì — màn trống nói nó dù
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
 | AC-45 | chưa có connection nào | mở Utilities | có **On Local Network** và **On Cloud**; mỗi màn trống có câu giải thích + nút thêm | ảnh `scripts/cloud-folders.json` |
-| AC-46 | folder cục bộ `Cloud/Trip` chọn qua bookmark | lưu | dòng connection giao thức `files`, `bookmark` khác nil, không mật khẩu trong Keychain; đọc lại bookmark ra đúng folder | `FilesFolderClientTests.bookmarkRoundTrip` |
+| AC-46 | folder cục bộ `Cloud/Trip` chọn qua bookmark | lưu | dòng connection giao thức `files`, `bookmark` khác nil, không mật khẩu trong Keychain; đọc lại bookmark ra đúng folder | `FilesFolderClientTests.bookmarkRoundTrip` ✅ |
 | AC-47 | folder có `a.JPG`, `b.CR3`, `x/`, `.hidden` | liệt kê qua client Files | 2 ảnh + 1 folder, dot file ẩn; New Folder/Rename/Delete/upload `.part`→tên thật chạy trên đĩa | `FilesFolderClientTests.listsAndEdits` + `.uploadVerifiesAndRenames` |
 | AC-48 | đường dẫn `..` hoặc tuyệt đối | client Files | bị từ chối (không ra ngoài folder đã chọn) | `FilesFolderClientTests.staysInsideTheFolder` |
 | AC-49 | folder cloud | mở menu tiêu đề | gốc là folder đã chọn, không có cấp trên | `ServerBrowserModelTests.cloudRootIsThePickedFolder` |

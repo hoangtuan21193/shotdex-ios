@@ -8,6 +8,10 @@ struct FileServer: Codable, Identifiable, Hashable, Sendable {
         case smb
         case sftp
         case webdav
+        /// A folder picked in the Files app — Dropbox, Google Drive,
+        /// OneDrive, iCloud Drive… (FS-17.05). No host, no password: a
+        /// security-scoped bookmark.
+        case files
 
         var id: String { rawValue }
 
@@ -16,17 +20,24 @@ struct FileServer: Codable, Identifiable, Hashable, Sendable {
             case .smb: "SMB"
             case .sftp: "SFTP"
             case .webdav: "WebDAV"
+            case .files: "Files"
             }
         }
 
-        /// The port at this protocol's default TLS setting.
+        /// The port at this protocol's default TLS setting; none for Files.
         var defaultPort: Int {
             switch self {
             case .smb: 445
             case .sftp: 22
             case .webdav: 443
+            case .files: 0
             }
         }
+
+        /// What the connection form offers: the ones typed in by address.
+        static let network: [TransferProtocol] = [.smb, .sftp, .webdav]
+
+        var isNetwork: Bool { self != .files }
     }
 
     var id: String
@@ -54,6 +65,8 @@ struct FileServer: Codable, Identifiable, Hashable, Sendable {
     var trustedFingerprint: String?
     /// WebDAV: HTTPS (default) or plain HTTP.
     var usesTLS: Bool
+    /// Files: the security-scoped bookmark of the picked folder (FS-17.05).
+    var bookmark: Data?
     /// Epoch seconds of the last upload — the prepare step picks the most
     /// recent one.
     var lastUsedAt: Int?
@@ -72,6 +85,7 @@ struct FileServer: Codable, Identifiable, Hashable, Sendable {
         usesDateFolders: Bool = false,
         trustedFingerprint: String? = nil,
         usesTLS: Bool = true,
+        bookmark: Data? = nil,
         lastUsedAt: Int? = nil,
         createdAt: Int = Int(Date().timeIntervalSince1970)
     ) {
@@ -87,6 +101,7 @@ struct FileServer: Codable, Identifiable, Hashable, Sendable {
         self.uploadFolder = uploadFolder
         self.usesDateFolders = usesDateFolders
         self.trustedFingerprint = trustedFingerprint
+        self.bookmark = bookmark
         self.lastUsedAt = lastUsedAt
         self.createdAt = createdAt
     }
@@ -109,7 +124,7 @@ struct FileServer: Codable, Identifiable, Hashable, Sendable {
         switch transferProtocol {
         case .sftp: true
         case .webdav: usesTLS
-        case .smb: false
+        case .smb, .files: false
         }
     }
 
@@ -130,6 +145,10 @@ struct FileServer: Codable, Identifiable, Hashable, Sendable {
             return folder.isEmpty ? home : "\(home)/\(folder)"
         case .smb, .webdav:
             return folder.isEmpty ? "/" : folder
+        case .files:
+            // `host` names the service, `share` the picked folder.
+            let top = [host, share].filter { !$0.isEmpty }.joined(separator: " › ")
+            return folder.isEmpty ? top : "\(top) › \(folder.replacingOccurrences(of: "/", with: " › "))"
         }
     }
 

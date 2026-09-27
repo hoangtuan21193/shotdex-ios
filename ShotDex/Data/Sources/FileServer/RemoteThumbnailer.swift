@@ -22,6 +22,15 @@ struct RemoteThumbnailer: Sendable {
     var sharpEnough = EmbeddedPreview.sharpEnough
 
     func thumbnail(for photo: ServerPhoto, in folder: String) async throws -> RemoteThumbnailResult {
+        if client.peeksWithSystemThumbnails {
+            // A Files-app folder: its service draws the thumbnail; reading
+            // the head would download the whole file (FS-17.05 §3).
+            let image = await client.systemThumbnail(at: ServerUploadPath.join(folder, photo.primary.name), maxPixelSize: maxPixelSize)
+            return RemoteThumbnailResult(
+                thumbnail: image.map { EmbeddedPreview.Thumbnail(image: $0, sourceLongSide: max($0.width, $0.height)) },
+                captureDate: nil
+            )
+        }
         var best: EmbeddedPreview.Thumbnail?
         var date: Date?
         // A pair tries its RAW's head first: a few hundred KB instead of the
@@ -42,6 +51,9 @@ struct RemoteThumbnailer: Sendable {
     /// Only the capture date — Date Taken sorting reads every file's head,
     /// not just the visible ones, so it stops at the first 64 KB.
     func captureDate(of file: RemoteEntry, at path: String) async throws -> Date? {
+        // Nothing read from a Files-app folder just for a date: the write
+        // date stands in.
+        if client.peeksWithSystemThumbnails { return nil }
         let head = try await client.readRange(path, offset: 0, length: 64 * 1024)
         return EmbeddedPreview.captureDate(from: head)
     }

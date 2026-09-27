@@ -52,6 +52,7 @@ struct FileServerDraft: Identifiable {
         switch row.transferProtocol {
         case .webdav: row.share = ServerUploadPath.normalizedFolder(row.share)
         case .smb, .sftp: row.share = ""
+        case .files: break
         }
         row.folder = ServerUploadPath.normalizedFolder(row.folder.trimmingCharacters(in: .whitespaces))
         let name = row.name.trimmingCharacters(in: .whitespaces)
@@ -157,7 +158,8 @@ struct FileServerFormScreen: View {
                 Section {
                     field("Name", text: $draft.server.name, prompt: draft.server.host.isEmpty ? "My NAS" : draft.server.host, focus: .name)
                     Picker("Protocol", selection: protocolBinding) {
-                        ForEach(FileServer.TransferProtocol.allCases) { Text($0.title).tag($0) }
+                        // Files folders are added from On Cloud, not typed in.
+                        ForEach(FileServer.TransferProtocol.network) { Text($0.title).tag($0) }
                     }
                     protocolOptions
                     field("Host", text: $draft.server.host, prompt: "nas.local", focus: .host)
@@ -500,7 +502,7 @@ struct FileServerFormScreen: View {
         switch draft.server.transferProtocol {
         case .webdav:
             Toggle("Use HTTPS", isOn: Binding(get: { draft.server.usesTLS }, set: { draft.server.usesTLS = $0; test = .idle }))
-        case .smb, .sftp:
+        case .smb, .sftp, .files:
             EmptyView()
         }
         if draft.server.isUnencrypted {
@@ -518,6 +520,8 @@ struct FileServerFormScreen: View {
             String(localized: "Folder is relative to your home folder on the server. It is where uploads start; you can pick another each time.")
         case .webdav:
             String(localized: "Path is the WebDAV address on the server, such as remote.php/dav/files/you for Nextcloud. Folder is where uploads start, inside Path.")
+        case .files:
+            ""
         }
     }
 

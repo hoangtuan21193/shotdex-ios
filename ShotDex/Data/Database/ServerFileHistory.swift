@@ -58,6 +58,8 @@ struct ServerFileHistory: Sendable {
     }
 
     private static func connectionIds(sameFilesAs server: FileServer, _ db: Database) throws -> [String] {
+        // Files folders have no host: each bookmark is its own place.
+        guard server.transferProtocol.isNetwork else { return [server.id] }
         let ids = try String.fetchAll(db, sql: """
             SELECT id FROM file_servers
             WHERE transferProtocol = ? AND lower(host) = lower(?) AND port = ?

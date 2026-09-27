@@ -7,6 +7,7 @@ enum RemoteFileClientFactory {
         case .smb: SMBFileClient(server: server, password: password)
         case .sftp: SFTPFileClient(server: server, password: password)
         case .webdav: WebDAVFileClient(server: server, password: password)
+        case .files: FilesFolderClient(server: server)
         }
     }
 }

@@ -1,3 +1,4 @@
+import CoreGraphics
 import CryptoKit
 import Foundation
 
@@ -52,10 +53,20 @@ protocol RemoteFileClient: AnyObject, Sendable {
     /// Room on the volume holding `path` (FS-17.01 §2b); nil when the
     /// server will not say.
     func storageSpace(at path: String) async throws -> StorageSpace?
+    /// True where reading a file's head means fetching the whole file — a
+    /// Files-app folder, whose service downloads on first read (FS-17.05
+    /// §3). Tiles then come from `systemThumbnail`, and Date Taken falls
+    /// back to the write date.
+    var peeksWithSystemThumbnails: Bool { get }
+    /// The system's thumbnail of a file (QuickLook — the service supplies
+    /// it without downloading); nil when it has none.
+    func systemThumbnail(at path: String, maxPixelSize: Int) async -> CGImage?
 }
 
 extension RemoteFileClient {
     func storageSpace(at path: String) async throws -> StorageSpace? { nil }
+    var peeksWithSystemThumbnails: Bool { false }
+    func systemThumbnail(at path: String, maxPixelSize: Int) async -> CGImage? { nil }
 
     /// Depth first: files, then subfolders, then the emptied folder. Dot
     /// files count — they are in the folder even if the browser hides them.

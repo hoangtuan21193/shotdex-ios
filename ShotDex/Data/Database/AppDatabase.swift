@@ -554,6 +554,14 @@ final class AppDatabase: Sendable {
             }
         }
 
+        // FS-17.05: a Files-app folder as a connection keeps a
+        // security-scoped bookmark instead of a host and a password.
+        migrator.registerMigration("v25-filesFolderBookmark") { db in
+            try db.alter(table: "file_servers") { t in
+                t.add(column: "bookmark", .blob)
+            }
+        }
+
         return migrator
     }
 }
