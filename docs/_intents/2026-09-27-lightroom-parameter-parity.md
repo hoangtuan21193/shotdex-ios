@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan |
 | Ngày | 2026-09-27 |
 | Trạng thái | accepted |
-| Tiến độ | **chưa làm** (2026-09-28) — spec FS-03.15, 60 AC · plan [2026-09-28-fs-03-15](../_plans/2026-09-28-fs-03-15-lightroom-parameter-parity.md) chờ duyệt, 61 task |
+| Tiến độ | **đang làm** (2026-09-28) — task 1/61, 1/60 AC xanh · plan [2026-09-28-fs-03-15](../_plans/2026-09-28-fs-03-15-lightroom-parameter-parity.md) |
 | Nguồn | phản hồi người dùng (chủ sở hữu sản phẩm) — "tôi muốn phản ánh được all thông số từ xmp của lightroom" |
 | Spec sinh ra từ đây | [FS-03.15](../02-functional-spec/FS-03-photo-editor/15-lightroom-parameter-parity.md) (+ 15a–15e) |
 

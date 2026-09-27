@@ -59,6 +59,34 @@ struct KernelLibraryTests {
         }
     }
 
+    /// FS-03.15 AC-5. The kit is the render core the app, tests and any future
+    /// extension share, so it may not pull in SwiftUI or GRDB. Read from the
+    /// host's source tree: the tests run on a simulator, which sees that disk.
+    @Test func kitHasNoSwiftUIOrGRDB() throws {
+        let kit = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("ShotDexKit")
+        let files = try #require(FileManager.default.enumerator(at: kit, includingPropertiesForKeys: nil))
+            .compactMap { $0 as? URL }
+            .filter { $0.pathExtension == "swift" }
+        #expect(files.count > 20, "found only \(files.count) kit sources — wrong root?")
+
+        let banned = ["SwiftUI", "GRDB"]
+        var offenders: [String] = []
+        for file in files {
+            let source = try String(contentsOf: file, encoding: .utf8)
+            for line in source.split(separator: "\n") {
+                let words = line.split(separator: " ").map(String.init)
+                guard let importIndex = words.firstIndex(of: "import"), importIndex + 1 < words.count else { continue }
+                if banned.contains(words[importIndex + 1]) {
+                    offenders.append("\(file.lastPathComponent): \(line.trimmingCharacters(in: .whitespaces))")
+                }
+            }
+        }
+        #expect(offenders.isEmpty, "kit imports a banned module: \(offenders)")
+    }
+
     /// AC-8. The point-color kernel has eight slots written into its
     /// signature; the model may not offer a ninth it cannot render.
     @Test func pointColorSlotsMatchTheModel() {
