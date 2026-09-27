@@ -52,7 +52,8 @@ folder** ở sheet upload và form connection (§5).
   `RAW+JPG`; folder: ngày sửa nếu server trả), cuối hàng: dấu In Library (ảnh) hoặc chevron (folder).
 - Chỉ **file ảnh**: đuôi thuộc `UTType.image` và ImageIO đọc được (lấy từ `CGImageSourceCopyTypeIdentifiers`, không
   liệt kê tay). File khác, video: ẩn, trừ khi bật **Show All Files** (§2c). File và folder bắt đầu bằng `.`: luôn ẩn.
-  Dòng cuối: "N photos" (+ "M other files hidden" khi M > 0 và Show All Files tắt).
+  Dòng cuối, bỏ phần bằng 0: "3 folders · 12 photos · 2 other files hidden" ("2 other files" khi Show All Files bật;
+  folder chỉ có folder con thì không có "0 photos").
 - **Ghép cặp**: file RAW và file JPEG/JPG/HEIC/HEIF cùng tên gốc (không phân biệt hoa thường) trong cùng folder →
   **một mục**, nhãn `RAW+JPG` / `RAW+HEIC`; thumbnail lấy từ file không-RAW.
 - Nhãn định dạng trên ô: cùng kiểu nhãn Library (`RAW`, `JPG`, `HEIC`, `PNG`, `TIFF`, `DNG`…).
@@ -128,18 +129,19 @@ px trong 256 KB; CR3 1620 px, ARW 1616 px, ORF 3200 px, RW2 trong 1 MB; RAF 4416
 ### 4a. Chọn nhiều
 
 - ⋯ → **Select** → chế độ chọn giống Library: chạm để chọn/bỏ, vuốt để chọn dải, **Select All** / **Deselect All**
-  trong ⋯, số đã chọn ở tiêu đề. Ảnh ghép cặp = một lựa chọn. Folder và file không phải ảnh không chọn được.
-- Thanh dưới: **Download** (kèm số) và **Delete** (`trash`, đỏ) — cả hai mờ khi 0. Ảnh "In Library" chọn được nhưng
+  (trái toolbar, như Files; phải là **Done**), số đã chọn ở tiêu đề. Ảnh ghép cặp = một lựa chọn. Folder và file không
+  phải ảnh không chọn được và hiện mờ trong lúc chọn; menu tiêu đề tắt.
+- Thanh dưới: **Save to Photos** (`square.and.arrow.down`; có số: "Save 3 to Photos") và **Delete** (`trash`, đỏ) — cả hai mờ khi 0. Ảnh "In Library" chọn được nhưng
   sheet tải về mặc định bỏ qua chúng (FS-17.02 §1).
 - Không ở chế độ chọn: chạm ô → xem lớn (preview nhúng, fit màn hình), tên, dung lượng, ngày sửa, camera/ống kính
-  nếu EXIF đọc được từ đoạn đầu; nút **Download** cho riêng tấm đó (FS-17 §6).
+  nếu EXIF đọc được từ đoạn đầu; nút **Save to Photos** cho riêng tấm đó (FS-17 §6).
 
 ### 4b. Nhấn giữ — Rename, Delete
 
 | Mục | Menu |
 |---|---|
 | folder | Open · Rename · Delete |
-| ảnh | Download · Rename · Delete |
+| ảnh | Save to Photos · Rename · Delete |
 | file khác (Show All Files) | Rename · Delete |
 | folder chia sẻ ở gốc SMB | Open (không đổi tên, không xoá được) |
 
@@ -155,6 +157,9 @@ px trong 256 KB; CR3 1620 px, ARW 1616 px, ORF 3200 px, RW2 trong 1 MB; RAF 4416
   (folder: mọi đường dẫn bên dưới), của mọi connection cùng giao thức + host + cổng. Rename thì **sửa đường dẫn** trong
   lịch sử upload và lịch sử tải về, để dấu In Library và luật xoá vẫn đúng. Lệch về phía an toàn: khớp thừa chỉ làm bớt
   ảnh được đề nghị xoá.
+
+Tên nút đổi 2026-09-27 (người dùng: "download không biết là về đâu"): **Save to Photos** — đúng tên sheet phía sau, đích
+có thể là Library hoặc album nên không gọi "Import to Library"; cùng chữ iOS dùng ở share sheet.
 
 ## 5. Chế độ chọn folder
 

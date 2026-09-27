@@ -240,6 +240,10 @@ final class ServerFolderModel {
         selected = Set(photos.map(\.id))
     }
 
+    func deselectAll() {
+        selected = []
+    }
+
     var selectedPhotos: [ServerPhoto] {
         photos.filter { selected.contains($0.id) }
     }
