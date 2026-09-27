@@ -118,9 +118,18 @@ public extension PhotoRenderService {
     /// Mixer → point colors → grading, matching Lightroom's stage order.
     /// Global-only by construction: only the whole-image call sites invoke it,
     /// never the per-mask adjustment pass.
-    static func applyColor(_ color: PhotoColorRecipe, to input: CIImage) -> CIImage {
-        guard !color.isIdentity else { return input }
+    /// Mixer, then Black & White when it is on, then point colour and grading
+    /// — grey first, so the Grade wheels can split-tone it (FS-03.15 §3 pass 8).
+    static func applyColor(
+        _ color: PhotoColorRecipe,
+        blackAndWhite: Bool = false,
+        to input: CIImage
+    ) -> CIImage {
+        guard !color.isIdentity || blackAndWhite else { return input }
         var image = applyMixer(color.mixer, to: input)
+        if blackAndWhite {
+            image = filtered("CIColorControls", image: image, values: [kCIInputSaturationKey: 0])
+        }
         image = applyPointColors(color.points, to: image)
         image = applyGrading(color.grading, to: image)
         return image.cropped(to: input.extent)

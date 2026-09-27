@@ -22,6 +22,21 @@ struct EditorAdjustmentCatalogTests {
         #expect(groups.contains { $0.kinds.contains(.grain) })
     }
 
+    /// FS-03.15 AC-6, E13. A mask has no Black & White, vignette or grain —
+    /// Lightroom's masks have none — while the whole photo keeps all three.
+    @Test func maskHasNoBlackWhiteVignetteGrain() {
+        let banned: Set<PhotoAdjustmentKind> = [
+            .blackAndWhite,
+            .vignette, .vignetteMidpoint, .vignetteFeather, .vignetteRoundness, .vignetteHighlights,
+            .grain, .grainSize, .grainRoughness,
+        ]
+        let mask = EditorAdjustmentCatalog.groups(isRAWSource: true, scope: .mask).flatMap(\.kinds)
+        #expect(banned.isDisjoint(with: mask))
+        #expect(mask.contains(.saturation), "Saturation −100 is how a mask goes grey")
+        let global = Set(EditorAdjustmentCatalog.groups(isRAWSource: true, scope: .global).flatMap(\.kinds))
+        #expect(banned.isSubset(of: global))
+    }
+
     @Test func rawGroupOnlyExistsForRAWGlobalScope() {
         let rawGlobal = EditorAdjustmentCatalog.groups(isRAWSource: true, scope: .global)
         #expect(rawGlobal.map(\.id).contains(.raw))

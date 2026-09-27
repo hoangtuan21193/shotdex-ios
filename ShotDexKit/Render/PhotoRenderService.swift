@@ -395,6 +395,7 @@ public actor PhotoRenderService {
             let adjusted = Self.applyMaskAdjustments(of: mask, to: image)
             image = blend(adjusted: adjusted, original: image, mask: maskImage)
         }
+        image = Self.applyPostMaskStages(of: recipe, to: image)
 
         if let maximumDimension {
             image = scaleDown(image, maximumDimension: maximumDimension)
@@ -412,18 +413,53 @@ public actor PhotoRenderService {
         )
     }
 
-    /// One stage of the chain that runs before the masks.
-    public enum PreMaskStage: CaseIterable, Sendable {
-        case adjustments, color, curve, lensProfile, optics, geo, look, crop, healing
+    /// One step of a photo's render, in the order of FS-03.15 §3. Steps a
+    /// feature has not reached yet are listed and do nothing, so the order is
+    /// written once and every new pass drops into its place.
+    public enum RenderPass: CaseIterable, Sendable {
+        case decode
+        case lensBlur
+        case manualLensVignetting
+        case calibration
+        case light
+        case detail
+        case dehaze
+        /// HSL mixer, Black & White, point colour, grading.
+        case color
+        case curve
+        case lensWarp
+        case optics
+        case geo
+        case look
+        case crop
+        case retouch
+        case masks
+        /// Post-crop vignette, then grain.
+        case effects
+        case output
     }
 
-    /// The stages before the masks, in order. The still, a Live Photo's motion
-    /// frames and the automatic-mask pass all walk this one list — three
-    /// hand-copied chains is how a Live Photo comes to save differently from
-    /// the frame the editor showed.
-    public static let preMaskStages: [PreMaskStage] = [
-        .adjustments, .color, .curve, .lensProfile, .optics, .geo, .look, .crop, .healing,
-    ]
+    /// The whole order. The still, a Live Photo's motion frames and the
+    /// automatic-mask pass all read this one list — three hand-copied chains is
+    /// how a Live Photo comes to save differently from the frame the editor
+    /// showed (FS-03.15 E15).
+    public static let renderPassOrder: [RenderPass] = RenderPass.allCases
+
+    /// The steps between the decoded, depth-blurred picture and the masks.
+    public static var preMaskPasses: [RenderPass] {
+        let order = renderPassOrder
+        guard let start = order.firstIndex(of: .lensBlur),
+              let end = order.firstIndex(of: .masks) else { return [] }
+        return Array(order[(start + 1)..<end])
+    }
+
+    /// The steps after the masks, before the preview is scaled down.
+    public static var postMaskPasses: [RenderPass] {
+        let order = renderPassOrder
+        guard let start = order.firstIndex(of: .masks),
+              let end = order.firstIndex(of: .output) else { return [] }
+        return Array(order[(start + 1)..<end])
+    }
 
     /// `appliesExposure` is false for a RAW still, whose exposure the decoder
     /// already applied.
@@ -434,27 +470,51 @@ public actor PhotoRenderService {
         to input: CIImage
     ) -> CIImage {
         var image = input
-        for stage in preMaskStages {
-            switch stage {
-            case .adjustments:
-                image = applyAdjustments(recipe.adjustments, to: image, appliesExposure: appliesExposure)
-            case .color: image = applyColor(recipe.color, to: image)
+        for pass in preMaskPasses {
+            switch pass {
+            case .manualLensVignetting, .calibration:
+                break
+            case .light:
+                image = applyLight(recipe.adjustments, to: image, appliesExposure: appliesExposure)
+            case .detail: image = applyDetail(recipe.adjustments, to: image)
+            case .dehaze: image = applyDehazePass(recipe.adjustments, to: image)
+            case .color:
+                image = applyColor(
+                    recipe.color,
+                    blackAndWhite: recipe.adjustments.blackAndWhite >= 0.5,
+                    to: image
+                )
             case .curve: image = applyCurve(recipe.curve, to: image)
-            case .lensProfile: image = applyLensProfile(of: recipe, source: source, to: image)
+            case .lensWarp: image = applyLensProfile(of: recipe, source: source, to: image)
             case .optics: image = applyOptics(recipe.adjustments, to: image)
             case .geo: image = applyGeo(recipe.adjustments, to: image)
             case .look: image = applyLook(of: recipe, to: image)
             case .crop: image = applyCrop(recipe.crop, to: image)
-            case .healing: image = applyHealing(recipe.healing, to: image)
+            case .retouch: image = applyHealing(recipe.healing, to: image)
+            case .decode, .lensBlur, .masks, .effects, .output:
+                break
             }
         }
         return image
     }
 
+    /// The steps after the masks.
+    public static func applyPostMaskStages(of recipe: PhotoEditRecipe, to input: CIImage) -> CIImage {
+        var image = input
+        for pass in postMaskPasses where pass == .effects {
+            image = applyEffects(recipe.adjustments, to: image)
+        }
+        return image
+    }
+
     /// What one mask does to the picture before it is blended through the
-    /// mask. Shared by the still and the Live Photo frames.
+    /// mask: light, white balance, presence, detail and dehaze. No Black &
+    /// White, vignette or grain — Lightroom's masks have none either
+    /// (FS-03.15 E13). Shared by the still and the Live Photo frames.
     public static func applyMaskAdjustments(of mask: PhotoMask, to image: CIImage) -> CIImage {
-        applyAdjustments(mask.adjustments, to: image, appliesExposure: true)
+        var result = applyLight(mask.adjustments, to: image, appliesExposure: true)
+        result = applyDetail(mask.adjustments, to: result)
+        return applyDehazePass(mask.adjustments, to: result)
     }
 
     public func resize(
@@ -1232,21 +1292,35 @@ public actor PhotoRenderService {
 
     // MARK: Adjustment graph
 
+    /// Video Studio's chain, in the order it has always had: Black & White,
+    /// light, detail, dehaze, vignette, grain. Photos follow `renderPassOrder`
+    /// instead; video keeps this until FS-12 decides its own order (FS-03.15
+    /// decision E13).
     public static func applyAdjustments(
         _ adjustments: PhotoAdjustments,
         to input: CIImage,
         appliesExposure: Bool
     ) -> CIImage {
+        var image = applyBlackAndWhite(adjustments, to: input)
+        image = applyLight(adjustments, to: image, appliesExposure: appliesExposure)
+        image = applyDetail(adjustments, to: image)
+        image = applyDehazePass(adjustments, to: image)
+        return applyEffects(adjustments, to: image)
+    }
+
+    /// Grey, with nothing else changed. Grading after it can split-tone.
+    static func applyBlackAndWhite(_ adjustments: PhotoAdjustments, to input: CIImage) -> CIImage {
+        guard adjustments.blackAndWhite >= 0.5 else { return input }
+        return filtered("CIColorControls", image: input, values: [kCIInputSaturationKey: 0])
+    }
+
+    /// Light, white balance and presence.
+    static func applyLight(
+        _ adjustments: PhotoAdjustments,
+        to input: CIImage,
+        appliesExposure: Bool
+    ) -> CIImage {
         var image = input
-        // Black & White first, so the tone work runs on grey and a later Grade wheel
-        // can split-tone it — the standard mono-then-tint order.
-        if adjustments.blackAndWhite >= 0.5 {
-            image = filtered(
-                "CIColorControls",
-                image: image,
-                values: [kCIInputSaturationKey: 0]
-            )
-        }
         if appliesExposure, abs(adjustments.exposure) > 0.0001 {
             image = filtered(
                 "CIExposureAdjust",
@@ -1352,16 +1426,29 @@ public actor PhotoRenderService {
                 ]
             )
         }
-        // Detail and Effects are two-way. Dragging right does the obvious thing;
-        // dragging left does its opposite, which is what a photographer expects
-        // from a slider with a centre tick.
+        return image
+    }
+
+    /// Detail and Effects are two-way. Dragging right does the obvious thing;
+    /// dragging left does its opposite, which is what a photographer expects
+    /// from a slider with a centre tick.
+    static func applyDetail(_ adjustments: PhotoAdjustments, to input: CIImage) -> CIImage {
+        var image = input
         for pass in detailPassOrder {
             image = apply(pass, adjustments, to: image)
         }
-        if abs(adjustments.dehaze) > 0.0001 {
-            image = applyDehaze(adjustments.dehaze, to: image)
-        }
-        image = applyVignette(adjustments, to: image)
+        return image
+    }
+
+    static func applyDehazePass(_ adjustments: PhotoAdjustments, to input: CIImage) -> CIImage {
+        guard abs(adjustments.dehaze) > 0.0001 else { return input }
+        return applyDehaze(adjustments.dehaze, to: input)
+    }
+
+    /// Post-crop vignette, then grain — after the masks, so the vignette
+    /// follows the cropped frame and the grain sits on top of everything.
+    static func applyEffects(_ adjustments: PhotoAdjustments, to input: CIImage) -> CIImage {
+        var image = applyVignette(adjustments, to: input)
         if adjustments.grain > 0 {
             image = applyGrain(
                 adjustments.grain,

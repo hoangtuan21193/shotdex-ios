@@ -796,6 +796,7 @@ final class LivePhotoFrameRenderer: @unchecked Sendable {
                 ]
             )
         }
+        image = PhotoRenderService.applyPostMaskStages(of: recipe, to: image)
         // Drawing layers are overlays now, rasterized in stack order with the rest.
         return applyOverlays(to: image)
     }

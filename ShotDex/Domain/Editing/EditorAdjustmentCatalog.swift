@@ -128,7 +128,10 @@ enum EditorAdjustmentCatalog {
             EditorAdjustmentGroup(
                 id: .color,
                 title: "Color",
-                kinds: [.warmth, .tint, .vibrance, .saturation, .blackAndWhite]
+                // A mask has no Black & White, vignette or grain — Lightroom's
+                // neither; Saturation −100 greys a mask (FS-03.15 E13).
+                kinds: [.warmth, .tint, .vibrance, .saturation]
+                    + (scope == .global ? [.blackAndWhite] : [])
             ),
             EditorAdjustmentGroup(
                 id: .detail,
@@ -142,12 +145,12 @@ enum EditorAdjustmentCatalog {
             EditorAdjustmentGroup(
                 id: .effects,
                 title: "Effects",
-                kinds: [
-                    .texture, .clarity, .dehaze,
-                    .vignette, .vignetteMidpoint, .vignetteFeather,
-                    .vignetteRoundness, .vignetteHighlights,
-                    .grain, .grainSize, .grainRoughness,
-                ]
+                kinds: ([.texture, .clarity, .dehaze]
+                    + (scope == .global ? [
+                        .vignette, .vignetteMidpoint, .vignetteFeather,
+                        .vignetteRoundness, .vignetteHighlights,
+                        .grain, .grainSize, .grainRoughness,
+                    ] : []))
                     // First in the group, not last: on a portrait it is the
                     // adjustment people came for, and the one that changes the
                     // picture most.
