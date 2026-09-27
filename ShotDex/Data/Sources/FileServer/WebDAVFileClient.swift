@@ -170,6 +170,21 @@ final class WebDAVFileClient: NSObject, RemoteFileClient, URLSessionDelegate, UR
         try check(response, path: path, allow: [200, 204, 404])
     }
 
+    /// RFC 4331 quota properties on the folder; servers without quotas
+    /// leave them out and the footer shows no storage line.
+    func storageSpace(at path: String) async throws -> StorageSpace? {
+        var request = request("PROPFIND", url(path, isDirectory: true))
+        request.setValue("0", forHTTPHeaderField: "Depth")
+        request.setValue("application/xml; charset=utf-8", forHTTPHeaderField: "Content-Type")
+        request.httpBody = Data("""
+            <?xml version="1.0" encoding="utf-8"?>
+            <d:propfind xmlns:d="DAV:"><d:prop><d:quota-available-bytes/><d:quota-used-bytes/></d:prop></d:propfind>
+            """.utf8)
+        guard let (data, response) = try? await send(request),
+              (response as? HTTPURLResponse)?.statusCode == 207 else { return nil }
+        return StorageSpaceReading.webdavQuota(data)
+    }
+
     func removeEmptyDirectory(_ path: String) async throws {
         let (_, response) = try await send(request("DELETE", url(path, isDirectory: true)))
         try check(response, path: path, allow: [200, 204, 404])

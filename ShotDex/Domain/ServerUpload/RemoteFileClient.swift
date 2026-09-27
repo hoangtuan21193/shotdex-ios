@@ -49,9 +49,14 @@ protocol RemoteFileClient: AnyObject, Sendable {
     /// Deletes a folder and everything in it (FS-17.01 §4b), stopping at the
     /// first failure. WebDAV does it in one request; the others walk it.
     func removeFolderTree(_ path: String) async throws
+    /// Room on the volume holding `path` (FS-17.01 §2b); nil when the
+    /// server will not say.
+    func storageSpace(at path: String) async throws -> StorageSpace?
 }
 
 extension RemoteFileClient {
+    func storageSpace(at path: String) async throws -> StorageSpace? { nil }
+
     /// Depth first: files, then subfolders, then the emptied folder. Dot
     /// files count — they are in the folder even if the browser hides them.
     func removeFolderTree(_ path: String) async throws {

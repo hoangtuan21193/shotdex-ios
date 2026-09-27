@@ -119,8 +119,19 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
     var dropConnectionOnDownload: Int?
     private(set) var downloadCount = 0
 
+    /// What `storageSpace(at:)` answers, by path; nil — no answer.
+    var spaces: [String: StorageSpace] = [:]
+
+    func storageSpace(at path: String) async throws -> StorageSpace? {
+        lock.withLock { spaces[path] }
+    }
+
+    /// What `entries(in:)` throws — a listing that fails after the login.
+    var entriesError: RemoteFileError?
+
     func entries(in directory: String) async throws -> [RemoteEntry] {
-        lock.withLock {
+        if let entriesError { throw entriesError }
+        return lock.withLock {
             let files = storage.filter { ServerUploadPath.parent(of: $0.key) == directory }.map { path, data in
                 RemoteEntry(name: ServerUploadPath.lastComponent(of: path), isDirectory: false, size: Int64(data.count), modified: modified[path])
             }

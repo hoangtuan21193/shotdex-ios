@@ -276,6 +276,23 @@ final class SFTPFileClient: RemoteFileClient, @unchecked Sendable {
         }
     }
 
+    /// `df -Pk` over the same SSH login: SFTP itself has no size request
+    /// in the version Citadel speaks. An SFTP-only account refuses the
+    /// command — nil, not an error. Five seconds at most.
+    func storageSpace(at path: String) async throws -> StorageSpace? {
+        guard let ssh else { return nil }
+        let target = path.isEmpty ? "." : path
+        let quoted = "'" + target.replacingOccurrences(of: "'", with: "'\\''") + "'"
+        do {
+            let output = try await withConnectTimeout(host: server.host, seconds: 5) {
+                try await ssh.executeCommand("df -Pk -- \(quoted)", maxResponseSize: 4096)
+            }
+            return StorageSpaceReading.diskFree(String(buffer: output))
+        } catch {
+            return nil
+        }
+    }
+
     func removeEmptyDirectory(_ path: String) async throws {
         do {
             try await connected().rmdir(at: path)

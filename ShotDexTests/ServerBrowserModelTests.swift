@@ -57,25 +57,25 @@ struct BrowserFixture {
         #expect(fixture.defaults.string(forKey: "serverBrowser.layout.\(other.id)") == nil)
     }
 
-    /// AC-24: New Folder makes it, opens it and puts it in the history.
-    @Test func newFolderOpensIt() async throws {
+    /// AC-24: New Folder makes it; browsing stays put with the new folder
+    /// in the list (choosing opens it — `chooseModeListsFoldersAndDimsPhotos`).
+    @Test func newFolderStaysWhileBrowsing() async throws {
         let fixture = try BrowserFixture()
         fixture.client.addDirectory("photos")
         let model = fixture.model()
         await model.current.load()
 
         #expect(await model.createFolder(named: "Trip"))
-        #expect(model.path == "photos/Trip")
-        #expect(try await fixture.client.directoryExists("photos/Trip"))
-        #expect(model.goBack())
         #expect(model.path == "photos")
+        #expect(!model.history.canGoBack)
+        #expect(try await fixture.client.directoryExists("photos/Trip"))
         #expect(model.current.contents.folders == ["Trip"])
 
         #expect(!(await model.createFolder(named: ".x")))
         #expect(!(await model.createFolder(named: "a/b")))
-        // Already there: opened, not an error.
+        // Already there: not an error.
         #expect(await model.createFolder(named: "Trip"))
-        #expect(model.path == "photos/Trip")
+        #expect(model.path == "photos")
         #expect(model.editError == nil)
     }
 
@@ -156,6 +156,23 @@ struct BrowserFixture {
         #expect(sftp.shortcuts.shortcuts.map(\.name) == ["NAS"])
     }
 
+    /// FS-17 AC-44: the storage line comes after the listing, and is
+    /// left out when the server does not say or at an SMB root.
+    @Test func storageLine() async throws {
+        let fixture = try BrowserFixture()
+        fixture.client.put("photos/a.JPG", Data([1]))
+        fixture.client.spaces["photos"] = StorageSpace(total: 4_000_000_000_000, free: 1_200_000_000_000)
+        let model = fixture.model()
+        await model.current.load()
+        for _ in 0..<100 where model.current.storage == nil { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(model.current.storage?.footerText == "1.2 TB free of 4 TB")
+
+        model.open(folder: "RAW")
+        await model.current.load()
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(model.current.storage == nil)
+    }
+
     /// AC-22, remembered: Files' Sort By flips on a second pick and is kept
     /// per connection.
     @Test func sortByFlipsAndIsRemembered() async throws {
@@ -230,6 +247,25 @@ struct BrowserFixture {
         #expect(try fixture.uploads.uploadedAssetIds() == ["C"])
         #expect(forgot == 1)
         #expect(model.current.contents.folders.isEmpty)
+    }
+
+    /// AC-41: edits list again behind the screen — never `.loading`, and a
+    /// failed listing keeps the old one.
+    @Test func refreshKeepsTheListing() async throws {
+        let fixture = try BrowserFixture()
+        for name in ["1.JPG", "2.JPG", "3.JPG"] { fixture.client.put("photos/\(name)", Data([1])) }
+        let model = fixture.model()
+        await model.current.load()
+
+        await model.delete([.photo(model.current.photos[0])])
+        #expect(model.current.listing == .loaded)
+        #expect(model.current.photos.map(\.id) == ["2.JPG", "3.JPG"])
+
+        fixture.client.entriesError = .connectionLost
+        await model.delete([.photo(model.current.photos[0])])
+        #expect(model.current.listing == .loaded)
+        #expect(model.current.photos.map(\.id) == ["2.JPG", "3.JPG"])
+        #expect(Set(fixture.client.files.keys) == ["photos/3.JPG"])
     }
 
     /// AC-27.

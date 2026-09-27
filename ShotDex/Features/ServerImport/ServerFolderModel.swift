@@ -32,6 +32,9 @@ final class ServerFolderModel {
     /// Tiles known to have no preview — the format icon.
     private(set) var withoutPreview: Set<String> = []
     private(set) var inLibrary: Set<String> = []
+    /// Room on the server here (FS-17.01 §2b); asked after the listing, so
+    /// the grid never waits on it.
+    private(set) var storage: StorageSpace?
     private(set) var known: [KnownRemoteFile] = []
     var isSelecting = false {
         didSet { if !isSelecting { selected = [] } }
@@ -73,12 +76,44 @@ final class ServerFolderModel {
             let entries = try await session.perform { client in try await client.entries(in: folder) }
             contents = ServerFolderListing.contents(of: entries)
             listing = .loaded
+            loadStorage()
             loadCachedDates()
             applyOrder()
             await refreshInLibrary()
             if sort == .dateTaken { readDates() }
         } catch {
             listing = .failed((error as? RemoteFileError) ?? .other(error.localizedDescription))
+        }
+    }
+
+    /// Lists again behind what is on screen (FS-17.01 §4b): after New
+    /// Folder, Rename, Delete or a pull to refresh. The listing never goes
+    /// back to `.loading` — that swapped the grid for a spinner and threw
+    /// the scroll position away — and a failure keeps the old listing.
+    func refresh() async {
+        guard listing == .loaded else {
+            await load(force: true)
+            return
+        }
+        let folder = folder
+        guard let entries = try? await session.perform({ client in try await client.entries(in: folder) }) else { return }
+        contents = ServerFolderListing.contents(of: entries)
+        selected.formIntersection(contents.photos.map(\.id))
+        loadStorage()
+        loadCachedDates()
+        applyOrder()
+        await refreshInLibrary()
+        if sort == .dateTaken { readDates() }
+    }
+
+    /// Queued behind the listing on the one login; a server that will not
+    /// say leaves the line out.
+    private func loadStorage() {
+        let folder = folder
+        let session = session
+        Task { [weak self] in
+            let space = (try? await session.perform { client in try await client.storageSpace(at: folder) }) ?? nil
+            self?.storage = space
         }
     }
 

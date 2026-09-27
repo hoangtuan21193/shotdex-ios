@@ -54,6 +54,17 @@ folder** ở sheet upload và form connection (§5).
   liệt kê tay). File khác, video: ẩn, trừ khi bật **Show All Files** (§2c). File và folder bắt đầu bằng `.`: luôn ẩn.
   Dòng cuối, bỏ phần bằng 0: "3 folders · 12 photos · 2 other files hidden" ("2 other files" khi Show All Files bật;
   folder chỉ có folder con thì không có "0 photos").
+- **Dung lượng** (người dùng 2026-09-27: "xem được total và dung lượng còn free trên server"): dòng thứ hai của footer,
+  cùng cỡ chữ: "1.2 TB free of 4 TB" (đơn vị theo `ByteCountFormatter` .file). Biết còn trống mà không biết tổng →
+  "1.2 TB free". Server không trả lời → không có dòng này (không báo lỗi). Hỏi một lần mỗi lần liệt kê folder, sau khi
+  lưới đã hiện — không làm chậm danh sách. Gốc SMB (danh sách folder chia sẻ) không có dòng này: mỗi folder chia sẻ có
+  thể nằm trên một ổ khác.
+
+  | Giao thức | Hỏi bằng | Ghi chú |
+  |---|---|---|
+  | SMB | QUERY_INFO `FileFsSizeInformation` trên folder chia sẻ | còn trống là phần **tài khoản này** dùng được (tính quota) |
+  | WebDAV | PROPFIND Depth 0 `quota-available-bytes` + `quota-used-bytes` (RFC 4331) | tổng = dùng + còn; server không có → không dòng |
+  | SFTP | lệnh `df -Pk` qua SSH ở folder đang mở | tài khoản chỉ SFTP (chroot, không cho chạy lệnh) → không dòng |
 - **Ghép cặp**: file RAW và file JPEG/JPG/HEIC/HEIF cùng tên gốc (không phân biệt hoa thường) trong cùng folder →
   **một mục**, nhãn `RAW+JPG` / `RAW+HEIC`; thumbnail lấy từ file không-RAW.
 - Nhãn định dạng trên ô: cùng kiểu nhãn Library (`RAW`, `JPG`, `HEIC`, `PNG`, `TIFF`, `DNG`…).
@@ -72,7 +83,8 @@ Thứ tự theo menu ⋯ của Files:
 | 4 | **View Options ▸** Show All Files (công tắc, mặc định tắt) |
 
 - Icons/List, Sort By + chiều, Show All Files **nhớ theo connection**.
-- **New Folder**: hỏi tên, tạo trong folder đang mở, rồi **mở luôn** folder đó (vào lịch sử). Tên: không rỗng, không
+- **New Folder**: hỏi tên, tạo trong folder đang mở. Khi duyệt: **ở lại** folder đang mở, folder mới hiện đúng chỗ
+  theo thứ tự (như Files; đổi 2026-09-27). Khi chọn folder (§5): mở luôn folder mới (vào lịch sử) — tạo để đẩy vào đó. Tên: không rỗng, không
   chứa `/`, không bắt đầu bằng `.`. Trùng folder đã có → mở folder đó, không báo lỗi. Ở gốc SMB: mờ (không tạo được folder
   chia sẻ từ đây).
 - **Show All Files** bật: file không phải ảnh hiện dạng icon tài liệu (`doc`) + tên, **mờ**, không mở, không chọn được;
@@ -152,6 +164,9 @@ px trong 256 KB; CR3 1620 px, ARW 1616 px, ORF 3200 px, RW2 trong 1 MB; RAF 4416
   đỏ **Delete** + Cancel. Cặp RAW+JPEG xoá cả hai. Folder xoá **đệ quy** (mọi file và folder con).
 - Xoá hỏng một phần (quyền, rớt mạng): dừng ở mục hỏng, báo câu lỗi FS-15.01 §3, liệt kê lại folder — thứ đã xoá không
   hiện lại.
+- **Giữ nguyên chỗ đang xem** (người dùng 2026-09-27: "sau khi delete nó lại tự scroll về đầu"): sau New Folder,
+  Rename, Delete và kéo-để-làm-mới, folder được liệt kê lại **ngầm** — nội dung cũ ở nguyên trên màn, không spinner
+  thay màn, không cuộn; danh sách mới thay vào tại chỗ. Liệt kê lại hỏng → giữ danh sách cũ.
 - **Ảnh trong Photos không bị đụng.** Nhưng lịch sử upload là bằng chứng "đã có trên server" để FS-15.02 §7 đề nghị
   xoá khỏi máy — file bị xoá trên server thì bằng chứng hết đúng: **xoá các dòng lịch sử upload** trỏ tới đường dẫn đó
   (folder: mọi đường dẫn bên dưới), của mọi connection cùng giao thức + host + cổng. Rename thì **sửa đường dẫn** trong

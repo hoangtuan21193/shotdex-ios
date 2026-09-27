@@ -290,6 +290,26 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
         }
     }
 
+    /// The share's size and what this account may still write
+    /// (`FileFsSizeInformation`); nil at the machine's root, where each share
+    /// may be a different volume.
+    func storageSpace(at path: String) async throws -> StorageSpace? {
+        do {
+            guard let (client, _) = try await open(path) else { return nil }
+            // FileFsSizeInformation is class 3 of the file-system info
+            // classes; SMBClient keeps that alias internal, and 3 is
+            // `.fileBothDirectoryInformation` in its shared enum.
+            let response = try await client.session.queryInfo(path: "", infoType: .fileSystem, fileInfoClass: .fileBothDirectoryInformation)
+            let size = FileFsSizeInformation(data: response.buffer)
+            return StorageSpaceReading.smb(
+                totalUnits: size.totalAllocationUnits, freeUnits: size.availableAllocationUnits,
+                sectorsPerUnit: size.sectorsPerAllocationUnit, bytesPerSector: size.bytesPerSector
+            )
+        } catch {
+            return nil
+        }
+    }
+
     func removeEmptyDirectory(_ path: String) async throws {
         do {
             let (client, rest) = try await openInShare(path)

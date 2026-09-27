@@ -33,7 +33,7 @@ struct ServerBrowserScreen: View {
             .safeAreaInset(edge: .bottom) { bottomBar }
             .task(id: model.path) { await folder.load() }
             .onChange(of: folder.thumbnails.count) { model.refreshCover() }
-            .refreshable { await folder.load(force: true) }
+            .refreshable { await folder.refresh() }
             // The bottom bar takes the tab bar's place while picking, as the
             // Library's selection does; before iOS 26 the tab bar is drawn over
             // the content and would hide the bar (seen on 18.6).
@@ -318,10 +318,17 @@ struct ServerBrowserScreen: View {
                 : Text("^[\(contents.hiddenFileCount) other file](inflect: true) hidden", comment: "Server browser footer: files left out"))
         }
         let line = parts.dropFirst().reduce(parts.first ?? Text(verbatim: "")) { $0 + Text(verbatim: " · ") + $1 }
-        return line
-            .font(.footnote)
-            .foregroundStyle(.secondary)
-            .padding(.vertical, 16)
+        return VStack(spacing: 4) {
+            line
+            // Room on the server, when it says (FS-17.01 §2b).
+            if let storage = folder.storage {
+                Text(storage.footerText)
+            }
+        }
+        .font(.footnote)
+        .foregroundStyle(.secondary)
+        .multilineTextAlignment(.center)
+        .padding(.vertical, 16)
     }
 
     // MARK: Toolbar

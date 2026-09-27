@@ -256,8 +256,9 @@ final class ServerBrowserModel {
 
     // MARK: Changes on the server
 
-    /// Makes `typed` in the folder on screen and opens it. A folder that is
-    /// already there is simply opened.
+    /// Makes `typed` in the folder on screen. Browsing stays where it is, as
+    /// Files does; choosing a folder opens the new one, which is why it was
+    /// made. A folder that is already there is not an error.
     @discardableResult
     func createFolder(named typed: String) async -> Bool {
         guard canCreateFolder, let name = RemoteFolderListing.validatedName(typed) else { return false }
@@ -267,8 +268,8 @@ final class ServerBrowserModel {
         defer { isWorking = false }
         do {
             try await session.perform { client in try await client.createDirectory(newPath) }
-            await folder.load(force: true)
-            go(to: newPath)
+            await folder.refresh()
+            if mode == .chooseFolder { go(to: newPath) }
             return true
         } catch {
             editError = Self.message(for: error)
@@ -308,11 +309,11 @@ final class ServerBrowserModel {
                 if case .folder = item { dropFolderModels(under: source) }
             } catch {
                 editError = Self.message(for: error)
-                await model.load(force: true)
+                await model.refresh()
                 return false
             }
         }
-        await model.load(force: true)
+        await model.refresh()
         return true
     }
 
@@ -345,7 +346,7 @@ final class ServerBrowserModel {
         }
         model.isSelecting = false
         if forgot > 0 { onUploadsForgotten() }
-        await model.load(force: true)
+        await model.refresh()
     }
 
     private func takenNames() -> [String] {
