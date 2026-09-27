@@ -22,7 +22,7 @@
   { "action": "wait", "seconds": 4 },
   { "action": "screenshot", "name": "10-scrolled" },
   { "action": "dump", "name": "10-scrolled" },
-  { "action": "longPress", "label": "pattern_030.jpg, JPG", "seconds": 1.2 },
+  { "action": "longPress", "label": "pattern_028.jpg, JPG", "seconds": 1.2 },
   { "action": "wait", "seconds": 1 },
   { "action": "tap", "label": "Delete" },
   { "action": "wait", "seconds": 1 },

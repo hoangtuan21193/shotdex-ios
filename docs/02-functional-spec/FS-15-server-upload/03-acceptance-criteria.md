@@ -65,7 +65,7 @@ lệch, huỷ) kiểm được mà không cần mạng. Phần chỉ máy thật
 | AC-50 | 3 connection | xem On Server, menu Upload to ▸, Settings → File Servers | mỗi hàng chỉ tên + folder (`photo/RAW`, SFTP `Home`), không `SMB`/host | `ServerUploadMenuTests.rowShapeFollowsConnectionCount` + ảnh `scripts/server-connect-as.json` (`40-saved-on-server`) |
 | AC-51 | connection `ShotDex Test` trong On Server | nhấn giữ → Edit Connection | form Edit mở với dữ liệu đã lưu; vuốt hàng có Edit + Delete; Delete hỏi xác nhận, lịch sử giữ | ảnh `scripts/server-connect-as.json` (`45-row-menu`, `50-edit-form`) |
 | AC-52 | Connect As xong, chọn `PHOTOS` | hộp Save Connection: đổi Name thành `NAS ảnh`, bật Add to Collections, Save; lần khác Cancel | connection `NAS ảnh` lưu với folder `PHOTOS`, có 1 ô Network (`PHOTOS`); Cancel → về màn chọn folder, chưa lưu gì; Name rỗng → Save mờ | `ConnectionSaverTests.savesAndAddsTile` + ảnh `scripts/server-connect-as.json` (`38-save-dialog`) |
-| AC-53 | form Add Connection nhập tay, Folder `photos/2026` | bật Add to Collections, Save; mở Edit; tắt, Save | có ô Network `2026`; Edit hiện công tắc bật; tắt + Save → ô mất, folder trên server không đổi; câu giải thích hiện dưới công tắc ở cả form và hộp Save Connection | `ConnectionSaverTests.formSwitchAddsAndRemoves` + ảnh ⚠️ chưa có |
+| AC-53 | form Add Connection nhập tay, Folder `photos/2026` | bật Add to Collections, Save; mở Edit; tắt, Save | có ô Network `2026`; Edit hiện công tắc bật; tắt + Save → ô mất, folder trên server không đổi; câu giải thích hiện dưới công tắc ở cả form và hộp Save Connection | `ConnectionSaverTests.formSwitchAddsAndRemoves` + ảnh `scripts/server-connect-as.json` (`50-edit-form`) |
 
 ### WebDAV (FS-15.05)
 
