@@ -2,6 +2,10 @@
 
 `FS-04.03` · `ShotDexKit/DepthImageReader.swift` · cập nhật 2026-09-22
 
+> **2026-09-28 — slider Depth Blur đã gỡ.** Lens Blur của [FS-03.15e](../FS-03-photo-editor/15e-lens-blur.md)
+> thay nó; tới khi Lens Blur xong thì editor không có làm mờ theo độ sâu. Phần đọc bản đồ độ sâu dưới đây vẫn
+> đúng và được Lens Blur dùng lại.
+
 **Một câu:** làm mờ hậu cảnh ảnh Portrait bằng chính bản đồ độ sâu của máy ảnh — và hai filter sẵn có của
 Apple đều không dùng được.
 

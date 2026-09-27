@@ -81,16 +81,21 @@ public struct ToneCurveAdjustments: Codable, Equatable, Sendable {
         ]),
     ]
 
+    /// The region curve, baked in before the point curves (FS-03.15 D51).
+    public var region = ParametricCurve.identity
+
     public init(
         rgb: [CurvePoint] = ToneCurveAdjustments.linear,
         red: [CurvePoint] = ToneCurveAdjustments.linear,
         green: [CurvePoint] = ToneCurveAdjustments.linear,
-        blue: [CurvePoint] = ToneCurveAdjustments.linear
+        blue: [CurvePoint] = ToneCurveAdjustments.linear,
+        region: ParametricCurve = .identity
     ) {
         self.rgb = rgb
         self.red = red
         self.green = green
         self.blue = blue
+        self.region = region
     }
 
     public var isIdentity: Bool {
@@ -98,6 +103,7 @@ public struct ToneCurveAdjustments: Codable, Equatable, Sendable {
             && red == Self.linear
             && green == Self.linear
             && blue == Self.linear
+            && region.isIdentity
     }
 
     public subscript(_ channel: ToneCurveChannel) -> [CurvePoint] {
@@ -120,7 +126,7 @@ public struct ToneCurveAdjustments: Codable, Equatable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case rgb, red, green, blue
+        case rgb, red, green, blue, region
     }
 
     public init(from decoder: any Decoder) throws {
@@ -129,6 +135,7 @@ public struct ToneCurveAdjustments: Codable, Equatable, Sendable {
         red = try container.decodeIfPresent([CurvePoint].self, forKey: .red) ?? Self.linear
         green = try container.decodeIfPresent([CurvePoint].self, forKey: .green) ?? Self.linear
         blue = try container.decodeIfPresent([CurvePoint].self, forKey: .blue) ?? Self.linear
+        region = (try? container.decodeIfPresent(ParametricCurve.self, forKey: .region)) ?? .identity
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -137,5 +144,44 @@ public struct ToneCurveAdjustments: Codable, Equatable, Sendable {
         if red != Self.linear { try container.encode(red, forKey: .red) }
         if green != Self.linear { try container.encode(green, forKey: .green) }
         if blue != Self.linear { try container.encode(blue, forKey: .blue) }
+        if !region.isIdentity { try container.encode(region, forKey: .region) }
+    }
+}
+
+/// Lightroom's region curve: four tonal regions pushed up or down, with the
+/// three splits between them movable. Values −1…1 (UI ±100); splits 0…1.
+/// Baked into the same 256-step table as the point curve, region first.
+public struct ParametricCurve: Codable, Equatable, Sendable {
+    public var shadows = 0.0
+    public var darks = 0.0
+    public var lights = 0.0
+    public var highlights = 0.0
+    public var shadowSplit = 0.25
+    public var midtoneSplit = 0.5
+    public var highlightSplit = 0.75
+
+    public static let identity = ParametricCurve()
+
+    public init() {}
+
+    /// The splits only shape the curve once a region moves, so a curve with
+    /// every region at 0 is untouched wherever its splits sit.
+    public var isIdentity: Bool {
+        shadows == 0 && darks == 0 && lights == 0 && highlights == 0
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case shadows, darks, lights, highlights, shadowSplit, midtoneSplit, highlightSplit
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        shadows = try container.decodeIfPresent(Double.self, forKey: .shadows) ?? 0
+        darks = try container.decodeIfPresent(Double.self, forKey: .darks) ?? 0
+        lights = try container.decodeIfPresent(Double.self, forKey: .lights) ?? 0
+        highlights = try container.decodeIfPresent(Double.self, forKey: .highlights) ?? 0
+        shadowSplit = try container.decodeIfPresent(Double.self, forKey: .shadowSplit) ?? 0.25
+        midtoneSplit = try container.decodeIfPresent(Double.self, forKey: .midtoneSplit) ?? 0.5
+        highlightSplit = try container.decodeIfPresent(Double.self, forKey: .highlightSplit) ?? 0.75
     }
 }

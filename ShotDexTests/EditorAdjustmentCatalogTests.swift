@@ -67,7 +67,7 @@ struct EditorAdjustmentCatalogTests {
             PhotoAdjustmentKind.grain, .grainSize, .grainRoughness,
             .vignetteMidpoint, .vignetteFeather, .sharpenRadius,
             .sharpenDetail, .sharpenMasking,
-            .colorNoiseReduction, .vignetteHighlights, .defringe, .rawLuminanceNoise,
+            .colorNoiseReduction, .vignetteHighlights, .rawLuminanceNoise,
             .noiseReduction, .noiseDetail,
         ] {
             #expect(EditorAdjustmentCatalog.sliderRange(of: kind) == 0...1)
@@ -130,7 +130,7 @@ struct EditorAdjustmentCatalogTests {
         #expect(global.map(\.id).contains(.optics))
         #expect(global.map(\.id).contains(.geo))
         let optics = global.first { $0.id == .optics }
-        #expect(optics?.kinds == [.chromaticAberration, .defringe])
+        #expect(optics?.kinds == [.chromaticAberration])
         let geo = global.first { $0.id == .geo }
         #expect(geo?.kinds == [
             .geoVertical, .geoHorizontal, .geoRotate, .geoScale, .geoOffsetX, .geoOffsetY,

@@ -320,6 +320,101 @@ public struct ColorGradingAdjustments: Codable, Equatable, Sendable {
     }
 }
 
+// MARK: - Black & White mixer
+
+/// How bright each of the eight bands turns when the photo goes grey. −1…1
+/// (UI ±100); 0 is the plain luminance mix.
+public struct GrayMixerAdjustments: Codable, Equatable, Sendable {
+    public var red = 0.0
+    public var orange = 0.0
+    public var yellow = 0.0
+    public var green = 0.0
+    public var aqua = 0.0
+    public var blue = 0.0
+    public var purple = 0.0
+    public var magenta = 0.0
+
+    public static let identity = GrayMixerAdjustments()
+
+    public init() {}
+
+    public var isIdentity: Bool { self == .identity }
+
+    public subscript(_ band: ColorMixerBand) -> Double {
+        get {
+            switch band {
+            case .red: red
+            case .orange: orange
+            case .yellow: yellow
+            case .green: green
+            case .aqua: aqua
+            case .blue: blue
+            case .purple: purple
+            case .magenta: magenta
+            }
+        }
+        set {
+            switch band {
+            case .red: red = newValue
+            case .orange: orange = newValue
+            case .yellow: yellow = newValue
+            case .green: green = newValue
+            case .aqua: aqua = newValue
+            case .blue: blue = newValue
+            case .purple: purple = newValue
+            case .magenta: magenta = newValue
+            }
+        }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case red, orange, yellow, green, aqua, blue, purple, magenta
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        for band in ColorMixerBand.allCases {
+            let key = CodingKeys(rawValue: band.rawValue)!
+            self[band] = try container.decodeIfPresent(Double.self, forKey: key) ?? 0
+        }
+    }
+}
+
+// MARK: - Calibration
+
+/// Lightroom's Calibration: where the three primaries sit and how saturated
+/// they are, plus a green–magenta tint in the shadows. −1…1 (UI ±100).
+public struct PhotoCalibration: Codable, Equatable, Sendable {
+    public var shadowTint = 0.0
+    public var redHue = 0.0
+    public var redSaturation = 0.0
+    public var greenHue = 0.0
+    public var greenSaturation = 0.0
+    public var blueHue = 0.0
+    public var blueSaturation = 0.0
+
+    public static let identity = PhotoCalibration()
+
+    public init() {}
+
+    public var isIdentity: Bool { self == .identity }
+
+    private enum CodingKeys: String, CodingKey {
+        case shadowTint, redHue, redSaturation, greenHue, greenSaturation, blueHue, blueSaturation
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        shadowTint = try container.decodeIfPresent(Double.self, forKey: .shadowTint) ?? 0
+        redHue = try container.decodeIfPresent(Double.self, forKey: .redHue) ?? 0
+        redSaturation = try container.decodeIfPresent(Double.self, forKey: .redSaturation) ?? 0
+        greenHue = try container.decodeIfPresent(Double.self, forKey: .greenHue) ?? 0
+        greenSaturation = try container.decodeIfPresent(Double.self, forKey: .greenSaturation) ?? 0
+        blueHue = try container.decodeIfPresent(Double.self, forKey: .blueHue) ?? 0
+        blueSaturation = try container.decodeIfPresent(Double.self, forKey: .blueSaturation) ?? 0
+    }
+}
+
 // MARK: - Container
 
 /// The whole Color tab under a single recipe key, so `PhotoEditRecipe` grows
@@ -328,15 +423,19 @@ public struct PhotoColorRecipe: Codable, Equatable, Sendable {
     public var mixer = ColorMixerAdjustments.identity
     public var points: [PointColorAdjustment] = []
     public var grading = ColorGradingAdjustments.identity
+    /// Used instead of the HSL mixer while Black & White is on.
+    public var grayMixer = GrayMixerAdjustments.identity
+    public var calibration = PhotoCalibration.identity
 
     public static let identity = PhotoColorRecipe()
 
     public var isIdentity: Bool {
         mixer.isIdentity && points.isEmpty && grading.isIdentity
+            && grayMixer.isIdentity && calibration.isIdentity
     }
 
     private enum CodingKeys: String, CodingKey {
-        case mixer, points, grading
+        case mixer, points, grading, grayMixer, calibration
     }
 
     public init() {}
@@ -349,6 +448,10 @@ public struct PhotoColorRecipe: Codable, Equatable, Sendable {
             ?? []
         grading = try container.decodeIfPresent(ColorGradingAdjustments.self, forKey: .grading)
             ?? .identity
+        grayMixer = (try? container.decodeIfPresent(GrayMixerAdjustments.self, forKey: .grayMixer))
+            ?? .identity
+        calibration = (try? container.decodeIfPresent(PhotoCalibration.self, forKey: .calibration))
+            ?? .identity
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -356,5 +459,7 @@ public struct PhotoColorRecipe: Codable, Equatable, Sendable {
         if !mixer.isIdentity { try container.encode(mixer, forKey: .mixer) }
         if !points.isEmpty { try container.encode(points, forKey: .points) }
         if !grading.isIdentity { try container.encode(grading, forKey: .grading) }
+        if !grayMixer.isIdentity { try container.encode(grayMixer, forKey: .grayMixer) }
+        if !calibration.isIdentity { try container.encode(calibration, forKey: .calibration) }
     }
 }

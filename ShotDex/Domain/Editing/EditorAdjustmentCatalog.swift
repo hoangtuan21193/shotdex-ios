@@ -59,16 +59,14 @@ enum EditorAdjustmentCatalog {
         .noiseDetail,
         .colorNoiseReduction,
         .vignetteHighlights,
-        .defringe,
         .rawSharpness,
         .rawLuminanceNoise,
         .rawColorNoise,
         .lensCorrection,
     ]
 
-    /// `hasDepth` adds the portrait Depth Blur row. Off by default so every
-    /// existing caller keeps the catalog it had, and so the row never appears
-    /// on a photo with no depth map to blur by.
+    /// `hasDepth` is kept for the Lens Blur group (FS-03.15e), which replaces
+    /// the old Depth Blur row; today it changes nothing.
     /// The sections the wide-screen panel lists, in order. Five, the way
     /// Lightroom's own Edit panel lists them — Curve folds into Light, Mix,
     /// Point and Grade become tabs inside Color, and Geometry goes with the crop
@@ -151,10 +149,6 @@ enum EditorAdjustmentCatalog {
                         .vignetteRoundness, .vignetteHighlights,
                         .grain, .grainSize, .grainRoughness,
                     ] : []))
-                    // First in the group, not last: on a portrait it is the
-                    // adjustment people came for, and the one that changes the
-                    // picture most.
-                    .prepending(hasDepth && scope == .global ? [.depthBlur] : [])
             ),
         ]
         // Optics and Geo act on the whole frame's geometry / lens, so they are
@@ -164,7 +158,7 @@ enum EditorAdjustmentCatalog {
                 EditorAdjustmentGroup(
                     id: .optics,
                     title: "Optics",
-                    kinds: [.chromaticAberration, .defringe]
+                    kinds: [.chromaticAberration]
                 )
             )
             groups.append(

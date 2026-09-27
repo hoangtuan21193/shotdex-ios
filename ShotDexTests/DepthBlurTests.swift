@@ -121,22 +121,4 @@ struct DepthBlurTests {
         )
         #expect(output.extent == input.extent)
     }
-
-    /// The Depth Blur row exists only for photos that carry depth, and only
-    /// outside a mask — a mask already limits where an adjustment lands, and
-    /// depth blur has its own idea about that.
-    @Test func catalogOffersDepthBlurOnlyForDepthPhotos() {
-        let withDepth = EditorAdjustmentCatalog.groups(
-            isRAWSource: false, scope: .global, hasDepth: true
-        )
-        let without = EditorAdjustmentCatalog.groups(
-            isRAWSource: false, scope: .global, hasDepth: false
-        )
-        let masked = EditorAdjustmentCatalog.groups(
-            isRAWSource: false, scope: .mask, hasDepth: true
-        )
-        #expect(withDepth.first { $0.id == .effects }?.kinds.first == .depthBlur)
-        #expect(without.first { $0.id == .effects }?.kinds.contains(.depthBlur) == false)
-        #expect(masked.first { $0.id == .effects }?.kinds.contains(.depthBlur) == false)
-    }
 }

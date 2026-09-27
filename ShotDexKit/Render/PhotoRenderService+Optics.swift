@@ -62,11 +62,10 @@ public extension PhotoRenderService {
 
     // MARK: Optics
 
-    /// Chromatic-aberration removal and defringe. Both are **approximations** — a
-    /// true correction needs a lens profile and edge detection, which ShotDex has
-    /// no data for. CA does a gentle chroma cleanup that softens colour fringing
-    /// without touching luminance detail; Defringe pulls down the most-saturated
-    /// colours (where fringing lives) globally, scaled by amount.
+    /// Chromatic-aberration removal — an **approximation**: a gentle chroma
+    /// cleanup that softens colour fringing without touching luminance detail.
+    /// The old whole-frame Defringe is gone; the edge-based purple/green
+    /// Defringe of FS-03.15b replaces it.
     static func applyOptics(_ adjustments: PhotoAdjustments, to input: CIImage) -> CIImage {
         var image = input
         if adjustments.chromaticAberration >= 0.5 {
@@ -77,13 +76,6 @@ public extension PhotoRenderService {
                     "inputNoiseLevel": 0.02,
                     "inputSharpness": 0.9,
                 ]
-            )
-        }
-        if adjustments.defringe > 0.0001 {
-            image = filtered(
-                "CIVibrance",
-                image: image,
-                values: ["inputAmount": -adjustments.defringe * 0.5]
             )
         }
         return image

@@ -361,17 +361,10 @@ public actor PhotoRenderService {
         recipe: PhotoEditRecipe,
         maximumDimension: CGFloat?
     ) throws -> PhotoRenderResult {
-        // Depth blur first, on the untouched picture. It is a capture-time
-        // property being re-decided, not a look laid over the result: blurring
-        // after tone and colour would blur a version of the photo the lens
-        // never saw, and the depth map would no longer line up with a cropped
-        // or straightened frame.
-        let unadjusted = Self.applyDepthBlur(
-            recipe.adjustments.depthBlur,
-            to: baseResult.image,
-            disparity: baseResult.disparity,
-            matte: baseResult.portraitMatte
-        )
+        // The Lens Blur slot (pass 2), on the untouched picture: a
+        // capture-time property being re-decided, not a look laid over the
+        // result. Empty until Lens Blur lands (FS-03.15e); Depth Blur is gone.
+        let unadjusted = baseResult.image
         var image = Self.applyPreMaskStages(
             of: recipe,
             source: source,
@@ -1165,12 +1158,12 @@ public actor PhotoRenderService {
     }
 
     /// The depth maps this render needs, or nothing when the recipe asks for
-    /// no depth blur.
+    /// no lens blur.
     private func depthMaps(
         source: PhotoRenderSourceInfo,
         recipe: PhotoEditRecipe
     ) -> (disparity: CIImage?, matte: CIImage?) {
-        guard recipe.adjustments.depthBlur > 0.001 else { return (nil, nil) }
+        guard !recipe.lensBlur.isIdentity else { return (nil, nil) }
         return (
             DepthImageReader.disparity(at: source.url),
             DepthImageReader.matte(at: source.url)

@@ -412,13 +412,8 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
     case grain
     case grainSize
     case grainRoughness
-    /// Portrait depth blur. Only meaningful on a photo that carries depth, so
-    /// the catalog hides the row on every other photo rather than offering a
-    /// slider that does nothing.
-    case depthBlur
     // Optics
     case chromaticAberration
-    case defringe
     // Geo (transform)
     case geoVertical
     case geoHorizontal
@@ -460,7 +455,6 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         case .colorNoiseReduction: "Color Noise"
         case .texture: "Texture"
         case .clarity: "Clarity"
-        case .depthBlur: "Depth Blur"
         case .dehaze: "Dehaze"
         case .vignette: "Vignette"
         case .vignetteMidpoint: "Vignette Midpoint"
@@ -471,7 +465,6 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         case .grainSize: "Grain Size"
         case .grainRoughness: "Grain Roughness"
         case .chromaticAberration: "Remove Chromatic Aberration"
-        case .defringe: "Defringe"
         case .geoVertical: "Vertical"
         case .geoHorizontal: "Horizontal"
         case .geoRotate: "Rotate"
@@ -512,7 +505,6 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         case .colorNoiseReduction: "drop.halffull"
         case .texture: "circle.grid.2x2"
         case .clarity: "circle.hexagonpath"
-        case .depthBlur: "camera.aperture"
         case .dehaze: "sun.haze"
         case .vignette: "viewfinder"
         case .vignetteMidpoint: "smallcircle.circle"
@@ -523,7 +515,6 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         case .grainSize: "circle.grid.3x3"
         case .grainRoughness: "circle.grid.3x3.circle"
         case .chromaticAberration: "camera.aperture"
-        case .defringe: "scribble.variable"
         case .geoVertical: "perspective"
         case .geoHorizontal: "perspective"
         case .geoRotate: "rotate.right"
@@ -545,7 +536,7 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
              .vignetteMidpoint, .vignetteFeather, .blackAndWhite,
              .sharpenRadius, .sharpenDetail, .sharpenMasking, .colorNoiseReduction,
              .noiseReduction, .noiseDetail,
-             .vignetteHighlights, .chromaticAberration, .defringe, .depthBlur: 0...1
+             .vignetteHighlights, .chromaticAberration: 0...1
         case .exposure: -2...2
         default: -1...1
         }
@@ -592,7 +583,6 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
         texture: Double = 0.0,
         clarity: Double = 0.0,
         dehaze: Double = 0.0,
-        depthBlur: Double = 0.0,
         vignette: Double = 0.0,
         vignetteMidpoint: Double = 0.5,
         vignetteFeather: Double = 0.5,
@@ -602,7 +592,6 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
         grainSize: Double = 0.0,
         grainRoughness: Double = 0.0,
         chromaticAberration: Double = 0.0,
-        defringe: Double = 0.0,
         geoVertical: Double = 0.0,
         geoHorizontal: Double = 0.0,
         geoRotate: Double = 0.0,
@@ -640,7 +629,6 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
         self.texture = texture
         self.clarity = clarity
         self.dehaze = dehaze
-        self.depthBlur = depthBlur
         self.vignette = vignette
         self.vignetteMidpoint = vignetteMidpoint
         self.vignetteFeather = vignetteFeather
@@ -650,7 +638,6 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
         self.grainSize = grainSize
         self.grainRoughness = grainRoughness
         self.chromaticAberration = chromaticAberration
-        self.defringe = defringe
         self.geoVertical = geoVertical
         self.geoHorizontal = geoHorizontal
         self.geoRotate = geoRotate
@@ -691,10 +678,6 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
     public var texture = 0.0
     public var clarity = 0.0
     public var dehaze = 0.0
-    /// Portrait depth blur, 0 = the photo as shot. Not a stop count: the
-    /// f-number the panel shows is a label over this, because the strength
-    /// Core Image's depth blur takes is not calibrated in stops.
-    public var depthBlur = 0.0
     public var vignette = 0.0
     /// Where the vignette starts falling off (0 = near the centre, 1 = only the
     /// extreme corners). Default 0.5 — a neutral value, so it is part of `.zero`
@@ -707,7 +690,6 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
     public var grainSize = 0.0
     public var grainRoughness = 0.0
     public var chromaticAberration = 0.0
-    public var defringe = 0.0
     public var geoVertical = 0.0
     public var geoHorizontal = 0.0
     public var geoRotate = 0.0
@@ -749,7 +731,6 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .colorNoiseReduction: colorNoiseReduction
             case .texture: texture
             case .clarity: clarity
-            case .depthBlur: depthBlur
             case .dehaze: dehaze
             case .vignette: vignette
             case .vignetteMidpoint: vignetteMidpoint
@@ -760,7 +741,6 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .grainSize: grainSize
             case .grainRoughness: grainRoughness
             case .chromaticAberration: chromaticAberration
-            case .defringe: defringe
             case .geoVertical: geoVertical
             case .geoHorizontal: geoHorizontal
             case .geoRotate: geoRotate
@@ -800,7 +780,6 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .colorNoiseReduction: colorNoiseReduction = newValue
             case .texture: texture = newValue
             case .clarity: clarity = newValue
-            case .depthBlur: depthBlur = newValue
             case .dehaze: dehaze = newValue
             case .vignette: vignette = newValue
             case .vignetteMidpoint: vignetteMidpoint = newValue
@@ -811,7 +790,6 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .grainSize: grainSize = newValue
             case .grainRoughness: grainRoughness = newValue
             case .chromaticAberration: chromaticAberration = newValue
-            case .defringe: defringe = newValue
             case .geoVertical: geoVertical = newValue
             case .geoHorizontal: geoHorizontal = newValue
             case .geoRotate: geoRotate = newValue
@@ -1202,6 +1180,14 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
     /// A Lensfun lens profile for distortion correction on sources the RAW
     /// decoder does not correct (JPEG, HEIC). Nil = no profile correction.
     public var lensProfile: PhotoLensProfileChoice?
+    /// Upright: the mode is part of a look, the guides and solved transform
+    /// belong to this frame (FS-03.15 D56, D57).
+    public var upright = PhotoUprightRecipe.identity
+    /// Lens Blur, which replaces Depth Blur once it renders (FS-03.15e).
+    public var lensBlur = PhotoLensBlurRecipe.identity
+    public var vignetteStyle: PhotoVignetteStyle = .highlightPriority
+    /// Pupils made dark again. Belong to this frame, like the healing spots.
+    public var redEyes: [PhotoRedEyeSpot] = []
 
     public static let identity = PhotoEditRecipe()
 
@@ -1232,6 +1218,10 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
             && overlays.isEmpty
             && healing.isEmpty
             && lensProfile == nil
+            && upright.isIdentity
+            && lensBlur.isIdentity
+            && vignetteStyle == .highlightPriority
+            && redEyes.isEmpty
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -1253,6 +1243,10 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
         case drawing
         case healing
         case lensProfile
+        case upright
+        case lensBlur
+        case vignetteStyle
+        case redEyes
     }
 
     public init() {}
@@ -1302,6 +1296,11 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
         // know is dropped, not the recipe.
         healing = try container.decodeLossyArrayIfPresent(PhotoHealingSpot.self, forKey: .healing) ?? []
         lensProfile = try? container.decodeIfPresent(PhotoLensProfileChoice.self, forKey: .lensProfile)
+        upright = (try? container.decodeIfPresent(PhotoUprightRecipe.self, forKey: .upright)) ?? .identity
+        lensBlur = (try? container.decodeIfPresent(PhotoLensBlurRecipe.self, forKey: .lensBlur)) ?? .identity
+        vignetteStyle = (try? container.decodeIfPresent(PhotoVignetteStyle.self, forKey: .vignetteStyle))
+            ?? .highlightPriority
+        redEyes = try container.decodeLossyArrayIfPresent(PhotoRedEyeSpot.self, forKey: .redEyes) ?? []
     }
 
     /// Written by hand so an untouched Color tab adds no key at all — a recipe
@@ -1322,6 +1321,10 @@ public struct PhotoEditRecipe: Codable, Equatable, Sendable {
         if !overlays.isEmpty { try container.encode(overlays, forKey: .overlays) }
         if !healing.isEmpty { try container.encode(healing, forKey: .healing) }
         try container.encodeIfPresent(lensProfile, forKey: .lensProfile)
+        if !upright.isIdentity { try container.encode(upright, forKey: .upright) }
+        if !lensBlur.isIdentity { try container.encode(lensBlur, forKey: .lensBlur) }
+        if vignetteStyle != .highlightPriority { try container.encode(vignetteStyle, forKey: .vignetteStyle) }
+        if !redEyes.isEmpty { try container.encode(redEyes, forKey: .redEyes) }
     }
 }
 
