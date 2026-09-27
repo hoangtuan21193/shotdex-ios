@@ -119,6 +119,20 @@ struct FileServer: Codable, Identifiable, Hashable, Sendable {
     }
 
     /// `host/share/folder` for the list row.
+    /// Where uploads start, as a list row shows it under the connection's
+    /// name (FS-15.01 §2): the folder path, `Home/…` for SFTP, `/` for the
+    /// top of a WebDAV path. No protocol, no host.
+    var folderDescription: String {
+        let folder = ServerUploadPath.normalizedFolder(self.folder)
+        switch transferProtocol {
+        case .sftp:
+            let home = String(localized: "Home", comment: "Connection row: the SFTP login's home folder")
+            return folder.isEmpty ? home : "\(home)/\(folder)"
+        case .smb, .webdav:
+            return folder.isEmpty ? "/" : folder
+        }
+    }
+
     var locationDescription: String {
         [host, share, ServerUploadPath.normalizedFolder(folder)]
             .filter { !$0.isEmpty }

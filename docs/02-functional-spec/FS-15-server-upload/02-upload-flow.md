@@ -16,7 +16,7 @@ connection (một **connection** = một dòng đã khai trong Settings → File
 |---|---|---|
 | 0 | **Upload to Server…** | sheet mở thẳng form **Add Connection**; lưu xong vào bước chuẩn bị với connection vừa tạo |
 | 1 | **Upload to <tên>** | sheet mở ở bước chuẩn bị với connection đó |
-| ≥ 2 | menu con **Upload to** ▸ | liệt kê **tên** từng connection, sắp theo tên, dòng phụ `SMB · host/folder`; cuối menu là **Add Connection…** |
+| ≥ 2 | menu con **Upload to** ▸ | liệt kê **tên** từng connection, sắp theo tên, dòng phụ là đường dẫn folder (như hàng connection, FS-15.01 §2); cuối menu là **Add Connection…** |
 
 - Chọn một tên trong menu con → sheet mở với **đúng connection đó**, không phải connection dùng lần trước.
 - **Add Connection…** trong menu con → form; lưu xong vào bước chuẩn bị với connection mới.
@@ -112,10 +112,12 @@ Bản đã sửa: `<tên gốc>_edited.<đuôi của bản sửa>`, cạnh bản
 
 ## 8. Sau khi đẩy
 
-- **Collections → Utilities → On Server** (màn mở ra tên **Uploaded to Server**; thẻ Utilities rộng 190pt
-  không chứa nổi tên dài): lưới mọi ảnh còn trong thư viện đã lên ít nhất một
-  server, mới nhất trước. Hàng chỉ hiện khi có ít nhất một ảnh. Menu **⋯ → Delete N from This Device** xoá
-  đúng những ảnh qua được luật §7, cùng hai hộp xác nhận.
+- **Collections → Utilities → On Server → Uploaded from This Device** (màn tên **Uploaded to Server**). Đổi 2026-09-27
+  (người dùng: "không được hiện button create video… phải biết ảnh đã upload lên chỗ nào"): màn là **danh sách nơi
+  đến** — mỗi hàng một connection + folder (tên connection, dưới là folder, bên phải số ảnh), mới nhất trước; chạm →
+  lưới ảnh của nơi đó (không có nút làm video). Ảnh lên hai nơi có ở cả hai. Hàng cuối **All Uploaded Photos** → lưới
+  mọi ảnh. Tên lấy theo connection hiện tại (đã đổi tên thì theo tên mới). Hàng chỉ hiện khi có ít nhất một ảnh. Menu
+  **⋯ → Delete N from This Device** xoá đúng những ảnh qua được luật §7, cùng hai hộp xác nhận.
 - **Dấu trên lưới**: glyph nhỏ ở góc dưới-trái ô, trên mọi lưới. Nhãn VoiceOver "Uploaded to server".
-- **Photo Info**: dòng "Uploaded to <tên server> · <ngày>" cho mỗi server, mới nhất trước.
+- **Photo Info**: mỗi nơi (server + folder) một dòng: tên server, dưới là folder, bên phải ngày; mới nhất trước.
 - Ảnh bị xoá khỏi thư viện → dòng lịch sử **ở lại** (bảng giữ bằng chứng); nó chỉ không còn hiện ở đâu.

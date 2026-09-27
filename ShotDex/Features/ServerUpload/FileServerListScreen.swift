@@ -37,7 +37,7 @@ struct FileServerListScreen: View {
                         }
                     }
                 } footer: {
-                    Text("Uploads send the original files over SMB or SFTP. Passwords are kept in the Keychain on this device.")
+                    Text("Uploads send the original files to the folder under each name. Passwords are kept in the Keychain on this device.")
                 }
             }
         }
@@ -79,7 +79,8 @@ struct FileServerListScreen: View {
     }
 }
 
-/// One server in a list: name, protocol, where.
+/// One connection in a list: its name and the folder it points at — what
+/// tells two connections to one server apart (FS-15.01 §2).
 struct FileServerRow: View {
     let server: FileServer
     /// Off inside a `NavigationLink`, which draws its own.
@@ -90,7 +91,7 @@ struct FileServerRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(server.name)
                     .foregroundStyle(.primary)
-                Text("\(server.transferProtocol.title) · \(server.locationDescription)")
+                Text(server.folderDescription)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)

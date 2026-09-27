@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-26 |
 | Trạng thái | accepted — người dùng duyệt 2026-09-26 |
-| Tiến độ | **đang làm** (2026-09-27) — spec đổi: màn duyệt kiểu Files (FS-17.01 §2, §4b, §5, AC-19…29); plan [2026-09-27-files-browser-connect-as](../_plans/2026-09-27-files-browser-connect-as.md) đang làm, task 7/11. Trước đó 16/18 AC xanh |
+| Tiến độ | **đang làm** (2026-09-27) — spec đổi: màn duyệt kiểu Files (FS-17.01 §2, §4b, §5, AC-19…29); plan [2026-09-27-files-browser-connect-as](../_plans/2026-09-27-files-browser-connect-as.md) đang làm, task 10/11 (còn /verify). Trước đó 16/18 AC xanh |
 | Nguồn | phản hồi người dùng (2026-09-26) |
 | Spec sinh ra từ đây | [FS-17](../02-functional-spec/FS-17-import-from-server/README.md) — 16 AC |
 

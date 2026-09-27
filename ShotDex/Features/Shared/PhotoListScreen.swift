@@ -12,6 +12,9 @@ struct PhotoListScreen: View {
     let title: String
     var subtitle: String?
     let assetIds: [String]
+    /// The film button. Off where a video is not what the list is for —
+    /// Uploaded to Server is about where copies are (FS-15.02 §8).
+    var showsMakeVideo = true
 
     @Environment(AppDependencies.self) private var dependencies
     /// The coordinator whose sheets are attached above this screen — the
@@ -41,7 +44,7 @@ struct PhotoListScreen: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                if let model, !model.items.isEmpty {
+                if showsMakeVideo, let model, !model.items.isEmpty {
                     Button {
                         makeVideo(model)
                     } label: {

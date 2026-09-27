@@ -74,3 +74,24 @@ import Testing
         #expect(known.map(\.remotePath) == ["photos/Beach.JPG"])
     }
 }
+
+/// FS-15.02 §8 — FS-15 AC-49: Uploaded to Server lists where the copies are.
+@Suite struct UploadDestinationsTests {
+    @Test func groupsByConnectionAndFolder() {
+        let rows: [UploadDestinations.Row] = [
+            .init(connectionName: "NAS", remotePath: "photos/2024/a.CR3", assetId: "A", uploadedAt: 10),
+            .init(connectionName: "NAS", remotePath: "photos/2024/a.JPG", assetId: "A", uploadedAt: 11),
+            .init(connectionName: "NAS", remotePath: "photos/2024/b.CR3", assetId: "B", uploadedAt: 30),
+            .init(connectionName: "Mac", remotePath: "Backup/a.CR3", assetId: "A", uploadedAt: 20),
+            .init(connectionName: "NAS", remotePath: "c.CR3", assetId: "C", uploadedAt: 5),
+            .init(connectionName: "NAS", remotePath: "photos/2024/gone.CR3", assetId: "G", uploadedAt: 40),
+        ]
+        let places = UploadDestinations.group(rows, present: ["A", "B", "C"])
+        #expect(places.map(\.connectionName) == ["NAS", "Mac", "NAS"])
+        #expect(places.map(\.folder) == ["photos/2024", "Backup", ""])
+        #expect(places[0].assetIds == ["B", "A"])
+        #expect(places[1].assetIds == ["A"])
+        // Nothing left in the library for a place: it goes.
+        #expect(UploadDestinations.group(rows, present: ["C"]).map(\.folder) == [""])
+    }
+}

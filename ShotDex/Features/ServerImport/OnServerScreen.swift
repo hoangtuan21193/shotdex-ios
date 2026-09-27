@@ -13,6 +13,7 @@ struct ServerBrowseRoute: Hashable {
 struct OnServerScreen: View {
     @Environment(AppDependencies.self) private var dependencies
     @State private var editing: FileServerDraft?
+    @State private var pendingDelete: FileServer?
     /// One login per connection, made on first push and kept for as long
     /// as On Server is — a plain class, so filling it while SwiftUI builds a
     /// destination does not invalidate the view.
@@ -45,6 +46,24 @@ struct OnServerScreen: View {
                         NavigationLink(value: ServerBrowseRoute(connectionId: server.id)) {
                             FileServerRow(server: server, showsChevron: false)
                         }
+                        // Edit where the connection is used, not only in
+                        // Settings (FS-17.01 §1).
+                        .contextMenu {
+                            Button {
+                                editing = FileServerDraft(server: server)
+                            } label: {
+                                Label("Edit Connection", systemImage: "pencil")
+                            }
+                            Button(role: .destructive) {
+                                pendingDelete = server
+                            } label: {
+                                Label("Delete Connection", systemImage: "trash")
+                            }
+                        }
+                        .swipeActions {
+                            Button("Delete", role: .destructive) { pendingDelete = server }
+                            Button("Edit") { editing = FileServerDraft(server: server) }
+                        }
                     }
                 }
             }
@@ -75,6 +94,20 @@ struct OnServerScreen: View {
         }
         .sheet(item: $editing) { draft in
             FileServerFormScreen(draft: draft)
+        }
+        .confirmationDialog(
+            pendingDelete.map { "Delete \($0.name)?" } ?? "",
+            isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
+            titleVisibility: .visible,
+            presenting: pendingDelete
+        ) { server in
+            Button("Delete Connection", role: .destructive) {
+                try? dependencies.fileServers.delete(id: server.id)
+                dependencies.fileServerCatalog.reload()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { _ in
+            Text("The upload history is kept, and nothing on the server or in your library is deleted.")
         }
         .navigationDestination(for: ServerBrowseRoute.self) { route in
             if let server = servers.first(where: { $0.id == route.connectionId }) {

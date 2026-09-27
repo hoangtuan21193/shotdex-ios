@@ -33,7 +33,7 @@ enum ServerUploadMenu {
     static func row(for servers: [FileServer]) -> Row {
         let items = servers
             .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-            .map { Item(id: $0.id, name: $0.name, detail: "\($0.transferProtocol.title) · \($0.locationDescription)") }
+            .map { Item(id: $0.id, name: $0.name, detail: $0.folderDescription) }
         switch items.count {
         case 0: return .addFirst
         case 1: return .single(items[0])

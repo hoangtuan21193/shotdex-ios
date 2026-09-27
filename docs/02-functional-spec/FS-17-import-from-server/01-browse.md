@@ -13,7 +13,7 @@ nhúng, chọn nhiều như Library.
 
 | Section | Nội dung |
 |---|---|
-| Connections | mỗi connection một hàng: tên · `SMB · host/folder` (`FileServerRow`) · chạm → duyệt, mở ở **Folder của connection**; lên cha bằng menu tiêu đề (§2a) |
+| Connections | mỗi connection một hàng: tên, dưới là đường dẫn folder (`FileServerRow`, FS-15.01 §2) · chạm → duyệt, mở ở **Folder của connection**; lên cha bằng menu tiêu đề (§2a) · **nhấn giữ** → Edit Connection / Delete Connection; **vuốt** → Edit, Delete (đổi 2026-09-27: trước chỉ sửa được trong Settings) |
 | (không tiêu đề) | **Uploaded from This Device** · số ảnh → màn Uploaded to Server hiện có (FS-15.02 §8); ẩn khi 0 |
 
 - Toolbar màn On Server: **+** → Add Connection (FS-15.04).

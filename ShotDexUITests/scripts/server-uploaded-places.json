@@ -1,0 +1,21 @@
+{
+ "steps": [
+  { "action": "launch" },
+  { "action": "wait", "seconds": 6 },
+  { "action": "tap", "label": "Collections", "type": "button" },
+  { "action": "wait", "seconds": 3 },
+  { "action": "swipe", "x": 0.5, "y": 0.75, "direction": "up", "distance": 0.5 },
+  { "action": "swipe", "x": 0.5, "y": 0.75, "direction": "up", "distance": 0.5 },
+  { "action": "swipe", "x": 0.5, "y": 0.75, "direction": "up", "distance": 0.5 },
+  { "action": "swipe", "x": 0.5, "y": 0.75, "direction": "up", "distance": 0.5 },
+  { "action": "tap", "label": "On Server" },
+  { "action": "wait", "seconds": 2 },
+  { "action": "tap", "label": "Uploaded from This Device" },
+  { "action": "wait", "seconds": 4 },
+  { "action": "screenshot", "name": "10-places" },
+  { "action": "dump", "name": "10-places" },
+  { "action": "tap", "label": "All Uploaded Photos" },
+  { "action": "wait", "seconds": 4 },
+  { "action": "screenshot", "name": "20-all-grid" }
+ ]
+}

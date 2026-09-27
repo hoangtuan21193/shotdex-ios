@@ -34,6 +34,20 @@ struct ServerUploadStore: Sendable {
         }
     }
 
+    /// Every upload with the connection's current name (the name at upload
+    /// time when the connection is gone) — Uploaded from This Device groups
+    /// these by place (FS-15.02 §8).
+    func destinationRows() throws -> [UploadDestinations.Row] {
+        try database.reader.read { db in
+            try Row.fetchAll(db, sql: """
+                SELECT COALESCE(f.name, u.serverName) AS name, u.remotePath, u.assetId, u.uploadedAt
+                FROM server_uploads u LEFT JOIN file_servers f ON f.id = u.serverId
+                """).map {
+                UploadDestinations.Row(connectionName: $0["name"], remotePath: $0["remotePath"], assetId: $0["assetId"], uploadedAt: $0["uploadedAt"])
+            }
+        }
+    }
+
     /// For each asset asked about, the file keys that are on some server.
     func uploadedFileKeys(assetIds: [String]) throws -> [String: Set<String>] {
         guard !assetIds.isEmpty else { return [:] }

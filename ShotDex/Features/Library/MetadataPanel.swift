@@ -101,8 +101,17 @@ struct MetadataPanel: View {
         let lines = serverUploadLines
         if !lines.isEmpty {
             Section {
-                ForEach(lines, id: \.server) { line in
-                    LabeledContent(line.server, value: line.date.formatted(date: .abbreviated, time: .omitted))
+                ForEach(lines, id: \.id) { line in
+                    LabeledContent {
+                        Text(line.date.formatted(date: .abbreviated, time: .omitted))
+                    } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(line.server)
+                            Text(line.folder.isEmpty ? "/" : line.folder)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
             } header: {
                 Label("Uploaded to Server", systemImage: "server.rack")
@@ -110,12 +119,16 @@ struct MetadataPanel: View {
         }
     }
 
-    private var serverUploadLines: [(server: String, date: Date)] {
+    /// One line per server and folder the photo's files went to — where
+    /// the copy is, not just which machine (FS-15.02 §8).
+    private var serverUploadLines: [(id: String, server: String, folder: String, date: Date)] {
         guard let id = asset?.localIdentifier, let uploadIndex else { return [] }
         var seen = Set<String>()
         return uploadIndex.uploads(assetId: id).compactMap { record in
-            guard seen.insert(record.serverName).inserted else { return nil }
-            return (record.serverName, Date(timeIntervalSince1970: TimeInterval(record.uploadedAt)))
+            let folder = ServerUploadPath.parent(of: record.remotePath)
+            let key = "\(record.serverName)\u{1F}\(folder)"
+            guard seen.insert(key).inserted else { return nil }
+            return (key, record.serverName, folder, Date(timeIntervalSince1970: TimeInterval(record.uploadedAt)))
         }
     }
 
