@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan |
 | Ngày | 2026-09-25 |
 | Trạng thái | draft |
-| Tiến độ | **chưa làm** (2026-09-25) — chưa có spec |
+| Tiến độ | **chưa làm** (2026-09-25) — chưa có spec. **Được thay bởi [2026-09-27-editor-iphone-layout](2026-09-27-editor-iphone-layout.md)** (2026-09-27); đề xuất đổi Trạng thái sang `dismissed` |
 | Nguồn | phản hồi người dùng (chủ sở hữu sản phẩm), đóng vai người dùng Lightroom |
 | Spec sinh ra từ đây | (điền khi sang Design) |
 
