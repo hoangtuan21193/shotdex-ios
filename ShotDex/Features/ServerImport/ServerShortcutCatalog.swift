@@ -23,7 +23,7 @@ final class ServerShortcutCatalog {
     }
 
     func add(serverId: String, path: String, name: String) {
-        try? store.add(serverId: serverId, path: path, name: name)
+        _ = try? store.add(serverId: serverId, path: path, name: name)
         reload()
     }
 
