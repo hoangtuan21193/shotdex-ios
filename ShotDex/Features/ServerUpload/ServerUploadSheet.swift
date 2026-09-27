@@ -12,8 +12,8 @@ struct ServerUploadSheet: View {
     @State private var isAddingServer = false
     @State private var isConfirmingCancel = false
     @State private var isConfirmingDelete = false
-    /// The folder browser's screens, root first (FS-15.02 §2a).
-    @State private var folderPath: [RemoteFolderRoute] = []
+    /// The folder picker, pushed over the prepare step (FS-15.02 §2a).
+    @State private var folderPath: [FolderPickerRoute] = []
     /// ⋯ → Add Connection…: the sheet opens on the form.
     private let startsAddingConnection: Bool
 
@@ -28,8 +28,11 @@ struct ServerUploadSheet: View {
                 .navigationTitle(title)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar { toolbar }
-                .navigationDestination(for: RemoteFolderRoute.self) { route in
-                    folderScreen(route)
+                .navigationDestination(for: FolderPickerRoute.self) { route in
+                    ServerBrowserScreen(model: route.model) { chosen in
+                        model.folder = chosen
+                        folderPath = []
+                    }
                 }
         }
         .interactiveDismissDisabled(model.stage == .uploading)
@@ -179,8 +182,18 @@ struct ServerUploadSheet: View {
     /// Folder, with where it is on the server; opens the browser at it.
     private func folderRow(_ server: FileServer) -> some View {
         Button {
-            guard model.openFolderBrowser() != nil else { return }
-            folderPath = RemoteFolderRoute.chain(to: model.folder)
+            guard let session = model.openBrowseSession() else { return }
+            let dependencies = dependencies
+            let picker = ServerBrowserModel(session: session, start: model.folder, mode: .chooseFolder) { path in
+                ServerFolderModel(
+                    session: session,
+                    folder: path,
+                    cache: dependencies.serverThumbnails,
+                    downloads: dependencies.serverDownloads,
+                    existingAssetIds: { PhotoKitAssetCreator.existingAssetIds($0) }
+                )
+            }
+            folderPath = [FolderPickerRoute(model: picker)]
         } label: {
             HStack {
                 Text("Folder")
@@ -203,33 +216,12 @@ struct ServerUploadSheet: View {
         .accessibilityHint("Choose or create a folder on the server")
     }
 
-    /// `share/folder` for SMB; `Home/folder` for SFTP, whose paths start at
-    /// the login's home folder.
+    /// The path from the machine's root for SMB (the share first) and
+    /// WebDAV; `Home/folder` for SFTP, whose paths start at the login's home.
     private static func displayPath(_ folder: String, on server: FileServer) -> String {
-        let root = rootTitle(of: server)
-        return folder.isEmpty ? root : "\(root)/\(folder)"
-    }
-
-    private static func rootTitle(of server: FileServer) -> String {
-        server.transferProtocol == .smb && !server.share.isEmpty
-            ? server.share
-            : String(localized: "Home", comment: "Upload to Server: the SFTP login's home folder, the top of the folder browser")
-    }
-
-    @ViewBuilder
-    private func folderScreen(_ route: RemoteFolderRoute) -> some View {
-        if let browser = model.folderBrowser, let server = model.selectedServer {
-            RemoteFolderScreen(
-                path: route.path,
-                title: route.path.isEmpty ? Self.rootTitle(of: server) : ServerUploadPath.lastComponent(of: route.path),
-                browser: browser,
-                onOpen: { folderPath.append(RemoteFolderRoute(path: $0)) },
-                onChoose: { chosen in
-                    model.folder = chosen
-                    folderPath = []
-                }
-            )
-        }
+        guard server.transferProtocol == .sftp else { return folder.isEmpty ? "/" : folder }
+        let home = String(localized: "Home", comment: "Upload to Server: the SFTP login's home folder, the top of the folder browser")
+        return folder.isEmpty ? home : "\(home)/\(folder)"
     }
 
     @ViewBuilder
@@ -503,4 +495,15 @@ struct ServerUploadHost: View {
             startsAddingConnection: request.target == .addConnection
         )
     }
+}
+
+/// The one screen the upload sheet pushes: the folder picker, which moves
+/// between folders itself. The route carries the model: a destination
+/// closure reading `@State` outside `body` gets a stale value (measured —
+/// the picker opened blank).
+struct FolderPickerRoute: Hashable {
+    let model: ServerBrowserModel
+
+    static func == (lhs: Self, rhs: Self) -> Bool { lhs.model === rhs.model }
+    func hash(into hasher: inout Hasher) { hasher.combine(ObjectIdentifier(model)) }
 }

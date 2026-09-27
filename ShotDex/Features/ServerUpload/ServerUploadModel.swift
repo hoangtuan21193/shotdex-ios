@@ -72,9 +72,9 @@ final class ServerUploadModel {
     private(set) var pendingConflict: ServerUploadConflict?
     private(set) var isDeleting = false
     var deleteError: String?
-    /// The folder browse under way, for `folderBrowserServerId`.
-    private(set) var folderBrowser: RemoteFolderBrowser?
-    private var folderBrowserServerId: String?
+    /// The login the folder picker uses, kept for the rest of the sheet
+    /// (FS-15.02 §2a).
+    private(set) var browseSession: ServerBrowseSession?
 
     private let fileServers: FileServerStore
     private let uploads: ServerUploadStore
@@ -178,7 +178,7 @@ final class ServerUploadModel {
 
     /// Switches connection and starts from where its last upload went.
     func select(_ serverId: String?) {
-        if serverId != selectedServerId { closeFolderBrowser() }
+        if serverId != selectedServerId { closeBrowseSession() }
         selectedServerId = serverId
         guard let server = selectedServer else { return }
         folder = server.startingUploadFolder
@@ -269,28 +269,26 @@ final class ServerUploadModel {
     func tearDown() {
         cancel()
         endHold()
-        closeFolderBrowser()
+        closeBrowseSession()
     }
 
     // MARK: Folder
 
-    /// The browser for the selected connection, opened on first use and
-    /// kept for the rest of the sheet (FS-15.02 §2a).
-    func openFolderBrowser() -> RemoteFolderBrowser? {
+    /// The picker's login for the selected connection, opened on first use
+    /// and kept for the rest of the sheet (FS-15.02 §2a).
+    func openBrowseSession() -> ServerBrowseSession? {
         guard let server = selectedServer else { return nil }
-        if let folderBrowser, folderBrowserServerId == server.id { return folderBrowser }
-        closeFolderBrowser()
-        let browser = RemoteFolderBrowser(client: makeClient(server, fileServers.password(for: server.id) ?? ""))
-        folderBrowser = browser
-        folderBrowserServerId = server.id
-        return browser
+        if let browseSession, browseSession.server.id == server.id { return browseSession }
+        closeBrowseSession()
+        let session = ServerBrowseSession(server: server, client: makeClient(server, fileServers.password(for: server.id) ?? ""))
+        browseSession = session
+        return session
     }
 
-    private func closeFolderBrowser() {
-        guard let browser = folderBrowser else { return }
-        folderBrowser = nil
-        folderBrowserServerId = nil
-        Task { await browser.close() }
+    private func closeBrowseSession() {
+        guard let session = browseSession else { return }
+        browseSession = nil
+        Task { await session.close() }
     }
 
     private func handle(_ event: ServerUploadEvent, items: [ServerUploadItem]) {

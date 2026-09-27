@@ -71,6 +71,10 @@ struct BrowserFixture {
 
         #expect(!(await model.createFolder(named: ".x")))
         #expect(!(await model.createFolder(named: "a/b")))
+        // Already there: opened, not an error.
+        #expect(await model.createFolder(named: "Trip"))
+        #expect(model.path == "photos/Trip")
+        #expect(model.editError == nil)
     }
 
     /// AC-24, AC-28: the SMB root holds only shares.

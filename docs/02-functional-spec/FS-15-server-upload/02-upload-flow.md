@@ -1,6 +1,6 @@
 # FS-15.02 — Luồng upload
 
-`FS-15.02` · `Features/ServerUpload/ServerUploadSheet.swift` · `ServerUploadModel` · `RemoteFolderBrowser`
+`FS-15.02` · `Features/ServerUpload/ServerUploadSheet.swift` · `ServerUploadModel` · `ServerImport/ServerBrowserScreen` (chọn folder)
 · `Domain/ServerUpload/` · `Data/Database/ServerUploadStore.swift` · cập nhật 2026-09-27
 
 **Một câu:** chọn connection ngay trong menu ⋯, chọn folder đích (nhớ lần trước), rồi một sheet đi bốn bước —
