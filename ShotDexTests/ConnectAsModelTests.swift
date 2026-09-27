@@ -107,3 +107,54 @@ private func found(_ services: [(DiscoveredServer.Service, Int)]) -> DiscoveredS
         #expect(signIn.error == nil)
     }
 }
+
+/// FS-15.04 §3 step 4 — FS-15 AC-52: Save Connection saves, and tiles the
+/// folder when asked.
+@Suite @MainActor struct ConnectionSaverTests {
+    @Test func savesAndAddsTile() throws {
+        let database = try AppDatabase.makeEmpty()
+        let servers = FileServerStore(database: database, passwords: InMemoryPasswordStore())
+        let shortcuts = ServerShortcutCatalog(store: ServerShortcutStore(database: database))
+        let model = ConnectAsModel(found: DiscoveredServer(name: "ShotDex Test", kind: .nas, offers: [.init(service: .smb, host: "t.local", port: 4450)]))
+        model.username = "tester"
+        model.password = "secret"
+        var draft = model.draft(folder: "PHOTOS")
+        draft.server.name = "NAS ảnh"
+
+        let saved = try ConnectionSaver.save(draft, addsTile: true, servers: servers, shortcuts: shortcuts)
+
+        #expect(saved.name == "NAS ảnh")
+        #expect(saved.folder == "PHOTOS")
+        #expect(servers.password(for: saved.id) == "secret")
+        #expect(shortcuts.shortcuts.map(\.path) == ["PHOTOS"])
+        #expect(shortcuts.shortcuts.map(\.name) == ["PHOTOS"])
+
+        var second = model.draft(folder: "ARCHIVE")
+        second.server.name = "Archive"
+        try ConnectionSaver.save(second, addsTile: false, servers: servers, shortcuts: shortcuts)
+        #expect(shortcuts.shortcuts.count == 1)
+    }
+
+    /// FS-15 AC-53: the form's switch — on edit, off removes the folder's
+    /// tile; on twice adds it once.
+    @Test func formSwitchAddsAndRemoves() throws {
+        let database = try AppDatabase.makeEmpty()
+        let servers = FileServerStore(database: database, passwords: InMemoryPasswordStore())
+        let shortcuts = ServerShortcutCatalog(store: ServerShortcutStore(database: database))
+        var draft = FileServerDraft()
+        draft.server.host = "nas.local"
+        draft.server.username = "me"
+        draft.server.folder = "photos/2026"
+        draft.password = "p"
+
+        let saved = try ConnectionSaver.save(draft, addsTile: true, servers: servers, shortcuts: shortcuts)
+        var edit = FileServerDraft(server: saved)
+        try ConnectionSaver.save(edit, addsTile: true, servers: servers, shortcuts: shortcuts)
+        #expect(shortcuts.shortcuts.map(\.path) == ["photos/2026"])
+        #expect(shortcuts.shortcuts.map(\.name) == ["2026"])
+
+        edit.server.name = "Renamed"
+        try ConnectionSaver.save(edit, addsTile: false, servers: servers, shortcuts: shortcuts)
+        #expect(shortcuts.shortcuts.isEmpty)
+    }
+}

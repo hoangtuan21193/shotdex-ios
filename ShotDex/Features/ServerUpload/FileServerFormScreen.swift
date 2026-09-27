@@ -77,6 +77,11 @@ struct FileServerFormScreen: View {
     @State private var pickerSession: ServerBrowseSession?
     /// Choose… signs in first; its failure shows under the Folder row.
     @State private var folderSignIn = ServerSignIn()
+    /// Add to Collections for the Folder (FS-17.04 §1); on edit, whether it
+    /// already has a tile.
+    @State private var addsTile = false
+    /// Connect As picked a folder: Save Connection is up (FS-15.04 §3).
+    @State private var pendingSave: PendingSave?
     /// Choose… stopped at the Trust alert and resumes after it.
     @State private var resumesChooseAfterTrust = false
     @FocusState private var focus: Field?
@@ -86,6 +91,11 @@ struct FileServerFormScreen: View {
 
     /// The screens the form pushes carry their models: a destination
     /// closure reading `@State` outside `body` gets a stale value.
+    struct PendingSave: Identifiable {
+        let id = UUID()
+        let draft: FileServerDraft
+    }
+
     enum Route: Hashable {
         case connectAs(ConnectAsModel)
         case folderPicker(ServerBrowserModel, feeds: PickerFeeds)
@@ -184,6 +194,16 @@ struct FileServerFormScreen: View {
                     Text(folderFooter)
                 }
                 Section {
+                    Toggle(isOn: $addsTile) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Add to Collections")
+                            Text(ConnectionSaver.tileExplanation)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                Section {
                     Button {
                         runTest()
                     } label: {
@@ -242,6 +262,17 @@ struct FileServerFormScreen: View {
             ) { _ in
                 Button("OK", role: .cancel) {}
             } message: { Text($0) }
+            .sheet(item: $pendingSave) { pending in
+                SaveConnectionSheet(
+                    name: pending.draft.server.name,
+                    folder: pending.draft.normalized.folderDescription,
+                    placeholder: pending.draft.server.host
+                ) { name, addsTile in
+                    var filled = pending.draft
+                    filled.server.name = name
+                    saveFromConnectAs(filled, addsTile: addsTile)
+                }
+            }
             .navigationDestination(for: Route.self) { route in
                 switch route {
                 case .connectAs(let model):
@@ -261,6 +292,8 @@ struct FileServerFormScreen: View {
             .task {
                 if !draft.isNew {
                     draft.hasSavedPassword = dependencies.fileServers.password(for: draft.server.id) != nil
+                    dependencies.serverShortcuts.reload()
+                    addsTile = dependencies.serverShortcuts.shortcut(serverId: draft.server.id, path: draft.server.folder) != nil
                 }
             }
             // Opening the form is what starts the search — and so what asks
@@ -448,14 +481,10 @@ struct FileServerFormScreen: View {
     private func choose(_ folder: String, feeds: PickerFeeds) {
         switch feeds {
         case .connectAs(let model):
-            // Signed in and a folder picked: that is a whole connection.
-            // Save it and close, rather than send the user back to a form
-            // to press Save again (FS-15.04 §3). A failed save leaves the
-            // filled form showing, with the reason.
-            draft = model.draft(folder: folder)
-            test = .signedIn
-            path = []
-            save()
+            // Signed in and a folder picked: that is a whole connection. Ask
+            // for its name and whether to tile the folder, then save — no
+            // trip back to the form to press Save again (FS-15.04 §3).
+            pendingSave = PendingSave(draft: model.draft(folder: folder))
             return
         case .form:
             draft.server.folder = folder
@@ -599,12 +628,28 @@ struct FileServerFormScreen: View {
         test = .idle
     }
 
-    private func save() {
-        let row = draft.normalized
+    /// Save Connection's Save. A failure leaves the filled form showing,
+    /// with the reason, so nothing typed is lost.
+    private func saveFromConnectAs(_ filled: FileServerDraft, addsTile: Bool) {
+        pendingSave = nil
         do {
-            try dependencies.fileServers.save(row, password: draft.password.isEmpty ? nil : draft.password)
+            let saved = try ConnectionSaver.save(filled, addsTile: addsTile, servers: dependencies.fileServers, shortcuts: dependencies.serverShortcuts)
             dependencies.fileServerCatalog.reload()
-            onSaved?((try? dependencies.fileServers.fetch(id: row.id)) ?? row)
+            onSaved?(saved)
+            dismiss()
+        } catch {
+            draft = filled
+            test = .signedIn
+            path = []
+            saveError = error.localizedDescription
+        }
+    }
+
+    private func save() {
+        do {
+            let saved = try ConnectionSaver.save(draft, addsTile: addsTile, servers: dependencies.fileServers, shortcuts: dependencies.serverShortcuts)
+            dependencies.fileServerCatalog.reload()
+            onSaved?(saved)
             dismiss()
         } catch {
             saveError = error.localizedDescription

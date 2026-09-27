@@ -1,16 +1,16 @@
 import SwiftUI
 
-/// Connect As (FS-15.04 §3): a server found on the network, what to call
-/// it, how to connect, the login, and Connect — a real sign-in whose failure
-/// shows right here. Signed in, it hands the login to the folder picker,
-/// whose Choose saves the connection. Tier A.
+/// Connect As (FS-15.04 §3): a server found on the network, how to
+/// connect, the login, and Connect — a real sign-in whose failure shows
+/// right here. Signed in, it hands the login to the folder picker; its
+/// Choose opens Save Connection, where the name is set. Tier A.
 struct ConnectAsScreen: View {
     @Bindable var model: ConnectAsModel
     let onSignedIn: (ServerBrowseSession) -> Void
     @FocusState private var focus: Field?
 
     enum Field: Hashable {
-        case name, username, password
+        case username, password
     }
 
     var body: some View {
@@ -30,15 +30,6 @@ struct ConnectAsScreen: View {
                     }
                 }
                 .accessibilityElement(children: .combine)
-                LabeledContent("Name") {
-                    TextField("Name", text: $model.name, prompt: Text(model.found.name))
-                        .multilineTextAlignment(.trailing)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .focused($focus, equals: .name)
-                        .submitLabel(.next)
-                        .onSubmit { focus = .username }
-                }
                 if model.showsProtocolChoice {
                     Picker("Connect Using", selection: $model.offer) {
                         ForEach(model.offers, id: \.self) { offer in

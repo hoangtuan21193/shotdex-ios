@@ -37,6 +37,10 @@ chúng ở menu ⋯ (FS-15.02 §1).
 | Username / Password | — | mật khẩu che, lưu Keychain |
 | Folder | SMB: bắt buộc · SFTP: rỗng = home · WebDAV: rỗng = gốc Path | folder **mặc định**; sheet upload đổi được mỗi lần. Đường dẫn tương đối, dấu `/` thừa bị bỏ. Nút **Choose…** mở màn chọn folder (FS-17.01 §5). SMB: cấp đầu là một folder máy tính chia sẻ (`Photos/2024`) — không còn ô Share riêng (§3a) |
 
+- Công tắc **Add to Collections** (section riêng dưới Folder), dòng giải thích "A tile for this folder in Collections.
+  One tap opens its photos." — cùng câu với hộp Save Connection (FS-15.04 §3). Add: mặc định tắt. Edit: bật nếu folder
+  đang có ô Network. Save: bật → thêm ô cho Folder (một lần); tắt → bỏ ô của Folder đó; server không bị đụng
+  (FS-17.04 §1; người dùng 2026-09-27).
 - Tiêu đề form: **Add Connection** / **Edit Connection**. Chân section Folder không nhắc thư mục theo ngày — đó là
   công tắc ở sheet upload.
 - **Save** mờ khi thiếu ô bắt buộc. Lưu **không** bắt buộc thử kết nối trước — server có thể đang tắt.

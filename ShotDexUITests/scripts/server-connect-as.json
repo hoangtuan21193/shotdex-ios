@@ -145,6 +145,23 @@
   },
   {
    "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "38-save-dialog"
+  },
+  {
+   "action": "dump",
+   "name": "38-save-dialog"
+  },
+  {
+   "action": "tap",
+   "label": "Save",
+   "type": "button"
+  },
+  {
+   "action": "wait",
    "seconds": 3
   },
   {

@@ -44,7 +44,7 @@ user pass". Trước đây chạm chỉ điền Host/Port rồi để người d
 ở dưới. Giờ theo Finder ("Connect As…") và Files ("Connect to Server"):
 
 1. Chạm hàng → đẩy màn **Connect to “<tên máy>”** trong form: đầu màn icon loại máy + tên + host; **Name** (điền sẵn
-   tên máy, sửa được); **Connect Using** (chỉ khi máy mở nhiều giao thức, thứ tự SMB, SFTP, WebDAV (HTTPS), WebDAV;
+   tên máy, sửa được) — bỏ 2026-09-27, tên sửa ở bước 4; **Connect Using** (chỉ khi máy mở nhiều giao thức, thứ tự SMB, SFTP, WebDAV (HTTPS), WebDAV;
    mặc định cái đầu); **Username**, **Password**. Không có câu giải thích (người dùng 2026-09-27: "ai cũng hiểu").
    Nút **Connect** là nút lớn đầy chiều ngang ở đáy màn — cùng kiểu nút **Choose** của bước sau; mờ khi thiếu
    Username/Password. Return ở ô Password cũng là Connect.
@@ -52,8 +52,12 @@ user pass". Trước đây chạm chỉ điền Host/Port rồi để người d
    của FS-15.01 §4 rồi nối tiếp.
 3. **Hỏng → báo ngay dưới ô Password**, bằng câu FS-15.01 §3 ("The username or password was rejected.", "Can't reach
    …"); giữ nguyên chữ đã gõ, focus về Password khi sai mật khẩu. Không rời màn.
-4. **Được → đẩy màn chọn folder** (FS-17.01 §5) ở gốc: SMB = các folder máy chia sẻ, SFTP = Home. **Choose = lưu
-   connection và đóng form** (đổi 2026-09-27: trước đó quay về form đã điền, bắt bấm Save lần nữa — "hơi loạn"). Lưu:
+4. **Được → đẩy màn chọn folder** (FS-17.01 §5) ở gốc: SMB = các folder máy chia sẻ, SFTP = Home. **Choose → hộp
+   Save Connection** (đổi 2026-09-27, lần hai: "sau khi choose thư mục, phải hiện dialog để sửa connection name, có
+   option cho ra shortcut ngoài collection không, rồi ấn save"): sheet nhỏ có **Name** (điền sẵn tên máy), dòng Folder
+   (chỉ đọc), công tắc **Add to Collections** (mặc định tắt; dòng giải thích "A tile for this folder in Collections. One tap opens its photos."),
+   **Cancel** (quay lại màn chọn folder) và **Save** (mờ khi Name rỗng). Save = lưu connection, bật công tắc thì thêm
+   ô Network cho folder đó (FS-17.04), rồi đóng form. Lưu:
    Name (qua luật đánh số FS-15.01 §3), Protocol, Host = tên `.local` phân giải được hoặc IP với máy tìm bằng quét 445,
    Port, Username, mật khẩu vào Keychain, Folder. Lưu hỏng → hiện form đã điền cùng câu lỗi, không mất gì đã gõ.
    Sửa sau bằng **Edit Connection** (FS-17.01 §1).

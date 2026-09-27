@@ -13,6 +13,8 @@ Nguồn: [intent](../../_intents/2026-09-27-network-shortcuts.md).
 - Màn duyệt server (chế độ duyệt, không phải chọn folder), ⋯ nhóm 1: **Add to Collections** — thêm folder đang mở.
   Folder đã có ô → mục đó thành **Remove from Collections**.
 - Nhấn giữ một ô folder: thêm **Add to Collections** (hoặc Remove…) sau Open.
+- Hộp **Save Connection** của Connect As (FS-15.04 §3) và form Add/Edit Connection (FS-15.01 §3) có công tắc **Add to
+  Collections** cho Folder, giải thích một câu: "A tile for this folder in Collections. One tap opens its photos."
 - Không có ở gốc SMB (chỉ là danh sách folder chia sẻ). Gốc SFTP/WebDAV thêm được.
 - Tên ô mặc định: tên folder (gốc: tên connection). Trùng (connection, đường dẫn) → không thêm lần hai.
 - Không ghi gì lên server.
