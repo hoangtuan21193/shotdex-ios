@@ -372,19 +372,12 @@ public actor PhotoRenderService {
             disparity: baseResult.disparity,
             matte: baseResult.portraitMatte
         )
-        var image = Self.applyAdjustments(
-            recipe.adjustments,
-            to: unadjusted,
-            appliesExposure: !source.isRAW
+        var image = Self.applyPreMaskStages(
+            of: recipe,
+            source: source,
+            appliesExposure: !source.isRAW,
+            to: unadjusted
         )
-        image = Self.applyColor(recipe.color, to: image)
-        image = Self.applyCurve(recipe.curve, to: image)
-        image = Self.applyLensProfile(of: recipe, source: source, to: image)
-        image = Self.applyOptics(recipe.adjustments, to: image)
-        image = Self.applyGeo(recipe.adjustments, to: image)
-        image = Self.applyLook(of: recipe, to: image)
-        image = Self.applyCrop(recipe.crop, to: image)
-        image = Self.applyHealing(recipe.healing, to: image)
         let croppedRawSkyMatte = baseResult.rawSkyMatte.map {
             Self.applyCrop(recipe.crop, to: $0)
         }
@@ -399,11 +392,7 @@ public actor PhotoRenderService {
                 disparity: maskDisparity,
                 cacheIdentity: cacheIdentity
             ) else { continue }
-            let adjusted = Self.applyAdjustments(
-                mask.adjustments,
-                to: image,
-                appliesExposure: true
-            )
+            let adjusted = Self.applyMaskAdjustments(of: mask, to: image)
             image = blend(adjusted: adjusted, original: image, mask: maskImage)
         }
 
@@ -421,6 +410,51 @@ public actor PhotoRenderService {
             colorSpace: baseResult.colorSpace,
             properties: source.properties
         )
+    }
+
+    /// One stage of the chain that runs before the masks.
+    public enum PreMaskStage: CaseIterable, Sendable {
+        case adjustments, color, curve, lensProfile, optics, geo, look, crop, healing
+    }
+
+    /// The stages before the masks, in order. The still, a Live Photo's motion
+    /// frames and the automatic-mask pass all walk this one list — three
+    /// hand-copied chains is how a Live Photo comes to save differently from
+    /// the frame the editor showed.
+    public static let preMaskStages: [PreMaskStage] = [
+        .adjustments, .color, .curve, .lensProfile, .optics, .geo, .look, .crop, .healing,
+    ]
+
+    /// `appliesExposure` is false for a RAW still, whose exposure the decoder
+    /// already applied.
+    public static func applyPreMaskStages(
+        of recipe: PhotoEditRecipe,
+        source: PhotoRenderSourceInfo,
+        appliesExposure: Bool,
+        to input: CIImage
+    ) -> CIImage {
+        var image = input
+        for stage in preMaskStages {
+            switch stage {
+            case .adjustments:
+                image = applyAdjustments(recipe.adjustments, to: image, appliesExposure: appliesExposure)
+            case .color: image = applyColor(recipe.color, to: image)
+            case .curve: image = applyCurve(recipe.curve, to: image)
+            case .lensProfile: image = applyLensProfile(of: recipe, source: source, to: image)
+            case .optics: image = applyOptics(recipe.adjustments, to: image)
+            case .geo: image = applyGeo(recipe.adjustments, to: image)
+            case .look: image = applyLook(of: recipe, to: image)
+            case .crop: image = applyCrop(recipe.crop, to: image)
+            case .healing: image = applyHealing(recipe.healing, to: image)
+            }
+        }
+        return image
+    }
+
+    /// What one mask does to the picture before it is blended through the
+    /// mask. Shared by the still and the Live Photo frames.
+    public static func applyMaskAdjustments(of mask: PhotoMask, to image: CIImage) -> CIImage {
+        applyAdjustments(mask.adjustments, to: image, appliesExposure: true)
     }
 
     public func resize(
@@ -730,19 +764,12 @@ public actor PhotoRenderService {
             recipe: recipe,
             maximumDimension: maximumDimension
         )
-        var image = Self.applyAdjustments(
-            recipe.adjustments,
-            to: base.image,
-            appliesExposure: !source.isRAW
+        let image = Self.applyPreMaskStages(
+            of: recipe,
+            source: source,
+            appliesExposure: !source.isRAW,
+            to: base.image
         )
-        image = Self.applyColor(recipe.color, to: image)
-        image = Self.applyCurve(recipe.curve, to: image)
-        image = Self.applyLensProfile(of: recipe, source: source, to: image)
-        image = Self.applyOptics(recipe.adjustments, to: image)
-        image = Self.applyGeo(recipe.adjustments, to: image)
-        image = Self.applyLook(of: recipe, to: image)
-        image = Self.applyCrop(recipe.crop, to: image)
-        image = Self.applyHealing(recipe.healing, to: image)
         let croppedRawSkyMatte = base.rawSkyMatte.map {
             Self.applyCrop(recipe.crop, to: $0)
         }

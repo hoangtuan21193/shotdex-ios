@@ -753,7 +753,7 @@ final class PhotoEditingService {
 /// PHLivePhotoEditingContext calls this block synchronously for every frame.
 /// Subject/Sky inference is resolved once from the full-size still and scaled
 /// across the motion resource; geometric and range masks remain frame-aware.
-private final class LivePhotoFrameRenderer: @unchecked Sendable {
+final class LivePhotoFrameRenderer: @unchecked Sendable {
     private let recipe: PhotoEditRecipe
     /// The still's source, for its EXIF focal length: the lens profile of a
     /// motion frame is the still's, since it is the same lens at the same focal.
@@ -776,28 +776,17 @@ private final class LivePhotoFrameRenderer: @unchecked Sendable {
     }
 
     func render(_ input: CIImage) -> CIImage {
-        var image = PhotoRenderService.applyAdjustments(
-            recipe.adjustments,
-            to: input,
-            appliesExposure: true
+        // The same stage list as the still, so a Live Photo's motion frames
+        // cannot drift from its key frame.
+        var image = PhotoRenderService.applyPreMaskStages(
+            of: recipe,
+            source: source,
+            appliesExposure: true,
+            to: input
         )
-        image = PhotoRenderService.applyColor(recipe.color, to: image)
-        image = PhotoRenderService.applyCurve(recipe.curve, to: image)
-        image = PhotoRenderService.applyLensProfile(of: recipe, source: source, to: image)
-        image = PhotoRenderService.applyOptics(recipe.adjustments, to: image)
-        image = PhotoRenderService.applyGeo(recipe.adjustments, to: image)
-        // The look, LUT included — same call as the still, so a Live Photo's
-        // motion frames cannot drift from its key frame.
-        image = PhotoRenderService.applyLook(of: recipe, to: image)
-        image = PhotoRenderService.applyCrop(recipe.crop, to: image)
-        image = PhotoRenderService.applyHealing(recipe.healing, to: image)
         for mask in recipe.masks where mask.isVisible {
             let maskImage = renderMask(mask, over: image)
-            let adjusted = PhotoRenderService.applyAdjustments(
-                mask.adjustments,
-                to: image,
-                appliesExposure: true
-            )
+            let adjusted = PhotoRenderService.applyMaskAdjustments(of: mask, to: image)
             image = PhotoRenderService.filtered(
                 "CIBlendWithMask",
                 image: adjusted,
