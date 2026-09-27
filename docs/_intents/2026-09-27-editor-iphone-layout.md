@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan |
 | Ngày | 2026-09-27 |
 | Trạng thái | accepted |
-| Tiến độ | **chưa làm** (2026-09-27) — spec FS-03.13, 45 AC |
+| Tiến độ | **chưa làm** (2026-09-28) — spec FS-03.13, 45 AC · plan [2026-09-28-fs-03-13](../_plans/2026-09-28-fs-03-13-iphone-editor-layout.md) chờ duyệt, 45 task |
 | Nguồn | phản hồi người dùng (chủ sở hữu sản phẩm) — phiên thiết kế 2026-09-27, mọi quyết định chốt trên canvas |
 | Spec sinh ra từ đây | [FS-03.13](../02-functional-spec/FS-03-photo-editor/13-iphone-editor-layout.md) (+ 13a–13d) |
 

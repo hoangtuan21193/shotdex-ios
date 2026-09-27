@@ -57,6 +57,10 @@ và ba mức độ mạnh tác động lên ảnh ra sao.
 
 - **Tối góc ở ánh sáng tuyến tính, trước tone.** RAW: trong khe lọc tuyến tính của `CIRAWFilter`, chạy trước
   đường cong tone của bộ giải. JPEG: pass đầu tiên sau giải mã — Core Image làm việc trong không gian tuyến tính.
+- **RAW khi kéo Vignetting**: editor giữ sẵn một bản giải mã tuyến tính half-float, trước tone; kéo slider chỉ
+  nhân gain lên bản đó, không giải mã lại, không hạ độ phân giải (FS-03.04).
+- Đánh đổi: bộ nhớ cache nền RAW gấp ~2× (half-float thay 8-bit). *Vì bù sau cache 8-bit đã qua tone thì
+  tỉ số góc/tâm sai khi Exposure +1 EV (AC-a9).*
 - **Méo + CA một pass**, ở vị trí pass nắn hôm nay: đầu nhóm hình học, trước Geo, crop và mask (render:382).
 - Pass này là **kernel lấy mẫu Metal mới** (FS-16) đọc R, G, B ở ba bán kính. *Vì* kernel warp của Core Image
   trả một toạ độ cho cả ba kênh nên không tách được đỏ/lam; ba lượt warp tốn ~3× mỗi khung.
@@ -83,6 +87,9 @@ và ba mức độ mạnh tác động lên ảnh ra sao.
 | 4 | tắt | không chạy |
 
 Hai slider chỉnh tay của FS-03.15 cộng lên trên mọi nguồn: đó là chỉnh tay, không phải sửa lần hai.
+
+- RAW vừa mở: nguồn giải lúc mở, giữ trong phiên và render theo nó; chỉ ghi vào recipe ở lần chỉnh đầu tiên
+  (FS-03.16 §3). Ảnh chưa chỉnh vẫn là "chưa sửa".
 
 ## 7. Tiêu chí nghiệm thu
 

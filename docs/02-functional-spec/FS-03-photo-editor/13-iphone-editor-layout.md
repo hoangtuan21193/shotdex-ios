@@ -101,6 +101,14 @@ Lý do và phương án đã cân nhắc: [DECISIONS.md](../../../.planboard/edi
 - **D66** Remove tạm bỏ, Heal không có chip Remove — 13c §4.
 - **D68** Lưới chọn mask 4×4, ba ô khuôn mặt giữ ngoài, thêm Object và People — 13c §1.
 
+Chỗ spec và code lệch, chốt 2026-09-28 — [DECISIONS.md](../../../.planboard/plans-deviations/DECISIONS.md):
+
+- **E1** Nhãn VoiceOver theo code: "RGB histogram", "More editor actions" — 13a AC-12.
+- **E2** ⋯ không lặp Undo / Redo (theo spec) — 13a §3.
+- **E3** Auto của Straighten ghi vào Angle của crop, không ghi Geometry Rotate — 13b §3, AC-23.
+- **E4** Mask mới tên "Mask n", dòng phụ liệt kê vùng; bỏ tên theo loại — 13c §2, sửa cả FS-03.05 AC-18.
+- **E5** Apply Previous luôn hiện, mờ khi chưa có ảnh trước — 13d §2.
+
 ## 6. Đoạn phải viết lại khi spec này land
 
 Không sửa trong lượt này; `/plan` liệt kê lại theo file:line.

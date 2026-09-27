@@ -40,6 +40,7 @@ Tổng quan và thứ tự render: [FS-03.15](15-lightroom-parameter-parity.md).
 - Không có nút Auto mix ở bản này.
 - Chuyển xám chạy **trong chặng Color, sau WB và Light** (thay chỗ đầu chuỗi hôm nay): Temp/Tint đổi tông xám
   như Lightroom. *Vì ở đầu chuỗi, preset B&W dùng Temp để đổi tông ra sai.*
+- Mask không có công tắc B&W (Lightroom cũng không); xám trong mask là Saturation −100 (FS-03.15 §3).
 
 | Control | Thẻ `crs:` | Thang |
 |---|---|---|

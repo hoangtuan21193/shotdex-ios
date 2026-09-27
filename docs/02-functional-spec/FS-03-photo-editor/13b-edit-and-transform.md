@@ -54,8 +54,10 @@ Một danh sách cuộn dọc có nhãn dính và mục lục như Edit, bốn n
   đặt sao cho đường đó nằm ngang, trong kẹp ±45°, **một** bước lịch sử. Hai ngón vẫn zoom / pan. Đường ngắn hơn
   8pt là chạm, không xoay. Hint: *"Drag a line along something that should be level, like the horizon or a table edge."*
 - Đường lệch **quá 45° so với ngang** (cột nhà, thân cây) được **dựng đứng thẳng**, như Lightroom và như Guided.
-- **Auto** của Straighten chạy phân tích Level của Upright ([FS-03.01b §5](01b-adjustments-and-crop.md#5-upright));
-  không thấy đường thẳng thì hàng ghi *"No straight lines to work from"* 3s, không đổi gì.
+- **Auto** của Straighten chạy phân tích Level của Upright ([FS-03.01b §5](01b-adjustments-and-crop.md#5-upright)),
+  **ghi vào Angle của Straighten** (góc khung crop), không ghi Geometry Rotate (chốt E3).
+  - *Vì* Straighten thuộc crop, không theo Copy Edits / Sync; Geometry đi theo look. Upright Level vẫn ghi Geometry.
+  - Không thấy đường thẳng thì hàng ghi *"No straight lines to work from"* 3s, không đổi gì.
 - **Guided**: một ngón vẽ tối đa **4** đường theo cạnh phải thẳng; hint đếm *"2 of 4 drawn."*; đường thứ 5 không vẽ.
   Phép nắn theo guide và Auto / Aspect / Constrain Crop thuộc [FS-03.15](15-lightroom-parameter-parity.md).
 - **Upright hai hàng 3 + 3**, mỗi chip ~120pt trên 402, ~111 trên 375: "Vertical" (~66pt) không bị cắt, không cuộn ngang.
@@ -87,7 +89,7 @@ Máy: iPhone 17 iOS 26.5 và 18.6; ảnh 3:2 (panel 344) nếu không ghi khác.
 | AC-20 | Transform | dump vùng thông số | 4 nhãn CROP · STRAIGHTEN · UPRIGHT · GEOMETRY đúng thứ tự; More… cộng 4 chip = mọi tỉ lệ trong danh sách tỉ lệ, mỗi cái một lần; trước FS-03.15 không hàng / chip nào mờ vì chưa có | ⚠️ chưa có — `EditorPanelLayoutTests.transformReachesEveryCropRatioOnce` + `iphone-transform.json` |
 | AC-21 | ảnh 3:2 crop gốc, góc 0° | Transform, chọn 1:1, Rotate một lần, rồi ✕ và xác nhận | crop về nguyên khung, không xoay, góc 0° | ⚠️ chưa có — `EditorHistoryAndSummaryTests.transformCancelRestoresTheFrame` |
 | AC-22 | Straighten Tool bật, góc 0° | kéo một ngón từ (60, 300) tới (340, 318) rồi nhấc; làm lại từ (200, 100) tới (220, 400) | lần 1: Angle 3,7° ±0,1° (atan 18/280), thước nằm ngang, đúng 1 bước lịch sử; lần 2: Angle 3,8° ±0,1° (atan 20/300), thước đứng thẳng; kéo 6pt thì Angle không đổi | ⚠️ chưa có — `StraightenToolTests.aLineAtThreeDegreesLevelsThePhoto` + `StraightenToolTests.aNearVerticalLineStandsUp` |
-| AC-23 | ảnh không có đường thẳng (bầu trời phẳng) | chạm Auto của Straighten | Angle không đổi; hàng ghi "No straight lines to work from" 3s | ⚠️ chưa có — `UprightAnalyzerTests` (ca rỗng đã có) + `iphone-transform.json` |
-| AC-24 | Upright, Guided, 4 guide đã vẽ | vẽ đường thứ 5 | vẫn 4 guide; hint "4 of 4 drawn."; chip Upright hai hàng 3 + 3, không cắt chữ trên 402 và 375, không cuộn ngang | ⚠️ chưa có — `iphone-transform.json` + `se-editor-fit.json` |
+| AC-23 | (1) ảnh không có đường thẳng (bầu trời phẳng); (2) ảnh có chân trời nghiêng | chạm Auto của Straighten | (1) Angle không đổi; hàng ghi "No straight lines to work from" 3s. (2) Angle nhận đúng góc Level mà phân tích Upright trả; cả hai ca Geometry Rotate không đổi (chốt E3) | ⚠️ chưa có — `UprightAnalyzerTests` (ca rỗng đã có) + `iphone-transform.json` |
+| AC-24 | Upright, Guided, 4 guide đã vẽ | vẽ đường thứ 5 | vẫn 4 guide; dòng chú "Up to 4 guides" (như 15b AC-24); chip Upright hai hàng 3 + 3, không cắt chữ trên 402 và 375, không cuộn ngang | ⚠️ chưa có — `iphone-transform.json` + `se-editor-fit.json` |
 
 **Chưa chứng minh được:** AC-15…AC-24 — chưa có code.

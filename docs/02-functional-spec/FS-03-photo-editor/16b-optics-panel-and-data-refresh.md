@@ -16,10 +16,14 @@ iPad/Duo. Theo thứ tự, lưới 40pt trên điện thoại, hàng xếp dọc
 |---|---|
 | 1 | công tắc **Lens Correction** — một cái cho mọi nguồn, thay cả "Lens Profile" ở Optics lẫn "Lens" ở nhóm RAW (danh mục:191) |
 | 2 | hàng trạng thái: tên ống · cách tìm, nút **Change** / **Choose Lens** bên phải |
+| — | nhãn nhóm **LENS PROFILE** |
 | 3–5 | **Distortion** · **Vignetting** · **Chromatic Aberration**, 0–200, mốc 100 |
 
-- Sau đó là hai slider chỉnh tay của [FS-03.15](15-lightroom-parameter-parity.md), rồi Remove CA / Defringe.
-- Năm hàng = 200pt trên điện thoại; Edit là một danh sách cuộn dọc nên không đụng trần 264/344pt của panel.
+- Sau đó là nhãn nhóm **MANUAL** với hai slider chỉnh tay của [FS-03.15](15-lightroom-parameter-parity.md)
+  (15b §3), rồi Remove CA / Defringe.
+- Hai cặp **Distortion · Vignetting** giữ cùng tên như Lightroom, tách bằng nhãn nhóm (tiêu đề nhỏ chữ hoa
+  kiểu section có sẵn). VoiceOver đọc kèm tên nhóm: "Distortion, Lens Profile" / "Distortion, Manual".
+- Năm hàng = 200pt trên điện thoại, cộng hai nhãn nhóm; Edit là một danh sách cuộn dọc nên không đụng trần 264/344pt của panel.
 - Không token, màu hay bo góc mới: chữ trạng thái dùng màu phụ, dòng mờ và slider mờ dùng màu mờ có sẵn.
 
 ## 2. Chữ trên màn
@@ -59,7 +63,7 @@ Một bước mới trong `/release-check` (spec mô tả, sửa skill ở giai 
 2. Chạy script đổi; JSON ghi commit và ngày của Lensfun vào phần nguồn.
 3. In một dòng so với bản đang có: số ống (có méo · có tối góc · có CA), số thân máy, dung lượng — ví dụ
    "Lens profiles 1527 → 1561 (+34) · vignetting … · TCA … · cameras 1054 → 1060 · 823KB → …".
-4. Liệt kê id ống **biến mất** — ảnh trỏ tới chúng rơi về AC-7 của FS-03.16.
+4. Liệt kê id ống **biến mất** — ảnh trỏ tới chúng rơi về AC-6 của FS-03.16.
 5. Chạy bộ test hồ sơ ống kính; JSON mới vào **một commit riêng**.
 
 **Fail** khi script lỗi, số ống giảm > 1%, hoặc JSON vượt trần. Id biến mất là cảnh báo, không fail.
@@ -71,7 +75,7 @@ Một bước mới trong `/release-check` (spec mô tả, sửa skill ở giai 
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-b1 | ARW Sony + FE 24-70mm F2.8 GM II có dữ liệu nhúng, trên iPhone 17 (402×874) | mở Optics | hàng trạng thái "FE 24-70mm F2.8 GM II · Found from photo info" không bị cắt, nút Change không bị che, ba slider ở 100 chạm được; dump đo khung từng hàng cao 40pt | ⚠️ chưa có (cần RAW mẫu trong thư viện sim) |
+| AC-b1 | ARW Sony + FE 24-70mm F2.8 GM II có dữ liệu nhúng, trên iPhone 17 (402×874) | mở Optics | hàng trạng thái "FE 24-70mm F2.8 GM II · Found from photo info" không bị cắt, nút Change không bị che, ba slider ở 100 chạm được, nằm dưới nhãn LENS PROFILE, nhãn VoiceOver "Distortion, Lens Profile"…; dump đo khung từng hàng cao 40pt | ⚠️ chưa có (cần RAW mẫu trong thư viện sim) |
 | AC-b2 | JPEG D800E + 16-35mm f/4 trong thư viện sim | bật Lens Correction | "Nikon AF-S Nikkor 16-35mm f/4G ED VR · Found from photo info", ba slider chạy | ⚠️ chưa có (tự khớp đã có: `LensProfileTests.nikonGenericExifFindsTheRightLens`) |
 | AC-b3 | cùng ảnh, đang tự tìm | Change → chọn một ống khác | "‹ống vừa chọn› · Chosen by you"; một Undo trả về trạng thái tự tìm | ⚠️ chưa có |
 | AC-b4 | RAW nguồn 3 (ống không có ở nguồn 1, 2) | mở Optics | "Using the camera's built-in correction" + dòng mờ "Strength controls need a lens profile"; ba slider mờ, VoiceOver đọc không dùng được; bật/tắt công tắc làm ảnh khác nhau | ⚠️ chưa có |

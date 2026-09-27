@@ -15,6 +15,8 @@ lại bị bỏ. Tổng quan: [FS-03.14](14-lightroom-preset-exchange.md).
   thử nghiệm ΔE (câu treo 1) thay bằng hệ số đo được — bảng hệ số là dữ liệu, không nằm rải trong mã.
 - Giá trị vượt dải của ShotDex → **kẹp** về biên, dòng ≈ nói giá trị gốc và giá trị đã đặt.
 - Preset chỉ ghi những thẻ nó mang; thẻ vắng mặt **không** đặt slider về 0 — look chỉ chứa phần preset nói.
+- Look nhập **mang tập thông số preset có ghi**; áp nó chỉ đổi đúng các thông số đó, phần còn lại giữ nguyên (chốt E6).
+  Look tự lưu (Save Current) vẫn thay đủ lát cắt — [DECISIONS](../../../.planboard/plans-deviations/DECISIONS.md).
 - Thẻ Process Version cũ (Lightroom 3 trở về trước: `Exposure`, `FillLight`, `Recovery`, `Brightness`
   không hậu tố 2012) → ✕ "Settings from Lightroom 3 or older".
 
@@ -23,7 +25,7 @@ lại bị bỏ. Tổng quan: [FS-03.14](14-lightroom-preset-exchange.md).
 | Nhóm | Thẻ `crs:` | Slider ShotDex | Trạng thái |
 |---|---|---|---|
 | Cân bằng trắng | `WhiteBalance`="As Shot" | — | ✓ (không đổi gì) |
-| | `Temperature` · `Tint` (K tuyệt đối, preset từ RAW) | WB Temp · WB Tint (chỉ RAW) | ≈ "applies to RAW photos only" |
+| | `Temperature` · `Tint` (K tuyệt đối, preset từ RAW) | **WB Kelvin · WB Tint tuyệt đối** (trường mới của recipe, chỉ RAW — chốt E7) | ✓ đúng số; áp lên JPEG thì không đổi gì |
 | | `IncrementalTemperature` · `IncrementalTint` | Temp · Tint | ✓ |
 | Basic | `Exposure2012` (±5 EV) | Exposure (±2 EV) | ✓; ngoài ±2 → ≈ kẹp |
 | | `Contrast2012` · `Highlights2012` · `Shadows2012` · `Whites2012` · `Blacks2012` | Contrast · Highlights · Shadows · Whites · Blacks | ✓ |
@@ -49,6 +51,10 @@ lại bị bỏ. Tổng quan: [FS-03.14](14-lightroom-preset-exchange.md).
 | | `PerspectiveAspect` · `PerspectiveUpright` | — | ✕ tới FS-03.15 |
 | Calibration | `ShadowTint` · `{Red,Green,Blue}{Hue,Saturation}` | — | ✕ tới FS-03.15 |
 | Profile | `CameraProfile` · `Look` (tên, Amount, bảng) | film look / LUT | §3, §4 |
+
+- **WB tuyệt đối (chốt E7):** recipe RAW có cặp Kelvin / Tint **tuyệt đối**, cạnh độ lệch so với As Shot (±4000 K / ±150).
+  - Có giá trị thì decoder đặt thẳng nhiệt độ trung tính, bỏ qua độ lệch; slider WB của RAW hiện Kelvin thật ([FS-03.04 §2](04-raw-and-render-graph.md)).
+  - Trường nằm trong model recipe của `ShotDexKit`, cùng vùng thông số với [FS-03.15](15-lightroom-parameter-parity.md).
 
 ## 3. Camera profile → film look
 
@@ -94,13 +100,13 @@ Mọi dòng "✕ tới FS-03.15/16" ở §2 là thông số ShotDex **chưa có*
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-b1 | preset chỉ có `CameraProfile`="Camera CLASSIC CHROME" | nhập | look có film look Classic Chrome, Amount 100%, mọi slider khác 0; hàng ✓ | `CameraProfileMapTests.fujiNamesMapToTheSameLook` |
+| AC-b1 | preset chỉ có `CameraProfile`="Camera CLASSIC CHROME"; ảnh đang có Exposure +0.50 | nhập, rồi áp look lên ảnh | look có film look Classic Chrome, Amount 100%, tập thông số đã đặt chỉ gồm film look; hàng ✓; sau khi áp ảnh vẫn Exposure +0.50, mọi slider khác giữ giá trị trước khi áp (chốt E6) | `CameraProfileMapTests.fujiNamesMapToTheSameLook` |
 | AC-b2 | preset có `CameraProfile`="Adobe Color" và `Vibrance`=+10 | nhập | film look Original, Vibrance +10; dòng ≈ nêu tên profile | `CameraProfileMapTests.unknownProfileFallsBackToOriginal` |
 | AC-b3 | `Exposure2012`=+3.00 | nhập | Exposure +2.00 EV; dòng ≈ "beyond ±2 EV — set to +2.00" | `LightroomMappingTests.exposureBeyondRangeIsClampedAndReported` |
 | AC-b4 | preset có `HasCrop`=True, crop 4:5 và `Exposure2012`=+0.30 | nhập | look không có crop, Exposure +0.30; dòng ✕ "Crop stays with each photo"; hàng ≈ | `LightroomMappingTests.cropIsNeverImported` |
-| AC-b5 | `WhiteBalance`="Custom", `Temperature`=5500, `Tint`=+10 | nhập rồi áp lên một JPEG | look mang WB Temp/Tint RAW; render JPEG không đổi màu (sai lệch 0/255); dòng ≈ "RAW photos only" | `LightroomMappingTests.absoluteWhiteBalanceIsRAWOnly` |
+| AC-b5 | `WhiteBalance`="Custom", `Temperature`=5500, `Tint`=+10 | nhập rồi áp lên một RAW và một JPEG | look mang WB tuyệt đối 5500 K / Tint +10 (không phải độ lệch so với As Shot); RAW: nhiệt độ trung tính của decoder = 5500 K, tint +10, slider WB đọc 5500 K; JPEG không đổi màu (sai lệch 0/255); hàng ✓ (chốt E7) | `LightroomMappingTests.absoluteWhiteBalanceIsRAWOnly` |
 | AC-b6 | preset có creative profile kèm RGBTable 32³ và Amount 60 | nhập | My LUTs +1 mang tên profile; look trỏ tới LUT đó ở 60% | `CreativeProfileTests.rgbTableBecomesALUT` — ⚠️ chưa có, chờ câu treo 2 |
 | AC-b7 | FS-03.15 chưa ship; preset có `ParametricShadows`=-20 và `Clarity2012`=+15 | nhập | Clarity +15; dòng ✕ "Tone curve regions aren't in ShotDex yet" | `LightroomMappingTests.missingTargetsAreSkippedWithAReason` |
-| AC-b8 | preset "adaptive" có mask Sky (Exposure −0.70 trong mask) và `Vibrance`=+20 toàn ảnh | nhập | look có Vibrance +20, không mask, Exposure 0; dòng ✕ "Masks stay with each photo"; hàng ≈ | `LightroomMappingTests.masksAreNeverImported` |
+| AC-b8 | preset "adaptive" có mask Sky (Exposure −0.70 trong mask) và `Vibrance`=+20 toàn ảnh | nhập | look có Vibrance +20, không mask, không có Exposure trong tập thông số đã đặt; dòng ✕ "Masks stay with each photo"; hàng ≈ | `LightroomMappingTests.masksAreNeverImported` |
 
 **Chưa chứng minh được:** AC-b1…b8 (chưa có code); AC-b6 còn chờ thử nghiệm RGBTable.

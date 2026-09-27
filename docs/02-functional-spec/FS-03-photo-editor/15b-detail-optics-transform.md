@@ -34,8 +34,13 @@ Thay slider Defringe chung (hôm nay giảm độ bão hoà cả khung — xấp
 
 ## 3. Méo và tối góc ống kính chỉnh tay
 
-Ở Optics › Lens Correction, dưới phần profile của FS-03.16: **Distortion** (±100) · **Vignetting** (±100)
-· **Midpoint** (0…100, chỉ hiện khi Vignetting ≠ 0).
+Ở Optics › Lens Correction, dưới nhãn nhóm **MANUAL**, sau nhóm **LENS PROFILE** của FS-03.16:
+**Distortion** (±100) · **Vignetting** (±100) · **Midpoint** (0…100, chỉ hiện khi Vignetting ≠ 0).
+
+- Hai cặp **Distortion · Vignetting** (LENS PROFILE 0–200, MANUAL ±100) **giữ cùng tên**, tách bằng nhãn
+  nhóm như Lightroom. Nhãn nhóm là tiêu đề nhỏ chữ hoa kiểu section có sẵn — không token mới.
+- VoiceOver đọc cả tên nhóm: "Distortion, Manual" / "Distortion, Lens Profile". *Vì chỉ đọc tên thì hai
+  hàng nghe trùng nhau.*
 
 - **Distortion** dương co tâm vào (nắn méo thùng), âm phình ra. Cộng vào **cùng một lượt warp** với profile
   — ảnh chỉ nội suy một lần — và tự phóng vừa đủ để không lộ góc trống (trần 1,5× chung với profile).
@@ -78,6 +83,7 @@ Nhóm Effects › Vignette thêm **Style** — một hàng chip ba ô ở đầu
 - **Paint Overlay**: trộn tuyến tính về đen (âm) hoặc trắng (dương); slider Highlights mờ, như Lightroom.
 - Vignette rồi Grain chạy **sau crop và mask**, trước hạ cỡ preview — tâm vignette là tâm khung sau crop.
   *Vì trước crop thì cắt lệch một bên là vignette lệch tâm, sai nghĩa "post-crop".*
+- Vignette và Grain **không có trong mask** (Lightroom cũng không); Video Studio giữ chỗ cũ (FS-03.15 §3).
 
 ## 6. Thẻ `crs:`
 

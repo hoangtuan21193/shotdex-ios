@@ -25,6 +25,9 @@ Khung, ✕ / ✓: [13a](13a-chrome-and-toolbar.md). Mask làm gì: [FS-03.05](05
 
 - **Hàng trên 40**: thumbnail 30×30 bo 8 · **tên mask 14,5pt đậm + ▼** và dòng phụ 11,5pt các vùng ("Sky − Brush") ·
   chip **Mask Overlay** · `+` 30×30 · `⋯` 30×30. `+` là **nút tạo duy nhất** = mask mới.
+- **Mask mới tên "Mask n"** với mọi loại vùng, n = số mask của ảnh sau khi thêm; Rename của ⋯ đổi được (chốt E4).
+  - Loại vùng chỉ đọc ở **dòng phụ**: mọi vùng theo thứ tự, vùng trừ sau "−" ("Sky − Brush"; Background đọc "Background").
+  - *Vì* mask nhiều vùng mà tên theo vùng đầu sẽ sai. Cùng luật ở [FS-03.05 §3](05-local-masks.md#3-chỉnh-mask-đang-chọn).
 - **Chạm tên / ▼ → danh sách dọc** thay vùng thông số: tiêu đề "Masks · n masks"; mỗi mask một hàng 40 (thumbnail ·
   tên · dòng phụ · 👁), dưới mask đang chọn là các **vùng** (⊕ cộng / ⊖ trừ) rồi **Add area** · **Subtract area**;
   cuối danh sách **New Mask**. Hàng đang chọn nền trắng 8%, bo 8.
@@ -92,7 +95,7 @@ Máy: iPhone 17 iOS 26.5 và 18.6, ảnh 3:2 (panel 344) nếu không ghi khác.
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
 | AC-25 | ảnh chưa có mask, ảnh 3:4 (panel 264) | chạm Mask | lưới 4 cột đủ mọi mục của danh sách vùng, mỗi mục một lần, Face Skin · Eyes · Lips là ô riêng; thấy 2 hàng, các hàng sau tới được bằng cuộn dọc; không cuộn ngang | ⚠️ chưa có — `MaskPhonePanelTests.chooserTilesCoverEveryKindOnce` + `iphone-mask-list.json` |
-| AC-26 | như AC-25 | chạm Brush rồi kéo một ngón 100pt trên ảnh | có 1 mask, 1 nét, không cần chạm thêm; hàng trên "Mask 1 ▼ · Mask Overlay · + · ⋯"; hàng cọ ghim | ⚠️ chưa có — `MaskPhonePanelTests.brushTileDrawsImmediately` |
+| AC-26 | như AC-25 | chạm Brush rồi kéo một ngón 100pt trên ảnh | có 1 mask, 1 nét, không cần chạm thêm; hàng trên "Mask 1 ▼ · Mask Overlay · + · ⋯", dòng phụ "Brush"; hàng cọ ghim | ⚠️ chưa có — `MaskPhonePanelTests.brushTileDrawsImmediately` |
 | AC-27 | 1 mask | chạm `+` rồi `‹` | vẫn 1 mask, mask cũ vẫn chọn | ⚠️ chưa có — `MaskPhonePanelTests.plusThenBackMakesNothing` (sửa test cũ theo lưới) |
 | AC-28 | Mask 1 = Sky − Brush, Mask 2 = Radial, Mask 1 chọn | chạm ▼ | danh sách đúng thứ tự: Mask 1 · Sky ⊕ · Brush ⊖ · Add area · Subtract area · Mask 2 · New Mask | ⚠️ chưa có — `MaskPhonePanelTests.listPutsAreaActionsUnderTheSelectedMask` |
 | AC-29 | danh sách mở, Mask 1 = Sky | Subtract area → Brush | lưới "Subtract from Mask 1" có mọi loại của danh sách (cả Background, Color, Luminance, Depth); Mask 1 có 2 vùng, vùng 2 là trừ; danh sách đóng; dòng phụ "Subtracting" | ⚠️ chưa có — `MaskPhonePanelTests.subtractAreaAddsASubtractingBrush` |

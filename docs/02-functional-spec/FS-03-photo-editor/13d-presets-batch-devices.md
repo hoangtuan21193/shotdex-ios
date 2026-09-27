@@ -35,6 +35,7 @@ chia sẻ look: [FS-03.14](14-lightroom-preset-exchange.md). Phiên nhiều ản
 - Cuối filmstrip: pill **Sync** cao 32 (nền trắng 12%, icon + chữ 12,5pt đậm) và "2 / 7" mono 10pt bên dưới.
   Chạm Sync → menu **Sync Look to N Photos** (dòng phụ "Tone, color, curve and look") · **Sync Everything to N Photos**
   · **Apply Previous** · **Auto Sync** (công tắc). Hành vi giữ FS-03.09b §3.
+- Menu Sync **luôn 4 mục**: Apply Previous **mờ** khi chưa có ảnh trước để áp, không ẩn (chốt E5).
 - **Sync chỉ ở đây**, không ở ⋯ — một hành động, một chỗ. Tràn viền thì chạm đôi để filmstrip hiện lại.
 - **Vào công cụ → filmstrip ẩn**, panel nhận lại 56, khung ảnh **đứng yên**. Vì mask, vết, lớp là của một ảnh: đổi
   ảnh giữa chừng công cụ dễ nhầm. Ra công cụ thì filmstrip hiện lại.
@@ -61,7 +62,7 @@ Máy: iPhone 17 iOS 26.5 và 18.6; iPhone Duo 27.1 cho AC-44, AC-45. Tiếp số
 | AC-37 | 49 look, ảnh 3:2 (panel 344) | chạm Presets | lưới 4 cột, 13 hàng, chỉ cuộn dọc; chạm Velvia → look áp, hàng Amount hiện ở 100 | ⚠️ chưa có — `iphone-presets-grid.json` + dump |
 | AC-38 | recipe identity, 0 look đã lưu | chạm My Looks | ô 1 Save Current mờ, ô 2 Import XMP Preset sáng, dòng "Save an edit here…" hiện; chạm nó mở bộ chọn tài liệu hệ thống | ⚠️ chưa có — `iphone-presets-grid.json` |
 | AC-39 | My Looks có 6 look, 1 LUT đã nhập | giữ lâu 0,6s lần lượt "Forest", Velvia (Presets), LUT đã nhập; rồi kéo Forest sang ô khác | Forest và LUT: đúng 4 mục Rename · Share · Export As · Delete, Export As đúng 3 định dạng; Velvia: 3 mục, không Delete; kéo không đổi thứ tự | ⚠️ chưa có — `iphone-presets-grid.json` |
-| AC-40 | phiên 7 ảnh, đang ở ảnh 2, 3 ảnh có nháp, 1 ảnh đã lưu | chụp màn Edit, rồi chạm Sync | filmstrip cao 56 giữa ảnh và panel, ô 44 bo 6, vòng trắng ở ô 2, 3 chấm, 1 ✓, "2 / 7"; 0 px accent ngoài Save; menu Sync đúng 4 mục | ⚠️ chưa có — `iphone-batch-filmstrip.json` + `Tools/accent-check` |
+| AC-40 | phiên 7 ảnh, đang ở ảnh 2, 3 ảnh có nháp, 1 ảnh đã lưu | chụp màn Edit, rồi chạm Sync | filmstrip cao 56 giữa ảnh và panel, ô 44 bo 6, vòng trắng ở ô 2, 3 chấm, 1 ✓, "2 / 7"; 0 px accent ngoài Save; menu Sync đúng 4 mục (Apply Previous mờ nếu phiên chưa có ảnh trước) | ⚠️ chưa có — `iphone-batch-filmstrip.json` + `Tools/accent-check` |
 | AC-41 | như AC-40, ảnh 3:2 | chạm Mask | filmstrip biến mất, panel 400, khung stage không đổi (±0,5pt); ✓ → filmstrip hiện lại, panel 344 | ⚠️ chưa có — `iphone-batch-filmstrip.json` dump trước / sau |
 | AC-42 | phiên nhiều ảnh, ảnh đang mở 3:4 | chụp màn Edit, rồi chạm ô một ảnh 3:2 | panel 264, stage cao 874 − 62 − 56 − 264 = 492, ảnh 369×492; sang ảnh 3:2 thì panel 344 | ⚠️ chưa có — `EditorPanelLayoutTests.batchPanelCountsTheFilmstrip` |
 | AC-43 | Mask Brush, 3 nét, trong công cụ | giả lập cảnh báo thiếu bộ nhớ | không crash; vẫn trong công cụ, 3 nét còn; ✕ vẫn trả về lúc vào | ⚠️ chưa có — `EditorHistoryAndSummaryTests.memoryWarningKeepsTheToolSession` |

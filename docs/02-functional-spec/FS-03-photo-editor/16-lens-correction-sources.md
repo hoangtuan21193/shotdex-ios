@@ -54,6 +54,8 @@ nắn méo, và preset Lightroom mang ba mức độ mạnh không có chỗ đ�
   đã sửa gì, bật chồng là không kiểm được.
 - Nguồn đã giải **lưu trong recipe**, renderer không tự chọn lại: một bản làm mới dữ liệu không được đổi âm
   thầm ảnh đã sửa.
+- RAW vừa mở: nguồn giải lúc mở nhưng **chỉ giữ trong phiên**; ghi vào recipe ở lần chỉnh đầu tiên. *Vì ghi
+  lúc mở thì mọi RAW vừa mở bị coi là "đã sửa" — hiện dấu, hỏi lưu khi thoát.*
 - Nguồn 2 có dữ liệu méo nhưng thiếu tối góc/CA thì slider mặt thiếu mờ, không rơi xuống nguồn 3.
 - Mặc định: RAW **bật**, JPEG **tắt**; JPEG máy ảnh đã tự sửa trong máy không tự khớp ống (16a §4).
 
@@ -67,6 +69,7 @@ nắn méo, và preset Lightroom mang ba mức độ mạnh không có chỗ đ�
 | Người dùng tự nhập? | không vào `photo_metadata` — recipe là dữ liệu sửa ảnh, đi đường lưu recipe như hôm nay ([FS-03.06](06-saving-recipe-and-live-photo.md)) |
 | Tương thích | app chưa phát hành: không migration, không cờ phiên bản; decode vẫn khoan dung (FS-03.11 §9b) |
 | Copy / Sync / My Looks | ba mức độ mạnh và công tắc **đi theo** look (tự chép vì nằm trong bộ thông số chỉnh); nguồn đã giải **không** — mỗi ảnh tự giải ống của nó |
+| Sync "Everything" | cũng giữ lựa chọn hồ sơ ống của từng ảnh, chỉ chép ba mức độ mạnh (và công tắc). *Vì ảnh B có thể chụp ống khác — chép hồ sơ của A là sửa méo sai* |
 
 ## 5. Preset Lightroom (FS-03.14 đổ vào đây)
 
@@ -86,7 +89,7 @@ nắn méo, và preset Lightroom mang ba mức độ mạnh không có chỗ đ�
 |---|---|
 | Preview | không hạ độ phân giải khi kéo ([FS-03.04](04-raw-and-render-graph.md)); pass mới chạy GPU, kernel Metal theo [FS-16](../FS-16-metal-kernels.md) |
 | Kit | bộ đọc dữ liệu nhúng và bảng nằm trong kit, không SwiftUI/GRDB ([EX-01](../../03-extensions-and-integrations/EX-01-shotdexkit-and-edit-extension.md)) |
-| Bộ nhớ | extension chia sẻ/widget render recipe có sửa ống kính vẫn dưới trần ([NF-02](../../04-non-functional-design/NF-02-memory-and-resources.md)) |
+| Bộ nhớ | không có trần riêng cho extension: hôm nay không extension nào render recipe (D60, [EX-01](../../03-extensions-and-integrations/EX-01-shotdexkit-and-edit-extension.md)); ngày có extension render thì đo lại cả bảng ống kính |
 | Dung lượng | bảng là JSON thô, trần 4MB (16b §4); hôm nay 823KB, thêm tối góc + CA ước 1–2MB, **chưa đo** |
 | Pháp lý | bộ đọc tự viết từ mô tả định dạng; không chép mã GPL (darktable, RawTherapee) |
 
@@ -99,11 +102,10 @@ nắn méo, và preset Lightroom mang ba mức độ mạnh không có chỗ đ�
 | AC-3 | ảnh A (ARW, nguồn dữ liệu nhúng, 50/100/150) và ảnh B (CR3, nguồn Lensfun ống của B) | Copy Edits ở A, Paste lên B | B nhận 50/100/150, **giữ** nguồn Lensfun ống của B, không nhận nguồn của A | ⚠️ chưa có |
 | AC-4 | `.xmp` có Enable 1, Setup Custom, Name "Adobe (Canon EF 24-70mm f/2.8L II USM)", ba mức 80/120/100 | nhập và áp lên CR3 chụp bằng ống đó | công tắc bật, ống là dòng Lensfun cùng tên, ba slider 80/120/100, báo cáo ghi ✓ | ⚠️ chưa có |
 | AC-5 | `.xmp` như AC-4 nhưng Name "Adobe (Foo 13mm f/1.1)" | nhập và áp lên cùng CR3 | ba mức 80/120/100 giữ nguyên, nguồn tự giải theo §3, báo cáo có một dòng ≈ nêu "Foo 13mm f/1.1", không crash | ⚠️ chưa có |
-| AC-6 | JPEG 24MP có nguồn Lensfun cả ba mặt | render thumbnail trong tiến trình extension chia sẻ | đỉnh bộ nhớ tăng ≤ 10MB so với cùng recipe tắt sửa ống; bảng nạp một lần mỗi tiến trình | ⚠️ chưa có |
-| AC-7 | recipe trỏ tới id ống không còn trong bảng (sau một lần làm mới) | mở ảnh trong editor | render không có bước sửa theo hồ sơ, không crash; panel hiện "No profile for this lens yet" + Choose Lens | ⚠️ chưa có |
-| AC-8 | RAW nguồn 3 (phần sửa của Apple) và JPEG nguồn 2, cùng recipe | tắt công tắc Lens Correction | cả hai ảnh mất sửa ống kính; danh mục thông số không còn thang RAW riêng nào điều khiển phần của Apple | ⚠️ chưa có |
+| AC-6 | recipe trỏ tới id ống không còn trong bảng (sau một lần làm mới) | mở ảnh trong editor | render không có bước sửa theo hồ sơ, không crash; panel hiện "No profile for this lens yet" + Choose Lens | ⚠️ chưa có |
+| AC-7 | RAW nguồn 3 (phần sửa của Apple) và JPEG nguồn 2, cùng recipe | tắt công tắc Lens Correction | cả hai ảnh mất sửa ống kính; danh mục thông số không còn thang RAW riêng nào điều khiển phần của Apple | ⚠️ chưa có |
 
-**Chưa chứng minh được:** AC-1 → AC-8 (chưa có code). AC của từng phần ở 16a §7 và 16b §5.
+**Chưa chứng minh được:** AC-1 → AC-7 (chưa có code). AC của từng phần ở 16a §7 và 16b §5.
 
 ## 8. Đã chốt 2026-09-28 — lý do ở [DECISIONS.md](../../../.planboard/editor-specs-decisions/DECISIONS.md)
 
@@ -114,6 +116,15 @@ nắn méo, và preset Lightroom mang ba mức độ mạnh không có chỗ đ�
 - **D75** JPEG đã sửa trong máy: đọc thẻ trạng thái, không tự khớp, nói rõ lý do (16a §4, 16b §2).
 - **D76** Giữ chip Remove CA, là sửa CA không cần hồ sơ (16a §5).
 - **D77** Ống người dùng chọn thắng dữ liệu nhúng, có lối quay về dữ liệu trong ảnh (16b §2).
+
+Chốt thêm khi đối chiếu kế hoạch với code — lý do ở
+[.planboard/plans-deviations/DECISIONS.md](../../../.planboard/plans-deviations/DECISIONS.md):
+
+- **E14** Hai cặp Distortion · Vignetting giữ tên, tách bằng nhãn nhóm LENS PROFILE / MANUAL (16b §1).
+- **E16** Không có tiêu chí bộ nhớ extension (§6).
+- **E17** Bù tối góc RAW khi kéo dùng bản giải mã tuyến tính half-float đã cache (16a §5).
+- **E18** Sync "Everything" giữ hồ sơ ống của từng ảnh (§4).
+- **E19** RAW vừa mở ghi nguồn vào recipe ở lần chỉnh đầu tiên (§3).
 
 ## 9. Rủi ro và câu hỏi còn treo
 

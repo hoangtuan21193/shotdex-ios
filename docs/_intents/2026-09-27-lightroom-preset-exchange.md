@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan |
 | Ngày | 2026-09-27 |
 | Trạng thái | accepted |
-| Tiến độ | **chưa làm** (2026-09-27) — spec FS-03.14, 33 AC |
+| Tiến độ | **chưa làm** (2026-09-28) — spec FS-03.14, 33 AC · plan [2026-09-28-fs-03-14](../_plans/2026-09-28-fs-03-14-lightroom-preset-exchange.md) chờ duyệt, 35 task |
 | Nguồn | phản hồi người dùng (chủ sở hữu sản phẩm) — phiên thiết kế 2026-09-27 |
 | Spec sinh ra từ đây | [FS-03.14](../02-functional-spec/FS-03-photo-editor/14-lightroom-preset-exchange.md) (+ 14a, 14b, 14c) |
 

@@ -62,6 +62,13 @@ Số là thứ tự chạy; chữ đậm là pass mới hoặc dời chỗ.
 Test đọc thứ tự này từ dữ liệu, như thứ tự pass Detail đang làm (FS-03.11 AC-13). Đổi chỗ B&W và
 vignette làm ảnh đã sửa ra khác — được phép vì app chưa phát hành; golden toàn pipeline chụp lại một lần.
 
+- **Một danh sách pass dùng chung** cho ảnh tĩnh, khung Live Photo và mask tự động; không nơi nào chép tay
+  chuỗi pass. *Vì chép tay thì đổi thứ tự ở ảnh tĩnh mà quên Live Photo — bản lưu ra khác ảnh trong editor.*
+- **Mask không có B&W, Vignette, Grain** (Lightroom cũng không): bộ chỉnh chuẩn trong mask chỉ còn Light · WB
+  · Presence · Detail · Dehaze, cộng phần riêng của 15d §2. Muốn xám trong mask thì Saturation −100.
+- **Video Studio giữ thứ tự pass hôm nay** (B&W, Vignette, Grain trong khâu chỉnh chung) tới khi
+  [FS-12](../FS-12-video-studio/) tự quyết; bảng trên chỉ áp cho ảnh.
+
 ## 4. Dữ liệu
 
 - Mọi trường mới **có thì đọc, không thì mặc định**; mặc định nằm trong trạng thái "chưa sửa", nên Reset và
@@ -114,6 +121,16 @@ Lý do từng điểm: [.planboard/editor-specs-decisions/DECISIONS.md](../../..
 - D69 — Red Eye có cả chạm từng mắt và nút tự dò (15c §4–5).
 - D70 — Red Eye là ô thứ tư trong hàng chế độ Heal (15c §1).
 
+Chốt thêm khi đối chiếu kế hoạch với code — lý do:
+[.planboard/plans-deviations/DECISIONS.md](../../../.planboard/plans-deviations/DECISIONS.md).
+
+- E10 — Subtract của vùng mask = hiện tại × (1 − vùng trừ) (15d §1).
+- E11 — guide thứ 5 của Upright Guided: dòng chú "Up to 4 guides" (15b §4, cả 13b AC-24).
+- E12 — AC-31 đo trong không gian làm việc tuyến tính (15c §7).
+- E13 — mask bỏ B&W, Vignette, Grain; Video Studio giữ thứ tự pass cũ tới khi FS-12 quyết (§3).
+- E14 — hai cặp Distortion · Vignetting giữ tên, tách bằng nhãn nhóm LENS PROFILE / MANUAL (15b §3).
+- E15 — gộp ba chuỗi pass chép tay thành một danh sách chung trước khi đổi thứ tự pass (§3).
+
 ## 7. Thử nghiệm và câu còn treo
 
 1. **Depth Anything V2** — số đo (dung lượng trong app, thời gian trên iPhone 12 và 15, mép tóc) ghi vào 15e
@@ -135,7 +152,7 @@ AC-40…52 · 15e AC-53…60. Máy mặc định: iPhone 17, iOS 26.5 và 18.6.
 | AC-3 | mỗi control mới ở 15a–15e | đọc bảng ánh xạ của FS-03.14 | mọi control có ≥ 1 thẻ `crs:` hoặc được ghi rõ "không có trong Lightroom" | ⚠️ chưa có (dự kiến `LightroomTagCoverageTests.everyParityControlHasATag`) |
 | AC-4 | ảnh tổng hợp 11648×8736, recipe Lens Blur 50 + 3 vết Heal nét cọ + 3 mask | lưu full resolution | đỉnh bộ nhớ ≤ 1,5GB; vượt thì phiên còn, có thông báo lỗi, không tạo asset rỗng | ⚠️ chưa có (dự kiến `LargeImageRenderTests.hundredMegapixelSaveStaysUnderCeiling`) |
 | AC-5 | build scheme ShotDex sau khi thêm mọi pass | grep thư mục kit + chạy test nạp kernel | 0 import SwiftUI/GRDB trong kit; mọi kernel mới nạp được | ⚠️ chưa có (mở rộng `KernelLibraryTests.everyKernelLoads`) |
-| AC-6 | recipe bật mọi pass của §3 | đọc thứ tự pass của renderer | đúng thứ tự bảng §3: Lens Blur → tối góc tay → Calibration → Light; B&W trong Color; vignette, grain sau mask | ⚠️ chưa có (dự kiến `RenderOrderTests.parityPassOrderMatchesTheSpec`) |
+| AC-6 | recipe bật mọi pass của §3 | đọc thứ tự pass của renderer | đúng thứ tự bảng §3: Lens Blur → tối góc tay → Calibration → Light; B&W trong Color; vignette, grain sau mask; ảnh tĩnh, khung Live Photo và mask tự động đọc cùng một danh sách; chuỗi của mask không có B&W, Vignette, Grain | ⚠️ chưa có (dự kiến `RenderOrderTests.parityPassOrderMatchesTheSpec`) |
 
 **Chưa chứng minh được:** AC-1…AC-6 (chưa code).
 

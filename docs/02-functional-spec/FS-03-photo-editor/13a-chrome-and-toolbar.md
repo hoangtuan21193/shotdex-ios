@@ -47,6 +47,7 @@ Ký hiệu: H cao màn · T băng trên · F filmstrip (56 hoặc 0) · W rộng
 - Stage có hành động VoiceOver **"Show Original"** — lối so sánh duy nhất cho người không giữ được.
 - **⋯ gọn**, theo thứ tự: History · Copy Edits · Paste Edits (khi clipboard có) · Fill Screen / Fit Photo · Revert to
   Original · Reset All · gọi lại bản đã lưu / đổi nguồn (cuối cùng, chỉ khi ảnh có). Revert, Reset All giữ FS-03.01 §3.
+- **Undo / Redo không lặp trong ⋯**: đã có ở cụm trái băng trên và chạm hai ngón (chốt E2).
 - Sync **không** ở ⋯: chỉ ở cuối filmstrip ([13d §2](13d-presets-batch-devices.md#2-sửa-nhiều-ảnh)).
 - Rotate / Flip rời ⋯ vào Transform; phủ đỏ / đảo vùng rời ⋯ vào hàng Mask và ⋯ của mask.
 
@@ -107,7 +108,7 @@ Máy: iPhone 17 (402×874) iOS 26.5 và 18.6; SE 375×667 khi ghi rõ. Script `T
 | AC-9 | Mask Brush, 3 nét, rồi ✓ | Undo một lần | còn 2 nét; panel vẫn là Edit | ⚠️ chưa có — `EditorHistoryAndSummaryTests.undoAfterApplyStepsBackOneStroke` |
 | AC-10 | Exposure +1,00, rồi vào Mask Brush, vẽ 2 nét | Undo 3 lần | sau lần 2: 0 nét, nút Undo mờ; lần 3 không đổi gì; Exposure vẫn +1,00 | ⚠️ chưa có — `EditorHistoryAndSummaryTests.undoInsideAToolStopsAtEntry` |
 | AC-11 | Edit, Exposure +1,00 | giữ ảnh 1,0s rồi nhả; lặp lại ở Presets với Velvia | lúc giữ ảnh là bản gốc (histogram khớp gốc), nhả là bản sửa, ở cả Edit và Presets; ở Mask Brush cùng cú giữ vẽ 1 dấu, không hiện gốc | ⚠️ chưa có — `iphone-tool-sessions.json` + chụp liên tục `Tools/sim-shot` |
-| AC-12 | VoiceOver bật | dump băng trên, thanh, stage | nhãn Back · Undo · Redo · Histogram · More · Save · Cancel · Apply; stage có hành động "Show Original" | ⚠️ chưa có — dump `iphone-editor-frame.json` |
+| AC-12 | VoiceOver bật | dump băng trên, thanh, stage | nhãn Back · Undo · Redo · RGB histogram · More editor actions · Save · Cancel · Apply (nhãn histogram và ⋯ theo code — chốt E1); stage có hành động "Show Original" | ⚠️ chưa có — dump `iphone-editor-frame.json` |
 | AC-13 | một ảnh, clipboard rỗng, không có bản đã lưu | mở ⋯ | đúng 5 mục: History · Copy Edits · Fill Screen · Revert to Original · Reset All. Phiên 7 ảnh: ⋯ vẫn không có mục Sync | ⚠️ chưa có — dump `iphone-editor-frame.json` + `iphone-batch-filmstrip.json` |
 | AC-14 | lần lượt Presets, Edit, Transform, Mask, Heal, Markup, iOS 26.5 và 18.6 | chụp từng màn | 0 px accent ngoài Save; tập hành động hai nhánh như nhau; nhãn "Transform" không bị cắt trên SE 375 | ⚠️ chưa có — `Tools/accent-check` + `se-editor-fit.json` + agent `ios26-parity` |
 

@@ -1,7 +1,7 @@
 # FS-03.05 — Mask cục bộ
 
 `FS-03.05` · `Features/Editing/EditorMaskPanels.swift` · `EditorMaskGuides.swift`
-· `ShotDexKit` (matte và overlay) · cập nhật 2026-09-24
+· `ShotDexKit` (matte và overlay) · cập nhật 2026-09-28
 
 **Một câu:** một ảnh có nhiều mask, mỗi mask có đủ bộ chỉnh riêng — và hình dạng của nó luôn nhìn thấy
 được, sờ được.
@@ -45,6 +45,8 @@ Vẽ, tranh chấp chạm và zoom: [FS-03.05b](05b-mask-painting-and-zoom.md).
 - **Dải đầu 40pt**: thumbnail 40×30 của mọi mask (matte đỏ trên nền xám phẳng — đỏ đè lên ảnh ở cỡ này không
   đọc nổi hình mask; chạm để chọn, đó là lối nhảy nhanh) · `+` · tên mask (không hẹp dưới 72pt — nhiều mask thì dải cuộn) · `⋯`. Mask đổi mà không qua chạm thumbnail (vừa tạo, Duplicate, Undo) thì dải **tự cuộn
   tới thumbnail đó**.
+- **Mask mới tên "Mask n"** với mọi loại, n = số mask của ảnh sau khi thêm; loại vùng đọc ở dòng phụ ("Sky − Brush").
+  *Vì* mask nhiều vùng mà tên theo vùng đầu sẽ sai (chốt E4 — [DECISIONS](../../../.planboard/plans-deviations/DECISIONS.md), [FS-03.13c §2](13c-mask-heal-markup.md#2-mask-đã-có-mask)).
 - Mask đang **tắt hiệu ứng** thì thumbnail mờ 35%.
 - **Hàng đầu dưới dải**: chip chọn hình (chỉ khi mask có ≥2 hình) · công tắc **Add / Subtract** (chế độ cho
   hình kế tiếp) · Undo.
@@ -70,8 +72,8 @@ Brush · Linear Gradient · Radial Gradient · Subject · Sky · Luminance Range
 **Face Skin · Eyes · Lips** (FS-03.11). Mỗi vùng là **Add hoặc Subtract** và có opacity riêng, nên cộng/trừ
 nhiều vùng vào cùng một mask được.
 
-- Màn chọn loại liệt kê **mục**, không phải loại: **Background** là Subject đảo, đặt tên "Background N",
-  không phải loại mới.
+- Màn chọn loại liệt kê **mục**, không phải loại: **Background** là Subject đảo, không phải loại mới; mask tạo từ
+  nó tên "Mask n" như mọi mask, dòng phụ đọc "Background" (§3).
 - **Depth Range**: phép dải của Luminance Range chạy trên bản đồ disparity, chuẩn hoá theo từng ảnh về
   0 (xa) … 1 (gần) — min/max đọc từ **một** pixel của `CIAreaMinMaxRed` (R = min, G = max) — cắt/scale
   theo khung render, rồi làm mờ khoảng một pixel bản đồ (bản đồ chỉ ~¼ độ phân giải ảnh, phóng lên bị
@@ -163,7 +165,7 @@ Tiếp số của [FS-03.12](12-phone-panel-grid.md). Máy: iPhone 17, iOS 26.5 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
 | AC-17 | ảnh chưa có mask | mở Mask | ba hàng chip hiện trong panel, không sheet; panel vẫn 264 | `MaskPhonePanelTests.chooserRowsCoverEveryKindOnce` + ảnh iPhone 17 26.5, 2026-09-24 |
-| AC-18 | như AC-17 | chạm Radial một lần | có đúng 1 mask, dải hiện 1 thumbnail + tên "Radial 1", hàng Feather · Opacity có | `MaskPhonePanelTests.oneTapOnRadialMakesOneShortNamedMask` + ảnh iPhone 17 26.5, 2026-09-24 |
+| AC-18 | như AC-17 | chạm Radial một lần | có đúng 1 mask, dải hiện 1 thumbnail + tên "Mask 1" (dòng phụ "Radial"), hàng Feather · Opacity có | ⚠️ phải chứng minh lại sau E4 — `MaskPhonePanelTests.oneTapOnRadialMakesOneShortNamedMask` sửa theo tên "Mask 1" (bằng chứng 2026-09-24 là tên cũ "Radial 1") |
 | AC-19 | ảnh không có depth | chạm Depth | không tạo mask; tiêu đề thành "This photo has no depth map. Portrait mode photos do." rồi trở lại sau 3s | `MaskPhonePanelTests.depthWithoutADepthMapGivesItsReason` + ảnh iPhone 17 26.5, 2026-09-24 |
 | AC-20 | 1 mask đang bật | `⋯` → Hide | ảnh mất tác dụng mask, thumbnail mờ 35%, lớp đỏ tắt; Show trả lại cả ba | `MaskPhonePanelTests.hideAndShowToggleTheEffect` |
 | AC-21 | 6 mask, dải cuộn tới cuối, mask 6 đang chọn, rồi chạm thumbnail mask 1 | `⋯` → Duplicate | bản sao nằm ngay sau mask 1, được chọn, thumbnail của nó nằm trọn trong dải | `MaskPhonePanelTests.duplicateLandsRightAfterItsSource` + ảnh iPhone 17 26.5, 2026-09-25 (6 mask Radial, chạm mask 1, `⋯` → Duplicate: bản sao ở vị trí 2, được chọn, nằm trọn trong dải) |
@@ -172,4 +174,4 @@ Tiếp số của [FS-03.12](12-phone-panel-grid.md). Máy: iPhone 17, iOS 26.5 
 | AC-24 | ảnh chưa có mask | chạm Sky rồi Undo một lần | 0 mask, panel về màn chọn loại | `MaskPhonePanelTests.undoAfterCreatingReturnsToTheChooser` |
 | AC-25 | 1 mask | `⋯` → Delete | 0 mask, panel về màn chọn loại, không có `‹` | `MaskPhonePanelTests.deletingTheLastMaskReturnsToTheChooser` |
 
-**Chưa chứng minh được:** không còn.
+**Chưa chứng minh được:** AC-18 — tên mask đổi theo chốt E4 (2026-09-28), chờ code + test sửa (plan FS-03.13 task AC-26).

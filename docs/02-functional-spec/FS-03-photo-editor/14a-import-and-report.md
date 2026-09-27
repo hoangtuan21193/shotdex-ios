@@ -72,7 +72,7 @@ Nhập từ ô Import xong → sheet **báo cáo** (`[.medium, .large]`, [DESIGN
   Rename không xoá nó, `.shotdexlook` mang nó theo. VoiceOver đọc "Imported".
 - Nhóm preset của Lightroom **bị bỏ** — My Looks không có nhóm (FS-03.13: Save Current không chọn nhóm).
 - Look mới nhập vào **đầu** danh sách, theo thứ tự file.
-- **Trùng tên** (không phân biệt hoa thường) → thêm hậu tố: "Golden 2". Nhập **không bao giờ** ghi đè hay xoá
+- **Trùng tên** (không phân biệt hoa thường) → thêm hậu tố như Rename (E8): "Golden (2)", đã có thì "(3)". Nhập **không bao giờ** ghi đè hay xoá
   look của người dùng — khác Save Current, vốn ghi đè ([FS-03.02 §9](02-film-simulation-and-presets.md#9-my-looks)).
 - **Trùng cả tên lẫn nội dung** → ✕ "Already in My Looks"; không thêm look.
 
@@ -88,7 +88,7 @@ Nhập từ ô Import xong → sheet **báo cáo** (`[.medium, .large]`, [DESIGN
 | AC-a6 | 10 `.xmp` chọn cùng lúc, một file XML hỏng | nhập | 9 look thêm, 1 hàng ✕ mang tên file hỏng; dòng đầu "9 looks added · 1 skipped" | `PresetImportReportTests.oneBrokenPresetOnlyLosesItself` |
 | AC-a7 | `.xmp` có `Exposure2012`=+1.00 và thẻ lạ `crs:FutureSlider`=40 | nhập | look thêm với Exposure +1.00; hàng ≈, dòng "Unknown setting FutureSlider — ignored" | `PresetImportReportTests.unknownTagsAreListedNotFatal` |
 | AC-a8 | sidecar `.xmp` chỉ có thẻ EXIF/Dublin Core, không thẻ `crs:` | nhập | ✕ "This XMP has no Lightroom edit settings"; không thêm look | `LightroomXMPReaderTests.sidecarWithoutSettingsIsNotAPreset` |
-| AC-a9 | My Looks đã có "Golden" (tự lưu) | nhập preset tên "golden", rồi nhập lại đúng file đó | lần đầu thêm "golden 2" nhãn "Imported", "Golden" giữ nguyên nội dung; lần hai ✕ "Already in My Looks", số look không đổi | `LookPresetStoreTests.importNeverOverwritesAUserLook` |
+| AC-a9 | My Looks đã có "Golden" (tự lưu) | nhập preset tên "golden", rồi nhập lại đúng file đó | lần đầu thêm "golden (2)" nhãn "Imported", "Golden" giữ nguyên nội dung; lần hai ✕ "Already in My Looks", số look không đổi | `LookPresetStoreTests.importNeverOverwritesAUserLook` |
 | AC-a10 | chọn cùng lúc 2 `.xmp` và 1 `.cube` 33³ | nhập | My Looks +2, tab LUTs +1; báo cáo có dòng "Added to LUTs" | `PresetImportReportTests.cubeFilesGoToLUTs` |
 | AC-a11 | lượt nhập 300 preset | chạm Cancel ở "Reading 120 of 300" | không look nào được thêm; My Looks như trước lượt nhập | `PresetImportTests.cancelAddsNothing` |
 | AC-a12 | `Golden.xmp` 3 KB | nhập, rồi Delete look "Golden" | sau nhập: cạnh look có bản chép byte-giống file gốc; sau Delete: bản chép cũng mất | `LookPresetStoreTests.keepsOriginalPresetBesideLook` |

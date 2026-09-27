@@ -71,10 +71,10 @@ Look tự làm trong ShotDex phải gửi được cho máy thứ hai hay cho đ
 | Mặt | Ràng buộc |
 |---|---|
 | Bộ nhớ | extension "Add to ShotDex" dưới trần extension ([NF-02 §3](../../04-non-functional-design/NF-02-memory-and-resources.md)); không phân tích, không render trong extension |
-| Kit | bộ đọc preset và bộ đọc look nằm trong app, **không** vào `ShotDexKit` — extension chỉ chép byte ([EX-01](../../03-extensions-and-integrations/EX-01-shotdexkit-and-edit-extension.md)) |
+| Kit | bộ đọc preset và bộ đọc look nằm trong app, **không** vào `ShotDexKit` — extension chỉ chép byte ([EX-01](../../03-extensions-and-integrations/EX-01-shotdexkit-and-edit-extension.md)). Ngoại lệ duy nhất: cặp trường WB Kelvin / Tint tuyệt đối cho RAW (chốt E7) thêm vào model recipe và decoder RAW trong kit — một trường, không thêm bộ đọc ([14b §2](14b-lightroom-mapping.md#2-bảng-thẻ)) |
 | Thiết bị | iPhone 402×874 · iPad 1376×1032 · Duo trong 951×669 · Duo ngoài 466×678 — cùng luồng, bố cục theo FS-03.13 |
 | iOS 26 vs trước | không có nhánh `#available` riêng; file importer, share sheet, banner giống nhau |
-| Thiết kế | banner nhận look dùng lại toast có Undo sẵn có, đậu **trên** panel ([DESIGN.md](../../../DESIGN.md) mục editor) — không bịa token |
+| Thiết kế | banner nhận look là **component cấp app** (mọi màn, ~4 s, nút Undo) — toast Undo của editor chỉ sống trong editor 3 s nên không dùng lại được (chốt E9); ngoài editor đậu trên tab bar, trong editor đậu **trên** panel; token lấy từ [DESIGN.md](../../../DESIGN.md), không bịa token |
 | Truy cập | báo cáo đọc được bằng VoiceOver theo từng dòng; ✓/≈/✕ có nhãn chữ, không chỉ ký hiệu |
 
 ## 6. Đã chốt 2026-09-28
@@ -99,6 +99,13 @@ Lý do từng điểm: [DECISIONS.md](../../../.planboard/editor-specs-decisions
 16. **Bảng trần kích thước** chốt như đề xuất, không có dòng zip (D49). → [14a §2](14a-import-and-report.md#2-giới-hạn-đọc)
 17. **Trùng tên** → thêm hậu tố; trùng cả nội dung → bỏ qua (D50). → [14a §4](14a-import-and-report.md#4-tên-nhãn-trùng-tên)
 18. **Không có màn Manage Looks**; giữ lâu mở menu bốn mục, Delete ẩn với preset có sẵn (D20). → [14c §3](14c-export-share-receive.md#3-menu-giữ-lâu)
+
+Chỗ spec và code lệch, chốt 2026-09-28 — [DECISIONS.md](../../../.planboard/plans-deviations/DECISIONS.md):
+
+19. **Look nhập chỉ đổi thông số preset có ghi** (look mang tập thông số đã đặt); look ShotDex tự lưu giữ như hôm nay (E6). → [14b §1](14b-lightroom-mapping.md#1-cách-quy-đổi)
+20. **Thêm WB Kelvin / Tint tuyệt đối cho RAW** để `Temperature`/`Tint` của Lightroom sang đúng số (E7). → [14b §2](14b-lightroom-mapping.md#2-bảng-thẻ)
+21. **Rename sang tên đã có bị từ chối**, gợi ý tên kèm "(2)" (E8). → [14c §3](14c-export-share-receive.md#3-menu-giữ-lâu)
+22. **Banner nhận look cấp app**, mọi màn, Undo ~4 s (E9). → [14c §4](14c-export-share-receive.md#4-nhận)
 
 ## 7. Tên thương hiệu
 
