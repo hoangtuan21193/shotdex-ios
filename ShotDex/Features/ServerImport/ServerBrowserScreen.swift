@@ -115,7 +115,11 @@ struct ServerBrowserScreen: View {
     }
 
     private var rootSymbol: String {
-        model.server.transferProtocol == .sftp ? "house" : "externaldrive.connected.to.line.below"
+        switch model.server.transferProtocol {
+        case .sftp: "house"
+        case .files: "icloud"
+        case .smb, .webdav: "externaldrive.connected.to.line.below"
+        }
     }
 
     private var deleteTitle: String {

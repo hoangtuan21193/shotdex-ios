@@ -130,6 +130,21 @@ struct BrowserFixture {
         #expect(model.current.contents.folders == ["RAW"])
     }
 
+    /// FS-17.05 AC-49: a cloud folder's browser tops out at the folder the
+    /// user picked — paths are relative to it, and the title menu never
+    /// offers anything above.
+    @Test func cloudRootIsThePickedFolder() throws {
+        let fixture = try BrowserFixture(transferProtocol: .files)
+        let model = fixture.model(start: "")
+        #expect(model.ancestors.isEmpty)
+        #expect(model.title == "NAS")
+        #expect(!model.isAtSMBRoot)
+        #expect(model.canCreateFolder)
+        model.open(folder: "Trip")
+        #expect(model.ancestors == [""])
+        #expect(model.title(for: "") == "NAS")
+    }
+
     /// FS-17.04 AC-31, 32: Add to Collections toggles a tile for the folder
     /// on screen or a folder in it; never at an SMB root, never while
     /// choosing a folder.

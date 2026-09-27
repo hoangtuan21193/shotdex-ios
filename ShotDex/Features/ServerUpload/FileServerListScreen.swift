@@ -75,7 +75,9 @@ struct FileServerListScreen: View {
     }
 
     private func reload() {
-        servers = (try? dependencies.fileServers.fetchAll()) ?? []
+        // Cloud folders are added and renamed in Collections → On Cloud;
+        // this form is for servers typed in by address.
+        servers = ((try? dependencies.fileServers.fetchAll()) ?? []).filter { $0.transferProtocol.isNetwork }
     }
 }
 

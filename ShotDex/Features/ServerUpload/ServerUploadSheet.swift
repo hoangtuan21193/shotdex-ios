@@ -219,6 +219,11 @@ struct ServerUploadSheet: View {
     /// The path from the machine's root for SMB (the share first) and
     /// WebDAV; `Home/folder` for SFTP, whose paths start at the login's home.
     private static func displayPath(_ folder: String, on server: FileServer) -> String {
+        if server.transferProtocol == .files {
+            var at = server
+            at.folder = folder
+            return at.folderDescription
+        }
         guard server.transferProtocol == .sftp else { return folder.isEmpty ? "/" : folder }
         let home = String(localized: "Home", comment: "Upload to Server: the SFTP login's home folder, the top of the folder browser")
         return folder.isEmpty ? home : "\(home)/\(folder)"

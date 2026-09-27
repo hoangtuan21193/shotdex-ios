@@ -23,7 +23,8 @@ struct OnServerScreen: View {
         var sessions: [String: ServerBrowseSession] = [:]
     }
 
-    private var servers: [FileServer] { dependencies.fileServerCatalog.servers }
+    /// The file servers on the network; cloud folders live in On Cloud.
+    private var servers: [FileServer] { dependencies.fileServerCatalog.servers.filter { $0.transferProtocol.isNetwork } }
 
     var body: some View {
         List {
@@ -80,7 +81,7 @@ struct OnServerScreen: View {
                 }
             }
         }
-        .navigationTitle("On Server")
+        .navigationTitle("Local Network")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {

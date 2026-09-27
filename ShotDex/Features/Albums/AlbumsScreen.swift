@@ -183,6 +183,9 @@ struct AlbumsScreen: View {
         .navigationDestination(for: OnServerDestination.self) { _ in
             OnServerScreen()
         }
+        .navigationDestination(for: OnCloudDestination.self) { _ in
+            OnCloudScreen()
+        }
         .navigationDestination(for: ServerShortcutRoute.self) { route in
             if let shortcut = dependencies.serverShortcuts.shortcuts.first(where: { $0.id == route.id }),
                let server = dependencies.fileServerCatalog.servers.first(where: { $0.id == shortcut.serverId }) {
@@ -645,13 +648,25 @@ extension AlbumsScreen {
             }
             .buttonStyle(.plain)
 
-            // Always there (FS-17 §6): the door to the file servers — browse
-            // and download — with the uploaded photos one row inside.
+            // Always there (FS-17.05 §1), empty or not: the doors to photos
+            // kept elsewhere. "Local Network" and "Cloud", not "On …": the
+            // 190pt Utilities card cut "On Local Network" to "On Local Networ".
+            // NAS and computers on this network, and cloud
+            // folders from the Files app — each with the uploads one row in.
             NavigationLink(value: OnServerDestination()) {
                 CollectionListRow(
-                    title: String(localized: "On Server", comment: "Utilities row: browse file servers and the photos uploaded to them"),
+                    title: String(localized: "Local Network", comment: "Utilities row: browse NAS drives and computers on this network"),
                     systemImage: "server.rack",
-                    spokenDetail: String(localized: "Browse and download from your file servers", comment: "VoiceOver detail on the On Server utilities row")
+                    spokenDetail: String(localized: "Browse and download from NAS drives and computers on this network", comment: "VoiceOver detail on the On Local Network utilities row")
+                )
+            }
+            .buttonStyle(.plain)
+
+            NavigationLink(value: OnCloudDestination()) {
+                CollectionListRow(
+                    title: String(localized: "Cloud", comment: "Utilities row: browse Dropbox, Google Drive and other cloud folders"),
+                    systemImage: "icloud",
+                    spokenDetail: String(localized: "Browse and download from Dropbox, Google Drive and other cloud folders", comment: "VoiceOver detail on the On Cloud utilities row")
                 )
             }
             .buttonStyle(.plain)

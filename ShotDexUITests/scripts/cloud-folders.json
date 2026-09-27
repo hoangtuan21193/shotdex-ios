@@ -1,0 +1,186 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Collections",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "screenshot",
+   "name": "10-utilities"
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.3
+  },
+  {
+   "action": "screenshot",
+   "name": "12-utilities-cloud-row"
+  },
+  {
+   "action": "tap",
+   "label": "Cloud"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "20-on-cloud-empty"
+  },
+  {
+   "action": "tap",
+   "label": "Add Cloud Folder",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "30-picker"
+  },
+  {
+   "action": "tap",
+   "x": 0.713,
+   "y": 0.94
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "x": 0.713,
+   "y": 0.94
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "40-browse"
+  },
+  {
+   "action": "tap",
+   "x": 0.3,
+   "y": 0.377
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "42-on-my-iphone"
+  },
+  {
+   "action": "tap",
+   "x": 0.176,
+   "y": 0.295
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "45-in-cloudtest"
+  },
+  {
+   "action": "tap",
+   "x": 0.866,
+   "y": 0.125
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "50-save-dialog"
+  },
+  {
+   "action": "tap",
+   "label": "Save",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "60-cloud-list"
+  },
+  {
+   "action": "tap",
+   "label": "CloudTest"
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "screenshot",
+   "name": "70-browse-cloud"
+  },
+  {
+   "action": "tap",
+   "label": "More"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "75-cloud-menu"
+  }
+ ]
+}

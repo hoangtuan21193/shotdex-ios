@@ -12,8 +12,11 @@ Nguồn: [intent](../../_intents/2026-09-27-cloud-folders.md).
 
 | Hàng | Glyph | Mở |
 |---|---|---|
-| **On Local Network** (thay "On Server") | `server.rack` | màn On Server hiện nay, tiêu đề **On Local Network**: connection SMB/SFTP/WebDAV + Uploaded from This Device |
-| **On Cloud** | `icloud` | màn On Cloud (§2) |
+| **Local Network** (thay "On Server") | `server.rack` | màn On Server hiện nay, tiêu đề **Local Network**: connection SMB/SFTP/WebDAV + Uploaded from This Device |
+| **Cloud** | `icloud` | màn Cloud (§2) |
+
+Tên người dùng chọn là "On Local Network" / "On Cloud"; thẻ Utilities rộng 190pt cắt còn "On Local Networ" (đo 2026-09-27,
+iPhone 17) nên bỏ chữ "On" ở cả hai.
 
 Cả hai luôn hiện, kể cả khi chưa có gì — màn trống nói nó dùng để làm gì.
 
@@ -50,10 +53,10 @@ Cả hai luôn hiện, kể cả khi chưa có gì — màn trống nói nó dù
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-45 | chưa có connection nào | mở Utilities | có **On Local Network** và **On Cloud**; mỗi màn trống có câu giải thích + nút thêm | ảnh `scripts/cloud-folders.json` |
+| AC-45 | chưa có connection nào | mở Utilities | có **Local Network** và **Cloud**, không bị cắt; mỗi màn trống có câu giải thích + nút thêm | ảnh `scripts/cloud-folders.json` (`10-utilities`, `20-on-cloud-empty`, iPhone 26.5) |
 | AC-46 | folder cục bộ `Cloud/Trip` chọn qua bookmark | lưu | dòng connection giao thức `files`, `bookmark` khác nil, không mật khẩu trong Keychain; đọc lại bookmark ra đúng folder | `FilesFolderClientTests.bookmarkRoundTrip` ✅ |
-| AC-47 | folder có `a.JPG`, `b.CR3`, `x/`, `.hidden` | liệt kê qua client Files | 2 ảnh + 1 folder, dot file ẩn; New Folder/Rename/Delete/upload `.part`→tên thật chạy trên đĩa | `FilesFolderClientTests.listsAndEdits` + `.uploadVerifiesAndRenames` |
-| AC-48 | đường dẫn `..` hoặc tuyệt đối | client Files | bị từ chối (không ra ngoài folder đã chọn) | `FilesFolderClientTests.staysInsideTheFolder` |
-| AC-49 | folder cloud | mở menu tiêu đề | gốc là folder đã chọn, không có cấp trên | `ServerBrowserModelTests.cloudRootIsThePickedFolder` |
-| AC-50 | folder cloud trong Upload to ▸ | đẩy 2 ảnh | 2 file trong folder, SHA-256 khớp, không `.shotdex-part` | `FilesFolderClientTests.uploadVerifiesAndRenames` + ảnh |
-| AC-51 | iOS 26.5 + 18.6 | Add Cloud Folder bằng On My iPhone (thay Dropbox trên simulator) | trình chọn hiện, chọn folder → Save Connection → hàng mới, duyệt thấy ảnh | ảnh `scripts/cloud-folders.json`; Dropbox/Google Drive thật ⚠️ chỉ máy thật |
+| AC-47 | folder có `a.JPG`, `b.CR3`, `x/`, `.hidden` | liệt kê qua client Files | 2 ảnh + 1 folder, dot file ẩn; New Folder/Rename/Delete/upload `.part`→tên thật chạy trên đĩa | `FilesFolderClientTests.listsAndEdits` + `.uploadVerifiesAndRenames` ✅ |
+| AC-48 | đường dẫn `..` hoặc tuyệt đối | client Files | bị từ chối (không ra ngoài folder đã chọn) | `FilesFolderClientTests.staysInsideTheFolder` ✅ |
+| AC-49 | folder cloud | mở menu tiêu đề | gốc là folder đã chọn, không có cấp trên | `ServerBrowserModelTests.cloudRootIsThePickedFolder` ✅ |
+| AC-50 | folder cloud trong Upload to ▸ | đẩy 2 ảnh | 2 file trong folder, SHA-256 khớp, không `.shotdex-part` | `FilesFolderClientTests.uploadVerifiesAndRenames` ✅ + ảnh upload qua sheet ⚠️ chưa có |
+| AC-51 | iOS 26.5 + 18.6 | Add Cloud Folder bằng On My iPhone (thay Dropbox trên simulator) | trình chọn hiện, chọn folder → Save Connection → hàng mới, duyệt thấy ảnh | ảnh `scripts/cloud-folders.json` (`40`→`70-browse-cloud`, iPhone 26.5: On My iPhone › CloudTest, thumbnail QuickLook); 18.6 ⚠️ chưa chạy; Dropbox/Google Drive thật ⚠️ chỉ máy thật |
