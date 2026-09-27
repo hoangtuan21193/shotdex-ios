@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-27 |
 | Trạng thái | accepted — người dùng 2026-09-27: "làm shortcut network theo đề xuất đi" |
-| Tiến độ | **đang làm** (2026-09-27) — task 2/4, plan [2026-09-27-network-shortcuts](../_plans/2026-09-27-network-shortcuts.md) |
+| Tiến độ | **đang làm** (2026-09-27) — task 3/4 (còn ảnh 18.6/iPad + /verify), plan [2026-09-27-network-shortcuts](../_plans/2026-09-27-network-shortcuts.md) |
 | Nguồn | phản hồi người dùng (2026-09-27) |
 | Spec sinh ra từ đây | [FS-17.04](../02-functional-spec/FS-17-import-from-server/04-network-shortcuts.md) |
 

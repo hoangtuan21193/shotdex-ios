@@ -25,6 +25,9 @@ struct AlbumsScreen: View {
     /// Owned by `RootTabView` so the snapshot is preloaded in the background
     /// after Library first paint. Falls back to a local model for previews.
     private let injectedModel: AlbumsModel?
+    /// Network tile being renamed (FS-17.04 §4).
+    @State private var renamingShortcut: ServerShortcut?
+    @State private var shortcutName = ""
     @State private var fallbackModel = AlbumsModel()
     private var model: AlbumsModel { injectedModel ?? fallbackModel }
 
@@ -180,6 +183,26 @@ struct AlbumsScreen: View {
         .navigationDestination(for: OnServerDestination.self) { _ in
             OnServerScreen()
         }
+        .navigationDestination(for: ServerShortcutRoute.self) { route in
+            if let shortcut = dependencies.serverShortcuts.shortcuts.first(where: { $0.id == route.id }),
+               let server = dependencies.fileServerCatalog.servers.first(where: { $0.id == shortcut.serverId }) {
+                ServerBrowserHost(server: server, start: shortcut.path)
+            } else {
+                ContentUnavailableView("Folder Removed", systemImage: "folder")
+            }
+        }
+        .task {
+            dependencies.fileServerCatalog.reload()
+            dependencies.serverShortcuts.reload()
+        }
+        .alert("Rename", isPresented: Binding(get: { renamingShortcut != nil }, set: { if !$0 { renamingShortcut = nil } }), presenting: renamingShortcut) { shortcut in
+            TextField("Name", text: $shortcutName)
+            Button("Rename") { dependencies.serverShortcuts.rename(shortcut.id, to: shortcutName) }
+                .disabled(shortcutName.trimmingCharacters(in: .whitespaces).isEmpty)
+            Button("Cancel", role: .cancel) {}
+        } message: { _ in
+            Text("Only the name in Collections changes. The folder on the server keeps its name.", comment: "Rename a Network tile")
+        }
         .navigationDestination(for: TripsDestination.self) { _ in
             TripsScreen()
         }
@@ -260,8 +283,50 @@ struct AlbumsScreen: View {
             if !model.sharedAlbums.isEmpty {
                 albumTokenSection(title: "Shared Albums", albums: model.sharedAlbums)
             }
+        case .network:
+            if !dependencies.serverShortcuts.shortcuts.isEmpty { networkSection() }
         case .utilities:
             utilitiesSection()
+        }
+    }
+
+    /// Network (FS-17.04): folders on a server kept as tiles. They look like
+    /// albums so they sit in the same row, with a server glyph so they are
+    /// not mistaken for one; opening one is the server browser, whose menu
+    /// is the Files one — never album Edit or Compress on server files.
+    private func networkSection() -> some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+            Text("Network")
+                .font(.title2.bold())
+                .padding(.horizontal)
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(alignment: .top, spacing: tileSpacing) {
+                    ForEach(dependencies.serverShortcuts.shortcuts) { shortcut in
+                        NavigationLink(value: ServerShortcutRoute(id: shortcut.id)) {
+                            NetworkShortcutTile(
+                                shortcut: shortcut,
+                                connectionName: dependencies.fileServerCatalog.servers.first { $0.id == shortcut.serverId }?.name ?? ""
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .contextMenu {
+                            Button {
+                                renamingShortcut = shortcut
+                                shortcutName = shortcut.name
+                            } label: {
+                                Label("Rename", systemImage: "pencil")
+                            }
+                            Button {
+                                dependencies.serverShortcuts.remove(shortcut.id)
+                            } label: {
+                                Label("Remove from Collections", systemImage: "folder.badge.minus")
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal)
+            }
+            .scrollClipDisabled()
         }
     }
 

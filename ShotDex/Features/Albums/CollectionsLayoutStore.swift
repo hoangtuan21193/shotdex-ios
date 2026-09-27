@@ -9,6 +9,8 @@ enum CollectionsSection: String, CaseIterable, Identifiable, Codable, Sendable {
     case smartAlbums
     case myAlbums
     case sharedAlbums
+    /// Folders on a server kept as tiles (FS-17.04).
+    case network
     // Media Types sits directly above Utilities, the way iOS 26 Photos
     // arranges the same two lists: both are pick-from-a-list destinations
     // rather than covers to browse, so they read as one block at the foot of
@@ -27,6 +29,7 @@ enum CollectionsSection: String, CaseIterable, Identifiable, Codable, Sendable {
         case .mediaTypes: "Media Types"
         case .myAlbums: "My Albums"
         case .sharedAlbums: "Shared Albums"
+        case .network: "Network"
         case .utilities: "Utilities"
         }
     }
@@ -40,6 +43,7 @@ enum CollectionsSection: String, CaseIterable, Identifiable, Codable, Sendable {
         case .mediaTypes: "square.stack.3d.down.right"
         case .myAlbums: "rectangle.stack"
         case .sharedAlbums: "person.2"
+        case .network: "network"
         case .utilities: "wrench.and.screwdriver"
         }
     }

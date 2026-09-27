@@ -134,11 +134,14 @@ struct OnServerScreen: View {
 }
 
 /// Makes a fresh browser for each push — the history starts over on every
-/// visit (FS-17.01 §2a) — on the connection's shared login.
+/// visit (FS-17.01 §2a) — on the connection's shared login, or, from a
+/// Collections tile (FS-17.04), on a login of its own.
 struct ServerBrowserHost: View {
     @Environment(AppDependencies.self) private var dependencies
     let server: FileServer
-    let session: ServerBrowseSession
+    var session: ServerBrowseSession?
+    /// Where the visit starts; the connection's folder when nil.
+    var start: String?
     @State private var model: ServerBrowserModel?
 
     var body: some View {
@@ -152,10 +155,13 @@ struct ServerBrowserHost: View {
         .onAppear {
             guard model == nil else { return }
             let dependencies = dependencies
-            let session = session
+            let session = session ?? ServerBrowseSession(
+                server: server,
+                client: RemoteFileClientFactory.make(for: server, password: dependencies.fileServers.password(for: server.id) ?? "")
+            )
             model = ServerBrowserModel(
                 session: session,
-                start: server.folder,
+                start: start ?? server.folder,
                 fileHistory: dependencies.serverFileHistory,
                 shortcuts: dependencies.serverShortcuts,
                 onUploadsForgotten: { dependencies.serverUploadIndex.reload() }
