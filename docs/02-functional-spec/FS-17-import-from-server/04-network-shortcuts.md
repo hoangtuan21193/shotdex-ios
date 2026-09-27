@@ -48,15 +48,15 @@ Nguồn: [intent](../../_intents/2026-09-27-network-shortcuts.md).
 ## 5. Dữ liệu
 
 Bảng `server_shortcuts` (migration v24): `id`, `serverId` (FK `file_servers`, xoá theo connection), `path`, `name`,
-`coverJPEG` (blob ≤ ~40 KB, cạnh dài 320 px), `createdAt`; duy nhất (`serverId`, `path`). Rename/Delete folder trên
+`coverJPEG` (blob, thumbnail 400 px của màn duyệt, JPEG 0.7), `createdAt`; duy nhất (`serverId`, `path`). Rename/Delete folder trên
 server qua ShotDex sửa/xoá `path` của ô trùng hoặc nằm dưới (cùng luật FS-17.01 §4b).
 
 ## 6. Tiêu chí nghiệm thu
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-31 | connection NAS, folder `photos/Trip` | ⋯ → Add to Collections; rồi mở ⋯ lại | 1 dòng `server_shortcuts` (NAS, `photos/Trip`, tên `Trip`); ⋯ giờ là Remove from Collections; thêm lần hai không tạo dòng mới | `ServerShortcutStoreTests.addIsIdempotent` + `ServerBrowserModelTests.shortcutToggle` |
-| AC-32 | gốc SMB; gốc SFTP | ⋯ | gốc SMB không có Add to Collections; gốc SFTP có, tên ô = tên connection | `ServerBrowserModelTests.shortcutToggle` |
+| AC-31 | connection NAS, folder `photos/Trip` | ⋯ → Add to Collections; rồi mở ⋯ lại | 1 dòng `server_shortcuts` (NAS, `photos/Trip`, tên `Trip`); ⋯ giờ là Remove from Collections; thêm lần hai không tạo dòng mới | `ServerShortcutStoreTests.addIsIdempotent` + `ServerBrowserModelTests.shortcutToggle` ⚠️ nửa sau chưa có |
+| AC-32 | gốc SMB; gốc SFTP | ⋯ | gốc SMB không có Add to Collections; gốc SFTP có, tên ô = tên connection | `ServerBrowserModelTests.shortcutToggle` ⚠️ chưa có |
 | AC-33 | 0 ô; rồi 2 ô | mở Collections | 0: không có mục Network; 2: mục Network sau Shared Albums, 2 ô theo thứ tự thêm, glyph server góc trên-phải | `ServerShortcutStoreTests.orderedByCreation` + ảnh `scripts/network-shortcuts.json` |
 | AC-34 | ô `Trip` | chạm | màn duyệt mở ở `photos/Trip` của NAS; menu tiêu đề có `photos`, NAS | ảnh `scripts/network-shortcuts.json` |
 | AC-35 | ô chưa có bìa, folder có 3 ảnh | mở ô, quay lại Collections | ô có bìa là thumbnail ảnh đầu; tắt server → bìa vẫn hiện | `ServerShortcutStoreTests.coverIsStored` + ảnh |

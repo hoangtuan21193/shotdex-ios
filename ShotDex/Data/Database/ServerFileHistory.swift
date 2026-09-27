@@ -1,8 +1,8 @@
 import Foundation
 import GRDB
 
-/// Keeps both histories true to the server after ShotDex renames or
-/// deletes something there (FS-17.01 §4b). The upload history is the proof
+/// Keeps both histories — and the Network tiles — true to the server after
+/// ShotDex renames or deletes something there (FS-17.01 §4b, FS-17.04 §5). The upload history is the proof
 /// that lets FS-15.02 §7 offer to delete photos from this device: a file
 /// deleted on the server must stop counting, or a photo could be deleted
 /// here with no copy left anywhere.
@@ -27,6 +27,12 @@ struct ServerFileHistory: Sendable {
             for id in doomed {
                 try db.execute(sql: "DELETE FROM server_uploads WHERE id = ?", arguments: [id])
             }
+            // A Network tile on the deleted folder, or inside it, goes too
+            // (FS-17.04 §5).
+            let tiles = try Row.fetchAll(db, sql: "SELECT id, path FROM server_shortcuts WHERE serverId IN (\(Self.placeholders(ids.count)))", arguments: StatementArguments(ids))
+            for tile in tiles where ServerHistoryPaths.isAffected(tile["path"], by: path) {
+                try db.execute(sql: "DELETE FROM server_shortcuts WHERE id = ?", arguments: [tile["id"] as String])
+            }
             return doomed.count
         }
     }
@@ -36,6 +42,11 @@ struct ServerFileHistory: Sendable {
     func move(_ path: String, to newPath: String, on server: FileServer) throws {
         try database.writer.write { db in
             let ids = try Self.connectionIds(sameFilesAs: server, db)
+            let tiles = try Row.fetchAll(db, sql: "SELECT id, path FROM server_shortcuts WHERE serverId IN (\(Self.placeholders(ids.count)))", arguments: StatementArguments(ids))
+            for tile in tiles {
+                guard let renamed = ServerHistoryPaths.renamed(tile["path"], from: path, to: newPath) else { continue }
+                try db.execute(sql: "UPDATE OR IGNORE server_shortcuts SET path = ? WHERE id = ?", arguments: [renamed, tile["id"] as String])
+            }
             for table in ["server_uploads", "server_downloads"] {
                 let rows = try Row.fetchAll(db, sql: "SELECT id, remotePath FROM \(table) WHERE serverId IN (\(Self.placeholders(ids.count)))", arguments: StatementArguments(ids))
                 for row in rows {

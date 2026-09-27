@@ -537,6 +537,23 @@ final class AppDatabase: Sendable {
                 """)
         }
 
+        // FS-17.04: folders on a server kept as tiles in Collections. The
+        // user made them, so they get their own table (BD-02); a tile goes
+        // with its connection. The cover is a small JPEG kept here so
+        // Collections draws it with the server off.
+        migrator.registerMigration("v24-serverShortcuts") { db in
+            try db.create(table: "server_shortcuts") { t in
+                t.primaryKey("id", .text)
+                t.column("serverId", .text).notNull()
+                    .references("file_servers", onDelete: .cascade)
+                t.column("path", .text).notNull()
+                t.column("name", .text).notNull()
+                t.column("coverJPEG", .blob)
+                t.column("createdAt", .integer).notNull()
+                t.uniqueKey(["serverId", "path"])
+            }
+        }
+
         return migrator
     }
 }
