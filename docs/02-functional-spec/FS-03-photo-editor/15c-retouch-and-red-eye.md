@@ -89,7 +89,7 @@ Remove (tô lên vật để xoá, tự lấp từ xung quanh) **tạm bỏ** t�
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
 | AC-30 | trời chuyển màu tổng hợp có một dây tối rộng 3px chạy chéo 40% khung | kéo một nét Heal Size vừa phủ dây | trong vùng vá sai lệch trung bình ≤ 2/255, tệ nhất ≤ 4/255 so với nền; không mép cứng | ⚠️ chưa có (dự kiến `PhotoHealingTests.brushHealRemovesAWire`) |
-| AC-31 | vết Clone tròn trên hai vùng phẳng 0,2 (đích) và 0,6 (nguồn), giá trị tuyến tính | đặt Opacity 50 | lõi vết ra 0,4 ± 2/255, đo trong không gian làm việc tuyến tính (không phải pixel sRGB) | ⚠️ chưa có (dự kiến `PhotoHealingTests.opacityBlendsHalfway`) |
+| AC-31 | vết Clone tròn trên hai vùng phẳng 0,2 (đích) và 0,6 (nguồn), giá trị tuyến tính | đặt Opacity 50 | lõi vết ra 0,4 ± 2/255, đo trong không gian làm việc tuyến tính (không phải pixel sRGB) | `PhotoHealingTests.opacityBlendsHalfway` · slider Opacity ở panel Heal (`ShotDexUITests/scripts/iphone-heal-opacity.json`) |
 | AC-32 | vết Heal với nguồn gợi ý | bấm New Source | nguồn mới khác chỗ cũ ≥ 1 bán kính, không chồng lên vết; Undo một lần trả nguồn cũ | ⚠️ chưa có (dự kiến `PhotoHealingTests.newSourcePicksAnotherPlace`) |
 | AC-33 | ảnh có 5 chấm bụi, Visualize Spots bật | lưu ảnh | file lưu khớp từng pixel bản Visualize tắt; Threshold 80 cho nhiều pixel trắng hơn Threshold 20 | ⚠️ chưa có (dự kiến `SpotVisualizerTests.visualizeIsDisplayOnly`) |
 | AC-34 | 6 vết heal/clone + 1 Red Eye, Show Spot Pins tắt | bấm Clear All rồi xác nhận | hộp xác nhận hiện (7 ≥ 2); sau khi xác nhận 0 vết; Undo một lần trả đủ 7; lúc pins tắt, bảng phần tử không có ghim nào ngoài vết đang chọn | ⚠️ chưa có (dự kiến `PhotoHealingTests.clearAllIsOneStep`) + `ShotDexUITests/scripts/iphone-heal-panel.json` |

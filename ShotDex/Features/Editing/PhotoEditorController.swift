@@ -1180,6 +1180,7 @@ final class PhotoEditorController {
     var healingMode: PhotoHealingMode = .heal
     var healingRadius = 0.03
     var healingFeather = 0.5
+    var healingOpacity = 1.0
 
     var selectedHealingSpot: PhotoHealingSpot? {
         guard let id = selectedHealingSpotID else { return nil }
@@ -1199,7 +1200,8 @@ final class PhotoEditorController {
             center: center,
             source: source,
             radius: healingRadius,
-            feather: healingFeather
+            feather: healingFeather,
+            opacity: healingOpacity
         )
         recipe.healing.append(spot)
         selectedHealingSpotID = spot.id
@@ -1223,6 +1225,7 @@ final class PhotoEditorController {
         healingMode = spot.mode
         healingRadius = spot.radius
         healingFeather = spot.feather
+        healingOpacity = spot.opacity
     }
 
     func setHealingMode(_ mode: PhotoHealingMode) {
@@ -1241,6 +1244,12 @@ final class PhotoEditorController {
         healingFeather = feather
         guard let id = selectedHealingSpotID else { return }
         updateHealingSpot(id) { $0.feather = feather }
+    }
+
+    func setHealingOpacity(_ opacity: Double) {
+        healingOpacity = opacity
+        guard let id = selectedHealingSpotID else { return }
+        updateHealingSpot(id) { $0.opacity = opacity }
     }
 
     func deleteSelectedHealingSpot() {

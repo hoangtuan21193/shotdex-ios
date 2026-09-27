@@ -1,7 +1,7 @@
 import SwiftUI
 import ShotDexKit
 
-/// The Heal tool's panel: Heal or Clone, the size and softness of the next
+/// The Heal tool's panel: Heal or Clone, the size, softness and strength of the next
 /// spot (or of the picked one), and a way to delete it. The spots themselves
 /// are made and moved on the photo (`EditorHealGuideOverlay`).
 struct EditorHealPanel: View {
@@ -53,6 +53,18 @@ struct EditorHealPanel: View {
                 onDrag: { controller.setHealingFeather($0) },
                 onEndDrag: { controller.endContinuousChange() },
                 onReset: { controller.setHealingFeather(0.5) }
+            )
+            EditorPlainSliderRow(
+                title: "Opacity",
+                value: controller.healingOpacity,
+                range: 0...1,
+                isBipolar: false,
+                valueText: "\(Int((controller.healingOpacity * 100).rounded()))",
+                isActive: false,
+                onBeginDrag: { controller.beginContinuousChange() },
+                onDrag: { controller.setHealingOpacity($0) },
+                onEndDrag: { controller.endContinuousChange() },
+                onReset: { controller.setHealingOpacity(1) }
             )
 
             if let spot = controller.selectedHealingSpot,

@@ -310,6 +310,41 @@ struct PhotoHealingTests {
         #expect(controller.recipe.healing.isEmpty, "and the next removes the spot")
     }
 
+    /// FS-03.15 AC-31. Opacity mixes the fill with what was there, in the
+    /// linear working space: a Clone at 50 over 0.2 from 0.6 lands on 0.4.
+    @Test func opacityBlendsHalfway() {
+        var values = [Float](repeating: 1, count: size * size * 4)
+        for y in 0..<size {
+            for x in 0..<size {
+                let level: Float = x < size / 2 ? 0.2 : 0.6
+                let index = (y * size + x) * 4
+                values[index] = level
+                values[index + 1] = level
+                values[index + 2] = level
+            }
+        }
+        let flat = CIImage(
+            bitmapData: values.withUnsafeBufferPointer { Data(buffer: $0) },
+            bytesPerRow: size * 16,
+            size: CGSize(width: size, height: size),
+            format: .RGBAf,
+            colorSpace: nil
+        )
+        let spot = PhotoHealingSpot(
+            mode: .clone,
+            center: NormalizedPoint(x: 0.25, y: 0.5),
+            source: NormalizedPoint(x: 0.75, y: 0.5),
+            radius: 12.0 / 256,
+            feather: 0,
+            opacity: 0.5
+        )
+        let result = pixels(PhotoRenderService.applyHealing([spot], to: flat))
+        let core = (128 * size + 64) * 4
+        for channel in 0..<3 {
+            #expect(abs(result[core + channel] - 0.4) <= 2.0 / 255, "channel \(channel) = \(result[core + channel])")
+        }
+    }
+
     @MainActor @Test func panelSlidersEditTheSelectedSpot() throws {
         let controller = PhotoEditorController(
             asset: PHAsset(),
@@ -319,9 +354,11 @@ struct PhotoHealingTests {
         controller.addHealingSpot(at: NormalizedPoint(x: 0.5, y: 0.5))
         controller.setHealingMode(.clone)
         controller.setHealingRadius(0.08)
+        controller.setHealingOpacity(0.5)
         let spot = try #require(controller.recipe.healing.first)
         #expect(spot.mode == .clone)
         #expect(spot.radius == 0.08)
+        #expect(spot.opacity == 0.5)
         controller.deleteSelectedHealingSpot()
         #expect(controller.recipe.healing.isEmpty)
     }
