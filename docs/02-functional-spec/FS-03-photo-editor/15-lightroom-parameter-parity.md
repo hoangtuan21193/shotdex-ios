@@ -148,7 +148,7 @@ AC-40…52 · 15e AC-53…60. Máy mặc định: iPhone 17, iOS 26.5 và 18.6.
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
 | AC-1 | recipe có mọi trường mới, một mask mang loại vùng lạ và một vết retouch có chế độ lạ | decode | chỉ mất đúng mask-vùng và vết đó; Calibration, curve vùng, mixer, Upright, Lens Blur còn nguyên | `RecipeLossyDecodingTests.newParityFieldsSurviveOneBadElement` · `.untouchedParityPartsWriteNothing` |
-| AC-2 | ảnh A có Calibration Red Hue +30, curve vùng Shadows +40, 2 vết Heal, 1 Red Eye, Upright Guided | Copy Edits → Paste sang B | B nhận Calibration và curve vùng; 0 vết retouch, 0 Red Eye, 0 guide | ⚠️ chưa có (dự kiến `EditClipboardTests.parityLookSlice`) |
+| AC-2 | ảnh A có Calibration Red Hue +30, curve vùng Shadows +40, 2 vết Heal, 1 Red Eye, Upright Guided | Copy Edits → Paste sang B | B nhận Calibration và curve vùng; 0 vết retouch, 0 Red Eye, 0 guide | `EditClipboardTests.parityLookSlice` |
 | AC-3 | mỗi control mới ở 15a–15e | đọc bảng ánh xạ của FS-03.14 | mọi control có ≥ 1 thẻ `crs:` hoặc được ghi rõ "không có trong Lightroom" | ⚠️ chưa có (dự kiến `LightroomTagCoverageTests.everyParityControlHasATag`) |
 | AC-4 | ảnh tổng hợp 11648×8736, recipe Lens Blur 50 + 3 vết Heal nét cọ + 3 mask | lưu full resolution | đỉnh bộ nhớ ≤ 1,5GB; vượt thì phiên còn, có thông báo lỗi, không tạo asset rỗng | ⚠️ chưa có (dự kiến `LargeImageRenderTests.hundredMegapixelSaveStaysUnderCeiling`) |
 | AC-5 | build scheme ShotDex sau khi thêm mọi pass | grep thư mục kit + chạy test nạp kernel | 0 import SwiftUI/GRDB trong kit; mọi kernel mới nạp được | `KernelLibraryTests.kitHasNoSwiftUIOrGRDB` + `everyKernelLoads` (mỗi kernel mới thêm một dòng) |

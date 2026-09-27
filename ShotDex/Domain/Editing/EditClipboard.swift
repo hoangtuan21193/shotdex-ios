@@ -48,14 +48,7 @@ final class EditClipboard {
     /// alone.
     func paste(onto recipe: PhotoEditRecipe) -> PhotoEditRecipe {
         guard let copied = self.recipe else { return recipe }
-        var result = recipe
-        result.adjustments = copied.adjustments
-        result.color = copied.color
-        result.curve = copied.curve
-        result.filter = copied.filter
-        result.lutID = copied.lutID
-        result.filterIntensity = copied.filterIntensity
-        return result
+        return EditorSyncScope.look.apply(copied, onto: recipe)
     }
 
     func clear() {
@@ -64,16 +57,9 @@ final class EditClipboard {
     }
 
     /// Everything about how the photo looks, with nothing about which photo it
-    /// is or how it is framed. `EditorSyncScope.look` is the same cut.
+    /// is or how it is framed — `EditorSyncScope.look` laid over nothing.
     static func look(of recipe: PhotoEditRecipe) -> PhotoEditRecipe {
-        var look = PhotoEditRecipe.identity
-        look.adjustments = recipe.adjustments
-        look.color = recipe.color
-        look.curve = recipe.curve
-        look.filter = recipe.filter
-        look.lutID = recipe.lutID
-        look.filterIntensity = recipe.filterIntensity
-        return look
+        EditorSyncScope.look.apply(recipe, onto: .identity)
     }
 }
 
@@ -97,13 +83,25 @@ enum EditorSyncScope {
         case .everything:
             return source
         case .look:
+            // The one place the look is cut — Copy Edits, Paste, Sync Look and
+            // My Looks all come through here (FS-03.15 AC-2).
             var result = target
             result.adjustments = source.adjustments
+            // Mixer, point colour, grading, B&W mixer and Calibration.
             result.color = source.color
+            // Point curves and the region curve.
             result.curve = source.curve
             result.filter = source.filter
             result.lutID = source.lutID
             result.filterIntensity = source.filterIntensity
+            result.vignetteStyle = source.vignetteStyle
+            // Upright travels as a mode, solved again on this photo; the guides
+            // and the solved transform were drawn for the other frame.
+            if source.upright.mode != target.upright.mode {
+                result.upright = .identity
+                result.upright.mode = source.upright.mode
+            }
+            // Retouch, Red Eye, Lens Blur, crop, masks and layers stay with the frame.
             return result
         }
     }
