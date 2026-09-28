@@ -2218,7 +2218,7 @@ struct PhotoEditorScreen: View {
                 } label: {
                     Label("Reset Curve", systemImage: "arrow.counterclockwise")
                 }
-                .disabled(controller.recipe.curve.isIdentity)
+                .disabled(controller.editedCurve.isIdentity)
                 Divider()
             } else if controller.editingMaskAdjustments {
                 Button {
@@ -2635,6 +2635,10 @@ struct PhotoEditorScreen: View {
                 chrome: chrome,
                 rename: { presentRename(controller) }
             )
+            .environment(\.editMaskCurve, EditMaskCurveAction {
+                controller.curveTargetMaskID = controller.selectedMaskID
+                selectGroup(.curve, in: controller)
+            })
         case .mask:
             if controller.editingMaskAdjustments {
                 EditorMaskDetailPanel(
@@ -2642,6 +2646,10 @@ struct PhotoEditorScreen: View {
                     chrome: chrome,
                     rename: { presentRename(controller) }
                 )
+                .environment(\.editMaskCurve, EditMaskCurveAction {
+                    controller.curveTargetMaskID = controller.selectedMaskID
+                    selectGroup(.curve, in: controller)
+                })
             } else {
                 EditorMaskListPanel(
                     controller: controller,
@@ -2820,6 +2828,10 @@ struct PhotoEditorScreen: View {
         // to 400% to judge sharpening, reach for Detail, lose the eyelash.
         if group == .cropGeometry || chrome.selectedGroup == .cropGeometry {
             chrome.resetZoom()
+        }
+        // A mask's Edit Curve lasts as long as the curve editor is open.
+        if chrome.selectedGroup == .curve, group != .curve {
+            controller.curveTargetMaskID = nil
         }
         // A stage mode is a session with a way out: snapshot on the way in so
         // Cancel has somewhere to return to, and drop the snapshot on the way

@@ -612,6 +612,10 @@ final class PhotoEditorController {
         scheduleRender()
     }
 
+    /// Set by a mask's Edit Curve: the curve editor then edits that mask's
+    /// curve. Cleared when the editor is left.
+    var curveTargetMaskID: UUID?
+
     /// The picked mask's Color swatch; nil when no mask is being adjusted.
     var selectedMaskTint: PhotoMaskTint? {
         guard let index = selectedMaskIndex, editingMaskAdjustments else { return nil }
@@ -3088,19 +3092,43 @@ final class PhotoEditorController {
 // MARK: - Tone curve
 
 extension PhotoEditorController {
+    /// The curve the curve editor is working on: the photo's, or — after a
+    /// mask's Edit Curve — that mask's own (FS-03.15d §2). A mask curve that
+    /// goes back to identity is dropped, so it writes no key.
+    var editedCurve: ToneCurveAdjustments {
+        get {
+            if let id = curveTargetMaskID, let mask = recipe.masks.first(where: { $0.id == id }) {
+                return mask.curve ?? .identity
+            }
+            return recipe.curve
+        }
+        set {
+            if let id = curveTargetMaskID, let index = recipe.masks.firstIndex(where: { $0.id == id }) {
+                recipe.masks[index].curve = newValue.isIdentity ? nil : newValue
+            } else {
+                recipe.curve = newValue
+            }
+        }
+    }
+
+    /// The mask whose curve the editor shows, when it shows one.
+    var curveTargetMask: PhotoMask? {
+        curveTargetMaskID.flatMap { id in recipe.masks.first { $0.id == id } }
+    }
+
     /// Replace one channel's control points. The on-photo curve overlay calls
     /// this live inside a `beginContinuousChange` / `endContinuousChange` bracket,
     /// exactly like the grading rows, so a drag coalesces into one undo step.
     func setCurve(_ points: [CurvePoint], for channel: ToneCurveChannel) {
-        recipe.curve[channel] = points
+        editedCurve[channel] = points
         scheduleRender()
     }
 
     /// Replace one channel with a preset shape as a single undo step.
     func applyCurvePreset(_ preset: ToneCurvePreset, to channel: ToneCurveChannel) {
-        guard recipe.curve[channel] != preset.points else { return }
+        guard editedCurve[channel] != preset.points else { return }
         beginContinuousChange()
-        recipe.curve[channel] = preset.points
+        editedCurve[channel] = preset.points
         endContinuousChange()
         scheduleRender()
     }
@@ -3109,21 +3137,21 @@ extension PhotoEditorController {
     /// with `beginContinuousChange` / `endContinuousChange`: one undo step.
     func updateCurveRegion(_ change: (inout ParametricCurve) -> Void) {
         if !isContinuousChange { recordHistory() }
-        change(&recipe.curve.region)
+        change(&editedCurve.region)
         scheduleRender(delay: isContinuousChange ? .milliseconds(30) : .milliseconds(90))
     }
 
     func resetCurveRegion() {
-        guard recipe.curve.region != .identity else { return }
+        guard editedCurve.region != .identity else { return }
         recordHistory()
-        recipe.curve.region = .identity
+        editedCurve.region = .identity
         scheduleRender()
     }
 
     /// Straighten one channel back to the identity line.
     func resetCurve(_ channel: ToneCurveChannel) {
         beginContinuousChange()
-        recipe.curve[channel] = ToneCurveAdjustments.linear
+        editedCurve[channel] = ToneCurveAdjustments.linear
         endContinuousChange()
         scheduleRender()
     }
@@ -3131,7 +3159,7 @@ extension PhotoEditorController {
     /// Straighten every channel.
     func resetAllCurves() {
         beginContinuousChange()
-        recipe.curve = .identity
+        editedCurve = .identity
         endContinuousChange()
         scheduleRender()
     }

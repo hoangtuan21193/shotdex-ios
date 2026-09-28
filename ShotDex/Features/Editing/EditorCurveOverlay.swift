@@ -27,7 +27,7 @@ struct EditorCurveOverlay: View {
     @State private var isShaping = false
 
     private var channel: ToneCurveChannel { chrome.curveChannel }
-    private var points: [CurvePoint] { controller.recipe.curve[channel] }
+    private var points: [CurvePoint] { controller.editedCurve[channel] }
     /// Region mode draws the whole curve that is applied and has nothing to grab.
     private var showsRegion: Bool { chrome.curveMode == .region }
 
@@ -163,7 +163,7 @@ struct EditorCurveOverlay: View {
 
     private func curvePath(_ rect: CGRect) -> Path {
         let lut = showsRegion
-            ? ParametricCurveMath.combinedLUT(region: controller.recipe.curve.region, points: controller.recipe.curve.rgb, count: 128)
+            ? ParametricCurveMath.combinedLUT(region: controller.editedCurve.region, points: controller.editedCurve.rgb, count: 128)
             : ToneCurveMath.lut(points: points, count: 128)
         return Path { path in
             for (index, value) in lut.enumerated() {
@@ -367,7 +367,7 @@ struct EditorCurvePanel: View {
 
     private var channel: ToneCurveChannel { chrome.curveChannel }
     private var isLinear: Bool {
-        controller.recipe.curve[channel] == ToneCurveAdjustments.linear
+        controller.editedCurve[channel] == ToneCurveAdjustments.linear
     }
 
     var body: some View {
@@ -380,6 +380,16 @@ struct EditorCurvePanel: View {
 
     private var phoneRows: some View {
         VStack(spacing: 0) {
+            if let mask = controller.curveTargetMask {
+                // Says whose curve this is: the same editor serves the photo
+                // and, from a mask's Edit Curve, that mask alone.
+                Text("Curve for \(mask.name)")
+                    .font(EditorTheme.maskSubtitle)
+                    .foregroundStyle(EditorTheme.secondaryText)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, EditorStripLayout.horizontalInset)
+                    .padding(.top, AppTheme.Spacing.xs)
+            }
             modeRow
                 .padding(.horizontal, EditorStripLayout.horizontalInset)
                 .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
@@ -409,8 +419,8 @@ struct EditorCurvePanel: View {
             if chrome.curveMode == .region {
                 Button("Reset") { controller.resetCurveRegion() }
                     .buttonStyle(EditorChipButtonStyle(isSelected: false))
-                    .disabled(controller.recipe.curve.region == .identity)
-                    .opacity(controller.recipe.curve.region == .identity ? EditorTheme.rowDisabled : 1)
+                    .disabled(controller.editedCurve.region == .identity)
+                    .opacity(controller.editedCurve.region == .identity ? EditorTheme.rowDisabled : 1)
             }
         }
     }
@@ -418,13 +428,13 @@ struct EditorCurvePanel: View {
     /// Four regions and the three splits between them.
     private var regionRows: some View {
         VStack(spacing: 0) {
-            regionSlider("Highlights", value: controller.recipe.curve.region.highlights) { $0.highlights = $1 }
-            regionSlider("Lights", value: controller.recipe.curve.region.lights) { $0.lights = $1 }
-            regionSlider("Darks", value: controller.recipe.curve.region.darks) { $0.darks = $1 }
-            regionSlider("Shadows", value: controller.recipe.curve.region.shadows) { $0.shadows = $1 }
-            splitSlider("Shadow Split", value: controller.recipe.curve.region.shadowSplit, reset: 0.25) { $0.shadowSplit = $1 }
-            splitSlider("Midtone Split", value: controller.recipe.curve.region.midtoneSplit, reset: 0.5) { $0.midtoneSplit = $1 }
-            splitSlider("Highlight Split", value: controller.recipe.curve.region.highlightSplit, reset: 0.75) { $0.highlightSplit = $1 }
+            regionSlider("Highlights", value: controller.editedCurve.region.highlights) { $0.highlights = $1 }
+            regionSlider("Lights", value: controller.editedCurve.region.lights) { $0.lights = $1 }
+            regionSlider("Darks", value: controller.editedCurve.region.darks) { $0.darks = $1 }
+            regionSlider("Shadows", value: controller.editedCurve.region.shadows) { $0.shadows = $1 }
+            splitSlider("Shadow Split", value: controller.editedCurve.region.shadowSplit, reset: 0.25) { $0.shadowSplit = $1 }
+            splitSlider("Midtone Split", value: controller.editedCurve.region.midtoneSplit, reset: 0.5) { $0.midtoneSplit = $1 }
+            splitSlider("Highlight Split", value: controller.editedCurve.region.highlightSplit, reset: 0.75) { $0.highlightSplit = $1 }
         }
     }
 
@@ -536,7 +546,7 @@ struct EditorCurvePanel: View {
                             // chip a dot is illegible, and Reset already says this one
                             // has a curve.
                             if channel != option,
-                               controller.recipe.curve[option] != ToneCurveAdjustments.linear {
+                               controller.editedCurve[option] != ToneCurveAdjustments.linear {
                                 Circle()
                                     .fill(EditorTheme.accent)
                                     .frame(width: 5, height: 5)
@@ -587,7 +597,7 @@ struct EditorCurvePanel: View {
                         controller.applyCurvePreset(preset, to: channel)
                     }
                     .buttonStyle(EditorChipButtonStyle(
-                        isSelected: controller.recipe.curve[channel] == preset.points
+                        isSelected: controller.editedCurve[channel] == preset.points
                     ))
                 }
             }

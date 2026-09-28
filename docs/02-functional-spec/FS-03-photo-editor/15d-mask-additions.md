@@ -40,6 +40,10 @@ Danh sách slider của mask (một danh sách dài như Edit) thêm:
 - **Bỏ khỏi mask**: B&W, Vignette, Grain — Lightroom cũng không có (FS-03.15 §3). Bộ chỉnh chuẩn còn Light ·
   WB · Presence · Detail · Dehaze; xám trong mask là Saturation −100.
 - Mask mới không mang curve/point color nào: recipe chỉ thêm khoá khi khác mặc định.
+- Curve (2026-09-28): `PhotoMask.curve`, nil tới khi sửa. Hàng **Curve · Edit Curve ›** ngay sau nhóm Light mở trình sửa
+  curve chung (điểm + vùng) trên curve của mask này, có dòng "Curve for <tên mask>"; rời trình sửa là thôi nhắm mask.
+  Point Color của mask: `PhotoMask.pointColors` đã render (cùng kernel toàn cục, trước Curve); **chưa có UI** — chờ
+  danh sách slider của mask theo FS-03.13.
 - Color (2026-09-28): `PhotoMask.tint` (hue, độ bão hoà), nil cho tới khi chọn. Cộng vào mọi pixel sắc độ của màu
   đó — màu trừ độ sáng Rec. 709 của chính nó — nên độ sáng không đổi; 100 = nửa màu đầy. Ô màu nằm ngay sau Hue, chạm
   mở bánh xe grading (dùng chung với overlay).
@@ -104,7 +108,7 @@ trong báo cáo import (FS-03.14). Mask còn lại của correction vẫn nhập
 | AC-41 | mask = Radial A (Add) rồi Linear B (Intersect) | thêm Radial C (Add) không chồng A | vùng C = 1 dù B = 0 ở đó (phép tính theo thứ tự); Undo một lần gỡ C; một vùng Subtract 0,5 trên matte 0,8 cho 0,4 ± 1/255 | `MaskIntersectTests.areasApplyInListOrder` · `…subtractMultipliesTheComplement` · golden `subtractMask-*`, `pipeline-*` (chụp lại, 26 + 27) |
 | AC-42 | ảnh 256×256, mask Radial ở ô 64×64 góc trên trái, thêm Exposure +0,5 toàn cục | đặt Hue +30 cho mask | hue trong mask đổi ≥ 10°; khối 32×32 quanh (0,875; 0,875) bằng bản không Hue ± 1/255 | `MaskLocalColorTests.hueStaysInsideTheMask` · `…hueRotationKeepsLuminance` · hàng: `ShotDexUITests/scripts/iphone-mask-hue.json` |
 | AC-43 | vùng xám 0,5 trong mask | đặt Color hue 30°, độ bão hoà 50 | pixel trong mask có hue 30° ± 5°; độ sáng Rec.709 lệch ≤ 1/255 | `MaskLocalColorTests.colorTintIsLuminanceNeutral` · `…noTintWritesNoKey` · ô + bánh xe: `ShotDexUITests/scripts/iphone-mask-color.json` |
-| AC-44 | dải xám trong mask nửa trái, curve toàn cục Soft S | đặt curve của mask: điểm (0,5; 0,4) | nửa trái mức 0,5 ra 0,4 ± 2/255 sau Soft S; nửa phải bằng bản chỉ có Soft S ± 1/255 | ⚠️ chưa có (dự kiến `MaskLocalCurveTests.maskCurveOnlyInside`) |
+| AC-44 | dải xám trong mask nửa trái, curve toàn cục Soft S | đặt curve của mask: điểm (0,5; 0,4) | nửa trái mức 0,5 ra 0,4 ± 2/255 sau Soft S; nửa phải bằng bản chỉ có Soft S ± 1/255 | `MaskLocalCurveTests.maskCurveOnlyInside` · `…editCurveWritesTheMaskCurve` · luồng Edit Curve: `ShotDexUITests/scripts/iphone-mask-curve.json` |
 | AC-45 | vân moiré màu tổng hợp (sọc lục/tím 3px cùng độ sáng) trong mask | đặt Moiré 80 | phương sai sắc độ trong mask còn ≤ 50%; độ sáng lệch ≤ 1/255; ngoài mask không đổi | ⚠️ chưa có (dự kiến `MaskLocalDetailTests.moireFlattensColourStripes`) |
 | AC-46 | ảnh CC0 không người, hai vật tách rời | chạm Object vào vật 1 | IoU với đối tượng 1 của Vision ≥ 0,9; phủ vật 2 ≤ 5% | ⚠️ chưa có — cần máy thật hoặc Vision của Mac (dự kiến `ObjectMaskTests.tapPicksOneObject`) |
 | AC-47 | ảnh có 2 người (hình nộm/manơcanh, không mặt thật) | mở People | có đúng 3 hàng: All People · Person 1 · Person 2, thứ tự theo diện tích | ⚠️ chưa có — cần máy thật (dự kiến `PeopleMaskTests.onePersonRowPerPerson`) + ảnh New Mask |
@@ -114,5 +118,5 @@ trong báo cáo import (FS-03.14). Mask còn lại của correction vẫn nhập
 | AC-51 | ảnh có mask Object đã tạo | đóng rồi mở lại ảnh; rồi xoá file matte và mở lần nữa | lần 2: Vision chạy 0 lần, matte khớp từng pixel lần 1; lần 3: tính lại, không alert | ⚠️ chưa có (dự kiến `GeneratedMatteStoreTests.reopenReadsTheSavedMatte`, Vision giả) |
 | AC-52 | editor, chưa có mask, iPhone 17 26.5 và 18.6 | mở Mask | lưới 4 cột đủ 14 ô đúng thứ tự §3; Face Skin, Eyes, Lips nằm ngoài People | ⚠️ chưa có (`ShotDexUITests/scripts/iphone-people-mask.json` + element dump) |
 
-**Chưa chứng minh được:** AC-44…AC-52 (chưa code). Point Color và Defringe của mask không có AC riêng —
+**Chưa chứng minh được:** AC-45…AC-52 (chưa code). Point Color và Defringe của mask không có AC riêng —
 dùng lại pass toàn cục, phủ bởi golden kernel FS-16 khi port.

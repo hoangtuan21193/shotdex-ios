@@ -15,6 +15,7 @@ struct EditorAdjustmentGroupsView<Footer: View>: View {
     /// sidebar turns off for every panel at once.
     var isScrollable: Bool?
     @Environment(\.editorPanelScrolls) private var panelScrolls
+    @Environment(\.editMaskCurve) private var editMaskCurve
     @ViewBuilder let footer: () -> Footer
 
     private var scrolls: Bool { isScrollable ?? panelScrolls }
@@ -110,6 +111,10 @@ struct EditorAdjustmentGroupsView<Footer: View>: View {
             .opacity(isLive ? 1 : EditorTheme.rowDisabled)
             .disabled(!isLive)
             .accessibilityHint(isLive ? "" : dependencyHint(for: kind))
+        }
+        if kind == .brightness, controller.editingMaskAdjustments, let editMaskCurve {
+            // After Light, the mask's own curve (FS-03.15d §2).
+            EditorMaskCurveRow(controller: controller, open: editMaskCurve.run)
         }
         if kind == .maskHue {
             // After Hue, the mask's Color swatch (FS-03.15d §2) — not a
@@ -392,5 +397,55 @@ struct EditorMaskTintRow: View {
         }
         .padding(.horizontal, AppTheme.Spacing.lg)
         .frame(minHeight: EditorLayoutMetrics.editorPanelRowHeight)
+    }
+}
+
+extension EnvironmentValues {
+    /// Opens the curve editor on the picked mask's own curve; set by the
+    /// editor screen around the mask panel.
+    @Entry var editMaskCurve: EditMaskCurveAction? = nil
+}
+
+/// The action behind a mask's Edit Curve, wrapped so the environment holds
+/// a value rather than a bare closure.
+struct EditMaskCurveAction: Equatable {
+    let run: () -> Void
+
+    func callAsFunction() { run() }
+
+    static func == (lhs: Self, rhs: Self) -> Bool { true }
+}
+
+/// "Edit Curve" in a mask's list: opens the curve editor on this mask's own
+/// curve, and says whether it has one.
+struct EditorMaskCurveRow: View {
+    @Bindable var controller: PhotoEditorController
+    let open: () -> Void
+
+    private var hasCurve: Bool {
+        guard let id = controller.selectedMaskID else { return false }
+        return controller.recipe.masks.first { $0.id == id }?.curve != nil
+    }
+
+    var body: some View {
+        Button(action: open) {
+            HStack(spacing: AppTheme.Spacing.sm) {
+                Text("Curve")
+                    .font(EditorTheme.rowLabel)
+                    .foregroundStyle(EditorTheme.panelText)
+                Spacer(minLength: 0)
+                Text(hasCurve ? "Edited" : "Edit Curve")
+                    .font(EditorTheme.rowLabel)
+                    .foregroundStyle(EditorTheme.secondaryText)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(EditorTheme.dimText)
+            }
+            .padding(.horizontal, AppTheme.Spacing.lg)
+            .frame(minHeight: EditorLayoutMetrics.editorPanelRowHeight)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Edit this mask's curve")
     }
 }

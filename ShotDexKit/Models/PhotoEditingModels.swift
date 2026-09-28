@@ -1239,6 +1239,12 @@ public struct PhotoMask: Codable, Identifiable, Equatable, Sendable {
     /// The mask's Color swatch (FS-03.15d §2): a tint that moves colour and
     /// never brightness. Nil — no key written — until one is picked.
     public var tint: PhotoMaskTint?
+    /// The mask's own point and region curve, laid over whatever the global
+    /// curve did (FS-03.15d §2). Nil — no key — until edited.
+    public var curve: ToneCurveAdjustments?
+    /// The mask's own Point Color, up to eight like the global one. Nil — no
+    /// key — while empty.
+    public var pointColors: [PointColorAdjustment]?
 
     public init(name: String, component: PhotoMaskComponent) {
         self.name = name
@@ -1265,6 +1271,9 @@ extension PhotoMask {
             forKey: .adjustments
         ) ?? .zero
         tint = try? container.decodeIfPresent(PhotoMaskTint.self, forKey: .tint)
+        curve = try? container.decodeIfPresent(ToneCurveAdjustments.self, forKey: .curve)
+        let points = (try? container.decodeLossyArrayIfPresent(PointColorAdjustment.self, forKey: .pointColors)) ?? nil
+        pointColors = points.flatMap { $0.isEmpty ? nil : Array($0.prefix(PointColorAdjustment.maximumCount)) }
     }
 }
 

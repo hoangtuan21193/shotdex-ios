@@ -515,6 +515,8 @@ public actor PhotoRenderService {
         // FS-03.15d §2 order: the standard set, then Hue, then Color.
         result = applyHueRotation(mask.adjustments.maskHue, to: result)
         if let tint = mask.tint { result = applyTint(tint, to: result) }
+        if let points = mask.pointColors, !points.isEmpty { result = applyPointColors(points, to: result) }
+        if let curve = mask.curve, !curve.isIdentity { result = applyCurve(curve, to: result) }
         return result
     }
 
