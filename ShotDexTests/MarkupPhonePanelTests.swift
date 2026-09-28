@@ -26,6 +26,20 @@ struct MarkupPhonePanelTests {
         #expect(!EditorMarkupPhonePanel.showsChooser(controller: controller, chrome: chrome))
     }
 
+    /// FS-03.13 AC-35. A text layer set left, then the middle alignment: the
+    /// text is centred, and the three buttons are one radio — exactly one lit,
+    /// each read by name.
+    @Test func alignmentGroupIsARadio() throws {
+        let controller = makeController()
+        controller.addTextOverlay()
+        controller.updateSelectedOverlay { $0.alignment = .leading }
+        controller.updateSelectedOverlay { $0.alignment = .center }
+        let overlay = try #require(controller.recipe.overlays.first)
+        #expect(overlay.alignment == .center)
+        #expect(OverlayTextAlignment.allCases.filter { $0 == overlay.alignment }.count == 1)
+        #expect(OverlayTextAlignment.allCases.map(\.accessibilityName) == ["Align left", "Align center", "Align right"])
+    }
+
     /// AC-36. `+` then `‹` changes nothing.
     @Test func plusThenBackMakesNothing() {
         let controller = makeController()

@@ -104,7 +104,7 @@ Máy: iPhone 17 iOS 26.5 và 18.6, ảnh 3:2 (panel 344) nếu không ghi khác.
 | AC-32 | Brush trên SE 375 và Duo ngoài 326pt | dump hàng trên và hàng cọ | không nhãn nào thành "…", chip đọc "Mask Overlay", mọi nút trong khung, `+` và `⋯` ≥30pt | ⚠️ chưa có — `se-editor-fit.json` + `duo-cover-editor.json` |
 | AC-33 | Heal, 3 vết, vết 2 chọn | dump panel, rồi Delete Spot | hàng chế độ không có Remove, không nút mờ vì chưa có; còn 2 vết, nhãn "SPOTS · 2", hàng SELECTED SPOT mờ | ⚠️ chưa có — `iphone-heal-markup.json` |
 | AC-34 | Markup, 3 lớp: Text 1 · Drawing 1 · Logo (trên → dưới) | mở danh sách, kéo ≡ của Logo lên đầu | thứ tự Logo · Text 1 · Drawing 1, ảnh vẽ Logo trên cùng; một Undo trả thứ tự cũ | ⚠️ chưa có — `MarkupPhonePanelTests.verticalListRestacksTheLayer` |
-| AC-35 | lớp chữ căn trái | chạm nút giữa của nhóm căn lề | chữ căn giữa; đúng 1 trong 3 nút sáng | ⚠️ chưa có — `MarkupPhonePanelTests.alignmentGroupIsARadio` |
+| AC-35 | lớp chữ căn trái | chạm nút giữa của nhóm căn lề | chữ căn giữa; đúng 1 trong 3 nút sáng | `MarkupPhonePanelTests.alignmentGroupIsARadio` (nhóm "Text alignment", nút "Align left/center/right") |
 | AC-36 | ảnh chưa có lớp, quyền `.limited` | Add a layer → Pen, chạm chấm màu, thử từng loại mực | tạo 1 lớp nét vẽ, vẽ được ngay; trang con có mọi loại mực của danh sách và bảng màu, không dải cuộn ngang; lớp Image mở bộ chọn ảnh hệ thống, không xin thêm quyền | ⚠️ chưa có — `MarkupPhonePanelTests.everyInkIsReachable` + `iphone-heal-markup.json` |
 
 **Chưa chứng minh được:** AC-25…AC-36 — chưa có code.

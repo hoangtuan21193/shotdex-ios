@@ -390,11 +390,15 @@ struct EditorTextDetailPanel: View {
                             .contentShape(Capsule())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(alignment.accessibilityName)
                     .accessibilityAddTraits(isSelected ? .isSelected : [])
                 }
             }
             .padding(3)
             .background(EditorTheme.control, in: Capsule())
+            // One control of three, exactly one lit (FS-03.13c §5).
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Text alignment")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 4)
@@ -727,5 +731,16 @@ struct EditorTextDetailPanel: View {
 
     private func percent(_ value: Double) -> String {
         String(format: "%.0f%%", value * 100)
+    }
+}
+
+extension OverlayTextAlignment {
+    /// What VoiceOver reads for each of the three alignment buttons.
+    var accessibilityName: String {
+        switch self {
+        case .leading: "Align left"
+        case .center: "Align center"
+        case .trailing: "Align right"
+        }
     }
 }
