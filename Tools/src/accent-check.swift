@@ -1,6 +1,7 @@
 // FS-03.12 AC-3: `Tools/accent-check shot.png [more.png …]` — counts pixels within ±8
 // of the dark accent (235,149,38) in the editor command band (top 60pt) and the
-// phone panel (the bottom 264pt), skipping the Save button (bottom-right 80×90pt).
+// phone panel (the bottom 264pt), skipping the Save button — top-right 56×60pt
+// since FS-03.13a §3 moved it up to the band.
 // The screen is read as 402pt wide (iPhone 17) unless the shot is a 2x 750px
 // frame (SE, 375pt). `KEEP_SAVE=1` counts Save too, as a sanity check.
 import CoreGraphics
@@ -30,9 +31,9 @@ func accentPixels(in path: String) -> Int? {
     for y in 0..<height {
         let yPoints = Double(y) / scale
         guard yPoints < 60 || yPoints > panelTop else { continue }
-        let inSaveRows = !keepsSave && yPoints > screenHeight - 90
+        let inSaveRows = !keepsSave && yPoints < 60
         for x in 0..<width {
-            if inSaveRows && Double(x) / scale > pointsWide - 80 { continue }
+            if inSaveRows && Double(x) / scale > pointsWide - 56 { continue }
             let i = (y * width + x) * 4
             if abs(Int(data[i]) - 235) <= 8, abs(Int(data[i + 1]) - 149) <= 8, abs(Int(data[i + 2]) - 38) <= 8 {
                 hits += 1

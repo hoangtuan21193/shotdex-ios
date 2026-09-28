@@ -1859,7 +1859,9 @@ struct PhotoEditorScreen: View {
                 ) { controller.redo() }
                     .accessibilityLabel("Redo")
 
-                beforeAfterButton(controller)
+                if showsDocumentControls {
+                    beforeAfterButton(controller)
+                }
 
                 if showsDocumentControls {
                     // Fit ⇄ fill, the double tap's visible twin. A gesture
@@ -1930,11 +1932,17 @@ struct PhotoEditorScreen: View {
                     undoRedo
                     trailingCommands
                 } else {
+                    // The phone (FS-03.13a §3): Back · Undo · Redo on the
+                    // left, histogram · ⋯ · Save on the right — Save always
+                    // there, even inside a tool. No compare button: a hold on
+                    // the photo shows the original.
+                    backButton(controller, side: buttonSize)
                     undoRedo
                     // Fixed reserve for the island; keeps the pill clear of the cutout.
                     Color.clear.frame(width: reserve)
                     if showsHistogram { pill }
                     trailingCommands
+                    saveButton(controller, side: buttonSize)
                 }
             }
             .frame(height: buttonSize)
@@ -2849,16 +2857,33 @@ struct PhotoEditorScreen: View {
     /// whose centred chip is the open group; Back and Save flank it. Padding 10,
     /// gap 8, per Turn 31 §4.
     private func groupStripRow(_ controller: PhotoEditorController) -> some View {
-        HStack(spacing: 8) {
-            backButton(controller)
-            EditorGroupWheel(controller: controller, chrome: chrome) { group in
-                selectGroup(group, in: controller)
-            }
-            .frame(maxWidth: .infinity)
-            saveButton(controller)
-        }
-        .padding(.horizontal, AppTheme.Spacing.lg)
+        // The six tools (FS-03.13a §4) — Back and Save moved up to the band.
+        EditorToolBar(
+            current: EditorTool.tool(for: chrome.selectedGroup),
+            select: { tool in selectTool(tool, in: controller) },
+            cancel: { cancelTool(in: controller) },
+            apply: { applyTool(in: controller) }
+        )
         .frame(height: EditorLayoutMetrics.editorGroupStripHeight)
+    }
+
+    /// Presets and Edit switch in place; the other four open a session.
+    private func selectTool(_ tool: EditorTool, in controller: PhotoEditorController) {
+        let current = EditorTool.tool(for: chrome.selectedGroup)
+        guard tool != current else { return }
+        selectGroup(tool.group(editListGroup: chrome.editListGroup), in: controller)
+    }
+
+    /// ✓: the tool's work stays, back to Edit (FS-03.13a §5).
+    private func applyTool(in controller: PhotoEditorController) {
+        selectGroup(EditorTool.edit.group(editListGroup: chrome.editListGroup), in: controller)
+    }
+
+    /// ✕: the recipe and the history as they were when the tool opened.
+    private func cancelTool(in controller: PhotoEditorController) {
+        let isCrop = chrome.selectedGroup == .cropGeometry
+        controller.restoreStageEntry()
+        selectGroup(EditorTool.edit.group(editListGroup: chrome.editListGroup), in: controller, discardingCrop: isCrop)
     }
 
     private func undoToastView(
@@ -3167,178 +3192,3 @@ private struct PhotoEditorSaveSheet: View {
     }
 }
 
-/// The group wheel (Turn 31 §4): a horizontal snap picker where the chip nearest the
-/// centre *is* the open group. Swiping and letting go snaps the nearest chip to the
-/// centre and switches to it — one gesture, no second tap; tapping an off-centre chip
-/// scrolls it to the centre and switches too. Half-viewport margins on both ends let
-/// the first and last groups reach the centre; a fade dissolves each edge into the
-/// panel colour. The centred chip is white and heavier, the rest white 32%, and a
-/// 16×2 white bar sits under the centre — no accent (FS-03.12 §6: accent is spent on
-/// Save alone). Every change gives a selection haptic.
-private struct EditorGroupWheel: View {
-    @Bindable var controller: PhotoEditorController
-    @Bindable var chrome: EditorChromeModel
-    /// Called with the group that reached the centre, to drive `selectGroup`.
-    let onSelect: (EditorGroup) -> Void
-
-    /// The chip the scroll view has snapped to the centre. Bound to
-    /// `scrollPosition`, so it follows both drags and programmatic scrolls.
-    @State private var centered: EditorGroup?
-    /// Waits for the wheel to stop moving before the panel changes.
-    ///
-    /// `centered` reports *every* chip that passes the middle, so acting on it
-    /// directly ran the full `selectGroup` — a crop commit, a tool change, a
-    /// `scheduleRender` — once per chip a flick went past, with a haptic
-    /// apiece. `spec.md` writes the intent as "vuốt → nhả → snap → đổi nhóm":
-    /// one switch, on release. A debounce rather than `onScrollPhaseChange`
-    /// because the deployment target is iOS 17 (18 adds the phase as a
-    /// backstop, `EditorWheelIdleSelect`). A tap does not wait for it — see
-    /// `tapTarget`. The tint still follows the wheel chip by chip.
-    @State private var settleTask: Task<Void, Never>?
-    private static let settleDelay = Duration.milliseconds(140)
-    /// The chip a tap is scrolling to. While it is set, the positions the scroll
-    /// view writes back on the way there are not choices: on iOS 18 it can write
-    /// the chip it is leaving and then the target inside one update, `onChange`
-    /// sees no change, and a debounced select for the target never ran — the
-    /// wheel showed Grade over a Point Color panel (FS-03.12, SE / 18.6). A tap
-    /// is a release already, so it selects at once and the scroll just follows.
-    @State private var tapTarget: EditorGroup?
-    @State private var tapTargetExpiry: Task<Void, Never>?
-    private static let tapScrollAllowance = Duration.milliseconds(600)
-
-    var body: some View {
-        GeometryReader { geo in
-            // Half-viewport-minus-half-chip padding at each end, so the first and
-            // last chips can sit dead centre.
-            let sideInset = max(
-                0,
-                (geo.size.width - EditorLayoutMetrics.editorGroupChipWidth) / 2
-            )
-            ScrollView(.horizontal) {
-                HStack(spacing: 8) {
-                    ForEach(EditorGroup.allCases) { group in
-                        chip(group).id(group)
-                    }
-                }
-                .frame(maxHeight: .infinity)
-                .scrollTargetLayout()
-            }
-            .scrollIndicators(.hidden)
-            .contentMargins(.horizontal, sideInset, for: .scrollContent)
-            .scrollTargetBehavior(.viewAligned)
-            .scrollPosition(id: $centered, anchor: .center)
-            .sensoryFeedback(.selection, trigger: centered)
-            .onAppear { centered = chrome.selectedGroup }
-            .onChange(of: centered) { _, new in
-                if let target = tapTarget {
-                    if new == target { tapTarget = nil }
-                    return
-                }
-                settleTask?.cancel()
-                guard new != nil else { return }
-                settleTask = Task {
-                    try? await Task.sleep(for: Self.settleDelay)
-                    guard !Task.isCancelled else { return }
-                    selectCentered()
-                }
-            }
-            .modifier(EditorWheelIdleSelect { if tapTarget == nil { selectCentered() } })
-            .onDisappear {
-                settleTask?.cancel()
-                tapTargetExpiry?.cancel()
-            }
-            .onChange(of: chrome.selectedGroup) { _, group in
-                // A group changed from outside the wheel (rare — Save's crop commit,
-                // a deep-link): keep the centred chip in step.
-                guard centered != group else { return }
-                withAnimation(EditorTheme.animation) { centered = group }
-            }
-            .overlay { edgeFades }
-            .overlay(alignment: .bottom) {
-                Capsule()
-                    .fill(.white)
-                    .frame(width: 16, height: 2)
-                    .padding(.bottom, 3)
-                    .allowsHitTesting(false)
-            }
-        }
-    }
-
-    /// Reads the wheel as it is now, not as the change that scheduled this saw it.
-    private func selectCentered() {
-        guard let current = centered, current != chrome.selectedGroup else { return }
-        onSelect(current)
-    }
-
-    private func chip(_ group: EditorGroup) -> some View {
-        let isCenter = centered == group
-        return Button {
-            settleTask?.cancel()
-            tapTargetExpiry?.cancel()
-            tapTarget = centered == group ? nil : group
-            withAnimation(EditorTheme.animation) { centered = group }
-            if group != chrome.selectedGroup { onSelect(group) }
-            // A write-back that never lands on the target must not leave the wheel
-            // deaf to the next drag.
-            tapTargetExpiry = Task {
-                try? await Task.sleep(for: Self.tapScrollAllowance)
-                guard !Task.isCancelled else { return }
-                tapTarget = nil
-            }
-        } label: {
-            VStack(spacing: 4) {
-                Image(systemName: group.icon)
-                    .font(.system(size: 19, weight: isCenter ? .semibold : .regular))
-                Text(group.title(blackAndWhite: controller.isBlackAndWhite))
-                    .font(.system(size: 9.5, weight: isCenter ? .semibold : .regular))
-                    .lineLimit(1)
-            }
-            .foregroundStyle(isCenter ? Color.white : EditorTheme.panelHint)
-            .frame(
-                width: EditorLayoutMetrics.editorGroupChipWidth,
-                height: EditorLayoutMetrics.editorGroupChipHeight
-            )
-            .contentShape(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(group.title(blackAndWhite: controller.isBlackAndWhite))
-        .accessibilityAddTraits(isCenter ? .isSelected : [])
-    }
-
-    /// The two 26pt fades dissolving the wheel's ends into the panel colour.
-    private var edgeFades: some View {
-        let fade = EditorLayoutMetrics.editorGroupWheelEdgeFade
-        return HStack(spacing: 0) {
-            LinearGradient(
-                colors: [EditorTheme.panelSolid, EditorTheme.panelSolid.opacity(0)],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
-            .frame(width: fade)
-            Spacer(minLength: 0)
-            LinearGradient(
-                colors: [EditorTheme.panelSolid.opacity(0), EditorTheme.panelSolid],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
-            .frame(width: fade)
-        }
-        .allowsHitTesting(false)
-    }
-}
-
-/// On iOS 18 the wheel also selects when its scroll comes to rest — a backstop
-/// for the debounce, which only runs when `scrollPosition` reports a change.
-private struct EditorWheelIdleSelect: ViewModifier {
-    let action: () -> Void
-
-    func body(content: Content) -> some View {
-        if #available(iOS 18.0, *) {
-            content.onScrollPhaseChange { _, phase in
-                if phase == .idle { action() }
-            }
-        } else {
-            content
-        }
-    }
-}

@@ -656,4 +656,18 @@ struct EditorPanelLayoutTests {
         #expect(Set(adjust).isSubset(of: Set(groups)))
         #expect(groups.first == .light && groups[1] == .curve)
     }
+
+    /// FS-03.13 AC-14. Six tools, fixed, in order; every group lights exactly
+    /// one of them; the four that build on the photo open a session.
+    @Test func sixToolsCoverEveryGroup() {
+        #expect(EditorTool.allCases.map(\.title) == ["Presets", "Edit", "Transform", "Mask", "Heal", "Markup"])
+        #expect(EditorTool.allCases.filter(\.isSession) == [.transform, .mask, .heal, .markup])
+        for group in EditorGroup.allCases {
+            let tool = EditorTool.tool(for: group)
+            #expect(EditorTool.allCases.contains(tool))
+        }
+        #expect(EditorTool.tool(for: .grade) == .edit && EditorTool.tool(for: .cropGeometry) == .transform)
+        #expect(EditorTool.edit.group(editListGroup: .detail) == .detail)
+        #expect(EditorTool.edit.group(editListGroup: nil) == .light)
+    }
 }

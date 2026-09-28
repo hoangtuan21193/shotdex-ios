@@ -135,6 +135,11 @@ struct EditorImageStage: View {
                 )
             }
             .contentShape(Rectangle())
+            // The one way to compare for someone who cannot hold a finger
+            // down: the compare button is gone (FS-03.13a §3).
+            .accessibilityAction(named: "Show Original") {
+                controller.showsOriginal.toggle()
+            }
             // How big the photo actually is on screen, so the render that runs
             // while a slider is moving can aim at exactly that instead of a flat
             // 1024 — which was below the display on any modern phone and made

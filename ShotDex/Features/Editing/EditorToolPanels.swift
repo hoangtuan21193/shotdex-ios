@@ -584,7 +584,7 @@ struct EditorCropPanel: View {
             }
             .padding(.horizontal, EditorStripLayout.horizontalInset)
             .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
-            Text("The crop applies when you leave this tab or save.")
+            Text("✓ applies the crop. ✕ puts the frame back.")
                 .font(EditorTheme.rowLabel)
                 .foregroundStyle(EditorTheme.panelHint)
                 .lineLimit(1)
@@ -655,7 +655,7 @@ struct EditorCropPanel: View {
 
             Spacer(minLength: 0)
 
-            Text("The crop applies when you leave this tab or save.")
+            Text("Apply keeps the crop. Cancel puts the frame back.")
                 .font(.system(size: 11))
                 .foregroundStyle(EditorTheme.secondaryText)
                 .padding(.horizontal, 18)
