@@ -86,6 +86,9 @@ public actor PhotoRenderService {
         public let lensCorrection: Double
         /// Apple's decoder correction is the lens source (FS-03.16a §6).
         public let usesAppleLensCorrection: Bool
+        /// The profile vignetting the decoder's linear slot runs: lens and
+        /// strength, nil when none.
+        public let profileVignetting: String?
     }
 
     private struct InteractiveBaseCache {
@@ -1299,7 +1302,10 @@ public actor PhotoRenderService {
             colorNoise: adjustments.rawColorNoise,
             sharpness: adjustments.rawSharpness,
             lensCorrection: adjustments.lensCorrection,
-            usesAppleLensCorrection: recipe.lensProfile?.usesAppleBuiltIn ?? true
+            usesAppleLensCorrection: recipe.lensProfile?.usesAppleBuiltIn ?? true,
+            profileVignetting: Self.profileVignettingFilter(of: recipe, source: source).map { _ in
+                "\(recipe.lensProfile?.lensID ?? "")|\(adjustments.lensVignettingScale)"
+            }
         )
     }
 
@@ -1352,6 +1358,7 @@ public actor PhotoRenderService {
                 raw.isLensCorrectionEnabled = recipe.adjustments.lensCorrection >= 0.5
                     && (recipe.lensProfile?.usesAppleBuiltIn ?? true)
             }
+            raw.linearSpaceFilter = Self.profileVignettingFilter(of: recipe, source: source)
             if let maximumDimension {
                 let nativeLongEdge = max(raw.nativeSize.width, raw.nativeSize.height)
                 raw.scaleFactor = Float(min(1, maximumDimension / max(1, nativeLongEdge)))
@@ -2019,10 +2026,10 @@ public actor PhotoRenderService {
     /// Mixes the filtered image back over the unfiltered one so a preset can be
     /// dialled in instead of being all-or-nothing.
     /// The Lensfun lens this render corrects with: the switch on, a Lensfun
-    /// source for some aspect, a lens the table still has; not RAW yet
-    /// (FS-03.16a T17).
+    /// source for some aspect, a lens the table still has — RAW and JPEG
+    /// alike (FS-03.16a §2).
     static func profileLens(of recipe: PhotoEditRecipe, source: PhotoRenderSourceInfo) -> LensfunLens? {
-        guard let choice = recipe.lensProfile, !source.isRAW, recipe.adjustments.lensCorrection >= 0.5,
+        guard let choice = recipe.lensProfile, recipe.adjustments.lensCorrection >= 0.5,
               [choice.distortionSource, choice.vignettingSource, choice.chromaticAberrationSource].contains(.lensfun),
               let lensID = choice.lensID
         else { return nil }
@@ -2042,7 +2049,9 @@ public actor PhotoRenderService {
         source: PhotoRenderSourceInfo,
         to image: CIImage
     ) -> CIImage {
-        guard let lens = profileLens(of: recipe, source: source),
+        // A RAW takes its vignetting in the decoder's linear slot, before
+        // its tone curve (`profileVignettingFilter`).
+        guard !source.isRAW, let lens = profileLens(of: recipe, source: source),
               let choice = recipe.lensProfile, choice.vignettingSource == .lensfun
         else { return image }
         let focal = exifFocalLength(source.properties) ?? lens.vignetting.first?.focal ?? 0
@@ -2056,6 +2065,25 @@ public actor PhotoRenderService {
             calibrationAspect: lens.calibrationAspect,
             to: image
         )
+    }
+
+    /// The profile's vignetting as the filter a RAW decoder runs in linear
+    /// light, before its tone curve (16a §5) — nil when there is none.
+    static func profileVignettingFilter(of recipe: PhotoEditRecipe, source: PhotoRenderSourceInfo) -> CIFilter? {
+        guard let lens = profileLens(of: recipe, source: source),
+              let choice = recipe.lensProfile, choice.vignettingSource == .lensfun,
+              recipe.adjustments.lensVignettingScale > 0.0001
+        else { return nil }
+        let focal = exifFocalLength(source.properties) ?? lens.vignetting.first?.focal ?? 0
+        let aperture = exifAperture(source.properties) ?? lens.vignetting.first?.aperture ?? 8
+        guard let term = lens.vignetting(atFocal: focal, aperture: aperture) else { return nil }
+        let filter = LensVignetteFilter()
+        filter.term = term
+        filter.strength = recipe.adjustments.lensVignettingScale
+        filter.lensCropFactor = lens.cropFactor
+        filter.cameraCropFactor = choice.cameraCropFactor
+        filter.calibrationAspect = lens.calibrationAspect
+        return filter
     }
 
     /// The recipe's lens profile, if it has one and the source is not RAW

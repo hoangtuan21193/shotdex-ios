@@ -115,3 +115,26 @@ public enum LensCorrectionPass {
     static let correctKernel = CoreImageKernelLibrary.kit.kernel(named: "lensCorrect")
     static let vignetteKernel = CoreImageKernelLibrary.kit.colorKernel(named: "lensVignette")
 }
+
+/// Lensfun pa vignetting as a filter, for the slot `CIRAWFilter` runs in
+/// linear light before its tone curve (`linearSpaceFilter`).
+public final class LensVignetteFilter: CIFilter {
+    @objc public var inputImage: CIImage?
+    public var term = LensVignettingTerm(focal: 0, aperture: 0, distance: 0, k1: 0, k2: 0, k3: 0)
+    public var strength = 1.0
+    public var lensCropFactor = 1.0
+    public var cameraCropFactor = 1.0
+    public var calibrationAspect = 1.5
+
+    public override var outputImage: CIImage? {
+        guard let inputImage else { return nil }
+        return LensCorrectionPass.applyVignetting(
+            term,
+            strength: strength,
+            lensCropFactor: lensCropFactor,
+            cameraCropFactor: cameraCropFactor,
+            calibrationAspect: calibrationAspect,
+            to: inputImage
+        )
+    }
+}

@@ -1495,22 +1495,32 @@ final class PhotoEditorController {
 
     /// Off the main actor: the first call decodes the ~800KB table.
     private func resolveLensProfile(for info: PhotoRenderSourceInfo) async {
-        guard !info.isRAW else {
-            lensProfileMatch = nil
-            lensCameraMount = nil
-            return
-        }
         let query = LensQuery(properties: info.properties)
         lensQuery = query
-        let (match, mount) = await Task.detached(priority: .utility) {
+        let isRAW = info.isRAW
+        let url = info.url
+        // RAW goes through Lensfun too now (FS-03.16a §2); the decoder's
+        // own correction is only the fallback.
+        let (match, mount, decoderSupports) = await Task.detached(priority: .utility) {
             let library = LensProfileLibrary.shared
             return (
                 LensProfileMatcher(library: library).match(query),
-                library.camera(make: query.cameraMake, model: query.cameraModel)?.mount
+                library.camera(make: query.cameraMake, model: query.cameraModel)?.mount,
+                isRAW ? (CIRAWFilter(imageURL: url)?.isLensCorrectionSupported ?? false) : false
             )
         }.value
         lensProfileMatch = match
         lensCameraMount = mount
+        if isRAW {
+            var inputs = LensCorrectionInputs(isRAW: true)
+            inputs.lensfunLens = match?.lens
+            inputs.cameraCropFactor = match?.cameraCropFactor ?? LensProfileMatcher().cameraCropFactor(query)
+            inputs.decoderSupportsLensCorrection = decoderSupports
+            sessionLensChoice = LensCorrectionResolver.resolve(inputs).choice
+        } else {
+            sessionLensChoice = nil
+        }
+        scheduleRender()
     }
 
     /// What corrects this photo and what the Optics status row says

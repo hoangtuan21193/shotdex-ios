@@ -106,4 +106,38 @@ struct LensCorrectionResolverTests {
         #expect(chosen.panel == .chosen(lensName: "Canon EF 24-70mm f/2.8L II USM"))
         #expect(chosen.choice.distortionSource == .lensfun)
     }
+
+    /// 16a AC-a3 and the table of §6, every combination: a Canon CR3 with a
+    /// Lensfun row and no maker data is source 2 with Apple's correction off;
+    /// whenever source 1 or 2 corrects anything Apple is off, Apple only when
+    /// neither does, and never both.
+    @Test func canonCR3WithLensfunIsProfileAppleOff() {
+        let cr3 = LensCorrectionResolver.resolve(LensCorrectionInputs(
+            isRAW: true, lensfunLens: Self.lens(), decoderSupportsLensCorrection: true
+        ))
+        #expect(cr3.choice.distortionSource == .lensfun && cr3.choice.vignettingSource == .lensfun)
+        #expect(!cr3.usesAppleBuiltIn)
+        #expect(cr3.panel == .found(lensName: "Canon EF 24-70mm f/2.8L II USM"))
+
+        for isRAW in [false, true] {
+            for embedded in [false, true] {
+                for hasLensfun in [false, true] {
+                    for decoder in [false, true] {
+                        let r = LensCorrectionResolver.resolve(LensCorrectionInputs(
+                            isRAW: isRAW,
+                            embeddedAspects: embedded ? [.distortion] : [],
+                            lensfunLens: hasLensfun ? Self.lens() : nil,
+                            decoderSupportsLensCorrection: decoder
+                        ))
+                        let sources = [r.choice.distortionSource, r.choice.vignettingSource, r.choice.chromaticAberrationSource]
+                        let profile = sources.contains { $0 == .embedded || $0 == .lensfun }
+                        #expect(!(profile && r.usesAppleBuiltIn), "twice: \(isRAW) \(embedded) \(hasLensfun) \(decoder)")
+                        #expect(profile == ((isRAW && embedded) || hasLensfun))
+                        #expect(r.usesAppleBuiltIn == (!profile && isRAW && decoder))
+                        if !isRAW { #expect(!sources.contains(.embedded)) }
+                    }
+                }
+            }
+        }
+    }
 }

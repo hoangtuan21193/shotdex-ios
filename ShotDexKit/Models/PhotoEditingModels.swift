@@ -632,8 +632,11 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         }
     }
 
+    /// On a RAW, a change here re-runs the decoder: its own parameters, the
+    /// Lens Correction switch (Apple's correction is a decoder flag) and the
+    /// profile's Vignetting, which runs in the decoder's linear slot.
     public var affectsRAWDemosaic: Bool {
-        self == .exposure || isRAWOnly
+        self == .exposure || isRAWOnly || self == .lensCorrection || self == .lensVignettingScale
     }
 }
 

@@ -139,7 +139,7 @@ struct EditorAdjustmentCatalogTests {
         let switches = EditorAdjustmentCatalog.groups(isRAWSource: true, scope: .global)
             .flatMap(\.kinds).filter { $0 == .lensCorrection }
         #expect(switches.count == 1)
-        #expect(!PhotoAdjustmentKind.lensCorrection.isRAWOnly && !PhotoAdjustmentKind.lensCorrection.affectsRAWDemosaic)
+        #expect(!PhotoAdjustmentKind.lensCorrection.isRAWOnly)
         #expect(EditorAdjustmentCatalog.displayText(1, of: .lensDistortionScale) == "100")
         #expect(EditorAdjustmentCatalog.displayText(2, of: .lensVignettingScale) == "200")
         #expect(EditorAdjustmentCatalog.accessibilityName(of: .lensDistortionScale) == "Distortion, Lens Profile")

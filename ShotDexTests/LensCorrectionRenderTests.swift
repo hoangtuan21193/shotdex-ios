@@ -160,4 +160,26 @@ struct LensCorrectionRenderTests {
         let b = try await renderer.render(source: source, recipe: chipOn).image
         #expect(LensBlurTests.meanDifference(a, b) > 0.5, "CA \(strength)")
     }
+
+    /// 16a AC-a3. The RAW decoder's linear-slot filter lifts a flat grey
+    /// frame exactly as Lensfun's pa model says: corner/centre =
+    /// 1 / (1 + k1 r² + k2 r⁴ + k3 r⁶), r = 1 at the calibration frame's
+    /// corner, within 1/255.
+    @Test func vignetteGainMatchesPAModel() throws {
+        let term = LensVignettingTerm(focal: 24, aperture: 2.8, distance: 10, k1: -0.45, k2: 0.1, k3: -0.02)
+        let filter = LensVignetteFilter()
+        filter.term = term
+        filter.inputImage = Self.flatGrey()
+        let output = try #require(filter.outputImage)
+        let extent = CGRect(x: 0, y: 0, width: 600, height: 400)
+        let norm = PhotoRenderService.lensNormalizationRadius(
+            extent: extent, lensCropFactor: 1, cameraCropFactor: 1, calibrationAspect: 1.5
+        ) * (1 + 1.5 * 1.5).squareRoot()
+        let corner = CGPoint(x: 2, y: 2)
+        let r = hypot(corner.x + 0.5 - 300, corner.y + 0.5 - 200) / norm
+        let r2 = r * r
+        let expected = 0.25 / (1 + term.k1 * r2 + term.k2 * r2 * r2 + term.k3 * r2 * r2 * r2)
+        #expect(abs(Self.linearValue(output, at: corner) - expected) <= 1.0 / 255, "\(Self.linearValue(output, at: corner)) vs \(expected)")
+        #expect(abs(Self.linearValue(output, at: CGPoint(x: 300, y: 200)) - 0.25) <= 1.0 / 255)
+    }
 }
