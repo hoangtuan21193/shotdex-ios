@@ -1665,7 +1665,9 @@ struct PhotoEditorScreen: View {
         case .markup:
             return !recipe.overlays.isEmpty
         case .colorMix:
-            return recipe.color.mixer != identity.color.mixer
+            return controller.isBlackAndWhite
+                ? recipe.color.grayMixer != identity.color.grayMixer
+                : recipe.color.mixer != identity.color.mixer
         case .pointColor:
             return !recipe.color.points.isEmpty
         }
@@ -1684,7 +1686,7 @@ struct PhotoEditorScreen: View {
                 // put "colour" in two places in the same list.
                 Picker("Colour controls", selection: colorSegmentBinding(controller)) {
                     Text("Basic").tag(EditorGroup.color)
-                    Text("Mix").tag(EditorGroup.colorMix)
+                    Text(controller.isBlackAndWhite ? "B&W Mix" : "Mix").tag(EditorGroup.colorMix)
                     Text("Point").tag(EditorGroup.pointColor)
                     Text("Grade").tag(EditorGroup.grade)
                 }
@@ -2410,8 +2412,10 @@ struct PhotoEditorScreen: View {
     /// detail panels for now.)
     private func panelHasTargetStrip(_ controller: PhotoEditorController) -> Bool {
         switch chrome.selectedGroup {
-        case .curve, .colorMix, .grade, .cropGeometry, .presets: true
-        case .pointColor: !controller.pointColors.isEmpty
+        case .curve, .grade, .cropGeometry, .presets: true
+        // The band swatches pick an HSL band; the B&W Mix lists all eight.
+        case .colorMix: !controller.isBlackAndWhite
+        case .pointColor: !controller.pointColors.isEmpty && !controller.isBlackAndWhite
         case .mask: !EditorMaskPhonePanel.showsChooser(controller: controller, chrome: chrome)
         case .markup: !EditorMarkupPhonePanel.showsChooser(controller: controller, chrome: chrome)
             && chrome.colorPalette == nil
@@ -3196,7 +3200,7 @@ private struct EditorGroupWheel: View {
             VStack(spacing: 4) {
                 Image(systemName: group.icon)
                     .font(.system(size: 19, weight: isCenter ? .semibold : .regular))
-                Text(group.title)
+                Text(group.title(blackAndWhite: controller.isBlackAndWhite))
                     .font(.system(size: 9.5, weight: isCenter ? .semibold : .regular))
                     .lineLimit(1)
             }
@@ -3208,7 +3212,7 @@ private struct EditorGroupWheel: View {
             .contentShape(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(group.title)
+        .accessibilityLabel(group.title(blackAndWhite: controller.isBlackAndWhite))
         .accessibilityAddTraits(isCenter ? .isSelected : [])
     }
 

@@ -27,7 +27,9 @@ struct EditorColorMixerSection: View {
     /// list is still there under the "All" swatch, and is still the only mode
     /// on the phone, where a swatch row would cost a slider.
     var body: some View {
-        if chrome.isWideLayout {
+        if controller.isBlackAndWhite {
+            grayMix
+        } else if chrome.isWideLayout {
             bandedMix
         } else if let band = chrome.sidebarMixBand {
             // Phone with a band picked in the target strip: that band's three rows.
@@ -40,6 +42,58 @@ struct EditorColorMixerSection: View {
         } else {
             allChannelsScroll
         }
+    }
+
+    // MARK: B&W Mix
+
+    /// Black & White on: eight sliders that brighten or darken each band before
+    /// it turns grey, each track running dark → light in its own colour, and
+    /// the HSL Mixer's absence said once underneath (FS-03.15a §2).
+    private var grayMix: some View {
+        VStack(spacing: 0) {
+            ForEach(ColorMixerBand.allCases) { band in
+                grayMixRow(band)
+            }
+            Text("HSL Mixer · \(PhotoEditorController.offInBlackAndWhite)")
+                .font(.system(size: 12))
+                .foregroundStyle(EditorTheme.secondaryText)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, AppTheme.Spacing.lg)
+                .padding(.top, AppTheme.Spacing.sm)
+            Color.clear.frame(height: 16)
+        }
+        .editorPanelScroll(panelScrolls)
+        .scrollDisabled(chrome.activePlainSliderID != nil)
+    }
+
+    private func grayMixRow(_ band: ColorMixerBand) -> some View {
+        let sliderID = "grayMixer.\(band.rawValue)"
+        let value = controller.grayMixerValue(band) * 100
+        return EditorPlainSliderRow(
+            title: band.displayName,
+            value: value,
+            range: -100...100,
+            isBipolar: true,
+            valueText: EditorColorFormat.signed(value),
+            isActive: chrome.activePlainSliderID == sliderID,
+            detent: 0,
+            trackGradient: EditorColorMixerStyle.luminanceGradient(aroundDegrees: band.centerDegrees),
+            onBeginDrag: {
+                controller.beginContinuousChange()
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                chrome.activePlainSliderID = sliderID
+            },
+            onDrag: { value in
+                controller.setGrayMixerValue(value / 100, band: band)
+            },
+            onEndDrag: {
+                controller.endContinuousChange()
+                chrome.activePlainSliderID = nil
+            },
+            onReset: {
+                controller.setGrayMixerValue(0, band: band)
+            }
+        )
     }
 
     /// Bands holding a shift on this photo — spoken as "Edited" on each swatch.
@@ -156,11 +210,33 @@ struct EditorPointColorSection: View {
     @Bindable var chrome: EditorChromeModel
 
     var body: some View {
-        if chrome.isWideLayout {
+        if controller.isBlackAndWhite {
+            offInBlackAndWhite
+        } else if chrome.isWideLayout {
             stackedBody
         } else {
             phoneBody
         }
+    }
+
+    /// Point Color does not render on a grey picture; the section says so and
+    /// the eyedropper stands down, so a tap on the photo cannot add a point
+    /// that would do nothing.
+    private var offInBlackAndWhite: some View {
+        VStack(spacing: AppTheme.Spacing.md) {
+            Image(systemName: "eyedropper")
+                .font(.system(size: 19, weight: .medium))
+                .foregroundStyle(EditorTheme.dimText)
+                .frame(width: 40, height: 40)
+                .background(EditorTheme.trackChip, in: Circle())
+                .accessibilityHidden(true)
+            Text(PhotoEditorController.offInBlackAndWhite)
+                .font(.system(size: 13))
+                .foregroundStyle(EditorTheme.secondaryText)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear { chrome.isEyedropperActive = false }
     }
 
     /// Phone (FS-03.12): the swatches and the eyedropper are the target strip

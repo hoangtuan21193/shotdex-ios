@@ -39,6 +39,8 @@ Tổng quan và thứ tự render: [FS-03.15](15-lightroom-parameter-parity.md).
 - Khi B&W bật, HSL Mixer và Point Color **không áp** và hàng của chúng mờ kèm dòng "Off while Black & White
   is on" — Lightroom cũng tắt HSL ở chế độ B&W. Grading vẫn nhuộm được ảnh xám.
 - Không có nút Auto mix ở bản này.
+- *Trên phone (2026-09-29):* chip Color Mix đổi tên thành **B&W Mix**, dải chọn màu HSL ẩn đi; dòng "Off while
+  Black & White is on" nằm cuối danh sách B&W Mix (cho HSL Mixer) và thay cả nội dung Point Color (ống hút tắt).
 - Chuyển xám chạy **trong chặng Color, sau WB và Light** (thay chỗ đầu chuỗi hôm nay): Temp/Tint đổi tông xám
   như Lightroom. *Vì ở đầu chuỗi, preset B&W dùng Temp để đổi tông ra sai.*
 - **Temp/Tint là hệ số từng kênh** trong ánh sáng tuyến tính (màu vật đen ở nhiệt độ đích chia cho ở 6500K, chuẩn
@@ -81,10 +83,10 @@ Tổng quan và thứ tự render: [FS-03.15](15-lightroom-parameter-parity.md).
 | AC-8 | dải xám | đặt cả bốn vùng lần lượt ±100 (16 tổ hợp dấu) và điểm chia 10/50/90 | mọi bảng tra đơn điệu không giảm, hai đầu giữ nguyên | `ParametricCurveTests.everyExtremeStaysMonotone` |
 | AC-9 | curve vùng Lights +30, curve điểm RGB Soft S | render dải xám | bằng bảng tra "vùng rồi điểm" tính tay ± 1/255, và chỉ một lượt curve trong chuỗi | `ParametricCurveTests.regionThenPointIsOneTable` · chế độ Region: `ShotDexUITests/scripts/iphone-curve-region.json` |
 | AC-10 | bảng 24 ô, B&W bật, mixer 0 | đặt Blue −60 | ô Blue tối đi ≥ 15% độ sáng; ô Yellow và Neutral 5 lệch ≤ 2/255; mọi ô R = G = B ± 1/255 | `GrayMixerTests.blueDarkensOnlyBlue` · golden `grayMixer-patches/photo` |
-| AC-11 | bảng 24 ô, B&W bật, HSL Blue Luminance +50 | render | HSL không áp (bằng bản HSL 0 ± 1/255); hàng Mixer ghi "Off while Black & White is on" | ⚠️ chưa có (dự kiến `GrayMixerTests.hslIsOffInBlackAndWhite`) + ảnh Edit › Color, iPhone 17 26.5 |
+| AC-11 | bảng 24 ô, B&W bật, HSL Blue Luminance +50 | render | HSL không áp (bằng bản HSL 0 ± 1/255); hàng Mixer ghi "Off while Black & White is on" | `GrayMixerTests.hslIsOffInBlackAndWhite` · `ShotDexUITests/scripts/iphone-bw-mix.json` (2-bw-mix: chip "B&W Mix", 8 slider, dòng "HSL Mixer · Off while Black & White is on" cuối danh sách; 3-point-off; iPhone 17 26.5) |
 | AC-12 | bảng 24 ô | đặt Calibration Red Hue +30 | hue ô Red dịch về phía cam +4°…+12°; ô Neutral 5 lệch ≤ 1/255; ô Blue dịch ≤ 2° | `CalibrationTests.redHueMovesRedTowardOrange` · `CalibrationTests.matrixAlwaysKeepsWhite` |
 | AC-13 | bảng 24 ô | đặt Blue Saturation +50 | độ bão hoà ô Blue tăng ≥ 10% tương đối; mọi ô trung tính lệch ≤ 1/255 | `CalibrationTests.saturationKeepsGreysGrey` · golden `shadowTint-patches/photo` |
 | AC-14 | Calibration ở mặc định | kéo Red Hue 0 → +40 rồi thả, rồi Undo một lần | một bước lịch sử; recipe về đúng mặc định, không thêm khoá Calibration | ⚠️ chưa có (dự kiến `EditorHistoryAndSummaryTests.calibrationDragIsOneStep`) |
 | AC-15 | bảng 24 ô, B&W bật, mixer 0 | đặt Temp +30 (so với 0) | ô Yellow sáng lên ≥ 3/255, ô Blue không sáng lên; mọi ô vẫn R = G = B ± 1/255 | `GrayMixerTests.temperatureShiftsTheGreyMix` · `WhiteBalanceMathTests` |
 
-**Chưa chứng minh được:** AC-11 (task 54), AC-14 (task 55).
+**Chưa chứng minh được:** AC-14 (task 55).

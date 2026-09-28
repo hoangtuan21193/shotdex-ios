@@ -1,9 +1,11 @@
 import CoreImage
 import Foundation
+import Photos
 import Testing
 @testable import ShotDexKit
+@testable import ShotDex
 
-/// FS-03.15 AC-10, AC-15 — the Black & White mix.
+/// FS-03.15 AC-10, AC-11, AC-15 — the Black & White mix.
 struct GrayMixerTests {
     /// Three ColorChecker patches in sRGB: Blue, Yellow, Neutral 5.
     private static let patches: [(name: String, rgb: (UInt8, UInt8, UInt8))] = [
@@ -72,6 +74,30 @@ struct GrayMixerTests {
         #expect(after <= before * 0.85, "blue went from \(before) to \(after)")
         #expect(abs(mixed["yellow"]!.0 - plain["yellow"]!.0) <= 2)
         #expect(abs(mixed["neutral5"]!.0 - plain["neutral5"]!.0) <= 2)
+    }
+
+    /// AC-11. Black & White on, HSL Blue Luminance +50: HSL does not render
+    /// (same as HSL 0 within 1/255); the editor calls the Mix group B&W Mix
+    /// and says the HSL Mixer and Point Color are off.
+    @MainActor @Test func hslIsOffInBlackAndWhite() {
+        var color = PhotoColorRecipe()
+        color.mixer[.blue][.luminance] = 0.5
+        let withHSL = Self.render(color)
+        let without = Self.render(PhotoColorRecipe())
+        for (name, a) in withHSL {
+            let b = without[name]!
+            #expect(abs(a.0 - b.0) <= 1 && abs(a.1 - b.1) <= 1 && abs(a.2 - b.2) <= 1, "\(name): \(a) vs \(b)")
+        }
+
+        let controller = PhotoEditorController(asset: PHAsset(), sourceAlbum: nil, service: PhotoEditingService())
+        #expect(!controller.isBlackAndWhite)
+        #expect(EditorGroup.colorMix.title(blackAndWhite: controller.isBlackAndWhite) == "Color Mix")
+        controller.setAdjustment(.blackAndWhite, value: 1)
+        #expect(controller.isBlackAndWhite)
+        #expect(EditorGroup.colorMix.title(blackAndWhite: controller.isBlackAndWhite) == "B&W Mix")
+        #expect(PhotoEditorController.offInBlackAndWhite == "Off while Black & White is on")
+        controller.setGrayMixerValue(-0.6, band: .blue)
+        #expect(controller.recipe.color.grayMixer.blue == -0.6)
     }
 
     /// AC-15. Black & White runs after white balance, and white balance is

@@ -80,6 +80,12 @@ enum EditorGroup: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// The chip's title on this photo: with Black & White on, Color Mix is
+    /// the B&W Mix (FS-03.15a §2).
+    func title(blackAndWhite: Bool) -> String {
+        self == .colorMix && blackAndWhite ? "B&W Mix" : title
+    }
+
     /// Plain (not upper-cased) chip title, per 28c §5.
     var title: String {
         switch self {
@@ -974,6 +980,23 @@ final class PhotoEditorController {
     }
 
     // MARK: - Color tab (global-only: mixer, point color, grading)
+
+    /// Black & White is on: the B&W Mix replaces the HSL Mixer, and HSL and
+    /// Point Color do not render (FS-03.15a §2).
+    var isBlackAndWhite: Bool { recipe.adjustments.blackAndWhite >= 0.5 }
+
+    /// What the HSL Mixer and Point Color rows say while Black & White is on.
+    static let offInBlackAndWhite = "Off while Black & White is on"
+
+    func grayMixerValue(_ band: ColorMixerBand) -> Double {
+        recipe.color.grayMixer[band]
+    }
+
+    func setGrayMixerValue(_ value: Double, band: ColorMixerBand) {
+        if !isContinuousChange { recordHistory() }
+        recipe.color.grayMixer[band] = min(1, max(-1, value))
+        scheduleRender()
+    }
 
     func mixerValue(band: ColorMixerBand, property: ColorMixerProperty) -> Double {
         recipe.color.mixer[band][property]
