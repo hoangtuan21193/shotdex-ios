@@ -2025,6 +2025,62 @@ public actor PhotoRenderService {
 
     /// Mixes the filtered image back over the unfiltered one so a preset can be
     /// dialled in instead of being all-or-nothing.
+    /// The profile's distortion and CA as one table in pixels, from whichever
+    /// source each aspect uses — the maker's data in the file or Lensfun —
+    /// at the strengths, with the manual Distortion folded in (16a §5). Nil
+    /// when neither aspect has a profile source.
+    static func lensCorrectionTable(
+        of recipe: PhotoEditRecipe,
+        source: PhotoRenderSourceInfo,
+        extent: CGRect
+    ) -> (table: LensCorrectionTable, center: CGPoint)? {
+        guard let choice = recipe.lensProfile, recipe.adjustments.lensCorrection >= 0.5 else { return nil }
+        let halfDiagonal = (extent.width * extent.width + extent.height * extent.height).squareRoot() / 2
+        var center = CGPoint(x: extent.midX, y: extent.midY)
+        var green: ((Double) -> Double)?
+        var red: ((Double) -> Double)?
+        var blue: ((Double) -> Double)?
+
+        if choice.distortionSource == .embedded || choice.chromaticAberrationSource == .embedded,
+           let embedded = EmbeddedLensDataCache.shared.correction(for: source.url) {
+            let frame = LensFrame(correction: embedded, extent: extent)
+            center = frame.center
+            if choice.distortionSource == .embedded, let curve = embedded.distortion {
+                green = { curve.value(at: $0 / frame.unit) }
+            }
+            if choice.chromaticAberrationSource == .embedded {
+                if let curve = embedded.red { red = { curve.value(at: $0 / frame.unit) } }
+                if let curve = embedded.blue { blue = { curve.value(at: $0 / frame.unit) } }
+            }
+        }
+        if let lens = profileLens(of: recipe, source: source) {
+            let norm = lensNormalizationRadius(
+                extent: extent,
+                lensCropFactor: lens.cropFactor,
+                cameraCropFactor: choice.cameraCropFactor,
+                calibrationAspect: lens.calibrationAspect
+            )
+            let focal = exifFocalLength(source.properties) ?? lens.distortion.first?.focal ?? lens.tca.first?.focal ?? 0
+            if choice.distortionSource == .lensfun, let term = lens.distortion(atFocal: focal) {
+                green = { term.scale(at: $0 / norm) }
+            }
+            if choice.chromaticAberrationSource == .lensfun, let tca = lens.chromaticAberration(atFocal: focal) {
+                red = { tca.scales(at: $0 / norm).red }
+                blue = { tca.scales(at: $0 / norm).blue }
+            }
+        }
+        guard green != nil || red != nil || blue != nil else { return nil }
+        let table = LensCorrectionTable.make(
+            green: green, red: red, blue: blue,
+            distortionStrength: min(max(recipe.adjustments.lensDistortionScale, 0), 2),
+            chromaticAberrationStrength: min(max(recipe.adjustments.lensChromaticAberrationScale, 0), 2),
+            manual: manualDistortionCoefficient(recipe.adjustments.lensManualDistortion),
+            halfDiagonal: halfDiagonal,
+            maximumRadius: halfDiagonal * 1.1
+        )
+        return (table, center)
+    }
+
     /// The Lensfun lens this render corrects with: the switch on, a Lensfun
     /// source for some aspect, a lens the table still has — RAW and JPEG
     /// alike (FS-03.16a §2).
@@ -2070,6 +2126,14 @@ public actor PhotoRenderService {
     /// The profile's vignetting as the filter a RAW decoder runs in linear
     /// light, before its tone curve (16a §5) — nil when there is none.
     static func profileVignettingFilter(of recipe: PhotoEditRecipe, source: PhotoRenderSourceInfo) -> CIFilter? {
+        if let choice = recipe.lensProfile, choice.vignettingSource == .embedded,
+           recipe.adjustments.lensCorrection >= 0.5, recipe.adjustments.lensVignettingScale > 0.0001,
+           let embedded = EmbeddedLensDataCache.shared.correction(for: source.url), embedded.hasVignetting {
+            let filter = LensVignetteCurveFilter()
+            filter.correction = embedded
+            filter.strength = recipe.adjustments.lensVignettingScale
+            return filter
+        }
         guard let lens = profileLens(of: recipe, source: source),
               let choice = recipe.lensProfile, choice.vignettingSource == .lensfun,
               recipe.adjustments.lensVignettingScale > 0.0001
@@ -2098,24 +2162,8 @@ public actor PhotoRenderService {
         let manual = recipe.adjustments.lensManualDistortion
         // The one Lens Correction switch turns the profile off with every
         // other source (FS-03.16a §6); the manual slider is not a profile.
-        if let lens = profileLens(of: recipe, source: source) {
-            let choice = recipe.lensProfile!
-            let focal = exifFocalLength(source.properties) ?? lens.distortion.first?.focal ?? lens.tca.first?.focal ?? 0
-            let term = choice.distortionSource == .lensfun ? lens.distortion(atFocal: focal) : nil
-            let tca = choice.chromaticAberrationSource == .lensfun ? lens.chromaticAberration(atFocal: focal) : nil
-            if term != nil || tca != nil {
-                return LensCorrectionPass.apply(
-                    distortion: term,
-                    tca: tca,
-                    distortionStrength: recipe.adjustments.lensDistortionScale,
-                    chromaticAberrationStrength: recipe.adjustments.lensChromaticAberrationScale,
-                    lensCropFactor: lens.cropFactor,
-                    cameraCropFactor: choice.cameraCropFactor,
-                    calibrationAspect: lens.calibrationAspect,
-                    manualDistortion: manual,
-                    to: image
-                )
-            }
+        if let table = lensCorrectionTable(of: recipe, source: source, extent: image.extent) {
+            return LensCorrectionPass.apply(table: table.table, center: table.center, to: image)
         }
         guard abs(manual) > 0.0001 else { return image }
         return applyLensProfile(

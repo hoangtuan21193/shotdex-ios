@@ -61,6 +61,33 @@ public struct LensCorrectionTable: Equatable, Sendable {
         return LensCorrectionTable(maximumRadius: maximumRadius, red: red, green: green, blue: blue)
     }
 
+    /// Any mix of sources, by radius in pixels: green's source/output ratio
+    /// and red's and blue's ratio to green, each before strength; the
+    /// strengths then scale every deviation from 1 (16a §5). `maximumRadius`
+    /// is in pixels too — the kernel runs with a normalisation of 1.
+    public static func make(
+        green: ((Double) -> Double)?,
+        red: ((Double) -> Double)?,
+        blue: ((Double) -> Double)?,
+        distortionStrength: Double,
+        chromaticAberrationStrength: Double,
+        manual: Double = 0,
+        halfDiagonal: Double,
+        maximumRadius: Double
+    ) -> LensCorrectionTable {
+        var redValues = [Float](), greenValues = [Float](), blueValues = [Float]()
+        for index in 0..<sampleCount {
+            let r = maximumRadius * Double(index) / Double(sampleCount - 1)
+            let rho = r / max(halfDiagonal, 1)
+            let g = (1 + distortionStrength * ((green?(r) ?? 1) - 1)) * (1 - manual * rho * rho)
+            let tr = red?(r) ?? 1, tb = blue?(r) ?? 1
+            greenValues.append(Float(g))
+            redValues.append(Float(g * (1 + chromaticAberrationStrength * (tr - 1))))
+            blueValues.append(Float(g * (1 + chromaticAberrationStrength * (tb - 1))))
+        }
+        return LensCorrectionTable(maximumRadius: maximumRadius, red: redValues, green: greenValues, blue: blueValues)
+    }
+
     /// The table as a 256×1 float image the kernel samples: R, G, B scales.
     var image: CIImage {
         var pixels = [Float](repeating: 1, count: Self.sampleCount * 4)

@@ -112,6 +112,67 @@ public enum LensCorrectionPass {
         return output ?? input
     }
 
+    // MARK: Any source
+
+    /// The maker's data and Lensfun per aspect, both brought to pixels:
+    /// distortion and CA in the one sampling pass. `center` is the optical
+    /// centre in the frame's coordinates.
+    public static func apply(
+        table: LensCorrectionTable,
+        center: CGPoint,
+        to input: CIImage
+    ) -> CIImage {
+        guard !table.isIdentity, let kernel = correctKernel else { return input }
+        let extent = input.extent
+        let zoom = fillZoom(table, extent: extent, norm: 1)
+        let halfDiagonal = (extent.width * extent.width + extent.height * extent.height).squareRoot() / 2
+        let reach = zip(zip(table.red, table.green), table.blue).map { max(abs($0.0 - 1), abs($0.1 - 1), abs($1 - 1)) }.max() ?? 0
+        let pad = CGFloat(Double(reach) * halfDiagonal) + 8
+        let output = kernel.apply(
+            extent: extent,
+            roiCallback: { index, rect in
+                index == 0 ? rect.insetBy(dx: -pad, dy: -pad).intersection(extent.insetBy(dx: -pad, dy: -pad))
+                    : CGRect(x: 0, y: 0, width: LensCorrectionTable.sampleCount, height: 1)
+            },
+            arguments: [
+                input.clampedToExtent(), table.image, CIVector(x: center.x, y: center.y),
+                Float(1), Float(zoom), Float(table.maximumRadius), Float(LensCorrectionTable.sampleCount),
+            ]
+        )
+        return output?.cropped(to: extent) ?? input
+    }
+
+    /// A gain curve over pixel radius, raised to `strength`.
+    public static func applyVignetting(
+        curve gain: (Double) -> Double,
+        strength: Double,
+        center: CGPoint,
+        maximumRadius: Double,
+        to input: CIImage
+    ) -> CIImage {
+        let strength = min(max(strength, 0), 2)
+        guard strength > 0.0001, let kernel = vignetteCurveKernel else { return input }
+        var pixels = [Float](repeating: 1, count: LensCorrectionTable.sampleCount * 4)
+        for index in 0..<LensCorrectionTable.sampleCount {
+            pixels[index * 4] = Float(gain(maximumRadius * Double(index) / Double(LensCorrectionTable.sampleCount - 1)))
+        }
+        let table = CIImage(
+            bitmapData: pixels.withUnsafeBufferPointer { Data(buffer: $0) },
+            bytesPerRow: LensCorrectionTable.sampleCount * 16,
+            size: CGSize(width: LensCorrectionTable.sampleCount, height: 1),
+            format: .RGBAf, colorSpace: nil
+        )
+        let extent = input.extent
+        return kernel.apply(
+            extent: extent,
+            roiCallback: { index, rect in index == 0 ? rect : CGRect(x: 0, y: 0, width: LensCorrectionTable.sampleCount, height: 1) },
+            arguments: [input, table, CIVector(x: center.x, y: center.y), Float(maximumRadius),
+                        Float(LensCorrectionTable.sampleCount), Float(strength)]
+        )?.cropped(to: extent) ?? input
+    }
+
+    static let vignetteCurveKernel = CoreImageKernelLibrary.kit.kernel(named: "lensVignetteCurve")
+
     static let correctKernel = CoreImageKernelLibrary.kit.kernel(named: "lensCorrect")
     static let vignetteKernel = CoreImageKernelLibrary.kit.colorKernel(named: "lensVignette")
 }
@@ -136,5 +197,47 @@ public final class LensVignetteFilter: CIFilter {
             calibrationAspect: calibrationAspect,
             to: inputImage
         )
+    }
+}
+
+/// The maker's vignetting curve for the RAW decoder's linear slot.
+public final class LensVignetteCurveFilter: CIFilter {
+    @objc public var inputImage: CIImage?
+    public var correction: EmbeddedLensCorrection?
+    public var strength = 1.0
+
+    public override var outputImage: CIImage? {
+        guard let inputImage else { return nil }
+        guard let correction, let curve = correction.vignetting else { return inputImage }
+        let extent = inputImage.extent
+        let frame = LensFrame(correction: correction, extent: extent)
+        return LensCorrectionPass.applyVignetting(
+            curve: { curve.value(at: $0 / frame.unit) },
+            strength: strength, center: frame.center, maximumRadius: frame.maximumRadius, to: inputImage
+        )
+    }
+}
+
+/// Where an embedded correction's radius 1 lands on a frame, in pixels.
+public struct LensFrame: Sendable {
+    public var center: CGPoint
+    public var unit: Double
+    public var maximumRadius: Double
+
+    public init(correction: EmbeddedLensCorrection, extent: CGRect) {
+        let c = CGPoint(
+            x: extent.minX + correction.center.x * extent.width,
+            y: extent.minY + (1 - correction.center.y) * extent.height
+        )
+        center = c
+        let corners = [CGPoint(x: extent.minX, y: extent.minY), CGPoint(x: extent.maxX, y: extent.minY),
+                       CGPoint(x: extent.minX, y: extent.maxY), CGPoint(x: extent.maxX, y: extent.maxY)]
+        let farthest = corners.map { hypot($0.x - c.x, $0.y - c.y) }.max() ?? 1
+        switch correction.unit {
+        case .halfDiagonal: unit = (extent.width * extent.width + extent.height * extent.height).squareRoot() / 2
+        case .halfLongSide: unit = max(extent.width, extent.height) / 2
+        case .farthestCorner: unit = farthest
+        }
+        maximumRadius = farthest * 1.05
     }
 }

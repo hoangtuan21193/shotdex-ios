@@ -1478,6 +1478,37 @@ final class PhotoEditorController {
 
     /// What EXIF says about the lens, read once when the source loads.
     @ObservationIgnored private var lensQuery = LensQuery()
+    /// What the file says about its lens, read once when it opens.
+    struct LensFacts {
+        var embedded: EmbeddedLensCorrection?
+        var embeddedLensName: String?
+        var decoderSupportsLensCorrection: Bool
+        var isJPEGCorrectedInCamera: Bool
+    }
+
+    @ObservationIgnored private var lensFacts = LensFacts(
+        embedded: nil, embeddedLensName: nil, decoderSupportsLensCorrection: false, isJPEGCorrectedInCamera: false
+    )
+
+    /// The resolver's inputs from the file's facts; the Lensfun lens is added
+    /// by the caller.
+    private func lensInputs() -> LensCorrectionInputs {
+        var inputs = LensCorrectionInputs(isRAW: isRAWSource)
+        if let embedded = lensFacts.embedded {
+            var aspects: Set<LensCorrectionAspect> = []
+            if embedded.hasDistortion { aspects.insert(.distortion) }
+            if embedded.hasVignetting { aspects.insert(.vignetting) }
+            if embedded.hasChromaticAberration { aspects.insert(.chromaticAberration) }
+            inputs.embeddedAspects = aspects
+            inputs.embeddedLensName = lensFacts.embeddedLensName
+        }
+        // Before the file has been read, a RAW is assumed decodable with
+        // Apple's correction, as it always was.
+        inputs.decoderSupportsLensCorrection = lensFacts.decoderSupportsLensCorrection || (isRAWSource && loadedSource == nil)
+        inputs.isJPEGCorrectedInCamera = lensFacts.isJPEGCorrectedInCamera
+        return inputs
+    }
+
     /// A RAW's lens sources as resolved when it opened — rendered, but not
     /// written into the recipe until the first edit (E19). Nil for JPEG and
     /// HEIC, which start with correction off.
@@ -1501,21 +1532,30 @@ final class PhotoEditorController {
         let url = info.url
         // RAW goes through Lensfun too now (FS-03.16a §2); the decoder's
         // own correction is only the fallback.
-        let (match, mount, decoderSupports) = await Task.detached(priority: .utility) {
+        let (match, mount, decoderSupports, embedded, corrected) = await Task.detached(priority: .utility) {
             let library = LensProfileLibrary.shared
             return (
                 LensProfileMatcher(library: library).match(query),
                 library.camera(make: query.cameraMake, model: query.cameraModel)?.mount,
-                isRAW ? (CIRAWFilter(imageURL: url)?.isLensCorrectionSupported ?? false) : false
+                isRAW ? (CIRAWFilter(imageURL: url)?.isLensCorrectionSupported ?? false) : false,
+                // The maker's own data (16a §1) — RAW only, read once and kept
+                // for the renderer.
+                isRAW ? EmbeddedLensDataCache.shared.correction(for: url) : nil,
+                isRAW ? false : (EmbeddedLensDataReader.isCorrectedInCamera(url: url) ?? false)
             )
         }.value
         lensProfileMatch = match
         lensCameraMount = mount
+        lensFacts = LensFacts(
+            embedded: embedded,
+            embeddedLensName: query.lensModel,
+            decoderSupportsLensCorrection: decoderSupports,
+            isJPEGCorrectedInCamera: corrected
+        )
         if isRAW {
-            var inputs = LensCorrectionInputs(isRAW: true)
+            var inputs = lensInputs()
             inputs.lensfunLens = match?.lens
             inputs.cameraCropFactor = match?.cameraCropFactor ?? LensProfileMatcher().cameraCropFactor(query)
-            inputs.decoderSupportsLensCorrection = decoderSupports
             sessionLensChoice = LensCorrectionResolver.resolve(inputs).choice
         } else {
             sessionLensChoice = nil
@@ -1530,8 +1570,7 @@ final class PhotoEditorController {
     /// choice yet, a JPEG shows the lens EXIF points to and a RAW falls to
     /// Apple's correction.
     var lensCorrectionResolution: LensCorrectionResolution {
-        var inputs = LensCorrectionInputs(isRAW: isRAWSource)
-        inputs.decoderSupportsLensCorrection = isRAWSource
+        var inputs = lensInputs()
         inputs.cameraCropFactor = LensProfileMatcher().cameraCropFactor(lensQuery)
         if let stored = recipe.lensProfile ?? sessionLensChoice {
             inputs.lensfunLens = stored.lensID.flatMap { LensProfileLibrary.shared.lens(id: $0) }

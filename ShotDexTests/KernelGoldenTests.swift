@@ -48,7 +48,7 @@ struct KernelGoldenTests {
     /// AC-2 counts forty kernels; every one of them has a case.
     @Test func everyKernelHasACase() {
         let kernels = Set(KernelGoldenCase.all.map(\.kernel))
-        #expect(kernels.count == 52)
+        #expect(kernels.count == 53)
         #expect(Set(KernelGoldenCase.all.map(\.name)).count == KernelGoldenCase.all.count)
     }
 
@@ -234,6 +234,12 @@ extension KernelGoldenCase {
                     CIVector(x: extent.midX, y: extent.midY), Float(extent.height / 2), Float(1.02),
                     Float(table.maximumRadius), Float(LensCorrectionTable.sampleCount),
                 ]
+            )
+        },
+        KernelGoldenCase(name: "lensVignetteCurve", kernel: "lensVignetteCurve") { input in
+            LensCorrectionPass.applyVignetting(
+                curve: { 1 + 0.6 * pow($0 / 40, 2) }, strength: 1.5,
+                center: CGPoint(x: extent.midX, y: extent.midY), maximumRadius: 40, to: input(0)
             )
         },
         color("lensVignette", { LensCorrectionPass.vignetteKernel }) {

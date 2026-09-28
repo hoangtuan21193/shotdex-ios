@@ -80,6 +80,18 @@ float4 lensVignette(sample_t s, float2 center, float norm, float3 k, float stren
     return float4(s.rgb * gain, s.a);
 }
 
+// Vignetting out by a gain curve over radius (the maker's own, FS-03.16a
+// §1): `table` 256×1 holds the gain in r; radius in pixels, the last texel
+// `maximumRadius`; the gain raised to `strength`.
+float4 lensVignetteCurve(sampler image, sampler table, float2 center, float maximumRadius,
+                         float count, float strength, destination dest) {
+    float4 s = image.sample(image.transform(dest.coord()));
+    float r = length(dest.coord() - center);
+    float t = clamp(r / maximumRadius, 0.0f, 1.0f) * (count - 1.0f) + 0.5f;
+    float gain = table.sample(table.transform(float2(t, 0.5f))).r;
+    return float4(s.rgb * pow(max(gain, 0.05f), strength), s.a);
+}
+
 // What noise reduction removed, kept signed.
 float4 noiseResidual(sample_t original, sample_t denoised) {
     return float4(original.rgb - denoised.rgb, 1.0f);

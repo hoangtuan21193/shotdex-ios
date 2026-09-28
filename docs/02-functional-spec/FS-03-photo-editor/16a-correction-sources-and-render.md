@@ -9,14 +9,19 @@ và ba mức độ mạnh tác động lên ảnh ra sao.
 
 ## 1. Nguồn 1 — dữ liệu hãng ghi trong file RAW
 
-| Hãng | Nơi ghi (xác nhận ở spike) | Có gì |
+| Hãng | Nơi ghi (xác nhận ở spike 2026-09-29) | Có gì · cách đọc · kiểm bằng gì |
 |---|---|---|
-| Sony ARW | `DistortionCorrParams` · `VignettingCorrParams` · `ChromaticAberrationCorrParams` | méo, tối góc, CA đỏ/lam — bảng giá trị theo bán kính |
-| Fujifilm RAF | `GeometricDistortionParams` · `VignettingParams` · `ChromaticAberrationParams` | cả ba, bảng theo bán kính |
-| Panasonic RW2 | `DistortionInfo` | méo; tối góc và CA xác nhận ở spike |
-| OM / Olympus ORF | maker notes nhóm ImageProcessing | méo; tối góc và CA xác nhận ở spike |
-| DNG | `WarpRectilinear` (OpcodeList3) · `FixVignetteRadial` (OpcodeList2/3) | méo + CA (hệ số riêng từng kênh), tối góc — đa thức theo đặc tả DNG công khai |
+| Sony ARW | raw SubIFD `0x7032` tối góc · `0x7035` CA · `0x7037` méo (int16: số nút rồi các nút, rải đều tâm → góc, đơn vị nửa đường chéo) | méo 1 + v·2⁻¹⁴; CA 1 + v·2⁻²¹ (đỏ rồi lam); gain tối góc 1 / 2^(0,5 − 2^(v·2⁻¹³ − 1)) · **tối góc khớp preview của máy** (1,219 đo / 1,217 tính ở r 0,8); ⚠️ méo và CA của mẫu quá nhỏ (≤ 0,2%) để kiểm thang/dấu |
+| Fujifilm RAF | FujiIFD `0xf00b` méo · `0xf00f` CA · `0xf010` tối góc (rational: 1 giá trị đầu bỏ, 9 bán kính nút, rồi giá trị) | méo %, CA đỏ rồi lam (lệch), tối góc % độ sáng · ⚠️ mẫu X-T50 + XF35 không méo, tối góc 100 — chỉ CA đọc được, thang chưa kiểm (Apple không hỗ trợ RAF nên không có đáp án) |
+| Panasonic RW2 | IFD0 `0x0119` DistortionInfo, 16 int16 /32768 (p02 ở 2, p04 ở 4, scale ở 5, cờ ở 7) | méo (1 + p02 r² + p04 r⁴)·(1 + scale), r nửa cạnh dài · **khớp phần Apple tự áp** (sai khác giảm 71%) · không có tối góc/CA → Lensfun bù |
+| OM / Olympus ORF | — | ⚠️ mẫu OM-5 II ghi sửa **tắt**, không có tham số; chưa có file nào để xác nhận nơi ghi — bộ đọc OM chưa làm |
+| DNG | `WarpRectilinear` (OpcodeList3) | méo + CA theo đặc tả Adobe: r·(k0 + k1r² + k2r⁴ + k3r⁶), r chuẩn hoá theo góc xa nhất, 3 plane = R/G/B · **khớp phần Apple tự áp** (Pixel: sai khác giảm 93%) · `FixVignetteRadial` chưa gặp trong mẫu (Pixel dùng GainMap, ngoài phạm vi) |
 | Canon CR3, Nikon NEF | — | không đọc trong spec này → nguồn 2 |
+
+- *Phát hiện ở spike:* phần sửa có sẵn của Apple **tự áp dữ liệu nhúng** cho DNG, Sony, Panasonic, OM (không cho CR3,
+  RAF). Nguồn 1 vẫn cần vì ba slider độ mạnh chỉ chạy trên pass của ShotDex; Apple thì chỉ bật/tắt.
+- Mẫu: 7 file CC0 từ raw.pixls.us (A7 IV, X-T50, G9, OM-5 II, R10, Leica Q, Pixel 7 Pro), kiểm không có mặt người bằng
+  Vision; chỉ khối opcode DNG (184 và 88 byte) vào repo làm fixture (`ShotDexTests/Fixtures/LensData`).
 
 - v1 đọc **cả năm định dạng**. Spike với RAW thật của từng hãng là bước kiểm cách đọc, không cắt hãng khỏi v1.
 - Mặt nào file không ghi thì **lấy bù từ Lensfun** nếu ống có dữ liệu mặt đó (FS-03.16 §3); Lensfun cũng thiếu
@@ -106,10 +111,10 @@ Hai slider chỉnh tay của FS-03.15 cộng lên trên mọi nguồn: đó là 
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-a1 | khối maker notes tách từ một ARW Sony có cả ba bộ thông số | giải nguồn | nguồn = 1; dịch chuyển ở góc ảnh 2400px khớp giá trị tính tay từ bảng trong 0,5px; phần của Apple tắt | ⚠️ chưa có |
-| AC-a2 | DNG có `WarpRectilinear` với hệ số kênh đỏ khác kênh lam | render ở 100 | bán kính góc của đỏ và lam lệch nhau đúng theo hai bộ hệ số, trong 0,5px | ⚠️ chưa có |
+| AC-a1 | khối maker notes tách từ một ARW Sony có cả ba bộ thông số | giải nguồn | nguồn = 1; dịch chuyển ở góc ảnh 2400px khớp giá trị tính tay từ bảng trong 0,5px; phần của Apple tắt | `LensEmbeddedDataTests.sonyThreeParamsDecodeWithinHalfPixel` · `…sonyEmbeddedDataDrivesTheRender` (bảng render theo nút của file, 200 = gấp đôi) · ⚠️ thang méo/CA Sony chưa kiểm được trên mẫu |
+| AC-a2 | DNG có `WarpRectilinear` với hệ số kênh đỏ khác kênh lam | render ở 100 | bán kính góc của đỏ và lam lệch nhau đúng theo hai bộ hệ số, trong 0,5px | `LensEmbeddedDataTests.dngRedBlueCoefficientsGiveSeparateRadii` (opcode thật của Leica Q) |
 | AC-a3 | CR3 Canon EOS R5 + EF 24-70mm f/2.8L II USM (có trong Lensfun, không có nguồn 1) | giải nguồn và render ảnh phẳng xám tổng hợp | nguồn = 2; phần của Apple tắt, không tổ hợp nào bật cả hai (bảng §6); tỉ số gain góc/tâm khớp mô hình `pa` ở tiêu cự/khẩu độ EXIF trong 1/255 | `LensCorrectionResolverTests.canonCR3WithLensfunIsProfileAppleOff` (mọi tổ hợp bảng §6) · `LensCorrectionRenderTests.vignetteGainMatchesPAModel` (bộ lọc khe tuyến tính, 1/255) · ⚠️ CR3 R5 + EF 24-70 thật: chưa có file |
-| AC-a4 | ARW có `DistortionCorrParams` bị cắt cụt (ít phần tử hơn khai báo) | giải nguồn | không crash; ống có trong Lensfun → nguồn 2, không có → nguồn 3 | ⚠️ chưa có |
+| AC-a4 | ARW có `DistortionCorrParams` bị cắt cụt (ít phần tử hơn khai báo) | giải nguồn | không crash; ống có trong Lensfun → nguồn 2, không có → nguồn 3 | `LensEmbeddedDataTests.truncatedSonyBlockFallsBack` |
 | AC-a5 | RAW hãng chưa đọc (Pentax PEF), ống không có trong Lensfun, bộ giải báo hỗ trợ | giải nguồn | nguồn = 3: phần của Apple theo công tắc, pass của ShotDex không chạy; kéo ba slider không đổi ảnh (lệch ≤ 1/255) | `LensCorrectionResolverTests.unsupportedMakerWithDecoderSupportIsBuiltIn` (seam `decoderSupportsLensCorrection`; ba slider 0 và 200 lệch ≤ 1/255) · ⚠️ file PEF thật trên sim: chưa |
 | AC-a6 | RAW có ống không có ở nguồn 1, 2, và bộ giải báo không hỗ trợ | render | nguồn = 4: phần của Apple và pass của ShotDex đều tắt; ảnh lệch ≤ 1/255 so với bản giải tắt sửa ống kính | `LensCorrectionResolverTests.noDecoderSupportIsNone` |
 | AC-a7 | ảnh nguồn 2 đủ ba mặt | đặt cả ba về 0 | ảnh lệch ≤ 1/255 so với công tắc tắt; zoom lấp = 1,0 | `LensCorrectionRenderTests.zeroStrengthsMatchSwitchOff` (render ≤ 1/255, bảng đồng nhất, zoom 1,0) |
@@ -117,11 +122,11 @@ Hai slider chỉnh tay của FS-03.15 cộng lên trên mọi nguồn: đó là 
 | AC-a9 | ảnh phẳng 18% tuyến tính, tối góc tổng hợp góc 50%, hồ sơ khớp | render RAW ở Exposure 0 rồi +1 EV | tỉ số góc/tâm đo tuyến tính = 1,00 ± 0,01 ở **cả hai** mức Exposure | `LensCorrectionRenderTests.vignetteRatioHoldsAcrossExposure` (gain tuyến tính, 1,00 ± 0,01 ở ×1 và ×2) · ⚠️ phần "kéo không giải mã lại" của E17 **chưa làm** — xem §5 |
 | AC-a10 | ống hiệu chuẩn crop 1,0 trên thân crop 1,53; và ống chỉ hiệu chuẩn crop 1,53 trên thân full frame | giải nguồn | ca đầu: nguồn 2, dịch góc bằng giá trị hồ sơ ở r = 1/1,53 bán kính góc full frame (±0,5px); ca sau: không tự khớp | `LensProfileTests.smallerSensorCalibrationIsNotAutoMatched` · `…normalizationFollowsTheCalibrationFrame` (cùng bán kính chuẩn hoá cho cả ba mặt) |
 | AC-a11 | HEIC iPhone 17 Pro | mở editor | nguồn = 4, không có bước sửa ống kính; ảnh giống bản không sửa | `LensCorrectionResolverTests.iPhoneHEICResolvesToNone` (nguồn 4 + render bằng bản tắt ≤ 1/255) |
-| AC-a12 | khối maker notes tách từ một RAF Fujifilm có cả ba bộ thông số | giải nguồn | nguồn = 1; dịch chuyển méo và lệch CA ở góc ảnh khớp giá trị tính tay từ bảng trong 0,5px; gain tối góc trong 1% | ⚠️ chưa có |
-| AC-a13 | khối maker notes tách từ một RW2 Panasonic có dữ liệu méo | giải nguồn | nguồn méo = 1; dịch góc khớp tính tay trong 0,5px; ống có trong Lensfun kèm tối góc → tối góc lấy từ Lensfun (nguồn 2); mặt nào cả hai đều thiếu thì slider mặt đó mờ | ⚠️ chưa có |
-| AC-a14 | khối maker notes tách từ một ORF OM/Olympus có dữ liệu méo | giải nguồn | như AC-a13 cho ORF | ⚠️ chưa có |
-| AC-a15 | JPEG Sony có thẻ trạng thái "đã sửa trong máy", ống có trong Lensfun | bật Lens Correction | không tự khớp, pass của ShotDex không chạy, ảnh lệch ≤ 1/255 so với công tắc tắt; chọn tay một ống thì pass chạy | ⚠️ chưa có |
-| AC-a16 | JPEG cùng thân máy, thẻ báo chưa sửa | bật Lens Correction | tự khớp ống như ảnh không có thẻ | ⚠️ chưa có |
+| AC-a12 | khối maker notes tách từ một RAF Fujifilm có cả ba bộ thông số | giải nguồn | nguồn = 1; dịch chuyển méo và lệch CA ở góc ảnh khớp giá trị tính tay từ bảng trong 0,5px; gain tối góc trong 1% | `LensEmbeddedDataTests.fujiThreeParamsDecode` · ⚠️ thang chưa kiểm (mẫu không méo, Apple không hỗ trợ RAF) |
+| AC-a13 | khối maker notes tách từ một RW2 Panasonic có dữ liệu méo | giải nguồn | nguồn méo = 1; dịch góc khớp tính tay trong 0,5px; ống có trong Lensfun kèm tối góc → tối góc lấy từ Lensfun (nguồn 2); mặt nào cả hai đều thiếu thì slider mặt đó mờ | `LensEmbeddedDataTests.panasonicDistortionDecodes` · `…panasonicDistortionFillsRestFromLensfun` |
+| AC-a14 | khối maker notes tách từ một ORF OM/Olympus có dữ liệu méo | giải nguồn | như AC-a13 cho ORF | ⚠️ chưa làm — mẫu OM không có tham số sửa; cần một ORF chụp với sửa méo bật |
+| AC-a15 | JPEG Sony có thẻ trạng thái "đã sửa trong máy", ống có trong Lensfun | bật Lens Correction | không tự khớp, pass của ShotDex không chạy, ảnh lệch ≤ 1/255 so với công tắc tắt; chọn tay một ống thì pass chạy | `LensEmbeddedDataTests.sonyJPEGCorrectedInCameraSkipsAutoMatch` (MakerNote 0x2013) |
+| AC-a16 | JPEG cùng thân máy, thẻ báo chưa sửa | bật Lens Correction | tự khớp ống như ảnh không có thẻ | `LensEmbeddedDataTests.uncorrectedTagMatchesAsUsual` |
 | AC-a17 | ảnh nguồn 2 có CA đỏ/lam, chip Remove CA bật | mở Optics, kéo CA 0 → 200 | chip vẫn hiện và chạm được; tắt chip đổi ảnh ở cả hai mức CA | `LensCorrectionRenderTests.removeCAChipChangesImageAtBothCAStrengths` (CA 0 và 200) · chip trong Optics: `iphone-optics-lens.json` 2-optics-profile |
 | AC-a18 | ảnh nguồn 2 đủ ba mặt, iPhone 17, kích thước hiển thị | kéo Distortion liên tục | méo + CA chạy trong **một** pass; ≤ 8 ms mỗi khung | `LensCorrectionRenderTests.distortionAndCAShareOnePass` (một nút `lensCorrect`, không `lensWarp`) · ⚠️ ≤ 8ms/khung: đo ở `/verify` trên iPhone 17 |
 
