@@ -121,9 +121,9 @@ trong báo cáo import (FS-03.14). Mask còn lại của correction vẫn nhập
 | AC-47 | ảnh có 2 người (hình nộm/manơcanh, không mặt thật) | mở People | có đúng 3 hàng: All People · Person 1 · Person 2, thứ tự theo diện tích | ⚠️ chưa có — cần máy thật (dự kiến `PeopleMaskTests.onePersonRowPerPerson`) + ảnh New Mask |
 | AC-48 | ảnh HEIC không có matte ngữ nghĩa | People → Person 1 → chạm Hair | không tạo mask; hàng Hair mờ 35% và hiện "Needs a Portrait photo taken on iPhone" 3s | ⚠️ chưa có (dự kiến `PeopleMaskTests.hairIsGatedOnTheMatte`) + `ShotDexUITests/scripts/iphone-people-mask.json` |
 | AC-49 | simulator (Vision không tách được người) | chạm People → All People | pill "Couldn't find a person" 3s; mask rỗng vẫn trong danh sách; không alert | ⚠️ chưa có (`ShotDexUITests/scripts/iphone-people-mask.json`, iPhone 17 26.5) |
-| AC-50 | ảnh CC0 không người, hai vật tách rời | chọn ô Subject, không chạm | mask phủ cả hai vật, IoU với phân tách gộp của Vision ≥ 0,9; không có pill "Tap…" | ⚠️ chưa có — cần máy thật hoặc Vision của Mac (dự kiến `ObjectMaskTests.subjectTakesEveryObjectWithoutATap`) |
+| AC-50 | ảnh CC0 không người, hai vật tách rời | chọn ô Subject, không chạm | mask phủ cả hai vật, IoU với phân tách gộp của Vision ≥ 0,9; không có pill "Tap…" | `ObjectMaskTests.subjectTakesEveryObjectWithoutATap` (chọn instance) · `ShotDexUITests/scripts/iphone-mask-subject.json` · ⚠️ IoU với Vision trên ảnh CC0: cần máy thật/Mac |
 | AC-51 | ảnh có mask Object đã tạo | đóng rồi mở lại ảnh; rồi xoá file matte và mở lần nữa | lần 2: Vision chạy 0 lần, matte khớp từng pixel lần 1; lần 3: tính lại, không alert | `GeneratedMatteStoreTests.reopenReadsTheSavedMatte` · `…unnamedPhotosWriteNothing` (Vision giả) |
 | AC-52 | editor, chưa có mask, iPhone 17 26.5 và 18.6 | mở Mask | lưới 4 cột đủ 14 ô đúng thứ tự §3; Face Skin, Eyes, Lips nằm ngoài People | ⚠️ chưa có (`ShotDexUITests/scripts/iphone-people-mask.json` + element dump) |
 
-**Chưa chứng minh được:** AC-46…AC-50, AC-52 (chưa code). Point Color và Defringe của mask không có AC riêng —
+**Chưa chứng minh được:** AC-46…AC-49, AC-52 (chưa code); phần IoU của AC-50 cần máy thật. Point Color và Defringe của mask không có AC riêng —
 dùng lại pass toàn cục, phủ bởi golden kernel FS-16 khi port.

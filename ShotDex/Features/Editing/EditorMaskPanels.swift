@@ -572,7 +572,7 @@ struct EditorMaskDetailPanel: View {
                 shapeFeatherRow(component)
                 componentSlider("Opacity", keyPath: \.opacity, range: 0.01...1)
             case .subject:
-                hint("Tap a person or object on the photo")
+                hint("Every subject in the photo, found on device")
                 componentSlider("Opacity", keyPath: \.opacity, range: 0.01...1)
             case .sky:
                 hint("Sky detected on device")

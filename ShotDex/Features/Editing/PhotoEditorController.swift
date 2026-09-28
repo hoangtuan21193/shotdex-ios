@@ -2424,12 +2424,9 @@ final class PhotoEditorController {
     }
 
     func setAutomaticMaskPoint(_ point: NormalizedPoint) {
-        guard let component = selectedComponent,
-              component.kind == .subject || component.kind == .colorRange
-        else { return }
-        if component.kind == .subject {
-            updateSelectedComponent { $0.subjectPoint = point }
-        } else if let color = samplePreviewColor(at: point) {
+        // Subject takes every subject; a tap only picks for Color Range now.
+        guard let component = selectedComponent, component.kind == .colorRange else { return }
+        if let color = samplePreviewColor(at: point) {
             updateSelectedComponent {
                 $0.sampledRed = color.red
                 $0.sampledGreen = color.green

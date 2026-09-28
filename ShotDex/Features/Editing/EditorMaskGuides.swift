@@ -42,8 +42,6 @@ struct EditorMaskGuideOverlay: View {
                     linearGuide(component)
                 case .radialGradient:
                     radialGuide(component)
-                case .subject:
-                    subjectPin(component)
                 default:
                     // Brush has no persistent guide: Size and Feather are set in
                     // the action-row popup, previewed by the cursor footprint.

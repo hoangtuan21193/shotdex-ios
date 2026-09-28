@@ -2419,7 +2419,7 @@ public actor PhotoRenderService {
             return radialGradientMask(component, extent: image.extent)
         case .subject:
             return try cachedAutomaticMask(
-                key: "\(cacheIdentity)|subject|\(component.id)|\(component.subjectPoint.x)|\(component.subjectPoint.y)",
+                key: "\(cacheIdentity)|subject|\(component.id)",
                 componentID: component.id,
                 image: image
             ) {
@@ -2694,13 +2694,11 @@ public actor PhotoRenderService {
         let handler = VNImageRequestHandler(ciImage: normalizedImage)
         try handler.perform([request])
         guard let observation = request.results?.first else { return nil }
-        let instance = instanceIndex(
-            at: point,
-            in: observation.instanceMask
-        )
-        let selected = instance > 0
-            ? IndexSet(integer: instance)
-            : observation.allInstances
+        guard let selected = Self.foregroundInstances(
+            for: .subject,
+            instanceAtPoint: instanceIndex(at: point, in: observation.instanceMask),
+            all: observation.allInstances
+        ) else { return nil }
         let pixelBuffer = try observation.generateScaledMaskForImage(
             forInstances: selected,
             from: handler
@@ -2795,6 +2793,21 @@ public actor PhotoRenderService {
             request.setComputeDevice(cpu, for: stage)
         }
         #endif
+    }
+
+    /// Which of Vision's foreground instances an area takes (FS-03.15d §3):
+    /// Subject is always every one of them, no tap needed. Nil is nothing to
+    /// select.
+    static func foregroundInstances(
+        for kind: PhotoMaskComponentKind,
+        instanceAtPoint: Int,
+        all: IndexSet
+    ) -> IndexSet? {
+        guard !all.isEmpty else { return nil }
+        switch kind {
+        default:
+            return all
+        }
     }
 
     private func instanceIndex(at point: NormalizedPoint, in buffer: CVPixelBuffer) -> Int {
