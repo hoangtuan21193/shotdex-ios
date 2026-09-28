@@ -56,6 +56,7 @@ struct EditorImageStage: View {
         switch controller.selectedMask?.components.first?.kind {
         case .sky: "sky"
         case .object: "object"
+        case .people: "person"
         case .faceSkin, .eyes, .lips: "face"
         default: "subject"
         }

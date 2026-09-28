@@ -18,7 +18,7 @@ struct MaskPhonePanelTests {
         let rows = EditorNewMaskOption.Row.allCases.flatMap(EditorNewMaskOption.options(in:))
         #expect(rows.count == EditorNewMaskOption.allCases.count)
         #expect(Set(rows) == Set(EditorNewMaskOption.allCases))
-        #expect(EditorNewMaskOption.options(in: .detect) == [.subject, .object, .sky, .background, .faceSkin, .eyes, .lips])
+        #expect(EditorNewMaskOption.options(in: .detect) == [.subject, .object, .people, .sky, .background, .faceSkin, .eyes, .lips])
         #expect(EditorNewMaskOption.options(in: .draw) == [.brush, .radialGradient, .linearGradient])
         #expect(EditorNewMaskOption.options(in: .range) == [.colorRange, .luminanceRange, .depthRange])
     }

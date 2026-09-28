@@ -1,0 +1,24 @@
+{
+ "steps": [
+  {"action": "launch"},
+  {"action": "wait", "seconds": 25},
+  {"action": "tap", "x": 0.5, "y": 0.35},
+  {"action": "wait", "seconds": 6},
+  {"action": "tap", "label": "Edit"},
+  {"action": "wait", "seconds": 12},
+  {"action": "tap", "label": "Mask", "type": "button"},
+  {"action": "wait", "seconds": 3},
+  {"action": "dump", "name": "0-chooser"},
+  {"action": "tap", "label": "People", "type": "button"},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "1-people-menu"},
+  {"action": "tap", "label": "All People"},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "2-parts"},
+  {"action": "dump", "name": "2-parts"},
+  {"action": "tap", "label": "Entire Person"},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "3-no-person"},
+  {"action": "dump", "name": "3-no-person"}
+ ]
+}

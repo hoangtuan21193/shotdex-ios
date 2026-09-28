@@ -911,7 +911,8 @@ public actor PhotoRenderService {
         // the still and scaled across.
         let stillDisparity = alignedDisparity(source: source, recipe: recipe, to: image.extent)
         for component in recipe.masks.flatMap(\.components)
-        where component.kind == .subject || component.kind == .object || component.kind == .sky
+        where component.kind == .subject || component.kind == .object || component.kind == .people
+            || component.kind == .sky
             || component.kind == .depthRange || component.kind.isFacePart {
             guard let mask = try componentMask(
                 component,
@@ -1163,6 +1164,9 @@ public actor PhotoRenderService {
         recipe: PhotoEditRecipe,
         to targetExtent: CGRect
     ) -> CIImage? {
+        // Every mask render passes through here before its masks, so this is
+        // also where People learns which file its semantic mattes live in.
+        semanticMatteSource = (source.url, recipe.crop)
         let wantsDepth = recipe.masks.contains { mask in
             mask.components.contains { $0.kind == .depthRange }
         }
@@ -2399,6 +2403,16 @@ public actor PhotoRenderService {
             // map instead of the picture — nearness is just another channel.
             guard let disparity else { return nil }
             return Self.depthRangeMask(component, disparity: disparity, extent: image.extent)
+        case .people:
+            let part = component.personPart ?? .entire
+            let person = component.personIndex ?? 0
+            return try cachedAutomaticMask(
+                key: "\(cacheIdentity)|people|\(person)|\(part.rawValue)",
+                componentID: component.id,
+                image: image
+            ) {
+                try peopleMask(person: person, part: part, image: image)
+            }
         case .faceSkin, .eyes, .lips:
             let kind = component.kind
             guard let hard = try cachedAutomaticMask(
@@ -2720,6 +2734,132 @@ public actor PhotoRenderService {
                 )
             )
             .cropped(to: image.extent)
+    }
+
+    /// Where the semantic mattes of the photo being masked are read from.
+    private var semanticMatteSource: (url: URL, crop: PhotoCropRecipe)?
+
+    /// A People area over `image`: everyone (person 0) or Person n, largest
+    /// first; whole, or one part. Face parts are the landmark masks cut to the
+    /// person; hair, skin, teeth and glasses are the capture's semantic mattes
+    /// cut to the person; Body Skin is skin less Face Skin. Nil when there is
+    /// no such person, or the file has no such matte.
+    private func peopleMask(person: Int, part: PhotoPersonPart, image: CIImage) throws -> CIImage? {
+        let extent = image.extent
+        let normalizedImage = image.transformed(by: CGAffineTransform(translationX: -extent.minX, y: -extent.minY))
+        let request = VNGeneratePersonInstanceMaskRequest()
+        Self.preferCPUOnSimulator(request)
+        let handler = VNImageRequestHandler(ciImage: normalizedImage)
+        try handler.perform([request])
+        guard let observation = request.results?.first else { return nil }
+        let order = Self.peopleByArea(Self.instanceAreas(observation.instanceMask))
+        let selected: IndexSet
+        if person == 0 {
+            selected = observation.allInstances
+        } else {
+            guard order.indices.contains(person - 1) else { return nil }
+            selected = IndexSet(integer: order[person - 1])
+        }
+        guard !selected.isEmpty else { return nil }
+        let buffer = try observation.generateScaledMaskForImage(forInstances: selected, from: handler)
+        let personMatte = CIImage(cvPixelBuffer: buffer)
+            .transformed(by: CGAffineTransform(translationX: extent.minX, y: extent.minY))
+            .cropped(to: extent)
+        switch part {
+        case .entire:
+            return personMatte
+        case .faceSkin, .eyes, .lips:
+            let kind: PhotoMaskComponentKind = part == .faceSkin ? .faceSkin : part == .eyes ? .eyes : .lips
+            guard let face = try faceMask(kind, image: image) else { return nil }
+            return Self.multiplied(face, personMatte, extent: extent)
+        case .hair, .teeth, .glasses:
+            guard let matte = semanticMatte(part, extent: extent) else { return nil }
+            return Self.multiplied(matte, personMatte, extent: extent)
+        case .bodySkin:
+            guard let skin = semanticMatte(.bodySkin, extent: extent) else { return nil }
+            let body = Self.multiplied(skin, personMatte, extent: extent)
+            guard let face = try faceMask(.faceSkin, image: image), let subtract = Self.subtractMaskKernel else { return body }
+            return subtract.apply(extent: extent, arguments: [body, face]) ?? body
+        }
+    }
+
+    private static func multiplied(_ a: CIImage, _ b: CIImage, extent: CGRect) -> CIImage {
+        a.applyingFilter("CIMultiplyCompositing", parameters: [kCIInputBackgroundImageKey: b]).cropped(to: extent)
+    }
+
+    /// The semantic matte for `part` from the photo being masked, cropped and
+    /// scaled onto `extent` the way the depth map is.
+    private func semanticMatte(_ part: PhotoPersonPart, extent: CGRect) -> CIImage? {
+        guard let (url, crop) = semanticMatteSource,
+              let option = Self.semanticMatteOption(part),
+              let matte = CIImage(contentsOf: url, options: [option: true, .applyOrientationProperty: true])
+        else { return nil }
+        let cropped = Self.applyCrop(crop, to: matte)
+        guard cropped.extent.width > 0, cropped.extent.height > 0 else { return nil }
+        let placed = CGAffineTransform(translationX: -cropped.extent.minX, y: -cropped.extent.minY)
+            .concatenating(CGAffineTransform(scaleX: extent.width / cropped.extent.width, y: extent.height / cropped.extent.height))
+            .concatenating(CGAffineTransform(translationX: extent.minX, y: extent.minY))
+        return cropped.transformed(by: placed).clampedToExtent().cropped(to: extent)
+    }
+
+    private static func semanticMatteOption(_ part: PhotoPersonPart) -> CIImageOption? {
+        switch part {
+        case .hair: .auxiliarySemanticSegmentationHairMatte
+        case .bodySkin: .auxiliarySemanticSegmentationSkinMatte
+        case .teeth: .auxiliarySemanticSegmentationTeethMatte
+        case .glasses: .auxiliarySemanticSegmentationGlassesMatte
+        default: nil
+        }
+    }
+
+    /// Which semantic-matte parts the file at `url` can make — the People
+    /// rows that are live. Reads the auxiliary data headers only.
+    public static func availableSemanticParts(at url: URL) -> Set<PhotoPersonPart> {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return [] }
+        let types: [(PhotoPersonPart, CFString)] = [
+            (.hair, kCGImageAuxiliaryDataTypeSemanticSegmentationHairMatte),
+            (.bodySkin, kCGImageAuxiliaryDataTypeSemanticSegmentationSkinMatte),
+            (.teeth, kCGImageAuxiliaryDataTypeSemanticSegmentationTeethMatte),
+            (.glasses, kCGImageAuxiliaryDataTypeSemanticSegmentationGlassesMatte),
+        ]
+        return Set(types.compactMap { part, type in
+            CGImageSourceCopyAuxiliaryDataInfoAtIndex(source, 0, type) != nil ? part : nil
+        })
+    }
+
+    /// Instance ids, largest first, at most four — Person 1…4 (FS-03.15d §3).
+    static func peopleByArea(_ areas: [Int: Int]) -> [Int] {
+        Array(areas.filter { $0.key > 0 && $0.value > 0 }
+            .sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
+            .map(\.key)
+            .prefix(4))
+    }
+
+    /// Pixel count per instance id in Vision's instance mask.
+    static func instanceAreas(_ buffer: CVPixelBuffer) -> [Int: Int] {
+        CVPixelBufferLockBaseAddress(buffer, .readOnly)
+        defer { CVPixelBufferUnlockBaseAddress(buffer, .readOnly) }
+        guard let base = CVPixelBufferGetBaseAddress(buffer),
+              CVPixelBufferGetPixelFormatType(buffer) == kCVPixelFormatType_OneComponent8
+        else { return [:] }
+        let width = CVPixelBufferGetWidth(buffer), height = CVPixelBufferGetHeight(buffer)
+        let rowBytes = CVPixelBufferGetBytesPerRow(buffer)
+        var areas: [Int: Int] = [:]
+        for y in 0..<height {
+            let row = base.advanced(by: y * rowBytes).assumingMemoryBound(to: UInt8.self)
+            for x in 0..<width { areas[Int(row[x]), default: 0] += 1 }
+        }
+        return areas
+    }
+
+    /// How many people Vision separates in `image`, at most four — the
+    /// People list's Person rows. Zero when Vision finds none or cannot run.
+    public static func personCount(in image: CGImage) -> Int {
+        let request = VNGeneratePersonInstanceMaskRequest()
+        preferCPUOnSimulator(request)
+        let handler = VNImageRequestHandler(cgImage: image)
+        guard (try? handler.perform([request])) != nil, let observation = request.results?.first else { return 0 }
+        return peopleByArea(instanceAreas(observation.instanceMask)).count
     }
 
     /// A face-part mask over every face Vision finds in `image`.

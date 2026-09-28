@@ -612,6 +612,53 @@ final class PhotoEditorController {
         scheduleRender()
     }
 
+    // MARK: People (FS-03.15d §3)
+
+    /// How many people Vision separates in the photo, at most four; nil until
+    /// counted. Zero on the simulator, where Vision cannot do it.
+    private(set) var peopleCount: Int?
+
+    /// Semantic-matte parts this photo's file can make.
+    var availableSemanticParts: Set<PhotoPersonPart> {
+        loadedSource.map { PhotoRenderService.availableSemanticParts(at: $0.info.url) } ?? []
+    }
+
+    /// Counts the people once, on the unedited preview, for the People list.
+    func countPeopleIfNeeded() {
+        guard peopleCount == nil, let cgImage = originalPreviewImage?.cgImage else { return }
+        peopleCount = PhotoRenderService.personCount(in: cgImage)
+    }
+
+    /// The People list's person rows: All People, then Person 1…n.
+    static func peopleRows(count: Int) -> [(title: String, person: Int?)] {
+        [("All People", nil)] + (0..<min(4, max(0, count))).map { ("Person \($0 + 1)", $0 + 1) }
+    }
+
+    /// A People mask for `person` (nil = everyone) and `part`. Refused, with
+    /// the reason, when the part needs a semantic matte this photo lacks —
+    /// nothing is made, as for any kind that cannot work (FS-03.05 §2).
+    @discardableResult
+    func addPeopleMask(person: Int?, part: PhotoPersonPart) -> String? {
+        addPeopleMask(person: person, part: part, available: availableSemanticParts)
+    }
+
+    @discardableResult
+    func addPeopleMask(person: Int?, part: PhotoPersonPart, available: Set<PhotoPersonPart>) -> String? {
+        if part.needsSemanticMatte, !available.contains(part) {
+            return "Needs a Portrait photo taken on iPhone"
+        }
+        addMask(kind: .people)
+        guard let maskIndex = recipe.masks.indices.last,
+              let componentIndex = recipe.masks[maskIndex].components.indices.last
+        else { return nil }
+        recipe.masks[maskIndex].components[componentIndex].personIndex = person
+        recipe.masks[maskIndex].components[componentIndex].personPart = part == .entire ? nil : part
+        let who = person.map { "Person \($0)" } ?? "People"
+        recipe.masks[maskIndex].name = part == .entire ? "\(who) \(recipe.masks.count)" : "\(who) \(part.displayName)"
+        scheduleRender()
+        return nil
+    }
+
     /// Set by a mask's Edit Curve: the curve editor then edits that mask's
     /// curve. Cleared when the editor is left.
     var curveTargetMaskID: UUID?
@@ -2190,7 +2237,7 @@ final class PhotoEditorController {
     func addMask(kind: PhotoMaskComponentKind) {
         recordHistory()
         let component = PhotoMaskComponent(kind: kind)
-        if kind == .subject || kind == .sky || kind.isFacePart {
+        if kind == .subject || kind == .sky || kind == .people || kind.isFacePart {
             detectingMaskComponentIDs.insert(component.id)
         }
         let number = recipe.masks.count + 1
@@ -2783,6 +2830,7 @@ final class PhotoEditorController {
         switch kind {
         case .sky: "Couldn't find the sky"
         case .object: "Nothing to select there"
+        case .people: "Couldn't find a person"
         case .faceSkin, .eyes, .lips: "Couldn't find a face"
         default: "Couldn't find a subject"
         }

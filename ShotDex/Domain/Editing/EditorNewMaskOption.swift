@@ -10,6 +10,7 @@ import ShotDexKit
 enum EditorNewMaskOption: String, CaseIterable, Identifiable, Sendable {
     case subject
     case object
+    case people
     case sky
     case background
     case faceSkin
@@ -29,6 +30,7 @@ enum EditorNewMaskOption: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .subject, .background: .subject
         case .object: .object
+        case .people: .people
         case .sky: .sky
         case .brush: .brush
         case .radialGradient: .radialGradient
@@ -74,7 +76,7 @@ enum EditorNewMaskOption: String, CaseIterable, Identifiable, Sendable {
 
     var row: Row {
         switch self {
-        case .subject, .object, .sky, .background, .faceSkin, .eyes, .lips: .detect
+        case .subject, .object, .people, .sky, .background, .faceSkin, .eyes, .lips: .detect
         case .brush, .linearGradient, .radialGradient: .draw
         case .colorRange, .luminanceRange, .depthRange: .range
         }
@@ -95,6 +97,7 @@ enum EditorNewMaskOption: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .subject: "Isolates the subject on device"
         case .object: "One object, picked with a tap"
+        case .people: "Everyone, or one person — whole or one part"
         case .sky: "Finds the sky automatically"
         case .background: "Everything except the subject"
         case .radialGradient: "Elliptical area, drag to place"

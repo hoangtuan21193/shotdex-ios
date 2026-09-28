@@ -1099,6 +1099,8 @@ public enum MaskBlendOperation: String, Codable, CaseIterable, Identifiable, Sen
 public enum PhotoMaskComponentKind: String, Codable, CaseIterable, Identifiable, Sendable {
     /// One foreground object, picked by a tap (FS-03.15d §3).
     case object
+    /// People: everyone, or one person, whole or one part (FS-03.15d §3).
+    case people
     case brush
     case linearGradient
     case radialGradient
@@ -1129,6 +1131,7 @@ public enum PhotoMaskComponentKind: String, Codable, CaseIterable, Identifiable,
         case .radialGradient: "Radial Gradient"
         case .subject: "Subject"
         case .object: "Object"
+        case .people: "People"
         case .sky: "Sky"
         case .luminanceRange: "Luminance Range"
         case .colorRange: "Color Range"
@@ -1146,6 +1149,7 @@ public enum PhotoMaskComponentKind: String, Codable, CaseIterable, Identifiable,
         case .radialGradient: "circle.dotted"
         case .subject: "person.crop.rectangle"
         case .object: "cube"
+        case .people: "person.2"
         case .sky: "cloud.sun"
         case .luminanceRange: "circle.lefthalf.striped.horizontal"
         case .colorRange: "eyedropper"
@@ -1153,6 +1157,35 @@ public enum PhotoMaskComponentKind: String, Codable, CaseIterable, Identifiable,
         case .faceSkin: "face.smiling"
         case .eyes: "eye"
         case .lips: "mouth"
+        }
+    }
+}
+
+/// What part of a person a People area takes (FS-03.15d §3).
+public enum PhotoPersonPart: String, Codable, CaseIterable, Identifiable, Sendable {
+    case entire, faceSkin, bodySkin, eyes, lips, hair, teeth, glasses
+
+    public var id: String { rawValue }
+
+    public var displayName: String {
+        switch self {
+        case .entire: "Entire Person"
+        case .faceSkin: "Face Skin"
+        case .bodySkin: "Body Skin"
+        case .eyes: "Eyes"
+        case .lips: "Lips"
+        case .hair: "Hair"
+        case .teeth: "Teeth"
+        case .glasses: "Glasses"
+        }
+    }
+
+    /// Parts read off the semantic mattes an iPhone Portrait capture stores —
+    /// on any other photo they cannot be made.
+    public var needsSemanticMatte: Bool {
+        switch self {
+        case .hair, .bodySkin, .teeth, .glasses: true
+        default: false
         }
     }
 }
@@ -1233,6 +1266,10 @@ public struct PhotoMaskComponent: Codable, Identifiable, Equatable, Sendable {
     /// Where an Object area was tapped; nil until it is, and nil is an empty
     /// area waiting for the tap.
     public var objectPoint: NormalizedPoint?
+    /// People: 1…4 is Person n, largest first; nil is everyone.
+    public var personIndex: Int?
+    /// People: which part; nil is the entire person.
+    public var personPart: PhotoPersonPart?
     public var luminanceMinimum = 0.25
     public var luminanceMaximum = 0.75
     public var sampledRed = 0.5

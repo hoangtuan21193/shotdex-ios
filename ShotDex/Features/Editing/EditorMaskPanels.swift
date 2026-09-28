@@ -574,6 +574,9 @@ struct EditorMaskDetailPanel: View {
             case .subject:
                 hint("Every subject in the photo, found on device")
                 componentSlider("Opacity", keyPath: \.opacity, range: 0.01...1)
+            case .people:
+                hint("People found on device")
+                componentSlider("Opacity", keyPath: \.opacity, range: 0.01...1)
             case .object:
                 hint("Tap an object on the photo. Add Area › Object picks another")
                 componentSlider("Opacity", keyPath: \.opacity, range: 0.01...1)
@@ -991,6 +994,12 @@ struct EditorMaskKindSketch: View {
                     Capsule()
                         .fill(EditorTheme.accent.opacity(0.35))
                         .frame(width: rect.width * 0.3, height: rect.height * 0.66)
+                case .people:
+                    HStack(spacing: rect.width * 0.08) {
+                        Capsule().fill(EditorTheme.accent.opacity(0.35))
+                        Capsule().fill(EditorTheme.accent.opacity(0.35))
+                    }
+                    .frame(width: rect.width * 0.4, height: rect.height * 0.6)
                 case .object:
                     // One thing of several: a single rounded block tinted,
                     // its neighbour left as an outline.

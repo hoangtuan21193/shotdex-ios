@@ -101,7 +101,51 @@ struct EditorMaskChooser: View {
         .animation(EditorTheme.animation, value: chrome.maskChooserNotice)
     }
 
+    /// People opens its list instead of making a mask: All People and
+    /// Person 1…4, each with its parts (FS-03.15d §3). A part the photo
+    /// cannot make says why in the header and makes nothing.
+    private var peopleChip: some View {
+        let available = controller.availableSemanticParts
+        return Menu {
+            ForEach(PhotoEditorController.peopleRows(count: controller.peopleCount ?? 0), id: \.title) { row in
+                Menu(row.title) {
+                    ForEach(PhotoPersonPart.allCases) { part in
+                        Button {
+                            if let reason = controller.addPeopleMask(person: row.person, part: part) {
+                                showNotice(reason)
+                            } else {
+                                chrome.isChoosingMaskKind = false
+                                chrome.maskChooserNotice = nil
+                                controller.editSelectedMaskAdjustments()
+                            }
+                        } label: {
+                            if part.needsSemanticMatte, !available.contains(part) {
+                                Text(part.displayName)
+                                Text("Needs a Portrait photo taken on iPhone")
+                            } else {
+                                Text(part.displayName)
+                            }
+                        }
+                    }
+                }
+            }
+        } label: {
+            EditorPanelChipLabel(title: EditorNewMaskOption.people.shortTitle, systemImage: EditorNewMaskOption.people.systemImage)
+        }
+        .buttonStyle(EditorChipButtonStyle(isSelected: false))
+        .onAppear { controller.countPeopleIfNeeded() }
+    }
+
+    @ViewBuilder
     private func chip(_ option: EditorNewMaskOption) -> some View {
+        if option == .people {
+            peopleChip
+        } else {
+            plainChip(option)
+        }
+    }
+
+    private func plainChip(_ option: EditorNewMaskOption) -> some View {
         let reason = option.unavailableReason(
             hasDepth: controller.hasDepthSource,
             hasFaces: controller.hasFaces
