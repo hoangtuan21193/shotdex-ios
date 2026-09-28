@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan |
 | Ngày | 2026-09-27 |
 | Trạng thái | accepted |
-| Tiến độ | **đang làm** (2026-09-29) — task 38/38, 34/36 AC xanh (AC-a9 một nửa; AC-a14 OM chờ mẫu) · plan [2026-09-28-fs-03-16](../_plans/2026-09-28-fs-03-16-lens-correction-sources.md) |
+| Tiến độ | **gần xong** (2026-09-29) — task 38/38, 34/36 AC xanh; full suite 1589 test xanh trên iPhone 17 26.5 · còn: AC-a14 (OM, chưa có ORF có tham số), nửa E17 của AC-a9 (kéo Vignetting RAW vẫn giải mã lại — ⚠️ CẦN QUYẾT ở 16a §5), ảnh ARW/D800E/nguồn 3/JPEG Sony có thẻ trên sim, ≤ 8ms của AC-a18 (đo ở /verify), thang méo/CA Sony và Fuji chưa kiểm trên mẫu · plan [2026-09-28-fs-03-16](../_plans/2026-09-28-fs-03-16-lens-correction-sources.md) |
 | Nguồn | phản hồi người dùng (chủ sở hữu sản phẩm) — phiên thiết kế 2026-09-27 |
 | Spec sinh ra từ đây | [FS-03.16](../02-functional-spec/FS-03-photo-editor/16-lens-correction-sources.md) (+ 16a, 16b) |
 
