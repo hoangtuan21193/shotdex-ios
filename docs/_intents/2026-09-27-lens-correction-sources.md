@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan |
 | Ngày | 2026-09-27 |
 | Trạng thái | accepted |
-| Tiến độ | **đang làm** (2026-09-29) — task 15/38, 14/36 AC xanh · plan [2026-09-28-fs-03-16](../_plans/2026-09-28-fs-03-16-lens-correction-sources.md) |
+| Tiến độ | **đang làm** (2026-09-29) — task 16/38, 14/36 AC xanh · plan [2026-09-28-fs-03-16](../_plans/2026-09-28-fs-03-16-lens-correction-sources.md) |
 | Nguồn | phản hồi người dùng (chủ sở hữu sản phẩm) — phiên thiết kế 2026-09-27 |
 | Spec sinh ra từ đây | [FS-03.16](../02-functional-spec/FS-03-photo-editor/16-lens-correction-sources.md) (+ 16a, 16b) |
 

@@ -1478,6 +1478,11 @@ final class PhotoEditorController {
 
     /// What EXIF says about the lens, read once when the source loads.
     @ObservationIgnored private var lensQuery = LensQuery()
+    /// A RAW's lens sources as resolved when it opened — rendered, but not
+    /// written into the recipe until the first edit (E19). Nil for JPEG and
+    /// HEIC, which start with correction off.
+    var sessionLensChoice: PhotoLensProfileChoice?
+
     /// The Lensfun row EXIF points to, or nil when nothing fits (FS-03.11 AC-15).
     private(set) var lensProfileMatch: LensProfileMatch?
     /// The mount of the body the photo came from, for the picker's first section.
@@ -1518,7 +1523,7 @@ final class PhotoEditorController {
         var inputs = LensCorrectionInputs(isRAW: isRAWSource)
         inputs.decoderSupportsLensCorrection = isRAWSource
         inputs.cameraCropFactor = LensProfileMatcher().cameraCropFactor(lensQuery)
-        if let stored = recipe.lensProfile {
+        if let stored = recipe.lensProfile ?? sessionLensChoice {
             inputs.lensfunLens = stored.lensID.flatMap { LensProfileLibrary.shared.lens(id: $0) }
             inputs.lensfunChosenByUser = !stored.isAutomatic
             inputs.cameraCropFactor = stored.cameraCropFactor
@@ -3212,6 +3217,18 @@ final class PhotoEditorController {
     private func recordHistory() {
         guard !isContinuousChange else { return }
         history.record(recipe)
+        adoptSessionLensChoice()
+    }
+
+    /// The first edit writes the lens source the RAW was resolved to when it
+    /// opened (FS-03.16 §3, E19). Until then the choice lives in the session
+    /// only, so a RAW opened and closed untouched stays an identity recipe —
+    /// no edited dot, no save prompt. Undo of that first edit goes back to
+    /// the recipe without it.
+    private func adoptSessionLensChoice() {
+        if recipe.lensProfile == nil, let sessionLensChoice {
+            recipe.lensProfile = sessionLensChoice
+        }
     }
 
     /// The recipe as the renderer needs it: text layers carry expanded tokens
@@ -3222,6 +3239,11 @@ final class PhotoEditorController {
     /// reopening the edit has to show the tokens the user typed, not the values
     /// they happened to expand to.
     private func renderReady(_ recipe: PhotoEditRecipe) -> PhotoEditRecipe {
+        var recipe = recipe
+        // The session's lens source renders before the first edit writes it.
+        if recipe.lensProfile == nil, let sessionLensChoice {
+            recipe.lensProfile = sessionLensChoice
+        }
         guard recipe.overlays.contains(where: { $0.kind == .text }) else { return recipe }
         var resolved = recipe
         resolved.overlays = recipe.overlays.map { overlay in

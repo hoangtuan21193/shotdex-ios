@@ -41,4 +41,28 @@ struct PhotoEditorControllerLensTests {
         #expect(resolution.panel == .noProfile)
         #expect(resolution.liveAspects.isEmpty)
     }
+
+    /// E19. A RAW whose lens source was resolved on open, closed untouched:
+    /// the recipe is still identity (no dot, no save prompt).
+    @Test func rawOpenedWithoutEditsStaysIdentity() {
+        let controller = makeController()
+        controller.sessionLensChoice = PhotoLensProfileChoice(
+            lensID: nil, cameraCropFactor: 1, isAutomatic: true,
+            distortionSource: .appleBuiltIn, vignettingSource: .appleBuiltIn, chromaticAberrationSource: .appleBuiltIn
+        )
+        #expect(controller.recipe.isIdentity)
+        #expect(controller.recipe.lensProfile == nil)
+    }
+
+    /// E19. The first edit writes the resolved source; one Undo takes the
+    /// edit and the source back off together.
+    @Test func firstEditWritesResolvedSource() {
+        let controller = makeController()
+        let session = PhotoLensProfileChoice(lensID: "Canon|Canon EF 24-70mm f/2.8L II USM|1.0", cameraCropFactor: 1, isAutomatic: true)
+        controller.sessionLensChoice = session
+        controller.setAdjustment(.exposure, value: 0.3)
+        #expect(controller.recipe.lensProfile == session)
+        controller.undo()
+        #expect(controller.recipe.lensProfile == nil && controller.recipe.isIdentity)
+    }
 }

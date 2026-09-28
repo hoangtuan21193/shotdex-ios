@@ -54,7 +54,9 @@ nắn méo, và preset Lightroom mang ba mức độ mạnh không có chỗ đ�
   đã sửa gì, bật chồng là không kiểm được.
 - Nguồn đã giải **lưu trong recipe**, renderer không tự chọn lại: một bản làm mới dữ liệu không được đổi âm
   thầm ảnh đã sửa.
-- RAW vừa mở: nguồn giải lúc mở nhưng **chỉ giữ trong phiên**; ghi vào recipe ở lần chỉnh đầu tiên. *Vì ghi
+- RAW vừa mở: nguồn giải lúc mở nhưng **chỉ giữ trong phiên**; ghi vào recipe ở lần chỉnh đầu tiên. *(Đã làm 2026-09-29: `PhotoEditorController.sessionLensChoice`, render qua
+  `renderReady`, ghi ở `recordHistory`; test `PhotoEditorControllerLensTests.rawOpenedWithoutEditsStaysIdentity`,
+  `…firstEditWritesResolvedSource`.)* *Vì ghi
   lúc mở thì mọi RAW vừa mở bị coi là "đã sửa" — hiện dấu, hỏi lưu khi thoát.*
 - Nguồn 2 có dữ liệu méo nhưng thiếu tối góc/CA thì slider mặt thiếu mờ, không rơi xuống nguồn 3.
 - Mặc định: RAW **bật**, JPEG **tắt**; JPEG máy ảnh đã tự sửa trong máy không tự khớp ống (16a §4).
