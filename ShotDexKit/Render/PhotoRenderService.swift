@@ -1467,9 +1467,15 @@ public actor PhotoRenderService {
     /// synthetic frame (±0.08 grain, ±0.12 texture): Luminance 60 · Detail 50
     /// leaves ~9% of the grain variance and ~70% of the texture. A classic
     /// filter, not a model (FS-03.11 §6).
+    ///
+    /// Contrast (FS-03.15b §1) hands back the local contrast the smoothing
+    /// took at edges: the original is mixed back through a soft edge map
+    /// found on the *denoised* frame, where grain no longer reads as edges,
+    /// so flat areas stay as smooth as Luminance left them.
     public static func applyLuminanceNoiseReduction(
         amount: Double,
         detail: Double,
+        contrast: Double = 0,
         to image: CIImage
     ) -> CIImage {
         guard amount > 0.001 else { return image }
@@ -1481,15 +1487,52 @@ public actor PhotoRenderService {
                 "inputSharpness": 0,
             ]
         ).cropped(to: image.extent)
+        var output = denoised
         let detail = min(1, max(0, detail))
-        guard detail > 0.001,
-              let residualKernel = noiseResidualKernel,
-              let addKernel = noiseDetailKernel,
-              let residual = residualKernel.apply(extent: image.extent, arguments: [image, denoised])
-        else { return denoised }
-        let texture = blurred(residual, radius: 1)
-        return addKernel.apply(extent: image.extent, arguments: [denoised, texture, detail])
-            ?? denoised
+        if detail > 0.001,
+           let residualKernel = noiseResidualKernel,
+           let addKernel = noiseDetailKernel,
+           let residual = residualKernel.apply(extent: image.extent, arguments: [image, denoised]) {
+            let texture = blurred(residual, radius: 1)
+            output = addKernel.apply(extent: image.extent, arguments: [denoised, texture, detail])
+                ?? denoised
+        }
+        return restoreEdgeContrast(min(1, max(0, contrast)), original: image, denoised: denoised, over: output)
+    }
+
+    /// The original mixed back over `output` by `contrast` × a soft edge map
+    /// of `denoised`. Untouched when the edge kernel is missing.
+    private static func restoreEdgeContrast(
+        _ contrast: Double,
+        original: CIImage,
+        denoised: CIImage,
+        over output: CIImage
+    ) -> CIImage {
+        guard contrast > 0.001, let kernel = edgeMaskKernel else { return output }
+        let extent = original.extent
+        let edges = filtered("CIEdges", image: denoised, values: [kCIInputIntensityKey: 4.0])
+        guard let hard = kernel.apply(extent: extent, arguments: [edges, 0.15, 0.4]) else { return output }
+        // Grown a couple of pixels, then softened: `CIEdges` marks the one or
+        // two pixels on the step, and the contrast the smoothing took is
+        // spread a little either side of it.
+        let grown = filtered("CIMorphologyMaximum", image: hard, values: [kCIInputRadiusKey: 2])
+        let mask = filtered(
+            "CIColorMatrix",
+            image: blurred(grown, radius: 1),
+            values: [
+                "inputRVector": CIVector(x: contrast, y: 0, z: 0, w: 0),
+                "inputGVector": CIVector(x: 0, y: contrast, z: 0, w: 0),
+                "inputBVector": CIVector(x: 0, y: 0, z: contrast, w: 0),
+            ]
+        )
+        return filtered(
+            "CIBlendWithMask",
+            image: original,
+            values: [
+                kCIInputBackgroundImageKey: output,
+                kCIInputMaskImageKey: mask,
+            ]
+        ).cropped(to: extent)
     }
 
     /// What noise reduction removed, kept signed.
@@ -1530,6 +1573,7 @@ public actor PhotoRenderService {
                 image = applyLuminanceNoiseReduction(
                     amount: adjustments.noiseReduction,
                     detail: adjustments.noiseDetail,
+                    contrast: adjustments.noiseContrast,
                     to: image
                 )
             }

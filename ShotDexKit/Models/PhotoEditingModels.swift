@@ -400,6 +400,8 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
     case noiseReduction
     /// How much fine texture luminance noise reduction keeps, 0…1, default 0.5.
     case noiseDetail
+    /// How much edge contrast luminance noise reduction hands back, 0…1.
+    case noiseContrast
     case colorNoiseReduction
     case texture
     case clarity
@@ -452,6 +454,7 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         case .definition: "Definition"
         case .noiseReduction: "Luminance Noise"
         case .noiseDetail: "Noise Detail"
+        case .noiseContrast: "Noise Contrast"
         case .colorNoiseReduction: "Color Noise"
         case .texture: "Texture"
         case .clarity: "Clarity"
@@ -502,6 +505,7 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         case .definition: "circle.dotted"
         case .noiseReduction: "aqi.medium"
         case .noiseDetail: "circle.dotted"
+        case .noiseContrast: "circle.lefthalf.filled"
         case .colorNoiseReduction: "drop.halffull"
         case .texture: "circle.grid.2x2"
         case .clarity: "circle.hexagonpath"
@@ -535,7 +539,7 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         case .lensCorrection, .grain, .grainSize, .grainRoughness,
              .vignetteMidpoint, .vignetteFeather, .blackAndWhite,
              .sharpenRadius, .sharpenDetail, .sharpenMasking, .colorNoiseReduction,
-             .noiseReduction, .noiseDetail,
+             .noiseReduction, .noiseDetail, .noiseContrast,
              .vignetteHighlights, .chromaticAberration: 0...1
         case .exposure: -2...2
         default: -1...1
@@ -674,6 +678,8 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
     /// Default 0.5 like Lightroom's Detail 50 — neutral, so part of `.zero` and
     /// no key until touched. Does nothing while `noiseReduction` is 0.
     public var noiseDetail = 0.5
+    /// Does nothing while `noiseReduction` is 0.
+    public var noiseContrast = 0.0
     public var colorNoiseReduction = 0.0
     public var texture = 0.0
     public var clarity = 0.0
@@ -728,6 +734,7 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .definition: definition
             case .noiseReduction: noiseReduction
             case .noiseDetail: noiseDetail
+            case .noiseContrast: noiseContrast
             case .colorNoiseReduction: colorNoiseReduction
             case .texture: texture
             case .clarity: clarity
@@ -777,6 +784,7 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .definition: definition = newValue
             case .noiseReduction: noiseReduction = newValue
             case .noiseDetail: noiseDetail = newValue
+            case .noiseContrast: noiseContrast = newValue
             case .colorNoiseReduction: colorNoiseReduction = newValue
             case .texture: texture = newValue
             case .clarity: clarity = newValue

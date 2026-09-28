@@ -57,6 +57,7 @@ enum EditorAdjustmentCatalog {
         .sharpenMasking,
         .noiseReduction,
         .noiseDetail,
+        .noiseContrast,
         .colorNoiseReduction,
         .vignetteHighlights,
         .rawSharpness,
@@ -90,7 +91,7 @@ enum EditorAdjustmentCatalog {
             return .vignette
         case .grainSize, .grainRoughness:
             return .grain
-        case .noiseDetail:
+        case .noiseDetail, .noiseContrast:
             return .noiseReduction
         default:
             return nil
@@ -137,7 +138,7 @@ enum EditorAdjustmentCatalog {
                 kinds: [
                     .sharpness, .sharpenRadius, .sharpenDetail, .sharpenMasking,
                     .definition,
-                    .noiseReduction, .noiseDetail, .colorNoiseReduction,
+                    .noiseReduction, .noiseDetail, .noiseContrast, .colorNoiseReduction,
                 ]
             ),
             EditorAdjustmentGroup(
@@ -221,6 +222,7 @@ enum EditorAdjustmentCatalog {
         case .warmth: "Temp"
         case .noiseReduction: "Lum NR"
         case .noiseDetail: "NR Detail"
+        case .noiseContrast: "NR Contrast"
         case .sharpness: "Sharpen"
         case .sharpenRadius: "Radius"
         case .sharpenDetail: "Detail"
