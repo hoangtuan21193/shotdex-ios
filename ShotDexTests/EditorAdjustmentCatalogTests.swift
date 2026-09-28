@@ -69,6 +69,8 @@ struct EditorAdjustmentCatalogTests {
             .sharpenDetail, .sharpenMasking,
             .colorNoiseReduction, .vignetteHighlights, .rawLuminanceNoise,
             .noiseReduction, .noiseDetail, .noiseContrast, .colorNoiseDetail, .colorNoiseSmoothness,
+            .defringePurpleAmount, .defringePurpleHueMinimum, .defringePurpleHueMaximum,
+            .defringeGreenAmount, .defringeGreenHueMinimum, .defringeGreenHueMaximum,
         ] {
             #expect(EditorAdjustmentCatalog.sliderRange(of: kind) == 0...1)
             #expect(EditorAdjustmentCatalog.isBipolar(kind) == false)
@@ -131,7 +133,11 @@ struct EditorAdjustmentCatalogTests {
         #expect(global.map(\.id).contains(.optics))
         #expect(global.map(\.id).contains(.geo))
         let optics = global.first { $0.id == .optics }
-        #expect(optics?.kinds == [.chromaticAberration])
+        #expect(optics?.kinds == [
+            .chromaticAberration,
+            .defringePurpleAmount, .defringePurpleHueMinimum, .defringePurpleHueMaximum,
+            .defringeGreenAmount, .defringeGreenHueMinimum, .defringeGreenHueMaximum,
+        ])
         let geo = global.first { $0.id == .geo }
         #expect(geo?.kinds == [
             .geoVertical, .geoHorizontal, .geoRotate, .geoScale, .geoOffsetX, .geoOffsetY,

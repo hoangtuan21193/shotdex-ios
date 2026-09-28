@@ -420,6 +420,14 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
     case grainRoughness
     // Optics
     case chromaticAberration
+    /// Defringe (FS-03.15b §2). Amounts 0…1 = Lightroom 0…20; hue rows
+    /// 0…1 = Lightroom 0…100.
+    case defringePurpleAmount
+    case defringePurpleHueMinimum
+    case defringePurpleHueMaximum
+    case defringeGreenAmount
+    case defringeGreenHueMinimum
+    case defringeGreenHueMaximum
     // Geo (transform)
     case geoVertical
     case geoHorizontal
@@ -474,6 +482,12 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         case .grainSize: "Grain Size"
         case .grainRoughness: "Grain Roughness"
         case .chromaticAberration: "Remove Chromatic Aberration"
+        case .defringePurpleAmount: "Purple Fringe Amount"
+        case .defringePurpleHueMinimum: "Purple Fringe Hue Min"
+        case .defringePurpleHueMaximum: "Purple Fringe Hue Max"
+        case .defringeGreenAmount: "Green Fringe Amount"
+        case .defringeGreenHueMinimum: "Green Fringe Hue Min"
+        case .defringeGreenHueMaximum: "Green Fringe Hue Max"
         case .geoVertical: "Vertical"
         case .geoHorizontal: "Horizontal"
         case .geoRotate: "Rotate"
@@ -527,6 +541,9 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         case .grainSize: "circle.grid.3x3"
         case .grainRoughness: "circle.grid.3x3.circle"
         case .chromaticAberration: "camera.aperture"
+        case .defringePurpleAmount, .defringeGreenAmount: "circle.dashed"
+        case .defringePurpleHueMinimum, .defringeGreenHueMinimum: "arrow.left.to.line"
+        case .defringePurpleHueMaximum, .defringeGreenHueMaximum: "arrow.right.to.line"
         case .geoVertical: "perspective"
         case .geoHorizontal: "perspective"
         case .geoRotate: "rotate.right"
@@ -548,7 +565,9 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
              .vignetteMidpoint, .vignetteFeather, .blackAndWhite,
              .sharpenRadius, .sharpenDetail, .sharpenMasking, .colorNoiseReduction,
              .noiseReduction, .noiseDetail, .noiseContrast, .colorNoiseDetail, .colorNoiseSmoothness,
-             .vignetteHighlights, .chromaticAberration: 0...1
+             .vignetteHighlights, .chromaticAberration,
+             .defringePurpleAmount, .defringePurpleHueMinimum, .defringePurpleHueMaximum,
+             .defringeGreenAmount, .defringeGreenHueMinimum, .defringeGreenHueMaximum: 0...1
         case .exposure: -2...2
         default: -1...1
         }
@@ -709,6 +728,14 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
     public var grainSize = 0.0
     public var grainRoughness = 0.0
     public var chromaticAberration = 0.0
+    public var defringePurpleAmount = 0.0
+    /// Hue rows default to Lightroom's 30/70 and 40/60 — neutral, so no key
+    /// until touched.
+    public var defringePurpleHueMinimum = 0.3
+    public var defringePurpleHueMaximum = 0.7
+    public var defringeGreenAmount = 0.0
+    public var defringeGreenHueMinimum = 0.4
+    public var defringeGreenHueMaximum = 0.6
     public var geoVertical = 0.0
     public var geoHorizontal = 0.0
     public var geoRotate = 0.0
@@ -763,6 +790,12 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .grainSize: grainSize
             case .grainRoughness: grainRoughness
             case .chromaticAberration: chromaticAberration
+            case .defringePurpleAmount: defringePurpleAmount
+            case .defringePurpleHueMinimum: defringePurpleHueMinimum
+            case .defringePurpleHueMaximum: defringePurpleHueMaximum
+            case .defringeGreenAmount: defringeGreenAmount
+            case .defringeGreenHueMinimum: defringeGreenHueMinimum
+            case .defringeGreenHueMaximum: defringeGreenHueMaximum
             case .geoVertical: geoVertical
             case .geoHorizontal: geoHorizontal
             case .geoRotate: geoRotate
@@ -815,6 +848,12 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .grainSize: grainSize = newValue
             case .grainRoughness: grainRoughness = newValue
             case .chromaticAberration: chromaticAberration = newValue
+            case .defringePurpleAmount: defringePurpleAmount = newValue
+            case .defringePurpleHueMinimum: defringePurpleHueMinimum = newValue
+            case .defringePurpleHueMaximum: defringePurpleHueMaximum = newValue
+            case .defringeGreenAmount: defringeGreenAmount = newValue
+            case .defringeGreenHueMinimum: defringeGreenHueMinimum = newValue
+            case .defringeGreenHueMaximum: defringeGreenHueMaximum = newValue
             case .geoVertical: geoVertical = newValue
             case .geoHorizontal: geoHorizontal = newValue
             case .geoRotate: geoRotate = newValue

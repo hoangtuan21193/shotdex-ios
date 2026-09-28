@@ -58,6 +58,42 @@ float4 chromaDenoise(sample_t original, sample_t blurred, float detail) {
     return float4(y + mix(softChroma, sharpChroma, detail * edge), original.a);
 }
 
+// Hue in degrees, 0…360.
+static float hueDegrees(float3 c) {
+    float high = max(c.r, max(c.g, c.b));
+    float low = min(c.r, min(c.g, c.b));
+    float d = high - low;
+    if (d <= 0.0f) return 0.0f;
+    float h;
+    if (high == c.r) {
+        h = (c.g - c.b) / d;
+        if (h < 0.0f) h += 6.0f;
+    } else if (high == c.g) {
+        h = (c.b - c.r) / d + 2.0f;
+    } else {
+        h = (c.r - c.g) / d + 4.0f;
+    }
+    return h * 60.0f;
+}
+
+// Soft membership of `h` in [lo, hi], 8° ramps outside.
+static float hueBand(float h, float lo, float hi) {
+    return smoothstep(lo - 8.0f, lo, h) * (1.0f - smoothstep(hi, hi + 8.0f, h));
+}
+
+// Defringe: pixels near an edge (`edge`, 0…1) whose hue falls in the purple
+// or green band are pulled toward grey. Each band is (strength, lo°, hi°);
+// neither band crosses 0°. Near-greys are left alone.
+float4 defringe(sample_t s, sample_t edge, float3 purple, float3 green) {
+    float3 c = s.rgb;
+    float spread = max(c.r, max(c.g, c.b)) - min(c.r, min(c.g, c.b));
+    float h = hueDegrees(c);
+    float band = purple.x * hueBand(h, purple.y, purple.z) + green.x * hueBand(h, green.y, green.z);
+    float pull = clamp(band, 0.0f, 1.0f) * edge.r * smoothstep(0.02f, 0.06f, spread);
+    float y = dot(c, float3(0.2126f, 0.7152f, 0.0722f));
+    return float4(mix(c, float3(y), pull), s.a);
+}
+
 // The image's luminance with its chroma moved `amount` of the way to the
 // source's chroma. Colour Smoothness feeds it a wide blur; the Moiré brush
 // will feed it the same.

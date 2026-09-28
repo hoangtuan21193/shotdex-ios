@@ -10,6 +10,8 @@ enum EditorValueFormat: Sendable {
     case kelvinOffset
     case tintOffset
     case toggle
+    /// Lightroom's 0…20 Defringe amount: storage 0…1 reads as 0…20.
+    case outOfTwenty
 }
 
 struct EditorAdjustmentGroup: Identifiable, Equatable, Sendable {
@@ -62,6 +64,12 @@ enum EditorAdjustmentCatalog {
         .colorNoiseDetail,
         .colorNoiseSmoothness,
         .vignetteHighlights,
+        .defringePurpleAmount,
+        .defringePurpleHueMinimum,
+        .defringePurpleHueMaximum,
+        .defringeGreenAmount,
+        .defringeGreenHueMinimum,
+        .defringeGreenHueMaximum,
         .rawSharpness,
         .rawLuminanceNoise,
         .rawColorNoise,
@@ -97,6 +105,10 @@ enum EditorAdjustmentCatalog {
             return .noiseReduction
         case .colorNoiseDetail, .colorNoiseSmoothness:
             return .colorNoiseReduction
+        case .defringePurpleHueMinimum, .defringePurpleHueMaximum:
+            return .defringePurpleAmount
+        case .defringeGreenHueMinimum, .defringeGreenHueMaximum:
+            return .defringeGreenAmount
         default:
             return nil
         }
@@ -164,7 +176,11 @@ enum EditorAdjustmentCatalog {
                 EditorAdjustmentGroup(
                     id: .optics,
                     title: "Optics",
-                    kinds: [.chromaticAberration]
+                    kinds: [
+                        .chromaticAberration,
+                        .defringePurpleAmount, .defringePurpleHueMinimum, .defringePurpleHueMaximum,
+                        .defringeGreenAmount, .defringeGreenHueMinimum, .defringeGreenHueMaximum,
+                    ]
                 )
             )
             groups.append(
@@ -205,6 +221,7 @@ enum EditorAdjustmentCatalog {
         case .exposure, .contrast: .stops
         case .warmth: .kelvinOffset
         case .tint: .tintOffset
+        case .defringePurpleAmount, .defringeGreenAmount: .outOfTwenty
         default: .percent
         }
     }
@@ -235,6 +252,12 @@ enum EditorAdjustmentCatalog {
         case .colorNoiseReduction: "Color NR"
         case .colorNoiseDetail: "Color Detail"
         case .colorNoiseSmoothness: "Smoothness"
+        case .defringePurpleAmount: "Purple"
+        case .defringePurpleHueMinimum: "Purple Min"
+        case .defringePurpleHueMaximum: "Purple Max"
+        case .defringeGreenAmount: "Green"
+        case .defringeGreenHueMinimum: "Green Min"
+        case .defringeGreenHueMaximum: "Green Max"
         case .blackAndWhite: "B&W"
         case .grainSize: "Size"
         case .grainRoughness: "Roughness"
@@ -270,6 +293,8 @@ enum EditorAdjustmentCatalog {
             return signedInteger((value * 3_000 / 10).rounded() * 10)
         case .tintOffset:
             return signedInteger(value * 150)
+        case .outOfTwenty:
+            return "\(Int((value * 20).rounded()))"
         }
     }
 
@@ -296,6 +321,7 @@ enum EditorAdjustmentCatalog {
         case .percent: entered / 100
         case .kelvinOffset: entered / 3_000
         case .tintOffset: entered / 150
+        case .outOfTwenty: entered / 20
         }
         let range = sliderRange(of: kind)
         return min(range.upperBound, max(range.lowerBound, raw))

@@ -67,7 +67,7 @@ public extension PhotoRenderService {
     /// The old whole-frame Defringe is gone; the edge-based purple/green
     /// Defringe of FS-03.15b replaces it.
     static func applyOptics(_ adjustments: PhotoAdjustments, to input: CIImage) -> CIImage {
-        var image = input
+        var image = applyDefringe(adjustments, to: input)
         if adjustments.chromaticAberration >= 0.5 {
             image = filtered(
                 "CINoiseReduction",
@@ -80,6 +80,57 @@ public extension PhotoRenderService {
         }
         return image
     }
+
+    // MARK: Defringe
+
+    /// Purple and green Defringe (FS-03.15b §2): only near high-contrast
+    /// edges — a luminance edge map, grown 3px so it covers the fringe beside
+    /// the step, then softened — pixels whose hue is in a band lose chroma.
+    /// A purple flower mid-frame is not an edge and keeps its colour.
+    ///
+    /// Amount 0…1 is Lightroom's 0…20; at 10 the band's chroma is 80% gone.
+    /// Hue rows 0…1 are Lightroom's 0…100 over 230°…350° (purple) and
+    /// 60°…180° (green).
+    static func applyDefringe(_ adjustments: PhotoAdjustments, to input: CIImage) -> CIImage {
+        let purpleAmount = min(1, max(0, adjustments.defringePurpleAmount))
+        let greenAmount = min(1, max(0, adjustments.defringeGreenAmount))
+        guard purpleAmount > 0.001 || greenAmount > 0.001,
+              let kernel = defringeKernel,
+              let edgeKernel = edgeMaskKernel
+        else { return input }
+        let extent = input.extent
+        let edges = filtered("CIEdges", image: input, values: [kCIInputIntensityKey: 4.0])
+        guard let hard = edgeKernel.apply(extent: extent, arguments: [edges, 0.3, 0.6]) else { return input }
+        let grown = filtered("CIMorphologyMaximum", image: hard, values: [kCIInputRadiusKey: 3])
+        let edgeMap = blurred(grown, radius: 1)
+
+        func band(_ amount: Double, _ hues: ClosedRange<Double>, from start: Double) -> CIVector {
+            CIVector(x: min(1, amount * 1.6), y: start + hues.lowerBound * 120, z: start + hues.upperBound * 120)
+        }
+        let purple = band(
+            purpleAmount,
+            defringeHueBand(minimum: adjustments.defringePurpleHueMinimum, maximum: adjustments.defringePurpleHueMaximum),
+            from: 230
+        )
+        let green = band(
+            greenAmount,
+            defringeHueBand(minimum: adjustments.defringeGreenHueMinimum, maximum: adjustments.defringeGreenHueMaximum),
+            from: 60
+        )
+        return kernel.apply(extent: extent, arguments: [input, edgeMap, purple, green]) ?? input
+    }
+
+    /// The two hue rows as a band: in order, and at least 10 (Lightroom's
+    /// minimum) wide, widened about its middle when the rows sit closer.
+    static func defringeHueBand(minimum: Double, maximum: Double) -> ClosedRange<Double> {
+        let gap = 0.1
+        let low = min(minimum, maximum), high = max(minimum, maximum)
+        guard high - low < gap else { return low...high }
+        let middle = min(1 - gap / 2, max(gap / 2, (low + high) / 2))
+        return (middle - gap / 2)...(middle + gap / 2)
+    }
+
+    static let defringeKernel = CoreImageKernelLibrary.kit.colorKernel(named: "defringe")
 
     // MARK: Geo (transform)
 
