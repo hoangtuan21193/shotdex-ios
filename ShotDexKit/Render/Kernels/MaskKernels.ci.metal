@@ -10,8 +10,11 @@ float4 addMask(sample_t current, sample_t incoming) {
     return float4(value, value, value, 1.0f);
 }
 
+// Subtract multiplies by the complement (FS-03.15d §1, E10): a soft 0.8 edge
+// minus 0.5 is 0.4, not 0.3 — plain subtraction bit deeper into soft edges
+// than Lightroom and Photoshop do.
 float4 subtractMask(sample_t current, sample_t incoming) {
-    float value = max(0.0f, current.r - incoming.r * incoming.a);
+    float value = current.r * (1.0f - clamp(incoming.r * incoming.a, 0.0f, 1.0f));
     return float4(value, value, value, 1.0f);
 }
 

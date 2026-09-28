@@ -89,4 +89,51 @@ struct MaskIntersectTests {
         controller.undo()
         #expect(controller.recipe.masks.first?.components.count == 1)
     }
+
+    /// A flat mask image of `value`.
+    static func flat(_ value: Double) -> CIImage {
+        CIImage(color: CIColor(red: value, green: value, blue: value))
+            .cropped(to: CGRect(x: 0, y: 0, width: size, height: size))
+    }
+
+    /// AC-41. Areas combine in list order: Radial A (Add), Linear B
+    /// (Intersect), then Radial C (Add) away from A — C is whole even where
+    /// B is 0, because it comes after the intersection. One Undo removes C.
+    @MainActor @Test func areasApplyInListOrder() async throws {
+        var a = PhotoMaskComponent(kind: .radialGradient)
+        a.center = NormalizedPoint(x: 0.25, y: 0.25)
+        a.radiusX = 0.12; a.radiusY = 0.12; a.feather = 0
+        var b = Self.topHalf()
+        b.operation = .intersect
+        var c = PhotoMaskComponent(kind: .radialGradient, operation: .add)
+        c.center = NormalizedPoint(x: 0.75, y: 0.75)
+        c.radiusX = 0.12; c.radiusY = 0.12; c.feather = 0
+
+        var mask = PhotoMask(name: "Order", component: a)
+        mask.components.append(b)
+        mask.components.append(c)
+        let matte = try #require(try await PhotoRenderService().maskMatte(mask, over: Self.squares()))
+        let inC = Self.mean(matte, x: 184..<200, y: 184..<200)
+        let inA = Self.mean(matte, x: 56..<72, y: 56..<72)
+        #expect(inC >= 0.95, "C, below the Linear, is \(inC)")
+        #expect(inA >= 0.95, "A, inside the Linear, is \(inA)")
+
+        let controller = PhotoEditorController(asset: PHAsset(), sourceAlbum: nil, service: PhotoEditingService())
+        controller.addMask(kind: .radialGradient)
+        controller.addMaskArea(kind: .linearGradient, operation: .intersect)
+        controller.addMaskArea(kind: .radialGradient, operation: .add)
+        #expect(controller.recipe.masks.first?.components.count == 3)
+        controller.undo()
+        #expect(controller.recipe.masks.first?.components.map(\.operation) == [.add, .intersect])
+    }
+
+    /// AC-41, E10. A Subtract of 0.5 over a mask at 0.8 leaves 0.4 — the
+    /// complement multiplied, not 0.3.
+    @Test func subtractMultipliesTheComplement() throws {
+        let kernel = try #require(PhotoRenderService.subtractMaskKernel)
+        let extent = CGRect(x: 0, y: 0, width: Self.size, height: Self.size)
+        let result = try #require(kernel.apply(extent: extent, arguments: [Self.flat(0.8), Self.flat(0.5)]))
+        let value = Self.mean(result, x: 0..<16, y: 0..<16)
+        #expect(abs(value - 0.4) <= 1 / 255, "0.8 − 0.5 gave \(value)")
+    }
 }
