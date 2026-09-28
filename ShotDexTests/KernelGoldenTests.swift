@@ -48,7 +48,7 @@ struct KernelGoldenTests {
     /// AC-2 counts forty kernels; every one of them has a case.
     @Test func everyKernelHasACase() {
         let kernels = Set(KernelGoldenCase.all.map(\.kernel))
-        #expect(kernels.count == 43)
+        #expect(kernels.count == 44)
         #expect(Set(KernelGoldenCase.all.map(\.name)).count == KernelGoldenCase.all.count)
     }
 
@@ -150,6 +150,7 @@ extension KernelGoldenCase {
         color("noiseResidual", { PhotoRenderService.noiseResidualKernel }) { [$0(0), $0(1)] },
         color("noiseDetail", { PhotoRenderService.noiseDetailKernel }) { [$0(0), $0(1), 0.6] },
         color("chromaDenoise", { PhotoRenderService.chromaDenoiseKernel }) { [$0(0), $0(1), 0.5] },
+        color("chromaBlend", { PhotoRenderService.chromaBlendKernel }) { [$0(0), $0(1), 0.7] },
     ]
 
     /// `active` slots get a reference and a shift each; the rest are zero,

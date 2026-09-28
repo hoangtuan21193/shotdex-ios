@@ -71,12 +71,23 @@
    "seconds": 2
   },
   {
+   "action": "swipe",
+   "x": 0.15,
+   "y": 0.86,
+   "direction": "up",
+   "distance": 0.1
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
    "action": "screenshot",
-   "name": "3-color-detail"
+   "name": "3-color-nr"
   },
   {
    "action": "dump",
-   "name": "3-color-detail"
+   "name": "3-color-nr"
   }
  ]
 }

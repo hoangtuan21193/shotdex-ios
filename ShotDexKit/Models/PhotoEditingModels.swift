@@ -405,6 +405,8 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
     case colorNoiseReduction
     /// How much fine colour edge colour noise reduction keeps, 0…1, default 0.5.
     case colorNoiseDetail
+    /// How much wide colour mottling colour noise reduction clears, 0…1, default 0.5.
+    case colorNoiseSmoothness
     case texture
     case clarity
     case dehaze
@@ -459,6 +461,7 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         case .noiseContrast: "Noise Contrast"
         case .colorNoiseReduction: "Color Noise"
         case .colorNoiseDetail: "Color Noise Detail"
+        case .colorNoiseSmoothness: "Color Noise Smoothness"
         case .texture: "Texture"
         case .clarity: "Clarity"
         case .dehaze: "Dehaze"
@@ -511,6 +514,7 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         case .noiseContrast: "circle.lefthalf.filled"
         case .colorNoiseReduction: "drop.halffull"
         case .colorNoiseDetail: "drop.circle"
+        case .colorNoiseSmoothness: "humidity"
         case .texture: "circle.grid.2x2"
         case .clarity: "circle.hexagonpath"
         case .dehaze: "sun.haze"
@@ -543,7 +547,7 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         case .lensCorrection, .grain, .grainSize, .grainRoughness,
              .vignetteMidpoint, .vignetteFeather, .blackAndWhite,
              .sharpenRadius, .sharpenDetail, .sharpenMasking, .colorNoiseReduction,
-             .noiseReduction, .noiseDetail, .noiseContrast, .colorNoiseDetail,
+             .noiseReduction, .noiseDetail, .noiseContrast, .colorNoiseDetail, .colorNoiseSmoothness,
              .vignetteHighlights, .chromaticAberration: 0...1
         case .exposure: -2...2
         default: -1...1
@@ -688,6 +692,8 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
     /// Default 0.5 like Lightroom's Color Detail 50 — neutral, so no key
     /// until touched. Does nothing while `colorNoiseReduction` is 0.
     public var colorNoiseDetail = 0.5
+    /// Default 0.5 like Lightroom's Color Smoothness 50.
+    public var colorNoiseSmoothness = 0.5
     public var texture = 0.0
     public var clarity = 0.0
     public var dehaze = 0.0
@@ -744,6 +750,7 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .noiseContrast: noiseContrast
             case .colorNoiseReduction: colorNoiseReduction
             case .colorNoiseDetail: colorNoiseDetail
+            case .colorNoiseSmoothness: colorNoiseSmoothness
             case .texture: texture
             case .clarity: clarity
             case .dehaze: dehaze
@@ -795,6 +802,7 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .noiseContrast: noiseContrast = newValue
             case .colorNoiseReduction: colorNoiseReduction = newValue
             case .colorNoiseDetail: colorNoiseDetail = newValue
+            case .colorNoiseSmoothness: colorNoiseSmoothness = newValue
             case .texture: texture = newValue
             case .clarity: clarity = newValue
             case .dehaze: dehaze = newValue

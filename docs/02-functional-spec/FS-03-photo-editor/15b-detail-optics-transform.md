@@ -22,6 +22,8 @@ Hàng Detail thành: Lum NR · NR Detail · **NR Contrast** · Color NR · **Col
   (kernel `chromaDenoise`). *Thay `CINoiseReduction`, vốn làm mềm cả độ sáng.*
 - **Color Smoothness** (0…100, mặc định 50): xoá vết loang màu tần số thấp (cỡ 8–32px) bằng làm mờ sắc độ
   bán kính lớn, không đụng độ sáng. Mờ khi Color NR = 0.
+  Trên hàng ghi **Smoothness** (ngay dưới Color Detail): "Color Smoothness" không vừa cột nhãn 78pt. Làm mờ
+  sắc độ bán kính 16px, trộn bằng kernel `chromaBlend` — kernel Moiré sẽ dùng lại.
 - Cả ba chạy trong lượt NR, trước mọi làm nét (thứ tự FS-03.11 §6 giữ nguyên). Kernel mới viết Metal (FS-16).
 
 ## 2. Defringe tím / lục
@@ -106,7 +108,7 @@ Nhóm Effects › Vignette thêm **Style** — một hàng chip ba ô ở đầu
 |---|---|---|---|---|
 | AC-16 | ảnh tổng hợp: bậc độ sáng 0,3→0,7 + nhiễu ±0,08; Lum NR 60 | đặt NR Contrast 100 (so với 0) | chênh độ sáng trên dải 4px quanh bậc tăng ≥ 10%; phương sai nhiễu vùng phẳng tăng ≤ 20% | `NoiseReductionSplitTests.contrastKeepsEdges` · hàng mờ khi Lum NR = 0: `ShotDexUITests/scripts/iphone-nr-contrast.json` |
 | AC-17 | ô cờ sắc độ 2px (đỏ/lục cùng độ sáng) + nhiễu màu ±0,05; Color NR 50 | đặt Color Detail 100 (so với 0) | phương sai sắc độ của ô cờ giữ ≥ 60% (Detail 0: ≤ 30%) | `NoiseReductionSplitTests.colorDetailKeepsFineColour` · `…colorNoiseReductionLeavesLuminance` · golden `chromaDenoise-*` · hàng: `ShotDexUITests/scripts/iphone-color-nr.json` |
-| AC-18 | nền xám có vết loang sắc độ 16px ±0,04; Color NR 50 | đặt Color Smoothness 100 (so với 0) | phương sai sắc độ còn ≤ 50%; độ sáng lệch ≤ 1/255 | ⚠️ chưa có (dự kiến `NoiseReductionSplitTests.smoothnessClearsMottling`) |
+| AC-18 | nền xám có vết loang sắc độ 16px ±0,04; Color NR 50 | đặt Color Smoothness 100 (so với 0) | phương sai sắc độ còn ≤ 50%; độ sáng lệch ≤ 1/255 | `NoiseReductionSplitTests.smoothnessClearsMottling` · golden `chromaBlend-*` · hàng: `ShotDexUITests/scripts/iphone-color-nr.json` |
 | AC-19 | rìa đen/trắng có viền tím hue 290° rộng 2px, viền lục ở rìa khác, và một ô tím phẳng cách rìa ≥ 12px | đặt Purple Amount 10 | sắc độ viền tím giảm ≥ 70%; viền lục và ô tím phẳng lệch ≤ 2/255 | ⚠️ chưa có (dự kiến `DefringeTests.purpleOnlyAtEdges`) |
 | AC-20 | lưới đường thẳng bị méo thùng tổng hợp (k1 = −0,05) | đặt Distortion +50 | điểm ở bán kính 0,8 dời vào 0,3%…1,5% nửa đường chéo; tâm đứng yên; không góc trống | ⚠️ chưa có (dự kiến `LensManualTests.distortionPullsTheEdgesIn`) |
 | AC-21 | ảnh xám phẳng 0,5 | đặt Vignetting +50, Midpoint 50 | độ sáng góc tăng ≥ 8% tương đối; tâm lệch ≤ 1/255; tâm tính trên khung trước crop; vị trí pass ngay sau Lens Blur | ⚠️ chưa có (dự kiến `LensManualTests.vignettingBrightensCorners`) |
@@ -119,4 +121,4 @@ Nhóm Effects › Vignette thêm **Style** — một hàng chip ba ô ở đầu
 | AC-28 | ảnh A Upright Auto; ảnh B là toà nhà khác nghiêng 3°, hội tụ 6° | Copy Edits A → Paste sang B | B mang chế độ Auto; phép nắn của B giải trên B (khác A); độ nghiêng của B còn ≤ 0,5° | ⚠️ chưa có — phần Level cần máy thật hoặc Vision của Mac (dự kiến `EditClipboardTests.uprightModeIsResolvedOnTheTarget`) |
 | AC-29 | ảnh 3:2, Vertical +40, tỉ lệ khoá 3:2 | bật Constrain Crop (so với tắt) | bật: 0 pixel ngoài ảnh sau nắn, khung vẫn 3:2 ± 0,01; tắt: mép kéo giãn, 0 pixel trong suốt | ⚠️ chưa có (dự kiến `GeoTransformTests.constrainCropKeepsTheLockedRatio`) |
 
-**Chưa chứng minh được:** AC-18…AC-29 (chưa code).
+**Chưa chứng minh được:** AC-19…AC-29 (chưa code).

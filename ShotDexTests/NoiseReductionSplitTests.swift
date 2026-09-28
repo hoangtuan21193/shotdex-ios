@@ -182,6 +182,62 @@ extension NoiseReductionSplitTests {
     }
 }
 
+extension NoiseReductionSplitTests {
+
+    /// Mid grey with colour blotches about 16px across: a random chroma
+    /// offset (±0.04 per channel, luminance removed) on an 8px-spaced grid,
+    /// smoothly interpolated between grid points.
+    private static func mottledFrame() -> CIImage {
+        var generator = SplitSeededGenerator(seed: 18)
+        let spacing = 8
+        let points = size / spacing + 2
+        let grid: [SIMD3<Float>] = (0..<(points * points)).map { _ in
+            let raw = SIMD3<Float>(
+                Float.random(in: -0.04...0.04, using: &generator),
+                Float.random(in: -0.04...0.04, using: &generator),
+                Float.random(in: -0.04...0.04, using: &generator)
+            )
+            let luma = 0.2126 * raw.x + 0.7152 * raw.y + 0.0722 * raw.z
+            return raw - SIMD3(repeating: luma)
+        }
+        func smooth(_ t: Float) -> Float { t * t * (3 - 2 * t) }
+        var pixels = [Float](repeating: 1, count: size * size * 4)
+        for y in 0..<size {
+            for x in 0..<size {
+                let gx = x / spacing, gy = y / spacing
+                let tx = smooth(Float(x % spacing) / Float(spacing))
+                let ty = smooth(Float(y % spacing) / Float(spacing))
+                let top = grid[gy * points + gx] * (1 - tx) + grid[gy * points + gx + 1] * tx
+                let bottom = grid[(gy + 1) * points + gx] * (1 - tx) + grid[(gy + 1) * points + gx + 1] * tx
+                let offset = top * (1 - ty) + bottom * ty
+                let index = (y * size + x) * 4
+                for channel in 0..<3 {
+                    pixels[index + channel] = 0.5 + offset[channel]
+                }
+            }
+        }
+        return image(pixels)
+    }
+
+    /// AC-18. Smoothness clears wide colour mottling that Color NR's own
+    /// blur is too small for, and leaves luminance alone.
+    @Test func smoothnessClearsMottling() {
+        let frame = Self.mottledFrame()
+        let rough = PhotoRenderService.applyColorNoiseReduction(
+            amount: 0.5, detail: 0.5, smoothness: 0, to: frame
+        )
+        let smooth = PhotoRenderService.applyColorNoiseReduction(
+            amount: 0.5, detail: 0.5, smoothness: 1, to: frame
+        )
+        let share = Self.chromaVariance(of: smooth, in: Self.inner) / Self.chromaVariance(of: rough, in: Self.inner)
+        #expect(share <= 0.5, "Smoothness 100 kept \(share) of the chroma variance")
+
+        let pairs = zip(Self.rgb(of: frame, in: Self.inner), Self.rgb(of: smooth, in: Self.inner))
+        let worst = pairs.map { abs(Self.luminance($0) - Self.luminance($1)) }.max() ?? 1
+        #expect(worst <= 1.0 / 255, "luminance moved \(worst)")
+    }
+}
+
 private struct SplitSeededGenerator: RandomNumberGenerator {
     private var state: UInt64
     init(seed: UInt64) { state = seed }

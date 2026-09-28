@@ -68,7 +68,7 @@ struct EditorAdjustmentCatalogTests {
             .vignetteMidpoint, .vignetteFeather, .sharpenRadius,
             .sharpenDetail, .sharpenMasking,
             .colorNoiseReduction, .vignetteHighlights, .rawLuminanceNoise,
-            .noiseReduction, .noiseDetail, .noiseContrast, .colorNoiseDetail,
+            .noiseReduction, .noiseDetail, .noiseContrast, .colorNoiseDetail, .colorNoiseSmoothness,
         ] {
             #expect(EditorAdjustmentCatalog.sliderRange(of: kind) == 0...1)
             #expect(EditorAdjustmentCatalog.isBipolar(kind) == false)
@@ -119,7 +119,7 @@ struct EditorAdjustmentCatalogTests {
         #expect(detail?.kinds == [
             .sharpness, .sharpenRadius, .sharpenDetail, .sharpenMasking,
             .definition, .noiseReduction, .noiseDetail, .noiseContrast,
-            .colorNoiseReduction, .colorNoiseDetail,
+            .colorNoiseReduction, .colorNoiseDetail, .colorNoiseSmoothness,
         ])
         // Detail and Masking are one-way strengths, like Radius.
         #expect(EditorAdjustmentCatalog.shortTitle(of: .sharpenDetail) == "Detail")

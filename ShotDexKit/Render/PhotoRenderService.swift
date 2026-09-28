@@ -1542,19 +1542,30 @@ public actor PhotoRenderService {
     /// untouched. Detail keeps the original chroma where it changes by more
     /// than noise does, which is a fine coloured edge (red lettering, a leaf
     /// rim) rather than speckle.
+    ///
+    /// Smoothness then clears the blotches too wide for that blur — colour
+    /// mottling 8–32px across — by moving chroma toward a 16px blur of it.
     public static func applyColorNoiseReduction(
         amount: Double,
         detail: Double,
+        smoothness: Double = 0,
         to image: CIImage
     ) -> CIImage {
         guard amount > 0.001, let kernel = chromaDenoiseKernel else { return image }
         let soft = blurred(image, radius: 1 + min(1, amount) * 4)
         let detail = min(1, max(0, detail))
-        return kernel.apply(extent: image.extent, arguments: [image, soft, detail]) ?? image
+        let denoised = kernel.apply(extent: image.extent, arguments: [image, soft, detail]) ?? image
+        let smoothness = min(1, max(0, smoothness))
+        guard smoothness > 0.001, let blend = chromaBlendKernel else { return denoised }
+        let wide = blurred(denoised, radius: 16)
+        return blend.apply(extent: image.extent, arguments: [denoised, wide, smoothness]) ?? denoised
     }
 
     /// Original luminance, blurred chroma, original chroma kept at edges.
     static let chromaDenoiseKernel = CoreImageKernelLibrary.kit.colorKernel(named: "chromaDenoise")
+
+    /// An image's luminance with its chroma moved toward another's.
+    static let chromaBlendKernel = CoreImageKernelLibrary.kit.colorKernel(named: "chromaBlend")
 
     /// What noise reduction removed, kept signed.
     static let noiseResidualKernel = CoreImageKernelLibrary.kit.colorKernel(named: "noiseResidual")
@@ -1602,6 +1613,7 @@ public actor PhotoRenderService {
                 image = applyColorNoiseReduction(
                     amount: adjustments.colorNoiseReduction,
                     detail: adjustments.colorNoiseDetail,
+                    smoothness: adjustments.colorNoiseSmoothness,
                     to: image
                 )
             }

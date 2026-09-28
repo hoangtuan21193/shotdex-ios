@@ -58,5 +58,16 @@ float4 chromaDenoise(sample_t original, sample_t blurred, float detail) {
     return float4(y + mix(softChroma, sharpChroma, detail * edge), original.a);
 }
 
+// The image's luminance with its chroma moved `amount` of the way to the
+// source's chroma. Colour Smoothness feeds it a wide blur; the Moiré brush
+// will feed it the same.
+float4 chromaBlend(sample_t image, sample_t source, float amount) {
+    float3 w = float3(0.2126f, 0.7152f, 0.0722f);
+    float y = dot(image.rgb, w);
+    float3 chroma = image.rgb - y;
+    float3 sourceChroma = source.rgb - dot(source.rgb, w);
+    return float4(y + mix(chroma, sourceChroma, amount), image.a);
+}
+
 }
 }
