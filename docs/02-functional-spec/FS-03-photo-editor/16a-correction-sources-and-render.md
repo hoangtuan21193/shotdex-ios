@@ -61,6 +61,11 @@ và ba mức độ mạnh tác động lên ảnh ra sao.
   nhân gain lên bản đó, không giải mã lại, không hạ độ phân giải (FS-03.04).
 - Đánh đổi: bộ nhớ cache nền RAW gấp ~2× (half-float thay 8-bit). *Vì bù sau cache 8-bit đã qua tone thì
   tỉ số góc/tâm sai khi Exposure +1 EV (AC-a9).*
+- *Hôm nay (2026-09-29):* gain chạy trong `linearSpaceFilter` (`LensVignetteFilter`), nên tỉ số đúng; nhưng kéo
+  Vignetting trên RAW vẫn **giải mã lại** mỗi khung ở cạnh nháp như mọi tham số của bộ giải. `CIRAWFilter` không trả
+  ảnh tuyến tính trước tone ra ngoài — ảnh qua khe tuyến tính đi thẳng vào đường cong của bộ giải — nên bản half-float
+  của E17 phải tự áp lại tone, và preview sẽ lệch bản lưu. ⚠️ CẦN QUYẾT: chấp nhận giải mã lại khi kéo, hay tự dựng
+  tone (lệch bản lưu), hay dùng `boostAmount` 0 + đường cong riêng.
 - **Méo + CA một pass**, ở vị trí pass nắn hôm nay: đầu nhóm hình học, trước Geo, crop và mask (render:382).
 - Pass này là **kernel lấy mẫu Metal mới** (FS-16) đọc R, G, B ở ba bán kính. *Vì* kernel warp của Core Image
   trả một toạ độ cho cả ba kênh nên không tách được đỏ/lam; ba lượt warp tốn ~3× mỗi khung.
@@ -109,7 +114,7 @@ Hai slider chỉnh tay của FS-03.15 cộng lên trên mọi nguồn: đó là 
 | AC-a6 | RAW có ống không có ở nguồn 1, 2, và bộ giải báo không hỗ trợ | render | nguồn = 4: phần của Apple và pass của ShotDex đều tắt; ảnh lệch ≤ 1/255 so với bản giải tắt sửa ống kính | `LensCorrectionResolverTests.noDecoderSupportIsNone` |
 | AC-a7 | ảnh nguồn 2 đủ ba mặt | đặt cả ba về 0 | ảnh lệch ≤ 1/255 so với công tắc tắt; zoom lấp = 1,0 | `LensCorrectionRenderTests.zeroStrengthsMatchSwitchOff` (render ≤ 1/255, bảng đồng nhất, zoom 1,0) |
 | AC-a8 | cùng ảnh | đặt cả ba về 200 | dịch chuyển méo ở góc = 2× mức 100 (±0,5px); gain tối góc = bình phương mức 100 (±1%); lệch CA = 2× (±0,5px) | `LensCorrectionRenderTests.twoHundredDoublesDisplacementSquaresGainDoublesCA` (bảng: dịch ±0,5px, lệch CA ±1%; render tối góc: gain² ±1%) · golden `lensCorrect`, `lensVignette` |
-| AC-a9 | ảnh phẳng 18% tuyến tính, tối góc tổng hợp góc 50%, hồ sơ khớp | render RAW ở Exposure 0 rồi +1 EV | tỉ số góc/tâm đo tuyến tính = 1,00 ± 0,01 ở **cả hai** mức Exposure | ⚠️ chưa có |
+| AC-a9 | ảnh phẳng 18% tuyến tính, tối góc tổng hợp góc 50%, hồ sơ khớp | render RAW ở Exposure 0 rồi +1 EV | tỉ số góc/tâm đo tuyến tính = 1,00 ± 0,01 ở **cả hai** mức Exposure | `LensCorrectionRenderTests.vignetteRatioHoldsAcrossExposure` (gain tuyến tính, 1,00 ± 0,01 ở ×1 và ×2) · ⚠️ phần "kéo không giải mã lại" của E17 **chưa làm** — xem §5 |
 | AC-a10 | ống hiệu chuẩn crop 1,0 trên thân crop 1,53; và ống chỉ hiệu chuẩn crop 1,53 trên thân full frame | giải nguồn | ca đầu: nguồn 2, dịch góc bằng giá trị hồ sơ ở r = 1/1,53 bán kính góc full frame (±0,5px); ca sau: không tự khớp | `LensProfileTests.smallerSensorCalibrationIsNotAutoMatched` · `…normalizationFollowsTheCalibrationFrame` (cùng bán kính chuẩn hoá cho cả ba mặt) |
 | AC-a11 | HEIC iPhone 17 Pro | mở editor | nguồn = 4, không có bước sửa ống kính; ảnh giống bản không sửa | `LensCorrectionResolverTests.iPhoneHEICResolvesToNone` (nguồn 4 + render bằng bản tắt ≤ 1/255) |
 | AC-a12 | khối maker notes tách từ một RAF Fujifilm có cả ba bộ thông số | giải nguồn | nguồn = 1; dịch chuyển méo và lệch CA ở góc ảnh khớp giá trị tính tay từ bảng trong 0,5px; gain tối góc trong 1% | ⚠️ chưa có |

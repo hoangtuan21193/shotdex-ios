@@ -182,4 +182,39 @@ struct LensCorrectionRenderTests {
         #expect(abs(Self.linearValue(output, at: corner) - expected) <= 1.0 / 255, "\(Self.linearValue(output, at: corner)) vs \(expected)")
         #expect(abs(Self.linearValue(output, at: CGPoint(x: 300, y: 200)) - 0.25) <= 1.0 / 255)
     }
+
+    /// 16a AC-a9. The profile's gain runs in linear light, before any tone:
+    /// a flat field darkened by the lens's own pa falloff comes back flat —
+    /// corner/centre 1.00 ± 0.01 — at Exposure 0 and at +1 EV (×2 linear),
+    /// because a gain in linear light commutes with exposure.
+    @Test func vignetteRatioHoldsAcrossExposure() throws {
+        let term = LensVignettingTerm(focal: 24, aperture: 2.8, distance: 10, k1: -0.45, k2: 0.1, k3: -0.02)
+        let extent = CGRect(x: 0, y: 0, width: 600, height: 400)
+        let norm = PhotoRenderService.lensNormalizationRadius(
+            extent: extent, lensCropFactor: 1, cameraCropFactor: 1, calibrationAspect: 1.5
+        ) * (1 + 1.5 * 1.5).squareRoot()
+        for exposure in [1.0, 2.0] {
+            // The lens's falloff as a capture records it, pixel by pixel so it
+            // is exactly the model's.
+            let width = 600, height = 400
+            var pixels = [Float](repeating: 1, count: width * height * 4)
+            for y in 0..<height {
+                for x in 0..<width {
+                    let r = hypot(Double(x) + 0.5 - 300, Double(y) + 0.5 - 200) / norm
+                    let v = Float(0.2 * exposure * term.falloff(at: r))
+                    let i = (y * width + x) * 4
+                    pixels[i] = v; pixels[i + 1] = v; pixels[i + 2] = v
+                }
+            }
+            let data = pixels.withUnsafeBufferPointer { Data(buffer: $0) }
+            let captured = CIImage(bitmapData: data, bytesPerRow: width * 16, size: extent.size, format: .RGBAf,
+                                   colorSpace: CGColorSpace(name: CGColorSpace.linearSRGB))
+            let filter = LensVignetteFilter()
+            filter.term = term
+            filter.inputImage = captured
+            let output = try #require(filter.outputImage)
+            let ratio = Self.linearValue(output, at: CGPoint(x: 2, y: 2)) / Self.linearValue(output, at: CGPoint(x: 300, y: 200))
+            #expect(abs(ratio - 1) <= 0.01, "exposure ×\(exposure): corner/centre \(ratio)")
+        }
+    }
 }
