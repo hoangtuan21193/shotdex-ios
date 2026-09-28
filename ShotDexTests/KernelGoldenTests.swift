@@ -48,7 +48,7 @@ struct KernelGoldenTests {
     /// AC-2 counts forty kernels; every one of them has a case.
     @Test func everyKernelHasACase() {
         let kernels = Set(KernelGoldenCase.all.map(\.kernel))
-        #expect(kernels.count == 49)
+        #expect(kernels.count == 50)
         #expect(Set(KernelGoldenCase.all.map(\.name)).count == KernelGoldenCase.all.count)
     }
 
@@ -220,6 +220,9 @@ extension KernelGoldenCase {
         lensBlurGather("lensBlurBlade", shape: 2),
         lensBlurGather("lensBlurRing", shape: 3),
         lensBlurGather("lensBlurCatEye", shape: 4),
+        color("lensBlurLevels", { LensBlurRenderer.levelsKernel }) {
+            [$0(0), $0(1), $0(2), $0(3), $0(0), $0(1), $0(2), $0(3), $0(1), Float(0.8), CIVector(x: 0.3, y: 0.7)]
+        },
     ]
 
     /// The bokeh gather, one case per shape, off-centre enough for Cat Eye

@@ -55,6 +55,10 @@ Nhóm **Lens Blur** riêng trong danh sách Edit, ngay sau Effects (thay hàng D
 - Đổi Bokeh, Near/Far hoặc chạm lấy nét: dựng lại 8 mức; trong lúc kéo Near/Far chấp nhận ít khung hơn.
 - Lưu ảnh không dựng sẵn: chạy thẳng 8 lớp độ sâu một lần ở độ phân giải đầy đủ. *Vì 8 khung 100MP vượt
   trần 1,5GB (§5 tổng quan).*
+- *Cách làm (2026-09-28, `LensBlurPreviewCache`):* chỉ đường kéo slider (`renderInteractivePreviewImages`) dùng
+  8 mức; mức k lưu ở 1/max(1, min(4, bán kính/3)) cỡ khung — một mức mờ không còn chi tiết nhỏ hơn bán kính, và
+  8 bản RGBA đủ cỡ của preview 2400px là ~120MB. Khoá dựng lại: ảnh, bokeh, dải lấy nét, khung; khoá trộn lại:
+  thêm Amount. Bản preview khi thả tay (`renderPreviewImages`) vẫn chạy đường lớp như bản lưu.
 
 ## 3. Ảnh không có độ sâu
 
@@ -88,9 +92,9 @@ Nhóm **Lens Blur** riêng trong danh sách Edit, ngay sau Effects (thay hàng D
 | AC-54 | nền tối 0,05 ở độ sâu 0,2 có một điểm sáng 1,0 cỡ 3px; Amount 80, dải lấy nét 70–100 | đặt Bokeh Ring (so với Circle) | Ring: độ sáng vành ≥ 1,3 lần lõi; Circle: vành/lõi ≤ 1,1; cả hai khớp golden ≤ 1/255 | `LensBlurTests.ringBokehHasABrightRim` · `…everyShapeKeepsTheLight` · golden `lensBlurGather` (Circle), `lensBlurBubble`, `lensBlurBlade`, `lensBlurRing`, `lensBlurCatEye` |
 | AC-55 | ảnh thử, nhóm Lens Blur mở | chạm vào nửa xa | dải lấy nét thành 10–30 (±2); nửa xa nét, nửa gần mờ; Undo một lần trả dải cũ | ⚠️ chưa có (dự kiến `LensBlurTests.tapToFocusCentresTheRange`) + `ShotDexUITests/scripts/iphone-lens-blur.json` |
 | AC-56 | ảnh JPEG không có bản đồ độ sâu | Paste Edits từ ảnh có Lens Blur 50, rồi đóng và mở lại ảnh | ước lượng chạy đúng 1 lần; nhãn "Estimated depth"; lần mở lại đọc file, ước lượng 0 lần; không alert | ⚠️ chưa có (dự kiến `LensBlurTests.noDepthPhotoIsEstimatedOnce`, model giả) + ảnh Edit, iPhone 17 26.5 |
-| AC-57 | ảnh Portrait 12MP, Lens Blur 50 đã thả tay | kéo Exposure qua 30 giá trị | làm mờ và trộn Lens Blur chạy 0 lần trong lúc kéo; thời gian khung trung bình ≤ 1,1 lần bản Lens Blur tắt; preview đúng cỡ hiển thị | ⚠️ chưa có (dự kiến `LensBlurTests.otherSlidersReuseTheBlendedResult`) |
-| AC-58 | ảnh Portrait 12MP, nhóm Lens Blur mở | kéo Amount 20 → 80 qua 30 giá trị | 8 mức mờ dựng 0 lần thêm, chỉ lượt trộn chạy; ở Amount 80, preview lệch bản lưu (chạy thẳng 8 lớp) trung bình ≤ 2/255 | ⚠️ chưa có (dự kiến `LensBlurTests.amountDragOnlyReblends`) |
+| AC-57 | ảnh Portrait 12MP, Lens Blur 50 đã thả tay | kéo Exposure qua 30 giá trị | làm mờ và trộn Lens Blur chạy 0 lần trong lúc kéo; thời gian khung trung bình ≤ 1,1 lần bản Lens Blur tắt; preview đúng cỡ hiển thị | `LensBlurTests.otherSlidersReuseTheBlendedResult` (đếm: 0 lần dựng mức, 0 lần trộn qua 30 khung) · ⚠️ thời gian khung trên ảnh Portrait 12MP thật: máy thật |
+| AC-58 | ảnh Portrait 12MP, nhóm Lens Blur mở | kéo Amount 20 → 80 qua 30 giá trị | 8 mức mờ dựng 0 lần thêm, chỉ lượt trộn chạy; ở Amount 80, preview lệch bản lưu (chạy thẳng 8 lớp) trung bình ≤ 2/255 | `LensBlurTests.amountDragOnlyReblends` (ảnh thử 512², 1 lần dựng, 30 lần trộn, lệch bản lưu ≤ 2/255) · ⚠️ ảnh Portrait 12MP thật: máy thật |
 | AC-59 | ảnh không độ sâu, bộ ước lượng giả trả lỗi | mở nhóm Lens Blur, đặt Amount 50 | ảnh bằng ảnh gốc ± 1/255; nhóm mờ với "Couldn't estimate depth for this photo."; không alert | ⚠️ chưa có (dự kiến `LensBlurTests.estimationFailureRendersTheOriginal`) |
 | AC-60 | bản Release trên iPhone 12 và iPhone 15 | đo Depth Anything kèm app | ghi vào §3: dung lượng model trong app (MB), thời gian ước lượng ảnh 12MP, IoU mép tóc với mặt nạ chân dung trên 10 ảnh Portrait hình nộm; phép đo, không ngưỡng chặn | ⚠️ chưa đo — máy thật, Instruments |
 
-**Chưa chứng minh được:** AC-55…AC-60 (chưa code; AC-60 cần máy thật).
+**Chưa chứng minh được:** AC-55, AC-56, AC-59, AC-60; phần 12MP của AC-57/58 (chưa code; AC-60 cần máy thật).

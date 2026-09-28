@@ -67,5 +67,32 @@ float4 lensBlurGather(sampler layer, float radius, float shape, float2 centre, f
     return sum / max(total, 0.0001f);
 }
 
+// The preview's blend (FS-03.15e §2): eight copies of the whole photo blurred
+// 0, 1/7 … 7/7 of the full radius, and each pixel mixing the two whose radius
+// brackets its own. The pixel's radius follows the saved render's steps —
+// seven per side of the focus band, each blurred by its middle — so the two
+// land on the same numbers wherever the depth does not change.
+float4 lensBlurLevels(sample_t l0, sample_t l1, sample_t l2, sample_t l3,
+                      sample_t l4, sample_t l5, sample_t l6, sample_t l7,
+                      sample_t depth, float amount, float2 band) {
+    float d = depth.r;
+    float t = 0.0f;
+    if (d < band.x) t = (band.x - d) / max(band.x, 0.0001f);
+    else if (d > band.y) t = (d - band.y) / max(1.0f - band.y, 0.0001f);
+    float step = ceil(clamp(t, 0.0f, 1.0f) * 7.0f);
+    float blur = step > 0.0f ? (step - 0.5f) / 7.0f : 0.0f;
+    float level = clamp(amount * blur * 7.0f, 0.0f, 7.0f);
+    float lower = floor(level);
+    float f = level - lower;
+    float4 a = l0, b = l1;
+    if (lower >= 6.0f) { a = l6; b = l7; }
+    else if (lower >= 5.0f) { a = l5; b = l6; }
+    else if (lower >= 4.0f) { a = l4; b = l5; }
+    else if (lower >= 3.0f) { a = l3; b = l4; }
+    else if (lower >= 2.0f) { a = l2; b = l3; }
+    else if (lower >= 1.0f) { a = l1; b = l2; }
+    return mix(a, b, f);
+}
+
 }
 }

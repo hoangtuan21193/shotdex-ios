@@ -99,6 +99,8 @@ public actor PhotoRenderService {
     /// Normalized depth maps, by file. One entry per photo the Depth Range mask
     /// has been used on in this session; cleared with the rest of the caches.
     private var disparityCache: [String: CIImage] = [:]
+    /// The preview's Lens Blur levels and mixed picture (FS-03.15e §2).
+    let lensBlurPreview = LensBlurPreviewCache()
     private var automaticMaskCacheOrder: [String] = []
     private static let automaticMaskCacheCapacity = 8
     /// Automatic masks (subject, sky, face parts) that came back with nothing —
@@ -236,7 +238,8 @@ public actor PhotoRenderService {
             baseResult: baseResult,
             source: source,
             recipe: recipe,
-            maximumDimension: nil
+            maximumDimension: nil,
+            reusesLensBlur: true
         )
         return try makePreviewImages(
             result: result,
@@ -360,20 +363,30 @@ public actor PhotoRenderService {
         )
     }
 
+    /// `reusesLensBlur` is the slider path: Lens Blur comes from the
+    /// preview's eight prebuilt levels, and a frame whose Lens Blur did not
+    /// change reuses the last mixed picture.
     private func render(
         baseResult: BaseImageResult,
         source: PhotoRenderSourceInfo,
         recipe: PhotoEditRecipe,
-        maximumDimension: CGFloat?
+        maximumDimension: CGFloat?,
+        reusesLensBlur: Bool = false
     ) throws -> PhotoRenderResult {
         // The Lens Blur slot (pass 2), on the untouched picture: a
         // capture-time property being re-decided, not a look laid over the
         // result (FS-03.15e).
-        let unadjusted = LensBlurRenderer.apply(
-            recipe.lensBlur,
-            to: baseResult.image,
-            depth: recipe.lensBlur.isIdentity ? nil : normalizedDisparity(at: source.url)
-        )
+        let depth = recipe.lensBlur.isIdentity ? nil : normalizedDisparity(at: source.url)
+        let unadjusted = reusesLensBlur
+            ? lensBlurPreview.image(
+                for: recipe.lensBlur,
+                base: baseResult.image,
+                depth: depth,
+                identity: "\(source.url.path)|\(String(describing: rawBaseSignature(source: source, recipe: recipe)))",
+                colorSpace: baseResult.colorSpace,
+                context: context
+            )
+            : LensBlurRenderer.apply(recipe.lensBlur, to: baseResult.image, depth: depth)
         var image = Self.applyPreMaskStages(
             of: recipe,
             source: source,

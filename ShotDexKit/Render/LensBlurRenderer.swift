@@ -181,9 +181,162 @@ public enum LensBlurRenderer {
             .cropped(to: extent)
     }
 
+    // MARK: Preview levels
+
+    /// The preview's levels: the whole photo blurred 0, 1/7 … 7/7 of the
+    /// radius Amount 100 gives (FS-03.15e §2).
+    static let levelCount = 8
+
+    /// The full radius at Amount 100 on a frame of `extent`.
+    static func fullRadius(for extent: CGRect) -> CGFloat {
+        min(extent.width, extent.height) * maximumRadiusShare
+    }
+
+    /// The whole photo spread over the bokeh by `radius`, opaque again —
+    /// a disc hanging over the frame's edge is divided back out.
+    static func level(_ image: CIImage, radius: CGFloat, shape: PhotoBokehShape) -> CIImage? {
+        guard radius > 0.5 else { return image }
+        guard let gather = gatherKernel,
+              let resolve = PhotoStackRenderer.weightedAlphaResolveKernel else { return nil }
+        let extent = image.extent
+        let spread = blur(image, radius: radius, shape: shape, extent: extent, kernel: gather)
+        return resolve.apply(extent: extent, arguments: [spread])?.cropped(to: extent)
+    }
+
+    /// The levels mixed per pixel by its depth: what the preview shows while
+    /// Amount is dragged. `levels` are the eight images, each stretched onto
+    /// the photo's frame already.
+    static func blend(
+        levels: [CIImage],
+        depth: CIImage,
+        recipe: PhotoLensBlurRecipe,
+        extent: CGRect
+    ) -> CIImage? {
+        guard levels.count == levelCount, let kernel = levelsKernel else { return nil }
+        let low = min(max(min(recipe.focusFar, recipe.focusNear), 0), 1)
+        let high = min(max(max(recipe.focusFar, recipe.focusNear), 0), 1)
+        let arguments: [Any] = levels + [
+            stretched(depth, onto: extent),
+            Float(min(max(recipe.amount, 0), 1)),
+            CIVector(x: low, y: high),
+        ]
+        return kernel.apply(extent: extent, arguments: arguments)
+    }
+
+    /// Eight levels mixed by depth into the preview's picture.
+    static let levelsKernel = CoreImageKernelLibrary.kit.colorKernel(named: "lensBlurLevels")
+
     /// The photo where the depth falls in a band, as a premultiplied layer.
     static let sliceKernel = CoreImageKernelLibrary.kit.colorKernel(named: "lensBlurSlice")
 
     /// A premultiplied layer averaged over the bokeh's disc.
     static let gatherKernel = CoreImageKernelLibrary.kit.kernel(named: "lensBlurGather")
+}
+
+/// The preview's Lens Blur work, kept between slider frames (FS-03.15e §2).
+///
+/// Eight levels of the whole picture are built once per photo, bokeh and
+/// focus band; dragging Amount only mixes them again, and every other slider
+/// reuses the mixed picture as it stands — Lens Blur runs on the untouched
+/// photo, so nothing they do can change it. The save does not come through
+/// here: it cuts the full-resolution photo into depth layers in one pass.
+///
+/// A blurred level carries no detail finer than its radius, so each is kept
+/// at a fraction of the frame: level k at 1/max(1, min(4, radius/3)). Eight
+/// full-size RGBA copies of a 2400px preview would be ~120MB.
+final class LensBlurPreviewCache {
+
+    struct LevelsKey: Equatable {
+        var identity: String
+        var extent: CGRect
+        var bokeh: PhotoBokehShape
+        var focusFar: Double
+        var focusNear: Double
+    }
+
+    private var levelsKey: LevelsKey?
+    private var levels: [(image: CGImage, scale: CGFloat)] = []
+    private var blendedAmount: Double?
+    private var blended: CGImage?
+
+    /// How many times the eight levels were built, and the levels mixed —
+    /// what AC-57 and AC-58 count.
+    private(set) var levelBuilds = 0
+    private(set) var blends = 0
+
+    init() {}
+
+    /// The re-focused picture for a preview frame, or `base` when there is
+    /// nothing to do or a kernel is missing.
+    func image(
+        for recipe: PhotoLensBlurRecipe,
+        base: CIImage,
+        depth: CIImage?,
+        identity: String,
+        colorSpace: CGColorSpace,
+        context: CIContext
+    ) -> CIImage {
+        guard !recipe.isIdentity, let depth else { return base }
+        let extent = base.extent
+        let key = LevelsKey(
+            identity: identity,
+            extent: extent,
+            bokeh: recipe.bokeh,
+            focusFar: recipe.focusFar,
+            focusNear: recipe.focusNear
+        )
+        if key == levelsKey, blendedAmount == recipe.amount, let blended {
+            return CIImage(cgImage: blended, options: [.colorSpace: colorSpace])
+        }
+        if key != levelsKey {
+            guard buildLevels(base: base, shape: recipe.bokeh, colorSpace: colorSpace, context: context) else {
+                return base
+            }
+            levelsKey = key
+        }
+        let stretchedLevels = levels.map { level -> CIImage in
+            let image = CIImage(cgImage: level.image, options: [.colorSpace: colorSpace])
+            guard level.scale > 1 else { return image }
+            return image
+                .transformed(by: CGAffineTransform(scaleX: level.scale, y: level.scale))
+                .clampedToExtent()
+                .cropped(to: extent)
+        }
+        guard let mixed = LensBlurRenderer.blend(levels: stretchedLevels, depth: depth, recipe: recipe, extent: extent),
+              let image = context.createCGImage(mixed, from: extent, format: .RGBA8, colorSpace: colorSpace)
+        else { return base }
+        blends += 1
+        blended = image
+        blendedAmount = recipe.amount
+        return CIImage(cgImage: image, options: [.colorSpace: colorSpace])
+    }
+
+    private func buildLevels(
+        base: CIImage,
+        shape: PhotoBokehShape,
+        colorSpace: CGColorSpace,
+        context: CIContext
+    ) -> Bool {
+        let extent = base.extent
+        let full = LensBlurRenderer.fullRadius(for: extent)
+        var built: [(image: CGImage, scale: CGFloat)] = []
+        for k in 0..<LensBlurRenderer.levelCount {
+            let radius = full * CGFloat(k) / CGFloat(LensBlurRenderer.levelCount - 1)
+            guard let level = LensBlurRenderer.level(base, radius: radius, shape: shape) else { return false }
+            let scale = k == 0 ? 1 : max(1, min(4, radius / 3))
+            let stored = scale > 1
+                ? level.transformed(by: CGAffineTransform(scaleX: 1 / scale, y: 1 / scale))
+                : level
+            let rect = stored.extent.integral
+            guard let image = context.createCGImage(stored, from: rect, format: .RGBA8, colorSpace: colorSpace) else {
+                return false
+            }
+            built.append((image, scale))
+        }
+        levels = built
+        blended = nil
+        blendedAmount = nil
+        levelBuilds += 1
+        return true
+    }
 }

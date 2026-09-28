@@ -202,6 +202,67 @@ struct LensBlurTests {
         #expect(abs(after - before) / before < 0.15, "\(shape) moved the light's energy \(before) → \(after)")
     }
 
+    // MARK: AC-57, AC-58 — the preview's levels
+
+    static let sRGB = CGColorSpace(name: CGColorSpace.sRGB)!
+
+    /// Mean |a − b| over the frame, in 8-bit sRGB steps.
+    static func meanDifference(_ a: CIImage, _ b: CIImage) -> Double {
+        let rect = CGRect(x: 0, y: 0, width: side, height: side)
+        func pixels(_ image: CIImage) -> [UInt8] {
+            var out = [UInt8](repeating: 0, count: side * side * 4)
+            CIContext().render(image, toBitmap: &out, rowBytes: side * 4, bounds: rect, format: .RGBA8, colorSpace: sRGB)
+            return out
+        }
+        let pa = pixels(a), pb = pixels(b)
+        var sum = 0.0, count = 0.0
+        for i in stride(from: 0, to: pa.count, by: 4) {
+            for c in 0..<3 {
+                sum += abs(Double(pa[i + c]) - Double(pb[i + c]))
+                count += 1
+            }
+        }
+        return sum / count
+    }
+
+    /// AC-58. Dragging Amount 20 → 80 over 30 values builds the eight levels
+    /// once and only mixes them after; at 80 the preview sits within 2/255 of
+    /// the save's layered render on average.
+    @Test func amountDragOnlyReblends() {
+        let cache = LensBlurPreviewCache()
+        let input = Self.stripes(), depth = Self.splitDepth()
+        var recipe = Self.recipe(amount: 0.2, far: 0.7, near: 1)
+        var last = input
+        for step in 0..<30 {
+            recipe.amount = 0.2 + 0.6 * Double(step) / 29
+            last = cache.image(for: recipe, base: input, depth: depth, identity: "stripes", colorSpace: Self.sRGB, context: CIContext())
+        }
+        #expect(cache.levelBuilds == 1)
+        #expect(cache.blends == 30)
+        let saved = LensBlurRenderer.apply(recipe, to: input, depth: depth)
+        let difference = Self.meanDifference(last, saved)
+        #expect(difference <= 2, "preview vs save: \(difference)/255")
+    }
+
+    /// AC-57. With Lens Blur let go, frames for any other slider reuse the
+    /// mixed picture: no level is built and nothing is mixed again. A new
+    /// focus band or bokeh does rebuild.
+    @Test func otherSlidersReuseTheBlendedResult() {
+        let cache = LensBlurPreviewCache()
+        let input = Self.stripes(), depth = Self.splitDepth()
+        var recipe = Self.recipe(amount: 0.5, far: 0.7, near: 1)
+        _ = cache.image(for: recipe, base: input, depth: depth, identity: "stripes", colorSpace: Self.sRGB, context: CIContext())
+        for _ in 0..<30 {
+            _ = cache.image(for: recipe, base: input, depth: depth, identity: "stripes", colorSpace: Self.sRGB, context: CIContext())
+        }
+        #expect(cache.levelBuilds == 1)
+        #expect(cache.blends == 1)
+
+        recipe.bokeh = .ring
+        _ = cache.image(for: recipe, base: input, depth: depth, identity: "stripes", colorSpace: Self.sRGB, context: CIContext())
+        #expect(cache.levelBuilds == 2)
+    }
+
     /// The saved recipe starts on the spec's default range, 60–100.
     @Test func defaultRangeIsSixtyToAHundred() {
         #expect(PhotoLensBlurRecipe.identity.focusFar == 0.6)
