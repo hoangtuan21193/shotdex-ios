@@ -20,6 +20,8 @@ struct EditorAdjustmentGroup: Identifiable, Equatable, Sendable {
         case color
         case detail
         case effects
+        /// Lens Correction › MANUAL, under Optics (FS-03.15b §3, E14).
+        case lensManual
         case optics
         case geo
         case raw
@@ -172,10 +174,19 @@ enum EditorAdjustmentCatalog {
         // Optics and Geo act on the whole frame's geometry / lens, so they are
         // global-only — never inside a mask.
         if scope == .global {
+            // Two groups so the Optics tab shows the MANUAL label above the
+            // manual lens rows; the second carries the fringe controls.
+            groups.append(
+                EditorAdjustmentGroup(
+                    id: .lensManual,
+                    title: "Manual",
+                    kinds: [.lensManualDistortion]
+                )
+            )
             groups.append(
                 EditorAdjustmentGroup(
                     id: .optics,
-                    title: "Optics",
+                    title: "Defringe",
                     kinds: [
                         .chromaticAberration,
                         .defringePurpleAmount, .defringePurpleHueMinimum, .defringePurpleHueMaximum,
@@ -252,6 +263,7 @@ enum EditorAdjustmentCatalog {
         case .colorNoiseReduction: "Color NR"
         case .colorNoiseDetail: "Color Detail"
         case .colorNoiseSmoothness: "Smoothness"
+        case .lensManualDistortion: "Distortion"
         case .defringePurpleAmount: "Purple"
         case .defringePurpleHueMinimum: "Purple Min"
         case .defringePurpleHueMaximum: "Purple Max"
@@ -272,6 +284,16 @@ enum EditorAdjustmentCatalog {
         case .rawColorNoise: "Color Noise"
         case .rawSharpness: "RAW Sharpen"
         case .lensCorrection: "Lens"
+        default: kind.displayName
+        }
+    }
+
+    /// What VoiceOver reads for a row. Rows that share a short title with a
+    /// row in another Lens Correction group carry the group's name —
+    /// "Distortion, Manual" against "Distortion, Lens Profile" (E14).
+    static func accessibilityName(of kind: PhotoAdjustmentKind) -> String {
+        switch kind {
+        case .lensManualDistortion: "\(shortTitle(of: kind)), Manual"
         default: kind.displayName
         }
     }

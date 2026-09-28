@@ -412,7 +412,7 @@ struct EditorSliderRow: View {
             detent: identity,
             trackGradient: EditorTheme.troughGradient(for: kind),
             showsTrailOverGradient: !EditorTheme.troughIsNeutralAtAnchor(for: kind),
-            accessibilityName: kind.displayName,
+            accessibilityName: EditorAdjustmentCatalog.accessibilityName(of: kind),
             onBeginDrag: onBeginDrag,
             onDrag: onDrag,
             onEndDrag: onEndDrag,

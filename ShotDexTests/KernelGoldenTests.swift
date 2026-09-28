@@ -184,6 +184,7 @@ extension KernelGoldenCase {
                 arguments: [
                     CIVector(x: 24, y: 24), Float(30), Float(1.05), model,
                     Float(-0.08), Float(0.03), Float(0.01), Float(-0.03), Float(0.02),
+                    Float(0.03), Float(33.94),
                 ]
             )?.cropped(to: extent)
         }

@@ -19,10 +19,14 @@ float4 vignette(sample_t s, float2 center, float2 halfExtent, float inner, float
     return float4(s.rgb * factor, s.a);
 }
 
-// Lensfun's three distortion models: 0 poly3, 1 poly5, 2 ptlens.
+// Lensfun's three distortion models: 0 poly3, 1 poly5, 2 ptlens — then the
+// manual Distortion on top, in the same warp so the frame is resampled once:
+// 1 − manual·ρ², ρ the output radius over the half-diagonal (FS-03.15b §3).
 float2 lensWarp(float2 center, float norm, float zoom, float model,
-                float k1, float k2, float a, float b, float c, destination dest) {
-    float2 d = (dest.coord() - center) / (norm * zoom);
+                float k1, float k2, float a, float b, float c,
+                float manual, float halfDiagonal, destination dest) {
+    float2 p = dest.coord() - center;
+    float2 d = p / (norm * zoom);
     float r = length(d);
     float g;
     if (model < 0.5f) {
@@ -32,7 +36,9 @@ float2 lensWarp(float2 center, float norm, float zoom, float model,
     } else {
         g = a * r * r * r + b * r * r + c * r + 1.0f - a - b - c;
     }
-    return center + d * g * norm;
+    float rho = length(p) / (halfDiagonal * zoom);
+    float manualScale = 1.0f - manual * rho * rho;
+    return center + d * g * manualScale * norm;
 }
 
 // What noise reduction removed, kept signed.

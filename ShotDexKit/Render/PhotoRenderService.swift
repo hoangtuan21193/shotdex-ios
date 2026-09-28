@@ -2021,22 +2021,33 @@ public actor PhotoRenderService {
     /// Mixes the filtered image back over the unfiltered one so a preset can be
     /// dialled in instead of being all-or-nothing.
     /// The recipe's lens profile, if it has one and the source is not RAW
-    /// (the RAW decoder corrects its own lenses). First of the geometry passes,
-    /// so Geometry, the crop and the masks all work on the corrected frame.
+    /// (the RAW decoder corrects its own lenses), plus the manual Distortion,
+    /// which applies to every source. First of the geometry passes, so
+    /// Geometry, the crop and the masks all work on the corrected frame.
     public static func applyLensProfile(
         of recipe: PhotoEditRecipe,
         source: PhotoRenderSourceInfo,
         to image: CIImage
     ) -> CIImage {
-        guard let choice = recipe.lensProfile, !source.isRAW,
-              let lens = LensProfileLibrary.shared.lens(id: choice.lensID),
-              let term = lens.distortion(atFocal: exifFocalLength(source.properties) ?? lens.distortion.first?.focal ?? 0)
-        else { return image }
+        let manual = recipe.adjustments.lensManualDistortion
+        if let choice = recipe.lensProfile, !source.isRAW,
+           let lens = LensProfileLibrary.shared.lens(id: choice.lensID),
+           let term = lens.distortion(atFocal: exifFocalLength(source.properties) ?? lens.distortion.first?.focal ?? 0) {
+            return applyLensProfile(
+                term,
+                lensCropFactor: lens.cropFactor,
+                cameraCropFactor: choice.cameraCropFactor,
+                calibrationAspect: lens.calibrationAspect,
+                manualDistortion: manual,
+                to: image
+            )
+        }
+        guard abs(manual) > 0.0001 else { return image }
         return applyLensProfile(
-            term,
-            lensCropFactor: lens.cropFactor,
-            cameraCropFactor: choice.cameraCropFactor,
-            calibrationAspect: lens.calibrationAspect,
+            LensDistortionTerm(model: .poly3, focal: 0, k1: 0),
+            lensCropFactor: 1,
+            cameraCropFactor: 1,
+            manualDistortion: manual,
             to: image
         )
     }

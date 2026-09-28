@@ -190,11 +190,16 @@ extension PhotoRenderService {
     /// enough that no corner or edge samples outside the photo — the
     /// "constrain crop" Lightroom applies — so a barrel correction never shows
     /// empty corners.
+    ///
+    /// `manualDistortion` (−1…1, FS-03.15b §3) rides in the same warp: positive
+    /// straightens barrel distortion, negative pincushion, and the fill zoom
+    /// covers both, capped at 1.5× together.
     public static func applyLensProfile(
         _ term: LensDistortionTerm,
         lensCropFactor: Double,
         cameraCropFactor: Double,
         calibrationAspect: Double = 1.5,
+        manualDistortion: Double = 0,
         to input: CIImage
     ) -> CIImage {
         guard let kernel = lensWarpKernel else { return input }
@@ -206,7 +211,9 @@ extension PhotoRenderService {
             cameraCropFactor: cameraCropFactor,
             calibrationAspect: calibrationAspect
         )
-        let zoom = fillZoom(term, extent: extent, norm: norm)
+        let manual = manualDistortionCoefficient(manualDistortion)
+        let zoom = fillZoom(term, manual: manual, extent: extent, norm: norm)
+        let halfDiagonal = (extent.width * extent.width + extent.height * extent.height).squareRoot() / 2
         let model: Float = switch term.model {
         case .poly3: 0
         case .poly5: 1
@@ -227,23 +234,38 @@ extension PhotoRenderService {
                 model,
                 Float(term.k1 ?? 0), Float(term.k2 ?? 0),
                 Float(term.a ?? 0), Float(term.b ?? 0), Float(term.c ?? 0),
+                Float(manual), Float(halfDiagonal),
             ]
         )
         return output?.cropped(to: extent) ?? input
     }
 
+    /// The kernel's `manual` for a Distortion slider value: ±100 moves the
+    /// half-diagonal by 4%, so +50 moves a point at 0.8 of it by about 1%.
+    static func manualDistortionCoefficient(_ distortion: Double) -> Double {
+        min(1, max(-1, distortion)) * 0.04
+    }
+
     /// The smallest zoom ≥ 1 at which the corners and edge midpoints of the
     /// corrected frame all sample inside the photo. An output point p samples
-    /// the source at p · g(r) / zoom, with r = |p| / (norm · zoom), so it stays
-    /// inside when zoom ≥ g(r); iterated because r depends on the zoom.
-    static func fillZoom(_ term: LensDistortionTerm, extent: CGRect, norm: Double) -> Double {
+    /// the source at p · g(r) · m(ρ) / zoom, with r = |p| / (norm · zoom) and
+    /// m the manual term over ρ = |p| / (halfDiagonal · zoom), so it stays
+    /// inside when zoom ≥ g(r) · m(ρ); iterated because both depend on the zoom.
+    static func fillZoom(
+        _ term: LensDistortionTerm,
+        manual: Double = 0,
+        extent: CGRect,
+        norm: Double
+    ) -> Double {
         let halfW = extent.width / 2, halfH = extent.height / 2
-        let radii = [
-            (halfW * halfW + halfH * halfH).squareRoot(), halfW, halfH,
-        ]
+        let halfDiagonal = (halfW * halfW + halfH * halfH).squareRoot()
+        let radii = [halfDiagonal, halfW, halfH]
         var zoom = 1.0
         for _ in 0..<6 {
-            zoom = max(1, radii.map { term.scale(at: $0 / (norm * zoom)) }.max() ?? 1)
+            zoom = max(1, radii.map { radius in
+                let rho = radius / (halfDiagonal * zoom)
+                return term.scale(at: radius / (norm * zoom)) * (1 - manual * rho * rho)
+            }.max() ?? 1)
         }
         return min(zoom, 1.5)
     }

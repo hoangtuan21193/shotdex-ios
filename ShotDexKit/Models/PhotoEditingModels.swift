@@ -420,6 +420,9 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
     case grainRoughness
     // Optics
     case chromaticAberration
+    /// Manual lens Distortion, −1…1: positive straightens barrel, negative
+    /// pincushion. Same warp as the lens profile (FS-03.15b §3).
+    case lensManualDistortion
     /// Defringe (FS-03.15b §2). Amounts 0…1 = Lightroom 0…20; hue rows
     /// 0…1 = Lightroom 0…100.
     case defringePurpleAmount
@@ -482,6 +485,7 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         case .grainSize: "Grain Size"
         case .grainRoughness: "Grain Roughness"
         case .chromaticAberration: "Remove Chromatic Aberration"
+        case .lensManualDistortion: "Manual Distortion"
         case .defringePurpleAmount: "Purple Fringe Amount"
         case .defringePurpleHueMinimum: "Purple Fringe Hue Min"
         case .defringePurpleHueMaximum: "Purple Fringe Hue Max"
@@ -541,6 +545,7 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         case .grainSize: "circle.grid.3x3"
         case .grainRoughness: "circle.grid.3x3.circle"
         case .chromaticAberration: "camera.aperture"
+        case .lensManualDistortion: "circle.grid.cross"
         case .defringePurpleAmount, .defringeGreenAmount: "circle.dashed"
         case .defringePurpleHueMinimum, .defringeGreenHueMinimum: "arrow.left.to.line"
         case .defringePurpleHueMaximum, .defringeGreenHueMaximum: "arrow.right.to.line"
@@ -728,6 +733,7 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
     public var grainSize = 0.0
     public var grainRoughness = 0.0
     public var chromaticAberration = 0.0
+    public var lensManualDistortion = 0.0
     public var defringePurpleAmount = 0.0
     /// Hue rows default to Lightroom's 30/70 and 40/60 — neutral, so no key
     /// until touched.
@@ -790,6 +796,7 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .grainSize: grainSize
             case .grainRoughness: grainRoughness
             case .chromaticAberration: chromaticAberration
+            case .lensManualDistortion: lensManualDistortion
             case .defringePurpleAmount: defringePurpleAmount
             case .defringePurpleHueMinimum: defringePurpleHueMinimum
             case .defringePurpleHueMaximum: defringePurpleHueMaximum
@@ -848,6 +855,7 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .grainSize: grainSize = newValue
             case .grainRoughness: grainRoughness = newValue
             case .chromaticAberration: chromaticAberration = newValue
+            case .lensManualDistortion: lensManualDistortion = newValue
             case .defringePurpleAmount: defringePurpleAmount = newValue
             case .defringePurpleHueMinimum: defringePurpleHueMinimum = newValue
             case .defringePurpleHueMaximum: defringePurpleHueMaximum = newValue
