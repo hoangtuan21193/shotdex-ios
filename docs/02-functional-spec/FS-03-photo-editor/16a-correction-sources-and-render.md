@@ -107,7 +107,7 @@ Hai slider chỉnh tay của FS-03.15 cộng lên trên mọi nguồn: đó là 
 | AC-a4 | ARW có `DistortionCorrParams` bị cắt cụt (ít phần tử hơn khai báo) | giải nguồn | không crash; ống có trong Lensfun → nguồn 2, không có → nguồn 3 | ⚠️ chưa có |
 | AC-a5 | RAW hãng chưa đọc (Pentax PEF), ống không có trong Lensfun, bộ giải báo hỗ trợ | giải nguồn | nguồn = 3: phần của Apple theo công tắc, pass của ShotDex không chạy; kéo ba slider không đổi ảnh (lệch ≤ 1/255) | `LensCorrectionResolverTests.unsupportedMakerWithDecoderSupportIsBuiltIn` (seam `decoderSupportsLensCorrection`; ba slider 0 và 200 lệch ≤ 1/255) · ⚠️ file PEF thật trên sim: chưa |
 | AC-a6 | RAW có ống không có ở nguồn 1, 2, và bộ giải báo không hỗ trợ | render | nguồn = 4: phần của Apple và pass của ShotDex đều tắt; ảnh lệch ≤ 1/255 so với bản giải tắt sửa ống kính | `LensCorrectionResolverTests.noDecoderSupportIsNone` |
-| AC-a7 | ảnh nguồn 2 đủ ba mặt | đặt cả ba về 0 | ảnh lệch ≤ 1/255 so với công tắc tắt; zoom lấp = 1,0 | ⚠️ chưa có |
+| AC-a7 | ảnh nguồn 2 đủ ba mặt | đặt cả ba về 0 | ảnh lệch ≤ 1/255 so với công tắc tắt; zoom lấp = 1,0 | `LensCorrectionRenderTests.zeroStrengthsMatchSwitchOff` (render ≤ 1/255, bảng đồng nhất, zoom 1,0) |
 | AC-a8 | cùng ảnh | đặt cả ba về 200 | dịch chuyển méo ở góc = 2× mức 100 (±0,5px); gain tối góc = bình phương mức 100 (±1%); lệch CA = 2× (±0,5px) | `LensCorrectionRenderTests.twoHundredDoublesDisplacementSquaresGainDoublesCA` (bảng: dịch ±0,5px, lệch CA ±1%; render tối góc: gain² ±1%) · golden `lensCorrect`, `lensVignette` |
 | AC-a9 | ảnh phẳng 18% tuyến tính, tối góc tổng hợp góc 50%, hồ sơ khớp | render RAW ở Exposure 0 rồi +1 EV | tỉ số góc/tâm đo tuyến tính = 1,00 ± 0,01 ở **cả hai** mức Exposure | ⚠️ chưa có |
 | AC-a10 | ống hiệu chuẩn crop 1,0 trên thân crop 1,53; và ống chỉ hiệu chuẩn crop 1,53 trên thân full frame | giải nguồn | ca đầu: nguồn 2, dịch góc bằng giá trị hồ sơ ở r = 1/1,53 bán kính góc full frame (±0,5px); ca sau: không tự khớp | `LensProfileTests.smallerSensorCalibrationIsNotAutoMatched` · `…normalizationFollowsTheCalibrationFrame` (cùng bán kính chuẩn hoá cho cả ba mặt) |
@@ -118,6 +118,6 @@ Hai slider chỉnh tay của FS-03.15 cộng lên trên mọi nguồn: đó là 
 | AC-a15 | JPEG Sony có thẻ trạng thái "đã sửa trong máy", ống có trong Lensfun | bật Lens Correction | không tự khớp, pass của ShotDex không chạy, ảnh lệch ≤ 1/255 so với công tắc tắt; chọn tay một ống thì pass chạy | ⚠️ chưa có |
 | AC-a16 | JPEG cùng thân máy, thẻ báo chưa sửa | bật Lens Correction | tự khớp ống như ảnh không có thẻ | ⚠️ chưa có |
 | AC-a17 | ảnh nguồn 2 có CA đỏ/lam, chip Remove CA bật | mở Optics, kéo CA 0 → 200 | chip vẫn hiện và chạm được; tắt chip đổi ảnh ở cả hai mức CA | ⚠️ chưa có |
-| AC-a18 | ảnh nguồn 2 đủ ba mặt, iPhone 17, kích thước hiển thị | kéo Distortion liên tục | méo + CA chạy trong **một** pass; ≤ 8 ms mỗi khung | ⚠️ chưa có (đo ở `/verify`) |
+| AC-a18 | ảnh nguồn 2 đủ ba mặt, iPhone 17, kích thước hiển thị | kéo Distortion liên tục | méo + CA chạy trong **một** pass; ≤ 8 ms mỗi khung | `LensCorrectionRenderTests.distortionAndCAShareOnePass` (một nút `lensCorrect`, không `lensWarp`) · ⚠️ ≤ 8ms/khung: đo ở `/verify` trên iPhone 17 |
 
 **Chưa chứng minh được:** mọi AC trừ phần méo của AC-a10.

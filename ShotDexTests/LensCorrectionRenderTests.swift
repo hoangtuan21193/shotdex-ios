@@ -96,4 +96,68 @@ struct LensCorrectionRenderTests {
         #expect(g1 > 1.05, "the corner is brightened")
         #expect(abs(g2 - g1 * g1) <= g1 * g1 * 0.01, "gain² — \(g1) → \(g2)")
     }
+
+    /// A real Lensfun row with distortion, vignetting and TCA.
+    static func fullLens() throws -> LensfunLens {
+        try #require(LensProfileLibrary.shared.lenses.first {
+            !$0.distortion.isEmpty && !$0.vignetting.isEmpty && !$0.tca.isEmpty && $0.cropFactor == 1
+        })
+    }
+
+    /// 16a AC-a7. All three strengths at 0: the photo exactly as with the
+    /// switch off — no warp, fill zoom 1.0, no vignetting gain.
+    @Test func zeroStrengthsMatchSwitchOff() async throws {
+        let (source, directory) = try await Self.jpeg()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let lens = try Self.fullLens()
+        var zero = PhotoEditRecipe.identity
+        zero.lensProfile = PhotoLensProfileChoice(lensID: lens.id, cameraCropFactor: 1, isAutomatic: true)
+        for kind in [PhotoAdjustmentKind.lensDistortionScale, .lensVignettingScale, .lensChromaticAberrationScale] {
+            zero.adjustments[kind] = 0
+        }
+        var off = zero
+        off.adjustments.lensCorrection = 0
+        let renderer = PhotoRenderService()
+        let a = try await renderer.render(source: source, recipe: zero).image
+        let b = try await renderer.render(source: source, recipe: off).image
+        #expect(LensBlurTests.meanDifference(a, b) <= 1)
+
+        let flat = LensCorrectionTable.make(
+            distortion: Self.barrel, tca: Self.fringe, distortionStrength: 0,
+            chromaticAberrationStrength: 0, maximumRadius: 2
+        )
+        #expect(flat.isIdentity)
+        #expect(LensCorrectionPass.fillZoom(flat, extent: CGRect(x: 0, y: 0, width: 600, height: 400), norm: 200) == 1)
+    }
+
+    /// 16a AC-a18. Distortion and CA are one pass in the render graph — one
+    /// lensCorrect node, no lensWarp beside it.
+    @Test func distortionAndCAShareOnePass() throws {
+        let image = LensCorrectionPass.apply(
+            distortion: Self.barrel, tca: Self.fringe, distortionStrength: 1, chromaticAberrationStrength: 1,
+            lensCropFactor: 1, cameraCropFactor: 1, calibrationAspect: 1.5, manualDistortion: 0.3,
+            to: Self.flatGrey()
+        )
+        let graph = image.debugDescription
+        #expect(graph.components(separatedBy: "lensCorrect").count - 1 == 1, "\(graph)")
+        #expect(!graph.contains("lensWarp"))
+    }
+
+    /// 16a AC-a17. Remove CA is not the profile: with the profile's CA at 0
+    /// and at 200, turning the chip on still changes the picture.
+    @Test(arguments: [0.0, 2.0])
+    func removeCAChipChangesImageAtBothCAStrengths(_ strength: Double) async throws {
+        let (source, directory) = try await Self.jpeg()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let lens = try Self.fullLens()
+        var chipOff = PhotoEditRecipe.identity
+        chipOff.lensProfile = PhotoLensProfileChoice(lensID: lens.id, cameraCropFactor: 1, isAutomatic: true)
+        chipOff.adjustments.lensChromaticAberrationScale = strength
+        var chipOn = chipOff
+        chipOn.adjustments.chromaticAberration = 1
+        let renderer = PhotoRenderService()
+        let a = try await renderer.render(source: source, recipe: chipOff).image
+        let b = try await renderer.render(source: source, recipe: chipOn).image
+        #expect(LensBlurTests.meanDifference(a, b) > 0.5, "CA \(strength)")
+    }
 }
