@@ -1,6 +1,8 @@
 import CoreImage
 import Foundation
+import ImageIO
 import Testing
+import UniformTypeIdentifiers
 @testable import ShotDexKit
 @testable import ShotDex
 
@@ -84,6 +86,86 @@ struct VignetteStyleTests {
             let light = Self.mean(of: PhotoRenderService.applyVignette(lighter, style: style, to: input), in: Self.greyBesideIt)
             #expect(dark < 0.5 && light > 0.5, "\(style): −50 → \(dark), +50 → \(light)")
         }
+    }
+
+    /// A flat mid-grey PNG on disk, for a full render.
+    private static func flatGreyFile(width: Int, height: Int) throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("vignette-crop-\(UUID().uuidString).png")
+        let bytes = [UInt8](repeating: 128, count: width * height * 4)
+        let provider = try #require(CGDataProvider(data: Data(bytes) as CFData))
+        let image = try #require(CGImage(
+            width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32,
+            bytesPerRow: width * 4, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue),
+            provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent
+        ))
+        let destination = try #require(CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil))
+        CGImageDestinationAddImage(destination, image, nil)
+        #expect(CGImageDestinationFinalize(destination))
+        return url
+    }
+
+    /// AC-26. With the crop keeping the left half, the vignette is centred on
+    /// the cropped frame: the brightest column sits in its middle, not at the
+    /// right edge where the uncropped centre would be.
+    @Test func vignetteFollowsTheCrop() async throws {
+        let url = try Self.flatGreyFile(width: 400, height: 200)
+        defer { try? FileManager.default.removeItem(at: url) }
+        var recipe = PhotoEditRecipe()
+        recipe.adjustments.vignette = -0.5
+        recipe.crop.rect = NormalizedRect(x: 0, y: 0, width: 0.5, height: 1)
+
+        let service = PhotoRenderService()
+        let info = try await service.inspectSource(at: url)
+        let output = try await service.render(source: info, recipe: recipe).image
+        let extent = output.extent
+
+        let context = CIContext(options: [.workingColorSpace: NSNull(), .outputColorSpace: NSNull()])
+        let width = Int(extent.width), height = Int(extent.height)
+        var values = [Float](repeating: 0, count: width * height * 4)
+        context.render(
+            output,
+            toBitmap: &values,
+            rowBytes: width * 4 * MemoryLayout<Float>.size,
+            bounds: extent,
+            format: .RGBAf,
+            colorSpace: nil
+        )
+        let middleRow = height / 2
+        let row = (0..<width).map { Double(values[(middleRow * width + $0) * 4 + 1]) }
+        let peak = row.max() ?? 0
+        let brightest = row.indices.filter { row[$0] >= peak - 0.002 }
+        let centre = Double(brightest.reduce(0, +)) / Double(brightest.count)
+        let offset = abs(centre + 0.5 - Double(width) / 2) / Double(min(width, height))
+        #expect(offset <= 0.02, "brightest column at \(centre) of \(width) — \(offset) of the short side off centre")
+    }
+
+    /// AC-26. Grain lands after the vignette: it is as strong in a darkened
+    /// corner as in the middle. Laid under the vignette, the corner's grain
+    /// would be scaled down with the corner.
+    @Test func grainRunsAfterTheVignette() {
+        let input = CIImage(color: CIColor(red: 0.5, green: 0.5, blue: 0.5))
+            .cropped(to: CGRect(x: 0, y: 0, width: Self.size, height: Self.size))
+        var adjustments = PhotoAdjustments()
+        adjustments.vignette = -1
+        adjustments.grain = 0.8
+        let output = PhotoRenderService.applyEffects(adjustments, to: input)
+
+        func spread(_ rect: CGRect) -> Double {
+            let context = CIContext(options: [.workingColorSpace: NSNull(), .outputColorSpace: NSNull()])
+            let w = Int(rect.width), h = Int(rect.height)
+            var values = [Float](repeating: 0, count: w * h * 4)
+            context.render(output, toBitmap: &values, rowBytes: w * 4 * MemoryLayout<Float>.size,
+                           bounds: rect, format: .RGBAf, colorSpace: nil)
+            let greens = stride(from: 1, to: values.count, by: 4).map { Double(values[$0]) }
+            let mean = greens.reduce(0, +) / Double(greens.count)
+            return (greens.reduce(0) { $0 + ($1 - mean) * ($1 - mean) } / Double(greens.count)).squareRoot()
+        }
+        let corner = spread(CGRect(x: 0, y: 0, width: 12, height: 12))
+        let middle = spread(CGRect(x: 42, y: 42, width: 12, height: 12))
+        #expect(corner >= middle * 0.7, "grain σ corner \(corner) against middle \(middle)")
+        #expect(PhotoRenderService.postMaskPasses.last == .effects)
     }
 
     /// Paint Overlay has no highlight protection, so Highlights goes quiet.
