@@ -117,7 +117,7 @@ Hai slider chỉnh tay của FS-03.15 cộng lên trên mọi nguồn: đó là 
 | AC-a14 | khối maker notes tách từ một ORF OM/Olympus có dữ liệu méo | giải nguồn | như AC-a13 cho ORF | ⚠️ chưa có |
 | AC-a15 | JPEG Sony có thẻ trạng thái "đã sửa trong máy", ống có trong Lensfun | bật Lens Correction | không tự khớp, pass của ShotDex không chạy, ảnh lệch ≤ 1/255 so với công tắc tắt; chọn tay một ống thì pass chạy | ⚠️ chưa có |
 | AC-a16 | JPEG cùng thân máy, thẻ báo chưa sửa | bật Lens Correction | tự khớp ống như ảnh không có thẻ | ⚠️ chưa có |
-| AC-a17 | ảnh nguồn 2 có CA đỏ/lam, chip Remove CA bật | mở Optics, kéo CA 0 → 200 | chip vẫn hiện và chạm được; tắt chip đổi ảnh ở cả hai mức CA | ⚠️ chưa có |
+| AC-a17 | ảnh nguồn 2 có CA đỏ/lam, chip Remove CA bật | mở Optics, kéo CA 0 → 200 | chip vẫn hiện và chạm được; tắt chip đổi ảnh ở cả hai mức CA | `LensCorrectionRenderTests.removeCAChipChangesImageAtBothCAStrengths` (CA 0 và 200) · chip trong Optics: `iphone-optics-lens.json` 2-optics-profile |
 | AC-a18 | ảnh nguồn 2 đủ ba mặt, iPhone 17, kích thước hiển thị | kéo Distortion liên tục | méo + CA chạy trong **một** pass; ≤ 8 ms mỗi khung | `LensCorrectionRenderTests.distortionAndCAShareOnePass` (một nút `lensCorrect`, không `lensWarp`) · ⚠️ ≤ 8ms/khung: đo ở `/verify` trên iPhone 17 |
 
 **Chưa chứng minh được:** mọi AC trừ phần méo của AC-a10.
