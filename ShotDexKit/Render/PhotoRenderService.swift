@@ -1402,20 +1402,18 @@ public actor PhotoRenderService {
             )
         }
         if abs(adjustments.warmth) > 0.0001 || abs(adjustments.tint) > 0.0001 {
+            // Channel gains in linear light, like Lightroom's white balance —
+            // not luminance-preserving, so warmth re-tones colours (and a
+            // Black & White conversion after it). See `WhiteBalanceMath`.
+            let gains = WhiteBalanceMath.gains(warmth: adjustments.warmth, tint: adjustments.tint)
             image = filtered(
-                "CITemperatureAndTint",
+                "CIColorMatrix",
                 image: image,
                 values: [
-                    "inputNeutral": CIVector(x: 6_500, y: 0),
-                    // `CITemperatureAndTint` reads temperature as physical Kelvin
-                    // (high = blue), the opposite of a photographer's slider where
-                    // right = warm. So a positive Warmth LOWERS the target Kelvin
-                    // and a positive Tint pushes toward magenta — matching the
-                    // colored track (right = orange / magenta).
-                    "inputTargetNeutral": CIVector(
-                        x: 6_500 - adjustments.warmth * 3_000,
-                        y: -adjustments.tint * 150
-                    ),
+                    "inputRVector": CIVector(x: CGFloat(gains.x), y: 0, z: 0, w: 0),
+                    "inputGVector": CIVector(x: 0, y: CGFloat(gains.y), z: 0, w: 0),
+                    "inputBVector": CIVector(x: 0, y: 0, z: CGFloat(gains.z), w: 0),
+                    "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
                 ]
             )
         }

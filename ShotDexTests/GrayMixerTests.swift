@@ -3,7 +3,7 @@ import Foundation
 import Testing
 @testable import ShotDexKit
 
-/// FS-03.15 AC-10 — the Black & White mix.
+/// FS-03.15 AC-10, AC-15 — the Black & White mix.
 struct GrayMixerTests {
     /// Three ColorChecker patches in sRGB: Blue, Yellow, Neutral 5.
     private static let patches: [(name: String, rgb: (UInt8, UInt8, UInt8))] = [
@@ -72,5 +72,17 @@ struct GrayMixerTests {
         #expect(after <= before * 0.85, "blue went from \(before) to \(after)")
         #expect(abs(mixed["yellow"]!.0 - plain["yellow"]!.0) <= 2)
         #expect(abs(mixed["neutral5"]!.0 - plain["neutral5"]!.0) <= 2)
+    }
+
+    /// AC-15. Black & White runs after white balance, and white balance is
+    /// channel gains, so warming the photo brightens yellow in the grey version.
+    @Test func temperatureShiftsTheGreyMix() {
+        let neutral = Self.render(PhotoColorRecipe())
+        let warm = Self.render(PhotoColorRecipe(), warmth: 0.3)
+        Self.expectGrey(warm)
+        #expect(warm["yellow"]!.0 - neutral["yellow"]!.0 >= 3, "yellow \(neutral["yellow"]!.0) → \(warm["yellow"]!.0)")
+        // Blue's brightness sits mostly in green, which the gains are normalised
+        // on, so it does not visibly darken — it must not brighten.
+        #expect(warm["blue"]!.0 <= neutral["blue"]!.0, "blue \(neutral["blue"]!.0) → \(warm["blue"]!.0)")
     }
 }

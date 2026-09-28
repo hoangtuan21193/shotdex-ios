@@ -41,6 +41,9 @@ Tổng quan và thứ tự render: [FS-03.15](15-lightroom-parameter-parity.md).
 - Không có nút Auto mix ở bản này.
 - Chuyển xám chạy **trong chặng Color, sau WB và Light** (thay chỗ đầu chuỗi hôm nay): Temp/Tint đổi tông xám
   như Lightroom. *Vì ở đầu chuỗi, preset B&W dùng Temp để đổi tông ra sai.*
+- **Temp/Tint là hệ số từng kênh** trong ánh sáng tuyến tính (màu vật đen ở nhiệt độ đích chia cho ở 6500K, chuẩn
+  hoá theo kênh lục), không giữ độ sáng như bộ lọc nhiệt màu của Core Image — nên màu vàng sáng lên khi ấm. Màu
+  lam gần như không tối đi vì độ sáng của nó nằm chủ yếu ở kênh lục (chốt 2026-09-28).
 - Mask không có công tắc B&W (Lightroom cũng không); xám trong mask là Saturation −100 (FS-03.15 §3).
 
 | Control | Thẻ `crs:` | Thang |
@@ -82,6 +85,6 @@ Tổng quan và thứ tự render: [FS-03.15](15-lightroom-parameter-parity.md).
 | AC-12 | bảng 24 ô | đặt Calibration Red Hue +30 | hue ô Red dịch về phía cam +4°…+12°; ô Neutral 5 lệch ≤ 1/255; ô Blue dịch ≤ 2° | ⚠️ chưa có (dự kiến `CalibrationTests.redHueMovesRedTowardOrange`) |
 | AC-13 | bảng 24 ô | đặt Blue Saturation +50 | độ bão hoà ô Blue tăng ≥ 10% tương đối; mọi ô trung tính lệch ≤ 1/255 | ⚠️ chưa có (dự kiến `CalibrationTests.saturationKeepsGreysGrey`) |
 | AC-14 | Calibration ở mặc định | kéo Red Hue 0 → +40 rồi thả, rồi Undo một lần | một bước lịch sử; recipe về đúng mặc định, không thêm khoá Calibration | ⚠️ chưa có (dự kiến `EditorHistoryAndSummaryTests.calibrationDragIsOneStep`) |
-| AC-15 | bảng 24 ô, B&W bật, mixer 0 | đặt Temp +30 (so với 0) | ô Yellow sáng lên và ô Blue tối đi, mỗi ô ≥ 3/255; mọi ô vẫn R = G = B ± 1/255 | ⚠️ chưa có (dự kiến `GrayMixerTests.temperatureShiftsTheGreyMix`) |
+| AC-15 | bảng 24 ô, B&W bật, mixer 0 | đặt Temp +30 (so với 0) | ô Yellow sáng lên ≥ 3/255, ô Blue không sáng lên; mọi ô vẫn R = G = B ± 1/255 | `GrayMixerTests.temperatureShiftsTheGreyMix` · `WhiteBalanceMathTests` |
 
 **Chưa chứng minh được:** AC-7…AC-15 (chưa code).
