@@ -143,7 +143,7 @@ struct EditorAdjustmentCatalogTests {
         ])
         let geo = global.first { $0.id == .geo }
         #expect(geo?.kinds == [
-            .geoVertical, .geoHorizontal, .geoRotate, .geoScale, .geoOffsetX, .geoOffsetY,
+            .geoVertical, .geoHorizontal, .geoRotate, .geoAspect, .geoScale, .geoOffsetX, .geoOffsetY,
         ])
         // Never inside a mask.
         let mask = EditorAdjustmentCatalog.groups(isRAWSource: true, scope: .mask)

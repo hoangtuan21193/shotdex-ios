@@ -439,6 +439,8 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
     case geoVertical
     case geoHorizontal
     case geoRotate
+    /// Width against height, −1…1: ×1.5^value about the centre (FS-03.15b §4).
+    case geoAspect
     case geoScale
     case geoOffsetX
     case geoOffsetY
@@ -501,6 +503,7 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         case .geoVertical: "Vertical"
         case .geoHorizontal: "Horizontal"
         case .geoRotate: "Rotate"
+        case .geoAspect: "Aspect"
         case .geoScale: "Scale"
         case .geoOffsetX: "Offset X"
         case .geoOffsetY: "Offset Y"
@@ -560,6 +563,7 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         case .geoVertical: "perspective"
         case .geoHorizontal: "perspective"
         case .geoRotate: "rotate.right"
+        case .geoAspect: "arrow.left.and.right.square"
         case .geoScale: "arrow.up.left.and.arrow.down.right"
         case .geoOffsetX: "arrow.left.and.right"
         case .geoOffsetY: "arrow.up.and.down"
@@ -757,6 +761,7 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
     public var geoVertical = 0.0
     public var geoHorizontal = 0.0
     public var geoRotate = 0.0
+    public var geoAspect = 0.0
     public var geoScale = 0.0
     public var geoOffsetX = 0.0
     public var geoOffsetY = 0.0
@@ -820,6 +825,7 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .geoVertical: geoVertical
             case .geoHorizontal: geoHorizontal
             case .geoRotate: geoRotate
+            case .geoAspect: geoAspect
             case .geoScale: geoScale
             case .geoOffsetX: geoOffsetX
             case .geoOffsetY: geoOffsetY
@@ -881,6 +887,7 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .geoVertical: geoVertical = newValue
             case .geoHorizontal: geoHorizontal = newValue
             case .geoRotate: geoRotate = newValue
+            case .geoAspect: geoAspect = newValue
             case .geoScale: geoScale = newValue
             case .geoOffsetX: geoOffsetX = newValue
             case .geoOffsetY: geoOffsetY = newValue

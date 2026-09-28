@@ -202,7 +202,7 @@ enum EditorAdjustmentCatalog {
                     id: .geo,
                     title: "Geo",
                     kinds: [
-                        .geoVertical, .geoHorizontal, .geoRotate,
+                        .geoVertical, .geoHorizontal, .geoRotate, .geoAspect,
                         .geoScale, .geoOffsetX, .geoOffsetY,
                     ]
                 )

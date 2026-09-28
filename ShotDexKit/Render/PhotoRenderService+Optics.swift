@@ -179,6 +179,7 @@ public extension PhotoRenderService {
         var image = input
 
         let hasAffine = abs(adjustments.geoRotate) > 0.0001
+            || abs(adjustments.geoAspect) > 0.0001
             || abs(adjustments.geoScale) > 0.0001
             || abs(adjustments.geoOffsetX) > 0.0001
             || abs(adjustments.geoOffsetY) > 0.0001
@@ -190,6 +191,8 @@ public extension PhotoRenderService {
             var transform = CGAffineTransform(translationX: extent.midX + tx, y: extent.midY + ty)
             transform = transform.rotated(by: angle)
             transform = transform.scaledBy(x: scale, y: scale)
+            let aspect = aspectScale(adjustments.geoAspect)
+            transform = transform.scaledBy(x: aspect.x, y: aspect.y)
             transform = transform.translatedBy(x: -extent.midX, y: -extent.midY)
             image = image.clampedToExtent().transformed(by: transform).cropped(to: extent)
         }
@@ -203,6 +206,14 @@ public extension PhotoRenderService {
             )
         }
         return image
+    }
+
+    /// Aspect's stretch: width against height becomes 1.5^value. The axis that
+    /// grows is the one scaled, never the other shrunk, so no edge pulls in
+    /// past the frame and no corner shows empty.
+    static func aspectScale(_ value: Double) -> (x: CGFloat, y: CGFloat) {
+        let ratio = pow(1.5, min(1, max(-1, value)))
+        return (CGFloat(max(1, ratio)), CGFloat(max(1, 1 / ratio)))
     }
 
     private static func keystone(
