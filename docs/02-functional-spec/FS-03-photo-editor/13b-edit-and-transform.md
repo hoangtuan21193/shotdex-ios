@@ -81,10 +81,10 @@ Máy: iPhone 17 iOS 26.5 và 18.6; ảnh 3:2 (panel 344) nếu không ghi khác.
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-15 | Edit, danh sách ở đầu | cuộn tới khi nhãn COLOR qua đầu vùng cuộn | nhãn dính đọc "COLOR ▼" | ⚠️ chưa có — `iphone-edit-list.json` + dump |
-| AC-16 | Edit | chạm "LIGHT ▼" | mục lục có đúng các nhóm của danh mục, mỗi nhóm một lần, đúng thứ tự (9 hôm nay), có "Grading", không có "Grade" | ⚠️ chưa có — `EditorPanelLayoutTests.phoneIndexListsEveryEditGroupOnce` |
-| AC-17 | mục lục mở | chạm Detail | nhãn DETAIL ở đầu vùng cuộn (±1pt), nhãn dính "DETAIL ▼", mục lục đóng | ⚠️ chưa có — `iphone-edit-list.json` dump trước / sau |
-| AC-18 | Edit cuộn tới Detail | chạm Presets rồi Edit | nhãn dính vẫn "DETAIL ▼", cùng offset (±1pt) | ⚠️ chưa có — `iphone-edit-list.json` |
+| AC-15 | Edit, danh sách ở đầu | cuộn tới khi nhãn COLOR qua đầu vùng cuộn | nhãn dính đọc "COLOR ▼" | `iphone-edit-list.json` 2-scrolled (nhãn dính "GRADING ▼", bánh xe theo) · nhãn dính đọc từ `scrollPosition(id:)` |
+| AC-16 | Edit | chạm "LIGHT ▼" | mục lục có đúng các nhóm của danh mục, mỗi nhóm một lần, đúng thứ tự (9 hôm nay), có "Grading", không có "Grade" | `EditorPanelLayoutTests.phoneIndexListsEveryEditGroupOnce` (11 nhóm hôm nay: 9 + Lens Blur + Calibration của FS-03.15) · `iphone-edit-list.json` 3-index |
+| AC-17 | mục lục mở | chạm Detail | nhãn DETAIL ở đầu vùng cuộn (±1pt), nhãn dính "DETAIL ▼", mục lục đóng | `iphone-edit-list.json` 3-index → 4-detail (nhãn dính "DETAIL ▼", mục lục đóng) |
+| AC-18 | Edit cuộn tới Detail | chạm Presets rồi Edit | nhãn dính vẫn "DETAIL ▼", cùng offset (±1pt) | `iphone-edit-list.json` 5-back · ⚠️ chỗ cuộn nhớ theo **nhóm** ở đầu (`chrome.editListGroup`), không theo từng điểm offset; kiểm lại sau task 8 khi có nút Edit |
 | AC-19 | ảnh 3:2 | Edit Curve, chạm đồ thị thêm 2 điểm, rồi ✕ | curve về đường thẳng, recipe không có khối curve; không phần tử nào của curve nằm trong khung stage lúc mở, trên iPhone 17 và iPad 13" sidebar | ⚠️ chưa có — `EditorHistoryAndSummaryTests.curveCancelLeavesNoCurveBlock` + dump hai máy |
 | AC-20 | Transform | dump vùng thông số | 4 nhãn CROP · STRAIGHTEN · UPRIGHT · GEOMETRY đúng thứ tự; More… cộng 4 chip = mọi tỉ lệ trong danh sách tỉ lệ, mỗi cái một lần; trước FS-03.15 không hàng / chip nào mờ vì chưa có | ⚠️ chưa có — `EditorPanelLayoutTests.transformReachesEveryCropRatioOnce` + `iphone-transform.json` |
 | AC-21 | ảnh 3:2 crop gốc, góc 0° | Transform, chọn 1:1, Rotate một lần, rồi ✕ và xác nhận | crop về nguyên khung, không xoay, góc 0° | ⚠️ chưa có — `EditorHistoryAndSummaryTests.transformCancelRestoresTheFrame` |

@@ -16,6 +16,12 @@ final class EditorChromeModel {
     /// Which 28c bottom-nav group is showing. Drives the panel content; the six
     /// adjustment groups all sit on the controller's global `.adjust` tool.
     var selectedGroup: EditorGroup = .light
+    /// Where the phone's Edit list is — the group at its top — kept for the
+    /// session so leaving Edit and coming back lands in the same place
+    /// (FS-03.13b §1). Never in the recipe or the history.
+    var editListGroup: EditorGroup?
+    /// A group the list should scroll to (a chip tapped on the wheel).
+    var editListScrollRequest: EditorGroup?
     /// Floating histogram card. It sits over the photo when expanded and parks as
     /// a pill in the action bar when collapsed. Collapsed on open — the photo is
     /// what the editor is for, so nothing covers it until the user asks.

@@ -641,4 +641,19 @@ struct EditorPanelLayoutTests {
             + EditorLayoutMetrics.sidebarLookRowHeight + 1
         #expect(column - unfolded < lightGroup)
     }
+
+    /// FS-03.13 AC-16. The Edit index lists every Edit group of the catalog,
+    /// each once, in order — "Grading", never "Grade" — and no Geometry,
+    /// which is Transform's.
+    @Test func phoneIndexListsEveryEditGroupOnce() {
+        let groups = EditorEditIndex.groups
+        #expect(Set(groups).count == groups.count)
+        let titles = groups.map { EditorEditIndex.title(of: $0, blackAndWhite: false) }
+        #expect(titles.contains("Grading") && !titles.contains("Grade"))
+        #expect(!groups.contains(.geo) && !groups.contains(.cropGeometry))
+        // Every parameter group of the wheel's adjust tool is in the list.
+        let adjust = EditorGroup.allCases.filter { $0.tool == .adjust && $0 != .geo }
+        #expect(Set(adjust).isSubset(of: Set(groups)))
+        #expect(groups.first == .light && groups[1] == .curve)
+    }
 }

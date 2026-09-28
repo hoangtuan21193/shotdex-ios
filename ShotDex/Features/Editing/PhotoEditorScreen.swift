@@ -2419,7 +2419,9 @@ struct PhotoEditorScreen: View {
     /// where there is one to pick: Grade's tonal region. (Mask keeps its own list /
     /// detail panels for now.)
     private func panelHasTargetStrip(_ controller: PhotoEditorController) -> Bool {
-        switch chrome.selectedGroup {
+        // The Edit list carries each group's strip under its label.
+        if Self.showsEditList(chrome) { return false }
+        return switch chrome.selectedGroup {
         case .curve, .grade, .cropGeometry, .presets: true
         // The band swatches pick an HSL band; the B&W Mix lists all eight.
         case .colorMix: !controller.isBlackAndWhite
@@ -2545,8 +2547,71 @@ struct PhotoEditorScreen: View {
     }
 
     /// The panel for whichever group the phone layout has open.
+    @ViewBuilder
     private func toolPanel(_ controller: PhotoEditorController) -> some View {
-        toolPanelContent(for: chrome.selectedGroup, controller: controller)
+        if Self.showsEditList(chrome) {
+            EditorEditList(
+                controller: controller,
+                chrome: chrome,
+                content: { group in
+                    group == .curve
+                        ? AnyView(curveRow(controller))
+                        : AnyView(toolPanelContent(for: group, controller: controller, isScrollable: false))
+                },
+                strip: { group in editListStrip(group, controller: controller) },
+                onTopGroupChange: { group in
+                    // Curve is a row of the list here; its graph opens only
+                    // from Edit Curve.
+                    guard group != .curve, chrome.selectedGroup != group else { return }
+                    chrome.selectedGroup = group
+                    if controller.selectedTool != group.tool { controller.selectedTool = group.tool }
+                }
+            )
+        } else {
+            toolPanelContent(for: chrome.selectedGroup, controller: controller)
+        }
+    }
+
+    /// The phone shows Edit as one list (FS-03.13b §1) for every group in
+    /// it; Curve's graph is still its own mode until it moves into the panel.
+    static func showsEditList(_ chrome: EditorChromeModel) -> Bool {
+        !chrome.isWideLayout && chrome.selectedGroup != .curve
+            && EditorEditIndex.groups.contains(chrome.selectedGroup)
+    }
+
+    /// A group's strip inside the list, under its label: the HSL bands, the
+    /// picked colours, the tonal regions.
+    private func editListStrip(_ group: EditorGroup, controller: PhotoEditorController) -> AnyView? {
+        switch group {
+        case .colorMix where !controller.isBlackAndWhite,
+             .grade:
+            return AnyView(targetStrip(for: group, controller: controller))
+        case .pointColor where !controller.pointColors.isEmpty && !controller.isBlackAndWhite:
+            return AnyView(targetStrip(for: group, controller: controller))
+        default:
+            return nil
+        }
+    }
+
+    /// Curve as a row of the Edit list: its name, the four channel dots, and
+    /// Edit Curve (FS-03.13b §2).
+    private func curveRow(_ controller: PhotoEditorController) -> some View {
+        HStack(spacing: 10) {
+            Text("Curve")
+                .font(EditorTheme.rowLabel)
+                .foregroundStyle(EditorTheme.secondaryText)
+            HStack(spacing: 4) {
+                ForEach([Color.white, .red, .green, .blue], id: \.self) { color in
+                    Circle().fill(color).frame(width: 8, height: 8)
+                }
+            }
+            .accessibilityHidden(true)
+            Spacer(minLength: 8)
+            Button("Edit Curve") { selectGroup(.curve, in: controller) }
+                .buttonStyle(EditorChipButtonStyle(isSelected: false))
+        }
+        .padding(.horizontal, AppTheme.Spacing.lg)
+        .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
     }
 
     /// One group's controls. Takes the group explicitly rather than reading
@@ -2830,6 +2895,11 @@ struct PhotoEditorScreen: View {
         // A cancelled hold-to-compare must not follow the user into the next
         // tool. See `stageContextMenu`.
         controller.showsOriginal = false
+        // Inside the phone's Edit list a chip scrolls the list to its group.
+        if !chrome.isWideLayout, group != .curve, EditorEditIndex.groups.contains(group),
+           Self.showsEditList(chrome) {
+            chrome.editListScrollRequest = group
+        }
         // 30c has no crop Done: the crop stays live and is committed when its tab is
         // left (or when the edit is saved). Switching to any other group is that
         // moment. Leaving via Save commits too, so a double commit is harmless.

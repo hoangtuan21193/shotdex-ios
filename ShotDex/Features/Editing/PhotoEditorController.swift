@@ -98,7 +98,7 @@ enum EditorGroup: String, CaseIterable, Identifiable {
         case .color: "Color"
         case .colorMix: "Color Mix"
         case .pointColor: "Point Color"
-        case .grade: "Grade"
+        case .grade: "Grading"
         case .effects: "Effects"
         case .lensBlur: "Lens Blur"
         case .detail: "Detail"
