@@ -57,7 +57,9 @@ struct EditorAdjustmentCatalogTests {
             .groups(isRAWSource: true, scope: .global, hasDepth: true)
             .flatMap(\.kinds)
         #expect(Set(kinds).count == kinds.count)
-        #expect(Set(kinds) == Set(PhotoAdjustmentKind.allCases))
+        #expect(Set(kinds).union(EditorAdjustmentCatalog.maskOnlyKinds) == Set(PhotoAdjustmentKind.allCases))
+        let maskKinds = EditorAdjustmentCatalog.groups(isRAWSource: false, scope: .mask).flatMap(\.kinds)
+        #expect(EditorAdjustmentCatalog.maskOnlyKinds.isSubset(of: Set(maskKinds)))
     }
 
     @Test func unipolarSlidersStartAtZero() {

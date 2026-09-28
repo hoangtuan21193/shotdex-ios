@@ -511,7 +511,26 @@ public actor PhotoRenderService {
     public static func applyMaskAdjustments(of mask: PhotoMask, to image: CIImage) -> CIImage {
         var result = applyLight(mask.adjustments, to: image, appliesExposure: true)
         result = applyDetail(mask.adjustments, to: result)
-        return applyDehazePass(mask.adjustments, to: result)
+        result = applyDehazePass(mask.adjustments, to: result)
+        // FS-03.15d §2 order: the standard set, then the mask's own Hue.
+        return applyHueRotation(mask.adjustments.maskHue, to: result)
+    }
+
+    /// Turns every hue by `amount` × 180° about the grey axis, keeping
+    /// luminance — the hue-rotate matrix SVG and CSS use, whose weights
+    /// (0.213, 0.715, 0.072) are Rec. 709's.
+    public static func applyHueRotation(_ amount: Double, to image: CIImage) -> CIImage {
+        guard abs(amount) > 0.0001 else { return image }
+        let angle = min(1, max(-1, amount)) * .pi
+        let c = cos(angle), s = sin(angle)
+        let lr = 0.213, lg = 0.715, lb = 0.072
+        let r = CIVector(x: lr + c * (1 - lr) - s * lr, y: lg - c * lg - s * lg, z: lb - c * lb + s * (1 - lb), w: 0)
+        let g = CIVector(x: lr - c * lr + s * 0.143, y: lg + c * (1 - lg) + s * 0.140, z: lb - c * lb - s * 0.283, w: 0)
+        let b = CIVector(x: lr - c * lr - s * (1 - lr), y: lg - c * lg + s * lg, z: lb + c * (1 - lb) + s * lb, w: 0)
+        return image.applyingFilter("CIColorMatrix", parameters: [
+            "inputRVector": r, "inputGVector": g, "inputBVector": b,
+            "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
+        ])
     }
 
     public func resize(

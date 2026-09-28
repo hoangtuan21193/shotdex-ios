@@ -119,6 +119,10 @@ enum EditorAdjustmentCatalog {
         }
     }
 
+    /// Kinds that only exist inside a mask: Lightroom's masks have a Hue its
+    /// global panel does not.
+    static let maskOnlyKinds: Set<PhotoAdjustmentKind> = [.maskHue]
+
     /// Whether a row is live given the values around it. Paint Overlay has no
     /// highlight protection to tune, so its Highlights row goes quiet too.
     static func isEnabled(
@@ -157,7 +161,7 @@ enum EditorAdjustmentCatalog {
                 // A mask has no Black & White, vignette or grain — Lightroom's
                 // neither; Saturation −100 greys a mask (FS-03.15 E13).
                 kinds: [.warmth, .tint, .vibrance, .saturation]
-                    + (scope == .global ? [.blackAndWhite] : [])
+                    + (scope == .global ? [.blackAndWhite] : [.maskHue])
             ),
             EditorAdjustmentGroup(
                 id: .detail,
