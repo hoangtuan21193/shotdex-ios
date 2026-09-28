@@ -99,8 +99,8 @@ nắn méo, và preset Lightroom mang ba mức độ mạnh không có chỗ đ�
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
 | AC-1 | recipe có Distortion 150 · Vignetting 0 · CA 200, nguồn Lensfun id "Canon\|Canon EF 24-70mm f/2.8L II USM\|1.0" | encode rồi decode | cả ba mức, công tắc và nguồn giống hệt; thêm một loại nguồn lạ vào JSON thì chỉ nguồn rơi về "không sửa", ba mức và mọi phần khác còn nguyên | `LensProfileTests.strengthsSourceAndSwitchRoundTrip` · `…unknownSourceFallsToNoneOnly` |
-| AC-2 | ảnh có Distortion 100 | kéo lên 160 rồi thả | đúng **một** bước history; Undo trả 100 và ảnh render lệch ≤ 1/255 so với trước khi kéo | ⚠️ chưa có |
-| AC-3 | ảnh A (ARW, nguồn dữ liệu nhúng, 50/100/150) và ảnh B (CR3, nguồn Lensfun ống của B) | Copy Edits ở A, Paste lên B | B nhận 50/100/150, **giữ** nguồn Lensfun ống của B, không nhận nguồn của A | ⚠️ chưa có |
+| AC-2 | ảnh có Distortion 100 | kéo lên 160 rồi thả | đúng **một** bước history; Undo trả 100 và ảnh render lệch ≤ 1/255 so với trước khi kéo | `PhotoEditorControllerLensTests.distortionDragRecordsOneStep` (Undo trả đúng recipe trước khi kéo nên render trùng) |
+| AC-3 | ảnh A (ARW, nguồn dữ liệu nhúng, 50/100/150) và ảnh B (CR3, nguồn Lensfun ống của B) | Copy Edits ở A, Paste lên B | B nhận 50/100/150, **giữ** nguồn Lensfun ống của B, không nhận nguồn của A | `EditClipboardTests.pasteCarriesStrengthsKeepsTargetLensSource` · Sync Everything (E18): `…syncEverythingKeepsTargetLensProfile` |
 | AC-4 | `.xmp` có Enable 1, Setup Custom, Name "Adobe (Canon EF 24-70mm f/2.8L II USM)", ba mức 80/120/100 | nhập và áp lên CR3 chụp bằng ống đó | công tắc bật, ống là dòng Lensfun cùng tên, ba slider 80/120/100, báo cáo ghi ✓ | ⚠️ chưa có |
 | AC-5 | `.xmp` như AC-4 nhưng Name "Adobe (Foo 13mm f/1.1)" | nhập và áp lên cùng CR3 | ba mức 80/120/100 giữ nguyên, nguồn tự giải theo §3, báo cáo có một dòng ≈ nêu "Foo 13mm f/1.1", không crash | ⚠️ chưa có |
 | AC-6 | recipe trỏ tới id ống không còn trong bảng (sau một lần làm mới) | mở ảnh trong editor | render không có bước sửa theo hồ sơ, không crash; panel hiện "No profile for this lens yet" + Choose Lens | ⚠️ chưa có |

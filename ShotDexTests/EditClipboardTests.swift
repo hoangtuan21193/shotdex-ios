@@ -162,6 +162,42 @@ struct EditClipboardTests {
         #expect(UprightResolver.resolve(b, on: building(tilt: -5, lean: 5), context: context) == b)
     }
 
+    /// FS-03.16 AC-3. A (embedded data, 50/100/150) pasted onto B (its own
+    /// Lensfun lens): B gets the strengths and keeps its own source.
+    @Test func pasteCarriesStrengthsKeepsTargetLensSource() {
+        var a = PhotoEditRecipe.identity
+        a.adjustments.lensDistortionScale = 0.5
+        a.adjustments.lensVignettingScale = 1
+        a.adjustments.lensChromaticAberrationScale = 1.5
+        a.lensProfile = PhotoLensProfileChoice(
+            lensID: nil, cameraCropFactor: 1, isAutomatic: true,
+            distortionSource: .embedded, vignettingSource: .embedded, chromaticAberrationSource: .embedded
+        )
+        var b = PhotoEditRecipe.identity
+        let bLens = PhotoLensProfileChoice(lensID: "Canon|Canon EF 24-70mm f/2.8L II USM|1.0", cameraCropFactor: 1, isAutomatic: true)
+        b.lensProfile = bLens
+        let clipboard = makeClipboard()
+        clipboard.copy(from: a)
+        let pasted = clipboard.paste(onto: b)
+        #expect(pasted.adjustments.lensDistortionScale == 0.5)
+        #expect(pasted.adjustments.lensChromaticAberrationScale == 1.5)
+        #expect(pasted.lensProfile == bLens)
+    }
+
+    /// FS-03.16 §4 (E18). Sync "Everything" keeps each target's own lens
+    /// profile and still carries the strengths and the switch.
+    @Test func syncEverythingKeepsTargetLensProfile() {
+        var a = PhotoEditRecipe.identity
+        a.adjustments.lensDistortionScale = 1.8
+        a.adjustments.lensCorrection = 0
+        a.lensProfile = PhotoLensProfileChoice(lensID: "Sony|FE 24-70mm F2.8 GM II|1.0", cameraCropFactor: 1, isAutomatic: true)
+        var b = PhotoEditRecipe.identity
+        b.lensProfile = PhotoLensProfileChoice(lensID: "Canon|Canon EF 24-70mm f/2.8L II USM|1.0", cameraCropFactor: 1, isAutomatic: false)
+        let synced = EditorSyncScope.everything.apply(a, onto: b)
+        #expect(synced.lensProfile == b.lensProfile)
+        #expect(synced.adjustments.lensDistortionScale == 1.8 && synced.adjustments.lensCorrection == 0)
+    }
+
     @Test func copyingNothingOffersNothing() {
         let clipboard = makeClipboard()
         clipboard.copy(from: .identity)

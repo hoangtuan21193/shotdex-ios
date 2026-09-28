@@ -81,7 +81,12 @@ enum EditorSyncScope {
     func apply(_ source: PhotoEditRecipe, onto target: PhotoEditRecipe) -> PhotoEditRecipe {
         switch self {
         case .everything:
-            return source
+            // Everything but the lens profile: B may have been shot on another
+            // lens, and A's profile would correct it wrongly (FS-03.16 §4,
+            // E18). The strengths and the switch come along in `adjustments`.
+            var result = source
+            result.lensProfile = target.lensProfile
+            return result
         case .look:
             // The one place the look is cut — Copy Edits, Paste, Sync Look and
             // My Looks all come through here (FS-03.15 AC-2).
