@@ -21,10 +21,11 @@ struct EditorPanelLayoutTests {
         #expect(EditorLayoutMetrics.editorTargetStripHeight == EditorLayoutMetrics.editorPanelRowHeight)
         #expect(EditorLayoutMetrics.editorPanelCornerRadius == 22)
 
-        // Light · Curve · Color · Mix · Point · Grade · Effects · Detail · Optics ·
-        // Geo · Crop · Heal · Mask · Markup · Presets — all in the wheel, each with
-        // an icon. Heal joined in FS-03.11; the phone gets it like the iPad.
-        #expect(EditorGroup.allCases.count == 15)
+        // Light · Curve · Color · Mix · Point · Grade · Effects · Lens Blur ·
+        // Detail · Optics · Geo · Calibration · Crop · Heal · Mask · Markup ·
+        // Presets — all in the wheel, each with an icon. Heal joined in FS-03.11;
+        // Lens Blur and Calibration in FS-03.15.
+        #expect(EditorGroup.allCases.count == 17)
         #expect(EditorGroup.allCases.allSatisfy { !$0.title.isEmpty })
         #expect(EditorGroup.allCases.allSatisfy { !$0.icon.isEmpty })
 

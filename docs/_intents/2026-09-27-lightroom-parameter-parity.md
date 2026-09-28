@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan |
 | Ngày | 2026-09-27 |
 | Trạng thái | accepted |
-| Tiến độ | **đang làm** (2026-09-28) — task 60/61, 58/60 AC xanh (task 7 — AC-3 — dời sang FS-03.14) · plan [2026-09-28-fs-03-15](../_plans/2026-09-28-fs-03-15-lightroom-parameter-parity.md) |
+| Tiến độ | **gần xong** (2026-09-29) — task 60/61, 58/60 AC xanh; còn AC-60 (đo Depth Anything trên iPhone 12/15 thật) và AC-3 (dời sang FS-03.14); full suite 1548 test xanh trên iPhone 17 26.5 · phần chờ máy thật: IoU Vision (AC-46/47/50), Vision con ngươi (AC-35/37), 12MP (AC-57/58), số đo AC-4 · plan [2026-09-28-fs-03-15](../_plans/2026-09-28-fs-03-15-lightroom-parameter-parity.md) |
 | Nguồn | phản hồi người dùng (chủ sở hữu sản phẩm) — "tôi muốn phản ánh được all thông số từ xmp của lightroom" |
 | Spec sinh ra từ đây | [FS-03.15](../02-functional-spec/FS-03-photo-editor/15-lightroom-parameter-parity.md) (+ 15a–15e) |
 
