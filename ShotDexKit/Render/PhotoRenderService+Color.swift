@@ -12,6 +12,44 @@ public extension PhotoRenderService {
     internal static let pointColorKernel = CoreImageKernelLibrary.kit.colorKernel(named: "pointColor")
     internal static let colorGradeKernel = CoreImageKernelLibrary.kit.colorKernel(named: "colorGrade")
     internal static let grayMixerKernel = CoreImageKernelLibrary.kit.colorKernel(named: "grayMixer")
+    internal static let shadowTintKernel = CoreImageKernelLibrary.kit.colorKernel(named: "shadowTint")
+
+    /// Calibration: the primaries matrix, then Shadow Tint, both in the linear
+    /// working space, before any tone work (FS-03.15 §3 pass 4).
+    internal static func applyCalibration(
+        _ calibration: PhotoCalibration,
+        to input: CIImage,
+        shadowTintKernel kernel: CIColorKernel? = shadowTintKernel
+    ) -> CIImage {
+        guard !calibration.isIdentity else { return input }
+        var image = input
+        let primaries = PhotoCalibration(
+            shadowTint: 0,
+            redHue: calibration.redHue, redSaturation: calibration.redSaturation,
+            greenHue: calibration.greenHue, greenSaturation: calibration.greenSaturation,
+            blueHue: calibration.blueHue, blueSaturation: calibration.blueSaturation
+        )
+        if !primaries.isIdentity {
+            let m = CalibrationMatrix.matrix(for: primaries)
+            func vector(_ row: SIMD3<Double>) -> CIVector {
+                CIVector(x: CGFloat(row.x), y: CGFloat(row.y), z: CGFloat(row.z), w: 0)
+            }
+            image = filtered(
+                "CIColorMatrix",
+                image: image,
+                values: [
+                    "inputRVector": vector(m[0]),
+                    "inputGVector": vector(m[1]),
+                    "inputBVector": vector(m[2]),
+                    "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
+                ]
+            )
+        }
+        if abs(calibration.shadowTint) > 0.0001, let kernel {
+            image = kernel.apply(extent: image.extent, arguments: [image, Float(calibration.shadowTint)]) ?? image
+        }
+        return image.cropped(to: input.extent)
+    }
 
     /// The eight mixer bands' centres, in degrees, as the HSL kernel takes
     /// them — from `ColorMixerBand.centerDegrees`, the constants

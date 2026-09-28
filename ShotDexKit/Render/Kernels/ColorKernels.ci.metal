@@ -121,6 +121,18 @@ float4 grayMixer(sample_t s, float4 mixA, float4 mixB, float4 centresA, float4 c
     return premultiply(float4(float3(grey), color.a));
 }
 
+// Calibration's Shadow Tint (FS-03.15 AC-12): green ↔ magenta, full at black,
+// gone by mid-grey. + is magenta, so green drops.
+float4 shadowTint(sample_t s, float amount) {
+    float4 color = unpremultiply(s);
+    float luma = dot(color.rgb, float3(0.2126f, 0.7152f, 0.0722f));
+    float weight = 1.0f - smoothstep(0.0f, 0.5f, luma);
+    float3 rgb = color.rgb;
+    rgb.g *= 1.0f - amount * 0.25f * weight;
+    rgb.rb *= 1.0f + amount * 0.08f * weight;
+    return premultiply(float4(clamp(rgb, float3(0.0f), float3(1.0f)), color.a));
+}
+
 // Eight slots: `PointColorAdjustment.maximumCount`, which a test holds to 8.
 float4 pointColor(sample_t s,
                   float4 ref0, float4 shift0, float4 ref1, float4 shift1,

@@ -395,7 +395,20 @@ public struct PhotoCalibration: Codable, Equatable, Sendable {
 
     public static let identity = PhotoCalibration()
 
-    public init() {}
+    public init(
+        shadowTint: Double = 0,
+        redHue: Double = 0, redSaturation: Double = 0,
+        greenHue: Double = 0, greenSaturation: Double = 0,
+        blueHue: Double = 0, blueSaturation: Double = 0
+    ) {
+        self.shadowTint = shadowTint
+        self.redHue = redHue
+        self.redSaturation = redSaturation
+        self.greenHue = greenHue
+        self.greenSaturation = greenSaturation
+        self.blueHue = blueHue
+        self.blueSaturation = blueSaturation
+    }
 
     public var isIdentity: Bool { self == .identity }
 
