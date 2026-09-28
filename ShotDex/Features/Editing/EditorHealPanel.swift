@@ -93,9 +93,9 @@ struct EditorHealPanel: View {
 
     private var hintText: String {
         if controller.recipe.healing.isEmpty {
-            return "Tap a spot on the photo to remove it. ShotDex fills it from beside it."
+            return "Tap a spot to remove it, or drag along a wire. ShotDex fills it from beside it."
         }
-        return "Drag the dashed circle to fill from somewhere else. Tap the photo for another spot."
+        return "Drag the dashed outline to fill from somewhere else. Tap or drag the photo for another."
     }
 }
 
@@ -119,22 +119,9 @@ struct EditorHealGuideOverlay: View {
 
     var body: some View {
         ZStack {
-            // Bottom-most: a tap on empty photo makes a spot. Spots above it win
-            // taps that land on them.
-            Color.clear
-                .contentShape(Rectangle())
-                .frame(width: imageRect.width, height: imageRect.height)
-                .position(x: imageRect.midX, y: imageRect.midY)
-                .onTapGesture { location in
-                    guard imageRect.width > 0, imageRect.height > 0 else { return }
-                    controller.addHealingSpot(at: NormalizedPoint(
-                        x: min(1, max(0, location.x / imageRect.width)),
-                        y: min(1, max(0, location.y / imageRect.height))
-                    ))
-                }
-                .accessibilityLabel("Photo")
-                .accessibilityHint("Tap to add a healing spot")
-
+            // Taps and strokes on empty photo land on the paint layer under
+            // this overlay (`EditorImageStage`); spots here win the touches
+            // that land on them.
             ForEach(Array(controller.recipe.healing.enumerated()), id: \.element.id) { index, spot in
                 spotGuide(spot, number: index + 1)
             }
@@ -157,6 +144,19 @@ struct EditorHealGuideOverlay: View {
         let source = point(spot.source)
         let color: Color = isSelected ? EditorTheme.accent : .white
         let line = (isSelected ? 2 : 1.25) / zoomScale
+
+        // A stroke spot draws its stroke — the repair — and, when picked, the
+        // same stroke where it is filled from.
+        if let stroke = spot.stroke {
+            strokePath(stroke, at: spot.center)
+                .stroke(color.opacity(0.35), style: StrokeStyle(lineWidth: radius * 2, lineCap: .round, lineJoin: .round))
+                .allowsHitTesting(false)
+            if isSelected {
+                strokePath(stroke, at: spot.source)
+                    .stroke(color.opacity(0.8), style: StrokeStyle(lineWidth: line, lineCap: .round, lineJoin: .round, dash: [5 / zoomScale, 4 / zoomScale]))
+                    .allowsHitTesting(false)
+            }
+        }
 
         if isSelected {
             Path { path in
@@ -190,6 +190,12 @@ struct EditorHealGuideOverlay: View {
             spot: spot,
             moves: \.center
         )
+    }
+
+    private func strokePath(_ stroke: [NormalizedPoint], at anchor: NormalizedPoint) -> Path {
+        Path { path in
+            path.addLines(stroke.map { point(NormalizedPoint(x: anchor.x + $0.x, y: anchor.y + $0.y)) })
+        }
     }
 
     private func handle(

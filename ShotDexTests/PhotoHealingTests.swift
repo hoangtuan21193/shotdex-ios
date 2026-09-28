@@ -244,6 +244,85 @@ struct PhotoHealingTests {
 
     /// Clone copies the source as it is, so from paler sky it shows — which is
     /// the reason Heal exists.
+    // MARK: Brush strokes (FS-03.15c AC-30)
+
+    private static let wireStart = (x: 77.0, y: 77.0)
+    private static let wireEnd = (x: 179.0, y: 179.0)
+
+    private static func distanceToWire(_ x: Double, _ y: Double) -> Double {
+        let ax = wireStart.x, ay = wireStart.y, bx = wireEnd.x, by = wireEnd.y
+        let t = max(0, min(1, ((x - ax) * (bx - ax) + (y - ay) * (by - ay)) / ((bx - ax) * (bx - ax) + (by - ay) * (by - ay))))
+        let dx = x - (ax + t * (bx - ax)), dy = y - (ay + t * (by - ay))
+        return (dx * dx + dy * dy).squareRoot()
+    }
+
+    /// The sky with a dark wire 3px wide running diagonally across 40% of
+    /// the frame, edges softened by a pixel so it is not aliased.
+    private func skyWithWire() -> CIImage {
+        var clean = pixels(sky(dust: false))
+        for y in 0..<size {
+            for x in 0..<size {
+                let d = Self.distanceToWire(Double(x) + 0.5, Double(y) + 0.5)
+                let coverage = Float(max(0, min(1, 2 - d)))
+                guard coverage > 0 else { continue }
+                let index = (y * size + x) * 4
+                for channel in 0..<3 { clean[index + channel] -= 0.3 * coverage }
+            }
+        }
+        return CIImage(
+            bitmapData: clean.withUnsafeBufferPointer { Data(buffer: $0) },
+            bytesPerRow: size * 16,
+            size: CGSize(width: size, height: size),
+            format: .RGBAf,
+            colorSpace: nil
+        )
+    }
+
+    /// AC-30. One Heal stroke along the wire, a little wider than it: inside
+    /// the repair the sky is back to within 2/255 on average and 4/255 at
+    /// worst, with no hard edge around it.
+    @Test func brushHealRemovesAWire() throws {
+        let points = (0...10).map { step -> NormalizedPoint in
+            let t = Double(step) / 10
+            return NormalizedPoint(
+                x: (Self.wireStart.x + t * (Self.wireEnd.x - Self.wireStart.x)) / Double(size),
+                y: (Self.wireStart.y + t * (Self.wireEnd.y - Self.wireStart.y)) / Double(size)
+            )
+        }
+        let radius = 5.0 / Double(size)
+        let stroke = try #require(PhotoHealingSpot.stroke(
+            through: points, mode: .heal, radius: radius, feather: 0.5, opacity: 1, aspectRatio: 1
+        ))
+        #expect(stroke.stroke?.count == 11)
+        let healed = pixels(PhotoRenderService.applyHealing([stroke], to: skyWithWire()))
+        let clean = pixels(sky(dust: false))
+
+        var sum: Float = 0, count: Float = 0, worst: Float = 0
+        for y in 0..<size {
+            for x in 0..<size {
+                let d = Self.distanceToWire(Double(x) + 0.5, Double(y) + 0.5)
+                let index = (y * size + x) * 4
+                let difference = (0..<3).map { abs(healed[index + $0] - clean[index + $0]) }.reduce(0, +) / 3 * 255
+                if d <= 5 { sum += difference; count += 1 }
+                if d <= 9 { worst = max(worst, difference) }
+            }
+        }
+        #expect(sum / count <= 2, "mean error \(sum / count)/255 along the wire")
+        #expect(worst <= 4, "worst error \(worst)/255 near the wire")
+    }
+
+    /// A stroke's source is the whole stroke moved square to it, 1.3 widths
+    /// off, and moving the spot moves the stroke.
+    @Test func strokeSourceSitsSquareToTheStroke() throws {
+        let points = [NormalizedPoint(x: 0.3, y: 0.5), NormalizedPoint(x: 0.7, y: 0.5)]
+        let spot = try #require(PhotoHealingSpot.stroke(
+            through: points, mode: .clone, radius: 0.02, feather: 0.5, opacity: 1, aspectRatio: 1
+        ))
+        #expect(abs(spot.source.x - spot.center.x) < 1e-9, "a level stroke's source is straight above or below")
+        #expect(abs(abs(spot.source.y - spot.center.y) - (0.04 * 1.3 + 0.04)) < 1e-9)
+        #expect(spot.stroke?.first?.x == -0.2)
+    }
+
     @Test func cloneFromDifferentGroundShows() {
         let cloned = PhotoRenderService.applyHealing(
             [spot(mode: .clone, sourceX: 0.5, sourceY: 0.35)],

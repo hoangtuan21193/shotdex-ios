@@ -39,14 +39,17 @@ extension PhotoRenderService {
             let radius = max(1, spot.radius * shortEdge)
             let destination = imagePoint(spot.center, extent: extent)
             let source = imagePoint(spot.source, extent: extent)
+            // The stroke's points on the photo, when the spot is a stroke.
+            let strokePoints: [CGPoint]? = spot.stroke.map { relative in
+                relative.map { imagePoint(NormalizedPoint(x: spot.center.x + $0.x, y: spot.center.y + $0.y), extent: extent) }
+            }
             // Everything this spot reads or writes: the ring reaches 1.7r and
             // the blur a radius past that.
-            let region = CGRect(
-                x: destination.x - radius * 2.8,
-                y: destination.y - radius * 2.8,
-                width: radius * 5.6,
-                height: radius * 5.6
-            )
+            let footprint = strokePoints.map { points -> CGRect in
+                let xs = points.map(\.x), ys = points.map(\.y)
+                return CGRect(x: xs.min()!, y: ys.min()!, width: xs.max()! - xs.min()!, height: ys.max()! - ys.min()!)
+            } ?? CGRect(origin: destination, size: .zero)
+            let region = footprint.insetBy(dx: -radius * 2.8, dy: -radius * 2.8)
             // Whole pixels: a fractional edge leaves a row of half-covered
             // pixels, which the composite drew as a hairline across the photo.
             .integral
@@ -74,16 +77,21 @@ extension PhotoRenderService {
             // cropped: Core Image may evaluate these kernels outside their
             // extent, and there the map must read "far" (1), never "centre" (0).
             let distanceSpan = radius * 3
-            guard let distance = CIFilter(
-                name: "CIRadialGradient",
-                parameters: [
-                    kCIInputCenterKey: CIVector(x: destination.x, y: destination.y),
-                    "inputRadius0": 0,
-                    "inputRadius1": distanceSpan,
-                    "inputColor0": CIColor(red: 0, green: 0, blue: 0),
-                    "inputColor1": CIColor(red: 1, green: 1, blue: 1),
-                ]
-            )?.outputImage else { continue }
+            let distanceMap: CIImage? = if let strokePoints {
+                strokeDistance(to: strokePoints, around: region, span: distanceSpan)
+            } else {
+                CIFilter(
+                    name: "CIRadialGradient",
+                    parameters: [
+                        kCIInputCenterKey: CIVector(x: destination.x, y: destination.y),
+                        "inputRadius0": 0,
+                        "inputRadius1": distanceSpan,
+                        "inputColor0": CIColor(red: 0, green: 0, blue: 0),
+                        "inputColor1": CIColor(red: 1, green: 1, blue: 1),
+                    ]
+                )?.outputImage
+            }
+            guard let distance = distanceMap else { continue }
             let heals: Float = spot.mode == .heal ? 1 : 0
 
             var numerator = shifted
@@ -118,6 +126,60 @@ extension PhotoRenderService {
             image = repaired.cropped(to: region).composited(over: image).cropped(to: extent)
         }
         return image
+    }
+
+    /// Distance to a stroke, 0…1 over `span`, as the same kind of map the
+    /// round spot's radial gradient is — so the ring, weight and blend kernels
+    /// heal along a wire exactly as they heal a speck. Measured on a grid of at
+    /// most 256 cells a side and scaled up linearly: distance changes by at
+    /// most one unit per unit moved, so a coarse grid interpolates it well.
+    /// Reads "far" (1) everywhere outside `region`, as the kernels need.
+    static func strokeDistance(to points: [CGPoint], around region: CGRect, span: CGFloat) -> CIImage? {
+        guard region.width > 0, region.height > 0, span > 0 else { return nil }
+        // A little past the region so the scaled grid's edge is already 1.
+        let area = region.insetBy(dx: -span * 0.2, dy: -span * 0.2)
+        let columns = max(2, min(256, Int(area.width.rounded(.up))))
+        let rows = max(2, min(256, Int(area.height.rounded(.up))))
+        let cellWidth = area.width / CGFloat(columns), cellHeight = area.height / CGFloat(rows)
+        let segments = zip(points, points.dropFirst()).map { ($0, $1) }
+        var values = [Float](repeating: 1, count: columns * rows * 4)
+        for row in 0..<rows {
+            // Bitmap rows run top-down; Core Image's y runs up.
+            let y = area.maxY - (CGFloat(row) + 0.5) * cellHeight
+            for column in 0..<columns {
+                let x = area.minX + (CGFloat(column) + 0.5) * cellWidth
+                var nearest = CGFloat.greatestFiniteMagnitude
+                for (a, b) in segments {
+                    nearest = min(nearest, segmentDistance(CGPoint(x: x, y: y), a, b))
+                }
+                let value = Float(min(1, nearest / span))
+                let index = (row * columns + column) * 4
+                values[index] = value
+                values[index + 1] = value
+                values[index + 2] = value
+            }
+        }
+        let data = values.withUnsafeBufferPointer { Data(buffer: $0) }
+        let grid = CIImage(
+            bitmapData: data,
+            bytesPerRow: columns * 4 * MemoryLayout<Float>.size,
+            size: CGSize(width: columns, height: rows),
+            format: .RGBAf,
+            colorSpace: nil
+        )
+        let placed = grid.samplingLinear()
+            .transformed(by: CGAffineTransform(scaleX: cellWidth, y: cellHeight))
+            .transformed(by: CGAffineTransform(translationX: area.minX, y: area.minY))
+            .cropped(to: area)
+        return placed.composited(over: CIImage(color: CIColor(red: 1, green: 1, blue: 1)))
+    }
+
+    private static func segmentDistance(_ p: CGPoint, _ a: CGPoint, _ b: CGPoint) -> CGFloat {
+        let abx = b.x - a.x, aby = b.y - a.y
+        let lengthSquared = abx * abx + aby * aby
+        let t = lengthSquared > 0 ? max(0, min(1, ((p.x - a.x) * abx + (p.y - a.y) * aby) / lengthSquared)) : 0
+        let dx = p.x - (a.x + t * abx), dy = p.y - (a.y + t * aby)
+        return (dx * dx + dy * dy).squareRoot()
     }
 
     // Kernels: `Kernels/HealingKernels.ci.metal`.

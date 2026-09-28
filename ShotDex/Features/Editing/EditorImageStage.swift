@@ -21,6 +21,8 @@ struct EditorImageStage: View {
     @State private var brushLocation: CGPoint?
     /// Fingertip while the point-color eyedropper is down — drives the loupe.
     @State private var sampleLocation: CGPoint?
+    /// The Heal stroke under the finger, in stage points (FS-03.15c §2).
+    @State private var healStroke: [CGPoint] = []
     /// Signature images decoded for the live overlay proxy. Loaded here rather than
     /// inside the `Canvas`, which cannot read files while drawing.
     @State private var overlayImages: [UUID: CGImage] = [:]
@@ -220,8 +222,38 @@ struct EditorImageStage: View {
                     EditorCropOverlay(controller: controller, imageRect: imageRect)
                 }
 
-                // Heal spots: tap empty photo to add, drag a circle to move it.
+                // Heal spots: tap empty photo for a round spot, drag for a
+                // stroke, drag a circle to move it. The paint layer's arbiter
+                // keeps one finger for the brush and two for zoom, as in Masks.
                 if controller.selectedTool == .heal, !chrome.isFullBleed {
+                    EditorPaintTouchLayer(
+                        origin: imageRect.origin,
+                        onTracked: { _ in },
+                        onBegan: { healStroke = [$0.startLocation, $0.location] },
+                        onMoved: { healStroke.append($0.location) },
+                        onEnded: { endHealStroke($0, in: imageRect) },
+                        onCancelled: { healStroke = [] },
+                        onPanBegan: beginPhotoPan,
+                        onPanChanged: { panPhoto($0, imageRect: imageRect, stage: stageSize) },
+                        onPanEnded: endPhotoPan
+                    )
+                    .frame(width: imageRect.width, height: imageRect.height)
+                    .position(x: imageRect.midX, y: imageRect.midY)
+
+                    if healStroke.count > 1 {
+                        Path { path in path.addLines(healStroke) }
+                            .stroke(
+                                EditorTheme.accent.opacity(0.45),
+                                style: StrokeStyle(
+                                    lineWidth: 2 * controller.healingRadius * min(imageRect.width, imageRect.height)
+                                        / max(1, chrome.zoomScale),
+                                    lineCap: .round,
+                                    lineJoin: .round
+                                )
+                            )
+                            .allowsHitTesting(false)
+                    }
+
                     EditorHealGuideOverlay(
                         controller: controller,
                         imageRect: imageRect,
@@ -860,6 +892,30 @@ struct EditorImageStage: View {
     /// all the way back — a dab of paint is not what "zoom in" asks for — while a
     /// gradient that was already being dragged just settles where it is, since
     /// moving a shape is reversible by eye and by one undo.
+    /// A lift that barely moved is a tap — a round spot, as before strokes;
+    /// anything longer is a stroke, its width fixed on screen, so zooming in
+    /// paints a thinner line on the photo (FS-03.05b §2).
+    private func endHealStroke(_ touch: EditorPaintTouchLayer.Touch, in imageRect: CGRect) {
+        defer { healStroke = [] }
+        guard imageRect.width > 0, imageRect.height > 0 else { return }
+        func normalized(_ p: CGPoint) -> NormalizedPoint {
+            NormalizedPoint(
+                x: min(1, max(0, (p.x - imageRect.minX) / imageRect.width)),
+                y: min(1, max(0, (p.y - imageRect.minY) / imageRect.height))
+            )
+        }
+        let points = healStroke.isEmpty ? [touch.startLocation, touch.location] : healStroke + [touch.location]
+        let travelled = zip(points, points.dropFirst()).reduce(0) { $0 + hypot($1.1.x - $1.0.x, $1.1.y - $1.0.y) }
+        if travelled < EditorLayoutMetrics.gestureArbitrationDistance {
+            controller.addHealingSpot(at: normalized(touch.startLocation))
+        } else {
+            controller.addHealingStroke(
+                through: points.map(normalized),
+                radius: controller.healingRadius / Double(max(1, chrome.zoomScale))
+            )
+        }
+    }
+
     private func cancelMaskPaint() {
         defer { resetMaskPaintState() }
         if isDrawing {

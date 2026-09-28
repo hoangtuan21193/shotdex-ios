@@ -1324,6 +1324,37 @@ final class PhotoEditorController {
         scheduleRender()
     }
 
+    /// A brush-stroke spot through `points` (the finger's path, 0…1 over the
+    /// cropped frame), `radius` half its width. One undo step. The path is
+    /// thinned to a point every half radius — enough to follow a wire, few
+    /// enough segments for the distance map.
+    func addHealingStroke(through points: [NormalizedPoint], radius: Double) {
+        let aspect = Double(previewAspectRatio)
+        let shortOverWidth = aspect >= 1 ? 1 / aspect : 1
+        let shortOverHeight = aspect >= 1 ? 1 : aspect
+        var thinned: [NormalizedPoint] = []
+        for point in points {
+            if let last = thinned.last {
+                let dx = (point.x - last.x) / shortOverWidth, dy = (point.y - last.y) / shortOverHeight
+                guard (dx * dx + dy * dy).squareRoot() >= radius / 2 else { continue }
+            }
+            thinned.append(point)
+        }
+        if let last = points.last, thinned.last != last { thinned.append(last) }
+        guard let spot = PhotoHealingSpot.stroke(
+            through: Array(thinned.prefix(128)),
+            mode: healingMode,
+            radius: radius,
+            feather: healingFeather,
+            opacity: healingOpacity,
+            aspectRatio: aspect
+        ) else { return }
+        recordHistory()
+        recipe.healing.append(spot)
+        selectedHealingSpotID = spot.id
+        scheduleRender()
+    }
+
     /// Edits one spot. During a drag the caller brackets this with
     /// `beginContinuousChange` / `endContinuousChange`, so the whole drag is
     /// one undo step (FS-03.11 AC-2).

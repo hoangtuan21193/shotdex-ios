@@ -37,6 +37,11 @@ public struct PhotoHealingSpot: Codable, Equatable, Identifiable, Sendable {
     /// 0 = hard edge, 1 = the whole radius is a blend.
     public var feather: Double
     public var opacity: Double
+    /// A brush-stroke spot's points, **relative to `center`** — so moving the
+    /// spot moves the stroke, and the source is the same stroke laid at
+    /// `source`. `radius` is then half the stroke's width. Nil for a round
+    /// spot (FS-03.15c §2).
+    public var stroke: [NormalizedPoint]?
 
     public init(
         id: UUID = UUID(),
@@ -45,7 +50,8 @@ public struct PhotoHealingSpot: Codable, Equatable, Identifiable, Sendable {
         source: NormalizedPoint,
         radius: Double = 0.03,
         feather: Double = 0.5,
-        opacity: Double = 1
+        opacity: Double = 1,
+        stroke: [NormalizedPoint]? = nil
     ) {
         self.id = id
         self.mode = mode
@@ -54,6 +60,68 @@ public struct PhotoHealingSpot: Codable, Equatable, Identifiable, Sendable {
         self.radius = radius
         self.feather = feather
         self.opacity = opacity
+        self.stroke = stroke.flatMap { $0.count >= 2 ? $0 : nil }
+    }
+
+    /// A stroke spot from the absolute points the finger went through: centred
+    /// on their middle, its source laid beside it.
+    public static func stroke(
+        through points: [NormalizedPoint],
+        mode: PhotoHealingMode,
+        radius: Double,
+        feather: Double,
+        opacity: Double,
+        aspectRatio: Double
+    ) -> PhotoHealingSpot? {
+        guard points.count >= 2 else { return nil }
+        let center = NormalizedPoint(
+            x: points.map(\.x).reduce(0, +) / Double(points.count),
+            y: points.map(\.y).reduce(0, +) / Double(points.count)
+        )
+        let relative = points.map { NormalizedPoint(x: $0.x - center.x, y: $0.y - center.y) }
+        return PhotoHealingSpot(
+            mode: mode,
+            center: center,
+            source: suggestedSource(forStroke: relative, at: center, radius: radius, aspectRatio: aspectRatio),
+            radius: radius,
+            feather: feather,
+            opacity: opacity,
+            stroke: relative
+        )
+    }
+
+    /// A stroke's proposed source: the whole stroke moved sideways,
+    /// square to its main direction, 1.3 widths off (FS-03.15c §2) — to the
+    /// side that stays in frame.
+    public static func suggestedSource(
+        forStroke relative: [NormalizedPoint],
+        at center: NormalizedPoint,
+        radius: Double,
+        aspectRatio: Double
+    ) -> NormalizedPoint {
+        guard let first = relative.first, let last = relative.last else { return center }
+        // Work in a square space (short edge = 1), where "square to" is square.
+        let shortOverWidth = aspectRatio >= 1 ? 1 / aspectRatio : 1
+        let shortOverHeight = aspectRatio >= 1 ? 1 : aspectRatio
+        let dx = (last.x - first.x) / shortOverWidth, dy = (last.y - first.y) / shortOverHeight
+        let length = max(1e-9, (dx * dx + dy * dy).squareRoot())
+        let normal = (x: -dy / length, y: dx / length)
+        let distance = radius * 2 * 1.3 + radius * 2
+        func candidate(_ sign: Double) -> NormalizedPoint {
+            NormalizedPoint(
+                x: center.x + sign * normal.x * distance * shortOverWidth,
+                y: center.y + sign * normal.y * distance * shortOverHeight
+            )
+        }
+        func fits(_ point: NormalizedPoint) -> Bool {
+            relative.allSatisfy { p in
+                (0...1).contains(point.x + p.x) && (0...1).contains(point.y + p.y)
+            }
+        }
+        let near = candidate(1)
+        if fits(near) { return near }
+        let far = candidate(-1)
+        return fits(far) ? far : near
     }
 
     /// The source ShotDex proposes for a spot at `center`: beside it, at a
