@@ -45,6 +45,8 @@ Hàng Size/Feather/Opacity cùng kiểu hàng cọ của Mask.
   bị cắt dưới Opacity trên iPhone.
 - **Visualize Spots**: ảnh trên canvas thành bản đồ đen trắng tách rìa (bụi hiện thành chấm trắng); slider
   **Threshold** 0…100 chỉnh độ nhạy. Chỉ hiển thị — không vào render, không vào file lưu; rời Heal là tắt.
+  Cách làm (2026-09-28, `SpotVisualizer`): ảnh xám trừ bản mờ 4px, lấy trị tuyệt đối, nhân 4…100 theo Threshold, kẹp
+  0…1. Là trạng thái của editor, không có trong recipe — nên không thể vào file lưu.
 - **Show Spot Pins**: tắt thì ẩn mọi ghim và vòng nguồn; vết đang chọn vẫn hiện ghim của nó.
 - **Clear All**: gỡ mọi vết (kể cả Red Eye) trong **một** bước Undo; hỏi xác nhận khi có **từ 2 vết** ("Clear all spots?" · nút "Clear All Spots").
 
@@ -99,7 +101,7 @@ Remove (tô lên vật để xoá, tự lấp từ xung quanh) **tạm bỏ** t�
 | AC-30 | trời chuyển màu tổng hợp có một dây tối rộng 3px chạy chéo 40% khung | kéo một nét Heal Size vừa phủ dây | trong vùng vá sai lệch trung bình ≤ 2/255, tệ nhất ≤ 4/255 so với nền; không mép cứng | `PhotoHealingTests.brushHealRemovesAWire` · `…strokeSourceSitsSquareToTheStroke` · chạm + kéo: `ShotDexUITests/scripts/iphone-heal-stroke.json` |
 | AC-31 | vết Clone tròn trên hai vùng phẳng 0,2 (đích) và 0,6 (nguồn), giá trị tuyến tính | đặt Opacity 50 | lõi vết ra 0,4 ± 2/255, đo trong không gian làm việc tuyến tính (không phải pixel sRGB) | `PhotoHealingTests.opacityBlendsHalfway` · slider Opacity ở panel Heal (`ShotDexUITests/scripts/iphone-heal-opacity.json`) |
 | AC-32 | vết Heal với nguồn gợi ý | bấm New Source | nguồn mới khác chỗ cũ ≥ 1 bán kính, không chồng lên vết; Undo một lần trả nguồn cũ | `PhotoHealingTests.newSourcePicksAnotherPlace` · nút: `ShotDexUITests/scripts/iphone-heal-new-source.json` |
-| AC-33 | ảnh có 5 chấm bụi, Visualize Spots bật | lưu ảnh | file lưu khớp từng pixel bản Visualize tắt; Threshold 80 cho nhiều pixel trắng hơn Threshold 20 | ⚠️ chưa có (dự kiến `SpotVisualizerTests.visualizeIsDisplayOnly`) |
+| AC-33 | ảnh có 5 chấm bụi, Visualize Spots bật | lưu ảnh | file lưu khớp từng pixel bản Visualize tắt; Threshold 80 cho nhiều pixel trắng hơn Threshold 20 | `SpotVisualizerTests.visualizeIsDisplayOnly` · `…thresholdControlsSensitivity` · `ShotDexUITests/scripts/iphone-heal-visualize.json` |
 | AC-34 | 6 vết heal/clone + 1 Red Eye, Show Spot Pins tắt | bấm Clear All rồi xác nhận | hộp xác nhận hiện (7 ≥ 2); sau khi xác nhận 0 vết; Undo một lần trả đủ 7; lúc pins tắt, bảng phần tử không có ghim nào ngoài vết đang chọn | ⚠️ chưa có (dự kiến `PhotoHealingTests.clearAllIsOneStep`) + `ShotDexUITests/scripts/iphone-heal-panel.json` |
 | AC-35 | ảnh mặt người tổng hợp có con ngươi đỏ (220,40,40) bán kính 12px | chạm Red Eye cách tâm con ngươi 20px | tâm vết lệch tâm con ngươi ≤ 2px; trong con ngươi đỏ ≤ max(lục, lam) + 10/255; mống mắt lệch ≤ 2/255 | ⚠️ chưa có (dự kiến `RedEyeTests.tapCentresOnThePupil`). Không dùng ảnh mặt người thật |
 | AC-36 | ảnh không có mặt nào (hoặc Vision báo lỗi — simulator) | chạm Red Eye | vết đặt đúng chỗ chạm, bán kính 1% cạnh ngắn; không alert | ⚠️ chưa có (dự kiến `RedEyeTests.noFaceFallsBackToTheTap`) |
@@ -107,4 +109,4 @@ Remove (tô lên vật để xoá, tự lấp từ xung quanh) **tạm bỏ** t�
 | AC-38 | ảnh không mắt đỏ nào (hoặc Vision báo lỗi — simulator) | bấm Fix Red Eye | 0 vết, 0 bước Undo; pill "No red eyes found" 3s; không alert | ⚠️ chưa có (dự kiến `RedEyeTests.fixRedEyeWithNothingToFix`) |
 | AC-39 | editor mở, iPhone 17 26.5 và 18.6 | mở Heal | hàng chế độ đúng 3 ô Heal · Clone · Red Eye, không ô Remove; chạm Red Eye hiện Pupil Size · Darken · Fix Red Eye | ⚠️ chưa có (`ShotDexUITests/scripts/iphone-heal-panel.json` + element dump) |
 
-**Chưa chứng minh được:** AC-33…AC-39 (chưa code).
+**Chưa chứng minh được:** AC-34…AC-39 (chưa code).

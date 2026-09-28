@@ -79,6 +79,25 @@ struct EditorHealPanel: View {
                 onReset: { controller.setHealingOpacity(1) }
             )
 
+            EditorToggleRow(
+                title: "Visualize Spots",
+                isOn: controller.isVisualizingSpots
+            ) { controller.isVisualizingSpots = $0 }
+            if controller.isVisualizingSpots {
+                EditorPlainSliderRow(
+                    title: "Threshold",
+                    value: controller.spotVisualizeThreshold,
+                    range: 0...1,
+                    isBipolar: false,
+                    valueText: "\(Int((controller.spotVisualizeThreshold * 100).rounded()))",
+                    isActive: false,
+                    onBeginDrag: {},
+                    onDrag: { controller.spotVisualizeThreshold = $0 },
+                    onEndDrag: {},
+                    onReset: { controller.spotVisualizeThreshold = 0.5 }
+                )
+            }
+
             if let spot = controller.selectedHealingSpot,
                let index = controller.recipe.healing.firstIndex(where: { $0.id == spot.id }) {
                 HStack {

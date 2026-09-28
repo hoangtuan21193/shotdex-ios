@@ -195,6 +195,8 @@ final class PhotoEditorController {
         set {
             guard newValue != currentTool else { return }
             if currentTool == .crop { cancelCropSession() }
+            // Visualize Spots is a Heal view: leaving Heal turns it off.
+            if currentTool == .heal { isVisualizingSpots = false }
             currentTool = newValue
             if newValue == .crop { beginCropSession() }
         }
@@ -361,7 +363,33 @@ final class PhotoEditorController {
     var historyCurrentIndex: Int { history.currentIndex }
 
     var previewImage: UIImage? {
-        showsOriginal ? originalPreviewImage ?? editedPreviewImage : editedPreviewImage
+        if isVisualizingSpots, let map = spotMapImage { return map }
+        return showsOriginal ? originalPreviewImage ?? editedPreviewImage : editedPreviewImage
+    }
+
+    // MARK: Visualize Spots (FS-03.15c §3)
+
+    /// On while Heal is open and the photographer asked for it; never in the
+    /// recipe, so it cannot reach a save.
+    var isVisualizingSpots = false {
+        didSet { refreshSpotMap() }
+    }
+
+    /// 0…1, higher is more sensitive.
+    var spotVisualizeThreshold = 0.5 {
+        didSet { refreshSpotMap() }
+    }
+
+    private(set) var spotMapImage: UIImage?
+    @ObservationIgnored private static let spotMapContext = CIContext(options: [.cacheIntermediates: false])
+
+    private func refreshSpotMap() {
+        guard isVisualizingSpots, let cgImage = editedPreviewImage?.cgImage else {
+            spotMapImage = nil
+            return
+        }
+        let map = SpotVisualizer.map(of: CIImage(cgImage: cgImage), threshold: spotVisualizeThreshold)
+        spotMapImage = Self.spotMapContext.createCGImage(map, from: map.extent).map { UIImage(cgImage: $0) }
     }
 
     /// Shape of the previewed photo, held stable while only the render *size*
@@ -2540,6 +2568,7 @@ final class PhotoEditorController {
             let image = UIImage(cgImage: preview.displayImage)
             updatePreviewAspect(from: image.size, recipe: previewRecipe)
             editedPreviewImage = image
+            if isVisualizingSpots { refreshSpotMap() }
             colorSamplingImage = preview.cleanImage
             await updateHistogram()
             await resolveMaskDetection()
