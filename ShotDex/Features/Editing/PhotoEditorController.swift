@@ -1508,6 +1508,26 @@ final class PhotoEditorController {
         lensCameraMount = mount
     }
 
+    /// What corrects this photo and what the Optics status row says
+    /// (FS-03.16 §3, 16b §2). A stored choice wins — the data refreshing
+    /// must not quietly change an edited photo — and a stored lens the table
+    /// no longer has is no profile, not the nearest guess (AC-6). With no
+    /// choice yet, a JPEG shows the lens EXIF points to and a RAW falls to
+    /// Apple's correction.
+    var lensCorrectionResolution: LensCorrectionResolution {
+        var inputs = LensCorrectionInputs(isRAW: isRAWSource)
+        inputs.decoderSupportsLensCorrection = isRAWSource
+        inputs.cameraCropFactor = LensProfileMatcher().cameraCropFactor(lensQuery)
+        if let stored = recipe.lensProfile {
+            inputs.lensfunLens = stored.lensID.flatMap { LensProfileLibrary.shared.lens(id: $0) }
+            inputs.lensfunChosenByUser = !stored.isAutomatic
+            inputs.cameraCropFactor = stored.cameraCropFactor
+        } else if !isRAWSource {
+            inputs.lensfunLens = lensProfileMatch?.lens
+        }
+        return LensCorrectionResolver.resolve(inputs)
+    }
+
     /// The one Lens Correction switch (FS-03.16a §6): on for a RAW by
     /// default; a JPEG is on once it has a lens to correct with.
     var isLensCorrectionOn: Bool {

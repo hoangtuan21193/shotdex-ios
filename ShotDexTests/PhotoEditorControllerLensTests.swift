@@ -28,4 +28,17 @@ struct PhotoEditorControllerLensTests {
         #expect(controller.recipe == before)
         #expect(controller.recipe.adjustments.lensDistortionScale == 1)
     }
+
+    /// AC-6. A recipe pointing at a lens the refreshed table no longer has:
+    /// the panel says "No profile for this lens yet", nothing is guessed.
+    @Test func staleLensIDIsNoProfile() {
+        let controller = makeController()
+        controller.recipe.lensProfile = PhotoLensProfileChoice(
+            lensID: "Sony|E PZ 16-50mm f/3.5-5.6 OSS|1.534", cameraCropFactor: 1.534, isAutomatic: true
+        )
+        #expect(LensProfileLibrary.shared.lens(id: "Sony|E PZ 16-50mm f/3.5-5.6 OSS|1.534") == nil)
+        let resolution = controller.lensCorrectionResolution
+        #expect(resolution.panel == .noProfile)
+        #expect(resolution.liveAspects.isEmpty)
+    }
 }

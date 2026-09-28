@@ -35,4 +35,18 @@ struct LensCorrectionRenderTests {
         #expect(LensBlurTests.meanDifference(corrected, plain) > 1, "the profile should change the picture")
         #expect(LensBlurTests.meanDifference(switchedOff, plain) <= 1)
     }
+
+    /// AC-6. The lens id is gone from the table: the render has no profile
+    /// step (the photo as shot), and does not crash.
+    @Test func missingLensIDRendersUncorrected() async throws {
+        let (source, directory) = try await Self.jpeg()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let renderer = PhotoRenderService()
+        var recipe = PhotoEditRecipe.identity
+        recipe.lensProfile = PhotoLensProfileChoice(lensID: "Gone|Nothing 1mm f/1|1.0", cameraCropFactor: 1, isAutomatic: true)
+        recipe.adjustments.lensDistortionScale = 2
+        let stale = try await renderer.render(source: source, recipe: recipe).image
+        let plain = try await renderer.render(source: source, recipe: .identity).image
+        #expect(LensBlurTests.meanDifference(stale, plain) <= 1)
+    }
 }
