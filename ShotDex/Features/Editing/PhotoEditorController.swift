@@ -536,6 +536,7 @@ final class PhotoEditorController {
     func undo() {
         guard let previous = history.undo(current: recipe) else { return }
         recipe = previous
+        uprightGuideNotice = nil
         repairSelection()
         scheduleRender()
     }
@@ -543,6 +544,7 @@ final class PhotoEditorController {
     func redo() {
         guard let next = history.redo(current: recipe) else { return }
         recipe = next
+        uprightGuideNotice = nil
         repairSelection()
         scheduleRender()
     }
@@ -743,6 +745,105 @@ final class PhotoEditorController {
         recipe.upright.mode = PhotoUprightMode(mode)
         recipe.upright.solved = suggestion.transform(for: mode)
         scheduleRender()
+    }
+
+    // MARK: Upright Guided (FS-03.15b §4)
+
+    /// "Up to 4 guides" after a fifth was refused; cleared by the next change.
+    private(set) var uprightGuideNotice: String?
+
+    /// The photo's own width over height — what guides are solved against.
+    private var uprightSourceAspect: Double {
+        guard let size = originalPreviewImage?.size, size.height > 0 else {
+            return Double(previewAspectRatio)
+        }
+        return Double(size.width / size.height)
+    }
+
+    /// Switches Upright to Guided, keeping any guides already drawn.
+    func enterUprightGuided() {
+        guard recipe.upright.mode != .guided else { return }
+        recordHistory()
+        recipe.upright.mode = .guided
+        solveGuides()
+    }
+
+    /// One new guide, one undo step. Refused past four, with the rule said.
+    @discardableResult
+    func addUprightGuide(from start: NormalizedPoint, to end: NormalizedPoint) -> Bool {
+        guard recipe.upright.guides.count < PhotoUprightRecipe.maximumGuides else {
+            uprightGuideNotice = "Up to 4 guides"
+            return false
+        }
+        uprightGuideNotice = nil
+        recordHistory()
+        recipe.upright.mode = .guided
+        recipe.upright.guides.append(PhotoUprightGuide(start: start, end: end))
+        solveGuides()
+        return true
+    }
+
+    /// Moves one end of a guide. Wrap a drag in `beginContinuousChange` /
+    /// `endContinuousChange` so the whole drag is one undo step.
+    func moveUprightGuide(at index: Int, end isEnd: Bool, to point: NormalizedPoint) {
+        guard recipe.upright.guides.indices.contains(index) else { return }
+        if isEnd {
+            recipe.upright.guides[index].end = point
+        } else {
+            recipe.upright.guides[index].start = point
+        }
+        solveGuides()
+    }
+
+    /// Clear Guides: every guide at once, one step.
+    func clearUprightGuides() {
+        guard !recipe.upright.guides.isEmpty else { return }
+        uprightGuideNotice = nil
+        recordHistory()
+        recipe.upright.guides = []
+        solveGuides()
+    }
+
+    private func solveGuides() {
+        recipe.upright.solved = UprightGuidedSolver.solve(recipe.upright.guides, aspect: uprightSourceAspect)
+        scheduleRender()
+    }
+
+    /// Where Geometry puts the photo's points, in the photo's own
+    /// 0…1 top-left space — for drawing guides over the corrected picture.
+    private var uprightMap: (map: GeoForwardMap, extent: CGRect) {
+        let extent = CGRect(x: 0, y: 0, width: uprightSourceAspect * 1000, height: 1000)
+        return (GeoForwardMap(adjustments: recipe.adjustments, upright: recipe.upright.solved, extent: extent), extent)
+    }
+
+    /// The crop window over the corrected frame, when it is a plain window —
+    /// no straighten, turn or flip. Guides follow that one; a turned crop is
+    /// drawn as though uncropped.
+    private var uprightCropWindow: NormalizedRect {
+        let crop = recipe.crop
+        guard crop.straightenDegrees == 0, crop.quarterTurns % 4 == 0, !crop.flippedHorizontally else {
+            return .full
+        }
+        return crop.rect
+    }
+
+    /// Photo point → where it shows on the stage, 0…1 top-left over the
+    /// picture as displayed.
+    func uprightDisplayPoint(for point: NormalizedPoint) -> NormalizedPoint {
+        let (map, extent) = uprightMap
+        let shown = map.apply(CGPoint(x: point.x * extent.width, y: (1 - point.y) * extent.height))
+        let window = uprightCropWindow
+        let x = Double(shown.x / extent.width), y = 1 - Double(shown.y / extent.height)
+        return NormalizedPoint(x: (x - window.x) / window.width, y: (y - window.y) / window.height)
+    }
+
+    /// Stage point → the photo point under it.
+    func uprightPhotoPoint(forDisplay point: NormalizedPoint) -> NormalizedPoint {
+        let (map, extent) = uprightMap
+        let window = uprightCropWindow
+        let x = window.x + point.x * window.width, y = window.y + point.y * window.height
+        let photo = map.inverse(CGPoint(x: x * extent.width, y: (1 - y) * extent.height))
+        return NormalizedPoint(x: Double(photo.x / extent.width), y: 1 - Double(photo.y / extent.height))
     }
 
     /// How many times this editor has analysed the photo for Upright. The

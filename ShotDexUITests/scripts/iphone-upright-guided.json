@@ -1,0 +1,134 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 25
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.35
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Edit"
+  },
+  {
+   "action": "wait",
+   "seconds": 12
+  },
+  {
+   "action": "tap",
+   "label": "Geometry",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Guided",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "1-guided-empty"
+  },
+  {
+   "action": "swipe",
+   "x": 0.15,
+   "y": 0.445,
+   "direction": "up",
+   "distance": 0.1,
+   "seconds": 0.4
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "swipe",
+   "x": 0.32,
+   "y": 0.445,
+   "direction": "up",
+   "distance": 0.1,
+   "seconds": 0.4
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.445,
+   "direction": "up",
+   "distance": 0.1,
+   "seconds": 0.4
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "swipe",
+   "x": 0.68,
+   "y": 0.445,
+   "direction": "up",
+   "distance": 0.1,
+   "seconds": 0.4
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "swipe",
+   "x": 0.85,
+   "y": 0.445,
+   "direction": "up",
+   "distance": 0.1,
+   "seconds": 0.4
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "2-five-tries"
+  },
+  {
+   "action": "dump",
+   "name": "2-five-tries"
+  },
+  {
+   "action": "tap",
+   "label": "Undo"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "3-after-undo"
+  },
+  {
+   "action": "dump",
+   "name": "3-after-undo"
+  }
+ ]
+}

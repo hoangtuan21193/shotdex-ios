@@ -58,6 +58,12 @@ struct EditorImageStage: View {
         }
     }
 
+    /// Upright Guided is on and Geometry is open: a drag on the photo draws a
+    /// guide, so the guide layer owns the stage's touches like the crop frame.
+    private var isDrawingGuides: Bool {
+        controller.recipe.upright.mode == .guided && chrome.selectedGroup == .geo
+    }
+
     private var isSamplingColor: Bool {
         (controller.selectedTool == .pointColor && chrome.isEyedropperActive)
             || chrome.markupColorSampler != nil
@@ -92,7 +98,7 @@ struct EditorImageStage: View {
     /// recognisers swallow the child's drag — the original crop-frame bug.
     private var imageGestureMask: GestureMask {
         controller.selectedTool == .crop || isSamplingColor || isEditingOverlay
-            || controller.isEditingDrawing || isShapingCurve
+            || controller.isEditingDrawing || isShapingCurve || isDrawingGuides
             ? .subviews
             : .all
     }
@@ -386,6 +392,17 @@ struct EditorImageStage: View {
                             )
                         }
                     }
+                }
+
+                // Upright Guided: same slot as the eyedropper, for the same
+                // reason — inside the zoomed stack a guide lands under the finger.
+                if isDrawingGuides {
+                    EditorUprightGuideLayer(
+                        controller: controller,
+                        imageRect: imageRect,
+                        image: image,
+                        zoomScale: chrome.zoomScale
+                    )
                 }
             }
             // Anchor for the eyedropper's touches: the un-zoomed stack, the same
@@ -1315,5 +1332,149 @@ enum EditorCropCorner: String, CaseIterable, Identifiable {
         case .bottomLeft: CGPoint(x: rect.minX, y: rect.maxY)
         case .bottomRight: CGPoint(x: rect.maxX, y: rect.maxY)
         }
+    }
+}
+
+/// Upright Guided on the photo (FS-03.15b §4): the guides drawn so far, with
+/// their two end handles (18pt, 44pt to grab — the crop frame's sizes), and
+/// the gesture that draws a new one or moves an end. Guides live on the
+/// photo; the controller maps them to where the correction shows them.
+private struct EditorUprightGuideLayer: View {
+    @Bindable var controller: PhotoEditorController
+    let imageRect: CGRect
+    let image: UIImage
+    let zoomScale: CGFloat
+
+    private enum Drag: Equatable {
+        case end(index: Int, isEnd: Bool)
+        case new(start: CGPoint)
+    }
+
+    @State private var drag: Drag?
+    @State private var location: CGPoint?
+
+    private static let handleDiameter: CGFloat = 18
+    private static let grabRadius: CGFloat = 22
+    private static let minimumLength: CGFloat = 24
+
+    var body: some View {
+        let scale = max(1, zoomScale)
+        ZStack {
+            Color.clear
+                .contentShape(Rectangle())
+                .frame(width: imageRect.width, height: imageRect.height)
+                .position(x: imageRect.midX, y: imageRect.midY)
+                .gesture(gesture(scale: scale))
+
+            Canvas { context, _ in
+                for guide in controller.recipe.upright.guides {
+                    var path = Path()
+                    path.move(to: stagePoint(guide.start))
+                    path.addLine(to: stagePoint(guide.end))
+                    context.stroke(path, with: .color(.black.opacity(0.5)), lineWidth: 3 / scale)
+                    context.stroke(path, with: .color(EditorTheme.accent), lineWidth: 1.5 / scale)
+                }
+                if case let .new(start) = drag, let location {
+                    var path = Path()
+                    path.move(to: start)
+                    path.addLine(to: location)
+                    context.stroke(path, with: .color(EditorTheme.accent), style: StrokeStyle(lineWidth: 1.5 / scale, dash: [6 / scale, 4 / scale]))
+                }
+            }
+            .allowsHitTesting(false)
+
+            ForEach(Array(controller.recipe.upright.guides.enumerated()), id: \.offset) { _, guide in
+                ForEach([guide.start, guide.end], id: \.self) { point in
+                    Circle()
+                        .fill(.white)
+                        .frame(width: Self.handleDiameter / scale, height: Self.handleDiameter / scale)
+                        .overlay(Circle().stroke(.black.opacity(0.35), lineWidth: 1 / scale))
+                        .shadow(color: .black.opacity(0.5), radius: 2 / scale)
+                        .position(stagePoint(point))
+                        .allowsHitTesting(false)
+                }
+            }
+
+            if case .end = drag, let location {
+                EditorColorLoupe(
+                    point: location,
+                    anchor: CGPoint(
+                        x: min(max(location.x, imageRect.minX), imageRect.maxX),
+                        y: min(max(location.y, imageRect.minY), imageRect.maxY)
+                    ),
+                    readout: nil,
+                    image: image,
+                    imageRect: imageRect,
+                    zoomScale: zoomScale
+                )
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Upright guides")
+        .accessibilityValue("\(controller.recipe.upright.guides.count) of \(PhotoUprightRecipe.maximumGuides) drawn")
+    }
+
+    private func stagePoint(_ photo: NormalizedPoint) -> CGPoint {
+        let shown = controller.uprightDisplayPoint(for: photo)
+        return CGPoint(
+            x: imageRect.minX + CGFloat(shown.x) * imageRect.width,
+            y: imageRect.minY + CGFloat(shown.y) * imageRect.height
+        )
+    }
+
+    private func photoPoint(_ stage: CGPoint) -> NormalizedPoint {
+        let clampedX = min(max(stage.x, imageRect.minX), imageRect.maxX)
+        let clampedY = min(max(stage.y, imageRect.minY), imageRect.maxY)
+        return controller.uprightPhotoPoint(forDisplay: NormalizedPoint(
+            x: Double((clampedX - imageRect.minX) / imageRect.width),
+            y: Double((clampedY - imageRect.minY) / imageRect.height)
+        ))
+    }
+
+    private func gesture(scale: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .named(EditorImageStage.stageSpace))
+            .onChanged { value in
+                if drag == nil {
+                    drag = hit(value.startLocation, scale: scale) ?? .new(start: value.startLocation)
+                    if case .end = drag { controller.beginContinuousChange() }
+                }
+                location = value.location
+                if case let .end(index, isEnd) = drag {
+                    controller.moveUprightGuide(at: index, end: isEnd, to: photoPoint(value.location))
+                }
+            }
+            .onEnded { value in
+                defer {
+                    drag = nil
+                    location = nil
+                }
+                switch drag {
+                case .end:
+                    controller.endContinuousChange()
+                case let .new(start):
+                    guard hypot(value.location.x - start.x, value.location.y - start.y) * scale >= Self.minimumLength
+                    else { return }
+                    if controller.addUprightGuide(from: photoPoint(start), to: photoPoint(value.location)) {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    }
+                case nil:
+                    break
+                }
+            }
+    }
+
+    /// The nearest end handle within grabbing distance of `point`.
+    private func hit(_ point: CGPoint, scale: CGFloat) -> Drag? {
+        var best: (Drag, CGFloat)?
+        for (index, guide) in controller.recipe.upright.guides.enumerated() {
+            for (isEnd, end) in [(false, guide.start), (true, guide.end)] {
+                let p = stagePoint(end)
+                let distance = hypot(p.x - point.x, p.y - point.y) * scale
+                if distance <= Self.grabRadius, distance < (best?.1 ?? .infinity) {
+                    best = (.end(index: index, isEnd: isEnd), distance)
+                }
+            }
+        }
+        return best?.0
     }
 }

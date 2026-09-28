@@ -198,16 +198,7 @@ public extension PhotoRenderService {
             CGPoint(x: extent.maxX, y: extent.maxY), CGPoint(x: extent.minX, y: extent.maxY),
         ]
         if hasAffine {
-            let angle = adjustments.geoRotate * 0.35
-            let scale = 1 + adjustments.geoScale * 0.3
-            let tx = adjustments.geoOffsetX * extent.width * 0.2
-            let ty = adjustments.geoOffsetY * extent.height * 0.2
-            var transform = CGAffineTransform(translationX: extent.midX + tx, y: extent.midY + ty)
-            transform = transform.rotated(by: angle)
-            transform = transform.scaledBy(x: scale, y: scale)
-            let aspect = aspectScale(adjustments.geoAspect)
-            transform = transform.scaledBy(x: aspect.x, y: aspect.y)
-            transform = transform.translatedBy(x: -extent.midX, y: -extent.midY)
+            let transform = geoAffine(adjustments, extent: extent)
             image = image.clampedToExtent().transformed(by: transform).cropped(to: extent)
             quad = quad.map { $0.applying(transform) }
         }
@@ -249,6 +240,20 @@ public extension PhotoRenderService {
         return image.transformed(by: fill).cropped(to: extent)
     }
 
+    /// Rotate, Scale, Aspect and Offset as one transform about the centre.
+    static func geoAffine(_ adjustments: PhotoAdjustments, extent: CGRect) -> CGAffineTransform {
+        let angle = adjustments.geoRotate * 0.35
+        let scale = 1 + adjustments.geoScale * 0.3
+        let tx = adjustments.geoOffsetX * extent.width * 0.2
+        let ty = adjustments.geoOffsetY * extent.height * 0.2
+        var transform = CGAffineTransform(translationX: extent.midX + tx, y: extent.midY + ty)
+        transform = transform.rotated(by: angle)
+        transform = transform.scaledBy(x: scale, y: scale)
+        let aspect = aspectScale(adjustments.geoAspect)
+        transform = transform.scaledBy(x: aspect.x, y: aspect.y)
+        return transform.translatedBy(x: -extent.midX, y: -extent.midY)
+    }
+
     /// Constrain Crop's zoom: the smallest scale about the centre at which the
     /// frame, same aspect, sits wholly inside `quad` — where the photo's
     /// corners landed — so nothing on screen was stretched in from outside
@@ -286,7 +291,7 @@ public extension PhotoRenderService {
         return true
     }
 
-    private static func extentCorners(_ extent: CGRect) -> [CGPoint] {
+    static func extentCorners(_ extent: CGRect) -> [CGPoint] {
         [
             CGPoint(x: extent.minX, y: extent.minY), CGPoint(x: extent.maxX, y: extent.minY),
             CGPoint(x: extent.maxX, y: extent.maxY), CGPoint(x: extent.minX, y: extent.maxY),
@@ -303,7 +308,7 @@ public extension PhotoRenderService {
 
     /// Where the keystone sends the frame's corners — bottom-left,
     /// bottom-right, top-right, top-left.
-    private static func keystoneCorners(vertical: Double, horizontal: Double, extent: CGRect) -> [CGPoint] {
+    static func keystoneCorners(vertical: Double, horizontal: Double, extent: CGRect) -> [CGPoint] {
         let v = CGFloat(vertical) * 0.25
         let h = CGFloat(horizontal) * 0.25
         let halfWidth = extent.width / 2
@@ -323,7 +328,7 @@ public extension PhotoRenderService {
 /// The projective map taking four points to four others — what
 /// `CIPerspectiveTransform` does to the frame's corners — so a point can be
 /// followed through it.
-struct Homography {
+struct Homography: Sendable {
     private let m: [Double]
 
     init?(from source: [CGPoint], to target: [CGPoint]) {
@@ -351,5 +356,82 @@ struct Homography {
         let x = Double(point.x), y = Double(point.y)
         let w = m[6] * x + m[7] * y + m[8]
         return CGPoint(x: (m[0] * x + m[1] * y + m[2]) / w, y: (m[3] * x + m[4] * y + m[5]) / w)
+    }
+}
+
+/// Where Geometry sends a point of the photo: the same affine, keystone and
+/// Constrain Crop zoom `applyGeo` applies, followed point by point — so a
+/// guide drawn on the corrected picture can be taken back to the photo, and
+/// a guide on the photo shown where the correction put it (FS-03.15b §4).
+public struct GeoForwardMap: Sendable {
+    private let affine: CGAffineTransform?
+    private let homography: Homography?
+    private let inverseHomography: Homography?
+    private let zoom: CGAffineTransform?
+
+    public init(adjustments sliders: PhotoAdjustments, upright: PhotoUprightTransform, extent: CGRect) {
+        var adjustments = sliders
+        adjustments.geoRotate += upright.rotate
+        adjustments.geoVertical += upright.vertical
+        adjustments.geoHorizontal += upright.horizontal
+        adjustments.geoAspect += upright.aspect
+        adjustments.geoScale += upright.scale
+        adjustments.geoOffsetX += upright.offsetX
+        adjustments.geoOffsetY += upright.offsetY
+
+        let hasAffine = abs(adjustments.geoRotate) > 0.0001 || abs(adjustments.geoAspect) > 0.0001
+            || abs(adjustments.geoScale) > 0.0001 || abs(adjustments.geoOffsetX) > 0.0001
+            || abs(adjustments.geoOffsetY) > 0.0001
+        let hasKeystone = abs(adjustments.geoVertical) > 0.0001 || abs(adjustments.geoHorizontal) > 0.0001
+        var quad = PhotoRenderService.extentCorners(extent)
+        if hasAffine {
+            let transform = PhotoRenderService.geoAffine(adjustments, extent: extent)
+            affine = transform
+            quad = quad.map { $0.applying(transform) }
+        } else {
+            affine = nil
+        }
+        if hasKeystone {
+            let corners = PhotoRenderService.keystoneCorners(
+                vertical: adjustments.geoVertical,
+                horizontal: adjustments.geoHorizontal,
+                extent: extent
+            )
+            let source = PhotoRenderService.extentCorners(extent)
+            homography = Homography(from: source, to: corners)
+            inverseHomography = Homography(from: corners, to: source)
+            if let homography { quad = quad.map(homography.apply) }
+        } else {
+            homography = nil
+            inverseHomography = nil
+        }
+        if adjustments.geoConstrainCrop >= 0.5, hasAffine || hasKeystone {
+            let factor = PhotoRenderService.constrainZoom(quad: quad, extent: extent)
+            zoom = factor > 1.0001
+                ? CGAffineTransform(translationX: extent.midX, y: extent.midY)
+                    .scaledBy(x: factor, y: factor)
+                    .translatedBy(x: -extent.midX, y: -extent.midY)
+                : nil
+        } else {
+            zoom = nil
+        }
+    }
+
+    /// Photo point → corrected frame, both in the frame's own coordinates.
+    public func apply(_ point: CGPoint) -> CGPoint {
+        var p = point
+        if let affine { p = p.applying(affine) }
+        if let homography { p = homography.apply(p) }
+        if let zoom { p = p.applying(zoom) }
+        return p
+    }
+
+    /// Corrected frame → photo point.
+    public func inverse(_ point: CGPoint) -> CGPoint {
+        var p = point
+        if let zoom { p = p.applying(zoom.inverted()) }
+        if let inverseHomography { p = inverseHomography.apply(p) }
+        if let affine { p = p.applying(affine.inverted()) }
+        return p
     }
 }

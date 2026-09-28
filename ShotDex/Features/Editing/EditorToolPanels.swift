@@ -809,22 +809,33 @@ struct EditorUprightRow: View {
                 .font(EditorTheme.groupLabel)
                 .tracking(1.1)
                 .foregroundStyle(EditorTheme.secondaryText)
-            HStack(spacing: AppTheme.Spacing.sm) {
-                ForEach(UprightMode.allCases) { mode in
-                    Button(mode.title) {
-                        apply(mode)
+            // Two rows of three (FS-03.13b): Off · Auto · Level over
+            // Vertical · Full · Guided — six chips in one row clip at 375pt.
+            ForEach([[PhotoUprightMode.off, .auto, .level], [.vertical, .full, .guided]], id: \.self) { row in
+                HStack(spacing: AppTheme.Spacing.sm) {
+                    ForEach(row) { mode in
+                        Button {
+                            choose(mode)
+                        } label: {
+                            Text(mode.displayName)
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(EditorChipButtonStyle(isSelected: controller.recipe.upright.mode == mode))
                     }
-                    .buttonStyle(EditorChipButtonStyle(
-                        isSelected: controller.recipe.upright.mode == PhotoUprightMode(mode)
-                    ))
                 }
-                Button("Off") {
-                    show(nil)
-                    controller.resetUpright()
+            }
+            if controller.recipe.upright.mode == .guided {
+                HStack(spacing: AppTheme.Spacing.sm) {
+                    Text(controller.uprightGuideNotice ?? guideHint)
+                        .font(EditorTheme.rowLabel)
+                        .foregroundStyle(EditorTheme.dimText)
+                    Spacer(minLength: 0)
+                    Button("Clear Guides") {
+                        controller.clearUprightGuides()
+                    }
+                    .buttonStyle(EditorChipButtonStyle(isSelected: false))
+                    .disabled(controller.recipe.upright.guides.isEmpty)
                 }
-                .buttonStyle(EditorChipButtonStyle(isSelected: false))
-                .disabled(!controller.hasUpright)
-                Spacer(minLength: 0)
             }
             if let note {
                 Text(note)
@@ -838,8 +849,25 @@ struct EditorUprightRow: View {
         .onDisappear { noteTask?.cancel() }
     }
 
-    private func apply(_ mode: UprightMode) {
-        show(controller.applyUpright(mode) ? nil : "No straight lines to work from")
+    private var guideHint: String {
+        let count = controller.recipe.upright.guides.count
+        return count == 0
+            ? "Drag along an edge that should be straight."
+            : "\(count) of \(PhotoUprightRecipe.maximumGuides) drawn."
+    }
+
+    private func choose(_ mode: PhotoUprightMode) {
+        switch mode {
+        case .off:
+            show(nil)
+            controller.resetUpright()
+        case .guided:
+            show(nil)
+            controller.enterUprightGuided()
+        default:
+            guard let analysis = UprightMode(mode) else { return }
+            show(controller.applyUpright(analysis) ? nil : "No straight lines to work from")
+        }
     }
 
     private func show(_ message: String?) {
