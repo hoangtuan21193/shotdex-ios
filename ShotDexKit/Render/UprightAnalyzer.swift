@@ -26,6 +26,17 @@ public enum UprightMode: String, CaseIterable, Identifiable, Sendable {
     var correctsKeystone: Bool { self != .level }
 }
 
+public extension PhotoUprightMode {
+    /// The stored mode for an analysis pass.
+    init(_ mode: UprightMode) {
+        switch mode {
+        case .level: self = .level
+        case .vertical: self = .vertical
+        case .full: self = .full
+        }
+    }
+}
+
 /// One straight edge found in the frame, in **normalized** coordinates: x and y
 /// in 0…1 with the origin bottom-left, the same convention the geo adjustments
 /// are written in.
@@ -72,14 +83,17 @@ public struct UprightSuggestion: Equatable, Sendable {
         abs(rotate) < 0.001 && abs(vertical) < 0.001 && abs(horizontal) < 0.001
     }
 
-    /// Writes the suggestion onto a recipe's adjustments, leaving the geo
-    /// controls it has nothing to say about alone.
-    public func apply(to adjustments: inout PhotoAdjustments, mode: UprightMode) {
-        if mode.correctsRotation { adjustments.geoRotate = rotate }
+    /// The part of the suggestion `mode` may use, as the solved transform a
+    /// recipe keeps apart from the Geometry sliders (FS-03.15 D57): those add
+    /// on top of it and are never overwritten by it.
+    public func transform(for mode: UprightMode) -> PhotoUprightTransform {
+        var transform = PhotoUprightTransform.identity
+        if mode.correctsRotation { transform.rotate = rotate }
         if mode.correctsKeystone {
-            adjustments.geoVertical = vertical
-            adjustments.geoHorizontal = horizontal
+            transform.vertical = vertical
+            transform.horizontal = horizontal
         }
+        return transform
     }
 }
 

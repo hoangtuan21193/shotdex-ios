@@ -724,20 +724,30 @@ final class PhotoEditorController {
         // bug the comment above exists to prevent — so a missing original is a
         // refusal, not a substitution.
         guard let cgImage = originalPreviewImage?.cgImage else { return false }
+        uprightSolveCount += 1
         guard let suggestion = UprightAnalyzer.analyze(
             CIImage(cgImage: cgImage),
             mode: mode,
             context: Self.uprightContext
         ) else { return false }
-
-        recordHistory()
-        // Geo is global-only — there is no per-mask transform — so this writes
-        // the recipe directly rather than going through `writeAdjustment`,
-        // which would route into the selected mask.
-        suggestion.apply(to: &recipe.adjustments, mode: mode)
-        scheduleRender()
+        storeUpright(suggestion, mode: mode)
         return true
     }
+
+    /// Keeps a solved Upright pass as the recipe's mode plus solved transform,
+    /// apart from the Geometry sliders, which add on top and are left alone
+    /// (FS-03.15b §4). Solved here, once — the render reads the stored
+    /// transform and never analyses.
+    func storeUpright(_ suggestion: UprightSuggestion, mode: UprightMode) {
+        recordHistory()
+        recipe.upright.mode = PhotoUprightMode(mode)
+        recipe.upright.solved = suggestion.transform(for: mode)
+        scheduleRender()
+    }
+
+    /// How many times this editor has analysed the photo for Upright. The
+    /// proof that a render never re-solves (FS-03.15b AC-27).
+    private(set) var uprightSolveCount = 0
 
     /// Effects › Vignette › Style — one history step per change.
     func setVignetteStyle(_ style: PhotoVignetteStyle) {
@@ -750,17 +760,14 @@ final class PhotoEditorController {
     /// Clears everything Upright can set, so "off" is one press rather than
     /// three sliders dragged back to zero.
     func resetUpright() {
+        guard hasUpright else { return }
         recordHistory()
-        recipe.adjustments.geoRotate = 0
-        recipe.adjustments.geoVertical = 0
-        recipe.adjustments.geoHorizontal = 0
+        recipe.upright = .identity
         scheduleRender()
     }
 
     var hasUpright: Bool {
-        abs(recipe.adjustments.geoRotate) > 0.0001
-            || abs(recipe.adjustments.geoVertical) > 0.0001
-            || abs(recipe.adjustments.geoHorizontal) > 0.0001
+        !recipe.upright.isIdentity
     }
 
     func jumpToHistoryStep(_ index: Int) {

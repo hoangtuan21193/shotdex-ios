@@ -814,7 +814,9 @@ struct EditorUprightRow: View {
                     Button(mode.title) {
                         apply(mode)
                     }
-                    .buttonStyle(EditorChipButtonStyle(isSelected: false))
+                    .buttonStyle(EditorChipButtonStyle(
+                        isSelected: controller.recipe.upright.mode == PhotoUprightMode(mode)
+                    ))
                 }
                 Button("Off") {
                     show(nil)

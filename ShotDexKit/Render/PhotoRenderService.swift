@@ -481,7 +481,7 @@ public actor PhotoRenderService {
             case .curve: image = applyCurve(recipe.curve, to: image)
             case .lensWarp: image = applyLensProfile(of: recipe, source: source, to: image)
             case .optics: image = applyOptics(recipe.adjustments, to: image)
-            case .geo: image = applyGeo(recipe.adjustments, to: image)
+            case .geo: image = applyGeo(recipe.adjustments, upright: recipe.upright.solved, to: image)
             case .look: image = applyLook(of: recipe, to: image)
             case .crop: image = applyCrop(recipe.crop, to: image)
             case .retouch: image = applyHealing(recipe.healing, to: image)

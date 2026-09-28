@@ -140,19 +140,14 @@ struct UprightAnalyzerTests {
         #expect(full.vertical != 0)
     }
 
-    @Test func applyingASuggestionLeavesTheOtherGeoControlsAlone() {
-        var adjustments = PhotoAdjustments.zero
-        adjustments.geoScale = 0.4
-        adjustments.geoVertical = 0.9
+    @Test func aModeKeepsOnlyTheCorrectionItMakes() {
+        let level = UprightSuggestion(rotate: 0.3, vertical: 0.2).transform(for: .level)
+        #expect(level.rotate == 0.3)
+        #expect(level.vertical == 0, "Level must not touch the keystone")
 
-        UprightSuggestion(rotate: 0.3, vertical: 0.2).apply(to: &adjustments, mode: .level)
-        #expect(adjustments.geoRotate == 0.3)
-        #expect(adjustments.geoVertical == 0.9, "Level must not touch the keystone")
-        #expect(adjustments.geoScale == 0.4)
-
-        UprightSuggestion(rotate: 0.5, vertical: 0.2).apply(to: &adjustments, mode: .vertical)
-        #expect(adjustments.geoRotate == 0.3, "Vertical must not touch the rotation")
-        #expect(adjustments.geoVertical == 0.2)
+        let vertical = UprightSuggestion(rotate: 0.5, vertical: 0.2).transform(for: .vertical)
+        #expect(vertical.rotate == 0, "Vertical must not touch the rotation")
+        #expect(vertical.vertical == 0.2)
     }
 
     @Test func anEmptySuggestionKnowsItIsEmpty() {

@@ -168,7 +168,21 @@ public extension PhotoRenderService {
     /// crop-aware coordinate remap are **not** done — combining a heavy Geo warp
     /// with masks can misalign the mask; the common case (Geo without masks) is
     /// exact.
-    static func applyGeo(_ adjustments: PhotoAdjustments, to input: CIImage) -> CIImage {
+    static func applyGeo(
+        _ sliders: PhotoAdjustments,
+        upright: PhotoUprightTransform = .identity,
+        to input: CIImage
+    ) -> CIImage {
+        // The solved Upright transform and the sliders add: Upright is stored
+        // apart (FS-03.15b §4) so Off hands the sliders back exactly.
+        var adjustments = sliders
+        adjustments.geoRotate += upright.rotate
+        adjustments.geoVertical += upright.vertical
+        adjustments.geoHorizontal += upright.horizontal
+        adjustments.geoAspect += upright.aspect
+        adjustments.geoScale += upright.scale
+        adjustments.geoOffsetX += upright.offsetX
+        adjustments.geoOffsetY += upright.offsetY
         let extent = input.extent
         var image = input
 
