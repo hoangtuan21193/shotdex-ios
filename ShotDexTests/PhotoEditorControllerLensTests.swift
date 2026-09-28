@@ -65,4 +65,27 @@ struct PhotoEditorControllerLensTests {
         controller.undo()
         #expect(controller.recipe.lensProfile == nil && controller.recipe.isIdentity)
     }
+
+    /// 16b AC-b3. Change → a lens picked by hand reads "Chosen by you", in
+    /// one step; one Undo puts back what was there.
+    @Test func chooseLensIsOneStep() throws {
+        let controller = makeController()
+        let lens = try #require(LensProfileLibrary.shared.lenses.first { !$0.distortion.isEmpty })
+        let before = controller.recipe
+        controller.chooseLensProfile(lens)
+        #expect(controller.historyTimeline.count == 2)
+        #expect(controller.lensCorrectionResolution.panel == .chosen(lensName: lens.displayName))
+        #expect(controller.isLensCorrectionOn)
+        controller.undo()
+        #expect(controller.recipe == before)
+    }
+
+    /// 16b AC-b4, AC-b10, AC-b11 — the strengths are dead when nothing but
+    /// Apple, or nothing at all, corrects the photo.
+    @Test func strengthSlidersFollowTheLiveAspects() {
+        let controller = makeController()
+        #expect(!controller.isLensStrengthLive(.lensDistortionScale), "no lens: dim")
+        #expect(controller.isLensStrengthLive(.exposure), "other rows untouched")
+        #expect(!controller.hasEmbeddedLensData, "a JPEG never offers the file's data (AC-b11)")
+    }
 }

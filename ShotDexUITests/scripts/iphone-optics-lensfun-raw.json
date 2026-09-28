@@ -1,0 +1,24 @@
+{
+ "steps": [
+  {"action": "launch"},
+  {"action": "wait", "seconds": 30},
+  {"action": "tap", "label": "Search", "type": "button"},
+  {"action": "wait", "seconds": 3},
+  {"action": "typeText", "text": "OM-5\n"},
+  {"action": "wait", "seconds": 8},
+  {"action": "tap", "x": 0.16, "y": 0.28},
+  {"action": "wait", "seconds": 6},
+  {"action": "tap", "label": "Edit"},
+  {"action": "wait", "seconds": 15},
+  {"action": "swipe", "x": 0.75, "y": 0.94, "direction": "left", "distance": 0.45},
+  {"action": "wait", "seconds": 2},
+  {"action": "tap", "label": "Optics", "type": "button"},
+  {"action": "wait", "seconds": 4},
+  {"action": "screenshot", "name": "1-optics"},
+  {"action": "wait", "seconds": 4},
+  {"action": "tap", "label": "Change", "type": "button"},
+  {"action": "wait", "seconds": 3},
+  {"action": "screenshot", "name": "2-picker"},
+  {"action": "wait", "seconds": 4}
+ ]
+}

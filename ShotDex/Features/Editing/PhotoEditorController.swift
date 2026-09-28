@@ -1604,15 +1604,44 @@ final class PhotoEditorController {
     }
 
     /// A lens the user picked, for when EXIF found none or the wrong one.
+    /// Wins over the file's own data for what the lens covers (16b AC-b9).
     func chooseLensProfile(_ lens: LensfunLens) {
         recordHistory()
         recipe.adjustments.lensCorrection = 1
-        recipe.lensProfile = PhotoLensProfileChoice(
-            lensID: lens.id,
-            cameraCropFactor: LensProfileMatcher().cameraCropFactor(lensQuery),
-            isAutomatic: lens.id == lensProfileMatch?.lens.id
-        )
+        var inputs = lensInputs()
+        inputs.lensfunLens = lens
+        inputs.lensfunChosenByUser = lens.id != lensProfileMatch?.lens.id || isRAWSource && hasEmbeddedLensData
+        inputs.cameraCropFactor = LensProfileMatcher().cameraCropFactor(lensQuery)
+        recipe.lensProfile = LensCorrectionResolver.resolve(inputs).choice
         scheduleRender()
+    }
+
+    /// The file carries the maker's own correction data (source 1).
+    var hasEmbeddedLensData: Bool { isRAWSource && !(lensFacts.embedded?.isEmpty ?? true) }
+
+    /// "Use Lens Data Found in Photo" (16b AC-b9): back to the file's data,
+    /// Lensfun filling only what it lacks. One step.
+    func useEmbeddedLensData() {
+        guard hasEmbeddedLensData else { return }
+        recordHistory()
+        var inputs = lensInputs()
+        inputs.lensfunLens = lensProfileMatch?.lens
+        inputs.cameraCropFactor = lensProfileMatch?.cameraCropFactor ?? LensProfileMatcher().cameraCropFactor(lensQuery)
+        recipe.lensProfile = LensCorrectionResolver.resolve(inputs).choice
+        scheduleRender()
+    }
+
+    /// Whether a profile-strength slider does anything on this photo: the
+    /// switch on and its aspect corrected by source 1 or 2 (16b §2).
+    func isLensStrengthLive(_ kind: PhotoAdjustmentKind) -> Bool {
+        let aspect: LensCorrectionAspect
+        switch kind {
+        case .lensDistortionScale: aspect = .distortion
+        case .lensVignettingScale: aspect = .vignetting
+        case .lensChromaticAberrationScale: aspect = .chromaticAberration
+        default: return true
+        }
+        return isLensCorrectionOn && lensCorrectionResolution.liveAspects.contains(aspect)
     }
 
     // MARK: Healing

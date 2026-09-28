@@ -89,7 +89,7 @@ struct EditorAdjustmentGroupsView<Footer: View>: View {
                 kind,
                 in: controller.recipe.adjustments,
                 vignetteStyle: controller.recipe.vignetteStyle
-            )
+            ) && controller.isLensStrengthLive(kind)
             EditorSliderRow(
                 kind: kind,
                 value: controller.adjustmentValue(kind),
@@ -125,6 +125,9 @@ struct EditorAdjustmentGroupsView<Footer: View>: View {
 
     /// Why a row cannot be dragged, for the people who cannot see that it is dim.
     private func dependencyHint(for kind: PhotoAdjustmentKind) -> String {
+        if !controller.isLensStrengthLive(kind) {
+            return "Strength controls need a lens profile"
+        }
         if kind == .vignetteHighlights, controller.recipe.vignetteStyle == .paintOverlay {
             return "Not used by Paint Overlay"
         }
