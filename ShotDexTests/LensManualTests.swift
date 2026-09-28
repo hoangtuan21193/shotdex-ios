@@ -146,6 +146,71 @@ struct LensManualTests {
         #expect(PhotoRenderService.applyLensProfile(of: PhotoEditRecipe(), source: raw, to: input) === input)
     }
 
+    private static func flatGrey() -> CIImage {
+        CIImage(color: CIColor(red: 0.5, green: 0.5, blue: 0.5))
+            .cropped(to: CGRect(x: 0, y: 0, width: width, height: height))
+    }
+
+    private static func mean(of image: CIImage, in rect: CGRect) -> Double {
+        let context = CIContext(options: [.workingColorSpace: NSNull(), .outputColorSpace: NSNull()])
+        let w = Int(rect.width), h = Int(rect.height)
+        var values = [Float](repeating: 0, count: w * h * 4)
+        context.render(
+            image,
+            toBitmap: &values,
+            rowBytes: w * 4 * MemoryLayout<Float>.size,
+            bounds: rect,
+            format: .RGBAf,
+            colorSpace: nil
+        )
+        let greens = stride(from: 1, to: values.count, by: 4).map { Double(values[$0]) }
+        return greens.reduce(0, +) / Double(greens.count)
+    }
+
+    /// AC-21. Vignetting +50 at Midpoint 50 brightens the corners by at least
+    /// 8% and leaves the centre alone; the pass is the one straight after
+    /// Lens Blur, which is before the crop, so the centre is the full frame's.
+    @Test func vignettingBrightensCorners() {
+        let input = Self.flatGrey()
+        var adjustments = PhotoAdjustments()
+        adjustments.lensManualVignetting = 0.5
+        let output = PhotoRenderService.applyManualLensVignetting(adjustments, to: input)
+
+        let corner = Self.mean(of: output, in: CGRect(x: 0, y: 0, width: 3, height: 3))
+        #expect(corner >= 0.5 * 1.08, "corner \(corner)")
+        let centre = Self.mean(of: output, in: CGRect(x: Self.width / 2 - 2, y: Self.height / 2 - 2, width: 4, height: 4))
+        #expect(abs(centre - 0.5) <= 1.0 / 255, "centre \(centre)")
+
+        let order = PhotoRenderService.renderPassOrder
+        let blur = order.firstIndex(of: .lensBlur) ?? -1
+        let vignetting = order.firstIndex(of: .manualLensVignetting) ?? -1
+        #expect(vignetting == blur + 1)
+        #expect(vignetting < order.firstIndex(of: .crop) ?? -1)
+    }
+
+    /// Negative darkens by the same stops, and a Midpoint further out keeps
+    /// more of the frame untouched.
+    @Test func vignettingDarkensAndMidpointMovesTheFallOff() {
+        let input = Self.flatGrey()
+        var darker = PhotoAdjustments()
+        darker.lensManualVignetting = -1
+        let corner = Self.mean(
+            of: PhotoRenderService.applyManualLensVignetting(darker, to: input),
+            in: CGRect(x: 0, y: 0, width: 3, height: 3)
+        )
+        #expect(corner < 0.3, "−100 corner \(corner)")
+
+        let probe = CGRect(x: 30, y: 20, width: 4, height: 4)
+        var near = PhotoAdjustments()
+        near.lensManualVignetting = 1
+        near.lensManualVignettingMidpoint = 0
+        var far = near
+        far.lensManualVignettingMidpoint = 1
+        let nearValue = Self.mean(of: PhotoRenderService.applyManualLensVignetting(near, to: input), in: probe)
+        let farValue = Self.mean(of: PhotoRenderService.applyManualLensVignetting(far, to: input), in: probe)
+        #expect(nearValue > farValue)
+    }
+
     /// E14. The row sits under MANUAL and says so to VoiceOver.
     @Test func distortionRowNamesItsGroup() {
         let groups = EditorAdjustmentCatalog.groups(isRAWSource: false, scope: .global)
@@ -155,5 +220,7 @@ struct LensManualTests {
         #expect(EditorAdjustmentCatalog.shortTitle(of: .lensManualDistortion) == "Distortion")
         #expect(EditorAdjustmentCatalog.accessibilityName(of: .lensManualDistortion) == "Distortion, Manual")
         #expect(EditorAdjustmentCatalog.isBipolar(.lensManualDistortion))
+        #expect(EditorAdjustmentCatalog.accessibilityName(of: .lensManualVignetting) == "Vignetting, Manual")
+        #expect(EditorAdjustmentCatalog.parentKind(of: .lensManualVignettingMidpoint) == .lensManualVignetting)
     }
 }

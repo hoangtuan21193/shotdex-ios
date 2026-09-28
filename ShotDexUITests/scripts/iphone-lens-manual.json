@@ -40,6 +40,26 @@
   {
    "action": "dump",
    "name": "1-manual"
+  },
+  {
+   "action": "swipe",
+   "x": 0.15,
+   "y": 0.9,
+   "direction": "up",
+   "distance": 0.06,
+   "seconds": 1
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "2-vignetting"
+  },
+  {
+   "action": "dump",
+   "name": "2-vignetting"
   }
  ]
 }

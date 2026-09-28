@@ -423,6 +423,10 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
     /// Manual lens Distortion, −1…1: positive straightens barrel, negative
     /// pincushion. Same warp as the lens profile (FS-03.15b §3).
     case lensManualDistortion
+    /// Manual lens Vignetting, −1…1 (±1 EV at the corner), and where its
+    /// fall-off starts, 0…1 default 0.5.
+    case lensManualVignetting
+    case lensManualVignettingMidpoint
     /// Defringe (FS-03.15b §2). Amounts 0…1 = Lightroom 0…20; hue rows
     /// 0…1 = Lightroom 0…100.
     case defringePurpleAmount
@@ -486,6 +490,8 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         case .grainRoughness: "Grain Roughness"
         case .chromaticAberration: "Remove Chromatic Aberration"
         case .lensManualDistortion: "Manual Distortion"
+        case .lensManualVignetting: "Manual Vignetting"
+        case .lensManualVignettingMidpoint: "Manual Vignetting Midpoint"
         case .defringePurpleAmount: "Purple Fringe Amount"
         case .defringePurpleHueMinimum: "Purple Fringe Hue Min"
         case .defringePurpleHueMaximum: "Purple Fringe Hue Max"
@@ -546,6 +552,8 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         case .grainRoughness: "circle.grid.3x3.circle"
         case .chromaticAberration: "camera.aperture"
         case .lensManualDistortion: "circle.grid.cross"
+        case .lensManualVignetting: "circle.dotted.circle"
+        case .lensManualVignettingMidpoint: "circle.circle"
         case .defringePurpleAmount, .defringeGreenAmount: "circle.dashed"
         case .defringePurpleHueMinimum, .defringeGreenHueMinimum: "arrow.left.to.line"
         case .defringePurpleHueMaximum, .defringeGreenHueMaximum: "arrow.right.to.line"
@@ -572,7 +580,8 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
              .noiseReduction, .noiseDetail, .noiseContrast, .colorNoiseDetail, .colorNoiseSmoothness,
              .vignetteHighlights, .chromaticAberration,
              .defringePurpleAmount, .defringePurpleHueMinimum, .defringePurpleHueMaximum,
-             .defringeGreenAmount, .defringeGreenHueMinimum, .defringeGreenHueMaximum: 0...1
+             .defringeGreenAmount, .defringeGreenHueMinimum, .defringeGreenHueMaximum,
+             .lensManualVignettingMidpoint: 0...1
         case .exposure: -2...2
         default: -1...1
         }
@@ -734,6 +743,9 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
     public var grainRoughness = 0.0
     public var chromaticAberration = 0.0
     public var lensManualDistortion = 0.0
+    public var lensManualVignetting = 0.0
+    /// Neutral default, so no key until touched.
+    public var lensManualVignettingMidpoint = 0.5
     public var defringePurpleAmount = 0.0
     /// Hue rows default to Lightroom's 30/70 and 40/60 — neutral, so no key
     /// until touched.
@@ -797,6 +809,8 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .grainRoughness: grainRoughness
             case .chromaticAberration: chromaticAberration
             case .lensManualDistortion: lensManualDistortion
+            case .lensManualVignetting: lensManualVignetting
+            case .lensManualVignettingMidpoint: lensManualVignettingMidpoint
             case .defringePurpleAmount: defringePurpleAmount
             case .defringePurpleHueMinimum: defringePurpleHueMinimum
             case .defringePurpleHueMaximum: defringePurpleHueMaximum
@@ -856,6 +870,8 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .grainRoughness: grainRoughness = newValue
             case .chromaticAberration: chromaticAberration = newValue
             case .lensManualDistortion: lensManualDistortion = newValue
+            case .lensManualVignetting: lensManualVignetting = newValue
+            case .lensManualVignettingMidpoint: lensManualVignettingMidpoint = newValue
             case .defringePurpleAmount: defringePurpleAmount = newValue
             case .defringePurpleHueMinimum: defringePurpleHueMinimum = newValue
             case .defringePurpleHueMaximum: defringePurpleHueMaximum = newValue

@@ -158,7 +158,13 @@ final class UIDriverTests: XCTestCase {
                         dy: (step.y ?? 0) + dy
                     )
                 )
-                start.press(forDuration: 0.05, thenDragTo: end)
+                if let hold = step.seconds {
+                    // A slow drag that holds at the end leaves no fling, so
+                    // a panel scrolls by the distance asked and no further.
+                    start.press(forDuration: 0.05, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: hold)
+                } else {
+                    start.press(forDuration: 0.05, thenDragTo: end)
+                }
                 break
             }
             let target: XCUIElement = step.label == nil ? app : try element(for: step)

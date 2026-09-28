@@ -72,6 +72,7 @@ enum EditorAdjustmentCatalog {
         .defringeGreenAmount,
         .defringeGreenHueMinimum,
         .defringeGreenHueMaximum,
+        .lensManualVignettingMidpoint,
         .rawSharpness,
         .rawLuminanceNoise,
         .rawColorNoise,
@@ -111,6 +112,8 @@ enum EditorAdjustmentCatalog {
             return .defringePurpleAmount
         case .defringeGreenHueMinimum, .defringeGreenHueMaximum:
             return .defringeGreenAmount
+        case .lensManualVignettingMidpoint:
+            return .lensManualVignetting
         default:
             return nil
         }
@@ -180,7 +183,7 @@ enum EditorAdjustmentCatalog {
                 EditorAdjustmentGroup(
                     id: .lensManual,
                     title: "Manual",
-                    kinds: [.lensManualDistortion]
+                    kinds: [.lensManualDistortion, .lensManualVignetting, .lensManualVignettingMidpoint]
                 )
             )
             groups.append(
@@ -264,6 +267,8 @@ enum EditorAdjustmentCatalog {
         case .colorNoiseDetail: "Color Detail"
         case .colorNoiseSmoothness: "Smoothness"
         case .lensManualDistortion: "Distortion"
+        case .lensManualVignetting: "Vignetting"
+        case .lensManualVignettingMidpoint: "Midpoint"
         case .defringePurpleAmount: "Purple"
         case .defringePurpleHueMinimum: "Purple Min"
         case .defringePurpleHueMaximum: "Purple Max"
@@ -293,7 +298,8 @@ enum EditorAdjustmentCatalog {
     /// "Distortion, Manual" against "Distortion, Lens Profile" (E14).
     static func accessibilityName(of kind: PhotoAdjustmentKind) -> String {
         switch kind {
-        case .lensManualDistortion: "\(shortTitle(of: kind)), Manual"
+        case .lensManualDistortion, .lensManualVignetting, .lensManualVignettingMidpoint:
+            "\(shortTitle(of: kind)), Manual"
         default: kind.displayName
         }
     }

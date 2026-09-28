@@ -466,7 +466,7 @@ public actor PhotoRenderService {
         for pass in preMaskPasses {
             switch pass {
             case .manualLensVignetting:
-                break
+                image = applyManualLensVignetting(recipe.adjustments, to: image)
             case .calibration: image = applyCalibration(recipe.color.calibration, to: image)
             case .light:
                 image = applyLight(recipe.adjustments, to: image, appliesExposure: appliesExposure)

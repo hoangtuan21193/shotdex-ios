@@ -58,7 +58,9 @@ Thay slider Defringe chung (hôm nay giảm độ bão hoà cả khung — xấp
   1 − 0,04 × giá trị × ρ², ρ là bán kính đầu ra chia nửa đường chéo. Áp cho cả ảnh RAW (bộ giải mã RAW chỉ tự sửa
   theo profile, không biết giá trị người dùng kéo). Cộng vào **cùng một lượt warp** với profile
   — ảnh chỉ nội suy một lần — và tự phóng vừa đủ để không lộ góc trống (trần 1,5× chung với profile).
-- **Vignetting** dương làm sáng góc, âm làm tối; Midpoint dời chỗ bắt đầu sụt. Tâm là tâm ảnh **trước** crop:
+- **Vignetting** dương làm sáng góc, âm làm tối — theo stop, ±100 là ±1 EV ở góc; Midpoint dời chỗ bắt đầu sụt.
+  Tròn quanh tâm, bán kính chuẩn là nửa đường chéo; dùng lại kernel `vignette`. Midpoint **mờ** (không ẩn) khi
+  Vignetting = 0, như Midpoint của Vignette ở Effects — ẩn thì nhóm đổi dáng dưới tay. Tâm là tâm ảnh **trước** crop:
   đây là tính chất của ống kính, khác Vignette ở Effects (tính theo khung sau crop).
 - Vignetting chạy trong không gian tuyến tính, **ngay sau Lens Blur** — như Lightroom, cùng chỗ với bù tối
   góc theo profile (FS-03.16). *Vì sau curve thì độ sáng đã uốn cong, bù tối góc ra loang.*
@@ -119,7 +121,7 @@ Nhóm Effects › Vignette thêm **Style** — một hàng chip ba ô ở đầu
 | AC-18 | nền xám có vết loang sắc độ 16px ±0,04; Color NR 50 | đặt Color Smoothness 100 (so với 0) | phương sai sắc độ còn ≤ 50%; độ sáng lệch ≤ 1/255 | `NoiseReductionSplitTests.smoothnessClearsMottling` · golden `chromaBlend-*` · hàng: `ShotDexUITests/scripts/iphone-color-nr.json` |
 | AC-19 | rìa đen/trắng có viền tím hue 290° rộng 2px, viền lục ở rìa khác, và một ô tím phẳng cách rìa ≥ 12px | đặt Purple Amount 10 | sắc độ viền tím giảm ≥ 70%; viền lục và ô tím phẳng lệch ≤ 2/255 | `DefringeTests.purpleOnlyAtEdges` · `…greenOnlyOnItsBand` · `…hueBandKeepsItsMinimumWidth` · golden `defringe-*` · hàng: `ShotDexUITests/scripts/iphone-defringe.json` |
 | AC-20 | ảnh có chấm ở tâm và ở bán kính 0,8 trên đường chéo | đặt Distortion +50 | chấm ở 0,8 dời **ra** 0,3%…1,5% nửa đường chéo; tâm đứng yên; không góc nào lấy mẫu ngoài ảnh (cả ±50, ±100) | `LensManualTests.distortionPullsTheEdgesIn` · `…neitherDirectionShowsEmptyCorners` · `…rawSourcesGetTheManualCorrection` · `…distortionRowNamesItsGroup` · golden `lensWarp*` (chụp lại) · hàng: `ShotDexUITests/scripts/iphone-lens-manual.json` |
-| AC-21 | ảnh xám phẳng 0,5 | đặt Vignetting +50, Midpoint 50 | độ sáng góc tăng ≥ 8% tương đối; tâm lệch ≤ 1/255; tâm tính trên khung trước crop; vị trí pass ngay sau Lens Blur | ⚠️ chưa có (dự kiến `LensManualTests.vignettingBrightensCorners`) |
+| AC-21 | ảnh xám phẳng 0,5 | đặt Vignetting +50, Midpoint 50 | độ sáng góc tăng ≥ 8% tương đối; tâm lệch ≤ 1/255; tâm tính trên khung trước crop; vị trí pass ngay sau Lens Blur | `LensManualTests.vignettingBrightensCorners` · `…vignettingDarkensAndMidpointMovesTheFallOff` · hàng: `ShotDexUITests/scripts/iphone-lens-manual.json` |
 | AC-22 | hình tròn đen giữa nền trắng | đặt Aspect +50 | tỉ lệ ngang/dọc của hình thành 1,22 ± 0,02; 0 pixel trong suốt | ⚠️ chưa có (dự kiến `GeoTransformTests.aspectStretchesAroundTheCentre`) |
 | AC-23 | ảnh toà nhà tổng hợp: cạnh dọc hội tụ 8°, nghiêng 2° | chạm Auto | độ nghiêng còn ≤ 0,5°; độ hội tụ còn 3°…4° (nắn 60%) | ⚠️ chưa có — phần Level cần máy thật hoặc Vision của Mac (dự kiến `UprightAnalyzerTests.autoLevelsAndPartlyStraightens`) |
 | AC-24 | cùng ảnh, Upright Guided, 4 đường đã có | vẽ 2 đường dọc theo hai cạnh nghiêng rồi thử đường thứ 5 | hai cạnh dọc trong 0,5°; đường thứ 5 không tạo, hiện "Up to 4 guides"; 1 Undo gỡ đúng 1 đường | ⚠️ chưa có (dự kiến `UprightGuidedTests.twoGuidesMakeBothVertical`) + `ShotDexUITests/scripts/iphone-upright-guided.json` |
@@ -129,7 +131,7 @@ Nhóm Effects › Vignette thêm **Style** — một hàng chip ba ô ở đầu
 | AC-28 | ảnh A Upright Auto; ảnh B là toà nhà khác nghiêng 3°, hội tụ 6° | Copy Edits A → Paste sang B | B mang chế độ Auto; phép nắn của B giải trên B (khác A); độ nghiêng của B còn ≤ 0,5° | ⚠️ chưa có — phần Level cần máy thật hoặc Vision của Mac (dự kiến `EditClipboardTests.uprightModeIsResolvedOnTheTarget`) |
 | AC-29 | ảnh 3:2, Vertical +40, tỉ lệ khoá 3:2 | bật Constrain Crop (so với tắt) | bật: 0 pixel ngoài ảnh sau nắn, khung vẫn 3:2 ± 0,01; tắt: mép kéo giãn, 0 pixel trong suốt | ⚠️ chưa có (dự kiến `GeoTransformTests.constrainCropKeepsTheLockedRatio`) |
 
-**Chưa chứng minh được:** AC-21…AC-29 (chưa code).
+**Chưa chứng minh được:** AC-22…AC-29 (chưa code).
 
 *AC-20 sửa 2026-09-28:* bản cũ ghi "dời vào" cùng lúc với "không góc trống" — hai điều không cùng đúng. Nắn méo
 thùng kéo vùng rìa **ra**; phóng vừa khít (không góc trống) không đảo chiều đó. Lightroom cũng vậy khi bật Constrain

@@ -132,7 +132,9 @@ struct EditorAdjustmentCatalogTests {
         let global = EditorAdjustmentCatalog.groups(isRAWSource: false, scope: .global)
         #expect(global.map(\.id).contains(.optics))
         #expect(global.map(\.id).contains(.geo))
-        #expect(global.first { $0.id == .lensManual }?.kinds == [.lensManualDistortion])
+        #expect(global.first { $0.id == .lensManual }?.kinds == [
+            .lensManualDistortion, .lensManualVignetting, .lensManualVignettingMidpoint,
+        ])
         let optics = global.first { $0.id == .optics }
         #expect(optics?.kinds == [
             .chromaticAberration,

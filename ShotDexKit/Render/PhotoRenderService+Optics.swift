@@ -81,6 +81,39 @@ public extension PhotoRenderService {
         return image
     }
 
+    // MARK: Manual lens vignetting
+
+    /// Manual lens Vignetting (FS-03.15b §3): positive brightens the corners,
+    /// negative darkens them, in stops — ±100 is ±1 EV at the corner. A
+    /// property of the lens, so it is circular about the centre of the frame
+    /// **before** crop and runs in linear light straight after Lens Blur,
+    /// where the Effects vignette is framed on the crop and runs last.
+    /// Midpoint moves where the fall-off starts. Reuses the `vignette` kernel.
+    static func applyManualLensVignetting(_ adjustments: PhotoAdjustments, to input: CIImage) -> CIImage {
+        let amount = min(1, max(-1, adjustments.lensManualVignetting))
+        guard abs(amount) > 0.0001, let kernel = vignetteKernel else { return input }
+        let extent = input.extent
+        let halfDiagonal = (extent.width * extent.width + extent.height * extent.height).squareRoot() / 2
+        let inner = 0.1 + min(1, max(0, adjustments.lensManualVignettingMidpoint)) * 0.8
+        // The kernel scales by 1 − w · amount; at the corner (w = 1) that is
+        // the gain 2^amount.
+        let kernelAmount = 1 - pow(2, amount)
+        let output = kernel.apply(
+            extent: extent,
+            arguments: [
+                input,
+                CIVector(x: extent.midX, y: extent.midY),
+                CIVector(x: halfDiagonal, y: halfDiagonal),
+                inner,
+                1.0,
+                kernelAmount,
+                2.0,
+                0.0,
+            ]
+        )
+        return output ?? input
+    }
+
     // MARK: Defringe
 
     /// Purple and green Defringe (FS-03.15b §2): only near high-contrast
