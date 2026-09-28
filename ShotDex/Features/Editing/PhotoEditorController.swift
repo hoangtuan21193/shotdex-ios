@@ -1705,12 +1705,34 @@ final class PhotoEditorController {
     }
 
     /// Every spot off the photo, one history step.
+    /// Clear All (FS-03.15c §3): every heal, clone and Red Eye spot off the
+    /// photo in one history step.
     func removeAllHealingSpots() {
-        guard !recipe.healing.isEmpty else { return }
+        guard spotCount > 0 else { return }
         recordHistory()
         recipe.healing.removeAll()
+        recipe.redEyes.removeAll()
         selectedHealingSpotID = nil
+        selectedRedEyeID = nil
         scheduleRender()
+    }
+
+    /// Heal, clone and Red Eye spots together — what Clear All clears.
+    var spotCount: Int { recipe.healing.count + recipe.redEyes.count }
+
+    /// Clear All asks first once there is more than one spot to lose.
+    var clearAllNeedsConfirmation: Bool { spotCount >= 2 }
+
+    /// Show Spot Pins: off hides every spot's pin and source ring except the
+    /// picked one's. A view setting, never written into the recipe.
+    var showsSpotPins = true
+
+    /// The spots whose pins are drawn on the photo.
+    var pinnedSpotIDs: Set<UUID> {
+        if showsSpotPins {
+            return Set(recipe.healing.map(\.id) + recipe.redEyes.map(\.id))
+        }
+        return Set([selectedHealingSpotID, selectedRedEyeID].compactMap { $0 })
     }
 
     /// Every mask off the photo, one history step.

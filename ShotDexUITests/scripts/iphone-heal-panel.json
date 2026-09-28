@@ -1,75 +1,40 @@
 {
  "steps": [
-  {
-   "action": "launch"
-  },
-  {
-   "action": "wait",
-   "seconds": 25
-  },
-  {
-   "action": "tap",
-   "x": 0.5,
-   "y": 0.35
-  },
-  {
-   "action": "wait",
-   "seconds": 6
-  },
-  {
-   "action": "tap",
-   "label": "Edit"
-  },
-  {
-   "action": "wait",
-   "seconds": 12
-  },
-  {
-   "action": "tap",
-   "label": "Heal",
-   "type": "button"
-  },
-  {
-   "action": "wait",
-   "seconds": 3
-  },
-  {
-   "action": "screenshot",
-   "name": "1-heal-modes"
-  },
-  {
-   "action": "dump",
-   "name": "1-heal-modes"
-  },
-  {
-   "action": "tap",
-   "label": "Red Eye",
-   "type": "button"
-  },
-  {
-   "action": "wait",
-   "seconds": 2
-  },
-  {
-   "action": "screenshot",
-   "name": "2a-red-eye-hint"
-  },
-  {
-   "action": "tap",
-   "x": 0.4,
-   "y": 0.38
-  },
-  {
-   "action": "wait",
-   "seconds": 4
-  },
-  {
-   "action": "screenshot",
-   "name": "2-red-eye"
-  },
-  {
-   "action": "dump",
-   "name": "2-red-eye"
-  }
+  {"action": "launch"},
+  {"action": "wait", "seconds": 25},
+  {"action": "tap", "x": 0.5, "y": 0.35},
+  {"action": "wait", "seconds": 6},
+  {"action": "tap", "label": "Edit"},
+  {"action": "wait", "seconds": 12},
+  {"action": "tap", "label": "Heal", "type": "button"},
+  {"action": "wait", "seconds": 3},
+  {"action": "screenshot", "name": "1-heal-modes"},
+  {"action": "wait", "seconds": 4},
+  {"action": "longPress", "x": 0.3, "y": 0.38, "seconds": 0.25},
+  {"action": "wait", "seconds": 3},
+  {"action": "longPress", "x": 0.5, "y": 0.38, "seconds": 0.25},
+  {"action": "wait", "seconds": 3},
+  {"action": "longPress", "x": 0.7, "y": 0.38, "seconds": 0.25},
+  {"action": "wait", "seconds": 3},
+  {"action": "tap", "label": "Red Eye", "type": "button"},
+  {"action": "wait", "seconds": 2},
+  {"action": "longPress", "x": 0.4, "y": 0.43, "seconds": 0.25},
+  {"action": "wait", "seconds": 4},
+  {"action": "screenshot", "name": "2-red-eye"},
+  {"action": "wait", "seconds": 4},
+  {"action": "swipe", "x": 0.2, "y": 0.84, "direction": "up", "distance": 0.15},
+  {"action": "wait", "seconds": 2},
+  {"action": "tap", "label": "Show Spot Pins", "type": "switch"},
+  {"action": "wait", "seconds": 3},
+  {"action": "screenshot", "name": "3-pins-off"},
+  {"action": "wait", "seconds": 4},
+  {"action": "tap", "label": "Clear All", "type": "button"},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "4-confirm"},
+  {"action": "wait", "seconds": 4},
+  {"action": "tap", "label": "Clear All Spots", "type": "button"},
+  {"action": "wait", "seconds": 3},
+  {"action": "screenshot", "name": "5-cleared"},
+  {"action": "wait", "seconds": 4}
  ]
 }

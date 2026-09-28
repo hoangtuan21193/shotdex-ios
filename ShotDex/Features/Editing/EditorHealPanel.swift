@@ -61,6 +61,10 @@ struct EditorHealPanel: View {
                 title: "Visualize Spots",
                 isOn: controller.isVisualizingSpots
             ) { controller.isVisualizingSpots = $0 }
+            EditorToggleRow(
+                title: "Show Spot Pins",
+                isOn: controller.showsSpotPins
+            ) { controller.showsSpotPins = $0 }
             if controller.isVisualizingSpots {
                 EditorPlainSliderRow(
                     title: "Threshold",
@@ -103,10 +107,42 @@ struct EditorHealPanel: View {
                 }
                 .padding(.horizontal, 14)
             }
+            if controller.spotCount > 0 {
+                HStack {
+                    Button(role: .destructive) {
+                        if controller.clearAllNeedsConfirmation {
+                            isConfirmingClearAll = true
+                        } else {
+                            controller.removeAllHealingSpots()
+                        }
+                    } label: {
+                        Label("Clear All", systemImage: "trash")
+                            .font(EditorTheme.maskSubtitle)
+                            .foregroundStyle(EditorTheme.timelineDestructive)
+                    }
+                    .buttonStyle(.plain)
+                    .frame(minHeight: 44)
+                    .confirmationDialog(
+                        "Clear all spots?",
+                        isPresented: $isConfirmingClearAll,
+                        titleVisibility: .visible
+                    ) {
+                        Button("Clear All Spots", role: .destructive) {
+                            controller.removeAllHealingSpots()
+                        }
+                    } message: {
+                        Text("All \(controller.spotCount) spots come off the photo. Undo brings them back.")
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 14)
+            }
         }
         .padding(.bottom, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
+
+    @State private var isConfirmingClearAll = false
 
     @ViewBuilder
     private var spotRows: some View {
@@ -244,11 +280,12 @@ struct EditorHealGuideOverlay: View {
             // Taps and strokes on empty photo land on the paint layer under
             // this overlay (`EditorImageStage`); spots here win the touches
             // that land on them.
+            let pinned = controller.pinnedSpotIDs
             ForEach(Array(controller.recipe.healing.enumerated()), id: \.element.id) { index, spot in
-                spotGuide(spot, number: index + 1)
+                if pinned.contains(spot.id) { spotGuide(spot, number: index + 1) }
             }
             ForEach(Array(controller.recipe.redEyes.enumerated()), id: \.element.id) { index, eye in
-                redEyeGuide(eye, number: index + 1)
+                if pinned.contains(eye.id) { redEyeGuide(eye, number: index + 1) }
             }
         }
         .coordinateSpace(name: Self.space)

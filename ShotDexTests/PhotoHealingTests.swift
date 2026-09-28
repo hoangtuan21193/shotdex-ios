@@ -357,6 +357,34 @@ struct PhotoHealingTests {
         #expect(controller.recipe.healing.first?.source == before.source)
     }
 
+    /// FS-03.15c AC-34. Six heal/clone spots and one Red Eye, pins off:
+    /// Clear All asks first (7 ≥ 2), takes all seven in one step, and one
+    /// Undo brings all seven back; with pins off only the picked spot has one.
+    @MainActor @Test func clearAllIsOneStep() {
+        let controller = PhotoEditorController(asset: PHAsset(), sourceAlbum: nil, service: PhotoEditingService())
+        controller.setHealingRadius(0.02)
+        for index in 0..<6 {
+            if index == 3 { controller.setHealingMode(.clone) }
+            controller.addHealingSpot(at: NormalizedPoint(x: 0.1 + Double(index) * 0.14, y: 0.3))
+        }
+        controller.addRedEye(at: NormalizedPoint(x: 0.5, y: 0.7), pupils: [])
+        #expect(controller.spotCount == 7)
+
+        controller.showsSpotPins = false
+        let picked = controller.recipe.healing[2].id
+        controller.selectedRedEyeID = nil
+        controller.selectedHealingSpotID = picked
+        #expect(controller.pinnedSpotIDs == [picked])
+        controller.showsSpotPins = true
+        #expect(controller.pinnedSpotIDs.count == 7)
+
+        #expect(controller.clearAllNeedsConfirmation)
+        controller.removeAllHealingSpots()
+        #expect(controller.spotCount == 0)
+        controller.undo()
+        #expect(controller.recipe.healing.count == 6 && controller.recipe.redEyes.count == 1)
+    }
+
     @Test func cloneFromDifferentGroundShows() {
         let cloned = PhotoRenderService.applyHealing(
             [spot(mode: .clone, sourceX: 0.5, sourceY: 0.35)],
