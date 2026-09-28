@@ -496,7 +496,7 @@ public actor PhotoRenderService {
     public static func applyPostMaskStages(of recipe: PhotoEditRecipe, to input: CIImage) -> CIImage {
         var image = input
         for pass in postMaskPasses where pass == .effects {
-            image = applyEffects(recipe.adjustments, to: image)
+            image = applyEffects(recipe.adjustments, vignetteStyle: recipe.vignetteStyle, to: image)
         }
         return image
     }
@@ -1439,8 +1439,12 @@ public actor PhotoRenderService {
 
     /// Post-crop vignette, then grain — after the masks, so the vignette
     /// follows the cropped frame and the grain sits on top of everything.
-    static func applyEffects(_ adjustments: PhotoAdjustments, to input: CIImage) -> CIImage {
-        var image = applyVignette(adjustments, to: input)
+    static func applyEffects(
+        _ adjustments: PhotoAdjustments,
+        vignetteStyle: PhotoVignetteStyle = .highlightPriority,
+        to input: CIImage
+    ) -> CIImage {
+        var image = applyVignette(adjustments, style: vignetteStyle, to: input)
         if adjustments.grain > 0 {
             image = applyGrain(
                 adjustments.grain,

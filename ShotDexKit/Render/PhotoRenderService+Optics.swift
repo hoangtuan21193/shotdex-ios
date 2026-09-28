@@ -1,47 +1,40 @@
 import CoreImage
 
 public extension PhotoRenderService {
-    // MARK: Vignette (Effects — with Roundness + Highlights)
+    // MARK: Vignette (Effects — with Roundness, Highlights and Style)
 
-    /// The shaped vignette. For the common case (no Roundness, no Highlights) it
-    /// stays on the proven `CIVignetteEffect`; only when those two are engaged does
-    /// it switch to a colour kernel that can do a super-ellipse falloff and protect
-    /// highlights. If the kernel fails to compile it degrades to leaving the image
-    /// untouched rather than crashing.
-    static func applyVignette(_ adjustments: PhotoAdjustments, to input: CIImage) -> CIImage {
-        applyVignette(adjustments, to: input, kernel: vignetteKernel)
+    /// The post-crop vignette. Lightroom's sign — negative darkens — and its
+    /// three styles (FS-03.15b §5), all in the one `vignette` kernel so a
+    /// Style change never switches the fall-off shape under the slider. If
+    /// the kernel fails to compile the picture is left untouched.
+    static func applyVignette(
+        _ adjustments: PhotoAdjustments,
+        style: PhotoVignetteStyle = .highlightPriority,
+        to input: CIImage
+    ) -> CIImage {
+        applyVignette(adjustments, style: style, to: input, kernel: vignetteKernel)
     }
 
     /// `kernel` is a parameter so a test can hand in `nil` (FS-16 AC-7).
     internal static func applyVignette(
         _ adjustments: PhotoAdjustments,
+        style: PhotoVignetteStyle = .highlightPriority,
         to input: CIImage,
         kernel: CIColorKernel?
     ) -> CIImage {
-        guard abs(adjustments.vignette) > 0.0001 else { return input }
+        guard abs(adjustments.vignette) > 0.0001, let kernel else { return input }
         let extent = input.extent
-        let minDimension = min(extent.width, extent.height)
-
-        if abs(adjustments.vignetteRoundness) < 0.01, adjustments.vignetteHighlights < 0.01 {
-            return filtered(
-                "CIVignetteEffect",
-                image: input,
-                values: [
-                    kCIInputCenterKey: CIVector(x: extent.midX, y: extent.midY),
-                    kCIInputRadiusKey: minDimension * (0.35 + adjustments.vignetteMidpoint * 0.65),
-                    kCIInputIntensityKey: adjustments.vignette * 2,
-                    "inputFalloff": max(0.05, adjustments.vignetteFeather),
-                ]
-            )
-        }
-
-        guard let kernel else { return input }
         // Distance is measured in half-extent units: an ellipse's corner sits at
         // ~1.41, its edge midpoints at 1.0.
         let base = 0.4 + adjustments.vignetteMidpoint * 0.9
         let inner = base * (1 - adjustments.vignetteFeather * 0.6)
         let outer = base + adjustments.vignetteFeather * 0.5 + 0.05
         let roundExponent = max(1.2, 2 + adjustments.vignetteRoundness * 3)
+        let styleCode: Double = switch style {
+        case .highlightPriority: 0
+        case .colorPriority: 1
+        case .paintOverlay: 2
+        }
         let output = kernel.apply(
             extent: extent,
             arguments: [
@@ -53,6 +46,7 @@ public extension PhotoRenderService {
                 adjustments.vignette,
                 roundExponent,
                 adjustments.vignetteHighlights,
+                styleCode,
             ]
         )
         return output ?? input
@@ -95,9 +89,8 @@ public extension PhotoRenderService {
         let extent = input.extent
         let halfDiagonal = (extent.width * extent.width + extent.height * extent.height).squareRoot() / 2
         let inner = 0.1 + min(1, max(0, adjustments.lensManualVignettingMidpoint)) * 0.8
-        // The kernel scales by 1 − w · amount; at the corner (w = 1) that is
-        // the gain 2^amount.
-        let kernelAmount = 1 - pow(2, amount)
+        // Color Priority with nothing held back is plain stops: the kernel
+        // moves 2 · amount stops at the corner, so half the slider is ±1 EV.
         let output = kernel.apply(
             extent: extent,
             arguments: [
@@ -106,9 +99,10 @@ public extension PhotoRenderService {
                 CIVector(x: halfDiagonal, y: halfDiagonal),
                 inner,
                 1.0,
-                kernelAmount,
+                amount / 2,
                 2.0,
                 0.0,
+                1.0,
             ]
         )
         return output ?? input

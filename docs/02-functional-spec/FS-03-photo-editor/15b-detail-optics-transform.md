@@ -99,6 +99,11 @@ Nhóm Effects › Vignette thêm **Style** — một hàng chip ba ô ở đầu
   giữ vùng sáng lại.
 - **Color Priority**: chỉ hạ độ sáng, giữ hue và độ bão hoà — góc tối mà không xỉn màu.
 - **Paint Overlay**: trộn tuyến tính về đen (âm) hoặc trắng (dương); slider Highlights mờ, như Lightroom.
+- **Dấu theo Lightroom** (chốt 2026-09-28): Vignette âm làm tối, dương làm sáng. *Trước đây ShotDex ngược lại
+  (dương tối) — preset Lightroom nhập vào sẽ ra vignette sáng.* ±100 là ±2 EV ở góc với hai kiểu Priority.
+- Highlight Priority tự giữ vùng sáng (độ sáng 0,55→0,95 giữ dần tới trọn), Highlights hạ ngưỡng dưới xuống;
+  Color Priority chỉ giữ theo Highlights. Cả ba kiểu dùng một kernel `vignette` — bỏ nhánh `CIVignetteEffect`
+  cũ để đổi Style không đổi dáng sụt.
 - Vignette rồi Grain chạy **sau crop và mask**, trước hạ cỡ preview — tâm vignette là tâm khung sau crop.
   *Vì trước crop thì cắt lệch một bên là vignette lệch tâm, sai nghĩa "post-crop".*
 - Vignette và Grain **không có trong mask** (Lightroom cũng không); Video Studio giữ chỗ cũ (FS-03.15 §3).
@@ -127,13 +132,13 @@ Nhóm Effects › Vignette thêm **Style** — một hàng chip ba ô ở đầu
 | AC-22 | hình tròn đen giữa nền trắng | đặt Aspect +50 | tỉ lệ ngang/dọc của hình thành 1,22 ± 0,02; 0 pixel trong suốt | `GeoTransformTests.aspectStretchesAroundTheCentre` · `…negativeAspectGrowsTheHeight` · hàng: `ShotDexUITests/scripts/iphone-geo-aspect.json` |
 | AC-23 | ảnh toà nhà tổng hợp: cạnh dọc hội tụ 8°, nghiêng 2° | chạm Auto | độ nghiêng còn ≤ 0,5°; độ hội tụ còn 3°…4° (nắn 60%) | ⚠️ chưa có — phần Level cần máy thật hoặc Vision của Mac (dự kiến `UprightAnalyzerTests.autoLevelsAndPartlyStraightens`) |
 | AC-24 | cùng ảnh, Upright Guided, 4 đường đã có | vẽ 2 đường dọc theo hai cạnh nghiêng rồi thử đường thứ 5 | hai cạnh dọc trong 0,5°; đường thứ 5 không tạo, hiện "Up to 4 guides"; 1 Undo gỡ đúng 1 đường | ⚠️ chưa có (dự kiến `UprightGuidedTests.twoGuidesMakeBothVertical`) + `ShotDexUITests/scripts/iphone-upright-guided.json` |
-| AC-25 | ảnh có đèn sáng 0,95 ở góc và vùng xám 0,5 cạnh đó | Vignette −50, Style Highlight Priority (so với Paint Overlay) | Highlight Priority: đèn còn ≥ 0,9, vùng xám tối ≥ 20%; Paint Overlay: đèn tối ≥ 20% | ⚠️ chưa có (dự kiến `VignetteStyleTests.highlightPriorityKeepsLights`) |
+| AC-25 | ảnh có đèn sáng 0,95 ở góc và vùng xám 0,5 cạnh đó | Vignette −50, Style Highlight Priority (so với Paint Overlay) | Highlight Priority: đèn còn ≥ 0,9, vùng xám tối ≥ 20%; Paint Overlay: đèn tối ≥ 20% | `VignetteStyleTests.highlightPriorityKeepsLights` · `…negativeDarkensPositiveBrightens` · `…paintOverlayDimsHighlights` · golden `vignette*` · chip: `ShotDexUITests/scripts/iphone-vignette-style.json` |
 | AC-26 | Vignette −50, crop giữ nửa trái ảnh | render | tâm vùng sáng nhất nằm ở tâm khung **sau** crop ± 2% cạnh ngắn; grain chạy sau vignette | ⚠️ chưa có (dự kiến `VignetteStyleTests.vignetteFollowsTheCrop`) |
 | AC-27 | ảnh toà nhà của AC-23, Upright Auto đã chạm | kéo slider Vertical tay +10, rồi render 20 lần | recipe mang chế độ Auto + phép nắn đã giải + Vertical 10 riêng; phép nắn giải 0 lần thêm; Off trả đúng Vertical 10 | ⚠️ chưa có (dự kiến `UprightStorageTests.solvedTransformAndSlidersAreSeparate`) |
 | AC-28 | ảnh A Upright Auto; ảnh B là toà nhà khác nghiêng 3°, hội tụ 6° | Copy Edits A → Paste sang B | B mang chế độ Auto; phép nắn của B giải trên B (khác A); độ nghiêng của B còn ≤ 0,5° | ⚠️ chưa có — phần Level cần máy thật hoặc Vision của Mac (dự kiến `EditClipboardTests.uprightModeIsResolvedOnTheTarget`) |
 | AC-29 | ảnh 3:2, Vertical +40, tỉ lệ khoá 3:2 | bật Constrain Crop (so với tắt) | bật: 0 pixel ngoài ảnh sau nắn, khung vẫn 3:2 ± 0,01; tắt: mép kéo giãn, 0 pixel trong suốt | ⚠️ chưa có (dự kiến `GeoTransformTests.constrainCropKeepsTheLockedRatio`) |
 
-**Chưa chứng minh được:** AC-23…AC-29 (chưa code).
+**Chưa chứng minh được:** AC-23, AC-24, AC-26…AC-29 (chưa code).
 
 *AC-20 sửa 2026-09-28:* bản cũ ghi "dời vào" cùng lúc với "không góc trống" — hai điều không cùng đúng. Nắn méo
 thùng kéo vùng rìa **ra**; phóng vừa khít (không góc trống) không đảo chiều đó. Lightroom cũng vậy khi bật Constrain

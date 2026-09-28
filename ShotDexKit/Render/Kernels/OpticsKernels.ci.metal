@@ -6,17 +6,29 @@
 extern "C" {
 namespace coreimage {
 
-// Distance in half-extent units, super-ellipse by `roundExponent`, eased off
-// the highlights. Works on the premultiplied colour; alpha is untouched.
+// Distance in half-extent units, super-ellipse by `roundExponent`. `amount`
+// is Lightroom's sign: negative darkens. Three styles (FS-03.15b §5):
+// 0 Highlight Priority — stops, lights held back (more with `highlights`);
+// 1 Color Priority — stops, hue and saturation kept, lights held back only by
+//   `highlights`; 2 Paint Overlay — mixed toward black or white, `highlights`
+//   ignored. Works on the premultiplied colour; alpha is untouched.
 float4 vignette(sample_t s, float2 center, float2 halfExtent, float inner, float outer,
-                float amount, float roundExponent, float highlights, destination dest) {
+                float amount, float roundExponent, float highlights, float style,
+                destination dest) {
     float2 d = (dest.coord() - center) / halfExtent;
     float dist = pow(pow(abs(d.x), roundExponent) + pow(abs(d.y), roundExponent), 1.0f / roundExponent);
-    float w = smoothstep(inner, outer, dist);
-    float luma = dot(s.rgb, float3(0.2126f, 0.7152f, 0.0722f));
-    w *= mix(1.0f, 1.0f - luma, highlights);
-    float factor = 1.0f - w * amount;
-    return float4(s.rgb * factor, s.a);
+    float w = smoothstep(inner, outer, dist) * abs(amount);
+    float3 c = s.rgb;
+    if (style > 1.5f) {
+        float target = amount < 0.0f ? 0.0f : s.a;
+        return float4(mix(c, float3(target), w * 0.8f), s.a);
+    }
+    float luma = dot(c, float3(0.2126f, 0.7152f, 0.0722f));
+    float held = style < 0.5f
+        ? smoothstep(0.55f - 0.3f * highlights, 0.95f, luma)
+        : highlights * smoothstep(0.55f, 0.95f, luma);
+    float stops = amount < 0.0f ? -2.0f * w * (1.0f - held) : 2.0f * w;
+    return float4(c * exp2(stops), s.a);
 }
 
 // Lensfun's three distortion models: 0 poly3, 1 poly5, 2 ptlens — then the

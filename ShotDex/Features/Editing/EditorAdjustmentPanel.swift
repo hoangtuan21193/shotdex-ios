@@ -68,6 +68,11 @@ struct EditorAdjustmentGroupsView<Footer: View>: View {
 
     @ViewBuilder
     private func row(for kind: PhotoAdjustmentKind) -> some View {
+        if kind == .vignette {
+            // Style heads the vignette rows (FS-03.15b §5); mask scope never
+            // lists `.vignette`, so this only appears in global Effects.
+            EditorVignetteStyleRow(controller: controller)
+        }
         if EditorAdjustmentCatalog.format(of: kind) == .toggle {
             EditorToggleRow(
                 title: EditorAdjustmentCatalog.shortTitle(of: kind),
@@ -79,7 +84,11 @@ struct EditorAdjustmentGroupsView<Footer: View>: View {
             // A dependent row stays in place and goes quiet until its parent has
             // a value: a vignette's midpoint means nothing at vignette 0, and
             // hiding the row would make the group's shape change under the hand.
-            let isLive = EditorAdjustmentCatalog.isEnabled(kind, in: controller.recipe.adjustments)
+            let isLive = EditorAdjustmentCatalog.isEnabled(
+                kind,
+                in: controller.recipe.adjustments,
+                vignetteStyle: controller.recipe.vignetteStyle
+            )
             EditorSliderRow(
                 kind: kind,
                 value: controller.adjustmentValue(kind),
@@ -106,6 +115,9 @@ struct EditorAdjustmentGroupsView<Footer: View>: View {
 
     /// Why a row cannot be dragged, for the people who cannot see that it is dim.
     private func dependencyHint(for kind: PhotoAdjustmentKind) -> String {
+        if kind == .vignetteHighlights, controller.recipe.vignetteStyle == .paintOverlay {
+            return "Not used by Paint Overlay"
+        }
         guard let parent = EditorAdjustmentCatalog.parentKind(of: kind) else { return "" }
         return "Needs \(EditorAdjustmentCatalog.shortTitle(of: parent)) above zero"
     }
@@ -297,5 +309,30 @@ private struct EditorTextButtonBody: View {
             .padding(.horizontal, 6)
             .frame(minWidth: 44, minHeight: 44)
             .contentShape(Rectangle())
+    }
+}
+
+/// Effects › Vignette › Style: Highlight Priority · Color Priority · Paint
+/// Overlay, as the shared editor chips. Scrolls sideways rather than
+/// truncating when the three names do not fit the width.
+struct EditorVignetteStyleRow: View {
+    @Bindable var controller: PhotoEditorController
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: AppTheme.Spacing.sm) {
+                ForEach(PhotoVignetteStyle.allCases) { style in
+                    Button(style.displayName) {
+                        controller.setVignetteStyle(style)
+                    }
+                    .buttonStyle(EditorChipButtonStyle(isSelected: controller.recipe.vignetteStyle == style))
+                    .accessibilityAddTraits(controller.recipe.vignetteStyle == style ? .isSelected : [])
+                }
+            }
+            .padding(.horizontal, AppTheme.Spacing.lg)
+        }
+        .padding(.vertical, AppTheme.Spacing.sm)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Vignette Style")
     }
 }

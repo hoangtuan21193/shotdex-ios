@@ -739,6 +739,14 @@ final class PhotoEditorController {
         return true
     }
 
+    /// Effects › Vignette › Style — one history step per change.
+    func setVignetteStyle(_ style: PhotoVignetteStyle) {
+        guard recipe.vignetteStyle != style else { return }
+        recordHistory()
+        recipe.vignetteStyle = style
+        scheduleRender()
+    }
+
     /// Clears everything Upright can set, so "off" is one press rather than
     /// three sliders dragged back to zero.
     func resetUpright() {

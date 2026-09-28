@@ -141,8 +141,20 @@ extension KernelGoldenCase {
         color("vignette", { PhotoRenderService.vignetteKernel }) {
             [
                 $0(0), CIVector(x: 24, y: 24), CIVector(x: 24, y: 24),
-                0.5, 1.1, 0.8, 3.5, 0.5,
+                0.5, 1.1, -0.8, 3.5, 0.5, 0,
             ]
+        },
+        KernelGoldenCase(name: "vignetteColorPriority", kernel: "vignette") { input in
+            PhotoRenderService.vignetteKernel?.apply(
+                extent: extent,
+                arguments: [input(0), CIVector(x: 24, y: 24), CIVector(x: 24, y: 24), 0.5, 1.1, -0.8, 2.0, 0.5, 1]
+            )
+        },
+        KernelGoldenCase(name: "vignettePaintOverlay", kernel: "vignette") { input in
+            PhotoRenderService.vignetteKernel?.apply(
+                extent: extent,
+                arguments: [input(0), CIVector(x: 24, y: 24), CIVector(x: 24, y: 24), 0.5, 1.1, 0.6, 2.0, 0, 2]
+            )
         },
         lens("lensWarpPoly3", model: 0),
         lens("lensWarpPoly5", model: 1),
@@ -331,7 +343,7 @@ struct KernelPipelineGoldenTests {
         recipe.adjustments.noiseDetail = 0.6
         recipe.adjustments.sharpness = 0.8
         recipe.adjustments.sharpenMasking = 0.4
-        recipe.adjustments.vignette = 0.6
+        recipe.adjustments.vignette = -0.6
         recipe.adjustments.vignetteRoundness = 0.5
         recipe.adjustments.vignetteHighlights = 0.4
         recipe.color.mixer.orange.saturation = 0.5

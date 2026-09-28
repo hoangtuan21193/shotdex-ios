@@ -119,8 +119,14 @@ enum EditorAdjustmentCatalog {
         }
     }
 
-    /// Whether a row is live given the values around it.
-    static func isEnabled(_ kind: PhotoAdjustmentKind, in adjustments: PhotoAdjustments) -> Bool {
+    /// Whether a row is live given the values around it. Paint Overlay has no
+    /// highlight protection to tune, so its Highlights row goes quiet too.
+    static func isEnabled(
+        _ kind: PhotoAdjustmentKind,
+        in adjustments: PhotoAdjustments,
+        vignetteStyle: PhotoVignetteStyle = .highlightPriority
+    ) -> Bool {
+        if kind == .vignetteHighlights, vignetteStyle == .paintOverlay { return false }
         guard let parent = parentKind(of: kind) else { return true }
         return adjustments[parent] != 0
     }
