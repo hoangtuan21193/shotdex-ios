@@ -84,6 +84,8 @@ public actor PhotoRenderService {
         public let colorNoise: Double
         public let sharpness: Double
         public let lensCorrection: Double
+        /// Apple's decoder correction is the lens source (FS-03.16a §6).
+        public let usesAppleLensCorrection: Bool
     }
 
     private struct InteractiveBaseCache {
@@ -1293,7 +1295,8 @@ public actor PhotoRenderService {
             luminanceNoise: adjustments.rawLuminanceNoise,
             colorNoise: adjustments.rawColorNoise,
             sharpness: adjustments.rawSharpness,
-            lensCorrection: adjustments.lensCorrection
+            lensCorrection: adjustments.lensCorrection,
+            usesAppleLensCorrection: recipe.lensProfile?.usesAppleBuiltIn ?? true
         )
     }
 
@@ -1339,7 +1342,12 @@ public actor PhotoRenderService {
                 )
             }
             if raw.isLensCorrectionSupported {
+                // One switch for every source (FS-03.16a §6); Apple's own
+                // correction only when the resolver chose it, never under a
+                // profile. A recipe with no choice yet is a RAW opened before
+                // the resolver ran: Apple's correction, as it always was.
                 raw.isLensCorrectionEnabled = recipe.adjustments.lensCorrection >= 0.5
+                    && (recipe.lensProfile?.usesAppleBuiltIn ?? true)
             }
             if let maximumDimension {
                 let nativeLongEdge = max(raw.nativeSize.width, raw.nativeSize.height)

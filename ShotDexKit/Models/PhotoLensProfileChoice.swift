@@ -64,6 +64,11 @@ public struct PhotoLensProfileChoice: Codable, Equatable, Sendable {
         [distortionSource, vignettingSource, chromaticAberrationSource].contains { $0 == .embedded || $0 == .lensfun }
     }
 
+    /// Apple's decoder correction is the choice: no aspect has a profile.
+    public var usesAppleBuiltIn: Bool {
+        [distortionSource, vignettingSource, chromaticAberrationSource].contains(.appleBuiltIn)
+    }
+
     private enum CodingKeys: String, CodingKey {
         case lensID, cameraCropFactor, isAutomatic
         case distortionSource, vignettingSource, chromaticAberrationSource
