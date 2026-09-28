@@ -105,6 +105,83 @@ extension NoiseReductionSplitTests {
     }
 }
 
+extension NoiseReductionSplitTests {
+
+    /// A 2px checkerboard of red and green at the same luminance, under
+    /// ±0.05 of independent per-channel (colour) noise.
+    private static func chromaChecker() -> CIImage {
+        var generator = SplitSeededGenerator(seed: 17)
+        let red: SIMD3<Float> = [0.62, 0.30, 0.30]
+        // Same Rec. 709 luminance as `red`.
+        let greenLevel: Float = (0.2126 * 0.62 + 0.7152 * 0.30 + 0.0722 * 0.30 - (0.2126 + 0.0722) * 0.2) / 0.7152
+        let green: SIMD3<Float> = [0.2, greenLevel, 0.2]
+        var pixels = [Float](repeating: 1, count: size * size * 4)
+        for y in 0..<size {
+            for x in 0..<size {
+                let colour = ((x / 2) + (y / 2)).isMultiple(of: 2) ? red : green
+                let index = (y * size + x) * 4
+                for channel in 0..<3 {
+                    pixels[index + channel] = colour[channel] + Float.random(in: -0.05...0.05, using: &generator)
+                }
+            }
+        }
+        return image(pixels)
+    }
+
+    private static func rgb(of image: CIImage, in rect: CGRect) -> [SIMD3<Double>] {
+        let context = CIContext(options: [.workingColorSpace: NSNull(), .outputColorSpace: NSNull()])
+        let width = Int(rect.width), height = Int(rect.height)
+        var pixels = [Float](repeating: 0, count: width * height * 4)
+        context.render(
+            image,
+            toBitmap: &pixels,
+            rowBytes: width * 4 * MemoryLayout<Float>.size,
+            bounds: rect,
+            format: .RGBAf,
+            colorSpace: nil
+        )
+        return stride(from: 0, to: pixels.count, by: 4).map {
+            SIMD3(Double(pixels[$0]), Double(pixels[$0 + 1]), Double(pixels[$0 + 2]))
+        }
+    }
+
+    private static func luminance(_ colour: SIMD3<Double>) -> Double {
+        0.2126 * colour.x + 0.7152 * colour.y + 0.0722 * colour.z
+    }
+
+    /// Mean squared distance of each pixel's chroma (colour minus its
+    /// luminance) from the region's mean chroma.
+    private static func chromaVariance(of image: CIImage, in rect: CGRect) -> Double {
+        let chroma = rgb(of: image, in: rect).map { $0 - SIMD3(repeating: luminance($0)) }
+        let mean = chroma.reduce(SIMD3<Double>.zero, +) / Double(chroma.count)
+        return chroma.map { ($0 - mean) * ($0 - mean) }.map { $0.sum() }.reduce(0, +) / Double(chroma.count)
+    }
+
+    private static let inner = CGRect(x: 8, y: 8, width: 80, height: 80)
+
+    /// AC-17. Color Detail keeps a fine coloured pattern that Color NR at
+    /// Detail 0 would wash out.
+    @Test func colorDetailKeepsFineColour() {
+        let frame = Self.chromaChecker()
+        let before = Self.chromaVariance(of: frame, in: Self.inner)
+        let washed = PhotoRenderService.applyColorNoiseReduction(amount: 0.5, detail: 0, to: frame)
+        let kept = PhotoRenderService.applyColorNoiseReduction(amount: 0.5, detail: 1, to: frame)
+        let washedShare = Self.chromaVariance(of: washed, in: Self.inner) / before
+        let keptShare = Self.chromaVariance(of: kept, in: Self.inner) / before
+        #expect(keptShare >= 0.6, "Detail 100 kept \(keptShare) of the chroma variance")
+        #expect(washedShare <= 0.3, "Detail 0 kept \(washedShare) of the chroma variance")
+    }
+
+    /// Colour noise reduction moves chroma only: luminance stays put.
+    @Test func colorNoiseReductionLeavesLuminance() {
+        let frame = Self.chromaChecker()
+        let output = PhotoRenderService.applyColorNoiseReduction(amount: 1, detail: 0, to: frame)
+        let pairs = zip(Self.rgb(of: frame, in: Self.inner), Self.rgb(of: output, in: Self.inner))
+        let worst = pairs.map { abs(Self.luminance($0) - Self.luminance($1)) }.max() ?? 1
+        #expect(worst <= 1.0 / 255, "luminance moved \(worst)")
+    }
+}
+
 private struct SplitSeededGenerator: RandomNumberGenerator {
     private var state: UInt64
     init(seed: UInt64) { state = seed }

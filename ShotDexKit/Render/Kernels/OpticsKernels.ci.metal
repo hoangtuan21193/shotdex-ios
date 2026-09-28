@@ -45,5 +45,18 @@ float4 noiseDetail(sample_t denoised, sample_t texture, float amount) {
     return float4(denoised.rgb + amount * texture.rgb, denoised.a);
 }
 
+// Colour noise reduction: the original's luminance with the blurred frame's
+// chroma, except where the chroma changes by more than noise does — a fine
+// red edge — where `detail` of the original chroma is kept. Chroma is the
+// colour minus its luminance, so luminance never moves.
+float4 chromaDenoise(sample_t original, sample_t blurred, float detail) {
+    float3 w = float3(0.2126f, 0.7152f, 0.0722f);
+    float y = dot(original.rgb, w);
+    float3 sharpChroma = original.rgb - y;
+    float3 softChroma = blurred.rgb - dot(blurred.rgb, w);
+    float edge = smoothstep(0.06f, 0.16f, length(sharpChroma - softChroma));
+    return float4(y + mix(softChroma, sharpChroma, detail * edge), original.a);
+}
+
 }
 }

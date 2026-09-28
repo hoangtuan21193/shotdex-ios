@@ -27,6 +27,7 @@ struct KernelLibraryTests {
             ("lensWarp", PhotoRenderService.lensWarpKernel),
             ("noiseResidual", PhotoRenderService.noiseResidualKernel),
             ("noiseDetail", PhotoRenderService.noiseDetailKernel),
+            ("chromaDenoise", PhotoRenderService.chromaDenoiseKernel),
             ("healRing", PhotoRenderService.healingRingKernel),
             ("healWeight", PhotoRenderService.healingWeightKernel),
             ("healBlend", PhotoRenderService.healingBlendKernel),
@@ -55,7 +56,7 @@ struct KernelLibraryTests {
             ("luminanceKey", VideoMaskRenderer.luminanceKeyKernel),
             ("colorKey", VideoMaskRenderer.colorKeyKernel),
         ]
-        #expect(kernels.count == 42)
+        #expect(kernels.count == 43)
         for (name, kernel) in kernels {
             #expect(kernel != nil, "\(name) did not load")
         }

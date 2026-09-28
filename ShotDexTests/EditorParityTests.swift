@@ -53,9 +53,9 @@ struct NoiseReductionSplitTests {
             .groups(isRAWSource: false, scope: .global)
             .first { $0.id == .detail }?.kinds ?? []
         let noise = detail.filter {
-            [.noiseReduction, .noiseDetail, .noiseContrast, .colorNoiseReduction].contains($0)
+            [.noiseReduction, .noiseDetail, .noiseContrast, .colorNoiseReduction, .colorNoiseDetail].contains($0)
         }
-        #expect(noise == [.noiseReduction, .noiseDetail, .noiseContrast, .colorNoiseReduction])
+        #expect(noise == [.noiseReduction, .noiseDetail, .noiseContrast, .colorNoiseReduction, .colorNoiseDetail])
         for kind in noise {
             #expect(!EditorAdjustmentCatalog.isBipolar(kind), "\(kind) is a strength")
             #expect(EditorAdjustmentCatalog.sliderRange(of: kind) == 0...1)
@@ -63,6 +63,8 @@ struct NoiseReductionSplitTests {
         // Detail waits for Luminance, like grain size waits for grain.
         #expect(EditorAdjustmentCatalog.parentKind(of: .noiseDetail) == .noiseReduction)
         #expect(EditorAdjustmentCatalog.parentKind(of: .noiseContrast) == .noiseReduction)
+        #expect(EditorAdjustmentCatalog.parentKind(of: .colorNoiseDetail) == .colorNoiseReduction)
+        #expect(PhotoAdjustments().colorNoiseDetail == 0.5)
         #expect(PhotoAdjustments().noiseDetail == 0.5)
         #expect(PhotoAdjustments().isIdentity)
         // A one-way strength reads "50", not "+50".

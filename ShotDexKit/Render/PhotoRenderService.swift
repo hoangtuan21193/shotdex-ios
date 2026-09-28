@@ -1535,6 +1535,27 @@ public actor PhotoRenderService {
         ).cropped(to: extent)
     }
 
+    /// Colour noise reduction with a Detail control (FS-03.15b §1).
+    ///
+    /// Chroma only: the frame is blurred and its chroma — colour minus
+    /// luminance — replaces the original's, so luminance and texture are
+    /// untouched. Detail keeps the original chroma where it changes by more
+    /// than noise does, which is a fine coloured edge (red lettering, a leaf
+    /// rim) rather than speckle.
+    public static func applyColorNoiseReduction(
+        amount: Double,
+        detail: Double,
+        to image: CIImage
+    ) -> CIImage {
+        guard amount > 0.001, let kernel = chromaDenoiseKernel else { return image }
+        let soft = blurred(image, radius: 1 + min(1, amount) * 4)
+        let detail = min(1, max(0, detail))
+        return kernel.apply(extent: image.extent, arguments: [image, soft, detail]) ?? image
+    }
+
+    /// Original luminance, blurred chroma, original chroma kept at edges.
+    static let chromaDenoiseKernel = CoreImageKernelLibrary.kit.colorKernel(named: "chromaDenoise")
+
     /// What noise reduction removed, kept signed.
     static let noiseResidualKernel = CoreImageKernelLibrary.kit.colorKernel(named: "noiseResidual")
 
@@ -1578,16 +1599,10 @@ public actor PhotoRenderService {
                 )
             }
             if adjustments.colorNoiseReduction > 0 {
-                // `CINoiseReduction` with zero luminance sharpening leans on its chroma
-                // smoothing, which is what colour-noise reduction wants — clean up the
-                // speckle without softening detail.
-                image = filtered(
-                    "CINoiseReduction",
-                    image: image,
-                    values: [
-                        "inputNoiseLevel": adjustments.colorNoiseReduction * 0.05,
-                        "inputSharpness": 0.4,
-                    ]
+                image = applyColorNoiseReduction(
+                    amount: adjustments.colorNoiseReduction,
+                    detail: adjustments.colorNoiseDetail,
+                    to: image
                 )
             }
         case .sharpen:
