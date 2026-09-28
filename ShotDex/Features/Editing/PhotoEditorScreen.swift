@@ -2739,7 +2739,7 @@ struct PhotoEditorScreen: View {
         case .color: ids = [.color]
         case .effects: ids = [.effects]
         case .detail: ids = controller.isRAWSource ? [.detail, .raw] : [.detail]
-        case .optics: ids = [.lensManual, .optics]
+        case .optics: ids = [.lensProfile, .lensManual, .optics]
         case .geo: ids = [.geo]
         default: ids = []
         }

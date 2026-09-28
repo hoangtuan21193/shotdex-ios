@@ -1485,7 +1485,7 @@ final class PhotoEditorController {
 
     /// The lens the recipe is corrected with, if any.
     var lensProfileLens: LensfunLens? {
-        recipe.lensProfile.flatMap { LensProfileLibrary.shared.lens(id: $0.lensID) }
+        recipe.lensProfile?.lensID.flatMap { LensProfileLibrary.shared.lens(id: $0) }
     }
 
     /// Off the main actor: the first call decodes the ~800KB table.

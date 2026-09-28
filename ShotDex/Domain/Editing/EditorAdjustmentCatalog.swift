@@ -20,6 +20,8 @@ struct EditorAdjustmentGroup: Identifiable, Equatable, Sendable {
         case color
         case detail
         case effects
+        /// Lens Correction › LENS PROFILE, under Optics (FS-03.16b §1).
+        case lensProfile
         /// Lens Correction › MANUAL, under Optics (FS-03.15b §3, E14).
         case lensManual
         case optics
@@ -51,6 +53,9 @@ enum EditorAdjustmentCatalog {
     /// there is no negative amount of film grain, and the RAW parameters are 0…1
     /// strengths inside `CIRAWFilter`.
     static let unipolarKinds: Set<PhotoAdjustmentKind> = [
+        .lensDistortionScale,
+        .lensVignettingScale,
+        .lensChromaticAberrationScale,
         .grain,
         .grainSize,
         .grainRoughness,
@@ -193,6 +198,13 @@ enum EditorAdjustmentCatalog {
             // manual lens rows; the second carries the fringe controls.
             groups.append(
                 EditorAdjustmentGroup(
+                    id: .lensProfile,
+                    title: "Lens Profile",
+                    kinds: [.lensDistortionScale, .lensVignettingScale, .lensChromaticAberrationScale]
+                )
+            )
+            groups.append(
+                EditorAdjustmentGroup(
                     id: .lensManual,
                     title: "Manual",
                     kinds: [.lensManualDistortion, .lensManualVignetting, .lensManualVignettingMidpoint]
@@ -278,6 +290,9 @@ enum EditorAdjustmentCatalog {
         case .colorNoiseReduction: "Color NR"
         case .colorNoiseDetail: "Color Detail"
         case .colorNoiseSmoothness: "Smoothness"
+        case .lensDistortionScale: "Distortion"
+        case .lensVignettingScale: "Vignetting"
+        case .lensChromaticAberrationScale: "Chromatic Aberration"
         case .lensManualDistortion: "Distortion"
         case .lensManualVignetting: "Vignetting"
         case .lensManualVignettingMidpoint: "Midpoint"
@@ -312,6 +327,8 @@ enum EditorAdjustmentCatalog {
         switch kind {
         case .lensManualDistortion, .lensManualVignetting, .lensManualVignettingMidpoint:
             "\(shortTitle(of: kind)), Manual"
+        case .lensDistortionScale, .lensVignettingScale, .lensChromaticAberrationScale:
+            "\(shortTitle(of: kind)), Lens Profile"
         default: kind.displayName
         }
     }

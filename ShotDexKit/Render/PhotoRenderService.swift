@@ -2018,7 +2018,8 @@ public actor PhotoRenderService {
     ) -> CIImage {
         let manual = recipe.adjustments.lensManualDistortion
         if let choice = recipe.lensProfile, !source.isRAW,
-           let lens = LensProfileLibrary.shared.lens(id: choice.lensID),
+           choice.distortionSource == .lensfun, let lensID = choice.lensID,
+           let lens = LensProfileLibrary.shared.lens(id: lensID),
            let term = lens.distortion(atFocal: exifFocalLength(source.properties) ?? lens.distortion.first?.focal ?? 0) {
             return applyLensProfile(
                 term,

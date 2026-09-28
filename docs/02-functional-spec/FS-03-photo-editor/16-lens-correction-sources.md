@@ -65,6 +65,7 @@ nắn méo, và preset Lightroom mang ba mức độ mạnh không có chỗ đ�
 |---|---|
 | Bộ thông số chỉnh | ba mức độ mạnh (0–2, hiển thị 0–200) · **một** công tắc cho mọi nguồn |
 | Lựa chọn hồ sơ ống | thêm loại nguồn; giữ id ống Lensfun, crop thân máy, tự khớp hay tự chọn — lưu riêng, ngoài bộ thông số |
+| *Tên trong code (2026-09-29)* | kind `lensDistortionScale` · `lensVignettingScale` · `lensChromaticAberrationScale` (mặc định 1, không ghi khoá khi 1) + `lensCorrection` làm công tắc; `PhotoLensProfileChoice.distortionSource/vignettingSource/chromaticAberrationSource` kiểu `LensCorrectionSource` (`embedded · lensfun · appleBuiltIn · none`), `lensID` thành tuỳ chọn; lựa chọn lưu trước khi có nguồn đọc ra Lensfun cho cả ba mặt |
 | Bỏ | thang bật/tắt riêng của RAW trong nhóm RAW (0–1 so ngưỡng 0,5) — không còn khái niệm thứ hai |
 | Người dùng tự nhập? | không vào `photo_metadata` — recipe là dữ liệu sửa ảnh, đi đường lưu recipe như hôm nay ([FS-03.06](06-saving-recipe-and-live-photo.md)) |
 | Tương thích | app chưa phát hành: không migration, không cờ phiên bản; decode vẫn khoan dung (FS-03.11 §9b) |
@@ -97,7 +98,7 @@ nắn méo, và preset Lightroom mang ba mức độ mạnh không có chỗ đ�
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | recipe có Distortion 150 · Vignetting 0 · CA 200, nguồn Lensfun id "Canon\|Canon EF 24-70mm f/2.8L II USM\|1.0" | encode rồi decode | cả ba mức, công tắc và nguồn giống hệt; thêm một loại nguồn lạ vào JSON thì chỉ nguồn rơi về "không sửa", ba mức và mọi phần khác còn nguyên | ⚠️ chưa có |
+| AC-1 | recipe có Distortion 150 · Vignetting 0 · CA 200, nguồn Lensfun id "Canon\|Canon EF 24-70mm f/2.8L II USM\|1.0" | encode rồi decode | cả ba mức, công tắc và nguồn giống hệt; thêm một loại nguồn lạ vào JSON thì chỉ nguồn rơi về "không sửa", ba mức và mọi phần khác còn nguyên | `LensProfileTests.strengthsSourceAndSwitchRoundTrip` · `…unknownSourceFallsToNoneOnly` |
 | AC-2 | ảnh có Distortion 100 | kéo lên 160 rồi thả | đúng **một** bước history; Undo trả 100 và ảnh render lệch ≤ 1/255 so với trước khi kéo | ⚠️ chưa có |
 | AC-3 | ảnh A (ARW, nguồn dữ liệu nhúng, 50/100/150) và ảnh B (CR3, nguồn Lensfun ống của B) | Copy Edits ở A, Paste lên B | B nhận 50/100/150, **giữ** nguồn Lensfun ống của B, không nhận nguồn của A | ⚠️ chưa có |
 | AC-4 | `.xmp` có Enable 1, Setup Custom, Name "Adobe (Canon EF 24-70mm f/2.8L II USM)", ba mức 80/120/100 | nhập và áp lên CR3 chụp bằng ống đó | công tắc bật, ống là dòng Lensfun cùng tên, ba slider 80/120/100, báo cáo ghi ✓ | ⚠️ chưa có |

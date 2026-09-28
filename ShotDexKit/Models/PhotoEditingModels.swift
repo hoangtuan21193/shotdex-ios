@@ -422,6 +422,11 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
     case chromaticAberration
     /// Manual lens Distortion, −1…1: positive straightens barrel, negative
     /// pincushion. Same warp as the lens profile (FS-03.15b §3).
+    /// Lens profile strengths (FS-03.16 §4), 0…2 shown 0…200, default 1:
+    /// how much of the profile's distortion, vignetting and CA to correct.
+    case lensDistortionScale
+    case lensVignettingScale
+    case lensChromaticAberrationScale
     case lensManualDistortion
     /// Manual lens Vignetting, −1…1 (±1 EV at the corner), and where its
     /// fall-off starts, 0…1 default 0.5.
@@ -502,6 +507,9 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         case .grainSize: "Grain Size"
         case .grainRoughness: "Grain Roughness"
         case .chromaticAberration: "Remove Chromatic Aberration"
+        case .lensDistortionScale: "Profile Distortion"
+        case .lensVignettingScale: "Profile Vignetting"
+        case .lensChromaticAberrationScale: "Profile Chromatic Aberration"
         case .lensManualDistortion: "Manual Distortion"
         case .lensManualVignetting: "Manual Vignetting"
         case .lensManualVignettingMidpoint: "Manual Vignetting Midpoint"
@@ -569,6 +577,9 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         case .grainSize: "circle.grid.3x3"
         case .grainRoughness: "circle.grid.3x3.circle"
         case .chromaticAberration: "camera.aperture"
+        case .lensDistortionScale: "square.grid.3x3"
+        case .lensVignettingScale: "circle.lefthalf.filled"
+        case .lensChromaticAberrationScale: "circle.hexagongrid"
         case .lensManualDistortion: "circle.grid.cross"
         case .lensManualVignetting: "circle.dotted.circle"
         case .lensManualVignettingMidpoint: "circle.circle"
@@ -605,6 +616,7 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
              .defringePurpleAmount, .defringePurpleHueMinimum, .defringePurpleHueMaximum,
              .defringeGreenAmount, .defringeGreenHueMinimum, .defringeGreenHueMaximum,
              .lensManualVignettingMidpoint, .geoConstrainCrop, .maskMoire, .maskDefringe: 0...1
+        case .lensDistortionScale, .lensVignettingScale, .lensChromaticAberrationScale: 0...2
         case .exposure: -2...2
         default: -1...1
         }
@@ -613,7 +625,7 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
     public var isRAWOnly: Bool {
         switch self {
         case .rawTemperature, .rawTint, .rawLuminanceNoise, .rawColorNoise,
-             .rawSharpness, .lensCorrection:
+             .rawSharpness:
             true
         default:
             false
@@ -765,6 +777,10 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
     public var grainSize = 0.0
     public var grainRoughness = 0.0
     public var chromaticAberration = 0.0
+    /// Neutral at 1 (the profile as measured), so no key until touched.
+    public var lensDistortionScale = 1.0
+    public var lensVignettingScale = 1.0
+    public var lensChromaticAberrationScale = 1.0
     public var lensManualDistortion = 0.0
     public var lensManualVignetting = 0.0
     /// Neutral default, so no key until touched.
@@ -836,6 +852,9 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .grainSize: grainSize
             case .grainRoughness: grainRoughness
             case .chromaticAberration: chromaticAberration
+            case .lensDistortionScale: lensDistortionScale
+            case .lensVignettingScale: lensVignettingScale
+            case .lensChromaticAberrationScale: lensChromaticAberrationScale
             case .lensManualDistortion: lensManualDistortion
             case .lensManualVignetting: lensManualVignetting
             case .lensManualVignettingMidpoint: lensManualVignettingMidpoint
@@ -902,6 +921,9 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .grainSize: grainSize = newValue
             case .grainRoughness: grainRoughness = newValue
             case .chromaticAberration: chromaticAberration = newValue
+            case .lensDistortionScale: lensDistortionScale = newValue
+            case .lensVignettingScale: lensVignettingScale = newValue
+            case .lensChromaticAberrationScale: lensChromaticAberrationScale = newValue
             case .lensManualDistortion: lensManualDistortion = newValue
             case .lensManualVignetting: lensManualVignetting = newValue
             case .lensManualVignettingMidpoint: lensManualVignettingMidpoint = newValue

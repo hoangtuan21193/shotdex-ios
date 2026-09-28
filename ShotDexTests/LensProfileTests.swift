@@ -40,6 +40,45 @@ struct LensProfileTests {
         #expect(try Data(contentsOf: url).count <= 4 * 1_048_576, "the 4 MB ceiling (16b §4)")
     }
 
+    /// FS-03.16 AC-1. Distortion 150 · Vignetting 0 · CA 200, the switch and a
+    /// Lensfun source survive encode → decode unchanged.
+    @Test func strengthsSourceAndSwitchRoundTrip() throws {
+        var recipe = PhotoEditRecipe.identity
+        recipe.adjustments.lensDistortionScale = 1.5
+        recipe.adjustments.lensVignettingScale = 0
+        recipe.adjustments.lensChromaticAberrationScale = 2
+        recipe.adjustments.lensCorrection = 0
+        recipe.lensProfile = PhotoLensProfileChoice(
+            lensID: "Canon|Canon EF 24-70mm f/2.8L II USM|1.0", cameraCropFactor: 1, isAutomatic: true
+        )
+        let decoded = try JSONDecoder().decode(PhotoEditRecipe.self, from: JSONEncoder().encode(recipe))
+        #expect(decoded == recipe)
+        #expect(decoded.lensProfile?.vignettingSource == .lensfun)
+        // Untouched strengths write no key: 100 is the profile as measured.
+        let plain = String(decoding: try JSONEncoder().encode(PhotoAdjustments()), as: UTF8.self)
+        #expect(!plain.contains("Scale"))
+    }
+
+    /// AC-1. A source this build does not know falls to "none" for that
+    /// aspect only; the strengths and the rest of the choice stay.
+    @Test func unknownSourceFallsToNoneOnly() throws {
+        var recipe = PhotoEditRecipe.identity
+        recipe.adjustments.lensDistortionScale = 1.5
+        recipe.adjustments.lensChromaticAberrationScale = 2
+        recipe.lensProfile = PhotoLensProfileChoice(
+            lensID: "Canon|Canon EF 24-70mm f/2.8L II USM|1.0", cameraCropFactor: 1, isAutomatic: false
+        )
+        var json = String(decoding: try JSONEncoder().encode(recipe), as: UTF8.self)
+        json = json.replacingOccurrences(of: "\"vignettingSource\":\"lensfun\"", with: "\"vignettingSource\":\"neuralNet\"")
+        #expect(json.contains("neuralNet"))
+        let decoded = try JSONDecoder().decode(PhotoEditRecipe.self, from: Data(json.utf8))
+        let choice = try #require(decoded.lensProfile)
+        #expect(choice.vignettingSource == .none)
+        #expect(choice.distortionSource == .lensfun && choice.chromaticAberrationSource == .lensfun)
+        #expect(choice.lensID == "Canon|Canon EF 24-70mm f/2.8L II USM|1.0" && !choice.isAutomatic)
+        #expect(decoded.adjustments.lensDistortionScale == 1.5 && decoded.adjustments.lensChromaticAberrationScale == 2)
+    }
+
     @Test func specIsReadTheWayEveryMakerWritesIt() {
         #expect(LensSpec.parse("16.0-35.0 mm f/4.0") == LensSpec(minFocal: 16, maxFocal: 35, aperture: 4))
         #expect(LensSpec.parse("EF24-70mm f/2.8L II USM") == LensSpec(minFocal: 24, maxFocal: 70, aperture: 2.8))
