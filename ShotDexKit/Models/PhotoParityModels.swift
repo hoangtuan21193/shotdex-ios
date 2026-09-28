@@ -118,6 +118,20 @@ public struct PhotoLensBlurRecipe: Codable, Equatable, Sendable {
     /// blur changes nothing.
     public var isIdentity: Bool { amount == 0 }
 
+    /// How far either side of a tapped depth the sharp band reaches — the
+    /// ±10 of FS-03.15e §1.
+    public static let tapFocusHalfWidth = 0.1
+
+    /// The recipe re-focused on `depth` (0 far … 1 near): the band ±10
+    /// around it, kept inside the scale.
+    public func focused(atDepth depth: Double) -> PhotoLensBlurRecipe {
+        var copy = self
+        let d = min(max(depth, 0), 1)
+        copy.focusFar = max(0, d - Self.tapFocusHalfWidth)
+        copy.focusNear = min(1, d + Self.tapFocusHalfWidth)
+        return copy
+    }
+
     private enum CodingKeys: String, CodingKey {
         case amount, bokeh, focusNear, focusFar
     }

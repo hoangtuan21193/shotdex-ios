@@ -1,6 +1,7 @@
 import CoreGraphics
 import CoreImage
 import Foundation
+import Photos
 import Testing
 @testable import ShotDexKit
 @testable import ShotDex
@@ -36,17 +37,24 @@ struct LensBlurTests {
         CIImage(cgImage: splitDepthPicture(near: near, far: far), options: [.colorSpace: NSNull()])
     }
 
+    /// The map as raw bytes: `CGColor(gray:)` is colour-matched on the way
+    /// into a device-gray context, and 0.2 lands as 66/255.
     static func splitDepthPicture(near: Double = 1, far: Double = 0.2) -> CGImage {
         let mapSide = side / 4
-        let context = CGContext(
-            data: nil, width: mapSide, height: mapSide, bitsPerComponent: 8, bytesPerRow: 0,
-            space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue
+        var bytes = [UInt8](repeating: 0, count: mapSide * mapSide)
+        for row in 0..<mapSide {
+            // Rows run top-down in a CGImage: the top half is near.
+            let value = row < mapSide / 2 ? near : far
+            for column in 0..<mapSide {
+                bytes[row * mapSide + column] = UInt8((value * 255).rounded())
+            }
+        }
+        let provider = CGDataProvider(data: Data(bytes) as CFData)!
+        return CGImage(
+            width: mapSide, height: mapSide, bitsPerComponent: 8, bitsPerPixel: 8, bytesPerRow: mapSide,
+            space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue),
+            provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent
         )!
-        context.setFillColor(CGColor(gray: far, alpha: 1))
-        context.fill(CGRect(x: 0, y: 0, width: mapSide, height: mapSide / 2))
-        context.setFillColor(CGColor(gray: near, alpha: 1))
-        context.fill(CGRect(x: 0, y: mapSide / 2, width: mapSide, height: mapSide / 2))
-        return context.makeImage()!
     }
 
     /// The luminance of `rect`, row by row.
@@ -349,6 +357,42 @@ struct LensBlurTests {
         let picture = try #require(CIContext().createCGImage(Self.stripes(), from: CGRect(x: 0, y: 0, width: Self.side, height: Self.side)))
         let depth = try estimator.depth(of: picture)
         #expect(depth.width > 100 && depth.height > 100)
+    }
+
+    // MARK: AC-55 — tap to focus
+
+    /// AC-55. A tap on the far half (depth 0.2) puts the band at 10–30: the
+    /// far half turns sharp and the near half blurs; one Undo puts the old
+    /// band back. The depth under the finger is read from the estimated map.
+    @MainActor @Test func tapToFocusCentresTheRange() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("lensblur-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let source = try await Self.jpegSource(in: directory)
+        let renderer = PhotoRenderService()
+        await renderer.setDepthEstimator(FakeEstimator())
+        _ = try await renderer.prepareLensBlurDepth(for: source)
+        // The bottom half of the frame, top-down.
+        let depth = try #require(await renderer.lensBlurDepthValue(
+            at: NormalizedPoint(x: 0.5, y: 0.8), source: source, crop: PhotoEditRecipe.identity.crop
+        ))
+        #expect(abs(depth - 0.2) < 0.02, "depth under the tap: \(depth)")
+
+        let focused = Self.recipe(amount: 0.5, far: 0.7, near: 1).focused(atDepth: depth)
+        #expect(abs(focused.focusFar - 0.1) <= 0.02 && abs(focused.focusNear - 0.3) <= 0.02)
+        let input = Self.stripes()
+        let output = LensBlurRenderer.apply(focused, to: input, depth: Self.splitDepth())
+        let far = Self.laplacianVariance(of: output, in: Self.farHalf) / Self.laplacianVariance(of: input, in: Self.farHalf)
+        let near = Self.laplacianVariance(of: output, in: Self.nearHalf) / Self.laplacianVariance(of: input, in: Self.nearHalf)
+        #expect(far >= 0.9, "far half kept \(far)")
+        #expect(near <= 0.4, "near half kept \(near)")
+
+        let controller = PhotoEditorController(asset: PHAsset(), sourceAlbum: nil, service: PhotoEditingService())
+        controller.updateLensBlur { $0.amount = 0.5 }
+        let before = controller.recipe.lensBlur
+        controller.focusLensBlur(atDepth: 0.2)
+        #expect(abs(controller.recipe.lensBlur.focusFar - 0.1) < 1e-9 && abs(controller.recipe.lensBlur.focusNear - 0.3) < 1e-9)
+        controller.undo()
+        #expect(controller.recipe.lensBlur == before)
     }
 
     /// The saved recipe starts on the spec's default range, 60–100.

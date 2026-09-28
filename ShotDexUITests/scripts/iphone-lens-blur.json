@@ -1,0 +1,32 @@
+{
+ "steps": [
+  {"action": "launch"},
+  {"action": "wait", "seconds": 25},
+  {"action": "tap", "x": 0.5, "y": 0.35},
+  {"action": "wait", "seconds": 6},
+  {"action": "tap", "label": "Edit"},
+  {"action": "wait", "seconds": 12},
+  {"action": "swipe", "x": 0.75, "y": 0.94, "direction": "left", "distance": 0.45},
+  {"action": "wait", "seconds": 2},
+  {"action": "tap", "label": "Lens Blur", "type": "button"},
+  {"action": "wait", "seconds": 1},
+  {"action": "screenshot", "name": "1-estimating"},
+  {"action": "wait", "seconds": 10},
+  {"action": "screenshot", "name": "2-lens-blur"},
+  {"action": "wait", "seconds": 4},
+  {"action": "swipe", "x": 0.28, "y": 0.755, "direction": "right", "distance": 0.4, "seconds": 0.8},
+  {"action": "wait", "seconds": 4},
+  {"action": "screenshot", "name": "3-amount"},
+  {"action": "wait", "seconds": 4},
+  {"action": "longPress", "x": 0.5, "y": 0.4, "seconds": 0.25},
+  {"action": "wait", "seconds": 4},
+  {"action": "screenshot", "name": "4-focused"},
+  {"action": "wait", "seconds": 4},
+  {"action": "swipe", "x": 0.1, "y": 0.8, "direction": "up", "distance": 0.12},
+  {"action": "wait", "seconds": 2},
+  {"action": "tap", "label": "Visualize Depth", "type": "switch"},
+  {"action": "wait", "seconds": 5},
+  {"action": "screenshot", "name": "5-visualize"},
+  {"action": "wait", "seconds": 4}
+ ]
+}

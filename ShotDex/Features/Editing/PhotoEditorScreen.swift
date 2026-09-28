@@ -1581,7 +1581,7 @@ struct PhotoEditorScreen: View {
     /// inside Light, Mix / Point / Grade are tabs inside Color, and Geometry
     /// went to Crop with the frame it shapes.
     private static let sidebarParameterGroups: [EditorGroup] = [
-        .light, .color, .effects, .detail, .optics, .calibration
+        .light, .color, .effects, .lensBlur, .detail, .optics, .calibration
     ]
 
     /// The three ways to work on colour, shown as segments inside one section
@@ -1620,6 +1620,8 @@ struct PhotoEditorScreen: View {
             controller.resetAllCurves()
         case .calibration:
             controller.resetCalibration()
+        case .lensBlur:
+            controller.resetLensBlur()
         case .color, .colorMix, .pointColor:
             // Colour is one recipe: basic, mixer and point colour all live in
             // it, and the section shows all three.
@@ -1649,6 +1651,8 @@ struct PhotoEditorScreen: View {
             return recipe.curve != identity.curve
         case .calibration:
             return !recipe.color.calibration.isIdentity
+        case .lensBlur:
+            return !recipe.lensBlur.isIdentity
         case .color:
             let basic = catalogGroups(for: .color, controller: controller).contains { catalogGroup in
                 catalogGroup.kinds.contains { recipe.adjustments[$0] != identity.adjustments[$0] }
@@ -2561,6 +2565,8 @@ struct PhotoEditorScreen: View {
             EditorCurvePanel(controller: controller, chrome: chrome)
         case .calibration:
             EditorCalibrationSection(controller: controller, chrome: chrome)
+        case .lensBlur:
+            EditorLensBlurSection(controller: controller, chrome: chrome)
         case .color:
             colorContent(controller, isScrollable: isScrollable)
         case .colorMix:
@@ -2855,7 +2861,7 @@ struct PhotoEditorScreen: View {
             chrome.selectedGroup = group
         }
         switch group {
-        case .light, .curve, .color, .colorMix, .effects, .detail, .optics, .geo, .calibration:
+        case .light, .curve, .color, .colorMix, .effects, .lensBlur, .detail, .optics, .geo, .calibration:
             controller.editGlobalAdjustments()
             // The graph takes the photo; a card floating over both would be noise.
             if group == .curve {

@@ -66,6 +66,8 @@ enum EditorGroup: String, CaseIterable, Identifiable {
     case pointColor
     case grade
     case effects
+    /// Right after Effects (FS-03.15e §1).
+    case lensBlur
     case detail
     case optics
     case geo
@@ -98,6 +100,7 @@ enum EditorGroup: String, CaseIterable, Identifiable {
         case .pointColor: "Point Color"
         case .grade: "Grade"
         case .effects: "Effects"
+        case .lensBlur: "Lens Blur"
         case .detail: "Detail"
         case .optics: "Optics"
         case .geo: "Geometry"
@@ -130,6 +133,7 @@ enum EditorGroup: String, CaseIterable, Identifiable {
         case .pointColor: "eyedropper"
         case .grade: "paintpalette"
         case .effects: "sparkles"
+        case .lensBlur: "circle.dashed.inset.filled"
         case .detail: "wand.and.rays"
         case .optics: "camera.aperture"
         case .geo: "grid"
@@ -147,7 +151,7 @@ enum EditorGroup: String, CaseIterable, Identifiable {
     /// parameters yet, so they sit on `.adjust` and show a placeholder.)
     var tool: PhotoEditorTool {
         switch self {
-        case .light, .curve, .color, .colorMix, .effects, .detail, .optics, .geo, .calibration: .adjust
+        case .light, .curve, .color, .colorMix, .effects, .lensBlur, .detail, .optics, .geo, .calibration: .adjust
         case .pointColor: .pointColor
         case .grade: .colorGrading
         case .cropGeometry: .crop
@@ -374,7 +378,109 @@ final class PhotoEditorController {
 
     var previewImage: UIImage? {
         if isVisualizingSpots, let map = spotMapImage { return map }
+        if isVisualizingDepth, let map = depthMapImage { return map }
         return showsOriginal ? originalPreviewImage ?? editedPreviewImage : editedPreviewImage
+    }
+
+    // MARK: Lens Blur (FS-03.15e)
+
+    /// Where this photo's depth comes from, for the group's header; `.none`
+    /// until the group has been opened.
+    private(set) var lensBlurDepthState: LensBlurDepth = .none
+    /// The model is working the depth out; the group's controls wait.
+    private(set) var isEstimatingDepth = false
+
+    /// The header line under the Lens Blur title, or nil for a captured map.
+    var lensBlurStatusText: String? {
+        if isEstimatingDepth { return "Estimating depth…" }
+        switch lensBlurDepthState {
+        case .estimated: return "Estimated depth"
+        case .failed: return Self.depthEstimationFailure
+        case .none: return loadedSource == nil ? nil : "No depth for this photo"
+        case .captured: return nil
+        }
+    }
+
+    static let depthEstimationFailure = "Couldn't estimate depth for this photo."
+
+    /// The controls work: there is depth, and it is not still being made.
+    var isLensBlurAvailable: Bool {
+        !isEstimatingDepth && (lensBlurDepthState == .captured || lensBlurDepthState == .estimated)
+    }
+
+    /// The group opened: work the depth out now, once, so the first drag
+    /// does not wait on the model (FS-03.15e §3).
+    func prepareLensBlurDepth() {
+        guard let source = loadedSource?.info, !isEstimatingDepth else { return }
+        isEstimatingDepth = true
+        let renderer = service.renderer
+        Task { @MainActor [weak self] in
+            let state = (try? await renderer.prepareLensBlurDepth(for: source)) ?? .failed
+            guard let self else { return }
+            self.isEstimatingDepth = false
+            self.lensBlurDepthState = state
+            if self.isVisualizingDepth { self.refreshDepthMap() }
+        }
+    }
+
+    /// One Lens Blur control; bracket a drag with begin/endContinuousChange.
+    func updateLensBlur(_ change: (inout PhotoLensBlurRecipe) -> Void) {
+        if !isContinuousChange { recordHistory() }
+        change(&recipe.lensBlur)
+        recipe.lensBlur.amount = min(1, max(0, recipe.lensBlur.amount))
+        recipe.lensBlur.focusFar = min(1, max(0, recipe.lensBlur.focusFar))
+        recipe.lensBlur.focusNear = min(1, max(0, recipe.lensBlur.focusNear))
+        scheduleRender()
+        if isVisualizingDepth { refreshDepthMap() }
+    }
+
+    /// A tap on the photo with Lens Blur open: the sharp band ±10 around the
+    /// depth under the finger, one undo step (AC-55).
+    func focusLensBlur(atDepth depth: Double) {
+        recordHistory()
+        recipe.lensBlur = recipe.lensBlur.focused(atDepth: depth)
+        scheduleRender()
+        if isVisualizingDepth { refreshDepthMap() }
+    }
+
+    func focusLensBlur(at point: NormalizedPoint) {
+        guard let source = loadedSource?.info else { return }
+        let renderer = service.renderer
+        let crop = recipe.crop
+        Task { @MainActor [weak self] in
+            guard let depth = await renderer.lensBlurDepthValue(at: point, source: source, crop: crop) else { return }
+            self?.focusLensBlur(atDepth: depth)
+        }
+    }
+
+    func resetLensBlur() {
+        guard recipe.lensBlur != .identity else { return }
+        recordHistory()
+        recipe.lensBlur = .identity
+        scheduleRender()
+    }
+
+    /// Visualize Depth: the canvas shows the map with the sharp band lit.
+    /// A view setting, never in the recipe.
+    var isVisualizingDepth = false {
+        didSet { refreshDepthMap() }
+    }
+
+    private(set) var depthMapImage: UIImage?
+
+    private func refreshDepthMap() {
+        guard isVisualizingDepth, let source = loadedSource?.info else {
+            depthMapImage = nil
+            return
+        }
+        let renderer = service.renderer
+        let recipe = recipe
+        let edge = max(editedPreviewImage?.size.width ?? 1200, editedPreviewImage?.size.height ?? 1200)
+        Task { @MainActor [weak self] in
+            let picture = await renderer.lensBlurDepthPicture(source: source, recipe: recipe, maximumDimension: edge)
+            guard let self, self.isVisualizingDepth else { return }
+            self.depthMapImage = picture.map { UIImage(cgImage: $0) }
+        }
     }
 
     // MARK: Visualize Spots (FS-03.15c §3)

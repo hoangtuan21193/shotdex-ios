@@ -224,6 +224,27 @@ struct EditorImageStage: View {
                     EditorCropOverlay(controller: controller, imageRect: imageRect)
                 }
 
+                // Lens Blur open: a tap re-focuses on the depth under the
+                // finger (FS-03.15e §1); two fingers still zoom and pan.
+                if chrome.selectedGroup == .lensBlur, controller.isLensBlurAvailable, !chrome.isFullBleed {
+                    EditorPaintTouchLayer(
+                        origin: imageRect.origin,
+                        onTracked: { _ in },
+                        onBegan: { _ in },
+                        onMoved: { _ in },
+                        onEnded: { touch in
+                            guard let point = normalized(touch.startLocation, in: imageRect) else { return }
+                            controller.focusLensBlur(at: point)
+                        },
+                        onCancelled: {},
+                        onPanBegan: beginPhotoPan,
+                        onPanChanged: { panPhoto($0, imageRect: imageRect, stage: stageSize) },
+                        onPanEnded: endPhotoPan
+                    )
+                    .frame(width: imageRect.width, height: imageRect.height)
+                    .position(x: imageRect.midX, y: imageRect.midY)
+                }
+
                 // Heal spots: tap empty photo for a round spot, drag for a
                 // stroke, drag a circle to move it. The paint layer's arbiter
                 // keeps one finger for the brush and two for zoom, as in Masks.
@@ -560,6 +581,11 @@ struct EditorImageStage: View {
                 EditorPillLabel(text: notice.uppercased())
                     .position(x: imageRect.midX, y: imageRect.minY + 24)
                     .transition(.opacity)
+            }
+
+            if chrome.selectedGroup == .lensBlur, controller.isLensBlurAvailable, !chrome.isFullBleed {
+                EditorPillLabel(text: "TAP TO FOCUS")
+                    .position(x: imageRect.midX, y: imageRect.maxY - 24)
             }
 
             if chrome.isFullBleed {

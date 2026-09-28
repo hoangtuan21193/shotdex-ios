@@ -2552,6 +2552,85 @@ public actor PhotoRenderService {
         return lensBlurDepth(for: source)
     }
 
+    /// The Lens Blur depth map cropped the way the recipe crops the photo —
+    /// the frame the editor shows. Geometry is not replayed, as for the
+    /// Depth Range mask.
+    private func displayedLensBlurDepth(source: PhotoRenderSourceInfo, crop: PhotoCropRecipe) -> CIImage? {
+        guard let map = normalizedDisparity(at: source.url) ?? estimatedDepthCache[depthKey(for: source)]
+                ?? storedEstimatedDepth(for: source)
+        else { return nil }
+        // Up to the photo's own proportions first: a map is stored at its
+        // own size, and a crop is a share of the photo.
+        let photo = CGRect(x: 0, y: 0, width: max(source.pixelWidth, 1), height: max(source.pixelHeight, 1))
+        let cropped = Self.applyCrop(crop, to: LensBlurRenderer.stretched(map, onto: photo))
+        return cropped.extent.width > 0 && cropped.extent.height > 0 ? cropped : nil
+    }
+
+    /// The normalised depth under `point` (x right, y down, 0…1 of the frame
+    /// the editor shows), for tap-to-focus — nil when there is no depth yet.
+    public func lensBlurDepthValue(
+        at point: NormalizedPoint,
+        source: PhotoRenderSourceInfo,
+        crop: PhotoCropRecipe
+    ) -> Double? {
+        guard let map = displayedLensBlurDepth(source: source, crop: crop) else { return nil }
+        let extent = map.extent
+        let x = extent.minX + CGFloat(min(max(point.x, 0), 1)) * (extent.width - 1)
+        let y = extent.minY + CGFloat(1 - min(max(point.y, 0), 1)) * (extent.height - 1)
+        var pixel = [Float](repeating: 0, count: 4)
+        context.render(
+            map, toBitmap: &pixel, rowBytes: 16,
+            bounds: CGRect(x: floor(x), y: floor(y), width: 1, height: 1),
+            format: .RGBAf, colorSpace: nil
+        )
+        return Double(pixel[0])
+    }
+
+    private func storedEstimatedDepth(for source: PhotoRenderSourceInfo) -> CIImage? {
+        let key = depthKey(for: source)
+        guard key.hasPrefix(Self.persistentMattePrefix), let saved = matteStore?.read(key) else { return nil }
+        let image = CIImage(cgImage: saved, options: [.colorSpace: NSNull()])
+        estimatedDepthCache[key] = image
+        return image
+    }
+
+    /// Visualize Depth (FS-03.15e §1): the depth map in false colour, far
+    /// blue to near yellow, with the sharp band lit — a view, never saved.
+    /// Cropped like the photo, at `maximumDimension`.
+    public func lensBlurDepthPicture(
+        source: PhotoRenderSourceInfo,
+        recipe editRecipe: PhotoEditRecipe,
+        maximumDimension: CGFloat
+    ) -> CGImage? {
+        let recipe = editRecipe.lensBlur
+        guard let map = displayedLensBlurDepth(source: source, crop: editRecipe.crop),
+              let slice = LensBlurRenderer.sliceKernel
+        else { return nil }
+        let aspect = map.extent.width / map.extent.height
+        let size = aspect >= 1
+            ? CGSize(width: maximumDimension, height: (maximumDimension / aspect).rounded())
+            : CGSize(width: (maximumDimension * aspect).rounded(), height: maximumDimension)
+        let frame = CGRect(origin: .zero, size: size)
+        let depth = LensBlurRenderer.stretched(map, onto: frame)
+        let colored = depth.applyingFilter("CIFalseColor", parameters: [
+            "inputColor0": CIColor(red: 0.1, green: 0.15, blue: 0.45),
+            "inputColor1": CIColor(red: 1, green: 0.85, blue: 0.3),
+        ]).cropped(to: frame)
+        let low = min(recipe.focusFar, recipe.focusNear), high = max(recipe.focusFar, recipe.focusNear)
+        let white = CIImage(color: CIColor(red: 1, green: 1, blue: 1)).cropped(to: frame)
+        guard let band = slice.apply(
+            extent: frame,
+            arguments: [white, depth, CIVector(x: low, y: high >= 1 ? 1.0001 : high)]
+        ) else { return nil }
+        let lit = band.applyingFilter("CIColorMatrix", parameters: [
+            "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 0.45),
+            "inputRVector": CIVector(x: 0.45, y: 0, z: 0, w: 0),
+            "inputGVector": CIVector(x: 0, y: 0.45, z: 0, w: 0),
+            "inputBVector": CIVector(x: 0, y: 0, z: 0.45, w: 0),
+        ]).composited(over: colored)
+        return context.createCGImage(lit, from: frame)
+    }
+
     /// The depth Lens Blur uses: the capture's own map, else one the model
     /// worked out — once per photo, saved to the matte store and read back
     /// on the next open. A failure is remembered and answers nil, which
