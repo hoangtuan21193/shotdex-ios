@@ -343,7 +343,13 @@ final class PhotoEditorController {
         }
     }
 
-    var canUndo: Bool { history.canUndo }
+    /// Inside a tool, Undo stops where the tool opened (FS-03.13a §5): going
+    /// further back is ✓ or ✕ first, so ✕ and Undo share one floor.
+    var canUndo: Bool {
+        guard history.canUndo else { return false }
+        if let entry = stageEntry { return history.undoDepth > entry.undoDepth }
+        return true
+    }
     var canRedo: Bool { history.canRedo }
     var recalledRecipe: PhotoEditRecipe? { session?.recalledRecipe }
     var canRecall: Bool { recalledRecipe != nil && recipe != recalledRecipe }
@@ -699,7 +705,7 @@ final class PhotoEditorController {
     }
 
     func undo() {
-        guard let previous = history.undo(current: recipe) else { return }
+        guard canUndo, let previous = history.undo(current: recipe) else { return }
         recipe = previous
         uprightGuideNotice = nil
         repairSelection()
@@ -1482,6 +1488,25 @@ final class PhotoEditorController {
     /// Apply — the work stays, the snapshot goes.
     func clearStageEntry() {
         stageEntry = nil
+    }
+
+    /// A tool is open: its entry is kept for ✕.
+    var isInStageSession: Bool { stageEntry != nil }
+
+    /// The open tool changed something — ✕ asks before throwing it away.
+    var stageHasChanges: Bool {
+        guard let entry = stageEntry else { return false }
+        return history.undoDepth > entry.undoDepth || recipe != entry.recipe
+    }
+
+    /// The system is short of memory (FS-03.13a §6): let go of what can be
+    /// rebuilt — thumbnails, the visualise maps — and keep the recipe, the
+    /// history and the open tool exactly as they are.
+    func handleMemoryWarning() {
+        filterThumbnails = [:]
+        lutThumbnails = [:]
+        maskThumbnails = [:]
+        placeholderImage = nil
     }
 
     /// Cancel — put back what the mode found, and take its steps out of History

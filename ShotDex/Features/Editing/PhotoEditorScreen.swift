@@ -51,6 +51,8 @@ struct PhotoEditorScreen: View {
     }
     @State private var chrome = EditorChromeModel()
     @State private var isSaveSheetPresented = false
+    /// The tool whose ✕ is waiting on "Discard changes to …?".
+    @State private var pendingToolCancel: EditorTool?
     @State private var isDiscardConfirmationPresented = false
     @State private var isRevertConfirmationPresented = false
     @State private var isFallbackNoticePresented = false
@@ -164,6 +166,23 @@ struct PhotoEditorScreen: View {
             }
         } message: {
             Text("This throws away every edit saved to this photo, including edits made in Photos.")
+        }
+        .alert(
+            "Discard changes to \(pendingToolCancel?.title ?? "")?",
+            isPresented: Binding(
+                get: { pendingToolCancel != nil },
+                set: { if !$0 { pendingToolCancel = nil } }
+            )
+        ) {
+            Button("Discard Changes", role: .destructive) {
+                if let controller { discardTool(in: controller) }
+                pendingToolCancel = nil
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+        // Short of memory: caches go, the session stays (FS-03.13a §6).
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)) { _ in
+            controller?.handleMemoryWarning()
         }
         .alert("Discard this editing session?", isPresented: $isDiscardConfirmationPresented) {
             Button("Discard Changes", role: .destructive) { dismiss() }
@@ -2541,6 +2560,10 @@ struct PhotoEditorScreen: View {
     /// own size). Commits a draft crop first, then opens the save sheet.
     private func saveButton(_ controller: PhotoEditorController, side: CGFloat = 42) -> some View {
         Button {
+            // Save inside a tool is ✓ and then the sheet (FS-03.13a §3).
+            if !chrome.isWideLayout, EditorTool.tool(for: chrome.selectedGroup).isSession {
+                applyTool(in: controller)
+            }
             controller.commitCropSession()
             isSaveSheetPresented = true
         } label: {
@@ -2897,8 +2920,17 @@ struct PhotoEditorScreen: View {
         selectGroup(EditorTool.edit.group(editListGroup: chrome.editListGroup), in: controller)
     }
 
-    /// ✕: the recipe and the history as they were when the tool opened.
+    /// ✕: the recipe and the history as they were when the tool opened —
+    /// asking first once the tool has changed anything (FS-03.13a §5).
     private func cancelTool(in controller: PhotoEditorController) {
+        if controller.stageHasChanges {
+            pendingToolCancel = EditorTool.tool(for: chrome.selectedGroup)
+        } else {
+            discardTool(in: controller)
+        }
+    }
+
+    private func discardTool(in controller: PhotoEditorController) {
         let isCrop = chrome.selectedGroup == .cropGeometry
         controller.restoreStageEntry()
         selectGroup(EditorTool.edit.group(editListGroup: chrome.editListGroup), in: controller, discardingCrop: isCrop)

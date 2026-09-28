@@ -5,6 +5,65 @@ import Testing
 @testable import ShotDex
 
 struct EditorHistoryAndSummaryTests {
+    @MainActor private func controller() -> PhotoEditorController {
+        PhotoEditorController(asset: PHAsset(), sourceAlbum: nil, service: PhotoEditingService())
+    }
+
+    /// FS-03.13 AC-8. Heal entered with 0 spots, three added, ✕: back to 0
+    /// spots and the history depth of the entry. Entered and left at once:
+    /// nothing to ask.
+    @MainActor @Test func cancelRestoresTheEntryRecipeAndDepth() {
+        let c = controller()
+        c.setAdjustment(.exposure, value: 0.2)
+        let depth = c.historyTimeline.count
+        c.beginStageSession()
+        #expect(!c.stageHasChanges, "entered and left at once: no question")
+        for x in [0.2, 0.5, 0.8] { c.addHealingSpot(at: NormalizedPoint(x: x, y: 0.5)) }
+        #expect(c.stageHasChanges)
+        c.restoreStageEntry()
+        #expect(c.recipe.healing.isEmpty)
+        #expect(c.historyTimeline.count == depth)
+        #expect(c.recipe.adjustments.exposure == 0.2)
+    }
+
+    /// FS-03.13 AC-10. Inside a tool Undo stops where it opened: the spot
+    /// goes, then Undo is dim and the edit from before the tool stays.
+    @MainActor @Test func undoInsideAToolStopsAtEntry() {
+        let c = controller()
+        c.setAdjustment(.exposure, value: 0.2)
+        c.beginStageSession()
+        c.addHealingSpot(at: NormalizedPoint(x: 0.5, y: 0.5))
+        #expect(c.canUndo)
+        c.undo()
+        #expect(c.recipe.healing.isEmpty)
+        #expect(!c.canUndo)
+        c.undo()
+        #expect(c.recipe.adjustments.exposure == 0.2, "no undo past the tool's entry")
+    }
+
+    /// FS-03.13 AC-9. Three strokes, ✓, one Undo: two are left, and the
+    /// undo is back to ordinary Edit history.
+    @MainActor @Test func undoAfterApplyStepsBackOneStroke() {
+        let c = controller()
+        c.beginStageSession()
+        for x in [0.2, 0.5, 0.8] { c.addHealingSpot(at: NormalizedPoint(x: x, y: 0.5)) }
+        c.clearStageEntry()
+        c.undo()
+        #expect(c.recipe.healing.count == 2)
+        #expect(!c.isInStageSession)
+    }
+
+    /// FS-03.13 AC-43. A memory warning inside a tool lets caches go and
+    /// keeps the tool open, its work and its undo.
+    @MainActor @Test func memoryWarningKeepsTheToolSession() {
+        let c = controller()
+        c.beginStageSession()
+        c.addHealingSpot(at: NormalizedPoint(x: 0.5, y: 0.5))
+        c.handleMemoryWarning()
+        #expect(c.isInStageSession && c.stageHasChanges)
+        #expect(c.recipe.healing.count == 1 && c.canUndo)
+    }
+
     /// FS-03.15a AC-14. Calibration at its defaults; Red Hue dragged 0 → +40
     /// and let go, then one Undo: one history step, the recipe back to its
     /// defaults with no Calibration key written.
