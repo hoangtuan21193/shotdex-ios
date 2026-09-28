@@ -1355,6 +1355,45 @@ final class PhotoEditorController {
         scheduleRender()
     }
 
+    /// Sources New Source has already offered each spot, so pressing again
+    /// moves on rather than bouncing between the two best.
+    @ObservationIgnored private var offeredSources: [UUID: [NormalizedPoint]] = [:]
+
+    /// New Source (FS-03.15c §3): the picked spot's source moves to the next
+    /// best place around it. One undo step. False when there is nowhere else.
+    @discardableResult
+    func findNewSource() -> Bool {
+        guard let cgImage = originalPreviewImage?.cgImage,
+              let picture = HealingSourceFinder.Picture(cgImage)
+        else { return false }
+        return findNewSource(in: picture)
+    }
+
+    /// The same, against a given picture — what the tests hand in.
+    @discardableResult
+    func findNewSource(in picture: HealingSourceFinder.Picture) -> Bool {
+        guard let id = selectedHealingSpotID,
+              let spot = recipe.healing.first(where: { $0.id == id })
+        else { return false }
+        let aspect = Double(picture.width) / Double(picture.height)
+        let shortOverWidth = aspect >= 1 ? 1 / aspect : 1
+        let shortOverHeight = aspect >= 1 ? 1 : aspect
+        var offered = offeredSources[id] ?? []
+        if !offered.contains(spot.source) { offered.append(spot.source) }
+        func farFromOffered(_ point: NormalizedPoint) -> Bool {
+            offered.allSatisfy { seen in
+                let dx = (point.x - seen.x) / shortOverWidth, dy = (point.y - seen.y) / shortOverHeight
+                return (dx * dx + dy * dy).squareRoot() >= spot.radius
+            }
+        }
+        guard let next = HealingSourceFinder.candidates(for: spot, in: picture).first(where: farFromOffered)
+        else { return false }
+        offered.append(next)
+        offeredSources[id] = offered
+        updateHealingSpot(id) { $0.source = next }
+        return true
+    }
+
     /// Edits one spot. During a drag the caller brackets this with
     /// `beginContinuousChange` / `endContinuousChange`, so the whole drag is
     /// one undo step (FS-03.11 AC-2).

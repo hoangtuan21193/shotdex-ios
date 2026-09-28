@@ -6,8 +6,20 @@ import ShotDexKit
 /// are made and moved on the photo (`EditorHealGuideOverlay`).
 struct EditorHealPanel: View {
     @Bindable var controller: PhotoEditorController
+    /// Off in the wide sidebar, which scrolls every panel at once.
+    @Environment(\.editorPanelScrolls) private var panelScrolls
 
     var body: some View {
+        // The phone panel is a fixed height: without its own scroll the picked
+        // spot's row — New Source, Delete Spot — sat clipped under Opacity.
+        if panelScrolls {
+            ScrollView(.vertical) { content }
+        } else {
+            content
+        }
+    }
+
+    private var content: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(hintText)
                 .font(EditorTheme.maskSubtitle)
@@ -74,6 +86,14 @@ struct EditorHealPanel: View {
                         .font(EditorTheme.maskSubtitle)
                         .foregroundStyle(EditorTheme.secondaryText)
                     Spacer(minLength: 8)
+                    Button {
+                        controller.findNewSource()
+                    } label: {
+                        Label("New Source", systemImage: "arrow.triangle.2.circlepath")
+                            .font(EditorTheme.maskSubtitle)
+                    }
+                    .buttonStyle(EditorChipButtonStyle(isSelected: false))
+                    .accessibilityHint("Fills the spot from the next best place around it")
                     Button(role: .destructive) {
                         controller.deleteSelectedHealingSpot()
                     } label: {

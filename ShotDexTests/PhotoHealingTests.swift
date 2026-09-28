@@ -323,6 +323,40 @@ struct PhotoHealingTests {
         #expect(spot.stroke?.first?.x == -0.2)
     }
 
+    /// AC-32. A spot on grey whose proposed source sits on a red band: New
+    /// Source moves it at least a radius away, clear of the spot, onto ground
+    /// like the spot's own — and one Undo puts the old source back.
+    @MainActor @Test func newSourcePicksAnotherPlace() throws {
+        let side = 128
+        var rgb = [Float](repeating: 0.5, count: side * side * 3)
+        for y in 0..<side {
+            for x in 76..<side {
+                let index = (y * side + x) * 3
+                rgb[index] = 0.9
+                rgb[index + 1] = 0.2
+                rgb[index + 2] = 0.2
+            }
+        }
+        let picture = HealingSourceFinder.Picture(width: side, height: side, rgb: rgb)
+
+        let controller = PhotoEditorController(asset: PHAsset(), sourceAlbum: nil, service: PhotoEditingService())
+        controller.setHealingRadius(0.05)
+        controller.addHealingSpot(at: NormalizedPoint(x: 0.5, y: 0.5))
+        let before = try #require(controller.recipe.healing.first)
+        #expect(before.source.x > 0.6, "the proposed source is on the red band")
+
+        #expect(controller.findNewSource(in: picture))
+        let after = try #require(controller.recipe.healing.first)
+        let moved = hypot(after.source.x - before.source.x, after.source.y - before.source.y)
+        #expect(moved >= before.radius, "moved \(moved)")
+        let fromSpot = hypot(after.source.x - after.center.x, after.source.y - after.center.y)
+        #expect(fromSpot >= after.radius * 2, "the copy clears the spot")
+        #expect(after.source.x * Double(side) < 76 - after.radius * Double(side) * 1.7, "on grey, not red")
+
+        controller.undo()
+        #expect(controller.recipe.healing.first?.source == before.source)
+    }
+
     @Test func cloneFromDifferentGroundShows() {
         let cloned = PhotoRenderService.applyHealing(
             [spot(mode: .clone, sourceX: 0.5, sourceY: 0.35)],
