@@ -88,17 +88,20 @@ struct MaskPhonePanelTests {
         #expect(controller.recipe.masks[1].name == "Radial 1 Copy")
     }
 
-    /// AC-22. `+` then `‹` leaves the masks as they were: the chooser makes
-    /// nothing until a kind is tapped.
+    /// AC-22, and FS-03.13 AC-27. `+` then `‹` leaves the masks as they
+    /// were — still one, the same one selected: the chooser makes nothing
+    /// until a kind is tapped.
     @Test func plusThenBackMakesNothing() {
         let controller = makeController()
         let chrome = EditorChromeModel()
         controller.addMask(option: .sky)
         let before = controller.recipe.masks.map(\.id)
+        let selected = controller.selectedMaskID
         chrome.isChoosingMaskKind = true
         #expect(EditorMaskPhonePanel.showsChooser(controller: controller, chrome: chrome))
         chrome.isChoosingMaskKind = false
         #expect(controller.recipe.masks.map(\.id) == before)
+        #expect(controller.selectedMaskID == selected)
         #expect(!EditorMaskPhonePanel.showsChooser(controller: controller, chrome: chrome))
     }
 

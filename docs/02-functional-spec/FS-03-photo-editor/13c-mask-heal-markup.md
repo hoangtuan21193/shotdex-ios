@@ -96,7 +96,7 @@ Máy: iPhone 17 iOS 26.5 và 18.6, ảnh 3:2 (panel 344) nếu không ghi khác.
 |---|---|---|---|---|
 | AC-25 | ảnh chưa có mask, ảnh 3:4 (panel 264) | chạm Mask | lưới 4 cột đủ mọi mục của danh sách vùng, mỗi mục một lần, Face Skin · Eyes · Lips là ô riêng; thấy 2 hàng, các hàng sau tới được bằng cuộn dọc; không cuộn ngang | ⚠️ chưa có — `MaskPhonePanelTests.chooserTilesCoverEveryKindOnce` + `iphone-mask-list.json` |
 | AC-26 | như AC-25 | chạm Brush rồi kéo một ngón 100pt trên ảnh | có 1 mask, 1 nét, không cần chạm thêm; hàng trên "Mask 1 ▼ · Mask Overlay · + · ⋯", dòng phụ "Brush"; hàng cọ ghim | ⚠️ chưa có — `MaskPhonePanelTests.brushTileDrawsImmediately` |
-| AC-27 | 1 mask | chạm `+` rồi `‹` | vẫn 1 mask, mask cũ vẫn chọn | ⚠️ chưa có — `MaskPhonePanelTests.plusThenBackMakesNothing` (sửa test cũ theo lưới) |
+| AC-27 | 1 mask | chạm `+` rồi `‹` | vẫn 1 mask, mask cũ vẫn chọn | `MaskPhonePanelTests.plusThenBackMakesNothing` (vẫn 1 mask, mask cũ vẫn chọn) |
 | AC-28 | Mask 1 = Sky − Brush, Mask 2 = Radial, Mask 1 chọn | chạm ▼ | danh sách đúng thứ tự: Mask 1 · Sky ⊕ · Brush ⊖ · Add area · Subtract area · Mask 2 · New Mask | ⚠️ chưa có — `MaskPhonePanelTests.listPutsAreaActionsUnderTheSelectedMask` |
 | AC-29 | danh sách mở, Mask 1 = Sky | Subtract area → Brush | lưới "Subtract from Mask 1" có mọi loại của danh sách (cả Background, Color, Luminance, Depth); Mask 1 có 2 vùng, vùng 2 là trừ; danh sách đóng; dòng phụ "Subtracting" | ⚠️ chưa có — `MaskPhonePanelTests.subtractAreaAddsASubtractingBrush` |
 | AC-30 | Brush, Size 40 | chạm viên Size, kéo slider tới 60, chạm ✓ | hàng về 3 viên, viên Size đọc 60; lúc kéo có vòng xem trước trên ảnh | ⚠️ chưa có — `iphone-mask-list.json` + chụp liên tục |
