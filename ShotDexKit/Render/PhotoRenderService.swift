@@ -31,6 +31,10 @@ public struct PhotoRenderSourceInfo: @unchecked Sendable {
     public let orientation: CGImagePropertyOrientation
     public let isRAW: Bool
     public let properties: [CFString: Any]
+    /// Who this photo is across launches — the app's asset, source and edit
+    /// date — when the caller knows. Keys the saved mattes; without it a
+    /// matte is only remembered in memory.
+    public var persistentIdentity: String?
 }
 
 public struct PhotoRenderResult {
@@ -2479,7 +2483,7 @@ public actor PhotoRenderService {
     ) -> String {
         let crop = recipe.crop
         return [
-            source.url.path,
+            source.persistentIdentity.map { Self.persistentMattePrefix + $0 } ?? source.url.path,
             "\(crop.rect.x),\(crop.rect.y),\(crop.rect.width),\(crop.rect.height)",
             "\(crop.quarterTurns),\(crop.straightenDegrees),\(crop.flippedHorizontally)",
         ].joined(separator: "|")
@@ -2513,6 +2517,19 @@ public actor PhotoRenderService {
             guard let mask = attempt() else { return markEmpty() }
             return markFound(mask)
         }
+        if automaticMaskCache[sizedKey] == nil, key.hasPrefix(Self.persistentMattePrefix),
+           let saved = matteStore?.read(key) {
+            // Reopened: the matte from last time, scaled to this render.
+            let stored = CIImage(cgImage: saved)
+            automaticMaskCache[sizedKey] = stored.transformed(by: CGAffineTransform(
+                scaleX: extent.width / stored.extent.width,
+                y: extent.height / stored.extent.height
+            ))
+            automaticMaskCacheOrder.append(sizedKey)
+            while automaticMaskCacheOrder.count > Self.automaticMaskCacheCapacity {
+                automaticMaskCache.removeValue(forKey: automaticMaskCacheOrder.removeFirst())
+            }
+        }
         if let cached = automaticMaskCache[sizedKey] {
             return markFound(cached
                 .transformed(
@@ -2536,6 +2553,7 @@ public actor PhotoRenderService {
             return markEmpty()
         }
         let detached = CIImage(cgImage: cgImage)
+        if key.hasPrefix(Self.persistentMattePrefix) { matteStore?.write(cgImage, for: key) }
         automaticMaskCache[sizedKey] = detached
         automaticMaskCacheOrder.append(sizedKey)
         while automaticMaskCacheOrder.count > Self.automaticMaskCacheCapacity {
@@ -2550,6 +2568,24 @@ public actor PhotoRenderService {
                 )
             )
             .cropped(to: extent))
+    }
+
+    /// Where mattes worked out once are kept across launches; nil keeps them
+    /// in memory only.
+    private var matteStore: GeneratedMatteStore?
+
+    public func setMatteStore(_ store: GeneratedMatteStore?) {
+        matteStore = store
+    }
+
+    /// Keys that begin with this name a photo by `persistentIdentity`, so
+    /// their mattes may be saved.
+    static let persistentMattePrefix = "persist:"
+
+    /// The automatic-matte cache with `build` standing in for Vision — what
+    /// the tests use to count how often Vision would run.
+    func automaticMatte(key: String, image: CIImage, build: () throws -> CIImage?) throws -> CIImage? {
+        try cachedAutomaticMask(key: key, componentID: UUID(), image: image, build: build)
     }
 
     /// The matte of `mask` over `image`, for tests: no sky matte, no depth.

@@ -215,7 +215,11 @@ final class PhotoEditingService {
                 throw PhotoEditingError.missingSource
             }
         }
-        let info = try await renderer.inspectSource(at: fileURL, typeHint: option.type)
+        var info = try await renderer.inspectSource(at: fileURL, typeHint: option.type)
+        // Names the photo across launches, so its mattes are read back from
+        // disk instead of worked out again (FS-03.15d §5).
+        let edited = session.asset.modificationDate?.timeIntervalSince1970 ?? 0
+        info.persistentIdentity = "\(session.asset.localIdentifier)|\(option.id)|\(edited)"
         return LoadedPhotoEditSource(optionID: option.id, info: info)
     }
 

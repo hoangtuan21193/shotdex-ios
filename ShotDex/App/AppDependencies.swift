@@ -136,6 +136,7 @@ final class AppDependencies {
         self.chartStore = ChartStore(database: database)
         self.photoLibrary = photoLibrary
         let photoRenderer = PhotoRenderService()
+        Task { await photoRenderer.setMatteStore(.applicationSupport()) }
         self.photoRenderer = photoRenderer
         self.photoEditing = PhotoEditingService(
             renderer: photoRenderer,

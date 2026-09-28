@@ -89,6 +89,9 @@ trong báo cáo import (FS-03.14). Mask còn lại của correction vẫn nhập
 - Mở lại ảnh thì đọc file, không chạy lại Vision. File mất hoặc hỏng thì tính lại, không báo lỗi. *Vì Vision
   có thể trả matte khác giữa hai bản iOS — tính lại thì mask đổi sau khi cập nhật hệ điều hành.*
 - Matte ngữ nghĩa đọc từ file ảnh thì luôn như nhau, không cần lưu.
+- Hôm nay (2026-09-28, `GeneratedMatteStore`): PNG xám 8-bit, cạnh dài ≤ 1536px (≈ ¼ ảnh 24MP), tên = SHA-256 của
+  khoá (id ảnh PhotoKit + nguồn + ngày sửa, rồi vùng + thông số + crop), trong Application Support/GeneratedMattes.
+  Chỉ khi nguồn có `persistentIdentity` (app đặt lúc nạp). Ảnh render trên 3000px (lưu full-res) chưa qua kho.
 - Không nhúng vào recipe (luật "không phình recipe" của LUT). Độ sâu ước lượng của Lens Blur dùng chung kho
   này (15e §3).
 
@@ -119,8 +122,8 @@ trong báo cáo import (FS-03.14). Mask còn lại của correction vẫn nhập
 | AC-48 | ảnh HEIC không có matte ngữ nghĩa | People → Person 1 → chạm Hair | không tạo mask; hàng Hair mờ 35% và hiện "Needs a Portrait photo taken on iPhone" 3s | ⚠️ chưa có (dự kiến `PeopleMaskTests.hairIsGatedOnTheMatte`) + `ShotDexUITests/scripts/iphone-people-mask.json` |
 | AC-49 | simulator (Vision không tách được người) | chạm People → All People | pill "Couldn't find a person" 3s; mask rỗng vẫn trong danh sách; không alert | ⚠️ chưa có (`ShotDexUITests/scripts/iphone-people-mask.json`, iPhone 17 26.5) |
 | AC-50 | ảnh CC0 không người, hai vật tách rời | chọn ô Subject, không chạm | mask phủ cả hai vật, IoU với phân tách gộp của Vision ≥ 0,9; không có pill "Tap…" | ⚠️ chưa có — cần máy thật hoặc Vision của Mac (dự kiến `ObjectMaskTests.subjectTakesEveryObjectWithoutATap`) |
-| AC-51 | ảnh có mask Object đã tạo | đóng rồi mở lại ảnh; rồi xoá file matte và mở lần nữa | lần 2: Vision chạy 0 lần, matte khớp từng pixel lần 1; lần 3: tính lại, không alert | ⚠️ chưa có (dự kiến `GeneratedMatteStoreTests.reopenReadsTheSavedMatte`, Vision giả) |
+| AC-51 | ảnh có mask Object đã tạo | đóng rồi mở lại ảnh; rồi xoá file matte và mở lần nữa | lần 2: Vision chạy 0 lần, matte khớp từng pixel lần 1; lần 3: tính lại, không alert | `GeneratedMatteStoreTests.reopenReadsTheSavedMatte` · `…unnamedPhotosWriteNothing` (Vision giả) |
 | AC-52 | editor, chưa có mask, iPhone 17 26.5 và 18.6 | mở Mask | lưới 4 cột đủ 14 ô đúng thứ tự §3; Face Skin, Eyes, Lips nằm ngoài People | ⚠️ chưa có (`ShotDexUITests/scripts/iphone-people-mask.json` + element dump) |
 
-**Chưa chứng minh được:** AC-46…AC-52 (chưa code). Point Color và Defringe của mask không có AC riêng —
+**Chưa chứng minh được:** AC-46…AC-50, AC-52 (chưa code). Point Color và Defringe của mask không có AC riêng —
 dùng lại pass toàn cục, phủ bởi golden kernel FS-16 khi port.
