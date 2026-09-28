@@ -97,12 +97,12 @@ Máy: iPhone 17 (402×874) iOS 26.5 và 18.6; SE 375×667 khi ghi rõ. Script `T
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | ảnh 6000×4000 (3:2), iPhone 17 | mở editor | panel 344, ảnh 402×268, vùng thông số hiện 6 hàng slider | ⚠️ chưa có — `EditorPanelLayoutTests.phonePanelIs344OnlyWhenTheExtraIsLetterbox` + `iphone-editor-frame.json` |
-| AC-2 | ảnh 4000×5000 (4:5), iPhone 17 | mở editor | panel 264, ảnh cao 503, 4 hàng slider | ⚠️ chưa có — cùng test (ca 4:5) |
-| AC-3 | ảnh 1:1 | tính panel trên 402×874 và 375×667 | 344 trên iPhone 17 (402 ≤ 468), 264 trên SE (375 > 275) | ⚠️ chưa có — cùng test (ca biên) |
-| AC-4 | ảnh 3:2, panel 344, trong Transform | chọn 4:5 rồi ✓ | panel vẫn 344 | ⚠️ chưa có — `EditorPanelLayoutTests.phonePanelStaysFixedForTheSession` |
+| AC-1 | ảnh 6000×4000 (3:2), iPhone 17 | mở editor | panel 344, ảnh 402×268, vùng thông số hiện 6 hàng slider | `EditorPanelLayoutTests.phonePanelIs344OnlyWhenTheExtraIsLetterbox` · ảnh: panel 344, 6 hàng trên ảnh 3:1 (iPhone 17 26.5) |
+| AC-2 | ảnh 4000×5000 (4:5), iPhone 17 | mở editor | panel 264, ảnh cao 503, 4 hàng slider | `EditorPanelLayoutTests.phonePanelIs344OnlyWhenTheExtraIsLetterbox` (ca 4:5 → 264) |
+| AC-3 | ảnh 1:1 | tính panel trên 402×874 và 375×667 | 344 trên iPhone 17 (402 ≤ 468), 264 trên SE (375 > 275) | `EditorPanelLayoutTests.phonePanelIs344OnlyWhenTheExtraIsLetterbox` (1:1: 344 trên 402×874, 264 trên SE 375×667) |
+| AC-4 | ảnh 3:2, panel 344, trong Transform | chọn 4:5 rồi ✓ | panel vẫn 344 | `EditorPanelLayoutTests.phonePanelStaysFixedForTheSession` |
 | AC-5 | ảnh 3:4, panel 264 | Edit → chạm "Edit Curve" | panel 315, ảnh vừa khung lại; ✓ trả panel về 264 | ⚠️ chưa có — `iphone-edit-list.json` + dump |
-| AC-6 | ảnh chỉ có trên iCloud, máy offline, ảnh 3:2 | mở editor | panel 344 trước khi ảnh tải; lỗi tải có lối ra; Back đóng editor | ⚠️ chưa có — `EditorPanelLayoutTests.panelHeightNeedsOnlyAssetPixelSize` + ảnh chụp tay |
+| AC-6 | ảnh chỉ có trên iCloud, máy offline, ảnh 3:2 | mở editor | panel 344 trước khi ảnh tải; lỗi tải có lối ra; Back đóng editor | `EditorPanelLayoutTests.panelHeightNeedsOnlyAssetPixelSize` (pixel asset + crop đã lưu, không chờ tải) · ⚠️ ảnh chụp tay offline chưa làm |
 | AC-7 | Transform mở, đã chọn 1:1 | chạm Save | sheet lưu mở; recipe có crop 1:1; huỷ sheet → ở Edit, crop 1:1 còn | ⚠️ chưa có — `iphone-tool-sessions.json` |
 | AC-8 | Heal, vào lúc có 0 vết, thêm 3 vết | chạm ✕ rồi xác nhận | hộp xác nhận hiện; sau xác nhận 0 vết, độ sâu lịch sử bằng lúc vào, thanh về 6 công cụ, Edit sáng. Vào Heal rồi ✕ ngay: không hỏi | ⚠️ chưa có — `EditorHistoryAndSummaryTests.cancelRestoresTheEntryRecipeAndDepth` + `iphone-tool-sessions.json` |
 | AC-9 | Mask Brush, 3 nét, rồi ✓ | Undo một lần | còn 2 nét; panel vẫn là Edit | ⚠️ chưa có — `EditorHistoryAndSummaryTests.undoAfterApplyStepsBackOneStroke` |

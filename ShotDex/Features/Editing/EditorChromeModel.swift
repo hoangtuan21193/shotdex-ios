@@ -20,6 +20,9 @@ final class EditorChromeModel {
     /// session so leaving Edit and coming back lands in the same place
     /// (FS-03.13b §1). Never in the recipe or the history.
     var editListGroup: EditorGroup?
+    /// The phone panel's height this frame (344 / 264 / 315), for what parks
+    /// above it.
+    var phonePanelHeight: CGFloat = EditorLayoutMetrics.phonePanelShort
     /// A group the list should scroll to (a chip tapped on the wheel).
     var editListScrollRequest: EditorGroup?
     /// Floating histogram card. It sits over the photo when expanded and parks as

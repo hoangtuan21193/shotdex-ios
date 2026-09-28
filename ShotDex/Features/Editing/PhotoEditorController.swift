@@ -321,6 +321,26 @@ final class PhotoEditorController {
         self.sourceAlbum = sourceAlbum
         self.service = service
         overlayTokens = OverlayTokenValues(metadata: metadata)
+        panelAspect = EditorLayoutMetrics.panelAspect(
+            pixelWidth: asset.pixelWidth, pixelHeight: asset.pixelHeight, crop: .identity
+        )
+    }
+
+    /// The photo's shape for the phone panel's height (FS-03.13a §2): the
+    /// asset's pixels and the crop the photo was saved with. Settled once when
+    /// the saved recipe arrives, then fixed for the session — a crop made now
+    /// does not change the panel; reopening the photo does.
+    private(set) var panelAspect: Double?
+    @ObservationIgnored private var hasSettledPanelAspect = false
+
+    func settlePanelAspect(with saved: PhotoEditRecipe) {
+        guard !hasSettledPanelAspect else { return }
+        hasSettledPanelAspect = true
+        if let aspect = EditorLayoutMetrics.panelAspect(
+            pixelWidth: asset.pixelWidth, pixelHeight: asset.pixelHeight, crop: saved.crop
+        ) {
+            panelAspect = aspect
+        }
     }
 
     var canUndo: Bool { history.canUndo }
@@ -551,6 +571,7 @@ final class PhotoEditorController {
             initialRecipe.sourceFilename = option.filename
             recipe = initialRecipe
             sessionBaselineRecipe = initialRecipe
+            settlePanelAspect(with: initialRecipe)
             history.clear()
             selectedMaskID = initialRecipe.masks.first?.id
             selectedComponentID = initialRecipe.masks.first?.components.first?.id

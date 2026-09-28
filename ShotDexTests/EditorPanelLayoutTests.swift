@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import Photos
 import Testing
 @testable import ShotDexKit
 @testable import ShotDex
@@ -669,5 +670,61 @@ struct EditorPanelLayoutTests {
         #expect(EditorTool.tool(for: .grade) == .edit && EditorTool.tool(for: .cropGeometry) == .transform)
         #expect(EditorTool.edit.group(editListGroup: .detail) == .detail)
         #expect(EditorTool.edit.group(editListGroup: nil) == .light)
+    }
+
+    // MARK: Panel by photo (FS-03.13a §2)
+
+    static func panel(_ aspect: Double, screen: CGSize = CGSize(width: 402, height: 874), band: CGFloat = 62) -> CGFloat {
+        EditorLayoutMetrics.phonePanelHeight(
+            screenHeight: screen.height, topBand: band, filmstrip: 0, stageWidth: screen.width, aspect: aspect
+        )
+    }
+
+    /// AC-1, AC-2, AC-3. The 80pt extra comes only out of letterbox: 3:2 and
+    /// 1:1 get 344 on an iPhone 17, 4:5 gets 264; on an SE (375×667, band 48)
+    /// 1:1 no longer fits and gets 264 while 3:2 still gets 344. The zone is
+    /// 265 on 344 — six 40pt rows and change — and 185 on 264.
+    @Test func phonePanelIs344OnlyWhenTheExtraIsLetterbox() {
+        #expect(Self.panel(1.5) == 344)
+        #expect(Self.panel(0.8) == 264)
+        #expect(Self.panel(1) == 344)
+        let se = CGSize(width: 375, height: 667)
+        #expect(Self.panel(1, screen: se, band: 48) == 264)
+        #expect(Self.panel(1.5, screen: se, band: 48) == 344)
+        #expect(EditorLayoutMetrics.paramZoneHeight(panel: 344) == 265)
+        #expect(EditorLayoutMetrics.paramZoneHeight(panel: 264) == 185)
+        #expect(Int(EditorLayoutMetrics.paramZoneHeight(panel: 344) / EditorLayoutMetrics.editorPanelRowHeight) == 6)
+        // AC-5: Curve grows a 264 panel to 315 (a 236 zone); 344 has room.
+        #expect(EditorLayoutMetrics.phonePanelHeight(base: 264, showsCurve: true) == 315)
+        #expect(EditorLayoutMetrics.phonePanelHeight(base: 344, showsCurve: true) == 344)
+        #expect(EditorLayoutMetrics.paramZoneHeight(panel: 315) == 236)
+    }
+
+    /// AC-6. The shape needs only the asset's pixel size and the saved crop —
+    /// nothing downloaded — quarter turns swapping the sides.
+    @Test func panelHeightNeedsOnlyAssetPixelSize() {
+        #expect(EditorLayoutMetrics.panelAspect(pixelWidth: 6000, pixelHeight: 4000, crop: .identity) == 1.5)
+        var square = PhotoCropRecipe.identity
+        square.rect = NormalizedRect(x: 1.0 / 6, y: 0, width: 4.0 / 6, height: 1)
+        #expect(abs((EditorLayoutMetrics.panelAspect(pixelWidth: 6000, pixelHeight: 4000, crop: square) ?? 0) - 1) < 1e-9)
+        var turned = PhotoCropRecipe.identity
+        turned.quarterTurns = 1
+        #expect(abs((EditorLayoutMetrics.panelAspect(pixelWidth: 6000, pixelHeight: 4000, crop: turned) ?? 0) - 2.0 / 3) < 1e-9)
+        #expect(EditorLayoutMetrics.panelAspect(pixelWidth: 0, pixelHeight: 0, crop: .identity) == nil)
+    }
+
+    /// AC-4. The shape settles once, from the photo as saved; a crop made in
+    /// the session does not move the panel.
+    @MainActor @Test func phonePanelStaysFixedForTheSession() {
+        let controller = PhotoEditorController(asset: PHAsset(), sourceAlbum: nil, service: PhotoEditingService())
+        var saved = PhotoEditRecipe.identity
+        saved.crop.rect = NormalizedRect(x: 0, y: 0, width: 0.5, height: 1)
+        controller.settlePanelAspect(with: saved)
+        let settled = controller.panelAspect
+        var cropped = PhotoEditRecipe.identity
+        cropped.crop.rect = NormalizedRect(x: 0, y: 0, width: 1, height: 0.2)
+        controller.settlePanelAspect(with: cropped)
+        controller.recipe.crop = cropped.crop
+        #expect(controller.panelAspect == settled)
     }
 }

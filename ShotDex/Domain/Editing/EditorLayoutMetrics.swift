@@ -37,6 +37,54 @@ enum EditorLayoutMetrics {
     /// 185 = 264 − 54 group strip − 25 safe-area inset.
     static let editorParamZoneHeight: CGFloat = 185
     static let editorParamZoneTopInset: CGFloat = 8
+
+    // MARK: Panel height by photo (FS-03.13a §2)
+
+    /// The phone panel's three heights: 344 when the photo's letterbox can
+    /// pay for the extra 80pt, 264 otherwise, 315 while Curve's graph is open
+    /// on a 264 panel.
+    static let phonePanelTall: CGFloat = 344
+    static let phonePanelShort: CGFloat = 264
+    static let phonePanelCurve: CGFloat = 315
+
+    /// 344 when the photo, fitted to the stage width, still fits the height a
+    /// 344 panel leaves — the 80pt come out of black bars, never out of the
+    /// picture — else 264. `aspect` is width ÷ height after the saved crop;
+    /// `filmstrip` is 56 in a multi-photo session, else 0.
+    static func phonePanelHeight(
+        screenHeight: CGFloat,
+        topBand: CGFloat,
+        filmstrip: CGFloat,
+        stageWidth: CGFloat,
+        aspect: Double
+    ) -> CGFloat {
+        guard aspect > 0 else { return phonePanelShort }
+        let photoHeight = stageWidth / CGFloat(aspect)
+        return photoHeight <= screenHeight - topBand - filmstrip - phonePanelTall ? phonePanelTall : phonePanelShort
+    }
+
+    /// Curve's graph needs 236pt of zone: a 264 panel grows to 315 while it
+    /// is open; 344 already has room.
+    static func phonePanelHeight(base: CGFloat, showsCurve: Bool) -> CGFloat {
+        showsCurve && base == phonePanelShort ? phonePanelCurve : base
+    }
+
+    /// The parameter zone of a panel: the panel less the 54pt tool bar and
+    /// the 25pt home inset — 265, 185 or 236.
+    static func paramZoneHeight(panel: CGFloat) -> CGFloat {
+        panel - editorGroupStripHeight - editorPanelSafeAreaInset
+    }
+
+    /// The photo's shape as the panel sees it: the asset's pixel size and the
+    /// saved crop — known before any pixel loads, so an iCloud-only photo
+    /// gets its panel at once (AC-6).
+    static func panelAspect(pixelWidth: Int, pixelHeight: Int, crop: PhotoCropRecipe) -> Double? {
+        guard pixelWidth > 0, pixelHeight > 0 else { return nil }
+        let width = Double(pixelWidth) * crop.rect.width
+        let height = Double(pixelHeight) * crop.rect.height
+        guard width > 0, height > 0 else { return nil }
+        return crop.quarterTurns % 2 == 0 ? width / height : height / width
+    }
     /// One row of the phone panel's grid: slider, switch, colour, font, hint, and the
     /// target strip. The fixed height is a tier-D exemption from sizing rows to the
     /// text (NF-06) — the grid is the point — so labels shrink instead (0.85 floor).

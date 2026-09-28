@@ -590,7 +590,6 @@ struct PhotoEditorScreen: View {
             // it, and a band over the Dynamic Island carrying the histogram and the
             // clipping readout. The editor claims both safe areas so the photo gets
             // that height.
-            let panelHeight = EditorLayoutMetrics.editorPanelHeight
             // The band must reach past the bottom of the Dynamic Island so a tall,
             // aspect-fit photo starts *below* it — the 48pt design height is short of
             // the ~59pt top safe area on Face-ID iPhones, which is what was slicing
@@ -598,6 +597,21 @@ struct PhotoEditorScreen: View {
             let bandHeight = max(
                 EditorLayoutMetrics.editorTopBandHeight,
                 proxy.safeAreaInsets.top
+            )
+            // The panel by the photo (FS-03.13a §2): 344 when the letterbox pays
+            // for it, else 264, from the shape settled when the photo opened;
+            // Curve grows a 264 panel to 315 while its graph is open.
+            let isMultiPhoto = session?.isMultiPhoto ?? false
+            let basePanel = EditorLayoutMetrics.phonePanelHeight(
+                screenHeight: proxy.size.height,
+                topBand: bandHeight,
+                filmstrip: isMultiPhoto && !EditorTool.tool(for: chrome.selectedGroup).isSession ? 56 : 0,
+                stageWidth: proxy.size.width,
+                aspect: controller.panelAspect ?? 1.5
+            )
+            let panelHeight = EditorLayoutMetrics.phonePanelHeight(
+                base: basePanel,
+                showsCurve: chrome.selectedGroup == .curve
             )
             // Width, height *and* orientation — see `usesSidebar`. A sidebar is
             // paid for in width, so it is only worth it on a window that has
@@ -828,6 +842,9 @@ struct PhotoEditorScreen: View {
                 panel(controller, height: panelHeight)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
+        }
+        .onChange(of: panelHeight, initial: true) { _, height in
+            chrome.phonePanelHeight = height
         }
     }
 
@@ -1120,7 +1137,7 @@ struct PhotoEditorScreen: View {
     private var undoToastBottomInset: CGFloat {
         if chrome.isFullBleed { return 40 }
         if chrome.isWideLayout { return AppTheme.Spacing.xxl }
-        return EditorLayoutMetrics.editorPanelHeight + AppTheme.Spacing.md
+        return chrome.phonePanelHeight + AppTheme.Spacing.md
     }
 
     /// Whether the photo is currently filling the canvas rather than fitted into
@@ -2379,9 +2396,9 @@ struct PhotoEditorScreen: View {
     /// glass; the image never shows through it.
     private func panel(_ controller: PhotoEditorController, height: CGFloat) -> some View {
         let hasTarget = panelHasTargetStrip(controller)
-        let rowsHeight = EditorLayoutMetrics.editorParamAreaHeight(
-            hasTargetStrip: hasTarget
-        )
+        let zoneHeight = EditorLayoutMetrics.paramZoneHeight(panel: height)
+        let rowsHeight = zoneHeight - EditorLayoutMetrics.editorParamZoneTopInset
+            - (hasTarget ? EditorLayoutMetrics.editorTargetStripHeight : 0)
         let slab = UnevenRoundedRectangle(
             topLeadingRadius: EditorLayoutMetrics.editorPanelCornerRadius,
             topTrailingRadius: EditorLayoutMetrics.editorPanelCornerRadius,
@@ -2400,7 +2417,7 @@ struct PhotoEditorScreen: View {
                 toolPanel(controller)
                     .frame(height: rowsHeight)
             }
-            .frame(height: EditorLayoutMetrics.editorParamZoneHeight)
+            .frame(height: zoneHeight)
             .overlay(alignment: .bottom) {
                 LinearGradient(
                     colors: [EditorTheme.panelSolid.opacity(0), EditorTheme.panelSolid],
@@ -2870,7 +2887,8 @@ struct PhotoEditorScreen: View {
     /// Presets and Edit switch in place; the other four open a session.
     private func selectTool(_ tool: EditorTool, in controller: PhotoEditorController) {
         let current = EditorTool.tool(for: chrome.selectedGroup)
-        guard tool != current else { return }
+        // Edit while Curve's graph is open is the way back to the list.
+        guard tool != current || chrome.selectedGroup == .curve else { return }
         selectGroup(tool.group(editListGroup: chrome.editListGroup), in: controller)
     }
 
