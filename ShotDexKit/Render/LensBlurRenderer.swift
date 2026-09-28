@@ -114,7 +114,7 @@ public enum LensBlurRenderer {
         return output.cropped(to: extent)
     }
 
-    /// One premultiplied layer spread over the bokeh's disc. Outside the
+    /// One premultiplied layer spread over the bokeh. Outside the
     /// frame the layer is transparent, so a disc that hangs over the edge
     /// loses coverage rather than pulling in black; the final resolve divides
     /// that back out.
@@ -141,7 +141,13 @@ public enum LensBlurRenderer {
         guard let spread = kernel.apply(
             extent: smallExtent.insetBy(dx: -ceil(smallRadius), dy: -ceil(smallRadius)),
             roiCallback: { _, rect in rect.insetBy(dx: -ceil(smallRadius) - 1, dy: -ceil(smallRadius) - 1) },
-            arguments: [small, Float(smallRadius), Float(shapeCode(shape))]
+            arguments: [
+                small,
+                Float(smallRadius),
+                Float(shapeCode(shape)),
+                CIVector(x: extent.midX / scale, y: extent.midY / scale),
+                Float(hypot(extent.width, extent.height) / 2 / scale),
+            ]
         ) else { return layer }
         let back = scale > 1
             ? spread.transformed(by: CGAffineTransform(scaleX: scale, y: scale))

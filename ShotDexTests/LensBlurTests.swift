@@ -132,6 +132,76 @@ struct LensBlurTests {
         #expect(LensBlurRenderer.layers(focusFar: 0.6, focusNear: 1).count == 8)
     }
 
+    // MARK: AC-54 — bokeh shapes
+
+    static let linear = CGColorSpace(name: CGColorSpace.linearSRGB)!
+
+    /// A dark 0.05 frame, everything at depth 0.2, one 3px light of 1.0 in
+    /// the middle — a street lamp far behind the focus.
+    static func pointLight() -> (image: CIImage, depth: CIImage) {
+        let frame = CGRect(x: 0, y: 0, width: side, height: side)
+        let background = CIImage(color: CIColor(red: 0.05, green: 0.05, blue: 0.05, alpha: 1, colorSpace: linear)!)
+        let light = CIImage(color: CIColor(red: 1, green: 1, blue: 1, alpha: 1, colorSpace: linear)!)
+            .cropped(to: CGRect(x: side / 2 - 1, y: side / 2 - 1, width: 3, height: 3))
+        let depth = CIImage(color: CIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1, colorSpace: linear)!)
+        return (light.composited(over: background).cropped(to: frame), depth.cropped(to: frame))
+    }
+
+    /// Mean linear luminance of the pixels whose distance from the light
+    /// lies in `band` (as a share of the blur radius).
+    static func meanLuminance(of image: CIImage, radius: Double, band: ClosedRange<Double>) -> Double {
+        let reach = Int(ceil(radius)) + 2
+        let rect = CGRect(x: side / 2 - reach, y: side / 2 - reach, width: 2 * reach + 1, height: 2 * reach + 1)
+        let width = Int(rect.width), height = Int(rect.height)
+        var pixels = [Float](repeating: 0, count: width * height * 4)
+        CIContext().render(image, toBitmap: &pixels, rowBytes: width * 16, bounds: rect, format: .RGBAf, colorSpace: linear)
+        var sum = 0.0, count = 0.0
+        for y in 0..<height {
+            for x in 0..<width {
+                let distance = hypot(Double(x - reach), Double(y - reach)) / radius
+                guard band.contains(distance) else { continue }
+                let i = (y * width + x) * 4
+                sum += 0.2126 * Double(pixels[i]) + 0.7152 * Double(pixels[i + 1]) + 0.0722 * Double(pixels[i + 2])
+                count += 1
+            }
+        }
+        return sum / max(count, 1)
+    }
+
+    /// AC-54. Amount 80, focus 70–100, the light at depth 0.2: Ring draws a
+    /// rim at least 1.3 times as bright as its core; Circle is even (≤ 1.1).
+    @Test func ringBokehHasABrightRim() {
+        let scene = Self.pointLight()
+        // The far layer's radius: Amount × 3.5% of the short edge × its step.
+        let layer = LensBlurRenderer.layers(focusFar: 0.7, focusNear: 1).first { $0.lower <= 0.2 && 0.2 < $0.upper }!
+        let radius = 0.8 * 0.035 * Double(Self.side) * layer.blur
+        func ratio(_ shape: PhotoBokehShape) -> Double {
+            var recipe = Self.recipe(amount: 0.8, far: 0.7, near: 1)
+            recipe.bokeh = shape
+            let output = LensBlurRenderer.apply(recipe, to: scene.image, depth: scene.depth)
+            let rim = Self.meanLuminance(of: output, radius: radius, band: 0.7...0.9)
+            let core = Self.meanLuminance(of: output, radius: radius, band: 0...0.3)
+            return rim / core
+        }
+        let ring = ratio(.ring)
+        let circle = ratio(.circle)
+        #expect(ring >= 1.3, "ring rim/core \(ring)")
+        #expect(circle <= 1.1 && circle >= 0.9, "circle rim/core \(circle)")
+    }
+
+    /// Every shape keeps the light's energy: the layer's average brightness
+    /// stays where it was, whichever bokeh spreads it.
+    @Test(arguments: PhotoBokehShape.allCases)
+    func everyShapeKeepsTheLight(_ shape: PhotoBokehShape) {
+        let scene = Self.pointLight()
+        var recipe = Self.recipe(amount: 0.8, far: 0.7, near: 1)
+        recipe.bokeh = shape
+        let output = LensBlurRenderer.apply(recipe, to: scene.image, depth: scene.depth)
+        let before = Self.meanLuminance(of: scene.image, radius: 12, band: 0...1)
+        let after = Self.meanLuminance(of: output, radius: 12, band: 0...1)
+        #expect(abs(after - before) / before < 0.15, "\(shape) moved the light's energy \(before) → \(after)")
+    }
+
     /// The saved recipe starts on the spec's default range, 60–100.
     @Test func defaultRangeIsSixtyToAHundred() {
         #expect(PhotoLensBlurRecipe.identity.focusFar == 0.6)

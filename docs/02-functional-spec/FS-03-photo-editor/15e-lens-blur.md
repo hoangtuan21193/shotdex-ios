@@ -41,6 +41,9 @@ Nhóm **Lens Blur** riêng trong danh sách Edit, ngay sau Effects (thay hàng D
   được thu nhỏ trước cho bán kính gom ≤ 6px), chồng *over* xa → gần rồi chia lại cho alpha.
 - Hình bokeh: Circle = đĩa đều; Bubble = đĩa viền sáng hơn; 5-Blade = ngũ giác; Ring = vành sáng, lõi tối;
   Cat Eye = đĩa bị cắt dần về phía mép khung.
+  *Trọng số (2026-09-28, `bokehWeight` trong `LensBlurKernels.ci.metal`):* Bubble vành ×2 từ 65% bán kính; Ring
+  lõi 0,2, vành 2,0 từ 55–80%; Cat Eye = giao với đĩa thứ hai dời về tâm khung 0,7 × (khoảng cách tới tâm /
+  nửa đường chéo). Trọng số chuẩn hoá, nên mọi hình giữ nguyên năng lượng của đốm sáng.
 - Mặt nạ chân dung (khi có) tinh chỉnh mép người như Depth Blur hôm nay — bản đồ độ sâu chỉ ¼ độ phân giải. *(chưa làm — task 48 chỉ dùng bản đồ độ sâu.)*
 - Kernel viết Metal cho Core Image, có golden ≤ 1/255 (FS-16 §4).
 
@@ -82,7 +85,7 @@ Nhóm **Lens Blur** riêng trong danh sách Edit, ngay sau Effects (thay hàng D
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
 | AC-53 | ảnh thử, Focus Range 70–100 | đặt Amount 50 | phương sai Laplacian nửa gần ≥ 90% ảnh gốc; nửa xa ≤ 40% | `LensBlurTests.focusRangeKeepsTheNearHalfSharp` · `…layersCoverTheDepthScaleFarToNear` · golden `lensBlurSlice`, `lensBlurGather` |
-| AC-54 | nền tối 0,05 ở độ sâu 0,2 có một điểm sáng 1,0 cỡ 3px; Amount 80, dải lấy nét 70–100 | đặt Bokeh Ring (so với Circle) | Ring: độ sáng vành ≥ 1,3 lần lõi; Circle: vành/lõi ≤ 1,1; cả hai khớp golden ≤ 1/255 | ⚠️ chưa có (dự kiến `LensBlurTests.ringBokehHasABrightRim` + ca golden `lensBlurRing`) |
+| AC-54 | nền tối 0,05 ở độ sâu 0,2 có một điểm sáng 1,0 cỡ 3px; Amount 80, dải lấy nét 70–100 | đặt Bokeh Ring (so với Circle) | Ring: độ sáng vành ≥ 1,3 lần lõi; Circle: vành/lõi ≤ 1,1; cả hai khớp golden ≤ 1/255 | `LensBlurTests.ringBokehHasABrightRim` · `…everyShapeKeepsTheLight` · golden `lensBlurGather` (Circle), `lensBlurBubble`, `lensBlurBlade`, `lensBlurRing`, `lensBlurCatEye` |
 | AC-55 | ảnh thử, nhóm Lens Blur mở | chạm vào nửa xa | dải lấy nét thành 10–30 (±2); nửa xa nét, nửa gần mờ; Undo một lần trả dải cũ | ⚠️ chưa có (dự kiến `LensBlurTests.tapToFocusCentresTheRange`) + `ShotDexUITests/scripts/iphone-lens-blur.json` |
 | AC-56 | ảnh JPEG không có bản đồ độ sâu | Paste Edits từ ảnh có Lens Blur 50, rồi đóng và mở lại ảnh | ước lượng chạy đúng 1 lần; nhãn "Estimated depth"; lần mở lại đọc file, ước lượng 0 lần; không alert | ⚠️ chưa có (dự kiến `LensBlurTests.noDepthPhotoIsEstimatedOnce`, model giả) + ảnh Edit, iPhone 17 26.5 |
 | AC-57 | ảnh Portrait 12MP, Lens Blur 50 đã thả tay | kéo Exposure qua 30 giá trị | làm mờ và trộn Lens Blur chạy 0 lần trong lúc kéo; thời gian khung trung bình ≤ 1,1 lần bản Lens Blur tắt; preview đúng cỡ hiển thị | ⚠️ chưa có (dự kiến `LensBlurTests.otherSlidersReuseTheBlendedResult`) |
@@ -90,4 +93,4 @@ Nhóm **Lens Blur** riêng trong danh sách Edit, ngay sau Effects (thay hàng D
 | AC-59 | ảnh không độ sâu, bộ ước lượng giả trả lỗi | mở nhóm Lens Blur, đặt Amount 50 | ảnh bằng ảnh gốc ± 1/255; nhóm mờ với "Couldn't estimate depth for this photo."; không alert | ⚠️ chưa có (dự kiến `LensBlurTests.estimationFailureRendersTheOriginal`) |
 | AC-60 | bản Release trên iPhone 12 và iPhone 15 | đo Depth Anything kèm app | ghi vào §3: dung lượng model trong app (MB), thời gian ước lượng ảnh 12MP, IoU mép tóc với mặt nạ chân dung trên 10 ảnh Portrait hình nộm; phép đo, không ngưỡng chặn | ⚠️ chưa đo — máy thật, Instruments |
 
-**Chưa chứng minh được:** AC-54…AC-60 (chưa code; AC-60 cần máy thật).
+**Chưa chứng minh được:** AC-55…AC-60 (chưa code; AC-60 cần máy thật).

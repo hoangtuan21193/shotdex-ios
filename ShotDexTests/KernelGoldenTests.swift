@@ -215,14 +215,27 @@ extension KernelGoldenCase {
         },
         color("redEye", { PhotoRenderService.redEyeKernel }) { [$0(0), $0(2), Float(0.6), Float(0.5)] },
         color("lensBlurSlice", { LensBlurRenderer.sliceKernel }) { [$0(0), $0(1), CIVector(x: 0.3, y: 0.7)] },
-        KernelGoldenCase(name: "lensBlurGather", kernel: "lensBlurGather") { input in
+        lensBlurGather("lensBlurGather", shape: 0),
+        lensBlurGather("lensBlurBubble", shape: 1),
+        lensBlurGather("lensBlurBlade", shape: 2),
+        lensBlurGather("lensBlurRing", shape: 3),
+        lensBlurGather("lensBlurCatEye", shape: 4),
+    ]
+
+    /// The bokeh gather, one case per shape, off-centre enough for Cat Eye
+    /// to clip.
+    private static func lensBlurGather(_ name: String, shape: Float) -> KernelGoldenCase {
+        KernelGoldenCase(name: name, kernel: "lensBlurGather") { input in
             LensBlurRenderer.gatherKernel?.apply(
                 extent: extent,
                 roiCallback: { _, rect in rect.insetBy(dx: -5, dy: -5) },
-                arguments: [input(0).clampedToExtent(), Float(3.5), Float(0)]
+                arguments: [
+                    input(0).clampedToExtent(), Float(3.5), shape,
+                    CIVector(x: extent.midX, y: extent.midY), Float(extent.width * 0.35),
+                ]
             )
-        },
-    ]
+        }
+    }
 
     // MARK: Group 3b — photo stack and focus stack
 
