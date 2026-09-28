@@ -1359,6 +1359,61 @@ final class PhotoEditorController {
         scheduleRender()
     }
 
+    /// "No red eyes found" for 3s after a Fix Red Eye that found nothing.
+    private(set) var redEyeNotice: String?
+    @ObservationIgnored private var redEyeNoticeTask: Task<Void, Never>?
+
+    /// Fix Red Eye (FS-03.15c §5): a spot on every red pupil Vision finds,
+    /// skipping pupils that already have one. The whole pass is one undo
+    /// step; nothing found is no step and a pill, never an alert.
+    @discardableResult
+    func fixRedEyes() -> Int {
+        guard let cgImage = originalPreviewImage?.cgImage,
+              let picture = HealingSourceFinder.Picture(cgImage, side: 1024)
+        else { return fixRedEyes(pupils: [], in: nil) }
+        return fixRedEyes(pupils: RedEyeLocator.pupils(in: cgImage), in: picture)
+    }
+
+    /// The same with the pupils and picture given — what the tests hand in.
+    @discardableResult
+    func fixRedEyes(pupils: [RedEyeLocator.Pupil], in picture: HealingSourceFinder.Picture?) -> Int {
+        let red = picture.map { RedEyeLocator.redPupils(pupils, in: $0) } ?? []
+        let aspect = Double(previewAspectRatio)
+        let shortOverWidth = aspect >= 1 ? 1 / aspect : 1
+        let shortOverHeight = aspect >= 1 ? 1 : aspect
+        let fresh = red.filter { pupil in
+            !recipe.redEyes.contains { spot in
+                let dx = (spot.center.x - pupil.center.x) / shortOverWidth
+                let dy = (spot.center.y - pupil.center.y) / shortOverHeight
+                return (dx * dx + dy * dy).squareRoot() <= spot.radius
+            }
+        }
+        guard !fresh.isEmpty else {
+            showRedEyeNotice("No red eyes found")
+            return 0
+        }
+        recordHistory()
+        for pupil in fresh {
+            var spot = RedEyeLocator.spot(forTapAt: pupil.center, pupils: [pupil], aspect: aspect)
+            spot.pupilSize = redEyePupilSize
+            spot.darken = redEyeDarken
+            recipe.redEyes.append(spot)
+            selectedRedEyeID = spot.id
+        }
+        scheduleRender()
+        return fresh.count
+    }
+
+    private func showRedEyeNotice(_ text: String) {
+        redEyeNoticeTask?.cancel()
+        redEyeNotice = text
+        redEyeNoticeTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(3))
+            guard !Task.isCancelled else { return }
+            self?.redEyeNotice = nil
+        }
+    }
+
     /// Edits one Red Eye spot; bracket a drag with begin/endContinuousChange.
     func updateRedEye(_ id: UUID, _ change: (inout PhotoRedEyeSpot) -> Void) {
         guard let index = recipe.redEyes.firstIndex(where: { $0.id == id }) else { return }

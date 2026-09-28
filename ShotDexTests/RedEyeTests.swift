@@ -107,4 +107,62 @@ struct RedEyeTests {
         let unpulled = RedEyeLocator.spot(forTapAt: tap, pupils: [far], aspect: 1)
         #expect(unpulled.center == tap && unpulled.radius == RedEyeLocator.defaultRadius)
     }
+
+    /// A picture with two drawn faces' pupils: a red pair and a dark brown
+    /// pair, in the 0…1 layout the pupils below use.
+    private static func twoFaces() -> (picture: HealingSourceFinder.Picture, red: [RedEyeLocator.Pupil], brown: [RedEyeLocator.Pupil]) {
+        let side = 512
+        var rgb = [Float](repeating: 0.6, count: side * side * 3)
+        let red = [NormalizedPoint(x: 0.25, y: 0.3), NormalizedPoint(x: 0.4, y: 0.3)]
+        let brown = [NormalizedPoint(x: 0.6, y: 0.7), NormalizedPoint(x: 0.75, y: 0.7)]
+        func paint(_ centre: NormalizedPoint, _ colour: (Float, Float, Float)) {
+            let cx = centre.x * Double(side), cy = centre.y * Double(side)
+            for y in 0..<side {
+                for x in 0..<side where hypot(Double(x) + 0.5 - cx, Double(y) + 0.5 - cy) <= 8 {
+                    let index = (y * side + x) * 3
+                    rgb[index] = colour.0; rgb[index + 1] = colour.1; rgb[index + 2] = colour.2
+                }
+            }
+        }
+        red.forEach { paint($0, (220 / 255, 40 / 255, 40 / 255)) }
+        brown.forEach { paint($0, (60 / 255, 40 / 255, 30 / 255)) }
+        let eyeWidth = 40.0 / Double(side)
+        return (
+            HealingSourceFinder.Picture(width: side, height: side, rgb: rgb),
+            red.map { RedEyeLocator.Pupil(center: $0, eyeWidth: eyeWidth) },
+            brown.map { RedEyeLocator.Pupil(center: $0, eyeWidth: eyeWidth) }
+        )
+    }
+
+    /// AC-37. Two faces, one red-eyed and one with dark brown pupils: Fix
+    /// Red Eye makes exactly two spots, both on the red pupils; the brown
+    /// pair is left alone; one Undo takes both off. (Vision finding the
+    /// pupils on a real face needs a device and a real face; the pupils are
+    /// handed in here as it would report them.)
+    @MainActor @Test func fixRedEyeSkipsDarkPupils() {
+        let (picture, red, brown) = Self.twoFaces()
+        let controller = PhotoEditorController(asset: PHAsset(), sourceAlbum: nil, service: PhotoEditingService())
+        #expect(controller.fixRedEyes(pupils: red + brown, in: picture) == 2)
+        #expect(controller.recipe.redEyes.count == 2)
+        for spot in controller.recipe.redEyes {
+            #expect(red.contains { hypot($0.center.x - spot.center.x, $0.center.y - spot.center.y) < 1e-9 })
+        }
+        // A second press finds the same pupils already fixed.
+        #expect(controller.fixRedEyes(pupils: red + brown, in: picture) == 0)
+        controller.undo()
+        #expect(controller.recipe.redEyes.isEmpty, "the whole pass is one undo step")
+    }
+
+    /// AC-38. Nothing red to fix — no pupils, or Vision unable to run: no
+    /// spot, no undo step, and "No red eyes found".
+    @MainActor @Test func fixRedEyeWithNothingToFix() {
+        let (picture, _, brown) = Self.twoFaces()
+        let controller = PhotoEditorController(asset: PHAsset(), sourceAlbum: nil, service: PhotoEditingService())
+        #expect(controller.fixRedEyes(pupils: [], in: picture) == 0)
+        #expect(controller.fixRedEyes(pupils: brown, in: picture) == 0)
+        #expect(controller.fixRedEyes(pupils: [], in: nil) == 0)
+        #expect(controller.recipe.redEyes.isEmpty)
+        #expect(!controller.canUndo)
+        #expect(controller.redEyeNotice == "No red eyes found")
+    }
 }

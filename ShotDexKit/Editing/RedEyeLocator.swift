@@ -42,6 +42,30 @@ public enum RedEyeLocator {
         return PhotoRedEyeSpot(center: point, radius: defaultRadius)
     }
 
+    /// The pupils that really are red (FS-03.15c §5): the same red-dominant
+    /// test the kernel uses, averaged over the middle of the pupil. Fixing a
+    /// dark brown pupil would only darken it more, wrongly.
+    public static func redPupils(_ pupils: [Pupil], in picture: HealingSourceFinder.Picture) -> [Pupil] {
+        let shortEdge = Double(min(picture.width, picture.height))
+        return pupils.filter { pupil in
+            let radius = max(1.5, pupil.eyeWidth * 0.45 * 0.5 * 0.6 * shortEdge)
+            let cx = pupil.center.x * Double(picture.width), cy = pupil.center.y * Double(picture.height)
+            var redness = 0.0, count = 0.0
+            let minX = max(0, Int(cx - radius)), maxX = min(picture.width - 1, Int(cx + radius))
+            let minY = max(0, Int(cy - radius)), maxY = min(picture.height - 1, Int(cy + radius))
+            guard minX <= maxX, minY <= maxY else { return false }
+            for y in minY...maxY {
+                for x in minX...maxX where hypot(Double(x) + 0.5 - cx, Double(y) + 0.5 - cy) <= radius {
+                    let index = (y * picture.width + x) * 3
+                    let r = Double(picture.rgb[index]), g = Double(picture.rgb[index + 1]), b = Double(picture.rgb[index + 2])
+                    redness += r - max(g, b)
+                    count += 1
+                }
+            }
+            return count > 0 && redness / count > 0.16
+        }
+    }
+
     /// Every pupil Vision finds in `image`. Empty when there is no face or
     /// Vision cannot run — the caller falls back to the tap, never to an
     /// alert.

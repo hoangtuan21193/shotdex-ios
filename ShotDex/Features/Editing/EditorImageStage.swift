@@ -553,6 +553,13 @@ struct EditorImageStage: View {
                 .accessibilityHint("Tap to fit the photo")
             }
 
+            // Fix Red Eye found nothing: said on the photo for 3s, no alert.
+            if let notice = controller.redEyeNotice, controller.selectedTool == .heal {
+                EditorPillLabel(text: notice.uppercased())
+                    .position(x: imageRect.midX, y: imageRect.minY + 24)
+                    .transition(.opacity)
+            }
+
             if chrome.isFullBleed {
                 EditorPillLabel(text: "DOUBLE TAP TO EXIT · PINCH TO ZOOM")
                     .position(x: imageRect.midX, y: imageRect.maxY - 24)

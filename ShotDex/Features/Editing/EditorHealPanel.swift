@@ -174,6 +174,18 @@ struct EditorHealPanel: View {
             onEndDrag: { controller.endContinuousChange() },
             onReset: { controller.setRedEyeDarken(0.5) }
         )
+        HStack {
+            Button {
+                controller.fixRedEyes()
+            } label: {
+                Label("Fix Red Eye", systemImage: "wand.and.stars")
+                    .font(EditorTheme.maskSubtitle)
+            }
+            .buttonStyle(EditorChipButtonStyle(isSelected: false))
+            .accessibilityHint("Finds every red pupil in the photo and fixes it")
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
         if let eye = controller.selectedRedEye,
            let index = controller.recipe.redEyes.firstIndex(where: { $0.id == eye.id }) {
             HStack {

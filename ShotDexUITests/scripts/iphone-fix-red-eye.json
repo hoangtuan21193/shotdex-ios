@@ -1,0 +1,21 @@
+{
+ "steps": [
+  {"action": "launch"},
+  {"action": "wait", "seconds": 25},
+  {"action": "tap", "x": 0.5, "y": 0.35},
+  {"action": "wait", "seconds": 6},
+  {"action": "tap", "label": "Edit"},
+  {"action": "wait", "seconds": 12},
+  {"action": "tap", "label": "Heal", "type": "button"},
+  {"action": "wait", "seconds": 3},
+  {"action": "tap", "label": "Red Eye", "type": "button"},
+  {"action": "wait", "seconds": 2},
+  {"action": "swipe", "x": 0.15, "y": 0.86, "direction": "up", "distance": 0.08},
+  {"action": "wait", "seconds": 2},
+  {"action": "dump", "name": "0-panel"},
+  {"action": "tap", "label": "Fix Red Eye", "type": "button"},
+  {"action": "wait", "seconds": 1},
+  {"action": "screenshot", "name": "1-no-red-eyes"},
+  {"action": "dump", "name": "1-no-red-eyes"}
+ ]
+}
