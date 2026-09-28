@@ -53,6 +53,33 @@ float2 lensWarp(float2 center, float norm, float zoom, float model,
     return center + d * g * manualScale * norm;
 }
 
+// A lens profile's distortion and chromatic aberration in one pass
+// (FS-03.16a §5): `table` is 256×1, by output radius, how far out to sample
+// red, green and blue (their scales in r, g, b). Radius is in units of
+// `norm` × `zoom`; the last texel stands for `maximumRadius`.
+float4 lensCorrect(sampler image, sampler table, float2 center, float norm, float zoom,
+                   float maximumRadius, float count, destination dest) {
+    float2 p = dest.coord() - center;
+    float2 d = p / (norm * zoom);
+    float r = length(d);
+    float t = clamp(r / maximumRadius, 0.0f, 1.0f) * (count - 1.0f) + 0.5f;
+    float4 s = table.sample(table.transform(float2(t, 0.5f)));
+    float4 g = image.sample(image.transform(center + d * s.g * norm));
+    float4 red = image.sample(image.transform(center + d * s.r * norm));
+    float4 blue = image.sample(image.transform(center + d * s.b * norm));
+    return float4(red.r, g.g, blue.b, g.a);
+}
+
+// Lensfun's pa vignetting taken out, at strength `strength`: the gain is
+// (1 / (1 + k1 r² + k2 r⁴ + k3 r⁶))^strength, r = 1 at the corner of the
+// calibration frame (`norm` pixels). Linear light, colour × gain.
+float4 lensVignette(sample_t s, float2 center, float norm, float3 k, float strength, destination dest) {
+    float r2 = length_squared((dest.coord() - center) / norm);
+    float f = 1.0f + k.x * r2 + k.y * r2 * r2 + k.z * r2 * r2 * r2;
+    float gain = pow(1.0f / max(f, 0.05f), strength);
+    return float4(s.rgb * gain, s.a);
+}
+
 // What noise reduction removed, kept signed.
 float4 noiseResidual(sample_t original, sample_t denoised) {
     return float4(original.rgb - denoised.rgb, 1.0f);

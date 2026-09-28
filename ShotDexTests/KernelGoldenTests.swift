@@ -48,7 +48,7 @@ struct KernelGoldenTests {
     /// AC-2 counts forty kernels; every one of them has a case.
     @Test func everyKernelHasACase() {
         let kernels = Set(KernelGoldenCase.all.map(\.kernel))
-        #expect(kernels.count == 50)
+        #expect(kernels.count == 52)
         #expect(Set(KernelGoldenCase.all.map(\.name)).count == KernelGoldenCase.all.count)
     }
 
@@ -220,6 +220,26 @@ extension KernelGoldenCase {
         lensBlurGather("lensBlurBlade", shape: 2),
         lensBlurGather("lensBlurRing", shape: 3),
         lensBlurGather("lensBlurCatEye", shape: 4),
+        KernelGoldenCase(name: "lensCorrect", kernel: "lensCorrect") { input in
+            let table = LensCorrectionTable.make(
+                distortion: LensDistortionTerm(model: .ptlens, focal: 24, a: 0.012, b: -0.035, c: 0.01),
+                tca: LensTCATerm(model: .poly3, focal: 24, br: 0.002, cr: 0, vr: 1.003, bb: -0.002, cb: 0, vb: 0.997),
+                distortionStrength: 1.5, chromaticAberrationStrength: 1.5, maximumRadius: 1.6
+            )
+            return LensCorrectionPass.correctKernel?.apply(
+                extent: extent,
+                roiCallback: { index, rect in index == 0 ? rect.insetBy(dx: -8, dy: -8) : CGRect(x: 0, y: 0, width: 256, height: 1) },
+                arguments: [
+                    input(0).clampedToExtent(), table.image,
+                    CIVector(x: extent.midX, y: extent.midY), Float(extent.height / 2), Float(1.02),
+                    Float(table.maximumRadius), Float(LensCorrectionTable.sampleCount),
+                ]
+            )
+        },
+        color("lensVignette", { LensCorrectionPass.vignetteKernel }) {
+            [$0(0), CIVector(x: extent.midX, y: extent.midY), Float(extent.width * 0.6),
+             CIVector(x: -0.45, y: 0.1, z: -0.02), Float(1.5)]
+        },
         color("lensBlurLevels", { LensBlurRenderer.levelsKernel }) {
             [$0(0), $0(1), $0(2), $0(3), $0(0), $0(1), $0(2), $0(3), $0(1), Float(0.8), CIVector(x: 0.3, y: 0.7)]
         },

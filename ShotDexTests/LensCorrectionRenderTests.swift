@@ -49,4 +49,51 @@ struct LensCorrectionRenderTests {
         let plain = try await renderer.render(source: source, recipe: .identity).image
         #expect(LensBlurTests.meanDifference(stale, plain) <= 1)
     }
+
+    static let barrel = LensDistortionTerm(model: .ptlens, focal: 24, a: 0.012, b: -0.035, c: 0.01)
+    static let fringe = LensTCATerm(model: .poly3, focal: 24, br: 0.0004, cr: 0, vr: 1.0006, bb: -0.0003, cb: 0, vb: 0.9995)
+
+    /// A flat grey frame in linear light, as the first pass after decode sees it.
+    static func flatGrey(width: Int = 600, height: Int = 400) -> CIImage {
+        CIImage(color: CIColor(red: 0.25, green: 0.25, blue: 0.25, alpha: 1, colorSpace: CGColorSpace(name: CGColorSpace.linearSRGB)!)!)
+            .cropped(to: CGRect(x: 0, y: 0, width: width, height: height))
+    }
+
+    static func linearValue(_ image: CIImage, at point: CGPoint) -> Double {
+        var pixel = [Float](repeating: 0, count: 4)
+        CIContext().render(image, toBitmap: &pixel, rowBytes: 16, bounds: CGRect(x: point.x, y: point.y, width: 1, height: 1),
+                           format: .RGBAf, colorSpace: CGColorSpace(name: CGColorSpace.linearSRGB))
+        return Double(pixel[1])
+    }
+
+    /// 16a AC-a8. At 200 the distortion moves each point twice as far as at
+    /// 100, the red/blue offset doubles, and the vignetting gain squares.
+    @Test func twoHundredDoublesDisplacementSquaresGainDoublesCA() {
+        func table(_ s: Double) -> LensCorrectionTable {
+            .make(distortion: Self.barrel, tca: Self.fringe, distortionStrength: s,
+                  chromaticAberrationStrength: s, maximumRadius: 2)
+        }
+        let one = table(1), two = table(2)
+        for r in [0.4, 0.9, 1.3, 1.8] {
+            let a = one.scales(at: r), b = two.scales(at: r)
+            // Displacement in pixels at a 2000px normalisation radius.
+            let d1 = (a.green - 1) * r * 2000, d2 = (b.green - 1) * r * 2000
+            #expect(abs(d2 - 2 * d1) <= 0.5, "r \(r): \(d1) → \(d2) px")
+            let ca1 = a.red / a.green - 1, ca2 = b.red / b.green - 1
+            #expect(abs(ca2 - 2 * ca1) <= abs(ca1) * 0.01 + 1e-7, "red offset r \(r)")
+            let cb1 = a.blue / a.green - 1, cb2 = b.blue / b.green - 1
+            #expect(abs(cb2 - 2 * cb1) <= abs(cb1) * 0.01 + 1e-7, "blue offset r \(r)")
+        }
+
+        let term = LensVignettingTerm(focal: 24, aperture: 2.8, distance: 10, k1: -0.45, k2: 0.1, k3: -0.02)
+        func gain(_ s: Double) -> Double {
+            let image = LensCorrectionPass.applyVignetting(
+                term, strength: s, lensCropFactor: 1, cameraCropFactor: 1, calibrationAspect: 1.5, to: Self.flatGrey()
+            )
+            return Self.linearValue(image, at: CGPoint(x: 2, y: 2)) / Self.linearValue(image, at: CGPoint(x: 300, y: 200))
+        }
+        let g1 = gain(1), g2 = gain(2)
+        #expect(g1 > 1.05, "the corner is brightened")
+        #expect(abs(g2 - g1 * g1) <= g1 * g1 * 0.01, "gain² — \(g1) → \(g2)")
+    }
 }

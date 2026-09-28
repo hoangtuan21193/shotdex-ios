@@ -66,6 +66,12 @@ và ba mức độ mạnh tác động lên ảnh ra sao.
   trả một toạ độ cho cả ba kênh nên không tách được đỏ/lam; ba lượt warp tốn ~3× mỗi khung.
 - **Dạng chung** (đề xuất, chốt sau spike): mọi nguồn quy về một bảng theo bán kính cho ba mặt — tỉ lệ méo,
   gain tối góc, tỉ lệ bán kính đỏ và lam so với lục. Đa thức Lensfun/DNG lấy mẫu vào cùng bảng.
+  *Đã làm (2026-09-29):* `LensCorrectionTable` — 256 mẫu theo bán kính (đơn vị méo của Lensfun, nửa cạnh ngắn
+  khung hiệu chuẩn), mỗi mẫu là tỉ lệ bán kính nguồn/đích của đỏ · lục · lam, đã nhân độ mạnh và cộng Distortion
+  chỉnh tay; kernel `lensCorrect` đọc bảng 256×1 và lấy mẫu ba kênh ở ba toạ độ. Tối góc là pass riêng `lensVignette`
+  (gain^s) ở khe tối góc tuyến tính, trước Calibration; `pa` dùng r = 1 ở góc khung hiệu chuẩn như Lensfun ghi
+  (`libs/lensfun/modifier.cpp`), méo và TCA dùng nửa cạnh ngắn. Tối góc nội suy theo tiêu cự và 1/khẩu độ, bản đo
+  xa nhất. Ảnh chỉ có Distortion chỉnh tay (không hồ sơ) vẫn chạy kernel `lensWarp` cũ.
 - Bán kính quy về khung hiệu chuẩn như FS-03.11 §7 cho cả ba mặt; nguồn 1 dùng khung cảm biến của chính file.
 
 | Mặt | Ở độ mạnh s = slider / 100 | 0 | 200 |
@@ -102,7 +108,7 @@ Hai slider chỉnh tay của FS-03.15 cộng lên trên mọi nguồn: đó là 
 | AC-a5 | RAW hãng chưa đọc (Pentax PEF), ống không có trong Lensfun, bộ giải báo hỗ trợ | giải nguồn | nguồn = 3: phần của Apple theo công tắc, pass của ShotDex không chạy; kéo ba slider không đổi ảnh (lệch ≤ 1/255) | `LensCorrectionResolverTests.unsupportedMakerWithDecoderSupportIsBuiltIn` (seam `decoderSupportsLensCorrection`; ba slider 0 và 200 lệch ≤ 1/255) · ⚠️ file PEF thật trên sim: chưa |
 | AC-a6 | RAW có ống không có ở nguồn 1, 2, và bộ giải báo không hỗ trợ | render | nguồn = 4: phần của Apple và pass của ShotDex đều tắt; ảnh lệch ≤ 1/255 so với bản giải tắt sửa ống kính | `LensCorrectionResolverTests.noDecoderSupportIsNone` |
 | AC-a7 | ảnh nguồn 2 đủ ba mặt | đặt cả ba về 0 | ảnh lệch ≤ 1/255 so với công tắc tắt; zoom lấp = 1,0 | ⚠️ chưa có |
-| AC-a8 | cùng ảnh | đặt cả ba về 200 | dịch chuyển méo ở góc = 2× mức 100 (±0,5px); gain tối góc = bình phương mức 100 (±1%); lệch CA = 2× (±0,5px) | ⚠️ chưa có |
+| AC-a8 | cùng ảnh | đặt cả ba về 200 | dịch chuyển méo ở góc = 2× mức 100 (±0,5px); gain tối góc = bình phương mức 100 (±1%); lệch CA = 2× (±0,5px) | `LensCorrectionRenderTests.twoHundredDoublesDisplacementSquaresGainDoublesCA` (bảng: dịch ±0,5px, lệch CA ±1%; render tối góc: gain² ±1%) · golden `lensCorrect`, `lensVignette` |
 | AC-a9 | ảnh phẳng 18% tuyến tính, tối góc tổng hợp góc 50%, hồ sơ khớp | render RAW ở Exposure 0 rồi +1 EV | tỉ số góc/tâm đo tuyến tính = 1,00 ± 0,01 ở **cả hai** mức Exposure | ⚠️ chưa có |
 | AC-a10 | ống hiệu chuẩn crop 1,0 trên thân crop 1,53; và ống chỉ hiệu chuẩn crop 1,53 trên thân full frame | giải nguồn | ca đầu: nguồn 2, dịch góc bằng giá trị hồ sơ ở r = 1/1,53 bán kính góc full frame (±0,5px); ca sau: không tự khớp | `LensProfileTests.smallerSensorCalibrationIsNotAutoMatched` · `…normalizationFollowsTheCalibrationFrame` (cùng bán kính chuẩn hoá cho cả ba mặt) |
 | AC-a11 | HEIC iPhone 17 Pro | mở editor | nguồn = 4, không có bước sửa ống kính; ảnh giống bản không sửa | `LensCorrectionResolverTests.iPhoneHEICResolvesToNone` (nguồn 4 + render bằng bản tắt ≤ 1/255) |

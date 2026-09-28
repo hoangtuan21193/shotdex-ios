@@ -491,6 +491,9 @@ public actor PhotoRenderService {
         for pass in preMaskPasses {
             switch pass {
             case .manualLensVignetting:
+                // The profile's vignetting first, then the manual slider —
+                // both in linear light before tone (FS-03.16a §5).
+                image = applyProfileVignetting(of: recipe, source: source, to: image)
                 image = applyManualLensVignetting(recipe.adjustments, to: image)
             case .calibration: image = applyCalibration(recipe.color.calibration, to: image)
             case .light:
@@ -2015,6 +2018,46 @@ public actor PhotoRenderService {
 
     /// Mixes the filtered image back over the unfiltered one so a preset can be
     /// dialled in instead of being all-or-nothing.
+    /// The Lensfun lens this render corrects with: the switch on, a Lensfun
+    /// source for some aspect, a lens the table still has; not RAW yet
+    /// (FS-03.16a T17).
+    static func profileLens(of recipe: PhotoEditRecipe, source: PhotoRenderSourceInfo) -> LensfunLens? {
+        guard let choice = recipe.lensProfile, !source.isRAW, recipe.adjustments.lensCorrection >= 0.5,
+              [choice.distortionSource, choice.vignettingSource, choice.chromaticAberrationSource].contains(.lensfun),
+              let lensID = choice.lensID
+        else { return nil }
+        return LensProfileLibrary.shared.lens(id: lensID)
+    }
+
+    /// The f-number the photo was taken at, from its EXIF.
+    static func exifAperture(_ properties: [CFString: Any]) -> Double? {
+        let exif = properties[kCGImagePropertyExifDictionary] as? [CFString: Any]
+        return (exif?[kCGImagePropertyExifFNumber] as? NSNumber)?.doubleValue
+    }
+
+    /// Lensfun's pa vignetting at the photo's focal and aperture, raised to
+    /// the Vignetting strength (gain^s, 16a §5).
+    static func applyProfileVignetting(
+        of recipe: PhotoEditRecipe,
+        source: PhotoRenderSourceInfo,
+        to image: CIImage
+    ) -> CIImage {
+        guard let lens = profileLens(of: recipe, source: source),
+              let choice = recipe.lensProfile, choice.vignettingSource == .lensfun
+        else { return image }
+        let focal = exifFocalLength(source.properties) ?? lens.vignetting.first?.focal ?? 0
+        let aperture = exifAperture(source.properties) ?? lens.vignetting.first?.aperture ?? 8
+        guard let term = lens.vignetting(atFocal: focal, aperture: aperture) else { return image }
+        return LensCorrectionPass.applyVignetting(
+            term,
+            strength: recipe.adjustments.lensVignettingScale,
+            lensCropFactor: lens.cropFactor,
+            cameraCropFactor: choice.cameraCropFactor,
+            calibrationAspect: lens.calibrationAspect,
+            to: image
+        )
+    }
+
     /// The recipe's lens profile, if it has one and the source is not RAW
     /// (the RAW decoder corrects its own lenses), plus the manual Distortion,
     /// which applies to every source. First of the geometry passes, so
@@ -2027,18 +2070,24 @@ public actor PhotoRenderService {
         let manual = recipe.adjustments.lensManualDistortion
         // The one Lens Correction switch turns the profile off with every
         // other source (FS-03.16a §6); the manual slider is not a profile.
-        if let choice = recipe.lensProfile, !source.isRAW, recipe.adjustments.lensCorrection >= 0.5,
-           choice.distortionSource == .lensfun, let lensID = choice.lensID,
-           let lens = LensProfileLibrary.shared.lens(id: lensID),
-           let term = lens.distortion(atFocal: exifFocalLength(source.properties) ?? lens.distortion.first?.focal ?? 0) {
-            return applyLensProfile(
-                term,
-                lensCropFactor: lens.cropFactor,
-                cameraCropFactor: choice.cameraCropFactor,
-                calibrationAspect: lens.calibrationAspect,
-                manualDistortion: manual,
-                to: image
-            )
+        if let lens = profileLens(of: recipe, source: source) {
+            let choice = recipe.lensProfile!
+            let focal = exifFocalLength(source.properties) ?? lens.distortion.first?.focal ?? lens.tca.first?.focal ?? 0
+            let term = choice.distortionSource == .lensfun ? lens.distortion(atFocal: focal) : nil
+            let tca = choice.chromaticAberrationSource == .lensfun ? lens.chromaticAberration(atFocal: focal) : nil
+            if term != nil || tca != nil {
+                return LensCorrectionPass.apply(
+                    distortion: term,
+                    tca: tca,
+                    distortionStrength: recipe.adjustments.lensDistortionScale,
+                    chromaticAberrationStrength: recipe.adjustments.lensChromaticAberrationScale,
+                    lensCropFactor: lens.cropFactor,
+                    cameraCropFactor: choice.cameraCropFactor,
+                    calibrationAspect: lens.calibrationAspect,
+                    manualDistortion: manual,
+                    to: image
+                )
+            }
         }
         guard abs(manual) > 0.0001 else { return image }
         return applyLensProfile(

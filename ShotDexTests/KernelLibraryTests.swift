@@ -38,6 +38,8 @@ struct KernelLibraryTests {
             ("lensBlurSlice", LensBlurRenderer.sliceKernel),
             ("lensBlurGather", LensBlurRenderer.gatherKernel),
             ("lensBlurLevels", LensBlurRenderer.levelsKernel),
+            ("lensCorrect", LensCorrectionPass.correctKernel),
+            ("lensVignette", LensCorrectionPass.vignetteKernel),
             ("focusDecision", PhotoStackRenderer.decisionKernel),
             ("focusPeak", PhotoStackRenderer.peakKernel),
             ("focusWeightedColour", PhotoStackRenderer.weightedColourKernel),
@@ -63,7 +65,7 @@ struct KernelLibraryTests {
             ("luminanceKey", VideoMaskRenderer.luminanceKeyKernel),
             ("colorKey", VideoMaskRenderer.colorKeyKernel),
         ]
-        #expect(kernels.count == 50)
+        #expect(kernels.count == 52)
         for (name, kernel) in kernels {
             #expect(kernel != nil, "\(name) did not load")
         }
