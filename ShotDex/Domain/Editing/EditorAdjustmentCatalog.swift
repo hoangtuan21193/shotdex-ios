@@ -73,6 +73,8 @@ enum EditorAdjustmentCatalog {
         .defringeGreenHueMinimum,
         .defringeGreenHueMaximum,
         .lensManualVignettingMidpoint,
+        .maskMoire,
+        .maskDefringe,
         .rawSharpness,
         .rawLuminanceNoise,
         .rawColorNoise,
@@ -121,7 +123,7 @@ enum EditorAdjustmentCatalog {
 
     /// Kinds that only exist inside a mask: Lightroom's masks have a Hue its
     /// global panel does not.
-    static let maskOnlyKinds: Set<PhotoAdjustmentKind> = [.maskHue]
+    static let maskOnlyKinds: Set<PhotoAdjustmentKind> = [.maskHue, .maskMoire, .maskDefringe]
 
     /// Whether a row is live given the values around it. Paint Overlay has no
     /// highlight protection to tune, so its Highlights row goes quiet too.
@@ -171,7 +173,7 @@ enum EditorAdjustmentCatalog {
                     .definition,
                     .noiseReduction, .noiseDetail, .noiseContrast,
                     .colorNoiseReduction, .colorNoiseDetail, .colorNoiseSmoothness,
-                ]
+                ] + (scope == .mask ? [.maskMoire, .maskDefringe] : [])
             ),
             EditorAdjustmentGroup(
                 id: .effects,

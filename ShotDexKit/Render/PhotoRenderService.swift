@@ -517,7 +517,31 @@ public actor PhotoRenderService {
         if let tint = mask.tint { result = applyTint(tint, to: result) }
         if let points = mask.pointColors, !points.isEmpty { result = applyPointColors(points, to: result) }
         if let curve = mask.curve, !curve.isIdentity { result = applyCurve(curve, to: result) }
+        result = applyMoire(mask.adjustments.maskMoire, to: result)
+        result = applyMaskDefringe(mask.adjustments.maskDefringe, to: result)
         return result
+    }
+
+    /// Moiré: fine colour stripes flattened by moving chroma toward a 4px blur
+    /// of it — the same kernel as Color Smoothness, luminance untouched.
+    public static func applyMoire(_ amount: Double, to image: CIImage) -> CIImage {
+        guard amount > 0.001, let blend = chromaBlendKernel else { return image }
+        let wide = blurred(image, radius: 4)
+        return blend.apply(extent: image.extent, arguments: [image, wide, min(1, amount)]) ?? image
+    }
+
+    /// A mask's Defringe: the global Defringe's edge-only pull toward grey,
+    /// with both bands opened to take in every hue.
+    static func applyMaskDefringe(_ amount: Double, to image: CIImage) -> CIImage {
+        guard amount > 0.001 else { return image }
+        var everyHue = PhotoAdjustments()
+        everyHue.defringePurpleAmount = amount
+        everyHue.defringePurpleHueMinimum = 0
+        everyHue.defringePurpleHueMaximum = 1
+        everyHue.defringeGreenAmount = amount
+        everyHue.defringeGreenHueMinimum = 0
+        everyHue.defringeGreenHueMaximum = 1
+        return applyDefringe(everyHue, to: image, bandStarts: (purple: 180, green: 0), bandSpan: 180)
     }
 
     /// A mask's Color: the tint's chroma — its colour minus its own Rec. 709

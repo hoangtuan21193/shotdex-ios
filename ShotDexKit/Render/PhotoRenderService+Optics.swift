@@ -119,6 +119,18 @@ public extension PhotoRenderService {
     /// Hue rows 0…1 are Lightroom's 0…100 over 230°…350° (purple) and
     /// 60°…180° (green).
     static func applyDefringe(_ adjustments: PhotoAdjustments, to input: CIImage) -> CIImage {
+        applyDefringe(adjustments, to: input, bandStarts: (purple: 230, green: 60), bandSpan: 120)
+    }
+
+    /// `bandStarts` and `bandSpan` in degrees: where each band's 0…1 hue rows
+    /// begin and how far they reach. A mask's Defringe opens them to 180°
+    /// each so every hue is in one band or the other.
+    static func applyDefringe(
+        _ adjustments: PhotoAdjustments,
+        to input: CIImage,
+        bandStarts: (purple: Double, green: Double),
+        bandSpan: Double
+    ) -> CIImage {
         let purpleAmount = min(1, max(0, adjustments.defringePurpleAmount))
         let greenAmount = min(1, max(0, adjustments.defringeGreenAmount))
         guard purpleAmount > 0.001 || greenAmount > 0.001,
@@ -132,17 +144,17 @@ public extension PhotoRenderService {
         let edgeMap = blurred(grown, radius: 1)
 
         func band(_ amount: Double, _ hues: ClosedRange<Double>, from start: Double) -> CIVector {
-            CIVector(x: min(1, amount * 1.6), y: start + hues.lowerBound * 120, z: start + hues.upperBound * 120)
+            CIVector(x: min(1, amount * 1.6), y: start + hues.lowerBound * bandSpan, z: start + hues.upperBound * bandSpan)
         }
         let purple = band(
             purpleAmount,
             defringeHueBand(minimum: adjustments.defringePurpleHueMinimum, maximum: adjustments.defringePurpleHueMaximum),
-            from: 230
+            from: bandStarts.purple
         )
         let green = band(
             greenAmount,
             defringeHueBand(minimum: adjustments.defringeGreenHueMinimum, maximum: adjustments.defringeGreenHueMaximum),
-            from: 60
+            from: bandStarts.green
         )
         return kernel.apply(extent: extent, arguments: [input, edgeMap, purple, green]) ?? input
     }

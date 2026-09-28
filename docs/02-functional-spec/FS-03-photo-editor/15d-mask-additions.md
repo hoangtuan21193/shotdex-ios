@@ -35,6 +35,10 @@ Danh sách slider của mask (một danh sách dài như Edit) thêm:
 | Detail | **Moiré** 0…100 | làm mờ sắc độ tần số cao dạng vân, không đụng độ sáng |
 | Detail | **Defringe** ±100 | dương khử viền màu mọi hue trong mask; âm che mask khỏi Defringe toàn cục |
 
+*Hôm nay (2026-09-28): Moiré = kéo sắc độ về bản mờ 4px (kernel `chromaBlend`, như Color Smoothness). Defringe
+của mask mới có nửa **dương** (0…100, cả hai dải hue mở 180° để gồm mọi hue); nửa âm — che mask khỏi Defringe toàn
+cục — cần ảnh trước Defringe trong chặng mask, chưa làm.*
+
 - Thứ tự trong một mask: bộ chỉnh chuẩn → Hue → Color → Point Color → Curve → Moiré → Defringe → trộn theo
   matte. Kernel màu áp trong vùng con phải để yên pixel xa (FS-16 §5).
 - **Bỏ khỏi mask**: B&W, Vignette, Grain — Lightroom cũng không có (FS-03.15 §3). Bộ chỉnh chuẩn còn Light ·
@@ -109,7 +113,7 @@ trong báo cáo import (FS-03.14). Mask còn lại của correction vẫn nhập
 | AC-42 | ảnh 256×256, mask Radial ở ô 64×64 góc trên trái, thêm Exposure +0,5 toàn cục | đặt Hue +30 cho mask | hue trong mask đổi ≥ 10°; khối 32×32 quanh (0,875; 0,875) bằng bản không Hue ± 1/255 | `MaskLocalColorTests.hueStaysInsideTheMask` · `…hueRotationKeepsLuminance` · hàng: `ShotDexUITests/scripts/iphone-mask-hue.json` |
 | AC-43 | vùng xám 0,5 trong mask | đặt Color hue 30°, độ bão hoà 50 | pixel trong mask có hue 30° ± 5°; độ sáng Rec.709 lệch ≤ 1/255 | `MaskLocalColorTests.colorTintIsLuminanceNeutral` · `…noTintWritesNoKey` · ô + bánh xe: `ShotDexUITests/scripts/iphone-mask-color.json` |
 | AC-44 | dải xám trong mask nửa trái, curve toàn cục Soft S | đặt curve của mask: điểm (0,5; 0,4) | nửa trái mức 0,5 ra 0,4 ± 2/255 sau Soft S; nửa phải bằng bản chỉ có Soft S ± 1/255 | `MaskLocalCurveTests.maskCurveOnlyInside` · `…editCurveWritesTheMaskCurve` · luồng Edit Curve: `ShotDexUITests/scripts/iphone-mask-curve.json` |
-| AC-45 | vân moiré màu tổng hợp (sọc lục/tím 3px cùng độ sáng) trong mask | đặt Moiré 80 | phương sai sắc độ trong mask còn ≤ 50%; độ sáng lệch ≤ 1/255; ngoài mask không đổi | ⚠️ chưa có (dự kiến `MaskLocalDetailTests.moireFlattensColourStripes`) |
+| AC-45 | vân moiré màu tổng hợp (sọc lục/tím 3px cùng độ sáng) trong mask | đặt Moiré 80 | phương sai sắc độ trong mask còn ≤ 50%; độ sáng lệch ≤ 1/255; ngoài mask không đổi | `MaskLocalDetailTests.moireFlattensColourStripes` · `…maskDefringeTakesEveryHue` · hàng: `ShotDexUITests/scripts/iphone-mask-detail.json` |
 | AC-46 | ảnh CC0 không người, hai vật tách rời | chạm Object vào vật 1 | IoU với đối tượng 1 của Vision ≥ 0,9; phủ vật 2 ≤ 5% | ⚠️ chưa có — cần máy thật hoặc Vision của Mac (dự kiến `ObjectMaskTests.tapPicksOneObject`) |
 | AC-47 | ảnh có 2 người (hình nộm/manơcanh, không mặt thật) | mở People | có đúng 3 hàng: All People · Person 1 · Person 2, thứ tự theo diện tích | ⚠️ chưa có — cần máy thật (dự kiến `PeopleMaskTests.onePersonRowPerPerson`) + ảnh New Mask |
 | AC-48 | ảnh HEIC không có matte ngữ nghĩa | People → Person 1 → chạm Hair | không tạo mask; hàng Hair mờ 35% và hiện "Needs a Portrait photo taken on iPhone" 3s | ⚠️ chưa có (dự kiến `PeopleMaskTests.hairIsGatedOnTheMatte`) + `ShotDexUITests/scripts/iphone-people-mask.json` |
@@ -118,5 +122,5 @@ trong báo cáo import (FS-03.14). Mask còn lại của correction vẫn nhập
 | AC-51 | ảnh có mask Object đã tạo | đóng rồi mở lại ảnh; rồi xoá file matte và mở lần nữa | lần 2: Vision chạy 0 lần, matte khớp từng pixel lần 1; lần 3: tính lại, không alert | ⚠️ chưa có (dự kiến `GeneratedMatteStoreTests.reopenReadsTheSavedMatte`, Vision giả) |
 | AC-52 | editor, chưa có mask, iPhone 17 26.5 và 18.6 | mở Mask | lưới 4 cột đủ 14 ô đúng thứ tự §3; Face Skin, Eyes, Lips nằm ngoài People | ⚠️ chưa có (`ShotDexUITests/scripts/iphone-people-mask.json` + element dump) |
 
-**Chưa chứng minh được:** AC-45…AC-52 (chưa code). Point Color và Defringe của mask không có AC riêng —
+**Chưa chứng minh được:** AC-46…AC-52 (chưa code). Point Color và Defringe của mask không có AC riêng —
 dùng lại pass toàn cục, phủ bởi golden kernel FS-16 khi port.

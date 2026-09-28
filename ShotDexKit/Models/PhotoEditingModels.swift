@@ -450,6 +450,11 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
     /// A mask's own Hue, −1…1 = ±180° round the whole wheel, luminance kept
     /// (FS-03.15d §2). Mask-only: Lightroom has no global Hue.
     case maskHue
+    /// A mask's Moiré, 0…1: fine colour stripes flattened, luminance kept.
+    case maskMoire
+    /// A mask's Defringe, 0…1: colour fringes of every hue cleared at edges
+    /// inside the mask (FS-03.15d §2).
+    case maskDefringe
     case rawTemperature
     case rawTint
     case rawLuminanceNoise
@@ -515,6 +520,8 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         case .geoOffsetY: "Offset Y"
         case .geoConstrainCrop: "Constrain Crop"
         case .maskHue: "Hue"
+        case .maskMoire: "Moiré"
+        case .maskDefringe: "Defringe"
         case .rawTemperature: "RAW White Balance"
         case .rawTint: "RAW Tint"
         case .rawLuminanceNoise: "RAW Luminance Noise"
@@ -577,6 +584,8 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         case .geoOffsetY: "arrow.up.and.down"
         case .geoConstrainCrop: "crop"
         case .maskHue: "paintpalette"
+        case .maskMoire: "circle.hexagongrid"
+        case .maskDefringe: "circle.dashed"
         case .rawTemperature: "thermometer.medium"
         case .rawTint: "slider.horizontal.2.square"
         case .rawLuminanceNoise: "sparkles.rectangle.stack"
@@ -595,7 +604,7 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
              .vignetteHighlights, .chromaticAberration,
              .defringePurpleAmount, .defringePurpleHueMinimum, .defringePurpleHueMaximum,
              .defringeGreenAmount, .defringeGreenHueMinimum, .defringeGreenHueMaximum,
-             .lensManualVignettingMidpoint, .geoConstrainCrop: 0...1
+             .lensManualVignettingMidpoint, .geoConstrainCrop, .maskMoire, .maskDefringe: 0...1
         case .exposure: -2...2
         default: -1...1
         }
@@ -777,6 +786,8 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
     public var geoOffsetY = 0.0
     public var geoConstrainCrop = 0.0
     public var maskHue = 0.0
+    public var maskMoire = 0.0
+    public var maskDefringe = 0.0
     public var rawTemperature = 0.0
     public var rawTint = 0.0
     public var rawLuminanceNoise = 0.0
@@ -843,6 +854,8 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .geoOffsetY: geoOffsetY
             case .geoConstrainCrop: geoConstrainCrop
             case .maskHue: maskHue
+            case .maskMoire: maskMoire
+            case .maskDefringe: maskDefringe
             case .rawTemperature: rawTemperature
             case .rawTint: rawTint
             case .rawLuminanceNoise: rawLuminanceNoise
@@ -907,6 +920,8 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .geoOffsetY: geoOffsetY = newValue
             case .geoConstrainCrop: geoConstrainCrop = newValue
             case .maskHue: maskHue = newValue
+            case .maskMoire: maskMoire = newValue
+            case .maskDefringe: maskDefringe = newValue
             case .rawTemperature: rawTemperature = newValue
             case .rawTint: rawTint = newValue
             case .rawLuminanceNoise: rawLuminanceNoise = newValue
