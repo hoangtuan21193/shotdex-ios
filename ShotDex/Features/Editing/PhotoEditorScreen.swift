@@ -2697,7 +2697,14 @@ struct PhotoEditorScreen: View {
                 EditorAdjustmentGroupsView(
                     controller: controller,
                     chrome: chrome,
-                    groups: groups,
+                    // The section above owns the Lens Correction switch.
+                    groups: groups.map { group in
+                        EditorAdjustmentGroup(
+                            id: group.id,
+                            title: group.title,
+                            kinds: group.kinds.filter { $0 != .lensCorrection }
+                        )
+                    },
                     isScrollable: isScrollable
                 )
             }

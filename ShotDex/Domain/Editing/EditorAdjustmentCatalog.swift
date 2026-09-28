@@ -200,7 +200,10 @@ enum EditorAdjustmentCatalog {
                 EditorAdjustmentGroup(
                     id: .lensProfile,
                     title: "Lens Profile",
-                    kinds: [.lensDistortionScale, .lensVignettingScale, .lensChromaticAberrationScale]
+                    // The switch is one for every source, RAW and JPEG alike
+                    // (FS-03.16b §1); the Optics section draws it above the
+                    // status row, so the generic rows skip it.
+                    kinds: [.lensCorrection, .lensDistortionScale, .lensVignettingScale, .lensChromaticAberrationScale]
                 )
             )
             groups.append(
@@ -245,7 +248,6 @@ enum EditorAdjustmentCatalog {
                         .rawSharpness,
                         .rawLuminanceNoise,
                         .rawColorNoise,
-                        .lensCorrection,
                     ]
                 )
             )
@@ -315,7 +317,7 @@ enum EditorAdjustmentCatalog {
         case .rawLuminanceNoise: "Lum Noise"
         case .rawColorNoise: "Color Noise"
         case .rawSharpness: "RAW Sharpen"
-        case .lensCorrection: "Lens"
+        case .lensCorrection: "Lens Correction"
         default: kind.displayName
         }
     }

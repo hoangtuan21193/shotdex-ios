@@ -130,10 +130,28 @@ struct EditorAdjustmentCatalogTests {
         #expect(EditorAdjustmentCatalog.shortTitle(of: .sharpenMasking) == "Masking")
     }
 
+    /// FS-03.16 AC-7. The RAW group has no lens row any more: one Lens
+    /// Correction switch, in Optics, for RAW and JPEG alike; the strengths
+    /// read 0–200 around 100.
+    @Test func rawGroupHasNoLensRow() {
+        let raw = EditorAdjustmentCatalog.groups(isRAWSource: true, scope: .global).first { $0.id == .raw }
+        #expect(raw != nil && raw?.kinds.contains(.lensCorrection) == false)
+        let switches = EditorAdjustmentCatalog.groups(isRAWSource: true, scope: .global)
+            .flatMap(\.kinds).filter { $0 == .lensCorrection }
+        #expect(switches.count == 1)
+        #expect(!PhotoAdjustmentKind.lensCorrection.isRAWOnly && !PhotoAdjustmentKind.lensCorrection.affectsRAWDemosaic)
+        #expect(EditorAdjustmentCatalog.displayText(1, of: .lensDistortionScale) == "100")
+        #expect(EditorAdjustmentCatalog.displayText(2, of: .lensVignettingScale) == "200")
+        #expect(EditorAdjustmentCatalog.accessibilityName(of: .lensDistortionScale) == "Distortion, Lens Profile")
+    }
+
     @Test func opticsAndGeoAreGlobalOnlyGroups() {
         let global = EditorAdjustmentCatalog.groups(isRAWSource: false, scope: .global)
         #expect(global.map(\.id).contains(.optics))
         #expect(global.map(\.id).contains(.geo))
+        #expect(global.first { $0.id == .lensProfile }?.kinds == [
+            .lensCorrection, .lensDistortionScale, .lensVignettingScale, .lensChromaticAberrationScale,
+        ])
         #expect(global.first { $0.id == .lensManual }?.kinds == [
             .lensManualDistortion, .lensManualVignetting, .lensManualVignettingMidpoint,
         ])

@@ -13,19 +13,19 @@ struct EditorLensProfileSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if controller.isRAWSource {
-                note("RAW photos are corrected by the RAW decoder — Lens Correction under Detail.")
-            } else {
-                EditorToggleRow(
-                    title: "Lens Profile",
-                    isOn: controller.recipe.lensProfile != nil
-                ) { isOn in
-                    if isOn, controller.lensProfileMatch == nil {
-                        isPickerPresented = true
-                    } else {
-                        controller.setLensProfileEnabled(isOn)
-                    }
+            // One switch for every source, RAW and JPEG (FS-03.16b §1).
+            EditorToggleRow(
+                title: "Lens Correction",
+                isOn: controller.isLensCorrectionOn
+            ) { isOn in
+                if isOn, !controller.isRAWSource, controller.recipe.lensProfile == nil,
+                   controller.lensProfileMatch == nil {
+                    isPickerPresented = true
+                } else {
+                    controller.setLensCorrectionEnabled(isOn)
                 }
+            }
+            if !controller.isRAWSource {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(statusText)
                         .font(EditorTheme.maskSubtitle)

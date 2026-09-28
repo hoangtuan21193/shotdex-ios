@@ -1508,17 +1508,23 @@ final class PhotoEditorController {
         lensCameraMount = mount
     }
 
-    /// On uses the lens found from EXIF; off removes the correction. One step.
-    func setLensProfileEnabled(_ isOn: Bool) {
+    /// The one Lens Correction switch (FS-03.16a §6): on for a RAW by
+    /// default; a JPEG is on once it has a lens to correct with.
+    var isLensCorrectionOn: Bool {
+        recipe.adjustments.lensCorrection >= 0.5 && (isRAWSource || recipe.lensProfile != nil)
+    }
+
+    /// Flips the switch, one step. A JPEG switched on with no lens yet takes
+    /// the one found from EXIF.
+    func setLensCorrectionEnabled(_ isOn: Bool) {
         recordHistory()
-        if isOn, let match = lensProfileMatch {
+        recipe.adjustments.lensCorrection = isOn ? 1 : 0
+        if isOn, recipe.lensProfile == nil, !isRAWSource, let match = lensProfileMatch {
             recipe.lensProfile = PhotoLensProfileChoice(
                 lensID: match.lens.id,
                 cameraCropFactor: match.cameraCropFactor,
                 isAutomatic: true
             )
-        } else {
-            recipe.lensProfile = nil
         }
         scheduleRender()
     }
@@ -1526,6 +1532,7 @@ final class PhotoEditorController {
     /// A lens the user picked, for when EXIF found none or the wrong one.
     func chooseLensProfile(_ lens: LensfunLens) {
         recordHistory()
+        recipe.adjustments.lensCorrection = 1
         recipe.lensProfile = PhotoLensProfileChoice(
             lensID: lens.id,
             cameraCropFactor: LensProfileMatcher().cameraCropFactor(lensQuery),

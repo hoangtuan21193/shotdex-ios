@@ -104,7 +104,7 @@ nắn méo, và preset Lightroom mang ba mức độ mạnh không có chỗ đ�
 | AC-4 | `.xmp` có Enable 1, Setup Custom, Name "Adobe (Canon EF 24-70mm f/2.8L II USM)", ba mức 80/120/100 | nhập và áp lên CR3 chụp bằng ống đó | công tắc bật, ống là dòng Lensfun cùng tên, ba slider 80/120/100, báo cáo ghi ✓ | ⚠️ chưa có |
 | AC-5 | `.xmp` như AC-4 nhưng Name "Adobe (Foo 13mm f/1.1)" | nhập và áp lên cùng CR3 | ba mức 80/120/100 giữ nguyên, nguồn tự giải theo §3, báo cáo có một dòng ≈ nêu "Foo 13mm f/1.1", không crash | ⚠️ chưa có |
 | AC-6 | recipe trỏ tới id ống không còn trong bảng (sau một lần làm mới) | mở ảnh trong editor | render không có bước sửa theo hồ sơ, không crash; panel hiện "No profile for this lens yet" + Choose Lens | ⚠️ chưa có |
-| AC-7 | RAW nguồn 3 (phần sửa của Apple) và JPEG nguồn 2, cùng recipe | tắt công tắc Lens Correction | cả hai ảnh mất sửa ống kính; danh mục thông số không còn thang RAW riêng nào điều khiển phần của Apple | ⚠️ chưa có |
+| AC-7 | RAW nguồn 3 (phần sửa của Apple) và JPEG nguồn 2, cùng recipe | tắt công tắc Lens Correction | cả hai ảnh mất sửa ống kính; danh mục thông số không còn thang RAW riêng nào điều khiển phần của Apple | `EditorAdjustmentCatalogTests.rawGroupHasNoLensRow` · `LensCorrectionRenderTests.switchOffDisablesBuiltInAndProfile` (JPEG nguồn 2) · `iphone-optics-lens.json` · ⚠️ nửa RAW nguồn 3 (cờ `isLensCorrectionEnabled = công tắc && usesAppleBuiltIn`) chưa có file RAW trên sim |
 
 **Chưa chứng minh được:** AC-1 → AC-7 (chưa có code). AC của từng phần ở 16a §7 và 16b §5.
 

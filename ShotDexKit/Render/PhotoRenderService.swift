@@ -2025,7 +2025,9 @@ public actor PhotoRenderService {
         to image: CIImage
     ) -> CIImage {
         let manual = recipe.adjustments.lensManualDistortion
-        if let choice = recipe.lensProfile, !source.isRAW,
+        // The one Lens Correction switch turns the profile off with every
+        // other source (FS-03.16a §6); the manual slider is not a profile.
+        if let choice = recipe.lensProfile, !source.isRAW, recipe.adjustments.lensCorrection >= 0.5,
            choice.distortionSource == .lensfun, let lensID = choice.lensID,
            let lens = LensProfileLibrary.shared.lens(id: lensID),
            let term = lens.distortion(atFocal: exifFocalLength(source.properties) ?? lens.distortion.first?.focal ?? 0) {
