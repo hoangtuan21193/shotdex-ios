@@ -125,6 +125,15 @@ struct LensProfileMatcher {
         }
         guard !candidates.isEmpty else { return nil }
 
+        // A row calibrated on a smaller sensor than this body never measured
+        // the corners this photo has (FS-03.16a §2): not matched on its own.
+        // A pick by hand still can.
+        let cameraCrop = camera?.cropFactor
+            ?? query.focal35.flatMap { f35 in query.focal.map { f35 / $0 } }
+            ?? 1
+        candidates = candidates.filter { $0.cropFactor <= cameraCrop + 0.05 }
+        guard !candidates.isEmpty else { return nil }
+
         if let mount = camera?.mount {
             let onMount = candidates.filter { $0.mounts.contains(mount) }
             if !onMount.isEmpty { candidates = onMount }
@@ -143,9 +152,6 @@ struct LensProfileMatcher {
             lhs.score != rhs.score ? lhs.score < rhs.score : lhs.lens.model > rhs.lens.model
         }) else { return nil }
 
-        let cameraCrop = camera?.cropFactor
-            ?? query.focal35.flatMap { f35 in query.focal.map { f35 / $0 } }
-            ?? 1
         return LensProfileMatch(
             lens: top.lens,
             cameraCropFactor: cameraCrop,

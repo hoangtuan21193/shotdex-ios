@@ -191,6 +191,31 @@ struct LensProfileTests {
         #expect(abs(mixed - 1125) > 50, "not simply half the 4:3 short side")
     }
 
+    /// FS-03.16a AC-a10. A lens calibrated full frame fits an APS-C body; a
+    /// row calibrated on APS-C (crop 1.53) is not matched on a full-frame
+    /// body, whose corners it never measured.
+    @Test func smallerSensorCalibrationIsNotAutoMatched() throws {
+        let table = """
+        {"cameras":[
+          {"maker":"Sony","aliases":["ILCE-7M4"],"mount":"Sony E","cropFactor":1.0},
+          {"maker":"Sony","aliases":["ILCE-6400"],"mount":"Sony E","cropFactor":1.53}],
+         "lenses":[
+          {"maker":"Sony","model":"E 35mm f/1.8 OSS","aliases":["E 35mm f/1.8 OSS"],"mounts":["Sony E"],
+           "cropFactor":1.53,"distortion":[{"model":"poly3","focal":35,"k1":-0.01}]},
+          {"maker":"Sony","model":"FE 50mm f/1.8","aliases":["FE 50mm f/1.8"],"mounts":["Sony E"],
+           "cropFactor":1.0,"distortion":[{"model":"poly3","focal":50,"k1":-0.02}]}]}
+        """
+        let library = LensProfileLibrary(data: Data(table.utf8))
+        let matcher = LensProfileMatcher(library: library)
+        let apsLensOnFullFrame = LensQuery(cameraMake: "Sony", cameraModel: "ILCE-7M4", lensModel: "E 35mm F1.8 OSS")
+        #expect(matcher.match(apsLensOnFullFrame) == nil)
+        let apsLensOnAPS = LensQuery(cameraMake: "Sony", cameraModel: "ILCE-6400", lensModel: "E 35mm F1.8 OSS")
+        #expect(matcher.match(apsLensOnAPS)?.lens.model == "E 35mm f/1.8 OSS")
+        let fullFrameLensOnAPS = LensQuery(cameraMake: "Sony", cameraModel: "ILCE-6400", lensModel: "FE 50mm F1.8")
+        let match = try #require(matcher.match(fullFrameLensOnAPS))
+        #expect(match.lens.model == "FE 50mm f/1.8" && match.cameraCropFactor == 1.53)
+    }
+
     @Test func calibrationAspectIsReadFromTheTable() throws {
         let lenses = LensProfileLibrary.shared.lenses
         let fourThirds = try #require(lenses.first { $0.aspectRatio == "4:3" })
