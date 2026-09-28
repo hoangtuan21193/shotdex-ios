@@ -1,83 +1,79 @@
 import SwiftUI
 import ShotDexKit
 
-/// The point tone curve, drawn over the photo while the Curve group is open —
-/// Snapseed's model rather than a separate screen, so every drag is judged on the
-/// picture it changes. A square plot centred on the image carries the photo's own
-/// histogram behind the curve, a thirds grid, the identity diagonal, the live
-/// curve and its draggable control points. Drag a point to move it (endpoints
-/// slide along their edge, interior points stay between their neighbours); drag on
-/// empty graph to drop a new point; double-tap a point to remove it. While a finger
-/// is down the plot fades almost away — only the curve and the grabbed point stay
-/// as a faint trace — so the photo behind it is what the eye reads; it comes back
-/// the moment the finger lifts. The channel chips live in the panel below.
-struct EditorCurveOverlay: View {
+/// The point tone curve as a square plot inside the panel (FS-03.13b §2) —
+/// never over the photo, at any layout, so every drag is judged on a picture
+/// nothing covers. The plot carries the photo's own histogram behind the
+/// curve, a thirds grid, the identity diagonal, the live curve and its
+/// draggable control points. Drag a point to move it (endpoints slide along
+/// their edge, interior points stay between their neighbours); tap empty graph
+/// to drop a new point; double-tap a point to remove it. It fills whatever
+/// square it is given: 220×220 in the phone's Curve tool, the sidebar's width
+/// on a wide screen.
+///
+/// A drag only shapes when it starts **on a control point**, and a new point
+/// comes from an explicit tap: on the phone the panel around it is Curve's own,
+/// but in the sidebar it sits inside a `ScrollView`, and a plot that claimed
+/// every drag inserted a point on the first change event — before any
+/// arbitration — so scrolling past the Curve section changed the photo's
+/// contrast.
+struct EditorCurveGraph: View {
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
-    /// Where the photo is laid out, in the stage's coordinates.
-    let imageRect: CGRect
-    /// The whole stage: the plot is sized to it and only centred on the photo.
-    let stageRect: CGRect
-    /// True when the plot is drawn inside the sidebar's `ScrollView` instead of
-    /// over the photo. It changes how touches are claimed — see `dragGesture`.
-    var scrollsWithPanel = false
 
     @State private var grabbed: Int?
-    /// A finger is on the graph: the plot steps back so the photo shows through.
-    @State private var isShaping = false
 
     private var channel: ToneCurveChannel { chrome.curveChannel }
     private var points: [CurvePoint] { controller.editedCurve[channel] }
     /// Region mode draws the whole curve that is applied and has nothing to grab.
     private var showsRegion: Bool { chrome.curveMode == .region }
 
-    /// Opacity of the chrome that is not being touched — scrim, grid, diagonal,
-    /// histogram, the other points — while a drag is in progress.
-    private static let restingChromeOpacity = 0.10
-    /// Opacity the curve and the grabbed point keep while shaping: enough to know
-    /// what is being pulled, not enough to hide the photo.
-    private static let restingCurveOpacity = 0.45
-    private static let fade = Animation.easeOut(duration: 0.15)
-
-    private var chromeOpacity: Double { isShaping ? Self.restingChromeOpacity : 1 }
-    private var curveOpacity: Double { isShaping ? Self.restingCurveOpacity : 1 }
-
     var body: some View {
-        let rect = EditorLayoutMetrics.curvePlotRect(in: imageRect, stage: stageRect)
-        let local = CGRect(origin: .zero, size: rect.size)
+        GeometryReader { geo in
+            let side = min(geo.size.width, geo.size.height)
+            plot(CGRect(origin: .zero, size: CGSize(width: side, height: side)))
+                // On the plot, not the GeometryReader: there the element
+                // came out empty and VoiceOver skipped the graph.
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Tone curve, \(channel.displayName) channel")
+                .accessibilityValue(accessibilityPoints)
+                .accessibilityHint("Tap the line to add a point. Drag to move it, double-tap to remove it.")
+                .accessibilityAddTraits(.allowsDirectInteraction)
+                .frame(width: geo.size.width, height: geo.size.height)
+        }
+        .aspectRatio(1, contentMode: .fit)
+    }
+
+    private func plot(_ local: CGRect) -> some View {
         ZStack {
             plotChrome(local)
-                .opacity(chromeOpacity)
             curvePath(local)
                 .stroke(
                     channelColor,
                     style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round)
                 )
                 .shadow(color: .black.opacity(0.6), radius: 1.5)
-                .opacity(curveOpacity)
             if !showsRegion {
                 ForEach(points.indices, id: \.self) { index in
                     controlPoint(isGrabbed: grabbed == index)
                         .position(viewPoint(points[index], in: local))
-                        .opacity(grabbed == index ? curveOpacity : chromeOpacity)
                 }
             }
         }
         .allowsHitTesting(!showsRegion)
-        .frame(width: rect.width, height: rect.height)
+        .frame(width: local.width, height: local.height)
         .contentShape(Rectangle())
         // A curve is grabbed at points a pointer cannot see. `.automatic`
-        // gives the cursor the region to work in without lifting the canvas
-        // off the photo behind it.
+        // gives the cursor the region to work in.
         .hoverEffect(.automatic)
         .highPriorityGesture(deleteGesture(local))
         .gesture(insertGesture(local))
         .gesture(dragGesture(local))
-        .animation(Self.fade, value: isShaping)
-        .position(x: rect.midX, y: rect.midY)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Tone curve, \(channel.displayName) channel")
-        .accessibilityHint("Drag on the graph to shape the curve")
+    }
+
+    /// "4 points" — what VoiceOver can say about a shape it cannot see.
+    private var accessibilityPoints: String {
+        showsRegion ? "Region curve" : "\(points.count) points"
     }
 
     // MARK: Layers
@@ -196,43 +192,15 @@ struct EditorCurveOverlay: View {
 
     // MARK: Gestures
 
-    /// Drag to shape. Over the photo any drag works, including one on empty
-    /// graph, which drops a point where the finger went down — that is the
-    /// Snapseed model and there is nothing else competing for the touch.
-    ///
-    /// Inside the sidebar there is: the panel's own `ScrollView`. A plot that
-    /// claimed every drag inserted a control point and called `setCurve` on the
-    /// *first* change event — before any arbitration — so scrolling the
-    /// parameter list past the Curve section changed the photo's contrast.
-    /// Every other control in that panel goes through `EditorRowGestureCatcher`,
-    /// which fails itself off-axis and suspends the enclosing scroll; the plot
-    /// did not. So in the panel a drag only shapes when it starts **on a control
-    /// point**, and a new point comes from an explicit tap (`insertGesture`).
-    /// Claiming the touch also sets `activePlainSliderID`, which is what the
-    /// sidebar's `.scrollDisabled` reads, so once shaping starts the list holds
-    /// still.
+    /// Drag to shape — only a drag that starts on a control point (see the
+    /// type's comment). Claiming the touch sets `activePlainSliderID`, which is
+    /// what the sidebar's `.scrollDisabled` reads, so once shaping starts the
+    /// list holds still.
     private func dragGesture(_ rect: CGRect) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
                 if grabbed == nil {
-                    guard let index = nearestPointIndex(to: value.startLocation, in: rect) else {
-                        guard !scrollsWithPanel else { return }
-                        isShaping = true
-                        claimScroll()
-                        controller.beginContinuousChange()
-                        var updated = points
-                        let new = clamped(
-                            index: nil,
-                            to: curvePoint(value.location, in: rect),
-                            in: updated
-                        )
-                        let insertion = updated.firstIndex { $0.x > new.x } ?? updated.count
-                        updated.insert(new, at: insertion)
-                        controller.setCurve(updated, for: channel)
-                        grabbed = insertion
-                        return
-                    }
-                    isShaping = true
+                    guard let index = nearestPointIndex(to: value.startLocation, in: rect) else { return }
                     claimScroll()
                     controller.beginContinuousChange()
                     grabbed = index
@@ -247,38 +215,39 @@ struct EditorCurveOverlay: View {
                 controller.setCurve(updated, for: channel)
             }
             .onEnded { _ in
-                guard isShaping else { return }
+                guard grabbed != nil else { return }
                 controller.endContinuousChange()
                 grabbed = nil
-                isShaping = false
                 releaseScroll()
             }
     }
 
-    /// In the panel, a tap on empty graph is what drops a new point — the drag
-    /// no longer does it, so that scrolling past the plot cannot.
+    /// A tap on empty graph drops a point **on the line** at the tap's input
+    /// level, as Lightroom does — the shape does not jump until it is dragged.
     private func insertGesture(_ rect: CGRect) -> some Gesture {
         SpatialTapGesture()
             .onEnded { value in
-                guard scrollsWithPanel else { return }
                 guard nearestPointIndex(to: value.location, in: rect) == nil else { return }
-                var updated = points
-                let new = clamped(
-                    index: nil,
-                    to: curvePoint(value.location, in: rect),
-                    in: updated
-                )
-                let insertion = updated.firstIndex { $0.x > new.x } ?? updated.count
-                updated.insert(new, at: insertion)
                 controller.beginContinuousChange()
-                controller.setCurve(updated, for: channel)
+                controller.setCurve(Self.inserting(at: curvePoint(value.location, in: rect).x, into: points), for: channel)
                 controller.endContinuousChange()
             }
     }
 
+    /// `points` with one more, at input `x` and the curve's own output there.
+    static func inserting(at x: Double, into points: [CurvePoint]) -> [CurvePoint] {
+        let x = min(0.99, max(0.01, x))
+        let lut = ToneCurveMath.lut(points: points, count: 256)
+        let y = Double(lut[Int((x * 255).rounded())])
+        var updated = points
+        let insertion = updated.firstIndex { $0.x > x } ?? updated.count
+        updated.insert(CurvePoint(x: x, y: min(1, max(0, y))), at: insertion)
+        return updated
+    }
+
     /// Tells the sidebar's scroll to hold still. `chrome.activePlainSliderID` is
-    /// what `.scrollDisabled` reads there; over the photo there is no scroll and
-    /// setting it is harmless.
+    /// what `.scrollDisabled` reads there; in the phone's Curve tool there is no
+    /// scroll and setting it is harmless.
     private func claimScroll() {
         chrome.activePlainSliderID = "curve.\(channel.rawValue)"
     }
@@ -335,14 +304,10 @@ struct EditorCurveOverlay: View {
         return best.index
     }
 
-    /// Constrain a dragged/added point: endpoints keep their x on the edge, interior
+    /// Constrain a dragged point: endpoints keep their x on the edge, interior
     /// points stay strictly between their neighbours, everything clamps to 0…1 in y.
-    private func clamped(index: Int?, to point: CurvePoint, in current: [CurvePoint]) -> CurvePoint {
+    private func clamped(index: Int, to point: CurvePoint, in current: [CurvePoint]) -> CurvePoint {
         let y = min(1, max(0, point.y))
-        guard let index else {
-            // A new interior point: keep it off the very edges.
-            return CurvePoint(x: min(0.99, max(0.01, point.x)), y: y)
-        }
         if index == 0 { return CurvePoint(x: 0, y: y) }
         if index == current.count - 1 { return CurvePoint(x: 1, y: y) }
         let lower = current[index - 1].x + 0.001
@@ -351,14 +316,14 @@ struct EditorCurveOverlay: View {
     }
 }
 
-/// The Curve group's panel: channel chips (RGB master, Red, Green, Blue), a Reset
-/// for the shown channel, the how-to line, and a row of preset shapes for the
-/// shown channel. The graph itself is on the photo.
+/// The Curve group's panel.
 ///
-/// On the phone (FS-03.12) the channel chips are the panel's target strip
-/// (`EditorCurveChannelStrip`), and below it every row sits on the 40pt grid:
-/// the preset row, the hint with Reset at its trailing end, and Show Graph when
-/// the graph is hidden. The sidebar keeps the stacked layout it was built with.
+/// On the phone it is the zone of the Curve tool (FS-03.13b §2): the graph,
+/// 220×220, on the left; on the right a column of the four channel chips,
+/// Reset and the how-to line. Region mode trades the graph for its seven
+/// sliders; it and the preset shapes are reached from ⋯, where the zone has no
+/// room for them. The sidebar keeps its stacked layout, with the same graph
+/// drawn under it by the screen.
 struct EditorCurvePanel: View {
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
@@ -379,30 +344,82 @@ struct EditorCurvePanel: View {
     }
 
     private var phoneRows: some View {
-        VStack(spacing: 0) {
-            if let mask = controller.curveTargetMask {
-                // Says whose curve this is: the same editor serves the photo
-                // and, from a mask's Edit Curve, that mask alone.
-                Text("Curve for \(mask.name)")
-                    .font(EditorTheme.maskSubtitle)
-                    .foregroundStyle(EditorTheme.secondaryText)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, EditorStripLayout.horizontalInset)
-                    .padding(.top, AppTheme.Spacing.xs)
-            }
-            modeRow
-                .padding(.horizontal, EditorStripLayout.horizontalInset)
-                .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
+        Group {
             if chrome.curveMode == .region {
-                ScrollView(.vertical, showsIndicators: false) {
-                    regionRows
+                VStack(spacing: 0) {
+                    modeRow
+                        .padding(.horizontal, EditorStripLayout.horizontalInset)
+                        .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
+                    ScrollView(.vertical, showsIndicators: false) {
+                        regionRows
+                    }
                 }
             } else {
-                pointRows
+                pointZone
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
+
+    /// Graph left, channels · Reset · hint right.
+    private var pointZone: some View {
+        HStack(alignment: .top, spacing: EditorCurvePanel.columnGap) {
+            EditorCurveGraph(controller: controller, chrome: chrome)
+                .frame(maxWidth: EditorCurvePanel.graphSide, maxHeight: EditorCurvePanel.graphSide)
+            VStack(alignment: .leading, spacing: EditorCurvePanel.chipGap) {
+                ForEach(ToneCurveChannel.allCases) { option in
+                    Button {
+                        chrome.curveChannel = option
+                    } label: {
+                        // The name centred like Reset below it; the dot
+                        // pinned to the leading edge, so the four sit in one
+                        // column instead of moving with each word's width.
+                        Text(option.displayName)
+                            .frame(maxWidth: .infinity)
+                            .overlay(alignment: .leading) {
+                                Circle()
+                                    .fill(option.stripDot)
+                                    .frame(width: EditorCurvePanel.dotSide, height: EditorCurvePanel.dotSide)
+                            }
+                    }
+                    .buttonStyle(EditorChipButtonStyle(
+                        isSelected: channel == option,
+                        horizontalPadding: AppTheme.Spacing.md
+                    ))
+                    .frame(height: EditorCurvePanel.chipHeight)
+                    .accessibilityLabel(option.displayName)
+                    .accessibilityAddTraits(channel == option ? .isSelected : [])
+                }
+                Button {
+                    controller.resetCurve(channel)
+                } label: {
+                    Text("Reset").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(EditorChipButtonStyle(isSelected: false))
+                .frame(height: EditorCurvePanel.chipHeight)
+                .disabled(isLinear)
+                .opacity(isLinear ? EditorTheme.rowDisabled : 1)
+                Text("Tap the line to add a point. Drag to move it, double-tap to remove it.")
+                    .font(EditorTheme.maskSubtitle)
+                    .foregroundStyle(EditorTheme.panelHint)
+                    .minimumScaleFactor(0.8)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(width: EditorCurvePanel.columnWidth)
+        }
+        .padding(.horizontal, AppTheme.Spacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// FS-03.13b §2: a 220pt square and a 120pt column of 30pt chips.
+    static let graphSide: CGFloat = 220
+    static let columnWidth: CGFloat = 120
+    static let chipHeight: CGFloat = 30
+    static let chipGap: CGFloat = 6
+    static let columnGap: CGFloat = 12
+    /// Larger than the strips' 8pt dot: here it stands alone at the edge
+    /// rather than beside the word.
+    static let dotSide: CGFloat = 10
 
     /// Point · Region. Region shapes the RGB master only, as in Lightroom.
     private var modeRow: some View {
@@ -477,46 +494,6 @@ struct EditorCurvePanel: View {
         )
     }
 
-    private var pointRows: some View {
-        VStack(spacing: 0) {
-            presetRow
-                .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
-            HStack(spacing: AppTheme.Spacing.sm) {
-                Text("Drag to shape · drag on empty graph to add · double-tap to remove")
-                    .font(EditorTheme.rowLabel)
-                    .foregroundStyle(EditorTheme.panelHint)
-                    .lineLimit(2)
-                    .minimumScaleFactor(EditorLayoutMetrics.editorPanelRowMinimumScale)
-                Spacer(minLength: 0)
-                Button("Reset") {
-                    controller.resetCurve(channel)
-                }
-                .buttonStyle(EditorChipButtonStyle(isSelected: false))
-                .disabled(isLinear)
-                .opacity(isLinear ? EditorTheme.rowDisabled : 1)
-            }
-            .padding(.horizontal, AppTheme.Spacing.lg)
-            .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
-            if chrome.isCurveGraphHidden {
-                HStack {
-                    Button {
-                        withAnimation(EditorTheme.animation) {
-                            chrome.isCurveGraphHidden = false
-                        }
-                    } label: {
-                        EditorPanelChipLabel(title: "Show Graph", systemImage: "chart.xyaxis.line")
-                    }
-                    .buttonStyle(EditorChipButtonStyle(isSelected: false))
-                    Spacer(minLength: 0)
-                }
-                .padding(.horizontal, AppTheme.Spacing.lg)
-                .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
-            }
-            Spacer(minLength: 0)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-    }
-
     private var stackedBody: some View {
         VStack(alignment: .leading, spacing: 12) {
             modeRow
@@ -564,25 +541,12 @@ struct EditorCurvePanel: View {
                 .disabled(isLinear)
             }
 
-            Text("Drag to shape · drag on empty graph to add · double-tap a point to remove")
+            Text("Tap the line to add a point. Drag to move it, double-tap to remove it.")
                 .font(.system(size: 11))
                 .foregroundStyle(EditorTheme.dimText)
                 .fixedSize(horizontal: false, vertical: true)
 
             presetRow
-
-            if chrome.isCurveGraphHidden {
-                Button {
-                    withAnimation(EditorTheme.animation) {
-                        chrome.isCurveGraphHidden = false
-                    }
-                } label: {
-                    Label("Show Graph", systemImage: "chart.xyaxis.line")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(EditorTheme.accent)
-                }
-                .buttonStyle(.plain)
-            }
         }
     }
 
@@ -606,26 +570,6 @@ struct EditorCurvePanel: View {
         // Bleed the scroll to the panel edges so the row does not clip mid-chip.
         .padding(.horizontal, usesPanelStyle && !isStacked ? 0 : -14)
         .contentMargins(.horizontal, inset, for: .scrollContent)
-    }
-}
-
-/// The phone panel's Curve target strip: four equal channel chips, each with its
-/// channel's colour dot. No "edited" dot (FS-03.12 §6).
-struct EditorCurveChannelStrip: View {
-    @Bindable var chrome: EditorChromeModel
-
-    var body: some View {
-        EditorPanelChipStrip(
-            items: ToneCurveChannel.allCases,
-            isSelected: { chrome.curveChannel == $0 },
-            label: { EditorPanelChipLabel(title: $0.displayName, dot: $0.stripDot) },
-            accessibilityName: \.displayName,
-            onSelect: { channel in
-                chrome.curveChannel = channel
-                // The region curve is RGB-only: a colour channel means points.
-                if channel != .rgb { chrome.curveMode = .point }
-            }
-        )
     }
 }
 

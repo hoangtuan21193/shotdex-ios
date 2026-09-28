@@ -1,15 +1,16 @@
 # FS-04.02 — Grading và Tone Curve
 
-`FS-04.02` · `Features/Editing/EditorColorPanel.swift` · `EditorCurveOverlay` · `EditorCurvePanel`
-· `Domain/Editing/ToneCurveMath.swift` · cập nhật 2026-09-24
+`FS-04.02` · `Features/Editing/EditorColorPanel.swift` · `EditorCurveGraph` · `EditorCurvePanel`
+· `Domain/Editing/ToneCurveMath.swift` · cập nhật 2026-09-29
 
-**Một câu:** bốn vùng sáng × ba slider, và một đồ thị curve nằm **đè lên chính tấm ảnh nó đang sửa**.
+**Một câu:** bốn vùng sáng × ba slider, và một đồ thị curve **trong panel**, ảnh không bị che.
 
 ## 1. Quy tắc
 
 - **Không dùng bánh xe màu trong panel** — panel cao cố định 264pt không đủ chỗ, và cả panel nên nói cùng
   một ngôn ngữ: dòng slider.
-- Đồ thị curve **đè lên ảnh**, không phải một màn riêng — bản chỉnh mù không thấy ảnh đã bị xoá.
+- Đồ thị curve **nằm trong panel, ở mọi layout** ([FS-03.13b §2](../FS-03-photo-editor/13b-edit-and-transform.md#2-curve-trong-panel)),
+  không phải một màn riêng và không đè lên ảnh — ảnh luôn thấy trọn lúc kéo.
 - Curve dựng bảng tra bằng nội suy **giữ tính đơn điệu**, nên đường không tự đảo chiều giữa hai điểm.
 - Một cú kéo = **một** bước hoàn tác.
 
@@ -44,37 +45,35 @@ về độ sáng** (chỉ thêm sắc, không làm sáng khung hình) và một 
   đường cong định nghĩa trên giá trị đã mã hoá gamma). Đường RGB chung được **nướng vào từng kênh** thay vì
   chạy thành một lượt riêng.
 
-## 4. Đồ thị trên ảnh
+## 4. Đồ thị
 
-Chọn chip **Curve** (ngay sau Light) → đồ thị vẽ lên ảnh, ở lớp **không bị phóng theo ảnh**.
+iPhone: hàng **Curve** (ngay sau Light) → **Edit Curve** mở công cụ con ✕ · Curve · ✓ (FS-03.13b §2). Sidebar
+iPad / Duo: đồ thị vuông dưới mục Curve, trong khối Light.
 
 | Thành phần | Chi tiết |
 |---|---|
-| Khung | vuông, căn giữa ảnh, cạnh = min(rộng, cao **của khung dựng**) − 2×16, tối thiểu 120, kẹp trong khung dựng |
+| Khung | vuông; **220×220** trong công cụ Curve của iPhone, rộng bằng sidebar trên màn rộng |
 | Nền | lớp tối 0,18 + **histogram của kênh đang chỉnh** vẽ mờ phía sau |
 | Lớp vẽ | lưới chia ba + đường chéo gốc + đường cong + điểm kéo 13pt (vùng chạm 26pt) |
 
-- **Tính theo khung dựng, không theo ảnh**: ảnh ngang được khung rộng bằng màn hình, tràn lên vùng đen, thay
-  vì bị bóp theo chiều cao ảnh.
-- Cử chỉ: kéo điểm để dời (điểm đầu và cuối trượt dọc mép, điểm giữa bị kẹp giữa hai hàng xóm) · **kéo trên
-  vùng trống = thêm điểm** · **chạm đôi lên điểm = xoá**.
-- **Mờ đi khi đang giữ tay** (mô hình Snapseed): ngón chạm thì lớp tối, lưới, đường chéo, histogram và các
-  điểm khác mờ về **0,10**, còn đường cong và điểm đang kéo giữ **0,45**, để thấy ảnh đổi live phía sau;
-  nhả tay thì trở lại bình thường.
-- Khi đồ thị đang hiện, **mọi cử chỉ mức ảnh bị tắt** (như khi cắt ảnh) — nếu không, cử chỉ của khung dựng
-  nuốt mất cú kéo trên đồ thị. Thẻ histogram nổi cũng thu lại.
+- Cử chỉ: kéo **từ một điểm** để dời (điểm đầu và cuối trượt dọc mép, điểm giữa bị kẹp giữa hai hàng xóm) ·
+  **chạm vào vùng trống = thêm điểm ngay trên đường**, ở mức vào chỗ chạm, nên đường chưa đổi cho tới khi kéo ·
+  **chạm đôi lên điểm = xoá**. Kéo từ vùng trống không làm gì: trong sidebar cú kéo đó là cuộn danh sách.
+- Thẻ histogram nổi thu lại khi Curve mở — đồ thị đã có histogram.
 
 ## 5. Panel Curve
 
-Dải chọn kênh **RGB / Red / Green / Blue**, mỗi chip một chấm màu của kênh — cộng nút Reset cho kênh đang
-chọn và một dòng nhắc (hàng hint). Kênh đang
-chọn dùng chung giữa panel và đồ thị.
+iPhone: đồ thị bên trái, cột phải rộng 120 gồm chip kênh **RGB / Red / Green / Blue** (chia dọc, cao 30, tên giữa chip,
+chấm màu 10pt của kênh **ghim mép trái**), chip **Reset** cho kênh đang chọn và hint *"Tap the line to add a point.
+Drag to move it, double-tap to remove it."*. Sidebar: chip kênh ngang, Reset, hint, hàng preset.
 
 **Preset** (có test): Linear · Soft S · Strong S · Brighten · Darken · Fade · Matte. Áp vào kênh đang chọn
-là **một** bước hoàn tác; chip sáng lên khi các điểm của kênh trùng preset.
+là **một** bước hoàn tác; chip sáng lên khi các điểm của kênh trùng preset. iPhone: trong ⋯ → **Preset Shapes**.
 
-Menu ⋯ khi đang ở Curve có thêm **Show/Hide Graph** (chỉ trong phiên; ẩn thì ảnh trở lại trần, cử chỉ ảnh
-quay về, panel hiện nút bật lại) và **Reset Curve**.
+**Region** (parametric, FS-03.15a §1): sidebar có chip Point · Region; iPhone chọn ở ⋯ → **Curve Type**, và
+vùng thông số đổi thành bảy slider có chip Point · Region ở đầu để quay lại.
+
+Menu ⋯ khi đang ở Curve có thêm **Reset Curve**. Show/Hide Graph đã bỏ: đồ thị không còn đè lên ảnh.
 
 ## 6. Tiêu chí nghiệm thu
 

@@ -444,29 +444,6 @@ struct EditorPanelLayoutTests {
         #expect(abs(abs(e.x - f.x) - 10) < 0.0001)
     }
 
-    /// The curve plot is sized to the stage and centred on the photo: a landscape
-    /// photo gets a screen-wide square spilling onto the letterbox, a portrait one
-    /// the same square inside the photo, and the square never leaves the stage.
-    @Test func curvePlotIsStageSizedAndImageCentred() {
-        let stage = CGRect(x: 0, y: 0, width: 402, height: 600)
-        let landscape = CGRect(x: 0, y: 166, width: 402, height: 268)
-        let plot = EditorLayoutMetrics.curvePlotRect(in: landscape, stage: stage)
-        #expect(plot.width == 402 - 2 * EditorLayoutMetrics.curvePlotInset)
-        #expect(plot.width == plot.height)
-        #expect(plot.midX == landscape.midX)
-        #expect(plot.midY == landscape.midY)
-
-        let tall = CGRect(x: 100, y: 0, width: 202, height: 600)
-        let tallPlot = EditorLayoutMetrics.curvePlotRect(in: tall, stage: stage)
-        #expect(tallPlot.width == plot.width)
-        #expect(tallPlot.midX == tall.midX)
-
-        // Image hugging the top edge: the plot is nudged down to stay on the stage.
-        let top = CGRect(x: 0, y: 0, width: 402, height: 120)
-        let topPlot = EditorLayoutMetrics.curvePlotRect(in: top, stage: stage)
-        #expect(topPlot.minY == EditorLayoutMetrics.curvePlotInset)
-    }
-
     // MARK: Which windows get the sidebar
 
     /// Asserted on the real windows ShotDex ships to, not on round numbers —

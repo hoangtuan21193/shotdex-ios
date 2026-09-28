@@ -29,8 +29,10 @@ Khung và ✕ / ✓: [13a](13a-chrome-and-toolbar.md). Thông số từng nhóm 
 
 - Curve là **một hàng sau Light**: nhãn "Curve" · 4 chấm kênh 8pt (trắng, đỏ, xanh lá, xanh dương) · chip **Edit Curve**.
 - Chạm Edit Curve = vào công cụ con **✕ · Curve · ✓**: vùng thông số thành đồ thị vuông **220×220** bên trái, cột
-  phải là chip kênh RGB · Red · Green · Blue (chia dọc, 120×30), chip Reset và hint *"Tap the line to add a point.
-  Drag to move it, double-tap to remove it."*
+  phải là chip kênh RGB · Red · Green · Blue (chia dọc, 120×30; tên giữa chip, chấm màu 10pt ghim mép trái), chip Reset và hint
+  *"Tap the line to add a point. Drag to move it, double-tap to remove it."*
+- Region (parametric) và các preset hình dạng không có chỗ trong vùng này: ở ⋯ → **Curve Type** / **Preset Shapes**.
+  Region đổi vùng thành bảy slider, có chip Point · Region ở đầu để quay lại.
 - Ảnh dọc (panel 264): panel tạm 315 ([13a §2](13a-chrome-and-toolbar.md#2-chiều-cao-panel)). Ảnh ngang: 344 đủ chỗ.
 - **Curve luôn trong panel, ở mọi layout** — kể cả sidebar iPad / Duo màn trong; không còn lớp curve đè stage.
   Ảnh không bị che nên vẫn thấy kết quả lúc kéo.
@@ -85,7 +87,7 @@ Máy: iPhone 17 iOS 26.5 và 18.6; ảnh 3:2 (panel 344) nếu không ghi khác.
 | AC-16 | Edit | chạm "LIGHT ▼" | mục lục có đúng các nhóm của danh mục, mỗi nhóm một lần, đúng thứ tự (9 hôm nay), có "Grading", không có "Grade" | `EditorPanelLayoutTests.phoneIndexListsEveryEditGroupOnce` (11 nhóm hôm nay: 9 + Lens Blur + Calibration của FS-03.15) · `iphone-edit-list.json` 3-index |
 | AC-17 | mục lục mở | chạm Detail | nhãn DETAIL ở đầu vùng cuộn (±1pt), nhãn dính "DETAIL ▼", mục lục đóng | `iphone-edit-list.json` 3-index → 4-detail (nhãn dính "DETAIL ▼", mục lục đóng) |
 | AC-18 | Edit cuộn tới Detail | chạm Presets rồi Edit | nhãn dính vẫn "DETAIL ▼", cùng offset (±1pt) | `iphone-edit-list.json` 5-back · ⚠️ chỗ cuộn nhớ theo **nhóm** ở đầu (`chrome.editListGroup`), không theo từng điểm offset; kiểm lại sau task 8 khi có nút Edit |
-| AC-19 | ảnh 3:2 | Edit Curve, chạm đồ thị thêm 2 điểm, rồi ✕ | curve về đường thẳng, recipe không có khối curve; không phần tử nào của curve nằm trong khung stage lúc mở, trên iPhone 17 và iPad 13" sidebar | ⚠️ chưa có — `EditorHistoryAndSummaryTests.curveCancelLeavesNoCurveBlock` + dump hai máy |
+| AC-19 | ảnh 3:2 | Edit Curve, chạm đồ thị thêm 2 điểm, rồi ✕ | curve về đường thẳng, recipe không có khối curve; không phần tử nào của curve nằm trong khung stage lúc mở, trên iPhone 17 và iPad 13" sidebar | ✅ `EditorHistoryAndSummaryTests.curveCancelLeavesNoCurveBlock` (+ `curveCancelInsideAToolKeepsTheToolsWork`, `tappedPointSitsOnTheLine`) · iPhone 17: `iphone-curve-tool.json` (hỏi Discard, về hàng Curve), `iphone-curve-dump.json` (đồ thị trong panel, không lớp nào trên stage); iPad 13" sidebar ⚠️ chưa chụp |
 | AC-20 | Transform | dump vùng thông số | 4 nhãn CROP · STRAIGHTEN · UPRIGHT · GEOMETRY đúng thứ tự; More… cộng 4 chip = mọi tỉ lệ trong danh sách tỉ lệ, mỗi cái một lần; trước FS-03.15 không hàng / chip nào mờ vì chưa có | ⚠️ chưa có — `EditorPanelLayoutTests.transformReachesEveryCropRatioOnce` + `iphone-transform.json` |
 | AC-21 | ảnh 3:2 crop gốc, góc 0° | Transform, chọn 1:1, Rotate một lần, rồi ✕ và xác nhận | crop về nguyên khung, không xoay, góc 0° | ⚠️ chưa có — `EditorHistoryAndSummaryTests.transformCancelRestoresTheFrame` |
 | AC-22 | Straighten Tool bật, góc 0° | kéo một ngón từ (60, 300) tới (340, 318) rồi nhấc; làm lại từ (200, 100) tới (220, 400) | lần 1: Angle 3,7° ±0,1° (atan 18/280), thước nằm ngang, đúng 1 bước lịch sử; lần 2: Angle 3,8° ±0,1° (atan 20/300), thước đứng thẳng; kéo 6pt thì Angle không đổi | ⚠️ chưa có — `StraightenToolTests.aLineAtThreeDegreesLevelsThePhoto` + `StraightenToolTests.aNearVerticalLineStandsUp` |

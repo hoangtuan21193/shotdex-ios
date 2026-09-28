@@ -347,8 +347,10 @@ final class PhotoEditorController {
     /// further back is ✓ or ✕ first, so ✕ and Undo share one floor.
     var canUndo: Bool {
         guard history.canUndo else { return false }
-        if let entry = stageEntry { return history.undoDepth > entry.undoDepth }
-        return true
+        // Inside a tool Undo stops where the tool opened; the Curve tool opens
+        // later than a Mask it sits in, so its floor is the higher one.
+        let floor = max(stageEntry?.undoDepth ?? 0, curveEntry?.undoDepth ?? 0)
+        return history.undoDepth > floor
     }
     var canRedo: Bool { history.canRedo }
     var recalledRecipe: PhotoEditRecipe? { session?.recalledRecipe }
@@ -1514,6 +1516,43 @@ final class PhotoEditorController {
     func restoreStageEntry() {
         guard let entry = stageEntry else { return }
         stageEntry = nil
+        history.rewind(toUndoDepth: entry.undoDepth)
+        guard recipe != entry.recipe else { return }
+        recipe = entry.recipe
+        scheduleRender()
+    }
+
+    // MARK: Curve tool session
+
+    /// What the recipe looked like when the phone's Curve tool opened
+    /// (FS-03.13b §2). Its own snapshot, not `stageEntry`: a mask's Edit Curve
+    /// opens inside the Mask tool, and the curve's ✕ must not take the mask's
+    /// work with it.
+    @ObservationIgnored private var curveEntry: (recipe: PhotoEditRecipe, undoDepth: Int)?
+
+    func beginCurveSession() {
+        guard curveEntry == nil else { return }
+        curveEntry = (recipe, history.undoDepth)
+    }
+
+    /// ✓ — the curve stays, the snapshot goes.
+    func applyCurveSession() {
+        curveEntry = nil
+    }
+
+    var isInCurveSession: Bool { curveEntry != nil }
+
+    /// The Curve tool changed something — ✕ asks first.
+    var curveHasChanges: Bool {
+        guard let entry = curveEntry else { return false }
+        return history.undoDepth > entry.undoDepth || recipe != entry.recipe
+    }
+
+    /// ✕ — the curve as it was when the tool opened, and its steps out of
+    /// History.
+    func cancelCurveSession() {
+        guard let entry = curveEntry else { return }
+        curveEntry = nil
         history.rewind(toUndoDepth: entry.undoDepth)
         guard recipe != entry.recipe else { return }
         recipe = entry.recipe

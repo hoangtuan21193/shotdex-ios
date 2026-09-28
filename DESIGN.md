@@ -340,7 +340,7 @@ Tiến trình dài chạy: `safeAreaInset(edge: .bottom)` với `ProgressView` +
 ### 10.5 Presentation
 - **Sheet** cho tùy chọn/nhập liệu (Filter, Advanced Search, Smart Album Editor, Chart Editor, History).
 - **Settings là màn hình đầy đủ** (`fullScreenCover`, 2026-09-21), không còn sheet: nó đã dài hơn một sheet chịu được, và trình sửa widget bên trong nó có một preview phải kéo/pinch — sheet sẽ nuốt mất cử chỉ đó. Một bề mặt vừa là nội dung vừa là control (preview widget) thì **ghim trên cùng, không cuộn**, phần chỉnh nằm dưới.
-- **fullScreenCover** cho công cụ chiếm toàn bộ ảnh (Viewer, Compare, Compress, Collage, Video Studio). Công cụ cần xem ảnh trong lúc kéo (Curve) **không** mở màn riêng — vẽ overlay lên stage của editor, mờ đi khi giữ tay (`EditorCurveOverlay`).
+- **fullScreenCover** cho công cụ chiếm toàn bộ ảnh (Viewer, Compare, Compress, Collage, Video Studio). Công cụ cần xem ảnh trong lúc kéo (Curve) **không** mở màn riêng và **không** đè lên ảnh — vẽ trong panel (`EditorCurveGraph`, FS-03.13b §2).
 - - **Xác nhận Discard/Huỷ dùng `.alert` 2 nút** (Discard đỏ + Keep Editing), **không** dùng `confirmationDialog`: iOS 26 vẽ dialog thành popover nổi và **ẩn nút role `.cancel`**, chỉ còn nút đỏ (Photo Editor, Video Studio, Collage đều đã đổi 2026-09-06).
 - Payload của `fullScreenCover(item:)` phải là struct `Identifiable` chứa sẵn dữ liệu (xem `CompressionPresentation`) — không đọc lại state ngoài.
 

@@ -26,6 +26,57 @@ struct EditorHistoryAndSummaryTests {
         #expect(c.recipe.adjustments.exposure == 0.2)
     }
 
+    /// FS-03.13 AC-19. Edit Curve, two points tapped onto the line, ✕: the
+    /// line is straight again, the saved recipe has no curve block, and the
+    /// two steps are out of History.
+    @MainActor @Test func curveCancelLeavesNoCurveBlock() throws {
+        let c = controller()
+        c.setAdjustment(.exposure, value: 0.2)
+        let depth = c.historyTimeline.count
+        c.beginCurveSession()
+        #expect(!c.curveHasChanges)
+        for x in [0.3, 0.7] {
+            c.beginContinuousChange()
+            c.setCurve(EditorCurveGraph.inserting(at: x, into: c.editedCurve[.rgb]), for: .rgb)
+            c.endContinuousChange()
+        }
+        #expect(c.editedCurve.rgb.count == 4)
+        #expect(c.curveHasChanges)
+        c.cancelCurveSession()
+        #expect(c.recipe.curve.isIdentity)
+        #expect(c.historyTimeline.count == depth)
+        #expect(c.recipe.adjustments.exposure == 0.2)
+        let json = try #require(String(data: JSONEncoder().encode(c.recipe), encoding: .utf8))
+        #expect(!json.contains("\"curve\""))
+    }
+
+    /// A tap drops the point on the line: the shape does not move until the
+    /// point is dragged.
+    @Test func tappedPointSitsOnTheLine() {
+        let points = EditorCurveGraph.inserting(at: 0.4, into: ToneCurveAdjustments.linear)
+        #expect(points.count == 3)
+        #expect(points[1].x == 0.4)
+        #expect(abs(points[1].y - 0.4) < 0.01)
+    }
+
+    /// The Curve tool inside a Mask: its ✕ takes back the curve only, the
+    /// Mask's work stays for the Mask's own ✕, and Undo stops at the curve's
+    /// entry.
+    @MainActor @Test func curveCancelInsideAToolKeepsTheToolsWork() {
+        let c = controller()
+        c.beginStageSession()
+        c.addHealingSpot(at: NormalizedPoint(x: 0.5, y: 0.5))
+        c.beginCurveSession()
+        #expect(!c.canUndo, "undo stops where the curve opened")
+        c.beginContinuousChange()
+        c.setCurve(EditorCurveGraph.inserting(at: 0.5, into: c.editedCurve[.rgb]), for: .rgb)
+        c.endContinuousChange()
+        c.cancelCurveSession()
+        #expect(c.recipe.curve.isIdentity)
+        #expect(c.recipe.healing.count == 1)
+        #expect(c.stageHasChanges)
+    }
+
     /// FS-03.13 AC-10. Inside a tool Undo stops where it opened: the spot
     /// goes, then Undo is dim and the edit from before the tool stays.
     @MainActor @Test func undoInsideAToolStopsAtEntry() {

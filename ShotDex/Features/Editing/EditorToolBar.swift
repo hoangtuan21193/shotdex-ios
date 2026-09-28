@@ -67,12 +67,15 @@ enum EditorTool: String, CaseIterable, Identifiable, Sendable {
 /// ✕ · the tool's name · ✓ (FS-03.13a §5).
 struct EditorToolBar: View {
     let current: EditorTool
+    /// A tool inside a tool — Curve, opened from Edit or a mask — shows its
+    /// own ✕ · name · ✓.
+    var sessionTitle: String?
     let select: (EditorTool) -> Void
     let cancel: () -> Void
     let apply: () -> Void
 
     var body: some View {
-        if current.isSession {
+        if current.isSession || sessionTitle != nil {
             sessionBar
         } else {
             tools
@@ -122,7 +125,7 @@ struct EditorToolBar: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Cancel")
             Spacer(minLength: 8)
-            Text(current.title)
+            Text(sessionTitle ?? current.title)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(.white)
                 .accessibilityAddTraits(.isHeader)

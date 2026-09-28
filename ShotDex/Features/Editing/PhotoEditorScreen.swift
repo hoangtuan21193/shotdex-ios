@@ -52,7 +52,8 @@ struct PhotoEditorScreen: View {
     @State private var chrome = EditorChromeModel()
     @State private var isSaveSheetPresented = false
     /// The tool whose ✕ is waiting on "Discard changes to …?".
-    @State private var pendingToolCancel: EditorTool?
+    /// The name of the tool whose ✕ is waiting on "Discard changes to …?".
+    @State private var pendingToolCancel: String?
     @State private var isDiscardConfirmationPresented = false
     @State private var isRevertConfirmationPresented = false
     @State private var isFallbackNoticePresented = false
@@ -168,7 +169,7 @@ struct PhotoEditorScreen: View {
             Text("This throws away every edit saved to this photo, including edits made in Photos.")
         }
         .alert(
-            "Discard changes to \(pendingToolCancel?.title ?? "")?",
+            "Discard changes to \(pendingToolCancel ?? "")?",
             isPresented: Binding(
                 get: { pendingToolCancel != nil },
                 set: { if !$0 { pendingToolCancel = nil } }
@@ -1794,18 +1795,8 @@ struct PhotoEditorScreen: View {
 
     /// The tone-curve plot, square, inside its sidebar section.
     private func sidebarCurveGraph(_ controller: PhotoEditorController) -> some View {
-        GeometryReader { geo in
-            let rect = CGRect(origin: .zero, size: geo.size)
-            EditorCurveOverlay(
-                controller: controller,
-                chrome: chrome,
-                imageRect: rect,
-                stageRect: rect,
-                scrollsWithPanel: true
-            )
-        }
-        .aspectRatio(1, contentMode: .fit)
-        .padding(.horizontal, AppTheme.Spacing.md)
+        EditorCurveGraph(controller: controller, chrome: chrome)
+            .padding(.horizontal, AppTheme.Spacing.md)
         .padding(.bottom, AppTheme.Spacing.sm)
     }
 
@@ -2257,15 +2248,35 @@ struct PhotoEditorScreen: View {
                 }
                 Divider()
             } else if chrome.selectedGroup == .curve {
-                Button {
-                    withAnimation(EditorTheme.animation) {
-                        chrome.isCurveGraphHidden.toggle()
+                // The phone's Curve zone is the graph and its channels; Region
+                // and the preset shapes live here (FS-03.13b §2). The sidebar
+                // shows both in its own section.
+                if !chrome.isWideLayout {
+                    Picker(selection: Binding(
+                        get: { chrome.curveMode },
+                        set: { mode in
+                            chrome.curveMode = mode
+                            if mode == .region { chrome.curveChannel = .rgb }
+                        }
+                    )) {
+                        ForEach(EditorCurveMode.allCases) { mode in
+                            Text(mode.displayName).tag(mode)
+                        }
+                    } label: {
+                        Label("Curve Type", systemImage: "chart.xyaxis.line")
                     }
-                } label: {
-                    Label(
-                        chrome.isCurveGraphHidden ? "Show Graph" : "Hide Graph",
-                        systemImage: "chart.xyaxis.line"
-                    )
+                    .pickerStyle(.menu)
+                    if chrome.curveMode == .point {
+                        Menu {
+                            ForEach(ToneCurveAdjustments.presets) { preset in
+                                Button(preset.name) {
+                                    controller.applyCurvePreset(preset, to: chrome.curveChannel)
+                                }
+                            }
+                        } label: {
+                            Label("Preset Shapes", systemImage: "point.3.connected.trianglepath.dotted")
+                        }
+                    }
                 }
                 Button {
                     controller.resetAllCurves()
@@ -2466,7 +2477,7 @@ struct PhotoEditorScreen: View {
         // The Edit list carries each group's strip under its label.
         if Self.showsEditList(chrome) { return false }
         return switch chrome.selectedGroup {
-        case .curve, .grade, .cropGeometry, .presets: true
+        case .grade, .cropGeometry, .presets: true
         // The band swatches pick an HSL band; the B&W Mix lists all eight.
         case .colorMix: !controller.isBlackAndWhite
         case .pointColor: !controller.pointColors.isEmpty && !controller.isBlackAndWhite
@@ -2490,8 +2501,6 @@ struct PhotoEditorScreen: View {
         case .grade:
             EditorGradeRegionStrip(controller: controller, chrome: chrome)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-        case .curve:
-            EditorCurveChannelStrip(chrome: chrome)
         case .colorMix:
             EditorColorMixBandPicker(
                 selection: chrome.sidebarMixBand,
@@ -2561,7 +2570,8 @@ struct PhotoEditorScreen: View {
     private func saveButton(_ controller: PhotoEditorController, side: CGFloat = 42) -> some View {
         Button {
             // Save inside a tool is ✓ and then the sheet (FS-03.13a §3).
-            if !chrome.isWideLayout, EditorTool.tool(for: chrome.selectedGroup).isSession {
+            if !chrome.isWideLayout,
+               EditorTool.tool(for: chrome.selectedGroup).isSession || chrome.selectedGroup == .curve {
                 applyTool(in: controller)
             }
             controller.commitCropSession()
@@ -2621,7 +2631,7 @@ struct PhotoEditorScreen: View {
     }
 
     /// The phone shows Edit as one list (FS-03.13b §1) for every group in
-    /// it; Curve's graph is still its own mode until it moves into the panel.
+    /// it; Curve is a row of it whose Edit Curve opens the Curve tool.
     static func showsEditList(_ chrome: EditorChromeModel) -> Bool {
         !chrome.isWideLayout && chrome.selectedGroup != .curve
             && EditorEditIndex.groups.contains(chrome.selectedGroup)
@@ -2900,6 +2910,7 @@ struct PhotoEditorScreen: View {
         // The six tools (FS-03.13a §4) — Back and Save moved up to the band.
         EditorToolBar(
             current: EditorTool.tool(for: chrome.selectedGroup),
+            sessionTitle: chrome.selectedGroup == .curve ? "Curve" : nil,
             select: { tool in selectTool(tool, in: controller) },
             cancel: { cancelTool(in: controller) },
             apply: { applyTool(in: controller) }
@@ -2910,30 +2921,51 @@ struct PhotoEditorScreen: View {
     /// Presets and Edit switch in place; the other four open a session.
     private func selectTool(_ tool: EditorTool, in controller: PhotoEditorController) {
         let current = EditorTool.tool(for: chrome.selectedGroup)
-        // Edit while Curve's graph is open is the way back to the list.
-        guard tool != current || chrome.selectedGroup == .curve else { return }
+        guard tool != current else { return }
         selectGroup(tool.group(editListGroup: chrome.editListGroup), in: controller)
     }
 
     /// ✓: the tool's work stays, back to Edit (FS-03.13a §5).
     private func applyTool(in controller: PhotoEditorController) {
+        if chrome.selectedGroup == .curve {
+            controller.applyCurveSession()
+            leaveCurve(controller)
+            return
+        }
         selectGroup(EditorTool.edit.group(editListGroup: chrome.editListGroup), in: controller)
     }
 
     /// ✕: the recipe and the history as they were when the tool opened —
     /// asking first once the tool has changed anything (FS-03.13a §5).
     private func cancelTool(in controller: PhotoEditorController) {
-        if controller.stageHasChanges {
-            pendingToolCancel = EditorTool.tool(for: chrome.selectedGroup)
+        let isCurve = chrome.selectedGroup == .curve
+        if isCurve ? controller.curveHasChanges : controller.stageHasChanges {
+            pendingToolCancel = isCurve ? "Curve" : EditorTool.tool(for: chrome.selectedGroup).title
         } else {
             discardTool(in: controller)
         }
     }
 
     private func discardTool(in controller: PhotoEditorController) {
+        if chrome.selectedGroup == .curve {
+            controller.cancelCurveSession()
+            leaveCurve(controller)
+            return
+        }
         let isCrop = chrome.selectedGroup == .cropGeometry
         controller.restoreStageEntry()
         selectGroup(EditorTool.edit.group(editListGroup: chrome.editListGroup), in: controller, discardingCrop: isCrop)
+    }
+
+    /// Out of the Curve tool: a mask's curve goes back to that mask, the
+    /// photo's to the Edit list at the Curve row (FS-03.13b §2).
+    private func leaveCurve(_ controller: PhotoEditorController) {
+        if controller.curveTargetMaskID != nil {
+            selectGroup(.mask, in: controller)
+        } else {
+            chrome.editListGroup = .curve
+            selectGroup(.light, in: controller)
+        }
     }
 
     private func undoToastView(
@@ -3006,8 +3038,18 @@ struct PhotoEditorScreen: View {
         // out so Apply's work is not still pending a rewind.
         if [EditorGroup.cropGeometry, .heal, .mask, .markup].contains(group) {
             controller.beginStageSession()
+        } else if group == .curve, controller.curveTargetMaskID != nil {
+            // A mask's Edit Curve opens inside the Mask tool: its entry stays
+            // for the Mask's own ✕.
         } else {
             controller.clearStageEntry()
+        }
+        // The phone's Curve is a tool of its own (FS-03.13b §2); leaving it
+        // any other way than ✕ keeps what it did.
+        if group == .curve, !chrome.isWideLayout {
+            controller.beginCurveSession()
+        } else if group != .curve {
+            controller.applyCurveSession()
         }
         withAnimation(EditorTheme.animation) {
             chrome.selectedGroup = group
@@ -3015,7 +3057,8 @@ struct PhotoEditorScreen: View {
         switch group {
         case .light, .curve, .color, .colorMix, .effects, .lensBlur, .detail, .optics, .geo, .calibration:
             controller.editGlobalAdjustments()
-            // The graph takes the photo; a card floating over both would be noise.
+            // The graph carries the histogram behind its curve; the card
+            // would say it twice.
             if group == .curve {
                 chrome.collapseHistogram()
             }
