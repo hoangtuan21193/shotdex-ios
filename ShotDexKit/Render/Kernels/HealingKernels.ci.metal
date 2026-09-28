@@ -39,5 +39,20 @@ float4 healBlend(sample_t shifted, sample_t numerator, sample_t denominator,
     return float4(repaired * amount, amount);
 }
 
+// Red Eye (FS-03.15c §4): inside the pupil (`pupil` of the spot's radius,
+// distance 0…1 over that radius) a red-dominant pixel has its red pulled to
+// the level of green and blue, then the lot darkened by `darken`. A pixel
+// that is not red — a brown iris, a lash — is left out of the layer. A
+// premultiplied layer with coverage in alpha, like healBlend.
+float4 redEye(sample_t s, sample_t distanceMap, float pupil, float darken) {
+    float dist = distanceMap.r;
+    float inside = 1.0f - smoothstep(pupil * 0.85f, pupil, dist);
+    float other = max(s.g, s.b);
+    float red = smoothstep(0.06f, 0.16f, s.r - other);
+    float amount = inside * red;
+    float3 fixed = float3(other, s.g, s.b) * (1.0f - 0.8f * darken);
+    return float4(fixed * amount, amount);
+}
+
 }
 }

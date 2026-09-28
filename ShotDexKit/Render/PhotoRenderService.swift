@@ -484,7 +484,9 @@ public actor PhotoRenderService {
             case .geo: image = applyGeo(recipe.adjustments, upright: recipe.upright.solved, to: image)
             case .look: image = applyLook(of: recipe, to: image)
             case .crop: image = applyCrop(recipe.crop, to: image)
-            case .retouch: image = applyHealing(recipe.healing, to: image)
+            case .retouch:
+                image = applyHealing(recipe.healing, to: image)
+                image = applyRedEyes(recipe.redEyes, to: image)
             case .decode, .lensBlur, .masks, .effects, .output:
                 break
             }

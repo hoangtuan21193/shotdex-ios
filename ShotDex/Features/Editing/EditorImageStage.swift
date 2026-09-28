@@ -240,7 +240,7 @@ struct EditorImageStage: View {
                     .frame(width: imageRect.width, height: imageRect.height)
                     .position(x: imageRect.midX, y: imageRect.midY)
 
-                    if healStroke.count > 1 {
+                    if healStroke.count > 1, !controller.isRedEyeMode {
                         Path { path in path.addLines(healStroke) }
                             .stroke(
                                 EditorTheme.accent.opacity(0.45),
@@ -903,6 +903,10 @@ struct EditorImageStage: View {
                 x: min(1, max(0, (p.x - imageRect.minX) / imageRect.width)),
                 y: min(1, max(0, (p.y - imageRect.minY) / imageRect.height))
             )
+        }
+        if controller.isRedEyeMode {
+            controller.addRedEye(at: normalized(touch.startLocation))
+            return
         }
         let points = healStroke.isEmpty ? [touch.startLocation, touch.location] : healStroke + [touch.location]
         let travelled = zip(points, points.dropFirst()).reduce(0) { $0 + hypot($1.1.x - $1.0.x, $1.1.y - $1.0.y) }

@@ -1326,6 +1326,65 @@ final class PhotoEditorController {
     var healingFeather = 0.5
     var healingOpacity = 1.0
 
+    // MARK: Red Eye (FS-03.15c §4)
+
+    /// The Heal panel's third mode: a tap fixes an eye instead of making a
+    /// spot.
+    var isRedEyeMode = false
+    var redEyePupilSize = 0.5
+    var redEyeDarken = 0.5
+    var selectedRedEyeID: UUID?
+
+    var selectedRedEye: PhotoRedEyeSpot? {
+        guard let id = selectedRedEyeID else { return nil }
+        return recipe.redEyes.first { $0.id == id }
+    }
+
+    /// A Red Eye spot for a tap: on the pupil Vision finds near the finger,
+    /// or right where the finger was. One undo step.
+    func addRedEye(at point: NormalizedPoint) {
+        let pupils = originalPreviewImage?.cgImage.map(RedEyeLocator.pupils(in:)) ?? []
+        addRedEye(at: point, pupils: pupils)
+    }
+
+    /// The same with the pupils given — what the tests hand in, since no
+    /// test may use a photo of a face.
+    func addRedEye(at point: NormalizedPoint, pupils: [RedEyeLocator.Pupil]) {
+        var spot = RedEyeLocator.spot(forTapAt: point, pupils: pupils, aspect: Double(previewAspectRatio))
+        spot.pupilSize = redEyePupilSize
+        spot.darken = redEyeDarken
+        recordHistory()
+        recipe.redEyes.append(spot)
+        selectedRedEyeID = spot.id
+        scheduleRender()
+    }
+
+    /// Edits one Red Eye spot; bracket a drag with begin/endContinuousChange.
+    func updateRedEye(_ id: UUID, _ change: (inout PhotoRedEyeSpot) -> Void) {
+        guard let index = recipe.redEyes.firstIndex(where: { $0.id == id }) else { return }
+        if !isContinuousChange { recordHistory() }
+        change(&recipe.redEyes[index])
+        scheduleRender(delay: isContinuousChange ? .milliseconds(30) : .milliseconds(90))
+    }
+
+    func setRedEyePupilSize(_ value: Double) {
+        redEyePupilSize = value
+        if let id = selectedRedEyeID { updateRedEye(id) { $0.pupilSize = value } }
+    }
+
+    func setRedEyeDarken(_ value: Double) {
+        redEyeDarken = value
+        if let id = selectedRedEyeID { updateRedEye(id) { $0.darken = value } }
+    }
+
+    func deleteSelectedRedEye() {
+        guard let id = selectedRedEyeID, let index = recipe.redEyes.firstIndex(where: { $0.id == id }) else { return }
+        recordHistory()
+        recipe.redEyes.remove(at: index)
+        selectedRedEyeID = recipe.redEyes.last?.id
+        scheduleRender()
+    }
+
     var selectedHealingSpot: PhotoHealingSpot? {
         guard let id = selectedHealingSpotID else { return nil }
         return recipe.healing.first { $0.id == id }
@@ -1443,6 +1502,7 @@ final class PhotoEditorController {
     }
 
     func setHealingMode(_ mode: PhotoHealingMode) {
+        isRedEyeMode = false
         healingMode = mode
         guard let id = selectedHealingSpotID else { return }
         updateHealingSpot(id) { $0.mode = mode }

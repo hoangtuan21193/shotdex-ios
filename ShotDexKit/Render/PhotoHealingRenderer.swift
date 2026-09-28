@@ -182,6 +182,42 @@ extension PhotoRenderService {
         return (dx * dx + dy * dy).squareRoot()
     }
 
+    /// Red Eye spots over `input`, each a small layer composited over the
+    /// photo — the coverage-in-alpha pattern the heal spots use, so a kernel
+    /// evaluated past its extent adds nothing there.
+    public static func applyRedEyes(_ spots: [PhotoRedEyeSpot], to input: CIImage) -> CIImage {
+        guard !spots.isEmpty, let kernel = redEyeKernel else { return input }
+        var image = input
+        let extent = input.extent
+        let shortEdge = min(extent.width, extent.height)
+        for spot in spots {
+            let radius = max(1, spot.radius * shortEdge)
+            let centre = imagePoint(spot.center, extent: extent)
+            let region = CGRect(x: centre.x - radius, y: centre.y - radius, width: radius * 2, height: radius * 2)
+                .integral.intersection(extent)
+            guard !region.isNull, region.width > 0, region.height > 0,
+                  let distance = CIFilter(
+                      name: "CIRadialGradient",
+                      parameters: [
+                          kCIInputCenterKey: CIVector(x: centre.x, y: centre.y),
+                          "inputRadius0": 0,
+                          "inputRadius1": radius,
+                          "inputColor0": CIColor(red: 0, green: 0, blue: 0),
+                          "inputColor1": CIColor(red: 1, green: 1, blue: 1),
+                      ]
+                  )?.outputImage,
+                  let layer = kernel.apply(
+                      extent: region,
+                      arguments: [input, distance, Float(min(1, max(0.05, spot.pupilSize))), Float(min(1, max(0, spot.darken)))]
+                  )
+            else { continue }
+            image = layer.cropped(to: region).composited(over: image).cropped(to: extent)
+        }
+        return image
+    }
+
+    static let redEyeKernel = CoreImageKernelLibrary.kit.colorKernel(named: "redEye")
+
     // Kernels: `Kernels/HealingKernels.ci.metal`.
     static let healingRingKernel = CoreImageKernelLibrary.kit.colorKernel(named: "healRing")
 

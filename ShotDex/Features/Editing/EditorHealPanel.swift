@@ -28,20 +28,88 @@ struct EditorHealPanel: View {
                 .padding(.horizontal, 14)
                 .padding(.top, 10)
 
+            // Heal · Clone · Red Eye (FS-03.15c §1). Remove would be first and
+            // is not shown while it is out (§6).
             HStack(spacing: 8) {
                 ForEach(PhotoHealingMode.allCases) { mode in
+                    let isSelected = !controller.isRedEyeMode && controller.healingMode == mode
                     Button {
                         controller.setHealingMode(mode)
                     } label: {
                         Label(mode.displayName, systemImage: mode == .heal ? "bandage" : "square.on.square")
                     }
-                    .buttonStyle(EditorChipButtonStyle(isSelected: controller.healingMode == mode))
-                    .accessibilityAddTraits(controller.healingMode == mode ? .isSelected : [])
+                    .buttonStyle(EditorChipButtonStyle(isSelected: isSelected))
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
                 }
+                Button {
+                    controller.isRedEyeMode = true
+                } label: {
+                    Label("Red Eye", systemImage: "eye")
+                }
+                .buttonStyle(EditorChipButtonStyle(isSelected: controller.isRedEyeMode))
+                .accessibilityAddTraits(controller.isRedEyeMode ? .isSelected : [])
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 14)
 
+            if controller.isRedEyeMode {
+                redEyeRows
+            } else {
+                spotRows
+            }
+            EditorToggleRow(
+                title: "Visualize Spots",
+                isOn: controller.isVisualizingSpots
+            ) { controller.isVisualizingSpots = $0 }
+            if controller.isVisualizingSpots {
+                EditorPlainSliderRow(
+                    title: "Threshold",
+                    value: controller.spotVisualizeThreshold,
+                    range: 0...1,
+                    isBipolar: false,
+                    valueText: "\(Int((controller.spotVisualizeThreshold * 100).rounded()))",
+                    isActive: false,
+                    onBeginDrag: {},
+                    onDrag: { controller.spotVisualizeThreshold = $0 },
+                    onEndDrag: {},
+                    onReset: { controller.spotVisualizeThreshold = 0.5 }
+                )
+            }
+
+            if !controller.isRedEyeMode, let spot = controller.selectedHealingSpot,
+               let index = controller.recipe.healing.firstIndex(where: { $0.id == spot.id }) {
+                HStack {
+                    Text("Spot \(index + 1) of \(controller.recipe.healing.count)")
+                        .font(EditorTheme.maskSubtitle)
+                        .foregroundStyle(EditorTheme.secondaryText)
+                    Spacer(minLength: 8)
+                    Button {
+                        controller.findNewSource()
+                    } label: {
+                        Label("New Source", systemImage: "arrow.triangle.2.circlepath")
+                            .font(EditorTheme.maskSubtitle)
+                    }
+                    .buttonStyle(EditorChipButtonStyle(isSelected: false))
+                    .accessibilityHint("Fills the spot from the next best place around it")
+                    Button(role: .destructive) {
+                        controller.deleteSelectedHealingSpot()
+                    } label: {
+                        Label("Delete Spot", systemImage: "trash")
+                            .font(EditorTheme.maskSubtitle)
+                            .foregroundStyle(EditorTheme.timelineDestructive)
+                    }
+                    .buttonStyle(.plain)
+                    .frame(minHeight: 44)
+                }
+                .padding(.horizontal, 14)
+            }
+        }
+        .padding(.bottom, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var spotRows: some View {
             EditorPlainSliderRow(
                 title: "Size",
                 value: controller.healingRadius,
@@ -78,59 +146,61 @@ struct EditorHealPanel: View {
                 onEndDrag: { controller.endContinuousChange() },
                 onReset: { controller.setHealingOpacity(1) }
             )
+    }
 
-            EditorToggleRow(
-                title: "Visualize Spots",
-                isOn: controller.isVisualizingSpots
-            ) { controller.isVisualizingSpots = $0 }
-            if controller.isVisualizingSpots {
-                EditorPlainSliderRow(
-                    title: "Threshold",
-                    value: controller.spotVisualizeThreshold,
-                    range: 0...1,
-                    isBipolar: false,
-                    valueText: "\(Int((controller.spotVisualizeThreshold * 100).rounded()))",
-                    isActive: false,
-                    onBeginDrag: {},
-                    onDrag: { controller.spotVisualizeThreshold = $0 },
-                    onEndDrag: {},
-                    onReset: { controller.spotVisualizeThreshold = 0.5 }
-                )
-            }
-
-            if let spot = controller.selectedHealingSpot,
-               let index = controller.recipe.healing.firstIndex(where: { $0.id == spot.id }) {
-                HStack {
-                    Text("Spot \(index + 1) of \(controller.recipe.healing.count)")
+    @ViewBuilder
+    private var redEyeRows: some View {
+        EditorPlainSliderRow(
+            title: "Pupil Size",
+            value: controller.redEyePupilSize,
+            range: 0.05...1,
+            isBipolar: false,
+            valueText: "\(Int((controller.redEyePupilSize * 100).rounded()))",
+            isActive: false,
+            onBeginDrag: { controller.beginContinuousChange() },
+            onDrag: { controller.setRedEyePupilSize($0) },
+            onEndDrag: { controller.endContinuousChange() },
+            onReset: { controller.setRedEyePupilSize(0.5) }
+        )
+        EditorPlainSliderRow(
+            title: "Darken",
+            value: controller.redEyeDarken,
+            range: 0...1,
+            isBipolar: false,
+            valueText: "\(Int((controller.redEyeDarken * 100).rounded()))",
+            isActive: false,
+            onBeginDrag: { controller.beginContinuousChange() },
+            onDrag: { controller.setRedEyeDarken($0) },
+            onEndDrag: { controller.endContinuousChange() },
+            onReset: { controller.setRedEyeDarken(0.5) }
+        )
+        if let eye = controller.selectedRedEye,
+           let index = controller.recipe.redEyes.firstIndex(where: { $0.id == eye.id }) {
+            HStack {
+                Text("Eye \(index + 1) of \(controller.recipe.redEyes.count)")
+                    .font(EditorTheme.maskSubtitle)
+                    .foregroundStyle(EditorTheme.secondaryText)
+                Spacer(minLength: 8)
+                Button(role: .destructive) {
+                    controller.deleteSelectedRedEye()
+                } label: {
+                    Label("Delete Spot", systemImage: "trash")
                         .font(EditorTheme.maskSubtitle)
-                        .foregroundStyle(EditorTheme.secondaryText)
-                    Spacer(minLength: 8)
-                    Button {
-                        controller.findNewSource()
-                    } label: {
-                        Label("New Source", systemImage: "arrow.triangle.2.circlepath")
-                            .font(EditorTheme.maskSubtitle)
-                    }
-                    .buttonStyle(EditorChipButtonStyle(isSelected: false))
-                    .accessibilityHint("Fills the spot from the next best place around it")
-                    Button(role: .destructive) {
-                        controller.deleteSelectedHealingSpot()
-                    } label: {
-                        Label("Delete Spot", systemImage: "trash")
-                            .font(EditorTheme.maskSubtitle)
-                            .foregroundStyle(EditorTheme.timelineDestructive)
-                    }
-                    .buttonStyle(.plain)
-                    .frame(minHeight: 44)
+                        .foregroundStyle(EditorTheme.timelineDestructive)
                 }
-                .padding(.horizontal, 14)
+                .buttonStyle(.plain)
+                .frame(minHeight: 44)
             }
+            .padding(.horizontal, 14)
         }
-        .padding(.bottom, 10)
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var hintText: String {
+        if controller.isRedEyeMode {
+            return controller.recipe.redEyes.isEmpty
+                ? "Tap a red eye to fix it."
+                : "Drag a circle to move it. Tap another eye to fix it too."
+        }
         if controller.recipe.healing.isEmpty {
             return "Tap a spot to remove it, or drag along a wire. ShotDex fills it from beside it."
         }
@@ -147,6 +217,7 @@ struct EditorHealGuideOverlay: View {
     var zoomScale: CGFloat = 1
 
     @State private var drag: DragAnchor?
+    @State private var redEyeDrag: DragAnchor?
 
     private struct DragAnchor {
         var spotID: UUID
@@ -163,6 +234,9 @@ struct EditorHealGuideOverlay: View {
             // that land on them.
             ForEach(Array(controller.recipe.healing.enumerated()), id: \.element.id) { index, spot in
                 spotGuide(spot, number: index + 1)
+            }
+            ForEach(Array(controller.recipe.redEyes.enumerated()), id: \.element.id) { index, eye in
+                redEyeGuide(eye, number: index + 1)
             }
         }
         .coordinateSpace(name: Self.space)
@@ -229,6 +303,44 @@ struct EditorHealGuideOverlay: View {
             spot: spot,
             moves: \.center
         )
+    }
+
+    /// A Red Eye spot: its circle, accent when picked; drag to move it.
+    private func redEyeGuide(_ eye: PhotoRedEyeSpot, number: Int) -> some View {
+        let isSelected = eye.id == controller.selectedRedEyeID
+        let radius = eye.radius * min(imageRect.width, imageRect.height)
+        let hit = max(radius * 2, EditorLayoutMetrics.maskGuideHitTarget / zoomScale)
+        let color: Color = isSelected ? EditorTheme.accent : .white
+        return Circle()
+            .stroke(color, style: StrokeStyle(lineWidth: (isSelected ? 2 : 1.25) / zoomScale, dash: [3 / zoomScale, 2 / zoomScale]))
+            .frame(width: radius * 2, height: radius * 2)
+            .shadow(color: .black.opacity(0.5), radius: 2 / zoomScale)
+            .frame(width: hit, height: hit)
+            .contentShape(Circle())
+            .position(point(eye.center))
+            .onTapGesture { controller.selectedRedEyeID = eye.id }
+            .highPriorityGesture(
+                DragGesture(minimumDistance: 2, coordinateSpace: .named(Self.space))
+                    .onChanged { value in
+                        if redEyeDrag == nil {
+                            controller.selectedRedEyeID = eye.id
+                            redEyeDrag = DragAnchor(spotID: eye.id, point: eye.center, touch: value.startLocation)
+                            controller.beginContinuousChange()
+                        }
+                        guard let redEyeDrag, imageRect.width > 0, imageRect.height > 0 else { return }
+                        let moved = NormalizedPoint(
+                            x: min(1, max(0, redEyeDrag.point.x + (value.location.x - redEyeDrag.touch.x) / imageRect.width)),
+                            y: min(1, max(0, redEyeDrag.point.y + (value.location.y - redEyeDrag.touch.y) / imageRect.height))
+                        )
+                        controller.updateRedEye(redEyeDrag.spotID) { $0.center = moved }
+                    }
+                    .onEnded { _ in
+                        redEyeDrag = nil
+                        controller.endContinuousChange()
+                    }
+            )
+            .accessibilityLabel("Red eye \(number)")
+            .accessibilityHint("Drag to move")
     }
 
     private func strokePath(_ stroke: [NormalizedPoint], at anchor: NormalizedPoint) -> Path {

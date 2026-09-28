@@ -58,6 +58,10 @@ Hàng Size/Feather/Opacity cùng kiểu hàng cọ của Mask.
 - Trong vòng tròn, pixel **đỏ trội** (đỏ lớn hơn hẳn lục và lam) được kéo đỏ về mức lục/lam rồi làm tối theo
   **Darken**; pixel không đỏ (mống mắt nâu, lông mi) không đổi. Hai slider: **Pupil Size** · **Darken** (0…100).
 - Mỗi vết Red Eye kéo để dời, Delete Spot để xoá; một chạm là một bước Undo.
+- Cách làm (2026-09-28): `RedEyeLocator` lấy `leftPupil/rightPupil` của `VNDetectFaceLandmarksRequest` trên ảnh gốc
+  preview; vòng tròn = 0,45 × bề ngang mắt, Pupil Size (mặc định 50) là phần được sửa. Kernel `redEye`: độ đỏ trội
+  = đỏ − max(lục, lam), ramp 0,06…0,16; đỏ kéo về max(lục, lam) rồi cả điểm tối đi 0,8 × Darken; lớp phủ có độ phủ
+  trong alpha, ghép đè như vết Heal. Chạy trong pass retouch, ngay sau vết Heal.
 
 ## 5. Red Eye — nút Fix Red Eye
 
@@ -103,10 +107,10 @@ Remove (tô lên vật để xoá, tự lấp từ xung quanh) **tạm bỏ** t�
 | AC-32 | vết Heal với nguồn gợi ý | bấm New Source | nguồn mới khác chỗ cũ ≥ 1 bán kính, không chồng lên vết; Undo một lần trả nguồn cũ | `PhotoHealingTests.newSourcePicksAnotherPlace` · nút: `ShotDexUITests/scripts/iphone-heal-new-source.json` |
 | AC-33 | ảnh có 5 chấm bụi, Visualize Spots bật | lưu ảnh | file lưu khớp từng pixel bản Visualize tắt; Threshold 80 cho nhiều pixel trắng hơn Threshold 20 | `SpotVisualizerTests.visualizeIsDisplayOnly` · `…thresholdControlsSensitivity` · `ShotDexUITests/scripts/iphone-heal-visualize.json` |
 | AC-34 | 6 vết heal/clone + 1 Red Eye, Show Spot Pins tắt | bấm Clear All rồi xác nhận | hộp xác nhận hiện (7 ≥ 2); sau khi xác nhận 0 vết; Undo một lần trả đủ 7; lúc pins tắt, bảng phần tử không có ghim nào ngoài vết đang chọn | ⚠️ chưa có (dự kiến `PhotoHealingTests.clearAllIsOneStep`) + `ShotDexUITests/scripts/iphone-heal-panel.json` |
-| AC-35 | ảnh mặt người tổng hợp có con ngươi đỏ (220,40,40) bán kính 12px | chạm Red Eye cách tâm con ngươi 20px | tâm vết lệch tâm con ngươi ≤ 2px; trong con ngươi đỏ ≤ max(lục, lam) + 10/255; mống mắt lệch ≤ 2/255 | ⚠️ chưa có (dự kiến `RedEyeTests.tapCentresOnThePupil`). Không dùng ảnh mặt người thật |
+| AC-35 | ảnh mặt người tổng hợp có con ngươi đỏ (220,40,40) bán kính 12px | chạm Red Eye cách tâm con ngươi 20px | tâm vết lệch tâm con ngươi ≤ 2px; trong con ngươi đỏ ≤ max(lục, lam) + 10/255; mống mắt lệch ≤ 2/255 | `RedEyeTests.tapCentresOnThePupil` (con ngươi đưa vào như Vision báo — không dùng ảnh mặt người) · golden `redEye-*` · `ShotDexUITests/scripts/iphone-heal-panel.json` |
 | AC-36 | ảnh không có mặt nào (hoặc Vision báo lỗi — simulator) | chạm Red Eye | vết đặt đúng chỗ chạm, bán kính 1% cạnh ngắn; không alert | ⚠️ chưa có (dự kiến `RedEyeTests.noFaceFallsBackToTheTap`) |
 | AC-37 | ảnh tổng hợp 2 mặt: một cặp con ngươi đỏ (220,40,40), một cặp nâu tối (60,40,30) | bấm Fix Red Eye | đúng 2 vết, cả hai trên con ngươi đỏ; con ngươi nâu lệch ≤ 2/255; Undo một lần gỡ cả 2 | ⚠️ chưa có — cần máy thật hoặc Vision của Mac (dự kiến `RedEyeTests.fixRedEyeSkipsDarkPupils`). Không dùng ảnh mặt người thật |
 | AC-38 | ảnh không mắt đỏ nào (hoặc Vision báo lỗi — simulator) | bấm Fix Red Eye | 0 vết, 0 bước Undo; pill "No red eyes found" 3s; không alert | ⚠️ chưa có (dự kiến `RedEyeTests.fixRedEyeWithNothingToFix`) |
 | AC-39 | editor mở, iPhone 17 26.5 và 18.6 | mở Heal | hàng chế độ đúng 3 ô Heal · Clone · Red Eye, không ô Remove; chạm Red Eye hiện Pupil Size · Darken · Fix Red Eye | ⚠️ chưa có (`ShotDexUITests/scripts/iphone-heal-panel.json` + element dump) |
 
-**Chưa chứng minh được:** AC-34…AC-39 (chưa code).
+**Chưa chứng minh được:** AC-34, AC-36…AC-39 (chưa code). AC-35 phần Vision tìm con ngươi trên mặt thật: cần máy thật, không có test (luật không dùng ảnh mặt).
