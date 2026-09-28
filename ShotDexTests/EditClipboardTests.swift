@@ -1,3 +1,4 @@
+import CoreImage
 import Foundation
 import Testing
 @testable import ShotDexKit
@@ -88,6 +89,77 @@ struct EditClipboardTests {
 
         #expect(EditorSyncScope.look.apply(a, onto: .identity) == b)
         #expect(EditClipboard.look(of: a) == b)
+    }
+
+    /// A 256² grey frame ruled with five parallel lines at `tilt`°, plus a
+    /// pair of side edges leaning in by `lean`° each — a building.
+    private func building(tilt: Double, lean: Double) -> CIImage {
+        let size = 256
+        var pixels = [Float](repeating: 0.12, count: size * size)
+        func draw(degrees: Double, through centre: (x: Double, y: Double)) {
+            let radians = degrees * .pi / 180
+            for step in 0...(size * 3) {
+                let t = (Double(step) / Double(size * 3) - 0.5) * Double(size)
+                let x = centre.x + cos(radians) * t
+                let y = centre.y - sin(radians) * t
+                for dx in -1...1 {
+                    for dy in -1...1 {
+                        let px = Int(x.rounded()) + dx, py = Int(y.rounded()) + dy
+                        guard px >= 0, px < size, py >= 0, py < size else { continue }
+                        pixels[py * size + px] = 0.95
+                    }
+                }
+            }
+        }
+        for line in 0..<5 {
+            draw(degrees: tilt, through: (128, 128 + Double(line - 2) * 36))
+        }
+        draw(degrees: 90 - lean + tilt, through: (30, 128))
+        draw(degrees: 90 + lean + tilt, through: (226, 128))
+        var rgba = [Float](repeating: 1, count: size * size * 4)
+        for (index, value) in pixels.enumerated() {
+            rgba[index * 4] = value
+            rgba[index * 4 + 1] = value
+            rgba[index * 4 + 2] = value
+        }
+        let data = rgba.withUnsafeBufferPointer { Data(buffer: $0) }
+        return CIImage(
+            bitmapData: data,
+            bytesPerRow: size * 4 * MemoryLayout<Float>.size,
+            size: CGSize(width: size, height: size),
+            format: .RGBAf,
+            colorSpace: nil
+        )
+    }
+
+    /// FS-03.15b AC-28. Photo A carries Upright Auto solved on A. Pasted onto
+    /// B, a different building, B gets the mode and a transform solved on B's
+    /// own lines — not A's. Level reads the horizon with Vision, which runs
+    /// on the simulator too (measured 2026-09-28: 2.87° read for a drawn 3°).
+    @Test func uprightModeIsResolvedOnTheTarget() throws {
+        let context = CIContext(options: [.useSoftwareRenderer: false])
+        var a = PhotoEditRecipe.identity
+        a.upright.mode = .auto
+        a = UprightResolver.resolve(a, on: building(tilt: -5, lean: 5), context: context)
+        #expect(!a.upright.solved.isIdentity, "A solved on A")
+
+        let clipboard = makeClipboard()
+        clipboard.copy(from: a)
+        let pasted = clipboard.paste(onto: .identity)
+        #expect(pasted.upright.mode == .auto)
+        #expect(pasted.upright.needsSolving)
+
+        let b = UprightResolver.resolve(pasted, on: building(tilt: 3, lean: 3), context: context)
+        #expect(b.upright.mode == .auto)
+        #expect(!b.upright.solved.isIdentity)
+        #expect(b.upright.solved != a.upright.solved, "B's transform is B's own")
+        #expect(b.upright.solved.rotate * 3 < 0, "B's 3° tilt is corrected the other way")
+        let applied = b.upright.solved.rotate * 0.35 * 180 / .pi
+        #expect(abs(applied + 3) <= 0.5, "B's 3° met with \(applied)°")
+        #expect(b.upright.solved.vertical != 0, "B's own convergence is straightened too")
+
+        // Already solved: nothing is solved again.
+        #expect(UprightResolver.resolve(b, on: building(tilt: -5, lean: 5), context: context) == b)
     }
 
     @Test func copyingNothingOffersNothing() {

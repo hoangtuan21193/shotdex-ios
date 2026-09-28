@@ -35,6 +35,44 @@ public enum UprightMode: String, CaseIterable, Identifiable, Sendable {
     var keystoneShare: Double { self == .auto ? 0.6 : 1 }
 }
 
+public extension UprightMode {
+    /// The analysis a stored mode asks for; nil for Off and Guided, which
+    /// draw no conclusion from the photo's own lines.
+    init?(_ mode: PhotoUprightMode) {
+        switch mode {
+        case .auto: self = .auto
+        case .level: self = .level
+        case .vertical: self = .vertical
+        case .full: self = .full
+        case .off, .guided: return nil
+        }
+    }
+}
+
+public extension PhotoUprightRecipe {
+    /// A mode that came from another photo — pasted, synced, a look — with
+    /// no transform solved on this one yet.
+    var needsSolving: Bool {
+        UprightMode(mode) != nil && solved.isIdentity
+    }
+}
+
+/// Solves a pasted Upright mode on the photo it landed on (FS-03.15b §4):
+/// the mode travels with a look, the transform does not.
+public enum UprightResolver {
+    /// `recipe` with its Upright solved on `image` — the photo's own
+    /// unedited pixels — or unchanged when nothing needs solving or the
+    /// photo has no lines to solve from.
+    public static func resolve(_ recipe: PhotoEditRecipe, on image: CIImage, context: CIContext) -> PhotoEditRecipe {
+        guard recipe.upright.needsSolving, let mode = UprightMode(recipe.upright.mode),
+              let suggestion = UprightAnalyzer.analyze(image, mode: mode, context: context)
+        else { return recipe }
+        var resolved = recipe
+        resolved.upright.solved = suggestion.transform(for: mode)
+        return resolved
+    }
+}
+
 public extension PhotoUprightMode {
     /// The stored mode for an analysis pass.
     init(_ mode: UprightMode) {
@@ -191,9 +229,13 @@ public enum UprightAnalyzer {
         for segment in segments {
             let angle = segment.angle
             let fromVertical = angle > 0 ? angle - .pi / 2 : angle + .pi / 2
-            // Only lines that are trying to be vertical: 3°…25° off.
+            // Only lines that are trying to be vertical: 0.5°…25° off. The
+            // floor was 3°, which threw away the spec's own 6° building (3° a
+            // side) and any edge the 1°-binned detector read a degree or two
+            // short. A side edge that really is near vertical is evidence
+            // too — of little convergence on that side.
             let tilt = abs(fromVertical)
-            guard tilt > 3 * .pi / 180, tilt < 25 * .pi / 180 else { continue }
+            guard tilt > 0.5 * .pi / 180, tilt < 25 * .pi / 180 else { continue }
             let midX = Double(segment.start.x + segment.end.x) / 2
             // The middle third says nothing about convergence — a line through
             // the centre leans the same way whichever side the camera was on.
@@ -221,9 +263,9 @@ public enum UprightAnalyzer {
     /// Vision's reading when it had one; the lines' own tilt otherwise.
     ///
     /// When the mode also levels, the keystone is read off the lines as they
-    /// will sit once levelled: a 2° tilt on a building converging 8° leaves
-    /// one edge only 2° off vertical, under the 3° a line needs to count, and
-    /// the keystone would come out as nothing.
+    /// will sit once levelled: a tilt as large as the lean leaves one edge
+    /// dead vertical, where it cannot count, and the keystone would come out
+    /// as half of itself or nothing.
     public static func suggestion(
         from segments: [UprightSegment],
         mode: UprightMode,
@@ -249,8 +291,10 @@ public enum UprightAnalyzer {
         guard (try? handler.perform([request])) != nil,
               let horizon = request.results?.first
         else { return nil }
-        let angle = Double(horizon.angle)
-        return abs(angle) <= 20 * .pi / 180 ? angle : nil
+        // Vision's angle runs the other way from this file's: a horizon
+        // rising 3° to the right reads −3° (measured on a drawn frame).
+        let tilt = -Double(horizon.angle)
+        return abs(tilt) <= 20 * .pi / 180 ? tilt : nil
     }
 
     // MARK: Detection

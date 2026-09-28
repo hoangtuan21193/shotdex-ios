@@ -1,3 +1,4 @@
+import CoreImage
 import Photos
 import ShotDexKit
 import SwiftUI
@@ -128,6 +129,7 @@ final class EditorBatchSaver {
         var recipe = item.recipe
         recipe.source = option.source
         recipe.sourceFilename = option.filename
+        recipe = try await resolvingUpright(recipe, source: source, service: service)
 
         let result: PhotoSaveResult
         if savesCopy {
@@ -152,6 +154,28 @@ final class EditorBatchSaver {
         }
         return result.assetID
     }
+
+    /// A pasted Upright mode solved on this photo's own pixels, once, before
+    /// the save — so the saved recipe carries the transform and reopening it
+    /// solves nothing (FS-03.15b AC-28).
+    private func resolvingUpright(
+        _ recipe: PhotoEditRecipe,
+        source: LoadedPhotoEditSource,
+        service: PhotoEditingService
+    ) async throws -> PhotoEditRecipe {
+        guard recipe.upright.needsSolving else { return recipe }
+        var identity = PhotoEditRecipe.identity
+        identity.source = recipe.source
+        identity.sourceFilename = recipe.sourceFilename
+        let original = try await service.renderer.renderPreview(
+            source: source.info,
+            recipe: identity,
+            maximumDimension: CGFloat(UprightAnalyzer.analysisSide * 2)
+        )
+        return UprightResolver.resolve(recipe, on: CIImage(cgImage: original), context: Self.uprightContext)
+    }
+
+    private static let uprightContext = CIContext(options: [.cacheIntermediates: false])
 
     /// Expands `{camera}`-style tokens **per photo**, not once for the run: a
     /// look synced across a shoot may carry a text overlay, and every frame has

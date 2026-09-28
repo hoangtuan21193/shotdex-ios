@@ -81,7 +81,11 @@ rồi Geometry (Vertical · Horizontal · Rotate · **Aspect** · Scale · Offse
   Mỗi đường thêm/kéo/xoá là một bước Undo.
 - **Dò đường**: Level dùng phép tìm đường chân trời của Vision; phần dọc dùng bộ dò đường dọc tự viết (bỏ
   phiếu đường thẳng trên ảnh xám 256px). Guided không cần dò.
-  Vision không chạy được (simulator) hay đọc nghiêng quá 20° thì Level quay về đường thẳng tự dò. Khi chế độ có
+  Vision không có kết quả hay đọc nghiêng quá 20° thì Level quay về đường thẳng tự dò. Góc của Vision ngược dấu
+  với quy ước ở đây (đường dốc lên 3° về phải đọc −3°). Đường dọc tính từ 0,5° lệch trở lên (trước là 3°).
+- Dán / Sync / lưu hàng loạt: chế độ đến từ ảnh khác mà chưa có phép nắn thì giải trên ảnh đích — trong editor
+  lúc dán (cùng bước Undo) hoặc khi ảnh gốc tải xong; khi lưu hàng loạt thì giải một lần trước khi lưu, recipe
+  lưu kèm phép nắn. Khi chế độ có
   cả xoay, độ hội tụ đo trên các đường **đã trừ** độ nghiêng — nghiêng 2° trên toà nhà hội tụ 8° để một cạnh chỉ
   còn lệch 2°, dưới ngưỡng 3° một đường cần để được tính.
 - Auto/Full: phần nào không dò được thì bỏ phần đó. Không dò được gì: không đổi gì, dòng "No straight
@@ -133,15 +137,15 @@ Nhóm Effects › Vignette thêm **Style** — một hàng chip ba ô ở đầu
 | AC-20 | ảnh có chấm ở tâm và ở bán kính 0,8 trên đường chéo | đặt Distortion +50 | chấm ở 0,8 dời **ra** 0,3%…1,5% nửa đường chéo; tâm đứng yên; không góc nào lấy mẫu ngoài ảnh (cả ±50, ±100) | `LensManualTests.distortionPullsTheEdgesIn` · `…neitherDirectionShowsEmptyCorners` · `…rawSourcesGetTheManualCorrection` · `…distortionRowNamesItsGroup` · golden `lensWarp*` (chụp lại) · hàng: `ShotDexUITests/scripts/iphone-lens-manual.json` |
 | AC-21 | ảnh xám phẳng 0,5 | đặt Vignetting +50, Midpoint 50 | độ sáng góc tăng ≥ 8% tương đối; tâm lệch ≤ 1/255; tâm tính trên khung trước crop; vị trí pass ngay sau Lens Blur | `LensManualTests.vignettingBrightensCorners` · `…vignettingDarkensAndMidpointMovesTheFallOff` · hàng: `ShotDexUITests/scripts/iphone-lens-manual.json` |
 | AC-22 | hình tròn đen giữa nền trắng | đặt Aspect +50 | tỉ lệ ngang/dọc của hình thành 1,22 ± 0,02; 0 pixel trong suốt | `GeoTransformTests.aspectStretchesAroundTheCentre` · `…negativeAspectGrowsTheHeight` · hàng: `ShotDexUITests/scripts/iphone-geo-aspect.json` |
-| AC-23 | ảnh toà nhà tổng hợp: cạnh dọc hội tụ 8°, nghiêng 2° | chạm Auto | độ nghiêng còn ≤ 0,5°; độ hội tụ còn 3°…4° (nắn 60%) | `UprightAnalyzerTests.autoLevelsAndPartlyStraightens` · `…aVisionHorizonOverridesTheLines` · chip: `ShotDexUITests/scripts/iphone-upright-auto.json` · ⚠️ Level qua Vision trên ảnh thật: cần máy thật |
+| AC-23 | ảnh toà nhà tổng hợp: cạnh dọc hội tụ 8°, nghiêng 2° | chạm Auto | độ nghiêng còn ≤ 0,5°; độ hội tụ còn 3°…4° (nắn 60%) | `UprightAnalyzerTests.autoLevelsAndPartlyStraightens` · `…aVisionHorizonOverridesTheLines` · chip: `ShotDexUITests/scripts/iphone-upright-auto.json` · Level qua Vision trên khung vẽ: `EditClipboardTests.uprightModeIsResolvedOnTheTarget` |
 | AC-24 | cùng ảnh, Upright Guided, 4 đường đã có | vẽ 2 đường dọc theo hai cạnh nghiêng rồi thử đường thứ 5 | hai cạnh dọc trong 0,5°; đường thứ 5 không tạo, hiện "Up to 4 guides"; 1 Undo gỡ đúng 1 đường | ⚠️ chưa có (dự kiến `UprightGuidedTests.twoGuidesMakeBothVertical`) + `ShotDexUITests/scripts/iphone-upright-guided.json` |
 | AC-25 | ảnh có đèn sáng 0,95 ở góc và vùng xám 0,5 cạnh đó | Vignette −50, Style Highlight Priority (so với Paint Overlay) | Highlight Priority: đèn còn ≥ 0,9, vùng xám tối ≥ 20%; Paint Overlay: đèn tối ≥ 20% | `VignetteStyleTests.highlightPriorityKeepsLights` · `…negativeDarkensPositiveBrightens` · `…paintOverlayDimsHighlights` · golden `vignette*` · chip: `ShotDexUITests/scripts/iphone-vignette-style.json` |
 | AC-26 | Vignette −50, crop giữ nửa trái ảnh | render | tâm vùng sáng nhất nằm ở tâm khung **sau** crop ± 2% cạnh ngắn; grain chạy sau vignette | `VignetteStyleTests.vignetteFollowsTheCrop` · `…grainRunsAfterTheVignette` |
 | AC-27 | ảnh toà nhà của AC-23, Upright Auto đã chạm | kéo slider Vertical tay +10, rồi render 20 lần | recipe mang chế độ Auto + phép nắn đã giải + Vertical 10 riêng; phép nắn giải 0 lần thêm; Off trả đúng Vertical 10 | `UprightStorageTests.solvedTransformAndSlidersAreSeparate` · `…renderAddsTheStoredTransformAndSolvesNothing` · `UprightAnalyzerTests.aModeKeepsOnlyTheCorrectionItMakes` · chip: `ShotDexUITests/scripts/iphone-upright-storage.json` |
-| AC-28 | ảnh A Upright Auto; ảnh B là toà nhà khác nghiêng 3°, hội tụ 6° | Copy Edits A → Paste sang B | B mang chế độ Auto; phép nắn của B giải trên B (khác A); độ nghiêng của B còn ≤ 0,5° | ⚠️ chưa có — phần Level cần máy thật hoặc Vision của Mac (dự kiến `EditClipboardTests.uprightModeIsResolvedOnTheTarget`) |
+| AC-28 | ảnh A Upright Auto; ảnh B là toà nhà khác nghiêng 3°, hội tụ 6° | Copy Edits A → Paste sang B | B mang chế độ Auto; phép nắn của B giải trên B (khác A); độ nghiêng của B còn ≤ 0,5° | `EditClipboardTests.uprightModeIsResolvedOnTheTarget` (Vision chạy trên sim: B còn lệch 0,13°) |
 | AC-29 | ảnh 3:2, Vertical +40, tỉ lệ khoá 3:2 | bật Constrain Crop (so với tắt) | bật: 0 pixel ngoài ảnh sau nắn, khung vẫn 3:2 ± 0,01; tắt: mép kéo giãn, 0 pixel trong suốt | ⚠️ chưa có (dự kiến `GeoTransformTests.constrainCropKeepsTheLockedRatio`) |
 
-**Chưa chứng minh được:** AC-24, AC-28, AC-29 (chưa code); AC-23 phần Vision trên ảnh thật (cần máy thật).
+**Chưa chứng minh được:** AC-24, AC-29 (chưa code).
 
 *AC-20 sửa 2026-09-28:* bản cũ ghi "dời vào" cùng lúc với "không góc trống" — hai điều không cùng đúng. Nắn méo
 thùng kéo vùng rìa **ra**; phóng vừa khít (không góc trống) không đảo chiều đó. Lightroom cũng vậy khi bật Constrain

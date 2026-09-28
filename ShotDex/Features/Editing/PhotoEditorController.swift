@@ -1409,7 +1409,7 @@ final class PhotoEditorController {
     func apply(_ newRecipe: PhotoEditRecipe) {
         guard newRecipe != recipe else { return }
         recordHistory()
-        recipe = newRecipe
+        recipe = resolvingUpright(newRecipe)
         scheduleRender()
     }
 
@@ -1417,7 +1417,25 @@ final class PhotoEditorController {
         let pasted = clipboard.paste(onto: recipe)
         guard pasted != recipe else { return }
         recordHistory()
-        recipe = pasted
+        recipe = resolvingUpright(pasted)
+        scheduleRender()
+    }
+
+    /// A pasted or synced Upright mode solved on this photo, inside the step
+    /// that brought it. Before the original has loaded there is nothing to
+    /// read; `resolvePendingUpright` runs again once it has.
+    private func resolvingUpright(_ candidate: PhotoEditRecipe) -> PhotoEditRecipe {
+        guard candidate.upright.needsSolving, let cgImage = originalPreviewImage?.cgImage else { return candidate }
+        uprightSolveCount += 1
+        return UprightResolver.resolve(candidate, on: CIImage(cgImage: cgImage), context: Self.uprightContext)
+    }
+
+    /// A draft that arrived before the original loaded: solve it now, folded
+    /// into the history step that brought the mode rather than a new one.
+    private func resolvePendingUpright() {
+        let resolved = resolvingUpright(recipe)
+        guard resolved != recipe else { return }
+        recipe = resolved
         scheduleRender()
     }
 
@@ -2562,6 +2580,7 @@ final class PhotoEditorController {
                 maximumDimension: Self.settleEdge
             )
             originalPreviewImage = UIImage(cgImage: cgImage)
+            resolvePendingUpright()
             await service.renderer.installInteractiveBase(
                 cgImage,
                 source: loadedSource.info,
