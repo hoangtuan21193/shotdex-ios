@@ -150,11 +150,11 @@ AC-40…52 · 15e AC-53…60. Máy mặc định: iPhone 17, iOS 26.5 và 18.6.
 | AC-1 | recipe có mọi trường mới, một mask mang loại vùng lạ và một vết retouch có chế độ lạ | decode | chỉ mất đúng mask-vùng và vết đó; Calibration, curve vùng, mixer, Upright, Lens Blur còn nguyên | `RecipeLossyDecodingTests.newParityFieldsSurviveOneBadElement` · `.untouchedParityPartsWriteNothing` |
 | AC-2 | ảnh A có Calibration Red Hue +30, curve vùng Shadows +40, 2 vết Heal, 1 Red Eye, Upright Guided | Copy Edits → Paste sang B | B nhận Calibration và curve vùng; 0 vết retouch, 0 Red Eye, 0 guide | `EditClipboardTests.parityLookSlice` |
 | AC-3 | mỗi control mới ở 15a–15e | đọc bảng ánh xạ của FS-03.14 | mọi control có ≥ 1 thẻ `crs:` hoặc được ghi rõ "không có trong Lightroom" | ⚠️ chưa có (dự kiến `LightroomTagCoverageTests.everyParityControlHasATag`) |
-| AC-4 | ảnh tổng hợp 11648×8736, recipe Lens Blur 50 + 3 vết Heal nét cọ + 3 mask | lưu full resolution | đỉnh bộ nhớ ≤ 1,5GB; vượt thì phiên còn, có thông báo lỗi, không tạo asset rỗng | ⚠️ chưa có (dự kiến `LargeImageRenderTests.hundredMegapixelSaveStaysUnderCeiling`) |
+| AC-4 | ảnh tổng hợp 11648×8736, recipe Lens Blur 50 + 3 vết Heal nét cọ + 3 mask | lưu full resolution | đỉnh bộ nhớ ≤ 1,5GB; vượt thì phiên còn, có thông báo lỗi, không tạo asset rỗng | `LargeImageRenderTests.hundredMegapixelSaveStaysUnderCeiling` (sim, 2026-09-29: đỉnh **834 MB** trên nền, render + JPEG) · đường lỗi: `render`/`write` ném trước `commit` (`PhotoEditingService.swift:393-405`), nên không có asset rỗng và phiên còn · ⚠️ số trên máy thật: đo lại |
 | AC-5 | build scheme ShotDex sau khi thêm mọi pass | grep thư mục kit + chạy test nạp kernel | 0 import SwiftUI/GRDB trong kit; mọi kernel mới nạp được | `KernelLibraryTests.kitHasNoSwiftUIOrGRDB` + `everyKernelLoads` (mỗi kernel mới thêm một dòng) |
 | AC-6 | recipe bật mọi pass của §3 | đọc thứ tự pass của renderer | đúng thứ tự bảng §3: Lens Blur → tối góc tay → Calibration → Light; B&W trong Color; vignette, grain sau mask; ảnh tĩnh, khung Live Photo và mask tự động đọc cùng một danh sách; chuỗi của mask không có B&W, Vignette, Grain | `RenderOrderTests.parityPassOrderMatchesTheSpec` · `.stillLiveAndAutoMaskShareOnePassList` · `.livePhotoFrameMatchesStill` · `.blackAndWhiteRunsInsideColor` · `EditorAdjustmentCatalogTests.maskHasNoBlackWhiteVignetteGrain`; golden `pipeline-groups-1-2` chụp lại một lần (2026-09-28), video không đổi |
 
-**Chưa chứng minh được:** AC-1…AC-6 (chưa code).
+**Chưa chứng minh được:** AC-3 (dời sang FS-03.14, task 7); số đo AC-4 trên máy thật.
 
 ## 9. Rủi ro đã biết
 
