@@ -32,6 +32,11 @@ struct LensBlurTests {
     /// Near (1.0) in the top half, far (0.2) in the bottom — Core Image's y
     /// grows upward, so "top" is the upper rows of the extent.
     static func splitDepth(near: Double = 1, far: Double = 0.2) -> CIImage {
+        // Not colour-managed, like a real disparity map: 0.2 stays 0.2.
+        CIImage(cgImage: splitDepthPicture(near: near, far: far), options: [.colorSpace: NSNull()])
+    }
+
+    static func splitDepthPicture(near: Double = 1, far: Double = 0.2) -> CGImage {
         let mapSide = side / 4
         let context = CGContext(
             data: nil, width: mapSide, height: mapSide, bitsPerComponent: 8, bytesPerRow: 0,
@@ -41,8 +46,7 @@ struct LensBlurTests {
         context.fill(CGRect(x: 0, y: 0, width: mapSide, height: mapSide / 2))
         context.setFillColor(CGColor(gray: near, alpha: 1))
         context.fill(CGRect(x: 0, y: mapSide / 2, width: mapSide, height: mapSide / 2))
-        // Not colour-managed, like a real disparity map: 0.2 stays 0.2.
-        return CIImage(cgImage: context.makeImage()!, options: [.colorSpace: NSNull()])
+        return context.makeImage()!
     }
 
     /// The luminance of `rect`, row by row.
@@ -261,6 +265,90 @@ struct LensBlurTests {
         recipe.bokeh = .ring
         _ = cache.image(for: recipe, base: input, depth: depth, identity: "stripes", colorSpace: Self.sRGB, context: CIContext())
         #expect(cache.levelBuilds == 2)
+    }
+
+    // MARK: AC-56, AC-59 — estimated depth
+
+    /// The model's stand-in: the test photo's near/far split, or an error.
+    struct FakeEstimator: DepthEstimating {
+        var fails = false
+        struct Failure: Error {}
+        func depth(of image: CGImage) throws -> CGImage {
+            if fails { throw Failure() }
+            return LensBlurTests.splitDepthPicture()
+        }
+    }
+
+    /// The test photo saved as a JPEG with no depth, as the renderer sees it.
+    static func jpegSource(in directory: URL) async throws -> PhotoRenderSourceInfo {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let url = directory.appendingPathComponent("stripes.jpg")
+        try CIContext().writeJPEGRepresentation(of: stripes(), to: url, colorSpace: sRGB)
+        var source = try await PhotoRenderService().inspectSource(at: url)
+        source.persistentIdentity = "asset-stripes|original|0"
+        return source
+    }
+
+    static func lensBlur(_ amount: Double) -> PhotoEditRecipe {
+        var recipe = PhotoEditRecipe.identity
+        recipe.lensBlur = Self.recipe(amount: amount, far: 0.7, near: 1)
+        return recipe
+    }
+
+    /// AC-56. A JPEG with no depth map and Lens Blur 50: the model runs once,
+    /// the depth reads as estimated; reopened — a new renderer over the same
+    /// store — it runs 0 times and the far half is still blurred.
+    @Test func noDepthPhotoIsEstimatedOnce() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("lensblur-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let source = try await Self.jpegSource(in: directory)
+        let store = GeneratedMatteStore(directory: directory.appendingPathComponent("mattes"))
+
+        let first = PhotoRenderService()
+        await first.setMatteStore(store)
+        await first.setDepthEstimator(FakeEstimator())
+        _ = try await first.render(source: source, recipe: Self.lensBlur(0.5))
+        _ = try await first.render(source: source, recipe: Self.lensBlur(0.6))
+        #expect(await first.depthEstimations == 1)
+        #expect(await first.lensBlurDepth(for: source) == .estimated)
+
+        let reopened = PhotoRenderService()
+        await reopened.setMatteStore(store)
+        await reopened.setDepthEstimator(FakeEstimator())
+        #expect(await reopened.lensBlurDepth(for: source) == .estimated)
+        let output = try await reopened.render(source: source, recipe: Self.lensBlur(0.5)).image
+        #expect(await reopened.depthEstimations == 0, "reopening ran the model again")
+        let input = try #require(CIImage(contentsOf: source.url))
+        let far = Self.laplacianVariance(of: output, in: Self.farHalf) / Self.laplacianVariance(of: input, in: Self.farHalf)
+        #expect(far <= 0.4, "far half kept \(far) — the saved depth was not used")
+    }
+
+    /// AC-59. The model fails: the photo renders as shot (± 1/255), the
+    /// depth reads as failed, and nothing throws.
+    @Test func estimationFailureRendersTheOriginal() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("lensblur-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let source = try await Self.jpegSource(in: directory)
+        let renderer = PhotoRenderService()
+        await renderer.setDepthEstimator(FakeEstimator(fails: true))
+        let output = try await renderer.render(source: source, recipe: Self.lensBlur(0.5)).image
+        let plain = try await renderer.render(source: source, recipe: .identity).image
+        #expect(Self.meanDifference(output, plain) <= 1)
+        #expect(await renderer.lensBlurDepth(for: source) == .failed)
+        #expect(await renderer.depthEstimations == 0)
+    }
+
+    /// The bundled Depth Anything model loads and answers with a depth
+    /// picture — on the simulator's CPU, so this proves the wiring, not the
+    /// quality (AC-60 measures that on a device). The model is not in git
+    /// (Resources/Models/README.md), so a fresh clone without it skips this
+    /// one — the same way the app degrades without it.
+    @Test(.enabled(if: CoreMLDepthEstimator() != nil, "DepthAnythingV2SmallF16 is not in this checkout"))
+    func bundledModelAnswersWithADepthPicture() throws {
+        let estimator = try #require(CoreMLDepthEstimator())
+        let picture = try #require(CIContext().createCGImage(Self.stripes(), from: CGRect(x: 0, y: 0, width: Self.side, height: Self.side)))
+        let depth = try estimator.depth(of: picture)
+        #expect(depth.width > 100 && depth.height > 100)
     }
 
     /// The saved recipe starts on the spec's default range, 60–100.

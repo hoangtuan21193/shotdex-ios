@@ -99,6 +99,7 @@ public actor PhotoRenderService {
     /// Normalized depth maps, by file. One entry per photo the Depth Range mask
     /// has been used on in this session; cleared with the rest of the caches.
     private var disparityCache: [String: CIImage] = [:]
+    private var filesWithoutDisparity: Set<String> = []
     /// The preview's Lens Blur levels and mixed picture (FS-03.15e §2).
     let lensBlurPreview = LensBlurPreviewCache()
     private var automaticMaskCacheOrder: [String] = []
@@ -376,7 +377,7 @@ public actor PhotoRenderService {
         // The Lens Blur slot (pass 2), on the untouched picture: a
         // capture-time property being re-decided, not a look laid over the
         // result (FS-03.15e).
-        let depth = recipe.lensBlur.isIdentity ? nil : normalizedDisparity(at: source.url)
+        let depth = recipe.lensBlur.isIdentity ? nil : lensBlurDepthMap(source: source, base: baseResult.image)
         let unadjusted = reusesLensBlur
             ? lensBlurPreview.image(
                 for: recipe.lensBlur,
@@ -1214,7 +1215,13 @@ public actor PhotoRenderService {
     private func normalizedDisparity(at url: URL) -> CIImage? {
         let key = url.path
         if let cached = disparityCache[key] { return cached }
-        guard let disparity = DepthImageReader.disparity(at: url) else { return nil }
+        // A photo with no map is asked on every Lens Blur frame; reading the
+        // file twice each time to learn it again would be a decode per frame.
+        guard !filesWithoutDisparity.contains(key) else { return nil }
+        guard let disparity = DepthImageReader.disparity(at: url) else {
+            filesWithoutDisparity.insert(key)
+            return nil
+        }
         let normalized = Self.normalizedDisparity(disparity, context: context)
         disparityCache[key] = normalized
         return normalized
@@ -2482,6 +2489,79 @@ public actor PhotoRenderService {
     /// Keys that begin with this name a photo by `persistentIdentity`, so
     /// their mattes may be saved.
     static let persistentMattePrefix = "persist:"
+
+    // MARK: Lens Blur depth (FS-03.15e §3)
+
+    private var depthEstimator: (any DepthEstimating)?
+    /// Estimated depth by photo, for this session; the matte store keeps it
+    /// across launches.
+    private var estimatedDepthCache: [String: CIImage] = [:]
+    private var failedDepthEstimates: Set<String> = []
+    /// How many times the model ran — what AC-56 counts.
+    public private(set) var depthEstimations = 0
+
+    public func setDepthEstimator(_ estimator: (any DepthEstimating)?) {
+        depthEstimator = estimator
+    }
+
+    /// The side the model sees. Depth Anything V2 is trained at 518; a bigger
+    /// picture costs time and adds nothing a quarter-resolution map had.
+    static let depthEstimationEdge: CGFloat = 518
+
+    private func depthKey(for source: PhotoRenderSourceInfo) -> String {
+        (source.persistentIdentity.map { Self.persistentMattePrefix + $0 } ?? source.url.path) + "|estimatedDepth"
+    }
+
+    /// Where this photo's Lens Blur depth comes from, without working
+    /// anything out.
+    public func lensBlurDepth(for source: PhotoRenderSourceInfo) -> LensBlurDepth {
+        if normalizedDisparity(at: source.url) != nil { return .captured }
+        let key = depthKey(for: source)
+        if failedDepthEstimates.contains(key) { return .failed }
+        if estimatedDepthCache[key] != nil { return .estimated }
+        if key.hasPrefix(Self.persistentMattePrefix), matteStore?.read(key) != nil { return .estimated }
+        return .none
+    }
+
+    /// Works the depth out now if the photo needs it — when the Lens Blur
+    /// group opens, so the first drag does not wait on the model.
+    public func prepareLensBlurDepth(for source: PhotoRenderSourceInfo) throws -> LensBlurDepth {
+        if normalizedDisparity(at: source.url) != nil { return .captured }
+        guard depthEstimator != nil else { return .none }
+        let options: [CIImageOption: Any] = [.applyOrientationProperty: true]
+        guard let image = CIImage(contentsOf: source.url, options: options) else { return .failed }
+        _ = lensBlurDepthMap(source: source, base: scaleDown(image, maximumDimension: Self.depthEstimationEdge))
+        return lensBlurDepth(for: source)
+    }
+
+    /// The depth Lens Blur uses: the capture's own map, else one the model
+    /// worked out — once per photo, saved to the matte store and read back
+    /// on the next open. A failure is remembered and answers nil, which
+    /// leaves the photo as shot (AC-59), never an alert.
+    func lensBlurDepthMap(source: PhotoRenderSourceInfo, base: CIImage) -> CIImage? {
+        if let captured = normalizedDisparity(at: source.url) { return captured }
+        let key = depthKey(for: source)
+        if let cached = estimatedDepthCache[key] { return cached }
+        let persists = key.hasPrefix(Self.persistentMattePrefix)
+        if persists, let saved = matteStore?.read(key) {
+            let image = CIImage(cgImage: saved, options: [.colorSpace: NSNull()])
+            estimatedDepthCache[key] = image
+            return image
+        }
+        guard let depthEstimator, !failedDepthEstimates.contains(key) else { return nil }
+        let small = scaleDown(base, maximumDimension: Self.depthEstimationEdge)
+        guard let picture = context.createCGImage(small, from: small.extent.integral),
+              let estimated = try? depthEstimator.depth(of: picture)
+        else {
+            failedDepthEstimates.insert(key)
+            return nil
+        }
+        depthEstimations += 1
+        if persists { matteStore?.write(estimated, for: key) }
+        let image = CIImage(cgImage: estimated, options: [.colorSpace: NSNull()])
+        estimatedDepthCache[key] = image
+        return image
+    }
 
     /// The automatic-matte cache with `build` standing in for Vision — what
     /// the tests use to count how often Vision would run.

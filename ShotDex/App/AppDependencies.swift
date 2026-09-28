@@ -136,7 +136,12 @@ final class AppDependencies {
         self.chartStore = ChartStore(database: database)
         self.photoLibrary = photoLibrary
         let photoRenderer = PhotoRenderService()
-        Task { await photoRenderer.setMatteStore(.applicationSupport()) }
+        Task {
+            await photoRenderer.setMatteStore(.applicationSupport())
+            // Nil until the Depth Anything model is in the bundle; Lens Blur
+            // then leaves photos without a depth map as shot.
+            await photoRenderer.setDepthEstimator(CoreMLDepthEstimator())
+        }
         self.photoRenderer = photoRenderer
         self.photoEditing = PhotoEditingService(
             renderer: photoRenderer,
