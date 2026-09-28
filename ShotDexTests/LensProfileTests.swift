@@ -16,6 +16,30 @@ struct LensProfileTests {
         #expect(Set(ids).count == ids.count)
     }
 
+    /// FS-03.16b AC-b7 (the table side). The refreshed table carries
+    /// Lensfun's vignetting (pa) and TCA as they are, and knows which Lensfun
+    /// commit it came from.
+    @Test func tableCarriesVignettingAndTCA() throws {
+        let library = LensProfileLibrary.shared
+        #expect(library.lenses.filter { !$0.vignetting.isEmpty }.count > 500)
+        #expect(library.lenses.filter { !$0.tca.isEmpty }.count > 500)
+        // A lens with only vignetting or TCA is kept now.
+        #expect(library.lenses.contains { $0.distortion.isEmpty })
+
+        let lens = try #require(library.lens(id: "7Artisans|7Artisans 35mm f/1.4 APS-C (manual)|1.534"))
+        let first = try #require(lens.vignetting.first)
+        #expect(first == LensVignettingTerm(focal: 35, aperture: 1.4, distance: 10, k1: -1.1844, k2: 0.882, k3: -0.3509))
+        #expect(abs(first.falloff(at: 0) - 1) < 1e-12)
+        let tca = try #require(lens.tca.first)
+        #expect(tca.model == .poly3 && tca.vr == 1.000096 && tca.vb == 0.9998935)
+
+        let url = try #require(Bundle(for: LensProfileLibrary.self).url(forResource: "lensfun-profiles", withExtension: "json"))
+        let table = try #require(try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+        #expect((table["lensfunCommit"] as? String)?.count == 40)
+        #expect(table["lensfunDate"] as? String == "2026-09-24")
+        #expect(try Data(contentsOf: url).count <= 4 * 1_048_576, "the 4 MB ceiling (16b §4)")
+    }
+
     @Test func specIsReadTheWayEveryMakerWritesIt() {
         #expect(LensSpec.parse("16.0-35.0 mm f/4.0") == LensSpec(minFocal: 16, maxFocal: 35, aperture: 4))
         #expect(LensSpec.parse("EF24-70mm f/2.8L II USM") == LensSpec(minFocal: 24, maxFocal: 70, aperture: 2.8))

@@ -45,6 +45,98 @@ public struct LensDistortionTerm: Codable, Equatable, Sendable {
     }
 }
 
+/// One vignetting measurement, Lensfun's `pa` model: the gain at radius r
+/// is 1 / (1 + k1 r² + k2 r⁴ + k3 r⁶). Stored in the table as a row
+/// [focal, aperture, distance, k1, k2, k3].
+public struct LensVignettingTerm: Codable, Equatable, Sendable {
+    public var focal: Double
+    public var aperture: Double
+    public var distance: Double
+    public var k1: Double
+    public var k2: Double
+    public var k3: Double
+
+    public init(focal: Double, aperture: Double, distance: Double, k1: Double, k2: Double, k3: Double) {
+        self.focal = focal
+        self.aperture = aperture
+        self.distance = distance
+        self.k1 = k1
+        self.k2 = k2
+        self.k3 = k3
+    }
+
+    public init(from decoder: any Decoder) throws {
+        var row = try decoder.unkeyedContainer()
+        focal = try row.decode(Double.self)
+        aperture = try row.decode(Double.self)
+        distance = try row.decode(Double.self)
+        k1 = try row.decode(Double.self)
+        k2 = try row.decode(Double.self)
+        k3 = try row.decode(Double.self)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var row = encoder.unkeyedContainer()
+        try row.encode(contentsOf: [focal, aperture, distance, k1, k2, k3])
+    }
+
+    /// How much darker the frame is at radius `r` than at the centre.
+    public func falloff(at r: Double) -> Double {
+        let r2 = r * r
+        return 1 + k1 * r2 + k2 * r2 * r2 + k3 * r2 * r2 * r2
+    }
+}
+
+/// One transverse chromatic aberration measurement: how much bigger the red
+/// and blue images are than the green one, by radius (Lensfun `linear`:
+/// kr, kb; `poly3`: br cr vr, bb cb vb).
+public struct LensTCATerm: Codable, Equatable, Sendable {
+    public enum Model: String, Codable, Sendable {
+        case linear
+        case poly3
+    }
+
+    public var model: Model
+    public var focal: Double
+    public var kr: Double?
+    public var kb: Double?
+    public var br: Double?
+    public var cr: Double?
+    public var vr: Double?
+    public var bb: Double?
+    public var cb: Double?
+    public var vb: Double?
+
+    public init(model: Model, focal: Double, kr: Double? = nil, kb: Double? = nil,
+                br: Double? = nil, cr: Double? = nil, vr: Double? = nil,
+                bb: Double? = nil, cb: Double? = nil, vb: Double? = nil) {
+        self.model = model
+        self.focal = focal
+        self.kr = kr
+        self.kb = kb
+        self.br = br
+        self.cr = cr
+        self.vr = vr
+        self.bb = bb
+        self.cb = cb
+        self.vb = vb
+    }
+
+    /// Red and blue radius over green at radius `r`.
+    public func scales(at r: Double) -> (red: Double, blue: Double) {
+        switch model {
+        case .linear:
+            return (kr ?? 1, kb ?? 1)
+        case .poly3:
+            let r2 = r * r
+            return (
+                (br ?? 0) * r2 + (cr ?? 0) * r + (vr ?? 1),
+                (bb ?? 0) * r2 + (cb ?? 0) * r + (vb ?? 1)
+            )
+        }
+    }
+}
+
 /// A lens in the embedded Lensfun table. Strings are Lensfun's own, unchanged.
 public struct LensfunLens: Codable, Equatable, Identifiable, Sendable {
     public var maker: String
@@ -54,6 +146,45 @@ public struct LensfunLens: Codable, Equatable, Identifiable, Sendable {
     public var cropFactor: Double
     public var aspectRatio: String?
     public var distortion: [LensDistortionTerm]
+    /// Vignetting by focal, aperture and distance (FS-03.16a §2).
+    public var vignetting: [LensVignettingTerm]
+    /// Transverse CA by focal.
+    public var tca: [LensTCATerm]
+
+    public init(
+        maker: String, model: String, aliases: [String], mounts: [String], cropFactor: Double,
+        aspectRatio: String? = nil, distortion: [LensDistortionTerm] = [],
+        vignetting: [LensVignettingTerm] = [], tca: [LensTCATerm] = []
+    ) {
+        self.maker = maker
+        self.model = model
+        self.aliases = aliases
+        self.mounts = mounts
+        self.cropFactor = cropFactor
+        self.aspectRatio = aspectRatio
+        self.distortion = distortion
+        self.vignetting = vignetting
+        self.tca = tca
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case maker, model, aliases, mounts, cropFactor, aspectRatio, distortion
+        case vignetting = "vignettingPA"
+        case tca
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        maker = try container.decode(String.self, forKey: .maker)
+        model = try container.decode(String.self, forKey: .model)
+        aliases = try container.decodeIfPresent([String].self, forKey: .aliases) ?? [model]
+        mounts = try container.decodeIfPresent([String].self, forKey: .mounts) ?? []
+        cropFactor = try container.decodeIfPresent(Double.self, forKey: .cropFactor) ?? 1
+        aspectRatio = try container.decodeIfPresent(String.self, forKey: .aspectRatio)
+        distortion = try container.decodeIfPresent([LensDistortionTerm].self, forKey: .distortion) ?? []
+        vignetting = try container.decodeIfPresent([LensVignettingTerm].self, forKey: .vignetting) ?? []
+        tca = try container.decodeIfPresent([LensTCATerm].self, forKey: .tca) ?? []
+    }
 
     /// Stable across table rebuilds as long as Lensfun keeps the name. The
     /// crop factor is part of it because Lensfun lists the same lens once per
@@ -117,7 +248,8 @@ public struct LensfunCamera: Codable, Equatable, Sendable {
     public var cropFactor: Double
 }
 
-/// The embedded Lensfun distortion table (`Resources/lensfun-distortion.json`,
+/// The embedded Lensfun table (`Resources/lensfun-profiles.json` — distortion,
+/// vignetting and TCA,
 /// built by `Tools/lensfun-to-json.py`). Lensfun is CC-BY-SA 3.0; the table is
 /// a verbatim subset, and everything ShotDex adds — matching EXIF to a row —
 /// lives outside it.
@@ -137,7 +269,7 @@ public final class LensProfileLibrary: Sendable {
 
     init(data: Data? = nil) {
         let data = data ?? Bundle(for: BundleMarker.self)
-            .url(forResource: "lensfun-distortion", withExtension: "json")
+            .url(forResource: "lensfun-profiles", withExtension: "json")
             .flatMap { try? Data(contentsOf: $0) }
         let payload = data.flatMap { try? JSONDecoder().decode(Payload.self, from: $0) }
         lenses = payload?.lenses ?? []

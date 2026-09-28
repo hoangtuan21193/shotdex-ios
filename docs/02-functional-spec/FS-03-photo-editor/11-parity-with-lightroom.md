@@ -115,7 +115,7 @@ Apple không phát hành cơ sở dữ liệu hệ số méo, và `.lcp` của A
 
 **Đã làm (2026-09-23):**
 
-- `Tools/lensfun-to-json.py` đổi 56 file XML của Lensfun (`data/db`) sang `ShotDexKit/Resources/lensfun-distortion.json`
+- `Tools/lensfun-to-json.py` đổi 56 file XML của Lensfun (`data/db`) sang `ShotDexKit/Resources/lensfun-profiles.json` (trước 2026-09-29: `lensfun-distortion.json`)
   (~840KB): 1527 ống có dữ liệu méo, 1054 thân máy (ngàm + crop factor). Chuỗi và hệ số chép nguyên văn.
 - **Khớp** (`LensProfileMatcher`): EXIF Nikon chỉ ghi "16.0-35.0 mm f/4.0", nên thu hẹp theo **dải tiêu cự +
   khẩu độ lớn nhất** trước, rồi **ngàm của thân máy**, rồi **hãng**, cuối cùng mới để token tên phân xử

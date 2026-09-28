@@ -68,6 +68,10 @@ Một bước mới trong `/release-check` (spec mô tả, sửa skill ở giai 
 
 **Fail** khi script lỗi, số ống giảm > 1%, hoặc JSON vượt trần. Id biến mất là cảnh báo, không fail.
 
+- *Lần làm mới đầu (2026-09-29, Lensfun `bbd4332`, 2026-09-24):* "Lens profiles 1527 → 1566 (+39) · vignetting 0 → 712 ·
+  TCA 0 → 1013 · cameras 1054 → 1057 · 823KB → 2346KB"; một id biến mất (`Sony|E PZ 16-50mm f/3.5-5.6 OSS|1.534`). File đổi
+  tên `lensfun-profiles.json`. Tối góc ghi dạng hàng `vignettingPA: [focal, aperture, distance, k1, k2, k3]` — ghi
+  dạng object thì 29 594 bản đo ra 4021KB, sát trần.
 - **Trần: bảng là JSON thô trong bundle, ≤ 4MB.** Vượt trần thì bảng chuyển sang nén trong bundle, giải nén
   lần đầu dùng; không cắt bớt ống. *Vì* không có trần thì mỗi lần làm mới app phình dần.
 
@@ -81,7 +85,7 @@ Một bước mới trong `/release-check` (spec mô tả, sửa skill ở giai 
 | AC-b4 | RAW nguồn 3 (ống không có ở nguồn 1, 2) | mở Optics | "Using the camera's built-in correction" + dòng mờ "Strength controls need a lens profile"; ba slider mờ, VoiceOver đọc không dùng được; bật/tắt công tắc làm ảnh khác nhau | ⚠️ chưa có |
 | AC-b5 | JPEG Nikon D90 không có dữ liệu ống | mở Optics | "No profile for this lens yet" + Choose Lens; chạm mở danh sách chọn, không nút chết | ⚠️ chưa có (tiền lệ: `LensProfileTests.noLensDataMeansNoMatch`, `ShotDexUITests/scripts/ipad-optics-lens-0.json`) |
 | AC-b6 | bản dựng bất kỳ | đọc chuỗi giao diện editor và danh mục thông số | không chuỗi nào chứa "Lensfun"; nhóm RAW không còn hàng sửa ống kính; Optics có đúng một công tắc cho RAW lẫn JPEG; Acknowledgements vẫn có "Lensfun" + CC-BY-SA 3.0 | ⚠️ chưa có |
-| AC-b7 | `data/db` của Lensfun ở commit mới hơn bản đang nhúng | chạy bước làm mới của `/release-check` | in dòng số ống trước → sau, dung lượng, id biến mất; JSON ghi commit Lensfun; chạy với thư mục rỗng thì bước **fail** và JSON không đổi | ⚠️ chưa có |
+| AC-b7 | `data/db` của Lensfun ở commit mới hơn bản đang nhúng | chạy bước làm mới của `/release-check` | in dòng số ống trước → sau, dung lượng, id biến mất; JSON ghi commit Lensfun; chạy với thư mục rỗng thì bước **fail** và JSON không đổi | `Tools/tests/test_lensfun_to_json.py` (5 ca) · `LensProfileTests.tableCarriesVignettingAndTCA` · bước trong `/release-check`: task 38 |
 | AC-b8 | JSON đổi ra lớn hơn 4MB (dữ liệu giả) | chạy bước làm mới | bước **fail**, nêu dung lượng và trần; JSON trong repo không đổi | ⚠️ chưa có |
 | AC-b9 | ARW Sony nguồn 1 (như AC-b1) | Change → chọn một ống Lensfun khác, rồi mở lại danh sách → chạm "Use Lens Data Found in Photo" | sau bước đầu: "‹ống vừa chọn› · Chosen by you"; sau bước sau: "Found from photo info", ảnh lệch ≤ 1/255 so với trước khi đổi; mỗi bước là một bước history | ⚠️ chưa có |
 | AC-b10 | JPEG có thẻ "đã sửa trong máy" (như AC-a15) | bật Lens Correction, mở Optics | hàng trạng thái "Already corrected in camera" không bị cắt, nút Choose Lens chạm được, ba slider mờ | ⚠️ chưa có |
