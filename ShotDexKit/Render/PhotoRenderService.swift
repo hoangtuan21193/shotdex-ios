@@ -512,8 +512,32 @@ public actor PhotoRenderService {
         var result = applyLight(mask.adjustments, to: image, appliesExposure: true)
         result = applyDetail(mask.adjustments, to: result)
         result = applyDehazePass(mask.adjustments, to: result)
-        // FS-03.15d §2 order: the standard set, then the mask's own Hue.
-        return applyHueRotation(mask.adjustments.maskHue, to: result)
+        // FS-03.15d §2 order: the standard set, then Hue, then Color.
+        result = applyHueRotation(mask.adjustments.maskHue, to: result)
+        if let tint = mask.tint { result = applyTint(tint, to: result) }
+        return result
+    }
+
+    /// A mask's Color: the tint's chroma — its colour minus its own Rec. 709
+    /// luminance — added to every pixel, so hue moves toward the tint and
+    /// luminance does not move at all. Half a full-strength colour at 100.
+    public static func applyTint(_ tint: PhotoMaskTint, to image: CIImage) -> CIImage {
+        guard !tint.isIdentity else { return image }
+        let h = (tint.hue.truncatingRemainder(dividingBy: 1) + 1).truncatingRemainder(dividingBy: 1) * 6
+        let x = 1 - abs(h.truncatingRemainder(dividingBy: 2) - 1)
+        let (r, g, b): (Double, Double, Double) = switch Int(h) {
+        case 0: (1, x, 0)
+        case 1: (x, 1, 0)
+        case 2: (0, 1, x)
+        case 3: (0, x, 1)
+        case 4: (x, 0, 1)
+        default: (1, 0, x)
+        }
+        let luma = 0.2126 * r + 0.7152 * g + 0.0722 * b
+        let amount = min(1, max(0, tint.saturation)) * 0.5
+        return image.applyingFilter("CIColorMatrix", parameters: [
+            "inputBiasVector": CIVector(x: (r - luma) * amount, y: (g - luma) * amount, z: (b - luma) * amount, w: 0),
+        ])
     }
 
     /// Turns every hue by `amount` × 180° about the grey axis, keeping

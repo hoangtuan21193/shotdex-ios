@@ -111,6 +111,11 @@ struct EditorAdjustmentGroupsView<Footer: View>: View {
             .disabled(!isLive)
             .accessibilityHint(isLive ? "" : dependencyHint(for: kind))
         }
+        if kind == .maskHue {
+            // After Hue, the mask's Color swatch (FS-03.15d §2) — not a
+            // slider, so it is not a catalog kind.
+            EditorMaskTintRow(controller: controller)
+        }
     }
 
     /// Why a row cannot be dragged, for the people who cannot see that it is dim.
@@ -334,5 +339,58 @@ struct EditorVignetteStyleRow: View {
         .padding(.vertical, AppTheme.Spacing.sm)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Vignette Style")
+    }
+}
+
+/// A mask's Color: the current tint as a swatch; tapping it opens the
+/// grading wheel the overlay colour control uses — hue round, saturation out.
+struct EditorMaskTintRow: View {
+    @Bindable var controller: PhotoEditorController
+    @State private var showsWheel = false
+
+    var body: some View {
+        let tint = controller.selectedMaskTint
+        VStack(spacing: AppTheme.Spacing.sm) {
+            HStack(spacing: AppTheme.Spacing.sm) {
+                Text("Color")
+                    .font(EditorTheme.rowLabel)
+                    .foregroundStyle(EditorTheme.panelText)
+                Spacer(minLength: 0)
+                Button {
+                    withAnimation(EditorTheme.animation) { showsWheel.toggle() }
+                } label: {
+                    Circle()
+                        .fill(tint.map { Color(hue: $0.hue, saturation: $0.saturation, brightness: 1) } ?? Color.clear)
+                        .overlay(Circle().stroke(EditorTheme.trackBorder, lineWidth: 1))
+                        .overlay {
+                            if tint == nil {
+                                Image(systemName: "circle.slash").font(.system(size: 13)).foregroundStyle(EditorTheme.dimText)
+                            }
+                        }
+                        .frame(width: 26, height: 26)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Mask color")
+                .accessibilityValue(tint == nil ? "None" : "Hue \(Int((tint!.hue * 360).rounded()))°, \(Int((tint!.saturation * 100).rounded()))%")
+            }
+            if showsWheel {
+                EditorColorWheel(
+                    hue: tint?.hue ?? 0,
+                    saturation: tint?.saturation ?? 0,
+                    diameter: 140,
+                    onBegin: { controller.beginContinuousChange() },
+                    onChange: { hue, saturation in
+                        controller.setSelectedMaskTint(PhotoMaskTint(hue: hue, saturation: saturation))
+                    },
+                    onEnd: { controller.endContinuousChange() },
+                    onReset: { controller.setSelectedMaskTint(nil) }
+                )
+                .padding(.bottom, AppTheme.Spacing.sm)
+            }
+        }
+        .padding(.horizontal, AppTheme.Spacing.lg)
+        .frame(minHeight: EditorLayoutMetrics.editorPanelRowHeight)
     }
 }

@@ -110,4 +110,30 @@ struct MaskLocalColorTests {
         let after = 0.213 * Double(v[0]) + 0.715 * Double(v[1]) + 0.072 * Double(v[2])
         #expect(abs(after - before) < 1e-4)
     }
+
+    /// AC-43. Color at hue 30°, saturation 50, over mid grey: the pixel's
+    /// hue is 30° ± 5° and its Rec. 709 luminance moves by 1/255 at most.
+    @Test func colorTintIsLuminanceNeutral() {
+        let grey = CIImage(color: CIColor(red: 0.5, green: 0.5, blue: 0.5))
+            .cropped(to: CGRect(x: 0, y: 0, width: 4, height: 4))
+        let tinted = PhotoRenderService.applyTint(PhotoMaskTint(hue: 30.0 / 360, saturation: 0.5), to: grey)
+        let context = CIContext(options: [.workingColorSpace: NSNull(), .outputColorSpace: NSNull()])
+        var v = [Float](repeating: 0, count: 4)
+        context.render(tinted, toBitmap: &v, rowBytes: 16, bounds: CGRect(x: 0, y: 0, width: 1, height: 1), format: .RGBAf, colorSpace: nil)
+        let hue = Self.hueDegrees(Double(v[0]), Double(v[1]), Double(v[2]))
+        #expect(abs(hue - 30) <= 5, "hue \(hue)°")
+        let luma = 0.2126 * Double(v[0]) + 0.7152 * Double(v[1]) + 0.0722 * Double(v[2])
+        #expect(abs(luma - 0.5) <= 1.0 / 255, "luminance \(luma)")
+    }
+
+    /// No Color picked, nothing written: a mask with a zero-saturation tint
+    /// saves no tint key.
+    @Test func noTintWritesNoKey() throws {
+        var mask = Self.cornerMask()
+        let plain = String(data: try JSONEncoder().encode(mask), encoding: .utf8) ?? ""
+        #expect(!plain.contains("tint"))
+        mask.tint = PhotoMaskTint(hue: 0.1, saturation: 0.4)
+        let decoded = try JSONDecoder().decode(PhotoMask.self, from: JSONEncoder().encode(mask))
+        #expect(decoded.tint == mask.tint)
+    }
 }

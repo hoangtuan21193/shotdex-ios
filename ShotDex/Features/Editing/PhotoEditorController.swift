@@ -612,6 +612,22 @@ final class PhotoEditorController {
         scheduleRender()
     }
 
+    /// The picked mask's Color swatch; nil when no mask is being adjusted.
+    var selectedMaskTint: PhotoMaskTint? {
+        guard let index = selectedMaskIndex, editingMaskAdjustments else { return nil }
+        return recipe.masks[index].tint
+    }
+
+    /// Sets the picked mask's Color. Bracket a wheel drag with
+    /// begin/endContinuousChange so it is one undo step.
+    func setSelectedMaskTint(_ tint: PhotoMaskTint?) {
+        guard let index = selectedMaskIndex, editingMaskAdjustments else { return }
+        if !isContinuousChange { recordHistory() }
+        recipe.masks[index].tint = (tint?.isIdentity ?? true) ? nil : tint
+        hideMaskShapeForAdjustment()
+        scheduleRender()
+    }
+
     private func writeAdjustment(_ kind: PhotoAdjustmentKind, value: Double) {
         if let index = selectedMaskIndex, editingMaskAdjustments {
             recipe.masks[index].adjustments[kind] = value

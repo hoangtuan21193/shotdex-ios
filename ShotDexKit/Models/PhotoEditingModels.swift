@@ -1236,6 +1236,9 @@ public struct PhotoMask: Codable, Identifiable, Equatable, Sendable {
     public var isInverted = false
     public var components: [PhotoMaskComponent]
     public var adjustments = PhotoAdjustments.zero
+    /// The mask's Color swatch (FS-03.15d §2): a tint that moves colour and
+    /// never brightness. Nil — no key written — until one is picked.
+    public var tint: PhotoMaskTint?
 
     public init(name: String, component: PhotoMaskComponent) {
         self.name = name
@@ -1261,7 +1264,21 @@ extension PhotoMask {
             PhotoAdjustments.self,
             forKey: .adjustments
         ) ?? .zero
+        tint = try? container.decodeIfPresent(PhotoMaskTint.self, forKey: .tint)
     }
+}
+
+/// A mask's tint: `hue` 0…1 round the wheel, `saturation` 0…1 how much.
+public struct PhotoMaskTint: Codable, Equatable, Sendable {
+    public var hue: Double
+    public var saturation: Double
+
+    public init(hue: Double, saturation: Double) {
+        self.hue = hue
+        self.saturation = saturation
+    }
+
+    public var isIdentity: Bool { saturation <= 0.0001 }
 }
 
 public struct PhotoEditRecipe: Codable, Equatable, Sendable {
