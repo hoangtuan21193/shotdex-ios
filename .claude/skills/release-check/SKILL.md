@@ -81,7 +81,30 @@ Export and `xcrun altool --validate-app` need the user's signing identity and
 App Store Connect key; report that step as **not checkable here** and hand the
 user the exact commands rather than pretending.
 
-## 7. Functional smoke, on device class
+## 7. Lens data refresh (FS-03.16b §4)
+
+Every release carries the newest Lensfun data. The machine running the check
+has network; the app never needs it.
+
+```bash
+LF=$(mktemp -d)/lensfun
+git clone --depth 1 --filter=blob:none --sparse https://github.com/lensfun/lensfun.git "$LF"
+git -C "$LF" sparse-checkout set data/db
+python3 Tools/lensfun-to-json.py "$LF/data/db" ShotDexKit/Resources/lensfun-profiles.json \
+  --previous ShotDexKit/Resources/lensfun-profiles.json
+python3 -m unittest discover -s Tools/tests
+```
+
+- The script prints one line — "Lens profiles a → b · vignetting … · TCA … ·
+  cameras … · KB → KB" — and every lens id that disappeared (a warning: photos
+  pointing at one fall back to "No profile for this lens yet", FS-03.16 AC-6).
+- It **fails** and leaves the table untouched when the directory has no lenses,
+  the lens count drops more than 1%, or the JSON passes **4 MB**. Past the
+  ceiling the table moves to compressed-in-bundle; lenses are never cut.
+- Then run the lens tests (`/test LensProfileTests`) and commit the new JSON on
+  its own. Report the printed line as evidence.
+
+## 8. Functional smoke, on device class
 
 Run `/screens` for: first launch with no permission, `.limited` access, an empty
 library, the editor round-trip (open → adjust → save → reopen shows edit), the
