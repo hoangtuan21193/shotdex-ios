@@ -2146,6 +2146,27 @@ final class PhotoEditorController {
         scheduleRender()
     }
 
+    /// Add / Subtract / Intersect area (FS-03.15d §1): a new area of `kind`
+    /// in the selected mask, combined by `operation` after the areas already
+    /// there. One undo step. The first area of a mask is always Add, so with
+    /// no mask selected this makes a new mask.
+    func addMaskArea(kind: PhotoMaskComponentKind, operation: MaskBlendOperation) {
+        guard let maskID = selectedMaskID, let index = recipe.masks.firstIndex(where: { $0.id == maskID }) else {
+            addMask(kind: kind)
+            return
+        }
+        recordHistory()
+        var component = PhotoMaskComponent(kind: kind)
+        component.operation = operation
+        if kind == .subject || kind == .sky || kind.isFacePart {
+            detectingMaskComponentIDs.insert(component.id)
+        }
+        recipe.masks[index].components.append(component)
+        selectedComponentID = component.id
+        markAwaitingPlacement(component)
+        revealMaskShape()
+    }
+
     func addMask(kind: PhotoMaskComponentKind) {
         recordHistory()
         let component = PhotoMaskComponent(kind: kind)

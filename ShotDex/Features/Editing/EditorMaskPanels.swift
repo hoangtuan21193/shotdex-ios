@@ -349,6 +349,12 @@ struct EditorMaskDetailPanel: View {
         }
     }
 
+    /// What an extra area can be: the drawn shapes and the ranges, plus
+    /// Subject and Sky.
+    static let areaKinds: [PhotoMaskComponentKind] = [
+        .brush, .linearGradient, .radialGradient, .colorRange, .luminanceRange, .subject, .sky,
+    ]
+
     /// First row under the strip on the phone: which shape of a multi-shape mask
     /// (chips, only when there are two or more), Add / Subtract for the next stroke
     /// or shape — still a mode, not a one-shot command — and one-tap Undo.
@@ -356,14 +362,34 @@ struct EditorMaskDetailPanel: View {
         HStack(spacing: EditorStripLayout.chipSpacing) {
             ScrollView(.horizontal) {
                 HStack(spacing: EditorStripLayout.chipSpacing) {
+                    // A new area for this mask, combined by the chosen
+                    // operation after the areas already there (FS-03.15d §1).
+                    Menu {
+                        ForEach(MaskBlendOperation.allCases) { operation in
+                            Menu {
+                                ForEach(Self.areaKinds, id: \.self) { kind in
+                                    Button(kind.displayName) {
+                                        controller.addMaskArea(kind: kind, operation: operation)
+                                    }
+                                }
+                            } label: {
+                                Label("\(operation.displayName) Area", systemImage: operation.symbolName)
+                            }
+                        }
+                    } label: {
+                        // Icon only: with the three operations beside it a
+                        // titled chip pushed Intersect under the Undo button.
+                        Image(systemName: "plus.square.on.square")
+                            .font(.system(size: 15, weight: .regular))
+                            .frame(minWidth: 20)
+                    }
+                    .buttonStyle(EditorChipButtonStyle(isSelected: false))
+                    .accessibilityLabel("Add, subtract or intersect an area")
                     ForEach(MaskBlendOperation.allCases) { operation in
                         Button {
                             controller.maskOperation = operation
                         } label: {
-                            EditorPanelChipLabel(
-                                title: operation == .add ? "Add" : "Subtract",
-                                systemImage: operation == .add ? "plus.circle" : "minus.circle"
-                            )
+                            EditorPanelChipLabel(title: operation.displayName, systemImage: operation.symbolName)
                         }
                         .buttonStyle(EditorChipButtonStyle(isSelected: controller.maskOperation == operation))
                     }
@@ -375,7 +401,7 @@ struct EditorMaskDetailPanel: View {
                             } label: {
                                 EditorPanelChipLabel(
                                     title: component.kind.displayName,
-                                    systemImage: component.operation == .add ? "plus.circle" : "minus.circle"
+                                    systemImage: component.operation.symbolName
                                 )
                             }
                             .buttonStyle(EditorChipButtonStyle(
@@ -586,10 +612,8 @@ struct EditorMaskDetailPanel: View {
                     controller.maskOperation = operation
                 } label: {
                     HStack(spacing: 4) {
-                        Image(
-                            systemName: operation == .add ? "plus.circle" : "minus.circle"
-                        )
-                        Text(operation == .add ? "Add" : "Subtract")
+                        Image(systemName: operation.symbolName)
+                        Text(operation.displayName)
                     }
                 }
                 .buttonStyle(

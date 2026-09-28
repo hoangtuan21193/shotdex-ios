@@ -15,6 +15,13 @@ float4 subtractMask(sample_t current, sample_t incoming) {
     return float4(value, value, value, 1.0f);
 }
 
+// Intersect: the mask so far times the new area, softened by the area's
+// opacity — at opacity 0 the mask is untouched, not emptied.
+float4 intersectMask(sample_t current, sample_t incoming, float opacity) {
+    float value = current.r * mix(1.0f, incoming.r, opacity);
+    return float4(value, value, value, 1.0f);
+}
+
 float4 invertMask(sample_t value) {
     float result = 1.0f - value.r;
     return float4(result, result, result, 1.0f);

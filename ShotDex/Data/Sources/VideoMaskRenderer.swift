@@ -178,6 +178,7 @@ enum VideoMaskRenderer {
         let name = switch operation {
         case .add: "CILightenBlendMode"
         case .subtract: "CIDarkenBlendMode"
+        case .intersect: "CIMultiplyBlendMode"
         }
         let source = operation == .subtract
             ? incoming.applyingFilter("CIColorInvert")

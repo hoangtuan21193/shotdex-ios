@@ -121,6 +121,7 @@ public actor PhotoRenderService {
     // Mask kernels: `Kernels/MaskKernels.ci.metal`.
     public static let addMaskKernel = CoreImageKernelLibrary.kit.colorKernel(named: "addMask")
     public static let subtractMaskKernel = CoreImageKernelLibrary.kit.colorKernel(named: "subtractMask")
+    public static let intersectMaskKernel = CoreImageKernelLibrary.kit.colorKernel(named: "intersectMask")
     public static let invertMaskKernel = CoreImageKernelLibrary.kit.colorKernel(named: "invertMask")
     public static let luminanceMaskKernel = CoreImageKernelLibrary.kit.colorKernel(named: "luminanceMask")
     public static let colorMaskKernel = CoreImageKernelLibrary.kit.colorKernel(named: "colorMask")
@@ -2245,6 +2246,15 @@ public actor PhotoRenderService {
                 cacheIdentity: cacheIdentity
             ) else { continue }
             incoming = incoming.cropped(to: extent)
+            if component.operation == .intersect {
+                // Opacity softens the intersection itself, inside the kernel:
+                // pre-scaling the area would cut the mask down instead.
+                accumulated = Self.intersectMaskKernel?.apply(
+                    extent: extent,
+                    arguments: [accumulated, incoming, Float(min(1, max(0, component.opacity)))]
+                ) ?? accumulated
+                continue
+            }
             if component.opacity < 0.999 {
                 incoming = incoming.applyingFilter(
                     "CIColorMatrix",
@@ -2473,14 +2483,25 @@ public actor PhotoRenderService {
             .cropped(to: extent))
     }
 
+    /// The matte of `mask` over `image`, for tests: no sky matte, no depth.
+    func maskMatte(_ mask: PhotoMask, over image: CIImage) throws -> CIImage? {
+        try renderMask(mask, over: image, rawSkyMatte: nil, cacheIdentity: "test-\(mask.id)")
+    }
+
     private func combineMask(
         _ current: CIImage,
         with incoming: CIImage,
         operation: MaskBlendOperation,
         extent: CGRect
     ) -> CIImage {
-        let kernel = operation == .add ? Self.addMaskKernel : Self.subtractMaskKernel
-        return kernel?.apply(extent: extent, arguments: [current, incoming]) ?? current
+        switch operation {
+        case .add:
+            return Self.addMaskKernel?.apply(extent: extent, arguments: [current, incoming]) ?? current
+        case .subtract:
+            return Self.subtractMaskKernel?.apply(extent: extent, arguments: [current, incoming]) ?? current
+        case .intersect:
+            return Self.intersectMaskKernel?.apply(extent: extent, arguments: [current, incoming, Float(1)]) ?? current
+        }
     }
 
     private func brushMask(_ strokes: [BrushStroke], extent: CGRect) -> CIImage {

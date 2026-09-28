@@ -1,0 +1,22 @@
+{
+ "steps": [
+  {"action": "launch"},
+  {"action": "wait", "seconds": 25},
+  {"action": "tap", "x": 0.5, "y": 0.35},
+  {"action": "wait", "seconds": 6},
+  {"action": "tap", "label": "Edit"},
+  {"action": "wait", "seconds": 12},
+  {"action": "tap", "label": "Mask", "type": "button"},
+  {"action": "wait", "seconds": 3},
+  {"action": "tap", "label": "Linear", "type": "button"},
+  {"action": "wait", "seconds": 4},
+  {"action": "screenshot", "name": "1-area-row"},
+  {"action": "dump", "name": "1-area-row"},
+  {"action": "tap", "label": "Add, subtract or intersect an area"},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "2-area-menu"},
+  {"action": "tap", "label": "Intersect Area"},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "3-intersect-kinds"}
+ ]
+}

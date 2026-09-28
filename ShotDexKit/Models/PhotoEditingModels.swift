@@ -1057,9 +1057,20 @@ public struct PhotoCropRecipe: Codable, Equatable, Sendable {
 public enum MaskBlendOperation: String, Codable, CaseIterable, Identifiable, Sendable {
     case add
     case subtract
+    /// Keeps only where the mask so far and this area overlap (FS-03.15d §1).
+    case intersect
 
     public var id: String { rawValue }
     public var displayName: String { rawValue.capitalized }
+
+    /// ⊕ / ⊖ / ⊗, the way the area rows mark them.
+    public var symbolName: String {
+        switch self {
+        case .add: "plus.circle"
+        case .subtract: "minus.circle"
+        case .intersect: "multiply.circle"
+        }
+    }
 }
 
 public enum PhotoMaskComponentKind: String, Codable, CaseIterable, Identifiable, Sendable {

@@ -48,7 +48,7 @@ struct KernelGoldenTests {
     /// AC-2 counts forty kernels; every one of them has a case.
     @Test func everyKernelHasACase() {
         let kernels = Set(KernelGoldenCase.all.map(\.kernel))
-        #expect(kernels.count == 46)
+        #expect(kernels.count == 47)
         #expect(Set(KernelGoldenCase.all.map(\.name)).count == KernelGoldenCase.all.count)
     }
 
@@ -90,6 +90,7 @@ extension KernelGoldenCase {
     static let mask: [KernelGoldenCase] = [
         color("addMask", { PhotoRenderService.addMaskKernel }) { [$0(0), $0(1)] },
         color("subtractMask", { PhotoRenderService.subtractMaskKernel }) { [$0(0), $0(1)] },
+        color("intersectMask", { PhotoRenderService.intersectMaskKernel }) { [$0(0), $0(1), Float(0.7)] },
         color("invertMask", { PhotoRenderService.invertMaskKernel }) { [$0(0)] },
         color("luminanceMask", { PhotoRenderService.luminanceMaskKernel }) {
             [$0(0), Float(0.3), Float(0.7), Float(0.1)]

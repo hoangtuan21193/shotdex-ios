@@ -17,6 +17,10 @@ Danh sách mask, lưới chọn loại, hàng cọ: [FS-03.13](13-iphone-editor-
 - Subtract = hiện tại × (1 − vùng trừ): mép mềm 0,8 trừ 0,5 còn 0,4, không phải 0,3. *Vì trừ thẳng làm mép
   bị khuyết sâu hơn Lightroom và Photoshop.*
 - Vùng đầu tiên luôn là Add. Đổi phép của một vùng là một bước Undo.
+- Hôm nay (2026-09-28), trước danh sách mask của FS-03.13: hàng dưới dải mask trên iPhone có nút ⧉ (menu **Add Area ·
+  Subtract Area · Intersect Area** → Brush · Linear · Radial · Color Range · Luminance Range · Subject · Sky) rồi ba
+  chip Add · Subtract · Intersect cho nét cọ/hình kế tiếp. Intersect = hiện tại × mix(1, vùng, Opacity) — kernel
+  `intersectMask`.
 
 ## 2. Thông số riêng của từng mask
 
@@ -93,7 +97,7 @@ trong báo cáo import (FS-03.14). Mask còn lại của correction vẫn nhập
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-40 | ảnh 256×256: nửa trên và nửa dưới đều có ô lam và ô vàng; mask = Linear phủ nửa trên | thêm Color Range lấy mẫu ô lam, phép Intersect | matte: ô lam nửa trên ≥ 0,95; ô lam nửa dưới ≤ 0,05; ô vàng nửa trên ≤ 0,05 | ⚠️ chưa có (dự kiến `MaskIntersectTests.intersectKeepsOnlyTheOverlap`) |
+| AC-40 | ảnh 256×256: nửa trên và nửa dưới đều có ô lam và ô vàng; mask = Linear phủ nửa trên | thêm Color Range lấy mẫu ô lam, phép Intersect | matte: ô lam nửa trên ≥ 0,95; ô lam nửa dưới ≤ 0,05; ô vàng nửa trên ≤ 0,05 | `MaskIntersectTests.intersectKeepsOnlyTheOverlap` · `…intersectAreaJoinsTheSelectedMask` · golden `intersectMask-*` · `ShotDexUITests/scripts/iphone-mask-intersect.json` |
 | AC-41 | mask = Radial A (Add) rồi Linear B (Intersect) | thêm Radial C (Add) không chồng A | vùng C = 1 dù B = 0 ở đó (phép tính theo thứ tự); Undo một lần gỡ C; một vùng Subtract 0,5 trên matte 0,8 cho 0,4 ± 1/255 | ⚠️ chưa có (dự kiến `MaskIntersectTests.areasApplyInListOrder`) |
 | AC-42 | ảnh 256×256, mask Radial ở ô 64×64 góc trên trái, thêm Exposure +0,5 toàn cục | đặt Hue +30 cho mask | hue trong mask đổi ≥ 10°; khối 32×32 quanh (0,875; 0,875) bằng bản không Hue ± 1/255 | ⚠️ chưa có (dự kiến `MaskLocalColorTests.hueStaysInsideTheMask`) |
 | AC-43 | vùng xám 0,5 trong mask | đặt Color hue 30°, độ bão hoà 50 | pixel trong mask có hue 30° ± 5°; độ sáng Rec.709 lệch ≤ 1/255 | ⚠️ chưa có (dự kiến `MaskLocalColorTests.colorTintIsLuminanceNeutral`) |
@@ -107,5 +111,5 @@ trong báo cáo import (FS-03.14). Mask còn lại của correction vẫn nhập
 | AC-51 | ảnh có mask Object đã tạo | đóng rồi mở lại ảnh; rồi xoá file matte và mở lần nữa | lần 2: Vision chạy 0 lần, matte khớp từng pixel lần 1; lần 3: tính lại, không alert | ⚠️ chưa có (dự kiến `GeneratedMatteStoreTests.reopenReadsTheSavedMatte`, Vision giả) |
 | AC-52 | editor, chưa có mask, iPhone 17 26.5 và 18.6 | mở Mask | lưới 4 cột đủ 14 ô đúng thứ tự §3; Face Skin, Eyes, Lips nằm ngoài People | ⚠️ chưa có (`ShotDexUITests/scripts/iphone-people-mask.json` + element dump) |
 
-**Chưa chứng minh được:** AC-40…AC-52 (chưa code). Point Color và Defringe của mask không có AC riêng —
+**Chưa chứng minh được:** AC-41…AC-52 (chưa code). Point Color và Defringe của mask không có AC riêng —
 dùng lại pass toàn cục, phủ bởi golden kernel FS-16 khi port.
