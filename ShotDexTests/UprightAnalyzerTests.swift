@@ -140,6 +140,42 @@ struct UprightAnalyzerTests {
         #expect(full.vertical != 0)
     }
 
+    /// FS-03.15b AC-23. A building whose edges converge 8° in all, the
+    /// whole frame tilted 2°: Auto levels it to within 0.5° and straightens
+    /// 60% of the convergence, leaving 3°…4°.
+    @Test func autoLevelsAndPartlyStraightens() {
+        let tilt = 2.0
+        let segments = [
+            segment(degrees: tilt),
+            segment(degrees: tilt, midX: 0.3),
+            segment(degrees: tilt, midX: 0.7),
+            // Converging tops: the left edge leans right 4°, the right edge
+            // left 4°, then the frame's tilt on both.
+            segment(degrees: 86 + tilt, midX: 0.15),
+            segment(degrees: -86 + tilt, midX: 0.85),
+        ]
+        let auto = UprightAnalyzer.suggestion(from: segments, mode: .auto)
+
+        let levelled = tilt + auto.rotate * 0.35 * 180 / .pi
+        #expect(abs(levelled) <= 0.5, "tilt left \(levelled)°")
+
+        let straightened = 2 * auto.vertical * UprightAnalyzer.convergencePerKeystoneUnit * 180 / .pi
+        let left = 8 - straightened
+        #expect(left >= 3 && left <= 4, "convergence left \(left)°")
+
+        let full = UprightAnalyzer.suggestion(from: segments, mode: .full)
+        #expect(abs(full.vertical * 0.6 - auto.vertical) < 1e-9, "Auto is 60% of Full's keystone")
+        #expect(PhotoUprightMode(UprightMode.auto) == .auto)
+    }
+
+    /// Vision's horizon, when it has one, sets the rotation in place of the
+    /// lines' own reading.
+    @Test func aVisionHorizonOverridesTheLines() {
+        let segments = [segment(degrees: 5)]
+        let fromVision = UprightAnalyzer.suggestion(from: segments, mode: .level, horizonTilt: 2 * .pi / 180)
+        #expect(abs(fromVision.rotate - (-(2 * Double.pi / 180) / 0.35)) < 1e-9)
+    }
+
     @Test func aModeKeepsOnlyTheCorrectionItMakes() {
         let level = UprightSuggestion(rotate: 0.3, vertical: 0.2).transform(for: .level)
         #expect(level.rotate == 0.3)

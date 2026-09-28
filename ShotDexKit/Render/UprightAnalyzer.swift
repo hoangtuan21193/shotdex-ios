@@ -1,9 +1,14 @@
 import CoreGraphics
 import CoreImage
 import Foundation
+import Vision
 
-/// What an Upright pass is allowed to correct — Lightroom's four buttons.
+/// What an Upright pass is allowed to correct — Lightroom's buttons, less
+/// Guided, which draws its own lines.
 public enum UprightMode: String, CaseIterable, Identifiable, Sendable {
+    /// Level, plus part of Vertical: a building is straightened most of the
+    /// way, not pulled up into a false tower (FS-03.15b §4).
+    case auto
     /// Rotation only: put the horizon back on the horizontal.
     case level
     /// Keystone only: make the verticals vertical, which is what a building
@@ -16,6 +21,7 @@ public enum UprightMode: String, CaseIterable, Identifiable, Sendable {
 
     public var title: String {
         switch self {
+        case .auto: "Auto"
         case .level: "Level"
         case .vertical: "Vertical"
         case .full: "Full"
@@ -24,12 +30,16 @@ public enum UprightMode: String, CaseIterable, Identifiable, Sendable {
 
     var correctsRotation: Bool { self != .vertical }
     var correctsKeystone: Bool { self != .level }
+
+    /// How much of the measured convergence the mode straightens.
+    var keystoneShare: Double { self == .auto ? 0.6 : 1 }
 }
 
 public extension PhotoUprightMode {
     /// The stored mode for an analysis pass.
     init(_ mode: UprightMode) {
         switch mode {
+        case .auto: self = .auto
         case .level: self = .level
         case .vertical: self = .vertical
         case .full: self = .full
@@ -122,6 +132,13 @@ public enum UprightAnalyzer {
     /// drag a mean off true, and the whole point is to agree with the majority
     /// of the edges.
     public static func levelRotation(from segments: [UprightSegment]) -> Double {
+        clamp(-levelTilt(from: segments) / 0.35)
+    }
+
+    /// The frame's tilt in radians, counter-clockwise positive: the weighted
+    /// median of how far the near-level and near-upright lines sit off true.
+    /// 0 when no line qualifies.
+    public static func levelTilt(from segments: [UprightSegment]) -> Double {
         // A vertical line says as much about tilt as a horizontal one, once its
         // angle is measured against the vertical instead.
         var offsets: [(value: Double, weight: Double)] = []
@@ -135,11 +152,31 @@ public enum UprightAnalyzer {
             guard abs(candidate) <= 20 * .pi / 180 else { continue }
             offsets.append((candidate, damped(segment.weight)))
         }
-        guard let median = weightedMedian(offsets) else { return 0 }
         // `applyGeo` rotates by `geoRotate * 0.35` radians, and the correction
-        // runs against the tilt.
-        return clamp(-median / 0.35)
+        // runs against the tilt — `levelRotation` does that division.
+        return weightedMedian(offsets) ?? 0
     }
+
+    /// `segments` turned by `-tilt` about their own midpoints: the lines as
+    /// they would sit once the frame is levelled.
+    static func detilted(_ segments: [UprightSegment], by tilt: Double) -> [UprightSegment] {
+        guard abs(tilt) > 1e-9 else { return segments }
+        let c = cos(-tilt), s = sin(-tilt)
+        return segments.map { segment in
+            let mid = CGPoint(x: (segment.start.x + segment.end.x) / 2, y: (segment.start.y + segment.end.y) / 2)
+            func turn(_ p: CGPoint) -> CGPoint {
+                let dx = Double(p.x - mid.x), dy = Double(p.y - mid.y)
+                return CGPoint(x: Double(mid.x) + dx * c - dy * s, y: Double(mid.y) + dx * s + dy * c)
+            }
+            return UprightSegment(start: turn(segment.start), end: turn(segment.end), weight: segment.weight)
+        }
+    }
+
+    /// Convergence the keystone straightens per unit of `geoVertical`, in
+    /// radians of lean on each side: `keystone` moves the corners by
+    /// `geoVertical * 0.25` of the width, which undoes about 26° on a frame
+    /// this shape.
+    public static let convergencePerKeystoneUnit = 26 * Double.pi / 180
 
     /// The keystone that makes the verticals parallel, as a `geoVertical`
     /// value.
@@ -177,19 +214,43 @@ public enum UprightAnalyzer {
         // quarter-width offset corresponds to roughly 26° of convergence on a
         // frame this shape — measured against the transform rather than
         // derived, because the transform is the thing that has to undo it.
-        return clamp(convergence / (26 * .pi / 180))
+        return clamp(convergence / convergencePerKeystoneUnit)
     }
 
-    /// Both halves at once, for the mode the user picked.
-    public static func suggestion(from segments: [UprightSegment], mode: UprightMode) -> UprightSuggestion {
+    /// Both halves at once, for the mode the user picked. `horizonTilt` is
+    /// Vision's reading when it had one; the lines' own tilt otherwise.
+    ///
+    /// When the mode also levels, the keystone is read off the lines as they
+    /// will sit once levelled: a 2° tilt on a building converging 8° leaves
+    /// one edge only 2° off vertical, under the 3° a line needs to count, and
+    /// the keystone would come out as nothing.
+    public static func suggestion(
+        from segments: [UprightSegment],
+        mode: UprightMode,
+        horizonTilt: Double? = nil
+    ) -> UprightSuggestion {
         var suggestion = UprightSuggestion()
+        let tilt = mode.correctsRotation ? (horizonTilt ?? levelTilt(from: segments)) : 0
         if mode.correctsRotation {
-            suggestion.rotate = levelRotation(from: segments)
+            suggestion.rotate = clamp(-tilt / 0.35)
         }
         if mode.correctsKeystone {
-            suggestion.vertical = verticalKeystone(from: segments)
+            suggestion.vertical = verticalKeystone(from: detilted(segments, by: tilt)) * mode.keystoneShare
         }
         return suggestion
+    }
+
+    /// The horizon's tilt from Vision, in radians counter-clockwise, or nil
+    /// when Vision finds none, cannot run (the simulator, often), or reads a
+    /// tilt past 20° — a diagonal in the picture, not a crooked camera.
+    public static func visionHorizonTilt(in image: CIImage) -> Double? {
+        let request = VNDetectHorizonRequest()
+        let handler = VNImageRequestHandler(ciImage: image, options: [:])
+        guard (try? handler.perform([request])) != nil,
+              let horizon = request.results?.first
+        else { return nil }
+        let angle = Double(horizon.angle)
+        return abs(angle) <= 20 * .pi / 180 ? angle : nil
     }
 
     // MARK: Detection
@@ -321,8 +382,11 @@ public enum UprightAnalyzer {
         context: CIContext
     ) -> UprightSuggestion? {
         let found = segments(in: image, context: context)
-        guard !found.isEmpty else { return nil }
-        let suggestion = suggestion(from: found, mode: mode)
+        // Level reads the horizon with Vision (FS-03.15b §4); the lines are
+        // the fallback, and the only source for the verticals.
+        let horizon = mode.correctsRotation ? visionHorizonTilt(in: image) : nil
+        guard !found.isEmpty || horizon != nil else { return nil }
+        let suggestion = suggestion(from: found, mode: mode, horizonTilt: horizon)
         return suggestion.isEmpty ? nil : suggestion
     }
 
