@@ -209,7 +209,7 @@ enum EditorAdjustmentCatalog {
                     title: "Geo",
                     kinds: [
                         .geoVertical, .geoHorizontal, .geoRotate, .geoAspect,
-                        .geoScale, .geoOffsetX, .geoOffsetY,
+                        .geoScale, .geoOffsetX, .geoOffsetY, .geoConstrainCrop,
                     ]
                 )
             )
@@ -237,7 +237,7 @@ enum EditorAdjustmentCatalog {
 
     static func format(of kind: PhotoAdjustmentKind) -> EditorValueFormat {
         switch kind {
-        case .lensCorrection, .blackAndWhite, .chromaticAberration: .toggle
+        case .lensCorrection, .blackAndWhite, .chromaticAberration, .geoConstrainCrop: .toggle
         case .exposure, .contrast: .stops
         case .warmth: .kelvinOffset
         case .tint: .tintOffset

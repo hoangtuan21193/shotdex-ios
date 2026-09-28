@@ -96,6 +96,12 @@ rồi Geometry (Vertical · Horizontal · Rotate · **Aspect** · Scale · Offse
   phép nắn đã giải ở lại ảnh gốc (§4 tổng quan).
 - **Constrain Crop** bật: tự cắt về hình chữ nhật lớn nhất nằm trong phần ảnh sau nắn, giữ tỉ lệ đang khoá.
   Tắt: kéo giãn mép như hôm nay. *Vì JPEG/HEIC không có trong suốt — góc trống sẽ thành viền đen.*
+  Cách làm (2026-09-28): theo dấu bốn góc ảnh qua phép affine và phép phối cảnh (homography), tìm khung cùng tỉ lệ
+  lớn nhất quanh tâm nằm trong tứ giác đó, rồi phóng cho khung ấy phủ kín — khung ra vẫn đúng kích thước.
+  Công tắc là một hàng cuối Geometry (`geoConstrainCrop`).
+- *Lỗi tìm thấy khi làm AC-29:* phép phối cảnh cũ (`CIPerspectiveTransform` trên ảnh đã kéo giãn vô hạn) trả ảnh
+  y nguyên — Vertical/Horizontal và phần dọc của Upright chưa từng có tác dụng. Nay dùng
+  `CIPerspectiveTransformWithExtent` với khung ảnh. Hệ số "26° mỗi đơn vị" của bộ dò dọc cần đo lại trên ảnh thật.
 
 ## 5. Vignette Style
 
@@ -143,9 +149,9 @@ Nhóm Effects › Vignette thêm **Style** — một hàng chip ba ô ở đầu
 | AC-26 | Vignette −50, crop giữ nửa trái ảnh | render | tâm vùng sáng nhất nằm ở tâm khung **sau** crop ± 2% cạnh ngắn; grain chạy sau vignette | `VignetteStyleTests.vignetteFollowsTheCrop` · `…grainRunsAfterTheVignette` |
 | AC-27 | ảnh toà nhà của AC-23, Upright Auto đã chạm | kéo slider Vertical tay +10, rồi render 20 lần | recipe mang chế độ Auto + phép nắn đã giải + Vertical 10 riêng; phép nắn giải 0 lần thêm; Off trả đúng Vertical 10 | `UprightStorageTests.solvedTransformAndSlidersAreSeparate` · `…renderAddsTheStoredTransformAndSolvesNothing` · `UprightAnalyzerTests.aModeKeepsOnlyTheCorrectionItMakes` · chip: `ShotDexUITests/scripts/iphone-upright-storage.json` |
 | AC-28 | ảnh A Upright Auto; ảnh B là toà nhà khác nghiêng 3°, hội tụ 6° | Copy Edits A → Paste sang B | B mang chế độ Auto; phép nắn của B giải trên B (khác A); độ nghiêng của B còn ≤ 0,5° | `EditClipboardTests.uprightModeIsResolvedOnTheTarget` (Vision chạy trên sim: B còn lệch 0,13°) |
-| AC-29 | ảnh 3:2, Vertical +40, tỉ lệ khoá 3:2 | bật Constrain Crop (so với tắt) | bật: 0 pixel ngoài ảnh sau nắn, khung vẫn 3:2 ± 0,01; tắt: mép kéo giãn, 0 pixel trong suốt | ⚠️ chưa có (dự kiến `GeoTransformTests.constrainCropKeepsTheLockedRatio`) |
+| AC-29 | ảnh 3:2, Vertical +40, tỉ lệ khoá 3:2 | bật Constrain Crop (so với tắt) | bật: 0 pixel ngoài ảnh sau nắn, khung vẫn 3:2 ± 0,01; tắt: mép kéo giãn, 0 pixel trong suốt | `GeoTransformTests.constrainCropKeepsTheLockedRatio` · `…constrainCropAloneIsIdentity` · hàng: `ShotDexUITests/scripts/iphone-constrain-crop.json` |
 
-**Chưa chứng minh được:** AC-24, AC-29 (chưa code).
+**Chưa chứng minh được:** AC-24 (chưa code).
 
 *AC-20 sửa 2026-09-28:* bản cũ ghi "dời vào" cùng lúc với "không góc trống" — hai điều không cùng đúng. Nắn méo
 thùng kéo vùng rìa **ra**; phóng vừa khít (không góc trống) không đảo chiều đó. Lightroom cũng vậy khi bật Constrain

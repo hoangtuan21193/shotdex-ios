@@ -76,6 +76,79 @@ struct GeoTransformTests {
         #expect(transparent == 0)
     }
 
+    /// 300×200 grey with a 3px red rim: anything sampled from outside the
+    /// photo is a smear of that rim.
+    private static func rimmed() -> CIImage {
+        let width = 300, height = 200
+        var pixels = [Float](repeating: 1, count: width * height * 4)
+        for y in 0..<height {
+            for x in 0..<width {
+                let rim = x < 3 || y < 3 || x >= width - 3 || y >= height - 3
+                let index = (y * width + x) * 4
+                pixels[index] = rim ? 1 : 0.5
+                pixels[index + 1] = rim ? 0 : 0.5
+                pixels[index + 2] = rim ? 0 : 0.5
+            }
+        }
+        let data = pixels.withUnsafeBufferPointer { Data(buffer: $0) }
+        return CIImage(
+            bitmapData: data,
+            bytesPerRow: width * 4 * MemoryLayout<Float>.size,
+            size: CGSize(width: width, height: height),
+            format: .RGBAf,
+            colorSpace: nil
+        )
+    }
+
+    /// Red pixels more than 4px in from the frame's edge — the smear — and
+    /// transparent pixels anywhere.
+    private static func smearAndHoles(_ image: CIImage) -> (smear: Int, holes: Int) {
+        let width = 300, height = 200
+        let context = CIContext(options: [.workingColorSpace: NSNull(), .outputColorSpace: NSNull()])
+        var values = [Float](repeating: 0, count: width * height * 4)
+        context.render(image, toBitmap: &values, rowBytes: width * 4 * MemoryLayout<Float>.size,
+                       bounds: CGRect(x: 0, y: 0, width: width, height: height), format: .RGBAf, colorSpace: nil)
+        var smear = 0, holes = 0
+        for y in 0..<height {
+            for x in 0..<width {
+                let index = (y * width + x) * 4
+                if values[index + 3] < 0.999 { holes += 1 }
+                let inner = x >= 4 && y >= 4 && x < width - 4 && y < height - 4
+                if inner, values[index] - values[index + 1] > 0.2 { smear += 1 }
+            }
+        }
+        return (smear, holes)
+    }
+
+    /// AC-29. A 3:2 photo, Vertical +40: with Constrain Crop the frame is
+    /// still 3:2 and holds nothing from outside the photo; without it the
+    /// edges are stretched in, and nothing is transparent either way.
+    @Test func constrainCropKeepsTheLockedRatio() {
+        var adjustments = PhotoAdjustments()
+        adjustments.geoVertical = 0.4
+        let loose = PhotoRenderService.applyGeo(adjustments, to: Self.rimmed())
+        adjustments.geoConstrainCrop = 1
+        let constrained = PhotoRenderService.applyGeo(adjustments, to: Self.rimmed())
+
+        #expect(abs(constrained.extent.width / constrained.extent.height - 1.5) <= 0.01)
+        let tight = Self.smearAndHoles(constrained)
+        #expect(tight.smear == 0, "\(tight.smear) smeared pixels with Constrain Crop")
+        #expect(tight.holes == 0)
+
+        let stretched = Self.smearAndHoles(loose)
+        #expect(stretched.smear > 100, "without it the edges stretch in (\(stretched.smear))")
+        #expect(stretched.holes == 0)
+    }
+
+    /// Nothing to straighten, nothing to crop: the toggle alone changes no
+    /// pixel.
+    @Test func constrainCropAloneIsIdentity() {
+        var adjustments = PhotoAdjustments()
+        adjustments.geoConstrainCrop = 1
+        let input = Self.rimmed()
+        #expect(PhotoRenderService.applyGeo(adjustments, to: input) === input)
+    }
+
     /// Squeezing is the same stretch turned: the taller axis grows, so the
     /// sides do not pull in.
     @Test func negativeAspectGrowsTheHeight() {

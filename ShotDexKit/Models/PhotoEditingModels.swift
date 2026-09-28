@@ -444,6 +444,9 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
     case geoScale
     case geoOffsetX
     case geoOffsetY
+    /// Constrain Crop, on/off: zoom the straightened frame so no edge is
+    /// stretched in from outside the photo (FS-03.15b §4).
+    case geoConstrainCrop
     case rawTemperature
     case rawTint
     case rawLuminanceNoise
@@ -507,6 +510,7 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         case .geoScale: "Scale"
         case .geoOffsetX: "Offset X"
         case .geoOffsetY: "Offset Y"
+        case .geoConstrainCrop: "Constrain Crop"
         case .rawTemperature: "RAW White Balance"
         case .rawTint: "RAW Tint"
         case .rawLuminanceNoise: "RAW Luminance Noise"
@@ -567,6 +571,7 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
         case .geoScale: "arrow.up.left.and.arrow.down.right"
         case .geoOffsetX: "arrow.left.and.right"
         case .geoOffsetY: "arrow.up.and.down"
+        case .geoConstrainCrop: "crop"
         case .rawTemperature: "thermometer.medium"
         case .rawTint: "slider.horizontal.2.square"
         case .rawLuminanceNoise: "sparkles.rectangle.stack"
@@ -585,7 +590,7 @@ public enum PhotoAdjustmentKind: String, Codable, CaseIterable, Identifiable, Se
              .vignetteHighlights, .chromaticAberration,
              .defringePurpleAmount, .defringePurpleHueMinimum, .defringePurpleHueMaximum,
              .defringeGreenAmount, .defringeGreenHueMinimum, .defringeGreenHueMaximum,
-             .lensManualVignettingMidpoint: 0...1
+             .lensManualVignettingMidpoint, .geoConstrainCrop: 0...1
         case .exposure: -2...2
         default: -1...1
         }
@@ -765,6 +770,7 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
     public var geoScale = 0.0
     public var geoOffsetX = 0.0
     public var geoOffsetY = 0.0
+    public var geoConstrainCrop = 0.0
     public var rawTemperature = 0.0
     public var rawTint = 0.0
     public var rawLuminanceNoise = 0.0
@@ -829,6 +835,7 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .geoScale: geoScale
             case .geoOffsetX: geoOffsetX
             case .geoOffsetY: geoOffsetY
+            case .geoConstrainCrop: geoConstrainCrop
             case .rawTemperature: rawTemperature
             case .rawTint: rawTint
             case .rawLuminanceNoise: rawLuminanceNoise
@@ -891,6 +898,7 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
             case .geoScale: geoScale = newValue
             case .geoOffsetX: geoOffsetX = newValue
             case .geoOffsetY: geoOffsetY = newValue
+            case .geoConstrainCrop: geoConstrainCrop = newValue
             case .rawTemperature: rawTemperature = newValue
             case .rawTint: rawTint = newValue
             case .rawLuminanceNoise: rawLuminanceNoise = newValue
