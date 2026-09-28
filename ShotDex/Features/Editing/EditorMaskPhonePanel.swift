@@ -44,8 +44,8 @@ struct EditorMaskPhonePanel: View {
     }
 }
 
-/// "Choose an area to adjust": three rows of kind chips, each scrolling, one tap
-/// makes the mask. A kind that cannot work on this photo is dimmed; tapping it
+/// "Choose an area to adjust": a 4-column grid of every kind, one tap makes
+/// the mask. A kind that cannot work on this photo is dimmed; tapping it
 /// puts the reason where the title was for 3s instead of making an empty mask.
 /// Long-press a chip for what the kind does (the old sheet's explainer line).
 struct EditorMaskChooser: View {
@@ -54,28 +54,49 @@ struct EditorMaskChooser: View {
     @State private var noticeTask: Task<Void, Never>?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            header
-            ForEach(Array(EditorNewMaskOption.Row.allCases.enumerated()), id: \.offset) { _, row in
-                ScrollView(.horizontal) {
-                    HStack(spacing: EditorStripLayout.chipSpacing) {
-                        ForEach(EditorNewMaskOption.options(in: row)) { option in
+        // Every kind on screen at once, 4 × 4 (FS-03.15d AC-52): three
+        // scrolling rows hid half of them past the right edge. Four 44pt rows
+        // fill the panel, so the title and the way back sit in the two slots
+        // the fourteen kinds leave free at the end.
+        let rows = stride(from: 0, to: EditorNewMaskOption.gridOrder.count, by: EditorNewMaskOption.gridColumns).map {
+            Array(EditorNewMaskOption.gridOrder[$0..<min($0 + EditorNewMaskOption.gridColumns, EditorNewMaskOption.gridOrder.count)])
+        }
+        VStack(spacing: 0) {
+            // No vertical spacing: each tile carries half the gap above and
+            // below as touch area, so a 40pt tile answers a 44pt target.
+            Grid(horizontalSpacing: Self.tileSpacing, verticalSpacing: 0) {
+                ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                    GridRow {
+                        ForEach(row) { option in
                             chip(option)
                         }
+                        if row.count < EditorNewMaskOption.gridColumns {
+                            header
+                                .gridCellColumns(EditorNewMaskOption.gridColumns - row.count)
+                        }
                     }
-                    .padding(.horizontal, AppTheme.Spacing.lg)
-                    .frame(maxHeight: .infinity)
                 }
-                .scrollIndicators(.hidden)
-                .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
             }
             Spacer(minLength: 0)
         }
+        .padding(.horizontal, AppTheme.Spacing.lg)
         .onDisappear { noticeTask?.cancel() }
     }
 
+    static let tileSpacing: CGFloat = 4
+    /// Drawn height; the touch area adds `tileSpacing` for 44pt.
+    static let tileHeight: CGFloat = 40
+
+    /// The grid's last, wide cell: the title — or for 3s the reason a kind
+    /// cannot work here — and, once there are masks, the way back to them.
     private var header: some View {
         HStack(spacing: AppTheme.Spacing.xs) {
+            Text(chrome.maskChooserNotice ?? "Choose an area to adjust")
+                .font(.system(size: 12))
+                .foregroundStyle(EditorTheme.secondaryText)
+                .lineLimit(2)
+                .minimumScaleFactor(EditorLayoutMetrics.editorPanelRowMinimumScale)
+                .frame(maxWidth: .infinity, alignment: .leading)
             if !controller.recipe.masks.isEmpty {
                 Button {
                     chrome.isChoosingMaskKind = false
@@ -83,21 +104,16 @@ struct EditorMaskChooser: View {
                     Image(systemName: "chevron.backward")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(.white)
-                        .frame(width: 26, height: 34)
+                        .frame(width: 44, height: Self.tileHeight)
+                        .background(EditorTheme.chipIdle, in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Back to masks")
             }
-            Text(chrome.maskChooserNotice ?? "Choose an area to adjust")
-                .font(.system(size: 13))
-                .foregroundStyle(EditorTheme.secondaryText)
-                .lineLimit(1)
-                .minimumScaleFactor(EditorLayoutMetrics.editorPanelRowMinimumScale)
-            Spacer(minLength: 0)
         }
-        .padding(.horizontal, AppTheme.Spacing.lg)
-        .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
+        .frame(height: Self.tileHeight)
+        .padding(.vertical, Self.tileSpacing / 2)
         .animation(EditorTheme.animation, value: chrome.maskChooserNotice)
     }
 
@@ -130,9 +146,10 @@ struct EditorMaskChooser: View {
                 }
             }
         } label: {
-            EditorPanelChipLabel(title: EditorNewMaskOption.people.shortTitle, systemImage: EditorNewMaskOption.people.systemImage)
+            EditorMaskKindTileLabel(option: .people)
         }
-        .buttonStyle(EditorChipButtonStyle(isSelected: false))
+        .buttonStyle(EditorMaskKindTileStyle())
+        .accessibilityLabel(EditorNewMaskOption.people.title)
         .onAppear { controller.countPeopleIfNeeded() }
     }
 
@@ -160,9 +177,9 @@ struct EditorMaskChooser: View {
                 controller.editSelectedMaskAdjustments()
             }
         } label: {
-            EditorPanelChipLabel(title: option.shortTitle, systemImage: option.systemImage)
+            EditorMaskKindTileLabel(option: option)
         }
-        .buttonStyle(EditorChipButtonStyle(isSelected: false))
+        .buttonStyle(EditorMaskKindTileStyle())
         .opacity(reason == nil ? 1 : EditorTheme.rowDisabled)
         .contextMenu {
             Text(reason ?? option.description)
@@ -179,6 +196,38 @@ struct EditorMaskChooser: View {
             guard !Task.isCancelled else { return }
             chrome.maskChooserNotice = nil
         }
+    }
+}
+
+/// One tile of the mask-kind grid: the kind's glyph over its short name.
+private struct EditorMaskKindTileLabel: View {
+    let option: EditorNewMaskOption
+
+    var body: some View {
+        VStack(spacing: 3) {
+            Image(systemName: option.systemImage)
+                .font(.system(size: 17))
+            Text(option.shortTitle)
+                .font(.system(size: 11))
+                .lineLimit(1)
+                .minimumScaleFactor(EditorLayoutMetrics.editorPanelRowMinimumScale)
+        }
+        .foregroundStyle(.white)
+        .frame(maxWidth: .infinity)
+        .frame(height: EditorMaskChooser.tileHeight)
+    }
+}
+
+/// The chip's idle fill and pressed dim, on a grid tile, with half the
+/// grid's gap above and below as touch area.
+private struct EditorMaskKindTileStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        let shape = RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous)
+        configuration.label
+            .background(EditorTheme.chipIdle, in: shape)
+            .opacity(configuration.isPressed ? 0.7 : 1)
+            .padding(.vertical, EditorMaskChooser.tileSpacing / 2)
+            .contentShape(Rectangle())
     }
 }
 

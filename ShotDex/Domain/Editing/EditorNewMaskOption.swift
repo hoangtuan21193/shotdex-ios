@@ -86,6 +86,19 @@ enum EditorNewMaskOption: String, CaseIterable, Identifiable, Sendable {
         allCases.filter { $0.row == row }
     }
 
+    /// The phone chooser's 4-column grid, read left to right (FS-03.15d §3):
+    /// what Vision finds first, the three face parts kept out of People so
+    /// skin, eyes and lips stay one tap, then what the user draws and the
+    /// ranges.
+    static let gridOrder: [EditorNewMaskOption] = [
+        .subject, .sky, .background, .object,
+        .people, .faceSkin, .eyes, .lips,
+        .brush, .radialGradient, .linearGradient, .colorRange,
+        .luminanceRange, .depthRange,
+    ]
+
+    static let gridColumns = 4
+
     var systemImage: String {
         switch self {
         case .background: "person.and.background.dotted"

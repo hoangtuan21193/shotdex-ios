@@ -23,6 +23,22 @@ struct MaskPhonePanelTests {
         #expect(EditorNewMaskOption.options(in: .range) == [.colorRange, .luminanceRange, .depthRange])
     }
 
+    /// FS-03.15d AC-52. The phone grid is 4 columns and 14 tiles, every kind
+    /// once, in §3's order; Face Skin, Eyes and Lips are tiles of their own,
+    /// outside People.
+    @Test func chooserGridIsFourByFourInOrder() {
+        let grid = EditorNewMaskOption.gridOrder
+        #expect(EditorNewMaskOption.gridColumns == 4)
+        #expect(grid.count == 14)
+        #expect(Set(grid) == Set(EditorNewMaskOption.allCases))
+        #expect(grid.map(\.shortTitle) == [
+            "Subject", "Sky", "Background", "Object",
+            "People", "Face Skin", "Eyes", "Lips",
+            "Brush", "Radial", "Linear", "Color",
+            "Luminance", "Depth",
+        ])
+    }
+
     /// AC-17 / AC-18. With no mask the chooser shows; one tap on Radial makes
     /// exactly one mask, named short, selected, and the chooser gives way.
     @Test func oneTapOnRadialMakesOneShortNamedMask() throws {

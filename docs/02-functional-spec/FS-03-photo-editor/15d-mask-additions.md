@@ -76,6 +76,9 @@ kho matte (§5).
   vẫn giữ để Undo/Delete — như Subject.
 - **Lưới chọn loại** của FS-03.13 thành **4×4**, 14 ô: Subject · Sky · Background · Object · People · Face
   Skin · Eyes · Lips · Brush · Radial · Linear · Color · Luminance · Depth.
+- *Trên phone (2026-09-29):* panel chỉ còn ~176pt dưới thanh nhóm, đúng bốn hàng 44pt, nên dòng "Choose an area to adjust"
+  (và lý do 3s khi một ô không dùng được, và nút quay lại danh sách mask) nằm ở **hai ô trống cuối lưới**; ô vẽ cao
+  40pt, vùng chạm 44pt nhờ ăn nửa khe trên dưới.
 - Ba ô khuôn mặt **giữ ở ngoài** People và vẫn phủ mọi khuôn mặt như hôm nay; trong People chúng giao với
   người đã chọn. *Vì chỉnh da, mắt, môi không nên sâu thêm một chạm.*
 
@@ -125,9 +128,9 @@ trong báo cáo import (FS-03.14). Mask còn lại của correction vẫn nhập
 | AC-49 | simulator (Vision không tách được người) | chạm People → All People | pill "Couldn't find a person" 3s; mask rỗng vẫn trong danh sách; không alert | `PeopleMaskTests.noPersonSaysSo` (câu báo) · `ShotDexUITests/scripts/iphone-people-mask.json` (3-no-person: pill "Detecting person…", mask People 1 vẫn trong danh sách, không alert; iPhone 17 26.5) |
 | AC-50 | ảnh CC0 không người, hai vật tách rời | chọn ô Subject, không chạm | mask phủ cả hai vật, IoU với phân tách gộp của Vision ≥ 0,9; không có pill "Tap…" | `ObjectMaskTests.subjectTakesEveryObjectWithoutATap` (chọn instance) · `ShotDexUITests/scripts/iphone-mask-subject.json` · ⚠️ IoU với Vision trên ảnh CC0: cần máy thật/Mac |
 | AC-51 | ảnh có mask Object đã tạo | đóng rồi mở lại ảnh; rồi xoá file matte và mở lần nữa | lần 2: Vision chạy 0 lần, matte khớp từng pixel lần 1; lần 3: tính lại, không alert | `GeneratedMatteStoreTests.reopenReadsTheSavedMatte` · `…unnamedPhotosWriteNothing` (Vision giả) |
-| AC-52 | editor, chưa có mask, iPhone 17 26.5 và 18.6 | mở Mask | lưới 4 cột đủ 14 ô đúng thứ tự §3; Face Skin, Eyes, Lips nằm ngoài People | ⚠️ chưa có (`ShotDexUITests/scripts/iphone-people-mask.json` + element dump) |
+| AC-52 | editor, chưa có mask, iPhone 17 26.5 và 18.6 | mở Mask | lưới 4 cột đủ 14 ô đúng thứ tự §3; Face Skin, Eyes, Lips nằm ngoài People | `MaskPhonePanelTests.chooserGridIsFourByFourInOrder` · `ShotDexUITests/scripts/iphone-mask-grid.json` (1-grid, 2-people; iPhone 17 26.5) · ⚠️ 18.6 chưa chụp — lưới không rẽ nhánh `#available` |
 
-**Chưa chứng minh được:** AC-52 (chưa code); phần IoU của AC-46, AC-50 và Vision tách người thật của AC-47 cần máy thật.
+**Chưa chứng minh được:** ảnh 18.6 của AC-52; phần IoU của AC-46, AC-50 và Vision tách người thật của AC-47 cần máy thật.
 
 **Lệch so với §People (2026-09-28):** danh sách People là `Menu` hệ thống (All People / Person n → phần), không phải trang có ảnh nhỏ từng người — Menu không hiện thumbnail và không làm mờ được một hàng, nên hàng cần matte ngữ nghĩa hiện dòng phụ "Needs a Portrait photo taken on iPhone" thay cho độ mờ 35%; chạm vào vẫn không tạo mask và hiện đúng câu đó 3s. Ảnh nhỏ từng người để sau. Point Color và Defringe của mask không có AC riêng —
 dùng lại pass toàn cục, phủ bởi golden kernel FS-16 khi port.
