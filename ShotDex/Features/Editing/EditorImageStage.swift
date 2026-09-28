@@ -55,6 +55,7 @@ struct EditorImageStage: View {
     private var detectingNoun: String {
         switch controller.selectedMask?.components.first?.kind {
         case .sky: "sky"
+        case .object: "object"
         case .faceSkin, .eyes, .lips: "face"
         default: "subject"
         }
@@ -568,7 +569,12 @@ struct EditorImageStage: View {
             // Mask detection (FS-03.05 §2): "Detecting…" while Vision runs on a new
             // automatic mask, then — only if it found nothing — why the mask is empty.
             if chrome.selectedGroup == .mask {
-                if controller.isDetectingSelectedMask {
+                if controller.selectedComponent?.kind == .object, controller.selectedComponent?.objectPoint == nil,
+                   controller.maskDetectionNotice == nil {
+                    EditorPillLabel(text: "TAP AN OBJECT IN THE PHOTO")
+                        .position(x: imageRect.midX, y: imageRect.minY + 24)
+                        .transition(.opacity)
+                } else if controller.isDetectingSelectedMask {
                     EditorPillLabel(text: "DETECTING \(detectingNoun.uppercased())…")
                         .position(x: imageRect.midX, y: imageRect.minY + 24)
                         .transition(.opacity)
@@ -886,7 +892,7 @@ struct EditorImageStage: View {
             } else {
                 controller.endContinuousChange()
             }
-        case .subject, .colorRange:
+        case .object, .colorRange:
             controller.setAutomaticMaskPoint(point)
         default:
             // Sky and luminance masks have no on-image geometry to edit;

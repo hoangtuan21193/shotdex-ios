@@ -911,8 +911,8 @@ public actor PhotoRenderService {
         // the still and scaled across.
         let stillDisparity = alignedDisparity(source: source, recipe: recipe, to: image.extent)
         for component in recipe.masks.flatMap(\.components)
-        where component.kind == .subject || component.kind == .sky || component.kind == .depthRange
-            || component.kind.isFacePart {
+        where component.kind == .subject || component.kind == .object || component.kind == .sky
+            || component.kind == .depthRange || component.kind.isFacePart {
             guard let mask = try componentMask(
                 component,
                 image: image,
@@ -2423,7 +2423,16 @@ public actor PhotoRenderService {
                 componentID: component.id,
                 image: image
             ) {
-                try subjectMask(at: component.subjectPoint, image: image)
+                try subjectMask(.subject, at: component.subjectPoint, image: image)
+            }
+        case .object:
+            guard let point = component.objectPoint else { return nil }
+            return try cachedAutomaticMask(
+                key: "\(cacheIdentity)|object|\(component.id)|\(point.x)|\(point.y)",
+                componentID: component.id,
+                image: image
+            ) {
+                try subjectMask(.object, at: point, image: image)
             }
         case .sky:
             if let rawSkyMatte {
@@ -2682,7 +2691,7 @@ public actor PhotoRenderService {
             .cropped(to: extent)
     }
 
-    private func subjectMask(at point: NormalizedPoint, image: CIImage) throws -> CIImage? {
+    private func subjectMask(_ kind: PhotoMaskComponentKind, at point: NormalizedPoint, image: CIImage) throws -> CIImage? {
         let normalizedImage = image.transformed(by:
             CGAffineTransform(
                 translationX: -image.extent.minX,
@@ -2695,7 +2704,7 @@ public actor PhotoRenderService {
         try handler.perform([request])
         guard let observation = request.results?.first else { return nil }
         guard let selected = Self.foregroundInstances(
-            for: .subject,
+            for: kind,
             instanceAtPoint: instanceIndex(at: point, in: observation.instanceMask),
             all: observation.allInstances
         ) else { return nil }
@@ -2796,8 +2805,9 @@ public actor PhotoRenderService {
     }
 
     /// Which of Vision's foreground instances an area takes (FS-03.15d §3):
-    /// Subject is always every one of them, no tap needed. Nil is nothing to
-    /// select.
+    /// Subject is always every one of them, no tap needed; Object is the one
+    /// under the tap, and background under the tap is nothing. Nil is nothing
+    /// to select.
     static func foregroundInstances(
         for kind: PhotoMaskComponentKind,
         instanceAtPoint: Int,
@@ -2805,6 +2815,8 @@ public actor PhotoRenderService {
     ) -> IndexSet? {
         guard !all.isEmpty else { return nil }
         switch kind {
+        case .object:
+            return instanceAtPoint > 0 && all.contains(instanceAtPoint) ? IndexSet(integer: instanceAtPoint) : nil
         default:
             return all
         }

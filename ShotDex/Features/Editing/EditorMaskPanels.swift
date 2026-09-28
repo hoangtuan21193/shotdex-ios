@@ -352,7 +352,7 @@ struct EditorMaskDetailPanel: View {
     /// What an extra area can be: the drawn shapes and the ranges, plus
     /// Subject and Sky.
     static let areaKinds: [PhotoMaskComponentKind] = [
-        .brush, .linearGradient, .radialGradient, .colorRange, .luminanceRange, .subject, .sky,
+        .brush, .linearGradient, .radialGradient, .colorRange, .luminanceRange, .subject, .object, .sky,
     ]
 
     /// First row under the strip on the phone: which shape of a multi-shape mask
@@ -573,6 +573,9 @@ struct EditorMaskDetailPanel: View {
                 componentSlider("Opacity", keyPath: \.opacity, range: 0.01...1)
             case .subject:
                 hint("Every subject in the photo, found on device")
+                componentSlider("Opacity", keyPath: \.opacity, range: 0.01...1)
+            case .object:
+                hint("Tap an object on the photo. Add Area › Object picks another")
                 componentSlider("Opacity", keyPath: \.opacity, range: 0.01...1)
             case .sky:
                 hint("Sky detected on device")
@@ -988,6 +991,16 @@ struct EditorMaskKindSketch: View {
                     Capsule()
                         .fill(EditorTheme.accent.opacity(0.35))
                         .frame(width: rect.width * 0.3, height: rect.height * 0.66)
+                case .object:
+                    // One thing of several: a single rounded block tinted,
+                    // its neighbour left as an outline.
+                    HStack(spacing: rect.width * 0.12) {
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(EditorTheme.accent.opacity(0.35))
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(EditorTheme.accent.opacity(0.35), lineWidth: 1)
+                    }
+                    .frame(width: rect.width * 0.5, height: rect.height * 0.4)
                 case .background:
                     // The Subject sketch's capsule punched out of a full tint,
                     // drawn even-odd so the hole is exactly that shape.

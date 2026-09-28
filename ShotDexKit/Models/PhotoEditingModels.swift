@@ -1097,6 +1097,8 @@ public enum MaskBlendOperation: String, Codable, CaseIterable, Identifiable, Sen
 }
 
 public enum PhotoMaskComponentKind: String, Codable, CaseIterable, Identifiable, Sendable {
+    /// One foreground object, picked by a tap (FS-03.15d §3).
+    case object
     case brush
     case linearGradient
     case radialGradient
@@ -1126,6 +1128,7 @@ public enum PhotoMaskComponentKind: String, Codable, CaseIterable, Identifiable,
         case .linearGradient: "Linear Gradient"
         case .radialGradient: "Radial Gradient"
         case .subject: "Subject"
+        case .object: "Object"
         case .sky: "Sky"
         case .luminanceRange: "Luminance Range"
         case .colorRange: "Color Range"
@@ -1142,6 +1145,7 @@ public enum PhotoMaskComponentKind: String, Codable, CaseIterable, Identifiable,
         case .linearGradient: "square.tophalf.filled"
         case .radialGradient: "circle.dotted"
         case .subject: "person.crop.rectangle"
+        case .object: "cube"
         case .sky: "cloud.sun"
         case .luminanceRange: "circle.lefthalf.striped.horizontal"
         case .colorRange: "eyedropper"
@@ -1226,6 +1230,9 @@ public struct PhotoMaskComponent: Codable, Identifiable, Equatable, Sendable {
     public var radiusY = 0.3
     public var feather = 0.5
     public var subjectPoint = NormalizedPoint.center
+    /// Where an Object area was tapped; nil until it is, and nil is an empty
+    /// area waiting for the tap.
+    public var objectPoint: NormalizedPoint?
     public var luminanceMinimum = 0.25
     public var luminanceMaximum = 0.75
     public var sampledRed = 0.5

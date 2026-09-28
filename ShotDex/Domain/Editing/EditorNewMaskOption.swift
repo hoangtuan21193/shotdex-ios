@@ -9,6 +9,7 @@ import ShotDexKit
 /// to, and the sheet can still offer the words people use.
 enum EditorNewMaskOption: String, CaseIterable, Identifiable, Sendable {
     case subject
+    case object
     case sky
     case background
     case faceSkin
@@ -27,6 +28,7 @@ enum EditorNewMaskOption: String, CaseIterable, Identifiable, Sendable {
     var componentKind: PhotoMaskComponentKind {
         switch self {
         case .subject, .background: .subject
+        case .object: .object
         case .sky: .sky
         case .brush: .brush
         case .radialGradient: .radialGradient
@@ -72,7 +74,7 @@ enum EditorNewMaskOption: String, CaseIterable, Identifiable, Sendable {
 
     var row: Row {
         switch self {
-        case .subject, .sky, .background, .faceSkin, .eyes, .lips: .detect
+        case .subject, .object, .sky, .background, .faceSkin, .eyes, .lips: .detect
         case .brush, .linearGradient, .radialGradient: .draw
         case .colorRange, .luminanceRange, .depthRange: .range
         }
@@ -92,6 +94,7 @@ enum EditorNewMaskOption: String, CaseIterable, Identifiable, Sendable {
     var description: String {
         switch self {
         case .subject: "Isolates the subject on device"
+        case .object: "One object, picked with a tap"
         case .sky: "Finds the sky automatically"
         case .background: "Everything except the subject"
         case .radialGradient: "Elliptical area, drag to place"

@@ -2424,9 +2424,14 @@ final class PhotoEditorController {
     }
 
     func setAutomaticMaskPoint(_ point: NormalizedPoint) {
-        // Subject takes every subject; a tap only picks for Color Range now.
-        guard let component = selectedComponent, component.kind == .colorRange else { return }
-        if let color = samplePreviewColor(at: point) {
+        // Subject takes every subject; a tap picks for Object and Color Range.
+        guard let component = selectedComponent,
+              component.kind == .object || component.kind == .colorRange
+        else { return }
+        if component.kind == .object {
+            detectingMaskComponentIDs.insert(component.id)
+            updateSelectedComponent { $0.objectPoint = point }
+        } else if let color = samplePreviewColor(at: point) {
             updateSelectedComponent {
                 $0.sampledRed = color.red
                 $0.sampledGreen = color.green
@@ -2762,11 +2767,22 @@ final class PhotoEditorController {
         if let kind = failedKinds.first {
             showMaskDetectionNotice(Self.detectionFailureText(for: kind))
         }
+        // An Object tap on background selects nothing: the area goes back to
+        // waiting for a tap, with no undo step of its own.
+        for maskIndex in recipe.masks.indices {
+            for componentIndex in recipe.masks[maskIndex].components.indices {
+                let component = recipe.masks[maskIndex].components[componentIndex]
+                if component.kind == .object, finished.contains(component.id), empty.contains(component.id) {
+                    recipe.masks[maskIndex].components[componentIndex].objectPoint = nil
+                }
+            }
+        }
     }
 
     static func detectionFailureText(for kind: PhotoMaskComponentKind) -> String {
         switch kind {
         case .sky: "Couldn't find the sky"
+        case .object: "Nothing to select there"
         case .faceSkin, .eyes, .lips: "Couldn't find a face"
         default: "Couldn't find a subject"
         }

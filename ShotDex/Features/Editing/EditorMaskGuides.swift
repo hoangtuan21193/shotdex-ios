@@ -42,6 +42,8 @@ struct EditorMaskGuideOverlay: View {
                     linearGuide(component)
                 case .radialGradient:
                     radialGuide(component)
+                case .object:
+                    if component.objectPoint != nil { subjectPin(component) }
                 default:
                     // Brush has no persistent guide: Size and Feather are set in
                     // the action-row popup, previewed by the cursor footprint.
@@ -212,7 +214,7 @@ struct EditorMaskGuideOverlay: View {
     /// Just says where the subject was picked. Not interactive — tapping somewhere
     /// else on the photo re-picks, which the paint layer underneath already does.
     private func subjectPin(_ component: PhotoMaskComponent) -> some View {
-        let point = EditorLayoutMetrics.maskViewPoint(component.subjectPoint, in: imageRect)
+        let point = EditorLayoutMetrics.maskViewPoint(component.objectPoint ?? component.subjectPoint, in: imageRect)
         return Circle()
             .fill(EditorTheme.accent)
             .frame(width: 10 / zoomScale, height: 10 / zoomScale)
