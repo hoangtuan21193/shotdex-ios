@@ -1,9 +1,36 @@
 import Foundation
+import Photos
 import Testing
 @testable import ShotDexKit
 @testable import ShotDex
 
 struct EditorHistoryAndSummaryTests {
+    /// FS-03.15a AC-14. Calibration at its defaults; Red Hue dragged 0 → +40
+    /// and let go, then one Undo: one history step, the recipe back to its
+    /// defaults with no Calibration key written.
+    @MainActor @Test func calibrationDragIsOneStep() throws {
+        let controller = PhotoEditorController(asset: PHAsset(), sourceAlbum: nil, service: PhotoEditingService())
+        controller.beginContinuousChange()
+        for step in 1...20 {
+            controller.setCalibrationValue(Double(step) * 0.02, for: .redHue)
+        }
+        controller.endContinuousChange()
+        #expect(abs(controller.recipe.color.calibration.redHue - 0.4) < 1e-9)
+        #expect(controller.historyTimeline.count == 2, "the drag is one step")
+
+        controller.undo()
+        #expect(controller.recipe.color.calibration == .identity)
+        let json = String(decoding: try JSONEncoder().encode(controller.recipe), as: UTF8.self)
+        #expect(!json.contains("calibration"), "\(json)")
+
+        var edited = PhotoEditRecipe.identity
+        edited.color.calibration.redHue = 0.4
+        edited.adjustments.exposure = 0.1
+        var before = PhotoEditRecipe.identity
+        before.adjustments.exposure = 0.1
+        #expect(EditorAdjustmentSummary.describeChange(from: before, to: edited) == "Calibration · Red Hue +40")
+    }
+
     @Test func timelineOrdersOldestFirstAroundTheCurrentStep() {
         var history = PhotoEditHistory()
         let first = PhotoEditRecipe.identity

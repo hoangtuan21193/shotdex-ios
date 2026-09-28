@@ -69,6 +69,8 @@ enum EditorGroup: String, CaseIterable, Identifiable {
     case detail
     case optics
     case geo
+    /// Last of the parameter groups, after Optics and RAW (FS-03.15a §3).
+    case calibration
     /// Crop **and** geometry: the frame, and the six sliders that shape the same
     /// rectangle. Renamed from `crop` on 2026-09-22 when Geometry moved in with
     /// it; `EditorGroupMigration` converts the stored raw value.
@@ -99,6 +101,7 @@ enum EditorGroup: String, CaseIterable, Identifiable {
         case .detail: "Detail"
         case .optics: "Optics"
         case .geo: "Geometry"
+        case .calibration: "Calibration"
         case .cropGeometry: "Crop"
         case .heal: "Heal"
         case .mask: "Mask"
@@ -130,6 +133,7 @@ enum EditorGroup: String, CaseIterable, Identifiable {
         case .detail: "wand.and.rays"
         case .optics: "camera.aperture"
         case .geo: "grid"
+        case .calibration: "dial.medium"
         case .cropGeometry: "crop"
         case .heal: "bandage"
         case .mask: "circle.dashed"
@@ -143,7 +147,7 @@ enum EditorGroup: String, CaseIterable, Identifiable {
     /// parameters yet, so they sit on `.adjust` and show a placeholder.)
     var tool: PhotoEditorTool {
         switch self {
-        case .light, .curve, .color, .colorMix, .effects, .detail, .optics, .geo: .adjust
+        case .light, .curve, .color, .colorMix, .effects, .detail, .optics, .geo, .calibration: .adjust
         case .pointColor: .pointColor
         case .grade: .colorGrading
         case .cropGeometry: .crop
@@ -980,6 +984,25 @@ final class PhotoEditorController {
     }
 
     // MARK: - Color tab (global-only: mixer, point color, grading)
+
+    func calibrationValue(_ control: EditorCalibrationControl) -> Double {
+        recipe.color.calibration[keyPath: control.keyPath]
+    }
+
+    /// One Calibration slider; a drag between `beginContinuousChange` and
+    /// `endContinuousChange` is one history step (AC-14).
+    func setCalibrationValue(_ value: Double, for control: EditorCalibrationControl) {
+        if !isContinuousChange { recordHistory() }
+        recipe.color.calibration[keyPath: control.keyPath] = min(1, max(-1, value))
+        scheduleRender()
+    }
+
+    func resetCalibration() {
+        guard !recipe.color.calibration.isIdentity else { return }
+        recordHistory()
+        recipe.color.calibration = .identity
+        scheduleRender()
+    }
 
     /// Black & White is on: the B&W Mix replaces the HSL Mixer, and HSL and
     /// Point Color do not render (FS-03.15a §2).

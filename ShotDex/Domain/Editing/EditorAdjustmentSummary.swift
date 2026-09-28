@@ -104,6 +104,15 @@ enum EditorAdjustmentSummary {
         if previous.points.count < current.points.count { return "Added Point Color" }
         if previous.points.count > current.points.count { return "Removed Point Color" }
         if previous.points != current.points { return "Point Color" }
+        if previous.calibration != current.calibration {
+            for control in EditorCalibrationControl.allCases
+            where abs(previous.calibration[keyPath: control.keyPath] - current.calibration[keyPath: control.keyPath])
+                > 0.0001 {
+                let value = Int((current.calibration[keyPath: control.keyPath] * 100).rounded())
+                return "Calibration · \(control.title) " + (value > 0 ? "+\(value)" : "\(value)")
+            }
+            return "Calibration"
+        }
         if previous.grading != current.grading {
             if abs(previous.grading.blending - current.grading.blending) > 0.0001 {
                 return "Grading · Blending \(Int((current.grading.blending * 100).rounded()))"

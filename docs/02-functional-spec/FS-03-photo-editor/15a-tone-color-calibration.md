@@ -65,6 +65,9 @@ Tổng quan và thứ tự render: [FS-03.15](15-lightroom-parameter-parity.md).
   phần hồ sơ màu máy ảnh, nên B&W Mixer và HSL đọc màu **đã** calibrate.
 - *Vì sau Light thì Exposure đã đẩy màu sang vùng khác trước khi calibrate* — preset giả phim ra lệch.
 - Không có trong mask (Lightroom cũng không). Ảnh RAW và ảnh thường dùng cùng một phép.
+- *Trên phone (2026-09-29):* chip **Calibration** ở cuối các nhóm thông số (sau Geometry, trước Crop), panel chia bốn
+  đầu mục như Lightroom — Shadows · Red Primary · Green Primary · Blue Primary — mỗi dòng chỉ ghi Tint / Hue /
+  Saturation ("Green Saturation" không vừa dòng 390pt). Lịch sử ghi "Calibration · Red Hue +40".
 
 | Control | Thẻ `crs:` | Thang |
 |---|---|---|
@@ -86,7 +89,7 @@ Tổng quan và thứ tự render: [FS-03.15](15-lightroom-parameter-parity.md).
 | AC-11 | bảng 24 ô, B&W bật, HSL Blue Luminance +50 | render | HSL không áp (bằng bản HSL 0 ± 1/255); hàng Mixer ghi "Off while Black & White is on" | `GrayMixerTests.hslIsOffInBlackAndWhite` · `ShotDexUITests/scripts/iphone-bw-mix.json` (2-bw-mix: chip "B&W Mix", 8 slider, dòng "HSL Mixer · Off while Black & White is on" cuối danh sách; 3-point-off; iPhone 17 26.5) |
 | AC-12 | bảng 24 ô | đặt Calibration Red Hue +30 | hue ô Red dịch về phía cam +4°…+12°; ô Neutral 5 lệch ≤ 1/255; ô Blue dịch ≤ 2° | `CalibrationTests.redHueMovesRedTowardOrange` · `CalibrationTests.matrixAlwaysKeepsWhite` |
 | AC-13 | bảng 24 ô | đặt Blue Saturation +50 | độ bão hoà ô Blue tăng ≥ 10% tương đối; mọi ô trung tính lệch ≤ 1/255 | `CalibrationTests.saturationKeepsGreysGrey` · golden `shadowTint-patches/photo` |
-| AC-14 | Calibration ở mặc định | kéo Red Hue 0 → +40 rồi thả, rồi Undo một lần | một bước lịch sử; recipe về đúng mặc định, không thêm khoá Calibration | ⚠️ chưa có (dự kiến `EditorHistoryAndSummaryTests.calibrationDragIsOneStep`) |
+| AC-14 | Calibration ở mặc định | kéo Red Hue 0 → +40 rồi thả, rồi Undo một lần | một bước lịch sử; recipe về đúng mặc định, không thêm khoá Calibration | `EditorHistoryAndSummaryTests.calibrationDragIsOneStep` · `ShotDexUITests/scripts/iphone-calibration.json` (1-calibration, 2-calibration-end; iPhone 17 26.5) |
 | AC-15 | bảng 24 ô, B&W bật, mixer 0 | đặt Temp +30 (so với 0) | ô Yellow sáng lên ≥ 3/255, ô Blue không sáng lên; mọi ô vẫn R = G = B ± 1/255 | `GrayMixerTests.temperatureShiftsTheGreyMix` · `WhiteBalanceMathTests` |
 
-**Chưa chứng minh được:** AC-14 (task 55).
+**Chưa chứng minh được:** —

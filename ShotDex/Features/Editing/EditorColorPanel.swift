@@ -939,3 +939,73 @@ struct EditorColorMixBandPicker: View {
         .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : .isButton)
     }
 }
+
+// MARK: - Calibration
+
+/// The seven Calibration sliders (FS-03.15a §3): Shadow Tint, then each
+/// primary's hue and saturation. Every track shows what its end does — green
+/// to magenta, the primary turning toward its neighbours, grey to full colour.
+struct EditorCalibrationSection: View {
+    @Environment(\.editorPanelScrolls) private var panelScrolls
+    @Bindable var controller: PhotoEditorController
+    @Bindable var chrome: EditorChromeModel
+
+    var body: some View {
+        // Plain headers, not pinned: seven rows in four sections is short
+        // enough that a sticky header only ever covers the rows under it.
+        VStack(spacing: 0) {
+            ForEach(EditorCalibrationControl.Section.allCases) { section in
+                EditorGroupHeader(title: section.rawValue, isFirst: section == .shadows)
+                ForEach(section.controls) { control in
+                    row(control)
+                }
+            }
+            Color.clear.frame(height: 16)
+        }
+        .editorPanelScroll(panelScrolls)
+        .scrollDisabled(chrome.activePlainSliderID != nil)
+    }
+
+    private func row(_ control: EditorCalibrationControl) -> some View {
+        let sliderID = "calibration.\(control.rawValue)"
+        let value = controller.calibrationValue(control) * 100
+        return EditorPlainSliderRow(
+            title: control.rowTitle,
+            value: value,
+            range: -100...100,
+            isBipolar: true,
+            valueText: EditorColorFormat.signed(value),
+            isActive: chrome.activePlainSliderID == sliderID,
+            detent: 0,
+            trackGradient: Self.gradient(control),
+            onBeginDrag: {
+                controller.beginContinuousChange()
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                chrome.activePlainSliderID = sliderID
+            },
+            onDrag: { value in
+                controller.setCalibrationValue(value / 100, for: control)
+            },
+            onEndDrag: {
+                controller.endContinuousChange()
+                chrome.activePlainSliderID = nil
+            },
+            onReset: {
+                controller.setCalibrationValue(0, for: control)
+            }
+        )
+    }
+
+    static func gradient(_ control: EditorCalibrationControl) -> LinearGradient {
+        guard let degrees = control.primaryDegrees else {
+            return LinearGradient(
+                colors: [EditorColorMixerStyle.hueColor(120, saturation: 0.7), EditorColorMixerStyle.hueColor(300, saturation: 0.7)],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        }
+        return control.isHue
+            ? EditorColorMixerStyle.hueGradient(aroundDegrees: degrees)
+            : EditorColorMixerStyle.saturationGradient(aroundDegrees: degrees)
+    }
+}
