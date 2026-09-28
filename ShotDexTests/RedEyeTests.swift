@@ -82,4 +82,29 @@ struct RedEyeTests {
         controller.undo()
         #expect(controller.recipe.redEyes.isEmpty, "one tap, one undo step")
     }
+
+    /// AC-36. No face — Vision finds nothing on a plain frame — or a pupil
+    /// too far from the finger: the spot sits exactly where the tap was, at
+    /// 1% of the short edge, and nothing is asked.
+    @MainActor @Test func noFaceFallsBackToTheTap() throws {
+        let plain = try #require(CIContext().createCGImage(
+            CIImage(color: CIColor(red: 0.5, green: 0.5, blue: 0.5)).cropped(to: CGRect(x: 0, y: 0, width: 256, height: 256)),
+            from: CGRect(x: 0, y: 0, width: 256, height: 256)
+        ))
+        #expect(RedEyeLocator.pupils(in: plain).isEmpty)
+
+        let controller = PhotoEditorController(asset: PHAsset(), sourceAlbum: nil, service: PhotoEditingService())
+        controller.isRedEyeMode = true
+        let tap = NormalizedPoint(x: 0.3, y: 0.6)
+        controller.addRedEye(at: tap, pupils: [])
+        let spot = try #require(controller.recipe.redEyes.first)
+        #expect(spot.center == tap)
+        #expect(spot.radius == RedEyeLocator.defaultRadius)
+        #expect(RedEyeLocator.defaultRadius == 0.01)
+
+        // A pupil well past three default radii does not pull the spot.
+        let far = RedEyeLocator.Pupil(center: NormalizedPoint(x: 0.5, y: 0.6), eyeWidth: 0.05)
+        let unpulled = RedEyeLocator.spot(forTapAt: tap, pupils: [far], aspect: 1)
+        #expect(unpulled.center == tap && unpulled.radius == RedEyeLocator.defaultRadius)
+    }
 }

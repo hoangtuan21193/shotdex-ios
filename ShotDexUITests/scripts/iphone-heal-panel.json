@@ -1,20 +1,75 @@
 {
  "steps": [
-  {"action": "launch"},
-  {"action": "wait", "seconds": 25},
-  {"action": "tap", "x": 0.5, "y": 0.35},
-  {"action": "wait", "seconds": 6},
-  {"action": "tap", "label": "Edit"},
-  {"action": "wait", "seconds": 12},
-  {"action": "tap", "label": "Heal", "type": "button"},
-  {"action": "wait", "seconds": 3},
-  {"action": "screenshot", "name": "1-heal-modes"},
-  {"action": "dump", "name": "1-heal-modes"},
-  {"action": "tap", "label": "Red Eye", "type": "button"},
-  {"action": "wait", "seconds": 2},
-  {"action": "tap", "x": 0.4, "y": 0.38},
-  {"action": "wait", "seconds": 4},
-  {"action": "screenshot", "name": "2-red-eye"},
-  {"action": "dump", "name": "2-red-eye"}
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 25
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.35
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Edit"
+  },
+  {
+   "action": "wait",
+   "seconds": 12
+  },
+  {
+   "action": "tap",
+   "label": "Heal",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "1-heal-modes"
+  },
+  {
+   "action": "dump",
+   "name": "1-heal-modes"
+  },
+  {
+   "action": "tap",
+   "label": "Red Eye",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "2a-red-eye-hint"
+  },
+  {
+   "action": "tap",
+   "x": 0.4,
+   "y": 0.38
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "2-red-eye"
+  },
+  {
+   "action": "dump",
+   "name": "2-red-eye"
+  }
  ]
 }
