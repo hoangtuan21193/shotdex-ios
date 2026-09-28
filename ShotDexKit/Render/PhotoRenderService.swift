@@ -508,8 +508,13 @@ public actor PhotoRenderService {
             case .look: image = applyLook(of: recipe, to: image)
             case .crop: image = applyCrop(recipe.crop, to: image)
             case .retouch:
+                // Red Eye samples the frame before the heal spots — no region
+                // kernel reads another's output (the rule the heal pass keeps,
+                // see `applyHealing`) — and its layers land over the healed
+                // frame.
+                let unhealed = image
                 image = applyHealing(recipe.healing, to: image)
-                image = applyRedEyes(recipe.redEyes, to: image)
+                image = applyRedEyes(recipe.redEyes, sampling: unhealed, over: image)
             case .decode, .lensBlur, .masks, .effects, .output:
                 break
             }
@@ -1358,11 +1363,24 @@ public actor PhotoRenderService {
             .applyOrientationProperty: true,
             .colorSpace: colorSpace,
         ]
-        guard var image = CIImage(contentsOf: source.url, options: options) else {
-            throw PhotoEditingError.cannotDecode
-        }
-        if let maximumDimension {
-            image = scaleDown(image, maximumDimension: maximumDimension)
+        var image: CIImage
+        if let maximumDimension,
+           max(source.pixelWidth, source.pixelHeight) > Self.largestLazilyScaledEdge,
+           let small = Self.decodedThumbnail(of: source.url, maximumDimension: maximumDimension) {
+            // A preview of a photo past the GPU's texture limit: decode it at
+            // preview size. Scaled down lazily, every region kernel after it
+            // (heal, Red Eye, masks) asks Core Image for its region of the
+            // 30000px original, which comes back black — the whole preview
+            // did, the first time a heal spot met a 300MP panorama.
+            image = CIImage(cgImage: small, options: [.colorSpace: colorSpace])
+        } else {
+            guard let decoded = CIImage(contentsOf: source.url, options: options) else {
+                throw PhotoEditingError.cannotDecode
+            }
+            image = decoded
+            if let maximumDimension {
+                image = scaleDown(image, maximumDimension: maximumDimension)
+            }
         }
         let maps = depthMaps(source: source, recipe: recipe)
         return BaseImageResult(
@@ -3133,6 +3151,22 @@ public actor PhotoRenderService {
             x: extent.minX + extent.width * point.x,
             y: extent.minY + extent.height * (1 - point.y)
         )
+    }
+
+    /// The longest edge a preview still decodes whole and scales in Core
+    /// Image: the Metal texture limit.
+    static let largestLazilyScaledEdge = 16_384
+
+    /// The photo decoded by ImageIO straight at `maximumDimension`, upright.
+    static func decodedThumbnail(of url: URL, maximumDimension: CGFloat) -> CGImage? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary)
+        else { return nil }
+        return CGImageSourceCreateThumbnailAtIndex(source, 0, [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: Int(maximumDimension.rounded()),
+            kCGImageSourceShouldCacheImmediately: true,
+        ] as CFDictionary)
     }
 
     private func scaleDown(_ image: CIImage, maximumDimension: CGFloat) -> CIImage {

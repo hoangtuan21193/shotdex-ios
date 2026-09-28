@@ -165,4 +165,45 @@ struct RedEyeTests {
         #expect(!controller.canUndo)
         #expect(controller.redEyeNotice == "No red eyes found")
     }
+
+    /// The bug the Heal panel screenshot caught (2026-09-29): on a photo past
+    /// the GPU's texture limit (the simulator library's 30000px panoramas),
+    /// one heal spot turned the whole preview black — the base was scaled
+    /// down lazily, so the heal kernel's region reached back into the full
+    /// original. Pixels far from the edits must match the plain preview, on
+    /// both preview paths, with and without a Red Eye spot.
+    @Test func healAndRedEyeLeaveTheRestOfTheFrame() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("redeye-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let url = directory.appendingPathComponent("wide.jpg")
+        let wide = CIFilter(name: "CIRandomGenerator")!.outputImage!
+            .cropped(to: CGRect(x: 0, y: 0, width: 17_000, height: 400))
+        try CIContext().writeJPEGRepresentation(of: wide, to: url, colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
+        let renderer = PhotoRenderService()
+        let source = try await renderer.inspectSource(at: url)
+        #expect(source.pixelWidth > PhotoRenderService.largestLazilyScaledEdge)
+
+        var recipe = PhotoEditRecipe.identity
+        recipe.healing = [PhotoHealingSpot(center: NormalizedPoint(x: 0.3, y: 0.5), source: NormalizedPoint(x: 0.36, y: 0.5))]
+        recipe.redEyes = [PhotoRedEyeSpot(center: NormalizedPoint(x: 0.6, y: 0.6), radius: 0.01)]
+        var healOnly = recipe
+        healOnly.redEyes = []
+        let plain = try await renderer.renderPreviewImages(source: source, recipe: .identity, maximumDimension: 1600).cleanImage
+        for (step, recipe) in [healOnly, recipe, healOnly, recipe].enumerated() {
+            let edited = step < 2
+                ? try await renderer.renderPreviewImages(source: source, recipe: recipe, maximumDimension: 1600).cleanImage
+                : try await renderer.renderInteractivePreviewImages(
+                    source: source, recipe: recipe, maximumDimension: 1600, cachesBase: true
+                ).cleanImage
+            #expect(edited.width == plain.width && edited.height == plain.height)
+            let a = CIImage(cgImage: edited), b = CIImage(cgImage: plain)
+            let w = edited.width, h = edited.height
+            for (x, y) in [(20, 20), (w - 30, 10), (w / 2, h - 5), (w * 3 / 4, h / 2)] {
+                let rect = CGRect(x: x, y: y, width: 4, height: 1)
+                let la = LensBlurTests.luminance(of: a, in: rect)[0], lb = LensBlurTests.luminance(of: b, in: rect)[0]
+                #expect(zip(la, lb).allSatisfy { abs($0 - $1) < 0.02 }, "step \(step) (\(x), \(y)): \(la) vs \(lb)")
+            }
+        }
+    }
 }

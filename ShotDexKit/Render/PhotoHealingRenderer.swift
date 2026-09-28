@@ -186,9 +186,17 @@ extension PhotoRenderService {
     /// photo — the coverage-in-alpha pattern the heal spots use, so a kernel
     /// evaluated past its extent adds nothing there.
     public static func applyRedEyes(_ spots: [PhotoRedEyeSpot], to input: CIImage) -> CIImage {
-        guard !spots.isEmpty, let kernel = redEyeKernel else { return input }
-        var image = input
-        let extent = input.extent
+        applyRedEyes(spots, sampling: input, over: input)
+    }
+
+    /// Red Eye layers made from `picture` and laid over `base`. Every spot
+    /// samples `picture`, never the frame another region kernel produced —
+    /// see the region-kernel note on `applyHealing`.
+    public static func applyRedEyes(_ spots: [PhotoRedEyeSpot], sampling picture: CIImage, over base: CIImage) -> CIImage {
+        guard !spots.isEmpty, let kernel = redEyeKernel else { return base }
+        let input = picture
+        var image = base
+        let extent = base.extent
         let shortEdge = min(extent.width, extent.height)
         for spot in spots {
             let radius = max(1, spot.radius * shortEdge)
