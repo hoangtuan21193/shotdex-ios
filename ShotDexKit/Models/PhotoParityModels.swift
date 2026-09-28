@@ -101,12 +101,14 @@ public enum PhotoBokehShape: String, Codable, CaseIterable, Identifiable, Sendab
 }
 
 /// Lens Blur: how much, what the out-of-focus highlights look like, and the
-/// depth range kept sharp (0 = nearest, 1 = farthest).
+/// depth range kept sharp, on the photo's normalised depth (0 = farthest,
+/// 1 = nearest — the scale the Focus Range rows show ×100, FS-03.15e §1).
+/// `focusFar` is the far edge of the sharp band and so the lower number.
 public struct PhotoLensBlurRecipe: Codable, Equatable, Sendable {
     public var amount = 0.0
     public var bokeh: PhotoBokehShape = .circle
-    public var focusNear = 0.0
-    public var focusFar = 0.2
+    public var focusNear = 1.0
+    public var focusFar = 0.6
 
     public static let identity = PhotoLensBlurRecipe()
 
@@ -124,8 +126,8 @@ public struct PhotoLensBlurRecipe: Codable, Equatable, Sendable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         amount = try container.decodeIfPresent(Double.self, forKey: .amount) ?? 0
         bokeh = (try? container.decodeIfPresent(PhotoBokehShape.self, forKey: .bokeh)) ?? .circle
-        focusNear = try container.decodeIfPresent(Double.self, forKey: .focusNear) ?? 0
-        focusFar = try container.decodeIfPresent(Double.self, forKey: .focusFar) ?? 0.2
+        focusNear = try container.decodeIfPresent(Double.self, forKey: .focusNear) ?? 1
+        focusFar = try container.decodeIfPresent(Double.self, forKey: .focusFar) ?? 0.6
     }
 }
 

@@ -48,7 +48,7 @@ struct KernelGoldenTests {
     /// AC-2 counts forty kernels; every one of them has a case.
     @Test func everyKernelHasACase() {
         let kernels = Set(KernelGoldenCase.all.map(\.kernel))
-        #expect(kernels.count == 47)
+        #expect(kernels.count == 49)
         #expect(Set(KernelGoldenCase.all.map(\.name)).count == KernelGoldenCase.all.count)
     }
 
@@ -214,6 +214,14 @@ extension KernelGoldenCase {
             [$0(0), $0(1), $0(3), $0(2), Float(8), Float(24), Float(0.5), Float(0.9), Float(1)]
         },
         color("redEye", { PhotoRenderService.redEyeKernel }) { [$0(0), $0(2), Float(0.6), Float(0.5)] },
+        color("lensBlurSlice", { LensBlurRenderer.sliceKernel }) { [$0(0), $0(1), CIVector(x: 0.3, y: 0.7)] },
+        KernelGoldenCase(name: "lensBlurGather", kernel: "lensBlurGather") { input in
+            LensBlurRenderer.gatherKernel?.apply(
+                extent: extent,
+                roiCallback: { _, rect in rect.insetBy(dx: -5, dy: -5) },
+                arguments: [input(0).clampedToExtent(), Float(3.5), Float(0)]
+            )
+        },
     ]
 
     // MARK: Group 3b — photo stack and focus stack

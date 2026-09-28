@@ -368,8 +368,12 @@ public actor PhotoRenderService {
     ) throws -> PhotoRenderResult {
         // The Lens Blur slot (pass 2), on the untouched picture: a
         // capture-time property being re-decided, not a look laid over the
-        // result. Empty until Lens Blur lands (FS-03.15e); Depth Blur is gone.
-        let unadjusted = baseResult.image
+        // result (FS-03.15e).
+        let unadjusted = LensBlurRenderer.apply(
+            recipe.lensBlur,
+            to: baseResult.image,
+            depth: recipe.lensBlur.isIdentity ? nil : normalizedDisparity(at: source.url)
+        )
         var image = Self.applyPreMaskStages(
             of: recipe,
             source: source,
@@ -1844,146 +1848,7 @@ public actor PhotoRenderService {
         ).cropped(to: extent)
     }
 
-    /// Portrait depth blur: the depth map decides what is near, and whatever
-    /// lies behind the subject is thrown progressively out of focus.
-    ///
-    /// Built from `CIMaskedVariableBlur` rather than `CIDepthBlurEffect`.
-    /// The latter is Apple's own portrait renderer, but it wants the capture's
-    /// calibration data and auxiliary metadata alongside the map, and without
-    /// them it returns the photo untouched — measurably so: a striped test
-    /// image came back with its stripes at full contrast. A masked variable
-    /// blur takes the one input this app actually has, the map, and blurs by
-    /// it.
-    ///
-    /// Zero returns the photo untouched rather than running the blur at radius
-    /// 0: this is the most expensive node in the graph, and a photo nobody
-    /// asked to blur must not pay for it.
-    ///
-    /// A missing map is not an error. The row only appears on photos that have
-    /// one, but a recipe carrying depth blur can be pasted onto a photo that
-    /// does not, and the right answer there is the photo as shot.
-    public static func applyDepthBlur(
-        _ amount: Double,
-        to input: CIImage,
-        disparity: CIImage?,
-        matte: CIImage?
-    ) -> CIImage {
-        guard amount > 0.001, let disparity else { return input }
-        let extent = input.extent
-        guard extent.width > 1, extent.height > 1 else { return input }
-
-        guard let mask = depthBlurMask(
-            disparity: disparity,
-            matte: matte,
-            extent: extent
-        ) else { return input }
-
-        // Two blurred copies of the photo, blended back in through the depth
-        // mask: mid distance gets the softer one, the far background the
-        // stronger one, and the subject none.
-        //
-        // Not `CIMaskedVariableBlur`, which is the filter written for exactly
-        // this and would give a continuous falloff: on the simulator it never
-        // finished a 240pt render — a test run had to be killed at ten
-        // minutes. Two Gaussians and two blends are a handful of passes and
-        // land in milliseconds.
-        //
-        // The radius is a fraction of the short edge, so the same slider means
-        // the same amount of blur on a preview and on a full-size export.
-        let radius = min(extent.width, extent.height) * 0.035 * CGFloat(min(amount, 1))
-        guard radius > 0.5 else { return input }
-
-        let near = blurred(input, radius: radius * 0.45, extent: extent)
-        let far = blurred(input, radius: radius, extent: extent)
-        // Halfway out, the softer copy replaces the sharp one; the rest of the
-        // way, the stronger copy replaces that.
-        let midBlend = blend(sharp: input, blurred: near, mask: ramp(mask, from: 0, to: 0.5), extent: extent)
-        return blend(sharp: midBlend, blurred: far, mask: ramp(mask, from: 0.5, to: 1), extent: extent)
-    }
-
-    /// One Gaussian pass, with the frame's edge pixels extended so the blur
-    /// does not pull transparency in from outside and darken the border.
-    private static func blurred(_ image: CIImage, radius: CGFloat, extent: CGRect) -> CIImage {
-        image.clampedToExtent()
-            .applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: radius])
-            .cropped(to: extent)
-    }
-
-    private static func blend(
-        sharp: CIImage,
-        blurred: CIImage,
-        mask: CIImage,
-        extent: CGRect
-    ) -> CIImage {
-        guard let output = CIFilter(name: "CIBlendWithMask", parameters: [
-            kCIInputImageKey: blurred,
-            kCIInputBackgroundImageKey: sharp,
-            kCIInputMaskImageKey: mask,
-        ])?.outputImage else { return sharp }
-        return output.cropped(to: extent)
-    }
-
-    /// Stretches the part of the mask between `from` and `to` across the full
-    /// 0…1 range, so each blend step reads only its own slice of depth.
-    private static func ramp(_ mask: CIImage, from: Double, to: Double) -> CIImage {
-        let span = max(to - from, 0.0001)
-        return mask.applyingFilter("CIColorMatrix", parameters: [
-            "inputRVector": CIVector(x: CGFloat(1 / span), y: 0, z: 0, w: 0),
-            "inputGVector": CIVector(x: 0, y: CGFloat(1 / span), z: 0, w: 0),
-            "inputBVector": CIVector(x: 0, y: 0, z: CGFloat(1 / span), w: 0),
-            "inputBiasVector": CIVector(
-                x: CGFloat(-from / span),
-                y: CGFloat(-from / span),
-                z: CGFloat(-from / span),
-                w: 0
-            ),
-        ])
-    }
-
-    /// How much blur each pixel gets: bright where the photo is far away, black
-    /// on the subject.
-    private static func depthBlurMask(
-        disparity: CIImage,
-        matte: CIImage?,
-        extent: CGRect
-    ) -> CIImage? {
-        // Disparity is high where things are near, which is the opposite of
-        // what the blur wants.
-        var mask = scaleToFill(disparity, extent: extent)
-            .applyingFilter("CIColorInvert")
-            .applyingFilter("CIColorControls", parameters: [
-                kCIInputSaturationKey: 0,
-            ])
-
-        if let matte {
-            // The matte knows where the person stops, down to hair and edges,
-            // far better than a quarter-resolution depth map does. Multiplying
-            // by its inverse pins the subject to zero blur.
-            let subject = scaleToFill(matte, extent: extent)
-                .applyingFilter("CIColorInvert")
-            mask = mask.applyingFilter("CIMultiplyCompositing", parameters: [
-                kCIInputBackgroundImageKey: subject,
-            ])
-        }
-        return mask.cropped(to: extent)
-    }
-
-    /// Stretches an auxiliary map onto the photo's frame. Auxiliary maps are
-    /// stored at a fraction of the picture's resolution and with their own
-    /// origin, so both have to be normalised away.
-    private static func scaleToFill(_ map: CIImage, extent: CGRect) -> CIImage {
-        let source = map.extent
-        guard source.width > 0, source.height > 0 else { return map }
-        return map
-            .transformed(by: CGAffineTransform(translationX: -source.minX, y: -source.minY))
-            .transformed(by: CGAffineTransform(
-                scaleX: extent.width / source.width,
-                y: extent.height / source.height
-            ))
-            .transformed(by: CGAffineTransform(translationX: extent.minX, y: extent.minY))
-    }
-
-    /// A pragmatic dehaze — not a dark-channel transmission estimate, but the look    /// A pragmatic dehaze — not a dark-channel transmission estimate, but the look
+    /// A pragmatic dehaze — not a dark-channel transmission estimate, but the look
     /// one produces. Positive lifts contrast and saturation, deepens the black
     /// point and adds midtone local contrast to cut through flat haze; negative
     /// fades the image and veils it toward a light haze grey.
