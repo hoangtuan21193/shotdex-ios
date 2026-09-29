@@ -22,7 +22,7 @@ Read `ShotDexUITests/UIDriver.swift` for the authoritative list; today:
 | `tap` | `label` [, `type`, `index`] **or** `x`,`y` (0–1 normalized) | label = accessibility label or identifier, **exact match first**, prefix only when nothing matches exactly (`"Photo, file type"` + `index` walks the grid). With no `index`, several matches → the first **hittable** one, so `Cancel` hits the sheet's button, not the covered commit-bar Cancel; `type` = `button`, `cell`, `staticText`… disambiguates |
 | `longPress` | same as tap, `seconds` | |
 | `swipe` | `direction`, optional `x`,`y` | |
-| `drag` | `x`,`y`,`toX`,`toY` (0–1) | one slow finger at any angle, held 0.2s at the end — rulers, guides; `swipe` only goes along an axis |
+| `drag` | `x`,`y`,`toX`,`toY` (0–1) [, `seconds`] | one slow finger at any angle, held `seconds` (default 0.2) at the end — rulers, guides, a slider held to photograph what it shows; `swipe` only goes along an axis |
 | `typeText` | `text` | into the focused field |
 | `scrollTo` | `label` | |
 | `orientation` | `text`: `portrait`/`landscape` | |

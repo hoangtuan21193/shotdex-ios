@@ -397,6 +397,21 @@ struct EditorImageStage: View {
                     }
 
 
+                    // Size changing from the brush row: the ring, in the
+                    // middle of the photo, shows only (FS-03.13c §3).
+                    if chrome.showsBrushSizePreview, brushLocation == nil,
+                       controller.selectedComponent?.kind == .brush {
+                        EditorBrushCursor(
+                            point: CGPoint(x: imageRect.midX, y: imageRect.midY),
+                            size: controller.brushSize,
+                            feather: controller.brushFeather,
+                            isEraser: controller.brushIsEraser,
+                            imageRect: imageRect,
+                            zoomScale: chrome.zoomScale
+                        )
+                        .allowsHitTesting(false)
+                    }
+
                     if let brushLocation,
                        controller.selectedComponent?.kind == .brush {
                         EditorBrushCursor(

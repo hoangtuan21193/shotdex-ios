@@ -1,0 +1,29 @@
+{
+ "steps": [
+  {"action": "launch"},
+  {"action": "wait", "seconds": 25},
+  {"action": "tap", "x": 0.5, "y": 0.35},
+  {"action": "wait", "seconds": 6},
+  {"action": "tap", "label": "Edit"},
+  {"action": "wait", "seconds": 12},
+  {"action": "tap", "label": "Mask"},
+  {"action": "wait", "seconds": 3},
+  {"action": "tap", "label": "Brush"},
+  {"action": "wait", "seconds": 3},
+  {"action": "screenshot", "name": "1-pills"},
+  {"action": "wait", "seconds": 4},
+  {"action": "dump", "name": "pills", "type": "other"},
+  {"action": "tap", "label": "Size"},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "2-size-slider"},
+  {"action": "wait", "seconds": 4},
+  {"action": "dump", "name": "size-slider"},
+  {"action": "drag", "x": 0.488, "y": 0.684, "toX": 0.6, "toY": 0.684, "seconds": 6},
+  {"action": "wait", "seconds": 2},
+  {"action": "tap", "label": "Done"},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "3-back-to-pills"},
+  {"action": "wait", "seconds": 4},
+  {"action": "dump", "name": "pills-after", "type": "other"}
+ ]
+}

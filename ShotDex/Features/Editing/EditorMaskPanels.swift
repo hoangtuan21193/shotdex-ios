@@ -318,7 +318,12 @@ struct EditorMaskDetailPanel: View {
     var body: some View {
         VStack(spacing: 0) {
             if isPhone {
-                phoneShapeRow
+                // Pinned: the brush row stays put while the sliders scroll
+                // (FS-03.13c §3). Areas, Add / Subtract and Undo are in the
+                // list and the band now.
+                if controller.selectedComponent?.kind == .brush {
+                    EditorBrushPinnedRow(controller: controller, chrome: chrome)
+                }
             } else {
                 navigationRow
             }
@@ -342,86 +347,6 @@ struct EditorMaskDetailPanel: View {
                     .frame(height: 2)
             }
         }
-    }
-
-    /// What an extra area can be: the drawn shapes and the ranges, plus
-    /// Subject and Sky.
-    static let areaKinds: [PhotoMaskComponentKind] = [
-        .brush, .linearGradient, .radialGradient, .colorRange, .luminanceRange, .subject, .object, .sky,
-    ]
-
-    /// First row under the strip on the phone: which shape of a multi-shape mask
-    /// (chips, only when there are two or more), Add / Subtract for the next stroke
-    /// or shape — still a mode, not a one-shot command — and one-tap Undo.
-    private var phoneShapeRow: some View {
-        HStack(spacing: EditorStripLayout.chipSpacing) {
-            ScrollView(.horizontal) {
-                HStack(spacing: EditorStripLayout.chipSpacing) {
-                    // A new area for this mask, combined by the chosen
-                    // operation after the areas already there (FS-03.15d §1).
-                    Menu {
-                        ForEach(MaskBlendOperation.allCases) { operation in
-                            Menu {
-                                ForEach(Self.areaKinds, id: \.self) { kind in
-                                    Button(kind.displayName) {
-                                        controller.addMaskArea(kind: kind, operation: operation)
-                                    }
-                                }
-                            } label: {
-                                Label("\(operation.displayName) Area", systemImage: operation.symbolName)
-                            }
-                        }
-                    } label: {
-                        // Icon only: with the three operations beside it a
-                        // titled chip pushed Intersect under the Undo button.
-                        Image(systemName: "plus.square.on.square")
-                            .font(.system(size: 15, weight: .regular))
-                            .frame(minWidth: 20)
-                    }
-                    .buttonStyle(EditorChipButtonStyle(isSelected: false))
-                    .accessibilityLabel("Add, subtract or intersect an area")
-                    ForEach(MaskBlendOperation.allCases) { operation in
-                        Button {
-                            controller.maskOperation = operation
-                        } label: {
-                            EditorPanelChipLabel(title: operation.displayName, systemImage: operation.symbolName)
-                        }
-                        .buttonStyle(EditorChipButtonStyle(isSelected: controller.maskOperation == operation))
-                    }
-                    if (controller.selectedMask?.components.count ?? 0) > 1 {
-                        Rectangle().fill(EditorTheme.trackBorder).frame(width: 1, height: 18)
-                        ForEach(controller.selectedMask?.components ?? []) { component in
-                            Button {
-                                controller.selectComponent(component.id)
-                            } label: {
-                                EditorPanelChipLabel(
-                                    title: component.kind.displayName,
-                                    systemImage: component.operation.symbolName
-                                )
-                            }
-                            .buttonStyle(EditorChipButtonStyle(
-                                isSelected: component.id == controller.selectedComponentID
-                            ))
-                        }
-                    }
-                }
-                .padding(.leading, EditorStripLayout.horizontalInset)
-                .frame(maxHeight: .infinity)
-            }
-            .scrollIndicators(.hidden)
-            Button {
-                controller.undo()
-            } label: {
-                Image(systemName: "arrow.uturn.backward")
-                    .frame(width: 24)
-            }
-            .buttonStyle(EditorChipButtonStyle(isSelected: false))
-            .disabled(!controller.canUndo)
-            .opacity(controller.canUndo ? 1 : EditorTheme.rowDisabled)
-            .accessibilityLabel("Undo")
-            .padding(.trailing, EditorStripLayout.horizontalInset)
-        }
-        .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
     }
 
     /// Second level of the Masks tab: back to the list, which mask this is, its
@@ -660,14 +585,17 @@ struct EditorMaskDetailPanel: View {
     /// language, and the shape controls left the floating pod for the action bar.
     @ViewBuilder
     private func brushRows(_ component: PhotoMaskComponent) -> some View {
-        brushSlider("Size", value: controller.brushSize, range: EditorLayoutMetrics.brushSizeRange, resetTo: 0.25) {
-            controller.brushSize = $0
-        }
-        brushSlider("Feather", value: controller.brushFeather, range: 0...1, resetTo: 0.45) {
-            controller.brushFeather = $0
-        }
-        brushSlider("Flow", value: controller.brushFlow, range: 0.05...1, resetTo: 0.8) {
-            controller.brushFlow = $0
+        // On the phone Size · Feather · Flow are the pinned row's pills.
+        if !isPhone {
+            brushSlider("Size", value: controller.brushSize, range: EditorLayoutMetrics.brushSizeRange, resetTo: 0.25) {
+                controller.brushSize = $0
+            }
+            brushSlider("Feather", value: controller.brushFeather, range: 0...1, resetTo: 0.45) {
+                controller.brushFeather = $0
+            }
+            brushSlider("Flow", value: controller.brushFlow, range: 0.05...1, resetTo: 0.8) {
+                controller.brushFlow = $0
+            }
         }
         componentSlider("Opacity", keyPath: \.opacity, range: 0.01...1)
         Button("Clear Strokes") {
