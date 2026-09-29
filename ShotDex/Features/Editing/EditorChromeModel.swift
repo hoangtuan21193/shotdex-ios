@@ -20,6 +20,10 @@ final class EditorChromeModel {
     /// session so leaving Edit and coming back lands in the same place
     /// (FS-03.13b §1). Never in the recipe or the history.
     var editListGroup: EditorGroup?
+    /// The exact scroll offset of the Edit list when it was left, for as long
+    /// as `editListGroup` is still the group it was taken at — "same place"
+    /// means the same pixel, not the top of the group (FS-03.13b AC-18).
+    var editListOffset: EditorListOffset?
     /// The phone panel's height this frame (344 / 264 / 315), for what parks
     /// above it.
     var phonePanelHeight: CGFloat = EditorLayoutMetrics.phonePanelShort
@@ -28,6 +32,7 @@ final class EditorChromeModel {
     /// The same two for the Transform list (FS-03.13b §3).
     var transformListSection: EditorTransformSection?
     var transformListScrollRequest: EditorTransformSection?
+    var transformListOffset: EditorListOffset?
     /// Straighten Tool on: one finger on the photo draws a ruler instead of
     /// moving the crop frame. Off whenever Transform is left.
     var isStraightenToolOn = false
