@@ -59,7 +59,7 @@ Máy: iPhone 17 iOS 26.5 và 18.6; iPhone Duo 27.1 cho AC-44, AC-45. Tiếp số
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-37 | 49 look, ảnh 3:2 (panel 344) | chạm Presets | lưới 4 cột, 13 hàng, chỉ cuộn dọc; chạm Velvia → look áp, hàng Amount hiện ở 100 | ⚠️ chưa có — `iphone-presets-grid.json` + dump |
+| AC-37 | 49 look, ảnh 3:2 (panel 344) | chạm Presets | lưới 4 cột, 13 hàng, chỉ cuộn dọc; chạm Velvia → look áp, hàng Amount hiện ở 100 | ✅ `EditorPanelLayoutTests.presetGridIsFourColumnsOfThirteenRows` · `iphone-presets-grid.json` (lưới 4 cột, ô 87×80 + khe 10 = hàng 90, cuộn dọc; chạm Velvia → hàng Amount 100%) |
 | AC-38 | recipe identity, 0 look đã lưu | chạm My Looks | ô 1 Save Current mờ, ô 2 Import XMP Preset sáng, dòng "Save an edit here…" hiện; chạm nó mở bộ chọn tài liệu hệ thống | ⚠️ chưa có — `iphone-presets-grid.json` |
 | AC-39 | My Looks có 6 look, 1 LUT đã nhập | giữ lâu 0,6s lần lượt "Forest", Velvia (Presets), LUT đã nhập; rồi kéo Forest sang ô khác | Forest và LUT: đúng 4 mục Rename · Share · Export As · Delete, Export As đúng 3 định dạng; Velvia: 3 mục, không Delete; kéo không đổi thứ tự | ⚠️ chưa có — `iphone-presets-grid.json` |
 | AC-40 | phiên 7 ảnh, đang ở ảnh 2, 3 ảnh có nháp, 1 ảnh đã lưu | chụp màn Edit, rồi chạm Sync | filmstrip cao 56 giữa ảnh và panel, ô 44 bo 6, vòng trắng ở ô 2, 3 chấm, 1 ✓, "2 / 7"; 0 px accent ngoài Save; menu Sync đúng 4 mục (Apply Previous mờ nếu phiên chưa có ảnh trước) | ⚠️ chưa có — `iphone-batch-filmstrip.json` + `Tools/accent-check` |

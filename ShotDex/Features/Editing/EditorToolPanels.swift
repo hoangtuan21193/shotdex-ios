@@ -62,24 +62,11 @@ struct EditorFiltersPanel: View {
         }
     }
 
+    /// Phone (FS-03.13d §1): Amount while a look is on, a hairline, then the
+    /// shelf as a 4-column grid scrolling vertically — a tap applies, there is
+    /// no ✕ / ✓.
     private var phoneContent: some View {
         VStack(spacing: 0) {
-            ScrollViewReader { scroller in
-                ScrollView(.horizontal) {
-                    LazyHStack(alignment: .top, spacing: EditorStripLayout.chipSpacing) {
-                        shelf
-                    }
-                    .padding(.horizontal, AppTheme.Spacing.lg)
-                    .padding(.top, 2)
-                    .padding(.bottom, AppTheme.Spacing.sm)
-                }
-                .scrollIndicators(.hidden)
-                .onAppear {
-                    if chrome.presetSource == .presets {
-                        scroller.scrollTo(controller.recipe.filter, anchor: .center)
-                    }
-                }
-            }
             if chrome.presetSource == .luts, usesDeletedLUT {
                 Label("LUT deleted · this photo renders without it", systemImage: "exclamationmark.triangle")
                     .font(EditorTheme.rowLabel)
@@ -89,11 +76,38 @@ struct EditorFiltersPanel: View {
             } else if hasActiveLook {
                 amountRow
             }
-            Spacer(minLength: 0)
+            Rectangle().fill(EditorTheme.panelDivider).frame(height: 1)
+            ScrollViewReader { scroller in
+                ScrollView(.vertical) {
+                    LazyVGrid(
+                        columns: Array(repeating: GridItem(.flexible(), spacing: EditorStripLayout.chipSpacing), count: Self.gridColumns),
+                        spacing: Self.gridRowSpacing
+                    ) {
+                        shelf
+                    }
+                    .padding(.horizontal, AppTheme.Spacing.lg)
+                    .padding(.vertical, AppTheme.Spacing.sm)
+                }
+                .scrollIndicators(.hidden)
+                .onAppear {
+                    if chrome.presetSource == .presets {
+                        scroller.scrollTo(controller.recipe.filter, anchor: .center)
+                    }
+                }
+            }
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .task { controller.refreshFilterThumbnails() }
     }
+
+    /// FS-03.13d §1: four columns; a 62pt thumbnail and its name make a 90pt row.
+    static let gridColumns = 4
+    static let tileThumbnailHeight: CGFloat = 62
+    static let gridRowSpacing: CGFloat = 10
+
+    /// The thumbnail's width: the grid cell on the phone, 62 in the sidebar strip.
+    private var tileWidth: CGFloat? { isPhonePanel ? nil : 62 }
+    private var nameWidth: CGFloat? { isPhonePanel ? nil : 66 }
 
     @ViewBuilder
     private var shelf: some View {
@@ -140,13 +154,15 @@ struct EditorFiltersPanel: View {
                 Image(systemName: systemImage)
                     .font(.system(size: 18, weight: .medium))
                     .foregroundStyle(.white)
-                    .frame(width: 62, height: 62)
+                    .frame(width: tileWidth, height: Self.tileThumbnailHeight)
+                    .frame(maxWidth: isPhonePanel ? .infinity : nil)
                     .background(EditorTheme.chipIdle, in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
                 Text(title)
                     .font(EditorTheme.tabLabel)
                     .foregroundStyle(EditorTheme.secondaryText)
                     .lineLimit(1)
-                    .frame(width: 66)
+                    .minimumScaleFactor(0.85)
+                    .frame(width: nameWidth)
             }
             .contentShape(Rectangle())
         }
@@ -166,13 +182,14 @@ struct EditorFiltersPanel: View {
                 Image(systemName: "camera.filters")
                     .font(.system(size: 18))
                     .foregroundStyle(EditorTheme.secondaryText)
-                    .frame(width: 62, height: 62)
+                    .frame(width: tileWidth, height: Self.tileThumbnailHeight)
+                    .frame(maxWidth: isPhonePanel ? .infinity : nil)
                     .background(EditorTheme.control, in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
                 Text(preset.name)
                     .font(EditorTheme.tabLabel)
                     .foregroundStyle(EditorTheme.secondaryText)
                     .lineLimit(1)
-                    .frame(width: 66)
+                    .frame(width: nameWidth)
             }
             .contentShape(Rectangle())
         }
@@ -371,7 +388,10 @@ struct EditorFiltersPanel: View {
             controller.chooseLUT(lut.id)
         } label: {
             VStack(spacing: 5) {
-                Group {
+                Color.clear
+                .frame(width: tileWidth, height: Self.tileThumbnailHeight)
+                .frame(maxWidth: isPhonePanel ? .infinity : nil)
+                .overlay {
                     if let image = controller.lutThumbnails[lut.id] {
                         Image(uiImage: image)
                             .resizable()
@@ -385,16 +405,16 @@ struct EditorFiltersPanel: View {
                         }
                     }
                 }
-                .frame(width: 62, height: 62)
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 .modifier(EditorTileSelection(isSelected: isSelected, usesRing: isPhonePanel))
 
                 Text(lut.displayName)
-                    .font(.system(size: 10, weight: isSelected ? .semibold : .regular))
-                    .foregroundStyle(isSelected ? (isPhonePanel ? .white : EditorTheme.accent) : EditorTheme.secondaryText)
+                    .font(.system(size: isPhonePanel ? 11 : 10, weight: isSelected ? .semibold : .regular))
+                    .foregroundStyle(isSelected ? (isPhonePanel ? .white : EditorTheme.accent) : isPhonePanel ? Color.white.opacity(0.6) : EditorTheme.secondaryText)
                     .lineLimit(1)
-                    .frame(width: 66)
+                    .frame(width: nameWidth)
             }
+            .opacity(isPhonePanel && !isSelected ? 0.8 : 1)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -478,17 +498,24 @@ struct EditorFiltersPanel: View {
             controller.chooseFilter(filter)
         } label: {
             VStack(spacing: 5) {
-                thumbnail(filter)
-                    .frame(width: 62, height: 62)
+                // The thumbnail fills a fixed frame and is cut to it: filled
+                // straight into a flexible grid cell it took its own width
+                // and spilled over the next tile.
+                Color.clear
+                    .frame(width: tileWidth, height: Self.tileThumbnailHeight)
+                    .frame(maxWidth: isPhonePanel ? .infinity : nil)
+                    .overlay { thumbnail(filter) }
                     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                     .modifier(EditorTileSelection(isSelected: isSelected, usesRing: isPhonePanel))
 
                 Text(filter.displayName)
-                    .font(.system(size: 10, weight: isSelected ? .semibold : .regular))
-                    .foregroundStyle(isSelected ? (isPhonePanel ? .white : EditorTheme.accent) : EditorTheme.secondaryText)
+                    .font(.system(size: isPhonePanel ? 11 : 10, weight: isSelected ? .semibold : .regular))
+                    .foregroundStyle(isSelected ? (isPhonePanel ? .white : EditorTheme.accent) : isPhonePanel ? Color.white.opacity(0.6) : EditorTheme.secondaryText)
                     .lineLimit(1)
-                    .frame(width: 66)
+                    .frame(width: nameWidth)
             }
+            // FS-03.13d §1: the picked look full, the rest at 80%.
+            .opacity(isPhonePanel && !isSelected ? 0.8 : 1)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

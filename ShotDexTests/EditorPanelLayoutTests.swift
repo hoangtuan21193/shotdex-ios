@@ -661,6 +661,15 @@ struct EditorPanelLayoutTests {
         #expect(EditorCropRatioRow.more.map(\.displayName) == ["4:3", "3:2", "16:9", "9:16"])
     }
 
+    /// FS-03.13 AC-37. The 49 looks make 13 rows of the 4-column grid, a
+    /// 62pt thumbnail and its name 90pt a row with the gap.
+    @Test func presetGridIsFourColumnsOfThirteenRows() {
+        #expect(PhotoFilter.allCases.count == 49)
+        let rows = (PhotoFilter.allCases.count + EditorFiltersPanel.gridColumns - 1) / EditorFiltersPanel.gridColumns
+        #expect(rows == 13)
+        #expect(EditorFiltersPanel.tileThumbnailHeight == 62)
+    }
+
     // MARK: Panel by photo (FS-03.13a §2)
 
     static func panel(_ aspect: Double, screen: CGSize = CGSize(width: 402, height: 874), band: CGFloat = 62) -> CGFloat {
