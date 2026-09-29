@@ -287,9 +287,53 @@ struct EditorColorPalettePanel: View {
         ColorRenderMath.hsv(fromRed: color.red, green: color.green, blue: color.blue)
     }
 
+    @State private var shownInk: EditorDrawInk?
+
     var body: some View {
+        ScrollView(.vertical) {
+            VStack(spacing: 0) {
+                header
+                if let ink = request.ink {
+                    inkGrid(ink)
+                }
+                paletteRows
+            }
+            .padding(.bottom, AppTheme.Spacing.lg)
+        }
+        .scrollIndicators(.hidden)
+        .scrollDisabled(chrome.activePlainSliderID != nil)
+    }
+
+    /// Every ink of the list, four to a row — no sideways scroll (FS-03.13c §5).
+    private func inkGrid(_ choice: EditorInkChoice) -> some View {
+        let current = shownInk ?? choice.current()
+        return LazyVGrid(
+            columns: Array(repeating: GridItem(.flexible(), spacing: EditorStripLayout.chipSpacing), count: 4),
+            spacing: EditorStripLayout.chipSpacing
+        ) {
+            ForEach(EditorDrawInk.allCases) { ink in
+                Button {
+                    shownInk = ink
+                    choice.choose(ink)
+                } label: {
+                    VStack(spacing: 3) {
+                        Image(systemName: ink.systemImage).font(.system(size: 16))
+                        Text(ink.title).font(.system(size: 11)).lineLimit(1).minimumScaleFactor(0.8)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                }
+                .buttonStyle(EditorInkTileStyle(isSelected: ink == current))
+                .accessibilityLabel(ink.title)
+                .accessibilityAddTraits(ink == current ? .isSelected : [])
+            }
+        }
+        .padding(.horizontal, AppTheme.Spacing.lg)
+        .padding(.bottom, AppTheme.Spacing.sm)
+    }
+
+    private var paletteRows: some View {
         VStack(spacing: 0) {
-            header
             recentRow
             channel("Hue", value: hsv.hue / 360, gradient: LinearGradient(
                 colors: [.red, .yellow, .green, .cyan, .blue, .purple, .red],
@@ -310,7 +354,6 @@ struct EditorColorPalettePanel: View {
             ), text: "\(Int((hsv.value * 100).rounded()))") { value in
                 make(hue: hsv.hue, saturation: hsv.saturation, value: value)
             }
-            Spacer(minLength: 0)
         }
     }
 
@@ -431,5 +474,19 @@ struct EditorColorPalettePanel: View {
 
     private func swiftUI(_ color: OverlayColor) -> Color {
         Color(red: color.red, green: color.green, blue: color.blue)
+    }
+}
+
+/// An ink tile: white 20% when it is the pen's, 6% otherwise, `r-sm`.
+private struct EditorInkTileStyle: ButtonStyle {
+    let isSelected: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        let shape = RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous)
+        configuration.label
+            .foregroundStyle(.white)
+            .background(isSelected ? EditorTheme.chipSelected : EditorTheme.chipIdle, in: shape)
+            .opacity(configuration.isPressed ? 0.7 : 1)
+            .contentShape(shape)
     }
 }

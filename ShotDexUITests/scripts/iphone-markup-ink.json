@@ -1,0 +1,28 @@
+{
+ "steps": [
+  {"action": "launch"},
+  {"action": "wait", "seconds": 25},
+  {"action": "tap", "x": 0.5, "y": 0.35},
+  {"action": "wait", "seconds": 6},
+  {"action": "tap", "label": "Edit"},
+  {"action": "wait", "seconds": 12},
+  {"action": "tap", "label": "Markup"},
+  {"action": "wait", "seconds": 3},
+  {"action": "screenshot", "name": "1-layer-grid"},
+  {"action": "wait", "seconds": 4},
+  {"action": "tap", "label": "Add Pen"},
+  {"action": "wait", "seconds": 4},
+  {"action": "drag", "x": 0.3, "y": 0.33, "toX": 0.6, "toY": 0.36, "seconds": 0.3},
+  {"action": "wait", "seconds": 3},
+  {"action": "screenshot", "name": "2-pen-rows"},
+  {"action": "wait", "seconds": 4},
+  {"action": "tap", "label": "Ink and color, Pen"},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "3-ink-page"},
+  {"action": "wait", "seconds": 4},
+  {"action": "tap", "label": "Watercolor"},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "4-watercolor"},
+  {"action": "wait", "seconds": 4}
+ ]
+}

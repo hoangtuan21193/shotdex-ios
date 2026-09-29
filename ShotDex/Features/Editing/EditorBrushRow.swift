@@ -49,9 +49,10 @@ struct EditorPill: Identifiable {
 /// §4 — the Mask brush and Heal). A tap on a pill turns the row into that
 /// setting's slider with ✓ to come back; holding a pill and sliding sideways
 /// changes it in place, as fast as the slider would.
-struct EditorPillRow<Leading: View>: View {
+struct EditorPillRow<Leading: View, Trailing: View>: View {
     let pills: [EditorPill]
     @ViewBuilder let leading: () -> Leading
+    @ViewBuilder var trailing: () -> Trailing
 
     @State private var editing: String?
     @State private var rowWidth: CGFloat = 0
@@ -84,6 +85,7 @@ struct EditorPillRow<Leading: View>: View {
                     onStep: { up in set(pill, pill.value + (up ? 1 : -1) * span / 20) }
                 )
             }
+            trailing()
         }
         .padding(.horizontal, EditorStripLayout.horizontalInset)
     }
@@ -121,6 +123,12 @@ struct EditorPillRow<Leading: View>: View {
             .accessibilityLabel("Done")
             .padding(.trailing, AppTheme.Spacing.sm)
         }
+    }
+}
+
+extension EditorPillRow where Trailing == EmptyView {
+    init(pills: [EditorPill], @ViewBuilder leading: @escaping () -> Leading) {
+        self.init(pills: pills, leading: leading, trailing: { EmptyView() })
     }
 }
 

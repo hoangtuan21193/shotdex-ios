@@ -60,7 +60,7 @@ struct EditorMarkupPhonePanel: View {
 
     // MARK: Add a layer
 
-    private enum Choice: Hashable {
+    enum Choice: Hashable {
         case text, image, sign, pen, marker, magnifier
         case shape(OverlayShapeStyle)
 
@@ -89,59 +89,59 @@ struct EditorMarkupPhonePanel: View {
         }
     }
 
-    /// Three rows: what is typed or placed, what is drawn by hand, and the shapes.
-    /// Every layer kind the old Add Layer menu offered is here.
-    private static let rows: [[Choice]] = [
-        [.text, .image, .sign],
-        [.pen, .marker],
-        OverlayShapeStyle.allCases.map(Choice.shape) + [.magnifier],
-    ]
+    /// Every layer kind, in the grid's order (FS-03.13c §1): Text · Image ·
+    /// Sign · Pen / Marker · the shapes / Magnifier.
+    static let gridOrder: [Choice] =
+        [.text, .image, .sign, .pen, .marker] + OverlayShapeStyle.allCases.map(Choice.shape) + [.magnifier]
 
+    /// "Add a layer" — or, from `+`, `‹` and "New Layer" — over a 4-column
+    /// grid of 60pt tiles, scrolling vertically like the mask chooser.
     private var chooser: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: AppTheme.Spacing.xs) {
-                if !controller.recipe.overlays.isEmpty {
-                    Button {
-                        chrome.isChoosingLayerKind = false
-                    } label: {
-                        Image(systemName: "chevron.backward")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .frame(width: 26, height: 34)
-                            .contentShape(Rectangle())
+        ScrollView(.vertical) {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: AppTheme.Spacing.xs) {
+                    if !controller.recipe.overlays.isEmpty {
+                        Button {
+                            chrome.isChoosingLayerKind = false
+                        } label: {
+                            Image(systemName: "chevron.backward")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .frame(width: 30, height: 30)
+                                .background(EditorTheme.chipIdle, in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
+                                .frame(width: 44, height: EditorMaskChooser.headerHeight, alignment: .leading)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Back to layers")
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Back to layers")
+                    Text(controller.recipe.overlays.isEmpty ? "Add a layer" : "New Layer")
+                        .font(.system(size: 13, weight: controller.recipe.overlays.isEmpty ? .regular : .semibold))
+                        .foregroundStyle(controller.recipe.overlays.isEmpty ? Color.white.opacity(0.6) : .white)
+                        .accessibilityAddTraits(.isHeader)
+                    Spacer(minLength: 0)
                 }
-                Text("Add a layer")
-                    .font(.system(size: 13))
-                    .foregroundStyle(EditorTheme.secondaryText)
-                Spacer(minLength: 0)
+                .frame(height: EditorMaskChooser.headerHeight)
+
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.flexible(), spacing: EditorMaskChooser.tileSpacing), count: 4),
+                    spacing: EditorMaskChooser.tileSpacing
+                ) {
+                    ForEach(Self.gridOrder, id: \.self) { choice in
+                        Button {
+                            choose(choice)
+                        } label: {
+                            EditorKindTileLabel(title: choice.title, systemImage: choice.systemImage)
+                        }
+                        .buttonStyle(EditorKindTileStyle())
+                        .accessibilityLabel("Add \(choice.title)")
+                    }
+                }
             }
             .padding(.horizontal, AppTheme.Spacing.lg)
-            .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
-
-            ForEach(Array(Self.rows.enumerated()), id: \.offset) { _, row in
-                ScrollView(.horizontal) {
-                    HStack(spacing: EditorStripLayout.chipSpacing) {
-                        ForEach(row, id: \.self) { choice in
-                            Button {
-                                choose(choice)
-                            } label: {
-                                EditorPanelChipLabel(title: choice.title, systemImage: choice.systemImage)
-                            }
-                            .buttonStyle(EditorChipButtonStyle(isSelected: false))
-                            .accessibilityLabel("Add \(choice.title)")
-                        }
-                    }
-                    .padding(.horizontal, AppTheme.Spacing.lg)
-                    .frame(maxHeight: .infinity)
-                }
-                .scrollIndicators(.hidden)
-                .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
-            }
-            Spacer(minLength: 0)
+            .padding(.bottom, AppTheme.Spacing.lg)
         }
+        .scrollIndicators(.hidden)
     }
 
     private func choose(_ choice: Choice) {
@@ -513,9 +513,9 @@ enum EditorDrawInk: String, CaseIterable, Identifiable {
     }
 }
 
-/// A drawing layer's rows on the phone panel (FS-05.01 §4): Draw · Erase · Select
-/// with the Ruler, then the ink (or the eraser kind), then Size, Opacity and
-/// Color. The panel sets the PencilKit tool; the system tool picker never shows.
+/// A drawing layer's rows on the phone (FS-03.13c §5): Draw and Erase, a
+/// hairline, Size · Opacity pills and the colour now — a tap on it opens the
+/// ink-and-colour page; then the swatches; then Select · Ruler.
 struct EditorDrawRows: View {
     @Bindable var session: EditorDrawSession
     @Bindable var controller: PhotoEditorController
@@ -524,101 +524,125 @@ struct EditorDrawRows: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            modeRow
-            if session.mode == .draw {
-                chipRow(EditorDrawInk.allCases, isSelected: { session.ink == $0 }) { ink in
-                    EditorPanelChipLabel(title: ink.title, systemImage: ink.systemImage)
-                } select: { session.ink = $0 }
-            } else if session.mode == .erase {
-                chipRow(EditorDrawSession.EraserKind.allCases, isSelected: { session.eraserKind == $0 }) { kind in
-                    EditorPanelChipLabel(title: kind.title, systemImage: kind == .strokes ? "scribble" : "eraser")
-                } select: { session.eraserKind = $0 }
+            EditorPillRow(pills: pills) {
+                modeChip(.draw, systemImage: "pencil.tip", label: "Draw")
+                modeChip(.erase, systemImage: "eraser", label: "Erase")
+                Rectangle()
+                    .fill(Color.white.opacity(0.18))
+                    .frame(width: 1, height: 20)
+            } trailing: {
+                colourDot
             }
-            if session.mode != .select {
-                EditorPlainSliderRow(
-                    title: "Size",
-                    value: Double(session.width),
-                    range: Double(session.widthRange.lowerBound)...Double(session.widthRange.upperBound),
-                    isBipolar: false,
-                    valueText: String(format: "%.0f", session.width),
-                    isActive: false,
-                    onBeginDrag: {},
-                    onDrag: { session.width = CGFloat($0) },
-                    onEndDrag: {},
-                    onReset: { session.width = session.ink.pkType.defaultWidth }
-                )
+            if session.mode == .erase {
+                HStack(spacing: EditorStripLayout.chipSpacing) {
+                    ForEach(EditorDrawSession.EraserKind.allCases) { kind in
+                        Button {
+                            session.eraserKind = kind
+                        } label: {
+                            EditorPanelChipLabel(title: kind.title, systemImage: kind == .strokes ? "scribble" : "eraser")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(EditorChipButtonStyle(isSelected: session.eraserKind == kind))
+                        .accessibilityAddTraits(session.eraserKind == kind ? .isSelected : [])
+                    }
+                }
+                .padding(.horizontal, EditorStripLayout.horizontalInset)
+                .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
             }
-            if session.mode == .draw {
-                EditorPlainSliderRow(
-                    title: "Opacity",
-                    value: session.opacity * 100,
-                    range: 5...100,
-                    isBipolar: false,
-                    valueText: "\(Int((session.opacity * 100).rounded()))%",
-                    isActive: false,
-                    detent: 100,
-                    onBeginDrag: {},
-                    onDrag: { session.opacity = $0 / 100 },
-                    onEndDrag: {},
-                    onReset: { session.opacity = 1 }
-                )
-                EditorOverlayColorControl(
-                    chrome: chrome,
-                    idPrefix: "draw.color",
-                    color: session.color,
-                    onBegin: {},
-                    onChange: { session.color = $0 },
-                    onEnd: {}
-                )
+            EditorOverlayColorControl(
+                chrome: chrome,
+                idPrefix: "draw.color",
+                color: session.color,
+                onBegin: {},
+                onChange: { session.color = $0 },
+                onEnd: {}
+            )
+            HStack(spacing: EditorStripLayout.chipSpacing) {
+                Button {
+                    session.mode = session.mode == .select ? .draw : .select
+                } label: {
+                    EditorPanelChipLabel(title: "Select", systemImage: EditorDrawSession.Mode.select.systemImage)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(EditorChipButtonStyle(isSelected: session.mode == .select))
+                .accessibilityAddTraits(session.mode == .select ? .isSelected : [])
+                Button {
+                    session.isRulerActive.toggle()
+                } label: {
+                    EditorPanelChipLabel(title: "Ruler", systemImage: "ruler")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(EditorChipButtonStyle(isSelected: session.isRulerActive))
+                .accessibilityValue(session.isRulerActive ? "On" : "Off")
             }
+            .padding(.horizontal, EditorStripLayout.horizontalInset)
+            .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
             Color.clear.frame(height: 16)
         }
         .editorPanelScroll(panelScrolls)
         .scrollDisabled(chrome.activePlainSliderID != nil)
     }
 
-    private var modeRow: some View {
-        HStack(spacing: EditorStripLayout.chipSpacing) {
-            ForEach(EditorDrawSession.Mode.allCases) { mode in
-                Button {
-                    session.mode = mode
-                } label: {
-                    EditorPanelChipLabel(title: mode.title, systemImage: mode.systemImage)
-                }
-                .buttonStyle(EditorChipButtonStyle(isSelected: session.mode == mode))
-                .accessibilityAddTraits(session.mode == mode ? .isSelected : [])
-            }
-            Spacer(minLength: 0)
-            Button {
-                session.isRulerActive.toggle()
-            } label: {
-                EditorPanelChipLabel(title: "Ruler", systemImage: "ruler")
-            }
-            .buttonStyle(EditorChipButtonStyle(isSelected: session.isRulerActive))
-            .accessibilityValue(session.isRulerActive ? "On" : "Off")
-        }
-        .padding(.horizontal, EditorStripLayout.horizontalInset)
-        .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
+    /// Size for the pen and the eraser; Opacity for the pen.
+    private var pills: [EditorPill] {
+        guard session.mode != .select else { return [] }
+        let width = EditorPill(
+            id: "size",
+            title: "Size",
+            value: Double(session.width),
+            range: Double(session.widthRange.lowerBound)...Double(session.widthRange.upperBound),
+            defaultValue: Double(session.ink.pkType.defaultWidth),
+            text: { String(format: "%.0f", $0) },
+            set: { session.width = CGFloat($0) }
+        )
+        guard session.mode == .draw else { return [width] }
+        return [
+            width,
+            EditorPill(
+                id: "opacity",
+                title: "Opacity",
+                value: session.opacity,
+                range: 0.05...1,
+                defaultValue: 1,
+                text: { "\(Int(($0 * 100).rounded()))" },
+                set: { session.opacity = $0 }
+            ),
+        ]
     }
 
-    private func chipRow<Item: Identifiable>(
-        _ items: [Item],
-        isSelected: @escaping (Item) -> Bool,
-        label: @escaping (Item) -> EditorPanelChipLabel,
-        select: @escaping (Item) -> Void
-    ) -> some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: EditorStripLayout.chipSpacing) {
-                ForEach(items) { item in
-                    Button { select(item) } label: { label(item) }
-                        .buttonStyle(EditorChipButtonStyle(isSelected: isSelected(item)))
-                        .accessibilityAddTraits(isSelected(item) ? .isSelected : [])
-                }
-            }
-            .padding(.horizontal, EditorStripLayout.horizontalInset)
-            .frame(maxHeight: .infinity)
+    private func modeChip(_ mode: EditorDrawSession.Mode, systemImage: String, label: String) -> some View {
+        Button {
+            session.mode = mode
+        } label: {
+            Image(systemName: systemImage)
+                .font(.system(size: 15))
+                .frame(width: 40 - 2 * EditorStripLayout.chipHorizontalPadding)
         }
-        .scrollIndicators(.hidden)
-        .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
+        .buttonStyle(EditorChipButtonStyle(isSelected: session.mode == mode))
+        .accessibilityLabel(label)
+        .accessibilityAddTraits(session.mode == mode ? .isSelected : [])
+    }
+
+    /// The pen's colour, 26pt; opens the ink-and-colour page.
+    private var colourDot: some View {
+        Button {
+            chrome.colorPalette = EditorColorPaletteRequest(
+                id: "draw.color",
+                color: { session.color },
+                onBegin: {},
+                onChange: { session.color = $0 },
+                onEnd: {},
+                ink: EditorInkChoice(current: { session.ink }, choose: { session.ink = $0 })
+            )
+        } label: {
+            Circle()
+                .fill(Color(red: session.color.red, green: session.color.green, blue: session.color.blue))
+                .frame(width: 26, height: 26)
+                .overlay { Circle().strokeBorder(Color.white.opacity(0.8), lineWidth: 1.5) }
+                .frame(width: 34, height: 40)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Ink and color, \(session.ink.title)")
     }
 }

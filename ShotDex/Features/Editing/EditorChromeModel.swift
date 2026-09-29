@@ -243,6 +243,14 @@ struct EditorColorPaletteRequest {
     let onBegin: () -> Void
     let onChange: (OverlayColor) -> Void
     let onEnd: () -> Void
+    /// The pen's ink, picked on the same page as its colour (FS-03.13c §5).
+    var ink: EditorInkChoice?
+}
+
+/// Which ink a drawing layer's pen uses, for the palette page.
+struct EditorInkChoice {
+    let current: () -> EditorDrawInk
+    let choose: (EditorDrawInk) -> Void
 }
 
 /// The Curve tool's two ways of shaping tone.

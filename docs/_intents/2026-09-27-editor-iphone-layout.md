@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan |
 | Ngày | 2026-09-27 |
 | Trạng thái | accepted |
-| Tiến độ | **đang làm** (2026-09-29) — task 35/45, 34/45 AC xanh (AC-18 và AC-32 một phần; D3 chờ số đo) · plan [2026-09-28-fs-03-13](../_plans/2026-09-28-fs-03-13-iphone-editor-layout.md) |
+| Tiến độ | **đang làm** (2026-09-29) — task 36/45, 35/45 AC xanh (AC-18, AC-32 và AC-36 một phần; D3 chờ số đo) · plan [2026-09-28-fs-03-13](../_plans/2026-09-28-fs-03-13-iphone-editor-layout.md) |
 | Nguồn | phản hồi người dùng (chủ sở hữu sản phẩm) — phiên thiết kế 2026-09-27, mọi quyết định chốt trên canvas |
 | Spec sinh ra từ đây | [FS-03.13](../02-functional-spec/FS-03-photo-editor/13-iphone-editor-layout.md) (+ 13a–13d) |
 

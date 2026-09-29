@@ -126,4 +126,23 @@ struct MarkupPhonePanelTests {
         #expect(EditorLayerOrder.moveOffset(from: 0, to: 2) == 3)
         #expect(EditorLayerOrder.destination(from: 0, offset: 500, rowHeight: 40, count: 3) == 2)
     }
+
+    /// FS-03.13 AC-36. The layer grid has every kind once, in 13c §1's
+    /// order; Pen makes one drawing layer at once; the ink page lists every
+    /// ink of the list, and choosing one is what the pen then draws with.
+    @Test func everyInkIsReachable() {
+        #expect(EditorMarkupPhonePanel.gridOrder.map(\.title) == [
+            "Text", "Image", "Sign", "Pen", "Marker",
+            "Rectangle", "Oval", OverlayShapeStyle.speechBubble.displayName, "Arrow", "Line", "Magnifier",
+        ])
+        #expect(Set(EditorMarkupPhonePanel.gridOrder).count == EditorMarkupPhonePanel.gridOrder.count)
+        #expect(EditorDrawInk.allCases.map(\.title) == ["Pen", "Marker", "Pencil", "Fountain", "Monoline", "Watercolor", "Crayon"])
+
+        let session = EditorDrawSession()
+        var chosen: [EditorDrawInk] = []
+        let choice = EditorInkChoice(current: { session.ink }, choose: { session.ink = $0; chosen.append($0) })
+        for ink in EditorDrawInk.allCases { choice.choose(ink) }
+        #expect(chosen == EditorDrawInk.allCases)
+        #expect(session.ink == .crayon)
+    }
 }

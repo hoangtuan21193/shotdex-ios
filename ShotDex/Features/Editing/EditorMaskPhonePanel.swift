@@ -87,7 +87,7 @@ struct EditorMaskChooser: View {
 
     /// FS-03.13c §1: 60pt tiles, 8 apart.
     static let tileSpacing: CGFloat = 8
-    static let tileHeight: CGFloat = 60
+    static let tileHeight = EditorKindTileLabel.height
     static let headerHeight: CGFloat = 32
 
     /// Whole rows a zone of `height` shows under the title; the rest scroll.
@@ -184,9 +184,9 @@ struct EditorMaskChooser: View {
                 }
             }
         } label: {
-            EditorMaskKindTileLabel(option: .people)
+            EditorKindTileLabel(title: EditorNewMaskOption.people.shortTitle, systemImage: EditorNewMaskOption.people.systemImage)
         }
-        .buttonStyle(EditorMaskKindTileStyle())
+        .buttonStyle(EditorKindTileStyle())
         .accessibilityLabel(EditorNewMaskOption.people.title)
         .onAppear { controller.countPeopleIfNeeded() }
     }
@@ -216,9 +216,9 @@ struct EditorMaskChooser: View {
                 finish()
             }
         } label: {
-            EditorMaskKindTileLabel(option: option)
+            EditorKindTileLabel(title: option.shortTitle, systemImage: option.systemImage)
         }
-        .buttonStyle(EditorMaskKindTileStyle())
+        .buttonStyle(EditorKindTileStyle())
         .opacity(reason == nil ? 1 : EditorTheme.rowDisabled)
         .contextMenu {
             Text(reason ?? option.description)
@@ -235,36 +235,6 @@ struct EditorMaskChooser: View {
             guard !Task.isCancelled else { return }
             chrome.maskChooserNotice = nil
         }
-    }
-}
-
-/// One tile of the mask-kind grid: the kind's glyph over its short name.
-private struct EditorMaskKindTileLabel: View {
-    let option: EditorNewMaskOption
-
-    var body: some View {
-        VStack(spacing: 5) {
-            Image(systemName: option.systemImage)
-                .font(.system(size: 19))
-            Text(option.shortTitle)
-                .font(.system(size: 11.5))
-                .lineLimit(1)
-                .minimumScaleFactor(EditorLayoutMetrics.editorPanelRowMinimumScale)
-        }
-        .foregroundStyle(.white)
-        .frame(maxWidth: .infinity)
-        .frame(height: EditorMaskChooser.tileHeight)
-    }
-}
-
-/// The tile's idle fill (white 6%, `r-md`) and pressed dim.
-private struct EditorMaskKindTileStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        let shape = RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
-        configuration.label
-            .background(EditorTheme.chipIdle, in: shape)
-            .opacity(configuration.isPressed ? 0.7 : 1)
-            .contentShape(shape)
     }
 }
 
