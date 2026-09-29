@@ -1,7 +1,8 @@
 # FS-03.09b — Sửa nhiều ảnh và Reference View
 
-`FS-03.09b` · `Features/Editing/EditorSession.swift` · `EditorFilmstrip` · `EditorReferencePane`
-· cập nhật 2026-09-22
+`FS-03.09b` · `Features/Editing/EditorSession.swift` · `EditorFilmstrip` · `EditorReferencePane` ·
+`EditorPreviewCache` · `EditorPreviewPreloader`
+· cập nhật 2026-09-29
 
 **Một câu:** một phiên sửa nhiều ảnh giữ **bản nháp theo từng ảnh**, không giữ pixel — và trên màn rộng có
 một khung mẫu ghim cạnh ảnh đang sửa.
@@ -11,7 +12,8 @@ Bố cục màn rộng: [FS-03.09](09-wide-screen-and-batch-editing.md).
 ## 1. Quy tắc
 
 - Phiên giữ **danh sách ảnh + recipe nháp theo id**, **không giữ ảnh đã decode**: editor vẫn mỗi lần một
-  ảnh, nhân lên 20 ảnh là 20 bản gốc mở cùng lúc.
+  ảnh, nhân lên 20 ảnh là 20 bản gốc mở cùng lúc. Preview của cả phiên nằm **trên đĩa**, không nằm trong
+  RAM (§2).
 - Sync chỉ ghi vào **nháp** — không đụng đĩa, không ghi đè ảnh nguồn.
 - **Lưu trong phiên nhiều ảnh KHÔNG đóng editor.**
 - Lưu cả mẻ chạy **không dựng giao diện**: một ảnh lỗi không dừng mẻ.
@@ -21,8 +23,30 @@ Bố cục màn rộng: [FS-03.09](09-wide-screen-and-batch-editing.md).
 
 - Lối vào: chế độ chọn → ⋯ → **Edit**, có ở Library, Album, Smart Album, On This Day. Video bị loại vì
   editor ảnh không mở được.
-- Đổi ảnh: chốt crop → lưu nháp → đóng ảnh cũ → mở ảnh mới → **áp nháp đè lên recipe đọc từ ảnh** (nháp
-  mới hơn).
+- Đổi ảnh: chốt crop → lưu nháp → **gửi preview của ảnh cũ vào cache** → đóng ảnh cũ → mở ảnh mới → **áp
+  nháp đè lên recipe đọc từ ảnh** (nháp mới hơn) *trước* lần render đầu — áp sau thì recipe đã lưu bị vẽ ra,
+  hiện lên, rồi mới bị vẽ đè.
+- **Preload cả phiên, cache trên đĩa.** Mở editor nhiều ảnh là một vòng nền đi **hết mọi ảnh**, từ ảnh đang
+  hiện ra ngoài (kế · trước · kế+2 · trước−2 …), **mỗi lần một ảnh**: mở session → tải bản gốc (cho phép
+  iCloud) → render preview 2400px đã sửa (recipe = nháp của phiên, không có thì recipe đã lưu) và bản chưa
+  sửa → ghi HEIC (~1 MB/ảnh; ảnh chưa sửa thì hai bản là **một file**) vào thư mục tạm của phiên
+  (`ShotDexPhoto-Previews-*`) → đóng session, trừ hai ảnh kề (giữ trong bộ đệm 3 session). RAM chỉ giữ
+  **3 preview đã giải mã** quanh ảnh đang hiện; cảnh báo bộ nhớ xả RAM, giữ file. **Đóng editor là xoá cả
+  thư mục.**
+  - Chạm một ảnh đã có trong cache: preview hiện **ngay, đậm 100%**, chỉ có pill `PREPARING` ở góc trên trái
+    stage trong lúc công cụ còn đang mở. Trước đây mỗi lần chạm filmstrip — kể cả chạm lại ảnh vừa rời —
+    đều mở lại bản gốc sau một thẻ "Loading full-quality preview…" và ảnh mờ 35%.
+  - Preview chỉ là **kết quả** khi được vẽ đúng recipe ảnh sẽ mở với (so vân tay SHA256 của recipe). Ảnh đã
+    sửa khác đi kể từ lúc cache (Sync, Auto Sync, Paste) → preview cũ chỉ là **placeholder mờ** và ảnh render
+    lại; ảnh đổi trong thư viện (modificationDate) → bỏ cả mục; ảnh vừa lưu → bỏ mục. Khi trúng và ảnh
+    không có layer, editor **dùng luôn preview làm bản settle** (histogram, eyedropper đọc từ nó) và dùng
+    bản chưa sửa đã cache làm nền tương tác thay vì render lại.
+  - Vòng preload **nhường ảnh đang hiện**: chờ khi editor đang mở một ảnh chưa có cache, đang render, đang
+    kéo slider hay đang lưu. Không bị huỷ khi chuyển ảnh — nó chỉ chọn ảnh kế tiếp quanh vị trí mới. Hệ quả
+    có chủ ý: lướt filmstrip nhanh hơn tốc độ mở ảnh thì những ảnh bị lướt qua chưa kịp vào cache.
+  - Recipe có **layer chữ** (token `{camera}`) hoặc Upright chưa giải: vòng preload chỉ vẽ bản chưa sửa;
+    lần mở đầu editor tự vẽ, lúc rời ảnh thì kết quả vào cache. RAW được vẽ **cùng nguồn sửa ống kính** mà
+    editor sẽ tự chọn khi mở, để preview và lần settle đầu không lệch nhau một bước chỉnh méo.
 - **Filmstrip** dưới canvas ở cả hai layout (124pt/thumbnail 96 trên điện thoại; **72/56** ở màn rộng —
   panel đã tiêu bề rộng, dải không nên tiêu thêm một phần mười chiều cao). Ẩn khi xem tràn viền và khi
   đang vẽ.
@@ -95,4 +119,12 @@ mẫu, mà "làm giống tấm kia" thì không thể làm khi chỉ thấy mộ
 
 ## 7. Tiêu chí nghiệm thu
 
-**Chưa viết.** Xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ).
+Mới có cho preload/cache preview (§2); phần còn lại của trang **chưa viết** — xem
+[README — Việc còn nợ](../../README.md#6-việc-còn-nợ). Máy: iPhone 17 iOS 26.5, iPad Pro 13" iOS 26.5.
+
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-1 | phiên 5 ảnh vừa mở ở ảnh 1, để yên 30 s | chạm ảnh 2 rồi ảnh 5 trên filmstrip lần đầu | ảnh hiện đậm 100% ngay khung chụp đầu sau chạm (≤ 1,2 s), **không** có "Loading full-quality preview…"; chỉ pill `PREPARING` ở góc trên trái tới khi công cụ sẵn | ✅ `EditorPreviewCacheTests.preloadOrderWalksOutwardFromTheCurrentPhoto` · `.preloadOrderCoversEveryPhotoOnce` · `.needsPreloadUntilBothHalvesAreThere` · `iphone-batch-preview-cache.json` (`2-photo2-first-tap`, `4-photo3-first-tap`, `7-photo5-first-tap`) · `ipad-batch-preview-cache.json` (`i3-photo3-first-tap`) |
+| AC-2 | ảnh 2 đã kéo Exposure lên +0,39, rồi chuyển sang ảnh 3 | chạm lại ảnh 2 | ảnh 2 hiện ngay, đậm 100%, với Exposure +0,39, không spinner (pill `PREPARING` nếu có thì chỉ tới khi công cụ sẵn); chạm lại ảnh 1 chưa sửa cũng vậy | ✅ `EditorPreviewCacheTests.storedPreviewComesBackFromMemory` · `.evictedPreviewIsReadBackFromDisk` · `.unchangedPhotoSharesOneFile` · `iphone-batch-preview-cache.json` (`5-photo2-back-tap`, `6-photo1-back-tap`) · `ipad-batch-preview-cache.json` (`i4-photo1-back-tap`, `i5-photo2-back-tap`) |
+| AC-3 | preview đã cache của một ảnh vẽ ở recipe A | nháp của ảnh đổi sang B (Sync), hoặc ảnh đổi trong thư viện, hoặc vừa lưu | A không còn là kết quả: với B là placeholder cũ, ảnh render lại; đổi trong thư viện hay vừa lưu thì mục bị bỏ | ✅ `EditorPreviewCacheTests.hitOnlyWhenTheFingerprintMatches` · `.aNewModificationStampReplacesTheWholeEntry` · `.invalidateDropsThePhoto` · ⚠️ chưa chụp màn Sync → mở ảnh đã cache |
+| AC-4 | phiên đã preload 5 ảnh | đóng editor; hoặc hệ thống báo thiếu bộ nhớ | đóng: thư mục `ShotDexPhoto-Previews-*` bị xoá, một lần ghi đang dở không tạo lại mục; thiếu bộ nhớ: RAM giữ 0 preview, file còn; bình thường RAM giữ ≤ 3 preview đã giải mã | ✅ `EditorPreviewCacheTests.clearRemovesTheDirectory` · `.memoryWarningKeepsTheDisk` · `.recentListKeepsOnlyTheNewest` · `.replacedFilesAreHandedBackForDeletion` · ⚠️ chưa đo bộ nhớ trên máy thật |

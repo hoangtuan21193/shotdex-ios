@@ -1,6 +1,6 @@
 # NF-02 — Bộ nhớ và tài nguyên
 
-`NF-02` · `ShotDexKit/` · `Data/Sources/PhotoRenderService.swift` · cập nhật 2026-09-22
+`NF-02` · `ShotDexKit/` · `Data/Sources/PhotoRenderService.swift` · cập nhật 2026-09-29
 
 **Một câu:** trần bộ nhớ theo từng target, vòng đời bộ nhớ đệm, và luật cho những thứ nặng nhất.
 
@@ -23,10 +23,16 @@
   thả, nhận thả, video). Mỗi công cụ vẫn tự dọn phần của mình, nhưng **tắt app đột ngột, crash, hoặc bị hệ
   thống giết** thì không ai dọn — mà một thư mục sót có thể đang giữ một file RAW đã chép. **Chỉ an toàn ở
   thời điểm khởi động**, vì lúc đó không phiên làm việc nào còn sống. Có test.
-- **Giữ lại ba phiên sửa ảnh gần nhất** (ảnh đang xem và hai ảnh kề), và hâm nóng trước hai ảnh bên cạnh.
-  Bộ nhớ đệm chỉ giữ **phần chuẩn bị của hệ thống và thư mục tạm**, không giữ ảnh đã giải mã, nên tốn ít và
-  có trần. Kết thúc một phiên **không** xoá thứ còn trong bộ đệm (xoá thư mục tạm thì lần mở sau không đọc
-  được file nữa); toàn bộ được nhả khi rời editor.
+- **Giữ lại ba phiên sửa ảnh gần nhất** (ảnh đang xem và hai ảnh kề); phiên của ảnh đang trên canvas
+  **không bao giờ bị đẩy ra**. Bộ nhớ đệm chỉ giữ **phần chuẩn bị của hệ thống và thư mục tạm**, không giữ ảnh
+  đã giải mã, nên tốn ít và có trần. Kết thúc một phiên **không** xoá thứ còn trong bộ đệm (xoá thư mục tạm
+  thì lần mở sau không đọc được file nữa); toàn bộ được nhả khi rời editor.
+- **Preview của phiên nhiều ảnh nằm trên đĩa, không nằm trong RAM**
+  ([FS-03.09b](../02-functional-spec/FS-03-photo-editor/09b-batch-editing-and-reference.md) §2): vòng preload
+  vẽ mọi ảnh 2400px ra HEIC (~1 MB/ảnh) trong một thư mục tạm `ShotDexPhoto-Previews-*`, mỗi lần một ảnh,
+  và đóng session của ảnh đó ngay sau khi vẽ (trừ hai ảnh kề) — một session là một bản sao nguyên bản gốc.
+  RAM giữ **tối đa 3 preview đã giải mã**; thiếu bộ nhớ thì xả hết, file giữ nguyên. Đóng editor là xoá cả
+  thư mục; app bị giết giữa chừng thì lần khởi động sau quét đi (cùng tiền tố `ShotDexPhoto-`).
 
 ## 3. Trần theo target
 
