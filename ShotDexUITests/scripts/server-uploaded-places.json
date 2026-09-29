@@ -8,7 +8,7 @@
   { "action": "swipe", "x": 0.5, "y": 0.75, "direction": "up", "distance": 0.5 },
   { "action": "swipe", "x": 0.5, "y": 0.75, "direction": "up", "distance": 0.5 },
   { "action": "swipe", "x": 0.5, "y": 0.75, "direction": "up", "distance": 0.5 },
-  { "action": "tap", "label": "On Server" },
+  { "action": "tap", "label": "Local Network" },
   { "action": "wait", "seconds": 2 },
   { "action": "tap", "label": "Uploaded from This Device" },
   { "action": "wait", "seconds": 4 },

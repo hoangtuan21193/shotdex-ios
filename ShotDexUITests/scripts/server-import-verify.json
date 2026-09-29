@@ -254,7 +254,7 @@
   },
   {
    "action": "tap",
-   "label": "On Server"
+   "label": "Local Network"
   },
   {
    "action": "wait",
