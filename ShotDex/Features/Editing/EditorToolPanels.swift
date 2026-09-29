@@ -74,6 +74,9 @@ struct EditorFiltersPanel: View {
         } message: {
             Text(renameNotice ?? "")
         }
+        .sheet(item: $exportPlan) { plan in
+            LookExportSheet(plan: plan) { exportPlan = nil }
+        }
     }
 
     // MARK: Long-press menu (FS-03.14c §3)
@@ -128,6 +131,7 @@ struct EditorFiltersPanel: View {
         }
         Menu {
             Button("ShotDex Look") { share(source) }
+            Button("Export XMP Preset") { exportXMP(source) }
         } label: {
             Label("Export As", systemImage: "doc.badge.arrow.up")
         }
@@ -136,6 +140,20 @@ struct EditorFiltersPanel: View {
                 Label("Delete", systemImage: "trash")
             }
         }
+    }
+
+    @State private var exportPlan: LookExportSheet.Plan?
+
+    /// The look as a Lightroom preset, after the sheet says what is lost.
+    private func exportXMP(_ source: LookExportSource) {
+        let output = LookXMPWriter.write(source.preset)
+        guard let url = try? LookExport.write(output.data, name: source.name, pathExtension: "xmp") else { return }
+        exportPlan = .init(
+            title: "Export XMP Preset",
+            fileURL: url,
+            lostLine: LookExport.lostLine(output.lostSettings, into: "an .xmp"),
+            mentionsAdobe: true
+        )
     }
 
     /// One `.shotdexlook` into the share sheet — no image with it (14c §2).

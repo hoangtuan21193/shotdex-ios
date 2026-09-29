@@ -63,3 +63,14 @@ enum LookExport {
         return url
     }
 }
+
+extension LookExport {
+    /// "Film look Velvia doesn't carry into an .xmp"; "Film look Velvia,
+    /// Brilliance and Clarity don't carry into a .cube" — one line, nil when
+    /// nothing is lost (14c §1).
+    static func lostLine(_ lost: [String], into format: String) -> String? {
+        guard let last = lost.last else { return nil }
+        let names = lost.count == 1 ? last : lost.dropLast().joined(separator: ", ") + " and " + last
+        return "\(names) \(lost.count == 1 ? "doesn't" : "don't") carry into \(format)"
+    }
+}
