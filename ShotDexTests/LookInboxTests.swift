@@ -100,6 +100,41 @@ struct LookInboxTests {
         #expect(inbox.pending.isEmpty)
     }
 
+    /// FS-03.14 AC-c10. Twenty 100 KB files and one of 40 MB: the twenty go
+    /// in, the 40 MB file is refused from its reported size and never copied.
+    @Test func extensionRefusesOversizedFiles() throws {
+        let sent = makeDirectory("sent")
+        var files: [URL] = []
+        for index in 0..<20 {
+            let url = sent.appendingPathComponent("Look \(index).shotdexlook")
+            try Data(count: 100 * 1024).write(to: url)
+            files.append(url)
+        }
+        let big = sent.appendingPathComponent("Huge.shotdexlook")
+        FileManager.default.createFile(atPath: big.path, contents: nil)
+        let handle = try FileHandle(forWritingTo: big)
+        try handle.truncate(atOffset: 40 * 1024 * 1024)
+        try handle.close()
+        files.append(big)
+
+        let group = makeDirectory("group")
+        let deposit = LookInboxLocation.deposit(files, into: group)
+        #expect(deposit.added == 20)
+        #expect(deposit.refused == [.tooLarge(name: "Huge.shotdexlook")])
+        #expect(LookInboxLocation.totals(in: group) == (20, 20 * 100 * 1024))
+
+        // The room's own ceiling: 50 files.
+        var more: [URL] = []
+        for index in 0..<31 {
+            let url = sent.appendingPathComponent("More \(index).shotdexlook")
+            try Data(count: 10).write(to: url)
+            more.append(url)
+        }
+        let second = LookInboxLocation.deposit(more, into: group)
+        #expect(second.added == 30)
+        #expect(second.refused == [.inboxFull(name: "More 30.shotdexlook")])
+    }
+
     /// Anything ≈ or ✕ turns the banner into a count with Details.
     @Test func mixedReceiveOffersDetails() {
         let report = PresetImportReport(entries: [
