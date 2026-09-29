@@ -87,6 +87,15 @@ struct EditorFiltersPanel: View {
                     }
                     .padding(.horizontal, AppTheme.Spacing.lg)
                     .padding(.vertical, AppTheme.Spacing.sm)
+                    // No look yet: what this shelf is for (FS-03.13d §1).
+                    if chrome.presetSource == .myLooks, lookPresets?.presets.isEmpty ?? true {
+                        Text("Save an edit here and it can be put on any photo.")
+                            .font(EditorTheme.rowLabel)
+                            .foregroundStyle(EditorTheme.panelHint)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, AppTheme.Spacing.lg)
+                    }
                 }
                 .scrollIndicators(.hidden)
                 .onAppear {

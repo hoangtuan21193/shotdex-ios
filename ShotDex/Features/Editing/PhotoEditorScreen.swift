@@ -741,7 +741,7 @@ struct PhotoEditorScreen: View {
             // close as though it had saved — no chip, no reason.
             .disabled(lookName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         } message: {
-            Text("Saves the tone, colour, curve and film look on this photo. The crop, masks and markup stay with the photo.")
+            Text("Saves tone, color, curve and film look. Crop, masks and markup stay with this photo.")
         }
         .alert("Some Photos Didn't Save", isPresented: $showsBatchFailures) {
             Button("OK") { batchSaver.clearFailures() }
