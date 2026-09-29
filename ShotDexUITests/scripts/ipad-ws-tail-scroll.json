@@ -1,0 +1,104 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-editor.sidebarEdge",
+    "trailing",
+    "-editor.sidebarHidden",
+    "NO",
+    "-editor.sidebarWidth",
+    "320"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 20
+  },
+  {
+   "action": "tap",
+   "label": "Photo, file type",
+   "type": "cell",
+   "index": 2
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "tap",
+   "label": "Edit",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 18
+  },
+  {
+   "action": "tap",
+   "label": "Light",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "swipe",
+   "x": 0.85,
+   "y": 0.35,
+   "direction": "up",
+   "distance": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "d01-mid-scroll",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "label": "Detail",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "d02-detail-opened",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "dump",
+   "name": "d02b-detail-later",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "label": "Calibration",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "d06-calibration-opened",
+   "type": "button"
+  }
+ ]
+}

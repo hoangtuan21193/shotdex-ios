@@ -103,6 +103,12 @@ struct PhotoEditorScreen: View {
     /// Live width while the edge is being dragged; written back on release so a
     /// drag is one `UserDefaults` write rather than one per frame.
     @State private var sidebarDragWidth: CGFloat?
+    /// Heights of the panel's sections and of its scroll viewport, for the
+    /// tail that lets the last section scroll up to the top (FS-03.09 AC-5).
+    @State private var sidebarSectionHeights: [EditorGroup: CGFloat] = [:]
+    @State private var sidebarViewportHeight: CGFloat = 0
+    /// The section a header tap last brought to the top.
+    @State private var sidebarScrollAnchor: EditorGroup?
     /// Width the drag started from. `DragGesture` reports translation from the
     /// gesture's start, not from the last frame, so adding it to the live width
     /// every frame integrates the drag and the sidebar slams into its clamp
@@ -1444,6 +1450,9 @@ struct PhotoEditorScreen: View {
                             ) {
                                 sidebarSectionBody(group, controller: controller)
                             }
+                            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+                                sidebarSectionHeights[group] = height
+                            }
                             .id(group)
                         }
                     } else {
@@ -1482,8 +1491,11 @@ struct PhotoEditorScreen: View {
                             .accessibilityHidden(true)
                         }
                     }
-                    Color.clear.frame(height: AppTheme.Spacing.xxl)
+                    Color.clear.frame(height: sidebarTailPadding)
                 }
+            }
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+                sidebarViewportHeight = height
             }
             // One switch for the whole stack: no panel inside the sidebar owns a
             // vertical scroll, so every section is exactly as tall as its content
@@ -1494,8 +1506,14 @@ struct PhotoEditorScreen: View {
             .scrollDisabled(chrome.activeSlider != nil)
             .onChange(of: chrome.sectionToScrollTo) { _, group in
                 guard let group else { return }
-                withAnimation(EditorTheme.animation) {
-                    proxy.scrollTo(group, anchor: .top)
+                // Grow the tail first, then scroll on the next pass: without
+                // it the list hits bottom and the last sections stop short of
+                // the top (Detail measured 100pt low).
+                sidebarScrollAnchor = group
+                DispatchQueue.main.async {
+                    withAnimation(EditorTheme.animation) {
+                        proxy.scrollTo(group, anchor: .top)
+                    }
                 }
                 chrome.sectionToScrollTo = nil
             }
@@ -1541,6 +1559,23 @@ struct PhotoEditorScreen: View {
     /// Which rail stop the panel is showing, derived from the selected group so
     /// there is one source of truth — a mask opened from the photo's own context
     /// menu moves the rail too.
+    /// Room under the last section so the one a header tap asked for can
+    /// reach the top of the list, whatever sits below it. Sections not laid
+    /// out yet count as a collapsed header.
+    private var sidebarTailPadding: CGFloat {
+        guard railMode == .edit, !chrome.showsHistoryPanel, let anchor = sidebarScrollAnchor,
+              let start = Self.sidebarParameterGroups.firstIndex(of: anchor) else {
+            return AppTheme.Spacing.xxl
+        }
+        let below = Self.sidebarParameterGroups[start...].reduce(CGFloat(0)) {
+            $0 + (sidebarSectionHeights[$1] ?? EditorLayoutMetrics.sidebarSectionHeaderHeight)
+        }
+        // Plus the usual tail: measured, the list still stopped 16pt short
+        // without it (the scroll view's inset is not in either height), and
+        // extra room below costs nothing — `scrollTo(.top)` lands exactly.
+        return max(0, sidebarViewportHeight - below) + AppTheme.Spacing.xxl
+    }
+
     private var railMode: EditorRailMode {
         EditorRailMode.containing(chrome.selectedGroup)
     }
