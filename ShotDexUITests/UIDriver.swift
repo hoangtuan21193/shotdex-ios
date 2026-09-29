@@ -7,7 +7,7 @@ import Foundation
 /// only the two or three it needs.
 struct UIDriverStep: Decodable {
     /// `launch`, `activate`, `tap`, `tapIndex`, `longPress`, `typeText`,
-    /// `swipe`, `scrollTo`, `wait`, `screenshot`, `dump`, `back`, `home`.
+    /// `swipe`, `drag`, `scrollTo`, `wait`, `screenshot`, `dump`, `back`, `home`.
     let action: String
     /// Accessibility label or identifier of the element to act on.
     let label: String?
@@ -27,6 +27,11 @@ struct UIDriverStep: Decodable {
     /// whose centre is a colour wheel, that grades the project instead of
     /// scrolling it.
     let distance: Double?
+    /// `drag` only: where a one-finger drag from `x`/`y` ends, normalized.
+    /// Any angle — `swipe` only goes along an axis, and a ruler drawn along
+    /// an axis levels nothing.
+    let toX: Double?
+    let toY: Double?
     /// Text for `typeText`.
     let text: String?
     /// Seconds for `wait`, and the timeout an element wait may take.

@@ -5,12 +5,13 @@ import ShotDexKit
 /// sliders come from the adjustment catalog and are drawn by the screen.
 struct EditorTransformSectionView: View {
     @Bindable var controller: PhotoEditorController
+    @Bindable var chrome: EditorChromeModel
     let section: EditorTransformSection
 
     var body: some View {
         switch section {
         case .crop: cropRows
-        case .straighten: angleRow
+        case .straighten: straightenRows
         case .upright: EditorUprightRow(controller: controller, showsLabel: false)
         case .geometry: EmptyView()
         }
@@ -102,6 +103,35 @@ struct EditorTransformSectionView: View {
     }
 
     // MARK: Straighten
+
+    /// Angle, then Straighten Tool; the tool's how-to while it is on.
+    private var straightenRows: some View {
+        VStack(spacing: 0) {
+            angleRow
+            HStack(spacing: EditorStripLayout.chipSpacing) {
+                Button {
+                    chrome.isStraightenToolOn.toggle()
+                } label: {
+                    EditorPanelChipLabel(title: "Straighten Tool", systemImage: "ruler")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(EditorChipButtonStyle(isSelected: chrome.isStraightenToolOn))
+                .accessibilityAddTraits(chrome.isStraightenToolOn ? .isSelected : [])
+            }
+            .padding(.horizontal, EditorStripLayout.horizontalInset)
+            .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
+            if chrome.isStraightenToolOn {
+                Text("Drag a line along something that should be level, like the horizon or a table edge.")
+                    .font(EditorTheme.rowLabel)
+                    .foregroundStyle(EditorTheme.panelHint)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, AppTheme.Spacing.lg)
+                    .padding(.vertical, AppTheme.Spacing.xs)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .animation(EditorTheme.animation, value: chrome.isStraightenToolOn)
+    }
 
     private var angleRow: some View {
         EditorPlainSliderRow(

@@ -2636,7 +2636,7 @@ struct PhotoEditorScreen: View {
                         groups: catalogGroups(for: .geo, controller: controller),
                         isScrollable: false
                     ))
-                    : AnyView(EditorTransformSectionView(controller: controller, section: section))
+                    : AnyView(EditorTransformSectionView(controller: controller, chrome: chrome, section: section))
             }
         } else {
             toolPanelContent(for: chrome.selectedGroup, controller: controller)
@@ -3041,6 +3041,9 @@ struct PhotoEditorScreen: View {
         // to 400% to judge sharpening, reach for Detail, lose the eyelash.
         if group == .cropGeometry || chrome.selectedGroup == .cropGeometry {
             chrome.resetZoom()
+        }
+        if group != .cropGeometry {
+            chrome.isStraightenToolOn = false
         }
         // A mask's Edit Curve lasts as long as the curve editor is open.
         if chrome.selectedGroup == .curve, group != .curve {

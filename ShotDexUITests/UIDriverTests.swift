@@ -80,11 +80,11 @@ final class UIDriverTests: XCTestCase {
         guard let path = ProcessInfo.processInfo.environment["SHOTDEX_UI_SCRIPT"], !path.isEmpty else {
             return [
                 UIDriverStep(action: "launch", label: nil, type: nil, index: nil, x: nil, y: nil,
-                             direction: nil, distance: nil, text: nil, seconds: nil, name: nil, arguments: nil, hittable: nil),
+                             direction: nil, distance: nil, toX: nil, toY: nil, text: nil, seconds: nil, name: nil, arguments: nil, hittable: nil),
                 UIDriverStep(action: "screenshot", label: nil, type: nil, index: nil, x: nil, y: nil,
-                             direction: nil, distance: nil, text: nil, seconds: nil, name: "launch", arguments: nil, hittable: nil),
+                             direction: nil, distance: nil, toX: nil, toY: nil, text: nil, seconds: nil, name: "launch", arguments: nil, hittable: nil),
                 UIDriverStep(action: "dump", label: nil, type: nil, index: nil, x: nil, y: nil,
-                             direction: nil, distance: nil, text: nil, seconds: nil, name: "launch", arguments: nil, hittable: nil),
+                             direction: nil, distance: nil, toX: nil, toY: nil, text: nil, seconds: nil, name: "launch", arguments: nil, hittable: nil),
             ]
         }
         // The test runs inside the simulator, which cannot see a path on the
@@ -139,6 +139,12 @@ final class UIDriverTests: XCTestCase {
             } else {
                 app.typeText(text)
             }
+        case "drag":
+            guard let start = coordinate(for: step), let toX = step.toX, let toY = step.toY else {
+                throw DriverError.missing("drag needs x, y, toX and toY")
+            }
+            let end = app.coordinate(withNormalizedOffset: CGVector(dx: toX, dy: toY))
+            start.press(forDuration: 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.2)
         case "swipe":
             // A point drag when the step gives coordinates: the element
             // swipes start at the element's centre, and on a panel with a

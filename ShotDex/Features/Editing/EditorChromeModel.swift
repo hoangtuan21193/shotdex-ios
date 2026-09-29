@@ -28,6 +28,9 @@ final class EditorChromeModel {
     /// The same two for the Transform list (FS-03.13b §3).
     var transformListSection: EditorTransformSection?
     var transformListScrollRequest: EditorTransformSection?
+    /// Straighten Tool on: one finger on the photo draws a ruler instead of
+    /// moving the crop frame. Off whenever Transform is left.
+    var isStraightenToolOn = false
     /// Floating histogram card. It sits over the photo when expanded and parks as
     /// a pill in the action bar when collapsed. Collapsed on open — the photo is
     /// what the editor is for, so nothing covers it until the user asks.

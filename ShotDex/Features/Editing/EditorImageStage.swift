@@ -23,6 +23,8 @@ struct EditorImageStage: View {
     @State private var sampleLocation: CGPoint?
     /// The Heal stroke under the finger, in stage points (FS-03.15c §2).
     @State private var healStroke: [CGPoint] = []
+    /// The Straighten Tool's ruler while the finger is down, in stage points.
+    @State private var ruler: (start: CGPoint, end: CGPoint)?
     /// Signature images decoded for the live overlay proxy. Loaded here rather than
     /// inside the `Canvas`, which cannot read files while drawing.
     @State private var overlayImages: [UUID: CGImage] = [:]
@@ -66,6 +68,57 @@ struct EditorImageStage: View {
     /// guide, so the guide layer owns the stage's touches like the crop frame.
     private var isDrawingGuides: Bool {
         controller.recipe.upright.mode == .guided && chrome.selectedGroup == .geo
+    }
+
+    private var isRulingStraighten: Bool {
+        chrome.isStraightenToolOn && controller.selectedTool == .crop && !chrome.isFullBleed
+    }
+
+    private func straightenRuler(imageRect: CGRect, stageSize: CGSize) -> some View {
+        let scale = max(1, chrome.zoomScale)
+        return ZStack {
+            EditorPaintTouchLayer(
+                origin: imageRect.origin,
+                onTracked: { _ in },
+                onBegan: { ruler = ($0.startLocation, $0.location) },
+                onMoved: { ruler = ($0.startLocation, $0.location) },
+                onEnded: { touch in
+                    ruler = nil
+                    guard let correction = StraightenToolMath.correction(
+                        from: touch.startLocation,
+                        to: touch.location,
+                        zoom: chrome.zoomScale
+                    ) else { return }
+                    controller.straighten(byRuler: correction)
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                },
+                onCancelled: { ruler = nil },
+                onPanBegan: beginPhotoPan,
+                onPanChanged: { panPhoto($0, imageRect: imageRect, stage: stageSize) },
+                onPanEnded: endPhotoPan
+            )
+            .frame(width: imageRect.width, height: imageRect.height)
+            .position(x: imageRect.midX, y: imageRect.midY)
+
+            if let ruler {
+                Path { path in
+                    path.move(to: ruler.start)
+                    path.addLine(to: ruler.end)
+                }
+                .stroke(Color.black.opacity(0.5), lineWidth: 3 / scale)
+                .overlay {
+                    Path { path in
+                        path.move(to: ruler.start)
+                        path.addLine(to: ruler.end)
+                    }
+                    .stroke(EditorTheme.accent, lineWidth: 1.5 / scale)
+                }
+                .allowsHitTesting(false)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Straighten ruler")
+        .accessibilityHint("Drag a line along something that should be level")
     }
 
     private var isSamplingColor: Bool {
@@ -219,6 +272,14 @@ struct EditorImageStage: View {
 
                 if controller.selectedTool == .crop {
                     EditorCropOverlay(controller: controller, imageRect: imageRect)
+                        // The ruler has the photo while the tool is on.
+                        .allowsHitTesting(!isRulingStraighten)
+                }
+
+                // Straighten Tool (FS-03.13b §3): one finger draws a ruler,
+                // lifting it levels the line; two fingers still zoom and pan.
+                if isRulingStraighten {
+                    straightenRuler(imageRect: imageRect, stageSize: stageSize)
                 }
 
                 // Lens Blur open: a tap re-focuses on the depth under the

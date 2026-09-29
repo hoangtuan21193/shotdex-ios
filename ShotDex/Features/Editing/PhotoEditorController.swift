@@ -1448,6 +1448,15 @@ final class PhotoEditorController {
         scheduleRender()
     }
 
+    /// The Straighten Tool's ruler lifted (FS-03.13b §3): one history step.
+    func straighten(byRuler correction: Double) {
+        let angle = StraightenToolMath.angle(current: recipe.crop.straightenDegrees, adding: correction)
+        guard angle != recipe.crop.straightenDegrees else { return }
+        beginContinuousChange()
+        setStraighten(angle)
+        endContinuousChange()
+    }
+
     /// The framing the Crop tab opened on, plus how deep the undo stack was then —
     /// a cancelled session has to drop its own history entries too, or undo would
     /// step back into frames that no longer exist.
