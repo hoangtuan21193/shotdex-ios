@@ -40,7 +40,7 @@ struct UploadedToServerScreen: View {
                         NavigationLink {
                             PhotoListScreen(
                                 title: String(localized: "Uploaded to Server"),
-                                subtitle: String(localized: "\(assetIds.count) photos", comment: "Uploaded to Server subtitle: how many photos have a copy on a server"),
+                                subtitle: String(AttributedString(localized: "^[\(assetIds.count) photo](inflect: true)", comment: "Uploaded to Server subtitle: how many photos have a copy on a server").characters),
                                 assetIds: assetIds,
                                 showsMakeVideo: false
                             )

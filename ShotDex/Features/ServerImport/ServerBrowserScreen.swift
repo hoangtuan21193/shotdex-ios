@@ -135,7 +135,7 @@ struct ServerBrowserScreen: View {
             }
             return String(localized: "Delete “\(name)” from \(model.server.name)?", comment: "Server browser: delete one photo or file")
         }
-        return String(localized: "Delete \(items.count) photos from \(model.server.name)?", comment: "Server browser: delete the picked photos")
+        return String(AttributedString(localized: "Delete ^[\(items.count) photo](inflect: true) from \(model.server.name)?", comment: "Server browser: delete the picked photos").characters)
     }
 
     // MARK: Content

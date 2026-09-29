@@ -173,7 +173,7 @@ struct ServerDownloadSheet: View {
                     .foregroundStyle(.secondary)
             } footer: {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("\(model.photosToDownload.count) photos · \(model.photosToDownload.reduce(0) { $0 + $1.files.count }) files · ~\(ByteCountFormatter.string(fromByteCount: model.estimatedBytes, countStyle: .file))",
+                    Text("^[\(model.photosToDownload.count) photo](inflect: true) · ^[\(model.photosToDownload.reduce(0) { $0 + $1.files.count }) file](inflect: true) · ~\(ByteCountFormatter.string(fromByteCount: model.estimatedBytes, countStyle: .file))",
                          comment: "Download from server summary: photos, files and estimated size")
                     if let short = model.spaceShortfall {
                         Text("Not enough space on this device — about \(ByteCountFormatter.string(fromByteCount: short, countStyle: .file)) more needed.",
@@ -237,8 +237,8 @@ struct ServerDownloadSheet: View {
             Section {
                 if summary.savedCount > 0 {
                     Text(model.destination == .library
-                         ? String(localized: "Imported \(summary.savedCount) photos into your library.", comment: "Import from server result headline, library only")
-                         : String(localized: "Imported \(summary.savedCount) photos into your library and “\(model.destinationTitle)”.", comment: "Import from server result headline, with an album"))
+                         ? String(AttributedString(localized: "Imported ^[\(summary.savedCount) photo](inflect: true) into your library.", comment: "Import from server result headline, library only").characters)
+                         : String(AttributedString(localized: "Imported ^[\(summary.savedCount) photo](inflect: true) into your library and “\(model.destinationTitle)”.", comment: "Import from server result headline, with an album").characters))
                         .font(.headline)
                     // Library only: opening an album from here would mean
                     // rebuilding the Collections album entry (FS-17.02 §4).
@@ -256,7 +256,7 @@ struct ServerDownloadSheet: View {
                     Text(stop).foregroundStyle(.secondary)
                 }
                 if summary.skippedCount > 0 {
-                    Text("\(summary.skippedCount) photos skipped — already in your library.", comment: "Download from server result: photos skipped because they were already in the library")
+                    Text("^[\(summary.skippedCount) photo](inflect: true) skipped — already in your library.", comment: "Download from server result: photos skipped because they were already in the library")
                         .foregroundStyle(.secondary)
                 }
             }
@@ -271,7 +271,7 @@ struct ServerDownloadSheet: View {
                         }
                     }
                     if summary.notAttemptedCount > 0 {
-                        Text("\(summary.notAttemptedCount) photos not imported yet.", comment: "Download from server result: photos the stopped batch never reached")
+                        Text("^[\(summary.notAttemptedCount) photo](inflect: true) not imported yet.", comment: "Download from server result: photos the stopped batch never reached")
                             .foregroundStyle(.secondary)
                     }
                     if model.hasRemaining {

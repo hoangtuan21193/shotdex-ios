@@ -233,7 +233,7 @@ struct ServerUploadSheet: View {
     private var summaryFooter: some View {
         if let summary = model.planSummary {
             VStack(alignment: .leading, spacing: 4) {
-                Text("\(summary.photoCount) photos · \(summary.fileCount) files · ~\(ByteCountFormatter.string(fromByteCount: summary.estimatedBytes, countStyle: .file))",
+                Text("^[\(summary.photoCount) photo](inflect: true) · ^[\(summary.fileCount) file](inflect: true) · ~\(ByteCountFormatter.string(fromByteCount: summary.estimatedBytes, countStyle: .file))",
                      comment: "Upload to Server prepare summary: photos, files and estimated size")
                 if summary.skippedPhotoCount > 0 {
                     Text("\(summary.skippedPhotoCount) have no RAW and will be skipped.",
@@ -300,7 +300,7 @@ struct ServerUploadSheet: View {
         return Form {
             Section {
                 if summary.uploadedPhotoCount > 0 {
-                    Text("Uploaded \(summary.uploadedPhotoCount) photos (\(ByteCountFormatter.string(fromByteCount: summary.uploadedBytes, countStyle: .file))) to \(model.selectedServer?.name ?? "")",
+                    Text("Uploaded ^[\(summary.uploadedPhotoCount) photo](inflect: true) (\(ByteCountFormatter.string(fromByteCount: summary.uploadedBytes, countStyle: .file))) to \(model.selectedServer?.name ?? "")",
                          comment: "Upload to Server result headline")
                         .font(.headline)
                 } else {
@@ -311,7 +311,7 @@ struct ServerUploadSheet: View {
                     Text(stop).foregroundStyle(.secondary)
                 }
                 if summary.skippedFileCount > 0 {
-                    Text("\(summary.skippedFileCount) files skipped because they were already on the server.",
+                    Text("^[\(summary.skippedFileCount) file](inflect: true) skipped because they were already on the server.",
                          comment: "Upload to Server result: files the user chose to skip")
                         .foregroundStyle(.secondary)
                 }
@@ -356,7 +356,7 @@ struct ServerUploadSheet: View {
                         }
                     }
                     if summary.notAttemptedCount > 0 {
-                        Text("\(summary.notAttemptedCount) files not uploaded yet.", comment: "Upload to Server result: files the stopped batch never reached")
+                        Text("^[\(summary.notAttemptedCount) file](inflect: true) not uploaded yet.", comment: "Upload to Server result: files the stopped batch never reached")
                             .foregroundStyle(.secondary)
                     }
                     if model.hasRemaining {
