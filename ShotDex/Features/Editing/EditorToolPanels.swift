@@ -132,6 +132,7 @@ struct EditorFiltersPanel: View {
         Menu {
             Button("ShotDex Look") { share(source) }
             Button("Export XMP Preset") { exportXMP(source) }
+            Button("LUT") { exportCube(source) }
         } label: {
             Label("Export As", systemImage: "doc.badge.arrow.up")
         }
@@ -153,6 +154,20 @@ struct EditorFiltersPanel: View {
             fileURL: url,
             lostLine: LookExport.lostLine(output.lostSettings, into: "an .xmp"),
             mentionsAdobe: true
+        )
+    }
+
+    /// The look's per-pixel part as a 33³ `.cube`; the sheet names what a
+    /// table cannot hold.
+    private func exportCube(_ source: LookExportSource) {
+        guard let output = LookCubeBaker.bake(source.preset),
+              let url = try? LookExport.write(Data(output.text.utf8), name: source.name, pathExtension: "cube")
+        else { return }
+        exportPlan = .init(
+            title: "Export LUT",
+            fileURL: url,
+            lostLine: LookExport.lostLine(output.lostSettings, into: "a .cube"),
+            mentionsAdobe: false
         )
     }
 

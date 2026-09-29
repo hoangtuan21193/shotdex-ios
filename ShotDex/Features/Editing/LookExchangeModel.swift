@@ -81,7 +81,7 @@ final class LookExchangeModel {
     #if DEBUG
     /// `-ShotDexImportFixtures`: a UI script cannot drive the document
     /// picker, so this launch argument imports three presets written here —
-    /// one of each outcome — the first time My Looks is shown.
+    /// one of each outcome — and a LUT, the first time My Looks is shown.
     private var hasImportedFixtures = false
 
     func importFixturesIfAsked() {
@@ -101,6 +101,7 @@ final class LookExchangeModel {
             ("Golden.xmp", xmp(#"crs:Exposure2012="+0.50" crs:HueAdjustmentRed="-20""#, name: "Golden")),
             ("Matte Fade.xmp", xmp(#"crs:Exposure2012="+3.00" crs:HasCrop="True" crs:CropTop="0.1" crs:Contrast2012="-30""#, name: "Matte Fade")),
             ("Broken.xmp", "<x:xmpmeta><rdf:RDF><unclosed>"),
+            ("Teal.cube", "LUT_3D_SIZE 2\n0 0.05 0.1\n0.9 0.05 0.1\n0 0.95 1\n0.9 0.95 1\n0 0.1 0.9\n0.9 0.1 0.9\n0 1 1\n0.9 1 1\n"),
         ]
         let urls = files.map { name, text in
             let url = folder.appendingPathComponent(name)
