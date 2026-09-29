@@ -29,7 +29,7 @@ Khung và ✕ / ✓: [13a](13a-chrome-and-toolbar.md). Thông số từng nhóm 
 
 - Curve là **một hàng sau Light**: nhãn "Curve" · 4 chấm kênh 8pt (trắng, đỏ, xanh lá, xanh dương) · chip **Edit Curve**.
 - Chạm Edit Curve = vào công cụ con **✕ · Curve · ✓**: vùng thông số thành đồ thị vuông **220×220** bên trái, cột
-  phải là chip kênh RGB · Red · Green · Blue (chia dọc, 120×30; tên giữa chip, chấm màu 10pt ghim mép trái), chip Reset và hint
+  phải là chip kênh RGB · Red · Green · Blue (chia dọc, cao 30, cột rộng tối thiểu 120 và lấy phần bề rộng còn lại — 138 trên 402; tên giữa chip, chấm màu 10pt ghim mép trái), chip Reset và hint
   *"Tap the line to add a point. Drag to move it, double-tap to remove it."*
 - Region (parametric) và các preset hình dạng không có chỗ trong vùng này: ở ⋯ → **Curve Type** / **Preset Shapes**.
   Region đổi vùng thành bảy slider, có chip Point · Region ở đầu để quay lại.

@@ -2449,13 +2449,17 @@ struct PhotoEditorScreen: View {
             }
             .frame(height: zoneHeight)
             .overlay(alignment: .bottom) {
-                LinearGradient(
-                    colors: [EditorTheme.panelSolid.opacity(0), EditorTheme.panelSolid],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: EditorLayoutMetrics.editorParamZoneFadeHeight)
-                .allowsHitTesting(false)
+                // The fade says "more below" on a list; Curve's zone is a fixed
+                // graph and would only lose its bottom corner to it.
+                if chrome.selectedGroup != .curve || chrome.curveMode == .region {
+                    LinearGradient(
+                        colors: [EditorTheme.panelSolid.opacity(0), EditorTheme.panelSolid],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .frame(height: EditorLayoutMetrics.editorParamZoneFadeHeight)
+                    .allowsHitTesting(false)
+                }
             }
             .clipShape(slab)
 

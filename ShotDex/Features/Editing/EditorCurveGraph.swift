@@ -362,56 +362,71 @@ struct EditorCurvePanel: View {
     }
 
     /// Graph left, channels · Reset · hint right.
+    /// The graph takes 220 when the width allows it and the column keeps at
+    /// least 120; the column takes whatever is left over, so the hint wraps
+    /// in three lines on a 402pt phone instead of four.
     private var pointZone: some View {
-        HStack(alignment: .top, spacing: EditorCurvePanel.columnGap) {
-            EditorCurveGraph(controller: controller, chrome: chrome)
-                .frame(maxWidth: EditorCurvePanel.graphSide, maxHeight: EditorCurvePanel.graphSide)
-            VStack(alignment: .leading, spacing: EditorCurvePanel.chipGap) {
-                ForEach(ToneCurveChannel.allCases) { option in
-                    Button {
-                        chrome.curveChannel = option
-                    } label: {
-                        // The name centred like Reset below it; the dot
-                        // pinned to the leading edge, so the four sit in one
-                        // column instead of moving with each word's width.
-                        Text(option.displayName)
-                            .frame(maxWidth: .infinity)
-                            .overlay(alignment: .leading) {
-                                Circle()
-                                    .fill(option.stripDot)
-                                    .frame(width: EditorCurvePanel.dotSide, height: EditorCurvePanel.dotSide)
-                            }
-                    }
-                    .buttonStyle(EditorChipButtonStyle(
-                        isSelected: channel == option,
-                        horizontalPadding: AppTheme.Spacing.md
-                    ))
-                    .frame(height: EditorCurvePanel.chipHeight)
-                    .accessibilityLabel(option.displayName)
-                    .accessibilityAddTraits(channel == option ? .isSelected : [])
-                }
-                Button {
-                    controller.resetCurve(channel)
-                } label: {
-                    Text("Reset").frame(maxWidth: .infinity)
-                }
-                .buttonStyle(EditorChipButtonStyle(isSelected: false))
-                .frame(height: EditorCurvePanel.chipHeight)
-                .disabled(isLinear)
-                .opacity(isLinear ? EditorTheme.rowDisabled : 1)
-                Text("Tap the line to add a point. Drag to move it, double-tap to remove it.")
-                    .font(EditorTheme.maskSubtitle)
-                    .foregroundStyle(EditorTheme.panelHint)
-                    .minimumScaleFactor(0.8)
-                    .fixedSize(horizontal: false, vertical: true)
+        GeometryReader { geo in
+            let width = geo.size.width - 2 * AppTheme.Spacing.lg
+            let graph = max(0, min(
+                EditorCurvePanel.graphSide,
+                geo.size.height,
+                width - EditorCurvePanel.columnGap - EditorCurvePanel.columnWidth
+            ))
+            HStack(alignment: .top, spacing: EditorCurvePanel.columnGap) {
+                EditorCurveGraph(controller: controller, chrome: chrome)
+                    .frame(width: graph, height: graph)
+                channelColumn
             }
-            .frame(width: EditorCurvePanel.columnWidth)
+            .padding(.horizontal, AppTheme.Spacing.lg)
         }
-        .padding(.horizontal, AppTheme.Spacing.lg)
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// FS-03.13b §2: a 220pt square and a 120pt column of 30pt chips.
+    private var channelColumn: some View {
+        VStack(alignment: .leading, spacing: EditorCurvePanel.chipGap) {
+            ForEach(ToneCurveChannel.allCases) { option in
+                Button {
+                    chrome.curveChannel = option
+                } label: {
+                    // The name centred like Reset below it; the dot
+                    // pinned to the leading edge, so the four sit in one
+                    // column instead of moving with each word's width.
+                    Text(option.displayName)
+                        .frame(maxWidth: .infinity)
+                        .overlay(alignment: .leading) {
+                            Circle()
+                                .fill(option.stripDot)
+                                .frame(width: EditorCurvePanel.dotSide, height: EditorCurvePanel.dotSide)
+                        }
+                }
+                .buttonStyle(EditorChipButtonStyle(
+                    isSelected: channel == option,
+                    horizontalPadding: AppTheme.Spacing.md
+                ))
+                .frame(height: EditorCurvePanel.chipHeight)
+                .accessibilityLabel(option.displayName)
+                .accessibilityAddTraits(channel == option ? .isSelected : [])
+            }
+            Button {
+                controller.resetCurve(channel)
+            } label: {
+                Text("Reset").frame(maxWidth: .infinity)
+            }
+            .buttonStyle(EditorChipButtonStyle(isSelected: false))
+            .frame(height: EditorCurvePanel.chipHeight)
+            .disabled(isLinear)
+            .opacity(isLinear ? EditorTheme.rowDisabled : 1)
+            Text("Tap the line to add a point. Drag to move it, double-tap to remove it.")
+                .font(EditorTheme.maskSubtitle)
+                .foregroundStyle(EditorTheme.panelHint)
+                .minimumScaleFactor(0.8)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    /// FS-03.13b §2: a 220pt square and a column of at least 120pt of
+    /// 30pt chips.
     static let graphSide: CGFloat = 220
     static let columnWidth: CGFloat = 120
     static let chipHeight: CGFloat = 30
