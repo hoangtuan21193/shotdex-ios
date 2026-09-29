@@ -304,7 +304,7 @@ final class PhotoEditorController {
     private static let rawDemosaicEdge: CGFloat = 768
     /// Nonisolated so it can be a default argument — the settle render's size is a
     /// constant, not actor state.
-    nonisolated private static let settleEdge: CGFloat = 2_400
+    nonisolated static let settleEdge: CGFloat = 2_400
     /// Ceiling for the settle render once the photo is pinched open. 2400 is about
     /// the pixels a whole photo needs on a phone at 100%; at 400% the same photo is
     /// being drawn four times that, so a flat 2400 made the picture soft exactly
@@ -324,11 +324,13 @@ final class PhotoEditorController {
         asset: PHAsset,
         sourceAlbum: PHAssetCollection?,
         service: PhotoEditingService,
-        metadata: PhotoMetadata? = nil
+        metadata: PhotoMetadata? = nil,
+        previewCache: EditorPreviewCache? = nil
     ) {
         self.asset = asset
         self.sourceAlbum = sourceAlbum
         self.service = service
+        self.previewCache = previewCache
         overlayTokens = OverlayTokenValues(metadata: metadata)
         panelAspect = EditorLayoutMetrics.panelAspect(
             pixelWidth: asset.pixelWidth, pixelHeight: asset.pixelHeight, crop: .identity
@@ -580,13 +582,48 @@ final class PhotoEditorController {
     /// the wait is a download and the screen should say so.
     private(set) var isDownloadingFromCloud = false
 
-    func load() async {
+    // MARK: Multi-photo preview cache (FS-03.09b §2)
+
+    /// The run's previews on disk; nil for a single-photo edit.
+    @ObservationIgnored private let previewCache: EditorPreviewCache?
+    /// The placeholder is this photo's full-quality preview, drawn with the
+    /// recipe it is opening with — the picture it will show, so the stage
+    /// shows it plainly instead of dimmed behind a spinner.
+    private(set) var isPlaceholderFullQuality = false
+    /// The placeholder came from the run's cache, so the low-resolution
+    /// PhotoKit frame must not replace it when it arrives.
+    @ObservationIgnored private var isPlaceholderCached = false
+    @ObservationIgnored private var cachedEditedPreview: EditorCachedPreview?
+    @ObservationIgnored private var cachedPreviewTask: Task<Void, Never>?
+    /// The original preview was read back from the cache rather than drawn.
+    @ObservationIgnored private var isOriginalFromCache = false
+    /// The last settle render that drew exactly this recipe on a plain canvas
+    /// — no crop frame, no mask tint, no layer lifted for editing. It is what
+    /// the cache gets when the run moves to another photo.
+    @ObservationIgnored private var lastCleanSettle: (image: UIImage, recipe: PhotoEditRecipe)?
+
+    /// Whether the editor is doing work of its own right now. The run's
+    /// preloader waits while it is, so the photo on screen always goes first.
+    /// A photo still opening *behind its own cached preview* is not waited
+    /// for: the picture is already up, and a quick walk down the filmstrip
+    /// would otherwise keep the preloader parked for as long as it lasts.
+    var isBusy: Bool {
+        (isLoading && !isPlaceholderFullQuality)
+            || isRendering || isSaving || isContinuousChange || isOverlayGesture
+    }
+
+    /// `draft` is the multi-photo run's parked edit for this photo, newer than
+    /// what the photo was saved with. It goes on before the first render —
+    /// applied afterwards, the saved recipe was drawn, shown, and then drawn
+    /// over.
+    func load(draft: PhotoEditRecipe? = nil) async {
         guard session == nil else { return }
         isLoading = true
         errorMessage = nil
+        showCachedPreview(draft: draft)
         requestPlaceholder()
         do {
-            let session = try await service.beginSession(for: asset)
+            let session = try await service.beginSession(for: asset, isOnCanvas: true)
             self.session = session
             let option = session.preferredSource(for: session.recalledRecipe)
             guard let option else { throw PhotoEditingError.missingSource }
@@ -606,15 +643,120 @@ final class PhotoEditorController {
             selectedMaskID = initialRecipe.masks.first?.id
             selectedComponentID = initialRecipe.masks.first?.components.first?.id
             selectedFilterCategory = initialRecipe.filter.category
-            await renderNow()
+            // One undoable step, like `apply(_:)`.
+            if let draft, draft != recipe {
+                recordHistory()
+                recipe = resolvingUpright(draft)
+            }
+            let adoptedCache = await adoptCachedEditedPreview()
+            if !adoptedCache {
+                await renderNow()
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
+        cachedPreviewTask?.cancel()
+        cachedPreviewTask = nil
+        cachedEditedPreview = nil
         isLoading = false
         // The real preview is on screen; a second full-frame bitmap is not
         // something to keep for the rest of the session.
         placeholderImage = nil
+        isPlaceholderFullQuality = false
+        isPlaceholderCached = false
         isDownloadingFromCloud = false
+    }
+
+    /// Puts the run's cached preview of this photo on screen before anything
+    /// else has happened: from memory in this frame when the photo was just
+    /// left, from disk a moment later otherwise.
+    private func showCachedPreview(draft: PhotoEditRecipe?) {
+        guard let previewCache else { return }
+        let id = asset.localIdentifier
+        let stamp = EditorPreviewCache.stamp(of: asset)
+        if let cached = previewCache.memoryEditedPreview(assetID: id, stamp: stamp, draft: draft) {
+            adoptPlaceholder(cached)
+            return
+        }
+        cachedPreviewTask = Task { [weak self] in
+            guard let cached = await previewCache.editedPreview(assetID: id, stamp: stamp, draft: draft) else { return }
+            self?.adoptPlaceholder(cached)
+        }
+    }
+
+    private func adoptPlaceholder(_ cached: EditorCachedPreview) {
+        guard isLoading else { return }
+        placeholderImage = cached.image
+        isPlaceholderCached = true
+        isPlaceholderFullQuality = cached.isCurrent
+        cachedEditedPreview = cached.isCurrent ? cached : nil
+    }
+
+    /// Uses the cached preview as the settled render when it was drawn from
+    /// exactly this recipe, instead of drawing the same picture again. The
+    /// histogram and the eyedropper read the clean picture, which is this one
+    /// only when no layer sits on top — a photo with layers renders.
+    private func adoptCachedEditedPreview() async -> Bool {
+        await cachedPreviewTask?.value
+        guard let cached = cachedEditedPreview,
+              cached.fingerprint == EditorPreviewFingerprint.of(recipe),
+              recipe.overlays.isEmpty,
+              selectedTool != .crop,
+              settleDimension <= Self.settleEdge,
+              let cgImage = cached.image.cgImage
+        else { return false }
+        renderTask?.cancel()
+        cancelInteractiveRender()
+        renderGeneration += 1
+        updatePreviewAspect(from: cached.image.size, recipe: renderReady(recipe))
+        editedPreviewImage = cached.image
+        colorSamplingImage = cgImage
+        lastCleanSettle = (cached.image, recipe)
+        await updateHistogram()
+        refreshMaskThumbnails()
+        refreshFilterThumbnails()
+        isRendering = false
+        return true
+    }
+
+    /// Hands this photo's previews to the run's cache as the canvas moves on,
+    /// so coming back to it shows the picture at once. The edited preview
+    /// only when the last clean settle drew the recipe as it stands now; the
+    /// original only when it was drawn here rather than read from the cache.
+    func storePreviewInCache() {
+        // Left before it finished opening: the saved recipe is not known yet,
+        // and a preview filed under the wrong one would be a wrong hit later.
+        guard let previewCache, !isLoading, errorMessage == nil,
+              let option = selectedSourceOption
+        else { return }
+        var edited: (image: UIImage, recipe: PhotoEditRecipe)?
+        if let settle = lastCleanSettle, settle.recipe == recipe {
+            edited = (settle.image, recipe)
+        }
+        var original: (image: UIImage, optionID: String)?
+        if let originalPreviewImage, !isOriginalFromCache {
+            original = (originalPreviewImage, option.id)
+        }
+        // Untouched: the edited preview *is* the original, one file for both.
+        var identity = PhotoEditRecipe.identity
+        identity.source = recipe.source
+        identity.sourceFilename = recipe.sourceFilename
+        if let settle = edited, renderReady(recipe) == identity {
+            original = (settle.image, option.id)
+        }
+        guard edited != nil || original != nil else { return }
+        let id = asset.localIdentifier
+        let stamp = EditorPreviewCache.stamp(of: asset)
+        let baseline = sessionBaselineRecipe
+        Task {
+            await previewCache.store(
+                assetID: id,
+                stamp: stamp,
+                baseline: baseline,
+                edited: edited,
+                original: original
+            )
+        }
     }
 
     /// Local only, fast format, no network: the point is to have *something* on
@@ -633,7 +775,7 @@ final class PhotoEditorController {
         ) { [weak self] image, info in
             let isInCloud = (info?[PHImageResultIsInCloudKey] as? Bool) ?? false
             Task { @MainActor [weak self] in
-                guard let self, self.isLoading else { return }
+                guard let self, self.isLoading, !self.isPlaceholderCached else { return }
                 if let image {
                     self.placeholderImage = image
                 } else if isInCloud {
@@ -644,6 +786,7 @@ final class PhotoEditorController {
     }
 
     func close() {
+        cachedPreviewTask?.cancel()
         renderTask?.cancel()
         interactiveRenderTask?.cancel()
         maskThumbnailTask?.cancel()
@@ -1684,19 +1827,23 @@ final class PhotoEditorController {
     /// The resolver's inputs from the file's facts; the Lensfun lens is added
     /// by the caller.
     private func lensInputs() -> LensCorrectionInputs {
-        var inputs = LensCorrectionInputs(isRAW: isRAWSource)
-        if let embedded = lensFacts.embedded {
+        Self.lensInputs(facts: lensFacts, isRAW: isRAWSource, hasLoadedSource: loadedSource != nil)
+    }
+
+    nonisolated static func lensInputs(facts: LensFacts, isRAW: Bool, hasLoadedSource: Bool) -> LensCorrectionInputs {
+        var inputs = LensCorrectionInputs(isRAW: isRAW)
+        if let embedded = facts.embedded {
             var aspects: Set<LensCorrectionAspect> = []
             if embedded.hasDistortion { aspects.insert(.distortion) }
             if embedded.hasVignetting { aspects.insert(.vignetting) }
             if embedded.hasChromaticAberration { aspects.insert(.chromaticAberration) }
             inputs.embeddedAspects = aspects
-            inputs.embeddedLensName = lensFacts.embeddedLensName
+            inputs.embeddedLensName = facts.embeddedLensName
         }
         // Before the file has been read, a RAW is assumed decodable with
         // Apple's correction, as it always was.
-        inputs.decoderSupportsLensCorrection = lensFacts.decoderSupportsLensCorrection || (isRAWSource && loadedSource == nil)
-        inputs.isJPEGCorrectedInCamera = lensFacts.isJPEGCorrectedInCamera
+        inputs.decoderSupportsLensCorrection = facts.decoderSupportsLensCorrection || (isRAW && !hasLoadedSource)
+        inputs.isJPEGCorrectedInCamera = facts.isJPEGCorrectedInCamera
         return inputs
     }
 
@@ -1715,42 +1862,65 @@ final class PhotoEditorController {
         recipe.lensProfile?.lensID.flatMap { LensProfileLibrary.shared.lens(id: $0) }
     }
 
+    /// What `resolveLensProfile` reads off a loaded file. Its own type so the
+    /// multi-photo preloader draws a RAW with the same lens source the editor
+    /// will open it with (FS-03.09b §2) — otherwise the cached preview and the
+    /// editor's first settle would differ by a distortion correction.
+    struct ResolvedLens {
+        let query: LensQuery
+        let match: LensProfileMatch?
+        let mount: String?
+        let facts: LensFacts
+        /// `sessionLensChoice` for a RAW, nil for anything else.
+        let sessionChoice: PhotoLensProfileChoice?
+    }
+
     /// Off the main actor: the first call decodes the ~800KB table.
-    private func resolveLensProfile(for info: PhotoRenderSourceInfo) async {
+    nonisolated static func resolveLens(for info: PhotoRenderSourceInfo) async -> ResolvedLens {
         let query = LensQuery(properties: info.properties)
-        lensQuery = query
         let isRAW = info.isRAW
         let url = info.url
         // RAW goes through Lensfun too now (FS-03.16a §2); the decoder's
         // own correction is only the fallback.
-        let (match, mount, decoderSupports, embedded, corrected) = await Task.detached(priority: .utility) {
+        return await Task.detached(priority: .utility) {
             let library = LensProfileLibrary.shared
-            return (
-                LensProfileMatcher(library: library).match(query),
-                library.camera(make: query.cameraMake, model: query.cameraModel)?.mount,
-                isRAW ? (CIRAWFilter(imageURL: url)?.isLensCorrectionSupported ?? false) : false,
+            let match = LensProfileMatcher(library: library).match(query)
+            let facts = LensFacts(
                 // The maker's own data (16a §1) — RAW only, read once and kept
                 // for the renderer.
-                isRAW ? EmbeddedLensDataCache.shared.correction(for: url) : nil,
-                isRAW ? false : (EmbeddedLensDataReader.isCorrectedInCamera(url: url) ?? false)
+                embedded: isRAW ? EmbeddedLensDataCache.shared.correction(for: url) : nil,
+                embeddedLensName: query.lensModel,
+                decoderSupportsLensCorrection: isRAW
+                    ? (CIRAWFilter(imageURL: url)?.isLensCorrectionSupported ?? false)
+                    : false,
+                isJPEGCorrectedInCamera: isRAW
+                    ? false
+                    : (EmbeddedLensDataReader.isCorrectedInCamera(url: url) ?? false)
+            )
+            var sessionChoice: PhotoLensProfileChoice?
+            if isRAW {
+                var inputs = lensInputs(facts: facts, isRAW: true, hasLoadedSource: true)
+                inputs.lensfunLens = match?.lens
+                inputs.cameraCropFactor = match?.cameraCropFactor ?? LensProfileMatcher().cameraCropFactor(query)
+                sessionChoice = LensCorrectionResolver.resolve(inputs).choice
+            }
+            return ResolvedLens(
+                query: query,
+                match: match,
+                mount: library.camera(make: query.cameraMake, model: query.cameraModel)?.mount,
+                facts: facts,
+                sessionChoice: sessionChoice
             )
         }.value
-        lensProfileMatch = match
-        lensCameraMount = mount
-        lensFacts = LensFacts(
-            embedded: embedded,
-            embeddedLensName: query.lensModel,
-            decoderSupportsLensCorrection: decoderSupports,
-            isJPEGCorrectedInCamera: corrected
-        )
-        if isRAW {
-            var inputs = lensInputs()
-            inputs.lensfunLens = match?.lens
-            inputs.cameraCropFactor = match?.cameraCropFactor ?? LensProfileMatcher().cameraCropFactor(query)
-            sessionLensChoice = LensCorrectionResolver.resolve(inputs).choice
-        } else {
-            sessionLensChoice = nil
-        }
+    }
+
+    private func resolveLensProfile(for info: PhotoRenderSourceInfo) async {
+        lensQuery = LensQuery(properties: info.properties)
+        let resolved = await Self.resolveLens(for: info)
+        lensProfileMatch = resolved.match
+        lensCameraMount = resolved.mount
+        lensFacts = resolved.facts
+        sessionLensChoice = resolved.sessionChoice
         scheduleRender()
     }
 
@@ -3197,6 +3367,7 @@ final class PhotoEditorController {
     ) async {
         guard let loadedSource else { return }
         isRendering = true
+        let renderedRecipe = recipe
         do {
             var previewRecipe = recipe
             if selectedTool == .crop {
@@ -3266,6 +3437,10 @@ final class PhotoEditorController {
             let image = UIImage(cgImage: preview.displayImage)
             updatePreviewAspect(from: image.size, recipe: previewRecipe)
             editedPreviewImage = image
+            if !usesInteractiveBase, !showsOverlay, selectedTool != .crop,
+               !isEditingOverlay, !isEditingDrawing, maximumDimension <= Self.settleEdge {
+                lastCleanSettle = (image, renderedRecipe)
+            }
             if isVisualizingSpots { refreshSpotMap() }
             colorSamplingImage = preview.cleanImage
             await updateHistogram()
@@ -3483,6 +3658,26 @@ final class PhotoEditorController {
         var identity = PhotoEditRecipe.identity
         identity.source = recipe.source
         identity.sourceFilename = recipe.sourceFilename
+        // A multi-photo run has usually drawn this already, in the preloader
+        // or on an earlier visit: the same identity render at the same size.
+        if let previewCache, let option = selectedSourceOption,
+           let cached = await previewCache.originalPreview(
+               assetID: asset.localIdentifier,
+               stamp: EditorPreviewCache.stamp(of: asset),
+               optionID: option.id
+           ),
+           let cgImage = cached.cgImage {
+            originalPreviewImage = cached
+            isOriginalFromCache = true
+            resolvePendingUpright()
+            await service.renderer.installInteractiveBase(
+                cgImage,
+                source: loadedSource.info,
+                recipe: identity
+            )
+            return
+        }
+        isOriginalFromCache = false
         do {
             let cgImage = try await service.renderer.renderPreview(
                 source: loadedSource.info,

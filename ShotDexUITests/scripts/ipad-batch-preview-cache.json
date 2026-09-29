@@ -1,0 +1,114 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 20
+  },
+  {
+   "action": "tap",
+   "label": "Select",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "ISO 400 \u00b7 105mm \u00b7 f/5.6",
+   "type": "staticText"
+  },
+  {
+   "action": "tap",
+   "label": "ISO 200 \u00b7 26mm \u00b7 f/4",
+   "type": "staticText"
+  },
+  {
+   "action": "tap",
+   "label": "ISO 200 \u00b7 24mm \u00b7 f/10",
+   "type": "staticText"
+  },
+  {
+   "action": "tap",
+   "label": "ISO 200 \u00b7 16mm \u00b7 f/10",
+   "type": "staticText"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Edit",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 35
+  },
+  {
+   "action": "screenshot",
+   "name": "i1-photo1"
+  },
+  {
+   "action": "tap",
+   "label": "Photo 2 of 4",
+   "type": "button"
+  },
+  {
+   "action": "screenshot",
+   "name": "i2-photo2-first-tap"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "tap",
+   "label": "Photo 3 of 4",
+   "type": "button"
+  },
+  {
+   "action": "screenshot",
+   "name": "i3-photo3-first-tap"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "tap",
+   "label": "Photo 1 of 4",
+   "type": "button"
+  },
+  {
+   "action": "screenshot",
+   "name": "i4-photo1-back-tap"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "tap",
+   "label": "Photo 2 of 4",
+   "type": "button"
+  },
+  {
+   "action": "screenshot",
+   "name": "i5-photo2-back-tap"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "dump",
+   "name": "ipad-filmstrip",
+   "type": "button"
+  }
+ ]
+}

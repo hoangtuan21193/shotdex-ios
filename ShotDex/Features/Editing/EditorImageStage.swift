@@ -590,27 +590,68 @@ struct EditorImageStage: View {
             // local frame sits under the spinner until the real preview lands.
             // Dimmed and un-interactive so nobody mistakes it for something they
             // can edit yet.
+            //
+            // In a multi-photo run the frame is usually the photo's own
+            // full-quality preview from the run's cache (FS-03.09b §2) — the
+            // picture it is about to show. That one is drawn plainly, with only
+            // a small pill while the tools finish opening: dimming the finished
+            // picture behind a spinner on every filmstrip tap was the bug.
+            let isFullQuality = controller.isPlaceholderFullQuality
             ZStack {
                 if let placeholder = controller.placeholderImage {
                     Image(uiImage: placeholder)
                         .resizable()
+                        .interpolation(.high)
                         .scaledToFit()
-                        .opacity(0.35)
+                        .opacity(isFullQuality ? 1 : 0.35)
                         .allowsHitTesting(false)
                         .transition(.opacity)
                 }
-                ProgressView(
-                    controller.isDownloadingFromCloud
-                        ? "Downloading from iCloud…"
-                        : "Loading full-quality preview…"
-                )
-                .tint(.white)
-                .foregroundStyle(.white)
-                .padding(AppTheme.Spacing.lg)
-                .background(EditorTheme.glass, in: RoundedRectangle.app(AppTheme.Radius.lg))
+                if !isFullQuality {
+                    ProgressView(
+                        controller.isDownloadingFromCloud
+                            ? "Downloading from iCloud…"
+                            : "Loading full-quality preview…"
+                    )
+                    .tint(.white)
+                    .foregroundStyle(.white)
+                    .padding(AppTheme.Spacing.lg)
+                    .background(EditorTheme.glass, in: RoundedRectangle.app(AppTheme.Radius.lg))
+                }
+            }
+            .frame(width: container.width, height: container.height)
+            .position(x: stageSize.width / 2, y: stageSize.height / 2)
+            .overlay(alignment: .topLeading) {
+                if isFullQuality {
+                    preparingPill
+                        .padding(AppTheme.Spacing.md)
+                        .transition(.opacity)
+                }
             }
             .animation(EditorTheme.animation, value: controller.placeholderImage == nil)
         }
+    }
+
+    /// The tools are still opening under a finished picture. A pill in the
+    /// zoom readout's corner — which is empty until the photo is zoomed — not
+    /// a card over the photo.
+    private var preparingPill: some View {
+        HStack(spacing: 5) {
+            ProgressView()
+                .controlSize(.mini)
+                .tint(EditorTheme.secondaryText)
+            Text("PREPARING")
+                .font(EditorTheme.pillLabel)
+                .tracking(0.8)
+                .lineLimit(1)
+        }
+        .fixedSize()
+        .foregroundStyle(EditorTheme.secondaryText)
+        .padding(.horizontal, 10)
+        .frame(height: 28)
+        .editorGlass(cornerRadius: AppTheme.Radius.lg)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Preparing editing tools")
     }
 
     @ViewBuilder

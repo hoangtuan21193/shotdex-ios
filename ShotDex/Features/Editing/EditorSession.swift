@@ -22,6 +22,9 @@ final class EditorSession {
     private(set) var drafts: [String: PhotoEditRecipe] = [:]
     /// Assets this session has already written.
     private(set) var savedIDs: Set<String> = []
+    /// Bumped whenever any draft changes, so the preview preloader can redraw
+    /// the photos whose next open will look different (FS-03.09b §2).
+    private(set) var draftRevision = 0
 
     init(assets: [PHAsset], startIndex: Int = 0) {
         self.assets = assets
@@ -43,11 +46,13 @@ final class EditorSession {
     /// than stored: it is the same as never having touched the photo, and
     /// keeping it would badge the thumbnail as edited.
     func store(_ recipe: PhotoEditRecipe, for asset: PHAsset) {
+        let before = drafts[asset.localIdentifier]
         if recipe.isIdentity {
             drafts.removeValue(forKey: asset.localIdentifier)
         } else {
             drafts[asset.localIdentifier] = recipe
         }
+        if drafts[asset.localIdentifier] != before { draftRevision += 1 }
     }
 
     /// Lightroom's Sync Settings: hand this recipe to every *other* photo in the
@@ -62,7 +67,7 @@ final class EditorSession {
 
     func markSaved(_ assetID: String) {
         savedIDs.insert(assetID)
-        drafts.removeValue(forKey: assetID)
+        if drafts.removeValue(forKey: assetID) != nil { draftRevision += 1 }
     }
 
     func hasDraft(_ asset: PHAsset) -> Bool {

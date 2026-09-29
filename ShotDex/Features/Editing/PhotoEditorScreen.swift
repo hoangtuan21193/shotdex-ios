@@ -74,12 +74,16 @@ struct PhotoEditorScreen: View {
     @State private var isSignatureNamePresented = false
     @State private var signatureName = ""
     @State private var drawSession = EditorDrawSession()
-    /// Warming the neighbouring photos' sessions. Held so dismissing the
-    /// editor stops it: `prewarmSession` allows network access, so it can
-    /// still be waiting on iCloud when the screen goes, and finishing after
+    /// Every photo of a multi-photo run at full quality, on disk for the
+    /// length of the run (FS-03.09b §2): a tap on the filmstrip shows the
+    /// picture at once instead of "Loading full-quality preview…".
+    @State private var previewCache = EditorPreviewCache()
+    /// Fills `previewCache` in the background. Held so dismissing the editor
+    /// stops it: it allows network access, so it can still be waiting on
+    /// iCloud when the screen goes, and finishing after
     /// `releaseCachedSessions()` would put a session back into a cache that
     /// no longer has an owner to release it.
-    @State private var prewarmTask: Task<Void, Never>?
+    @State private var preloader: EditorPreviewPreloader?
 
     /// Wide-screen sidebar: which side it is parked on, how wide, and whether
     /// it is collapsed. All three are the user's, so all three persist — but
@@ -147,12 +151,17 @@ struct PhotoEditorScreen: View {
             await openCurrentPhoto()
         }
         .onDisappear {
-            prewarmTask?.cancel()
+            preloader?.cancel()
             controller?.close()
             // The cached sessions belong to this editor run: their temporary
             // directories have to go with it, or a long browse leaves three
-            // photos' worth of files behind every time.
+            // photos' worth of files behind every time. The previews too.
             dependencies.photoEditing.releaseCachedSessions()
+            previewCache.clear()
+        }
+        // A sync changed what other photos will open with: draw them again.
+        .onChange(of: session?.draftRevision) {
+            if let session { startPreloading(session, canvas: controller) }
         }
         .interactiveDismissDisabled(hasUnsavedWork)
         // An alert, not a confirmation dialog: on iOS 26 the dialog floats over the
@@ -184,6 +193,7 @@ struct PhotoEditorScreen: View {
         // Short of memory: caches go, the session stays (FS-03.13a §6).
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)) { _ in
             controller?.handleMemoryWarning()
+            previewCache.handleMemoryWarning()
         }
         .alert("Discard this editing session?", isPresented: $isDiscardConfirmationPresented) {
             Button("Discard Changes", role: .destructive) { dismiss() }
@@ -365,7 +375,8 @@ struct PhotoEditorScreen: View {
             // `{camera}` tokens in text overlays, so handing it to a sibling
             // would stamp the wrong camera on it.
             service: dependencies.photoEditing,
-            metadata: target.localIdentifier == asset.localIdentifier ? metadata : nil
+            metadata: target.localIdentifier == asset.localIdentifier ? metadata : nil,
+            previewCache: session.isMultiPhoto ? previewCache : nil
         )
         // Every session opens on Adjust: the tab the user left last time is
         // rarely the one they want on a different photo.
@@ -374,30 +385,27 @@ struct PhotoEditorScreen: View {
         // Swapped out, so its original can go. After the assignment, not before:
         // closing first is what left the screen with no controller to render.
         outgoing?.close()
-        await newController.load()
-        // After load: `load()` reads the asset's own saved edit, and the draft
-        // from this session is the newer of the two.
-        if let draft = session.draft(for: target) {
-            newController.apply(draft)
-        }
-        prewarmNeighbours(of: session)
+        // The session's draft is newer than the asset's own saved edit, and
+        // goes on inside `load` so the saved one is never drawn first.
+        startPreloading(session, canvas: newController)
+        await newController.load(draft: session.draft(for: target))
     }
 
-    /// Opens the sessions either side of the current photo in the background.
-    /// A filmstrip walk goes next, next, back — and the back step used to pay
-    /// a full `beginSession` (an iCloud round trip for anything not local)
-    /// for a photo the editor had open a second earlier.
-    private func prewarmNeighbours(of session: EditorSession) {
-        let neighbours = [session.index - 1, session.index + 1]
-            .filter { session.assets.indices.contains($0) }
-            .map { session.assets[$0] }
-        guard !neighbours.isEmpty else { return }
-        prewarmTask?.cancel()
-        prewarmTask = Task { @MainActor in
-            for asset in neighbours {
-                guard !Task.isCancelled else { return }
-                await dependencies.photoEditing.prewarmSession(for: asset)
-            }
+    /// Walks the whole run in the background, outward from the photo on
+    /// screen, drawing each photo's full-quality preview into
+    /// `previewCache`. It waits while the canvas is busy, so the photo just
+    /// opened always goes first.
+    private func startPreloading(_ session: EditorSession, canvas: PhotoEditorController?) {
+        guard session.isMultiPhoto else { return }
+        let preloader = preloader ?? EditorPreviewPreloader(
+            service: dependencies.photoEditing,
+            cache: previewCache
+        )
+        self.preloader = preloader
+        // A switch restarts the walk with the new canvas, so the one captured
+        // here is always the one on screen.
+        preloader.follow(session: session) { [weak canvas] in
+            canvas?.isBusy ?? true
         }
     }
 
@@ -411,6 +419,10 @@ struct PhotoEditorScreen: View {
         if let outgoing, let current = session.current {
             outgoing.commitCropSession()
             session.store(outgoing.recipe, for: current)
+            // Coming back to this photo shows it at once. Not after a save:
+            // the library's copy is the one to show now, and the cache entry
+            // was dropped for that reason.
+            if !session.isSaved(current) { outgoing.storePreviewInCache() }
         }
         session.moveToPhoto(at: index)
         // The outgoing controller is *not* dropped here. The body renders
@@ -460,6 +472,7 @@ struct PhotoEditorScreen: View {
             savesCopy: savesCopy,
             album: sourceAlbum,
             onSaved: { assetID in
+                previewCache.invalidate(assetID: assetID)
                 session.markSaved(assetID)
                 onSaved?(assetID)
             },
@@ -795,6 +808,7 @@ struct PhotoEditorScreen: View {
                 // Announced here, once, not in the fallback alert's OK button:
                 // the JPEG fallback still saved an asset worth revealing.
                 if let savedAssetID = controller.savedAssetID {
+                    previewCache.invalidate(assetID: savedAssetID)
                     session?.markSaved(savedAssetID)
                     onSaved?(savedAssetID)
                 }

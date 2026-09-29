@@ -104,10 +104,17 @@ final class PhotoEditingService {
     /// and bounded.
     private var recentSessions: [(id: String, session: PhotoEditingSession)] = []
     private static let recentSessionLimit = 3
+    /// The photo the editor has open. Its session is never the one evicted:
+    /// the multi-photo preloader warms neighbours into this cache while the
+    /// canvas is still using its own entry, and evicting that entry would
+    /// delete the source file out from under the live editor.
+    private var activeSessionID: String?
 
     /// Opens a session, reusing the cached one when this photo was open a
-    /// moment ago.
-    func beginSession(for asset: PHAsset) async throws -> PhotoEditingSession {
+    /// moment ago. `isOnCanvas`: the editor's own photo, pinned against
+    /// eviction until another photo takes the canvas.
+    func beginSession(for asset: PHAsset, isOnCanvas: Bool = false) async throws -> PhotoEditingSession {
+        if isOnCanvas { activeSessionID = asset.localIdentifier }
         if let cached = recentSessions.first(where: { $0.id == asset.localIdentifier })?.session {
             return cached
         }
@@ -116,28 +123,33 @@ final class PhotoEditingService {
         return session
     }
 
-    /// Warms a session the user has not asked for yet — the neighbours in a
-    /// multi-photo run. Failures are silent: this is a head start, not a
-    /// promise, and the real open will report anything that is wrong.
-    func prewarmSession(for asset: PHAsset) async {
-        guard asset.mediaType == .image,
-              !recentSessions.contains(where: { $0.id == asset.localIdentifier })
-        else { return }
-        guard let session = try? await makeSession(for: asset) else { return }
-        // The editor may have closed while this was waiting on iCloud, and
-        // the cache it would go into has already been released.
+    /// A session for the multi-photo preloader (FS-03.09b §2). `keeps` puts
+    /// it in the recent cache — a neighbour of the photo on screen, likely the
+    /// next one opened. Otherwise it is the caller's, to hand to `endSession`
+    /// when the previews are drawn: the preloader walks the whole run, and a
+    /// session holds a full copy of the original, so twenty photos must not
+    /// mean twenty copies.
+    func preloadSession(for asset: PHAsset, keeps: Bool) async throws -> PhotoEditingSession {
+        if let cached = recentSessions.first(where: { $0.id == asset.localIdentifier })?.session {
+            return cached
+        }
+        let session = try await makeSession(for: asset)
+        // The editor may have closed, or the walk moved on, while this was
+        // waiting on iCloud.
         guard !Task.isCancelled else {
             discard(session)
-            return
+            throw CancellationError()
         }
-        remember(session, for: asset.localIdentifier)
+        if keeps { remember(session, for: asset.localIdentifier) }
+        return session
     }
 
     private func remember(_ session: PhotoEditingSession, for id: String) {
         recentSessions.removeAll { $0.id == id }
         recentSessions.append((id, session))
-        while recentSessions.count > Self.recentSessionLimit {
-            let evicted = recentSessions.removeFirst()
+        while recentSessions.count > Self.recentSessionLimit,
+              let oldest = recentSessions.firstIndex(where: { $0.id != activeSessionID }) {
+            let evicted = recentSessions.remove(at: oldest)
             discard(evicted.session)
         }
     }
@@ -154,6 +166,7 @@ final class PhotoEditingService {
     func releaseCachedSessions() {
         for entry in recentSessions { discard(entry.session) }
         recentSessions.removeAll()
+        activeSessionID = nil
     }
 
     private func makeSession(for asset: PHAsset) async throws -> PhotoEditingSession {
