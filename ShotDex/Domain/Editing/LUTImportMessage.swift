@@ -13,6 +13,7 @@ enum LUTImportMessage {
     static let cubeType = UTType(filenameExtension: "cube") ?? .data
 
     static func text(for error: any Error) -> String {
+        if let refusal = error as? PresetImportLimits.Refusal { return refusal.message }
         guard let failure = error as? CubeLUTParser.Failure else {
             return String(
                 localized: "The file could not be opened as text. ShotDex reads .cube files.",

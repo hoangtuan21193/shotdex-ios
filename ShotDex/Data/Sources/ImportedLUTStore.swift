@@ -71,6 +71,9 @@ final class ImportedLUTStore {
         let accessing = pickedURL.startAccessingSecurityScopedResource()
         defer { if accessing { pickedURL.stopAccessingSecurityScopedResource() } }
 
+        // Size first, from the file system: a 2 GB file named .cube is never
+        // read into memory to find out it is not a LUT (FS-03.14a §2).
+        if case let .failure(refusal) = PresetImportLimits.check(pickedURL) { throw refusal }
         let text = try String(contentsOf: pickedURL, encoding: .utf8)
         let parsed = try CubeLUTParser.parse(text)
 
