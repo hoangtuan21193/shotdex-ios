@@ -22,6 +22,8 @@ final class EditorSession {
     private(set) var drafts: [String: PhotoEditRecipe] = [:]
     /// Assets this session has already written.
     private(set) var savedIDs: Set<String> = []
+    /// The recipe each photo was last written with by Save Changes.
+    private var savedRecipes: [String: PhotoEditRecipe] = [:]
     /// Bumped whenever any draft changes, so the preview preloader can redraw
     /// the photos whose next open will look different (FS-03.09b §2).
     private(set) var draftRevision = 0
@@ -42,17 +44,25 @@ final class EditorSession {
         drafts[asset.localIdentifier]
     }
 
-    /// Remembers where a photo was left. An identity recipe is dropped rather
-    /// than stored: it is the same as never having touched the photo, and
-    /// keeping it would badge the thumbnail as edited.
+    /// Remembers where a photo was left. A recipe with nothing to write is
+    /// dropped rather than stored: identity is the same as never having touched
+    /// the photo, and the recipe a Save Changes just wrote is the same as the
+    /// library's copy. Keeping either would badge the thumbnail as edited and
+    /// count the photo in Save All again (FS-03.09b AC-5).
     func store(_ recipe: PhotoEditRecipe, for asset: PHAsset) {
-        let before = drafts[asset.localIdentifier]
-        if recipe.isIdentity {
-            drafts.removeValue(forKey: asset.localIdentifier)
+        store(recipe, forID: asset.localIdentifier)
+    }
+
+    /// `store(_:for:)` by asset id, so the rule is testable without PhotoKit.
+    func store(_ recipe: PhotoEditRecipe, forID id: String) {
+        let before = drafts[id]
+        let isUnchanged = savedRecipes[id].map { recipe == $0 } ?? recipe.isIdentity
+        if isUnchanged {
+            drafts.removeValue(forKey: id)
         } else {
-            drafts[asset.localIdentifier] = recipe
+            drafts[id] = recipe
         }
-        if drafts[asset.localIdentifier] != before { draftRevision += 1 }
+        if drafts[id] != before { draftRevision += 1 }
     }
 
     /// Lightroom's Sync Settings: hand this recipe to every *other* photo in the
@@ -65,8 +75,12 @@ final class EditorSession {
         }
     }
 
-    func markSaved(_ assetID: String) {
+    /// `recipe`: what Save Changes wrote to this photo, so leaving it untouched
+    /// afterwards does not park the same edit as a draft again. Nil for a Save
+    /// Copy, which leaves the photo itself as it was.
+    func markSaved(_ assetID: String, recipe: PhotoEditRecipe? = nil) {
         savedIDs.insert(assetID)
+        if let recipe { savedRecipes[assetID] = recipe }
         if drafts.removeValue(forKey: assetID) != nil { draftRevision += 1 }
     }
 

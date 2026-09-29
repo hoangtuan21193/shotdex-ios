@@ -78,6 +78,10 @@ Bản đầu bê nguyên recipe, tức dán crop 4:5 và mask khuôn mặt của
 
 - Lưu một ảnh xong thì **nhảy sang ảnh kế còn nháp** (quét xuôi rồi vòng lại), chỉ đóng khi hết. Bản đầu
   đóng ngay sau mỗi lần lưu nên sync 20 ảnh chỉ lưu được 1, và badge "đã lưu" là code không bao giờ chạy tới.
+- Ảnh vừa **Save Changes** mở lại **từ Photos**, không từ phiên cache trước khi lưu: `PhotoEditingService`
+  cho phiên đó nghỉ (`EditingSessionCache.retire`) — không dùng lại, nhưng file tạm giữ tới khi đóng editor vì
+  canvas có thể còn vẽ từ nó. Rời ảnh vừa lưu mà chưa sửa gì thêm thì **không** gửi lại thành nháp
+  (`EditorSession.markSaved(_:recipe:)`): ảnh không bị đếm lại trong `Save Changes to N Photos`.
 - **Save All**: sheet lưu có thêm `Save Changes to N Photos` / `Save N Copies` khi phiên có từ 2 ảnh mang
   nháp. Vòng lặp chạy **không dựng editor** — editor tồn tại để nuôi preview tương tác, 40 cái trong một
   vòng lặp là vẽ ảnh không ai nhìn.
@@ -119,7 +123,7 @@ mẫu, mà "làm giống tấm kia" thì không thể làm khi chỉ thấy mộ
 
 ## 7. Tiêu chí nghiệm thu
 
-Mới có cho preload/cache preview (§2); phần còn lại của trang **chưa viết** — xem
+Mới có cho preload/cache preview (§2) và lưu trong phiên (§4, AC-5); phần còn lại của trang **chưa viết** — xem
 [README — Việc còn nợ](../../README.md#6-việc-còn-nợ). Máy: iPhone 17 iOS 26.5, iPad Pro 13" iOS 26.5.
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
@@ -128,3 +132,4 @@ Mới có cho preload/cache preview (§2); phần còn lại của trang **chưa
 | AC-2 | ảnh 2 đã kéo Exposure lên +0,39, rồi chuyển sang ảnh 3 | chạm lại ảnh 2 | ảnh 2 hiện ngay, đậm 100%, với Exposure +0,39, không spinner (pill `PREPARING` nếu có thì chỉ tới khi công cụ sẵn); chạm lại ảnh 1 chưa sửa cũng vậy | ✅ `EditorPreviewCacheTests.storedPreviewComesBackFromMemory` · `.evictedPreviewIsReadBackFromDisk` · `.unchangedPhotoSharesOneFile` · `iphone-batch-preview-cache.json` (`5-photo2-back-tap`, `6-photo1-back-tap`) · `ipad-batch-preview-cache.json` (`i4-photo1-back-tap`, `i5-photo2-back-tap`) |
 | AC-3 | preview đã cache của một ảnh vẽ ở recipe A | nháp của ảnh đổi sang B (Sync), hoặc ảnh đổi trong thư viện, hoặc vừa lưu | A không còn là kết quả: với B là placeholder cũ, ảnh render lại; đổi trong thư viện hay vừa lưu thì mục bị bỏ | ✅ `EditorPreviewCacheTests.hitOnlyWhenTheFingerprintMatches` · `.aNewModificationStampReplacesTheWholeEntry` · `.invalidateDropsThePhoto` · ⚠️ chưa chụp màn Sync → mở ảnh đã cache |
 | AC-4 | phiên đã preload 5 ảnh | đóng editor; hoặc hệ thống báo thiếu bộ nhớ | đóng: thư mục `ShotDexPhoto-Previews-*` bị xoá, một lần ghi đang dở không tạo lại mục; thiếu bộ nhớ: RAM giữ 0 preview, file còn; bình thường RAM giữ ≤ 3 preview đã giải mã | ✅ `EditorPreviewCacheTests.clearRemovesTheDirectory` · `.memoryWarningKeepsTheDisk` · `.recentListKeepsOnlyTheNewest` · `.replacedFilesAreHandedBackForDeletion` · ⚠️ chưa đo bộ nhớ trên máy thật |
+| AC-5 | phiên 3 ảnh, ảnh 1 đã Reset All rồi kéo Exposure lên +0,66 (bản đã lưu trước đó: +0,66 / Contrast +0,26), ảnh 2 có nháp | Save → Save Changes trên ảnh 1 (editor tự sang ảnh 2), rồi chạm lại ảnh 1 trên filmstrip; sau đó kéo Contrast lên +0,26, Save Changes lần nữa và mở lại ảnh 1 | ảnh 1 mở lại đúng bản vừa lưu: Exposure +0,66, Contrast 0, Undo tắt — không phải recipe trước khi lưu; sheet lưu ở ảnh 2 không còn `Save Changes to 2 Photos` (ảnh 1 không thành nháp lại); lần lưu thứ hai dựng tiếp trên bản đã lưu: mở lại +0,66 / +0,26 | ✅ `EditingSessionCacheTests.savedPhotoIsRetiredNotReused` · `.retireIsIdempotent` · `.reopenAfterSaveCachesTheNewSession` · `.evictionSparesTheCanvas` · `.rememberingAgainReplaces` · `EditorSessionDraftTests.leavingASavedPhotoDoesNotParkItAgain` · `.anEditAfterTheSaveIsADraft` · `.resetAfterSaveIsADraft` · `.saveCopyKeepsTheDraft` · `iphone-batch-save-reopen.json` (cần 3 JPEG gradient ISO 111 / 222 / 333 trong thư viện sim; `5b-save-sheet-on-photo2`, `6-photo1-reopened`, `10-photo1-reopened-again`); bỏ `retire` thì `6-photo1-reopened` ra +0,66 / +0,26 (lỗi cũ) · ⚠️ chưa chạy trên iPad / Duo |

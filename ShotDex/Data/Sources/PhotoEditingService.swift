@@ -102,20 +102,19 @@ final class PhotoEditingService {
     /// a filmstrip walk actually revisits. Each entry holds a PhotoKit input
     /// and a temporary directory, not a decoded image, so the cost is small
     /// and bounded.
-    private var recentSessions: [(id: String, session: PhotoEditingSession)] = []
-    private static let recentSessionLimit = 3
-    /// The photo the editor has open. Its session is never the one evicted:
-    /// the multi-photo preloader warms neighbours into this cache while the
-    /// canvas is still using its own entry, and evicting that entry would
-    /// delete the source file out from under the live editor.
-    private var activeSessionID: String?
+    ///
+    /// The photo the editor has open is never the one evicted: the
+    /// multi-photo preloader warms neighbours into this cache while the canvas
+    /// is still using its own entry, and evicting that entry would delete the
+    /// source file out from under the live editor.
+    private var sessions = EditingSessionCache<PhotoEditingSession>(limit: 3)
 
     /// Opens a session, reusing the cached one when this photo was open a
     /// moment ago. `isOnCanvas`: the editor's own photo, pinned against
     /// eviction until another photo takes the canvas.
     func beginSession(for asset: PHAsset, isOnCanvas: Bool = false) async throws -> PhotoEditingSession {
-        if isOnCanvas { activeSessionID = asset.localIdentifier }
-        if let cached = recentSessions.first(where: { $0.id == asset.localIdentifier })?.session {
+        if isOnCanvas { sessions.activeID = asset.localIdentifier }
+        if let cached = sessions.cached(asset.localIdentifier) {
             return cached
         }
         let session = try await makeSession(for: asset)
@@ -130,7 +129,7 @@ final class PhotoEditingService {
     /// session holds a full copy of the original, so twenty photos must not
     /// mean twenty copies.
     func preloadSession(for asset: PHAsset, keeps: Bool) async throws -> PhotoEditingSession {
-        if let cached = recentSessions.first(where: { $0.id == asset.localIdentifier })?.session {
+        if let cached = sessions.cached(asset.localIdentifier) {
             return cached
         }
         let session = try await makeSession(for: asset)
@@ -145,13 +144,7 @@ final class PhotoEditingService {
     }
 
     private func remember(_ session: PhotoEditingSession, for id: String) {
-        recentSessions.removeAll { $0.id == id }
-        recentSessions.append((id, session))
-        while recentSessions.count > Self.recentSessionLimit,
-              let oldest = recentSessions.firstIndex(where: { $0.id != activeSessionID }) {
-            let evicted = recentSessions.remove(at: oldest)
-            discard(evicted.session)
-        }
+        for dropped in sessions.remember(session, id: id) { discard(dropped) }
     }
 
     /// Drops a cached session for good — the only place its temporary
@@ -164,9 +157,7 @@ final class PhotoEditingService {
 
     /// Everything the cache holds, released when the editor closes.
     func releaseCachedSessions() {
-        for entry in recentSessions { discard(entry.session) }
-        recentSessions.removeAll()
-        activeSessionID = nil
+        for session in sessions.releaseAll() { discard(session) }
     }
 
     private func makeSession(for asset: PHAsset) async throws -> PhotoEditingSession {
@@ -204,11 +195,12 @@ final class PhotoEditingService {
         )
     }
 
-    /// Ends a session the caller owns. A session still in `recentSessions` is
-    /// *not* torn down: deleting its temporary directory would leave the next
-    /// open reading files that are gone.
+    /// Ends a session the caller owns. A session the cache still holds —
+    /// recent, or retired by a save — is *not* torn down: deleting its
+    /// temporary directory would leave the next open, or the canvas still
+    /// drawing from it, reading files that are gone.
     func endSession(_ session: PhotoEditingSession) {
-        guard !recentSessions.contains(where: { $0.session === session }) else { return }
+        guard !sessions.owns(session) else { return }
         discard(session)
     }
 
@@ -387,6 +379,7 @@ final class PhotoEditingService {
                 to: session.asset,
                 includeMetadata: includeMetadata
             )
+            sessions.retire(session.asset.localIdentifier)
             let actualFormat: PhotoOutputFormat =
                 output.defaultRenderedContentType?.conforms(to: .heic) == true
                     ? .heic
@@ -417,6 +410,10 @@ final class PhotoEditingService {
             to: session.asset,
             includeMetadata: includeMetadata
         )
+        // The photo now carries the saved recipe and a new modification
+        // date: the next open must read PhotoKit again, not reuse this
+        // session's pre-save input (FS-03.09b AC-5).
+        sessions.retire(session.asset.localIdentifier)
         return PhotoSaveResult(
             assetID: session.asset.localIdentifier,
             format: actualFormat,

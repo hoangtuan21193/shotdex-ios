@@ -473,7 +473,10 @@ struct PhotoEditorScreen: View {
             album: sourceAlbum,
             onSaved: { assetID in
                 previewCache.invalidate(assetID: assetID)
-                session.markSaved(assetID)
+                session.markSaved(
+                    assetID,
+                    recipe: savesCopy ? nil : items.first { $0.asset.localIdentifier == assetID }?.recipe
+                )
                 onSaved?(assetID)
             },
             onFinished: {
@@ -809,7 +812,12 @@ struct PhotoEditorScreen: View {
                 // the JPEG fallback still saved an asset worth revealing.
                 if let savedAssetID = controller.savedAssetID {
                     previewCache.invalidate(assetID: savedAssetID)
-                    session?.markSaved(savedAssetID)
+                    // Save Changes hands back this photo's own id; Save Copy a
+                    // new asset's, and the photo keeps its draft.
+                    session?.markSaved(
+                        savedAssetID,
+                        recipe: savedAssetID == controller.asset.localIdentifier ? controller.recipe : nil
+                    )
                     onSaved?(savedAssetID)
                 }
                 if controller.didFallbackToJPEG {
