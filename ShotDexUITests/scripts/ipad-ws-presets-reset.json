@@ -1,0 +1,31 @@
+{
+  "steps": [
+    { "action": "launch", "arguments": ["-editor.sidebarEdge", "trailing", "-editor.sidebarHidden", "NO", "-editor.sidebarWidth", "320"] },
+    { "action": "wait", "seconds": 20 },
+    { "action": "tap", "label": "Photo, file type", "type": "cell", "index": 2 },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Edit", "type": "button" },
+    { "action": "wait", "seconds": 18 },
+    { "action": "tap", "label": "rail.presets" },
+    { "action": "wait", "seconds": 5 },
+    { "action": "screenshot", "name": "f01-presets" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "dump", "name": "f01-presets", "type": "button" },
+    { "action": "tap", "label": "rail.edit" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "tap", "label": "Light", "type": "button" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "drag", "x": 0.80, "y": 0.275, "toX": 0.88, "toY": 0.275 },
+    { "action": "wait", "seconds": 3 },
+    { "action": "screenshot", "name": "f02-exposure-dragged" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "dump", "name": "f02-exposure-dragged" },
+    { "action": "tap", "label": "Reset Light", "type": "button" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "dump", "name": "f03-after-reset-light" },
+    { "action": "tap", "label": "Undo", "type": "button" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "dump", "name": "f04-after-undo", "type": "staticText" },
+    { "action": "wait", "seconds": 8 }
+  ]
+}
