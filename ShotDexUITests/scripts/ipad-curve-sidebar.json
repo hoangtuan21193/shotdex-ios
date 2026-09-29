@@ -1,0 +1,87 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 25
+  },
+  {
+   "action": "tap",
+   "x": 0.25,
+   "y": 0.18
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Edit"
+  },
+  {
+   "action": "wait",
+   "seconds": 12
+  },
+  {
+   "action": "tap",
+   "label": "Light",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "swipe",
+   "x": 0.13,
+   "y": 0.8,
+   "direction": "up",
+   "distance": 0.35
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "swipe",
+   "x": 0.13,
+   "y": 0.8,
+   "direction": "up",
+   "distance": 0.35
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "swipe",
+   "x": 0.13,
+   "y": 0.8,
+   "direction": "up",
+   "distance": 0.35
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "1-sidebar-curve"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "dump",
+   "name": "curve-other",
+   "type": "other"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  }
+ ]
+}

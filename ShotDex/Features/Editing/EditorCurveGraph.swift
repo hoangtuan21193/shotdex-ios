@@ -438,6 +438,13 @@ struct EditorCurvePanel: View {
                     .buttonStyle(EditorChipButtonStyle(isSelected: false))
                     .disabled(controller.editedCurve.region == .identity)
                     .opacity(controller.editedCurve.region == .identity ? EditorTheme.rowDisabled : 1)
+            } else {
+                // The sidebar's channel row has no room for it: four chips and
+                // Reset in ~210pt cut "RGB" to "R…".
+                Button("Reset") { controller.resetCurve(channel) }
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(isLinear ? EditorTheme.dimText : EditorTheme.accent)
+                    .disabled(isLinear)
             }
         }
     }
@@ -533,12 +540,6 @@ struct EditorCurvePanel: View {
                     .buttonStyle(EditorChipButtonStyle(isSelected: channel == option))
                 }
                 Spacer(minLength: 0)
-                Button("Reset") {
-                    controller.resetCurve(channel)
-                }
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(isLinear ? EditorTheme.dimText : EditorTheme.accent)
-                .disabled(isLinear)
             }
 
             Text("Tap the line to add a point. Drag to move it, double-tap to remove it.")
