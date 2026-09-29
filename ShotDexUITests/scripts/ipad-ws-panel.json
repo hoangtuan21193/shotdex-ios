@@ -1,0 +1,215 @@
+{
+  "steps": [
+    {
+      "action": "launch",
+      "arguments": [
+        "-editor.sidebarEdge",
+        "trailing",
+        "-editor.sidebarHidden",
+        "NO",
+        "-editor.sidebarWidth",
+        "320"
+      ]
+    },
+    {
+      "action": "wait",
+      "seconds": 20
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 2
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "tap",
+      "label": "Edit",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 18
+    },
+    {
+      "action": "screenshot",
+      "name": "a01-default"
+    },
+    {
+      "action": "dump",
+      "name": "a01-default"
+    },
+    {
+      "action": "tap",
+      "label": "Light",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "dump",
+      "name": "a02-light-open",
+      "type": "button"
+    },
+    {
+      "action": "swipe",
+      "x": 0.85,
+      "y": 0.35,
+      "direction": "up",
+      "distance": 0.25
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "screenshot",
+      "name": "a03-light-scrolled"
+    },
+    {
+      "action": "dump",
+      "name": "a03-light-scrolled"
+    },
+    {
+      "action": "tap",
+      "label": "Detail",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "screenshot",
+      "name": "a04-detail-tapped"
+    },
+    {
+      "action": "dump",
+      "name": "a04-detail-tapped",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Color",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "screenshot",
+      "name": "a05-color"
+    },
+    {
+      "action": "dump",
+      "name": "a05-color"
+    },
+    {
+      "action": "tap",
+      "label": "rail.edit"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "screenshot",
+      "name": "a06-panel-hidden"
+    },
+    {
+      "action": "dump",
+      "name": "a06-panel-hidden",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "rail.edit"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "dump",
+      "name": "a07-panel-back",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "rail.crop"
+    },
+    {
+      "action": "wait",
+      "seconds": 5
+    },
+    {
+      "action": "screenshot",
+      "name": "a08-crop"
+    },
+    {
+      "action": "dump",
+      "name": "a08-crop"
+    },
+    {
+      "action": "swipe",
+      "x": 0.85,
+      "y": 0.35,
+      "direction": "up",
+      "distance": 0.25
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "screenshot",
+      "name": "a09-crop-scrolled"
+    },
+    {
+      "action": "dump",
+      "name": "a09-crop-scrolled"
+    },
+    {
+      "action": "tap",
+      "label": "Rotate",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "dump",
+      "name": "a10-crop-rotated",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Cancel",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "screenshot",
+      "name": "a11-after-cancel"
+    },
+    {
+      "action": "dump",
+      "name": "a11-after-cancel",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    }
+  ]
+}

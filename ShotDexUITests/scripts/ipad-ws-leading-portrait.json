@@ -1,0 +1,295 @@
+{
+  "steps": [
+    {
+      "action": "launch",
+      "arguments": [
+        "-editor.sidebarEdge",
+        "leading",
+        "-editor.sidebarHidden",
+        "NO",
+        "-editor.sidebarWidth",
+        "320"
+      ]
+    },
+    {
+      "action": "wait",
+      "seconds": 20
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 2
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "tap",
+      "label": "Edit",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 18
+    },
+    {
+      "action": "screenshot",
+      "name": "c01-leading-landscape"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "dump",
+      "name": "c01-leading-landscape",
+      "type": "button"
+    },
+    {
+      "action": "dump",
+      "name": "c01-leading-landscape-images",
+      "type": "image"
+    },
+    {
+      "action": "tap",
+      "label": "rail.crop"
+    },
+    {
+      "action": "wait",
+      "seconds": 5
+    },
+    {
+      "action": "screenshot",
+      "name": "c01b-crop-leading"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "dump",
+      "name": "c01b-crop-leading",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Cancel",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "tap",
+      "label": "rail.mask"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "tap",
+      "label": "New Mask",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "tap",
+      "label": "Linear",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "tap",
+      "label": "Create",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 5
+    },
+    {
+      "action": "tap",
+      "label": "Masks",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "tap",
+      "label": "New Mask",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "tap",
+      "label": "Radial",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "tap",
+      "label": "Create",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 5
+    },
+    {
+      "action": "tap",
+      "label": "Masks",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "screenshot",
+      "name": "c01c-mask-list"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "dump",
+      "name": "c01c-mask-list",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Cancel",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "orientation",
+      "text": "portrait"
+    },
+    {
+      "action": "wait",
+      "seconds": 12
+    },
+    {
+      "action": "screenshot",
+      "name": "c02-leading-portrait"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "dump",
+      "name": "c02-leading-portrait",
+      "type": "button"
+    },
+    {
+      "action": "dump",
+      "name": "c02-leading-portrait-images",
+      "type": "image"
+    },
+    {
+      "action": "tap",
+      "label": "rail.edit"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "screenshot",
+      "name": "c03-portrait-folded"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "dump",
+      "name": "c03-portrait-folded",
+      "type": "button"
+    },
+    {
+      "action": "dump",
+      "name": "c03-portrait-folded-images",
+      "type": "image"
+    },
+    {
+      "action": "orientation",
+      "text": "landscape"
+    },
+    {
+      "action": "wait",
+      "seconds": 10
+    },
+    {
+      "action": "dump",
+      "name": "c04-landscape-folded",
+      "type": "button"
+    },
+    {
+      "action": "orientation",
+      "text": "portrait"
+    },
+    {
+      "action": "wait",
+      "seconds": 10
+    },
+    {
+      "action": "screenshot",
+      "name": "c05-portrait-folded-again"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "dump",
+      "name": "c05-portrait-folded-again",
+      "type": "button"
+    },
+    {
+      "action": "dump",
+      "name": "c05-portrait-folded-again-images",
+      "type": "image"
+    },
+    {
+      "action": "tap",
+      "label": "rail.edit"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "orientation",
+      "text": "landscape"
+    },
+    {
+      "action": "wait",
+      "seconds": 10
+    }
+  ]
+}
