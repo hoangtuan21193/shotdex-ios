@@ -1,0 +1,28 @@
+{
+ "steps": [
+  {"action": "launch"},
+  {"action": "wait", "seconds": 25},
+  {"action": "tap", "x": 0.5, "y": 0.35},
+  {"action": "wait", "seconds": 6},
+  {"action": "tap", "label": "Edit"},
+  {"action": "wait", "seconds": 12},
+  {"action": "tap", "label": "Heal"},
+  {"action": "wait", "seconds": 3},
+  {"action": "tap", "x": 0.25, "y": 0.33},
+  {"action": "wait", "seconds": 3},
+  {"action": "tap", "x": 0.5, "y": 0.33},
+  {"action": "wait", "seconds": 3},
+  {"action": "tap", "x": 0.75, "y": 0.33},
+  {"action": "wait", "seconds": 3},
+  {"action": "tap", "label": "Healing spot 2"},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "1-three-spots"},
+  {"action": "wait", "seconds": 4},
+  {"action": "dump", "name": "heal-buttons", "type": "button"},
+  {"action": "tap", "label": "Delete Spot"},
+  {"action": "wait", "seconds": 3},
+  {"action": "screenshot", "name": "2-deleted"},
+  {"action": "wait", "seconds": 4},
+  {"action": "dump", "name": "heal-texts", "type": "staticText"}
+ ]
+}

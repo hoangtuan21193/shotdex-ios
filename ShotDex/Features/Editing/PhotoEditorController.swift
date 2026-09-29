@@ -2070,7 +2070,9 @@ final class PhotoEditorController {
         else { return }
         recordHistory()
         recipe.healing.remove(at: index)
-        selectedHealingSpotID = recipe.healing.last?.id
+        // Nothing picked afterwards (FS-03.13 AC-33): handing the selection
+        // to another spot put the next Delete one tap from the wrong spot.
+        selectedHealingSpotID = nil
         scheduleRender()
     }
 

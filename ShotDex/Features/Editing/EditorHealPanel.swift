@@ -8,11 +8,13 @@ struct EditorHealPanel: View {
     @Bindable var controller: PhotoEditorController
     /// Off in the wide sidebar, which scrolls every panel at once.
     @Environment(\.editorPanelScrolls) private var panelScrolls
+    @Environment(\.editorUsesPanelStyle) private var usesPanelStyle
+    @Environment(\.editorSliderStacked) private var isStacked
 
     var body: some View {
-        // The phone panel is a fixed height: without its own scroll the picked
-        // spot's row — New Source, Delete Spot — sat clipped under Opacity.
-        if panelScrolls {
+        if usesPanelStyle && !isStacked {
+            EditorHealPhoneRows(controller: controller)
+        } else if panelScrolls {
             ScrollView(.vertical) { content }
         } else {
             content
@@ -253,6 +255,208 @@ struct EditorHealPanel: View {
             return "Tap a spot to remove it, or drag along a wire. ShotDex fills it from beside it."
         }
         return "Drag the dashed outline to fill from somewhere else. Tap or drag the photo for another."
+    }
+}
+
+/// Heal on the phone (FS-03.13c §4), top to bottom: Heal · Clone · Red Eye,
+/// the pinned pills, then — scrolling — SELECTED SPOT (New Source · Delete
+/// Spot, dimmed with nothing picked) and SPOTS · n (Visualize Spots,
+/// Threshold while it is on, Show Spot Pins · Clear All). No Remove (§4).
+struct EditorHealPhoneRows: View {
+    @Bindable var controller: PhotoEditorController
+    @State private var isConfirmingClearAll = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            modeRow
+            if controller.isRedEyeMode {
+                EditorPillRow(pills: redEyePills) { EmptyView() }
+            } else {
+                EditorPillRow(pills: healPills) { EmptyView() }
+            }
+            ScrollView(.vertical) {
+                VStack(spacing: 0) {
+                    if controller.isRedEyeMode {
+                        redEyeRows
+                    } else {
+                        spotRows
+                    }
+                }
+                .padding(.bottom, AppTheme.Spacing.lg)
+            }
+            .scrollIndicators(.hidden)
+        }
+    }
+
+    private var modeRow: some View {
+        HStack(spacing: EditorStripLayout.chipSpacing) {
+            ForEach(PhotoHealingMode.allCases) { mode in
+                modeChip(
+                    mode.displayName,
+                    systemImage: mode == .heal ? "bandage" : "square.on.square",
+                    isSelected: !controller.isRedEyeMode && controller.healingMode == mode
+                ) { controller.setHealingMode(mode) }
+            }
+            modeChip("Red Eye", systemImage: "eye", isSelected: controller.isRedEyeMode) {
+                controller.isRedEyeMode = true
+            }
+        }
+        .padding(.horizontal, EditorStripLayout.horizontalInset)
+        .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
+    }
+
+    private func modeChip(_ title: String, systemImage: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            EditorPanelChipLabel(title: title, systemImage: systemImage)
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(EditorChipButtonStyle(isSelected: isSelected))
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    // MARK: Pills
+
+    private func percent(_ value: Double) -> String { "\(Int((value * 100).rounded()))" }
+
+    private var healPills: [EditorPill] {
+        [
+            EditorPill(
+                id: "size", title: "Size", value: controller.healingRadius, range: 0.005...0.15, defaultValue: 0.03,
+                text: { "\(Int(($0 * 200).rounded()))" }, set: { controller.setHealingRadius($0) },
+                begin: { controller.beginContinuousChange() }, end: { controller.endContinuousChange() }
+            ),
+            EditorPill(
+                id: "feather", title: "Feather", value: controller.healingFeather, range: 0...1, defaultValue: 0.5,
+                text: percent, set: { controller.setHealingFeather($0) },
+                begin: { controller.beginContinuousChange() }, end: { controller.endContinuousChange() }
+            ),
+            EditorPill(
+                id: "opacity", title: "Opacity", value: controller.healingOpacity, range: 0...1, defaultValue: 1,
+                text: percent, set: { controller.setHealingOpacity($0) },
+                begin: { controller.beginContinuousChange() }, end: { controller.endContinuousChange() }
+            ),
+        ]
+    }
+
+    private var redEyePills: [EditorPill] {
+        [
+            EditorPill(
+                id: "pupil", title: "Pupil", value: controller.redEyePupilSize, range: 0.05...1, defaultValue: 0.5,
+                text: percent, set: { controller.setRedEyePupilSize($0) },
+                begin: { controller.beginContinuousChange() }, end: { controller.endContinuousChange() }
+            ),
+            EditorPill(
+                id: "darken", title: "Darken", value: controller.redEyeDarken, range: 0...1, defaultValue: 0.5,
+                text: percent, set: { controller.setRedEyeDarken($0) },
+                begin: { controller.beginContinuousChange() }, end: { controller.endContinuousChange() }
+            ),
+        ]
+    }
+
+    // MARK: Sections
+
+    private func label(_ text: String) -> some View {
+        Text(text)
+            .font(EditorTheme.groupLabel)
+            .tracking(1.1)
+            .foregroundStyle(Color.white.opacity(0.45))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, AppTheme.Spacing.lg)
+            .frame(height: 26)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    private func chip(
+        _ title: String,
+        systemImage: String,
+        isSelected: Bool = false,
+        isDestructive: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            EditorPanelChipLabel(title: title, systemImage: systemImage)
+                .foregroundStyle(isDestructive ? EditorTheme.timelineDestructive : .white)
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(EditorChipButtonStyle(isSelected: isSelected))
+    }
+
+    @ViewBuilder
+    private var spotRows: some View {
+        let hasSpot = controller.selectedHealingSpot != nil
+        label("SELECTED SPOT")
+        HStack(spacing: EditorStripLayout.chipSpacing) {
+            chip("New Source", systemImage: "arrow.triangle.2.circlepath") { controller.findNewSource() }
+                .accessibilityHint("Fills the spot from the next best place around it")
+            chip("Delete Spot", systemImage: "trash", isDestructive: true) { controller.deleteSelectedHealingSpot() }
+        }
+        .padding(.horizontal, EditorStripLayout.horizontalInset)
+        .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
+        .disabled(!hasSpot)
+        .opacity(hasSpot ? 1 : EditorTheme.rowDisabled)
+
+        label("SPOTS · \(controller.spotCount)")
+        EditorToggleRow(
+            title: "Visualize Spots",
+            isOn: controller.isVisualizingSpots
+        ) { controller.isVisualizingSpots = $0 }
+        if controller.isVisualizingSpots {
+            EditorPlainSliderRow(
+                title: "Threshold",
+                value: controller.spotVisualizeThreshold,
+                range: 0...1,
+                isBipolar: false,
+                valueText: percent(controller.spotVisualizeThreshold),
+                isActive: false,
+                onBeginDrag: {},
+                onDrag: { controller.spotVisualizeThreshold = $0 },
+                onEndDrag: {},
+                onReset: { controller.spotVisualizeThreshold = 0.5 }
+            )
+        }
+        HStack(spacing: EditorStripLayout.chipSpacing) {
+            chip("Show Spot Pins", systemImage: "mappin", isSelected: controller.showsSpotPins) {
+                controller.showsSpotPins.toggle()
+            }
+            .accessibilityAddTraits(controller.showsSpotPins ? .isSelected : [])
+            chip("Clear All", systemImage: "trash", isDestructive: true) {
+                if controller.clearAllNeedsConfirmation {
+                    isConfirmingClearAll = true
+                } else {
+                    controller.removeAllHealingSpots()
+                }
+            }
+            .disabled(controller.spotCount == 0)
+            .opacity(controller.spotCount == 0 ? EditorTheme.rowDisabled : 1)
+            .confirmationDialog("Clear all spots?", isPresented: $isConfirmingClearAll, titleVisibility: .visible) {
+                Button("Clear All Spots", role: .destructive) {
+                    controller.removeAllHealingSpots()
+                }
+            } message: {
+                Text("All \(controller.spotCount) spots come off the photo. Undo brings them back.")
+            }
+        }
+        .padding(.horizontal, EditorStripLayout.horizontalInset)
+        .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
+    }
+
+    @ViewBuilder
+    private var redEyeRows: some View {
+        HStack(spacing: EditorStripLayout.chipSpacing) {
+            chip("Fix Red Eye", systemImage: "wand.and.stars") { controller.fixRedEyes() }
+                .accessibilityHint("Finds every red pupil in the photo and fixes it")
+        }
+        .padding(.horizontal, EditorStripLayout.horizontalInset)
+        .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
+        let hasEye = controller.selectedRedEye != nil
+        label("SELECTED SPOT")
+        HStack(spacing: EditorStripLayout.chipSpacing) {
+            chip("Delete Spot", systemImage: "trash", isDestructive: true) { controller.deleteSelectedRedEye() }
+        }
+        .padding(.horizontal, EditorStripLayout.horizontalInset)
+        .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
+        .disabled(!hasEye)
+        .opacity(hasEye ? 1 : EditorTheme.rowDisabled)
     }
 }
 

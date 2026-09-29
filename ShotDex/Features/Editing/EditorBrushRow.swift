@@ -31,82 +31,79 @@ enum EditorBrushPill: String, CaseIterable, Identifiable {
     }
 }
 
-/// The Mask brush's one pinned row (FS-03.13c §3): Draw and Erase, a hairline,
-/// then Size · Feather · Flow as equal pills. A tap on a pill turns the row
-/// into that setting's slider with ✓ to come back; holding a pill and sliding
-/// sideways changes it in place, as fast as the slider would. While Size
-/// changes, the stage shows the brush ring in the middle of the photo.
-struct EditorBrushPinnedRow: View {
-    @Bindable var controller: PhotoEditorController
-    @Bindable var chrome: EditorChromeModel
+/// One setting in a pinned pill row: what it reads, how it writes, and what
+/// its slider does at the ends.
+struct EditorPill: Identifiable {
+    let id: String
+    let title: String
+    let value: Double
+    let range: ClosedRange<Double>
+    let defaultValue: Double
+    let text: (Double) -> String
+    let set: (Double) -> Void
+    var begin: () -> Void = {}
+    var end: () -> Void = {}
+}
 
-    @State private var editing: EditorBrushPill?
+/// A pinned row of equal pills after optional leading chips (FS-03.13c §3,
+/// §4 — the Mask brush and Heal). A tap on a pill turns the row into that
+/// setting's slider with ✓ to come back; holding a pill and sliding sideways
+/// changes it in place, as fast as the slider would.
+struct EditorPillRow<Leading: View>: View {
+    let pills: [EditorPill]
+    @ViewBuilder let leading: () -> Leading
+
+    @State private var editing: String?
     @State private var rowWidth: CGFloat = 0
 
     var body: some View {
         Group {
-            if let editing {
-                sliderRow(editing)
+            if let editing, let pill = pills.first(where: { $0.id == editing }) {
+                sliderRow(pill)
             } else {
-                pills
+                row
             }
         }
         .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
         .onGeometryChange(for: CGFloat.self, of: \.size.width) { rowWidth = $0 }
-        .onDisappear { chrome.showsBrushSizePreview = false }
     }
 
-    private var pills: some View {
+    private var row: some View {
         HStack(spacing: EditorStripLayout.chipSpacing) {
-            modeChip(isEraser: false)
-            modeChip(isEraser: true)
-            Rectangle()
-                .fill(Color.white.opacity(0.18))
-                .frame(width: 1, height: 20)
-            ForEach(EditorBrushPill.allCases) { pill in
+            leading()
+            ForEach(pills) { pill in
+                let span = pill.range.upperBound - pill.range.lowerBound
                 EditorBrushPillButton(
                     title: pill.title,
-                    valueText: EditorLayoutMetrics.brushAmountText(value(pill), in: pill.range),
-                    sensitivity: (pill.range.upperBound - pill.range.lowerBound) / Double(max(1, rowWidth)),
-                    onTap: { withAnimation(EditorTheme.animation) { editing = pill } },
-                    onHoldBegan: { begin(pill) },
-                    onHoldChanged: { delta in set(pill, value(pill) + delta) },
-                    onHoldEnded: { end(pill) },
-                    onStep: { up in
-                        set(pill, value(pill) + (up ? 1 : -1) * (pill.range.upperBound - pill.range.lowerBound) / 20)
-                    }
+                    valueText: pill.text(pill.value),
+                    sensitivity: span / Double(max(1, rowWidth)),
+                    onTap: { withAnimation(EditorTheme.animation) { editing = pill.id } },
+                    onHoldBegan: pill.begin,
+                    onHoldChanged: { delta in set(pill, pill.value + delta) },
+                    onHoldEnded: pill.end,
+                    onStep: { up in set(pill, pill.value + (up ? 1 : -1) * span / 20) }
                 )
             }
         }
         .padding(.horizontal, EditorStripLayout.horizontalInset)
     }
 
-    private func modeChip(isEraser: Bool) -> some View {
-        let isOn = controller.brushIsEraser == isEraser
-        return Button {
-            controller.maskOperation = isEraser ? .subtract : .add
-        } label: {
-            Image(systemName: isEraser ? "eraser" : "paintbrush.pointed")
-                .font(.system(size: 15))
-                .frame(width: 40 - 2 * EditorStripLayout.chipHorizontalPadding)
-        }
-        .buttonStyle(EditorChipButtonStyle(isSelected: isOn))
-        .accessibilityLabel(isEraser ? "Erase" : "Draw")
-        .accessibilityAddTraits(isOn ? .isSelected : [])
+    private func set(_ pill: EditorPill, _ new: Double) {
+        pill.set(min(pill.range.upperBound, max(pill.range.lowerBound, new)))
     }
 
-    private func sliderRow(_ pill: EditorBrushPill) -> some View {
+    private func sliderRow(_ pill: EditorPill) -> some View {
         HStack(spacing: 0) {
             EditorPlainSliderRow(
                 title: pill.title,
-                value: value(pill),
+                value: pill.value,
                 range: pill.range,
                 isBipolar: false,
-                valueText: EditorLayoutMetrics.brushAmountText(value(pill), in: pill.range),
+                valueText: pill.text(pill.value),
                 isActive: false,
-                onBeginDrag: { begin(pill) },
+                onBeginDrag: pill.begin,
                 onDrag: { set(pill, $0) },
-                onEndDrag: { end(pill) },
+                onEndDrag: pill.end,
                 onReset: { set(pill, pill.defaultValue) }
             )
             Button {
@@ -125,39 +122,73 @@ struct EditorBrushPinnedRow: View {
             .padding(.trailing, AppTheme.Spacing.sm)
         }
     }
+}
 
-    // MARK: Values
+/// The Mask brush's one pinned row (FS-03.13c §3): Draw and Erase, a hairline,
+/// then Size · Feather · Flow. While Size changes, the stage shows the brush
+/// ring in the middle of the photo.
+struct EditorBrushPinnedRow: View {
+    @Bindable var controller: PhotoEditorController
+    @Bindable var chrome: EditorChromeModel
 
-    private func value(_ pill: EditorBrushPill) -> Double {
-        switch pill {
+    var body: some View {
+        EditorPillRow(pills: EditorBrushPill.allCases.map(pill)) {
+            modeChip(isEraser: false)
+            modeChip(isEraser: true)
+            Rectangle()
+                .fill(Color.white.opacity(0.18))
+                .frame(width: 1, height: 20)
+        }
+        .onDisappear { chrome.showsBrushSizePreview = false }
+    }
+
+    private func pill(_ kind: EditorBrushPill) -> EditorPill {
+        EditorPill(
+            id: kind.rawValue,
+            title: kind.title,
+            value: value(kind),
+            range: kind.range,
+            defaultValue: kind.defaultValue,
+            text: { EditorLayoutMetrics.brushAmountText($0, in: kind.range) },
+            // Brush settings live on the controller, not the recipe: no history.
+            set: { new in
+                switch kind {
+                case .size: controller.brushSize = new
+                case .feather: controller.brushFeather = new
+                case .flow: controller.brushFlow = new
+                }
+            },
+            begin: { if kind == .size { chrome.showsBrushSizePreview = true } },
+            end: { chrome.showsBrushSizePreview = false }
+        )
+    }
+
+    private func value(_ kind: EditorBrushPill) -> Double {
+        switch kind {
         case .size: controller.brushSize
         case .feather: controller.brushFeather
         case .flow: controller.brushFlow
         }
     }
 
-    /// Brush settings live on the controller, not the recipe: no history.
-    private func set(_ pill: EditorBrushPill, _ new: Double) {
-        let clamped = min(pill.range.upperBound, max(pill.range.lowerBound, new))
-        switch pill {
-        case .size: controller.brushSize = clamped
-        case .feather: controller.brushFeather = clamped
-        case .flow: controller.brushFlow = clamped
+    private func modeChip(isEraser: Bool) -> some View {
+        let isOn = controller.brushIsEraser == isEraser
+        return Button {
+            controller.maskOperation = isEraser ? .subtract : .add
+        } label: {
+            Image(systemName: isEraser ? "eraser" : "paintbrush.pointed")
+                .font(.system(size: 15))
+                .frame(width: 40 - 2 * EditorStripLayout.chipHorizontalPadding)
         }
-    }
-
-    private func begin(_ pill: EditorBrushPill) {
-        if pill == .size { chrome.showsBrushSizePreview = true }
-    }
-
-    private func end(_ pill: EditorBrushPill) {
-        chrome.showsBrushSizePreview = false
+        .buttonStyle(EditorChipButtonStyle(isSelected: isOn))
+        .accessibilityLabel(isEraser ? "Erase" : "Draw")
+        .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 }
 
 /// One pill: its name and a mono number. A tap opens its slider; hold for a
 /// quarter second and slide sideways to change it where it is.
-private struct EditorBrushPillButton: View {
+struct EditorBrushPillButton: View {
     let title: String
     let valueText: String
     /// Value per point of horizontal travel — the slider's own rate.

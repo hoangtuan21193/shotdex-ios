@@ -504,6 +504,18 @@ struct PhotoHealingTests {
         #expect(controller.recipe.healing.isEmpty)
     }
 
+    /// FS-03.13 AC-33. Three spots, the second picked, Delete Spot: two are
+    /// left and none is picked, so SELECTED SPOT dims.
+    @MainActor @Test func deletingASpotLeavesNonePicked() throws {
+        let controller = PhotoEditorController(asset: PHAsset(), sourceAlbum: nil, service: PhotoEditingService())
+        for x in [0.25, 0.5, 0.75] { controller.addHealingSpot(at: NormalizedPoint(x: x, y: 0.5)) }
+        controller.selectedHealingSpotID = controller.recipe.healing[1].id
+        controller.deleteSelectedHealingSpot()
+        #expect(controller.recipe.healing.count == 2)
+        #expect(controller.spotCount == 2)
+        #expect(controller.selectedHealingSpot == nil)
+    }
+
     /// AC-3. Healing belongs to one frame: Copy Edits, Paste, Sync Look and a
     /// saved look never carry it, and pasting leaves the target's own spots.
     @MainActor @Test func healingIsNeverCopied() {
