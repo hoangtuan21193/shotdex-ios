@@ -146,6 +146,11 @@
   },
   {
    "action": "dump",
+   "name": "edit-frame",
+   "type": "image"
+  },
+  {
+   "action": "dump",
    "name": "filmstrip",
    "type": "button"
   },
@@ -181,6 +186,36 @@
   },
   {
    "action": "tap",
+   "label": "More editor actions"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "2b-overflow-batch"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "dump",
+   "name": "overflow-batch",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.15
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
    "label": "Mask"
   },
   {
@@ -194,6 +229,11 @@
   {
    "action": "wait",
    "seconds": 4
+  },
+  {
+   "action": "dump",
+   "name": "mask-frame",
+   "type": "image"
   },
   {
    "action": "tap",
@@ -210,6 +250,11 @@
   {
    "action": "wait",
    "seconds": 4
+  },
+  {
+   "action": "dump",
+   "name": "back-frame",
+   "type": "image"
   }
  ]
 }

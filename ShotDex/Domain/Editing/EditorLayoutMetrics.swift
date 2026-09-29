@@ -69,6 +69,13 @@ enum EditorLayoutMetrics {
         showsCurve && base == phonePanelShort ? phonePanelCurve : base
     }
 
+    /// A multi-photo edit: the filmstrip's height is counted in `base`, and
+    /// while a tool hides the strip the panel takes it back, so the photo
+    /// does not move (FS-03.13d §2).
+    static func phonePanelHeight(base: CGFloat, showsCurve: Bool, hiddenFilmstrip: CGFloat) -> CGFloat {
+        phonePanelHeight(base: base, showsCurve: showsCurve) + hiddenFilmstrip
+    }
+
     /// The parameter zone of a panel: the panel less the 54pt tool bar and
     /// the 25pt home inset — 265, 185 or 236.
     static func paramZoneHeight(panel: CGFloat) -> CGFloat {

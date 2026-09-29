@@ -670,6 +670,26 @@ struct EditorPanelLayoutTests {
         #expect(EditorFiltersPanel.tileThumbnailHeight == 62)
     }
 
+    /// FS-03.13 AC-42. A multi-photo edit on an iPhone 17: a 3:4 photo gets
+    /// 264 and a 492pt stage (874 − 62 − 56 − 264), where it is 369×492; a
+    /// 3:2 photo gets 344. AC-41: a tool hides the strip and the panel takes
+    /// its 56 back — 400 — so the stage keeps its height.
+    @Test func batchPanelCountsTheFilmstrip() {
+        func base(_ aspect: Double) -> CGFloat {
+            EditorLayoutMetrics.phonePanelHeight(
+                screenHeight: 874, topBand: 62, filmstrip: EditorPhoneFilmstrip.height, stageWidth: 402, aspect: aspect
+            )
+        }
+        #expect(base(0.75) == 264)
+        let stage: CGFloat = 874 - 62 - EditorPhoneFilmstrip.height - base(0.75)
+        #expect(stage == 492)
+        #expect(abs(stage * 0.75 - 369) < 0.5)
+        #expect(base(1.5) == 344)
+        let inTool = EditorLayoutMetrics.phonePanelHeight(base: base(1.5), showsCurve: false, hiddenFilmstrip: EditorPhoneFilmstrip.height)
+        #expect(inTool == 400)
+        #expect(874 - 62 - inTool == 874 - 62 - EditorPhoneFilmstrip.height - base(1.5), "the stage does not move")
+    }
+
     // MARK: Panel by photo (FS-03.13a §2)
 
     static func panel(_ aspect: Double, screen: CGSize = CGSize(width: 402, height: 874), band: CGFloat = 62) -> CGFloat {

@@ -625,13 +625,14 @@ struct PhotoEditorScreen: View {
             let basePanel = EditorLayoutMetrics.phonePanelHeight(
                 screenHeight: proxy.size.height,
                 topBand: bandHeight,
-                filmstrip: isMultiPhoto && showsPhoneFilmstripSlot ? EditorPhoneFilmstrip.height : 0,
+                filmstrip: isMultiPhoto ? EditorPhoneFilmstrip.height : 0,
                 stageWidth: proxy.size.width,
                 aspect: controller.panelAspect ?? 1.5
             )
             let panelHeight = EditorLayoutMetrics.phonePanelHeight(
                 base: basePanel,
-                showsCurve: chrome.selectedGroup == .curve
+                showsCurve: chrome.selectedGroup == .curve,
+                hiddenFilmstrip: isMultiPhoto && !showsPhoneFilmstripSlot ? EditorPhoneFilmstrip.height : 0
             )
             // Width, height *and* orientation — see `usesSidebar`. A sidebar is
             // paid for in width, so it is only worth it on a window that has
@@ -1020,7 +1021,7 @@ struct PhotoEditorScreen: View {
     }
 
     /// The phone filmstrip is out while a tool — Curve included — is open
-    /// (FS-03.13d §2); the panel's height counts it only when it is in.
+    /// (FS-03.13d §2); the panel then takes its 56 back.
     private var showsPhoneFilmstripSlot: Bool {
         !EditorTool.tool(for: chrome.selectedGroup).isSession && chrome.selectedGroup != .curve
     }
@@ -2172,267 +2173,10 @@ struct PhotoEditorScreen: View {
     ) -> some View {
         let size = EditorLayoutMetrics.editorFloatingCommandButtonSize(isRegularWidth: horizontalSizeClass == .regular)
         return Menu {
-            // Undo and Redo are *also* here, not only as the two discs in the
-            // band's corner. On a phone that corner is the one place a thumb
-            // cannot reach without regripping, 800pt from the slider the hand
-            // is on, and the only other route was ⌘Z. A named row costs no
-            // screen space; `EditorTwoFingerTapCatcher` on the stage covers the
-            // reach, the way Lightroom and Procreate both do it.
-            Button {
-                controller.undo()
-            } label: {
-                Label("Undo", systemImage: "arrow.uturn.backward")
-            }
-            .disabled(!controller.canUndo)
-
-            Button {
-                controller.redo()
-            } label: {
-                Label("Redo", systemImage: "arrow.uturn.forward")
-            }
-            .disabled(!controller.canRedo)
-
-            Divider()
-
-            // Pinning a reference had exactly one route: a context menu on a
-            // 56pt filmstrip thumbnail. HIG *Gestures* — a custom gesture must
-            // not be the only way to perform an important action — and
-            // `spec.md` calls the reference pane the reason the big screen
-            // exists.
-            if showsSidebarControls, let session, session.isMultiPhoto {
-                Button {
-                    withAnimation(EditorTheme.animation) {
-                        if session.referenceIndex == nil {
-                            session.toggleReference(at: session.index)
-                        } else {
-                            session.referenceIndex = nil
-                        }
-                    }
-                } label: {
-                    Label(
-                        session.referenceIndex == nil ? "Use as Reference" : "Clear Reference",
-                        systemImage: "rectangle.on.rectangle"
-                    )
-                }
-            }
-
-            // On the phone the double tap means full bleed and there is no
-            // named fit ⇄ fill anywhere; in the wide layout it means fit ⇄ fill
-            // and full bleed has the rail's Hide Tools. On the Duo one user
-            // meets both meanings in one sitting, so each needs a control with
-            // a name on it — this is the phone's missing half. (The wide layout
-            // already has the fit/fill disc in the band.)
-            if !showsSidebarControls {
-                Button {
-                    chrome.requestFillZoomToggle()
-                } label: {
-                    Label(
-                        isFillingCanvas ? "Fit Photo" : "Fill Screen",
-                        systemImage: isFillingCanvas
-                            ? "arrow.down.forward.and.arrow.up.backward"
-                            : "arrow.up.backward.and.arrow.down.forward"
-                    )
-                }
-            }
-
             if showsSidebarControls {
-                Divider()
-
-                Picker("Tools Panel", selection: $sidebarEdgeRaw) {
-                    ForEach(EditorSidebarEdge.allCases) { edge in
-                        Text(edge.title).tag(edge.rawValue)
-                    }
-                }
-                .pickerStyle(.menu)
-
-                Button {
-                    // Through `setSidebarHidden`, like the rail button and ⌘\ —
-                    // it is the only thing that writes the preference, so a
-                    // plain `toggle()` here hid the panel and then brought it
-                    // back on the next launch.
-                    withAnimation(EditorTheme.animation) {
-                        setSidebarHidden(!isSidebarHidden)
-                    }
-                } label: {
-                    Label(
-                        isSidebarHidden ? "Show Tools" : "Hide Tools",
-                        systemImage: isSidebarHidden
-                            ? sidebarEdge.expandIcon
-                            : sidebarEdge.collapseIcon
-                    )
-                }
-
-                Divider()
-            }
-
-            if controller.selectedTool == .crop {
-                Button {
-                    controller.rotate()
-                } label: {
-                    Label("Rotate 90°", systemImage: "rotate.right")
-                }
-                Button {
-                    controller.flip()
-                } label: {
-                    Label("Flip Horizontal", systemImage: "arrow.left.and.right.righttriangle.left.righttriangle.right")
-                }
-                Divider()
-            } else if chrome.selectedGroup == .curve {
-                // The phone's Curve zone is the graph and its channels; Region
-                // and the preset shapes live here (FS-03.13b §2). The sidebar
-                // shows both in its own section.
-                if !chrome.isWideLayout {
-                    Picker(selection: Binding(
-                        get: { chrome.curveMode },
-                        set: { mode in
-                            chrome.curveMode = mode
-                            if mode == .region { chrome.curveChannel = .rgb }
-                        }
-                    )) {
-                        ForEach(EditorCurveMode.allCases) { mode in
-                            Text(mode.displayName).tag(mode)
-                        }
-                    } label: {
-                        Label("Curve Type", systemImage: "chart.xyaxis.line")
-                    }
-                    .pickerStyle(.menu)
-                    if chrome.curveMode == .point {
-                        Menu {
-                            ForEach(ToneCurveAdjustments.presets) { preset in
-                                Button(preset.name) {
-                                    controller.applyCurvePreset(preset, to: chrome.curveChannel)
-                                }
-                            }
-                        } label: {
-                            Label("Preset Shapes", systemImage: "point.3.connected.trianglepath.dotted")
-                        }
-                    }
-                }
-                Button {
-                    controller.resetAllCurves()
-                } label: {
-                    Label("Reset Curve", systemImage: "arrow.counterclockwise")
-                }
-                .disabled(controller.editedCurve.isIdentity)
-                Divider()
-            } else if controller.editingMaskAdjustments {
-                Button {
-                    controller.setMaskOverlay(!controller.isMaskOverlayPinned)
-                } label: {
-                    Label(
-                        controller.isMaskOverlayPinned ? "Hide Mask Overlay" : "Show Mask Overlay",
-                        systemImage: "circle.righthalf.filled"
-                    )
-                }
-                Button {
-                    controller.invertSelectedMask()
-                } label: {
-                    Label("Invert Selection", systemImage: "circle.lefthalf.filled")
-                }
-                Divider()
-            }
-
-
-            // Tone, colour, curve and filter only — see `EditClipboard`.
-            Button {
-                dependencies.editClipboard.copy(from: controller.recipe)
-            } label: {
-                Label("Copy Edits", systemImage: "doc.on.doc")
-            }
-            .disabled(EditClipboard.look(of: controller.recipe).isIdentity)
-
-            if dependencies.editClipboard.hasContent {
-                Button {
-                    controller.pasteEdits(from: dependencies.editClipboard)
-                } label: {
-                    Label("Paste Edits", systemImage: "doc.on.clipboard")
-                }
-            }
-
-            if let session, session.isMultiPhoto {
-                Toggle(isOn: Binding(
-                    get: { session.isAutoSyncing },
-                    set: { session.isAutoSyncing = $0 }
-                )) {
-                    Label("Auto Sync", systemImage: "arrow.triangle.2.circlepath")
-                }
-
-                if session.previousRecipe != nil {
-                    Button {
-                        applyPreviousEdit(controller)
-                    } label: {
-                        Label("Apply Previous", systemImage: "arrow.uturn.left.square")
-                    }
-                }
-
-                Menu(
-                    session.assets.count == 2
-                        ? "Sync to 1 Photo"
-                        : "Sync to \(session.assets.count - 1) Photos"
-                ) {
-                    Button {
-                        syncEditsToAll(.look)
-                    } label: {
-                        Label("Sync Look", systemImage: "paintpalette")
-                    }
-                    Button {
-                        syncEditsToAll(.everything)
-                    } label: {
-                        Label("Sync Everything", systemImage: "square.on.square.dashed")
-                    }
-                }
-                .disabled(controller.recipe.isIdentity)
-            }
-
-            Button {
-                controller.reset()
-            } label: {
-                Label("Reset All", systemImage: "arrow.counterclockwise")
-            }
-            .disabled(controller.recipe.isIdentity)
-
-            // Reset All only undoes this session. Revert throws away every edit
-            // ever saved to the asset, including edits made in Photos, and is
-            // the only way back to the camera's own frame.
-            if controller.canRevertToOriginal {
-                Button(role: .destructive) {
-                    isRevertConfirmationPresented = true
-                } label: {
-                    Label("Revert to Original", systemImage: "arrow.uturn.backward")
-                }
-            }
-
-            Button {
-                showHistory()
-            } label: {
-                Label("History", systemImage: "clock.arrow.circlepath")
-            }
-
-            if controller.recalledRecipe != nil {
-                Button {
-                    controller.recallLastEdit()
-                } label: {
-                    Label("Recall Last ShotDex Edit", systemImage: "arrow.trianglehead.clockwise")
-                }
-                .disabled(!controller.canRecall)
-            }
-
-            if controller.sourceOptions.count > 1 {
-                Menu("Source") {
-                    ForEach(controller.sourceOptions) { option in
-                        Button {
-                            Task {
-                                try? await controller.selectSource(option)
-                            }
-                        } label: {
-                            if option.id == controller.selectedSourceOption?.id {
-                                Label(option.displayName, systemImage: "checkmark")
-                            } else {
-                                Text(option.displayName)
-                            }
-                        }
-                    }
-                }
+                wideOverflowItems(controller)
+            } else {
+                phoneOverflowItems(controller)
             }
         } label: {
             Image(systemName: "ellipsis")
@@ -2444,6 +2188,374 @@ struct PhotoEditorScreen: View {
         }
         .hoverEffect(.lift)
         .accessibilityLabel("More editor actions")
+    }
+
+    /// The phone's ⋯ (FS-03.13a §3), in order: History · Copy Edits · Paste
+    /// Edits · Fill Screen / Fit Photo · Revert to Original · Reset All ·
+    /// Recall / Source. Undo and Redo are in the band (E2), Sync is at the
+    /// filmstrip's end, Rotate / Flip in Transform, the mask overlay in the
+    /// Mask row. Curve's type and shapes stay while Curve is open.
+    @ViewBuilder
+    private func phoneOverflowItems(_ controller: PhotoEditorController) -> some View {
+        if chrome.selectedGroup == .curve {
+            curveOverflowItems(controller)
+            Divider()
+        }
+        Button {
+            showHistory()
+        } label: {
+            Label("History", systemImage: "clock.arrow.circlepath")
+        }
+        Button {
+            dependencies.editClipboard.copy(from: controller.recipe)
+        } label: {
+            Label("Copy Edits", systemImage: "doc.on.doc")
+        }
+        .disabled(EditClipboard.look(of: controller.recipe).isIdentity)
+        if dependencies.editClipboard.hasContent {
+            Button {
+                controller.pasteEdits(from: dependencies.editClipboard)
+            } label: {
+                Label("Paste Edits", systemImage: "doc.on.clipboard")
+            }
+        }
+        Button {
+            chrome.requestFillZoomToggle()
+        } label: {
+            Label(
+                isFillingCanvas ? "Fit Photo" : "Fill Screen",
+                systemImage: isFillingCanvas
+                    ? "arrow.down.forward.and.arrow.up.backward"
+                    : "arrow.up.backward.and.arrow.down.forward"
+            )
+        }
+        if controller.canRevertToOriginal {
+            Button(role: .destructive) {
+                isRevertConfirmationPresented = true
+            } label: {
+                Label("Revert to Original", systemImage: "arrow.uturn.backward")
+            }
+        }
+        Button {
+            controller.reset()
+        } label: {
+            Label("Reset All", systemImage: "arrow.counterclockwise")
+        }
+        .disabled(controller.recipe.isIdentity)
+        recallAndSourceItems(controller)
+    }
+
+    /// Curve's own items while it is open: Region and the preset shapes have
+    /// no room in its zone (FS-03.13b §2).
+    @ViewBuilder
+    private func curveOverflowItems(_ controller: PhotoEditorController) -> some View {
+        Picker(selection: Binding(
+            get: { chrome.curveMode },
+            set: { mode in
+                chrome.curveMode = mode
+                if mode == .region { chrome.curveChannel = .rgb }
+            }
+        )) {
+            ForEach(EditorCurveMode.allCases) { mode in
+                Text(mode.displayName).tag(mode)
+            }
+        } label: {
+            Label("Curve Type", systemImage: "chart.xyaxis.line")
+        }
+        .pickerStyle(.menu)
+        if chrome.curveMode == .point {
+            Menu {
+                ForEach(ToneCurveAdjustments.presets) { preset in
+                    Button(preset.name) {
+                        controller.applyCurvePreset(preset, to: chrome.curveChannel)
+                    }
+                }
+            } label: {
+                Label("Preset Shapes", systemImage: "point.3.connected.trianglepath.dotted")
+            }
+        }
+        Button {
+            controller.resetAllCurves()
+        } label: {
+            Label("Reset Curve", systemImage: "arrow.counterclockwise")
+        }
+        .disabled(controller.editedCurve.isIdentity)
+    }
+
+    /// Last, and only when the photo has them.
+    @ViewBuilder
+    private func recallAndSourceItems(_ controller: PhotoEditorController) -> some View {
+        if controller.recalledRecipe != nil {
+            Button {
+                controller.recallLastEdit()
+            } label: {
+                Label("Recall Last ShotDex Edit", systemImage: "arrow.trianglehead.clockwise")
+            }
+            .disabled(!controller.canRecall)
+        }
+        if controller.sourceOptions.count > 1 {
+            Menu("Source") {
+                ForEach(controller.sourceOptions) { option in
+                    Button {
+                        Task {
+                            try? await controller.selectSource(option)
+                        }
+                    } label: {
+                        if option.id == controller.selectedSourceOption?.id {
+                            Label(option.displayName, systemImage: "checkmark")
+                        } else {
+                            Text(option.displayName)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// The sidebar's ⋯: everything the wide layout has no other place for.
+    @ViewBuilder
+    private func wideOverflowItems(_ controller: PhotoEditorController) -> some View {
+        // Undo and Redo are *also* here, not only as the two discs in the
+        // band's corner. On a phone that corner is the one place a thumb
+        // cannot reach without regripping, 800pt from the slider the hand
+        // is on, and the only other route was ⌘Z. A named row costs no
+        // screen space; `EditorTwoFingerTapCatcher` on the stage covers the
+        // reach, the way Lightroom and Procreate both do it.
+        Button {
+            controller.undo()
+        } label: {
+            Label("Undo", systemImage: "arrow.uturn.backward")
+        }
+        .disabled(!controller.canUndo)
+
+        Button {
+            controller.redo()
+        } label: {
+            Label("Redo", systemImage: "arrow.uturn.forward")
+        }
+        .disabled(!controller.canRedo)
+
+        Divider()
+
+        // Pinning a reference had exactly one route: a context menu on a
+        // 56pt filmstrip thumbnail. HIG *Gestures* — a custom gesture must
+        // not be the only way to perform an important action — and
+        // `spec.md` calls the reference pane the reason the big screen
+        // exists.
+        if let session, session.isMultiPhoto {
+            Button {
+                withAnimation(EditorTheme.animation) {
+                    if session.referenceIndex == nil {
+                        session.toggleReference(at: session.index)
+                    } else {
+                        session.referenceIndex = nil
+                    }
+                }
+            } label: {
+                Label(
+                    session.referenceIndex == nil ? "Use as Reference" : "Clear Reference",
+                    systemImage: "rectangle.on.rectangle"
+                )
+            }
+        }
+
+        Divider()
+
+        Picker("Tools Panel", selection: $sidebarEdgeRaw) {
+            ForEach(EditorSidebarEdge.allCases) { edge in
+                Text(edge.title).tag(edge.rawValue)
+            }
+        }
+        .pickerStyle(.menu)
+
+        Button {
+            // Through `setSidebarHidden`, like the rail button and ⌘\ —
+            // it is the only thing that writes the preference, so a
+            // plain `toggle()` here hid the panel and then brought it
+            // back on the next launch.
+            withAnimation(EditorTheme.animation) {
+                setSidebarHidden(!isSidebarHidden)
+            }
+        } label: {
+            Label(
+                isSidebarHidden ? "Show Tools" : "Hide Tools",
+                systemImage: isSidebarHidden
+                    ? sidebarEdge.expandIcon
+                    : sidebarEdge.collapseIcon
+            )
+        }
+
+        Divider()
+
+        if controller.selectedTool == .crop {
+            Button {
+                controller.rotate()
+            } label: {
+                Label("Rotate 90°", systemImage: "rotate.right")
+            }
+            Button {
+                controller.flip()
+            } label: {
+                Label("Flip Horizontal", systemImage: "arrow.left.and.right.righttriangle.left.righttriangle.right")
+            }
+            Divider()
+        } else if chrome.selectedGroup == .curve {
+            // The phone's Curve zone is the graph and its channels; Region
+            // and the preset shapes live here (FS-03.13b §2). The sidebar
+            // shows both in its own section.
+            if !chrome.isWideLayout {
+                Picker(selection: Binding(
+                    get: { chrome.curveMode },
+                    set: { mode in
+                        chrome.curveMode = mode
+                        if mode == .region { chrome.curveChannel = .rgb }
+                    }
+                )) {
+                    ForEach(EditorCurveMode.allCases) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                } label: {
+                    Label("Curve Type", systemImage: "chart.xyaxis.line")
+                }
+                .pickerStyle(.menu)
+                if chrome.curveMode == .point {
+                    Menu {
+                        ForEach(ToneCurveAdjustments.presets) { preset in
+                            Button(preset.name) {
+                                controller.applyCurvePreset(preset, to: chrome.curveChannel)
+                            }
+                        }
+                    } label: {
+                        Label("Preset Shapes", systemImage: "point.3.connected.trianglepath.dotted")
+                    }
+                }
+            }
+            Button {
+                controller.resetAllCurves()
+            } label: {
+                Label("Reset Curve", systemImage: "arrow.counterclockwise")
+            }
+            .disabled(controller.editedCurve.isIdentity)
+            Divider()
+        } else if controller.editingMaskAdjustments {
+            Button {
+                controller.setMaskOverlay(!controller.isMaskOverlayPinned)
+            } label: {
+                Label(
+                    controller.isMaskOverlayPinned ? "Hide Mask Overlay" : "Show Mask Overlay",
+                    systemImage: "circle.righthalf.filled"
+                )
+            }
+            Button {
+                controller.invertSelectedMask()
+            } label: {
+                Label("Invert Selection", systemImage: "circle.lefthalf.filled")
+            }
+            Divider()
+        }
+
+
+        // Tone, colour, curve and filter only — see `EditClipboard`.
+        Button {
+            dependencies.editClipboard.copy(from: controller.recipe)
+        } label: {
+            Label("Copy Edits", systemImage: "doc.on.doc")
+        }
+        .disabled(EditClipboard.look(of: controller.recipe).isIdentity)
+
+        if dependencies.editClipboard.hasContent {
+            Button {
+                controller.pasteEdits(from: dependencies.editClipboard)
+            } label: {
+                Label("Paste Edits", systemImage: "doc.on.clipboard")
+            }
+        }
+
+        if let session, session.isMultiPhoto {
+            Toggle(isOn: Binding(
+                get: { session.isAutoSyncing },
+                set: { session.isAutoSyncing = $0 }
+            )) {
+                Label("Auto Sync", systemImage: "arrow.triangle.2.circlepath")
+            }
+
+            if session.previousRecipe != nil {
+                Button {
+                    applyPreviousEdit(controller)
+                } label: {
+                    Label("Apply Previous", systemImage: "arrow.uturn.left.square")
+                }
+            }
+
+            Menu(
+                session.assets.count == 2
+                    ? "Sync to 1 Photo"
+                    : "Sync to \(session.assets.count - 1) Photos"
+            ) {
+                Button {
+                    syncEditsToAll(.look)
+                } label: {
+                    Label("Sync Look", systemImage: "paintpalette")
+                }
+                Button {
+                    syncEditsToAll(.everything)
+                } label: {
+                    Label("Sync Everything", systemImage: "square.on.square.dashed")
+                }
+            }
+            .disabled(controller.recipe.isIdentity)
+        }
+
+        Button {
+            controller.reset()
+        } label: {
+            Label("Reset All", systemImage: "arrow.counterclockwise")
+        }
+        .disabled(controller.recipe.isIdentity)
+
+        // Reset All only undoes this session. Revert throws away every edit
+        // ever saved to the asset, including edits made in Photos, and is
+        // the only way back to the camera's own frame.
+        if controller.canRevertToOriginal {
+            Button(role: .destructive) {
+                isRevertConfirmationPresented = true
+            } label: {
+                Label("Revert to Original", systemImage: "arrow.uturn.backward")
+            }
+        }
+
+        Button {
+            showHistory()
+        } label: {
+            Label("History", systemImage: "clock.arrow.circlepath")
+        }
+
+        if controller.recalledRecipe != nil {
+            Button {
+                controller.recallLastEdit()
+            } label: {
+                Label("Recall Last ShotDex Edit", systemImage: "arrow.trianglehead.clockwise")
+            }
+            .disabled(!controller.canRecall)
+        }
+
+        if controller.sourceOptions.count > 1 {
+            Menu("Source") {
+                ForEach(controller.sourceOptions) { option in
+                    Button {
+                        Task {
+                            try? await controller.selectSource(option)
+                        }
+                    } label: {
+                        if option.id == controller.selectedSourceOption?.id {
+                            Label(option.displayName, systemImage: "checkmark")
+                        } else {
+                            Text(option.displayName)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // MARK: Panel
