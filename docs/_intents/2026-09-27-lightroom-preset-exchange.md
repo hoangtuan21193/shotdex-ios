@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan |
 | Ngày | 2026-09-27 |
 | Trạng thái | accepted |
-| Tiến độ | **đang làm** (2026-09-29) — task 34/35, 31/33 AC xanh (AC-c10 một phần) · plan [2026-09-28-fs-03-14](../_plans/2026-09-28-fs-03-14-lightroom-preset-exchange.md) |
+| Tiến độ | **gần xong** (2026-09-29) — task 35/35, 31/33 AC xanh, full suite 1668 test (1 lỗi flaky ngoài vùng: `ServerUploadModelTests.idleTimerRestoredOnEveryExit`, chạy riêng xanh); còn: AC-c10 bộ nhớ đỉnh extension (Instruments trên máy thật), AC-c11 (thủ công hai máy thật) · plan [2026-09-28-fs-03-14](../_plans/2026-09-28-fs-03-14-lightroom-preset-exchange.md) |
 | Nguồn | phản hồi người dùng (chủ sở hữu sản phẩm) — phiên thiết kế 2026-09-27 |
 | Spec sinh ra từ đây | [FS-03.14](../02-functional-spec/FS-03-photo-editor/14-lightroom-preset-exchange.md) (+ 14a, 14b, 14c) |
 

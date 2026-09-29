@@ -103,4 +103,4 @@ Files, AirDrop…). Tên file = tên look, bỏ ký tự cấm trong tên file.
 | AC-c11 | máy nhận **không cài** ShotDex | AirDrop `Golden.shotdexlook` tới | iOS lưu vào Files, không lỗi; cài ShotDex rồi chạm file → nhập như AC-c7 | ⚠️ chưa có (thủ công, hai máy thật) |
 | AC-c12 | ảnh đang mở là một JPEG 24 MP; look "Golden" | Share "Golden" | file chỉ có các trường của §1, không dữ liệu ảnh nào; cỡ file < 10 KB | ✅ `LookFileCodecTests.sharedFileCarriesNoImage` |
 
-**Chưa chứng minh được:** AC-c1…c12 (chưa có code); AC-c5, c7, c9, c10, c11 cần ui-drive, máy thật hoặc thao tác tay.
+**Chưa chứng minh được:** AC-c10 một phần (bộ nhớ đỉnh < 30 MB cần Instruments trên máy thật); AC-c11 (AirDrop tới máy không cài ShotDex — thủ công, hai máy thật). AC-c9 mới chạy trên simulator.

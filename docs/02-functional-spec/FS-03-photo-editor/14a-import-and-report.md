@@ -93,7 +93,7 @@ Nhập từ ô Import xong → sheet **báo cáo** (`[.medium, .large]`, [DESIGN
 | AC-a11 | lượt nhập 300 preset | chạm Cancel ở "Reading 120 of 300" | không look nào được thêm; My Looks như trước lượt nhập | ✅ `PresetImportTests.cancelAddsNothing` |
 | AC-a12 | `Golden.xmp` 3 KB | nhập, rồi Delete look "Golden" | sau nhập: cạnh look có bản chép byte-giống file gốc; sau Delete: bản chép cũng mất | ✅ `LookPresetStoreTests.keepsOriginalPresetBesideLook` (+ `legacyLooksMoveIntoTheFileOnce`) |
 
-**Chưa chứng minh được:** AC-a1…a12 (chưa có code).
+**Chưa chứng minh được:** không còn AC nào của 14a.
 
 ## 6. Rủi ro đã biết
 

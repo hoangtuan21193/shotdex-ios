@@ -133,7 +133,7 @@ Chỗ spec và code lệch, chốt 2026-09-28 — [DECISIONS.md](../../../.planb
 |---|---|---|---|---|
 | AC-0.1 | máy ở chế độ máy bay, không Wi-Fi | nhập một `.xmp` 3 KB rồi Export As `.shotdexlook` | cả hai xong, không có lời gọi mạng nào (0 request trong log mạng của phiên) | ✅ `LookExchangeOfflineTests.importAndExportNeedNoNetwork` |
 
-**Chưa chứng minh được:** mọi AC của FS-03.14 (chưa có code). Tổng: 1 ở đây + 12 ở 14a + 8 ở 14b + 12 ở 14c = **33**.
+**Chưa chứng minh được:** AC-c10 một phần (bộ nhớ đỉnh extension chưa đo trên máy), AC-c11 (thủ công, hai máy thật) — còn lại 31/33 đã có chứng minh. Tổng: 1 ở đây + 12 ở 14a + 8 ở 14b + 12 ở 14c = **33**.
 
 ## 10. Tài liệu phải sửa theo khi làm
 
