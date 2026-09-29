@@ -39,6 +39,23 @@ struct MaskPhonePanelTests {
         ])
     }
 
+    /// FS-03.13 AC-25. Four columns, every kind once with the three face
+    /// tiles their own; a 264 panel shows two whole rows and a 344 panel
+    /// three, the rest scrolling vertically — never sideways.
+    @Test func chooserTilesCoverEveryKindOnce() {
+        let grid = EditorNewMaskOption.gridOrder
+        #expect(grid.count == EditorNewMaskOption.allCases.count)
+        #expect(Set(grid) == Set(EditorNewMaskOption.allCases))
+        #expect([.faceSkin, .eyes, .lips].allSatisfy(grid.contains))
+        let rows = (grid.count + EditorNewMaskOption.gridColumns - 1) / EditorNewMaskOption.gridColumns
+        func zone(_ panel: CGFloat) -> CGFloat {
+            EditorLayoutMetrics.paramZoneHeight(panel: panel) - EditorLayoutMetrics.editorParamZoneTopInset
+        }
+        #expect(EditorMaskChooser.visibleRows(in: zone(EditorLayoutMetrics.phonePanelShort)) == 2)
+        #expect(EditorMaskChooser.visibleRows(in: zone(EditorLayoutMetrics.phonePanelTall)) == 3)
+        #expect(rows > 3, "the last rows are reached by scrolling")
+    }
+
     /// AC-17 / AC-18. With no mask the chooser shows; one tap on Radial makes
     /// exactly one mask, named short, selected, and the chooser gives way.
     @Test func oneTapOnRadialMakesOneShortNamedMask() throws {

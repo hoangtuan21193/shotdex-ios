@@ -94,7 +94,7 @@ Máy: iPhone 17 iOS 26.5 và 18.6, ảnh 3:2 (panel 344) nếu không ghi khác.
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-25 | ảnh chưa có mask, ảnh 3:4 (panel 264) | chạm Mask | lưới 4 cột đủ mọi mục của danh sách vùng, mỗi mục một lần, Face Skin · Eyes · Lips là ô riêng; thấy 2 hàng, các hàng sau tới được bằng cuộn dọc; không cuộn ngang | ⚠️ chưa có — `MaskPhonePanelTests.chooserTilesCoverEveryKindOnce` + `iphone-mask-list.json` |
+| AC-25 | ảnh chưa có mask, ảnh 3:4 (panel 264) | chạm Mask | lưới 4 cột đủ mọi mục của danh sách vùng, mỗi mục một lần, Face Skin · Eyes · Lips là ô riêng; thấy 2 hàng, các hàng sau tới được bằng cuộn dọc; không cuộn ngang | ✅ `MaskPhonePanelTests.chooserTilesCoverEveryKindOnce` · `iphone-mask-list.json` (ảnh 3:4, panel 264: 2 hàng, cuộn dọc ra hàng 3–4) |
 | AC-26 | như AC-25 | chạm Brush rồi kéo một ngón 100pt trên ảnh | có 1 mask, 1 nét, không cần chạm thêm; hàng trên "Mask 1 ▼ · Mask Overlay · + · ⋯", dòng phụ "Brush"; hàng cọ ghim | ⚠️ chưa có — `MaskPhonePanelTests.brushTileDrawsImmediately` |
 | AC-27 | 1 mask | chạm `+` rồi `‹` | vẫn 1 mask, mask cũ vẫn chọn | `MaskPhonePanelTests.plusThenBackMakesNothing` (vẫn 1 mask, mask cũ vẫn chọn) |
 | AC-28 | Mask 1 = Sky − Brush, Mask 2 = Radial, Mask 1 chọn | chạm ▼ | danh sách đúng thứ tự: Mask 1 · Sky ⊕ · Brush ⊖ · Add area · Subtract area · Mask 2 · New Mask | ⚠️ chưa có — `MaskPhonePanelTests.listPutsAreaActionsUnderTheSelectedMask` |

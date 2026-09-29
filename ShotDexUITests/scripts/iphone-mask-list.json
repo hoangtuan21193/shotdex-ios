@@ -1,0 +1,85 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 30
+  },
+  {
+   "action": "tap",
+   "label": "Search"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "typeText",
+   "text": "D800E\n"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "tap",
+   "x": 0.17,
+   "y": 0.3
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Edit"
+  },
+  {
+   "action": "wait",
+   "seconds": 12
+  },
+  {
+   "action": "tap",
+   "label": "Mask"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "1-grid-264"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "dump",
+   "name": "grid",
+   "type": "button"
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.86,
+   "direction": "up",
+   "distance": 0.12,
+   "seconds": 0.5
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "2-grid-scrolled"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  }
+ ]
+}
