@@ -142,7 +142,8 @@ struct RecipeLossyDecodingTests {
         )
         defaults.set(Data(broken.utf8), forKey: SettingsKeys.lookPresets)
 
-        let store = LookPresetStore(defaults: defaults)
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("looks-\(UUID().uuidString)")
+        let store = LookPresetStore(directory: directory, defaults: defaults)
         #expect(store.presets.map(\.name) == ["Keep"])
     }
 }

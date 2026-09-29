@@ -13,6 +13,15 @@ struct LookPreset: Codable, Identifiable, Equatable, Sendable {
     var name: String
     var recipe: PhotoEditRecipe
     var createdAt: Date
+    /// Made here, or brought in from a preset file (FS-03.14c §6) — what the
+    /// "Imported" label reads.
+    var source: LookSource = .shotdex
+    /// The receive (an import, an opened file) that brought it, so Undo can
+    /// take the whole receive back.
+    var receiveID: UUID?
+    /// The preset file it came from, kept byte for byte beside it (D35) so a
+    /// later build can map it again; a file name in the store's folder.
+    var originalPresetFile: String?
 
     init(id: UUID = UUID(), name: String, recipe: PhotoEditRecipe, createdAt: Date = Date()) {
         self.id = id
@@ -20,6 +29,27 @@ struct LookPreset: Codable, Identifiable, Equatable, Sendable {
         self.recipe = EditorSyncScope.look.apply(recipe, onto: .identity)
         self.createdAt = createdAt
     }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, recipe, createdAt, source, receiveID, originalPresetFile
+    }
+
+    /// The fields added with the file store decode as absent when they are,
+    /// so one old look is not lost for a field it never had.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        recipe = try container.decode(PhotoEditRecipe.self, forKey: .recipe)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        source = (try? container.decodeIfPresent(LookSource.self, forKey: .source)) ?? .shotdex
+        receiveID = try? container.decodeIfPresent(UUID.self, forKey: .receiveID)
+        originalPresetFile = try? container.decodeIfPresent(String.self, forKey: .originalPresetFile)
+    }
+}
+
+enum LookSource: String, Codable, Sendable {
+    case shotdex, imported
 }
 
 /// The user's own looks.
@@ -29,31 +59,76 @@ struct LookPreset: Codable, Identifiable, Equatable, Sendable {
 /// — which is why "save this as a preset" is the feature photographers ask for
 /// first and the one that makes a shoot's second day faster than its first.
 ///
-/// Modelled on `SignaturePresetStore`: `@Observable`, JSON in `UserDefaults`,
-/// held in `AppDependencies`. Looks are small — a few hundred bytes of numbers
-/// — so there is no file store here the way signatures need one for images.
+/// One JSON file in Application Support plus a folder for the preset files
+/// imported looks came from (FS-03.14c §6, D34) — the same shape as the
+/// imported-LUT store. User data, so never in `photo_metadata`.
 @MainActor
 @Observable
 final class LookPresetStore {
     private(set) var presets: [LookPreset] = []
 
-    private let defaults: UserDefaults
+    private let directory: URL
+    private var fileURL: URL { directory.appendingPathComponent("looks.json") }
+    private var originalsDirectory: URL { directory.appendingPathComponent("Originals", isDirectory: true) }
 
-    init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
+    nonisolated static func defaultDirectory() -> URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Looks", isDirectory: true)
+    }
+
+    /// `defaults` is only read once: looks this build kept in `UserDefaults`
+    /// before the file store move into the file and the key goes. The app is
+    /// unreleased — this keeps a development phone's looks, it is not a
+    /// compatibility layer.
+    init(directory: URL = LookPresetStore.defaultDirectory(), defaults: UserDefaults = .standard) {
+        self.directory = directory
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        if !FileManager.default.fileExists(atPath: fileURL.path),
+           let legacy = defaults.data(forKey: SettingsKeys.lookPresets) {
+            presets = Self.decode(legacy)
+            persist()
+            defaults.removeObject(forKey: SettingsKeys.lookPresets)
+        }
         reload()
     }
 
     func reload() {
-        guard let data = defaults.data(forKey: SettingsKeys.lookPresets),
-              // One preset this build cannot read is dropped on its own; it
-              // used to empty the whole list.
-              let decoded = try? JSONDecoder().decode(LossyArray<LookPreset>.self, from: data).elements
-        else {
+        guard let data = try? Data(contentsOf: fileURL) else {
             presets = []
             return
         }
-        presets = decoded.sorted { $0.createdAt > $1.createdAt }
+        presets = Self.decode(data)
+    }
+
+    /// One look this build cannot read is dropped on its own; it used to
+    /// empty the whole list.
+    private static func decode(_ data: Data) -> [LookPreset] {
+        let decoded = (try? JSONDecoder().decode(LossyArray<LookPreset>.self, from: data).elements) ?? []
+        return decoded.sorted { $0.createdAt > $1.createdAt }
+    }
+
+    /// Where a look's preset file is kept, when it has one.
+    func originalPresetURL(for preset: LookPreset) -> URL? {
+        preset.originalPresetFile.map { originalsDirectory.appendingPathComponent($0) }
+    }
+
+    /// Puts a look at the front of the shelf, with the bytes of the preset
+    /// file it came from beside it (D35). The lower-level half of an import;
+    /// naming rules are the caller's.
+    func insert(_ preset: LookPreset, original: (data: Data, pathExtension: String)? = nil) {
+        var preset = preset
+        if let original {
+            try? FileManager.default.createDirectory(at: originalsDirectory, withIntermediateDirectories: true)
+            let name = "\(preset.id.uuidString).\(original.pathExtension)"
+            do {
+                try original.data.write(to: originalsDirectory.appendingPathComponent(name), options: .atomic)
+                preset.originalPresetFile = name
+            } catch {
+                preset.originalPresetFile = nil
+            }
+        }
+        presets.insert(preset, at: 0)
+        persist()
     }
 
     /// Saves a look under `name`. A name already in use is overwritten rather
@@ -82,16 +157,93 @@ final class LookPresetStore {
         return preset
     }
 
-    func rename(_ preset: LookPreset, to name: String) {
+    /// Why a rename did not happen (FS-03.14c §3, chốt E8).
+    enum RenameRefusal: Error, Equatable {
+        case emptyName
+        /// Another look already has the name; `suggestion` is the first free
+        /// "‹name› (2)", "(3)"…
+        case nameTaken(suggestion: String)
+    }
+
+    /// Renames a look. A name another look already has — any case — is
+    /// refused with a free one to offer instead: two tiles with one name are
+    /// two tiles the user cannot tell apart. The look's own name, in any
+    /// case, is allowed.
+    @discardableResult
+    func rename(_ preset: LookPreset, to name: String) -> RenameRefusal? {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, let index = presets.firstIndex(where: { $0.id == preset.id }) else {
-            return
+        guard !trimmed.isEmpty else { return .emptyName }
+        guard let index = presets.firstIndex(where: { $0.id == preset.id }) else { return nil }
+        if isTaken(trimmed, except: preset.id) {
+            return .nameTaken(suggestion: freeName(like: trimmed, except: preset.id))
         }
         presets[index].name = trimmed
         persist()
+        return nil
     }
 
+    private func isTaken(_ name: String, except id: UUID) -> Bool {
+        presets.contains { $0.id != id && $0.name.caseInsensitiveCompare(name) == .orderedSame }
+    }
+
+    /// `name` is `base`, or `base` with a " (n)" the name rules added — any case.
+    static func isName(_ name: String, aVariantOf base: String) -> Bool {
+        if name.caseInsensitiveCompare(base) == .orderedSame { return true }
+        let prefix = base + " ("
+        guard name.count > prefix.count + 1,
+              name.lowercased().hasPrefix(prefix.lowercased()),
+              name.hasSuffix(")")
+        else { return false }
+        let digits = name.dropFirst(prefix.count).dropLast()
+        return !digits.isEmpty && digits.allSatisfy(\.isNumber)
+    }
+
+    /// "‹name› (n)" with the smallest n ≥ 2 no other look has.
+    func freeName(like name: String, except id: UUID) -> String {
+        var number = 2
+        while isTaken("\(name) (\(number))", except: id) { number += 1 }
+        return "\(name) (\(number))"
+    }
+
+    /// What adding an imported look did (FS-03.14a §3).
+    enum ImportOutcome: Equatable {
+        case added(LookPreset)
+        /// Same name, same settings: already on the shelf, nothing added.
+        case alreadyInMyLooks
+    }
+
+    /// Adds a look from a preset file. It never overwrites a look the user
+    /// has: a name already taken gets the first free "(n)"; a look with the
+    /// same name and the same settings is already here and adds nothing (D50).
+    @discardableResult
+    func addImported(
+        _ recipe: PhotoEditRecipe,
+        name: String,
+        original: (data: Data, pathExtension: String)? = nil,
+        receiveID: UUID? = nil
+    ) -> ImportOutcome {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let base = trimmed.isEmpty ? "Imported Look" : trimmed
+        let look = EditorSyncScope.look.apply(recipe, onto: .identity)
+        // The same file imported again: its settings under its name, or the
+        // "(n)" name an earlier import of it was given.
+        if presets.contains(where: { Self.isName($0.name, aVariantOf: base) && $0.recipe == look }) {
+            return .alreadyInMyLooks
+        }
+        let id = UUID()
+        let finalName = isTaken(base, except: id) ? freeName(like: base, except: id) : base
+        var preset = LookPreset(id: id, name: finalName, recipe: look)
+        preset.source = .imported
+        preset.receiveID = receiveID
+        insert(preset, original: original)
+        return .added(presets[0])
+    }
+
+    /// Deletes a look and the preset file kept beside it.
     func delete(_ preset: LookPreset) {
+        if let stored = presets.first(where: { $0.id == preset.id }), let url = originalPresetURL(for: stored) {
+            try? FileManager.default.removeItem(at: url)
+        }
         presets.removeAll { $0.id == preset.id }
         persist()
     }
@@ -109,6 +261,7 @@ final class LookPresetStore {
     }
 
     private func persist() {
-        defaults.set(try? JSONEncoder().encode(presets), forKey: SettingsKeys.lookPresets)
+        guard let data = try? JSONEncoder().encode(presets) else { return }
+        try? data.write(to: fileURL, options: .atomic)
     }
 }
