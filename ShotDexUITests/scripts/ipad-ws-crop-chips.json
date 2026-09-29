@@ -1,0 +1,59 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-editor.sidebarEdge",
+    "trailing",
+    "-editor.sidebarHidden",
+    "NO",
+    "-editor.sidebarWidth",
+    "320"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 20
+  },
+  {
+   "action": "tap",
+   "label": "Photo, file type",
+   "type": "cell",
+   "index": 2
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "tap",
+   "label": "Edit",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 18
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "tap",
+   "label": "rail.crop"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "c01-crop",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 25
+  }
+ ]
+}

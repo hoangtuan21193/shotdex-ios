@@ -751,22 +751,21 @@ struct EditorCropPanel: View {
 
             straightenRow
 
-            ScrollView(.horizontal) {
-                HStack(spacing: 8) {
-                    ForEach(CropAspect.allCases) { aspect in
-                        Button(aspect.displayName) {
-                            controller.chooseCropAspect(aspect, imageAspect: nil)
-                        }
-                        .buttonStyle(
-                            EditorChipButtonStyle(
-                                isSelected: controller.recipe.crop.aspect == aspect
-                            )
-                        )
+            // Wrapped, not scrolled: a sideways strip in a 320pt panel hid
+            // 4:5 and 9:16 past its edge (FS-03.09 AC-13).
+            EditorChipFlowLayout(spacing: 8) {
+                ForEach(CropAspect.allCases) { aspect in
+                    Button(aspect.displayName) {
+                        controller.chooseCropAspect(aspect, imageAspect: nil)
                     }
+                    .buttonStyle(
+                        EditorChipButtonStyle(
+                            isSelected: controller.recipe.crop.aspect == aspect
+                        )
+                    )
                 }
-                .padding(.horizontal, 16)
             }
-            .scrollIndicators(.hidden)
+            .padding(.horizontal, 16)
 
             Spacer(minLength: 0)
 
@@ -1200,3 +1199,54 @@ struct EditorPresetSourceStrip: View {
     }
 }
 
+
+/// Chips left to right, wrapping onto a new line when the next one would not
+/// fit — for a short set of choices in a panel too narrow to show them in one
+/// row, where a sideways strip hides the last ones.
+struct EditorChipFlowLayout: Layout {
+    var spacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let rows = rows(for: subviews, width: proposal.width ?? .infinity)
+        let height = rows.map(\.height).reduce(0, +) + spacing * CGFloat(max(rows.count - 1, 0))
+        let width = rows.map(\.width).max() ?? 0
+        return CGSize(width: proposal.width ?? width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var y = bounds.minY
+        for row in rows(for: subviews, width: bounds.width) {
+            var x = bounds.minX
+            for index in row.indices {
+                let size = subviews[index].sizeThatFits(.unspecified)
+                subviews[index].place(at: CGPoint(x: x, y: y + (row.height - size.height) / 2), proposal: ProposedViewSize(size))
+                x += size.width + spacing
+            }
+            y += row.height + spacing
+        }
+    }
+
+    private struct Row {
+        var indices: [Int] = []
+        var width: CGFloat = 0
+        var height: CGFloat = 0
+    }
+
+    private func rows(for subviews: Subviews, width: CGFloat) -> [Row] {
+        var rows: [Row] = []
+        var current = Row()
+        for index in subviews.indices {
+            let size = subviews[index].sizeThatFits(.unspecified)
+            let needed = current.indices.isEmpty ? size.width : current.width + spacing + size.width
+            if needed > width, !current.indices.isEmpty {
+                rows.append(current)
+                current = Row()
+            }
+            current.width = current.indices.isEmpty ? size.width : current.width + spacing + size.width
+            current.height = max(current.height, size.height)
+            current.indices.append(index)
+        }
+        if !current.indices.isEmpty { rows.append(current) }
+        return rows
+    }
+}
