@@ -230,26 +230,11 @@ struct EditorMaskActionsMenu: View {
     /// Removes the whole mask and returns to the list. Turn 31 moved this off the
     /// (now gone) command row and into here.
     var deleteMask: (() -> Void)?
+    /// The phone's top row draws it as a 30pt chip like `+` beside it.
+    var isChip = false
 
     var body: some View {
         Menu {
-            // Undo and redo are on the action row everywhere else, but that row is
-            // the shape controls while a mask is open — which left the one tool
-            // where a wrong move is a stroke of paint with no way to take it back
-            // short of leaving the mask.
-            Button {
-                controller.undo()
-            } label: {
-                Label("Undo", systemImage: "arrow.uturn.backward")
-            }
-            .disabled(!controller.canUndo)
-            Button {
-                controller.redo()
-            } label: {
-                Label("Redo", systemImage: "arrow.uturn.forward")
-            }
-            .disabled(!controller.canRedo)
-            Divider()
             // The effect switch: on the phone it moved here from the gone nav row's
             // eye (FS-03.05 §3); the strip dims the thumbnail while it is off.
             Button {
@@ -294,11 +279,21 @@ struct EditorMaskActionsMenu: View {
                 }
             }
         } label: {
-            Image(systemName: "ellipsis")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(EditorTheme.secondaryText)
-                .frame(width: 40, height: 44)
-                .contentShape(Rectangle())
+            if isChip {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 30, height: 30)
+                    .background(EditorTheme.chipIdle, in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
+                    .frame(width: 38, height: 44)
+                    .contentShape(Rectangle())
+            } else {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(EditorTheme.secondaryText)
+                    .frame(width: 40, height: 44)
+                    .contentShape(Rectangle())
+            }
         }
         .accessibilityLabel("Mask actions")
     }

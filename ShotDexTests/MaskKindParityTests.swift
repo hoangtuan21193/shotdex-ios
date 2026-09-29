@@ -31,7 +31,8 @@ struct MaskKindParityTests {
         let mask = try #require(controller.recipe.masks.last)
         #expect(mask.isInverted)
         #expect(mask.components.map(\.kind) == [.subject])
-        #expect(mask.name.hasPrefix("Background"))
+        #expect(mask.name == "Mask 1")
+        #expect(MaskAreaSummary.subtitle(for: mask) == "Background")
 
         controller.addMask(option: .subject)
         #expect(controller.recipe.masks.last?.isInverted == false)

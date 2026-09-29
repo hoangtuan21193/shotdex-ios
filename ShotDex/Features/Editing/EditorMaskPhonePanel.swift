@@ -231,38 +231,59 @@ private struct EditorMaskKindTileStyle: ButtonStyle {
     }
 }
 
-/// The phone panel's Mask target strip: every mask as a 40×30 matte thumbnail
-/// (white ring on the selected one, 35% when its effect is off), `+` for another
-/// mask, the selected mask's name, and its `⋯` menu. The strip follows the
-/// selection when it changes without a tap here (a new mask, Duplicate, Undo).
-struct EditorMaskStrip: View {
+/// The Mask tool's top row (FS-03.13c §2): the selected mask's thumbnail,
+/// its name ▼ over the areas it holds, Mask Overlay, `+` (the one way to a new
+/// mask) and `⋯`. The name opens the list of masks (`chrome.isMaskListOpen`).
+struct EditorMaskTopRow: View {
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
     let rename: () -> Void
 
     var body: some View {
-        HStack(spacing: 0) {
-            ScrollViewReader { proxy in
-                ScrollView(.horizontal) {
-                    HStack(spacing: 0) {
-                        ForEach(controller.recipe.masks) { mask in
-                            thumbnail(mask).id(mask.id)
+        HStack(spacing: AppTheme.Spacing.sm) {
+            if let mask = controller.selectedMask {
+                Button {
+                    withAnimation(EditorTheme.animation) { chrome.isMaskListOpen.toggle() }
+                } label: {
+                    HStack(spacing: AppTheme.Spacing.sm) {
+                        EditorMaskThumbnail(controller: controller, mask: mask, side: 30)
+                        VStack(alignment: .leading, spacing: 1) {
+                            HStack(spacing: 4) {
+                                Text(mask.name)
+                                    .font(.system(size: 14.5, weight: .semibold))
+                                    .lineLimit(1)
+                                Image(systemName: chrome.isMaskListOpen ? "chevron.up" : "chevron.down")
+                                    .font(.system(size: 10, weight: .bold))
+                            }
+                            .foregroundStyle(.white)
+                            Text(subtitle(of: mask))
+                                .font(.system(size: 11.5))
+                                .foregroundStyle(EditorTheme.secondaryText)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
                         }
+                        Spacer(minLength: 0)
                     }
+                    .contentShape(Rectangle())
                 }
-                .scrollIndicators(.hidden)
-                .onChange(of: controller.selectedMaskID) { _, id in
-                    guard let id else { return }
-                    withAnimation(EditorTheme.animation) { proxy.scrollTo(id, anchor: .center) }
-                }
-                .onAppear {
-                    if let id = controller.selectedMaskID { proxy.scrollTo(id, anchor: .center) }
-                }
+                .buttonStyle(.plain)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(mask.name), \(subtitle(of: mask))")
+                .accessibilityHint("Shows every mask")
+                .layoutPriority(1)
             }
-            .frame(maxWidth: CGFloat(controller.recipe.masks.count) * 48)
-            .layoutPriority(1)
 
             Button {
+                controller.setMaskOverlay(!controller.showsMaskOverlay)
+            } label: {
+                Text("Mask Overlay")
+                    .fixedSize()
+            }
+            .buttonStyle(EditorChipButtonStyle(isSelected: controller.showsMaskOverlay))
+            .accessibilityAddTraits(controller.showsMaskOverlay ? .isSelected : [])
+
+            Button {
+                chrome.isMaskListOpen = false
                 chrome.isChoosingMaskKind = true
             } label: {
                 Image(systemName: "plus")
@@ -270,77 +291,61 @@ struct EditorMaskStrip: View {
                     .foregroundStyle(.white)
                     .frame(width: 30, height: 30)
                     .background(EditorTheme.chipIdle, in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
-                    .frame(width: 44, height: 40)
+                    .frame(width: 38, height: 44)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("New mask")
 
-            Text(controller.selectedMask?.name ?? "")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.white)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .frame(
-                    minWidth: EditorLayoutMetrics.editorThumbnailStripNameMinWidth,
-                    maxWidth: .infinity,
-                    alignment: .leading
-                )
-                .padding(.leading, AppTheme.Spacing.xs)
-
-            EditorMaskActionsMenu(controller: controller, rename: rename) {
+            EditorMaskActionsMenu(controller: controller, rename: rename, deleteMask: {
                 controller.deleteSelectedMask()
                 chrome.resetZoom()
-            }
+            }, isChip: true)
         }
-        .padding(.horizontal, AppTheme.Spacing.sm)
+        .padding(.leading, AppTheme.Spacing.lg)
+        .padding(.trailing, AppTheme.Spacing.sm)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func thumbnail(_ mask: PhotoMask) -> some View {
-        let isSelected = controller.selectedMaskID == mask.id
+    /// The areas, or "Subtracting" while a subtracted area is the one being
+    /// worked on.
+    private func subtitle(of mask: PhotoMask) -> String {
+        controller.selectedComponent?.operation == .subtract ? "Subtracting" : MaskAreaSummary.subtitle(for: mask)
+    }
+}
+
+/// A mask's matte as a thumbnail (its kind's glyph until the matte exists),
+/// dimmed while its effect is off, a spinner while detection runs.
+struct EditorMaskThumbnail: View {
+    @Bindable var controller: PhotoEditorController
+    let mask: PhotoMask
+    let side: CGFloat
+
+    var body: some View {
         let shape = RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous)
-        return Button {
-            controller.selectMask(mask.id)
-            controller.editSelectedMaskAdjustments()
-        } label: {
-            shape
-                .fill(EditorTheme.chipIdle)
-                .frame(width: 40, height: 30)
-                .overlay {
-                    if let image = controller.maskThumbnails[mask.id] {
-                        Image(uiImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 40, height: 30)
-                            .clipShape(shape)
-                    } else {
-                        Image(systemName: mask.components.first?.kind.systemImage ?? "circle.dashed")
-                            .font(.system(size: 13))
-                            .foregroundStyle(EditorTheme.dimText)
-                    }
+        shape
+            .fill(EditorTheme.chipIdle)
+            .frame(width: side, height: side)
+            .overlay {
+                if let image = controller.maskThumbnails[mask.id] {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: side, height: side)
+                        .clipShape(shape)
+                } else {
+                    Image(systemName: mask.components.first?.kind.systemImage ?? "circle.dashed")
+                        .font(.system(size: 13))
+                        .foregroundStyle(EditorTheme.dimText)
                 }
-                .opacity(mask.isVisible ? 1 : EditorTheme.rowDisabled)
-                .overlay {
-                    if controller.isDetecting(mask: mask) {
-                        ProgressView()
-                            .controlSize(.small)
-                            .tint(.white)
-                    }
+            }
+            .opacity(mask.isVisible ? 1 : EditorTheme.rowDisabled)
+            .overlay {
+                if controller.isDetecting(mask: mask) {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(.white)
                 }
-                .padding(3.5)
-                .overlay {
-                    if isSelected {
-                        RoundedRectangle(cornerRadius: AppTheme.Radius.sm + 3.5, style: .continuous)
-                            .strokeBorder(.white, lineWidth: 1.5)
-                    }
-                }
-                .frame(width: 48, height: 40)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(mask.name)
-        .accessibilityValue(mask.isVisible ? "" : "Hidden")
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
+            }
     }
 }

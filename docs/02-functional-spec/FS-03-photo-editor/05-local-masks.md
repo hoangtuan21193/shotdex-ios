@@ -165,7 +165,7 @@ Tiếp số của [FS-03.12](12-phone-panel-grid.md). Máy: iPhone 17, iOS 26.5 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
 | AC-17 | ảnh chưa có mask | mở Mask | ba hàng chip hiện trong panel, không sheet; panel vẫn 264 | `MaskPhonePanelTests.chooserRowsCoverEveryKindOnce` + ảnh iPhone 17 26.5, 2026-09-24 |
-| AC-18 | như AC-17 | chạm Radial một lần | có đúng 1 mask, dải hiện 1 thumbnail + tên "Mask 1" (dòng phụ "Radial"), hàng Feather · Opacity có | ⚠️ phải chứng minh lại sau E4 — `MaskPhonePanelTests.oneTapOnRadialMakesOneShortNamedMask` sửa theo tên "Mask 1" (bằng chứng 2026-09-24 là tên cũ "Radial 1") |
+| AC-18 | như AC-17 | chạm Radial một lần | có đúng 1 mask, dải hiện 1 thumbnail + tên "Mask 1" (dòng phụ "Radial"), hàng Feather · Opacity có | ✅ `MaskPhonePanelTests.oneTapOnRadialMakesOneShortNamedMask` — tên "Mask 1", dòng phụ "Radial" (E4, 2026-09-29) |
 | AC-19 | ảnh không có depth | chạm Depth | không tạo mask; tiêu đề thành "This photo has no depth map. Portrait mode photos do." rồi trở lại sau 3s | `MaskPhonePanelTests.depthWithoutADepthMapGivesItsReason` + ảnh iPhone 17 26.5, 2026-09-24 |
 | AC-20 | 1 mask đang bật | `⋯` → Hide | ảnh mất tác dụng mask, thumbnail mờ 35%, lớp đỏ tắt; Show trả lại cả ba | `MaskPhonePanelTests.hideAndShowToggleTheEffect` |
 | AC-21 | 6 mask, dải cuộn tới cuối, mask 6 đang chọn, rồi chạm thumbnail mask 1 | `⋯` → Duplicate | bản sao nằm ngay sau mask 1, được chọn, thumbnail của nó nằm trọn trong dải | `MaskPhonePanelTests.duplicateLandsRightAfterItsSource` + ảnh iPhone 17 26.5, 2026-09-25 (6 mask Radial, chạm mask 1, `⋯` → Duplicate: bản sao ở vị trí 2, được chọn, nằm trọn trong dải) |

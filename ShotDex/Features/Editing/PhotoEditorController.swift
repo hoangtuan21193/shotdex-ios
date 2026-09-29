@@ -798,8 +798,6 @@ final class PhotoEditorController {
         else { return nil }
         recipe.masks[maskIndex].components[componentIndex].personIndex = person
         recipe.masks[maskIndex].components[componentIndex].personPart = part == .entire ? nil : part
-        let who = person.map { "Person \($0)" } ?? "People"
-        recipe.masks[maskIndex].name = part == .entire ? "\(who) \(recipe.masks.count)" : "\(who) \(part.displayName)"
         scheduleRender()
         return nil
     }
@@ -2607,9 +2605,6 @@ final class PhotoEditorController {
     func addMask(option: EditorNewMaskOption) {
         addMask(kind: option.componentKind)
         guard let index = recipe.masks.indices.last else { return }
-        // "Radial 1", not "Radial Gradient 1": the name sits beside the thumbnails
-        // in a 40pt strip (FS-03.05 §2).
-        recipe.masks[index].name = "\(option.shortTitle) \(recipe.masks.count)"
         guard option.startsInverted else { return }
         recipe.masks[index].isInverted = true
         scheduleRender()
@@ -2642,8 +2637,11 @@ final class PhotoEditorController {
         if kind == .subject || kind == .sky || kind == .people || kind.isFacePart {
             detectingMaskComponentIDs.insert(component.id)
         }
+        // "Mask n" whatever it holds (FS-03.13c §2, E4): a name taken from
+        // the first area is wrong the moment a second is added. The kinds are
+        // read from `MaskAreaSummary`.
         let number = recipe.masks.count + 1
-        let mask = PhotoMask(name: "\(kind.displayName) \(number)", component: component)
+        let mask = PhotoMask(name: "Mask \(number)", component: component)
         recipe.masks.append(mask)
         selectedMaskID = mask.id
         selectedComponentID = component.id

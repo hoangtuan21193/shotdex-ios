@@ -31,6 +31,9 @@ final class EditorChromeModel {
     /// Straighten Tool on: one finger on the photo draws a ruler instead of
     /// moving the crop frame. Off whenever Transform is left.
     var isStraightenToolOn = false
+    /// The Mask tool's list of masks, opened from the name in its top row
+    /// (FS-03.13c §2).
+    var isMaskListOpen = false
     /// Floating histogram card. It sits over the photo when expanded and parks as
     /// a pill in the action bar when collapsed. Collapsed on open — the photo is
     /// what the editor is for, so nothing covers it until the user asks.

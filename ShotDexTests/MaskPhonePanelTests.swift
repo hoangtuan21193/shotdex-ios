@@ -57,7 +57,8 @@ struct MaskPhonePanelTests {
     }
 
     /// AC-17 / AC-18. With no mask the chooser shows; one tap on Radial makes
-    /// exactly one mask, named short, selected, and the chooser gives way.
+    /// exactly one mask, "Mask 1" with "Radial" under it (FS-03.13c §2, E4),
+    /// selected, and the chooser gives way.
     @Test func oneTapOnRadialMakesOneShortNamedMask() throws {
         let controller = makeController()
         let chrome = EditorChromeModel()
@@ -66,9 +67,29 @@ struct MaskPhonePanelTests {
         controller.addMask(option: .radialGradient)
         let mask = try #require(controller.recipe.masks.first)
         #expect(controller.recipe.masks.count == 1)
-        #expect(mask.name == "Radial 1")
+        #expect(mask.name == "Mask 1")
+        #expect(MaskAreaSummary.subtitle(for: mask) == "Radial")
         #expect(controller.selectedMaskID == mask.id)
         #expect(!EditorMaskPhonePanel.showsChooser(controller: controller, chrome: chrome))
+    }
+
+    /// FS-03.13 AC-26. One tap on Brush and a 100pt drag: one mask, one
+    /// stroke, nothing else tapped in between; the row reads "Mask 1" over
+    /// "Brush".
+    @Test func brushTileDrawsImmediately() throws {
+        let controller = makeController()
+        controller.addMask(option: .brush)
+        controller.editSelectedMaskAdjustments()
+        #expect(controller.selectedComponent?.kind == .brush)
+        #expect(controller.editingMaskAdjustments, "the paint layer is up at once")
+        controller.beginBrushStroke(at: NormalizedPoint(x: 0.3, y: 0.5))
+        controller.continueBrushStroke(at: NormalizedPoint(x: 0.55, y: 0.5))
+        controller.endBrushStroke()
+        let mask = try #require(controller.recipe.masks.first)
+        #expect(controller.recipe.masks.count == 1)
+        #expect(mask.components.first?.brushStrokes.count == 1)
+        #expect(mask.name == "Mask 1")
+        #expect(MaskAreaSummary.subtitle(for: mask) == "Brush")
     }
 
     /// AC-19. Depth on a photo without a depth map is refused with the reason
@@ -102,7 +123,7 @@ struct MaskPhonePanelTests {
         controller.duplicateSelectedMask()
         #expect(controller.recipe.masks.count == 3)
         #expect(controller.recipe.masks[1].id == controller.selectedMaskID)
-        #expect(controller.recipe.masks[1].name == "Radial 1 Copy")
+        #expect(controller.recipe.masks[1].name == "Mask 1 Copy")
     }
 
     /// AC-22, and FS-03.13 AC-27. `+` then `‹` leaves the masks as they
