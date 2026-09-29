@@ -20,7 +20,7 @@ Nguồn: [intent](../../_intents/2026-09-26-import-from-server.md). Chiều ngư
 | 03 | [Tiêu chí nghiệm thu](03-acceptance-criteria.md) | AC-1…30 (AC-18 từ lỗi 2026-09-27) |
 | 04 | [Folder trong Collections (Network)](04-network-shortcuts.md) | thêm folder thành ô, mục Network, bìa lưu trên máy, AC-31…40 |
 | 05 | [On Local Network, On Cloud](05-cloud-folders.md) | tách Utilities, folder Dropbox/Google Drive… qua app Files, duyệt + upload, AC-45…51 |
-| 06 | [Sửa và xuất ảnh trên server](06-edit-and-export.md) | menu như album, bản tạm, editor, sheet xuất bốn đích, AC-52…70 |
+| 06 | [Sửa và xuất ảnh trên server](06-edit-and-export.md) | menu như album, bản tạm, editor, sheet xuất bốn đích, AC-52…70, AC-72…75 |
 
 ## 1. Người dùng cần gì
 

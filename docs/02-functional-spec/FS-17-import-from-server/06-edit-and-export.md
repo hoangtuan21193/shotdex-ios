@@ -1,7 +1,7 @@
 # FS-17.06 — Sửa và dùng ảnh trên server, hỏi nơi lưu lúc xuất
 
 `FS-17.06` · `Features/ServerImport/` (menu, sheet xuất) · `Features/Editing/` · `Collage/` · `VideoStudio/`
-· `Creations/` · test `ShotDexTests/ServerEdit*Tests.swift` · cập nhật 2026-09-29
+· `Creations/` · test `ShotDexTests/ServerEdit*Tests.swift` · cập nhật 2026-09-30
 
 **Một câu:** ảnh trong folder On Local Network / On Cloud có các lệnh làm được trên file như ảnh trong album. Bản
 gốc được tải về máy làm bản tạm, và lúc xuất app hỏi lưu đi đâu. Bản gốc trên server không bị đụng nếu người dùng
@@ -19,6 +19,9 @@ Photos trước, không để lại bản sao trong library, và biết chắc b
 
 **Có:** Edit (một tấm và cả loạt) · Paste Edits · Share · Copy · Combine Photos · Create Collage · Create Video ·
 Resize · Export EXIF (CSV) · Import to Library (đã có). Lối vào: nhấn giữ ô, chế độ chọn, màn xem một ảnh.
+
+**Hai đợt** (plan 2026-09-30): đợt 1 là mọi lệnh trừ Combine Photos, Create Collage, Create Video; đợt 2 thêm ba
+lệnh đó (AC-67). Trong đợt 1 ba lệnh này không có trong menu, chứ không hiện rồi mờ.
 
 **Cố ý không có:**
 - Adjust Date & Time, Adjust Location, Add to Collection, Duplicate, Favorite, Hide — vì chỉ có nghĩa với Photos.
@@ -64,8 +67,8 @@ Resize · Export EXIF (CSV) · Import to Library (đã có). Lối vào: nhấn 
 
 | Hàng | Nội dung |
 |---|---|
-| **Original Folder** | tên connection + đường dẫn; mờ kèm lý do khi connection chỉ đọc hoặc folder cloud không ghi được |
-| **Photos Library** | ảnh render thành asset mới, như Save Copy (FS-03.06); quyền `.limited` vẫn tạo được |
+| **Original Folder** | tên connection + đường dẫn; mờ kèm lý do ở gốc SMB, hoặc khi folder cloud báo không ghi được |
+| **Photos Library** | asset mới **chỉ gồm bản render** JPEG/HEIC, như kết quả Resize — bản gốc không vào library; ngày chụp, vị trí lấy từ EXIF gốc; `.limited` vẫn tạo được |
 | **Other Folder…** | chọn connection đã lưu rồi duyệt tới folder, dùng bộ chọn folder của sheet upload (FS-15.02 §2) |
 | **Share…** | share sheet, mở sau khi các đích khác đã xong |
 | Khi trùng bản gốc | chỉ hiện khi chọn Original Folder: **Save as New File** (mặc định) · **Replace Original** |
@@ -76,8 +79,10 @@ Resize · Export EXIF (CSV) · Import to Library (đã có). Lối vào: nhấn 
   be recovered." Ảnh có bản gốc RAW thì không có lựa chọn này, kèm câu "Originals in RAW stay — edits are saved as JPEG or HEIC."
 - Tên file mới: `<tên gốc>_edited.<đuôi>`, cùng quy ước với FS-15.02 §3 (người dùng chốt 2026-09-29). Trùng thì thêm
   ` (2)`, ` (3)`…, như Keep Both của FS-15.02 §5.
-- Ghi lên server theo đúng khuôn FS-15.02 §4: `.shotdex-part` → đọc lại → SHA-256 khớp → đổi tên thật → ghi lịch sử
-  upload, để lưới hiện dấu "In Library" / "Uploaded" như hiện nay.
+- Ghi lên server theo đúng khuôn FS-15.02 §4: `.shotdex-part` → đọc lại → SHA-256 khớp → đổi tên thật. **Không** ghi
+  lịch sử upload: dòng lịch sử gắn một asset trong Photos, mà bản xuất từ server không có.
+- Không thử ghi trước khi mở sheet. Server từ chối ghi thì đích đó báo "You can't write to this folder." kèm
+  **Choose Another Folder**; bản tạm và recipe được giữ như mọi đích lỗi.
 - Mỗi đích chạy độc lập. Xong hết thì xoá bản tạm và recipe, đóng editor, rồi quay lại lưới. Lưới tải lại folder nếu
   có ghi vào đó.
 - Một đích lỗi (rớt mạng, server đầy) thì bản tạm và recipe được **giữ lại**. Sheet hiện kết quả từng đích kèm
@@ -112,14 +117,18 @@ Resize · Export EXIF (CSV) · Import to Library (đã có). Lối vào: nhấn 
 | AC-62 | sửa `a.JPG` | Replace Original → xác nhận | `a.JPG` mang nội dung mới; bấm Cancel ở hộp xác nhận thì không ghi gì | `ServerEditExportTests.replaceNeedsConfirm` ⚠️ chưa có + ảnh hộp |
 | AC-63 | nguồn `b.CR3` | mở sheet | không có Replace Original, có câu RAW | `ServerEditExportTests.rawCannotBeReplaced` ⚠️ chưa có + ảnh |
 | AC-64 | chọn Photos Library + Other Folder (SFTP `/sel`) + Share | Export | 1 asset mới trong Photos; `/sel/a_edited.jpg`; share sheet mở sau cùng | `ServerEditExportTests.multipleDestinations` ⚠️ chưa có + ảnh |
-| AC-65 | connection chỉ đọc | mở sheet | Original Folder mờ, có lý do | ảnh ⚠️ chưa có |
+| AC-65 | folder server từ chối ghi | Export tới Original Folder | đích đó báo "You can't write to this folder." + Choose Another Folder; bản tạm còn; không file `.shotdex-part` nào sót | `ServerEditExportTests.permissionDeniedOffersAnotherFolder` ⚠️ chưa có + ảnh |
 | AC-66 | loạt 5 ảnh, sửa 3 | Export… | hỏi nơi lưu 1 lần, xuất 3 file, 2 ảnh chưa sửa không xuất | `ServerEditExportTests.batchExportsEditedOnly` ⚠️ chưa có |
-| AC-67 | chọn 4 ảnh | Create Collage → lưu | sheet xuất §6 mở, không tự lưu vào Photos | ảnh ⚠️ chưa có |
+| AC-67 | (đợt 2) chọn 4 ảnh | Create Collage → lưu | sheet xuất §6 mở, không tự lưu vào Photos | ảnh ⚠️ chưa có |
 | AC-68 | chọn 2 ảnh | Export EXIF (CSV) | CSV 2 dòng; mỗi file chỉ đọc phần đầu (≤ 1 MB) | `ServerEditExifTests.readsHeadOnly` ⚠️ chưa có |
 | AC-69 | server tắt giữa lúc xuất (Original Folder), Photos đã xong | Export | Photos xong; Original Folder lỗi + Retry Failed; bản tạm + recipe còn | `ServerEditExportTests.failedDestinationKeepsDraft` ⚠️ chưa có |
 | AC-70 | iOS 26.5, 18.6, iPad, Duo trong | menu + sheet | không bị cắt, cùng lệnh ở hai nhánh | ảnh ⚠️ chưa có |
+| AC-72 | clipboard có look (Exposure +1), chọn 2 ảnh | Paste Edits | tải 2 bản tạm, sheet xuất mở với `2 photos`; không ghi gì trước khi bấm Export | `ServerEditSessionTests.pasteEditsGoesToExportSheet` ⚠️ chưa có |
+| AC-73 | chọn 1 ảnh 6000×4000 | Resize 50% → lưu | sheet xuất mở; xuất Original Folder ra `a_edited.jpg` 3000×2000 | `ServerEditExportTests.resizeExportsThroughSheet` ⚠️ chưa có |
+| AC-74 | `a.JPG` có GPS, Share bỏ vị trí đang bật | Share | share sheet nhận file bản gốc đã bỏ GPS; đóng share sheet thì bản tạm bị xoá | `ServerEditSessionTests.shareHandsOriginalAndCleansUp` ⚠️ chưa có |
+| AC-75 | `b.CR3` 6000×4000 | Copy | pasteboard có ảnh cạnh dài ≤ 4096 px; bản tạm bị xoá | `ServerEditSessionTests.copyBoundsAndCleansUp` ⚠️ chưa có |
 
-**Chưa chứng minh được:** AC-52…AC-70 — chưa có code.
+**Chưa chứng minh được:** AC-52…AC-70, AC-72…AC-75 — chưa có code. (AC-71 thuộc FS-17.03.)
 
 ## 9. Rủi ro đã biết
 
