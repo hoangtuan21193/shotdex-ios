@@ -22,6 +22,9 @@ struct LookPreset: Codable, Identifiable, Equatable, Sendable {
     /// The preset file it came from, kept byte for byte beside it (D35) so a
     /// later build can map it again; a file name in the store's folder.
     var originalPresetFile: String?
+    /// An imported look's settings the preset named (E6): applying it
+    /// changes only those. Nil for a look made here — the whole look cut.
+    var namedSettings: Set<LookSettingKey>?
 
     init(id: UUID = UUID(), name: String, recipe: PhotoEditRecipe, createdAt: Date = Date()) {
         self.id = id
@@ -31,7 +34,7 @@ struct LookPreset: Codable, Identifiable, Equatable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, recipe, createdAt, source, receiveID, originalPresetFile
+        case id, name, recipe, createdAt, source, receiveID, originalPresetFile, namedSettings
     }
 
     /// The fields added with the file store decode as absent when they are,
@@ -45,6 +48,12 @@ struct LookPreset: Codable, Identifiable, Equatable, Sendable {
         source = (try? container.decodeIfPresent(LookSource.self, forKey: .source)) ?? .shotdex
         receiveID = try? container.decodeIfPresent(UUID.self, forKey: .receiveID)
         originalPresetFile = try? container.decodeIfPresent(String.self, forKey: .originalPresetFile)
+        namedSettings = try? container.decodeIfPresent(Set<LookSettingKey>.self, forKey: .namedSettings)
+    }
+
+    /// This look on `recipe`: the whole look cut, or only the named settings.
+    func applied(onto recipe: PhotoEditRecipe) -> PhotoEditRecipe {
+        EditorSyncScope.applyLook(self.recipe, named: namedSettings, onto: recipe)
     }
 }
 
@@ -220,7 +229,8 @@ final class LookPresetStore {
         _ recipe: PhotoEditRecipe,
         name: String,
         original: (data: Data, pathExtension: String)? = nil,
-        receiveID: UUID? = nil
+        receiveID: UUID? = nil,
+        namedSettings: Set<LookSettingKey>? = nil
     ) -> ImportOutcome {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let base = trimmed.isEmpty ? "Imported Look" : trimmed
@@ -235,6 +245,7 @@ final class LookPresetStore {
         var preset = LookPreset(id: id, name: finalName, recipe: look)
         preset.source = .imported
         preset.receiveID = receiveID
+        preset.namedSettings = namedSettings
         insert(preset, original: original)
         return .added(presets[0])
     }

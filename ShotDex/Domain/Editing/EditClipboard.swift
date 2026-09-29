@@ -111,3 +111,93 @@ enum EditorSyncScope {
         }
     }
 }
+
+extension EditorSyncScope {
+    /// A look imported from a preset changes only the settings the preset
+    /// named (FS-03.14b §1, E6); everything else on the photo stays. `named`
+    /// nil is a look made in ShotDex: the whole look cut, as `apply` does.
+    static func applyLook(_ source: PhotoEditRecipe, named: Set<LookSettingKey>?, onto target: PhotoEditRecipe) -> PhotoEditRecipe {
+        guard let named else { return EditorSyncScope.look.apply(source, onto: target) }
+        var result = target
+        for key in named {
+            let parts = key.rawValue.split(separator: ".").map(String.init)
+            guard let head = parts.first else { continue }
+            switch head {
+            case "adjustment":
+                if parts.count == 2, let kind = PhotoAdjustmentKind(rawValue: parts[1]) {
+                    result.adjustments[kind] = source.adjustments[kind]
+                }
+            case "mixer":
+                if parts.count == 3, let band = ColorMixerBand(rawValue: parts[1]),
+                   let property = ColorMixerProperty(rawValue: parts[2]) {
+                    var channel = result.color.mixer[band]
+                    channel[property] = source.color.mixer[band][property]
+                    result.color.mixer[band] = channel
+                }
+            case "grayMixer":
+                if parts.count == 2, let band = ColorMixerBand(rawValue: parts[1]) {
+                    result.color.grayMixer[band] = source.color.grayMixer[band]
+                }
+            case "calibration":
+                result.color.calibration = Self.copyCalibration(parts.last ?? "", from: source.color.calibration, onto: result.color.calibration)
+            case "grading":
+                if parts.count == 2 {
+                    if parts[1] == "blending" { result.color.grading.blending = source.color.grading.blending }
+                    if parts[1] == "balance" { result.color.grading.balance = source.color.grading.balance }
+                } else if parts.count == 3, let region = ColorGradingRegion(rawValue: parts[1]) {
+                    switch parts[2] {
+                    case "hue": result.color.grading[region].hue = source.color.grading[region].hue
+                    case "saturation": result.color.grading[region].saturation = source.color.grading[region].saturation
+                    case "luminance": result.color.grading[region].luminance = source.color.grading[region].luminance
+                    default: break
+                    }
+                }
+            case "curve":
+                if parts.count == 3, parts[1] == "region" {
+                    result.curve.region = Self.copyRegion(parts[2], from: source.curve.region, onto: result.curve.region)
+                } else if parts.count == 2, let channel = ToneCurveChannel(rawValue: parts[1]) {
+                    result.curve[channel] = source.curve[channel]
+                }
+            case "vignetteStyle":
+                result.vignetteStyle = source.vignetteStyle
+            case "filter":
+                result.filter = source.filter
+                result.lutID = source.lutID
+                result.filterIntensity = source.filterIntensity
+            default:
+                break
+            }
+        }
+        return result
+    }
+
+    private static func copyCalibration(_ key: String, from source: PhotoCalibration, onto target: PhotoCalibration) -> PhotoCalibration {
+        var result = target
+        switch key {
+        case "shadowTint": result.shadowTint = source.shadowTint
+        case "redHue": result.redHue = source.redHue
+        case "redSaturation": result.redSaturation = source.redSaturation
+        case "greenHue": result.greenHue = source.greenHue
+        case "greenSaturation": result.greenSaturation = source.greenSaturation
+        case "blueHue": result.blueHue = source.blueHue
+        case "blueSaturation": result.blueSaturation = source.blueSaturation
+        default: break
+        }
+        return result
+    }
+
+    private static func copyRegion(_ key: String, from source: ParametricCurve, onto target: ParametricCurve) -> ParametricCurve {
+        var result = target
+        switch key {
+        case "shadows": result.shadows = source.shadows
+        case "darks": result.darks = source.darks
+        case "lights": result.lights = source.lights
+        case "highlights": result.highlights = source.highlights
+        case "shadowSplit": result.shadowSplit = source.shadowSplit
+        case "midtoneSplit": result.midtoneSplit = source.midtoneSplit
+        case "highlightSplit": result.highlightSplit = source.highlightSplit
+        default: break
+        }
+        return result
+    }
+}

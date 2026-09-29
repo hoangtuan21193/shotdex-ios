@@ -185,7 +185,7 @@ struct EditorFiltersPanel: View {
     /// no thumbnail of their own). Long-press still deletes it.
     private func lookTile(_ preset: LookPreset, store: LookPresetStore) -> some View {
         Button {
-            controller.apply(EditorSyncScope.look.apply(preset.recipe, onto: controller.recipe))
+            controller.apply(preset.applied(onto: controller.recipe))
         } label: {
             VStack(spacing: 5) {
                 Image(systemName: "camera.filters")
@@ -441,7 +441,7 @@ struct EditorFiltersPanel: View {
 
     private func lookChip(_ preset: LookPreset, store: LookPresetStore) -> some View {
         Button {
-            controller.apply(EditorSyncScope.look.apply(preset.recipe, onto: controller.recipe))
+            controller.apply(preset.applied(onto: controller.recipe))
         } label: {
             Text(preset.name)
                 .font(EditorTheme.pillLabel)

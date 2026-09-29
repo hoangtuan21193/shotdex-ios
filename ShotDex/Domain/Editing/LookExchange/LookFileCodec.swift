@@ -12,6 +12,9 @@ struct LookFile: Codable, Equatable {
     var source: LookSource
     var createdAt: Date
     var look: PhotoEditRecipe
+    /// An imported look's named settings (14c §1, E6); absent for a look
+    /// made in ShotDex.
+    var namedSettings: [String]?
     var lut: EmbeddedLUT?
 
     struct EmbeddedLUT: Codable, Equatable {
@@ -48,6 +51,7 @@ enum LookFileCodec {
             source: preset.source,
             createdAt: preset.createdAt,
             look: EditorSyncScope.look.apply(preset.recipe, onto: .identity),
+            namedSettings: preset.namedSettings.map { $0.map(\.rawValue).sorted() },
             lut: preset.recipe.lutID == nil ? nil : lut
         )
         let encoder = JSONEncoder()

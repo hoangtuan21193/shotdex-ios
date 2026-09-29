@@ -135,6 +135,21 @@ enum LightroomMapping {
                 result.lines.append(.init(kind: .changed, text: "Lens correction on — the lens is chosen by ShotDex"))
             }
             return true
+        case "CameraProfile":
+            switch CameraProfileMap.match(raw) {
+            case let .exact(filter):
+                result.recipe.filter = filter
+            case let .near(filter):
+                result.recipe.filter = filter
+                result.lines.append(.init(kind: .changed, text: "Profile '\(raw)' — ShotDex look \(filter.displayName) used"))
+            case .none:
+                result.recipe.filter = .original
+                result.lines.append(.init(kind: .changed, text: "No ShotDex look for profile '\(raw)' — Original used"))
+            }
+            result.recipe.filterIntensity = 1
+            result.namedSettings.insert(.filter)
+            result.appliedCount += 1
+            return true
         case "PostCropVignetteStyle":
             let styles: [String: PhotoVignetteStyle] = ["1": .highlightPriority, "2": .colorPriority, "3": .paintOverlay]
             guard let style = styles[raw] else { return nil }

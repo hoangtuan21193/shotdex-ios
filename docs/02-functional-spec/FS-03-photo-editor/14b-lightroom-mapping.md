@@ -106,7 +106,7 @@ Mọi dòng "✕ tới FS-03.15/16" ở §2 là thông số ShotDex **chưa có*
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-b1 | preset chỉ có `CameraProfile`="Camera CLASSIC CHROME"; ảnh đang có Exposure +0.50 | nhập, rồi áp look lên ảnh | look có film look Classic Chrome, Amount 100%, tập thông số đã đặt chỉ gồm film look; hàng ✓; sau khi áp ảnh vẫn Exposure +0.50, mọi slider khác giữ giá trị trước khi áp (chốt E6) | `CameraProfileMapTests.fujiNamesMapToTheSameLook` |
+| AC-b1 | preset chỉ có `CameraProfile`="Camera CLASSIC CHROME"; ảnh đang có Exposure +0.50 | nhập, rồi áp look lên ảnh | look có film look Classic Chrome, Amount 100%, tập thông số đã đặt chỉ gồm film look; hàng ✓; sau khi áp ảnh vẫn Exposure +0.50, mọi slider khác giữ giá trị trước khi áp (chốt E6) | ✅ `CameraProfileMapTests.fujiNamesMapToTheSameLook` + `EditClipboardSparseLookTests.importedLookLeavesUnnamedSettingsAlone` |
 | AC-b2 | preset có `CameraProfile`="Adobe Color" và `Vibrance`=+10 | nhập | film look Original, Vibrance +10; dòng ≈ nêu tên profile | `CameraProfileMapTests.unknownProfileFallsBackToOriginal` |
 | AC-b3 | `Exposure2012`=+3.00 | nhập | Exposure +2.00 EV; dòng ≈ "beyond ±2 EV — set to +2.00" | ✅ `LightroomMappingTests.exposureBeyondRangeIsClampedAndReported` |
 | AC-b4 | preset có `HasCrop`=True, crop 4:5 và `Exposure2012`=+0.30 | nhập | look không có crop, Exposure +0.30; dòng ✕ "Crop stays with each photo"; hàng ≈ | ✅ `LightroomMappingTests.cropIsNeverImported` |
