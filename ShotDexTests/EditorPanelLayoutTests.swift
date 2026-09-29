@@ -574,19 +574,21 @@ struct EditorPanelLayoutTests {
         }
     }
 
-    /// The canvas the photo gets on an 11" iPad in landscape, measured on
-    /// 2026-09-22: 842 wide (window minus panel minus rail) by 786 tall (window
-    /// minus the command band). A 3:2 frame fills 553 of those 786pt — 71%, so
-    /// the rebuild's job is not to grow that number but to **not shrink it**.
-    /// Cards, the footer move and the Save pill must all come out of chrome the
-    /// panel already had.
+    /// The canvas the photo gets on an 11" iPad in landscape (AC-20). The
+    /// 2026-09-22 baseline was 842 wide; the resize handle between canvas and
+    /// panel takes 10 of it, which this test used to leave out while the
+    /// device measured 832. 832 is the floor now (D5, 2026-09-30) — measured,
+    /// not the number the arithmetic wished for. Height: window minus the
+    /// command band. Cards, the footer move and the Save pill must all come
+    /// out of chrome the panel already had.
     @Test func theCanvasDoesNotShrinkBelowTheMeasuredBaseline() {
         let canvasWidth = Self.iPad11Landscape.width
             - EditorLayoutMetrics.sidebarDefaultWidth
             - EditorLayoutMetrics.sidebarRailWidth
+            - EditorLayoutMetrics.sidebarResizeHandleWidth
         let canvasHeight = Self.iPad11Landscape.height - EditorLayoutMetrics.editorTopBandHeight
 
-        #expect(canvasWidth >= 842)
+        #expect(canvasWidth >= 832)
         #expect(canvasHeight >= 782)
 
         // And the panel is still paid for in width, never in canvas height: the
