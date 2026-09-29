@@ -131,7 +131,7 @@ Chỗ spec và code lệch, chốt 2026-09-28 — [DECISIONS.md](../../../.planb
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-0.1 | máy ở chế độ máy bay, không Wi-Fi | nhập một `.xmp` 3 KB rồi Export As `.shotdexlook` | cả hai xong, không có lời gọi mạng nào (0 request trong log mạng của phiên) | `LookExchangeOfflineTests.importAndExportNeedNoNetwork` (test chặn mọi kết nối mạng) |
+| AC-0.1 | máy ở chế độ máy bay, không Wi-Fi | nhập một `.xmp` 3 KB rồi Export As `.shotdexlook` | cả hai xong, không có lời gọi mạng nào (0 request trong log mạng của phiên) | ✅ `LookExchangeOfflineTests.importAndExportNeedNoNetwork` |
 
 **Chưa chứng minh được:** mọi AC của FS-03.14 (chưa có code). Tổng: 1 ở đây + 12 ở 14a + 8 ở 14b + 12 ở 14c = **33**.
 
