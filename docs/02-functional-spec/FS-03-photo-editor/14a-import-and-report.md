@@ -89,7 +89,7 @@ Nhập từ ô Import xong → sheet **báo cáo** (`[.medium, .large]`, [DESIGN
 | AC-a7 | `.xmp` có `Exposure2012`=+1.00 và thẻ lạ `crs:FutureSlider`=40 | nhập | look thêm với Exposure +1.00; hàng ≈, dòng "Unknown setting FutureSlider — ignored" | ✅ `PresetImportReportTests.unknownTagsAreListedNotFatal` |
 | AC-a8 | sidecar `.xmp` chỉ có thẻ EXIF/Dublin Core, không thẻ `crs:` | nhập | ✕ "This XMP has no Lightroom edit settings"; không thêm look | ✅ `LightroomXMPReaderTests.sidecarWithoutSettingsIsNotAPreset` |
 | AC-a9 | My Looks đã có "Golden" (tự lưu) | nhập preset tên "golden", rồi nhập lại đúng file đó | lần đầu thêm "golden (2)" nhãn "Imported", "Golden" giữ nguyên nội dung; lần hai ✕ "Already in My Looks", số look không đổi | ✅ `LookPresetStoreTests.importNeverOverwritesAUserLook` |
-| AC-a10 | chọn cùng lúc 2 `.xmp` và 1 `.cube` 33³ | nhập | My Looks +2, tab LUTs +1; báo cáo có dòng "Added to LUTs" | `PresetImportReportTests.cubeFilesGoToLUTs` |
+| AC-a10 | chọn cùng lúc 2 `.xmp` và 1 `.cube` 33³ | nhập | My Looks +2, tab LUTs +1; báo cáo có dòng "Added to LUTs" | ✅ `PresetImportReportTests.cubeFilesGoToLUTs` |
 | AC-a11 | lượt nhập 300 preset | chạm Cancel ở "Reading 120 of 300" | không look nào được thêm; My Looks như trước lượt nhập | `PresetImportTests.cancelAddsNothing` |
 | AC-a12 | `Golden.xmp` 3 KB | nhập, rồi Delete look "Golden" | sau nhập: cạnh look có bản chép byte-giống file gốc; sau Delete: bản chép cũng mất | ✅ `LookPresetStoreTests.keepsOriginalPresetBesideLook` (+ `legacyLooksMoveIntoTheFileOnce`) |
 

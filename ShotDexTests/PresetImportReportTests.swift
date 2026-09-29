@@ -49,4 +49,29 @@ struct PresetImportReportTests {
         let kept = try #require(store.presets.first)
         #expect(store.originalPresetURL(for: kept) != nil, "the preset file is kept beside it")
     }
+
+    /// FS-03.14 AC-a10. Two .xmp and one .cube at once: My Looks +2, the
+    /// LUTs tab +1, and a row "Added to LUTs".
+    @MainActor @Test func cubeFilesGoToLUTs() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("presets-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let a = folder.appendingPathComponent("A.xmp"), b = folder.appendingPathComponent("B.xmp")
+        try LightroomXMPReaderTests.preset(#"crs:Exposure2012="+0.20""#).write(to: a)
+        try LightroomXMPReaderTests.preset(#"crs:Contrast2012="+20""#).write(to: b)
+        let cube = folder.appendingPathComponent("Teal Test.cube")
+        var text = "TITLE \"Teal Test\"\nLUT_3D_SIZE 2\n"
+        for blue in 0...1 { for green in 0...1 { for red in 0...1 { text += "\(red) \(green) \(blue)\n" } } }
+        try Data(text.utf8).write(to: cube)
+
+        let store = LookPresetStore(directory: folder.appendingPathComponent("store"), defaults: UserDefaults(suiteName: "import-\(UUID().uuidString)")!)
+        let luts = ImportedLUTStore()
+        let before = luts.luts.count
+        let report = PresetImporter.apply(try PresetImporter.read([a, cube, b]), looks: store, luts: luts)
+        defer { for lut in luts.luts where lut.displayName == "Teal Test" { luts.delete(lut) } }
+        #expect(store.presets.count == 2)
+        #expect(luts.luts.count == before + 1)
+        let row = try #require(report.entries.first { $0.name == "Teal Test" })
+        #expect(row.lines == [PresetReportLine(kind: .applied, text: "Added to LUTs")])
+    }
 }
