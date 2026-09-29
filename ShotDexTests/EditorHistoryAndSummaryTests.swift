@@ -97,6 +97,28 @@ struct EditorHistoryAndSummaryTests {
         #expect(c.historyTimeline.count == depth)
     }
 
+    /// FS-03.13 AC-23 (E3). Straighten's Auto writes Level's angle into the
+    /// crop, one step; Geometry Rotate and Upright stay as they were. With no
+    /// line found nothing changes.
+    @MainActor @Test func straightenAutoWritesTheCropAngle() {
+        let c = controller()
+        let level = UprightSuggestion(rotate: 0.2)
+        #expect(c.applyStraightenAuto(level))
+        #expect(abs(c.recipe.crop.straightenDegrees - 0.2 * 0.35 * 180 / .pi) < 0.0001)
+        #expect(c.recipe.adjustments.geoRotate == 0)
+        #expect(c.recipe.upright.solved == .identity)
+        let depth = c.historyTimeline.count
+        c.setStraighten(1)
+        let before = c.recipe
+        #expect(!c.applyStraightenAuto(nil))
+        #expect(c.recipe == before)
+        #expect(c.historyTimeline.count == depth + 1)
+        // Flipped, the same tilt in the file is the mirror on screen.
+        c.flip()
+        #expect(c.applyStraightenAuto(level))
+        #expect(abs(c.recipe.crop.straightenDegrees + 0.2 * 0.35 * 180 / .pi) < 0.0001)
+    }
+
     /// FS-03.13 AC-10. Inside a tool Undo stops where it opened: the spot
     /// goes, then Undo is dim and the edit from before the tool stays.
     @MainActor @Test func undoInsideAToolStopsAtEntry() {

@@ -1448,6 +1448,28 @@ final class PhotoEditorController {
         scheduleRender()
     }
 
+    /// Straighten's Auto (FS-03.13b §3, chosen E3): Upright's Level pass,
+    /// written into the crop's angle — Straighten belongs to the crop and does
+    /// not travel with Copy Edits, where Geometry would. Geometry and Upright
+    /// are left as they are. False when the photo has no line to work from.
+    func autoStraighten() -> Bool {
+        guard let cgImage = originalPreviewImage?.cgImage else { return false }
+        let suggestion = UprightAnalyzer.analyze(CIImage(cgImage: cgImage), mode: .level, context: Self.uprightContext)
+        return applyStraightenAuto(suggestion)
+    }
+
+    /// `autoStraighten` after the analysis: the seam the tests drive.
+    func applyStraightenAuto(_ suggestion: UprightSuggestion?) -> Bool {
+        guard let suggestion, abs(suggestion.rotate) > 0.001 else { return false }
+        // The analysis reads the photo before the flip; the angle turns what
+        // is shown, after it.
+        let degrees = recipe.crop.flippedHorizontally ? -suggestion.rotationDegrees : suggestion.rotationDegrees
+        beginContinuousChange()
+        setStraighten(degrees)
+        endContinuousChange()
+        return true
+    }
+
     /// The Straighten Tool's ruler lifted (FS-03.13b §3): one history step.
     func straighten(byRuler correction: Double) {
         let angle = StraightenToolMath.angle(current: recipe.crop.straightenDegrees, adding: correction)

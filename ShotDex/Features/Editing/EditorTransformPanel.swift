@@ -8,6 +8,11 @@ struct EditorTransformSectionView: View {
     @Bindable var chrome: EditorChromeModel
     let section: EditorTransformSection
 
+    /// Auto found nothing: said in the row for 3s, as Upright does — the
+    /// editor's toast carries an Undo there would be nothing to undo for.
+    @State private var autoNote: String?
+    @State private var autoNoteTask: Task<Void, Never>?
+
     var body: some View {
         switch section {
         case .crop: cropRows
@@ -117,9 +122,25 @@ struct EditorTransformSectionView: View {
                 }
                 .buttonStyle(EditorChipButtonStyle(isSelected: chrome.isStraightenToolOn))
                 .accessibilityAddTraits(chrome.isStraightenToolOn ? .isSelected : [])
+                Button {
+                    showAutoNote(controller.autoStraighten() ? nil : "No straight lines to work from")
+                } label: {
+                    EditorPanelChipLabel(title: "Auto", systemImage: "wand.and.stars")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(EditorChipButtonStyle(isSelected: false))
+                .accessibilityLabel("Auto Straighten")
             }
             .padding(.horizontal, EditorStripLayout.horizontalInset)
             .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
+            if let autoNote {
+                Text(autoNote)
+                    .font(EditorTheme.rowLabel)
+                    .foregroundStyle(EditorTheme.panelHint)
+                    .padding(.horizontal, AppTheme.Spacing.lg)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
+            }
             if chrome.isStraightenToolOn {
                 Text("Drag a line along something that should be level, like the horizon or a table edge.")
                     .font(EditorTheme.rowLabel)
@@ -131,6 +152,19 @@ struct EditorTransformSectionView: View {
             }
         }
         .animation(EditorTheme.animation, value: chrome.isStraightenToolOn)
+        .animation(EditorTheme.animation, value: autoNote)
+        .onDisappear { autoNoteTask?.cancel() }
+    }
+
+    private func showAutoNote(_ message: String?) {
+        autoNoteTask?.cancel()
+        autoNote = message
+        guard message != nil else { return }
+        autoNoteTask = Task {
+            try? await Task.sleep(for: .seconds(3))
+            guard !Task.isCancelled else { return }
+            autoNote = nil
+        }
     }
 
     private var angleRow: some View {

@@ -131,6 +131,13 @@ public struct UprightSuggestion: Equatable, Sendable {
         abs(rotate) < 0.001 && abs(vertical) < 0.001 && abs(horizontal) < 0.001
     }
 
+    /// `rotate` in degrees, counter-clockwise positive — what Straighten's
+    /// Auto writes into the crop angle (FS-03.13b §3). `applyGeo` turns by
+    /// `geoRotate * 0.35` radians.
+    public var rotationDegrees: Double {
+        rotate * 0.35 * 180 / .pi
+    }
+
     /// The part of the suggestion `mode` may use, as the solved transform a
     /// recipe keeps apart from the Geometry sliders (FS-03.15 D57): those add
     /// on top of it and are never overwritten by it.
