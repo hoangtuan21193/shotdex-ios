@@ -82,7 +82,7 @@ Nhập từ ô Import xong → sheet **báo cáo** (`[.medium, .large]`, [DESIGN
 |---|---|---|---|---|
 | AC-a1 | `.xmp` có `crs:Name`="Golden", `Exposure2012`=+0.50, `HueAdjustmentRed`=-20 | nhập qua ô Import XMP Preset | My Looks thêm "Golden" nhãn "Imported": Exposure +0.50 EV, Red Hue −20; báo cáo "1 look added", hàng ✓ | ⚠️ nửa Domain ✅ `LightroomXMPReaderTests.exposureAndRedHueMap` (+ `elementFormIsReadToo`, `aDoctypeIsRefusedBeforeParsing`); ô Import + `looks-import-report.json` ở task 23 |
 | AC-a2 | `.lrtemplate` title "Matte", `Contrast2012` = -30, `Blacks2012` = 25 | nhập | "Matte" nhãn "Imported": Contrast −30, Blacks +25; ✓ | ✅ `LightroomTemplateReaderTests.readsSettingsAsData` (+ `functionCallsAreRejected`) |
-| AC-a3 | DNG 25 MB của bản di động, XMP có `Vibrance`=+15 | nhập | look có Vibrance +15; bộ đếm giải mã ảnh của test = 0 | `PresetDNGReaderTests.readsXMPWithoutDecodingPixels` |
+| AC-a3 | DNG 25 MB của bản di động, XMP có `Vibrance`=+15 | nhập | look có Vibrance +15; bộ đếm giải mã ảnh của test = 0 | ✅ `PresetDNGReaderTests.readsXMPWithoutDecodingPixels` (file TIFF dựng trong test mang gói XMP; 0 lần giải mã) |
 | AC-a4 | `.xmp` thiếu thẻ đóng ở dòng 14 | nhập | hàng ✕ "The file is not valid XMP. Try exporting the preset from Lightroom again."; số look không đổi | ✅ `LightroomXMPReaderTests.malformedXMLGivesNextStep` |
 | AC-a5 | `.xmp` 50 MB | nhập | ✕ "Larger than 5 MB — not a preset" trước khi đọc nội dung; bộ nhớ tăng < 10 MB | `PresetImportLimitsTests.oversizedFileIsRefusedUnread` |
 | AC-a6 | 10 `.xmp` chọn cùng lúc, một file XML hỏng | nhập | 9 look thêm, 1 hàng ✕ mang tên file hỏng; dòng đầu "9 looks added · 1 skipped" | `PresetImportReportTests.oneBrokenPresetOnlyLosesItself` |
