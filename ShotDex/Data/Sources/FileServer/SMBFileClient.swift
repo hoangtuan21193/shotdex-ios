@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import Network
 import SMBClient
 
 /// `RemoteFileClient` over SMB 2/3 (SMBClient, MIT). Paths start at the
@@ -361,9 +362,18 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
 /// POSIX / Network framework errors from either library, in the user's terms.
 func mapNetworkError(_ error: Error, host: String) -> Error {
     let nsError = error as NSError
-    // The system refused local-network access (the user said Don't Allow).
-    if nsError.domain == "NWErrorDomain" || nsError.domain == NSPOSIXErrorDomain {
-        switch Int32(nsError.code) {
+    // SMBClient throws Network's own `NWError`, which bridges to the domain
+    // "Network.NWError" — read its POSIX code directly.
+    let posixCode: Int32? = if let nwError = error as? NWError, case .posix(let code) = nwError {
+        code.rawValue
+    } else if nsError.domain == "NWErrorDomain" || nsError.domain == NSPOSIXErrorDomain {
+        Int32(nsError.code)
+    } else {
+        nil
+    }
+    if let posixCode {
+        switch posixCode {
+        // The system refused local-network access (the user said Don't Allow).
         case EPERM, EACCES: return RemoteFileError.localNetworkDenied
         case ECONNREFUSED, EHOSTUNREACH, ENETUNREACH, ETIMEDOUT, EHOSTDOWN: return RemoteFileError.unreachable(host: host)
         case ECONNRESET, EPIPE, ENOTCONN: return RemoteFileError.connectionLost
