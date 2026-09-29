@@ -24,6 +24,8 @@ struct EditorMarkupPhonePanel: View {
                 EditorColorPalettePanel(chrome: chrome, request: palette)
             } else if Self.showsChooser(controller: controller, chrome: chrome) {
                 chooser
+            } else if chrome.isLayerListOpen {
+                EditorLayerList(controller: controller, chrome: chrome)
             } else {
                 layerRows()
             }
@@ -31,6 +33,7 @@ struct EditorMarkupPhonePanel: View {
         .onAppear(perform: keepALayerOpen)
         .onDisappear {
             chrome.isChoosingLayerKind = false
+            chrome.isLayerListOpen = false
             chrome.colorPalette = nil
             chrome.markupColorSampler = nil
         }
@@ -155,41 +158,51 @@ struct EditorMarkupPhonePanel: View {
     }
 }
 
-/// The phone panel's Markup target strip: a 40×30 tile per layer (front-most
-/// first, the way a layer list reads), `+`, the selected layer's name and its `⋯`.
-/// The strip scrolls to the selected layer whenever it changes — including a tap
-/// on the layer on the photo (FS-05.03 §4).
-struct EditorLayerStrip: View {
+/// The Markup tool's top row (FS-03.13c §5): the selected layer's thumbnail,
+/// its name ▼ over what it says (a text layer's words, tokens filled in) or
+/// what it is, `+` and `⋯`. The name opens the list of layers. A tap on a
+/// layer on the photo selects it too.
+struct EditorLayerTopRow: View {
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
     let rename: () -> Void
     let replaceImage: () -> Void
     let saveSignature: () -> Void
-    @State private var dropTarget: UUID?
 
     var body: some View {
-        HStack(spacing: 0) {
-            ScrollViewReader { proxy in
-                ScrollView(.horizontal) {
-                    HStack(spacing: 0) {
-                        ForEach(controller.recipe.overlays.reversed()) { overlay in
-                            tile(overlay).id(overlay.id)
+        HStack(spacing: AppTheme.Spacing.sm) {
+            if let layer = controller.selectedOverlay {
+                Button {
+                    withAnimation(EditorTheme.animation) { chrome.isLayerListOpen.toggle() }
+                } label: {
+                    HStack(spacing: AppTheme.Spacing.sm) {
+                        EditorLayerThumbnail(overlay: layer, side: 30)
+                        VStack(alignment: .leading, spacing: 1) {
+                            HStack(spacing: 4) {
+                                Text(controller.displayName(of: layer))
+                                    .font(.system(size: 14.5, weight: .semibold))
+                                    .lineLimit(1)
+                                Image(systemName: chrome.isLayerListOpen ? "chevron.up" : "chevron.down")
+                                    .font(.system(size: 10, weight: .bold))
+                            }
+                            .foregroundStyle(.white)
+                            Text(EditorLayerTopRow.subtitle(of: layer, controller: controller))
+                                .font(.system(size: 11.5))
+                                .foregroundStyle(EditorTheme.secondaryText)
+                                .lineLimit(1)
                         }
+                        Spacer(minLength: 0)
                     }
+                    .contentShape(Rectangle())
                 }
-                .scrollIndicators(.hidden)
-                .onChange(of: controller.selectedOverlayID) { _, id in
-                    guard let id else { return }
-                    withAnimation(EditorTheme.animation) { proxy.scrollTo(id, anchor: .center) }
-                }
-                .onAppear {
-                    if let id = controller.selectedOverlayID { proxy.scrollTo(id, anchor: .center) }
-                }
+                .buttonStyle(.plain)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(controller.displayName(of: layer)), \(EditorLayerTopRow.subtitle(of: layer, controller: controller))")
+                .accessibilityHint("Shows every layer")
             }
-            .frame(maxWidth: CGFloat(controller.recipe.overlays.count) * 48)
-            .layoutPriority(1)
 
             Button {
+                chrome.isLayerListOpen = false
                 chrome.isChoosingLayerKind = true
             } label: {
                 Image(systemName: "plus")
@@ -197,23 +210,11 @@ struct EditorLayerStrip: View {
                     .foregroundStyle(.white)
                     .frame(width: 30, height: 30)
                     .background(EditorTheme.chipIdle, in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
-                    .frame(width: 44, height: 40)
+                    .frame(width: 38, height: 44)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Add a layer")
-
-            Text(controller.selectedOverlay.map(controller.displayName(of:)) ?? "")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.white)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .frame(
-                    minWidth: EditorLayoutMetrics.editorThumbnailStripNameMinWidth,
-                    maxWidth: .infinity,
-                    alignment: .leading
-                )
-                .padding(.leading, AppTheme.Spacing.xs)
 
             EditorLayerActionsMenu(
                 controller: controller,
@@ -222,66 +223,172 @@ struct EditorLayerStrip: View {
                 saveSignature: saveSignature
             )
         }
-        .padding(.horizontal, AppTheme.Spacing.sm)
+        .padding(.leading, AppTheme.Spacing.lg)
+        .padding(.trailing, AppTheme.Spacing.sm)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func tile(_ overlay: PhotoOverlay) -> some View {
-        let isSelected = controller.selectedOverlayID == overlay.id
+    /// What the layer says, or what it is when that is its name already.
+    static func subtitle(of layer: PhotoOverlay, controller: PhotoEditorController) -> String {
+        let kind: String = switch layer.kind {
+        case .text: "Text"
+        case .image: "Image"
+        case .shape: layer.shapeStyle.displayName
+        case .magnifier: "Magnifier"
+        case .drawing: "Drawing"
+        }
+        guard layer.kind == .text else { return kind }
+        let words = controller.resolvedText(for: layer)
+            .replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespaces)
+        return words.isEmpty || words == controller.displayName(of: layer) ? kind : words
+    }
+}
+
+/// A layer as a tile: its kind's glyph, a text layer's in its own colour,
+/// dimmed while hidden.
+struct EditorLayerThumbnail: View {
+    let overlay: PhotoOverlay
+    let side: CGFloat
+
+    var body: some View {
         let shape = RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous)
         let glyphColor: Color = overlay.kind == .text
             ? Color(red: overlay.fill.red, green: overlay.fill.green, blue: overlay.fill.blue)
             : .white
-        return Button {
-            chrome.isChoosingLayerKind = false
-            controller.openOverlayDetail(overlay.id)
-        } label: {
-            shape
-                .fill(EditorTheme.control)
-                .frame(width: 40, height: 30)
-                .overlay {
-                    Image(systemName: overlay.kind == .shape ? overlay.shapeStyle.systemImage : overlay.kind.systemImage)
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(glyphColor)
-                }
-                .opacity(overlay.isVisible ? 1 : EditorTheme.rowDisabled)
-                .padding(3.5)
-                .overlay {
-                    if isSelected {
-                        RoundedRectangle(cornerRadius: AppTheme.Radius.sm + 3.5, style: .continuous)
-                            .strokeBorder(.white, lineWidth: 1.5)
-                    }
-                }
-                .frame(width: 48, height: 40)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        // Touch and hold, then drag onto another tile to restack (FS-05.01 §3).
-        .draggable(overlay.id.uuidString) {
-            Image(systemName: overlay.kind == .shape ? overlay.shapeStyle.systemImage : overlay.kind.systemImage)
-                .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(.white)
-                .frame(width: 40, height: 30)
-                .background(EditorTheme.control, in: shape)
-        }
-        .dropDestination(for: String.self) { items, _ in
-            guard let dragged = items.first.flatMap(UUID.init(uuidString:)) else { return false }
-            controller.moveOverlay(id: dragged, ontoOverlay: overlay.id)
-            return true
-        } isTargeted: { targeted in
-            dropTarget = targeted ? overlay.id : (dropTarget == overlay.id ? nil : dropTarget)
-        }
-        .overlay {
-            if dropTarget == overlay.id {
-                RoundedRectangle(cornerRadius: AppTheme.Radius.sm + 3.5, style: .continuous)
-                    .strokeBorder(.white.opacity(0.5), lineWidth: 1.5)
-                    .frame(width: 47, height: 37)
-                    .allowsHitTesting(false)
+        shape
+            .fill(EditorTheme.control)
+            .frame(width: side, height: side)
+            .overlay {
+                Image(systemName: overlay.kind == .shape ? overlay.shapeStyle.systemImage : overlay.kind.systemImage)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(glyphColor)
             }
+            .opacity(overlay.isVisible ? 1 : EditorTheme.rowDisabled)
+    }
+}
+
+/// Every layer, front-most first (FS-03.13c §5): ≡ · thumbnail · name · 👁,
+/// 40pt rows. Drag ≡ up or down to restack — one Undo; a tap picks and
+/// closes; Add Layer last.
+struct EditorLayerList: View {
+    @Bindable var controller: PhotoEditorController
+    @Bindable var chrome: EditorChromeModel
+
+    @State private var dragging: UUID?
+    @State private var dragOffset: CGFloat = 0
+
+    static let rowHeight: CGFloat = 40
+
+    var body: some View {
+        let layers = Array(controller.recipe.overlays.reversed())
+        ScrollView(.vertical) {
+            VStack(spacing: 0) {
+                Text("Layers · \(layers.count) \(layers.count == 1 ? "layer" : "layers") · front to back")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.white.opacity(0.6))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(height: 32)
+                    .accessibilityAddTraits(.isHeader)
+                ForEach(Array(layers.enumerated()), id: \.element.id) { index, layer in
+                    row(layer, index: index, count: layers.count)
+                        .offset(y: dragging == layer.id ? dragOffset : 0)
+                        .zIndex(dragging == layer.id ? 1 : 0)
+                }
+                Button {
+                    chrome.isLayerListOpen = false
+                    chrome.isChoosingLayerKind = true
+                } label: {
+                    HStack(spacing: AppTheme.Spacing.sm) {
+                        Image(systemName: "plus").font(.system(size: 14)).frame(width: 30)
+                        Text("Add Layer").font(.system(size: 14))
+                        Spacer(minLength: 0)
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.leading, AppTheme.Spacing.sm)
+                    .frame(height: Self.rowHeight)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, AppTheme.Spacing.lg)
+            .padding(.bottom, AppTheme.Spacing.lg)
         }
-        .accessibilityLabel(controller.displayName(of: overlay))
-        .accessibilityValue(overlay.isVisible ? "" : "Hidden")
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .scrollIndicators(.hidden)
+        .scrollDisabled(dragging != nil)
+    }
+
+    private func row(_ layer: PhotoOverlay, index: Int, count: Int) -> some View {
+        let isSelected = controller.selectedOverlayID == layer.id
+        return HStack(spacing: AppTheme.Spacing.sm) {
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 15))
+                .foregroundStyle(EditorTheme.secondaryText)
+                .frame(width: 30, height: Self.rowHeight)
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 2)
+                        .onChanged { value in
+                            dragging = layer.id
+                            dragOffset = value.translation.height
+                        }
+                        .onEnded { value in
+                            let destination = EditorLayerOrder.destination(
+                                from: index, offset: value.translation.height, rowHeight: Self.rowHeight, count: count
+                            )
+                            dragging = nil
+                            dragOffset = 0
+                            guard destination != index else { return }
+                            controller.moveOverlays(
+                                fromDisplay: IndexSet(integer: index),
+                                toDisplay: EditorLayerOrder.moveOffset(from: index, to: destination)
+                            )
+                        }
+                )
+                .accessibilityLabel("Reorder \(controller.displayName(of: layer))")
+                .accessibilityAction(named: "Move Up") {
+                    guard index > 0 else { return }
+                    controller.moveOverlays(fromDisplay: IndexSet(integer: index), toDisplay: index - 1)
+                }
+                .accessibilityAction(named: "Move Down") {
+                    guard index < count - 1 else { return }
+                    controller.moveOverlays(fromDisplay: IndexSet(integer: index), toDisplay: index + 2)
+                }
+
+            Button {
+                controller.openOverlayDetail(layer.id)
+                withAnimation(EditorTheme.animation) { chrome.isLayerListOpen = false }
+            } label: {
+                HStack(spacing: AppTheme.Spacing.sm) {
+                    EditorLayerThumbnail(overlay: layer, side: 30)
+                    Text(controller.displayName(of: layer))
+                        .font(.system(size: 14.5, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityAddTraits(isSelected ? .isSelected : [])
+
+            Button {
+                controller.toggleOverlayVisibility(id: layer.id)
+            } label: {
+                Image(systemName: layer.isVisible ? "eye" : "eye.slash")
+                    .font(.system(size: 15))
+                    .foregroundStyle(layer.isVisible ? Color.white : EditorTheme.dimText)
+                    .frame(width: 44, height: Self.rowHeight)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(layer.isVisible ? "Hide \(controller.displayName(of: layer))" : "Show \(controller.displayName(of: layer))")
+        }
+        .frame(height: Self.rowHeight)
+        .background(
+            isSelected || dragging == layer.id ? Color.white.opacity(0.08) : .clear,
+            in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous)
+        )
     }
 }
 

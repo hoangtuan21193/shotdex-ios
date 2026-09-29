@@ -40,6 +40,8 @@ final class EditorChromeModel {
     /// Size is being changed from the brush row: the stage shows the brush
     /// ring in the middle of the photo (FS-03.13c §3).
     var showsBrushSizePreview = false
+    /// The Markup tool's list of layers, opened from the name in its top row.
+    var isLayerListOpen = false
     /// Floating histogram card. It sits over the photo when expanded and parks as
     /// a pill in the action bar when collapsed. Collapsed on open — the photo is
     /// what the editor is for, so nothing covers it until the user asks.

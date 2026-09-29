@@ -99,21 +99,31 @@ struct MarkupPhonePanelTests {
         #expect(chrome.recentColors.filter { $0 == OverlayColor(white: 0.5) }.count == 1)
     }
 
-    /// Chốt #6. Hold-and-drag on the strip: the strip is front-to-back, so
-    /// dropping the back layer on the front tile brings it to the front, and
-    /// dropping it back on the last tile sends it to the back again.
-    @Test func dragOntoATileRestacksTheLayer() {
+    /// FS-03.13 AC-34 (replaces the strip's hold-and-drag, chốt #6). Three
+    /// layers, Text 1 · Drawing 1 · Logo front to back: dragging Logo's ≡
+    /// two rows up puts it first — on top of the photo — in one Undo.
+    @Test func verticalListRestacksTheLayer() throws {
         let controller = makeController()
-        controller.addTextOverlay()
-        controller.addShapeOverlay(.rectangle)
-        controller.addMagnifierOverlay()
-        let back = controller.recipe.overlays[0].id
-        let front = controller.recipe.overlays[2].id
-        controller.moveOverlay(id: back, ontoOverlay: front)
-        #expect(controller.recipe.overlays.map(\.kind) == [.shape, .magnifier, .text])
-        controller.moveOverlay(id: back, ontoOverlay: controller.recipe.overlays[0].id)
-        #expect(controller.recipe.overlays.map(\.kind) == [.text, .shape, .magnifier])
+        controller.addMagnifierOverlay()          // back: "Logo"
+        controller.addShapeOverlay(.rectangle)    // "Drawing 1"
+        controller.addTextOverlay()               // front: "Text 1"
+        let logo = controller.recipe.overlays[0].id
+        let displayed = { controller.recipe.overlays.reversed().map(\.id) }
+        let before = displayed()
+        #expect(before.last == logo)
+        let start = 2
+        let destination = EditorLayerOrder.destination(from: start, offset: -80, rowHeight: 40, count: 3)
+        #expect(destination == 0)
+        controller.moveOverlays(
+            fromDisplay: IndexSet(integer: start),
+            toDisplay: EditorLayerOrder.moveOffset(from: start, to: destination)
+        )
+        #expect(displayed() == [logo, before[0], before[1]])
+        #expect(controller.recipe.overlays.last?.id == logo, "drawn last, so on top")
         controller.undo()
-        #expect(controller.recipe.overlays.map(\.kind) == [.shape, .magnifier, .text])
+        #expect(displayed() == before)
+        // Downwards the drop slot counts past the row itself.
+        #expect(EditorLayerOrder.moveOffset(from: 0, to: 2) == 3)
+        #expect(EditorLayerOrder.destination(from: 0, offset: 500, rowHeight: 40, count: 3) == 2)
     }
 }

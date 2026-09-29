@@ -1,0 +1,33 @@
+{
+ "steps": [
+  {"action": "launch"},
+  {"action": "wait", "seconds": 25},
+  {"action": "tap", "x": 0.5, "y": 0.35},
+  {"action": "wait", "seconds": 6},
+  {"action": "tap", "label": "Edit"},
+  {"action": "wait", "seconds": 12},
+  {"action": "tap", "label": "Markup"},
+  {"action": "wait", "seconds": 3},
+  {"action": "tap", "label": "Add Speech bubble"},
+  {"action": "wait", "seconds": 3},
+  {"action": "tap", "label": "Add a layer"},
+  {"action": "wait", "seconds": 2},
+  {"action": "tap", "label": "Add Rectangle"},
+  {"action": "wait", "seconds": 3},
+  {"action": "tap", "label": "Add a layer"},
+  {"action": "wait", "seconds": 2},
+  {"action": "tap", "label": "Add Oval"},
+  {"action": "wait", "seconds": 3},
+  {"action": "screenshot", "name": "1-top-row"},
+  {"action": "wait", "seconds": 4},
+  {"action": "tap", "x": 0.25, "y": 0.638},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "2-list"},
+  {"action": "wait", "seconds": 4},
+  {"action": "dump", "name": "list", "type": "button"},
+  {"action": "drag", "x": 0.077, "y": 0.812, "toX": 0.077, "toY": 0.721, "seconds": 1},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "3-restacked"},
+  {"action": "wait", "seconds": 4}
+ ]
+}

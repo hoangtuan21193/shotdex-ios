@@ -2522,7 +2522,7 @@ struct PhotoEditorScreen: View {
         case .mask:
             EditorMaskTopRow(controller: controller, chrome: chrome, rename: { presentRename(controller) })
         case .markup:
-            EditorLayerStrip(
+            EditorLayerTopRow(
                 controller: controller,
                 chrome: chrome,
                 rename: { presentLayerRename(controller) },
