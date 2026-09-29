@@ -5,9 +5,9 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-29 |
 | Trạng thái | accepted — người dùng 2026-09-29: "ok tên file theo đề xuất, accepted" |
-| Tiến độ | **chưa làm** (2026-09-29) — chưa có spec |
+| Tiến độ | **chưa làm** (2026-09-29) — spec FS-17.06, 19 AC |
 | Nguồn | phản hồi người dùng (2026-09-29) |
-| Spec sinh ra từ đây | (điền khi sang Design) |
+| Spec sinh ra từ đây | [FS-17.06](../02-functional-spec/FS-17-import-from-server/06-edit-and-export.md) |
 
 ## Problem — vấn đề
 
@@ -50,7 +50,8 @@ Người dùng đã chốt ngày 2026-09-29:
   4. share sheet.
 - **Bản gốc khi xuất về server/cloud: hỏi mỗi lần.** Mặc định là ghi file mới cạnh bản gốc. Chọn "Thay bản gốc"
   thì phải xác nhận thêm một lần, vì bản cũ mất vĩnh viễn.
-- **Lưu tạm ngắn nhất có thể.** Xuất xong thì bản tạm và phần chỉnh sửa (recipe) bị xoá. Lần sau mở lại tấm đó là
+- **Lưu tạm ngắn nhất có thể.** Xuất xong thì bản tạm và phần chỉnh sửa (recipe) bị xoá. Một đích lỗi thì giữ lại
+  để Retry (chốt khi soạn spec). Lần sau mở lại tấm đó là
   sửa từ đầu.
 
 ## Affected users and systems — phạm vi ảnh hưởng
@@ -91,7 +92,8 @@ Không còn câu nào. Người dùng đã trả lời các câu dưới đây n
    thumbnail.
 4. **Chọn nhiều ảnh rồi Edit** nằm trong đợt này: chạy qua cả loạt như FS-03.09b, cả loạt hỏi nơi lưu một lần.
 
-5. **Tên file mới** khi xuất về server: `<tên gốc>-edited.<đuôi>`, trùng thì `-edited-2`. Định
+5. **Tên file mới** khi xuất về server: `<tên gốc>_edited.<đuôi>` như FS-15.02 §3 (đổi từ `-edited` khi soạn spec,
+   người dùng chốt 2026-09-29), trùng thì ` (2)`. Định
    dạng theo cài đặt xuất của editor (JPEG/HEIC). Không bao giờ ghi ra RAW.
 
 ---

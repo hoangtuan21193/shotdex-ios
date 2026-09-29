@@ -36,7 +36,8 @@ Nguồn: [intent](../../_intents/2026-09-27-network-shortcuts.md).
 - Chạm ô → đẩy màn duyệt server (FS-17.01 §2) của connection đó, mở ở folder của ô. Lịch sử bắt đầu ở đó; menu tiêu
   đề đi lên cha được như thường. Mọi luật màn duyệt giữ nguyên: ⋯ kiểu Files, Rename/Delete trên server có hỏi,
   **Import to Library** là lối sang Photos.
-- Không có menu album (không Edit, Compress, Share album) — debate 2026-09-27 trong intent.
+- Ảnh trong folder có các lệnh làm được trên file như ảnh trong album (Edit, Share, Collage…), hỏi nơi lưu lúc
+  xuất: [FS-17.06](06-edit-and-export.md). Rename/Delete trên server vẫn là lệnh kiểu Files.
 - Mở xong và folder có ảnh → cập nhật bìa bằng thumbnail ảnh đầu theo thứ tự đang xếp.
 - Server không tới được → màn duyệt báo lỗi FS-15.01 §3 + Try Again, như khi vào từ On Server.
 
@@ -65,5 +66,5 @@ server qua ShotDex sửa/xoá `path` của ô trùng hoặc nằm dưới (cùng
 | AC-36 | ô `Trip` | nhấn giữ → Rename "Chọn lọc"; rồi Remove from Collections | tên ô đổi, folder trên server không đổi; Remove → ô mất, không hỏi, folder còn | `ServerShortcutStoreTests.renameAndRemoveLeaveServerAlone` + ảnh `50-tile-menu`, `60-renamed` |
 | AC-37 | connection NAS có 2 ô | xoá connection | 2 ô mất | `ServerShortcutStoreTests.deletingConnectionRemovesShortcuts` |
 | AC-38 | ô trỏ `photos/Trip` | trong ShotDex đổi tên folder `Trip` → `Holiday`; rồi xoá `photos` | ô trỏ `photos/Holiday`; xoá `photos` → ô mất | `ServerShortcutStoreTests.followsRenameAndDelete` |
-| AC-39 | mở ô | xem ⋯ | là ⋯ kiểu Files (Select, New Folder, Icons/List, Sort By, View Options, Remove from Collections) — không Edit/Compress | ảnh `scripts/network-shortcuts.json` (`35-opened-menu`) |
+| AC-39 | mở ô | xem ⋯ | là ⋯ kiểu Files (Select, New Folder, Icons/List, Sort By, View Options, Remove from Collections); lệnh ảnh nằm ở menu ảnh (FS-17.06) | ảnh `scripts/network-shortcuts.json` (`35-opened-menu`) |
 | AC-40 | iOS 26.5, 18.6, iPad | Collections có 2 ô | hàng ô cùng kích thước ô My Albums, không bị cắt | ảnh ⚠️ chưa có |
