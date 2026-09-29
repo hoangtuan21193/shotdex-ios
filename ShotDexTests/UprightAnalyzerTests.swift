@@ -1,4 +1,5 @@
 import CoreGraphics
+import CoreImage
 import Foundation
 import Testing
 @testable import ShotDexKit
@@ -122,10 +123,14 @@ struct UprightAnalyzerTests {
     // MARK: Modes
 
     @Test func eachModeTouchesOnlyItsOwnControls() {
+        // The whole frame tilted 4°, its sides converging 8° each way. (Until
+        // 2026-09-29 the sides were left untilted, which only worked because
+        // Level read their convergence as tilt; with it taken out they say
+        // the frame is level and outvote the one horizon.)
         let segments = [
             segment(degrees: 4),
-            segment(degrees: 82, midX: 0.15),
-            segment(degrees: -82, midX: 0.85),
+            segment(degrees: 82 + 4, midX: 0.15),
+            segment(degrees: -82 + 4, midX: 0.85),
         ]
         let level = UprightAnalyzer.suggestion(from: segments, mode: .level)
         #expect(level.rotate != 0)
@@ -159,13 +164,34 @@ struct UprightAnalyzerTests {
         let levelled = tilt + auto.rotate * 0.35 * 180 / .pi
         #expect(abs(levelled) <= 0.5, "tilt left \(levelled)°")
 
-        let straightened = 2 * auto.vertical * UprightAnalyzer.convergencePerKeystoneUnit * 180 / .pi
-        let left = 8 - straightened
+        // What is left is read off the transform itself — the two edges
+        // followed through `GeoForwardMap` on a square frame, the space these
+        // segments are written in — not off a degrees-per-unit constant: the
+        // old 26° one was never measured against a keystone that moved pixels.
+        let left = Self.convergence(of: [segments[3], segments[4]], after: auto.transform(for: .auto))
         #expect(left >= 3 && left <= 4, "convergence left \(left)°")
+        let fullLeft = Self.convergence(of: [segments[3], segments[4]], after: UprightAnalyzer
+            .suggestion(from: segments, mode: .full).transform(for: .full))
+        #expect(abs(fullLeft) <= 0.3, "Full leaves \(fullLeft)°")
 
         let full = UprightAnalyzer.suggestion(from: segments, mode: .full)
         #expect(abs(full.vertical * 0.6 - auto.vertical) < 1e-9, "Auto is 60% of Full's keystone")
         #expect(PhotoUprightMode(UprightMode.auto) == .auto)
+    }
+
+    /// Degrees the left edge leans right plus the right edge leans left —
+    /// the total convergence of `edges` — once `transform` has moved them on
+    /// a square frame.
+    private static func convergence(of edges: [UprightSegment], after transform: PhotoUprightTransform) -> Double {
+        let extent = CGRect(x: 0, y: 0, width: 1000, height: 1000)
+        let map = GeoForwardMap(adjustments: .zero, upright: transform, extent: extent)
+        let leans = edges.map { edge -> Double in
+            var a = map.apply(CGPoint(x: edge.start.x * 1000, y: edge.start.y * 1000))
+            var b = map.apply(CGPoint(x: edge.end.x * 1000, y: edge.end.y * 1000))
+            if b.y < a.y { swap(&a, &b) }
+            return atan2(Double(b.x - a.x), Double(b.y - a.y)) * 180 / .pi
+        }
+        return leans[0] - leans[1]
     }
 
     /// Vision's horizon, when it has one, sets the rotation in place of the
@@ -296,6 +322,116 @@ struct UprightAnalyzerTests {
                     pixels[py * width + px] = 0.95
                 }
             }
+        }
+    }
+
+    // MARK: Keystone on pixels
+
+    /// A 1200×800 building on a textured ground: six edges through one
+    /// vanishing point above the centre — the pair crossing mid-height at
+    /// x = 0.15 and 0.85 leans `lean`° each way — plus four window sills,
+    /// the lot turned by `tilt`°. Returns the frame and the drawn edges in
+    /// its pixels, left to right, so the result can be checked against the
+    /// drawing and not only against the detector that made the suggestion.
+    private static func drawnBuilding(lean: Double, tilt: Double) -> (image: CIImage, edges: [(CGPoint, CGPoint)]) {
+        let width = 1200, height = 800
+        let w = Double(width), h = Double(height)
+        let context = CGContext(
+            data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
+            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        )!
+        // Blotches and grain, so the gradient threshold sees texture the way
+        // it does in a photo. A fixed-seed generator keeps it repeatable.
+        var state: UInt64 = 0x9E37_79B9_7F4A_7C15
+        func random() -> Double {
+            state = state &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
+            return Double(state >> 11) / Double(1 << 53)
+        }
+        let pixels = context.data!.assumingMemoryBound(to: UInt8.self)
+        for y in 0..<height {
+            for x in 0..<width {
+                let fx = Double(x) / w, fy = Double(y) / h
+                let value = 0.42 + 0.05 * sin(fx * 13 + 1) * cos(fy * 9 + 2) + 0.04 * sin(fx * 31 + fy * 17)
+                    + 0.03 * cos(fx * 57 - fy * 43) + (random() - 0.5) * 0.1
+                let byte = UInt8(max(0, min(255, value * 255)))
+                let index = (y * width + x) * 4
+                pixels[index] = byte
+                pixels[index + 1] = byte
+                pixels[index + 2] = byte
+                pixels[index + 3] = 255
+            }
+        }
+        let turn = tilt * .pi / 180
+        func turned(_ p: CGPoint) -> CGPoint {
+            let dx = Double(p.x) - w / 2, dy = Double(p.y) - h / 2
+            return CGPoint(x: w / 2 + dx * cos(turn) - dy * sin(turn), y: h / 2 + dx * sin(turn) + dy * cos(turn))
+        }
+        context.setStrokeColor(CGColor(gray: 0.12, alpha: 1))
+        context.setLineWidth(4)
+        for row in [0.2, 0.4, 0.6, 0.8] {
+            context.move(to: turned(CGPoint(x: -0.2 * w, y: row * h)))
+            context.addLine(to: turned(CGPoint(x: 1.2 * w, y: row * h)))
+            context.strokePath()
+        }
+        let vanishing = CGPoint(x: w / 2, y: h / 2 + 0.35 * w / tan(lean * .pi / 180))
+        var edges: [(CGPoint, CGPoint)] = []
+        context.setStrokeColor(CGColor(gray: 0.92, alpha: 1))
+        context.setLineWidth(6)
+        for midX in [0.06, 0.15, 0.26, 0.74, 0.85, 0.94] {
+            let mid = CGPoint(x: midX * w, y: h / 2)
+            let dx = Double(vanishing.x - mid.x), dy = Double(vanishing.y - mid.y)
+            let reach = 0.75 * h / (dx * dx + dy * dy).squareRoot()
+            let foot = turned(CGPoint(x: Double(mid.x) - dx * reach, y: Double(mid.y) - dy * reach))
+            let top = turned(CGPoint(x: Double(mid.x) + dx * reach, y: Double(mid.y) + dy * reach))
+            context.move(to: foot)
+            context.addLine(to: top)
+            context.strokePath()
+            edges.append((foot, top))
+        }
+        return (CIImage(cgImage: context.makeImage()!), edges)
+    }
+
+    /// Degrees a drawn edge leans right at the top once `transform` has
+    /// moved it on a 1200×800 frame.
+    private static func lean(of edge: (CGPoint, CGPoint), after transform: PhotoUprightTransform) -> Double {
+        let map = GeoForwardMap(adjustments: .zero, upright: transform, extent: CGRect(x: 0, y: 0, width: 1200, height: 800))
+        let a = map.apply(edge.0), b = map.apply(edge.1)
+        return atan2(Double(b.x - a.x), Double(b.y - a.y)) * 180 / .pi
+    }
+
+    /// FS-03.15b AC-23 on pixels. A drawn building is analysed, the
+    /// suggestion is rendered through `applyGeo`, and the lines are found
+    /// again: Full leaves no convergence and Auto 40% of it, both by the
+    /// analyzer's own reading of the output and by the drawn edges followed
+    /// through the transform; both level the frame to within 0.5°.
+    ///
+    /// Until 2026-09-29 the keystone read convergence as an angle over "26°
+    /// per unit" that nothing had measured — the perspective filter it
+    /// fed had never moved a pixel (FS-03.15b AC-29). On this frame Full
+    /// straightened 19–34% of the convergence, and Level turned an upright
+    /// frame by up to 1.5° because it read the converging edges as tilt.
+    @Test(arguments: [(lean: 4.0, tilt: 2.0), (lean: 6.0, tilt: 0.0), (lean: 2.0, tilt: 0.0)])
+    func theKeystoneStraightensADrawnBuilding(lean: Double, tilt: Double) throws {
+        let context = CIContext()
+        let (image, edges) = Self.drawnBuilding(lean: lean, tilt: tilt)
+        let before = try #require(UprightAnalyzer.keystoneSpread(from: UprightAnalyzer.segments(in: image, context: context)))
+        #expect(before > 0, "tops leaning in read as a positive spread")
+
+        for (mode, share) in [(UprightMode.full, 0.0), (.auto, 0.4)] {
+            let suggestion = try #require(UprightAnalyzer.analyze(image, mode: mode, context: context))
+            let transform = suggestion.transform(for: mode)
+            #expect(transform.vertical > 0, "\(mode): the tops are spread, not pulled in")
+            let output = PhotoRenderService.applyGeo(.zero, upright: transform, to: image)
+            let after = try #require(UprightAnalyzer.keystoneSpread(from: UprightAnalyzer.segments(in: output, context: context)))
+            #expect(abs(after / before - share) <= 0.06,
+                    "\(mode) left \(after / before) of the convergence re-detected (\(after) of \(before))")
+
+            let left = Self.lean(of: edges[1], after: transform)
+            let right = Self.lean(of: edges[4], after: transform)
+            let convergence = (left - right) / 2
+            #expect(abs(convergence - share * lean) <= 0.06 * lean,
+                    "\(mode) left \(convergence)° a side of the drawn \(lean)°")
+            #expect(abs((left + right) / 2) <= 0.5, "\(mode) left the frame tilted \((left + right) / 2)°")
         }
     }
 

@@ -86,12 +86,23 @@ rồi Geometry (Vertical · Horizontal · Rotate · **Aspect** · Scale · Offse
 - **Dò đường**: Level dùng phép tìm đường chân trời của Vision; phần dọc dùng bộ dò đường dọc tự viết (bỏ
   phiếu đường thẳng trên ảnh xám 256px). Guided không cần dò.
   Vision không có kết quả hay đọc nghiêng quá 20° thì Level quay về đường thẳng tự dò. Góc của Vision ngược dấu
-  với quy ước ở đây (đường dốc lên 3° về phải đọc −3°). Đường dọc tính từ 0,5° lệch trở lên (trước là 3°).
+  với quy ước ở đây (đường dốc lên 3° về phải đọc −3°). Mỗi đỉnh Hough (ô 1°, ~3,4px) được khớp lại bằng trục
+  chính của các pixel cạnh quanh nó (4 lượt, dải ±2,5px, trọng số bình phương độ dốc) — ô Hough không đủ mịn cho
+  Vertical: trên toà nhà vẽ, đỉnh thô đọc hụt ¼ độ hội tụ; sau khớp mỗi cạnh lệch ≤ 0,04°.
 - Dán / Sync / lưu hàng loạt: chế độ đến từ ảnh khác mà chưa có phép nắn thì giải trên ảnh đích — trong editor
   lúc dán (cùng bước Undo) hoặc khi ảnh gốc tải xong; khi lưu hàng loạt thì giải một lần trước khi lưu, recipe
-  lưu kèm phép nắn. Khi chế độ có
-  cả xoay, độ hội tụ đo trên các đường **đã trừ** độ nghiêng — nghiêng 2° trên toà nhà hội tụ 8° để một cạnh chỉ
-  còn lệch 2°, dưới ngưỡng 3° một đường cần để được tính.
+  lưu kèm phép nắn.
+- **Vertical giải thế nào** (sửa 2026-09-29): phép keystone đưa một đường cắt mép dưới ở `b` và mép trên ở `t`
+  (tính bằng nửa bề ngang từ tâm) tới `b(1 − s)` và `t(1 + s)`, nên đường đứng thẳng khi `s = −r/a` — `r` là độ
+  chạy dx/dy của đường trong toạ độ chuẩn hoá, `a` là chỗ nó cắt giữa chiều cao. Mọi cạnh qua cùng một điểm tụ
+  cho cùng một `s`, còn *độ nghiêng* của nó lớn dần theo khoảng cách tới tâm — vì thế không thể là "một góc nhân
+  một hệ số". Mỗi cặp đường trái–phải cho `s = −(r_phải − r_trái)/(a_phải − a_trái)` (độ nghiêng đều của cả khung
+  triệt tiêu trong hiệu, nên không cần trừ nghiêng trước và không còn ngưỡng lệch tối thiểu); lấy trung vị có trọng
+  số của các cặp; `geoVertical = s / 0,25` (0,25 = độ dời góc của một đơn vị Vertical, `keystoneCornerShift`).
+- **Level trên đường dọc** (sửa 2026-09-29): góc đọc trên ảnh thật chứ không trong toạ độ chuẩn hoá (khung 3:2 làm
+  chân trời 3° thành 4,5° và cạnh dọc 3° thành 2°), và phần hội tụ `s·a` được trừ khỏi độ chạy của mỗi cạnh dọc
+  trước khi nó được tính là nghiêng — không thì trung vị rơi vào độ nghiêng của một bên toà nhà và Level xoay một
+  khung thẳng 1,3° (toà nhà vẽ 4° mỗi bên, không nghiêng).
 - Auto/Full: phần nào không dò được thì bỏ phần đó. Không dò được gì: không đổi gì, dòng "No straight
   lines to work from" trong 3s (luật hôm nay).
 - **Lưu**: recipe mang **chế độ Upright + phép nắn đã giải** riêng; ba slider Geo tay cộng lên trên, không
@@ -105,7 +116,18 @@ rồi Geometry (Vertical · Horizontal · Rotate · **Aspect** · Scale · Offse
   Công tắc là một hàng cuối Geometry (`geoConstrainCrop`).
 - *Lỗi tìm thấy khi làm AC-29:* phép phối cảnh cũ (`CIPerspectiveTransform` trên ảnh đã kéo giãn vô hạn) trả ảnh
   y nguyên — Vertical/Horizontal và phần dọc của Upright chưa từng có tác dụng. Nay dùng
-  `CIPerspectiveTransformWithExtent` với khung ảnh. Hệ số "26° mỗi đơn vị" của bộ dò dọc cần đo lại trên ảnh thật.
+  `CIPerspectiveTransformWithExtent` với khung ảnh. Hệ số "26° mỗi đơn vị" của bộ dò dọc **đã đo lại
+  (2026-09-29) và bỏ**: trên toà nhà vẽ 1200×800 (6 cạnh qua một điểm tụ, nền có vân, cạnh ở x = 0,15 nghiêng
+  2°/4°/6° mỗi bên, có và không nghiêng khung 2°), chạy Auto/Full → `applyGeo` → dò lại đường trên ảnh ra, và đối
+  chiếu với các cạnh đã vẽ đưa qua `GeoForwardMap`. Quét `geoVertical` cho thấy dấu đúng (dương giãn đỉnh, giảm
+  hội tụ) và tuyến tính: cạnh ở x = 0,15 cần 0,133 / 0,266 / 0,400 cho 2° / 4° / 6° — tức ~15° độ nghiêng *tại
+  x = 0,15* mỗi đơn vị trên khung 3:2, và mọi cạnh qua cùng điểm tụ cần cùng một giá trị dù nghiêng khác nhau
+  (5,0° / 4,0° / 2,75° ở x = 0,06 / 0,15 / 0,26). Hệ số cũ đề nghị 0,026 / 0,090 / 0,116 — Full còn 1,61° /
+  2,66° / 4,28° mỗi bên (81% / 66% / 71% độ hội tụ), Auto còn 80–89%, và Level xoay thêm 0,7°…1,5° trên khung
+  không nghiêng. Nay (công thức `s = −r/a` ở trên + khớp lại đỉnh Hough): đề nghị 0,134 / 0,266 / 0,399; Full
+  còn ≤ 0,02° mỗi bên (khung nghiêng 2°: độ hội tụ còn 0,04°, độ nghiêng còn 0,12° vì Vision đọc 1,88°), Auto
+  còn 40% (0,80° / 1,61° / 2,42°; bộ dò đọc lại ảnh ra: 39–41%). Test:
+  `UprightAnalyzerTests.theKeystoneStraightensADrawnBuilding`.
 
 ## 5. Vignette Style
 
@@ -147,7 +169,7 @@ Nhóm Effects › Vignette thêm **Style** — một hàng chip ba ô ở đầu
 | AC-20 | ảnh có chấm ở tâm và ở bán kính 0,8 trên đường chéo | đặt Distortion +50 | chấm ở 0,8 dời **ra** 0,3%…1,5% nửa đường chéo; tâm đứng yên; không góc nào lấy mẫu ngoài ảnh (cả ±50, ±100) | `LensManualTests.distortionPullsTheEdgesIn` · `…neitherDirectionShowsEmptyCorners` · `…rawSourcesGetTheManualCorrection` · `…distortionRowNamesItsGroup` · golden `lensWarp*` (chụp lại) · hàng: `ShotDexUITests/scripts/iphone-lens-manual.json` |
 | AC-21 | ảnh xám phẳng 0,5 | đặt Vignetting +50, Midpoint 50 | độ sáng góc tăng ≥ 8% tương đối; tâm lệch ≤ 1/255; tâm tính trên khung trước crop; vị trí pass ngay sau Lens Blur | `LensManualTests.vignettingBrightensCorners` · `…vignettingDarkensAndMidpointMovesTheFallOff` · hàng: `ShotDexUITests/scripts/iphone-lens-manual.json` |
 | AC-22 | hình tròn đen giữa nền trắng | đặt Aspect +50 | tỉ lệ ngang/dọc của hình thành 1,22 ± 0,02; 0 pixel trong suốt | `GeoTransformTests.aspectStretchesAroundTheCentre` · `…negativeAspectGrowsTheHeight` · hàng: `ShotDexUITests/scripts/iphone-geo-aspect.json` |
-| AC-23 | ảnh toà nhà tổng hợp: cạnh dọc hội tụ 8°, nghiêng 2° | chạm Auto | độ nghiêng còn ≤ 0,5°; độ hội tụ còn 3°…4° (nắn 60%) | `UprightAnalyzerTests.autoLevelsAndPartlyStraightens` · `…aVisionHorizonOverridesTheLines` · chip: `ShotDexUITests/scripts/iphone-upright-auto.json` · Level qua Vision trên khung vẽ: `EditClipboardTests.uprightModeIsResolvedOnTheTarget` |
+| AC-23 | ảnh toà nhà tổng hợp: cạnh dọc hội tụ 8°, nghiêng 2° | chạm Auto | độ nghiêng còn ≤ 0,5°; độ hội tụ còn 3°…4° (nắn 60%) | `UprightAnalyzerTests.autoLevelsAndPartlyStraightens` · trên pixel (vẽ → Auto/Full → `applyGeo` → dò lại): `…theKeystoneStraightensADrawnBuilding` · `…aVisionHorizonOverridesTheLines` · chip: `ShotDexUITests/scripts/iphone-upright-auto.json` · Level qua Vision trên khung vẽ: `EditClipboardTests.uprightModeIsResolvedOnTheTarget` |
 | AC-24 | cùng ảnh, Upright Guided, 4 đường đã có | vẽ 2 đường dọc theo hai cạnh nghiêng rồi thử đường thứ 5 | hai cạnh dọc trong 0,5°; đường thứ 5 không tạo, hiện "Up to 4 guides"; 1 Undo gỡ đúng 1 đường | `UprightGuidedTests.twoGuidesMakeBothVertical` · `…oneGuideOnlyRotates` · `…aFifthGuideIsRefusedAndEachGuideIsOneUndo` · `ShotDexUITests/scripts/iphone-upright-guided.json` |
 | AC-25 | ảnh có đèn sáng 0,95 ở góc và vùng xám 0,5 cạnh đó | Vignette −50, Style Highlight Priority (so với Paint Overlay) | Highlight Priority: đèn còn ≥ 0,9, vùng xám tối ≥ 20%; Paint Overlay: đèn tối ≥ 20% | `VignetteStyleTests.highlightPriorityKeepsLights` · `…negativeDarkensPositiveBrightens` · `…paintOverlayDimsHighlights` · golden `vignette*` · chip: `ShotDexUITests/scripts/iphone-vignette-style.json` |
 | AC-26 | Vignette −50, crop giữ nửa trái ảnh | render | tâm vùng sáng nhất nằm ở tâm khung **sau** crop ± 2% cạnh ngắn; grain chạy sau vignette | `VignetteStyleTests.vignetteFollowsTheCrop` · `…grainRunsAfterTheVignette` |

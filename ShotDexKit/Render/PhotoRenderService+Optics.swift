@@ -318,11 +318,16 @@ public extension PhotoRenderService {
         return (CGFloat(max(1, ratio)), CGFloat(max(1, 1 / ratio)))
     }
 
+    /// How far one unit of Vertical moves each top corner out and each
+    /// bottom corner in, as a fraction of the half-width (Horizontal the
+    /// same on the sides). `UprightAnalyzer.verticalKeystone` divides by it.
+    static let keystoneCornerShift = 0.25
+
     /// Where the keystone sends the frame's corners — bottom-left,
     /// bottom-right, top-right, top-left.
     static func keystoneCorners(vertical: Double, horizontal: Double, extent: CGRect) -> [CGPoint] {
-        let v = CGFloat(vertical) * 0.25
-        let h = CGFloat(horizontal) * 0.25
+        let v = CGFloat(vertical * keystoneCornerShift)
+        let h = CGFloat(horizontal * keystoneCornerShift)
         let halfWidth = extent.width / 2
         let halfHeight = extent.height / 2
         func corner(_ signX: CGFloat, _ signY: CGFloat) -> CGPoint {

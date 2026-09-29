@@ -170,28 +170,46 @@ public enum UprightAnalyzer {
 
     // MARK: Geometry (pure)
 
-    /// The rotation that levels the frame, as a `geoRotate` value.
+    /// The rotation that levels the frame, as a `geoRotate` value. `aspect`
+    /// is the frame's width over its height (see `levelTilt`).
     ///
     /// Takes the **median** angle of the near-horizontal and near-vertical
     /// lines, not the mean: one strong diagonal — a staircase, a shadow — would
     /// drag a mean off true, and the whole point is to agree with the majority
     /// of the edges.
-    public static func levelRotation(from segments: [UprightSegment]) -> Double {
-        clamp(-levelTilt(from: segments) / 0.35)
+    public static func levelRotation(from segments: [UprightSegment], aspect: Double = 1) -> Double {
+        clamp(-levelTilt(from: segments, aspect: aspect) / 0.35)
     }
 
     /// The frame's tilt in radians, counter-clockwise positive: the weighted
     /// median of how far the near-level and near-upright lines sit off true.
     /// 0 when no line qualifies.
-    public static func levelTilt(from segments: [UprightSegment]) -> Double {
-        // A vertical line says as much about tilt as a horizontal one, once its
-        // angle is measured against the vertical instead.
+    ///
+    /// Angles are read on the picture, not in the normalized space the
+    /// segments are written in: `aspect` (width over height) stretches x back
+    /// out, because a 3° horizon on a 3:2 frame is 4.5° in that space and a
+    /// 3° upright only 2°. And an upright's lean is read with the building's
+    /// convergence taken out of it (`keystoneSpread`): shot from the
+    /// pavement, the edges on the left lean right and those on the right
+    /// lean left, which is perspective, not a crooked camera — left in, the
+    /// median lands on one side's lean and Level turns an upright frame by
+    /// 1.3° (measured on a drawn 3:2 building with 4° a side, 2026-09-29).
+    public static func levelTilt(from segments: [UprightSegment], aspect: Double = 1) -> Double {
+        let spread = keystoneSpread(from: segments) ?? 0
         var offsets: [(value: Double, weight: Double)] = []
         for segment in segments {
-            let angle = segment.angle
-            let fromHorizontal = angle
-            let fromVertical = angle > 0 ? angle - .pi / 2 : angle + .pi / 2
-            let candidate = abs(fromHorizontal) <= abs(fromVertical) ? fromHorizontal : fromVertical
+            let dx = Double(segment.end.x - segment.start.x)
+            let dy = Double(segment.end.y - segment.start.y)
+            guard dx != 0 || dy != 0 else { continue }
+            let candidate: Double
+            if abs(dx) * aspect >= abs(dy) {
+                // Near level: its angle from the horizontal, on the picture.
+                candidate = atan(dy / (dx * aspect))
+            } else {
+                // Near upright: a counter-clockwise tilt leans the top left.
+                let run = dx / dy + spread * centreOffset(of: segment)
+                candidate = -atan(run * aspect)
+            }
             // Past 20° the line is not a tilted horizon or upright, it is a
             // diagonal that belongs in the picture.
             guard abs(candidate) <= 20 * .pi / 180 else { continue }
@@ -202,89 +220,97 @@ public enum UprightAnalyzer {
         return weightedMedian(offsets) ?? 0
     }
 
-    /// `segments` turned by `-tilt` about their own midpoints: the lines as
-    /// they would sit once the frame is levelled.
-    static func detilted(_ segments: [UprightSegment], by tilt: Double) -> [UprightSegment] {
-        guard abs(tilt) > 1e-9 else { return segments }
-        let c = cos(-tilt), s = sin(-tilt)
-        return segments.map { segment in
-            let mid = CGPoint(x: (segment.start.x + segment.end.x) / 2, y: (segment.start.y + segment.end.y) / 2)
-            func turn(_ p: CGPoint) -> CGPoint {
-                let dx = Double(p.x - mid.x), dy = Double(p.y - mid.y)
-                return CGPoint(x: Double(mid.x) + dx * c - dy * s, y: Double(mid.y) + dx * s + dy * c)
-            }
-            return UprightSegment(start: turn(segment.start), end: turn(segment.end), weight: segment.weight)
-        }
+    /// Where a segment's line crosses the frame's mid-height, as an offset
+    /// from the centre in half-widths: −1 the left edge, 1 the right.
+    static func centreOffset(of segment: UprightSegment) -> Double {
+        let dx = Double(segment.end.x - segment.start.x)
+        let dy = Double(segment.end.y - segment.start.y)
+        guard abs(dy) > 1e-9 else { return Double(segment.start.x + segment.end.x) - 1 }
+        let x = Double(segment.start.x) + (0.5 - Double(segment.start.y)) * dx / dy
+        return 2 * x - 1
     }
 
-    /// Convergence the keystone straightens per unit of `geoVertical`, in
-    /// radians of lean on each side: `keystone` moves the corners by
-    /// `geoVertical * 0.25` of the width, which undoes about 26° on a frame
-    /// this shape.
-    public static let convergencePerKeystoneUnit = 26 * Double.pi / 180
-
-    /// The keystone that makes the verticals parallel, as a `geoVertical`
-    /// value.
+    /// How far the keystone has to push the top corners out (and pull the
+    /// bottom ones in), as a fraction of the half-width, for the photo's
+    /// near-vertical lines to come out parallel. Positive for tops leaning
+    /// in — a building shot from below. Nil without evidence on both sides.
     ///
-    /// Measures how much the near-vertical lines on the left lean one way and
-    /// the ones on the right lean the other: that difference *is* the
-    /// convergence, and it is signed, so a building shot from below (tops
-    /// leaning in) and one shot from above come out with opposite corrections.
-    public static func verticalKeystone(from segments: [UprightSegment]) -> Double {
-        var left: [(value: Double, weight: Double)] = []
-        var right: [(value: Double, weight: Double)] = []
+    /// The keystone maps a line that crosses the bottom edge at offset `b`
+    /// and the top at `t` (half-widths from the centre) to `b(1 − s)` and
+    /// `t(1 + s)`, so it stands upright when `s = (b − t)/(b + t)` — which,
+    /// with the line's run `r = dx/dy` in normalized space and its offset `a`
+    /// at mid-height, is `s = −r/a`. Every line through one vanishing point
+    /// gives the same `s`, while its *lean* grows with its distance from the
+    /// centre. That is why this is not an angle times a constant: the old
+    /// "26° per unit" read the lean of whichever lines the median landed on
+    /// and Full undid only 19–34% of a drawn building's convergence
+    /// (FS-03.15b AC-23, measured 2026-09-29). A uniform tilt adds the same run to every line, so the
+    /// slope between a line on each side, not either side alone, is the
+    /// answer: `s = −(r_right − r_left)/(a_right − a_left)`.
+    static func keystoneSpread(from segments: [UprightSegment]) -> Double? {
+        var left: [(run: Double, offset: Double, weight: Double)] = []
+        var right: [(run: Double, offset: Double, weight: Double)] = []
         for segment in segments {
-            let angle = segment.angle
-            let fromVertical = angle > 0 ? angle - .pi / 2 : angle + .pi / 2
-            // Only lines that are trying to be vertical: 0.5°…25° off. The
-            // floor was 3°, which threw away the spec's own 6° building (3° a
-            // side) and any edge the 1°-binned detector read a degree or two
-            // short. A side edge that really is near vertical is evidence
-            // too — of little convergence on that side.
-            let tilt = abs(fromVertical)
-            guard tilt > 0.5 * .pi / 180, tilt < 25 * .pi / 180 else { continue }
-            let midX = Double(segment.start.x + segment.end.x) / 2
-            // The middle third says nothing about convergence — a line through
+            let dx = Double(segment.end.x - segment.start.x)
+            let dy = Double(segment.end.y - segment.start.y)
+            guard abs(dy) > 1e-9 else { continue }
+            let run = dx / dy
+            // Only lines that are trying to be vertical: within 25°. A side
+            // edge that really is vertical is evidence too — of no
+            // convergence on that side.
+            guard abs(atan(run)) < 25 * .pi / 180 else { continue }
+            let offset = centreOffset(of: segment)
+            let weight = damped(segment.weight)
+            // The middle band says nothing about convergence — a line through
             // the centre leans the same way whichever side the camera was on.
-            if midX < 0.4 {
-                left.append((fromVertical, damped(segment.weight)))
-            } else if midX > 0.6 {
-                right.append((fromVertical, damped(segment.weight)))
+            if offset < -0.2 {
+                left.append((run, offset, weight))
+            } else if offset > 0.2 {
+                right.append((run, offset, weight))
             }
         }
-        guard let leftLean = weightedMedian(left), let rightLean = weightedMedian(right) else {
-            return 0
+        // Every left–right pair gives its own answer, and the weighted median
+        // of those is the estimate: a median of runs and a separate median of
+        // offsets can come from different lines and pair one line's lean with
+        // another's position.
+        var answers: [(value: Double, weight: Double)] = []
+        for l in left {
+            for r in right {
+                answers.append((-(r.run - l.run) / (r.offset - l.offset), l.weight * r.weight))
+            }
         }
-        // Converging tops: the left line leans right and the right line leans
-        // left, so their difference is the signal and their sum is the tilt
-        // that Level deals with.
-        let convergence = (rightLean - leftLean) / 2
-        // `keystone` scales the corner offsets by `geoVertical * 0.25`, and a
-        // quarter-width offset corresponds to roughly 26° of convergence on a
-        // frame this shape — measured against the transform rather than
-        // derived, because the transform is the thing that has to undo it.
-        return clamp(convergence / convergencePerKeystoneUnit)
+        return weightedMedian(answers)
+    }
+
+    /// The keystone that makes the verticals parallel, as a `geoVertical`
+    /// value: `keystoneSpread` over the corner shift one unit of
+    /// `geoVertical` makes. Signed, so a building shot from below (tops
+    /// leaning in) and one shot from above come out with opposite
+    /// corrections.
+    public static func verticalKeystone(from segments: [UprightSegment]) -> Double {
+        guard let spread = keystoneSpread(from: segments) else { return 0 }
+        return clamp(spread / PhotoRenderService.keystoneCornerShift)
     }
 
     /// Both halves at once, for the mode the user picked. `horizonTilt` is
     /// Vision's reading when it had one; the lines' own tilt otherwise.
+    /// `aspect` is the frame's width over its height.
     ///
-    /// When the mode also levels, the keystone is read off the lines as they
-    /// will sit once levelled: a tilt as large as the lean leaves one edge
-    /// dead vertical, where it cannot count, and the keystone would come out
-    /// as half of itself or nothing.
+    /// The keystone needs no levelling first: a tilt leans every line by the
+    /// same run, and `keystoneSpread` reads the difference between the sides.
     public static func suggestion(
         from segments: [UprightSegment],
         mode: UprightMode,
-        horizonTilt: Double? = nil
+        horizonTilt: Double? = nil,
+        aspect: Double = 1
     ) -> UprightSuggestion {
         var suggestion = UprightSuggestion()
-        let tilt = mode.correctsRotation ? (horizonTilt ?? levelTilt(from: segments)) : 0
         if mode.correctsRotation {
+            let tilt = horizonTilt ?? levelTilt(from: segments, aspect: aspect)
             suggestion.rotate = clamp(-tilt / 0.35)
         }
         if mode.correctsKeystone {
-            suggestion.vertical = verticalKeystone(from: detilted(segments, by: tilt)) * mode.keystoneShare
+            suggestion.vertical = verticalKeystone(from: segments) * mode.keystoneShare
         }
         return suggestion
     }
@@ -324,6 +350,7 @@ public enum UprightAnalyzer {
         let radiusSteps = 180
         let radiusScale = Double(radiusSteps) / (2 * diagonal)
         var accumulator = [Double](repeating: 0, count: angleSteps * radiusSteps)
+        var edges: [EdgePixel] = []
 
         var sines = [Double](repeating: 0, count: angleSteps)
         var cosines = [Double](repeating: 0, count: angleSteps)
@@ -348,6 +375,7 @@ public enum UprightAnalyzer {
                 var theta = atan2(gy, gx)
                 if theta < 0 { theta += .pi }
                 let centre = Int((theta / .pi) * Double(angleSteps)) % angleSteps
+                edges.append(EdgePixel(x: Double(x), y: Double(height - 1 - y), magnitude: magnitude, step: centre))
                 // ±4° of slack absorbs the quantisation of an 8-bit image.
                 for offset in -4...4 {
                     let step = (centre + offset + angleSteps) % angleSteps
@@ -381,8 +409,12 @@ public enum UprightAnalyzer {
 
         var result: [UprightSegment] = []
         for peak in peaks.prefix(maximumCount) {
-            let theta = Double(peak.step) * .pi / Double(angleSteps)
-            let radius = Double(peak.bin) / radiusScale - diagonal
+            var theta = Double(peak.step) * .pi / Double(angleSteps)
+            var radius = Double(peak.bin) / radiusScale - diagonal
+            if let refined = refinedLine(theta: theta, radius: radius, step: peak.step,
+                                         angleSteps: angleSteps, edges: edges) {
+                (theta, radius) = refined
+            }
             guard let segment = segment(
                 theta: theta,
                 radius: radius,
@@ -437,11 +469,80 @@ public enum UprightAnalyzer {
         // the fallback, and the only source for the verticals.
         let horizon = mode.correctsRotation ? visionHorizonTilt(in: image) : nil
         guard !found.isEmpty || horizon != nil else { return nil }
-        let suggestion = suggestion(from: found, mode: mode, horizonTilt: horizon)
+        let aspect = Double(image.extent.width / image.extent.height)
+        let suggestion = suggestion(from: found, mode: mode, horizonTilt: horizon, aspect: aspect)
         return suggestion.isEmpty ? nil : suggestion
     }
 
     // MARK: Pieces
+
+    /// One pixel over the gradient threshold, in the bottom-up space the
+    /// accumulator uses, with the angle bin its gradient points into.
+    private struct EdgePixel {
+        var x: Double
+        var y: Double
+        var magnitude: Double
+        var step: Int
+    }
+
+    /// A Hough peak fitted to the edge pixels that made it: the principal
+    /// axis of those within a few pixels of the peak's line whose gradient
+    /// agrees with it, weighted by the square of the gradient's strength so
+    /// the texture that happens to sit in the band cannot hold the fit to the
+    /// peak's own angle. Four passes, each in a band about the last fit:
+    /// wide enough (±2.5px) to hold both edges of a thin line whole, since a
+    /// band that clips one end holds the fit to the angle it started from —
+    /// at ±1.5px the same building's edges still read up to 0.5° short
+    /// (5.02° as 4.50°), at ±2.5px within 0.04°.
+    ///
+    /// The accumulator alone is too coarse for Vertical. Its bins are 1° and
+    /// 1/90 of the diagonal (about 3.4px at 256), so a whole family of lines
+    /// within a degree of the edge lands in one cell: on a drawn 1200×800
+    /// building leaning 4° a side the peaks alone read a quarter of the
+    /// convergence away before the keystone ever ran (2026-09-29).
+    private static func refinedLine(
+        theta: Double,
+        radius: Double,
+        step: Int,
+        angleSteps: Int,
+        edges: [EdgePixel]
+    ) -> (theta: Double, radius: Double)? {
+        var theta = theta, radius = radius
+        for band in [3.0, 2.5, 2.5, 2.5] {
+            let c = cos(theta), s = sin(theta)
+            var weight = 0.0, sumX = 0.0, sumY = 0.0, sumXX = 0.0, sumYY = 0.0, sumXY = 0.0
+            var count = 0
+            for edge in edges {
+                let apart = abs(edge.step - step)
+                guard min(apart, angleSteps - apart) <= 8,
+                      abs(edge.x * c + edge.y * s - radius) <= band else { continue }
+                let strength = edge.magnitude * edge.magnitude
+                weight += strength
+                sumX += edge.x * strength
+                sumY += edge.y * strength
+                sumXX += edge.x * edge.x * strength
+                sumYY += edge.y * edge.y * strength
+                sumXY += edge.x * edge.y * strength
+                count += 1
+            }
+            guard count >= 8, weight > 0 else { return nil }
+            let meanX = sumX / weight, meanY = sumY / weight
+            let xx = sumXX / weight - meanX * meanX
+            let yy = sumYY / weight - meanY * meanY
+            let xy = sumXY / weight - meanX * meanY
+            // The line runs along the principal axis; theta is its normal.
+            var fitted = 0.5 * atan2(2 * xy, xx - yy) + .pi / 2
+            if fitted < 0 { fitted += .pi }
+            if fitted >= .pi { fitted -= .pi }
+            // A fit that swung past the vote's slack found something else.
+            var swing = abs(fitted - theta)
+            swing = min(swing, .pi - swing)
+            guard swing <= 4 * .pi / 180 else { return nil }
+            theta = fitted
+            radius = meanX * cos(theta) + meanY * sin(theta)
+        }
+        return (theta, radius)
+    }
 
     private static func gradientX(_ pixels: [Float], width: Int, x: Int, y: Int) -> Double {
         func value(_ dx: Int, _ dy: Int) -> Double { Double(pixels[(y + dy) * width + (x + dx)]) }
