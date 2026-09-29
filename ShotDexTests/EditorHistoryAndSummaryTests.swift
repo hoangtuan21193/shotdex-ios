@@ -77,6 +77,26 @@ struct EditorHistoryAndSummaryTests {
         #expect(c.stageHasChanges)
     }
 
+    /// FS-03.13 AC-21. Transform on an uncropped photo at 0°: 1:1, one
+    /// Rotate, ✕ confirmed — the whole frame again, no turn, 0°, and the two
+    /// steps out of History.
+    @MainActor @Test func transformCancelRestoresTheFrame() {
+        let c = controller()
+        let depth = c.historyTimeline.count
+        c.beginStageSession()
+        c.chooseCropAspect(.square, imageAspect: nil)
+        c.rotate()
+        #expect(c.recipe.crop.aspect == .square)
+        #expect(c.recipe.crop.quarterTurns == 1)
+        #expect(c.stageHasChanges, "✕ asks first")
+        c.restoreStageEntry()
+        c.cancelCropSession()
+        #expect(c.recipe.crop == .identity)
+        #expect(c.recipe.crop.quarterTurns == 0)
+        #expect(c.recipe.crop.straightenDegrees == 0)
+        #expect(c.historyTimeline.count == depth)
+    }
+
     /// FS-03.13 AC-10. Inside a tool Undo stops where it opened: the spot
     /// goes, then Undo is dim and the edit from before the tool stays.
     @MainActor @Test func undoInsideAToolStopsAtEntry() {
