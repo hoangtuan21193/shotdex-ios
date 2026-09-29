@@ -42,6 +42,30 @@ struct LookInboxTests {
         #expect(FileManager.default.fileExists(atPath: sent.path), "the sender's file is not ours to delete")
     }
 
+    /// FS-03.14 AC-c8. "Teal Look" carrying the LUT "Teal": Undo on the
+    /// banner takes back the look and the LUT, and the inbox copy is gone.
+    @Test func undoRemovesTheWholeReceive() async throws {
+        let looks = LookPresetStore(directory: makeDirectory("looks"), defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        let luts = ImportedLUTStore()
+        let banner = AppBannerModel()
+        let inbox = LookInbox(looks: looks, luts: luts, banner: banner, directory: makeDirectory("inbox"))
+        let lutsBefore = luts.luts.count
+        let cube = "TITLE \"Teal\"\nLUT_3D_SIZE 2\n0 0 0\n1 0 0\n0 1 0\n1 1 0\n0 0 1\n1 0 1\n0 1 1\n1 1 1\n"
+        let sent = try lookFile("Teal Look", lut: LookFile.EmbeddedLUT(name: "Teal", cube: cube))
+
+        await inbox.receive(sent)
+        #expect(looks.presets.map(\.name) == ["Teal Look"])
+        #expect(luts.luts.count == lutsBefore + 1)
+        #expect(looks.presets.first?.recipe.lutID == luts.luts.first { $0.displayName == "Teal" }?.id)
+        #expect(banner.current?.actionTitle == "Undo")
+
+        banner.performAction()
+        #expect(looks.presets.isEmpty)
+        #expect(luts.luts.count == lutsBefore)
+        #expect(inbox.pending.isEmpty)
+        #expect(banner.current == nil)
+    }
+
     /// A copy left behind by a launch that ended mid-import is imported on
     /// the next launch's drain, and not again.
     @Test func leftoverCopyImportsOnNextLaunch() async throws {
