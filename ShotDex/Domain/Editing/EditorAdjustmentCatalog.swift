@@ -86,20 +86,6 @@ enum EditorAdjustmentCatalog {
         .lensCorrection,
     ]
 
-    /// `hasDepth` is kept for the Lens Blur group (FS-03.15e), which replaces
-    /// the old Depth Blur row; today it changes nothing.
-    /// The sections the wide-screen panel lists, in order. Five, the way
-    /// Lightroom's own Edit panel lists them — Curve folds into Light, Mix,
-    /// Point and Grade become tabs inside Color, and Geometry goes with the crop
-    /// frame it belongs to. Eight flat groups meant that opening the first one
-    /// pushed six of the other seven off a 834pt screen.
-    ///
-    /// RAW has no section of its own: its rows ride inside Detail when the source
-    /// is RAW, which is where a photographer looks for them anyway.
-    static let sidebarSections: [EditorAdjustmentGroup.Identity] = [
-        .light, .color, .effects, .detail, .optics,
-    ]
-
     /// The slider a dependent row waits for. Midpoint, roundness, feather and
     /// the highlight roll-off do nothing until there is a vignette to shape;
     /// grain size and roughness do nothing until there is grain. Lightroom dims
@@ -142,6 +128,8 @@ enum EditorAdjustmentCatalog {
         return adjustments[parent] != 0
     }
 
+    /// `hasDepth` is kept for the Lens Blur group (FS-03.15e), which replaces
+    /// the old Depth Blur row; today it changes nothing.
     static func groups(
         isRAWSource: Bool,
         scope: Scope,

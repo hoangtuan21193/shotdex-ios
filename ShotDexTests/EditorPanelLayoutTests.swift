@@ -481,8 +481,9 @@ struct EditorPanelLayoutTests {
 
     /// Five sections, and the panel says so in one place: the catalog. A screen
     /// that hand-listed them is how Color went missing from one device once.
-    @Test func thePanelListsFiveSections() {
-        #expect(EditorAdjustmentCatalog.sidebarSections == [.light, .color, .effects, .detail, .optics])
+    /// AC-1: the list the screen actually draws, not a catalog copy of it.
+    @Test func thePanelListsSevenSections() {
+        #expect(PhotoEditorScreen.sidebarParameterGroups == [.light, .color, .effects, .lensBlur, .detail, .optics, .calibration])
     }
 
     /// A dependent row is dead until the slider it belongs to has a value.

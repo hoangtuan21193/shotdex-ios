@@ -1781,10 +1781,11 @@ struct PhotoEditorScreen: View {
     /// layers.
     private static let stageModes: [EditorRailMode] = [.crop, .heal, .mask, .markup]
 
-    /// The five sections the panel lists, in the catalog's order. Curve rides
-    /// inside Light, Mix / Point / Grade are tabs inside Color, and Geometry
-    /// went to Crop with the frame it shapes.
-    private static let sidebarParameterGroups: [EditorGroup] = [
+    /// The seven sections the panel lists (FS-03.09 AC-1). Curve rides inside
+    /// Light, Mix / Point / Grade are tabs inside Color, and Geometry went to
+    /// Crop with the frame it shapes. Lens Blur and Calibration stay sections
+    /// of their own, as in Lightroom.
+    static let sidebarParameterGroups: [EditorGroup] = [
         .light, .color, .effects, .lensBlur, .detail, .optics, .calibration
     ]
 
