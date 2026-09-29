@@ -65,6 +65,15 @@ enum LightroomMapping {
         for tag in settings.structures.sorted() {
             if let group = LightroomMappingTable.skippedGroup(for: tag) { skip(group) }
         }
+        // A creative profile (14b §4): its table is Adobe's own encoding,
+        // with no published description to read it by — said, not guessed.
+        if settings.structures.contains("Look") {
+            let name = settings.look["Name"].map { "'\($0)'" } ?? "the preset's profile"
+            let text = settings.look["Parameters"] == nil
+                ? "The profile's colour table isn't in the file"
+                : "Creative profile \(name) — its colour table can't be read, so it's left out"
+            result.lines.append(.init(kind: .skipped, text: text))
+        }
         let isAsShot = settings.values["WhiteBalance"]?.lowercased() == "as shot"
         for tag in settings.values.keys.sorted() {
             guard let raw = settings.values[tag] else { continue }
