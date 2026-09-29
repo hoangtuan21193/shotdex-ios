@@ -43,10 +43,22 @@ struct LightroomMappingResult: Equatable {
 enum LightroomMapping {
     static func map(_ settings: LightroomSettings) -> LightroomMappingResult {
         var result = LightroomMappingResult()
+        var skippedGroups: [String] = []
+        func skip(_ group: LightroomMappingTable.SkippedGroup) {
+            guard !skippedGroups.contains(group.message) else { return }
+            skippedGroups.append(group.message)
+        }
+        // Nested structures first: a mask group carries Exposure of its own,
+        // which must never reach the look (D37) — it is skipped whole.
+        for tag in settings.structures.sorted() {
+            if let group = LightroomMappingTable.skippedGroup(for: tag) { skip(group) }
+        }
         for tag in settings.values.keys.sorted() {
             guard let raw = settings.values[tag] else { continue }
             if LightroomMappingTable.administrative.contains(tag) { continue }
-            if let row = LightroomMappingTable.adjustments[tag] {
+            if let group = LightroomMappingTable.skippedGroup(for: tag) {
+                skip(group)
+            } else if let row = LightroomMappingTable.adjustments[tag] {
                 apply(row, tag: tag, raw: raw, to: &result)
             } else if let target = LightroomMappingTable.mixerTarget(tag) {
                 applyMixer(target, raw: raw, to: &result)
@@ -54,6 +66,7 @@ enum LightroomMapping {
                 result.lines.append(.init(kind: .changed, text: "Unknown setting \(tag) — ignored"))
             }
         }
+        result.lines += skippedGroups.map { PresetReportLine(kind: .skipped, text: $0) }
         return result
     }
 

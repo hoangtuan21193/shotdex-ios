@@ -46,6 +46,27 @@ enum LightroomMappingTable {
         "HasSettings", "CompatibleVersion", "Group", "SortName", "Description",
     ]
 
+    /// Groups a look never takes (14b §4), each one line however many of its
+    /// tags a preset carries.
+    struct SkippedGroup {
+        var message: String
+        var matches: (String) -> Bool
+    }
+
+    static let skippedGroups: [SkippedGroup] = [
+        SkippedGroup(message: "Crop stays with each photo") { $0 == "HasCrop" || $0.hasPrefix("Crop") },
+        SkippedGroup(message: "Masks stay with each photo") {
+            ["MaskGroupBasedCorrections", "GradientBasedCorrections", "CircularGradientBasedCorrections",
+             "PaintBasedCorrections"].contains($0)
+        },
+        SkippedGroup(message: "Spot fixes belong to one photo") { $0 == "RetouchAreas" || $0 == "RedEyeInfo" || $0 == "RetouchInfo" },
+        SkippedGroup(message: "HDR editing isn't in ShotDex") { $0.hasPrefix("HDR") },
+    ]
+
+    static func skippedGroup(for tag: String) -> SkippedGroup? {
+        skippedGroups.first { $0.matches(tag) }
+    }
+
     static let adjustments: [String: AdjustmentRow] = [
         "Exposure2012": AdjustmentRow(kind: .exposure, title: "Exposure", lightroom: nil, unit: " EV"),
     ]
