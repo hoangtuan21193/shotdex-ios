@@ -69,4 +69,21 @@ struct LightroomXMPReaderTests {
         #expect(LightroomXMPReader.Failure.notValidXMP.message
             == "The file is not valid XMP. Try exporting the preset from Lightroom again.")
     }
+
+    /// FS-03.14 AC-a8. A sidecar with only EXIF and Dublin Core: ✕ "This XMP
+    /// has no Lightroom edit settings", no look.
+    @Test func sidecarWithoutSettingsIsNotAPreset() {
+        let sidecar = Data("""
+        <x:xmpmeta xmlns:x="adobe:ns:meta/">
+         <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+          <rdf:Description rdf:about="" xmlns:exif="http://ns.adobe.com/exif/1.0/"
+            xmlns:dc="http://purl.org/dc/elements/1.1/" exif:ExposureTime="1/250">
+           <dc:creator><rdf:Seq><rdf:li>Someone</rdf:li></rdf:Seq></dc:creator>
+          </rdf:Description>
+         </rdf:RDF>
+        </x:xmpmeta>
+        """.utf8)
+        #expect(throws: LightroomXMPReader.Failure.noLightroomSettings) { try LightroomXMPReader.read(sidecar) }
+        #expect(LightroomXMPReader.Failure.noLightroomSettings.message == "This XMP has no Lightroom edit settings")
+    }
 }
