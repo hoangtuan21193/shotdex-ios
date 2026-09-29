@@ -25,6 +25,9 @@ final class EditorChromeModel {
     var phonePanelHeight: CGFloat = EditorLayoutMetrics.phonePanelShort
     /// A group the list should scroll to (a chip tapped on the wheel).
     var editListScrollRequest: EditorGroup?
+    /// The same two for the Transform list (FS-03.13b §3).
+    var transformListSection: EditorTransformSection?
+    var transformListScrollRequest: EditorTransformSection?
     /// Floating histogram card. It sits over the photo when expanded and parks as
     /// a pill in the action bar when collapsed. Collapsed on open — the photo is
     /// what the editor is for, so nothing covers it until the user asks.

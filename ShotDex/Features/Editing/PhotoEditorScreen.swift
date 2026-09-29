@@ -2481,7 +2481,7 @@ struct PhotoEditorScreen: View {
         // The Edit list carries each group's strip under its label.
         if Self.showsEditList(chrome) { return false }
         return switch chrome.selectedGroup {
-        case .grade, .cropGeometry, .presets: true
+        case .grade, .presets: true
         // The band swatches pick an HSL band; the B&W Mix lists all eight.
         case .colorMix: !controller.isBlackAndWhite
         case .pointColor: !controller.pointColors.isEmpty && !controller.isBlackAndWhite
@@ -2517,8 +2517,6 @@ struct PhotoEditorScreen: View {
             .padding(.horizontal, EditorStripLayout.horizontalInset)
         case .pointColor:
             EditorPointColorStrip(controller: controller, chrome: chrome)
-        case .cropGeometry:
-            EditorCropAspectStrip(controller: controller)
         case .presets:
             EditorPresetSourceStrip(chrome: chrome)
         case .mask:
@@ -2629,6 +2627,17 @@ struct PhotoEditorScreen: View {
                     if controller.selectedTool != group.tool { controller.selectedTool = group.tool }
                 }
             )
+        } else if chrome.selectedGroup == .cropGeometry, !chrome.isWideLayout {
+            EditorTransformList(chrome: chrome) { section in
+                section == .geometry
+                    ? AnyView(EditorAdjustmentGroupsView(
+                        controller: controller,
+                        chrome: chrome,
+                        groups: catalogGroups(for: .geo, controller: controller),
+                        isScrollable: false
+                    ))
+                    : AnyView(EditorTransformSectionView(controller: controller, section: section))
+            }
         } else {
             toolPanelContent(for: chrome.selectedGroup, controller: controller)
         }

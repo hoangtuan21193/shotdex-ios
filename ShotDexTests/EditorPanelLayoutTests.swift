@@ -649,6 +649,18 @@ struct EditorPanelLayoutTests {
         #expect(EditorTool.edit.group(editListGroup: nil) == .light)
     }
 
+    /// FS-03.13 AC-20. Transform lists CROP · STRAIGHTEN · UPRIGHT ·
+    /// GEOMETRY in order, none hidden now FS-03.15 has landed; the four ratio
+    /// chips and More… reach every ratio exactly once.
+    @Test func transformReachesEveryCropRatioOnce() {
+        #expect(EditorTransformSection.shown.map { $0.title.uppercased() } == ["CROP", "STRAIGHTEN", "UPRIGHT", "GEOMETRY"])
+        let reached = EditorCropRatioRow.chips + EditorCropRatioRow.more
+        #expect(reached.count == CropAspect.allCases.count)
+        #expect(Set(reached) == Set(CropAspect.allCases))
+        #expect(EditorCropRatioRow.chips.map(\.displayName) == ["Original", "Free", "1:1", "4:5"])
+        #expect(EditorCropRatioRow.more.map(\.displayName) == ["4:3", "3:2", "16:9", "9:16"])
+    }
+
     // MARK: Panel by photo (FS-03.13a §2)
 
     static func panel(_ aspect: Double, screen: CGSize = CGSize(width: 402, height: 874), band: CGFloat = 62) -> CGFloat {

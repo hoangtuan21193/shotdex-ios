@@ -544,71 +544,15 @@ struct EditorFiltersPanel: View {
     }
 }
 
-/// Crop tab: rotate / flip / reset, straighten, ratio chips. Mask overlays stay
-/// hidden while framing, which the render path already handles.
-///
-/// Turn 31: there is no in-panel command row, so the framing actions that lived
-/// there — rotate, flip, reset crop — are a button row at the top of this panel
-/// (rotate and flip are also in the band's ⋯ menu). There is no Done: the crop
-/// commits when the tab is left or the edit is saved.
+/// Crop in the wide sidebar: rotate / flip / reset, straighten, ratio chips.
+/// Mask overlays stay hidden while framing, which the render path already
+/// handles.
 struct EditorCropPanel: View {
     @Bindable var controller: PhotoEditorController
-    @Environment(\.editorUsesPanelStyle) private var usesPanelStyle
-    @Environment(\.editorSliderStacked) private var isStacked
 
     var body: some View {
-        if usesPanelStyle && !isStacked {
-            phoneRows
-        } else {
-            stackedBody
-        }
-    }
-
-    /// Phone (FS-03.12): the ratios are the target strip (`EditorCropAspectStrip`);
-    /// under it Straighten, the Rotate · Flip · Reset chips, and the footnote as a
-    /// hint row — every one a 40pt grid row.
-    private var phoneRows: some View {
-        VStack(spacing: 0) {
-            straightenRow
-            HStack(spacing: EditorStripLayout.chipSpacing) {
-                phoneAction("Rotate", icon: "rotate.right", isEnabled: true) { controller.rotate() }
-                phoneAction(
-                    "Flip",
-                    icon: "arrow.left.and.right.righttriangle.left.righttriangle.right",
-                    isEnabled: true
-                ) { controller.flip() }
-                phoneAction("Reset", icon: "arrow.counterclockwise", isEnabled: controller.recipe.crop != .identity) {
-                    controller.resetCrop()
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, EditorStripLayout.horizontalInset)
-            .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
-            Text("✓ applies the crop. ✕ puts the frame back.")
-                .font(EditorTheme.rowLabel)
-                .foregroundStyle(EditorTheme.panelHint)
-                .lineLimit(1)
-                .minimumScaleFactor(EditorLayoutMetrics.editorPanelRowMinimumScale)
-                .padding(.horizontal, AppTheme.Spacing.lg)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .frame(height: EditorLayoutMetrics.editorPanelRowHeight)
-            Spacer(minLength: 0)
-        }
-    }
-
-    private func phoneAction(
-        _ title: String,
-        icon: String,
-        isEnabled: Bool,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            EditorPanelChipLabel(title: title, systemImage: icon)
-        }
-        .buttonStyle(EditorChipButtonStyle(isSelected: false))
-        .disabled(!isEnabled)
-        .opacity(isEnabled ? 1 : EditorTheme.rowDisabled)
-        .accessibilityLabel(title)
+        // The phone draws Transform as a list of its own (`EditorTransformList`).
+        stackedBody
     }
 
     private var straightenRow: some View {
@@ -716,37 +660,6 @@ struct EditorCropPanel: View {
     }
 }
 
-/// The phone panel's Crop target strip: every ratio, each with a frame glyph,
-/// scrolling (eight chips). The selected ratio is the white-20% chip, not accent.
-struct EditorCropAspectStrip: View {
-    @Bindable var controller: PhotoEditorController
-
-    var body: some View {
-        EditorPanelChipStrip(
-            items: CropAspect.allCases,
-            isSelected: { controller.recipe.crop.aspect == $0 },
-            label: { EditorPanelChipLabel(title: $0.displayName, systemImage: $0.stripSymbol) },
-            accessibilityName: \.displayName,
-            onSelect: { controller.chooseCropAspect($0, imageAspect: nil) }
-        )
-    }
-}
-
-extension CropAspect {
-    var stripSymbol: String {
-        switch self {
-        case .free: "crop"
-        case .original: "photo"
-        case .square: "square"
-        case .fourThree: "rectangle.ratio.4.to.3"
-        case .threeTwo: "rectangle"
-        case .sixteenNine: "rectangle.ratio.16.to.9"
-        case .fourFive: "rectangle.portrait"
-        case .nineSixteen: "rectangle.ratio.9.to.16"
-        }
-    }
-}
-
 /// Slider row for values that are not `PhotoAdjustmentKind` (filter intensity,
 /// straighten, mask shape parameters). Uses the same pan arbitration as the
 /// adjustment rows.
@@ -796,6 +709,8 @@ struct EditorPlainSliderRow: View {
 /// like?") and answered in one press.
 struct EditorUprightRow: View {
     @Bindable var controller: PhotoEditorController
+    /// Off inside the Transform list, whose own label says UPRIGHT.
+    var showsLabel = true
 
     /// Said in the row rather than in the editor's toast: that toast carries an
     /// Undo button, and there is nothing to undo when a pass found no lines —
@@ -805,10 +720,12 @@ struct EditorUprightRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
-            Text("UPRIGHT")
-                .font(EditorTheme.groupLabel)
-                .tracking(1.1)
-                .foregroundStyle(EditorTheme.secondaryText)
+            if showsLabel {
+                Text("UPRIGHT")
+                    .font(EditorTheme.groupLabel)
+                    .tracking(1.1)
+                    .foregroundStyle(EditorTheme.secondaryText)
+            }
             // Two rows of three (FS-03.13b): Off · Auto · Level over
             // Vertical · Full · Guided — six chips in one row clip at 375pt.
             ForEach([[PhotoUprightMode.off, .auto, .level], [.vertical, .full, .guided]], id: \.self) { row in
