@@ -54,7 +54,9 @@ Files, AirDrop…). Tên file = tên look, bỏ ký tự cấm trong tên file.
 - Banner **cấp app**, hiện trên mọi màn (Library, editor, Statistics…) — không phải toast Undo 3 s của editor (chốt E9).
   *Vì* file AirDrop thường tới khi đang ở Library — [DECISIONS](../../../.planboard/plans-deviations/DECISIONS.md).
 - Banner: "Golden added to My Looks" · **Undo**; có ≈/✕ thì "3 looks added · 1 skipped" + **Details** mở đúng
-  sheet báo cáo của [14a §3](14a-import-and-report.md#3-báo-cáo). Đậu **trên** panel/tab bar.
+  sheet báo cáo của [14a §3](14a-import-and-report.md#3-báo-cáo). Một file ≈/✕: "Golden added with changes" /
+  "Golden not added" + Details; không look nào vào: "No looks added · 1 skipped". Đậu **trên** panel/tab bar.
+- Chỉ bề mặt trên cùng (màn gốc, trình xem, editor — cái xuất hiện sau cùng) vẽ banner và mở Details.
 - **Undo gỡ toàn bộ lần nhận đó** — mọi look và LUT nhúng nó thêm. Banner tắt rồi thì gỡ từng look bằng Delete.
 - Khởi động lạnh: nhập chạy **sau** khi kho look đã nạp, banner hiện trên màn đầu tiên; mỗi file nhập **một lần**.
 
@@ -94,7 +96,7 @@ Files, AirDrop…). Tên file = tên look, bỏ ký tự cấm trong tên file.
 | AC-c4 | look Mono + Clarity +40 | Export As `.cube` rồi áp cube lên ảnh thử | 33³; sai lệch trung bình ≤ **1/255** so với render ShotDex của riêng Mono | ✅ `LookExportCubeTests.bakesColourOnly` (+ `identityLookIsTheIdentityTable`) · `looks-menu-formats.json` (sheet Export LUT) |
 | AC-c5 | Presets có preset sẵn "Velvia"; My Looks có "Golden" | giữ lâu từng ô | "Golden": Rename · Share · Export As · Delete; "Velvia": Rename · Share · Export As, không Delete | ✅ `looks-context-menu.json` (giữ lâu Velvia: Rename · Share… · Export As, không Delete; "Golden": thêm Delete) · `LookPresetStoreTests.builtInRenamesOnThePanelOnly` |
 | AC-c6 | có "Golden" và "Look 2" | Rename "Golden" thành "look 2" | từ chối kèm thông báo; ô tên gợi ý "look 2 (2)"; hai look giữ nguyên | ✅ `LookPresetStoreTests.renameRefusesATakenName` |
-| AC-c7 | ShotDex tắt hẳn; `Golden.shotdexlook` | mở file (AirDrop / `simctl openurl`) | app khởi động, My Looks có "Golden" đúng một lần, banner Undo hiện ≤ 4 s | `LookInboxTests.coldLaunchFileIsImportedOnce` + ⚠️ chưa có (ui-drive không mở được file) |
+| AC-c7 | ShotDex tắt hẳn; `Golden.shotdexlook` | mở file (AirDrop / `simctl openurl`) | app khởi động, My Looks có "Golden" đúng một lần, banner Undo hiện ≤ 4 s | ✅ `LookInboxTests.coldLaunchFileIsImportedOnce` (+ `leftoverCopyImportsOnNextLaunch`) · tay: app tắt, `xcrun simctl openurl file://…/Harbour.shotdexlook` → app khởi động, `Tools/sim-shot` ở giây ~2 có banner "Harbour added to My Looks · Undo", `looks.json` có "Harbour" một lần, `LookInbox/` và `Documents/Inbox/` rỗng · `receive-details.json` (Details mở sheet báo cáo) |
 | AC-c8 | `Teal Look.shotdexlook` nhúng LUT "Teal" | mở file rồi chạm Undo trên banner | My Looks và My LUTs về đúng số trước lần nhận; bản chép trong hộp thư đã xoá | `LookInboxTests.undoRemovesTheWholeReceive` |
 | AC-c9 | 2 file `.shotdexlook` | "Add to ShotDex", rồi mở app | banner "2 looks added"; hộp thư chờ App Group rỗng | `LookInboxTests.pendingFilesImportOnLaunch` + ⚠️ chưa có trên máy thật |
 | AC-c10 | extension; 20 file 100 KB và 1 file 40 MB | chọn cả 21 | 20 vào hộp thư, file 40 MB bị từ chối không đọc; bộ nhớ đỉnh extension < **30 MB** | `LookInboxTests.extensionRefusesOversizedFiles` + ⚠️ chưa có (Instruments trên máy) |

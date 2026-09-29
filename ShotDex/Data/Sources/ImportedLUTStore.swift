@@ -145,6 +145,14 @@ final class ImportedLUTStore {
         reload()
     }
 
+    /// Undo of a receive: the LUTs it brought go too (FS-03.14c AC-c8).
+    func removeReceive(_ receiveID: UUID) {
+        for lut in luts where receives[lut.id] == receiveID {
+            delete(lut)
+            receives.removeValue(forKey: lut.id)
+        }
+    }
+
     private func modified(_ url: URL) -> Date? {
         try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
     }

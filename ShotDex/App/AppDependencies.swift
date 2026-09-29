@@ -87,6 +87,8 @@ final class AppDependencies {
     let lookExchange: LookExchangeModel
     /// The app-level banner every full-screen surface hosts (FS-03.14c §4).
     let banner: AppBannerModel
+    /// Looks opened from AirDrop, Files, Messages or Mail (FS-03.14c §4).
+    let lookInbox: LookInbox
     /// The order and visibility of the Collections tab's sections.
     let collectionsLayout: CollectionsLayoutStore
     /// Photos opened and photos shared, for the Recently Viewed / Recently
@@ -250,6 +252,7 @@ final class AppDependencies {
         self.importedLUTs = ImportedLUTStore()
         self.lookExchange = LookExchangeModel(looks: lookPresets, luts: importedLUTs)
         self.banner = AppBannerModel()
+        self.lookInbox = LookInbox(looks: lookPresets, luts: importedLUTs, banner: banner)
         self.collectionsLayout = CollectionsLayoutStore()
         self.spotlight = SpotlightIndexer(
             libraryQueries: libraryQueries,

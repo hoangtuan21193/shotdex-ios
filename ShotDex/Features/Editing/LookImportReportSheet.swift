@@ -10,7 +10,7 @@ struct LookImportReportSheet: View {
         NavigationStack {
             Group {
                 if let report = model.report {
-                    reportList(report)
+                    PresetImportReportList(report: report)
                 } else {
                     reading
                 }
@@ -43,8 +43,34 @@ struct LookImportReportSheet: View {
         .padding(AppTheme.Spacing.xl)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+}
 
-    private func reportList(_ report: PresetImportReport) -> some View {
+/// Details on a receive's banner (FS-03.14c §4): the same report, opened
+/// from wherever the file arrived.
+struct ReceivedReportSheet: View {
+    let report: PresetImportReport
+    let done: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            PresetImportReportList(report: report)
+                .navigationTitle("Import")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done", action: done)
+                    }
+                }
+        }
+        .presentationDetents([.medium, .large])
+    }
+}
+
+/// "12 looks added · 2 skipped", then a row per preset that opens its lines.
+struct PresetImportReportList: View {
+    let report: PresetImportReport
+
+    var body: some View {
         List {
             Section {
                 ForEach(report.entries) { entry in

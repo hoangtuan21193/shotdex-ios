@@ -26,14 +26,32 @@ final class AppBannerModel {
 
     private(set) var current: Banner?
     private var action: (() -> Void)?
+    /// A receive's report, opened by the banner's Details.
+    var presentedReport: PresetImportReport?
+    /// Hosts on screen, oldest first: only the newest — the surface on top —
+    /// draws the banner and presents Details.
+    private(set) var hosts: [UUID] = []
+
+    func appear(_ host: UUID) { hosts.removeAll { $0 == host }; hosts.append(host) }
+    func disappear(_ host: UUID) { hosts.removeAll { $0 == host } }
+    func isTop(_ host: UUID) -> Bool { hosts.last == host }
 
     #if DEBUG
     /// `-ShotDexStickyBanner`: a UI script photographs the banner on each
     /// screen, which a four-second banner does not survive.
-    nonisolated static let isSticky = ProcessInfo.processInfo.arguments.contains("-ShotDexStickyBanner")
+    /// `-ShotDexStickyDetails` puts up the Details variant instead.
+    nonisolated static let isSticky = ["-ShotDexStickyBanner", "-ShotDexStickyDetails"]
+        .contains(where: ProcessInfo.processInfo.arguments.contains)
 
     init() {
-        if Self.isSticky { show("Golden added to My Looks", actionTitle: "Undo") {} }
+        if ProcessInfo.processInfo.arguments.contains("-ShotDexStickyDetails") {
+            let report = PresetImportReport(entries: [
+                .init(name: "Harbour", status: .skipped, lines: [.init(kind: .skipped, text: "Already in My Looks")]),
+            ])
+            show("Harbour not added", actionTitle: "Details") { [weak self] in self?.presentedReport = report }
+        } else if Self.isSticky {
+            show("Golden added to My Looks", actionTitle: "Undo") {}
+        }
     }
     #endif
 
@@ -63,23 +81,47 @@ final class AppBannerModel {
 
 extension View {
     /// Shows the app banner above `bottomInset`. Every full-screen surface
-    /// hosts it — a cover hides the hosts below it, so the topmost one is
-    /// the one seen. `dark` is tier D, the editor.
+    /// hosts it; a cover keeps the hosts below it alive, so only the host
+    /// that appeared last — the one on top — draws it. `dark` is tier D, the
+    /// editor.
     func appBannerHost(_ model: AppBannerModel, bottomInset: CGFloat, dark: Bool = false) -> some View {
-        overlay(alignment: .bottom) {
-            if let banner = model.current {
-                ActionToast(text: banner.text, actionTitle: banner.actionTitle, dark: dark) {
-                    model.performAction()
-                }
-                .padding(.bottom, bottomInset)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-                .task(id: banner.id) {
-                    try? await Task.sleep(for: banner.duration)
-                    withAnimation(AppTheme.Motion.standard) { model.expire(banner.id) }
+        modifier(AppBannerHost(model: model, bottomInset: bottomInset, dark: dark))
+    }
+}
+
+private struct AppBannerHost: ViewModifier {
+    @Bindable var model: AppBannerModel
+    let bottomInset: CGFloat
+    let dark: Bool
+    @State private var id = UUID()
+
+    func body(content: Content) -> some View {
+        let isTop = model.isTop(id)
+        content
+            .overlay(alignment: .bottom) {
+                if isTop, let banner = model.current {
+                    ActionToast(text: banner.text, actionTitle: banner.actionTitle, dark: dark) {
+                        model.performAction()
+                    }
+                    .padding(.bottom, bottomInset)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .task(id: banner.id) {
+                        try? await Task.sleep(for: banner.duration)
+                        withAnimation(AppTheme.Motion.standard) { model.expire(banner.id) }
+                    }
                 }
             }
-        }
-        .animation(AppTheme.Motion.standard, value: model.current)
+            .animation(AppTheme.Motion.standard, value: model.current)
+            .sheet(isPresented: Binding(
+                get: { isTop && model.presentedReport != nil },
+                set: { if !$0 { model.presentedReport = nil } }
+            )) {
+                if let report = model.presentedReport {
+                    ReceivedReportSheet(report: report) { model.presentedReport = nil }
+                }
+            }
+            .onAppear { model.appear(id) }
+            .onDisappear { model.disappear(id) }
     }
 }
 

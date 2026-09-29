@@ -287,6 +287,12 @@ final class LookPresetStore {
         persist()
     }
 
+    /// Undo of a receive (14c §4): every look it added goes, with the
+    /// preset files kept beside them.
+    func removeReceive(_ receiveID: UUID) {
+        for preset in presets where preset.receiveID == receiveID { delete(preset) }
+    }
+
     /// What a new preset is called before the user types anything. Numbered so
     /// two saves in a row do not collide in the overwrite rule above.
     func suggestedName() -> String {

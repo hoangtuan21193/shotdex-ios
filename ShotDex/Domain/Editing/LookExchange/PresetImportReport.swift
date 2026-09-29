@@ -41,7 +41,11 @@ struct PresetImportReport: Equatable {
 
     /// "12 looks added · 2 skipped"; "1 look added" when nothing was skipped.
     var header: String {
-        let added = addedCount == 1 ? "1 look added" : "\(addedCount) looks added"
+        let added = switch addedCount {
+        case 0: "No looks added"
+        case 1: "1 look added"
+        default: "\(addedCount) looks added"
+        }
         return skippedCount == 0 ? added : "\(added) · \(skippedCount) skipped"
     }
 

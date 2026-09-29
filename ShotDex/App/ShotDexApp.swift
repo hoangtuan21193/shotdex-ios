@@ -68,6 +68,11 @@ struct ShotDexApp: App {
                 // widget process and parsed by the same type here, so the two
                 // cannot drift apart.
                 .onOpenURL { url in
+                    // A look opened from AirDrop, Files, Messages or Mail.
+                    if url.isFileURL {
+                        Task { await dependencies.lookInbox.receive(url) }
+                        return
+                    }
                     guard let link = WidgetDeepLink(url: url) else { return }
                     switch link {
                     case .onThisDay(let dayKey):
@@ -80,6 +85,8 @@ struct ShotDexApp: App {
                     }
                 }
                 .task {
+                    // A look still waiting from a launch that ended mid-import.
+                    await dependencies.lookInbox.drain()
                     // Cheap: a few SELECT DISTINCTs and one Spotlight write.
                     await dependencies.backfillMediaSubtypes()
                     await dependencies.spotlight.reindex()

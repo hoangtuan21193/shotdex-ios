@@ -1,0 +1,16 @@
+{
+ "steps": [
+  {"action": "launch", "arguments": ["-ShotDexStickyDetails"]},
+  {"action": "wait", "seconds": 25},
+  {"action": "screenshot", "name": "1-library-banner"},
+  {"action": "wait", "seconds": 3},
+  {"action": "tap", "label": "Details"},
+  {"action": "wait", "seconds": 3},
+  {"action": "screenshot", "name": "2-library-details"},
+  {"action": "wait", "seconds": 3},
+  {"action": "tap", "label": "Done"},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "3-library-after"},
+  {"action": "wait", "seconds": 3}
+ ]
+}
