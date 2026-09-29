@@ -1,0 +1,14 @@
+{"steps":[
+ {"action":"launch"},{"action":"wait","seconds":30},
+ {"action":"tap","label":"Search"},{"action":"wait","seconds":3},
+ {"action":"typeText","text":"Leica\n"},{"action":"wait","seconds":5},
+ {"action":"screenshot","name":"0-search"},{"action":"wait","seconds":3},
+ {"action":"tap","x":0.17,"y":0.3},{"action":"wait","seconds":8},
+ {"action":"tap","label":"Edit"},{"action":"wait","seconds":15},
+ {"action":"tap","label":"Light, Edit groups"},{"action":"wait","seconds":2},
+ {"action":"tap","label":"Detail","type":"button"},{"action":"wait","seconds":3},
+ {"action":"swipe","x":0.5,"y":0.86,"direction":"up","distance":0.12,"seconds":0.5},{"action":"wait","seconds":2},
+ {"action":"swipe","x":0.5,"y":0.86,"direction":"up","distance":0.12,"seconds":0.5},{"action":"wait","seconds":2},
+ {"action":"screenshot","name":"1-raw-wb"},{"action":"wait","seconds":4},
+ {"action":"dump","name":"texts","type":"staticText"}
+]}

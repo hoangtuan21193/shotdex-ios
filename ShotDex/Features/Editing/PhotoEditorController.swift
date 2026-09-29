@@ -371,6 +371,19 @@ final class PhotoEditorController {
     /// Blur row in Effects. Resolved once when the source loads: the check
     /// opens the file, so it must not run per panel rebuild.
     private(set) var hasDepthSource = false
+    /// A RAW's As Shot white balance, read once when it opens — what the RAW
+    /// White Balance slider reads its Kelvin around (FS-03.14b E7).
+    private(set) var rawAsShotWhiteBalance: (kelvin: Double, tint: Double)?
+
+    /// "5500 K" / "+10" for the RAW White Balance and Tint sliders when the
+    /// As Shot pair is known; nil for any other slider.
+    func rawWhiteBalanceText(_ kind: PhotoAdjustmentKind) -> String? {
+        guard let asShot = rawAsShotWhiteBalance, kind == .rawTemperature || kind == .rawTint else { return nil }
+        let neutral = RAWWhiteBalance.neutral(asShotKelvin: asShot.kelvin, asShotTint: asShot.tint, adjustments: currentAdjustments)
+        if kind == .rawTemperature { return "\(Int((neutral.kelvin / 10).rounded()) * 10) K" }
+        let tint = Int(neutral.tint.rounded())
+        return tint > 0 ? "+\(tint)" : "\(tint)"
+    }
     /// Whether the photo has a face, for the three face-part masks. Nil until
     /// the check has run on the first preview; once per photo, not per sheet.
     private(set) var hasFaces: Bool?
@@ -657,6 +670,10 @@ final class PhotoEditorController {
         hasDepthSource = await Task.detached(priority: .userInitiated) {
             DepthImageReader.hasDepth(at: url)
         }.value
+        let isRAW = loaded.info.isRAW
+        rawAsShotWhiteBalance = isRAW
+            ? await Task.detached(priority: .userInitiated) { PhotoRenderService.asShotWhiteBalance(at: url) }.value
+            : nil
         recipe.source = option.source
         recipe.sourceFilename = option.filename
         await renderOriginal()
@@ -757,7 +774,17 @@ final class PhotoEditorController {
     }
 
     func adjustmentValue(_ kind: PhotoAdjustmentKind) -> Double {
-        currentAdjustments[kind]
+        // An absolute white balance (an imported look, E7) reads where it
+        // sits against As Shot.
+        if let asShot = rawAsShotWhiteBalance {
+            if kind == .rawTemperature, let kelvin = currentAdjustments.rawWhiteBalanceKelvin {
+                return min(1, max(-1, (kelvin - asShot.kelvin) / RAWWhiteBalance.kelvinPerUnit))
+            }
+            if kind == .rawTint, let tint = currentAdjustments.rawWhiteBalanceTint {
+                return min(1, max(-1, (tint - asShot.tint) / RAWWhiteBalance.tintPerUnit))
+            }
+        }
+        return currentAdjustments[kind]
     }
 
     func setAdjustment(_ kind: PhotoAdjustmentKind, value: Double) {
@@ -837,6 +864,16 @@ final class PhotoEditorController {
             hideMaskShapeForAdjustment()
         } else {
             recipe.adjustments[kind] = value
+            // Dragging a white balance an imported look set absolutely keeps it
+            // absolute: the slider writes the Kelvin it now shows (E7).
+            if let asShot = rawAsShotWhiteBalance {
+                if kind == .rawTemperature, recipe.adjustments.rawWhiteBalanceKelvin != nil {
+                    recipe.adjustments.rawWhiteBalanceKelvin = asShot.kelvin + value * RAWWhiteBalance.kelvinPerUnit
+                }
+                if kind == .rawTint, recipe.adjustments.rawWhiteBalanceTint != nil {
+                    recipe.adjustments.rawWhiteBalanceTint = asShot.tint + value * RAWWhiteBalance.tintPerUnit
+                }
+            }
         }
     }
 

@@ -80,6 +80,9 @@ public actor PhotoRenderService {
         public let exposure: Double
         public let temperature: Double
         public let tint: Double
+        /// The absolute white balance an imported look carries (E7).
+        public let absoluteKelvin: Double?
+        public let absoluteTint: Double?
         public let luminanceNoise: Double
         public let colorNoise: Double
         public let sharpness: Double
@@ -1288,6 +1291,13 @@ public actor PhotoRenderService {
         )
     }
 
+    /// A RAW's As Shot white balance — what the RAW White Balance slider
+    /// reads in Kelvin around. Nil for a file the decoder cannot open.
+    public static func asShotWhiteBalance(at url: URL) -> (kelvin: Double, tint: Double)? {
+        guard let raw = CIRAWFilter(imageURL: url) else { return nil }
+        return (Double(raw.neutralTemperature), Double(raw.neutralTint))
+    }
+
     private func rawBaseSignature(
         source: PhotoRenderSourceInfo,
         recipe: PhotoEditRecipe
@@ -1298,6 +1308,8 @@ public actor PhotoRenderService {
             exposure: adjustments.exposure,
             temperature: adjustments.rawTemperature,
             tint: adjustments.rawTint,
+            absoluteKelvin: adjustments.rawWhiteBalanceKelvin,
+            absoluteTint: adjustments.rawWhiteBalanceTint,
             luminanceNoise: adjustments.rawLuminanceNoise,
             colorNoise: adjustments.rawColorNoise,
             sharpness: adjustments.rawSharpness,
@@ -1321,19 +1333,16 @@ public actor PhotoRenderService {
             }
             raw.orientation = source.orientation
             raw.exposure = Float(recipe.adjustments.exposure)
-            // `neutralTemperature` is the Kelvin the decoder treats as the scene's
-            // white, so raising it cools the result — the opposite of the slider
-            // (right = warm). Subtract so a positive RAW White Balance warms and a
-            // positive RAW Tint goes magenta, matching the colored track and the
-            // non-RAW Temp/Tint above.
-            raw.neutralTemperature = max(
-                2_000,
-                min(50_000, raw.neutralTemperature - Float(recipe.adjustments.rawTemperature * 4_000))
+            // As Shot moved by the sliders, or the absolute pair an imported
+            // look carries (E7). `RAWWhiteBalance` records the measured
+            // directions: this used to subtract, and the sliders ran backwards.
+            let neutral = RAWWhiteBalance.neutral(
+                asShotKelvin: Double(raw.neutralTemperature),
+                asShotTint: Double(raw.neutralTint),
+                adjustments: recipe.adjustments
             )
-            raw.neutralTint = max(
-                -150,
-                min(150, raw.neutralTint - Float(recipe.adjustments.rawTint * 150))
-            )
+            raw.neutralTemperature = Float(neutral.kelvin)
+            raw.neutralTint = Float(neutral.tint)
             if raw.isLuminanceNoiseReductionSupported {
                 raw.luminanceNoiseReductionAmount = clampedUnit(
                     Double(raw.luminanceNoiseReductionAmount)

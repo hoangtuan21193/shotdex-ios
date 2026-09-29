@@ -93,6 +93,7 @@ struct EditorAdjustmentGroupsView<Footer: View>: View {
             EditorSliderRow(
                 kind: kind,
                 value: controller.adjustmentValue(kind),
+                valueText: controller.rawWhiteBalanceText(kind),
                 isActive: chrome.activeSlider == kind,
                 onBeginDrag: { beginDrag(kind) },
                 onDrag: { value in

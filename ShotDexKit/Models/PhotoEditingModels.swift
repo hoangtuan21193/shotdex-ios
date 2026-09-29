@@ -813,6 +813,11 @@ public struct PhotoAdjustments: Codable, Equatable, Sendable {
     public var rawColorNoise = 0.0
     public var rawSharpness = 0.0
     public var lensCorrection = 1.0
+    /// RAW only: the white balance as an absolute Kelvin and Tint (FS-03.14b,
+    /// E7) — what a Lightroom preset's `Temperature` / `Tint` say. When set,
+    /// the decoder takes it as is and the As Shot offsets above are ignored.
+    public var rawWhiteBalanceKelvin: Double?
+    public var rawWhiteBalanceTint: Double?
 
     public static let zero = PhotoAdjustments()
 
@@ -980,6 +985,10 @@ extension PhotoAdjustmentKind: CodingKey {
     }
 }
 
+private enum PhotoAdjustmentsExtraKey: String, CodingKey {
+    case rawWhiteBalanceKelvin, rawWhiteBalanceTint
+}
+
 public extension PhotoAdjustments {
     init(from decoder: any Decoder) throws {
         self.init()
@@ -989,6 +998,9 @@ public extension PhotoAdjustments {
             else { continue }
             self[kind] = value
         }
+        let extra = try decoder.container(keyedBy: PhotoAdjustmentsExtraKey.self)
+        rawWhiteBalanceKelvin = try? extra.decodeIfPresent(Double.self, forKey: .rawWhiteBalanceKelvin)
+        rawWhiteBalanceTint = try? extra.decodeIfPresent(Double.self, forKey: .rawWhiteBalanceTint)
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -997,6 +1009,35 @@ public extension PhotoAdjustments {
         for kind in PhotoAdjustmentKind.allCases where self[kind] != defaults[kind] {
             try container.encode(self[kind], forKey: kind)
         }
+        var extra = encoder.container(keyedBy: PhotoAdjustmentsExtraKey.self)
+        try extra.encodeIfPresent(rawWhiteBalanceKelvin, forKey: .rawWhiteBalanceKelvin)
+        try extra.encodeIfPresent(rawWhiteBalanceTint, forKey: .rawWhiteBalanceTint)
+    }
+}
+
+/// A RAW's white balance for the decoder (FS-03.04 §2, FS-03.14b E7).
+///
+/// Measured on DNG, ORF and ARW files (2026-09-29): raising
+/// `CIRAWFilter.neutralTemperature` **warms** the picture and raising
+/// `neutralTint` takes it toward magenta — the same directions as the RAW
+/// White Balance and Tint sliders' coloured tracks and as Lightroom's
+/// Temperature and Tint. The offsets are added.
+public enum RAWWhiteBalance {
+    public static let kelvinRange: ClosedRange<Double> = 2_000...50_000
+    public static let tintRange: ClosedRange<Double> = -150...150
+    /// Kelvin one full swing of the RAW White Balance slider moves.
+    public static let kelvinPerUnit = 4_000.0
+    public static let tintPerUnit = 150.0
+
+    /// The decoder's neutral temperature and tint: the absolute pair when the
+    /// recipe has one, else As Shot moved by the sliders.
+    public static func neutral(asShotKelvin: Double, asShotTint: Double, adjustments: PhotoAdjustments) -> (kelvin: Double, tint: Double) {
+        let kelvin = adjustments.rawWhiteBalanceKelvin ?? asShotKelvin + adjustments.rawTemperature * kelvinPerUnit
+        let tint = adjustments.rawWhiteBalanceTint ?? asShotTint + adjustments.rawTint * tintPerUnit
+        return (
+            min(kelvinRange.upperBound, max(kelvinRange.lowerBound, kelvin)),
+            min(tintRange.upperBound, max(tintRange.lowerBound, tint))
+        )
     }
 }
 

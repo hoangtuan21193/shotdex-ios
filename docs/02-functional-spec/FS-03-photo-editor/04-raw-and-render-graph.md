@@ -24,6 +24,12 @@ phân giải** để chạy cho mượt.
 - Nguồn RAW mở thêm bốn thứ trong Adjust: **White Balance · Noise Reduction (luminance + color) · RAW
   Sharpening · Lens Correction**. Không phải RAW thì bốn mục này **không hiện**.
 - Bốn thứ đó đi qua decoder RAW; phần còn lại dùng graph chung.
+- **White Balance đọc bằng Kelvin thật** quanh As Shot của file (vd "5990 K"), Tint bằng số của decoder. Slider
+  dời As Shot ±4000 K / ±150; sang phải = ấm / magenta (đo 2026-09-29 trên DNG, ORF, ARW: tăng
+  `neutralTemperature` làm ảnh ấm — bản trước trừ nên slider chạy ngược, đã sửa). Look nhập từ preset Lightroom
+  có thể mang cặp **Kelvin / Tint tuyệt đối** ([FS-03.14b](14b-lightroom-mapping.md), chốt E7): khi có, decoder dùng
+  thẳng, slider hiện đúng số đó, kéo slider ghi lại cặp tuyệt đối. JPEG không có white balance của decoder nên
+  cặp này không đổi gì.
 - Output giữ color profile gốc tốt nhất có thể (Display P3 / Adobe RGB / sRGB). **Không có picker color
   space.**
 

@@ -392,6 +392,8 @@ struct EditorValueSlider: View {
 struct EditorSliderRow: View {
     let kind: PhotoAdjustmentKind
     let value: Double
+    /// Replaces the catalog's reading — the RAW white balance in Kelvin.
+    var valueText: String?
     let isActive: Bool
     let onBeginDrag: () -> Void
     let onDrag: (Double) -> Void
@@ -405,7 +407,7 @@ struct EditorSliderRow: View {
             label: EditorAdjustmentCatalog.shortTitle(of: kind),
             value: value,
             range: EditorAdjustmentCatalog.sliderRange(of: kind),
-            valueText: EditorAdjustmentCatalog.displayText(value, of: kind),
+            valueText: valueText ?? EditorAdjustmentCatalog.displayText(value, of: kind),
             isActive: isActive,
             anchor: identity,
             showsAnchorNotch: EditorAdjustmentCatalog.isBipolar(kind),
