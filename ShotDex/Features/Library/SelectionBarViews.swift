@@ -105,6 +105,8 @@ struct SelectionCountCaption: View {
         formatter.countStyle = .file
         // "0 KB", not "Zero KB", while a selection is still un-indexed.
         formatter.allowsNonnumericFormatting = false
+        // Without bytes in the ladder: an un-indexed pick of 0 read "~0bytes".
+        formatter.allowedUnits = [.useKB, .useMB, .useGB, .useTB]
         return formatter
     }()
 
