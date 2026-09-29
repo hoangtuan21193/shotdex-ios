@@ -365,6 +365,7 @@ Một mẫu duy nhất cho Library, Album Detail, Smart Album Detail, On This Da
 - **Xác nhận phá hủy:** `.confirmationDialog` với `titleVisibility: .visible`, nút phá hủy `role: .destructive` ghi rõ hậu quả, nút hủy `role: .cancel`.
 - **Animation:** `EditorTheme.animation` (easeOut 0.22) cho đổi trạng thái; `EditorTheme.panelSpring` (spring 0.32/0.85) cho panel trượt. Không tự viết duration khác.
 - **Nháy để chỉ chỗ:** `AppTheme.Motion.searchFlashDuration` = **1,2 s** — thời gian một hàng giữ nền sáng sau khi một kết quả tìm kiếm đưa người đọc tới nó. Đủ lâu để mắt tìm ra hàng trong một danh sách dài, đủ ngắn để không đọc thành trạng thái "đang chọn". Bản thân cú chuyển nền vẫn dùng `Motion.standard`.
+- **Phủ đỏ mask tự tắt:** `AppTheme.Motion.maskOverlayFadeDelay` = **1,5 s** sau khi nhấc tay khỏi hình mask (FS-03.13c §3); kéo slider thì tắt ngay; chip **Mask Overlay** ghim thì không tắt. Mọi layout một luật.
 - **Haptic:** `.sensoryFeedback(.selection, trigger:)` khi đổi tab/preset; `.impact` khi kết thúc kéo slider; `.success` khi export xong.
 
 ---

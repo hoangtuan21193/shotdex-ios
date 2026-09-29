@@ -2287,10 +2287,10 @@ struct PhotoEditorScreen: View {
                 Divider()
             } else if controller.editingMaskAdjustments {
                 Button {
-                    controller.setMaskOverlay(!controller.showsMaskOverlay)
+                    controller.setMaskOverlay(!controller.isMaskOverlayPinned)
                 } label: {
                     Label(
-                        controller.showsMaskOverlay ? "Hide Mask Overlay" : "Show Mask Overlay",
+                        controller.isMaskOverlayPinned ? "Hide Mask Overlay" : "Show Mask Overlay",
                         systemImage: "circle.righthalf.filled"
                     )
                 }

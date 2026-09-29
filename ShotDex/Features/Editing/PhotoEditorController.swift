@@ -221,11 +221,20 @@ final class PhotoEditorController {
     var selectedMaskID: UUID?
     var selectedComponentID: UUID?
     var selectedPointColorID: UUID?
-    /// On whenever the user is working on the mask's shape, off the moment they
-    /// start adjusting its effect — the red tint covers the pixels being judged.
-    /// One rule, no exceptions: even an overlay switched on by hand yields to a
-    /// slider drag, because a red-tinted photo makes every adjustment unreadable.
-    private(set) var showsMaskOverlay = false
+    /// The red mask overlay (FS-03.13c §3), one rule at every layout: on while
+    /// a finger works the shape, off `maskOverlayFadeDelay` after it lifts and
+    /// at once when a slider moves — unless the Mask Overlay chip pins it, in
+    /// which case it stays, sliders included.
+    var showsMaskOverlay: Bool { isMaskOverlayPinned || isMaskOverlayAutomatic }
+    /// The Mask Overlay chip.
+    private(set) var isMaskOverlayPinned = false
+    private(set) var isMaskOverlayAutomatic = false
+    /// How long the automatic overlay stays after the finger lifts. A
+    /// variable so a test does not wait the real 1.5s.
+    @ObservationIgnored var maskOverlayFadeDelay: Duration = AppTheme.Motion.maskOverlayFadeDelay
+    @ObservationIgnored private var maskOverlayFadeTask: Task<Void, Never>?
+    /// A finger is on the shape: the overlay does not start its fade.
+    @ObservationIgnored private var isShapingMask = false
     var showsOriginal = false
     /// Whether new mask regions and brush strokes add to or subtract from the
     /// selected mask. Lives here because the Add/Sub control in the action row and
@@ -876,28 +885,57 @@ final class PhotoEditorController {
         scheduleRender(delay: .zero)
     }
 
-    /// The eye in the action row.
+    /// The Mask Overlay chip (and the sidebar's menu item of the same name):
+    /// pins the overlay on, or hands it back to the automatic rule.
     func setMaskOverlay(_ shows: Bool) {
-        showsMaskOverlay = shows
+        isMaskOverlayPinned = shows
         scheduleRender(delay: .zero)
     }
 
-    /// Turns the red overlay on because the user is working on the mask's *shape* —
-    /// creating or opening a mask, painting, placing a gradient, inverting, changing
-    /// a shape. The shape is what they are looking at, so it stays on screen until
-    /// they move to the adjustments; there is no timer taking it away mid-stroke.
+    /// The user is working on the mask's *shape* — creating or opening a
+    /// mask, a tap on it, inverting, changing a shape: the overlay shows it,
+    /// and fades after `maskOverlayFadeDelay` unless a finger is still down.
     func revealMaskShape() {
-        guard !showsMaskOverlay else { return }
-        showsMaskOverlay = true
-        scheduleRender(delay: .zero)
+        let wasShowing = showsMaskOverlay
+        isMaskOverlayAutomatic = true
+        if isShapingMask {
+            maskOverlayFadeTask?.cancel()
+        } else {
+            scheduleMaskOverlayFade()
+        }
+        if !wasShowing { scheduleRender(delay: .zero) }
     }
 
-    /// The moment the user starts dialling the mask's effect, the red tint is in the
-    /// way of the only thing that matters — what the adjustment looks like — so it
-    /// gets out of the way by itself, no matter how it was turned on.
+    /// A finger went down on the shape — a stroke, a gradient drag.
+    func beginMaskShaping() {
+        isShapingMask = true
+        revealMaskShape()
+    }
+
+    /// …and lifted: the overlay starts its fade.
+    func endMaskShaping() {
+        isShapingMask = false
+        scheduleMaskOverlayFade()
+    }
+
+    private func scheduleMaskOverlayFade() {
+        maskOverlayFadeTask?.cancel()
+        let delay = maskOverlayFadeDelay
+        maskOverlayFadeTask = Task { [weak self] in
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled, let self, self.isMaskOverlayAutomatic else { return }
+            self.isMaskOverlayAutomatic = false
+            if !self.isMaskOverlayPinned { self.scheduleRender(delay: .zero) }
+        }
+    }
+
+    /// The moment the user starts dialling the mask's effect the automatic
+    /// overlay gets out of the way of what the adjustment looks like. A pinned
+    /// one stays: the user asked for it.
     private func hideMaskShapeForAdjustment() {
-        guard showsMaskOverlay else { return }
-        showsMaskOverlay = false
+        maskOverlayFadeTask?.cancel()
+        guard isMaskOverlayAutomatic else { return }
+        isMaskOverlayAutomatic = false
     }
 
     /// Leaves the single-mask editor and returns to the mask list.
@@ -2771,7 +2809,8 @@ final class PhotoEditorController {
             if recipe.masks[index].isVisible {
                 revealMaskShape()
             } else {
-                showsMaskOverlay = false
+                maskOverlayFadeTask?.cancel()
+                isMaskOverlayAutomatic = false
             }
         }
         scheduleRender()
@@ -2824,7 +2863,7 @@ final class PhotoEditorController {
               let componentIndex = selectedComponentIndex
         else { return }
         beginContinuousChange()
-        revealMaskShape()
+        beginMaskShaping()
         let stroke = BrushStroke(
             points: [point],
             size: EditorLayoutMetrics.paintedSize(brushSize, zoomScale: zoomScale),
@@ -2874,6 +2913,7 @@ final class PhotoEditorController {
     func endBrushStroke() {
         activeBrushStrokeIndex = nil
         endContinuousChange()
+        endMaskShaping()
         scheduleRender()
     }
 
@@ -2885,6 +2925,7 @@ final class PhotoEditorController {
         defer {
             activeBrushStrokeIndex = nil
             isContinuousChange = false
+            endMaskShaping()
         }
         guard let maskIndex = selectedMaskIndex,
               let componentIndex = selectedComponentIndex,

@@ -1,0 +1,26 @@
+{
+ "steps": [
+  {"action": "launch"},
+  {"action": "wait", "seconds": 25},
+  {"action": "tap", "x": 0.5, "y": 0.35},
+  {"action": "wait", "seconds": 6},
+  {"action": "tap", "label": "Edit"},
+  {"action": "wait", "seconds": 12},
+  {"action": "tap", "label": "Mask"},
+  {"action": "wait", "seconds": 3},
+  {"action": "tap", "label": "Brush"},
+  {"action": "wait", "seconds": 4},
+  {"action": "drag", "x": 0.3, "y": 0.33, "toX": 0.6, "toY": 0.35, "seconds": 6},
+  {"action": "wait", "seconds": 3},
+  {"action": "screenshot", "name": "2-two-seconds-after-lift"},
+  {"action": "wait", "seconds": 3},
+  {"action": "drag", "x": 0.54, "y": 0.871, "toX": 0.64, "toY": 0.871, "seconds": 6},
+  {"action": "wait", "seconds": 2},
+  {"action": "tap", "label": "Mask Overlay"},
+  {"action": "wait", "seconds": 2},
+  {"action": "drag", "x": 0.64, "y": 0.871, "toX": 0.72, "toY": 0.871, "seconds": 6},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "5-pinned-after-slider"},
+  {"action": "wait", "seconds": 4}
+ ]
+}

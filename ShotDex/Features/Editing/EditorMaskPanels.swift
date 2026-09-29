@@ -411,25 +411,9 @@ struct EditorMaskDetailPanel: View {
             .buttonStyle(.plain)
             .layoutPriority(1)
 
-            // One-tap undo, because the thing most likely to need taking back in
-            // here is a brush stroke and a menu is two taps too many. Redo is
-            // rarer, so it stays in the `⋯` menu with this one.
-            Button {
-                controller.undo()
-            } label: {
-                Image(systemName: "arrow.uturn.backward")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(
-                        controller.canUndo
-                            ? EditorTheme.secondaryText
-                            : EditorTheme.dimText.opacity(0.5)
-                    )
-                    .frame(width: 34, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(!controller.canUndo)
-            .accessibilityLabel("Undo")
+            // No Undo here: the band's Undo is one tap away (E2), and at the
+            // sidebar's width its 34pt came out of the mask's name — "Mask 1"
+            // read as "…".
 
             // The mask's *effect* on and off, and it is the eye on purpose:
             // Lightroom and every layers panel taught that instinct, and a

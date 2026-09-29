@@ -947,6 +947,7 @@ struct EditorImageStage: View {
                         in: imageRect
                     ) ?? point
                     controller.beginContinuousChange()
+                    controller.beginMaskShaping()
                 }
                 controller.setGradient(start: gradientStart ?? point, end: point)
             } else if let previous = gradientMoveLocation {
@@ -962,6 +963,7 @@ struct EditorImageStage: View {
             } else {
                 gradientMoveLocation = touch.location
                 controller.beginContinuousChange()
+                controller.beginMaskShaping()
             }
         default:
             break
@@ -982,6 +984,7 @@ struct EditorImageStage: View {
                 controller.revealMaskShape()
             } else {
                 controller.endContinuousChange()
+                controller.endMaskShaping()
             }
         case .object, .colorRange:
             controller.setAutomaticMaskPoint(point)
@@ -1030,6 +1033,7 @@ struct EditorImageStage: View {
             controller.cancelBrushStroke()
         } else if gradientStart != nil || gradientMoveLocation != nil {
             controller.endContinuousChange()
+            controller.endMaskShaping()
         }
     }
 

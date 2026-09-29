@@ -88,6 +88,9 @@ enum AppTheme {
         /// reader to it (DESIGN.md §11). Long enough for the eye to find the
         /// row in a long list, short enough not to read as a selection.
         static let searchFlashDuration: Duration = .milliseconds(1200)
+        /// How long the automatic mask overlay stays after the finger lifts
+        /// (DESIGN.md §11, FS-03.13c §3).
+        static let maskOverlayFadeDelay: Duration = .milliseconds(1500)
     }
 }
 

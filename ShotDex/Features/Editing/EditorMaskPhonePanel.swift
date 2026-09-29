@@ -453,13 +453,13 @@ struct EditorMaskTopRow: View {
             }
 
             Button {
-                controller.setMaskOverlay(!controller.showsMaskOverlay)
+                controller.setMaskOverlay(!controller.isMaskOverlayPinned)
             } label: {
                 Text("Mask Overlay")
                     .fixedSize()
             }
-            .buttonStyle(EditorChipButtonStyle(isSelected: controller.showsMaskOverlay))
-            .accessibilityAddTraits(controller.showsMaskOverlay ? .isSelected : [])
+            .buttonStyle(EditorChipButtonStyle(isSelected: controller.isMaskOverlayPinned))
+            .accessibilityAddTraits(controller.isMaskOverlayPinned ? .isSelected : [])
 
             Button {
                 chrome.isMaskListOpen = false
