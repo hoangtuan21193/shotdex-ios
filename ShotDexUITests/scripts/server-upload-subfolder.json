@@ -1,0 +1,120 @@
+{
+    "steps": [
+        {
+            "action": "launch"
+        },
+        {
+            "action": "wait",
+            "seconds": 6
+        },
+        {
+            "action": "tap",
+            "label": "Select photos",
+            "type": "button"
+        },
+        {
+            "action": "wait",
+            "seconds": 1
+        },
+        {
+            "action": "tap",
+            "x": 0.5,
+            "y": 0.6
+        },
+        {
+            "action": "tap",
+            "x": 0.83,
+            "y": 0.6
+        },
+        {
+            "action": "screenshot",
+            "name": "03-selected"
+        },
+        {
+            "action": "tap",
+            "label": "More selection actions"
+        },
+        {
+            "action": "wait",
+            "seconds": 1
+        },
+        {
+            "action": "screenshot",
+            "name": "05-menu"
+        },
+        {
+            "action": "tap",
+            "label": "Upload to ShotDex Test"
+        },
+        {
+            "action": "wait",
+            "seconds": 4
+        },
+        {
+            "action": "screenshot",
+            "name": "10-prepare"
+        },
+        {
+            "action": "tap",
+            "label": "Folder"
+        },
+        {
+            "action": "wait",
+            "seconds": 8
+        },
+        {
+            "action": "screenshot",
+            "name": "20-picker"
+        },
+        {
+            "action": "tap",
+            "label": "RAW, Folder"
+        },
+        {
+            "action": "wait",
+            "seconds": 6
+        },
+        {
+            "action": "screenshot",
+            "name": "25-picker-raw"
+        },
+        {
+            "action": "tap",
+            "label": "Choose \u201cRAW\u201d"
+        },
+        {
+            "action": "wait",
+            "seconds": 2
+        },
+        {
+            "action": "screenshot",
+            "name": "30-prepare-raw"
+        },
+        {
+            "action": "dump",
+            "name": "30-prepare-raw"
+        },
+        {
+            "action": "tap",
+            "label": "Upload",
+            "type": "button"
+        },
+        {
+            "action": "wait",
+            "seconds": 15
+        },
+        {
+            "action": "screenshot",
+            "name": "40-result"
+        },
+        {
+            "action": "tap",
+            "label": "Done",
+            "type": "button"
+        },
+        {
+            "action": "wait",
+            "seconds": 2
+        }
+    ]
+}

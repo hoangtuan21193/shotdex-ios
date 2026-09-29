@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-26 |
 | Trạng thái | accepted — người dùng duyệt 2026-09-26 |
-| Tiến độ | **đang làm** (2026-09-27) — spec đổi: Connect As + bỏ Share (FS-15.04 §3, §5, AC-42…51); plan [2026-09-27-files-browser-connect-as](../_plans/2026-09-27-files-browser-connect-as.md) đã làm, chờ /verify. Trước đó 9/12 AC xanh |
+| Tiến độ | **gần xong** (2026-09-30, /verify) — plan [2026-09-27-files-browser-connect-as](../_plans/2026-09-27-files-browser-connect-as.md) 11/11 task; FS-15.04 20/23 AC xanh (Connect As, sai mật khẩu, Choose…, lưu, upload qua đường dẫn gộp AC-48 khớp SHA-256); còn AC-27, AC-37 (hộp Local Network chỉ có trên máy thật), AC-41 (iPhone thật) |
 | Nguồn | phản hồi người dùng (2026-09-26, sau khi dùng FS-15) |
 | Spec sinh ra từ đây | [FS-15.04](../02-functional-spec/FS-15-server-upload/04-find-servers.md) — AC-24…AC-30 |
 

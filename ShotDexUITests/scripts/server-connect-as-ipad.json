@@ -1,0 +1,415 @@
+{
+    "steps": [
+        {
+            "action": "launch"
+        },
+        {
+            "action": "wait",
+            "seconds": 8
+        },
+        {
+            "action": "tap",
+            "label": "Collections",
+            "type": "button"
+        },
+        {
+            "action": "wait",
+            "seconds": 3
+        },
+        {
+            "action": "swipe",
+            "x": 0.5,
+            "y": 0.75,
+            "direction": "up",
+            "distance": 0.5
+        },
+        {
+            "action": "swipe",
+            "x": 0.5,
+            "y": 0.75,
+            "direction": "up",
+            "distance": 0.5
+        },
+        {
+            "action": "swipe",
+            "x": 0.5,
+            "y": 0.75,
+            "direction": "up",
+            "distance": 0.5
+        },
+        {
+            "action": "tap",
+            "label": "Local Network"
+        },
+        {
+            "action": "wait",
+            "seconds": 2
+        },
+        {
+            "action": "tap",
+            "label": "Add Connection",
+            "type": "button"
+        },
+        {
+            "action": "wait",
+            "seconds": 8
+        },
+        {
+            "action": "screenshot",
+            "name": "i10-found"
+        },
+        {
+            "action": "tap",
+            "label": "ShotDex Test"
+        },
+        {
+            "action": "wait",
+            "seconds": 2
+        },
+        {
+            "action": "typeText",
+            "text": "tester\n"
+        },
+        {
+            "action": "typeText",
+            "text": "secret\n"
+        },
+        {
+            "action": "wait",
+            "seconds": 6
+        },
+        {
+            "action": "tap",
+            "label": "Not Now",
+            "type": "button"
+        },
+        {
+            "action": "wait",
+            "seconds": 1
+        },
+        {
+            "action": "screenshot",
+            "name": "i30-picker-shares"
+        },
+        {
+            "action": "tap",
+            "label": "PHOTOS, Folder"
+        },
+        {
+            "action": "wait",
+            "seconds": 6
+        },
+        {
+            "action": "tap",
+            "label": "Choose \u201cPHOTOS\u201d"
+        },
+        {
+            "action": "wait",
+            "seconds": 2
+        },
+        {
+            "action": "screenshot",
+            "name": "i38-save-dialog"
+        },
+        {
+            "action": "tap",
+            "label": "Save",
+            "type": "button"
+        },
+        {
+            "action": "wait",
+            "seconds": 3
+        },
+        {
+            "action": "screenshot",
+            "name": "i40-saved"
+        },
+        {
+            "action": "tap",
+            "label": "ShotDex Test"
+        },
+        {
+            "action": "wait",
+            "seconds": 6
+        },
+        {
+            "action": "screenshot",
+            "name": "i10-start-folder-icons"
+        },
+        {
+            "action": "tap",
+            "label": "Import, Folder"
+        },
+        {
+            "action": "wait",
+            "seconds": 15
+        },
+        {
+            "action": "screenshot",
+            "name": "i40-import-icons"
+        },
+        {
+            "action": "tap",
+            "label": "Import",
+            "type": "button"
+        },
+        {
+            "action": "wait",
+            "seconds": 2
+        },
+        {
+            "action": "screenshot",
+            "name": "i20-title-menu"
+        },
+        {
+            "action": "tap",
+            "x": 0.15,
+            "y": 0.85
+        },
+        {
+            "action": "wait",
+            "seconds": 1
+        },
+        {
+            "action": "tap",
+            "label": "Back"
+        },
+        {
+            "action": "wait",
+            "seconds": 2
+        },
+        {
+            "action": "screenshot",
+            "name": "i50-after-back"
+        },
+        {
+            "action": "tap",
+            "label": "Forward"
+        },
+        {
+            "action": "wait",
+            "seconds": 3
+        },
+        {
+            "action": "screenshot",
+            "name": "i55-after-forward"
+        },
+        {
+            "action": "tap",
+            "label": "More"
+        },
+        {
+            "action": "wait",
+            "seconds": 2
+        },
+        {
+            "action": "screenshot",
+            "name": "i60-more-menu"
+        },
+        {
+            "action": "tap",
+            "label": "List"
+        },
+        {
+            "action": "wait",
+            "seconds": 3
+        },
+        {
+            "action": "screenshot",
+            "name": "i65-list"
+        },
+        {
+            "action": "tap",
+            "label": "More"
+        },
+        {
+            "action": "wait",
+            "seconds": 1
+        },
+        {
+            "action": "tap",
+            "label": "Sort By"
+        },
+        {
+            "action": "wait",
+            "seconds": 2
+        },
+        {
+            "action": "screenshot",
+            "name": "i70-sort-by"
+        },
+        {
+            "action": "tap",
+            "label": "Size"
+        },
+        {
+            "action": "wait",
+            "seconds": 2
+        },
+        {
+            "action": "tap",
+            "label": "More"
+        },
+        {
+            "action": "wait",
+            "seconds": 1
+        },
+        {
+            "action": "tap",
+            "label": "View Options"
+        },
+        {
+            "action": "wait",
+            "seconds": 1
+        },
+        {
+            "action": "tap",
+            "label": "Show All Files"
+        },
+        {
+            "action": "wait",
+            "seconds": 2
+        },
+        {
+            "action": "screenshot",
+            "name": "i75-list-size-all-files"
+        },
+        {
+            "action": "longPress",
+            "label": "IMG_0003",
+            "seconds": 1.2
+        },
+        {
+            "action": "wait",
+            "seconds": 2
+        },
+        {
+            "action": "screenshot",
+            "name": "i80-context-menu"
+        },
+        {
+            "action": "tap",
+            "label": "Delete"
+        },
+        {
+            "action": "wait",
+            "seconds": 2
+        },
+        {
+            "action": "screenshot",
+            "name": "i85-delete-confirm"
+        },
+        {
+            "action": "tap",
+            "label": "Cancel",
+            "type": "button"
+        },
+        {
+            "action": "wait",
+            "seconds": 1
+        },
+        {
+            "action": "tap",
+            "label": "More"
+        },
+        {
+            "action": "wait",
+            "seconds": 1
+        },
+        {
+            "action": "tap",
+            "label": "Icons"
+        },
+        {
+            "action": "wait",
+            "seconds": 2
+        },
+        {
+            "action": "tap",
+            "label": "More"
+        },
+        {
+            "action": "wait",
+            "seconds": 1
+        },
+        {
+            "action": "tap",
+            "label": "Select"
+        },
+        {
+            "action": "wait",
+            "seconds": 1
+        },
+        {
+            "action": "tap",
+            "label": "IMG_0003"
+        },
+        {
+            "action": "wait",
+            "seconds": 1
+        },
+        {
+            "action": "screenshot",
+            "name": "i90-selecting"
+        },
+        {
+            "action": "dump",
+            "name": "i90-selecting"
+        },
+        {
+            "action": "tap",
+            "label": "Done",
+            "type": "button"
+        },
+        {
+            "action": "wait",
+            "seconds": 1
+        },
+        {
+            "action": "tap",
+            "label": "More"
+        },
+        {
+            "action": "wait",
+            "seconds": 1
+        },
+        {
+            "action": "tap",
+            "label": "Add to Collections"
+        },
+        {
+            "action": "wait",
+            "seconds": 1
+        },
+        {
+            "action": "tap",
+            "label": "Collections",
+            "type": "button"
+        },
+        {
+            "action": "wait",
+            "seconds": 2
+        },
+        {
+            "action": "tap",
+            "label": "Collections",
+            "type": "button"
+        },
+        {
+            "action": "wait",
+            "seconds": 3
+        },
+        {
+            "action": "scrollTo",
+            "label": "Network"
+        },
+        {
+            "action": "wait",
+            "seconds": 2
+        },
+        {
+            "action": "screenshot",
+            "name": "i95-network"
+        }
+    ]
+}

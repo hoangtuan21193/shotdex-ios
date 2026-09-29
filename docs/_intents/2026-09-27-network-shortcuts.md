@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-27 |
 | Trạng thái | accepted — người dùng 2026-09-27: "làm shortcut network theo đề xuất đi" |
-| Tiến độ | **đang làm** (2026-09-27) — task 3/4 (còn ảnh 18.6/iPad + /verify), plan [2026-09-27-network-shortcuts](../_plans/2026-09-27-network-shortcuts.md) |
+| Tiến độ | **xong** (2026-09-30, /verify) — task 4/4; 10/10 AC xanh (iPhone 26.5, iPhone 18.6, iPad 13"; bìa khi server tắt); full suite xanh (1669 test; 7 class bị văng khi hai lượt chạy chồng trên một sim, chạy lại riêng 49/49 xanh), plan [2026-09-27-network-shortcuts](../_plans/2026-09-27-network-shortcuts.md) |
 | Nguồn | phản hồi người dùng (2026-09-27) |
 | Spec sinh ra từ đây | [FS-17.04](../02-functional-spec/FS-17-import-from-server/04-network-shortcuts.md) |
 

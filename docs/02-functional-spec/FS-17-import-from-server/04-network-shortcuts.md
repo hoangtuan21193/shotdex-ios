@@ -58,13 +58,13 @@ server qua ShotDex sửa/xoá `path` của ô trùng hoặc nằm dưới (cùng
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-31 | connection NAS, folder `photos/Trip` | ⋯ → Add to Collections; rồi mở ⋯ lại | 1 dòng `server_shortcuts` (NAS, `photos/Trip`, tên `Trip`); ⋯ giờ là Remove from Collections; thêm lần hai không tạo dòng mới | `ServerShortcutStoreTests.addIsIdempotent` + `ServerBrowserModelTests.shortcutToggle` + ảnh ⚠️ chưa có |
+| AC-31 | connection NAS, folder `photos/Trip` | ⋯ → Add to Collections; rồi mở ⋯ lại | 1 dòng `server_shortcuts` (NAS, `photos/Trip`, tên `Trip`); ⋯ giờ là Remove from Collections; thêm lần hai không tạo dòng mới | `ServerShortcutStoreTests.addIsIdempotent` + `ServerBrowserModelTests.shortcutToggle` + ảnh `scripts/network-shortcuts.json` (`10-menu-add` → `12-menu-remove`, iPhone 26.5) |
 | AC-32 | gốc SMB; gốc SFTP | ⋯ | gốc SMB không có Add to Collections; gốc SFTP có, tên ô = tên connection | `ServerBrowserModelTests.shortcutToggle` |
 | AC-33 | 0 ô; rồi 2 ô | mở Collections | 0: không có mục Network; 2: mục Network sau Shared Albums, 2 ô theo thứ tự thêm, glyph server góc trên-phải | `ServerShortcutStoreTests.orderedByCreation` + ảnh `scripts/network-shortcuts.json` (`20-network-no-cover`, iPhone 26.5) |
-| AC-34 | ô `Trip` | chạm | màn duyệt mở ở `photos/Trip` của NAS; menu tiêu đề có `photos`, NAS | ảnh `scripts/network-shortcuts.json` (`30-opened`; menu tiêu đề: ⚠️ chưa chụp) |
-| AC-35 | ô chưa có bìa, folder có 3 ảnh | mở ô, quay lại Collections | ô có bìa là thumbnail ảnh đầu; tắt server → bìa vẫn hiện | `ServerShortcutStoreTests.coverIsStored` + ảnh `40-network-cover` (bìa khi tắt server: ⚠️ chưa chụp) |
+| AC-34 | ô `Trip` | chạm | màn duyệt mở ở `photos/Trip` của NAS; menu tiêu đề có `photos`, NAS | ảnh `scripts/network-shortcuts.json` (`30-opened`, `33-title-menu`: `PHOTOS`, `ShotDex Test`) |
+| AC-35 | ô chưa có bìa, folder có 3 ảnh | mở ô, quay lại Collections | ô có bìa là thumbnail ảnh đầu; tắt server → bìa vẫn hiện | `ServerShortcutStoreTests.coverIsStored` + ảnh `40-network-cover` + `scripts/network-shortcuts-offline.json` (`70-cover-server-off`: SMB đã tắt, bìa vẫn hiện) |
 | AC-36 | ô `Trip` | nhấn giữ → Rename "Chọn lọc"; rồi Remove from Collections | tên ô đổi, folder trên server không đổi; Remove → ô mất, không hỏi, folder còn | `ServerShortcutStoreTests.renameAndRemoveLeaveServerAlone` + ảnh `50-tile-menu`, `60-renamed` |
 | AC-37 | connection NAS có 2 ô | xoá connection | 2 ô mất | `ServerShortcutStoreTests.deletingConnectionRemovesShortcuts` |
 | AC-38 | ô trỏ `photos/Trip` | trong ShotDex đổi tên folder `Trip` → `Holiday`; rồi xoá `photos` | ô trỏ `photos/Holiday`; xoá `photos` → ô mất | `ServerShortcutStoreTests.followsRenameAndDelete` |
 | AC-39 | mở ô | xem ⋯ | là ⋯ kiểu Files (Select, New Folder, Icons/List, Sort By, View Options, Remove from Collections); lệnh ảnh nằm ở menu ảnh (FS-17.06) | ảnh `scripts/network-shortcuts.json` (`35-opened-menu`) |
-| AC-40 | iOS 26.5, 18.6, iPad | Collections có 2 ô | hàng ô cùng kích thước ô My Albums, không bị cắt | ảnh ⚠️ chưa có |
+| AC-40 | iOS 26.5, 18.6, iPad | Collections có 2 ô | hàng ô cùng kích thước ô My Albums, không bị cắt | ảnh 2026-09-30: iPhone 17 26.5 `network-shortcuts.json` (`40-network-cover`), iPhone 16 Pro 18.6 (chụp tay qua `Tools/sim-shot`), iPad Pro 13" `server-import-ipad-select.json` (`j10-network`) — ô Network cùng cỡ ô Recently Added |

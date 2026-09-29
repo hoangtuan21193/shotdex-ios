@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-27 |
 | Trạng thái | accepted — người dùng 2026-09-27 chọn: tên "On Local Network" / "On Cloud"; đi qua app Files; cả xem lẫn upload |
-| Tiến độ | **đang làm** (2026-09-27) — task 3/4 (còn 18.6 + upload qua sheet + máy thật), plan [2026-09-27-cloud-folders](../_plans/2026-09-27-cloud-folders.md) |
+| Tiến độ | **gần xong** (2026-09-30, /verify) — task 4/4; 7/7 AC có bằng chứng trên simulator (iPhone 26.5 + 18.6: Add Cloud Folder, duyệt, upload qua sheet khớp SHA-256); còn Dropbox/Google Drive thật của AC-51 (chỉ máy thật), plan [2026-09-27-cloud-folders](../_plans/2026-09-27-cloud-folders.md) |
 | Nguồn | phản hồi người dùng (2026-09-27) |
 | Spec sinh ra từ đây | [FS-17.05](../02-functional-spec/FS-17-import-from-server/05-cloud-folders.md) |
 

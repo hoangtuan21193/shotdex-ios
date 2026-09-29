@@ -1,0 +1,114 @@
+{
+    "steps": [
+        {
+            "action": "launch"
+        },
+        {
+            "action": "wait",
+            "seconds": 8
+        },
+        {
+            "action": "tap",
+            "label": "Collections",
+            "type": "button"
+        },
+        {
+            "action": "wait",
+            "seconds": 3
+        },
+        {
+            "action": "scrollTo",
+            "label": "Network"
+        },
+        {
+            "action": "wait",
+            "seconds": 2
+        },
+        {
+            "action": "screenshot",
+            "name": "j10-network"
+        },
+        {
+            "action": "tap",
+            "label": "Import, folder on"
+        },
+        {
+            "action": "wait",
+            "seconds": 12
+        },
+        {
+            "action": "tap",
+            "label": "More"
+        },
+        {
+            "action": "wait",
+            "seconds": 1
+        },
+        {
+            "action": "tap",
+            "label": "Select"
+        },
+        {
+            "action": "wait",
+            "seconds": 1
+        },
+        {
+            "action": "tap",
+            "label": "DSC_0750"
+        },
+        {
+            "action": "tap",
+            "label": "PB290154"
+        },
+        {
+            "action": "tap",
+            "label": "IMG_0003"
+        },
+        {
+            "action": "wait",
+            "seconds": 1
+        },
+        {
+            "action": "screenshot",
+            "name": "j20-selected-3"
+        },
+        {
+            "action": "tap",
+            "label": "Import 3 to Library"
+        },
+        {
+            "action": "wait",
+            "seconds": 3
+        },
+        {
+            "action": "screenshot",
+            "name": "j30-sheet"
+        },
+        {
+            "action": "tap",
+            "label": "Import",
+            "type": "button"
+        },
+        {
+            "action": "wait",
+            "seconds": 30
+        },
+        {
+            "action": "screenshot",
+            "name": "j40-result"
+        },
+        {
+            "action": "tap",
+            "label": "Done",
+            "type": "button"
+        },
+        {
+            "action": "wait",
+            "seconds": 3
+        },
+        {
+            "action": "screenshot",
+            "name": "j50-in-library"
+        }
+    ]
+}

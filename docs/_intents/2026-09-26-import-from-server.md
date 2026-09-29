@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-26 |
 | Trạng thái | accepted — người dùng duyệt 2026-09-26 |
-| Tiến độ | **đang làm** (2026-09-27) — spec đổi: màn duyệt kiểu Files (FS-17.01 §2, §4b, §5, AC-19…29); plan [2026-09-27-files-browser-connect-as](../_plans/2026-09-27-files-browser-connect-as.md) đang làm, task 10/11 (còn /verify). Trước đó 16/18 AC xanh |
+| Tiến độ | **gần xong** (2026-09-30, /verify) — plan [2026-09-27-files-browser-connect-as](../_plans/2026-09-27-files-browser-connect-as.md) 11/11 task; FS-17.03 33/35 AC xanh trên iPhone 26.5, iPhone 18.6, iPad 13"; còn AC-15 trên Duo (sim gập) và AC-44 với WebDAV/SFTP thật; lỗi AC-71 ("NWError 61" khi server tắt) tìm ra và sửa trong lượt này, commit 6ff9ab5 |
 | Nguồn | phản hồi người dùng (2026-09-26) |
 | Spec sinh ra từ đây | [FS-17](../02-functional-spec/FS-17-import-from-server/README.md) — 16 AC |
 
