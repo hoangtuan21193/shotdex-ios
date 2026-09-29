@@ -91,6 +91,12 @@ enum PhotoShareSheet {
             presenter = presented
         }
         let activity = UIActivityViewController(activityItems: items, applicationActivities: nil)
+        // On iPad the sheet is a popover and needs an anchor, or UIKit traps.
+        if let popover = activity.popoverPresentationController {
+            popover.sourceView = presenter.view
+            popover.sourceRect = CGRect(x: presenter.view.bounds.midX, y: presenter.view.bounds.midY, width: 1, height: 1)
+            popover.permittedArrowDirections = []
+        }
         presenter.present(activity, animated: true)
     }
 

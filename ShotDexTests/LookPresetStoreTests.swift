@@ -126,6 +126,20 @@ struct LookPresetStoreTests {
         #expect(store.presets.first { $0.id == dune.id }?.name == "DUNE")
     }
 
+    /// FS-03.14c §3. A built-in film look renames on the panel only: another
+    /// built-in's name is refused, its own name puts it back.
+    @Test func builtInRenamesOnThePanelOnly() {
+        let directory = makeDirectory()
+        let store = makeStore(directory: directory)
+        #expect(store.rename(.velvia, to: "Punchy") == nil)
+        #expect(store.displayName(of: .velvia) == "Punchy")
+        #expect(makeStore(directory: directory).displayName(of: .velvia) == "Punchy", "kept across launches")
+        let taken = PhotoFilter.mono.displayName.uppercased()
+        #expect(store.rename(.velvia, to: taken) == .nameTaken(suggestion: "\(taken) (2)"))
+        #expect(store.rename(.velvia, to: PhotoFilter.velvia.displayName) == nil)
+        #expect(store.presetNames.isEmpty)
+    }
+
     /// FS-03.14 AC-a12 (D35). An imported look keeps the preset file it came
     /// from byte for byte beside it; deleting the look deletes the copy.
     @Test func keepsOriginalPresetBesideLook() throws {

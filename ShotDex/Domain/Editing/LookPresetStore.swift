@@ -78,6 +78,10 @@ final class LookPresetStore {
 
     private let directory: URL
     private var fileURL: URL { directory.appendingPathComponent("looks.json") }
+    private var presetNamesURL: URL { directory.appendingPathComponent("preset-names.json") }
+    /// Names the user gave built-in film looks (14c §3): only the Presets
+    /// panel reads them; the look itself keeps its identity.
+    private(set) var presetNames: [String: String] = [:]
     private var originalsDirectory: URL { directory.appendingPathComponent("Originals", isDirectory: true) }
 
     nonisolated static func defaultDirectory() -> URL {
@@ -102,11 +106,35 @@ final class LookPresetStore {
     }
 
     func reload() {
+        presetNames = (try? Data(contentsOf: presetNamesURL))
+            .flatMap { try? JSONDecoder().decode([String: String].self, from: $0) } ?? [:]
         guard let data = try? Data(contentsOf: fileURL) else {
             presets = []
             return
         }
         presets = Self.decode(data)
+    }
+
+    /// A built-in film look's name on the Presets panel.
+    func displayName(of filter: PhotoFilter) -> String {
+        presetNames[filter.rawValue] ?? filter.displayName
+    }
+
+    /// Renames a built-in film look on the panel. Another built-in's name is
+    /// refused like a look's; the look's own name puts it back.
+    @discardableResult
+    func rename(_ filter: PhotoFilter, to name: String) -> RenameRefusal? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return .emptyName }
+        let others = PhotoFilter.allCases.filter { $0 != filter }.map(displayName(of:))
+        if others.contains(where: { $0.caseInsensitiveCompare(trimmed) == .orderedSame }) {
+            var number = 2
+            while others.contains(where: { $0.caseInsensitiveCompare("\(trimmed) (\(number))") == .orderedSame }) { number += 1 }
+            return .nameTaken(suggestion: "\(trimmed) (\(number))")
+        }
+        presetNames[filter.rawValue] = trimmed == filter.displayName ? nil : trimmed
+        if let data = try? JSONEncoder().encode(presetNames) { try? data.write(to: presetNamesURL, options: .atomic) }
+        return nil
     }
 
     /// One look this build cannot read is dropped on its own; it used to

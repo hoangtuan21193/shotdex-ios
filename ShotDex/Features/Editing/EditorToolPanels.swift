@@ -50,18 +50,98 @@ struct EditorFiltersPanel: View {
     }
 
     var body: some View {
-        if isPhonePanel {
-            phoneContent
-                .lutImporter(isPresented: $isLUTImporterPresented, error: $lutImportError, luts: luts, controller: controller)
-        } else if scrolls {
-            ScrollView(.vertical) {
+        Group {
+            if isPhonePanel {
+                phoneContent
+                    .lutImporter(isPresented: $isLUTImporterPresented, error: $lutImportError, luts: luts, controller: controller)
+            } else if scrolls {
+                ScrollView(.vertical) {
+                    content
+                }
+                .scrollIndicators(.hidden)
+                .scrollBounceBehavior(.basedOnSize)
+            } else {
                 content
             }
-            .scrollIndicators(.hidden)
-            .scrollBounceBehavior(.basedOnSize)
-        } else {
-            content
         }
+        .alert(
+            "Rename",
+            isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })
+        ) {
+            TextField("Name", text: $renameText)
+            Button("Cancel", role: .cancel) { renaming = nil }
+            Button("Rename") { commitRename() }
+        } message: {
+            Text(renameNotice ?? "")
+        }
+    }
+
+    // MARK: Long-press menu (FS-03.14c §3)
+
+    /// A tile being renamed, with what it is.
+    private enum RenameTarget {
+        case look(LookPreset)
+        case preset(PhotoFilter)
+        case lut(ImportedLUT)
+    }
+
+    @State private var renaming: RenameTarget?
+    @State private var renameText = ""
+    @State private var renameNotice: String?
+
+    private func startRename(_ target: RenameTarget, name: String, notice: String? = nil) {
+        renameText = name
+        renameNotice = notice
+        renaming = target
+    }
+
+    /// A taken name keeps the alert's question open with a free name to take
+    /// instead; the looks stay as they were (AC-c6).
+    private func commitRename() {
+        guard let target = renaming else { return }
+        let refusal: LookPresetStore.RenameRefusal? = switch target {
+        case let .look(look): lookPresets?.rename(look, to: renameText)
+        case let .preset(filter): lookPresets?.rename(filter, to: renameText)
+        case let .lut(lut): luts?.rename(lut, to: renameText)
+        }
+        renaming = nil
+        guard case let .nameTaken(suggestion) = refusal else { return }
+        let asked = renameText
+        DispatchQueue.main.async {
+            startRename(target, name: suggestion, notice: "Another look is already called “\(asked)”.")
+        }
+    }
+
+    /// Rename · Share · Export As ▸ · Delete; Delete only where there is
+    /// something of the user's to delete.
+    @ViewBuilder
+    private func tileMenu(_ source: LookExportSource, rename target: RenameTarget, delete: (() -> Void)?) -> some View {
+        Button {
+            startRename(target, name: source.name)
+        } label: {
+            Label("Rename", systemImage: "pencil")
+        }
+        Button {
+            share(source)
+        } label: {
+            Label("Share…", systemImage: "square.and.arrow.up")
+        }
+        Menu {
+            Button("ShotDex Look") { share(source) }
+        } label: {
+            Label("Export As", systemImage: "doc.badge.arrow.up")
+        }
+        if let delete {
+            Button(role: .destructive, action: delete) {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+    }
+
+    /// One `.shotdexlook` into the share sheet — no image with it (14c §2).
+    private func share(_ source: LookExportSource) {
+        guard let url = try? LookExport.shotdexLookFile(for: source, lutText: { luts?.text(for: $0) }) else { return }
+        PhotoShareSheet.present(items: [url])
     }
 
     /// Phone (FS-03.13d §1): Amount while a look is on, a hairline, then the
@@ -221,11 +301,7 @@ struct EditorFiltersPanel: View {
         }
         .buttonStyle(.plain)
         .contextMenu {
-            Button(role: .destructive) {
-                store.delete(preset)
-            } label: {
-                Label("Delete Look", systemImage: "trash")
-            }
+            tileMenu(.look(preset), rename: .look(preset)) { store.delete(preset) }
         }
         .accessibilityLabel(preset.source == .imported ? "Apply look \(preset.name), Imported" : "Apply look \(preset.name)")
     }
@@ -455,11 +531,9 @@ struct EditorFiltersPanel: View {
         }
         .buttonStyle(.plain)
         .contextMenu {
-            Button(role: .destructive) {
+            tileMenu(.lut(id: lut.id, name: lut.displayName, url: lut.url), rename: .lut(lut)) {
                 store.delete(lut)
                 controller.scheduleRender()
-            } label: {
-                Label("Delete LUT", systemImage: "trash")
             }
         }
         .accessibilityLabel(lut.displayName)
@@ -481,11 +555,7 @@ struct EditorFiltersPanel: View {
         .buttonStyle(.plain)
         .hoverEffect(.highlight)
         .contextMenu {
-            Button(role: .destructive) {
-                store.delete(preset)
-            } label: {
-                Label("Delete Look", systemImage: "trash")
-            }
+            tileMenu(.look(preset), rename: .look(preset)) { store.delete(preset) }
         }
         .accessibilityLabel("Apply look \(preset.name)")
     }
@@ -544,7 +614,7 @@ struct EditorFiltersPanel: View {
                     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                     .modifier(EditorTileSelection(isSelected: isSelected, usesRing: isPhonePanel))
 
-                Text(filter.displayName)
+                Text(lookPresets?.displayName(of: filter) ?? filter.displayName)
                     .font(.system(size: isPhonePanel ? 11 : 10, weight: isSelected ? .semibold : .regular))
                     .foregroundStyle(isSelected ? (isPhonePanel ? .white : EditorTheme.accent) : isPhonePanel ? Color.white.opacity(0.6) : EditorTheme.secondaryText)
                     .lineLimit(1)
@@ -555,7 +625,12 @@ struct EditorFiltersPanel: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(filter.displayName)
+        // A built-in look: renamed on this panel only, never deleted (D20).
+        .contextMenu {
+            let name = lookPresets?.displayName(of: filter) ?? filter.displayName
+            tileMenu(.preset(filter, name: name), rename: .preset(filter), delete: nil)
+        }
+        .accessibilityLabel(lookPresets?.displayName(of: filter) ?? filter.displayName)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 

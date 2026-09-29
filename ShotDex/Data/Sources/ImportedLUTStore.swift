@@ -109,6 +109,34 @@ final class ImportedLUTStore {
         return ImportedLUT(id: id, displayName: displayName, url: destination)
     }
 
+    /// The LUT's name and `.cube` text, for a look that embeds it.
+    func text(for id: String) -> (name: String, text: String)? {
+        guard let lut = luts.first(where: { $0.id == id }),
+              let text = try? String(contentsOf: lut.url, encoding: .utf8)
+        else { return nil }
+        return (lut.displayName, text)
+    }
+
+    /// Renames a LUT; a name another LUT has, any case, is refused with the
+    /// first free "(n)" (FS-03.14c §3, E8).
+    @discardableResult
+    func rename(_ lut: ImportedLUT, to name: String) -> LookPresetStore.RenameRefusal? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return .emptyName }
+        func taken(_ candidate: String) -> Bool {
+            luts.contains { $0.id != lut.id && $0.displayName.caseInsensitiveCompare(candidate) == .orderedSame }
+        }
+        if taken(trimmed) {
+            var number = 2
+            while taken("\(trimmed) (\(number))") { number += 1 }
+            return .nameTaken(suggestion: "\(trimmed) (\(number))")
+        }
+        names[lut.id] = trimmed
+        saveManifest()
+        reload()
+        return nil
+    }
+
     func delete(_ lut: ImportedLUT) {
         try? FileManager.default.removeItem(at: lut.url)
         names.removeValue(forKey: lut.id)
