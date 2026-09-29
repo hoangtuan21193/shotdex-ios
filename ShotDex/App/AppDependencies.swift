@@ -85,6 +85,8 @@ final class AppDependencies {
     let importedLUTs: ImportedLUTStore
     /// Importing presets and looks, and later receiving them (FS-03.14).
     let lookExchange: LookExchangeModel
+    /// The app-level banner every full-screen surface hosts (FS-03.14c §4).
+    let banner: AppBannerModel
     /// The order and visibility of the Collections tab's sections.
     let collectionsLayout: CollectionsLayoutStore
     /// Photos opened and photos shared, for the Recently Viewed / Recently
@@ -247,6 +249,7 @@ final class AppDependencies {
         self.lookPresets = LookPresetStore()
         self.importedLUTs = ImportedLUTStore()
         self.lookExchange = LookExchangeModel(looks: lookPresets, luts: importedLUTs)
+        self.banner = AppBannerModel()
         self.collectionsLayout = CollectionsLayoutStore()
         self.spotlight = SpotlightIndexer(
             libraryQueries: libraryQueries,

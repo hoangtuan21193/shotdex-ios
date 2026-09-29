@@ -234,6 +234,7 @@ struct RootTabView: View {
         // their own copy. The host also hands this coordinator down as
         // `\.assetActions`, which is how the screens reach it.
         .assetActionHost(assetActions ?? dependencies.assetActions)
+        .appBannerHost(dependencies.banner, bottomInset: 120)
         .sheet(item: $uploadRequest) { ServerUploadHost(request: $0) }
         .environment(\.presentServerUpload, PresentServerUploadAction { uploadRequest = ServerUploadRequest(assetIds: $0, target: $1) })
         .environment(navigation)
@@ -329,6 +330,7 @@ struct RootTabView: View {
             .animation(.snappy(duration: 0.25), value: navigation.selectionBar != nil)
             .keepScreenAwakeWhileIndexing(libraryModel: libraryModel)
             .assetActionHost(assetActions ?? dependencies.assetActions)
+            .appBannerHost(dependencies.banner, bottomInset: 120)
             .sheet(item: $uploadRequest) { ServerUploadHost(request: $0) }
             .environment(\.presentServerUpload, PresentServerUploadAction { uploadRequest = ServerUploadRequest(assetIds: $0, target: $1) })
             .environment(navigation)

@@ -751,6 +751,7 @@ struct PhotoEditorScreen: View {
         }
         .animation(EditorTheme.animation, value: chrome.isFullBleed)
         .animation(EditorTheme.animation, value: chrome.undoToast?.id)
+        .appBannerHost(dependencies.banner, bottomInset: undoToastBottomInset, dark: true)
         .overlay {
             if batchSaver.isRunning {
                 EditorBatchSaveOverlay(saver: batchSaver)

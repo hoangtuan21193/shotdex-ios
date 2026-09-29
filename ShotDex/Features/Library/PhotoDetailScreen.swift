@@ -287,6 +287,7 @@ struct PhotoDetailScreen: View {
         // cannot reach over it — it hosts the shared action sheets itself.
         // Its own coordinator, not the root's: see `viewerAssetActions`.
         .assetActionHost(dependencies.viewerAssetActions)
+        .appBannerHost(dependencies.banner, bottomInset: 120)
         .sheet(item: $burstList) { presentation in
             // Neither the root nor this viewer can present over this sheet,
             // so its tile menu gets a coordinator and host of its own.

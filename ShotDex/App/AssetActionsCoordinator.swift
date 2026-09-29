@@ -371,18 +371,3 @@ private struct AssetActionHost: ViewModifier {
             .animation(.snappy(duration: 0.2), value: coordinator.toastMessage)
     }
 }
-
-/// A brief glass capsule confirming an action that leaves no visible trace.
-private struct ActionToast: View {
-    let text: String
-
-    var body: some View {
-        Text(text)
-            .font(.subheadline.weight(.medium))
-            .foregroundStyle(.primary)
-            .padding(.horizontal, 20)
-            .frame(height: 44)
-            .glassBackground(Capsule())
-            .allowsHitTesting(false)
-    }
-}
