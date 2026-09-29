@@ -57,4 +57,16 @@ struct LightroomXMPReaderTests {
         let deep = Data((String(repeating: "<a>", count: 70) + String(repeating: "</a>", count: 70)).utf8)
         #expect(throws: SafeXMLReader.Failure.tooDeep) { try SafeXMLReader.read(deep) }
     }
+
+    /// FS-03.14 AC-a4. A closing tag missing on line 14: ✕ with the next
+    /// step, no look.
+    @Test func malformedXMLGivesNextStep() {
+        var lines = String(decoding: Self.preset(#"crs:Exposure2012="+0.50""#), as: UTF8.self).components(separatedBy: "\n")
+        while lines.count < 16 { lines.insert(" <!-- padding -->", at: 1) }
+        lines[13] = "<crs:Name>unclosed"
+        let broken = Data(lines.joined(separator: "\n").utf8)
+        #expect(throws: LightroomXMPReader.Failure.notValidXMP) { try LightroomXMPReader.read(broken) }
+        #expect(LightroomXMPReader.Failure.notValidXMP.message
+            == "The file is not valid XMP. Try exporting the preset from Lightroom again.")
+    }
 }
