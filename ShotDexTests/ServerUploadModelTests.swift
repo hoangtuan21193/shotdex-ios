@@ -58,8 +58,10 @@ import Testing
         return Setup(model: model, hold: hold, client: client, deleted: deleted, servers: servers, nas: nas)
     }
 
+    /// Up to 30 s: it returns the moment the run finishes, and a loaded full
+    /// suite has taken longer than 5 s to get there.
     private func waitUntilFinished(_ model: ServerUploadModel) async {
-        for _ in 0..<500 where model.stage != .finished {
+        for _ in 0..<3000 where model.stage != .finished {
             try? await Task.sleep(for: .milliseconds(10))
         }
     }
@@ -77,16 +79,24 @@ import Testing
         // Cancelled (the Cancel button, and the app going to the background).
         let cancelled = try makeSetup(fixture: UploadFixture(count: 3, bytes: 100))
         let model = cancelled.model
+        // Upload 2 is held until Cancel has actually run on the main actor, as
+        // a real 50 MB upload would be — no wall-clock guess. The upload runs
+        // on the session actor, never on the main thread, so the wait cannot
+        // block the cancel it is waiting for; the timeout only turns a
+        // regression into a failure instead of a hang.
+        let cancelHasRun = DispatchSemaphore(value: 0)
         cancelled.client.onUpload = { number in
             guard number == 2 else { return }
-            Task { @MainActor in model.cancel() }
-            // Hold upload 2 long enough for the cancel to land on the main
-            // actor, as a real 50 MB upload would.
-            Thread.sleep(forTimeInterval: 0.3)
+            Task { @MainActor in
+                model.cancel()
+                cancelHasRun.signal()
+            }
+            _ = cancelHasRun.wait(timeout: .now() + 30)
         }
         await model.load()
         model.start()
         await waitUntilFinished(model)
+        #expect(model.stage == .finished)
         #expect(model.summary.stopMessage != nil)
         #expect(cancelled.hold.holds == 0)
 
