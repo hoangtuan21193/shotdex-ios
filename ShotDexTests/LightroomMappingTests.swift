@@ -56,4 +56,45 @@ struct LightroomMappingTests {
         #expect(!result.namedSettings.contains(.adjustment(.exposure)))
         #expect(result.lines == [PresetReportLine(kind: .skipped, text: "Masks stay with each photo")])
     }
+
+    /// FS-03.14 AC-b7. Point Color and Clarity +15: Clarity +15, and one ✕
+    /// "Point Color from Lightroom isn't in ShotDex yet" (FS-03.15 shipped
+    /// first, so the tone-curve regions this AC once used now land).
+    @Test func missingTargetsAreSkippedWithAReason() throws {
+        let body = "<crs:PointColors><rdf:Seq><rdf:li>12.5, 0.4, 0.6, 0, 0, 0, 0.1, 0.2, 0.3</rdf:li></rdf:Seq></crs:PointColors>"
+        let result = try map(#"crs:Clarity2012="+15" crs:ParametricShadows="-20""#, body: body)
+        #expect(abs(result.recipe.adjustments[.clarity] - 0.15) < 1e-9)
+        #expect(abs(result.recipe.curve.region.shadows + 0.2) < 1e-9, "the regions have a home now")
+        #expect(result.lines == [PresetReportLine(kind: .skipped, text: "Point Color from Lightroom isn't in ShotDex yet")])
+    }
+
+    /// The table's scales, spot-checked across groups: Sharpness 0…150,
+    /// Color Grading's split-toning names and 0…360 hue, the point curve on
+    /// 0…255, B&W Mix, calibration, lens scale 0…200 and PV2010 tags.
+    @Test func everyGroupLandsOnItsSlider() throws {
+        let body = """
+        <crs:ToneCurvePV2012><rdf:Seq><rdf:li>0, 0</rdf:li><rdf:li>128, 153</rdf:li><rdf:li>255, 255</rdf:li></rdf:Seq></crs:ToneCurvePV2012>
+        """
+        let attributes = [
+            #"crs:Sharpness="150""#, #"crs:SplitToningShadowHue="200""#, #"crs:SplitToningShadowSaturation="30""#,
+            #"crs:ColorGradeShadowLum="-10""#, #"crs:ColorGradeBlending="50""#, #"crs:GrayMixerRed="-40""#,
+            #"crs:RedHue="+12""#, #"crs:LensProfileDistortionScale="200""#, #"crs:ConvertToGrayscale="True""#,
+            #"crs:PostCropVignetteStyle="2""#, #"crs:DefringePurpleAmount="10""#, #"crs:FillLight="20""#,
+        ].joined(separator: " ")
+        let result = try map(attributes, body: body)
+        let recipe = result.recipe
+        #expect(recipe.adjustments[.sharpness] == 1)
+        #expect(recipe.color.grading.shadows.hue == 200)
+        #expect(abs(recipe.color.grading.shadows.saturation - 0.3) < 1e-9)
+        #expect(abs(recipe.color.grading.shadows.luminance + 0.1) < 1e-9)
+        #expect(abs(recipe.color.grayMixer[.red] + 0.4) < 1e-9)
+        #expect(abs(recipe.color.calibration.redHue - 0.12) < 1e-9)
+        #expect(recipe.adjustments[.lensDistortionScale] == 2)
+        #expect(recipe.adjustments[.blackAndWhite] == 1)
+        #expect(recipe.vignetteStyle == .colorPriority)
+        #expect(abs(recipe.adjustments[.defringePurpleAmount] - 0.5) < 1e-9)
+        #expect(recipe.curve.rgb.count == 3)
+        #expect(abs(recipe.curve.rgb[1].y - 0.6) < 1e-9)
+        #expect(result.lines.contains(PresetReportLine(kind: .skipped, text: "Settings from Lightroom 3 or older")))
+    }
 }
