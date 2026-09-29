@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-23 |
 | Trạng thái | accepted |
-| Tiến độ | **gần xong** (2026-09-24) — 9/9 task đã commit; 9/15 AC xanh (1–7, 10, 11), AC-12 và AC-13 một nửa; còn AC-8 (Duo), 9 (VoiceOver), 14 (album người dùng), 15 (smart album) |
+| Tiến độ | **gần xong** (2026-09-30) — 9/9 task đã commit; 11/15 AC xanh (1–7, 10, 11, 14, 15); AC-9, AC-12, AC-13 một nửa (còn: chữ "menu" của VoiceOver, ảnh cảnh báo `Couldn't Save`, On This Day); AC-8 chờ Duo |
 | Nguồn | phản hồi người dùng (trong lúc soạn FS-14 panorama) |
 | Spec sinh ra từ đây | [FS-01.09](../02-functional-spec/FS-01-library/09-photo-stacking.md) |
 

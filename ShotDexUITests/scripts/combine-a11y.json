@@ -1,0 +1,10 @@
+{"steps":[
+{"action":"launch"},{"action":"wait","seconds":6},
+{"action":"tap","label":"Select photos","type":"button"},{"action":"wait","seconds":1},
+{"action":"tap","x":0.5,"y":0.6},{"action":"tap","x":0.83,"y":0.6},{"action":"tap","x":0.17,"y":0.6},
+{"action":"tap","label":"More selection actions"},{"action":"wait","seconds":1},
+{"action":"dump","name":"10-menu"},
+{"action":"tap","label":"Combine Photos"},{"action":"wait","seconds":1},
+{"action":"screenshot","name":"20-submenu"},
+{"action":"dump","name":"20-submenu"}
+]}
