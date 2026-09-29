@@ -18,6 +18,9 @@ final class LookExchangeModel {
     private let looks: LookPresetStore
     private let luts: ImportedLUTStore
     private var task: Task<Void, Never>?
+    /// The read itself, detached from the main actor: cancelled with the
+    /// import so it stops between files instead of reading the rest.
+    private var readingTask: Task<PresetImporter.Plan?, Never>?
 
     init(looks: LookPresetStore, luts: ImportedLUTStore) {
         self.looks = looks
@@ -35,14 +38,16 @@ final class LookExchangeModel {
         report = nil
         progress = (0, urls.count)
         isSheetPresented = true
+        let reading = Task.detached(priority: .userInitiated) { [weak self] () -> PresetImporter.Plan? in
+            let accessed = urls.map { $0.startAccessingSecurityScopedResource() }
+            defer { for (url, did) in zip(urls, accessed) where did { url.stopAccessingSecurityScopedResource() } }
+            return try? PresetImporter.read(urls) { read, total in
+                Task { @MainActor in self?.progress = (read, total) }
+            }
+        }
+        readingTask = reading
         task = Task { [weak self] in
-            let plan = await Task.detached(priority: .userInitiated) { () -> PresetImporter.Plan? in
-                let accessed = urls.map { $0.startAccessingSecurityScopedResource() }
-                defer { for (url, did) in zip(urls, accessed) where did { url.stopAccessingSecurityScopedResource() } }
-                return try? PresetImporter.read(urls) { read, total in
-                    Task { @MainActor [weak self] in self?.progress = (read, total) }
-                }
-            }.value
+            let plan = await reading.value
             guard let self, !Task.isCancelled else { return }
             // Security-scoped access again for the .cube files the stores copy.
             let accessed = urls.map { $0.startAccessingSecurityScopedResource() }
@@ -59,6 +64,8 @@ final class LookExchangeModel {
 
     /// Cancel adds nothing: the stores are only written once reading is done.
     func cancelImport() {
+        readingTask?.cancel()
+        readingTask = nil
         task?.cancel()
         task = nil
         progress = nil
