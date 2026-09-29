@@ -6,6 +6,7 @@ import ShotDexKit
 /// level down, inside the mask.
 struct EditorMaskListPanel: View {
     @Environment(\.editorPanelShowsTitle) private var panelShowsTitle
+    @Environment(\.editorPanelScrolls) private var panelScrolls
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
     let rename: () -> Void
@@ -103,6 +104,8 @@ struct EditorMaskListPanel: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .environment(\.defaultMinListRowHeight, 56)
+        // 56pt row plus its 3pt insets above and below.
+        .editorListSizedToRows(controller.recipe.masks.count, rowHeight: 62, scrolls: panelScrolls)
     }
 
     private func open(_ mask: PhotoMask) {

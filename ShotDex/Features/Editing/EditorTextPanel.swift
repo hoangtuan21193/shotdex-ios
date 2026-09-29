@@ -10,6 +10,7 @@ import ShotDexKit
 /// the drawing is fixed at the back and has no handle.
 struct EditorTextPanel: View {
     @Environment(\.editorPanelShowsTitle) private var panelShowsTitle
+    @Environment(\.editorPanelScrolls) private var panelScrolls
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
     let addText: () -> Void
@@ -209,6 +210,8 @@ struct EditorTextPanel: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .environment(\.defaultMinListRowHeight, 56)
+        // 56pt row plus its 3pt insets above and below.
+        .editorListSizedToRows(controller.recipe.overlays.count, rowHeight: 62, scrolls: panelScrolls)
     }
 
     /// A text layer is named by what it says, resolved — a row reading

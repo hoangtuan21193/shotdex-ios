@@ -438,4 +438,22 @@ extension View {
             self
         }
     }
+
+    /// Gives a layer `List` (masks, markup layers) the height of its rows where
+    /// panels may not scroll.
+    ///
+    /// A `List` is a scroll view and has no intrinsic height. The phone slab
+    /// hands it a fixed height to fill; the wide sidebar's stack offers none,
+    /// so the list drew as a 4pt sliver — "Layers · 3" over an empty panel,
+    /// measured on the 13" iPad. There it takes exactly its rows and the
+    /// sidebar's own scroll takes any overflow.
+    @ViewBuilder
+    func editorListSizedToRows(_ count: Int, rowHeight: CGFloat, scrolls: Bool) -> some View {
+        if scrolls {
+            self
+        } else {
+            frame(height: CGFloat(count) * rowHeight)
+                .scrollDisabled(true)
+        }
+    }
 }
