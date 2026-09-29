@@ -29,12 +29,13 @@ Khung, ✕ / ✓: [13a](13a-chrome-and-toolbar.md). Mask làm gì: [FS-03.05](05
   - Loại vùng chỉ đọc ở **dòng phụ**: mọi vùng theo thứ tự, vùng trừ sau "−" ("Sky − Brush"; Background đọc "Background").
   - *Vì* mask nhiều vùng mà tên theo vùng đầu sẽ sai. Cùng luật ở [FS-03.05 §3](05-local-masks.md#3-chỉnh-mask-đang-chọn).
 - **Chạm tên / ▼ → danh sách dọc** thay vùng thông số: tiêu đề "Masks · n masks"; mỗi mask một hàng 40 (thumbnail ·
-  tên · dòng phụ · 👁), dưới mask đang chọn là các **vùng** (⊕ cộng / ⊖ trừ) rồi **Add area** · **Subtract area**;
+  tên · dòng phụ · 👁), dưới mask đang chọn là các **vùng** (⊕ cộng / ⊖ trừ / ⊗ giao) rồi **Add area** · **Subtract area** ·
+  **Intersect area** (Intersect của [FS-03.15d §1](15d-mask-additions.md) — thêm 2026-09-29 để iPhone không mất nó);
   cuối danh sách **New Mask**. Hàng đang chọn nền trắng 8%, bo 8.
 - Chạm một hàng = chọn mask / vùng đó và **đóng danh sách**. 👁 = ẩn / hiện hiệu ứng của mask đó (như Hide / Show
   của ⋯, thumbnail mờ 35%).
-- **Add / Subtract area** mở lưới ô với tiêu đề *"Add to Mask 1"* / *"Subtract from Mask 1"*, **đủ mọi loại vùng**, dựng
-  từ danh sách như lưới chọn loại (§1). Chạm một loại thêm vùng với chế độ đó.
+- **Add / Subtract / Intersect area** mở lưới ô với tiêu đề *"Add to Mask 1"* / *"Subtract from Mask 1"* / *"Intersect with Mask 1"*, **đủ mọi loại vùng**, dựng
+  từ danh sách như lưới chọn loại (§1). Chạm một loại thêm vùng với chế độ đó. Background làm vùng = Subject đảo (vùng có cờ đảo riêng).
 - Dòng phụ hàng trên đọc "Subtracting" khi vùng đang chọn là vùng trừ.
 - ⋯ của mask giữ [FS-03.05 §3](05-local-masks.md#3-chỉnh-mask-đang-chọn): Hide / Show · Rename · Invert · Duplicate ·
   Delete This Shape · Delete. Hàng Add / Subtract + Undo cũ và dải thumbnail cuộn ngang **bỏ**.
@@ -97,8 +98,8 @@ Máy: iPhone 17 iOS 26.5 và 18.6, ảnh 3:2 (panel 344) nếu không ghi khác.
 | AC-25 | ảnh chưa có mask, ảnh 3:4 (panel 264) | chạm Mask | lưới 4 cột đủ mọi mục của danh sách vùng, mỗi mục một lần, Face Skin · Eyes · Lips là ô riêng; thấy 2 hàng, các hàng sau tới được bằng cuộn dọc; không cuộn ngang | ✅ `MaskPhonePanelTests.chooserTilesCoverEveryKindOnce` · `iphone-mask-list.json` (ảnh 3:4, panel 264: 2 hàng, cuộn dọc ra hàng 3–4) |
 | AC-26 | như AC-25 | chạm Brush rồi kéo một ngón 100pt trên ảnh | có 1 mask, 1 nét, không cần chạm thêm; hàng trên "Mask 1 ▼ · Mask Overlay · + · ⋯", dòng phụ "Brush"; hàng cọ ghim | ✅ `MaskPhonePanelTests.brushTileDrawsImmediately` · `MaskAreaSummaryTests.subtitleListsEveryArea` · `iphone-mask-brush-row.json` (hàng trên "Mask 1 ▼ · Brush · Mask Overlay · + · ⋯"); hàng cọ ghim: AC-30 |
 | AC-27 | 1 mask | chạm `+` rồi `‹` | vẫn 1 mask, mask cũ vẫn chọn | `MaskPhonePanelTests.plusThenBackMakesNothing` (vẫn 1 mask, mask cũ vẫn chọn) |
-| AC-28 | Mask 1 = Sky − Brush, Mask 2 = Radial, Mask 1 chọn | chạm ▼ | danh sách đúng thứ tự: Mask 1 · Sky ⊕ · Brush ⊖ · Add area · Subtract area · Mask 2 · New Mask | ⚠️ chưa có — `MaskPhonePanelTests.listPutsAreaActionsUnderTheSelectedMask` |
-| AC-29 | danh sách mở, Mask 1 = Sky | Subtract area → Brush | lưới "Subtract from Mask 1" có mọi loại của danh sách (cả Background, Color, Luminance, Depth); Mask 1 có 2 vùng, vùng 2 là trừ; danh sách đóng; dòng phụ "Subtracting" | ⚠️ chưa có — `MaskPhonePanelTests.subtractAreaAddsASubtractingBrush` |
+| AC-28 | Mask 1 = Sky − Brush, Mask 2 = Radial, Mask 1 chọn | chạm ▼ | danh sách đúng thứ tự: Mask 1 · Sky ⊕ · Brush ⊖ · Add area · Subtract area · Intersect area · Mask 2 · New Mask | ✅ `MaskPhonePanelTests.listPutsAreaActionsUnderTheSelectedMask` · `iphone-mask-areas.json` (1-list, 4-list-two-areas) |
+| AC-29 | danh sách mở, Mask 1 = Sky | Subtract area → Brush | lưới "Subtract from Mask 1" có mọi loại của danh sách (cả Background, Color, Luminance, Depth); Mask 1 có 2 vùng, vùng 2 là trừ; danh sách đóng; dòng phụ "Subtracting" | ✅ `MaskPhonePanelTests.subtractAreaAddsASubtractingBrush` · `MaskIntersectTests.anInvertedAreaIsItsComplement` · `iphone-mask-areas.json` (2-subtract-grid, 3-subtracting) |
 | AC-30 | Brush, Size 40 | chạm viên Size, kéo slider tới 60, chạm ✓ | hàng về 3 viên, viên Size đọc 60; lúc kéo có vòng xem trước trên ảnh | ⚠️ chưa có — `iphone-mask-list.json` + chụp liên tục |
 | AC-31 | Brush, chip Mask Overlay tắt, trên iPhone 17 và iPad 13" sidebar | vẽ 1 nét, nhấc, chờ 2s, rồi kéo Exposure | lúc vẽ có phủ đỏ; 2s sau nhấc không còn; lúc kéo không có. Bật chip rồi kéo Exposure: phủ đỏ còn. Hai máy như nhau | ⚠️ chưa có — `MaskOverlayPolicyTests.autoOverlayFollowsPaintAndYieldsToSliders` |
 | AC-32 | Brush trên SE 375 và Duo ngoài 326pt | dump hàng trên và hàng cọ | không nhãn nào thành "…", chip đọc "Mask Overlay", mọi nút trong khung, `+` và `⋯` ≥30pt | ⚠️ chưa có — `se-editor-fit.json` + `duo-cover-editor.json` |

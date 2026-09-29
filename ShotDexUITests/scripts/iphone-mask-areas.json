@@ -1,0 +1,30 @@
+{
+ "steps": [
+  {"action": "launch"},
+  {"action": "wait", "seconds": 25},
+  {"action": "tap", "x": 0.5, "y": 0.35},
+  {"action": "wait", "seconds": 6},
+  {"action": "tap", "label": "Edit"},
+  {"action": "wait", "seconds": 12},
+  {"action": "tap", "label": "Mask"},
+  {"action": "wait", "seconds": 3},
+  {"action": "tap", "label": "Radial"},
+  {"action": "wait", "seconds": 3},
+  {"action": "tap", "label": "Mask 1, Radial"},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "1-list"},
+  {"action": "wait", "seconds": 4},
+  {"action": "tap", "label": "Subtract area"},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "2-subtract-grid"},
+  {"action": "wait", "seconds": 4},
+  {"action": "tap", "label": "Brush"},
+  {"action": "wait", "seconds": 3},
+  {"action": "screenshot", "name": "3-subtracting"},
+  {"action": "wait", "seconds": 4},
+  {"action": "tap", "label": "Mask 1, Subtracting"},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "4-list-two-areas"},
+  {"action": "wait", "seconds": 4}
+ ]
+}

@@ -92,6 +92,53 @@ struct MaskPhonePanelTests {
         #expect(MaskAreaSummary.subtitle(for: mask) == "Brush")
     }
 
+    /// FS-03.13 AC-28. Mask 1 = Sky − Brush, Mask 2 = Radial, Mask 1
+    /// selected: Mask 1 · Sky · Brush · Add / Subtract / Intersect area ·
+    /// Mask 2 · New Mask.
+    @Test func listPutsAreaActionsUnderTheSelectedMask() throws {
+        let controller = makeController()
+        controller.addMask(option: .sky)
+        controller.addMaskArea(option: .brush, operation: .subtract)
+        controller.addMask(option: .radialGradient)
+        let first = try #require(controller.recipe.masks.first)
+        let second = try #require(controller.recipe.masks.last)
+        controller.selectMask(first.id)
+        let rows = EditorMaskListRow.rows(masks: controller.recipe.masks, selected: controller.selectedMaskID)
+        #expect(rows == [
+            .mask(first.id),
+            .area(mask: first.id, component: first.components[0].id),
+            .area(mask: first.id, component: first.components[1].id),
+            .addArea(.add), .addArea(.subtract), .addArea(.intersect),
+            .mask(second.id),
+            .newMask,
+        ])
+        #expect(first.components.map(MaskAreaSummary.name(of:)) == ["Sky", "Brush"])
+        #expect(first.components.map(\.operation) == [.add, .subtract])
+        #expect(MaskAreaSummary.subtitle(for: first) == "Sky − Brush")
+        #expect(MaskBlendOperation.allCases.map(EditorMaskListRow.title(of:)) == ["Add area", "Subtract area", "Intersect area"])
+    }
+
+    /// FS-03.13 AC-29. Subtract area → Brush on Mask 1 = Sky: the grid is
+    /// titled "Subtract from Mask 1" and offers every kind; Mask 1 then has
+    /// two areas, the second subtracting and selected, so the top row reads
+    /// "Subtracting". Background as an area is Subject inverted.
+    @Test func subtractAreaAddsASubtractingBrush() throws {
+        let controller = makeController()
+        controller.addMask(option: .sky)
+        #expect(EditorMaskListRow.chooserTitle(for: .subtract, maskName: "Mask 1") == "Subtract from Mask 1")
+        #expect(Set(EditorNewMaskOption.gridOrder) == Set(EditorNewMaskOption.allCases), "the area grid is the chooser grid")
+        controller.addMaskArea(option: .brush, operation: .subtract)
+        let mask = try #require(controller.recipe.masks.first)
+        #expect(controller.recipe.masks.count == 1)
+        #expect(mask.components.map(\.operation) == [.add, .subtract])
+        #expect(controller.selectedComponentID == mask.components[1].id)
+        #expect(MaskAreaSummary.topRowSubtitle(for: mask, selectedComponent: controller.selectedComponentID) == "Subtracting")
+
+        controller.addMaskArea(option: .background, operation: .subtract)
+        let background = try #require(controller.recipe.masks.first?.components.last)
+        #expect(background.kind == .subject && background.isInverted)
+    }
+
     /// AC-19. Depth on a photo without a depth map is refused with the reason
     /// the title shows — the reason text is the one the old sheet used.
     @Test func depthWithoutADepthMapGivesItsReason() {

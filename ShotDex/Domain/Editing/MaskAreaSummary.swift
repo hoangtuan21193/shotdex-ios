@@ -1,3 +1,4 @@
+import Foundation
 import ShotDexKit
 
 /// A mask's subtitle (FS-03.13c §2): every area in order, each after the
@@ -16,6 +17,13 @@ enum MaskAreaSummary {
             text += name(of: component)
         }
         return text
+    }
+
+    /// The top row's line (FS-03.13c §2): the areas, or "Subtracting" while
+    /// a subtracted area is the one being worked on.
+    static func topRowSubtitle(for mask: PhotoMask, selectedComponent: UUID?) -> String {
+        let selected = mask.components.first { $0.id == selectedComponent }
+        return selected?.operation == .subtract ? "Subtracting" : subtitle(for: mask)
     }
 
     /// The area's short name: the chooser's tile title, or who and which part

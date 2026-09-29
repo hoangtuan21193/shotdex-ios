@@ -1279,6 +1279,9 @@ public struct PhotoMaskComponent: Codable, Identifiable, Equatable, Sendable {
     public var kind: PhotoMaskComponentKind
     public var operation: MaskBlendOperation = .add
     public var opacity = 1.0
+    /// The area's complement before it is combined: Background added to or
+    /// taken from a mask is Subject inverted (FS-03.13c §2).
+    public var isInverted = false
 
     public var brushStrokes: [BrushStroke] = []
     public var startPoint = NormalizedPoint(x: 0.5, y: 0.2)

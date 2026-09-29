@@ -12,20 +12,27 @@ struct EditorMaskPhonePanel: View {
 
     /// The chooser shows when there is nothing to adjust, or when `+` asked for it.
     static func showsChooser(controller: PhotoEditorController, chrome: EditorChromeModel) -> Bool {
-        controller.recipe.masks.isEmpty || chrome.isChoosingMaskKind
+        controller.recipe.masks.isEmpty || chrome.isChoosingMaskKind || chrome.maskAreaOperation != nil
     }
 
     var body: some View {
         Group {
             if Self.showsChooser(controller: controller, chrome: chrome) {
                 EditorMaskChooser(controller: controller, chrome: chrome)
+            } else if chrome.isMaskListOpen {
+                EditorMaskList(controller: controller, chrome: chrome)
             } else {
                 EditorMaskDetailPanel(controller: controller, chrome: chrome, rename: rename)
             }
         }
         .onAppear(perform: keepAMaskOpen)
-        // Leaving the Mask tab ends a half-made "+": coming back shows the masks.
-        .onDisappear { chrome.isChoosingMaskKind = false }
+        // Leaving the Mask tab ends a half-made "+" and closes the list:
+        // coming back shows the selected mask.
+        .onDisappear {
+            chrome.isChoosingMaskKind = false
+            chrome.isMaskListOpen = false
+            chrome.maskAreaOperation = nil
+        }
         .onChange(of: controller.recipe.masks.map(\.id)) { keepAMaskOpen() }
         .onChange(of: controller.editingMaskAdjustments) { keepAMaskOpen() }
     }
@@ -90,11 +97,37 @@ struct EditorMaskChooser: View {
 
     /// "Choose an area to adjust" — or, from `+` with masks already there,
     /// `‹` and "New Mask". For 3s after a refused tap, the reason instead.
+    /// The title: an area for the selected mask, a new mask, or the first.
+    private var title: String {
+        if let operation = chrome.maskAreaOperation {
+            return EditorMaskListRow.chooserTitle(for: operation, maskName: controller.selectedMask?.name ?? "")
+        }
+        return controller.recipe.masks.isEmpty ? "Choose an area to adjust" : "New Mask"
+    }
+
+    /// Back from an area grid is the list it came from; from `+` the mask.
+    private func goBack() {
+        if chrome.maskAreaOperation != nil {
+            chrome.maskAreaOperation = nil
+        } else {
+            chrome.isChoosingMaskKind = false
+        }
+    }
+
+    /// One tap made the mask or the area: back to the selected mask, list shut.
+    private func finish() {
+        chrome.isChoosingMaskKind = false
+        chrome.maskAreaOperation = nil
+        chrome.isMaskListOpen = false
+        chrome.maskChooserNotice = nil
+        controller.editSelectedMaskAdjustments()
+    }
+
     private var header: some View {
         HStack(spacing: AppTheme.Spacing.xs) {
             if !controller.recipe.masks.isEmpty {
                 Button {
-                    chrome.isChoosingMaskKind = false
+                    goBack()
                 } label: {
                     Image(systemName: "chevron.backward")
                         .font(.system(size: 15, weight: .semibold))
@@ -105,9 +138,9 @@ struct EditorMaskChooser: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Back to masks")
+                .accessibilityLabel(chrome.maskAreaOperation == nil ? "Back to masks" : "Back to the list")
             }
-            Text(chrome.maskChooserNotice ?? (controller.recipe.masks.isEmpty ? "Choose an area to adjust" : "New Mask"))
+            Text(chrome.maskChooserNotice ?? title)
                 .font(.system(size: 13, weight: controller.recipe.masks.isEmpty ? .regular : .semibold))
                 .foregroundStyle(controller.recipe.masks.isEmpty || chrome.maskChooserNotice != nil ? Color.white.opacity(0.6) : .white)
                 .lineLimit(2)
@@ -129,12 +162,15 @@ struct EditorMaskChooser: View {
                 Menu(row.title) {
                     ForEach(PhotoPersonPart.allCases) { part in
                         Button {
-                            if let reason = controller.addPeopleMask(person: row.person, part: part) {
+                            if part.needsSemanticMatte, !available.contains(part) {
+                                showNotice("Needs a Portrait photo taken on iPhone")
+                            } else if let operation = chrome.maskAreaOperation {
+                                controller.addMaskArea(option: .people, operation: operation, person: row.person, part: part)
+                                finish()
+                            } else if let reason = controller.addPeopleMask(person: row.person, part: part) {
                                 showNotice(reason)
                             } else {
-                                chrome.isChoosingMaskKind = false
-                                chrome.maskChooserNotice = nil
-                                controller.editSelectedMaskAdjustments()
+                                finish()
                             }
                         } label: {
                             if part.needsSemanticMatte, !available.contains(part) {
@@ -172,11 +208,12 @@ struct EditorMaskChooser: View {
         return Button {
             if let reason {
                 showNotice(reason)
+            } else if let operation = chrome.maskAreaOperation {
+                controller.addMaskArea(option: option, operation: operation)
+                finish()
             } else {
-                chrome.isChoosingMaskKind = false
-                chrome.maskChooserNotice = nil
                 controller.addMask(option: option)
-                controller.editSelectedMaskAdjustments()
+                finish()
             }
         } label: {
             EditorMaskKindTileLabel(option: option)
@@ -228,6 +265,148 @@ private struct EditorMaskKindTileStyle: ButtonStyle {
             .background(EditorTheme.chipIdle, in: shape)
             .opacity(configuration.isPressed ? 0.7 : 1)
             .contentShape(shape)
+    }
+}
+
+/// Every mask, opened from the name in the top row (FS-03.13c §2): a 40pt
+/// row each; under the selected one its areas and Add / Subtract / Intersect
+/// area; New Mask last. A tap picks and closes; 👁 hides or shows that mask.
+struct EditorMaskList: View {
+    @Bindable var controller: PhotoEditorController
+    @Bindable var chrome: EditorChromeModel
+
+    var body: some View {
+        let masks = controller.recipe.masks
+        ScrollView(.vertical) {
+            VStack(spacing: 0) {
+                Text("Masks · \(masks.count) \(masks.count == 1 ? "mask" : "masks")")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.white.opacity(0.6))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(height: 32)
+                    .accessibilityAddTraits(.isHeader)
+                ForEach(EditorMaskListRow.rows(masks: masks, selected: controller.selectedMaskID), id: \.self) { row in
+                    rowView(row)
+                }
+            }
+            .padding(.horizontal, AppTheme.Spacing.lg)
+            .padding(.bottom, AppTheme.Spacing.lg)
+        }
+        .scrollIndicators(.hidden)
+    }
+
+    @ViewBuilder
+    private func rowView(_ row: EditorMaskListRow) -> some View {
+        switch row {
+        case let .mask(id):
+            if let mask = controller.recipe.masks.first(where: { $0.id == id }) {
+                maskRow(mask)
+            }
+        case let .area(maskID, componentID):
+            if let component = controller.recipe.masks.first(where: { $0.id == maskID })?
+                .components.first(where: { $0.id == componentID }) {
+                action(
+                    title: MaskAreaSummary.name(of: component),
+                    systemImage: component.operation.symbolName,
+                    isSelected: controller.selectedComponentID == componentID,
+                    isIndented: true
+                ) {
+                    controller.selectComponent(componentID)
+                    close()
+                }
+            }
+        case let .addArea(operation):
+            action(
+                title: EditorMaskListRow.title(of: operation),
+                systemImage: operation.symbolName,
+                isSelected: false,
+                isIndented: true,
+                isDim: true
+            ) {
+                chrome.maskAreaOperation = operation
+            }
+        case .newMask:
+            action(title: "New Mask", systemImage: "plus", isSelected: false, isIndented: false) {
+                chrome.isMaskListOpen = false
+                chrome.isChoosingMaskKind = true
+            }
+        }
+    }
+
+    private func maskRow(_ mask: PhotoMask) -> some View {
+        let isSelected = controller.selectedMaskID == mask.id
+        return HStack(spacing: AppTheme.Spacing.sm) {
+            Button {
+                controller.selectMask(mask.id)
+                close()
+            } label: {
+                HStack(spacing: AppTheme.Spacing.sm) {
+                    EditorMaskThumbnail(controller: controller, mask: mask, side: 30)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(mask.name)
+                            .font(.system(size: 14.5, weight: .semibold))
+                            .foregroundStyle(.white)
+                        Text(MaskAreaSummary.subtitle(for: mask))
+                            .font(.system(size: 11.5))
+                            .foregroundStyle(EditorTheme.secondaryText)
+                    }
+                    .lineLimit(1)
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(mask.name), \(MaskAreaSummary.subtitle(for: mask))")
+            .accessibilityAddTraits(isSelected ? .isSelected : [])
+
+            Button {
+                controller.toggleMaskVisibility(mask.id)
+            } label: {
+                Image(systemName: mask.isVisible ? "eye" : "eye.slash")
+                    .font(.system(size: 15))
+                    .foregroundStyle(mask.isVisible ? Color.white : EditorTheme.dimText)
+                    .frame(width: 44, height: 40)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(mask.isVisible ? "Hide \(mask.name)" : "Show \(mask.name)")
+        }
+        .padding(.leading, AppTheme.Spacing.sm)
+        .frame(height: 40)
+        .background(isSelected ? Color.white.opacity(0.08) : .clear, in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
+    }
+
+    private func action(
+        title: String,
+        systemImage: String,
+        isSelected: Bool,
+        isIndented: Bool,
+        isDim: Bool = false,
+        perform: @escaping () -> Void
+    ) -> some View {
+        Button(action: perform) {
+            HStack(spacing: AppTheme.Spacing.sm) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 14))
+                    .frame(width: 30)
+                Text(title)
+                    .font(.system(size: 14))
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(isDim ? Color.white.opacity(0.6) : .white)
+            .padding(.leading, isIndented ? 30 : AppTheme.Spacing.sm)
+            .frame(height: 40)
+            .background(isSelected ? Color.white.opacity(0.08) : .clear, in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private func close() {
+        withAnimation(EditorTheme.animation) { chrome.isMaskListOpen = false }
+        controller.editSelectedMaskAdjustments()
     }
 }
 
@@ -310,7 +489,7 @@ struct EditorMaskTopRow: View {
     /// The areas, or "Subtracting" while a subtracted area is the one being
     /// worked on.
     private func subtitle(of mask: PhotoMask) -> String {
-        controller.selectedComponent?.operation == .subtract ? "Subtracting" : MaskAreaSummary.subtitle(for: mask)
+        MaskAreaSummary.topRowSubtitle(for: mask, selectedComponent: controller.selectedComponentID)
     }
 }
 

@@ -2362,6 +2362,9 @@ public actor PhotoRenderService {
                 cacheIdentity: cacheIdentity
             ) else { continue }
             incoming = incoming.cropped(to: extent)
+            if component.isInverted, let kernel = Self.invertMaskKernel {
+                incoming = kernel.apply(extent: extent, arguments: [incoming]) ?? incoming
+            }
             if component.operation == .intersect {
                 // Opacity softens the intersection itself, inside the kernel:
                 // pre-scaling the area would cut the mask down instead.

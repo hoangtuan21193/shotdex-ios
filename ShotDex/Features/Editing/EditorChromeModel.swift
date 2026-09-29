@@ -34,6 +34,9 @@ final class EditorChromeModel {
     /// The Mask tool's list of masks, opened from the name in its top row
     /// (FS-03.13c §2).
     var isMaskListOpen = false
+    /// Add / Subtract / Intersect area picked in that list: the chooser grid
+    /// then adds an area to the selected mask instead of making a mask.
+    var maskAreaOperation: MaskBlendOperation?
     /// Floating histogram card. It sits over the photo when expanded and parks as
     /// a pill in the action bar when collapsed. Collapsed on open — the photo is
     /// what the editor is for, so nothing covers it until the user asks.

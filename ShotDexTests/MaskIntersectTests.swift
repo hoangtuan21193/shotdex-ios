@@ -77,6 +77,21 @@ struct MaskIntersectTests {
         #expect(topYellow <= 0.05, "top yellow \(topYellow)")
     }
 
+    /// FS-03.13c §2. An inverted area is its complement: the top half less
+    /// "not blue" leaves only the top blue square — Background subtracted is
+    /// built the same way.
+    @Test func anInvertedAreaIsItsComplement() async throws {
+        var notBlue = Self.blueRange(.subtract)
+        notBlue.isInverted = true
+        var mask = PhotoMask(name: "Mask 1", component: Self.topHalf())
+        mask.components.append(notBlue)
+        let matte = try #require(try await PhotoRenderService().maskMatte(mask, over: Self.squares()))
+        let topBlue = Self.mean(matte, x: 40..<88, y: 40..<88)
+        let topGrey = Self.mean(matte, x: 110..<150, y: 40..<88)
+        #expect(topBlue >= 0.95, "top blue \(topBlue)")
+        #expect(topGrey <= 0.05, "top grey \(topGrey)")
+    }
+
     /// The editor side: Intersect area adds a second area to the picked
     /// mask, one undo step.
     @MainActor @Test func intersectAreaJoinsTheSelectedMask() throws {

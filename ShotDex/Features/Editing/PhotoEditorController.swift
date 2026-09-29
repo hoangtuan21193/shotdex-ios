@@ -2614,6 +2614,26 @@ final class PhotoEditorController {
     /// in the selected mask, combined by `operation` after the areas already
     /// there. One undo step. The first area of a mask is always Add, so with
     /// no mask selected this makes a new mask.
+    /// An area from the chooser grid (FS-03.13c §2): any kind, Background as
+    /// Subject inverted, People as who and which part.
+    func addMaskArea(
+        option: EditorNewMaskOption,
+        operation: MaskBlendOperation,
+        person: Int? = nil,
+        part: PhotoPersonPart? = nil
+    ) {
+        addMaskArea(kind: option.componentKind, operation: operation)
+        guard let maskIndex = selectedMaskIndex,
+              let componentIndex = recipe.masks[maskIndex].components.indices.last
+        else { return }
+        recipe.masks[maskIndex].components[componentIndex].isInverted = option.startsInverted
+        if option == .people {
+            recipe.masks[maskIndex].components[componentIndex].personIndex = person
+            recipe.masks[maskIndex].components[componentIndex].personPart = part == .entire ? nil : part
+        }
+        scheduleRender()
+    }
+
     func addMaskArea(kind: PhotoMaskComponentKind, operation: MaskBlendOperation) {
         guard let maskID = selectedMaskID, let index = recipe.masks.firstIndex(where: { $0.id == maskID }) else {
             addMask(kind: kind)
@@ -2622,7 +2642,7 @@ final class PhotoEditorController {
         recordHistory()
         var component = PhotoMaskComponent(kind: kind)
         component.operation = operation
-        if kind == .subject || kind == .sky || kind.isFacePart {
+        if kind == .subject || kind == .sky || kind == .people || kind.isFacePart {
             detectingMaskComponentIDs.insert(component.id)
         }
         recipe.masks[index].components.append(component)
@@ -2738,13 +2758,21 @@ final class PhotoEditorController {
     /// of the reverse confusion — an eye switched on later while the guard
     /// against effect-off masks quietly refused to draw anything.
     func toggleSelectedMaskVisibility() {
-        guard let index = selectedMaskIndex else { return }
+        guard let id = selectedMaskID else { return }
+        toggleMaskVisibility(id)
+    }
+
+    /// Hide / Show one mask's effect — the list's 👁, for any row.
+    func toggleMaskVisibility(_ id: UUID) {
+        guard let index = recipe.masks.firstIndex(where: { $0.id == id }) else { return }
         recordHistory()
         recipe.masks[index].isVisible.toggle()
-        if recipe.masks[index].isVisible {
-            revealMaskShape()
-        } else {
-            showsMaskOverlay = false
+        if id == selectedMaskID {
+            if recipe.masks[index].isVisible {
+                revealMaskShape()
+            } else {
+                showsMaskOverlay = false
+            }
         }
         scheduleRender()
     }
