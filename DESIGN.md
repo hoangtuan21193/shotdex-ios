@@ -106,7 +106,7 @@ Thumbnail trong lưới ảnh: vuông, không bo (do `PhotoGridCollectionView` q
 | `r-cell` | **10** | ô lệnh trong dải lệnh inspector |
 | `r-export` | **19** | pill Export |
 
-Định nghĩa trong `VideoStudioMetrics` (`trackRadius`/`commandCellRadius`/`exportPillRadius`). **Không** dùng ba giá trị này ở màn khác.
+Định nghĩa trong `VideoStudioMetrics` (`trackRadius`/`commandCellRadius`/`exportPillRadius`). **Không** dùng ba giá trị này ở màn khác. Ngoại lệ duy nhất: `r-track` cho ô filmstrip 44pt của editor trên iPhone (FS-03.13d §2, `EditorLayoutMetrics.filmstripCellRadius`) — cùng lý do, một dải ô nhỏ trên nền panel.
 
 ---
 

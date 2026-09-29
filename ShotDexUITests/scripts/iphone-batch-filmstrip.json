@@ -1,0 +1,215 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 25
+  },
+  {
+   "action": "tap",
+   "label": "Select",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "x": 0.17,
+   "y": 0.3
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.3
+  },
+  {
+   "action": "tap",
+   "x": 0.83,
+   "y": 0.3
+  },
+  {
+   "action": "tap",
+   "x": 0.17,
+   "y": 0.46
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.46
+  },
+  {
+   "action": "tap",
+   "x": 0.83,
+   "y": 0.46
+  },
+  {
+   "action": "tap",
+   "x": 0.17,
+   "y": 0.62
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Edit",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 15
+  },
+  {
+   "action": "drag",
+   "x": 0.54,
+   "y": 0.667,
+   "toX": 0.62,
+   "toY": 0.667,
+   "seconds": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "x": 0.214,
+   "y": 0.564
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "drag",
+   "x": 0.54,
+   "y": 0.667,
+   "toX": 0.62,
+   "toY": 0.667,
+   "seconds": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "x": 0.343,
+   "y": 0.564
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "drag",
+   "x": 0.54,
+   "y": 0.667,
+   "toX": 0.62,
+   "toY": 0.667,
+   "seconds": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "x": 0.085,
+   "y": 0.564
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "tap",
+   "x": 0.214,
+   "y": 0.564
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "1-filmstrip"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "dump",
+   "name": "filmstrip",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "label": "Sync"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "2-sync-menu"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "dump",
+   "name": "sync-menu",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.15
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Mask"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "3-mask-no-filmstrip"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "tap",
+   "label": "Apply"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "4-back"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  }
+ ]
+}

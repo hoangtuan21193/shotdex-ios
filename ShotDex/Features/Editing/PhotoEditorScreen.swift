@@ -625,7 +625,7 @@ struct PhotoEditorScreen: View {
             let basePanel = EditorLayoutMetrics.phonePanelHeight(
                 screenHeight: proxy.size.height,
                 topBand: bandHeight,
-                filmstrip: isMultiPhoto && !EditorTool.tool(for: chrome.selectedGroup).isSession ? 56 : 0,
+                filmstrip: isMultiPhoto && showsPhoneFilmstripSlot ? EditorPhoneFilmstrip.height : 0,
                 stageWidth: proxy.size.width,
                 aspect: controller.panelAspect ?? 1.5
             )
@@ -1019,6 +1019,12 @@ struct PhotoEditorScreen: View {
         }
     }
 
+    /// The phone filmstrip is out while a tool — Curve included — is open
+    /// (FS-03.13d §2); the panel's height counts it only when it is in.
+    private var showsPhoneFilmstripSlot: Bool {
+        !EditorTool.tool(for: chrome.selectedGroup).isSession && chrome.selectedGroup != .curve
+    }
+
     /// The run of photos under the canvas. Nothing at all for a single photo, and
     /// nothing while a tool has taken the screen over (drawing, full bleed) —
     /// switching photos mid-stroke is not something anyone means to do.
@@ -1027,7 +1033,31 @@ struct PhotoEditorScreen: View {
         _ controller: PhotoEditorController,
         canvasHeight: CGFloat
     ) -> some View {
-        if let session, session.isMultiPhoto, !chrome.isFullBleed, !controller.isEditingDrawing {
+        if let session, session.isMultiPhoto, !chrome.isFullBleed, !controller.isEditingDrawing, !chrome.isWideLayout {
+            // The phone (FS-03.13d §2): 56pt, and gone while a tool is open —
+            // a mask, a spot, a layer belong to one photo.
+            if showsPhoneFilmstripSlot {
+                EditorPhoneFilmstrip(
+                    session: session,
+                    photoLibrary: dependencies.photoLibrary,
+                    currentHasEdits: !controller.recipe.isIdentity,
+                    sync: EditorFilmstripSync(
+                        canSync: !controller.recipe.isIdentity,
+                        hasPrevious: session.previousRecipe != nil,
+                        syncLook: { syncEditsToAll(.look) },
+                        syncEverything: { syncEditsToAll(.everything) },
+                        applyPrevious: { applyPreviousEdit(controller) },
+                        isAutoSyncing: Binding(
+                            get: { session.isAutoSyncing },
+                            set: { session.isAutoSyncing = $0 }
+                        )
+                    )
+                ) { index in
+                    selectPhoto(at: index)
+                }
+                .transition(.opacity)
+            }
+        } else if let session, session.isMultiPhoto, !chrome.isFullBleed, !controller.isEditingDrawing {
             EditorFilmstrip(
                 session: session,
                 photoLibrary: dependencies.photoLibrary,

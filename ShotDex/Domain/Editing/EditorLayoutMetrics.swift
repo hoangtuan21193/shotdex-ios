@@ -292,6 +292,9 @@ enum EditorLayoutMetrics {
     /// run on screen: at 64pt a thumbnail said "this is a photo" and nothing
     /// else, and picking between two frames of the same subject meant switching
     /// the canvas back and forth.
+    /// The phone filmstrip's frame corner: `r-track`, the Video Studio
+    /// timeline's radius, which DESIGN.md §5 extends to it (FS-03.13d §2).
+    static let filmstripCellRadius: CGFloat = 6
     static let filmstripThumbnailSide: CGFloat = 96
     static let filmstripHeight: CGFloat = 124
     /// The floating command row inside the band: 34pt circular buttons, 37 tall,
