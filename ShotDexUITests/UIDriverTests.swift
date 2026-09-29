@@ -472,7 +472,9 @@ final class UIDriverTests: XCTestCase {
         case .timeline: "timeline"
         case .incrementArrow: "incrementArrow"
         case .decrementArrow: "decrementArrow"
-        @unknown default: "type\(type.rawValue)"
+        // `default`, not `@unknown default`: the 27.1 SDK added cases
+        // (radioGroup, comboBox, tab …) that iOS never produces.
+        default: "type\(type.rawValue)"
         }
     }
 
