@@ -66,8 +66,12 @@ final class ImportedLUTStore {
     /// read is rejected here, where the user is still looking at the picker
     /// and can pick another, rather than silently doing nothing to the
     /// picture later.
+    /// LUTs a receive (an import, an opened `.shotdexlook`) brought, so its
+    /// Undo can take them back (FS-03.14c AC-c8).
+    private(set) var receives: [String: UUID] = [:]
+
     @discardableResult
-    func add(from pickedURL: URL) throws -> ImportedLUT {
+    func add(from pickedURL: URL, receiveID: UUID? = nil) throws -> ImportedLUT {
         let accessing = pickedURL.startAccessingSecurityScopedResource()
         defer { if accessing { pickedURL.stopAccessingSecurityScopedResource() } }
 
@@ -84,9 +88,25 @@ final class ImportedLUTStore {
         let fileName = pickedURL.deletingPathExtension().lastPathComponent
         let name = parsed.title ?? (fileName.isEmpty ? String(localized: "Imported LUT") : fileName)
         names[id] = name
+        if let receiveID { receives[id] = receiveID }
         saveManifest()
         reload()
         return ImportedLUT(id: id, displayName: name, url: destination)
+    }
+
+    /// A LUT from text — the table a `.shotdexlook` embeds (14c §1).
+    @discardableResult
+    func add(text: String, name: String, receiveID: UUID? = nil) throws -> ImportedLUT {
+        let parsed = try CubeLUTParser.parse(text)
+        let id = UUID().uuidString
+        let destination = directory.appendingPathComponent(id).appendingPathExtension("cube")
+        try text.write(to: destination, atomically: true, encoding: .utf8)
+        let displayName = parsed.title ?? name
+        names[id] = displayName
+        if let receiveID { receives[id] = receiveID }
+        saveManifest()
+        reload()
+        return ImportedLUT(id: id, displayName: displayName, url: destination)
     }
 
     func delete(_ lut: ImportedLUT) {

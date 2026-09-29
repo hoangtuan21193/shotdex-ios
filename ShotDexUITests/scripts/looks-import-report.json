@@ -1,0 +1,25 @@
+{
+ "steps": [
+  {"action": "launch", "arguments": ["-ShotDexImportFixtures"]},
+  {"action": "wait", "seconds": 25},
+  {"action": "tap", "x": 0.5, "y": 0.35},
+  {"action": "wait", "seconds": 6},
+  {"action": "tap", "label": "Edit"},
+  {"action": "wait", "seconds": 12},
+  {"action": "tap", "label": "Presets"},
+  {"action": "wait", "seconds": 3},
+  {"action": "tap", "label": "My Looks"},
+  {"action": "wait", "seconds": 5},
+  {"action": "screenshot", "name": "1-report"},
+  {"action": "wait", "seconds": 4},
+  {"action": "dump", "name": "report", "type": "staticText"},
+  {"action": "tap", "label": "Matte Fade, Added with changes"},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "2-lines"},
+  {"action": "wait", "seconds": 4},
+  {"action": "tap", "label": "Done"},
+  {"action": "wait", "seconds": 3},
+  {"action": "screenshot", "name": "3-my-looks"},
+  {"action": "wait", "seconds": 4}
+ ]
+}

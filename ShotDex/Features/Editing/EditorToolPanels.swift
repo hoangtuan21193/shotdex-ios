@@ -16,6 +16,8 @@ struct EditorFiltersPanel: View {
     var luts: ImportedLUTStore?
     /// Asks the screen to name and save the current edit as a look.
     var saveLook: (() -> Void)?
+    /// Import XMP Preset (FS-03.14a): the screen opens the document picker.
+    var lookExchange: LookExchangeModel?
     /// Scrolls itself when the host gives it a fixed height — the phone's
     /// 167pt parameter zone, where My Looks and My LUTs above the film strip
     /// no longer fit. The wide sidebar already scrolls, and a scroll view
@@ -129,6 +131,14 @@ struct EditorFiltersPanel: View {
             if let saveLook {
                 actionTile("Save Current", systemImage: "plus", isEnabled: !controller.recipe.isIdentity, action: saveLook)
             }
+            if let lookExchange {
+                actionTile("Import XMP Preset", systemImage: "square.and.arrow.down", isEnabled: true) {
+                    lookExchange.isPickingFiles = true
+                }
+                #if DEBUG
+                .onAppear { lookExchange.importFixturesIfAsked() }
+                #endif
+            }
             if let lookPresets {
                 ForEach(lookPresets.presets) { preset in
                     lookTile(preset, store: lookPresets)
@@ -199,6 +209,13 @@ struct EditorFiltersPanel: View {
                     .foregroundStyle(EditorTheme.secondaryText)
                     .lineLimit(1)
                     .frame(width: nameWidth)
+                // The look's source, after its name — not part of it (14a §4).
+                if preset.source == .imported {
+                    Text("Imported")
+                        .font(.system(size: 9.5))
+                        .foregroundStyle(EditorTheme.dimText)
+                        .lineLimit(1)
+                }
             }
             .contentShape(Rectangle())
         }
@@ -210,7 +227,7 @@ struct EditorFiltersPanel: View {
                 Label("Delete Look", systemImage: "trash")
             }
         }
-        .accessibilityLabel("Apply look \(preset.name)")
+        .accessibilityLabel(preset.source == .imported ? "Apply look \(preset.name), Imported" : "Apply look \(preset.name)")
     }
 
     private var content: some View {
@@ -258,6 +275,16 @@ struct EditorFiltersPanel: View {
                         }
                         .buttonStyle(.plain)
                         .disabled(controller.recipe.isIdentity)
+                    }
+                    if let lookExchange {
+                        Button {
+                            lookExchange.isPickingFiles = true
+                        } label: {
+                            Label("Import XMP Preset", systemImage: "square.and.arrow.down")
+                                .font(EditorTheme.maskSubtitle)
+                                .foregroundStyle(EditorTheme.accent)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal, 14)

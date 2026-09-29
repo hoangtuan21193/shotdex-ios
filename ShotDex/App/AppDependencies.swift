@@ -83,6 +83,8 @@ final class AppDependencies {
     /// `.cube` LUTs imported from Files — one list for the photo editor's
     /// Presets and Video Studio's colour panel.
     let importedLUTs: ImportedLUTStore
+    /// Importing presets and looks, and later receiving them (FS-03.14).
+    let lookExchange: LookExchangeModel
     /// The order and visibility of the Collections tab's sections.
     let collectionsLayout: CollectionsLayoutStore
     /// Photos opened and photos shared, for the Recently Viewed / Recently
@@ -244,6 +246,7 @@ final class AppDependencies {
         self.editClipboard = EditClipboard()
         self.lookPresets = LookPresetStore()
         self.importedLUTs = ImportedLUTStore()
+        self.lookExchange = LookExchangeModel(looks: lookPresets, luts: importedLUTs)
         self.collectionsLayout = CollectionsLayoutStore()
         self.spotlight = SpotlightIndexer(
             libraryQueries: libraryQueries,

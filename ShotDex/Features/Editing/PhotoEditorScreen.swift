@@ -236,6 +236,23 @@ struct PhotoEditorScreen: View {
                 }
             }
         }
+        // Import XMP Preset (FS-03.14a): many files at once, then the report.
+        .fileImporter(
+            isPresented: Binding(
+                get: { dependencies.lookExchange.isPickingFiles },
+                set: { dependencies.lookExchange.isPickingFiles = $0 }
+            ),
+            allowedContentTypes: LookExchangeModel.importTypes,
+            allowsMultipleSelection: true
+        ) { result in
+            if case let .success(urls) = result { dependencies.lookExchange.startImport(urls) }
+        }
+        .sheet(isPresented: Binding(
+            get: { dependencies.lookExchange.isSheetPresented },
+            set: { if !$0 { dependencies.lookExchange.dismissReport() } }
+        )) {
+            LookImportReportSheet(model: dependencies.lookExchange)
+        }
         .sheet(isPresented: $isImagePickerPresented) {
             if let controller {
                 EditorSignatureImagePicker(
@@ -2959,6 +2976,7 @@ struct PhotoEditorScreen: View {
                     lookName = dependencies.lookPresets.suggestedName()
                     isSaveLookPresented = true
                 },
+                lookExchange: dependencies.lookExchange,
                 scrolls: isScrollable ?? !chrome.isWideLayout
             )
         case .markup where !chrome.isWideLayout:
