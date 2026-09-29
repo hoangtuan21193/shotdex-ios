@@ -11,6 +11,9 @@ final class LookInbox {
     private let luts: ImportedLUTStore?
     private let banner: AppBannerModel
     private let directory: URL
+    /// The App Group room "Add to ShotDex" fills; emptied into `directory`
+    /// before each drain.
+    private let groupDirectory: URL?
     private var isDraining = false
     private var drainsAgain = false
 
@@ -19,11 +22,18 @@ final class LookInbox {
             .appendingPathComponent("LookInbox", isDirectory: true)
     }
 
-    init(looks: LookPresetStore, luts: ImportedLUTStore?, banner: AppBannerModel, directory: URL = LookInbox.defaultDirectory()) {
+    init(
+        looks: LookPresetStore,
+        luts: ImportedLUTStore?,
+        banner: AppBannerModel,
+        directory: URL = LookInbox.defaultDirectory(),
+        groupDirectory: URL? = LookInboxLocation.pendingDirectory()
+    ) {
         self.looks = looks
         self.luts = luts
         self.banner = banner
         self.directory = directory
+        self.groupDirectory = groupDirectory
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     }
 
@@ -71,6 +81,7 @@ final class LookInbox {
         var last: PresetImportReport?
         repeat {
             drainsAgain = false
+            collectFromGroup()
             let files = pending
             guard !files.isEmpty else { break }
             let plan = await Task.detached(priority: .userInitiated) { try? PresetImporter.read(files) }.value
@@ -82,6 +93,18 @@ final class LookInbox {
             last = report
         } while drainsAgain
         return last
+    }
+
+    /// Moves what "Add to ShotDex" left in the App Group into the app's own
+    /// inbox, folder by folder.
+    private func collectFromGroup() {
+        guard let groupDirectory else { return }
+        let folders = (try? FileManager.default.contentsOfDirectory(
+            at: groupDirectory, includingPropertiesForKeys: nil, options: .skipsHiddenFiles
+        )) ?? []
+        for folder in folders {
+            try? FileManager.default.moveItem(at: folder, to: directory.appendingPathComponent(folder.lastPathComponent, isDirectory: true))
+        }
     }
 
     /// Undo on the banner: every look and LUT the receive added.

@@ -118,6 +118,12 @@ final class UIDriverTests: XCTestCase {
             _ = app.wait(for: .runningForeground, timeout: 30)
         case "activate":
             app.activate()
+        case "switchApp":
+            // Another app — Files, to reach a share extension — and every
+            // later step goes to it. `text` is its bundle identifier.
+            app = XCUIApplication(bundleIdentifier: step.text ?? "com.hoangtuan.shotdex")
+            app.activate()
+            _ = app.wait(for: .runningForeground, timeout: 30)
         case "tap", "tapIndex":
             if let point = coordinate(for: step) {
                 point.tap()
@@ -502,7 +508,7 @@ final class UIDriverTests: XCTestCase {
 
     private func writeReport() {
         hasWrittenReport = true
-        let screen = XCUIApplication().frame
+        let screen = app.frame
         let ours = ProcessInfo.processInfo.environment.filter { $0.key.contains("SHOTDEX") }
             .mapValues { $0.count > 120 ? "\($0.prefix(120))… (\($0.count) chars)" : $0 }
         let report = UIDriverReport(

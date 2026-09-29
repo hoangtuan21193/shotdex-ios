@@ -1,0 +1,30 @@
+{
+ "steps": [
+  {"action": "switchApp", "text": "com.apple.DocumentsApp"},
+  {"action": "wait", "seconds": 4},
+  {"action": "tap", "label": "Browse"},
+  {"action": "wait", "seconds": 2},
+  {"action": "tap", "label": "On My iPhone"},
+  {"action": "wait", "seconds": 3},
+  {"action": "screenshot", "name": "1-files"},
+  {"action": "tap", "label": "More"},
+  {"action": "wait", "seconds": 2},
+  {"action": "tap", "label": "Select"},
+  {"action": "wait", "seconds": 2},
+  {"action": "tap", "x": 0.176, "y": 0.265},
+  {"action": "tap", "x": 0.5, "y": 0.265},
+  {"action": "wait", "seconds": 2},
+  {"action": "tap", "label": "Share"},
+  {"action": "wait", "seconds": 4},
+  {"action": "screenshot", "name": "2-share-sheet"},
+  {"action": "tap", "x": 0.17, "y": 0.655},
+  {"action": "wait", "seconds": 4},
+  {"action": "screenshot", "name": "3-added"},
+  {"action": "tap", "label": "Done"},
+  {"action": "wait", "seconds": 2},
+  {"action": "switchApp", "text": "com.hoangtuan.shotdex"},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "4-banner"},
+  {"action": "wait", "seconds": 3}
+ ]
+}

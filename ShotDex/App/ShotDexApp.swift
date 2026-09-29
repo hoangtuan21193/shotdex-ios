@@ -39,6 +39,8 @@ struct ShotDexApp: App {
                         // once, so coming back to the foreground is the other
                         // moment those asks can be answered.
                         Task { await dependencies.refreshWidgetSnapshot() }
+                        // Looks "Add to ShotDex" left while the app was away.
+                        Task { await dependencies.lookInbox.drain() }
                     }
                 }
                 // A tapped Spotlight result arrives as a user activity rather

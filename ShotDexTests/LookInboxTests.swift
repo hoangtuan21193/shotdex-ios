@@ -28,7 +28,7 @@ struct LookInboxTests {
         let looks = LookPresetStore(directory: makeDirectory("looks"), defaults: UserDefaults(suiteName: UUID().uuidString)!)
         let banner = AppBannerModel()
         let inboxDirectory = makeDirectory("inbox")
-        let inbox = LookInbox(looks: looks, luts: nil, banner: banner, directory: inboxDirectory)
+        let inbox = LookInbox(looks: looks, luts: nil, banner: banner, directory: inboxDirectory, groupDirectory: nil)
         let sent = try lookFile("Golden")
 
         let report = try #require(await inbox.receive(sent))
@@ -48,7 +48,7 @@ struct LookInboxTests {
         let looks = LookPresetStore(directory: makeDirectory("looks"), defaults: UserDefaults(suiteName: UUID().uuidString)!)
         let luts = ImportedLUTStore()
         let banner = AppBannerModel()
-        let inbox = LookInbox(looks: looks, luts: luts, banner: banner, directory: makeDirectory("inbox"))
+        let inbox = LookInbox(looks: looks, luts: luts, banner: banner, directory: makeDirectory("inbox"), groupDirectory: nil)
         let lutsBefore = luts.luts.count
         let cube = "TITLE \"Teal\"\nLUT_3D_SIZE 2\n0 0 0\n1 0 0\n0 1 0\n1 1 0\n0 0 1\n1 0 1\n0 1 1\n1 1 1\n"
         let sent = try lookFile("Teal Look", lut: LookFile.EmbeddedLUT(name: "Teal", cube: cube))
@@ -75,10 +75,28 @@ struct LookInboxTests {
         try FileManager.default.createDirectory(at: waiting, withIntermediateDirectories: true)
         try FileManager.default.copyItem(at: try lookFile("Dune"), to: waiting.appendingPathComponent("Dune.shotdexlook"))
 
-        let inbox = LookInbox(looks: looks, luts: nil, banner: AppBannerModel(), directory: inboxDirectory)
+        let inbox = LookInbox(looks: looks, luts: nil, banner: AppBannerModel(), directory: inboxDirectory, groupDirectory: nil)
         await inbox.drain()
         await inbox.drain()
         #expect(looks.presets.map(\.name) == ["Dune"])
+        #expect(inbox.pending.isEmpty)
+    }
+
+    /// FS-03.14 AC-c9. Two files "Add to ShotDex" left in the App Group come
+    /// in on the next launch as one receive — "2 looks added" — and the
+    /// waiting room is empty.
+    @Test func pendingFilesImportOnLaunch() async throws {
+        let looks = LookPresetStore(directory: makeDirectory("looks"), defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        let banner = AppBannerModel()
+        let group = makeDirectory("group")
+        let deposit = LookInboxLocation.deposit([try lookFile("Golden"), try lookFile("Dune")], into: group)
+        #expect(deposit == .init(added: 2, refused: []))
+
+        let inbox = LookInbox(looks: looks, luts: nil, banner: banner, directory: makeDirectory("inbox"), groupDirectory: group)
+        await inbox.drain()
+        #expect(Set(looks.presets.map(\.name)) == ["Golden", "Dune"])
+        #expect(banner.current?.text == "2 looks added")
+        #expect(LookInboxLocation.totals(in: group).files == 0)
         #expect(inbox.pending.isEmpty)
     }
 
