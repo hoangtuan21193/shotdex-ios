@@ -33,4 +33,18 @@ struct CameraProfileMapTests {
         #expect(applied.color == photo.color)
         #expect(applied.curve == photo.curve)
     }
+
+    /// FS-03.14 AC-b2. "Adobe Color" with Vibrance +10: film look Original,
+    /// Vibrance +10, a ≈ line naming the profile.
+    @Test func unknownProfileFallsBackToOriginal() throws {
+        #expect(CameraProfileMap.match("Adobe Color") == .none)
+        let settings = try LightroomXMPReader.read(LightroomXMPReaderTests.preset(
+            #"crs:CameraProfile="Adobe Color" crs:Vibrance="+10""#
+        ))
+        let result = LightroomMapping.map(settings)
+        #expect(result.recipe.filter == .original)
+        #expect(abs(result.recipe.adjustments[.vibrance] - 0.1) < 1e-9)
+        #expect(result.lines == [PresetReportLine(kind: .changed, text: "No ShotDex look for profile 'Adobe Color' — Original used")])
+        #expect(PresetImportReport.status(applied: result.appliedCount, lines: result.lines) == .addedWithChanges)
+    }
 }
