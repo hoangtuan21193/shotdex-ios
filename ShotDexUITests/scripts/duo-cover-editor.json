@@ -1,0 +1,28 @@
+{
+ "steps": [
+  {"action": "launch"},
+  {"action": "wait", "seconds": 20},
+  {"action": "tap", "x": 0.4, "y": 0.35},
+  {"action": "wait", "seconds": 8},
+  {"action": "tap", "label": "Edit"},
+  {"action": "wait", "seconds": 14},
+  {"action": "screenshot", "name": "1-edit"},
+  {"action": "wait", "seconds": 4},
+  {"action": "dump", "name": "cover-edit", "type": "button"},
+  {"action": "dump", "name": "cover-edit-images", "type": "image"},
+  {"action": "tap", "label": "Mask", "type": "button"},
+  {"action": "wait", "seconds": 4},
+  {"action": "tap", "label": "Brush"},
+  {"action": "wait", "seconds": 4},
+  {"action": "drag", "x": 0.25, "y": 0.3, "toX": 0.6, "toY": 0.3, "seconds": 0.3},
+  {"action": "wait", "seconds": 3},
+  {"action": "screenshot", "name": "2-mask"},
+  {"action": "wait", "seconds": 4},
+  {"action": "dump", "name": "cover-mask", "type": "button"},
+  {"action": "tap", "label": "Apply"},
+  {"action": "wait", "seconds": 3},
+  {"action": "screenshot", "name": "3-after-apply"},
+  {"action": "wait", "seconds": 4},
+  {"action": "dump", "name": "cover-after", "type": "button"}
+ ]
+}

@@ -225,7 +225,8 @@ struct EditorBrushPillButton: View {
         .font(EditorTheme.chipLabel)
         .foregroundStyle(.white)
         .lineLimit(1)
-        .minimumScaleFactor(EditorLayoutMetrics.editorPanelRowMinimumScale)
+        // A 60pt pill on the Duo cover's 326pt list: "Feather 45" needs 0.75.
+        .minimumScaleFactor(0.75)
         .frame(maxWidth: .infinity)
         .frame(height: EditorStripLayout.chipHeight)
         .background(

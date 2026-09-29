@@ -47,6 +47,17 @@ enum EditorLayoutMetrics {
     static let phonePanelShort: CGFloat = 264
     static let phonePanelCurve: CGFloat = 315
 
+    /// The Duo cover (FS-03.13d §3): a compact window with iOS's rail in a
+    /// trailing safe area this wide or wider gets the tool column.
+    static let duoCoverRailMinimum: CGFloat = 60
+    static let duoCoverBandHeight: CGFloat = 44
+    static let duoCoverListHeight: CGFloat = 300
+    static let duoCoverListRadius = editorPanelCornerRadius
+
+    static func usesDuoCoverColumn(isWide: Bool, windowTrailingInset: CGFloat) -> Bool {
+        !isWide && windowTrailingInset >= duoCoverRailMinimum
+    }
+
     /// 344 when the photo, fitted to the stage width, still fits the height a
     /// 344 panel leaves — the 80pt come out of black bars, never out of the
     /// picture — else 264. `aspect` is width ÷ height after the saved crop;

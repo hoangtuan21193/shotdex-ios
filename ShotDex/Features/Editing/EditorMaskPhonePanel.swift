@@ -388,6 +388,12 @@ struct EditorMaskTopRow: View {
     @Bindable var chrome: EditorChromeModel
     let rename: () -> Void
 
+    @State private var rowWidth: CGFloat = 400
+
+    /// Below this the name gives way to "Mask Overlay": on the Duo cover's
+    /// 326pt list "Mask 1" read "Ma…" (FS-03.13d §3 allows "Overlay" there).
+    static let fullChipMinimumWidth: CGFloat = 350
+
     var body: some View {
         HStack(spacing: AppTheme.Spacing.sm) {
             if let mask = controller.selectedMask {
@@ -425,10 +431,11 @@ struct EditorMaskTopRow: View {
             Button {
                 controller.setMaskOverlay(!controller.isMaskOverlayPinned)
             } label: {
-                Text("Mask Overlay")
+                Text(rowWidth < Self.fullChipMinimumWidth ? "Overlay" : "Mask Overlay")
                     .fixedSize()
             }
             .buttonStyle(EditorChipButtonStyle(isSelected: controller.isMaskOverlayPinned))
+            .accessibilityLabel("Mask Overlay")
             .accessibilityAddTraits(controller.isMaskOverlayPinned ? .isSelected : [])
 
             Button {
@@ -454,6 +461,7 @@ struct EditorMaskTopRow: View {
         .padding(.leading, AppTheme.Spacing.lg)
         .padding(.trailing, AppTheme.Spacing.sm)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onGeometryChange(for: CGFloat.self, of: \.size.width) { rowWidth = $0 }
     }
 
     /// The areas, or "Subtracting" while a subtracted area is the one being

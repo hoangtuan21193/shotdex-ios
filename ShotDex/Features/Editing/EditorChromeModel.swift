@@ -42,6 +42,9 @@ final class EditorChromeModel {
     var showsBrushSizePreview = false
     /// The Markup tool's list of layers, opened from the name in its top row.
     var isLayerListOpen = false
+    /// The window's trailing safe-area inset: 84 on the Duo's cover, where
+    /// iOS puts its rail (FS-03.13d §3).
+    var windowTrailingInset: CGFloat = 0
     /// Floating histogram card. It sits over the photo when expanded and parks as
     /// a pill in the action bar when collapsed. Collapsed on open — the photo is
     /// what the editor is for, so nothing covers it until the user asks.

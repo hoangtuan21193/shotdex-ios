@@ -654,6 +654,11 @@ struct PhotoEditorScreen: View {
                         canvasWidth: proxy.size.width,
                         canvasHeight: proxy.size.height
                     )
+                } else if EditorLayoutMetrics.usesDuoCoverColumn(
+                    isWide: false,
+                    windowTrailingInset: chrome.windowTrailingInset
+                ) {
+                    duoCoverBody(controller, bottomInset: proxy.safeAreaInsets.bottom)
                 } else {
                     narrowBody(
                         controller,
@@ -661,6 +666,11 @@ struct PhotoEditorScreen: View {
                         panelHeight: panelHeight,
                         canvasHeight: proxy.size.height
                     )
+                }
+            }
+            .background {
+                EditorWindowInsetsReader { insets in
+                    if chrome.windowTrailingInset != insets.right { chrome.windowTrailingInset = insets.right }
                 }
             }
             // Follows the window, not the device: a Split View that narrows past
@@ -836,6 +846,92 @@ struct PhotoEditorScreen: View {
 
     /// Phone layout: band on top, photo, one fixed slab of tools glued to the
     /// bottom.
+    /// The Duo cover (FS-03.13d §3): a 44pt band without an island, the photo
+    /// 326pt wide, the list a fixed 300 under it, and the six tools — or ✕ and
+    /// ✓ inside a tool — in a 56pt column beside iOS's rail, under Save.
+    private func duoCoverBody(_ controller: PhotoEditorController, bottomInset: CGFloat) -> some View {
+        let isInTool = EditorTool.tool(for: chrome.selectedGroup).isSession || chrome.selectedGroup == .curve
+        return HStack(spacing: 0) {
+            VStack(spacing: 0) {
+                if !chrome.isFullBleed {
+                    duoCoverBand(controller, isInTool: isInTool)
+                }
+                imageStage(controller)
+                if !chrome.isFullBleed {
+                    duoCoverList(controller)
+                    Color.clear.frame(height: bottomInset)
+                }
+            }
+            if !chrome.isFullBleed {
+                EditorToolColumn(
+                    current: EditorTool.tool(for: chrome.selectedGroup),
+                    isInSubTool: chrome.selectedGroup == .curve,
+                    select: { tool in selectTool(tool, in: controller) },
+                    cancel: { cancelTool(in: controller) },
+                    apply: { applyTool(in: controller) }
+                ) {
+                    saveButton(controller, side: 36)
+                }
+                .padding(.bottom, bottomInset)
+                .background(EditorTheme.background)
+            }
+        }
+        .background(EditorTheme.background)
+        .environment(\.editorUsesPanelStyle, true)
+        .onAppear { chrome.phonePanelHeight = EditorLayoutMetrics.duoCoverListHeight }
+    }
+
+    /// Back · Undo · Redo … histogram · ⋯, and the open tool's name in the
+    /// middle while one is.
+    private func duoCoverBand(_ controller: PhotoEditorController, isInTool: Bool) -> some View {
+        let side: CGFloat = 36
+        return HStack(spacing: 5) {
+            backButton(controller, side: side)
+            circleCommand("arrow.uturn.backward", isEnabled: controller.canUndo) { controller.undo() }
+                .accessibilityLabel("Undo")
+            circleCommand("arrow.uturn.forward", isEnabled: controller.canRedo) { controller.redo() }
+                .accessibilityLabel("Redo")
+            Spacer(minLength: AppTheme.Spacing.sm)
+            EditorHistogramPill(histogram: controller.histogram, namespace: histogramNamespace) {
+                withAnimation(EditorHistogramTransition.animation) {
+                    chrome.isHistogramCollapsed = false
+                }
+            }
+            .frame(width: 40, height: 28)
+            overflowMenu(controller)
+        }
+        .overlay {
+            if isInTool {
+                Text(chrome.selectedGroup == .curve ? "Curve" : EditorTool.tool(for: chrome.selectedGroup).title)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .accessibilityAddTraits(.isHeader)
+                    .allowsHitTesting(false)
+            }
+        }
+        .padding(.horizontal, AppTheme.Spacing.sm)
+        .frame(height: EditorLayoutMetrics.duoCoverBandHeight)
+        .background(EditorTheme.background)
+    }
+
+    /// The panel's zone without its tool bar: fixed at 300 on the cover.
+    private func duoCoverList(_ controller: PhotoEditorController) -> some View {
+        let hasTarget = panelHasTargetStrip(controller)
+        let slab = RoundedRectangle(cornerRadius: EditorLayoutMetrics.duoCoverListRadius, style: .continuous)
+        return VStack(spacing: 0) {
+            Color.clear.frame(height: EditorLayoutMetrics.editorParamZoneTopInset)
+            if hasTarget {
+                targetStrip(controller)
+                    .frame(height: EditorLayoutMetrics.editorTargetStripHeight)
+            }
+            toolPanel(controller)
+                .frame(maxHeight: .infinity)
+        }
+        .frame(height: EditorLayoutMetrics.duoCoverListHeight)
+        .background(EditorTheme.panelSolid, in: slab)
+        .clipShape(slab)
+    }
+
     private func narrowBody(
         _ controller: PhotoEditorController,
         bandHeight: CGFloat,
