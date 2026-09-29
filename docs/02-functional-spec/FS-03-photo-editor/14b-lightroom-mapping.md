@@ -113,6 +113,6 @@ Mọi dòng "✕ tới FS-03.15/16" ở §2 là thông số ShotDex **chưa có*
 | AC-b5 | `WhiteBalance`="Custom", `Temperature`=5500, `Tint`=+10 | nhập rồi áp lên một RAW và một JPEG | look mang WB tuyệt đối 5500 K / Tint +10 (không phải độ lệch so với As Shot); RAW: nhiệt độ trung tính của decoder = 5500 K, tint +10, slider WB đọc 5500 K; JPEG không đổi màu (sai lệch 0/255); hàng ✓ (chốt E7) | `LightroomMappingTests.absoluteWhiteBalanceIsRAWOnly` |
 | AC-b6 | preset có creative profile kèm `Look/Parameters/LookTable` 32³ và Amount 60 | nhập | My LUTs +1 mang tên profile; look trỏ tới LUT đó ở 60% | `CreativeProfileTests.rgbTableBecomesALUT` — ⚠️ chưa có, chờ câu treo 2 |
 | AC-b7 | FS-03.15 chưa ship; preset có `ParametricShadows`=-20 và `Clarity2012`=+15 | nhập | Clarity +15; dòng ✕ "Tone curve regions aren't in ShotDex yet" | `LightroomMappingTests.missingTargetsAreSkippedWithAReason` |
-| AC-b8 | preset "adaptive" có mask Sky (Exposure −0.70 trong mask) và `Vibrance`=+20 toàn ảnh | nhập | look có Vibrance +20, không mask, không có Exposure trong tập thông số đã đặt; dòng ✕ "Masks stay with each photo"; hàng ≈ | `LightroomMappingTests.masksAreNeverImported` |
+| AC-b8 | preset "adaptive" có mask Sky (Exposure −0.70 trong mask) và `Vibrance`=+20 toàn ảnh | nhập | look có Vibrance +20, không mask, không có Exposure trong tập thông số đã đặt; dòng ✕ "Masks stay with each photo"; hàng ≈ | ✅ `LightroomMappingTests.masksAreNeverImported` |
 
 **Chưa chứng minh được:** AC-b1…b8 (chưa có code); AC-b6 còn chờ thử nghiệm RGBTable.

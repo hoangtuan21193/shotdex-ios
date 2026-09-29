@@ -30,4 +30,30 @@ struct LightroomMappingTests {
         #expect(result.lines == [PresetReportLine(kind: .skipped, text: "Crop stays with each photo")])
         #expect(PresetImportReport.status(applied: result.appliedCount, lines: result.lines) == .addedWithChanges)
     }
+
+    /// FS-03.14 AC-b8 (D37). An adaptive preset: a Sky mask with Exposure
+    /// −0.70 inside it and Vibrance +20 on the whole photo. The look has
+    /// Vibrance +20, no mask, no Exposure among its settings; ✕ "Masks stay
+    /// with each photo"; ≈ row.
+    @Test func masksAreNeverImported() throws {
+        let body = """
+        <crs:MaskGroupBasedCorrections>
+         <rdf:Seq>
+          <rdf:li>
+           <rdf:Description crs:What="Correction" crs:CorrectionAmount="1" crs:LocalExposure2012="-0.70">
+            <crs:CorrectionMasks>
+             <rdf:Seq><rdf:li crs:What="Mask/Image" crs:MaskSubType="2"/></rdf:Seq>
+            </crs:CorrectionMasks>
+           </rdf:Description>
+          </rdf:li>
+         </rdf:Seq>
+        </crs:MaskGroupBasedCorrections>
+        """
+        let result = try map(#"crs:Vibrance="+20""#, body: body)
+        #expect(result.recipe.masks.isEmpty)
+        #expect(abs(result.recipe.adjustments[.vibrance] - 0.2) < 1e-9)
+        #expect(result.recipe.adjustments[.exposure] == 0)
+        #expect(!result.namedSettings.contains(.adjustment(.exposure)))
+        #expect(result.lines == [PresetReportLine(kind: .skipped, text: "Masks stay with each photo")])
+    }
 }

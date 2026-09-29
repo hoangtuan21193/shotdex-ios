@@ -67,8 +67,22 @@ enum LightroomMappingTable {
         skippedGroups.first { $0.matches(tag) }
     }
 
+    private static let hundred: ClosedRange<Double> = -100...100
+
     static let adjustments: [String: AdjustmentRow] = [
         "Exposure2012": AdjustmentRow(kind: .exposure, title: "Exposure", lightroom: nil, unit: " EV"),
+        "Contrast2012": AdjustmentRow(kind: .contrast, title: "Contrast", lightroom: hundred),
+        "Highlights2012": AdjustmentRow(kind: .highlights, title: "Highlights", lightroom: hundred),
+        "Shadows2012": AdjustmentRow(kind: .shadows, title: "Shadows", lightroom: hundred),
+        "Whites2012": AdjustmentRow(kind: .whites, title: "Whites", lightroom: hundred),
+        "Blacks2012": AdjustmentRow(kind: .blackPoint, title: "Blacks", lightroom: hundred),
+        "Texture": AdjustmentRow(kind: .texture, title: "Texture", lightroom: hundred),
+        "Clarity2012": AdjustmentRow(kind: .clarity, title: "Clarity", lightroom: hundred),
+        "Dehaze": AdjustmentRow(kind: .dehaze, title: "Dehaze", lightroom: hundred),
+        "Vibrance": AdjustmentRow(kind: .vibrance, title: "Vibrance", lightroom: hundred),
+        "Saturation": AdjustmentRow(kind: .saturation, title: "Saturation", lightroom: hundred),
+        "IncrementalTemperature": AdjustmentRow(kind: .warmth, title: "Temp", lightroom: hundred),
+        "IncrementalTint": AdjustmentRow(kind: .tint, title: "Tint", lightroom: hundred),
     ]
 
     private static let bandNames: [String: ColorMixerBand] = [
