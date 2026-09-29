@@ -64,10 +64,14 @@ struct EditorImageStage: View {
         }
     }
 
-    /// Upright Guided is on and Geometry is open: a drag on the photo draws a
-    /// guide, so the guide layer owns the stage's touches like the crop frame.
+    /// Upright Guided is on and Geometry is open — on the phone, Transform
+    /// scrolled to Upright or Geometry: a drag on the photo draws a guide, so
+    /// the guide layer owns the stage's touches like the crop frame.
     private var isDrawingGuides: Bool {
-        controller.recipe.upright.mode == .guided && chrome.selectedGroup == .geo
+        guard controller.recipe.upright.mode == .guided else { return false }
+        if chrome.selectedGroup == .geo { return true }
+        return chrome.selectedGroup == .cropGeometry && !chrome.isWideLayout && !chrome.isStraightenToolOn
+            && [.upright, .geometry].contains(chrome.transformListSection)
     }
 
     private var isRulingStraighten: Bool {
@@ -272,8 +276,8 @@ struct EditorImageStage: View {
 
                 if controller.selectedTool == .crop {
                     EditorCropOverlay(controller: controller, imageRect: imageRect)
-                        // The ruler has the photo while the tool is on.
-                        .allowsHitTesting(!isRulingStraighten)
+                        // The ruler, or the guides, have the photo instead.
+                        .allowsHitTesting(!isRulingStraighten && !isDrawingGuides)
                 }
 
                 // Straighten Tool (FS-03.13b §3): one finger draws a ruler,

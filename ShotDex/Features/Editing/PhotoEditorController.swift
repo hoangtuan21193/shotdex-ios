@@ -1060,6 +1060,8 @@ final class PhotoEditorController {
     /// no straighten, turn or flip. Guides follow that one; a turned crop is
     /// drawn as though uncropped.
     private var uprightCropWindow: NormalizedRect {
+        // Transform shows the whole photo with the frame drawn over it.
+        guard selectedTool != .crop else { return .full }
         let crop = recipe.crop
         guard crop.straightenDegrees == 0, crop.quarterTurns % 4 == 0, !crop.flippedHorizontally else {
             return .full

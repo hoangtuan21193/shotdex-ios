@@ -1,0 +1,24 @@
+{
+ "steps": [
+  {"action": "launch"},
+  {"action": "wait", "seconds": 25},
+  {"action": "tap", "x": 0.5, "y": 0.39},
+  {"action": "wait", "seconds": 6},
+  {"action": "tap", "label": "Edit"},
+  {"action": "wait", "seconds": 12},
+  {"action": "tap", "label": "Transform"},
+  {"action": "wait", "seconds": 3},
+  {"action": "screenshot", "name": "1-crop"},
+  {"action": "wait", "seconds": 4},
+  {"action": "dump", "name": "crop-buttons", "type": "button"},
+  {"action": "tap", "label": "Crop, Transform groups"},
+  {"action": "wait", "seconds": 2},
+  {"action": "tap", "label": "Upright", "type": "button"},
+  {"action": "wait", "seconds": 3},
+  {"action": "tap", "label": "Guided"},
+  {"action": "wait", "seconds": 3},
+  {"action": "screenshot", "name": "2-upright"},
+  {"action": "wait", "seconds": 4},
+  {"action": "dump", "name": "upright-buttons", "type": "button"}
+ ]
+}
