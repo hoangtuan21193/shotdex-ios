@@ -21,6 +21,7 @@ struct LookSettingKey: RawRepresentable, Hashable, Codable, Sendable {
     static func region(_ key: String) -> LookSettingKey { .init(rawValue: "curve.region.\(key)") }
     static func curve(_ channel: ToneCurveChannel) -> LookSettingKey { .init(rawValue: "curve.\(channel.rawValue)") }
     static let vignetteStyle = LookSettingKey(rawValue: "vignetteStyle")
+    static let rawWhiteBalance = LookSettingKey(rawValue: "rawWhiteBalance")
     static let filter = LookSettingKey(rawValue: "filter")
 }
 
@@ -64,9 +65,11 @@ enum LightroomMapping {
         for tag in settings.structures.sorted() {
             if let group = LightroomMappingTable.skippedGroup(for: tag) { skip(group) }
         }
+        let isAsShot = settings.values["WhiteBalance"]?.lowercased() == "as shot"
         for tag in settings.values.keys.sorted() {
             guard let raw = settings.values[tag] else { continue }
             if LightroomMappingTable.administrative.contains(tag) { continue }
+            if isAsShot, tag == "Temperature" || tag == "Tint" { continue }
             if let group = LightroomMappingTable.skippedGroup(for: tag) {
                 skip(group)
             } else if LightroomMappingTable.legacyProcess.contains(tag) {
@@ -134,6 +137,22 @@ enum LightroomMapping {
             if isOn {
                 result.lines.append(.init(kind: .changed, text: "Lens correction on — the lens is chosen by ShotDex"))
             }
+            return true
+        case "WhiteBalance":
+            // "As Shot" changes nothing; any other value is carried by the
+            // Temperature and Tint beside it.
+            return true
+        case "Temperature", "Tint":
+            // An absolute pair for RAWs (E7); a preset made on a JPEG writes
+            // IncrementalTemperature instead.
+            guard let value = number(raw) else { return nil }
+            if tag == "Temperature" {
+                result.recipe.adjustments.rawWhiteBalanceKelvin = min(RAWWhiteBalance.kelvinRange.upperBound, max(RAWWhiteBalance.kelvinRange.lowerBound, value))
+            } else {
+                result.recipe.adjustments.rawWhiteBalanceTint = min(RAWWhiteBalance.tintRange.upperBound, max(RAWWhiteBalance.tintRange.lowerBound, value))
+            }
+            result.namedSettings.insert(.rawWhiteBalance)
+            result.appliedCount += 1
             return true
         case "CameraProfile":
             switch CameraProfileMap.match(raw) {

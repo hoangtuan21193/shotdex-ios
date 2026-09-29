@@ -97,4 +97,28 @@ struct LightroomMappingTests {
         #expect(abs(recipe.curve.rgb[1].y - 0.6) < 1e-9)
         #expect(result.lines.contains(PresetReportLine(kind: .skipped, text: "Settings from Lightroom 3 or older")))
     }
+
+    /// FS-03.14 AC-b5 (E7). WhiteBalance Custom, Temperature 5500, Tint +10:
+    /// the look carries the absolute pair — not an offset from As Shot — and
+    /// on a RAW the decoder's neutral is exactly 5500 K / +10 whatever the
+    /// file's As Shot; ✓. (A JPEG ignores the pair:
+    /// `RawWhiteBalanceTests.jpegIgnoresAbsoluteWhiteBalance`.)
+    @Test func absoluteWhiteBalanceIsRAWOnly() throws {
+        let result = try map(#"crs:WhiteBalance="Custom" crs:Temperature="5500" crs:Tint="+10""#)
+        #expect(result.recipe.adjustments.rawWhiteBalanceKelvin == 5_500)
+        #expect(result.recipe.adjustments.rawWhiteBalanceTint == 10)
+        #expect(result.recipe.adjustments.rawTemperature == 0)
+        #expect(result.lines.isEmpty)
+        #expect(result.namedSettings == [.rawWhiteBalance])
+        for asShot in [4_800.0, 6_500.0] {
+            let neutral = RAWWhiteBalance.neutral(asShotKelvin: asShot, asShotTint: 3, adjustments: result.recipe.adjustments)
+            #expect(neutral.kelvin == 5_500 && neutral.tint == 10)
+        }
+        let asShot = try map(#"crs:WhiteBalance="As Shot" crs:Temperature="5500""#)
+        #expect(asShot.recipe.adjustments.rawWhiteBalanceKelvin == nil)
+        var look = LookPreset(name: "WB", recipe: result.recipe)
+        look.namedSettings = result.namedSettings
+        let applied = look.applied(onto: .identity)
+        #expect(applied.adjustments.rawWhiteBalanceKelvin == 5_500)
+    }
 }

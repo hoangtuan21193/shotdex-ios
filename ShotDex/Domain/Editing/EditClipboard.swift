@@ -160,6 +160,9 @@ extension EditorSyncScope {
                 }
             case "vignetteStyle":
                 result.vignetteStyle = source.vignetteStyle
+            case "rawWhiteBalance":
+                result.adjustments.rawWhiteBalanceKelvin = source.adjustments.rawWhiteBalanceKelvin
+                result.adjustments.rawWhiteBalanceTint = source.adjustments.rawWhiteBalanceTint
             case "filter":
                 result.filter = source.filter
                 result.lutID = source.lutID
