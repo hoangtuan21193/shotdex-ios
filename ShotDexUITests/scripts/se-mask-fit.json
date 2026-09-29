@@ -1,0 +1,20 @@
+{
+ "steps": [
+  {"action": "launch"},
+  {"action": "wait", "seconds": 25},
+  {"action": "tap", "x": 0.5, "y": 0.39},
+  {"action": "wait", "seconds": 6},
+  {"action": "tap", "label": "Edit"},
+  {"action": "wait", "seconds": 12},
+  {"action": "tap", "label": "Mask"},
+  {"action": "wait", "seconds": 3},
+  {"action": "swipe", "x": 0.5, "y": 0.9, "direction": "up", "distance": 0.1, "seconds": 0.5},
+  {"action": "wait", "seconds": 2},
+  {"action": "tap", "label": "Brush"},
+  {"action": "wait", "seconds": 3},
+  {"action": "screenshot", "name": "1-brush"},
+  {"action": "wait", "seconds": 4},
+  {"action": "dump", "name": "buttons", "type": "button"},
+  {"action": "dump", "name": "texts", "type": "staticText"}
+ ]
+}
