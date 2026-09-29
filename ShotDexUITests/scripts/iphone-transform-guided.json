@@ -1,0 +1,150 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 30
+  },
+  {
+   "action": "tap",
+   "label": "Search"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "typeText",
+   "text": "D800E\n"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "tap",
+   "x": 0.17,
+   "y": 0.3
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Edit"
+  },
+  {
+   "action": "wait",
+   "seconds": 12
+  },
+  {
+   "action": "tap",
+   "label": "Transform"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Crop, Transform groups"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Upright",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Guided"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "drag",
+   "x": 0.2,
+   "y": 0.2,
+   "toX": 0.22,
+   "toY": 0.55
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "drag",
+   "x": 0.35,
+   "y": 0.2,
+   "toX": 0.37,
+   "toY": 0.55
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "drag",
+   "x": 0.5,
+   "y": 0.2,
+   "toX": 0.52,
+   "toY": 0.55
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "drag",
+   "x": 0.65,
+   "y": 0.2,
+   "toX": 0.67,
+   "toY": 0.55
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "drag",
+   "x": 0.8,
+   "y": 0.2,
+   "toX": 0.8200000000000001,
+   "toY": 0.55
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "1-five-drawn"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "dump",
+   "name": "guided-text",
+   "type": "staticText"
+  },
+  {
+   "action": "dump",
+   "name": "guided-buttons",
+   "type": "button"
+  }
+ ]
+}
