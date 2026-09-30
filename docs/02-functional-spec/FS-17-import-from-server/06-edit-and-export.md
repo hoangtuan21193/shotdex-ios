@@ -46,7 +46,7 @@ lệnh đó (AC-67). Trong đợt 1 ba lệnh này không có trong menu, chứ 
 
 - Mọi lệnh ở §3, trừ Export EXIF, đều tải **bản gốc** trước. Cặp RAW+JPEG thì tải cả hai file, như Import (FS-17.02 §2).
 - Kiểm chỗ trống **trước** khi tải: tổng dung lượng các file cộng 1 GB phải còn đủ, như FS-17.02 §1. Không đủ thì
-  không tải và báo "Not enough space on this device — about Y GB needed."
+  không tải và báo "Not enough space on this device — about Y more needed.", cùng câu với Import.
 - Tải xong, file được kiểm như lúc Import (số byte đúng, ImageIO mở được). Hỏng thì ảnh đó lỗi, loạt vẫn chạy tiếp.
 - Có tiến độ `Downloading 3 of 12` kèm nút Cancel. Cancel thì xoá phần đã tải và quay lại lưới.
 - Một connection chỉ chạy một lệnh mỗi lúc: đang tải thì lưới không tải thumbnail mới.
@@ -107,7 +107,7 @@ lệnh đó (AC-67). Trong đợt 1 ba lệnh này không có trong menu, chứ 
 | AC-52 | folder NAS có `a.JPG` | nhấn giữ `a.JPG` | menu có Edit, Share, Copy, Import to Library, Rename, Delete; không có Adjust Date, Add to Collection, Duplicate, Favorite, Hide | ảnh `scripts/server-edit.json` ⚠️ chưa có |
 | AC-53 | chọn 3 ảnh | mở ⋯ | 8 lệnh §3 theo đúng thứ tự, tên + glyph trùng menu album | `ServerEditMenuTests.matchesAlbumMenu` ⚠️ chưa có + ảnh |
 | AC-54 | `a.JPG` 12 MB, máy còn 500 MB | Edit | tải 1 file, editor mở, server không có thay đổi nào (không ghi, không đổi tên) | `ServerEditSessionTests.downloadsOriginalOnly` ⚠️ chưa có |
-| AC-55 | 3 RAW × 60 MB, máy còn 1.1 GB | Edit | không tải byte nào, báo "about 1.2 GB needed" | `ServerEditSessionTests.spaceCheckBeforeDownload` ⚠️ chưa có |
+| AC-55 | 3 RAW × 60 MB, máy còn 1.1 GB | Edit | không tải byte nào, báo "about 80 MB more needed" (cần 1.18 GB) | `ServerEditSessionTests.spaceCheckBeforeDownload` |
 | AC-56 | đang tải ảnh 2/3 | Cancel | thư mục tạm bị xoá, quay lại lưới, không mở editor | `ServerEditSessionTests.cancelRemovesTemp` ⚠️ chưa có |
 | AC-57 | editor, Exposure +1 | Cancel → Discard | bản tạm + recipe mất; mở lại `a.JPG` thì Exposure = 0 | `ServerEditSessionTests.discardDropsDraft` ⚠️ chưa có + ảnh |
 | AC-58 | editor, chưa sửa gì | Cancel | không hỏi, bản tạm bị xoá | `ServerEditSessionTests.cleanLeaveNoPrompt` ⚠️ chưa có |

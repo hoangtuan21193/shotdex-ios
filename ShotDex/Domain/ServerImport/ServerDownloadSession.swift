@@ -159,21 +159,14 @@ actor ServerDownloadSession {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: folder) }
 
-        var local: [(file: RemoteEntry, url: URL, sha256: String)] = []
-        var before: Int64 = 0
-        for file in item.photo.files {
-            let url = folder.appendingPathComponent(file.name)
-            let offset = before
-            let sha = try await client.download(item.path(of: file), to: url) { bytes in progress(offset + bytes) }
-            local.append((file, url, sha))
-            before += file.size
-        }
-
-        onEvent(.phase(index: index, .checking))
-        for (file, url, sha) in local {
-            if let reason = Self.checkFailure(file: file, at: url, sha256: sha, known: item.knownChecksums[file.name]) {
-                return .failed(reason)
-            }
+        let onEvent = onEvent
+        let outcome = try await ServerPhotoFetch.fetch(item, client: client, into: folder, onChecking: {
+            onEvent(.phase(index: index, .checking))
+        }, progress: progress)
+        let local: [FetchedFile]
+        switch outcome {
+        case .fetched(let files): local = files
+        case .failed(let reason): return .failed(reason)
         }
 
         onEvent(.phase(index: index, .saving))
@@ -190,10 +183,10 @@ actor ServerDownloadSession {
             albumId: albumId
         )
         let assetId = try await creator.createAsset(request)
-        for (file, _, sha) in local {
+        for entry in local {
             try? record(ServerDownloadRecord(
                 assetId: assetId, serverId: serverId, serverName: serverName,
-                remotePath: item.path(of: file), byteCount: file.size, sha256: sha
+                remotePath: item.path(of: entry.file), byteCount: entry.file.size, sha256: entry.sha256
             ))
         }
         return .saved(assetId: assetId)

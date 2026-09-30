@@ -126,9 +126,7 @@ final class ServerDownloadModel {
 
     /// Bytes short on this device, or nil when it fits with 1 GB to spare.
     var spaceShortfall: Int64? {
-        guard let free = freeSpace() else { return nil }
-        let needed = estimatedBytes + 1_000_000_000
-        return needed > free ? needed - free : nil
+        DeviceSpaceCheck.shortfall(for: estimatedBytes, free: freeSpace())
     }
 
     var canStart: Bool { stage == .preparing && !photosToDownload.isEmpty && spaceShortfall == nil }
