@@ -1,4 +1,5 @@
 import Foundation
+import ShotDexKit
 
 /// One place an export goes (FS-17.06 §6). Chosen together, run one after
 /// the other; Share always last, because it hands the user a sheet.
@@ -99,8 +100,9 @@ struct ServerExportReport: Sendable, Equatable {
 /// What the export needs from the rest of the app — the renderer, the two
 /// servers, Photos — so the run is tested against fakes.
 struct ServerExportServices: Sendable {
-    /// Renders one photo's edit to a file in `directory`.
-    var render: @Sendable (FetchedServerPhoto, ServerExportFormat, URL) async throws -> URL
+    /// Renders one photo's edit to a file in `directory`, resized when a
+    /// preset is given (Resize, FS-17.06 §3).
+    var render: @Sendable (FetchedServerPhoto, ServerExportFormat, ResizePreset?, URL) async throws -> URL
     /// The photo's own connection.
     var originAccess: any RemoteFileAccess
     /// Another saved connection, by id.
@@ -118,6 +120,7 @@ actor ServerEditExporter {
         let destinations: Set<ServerExportDestination>
         let placement: ServerEditPlacement
         let format: ServerExportFormat
+        var resize: ResizePreset?
     }
 
     enum Event: Sendable {
@@ -185,7 +188,7 @@ actor ServerEditExporter {
             : job.format
         let folder = renderDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        let url = try await services.render(photo, format, folder)
+        let url = try await services.render(photo, format, job.resize, folder)
         rendered[photo.id] = url
         return url
     }

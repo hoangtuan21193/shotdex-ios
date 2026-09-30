@@ -556,10 +556,16 @@ final class PhotoEditingService {
         recipe: PhotoEditRecipe,
         format: PhotoOutputFormat,
         includeMetadata: Bool,
+        resize: ResizePreset? = nil,
         to url: URL
     ) async throws {
-        let rendered = try await renderer.render(source: source.info, recipe: recipe)
-        try await renderer.write(rendered, to: url, format: format, quality: 1, includeMetadata: includeMetadata)
+        var rendered = try await renderer.render(source: source.info, recipe: recipe)
+        var quality = 1.0
+        if let resize {
+            rendered = await renderer.resize(rendered, preset: resize, cropAnchor: .center)
+            quality = resize.quality
+        }
+        try await renderer.write(rendered, to: url, format: format, quality: quality, includeMetadata: includeMetadata)
     }
 
     func deleteCreatedAssets(ids: [String]) async throws {

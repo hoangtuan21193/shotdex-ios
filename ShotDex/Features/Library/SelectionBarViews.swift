@@ -196,7 +196,7 @@ struct SelectionToolbarItems: ToolbarContent {
         // for the things that are not.
         ToolbarItem(placement: .topBarLeading) {
             if let onEdit = model.onEdit {
-                Button("Edit", action: onEdit)
+                Button(PhotoCommand.edit.title, action: onEdit)
                     .tint(.primary)
                     .disabled(model.imageSelectionCount < 1)
             }
@@ -206,7 +206,7 @@ struct SelectionToolbarItems: ToolbarContent {
                 Menu {
                     if let onPasteEdits = model.onPasteEdits {
                         Button(action: onPasteEdits) {
-                            Label("Paste Edits", systemImage: "doc.on.clipboard")
+                            PhotoCommand.pasteEdits.label
                         }
                         .disabled(model.imageSelectionCount < 1)
                     }
@@ -224,36 +224,36 @@ struct SelectionToolbarItems: ToolbarContent {
                                 .disabled(!purpose.isEnabled(imageCount: model.imageSelectionCount))
                             }
                         } label: {
-                            Label("Combine Photos", systemImage: "square.3.layers.3d")
+                            PhotoCommand.combine.label
                         }
                     }
                     if let onCollage = model.onCollage {
                         Button(action: onCollage) {
-                            Label("Create Collage", systemImage: "rectangle.split.2x2")
+                            PhotoCommand.collage.label
                         }
                         .disabled(!CollageTemplateCatalog.supportedCounts.contains(model.imageSelectionCount))
                     }
                     if let onVideo = model.onVideo {
                         Button(action: onVideo) {
-                            Label("Create Video", systemImage: "film")
+                            PhotoCommand.video.label
                         }
                         .disabled(model.selectionCount < 1)
                     }
                     if let onCompress = model.onCompress {
                         Button(action: onCompress) {
-                            Label("Resize", systemImage: "arrow.down.right.and.arrow.up.left")
+                            PhotoCommand.resize.label
                         }
                         .disabled(model.imageSelectionCount < 1)
                     }
                     if let onAddToCollection = model.onAddToCollection {
                         Button(action: onAddToCollection) {
-                            Label("Add to Collection", systemImage: "rectangle.stack.badge.plus")
+                            PhotoCommand.addToCollection.label
                         }
                         .disabled(model.selectionCount < 1)
                     }
                     if let onExportEXIF = model.onExportEXIF {
                         Button(action: onExportEXIF) {
-                            Label("Export EXIF (CSV)", systemImage: "doc.badge.arrow.up")
+                            PhotoCommand.exportEXIF.label
                         }
                         .disabled(model.imageSelectionCount < 1)
                     }
@@ -263,7 +263,7 @@ struct SelectionToolbarItems: ToolbarContent {
                     }
                     if let onDuplicate = model.onDuplicate {
                         Button(action: onDuplicate) {
-                            Label("Duplicate", systemImage: "plus.square.on.square")
+                            PhotoCommand.duplicate.label
                         }
                         .disabled(model.selectionCount < 1)
                     }
@@ -337,7 +337,7 @@ private extension SelectionToolbarItems {
                     Button {
                         actions.copyToPasteboard(id: id)
                     } label: {
-                        Label("Copy", systemImage: "doc.on.doc")
+                        PhotoCommand.copy.label
                     }
                 }
             }

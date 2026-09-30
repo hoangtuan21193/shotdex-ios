@@ -1,3 +1,4 @@
+import ShotDexKit
 import SwiftUI
 
 /// Export… of an edit made on server photos (FS-17.06 §6): pick one or more
@@ -114,6 +115,21 @@ struct ServerExportSheet: View {
                     detail: String(localized: "Opens after the others finish.", comment: "Server export: Share row detail"))
             } header: {
                 Text("Save To", comment: "Server export: destinations section")
+            }
+
+            if let presets = model.resizePresets {
+                Section {
+                    Picker(String(localized: "Size", comment: "Server export: Resize preset"), selection: Binding(
+                        get: { model.resizePreset?.id },
+                        set: { id in model.resizePreset = presets.first { $0.id == id } }
+                    )) {
+                        ForEach(presets) { preset in
+                            Text(preset.name).tag(Optional(preset.id))
+                        }
+                    }
+                } footer: {
+                    Text("The long side of each exported photo. The originals keep their size.", comment: "Server export: Resize footer")
+                }
             }
 
             if model.destinations.contains(.originalFolder) {

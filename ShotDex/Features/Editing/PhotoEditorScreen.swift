@@ -554,43 +554,7 @@ struct PhotoEditorScreen: View {
         let selection = session?.exportSelection(canvasRecipe: controller.recipe) ?? []
         let photos = selection.map(\.photo)
         let recipes = Dictionary(selection.map { ($0.photo.id, $0.recipe) }, uniquingKeysWith: { first, _ in first })
-        let service = dependencies.photoEditing
-        let library = dependencies.photoLibrary
-        let servers = Dictionary(uniqueKeysWithValues: dependencies.fileServerCatalog.servers.map { ($0.id, $0) })
-        let store = dependencies.fileServers
-        let passwords = servers.mapValues { store.password(for: $0.id) ?? "" }
-        let pool = RemoteAccessPool { id in
-            guard let server = servers[id] else { throw RemoteFileError.other(String(localized: "That connection is gone.", comment: "Server export: the picked connection was deleted")) }
-            return ServerBrowseSession(server: server, client: RemoteFileClientFactory.make(for: server, password: passwords[id] ?? ""))
-        }
-        let frozen = recipes
-        return ServerExportModel(
-            photos: photos,
-            originServer: context.server,
-            renderDirectory: context.workDirectory.appendingPathComponent("Exports", isDirectory: true),
-            services: ServerExportServices(
-                render: { photo, format, folder in
-                    try await EditorBatchSaver.renderToFile(
-                        photo,
-                        recipe: frozen[photo.id] ?? .identity,
-                        service: service,
-                        format: format == .heic ? .heic : .jpeg,
-                        includeMetadata: true,
-                        into: folder
-                    )
-                },
-                originAccess: context.access,
-                access: { id in try await pool.access(for: id) },
-                saveToPhotos: { url, name in
-                    // Photos takes the file; the render stays for the other
-                    // destinations.
-                    let copy = url.deletingLastPathComponent()
-                        .appendingPathComponent("photos-\(UUID().uuidString)-\(url.lastPathComponent)")
-                    try FileManager.default.copyItem(at: url, to: copy)
-                    return try await library.saveImageFile(at: copy, filename: name)
-                }
-            )
-        )
+        return ServerExportModel.make(photos: photos, recipes: recipes, context: context, dependencies: dependencies)
     }
 
     private var batchSaveFailureMessage: String {

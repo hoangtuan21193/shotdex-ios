@@ -44,20 +44,20 @@ struct PhotoTileContextMenu {
         )
         if let onEdit {
             primary.append(
-                UIAction(title: "Edit", image: UIImage(systemName: "slider.horizontal.3")) { _ in
+                UIAction(title: PhotoCommand.edit.title, image: UIImage(systemName: PhotoCommand.edit.systemImage)) { _ in
                     onEdit()
                 }
             )
         }
         primary.append(
-            UIAction(title: "Share", image: UIImage(systemName: "square.and.arrow.up")) { _ in
+            UIAction(title: PhotoCommand.share.title, image: UIImage(systemName: PhotoCommand.share.systemImage)) { _ in
                 onShare()
             }
         )
         // A video's frames are not something the pasteboard can hold.
         if !isVideo {
             primary.append(
-                UIAction(title: "Copy", image: UIImage(systemName: "doc.on.doc")) { _ in
+                UIAction(title: PhotoCommand.copy.title, image: UIImage(systemName: PhotoCommand.copy.systemImage)) { _ in
                     actions.copyToPasteboard(id: assetId)
                 }
             )
@@ -65,12 +65,12 @@ struct PhotoTileContextMenu {
 
         let organise: [UIMenuElement] = [
             UIAction(
-                title: "Add to Collection",
-                image: UIImage(systemName: "rectangle.stack.badge.plus")
+                title: PhotoCommand.addToCollection.title,
+                image: UIImage(systemName: PhotoCommand.addToCollection.systemImage)
             ) { _ in onAddToCollection() },
             UIAction(
-                title: "Duplicate",
-                image: UIImage(systemName: "plus.square.on.square")
+                title: PhotoCommand.duplicate.title,
+                image: UIImage(systemName: PhotoCommand.duplicate.systemImage)
             ) { _ in onDuplicate() },
             UIAction(
                 title: "Adjust Date & Time",

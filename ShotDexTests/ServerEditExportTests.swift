@@ -32,7 +32,7 @@ import Testing
             saved: SavedBox = SavedBox()
         ) -> ServerExportServices {
             ServerExportServices(
-                render: { photo, format, folder in
+                render: { photo, format, _, folder in
                     let url = folder.appendingPathComponent("render.\(format.fileExtension)")
                     try Data("edited \(photo.photo.primary.name) \(format.rawValue)".utf8).write(to: url)
                     return url

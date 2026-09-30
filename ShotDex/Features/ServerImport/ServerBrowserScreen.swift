@@ -18,6 +18,9 @@ struct ServerBrowserScreen: View {
     /// Edit, Share, Copy… on server photos (FS-17.06).
     @State private var commandRun: ServerPhotoCommandRun?
     @State private var viewing: ServerPhoto?
+    /// Picked in the one-photo viewer, run once it has closed: a sheet
+    /// cannot present while another is still leaving.
+    @State private var viewerCommand: (command: PhotoCommand, photo: ServerPhoto)?
     @State private var isNamingFolder = false
     @State private var renaming: ServerBrowserItem?
     @State private var typedName = ""
@@ -61,8 +64,10 @@ struct ServerBrowserScreen: View {
                 })
             }
             .serverPhotoCommands($commandRun) { Task { await folder.refresh() } }
-            .sheet(item: $viewing) { photo in
-                ServerPhotoViewer(photo: photo, model: folder) { presentDownload([photo]) }
+            .sheet(item: $viewing, onDismiss: runViewerCommand) { photo in
+                ServerPhotoViewer(photo: photo, model: folder) { command in
+                    viewerCommand = (command, photo)
+                }
             }
             .alert("New Folder", isPresented: $isNamingFolder) {
                 TextField("Name", text: $typedName)
@@ -292,8 +297,11 @@ struct ServerBrowserScreen: View {
                 }
             case .photo(let photo):
                 if model.canSelect {
-                    Button { run(.edit, on: [photo]) } label: { Label("Edit", systemImage: "slider.horizontal.3") }
-                    Button { presentDownload([photo]) } label: { Label("Import to Library", systemImage: "arrow.down.circle") }
+                    Section {
+                        ForEach(PhotoCommand.serverPhotoMenu) { command in
+                            Button { perform(command, on: [photo]) } label: { command.label }
+                        }
+                    }
                 }
             case .file:
                 EmptyView()
@@ -356,8 +364,21 @@ struct ServerBrowserScreen: View {
                     Button("Select All") { folder.selectAll() }
                 }
             }
+            // Beside the selection's other leading control, as the album's
+            // Edit sits beside Compare.
+            ToolbarItem(placement: .topBarLeading) {
+                Button(PhotoCommand.edit.title) { perform(.edit, on: folder.selectedPhotos) }
+                    .disabled(folder.selected.isEmpty || model.isWorking)
+            }
             if actionsInToolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button {
+                        perform(.share, on: folder.selectedPhotos)
+                    } label: {
+                        Image(systemName: PhotoCommand.share.systemImage)
+                    }
+                    .accessibilityLabel(PhotoCommand.share.title)
+                    .disabled(folder.selected.isEmpty || model.isWorking)
                     Button(role: .destructive) {
                         deleting = folder.selectedPhotos.map(ServerBrowserItem.photo)
                     } label: {
@@ -373,6 +394,9 @@ struct ServerBrowserScreen: View {
                     .buttonStyle(.borderedProminent)
                     .disabled(folder.selected.isEmpty || model.isWorking)
                 }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                selectionMenu
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Done") { folder.isSelecting = false }
@@ -411,6 +435,22 @@ struct ServerBrowserScreen: View {
         folder.selected.isEmpty
             ? String(localized: "Import to Library", comment: "Server browser: copy the picked photos into the library")
             : String(localized: "Import \(folder.selected.count) to Library", comment: "Server browser: copy the picked photos into the library, with their count")
+    }
+
+    /// The selection's ⋯: the album's rows that work on a file, in the
+    /// album's order (FS-17.06 §3).
+    private var selectionMenu: some View {
+        Menu {
+            ForEach(PhotoCommand.serverSelectionMenu) { command in
+                if command != .pasteEdits || dependencies.editClipboard.recipe != nil {
+                    Button { perform(command, on: folder.selectedPhotos) } label: { command.label }
+                        .disabled(folder.selected.isEmpty || model.isWorking)
+                }
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+        }
+        .accessibilityLabel(String(localized: "More selection actions", comment: "Server browser: the selection's ⋯ menu"))
     }
 
     /// ⋯, in the order of Files' own (FS-17.01 §2c).
@@ -499,6 +539,14 @@ struct ServerBrowserScreen: View {
         } else if folder.isSelecting {
             HStack(spacing: 12) {
                 Button {
+                    perform(.share, on: folder.selectedPhotos)
+                } label: {
+                    Image(systemName: PhotoCommand.share.systemImage)
+                        .frame(minWidth: 28)
+                }
+                .buttonStyle(.bordered)
+                .accessibilityLabel(PhotoCommand.share.title)
+                Button {
                     presentDownload(folder.selectedPhotos)
                 } label: {
                     Label(importTitle, systemImage: "arrow.down.circle")
@@ -546,6 +594,51 @@ struct ServerBrowserScreen: View {
             return String(localized: "Choose Home", comment: "Server folder picker: pick the SFTP home folder")
         }
         return String(localized: "Choose “\(model.title)”", comment: "Server folder picker: pick the folder on screen")
+    }
+
+    private func runViewerCommand() {
+        guard let (command, photo) = viewerCommand else { return }
+        viewerCommand = nil
+        perform(command, on: [photo])
+    }
+
+    /// One of the album's commands on server photos (FS-17.06 §3).
+    private func perform(_ command: PhotoCommand, on photos: [ServerPhoto]) {
+        switch command {
+        case .edit: run(.edit, on: photos)
+        case .share: run(.share, on: photos)
+        case .copy: run(.copy, on: Array(photos.prefix(1)))
+        case .pasteEdits: run(.pasteEdits, on: photos)
+        case .resize: run(.resize, on: photos)
+        case .exportEXIF: exportEXIF(photos)
+        case .importToLibrary: presentDownload(photos)
+        case .combine, .collage, .video, .addToCollection, .duplicate: break
+        }
+    }
+
+    /// EXIF of the picked photos as a CSV to share — heads only (FS-17.06 §4).
+    private func exportEXIF(_ photos: [ServerPhoto]) {
+        guard !photos.isEmpty else { return }
+        let access = model.session
+        let folderPath = folder.folder
+        let store = dependencies.metadataStore
+        Task {
+            let composer = MetadataComposer(sensorLookup: SensorLookup(
+                records: (try? SensorDatabaseLoader().loadRecords()) ?? [],
+                customMappings: (try? store.customMappings()) ?? []
+            ))
+            let scratch = FileManager.default.temporaryDirectory
+                .appendingPathComponent("\(TemporaryWorkspace.serverEditPrefix)EXIF-\(UUID().uuidString)", isDirectory: true)
+            do {
+                let rows = try await ServerExifExport.rows(for: photos, in: folderPath, access: access, composer: composer, scratch: scratch)
+                let url = try ExifCSVExporter.writeTemporaryFile(rows)
+                PhotoShareSheet.present(items: [url]) {
+                    try? FileManager.default.removeItem(at: url.deletingLastPathComponent())
+                }
+            } catch {
+                model.editError = error.localizedDescription
+            }
+        }
     }
 
     /// Brings the originals down, then runs `command` on them (FS-17.06 §4).
@@ -850,7 +943,9 @@ struct ServerPhotoViewer: View {
     @Environment(\.dismiss) private var dismiss
     let photo: ServerPhoto
     let model: ServerFolderModel
-    let onDownload: () -> Void
+    /// Edit, Share or Import to Library; run by the browser once this
+    /// sheet has gone (FS-17.06 §3).
+    let onCommand: (PhotoCommand) -> Void
     @State private var image: CGImage?
     @State private var isLoading = true
 
@@ -883,14 +978,32 @@ struct ServerPhotoViewer: View {
                 }
                 .font(.subheadline)
                 .padding(.horizontal, 16)
-                Button {
-                    dismiss()
-                    onDownload()
-                } label: {
-                    Label("Import to Library", systemImage: "arrow.down.circle")
-                        .frame(maxWidth: .infinity)
+                HStack(spacing: 12) {
+                    Button {
+                        onCommand(.edit)
+                        dismiss()
+                    } label: {
+                        Label(PhotoCommand.edit.title, systemImage: PhotoCommand.edit.systemImage)
+                    }
+                    .buttonStyle(.bordered)
+                    Button {
+                        onCommand(.share)
+                        dismiss()
+                    } label: {
+                        Image(systemName: PhotoCommand.share.systemImage)
+                            .frame(minWidth: 28)
+                    }
+                    .buttonStyle(.bordered)
+                    .accessibilityLabel(PhotoCommand.share.title)
+                    Button {
+                        onCommand(.importToLibrary)
+                        dismiss()
+                    } label: {
+                        Label(PhotoCommand.importToLibrary.title, systemImage: PhotoCommand.importToLibrary.systemImage)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
                 }
-                .buttonStyle(.borderedProminent)
                 .controlSize(.large)
                 .padding(.horizontal, 16)
                 .padding(.bottom, 8)

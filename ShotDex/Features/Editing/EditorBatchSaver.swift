@@ -187,6 +187,7 @@ final class EditorBatchSaver {
         service: PhotoEditingService,
         format: PhotoOutputFormat,
         includeMetadata: Bool,
+        resize: ResizePreset? = nil,
         into folder: URL
     ) async throws -> URL {
         let session = try await service.beginSession(for: .serverFile(photo))
@@ -207,6 +208,7 @@ final class EditorBatchSaver {
             recipe: tokensExpanded(recipe, values: OverlayTokenValues(metadata: nil)),
             format: written,
             includeMetadata: includeMetadata,
+            resize: resize,
             to: url
         )
         return url

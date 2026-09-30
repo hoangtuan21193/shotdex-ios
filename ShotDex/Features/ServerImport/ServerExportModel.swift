@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import ShotDexKit
 
 /// The export sheet of a server run (FS-17.06 §6): where to, how the
 /// original is treated, the run, and what came of it per destination.
@@ -29,6 +30,9 @@ final class ServerExportModel {
     var placement: ServerEditPlacement = .newFile
     var format: ServerExportFormat = .jpeg
     var otherFolder: OtherFolder?
+    /// Set for Resize (FS-17.06 §3): the sizes offered, and the one picked.
+    let resizePresets: [ResizePreset]?
+    var resizePreset: ResizePreset?
     private(set) var report = ServerExportReport()
     private(set) var progressLine = ""
 
@@ -50,9 +54,12 @@ final class ServerExportModel {
         photos: [FetchedServerPhoto],
         originServer: FileServer,
         renderDirectory: URL,
-        services: ServerExportServices
+        services: ServerExportServices,
+        resizePresets: [ResizePreset]? = nil
     ) {
         self.photos = photos
+        self.resizePresets = resizePresets
+        self.resizePreset = resizePresets?.first
         self.originServer = originServer
         self.originFolder = photos.first?.folder ?? ""
         self.renderDirectory = renderDirectory
@@ -94,7 +101,8 @@ final class ServerExportModel {
         guard canExport else { return }
         let effectivePlacement: ServerEditPlacement = destinations.contains(.originalFolder) && canReplaceOriginals ? placement : .newFile
         let job = ServerEditExporter.Job(
-            photos: photos, destinations: resolvedDestinations, placement: effectivePlacement, format: format
+            photos: photos, destinations: resolvedDestinations, placement: effectivePlacement, format: format,
+            resize: resizePreset
         )
         start(job, exporter: ServerEditExporter(services: services, renderDirectory: renderDirectory) { [weak self] event in
             Task { @MainActor in self?.handle(event) }
@@ -118,7 +126,8 @@ final class ServerExportModel {
             report.outcomes[destination]?.values.contains(.permissionDenied) == true
         })
         next.insert(.otherFolder(serverId: folder.server.id, serverName: folder.server.name, path: folder.path))
-        start(ServerEditExporter.Job(photos: job.photos, destinations: next, placement: job.placement, format: job.format),
+        start(ServerEditExporter.Job(photos: job.photos, destinations: next, placement: job.placement,
+                                     format: job.format, resize: job.resize),
               exporter: exporter)
     }
 
@@ -183,5 +192,60 @@ actor RemoteAccessPool {
     func closeAll() async {
         for session in sessions.values { await session.close() }
         sessions = [:]
+    }
+}
+
+extension ServerExportModel {
+    /// An export wired to the app: the editor's renderer, the run's login
+    /// for the original folder, a login per other connection opened on first
+    /// use, and Photos for the library.
+    static func make(
+        photos: [FetchedServerPhoto],
+        recipes: [String: PhotoEditRecipe],
+        context: ServerExportContext,
+        dependencies: AppDependencies,
+        resizePresets: [ResizePreset]? = nil
+    ) -> ServerExportModel {
+        let service = dependencies.photoEditing
+        let library = dependencies.photoLibrary
+        dependencies.fileServerCatalog.reload()
+        let servers = Dictionary(uniqueKeysWithValues: dependencies.fileServerCatalog.servers.map { ($0.id, $0) })
+        let store = dependencies.fileServers
+        let passwords = servers.mapValues { store.password(for: $0.id) ?? "" }
+        let pool = RemoteAccessPool { id in
+            guard let server = servers[id] else {
+                throw RemoteFileError.other(String(localized: "That connection is gone.", comment: "Server export: the picked connection was deleted"))
+            }
+            return ServerBrowseSession(server: server, client: RemoteFileClientFactory.make(for: server, password: passwords[id] ?? ""))
+        }
+        return ServerExportModel(
+            photos: photos,
+            originServer: context.server,
+            renderDirectory: context.workDirectory.appendingPathComponent("Exports", isDirectory: true),
+            services: ServerExportServices(
+                render: { photo, format, resize, folder in
+                    try await EditorBatchSaver.renderToFile(
+                        photo,
+                        recipe: recipes[photo.id] ?? .identity,
+                        service: service,
+                        format: format == .heic ? .heic : .jpeg,
+                        includeMetadata: true,
+                        resize: resize,
+                        into: folder
+                    )
+                },
+                originAccess: context.access,
+                access: { id in try await pool.access(for: id) },
+                saveToPhotos: { url, name in
+                    // Photos takes the file; the render stays for the other
+                    // destinations.
+                    let copy = url.deletingLastPathComponent()
+                        .appendingPathComponent("photos-\(UUID().uuidString)-\(url.lastPathComponent)")
+                    try FileManager.default.copyItem(at: url, to: copy)
+                    return try await library.saveImageFile(at: copy, filename: name)
+                }
+            ),
+            resizePresets: resizePresets
+        )
     }
 }
