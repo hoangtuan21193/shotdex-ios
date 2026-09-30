@@ -439,9 +439,23 @@ struct ServerBrowserScreen: View {
     private var selectionMenu: some View {
         Menu {
             ForEach(PhotoCommand.serverSelectionMenu) { command in
-                if command != .pasteEdits || dependencies.editClipboard.recipe != nil {
+                if command == .combine {
+                    // A submenu, as in the album: the purposes dim below
+                    // two photos rather than vanish (FS-01.09 §2).
+                    Menu {
+                        ForEach(CombinePurpose.menuRows) { purpose in
+                            Button { run(.combine(purpose), on: folder.selectedPhotos) } label: {
+                                Label(purpose.title, systemImage: purpose.systemImage)
+                            }
+                            .disabled(!purpose.isEnabled(imageCount: folder.selected.count) || model.isWorking)
+                        }
+                    } label: {
+                        command.label
+                    }
+                } else if command != .pasteEdits || dependencies.editClipboard.recipe != nil {
                     Button { perform(command, on: folder.selectedPhotos) } label: { command.label }
-                        .disabled(folder.selected.isEmpty || model.isWorking)
+                        .disabled(folder.selected.isEmpty || model.isWorking
+                                  || (command == .collage && !CollageTemplateCatalog.supportedCounts.contains(folder.selected.count)))
                 }
             }
             // Last, in its own group, where the album keeps it.
@@ -617,7 +631,10 @@ struct ServerBrowserScreen: View {
         case .resize: run(.resize, on: photos)
         case .exportEXIF: exportEXIF(photos)
         case .importToLibrary: presentDownload(photos)
-        case .combine, .collage, .video, .addToCollection, .duplicate: break
+        case .collage: run(.collage, on: photos)
+        case .video: run(.video, on: photos)
+        // Combine needs its purpose, which the submenu passes to `run`.
+        case .combine, .addToCollection, .duplicate: break
         }
     }
 

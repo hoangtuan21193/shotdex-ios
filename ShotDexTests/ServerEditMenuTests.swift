@@ -15,10 +15,10 @@ import Testing
             #expect(!PhotoCommand.serverSelectionMenu.contains(photosOnly))
             #expect(!PhotoCommand.serverPhotoMenu.contains(photosOnly))
         }
-        // Phase 1 (FS-17.06 §2): Combine, Collage and Video are not offered yet.
-        for later in [PhotoCommand.combine, .collage, .video] {
-            #expect(!PhotoCommand.serverSelectionMenu.contains(later))
-        }
+        // AC-76 (phase 2): every row the album has that works on a file.
+        #expect(PhotoCommand.serverSelectionMenu == [
+            .pasteEdits, .combine, .collage, .video, .resize, .exportEXIF, .importToLibrary,
+        ])
     }
 
     /// AC-52: the long-press menu is Edit, Share, Copy, Import to Library.

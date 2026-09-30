@@ -11,6 +11,11 @@ enum ServerPhotoCommand: Equatable {
     /// The clipboard's look onto every photo, then straight to the export.
     case pasteEdits
     case resize
+    /// One file made from all the photos, through the export sheet
+    /// (FS-17.06 §5b).
+    case collage
+    case video
+    case combine(CombinePurpose)
 }
 
 /// Share and Copy of server originals (FS-17.06 §3): what is handed to the
@@ -107,6 +112,11 @@ struct ServerPhotoCommandHost: ViewModifier {
     @State private var open: ServerPhotoCommandRun?
     /// Paste Edits and Resize go straight to the export sheet.
     @State private var exporting: ExportPresentation?
+    /// The tools that make one file from all the photos (FS-17.06 §5b).
+    @State private var collaging: ServerPhotoCommandRun?
+    @State private var videoRun: ServerPhotoCommandRun?
+    @State private var stacking: PhotoStackPresentation?
+    @State private var panorama: PanoramaMergePresentation?
 
     func body(content: Content) -> some View {
         content
@@ -121,6 +131,21 @@ struct ServerPhotoCommandHost: ViewModifier {
             }
             .fullScreenCover(item: $editing, onDismiss: closeTool) { run in
                 PhotoEditorScreen(serverPhotos: run.photos, export: run.exportContext)
+            }
+            .fullScreenCover(item: $collaging, onDismiss: closeTool) { run in
+                CollageScreen(serverPhotos: run.photos, export: run.exportContext)
+            }
+            .fullScreenCover(item: $videoRun, onDismiss: closeTool) { run in
+                VideoStudioScreen(
+                    assets: [], mode: .multiClip, onSaved: { _ in },
+                    server: run.exportContext.map { ServerVideoStudioLaunch(photos: run.photos, export: $0) }
+                )
+            }
+            .fullScreenCover(item: $stacking, onDismiss: closeTool) { presentation in
+                PhotoStackScreen(presentation: presentation)
+            }
+            .fullScreenCover(item: $panorama, onDismiss: closeTool) { presentation in
+                PanoramaMergeScreen(presentation: presentation)
             }
             .sheet(item: $exporting, onDismiss: closeTool) { presentation in
                 ServerExportSheet(model: presentation.model) {
@@ -159,6 +184,19 @@ struct ServerPhotoCommandHost: ViewModifier {
             exporting = ExportPresentation(model: .make(
                 photos: finished.photos, recipes: recipes, context: context, dependencies: dependencies
             ))
+        case .collage:
+            guard CollageTemplateCatalog.supportedCounts.contains(finished.photos.count) else { return closeTool() }
+            collaging = finished
+        case .video:
+            videoRun = finished
+        case .combine(let purpose):
+            guard finished.photos.count >= CombinePurpose.minimumPhotoCount else { return closeTool() }
+            switch purpose {
+            case .focusStack, .stackExposures:
+                stacking = PhotoStackPresentation(serverPhotos: finished.photos, purpose: purpose, export: finished.exportContext)
+            case .panorama:
+                panorama = PanoramaMergePresentation(serverPhotos: finished.photos, export: finished.exportContext)
+            }
         case .resize:
             guard let context = finished.exportContext else { return closeTool() }
             exporting = ExportPresentation(model: .make(

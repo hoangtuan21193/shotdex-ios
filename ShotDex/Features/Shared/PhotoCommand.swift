@@ -62,8 +62,9 @@ enum PhotoCommand: String, CaseIterable, Identifiable {
 
     /// What works on a file: the album's rows minus the Photos-only ones,
     /// in the album's order, then the server's own Import (FS-17.06 §3).
-    /// Combine, Collage and Video come in the second phase.
-    static let serverSelectionMenu: [PhotoCommand] = [.pasteEdits, .resize, .exportEXIF, .importToLibrary]
+    static let serverSelectionMenu: [PhotoCommand] = [
+        .pasteEdits, .combine, .collage, .video, .resize, .exportEXIF, .importToLibrary,
+    ]
 
     /// The long-press menu of a server photo, before the Files group.
     static let serverPhotoMenu: [PhotoCommand] = [.edit, .share, .copy, .importToLibrary]
