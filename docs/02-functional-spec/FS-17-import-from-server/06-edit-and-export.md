@@ -108,7 +108,7 @@ lệnh đó (AC-67). Trong đợt 1 ba lệnh này không có trong menu, chứ 
 | AC-53 | chọn 3 ảnh | mở ⋯ | 8 lệnh §3 theo đúng thứ tự, tên + glyph trùng menu album | `ServerEditMenuTests.matchesAlbumMenu` ⚠️ chưa có + ảnh |
 | AC-54 | `a.JPG` 12 MB, máy còn 500 MB | Edit | tải 1 file, editor mở, server không có thay đổi nào (không ghi, không đổi tên) | `ServerEditSessionTests.downloadsOriginalOnly` ⚠️ chưa có |
 | AC-55 | 3 RAW × 60 MB, máy còn 1.1 GB | Edit | không tải byte nào, báo "about 80 MB more needed" (cần 1.18 GB) | `ServerEditSessionTests.spaceCheckBeforeDownload` |
-| AC-56 | đang tải ảnh 2/3 | Cancel | thư mục tạm bị xoá, quay lại lưới, không mở editor | `ServerEditSessionTests.cancelRemovesTemp` ⚠️ chưa có |
+| AC-56 | đang tải ảnh 2/3 | Cancel | thư mục tạm bị xoá, quay lại lưới, không mở editor | `ServerEditSessionTests.cancelRemovesTemp` |
 | AC-57 | editor, Exposure +1 | Cancel → Discard | bản tạm + recipe mất; mở lại `a.JPG` thì Exposure = 0 | `ServerEditSessionTests.discardDropsDraft` ⚠️ chưa có + ảnh |
 | AC-58 | editor, chưa sửa gì | Cancel | không hỏi, bản tạm bị xoá | `ServerEditSessionTests.cleanLeaveNoPrompt` ⚠️ chưa có |
 | AC-59 | thư mục tạm còn sót từ lần app bị giết | khởi động app | thư mục bị xoá | `TemporaryWorkspaceTests.aServerEditCopyLeftByAKilledAppIsSwept` |

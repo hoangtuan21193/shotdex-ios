@@ -66,6 +66,39 @@ final class DirectRemoteAccess: RemoteFileAccess, @unchecked Sendable {
         #expect(hold.holds == 0)
     }
 
+    /// AC-56: Cancel while the second of three photos is on its way — the
+    /// work folder, with the first photo already in it, is deleted and no
+    /// editor opens.
+    @Test func cancelRemovesTemp() async throws {
+        let client = InMemoryRemoteFileClient()
+        let photos = (0..<3).map { n -> ServerPhoto in
+            let data = RemoteThumbnailTests.jpeg(width: 200 + n)
+            client.put("Trip/P\(n).JPG", data)
+            return ServerPhoto(files: [entry("P\(n).JPG", data.count)])
+        }
+        let access = DirectRemoteAccess(client)
+        let hold = NoHold()
+        let model = ServerEditFetchModel(
+            serverId: "S1", folder: "Trip", photos: photos,
+            access: access, freeSpace: { nil }, screenHold: hold
+        )
+        access.onPerform = { number in
+            guard number == 2 else { return }
+            await MainActor.run { model.cancel() }
+            try await Task.sleep(for: .seconds(5))
+        }
+
+        model.start()
+        let directory = try #require(model.workDirectory)
+        await waitUntilSettled(model)
+
+        #expect(model.stage == .cancelled)
+        #expect(model.fetched.isEmpty)
+        #expect(client.downloadCount == 1)
+        #expect(!FileManager.default.fileExists(atPath: directory.path))
+        #expect(hold.holds == 0)
+    }
+
     /// The same room rule as Import (FS-17.02 §1): free space unknown is not a
     /// reason to refuse.
     @Test func unknownFreeSpaceDoesNotRefuse() {
