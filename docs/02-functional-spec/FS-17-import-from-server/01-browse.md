@@ -145,6 +145,7 @@ px trong 256 KB; CR3 1620 px, ARW 1616 px, ORF 3200 px, RW2 trong 1 MB; RAF 4416
   phải ảnh không chọn được và hiện mờ trong lúc chọn; menu tiêu đề tắt.
 - Thanh dưới: **Import to Library** (`arrow.down.circle`; có số: "Import 3 to Library") và **Delete** (`trash`, đỏ) — cả hai mờ khi 0. Ảnh "In Library" chọn được nhưng
   sheet tải về mặc định bỏ qua chúng (FS-17.02 §1).
+- **Regular width** (iPad toàn màn, không trong sheet — 2026-09-30, D10): không có thanh dưới; **Delete** (`trash`) và **Import N to Library** (nút nổi bật) lên toolbar phải, cạnh Done, như app Files. Chế độ chọn folder cũng vậy: **Choose “…”** là nút xác nhận trên toolbar, câu "Open one of the shared folders first." còn ở chân màn. Trong sheet (iPad form sheet ~580pt) size class là compact nên giữ nút dưới, rộng bằng sheet. Connect As theo cùng luật. Ảnh: `scripts/server-ipad-toolbar-actions.json`, `scripts/server-ipad-connect-toolbar.json`.
 - Không ở chế độ chọn: chạm ô → xem lớn (preview nhúng, fit màn hình), tên, dung lượng, ngày sửa, camera/ống kính
   nếu EXIF đọc được từ đoạn đầu; nút **Import to Library** cho riêng tấm đó (FS-17 §6).
 

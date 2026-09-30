@@ -8,6 +8,7 @@ struct ConnectAsScreen: View {
     @Bindable var model: ConnectAsModel
     let onSignedIn: (ServerBrowseSession) -> Void
     @FocusState private var focus: Field?
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     enum Field: Hashable {
         case username, password
@@ -68,8 +69,23 @@ struct ConnectAsScreen: View {
             }
         }
         // The same full-width button as the picker's Choose at the next
-        // step, where a thumb reaches it.
+        // step, where a thumb reaches it — on a phone. Regular width puts it
+        // in the toolbar, as the picker's Choose goes (FS-17 D10).
+        .toolbar {
+            if sizeClass == .regular {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button {
+                        connect()
+                    } label: {
+                        if model.signIn.isConnecting { ProgressView() } else { Text("Connect") }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!model.canConnect)
+                }
+            }
+        }
         .safeAreaInset(edge: .bottom) {
+            if sizeClass != .regular {
             Button {
                 connect()
             } label: {
@@ -84,6 +100,7 @@ struct ConnectAsScreen: View {
             .disabled(!model.canConnect)
             .padding(.horizontal, 16)
             .padding(.bottom, 8)
+            }
         }
         // Not `.disabled` on the whole form while connecting: re-enabling
         // it left the password field blank on screen (value still there)

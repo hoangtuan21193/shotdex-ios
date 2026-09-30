@@ -23,6 +23,11 @@ struct ServerBrowserScreen: View {
 
     private var folder: ServerFolderModel { model.current }
 
+    /// Regular width puts the picking actions in the toolbar, as Files does
+    /// on iPad: a bottom slab across 1000pt is the phone layout blown up
+    /// (FS-17 D10, DESIGN.md §10.1c). Compact keeps the thumb-height bar.
+    private var actionsInToolbar: Bool { sizeClass == .regular }
+
     var body: some View {
         content
             .navigationTitle(title)
@@ -347,6 +352,24 @@ struct ServerBrowserScreen: View {
                     Button("Select All") { folder.selectAll() }
                 }
             }
+            if actionsInToolbar {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button(role: .destructive) {
+                        deleting = folder.selectedPhotos.map(ServerBrowserItem.photo)
+                    } label: {
+                        Image(systemName: "trash")
+                    }
+                    .accessibilityLabel("Delete")
+                    .disabled(folder.selected.isEmpty || model.isWorking)
+                    Button {
+                        presentDownload(folder.selectedPhotos)
+                    } label: {
+                        Text(importTitle)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(folder.selected.isEmpty || model.isWorking)
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Done") { folder.isSelecting = false }
                     .fontWeight(.semibold)
@@ -370,7 +393,20 @@ struct ServerBrowserScreen: View {
             ToolbarItem(placement: .topBarTrailing) {
                 moreMenu
             }
+            if actionsInToolbar, model.mode == .chooseFolder {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(chooseTitle) { onChoose?(model.path) }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(!model.canChoose)
+                }
+            }
         }
+    }
+
+    private var importTitle: String {
+        folder.selected.isEmpty
+            ? String(localized: "Import to Library", comment: "Server browser: copy the picked photos into the library")
+            : String(localized: "Import \(folder.selected.count) to Library", comment: "Server browser: copy the picked photos into the library, with their count")
     }
 
     /// ⋯, in the order of Files' own (FS-17.01 §2c).
@@ -449,17 +485,19 @@ struct ServerBrowserScreen: View {
 
     @ViewBuilder
     private var bottomBar: some View {
-        if folder.isSelecting {
+        if actionsInToolbar {
+            if model.mode == .chooseFolder, model.isAtSMBRoot {
+                Text("Open one of the shared folders first.", comment: "Server folder picker: nothing can be chosen at an SMB root")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .padding(.bottom, 8)
+            }
+        } else if folder.isSelecting {
             HStack(spacing: 12) {
                 Button {
                     presentDownload(folder.selectedPhotos)
                 } label: {
-                    Label(
-                        folder.selected.isEmpty
-                            ? String(localized: "Import to Library", comment: "Server browser: copy the picked photos into the library")
-                            : String(localized: "Import \(folder.selected.count) to Library", comment: "Server browser: copy the picked photos into the library, with their count"),
-                        systemImage: "arrow.down.circle"
-                    )
+                    Label(importTitle, systemImage: "arrow.down.circle")
                     .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
