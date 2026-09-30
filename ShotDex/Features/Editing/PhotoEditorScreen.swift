@@ -20,11 +20,11 @@ struct PhotoEditorScreen: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
-    let asset: PHAsset
+    let origin: PhotoEditOrigin
     /// Every photo opened together, when the editor was entered from a multi-photo
-    /// selection. `asset` is whichever of them is on the canvas first. Empty (the
+    /// selection. `origin` is whichever of them is on the canvas first. Empty (the
     /// single-photo case) means no filmstrip and no sync.
-    var siblings: [PHAsset] = []
+    var siblings: [PhotoEditOrigin] = []
     let sourceAlbum: PHAssetCollection?
     /// The indexed row for this photo, when the presenter already has it. Only used
     /// to expand `{camera}`-style tokens in text overlays; everything else in the
@@ -34,6 +34,29 @@ struct PhotoEditorScreen: View {
     /// a successful save — Save Changes hands back this asset's own id, Save
     /// Copy the new copy's. The presenter uses it to put that photo on screen.
     var onSaved: ((String) -> Void)?
+
+    init(
+        asset: PHAsset,
+        siblings: [PHAsset] = [],
+        sourceAlbum: PHAssetCollection?,
+        metadata: PhotoMetadata? = nil,
+        onSaved: ((String) -> Void)? = nil
+    ) {
+        self.origin = .asset(asset)
+        self.siblings = siblings.map(PhotoEditOrigin.asset)
+        self.sourceAlbum = sourceAlbum
+        self.metadata = metadata
+        self.onSaved = onSaved
+    }
+
+    /// Server originals fetched to this device (FS-17.06 §5): the same
+    /// editor, one filmstrip for the run.
+    init(serverPhotos: [FetchedServerPhoto]) {
+        let photos = serverPhotos.map(PhotoEditOrigin.serverFile)
+        self.origin = photos[0]
+        self.siblings = photos.count > 1 ? photos : []
+        self.sourceAlbum = nil
+    }
 
     @State private var controller: PhotoEditorController?
     @State private var session: EditorSession?
@@ -150,9 +173,9 @@ struct PhotoEditorScreen: View {
         .task {
             guard controller == nil else { return }
             if session == nil {
-                let run = siblings.isEmpty ? [asset] : siblings
-                let start = run.firstIndex { $0.localIdentifier == asset.localIdentifier } ?? 0
-                session = EditorSession(assets: run, startIndex: start)
+                let run = siblings.isEmpty ? [origin] : siblings
+                let start = run.firstIndex { $0.id == origin.id } ?? 0
+                session = EditorSession(photos: run, startIndex: start)
             }
             await openCurrentPhoto()
         }
@@ -378,13 +401,13 @@ struct PhotoEditorScreen: View {
     private func openCurrentPhoto(replacing outgoing: PhotoEditorController? = nil) async {
         guard let session, let target = session.current else { return }
         let newController = PhotoEditorController(
-            asset: target,
+            origin: target,
             sourceAlbum: sourceAlbum,
             // The metadata is this screen's *entry* photo only — it expands
             // `{camera}` tokens in text overlays, so handing it to a sibling
             // would stamp the wrong camera on it.
             service: dependencies.photoEditing,
-            metadata: target.localIdentifier == asset.localIdentifier ? metadata : nil,
+            metadata: target.id == origin.id ? metadata : nil,
             previewCache: session.isMultiPhoto ? previewCache : nil
         )
         // Every session opens on Adjust: the tab the user left last time is
@@ -421,7 +444,7 @@ struct PhotoEditorScreen: View {
     /// Switches the canvas to another photo in the run, parking the current
     /// edit in the session first so coming back restores it.
     private func selectPhoto(at index: Int) {
-        guard let session, index != session.index, session.assets.indices.contains(index) else {
+        guard let session, index != session.index, session.photos.indices.contains(index) else {
             return
         }
         let outgoing = controller
@@ -448,7 +471,7 @@ struct PhotoEditorScreen: View {
     private var pendingSaveCount: Int {
         guard let session, session.isMultiPhoto else { return 0 }
         var count = session.draftCount
-        if let controller, !controller.recipe.isIdentity, !session.hasDraft(session.assets[session.index]) {
+        if let controller, !controller.recipe.isIdentity, !session.hasDraft(session.photos[session.index]) {
             count += 1
         }
         return count
@@ -466,8 +489,8 @@ struct PhotoEditorScreen: View {
         controller.commitCropSession()
         session.store(controller.recipe, for: current)
 
-        let items: [(asset: PHAsset, recipe: PhotoEditRecipe)] = session.assets.compactMap { asset in
-            guard let recipe = session.draft(for: asset) else { return nil }
+        let items: [(asset: PHAsset, recipe: PhotoEditRecipe)] = session.photos.compactMap { photo in
+            guard let asset = photo.asset, let recipe = session.draft(for: photo) else { return nil }
             return (asset, recipe)
         }
         guard !items.isEmpty else { return }
@@ -514,11 +537,11 @@ struct PhotoEditorScreen: View {
     /// screen.
     private func advanceAfterSave() -> Bool {
         guard let session, session.isMultiPhoto else { return false }
-        let order = session.assets.indices
+        let order = session.photos.indices
         // Look forward from here first, then wrap: the run reads left to right.
         let forward = order.filter { $0 > session.index }
         let behind = order.filter { $0 < session.index }
-        let next = (forward + behind).first { session.hasDraft(session.assets[$0]) }
+        let next = (forward + behind).first { session.hasDraft(session.photos[$0]) }
         guard let next else { return false }
         selectPhoto(at: next)
         return true
@@ -825,7 +848,7 @@ struct PhotoEditorScreen: View {
                     // new asset's, and the photo keeps its draft.
                     session?.markSaved(
                         savedAssetID,
-                        recipe: savedAssetID == controller.asset.localIdentifier ? controller.recipe : nil
+                        recipe: savedAssetID == controller.asset?.localIdentifier ? controller.recipe : nil
                     )
                     onSaved?(savedAssetID)
                 }
@@ -1087,7 +1110,7 @@ struct PhotoEditorScreen: View {
                 }
 
                 VStack(spacing: 0) {
-                    if let reference = session?.referenceAsset, !chrome.isFullBleed,
+                    if let reference = session?.referencePhoto, !chrome.isFullBleed,
                        !controller.isEditingDrawing {
                         referenceSplit(
                             controller,
@@ -1129,7 +1152,7 @@ struct PhotoEditorScreen: View {
     @ViewBuilder
     private func referenceSplit(
         _ controller: PhotoEditorController,
-        reference: PHAsset,
+        reference: PhotoEditOrigin,
         canvas: CGSize
     ) -> some View {
         let axis = EditorLayoutMetrics.referenceSplit(
@@ -1137,7 +1160,7 @@ struct PhotoEditorScreen: View {
             aspectRatio: controller.previewAspectRatio
         )
         let pane = EditorReferencePane(
-            asset: reference,
+            photo: reference,
             photoLibrary: dependencies.photoLibrary,
             zoomScale: chrome.zoomScale,
             zoomOffset: chrome.zoomOffset,
@@ -2677,9 +2700,9 @@ struct PhotoEditorScreen: View {
             }
 
             Menu(
-                session.assets.count == 2
+                session.photos.count == 2
                     ? "Sync to 1 Photo"
-                    : "Sync to \(session.assets.count - 1) Photos"
+                    : "Sync to \(session.photos.count - 1) Photos"
             ) {
                 Button {
                     syncEditsToAll(.look)
@@ -3605,7 +3628,7 @@ private struct PhotoEditorSaveSheet: View {
                         Label("Save Changes", systemImage: "square.and.arrow.down")
                     }
                     .disabled(
-                        format == nil || !controller.asset.canPerform(.content)
+                        format == nil || controller.asset?.canPerform(.content) != true
                     )
                 } footer: {
                     Text("Save Changes is non-destructive: Photos keeps the original and ShotDex reopens this photo with the saved crop, sliders and masks. A Live Photo keeps its motion. Save Copy creates a still image.")

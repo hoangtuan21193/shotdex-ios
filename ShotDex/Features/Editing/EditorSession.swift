@@ -14,7 +14,7 @@ import SwiftUI
 @MainActor
 @Observable
 final class EditorSession {
-    let assets: [PHAsset]
+    let photos: [PhotoEditOrigin]
     /// Which asset is on the canvas.
     var index: Int
 
@@ -28,20 +28,23 @@ final class EditorSession {
     /// the photos whose next open will look different (FS-03.09b §2).
     private(set) var draftRevision = 0
 
-    init(assets: [PHAsset], startIndex: Int = 0) {
-        self.assets = assets
-        self.index = min(max(startIndex, 0), max(assets.count - 1, 0))
+    init(photos: [PhotoEditOrigin], startIndex: Int = 0) {
+        self.photos = photos
+        self.index = min(max(startIndex, 0), max(photos.count - 1, 0))
     }
 
-    var current: PHAsset? {
-        assets.indices.contains(index) ? assets[index] : nil
+    var current: PhotoEditOrigin? {
+        photos.indices.contains(index) ? photos[index] : nil
     }
 
     /// A filmstrip only earns its space when there is more than one photo in it.
-    var isMultiPhoto: Bool { assets.count > 1 }
+    var isMultiPhoto: Bool { photos.count > 1 }
 
-    func draft(for asset: PHAsset) -> PhotoEditRecipe? {
-        drafts[asset.localIdentifier]
+    /// Server photos (FS-17.06 §5): exported, never saved back to Photos.
+    var isServerRun: Bool { photos.first?.isServerFile == true }
+
+    func draft(for photo: PhotoEditOrigin) -> PhotoEditRecipe? {
+        drafts[photo.id]
     }
 
     /// Remembers where a photo was left. A recipe with nothing to write is
@@ -49,8 +52,8 @@ final class EditorSession {
     /// the photo, and the recipe a Save Changes just wrote is the same as the
     /// library's copy. Keeping either would badge the thumbnail as edited and
     /// count the photo in Save All again (FS-03.09b AC-5).
-    func store(_ recipe: PhotoEditRecipe, for asset: PHAsset) {
-        store(recipe, forID: asset.localIdentifier)
+    func store(_ recipe: PhotoEditRecipe, for photo: PhotoEditOrigin) {
+        store(recipe, forID: photo.id)
     }
 
     /// `store(_:for:)` by asset id, so the rule is testable without PhotoKit.
@@ -68,9 +71,9 @@ final class EditorSession {
     /// Lightroom's Sync Settings: hand this recipe to every *other* photo in the
     /// run. The photo it came from is left alone — it already has it, and writing
     /// it back would replace the live controller's state behind its back.
-    func syncToAll(_ recipe: PhotoEditRecipe, from asset: PHAsset, scope: EditorSyncScope) {
-        for other in assets where other.localIdentifier != asset.localIdentifier {
-            let base = drafts[other.localIdentifier] ?? .identity
+    func syncToAll(_ recipe: PhotoEditRecipe, from photo: PhotoEditOrigin, scope: EditorSyncScope) {
+        for other in photos where other.id != photo.id {
+            let base = drafts[other.id] ?? .identity
             store(scope.apply(recipe, onto: base), for: other)
         }
     }
@@ -84,12 +87,12 @@ final class EditorSession {
         if drafts.removeValue(forKey: assetID) != nil { draftRevision += 1 }
     }
 
-    func hasDraft(_ asset: PHAsset) -> Bool {
-        drafts[asset.localIdentifier] != nil
+    func hasDraft(_ photo: PhotoEditOrigin) -> Bool {
+        drafts[photo.id] != nil
     }
 
-    func isSaved(_ asset: PHAsset) -> Bool {
-        savedIDs.contains(asset.localIdentifier)
+    func isSaved(_ photo: PhotoEditOrigin) -> Bool {
+        savedIDs.contains(photo.id)
     }
 
     /// How many photos are carrying unsaved edits, for the sync/save wording.
@@ -116,9 +119,9 @@ final class EditorSession {
     /// where there is no room for two.
     var referenceIndex: Int?
 
-    var referenceAsset: PHAsset? {
-        guard let referenceIndex, assets.indices.contains(referenceIndex) else { return nil }
-        return assets[referenceIndex]
+    var referencePhoto: PhotoEditOrigin? {
+        guard let referenceIndex, photos.indices.contains(referenceIndex) else { return nil }
+        return photos[referenceIndex]
     }
 
     /// Whether the reference follows the canvas's zoom and pan — Lightroom's
@@ -136,15 +139,15 @@ final class EditorSession {
     private(set) var previousIndex: Int?
 
     func moveToPhoto(at index: Int) {
-        guard assets.indices.contains(index), index != self.index else { return }
+        guard photos.indices.contains(index), index != self.index else { return }
         previousIndex = self.index
         self.index = index
     }
 
     /// The edit on the photo the user just came from, if it has one.
     var previousRecipe: PhotoEditRecipe? {
-        guard let previousIndex, assets.indices.contains(previousIndex) else { return nil }
-        return drafts[assets[previousIndex].localIdentifier]
+        guard let previousIndex, photos.indices.contains(previousIndex) else { return nil }
+        return drafts[photos[previousIndex].id]
     }
 }
 
@@ -183,8 +186,8 @@ struct EditorFilmstrip: View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: AppTheme.Spacing.sm) {
-                    ForEach(Array(session.assets.enumerated()), id: \.offset) { index, asset in
-                        thumbnail(asset, index: index)
+                    ForEach(Array(session.photos.enumerated()), id: \.offset) { index, photo in
+                        thumbnail(photo, index: index)
                             .id(index)
                     }
                 }
@@ -203,13 +206,13 @@ struct EditorFilmstrip: View {
         }
     }
 
-    private func thumbnail(_ asset: PHAsset, index: Int) -> some View {
+    private func thumbnail(_ photo: PhotoEditOrigin, index: Int) -> some View {
         let isCurrent = index == session.index
-        let isEdited = isCurrent ? currentHasEdits : session.hasDraft(asset)
+        let isEdited = isCurrent ? currentHasEdits : session.hasDraft(photo)
         return Button {
             select(index)
         } label: {
-            EditorFilmstripThumbnail(asset: asset, photoLibrary: photoLibrary)
+            EditorFilmstripThumbnail(photo: photo, photoLibrary: photoLibrary)
                 .frame(width: thumbnailSide, height: thumbnailSide)
                 .clipShape(RoundedRectangle.app(AppTheme.Radius.sm))
                 .overlay {
@@ -223,7 +226,7 @@ struct EditorFilmstrip: View {
                     // Same meaning as Lightroom's badge: this frame carries
                     // develop settings that the file on disk does not.
                     if isEdited {
-                        Image(systemName: session.isSaved(asset)
+                        Image(systemName: session.isSaved(photo)
                             ? "checkmark.circle.fill"
                             : "slider.horizontal.3")
                             .font(.system(size: 10, weight: .bold))
@@ -259,7 +262,7 @@ struct EditorFilmstrip: View {
                 }
             }
         }
-        .accessibilityLabel("Photo \(index + 1) of \(session.assets.count)")
+        .accessibilityLabel("Photo \(index + 1) of \(session.photos.count)")
         .accessibilityAddTraits(isCurrent ? [.isSelected, .isButton] : .isButton)
     }
 }
@@ -268,7 +271,7 @@ struct EditorFilmstrip: View {
 /// cell scrolls away, rather than every photo in a long selection being fetched
 /// the moment the editor opens.
 struct EditorFilmstripThumbnail: View {
-    let asset: PHAsset
+    let photo: PhotoEditOrigin
     let photoLibrary: PhotoLibraryService
 
     @State private var image: UIImage?
@@ -304,6 +307,18 @@ struct EditorFilmstripThumbnail: View {
     private func load() {
         cancel()
         let side = EditorLayoutMetrics.filmstripThumbnailSide * 3
+        if let file = photo.serverFile {
+            // Already on disk: ImageIO's thumbnail, off the main thread.
+            let url = file.primaryURL
+            Task {
+                let thumbnail = await Task.detached {
+                    EmbeddedPreview.thumbnail(ofFileAt: url, maxPixelSize: Int(side))?.image
+                }.value
+                if let thumbnail { image = UIImage(cgImage: thumbnail) }
+            }
+            return
+        }
+        guard let asset = photo.asset else { return }
         let size = CGSize(width: side, height: side)
         requestID = photoLibrary.requestThumbnail(
             for: asset,

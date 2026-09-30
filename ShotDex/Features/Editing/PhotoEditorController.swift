@@ -167,7 +167,9 @@ enum EditorGroup: String, CaseIterable, Identifiable {
 @Observable
 final class PhotoEditorController {
     // Curve setters live in an extension at the end of this file.
-    let asset: PHAsset
+    let origin: PhotoEditOrigin
+    /// Nil for a server photo (FS-17.06 §5).
+    var asset: PHAsset? { origin.asset }
     let sourceAlbum: PHAssetCollection?
     /// What `{camera}`-style tokens in a text layer expand to. Resolved once from
     /// the indexed row the caller already had — this is the whole reason the
@@ -323,22 +325,39 @@ final class PhotoEditorController {
     /// a saved recipe has a real shape, so it is by definition placed.
     @ObservationIgnored private var unplacedComponentIDs: Set<UUID> = []
 
-    init(
+    convenience init(
         asset: PHAsset,
         sourceAlbum: PHAssetCollection?,
         service: PhotoEditingService,
         metadata: PhotoMetadata? = nil,
         previewCache: EditorPreviewCache? = nil
     ) {
-        self.asset = asset
+        self.init(origin: .asset(asset), sourceAlbum: sourceAlbum, service: service,
+                  metadata: metadata, previewCache: previewCache)
+    }
+
+    init(
+        origin: PhotoEditOrigin,
+        sourceAlbum: PHAssetCollection?,
+        service: PhotoEditingService,
+        metadata: PhotoMetadata? = nil,
+        previewCache: EditorPreviewCache? = nil
+    ) {
+        self.origin = origin
         self.sourceAlbum = sourceAlbum
         self.service = service
         self.previewCache = previewCache
         overlayTokens = OverlayTokenValues(metadata: metadata)
+        let size = origin.pixelSize
+        pixelSize = size
         panelAspect = EditorLayoutMetrics.panelAspect(
-            pixelWidth: asset.pixelWidth, pixelHeight: asset.pixelHeight, crop: .identity
+            pixelWidth: size.width, pixelHeight: size.height, crop: .identity
         )
     }
+
+    /// The photo's shown size, read once — a server file's comes from its
+    /// header, which is not free to read again every layout pass.
+    @ObservationIgnored private let pixelSize: (width: Int, height: Int)
 
     /// The photo's shape for the phone panel's height (FS-03.13a §2): the
     /// asset's pixels and the crop the photo was saved with. Settled once when
@@ -351,7 +370,7 @@ final class PhotoEditorController {
         guard !hasSettledPanelAspect else { return }
         hasSettledPanelAspect = true
         if let aspect = EditorLayoutMetrics.panelAspect(
-            pixelWidth: asset.pixelWidth, pixelHeight: asset.pixelHeight, crop: saved.crop
+            pixelWidth: pixelSize.width, pixelHeight: pixelSize.height, crop: saved.crop
         ) {
             panelAspect = aspect
         }
@@ -626,7 +645,7 @@ final class PhotoEditorController {
         showCachedPreview(draft: draft)
         requestPlaceholder()
         do {
-            let session = try await service.beginSession(for: asset, isOnCanvas: true)
+            let session = try await service.beginSession(for: origin, isOnCanvas: true)
             self.session = session
             let option = session.preferredSource(for: session.recalledRecipe)
             guard let option else { throw PhotoEditingError.missingSource }
@@ -678,8 +697,8 @@ final class PhotoEditorController {
     /// left, from disk a moment later otherwise.
     private func showCachedPreview(draft: PhotoEditRecipe?) {
         guard let previewCache else { return }
-        let id = asset.localIdentifier
-        let stamp = EditorPreviewCache.stamp(of: asset)
+        let id = origin.id
+        let stamp = origin.stamp
         if let cached = previewCache.memoryEditedPreview(assetID: id, stamp: stamp, draft: draft) {
             adoptPlaceholder(cached)
             return
@@ -751,8 +770,8 @@ final class PhotoEditorController {
             original = (settle.image, option.id)
         }
         guard edited != nil || original != nil else { return }
-        let id = asset.localIdentifier
-        let stamp = EditorPreviewCache.stamp(of: asset)
+        let id = origin.id
+        let stamp = origin.stamp
         let baseline = sessionBaselineRecipe
         Task {
             await previewCache.store(
@@ -769,6 +788,19 @@ final class PhotoEditorController {
     /// screen this frame. If it comes back empty because the original lives in
     /// iCloud, that is itself worth saying.
     private func requestPlaceholder() {
+        if let file = origin.serverFile {
+            // Already on this device: the file's own thumbnail.
+            let url = file.primaryURL
+            Task { [weak self] in
+                let image = await Task.detached {
+                    EmbeddedPreview.thumbnail(ofFileAt: url, maxPixelSize: 1024)?.image
+                }.value
+                guard let self, let image, self.isLoading, !self.isPlaceholderCached else { return }
+                self.placeholderImage = UIImage(cgImage: image)
+            }
+            return
+        }
+        guard let asset else { return }
         let options = PHImageRequestOptions()
         options.deliveryMode = .fastFormat
         options.resizeMode = .fast
@@ -1156,14 +1188,14 @@ final class PhotoEditorController {
     /// False for an asset that was never edited, and for one the app may not
     /// write to (a shared album's photo, say).
     var canRevertToOriginal: Bool {
-        asset.canPerform(.content)
+        asset?.canPerform(.content) ?? false
     }
 
     /// Throws away every saved edit on the asset — including ones made in
     /// Photos — and closes the editor, since what it is editing no longer
     /// exists. Distinct from `reset()`, which only undoes this session.
     func revertToOriginal(completion: @escaping () -> Void) {
-        let asset = asset
+        guard let asset else { return completion() }
         Task { @MainActor in
             try? await PHPhotoLibrary.shared().performChanges {
                 PHAssetChangeRequest(for: asset).revertAssetContentToOriginal()
@@ -3672,8 +3704,8 @@ final class PhotoEditorController {
         // or on an earlier visit: the same identity render at the same size.
         if let previewCache, let option = selectedSourceOption,
            let cached = await previewCache.originalPreview(
-               assetID: asset.localIdentifier,
-               stamp: EditorPreviewCache.stamp(of: asset),
+               assetID: origin.id,
+               stamp: origin.stamp,
                optionID: option.id
            ),
            let cgImage = cached.cgImage {

@@ -234,7 +234,7 @@ struct PhotoStackScreen: View {
                     Button {
                         model.pickRetouchFrame(index)
                     } label: {
-                        EditorFilmstripThumbnail(asset: model.loadedAssets[index], photoLibrary: dependencies.photoLibrary)
+                        EditorFilmstripThumbnail(photo: .asset(model.loadedAssets[index]), photoLibrary: dependencies.photoLibrary)
                             .frame(width: side, height: side)
                             .clipShape(RoundedRectangle.app(AppTheme.Radius.sm))
                             .overlay {

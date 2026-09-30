@@ -30,8 +30,8 @@ struct EditorPhoneFilmstrip: View {
             ScrollViewReader { proxy in
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: AppTheme.Spacing.sm) {
-                        ForEach(Array(session.assets.enumerated()), id: \.offset) { index, asset in
-                            frame(asset, index: index).id(index)
+                        ForEach(Array(session.photos.enumerated()), id: \.offset) { index, photo in
+                            frame(photo, index: index).id(index)
                         }
                     }
                     .padding(.leading, AppTheme.Spacing.md)
@@ -59,15 +59,15 @@ struct EditorPhoneFilmstrip: View {
 
     private static let fadeWidth: CGFloat = 28
 
-    private func frame(_ asset: PHAsset, index: Int) -> some View {
+    private func frame(_ photo: PhotoEditOrigin, index: Int) -> some View {
         let isCurrent = index == session.index
-        let isSaved = session.isSaved(asset)
-        let hasDraft = isCurrent ? currentHasEdits : session.hasDraft(asset)
+        let isSaved = session.isSaved(photo)
+        let hasDraft = isCurrent ? currentHasEdits : session.hasDraft(photo)
         let shape = RoundedRectangle(cornerRadius: EditorLayoutMetrics.filmstripCellRadius, style: .continuous)
         return Button {
             select(index)
         } label: {
-            EditorFilmstripThumbnail(asset: asset, photoLibrary: photoLibrary)
+            EditorFilmstripThumbnail(photo: photo, photoLibrary: photoLibrary)
                 .frame(width: Self.frameSide, height: Self.frameSide)
                 .clipShape(shape)
                 .overlay(alignment: .bottomTrailing) {
@@ -94,12 +94,12 @@ struct EditorPhoneFilmstrip: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Photo \(index + 1) of \(session.assets.count)")
+        .accessibilityLabel("Photo \(index + 1) of \(session.photos.count)")
         .accessibilityValue(isSaved ? "Saved" : hasDraft ? "Edited" : "")
         .accessibilityAddTraits(isCurrent ? [.isSelected, .isButton] : .isButton)
     }
 
-    private var others: Int { session.assets.count - 1 }
+    private var others: Int { session.photos.count - 1 }
     private var photosText: String { others == 1 ? "1 Photo" : "\(others) Photos" }
 
     /// Always four items (E5): Apply Previous dims when there is no previous.
@@ -135,7 +135,7 @@ struct EditorPhoneFilmstrip: View {
             }
             .menuOrder(.fixed)
             .accessibilityLabel("Sync")
-            Text("\(session.index + 1) / \(session.assets.count)")
+            Text("\(session.index + 1) / \(session.photos.count)")
                 .font(.system(size: 10).monospacedDigit())
                 .foregroundStyle(EditorTheme.secondaryText)
         }

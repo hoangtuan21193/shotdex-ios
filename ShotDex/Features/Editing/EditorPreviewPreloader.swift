@@ -37,7 +37,7 @@ final class EditorPreviewPreloader {
         task = Task(priority: .utility) { [weak self] in
             while !Task.isCancelled, let self, let next = self.nextPhoto() {
                 let stored = await self.preload(
-                    next.asset,
+                    next.photo,
                     draft: next.draft,
                     isNeighbour: next.isNeighbour,
                     isEditorBusy: { [weak self] in self?.isEditorBusy() ?? true }
@@ -65,26 +65,26 @@ final class EditorPreviewPreloader {
     /// The nearest photo to the canvas that still has work, in
     /// `EditorPreloadOrder`. Asked afresh before each photo, so a switch or a
     /// sync is followed without restarting anything.
-    private func nextPhoto() -> (asset: PHAsset, draft: PhotoEditRecipe?, isNeighbour: Bool, key: String)? {
+    private func nextPhoto() -> (photo: PhotoEditOrigin, draft: PhotoEditRecipe?, isNeighbour: Bool, key: String)? {
         guard let session else { return nil }
         let current = session.index
-        for index in EditorPreloadOrder.indices(count: session.assets.count, around: current) where index != current {
-            let asset = session.assets[index]
-            guard asset.mediaType == .image else { continue }
-            let draft = session.draft(for: asset)
-            let key = "\(asset.localIdentifier)|\(draft.map(EditorPreviewFingerprint.of) ?? "saved")"
+        for index in EditorPreloadOrder.indices(count: session.photos.count, around: current) where index != current {
+            let photo = session.photos[index]
+            if let asset = photo.asset, asset.mediaType != .image { continue }
+            let draft = session.draft(for: photo)
+            let key = "\(photo.id)|\(draft.map(EditorPreviewFingerprint.of) ?? "saved")"
             guard !failures.contains(key), cache.needsPreload(
-                assetID: asset.localIdentifier,
-                stamp: EditorPreviewCache.stamp(of: asset),
+                assetID: photo.id,
+                stamp: photo.stamp,
                 draft: draft
             ) else { continue }
-            return (asset, draft, abs(index - current) <= 1, key)
+            return (photo, draft, abs(index - current) <= 1, key)
         }
         return nil
     }
 
     private func preload(
-        _ asset: PHAsset,
+        _ photo: PhotoEditOrigin,
         draft: PhotoEditRecipe?,
         isNeighbour: Bool,
         isEditorBusy: @MainActor () -> Bool
@@ -92,7 +92,7 @@ final class EditorPreviewPreloader {
         guard await Self.waitUntilIdle(isEditorBusy) else { return false }
         let session: PhotoEditingSession
         do {
-            session = try await service.preloadSession(for: asset, keeps: isNeighbour)
+            session = try await service.preloadSession(for: photo, keeps: isNeighbour)
         } catch {
             return false
         }
@@ -112,8 +112,8 @@ final class EditorPreviewPreloader {
         baseline.source = option.source
         baseline.sourceFilename = option.filename
         let recipe = draft ?? baseline
-        let id = asset.localIdentifier
-        let stamp = EditorPreviewCache.stamp(of: asset)
+        let id = photo.id
+        let stamp = photo.stamp
         let renderer = service.renderer
         let edge = PhotoEditorController.settleEdge
 

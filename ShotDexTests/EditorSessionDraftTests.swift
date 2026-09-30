@@ -18,7 +18,7 @@ struct EditorSessionDraftTests {
     /// Save Changes, then the editor moves on and parks the photo it left:
     /// the same recipe it just wrote is not a draft.
     @Test func leavingASavedPhotoDoesNotParkItAgain() {
-        let session = EditorSession(assets: [])
+        let session = EditorSession(photos: [])
         let saved = recipe(exposure: 0.66)
         session.store(saved, forID: "A")
         session.store(recipe(exposure: 0.4), forID: "B")
@@ -32,7 +32,7 @@ struct EditorSessionDraftTests {
 
     /// A change made after the save is a draft again.
     @Test func anEditAfterTheSaveIsADraft() {
-        let session = EditorSession(assets: [])
+        let session = EditorSession(photos: [])
         let saved = recipe(exposure: 0.66)
         session.markSaved("A", recipe: saved)
 
@@ -45,7 +45,7 @@ struct EditorSessionDraftTests {
     /// holds, not "never touched" — the identity rule is only for photos this
     /// run has not written.
     @Test func resetAfterSaveIsADraft() {
-        let session = EditorSession(assets: [])
+        let session = EditorSession(photos: [])
         session.markSaved("A", recipe: recipe(exposure: 0.66))
         session.store(.identity, forID: "A")
         #expect(session.drafts["A"] == .identity)
@@ -56,7 +56,7 @@ struct EditorSessionDraftTests {
 
     /// Save Copy leaves the photo itself as it was, so its edit stays a draft.
     @Test func saveCopyKeepsTheDraft() {
-        let session = EditorSession(assets: [])
+        let session = EditorSession(photos: [])
         let edit = recipe(exposure: 0.66)
         session.store(edit, forID: "A")
         session.markSaved("copy-of-A")

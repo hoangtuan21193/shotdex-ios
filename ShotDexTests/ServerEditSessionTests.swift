@@ -99,6 +99,47 @@ final class DirectRemoteAccess: RemoteFileAccess, @unchecked Sendable {
         #expect(hold.holds == 0)
     }
 
+    /// AC-54: Edit on one photo brings down exactly its one file, writes
+    /// nothing to the server, and the editor's session reads that file in
+    /// place — no second copy, no PhotoKit input.
+    @Test func downloadsOriginalOnly() async throws {
+        let client = InMemoryRemoteFileClient()
+        let data = RemoteThumbnailTests.jpeg(width: 640, date: "2024:05:01 10:00:00")
+        client.put("Trip/a.JPG", data)
+        client.put("Trip/b.JPG", RemoteThumbnailTests.jpeg(width: 300))
+        let before = client.files
+        let model = ServerEditFetchModel(
+            serverId: "S1", folder: "Trip", photos: [ServerPhoto(files: [entry("a.JPG", data.count)])],
+            access: DirectRemoteAccess(client), freeSpace: { 2_000_000_000 }, screenHold: NoHold()
+        )
+
+        model.start()
+        await waitUntilSettled(model)
+
+        #expect(model.stage == .fetched)
+        let fetched = try #require(model.fetched.first)
+        defer { if let directory = model.workDirectory { try? FileManager.default.removeItem(at: directory) } }
+        #expect(client.downloadCount == 1)
+        #expect(client.uploadCount == 0)
+        #expect(client.removed.isEmpty)
+        #expect(client.files == before)
+        #expect(try Data(contentsOf: fetched.primaryURL) == data)
+        #expect(fetched.id == "S1|Trip/a.JPG")
+
+        let service = PhotoEditingService()
+        let session = try await service.beginSession(for: .serverFile(fetched))
+        defer { service.releaseCachedSessions() }
+        #expect(session.contentInput == nil)
+        #expect(session.asset == nil)
+        let option = try #require(session.preferredSource(for: nil))
+        #expect(option.filename == "a.JPG")
+        let loaded = try await service.loadSource(option, in: session)
+        #expect(loaded.info.persistentIdentity?.hasPrefix("S1|Trip/a.JPG|") == true)
+        // Read where it lies: nothing was copied into the session's folder.
+        let copies = try FileManager.default.contentsOfDirectory(atPath: session.temporaryDirectory.path)
+        #expect(copies.isEmpty)
+    }
+
     /// The same room rule as Import (FS-17.02 §1): free space unknown is not a
     /// reason to refuse.
     @Test func unknownFreeSpaceDoesNotRefuse() {

@@ -15,6 +15,8 @@ struct ServerBrowserScreen: View {
     /// Choose-folder mode: the folder picked.
     var onChoose: ((String) -> Void)?
     @State private var downloadModel: ServerDownloadModel?
+    /// Edit, Share, Copy… on server photos (FS-17.06).
+    @State private var commandRun: ServerPhotoCommandRun?
     @State private var viewing: ServerPhoto?
     @State private var isNamingFolder = false
     @State private var renaming: ServerBrowserItem?
@@ -58,6 +60,7 @@ struct ServerBrowserScreen: View {
                     }
                 })
             }
+            .serverPhotoCommands($commandRun)
             .sheet(item: $viewing) { photo in
                 ServerPhotoViewer(photo: photo, model: folder) { presentDownload([photo]) }
             }
@@ -289,6 +292,7 @@ struct ServerBrowserScreen: View {
                 }
             case .photo(let photo):
                 if model.canSelect {
+                    Button { run(.edit, on: [photo]) } label: { Label("Edit", systemImage: "slider.horizontal.3") }
                     Button { presentDownload([photo]) } label: { Label("Import to Library", systemImage: "arrow.down.circle") }
                 }
             case .file:
@@ -542,6 +546,20 @@ struct ServerBrowserScreen: View {
             return String(localized: "Choose Home", comment: "Server folder picker: pick the SFTP home folder")
         }
         return String(localized: "Choose “\(model.title)”", comment: "Server folder picker: pick the folder on screen")
+    }
+
+    /// Brings the originals down, then runs `command` on them (FS-17.06 §4).
+    private func run(_ command: ServerPhotoCommand, on photos: [ServerPhoto]) {
+        guard !photos.isEmpty else { return }
+        let fetch = ServerEditFetchModel(
+            serverId: model.server.id,
+            folder: folder.folder,
+            photos: photos,
+            access: model.session,
+            freeSpace: { DiskSpace.availableBytes() },
+            screenHold: ScreenAwakeCoordinator.shared
+        )
+        commandRun = ServerPhotoCommandRun(command: command, fetch: fetch)
     }
 
     private func presentDownload(_ photos: [ServerPhoto]) {

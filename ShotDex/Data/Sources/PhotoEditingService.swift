@@ -14,33 +14,46 @@ struct PhotoEditSourceOption: Identifiable {
     let type: UTType
     fileprivate let resource: PHAssetResource?
     fileprivate let contentInputURL: URL?
+    /// A server original already on disk (FS-17.06 §5): read in place, not
+    /// copied into the session.
+    fileprivate var localFileURL: URL? = nil
 
     var isRAW: Bool { type.conforms(to: .rawImage) }
 }
 
 @MainActor
 final class PhotoEditingSession {
-    let asset: PHAsset
-    let contentInput: PHContentEditingInput
+    let origin: PhotoEditOrigin
+    /// Nil for a server photo: there is nothing in Photos to write to.
+    let contentInput: PHContentEditingInput?
     let sourceOptions: [PhotoEditSourceOption]
     let recalledRecipe: PhotoEditRecipe?
     let temporaryDirectory: URL
 
     fileprivate init(
-        asset: PHAsset,
-        contentInput: PHContentEditingInput,
+        origin: PhotoEditOrigin,
+        contentInput: PHContentEditingInput?,
         sourceOptions: [PhotoEditSourceOption],
         recalledRecipe: PhotoEditRecipe?,
         temporaryDirectory: URL
     ) {
-        self.asset = asset
+        self.origin = origin
         self.contentInput = contentInput
         self.sourceOptions = sourceOptions
         self.recalledRecipe = recalledRecipe
         self.temporaryDirectory = temporaryDirectory
     }
 
-    var isLivePhoto: Bool { asset.mediaSubtypes.contains(.photoLive) }
+    var asset: PHAsset? { origin.asset }
+
+    var isLivePhoto: Bool { asset?.mediaSubtypes.contains(.photoLive) ?? false }
+
+    /// The asset and its PhotoKit input, for the paths that write back to
+    /// Photos — which a server photo never takes.
+    fileprivate func library() throws -> (asset: PHAsset, input: PHContentEditingInput) {
+        guard let asset, let contentInput else { throw PhotoEditingError.unavailable }
+        return (asset, contentInput)
+    }
     var hasRAWAndRenderedPair: Bool {
         sourceOptions.contains(where: \.isRAW)
             && sourceOptions.contains(where: { !$0.isRAW })
@@ -113,12 +126,16 @@ final class PhotoEditingService {
     /// moment ago. `isOnCanvas`: the editor's own photo, pinned against
     /// eviction until another photo takes the canvas.
     func beginSession(for asset: PHAsset, isOnCanvas: Bool = false) async throws -> PhotoEditingSession {
-        if isOnCanvas { sessions.activeID = asset.localIdentifier }
-        if let cached = sessions.cached(asset.localIdentifier) {
+        try await beginSession(for: .asset(asset), isOnCanvas: isOnCanvas)
+    }
+
+    func beginSession(for origin: PhotoEditOrigin, isOnCanvas: Bool = false) async throws -> PhotoEditingSession {
+        if isOnCanvas { sessions.activeID = origin.id }
+        if let cached = sessions.cached(origin.id) {
             return cached
         }
-        let session = try await makeSession(for: asset)
-        remember(session, for: asset.localIdentifier)
+        let session = try await makeSession(for: origin)
+        remember(session, for: origin.id)
         return session
     }
 
@@ -128,18 +145,18 @@ final class PhotoEditingService {
     /// when the previews are drawn: the preloader walks the whole run, and a
     /// session holds a full copy of the original, so twenty photos must not
     /// mean twenty copies.
-    func preloadSession(for asset: PHAsset, keeps: Bool) async throws -> PhotoEditingSession {
-        if let cached = sessions.cached(asset.localIdentifier) {
+    func preloadSession(for origin: PhotoEditOrigin, keeps: Bool) async throws -> PhotoEditingSession {
+        if let cached = sessions.cached(origin.id) {
             return cached
         }
-        let session = try await makeSession(for: asset)
+        let session = try await makeSession(for: origin)
         // The editor may have closed, or the walk moved on, while this was
         // waiting on iCloud.
         guard !Task.isCancelled else {
             discard(session)
             throw CancellationError()
         }
-        if keeps { remember(session, for: asset.localIdentifier) }
+        if keeps { remember(session, for: origin.id) }
         return session
     }
 
@@ -158,6 +175,45 @@ final class PhotoEditingService {
     /// Everything the cache holds, released when the editor closes.
     func releaseCachedSessions() {
         for session in sessions.releaseAll() { discard(session) }
+    }
+
+    private func makeSession(for origin: PhotoEditOrigin) async throws -> PhotoEditingSession {
+        switch origin {
+        case .asset(let asset): try await makeSession(for: asset)
+        case .serverFile(let photo): try makeSession(for: photo)
+        }
+    }
+
+    /// A server original fetched to disk: its files are the sources — the
+    /// RAW and its JPEG/HEIC twin, when both came down — and there is no
+    /// saved recipe to recall (FS-17.06 §5).
+    private func makeSession(for photo: FetchedServerPhoto) throws -> PhotoEditingSession {
+        let options = photo.files.map { fetched in
+            let type = UTType(filenameExtension: (fetched.file.name as NSString).pathExtension) ?? .image
+            let isRAW = type.conforms(to: .rawImage)
+            let source: PhotoEditSource = isRAW ? .raw : .rendered
+            return PhotoEditSourceOption(
+                id: "\(source.rawValue)-\(fetched.file.name)",
+                source: source,
+                displayName: isRAW ? "RAW" : type.preferredFilenameExtension?.uppercased() ?? "JPEG",
+                filename: fetched.file.name,
+                type: type,
+                resource: nil,
+                contentInputURL: nil,
+                localFileURL: fetched.url
+            )
+        }.sorted { lhs, rhs in
+            if lhs.isRAW != rhs.isRAW { return lhs.isRAW }
+            return lhs.displayName < rhs.displayName
+        }
+        guard !options.isEmpty else { throw PhotoEditingError.missingSource }
+        return PhotoEditingSession(
+            origin: .serverFile(photo),
+            contentInput: nil,
+            sourceOptions: options,
+            recalledRecipe: nil,
+            temporaryDirectory: try makeTemporaryDirectory()
+        )
     }
 
     private func makeSession(for asset: PHAsset) async throws -> PhotoEditingSession {
@@ -187,7 +243,7 @@ final class PhotoEditingService {
             throw PhotoEditingError.missingSource
         }
         return PhotoEditingSession(
-            asset: asset,
+            origin: .asset(asset),
             contentInput: input,
             sourceOptions: options,
             recalledRecipe: recalledRecipe,
@@ -208,7 +264,7 @@ final class PhotoEditingService {
         _ option: PhotoEditSourceOption,
         in session: PhotoEditingSession
     ) async throws -> LoadedPhotoEditSource {
-        let fileURL = session.temporaryDirectory
+        let fileURL = option.localFileURL ?? session.temporaryDirectory
             .appendingPathComponent("source-\(option.id)")
             .appendingPathExtension(option.type.preferredFilenameExtension ?? "image")
         if !FileManager.default.fileExists(atPath: fileURL.path) {
@@ -223,8 +279,7 @@ final class PhotoEditingService {
         var info = try await renderer.inspectSource(at: fileURL, typeHint: option.type)
         // Names the photo across launches, so its mattes are read back from
         // disk instead of worked out again (FS-03.15d §5).
-        let edited = session.asset.modificationDate?.timeIntervalSince1970 ?? 0
-        info.persistentIdentity = "\(session.asset.localIdentifier)|\(option.id)|\(edited)"
+        info.persistentIdentity = "\(session.origin.id)|\(option.id)|\(session.origin.stamp)"
         return LoadedPhotoEditSource(optionID: option.id, info: info)
     }
 
@@ -241,6 +296,7 @@ final class PhotoEditingService {
         includeMetadata: Bool,
         album: PHAssetCollection?
     ) async throws -> PhotoSaveResult {
+        let (asset, contentInput) = try session.library()
         let renderRecipe = renderRecipe ?? recipe
         let resolvedRequested = await renderer.resolvedOutputFormat(
             requested: requestedFormat,
@@ -248,7 +304,7 @@ final class PhotoEditingService {
             sourceIsRAW: source.info.isRAW
         )
         let supportedTypes = PHContentEditingOutput(
-            contentEditingInput: session.contentInput
+            contentEditingInput: contentInput
         ).supportedRenderedContentTypes
         let actualFormat = supportedTypes.contains(resolvedRequested.uniformType)
             ? resolvedRequested
@@ -282,12 +338,12 @@ final class PhotoEditingService {
 
         var attachedRecipe = recipe
         attachedRecipe.sourceAssetIdentifier =
-            recipe.sourceAssetIdentifier ?? session.asset.localIdentifier
+            recipe.sourceAssetIdentifier ?? asset.localIdentifier
         attachedRecipe.sourceFilename =
             session.sourceOptions.first(where: { $0.id == source.optionID })?.filename
         let filenameReservation = filenameIndexes.reserve(
             sourceAssetIdentifier:
-                attachedRecipe.sourceAssetIdentifier ?? session.asset.localIdentifier,
+                attachedRecipe.sourceAssetIdentifier ?? asset.localIdentifier,
             suffix: "SHOTDEX_EDITED"
         )
         let filename = PhotoOutputFilename.make(
@@ -305,8 +361,8 @@ final class PhotoEditingService {
                 resourceOptions.originalFilename = filename
                 creation.addResource(with: .photo, fileURL: baseURL, options: resourceOptions)
                 if includeMetadata {
-                    creation.creationDate = session.asset.creationDate
-                    creation.location = session.asset.location
+                    creation.creationDate = asset.creationDate
+                    creation.location = asset.location
                 }
                 guard let placeholder = creation.placeholderForCreatedAsset else {
                     transactionFileError = PhotoEditingError.cannotCreateAsset
@@ -358,8 +414,9 @@ final class PhotoEditingService {
         requestedFormat: PhotoOutputFormat,
         includeMetadata: Bool
     ) async throws -> PhotoSaveResult {
+        let (asset, contentInput) = try session.library()
         let renderRecipe = renderRecipe ?? recipe
-        let output = PHContentEditingOutput(contentEditingInput: session.contentInput)
+        let output = PHContentEditingOutput(contentEditingInput: contentInput)
         let resolvedRequested = await renderer.resolvedOutputFormat(
             requested: requestedFormat,
             sourceType: source.info.type,
@@ -376,16 +433,16 @@ final class PhotoEditingService {
             output.adjustmentData = makeAdjustmentData(recipe)
             try await commit(
                 output: output,
-                to: session.asset,
+                to: asset,
                 includeMetadata: includeMetadata
             )
-            sessions.retire(session.asset.localIdentifier)
+            sessions.retire(asset.localIdentifier)
             let actualFormat: PhotoOutputFormat =
                 output.defaultRenderedContentType?.conforms(to: .heic) == true
                     ? .heic
                     : .jpeg
             return PhotoSaveResult(
-                assetID: session.asset.localIdentifier,
+                assetID: asset.localIdentifier,
                 format: actualFormat,
                 fellBackToJPEG:
                     actualFormat == .jpeg && resolvedRequested == .heic
@@ -407,15 +464,15 @@ final class PhotoEditingService {
         output.adjustmentData = makeAdjustmentData(recipe)
         try await commit(
             output: output,
-            to: session.asset,
+            to: asset,
             includeMetadata: includeMetadata
         )
         // The photo now carries the saved recipe and a new modification
         // date: the next open must read PhotoKit again, not reuse this
         // session's pre-save input (FS-03.09b AC-5).
-        sessions.retire(session.asset.localIdentifier)
+        sessions.retire(asset.localIdentifier)
         return PhotoSaveResult(
-            assetID: session.asset.localIdentifier,
+            assetID: asset.localIdentifier,
             format: actualFormat,
             fellBackToJPEG: actualFormat != resolvedRequested
         )
@@ -537,8 +594,12 @@ final class PhotoEditingService {
         in session: PhotoEditingSession
     ) -> Bool {
         guard format != .preserve else { return true }
+        guard let contentInput = session.contentInput else {
+            // A server photo is written by ShotDex itself, not by Photos.
+            return format == .jpeg || (format == .heic && Self.supportsHEICEncoding)
+        }
         return PHContentEditingOutput(
-            contentEditingInput: session.contentInput
+            contentEditingInput: contentInput
         ).supportedRenderedContentTypes.contains(format.uniformType)
     }
 
@@ -743,9 +804,9 @@ final class PhotoEditingService {
         output: PHContentEditingOutput,
         recipe: PhotoEditRecipe
     ) async throws {
-        guard let context = PHLivePhotoEditingContext(
-            livePhotoEditingInput: session.contentInput
-        ) else {
+        guard let contentInput = session.contentInput,
+              let context = PHLivePhotoEditingContext(livePhotoEditingInput: contentInput)
+        else {
             throw PhotoEditingError.cannotRender
         }
         let automaticMasks = try await renderer.automaticMaskImages(

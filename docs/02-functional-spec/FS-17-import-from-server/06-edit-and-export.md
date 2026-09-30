@@ -34,7 +34,8 @@ lệnh đó (AC-67). Trong đợt 1 ba lệnh này không có trong menu, chứ 
 | Lối vào | Lệnh |
 |---|---|
 | Nhấn giữ một ảnh | Edit · Share · Copy · Import to Library — rồi nhóm Files: Rename · Delete |
-| Chế độ chọn, ⋯ | Edit · Paste Edits · Combine Photos · Create Collage · Create Video · Resize · Export EXIF (CSV) · Import to Library |
+| Chế độ chọn, thanh trên | nút chữ **Edit** cạnh ⋯, như chế độ chọn của album |
+| Chế độ chọn, ⋯ | Paste Edits · Combine Photos · Create Collage · Create Video · Resize · Export EXIF (CSV) · Import to Library |
 | Chế độ chọn, thanh dưới | Share · Delete (xoá trên server, hỏi như hiện nay) |
 | Màn xem một ảnh | Edit · Share · Import to Library |
 
@@ -58,7 +59,8 @@ lệnh đó (AC-67). Trong đợt 1 ba lệnh này không có trong menu, chứ 
 - Editor mở như với ảnh trong library: cùng panel, cùng mask, lens profile đọc từ EXIF trong file.
 - Nút lưu (Save Copy / Save Changes, FS-03.06 §2) được thay bằng một nút **Export…** mở sheet xuất (§6).
 - Loạt nhiều ảnh chạy như FS-03.09b, và nút Export… xuất **mọi ảnh đã sửa** của loạt trong một lần hỏi nơi lưu.
-- Rời editor khi có sửa chưa xuất (Cancel, vuốt đóng) thì hỏi "Discard edits?". Discard thì xoá bản tạm và recipe.
+- Rời editor khi có sửa chưa xuất (Back, Cancel) thì hỏi như với ảnh library: "Discard this editing session?".
+  Discard thì xoá bản tạm và recipe. Editor che toàn màn hình nên không vuốt đóng được.
 - Rời mà chưa sửa gì thì không hỏi, chỉ xoá bản tạm. App bị giết thì bản tạm được dọn ở lần khởi động sau.
 - Recipe chỉ sống trong phiên và không bao giờ vào kho recipe của ảnh Photos.
 - Collage, Video, Combine Photos, Resize và Paste Edits cũng dùng bản tạm. Nút lưu của các màn đó mở cùng sheet xuất.
@@ -105,8 +107,8 @@ lệnh đó (AC-67). Trong đợt 1 ba lệnh này không có trong menu, chứ 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
 | AC-52 | folder NAS có `a.JPG` | nhấn giữ `a.JPG` | menu có Edit, Share, Copy, Import to Library, Rename, Delete; không có Adjust Date, Add to Collection, Duplicate, Favorite, Hide | ảnh `scripts/server-edit.json` ⚠️ chưa có |
-| AC-53 | chọn 3 ảnh | mở ⋯ | 8 lệnh §3 theo đúng thứ tự, tên + glyph trùng menu album | `ServerEditMenuTests.matchesAlbumMenu` ⚠️ chưa có + ảnh |
-| AC-54 | `a.JPG` 12 MB, máy còn 500 MB | Edit | tải 1 file, editor mở, server không có thay đổi nào (không ghi, không đổi tên) | `ServerEditSessionTests.downloadsOriginalOnly` ⚠️ chưa có |
+| AC-53 | chọn 3 ảnh | nhìn thanh trên, mở ⋯ | nút Edit cạnh ⋯; ⋯ có các lệnh §3 của đợt này theo đúng thứ tự, tên + glyph trùng menu album | `ServerEditMenuTests.matchesAlbumMenu` ⚠️ chưa có + ảnh |
+| AC-54 | `a.JPG` 12 MB, máy còn 2 GB | Edit | tải 1 file, editor mở, server không có thay đổi nào (không ghi, không đổi tên) | `ServerEditSessionTests.downloadsOriginalOnly` |
 | AC-55 | 3 RAW × 60 MB, máy còn 1.1 GB | Edit | không tải byte nào, báo "about 80 MB more needed" (cần 1.18 GB) | `ServerEditSessionTests.spaceCheckBeforeDownload` |
 | AC-56 | đang tải ảnh 2/3 | Cancel | thư mục tạm bị xoá, quay lại lưới, không mở editor | `ServerEditSessionTests.cancelRemovesTemp` |
 | AC-57 | editor, Exposure +1 | Cancel → Discard | bản tạm + recipe mất; mở lại `a.JPG` thì Exposure = 0 | `ServerEditSessionTests.discardDropsDraft` ⚠️ chưa có + ảnh |

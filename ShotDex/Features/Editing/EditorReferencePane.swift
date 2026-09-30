@@ -8,7 +8,7 @@ import SwiftUI
 /// is finished. Rendering it through a second `PhotoEditorController` would
 /// double the editor's memory for a picture nobody is changing.
 struct EditorReferencePane: View {
-    let asset: PHAsset
+    let photo: PhotoEditOrigin
     let photoLibrary: PhotoLibraryService
     /// The canvas's zoom and pan, mirrored here while the two are linked. Both
     /// panes are the same size and both frames are aspect-fit inside them, so
@@ -45,7 +45,7 @@ struct EditorReferencePane: View {
         // being matched to, and the whole job of this pane is comparing the two
         // at a glance.
         .overlay(alignment: .top) { header }
-        .task(id: asset.localIdentifier) { load() }
+        .task(id: photo.id) { load() }
         .onDisappear(perform: cancel)
     }
 
@@ -93,6 +93,18 @@ struct EditorReferencePane: View {
     private func load() {
         cancel()
         image = nil
+        if let file = photo.serverFile {
+            // A server original on disk (FS-17.06 §5): shown as the file is.
+            let url = file.primaryURL
+            Task {
+                let decoded = await Task.detached {
+                    EmbeddedPreview.thumbnail(ofFileAt: url, maxPixelSize: 1400)?.image
+                }.value
+                if let decoded { image = UIImage(cgImage: decoded) }
+            }
+            return
+        }
+        guard let asset = photo.asset else { return }
         requestID = photoLibrary.requestDetailImage(
             for: asset,
             targetSize: CGSize(width: 1400, height: 1400),
