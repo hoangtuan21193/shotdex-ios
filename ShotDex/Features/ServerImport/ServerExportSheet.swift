@@ -161,7 +161,7 @@ struct ServerExportSheet: View {
             if model.composedFilename == nil {
                 Text("Enter a name to export.", comment: "Server export: the typed name leaves nothing")
             } else {
-                Text(verbatim: "\(composed.tool.title) · \(composed.fileExtension.uppercased())")
+                Text(verbatim: "\(composed.tool.title) · \(composed.formatName)")
             }
         }
     }

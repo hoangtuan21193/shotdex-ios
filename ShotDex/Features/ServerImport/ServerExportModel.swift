@@ -25,6 +25,15 @@ final class ServerExportModel {
         let firstFilename: String
 
         var fileExtension: String { file.pathExtension.lowercased() }
+
+        /// The format as the sheet names it elsewhere: JPEG, HEIC, MP4.
+        var formatName: String {
+            switch fileExtension {
+            case "jpg", "jpeg": "JPEG"
+            case "heic", "heif": "HEIC"
+            default: fileExtension.uppercased()
+            }
+        }
     }
 
     /// The other folder picked for Other Folder….

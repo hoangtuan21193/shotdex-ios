@@ -60,11 +60,18 @@ struct CollageExportScreen: View {
     private var background: some View {
         EditorTheme.background.ignoresSafeArea()
         if let preview {
-            Image(uiImage: preview)
-                .resizable()
-                .scaledToFill()
-                .ignoresSafeArea()
-                .blur(radius: 30)
+            // Filled inside a view that takes the screen's size, so the
+            // fill never widens the ZStack: a square collage on a portrait
+            // phone otherwise laid the whole screen out 870pt wide, with the
+            // top bar and the options card pushed off both edges.
+            Color.clear
+                .overlay {
+                    Image(uiImage: preview)
+                        .resizable()
+                        .scaledToFill()
+                        .blur(radius: 30)
+                }
+                .clipped()
                 .overlay(Color.black.opacity(0.6))
                 .ignoresSafeArea()
         }
