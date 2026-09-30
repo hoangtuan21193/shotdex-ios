@@ -121,6 +121,10 @@ Tên album là `ShotDex Collages` chứ không phải `Collages`: tab Collection
 `Collages` là *project mở lại được*, nên một album người dùng cùng tên trên cùng màn là một cái tên hai
 nghĩa. Album `Collages` do bản cũ tạo vẫn được nhận và ghi tiếp nếu còn.
 
+Collage làm từ ảnh server ([FS-17.06 §5b](FS-17-import-from-server/06-edit-and-export.md)): nút là `Export…`, file
+render vào thư mục tạm của lượt rồi mở sheet xuất; không lưu vào Photos, không vào album, không ghi Creations.
+Ảnh library vẫn thêm được qua picker; kéo thả file từ app khác bị tắt.
+
 ## 9. Lệch so với thiết kế đã ghi
 
 - Hiệu ứng ảnh bay theo đường cong khi giảm số ô rút gọn thành chèn + nháy.

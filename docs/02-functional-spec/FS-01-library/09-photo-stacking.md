@@ -67,6 +67,10 @@ Tầng D (DESIGN §10.3, §10.3b): `Cancel` · tiêu đề · `Save`; stage đen
   - **Smart Album, On This Day** (và album không cho thêm ảnh): chuyển sang tab Library và mở ảnh ở đó.
 - Ảnh lưu là JPEG 0,95 mang EXIF của khung đầu (máy, ống kính, ngày, vị trí) — chung cho cả ba dòng, luật ở FS-01.10 §6.
 
+Ảnh server ([FS-17.06 §5b](../FS-17-import-from-server/06-edit-and-export.md)): ba dòng Combine Photos cũng có
+trong ⋯ của folder server. `Save` thành `Export…`, JPEG ghi vào thư mục tạm của lượt rồi mở sheet xuất; khung
+đọc thẳng từ bản tạm, Focus Stack xếp theo ngày EXIF trong file. Cancel hỏi Discard khi đã có nét retouch.
+
 ## 4. Focus stack (thuật toán hiện tại — sẽ thay theo [FS-01.10](10-focus-stack.md))
 
 1. Align mỗi frame bằng bộ căn ảnh theo tịnh tiến của hệ thống — **chỉ tịnh tiến**. Sẽ đổi theo

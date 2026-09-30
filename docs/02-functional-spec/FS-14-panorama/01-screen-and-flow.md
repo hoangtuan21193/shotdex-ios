@@ -33,6 +33,10 @@ trong thông báo lỗi.
 
 ## 3. Bố cục
 
+Ảnh server ([FS-17.06 §5b](../FS-17-import-from-server/06-edit-and-export.md)): khung đọc từ bản tạm trên máy,
+`Save` thành `Export…`, file ghép nằm trong thư mục tạm của lượt rồi mở sheet xuất; không có ghi chú crash và
+không vào Photos.
+
 Khung tầng D như Combine Photos (DESIGN §10.3, §10.3b): top bar `Cancel` · tiêu đề `Panorama` · `Save`,
 stage đen, một panel đáy `panelSolid`. Không token mới.
 

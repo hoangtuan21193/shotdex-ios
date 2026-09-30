@@ -115,3 +115,11 @@ với **mọi** preset, và đó là lỗi thật đằng sau triệu chứng ng
 ## 10. Tiêu chí nghiệm thu
 
 Xem [README](README.md) — FS-12 là tài liệu duy nhất đã có bảng AC đầy đủ.
+
+## Ảnh server (FS-17.06 §5b)
+
+Dự án làm từ ảnh server giữ `assetID` dạng chuỗi (`serverId|path`) và một bảng id → bản tạm trên máy.
+`StillFrameStore` đọc bản tạm ở cỡ render (LRU 4 giữ nguyên), filmstrip, filter và scope cũng đọc từ file.
+Export dừng ở file `.mp4`, chuyển vào thư mục tạm của lượt và mở sheet xuất
+([FS-17.06](../FS-17-import-from-server/06-edit-and-export.md)); không lưu Photos, không ghi Creations. Ảnh và video
+library vẫn thêm được; kéo thả từ app khác bị tắt.

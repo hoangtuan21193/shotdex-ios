@@ -6,7 +6,7 @@
 | Intent | [2026-09-29-network-folder-edit](../_intents/2026-09-29-network-folder-edit.md) |
 | Đợt 1 | [2026-09-30-network-folder-edit](2026-09-30-network-folder-edit.md) |
 | Ngày | 2026-09-30 |
-| Trạng thái | đã duyệt (2026-09-30) |
+| Trạng thái | gần xong (2026-09-30) — 9/9 task; còn ảnh Duo và iPad ngang |
 
 ## 1. Hiểu đúng chưa
 
@@ -78,3 +78,17 @@ Id trong recipe giữ `String` — không đổi Codable.
 - Chạy thật trên SMB (impacket): file ra trên share, `shasum` khớp.
 - Tài liệu phải cập nhật: FS-17.06 cột "Chứng minh bằng", intent Tiến độ, FS-05 (Collage) / FS-14 (Combine) / Video
   Studio một dòng về lượt server.
+
+## 7. Kết quả (2026-09-30)
+
+- Commit: 8c005dc (spec/plan), 0c4615f, 8267383, 1f1e8ca, f458f3c, 7d7e3d8, 7a8a965, 6fb4af8, b7e7dcf, 60d0331 (2 lỗi
+  thấy trên ảnh: nền màn Export của collage làm cả màn rộng ~870pt — có từ trước, cả với collage library; và nhãn
+  `JPG` → `JPEG`).
+- Chạy thật trên SMB (impacket, iPhone 17 Pro 26.5): Collage → `DSCF1000_collage.jpg`, trộn ảnh library →
+  `DSCF1000_collage (2).jpg`, Video → `DSCF1000_video.mp4` + 1 video trong Photos, Focus Stack và Panorama tới sheet.
+  Mọi đường ra để lại 0 thư mục `ShotDexServerEdit-*`.
+- iPhone 16 Pro 18.6: menu, sheet gộp (sáng, theo hệ thống — trên 26.5 sheet thừa hưởng nền tối của màn công cụ, như
+  đợt 1), hộp Discard của collage. iPad Pro 13 dọc: toolbar chế độ chọn, menu, collage có sidebar, sheet gộp dạng form.
+- Còn mở: Duo (công cụ MCP bấm sai màn ngoài, `ui-drive` cài lại app làm mất connection đã seed), iPad ngang.
+- Ghi nhận ngoài phạm vi (không sửa): màn Export của collage trên iPad kéo nút Export hết chiều ngang 1376pt; công tắc
+  Keep EXIF tắt trên 18.6 gần như không thấy rãnh.
