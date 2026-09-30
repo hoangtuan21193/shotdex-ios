@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan |
 | Ngày | 2026-09-22 |
 | Trạng thái | accepted |
-| Tiến độ | **xong phần FS-03.11** (2026-09-23) — 16/16 AC có test; câu treo 2 (`.xmp`/`.dng`) và 4 (HDR) chưa chốt |
+| Tiến độ | **xong phần FS-03.11** (2026-09-23) — 16/16 AC có test; câu 2 đã làm ở FS-03.14; câu 4 (HDR) chốt làm 2026-09-30 → intent `2026-09-30-hdr-merge` |
 | Nguồn | phản hồi người dùng (chủ sở hữu sản phẩm) · bảng đối chiếu từ agent `lightroom-parity` (2026-09-22) |
 | Spec sinh ra từ đây | [`FS-03.11`](../02-functional-spec/FS-03-photo-editor/11-parity-with-lightroom.md) — 16 AC, viết 2026-09-23 |
 
@@ -149,11 +149,13 @@ Dưới cả sáu: **tự động dò bụi cảm biến** (phải có mục 1 t
    (đã có sẵn), LUT import chen lên hạng 3, hồ sơ ống kính rớt xuống đáy. → người dùng chốt.
 2. **Nhập `.xmp` preset và profile `.dng` của bên thứ ba** có làm không? Khác `.cube` hoàn toàn: schema XMP
    của Adobe và định dạng ma trận/đường tông độc quyền. → người dùng; nếu có thì tách spec riêng.
+   → **đã làm** ở FS-03.14 (nhập/xuất preset Lightroom `.xmp`, hồ sơ máy ảnh — AC-b1).
 3. ~~Khử nhiễu bằng mô hình~~ — **chốt 2026-09-23: không tự huấn luyện.** Giữ bộ lọc có sẵn và tiêu chỉnh
    nó (thêm Detail cho đường luminance, khử nhiễu chạy trước sharpening), nói thật là ở ISO rất cao không
    bằng Denoise AI, và không có chữ "AI" nào trong giao diện. Xem `FS-03.11` §6.
 4. **HDR có nhận không?** Ghép HDR khả thi (đã có đường nạp nhiều khung của `PhotoStackRenderer`); panorama
-   thì đắt hơn hẳn. → người dùng.
+   thì đắt hơn hẳn. → **chốt 2026-09-30: làm**, thành một mục mới của Combine Photos; intent riêng
+   `2026-09-30-hdr-merge`. Panorama đã làm ở FS-14.
 5. **Recipe đổi cấu trúc thì di trú thế nào?** Tầng healing là thay đổi lớn nhất. → `data-migration` phải trả
    lời trước khi viết dòng code đầu tiên.
 6. **"Chỉn chu" nghiệm thu bằng gì?** Cần định nghĩa kiểm được cho từng chức năng (xoá vết khớp vân nền tới

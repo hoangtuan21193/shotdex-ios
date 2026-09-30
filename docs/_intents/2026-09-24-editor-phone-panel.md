@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan |
 | Ngày | 2026-09-24 |
 | Trạng thái | accepted |
-| Tiến độ | **gần xong** (2026-09-25, `/verify`) — 22/22 task, 37/38 AC xanh, `Tools/gate` xanh; AC-16 còn một mục không thử được (chip shape của mask nhiều shape — không có đường tạo mask nhiều shape), chờ quyết định |
+| Tiến độ | **xong** (2026-09-30) — 22/22 task, 38/38 AC xanh (AC-16: mục chip shape của mask nhiều shape bỏ khỏi AC theo người dùng — không có đường tạo); full suite 1703 test xanh 2026-09-30 |
 | Nguồn | phản hồi người dùng (chủ sở hữu sản phẩm) — bản bàn giao từ Claude Design |
 | Spec sinh ra từ đây | [FS-03.12](../02-functional-spec/FS-03-photo-editor/12-phone-panel-grid.md) (+ FS-03.01, 01b, 02, 05 · FS-04.01, 02 · FS-05 README, 01, 02, 03) |
 
