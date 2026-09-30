@@ -59,6 +59,9 @@ final class ServerPhotoCommandRun: Identifiable {
     /// The browse run's login, which an export to the original folder uses.
     let access: any RemoteFileAccess
     let fetch: ServerEditFetchModel
+    /// Set when an export arrived everywhere; the browser then leaves
+    /// selection, as it does after Import.
+    private(set) var hasExported = false
 
     init(command: ServerPhotoCommand, server: FileServer, access: any RemoteFileAccess, fetch: ServerEditFetchModel) {
         self.command = command
@@ -69,7 +72,11 @@ final class ServerPhotoCommandRun: Identifiable {
 
     /// What an editor on these photos needs to export them.
     var exportContext: ServerExportContext? {
-        fetch.workDirectory.map { ServerExportContext(server: server, access: access, workDirectory: $0) }
+        fetch.workDirectory.map { directory in
+            ServerExportContext(server: server, access: access, workDirectory: directory) { [weak self] in
+                self?.hasExported = true
+            }
+        }
     }
 
     var photos: [FetchedServerPhoto] { fetch.fetched }
@@ -88,9 +95,9 @@ final class ServerPhotoCommandRun: Identifiable {
 struct ServerPhotoCommandHost: ViewModifier {
     @Environment(AppDependencies.self) private var dependencies
     @Binding var run: ServerPhotoCommandRun?
-    /// After a tool closes — the browser reloads the folder an export may
-    /// have written to.
-    var onClosed: () -> Void = {}
+    /// After a tool closes, with whether an export arrived — the browser
+    /// reloads the folder it may have written to.
+    var onClosed: (_ exported: Bool) -> Void = { _ in }
     /// The sheet's item: nil the moment the sheet goes.
     @State private var fetching: ServerPhotoCommandRun?
     /// The same run, kept for `onDismiss`, which runs after the item is nil.
@@ -116,7 +123,10 @@ struct ServerPhotoCommandHost: ViewModifier {
                 PhotoEditorScreen(serverPhotos: run.photos, export: run.exportContext)
             }
             .sheet(item: $exporting, onDismiss: closeTool) { presentation in
-                ServerExportSheet(model: presentation.model) { exporting = nil }
+                ServerExportSheet(model: presentation.model) {
+                    open?.exportContext?.onExported()
+                    exporting = nil
+                }
             }
     }
 
@@ -159,14 +169,15 @@ struct ServerPhotoCommandHost: ViewModifier {
     }
 
     private func closeTool() {
+        let exported = open?.hasExported ?? false
         open?.discardCopies()
         open = nil
-        onClosed()
+        onClosed(exported)
     }
 }
 
 extension View {
-    func serverPhotoCommands(_ run: Binding<ServerPhotoCommandRun?>, onClosed: @escaping () -> Void = {}) -> some View {
+    func serverPhotoCommands(_ run: Binding<ServerPhotoCommandRun?>, onClosed: @escaping (_ exported: Bool) -> Void = { _ in }) -> some View {
         modifier(ServerPhotoCommandHost(run: run, onClosed: onClosed))
     }
 }
@@ -177,6 +188,8 @@ struct ServerExportContext {
     let server: FileServer
     let access: any RemoteFileAccess
     let workDirectory: URL
+    /// Called once everything arrived.
+    var onExported: () -> Void = {}
 }
 
 private struct ExportPresentation: Identifiable {

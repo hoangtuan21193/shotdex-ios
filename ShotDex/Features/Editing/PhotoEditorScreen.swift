@@ -866,6 +866,7 @@ struct PhotoEditorScreen: View {
         .sheet(isPresented: $isSaveSheetPresented) {
             if let exportModel {
                 ServerExportSheet(model: exportModel) {
+                    serverExport?.onExported()
                     isSaveSheetPresented = false
                     dismiss()
                 }

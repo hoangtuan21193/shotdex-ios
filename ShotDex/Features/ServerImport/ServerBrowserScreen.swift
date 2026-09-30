@@ -63,7 +63,10 @@ struct ServerBrowserScreen: View {
                     }
                 })
             }
-            .serverPhotoCommands($commandRun) { Task { await folder.refresh() } }
+            .serverPhotoCommands($commandRun) { exported in
+                if exported { folder.isSelecting = false }
+                Task { await folder.refresh() }
+            }
             .sheet(item: $viewing, onDismiss: runViewerCommand) { photo in
                 ServerPhotoViewer(photo: photo, model: folder) { command in
                     viewerCommand = (command, photo)
