@@ -78,4 +78,73 @@ import Testing
         #expect(fixture.client.files["Trip/a.JPG"] == original)
         #expect(!fixture.client.files.keys.contains { $0.hasSuffix(ServerUploadPath.partSuffix) })
     }
+
+    /// AC-61: `a_edited.jpg` is already there — the second export is
+    /// `a_edited (2).jpg`, and the first is left alone.
+    @Test func nameCollisionNumbers() async throws {
+        let fixture = Fixture()
+        defer { try? FileManager.default.removeItem(at: fixture.directory) }
+        let photo = try fixture.photo("a.JPG")
+        fixture.client.put("Trip/a_edited.jpg", Data("earlier".utf8))
+
+        let report = await fixture.exporter(fixture.services()).run(.init(
+            photos: [photo], destinations: [.originalFolder], placement: .newFile, format: .jpeg
+        ))
+
+        #expect(report.outcome(.originalFolder, photo.id) == .done("Trip/a_edited (2).jpg"))
+        #expect(fixture.client.files["Trip/a_edited.jpg"] == Data("earlier".utf8))
+        #expect(fixture.client.files["Trip/a_edited (2).jpg"] == Data("edited a.JPG jpeg".utf8))
+    }
+
+    /// AC-62: Replace Original — `a.JPG` carries the edit under its own name,
+    /// rendered in its own format even when HEIC was picked, and no
+    /// `_edited` file appears.
+    @Test func replaceNeedsConfirm() async throws {
+        let fixture = Fixture()
+        defer { try? FileManager.default.removeItem(at: fixture.directory) }
+        let photo = try fixture.photo("a.JPG")
+
+        let report = await fixture.exporter(fixture.services()).run(.init(
+            photos: [photo], destinations: [.originalFolder], placement: .replaceOriginal, format: .heic
+        ))
+
+        #expect(report.outcome(.originalFolder, photo.id) == .done("Trip/a.JPG"))
+        #expect(fixture.client.files["Trip/a.JPG"] == Data("edited a.JPG jpeg".utf8))
+        #expect(fixture.client.files.keys.sorted() == ["Trip/a.JPG"])
+    }
+
+    /// A replacement that fails its read-back leaves the original where it
+    /// was: the original goes only after the new file checked out.
+    @Test func replaceKeepsOriginalWhenTheCheckFails() async throws {
+        let fixture = Fixture()
+        defer { try? FileManager.default.removeItem(at: fixture.directory) }
+        let photo = try fixture.photo("a.JPG")
+        let original = fixture.client.files["Trip/a.JPG"]
+        fixture.client.corruptReadBack = ["Trip/a.JPG"]
+
+        let report = await fixture.exporter(fixture.services()).run(.init(
+            photos: [photo], destinations: [.originalFolder], placement: .replaceOriginal, format: .jpeg
+        ))
+
+        guard case .failed = report.outcome(.originalFolder, photo.id) else {
+            Issue.record("expected the checksum to fail the write")
+            return
+        }
+        #expect(fixture.client.files["Trip/a.JPG"] == original)
+        #expect(!fixture.client.files.keys.contains { $0.hasSuffix(ServerUploadPath.partSuffix) })
+    }
+
+    /// AC-63: an original in RAW, or a RAW+JPEG pair, cannot be replaced; a
+    /// lone JPEG or HEIC can.
+    @Test func rawCannotBeReplaced() {
+        func photo(_ names: String...) -> ServerPhoto {
+            ServerPhoto(files: names.map { RemoteEntry(name: $0, isDirectory: false, size: 1, modified: nil) })
+        }
+        #expect(!ServerExportRules.canReplaceOriginal(photo("b.CR3")))
+        #expect(!ServerExportRules.canReplaceOriginal(photo("c.JPG", "c.NEF")))
+        #expect(!ServerExportRules.canReplaceOriginal(photo("d.PNG")))
+        #expect(ServerExportRules.canReplaceOriginal(photo("a.JPG")))
+        #expect(ServerExportRules.canReplaceOriginal(photo("e.heic")))
+        #expect(ServerExportRules.replacementFormat(for: photo("e.heic")) == .heic)
+    }
 }
