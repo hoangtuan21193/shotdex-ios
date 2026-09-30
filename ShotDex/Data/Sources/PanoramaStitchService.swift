@@ -68,7 +68,7 @@ struct PanoramaStitchFrame {
 struct PanoramaStitchService {
     /// Loads one frame. Nil means the frame could not be obtained — almost
     /// always an iCloud original that would not come down.
-    var loadFrame: @Sendable (PHAsset) async -> PanoramaStitchFrame?
+    var loadFrame: @Sendable (PhotoEditOrigin) async -> PanoramaStitchFrame?
     /// Creates the asset from the file on disk.
     var saveFile: @Sendable (URL, String) async throws -> String
     /// Indexes the new asset immediately, so the viewer that opens onto it
@@ -84,7 +84,19 @@ struct PanoramaStitchService {
         progress: @escaping @Sendable (PanoramaStitchPhase) -> Void = { _ in },
         isCancelled: @escaping @Sendable () -> Bool = { false }
     ) async throws -> String {
-        let photos = assets.filter { $0.mediaType == .image }
+        try await stitch(
+            photos: assets.filter { $0.mediaType == .image }.map(PhotoEditOrigin.asset),
+            options: options, progress: progress, isCancelled: isCancelled
+        )
+    }
+
+    /// Library photos, or server copies on this device (FS-17.06 §5b).
+    func stitch(
+        photos: [PhotoEditOrigin],
+        options: PanoramaStitchOptions = PanoramaStitchOptions(),
+        progress: @escaping @Sendable (PanoramaStitchPhase) -> Void = { _ in },
+        isCancelled: @escaping @Sendable () -> Bool = { false }
+    ) async throws -> String {
         guard photos.count >= 2 else { throw PanoramaStitchError.needsTwoImages }
 
         // 1. Every frame, once. Both resolutions come out of the same read:
@@ -92,10 +104,10 @@ struct PanoramaStitchService {
         // available here.
         var frames: [PanoramaStitchFrame] = []
         var missing = 0
-        for (index, asset) in photos.enumerated() {
+        for (index, photo) in photos.enumerated() {
             if isCancelled() { throw PanoramaStitchError.cancelled }
             progress(.loading(done: index, total: photos.count))
-            if let frame = await loadFrame(asset) {
+            if let frame = await loadFrame(photo) {
                 frames.append(frame)
             } else {
                 missing += 1
@@ -111,7 +123,7 @@ struct PanoramaStitchService {
         do {
             registration = try PanoramaRegistrar.register(
                 images: frames.map(\.working),
-                captureDates: photos.map(\.creationDate)
+                captureDates: photos.map(\.captureDate)
             )
         } catch PanoramaRegistrationError.needsTwoImages {
             throw PanoramaStitchError.needsTwoImages
@@ -300,7 +312,7 @@ extension PanoramaStitchService {
         indexAsset: @escaping @Sendable (String) async -> Void
     ) -> PanoramaStitchService {
         PanoramaStitchService(
-            loadFrame: { asset in await frame(for: asset) },
+            loadFrame: { photo in await frame(for: photo) },
             saveFile: { url, name in
                 try await photoLibrary.saveImageFile(at: url, filename: name)
             },
@@ -308,11 +320,43 @@ extension PanoramaStitchService {
         )
     }
 
-    private static func frame(for asset: PHAsset) async -> PanoramaStitchFrame? {
-        guard let data = await originalData(for: asset) else { return nil }
+    /// A panorama of server photos (FS-17.06 §5b): the frames come from the
+    /// copies on disk, and the finished file is moved into the run's work
+    /// directory instead of Photos. The identifier it returns is that file's
+    /// path.
+    static func composing(into directory: URL) -> PanoramaStitchService {
+        PanoramaStitchService(
+            loadFrame: { photo in await frame(for: photo) },
+            saveFile: { url, name in
+                let folder = directory.appendingPathComponent("Compose-\(UUID().uuidString)", isDirectory: true)
+                try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                let destination = folder.appendingPathComponent(name)
+                try FileManager.default.moveItem(at: url, to: destination)
+                return destination.path
+            },
+            indexAsset: { _ in }
+        )
+    }
+
+    static func frame(for photo: PhotoEditOrigin) async -> PanoramaStitchFrame? {
+        switch photo {
+        case .serverFile(let file):
+            let url = file.primaryURL
+            return await Task.detached(priority: .userInitiated) {
+                CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary)
+                    .flatMap(frame(from:))
+            }.value
+        case .asset(let asset):
+            guard let data = await originalData(for: asset) else { return nil }
+            let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
+            return CGImageSourceCreateWithData(data as CFData, sourceOptions).flatMap(frame(from:))
+        }
+    }
+
+    /// Both resolutions and the properties, out of one read of the original.
+    private static func frame(from source: CGImageSource) -> PanoramaStitchFrame? {
         let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
-        guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions),
-              let full = CGImageSourceCreateImageAtIndex(source, 0, sourceOptions)
+        guard let full = CGImageSourceCreateImageAtIndex(source, 0, sourceOptions)
         else { return nil }
         let properties = (CGImageSourceCopyPropertiesAtIndex(source, 0, sourceOptions)
             as? [CFString: Any]) ?? [:]

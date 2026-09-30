@@ -122,4 +122,25 @@ import Testing
         let properties = try #require(CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any])
         #expect(properties[kCGImagePropertyPixelWidth] as? Int == 320)
     }
+
+    /// AC-80: a panorama frame of a server photo comes from its file, and
+    /// the stitched file lands in the run's work directory, not in Photos.
+    @Test func panoramaReadsFilesAndKeepsTheResultInTheRun() async throws {
+        let run = Run()
+        defer { try? FileManager.default.removeItem(at: run.directory) }
+        let photos = try run.photos(["DSCF1000.JPG"], width: 640, height: 480, dates: ["2026:09:28 07:15:30"])
+
+        let frame = try #require(await PanoramaStitchService.frame(for: .serverFile(photos[0])))
+        #expect(frame.width == 640 && frame.height == 480)
+        #expect(frame.properties[kCGImagePropertyPixelWidth] as? Int == 640)
+
+        let stitched = run.directory.appendingPathComponent("scratch-panorama.jpg")
+        try Data("panorama".utf8).write(to: stitched)
+        let service = PanoramaStitchService.composing(into: run.directory)
+        let identifier = try await service.saveFile(stitched, "panorama-640x480.jpg")
+        #expect(identifier.hasPrefix(run.directory.path))
+        #expect(identifier.hasSuffix("panorama-640x480.jpg"))
+        #expect(FileManager.default.fileExists(atPath: identifier))
+        #expect(!FileManager.default.fileExists(atPath: stitched.path))
+    }
 }

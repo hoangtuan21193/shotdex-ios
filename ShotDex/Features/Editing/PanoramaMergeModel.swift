@@ -32,7 +32,13 @@ enum PanoramaMergeState: Equatable {
 @MainActor
 @Observable
 final class PanoramaMergeModel {
-    let assets: [PHAsset]
+    /// Library photos, or server copies on this device (FS-17.06 §5b).
+    let photos: [PhotoEditOrigin]
+    /// Set for server photos: Save stitches into the run's work directory
+    /// and hands the file to the export sheet instead of Photos.
+    let serverWorkDirectory: URL?
+    /// The stitched panorama of a server run, waiting for the export sheet.
+    var composedFile: URL?
 
     private(set) var state: PanoramaMergeState = .loading(done: 0, total: 0)
     private(set) var preview: CGImage?
@@ -111,10 +117,21 @@ final class PanoramaMergeModel {
     /// The long edge a preview is built at. The sharp tier of FS-14.01 §4.
     nonisolated static let previewEdge = 1_536
 
-    init(assets: [PHAsset], photoLibrary: PhotoLibraryService, stitch: PanoramaStitchService) {
-        self.assets = assets.filter { $0.mediaType == .image }
+    convenience init(assets: [PHAsset], photoLibrary: PhotoLibraryService, stitch: PanoramaStitchService) {
+        self.init(photos: assets.filter { $0.mediaType == .image }.map(PhotoEditOrigin.asset),
+                  photoLibrary: photoLibrary, stitch: stitch)
+    }
+
+    init(
+        photos: [PhotoEditOrigin],
+        photoLibrary: PhotoLibraryService,
+        stitch: PanoramaStitchService,
+        serverWorkDirectory: URL? = nil
+    ) {
+        self.photos = photos
         self.photoLibrary = photoLibrary
         self.stitch = stitch
+        self.serverWorkDirectory = serverWorkDirectory
     }
 
     /// The photographer said go ahead to the long wait.
@@ -241,24 +258,24 @@ final class PanoramaMergeModel {
     static let confirmThreshold = 50
 
     func load() async {
-        guard assets.count >= 2 else {
+        guard photos.count >= 2 else {
             state = .noOverlap
             return
         }
-        if assets.count > Self.confirmThreshold, !hasConfirmed {
-            state = .confirming(Self.waitEstimate(frames: assets.count))
+        if photos.count > Self.confirmThreshold, !hasConfirmed {
+            state = .confirming(Self.waitEstimate(frames: photos.count))
             return
         }
-        state = .loading(done: 0, total: assets.count)
+        state = .loading(done: 0, total: photos.count)
 
         var images: [PanoramaImage] = []
         var sources: [PanoramaCISource] = []
         var missing = 0
         var pixelWidth = 0, pixelHeight = 0
 
-        for (index, asset) in assets.enumerated() {
-            state = .loading(done: index, total: assets.count)
-            guard let proxy = await Self.proxyImage(for: asset, photoLibrary: photoLibrary),
+        for (index, photo) in photos.enumerated() {
+            state = .loading(done: index, total: photos.count)
+            guard let proxy = await Self.proxyImage(for: photo, photoLibrary: photoLibrary),
                   let cgImage = proxy.cgImage,
                   let working = PanoramaImage.luminance(of: cgImage)
             else {
@@ -291,7 +308,7 @@ final class PanoramaMergeModel {
         let registration: PanoramaRegistration
         do {
             registration = try PanoramaRegistrar.register(
-                images: images, captureDates: assets.map(\.creationDate)
+                images: images, captureDates: photos.map(\.captureDate)
             )
         } catch {
             state = .noOverlap
@@ -630,7 +647,7 @@ final class PanoramaMergeModel {
 
     /// Every frame, placed or not, with the outline the stage draws.
     var arrangedFrames: [ArrangedFrame] {
-        (0..<assets.count).map { index in
+        (0..<photos.count).map { index in
             ArrangedFrame(
                 id: index,
                 outline: outline(of: index) ?? [],
@@ -747,7 +764,10 @@ final class PanoramaMergeModel {
         // about thirty seconds, and what it takes has to look like a cancel
         // rather than a hang.
         ScreenAwakeCoordinator.shared.beginHold()
-        PanoramaSaveRecord.begin(assetIDs: assets.map(\.localIdentifier))
+        // The crash note names library photos; a server run has none.
+        if serverWorkDirectory == nil {
+            PanoramaSaveRecord.begin(assetIDs: photos.compactMap(\.asset).map(\.localIdentifier))
+        }
         let assertion = UIApplication.shared.beginBackgroundTask(withName: "panorama-save") {
             [weak self] in
             Task { @MainActor in self?.cancelSave() }
@@ -760,7 +780,7 @@ final class PanoramaMergeModel {
             }
             do {
                 let identifier = try await stitch.stitch(
-                    assets: assets,
+                    photos: photos,
                     options: options,
                     progress: { [weak self] phase in
                         Task { @MainActor in self?.apply(phase) }
@@ -769,7 +789,12 @@ final class PanoramaMergeModel {
                         self?.isCancelledFlag.withLock { $0 } ?? false
                     }
                 )
-                savedAssetID = identifier
+                if serverWorkDirectory != nil {
+                    // A server run: the identifier is the stitched file.
+                    composedFile = URL(fileURLWithPath: identifier)
+                } else {
+                    savedAssetID = identifier
+                }
                 PanoramaSaveRecord.finish()
             } catch PanoramaStitchError.cancelled {
                 // Nothing was created, and nothing needs saying.
@@ -815,6 +840,18 @@ final class PanoramaMergeModel {
 
     /// One frame at preview resolution, through the viewer's own request path
     /// so an iCloud-only original is fetched rather than skipped.
+    private static func proxyImage(
+        for photo: PhotoEditOrigin,
+        photoLibrary: PhotoLibraryService
+    ) async -> UIImage? {
+        switch photo {
+        case .serverFile(let file):
+            return await PhotoOriginFile.loadImage(at: file.primaryURL, maxPixelSize: previewEdge)
+        case .asset(let asset):
+            return await proxyImage(for: asset, photoLibrary: photoLibrary)
+        }
+    }
+
     private static func proxyImage(
         for asset: PHAsset,
         photoLibrary: PhotoLibraryService

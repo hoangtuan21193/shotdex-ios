@@ -67,7 +67,7 @@ struct PanoramaArrangeOverlay: View {
             .position(x: centre.x, y: centre.y)
             .offset(dragging == frame.id ? translation : .zero)
             .gesture(drag(frame.id))
-            .accessibilityLabel(frame.accessibilityLabel(of: model.assets.count))
+            .accessibilityLabel(frame.accessibilityLabel(of: model.photos.count))
             .accessibilityHint(Text("Drag to move this photo in the panorama"))
             .accessibilityAction(named: Text("Remove")) {
                 model.removeFromPanorama(frame: frame.id)
@@ -173,7 +173,7 @@ struct PanoramaNotPlacedStrip: View {
             // preview and the spring-back for free.
             .onDrag { NSItemProvider(object: PanoramaFrameDrag.token(frame) as NSString) }
             .accessibilityLabel(
-                Text("Photo \(frame + 1) of \(model.assets.count), not placed")
+                Text("Photo \(frame + 1) of \(model.photos.count), not placed")
             )
             .accessibilityHint(Text("Drag onto the panorama where it belongs"))
     }

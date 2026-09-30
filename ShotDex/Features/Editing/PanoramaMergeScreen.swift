@@ -4,9 +4,21 @@ import SwiftUI
 
 /// What the panorama screen was opened with.
 struct PanoramaMergePresentation: Identifiable {
-    let assets: [PHAsset]
+    let photos: [PhotoEditOrigin]
+    /// Server photos (FS-17.06 §5b): Save opens the export sheet instead of
+    /// writing to Photos.
+    var serverExport: ServerExportContext?
 
-    var id: String { assets.first?.localIdentifier ?? UUID().uuidString }
+    init(assets: [PHAsset]) {
+        self.photos = assets.map(PhotoEditOrigin.asset)
+    }
+
+    init(serverPhotos: [FetchedServerPhoto], export: ServerExportContext?) {
+        self.photos = serverPhotos.map(PhotoEditOrigin.serverFile)
+        self.serverExport = export
+    }
+
+    var id: String { photos.first?.id ?? UUID().uuidString }
 }
 
 /// Joins a run of overlapping frames into one photo.
@@ -24,6 +36,7 @@ struct PanoramaMergeScreen: View {
     var onSaved: ((String) -> Void)?
 
     @State private var model: PanoramaMergeModel?
+    @State private var serverExportModel: ServerExportModel?
 
     var body: some View {
         GeometryReader { proxy in
@@ -68,11 +81,22 @@ struct PanoramaMergeScreen: View {
         .interactiveDismissDisabled(model?.isSaving == true)
         .task {
             guard model == nil else { return }
-            let created = PanoramaMergeModel(
-                assets: presentation.assets,
-                photoLibrary: photoLibrary,
-                stitch: dependencies.panoramaStitchService
-            )
+            let workDirectory = presentation.serverExport?.workDirectory
+            let created: PanoramaMergeModel
+            if let workDirectory {
+                created = PanoramaMergeModel(
+                    photos: presentation.photos,
+                    photoLibrary: photoLibrary,
+                    stitch: .composing(into: workDirectory),
+                    serverWorkDirectory: workDirectory
+                )
+            } else {
+                created = PanoramaMergeModel(
+                    photos: presentation.photos.filter { $0.asset?.mediaType == .image },
+                    photoLibrary: photoLibrary,
+                    stitch: dependencies.panoramaStitchService
+                )
+            }
             model = created
             await created.load()
         }
@@ -80,6 +104,22 @@ struct PanoramaMergeScreen: View {
             guard let identifier = model?.savedAssetID else { return }
             onSaved?(identifier)
             dismiss()
+        }
+        .onChange(of: model?.composedFile) {
+            guard let file = model?.composedFile, let context = presentation.serverExport else { return }
+            serverExportModel = .makeComposed(
+                .init(file: file, tool: .panorama, firstFilename: presentation.photos.first?.filename ?? ""),
+                photos: presentation.photos.compactMap(\.serverFile),
+                context: context,
+                dependencies: dependencies
+            )
+        }
+        .sheet(item: $serverExportModel, onDismiss: { model?.composedFile = nil }) { exportModel in
+            ServerExportSheet(model: exportModel) {
+                serverExportModel = nil
+                presentation.serverExport?.onExported()
+                dismiss()
+            }
         }
         .alert(
             "Couldn't Save",
@@ -106,7 +146,9 @@ struct PanoramaMergeScreen: View {
                 .font(EditorTheme.sidebarTitle)
                 .foregroundStyle(.white)
             Spacer()
-            Button("Save") { model.save() }
+            Button(presentation.serverExport == nil
+                   ? String(localized: "Save")
+                   : String(localized: "Export…", comment: "Panorama of server photos: choose where the result goes")) { model.save() }
                 .fontWeight(.semibold)
                 .foregroundStyle(model.canSave ? EditorTheme.accent : EditorTheme.dimText)
                 .disabled(!model.canSave)
@@ -212,7 +254,7 @@ struct PanoramaMergeScreen: View {
             Text("This will take a while")
                 .font(EditorTheme.sidebarTitle)
                 .foregroundStyle(.white)
-            Text("About \(estimate) for ^[\(model.assets.count) photo](inflect: true).")
+            Text("About \(estimate) for ^[\(model.photos.count) photo](inflect: true).")
                 .font(EditorTheme.maskSubtitle)
                 .foregroundStyle(EditorTheme.secondaryText)
                 .multilineTextAlignment(.center)
