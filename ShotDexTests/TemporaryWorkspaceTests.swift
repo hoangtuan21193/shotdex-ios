@@ -46,6 +46,19 @@ import Testing
         #expect(remaining.count == strangers.count)
     }
 
+    /// A server original fetched to edit is kept until export or discard; an
+    /// app killed in between leaves it behind (FS-17.06 AC-59).
+    @Test func aServerEditCopyLeftByAKilledAppIsSwept() throws {
+        let sandbox = try makeSandbox()
+        defer { try? FileManager.default.removeItem(at: sandbox) }
+        let leftover = sandbox.appendingPathComponent("\(TemporaryWorkspace.serverEditPrefix)\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: leftover, withIntermediateDirectories: true)
+        try Data("raw".utf8).write(to: leftover.appendingPathComponent("DSC_0001.NEF"))
+
+        #expect(TemporaryWorkspace.sweepOrphans(in: sandbox) == 1)
+        #expect(!FileManager.default.fileExists(atPath: leftover.path))
+    }
+
     @Test func aMissingDirectoryIsNotAnError() {
         let absent = FileManager.default.temporaryDirectory
             .appendingPathComponent("SweepTest-absent-\(UUID().uuidString)", isDirectory: true)
