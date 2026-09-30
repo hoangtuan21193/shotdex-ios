@@ -11,6 +11,7 @@ struct MetadataPanel: View {
     let indexedMetadata: PhotoMetadata?
     /// Absent in previews; there the section simply never shows.
     @Environment(ServerUploadIndex.self) private var uploadIndex: ServerUploadIndex?
+    @Environment(FileServerCatalog.self) private var catalog: FileServerCatalog?
 
     @State private var report: AssetMetadataReport?
     @State private var isLoading = true
@@ -107,7 +108,7 @@ struct MetadataPanel: View {
                     } label: {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(line.server)
-                            Text(line.folder.isEmpty ? "/" : line.folder)
+                            Text(line.folder)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -128,8 +129,20 @@ struct MetadataPanel: View {
             let folder = ServerUploadPath.parent(of: record.remotePath)
             let key = "\(record.serverName)\u{1F}\(folder)"
             guard seen.insert(key).inserted else { return nil }
-            return (key, record.serverName, folder, Date(timeIntervalSince1970: TimeInterval(record.uploadedAt)))
+            return (key, record.serverName, folderText(folder, serverId: record.serverId), Date(timeIntervalSince1970: TimeInterval(record.uploadedAt)))
         }
+    }
+
+    /// The folder as the connection's own row spells it — "On My iPhone ›
+    /// CloudTest" for a Files folder, "Home/Photos" for SFTP — not "/" for a
+    /// copy that sits at the top of a picked folder. A connection since
+    /// deleted keeps the bare path.
+    private func folderText(_ folder: String, serverId: String?) -> String {
+        guard let serverId, var server = catalog?.servers.first(where: { $0.id == serverId }) else {
+            return folder.isEmpty ? "/" : folder
+        }
+        server.folder = folder
+        return server.folderDescription
     }
 
     @ViewBuilder
