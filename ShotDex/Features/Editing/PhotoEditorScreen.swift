@@ -1706,6 +1706,9 @@ struct PhotoEditorScreen: View {
         safeArea: EdgeInsets
     ) -> some View {
         HStack(spacing: AppTheme.Spacing.md) {
+            // Markup's ↺ is on its Layers row (FS-03.09 AC-29): two buttons
+            // emptying one stack was one too many.
+            if railMode != .markup {
             Button {
                 resetStageMode(controller)
             } label: {
@@ -1723,6 +1726,7 @@ struct PhotoEditorScreen: View {
             .disabled(!stageModeHasWork(controller))
             .hoverEffect(.highlight)
             .accessibilityLabel("Reset \(railMode.title)")
+            }
 
             Spacer(minLength: 8)
 

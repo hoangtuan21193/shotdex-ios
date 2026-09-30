@@ -20,6 +20,8 @@ struct EditorTextPanel: View {
     let startDrawing: () -> Void
     let openPresets: () -> Void
 
+    @State private var isConfirmingRemoveAll = false
+
     var body: some View {
         VStack(spacing: 0) {
             addBar
@@ -70,27 +72,50 @@ struct EditorTextPanel: View {
             .accessibilityLabel("Add layer")
 
             Spacer(minLength: 0)
-
-            Button {
-                controller.removeAllOverlays()
-            } label: {
-                Image(systemName: "arrow.counterclockwise")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(hasLayers ? EditorTheme.secondaryText : EditorTheme.dimText)
-                    .frame(width: AppTheme.Size.minTouch, height: AppTheme.Size.minTouch)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(!hasLayers)
-            .accessibilityLabel("Remove all layers")
         }
         .padding(.horizontal, 14)
         .padding(.top, 10)
         .padding(.bottom, 2)
     }
 
-    private var hasLayers: Bool {
-        !controller.recipe.overlays.isEmpty || controller.hasDrawing
+    private var hasLayers: Bool { layerCount > 0 }
+
+    private var layerCount: Int {
+        controller.recipe.overlays.count + (controller.hasDrawing ? 1 : 0)
+    }
+
+    /// The one ↺ for the whole stack (FS-03.09 AC-29, D7): on the Layers row
+    /// it empties, not in the panel foot as well. One layer goes at once — Undo
+    /// has it; two or more ask first.
+    private var removeAllButton: some View {
+        Button {
+            if layerCount >= 2 {
+                isConfirmingRemoveAll = true
+            } else {
+                controller.removeAllOverlays()
+            }
+        } label: {
+            Image(systemName: "arrow.counterclockwise")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(hasLayers ? EditorTheme.secondaryText : EditorTheme.dimText)
+                .frame(width: AppTheme.Size.minTouch, height: AppTheme.Size.minTouch)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!hasLayers)
+        .accessibilityLabel("Remove all layers")
+        .confirmationDialog(
+            Text("Remove all \(layerCount) layers?"),
+            isPresented: $isConfirmingRemoveAll,
+            titleVisibility: .visible
+        ) {
+            Button("Remove All Layers", role: .destructive) {
+                controller.removeAllOverlays()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("You can undo this.")
+        }
     }
 
 
@@ -135,11 +160,12 @@ struct EditorTextPanel: View {
                 .tracking(1.1)
                 .foregroundStyle(EditorTheme.secondaryText)
             Spacer(minLength: 0)
+            removeAllButton
             Button("Presets", action: openPresets)
                 .buttonStyle(EditorTextButtonStyle())
         }
         .padding(.horizontal, 16)
-        .frame(height: 34)
+        .frame(height: AppTheme.Size.minTouch)
     }
 
     private var sectionTitle: String {

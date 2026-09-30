@@ -1,0 +1,201 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-editor.sidebarEdge",
+    "trailing",
+    "-editor.sidebarHidden",
+    "NO",
+    "-editor.sidebarWidth",
+    "320"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 20
+  },
+  {
+   "action": "tap",
+   "label": "Photo, file type",
+   "type": "cell",
+   "index": 2
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "tap",
+   "label": "Edit",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 18
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "tap",
+   "label": "rail.markup"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "dump",
+   "name": "b06-markup-empty",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "label": "Add layer",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Shape",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Rectangle",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Add layer",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Shape",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Oval",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Add layer",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Shape",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Arrow",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "b07-three-layers",
+   "type": "staticText"
+  },
+  {
+   "action": "dump",
+   "name": "m01-three-layers-buttons",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "label": "Remove all layers",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "m02-confirm",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "label": "Remove All Layers",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "m03-after-remove",
+   "type": "staticText"
+  },
+  {
+   "action": "tap",
+   "label": "Undo",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "m04-after-undo",
+   "type": "staticText"
+  },
+  {
+   "action": "tap",
+   "label": "Remove all layers",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "wait",
+   "seconds": 25
+  }
+ ]
+}
