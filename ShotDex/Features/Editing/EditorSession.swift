@@ -98,6 +98,15 @@ final class EditorSession {
     /// How many photos are carrying unsaved edits, for the sync/save wording.
     var draftCount: Int { drafts.count }
 
+    /// Whether leaving now would throw work away: the photo on the canvas
+    /// (`canvasHasChanges`, which only its controller knows) or a draft parked
+    /// on any other photo by Sync, Paste Edits or a switch. False means the
+    /// editor closes without asking — and a server run's copies are deleted
+    /// with nothing lost (FS-17.06 §5).
+    func hasUnsavedWork(canvasHasChanges: Bool) -> Bool {
+        canvasHasChanges || !drafts.isEmpty
+    }
+
     /// Lightroom's Auto Sync: while this is on, every committed change lands on
     /// the rest of the run as well.
     ///

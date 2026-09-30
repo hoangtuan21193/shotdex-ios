@@ -111,8 +111,8 @@ lệnh đó (AC-67). Trong đợt 1 ba lệnh này không có trong menu, chứ 
 | AC-54 | `a.JPG` 12 MB, máy còn 2 GB | Edit | tải 1 file, editor mở, server không có thay đổi nào (không ghi, không đổi tên) | `ServerEditSessionTests.downloadsOriginalOnly` |
 | AC-55 | 3 RAW × 60 MB, máy còn 1.1 GB | Edit | không tải byte nào, báo "about 80 MB more needed" (cần 1.18 GB) | `ServerEditSessionTests.spaceCheckBeforeDownload` |
 | AC-56 | đang tải ảnh 2/3 | Cancel | thư mục tạm bị xoá, quay lại lưới, không mở editor | `ServerEditSessionTests.cancelRemovesTemp` |
-| AC-57 | editor, Exposure +1 | Cancel → Discard | bản tạm + recipe mất; mở lại `a.JPG` thì Exposure = 0 | `ServerEditSessionTests.discardDropsDraft` ⚠️ chưa có + ảnh |
-| AC-58 | editor, chưa sửa gì | Cancel | không hỏi, bản tạm bị xoá | `ServerEditSessionTests.cleanLeaveNoPrompt` ⚠️ chưa có |
+| AC-57 | editor, Exposure +1 | Cancel → Discard | bản tạm + recipe mất; mở lại `a.JPG` thì Exposure = 0 | `ServerEditSessionTests.discardDropsDraft`; ảnh hộp Discard ⚠️ chưa có |
+| AC-58 | editor, chưa sửa gì | Cancel | không hỏi, bản tạm bị xoá | `ServerEditSessionTests.cleanLeaveNoPrompt` |
 | AC-59 | thư mục tạm còn sót từ lần app bị giết | khởi động app | thư mục bị xoá | `TemporaryWorkspaceTests.aServerEditCopyLeftByAKilledAppIsSwept` |
 | AC-60 | sửa `a.JPG`, chọn Original Folder + Save as New File | Export | có `a_edited.jpg` cạnh `a.JPG`, SHA khớp, `a.JPG` còn nguyên byte; bản tạm bị xoá | `ServerEditExportTests.newFileBesideOriginal` ⚠️ chưa có |
 | AC-61 | `a_edited.jpg` đã có | xuất lần hai | ghi `a_edited (2).jpg` | `ServerEditExportTests.nameCollisionNumbers` ⚠️ chưa có |

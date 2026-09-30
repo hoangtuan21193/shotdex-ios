@@ -70,7 +70,8 @@ struct PhotoEditorScreen: View {
     /// net back to its baseline therefore dismissed without a word and took
     /// every parked draft with it.
     private var hasUnsavedWork: Bool {
-        controller?.hasSessionChanges == true || (session?.draftCount ?? 0) > 0
+        let canvasHasChanges = controller?.hasSessionChanges == true
+        return session?.hasUnsavedWork(canvasHasChanges: canvasHasChanges) ?? canvasHasChanges
     }
     @State private var chrome = EditorChromeModel()
     @State private var isSaveSheetPresented = false
@@ -227,6 +228,11 @@ struct PhotoEditorScreen: View {
         .alert("Discard this editing session?", isPresented: $isDiscardConfirmationPresented) {
             Button("Discard Changes", role: .destructive) { dismiss() }
             Button("Keep Editing", role: .cancel) {}
+        } message: {
+            // A server run keeps nothing once it closes (FS-17.06 §5).
+            if session?.isServerRun == true {
+                Text("The copies downloaded from the server are deleted too. The originals on the server stay as they are.")
+            }
         }
         .alert("Rename Mask", isPresented: $isRenamePresented) {
             TextField("Mask name", text: $renameText)

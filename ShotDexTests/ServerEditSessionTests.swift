@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 @testable import ShotDex
+import ShotDexKit
 
 /// A server's calls straight to one client — no gate, no login. `onPerform`
 /// runs before each call with its 1-based number: where a test cancels.
@@ -138,6 +139,62 @@ final class DirectRemoteAccess: RemoteFileAccess, @unchecked Sendable {
         // Read where it lies: nothing was copied into the session's folder.
         let copies = try FileManager.default.contentsOfDirectory(atPath: session.temporaryDirectory.path)
         #expect(copies.isEmpty)
+    }
+
+    /// One photo fetched through the model, as the browser's Edit does.
+    private func fetchedRun(_ name: String = "a.JPG") async throws -> (ServerPhotoCommandRun, InMemoryRemoteFileClient) {
+        let client = InMemoryRemoteFileClient()
+        let data = RemoteThumbnailTests.jpeg(width: 400)
+        client.put("Trip/\(name)", data)
+        let model = ServerEditFetchModel(
+            serverId: "S1", folder: "Trip", photos: [ServerPhoto(files: [entry(name, data.count)])],
+            access: DirectRemoteAccess(client), freeSpace: { nil }, screenHold: NoHold()
+        )
+        model.start()
+        await waitUntilSettled(model)
+        #expect(model.stage == .fetched)
+        return (ServerPhotoCommandRun(command: .edit, fetch: model), client)
+    }
+
+    /// AC-57: Exposure +1 on a server photo, then Discard — the editor asks
+    /// first, the copy is deleted, and opening the photo again starts from
+    /// nothing: a server photo never recalls a recipe.
+    @Test func discardDropsDraft() async throws {
+        let (run, client) = try await fetchedRun()
+        let photo = try #require(run.photos.first)
+        let directory = try #require(run.fetch.workDirectory)
+        let editor = EditorSession(photos: [.serverFile(photo)])
+        var edited = PhotoEditRecipe.identity
+        edited.adjustments.exposure = 1
+        editor.store(edited, for: .serverFile(photo))
+        #expect(editor.hasUnsavedWork(canvasHasChanges: false))
+        #expect(editor.isServerRun)
+
+        run.discardCopies()
+
+        #expect(!FileManager.default.fileExists(atPath: directory.path))
+        #expect(client.uploadCount == 0 && client.removed.isEmpty)
+        let (again, _) = try await fetchedRun()
+        defer { again.discardCopies() }
+        let service = PhotoEditingService()
+        let session = try await service.beginSession(for: .serverFile(try #require(again.photos.first)))
+        defer { service.releaseCachedSessions() }
+        #expect(session.recalledRecipe == nil)
+        #expect(EditorSession(photos: [.serverFile(photo)]).draft(for: .serverFile(photo)) == nil)
+    }
+
+    /// AC-58: nothing edited — the editor closes without asking, and the
+    /// copy still goes.
+    @Test func cleanLeaveNoPrompt() async throws {
+        let (run, _) = try await fetchedRun()
+        let photo = try #require(run.photos.first)
+        let directory = try #require(run.fetch.workDirectory)
+        let editor = EditorSession(photos: [.serverFile(photo)])
+        #expect(!editor.hasUnsavedWork(canvasHasChanges: false))
+        #expect(editor.hasUnsavedWork(canvasHasChanges: true))
+
+        run.discardCopies()
+        #expect(!FileManager.default.fileExists(atPath: directory.path))
     }
 
     /// The same room rule as Import (FS-17.02 §1): free space unknown is not a
