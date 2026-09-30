@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan |
 | Ngày | 2026-09-22 |
 | Trạng thái | accepted |
-| Tiến độ | **đang làm** (2026-09-29) — FS-03.09 `/verify` trên iPad 13" + iPad Pro 11": 24/37 AC xanh; 8 ⚠️ lệch chờ quyết (AC-1 bảy thẻ chứ không năm, AC-9 cụm lệnh 361pt, AC-11 đồ curve nuốt cú cuộn, AC-13 bảy slider + đổi mode thì áp khung, AC-20 canvas 832 < 842, AC-29 không hỏi xác nhận, AC-30 palette PencilKit che chân panel, AC-5/AC-28 một nửa); AC-14/15 cần máy thật (AC-15 code chưa có); nhóm Duo màn trong chưa chụp — sim gập, không có Simulator.app |
+| Tiến độ | **gần xong** (2026-09-30, /verify) — FS-03.09: 33/37 AC xanh trên iPad Pro 13" M5 + iPad Pro 11"; 8 chỗ lệch đã chốt qua planboard `fs0309-divergences` (D1–D10, D12) và sửa xong: AC-1 (7 thẻ, test đọc đúng danh sách), 5 (đệm dưới), 9, 11 (kéo chỉ trên điểm curve), 13 (chip xuống hàng), 20 (mốc 832), 28/29 (một ↺, hỏi khi ≥ 2 layer), 30 (bảng cọ trong panel); full suite 1703 test xanh. Còn: AC-2 (Duo màn trong — sim gập), AC-14 (máy thật, iCloud), ảnh AC-15 (quyền `.limited` — code + test đã có), AC-24 (thuộc EX-05, chưa làm) |
 | Nguồn | phản hồi người dùng (chủ sở hữu sản phẩm) |
 | Spec sinh ra từ đây | [FS-03.09](../02-functional-spec/FS-03-photo-editor/09-wide-screen-and-batch-editing.md) |
 
