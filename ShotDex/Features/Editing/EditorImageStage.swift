@@ -353,7 +353,10 @@ struct EditorImageStage: View {
                     EditorDrawingCanvas(
                         session: drawSession,
                         clearSignal: drawSession.clearToken,
-                        usesSystemToolPicker: chrome.isWideLayout
+                        // The panel's own rows set the tool on every layout now:
+                        // the system palette floated over the photo and the
+                        // panel foot on a wide screen (FS-03.09 AC-30, D8).
+                        usesSystemToolPicker: false
                     )
                     .frame(width: imageRect.width, height: imageRect.height)
                     .position(x: imageRect.midX, y: imageRect.midY)

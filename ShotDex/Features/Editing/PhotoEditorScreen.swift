@@ -2266,16 +2266,26 @@ struct PhotoEditorScreen: View {
     /// The drawing sub-mode's own top bar: Clear and Done sit up here, level with
     /// the Dynamic Island, because the `PKToolPicker` owns the bottom of the screen
     /// and would otherwise cover a bottom action row.
-    /// Clear and Done for a drawing session, in the panel rather than floating
-    /// over the photo. PencilKit's own palette still floats — it is the system's
-    /// and cannot be re-parented — but the two decisions that end the session
-    /// now sit beside the picture instead of on top of it.
+    /// A drawing session in the panel: the phone's brush rows (draw / erase,
+    /// tool, size, opacity, colour, ruler), then Clear and Done. Nothing floats
+    /// over the photo — the system palette used to, covering the bottom of the
+    /// picture and the panel foot (FS-03.09 AC-30, D8).
     private func sidebarDrawControls(_ controller: PhotoEditorController) -> some View {
         VStack(spacing: AppTheme.Spacing.md) {
-            Text("Draw on the photo. The pencil palette is the system's; it can be dragged out of the way.")
-                .font(EditorTheme.maskSubtitle)
-                .foregroundStyle(EditorTheme.secondaryText)
-                .fixedSize(horizontal: false, vertical: true)
+            // The colour dot opens the ink-and-colour page in the panel's
+            // place, as on the phone; the phone-width colour row (swatches
+            // that share the width, a hue-ring custom swatch) instead of the
+            // stacked one, whose "Custom" word broke in two at 320pt.
+            Group {
+                if let palette = chrome.colorPalette {
+                    EditorColorPalettePanel(chrome: chrome, request: palette)
+                } else {
+                    EditorDrawRows(session: drawSession, controller: controller, chrome: chrome)
+                }
+            }
+            .environment(\.editorSliderStacked, false)
+            .padding(.horizontal, -AppTheme.Spacing.md)
+            .onDisappear { chrome.colorPalette = nil }
 
             HStack(spacing: AppTheme.Spacing.md) {
                 Button("Clear") { drawSession.clear() }

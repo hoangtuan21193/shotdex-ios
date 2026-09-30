@@ -1,0 +1,101 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-editor.sidebarEdge",
+    "trailing",
+    "-editor.sidebarHidden",
+    "NO",
+    "-editor.sidebarWidth",
+    "320"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 20
+  },
+  {
+   "action": "tap",
+   "label": "Photo, file type",
+   "type": "cell",
+   "index": 2
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "tap",
+   "label": "Edit",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 18
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "tap",
+   "label": "rail.markup"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Add layer",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Draw",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "swipe",
+   "x": 0.3,
+   "y": 0.5,
+   "direction": "right",
+   "distance": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "p01-drawing",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "label": "Ink and color, Pen"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "p02-palette",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 30
+  }
+ ]
+}
