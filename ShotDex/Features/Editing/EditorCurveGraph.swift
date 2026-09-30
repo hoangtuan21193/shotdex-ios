@@ -16,12 +16,26 @@ import ShotDexKit
 /// but in the sidebar it sits inside a `ScrollView`, and a plot that claimed
 /// every drag inserted a point on the first change event — before any
 /// arbitration — so scrolling past the Curve section changed the photo's
-/// contrast.
+/// contrast. The drag lives on each point's own 52pt target, not on the plot:
+/// a plot-wide drag that ignored touches off a point still owned them, so a
+/// swipe that began on the 280pt graph never scrolled the list (FS-03.09
+/// AC-11, D3).
 struct EditorCurveGraph: View {
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
 
+    /// Which point is held, for the enlarged dot.
     @State private var grabbed: Int?
+    /// The held point and where it was when the finger came down, in a
+    /// reference: the UIKit callbacks run between renders, where a `@State`
+    /// written a moment ago still reads back as the old value (measured: the
+    /// first write never landed and the point never moved).
+    @State private var drag = CurveDrag()
+
+    final class CurveDrag {
+        var index: Int?
+        var start: CurvePoint?
+    }
 
     private var channel: ToneCurveChannel { chrome.curveChannel }
     private var points: [CurvePoint] { controller.editedCurve[channel] }
@@ -56,6 +70,14 @@ struct EditorCurveGraph: View {
             if !showsRegion {
                 ForEach(points.indices, id: \.self) { index in
                     controlPoint(isGrabbed: grabbed == index)
+                        .frame(width: EditorLayoutMetrics.curvePointHitRadius * 2, height: EditorLayoutMetrics.curvePointHitRadius * 2)
+                        .overlay {
+                            EditorPointDragCatcher(
+                                onChanged: { move(index, by: $0, in: local) },
+                                onEnded: { endDrag() },
+                                onDoubleTap: { removePoint(index) }
+                            )
+                        }
                         .position(viewPoint(points[index], in: local))
                 }
             }
@@ -66,9 +88,7 @@ struct EditorCurveGraph: View {
         // A curve is grabbed at points a pointer cannot see. `.automatic`
         // gives the cursor the region to work in.
         .hoverEffect(.automatic)
-        .highPriorityGesture(deleteGesture(local))
         .gesture(insertGesture(local))
-        .gesture(dragGesture(local))
     }
 
     /// "4 points" — what VoiceOver can say about a shape it cannot see.
@@ -192,34 +212,35 @@ struct EditorCurveGraph: View {
 
     // MARK: Gestures
 
-    /// Drag to shape — only a drag that starts on a control point (see the
-    /// type's comment). Claiming the touch sets `activePlainSliderID`, which is
-    /// what the sidebar's `.scrollDisabled` reads, so once shaping starts the
-    /// list holds still.
-    private func dragGesture(_ rect: CGRect) -> some Gesture {
-        DragGesture(minimumDistance: 0)
-            .onChanged { value in
-                if grabbed == nil {
-                    guard let index = nearestPointIndex(to: value.startLocation, in: rect) else { return }
-                    claimScroll()
-                    controller.beginContinuousChange()
-                    grabbed = index
-                }
-                guard let index = grabbed, index < points.count else { return }
-                var updated = points
-                updated[index] = clamped(
-                    index: index,
-                    to: curvePoint(value.location, in: rect),
-                    in: updated
-                )
-                controller.setCurve(updated, for: channel)
-            }
-            .onEnded { _ in
-                guard grabbed != nil else { return }
-                controller.endContinuousChange()
-                grabbed = nil
-                releaseScroll()
-            }
+    /// Drag to shape, from the point's own target (see the type's comment):
+    /// the point moves by the finger's travel. The first call opens the undo
+    /// step, so a touch that never moves records nothing.
+    private func move(_ index: Int, by translation: CGSize, in rect: CGRect) {
+        if drag.index == nil {
+            guard index < points.count else { return }
+            claimScroll()
+            controller.beginContinuousChange()
+            drag.index = index
+            drag.start = points[index]
+            grabbed = index
+        }
+        guard let grabbed = drag.index, let grabStart = drag.start, grabbed < points.count, rect.width > 0, rect.height > 0 else { return }
+        let moved = CurvePoint(
+            x: grabStart.x + Double(translation.width / rect.width),
+            y: grabStart.y - Double(translation.height / rect.height)
+        )
+        var updated = points
+        updated[grabbed] = clamped(index: grabbed, to: moved, in: updated)
+        controller.setCurve(updated, for: channel)
+    }
+
+    private func endDrag() {
+        guard drag.index != nil else { return }
+        controller.endContinuousChange()
+        drag.index = nil
+        drag.start = nil
+        grabbed = nil
+        releaseScroll()
     }
 
     /// A tap on empty graph drops a point **on the line** at the tap's input
@@ -258,18 +279,14 @@ struct EditorCurveGraph: View {
         }
     }
 
-    private func deleteGesture(_ rect: CGRect) -> some Gesture {
-        SpatialTapGesture(count: 2)
-            .onEnded { value in
-                guard let index = nearestPointIndex(to: value.location, in: rect),
-                      index != 0, index != points.count - 1
-                else { return }
-                controller.beginContinuousChange()
-                var updated = points
-                updated.remove(at: index)
-                controller.setCurve(updated, for: channel)
-                controller.endContinuousChange()
-            }
+    /// Double-tap a point to remove it; the two ends stay.
+    private func removePoint(_ index: Int) {
+        guard index != 0, index < points.count - 1 else { return }
+        controller.beginContinuousChange()
+        var updated = points
+        updated.remove(at: index)
+        controller.setCurve(updated, for: channel)
+        controller.endContinuousChange()
     }
 
     // MARK: Geometry
@@ -597,6 +614,119 @@ extension ToneCurveChannel {
         case .red: EditorTheme.histogramRed
         case .green: EditorTheme.histogramGreen
         case .blue: EditorTheme.histogramBlue
+        }
+    }
+}
+
+/// A control point's own touch handling, in UIKit: a SwiftUI drag inside the
+/// sidebar's `ScrollView` either lost every touch to the scroll (measured: the
+/// point did not move) or, attached to the whole plot, took them all.
+///
+/// A zero-duration press claims the touch the moment it lands **on the point**
+/// and switches the enclosing scroll view's pan off until it lifts — the same
+/// hand-off `SliderPanCatcher` makes for a track. Touches that land anywhere
+/// else never reach it, so the list scrolls under them. The drag reports only
+/// once the finger has moved, so a tap or a double-tap changes nothing.
+struct EditorPointDragCatcher: UIViewRepresentable {
+    let onChanged: (CGSize) -> Void
+    let onEnded: () -> Void
+    let onDoubleTap: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onChanged: onChanged, onEnded: onEnded, onDoubleTap: onDoubleTap)
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        view.backgroundColor = .clear
+        let press = UILongPressGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.press(_:)))
+        press.minimumPressDuration = 0
+        press.allowableMovement = .greatestFiniteMagnitude
+        press.numberOfTouchesRequired = 1
+        press.cancelsTouchesInView = false
+        let doubleTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.doubleTap(_:)))
+        doubleTap.numberOfTapsRequired = 2
+        press.delegate = context.coordinator
+        doubleTap.delegate = context.coordinator
+        view.addGestureRecognizer(press)
+        view.addGestureRecognizer(doubleTap)
+        return view
+    }
+
+    func updateUIView(_: UIView, context: Context) {
+        context.coordinator.onChanged = onChanged
+        context.coordinator.onEnded = onEnded
+        context.coordinator.onDoubleTap = onDoubleTap
+    }
+
+    @MainActor
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        var onChanged: (CGSize) -> Void
+        var onEnded: () -> Void
+        var onDoubleTap: () -> Void
+        private var start: CGPoint?
+        private var hasMoved = false
+        private weak var suspendedScrollView: UIScrollView?
+
+        init(onChanged: @escaping (CGSize) -> Void, onEnded: @escaping () -> Void, onDoubleTap: @escaping () -> Void) {
+            self.onChanged = onChanged
+            self.onEnded = onEnded
+            self.onDoubleTap = onDoubleTap
+        }
+
+        @objc func press(_ recognizer: UILongPressGestureRecognizer) {
+            guard let view = recognizer.view else { return }
+            // In the window, not the point's own view: the view moves with the
+            // point it is dragging.
+            let location = recognizer.location(in: view.window)
+            switch recognizer.state {
+            case .began:
+                start = location
+                hasMoved = false
+                suspendScrolling(from: view)
+            case .changed:
+                guard let start else { return }
+                let translation = CGSize(width: location.x - start.x, height: location.y - start.y)
+                if !hasMoved, hypot(translation.width, translation.height) < 1 { return }
+                hasMoved = true
+                onChanged(translation)
+            case .ended, .cancelled, .failed:
+                resumeScrolling()
+                if hasMoved { onEnded() }
+                start = nil
+                hasMoved = false
+            default:
+                break
+            }
+        }
+
+        @objc func doubleTap(_ recognizer: UITapGestureRecognizer) {
+            if recognizer.state == .ended { onDoubleTap() }
+        }
+
+        private func suspendScrolling(from view: UIView) {
+            var candidate: UIView? = view.superview
+            while let current = candidate {
+                if let scrollView = current as? UIScrollView {
+                    scrollView.panGestureRecognizer.isEnabled = false
+                    suspendedScrollView = scrollView
+                    return
+                }
+                candidate = current.superview
+            }
+        }
+
+        private func resumeScrolling() {
+            suspendedScrollView?.panGestureRecognizer.isEnabled = true
+            suspendedScrollView = nil
+        }
+
+        func gestureRecognizer(
+            _: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith _: UIGestureRecognizer
+        ) -> Bool {
+            // The press and the double-tap both see a tap; neither blocks the other.
+            true
         }
     }
 }

@@ -1,0 +1,102 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-editor.sidebarEdge",
+    "trailing",
+    "-editor.sidebarHidden",
+    "NO",
+    "-editor.sidebarWidth",
+    "320"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 20
+  },
+  {
+   "action": "tap",
+   "label": "Photo, file type",
+   "type": "cell",
+   "index": 2
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "tap",
+   "label": "Edit",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 18
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "tap",
+   "label": "Light",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "swipe",
+   "x": 0.85,
+   "y": 0.35,
+   "direction": "up",
+   "distance": 0.4
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "b02-curve-other",
+   "type": "other"
+  },
+  {
+   "action": "dump",
+   "name": "b02-curve-buttons",
+   "type": "button"
+  },
+  {
+   "action": "swipe",
+   "x": 0.848,
+   "y": 0.515,
+   "direction": "down",
+   "distance": 0.25
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "b03-after-plot-swipe-other",
+   "type": "other"
+  },
+  {
+   "action": "dump",
+   "name": "b03-after-plot-swipe-buttons",
+   "type": "button"
+  },
+  {
+   "action": "dump",
+   "name": "b03-curve-value",
+   "type": "other"
+  }
+ ]
+}
