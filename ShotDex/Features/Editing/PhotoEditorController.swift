@@ -272,6 +272,9 @@ final class PhotoEditorController {
     private(set) var isRendering = false
     private(set) var isSaving = false
     private(set) var errorMessage: String?
+    /// The photo would not open (FS-03.09 AC-15): kept apart from
+    /// `errorMessage` because it says where to go next and closes the editor.
+    private(set) var loadFailure: EditorLoadFailure?
     private(set) var didFallbackToJPEG = false
     private(set) var savedAssetID: String?
 
@@ -653,7 +656,10 @@ final class PhotoEditorController {
                 await renderNow()
             }
         } catch {
-            errorMessage = error.localizedDescription
+            loadFailure = EditorLoadFailure.classify(
+                error,
+                accessIsLimited: PHPhotoLibrary.authorizationStatus(for: .readWrite) == .limited
+            )
         }
         cachedPreviewTask?.cancel()
         cachedPreviewTask = nil
@@ -726,7 +732,7 @@ final class PhotoEditorController {
     func storePreviewInCache() {
         // Left before it finished opening: the saved recipe is not known yet,
         // and a preview filed under the wrong one would be a wrong hit later.
-        guard let previewCache, !isLoading, errorMessage == nil,
+        guard let previewCache, !isLoading, errorMessage == nil, loadFailure == nil,
               let option = selectedSourceOption
         else { return }
         var edited: (image: UIImage, recipe: PhotoEditRecipe)?
@@ -3248,6 +3254,10 @@ final class PhotoEditorController {
 
     func clearError() {
         errorMessage = nil
+    }
+
+    func clearLoadFailure() {
+        loadFailure = nil
     }
 
     private func scheduleInteractiveRender() {

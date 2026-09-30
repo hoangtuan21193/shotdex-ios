@@ -230,6 +230,9 @@ struct PhotoEditorScreen: View {
         } message: {
             Text(controller?.errorMessage ?? "")
         }
+        // A photo that would not open: nothing to edit, so every way out of
+        // the alert also leaves the editor (FS-03.09 AC-15).
+        .modifier(EditorLoadFailureAlert(controller: controller, close: { dismiss() }))
         .alert("Saved as JPEG", isPresented: $isFallbackNoticePresented) {
             Button("OK") { dismiss() }
         } message: {
@@ -3630,3 +3633,35 @@ private struct PhotoEditorSaveSheet: View {
     }
 }
 
+
+/// The alert for a photo that would not open (FS-03.09 AC-15). A modifier of
+/// its own because the screen's body is already at the type checker's limit.
+private struct EditorLoadFailureAlert: ViewModifier {
+    let controller: PhotoEditorController?
+    let close: () -> Void
+
+    func body(content: Content) -> some View {
+        content.alert(
+            controller?.loadFailure?.title ?? "",
+            isPresented: Binding(
+                get: { controller?.loadFailure != nil },
+                set: { if !$0 { controller?.clearLoadFailure() } }
+            ),
+            presenting: controller?.loadFailure
+        ) { failure in
+            if failure.offersSettings {
+                Button("Open Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                    close()
+                }
+                Button("Cancel", role: .cancel) { close() }
+            } else {
+                Button("OK", role: .cancel) { close() }
+            }
+        } message: { failure in
+            Text(failure.message)
+        }
+    }
+}
