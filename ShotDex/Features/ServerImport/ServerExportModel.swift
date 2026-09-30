@@ -16,6 +16,17 @@ final class ServerExportModel {
         case done
     }
 
+    /// One file a tool made from all the photos (FS-17.06 §6b): it goes out
+    /// as it is, under a name the user can change.
+    struct ComposedSource {
+        let file: URL
+        let tool: ServerComposedName.Tool
+        /// The name of the photo the default name is built from.
+        let firstFilename: String
+
+        var fileExtension: String { file.pathExtension.lowercased() }
+    }
+
     /// The other folder picked for Other Folder….
     struct OtherFolder: Equatable {
         let server: FileServer
@@ -33,6 +44,10 @@ final class ServerExportModel {
     /// Set for Resize (FS-17.06 §3): the sizes offered, and the one picked.
     let resizePresets: [ResizePreset]?
     var resizePreset: ResizePreset?
+    /// Set when a tool made one file from all the photos.
+    let composed: ComposedSource?
+    /// The name typed in the sheet, without the extension.
+    var name: String
     private(set) var report = ServerExportReport()
     private(set) var progressLine = ""
 
@@ -55,9 +70,12 @@ final class ServerExportModel {
         originServer: FileServer,
         renderDirectory: URL,
         services: ServerExportServices,
-        resizePresets: [ResizePreset]? = nil
+        resizePresets: [ResizePreset]? = nil,
+        composed: ComposedSource? = nil
     ) {
         self.photos = photos
+        self.composed = composed
+        self.name = composed.map { ServerComposedName.defaultBase(firstFilename: $0.firstFilename, tool: $0.tool) } ?? ""
         self.resizePresets = resizePresets
         self.resizePreset = resizePresets?.first
         self.originServer = originServer
@@ -68,7 +86,17 @@ final class ServerExportModel {
 
     /// Replace Original is offered only when every photo can take it — a
     /// lone JPEG or HEIC (FS-17.06 §6).
-    var canReplaceOriginals: Bool { photos.allSatisfy { ServerExportRules.canReplaceOriginal($0.photo) } }
+    var canReplaceOriginals: Bool {
+        composed == nil && photos.allSatisfy { ServerExportRules.canReplaceOriginal($0.photo) }
+    }
+
+    var isComposed: Bool { composed != nil }
+
+    /// The file name the composed file goes out under, or nil while the
+    /// typed name leaves nothing (FS-17.06 §6b).
+    var composedFilename: String? {
+        composed.flatMap { ServerComposedName.filename(typed: name, fileExtension: $0.fileExtension) }
+    }
 
     var hasRAWOriginal: Bool { photos.contains { $0.photo.raw != nil } }
 
@@ -85,6 +113,7 @@ final class ServerExportModel {
 
     var canExport: Bool {
         stage == .choosing && !destinations.isEmpty && resolvedDestinations.count == destinations.count
+            && (composed == nil || composedFilename != nil)
     }
 
     /// Replace Original goes through a second, red confirmation first.
@@ -102,7 +131,10 @@ final class ServerExportModel {
         let effectivePlacement: ServerEditPlacement = destinations.contains(.originalFolder) && canReplaceOriginals ? placement : .newFile
         let job = ServerEditExporter.Job(
             photos: photos, destinations: resolvedDestinations, placement: effectivePlacement, format: format,
-            resize: resizePreset
+            resize: resizePreset,
+            composed: composed.map { source in
+                ComposedOutput(file: source.file, filename: composedFilename ?? source.file.lastPathComponent, folder: originFolder)
+            }
         )
         start(job, exporter: ServerEditExporter(services: services, renderDirectory: renderDirectory) { [weak self] event in
             Task { @MainActor in self?.handle(event) }
@@ -127,7 +159,7 @@ final class ServerExportModel {
         })
         next.insert(.otherFolder(serverId: folder.server.id, serverName: folder.server.name, path: folder.path))
         start(ServerEditExporter.Job(photos: job.photos, destinations: next, placement: job.placement,
-                                     format: job.format, resize: job.resize),
+                                     format: job.format, resize: job.resize, composed: job.composed),
               exporter: exporter)
     }
 
@@ -148,12 +180,12 @@ final class ServerExportModel {
             guard let self else { return }
             self.task = nil
             self.report = report
-            self.stage = report.isComplete(photos: job.photos, destinations: job.destinations) ? .done : .finishedWithFailures
+            self.stage = report.isComplete(ids: job.itemIds, destinations: job.destinations) ? .done : .finishedWithFailures
         }
     }
 
     private func handle(_ event: ServerEditExporter.Event) {
-        let count = photos.count
+        let count = composed == nil ? photos.count : 1
         switch event {
         case .rendering(let index):
             progressLine = String(localized: "Rendering \(index + 1) of \(count)", comment: "Server export: rendering the edit of one photo")
@@ -207,6 +239,50 @@ extension ServerExportModel {
         resizePresets: [ResizePreset]? = nil
     ) -> ServerExportModel {
         let service = dependencies.photoEditing
+        return ServerExportModel(
+            photos: photos,
+            originServer: context.server,
+            renderDirectory: context.workDirectory.appendingPathComponent("Exports", isDirectory: true),
+            services: services(context: context, dependencies: dependencies) { photo, format, resize, folder in
+                try await EditorBatchSaver.renderToFile(
+                    photo,
+                    recipe: recipes[photo.id] ?? .identity,
+                    service: service,
+                    format: format == .heic ? .heic : .jpeg,
+                    includeMetadata: true,
+                    resize: resize,
+                    into: folder
+                )
+            },
+            resizePresets: resizePresets
+        )
+    }
+
+    /// The export of one file a tool made from `photos` — a collage, a
+    /// combined photo, a video (FS-17.06 §6b).
+    static func makeComposed(
+        _ source: ComposedSource,
+        photos: [FetchedServerPhoto],
+        context: ServerExportContext,
+        dependencies: AppDependencies
+    ) -> ServerExportModel {
+        ServerExportModel(
+            photos: photos,
+            originServer: context.server,
+            renderDirectory: context.workDirectory.appendingPathComponent("Exports", isDirectory: true),
+            services: services(context: context, dependencies: dependencies) { _, _, _, _ in
+                // The tool rendered it already; nothing renders per photo.
+                source.file
+            },
+            composed: source
+        )
+    }
+
+    private static func services(
+        context: ServerExportContext,
+        dependencies: AppDependencies,
+        render: @escaping @Sendable (FetchedServerPhoto, ServerExportFormat, ResizePreset?, URL) async throws -> URL
+    ) -> ServerExportServices {
         let library = dependencies.photoLibrary
         dependencies.fileServerCatalog.reload()
         let servers = Dictionary(uniqueKeysWithValues: dependencies.fileServerCatalog.servers.map { ($0.id, $0) })
@@ -218,34 +294,22 @@ extension ServerExportModel {
             }
             return ServerBrowseSession(server: server, client: RemoteFileClientFactory.make(for: server, password: passwords[id] ?? ""))
         }
-        return ServerExportModel(
-            photos: photos,
-            originServer: context.server,
-            renderDirectory: context.workDirectory.appendingPathComponent("Exports", isDirectory: true),
-            services: ServerExportServices(
-                render: { photo, format, resize, folder in
-                    try await EditorBatchSaver.renderToFile(
-                        photo,
-                        recipe: recipes[photo.id] ?? .identity,
-                        service: service,
-                        format: format == .heic ? .heic : .jpeg,
-                        includeMetadata: true,
-                        resize: resize,
-                        into: folder
-                    )
-                },
-                originAccess: context.access,
-                access: { id in try await pool.access(for: id) },
-                saveToPhotos: { url, name in
-                    // Photos takes the file; the render stays for the other
-                    // destinations.
-                    let copy = url.deletingLastPathComponent()
-                        .appendingPathComponent("photos-\(UUID().uuidString)-\(url.lastPathComponent)")
-                    try FileManager.default.copyItem(at: url, to: copy)
-                    return try await library.saveImageFile(at: copy, filename: name)
+        return ServerExportServices(
+            render: render,
+            originAccess: context.access,
+            access: { id in try await pool.access(for: id) },
+            saveToPhotos: { url, name in
+                // A video goes in as a video, read in place.
+                if ServerExportRules.isMovie(url) {
+                    return try await library.importFile(at: url, isVideo: true)
                 }
-            ),
-            resizePresets: resizePresets
+                // Photos takes the file; the render stays for the other
+                // destinations.
+                let copy = url.deletingLastPathComponent()
+                    .appendingPathComponent("photos-\(UUID().uuidString)-\(url.lastPathComponent)")
+                try FileManager.default.copyItem(at: url, to: copy)
+                return try await library.saveImageFile(at: copy, filename: name)
+            }
         )
     }
 }

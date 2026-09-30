@@ -108,13 +108,16 @@ struct ServerExportSheet: View {
 
     private var chooseForm: some View {
         Form {
+            if let composed = model.composed {
+                nameSection(composed)
+            }
             Section {
                 row(.originalFolder,
                     title: String(localized: "Original Folder", comment: "Server export destination"),
                     detail: "\(model.originServer.name) · \(model.originFolder.isEmpty ? "/" : model.originFolder)")
                 row(.photosLibrary,
                     title: String(localized: "Photos Library", comment: "Server export destination"),
-                    detail: String(localized: "A new photo with the edit. The original stays on the server.", comment: "Server export: Photos Library row detail"))
+                    detail: photosLibraryDetail)
                 otherFolderRow
                 row(.share,
                     title: String(localized: "Share", comment: "Server export destination"),
@@ -123,6 +126,48 @@ struct ServerExportSheet: View {
                 Text("Save To", comment: "Server export: destinations section")
             }
 
+            if !model.isComposed {
+                perPhotoSections
+            }
+        }
+    }
+
+    private var photosLibraryDetail: String {
+        switch model.composed?.tool {
+        case nil:
+            String(localized: "A new photo with the edit. The original stays on the server.", comment: "Server export: Photos Library row detail")
+        case .video?:
+            String(localized: "A new video. The originals stay on the server.", comment: "Server export: Photos Library row detail, a video made from server photos")
+        default:
+            String(localized: "A new photo. The originals stay on the server.", comment: "Server export: Photos Library row detail, one photo made from several server photos")
+        }
+    }
+
+    /// The name one composed file goes out under (FS-17.06 §6b).
+    private func nameSection(_ composed: ServerExportModel.ComposedSource) -> some View {
+        Section {
+            HStack(spacing: 4) {
+                TextField(String(localized: "Name", comment: "Server export: name of the one file a tool made"), text: $model.name)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .submitLabel(.done)
+                Text(verbatim: ".\(composed.fileExtension)")
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+            }
+        } header: {
+            Text("Name", comment: "Server export: name section")
+        } footer: {
+            if model.composedFilename == nil {
+                Text("Enter a name to export.", comment: "Server export: the typed name leaves nothing")
+            } else {
+                Text(verbatim: "\(composed.tool.title) · \(composed.fileExtension.uppercased())")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var perPhotoSections: some View {
             if let presets = model.resizePresets {
                 Section {
                     Picker(String(localized: "Size", comment: "Server export: Resize preset"), selection: Binding(
@@ -169,7 +214,6 @@ struct ServerExportSheet: View {
                 Text("^[\(model.photos.count) photo](inflect: true) · \(model.format == .jpeg ? "JPEG" : "HEIC")",
                      comment: "Server export summary: photos and format")
             }
-        }
     }
 
     private func row(_ choice: ServerExportModel.Choice, title: String, detail: String) -> some View {

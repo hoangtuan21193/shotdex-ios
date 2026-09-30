@@ -13,6 +13,17 @@ enum ServerComposedName {
         case video
 
         var suffix: String { rawValue }
+
+        /// What the sheet calls the file: `Collage · JPEG`.
+        var title: String {
+            switch self {
+            case .collage: String(localized: "Collage", comment: "Server export: kind of the one file a tool made")
+            case .focusStack: String(localized: "Focus Stack", comment: "Server export: kind of the one file a tool made")
+            case .panorama: String(localized: "Panorama", comment: "Server export: kind of the one file a tool made")
+            case .stack: String(localized: "Stacked Photo", comment: "Server export: kind of the one file a tool made")
+            case .video: String(localized: "Video", comment: "Server export: kind of the one file a tool made")
+            }
+        }
     }
 
     /// `DSCF1000_collage` for a collage whose first photo is `DSCF1000.JPG`.

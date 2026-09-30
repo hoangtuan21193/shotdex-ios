@@ -93,4 +93,38 @@ import Testing
         #expect(ServerExportRules.isMovie(URL(fileURLWithPath: "/t/a.MOV")))
         #expect(!ServerExportRules.isMovie(URL(fileURLWithPath: "/t/a_collage.jpg")))
     }
+
+    /// AC-77/AC-78: the sheet starts on `DSCF1000_collage`, offers no
+    /// Replace, and will not export under a name that leaves nothing; the
+    /// run then writes the typed name.
+    @MainActor
+    @Test func composedEmptyNameDisablesExport() async throws {
+        let fixture = Fixture()
+        defer { try? FileManager.default.removeItem(at: fixture.directory) }
+        let photos = [try fixture.photo("DSCF1000.JPG"), try fixture.photo("DSCF1001.JPG")]
+        let server = FileServer(name: "NAS", transferProtocol: .smb, host: "nas.local", username: "u", share: "photos")
+        let model = ServerExportModel(
+            photos: photos, originServer: server,
+            renderDirectory: fixture.directory.appendingPathComponent("exports"),
+            services: fixture.services(),
+            composed: .init(file: try composedFile(fixture), tool: .collage, firstFilename: "DSCF1000.JPG")
+        )
+
+        #expect(model.name == "DSCF1000_collage")
+        #expect(!model.canReplaceOriginals)
+        model.toggle(.originalFolder)
+        #expect(model.canExport)
+        for empty in ["", "   ", "/", " : "] {
+            model.name = empty
+            #expect(!model.canExport, "\(empty)")
+        }
+
+        model.name = "Trip"
+        model.export()
+        for _ in 0..<3000 where model.stage != .done && model.stage != .finishedWithFailures {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(model.stage == .done)
+        #expect(fixture.client.files["Trip/Trip.jpg"] == Data("collage".utf8))
+    }
 }
