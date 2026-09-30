@@ -47,7 +47,11 @@ struct ServerExportSheet: View {
             Button(String(localized: "Replace", comment: "Server export: confirm replacing originals"), role: .destructive) { model.export() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("The originals are deleted and can't be recovered.", comment: "Server export: replace originals confirmation")
+            if model.photos.count == 1 {
+                Text("The original is deleted and can't be recovered.", comment: "Server export: replace one original, confirmation")
+            } else {
+                Text("The originals are deleted and can't be recovered.", comment: "Server export: replace originals confirmation")
+            }
         }
         .confirmationDialog(
             String(localized: "Choose a Connection", comment: "Server export: pick the connection for Other Folder"),
@@ -61,8 +65,10 @@ struct ServerExportSheet: View {
     }
 
     private var replaceTitle: String {
-        String(localized: "Replace ^[\(model.photos.count) original](inflect: true) on \(model.originServer.name)?",
-               comment: "Server export: replace originals confirmation title")
+        // Through AttributedString: a plain String keeps the ^[…](inflect:)
+        // markup as text.
+        String(AttributedString(localized: "Replace ^[\(model.photos.count) original](inflect: true) on \(model.originServer.name)?",
+                                comment: "Server export: replace originals confirmation title").characters)
     }
 
     @ToolbarContentBuilder

@@ -357,15 +357,9 @@ struct ServerBrowserScreen: View {
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
         if folder.isSelecting {
-            ToolbarItem(placement: .topBarLeading) {
-                if folder.selected.count == folder.photos.count, !folder.photos.isEmpty {
-                    Button("Deselect All") { folder.deselectAll() }
-                } else {
-                    Button("Select All") { folder.selectAll() }
-                }
-            }
-            // Beside the selection's other leading control, as the album's
-            // Edit sits beside Compare.
+            // Alone on the leading side, as the album's Edit is; Select All
+            // lives in ⋯ there too, and two words here squeeze the
+            // "N Selected" title to "N Selec…" on a phone.
             ToolbarItem(placement: .topBarLeading) {
                 Button(PhotoCommand.edit.title) { perform(.edit, on: folder.selectedPhotos) }
                     .disabled(folder.selected.isEmpty || model.isWorking)
@@ -445,6 +439,14 @@ struct ServerBrowserScreen: View {
                 if command != .pasteEdits || dependencies.editClipboard.recipe != nil {
                     Button { perform(command, on: folder.selectedPhotos) } label: { command.label }
                         .disabled(folder.selected.isEmpty || model.isWorking)
+                }
+            }
+            // Last, in its own group, where the album keeps it.
+            Section {
+                if folder.selected.count == folder.photos.count, !folder.photos.isEmpty {
+                    Button { folder.deselectAll() } label: { Label("Deselect All", systemImage: "circle") }
+                } else {
+                    Button { folder.selectAll() } label: { Label("Select All", systemImage: "checkmark.circle") }
                 }
             }
         } label: {
@@ -979,13 +981,17 @@ struct ServerPhotoViewer: View {
                 .font(.subheadline)
                 .padding(.horizontal, 16)
                 HStack(spacing: 12) {
+                    // Icons, as the library viewer draws them: with words,
+                    // Import wraps to two lines on a 402pt phone.
                     Button {
                         onCommand(.edit)
                         dismiss()
                     } label: {
-                        Label(PhotoCommand.edit.title, systemImage: PhotoCommand.edit.systemImage)
+                        Image(systemName: PhotoCommand.edit.systemImage)
+                            .frame(minWidth: 28)
                     }
                     .buttonStyle(.bordered)
+                    .accessibilityLabel(PhotoCommand.edit.title)
                     Button {
                         onCommand(.share)
                         dismiss()
@@ -1000,6 +1006,7 @@ struct ServerPhotoViewer: View {
                         dismiss()
                     } label: {
                         Label(PhotoCommand.importToLibrary.title, systemImage: PhotoCommand.importToLibrary.systemImage)
+                            .lineLimit(1)
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
