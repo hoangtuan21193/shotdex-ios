@@ -139,6 +139,18 @@ final class VideoStudioModel {
     var exportState: ExportState = .idle
     private(set) var savedAssetID: String?
     var errorMessage: String?
+    /// Set for a project of server photos.
+    let serverWorkDirectory: URL?
+    /// The server photos' copies on this device, by clip id.
+    let serverFiles: [String: URL]
+    /// The exported video of a server run, waiting for the export sheet.
+    var composedFile: URL?
+
+    var isServerRun: Bool { serverWorkDirectory != nil }
+
+    /// The copy on disk behind a clip, for a server photo; nil for a
+    /// library asset. Thumbnails read it instead of PhotoKit.
+    func serverFileURL(for assetID: String) -> URL? { serverFiles[assetID] }
 
     var lastFont = OverlayFontChoice.system
 
@@ -153,8 +165,25 @@ final class VideoStudioModel {
     var dropImportTask: Task<Void, Never>?
     private var isAudioSessionActive = false
 
-    init(
+    convenience init(
         assets: [PHAsset],
+        mode: VideoStudioMode,
+        service: VideoStudioService,
+        photoLibrary: PhotoLibraryService,
+        overlayFontRecents: OverlayFontRecentsStore,
+        overlayImages: OverlayImageStore,
+        creationStore: CreationStore? = nil,
+        restoring: Creation? = nil
+    ) {
+        self.init(
+            photos: assets.map(PhotoEditOrigin.asset), mode: mode, service: service, photoLibrary: photoLibrary,
+            overlayFontRecents: overlayFontRecents, overlayImages: overlayImages,
+            creationStore: creationStore, restoring: restoring
+        )
+    }
+
+    init(
+        photos: [PhotoEditOrigin],
         mode: VideoStudioMode,
         service: VideoStudioService,
         photoLibrary: PhotoLibraryService,
@@ -164,8 +193,17 @@ final class VideoStudioModel {
         /// Reopening a saved video: the stored recipe stands in for the one
         /// built from `assets`. `load()` then resolves sources for *its*
         /// clips, so trims, speeds, captions and music all come back.
-        restoring: Creation? = nil
+        restoring: Creation? = nil,
+        /// A project of server photos (FS-17.06 §5b): Export stops at the
+        /// file, which goes to the export sheet instead of Photos.
+        serverWorkDirectory: URL? = nil
     ) {
+        self.serverWorkDirectory = serverWorkDirectory
+        self.serverFiles = Dictionary(
+            photos.compactMap { photo in photo.serverFile.map { (photo.id, $0.primaryURL) } },
+            uniquingKeysWith: { first, _ in first }
+        )
+        service.setServerFiles(serverFiles)
         self.mode = mode
         self.service = service
         self.photoLibrary = photoLibrary
@@ -177,10 +215,10 @@ final class VideoStudioModel {
             self.recipe = stored
         } else {
             self.recipe = VideoProjectRecipe(
-                clips: assets.map { asset in
+                clips: photos.map { photo in
                     VideoClip(
-                        assetID: asset.localIdentifier,
-                        kind: asset.mediaType == .video ? .video : .photo
+                        assetID: photo.id,
+                        kind: photo.asset?.mediaType == .video ? .video : .photo
                     )
                 }
             )
@@ -475,6 +513,7 @@ final class VideoStudioModel {
             VideoAudioSession.deactivate()
             isAudioSessionActive = false
         }
+        service.setServerFiles([:])
         service.cleanupSession()
     }
 
@@ -1794,6 +1833,17 @@ final class VideoStudioModel {
                     if case .exporting = self?.exportState {
                         self?.exportState = .exporting(progress)
                     }
+                }
+                if let serverWorkDirectory {
+                    // A server run: the file goes to the export sheet;
+                    // nothing reaches Photos or Creations here.
+                    let folder = serverWorkDirectory.appendingPathComponent("Compose-\(UUID().uuidString)", isDirectory: true)
+                    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                    let destination = folder.appendingPathComponent("video.\(url.pathExtension)")
+                    try FileManager.default.moveItem(at: url, to: destination)
+                    exportState = .idle
+                    composedFile = destination
+                    return
                 }
                 exportState = .saving
                 let assetID = try await service.saveToPhotos(url: url)

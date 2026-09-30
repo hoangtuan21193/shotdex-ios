@@ -150,9 +150,19 @@ final class StillFrameStore: @unchecked Sendable {
     private var cache: [String: CIImage] = [:]
     private var order: [String] = []
     private let capacity = 4
+    /// Server copies on this device by clip id (FS-17.06 §5b): decoded from
+    /// the file at the render size instead of asked of PhotoKit.
+    private var files: [String: URL]
 
-    init(targetLongEdge: CGFloat) {
+    init(targetLongEdge: CGFloat, files: [String: URL] = [:]) {
         self.targetLongEdge = targetLongEdge
+        self.files = files
+    }
+
+    func setFiles(_ files: [String: URL]) {
+        lock.lock()
+        defer { lock.unlock() }
+        self.files = files
     }
 
     func image(for assetID: String) -> CIImage? {
@@ -179,6 +189,12 @@ final class StillFrameStore: @unchecked Sendable {
     }
 
     private func load(_ assetID: String) -> CIImage? {
+        lock.lock()
+        let file = files[assetID]
+        lock.unlock()
+        if let file {
+            return PhotoOriginFile.image(at: file, maxPixelSize: Int(targetLongEdge.rounded(.up))).map { CIImage(cgImage: $0) }
+        }
         let fetch = PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil)
         guard let asset = fetch.firstObject else { return nil }
         let options = PHImageRequestOptions()

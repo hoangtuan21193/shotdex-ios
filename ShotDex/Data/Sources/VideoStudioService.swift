@@ -20,6 +20,16 @@ final class VideoStudioService {
     /// One per session: preview-sized stills. Export builds its own.
     private let previewStillStore = StillFrameStore(targetLongEdge: previewLongEdge)
     private var sessionDirectory: URL?
+    /// Server copies on this device by clip id, for a project made from
+    /// server photos (FS-17.06 §5b). Empty otherwise.
+    private(set) var serverFiles: [String: URL] = [:]
+
+    /// Points the stills of this session at server copies on disk; an empty
+    /// map when the session ends.
+    func setServerFiles(_ files: [String: URL]) {
+        serverFiles = files
+        previewStillStore.setFiles(files)
+    }
 
     init(
         importFile: @escaping (URL, Bool) async throws -> String,
@@ -66,6 +76,15 @@ final class VideoStudioService {
         // anything.
         var pending: [(clip: VideoClip, asset: PHAsset)] = []
         for clip in clips {
+            if clip.kind == .photo, let file = serverFiles[clip.assetID] {
+                // A server copy: its oriented size straight from the file.
+                let size = PhotoEditOrigin.orientedPixelSize(of: file)
+                loaded.sources[clip.id] = .photo(
+                    assetID: clip.assetID,
+                    pixelSize: CGSize(width: size?.width ?? 0, height: size?.height ?? 0)
+                )
+                continue
+            }
             guard let asset = assets[clip.assetID] else { continue }
             if clip.kind == .photo {
                 loaded.sources[clip.id] = .photo(
@@ -397,7 +416,7 @@ final class VideoStudioService {
                 renderSize: renderSize
             )
         }
-        let exportStillStore = StillFrameStore(targetLongEdge: max(renderSize.width, renderSize.height))
+        let exportStillStore = StillFrameStore(targetLongEdge: max(renderSize.width, renderSize.height), files: serverFiles)
         let videoComposition = VideoCompositionBuilder.videoComposition(
             recipe: recipe,
             layout: layout,

@@ -43,6 +43,17 @@ final class VideoFilterThumbnails {
         images = [:]
         renderTask?.cancel()
 
+        if let file = model.serverFileURL(for: assetID) {
+            // A server copy (FS-17.06 §5b); the long side covers an aspect
+            // fill of the square swatch.
+            let side = Int(cell * 4)
+            Task { [weak self] in
+                guard let image = await PhotoOriginFile.loadImage(at: file, maxPixelSize: side),
+                      self?.baseAssetID == assetID else { return }
+                self?.render(base: image)
+            }
+            return
+        }
         guard let asset = PhotoLibraryService.fetchAssets(ids: [assetID]).first else { return }
         let target = CGSize(width: cell * 2, height: cell * 2)
         _ = photoLibrary.requestThumbnail(

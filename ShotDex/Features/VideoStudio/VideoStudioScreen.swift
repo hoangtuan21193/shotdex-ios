@@ -14,6 +14,12 @@ struct VideoStudioPresentation: Identifiable {
     let mode: VideoStudioMode
 }
 
+/// Server photos opening the Video Studio (FS-17.06 §5b).
+struct ServerVideoStudioLaunch {
+    let photos: [FetchedServerPhoto]
+    let export: ServerExportContext
+}
+
 /// Full-screen video editor: a floating command band over the Dynamic Island
 /// (undo/redo, timecode, back, export), the preview, the multi-lane timeline
 /// with a fixed centre playhead, and a tool row. Editing controls live in one
@@ -28,6 +34,8 @@ struct VideoStudioScreen: View {
     /// Reopening a video from Creations: its stored recipe comes back in place
     /// of a fresh project, and exporting updates that same row.
     var restoring: Creation?
+    /// A project of server photos: Export hands the file to the export sheet.
+    var server: ServerVideoStudioLaunch?
 
     @State private var model: VideoStudioModel?
     @State private var isDiscardConfirmationPresented = false
@@ -94,14 +102,15 @@ struct VideoStudioScreen: View {
         .task {
             guard model == nil else { return }
             let newModel = VideoStudioModel(
-                assets: assets,
+                photos: server.map { $0.photos.map(PhotoEditOrigin.serverFile) } ?? assets.map(PhotoEditOrigin.asset),
                 mode: mode,
                 service: dependencies.videoStudio,
                 photoLibrary: dependencies.photoLibrary,
                 overlayFontRecents: dependencies.overlayFontRecents,
                 overlayImages: dependencies.overlayImages,
-                creationStore: dependencies.creations,
-                restoring: restoring
+                creationStore: server == nil ? dependencies.creations : nil,
+                restoring: restoring,
+                serverWorkDirectory: server?.export.workDirectory
             )
             newModel.onSaved = { assetID in onSaved(assetID); dismiss() }
             model = newModel
@@ -140,7 +149,12 @@ struct VideoStudioScreen: View {
         }
         .sheet(isPresented: $isExportSheetPresented) {
             if let model {
-                VideoExportSheet(model: model).presentationDetents([.height(300)])
+                VideoExportSheet(model: model, server: server) {
+                    server?.export.onExported()
+                    isExportSheetPresented = false
+                    dismiss()
+                }
+                .presentationDetents([.height(300)])
             }
         }
         .sheet(item: $musicChooserIntent) { intent in
@@ -568,7 +582,9 @@ struct VideoStudioScreen: View {
             }
             return true
         }
-        guard PhotoDropImport.canImport(providers) else { return false }
+        // A project of server photos keeps files from other apps out: they
+        // would be imported into Photos first (FS-17.06 §5b).
+        guard !model.isServerRun, PhotoDropImport.canImport(providers) else { return false }
         model.dropImportTask = Task { @MainActor in
             let result = await PhotoDropImport.importAssets(
                 from: providers,

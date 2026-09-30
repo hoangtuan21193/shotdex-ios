@@ -265,6 +265,7 @@ private struct ClipBand: View {
     var body: some View {
         ClipFilmstrip(
             assetID: clip.assetID,
+            fileURL: model.serverFileURL(for: clip.assetID),
             photoLibrary: model.photoLibrary,
             width: width,
             height: lanes.clipCell
@@ -431,6 +432,8 @@ private struct ClipBand: View {
 /// read as a strip without extra image requests.
 struct ClipFilmstrip: View {
     let assetID: String
+    /// A server copy on disk (FS-17.06 §5b), read instead of PhotoKit.
+    var fileURL: URL?
     let photoLibrary: PhotoLibraryService
     let width: CGFloat
     let height: CGFloat
@@ -451,8 +454,13 @@ struct ClipFilmstrip: View {
         .frame(width: width, height: height, alignment: .leading)
         .clipped()
         .onAppear {
-            guard image == nil,
-                  let asset = PhotoLibraryService.fetchAssets(ids: [assetID]).first
+            guard image == nil else { return }
+            if let fileURL {
+                let side = Int(max(240, height * ActiveDisplay.scale))
+                Task { image = await PhotoOriginFile.loadImage(at: fileURL, maxPixelSize: side) }
+                return
+            }
+            guard let asset = PhotoLibraryService.fetchAssets(ids: [assetID]).first
             else { return }
             // Sized from the cell the frame lands in, not a constant: an
             // 88pt regular-width cell on a 3x screen wants 264px, and a 240px

@@ -53,6 +53,16 @@ final class VideoScopeModel {
         baseAssetID = assetID
         base = nil
         renderedGrade = nil
+        if let file = model.serverFileURL(for: assetID) {
+            // A server copy (FS-17.06 §5b).
+            Task { [weak self] in
+                guard let cg = await PhotoOriginFile.loadImage(at: file, maxPixelSize: 480)?.cgImage,
+                      let self, self.baseAssetID == assetID else { return }
+                base = CIImage(cgImage: cg)
+                rerender()
+            }
+            return
+        }
         guard let asset = PhotoLibraryService.fetchAssets(ids: [assetID]).first else { return }
         _ = photoLibrary.requestThumbnail(
             for: asset,

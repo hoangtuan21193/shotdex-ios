@@ -5,7 +5,14 @@ import SwiftUI
 /// studio via the model's `onSaved`.
 struct VideoExportSheet: View {
     @Bindable var model: VideoStudioModel
+    /// A project of server photos: the file goes to the export sheet
+    /// (FS-17.06 §5b), not to Photos.
+    var server: ServerVideoStudioLaunch?
+    /// Every destination of a server run has the video.
+    var onServerExported: () -> Void = {}
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppDependencies.self) private var dependencies
+    @State private var serverExportModel: ServerExportModel?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -58,6 +65,21 @@ struct VideoExportSheet: View {
         .background(EditorTheme.panelSolid)
         .preferredColorScheme(.dark)
         .interactiveDismissDisabled(isBusy)
+        .onChange(of: model.composedFile) { _, file in
+            guard let file, let server else { return }
+            serverExportModel = .makeComposed(
+                .init(file: file, tool: .video, firstFilename: server.photos.first?.photo.primary.name ?? ""),
+                photos: server.photos,
+                context: server.export,
+                dependencies: dependencies
+            )
+        }
+        .sheet(item: $serverExportModel, onDismiss: { model.composedFile = nil }) { exportModel in
+            ServerExportSheet(model: exportModel) {
+                serverExportModel = nil
+                onServerExported()
+            }
+        }
     }
 
     private var isBusy: Bool {
@@ -76,7 +98,10 @@ struct VideoExportSheet: View {
         Button {
             model.export()
         } label: {
-            Label(String(localized: "Export"), systemImage: "square.and.arrow.down")
+            Label(server == nil
+                  ? String(localized: "Export")
+                  : String(localized: "Export…", comment: "Video of server photos: choose where the video goes"),
+                  systemImage: "square.and.arrow.down")
                 .font(.headline)
                 .frame(maxWidth: .infinity)
                 .frame(height: 46)

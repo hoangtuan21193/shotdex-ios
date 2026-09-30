@@ -143,4 +143,57 @@ import Testing
         #expect(FileManager.default.fileExists(atPath: identifier))
         #expect(!FileManager.default.fileExists(atPath: stitched.path))
     }
+
+    /// AC-84: a 6000×4000 server original reaches the video compositor at
+    /// the render size, never decoded whole.
+    @Test func videoStillsDecodeAtTheRenderSize() throws {
+        let run = Run()
+        defer { try? FileManager.default.removeItem(at: run.directory) }
+        let photo = try run.photos(["DSCF1000.JPG"], width: 6000, height: 4000)[0]
+        let store = StillFrameStore(targetLongEdge: 1280, files: [photo.id: photo.primaryURL])
+        let image = try #require(store.image(for: photo.id))
+        #expect(max(image.extent.width, image.extent.height) == 1280)
+        #expect(store.image(for: "not-a-clip") == nil)
+    }
+
+    /// AC-81: three server photos make a project of photo clips that loads
+    /// from the copies, exports to an .mp4 in the run's work directory for
+    /// the export sheet, and leaves Photos and Creations alone.
+    @MainActor
+    @Test func videoOfServerPhotosExportsToAFile() async throws {
+        let run = Run()
+        defer { try? FileManager.default.removeItem(at: run.directory) }
+        let photos = try run.photos(["DSCF1000.JPG", "DSCF1001.JPG", "DSCF1002.JPG"], width: 640, height: 480)
+        let dependencies = AppDependencies.preview()
+        let model = VideoStudioModel(
+            photos: photos.map(PhotoEditOrigin.serverFile),
+            mode: .multiClip,
+            service: dependencies.videoStudio,
+            photoLibrary: dependencies.photoLibrary,
+            overlayFontRecents: dependencies.overlayFontRecents,
+            overlayImages: dependencies.overlayImages,
+            creationStore: nil,
+            serverWorkDirectory: run.directory
+        )
+        defer { model.close() }
+        #expect(model.isServerRun)
+        #expect(model.recipe.clips.map(\.assetID) == photos.map(\.id))
+        #expect(model.recipe.clips.allSatisfy { $0.kind == .photo })
+        #expect(model.serverFileURL(for: photos[0].id) == photos[0].primaryURL)
+
+        await model.load()
+        #expect(model.phase == .ready)
+        #expect(model.recipe.clips.count == 3)
+
+        model.export()
+        for _ in 0..<6000 where model.composedFile == nil {
+            if case .failed = model.exportState { break }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        let file = try #require(model.composedFile)
+        #expect(file.path.hasPrefix(run.directory.path))
+        #expect(file.pathExtension == "mp4")
+        #expect(model.savedAssetID == nil)
+        #expect(try FileManager.default.attributesOfItem(atPath: file.path)[.size] as? Int ?? 0 > 0)
+    }
 }
