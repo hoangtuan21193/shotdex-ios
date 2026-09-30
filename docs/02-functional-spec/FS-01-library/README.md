@@ -22,6 +22,7 @@ bằng rule, chọn hàng loạt rồi làm gì đó với chúng.
 | 08 | [Compare](08-compare.md) | nhiều card cùng zoom, chạm để đánh dấu xoá |
 | 09 | [Ghép nhiều ảnh](09-photo-stacking.md) | menu Combine Photos: Focus Stack · Panorama · Stack Exposures (Average/Lighten/Darken) |
 | 10 | [Focus Stack](10-focus-stack.md) | căn có co giãn, hai cách ghép, Radius/Smoothing, tô sửa từ một khung |
+| 11 | [HDR](11-hdr-merge.md) | loạt bù trừ sáng → một ảnh: radiance từ RAW, căn khung, khử bóng ma bốn mức, Strength |
 
 ## Quy tắc chung
 

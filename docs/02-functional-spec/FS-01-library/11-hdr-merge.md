@@ -1,0 +1,142 @@
+# FS-01.11 — HDR
+
+`FS-01.11` · tier D · `ShotDexKit/Render/` (cạnh `PhotoStackRenderer`) · `Features/Editing/PhotoStack*` · test
+⚠️ chưa có · cập nhật 2026-10-01 · nguồn [intent](../../_intents/2026-09-30-hdr-merge.md) ·
+[spike](../../_intents/2026-09-30-hdr-merge-spike.md)
+
+**Một câu:** Combine Photos ▸ **HDR** ghép một loạt chụp bù trừ sáng (từ 2 khung) thành một ảnh giữ được cả vùng
+sáng của khung tối lẫn vùng tối của khung sáng. Căn khung khi chụp cầm tay, khử bóng ma bốn mức, một thanh độ mạnh.
+
+> Trạng thái: **spec, chưa build**. Mọi `⚠️ CẦN QUYẾT` đã chốt với người dùng ngày 2026-10-01.
+
+## 1. Người dùng cần gì
+
+Người chụp phong cảnh, nội thất, kiến trúc bấm một loạt AEB (−2 / 0 / +2 EV, hay 5 khung ±4 EV) để giữ trời sáng
+lẫn góc tối. Hôm nay họ phải mang loạt đó sang Lightroom hay app khác để ghép. Stack Exposures (Average/Lighten/
+Darken) không làm được việc này: trung bình ba khung lệch sáng ra một tấm xám đục.
+
+## 2. Phạm vi
+
+**Có:** ghép từ RAW khi cả loạt là RAW · căn dịch + co giãn + xoay · khử bóng ma Off / Low / Medium / High · một
+thanh Strength · xuất 8-bit theo dải · báo khung không căn được, không tải được.
+
+**Cố ý không có:** HDR gain map · xuất DNG hay TIFF · ghép HDR rồi ghép panorama trong một lượt · batch nhiều loạt ·
+bộ thanh trượt tone đầy đủ, Auto Tone (sửa tiếp trong editor) — chốt ở câu 1–4 của intent và ngày 2026-10-01.
+
+## 3. Luồng và màn
+
+Tầng D như [FS-01.09](09-photo-stacking.md) §3 và DESIGN §10.3b: `Cancel` · `HDR` · `Save`; stage đen; một panel. Panel, từ trên
+xuống:
+
+1. **Câu giải thích** một dòng: *Merges a bracketed series into one photo that keeps the highlights and the shadows.*
+2. **Deghost** — segmented control chữ `Off · Low · Medium · High` (DESIGN §6, cao 32). Dưới là một câu nói mức đang
+   chọn làm gì. **Mặc định Medium** (spike §4).
+3. **Strength** — hàng slider tầng D sẵn có, 0–100, **mặc định 60**. Strength 0 là một phơi sáng ở mức của khung
+   tham chiếu.
+4. Dòng nhắc căn khung như Focus Stack; khi có khung bị loại, loạt không phải bracket hay loạt lẫn RAW thì thay
+   bằng dòng báo (§4, §5).
+
+- **Không có Auto Tone** (chốt 2026-10-01). Nút Auto của editor đã bị gỡ ở FS-03.09 AC-27; chỉnh tone tiếp thì
+  mở ảnh ra trong editor.
+- Strength 60 là mặc định tạm; số cuối chốt bằng mắt trên loạt chụp thật ở `/verify`. *Vì* ở 100 spike thấy mây
+  bị "HDR quá tay" (§2).
+- Đổi Deghost hay Strength **không nạp lại và không căn lại khung**: dựng lại từ khung preview đã căn.
+- Preview ở 1600px như Focus Stack.
+
+## 4. Thứ tự, tham chiếu, căn khung
+
+- **Thứ tự theo phơi sáng**, không theo thứ tự chọn hay thứ tự lưới. Phơi sáng của từng khung tính từ EXIF: thời
+  gian phơi × ISO ÷ khẩu độ², rồi cộng Exposure Bias. Khung thiếu cả hai dữ liệu đó thì đo độ sáng trung vị sau khi
+  giải mã.
+- **Khung tham chiếu** là khung có phơi sáng ở giữa (loạt chẵn thì lấy khung sáng hơn trong hai khung giữa). Khử
+  bóng ma giữ nội dung của khung này, và EXIF của ảnh ra là EXIF của khung này.
+- **Căn khung:** dùng lại nguyên văn bộ căn của [Focus Stack](10-focus-stack.md) §4 — mỗi khung căn với khung liền kề
+  theo thứ tự phơi sáng, trên bản đã đưa về cùng phơi sáng, mô hình 4 bậc tự do. Spike: bước 3 EV, cầm tay ±30 px,
+  xoay ±1,5° đều dưới 0,4 px ở 1536px.
+- Khung **không căn được** bị loại, và panel nói ra, như Focus Stack §4. Còn ít hơn 2 khung thì không ghép, và nói lý do.
+- **Các khung không phải một loạt bracket** (phơi sáng lệch nhau dưới 0,5 EV): **vẫn ghép**, và dòng nhắc đổi thành
+  *These photos have about the same exposure. HDR works best on a bracketed series.* Dòng HDR trong menu không
+  mờ, vì menu không đọc EXIF (chốt 2026-10-01, câu 5 của intent).
+- Loạt chỉ phủ một phần cảnh: khung tối nhất vẫn cháy trên 1% diện tích → dòng báo *Some highlights are bright in every
+  frame and can't be recovered.*
+
+## 5. Ghép
+
+- **Cả loạt là RAW** (hay cặp RAW+JPEG, lấy RAW) → ghép **từ dữ liệu RAW**: giải mã tuyến tính không tone của bộ giải,
+  gộp thành một ảnh radiance, trọng số theo thời gian phơi, bỏ mẫu cháy (spike §2).
+- **Loạt JPEG/HEIC** → cùng đường sau khi đảo ngược đường sRGB. Đây là xấp xỉ: JPEG của máy có đường tông riêng.
+- **Loạt lẫn RAW và không RAW** → dùng **bản đã render cho mọi khung**, và nói ra một dòng: *Some of these photos
+  aren't RAW, so all of them are merged from their processed versions.* *Vì* trộn radiance của RAW với JPEG đã
+  tone thì lệch sáng giữa các khung (chốt 2026-10-01).
+- **Tone map:** trộn các phơi sáng ảo của radiance theo kim tự tháp Laplace (exposure fusion). Strength co giãn khoảng
+  EV của các phơi sáng ảo; Strength 0 là một phơi sáng ở mức khung tham chiếu.
+- **Số tầng của kim tự tháp theo cỡ ảnh** (tầng thô cỡ 6 px ở cạnh ngắn). *Vì* với số tầng cố định, preview và bản lưu
+  cho hai ảnh khác nhau (spike §6: 18–23 dB).
+- **Khử bóng ma:** mỗi điểm ảnh so với khung **neo** — khung tham chiếu nếu nó chưa cháy ở đó, không thì khung ngắn hơn
+  gần nhất còn đọc được. Khung lệch khỏi khung neo quá ngưỡng nhiễu của mức đang chọn thì bị bỏ ở đó, có giãn vùng.
+  *Vì* so cố định với khung giữa thì bỏ sót vật di chuyển trong vùng trời cháy (spike §4).
+- Ngưỡng từng mức lấy theo mô hình nhiễu của cảm biến, cả lượng tử 14-bit. Spike: z = 12 / 7 / 5, giãn 2 / 4 / 8 px ở
+  1536px; chỉnh lại trên loạt thật ở `/verify`.
+
+## 6. Lưu
+
+- Như FS-01.09 §3: Save → ảnh mới, Cancel giữ lựa chọn, lưu xong mở viewer theo màn đang đứng.
+- **Full-res theo dải**: 128–256 hàng, mọi khung cùng mở, đọc xen kẽ theo dải (spike §5: 5 × 24 MP, ~400–500 MB trên
+  Mac). Radiance của dải ghép xong thì đi qua tone map.
+- **Tone map của bản lưu chạy trên cả tấm**, dạng lát trên GPU như bộ trộn đa dải của [FS-14](../FS-14-panorama/README.md),
+  không suy ra từ preview (spike §6: chênh ~30 dB).
+- **Định dạng ra theo luật lưu của editor** ([FS-03.06](../FS-03-photo-editor/06-saving-recipe-and-live-photo.md)):
+  Save hỏi JPEG hay HEIC, **mặc định JPEG**; máy không ghi được HEIC thì báo trước là dùng JPEG. JPEG ở chất lượng
+  0,95 như Focus Stack. Cả hai đường ghi phải đi **theo dải** (chốt 2026-10-01).
+- EXIF là của **khung tham chiếu**: máy, ống kính, ngày, vị trí. Bỏ thời gian phơi, ISO, khẩu độ và Exposure Bias —
+  chúng không còn tả ảnh ra (như panorama chỉ giữ phơi sáng khi mọi khung khớp).
+- Khung gốc nào tải hỏng lúc lưu thì dừng và báo, không lưu ảnh thiếu khung.
+- **Trần của Save**: loạt 5 khung RAW 24 MP, footprint đỉnh **≤ 700 MB** và **≤ 60 s** trên iPhone 12 (chốt
+  2026-10-01). Nới hơn Focus Stack (500 MB) vì nền của bộ giải RAW (~400 MB trên Mac) chưa đo trên iPhone.
+
+## 7. Menu
+
+- Combine Photos có thêm dòng **HDR**: [FS-01.09](09-photo-stacking.md) §1 đã ghi bốn dòng; DESIGN §10.3b sửa cùng lượt build.
+- Tên dòng **HDR** (như Lightroom *Photo Merge ▸ HDR*); thứ tự **Focus Stack · Panorama · HDR · Stack Exposures**
+  — ba việc ghép thành một ảnh mới, rồi việc ghép cùng một phơi sáng (chốt 2026-10-01).
+- Mờ khi < 2 ảnh, như các dòng khác. Video bị bỏ qua.
+
+## 8. Tiêu chí nghiệm thu
+
+Loạt thử là khung ảo có đáp án như spike §1: cảnh 14 EV dựng từ RAW thật không mặt người, nhiễu shot + đọc,
+14-bit, cháy ở 1. Test dựng loạt từ ảnh nhỏ đóng trong test bundle, không dùng thư viện ảnh.
+
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-1 | loạt 5 khung RAW −4…+4 EV, cảnh 14 EV, đứng yên | ghép, deghost Off | sai số radiance ≤ 0,03 stop RMS; ảnh đã tone map ≥ 48 dB so với tone map của cảnh sạch | ⚠️ chưa có |
+| AC-2 | loạt 3 khung −2/0/+2 EV của cảnh 10 EV | ghép | vùng cháy ở EV 0 khôi phục, sai số ≤ 0,05 stop RMS; không còn điểm nào cháy ở ảnh ra | ⚠️ chưa có |
+| AC-3 | loạt 5 khung chọn theo thứ tự xáo | ghép | cùng kết quả như thứ tự đúng; khung tham chiếu là khung EV 0 | ⚠️ chưa có |
+| AC-4 | loạt 5 khung, bước 3 EV, mỗi khung lệch tới ±30 px và xoay tới ±1,5° | căn | sai số căn ≤ 0,5 px ở 1536px cho mọi khung; không khung nào bị loại | ⚠️ chưa có |
+| AC-5 | loạt có 1 khung ảnh khác cảnh chen vào | ghép | khung đó bị loại; panel ghi *1 of 6 frames couldn't be lined up and were left out.* | ⚠️ chưa có |
+| AC-6 | một mảng kết cấu dịch 3 px mỗi khung, khung tham chiếu đọc được ở đó | ghép ở Off / Low / Medium / High | sai số ở vùng động ≥ 0,5 / ≤ 0,25 / ≤ 0,1 / ≤ 0,1 stop | ⚠️ chưa có |
+| AC-7 | loạt đứng yên, không gì di chuyển | ghép ở Medium; rồi High | ≤ 0,5% điểm ảnh tĩnh bị bỏ nhầm ở Medium; ≤ 3% ở High | ⚠️ chưa có |
+| AC-8 | vật sáng di chuyển 70 px/khung trong vùng trời cháy ở EV 0 | ghép ở Medium | chỉ còn **một** bản của vật (lấy từ khung neo), không bóng chồng | ⚠️ chưa có |
+| AC-9 | màn HDR đang mở | đổi Deghost, rồi Strength | preview dựng lại, không nạp lại và không căn lại khung (đếm số lần đọc khung) | ⚠️ chưa có |
+| AC-10 | mở màn HDR | nhìn panel | Medium chọn sẵn; Strength 60; không có Auto Tone; câu giải thích hiện | ⚠️ chưa có |
+| AC-11 | 5 khung cùng phơi sáng (lệch < 0,5 EV) | mở màn | vẫn ghép; dòng báo *These photos have about the same exposure…* | ⚠️ chưa có |
+| AC-12 | loạt 3 khung, khung tối nhất vẫn cháy 5% diện tích | mở màn | dòng báo *Some highlights are bright in every frame…* | ⚠️ chưa có |
+| AC-13 | preview 1600px và bản lưu của cùng loạt | thu bản lưu về 1600px rồi so | ≥ 32 dB — số tầng kim tự tháp theo cỡ ảnh | ⚠️ chưa có |
+| AC-14 | 5 khung RAW × 24 MP | Save trên iPhone 12 | footprint đỉnh ≤ 700 MB, ≤ 60 s; như nhau (± 10%) ở 3 khung | ⚠️ chưa có |
+| AC-15 | ảnh HDR đã lưu | xem EXIF trong viewer | máy, ống kính, ngày, vị trí của khung tham chiếu; không thời gian phơi, ISO, khẩu, Exposure Bias | ⚠️ chưa có |
+| AC-16 | 2 khung chỉ có trên iCloud, máy mất mạng | mở màn | *2 photos couldn't be downloaded* + Retry; không ghép thiếu khung mà không báo | ⚠️ chưa có |
+| AC-17 | đang lưu | Cancel | không asset nào được tạo; thư mục tạm của phiên rỗng | ⚠️ chưa có |
+| AC-18 | chọn 2 ảnh | mở ⋯ ▸ Combine Photos | bốn dòng Focus Stack · Panorama · HDR · Stack Exposures; chọn 1 ảnh thì dòng HDR mờ | ⚠️ chưa có |
+| AC-19 | iPhone 26.5 + 18.6, iPad 13", Duo trong và ngoài | mở màn HDR với loạt 3 khung, đổi từng control, Save | ảnh từng trạng thái; không control bị cắt hay che; viewer mở ảnh vừa lưu | ⚠️ chưa có |
+| AC-20 | quyền ảnh `.limited`, cả loạt nằm trong tập được chọn | Save | ảnh mới hiện trong lưới Library | ⚠️ chưa có |
+| AC-21 | loạt 3 CR3 + 2 JPEG | mở màn | ghép từ bản đã render của cả 5; dòng báo *Some of these photos aren't RAW…* | ⚠️ chưa có |
+| AC-22 | Save, chọn HEIC | lưu | ảnh ra là HEIC; máy không ghi được HEIC thì báo trước và lưu JPEG | ⚠️ chưa có |
+
+## 9. Rủi ro đã biết
+
+| Rủi ro | Xử lý |
+|---|---|
+| Chỉ có khung ảo; loạt chụp thật, nhiễu thật, đường tông JPEG của hãng chưa thử | `/verify` chạy trên loạt thật; ngưỡng deghost chỉnh lại |
+| Nền bộ nhớ của bộ giải RAW trên iPhone chưa đo (~400 MB trên Mac) | đo trước tiên ở task đầu của `/plan`; AC-14 là cổng |
+| Tone map cỡ đầy đủ theo lát trên GPU chưa được đo bộ nhớ | dựa trên bộ trộn đa dải của FS-14; AC-13 và AC-14 là cổng |
+| Máy chụp 3 khung ±2 EV không đủ cho cảnh rất ngược sáng | nói ra (AC-12), không giả là đã khôi phục |
+| Không trần số khung; bộ nhớ chỉ đo ở 5 khung | AC-14 đo 3 và 5 khung; `/plan` đo thêm 9 khung trước khi chốt |

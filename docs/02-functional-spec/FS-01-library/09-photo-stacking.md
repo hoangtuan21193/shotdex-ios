@@ -11,7 +11,8 @@
 
 ## 1. Quy tắc
 
-- Menu con **một cấp, ba dòng**, thứ tự cố định: **Focus Stack · Panorama · Stack Exposures**. Tên dòng là việc
+- Menu con **một cấp, bốn dòng**, thứ tự cố định: **Focus Stack · Panorama · HDR · Stack Exposures**
+  (HDR thêm 2026-10-01, [FS-01.11](11-hdr-merge.md); chưa build). Tên dòng là việc
   người chụp làm; không tên phép toán nào (`Average`, `Lighten`, `Darken`) nằm trong menu.
 - **Stack Exposures** gom ba cách ghép cùng một kiểu chụp — nhiều lần bấm một khung cảnh, máy đứng yên — vào
   **một màn có bộ chọn** `Average · Lighten · Darken`, để thử cả ba trên cùng chuỗi mà không phải chọn lại ảnh.
