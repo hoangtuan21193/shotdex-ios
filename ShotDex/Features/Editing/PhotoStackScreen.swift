@@ -4,12 +4,26 @@ import SwiftUI
 
 /// What a combine was opened with.
 struct PhotoStackPresentation: Identifiable {
-    let assets: [PHAsset]
+    let photos: [PhotoEditOrigin]
     /// The Combine Photos row that opened it — decides the title, the modes on
     /// offer and the one it starts on.
     let purpose: CombinePurpose
+    /// Server photos (FS-17.06 §5b): Save opens the export sheet instead of
+    /// writing to Photos.
+    var serverExport: ServerExportContext?
 
-    var id: String { assets.first?.localIdentifier ?? UUID().uuidString }
+    init(assets: [PHAsset], purpose: CombinePurpose) {
+        self.photos = assets.map(PhotoEditOrigin.asset)
+        self.purpose = purpose
+    }
+
+    init(serverPhotos: [FetchedServerPhoto], purpose: CombinePurpose, export: ServerExportContext?) {
+        self.photos = serverPhotos.map(PhotoEditOrigin.serverFile)
+        self.purpose = purpose
+        self.serverExport = export
+    }
+
+    var id: String { photos.first?.id ?? UUID().uuidString }
 }
 
 /// Combines a run of frames into one photo: Focus Stack, or Stack Exposures
@@ -34,6 +48,8 @@ struct PhotoStackScreen: View {
     /// The stroke under the finger, in normalized picture coordinates, drawn
     /// live until it lifts and becomes a real stroke.
     @State private var liveStroke: [NormalizedPoint] = []
+    @State private var serverExportModel: ServerExportModel?
+    @State private var isConfirmingDiscard = false
 
     var body: some View {
         ZStack {
@@ -46,9 +62,10 @@ struct PhotoStackScreen: View {
         .task {
             let model = PhotoStackModel(
                 purpose: presentation.purpose,
-                assets: presentation.assets,
+                photos: presentation.photos,
                 photoLibrary: dependencies.photoLibrary,
-                indexPipeline: dependencies.indexPipeline
+                indexPipeline: dependencies.indexPipeline,
+                serverWorkDirectory: presentation.serverExport?.workDirectory
             )
             self.model = model
             await model.loadFrames()
@@ -70,6 +87,28 @@ struct PhotoStackScreen: View {
                 dismiss()
             }
         }
+        .onChange(of: model.composedFile) { _, file in
+            guard let file, let context = presentation.serverExport else { return }
+            serverExportModel = .makeComposed(
+                .init(file: file, tool: model.composedTool, firstFilename: model.loadedPhotos.first?.filename ?? ""),
+                photos: presentation.photos.compactMap(\.serverFile),
+                context: context,
+                dependencies: dependencies
+            )
+        }
+        .sheet(item: $serverExportModel, onDismiss: { model.composedFile = nil }) { exportModel in
+            ServerExportSheet(model: exportModel) {
+                serverExportModel = nil
+                presentation.serverExport?.onExported()
+                dismiss()
+            }
+        }
+        // Server copies go when the screen closes; retouch strokes are the
+        // work that would go with them (FS-17.06 §5b).
+        .alert("Discard this combine?", isPresented: $isConfirmingDiscard) {
+            Button("Discard", role: .destructive) { dismiss() }
+            Button("Keep Editing", role: .cancel) {}
+        }
         .alert(
             model.failure?.title ?? "",
             isPresented: Binding(get: { model.failure != nil }, set: { if !$0 { model.failure = nil } })
@@ -84,14 +123,22 @@ struct PhotoStackScreen: View {
 
     private func topBar(_ model: PhotoStackModel) -> some View {
         HStack {
-            Button("Cancel") { dismiss() }
+            Button("Cancel") {
+                if presentation.serverExport != nil, !model.retouchStrokes.isEmpty {
+                    isConfirmingDiscard = true
+                } else {
+                    dismiss()
+                }
+            }
                 .foregroundStyle(.white)
             Spacer()
             Text(presentation.purpose.title)
                 .font(EditorTheme.sidebarTitle)
                 .foregroundStyle(.white)
             Spacer()
-            Button("Save") { model.save() }
+            Button(presentation.serverExport == nil
+                   ? String(localized: "Save")
+                   : String(localized: "Export…", comment: "Combine of server photos: choose where the result goes")) { model.save() }
                 .fontWeight(.semibold)
                 .foregroundStyle(model.canSave ? EditorTheme.accent : EditorTheme.dimText)
                 .disabled(!model.canSave)
@@ -234,7 +281,7 @@ struct PhotoStackScreen: View {
                     Button {
                         model.pickRetouchFrame(index)
                     } label: {
-                        EditorFilmstripThumbnail(photo: .asset(model.loadedAssets[index]), photoLibrary: dependencies.photoLibrary)
+                        EditorFilmstripThumbnail(photo: model.loadedPhotos[index], photoLibrary: dependencies.photoLibrary)
                             .frame(width: side, height: side)
                             .clipShape(RoundedRectangle.app(AppTheme.Radius.sm))
                             .overlay {
@@ -250,7 +297,7 @@ struct PhotoStackScreen: View {
                             .opacity(isCurrent ? 1 : 0.72)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Frame \(index + 1) of \(model.loadedAssets.count)")
+                    .accessibilityLabel("Frame \(index + 1) of \(model.loadedPhotos.count)")
                     .accessibilityAddTraits(isCurrent ? [.isSelected, .isButton] : .isButton)
                 }
             }

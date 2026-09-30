@@ -73,4 +73,53 @@ import Testing
         model.selectTemplate(other.id)
         #expect(model.hasEdits)
     }
+
+    /// AC-79: frames named in one order but shot in the other stack in
+    /// shooting order — the EXIF date in each file decides.
+    @MainActor
+    @Test func focusStackOrdersByEXIF() throws {
+        let run = Run()
+        defer { try? FileManager.default.removeItem(at: run.directory) }
+        let photos = try run.photos(
+            ["DSCF1000.JPG", "DSCF1001.JPG", "DSCF1002.JPG"], width: 64, height: 48,
+            dates: ["2026:09:28 07:15:32", "2026:09:28 07:15:31", "2026:09:28 07:15:30"]
+        )
+        let dependencies = AppDependencies.preview()
+        let model = PhotoStackModel(
+            purpose: .focusStack, photos: photos.map(PhotoEditOrigin.serverFile),
+            photoLibrary: dependencies.photoLibrary, indexPipeline: dependencies.indexPipeline,
+            serverWorkDirectory: run.directory
+        )
+        #expect(model.photos.map(\.filename) == ["DSCF1002.JPG", "DSCF1001.JPG", "DSCF1000.JPG"])
+        #expect(model.composedTool == .focusStack)
+    }
+
+    /// AC-79: Stack Exposures on server copies saves a file for the export
+    /// sheet, and nothing to Photos.
+    @MainActor
+    @Test func stackExposuresSavesAFileForTheSheet() async throws {
+        let run = Run()
+        defer { try? FileManager.default.removeItem(at: run.directory) }
+        let photos = try run.photos(["DSCF1000.JPG", "DSCF1001.JPG"], width: 320, height: 200)
+        let dependencies = AppDependencies.preview()
+        let model = PhotoStackModel(
+            purpose: .stackExposures, photos: photos.map(PhotoEditOrigin.serverFile),
+            photoLibrary: dependencies.photoLibrary, indexPipeline: dependencies.indexPipeline,
+            serverWorkDirectory: run.directory
+        )
+        #expect(model.composedTool == .stack)
+        await model.loadFrames()
+        for _ in 0..<3000 where !model.canSave { try? await Task.sleep(for: .milliseconds(10)) }
+        #expect(model.loadedPhotos.count == 2)
+        model.save()
+        for _ in 0..<3000 where model.composedFile == nil && model.failure == nil {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        let file = try #require(model.composedFile)
+        #expect(file.path.hasPrefix(run.directory.path))
+        #expect(model.savedAssetID == nil)
+        let source = try #require(CGImageSourceCreateWithURL(file as CFURL, nil))
+        let properties = try #require(CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any])
+        #expect(properties[kCGImagePropertyPixelWidth] as? Int == 320)
+    }
 }

@@ -30,7 +30,13 @@ final class PhotoStackModel {
     }
 
     let purpose: CombinePurpose
-    let assets: [PHAsset]
+    /// Library photos, or server copies on this device (FS-17.06 §5b).
+    let photos: [PhotoEditOrigin]
+    /// Set for server photos: Save writes the combine into it and hands the
+    /// file to the export sheet instead of Photos.
+    let serverWorkDirectory: URL?
+    /// The saved combine of a server run, waiting for the export sheet.
+    var composedFile: URL?
 
     var mode: PhotoStackMode {
         didSet { if mode != oldValue { renderPreview() } }
@@ -45,15 +51,15 @@ final class PhotoStackModel {
     private(set) var statusText: String?
     var failure: Failure?
     /// Frames the last combine left out because they would not line up
-    /// (focus stack only), as indices into `loadedAssets`.
+    /// (focus stack only), as indices into `loadedPhotos`.
     private(set) var excludedFrames: [Int] = []
-    /// How many of `assets` could not be loaded — an iCloud-only original with
+    /// How many of `photos` could not be loaded — an iCloud-only original with
     /// no network, most often. Said on the panel with a Retry, never dropped
     /// quietly (FS-01.10 §4, AC-12).
     private(set) var missingFrameCount = 0
     /// The assets whose preview did load, in stacking order. Save combines
     /// these and no others, so it saves what the preview showed.
-    private(set) var loadedAssets: [PHAsset] = []
+    private(set) var loadedPhotos: [PhotoEditOrigin] = []
     /// Set once the new asset is saved, indexed and visible to the grid.
     private(set) var savedAssetID: String?
 
@@ -72,11 +78,23 @@ final class PhotoStackModel {
     private let photoLibrary: PhotoLibraryService
     private let indexPipeline: IndexPipeline
 
-    init(purpose: CombinePurpose, assets: [PHAsset], photoLibrary: PhotoLibraryService, indexPipeline: IndexPipeline) {
+    convenience init(purpose: CombinePurpose, assets: [PHAsset], photoLibrary: PhotoLibraryService, indexPipeline: IndexPipeline) {
+        self.init(purpose: purpose, photos: assets.map(PhotoEditOrigin.asset), photoLibrary: photoLibrary,
+                  indexPipeline: indexPipeline)
+    }
+
+    init(
+        purpose: CombinePurpose,
+        photos: [PhotoEditOrigin],
+        photoLibrary: PhotoLibraryService,
+        indexPipeline: IndexPipeline,
+        serverWorkDirectory: URL? = nil
+    ) {
         self.purpose = purpose
         // A focus stack registers neighbour to neighbour, so it runs in the
         // order the bracket was shot; the blend modes do not care.
-        self.assets = purpose == .focusStack ? Self.shootingOrder(assets) : assets
+        self.photos = purpose == .focusStack ? Self.shootingOrder(photos) : photos
+        self.serverWorkDirectory = serverWorkDirectory
         self.mode = purpose.defaultMode ?? .average
         self.photoLibrary = photoLibrary
         self.indexPipeline = indexPipeline
@@ -111,20 +129,20 @@ final class PhotoStackModel {
     func loadFrames() async {
         renderTask?.cancel()
         isWorking = true
-        statusText = String(localized: "Loading \(assets.count) photos…", comment: "Stack screen status while the preview frames load")
+        statusText = String(localized: "Loading \(photos.count) photos…", comment: "Stack screen status while the preview frames load")
         defer { isWorking = false }
 
         var frames: [CIImage] = []
-        var loaded: [PHAsset] = []
-        for asset in assets {
-            guard let image = await Self.previewImage(for: asset, photoLibrary: photoLibrary),
+        var loaded: [PhotoEditOrigin] = []
+        for photo in photos {
+            guard let image = await Self.previewImage(for: photo, photoLibrary: photoLibrary),
                   let ciImage = CIImage(image: image) else { continue }
             frames.append(ciImage)
-            loaded.append(asset)
+            loaded.append(photo)
         }
         previewFrames = frames
-        loadedAssets = loaded
-        missingFrameCount = assets.count - loaded.count
+        loadedPhotos = loaded
+        missingFrameCount = photos.count - loaded.count
         preparedFocus = nil
         stackedBase = nil
         retouchStrokes = []
@@ -181,7 +199,7 @@ final class PhotoStackModel {
     /// In painting order. Only for this session: they are not saved anywhere
     /// but into the photo.
     private(set) var retouchStrokes: [FocusStackRetouchStroke] = []
-    /// The frame the brush paints from, as an index into `loadedAssets`. Nil
+    /// The frame the brush paints from, as an index into `loadedPhotos`. Nil
     /// until the first stroke picks one.
     private(set) var retouchFrame: Int?
     /// True once the user picked a frame in the strip; until then every
@@ -195,7 +213,7 @@ final class PhotoStackModel {
     static let brushSizeRange = 0.01...0.25
 
     /// The frames a stroke can paint from — the ones that lined up — as
-    /// indices into `loadedAssets`.
+    /// indices into `loadedPhotos`.
     var retouchableFrames: [Int] { preparedFocus?.inputIndices ?? [] }
 
     var canRetouch: Bool { mode == .focusStack && preparedFocus != nil && preview != nil }
@@ -310,7 +328,7 @@ final class PhotoStackModel {
     /// The folder is gone when the save ends, cancelled or not.
     func save() {
         renderTask?.cancel()
-        let assets = loadedAssets
+        let photos = loadedPhotos
         renderTask = Task {
             isWorking = true
             statusText = String(localized: "Loading full-resolution frames…", comment: "Stack screen status while originals load for saving")
@@ -323,11 +341,10 @@ final class PhotoStackModel {
                 var urls: [URL] = []
                 var firstFrameProperties: [String: Any] = [:]
                 var missing = 0
-                for (index, asset) in assets.enumerated() {
+                for (index, photo) in photos.enumerated() {
                     try Task.checkCancellation()
-                    statusText = String(localized: "Loading \(index + 1) of \(assets.count)…", comment: "Stack screen status while originals load, one by one")
-                    guard let data = await Self.originalData(for: asset),
-                          let url = try session?.store(data, index: index),
+                    statusText = String(localized: "Loading \(index + 1) of \(photos.count)…", comment: "Stack screen status while originals load, one by one")
+                    guard let url = try await Self.originalFile(for: photo, index: index, session: session),
                           let image = CIImage(contentsOf: url, options: [.applyOrientationProperty: true])
                     else { missing += 1; continue }
                     if frames.isEmpty, let source = CGImageSourceCreateWithURL(url as CFURL, nil) {
@@ -384,6 +401,16 @@ final class PhotoStackModel {
                     throw PhotoStackError.renderFailed
                 }
                 try Task.checkCancellation()
+                if let serverWorkDirectory {
+                    // A server run (FS-17.06 §5b): the file goes to the export
+                    // sheet; nothing is written to Photos here.
+                    let folder = serverWorkDirectory.appendingPathComponent("Compose-\(UUID().uuidString)", isDirectory: true)
+                    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                    let url = folder.appendingPathComponent("stack.jpg")
+                    try data.write(to: url)
+                    composedFile = url
+                    return
+                }
                 let name = "ShotDex-\(mode.rawValue)-\(Int(Date().timeIntervalSince1970)).jpg"
                 let assetID = try await photoLibrary.saveImage(data, filename: name)
                 _ = await indexPipeline.indexSingle(assetId: assetID)
@@ -414,21 +441,43 @@ enum StackSaveError: LocalizedError, Equatable {
 }
 
 extension PhotoStackModel {
-    /// Capture time, then original file name (FS-01.10 §4).
-    static func shootingOrder(_ assets: [PHAsset]) -> [PHAsset] {
-        let frames = assets.map { asset in
-            FocusStackOrder.Frame(
-                id: asset.localIdentifier,
-                captureDate: asset.creationDate,
-                fileName: PHAssetResource.assetResources(for: asset).first?.originalFilename
-            )
+    /// Capture time, then original file name (FS-01.10 §4). A server photo's
+    /// time is the EXIF date in its file (FS-17.06 §5b).
+    static func shootingOrder(_ photos: [PhotoEditOrigin]) -> [PhotoEditOrigin] {
+        let frames = photos.map { photo in
+            FocusStackOrder.Frame(id: photo.id, captureDate: photo.captureDate, fileName: photo.filename)
         }
-        let byID = Dictionary(uniqueKeysWithValues: assets.map { ($0.localIdentifier, $0) })
+        let byID = Dictionary(photos.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         return FocusStackOrder.sorted(frames).compactMap { byID[$0] }
+    }
+
+    /// The name the export sheet starts from: the first frame's, with the
+    /// tool's suffix.
+    var composedTool: ServerComposedName.Tool { purpose == .focusStack ? .focusStack : .stack }
+
+    /// The original on disk for the full-resolution pass: a server copy as it
+    /// is, a library original written into the session folder.
+    static func originalFile(for photo: PhotoEditOrigin, index: Int, session: PhotoStackSession?) async throws -> URL? {
+        switch photo {
+        case .serverFile(let file):
+            return file.primaryURL
+        case .asset(let asset):
+            guard let data = await originalData(for: asset) else { return nil }
+            return try session?.store(data, index: index)
+        }
     }
 
     /// One frame at proxy resolution, through the viewer's own request path so
     /// an iCloud-only original is fetched rather than skipped.
+    static func previewImage(for photo: PhotoEditOrigin, photoLibrary: PhotoLibraryService) async -> UIImage? {
+        switch photo {
+        case .serverFile(let file):
+            return await PhotoOriginFile.loadImage(at: file.primaryURL, maxPixelSize: 1600)
+        case .asset(let asset):
+            return await previewImage(for: asset, photoLibrary: photoLibrary)
+        }
+    }
+
     static func previewImage(for asset: PHAsset, photoLibrary: PhotoLibraryService) async -> UIImage? {
         await withCheckedContinuation { continuation in
             var hasResumed = false
