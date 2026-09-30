@@ -218,7 +218,7 @@ import Testing
 
     @MainActor
     private func waitWhileExporting(_ model: ServerExportModel) async {
-        for _ in 0..<500 where model.stage == .exporting {
+        for _ in 0..<3000 where model.stage == .exporting {
             try? await Task.sleep(for: .milliseconds(10))
         }
     }

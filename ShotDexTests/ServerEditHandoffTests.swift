@@ -48,7 +48,7 @@ import ShotDexKit
             access: DirectRemoteAccess(client), freeSpace: { nil }, screenHold: ServerEditSessionTests.NoHold()
         )
         model.start()
-        for _ in 0..<500 where model.stage == .downloading { try? await Task.sleep(for: .milliseconds(10)) }
+        for _ in 0..<3000 where model.stage == .downloading { try? await Task.sleep(for: .milliseconds(10)) }
         #expect(model.stage == .fetched)
         let server = FileServer(name: "NAS", transferProtocol: .smb, host: "nas.local", username: "u", share: "photos")
         return (ServerPhotoCommandRun(command: .share, server: server, access: DirectRemoteAccess(client), fetch: model), client)

@@ -15,6 +15,9 @@ Photos.
   âm thầm quay về file gốc.
 - **Save Changes không xoá bản gốc** — Photos vẫn Revert được.
 
+- Ảnh từ server (FS-17.06) không có recipe gắn vào ảnh: editor mở trên bản tạm, nút lưu là **Export…** và
+  recipe mất khi xuất xong hoặc Discard.
+
 ## 2. Save Copy và Save Changes
 
 | | Save Copy | Save Changes |

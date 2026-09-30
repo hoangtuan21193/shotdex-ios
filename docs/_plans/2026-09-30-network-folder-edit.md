@@ -5,7 +5,7 @@
 | Đặc tả | `docs/02-functional-spec/FS-17-import-from-server/06-edit-and-export.md` (AC-52…70, AC-72…75) |
 | Intent | [2026-09-29-network-folder-edit](../_intents/2026-09-29-network-folder-edit.md) |
 | Ngày | 2026-09-30 |
-| Trạng thái | đang làm — người dùng duyệt 2026-09-30 ("làm all task theo plan") |
+| Trạng thái | đợt 1 gần xong (2026-09-30) — 22/22 task; còn ảnh iPad/Duo; đợt 2 chưa lập plan |
 | Quyết định | planboard `.planboard/network-folder-edit/` — 12 quyết định, người dùng "OK hết theo đề xuất" 2026-09-30 |
 
 ## 1. Hiểu đúng chưa
@@ -150,3 +150,13 @@ Không có dòng ✅ trọn để viết test trước; AC-61 (phần tên) làm
   `copy-consistency`, `ios26-parity`, `device-layout`.
 - Tài liệu: cột "Chứng minh bằng" của FS-17.06 sau mỗi AC; FS-03.06 thêm một dòng về nguồn file; NF-02 §2 thêm tiền
   tố; dòng Tiến độ của intent sau mỗi commit.
+
+## 9. Kết quả đợt 1 (2026-09-30)
+
+- Commit: `5084085` … `d05ed3e` (AC-59 → AC-75 và 4 sửa lỗi thấy trên ảnh chụp).
+- Chạy thật trên SMB (impacket, 127.0.0.1:4451) ở iPhone 17 Pro 26.5 và iPhone 16 Pro 18.6: Edit → Export tới
+  Original Folder (`_edited`, rồi `_edited (2)`), Replace có xác nhận, Discard xoá bản tạm, Resize mở sheet có Size.
+- Lỗi thấy khi chụp và đã sửa: tiêu đề chọn bị cắt, Import xuống dòng ở viewer, markup inflect lộ ra trong hộp
+  Replace, lưới không thoát chế độ chọn sau khi xuất, và thumbnail JPEG không có thumbnail nhúng chỉ vẽ nửa trên (FS-17.01).
+- Chưa làm: ảnh iPad/Duo (công cụ MCP bấm sai ở iPad ngang và Duo; `ui-drive` cài lại app nên mất connection seed),
+  ảnh AC-63 (không có RAW mẫu không mặt người), ảnh AC-65, đợt 2 (Collage/Video/Combine, AC-67).

@@ -1,7 +1,7 @@
 # FS-17.06 — Sửa và dùng ảnh trên server, hỏi nơi lưu lúc xuất
 
 `FS-17.06` · `Features/ServerImport/` (menu, sheet xuất) · `Features/Editing/` · `Collage/` · `VideoStudio/`
-· `Creations/` · test `ShotDexTests/ServerEdit*Tests.swift` · cập nhật 2026-09-30
+· `Creations/` · test `ShotDexTests/ServerEdit*Tests.swift` · cập nhật 2026-09-30 (đợt 1 xong)
 
 **Một câu:** ảnh trong folder On Local Network / On Cloud có các lệnh làm được trên file như ảnh trong album. Bản
 gốc được tải về máy làm bản tạm, và lúc xuất app hỏi lưu đi đâu. Bản gốc trên server không bị đụng nếu người dùng
@@ -110,31 +110,31 @@ lệnh đó (AC-67). Trong đợt 1 ba lệnh này không có trong menu, chứ 
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-52 | folder NAS có `a.JPG` | nhấn giữ `a.JPG` | menu có Edit, Share, Copy, Import to Library, Rename, Delete; không có Adjust Date, Add to Collection, Duplicate, Favorite, Hide | `ServerEditMenuTests.longPressMenu`; ảnh `scripts/server-edit.json` ⚠️ chưa có |
-| AC-53 | chọn 3 ảnh | nhìn thanh trên, mở ⋯ | nút Edit cạnh ⋯; ⋯ có các lệnh §3 của đợt này theo đúng thứ tự, tên + glyph trùng menu album | `ServerEditMenuTests.matchesAlbumMenu`; ảnh ⚠️ chưa có |
+| AC-52 | folder NAS có `a.JPG` | nhấn giữ `a.JPG` | menu có Edit, Share, Copy, Import to Library, Rename, Delete; không có Adjust Date, Add to Collection, Duplicate, Favorite, Hide | `ServerEditMenuTests.longPressMenu` + ảnh `assets/2026-09-30-fs1706-ios26-11-long-press-menu.png` |
+| AC-53 | chọn 3 ảnh | nhìn thanh trên, mở ⋯ | nút Edit cạnh ⋯; ⋯ có các lệnh §3 của đợt này theo đúng thứ tự, tên + glyph trùng menu album | `ServerEditMenuTests.matchesAlbumMenu` + ảnh `…-ios26-20-selecting.png`, `…-ios26-21-selection-menu.png`, `…-ios18-20-selecting.png` |
 | AC-54 | `a.JPG` 12 MB, máy còn 2 GB | Edit | tải 1 file, editor mở, server không có thay đổi nào (không ghi, không đổi tên) | `ServerEditSessionTests.downloadsOriginalOnly` |
 | AC-55 | 3 RAW × 60 MB, máy còn 1.1 GB | Edit | không tải byte nào, báo "about 80 MB more needed" (cần 1.18 GB) | `ServerEditSessionTests.spaceCheckBeforeDownload` |
 | AC-56 | đang tải ảnh 2/3 | Cancel | thư mục tạm bị xoá, quay lại lưới, không mở editor | `ServerEditSessionTests.cancelRemovesTemp` |
-| AC-57 | editor, Exposure +1 | Cancel → Discard | bản tạm + recipe mất; mở lại `a.JPG` thì Exposure = 0 | `ServerEditSessionTests.discardDropsDraft`; ảnh hộp Discard ⚠️ chưa có |
+| AC-57 | editor, Exposure +1 | Cancel → Discard | bản tạm + recipe mất; mở lại `a.JPG` thì Exposure = 0 | `ServerEditSessionTests.discardDropsDraft` + ảnh `…-ios26-30-discard.png` |
 | AC-58 | editor, chưa sửa gì | Cancel | không hỏi, bản tạm bị xoá | `ServerEditSessionTests.cleanLeaveNoPrompt` |
 | AC-59 | thư mục tạm còn sót từ lần app bị giết | khởi động app | thư mục bị xoá | `TemporaryWorkspaceTests.aServerEditCopyLeftByAKilledAppIsSwept` |
 | AC-60 | sửa `a.JPG`, chọn Original Folder + Save as New File | Export | có `a_edited.jpg` cạnh `a.JPG`, SHA khớp, `a.JPG` còn nguyên byte; bản tạm bị xoá | `ServerEditExportTests.newFileBesideOriginal` |
 | AC-61 | `a_edited.jpg` đã có | xuất lần hai | ghi `a_edited (2).jpg` | `ServerEditExportTests.nameCollisionNumbers` |
-| AC-62 | sửa `a.JPG` | Replace Original → xác nhận | `a.JPG` mang nội dung mới; bấm Cancel ở hộp xác nhận thì không ghi gì | `ServerEditExportTests.replaceNeedsConfirm` + `replaceKeepsOriginalWhenTheCheckFails`; ảnh hộp xác nhận ⚠️ chưa có |
-| AC-63 | nguồn `b.CR3` | mở sheet | không có Replace Original, có câu RAW | `ServerEditExportTests.rawCannotBeReplaced`; ảnh ⚠️ chưa có |
-| AC-64 | chọn Photos Library + Other Folder (SFTP `/sel`) + Share | Export | 1 asset mới trong Photos; `/sel/a_edited.jpg`; share sheet mở sau cùng | `ServerEditExportTests.multipleDestinations`; ảnh ⚠️ chưa có |
+| AC-62 | sửa `a.JPG` | Replace Original → xác nhận | `a.JPG` mang nội dung mới; bấm Cancel ở hộp xác nhận thì không ghi gì | `ServerEditExportTests.replaceNeedsConfirm` + `replaceKeepsOriginalWhenTheCheckFails` + ảnh `…-ios26-50-replace-confirm.png`; Cancel và Replace chạy thật trên SMB (impacket) 2026-09-30 |
+| AC-63 | nguồn `b.CR3` | mở sheet | không có Replace Original, có câu RAW | `ServerEditExportTests.rawCannotBeReplaced`; ảnh ⚠️ chưa có (không có file RAW mẫu không mặt người) |
+| AC-64 | chọn Photos Library + Other Folder (SFTP `/sel`) + Share | Export | 1 asset mới trong Photos; `/sel/a_edited.jpg`; share sheet mở sau cùng | `ServerEditExportTests.multipleDestinations` + ảnh `…-ios26-14-export-sheet.png`, `…-ios18-14-export-sheet.png`, `…-ios26-17-grid-after-export.png` |
 | AC-65 | folder server từ chối ghi | Export tới Original Folder | đích đó báo "You can't write to this folder." + Choose Another Folder; bản tạm còn; không file `.shotdex-part` nào sót | `ServerEditExportTests.permissionDeniedOffersAnotherFolder`; ảnh ⚠️ chưa có |
 | AC-66 | loạt 5 ảnh, sửa 3 | Export… | hỏi nơi lưu 1 lần, xuất 3 file, 2 ảnh chưa sửa không xuất | `ServerEditSessionTests.batchExportsEditedOnly` + `singleUntouchedPhotoStillExports` |
-| AC-67 | (đợt 2) chọn 4 ảnh | Create Collage → lưu | sheet xuất §6 mở, không tự lưu vào Photos | ảnh ⚠️ chưa có |
+| AC-67 | (đợt 2) chọn 4 ảnh | Create Collage → lưu | sheet xuất §6 mở, không tự lưu vào Photos | đợt 2 ⚠️ chưa có |
 | AC-68 | chọn 2 ảnh | Export EXIF (CSV) | CSV 2 dòng; mỗi file chỉ đọc phần đầu (≤ 1 MB) | `ServerEditHandoffTests.readsHeadOnly` |
 | AC-69 | server tắt giữa lúc xuất (Original Folder), Photos đã xong | Export | Photos xong; Original Folder lỗi + Retry Failed; bản tạm + recipe còn | `ServerEditExportTests.failedDestinationKeepsDraft` |
-| AC-70 | iOS 26.5, 18.6, iPad, Duo trong | menu + sheet | không bị cắt, cùng lệnh ở hai nhánh | ảnh ⚠️ chưa có |
+| AC-70 | iOS 26.5, 18.6, iPad, Duo trong | menu + sheet | không bị cắt, cùng lệnh ở hai nhánh | iPhone 17 Pro 26.5 + iPhone 16 Pro 18.6: ảnh ở các AC trên; iPad, Duo ⚠️ chưa có |
 | AC-72 | clipboard có look (Exposure +1), chọn 2 ảnh | Paste Edits | tải 2 bản tạm, sheet xuất mở với `2 photos`; không ghi gì trước khi bấm Export | `ServerEditHandoffTests.pasteEditsGoesToExportSheet` |
 | AC-73 | 1 ảnh 600×400 | Resize, cạnh dài 300 → Export tới Original Folder | `a_edited.jpg` 300×200; `a.JPG` giữ nguyên | `ServerEditHandoffTests.resizeExportsThroughSheet` |
 | AC-74 | `a.JPG` có GPS, Share bỏ vị trí đang bật | Share | share sheet nhận file bản gốc đã bỏ GPS; đóng share sheet thì bản tạm bị xoá | `ServerEditHandoffTests.shareHandsOriginalAndCleansUp` |
 | AC-75 | `b.CR3` 6000×4000 | Copy | pasteboard có ảnh cạnh dài ≤ 4096 px; bản tạm bị xoá | `ServerEditHandoffTests.copyBoundsAndCleansUp` |
 
-**Chưa chứng minh được:** AC-52…AC-70, AC-72…AC-75 — chưa có code. (AC-71 thuộc FS-17.03.)
+**Chưa chứng minh được:** AC-67 (đợt 2); ảnh AC-63, AC-65; AC-70 trên iPad và Duo. (AC-71 thuộc FS-17.03.)
 
 ## 9. Rủi ro đã biết
 

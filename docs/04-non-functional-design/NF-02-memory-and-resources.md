@@ -20,7 +20,7 @@
 ## 2. Dọn dẹp và tái dùng
 
 - **Quét thư mục tạm mồ côi lúc app khởi động**: xoá mọi thư mục tạm còn sót của các công cụ (sửa ảnh, kéo
-  thả, nhận thả, video). Mỗi công cụ vẫn tự dọn phần của mình, nhưng **tắt app đột ngột, crash, hoặc bị hệ
+  thả, nhận thả, video, bản gốc tải từ server để sửa — `ShotDexServerEdit-`, FS-17.06). Mỗi công cụ vẫn tự dọn phần của mình, nhưng **tắt app đột ngột, crash, hoặc bị hệ
   thống giết** thì không ai dọn — mà một thư mục sót có thể đang giữ một file RAW đã chép. **Chỉ an toàn ở
   thời điểm khởi động**, vì lúc đó không phiên làm việc nào còn sống. Có test.
 - **Giữ lại ba phiên sửa ảnh gần nhất** (ảnh đang xem và hai ảnh kề); phiên của ảnh đang trên canvas

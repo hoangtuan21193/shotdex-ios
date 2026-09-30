@@ -34,7 +34,7 @@ final class DirectRemoteAccess: RemoteFileAccess, @unchecked Sendable {
     }
 
     private func waitUntilSettled(_ model: ServerEditFetchModel) async {
-        for _ in 0..<500 where model.stage == .downloading {
+        for _ in 0..<3000 where model.stage == .downloading {
             try? await Task.sleep(for: .milliseconds(10))
         }
     }

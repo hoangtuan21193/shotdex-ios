@@ -10,87 +10,87 @@ File này chỉ là checklist; hai file lệch nhau thì tin `docs/_plans`.
 - Cần đi chệch một quyết định đã chốt (DECISIONS.md): dừng lại, hỏi người dùng.
 
 ## Việc cần làm (đợt 1)
-- [ ] **1. Tiền tố tạm + sweep** (AC-59)
+- [x] **1. Tiền tố tạm + sweep** (AC-59)
   - Theo: D3
   - Xong khi: AC-59 xanh, cột Chứng minh bằng của FS-17.06 đã điền
   - Kiểm tra: `/test TemporaryWorkspaceTests`
-- [ ] **2. Fetch + verify dùng chung; kiểm chỗ trống** (AC-55)
+- [x] **2. Fetch + verify dùng chung; kiểm chỗ trống** (AC-55)
   - Theo: D3
   - Xong khi: AC-55 xanh, cột Chứng minh bằng của FS-17.06 đã điền
   - Kiểm tra: `/test ServerEditSessionTests/spaceCheckBeforeDownload`
-- [ ] **3. Cancel phiên bản tạm** (AC-56)
+- [x] **3. Cancel phiên bản tạm** (AC-56)
   - Theo: D3,D10
   - Xong khi: AC-56 xanh, cột Chứng minh bằng của FS-17.06 đã điền
   - Kiểm tra: `/test ServerEditSessionTests/cancelRemovesTemp`
-- [ ] **4. Phiên sửa ảnh nguồn file; Edit mở editor** (AC-54)
+- [x] **4. Phiên sửa ảnh nguồn file; Edit mở editor** (AC-54)
   - Theo: D1
   - Xong khi: AC-54 xanh, cột Chứng minh bằng của FS-17.06 đã điền
   - Kiểm tra: `/test ServerEditSessionTests/downloadsOriginalOnly`
-- [ ] **5. Discard edits?** (AC-57)
+- [x] **5. Discard edits?** (AC-57)
   - Theo: D11
   - Xong khi: AC-57 xanh, cột Chứng minh bằng của FS-17.06 đã điền
   - Kiểm tra: `/test ServerEditSessionTests/discardDropsDraft`
-- [ ] **6. Rời không sửa: không hỏi** (AC-58)
+- [x] **6. Rời không sửa: không hỏi** (AC-58)
   - Theo: D11
   - Xong khi: AC-58 xanh, cột Chứng minh bằng của FS-17.06 đã điền
   - Kiểm tra: `/test ServerEditSessionTests/cleanLeaveNoPrompt`
-- [ ] **7. Bộ ghi: file mới cạnh bản gốc** (AC-60)
+- [x] **7. Bộ ghi: file mới cạnh bản gốc** (AC-60)
   - Theo: D5
   - Xong khi: AC-60 xanh, cột Chứng minh bằng của FS-17.06 đã điền
   - Kiểm tra: `/test ServerEditExportTests/newFileBesideOriginal`
-- [ ] **8. Trùng tên → (2)** (AC-61)
+- [x] **8. Trùng tên → (2)** (AC-61)
   - Theo: D5
   - Xong khi: AC-61 xanh, cột Chứng minh bằng của FS-17.06 đã điền
   - Kiểm tra: `/test ServerEditExportTests/nameCollisionNumbers`
-- [ ] **9. Replace Original + xác nhận** (AC-62)
+- [x] **9. Replace Original + xác nhận** (AC-62)
   - Theo: D5
   - Xong khi: AC-62 xanh, cột Chứng minh bằng của FS-17.06 đã điền
   - Kiểm tra: `/test ServerEditExportTests/replaceNeedsConfirm`
-- [ ] **10. RAW không thay được** (AC-63)
+- [x] **10. RAW không thay được** (AC-63)
   - Theo: D5
   - Xong khi: AC-63 xanh, cột Chứng minh bằng của FS-17.06 đã điền
   - Kiểm tra: `/test ServerEditExportTests/rawCannotBeReplaced`
-- [ ] **11. Sheet xuất nhiều đích** (AC-64)
+- [x] **11. Sheet xuất nhiều đích** (AC-64)
   - Theo: D4,D8,D12
   - Xong khi: AC-64 xanh, cột Chứng minh bằng của FS-17.06 đã điền
   - Kiểm tra: `/test ServerEditExportTests/multipleDestinations`
-- [ ] **12. Đích lỗi giữ nháp, Retry Failed** (AC-69)
+- [x] **12. Đích lỗi giữ nháp, Retry Failed** (AC-69)
   - Theo: D5
   - Xong khi: AC-69 xanh, cột Chứng minh bằng của FS-17.06 đã điền
   - Kiểm tra: `/test ServerEditExportTests/failedDestinationKeepsDraft`
-- [ ] **13. Lỗi quyền + Choose Another Folder** (AC-65)
+- [x] **13. Lỗi quyền + Choose Another Folder** (AC-65)
   - Theo: D7
   - Xong khi: AC-65 xanh, cột Chứng minh bằng của FS-17.06 đã điền
   - Kiểm tra: `/test ServerEditExportTests/permissionDeniedOffersAnotherFolder`
-- [ ] **14. Batch chỉ xuất ảnh đã sửa** (AC-66)
+- [x] **14. Batch chỉ xuất ảnh đã sửa** (AC-66)
   - Theo: D1,D11
   - Xong khi: AC-66 xanh, cột Chứng minh bằng của FS-17.06 đã điền
   - Kiểm tra: `/test ServerEditExportTests/batchExportsEditedOnly`
-- [ ] **15. Định nghĩa lệnh chung; ⋯ chế độ chọn** (AC-53)
+- [x] **15. Định nghĩa lệnh chung; ⋯ chế độ chọn** (AC-53)
   - Theo: D9
   - Xong khi: AC-53 xanh, cột Chứng minh bằng của FS-17.06 đã điền
   - Kiểm tra: `/test ServerEditMenuTests/matchesAlbumMenu`
-- [ ] **16. Menu nhấn giữ + viewer** (AC-52)
+- [x] **16. Menu nhấn giữ + viewer** (AC-52)
   - Theo: D9
   - Xong khi: AC-52 có ảnh đã xem
   - Kiểm tra: `Tools/ui-drive … scripts/server-edit.json`
-- [ ] **17. Paste Edits → sheet xuất** (AC-72)
+- [x] **17. Paste Edits → sheet xuất** (AC-72)
   - Theo: D1
   - Xong khi: AC-72 xanh, cột Chứng minh bằng của FS-17.06 đã điền
   - Kiểm tra: `/test ServerEditSessionTests/pasteEditsGoesToExportSheet`
-- [ ] **18. Resize trên nguồn file** (AC-73)
+- [x] **18. Resize trên nguồn file** (AC-73)
   - Theo: D1
   - Xong khi: AC-73 xanh, cột Chứng minh bằng của FS-17.06 đã điền
   - Kiểm tra: `/test ServerEditExportTests/resizeExportsThroughSheet`
-- [ ] **19. Share file tạm** (AC-74)
+- [x] **19. Share file tạm** (AC-74)
   - Theo: D12
   - Xong khi: AC-74 xanh, cột Chứng minh bằng của FS-17.06 đã điền
   - Kiểm tra: `/test ServerEditSessionTests/shareHandsOriginalAndCleansUp`
-- [ ] **20. Copy** (AC-75)
+- [x] **20. Copy** (AC-75)
   - Theo: D12
   - Xong khi: AC-75 xanh, cột Chứng minh bằng của FS-17.06 đã điền
   - Kiểm tra: `/test ServerEditSessionTests/copyBoundsAndCleansUp`
-- [ ] **21. Export EXIF chỉ đọc đầu file** (AC-68)
+- [x] **21. Export EXIF chỉ đọc đầu file** (AC-68)
   - Theo: D3
   - Xong khi: AC-68 xanh, cột Chứng minh bằng của FS-17.06 đã điền
   - Kiểm tra: `/test ServerEditExifTests/readsHeadOnly`
