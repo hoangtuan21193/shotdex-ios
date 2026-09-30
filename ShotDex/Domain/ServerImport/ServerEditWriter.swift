@@ -4,6 +4,9 @@ import Foundation
 enum ServerEditPlacement: Equatable, Sendable {
     /// `<name>_edited.<ext>`, then ` (2)`, ` (3)`… — the original untouched.
     case newFile
+    /// The name given, then ` (2)`, ` (3)`… — one file made from several
+    /// photos, named in the sheet (FS-17.06 §6b).
+    case asNamed
     /// Under the original's own name. The original is deleted only once the
     /// new file has been read back and matched.
     case replaceOriginal
@@ -37,6 +40,9 @@ enum ServerEditWriter {
             let existing = try await client.fileNames(in: folder)
             let edited = ServerUploadPath.editedFilename(original: originalName, rendered: local.lastPathComponent)
             destination = ServerUploadPath.join(folder, ServerUploadPath.nextFreeName(for: edited, existing: existing))
+        case .asNamed:
+            let existing = try await client.fileNames(in: folder)
+            destination = ServerUploadPath.join(folder, ServerUploadPath.nextFreeName(for: originalName, existing: existing))
         case .replaceOriginal:
             destination = ServerUploadPath.join(folder, originalName)
         }

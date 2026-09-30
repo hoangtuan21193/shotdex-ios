@@ -43,6 +43,11 @@ enum ServerExportRules {
         return replacementFormat(for: photo) != nil
     }
 
+    /// A video goes into Photos as a video, not a photo.
+    static func isMovie(_ url: URL) -> Bool {
+        ["mp4", "mov", "m4v"].contains(url.pathExtension.lowercased())
+    }
+
     /// The format a replacement is rendered in: the original's own.
     static func replacementFormat(for photo: ServerPhoto) -> ServerExportFormat? {
         switch (photo.primary.name as NSString).pathExtension.lowercased() {
@@ -83,9 +88,13 @@ struct ServerExportReport: Sendable, Equatable {
 
     /// Every photo reached every destination. Only then do the copies go.
     func isComplete(photos: [FetchedServerPhoto], destinations: Set<ServerExportDestination>) -> Bool {
+        isComplete(ids: photos.map(\.id), destinations: destinations)
+    }
+
+    func isComplete(ids: [String], destinations: Set<ServerExportDestination>) -> Bool {
         destinations.allSatisfy { destination in
-            destination == .share || photos.allSatisfy {
-                if case .done = outcome(destination, $0.id) { true } else { false }
+            destination == .share || ids.allSatisfy {
+                if case .done = outcome(destination, $0) { true } else { false }
             }
         }
     }
@@ -111,6 +120,19 @@ struct ServerExportServices: Sendable {
     var saveToPhotos: @Sendable (URL, String) async throws -> String
 }
 
+/// One file a tool made from several photos — a collage, a combined photo,
+/// a video — already on disk, and the name it goes out under (FS-17.06 §6b).
+struct ComposedOutput: Sendable, Equatable {
+    /// The key the report files it under.
+    static let id = "composed"
+
+    let file: URL
+    /// With the extension, already cleaned (`ServerComposedName.filename`).
+    let filename: String
+    /// The first server photo's folder: where Original Folder writes.
+    let folder: String
+}
+
 /// Renders every photo once, then sends it to each destination (FS-17.06 §6).
 /// A destination that fails leaves the others alone; a retry runs only what
 /// is not done, reusing the renders already on disk.
@@ -121,6 +143,12 @@ actor ServerEditExporter {
         let placement: ServerEditPlacement
         let format: ServerExportFormat
         var resize: ResizePreset?
+        /// A file made from all the photos: sent as it is, once per
+        /// destination, instead of one render per photo.
+        var composed: ComposedOutput?
+
+        /// What the report is keyed by.
+        var itemIds: [String] { composed == nil ? photos.map(\.id) : [ComposedOutput.id] }
     }
 
     enum Event: Sendable {
@@ -132,6 +160,7 @@ actor ServerEditExporter {
     private let renderDirectory: URL
     private let onEvent: @Sendable (Event) -> Void
     private var rendered: [String: URL] = [:]
+    private var namedFiles: [String: URL] = [:]
     private(set) var report = ServerExportReport()
 
     init(
@@ -145,6 +174,7 @@ actor ServerEditExporter {
     }
 
     func run(_ job: Job) async -> ServerExportReport {
+        if let composed = job.composed { return await run(composed, to: job.destinations) }
         try? FileManager.default.createDirectory(at: renderDirectory, withIntermediateDirectories: true)
         for destination in job.destinations.sorted(by: { $0.order < $1.order }) {
             for (index, photo) in job.photos.enumerated() {
@@ -178,6 +208,81 @@ actor ServerEditExporter {
             }
         }
         return report
+    }
+
+    private func run(_ composed: ComposedOutput, to destinations: Set<ServerExportDestination>) async -> ServerExportReport {
+        let file: URL
+        do {
+            file = try named(composed)
+        } catch {
+            for destination in destinations {
+                report.outcomes[destination, default: [:]][ComposedOutput.id] = .failed(error.localizedDescription)
+            }
+            return report
+        }
+        for destination in destinations.sorted(by: { $0.order < $1.order }) {
+            if Task.isCancelled { return report }
+            if case .done = report.outcome(destination, ComposedOutput.id) { continue }
+            let outcome: ServerExportOutcome
+            do {
+                onEvent(.sending(destination: destination, index: 0))
+                outcome = try await send(file, named: composed.filename, folder: composed.folder, to: destination)
+            } catch let error as RemoteFileError {
+                if case .permissionDenied = error {
+                    outcome = .permissionDenied
+                } else {
+                    outcome = .failed(error.localizedDescription)
+                }
+            } catch is CancellationError {
+                return report
+            } catch {
+                outcome = .failed(error.localizedDescription)
+            }
+            report.outcomes[destination, default: [:]][ComposedOutput.id] = outcome
+        }
+        return report
+    }
+
+    /// The file under the name the user gave it, so Share and Photos see
+    /// that name too. A hard link where the volume allows, a copy otherwise.
+    private func named(_ composed: ComposedOutput) throws -> URL {
+        if composed.file.lastPathComponent == composed.filename { return composed.file }
+        if let url = namedFiles[composed.filename], FileManager.default.fileExists(atPath: url.path) { return url }
+        let folder = renderDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let url = folder.appendingPathComponent(composed.filename)
+        do {
+            try FileManager.default.linkItem(at: composed.file, to: url)
+        } catch {
+            try FileManager.default.copyItem(at: composed.file, to: url)
+        }
+        namedFiles[composed.filename] = url
+        return url
+    }
+
+    private func send(
+        _ file: URL, named filename: String, folder: String, to destination: ServerExportDestination
+    ) async throws -> ServerExportOutcome {
+        switch destination {
+        case .originalFolder:
+            let path = try await services.originAccess.perform { client in
+                try await ServerEditWriter.write(file, originalName: filename, into: folder,
+                                                 placement: .asNamed, client: client)
+            }
+            return .done(path)
+        case .otherFolder(let serverId, _, let folder):
+            let access = try await services.access(serverId)
+            let path = try await access.perform { client in
+                try await ServerEditWriter.write(file, originalName: filename, into: folder,
+                                                 placement: .asNamed, client: client)
+            }
+            return .done(path)
+        case .photosLibrary:
+            return .done(try await services.saveToPhotos(file, filename))
+        case .share:
+            if !report.shareFiles.contains(file) { report.shareFiles.append(file) }
+            return .done(file.path)
+        }
     }
 
     private func renderedFile(_ photo: FetchedServerPhoto, index: Int, job: Job) async throws -> URL {
