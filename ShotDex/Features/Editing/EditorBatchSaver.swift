@@ -129,7 +129,7 @@ final class EditorBatchSaver {
         var recipe = item.recipe
         recipe.source = option.source
         recipe.sourceFilename = option.filename
-        recipe = try await resolvingUpright(recipe, source: source, service: service)
+        recipe = try await Self.resolvingUpright(recipe, source: source, service: service)
 
         let result: PhotoSaveResult
         if savesCopy {
@@ -158,7 +158,7 @@ final class EditorBatchSaver {
     /// A pasted Upright mode solved on this photo's own pixels, once, before
     /// the save — so the saved recipe carries the transform and reopening it
     /// solves nothing (FS-03.15b AC-28).
-    private func resolvingUpright(
+    static func resolvingUpright(
         _ recipe: PhotoEditRecipe,
         source: LoadedPhotoEditSource,
         service: PhotoEditingService
@@ -177,6 +177,41 @@ final class EditorBatchSaver {
 
     private static let uprightContext = CIContext(options: [.cacheIntermediates: false])
 
+    /// A server photo's edit rendered to a file for export (FS-17.06 §6): the
+    /// steps of a save, with a file in `folder` at the end instead of Photos.
+    /// The file is named the way it lands — `<name>_edited.<ext>` — so a
+    /// share carries a real name too.
+    static func renderToFile(
+        _ photo: FetchedServerPhoto,
+        recipe: PhotoEditRecipe,
+        service: PhotoEditingService,
+        format: PhotoOutputFormat,
+        includeMetadata: Bool,
+        into folder: URL
+    ) async throws -> URL {
+        let session = try await service.beginSession(for: .serverFile(photo))
+        defer { service.endSession(session) }
+        guard let option = session.preferredSource(for: recipe) else {
+            throw PhotoEditingError.missingSource
+        }
+        let source = try await service.loadSource(option, in: session)
+        var recipe = recipe
+        recipe.source = option.source
+        recipe.sourceFilename = option.filename
+        recipe = try await resolvingUpright(recipe, source: source, service: service)
+        let written = format == .heic && !PhotoEditingService.supportsHEICEncoding ? .jpeg : format
+        let name = ServerUploadPath.editedFilename(original: photo.photo.primary.name, rendered: "x.\(written.fileExtension)")
+        let url = folder.appendingPathComponent(name)
+        try await service.writeRender(
+            source: source,
+            recipe: tokensExpanded(recipe, values: OverlayTokenValues(metadata: nil)),
+            format: written,
+            includeMetadata: includeMetadata,
+            to: url
+        )
+        return url
+    }
+
     /// Expands `{camera}`-style tokens **per photo**, not once for the run: a
     /// look synced across a shoot may carry a text overlay, and every frame has
     /// to stamp its own camera and exposure, not the first frame's.
@@ -187,7 +222,11 @@ final class EditorBatchSaver {
     ) -> PhotoEditRecipe {
         guard recipe.overlays.contains(where: { $0.kind == .text }) else { return recipe }
         let metadata = try? libraryQueries.metadata(assetId: asset.localIdentifier)
-        let values = OverlayTokenValues(metadata: metadata)
+        return Self.tokensExpanded(recipe, values: OverlayTokenValues(metadata: metadata))
+    }
+
+    private static func tokensExpanded(_ recipe: PhotoEditRecipe, values: OverlayTokenValues) -> PhotoEditRecipe {
+        guard recipe.overlays.contains(where: { $0.kind == .text }) else { return recipe }
         var resolved = recipe
         resolved.overlays = recipe.overlays.map { overlay in
             guard overlay.kind == .text else { return overlay }

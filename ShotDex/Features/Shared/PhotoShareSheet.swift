@@ -78,19 +78,24 @@ enum PhotoShareSheet {
 
     /// Presents one `UIActivityViewController` for the gathered items. No-op if
     /// there's nothing to share or no foreground window.
+    /// `onFinished` runs when the sheet closes, shared or not — where a
+    /// caller deletes the files it handed over (FS-17.06 §6).
     @MainActor
-    static func present(items: [Any]) {
+    static func present(items: [Any], onFinished: (() -> Void)? = nil) {
         guard !items.isEmpty,
               let scene = UIApplication.shared.connectedScenes
                 .compactMap({ $0 as? UIWindowScene })
                 .first(where: { $0.activationState == .foregroundActive }),
               let root = scene.keyWindow?.rootViewController
-        else { return }
+        else { onFinished?(); return }
         var presenter = root
         while let presented = presenter.presentedViewController {
             presenter = presented
         }
         let activity = UIActivityViewController(activityItems: items, applicationActivities: nil)
+        if let onFinished {
+            activity.completionWithItemsHandler = { _, _, _, _ in onFinished() }
+        }
         // On iPad the sheet is a popover and needs an anchor, or UIKit traps.
         if let popover = activity.popoverPresentationController {
             popover.sourceView = presenter.view

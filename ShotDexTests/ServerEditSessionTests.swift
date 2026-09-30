@@ -153,7 +153,8 @@ final class DirectRemoteAccess: RemoteFileAccess, @unchecked Sendable {
         model.start()
         await waitUntilSettled(model)
         #expect(model.stage == .fetched)
-        return (ServerPhotoCommandRun(command: .edit, fetch: model), client)
+        let server = FileServer(name: "NAS", transferProtocol: .smb, host: "nas.local", username: "u", share: "photos")
+        return (ServerPhotoCommandRun(command: .edit, server: server, access: DirectRemoteAccess(client), fetch: model), client)
     }
 
     /// AC-57: Exposure +1 on a server photo, then Discard — the editor asks
@@ -203,5 +204,39 @@ final class DirectRemoteAccess: RemoteFileAccess, @unchecked Sendable {
         #expect(DeviceSpaceCheck.shortfall(for: 180_000_000, free: nil) == nil)
         #expect(DeviceSpaceCheck.shortfall(for: 180_000_000, free: 1_180_000_000) == nil)
         #expect(DeviceSpaceCheck.shortfall(for: 180_000_000, free: 1_179_999_999) == 1)
+    }
+
+    /// AC-66: five photos, three edited — Export… sends those three with
+    /// their own edits, not the two left alone.
+    @Test func batchExportsEditedOnly() throws {
+        let photos = (0..<5).map { n -> FetchedServerPhoto in
+            let entry = entry("P\(n).JPG", 10)
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("P\(n).JPG")
+            return FetchedServerPhoto(serverId: "S1", folder: "Trip", photo: ServerPhoto(files: [entry]),
+                                      files: [FetchedFile(file: entry, url: url, sha256: "")])
+        }
+        let editor = EditorSession(photos: photos.map(PhotoEditOrigin.serverFile), startIndex: 4)
+        func edit(_ exposure: Double) -> PhotoEditRecipe {
+            var recipe = PhotoEditRecipe.identity
+            recipe.adjustments.exposure = exposure
+            return recipe
+        }
+        editor.store(edit(0.5), for: .serverFile(photos[0]))
+        editor.store(edit(1), for: .serverFile(photos[2]))
+
+        let selection = editor.exportSelection(canvasRecipe: edit(-1))
+
+        #expect(selection.map(\.photo.photo.primary.name) == ["P0.JPG", "P2.JPG", "P4.JPG"])
+        #expect(selection.map(\.recipe.adjustments.exposure) == [0.5, 1, -1])
+    }
+
+    /// Alone in its run and untouched, the photo still exports — a RAW
+    /// turned into a JPEG with no slider moved.
+    @Test func singleUntouchedPhotoStillExports() {
+        let entry = entry("R.CR3", 10)
+        let photo = FetchedServerPhoto(serverId: "S1", folder: "Trip", photo: ServerPhoto(files: [entry]),
+                                       files: [FetchedFile(file: entry, url: URL(fileURLWithPath: "/tmp/R.CR3"), sha256: "")])
+        let editor = EditorSession(photos: [.serverFile(photo)])
+        #expect(editor.exportSelection(canvasRecipe: .identity).map(\.photo.id) == [photo.id])
     }
 }

@@ -98,6 +98,22 @@ final class EditorSession {
     /// How many photos are carrying unsaved edits, for the sync/save wording.
     var draftCount: Int { drafts.count }
 
+    /// What Export… sends from a server run (FS-17.06 §5), after the canvas
+    /// photo's `canvasRecipe` has been parked: every photo carrying an edit,
+    /// or — alone in its run — the photo as it is, so a RAW can be exported
+    /// as a JPEG without touching a slider.
+    func exportSelection(canvasRecipe: PhotoEditRecipe) -> [(photo: FetchedServerPhoto, recipe: PhotoEditRecipe)] {
+        if let current { store(canvasRecipe, for: current) }
+        let edited = photos.compactMap { photo -> (photo: FetchedServerPhoto, recipe: PhotoEditRecipe)? in
+            guard let file = photo.serverFile, let draft = drafts[photo.id] else { return nil }
+            return (file, draft)
+        }
+        if edited.isEmpty, !isMultiPhoto, let file = current?.serverFile {
+            return [(file, canvasRecipe)]
+        }
+        return edited
+    }
+
     /// Whether leaving now would throw work away: the photo on the canvas
     /// (`canvasHasChanges`, which only its controller knows) or a draft parked
     /// on any other photo by Sync, Paste Edits or a switch. False means the

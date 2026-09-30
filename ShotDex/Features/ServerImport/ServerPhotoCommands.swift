@@ -12,11 +12,21 @@ enum ServerPhotoCommand: Equatable {
 final class ServerPhotoCommandRun: Identifiable {
     let id = UUID()
     let command: ServerPhotoCommand
+    let server: FileServer
+    /// The browse run's login, which an export to the original folder uses.
+    let access: any RemoteFileAccess
     let fetch: ServerEditFetchModel
 
-    init(command: ServerPhotoCommand, fetch: ServerEditFetchModel) {
+    init(command: ServerPhotoCommand, server: FileServer, access: any RemoteFileAccess, fetch: ServerEditFetchModel) {
         self.command = command
+        self.server = server
+        self.access = access
         self.fetch = fetch
+    }
+
+    /// What an editor on these photos needs to export them.
+    var exportContext: ServerExportContext? {
+        fetch.workDirectory.map { ServerExportContext(server: server, access: access, workDirectory: $0) }
     }
 
     var photos: [FetchedServerPhoto] { fetch.fetched }
@@ -34,6 +44,9 @@ final class ServerPhotoCommandRun: Identifiable {
 /// same way.
 struct ServerPhotoCommandHost: ViewModifier {
     @Binding var run: ServerPhotoCommandRun?
+    /// After a tool closes — the browser reloads the folder an export may
+    /// have written to.
+    var onClosed: () -> Void = {}
     /// The sheet's item: nil the moment the sheet goes.
     @State private var fetching: ServerPhotoCommandRun?
     /// The same run, kept for `onDismiss`, which runs after the item is nil.
@@ -54,7 +67,7 @@ struct ServerPhotoCommandHost: ViewModifier {
                 ServerEditFetchSheet(model: run.fetch)
             }
             .fullScreenCover(item: $editing, onDismiss: closeTool) { run in
-                PhotoEditorScreen(serverPhotos: run.photos)
+                PhotoEditorScreen(serverPhotos: run.photos, export: run.exportContext)
             }
     }
 
@@ -74,11 +87,20 @@ struct ServerPhotoCommandHost: ViewModifier {
     private func closeTool() {
         open?.discardCopies()
         open = nil
+        onClosed()
     }
 }
 
 extension View {
-    func serverPhotoCommands(_ run: Binding<ServerPhotoCommandRun?>) -> some View {
-        modifier(ServerPhotoCommandHost(run: run))
+    func serverPhotoCommands(_ run: Binding<ServerPhotoCommandRun?>, onClosed: @escaping () -> Void = {}) -> some View {
+        modifier(ServerPhotoCommandHost(run: run, onClosed: onClosed))
     }
+}
+
+/// The connection a server run came from and where its copies live — what
+/// the editor's Export… needs (FS-17.06 §6).
+struct ServerExportContext {
+    let server: FileServer
+    let access: any RemoteFileAccess
+    let workDirectory: URL
 }

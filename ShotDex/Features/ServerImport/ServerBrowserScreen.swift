@@ -60,7 +60,7 @@ struct ServerBrowserScreen: View {
                     }
                 })
             }
-            .serverPhotoCommands($commandRun)
+            .serverPhotoCommands($commandRun) { Task { await folder.refresh() } }
             .sheet(item: $viewing) { photo in
                 ServerPhotoViewer(photo: photo, model: folder) { presentDownload([photo]) }
             }
@@ -559,7 +559,7 @@ struct ServerBrowserScreen: View {
             freeSpace: { DiskSpace.availableBytes() },
             screenHold: ScreenAwakeCoordinator.shared
         )
-        commandRun = ServerPhotoCommandRun(command: command, fetch: fetch)
+        commandRun = ServerPhotoCommandRun(command: command, server: model.server, access: model.session, fetch: fetch)
     }
 
     private func presentDownload(_ photos: [ServerPhoto]) {

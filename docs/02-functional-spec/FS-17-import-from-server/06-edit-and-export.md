@@ -74,9 +74,11 @@ lệnh đó (AC-67). Trong đợt 1 ba lệnh này không có trong menu, chứ 
 | **Other Folder…** | chọn connection đã lưu rồi duyệt tới folder, dùng bộ chọn folder của sheet upload (FS-15.02 §2) |
 | **Share…** | share sheet, mở sau khi các đích khác đã xong |
 | Khi trùng bản gốc | chỉ hiện khi chọn Original Folder: **Save as New File** (mặc định) · **Replace Original** |
-| Tóm tắt | `3 photos · JPEG · ~42 MB`, định dạng theo cài đặt xuất của editor |
+| Định dạng | JPEG / HEIC; Replace Original luôn giữ định dạng của bản gốc |
+| Tóm tắt | `3 photos · JPEG` — cỡ file chỉ biết sau khi render nên không ước |
 
 - Chọn được một hay nhiều đích (dấu ✓). Nút **Export** mờ khi chưa chọn đích nào.
+- Replace Original chỉ có khi **mọi** ảnh là JPEG hoặc HEIC đơn lẻ; bản render lấy đúng định dạng và tên của bản gốc.
 - **Replace Original** hỏi thêm một lần, nút đỏ: "Replace 3 originals on NAS? The originals are deleted and cannot
   be recovered." Ảnh có bản gốc RAW thì không có lựa chọn này, kèm câu "Originals in RAW stay — edits are saved as JPEG or HEIC."
 - Tên file mới: `<tên gốc>_edited.<đuôi>`, cùng quy ước với FS-15.02 §3 (người dùng chốt 2026-09-29). Trùng thì thêm
@@ -118,12 +120,12 @@ lệnh đó (AC-67). Trong đợt 1 ba lệnh này không có trong menu, chứ 
 | AC-61 | `a_edited.jpg` đã có | xuất lần hai | ghi `a_edited (2).jpg` | `ServerEditExportTests.nameCollisionNumbers` |
 | AC-62 | sửa `a.JPG` | Replace Original → xác nhận | `a.JPG` mang nội dung mới; bấm Cancel ở hộp xác nhận thì không ghi gì | `ServerEditExportTests.replaceNeedsConfirm` + `replaceKeepsOriginalWhenTheCheckFails`; ảnh hộp xác nhận ⚠️ chưa có |
 | AC-63 | nguồn `b.CR3` | mở sheet | không có Replace Original, có câu RAW | `ServerEditExportTests.rawCannotBeReplaced`; ảnh ⚠️ chưa có |
-| AC-64 | chọn Photos Library + Other Folder (SFTP `/sel`) + Share | Export | 1 asset mới trong Photos; `/sel/a_edited.jpg`; share sheet mở sau cùng | `ServerEditExportTests.multipleDestinations` ⚠️ chưa có + ảnh |
-| AC-65 | folder server từ chối ghi | Export tới Original Folder | đích đó báo "You can't write to this folder." + Choose Another Folder; bản tạm còn; không file `.shotdex-part` nào sót | `ServerEditExportTests.permissionDeniedOffersAnotherFolder` ⚠️ chưa có + ảnh |
-| AC-66 | loạt 5 ảnh, sửa 3 | Export… | hỏi nơi lưu 1 lần, xuất 3 file, 2 ảnh chưa sửa không xuất | `ServerEditExportTests.batchExportsEditedOnly` ⚠️ chưa có |
+| AC-64 | chọn Photos Library + Other Folder (SFTP `/sel`) + Share | Export | 1 asset mới trong Photos; `/sel/a_edited.jpg`; share sheet mở sau cùng | `ServerEditExportTests.multipleDestinations`; ảnh ⚠️ chưa có |
+| AC-65 | folder server từ chối ghi | Export tới Original Folder | đích đó báo "You can't write to this folder." + Choose Another Folder; bản tạm còn; không file `.shotdex-part` nào sót | `ServerEditExportTests.permissionDeniedOffersAnotherFolder`; ảnh ⚠️ chưa có |
+| AC-66 | loạt 5 ảnh, sửa 3 | Export… | hỏi nơi lưu 1 lần, xuất 3 file, 2 ảnh chưa sửa không xuất | `ServerEditSessionTests.batchExportsEditedOnly` + `singleUntouchedPhotoStillExports` |
 | AC-67 | (đợt 2) chọn 4 ảnh | Create Collage → lưu | sheet xuất §6 mở, không tự lưu vào Photos | ảnh ⚠️ chưa có |
 | AC-68 | chọn 2 ảnh | Export EXIF (CSV) | CSV 2 dòng; mỗi file chỉ đọc phần đầu (≤ 1 MB) | `ServerEditExifTests.readsHeadOnly` ⚠️ chưa có |
-| AC-69 | server tắt giữa lúc xuất (Original Folder), Photos đã xong | Export | Photos xong; Original Folder lỗi + Retry Failed; bản tạm + recipe còn | `ServerEditExportTests.failedDestinationKeepsDraft` ⚠️ chưa có |
+| AC-69 | server tắt giữa lúc xuất (Original Folder), Photos đã xong | Export | Photos xong; Original Folder lỗi + Retry Failed; bản tạm + recipe còn | `ServerEditExportTests.failedDestinationKeepsDraft` |
 | AC-70 | iOS 26.5, 18.6, iPad, Duo trong | menu + sheet | không bị cắt, cùng lệnh ở hai nhánh | ảnh ⚠️ chưa có |
 | AC-72 | clipboard có look (Exposure +1), chọn 2 ảnh | Paste Edits | tải 2 bản tạm, sheet xuất mở với `2 photos`; không ghi gì trước khi bấm Export | `ServerEditSessionTests.pasteEditsGoesToExportSheet` ⚠️ chưa có |
 | AC-73 | chọn 1 ảnh 6000×4000 | Resize 50% → lưu | sheet xuất mở; xuất Original Folder ra `a_edited.jpg` 3000×2000 | `ServerEditExportTests.resizeExportsThroughSheet` ⚠️ chưa có |

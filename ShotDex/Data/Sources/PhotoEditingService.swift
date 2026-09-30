@@ -549,6 +549,19 @@ final class PhotoEditingService {
         )
     }
 
+    /// The edit drawn at full size into a file this app owns — a server
+    /// photo's export (FS-17.06 §6), which Photos never sees.
+    func writeRender(
+        source: LoadedPhotoEditSource,
+        recipe: PhotoEditRecipe,
+        format: PhotoOutputFormat,
+        includeMetadata: Bool,
+        to url: URL
+    ) async throws {
+        let rendered = try await renderer.render(source: source.info, recipe: recipe)
+        try await renderer.write(rendered, to: url, format: format, quality: 1, includeMetadata: includeMetadata)
+    }
+
     func deleteCreatedAssets(ids: [String]) async throws {
         try await deleteAssets(ids: ids)
     }

@@ -50,12 +50,33 @@ struct PhotoEditorScreen: View {
     }
 
     /// Server originals fetched to this device (FS-17.06 §5): the same
-    /// editor, one filmstrip for the run.
-    init(serverPhotos: [FetchedServerPhoto]) {
+    /// editor, one filmstrip for the run, and Export… in place of Save.
+    init(serverPhotos: [FetchedServerPhoto], export: ServerExportContext?) {
         let photos = serverPhotos.map(PhotoEditOrigin.serverFile)
         self.origin = photos[0]
         self.siblings = photos.count > 1 ? photos : []
         self.sourceAlbum = nil
+        self.serverExport = export
+    }
+
+    /// Set for a server run: where Export… writes from.
+    private var serverExport: ServerExportContext?
+    /// The open export sheet's run, made once when it opens.
+    @State private var exportModel: ServerExportModel?
+
+    /// A server run has nothing in Photos to save to: it exports.
+    private var saveTitle: String {
+        session?.isServerRun == true
+            ? String(localized: "Export", comment: "Editor: the save button on server photos (FS-17.06)")
+            : String(localized: "Save", comment: "Editor: the save button")
+    }
+
+    /// Save on a library photo; Export… on a server run (FS-17.06 §5).
+    private func presentSave(_ controller: PhotoEditorController) {
+        if let serverExport, session?.isServerRun == true {
+            exportModel = makeExportModel(controller, context: serverExport)
+        }
+        isSaveSheetPresented = true
     }
 
     @State private var controller: PhotoEditorController?
@@ -358,7 +379,7 @@ struct PhotoEditorScreen: View {
                 .disabled(!controller.canRedo)
             Button("Save") {
                 controller.commitCropSession()
-                isSaveSheetPresented = true
+                presentSave(controller)
             }
             .keyboardShortcut("s", modifiers: .command)
             .disabled(controller.isLoading || controller.isSaving)
@@ -522,6 +543,53 @@ struct PhotoEditorScreen: View {
                 // failures, which keep their drafts so they can be retried.
                 if session.draftCount == 0 { dismiss() }
             }
+        )
+    }
+
+    /// The export of a server run (FS-17.06 §6): every photo carrying an
+    /// edit — the canvas one parked first — or, alone in its run, the photo
+    /// as it is.
+    private func makeExportModel(_ controller: PhotoEditorController, context: ServerExportContext) -> ServerExportModel {
+        controller.commitCropSession()
+        let selection = session?.exportSelection(canvasRecipe: controller.recipe) ?? []
+        let photos = selection.map(\.photo)
+        let recipes = Dictionary(selection.map { ($0.photo.id, $0.recipe) }, uniquingKeysWith: { first, _ in first })
+        let service = dependencies.photoEditing
+        let library = dependencies.photoLibrary
+        let servers = Dictionary(uniqueKeysWithValues: dependencies.fileServerCatalog.servers.map { ($0.id, $0) })
+        let store = dependencies.fileServers
+        let passwords = servers.mapValues { store.password(for: $0.id) ?? "" }
+        let pool = RemoteAccessPool { id in
+            guard let server = servers[id] else { throw RemoteFileError.other(String(localized: "That connection is gone.", comment: "Server export: the picked connection was deleted")) }
+            return ServerBrowseSession(server: server, client: RemoteFileClientFactory.make(for: server, password: passwords[id] ?? ""))
+        }
+        let frozen = recipes
+        return ServerExportModel(
+            photos: photos,
+            originServer: context.server,
+            renderDirectory: context.workDirectory.appendingPathComponent("Exports", isDirectory: true),
+            services: ServerExportServices(
+                render: { photo, format, folder in
+                    try await EditorBatchSaver.renderToFile(
+                        photo,
+                        recipe: frozen[photo.id] ?? .identity,
+                        service: service,
+                        format: format == .heic ? .heic : .jpeg,
+                        includeMetadata: true,
+                        into: folder
+                    )
+                },
+                originAccess: context.access,
+                access: { id in try await pool.access(for: id) },
+                saveToPhotos: { url, name in
+                    // Photos takes the file; the render stays for the other
+                    // destinations.
+                    let copy = url.deletingLastPathComponent()
+                        .appendingPathComponent("photos-\(UUID().uuidString)-\(url.lastPathComponent)")
+                    try FileManager.default.copyItem(at: url, to: copy)
+                    return try await library.saveImageFile(at: copy, filename: name)
+                }
+            )
         )
     }
 
@@ -832,6 +900,12 @@ struct PhotoEditorScreen: View {
             Text(batchSaveFailureMessage)
         }
         .sheet(isPresented: $isSaveSheetPresented) {
+            if let exportModel {
+                ServerExportSheet(model: exportModel) {
+                    isSaveSheetPresented = false
+                    dismiss()
+                }
+            } else {
             PhotoEditorSaveSheet(
                 controller: controller,
                 pendingCount: pendingSaveCount,
@@ -866,6 +940,7 @@ struct PhotoEditorScreen: View {
             }
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
+            }
         }
         .sheet(isPresented: $chrome.isNewMaskSheetPresented) {
             EditorNewMaskSheet(
@@ -2937,14 +3012,14 @@ struct PhotoEditorScreen: View {
                 applyTool(in: controller)
             }
             controller.commitCropSession()
-            isSaveSheetPresented = true
+            presentSave(controller)
         } label: {
             if chrome.isWideLayout {
                 // A word, not a slab. The panel's old Save was 240×50 of accent
                 // sitting beside a photograph whose colour the user is judging;
                 // the pill says the same thing in 32pt and lets the picture be
                 // the brightest thing on screen.
-                Text("Save")
+                Text(saveTitle)
                     .font(EditorTheme.pillLabel)
                     .foregroundStyle(.black)
                     .padding(.horizontal, AppTheme.Spacing.md)
@@ -2963,7 +3038,7 @@ struct PhotoEditorScreen: View {
         .buttonStyle(.plain)
         .disabled(controller.isLoading || controller.isSaving)
         .hoverEffect(.lift)
-        .accessibilityLabel("Save")
+        .accessibilityLabel(saveTitle)
     }
 
     /// The panel for whichever group the phone layout has open.
