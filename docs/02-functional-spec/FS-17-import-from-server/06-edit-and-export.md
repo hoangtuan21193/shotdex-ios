@@ -1,7 +1,7 @@
 # FS-17.06 — Sửa và dùng ảnh trên server, hỏi nơi lưu lúc xuất
 
 `FS-17.06` · `Features/ServerImport/` (menu, sheet xuất) · `Features/Editing/` · `Collage/` · `VideoStudio/`
-· `Creations/` · test `ShotDexTests/ServerEdit*Tests.swift` · cập nhật 2026-09-30 (đợt 1 xong)
+· `Creations/` · test `ShotDexTests/ServerEdit*Tests.swift` · cập nhật 2026-09-30 (đợt 1 xong, đợt 2 đã có spec)
 
 **Một câu:** ảnh trong folder On Local Network / On Cloud có các lệnh làm được trên file như ảnh trong album. Bản
 gốc được tải về máy làm bản tạm, và lúc xuất app hỏi lưu đi đâu. Bản gốc trên server không bị đụng nếu người dùng
@@ -21,7 +21,8 @@ Photos trước, không để lại bản sao trong library, và biết chắc b
 Resize · Export EXIF (CSV) · Import to Library (đã có). Lối vào: nhấn giữ ô, chế độ chọn, màn xem một ảnh.
 
 **Hai đợt** (plan 2026-09-30): đợt 1 là mọi lệnh trừ Combine Photos, Create Collage, Create Video; đợt 2 thêm ba
-lệnh đó (AC-67). Trong đợt 1 ba lệnh này không có trong menu, chứ không hiện rồi mờ.
+lệnh đó (AC-67, AC-76…84). Trong đợt 1 ba lệnh này không có trong menu, chứ không hiện rồi mờ. Combine Photos có
+đủ ba hàng như album: Focus Stack, Panorama, Stack Exposures.
 
 **Cố ý không có:**
 - Adjust Date & Time, Adjust Location, Add to Collection, Duplicate, Favorite, Hide — vì chỉ có nghĩa với Photos.
@@ -64,6 +65,20 @@ lệnh đó (AC-67). Trong đợt 1 ba lệnh này không có trong menu, chứ 
 - Rời mà chưa sửa gì thì không hỏi, chỉ xoá bản tạm. App bị giết thì bản tạm được dọn ở lần khởi động sau.
 - Recipe chỉ sống trong phiên và không bao giờ vào kho recipe của ảnh Photos.
 - Collage, Video, Combine Photos, Resize và Paste Edits cũng dùng bản tạm. Nút lưu của các màn đó mở cùng sheet xuất.
+
+### 5b. Collage, Combine Photos, Create Video (đợt 2)
+
+- Màn công cụ mở như với ảnh library, với các ảnh server đã tải. Nút lưu đổi thành **Export…**: công cụ render ra một
+  file trong thư mục tạm, rồi mở sheet xuất ở chế độ **một file gộp** (§6b).
+- **Được trộn ảnh library** (người dùng chốt 2026-09-30): picker thêm ảnh trong Collage và Video Studio vẫn còn, và
+  ảnh library thêm vào không bị đổi gì. **Kéo thả** file từ app khác thì tắt trong lượt này, vì nó import file vào
+  Photos trước.
+- Không lưu gì vào Photos lúc bấm Export…, không tạo album "ShotDex Collages", không ghi dòng Creations: recipe chỉ
+  sống trong phiên (§5).
+- Focus Stack xếp khung theo ngày chụp EXIF trong file, rồi theo tên file, như với ảnh library.
+- Rời công cụ khi đã làm gì đó (đổi layout, thêm clip, chỉnh…) thì hỏi "Discard?" như editor. Chưa làm gì thì không
+  hỏi. Cả hai đường đều xoá bản tạm.
+- Video Studio đọc ảnh server ở cỡ render, không giải mã full-res cho mỗi khung (NF-02).
 - Paste Edits và Resize không mở editor: tải xong là vào thẳng sheet xuất. Resize thêm mục **Size** (các cỡ dựng sẵn
   của Resize: 4K, 2048 px, 1080 px).
 
@@ -93,6 +108,19 @@ lệnh đó (AC-67). Trong đợt 1 ba lệnh này không có trong menu, chứ 
   có ghi vào đó.
 - Một đích lỗi (rớt mạng, server đầy) thì bản tạm và recipe được **giữ lại**. Sheet hiện kết quả từng đích kèm
   **Retry Failed**; rời sheet thì mới hỏi Discard (người dùng chốt 2026-09-29). Vì một lần rớt Wi‑Fi không được làm mất công sửa.
+
+### 6b. Chế độ một file gộp (Collage, Combine, Video)
+
+| Hàng | Nội dung |
+|---|---|
+| **Name** | ô nhập tên, mặc định `<tên ảnh đầu>_collage` · `_focus-stack` · `_panorama` · `_stack` · `_video`; đuôi `.jpg` / `.heic` / `.mp4` hiện cạnh ô, không sửa được (người dùng chốt 2026-09-30) |
+| Save To | bốn đích như §6; Original Folder là folder của ảnh server đầu tiên |
+| Không có | Save as New File / Replace Original (không có bản gốc nào để thay), Format (công cụ đã chọn), Size |
+| Tóm tắt | `1 collage · JPEG` · `1 video · MP4` |
+
+- Tên rỗng, hoặc chỉ gồm `/ : \` và khoảng trắng, thì nút Export mờ. Ký tự `/ : \` bị bỏ khỏi tên.
+- Trùng tên ở đích thì thêm ` (2)`, ` (3)`…, như §6.
+- Photos Library nhận ảnh gộp như một ảnh, và video như một video.
 
 ## 7. Ràng buộc
 
@@ -125,7 +153,7 @@ lệnh đó (AC-67). Trong đợt 1 ba lệnh này không có trong menu, chứ 
 | AC-64 | chọn Photos Library + Other Folder (SFTP `/sel`) + Share | Export | 1 asset mới trong Photos; `/sel/a_edited.jpg`; share sheet mở sau cùng | `ServerEditExportTests.multipleDestinations` + ảnh `…-ios26-14-export-sheet.png`, `…-ios18-14-export-sheet.png`, `…-ios26-17-grid-after-export.png` |
 | AC-65 | folder server từ chối ghi | Export tới Original Folder | đích đó báo "You can't write to this folder." + Choose Another Folder; bản tạm còn; không file `.shotdex-part` nào sót | `ServerEditExportTests.permissionDeniedOffersAnotherFolder`; ảnh ⚠️ chưa có |
 | AC-66 | loạt 5 ảnh, sửa 3 | Export… | hỏi nơi lưu 1 lần, xuất 3 file, 2 ảnh chưa sửa không xuất | `ServerEditSessionTests.batchExportsEditedOnly` + `singleUntouchedPhotoStillExports` |
-| AC-67 | (đợt 2) chọn 4 ảnh | Create Collage → lưu | sheet xuất §6 mở, không tự lưu vào Photos | đợt 2 ⚠️ chưa có |
+| AC-67 | (đợt 2) chọn 4 ảnh | Create Collage → Export… | sheet xuất §6b mở; Photos không có asset mới, không có dòng Creations | ⚠️ chưa có |
 | AC-68 | chọn 2 ảnh | Export EXIF (CSV) | CSV 2 dòng; mỗi file chỉ đọc phần đầu (≤ 1 MB) | `ServerEditHandoffTests.readsHeadOnly` |
 | AC-69 | server tắt giữa lúc xuất (Original Folder), Photos đã xong | Export | Photos xong; Original Folder lỗi + Retry Failed; bản tạm + recipe còn | `ServerEditExportTests.failedDestinationKeepsDraft` |
 | AC-70 | iOS 26.5, 18.6, iPad, Duo trong | menu + sheet | không bị cắt, cùng lệnh ở hai nhánh | iPhone 17 Pro 26.5 + iPhone 16 Pro 18.6: ảnh ở các AC trên; iPad, Duo ⚠️ chưa có |
@@ -133,8 +161,17 @@ lệnh đó (AC-67). Trong đợt 1 ba lệnh này không có trong menu, chứ 
 | AC-73 | 1 ảnh 600×400 | Resize, cạnh dài 300 → Export tới Original Folder | `a_edited.jpg` 300×200; `a.JPG` giữ nguyên | `ServerEditHandoffTests.resizeExportsThroughSheet` |
 | AC-74 | `a.JPG` có GPS, Share bỏ vị trí đang bật | Share | share sheet nhận file bản gốc đã bỏ GPS; đóng share sheet thì bản tạm bị xoá | `ServerEditHandoffTests.shareHandsOriginalAndCleansUp` |
 | AC-75 | `b.CR3` 6000×4000 | Copy | pasteboard có ảnh cạnh dài ≤ 4096 px; bản tạm bị xoá | `ServerEditHandoffTests.copyBoundsAndCleansUp` |
+| AC-76 | (đợt 2) chọn 3 ảnh | mở ⋯ | Paste Edits · Combine Photos (Focus Stack, Panorama, Stack Exposures) · Create Collage · Create Video · Resize · Export EXIF (CSV) · Import to Library, tên + glyph trùng album | ⚠️ chưa có |
+| AC-77 | (đợt 2) collage từ `DSCF1000.JPG` + 3 ảnh | Export… | sheet có Name = `DSCF1000_collage`, không có Replace/Format/Size; Original Folder ghi `DSCF1000_collage.jpg`, lần hai `DSCF1000_collage (2).jpg`; đổi tên thành `Trip` thì ghi `Trip.jpg` | ⚠️ chưa có |
+| AC-78 | (đợt 2) sheet gộp | xoá hết ô Name, hoặc nhập `/` | nút Export mờ | ⚠️ chưa có |
+| AC-79 | (đợt 2) 3 JPEG server, ngày EXIF ngược thứ tự tên file | Combine → Focus Stack → Export… | khung xếp theo DateTimeOriginal; sheet mở với Name `…_focus-stack` | ⚠️ chưa có |
+| AC-80 | (đợt 2) 2 khung server chồng nhau | Combine → Panorama → Export… | khung đọc từ file, không gọi PhotoKit; sheet mở với Name `…_panorama` | ⚠️ chưa có |
+| AC-81 | (đợt 2) 3 ảnh server | Create Video → Export… → Photos Library + Original Folder | sheet không có Format/Size/Replace; Photos có 1 video mới; `DSCF1000_video.mp4` cạnh ảnh gốc, SHA khớp | ⚠️ chưa có |
+| AC-82 | (đợt 2) collage 2 ảnh server + 1 ảnh library thêm qua picker | Export… → Original Folder | file ghi đúng; asset library không đổi; kéo thả file từ app khác không nhận | ⚠️ chưa có |
+| AC-83 | (đợt 2) collage đã đổi layout | Close | hỏi Discard; Discard thì thư mục tạm mất. Chưa làm gì thì Close không hỏi | ⚠️ chưa có |
+| AC-84 | (đợt 2) video 20 ảnh server 6000×4000 | dựng preview và xuất | mỗi khung đọc từ file ở cạnh dài ≤ cỡ render, không giải mã full-res | ⚠️ chưa có |
 
-**Chưa chứng minh được:** AC-67 (đợt 2); ảnh AC-63, AC-65; AC-70 trên iPad và Duo. (AC-71 thuộc FS-17.03.)
+**Chưa chứng minh được:** AC-67, AC-76…84 (đợt 2); ảnh AC-63, AC-65; AC-70 trên iPad và Duo. (AC-71 thuộc FS-17.03.)
 
 ## 9. Rủi ro đã biết
 

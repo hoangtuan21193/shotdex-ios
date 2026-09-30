@@ -5,7 +5,7 @@
 | Đặc tả | `docs/02-functional-spec/FS-17-import-from-server/06-edit-and-export.md` (AC-52…70, AC-72…75) |
 | Intent | [2026-09-29-network-folder-edit](../_intents/2026-09-29-network-folder-edit.md) |
 | Ngày | 2026-09-30 |
-| Trạng thái | đợt 1 gần xong (2026-09-30) — 22/22 task; còn ảnh iPad/Duo; đợt 2 chưa lập plan |
+| Trạng thái | đợt 1 gần xong (2026-09-30) — 22/22 task; còn ảnh iPad/Duo; đợt 2: [plan riêng](2026-09-30-network-folder-edit-phase2.md) |
 | Quyết định | planboard `.planboard/network-folder-edit/` — 12 quyết định, người dùng "OK hết theo đề xuất" 2026-09-30 |
 
 ## 1. Hiểu đúng chưa
