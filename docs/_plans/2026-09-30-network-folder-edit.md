@@ -5,7 +5,7 @@
 | Đặc tả | `docs/02-functional-spec/FS-17-import-from-server/06-edit-and-export.md` (AC-52…70, AC-72…75) |
 | Intent | [2026-09-29-network-folder-edit](../_intents/2026-09-29-network-folder-edit.md) |
 | Ngày | 2026-09-30 |
-| Trạng thái | nháp — chờ duyệt |
+| Trạng thái | đang làm — người dùng duyệt 2026-09-30 ("làm all task theo plan") |
 | Quyết định | planboard `.planboard/network-folder-edit/` — 12 quyết định, người dùng "OK hết theo đề xuất" 2026-09-30 |
 
 ## 1. Hiểu đúng chưa
@@ -128,14 +128,20 @@ Không có dòng ✅ trọn để viết test trước; AC-61 (phần tên) làm
 | File cloud online-only (iCloud Drive, Dropbox) | thấp | file coordination của client Files; Cancel dừng lượt tải |
 | Hai session sửa cùng checkout (shotdex-ios-2 đang /verify FS-17) | cao | stage đúng đường dẫn, `git commit -- <paths>`; AC-71 là của session kia |
 
-## 7. Phản biện
+## 7. Phản biện (`challenger`, 2026-09-30)
 
-Chưa chạy `challenger`. Chạy trước khi bắt đầu task 4 (D1 là chỗ đắt nhất nếu sai).
+| Phản đối | Trả lời / thay đổi |
+|---|---|
+| Chỗ nối chưa được đặt tên; 5 kiểu bám PHAsset (session, controller, EditorSession, CompressionController, EditorBatchSaver) sẽ mỗi kiểu tự nghĩ một cách | **một kiểu chung** cho nguồn ảnh (asset hoặc file server) thay PHAsset ở cả 5 chỗ, viết trước task 4 |
+| Batch saver đổi ở task 14, cách mốc chạy lại test editor 10 task | chạy lại toàn bộ test editor ngay sau task 14 |
+| Revert: model trả false nhưng nút vẫn có thể hiện | một test khẳng định cả hai với nguồn file |
+| Preview cache khoá theo PHAsset là chỗ thứ 6 | nguồn file khoá theo đường dẫn + byte + ngày sửa; cache vẫn bị xoá khi đóng editor |
+| Mattes cache khoá theo localIdentifier | giữ như plan (connection + đường dẫn + byte + ngày sửa) |
 
 ## 8. Cách chứng minh là xong
 
 - Test: `/test ServerEditSessionTests`, `ServerEditExportTests`, `ServerEditMenuTests`, `ServerEditExifTests`,
-  `TemporaryWorkspaceTests`; toàn bộ test editor + ServerImport + ServerUpload sau task 4 và task 11; full suite một
+  `TemporaryWorkspaceTests`; toàn bộ test editor + ServerImport + ServerUpload sau task 4, 11 và 14; full suite một
   lần lúc xong đợt 1.
 - Server thử: impacket SMB 4450 + asyncssh SFTP 2222 + wsgidav (memory FS-15); một share chỉ đọc cho AC-65.
 - Màn hình: menu nhấn giữ, ⋯ chế độ chọn, viewer, sheet tiến độ, editor Export…, Discard, sheet xuất (thường / RAW /

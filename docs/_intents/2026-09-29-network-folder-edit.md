@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-29 |
 | Trạng thái | accepted — người dùng 2026-09-29: "ok tên file theo đề xuất, accepted" |
-| Tiến độ | **chưa làm** (2026-09-30) — plan [2026-09-30-network-folder-edit](../_plans/2026-09-30-network-folder-edit.md) chờ duyệt, 22 task đợt 1 (+ đợt 2: AC-67) |
+| Tiến độ | **đang làm** (2026-09-30) — task 1/22, 1/23 AC xanh (AC-59), plan [2026-09-30-network-folder-edit](../_plans/2026-09-30-network-folder-edit.md) |
 | Nguồn | phản hồi người dùng (2026-09-29) |
 | Spec sinh ra từ đây | [FS-17.06](../02-functional-spec/FS-17-import-from-server/06-edit-and-export.md) |
 
