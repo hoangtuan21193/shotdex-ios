@@ -227,6 +227,15 @@ enum EmbeddedPreview {
            [UTType.png, .gif, .bmp, .webP].contains(where: { type.conforms(to: $0) }) {
             return nil
         }
+        // A JPEG with no thumbnail of its own does the same: ImageIO decodes
+        // the cut-off main image — top rows only — and calls it done. With no
+        // whole JPEG inside the head there was no embedded thumbnail to use.
+        // (Every export ShotDex writes is such a JPEG, FS-17.06.)
+        if !isWholeFile,
+           let identifier = CGImageSourceGetType(source) as String?, UTType(identifier)?.conforms(to: .jpeg) == true,
+           embeddedJPEGs(in: head, limit: 1).isEmpty {
+            return nil
+        }
         return Thumbnail(image: image, sourceLongSide: max(image.width, image.height))
     }
 

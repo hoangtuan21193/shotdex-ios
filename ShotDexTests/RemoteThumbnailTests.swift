@@ -85,6 +85,34 @@ import UniformTypeIdentifiers
         #expect(result.captureDate != nil)
     }
 
+    /// A JPEG with no thumbnail of its own, bigger than the first read —
+    /// every export ShotDex writes (FS-17.06). Its cut-off head is not a
+    /// thumbnail (ImageIO draws the top rows only); the whole file is read
+    /// and the tile is the whole picture.
+    @Test func largeJPEGWithoutThumbnailReadsWholeFile() async throws {
+        let client = InMemoryRemoteFileClient()
+        var noise = SystemRandomNumberGenerator()
+        let width = 1200, height = 800
+        var pixels = [UInt8](repeating: 0, count: width * height * 4)
+        for index in pixels.indices { pixels[index] = UInt8.random(in: 0...255, using: &noise) }
+        let context = CGContext(data: &pixels, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
+                                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
+        let data = NSMutableData()
+        let destination = CGImageDestinationCreateWithData(data, UTType.jpeg.identifier as CFString, 1, nil)!
+        CGImageDestinationAddImage(destination, context.makeImage()!, [kCGImageDestinationLossyCompressionQuality: 0.9] as CFDictionary)
+        CGImageDestinationFinalize(destination)
+        let file = data as Data
+        #expect(file.count > EmbeddedPreview.firstRead)
+
+        #expect(EmbeddedPreview.thumbnail(from: file.prefix(EmbeddedPreview.firstRead), isWholeFile: false) == nil)
+
+        client.put("P/E_edited.jpg", file)
+        let photo = ServerPhoto(files: [RemoteEntry(name: "E_edited.jpg", isDirectory: false, size: Int64(file.count), modified: nil)])
+        let result = try await thumbnailer(client).thumbnail(for: photo, in: "P")
+        #expect(result.thumbnail?.sourceLongSide == width)
+        #expect(client.downloadCount == 1)
+    }
+
     /// AC-5: a RAW with no preview in its first megabyte is not downloaded.
     @Test func rawWithoutPreviewStaysIcon() async throws {
         let client = InMemoryRemoteFileClient()

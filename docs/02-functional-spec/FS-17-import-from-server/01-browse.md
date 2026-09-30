@@ -116,7 +116,8 @@ Thứ tự thử, dừng ở bước đầu tiên ra ảnh ≥ 320 px cạnh dà
 thử **file RAW trước** — đoạn đầu RAW rẻ hơn tải trọn JPEG.
 
 1. Đọc **256 KB đầu** file (range read).
-2. ImageIO trên đoạn đó (JPEG/HEIC có EXIF thumbnail, NEF, DNG iPhone) — **trừ PNG/GIF/BMP/WebP chưa đọc trọn**: ImageIO
+2. ImageIO trên đoạn đó (JPEG/HEIC có EXIF thumbnail, NEF, DNG iPhone) — **trừ PNG/GIF/BMP/WebP chưa đọc trọn, và JPEG không
+   có thumbnail nhúng** (mọi bản xuất của FS-17.06): ImageIO
    trả về phần ảnh đã giải mã (dải trên, còn lại trong suốt) như thể thumbnail; đo được: ô trống với PNG 1 MB; rồi tách **JPEG nhúng có đủ byte** — tìm điểm
    kết thúc bằng cách đi qua marker, vì ImageIO gọi một JPEG bị cắt là "complete" khi mới đọc header; chọn JPEG nhỏ
    nhất mà ≥ 320 px.
