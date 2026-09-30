@@ -21,13 +21,27 @@ struct CollageScreen: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppDependencies.self) private var dependencies
 
-    let assets: [PHAsset]
+    let photos: [PhotoEditOrigin]
     /// Called with the new asset id after a successful export, so the presenter
     /// can open the new photo's detail (§12).
     var onSaved: (String) -> Void = { _ in }
     /// Reopening a collage from Creations: its stored recipe comes back in
     /// place of a fresh layout, and exporting updates that same row.
     var restoring: Creation?
+    /// A collage of server photos (FS-17.06 §5b): Export hands the file to
+    /// the export sheet, and nothing goes to Photos on its own.
+    var serverExport: ServerExportContext?
+
+    init(assets: [PHAsset], onSaved: @escaping (String) -> Void = { _ in }, restoring: Creation? = nil) {
+        self.photos = assets.map(PhotoEditOrigin.asset)
+        self.onSaved = onSaved
+        self.restoring = restoring
+    }
+
+    init(serverPhotos: [FetchedServerPhoto], export: ServerExportContext?) {
+        self.photos = serverPhotos.map(PhotoEditOrigin.serverFile)
+        self.serverExport = export
+    }
 
     @State private var model: CollageEditorModel?
     @State private var isExportPresented = false
@@ -64,13 +78,14 @@ struct CollageScreen: View {
         .task {
             guard model == nil else { return }
             let newModel = CollageEditorModel(
-                assets: assets,
+                photos: photos,
                 photoLibrary: dependencies.photoLibrary,
                 indexPipeline: dependencies.indexPipeline,
                 overlayFontRecents: dependencies.overlayFontRecents,
                 presetStore: dependencies.collagePresets,
-                creationStore: dependencies.creations,
-                restoring: restoring
+                creationStore: serverExport == nil ? dependencies.creations : nil,
+                restoring: restoring,
+                serverWorkDirectory: serverExport?.workDirectory
             )
             model = newModel
             newModel.loadPreviews()
@@ -78,7 +93,16 @@ struct CollageScreen: View {
         .interactiveDismissDisabled(model?.hasEdits == true || model?.isExporting == true)
         .fullScreenCover(isPresented: $isExportPresented) {
             if let model {
-                CollageExportScreen(model: model, onClose: { isExportPresented = false })
+                CollageExportScreen(
+                    model: model,
+                    serverExport: serverExport,
+                    onClose: { isExportPresented = false },
+                    onServerExported: {
+                        serverExport?.onExported()
+                        isExportPresented = false
+                        dismiss()
+                    }
+                )
             }
         }
         .onChange(of: model?.didSaveAssetID) { _, assetID in

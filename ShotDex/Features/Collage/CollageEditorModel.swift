@@ -28,11 +28,20 @@ final class CollageEditorModel {
         }
     }
 
-    /// The photo pool brought over from the library — the union of everything
-    /// ever placed or set aside. Slots reference these by id. It grows as the
-    /// picker pulls in photos beyond the originals (`ingest`), so a slot can hold
-    /// any library asset, and its preview/export can always find the pixels.
-    private(set) var assets: [PHAsset]
+    /// The photo pool — the union of everything ever placed or set aside.
+    /// Slots reference these by id. It grows as the picker pulls in photos
+    /// beyond the originals (`ingest`), so a slot can hold any library asset,
+    /// and its preview/export can always find the pixels. A collage made from
+    /// server photos starts with their copies on this device (FS-17.06 §5b).
+    private(set) var photos: [PhotoEditOrigin]
+    /// Set for a collage of server photos: Export renders into it and hands
+    /// the file to the export sheet instead of saving to Photos.
+    let serverWorkDirectory: URL?
+    /// The finished collage of a server run, waiting for the export sheet.
+    var composedFile: URL?
+    /// The first placed photo's name, which the export's default name is
+    /// built from.
+    private(set) var firstPlacedFilename = ""
     private let photoLibrary: PhotoLibraryService
     private let indexPipeline: IndexPipeline
     private let overlayFontRecents: OverlayFontRecentsStore
@@ -94,7 +103,7 @@ final class CollageEditorModel {
     static let slotRange = CollageTemplateCatalog.supportedCounts
 
     init(
-        assets: [PHAsset],
+        photos: [PhotoEditOrigin],
         photoLibrary: PhotoLibraryService,
         indexPipeline: IndexPipeline,
         overlayFontRecents: OverlayFontRecentsStore,
@@ -103,9 +112,11 @@ final class CollageEditorModel {
         /// Reopening a saved collage: its recipe and the row it belongs to.
         /// The layout, styling, captions and crops come back exactly as they
         /// were exported, because the recipe *is* what was exported.
-        restoring: Creation? = nil
+        restoring: Creation? = nil,
+        serverWorkDirectory: URL? = nil
     ) {
-        self.assets = assets
+        self.photos = photos
+        self.serverWorkDirectory = serverWorkDirectory
         self.photoLibrary = photoLibrary
         self.indexPipeline = indexPipeline
         self.overlayFontRecents = overlayFontRecents
@@ -115,10 +126,10 @@ final class CollageEditorModel {
         if let stored = restoring?.collageRecipe {
             self.recipe = stored
         } else {
-            let template = CollageTemplateCatalog.templates(for: assets.count).first
+            let template = CollageTemplateCatalog.templates(for: photos.count).first
             self.recipe = CollageRecipe(
                 templateID: template?.id ?? "",
-                cells: assets.map { CollageCell(assetID: $0.localIdentifier) }
+                cells: photos.map { CollageCell(assetID: $0.id) }
             )
         }
         self.unplaced = []
@@ -164,9 +175,15 @@ final class CollageEditorModel {
 
     func image(forAsset id: String) -> UIImage? { imagesByAsset[id] }
 
-    func asset(id: String) -> PHAsset? {
-        assets.first { $0.localIdentifier == id }
+    func photo(id: String) -> PhotoEditOrigin? {
+        photos.first { $0.id == id }
     }
+
+    /// The library asset behind a pool id; nil for a server photo.
+    func asset(id: String) -> PHAsset? { photo(id: id)?.asset }
+
+    /// True when the collage started from server photos (FS-17.06 §5b).
+    var isServerRun: Bool { serverWorkDirectory != nil }
 
     // MARK: - Loading
 
@@ -174,12 +191,21 @@ final class CollageEditorModel {
     /// opportunistic — a degraded rendition fills the cell immediately and the
     /// final replaces it in place. 1200pt is enough headroom for a zoomed cell
     /// on the interactive canvas; the export requests its own pixels.
-    func loadPreviews() { loadPreviews(for: assets) }
+    func loadPreviews() { loadPreviews(for: photos) }
 
-    private func loadPreviews(for subset: [PHAsset]) {
+    private func loadPreviews(for subset: [PhotoEditOrigin]) {
         let targetSize = CGSize(width: 1200, height: 1200)
-        for asset in subset {
-            let id = asset.localIdentifier
+        for photo in subset {
+            let id = photo.id
+            if let file = photo.serverFile {
+                // A server original on disk: decoded at the preview's size.
+                Task { [weak self] in
+                    let image = await PhotoOriginFile.loadImage(at: file.primaryURL, maxPixelSize: Int(targetSize.width))
+                    if let image { self?.imagesByAsset[id] = image }
+                }
+                continue
+            }
+            guard let asset = photo.asset else { continue }
             _ = photoLibrary.requestDetailImage(
                 for: asset,
                 targetSize: targetSize,
@@ -198,11 +224,11 @@ final class CollageEditorModel {
     /// previews, so a photo picked from Recents/Favorites/Screenshots (§6) has
     /// pixels for both the canvas and the export.
     private func ingest(_ ids: [String]) {
-        let known = Set(assets.map(\.localIdentifier))
+        let known = Set(photos.map(\.id))
         let newIDs = ids.filter { !known.contains($0) }
         guard !newIDs.isEmpty else { return }
-        let fetched = PhotoLibraryService.fetchAssets(ids: newIDs)
-        assets.append(contentsOf: fetched)
+        let fetched = PhotoLibraryService.fetchAssets(ids: newIDs).map(PhotoEditOrigin.asset)
+        photos.append(contentsOf: fetched)
         loadPreviews(for: fetched)
     }
 
@@ -629,21 +655,27 @@ final class CollageEditorModel {
         )
 
         var images: [Int: CGImage] = [:]
-        let assetsByID = Dictionary(uniqueKeysWithValues: assets.map { ($0.localIdentifier, $0) })
-        var firstPlacedAsset: PHAsset?
+        let photosByID = Dictionary(photos.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        var firstPlaced: PhotoEditOrigin?
         for (index, cell) in recipe.cells.enumerated() {
             guard let assetID = cell.assetID,
-                  let asset = assetsByID[assetID],
+                  let photo = photosByID[assetID],
                   frames.indices.contains(index) else { continue }
-            if firstPlacedAsset == nil { firstPlacedAsset = asset }
+            if firstPlaced == nil { firstPlaced = photo }
             let frame = frames[index]
             // 1.5× headroom over the placed size keeps the clipped region sharp
             // after the aspect-fill crop without pulling the full original.
             let side = max(frame.width, frame.height) * CGFloat(cell.contentScale) * 1.5
-            let image = await requestExportImage(
-                asset: asset,
-                targetSize: CGSize(width: side, height: side)
-            )
+            let image: UIImage?
+            switch photo {
+            case .serverFile(let file):
+                image = await PhotoOriginFile.loadImage(at: file.primaryURL, maxPixelSize: Int(side.rounded(.up)))
+            case .asset(let asset):
+                image = await requestExportImage(
+                    asset: asset,
+                    targetSize: CGSize(width: side, height: side)
+                )
+            }
             if let cgImage = image?.cgImage {
                 images[index] = cgImage
             }
@@ -655,8 +687,11 @@ final class CollageEditorModel {
         }
 
         var metadata: [CFString: Any]?
-        if options.keepFirstPhotoEXIF, let firstPlacedAsset {
-            metadata = await photoLibrary.imageProperties(for: firstPlacedAsset)
+        if options.keepFirstPhotoEXIF, let firstPlaced {
+            switch firstPlaced {
+            case .asset(let asset): metadata = await photoLibrary.imageProperties(for: asset)
+            case .serverFile(let file): metadata = PhotoOriginFile.properties(at: file.primaryURL)
+            }
         }
 
         let recipe = recipe
@@ -675,6 +710,23 @@ final class CollageEditorModel {
 
         guard let rendered else {
             errorMessage = String(localized: "Couldn't render the collage.")
+            return
+        }
+
+        if let serverWorkDirectory {
+            // A server run (FS-17.06 §5b): the file goes to the export sheet,
+            // nothing to Photos, no Creations row — the recipe lives only in
+            // this session.
+            do {
+                let folder = serverWorkDirectory.appendingPathComponent("Compose-\(UUID().uuidString)", isDirectory: true)
+                try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                let url = folder.appendingPathComponent("collage.\(options.format.fileExtension)")
+                try rendered.write(to: url)
+                firstPlacedFilename = firstPlaced?.filename ?? photos.first?.filename ?? ""
+                composedFile = url
+            } catch {
+                errorMessage = error.localizedDescription
+            }
             return
         }
 

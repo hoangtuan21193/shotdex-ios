@@ -204,6 +204,9 @@ final class ServerExportModel {
     }
 }
 
+/// A sheet item: one export, one sheet.
+extension ServerExportModel: Identifiable {}
+
 /// Logins to the other connections an export writes to, opened on first use
 /// and shared by every photo of the run.
 actor RemoteAccessPool {

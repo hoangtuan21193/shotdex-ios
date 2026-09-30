@@ -7,7 +7,15 @@ import SwiftUI
 /// album and hands the new asset id back so the editor can open its detail.
 struct CollageExportScreen: View {
     @Bindable var model: CollageEditorModel
+    /// Set for a collage of server photos: the button opens the export
+    /// sheet instead of saving to Photos (FS-17.06 §5b).
+    var serverExport: ServerExportContext?
     let onClose: () -> Void
+    /// Every destination of a server run has the collage.
+    var onServerExported: () -> Void = {}
+
+    @Environment(AppDependencies.self) private var dependencies
+    @State private var serverExportModel: ServerExportModel?
 
     @Environment(\.dismiss) private var dismiss
 
@@ -29,6 +37,21 @@ struct CollageExportScreen: View {
         }
         .preferredColorScheme(.dark)
         .task { preview = await model.renderPreview() }
+        .onChange(of: model.composedFile) { _, file in
+            guard let file, let serverExport else { return }
+            serverExportModel = .makeComposed(
+                .init(file: file, tool: .collage, firstFilename: model.firstPlacedFilename),
+                photos: model.photos.compactMap(\.serverFile),
+                context: serverExport,
+                dependencies: dependencies
+            )
+        }
+        .sheet(item: $serverExportModel, onDismiss: { model.composedFile = nil }) { exportModel in
+            ServerExportSheet(model: exportModel) {
+                serverExportModel = nil
+                onServerExported()
+            }
+        }
     }
 
     // MARK: Background + preview
@@ -169,9 +192,11 @@ struct CollageExportScreen: View {
         VStack(spacing: AppTheme.Spacing.sm) {
             // Not a "smart album": in this app that word means a saved rule
             // query. This is a plain album the export files into.
-            Label("Added to your ShotDex Collages album", systemImage: "rectangle.stack.badge.plus")
-                .font(.footnote)
-                .foregroundStyle(EditorTheme.secondaryText)
+            if serverExport == nil {
+                Label("Added to your ShotDex Collages album", systemImage: "rectangle.stack.badge.plus")
+                    .font(.footnote)
+                    .foregroundStyle(EditorTheme.secondaryText)
+            }
 
             Button {
                 Task { await model.export(options) }
@@ -180,7 +205,10 @@ struct CollageExportScreen: View {
                     if model.isExporting {
                         ProgressView().tint(.black)
                     } else {
-                        Text("Save to Photos").font(.system(size: 16, weight: .semibold))
+                        Text(serverExport == nil
+                             ? String(localized: "Save to Photos")
+                             : String(localized: "Export…", comment: "Collage of server photos: choose where the collage goes"))
+                            .font(.system(size: 16, weight: .semibold))
                     }
                 }
                 .foregroundStyle(.black)
@@ -191,7 +219,9 @@ struct CollageExportScreen: View {
             .buttonStyle(.plain)
             .disabled(model.isExporting)
 
-            Text("Opens the new photo when done")
+            Text(serverExport == nil
+                 ? String(localized: "Opens the new photo when done")
+                 : String(localized: "Choose the folder, Photos or Share next.", comment: "Collage of server photos: what Export… opens"))
                 .font(.caption)
                 .foregroundStyle(EditorTheme.dimText)
         }

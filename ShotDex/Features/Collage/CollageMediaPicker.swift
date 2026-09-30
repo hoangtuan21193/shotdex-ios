@@ -17,7 +17,9 @@ struct CollageMediaPicker: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var tab: CollagePickerTab = .recents
-    @State private var assets: [PHAsset] = []
+    /// The tab's photos. Library assets, plus — on Selected — the server
+    /// photos this collage started from (FS-17.06 §5b).
+    @State private var photos: [PhotoEditOrigin] = []
     /// Picked ids, in tap order — the order they fill the slots and the number
     /// shown on each ring.
     @State private var selection: [String] = []
@@ -46,7 +48,7 @@ struct CollageMediaPicker: View {
                     Button {
                         tab = item
                     } label: {
-                        Text(item.title(selectedCount: model.assets.count))
+                        Text(item.title(selectedCount: model.photos.count))
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(tab == item ? .black : .white)
                             .padding(.horizontal, AppTheme.Spacing.md)
@@ -69,14 +71,15 @@ struct CollageMediaPicker: View {
     private var grid: some View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 3) {
-                ForEach(assets, id: \.localIdentifier) { asset in
-                    let index = selection.firstIndex(of: asset.localIdentifier)
+                ForEach(photos) { photo in
+                    let index = selection.firstIndex(of: photo.id)
                     CollagePickerCell(
-                        asset: asset,
+                        photo: photo,
+                        preview: model.image(forAsset: photo.id),
                         photoLibrary: photoLibrary,
                         selectionNumber: index.map { $0 + 1 }
                     )
-                    .onTapGesture { toggle(asset.localIdentifier) }
+                    .onTapGesture { toggle(photo.id) }
                 }
             }
             .padding(.horizontal, 3)
@@ -134,26 +137,26 @@ struct CollageMediaPicker: View {
 
     private func loadAssets() async {
         let tab = tab
-        let fetched: [PHAsset]
+        let fetched: [PhotoEditOrigin]
         switch tab {
         case .selected:
             let ids = orderedSelectedIDs()
-            fetched = ids.compactMap { model.asset(id: $0) }
+            fetched = ids.compactMap { model.photo(id: $0) }
         case .recents:
-            fetched = CollagePickerFetch.recents()
+            fetched = CollagePickerFetch.recents().map(PhotoEditOrigin.asset)
         case .favorites:
-            fetched = CollagePickerFetch.smartAlbum(.smartAlbumFavorites)
+            fetched = CollagePickerFetch.smartAlbum(.smartAlbumFavorites).map(PhotoEditOrigin.asset)
         case .screenshots:
-            fetched = CollagePickerFetch.smartAlbum(.smartAlbumScreenshots)
+            fetched = CollagePickerFetch.smartAlbum(.smartAlbumScreenshots).map(PhotoEditOrigin.asset)
         }
-        assets = fetched
+        photos = fetched
     }
 
     /// The photos already in this collage session: the tray plus the pool, deduped.
     private func orderedSelectedIDs() -> [String] {
         var seen = Set<String>()
         var ids: [String] = []
-        for id in model.unplaced + model.assets.map(\.localIdentifier) where seen.insert(id).inserted {
+        for id in model.unplaced + model.photos.map(\.id) where seen.insert(id).inserted {
             ids.append(id)
         }
         return ids
@@ -207,7 +210,9 @@ enum CollagePickerFetch {
 /// The 3pt gutter squares are below the 44pt minimum, but the whole cell is the
 /// tap target, so the effective area is a full grid third — well over 44.
 private struct CollagePickerCell: View {
-    let asset: PHAsset
+    let photo: PhotoEditOrigin
+    /// The collage's own preview, when it has one — a server photo's.
+    let preview: UIImage?
     let photoLibrary: PhotoLibraryService
     let selectionNumber: Int?
 
@@ -217,7 +222,7 @@ private struct CollagePickerCell: View {
         EditorTheme.control
             .aspectRatio(1, contentMode: .fill)
             .overlay {
-                if let image {
+                if let image = image ?? preview {
                     Image(uiImage: image).resizable().scaledToFill()
                 }
             }
@@ -230,7 +235,7 @@ private struct CollagePickerCell: View {
             .overlay(alignment: .topTrailing) { ring }
             .contentShape(Rectangle())
             .onAppear {
-                guard image == nil else { return }
+                guard image == nil, preview == nil, let asset = photo.asset else { return }
                 _ = photoLibrary.requestThumbnail(
                     for: asset,
                     targetSize: CGSize(width: 300, height: 300),
