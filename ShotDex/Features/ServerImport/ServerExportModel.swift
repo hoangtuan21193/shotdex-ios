@@ -172,6 +172,15 @@ final class ServerExportModel {
               exporter: exporter)
     }
 
+    /// What went wrong at one destination, for its row in the result:
+    /// the first thing that did not arrive there, or nil when everything
+    /// did. A composed export is filed under its own key, not a photo's.
+    func failure(at destination: ServerExportDestination) -> ServerExportOutcome? {
+        let ids = composed == nil ? photos.map(\.id) : [ComposedOutput.id]
+        return ids.compactMap { report.outcome(destination, $0) }
+            .first { if case .done = $0 { false } else { true } }
+    }
+
     var hasPermissionDenied: Bool {
         report.outcomes.values.contains { $0.values.contains(.permissionDenied) }
     }

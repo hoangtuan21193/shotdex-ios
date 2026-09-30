@@ -127,4 +127,33 @@ import Testing
         #expect(model.stage == .done)
         #expect(fixture.client.files["Trip/Trip.jpg"] == Data("collage".utf8))
     }
+
+    /// A refused write on a composed export is shown as refused, not as a
+    /// tick: the result rows read the composed file's outcome, which is not
+    /// filed under any photo's id (found on the 18.6 screenshots, 2026-10-01).
+    @MainActor
+    @Test func composedRefusalShowsOnItsRow() async throws {
+        let fixture = Fixture()
+        defer { try? FileManager.default.removeItem(at: fixture.directory) }
+        let photos = [try fixture.photo("DSCF1000.JPG")]
+        var services = fixture.services()
+        services.originAccess = DirectRemoteAccess(ServerEditExportTests.RefusingClient())
+        let server = FileServer(name: "NAS", transferProtocol: .smb, host: "nas.local", username: "u", share: "photos")
+        let model = ServerExportModel(
+            photos: photos, originServer: server,
+            renderDirectory: fixture.directory.appendingPathComponent("exports"),
+            services: services,
+            composed: .init(file: try composedFile(fixture), tool: .collage, firstFilename: "DSCF1000.JPG")
+        )
+        model.toggle(.originalFolder)
+
+        model.export()
+        for _ in 0..<3000 where model.stage != .done && model.stage != .finishedWithFailures {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+
+        #expect(model.stage == .finishedWithFailures)
+        #expect(model.failure(at: .originalFolder) == .permissionDenied)
+        #expect(model.hasPermissionDenied)
+    }
 }

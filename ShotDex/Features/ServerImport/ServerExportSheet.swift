@@ -340,8 +340,7 @@ struct ServerExportSheet: View {
     }
 
     private func resultRow(_ destination: ServerExportDestination) -> some View {
-        let outcomes = model.photos.compactMap { model.report.outcome(destination, $0.id) }
-        let failure = outcomes.first { if case .done = $0 { false } else { true } }
+        let failure = model.failure(at: destination)
         return HStack(alignment: .firstTextBaseline) {
             Image(systemName: failure == nil ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                 .foregroundStyle(failure == nil ? Color.green : Color.orange)
