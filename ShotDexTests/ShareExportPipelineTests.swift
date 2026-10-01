@@ -248,16 +248,19 @@ struct ShareExportPipelineTests {
         #expect(!body.contains("requestImageDataAndOrientation"))
     }
 
-    /// AC-10: twenty 48 MP photos at No Location — none keeps its GPS, all
-    /// keep the camera, and the peak memory of the gather does not grow with
-    /// the count: twenty cost no more than one, plus at most one file's size.
+    /// AC-10: twenty full-frame photos at No Location — none keeps its GPS,
+    /// all keep the camera, and the peak memory of the gather does not grow
+    /// with the count: twenty cost no more than one, plus at most one file's
+    /// size. 24 MP rather than A's 48: the claim is flatness, measured 48 MP
+    /// gave +127 / +130 MB, and at 48 MP this test's own peak pushed the HDR
+    /// suite's memory ceiling over in a full parallel run.
     @Test func twentyPhotosPeakIsFlat() async throws {
         defer { cleanUp() }
         var options = MetadataFixture.Options()
-        options.width = 8064
-        options.height = 6048
+        options.width = 6000
+        options.height = 4000
         options.xmp = false
-        let big = fixtures.appendingPathComponent("A-48mp.jpg")
+        let big = fixtures.appendingPathComponent("A-24mp.jpg")
         try MetadataFixture.encode(.jpeg, options: options).write(to: big)
         let fileSize = UInt64(try FileManager.default.attributesOfItem(atPath: big.path)[.size] as? Int ?? 0)
         let reader = FakeReader(photos: Dictionary(uniqueKeysWithValues: (0..<20).map { ("\($0)", big) }))

@@ -189,7 +189,7 @@ struct MetadataRewriteProbeTests {
                 options.gainMap = gainMap
                 options.depth = depth
                 if (try? MetadataFixture.encode(type, options: options)) != nil { break }
-                lines.append("heic · fixture with gain map \(gainMap), depth \(depth) | ImageIO refused")
+                lines.append("heic · fixture with gain map \(gainMap), depth \(depth) | not available (ImageIO refused the depth map when this was measured)")
                 options.gainMap = false
                 options.depth = false
             }
@@ -201,6 +201,14 @@ struct MetadataRewriteProbeTests {
         #expect(source.gps && source.cityXMP && source.gpsInXMP, "fixture carries the location twice")
 
         for strategy in Strategy.allCases {
+            // A re-encode of a HEIC runs the simulator's HEVC encoder, which
+            // deadlocks when another encode overlaps it in a full parallel
+            // run (see MetadataFixture.encode). Measured once on 26.5 and
+            // 18.6 (spec §8): pixels change and the gain map goes.
+            if type == .heic && (strategy == .reencodeNoLocation || strategy == .reencodeNoMetadata) {
+                lines.append("heic · \(strategy.rawValue) | not run in the suite (spec §8: pixels change, gain map lost)")
+                continue
+            }
             guard let output = Self.rewrite(original, strategy, type: type, folder: folder) else {
                 lines.append("\(type.preferredFilenameExtension ?? "?") · \(strategy.rawValue) | FAILED")
                 continue

@@ -583,3 +583,11 @@ No acceptance criteria yet — each needs `/spec` before it gets a task.
 - [ ] iCloud originals: **Combine Photos** (Focus Stack, HDR, Panorama) shows "N photos couldn't be downloaded" + Retry but no percent while downloading (`PhotoStackScreen.swift:409`, `PanoramaMergeScreen.swift:229`) _(FS-02.06 §2)_
 - [ ] iCloud originals: **Copy and drag** do not apply the full-pixel rule — a 1536px Optimize Storage proxy can leave as the original (`AssetActionsCoordinator.swift:195-211`, `PhotoDragItem.swift`) _(FS-02.06 §3)_
 - [ ] Unsupported RAW: **Combine (HDR, Focus Stack, Panorama), Edit in ShotDex (EX-05) and server photos (FS-17)** have no unsupported-RAW handling — same message and RAW+JPEG pair rule as the editor, plus Combine asking before it uses an embedded preview _(FS-03.04b §4)_
+
+# FS-08.06 share metadata — seen in passing (2026-10-01)
+
+Outside the plan's acceptance criteria; noticed while screenshotting the plan's screens on iPhone 17 / iOS 26.5.
+
+- [ ] `ShotDex/Features/Editing/CompressionScreen.swift` (size estimate row) — the estimate reads `~~9 KB`: a tilde in the label and another in the formatted value _(seen on the Resize screen)_
+- [ ] `ShotDex/Features/Editing/EditorBatchSaver.swift` (`PasteEditsSheet`) — "Paste onto 1 Photos": the count is interpolated into a plural noun with no singular _(seen on the Paste Edits sheet)_
+- [ ] `ShotDexShare/ShareViewController.swift:113-116` — the extension's temporary copy of each received file is never removed (plan FS-08.06 §2, AC-14 row) _(plan)_

@@ -116,7 +116,29 @@ enum MetadataFixture {
         return url
     }
 
+    /// Photo A's pixels and metadata in `type`. HEIC is never encoded in a
+    /// test: the simulator's HEVC encoder deadlocks when two encodes overlap
+    /// (sampled in a full parallel run: this fixture and the editor's
+    /// preview cache both parked in `VCPHEVC` on a semaphore, and every
+    /// other test starved behind them). The two HEIC shapes the tests use
+    /// were encoded once on the host by this same code and live in
+    /// `Fixtures/Metadata/`.
     static func encode(_ type: UTType, options: Options) throws -> Data {
+        guard type == .heic else { return try freshEncode(type, options: options) }
+        let standard = Options()
+        guard options.width == standard.width, options.height == standard.height, !options.depth else {
+            throw FixtureError.cannotEncode("HEIC \(options.width)x\(options.height) depth \(options.depth): no pregenerated file")
+        }
+        let name = options.gainMap ? "photo-A-gainmap.heic" : "photo-A.heic"
+        return try Data(contentsOf: heicFixtures.appendingPathComponent(name))
+    }
+
+    /// Where the pregenerated HEIC files are, beside this source file.
+    static let heicFixtures = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent()
+        .appendingPathComponent("Fixtures/Metadata")
+
+    static func freshEncode(_ type: UTType, options: Options) throws -> Data {
         let output = NSMutableData()
         guard let destination = CGImageDestinationCreateWithData(output, type.identifier as CFString, 1, nil)
         else { throw FixtureError.cannotEncode(type.identifier) }
