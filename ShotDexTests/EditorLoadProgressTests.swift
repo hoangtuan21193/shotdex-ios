@@ -32,14 +32,17 @@ import Testing
         let run = ServerComposeToolTests.Run()
         defer { try? FileManager.default.removeItem(at: run.directory) }
         let photo = try run.photos(["A.jpg"])[0]
-        let service = PhotoEditingService()
-        let before = Self.sessionFolders()
+        // A root of its own: other suites open sessions in the shared
+        // temporary directory at the same time.
+        let root = run.directory.appendingPathComponent("sessions", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let service = PhotoEditingService(temporaryRoot: root)
         let task = Task { @MainActor in
             withUnsafeCurrentTask { $0?.cancel() }
             return try await service.beginSession(for: .serverFile(photo), isOnCanvas: true)
         }
         await #expect(throws: CancellationError.self) { try await task.value }
-        #expect(Self.sessionFolders() == before)
+        #expect(Self.sessionFolders(in: root).isEmpty)
     }
 
     /// AC-4. The scripted download stops at the next tick once cancelled —
@@ -57,8 +60,8 @@ import Testing
         #expect(await fake.probe(.test("A")) == .inCloud)
     }
 
-    static func sessionFolders() -> Set<String> {
-        let names = (try? FileManager.default.contentsOfDirectory(atPath: FileManager.default.temporaryDirectory.path)) ?? []
+    static func sessionFolders(in root: URL) -> Set<String> {
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: root.path)) ?? []
         return Set(names.filter { $0.hasPrefix("ShotDexPhoto-") })
     }
 }

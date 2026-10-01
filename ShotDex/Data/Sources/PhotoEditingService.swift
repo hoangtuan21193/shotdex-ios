@@ -97,13 +97,18 @@ final class PhotoEditingService {
     /// the simulator shows the editor's download card (FS-02.06). PhotoKit's
     /// fetcher returns at once; nil does the same.
     var originalFetcher: (any OriginalFetching)?
+    /// Where sessions put their `ShotDexPhoto-` folders: the temporary
+    /// directory, or a test's own.
+    private let temporaryRoot: URL
 
     init(
         renderer: PhotoRenderService = PhotoRenderService(),
         indexNewAsset: (@Sendable (String) async -> Void)? = nil,
         publishCreatedAsset: (@MainActor @Sendable (String) -> Void)? = nil,
-        filenameIndexes: PhotoOutputFilenameIndexStore? = nil
+        filenameIndexes: PhotoOutputFilenameIndexStore? = nil,
+        temporaryRoot: URL = FileManager.default.temporaryDirectory
     ) {
+        self.temporaryRoot = temporaryRoot
         self.renderer = renderer
         self.indexNewAsset = indexNewAsset
         self.publishCreatedAsset = publishCreatedAsset
@@ -189,7 +194,7 @@ final class PhotoEditingService {
     /// directory is removed, so a session still in the cache keeps its files.
     private func discard(_ session: PhotoEditingSession) {
         let directory = session.temporaryDirectory
-        guard directory.path.hasPrefix(FileManager.default.temporaryDirectory.path) else { return }
+        guard directory.path.hasPrefix(temporaryRoot.path) else { return }
         try? FileManager.default.removeItem(at: directory)
     }
 
@@ -888,7 +893,7 @@ final class PhotoEditingService {
     }
 
     private func makeTemporaryDirectory() throws -> URL {
-        let url = FileManager.default.temporaryDirectory
+        let url = temporaryRoot
             .appendingPathComponent("ShotDexPhoto-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(
             at: url,
