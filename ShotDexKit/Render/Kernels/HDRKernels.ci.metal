@@ -62,5 +62,31 @@ float4 hdrReject(sample_t frame, sample_t anchor, float gain, float3 noise, floa
     return float4(r, r, r, 1.0f);
 }
 
+// Exposure fusion's say for one virtual exposure, display-encoded: how
+// well exposed each channel is (Mertens' Gaussian around mid-grey). Neither
+// contrast nor saturation — contrast is measured at the pixel and differs
+// between a preview and the full-size save, and saturation is zero on a
+// grey subject. A clipped exposure gets nothing: Mertens' curve barely tells
+// 0.97 from 1.0, and the white of the brighter exposures would wash out a
+// highlight only the darkest one holds. The floor (a half float still
+// represents it) averages the exposures where all of them clip.
+float4 hdrFusionWeight(sample_t image) {
+    float3 v = clamp(image.rgb, 0.0f, 1.0f);
+    float3 d = v - 0.5f;
+    float3 e = exp(-(d * d) / 0.08f);
+    float m = max(v.r, max(v.g, v.b));
+    float w = e.r * e.g * e.b * clamp((0.995f - m) / 0.025f, 0.0f, 1.0f) + 0.00001f;
+    return float4(w, w, w, 1.0f);
+}
+
+// White where even the darkest frame clipped. Nothing says how bright it
+// was, and the extra-dark virtual exposure would otherwise draw a blown sun
+// as grey. `clip` is the radiance at which the darkest frame clips.
+float4 hdrBlownToWhite(sample_t fused, sample_t radiance, float clip) {
+    float m = max(radiance.r, max(radiance.g, radiance.b)) / clip;
+    float w = clamp((m - 0.90f) / 0.08f, 0.0f, 1.0f);
+    return float4(mix(fused.rgb, float3(1.0f), w), 1.0f);
+}
+
 }
 }

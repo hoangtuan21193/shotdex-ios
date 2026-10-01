@@ -254,6 +254,24 @@ struct HDRBracketFixture {
         return rgb
     }
 
+    /// Renders display-encoded (sRGB) RGB floats, top row first — what a
+    /// PSNR of a tone-mapped picture is measured on.
+    func displayPixels(_ image: CIImage) -> [Float] {
+        var rgba = [Float](repeating: 0, count: width * height * 4)
+        rgba.withUnsafeMutableBytes { bytes in
+            Self.context.render(image, toBitmap: bytes.baseAddress!, rowBytes: width * 16,
+                                bounds: CGRect(x: 0, y: 0, width: width, height: height),
+                                format: .RGBAf, colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
+        }
+        return (0..<(width * height)).flatMap { [rgba[$0 * 4], rgba[$0 * 4 + 1], rgba[$0 * 4 + 2]] }
+    }
+
+    /// PSNR in dB of two pictures in 0…1.
+    static func psnr(_ a: [Float], _ b: [Float]) -> Double {
+        let mse = zip(a, b).reduce(0.0) { $0 + pow(Double($1.0) - Double($1.1), 2) } / Double(a.count)
+        return 10 * log10(1 / max(mse, 1e-12))
+    }
+
     static func luma(_ rgb: [Float], _ i: Int) -> Double {
         0.2126 * Double(rgb[i * 3]) + 0.7152 * Double(rgb[i * 3 + 1]) + 0.0722 * Double(rgb[i * 3 + 2])
     }

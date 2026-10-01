@@ -48,7 +48,7 @@ struct KernelGoldenTests {
     /// AC-2 counts forty kernels; every one of them has a case.
     @Test func everyKernelHasACase() {
         let kernels = Set(KernelGoldenCase.all.map(\.kernel))
-        #expect(kernels.count == 57)
+        #expect(kernels.count == 59)
         #expect(Set(KernelGoldenCase.all.map(\.name)).count == KernelGoldenCase.all.count)
     }
 
@@ -304,6 +304,8 @@ extension KernelGoldenCase {
         color("hdrResolve", { HDRMerge.resolveKernel }) { [$0(0), $0(1)] },
         color("hdrAnchor", { HDRMerge.anchorKernel }) { [$0(0), $0(1), Float(0.5), hdrNoise, Float(0)] },
         color("hdrReject", { HDRMerge.rejectKernel }) { [$0(1), $0(0), Float(0.5), hdrNoise, Float(7)] },
+        color("hdrFusionWeight", { HDRMerge.fusionWeightKernel }) { [$0(0)] },
+        color("hdrBlownToWhite", { HDRMerge.blownToWhiteKernel }) { [$0(0), $0(1), Float(0.8)] },
     ]
 
     // MARK: Group 3c — panorama

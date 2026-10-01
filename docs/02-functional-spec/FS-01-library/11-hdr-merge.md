@@ -31,8 +31,8 @@ xuống:
 1. **Câu giải thích** một dòng: *Merges a bracketed series into one photo that keeps the highlights and the shadows.*
 2. **Deghost** — segmented control chữ `Off · Low · Medium · High` (DESIGN §6, cao 32). Dưới là một câu nói mức đang
    chọn làm gì. **Mặc định Medium** (spike §4).
-3. **Strength** — hàng slider tầng D sẵn có, 0–100, **mặc định 60**. Strength 0 là một phơi sáng ở mức của khung
-   tham chiếu.
+3. **Strength** — hàng slider tầng D sẵn có, 0–100, **mặc định 60**. Strength 0 là khung tham chiếu có phục hồi vùng
+   sáng (§5).
 4. Dòng nhắc căn khung như Focus Stack; khi có khung bị loại, loạt không phải bracket hay loạt lẫn RAW thì thay
    bằng dòng báo (§4, §5).
 
@@ -71,10 +71,19 @@ xuống:
 - **Loạt lẫn RAW và không RAW** → dùng **bản đã render cho mọi khung**, và nói ra một dòng: *Some of these photos
   aren't RAW, so all of them are merged from their processed versions.* *Vì* trộn radiance của RAW với JPEG đã
   tone thì lệch sáng giữa các khung (chốt 2026-10-01).
-- **Tone map:** trộn các phơi sáng ảo của radiance theo kim tự tháp Laplace (exposure fusion). Strength co giãn khoảng
-  EV của các phơi sáng ảo; Strength 0 là một phơi sáng ở mức khung tham chiếu.
-- **Số tầng của kim tự tháp theo cỡ ảnh** (tầng thô cỡ 6 px ở cạnh ngắn). *Vì* với số tầng cố định, preview và bản lưu
-  cho hai ảnh khác nhau (spike §6: 18–23 dB).
+- **Tone map:** trộn các phơi sáng ảo của radiance theo kim tự tháp Laplace (exposure fusion). Phơi sáng ảo là
+  Strength × stop của từng khung, **cộng phơi sáng của khung tối nhất ở mọi Strength** (chốt 2026-10-01): vùng sáng
+  chỉ khung tối nhất giữ được luôn lấy lại, Strength chỉ quyết độ nâng vùng tối và độ nén tương phản. Strength 0 là
+  khung tham chiếu có phục hồi vùng sáng. *Vì* không có nó, ở Strength 60 loạt thử ±2 còn 2,9% điểm trắng.
+- Trọng số fusion chỉ là độ phơi sáng tốt (Mertens), **không** tương phản (đo ở mức điểm ảnh, preview và bản lưu
+  khác nhau) và **không** độ bão hoà (bằng 0 trên chủ thể xám); phơi sáng ảo đã cháy có trọng số 0.
+- **Các dải của kim tự tháp theo cỡ ảnh**: 9 dải, σ dải thô nhất = cạnh ngắn / 16, mỗi dải mịn hơn chia đôi. *Vì* với
+  số tầng cố định, preview và bản lưu cho hai ảnh khác nhau (spike §6: 18–23 dB). Cạnh ngắn/16 như bộ trộn panorama:
+  /8 thì dải thô kéo màu trắng của phơi sáng sáng sang vùng sáng cạnh mảng trung tính lớn (0,9% điểm trắng ở loạt thử).
+- **Phơi sáng ảo thêm** ở mức khung tối nhất − 1 stop (khoảng đệm cho fusion vọt quá 1 cạnh vùng sáng); vùng mà cả khung
+  tối nhất cũng cháy thì ép về trắng, không để thành xám. Đo 2026-10-01 trên loạt ±2 cảnh 10 EV: 0 điểm trắng ở
+  Strength 0 / 60 / 100; Strength 0 tối hơn khung tham chiếu ~⅓ stop (trung vị). Giới hạn phơi sáng thêm vào riêng vùng
+  sáng thì lệch còn một nửa nhưng lại 0,2% trắng ở 100 — chọn bản không trắng.
 - **Khử bóng ma:** mỗi điểm ảnh so với khung **neo** — khung tham chiếu nếu nó chưa cháy ở đó, không thì khung ngắn hơn
   gần nhất còn đọc được. Khung lệch khỏi khung neo quá ngưỡng nhiễu của mức đang chọn thì bị bỏ ở đó, có giãn vùng.
   *Vì* so cố định với khung giữa thì bỏ sót vật di chuyển trong vùng trời cháy (spike §4).
@@ -114,8 +123,8 @@ Loạt thử là khung ảo có đáp án như spike §1: cảnh 14 EV dựng t�
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | loạt 5 khung RAW −4…+4 EV, cảnh 14 EV, đứng yên | ghép, deghost Off | sai số radiance ≤ 0,03 stop RMS; ảnh đã tone map ≥ 48 dB so với tone map của cảnh sạch | 🟡 radiance 0,016 stop: `HDRMergeTests.fiveFramesOfAFourteenStopSceneMergeWithinThreeHundredthsOfAStop`; tone map: task 6 |
-| AC-2 | loạt 3 khung −2/0/+2 EV của cảnh 10 EV | ghép | vùng cháy ở EV 0 khôi phục, sai số ≤ 0,05 stop RMS; không còn điểm nào cháy ở ảnh ra | 🟡 vùng cháy 0,011 stop, cả ảnh 0,017: `HDRMergeTests.threeFramesRecoverTheReferencesClippedHighlights`; ảnh ra sau tone map: task 6 |
+| AC-1 | loạt 5 khung RAW −4…+4 EV, cảnh 14 EV, đứng yên | ghép, deghost Off | sai số radiance ≤ 0,03 stop RMS; ảnh đã tone map ≥ 48 dB so với tone map của cảnh sạch | `HDRMergeTests.fiveFramesOfAFourteenStopSceneMergeWithinThreeHundredthsOfAStop` — 0,016 stop; `HDRToneMapTests.theMergedSeriesToneMapsLikeTheCleanScene` — 55,5 dB |
+| AC-2 | loạt 3 khung −2/0/+2 EV của cảnh 10 EV | ghép | vùng cháy ở EV 0 khôi phục, sai số ≤ 0,05 stop RMS; không còn điểm nào cháy ở ảnh ra | `HDRMergeTests.threeFramesRecoverTheReferencesClippedHighlights` — vùng cháy 0,011 stop, cả ảnh 0,017; `HDRToneMapTests.nothingIsLeftClippedAtAnyStrength` — 0 điểm trắng ở Strength 0/60/100 |
 | AC-3 | loạt 5 khung chọn theo thứ tự xáo | ghép | cùng kết quả như thứ tự đúng; khung tham chiếu là khung EV 0 | `HDRBracketOrderTests.shuffledSelectionComesBackDarkestFirstWithTheMiddleAsReference`, `HDRMergeTests.aShuffledSelectionMergesToTheSamePicture` |
 | AC-4 | loạt 5 khung, bước 3 EV, mỗi khung lệch tới ±30 px và xoay tới ±1,5° | căn | sai số căn ≤ 0,5 px ở 1536px cho mọi khung; không khung nào bị loại | `HDRMergeTests.alignsAcrossThreeStops` — 0,08–0,22 px ở 1536 (960 px, −6…+6 EV) |
 | AC-5 | loạt có 1 khung ảnh khác cảnh chen vào | ghép | khung đó bị loại; panel ghi *1 of 6 frames couldn't be lined up and were left out.* | 🟡 loại khung: `HDRMergeTests.leavesOutAFrameFromAnotherScene`; câu trên panel: task 9 |
@@ -126,7 +135,7 @@ Loạt thử là khung ảo có đáp án như spike §1: cảnh 14 EV dựng t�
 | AC-10 | mở màn HDR | nhìn panel | Medium chọn sẵn; Strength 60; không có Auto Tone; câu giải thích hiện | ⚠️ chưa có |
 | AC-11 | 5 khung cùng phơi sáng (lệch < 0,5 EV) | mở màn | vẫn ghép; dòng báo *These photos have about the same exposure…* | 🟡 cờ: `HDRBracketOrderTests.framesAtOneExposureAreFlagged`; dòng báo: task 9 |
 | AC-12 | loạt 3 khung, khung tối nhất vẫn cháy 5% diện tích | mở màn | dòng báo *Some highlights are bright in every frame…* | ⚠️ chưa có |
-| AC-13 | preview 1600px và bản lưu của cùng loạt | thu bản lưu về 1600px rồi so | ≥ 32 dB — số tầng kim tự tháp theo cỡ ảnh | ⚠️ chưa có |
+| AC-13 | preview 1600px và bản lưu của cùng loạt | thu bản lưu về 1600px rồi so | ≥ 32 dB — số tầng kim tự tháp theo cỡ ảnh | `HDRToneMapTests.thePreviewMatchesTheSave` — 35,1 dB (loạt ±2, cảnh 10 EV, 960→256). Fixture 14 EV cạnh cứng: 30,0 dB, nhưng chỉ clamp không tone map đã 30,7 — trần của phép đo, không phải của tone map |
 | AC-14 | 5 khung RAW × 24 MP | Save trên iPhone 12 | footprint đỉnh ≤ 700 MB, ≤ 60 s; như nhau (± 10%) ở 3 khung | ⚠️ chưa có |
 | AC-15 | ảnh HDR đã lưu | xem EXIF trong viewer | máy, ống kính, ngày, vị trí của khung tham chiếu; không thời gian phơi, ISO, khẩu, Exposure Bias | ⚠️ chưa có |
 | AC-16 | 2 khung chỉ có trên iCloud, máy mất mạng | mở màn | *2 photos couldn't be downloaded* + Retry; không ghép thiếu khung mà không báo | ⚠️ chưa có |
@@ -146,3 +155,4 @@ Loạt thử là khung ảo có đáp án như spike §1: cảnh 14 EV dựng t�
 | Tone map cỡ đầy đủ theo lát trên GPU chưa được đo bộ nhớ | dựa trên bộ trộn đa dải của FS-14; AC-13 và AC-14 là cổng |
 | Máy chụp 3 khung ±2 EV không đủ cho cảnh rất ngược sáng | nói ra (AC-12), không giả là đã khôi phục |
 | Không trần số khung; bộ nhớ chỉ đo ở 5 khung | AC-14 đo 3 và 5 khung; `/plan` đo thêm 9 khung trước khi chốt |
+| Fusion để viền tối (giá trị về 0) ở cạnh sáng/tối rất gắt: ~0,4% điểm ảnh trên loạt thử 10 EV cạnh cứng | xem trên loạt chụp thật ở `/verify`; ảnh thật ít cạnh 10 EV liền nhau |

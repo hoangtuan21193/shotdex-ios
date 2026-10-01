@@ -157,6 +157,118 @@ public enum HDRMerge {
         return keeps
     }
 
+    // MARK: Tone map
+
+    /// Bands of the fusion. Fixed in number and sized by the picture, so a
+    /// preview and the full-size save are the same operation at two
+    /// resolutions (spike §6: with a fixed pixel pyramid they differ by
+    /// 18–23 dB).
+    static let fusionBands = 9
+    /// The coarsest band's σ as a fraction of the short side. A sixteenth,
+    /// like the panorama blender: wider and the coarse bands pull bright
+    /// exposures' white across into the highlights next to large mid-tones
+    /// (an eighth left 0.9 % of a ±2 series at white, a sixteenth 0.4 %).
+    static let coarsestFraction = 16.0
+    /// Stops below the darkest frame of the extra virtual exposure. Room for
+    /// the fusion's overshoot next to a highlight the darkest frame only
+    /// just held: with it, nothing of the ±2 test series is left at white at
+    /// any Strength.
+    static let headroom = 1.0
+
+    /// The radiance as a displayable picture, linear, 0…1: exposure fusion
+    /// of virtual exposures at `strength` × each frame's stops, plus the
+    /// darkest frame's exposure less `headroom` at every strength — the
+    /// highlights only it held come back however low Strength is (chosen
+    /// 2026-10-01: at 60 without it, 3 % of a ±2 test series stayed white).
+    /// Strength 0 is the reference with its highlights recovered; 1 is the
+    /// series as shot. What every frame clipped stays white.
+    ///
+    /// The extra exposure is not confined to the highlights: fusion blends
+    /// it in wherever it is well exposed, which darkens the reference ~⅓
+    /// stop at Strength 0 (median, ±2 test series). Confining it to where
+    /// the next exposure nears clipping halves that but leaves 0.2 % of the
+    /// picture white at 100 — measured 2026-10-01, chose the white-free one.
+    public static func toneMapped(_ radiance: CIImage, stops: [Double], strength: Double) -> CIImage? {
+        let extent = radiance.extent
+        guard extent.width > 0, extent.height > 0 else { return nil }
+        let clamp = min(1, max(0, strength))
+        var levels: [Double] = []
+        for ev in stops.map({ $0 * clamp }).sorted() where levels.last.map({ ev - $0 > 0.05 }) ?? true {
+            levels.append(ev)
+        }
+        if levels.isEmpty { levels = [0] }
+        levels.insert(min(0, stops.min() ?? 0) - headroom, at: 0)
+        guard let weightKernel = fusionWeightKernel,
+              let differenceKernel = PanoramaCIBlender.differenceKernel,
+              let bandKernel = PanoramaCIBlender.bandKernel,
+              let bandWeightKernel = PanoramaCIBlender.bandWeightKernel,
+              let resolveKernel = PanoramaCIBlender.resolveKernel,
+              let sumKernel = PanoramaCIBlender.sumKernel,
+              let blownKernel = blownToWhiteKernel
+        else { return nil }
+
+        // Display-encoded virtual exposures and how well exposed each is.
+        let exposures = levels.map { ev in
+            radiance.applyingFilter("CIExposureAdjust", parameters: [kCIInputEVKey: ev])
+                .applyingFilter("CIColorClamp")
+                .applyingFilter("CILinearToSRGBToneCurve")
+        }
+        let weights = exposures.compactMap { weightKernel.apply(extent: extent, arguments: [$0]) }
+        guard weights.count == exposures.count else { return nil }
+
+        // σ of each band, finest first: the coarsest an eighth of the short
+        // side (a pyramid whose top is ~6 px), halving down from there.
+        let short = Double(min(extent.width, extent.height))
+        let sigmas = (0..<fusionBands).map { short / coarsestFraction / pow(2, Double(fusionBands - 1 - $0)) }
+        func blurred(_ image: CIImage, _ sigma: Double) -> CIImage {
+            sigma < 0.3 ? image : image.clampedToExtent().applyingGaussianBlur(sigma: sigma).cropped(to: extent)
+        }
+        let imagePyramids = exposures.map { image in sigmas.map { blurred(image, $0) } }
+        let weightPyramids = weights.map { weight in sigmas.map { blurred(weight, $0) } }
+
+        var total: CIImage?
+        for band in 0...fusionBands {
+            var bandTotal = CIImage(color: .black).cropped(to: extent)
+            var weightTotal = bandTotal
+            for index in exposures.indices {
+                let detail: CIImage
+                let mask: CIImage
+                if band == fusionBands {
+                    // What is left under the coarsest band.
+                    detail = imagePyramids[index][fusionBands - 1]
+                    mask = weightPyramids[index][fusionBands - 1]
+                } else {
+                    let finer = band == 0 ? exposures[index] : imagePyramids[index][band - 1]
+                    guard let difference = differenceKernel.apply(
+                        extent: extent, arguments: [finer, imagePyramids[index][band]]
+                    ) else { return nil }
+                    detail = difference
+                    mask = weightPyramids[index][band]
+                }
+                guard let nextBand = bandKernel.apply(extent: extent, arguments: [bandTotal, detail, mask]),
+                      let nextWeight = bandWeightKernel.apply(extent: extent, arguments: [weightTotal, mask])
+                else { return nil }
+                bandTotal = nextBand
+                weightTotal = nextWeight
+            }
+            guard let resolved = resolveKernel.apply(extent: extent, arguments: [bandTotal, weightTotal])
+            else { return nil }
+            if let running = total {
+                guard let sum = sumKernel.apply(extent: extent, arguments: [running, resolved]) else { return nil }
+                total = sum
+            } else {
+                total = resolved
+            }
+        }
+        guard let total, let white = blownKernel.apply(
+            extent: extent, arguments: [total, radiance, Float(pow(2, -(stops.min() ?? 0)))]
+        ) else { return nil }
+        return white.applyingFilter("CIColorClamp").applyingFilter("CISRGBToneCurveToLinear")
+    }
+
+    static let fusionWeightKernel = CoreImageKernelLibrary.kit.colorKernel(named: "hdrFusionWeight")
+    static let blownToWhiteKernel = CoreImageKernelLibrary.kit.colorKernel(named: "hdrBlownToWhite")
+
     /// Per pixel, the frame nearest the reference from below that is still
     /// readable there, as radiance with its noise σ in alpha. The darkest
     /// frame is the floor: where it clips too, nothing reads better.
