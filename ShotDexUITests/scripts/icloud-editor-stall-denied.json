@@ -1,0 +1,24 @@
+{
+  "steps": [
+    { "action": "launch", "arguments": ["-ShotDexFakeICloud", "cloud=all,stall"] },
+    { "action": "wait", "seconds": 6 },
+    { "action": "tap", "x": 0.165, "y": 0.30 },
+    { "action": "wait", "seconds": 1.5 },
+    { "action": "tap", "label": "Edit", "type": "button" },
+    { "action": "wait", "seconds": 17 },
+    { "action": "tap", "label": "Close", "type": "button" },
+    { "action": "wait", "seconds": 1.5 },
+    { "action": "screenshot", "name": "01-closed-from-stall" },
+    { "action": "wait", "seconds": 5 },
+    { "action": "launch", "arguments": ["-ShotDexFakeICloud", "cloud=all,seconds=4,denied"] },
+    { "action": "wait", "seconds": 6 },
+    { "action": "tap", "x": 0.165, "y": 0.30 },
+    { "action": "wait", "seconds": 1.5 },
+    { "action": "tap", "label": "Edit", "type": "button" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "tap", "label": "Cancel", "type": "button" },
+    { "action": "wait", "seconds": 1.5 },
+    { "action": "screenshot", "name": "02-closed-from-alert" },
+    { "action": "wait", "seconds": 5 }
+  ]
+}
