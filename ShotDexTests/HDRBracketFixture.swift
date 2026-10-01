@@ -152,6 +152,68 @@ struct HDRBracketFixture {
         return Series(scene: truth, frames: frames, stops: stops, reference: stops.firstIndex(of: 0) ?? stops.count / 2)
     }
 
+    /// A series where something moved: frame `k` sees `sceneFor(k)`, and the
+    /// truth is what frame `truth` saw.
+    func series(stops: [Double], truth: Int, sceneFor: (Int) -> [Float]) -> Series {
+        let frames = stops.enumerated().map { frame(of: sceneFor($0), stops: $1, seed: UInt64($0 + 1)) }
+        return Series(scene: sceneFor(truth), frames: frames, stops: stops,
+                      reference: stops.firstIndex(of: 0) ?? stops.count / 2)
+    }
+
+    /// A square of cells `cell` pixels wide, each at its own log₂ level.
+    func texture(size: Int, cell: Int, levels: ClosedRange<Double>, seed textureSeed: UInt64) -> [Float] {
+        var generator = SplitMix64(seed: textureSeed)
+        let cells = (size + cell - 1) / cell
+        let values = (0..<(cells * cells)).map { _ in
+            Float(pow(2, levels.lowerBound + Double(generator.next() % 10_000) / 10_000 * (levels.upperBound - levels.lowerBound)))
+        }
+        var out = [Float](repeating: 0, count: size * size)
+        for y in 0..<size { for x in 0..<size { out[y * size + x] = values[(y / cell) * cells + x / cell] } }
+        return out
+    }
+
+    /// `patch` (grey, `size` square) pasted with its top-left at `origin`,
+    /// which may be fractional: sampled bilinearly, so a sub-pixel move is a
+    /// real one.
+    func pasting(_ patch: [Float], size: Int, into scene: [Float], at origin: CGPoint) -> [Float] {
+        var out = scene
+        let x0 = Int(floor(origin.x)), y0 = Int(floor(origin.y))
+        for y in max(0, y0)..<min(height, y0 + size + 1) { for x in max(0, x0)..<min(width, x0 + size + 1) {
+            let px = Double(x) - Double(origin.x), py = Double(y) - Double(origin.y)
+            guard px >= 0, py >= 0, px <= Double(size - 1), py <= Double(size - 1) else { continue }
+            let ix = min(size - 2, Int(px)), iy = min(size - 2, Int(py))
+            let tx = Float(px - Double(ix)), ty = Float(py - Double(iy))
+            let v = (patch[iy * size + ix] * (1 - tx) + patch[iy * size + ix + 1] * tx) * (1 - ty)
+                + (patch[(iy + 1) * size + ix] * (1 - tx) + patch[(iy + 1) * size + ix + 1] * tx) * ty
+            for c in 0..<3 { out[(y * width + x) * 3 + c] = v }
+        } }
+        return out
+    }
+
+    /// `rect` filled flat at 2^`level`; `disc` the same inside a circle.
+    func filling(_ scene: [Float], rect: CGRect, level: Double) -> [Float] {
+        var out = scene
+        let v = Float(pow(2, level))
+        for y in max(0, Int(rect.minY))..<min(height, Int(rect.maxY)) {
+            for x in max(0, Int(rect.minX))..<min(width, Int(rect.maxX)) {
+                for c in 0..<3 { out[(y * width + x) * 3 + c] = v }
+            }
+        }
+        return out
+    }
+
+    func disc(_ scene: [Float], centre: CGPoint, radius: Double, level: Double) -> [Float] {
+        var out = scene
+        let v = Float(pow(2, level))
+        for y in max(0, Int(centre.y - radius))..<min(height, Int(centre.y + radius) + 1) {
+            for x in max(0, Int(centre.x - radius))..<min(width, Int(centre.x + radius) + 1)
+            where hypot(Double(x) + 0.5 - centre.x, Double(y) + 0.5 - centre.y) <= radius {
+                for c in 0..<3 { out[(y * width + x) * 3 + c] = v }
+            }
+        }
+        return out
+    }
+
     /// A shift of up to `shift` pixels and a turn of up to `degrees` about
     /// the centre, seeded per frame.
     func handheldMap(frame: Int, shift: Double, degrees: Double) -> CGAffineTransform {

@@ -119,9 +119,9 @@ Loạt thử là khung ảo có đáp án như spike §1: cảnh 14 EV dựng t�
 | AC-3 | loạt 5 khung chọn theo thứ tự xáo | ghép | cùng kết quả như thứ tự đúng; khung tham chiếu là khung EV 0 | `HDRBracketOrderTests.shuffledSelectionComesBackDarkestFirstWithTheMiddleAsReference`, `HDRMergeTests.aShuffledSelectionMergesToTheSamePicture` |
 | AC-4 | loạt 5 khung, bước 3 EV, mỗi khung lệch tới ±30 px và xoay tới ±1,5° | căn | sai số căn ≤ 0,5 px ở 1536px cho mọi khung; không khung nào bị loại | `HDRMergeTests.alignsAcrossThreeStops` — 0,08–0,22 px ở 1536 (960 px, −6…+6 EV) |
 | AC-5 | loạt có 1 khung ảnh khác cảnh chen vào | ghép | khung đó bị loại; panel ghi *1 of 6 frames couldn't be lined up and were left out.* | 🟡 loại khung: `HDRMergeTests.leavesOutAFrameFromAnotherScene`; câu trên panel: task 9 |
-| AC-6 | một mảng kết cấu dịch 3 px mỗi khung, khung tham chiếu đọc được ở đó | ghép ở Off / Low / Medium / High | sai số ở vùng động ≥ 0,5 / ≤ 0,25 / ≤ 0,1 / ≤ 0,1 stop | ⚠️ chưa có |
-| AC-7 | loạt đứng yên, không gì di chuyển | ghép ở Medium; rồi High | ≤ 0,5% điểm ảnh tĩnh bị bỏ nhầm ở Medium; ≤ 3% ở High | ⚠️ chưa có |
-| AC-8 | vật sáng di chuyển 70 px/khung trong vùng trời cháy ở EV 0 | ghép ở Medium | chỉ còn **một** bản của vật (lấy từ khung neo), không bóng chồng | ⚠️ chưa có |
+| AC-6 | một mảng kết cấu dịch 3 px mỗi khung, khung tham chiếu đọc được ở đó | ghép ở Off / Low / Medium / High | sai số ở vùng động ≥ 0,5 / ≤ 0,25 / ≤ 0,1 / ≤ 0,1 stop | `HDRDeghostTests.aSwayingPatchIsCaughtFromMediumUp` — 0,61 / 0,050 / 0,027 / 0,021 |
+| AC-7 | loạt đứng yên, không gì di chuyển | ghép ở Medium; rồi High | ≤ 0,5% điểm ảnh tĩnh bị bỏ nhầm ở Medium; ≤ 3% ở High | `HDRDeghostTests.aStillSeriesKeepsAlmostEveryPixel` — 0% / 0% trên nhiễu đúng mô hình; nhiễu thật chưa đo (§9) |
+| AC-8 | vật sáng di chuyển 70 px/khung trong vùng trời cháy ở EV 0 | ghép ở Medium | chỉ còn **một** bản của vật (lấy từ khung neo), không bóng chồng | `HDRDeghostTests.somethingMovingThroughClippedSkyComesOutOnce` — dọc vệt: Off 0,11, Medium 0,007 stop |
 | AC-9 | màn HDR đang mở | đổi Deghost, rồi Strength | preview dựng lại, không nạp lại và không căn lại khung (đếm số lần đọc khung) | ⚠️ chưa có |
 | AC-10 | mở màn HDR | nhìn panel | Medium chọn sẵn; Strength 60; không có Auto Tone; câu giải thích hiện | ⚠️ chưa có |
 | AC-11 | 5 khung cùng phơi sáng (lệch < 0,5 EV) | mở màn | vẫn ghép; dòng báo *These photos have about the same exposure…* | 🟡 cờ: `HDRBracketOrderTests.framesAtOneExposureAreFlagged`; dòng báo: task 9 |
