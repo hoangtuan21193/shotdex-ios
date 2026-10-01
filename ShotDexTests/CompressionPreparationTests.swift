@@ -58,6 +58,27 @@ import Testing
         #expect(!FileManager.default.fileExists(atPath: preparation.folder.path))
     }
 
+    /// AC-9. Five photos, two only in iCloud and not coming down, Delete
+    /// Originals on, Continue with 3: three copies, exactly those three
+    /// originals deleted; the two stay, with no copy, named in the summary.
+    @Test func continueWithThreeDeletesOnlyThree() async throws {
+        let (controller, library, _) = resize(5, script: "cloud=2,seconds=0.2,fail=1+2")
+        controller.startExport()
+        try await until { controller.preparation?.state.phase == .failed }
+        let failed = Set(try #require(controller.preparation).state.downloads.filter(\.hasFailed).map(\.id))
+        #expect(failed.count == 2)
+        #expect(controller.preparation?.state.continueCount == 3)
+        controller.preparation?.choose(.continueWithout)
+        try await until { controller.didFinish }
+        let kept = Set(controller.photos.map(\.id)).subtracting(failed)
+        #expect(library.created.count == 3)
+        #expect(Set(library.deleted) == kept)
+        #expect(Set(library.deleted).isDisjoint(with: failed))
+        #expect(Set(library.created) == Set(kept.map { "copy-\($0)" }))
+        #expect(controller.failures.count == 2)
+        #expect(controller.deletedOriginalCount == 3)
+    }
+
     /// The prepared original is what the copy is made from: nothing is
     /// fetched again mid-batch.
     @Test func copiesReadThePreparedOriginals() async throws {
