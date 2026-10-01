@@ -1,4 +1,5 @@
 import Foundation
+import ImageIO
 import ShotDexKit
 import UniformTypeIdentifiers
 
@@ -75,6 +76,8 @@ struct ShareExportResult: Sendable, Equatable {
     var skipped: [String] = []
     /// RAW files handed over as they are because the user said so.
     var rawSharedAsIs = 0
+    /// HEIC photos handed over as JPEG — No Metadata (spec §3).
+    var heicSentAsJPEG = 0
 }
 
 /// Gathers a share one item at a time into a scratch folder of its own
@@ -141,8 +144,14 @@ struct ShareExportPipeline: Sendable {
             let original = slot.appendingPathComponent("original-" + source.filename)
             defer { try? FileManager.default.removeItem(at: original) }
             try await reader.writePhoto(source, to: original)
-            try MetadataRewriter.rewrite(original, to: file, level: effectiveLevel(for: source, file: original))
-            return file
+            let effective = effectiveLevel(for: source, file: original)
+            // A HEIC at No Metadata leaves as a JPEG, under the photo's name.
+            let type = CGImageSourceCreateWithURL(original as CFURL, nil).flatMap(CGImageSourceGetType) as String?
+            let destination = type.map { MetadataRewriter.convertsToJPEG($0, at: effective) } == true
+                ? slot.appendingPathComponent((source.filename as NSString).deletingPathExtension + ".jpg")
+                : file
+            try MetadataRewriter.rewrite(original, to: destination, level: effective)
+            return destination
         }
     }
 
@@ -171,7 +180,14 @@ struct ShareExportPipeline: Sendable {
         var result = ShareExportResult()
         for (index, source) in sources.enumerated() {
             do {
-                result.files.append(try await export(source, index: index))
+                let file = try await export(source, index: index)
+                result.files.append(file)
+                if source.kind == .photo, file.pathExtension == "jpg",
+                   (source.filename as NSString).pathExtension.lowercased() != "jpg",
+                   let type = UTType(filenameExtension: (source.filename as NSString).pathExtension),
+                   MetadataRewriter.heifTypes.contains(type.identifier) {
+                    result.heicSentAsJPEG += 1
+                }
                 if source.kind == .raw, level != .all, rawChoice == .shareRAWWithLocation {
                     result.rawSharedAsIs += 1
                 }
@@ -226,7 +242,9 @@ struct ShareDragPlan: Equatable, Sendable {
             type = .jpeg
             rawChoice = .shareAsJPEG
         } else {
-            type = source.uniformType.flatMap(UTType.init) ?? (source.kind == .video ? .quickTimeMovie : .jpeg)
+            let shared = source.uniformType.flatMap(UTType.init) ?? (source.kind == .video ? .quickTimeMovie : .jpeg)
+            // A HEIC at No Metadata is written as a JPEG (spec §3).
+            type = MetadataRewriter.convertsToJPEG(shared.identifier, at: level) ? .jpeg : shared
             rawChoice = .skip
         }
     }

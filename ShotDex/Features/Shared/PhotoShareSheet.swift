@@ -30,11 +30,14 @@ enum PhotoShareSheet {
 
         /// RAW files in `items` that went as they are, at the user's word.
         var rawSharedAsIs = 0
+        /// HEIC photos in `items` written as JPEG (No Metadata).
+        var heicSentAsJPEG = 0
 
         var plan: ShareBatchPlan {
             ShareBatchPlan(
                 level: level, photoCount: photoCount, videoCount: items.count - photoCount,
-                rawSharedAsIsCount: rawSharedAsIs
+                rawSharedAsIsCount: rawSharedAsIs,
+                heicAsJPEGCount: heicSentAsJPEG
             )
         }
 
@@ -96,6 +99,7 @@ enum PhotoShareSheet {
             items: result.files, failed: result.failed, unread: result.unread, folder: folder, level: level,
             regather: { await gather(sources: sources, reader: reader, level: $0, onClose: onClose) },
             rawSharedAsIs: result.rawSharedAsIs,
+            heicSentAsJPEG: result.heicSentAsJPEG,
             onClose: onClose
         )
     }
@@ -177,7 +181,7 @@ enum PhotoShareSheet {
             let title = items.count == 1 ? "\(name) · \(plan.subtitle.text)" : plan.subtitle.text
             // One line each: the level on the title, the video note on the
             // line below it, where the file name would be.
-            let note: String? = switch plan.keepsNote {
+            let keeps: String? = switch plan.keepsNote {
             case .videos: String(localized: "Videos keep their metadata")
             case .raw: plan.level == .noLocation
                 ? String(localized: "RAW files keep their location")
@@ -185,6 +189,9 @@ enum PhotoShareSheet {
             case .videosAndRAW: String(localized: "Videos and RAW files keep their metadata")
             case nil: nil
             }
+            let converted = plan.notesHEICAsJPEG ? String(localized: "HEIC sent as JPEG") : nil
+            let notes = [keeps, converted].compactMap { $0 }
+            let note: String? = notes.isEmpty ? nil : notes.joined(separator: " · ")
             let isPhoto = prepared.folder.map { first.path.hasPrefix($0.path) } ?? false
             items[0] = ShareHeaderItem(file: first, title: title, note: note, showsImage: isPhoto)
         }

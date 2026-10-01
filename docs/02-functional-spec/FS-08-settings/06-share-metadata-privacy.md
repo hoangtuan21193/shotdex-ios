@@ -44,6 +44,10 @@ khác (iPad, Split View).
   Pixel sau khi giải mã phải trùng bản gốc (người dùng chốt 2026-10-01: không có đường mã hoá lại).
   - **PNG và TIFF** được **ghi lại không mất dữ liệu** (giải mã rồi mã hoá lại cùng định dạng), vì cách chép giữ
     nguyên GPS của PNG và thẻ máy của TIFF; pixel vẫn trùng từng byte, test so pixel (người dùng chốt 2026-10-01).
+  - **HEIC ở No Metadata đi dưới dạng JPEG chất lượng tối đa** (người dùng chốt 2026-10-01): không cách chép nào xoá
+    được ngày chụp, City và Rating của HEIC (§8). JPEG giữ hướng xoay, color profile, Artist, Copyright, cùng tên ảnh
+    với đuôi `.jpg`; gain map HDR không theo. Không bao giờ âm thầm: dòng thứ hai của đầu share sheet ghi *"HEIC sent
+    as JPEG"*, và kéo thả ở mức này đăng ký kiểu JPEG.
 - **Asset đã bị xoá vị trí trong app mà file vẫn mang GPS**: mọi mức đều bỏ GPS của file (ở All Metadata file
   được ghi lại để bỏ đúng nhóm vị trí, mọi trường khác giữ). Vì người dùng đã xoá vị trí thì không được để nó rời
   máy. Asset **đổi** sang vị trí khác thì chưa đổi luật: All Metadata vẫn giao nguyên byte.
@@ -72,8 +76,12 @@ khác (iPad, Split View).
   - Chạm Share vẫn là một chạm và chạy theo mặc định Settings.
   - Share sheet có **hai dòng hành động** của app, cho hai mức khác mặc định: *Share With Location* (về All
     Metadata), *Share Without Location*, *Share Without Metadata* — mặc định là mức nào thì dòng đó vắng.
-  - Phụ đề ở đầu share sheet nói mức đang áp: *"All metadata"* · *"Location removed"* · *"Metadata removed"*.
-    Phụ đề đi qua thông tin xem trước của mục share (tiêu đề + phụ đề), không phải control.
+  - Đầu share sheet nói mức đang áp: *"All metadata"* · *"Location removed"* · *"Metadata removed"*. **Mức nằm ở
+    tiêu đề** — *"PhotoA · Location removed"* khi share một ảnh, chỉ tên mức khi nhiều ảnh — vì `LPLinkMetadata`
+    không có trường phụ đề công khai (người dùng chốt 2026-10-01). **Dòng thứ hai** (chỗ tên file) dành cho ghi chú,
+    nối bằng " · ": *"Videos keep their metadata"*, *"RAW files keep their location"* (hoặc *metadata*), *"Videos
+    and RAW files keep their metadata"*, *"HEIC sent as JPEG"*; không có ghi chú thì là tên file. Đây là thông tin
+    xem trước của mục share, không phải control.
   - Chạm một dòng: share sheet đóng rồi mở lại ngay ở mức đó; phụ đề đổi theo. Chưa tải hay ghi lại gì cho tới
     khi người dùng chọn đích ([FS-02.06 §9](../FS-02-photo-detail/06-icloud-originals.md)).
 - **Save Changes không bao giờ đổi ngày hay vị trí của asset.** Code 2026-10-01 xoá cả hai khi Include Metadata
@@ -102,7 +110,10 @@ khác (iPad, Split View).
 - **Huỷ lúc đang gom** bằng Cancel của modal (hôm nay nút Share chỉ thành vòng quay, không có Cancel). Huỷ thì
   đích không nhận file nào.
 - Ảnh không phải RAW mà ghi lại lỗi (file hỏng) **không bao giờ** đi nguyên bản: nó bị bỏ khỏi mẻ và nêu tên trong
-  modal, cùng chỗ với ảnh tải hỏng.
+  modal, cùng chỗ với ảnh tải hỏng. **Tới khi modal của FS-02.06 có**, ảnh bỏ khỏi mẻ được nêu tên trong một alert
+  trước khi share sheet mở (người dùng chốt 2026-10-01): *"Not Everything Can Be Shared"* — *"These couldn't be
+  prepared and were left out: IMG_0001.HEIC, …"* — OK rồi share sheet mở với phần còn lại; không còn gì thì tiêu đề
+  là *"Unable to Share"* và không mở share sheet.
 - **Video share nguyên bản** ở mọi mức. Mẻ có video và mức không phải All Metadata thì phụ đề share sheet ghi
   thêm *"Videos keep their metadata"*.
 - **Kéo ảnh sang app khác** gom file theo mặc định Settings, cùng luật ghi lại như Share. Ảnh đã chỉnh trong app
@@ -129,7 +140,7 @@ khác (iPad, Split View).
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
 | AC-1 | Settings = No Location; ảnh A trong lưới | Share → Save to Files | file không có nhóm GPS; còn Make `SONY`, Model `ILCE-7M4`, ISO 400, ngày 2026-09-20 17:05; pixel giải mã trùng bản gốc | `ShareExportPipelineTests.noLocationFromTheGrid` (pipeline của nút Share ở lưới, chọn, album, smart album, On This Day), `MetadataRewriterTests.noLocationRemovesThePlaceOnly`, `.noLocationKeepsEveryPixel` (JPEG/HEIC/TIFF/PNG), `.noLocationKeepsTheGainMap`, `.failedRewriteNeverReturnsOriginal`; picker Settings iPhone 17 26.5 (2026-10-01). Còn thiếu: depth của ảnh Portrait (§8) và Save to Files trên máy — lúc `/verify` |
-| AC-2 | Settings = All Metadata; ảnh A | Share, rồi chạm dòng *Share Without Metadata* trong share sheet | file không có GPS, Make, Model, ISO, ngày chụp, MakerNote; còn hướng xoay, color profile, Artist `Nguyen An`, Copyright `© 2026 Nguyen An`; Settings vẫn All Metadata, lần share sau mở ở All | một phần: file JPEG `MetadataRewriterTests.noMetadataJPEG`, PNG/TIFF `.losslessFormatsAreWrittenAgainPixelForPixel` (không GPS/Make/Model/ISO/ngày/lens/MakerNote/City/Rating; còn orientation 6, P3, Artist, Copyright, pixel trùng). HEIC ⚠️ chờ người dùng chọn cách (§8) — tới lúc đó HEIC ở No Metadata bị bỏ khỏi mẻ và nêu tên (`.noMetadataHEICIsRefusedUntilDecided`); dòng *Share Without Metadata* + Settings không đổi ⚠️ chưa có (task 12–13) |
+| AC-2 | Settings = All Metadata; ảnh A | Share, rồi chạm dòng *Share Without Metadata* trong share sheet | file không có GPS, Make, Model, ISO, ngày chụp, MakerNote; còn hướng xoay, color profile, Artist `Nguyen An`, Copyright `© 2026 Nguyen An`; Settings vẫn All Metadata, lần share sau mở ở All | file: JPEG `MetadataRewriterTests.noMetadataJPEG`, PNG/TIFF `.losslessFormatsAreWrittenAgainPixelForPixel` (không GPS/Make/Model/ISO/ngày/lens/MakerNote/City/Rating; còn orientation 6, P3, Artist, Copyright, pixel trùng), HEIC → JPEG `.noMetadataHEICBecomesJPEG`, `ShareExportPipelineTests.heicAtNoMetadataLeavesAsJPEG`, `ShareBatchPlanTests.heicAsJPEGIsSaid`; dòng *Share Without Metadata* và Settings không đổi: `ShareBatchPlanTests.rowsAndSubtitle`, `.oneShotOverrideKeepsSettings` + ảnh share sheet (AC-7, AC-20). Dòng *HEIC sent as JPEG* trên máy: lúc `/verify` |
 | AC-3 | Settings = All Metadata; ảnh A | Share; rồi Remove Location cho A trong app và Share lại | lần 1: SHA-256 file nhận được bằng SHA-256 file gốc của asset. Lần 2: file không có nhóm GPS, còn Make `SONY`, ISO 400, ngày 2026-09-20 17:05 | lần 1 `ShareExportPipelineTests.allMetadataIsByteIdentical`, `.noLocationAnywhereStaysByteIdentical`; lần 2 `ShareExportPipelineTests.removedLocationDropsFileGPSAtAll` (vị trí asset rỗng → bỏ GPS của file, pixel trùng). Remove Location trên máy rồi Save to Files: lúc `/verify` |
 | AC-4 | JPEG xuất từ Lightroom: GPS trong cả EXIF lẫn XMP, IPTC City `Ho Chi Minh City`, XMP Rating 4 | Share, No Location | không còn nhóm GPS, không còn toạ độ trong XMP, không còn City; Rating 4 vẫn còn | `MetadataRewriterTests.lightroomXMP` (JPEG một gói XMP kiểu Lightroom + IIM: không còn GPS ở EXIF/XMP, City/State/Country/Location/LocationCreated, không còn chuỗi địa danh nào trong byte của file; Rating 4, Make, pixel giữ) |
 | AC-5 | Settings = No Location; ảnh A mở trong Photo Detail | chạm Share | file không có GPS, giống hệt share từ lưới | `ShareExportPipelineTests.detailMatchesGrid` (viewer đi qua `PhotoShareSheet.gather` của lưới; ảnh chưa tải tách khỏi ảnh ghi lại lỗi); iPhone 17 26.5 (2026-10-01): ảnh A (HEIC sinh trên máy, có GPS + IPTC City) → viewer → Share → Save to Files, file trong `File Provider Storage` của sim đọc bằng ImageIO: không GPS, không City, còn SONY / ILCE-7M4 / ISO 400 / ngày / Artist; thư mục `ShotDexShare-` đã xoá khi sheet đóng. Ảnh chỉ trên iCloud vẫn *Unable to Share* tới FS-02.06 task 14 |
@@ -151,7 +162,7 @@ khác (iPad, Split View).
 | AC-21 | iPad, Split View với Files; Settings = No Location; một ARW có GPS | kéo ARW sang Files | Files nhận một JPEG đủ cỡ, không GPS, còn Make `SONY`; không có alert | một phần: `ShareExportPipelineTests.dragRAWBecomesJPEG` (cần thư mục mẫu RAW: DNG DJI có GPS → kéo ở No Location đăng ký `public.jpeg`, JPEG đủ cỡ 4024 px, không GPS, còn Make; ở All Metadata đăng ký kiểu RAW). Kéo thật sang Files ở Split View iPad: ⚠️ lúc `/verify` |
 | AC-22 | ảnh server `DSCF1000.JPG` (của AC-13) đã chỉnh trong editor; Settings = No Location | Export…, chọn đích **Share…** ([FS-17.06 §6](../FS-17-import-from-server/06-edit-and-export.md)), rồi Save to Files | file nhận được là bản render không có nhóm GPS, còn Make/Model; share sheet có hai dòng của app như AC-7; Settings vẫn No Location | `ServerExportShareTests.noLocationRenderHasNoGPS` (bản render mang GPS + SONY/ILCE-7M4 → qua pipeline ở No Location: không GPS, còn Make/Model), `.theSheetSharesThroughThePipeline` (đích Share của sheet xuất đi qua `PhotoShareSheet.gather` ở mức Settings → cùng đầu sheet, hai dòng, `oneShotOverrideKeepsSettings`). Video do công cụ làm đi nguyên. Chạy với NAS thật trên máy: lúc `/verify` |
 
-**Chưa chứng minh được (2026-10-01):** AC-11 (chờ modal Cancel của FS-02.06 task 10) · AC-14 (đo extension, dời sang `/verify`) · AC-2 phần HEIC (chờ người dùng chọn cách, §8) · AC-1 depth của ảnh Portrait · AC-19, AC-21 kéo thật ở Split View iPad · Duo ngoài 382pt cho Resize. Các AC còn lại có test, phần lớn có thêm bằng chứng trên iPhone 17 26.5.
+**Chưa chứng minh được (2026-10-01):** AC-11 (chờ modal Cancel của FS-02.06 task 10) · AC-14 (đo extension, dời sang `/verify`) · AC-1 depth của ảnh Portrait · AC-19, AC-21 kéo thật ở Split View iPad · Duo ngoài 382pt cho Resize. Các AC còn lại có test, phần lớn có thêm bằng chứng trên iPhone 17 26.5.
 
 ## 8. Rủi ro đã biết
 
@@ -159,7 +170,7 @@ khác (iPad, Split View).
 |---|---|
 | ghi lại HEIC có thể làm mất gain map HDR và depth của ảnh Portrait: test hiện có chỉ kiểm kích thước | **đo 2026-10-01** (`MetadataRewriteProbeTests`, iOS 26.5 + 18.6, kết quả như nhau): chép không giải mã giữ gain map HDR; mã hoá lại thì mất. Depth **chưa đo được** — ImageIO trên simulator từ chối ghi bản đồ disparity tự dựng; cần một ảnh Portrait thật không có người lúc `/verify` |
 | vị trí sửa bằng Adjust Location nằm ở asset, còn file vẫn mang GPS cũ. All Metadata có thể giao toạ độ người dùng tưởng đã xoá | asset không còn vị trí → bỏ GPS của file ở mọi mức (§3, AC-3). Asset đổi sang vị trí khác: chưa có luật, All vẫn nguyên byte |
-| ghi lại HEIC ở No Metadata không giải mã có thể để sót ngày chụp và IPTC City/Rating (đo macOS 27.0) | **đo 2026-10-01 trên iOS 26.5 + 18.6: còn sót.** Cả bốn cách chép không giải mã (bộ mới chỉ có trường giữ lại, có/không `ShouldExcludeXMP`; bộ gốc gỡ hết trường khác; như trên mà giữ trường cấu trúc) đều để lại ngày chụp, City (IPTC và XMP), địa điểm XMP và Rating; gỡ được GPS, Make, ISO. Chỉ mã hoá lại mới sạch, mà mã hoá lại thì pixel đổi và mất gain map. Chờ người dùng chọn cách (plan task 11) — tới lúc đó HEIC ở No Metadata ghi lại không đạt kiểm tra sau ghi, nên bị bỏ khỏi mẻ và nêu tên, không bao giờ đi nguyên bản |
+| ghi lại HEIC ở No Metadata không giải mã có thể để sót ngày chụp và IPTC City/Rating (đo macOS 27.0) | **đo 2026-10-01 trên iOS 26.5 + 18.6: còn sót.** Cả bốn cách chép không giải mã (bộ mới chỉ có trường giữ lại, có/không `ShouldExcludeXMP`; bộ gốc gỡ hết trường khác; như trên mà giữ trường cấu trúc) đều để lại ngày chụp, City (IPTC và XMP), địa điểm XMP và Rating; gỡ được GPS, Make, ISO. Chỉ mã hoá lại mới sạch, mà mã hoá lại thì pixel đổi và mất gain map. **Người dùng chốt 2026-10-01: HEIC ở No Metadata đi dưới dạng JPEG chất lượng tối đa** (§3), đầu share sheet ghi *"HEIC sent as JPEG"* |
 | định dạng không nén mất dữ liệu (PNG, TIFF) | **đo 2026-10-01 (iOS 26.5 + 18.6):** PNG chép không giải mã **giữ nguyên GPS** ở cả No Location lẫn No Metadata; TIFF chép thì No Location sạch, No Metadata còn Make/ISO/MakerApple. Mã hoá lại hai định dạng này cho pixel trùng từng byte và sạch ở cả hai mức. **Người dùng chốt 2026-10-01: PNG/TIFF ghi lại không mất dữ liệu** ở No Location và No Metadata (§3); `MetadataRewriterTests.noLocationKeepsEveryPixel` (PNG, TIFF) và `.losslessFormatsAreWrittenAgainPixelForPixel` so pixel |
 | JPEG | **đo 2026-10-01 (iOS 26.5 + 18.6):** chép không giải mã sạch ở cả hai mức, pixel trùng; No Location giữ Make, ISO, ngày, MakerApple, Rating, Artist, Copyright; No Metadata giữ hướng xoay, P3, Artist, Copyright. Mã hoá lại (cách `stripLocation` cũ) đổi pixel |
 | video slow-mo không phải một file, nên hôm nay share bỏ qua nó mà không báo | ghi vào intent mục 1. Spec này không sửa |

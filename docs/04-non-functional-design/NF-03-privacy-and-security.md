@@ -57,7 +57,10 @@ Danh tính là **khoá chứng thực của bản cài** — gỡ app là mất.
 - **Vị trí người dùng đã xoá không rời máy**: asset không còn vị trí mà file vẫn mang GPS thì mọi mức, kể cả All
   Metadata, đều bỏ GPS của file.
 - Ghi lại file bằng cách **chép ảnh sang file mới kèm bộ thuộc tính đã sửa**, **không** giải mã rồi mã hoá
-  lại: bỏ toạ độ mà **không đụng một pixel hay một trường EXIF nào khác**.
+  lại: bỏ toạ độ mà **không đụng một pixel hay một trường EXIF nào khác**. Hai ngoại lệ, người dùng chốt
+  2026-10-01 ([FS-08.06 §3](../02-functional-spec/FS-08-settings/06-share-metadata-privacy.md)): PNG và TIFF
+  được ghi lại không mất dữ liệu (pixel vẫn trùng từng byte), và HEIC ở No Metadata đi dưới dạng JPEG chất
+  lượng tối đa — share sheet nói rõ *"HEIC sent as JPEG"*.
 - **Muốn xoá một trường thì phải ghi một giá trị rỗng tường minh** — bỏ trống trường đó nghĩa là "giữ nguyên
   của ảnh gốc". Xoá cả nhóm GPS, trường vị trí chủ thể, và mấy trường địa danh của chuẩn báo chí.
 - **Không ghi lại được thì không âm thầm giao đi nguyên bản.** ImageIO không ghi được RAW, nên mẻ có RAW hỏi

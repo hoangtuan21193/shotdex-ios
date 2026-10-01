@@ -48,7 +48,49 @@ enum MetadataRewriter {
             try reencodeLosslessly(image, type: type, to: destination, level: level)
             return
         }
+        if convertsToJPEG(type as String, at: level) {
+            try writeJPEG(image, to: destination)
+            return
+        }
         try write(image, type: type, metadata: metadata(of: image, keeping: level), to: destination, level: level)
+    }
+
+    /// Whether a file of `type` leaves as a JPEG at `level`: a HEIC at No
+    /// Metadata (FS-08.06 §3, decided 2026-10-01). No lossless copy clears a
+    /// HEIC's capture date, City and Rating (plan task 2), so it goes as a
+    /// maximum-quality JPEG with only the keepers, and the share says so.
+    static func convertsToJPEG(_ type: String, at level: MetadataLevel) -> Bool {
+        level == .noMetadata && heifTypes.contains(type)
+    }
+
+    static let heifTypes: Set<String> = [UTType.heic.identifier, UTType.heif.identifier]
+
+    /// The HEIC decoded and written as a JPEG at maximum quality, carrying
+    /// only orientation, Artist and Copyright; the colour profile travels
+    /// with the decoded image. The gain map does not survive.
+    private static func writeJPEG(_ image: CGImageSource, to destination: URL) throws {
+        guard let decoded = CGImageSourceCreateImageAtIndex(image, 0, nil),
+              let properties = CGImageSourceCopyPropertiesAtIndex(image, 0, nil) as? [CFString: Any],
+              let output = CGImageDestinationCreateWithURL(destination as CFURL, UTType.jpeg.identifier as CFString, 1, nil)
+        else { throw Failure.cannotWrite }
+        var kept = MetadataLevel.noMetadata.filteredProperties(properties)
+        if let orientation = properties[kCGImagePropertyOrientation] {
+            kept[kCGImagePropertyOrientation] = orientation
+            var tiff = kept[kCGImagePropertyTIFFDictionary] as? [CFString: Any] ?? [:]
+            tiff[kCGImagePropertyTIFFOrientation] = orientation
+            kept[kCGImagePropertyTIFFDictionary] = tiff
+        }
+        kept[kCGImageDestinationLossyCompressionQuality] = 1.0
+        CGImageDestinationAddImage(output, decoded, kept as CFDictionary)
+        guard CGImageDestinationFinalize(output) else {
+            try? FileManager.default.removeItem(at: destination)
+            throw Failure.cannotWrite
+        }
+        let left = leftovers(in: destination, level: .noMetadata)
+        guard left.isEmpty else {
+            try? FileManager.default.removeItem(at: destination)
+            throw Failure.stillCarries(left)
+        }
     }
 
     /// Formats whose encoding loses nothing, so writing them again gives back
@@ -181,6 +223,11 @@ enum MetadataRewriter {
         // TIFF it makes.
         "tiff:Compression", "tiff:PhotometricInterpretation", "tiff:BitsPerSample",
         "tiff:SamplesPerPixel", "tiff:PlanarConfiguration", "tiff:ImageWidth", "tiff:ImageLength",
+        // What ImageIO's JPEG writer puts into every JPEG it makes, with
+        // fixed values: format versions, the YCbCr layout, scene type
+        // "standard". Nothing about the camera, the place or the person.
+        "exif:ExifVersion", "exif:FlashPixVersion", "exif:ComponentsConfiguration", "exif:SceneCaptureType",
+        "tiff:YCbCrPositioning", "tiff:_YCbCrPositioning",
     ]
 
     /// Whether `level` removes the tag at `path` (`prefix:Name`).
@@ -265,7 +312,9 @@ enum MetadataRewriter {
             if let exif = properties[kCGImagePropertyExifDictionary] as? [CFString: Any] {
                 let kept: Set<String> = [
                     kCGImagePropertyExifPixelXDimension as String, kCGImagePropertyExifPixelYDimension as String,
-                    kCGImagePropertyExifColorSpace as String,
+                    kCGImagePropertyExifColorSpace as String, kCGImagePropertyExifVersion as String,
+                    kCGImagePropertyExifFlashPixVersion as String, kCGImagePropertyExifComponentsConfiguration as String,
+                    kCGImagePropertyExifSceneCaptureType as String,
                 ]
                 found += exif.keys.map { $0 as String }.filter { !kept.contains($0) }.map { "EXIF \($0)" }
             }

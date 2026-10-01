@@ -213,17 +213,41 @@ struct MetadataRewriterTests {
         #expect(MetadataRewriter.leftovers(in: shared, level: .noMetadata).isEmpty)
     }
 
-    /// Spec §8 (plan task 2): no lossless copy of a HEIC clears its capture
-    /// date, City and Rating, and how to do it is the user's call. Until
-    /// then a HEIC at No Metadata is refused — left out of the share and
-    /// named — never handed over carrying what it promised to remove.
-    @Test func noMetadataHEICIsRefusedUntilDecided() throws {
+    /// AC-2, HEIC (decided 2026-10-01): no lossless copy clears a HEIC's
+    /// capture date, City and Rating, so at No Metadata it leaves as a
+    /// maximum-quality JPEG — clean, upright, in its colour profile, with
+    /// the Artist and Copyright.
+    @Test func noMetadataHEICBecomesJPEG() throws {
         defer { cleanUp() }
         let original = try MetadataFixture.write(.heic, in: folder)
-        let shared = output().appendingPathExtension("heic")
-        #expect(throws: MetadataRewriter.Failure.self) {
-            try MetadataRewriter.rewrite(original, to: shared, level: .noMetadata)
-        }
-        #expect(!FileManager.default.fileExists(atPath: shared.path))
+        #expect(MetadataRewriter.convertsToJPEG(UTType.heic.identifier, at: .noMetadata))
+        #expect(!MetadataRewriter.convertsToJPEG(UTType.heic.identifier, at: .noLocation))
+        #expect(!MetadataRewriter.convertsToJPEG(UTType.jpeg.identifier, at: .noMetadata))
+
+        let shared = output().appendingPathExtension("jpg")
+        try MetadataRewriter.rewrite(original, to: shared, level: .noMetadata)
+
+        let source = try #require(CGImageSourceCreateWithURL(shared as CFURL, nil))
+        #expect(CGImageSourceGetType(source) as String? == UTType.jpeg.identifier)
+        #expect(MetadataRewriter.leftovers(in: shared, level: .noMetadata).isEmpty)
+        let props = MetadataFixture.properties(of: shared)
+        #expect(props[kCGImagePropertyGPSDictionary] == nil)
+        let exif = props[kCGImagePropertyExifDictionary] as? [CFString: Any] ?? [:]
+        #expect(exif[kCGImagePropertyExifDateTimeOriginal] == nil)
+        #expect(exif[kCGImagePropertyExifISOSpeedRatings] == nil)
+        let xmp = MetadataFixture.xmpPaths(of: shared)
+        #expect(!xmp.contains("photoshop:City"))
+        #expect(!xmp.contains("xmp:Rating"))
+        #expect(!xmp.contains { $0.hasPrefix("exif:DateTime") })
+        let iptc = props[kCGImagePropertyIPTCDictionary] as? [CFString: Any] ?? [:]
+        #expect(iptc[kCGImagePropertyIPTCCity] == nil)
+        #expect(iptc[kCGImagePropertyIPTCStarRating] == nil)
+        let tiff = props[kCGImagePropertyTIFFDictionary] as? [CFString: Any] ?? [:]
+        #expect(tiff[kCGImagePropertyTIFFMake] == nil)
+        #expect(tiff[kCGImagePropertyTIFFArtist] as? String == MetadataFixture.artist)
+        #expect(tiff[kCGImagePropertyTIFFCopyright] as? String == MetadataFixture.copyright)
+        #expect(props[kCGImagePropertyOrientation] as? Int == MetadataFixture.orientation)
+        #expect(MetadataFixture.hasColorProfile(shared))
+        #expect(props[kCGImagePropertyPixelWidth] as? Int == MetadataFixture.Options().width)
     }
 }

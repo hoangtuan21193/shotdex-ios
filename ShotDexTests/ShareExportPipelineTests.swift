@@ -482,4 +482,32 @@ struct ShareExportPipelineTests {
         let native = try #require(CIRAWFilter(imageURL: dng)?.outputImage?.extent.size)
         #expect(MetadataFixture.properties(of: file)[kCGImagePropertyPixelWidth] as? Int == Int(native.width))
     }
+
+    /// AC-2, HEIC: a HEIC shared at No Metadata arrives as a JPEG under the
+    /// photo's own name, counted so the share sheet says so; a drag at that
+    /// level offers JPEG.
+    @Test func heicAtNoMetadataLeavesAsJPEG() async throws {
+        defer { cleanUp() }
+        let photoA = try MetadataFixture.write(.heic, in: fixtures)
+        let jpeg = try MetadataFixture.write(.jpeg, in: fixtures)
+        let pipeline = ShareExportPipeline(
+            reader: FakeReader(photos: ["A": photoA, "J": jpeg]),
+            folder: try ShareExportPipeline.makeFolder(in: shareRoot),
+            level: .noMetadata
+        )
+        let result = await pipeline.export([
+            ShareSource(id: "A", kind: .photo, filename: "IMG_0001.HEIC"),
+            ShareSource(id: "J", kind: .photo, filename: "IMG_0002.JPG"),
+        ])
+        #expect(result.failed.isEmpty)
+        #expect(result.files.map(\.lastPathComponent) == ["IMG_0001.jpg", "IMG_0002.JPG"])
+        #expect(result.heicSentAsJPEG == 1)
+        #expect(MetadataRewriter.leftovers(in: result.files[0], level: .noMetadata).isEmpty)
+        // Only the shared file is left in its slot.
+        #expect(try FileManager.default.contentsOfDirectory(atPath: result.files[0].deletingLastPathComponent().path) == ["IMG_0001.jpg"])
+
+        let heic = ShareSource(id: "A", kind: .photo, filename: "IMG_0001.HEIC", uniformType: "public.heic")
+        #expect(ShareDragPlan(source: heic, level: .noMetadata).type == .jpeg)
+        #expect(ShareDragPlan(source: heic, level: .noLocation).type == .heic)
+    }
 }

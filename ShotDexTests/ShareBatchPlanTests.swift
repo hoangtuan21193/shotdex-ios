@@ -114,4 +114,10 @@ struct ShareBatchPlanTests {
         #expect(ShareBatchPlan(level: .noLocation, photoCount: 1, videoCount: 0).keepsNote == nil)
         #expect(ShareBatchPlan(level: .all, photoCount: 1, videoCount: 1, rawSharedAsIsCount: 1).keepsNote == nil)
     }
+
+    /// AC-2: a HEIC sent as JPEG is said on the header's second line.
+    @Test func heicAsJPEGIsSaid() {
+        #expect(ShareBatchPlan(level: .noMetadata, photoCount: 2, videoCount: 0, heicAsJPEGCount: 1).notesHEICAsJPEG)
+        #expect(!ShareBatchPlan(level: .noMetadata, photoCount: 2, videoCount: 0).notesHEICAsJPEG)
+    }
 }

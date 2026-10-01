@@ -20,6 +20,8 @@ struct ShareBatchPlan: Equatable, Sendable {
     var unreadableRAWCount = 0
     /// RAW files the user chose to share as they are, location and all.
     var rawSharedAsIsCount = 0
+    /// HEIC photos going out as JPEG because the level is No Metadata.
+    var heicAsJPEGCount = 0
 
     /// The one-shot rows, in order: the two levels that are not in force.
     /// Choosing one changes this share only, never Settings.
@@ -56,6 +58,10 @@ struct ShareBatchPlan: Equatable, Sendable {
     }
 
     enum KeepsNote: Equatable, Sendable { case videos, raw, videosAndRAW }
+
+    /// Whether the header's second line also says HEIC photos went as JPEG,
+    /// so the change of format is never silent.
+    var notesHEICAsJPEG: Bool { heicAsJPEGCount > 0 }
 
     /// Whether the share stops once, before anything is gathered, to ask
     /// what to do with its RAW files: only below All Metadata, where a RAW
