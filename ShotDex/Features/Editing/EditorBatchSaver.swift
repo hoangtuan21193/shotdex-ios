@@ -148,8 +148,7 @@ final class EditorBatchSaver {
                 source: source,
                 recipe: recipe,
                 renderRecipe: renderReady(recipe, for: item.asset, libraryQueries: libraryQueries),
-                requestedFormat: format,
-                includeMetadata: includeMetadata
+                requestedFormat: format
             )
         }
         return result.assetID

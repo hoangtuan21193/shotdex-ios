@@ -3615,7 +3615,7 @@ private struct PhotoEditorSaveSheet: View {
                         .foregroundStyle(.orange)
                     }
                 } footer: {
-                    Text("Save Copy is full resolution at maximum quality. Turning off metadata strips EXIF and clears the Photos date/location on Save Changes. If Photos doesn't support HEIC for this photo, ShotDex falls back to JPEG and tells you.")
+                    Text("Save Copy is full resolution at maximum quality. Turning off metadata strips EXIF from the copy; Save Changes always keeps the photo's date and location. If Photos doesn't support HEIC for this photo, ShotDex falls back to JPEG and tells you.")
                 }
 
                 if pendingCount > 1, let saveAll {
@@ -3664,10 +3664,7 @@ private struct PhotoEditorSaveSheet: View {
                     Button {
                         guard let format else { return }
                         Task {
-                            await controller.saveChanges(
-                                format: format,
-                                includeMetadata: includeMetadata
-                            )
+                            await controller.saveChanges(format: format)
                             if controller.savedAssetID != nil { onFinished() }
                         }
                     } label: {

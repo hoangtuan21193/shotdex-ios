@@ -406,13 +406,16 @@ final class PhotoEditingService {
     }
 
     /// See `saveCopy` for why the attached and the rendered recipe can differ.
+    ///
+    /// No metadata choice: the photo stays in the library, so its date and
+    /// location are the user's own data, not something to strip on the way
+    /// out — and Revert to Original would not bring them back (FS-08.06 AC-17).
     func saveChanges(
         session: PhotoEditingSession,
         source: LoadedPhotoEditSource,
         recipe: PhotoEditRecipe,
         renderRecipe: PhotoEditRecipe? = nil,
-        requestedFormat: PhotoOutputFormat,
-        includeMetadata: Bool
+        requestedFormat: PhotoOutputFormat
     ) async throws -> PhotoSaveResult {
         let (asset, contentInput) = try session.library()
         let renderRecipe = renderRecipe ?? recipe
@@ -431,11 +434,7 @@ final class PhotoEditingService {
                 recipe: renderRecipe
             )
             output.adjustmentData = makeAdjustmentData(recipe)
-            try await commit(
-                output: output,
-                to: asset,
-                includeMetadata: includeMetadata
-            )
+            try await commit(output: output, to: asset)
             sessions.retire(asset.localIdentifier)
             let actualFormat: PhotoOutputFormat =
                 output.defaultRenderedContentType?.conforms(to: .heic) == true
@@ -459,14 +458,10 @@ final class PhotoEditingService {
             to: destination,
             format: actualFormat,
             quality: 1,
-            includeMetadata: includeMetadata
+            includeMetadata: true
         )
         output.adjustmentData = makeAdjustmentData(recipe)
-        try await commit(
-            output: output,
-            to: asset,
-            includeMetadata: includeMetadata
-        )
+        try await commit(output: output, to: asset)
         // The photo now carries the saved recipe and a new modification
         // date: the next open must read PhotoKit again, not reuse this
         // session's pre-save input (FS-03.09b AC-5).
@@ -762,18 +757,11 @@ final class PhotoEditingService {
         return try? JSONDecoder().decode(PhotoEditRecipe.self, from: adjustmentData.data)
     }
 
-    private func commit(
-        output: PHContentEditingOutput,
-        to asset: PHAsset,
-        includeMetadata: Bool
-    ) async throws {
+    /// Only the edit changes; the asset's date and location stay as they are.
+    private func commit(output: PHContentEditingOutput, to asset: PHAsset) async throws {
         try await PHPhotoLibrary.shared().performChanges {
             let request = PHAssetChangeRequest(for: asset)
             request.contentEditingOutput = output
-            if !includeMetadata {
-                request.creationDate = nil
-                request.location = nil
-            }
         }
     }
 

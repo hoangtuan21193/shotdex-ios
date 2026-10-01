@@ -3263,7 +3263,7 @@ final class PhotoEditorController {
         }
     }
 
-    func saveChanges(format: PhotoOutputFormat, includeMetadata: Bool) async {
+    func saveChanges(format: PhotoOutputFormat) async {
         guard let session, let loadedSource else { return }
         isSaving = true
         errorMessage = nil
@@ -3274,8 +3274,7 @@ final class PhotoEditorController {
                 source: loadedSource,
                 recipe: recipe,
                 renderRecipe: renderReady(recipe),
-                requestedFormat: format,
-                includeMetadata: includeMetadata
+                requestedFormat: format
             )
             didFallbackToJPEG = result.fellBackToJPEG
             savedAssetID = result.assetID
