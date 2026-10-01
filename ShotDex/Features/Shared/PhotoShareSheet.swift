@@ -15,6 +15,22 @@ enum PhotoShareSheet {
         /// The part of `failed` that never arrived from the library.
         var unread: [String] = []
         var folder: URL?
+        /// The metadata level the photos were prepared at.
+        var level: MetadataLevel = .all
+        /// Prepares the same share again at another level, for the share
+        /// sheet's one-shot rows. `nil` where a share offers no rows.
+        var regather: (@MainActor (MetadataLevel) async -> Prepared)?
+
+        /// Photos are the files gathered into the folder; anything else is a
+        /// video the library handed over as it is.
+        var photoCount: Int {
+            guard let folder else { return 0 }
+            return items.compactMap { $0 as? URL }.filter { $0.path.hasPrefix(folder.path) }.count
+        }
+
+        var plan: ShareBatchPlan {
+            ShareBatchPlan(level: level, photoCount: photoCount, videoCount: items.count - photoCount)
+        }
 
         /// Removes the gathered copies. Videos are the library's own files and
         /// are never inside the folder.
@@ -43,7 +59,10 @@ enum PhotoShareSheet {
             level: level
         )
         let result = await pipeline.export(assets.map(ShareSource.init(asset:)))
-        return Prepared(items: result.files, failed: result.failed, unread: result.unread, folder: folder)
+        return Prepared(
+            items: result.files, failed: result.failed, unread: result.unread, folder: folder, level: level,
+            regather: { await gather(assets: assets, level: $0, allowsNetworkAccess: allowsNetworkAccess) }
+        )
     }
 
     /// Presents the share sheet for a gather, telling the user first which
@@ -51,7 +70,7 @@ enum PhotoShareSheet {
     /// closes, shared or not.
     @MainActor
     static func present(_ prepared: Prepared) {
-        let share = { present(items: prepared.items) { prepared.removeFiles() } }
+        let share = { presentSheet(for: prepared) }
         guard !prepared.failed.isEmpty else { return share() }
         guard let presenter = topPresenter() else { return prepared.removeFiles() }
         let names = prepared.failed.joined(separator: ", ")
@@ -75,13 +94,71 @@ enum PhotoShareSheet {
         if let onFinished {
             activity.completionWithItemsHandler = { _, _, _, _ in onFinished() }
         }
-        // On iPad the sheet is a popover and needs an anchor, or UIKit traps.
+        anchor(activity, in: presenter)
+        presenter.present(activity, animated: true)
+    }
+
+    /// The share sheet for a photo share: a header naming the level in
+    /// force, and the app's rows for the other two (FS-08.06 §4). Choosing a
+    /// row closes the sheet, prepares the share again at that level and
+    /// opens it again; Settings is not touched.
+    @MainActor
+    private static func presentSheet(for prepared: Prepared) {
+        let plan = prepared.plan
+        var items = prepared.items
+        if plan.photoCount > 0, let first = items.first as? URL {
+            let name = first.deletingPathExtension().lastPathComponent
+            let title = items.count == 1 ? "\(name) · \(plan.subtitle.text)" : plan.subtitle.text
+            items[0] = ShareHeaderItem(file: first, title: title)
+        }
+        let rows = prepared.regather == nil ? [] : plan.rows.map(ShareLevelRow.init(level:))
+        present(items: items, activities: rows) { chosen in
+            prepared.removeFiles()
+            guard let chosen, let regather = prepared.regather,
+                  let level = MetadataLevel.allCases.first(where: { ShareLevelRow.activityType(for: $0) == chosen })
+            else { return }
+            Task { @MainActor in
+                let again = await regather(level)
+                await waitForDismissal()
+                present(again)
+            }
+        }
+    }
+
+    /// Waits, briefly, for the share sheet that just closed to finish leaving
+    /// the screen: UIKit will not present over a controller on its way out.
+    @MainActor
+    private static func waitForDismissal() async {
+        for _ in 0..<20 {
+            guard let top = topPresenter(), top is UIActivityViewController || top.isBeingDismissed else { return }
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+    }
+
+    /// Presents a `UIActivityViewController` with the app's own rows.
+    /// `onFinished` gets the chosen activity's type — `nil` when the sheet
+    /// was dismissed — once the sheet closes.
+    @MainActor
+    private static func present(
+        items: [Any],
+        activities: [UIActivity],
+        onFinished: @escaping (UIActivity.ActivityType?) -> Void
+    ) {
+        guard !items.isEmpty, let presenter = topPresenter() else { onFinished(nil); return }
+        let activity = UIActivityViewController(activityItems: items, applicationActivities: activities)
+        activity.completionWithItemsHandler = { type, completed, _, _ in onFinished(completed ? type : nil) }
+        anchor(activity, in: presenter)
+        presenter.present(activity, animated: true)
+    }
+
+    /// On iPad the sheet is a popover and needs an anchor, or UIKit traps.
+    @MainActor
+    private static func anchor(_ activity: UIActivityViewController, in presenter: UIViewController) {
         if let popover = activity.popoverPresentationController {
             popover.sourceView = presenter.view
             popover.sourceRect = CGRect(x: presenter.view.bounds.midX, y: presenter.view.bounds.midY, width: 1, height: 1)
             popover.permittedArrowDirections = []
         }
-        presenter.present(activity, animated: true)
     }
 
     /// The view controller on top of the foreground window, which is where a
