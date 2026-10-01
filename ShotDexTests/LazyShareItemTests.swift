@@ -114,4 +114,49 @@ import UIKit
         let left = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
         #expect(left.allSatisfy { !$0.hasPrefix(OriginalPreparation.prefix) && !$0.hasPrefix(ShareExportPipeline.prefix) })
     }
+
+    /// Waits, briefly, for a condition the batch reaches on its own.
+    func until(_ condition: () -> Bool) async throws {
+        for _ in 0..<100 where !condition() { try await Task.sleep(for: .milliseconds(50)) }
+        #expect(condition())
+    }
+
+    /// AC-7. Twelve photos, three in iCloud, two of the downloads fail: the
+    /// modal names them with "Share 10" · Retry · Cancel, and no provider
+    /// has handed anything over while it asks. Share 10 hands over ten.
+    @Test func failuresHoldProvidersUntilChoice() async throws {
+        defer { cleanUp() }
+        let (batch, fake) = batch(12, script: "cloud=3,seconds=0.3,fail=1+2")
+        let providers = batch.providers(header: nil)
+        let asking = Task { await Self.ask(providers) }
+        try await until { batch.preparation?.state.phase == .failed }
+        let state = try #require(batch.preparation?.state)
+        #expect(state.failureTitle == "2 of 12 photos couldn't be downloaded from iCloud.")
+        #expect(state.failedNames.count == 2)
+        #expect(state.continueCount == 10)
+        #expect(batch.isShown)
+        #expect(batch.shareFolder == nil)
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(batch.stage == .preparing)
+        batch.preparation?.choose(.continueWithout)
+        let items = await asking.value
+        #expect(items.compactMap { $0 as? URL }.count == 10)
+        #expect(fake.downloadCount == 3)
+        batch.removeFiles()
+    }
+
+    /// AC-7. Cancel at the failure: nothing reaches the destination and the
+    /// share sheet is told to close.
+    @Test func cancelDeliversNothing() async throws {
+        defer { cleanUp() }
+        let (batch, _) = batch(12, script: "cloud=3,seconds=0.3,fail=2")
+        var closed = false
+        batch.onCancel = { closed = true }
+        let asking = Task { await Self.ask(batch.providers(header: nil)) }
+        try await until { batch.preparation?.state.phase == .failed }
+        batch.cancel()
+        let items = await asking.value
+        #expect(items.allSatisfy { !($0 is URL) })
+        #expect(closed)
+    }
 }

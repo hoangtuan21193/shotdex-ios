@@ -136,4 +136,23 @@ import Testing
         #expect(fake.cancelledCount == 4)
         #expect(!FileManager.default.fileExists(atPath: preparation.folder.path))
     }
+
+    /// AC-7. Retry downloads only the photos that failed.
+    @Test func retryOnlyRefetchesFailures() async throws {
+        defer { cleanUp() }
+        let fake = FakeOriginalFetcher(script: .init("cloud=all,seconds=0.2,fail=2"), base: FixtureOriginalFetcher())
+        let preparation = OriginalPreparation(items: items(3), fetcher: fake, in: directory)
+        let run = Task { await preparation.run() }
+        for _ in 0..<100 where preparation.state.phase != .failed { try await Task.sleep(for: .milliseconds(30)) }
+        #expect(preparation.state.phase == .failed)
+        #expect(preparation.state.failedNames.count == 1)
+        #expect(preparation.isShown)
+        #expect(fake.downloadCount == 3)
+        preparation.choose(.retry)
+        guard case .ready(let files, let skipped) = await run.value else { Issue.record("not ready"); return }
+        #expect(fake.downloadCount == 4)
+        #expect(files.count == 3)
+        #expect(skipped.isEmpty)
+        preparation.removeFiles()
+    }
 }
