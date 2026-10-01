@@ -162,11 +162,15 @@ final class PhotoEditingService {
     /// when the previews are drawn: the preloader walks the whole run, and a
     /// session holds a full copy of the original, so twenty photos must not
     /// mean twenty copies.
-    func preloadSession(for origin: PhotoEditOrigin, keeps: Bool) async throws -> PhotoEditingSession {
+    func preloadSession(
+        for origin: PhotoEditOrigin,
+        keeps: Bool,
+        progress: (@MainActor (Double) -> Void)? = nil
+    ) async throws -> PhotoEditingSession {
         if let cached = sessions.cached(origin.id) {
             return cached
         }
-        let session = try await makeSession(for: origin)
+        let session = try await makeSession(for: origin, progress: progress)
         // The editor may have closed, or the walk moved on, while this was
         // waiting on iCloud.
         guard !Task.isCancelled else {

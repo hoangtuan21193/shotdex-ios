@@ -1,0 +1,24 @@
+{
+  "steps": [
+    { "action": "launch", "arguments": ["-ShotDexFakeICloud", "cloud=all,seconds=6"] },
+    { "action": "wait", "seconds": 6 },
+    { "action": "tap", "label": "Select photos", "type": "button" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "x": 0.165, "y": 0.30 },
+    { "action": "tap", "x": 0.83, "y": 0.30 },
+    { "action": "tap", "x": 0.165, "y": 0.46 },
+    { "action": "tap", "x": 0.5, "y": 0.46 },
+    { "action": "tap", "x": 0.83, "y": 0.46 },
+    { "action": "tap", "label": "Edit", "type": "button" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "screenshot", "name": "01-filmstrip-glyphs" },
+    { "action": "wait", "seconds": 7 },
+    { "action": "screenshot", "name": "02-preload-ring" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "screenshot", "name": "03-preload-ring-later" },
+    { "action": "tap", "label": "Photo 4 of 5" },
+    { "action": "wait", "seconds": 1.5 },
+    { "action": "screenshot", "name": "04-tap-cloud-photo-card" },
+    { "action": "wait", "seconds": 6 }
+  ]
+}

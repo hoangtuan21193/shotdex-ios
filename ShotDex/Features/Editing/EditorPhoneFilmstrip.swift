@@ -67,8 +67,9 @@ struct EditorPhoneFilmstrip: View {
         return Button {
             select(index)
         } label: {
-            EditorFilmstripThumbnail(photo: photo, photoLibrary: photoLibrary)
+            EditorFilmstripThumbnail(photo: photo, photoLibrary: photoLibrary, original: session.originalStates[photo.id])
                 .frame(width: Self.frameSide, height: Self.frameSide)
+                .onAppear { session.probeOriginal(of: photo) }
                 .clipShape(shape)
                 .overlay(alignment: .bottomTrailing) {
                     // No accent: a dot is an unsaved draft, a check is saved.

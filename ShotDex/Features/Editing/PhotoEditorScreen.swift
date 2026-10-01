@@ -198,6 +198,7 @@ struct PhotoEditorScreen: View {
                 let run = siblings.isEmpty ? [origin] : siblings
                 let start = run.firstIndex { $0.id == origin.id } ?? 0
                 session = EditorSession(photos: run, startIndex: start)
+                session?.originalFetcher = dependencies.originalFetcher
             }
             await openCurrentPhoto()
         }
@@ -448,6 +449,10 @@ struct PhotoEditorScreen: View {
         // goes on inside `load` so the saved one is never drawn first.
         startPreloading(session, canvas: newController)
         await newController.load(draft: session.draft(for: target))
+        // It opened, so its original is here now (FS-02.06 AC-13).
+        if newController.loadFailure == nil, newController.loadedSource != nil {
+            session.markOriginalLocal(target.id)
+        }
     }
 
     /// Walks the whole run in the background, outward from the photo on

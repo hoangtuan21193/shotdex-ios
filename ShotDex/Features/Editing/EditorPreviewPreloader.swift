@@ -91,9 +91,15 @@ final class EditorPreviewPreloader {
     ) async -> Bool {
         guard await Self.waitUntilIdle(isEditorBusy) else { return false }
         let session: PhotoEditingSession
+        let run = self.session
         do {
-            session = try await service.preloadSession(for: photo, keeps: isNeighbour)
+            // Its download shows on the photo's filmstrip cell (FS-02.06 AC-13).
+            session = try await service.preloadSession(for: photo, keeps: isNeighbour) { fraction in
+                run?.reportOriginalDownload(photo.id, fraction: fraction)
+            }
+            run?.markOriginalLocal(photo.id)
         } catch {
+            run?.markOriginalDownloadEnded(photo.id)
             return false
         }
         // A no-op for a session the recent cache kept.

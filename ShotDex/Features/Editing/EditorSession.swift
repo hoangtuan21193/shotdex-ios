@@ -33,6 +33,56 @@ final class EditorSession {
         self.index = min(max(startIndex, 0), max(photos.count - 1, 0))
     }
 
+    // MARK: Originals in iCloud (FS-02.06 AC-13)
+
+    /// Where a filmstrip photo's original is, as far as this run knows.
+    enum OriginalState: Equatable {
+        case inCloud
+        /// The preloader is bringing it down: 0…1.
+        case downloading(Double)
+        case local
+    }
+
+    /// Per photo, asked once a run with the network off, lazily as cells
+    /// appear — never stored past the run (§7).
+    private(set) var originalStates: [String: OriginalState] = [:]
+    @ObservationIgnored var originalFetcher: (any OriginalFetching)?
+    @ObservationIgnored private var probing: Set<String> = []
+
+    /// Asks about one photo the first time its cell appears.
+    func probeOriginal(of photo: PhotoEditOrigin) {
+        guard let fetcher = originalFetcher, let asset = photo.asset, asset.mediaType == .image,
+              originalStates[photo.id] == nil, !probing.contains(photo.id) else { return }
+        probing.insert(photo.id)
+        let item = OriginalItem(id: asset.localIdentifier, filename: "",
+                                photo: PixelSize(width: asset.pixelWidth, height: asset.pixelHeight))
+        Task { [weak self] in
+            let availability = await fetcher.probe(item)
+            guard let self else { return }
+            self.probing.remove(photo.id)
+            // A download that started meanwhile says more than the probe.
+            if self.originalStates[photo.id] == nil {
+                self.originalStates[photo.id] = availability == .local ? .local : .inCloud
+            }
+        }
+    }
+
+    /// The preloader's progress on one photo's original.
+    func reportOriginalDownload(_ id: String, fraction: Double) {
+        guard originalStates[id] != .local else { return }
+        originalStates[id] = .downloading(fraction)
+    }
+
+    /// The photo's original is here (its session opened).
+    func markOriginalLocal(_ id: String) {
+        originalStates[id] = .local
+    }
+
+    /// The download stopped short: back to the glyph.
+    func markOriginalDownloadEnded(_ id: String) {
+        if case .downloading = originalStates[id] { originalStates[id] = .inCloud }
+    }
+
     var current: PhotoEditOrigin? {
         photos.indices.contains(index) ? photos[index] : nil
     }
@@ -237,8 +287,9 @@ struct EditorFilmstrip: View {
         return Button {
             select(index)
         } label: {
-            EditorFilmstripThumbnail(photo: photo, photoLibrary: photoLibrary)
+            EditorFilmstripThumbnail(photo: photo, photoLibrary: photoLibrary, original: session.originalStates[photo.id])
                 .frame(width: thumbnailSide, height: thumbnailSide)
+                .onAppear { session.probeOriginal(of: photo) }
                 .clipShape(RoundedRectangle.app(AppTheme.Radius.sm))
                 .overlay {
                     RoundedRectangle.app(AppTheme.Radius.sm)
@@ -298,6 +349,9 @@ struct EditorFilmstrip: View {
 struct EditorFilmstripThumbnail: View {
     let photo: PhotoEditOrigin
     let photoLibrary: PhotoLibraryService
+    /// Where the original is (FS-02.06 AC-13): a glyph while it is only in
+    /// iCloud, a ring with no number while the preloader brings it down.
+    var original: EditorSession.OriginalState?
 
     @State private var image: UIImage?
     @State private var requestID: PHImageRequestID?
@@ -321,8 +375,31 @@ struct EditorFilmstripThumbnail: View {
                 }
             }
             .clipped()
+            .overlay(alignment: .topTrailing) { originalBadge }
             .onAppear(perform: load)
             .onDisappear(perform: cancel)
+    }
+
+    @ViewBuilder private var originalBadge: some View {
+        switch original {
+        case .inCloud?:
+            Image(systemName: "icloud")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 16, height: 16)
+                .background(Circle().fill(.black.opacity(0.55)))
+                .padding(2)
+                .accessibilityLabel(String(localized: "Original in iCloud"))
+        case .downloading(let fraction)?:
+            ICloudDownloadRing(progress: fraction)
+                .tint(EditorTheme.accent)
+                .scaleEffect(0.73)
+                .frame(width: 16, height: 16)
+                .background(Circle().fill(.black.opacity(0.55)))
+                .padding(2)
+        default:
+            EmptyView()
+        }
     }
 
     /// Local first, then iCloud. With Optimize Storage on — which is the normal
