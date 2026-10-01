@@ -45,9 +45,10 @@ xuống:
 
 ## 4. Thứ tự, tham chiếu, căn khung
 
-- **Thứ tự theo phơi sáng**, không theo thứ tự chọn hay thứ tự lưới. Phơi sáng của từng khung tính từ EXIF: thời
-  gian phơi × ISO ÷ khẩu độ², rồi cộng Exposure Bias. Khung thiếu cả hai dữ liệu đó thì đo độ sáng trung vị sau khi
-  giải mã.
+- **Thứ tự theo phơi sáng**, tối trước, không theo thứ tự chọn hay thứ tự lưới. Phơi sáng của từng khung tính từ EXIF:
+  log₂(thời gian phơi × ISO ÷ khẩu độ²). **Không cộng Exposure Bias** — trong một loạt AEB máy đã thực hiện mức bù bằng
+  cách đổi tốc độ (hay ISO, khẩu), cộng nữa là đếm hai lần. Bias chỉ dùng khi thiếu bộ ba đó; thiếu cả bias thì đo độ
+  sáng trung vị sau khi giải mã. Cả loạt dùng **một** nguồn: nguồn đầu tiên mà mọi khung đều có.
 - **Khung tham chiếu** là khung có phơi sáng ở giữa (loạt chẵn thì lấy khung sáng hơn trong hai khung giữa). Khử
   bóng ma giữ nội dung của khung này, và EXIF của ảnh ra là EXIF của khung này.
 - **Căn khung:** dùng lại nguyên văn bộ căn của [Focus Stack](10-focus-stack.md) §4 — mỗi khung căn với khung liền kề
@@ -113,7 +114,7 @@ Loạt thử là khung ảo có đáp án như spike §1: cảnh 14 EV dựng t�
 |---|---|---|---|---|
 | AC-1 | loạt 5 khung RAW −4…+4 EV, cảnh 14 EV, đứng yên | ghép, deghost Off | sai số radiance ≤ 0,03 stop RMS; ảnh đã tone map ≥ 48 dB so với tone map của cảnh sạch | ⚠️ chưa có |
 | AC-2 | loạt 3 khung −2/0/+2 EV của cảnh 10 EV | ghép | vùng cháy ở EV 0 khôi phục, sai số ≤ 0,05 stop RMS; không còn điểm nào cháy ở ảnh ra | ⚠️ chưa có |
-| AC-3 | loạt 5 khung chọn theo thứ tự xáo | ghép | cùng kết quả như thứ tự đúng; khung tham chiếu là khung EV 0 | ⚠️ chưa có |
+| AC-3 | loạt 5 khung chọn theo thứ tự xáo | ghép | cùng kết quả như thứ tự đúng; khung tham chiếu là khung EV 0 | 🟡 thứ tự + tham chiếu: `HDRBracketOrderTests.shuffledSelectionComesBackDarkestFirstWithTheMiddleAsReference`; kết quả ghép: task 4 |
 | AC-4 | loạt 5 khung, bước 3 EV, mỗi khung lệch tới ±30 px và xoay tới ±1,5° | căn | sai số căn ≤ 0,5 px ở 1536px cho mọi khung; không khung nào bị loại | ⚠️ chưa có |
 | AC-5 | loạt có 1 khung ảnh khác cảnh chen vào | ghép | khung đó bị loại; panel ghi *1 of 6 frames couldn't be lined up and were left out.* | ⚠️ chưa có |
 | AC-6 | một mảng kết cấu dịch 3 px mỗi khung, khung tham chiếu đọc được ở đó | ghép ở Off / Low / Medium / High | sai số ở vùng động ≥ 0,5 / ≤ 0,25 / ≤ 0,1 / ≤ 0,1 stop | ⚠️ chưa có |
@@ -121,7 +122,7 @@ Loạt thử là khung ảo có đáp án như spike §1: cảnh 14 EV dựng t�
 | AC-8 | vật sáng di chuyển 70 px/khung trong vùng trời cháy ở EV 0 | ghép ở Medium | chỉ còn **một** bản của vật (lấy từ khung neo), không bóng chồng | ⚠️ chưa có |
 | AC-9 | màn HDR đang mở | đổi Deghost, rồi Strength | preview dựng lại, không nạp lại và không căn lại khung (đếm số lần đọc khung) | ⚠️ chưa có |
 | AC-10 | mở màn HDR | nhìn panel | Medium chọn sẵn; Strength 60; không có Auto Tone; câu giải thích hiện | ⚠️ chưa có |
-| AC-11 | 5 khung cùng phơi sáng (lệch < 0,5 EV) | mở màn | vẫn ghép; dòng báo *These photos have about the same exposure…* | ⚠️ chưa có |
+| AC-11 | 5 khung cùng phơi sáng (lệch < 0,5 EV) | mở màn | vẫn ghép; dòng báo *These photos have about the same exposure…* | 🟡 cờ: `HDRBracketOrderTests.framesAtOneExposureAreFlagged`; dòng báo: task 9 |
 | AC-12 | loạt 3 khung, khung tối nhất vẫn cháy 5% diện tích | mở màn | dòng báo *Some highlights are bright in every frame…* | ⚠️ chưa có |
 | AC-13 | preview 1600px và bản lưu của cùng loạt | thu bản lưu về 1600px rồi so | ≥ 32 dB — số tầng kim tự tháp theo cỡ ảnh | ⚠️ chưa có |
 | AC-14 | 5 khung RAW × 24 MP | Save trên iPhone 12 | footprint đỉnh ≤ 700 MB, ≤ 60 s; như nhau (± 10%) ở 3 khung | ⚠️ chưa có |
@@ -131,7 +132,7 @@ Loạt thử là khung ảo có đáp án như spike §1: cảnh 14 EV dựng t�
 | AC-18 | chọn 2 ảnh | mở ⋯ ▸ Combine Photos | bốn dòng Focus Stack · Panorama · HDR · Stack Exposures; chọn 1 ảnh thì dòng HDR mờ | ⚠️ chưa có |
 | AC-19 | iPhone 26.5 + 18.6, iPad 13", Duo trong và ngoài | mở màn HDR với loạt 3 khung, đổi từng control, Save | ảnh từng trạng thái; không control bị cắt hay che; viewer mở ảnh vừa lưu | ⚠️ chưa có |
 | AC-20 | quyền ảnh `.limited`, cả loạt nằm trong tập được chọn | Save | ảnh mới hiện trong lưới Library | ⚠️ chưa có |
-| AC-21 | loạt 3 CR3 + 2 JPEG | mở màn | ghép từ bản đã render của cả 5; dòng báo *Some of these photos aren't RAW…* | ⚠️ chưa có |
+| AC-21 | loạt 3 CR3 + 2 JPEG | mở màn | ghép từ bản đã render của cả 5; dòng báo *Some of these photos aren't RAW…* | 🟡 cờ: `HDRBracketOrderTests.aMixedSeriesIsFlaggedAndDoesNotMergeFromRAW`; nguồn + dòng báo: task 7, 9 |
 | AC-22 | Save, chọn HEIC | lưu | ảnh ra là HEIC; máy không ghi được HEIC thì báo trước và lưu JPEG | ⚠️ chưa có |
 
 ## 9. Rủi ro đã biết
