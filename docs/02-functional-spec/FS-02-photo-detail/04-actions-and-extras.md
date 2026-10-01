@@ -34,7 +34,9 @@
 - **Delete** gọi đường xoá của hệ thống → hộp thoại xác nhận. Huỷ thì không đổi gì. Xoá xong danh sách bị
   cắt nên pager **dựng lại trang hiện tại** ở cùng vị trí đã kẹp — hiện ảnh kế tiếp kiểu Photos; hết ảnh thì
   đóng viewer.
-- **Share**: ảnh chia sẻ dữ liệu ảnh, video chia sẻ file. File chưa tải về máy → cảnh báo "Unable to Share".
+- **Share**: như Photos ([06](06-icloud-originals.md) §9) — share sheet mở ngay, mỗi mục là nguồn dữ liệu lười;
+  chọn đích rồi mới tải bản gốc (nếu chỉ có trên iCloud) và ghi lại metadata trong modal giữa màn có tiến độ +
+  Cancel. Video chia sẻ file. Không còn cảnh báo "Unable to Share" (2026-10-02).
   Luật gỡ vị trí: [NF-03](../../04-non-functional-design/NF-03-privacy-and-security.md).
 - **Favorite** ghi thẳng lên thư viện ảnh — hệ thống là nguồn thật.
 

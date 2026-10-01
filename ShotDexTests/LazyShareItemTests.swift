@@ -202,4 +202,26 @@ import UIKit
             #expect(!code.contains("OriginalDownloadLine"), "\(path)")
         }
     }
+
+    /// AC-8. The viewer's Share of a 6000×4000 photo only in iCloud: the
+    /// destination gets the downloaded original, 6000×4000, and the viewer
+    /// has no "Unable to Share" left.
+    @Test func viewerSharesPreparedOriginal() async throws {
+        defer { cleanUp() }
+        let source = ShareSource(id: "A", kind: .photo, filename: "IMG_0001.JPG", uniformType: "public.jpeg")
+        let original = OriginalItem(id: "A", filename: "IMG_0001.JPG", photo: PixelSize(width: 6000, height: 4000))
+        let fake = FakeOriginalFetcher(script: .init("cloud=all,seconds=0.2"), base: FixtureOriginalFetcher())
+        let batch = LazyShareBatch(
+            sources: [source], originals: ["A": original], level: .all, fetcher: fake,
+            availableBytes: { nil }, reader: ShareExportPipelineTests.FakeReader(), directory: directory
+        )
+        let file = try #require(await Self.ask(batch.providers(header: nil)).first as? URL)
+        #expect(OriginalCompleteness.measure(file)?.size == PixelSize(width: 6000, height: 4000))
+        #expect(fake.downloadCount == 1)
+        batch.removeFiles()
+        let viewer = try AssetMetadataCarryOverTests.codeLines(of: "ShotDex/Features/Library/PhotoDetailScreen.swift")
+            .joined(separator: "\n")
+        #expect(!viewer.contains("Unable to Share"))
+        #expect(!viewer.contains("allowsNetworkAccess: false"))
+    }
 }

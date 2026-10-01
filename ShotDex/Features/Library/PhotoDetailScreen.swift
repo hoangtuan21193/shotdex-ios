@@ -134,7 +134,6 @@ struct PhotoDetailScreen: View {
     /// once via `measureWidth` rather than a per-frame GeometryReader — the
     /// dismiss drag re-evaluates this body every frame.
     @State private var panelContentWidth: CGFloat = 0
-    @State private var isShareUnavailable = false
     @State private var shareItems: [Any]?
     @State private var dragOffset: CGSize = .zero
     @State private var currentFilename: String?
@@ -397,7 +396,6 @@ struct PhotoDetailScreen: View {
             }
         }
         .viewerAlerts(
-            shareUnavailable: $isShareUnavailable,
             hideAssetId: $hideConfirmationAssetId,
             onHide: { dependencies.viewerAssetActions.toggleHidden(ids: [$0]) }
         )
@@ -1165,51 +1163,13 @@ struct PhotoDetailScreen: View {
         }
     }
 
+    /// The same lazy share as the grid (FS-02.06 §9, FS-08.06 AC-5): the
+    /// share sheet opens at once, and a photo only in iCloud downloads in the
+    /// Share modal once a destination asks. A video goes as it is.
     private func share(_ metadata: PhotoMetadata) {
-        guard let asset = model.asset(for: metadata.assetId) else {
-            isShareUnavailable = true
-            return
-        }
-        if asset.mediaType == .video {
-            shareVideo(asset)
-        } else {
-            shareImage(asset)
-        }
-    }
-
-    /// Through the same pipeline as the grid (FS-08.06 AC-5), so the photo
-    /// leaves with the metadata Settings chose. A photo only in iCloud still
-    /// says it is not downloaded yet: the viewer gets the download modal with
-    /// FS-02.06, not here.
-    private func shareImage(_ asset: PHAsset) {
-        Task { @MainActor in
-            let share = await PhotoShareSheet.gather(assets: [asset], allowsNetworkAccess: false)
-            guard share.unread.isEmpty else {
-                share.removeFiles()
-                isShareUnavailable = true
-                return
-            }
-            PhotoShareSheet.present(share)
-        }
-    }
-
-    private func shareVideo(_ asset: PHAsset) {
-        let options = PHVideoRequestOptions()
-        options.isNetworkAccessAllowed = true
-        options.deliveryMode = .automatic
-        PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
-            Task { @MainActor in
-                guard let urlAsset = avAsset as? AVURLAsset else {
-                    isShareUnavailable = true
-                    return
-                }
-                presentShareSheet(items: [urlAsset.url], filename: currentFilename)
-            }
-        }
-    }
-
-    private func presentShareSheet(items: [Any], filename: String?) {
-        PhotoShareSheet.present(items: items)
+        guard let asset = model.asset(for: metadata.assetId) else { return }
+        let downloads = dependencies.originalDownloads
+        Task { await PhotoShareSheet.share(assets: [asset], downloads: downloads) }
     }
 
     private func updateFilename(assetId: String) {
@@ -3015,20 +2975,14 @@ private final class PhotoPageHost: UIHostingController<AnyView> {
     }
 }
 
-/// The viewer's two alerts, lifted out of its body: one more `.alert` inline
+/// The viewer's alert, lifted out of its body: one more `.alert` inline
 /// and the type-checker gives up on a view this size.
 private extension View {
     func viewerAlerts(
-        shareUnavailable: Binding<Bool>,
         hideAssetId: Binding<String?>,
         onHide: @escaping (String) -> Void
     ) -> some View {
         self
-            .alert("Unable to Share", isPresented: shareUnavailable) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text("This photo hasn't been downloaded from iCloud yet.")
-            }
             // Hiding is one-way from inside this app: iOS 16 took the hidden
             // album away from every app but Photos, so ShotDex can set the
             // flag and then never see the photo again to undo it — the case

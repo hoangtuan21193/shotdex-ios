@@ -243,9 +243,10 @@ struct ShareExportPipelineTests {
 
         let viewer = try AssetMetadataCarryOverTests.codeLines(of: "ShotDex/Features/Library/PhotoDetailScreen.swift")
             .joined(separator: "\n")
-        let start = try #require(viewer.range(of: "private func shareImage("))
+        // The viewer and the grid open the same lazy share (FS-02.06 AC-8).
+        let start = try #require(viewer.range(of: "private func share(_ metadata: PhotoMetadata)"))
         let body = viewer[start.lowerBound...].prefix(600)
-        #expect(body.contains("PhotoShareSheet.gather("))
+        #expect(body.contains("PhotoShareSheet.share(assets:"))
         #expect(!body.contains("requestImageDataAndOrientation"))
     }
 

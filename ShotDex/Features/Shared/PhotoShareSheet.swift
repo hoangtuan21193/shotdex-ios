@@ -3,9 +3,10 @@ import Photos
 import ShotDexKit
 import UIKit
 
-/// Shared multi-asset share plumbing. Gathers shareable items for a set of
-/// assets (downloading from iCloud when needed) and presents a single system
-/// share sheet from the top-most view controller.
+/// Shared multi-asset share plumbing. Library photos open the system share
+/// sheet at once with lazy items and download in the Share modal once a
+/// destination asks (FS-02.06 §9); server originals already on disk are
+/// gathered first. One sheet, from the top-most view controller.
 enum PhotoShareSheet {
     /// What a gather produced: the files for the share sheet, the names of
     /// the items that could not be prepared, and the scratch folder the files
@@ -60,27 +61,12 @@ enum PhotoShareSheet {
         }
     }
 
-    /// Resolves shareable items for the given assets, in order, one file at a
-    /// time (FS-08.06 §5). Photos share their current version with the
-    /// metadata `level` keeps; videos share as they are. iCloud-only assets
-    /// are downloaded; an item that still fails — or a photo whose metadata
-    /// cannot be removed — is named in `failed` and left out, never shared
-    /// with what the level promised to remove.
-    static func gather(
-        assets: [PHAsset],
-        level: MetadataLevel = .sharingDefault(),
-        allowsNetworkAccess: Bool = true
-    ) async -> Prepared {
-        await gather(
-            sources: assets.map(ShareSource.init(asset:)),
-            reader: PhotoKitShareReader(allowsNetworkAccess: allowsNetworkAccess),
-            level: level
-        )
-    }
-
-    /// The same for any items and any reader — the library's photos, or the
-    /// originals fetched from a file server (FS-17.06 §6). Asks the RAW
-    /// question first when the share needs it.
+    /// Resolves shareable items, in order, one file at a time (FS-08.06 §5),
+    /// before the sheet opens — the originals fetched from a file server
+    /// (FS-17.06 §6), which are already on disk. Library photos take the lazy
+    /// `share(assets:downloads:)` instead. Asks the RAW question first when
+    /// the share needs it; an item that fails is named in `failed` and left
+    /// out, never shared with what the level promised to remove.
     static func gather(
         sources: [ShareSource],
         reader: any ShareAssetReader,
@@ -132,7 +118,7 @@ enum PhotoShareSheet {
             if let asset = byID[source.id] { originals[source.id] = OriginalItem(asset: asset) }
         }
         let fetcher = downloads?.fetcher ?? PhotoKitOriginalFetcher()
-        let reader = PhotoKitShareReader(allowsNetworkAccess: true)
+        let reader = PhotoKitShareReader()
         let batch = downloads?.makeShare(
             sources: sources, originals: originals, level: level, rawChoice: rawChoice, reader: reader
         ) ?? LazyShareBatch(
