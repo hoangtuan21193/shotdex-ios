@@ -177,6 +177,82 @@ enum MetadataFixture {
         ]
     }
 
+    /// A JPEG the way Lightroom exports one: EXIF and IPTC written by
+    /// ImageIO, plus an XMP packet of its own that repeats the coordinate,
+    /// names the place (City, State, Country, Location, LocationCreated) and
+    /// carries a 4-star rating. Spliced in as a raw APP1 segment, so ImageIO
+    /// has no say in what the packet holds.
+    static func lightroomJPEG(in folder: URL) throws -> URL {
+        var options = Options()
+        options.xmp = false
+        let plain = try encode(.jpeg, options: options)
+        let packet = """
+        <?xpacket begin="\u{FEFF}" id="W5M0MpCehiHzreSzNTczkc9d"?>
+        <x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 7.0">
+         <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+          <rdf:Description rdf:about=""
+            xmlns:xmp="http://ns.adobe.com/xap/1.0/"
+            xmlns:exif="http://ns.adobe.com/exif/1.0/"
+            xmlns:photoshop="http://ns.adobe.com/photoshop/1.0/"
+            xmlns:Iptc4xmpCore="http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/"
+            xmlns:Iptc4xmpExt="http://iptc.org/std/Iptc4xmpExt/2008-02-29/"
+            xmp:Rating="\(rating)"
+            xmp:CreatorTool="Adobe Lightroom Classic 14.0"
+            exif:GPSLatitude="10,46.614N"
+            exif:GPSLongitude="106,42.054E"
+            exif:GPSAltitude="12/1"
+            photoshop:City="\(city)"
+            photoshop:State="Ho Chi Minh"
+            photoshop:Country="Vietnam"
+            Iptc4xmpCore:Location="District 1"
+            Iptc4xmpCore:CountryCode="VN">
+           <Iptc4xmpExt:LocationCreated>
+            <rdf:Bag>
+             <rdf:li Iptc4xmpExt:City="\(city)" Iptc4xmpExt:CountryName="Vietnam"/>
+            </rdf:Bag>
+           </Iptc4xmpExt:LocationCreated>
+          </rdf:Description>
+         </rdf:RDF>
+        </x:xmpmeta>
+        <?xpacket end="w"?>
+        """
+        var segment = Data("http://ns.adobe.com/xap/1.0/".utf8) + Data([0])
+        segment.append(Data(packet.utf8))
+        let length = segment.count + 2
+        var app1 = Data([0xFF, 0xE1, UInt8(length >> 8), UInt8(length & 0xFF)])
+        app1.append(segment)
+        // ImageIO wrote an XMP packet of its own (it mirrors IPTC there);
+        // a Lightroom file has one packet, so that one goes and ours takes
+        // its place straight after SOI.
+        var jpeg = Data(plain.prefix(2))
+        jpeg.append(app1)
+        jpeg.append(withoutXMPSegments(plain).dropFirst(2))
+        let url = folder.appendingPathComponent("Lightroom-\(UUID().uuidString.prefix(8)).jpg")
+        try jpeg.write(to: url)
+        return url
+    }
+
+    /// The JPEG with every XMP APP1 segment taken out; everything else,
+    /// from SOI to the end of the scan, byte for byte.
+    static func withoutXMPSegments(_ jpeg: Data) -> Data {
+        let bytes = [UInt8](jpeg)
+        let header = [UInt8]("http://ns.adobe.com/xap/1.0/".utf8)
+        var output = [UInt8](bytes.prefix(2))
+        var index = 2
+        while index + 4 <= bytes.count, bytes[index] == 0xFF {
+            let marker = bytes[index + 1]
+            if marker == 0xDA { break }  // start of scan: the rest is image data
+            let length = Int(bytes[index + 2]) << 8 | Int(bytes[index + 3])
+            let end = index + 2 + length
+            let payload = bytes[(index + 4)..<min(end, bytes.count)]
+            let isXMP = marker == 0xE1 && payload.starts(with: header)
+            if !isXMP { output += bytes[index..<end] }
+            index = end
+        }
+        output += bytes[index...]
+        return Data(output)
+    }
+
     enum FixtureError: Error { case cannotEncode(String) }
 
     // MARK: Reading back

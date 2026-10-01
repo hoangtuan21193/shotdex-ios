@@ -119,4 +119,42 @@ struct MetadataRewriterTests {
             #expect(!MetadataRewriter.isLocation(path), "\(path)")
         }
     }
+
+    /// AC-4: a Lightroom JPEG repeats the coordinate in XMP and names the
+    /// place in IPTC and XMP. No Location removes all of it and keeps the
+    /// rating.
+    @Test func lightroomXMP() throws {
+        defer { cleanUp() }
+        let original = try MetadataFixture.lightroomJPEG(in: folder)
+        let before = MetadataFixture.xmpPaths(of: original)
+        #expect(before.contains("photoshop:City"))
+        #expect(before.contains("xmp:Rating"))
+        #expect(before.contains { $0.hasPrefix("Iptc4xmpExt:LocationCreated") }, "\(before.sorted())")
+        #expect(MetadataFixture.dictionary(kCGImagePropertyGPSDictionary, of: original) != nil)
+
+        let shared = output().appendingPathExtension("jpg")
+        try MetadataRewriter.rewrite(original, to: shared, level: .noLocation)
+
+        #expect(MetadataFixture.dictionary(kCGImagePropertyGPSDictionary, of: shared) == nil)
+        let after = MetadataFixture.xmpPaths(of: shared)
+        #expect(!after.contains { $0.hasPrefix("exif:GPS") }, "\(after.sorted())")
+        for place in ["photoshop:City", "photoshop:State", "photoshop:Country", "Iptc4xmpCore:Location", "Iptc4xmpCore:CountryCode"] {
+            #expect(!after.contains(place), "\(place)")
+        }
+        #expect(!after.contains { $0.hasPrefix("Iptc4xmpExt:Location") })
+        let iptc = MetadataFixture.dictionary(kCGImagePropertyIPTCDictionary, of: shared) ?? [:]
+        #expect(iptc[kCGImagePropertyIPTCCity] == nil)
+
+        // The packet's own bytes: no coordinate or place survives anywhere in
+        // the file, whatever ImageIO's reader chooses to surface.
+        let text = String(decoding: try Data(contentsOf: shared), as: UTF8.self)
+        #expect(!text.contains(MetadataFixture.city))
+        #expect(!text.contains("46.614N"))
+        #expect(!text.contains("District 1"))
+
+        #expect(after.contains("xmp:Rating"))
+        let tiff = try #require(MetadataFixture.dictionary(kCGImagePropertyTIFFDictionary, of: shared))
+        #expect(tiff[kCGImagePropertyTIFFMake] as? String == MetadataFixture.make)
+        #expect(MetadataFixture.pixels(of: shared) == MetadataFixture.pixels(of: original))
+    }
 }
