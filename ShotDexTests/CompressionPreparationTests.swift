@@ -79,6 +79,38 @@ import Testing
         #expect(controller.deletedOriginalCount == 3)
     }
 
+    /// AC-10. Twenty photos only in iCloud: the processing modal's line is
+    /// "Downloading from iCloud · k of 20 · N%" before any photo is
+    /// processed.
+    @Test func progressLineInProcessingModal() async throws {
+        let (controller, library, _) = resize(20, script: "cloud=all,seconds=1")
+        controller.startExport()
+        try await until { controller.preparation?.state.phase == .downloading && (controller.preparation?.state.percent ?? 0) > 0 }
+        #expect(controller.isPreparing)
+        let line = try #require(controller.preparation?.state.progressLine)
+        #expect(line.wholeMatch(of: /Downloading from iCloud · \d+ of 20 · \d+%/) != nil, "\(line)")
+        #expect(library.created.isEmpty)
+        controller.cancelExport()
+        try await until { !controller.isExporting }
+    }
+
+    /// AC-10. Cancel while the fourth original downloads: nothing created,
+    /// nothing deleted, the modal gone within a second, back on the form.
+    @Test func cancelDuringDownloadCreatesNothing() async throws {
+        let (controller, library, fake) = resize(20, script: "cloud=all,seconds=30")
+        controller.startExport()
+        try await until { fake.downloadCount == 4 }
+        let pressed = ContinuousClock.now
+        controller.cancelExport()
+        try await until { !controller.isExporting }
+        #expect(ContinuousClock.now - pressed < .seconds(1))
+        #expect(library.created.isEmpty)
+        #expect(library.deleted.isEmpty)
+        #expect(library.removed.isEmpty)
+        #expect(fake.cancelledCount == 4)
+        #expect(!controller.didFinish)
+    }
+
     /// The prepared original is what the copy is made from: nothing is
     /// fetched again mid-batch.
     @Test func copiesReadThePreparedOriginals() async throws {
