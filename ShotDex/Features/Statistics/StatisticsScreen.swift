@@ -184,7 +184,8 @@ struct StatisticsScreen: View {
             columns: columns,
             onOpen: { navigation.openLibrary(with: $0) },
             onHide: {},
-            onRetry: { model.loadInsights() }
+            onRetry: { model.loadInsights() },
+            onUnknownCameras: { navigation.openSettings(at: .unknownCameras) }
         )
     }
 

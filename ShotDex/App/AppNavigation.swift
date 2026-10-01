@@ -34,6 +34,10 @@ final class AppNavigation {
     /// Set by Statistics drill-downs; consumed by the Library model owner.
     var pendingLibraryFilter: FilterCriteria?
 
+    /// A Settings row another tab asked to land on (Insights' unknown-sensor
+    /// footer → Unknown Cameras); read once as Settings opens.
+    private(set) var pendingSettingsRow: SettingsRowLabel?
+
     /// Free text a Shortcut or Spotlight asked the Library to search for.
     var pendingSearchQuery: String?
 
@@ -99,6 +103,19 @@ final class AppNavigation {
         pendingOnThisDayDate = date
         onThisDayToken &+= 1
         selectedTab = .albums
+    }
+
+    /// Opens Settings scrolled to `row`, the way a search result lands on it.
+    func openSettings(at row: SettingsRowLabel) {
+        pendingSettingsRow = row
+        isSettingsSheetPresented = true
+    }
+
+    /// Settings taking the request: it lands there once, and a later plain
+    /// open starts at the top again.
+    func consumePendingSettingsRow() -> SettingsRowLabel? {
+        defer { pendingSettingsRow = nil }
+        return pendingSettingsRow
     }
 
     func openLibrary(with criteria: FilterCriteria) {

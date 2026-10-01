@@ -429,4 +429,36 @@ struct StatisticsInsightsTests {
         }
         #expect(footer == nil)
     }
+
+    /// AC-10: 200 photos with a real focal length, 180 from a camera whose
+    /// sensor is unknown — no focal sentence, the footer instead.
+    @Test func unknownSensorSuppressesFocalSentence() throws {
+        let database = try AppDatabase.makeEmpty()
+        var rows = (0..<180).map { record("u\($0)", camera: "Mystery X1", focal: 23, equivalent: nil) }
+        rows += (0..<20).map { record("k\($0)", camera: "EOS R6", lens: "RF 50mm", focal: 50, equivalent: 50) }
+        try save(rows, into: database)
+
+        let inputs = try StatisticsQueries(database: database).insightInputs()
+        #expect(inputs.actualFocalCount == 200)
+        #expect(inputs.unknownSensorCount == 180)
+        #expect(InsightSelector.focal(inputs) == nil)
+        let state = InsightSelector.cardState(indexedRows: 200, inputs: inputs)
+        guard case .insights(let sentences, let footer) = state else {
+            Issue.record("expected the card, got \(state)"); return
+        }
+        #expect(!sentences.contains { if case .focalValue = $0.kind { true } else if case .focalGroup = $0.kind { true } else { false } })
+        #expect(footer == 180)
+        #expect(InsightCopy.unknownSensorFooter(180, locale: english)
+            == "180 photos are from cameras with an unknown sensor size.")
+    }
+
+    /// The footer's tap: Settings opens at the Unknown Cameras row, once.
+    @MainActor @Test func unknownCamerasFooterOpensSettingsAtTheRow() {
+        let navigation = AppNavigation()
+        navigation.openSettings(at: .unknownCameras)
+        #expect(navigation.isSettingsSheetPresented)
+        #expect(navigation.consumePendingSettingsRow() == .unknownCameras)
+        #expect(navigation.consumePendingSettingsRow() == nil)
+        #expect(SettingsSearchIndex.entry(for: .unknownCameras).section == .cameraDatabase)
+    }
 }

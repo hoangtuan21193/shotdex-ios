@@ -12,6 +12,7 @@ struct SettingsScreen: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(AppDependencies.self) private var dependencies
+    @Environment(AppNavigation.self) private var appNavigation
 
     let libraryModel: LibraryModel?
 
@@ -99,6 +100,10 @@ struct SettingsScreen: View {
                 await refreshIndexInfo()
             }
             .task {
+                // Opened from another tab to a row: land on it like a search result.
+                if let row = appNavigation.consumePendingSettingsRow() {
+                    navigation.open(SettingsSearchIndex.entry(for: row), usesSplitView: usesSplitView)
+                }
                 notificationAuthorization = await dependencies.onThisDayNotifications.authorizationState()
             }
             .onChange(of: isOnThisDayReminderEnabled) { _, isEnabled in
@@ -920,6 +925,7 @@ struct SettingsScreen: View {
     return SettingsScreen(libraryModel: nil)
         .environment(dependencies)
         .environment(dependencies.photoLibrary)
+        .environment(AppNavigation())
 }
 
 /// The three destructive confirmations Settings owns.

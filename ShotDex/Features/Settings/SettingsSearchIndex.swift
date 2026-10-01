@@ -79,7 +79,7 @@ enum SettingsSearchIndex {
             return (WidgetAlbumCatalog.normalized(words), entry)
         }
 
-    private static func entry(for label: SettingsRowLabel) -> SettingsSearchEntry {
+    static func entry(for label: SettingsRowLabel) -> SettingsSearchEntry {
         let section = section(for: label)
         return SettingsSearchEntry(
             label: label,

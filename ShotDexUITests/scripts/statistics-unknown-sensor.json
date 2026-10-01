@@ -1,0 +1,75 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Settings"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Re-index Library"
+    },
+    {
+      "action": "wait",
+      "seconds": 10
+    },
+    {
+      "action": "tap",
+      "label": "Done"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Statistics"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "screenshot",
+      "name": "01-unknown-sensor-footer"
+    },
+    {
+      "action": "dump",
+      "name": "01-unknown-sensor-footer"
+    },
+    {
+      "action": "tap",
+      "label": "180 photos are from cameras with an unknown sensor size."
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "screenshot",
+      "name": "02-settings-unknown-cameras"
+    },
+    {
+      "action": "dump",
+      "name": "02-settings-unknown-cameras"
+    },
+    {
+      "action": "tap",
+      "label": "Done"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    }
+  ]
+}
