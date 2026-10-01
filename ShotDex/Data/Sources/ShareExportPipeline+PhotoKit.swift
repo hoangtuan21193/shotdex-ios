@@ -37,7 +37,7 @@ extension ShareSource {
            let shared = resources.first(where: { $0.type == type }) {
             filename = Self.filename(original: original, shared: shared.originalFilename)
         }
-        self.init(id: asset.localIdentifier, kind: kind, filename: filename)
+        self.init(id: asset.localIdentifier, kind: kind, filename: filename, hasLocation: asset.location != nil)
     }
 }
 

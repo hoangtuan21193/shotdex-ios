@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import ImageIO
 import Photos
 import Testing
 import ShotDexKit
@@ -159,5 +160,54 @@ struct ShareExportPipelineTests {
         #expect(result.files.map(\.lastPathComponent) == ["IMG_0002.JPG"])
         let slot = pipeline.folder.appendingPathComponent("0")
         #expect(try FileManager.default.contentsOfDirectory(atPath: slot.path).isEmpty)
+    }
+
+    /// AC-3, second half: Remove Location in the app, then share at All
+    /// Metadata — the file's GPS goes too, and nothing else does.
+    @Test func removedLocationDropsFileGPSAtAll() async throws {
+        defer { cleanUp() }
+        let photoA = try MetadataFixture.write(.heic, in: fixtures)
+        let pipeline = ShareExportPipeline(
+            reader: FakeReader(photos: ["A": photoA]),
+            folder: try ShareExportPipeline.makeFolder(in: shareRoot),
+            level: .all
+        )
+        let result = await pipeline.export([
+            ShareSource(id: "A", kind: .photo, filename: "IMG_0001.HEIC", hasLocation: false),
+        ])
+
+        let file = try #require(result.files.first)
+        #expect(MetadataFixture.dictionary(kCGImagePropertyGPSDictionary, of: file) == nil)
+        #expect(!MetadataRewriter.carriesLocation(file))
+        let tiff = try #require(MetadataFixture.dictionary(kCGImagePropertyTIFFDictionary, of: file))
+        #expect(tiff[kCGImagePropertyTIFFMake] as? String == "SONY")
+        let exif = try #require(MetadataFixture.dictionary(kCGImagePropertyExifDictionary, of: file))
+        #expect(exif[kCGImagePropertyExifISOSpeedRatings] as? [Int] == [400])
+        #expect(exif[kCGImagePropertyExifDateTimeOriginal] as? String == "2026:09:20 17:05:00")
+        #expect(MetadataFixture.pixels(of: file) == MetadataFixture.pixels(of: photoA))
+    }
+
+    /// A photo that never had a location shares byte for byte at All, even
+    /// though its asset has none.
+    @Test func noLocationAnywhereStaysByteIdentical() async throws {
+        defer { cleanUp() }
+        var options = MetadataFixture.Options()
+        options.xmp = false
+        let data = try MetadataFixture.encode(.jpeg, options: options)
+        let plain = try #require(CGImageSourceCreateWithData(data as CFData, nil))
+        let url = fixtures.appendingPathComponent("plain.jpg")
+        let destination = try #require(CGImageDestinationCreateWithURL(url as CFURL, "public.jpeg" as CFString, 1, nil))
+        let strip: [CFString: Any] = [kCGImageMetadataShouldExcludeGPS: true]
+        #expect(CGImageDestinationCopyImageSource(destination, plain, strip as CFDictionary, nil))
+        #expect(!MetadataRewriter.carriesLocation(url))
+
+        let pipeline = ShareExportPipeline(
+            reader: FakeReader(photos: ["P": url]),
+            folder: try ShareExportPipeline.makeFolder(in: shareRoot),
+            level: .all
+        )
+        let result = await pipeline.export([ShareSource(id: "P", kind: .photo, filename: "P.jpg", hasLocation: false)])
+        let file = try #require(result.files.first)
+        #expect(try Self.sha256(file) == Self.sha256(url))
     }
 }

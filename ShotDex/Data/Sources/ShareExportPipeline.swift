@@ -17,6 +17,10 @@ struct ShareSource: Sendable, Equatable {
     let kind: Kind
     /// The name the shared file gets, e.g. `IMG_1234.HEIC`.
     let filename: String
+    /// Whether the library asset still has a location. One the user removed
+    /// in the app may still sit in the file's GPS, and it must not leave with
+    /// the file at any level, All Metadata included (spec §3).
+    var hasLocation = true
 }
 
 /// Where the share pipeline reads the bytes it hands over. `PhotoKitShareReader`
@@ -67,7 +71,7 @@ struct ShareExportPipeline: Sendable {
             let slot = folder.appendingPathComponent(String(index), isDirectory: true)
             try FileManager.default.createDirectory(at: slot, withIntermediateDirectories: true)
             let file = slot.appendingPathComponent(source.filename)
-            guard level != .all else {
+            if level == .all && source.hasLocation {
                 try await reader.writePhoto(source, to: file)
                 return file
             }
@@ -77,9 +81,19 @@ struct ShareExportPipeline: Sendable {
             let original = slot.appendingPathComponent("original-" + source.filename)
             defer { try? FileManager.default.removeItem(at: original) }
             try await reader.writePhoto(source, to: original)
-            try MetadataRewriter.rewrite(original, to: file, level: level)
+            try MetadataRewriter.rewrite(original, to: file, level: effectiveLevel(for: source, file: original))
             return file
         }
+    }
+
+    /// The level a photo is actually written at. All Metadata is the file as
+    /// it is — unless the asset's location was removed in the app and the
+    /// file still carries one: then only the place goes (spec §3, AC-3). A
+    /// location the user *changed* is not covered: All still hands over the
+    /// file's own.
+    func effectiveLevel(for source: ShareSource, file: URL) -> MetadataLevel {
+        guard level == .all, !source.hasLocation else { return level }
+        return MetadataRewriter.carriesLocation(file) ? .noLocation : .all
     }
 
     /// Prepares every item in order. One that fails — a download that did not
