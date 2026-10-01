@@ -1,0 +1,160 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Collections"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "tap",
+      "label": "New album or smart album, or customize this tab"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "tap",
+      "label": "New Smart Album"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "tap",
+      "x": 0.5,
+      "y": 0.23
+    },
+    {
+      "action": "typeText",
+      "text": "Busiest month"
+    },
+    {
+      "action": "tap",
+      "label": "Camera Model"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "tap",
+      "label": "Date Taken"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "tap",
+      "label": "is on"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "tap",
+      "label": "is in"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "screenshot",
+      "name": "01-is-in"
+    },
+    {
+      "action": "dump",
+      "name": "01-is-in"
+    },
+    {
+      "action": "tap",
+      "label": "Month, October"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "tap",
+      "label": "July"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "screenshot",
+      "name": "02-july"
+    },
+    {
+      "action": "dump",
+      "name": "02-july"
+    },
+    {
+      "action": "tap",
+      "label": "Month, July"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "tap",
+      "label": "August"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "screenshot",
+      "name": "03-august"
+    },
+    {
+      "action": "dump",
+      "name": "03-august"
+    },
+    {
+      "action": "tap",
+      "label": "Save"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "screenshot",
+      "name": "04-collections"
+    },
+    {
+      "action": "tap",
+      "label": "Busiest month"
+    },
+    {
+      "action": "wait",
+      "seconds": 5
+    },
+    {
+      "action": "screenshot",
+      "name": "05-album"
+    },
+    {
+      "action": "dump",
+      "name": "05-album"
+    }
+  ]
+}
