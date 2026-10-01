@@ -67,7 +67,11 @@ xuống:
 
 - **Cả loạt là RAW** (hay cặp RAW+JPEG, lấy RAW) → ghép **từ dữ liệu RAW**: giải mã tuyến tính không tone của bộ giải,
   gộp thành một ảnh radiance, trọng số theo thời gian phơi, bỏ mẫu cháy (spike §2).
-- **Loạt JPEG/HEIC** → cùng đường sau khi đảo ngược đường sRGB. Đây là xấp xỉ: JPEG của máy có đường tông riêng.
+- **Loạt JPEG/HEIC** → cùng đường sau khi đảo ngược đường sRGB (quản lý màu của Core Image làm việc đó khi đọc vào).
+  Đây là xấp xỉ: JPEG của máy có đường tông riêng.
+- **File của từng khung** (`HDRFrameSource`): ảnh server lấy file RAW đi kèm nếu có; ảnh thư viện lấy resource RAW nếu
+  có (cặp RAW+JPEG lấy RAW), không thì bản hiện tại. Phơi sáng đọc từ EXIF của chính file; ISO của CR3 nằm ở
+  `ISOSpeed`/`RecommendedExposureIndex`, không ở `ISOSpeedRatings`. RAW trong loạt lẫn đọc qua đường tông của bộ giải.
 - **Loạt lẫn RAW và không RAW** → dùng **bản đã render cho mọi khung**, và nói ra một dòng: *Some of these photos
   aren't RAW, so all of them are merged from their processed versions.* *Vì* trộn radiance của RAW với JPEG đã
   tone thì lệch sáng giữa các khung (chốt 2026-10-01).
@@ -143,7 +147,7 @@ Loạt thử là khung ảo có đáp án như spike §1: cảnh 14 EV dựng t�
 | AC-18 | chọn 2 ảnh | mở ⋯ ▸ Combine Photos | bốn dòng Focus Stack · Panorama · HDR · Stack Exposures; chọn 1 ảnh thì dòng HDR mờ | ⚠️ chưa có |
 | AC-19 | iPhone 26.5 + 18.6, iPad 13", Duo trong và ngoài | mở màn HDR với loạt 3 khung, đổi từng control, Save | ảnh từng trạng thái; không control bị cắt hay che; viewer mở ảnh vừa lưu | ⚠️ chưa có |
 | AC-20 | quyền ảnh `.limited`, cả loạt nằm trong tập được chọn | Save | ảnh mới hiện trong lưới Library | ⚠️ chưa có |
-| AC-21 | loạt 3 CR3 + 2 JPEG | mở màn | ghép từ bản đã render của cả 5; dòng báo *Some of these photos aren't RAW…* | 🟡 cờ: `HDRBracketOrderTests.aMixedSeriesIsFlaggedAndDoesNotMergeFromRAW`; nguồn + dòng báo: task 7, 9 |
+| AC-21 | loạt 3 CR3 + 2 JPEG | mở màn | ghép từ bản đã render của cả 5; dòng báo *Some of these photos aren't RAW…* | 🟡 cờ: `HDRBracketOrderTests.aMixedSeriesIsFlaggedAndDoesNotMergeFromRAW`; nguồn: `HDRFrameSourceTests.aRAWReadsLinearOrProcessed` (RAW qua đường tông của bộ giải: trung vị −1,19 so với −2,27 stop tuyến tính); dòng báo: task 9 |
 | AC-22 | Save, chọn HEIC | lưu | ảnh ra là HEIC; máy không ghi được HEIC thì báo trước và lưu JPEG | ⚠️ chưa có |
 
 ## 9. Rủi ro đã biết
