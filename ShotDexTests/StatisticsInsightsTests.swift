@@ -403,4 +403,30 @@ struct StatisticsInsightsTests {
         let filter = try #require(insight.filter)
         #expect(try LibraryQueries(database: database).count(matching: filter) == 40)
     }
+
+    /// AC-4: X-T5 (APS-C) 300 photos at 23mm real / 35mm equivalent and 100
+    /// at 33 / 50, plus 100 at 23mm from a camera with an unknown sensor. The
+    /// sentence says 35mm, never 23mm, at 75% of 400 — and names that
+    /// denominator, since 400 of 500 photos with a camera is under 90%.
+    @Test func focalSentenceNamesEquivalentAndDenominator() throws {
+        let database = try AppDatabase.makeEmpty()
+        var rows = (0..<300).map { record("a\($0)", camera: "X-T5", lens: "XF23mmF1.4 R", focal: 23, equivalent: 35) }
+        rows += (0..<100).map { record("b\($0)", camera: "X-T5", lens: "XF33mmF1.4 R", focal: 33, equivalent: 50) }
+        rows += (0..<100).map { record("c\($0)", camera: "Mystery X1", focal: 23, equivalent: nil) }
+        try save(rows, into: database)
+
+        let inputs = try StatisticsQueries(database: database).insightInputs()
+        #expect(inputs.photosWithCamera == 500)
+        #expect(inputs.unknownSensorCount == 100)
+        let insight = try #require(InsightSelector.focal(inputs))
+        #expect(insight.kind == .focalValue(millimetres: 35, count: 300, denominator: 400, namesDenominator: true))
+        let sentence = InsightCopy.sentence(insight, locale: english)
+        #expect(sentence == "75% of your photos with a known equivalent focal length are at 35mm equivalent.")
+        #expect(!sentence.contains("23mm"))
+        // 20% unknown is under half: no unknown-sensor footer.
+        guard case .insights(_, let footer) = InsightSelector.cardState(indexedRows: 500, inputs: inputs) else {
+            Issue.record("expected sentences"); return
+        }
+        #expect(footer == nil)
+    }
 }
