@@ -1,0 +1,67 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Settings"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Re-index Library"
+    },
+    {
+      "action": "wait",
+      "seconds": 15
+    },
+    {
+      "action": "tap",
+      "label": "Done"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Statistics"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "screenshot",
+      "name": "01-statistics"
+    },
+    {
+      "action": "dump",
+      "name": "01-statistics"
+    },
+    {
+      "action": "tap",
+      "label": "85% of your photos are at 26mm equivalent."
+    },
+    {
+      "action": "wait",
+      "seconds": 5
+    },
+    {
+      "action": "screenshot",
+      "name": "02-library-filtered"
+    },
+    {
+      "action": "dump",
+      "name": "02-library-filtered"
+    }
+  ]
+}
