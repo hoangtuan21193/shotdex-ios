@@ -7,7 +7,7 @@
 **Một câu:** Combine Photos ▸ **HDR** ghép một loạt chụp bù trừ sáng (từ 2 khung) thành một ảnh giữ được cả vùng
 sáng của khung tối lẫn vùng tối của khung sáng. Căn khung khi chụp cầm tay, khử bóng ma bốn mức, một thanh độ mạnh.
 
-> Trạng thái: **đã build** (2026-10-01), chờ `/verify`. Mọi `⚠️ CẦN QUYẾT` đã chốt với người dùng ngày 2026-10-01.
+> Trạng thái: **đã build, `/verify` 2026-10-01: 19/22 AC xanh** — còn AC-14 (iPhone 12), AC-19 (18.6, Duo màn trong), AC-20 (máy thật). Mọi `⚠️ CẦN QUYẾT` đã chốt với người dùng ngày 2026-10-01.
 
 ## 1. Người dùng cần gì
 
