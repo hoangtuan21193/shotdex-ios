@@ -1,0 +1,17 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "tap", "label": "Settings" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "orientation", "text": "landscape" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "tap", "label": "Display" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "screenshot", "name": "01-settings-display" },
+    { "action": "dump", "name": "01-settings-display", "type": "staticText" },
+    { "action": "orientation", "text": "portrait" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "tap", "label": "Done" }
+  ]
+}

@@ -93,8 +93,12 @@ struct InsightsCard: View {
                 }
             }
         } else {
+            // A hairline between columns, as between rows on the phone: without
+            // it a sentence's chevron sits against the next one's symbol and
+            // reads as pointing at it.
             HStack(alignment: .top, spacing: AppTheme.Spacing.lg) {
                 ForEach(0..<columns, id: \.self) { column in
+                    if column > 0 { Divider() }
                     VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
                         ForEach(Array(sentences.enumerated()).filter { $0.offset % columns == column }, id: \.offset) {
                             row($0.element)
@@ -103,6 +107,7 @@ struct InsightsCard: View {
                     .frame(maxWidth: .infinity, alignment: .topLeading)
                 }
             }
+            .fixedSize(horizontal: false, vertical: true)
         }
     }
 

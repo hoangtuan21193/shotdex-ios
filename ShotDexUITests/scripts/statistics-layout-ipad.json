@@ -1,0 +1,77 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "tap",
+      "label": "Settings"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Re-index Library"
+    },
+    {
+      "action": "wait",
+      "seconds": 15
+    },
+    {
+      "action": "tap",
+      "label": "Done"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Statistics"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "orientation",
+      "text": "landscape"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "screenshot",
+      "name": "01-landscape"
+    },
+    {
+      "action": "dump",
+      "name": "01-landscape-texts",
+      "type": "staticText"
+    },
+    {
+      "action": "orientation",
+      "text": "portrait"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "screenshot",
+      "name": "02-portrait"
+    },
+    {
+      "action": "dump",
+      "name": "02-portrait-texts",
+      "type": "staticText"
+    }
+  ]
+}
