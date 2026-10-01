@@ -45,7 +45,7 @@ final class EditorBatchSaver {
         service: PhotoEditingService,
         libraryQueries: LibraryQueries,
         format: PhotoOutputFormat,
-        includeMetadata: Bool,
+        metadata: MetadataLevel,
         savesCopy: Bool,
         album: PHAssetCollection?,
         onSaved: @escaping (String) -> Void,
@@ -67,7 +67,7 @@ final class EditorBatchSaver {
                         service: service,
                         libraryQueries: libraryQueries,
                         format: format,
-                        includeMetadata: includeMetadata,
+                        metadata: metadata,
                         savesCopy: savesCopy,
                         album: album
                     )
@@ -114,7 +114,7 @@ final class EditorBatchSaver {
         service: PhotoEditingService,
         libraryQueries: LibraryQueries,
         format: PhotoOutputFormat,
-        includeMetadata: Bool,
+        metadata: MetadataLevel,
         savesCopy: Bool,
         album: PHAssetCollection?
     ) async throws -> String {
@@ -139,7 +139,7 @@ final class EditorBatchSaver {
                 recipe: recipe,
                 renderRecipe: renderReady(recipe, for: item.asset, libraryQueries: libraryQueries),
                 requestedFormat: format,
-                includeMetadata: includeMetadata,
+                metadata: metadata,
                 album: album
             )
         } else {
@@ -185,7 +185,7 @@ final class EditorBatchSaver {
         recipe: PhotoEditRecipe,
         service: PhotoEditingService,
         format: PhotoOutputFormat,
-        includeMetadata: Bool,
+        metadata: MetadataLevel,
         resize: ResizePreset? = nil,
         into folder: URL
     ) async throws -> URL {
@@ -206,7 +206,7 @@ final class EditorBatchSaver {
             source: source,
             recipe: tokensExpanded(recipe, values: OverlayTokenValues(metadata: nil)),
             format: written,
-            includeMetadata: includeMetadata,
+            metadata: metadata,
             resize: resize,
             to: url
         )
@@ -360,7 +360,7 @@ struct PasteEditsSheet: View {
             service: dependencies.photoEditing,
             libraryQueries: dependencies.libraryQueries,
             format: format,
-            includeMetadata: includeMetadata,
+            metadata: includeMetadata ? .all : .noMetadata,
             savesCopy: savesCopy,
             album: nil,
             onSaved: { _ in },

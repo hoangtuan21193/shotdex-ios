@@ -76,7 +76,7 @@ final class CompressionController {
             format: format,
             quality: quality,
             preset: preset,
-            includeMetadata: includeMetadata,
+            metadata: includeMetadata ? .all : .noMetadata,
             cropAnchor: assets.count > 1 ? .center : cropAnchor
         )
     }

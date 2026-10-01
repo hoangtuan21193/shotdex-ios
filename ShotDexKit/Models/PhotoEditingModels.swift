@@ -1609,27 +1609,28 @@ public struct PhotoExportOptions: Codable, Equatable, Sendable {
         format: PhotoOutputFormat,
         quality: Double,
         preset: ResizePreset,
-        includeMetadata: Bool,
+        metadata: MetadataLevel,
         cropAnchor: NormalizedPoint,
     ) {
         self.format = format
         self.quality = quality
         self.preset = preset
-        self.includeMetadata = includeMetadata
+        self.metadata = metadata
         self.cropAnchor = cropAnchor
     }
 
     public var format: PhotoOutputFormat
     public var quality: Double
     public var preset: ResizePreset
-    public var includeMetadata: Bool
+    /// What the resized copy keeps (FS-08.06 §4).
+    public var metadata: MetadataLevel
     public var cropAnchor: NormalizedPoint
 
     public static let compressDefault = PhotoExportOptions(
         format: .preserve,
         quality: 0.8,
         preset: .original,
-        includeMetadata: true,
+        metadata: .all,
         cropAnchor: .center
     )
 }

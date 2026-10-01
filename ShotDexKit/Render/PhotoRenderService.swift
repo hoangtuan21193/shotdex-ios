@@ -685,7 +685,7 @@ public actor PhotoRenderService {
         to url: URL,
         format: PhotoOutputFormat,
         quality: Double,
-        includeMetadata: Bool
+        metadata: MetadataLevel
     ) throws {
         let resolvedFormat = format == .preserve ? .jpeg : format
         guard let cgImage = context.createCGImage(
@@ -706,7 +706,7 @@ public actor PhotoRenderService {
         ) else {
             throw PhotoEditingError.cannotEncode
         }
-        var properties: [CFString: Any] = includeMetadata ? result.properties : [:]
+        var properties = metadata.filteredProperties(result.properties)
         properties[kCGImagePropertyOrientation] = 1
         properties[kCGImagePropertyPixelWidth] = cgImage.width
         properties[kCGImagePropertyPixelHeight] = cgImage.height
@@ -799,12 +799,13 @@ public actor PhotoRenderService {
         )
         let ratio = pow(targetPixels / previewPixels, 0.82)
         let metadataOverhead: Int
-        if options.includeMetadata,
+        let kept = options.metadata.filteredProperties(source.properties)
+        if !kept.isEmpty,
            PropertyListSerialization.propertyList(
-               source.properties,
+               kept,
                isValidFor: .binary
            ), let encoded = try? PropertyListSerialization.data(
-               fromPropertyList: source.properties,
+               fromPropertyList: kept,
                format: .binary,
                options: 0
            ) {

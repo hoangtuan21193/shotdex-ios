@@ -185,7 +185,7 @@ import ShotDexKit
         defer { service.releaseCachedSessions() }
         let preset = ResizePreset(name: "300 px", kind: .longEdge, longEdge: 300)
         let render = try await EditorBatchSaver.renderToFile(
-            photo, recipe: .identity, service: service, format: .jpeg, includeMetadata: true,
+            photo, recipe: .identity, service: service, format: .jpeg, metadata: .all,
             resize: preset, into: try #require(run.fetch.workDirectory)
         )
         #expect(render.lastPathComponent == "a_edited.jpg")

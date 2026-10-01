@@ -509,7 +509,7 @@ struct PhotoEditorScreen: View {
     private func saveWholeRun(
         _ controller: PhotoEditorController,
         format: PhotoOutputFormat,
-        includeMetadata: Bool,
+        metadata: MetadataLevel,
         savesCopy: Bool
     ) {
         guard let session, let current = session.current else { return }
@@ -527,7 +527,7 @@ struct PhotoEditorScreen: View {
             service: dependencies.photoEditing,
             libraryQueries: dependencies.libraryQueries,
             format: format,
-            includeMetadata: includeMetadata,
+            metadata: metadata,
             savesCopy: savesCopy,
             album: sourceAlbum,
             onSaved: { assetID in
@@ -874,12 +874,12 @@ struct PhotoEditorScreen: View {
             PhotoEditorSaveSheet(
                 controller: controller,
                 pendingCount: pendingSaveCount,
-                saveAll: { format, includeMetadata, savesCopy in
+                saveAll: { format, metadata, savesCopy in
                     isSaveSheetPresented = false
                     saveWholeRun(
                         controller,
                         format: format,
-                        includeMetadata: includeMetadata,
+                        metadata: metadata,
                         savesCopy: savesCopy
                     )
                 }
@@ -3586,15 +3586,16 @@ private struct PhotoEditorSaveSheet: View {
     /// Photos in this run carrying edits. Zero for a single-photo session, which
     /// hides the batch row entirely.
     var pendingCount: Int = 0
-    /// Starts a batch write: format, metadata, and whether it copies rather than
-    /// overwrites.
-    var saveAll: ((PhotoOutputFormat, Bool, Bool) -> Void)?
+    /// Starts a batch write: format, what a copy keeps, and whether it copies
+    /// rather than overwrites.
+    var saveAll: ((PhotoOutputFormat, MetadataLevel, Bool) -> Void)?
     let onFinished: () -> Void
 
     /// Defaults to JPEG: it is the format that always works, and making every save
     /// start with a format decision was friction for no benefit.
     @State private var format: PhotoOutputFormat? = .jpeg
-    @State private var includeMetadata = true
+    /// What a copy keeps; starts at the Settings default (FS-08.06 §4).
+    @State private var copyMetadata = MetadataLevel.sharingDefault()
 
     var body: some View {
         NavigationStack {
@@ -3605,7 +3606,6 @@ private struct PhotoEditorSaveSheet: View {
                         Text("HEIC").tag(PhotoOutputFormat.heic as PhotoOutputFormat?)
                     }
                     .pickerStyle(.segmented)
-                    Toggle("Include Metadata", isOn: $includeMetadata)
                     if format == .heic, !controller.supportsHEICEditOutput {
                         Label(
                             "Photos doesn't support an HEIC edited version of this photo. ShotDex will save a maximum-quality JPEG.",
@@ -3615,14 +3615,14 @@ private struct PhotoEditorSaveSheet: View {
                         .foregroundStyle(.orange)
                     }
                 } footer: {
-                    Text("Save Copy is full resolution at maximum quality. Turning off metadata strips EXIF from the copy; Save Changes always keeps the photo's date and location. If Photos doesn't support HEIC for this photo, ShotDex falls back to JPEG and tells you.")
+                    Text("Full resolution at maximum quality. If Photos doesn't support HEIC for this photo, ShotDex falls back to JPEG and tells you.")
                 }
 
                 if pendingCount > 1, let saveAll {
                     Section {
                         Button {
                             guard let format else { return }
-                            saveAll(format, includeMetadata, false)
+                            saveAll(format, .all, false)
                         } label: {
                             Label(
                                 "Save Changes to \(pendingCount) Photos",
@@ -3633,7 +3633,7 @@ private struct PhotoEditorSaveSheet: View {
 
                         Button {
                             guard let format else { return }
-                            saveAll(format, includeMetadata, true)
+                            saveAll(format, copyMetadata, true)
                         } label: {
                             Label(
                                 "Save \(pendingCount) Copies",
@@ -3647,20 +3647,28 @@ private struct PhotoEditorSaveSheet: View {
                 }
 
                 Section {
+                    Picker("Metadata", selection: $copyMetadata) {
+                        ForEach(MetadataLevel.allCases, id: \.self) { level in
+                            Text(level.title).tag(level)
+                        }
+                    }
                     Button {
                         guard let format else { return }
                         Task {
-                            await controller.saveCopy(
-                                format: format,
-                                includeMetadata: includeMetadata
-                            )
+                            await controller.saveCopy(format: format, metadata: copyMetadata)
                             if controller.savedAssetID != nil { onFinished() }
                         }
                     } label: {
                         Label("Save Copy", systemImage: "plus.square.on.square")
                     }
                     .disabled(format == nil)
+                } header: {
+                    Text("Save Copy")
+                } footer: {
+                    Text("A new still photo with the metadata you choose. No Location also leaves the copy's place empty in Photos; No Metadata dates it today.")
+                }
 
+                Section {
                     Button {
                         guard let format else { return }
                         Task {
@@ -3674,7 +3682,7 @@ private struct PhotoEditorSaveSheet: View {
                         format == nil || controller.asset?.canPerform(.content) != true
                     )
                 } footer: {
-                    Text("Save Changes is non-destructive: Photos keeps the original and ShotDex reopens this photo with the saved crop, sliders and masks. A Live Photo keeps its motion. Save Copy creates a still image.")
+                    Text("Save Changes keeps everything — the photo's date, location and metadata — and is non-destructive: Photos keeps the original and ShotDex reopens this photo with the saved crop, sliders and masks. A Live Photo keeps its motion.")
                 }
             }
             .navigationTitle("Save Edit")

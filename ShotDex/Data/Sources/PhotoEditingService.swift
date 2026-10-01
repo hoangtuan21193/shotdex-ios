@@ -293,7 +293,7 @@ final class PhotoEditingService {
         recipe: PhotoEditRecipe,
         renderRecipe: PhotoEditRecipe? = nil,
         requestedFormat: PhotoOutputFormat,
-        includeMetadata: Bool,
+        metadata: MetadataLevel,
         album: PHAssetCollection?
     ) async throws -> PhotoSaveResult {
         let (asset, contentInput) = try session.library()
@@ -325,7 +325,7 @@ final class PhotoEditingService {
             to: baseURL,
             format: actualFormat,
             quality: 1,
-            includeMetadata: includeMetadata
+            metadata: metadata
         )
         let final = try await renderer.render(source: source.info, recipe: renderRecipe)
         try await renderer.write(
@@ -333,7 +333,7 @@ final class PhotoEditingService {
             to: renderedURL,
             format: actualFormat,
             quality: 1,
-            includeMetadata: includeMetadata
+            metadata: metadata
         )
 
         var attachedRecipe = recipe
@@ -360,10 +360,9 @@ final class PhotoEditingService {
                 let resourceOptions = PHAssetResourceCreationOptions()
                 resourceOptions.originalFilename = filename
                 creation.addResource(with: .photo, fileURL: baseURL, options: resourceOptions)
-                if includeMetadata {
-                    creation.creationDate = asset.creationDate
-                    creation.location = asset.location
-                }
+                let carryOver = AssetMetadataCarryOver(level: metadata)
+                if carryOver.keepsDate { creation.creationDate = asset.creationDate }
+                if carryOver.keepsLocation { creation.location = asset.location }
                 guard let placeholder = creation.placeholderForCreatedAsset else {
                     transactionFileError = PhotoEditingError.cannotCreateAsset
                     return
@@ -458,7 +457,8 @@ final class PhotoEditingService {
             to: destination,
             format: actualFormat,
             quality: 1,
-            includeMetadata: true
+            // Save Changes keeps everything: the photo never leaves (AC-17).
+            metadata: .all
         )
         output.adjustmentData = makeAdjustmentData(recipe)
         try await commit(output: output, to: asset)
@@ -508,7 +508,7 @@ final class PhotoEditingService {
             to: outputURL,
             format: format,
             quality: options.quality,
-            includeMetadata: options.includeMetadata
+            metadata: options.metadata
         )
         let sourceName = session.sourceOptions.first(where: { $0.id == source.optionID })?.filename
         let sourceAssetIdentifier =
@@ -529,7 +529,7 @@ final class PhotoEditingService {
                 fileURL: outputURL,
                 filename: filename,
                 sourceAsset: asset,
-                includeMetadata: options.includeMetadata,
+                metadata: options.metadata,
                 album: album
             )
         } catch {
@@ -550,7 +550,7 @@ final class PhotoEditingService {
         source: LoadedPhotoEditSource,
         recipe: PhotoEditRecipe,
         format: PhotoOutputFormat,
-        includeMetadata: Bool,
+        metadata: MetadataLevel,
         resize: ResizePreset? = nil,
         to url: URL
     ) async throws {
@@ -560,7 +560,7 @@ final class PhotoEditingService {
             rendered = await renderer.resize(rendered, preset: resize, cropAnchor: .center)
             quality = resize.quality
         }
-        try await renderer.write(rendered, to: url, format: format, quality: quality, includeMetadata: includeMetadata)
+        try await renderer.write(rendered, to: url, format: format, quality: quality, metadata: metadata)
     }
 
     func deleteCreatedAssets(ids: [String]) async throws {
@@ -769,7 +769,7 @@ final class PhotoEditingService {
         fileURL: URL,
         filename: String,
         sourceAsset: PHAsset,
-        includeMetadata: Bool,
+        metadata: MetadataLevel,
         album: PHAssetCollection?
     ) async throws -> String {
         var placeholderID: String?
@@ -778,10 +778,9 @@ final class PhotoEditingService {
             let resourceOptions = PHAssetResourceCreationOptions()
             resourceOptions.originalFilename = filename
             creation.addResource(with: .photo, fileURL: fileURL, options: resourceOptions)
-            if includeMetadata {
-                creation.creationDate = sourceAsset.creationDate
-                creation.location = sourceAsset.location
-            }
+            let carryOver = AssetMetadataCarryOver(level: metadata)
+            if carryOver.keepsDate { creation.creationDate = sourceAsset.creationDate }
+            if carryOver.keepsLocation { creation.location = sourceAsset.location }
             guard let placeholder = creation.placeholderForCreatedAsset else { return }
             placeholderID = placeholder.localIdentifier
             if let album, album.canPerform(.addContent),

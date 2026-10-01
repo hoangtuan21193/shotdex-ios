@@ -64,7 +64,7 @@ struct LargeImageRenderTests {
         sampler.start()
         let output = folder.appendingPathComponent("saved.jpg")
         let result = try await renderer.render(source: source, recipe: recipe)
-        try await renderer.write(result, to: output, format: .jpeg, quality: 0.9, includeMetadata: true)
+        try await renderer.write(result, to: output, format: .jpeg, quality: 0.9, metadata: .all)
         let peak = sampler.stop()
         let used = peak > baseline ? peak - baseline : 0
         print("FOOTPRINT 100 MP save: \(used / 1_048_576) MB")

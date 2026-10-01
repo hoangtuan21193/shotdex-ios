@@ -1,4 +1,5 @@
 import Foundation
+import ImageIO
 
 /// How much of a photo's metadata goes with it when it leaves the app
 /// (FS-08.06 §3). One value in Settings is the default for every way out —
@@ -19,4 +20,50 @@ public enum MetadataLevel: String, CaseIterable, Codable, Sendable {
 
     /// Whether this level removes the location.
     public var removesLocation: Bool { self != .all }
+}
+
+extension MetadataLevel {
+    /// The ImageIO property dictionaries a render writes, filtered by the
+    /// level (spec §3) — for files that are rendered, not copied: Save Copy,
+    /// Paste Edits as copies, Resize. Orientation is not decided here; the
+    /// renderer writes its own.
+    public func filteredProperties(_ properties: [CFString: Any]) -> [CFString: Any] {
+        switch self {
+        case .all:
+            return properties
+        case .noLocation:
+            var kept = properties
+            kept[kCGImagePropertyGPSDictionary] = nil
+            if var exif = kept[kCGImagePropertyExifDictionary] as? [CFString: Any] {
+                exif[kCGImagePropertyExifSubjectLocation] = nil
+                kept[kCGImagePropertyExifDictionary] = exif
+            }
+            if var iptc = kept[kCGImagePropertyIPTCDictionary] as? [CFString: Any] {
+                for key in Self.iptcPlaceKeys { iptc[key] = nil }
+                kept[kCGImagePropertyIPTCDictionary] = iptc
+            }
+            return kept
+        case .noMetadata:
+            // Only the author's two fields, where they were.
+            var kept: [CFString: Any] = [:]
+            if let tiff = properties[kCGImagePropertyTIFFDictionary] as? [CFString: Any] {
+                let author = tiff.filter { $0.key == kCGImagePropertyTIFFArtist || $0.key == kCGImagePropertyTIFFCopyright }
+                if !author.isEmpty { kept[kCGImagePropertyTIFFDictionary] = author }
+            }
+            if let iptc = properties[kCGImagePropertyIPTCDictionary] as? [CFString: Any] {
+                let author = iptc.filter {
+                    $0.key == kCGImagePropertyIPTCByline || $0.key == kCGImagePropertyIPTCCopyrightNotice
+                }
+                if !author.isEmpty { kept[kCGImagePropertyIPTCDictionary] = author }
+            }
+            return kept
+        }
+    }
+
+    /// IPTC fields that name a place.
+    static let iptcPlaceKeys: [CFString] = [
+        kCGImagePropertyIPTCCity, kCGImagePropertyIPTCProvinceState,
+        kCGImagePropertyIPTCCountryPrimaryLocationName, kCGImagePropertyIPTCCountryPrimaryLocationCode,
+        kCGImagePropertyIPTCSubLocation,
+    ]
 }

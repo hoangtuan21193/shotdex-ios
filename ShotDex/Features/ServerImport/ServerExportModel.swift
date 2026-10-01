@@ -270,7 +270,9 @@ extension ServerExportModel {
                     recipe: recipes[photo.id] ?? .identity,
                     service: service,
                     format: format == .heic ? .heic : .jpeg,
-                    includeMetadata: true,
+                    // The render goes back to the server and to Photos with
+                    // everything; its Share destination filters it (AC-22).
+                    metadata: .all,
                     resize: resize,
                     into: folder
                 )

@@ -3241,7 +3241,7 @@ final class PhotoEditorController {
         )
     }
 
-    func saveCopy(format: PhotoOutputFormat, includeMetadata: Bool) async {
+    func saveCopy(format: PhotoOutputFormat, metadata: MetadataLevel) async {
         guard let session, let loadedSource else { return }
         isSaving = true
         errorMessage = nil
@@ -3253,7 +3253,7 @@ final class PhotoEditorController {
                 recipe: recipe,
                 renderRecipe: renderReady(recipe),
                 requestedFormat: format,
-                includeMetadata: includeMetadata,
+                metadata: metadata,
                 album: sourceAlbum
             )
             didFallbackToJPEG = result.fellBackToJPEG
