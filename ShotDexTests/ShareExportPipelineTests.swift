@@ -450,4 +450,32 @@ struct ShareExportPipelineTests {
         let exif = try #require(MetadataFixture.dictionary(kCGImagePropertyExifDictionary, of: file))
         #expect(exif[kCGImagePropertyExifISOSpeedRatings] as? [Int] == [400])
     }
+
+    /// AC-21: a RAW dragged out below All Metadata is offered and written as
+    /// a full-size JPEG at that level — no question, no location. At All
+    /// Metadata the RAW goes as it is.
+    @Test(.enabled(if: RAWFixtures.has(RAWFixtures.dji), "needs the RAW samples in ~/Library/Caches/ShotDexFixtures/raw/"))
+    func dragRAWBecomesJPEG() async throws {
+        defer { cleanUp() }
+        let dng = try #require(RAWFixtures.available(RAWFixtures.dji))
+        let source = ShareSource(id: "dng", kind: .raw, filename: "DJI_0001.DNG", uniformType: "com.adobe.raw-image")
+        let plan = ShareDragPlan(source: source, level: .noLocation)
+        #expect(plan.type == .jpeg)
+        #expect(plan.rawChoice == .shareAsJPEG)
+        #expect(ShareDragPlan(source: source, level: .all).type == UTType("com.adobe.raw-image"))
+
+        var pipeline = ShareExportPipeline(
+            reader: FakeReader(photos: ["dng": dng]),
+            folder: try ShareExportPipeline.makeFolder(in: shareRoot),
+            level: .noLocation
+        )
+        pipeline.rawChoice = plan.rawChoice
+        let result = await pipeline.export([source])
+        let file = try #require(result.files.first)
+        #expect(file.pathExtension == "jpg")
+        #expect(MetadataFixture.dictionary(kCGImagePropertyGPSDictionary, of: file) == nil)
+        #expect(MetadataFixture.dictionary(kCGImagePropertyTIFFDictionary, of: file)?[kCGImagePropertyTIFFMake] as? String == "DJI")
+        let native = try #require(CIRAWFilter(imageURL: dng)?.outputImage?.extent.size)
+        #expect(MetadataFixture.properties(of: file)[kCGImagePropertyPixelWidth] as? Int == Int(native.width))
+    }
 }

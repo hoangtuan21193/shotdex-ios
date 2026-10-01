@@ -212,16 +212,22 @@ extension ShareBatchPlan {
 
 /// Dragging a photo into another app (FS-08.06 §5): the same pipeline as a
 /// share at the Settings level — the current version, the edited one if the
-/// photo was edited — with nowhere to ask a question.
+/// photo was edited — with nowhere to ask a question. So a RAW below All
+/// Metadata leaves as a full-size JPEG at that level, never with its
+/// location, and the drag offers JPEG rather than the RAW's type.
 struct ShareDragPlan: Equatable, Sendable {
     /// The type the drag offers the other app.
     let type: UTType
-    /// The answer a share would have asked for. Skip until plan task 23: a
-    /// RAW below All Metadata does not leave by drag.
+    /// The answer a share would have asked for.
     let rawChoice: RAWChoice
 
     init(source: ShareSource, level: MetadataLevel) {
-        type = source.uniformType.flatMap(UTType.init) ?? (source.kind == .video ? .quickTimeMovie : .jpeg)
-        rawChoice = .skip
+        if source.kind == .raw && level != .all {
+            type = .jpeg
+            rawChoice = .shareAsJPEG
+        } else {
+            type = source.uniformType.flatMap(UTType.init) ?? (source.kind == .video ? .quickTimeMovie : .jpeg)
+            rawChoice = .skip
+        }
     }
 }
