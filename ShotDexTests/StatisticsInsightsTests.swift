@@ -353,4 +353,54 @@ struct StatisticsInsightsTests {
         #expect(inputs.shutterAndFocalCount == 100)
         #expect(inputs.monthCounts.reduce(0) { $0 + $1.count } == 100)
     }
+
+    // MARK: Focal sentence on real rows (AC-3)
+
+    /// AC-3: 1,000 iPhone 13 Pro photos, 850 on the main module (26mm
+    /// equivalent), 150 on the tele (77mm): the value sentence, and a filter
+    /// whose Library count is the sentence's 850.
+    @Test func focalSentenceUsesEquivalentValue() throws {
+        let database = try AppDatabase.makeEmpty()
+        var rows = (0..<850).map {
+            record("m\($0)", camera: "iPhone 13 Pro", lens: "iPhone 13 Pro back triple camera 5.7mm f/1.5",
+                   focal: 5.7, equivalent: 26, shutter: 1.0 / 120)
+        }
+        rows += (0..<150).map {
+            record("t\($0)", camera: "iPhone 13 Pro", lens: "iPhone 13 Pro back triple camera 9mm f/2.8",
+                   focal: 9, equivalent: 77, shutter: 1.0 / 120)
+        }
+        try save(rows, into: database)
+
+        let inputs = try StatisticsQueries(database: database).insightInputs()
+        let first = try #require(InsightSelector.select(inputs).first)
+        #expect(InsightCopy.sentence(first, locale: english) == "85% of your photos are at 26mm equivalent.")
+        let filter = try #require(first.filter)
+        #expect(filter.focalLengthMode == .equivalent)
+        #expect(filter.focalRange.lowerBound == 25.5)
+        #expect(filter.focalRange.upperBound.map { abs($0 - 26.5) < 0.001 && $0 < 26.5 } == true)
+        #expect(try LibraryQueries(database: database).count(matching: filter) == 850)
+    }
+
+    /// No single focal length holds half, the Wide group does: the group
+    /// sentence counts with the Library filter's bounds, so a photo at
+    /// 19.999 or 35mm stays out and one at 20 or 34.999 is in — the same
+    /// photos the grid shows after the tap.
+    @Test func angleGroupSentenceCountEqualsFilterCount() throws {
+        let database = try AppDatabase.makeEmpty()
+        var rows: [PhotoMetadata] = []
+        for (value, count) in [(19.999, 15), (20.0, 14), (25.0, 14), (34.999, 12), (35.0, 15)] {
+            rows += (0..<count).map { record("f\(value)-\($0)", camera: "EOS R6", focal: value, equivalent: value) }
+        }
+        try save(rows, into: database)
+
+        let inputs = try StatisticsQueries(database: database).insightInputs()
+        #expect(inputs.focalAngleCounts[.ultraWide] == 15)
+        #expect(inputs.focalAngleCounts[.wide] == 40)
+        #expect(inputs.focalAngleCounts[.standard] == 15)
+        let insight = try #require(InsightSelector.focal(inputs))
+        #expect(insight.kind == .focalGroup(buckets: [.wide], count: 40, denominator: 70, namesDenominator: false))
+        #expect(InsightCopy.sentence(insight, locale: english) == "57% of your photos are at 20–34mm equivalent (Wide).")
+        let filter = try #require(insight.filter)
+        #expect(try LibraryQueries(database: database).count(matching: filter) == 40)
+    }
 }
