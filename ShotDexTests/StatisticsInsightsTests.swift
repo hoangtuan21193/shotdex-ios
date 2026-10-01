@@ -489,4 +489,30 @@ struct StatisticsInsightsTests {
         let sentences = InsightSelector.select(inputs)
         #expect(sentences.map(\.kind).contains(pair.kind))
     }
+
+    /// AC-6: 500 photos at 50mm equivalent, 90 at 1/15 s and 410 at 1/250 s:
+    /// 18% slow, a sentence that opens nothing. 20 at 1/15 s (4%): none.
+    @Test func slowShutterSentenceAt18Percent() throws {
+        let database = try AppDatabase.makeEmpty()
+        var rows = (0..<90).map { record("s\($0)", camera: "EOS R6", focal: 50, equivalent: 50, shutter: 1.0 / 15) }
+        rows += (0..<410).map { record("f\($0)", camera: "EOS R6", focal: 50, equivalent: 50, shutter: 1.0 / 250) }
+        try save(rows, into: database)
+
+        let inputs = try StatisticsQueries(database: database).insightInputs()
+        let slow = try #require(InsightSelector.slowShutter(inputs))
+        #expect(InsightCopy.sentence(slow, locale: english) == "18% of your photos were shot slower than 1/focal length.")
+        #expect(slow.filter == nil, "untappable: no chevron, no button trait")
+    }
+
+    @Test func noSlowShutterSentenceBelowFivePercent() throws {
+        let database = try AppDatabase.makeEmpty()
+        var rows = (0..<20).map { record("s\($0)", camera: "EOS R6", focal: 50, equivalent: 50, shutter: 1.0 / 15) }
+        rows += (0..<480).map { record("f\($0)", camera: "EOS R6", focal: 50, equivalent: 50, shutter: 1.0 / 250) }
+        try save(rows, into: database)
+
+        let inputs = try StatisticsQueries(database: database).insightInputs()
+        #expect(inputs.slowShutterCount == 20 && inputs.shutterAndFocalCount == 500)
+        #expect(InsightSelector.slowShutter(inputs) == nil)
+        #expect(!InsightSelector.select(inputs).contains { if case .slowShutter = $0.kind { true } else { false } })
+    }
 }
