@@ -1,7 +1,7 @@
 # FS-08.06 — Metadata khi chia sẻ và xuất
 
 `FS-08.06` · tier A (Settings, sheet Save) + D (Resize) · `Features/Shared/PhotoShareSheet.swift` · `Features/Settings/SettingsScreen.swift`
-· `Data/Sources/PhotoEditingService.swift` · `ShotDexTests/ShareLocationStrippingTests.swift` · cập nhật 2026-10-01
+· `Data/Sources/PhotoEditingService.swift` · `Domain/Metadata/MetadataRewriter.swift` · `Data/Sources/ShareExportPipeline.swift` · `ShotDexTests/MetadataRewriterTests.swift` · cập nhật 2026-10-01
 
 Nguồn intent: [2026-09-30-user-wishes-research](../../_intents/2026-09-30-user-wishes-research.md) mục 3.
 
@@ -126,7 +126,7 @@ khác (iPad, Split View).
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | Settings = No Location; ảnh A trong lưới | Share → Save to Files | file không có nhóm GPS; còn Make `SONY`, Model `ILCE-7M4`, ISO 400, ngày 2026-09-20 17:05; pixel giải mã trùng bản gốc | một phần: `ShareLocationStrippingTests.theCoordinateIsGone`, `.everythingElseSurvives` (chỉ hàm ghi lại); luồng từ lưới ⚠️ chưa có |
+| AC-1 | Settings = No Location; ảnh A trong lưới | Share → Save to Files | file không có nhóm GPS; còn Make `SONY`, Model `ILCE-7M4`, ISO 400, ngày 2026-09-20 17:05; pixel giải mã trùng bản gốc | `ShareExportPipelineTests.noLocationFromTheGrid` (pipeline của nút Share ở lưới, chọn, album, smart album, On This Day), `MetadataRewriterTests.noLocationRemovesThePlaceOnly`, `.noLocationKeepsEveryPixel` (JPEG/HEIC/TIFF), `.noLocationKeepsTheGainMap`, `.failedRewriteNeverReturnsOriginal`; picker Settings iPhone 17 26.5 (2026-10-01). Còn thiếu: depth của ảnh Portrait (§8) và Save to Files trên máy — lúc `/verify` |
 | AC-2 | Settings = All Metadata; ảnh A | Share, rồi chạm dòng *Share Without Metadata* trong share sheet | file không có GPS, Make, Model, ISO, ngày chụp, MakerNote; còn hướng xoay, color profile, Artist `Nguyen An`, Copyright `© 2026 Nguyen An`; Settings vẫn All Metadata, lần share sau mở ở All | ⚠️ chưa có |
 | AC-3 | Settings = All Metadata; ảnh A | Share; rồi Remove Location cho A trong app và Share lại | lần 1: SHA-256 file nhận được bằng SHA-256 file gốc của asset. Lần 2: file không có nhóm GPS, còn Make `SONY`, ISO 400, ngày 2026-09-20 17:05 | một phần: lần 1 `ShareExportPipelineTests.allMetadataIsByteIdentical` (pipeline, chưa nối vào nút Share); lần 2 ⚠️ chưa có |
 | AC-4 | JPEG xuất từ Lightroom: GPS trong cả EXIF lẫn XMP, IPTC City `Ho Chi Minh City`, XMP Rating 4 | Share, No Location | không còn nhóm GPS, không còn toạ độ trong XMP, không còn City; Rating 4 vẫn còn | ⚠️ chưa có |

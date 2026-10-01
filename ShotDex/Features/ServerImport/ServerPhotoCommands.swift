@@ -28,12 +28,11 @@ enum ServerPhotoHandoff {
         let folder = directory.appendingPathComponent("Share-\(UUID().uuidString)", isDirectory: true)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         return photos.flatMap(\.files).map { fetched in
-            guard !includesLocation,
-                  let data = try? Data(contentsOf: fetched.url),
-                  let stripped = PhotoShareSheet.stripLocation(from: data)
-            else { return fetched.url }
+            guard !includesLocation else { return fetched.url }
             let url = folder.appendingPathComponent(fetched.file.name)
-            return (try? stripped.write(to: url)) != nil ? url : fetched.url
+            // Still hands over the original when the rewrite fails (a RAF):
+            // the RAW alert that replaces this is FS-08.06 plan task 18.
+            return (try? MetadataRewriter.rewrite(fetched.url, to: url, level: .noLocation)) != nil ? url : fetched.url
         }
     }
 
@@ -167,7 +166,7 @@ struct ServerPhotoCommandHost: ViewModifier {
         case .edit:
             editing = finished
         case .share:
-            let includesLocation = UserDefaults.standard.object(forKey: SettingsKeys.shareIncludesLocation) as? Bool ?? true
+            let includesLocation = !MetadataLevel.sharingDefault().removesLocation
             let files = ServerPhotoHandoff.shareFiles(
                 for: finished.photos, includesLocation: includesLocation,
                 in: finished.fetch.workDirectory ?? FileManager.default.temporaryDirectory

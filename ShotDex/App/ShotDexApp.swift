@@ -1,4 +1,5 @@
 import CoreSpotlight
+import ShotDexKit
 import SwiftUI
 
 @main
@@ -9,6 +10,7 @@ struct ShotDexApp: App {
         // Before anything opens a session of its own: whatever is left under
         // /tmp from a run that was force-quit or killed is ours and is dead.
         _ = TemporaryWorkspace.sweepOrphans()
+        MetadataLevel.migrateLegacySharingSwitch()
         let dependencies = AppDependencies.live()
         _dependencies = State(initialValue: dependencies)
         // BGTaskScheduler requires registration before launch finishes.

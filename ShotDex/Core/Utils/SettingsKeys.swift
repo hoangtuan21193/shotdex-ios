@@ -1,4 +1,5 @@
 import Foundation
+import ShotDexKit
 
 /// UserDefaults keys shared between the Settings UI and the feature models.
 enum SettingsKeys {
@@ -49,11 +50,15 @@ enum SettingsKeys {
     /// Whether the viewer renders HDR photos at their full brightness.
     static let viewFullHDR = "display.viewFullHDR"
 
-    /// Whether a shared photo carries the place it was taken. On by default,
-    /// like Photos: the location is part of the picture's record, and a
-    /// photographer sharing with a client usually wants it. Off is for the
-    /// times the recipient should not learn where you were.
-    static let shareIncludesLocation = "share.includeLocation"
+    /// How much metadata a photo takes with it when it leaves the app — a
+    /// `MetadataLevel` raw value (FS-08.06 §4). The default for every way out:
+    /// Share, Save Copy, Paste Edits, Resize, drag. Unwritten means All
+    /// Metadata, like Photos: a photographer sharing with a client usually
+    /// wants the camera, the lens and the place to go with the picture.
+    static let shareMetadataLevel = "share.metadataLevel"
+    /// The on/off Include Location switch the level replaced. Read once at
+    /// launch — off becomes No Location — and then removed.
+    static let legacyShareIncludesLocation = "share.includeLocation"
 
     /// Set once the Statistics dashboard has seeded its default charts, so a
     /// board a user deliberately cleared isn't re-seeded on next launch.
@@ -109,4 +114,23 @@ enum SettingsKeys {
     static let editorSidebarWidth = "editor.sidebarWidth"
     /// Whether the sidebar is collapsed so the photo has the whole window.
     static let editorSidebarHidden = "editor.sidebarHidden"
+}
+
+extension MetadataLevel {
+    /// The Settings default for every way a photo leaves the app.
+    static func sharingDefault(in defaults: UserDefaults = .standard) -> MetadataLevel {
+        defaults.string(forKey: SettingsKeys.shareMetadataLevel).flatMap(MetadataLevel.init(rawValue:)) ?? .all
+    }
+
+    /// Carries the old Include Location switch over once: off becomes No
+    /// Location, on (or never touched) leaves the default. The old key is
+    /// removed either way, so this does nothing the second time.
+    static func migrateLegacySharingSwitch(in defaults: UserDefaults = .standard) {
+        guard let includesLocation = defaults.object(forKey: SettingsKeys.legacyShareIncludesLocation) as? Bool
+        else { return }
+        if !includesLocation, defaults.string(forKey: SettingsKeys.shareMetadataLevel) == nil {
+            defaults.set(MetadataLevel.noLocation.rawValue, forKey: SettingsKeys.shareMetadataLevel)
+        }
+        defaults.removeObject(forKey: SettingsKeys.legacyShareIncludesLocation)
+    }
 }

@@ -66,7 +66,7 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
     case measured
 
     // Sharing
-    case includeLocation
+    case metadataWhenSharing
 
     // Export
     case resizePresets
@@ -124,7 +124,7 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .clearScanResults: "Clear Results"
         case .photosAndVideos: "Photos and Videos"
         case .measured: "Measured"
-        case .includeLocation: "Include Location"
+        case .metadataWhenSharing: "Metadata When Sharing"
         case .resizePresets: "Resize Presets"
         case .fileServers: "File Servers"
         case .unknownCameras: "Unknown Cameras"
@@ -159,7 +159,7 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
             .subjectScan
         case .photosAndVideos, .measured:
             .libraryStorage
-        case .includeLocation:
+        case .metadataWhenSharing:
             .sharing
         case .resizePresets:
             .export
@@ -180,6 +180,7 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
     var searchAliases: [String] {
         switch self {
         case .fileServers: ["SMB", "SFTP", "NAS", "upload"]
+        case .metadataWhenSharing: ["location", "GPS", "EXIF", "privacy"]
         default: []
         }
     }

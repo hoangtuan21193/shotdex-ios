@@ -402,9 +402,9 @@ struct LibraryScreen: View {
         isPreparingShare = true
         Task {
             let assets = PhotoLibraryService.fetchAssets(ids: ids)
-            let items = await PhotoShareSheet.gather(assets: assets)
+            let share = await PhotoShareSheet.gather(assets: assets)
             isPreparingShare = false
-            PhotoShareSheet.present(items: items)
+            PhotoShareSheet.present(share)
         }
     }
 

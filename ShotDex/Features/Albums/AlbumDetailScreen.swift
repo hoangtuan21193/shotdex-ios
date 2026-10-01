@@ -470,9 +470,9 @@ struct AlbumDetailScreen: View {
         let assets = selectedIds.compactMap { model.assetsById[$0] }
         isPreparingShare = true
         Task {
-            let items = await PhotoShareSheet.gather(assets: assets)
+            let share = await PhotoShareSheet.gather(assets: assets)
             isPreparingShare = false
-            PhotoShareSheet.present(items: items)
+            PhotoShareSheet.present(share)
         }
     }
 

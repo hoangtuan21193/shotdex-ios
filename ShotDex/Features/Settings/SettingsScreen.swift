@@ -1,3 +1,4 @@
+import ShotDexKit
 import SwiftUI
 
 /// Settings content, hosted in a bottom sheet: photo library /
@@ -16,7 +17,7 @@ struct SettingsScreen: View {
 
     @AppStorage(SettingsKeys.autoplayVideos) private var autoplayVideos = true
     @AppStorage(SettingsKeys.viewFullHDR) private var viewFullHDR = false
-    @AppStorage(SettingsKeys.shareIncludesLocation) private var shareIncludesLocation = true
+    @AppStorage(SettingsKeys.shareMetadataLevel) private var shareMetadataLevel = MetadataLevel.all
     @State private var storage: LibraryQueries.StorageTotals?
     @AppStorage("display.showISO") private var showsISO = true
     @AppStorage("display.showAperture") private var showsAperture = true
@@ -486,11 +487,16 @@ struct SettingsScreen: View {
 
     private var sharingSection: some View {
         Section {
-            Toggle(Row.includeLocation.title, isOn: $shareIncludesLocation).settingsRow(.includeLocation)
+            Picker(Row.metadataWhenSharing.title, selection: $shareMetadataLevel) {
+                ForEach(MetadataLevel.allCases, id: \.self) { level in
+                    Text(level.title).tag(level)
+                }
+            }
+            .settingsRow(.metadataWhenSharing)
         } header: {
             Text("Sharing")
         } footer: {
-            Text("Turning this off removes where a photo was taken before it leaves the app. Everything else — camera, lens, exposure, date — still goes with it.\n\nVideos are unaffected: their location lives in the file itself, and removing it would mean re-encoding the whole clip.")
+            Text("What goes with a photo each time you share it. No Location removes where it was taken; camera, lens, exposure and date still go with it. No Metadata keeps only what the picture needs to look right, and the Artist and Copyright.\n\nVideos always keep their metadata: removing it would mean copying the whole clip.")
         }
     }
 

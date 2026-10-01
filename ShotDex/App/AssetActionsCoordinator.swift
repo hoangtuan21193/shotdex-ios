@@ -222,8 +222,8 @@ final class AssetActionsCoordinator {
         guard !assets.isEmpty else { return }
         recentActivity?.recordShared(ids)
         perform {
-            let items = await PhotoShareSheet.gather(assets: assets)
-            PhotoShareSheet.present(items: items)
+            let share = await PhotoShareSheet.gather(assets: assets)
+            PhotoShareSheet.present(share)
         }
     }
 

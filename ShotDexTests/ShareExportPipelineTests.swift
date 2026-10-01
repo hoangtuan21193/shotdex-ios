@@ -2,6 +2,7 @@ import CryptoKit
 import Foundation
 import Photos
 import Testing
+import ShotDexKit
 import UniformTypeIdentifiers
 @testable import ShotDex
 
@@ -52,7 +53,8 @@ struct ShareExportPipelineTests {
         let photoA = try MetadataFixture.write(.heic, in: fixtures)
         let pipeline = ShareExportPipeline(
             reader: FakeReader(photos: ["A": photoA]),
-            folder: try ShareExportPipeline.makeFolder(in: shareRoot)
+            folder: try ShareExportPipeline.makeFolder(in: shareRoot),
+            level: .all
         )
 
         let result = await pipeline.export([ShareSource(id: "A", kind: .photo, filename: "IMG_0001.HEIC")])
@@ -76,7 +78,8 @@ struct ShareExportPipelineTests {
         let still = try MetadataFixture.write(.heic, in: fixtures)
         let pipeline = ShareExportPipeline(
             reader: FakeReader(photos: ["live": still]),
-            folder: try ShareExportPipeline.makeFolder(in: shareRoot)
+            folder: try ShareExportPipeline.makeFolder(in: shareRoot),
+            level: .all
         )
         let result = await pipeline.export([ShareSource(id: "live", kind: .photo, filename: "IMG_0002.HEIC")])
         #expect(result.files.count == 1)
@@ -97,7 +100,8 @@ struct ShareExportPipelineTests {
         let two = try MetadataFixture.write(.jpeg, in: fixtures)
         let pipeline = ShareExportPipeline(
             reader: FakeReader(photos: ["1": one, "2": two]),
-            folder: try ShareExportPipeline.makeFolder(in: shareRoot)
+            folder: try ShareExportPipeline.makeFolder(in: shareRoot),
+            level: .all
         )
         let result = await pipeline.export([
             ShareSource(id: "1", kind: .photo, filename: "IMG_0001.JPG"),
@@ -107,5 +111,53 @@ struct ShareExportPipelineTests {
         #expect(Set(result.files).count == 2)
         pipeline.removeFolder()
         #expect(!FileManager.default.fileExists(atPath: pipeline.folder.path))
+    }
+
+    /// AC-1: No Location from the grid — the file has no GPS, keeps the camera,
+    /// the exposure and the date, and decodes to the same pixels.
+    @Test func noLocationFromTheGrid() async throws {
+        defer { cleanUp() }
+        let photoA = try MetadataFixture.write(.heic, in: fixtures)
+        let pipeline = ShareExportPipeline(
+            reader: FakeReader(photos: ["A": photoA]),
+            folder: try ShareExportPipeline.makeFolder(in: shareRoot),
+            level: .noLocation
+        )
+        let result = await pipeline.export([ShareSource(id: "A", kind: .photo, filename: "IMG_0001.HEIC")])
+
+        let file = try #require(result.files.first)
+        #expect(file.lastPathComponent == "IMG_0001.HEIC")
+        #expect(MetadataFixture.dictionary(kCGImagePropertyGPSDictionary, of: file) == nil)
+        let tiff = try #require(MetadataFixture.dictionary(kCGImagePropertyTIFFDictionary, of: file))
+        #expect(tiff[kCGImagePropertyTIFFMake] as? String == "SONY")
+        #expect(tiff[kCGImagePropertyTIFFModel] as? String == "ILCE-7M4")
+        let exif = try #require(MetadataFixture.dictionary(kCGImagePropertyExifDictionary, of: file))
+        #expect(exif[kCGImagePropertyExifISOSpeedRatings] as? [Int] == [400])
+        #expect(exif[kCGImagePropertyExifDateTimeOriginal] as? String == "2026:09:20 17:05:00")
+        #expect(MetadataFixture.pixels(of: file) == MetadataFixture.pixels(of: photoA))
+        // Only the shared file is left in its slot: the original copy is gone.
+        let slot = file.deletingLastPathComponent()
+        #expect(try FileManager.default.contentsOfDirectory(atPath: slot.path) == ["IMG_0001.HEIC"])
+    }
+
+    /// Spec §5: a photo whose location cannot be removed is left out and
+    /// named; the rest of the share goes ahead.
+    @Test func aPhotoThatCannotBeCleanedIsLeftOut() async throws {
+        defer { cleanUp() }
+        let jpeg = try MetadataFixture.write(.jpeg, in: fixtures)
+        let png = try MetadataFixture.write(.png, in: fixtures)
+        let pipeline = ShareExportPipeline(
+            reader: FakeReader(photos: ["jpeg": jpeg, "png": png]),
+            folder: try ShareExportPipeline.makeFolder(in: shareRoot),
+            level: .noLocation
+        )
+        let result = await pipeline.export([
+            ShareSource(id: "png", kind: .photo, filename: "Screenshot.PNG"),
+            ShareSource(id: "jpeg", kind: .photo, filename: "IMG_0002.JPG"),
+        ])
+        #expect(result.failed == ["Screenshot.PNG"])
+        #expect(result.files.map(\.lastPathComponent) == ["IMG_0002.JPG"])
+        let slot = pipeline.folder.appendingPathComponent("0")
+        #expect(try FileManager.default.contentsOfDirectory(atPath: slot.path).isEmpty)
     }
 }

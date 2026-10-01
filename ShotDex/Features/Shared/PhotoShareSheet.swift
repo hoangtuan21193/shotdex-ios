@@ -1,79 +1,57 @@
-import AVFoundation
-import ImageIO
 import Photos
+import ShotDexKit
 import UIKit
-import UniformTypeIdentifiers
 
 /// Shared multi-asset share plumbing. Gathers shareable items for a set of
 /// assets (downloading from iCloud when needed) and presents a single system
 /// share sheet from the top-most view controller.
 enum PhotoShareSheet {
-    /// Resolves shareable items for the given assets, in order. Images share
-    /// their original data; videos share a file URL. iCloud-only assets are
-    /// downloaded (`isNetworkAccessAllowed = true`); any that still fail are
-    /// skipped rather than aborting the whole share.
-    static func gather(assets: [PHAsset]) async -> [Any] {
-        // Read once, not per photo: the user cannot change the switch while
-        // the share is being assembled.
-        let includesLocation = UserDefaults.standard.object(
-            forKey: SettingsKeys.shareIncludesLocation
-        ) as? Bool ?? true
-        var items: [Any] = []
-        for asset in assets {
-            if asset.mediaType == .video {
-                if let url = await videoURL(for: asset) { items.append(url) }
-            } else if let data = await imageData(for: asset) {
-                items.append(includesLocation ? data : stripLocation(from: data) ?? data)
-            }
+    /// What a gather produced: the files for the share sheet, the names of
+    /// the items that could not be prepared, and the scratch folder the files
+    /// live in until the sheet closes.
+    struct Prepared {
+        var items: [Any]
+        var failed: [String]
+        var folder: URL?
+
+        /// Removes the gathered copies. Videos are the library's own files and
+        /// are never inside the folder.
+        func removeFiles() {
+            if let folder { try? FileManager.default.removeItem(at: folder) }
         }
-        return items
     }
 
-    /// The same photo with its GPS tags removed, and every other tag kept.
-    ///
-    /// Rewritten through ImageIO rather than re-encoded through UIImage: this
-    /// has to drop three metadata dictionaries without touching a pixel or a
-    /// single other EXIF field, which is the whole promise of the switch.
-    ///
-    /// Video is not covered. A movie's location lives in its container
-    /// metadata, and stripping it means rewriting the file — a share should
-    /// not re-encode a 4K clip, so a video shares as it is and the switch says
-    /// nothing about it.
-    static func stripLocation(from data: Data) -> Data? {
-        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
-              let type = CGImageSourceGetType(source),
-              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil)
-                  as? [CFString: Any]
-        else { return nil }
-
-        var updated = properties
-        // kCFNull, not "remove the key": ImageIO treats an absent key as
-        // "leave what the source had" and only a null as "drop it".
-        updated[kCGImagePropertyGPSDictionary] = kCFNull
-        if var exif = updated[kCGImagePropertyExifDictionary] as? [CFString: Any] {
-            // Some cameras repeat the coordinate here.
-            exif[kCGImagePropertyExifSubjectLocation] = kCFNull
-            updated[kCGImagePropertyExifDictionary] = exif
+    /// Resolves shareable items for the given assets, in order, one file at a
+    /// time (FS-08.06 §5). Photos share their current version with the
+    /// metadata `level` keeps; videos share as they are. iCloud-only assets
+    /// are downloaded; an item that still fails — or a photo whose metadata
+    /// cannot be removed — is named in `failed` and left out, never shared
+    /// with what the level promised to remove.
+    static func gather(assets: [PHAsset], level: MetadataLevel = .sharingDefault()) async -> Prepared {
+        guard let folder = try? ShareExportPipeline.makeFolder() else {
+            return Prepared(items: [], failed: assets.map { ShareSource(asset: $0).filename }, folder: nil)
         }
-        if var iptc = updated[kCGImagePropertyIPTCDictionary] as? [CFString: Any] {
-            for key in [
-                kCGImagePropertyIPTCSubLocation,
-                kCGImagePropertyIPTCCity,
-                kCGImagePropertyIPTCProvinceState,
-                kCGImagePropertyIPTCCountryPrimaryLocationName,
-            ] {
-                iptc[key] = kCFNull
-            }
-            updated[kCGImagePropertyIPTCDictionary] = iptc
-        }
+        let pipeline = ShareExportPipeline(reader: PhotoKitShareReader(), folder: folder, level: level)
+        let result = await pipeline.export(assets.map(ShareSource.init(asset:)))
+        return Prepared(items: result.files, failed: result.failed, folder: folder)
+    }
 
-        let output = NSMutableData()
-        guard let destination = CGImageDestinationCreateWithData(
-            output, type, 1, nil
-        ) else { return nil }
-        CGImageDestinationAddImageFromSource(destination, source, 0, updated as CFDictionary)
-        guard CGImageDestinationFinalize(destination) else { return nil }
-        return output as Data
+    /// Presents the share sheet for a gather, telling the user first which
+    /// items were left out. The gathered copies are removed when the sheet
+    /// closes, shared or not.
+    @MainActor
+    static func present(_ prepared: Prepared) {
+        let share = { present(items: prepared.items) { prepared.removeFiles() } }
+        guard !prepared.failed.isEmpty else { return share() }
+        guard let presenter = topPresenter() else { return prepared.removeFiles() }
+        let names = prepared.failed.joined(separator: ", ")
+        let alert = UIAlertController(
+            title: String(localized: prepared.items.isEmpty ? "Unable to Share" : "Not Everything Can Be Shared"),
+            message: String(localized: "These couldn't be prepared and were left out: \(names)"),
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: String(localized: "OK"), style: .default) { _ in share() })
+        presenter.present(alert, animated: true)
     }
 
     /// Presents one `UIActivityViewController` for the gathered items. No-op if
@@ -82,16 +60,7 @@ enum PhotoShareSheet {
     /// caller deletes the files it handed over (FS-17.06 §6).
     @MainActor
     static func present(items: [Any], onFinished: (() -> Void)? = nil) {
-        guard !items.isEmpty,
-              let scene = UIApplication.shared.connectedScenes
-                .compactMap({ $0 as? UIWindowScene })
-                .first(where: { $0.activationState == .foregroundActive }),
-              let root = scene.keyWindow?.rootViewController
-        else { onFinished?(); return }
-        var presenter = root
-        while let presented = presenter.presentedViewController {
-            presenter = presented
-        }
+        guard !items.isEmpty, let presenter = topPresenter() else { onFinished?(); return }
         let activity = UIActivityViewController(activityItems: items, applicationActivities: nil)
         if let onFinished {
             activity.completionWithItemsHandler = { _, _, _, _ in onFinished() }
@@ -105,27 +74,18 @@ enum PhotoShareSheet {
         presenter.present(activity, animated: true)
     }
 
-    private static func imageData(for asset: PHAsset) async -> Data? {
-        let options = PHImageRequestOptions()
-        options.isNetworkAccessAllowed = true
-        options.deliveryMode = .highQualityFormat
-        // highQualityFormat delivers a single callback (no progressive passes),
-        // so resuming the continuation once is safe.
-        return await withCheckedContinuation { continuation in
-            PHImageManager.default().requestImageDataAndOrientation(for: asset, options: options) { data, _, _, _ in
-                continuation.resume(returning: data)
-            }
+    /// The view controller on top of the foreground window, which is where a
+    /// sheet or an alert has to be presented from.
+    @MainActor
+    private static func topPresenter() -> UIViewController? {
+        guard let scene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first(where: { $0.activationState == .foregroundActive }),
+              var presenter = scene.keyWindow?.rootViewController
+        else { return nil }
+        while let presented = presenter.presentedViewController {
+            presenter = presented
         }
-    }
-
-    private static func videoURL(for asset: PHAsset) async -> URL? {
-        let options = PHVideoRequestOptions()
-        options.isNetworkAccessAllowed = true
-        options.deliveryMode = .automatic
-        return await withCheckedContinuation { continuation in
-            PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
-                continuation.resume(returning: (avAsset as? AVURLAsset)?.url)
-            }
-        }
+        return presenter
     }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import ShotDexKit
 
 /// One photo or video on its way out of the app (FS-08.06): what the share
 /// pipeline needs to know about it, and nothing PhotoKit-shaped, so the
@@ -44,6 +45,8 @@ struct ShareExportResult: Sendable, Equatable {
 struct ShareExportPipeline: Sendable {
     let reader: any ShareAssetReader
     let folder: URL
+    /// What goes with each photo. Videos go as they are at every level.
+    let level: MetadataLevel
 
     static let prefix = "ShotDexShare-"
 
@@ -64,13 +67,24 @@ struct ShareExportPipeline: Sendable {
             let slot = folder.appendingPathComponent(String(index), isDirectory: true)
             try FileManager.default.createDirectory(at: slot, withIntermediateDirectories: true)
             let file = slot.appendingPathComponent(source.filename)
-            try await reader.writePhoto(source, to: file)
+            guard level != .all else {
+                try await reader.writePhoto(source, to: file)
+                return file
+            }
+            // The original lands under a name of its own and is gone once the
+            // rewrite is done, whichever way it went: a photo whose metadata
+            // cannot be removed is left out, never handed over as it was.
+            let original = slot.appendingPathComponent("original-" + source.filename)
+            defer { try? FileManager.default.removeItem(at: original) }
+            try await reader.writePhoto(source, to: original)
+            try MetadataRewriter.rewrite(original, to: file, level: level)
             return file
         }
     }
 
-    /// Prepares every item in order. One that fails is named in `failed` and
-    /// left out, rather than ending the whole share.
+    /// Prepares every item in order. One that fails — a download that did not
+    /// finish, a photo whose metadata could not be removed — is named in
+    /// `failed` and left out, rather than ending the whole share.
     func export(_ sources: [ShareSource]) async -> ShareExportResult {
         var result = ShareExportResult()
         for (index, source) in sources.enumerated() {

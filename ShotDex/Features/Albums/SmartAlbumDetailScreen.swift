@@ -459,9 +459,9 @@ struct SmartAlbumDetailScreen: View {
         let assets = selectedIds.compactMap { model.asset(for: $0) }
         isPreparingShare = true
         Task {
-            let items = await PhotoShareSheet.gather(assets: assets)
+            let share = await PhotoShareSheet.gather(assets: assets)
             isPreparingShare = false
-            PhotoShareSheet.present(items: items)
+            PhotoShareSheet.present(share)
         }
     }
 
