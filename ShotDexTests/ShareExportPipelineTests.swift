@@ -210,4 +210,40 @@ struct ShareExportPipelineTests {
         let file = try #require(result.files.first)
         #expect(try Self.sha256(file) == Self.sha256(url))
     }
+
+    /// AC-5: the viewer shares through the grid's own gather, so a photo
+    /// shared from either leaves as the same bytes. A photo that never
+    /// arrived from the library is told apart from one that could not be
+    /// cleaned, which is how the viewer still says "not downloaded yet".
+    @Test func detailMatchesGrid() async throws {
+        defer { cleanUp() }
+        let photoA = try MetadataFixture.write(.heic, in: fixtures)
+        var outputs: [String] = []
+        for _ in 0..<2 {
+            let pipeline = ShareExportPipeline(
+                reader: FakeReader(photos: ["A": photoA]),
+                folder: try ShareExportPipeline.makeFolder(in: shareRoot),
+                level: .noLocation
+            )
+            let result = await pipeline.export([ShareSource(id: "A", kind: .photo, filename: "IMG_0001.HEIC")])
+            outputs.append(try Self.sha256(try #require(result.files.first)))
+        }
+        #expect(outputs[0] == outputs[1])
+
+        let missing = ShareExportPipeline(
+            reader: FakeReader(),
+            folder: try ShareExportPipeline.makeFolder(in: shareRoot),
+            level: .noLocation
+        )
+        let result = await missing.export([ShareSource(id: "cloud", kind: .photo, filename: "IMG_0003.HEIC")])
+        #expect(result.failed == ["IMG_0003.HEIC"])
+        #expect(result.unread == ["IMG_0003.HEIC"])
+
+        let viewer = try AssetMetadataCarryOverTests.codeLines(of: "ShotDex/Features/Library/PhotoDetailScreen.swift")
+            .joined(separator: "\n")
+        let start = try #require(viewer.range(of: "private func shareImage("))
+        let body = viewer[start.lowerBound...].prefix(600)
+        #expect(body.contains("PhotoShareSheet.gather("))
+        #expect(!body.contains("requestImageDataAndOrientation"))
+    }
 }

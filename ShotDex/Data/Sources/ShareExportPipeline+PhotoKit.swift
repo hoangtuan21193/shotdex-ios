@@ -45,6 +45,11 @@ extension ShareSource {
 struct PhotoKitShareReader: ShareAssetReader {
     enum ReadError: Error { case missing, noPhotoResource, noVideoFile }
 
+    /// Whether a photo only in iCloud is downloaded. The viewer's Share says
+    /// "not downloaded yet" instead, until FS-02.06 gives it the download
+    /// modal (plan task 8).
+    var allowsNetworkAccess = true
+
     func writePhoto(_ source: ShareSource, to url: URL) async throws {
         guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [source.id], options: nil).firstObject
         else { throw ReadError.missing }
@@ -53,7 +58,7 @@ struct PhotoKitShareReader: ShareAssetReader {
               let resource = resources.first(where: { $0.type == type })
         else { throw ReadError.noPhotoResource }
         let options = PHAssetResourceRequestOptions()
-        options.isNetworkAccessAllowed = true
+        options.isNetworkAccessAllowed = allowsNetworkAccess
         try await PHAssetResourceManager.default().writeData(for: resource, toFile: url, options: options)
     }
 

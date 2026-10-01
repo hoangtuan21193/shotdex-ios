@@ -1120,18 +1120,19 @@ struct PhotoDetailScreen: View {
         }
     }
 
+    /// Through the same pipeline as the grid (FS-08.06 AC-5), so the photo
+    /// leaves with the metadata Settings chose. A photo only in iCloud still
+    /// says it is not downloaded yet: the viewer gets the download modal with
+    /// FS-02.06, not here.
     private func shareImage(_ asset: PHAsset) {
-        let options = PHImageRequestOptions()
-        options.isNetworkAccessAllowed = false
-        options.deliveryMode = .highQualityFormat
-        PHImageManager.default().requestImageDataAndOrientation(for: asset, options: options) { data, _, _, _ in
-            Task { @MainActor in
-                guard let data else {
-                    isShareUnavailable = true
-                    return
-                }
-                presentShareSheet(items: [data as Any], filename: currentFilename)
+        Task { @MainActor in
+            let share = await PhotoShareSheet.gather(assets: [asset], allowsNetworkAccess: false)
+            guard share.unread.isEmpty else {
+                share.removeFiles()
+                isShareUnavailable = true
+                return
             }
+            PhotoShareSheet.present(share)
         }
     }
 

@@ -38,7 +38,12 @@ protocol ShareAssetReader: Sendable {
 /// the names of the items that could not be prepared.
 struct ShareExportResult: Sendable, Equatable {
     var files: [URL] = []
+    /// Every item left out, by name.
     var failed: [String] = []
+    /// The part of `failed` that never arrived from the library — not on the
+    /// device, or a download that did not finish — as opposed to a photo
+    /// whose metadata could not be removed.
+    var unread: [String] = []
 }
 
 /// Gathers a share one item at a time into a scratch folder of its own
@@ -104,8 +109,11 @@ struct ShareExportPipeline: Sendable {
         for (index, source) in sources.enumerated() {
             do {
                 result.files.append(try await export(source, index: index))
+            } catch is MetadataRewriter.Failure {
+                result.failed.append(source.filename)
             } catch {
                 result.failed.append(source.filename)
+                result.unread.append(source.filename)
             }
         }
         return result

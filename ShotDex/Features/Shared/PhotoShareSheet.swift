@@ -12,6 +12,8 @@ enum PhotoShareSheet {
     struct Prepared {
         var items: [Any]
         var failed: [String]
+        /// The part of `failed` that never arrived from the library.
+        var unread: [String] = []
         var folder: URL?
 
         /// Removes the gathered copies. Videos are the library's own files and
@@ -27,13 +29,21 @@ enum PhotoShareSheet {
     /// are downloaded; an item that still fails — or a photo whose metadata
     /// cannot be removed — is named in `failed` and left out, never shared
     /// with what the level promised to remove.
-    static func gather(assets: [PHAsset], level: MetadataLevel = .sharingDefault()) async -> Prepared {
+    static func gather(
+        assets: [PHAsset],
+        level: MetadataLevel = .sharingDefault(),
+        allowsNetworkAccess: Bool = true
+    ) async -> Prepared {
         guard let folder = try? ShareExportPipeline.makeFolder() else {
             return Prepared(items: [], failed: assets.map { ShareSource(asset: $0).filename }, folder: nil)
         }
-        let pipeline = ShareExportPipeline(reader: PhotoKitShareReader(), folder: folder, level: level)
+        let pipeline = ShareExportPipeline(
+            reader: PhotoKitShareReader(allowsNetworkAccess: allowsNetworkAccess),
+            folder: folder,
+            level: level
+        )
         let result = await pipeline.export(assets.map(ShareSource.init(asset:)))
-        return Prepared(items: result.files, failed: result.failed, folder: folder)
+        return Prepared(items: result.files, failed: result.failed, unread: result.unread, folder: folder)
     }
 
     /// Presents the share sheet for a gather, telling the user first which
