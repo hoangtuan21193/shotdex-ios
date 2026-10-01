@@ -51,6 +51,9 @@ final class AssetActionsCoordinator {
     /// Records shares for the Recently Shared collection. Optional so the
     /// viewer's own coordinator can share the one store.
     private let recentActivity: RecentActivityStore?
+    /// The Share modal (FS-02.06 §9); nil in previews, which then share
+    /// the way a lazy share would with no modal to show.
+    private let originalDownloads: OriginalDownloadModel?
 
     var dateRequest: DateRequest?
     var locationRequest: LocationRequest?
@@ -66,11 +69,13 @@ final class AssetActionsCoordinator {
     init(
         photoLibrary: PhotoLibraryService,
         metadataStore: MetadataStore,
-        recentActivity: RecentActivityStore? = nil
+        recentActivity: RecentActivityStore? = nil,
+        originalDownloads: OriginalDownloadModel? = nil
     ) {
         self.photoLibrary = photoLibrary
         self.metadataStore = metadataStore
         self.recentActivity = recentActivity
+        self.originalDownloads = originalDownloads
     }
 
     // MARK: Favorite

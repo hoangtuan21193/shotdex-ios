@@ -21,6 +21,8 @@ final class AppDependencies {
     /// (FS-02.06). Scripted under the DEBUG launch argument
     /// `-ShotDexFakeICloud`, because a simulator has no iCloud library.
     let originalFetcher: any OriginalFetching
+    /// The Share modal every way into Share uses (FS-02.06 §9).
+    let originalDownloads: OriginalDownloadModel
     let compressionPresets: CompressionPresetStore
     let signaturePresets: SignaturePresetStore
     let overlayFontRecents: OverlayFontRecentsStore
@@ -71,7 +73,8 @@ final class AppDependencies {
         AssetActionsCoordinator(
             photoLibrary: photoLibrary,
             metadataStore: metadataStore,
-            recentActivity: recentActivity
+            recentActivity: recentActivity,
+            originalDownloads: originalDownloads
         )
     }
 
@@ -155,10 +158,12 @@ final class AppDependencies {
         self.photoRenderer = photoRenderer
         let photoKitFetcher = PhotoKitOriginalFetcher()
         #if DEBUG
-        self.originalFetcher = FakeOriginalFetcher.fromLaunchArguments(base: photoKitFetcher) ?? photoKitFetcher
+        let originalFetcher: any OriginalFetching = FakeOriginalFetcher.fromLaunchArguments(base: photoKitFetcher)
+            ?? photoKitFetcher
         #else
-        self.originalFetcher = photoKitFetcher
+        let originalFetcher: any OriginalFetching = photoKitFetcher
         #endif
+        self.originalFetcher = originalFetcher
         self.photoEditing = PhotoEditingService(
             renderer: photoRenderer,
             indexNewAsset: { assetID in
@@ -233,17 +238,29 @@ final class AppDependencies {
         )
         self.indexTraffic = indexTraffic
         self.indexInteractionGate = indexInteractionGate
+        var availableBytes: @Sendable () -> Int64? = { DiskSpace.availableBytes() }
+        #if DEBUG
+        if let fake = originalFetcher as? FakeOriginalFetcher, let free = fake.freeBytes {
+            availableBytes = { free }
+        }
+        #endif
+        let originalDownloads = OriginalDownloadModel(
+            fetcher: originalFetcher, gate: indexInteractionGate, availableBytes: availableBytes
+        )
+        self.originalDownloads = originalDownloads
         let recentActivity = RecentActivityStore()
         self.recentActivity = recentActivity
         self.assetActions = AssetActionsCoordinator(
             photoLibrary: photoLibrary,
             metadataStore: metadataStore,
-            recentActivity: recentActivity
+            recentActivity: recentActivity,
+            originalDownloads: originalDownloads
         )
         self.viewerAssetActions = AssetActionsCoordinator(
             photoLibrary: photoLibrary,
             metadataStore: metadataStore,
-            recentActivity: recentActivity
+            recentActivity: recentActivity,
+            originalDownloads: originalDownloads
         )
         self.subjectScan = SubjectScanModel(
             pipeline: SubjectScanPipeline(

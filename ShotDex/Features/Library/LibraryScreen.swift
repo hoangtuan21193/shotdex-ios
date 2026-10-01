@@ -50,7 +50,6 @@ struct LibraryScreen: View {
     /// handed to the grid as its top content inset (see `photoGrid`).
     @State private var topAccessoryHeight: CGFloat = 0
     @State private var isDeleting = false
-    @State private var isPreparingShare = false
     @State private var isDuplicating = false
     @State private var deleteErrorMessage: String?
     /// Errors from the ⋯ actions (Export EXIF, Duplicate) — its own alert so it
@@ -394,17 +393,16 @@ struct LibraryScreen: View {
         }
     }
 
-    /// Gathers the selected assets (downloading iCloud-only originals) and
-    /// presents a single system share sheet.
+    /// Opens the share sheet at once, like Photos: nothing is downloaded
+    /// until a destination asks, then the Share modal shows the iCloud
+    /// download (FS-02.06 §9).
     private func shareSelected() {
-        guard !selectedIds.isEmpty, !isPreparingShare else { return }
+        guard !selectedIds.isEmpty else { return }
         let ids = selectedIds
-        isPreparingShare = true
+        let downloads = dependencies.originalDownloads
         Task {
             let assets = PhotoLibraryService.fetchAssets(ids: ids)
-            let share = await PhotoShareSheet.gather(assets: assets)
-            isPreparingShare = false
-            PhotoShareSheet.present(share)
+            await PhotoShareSheet.share(assets: assets, downloads: downloads)
         }
     }
 
@@ -540,14 +538,12 @@ struct LibraryScreen: View {
         var isSelecting: Bool
         var ids: [String]
         var isDeleting: Bool
-        var isPreparingShare: Bool
     }
     private var selectionSnapshot: SelectionSnapshot {
         SelectionSnapshot(
             isSelecting: isSelecting,
             ids: selectedIds,
-            isDeleting: isDeleting,
-            isPreparingShare: isPreparingShare
+            isDeleting: isDeleting
         )
     }
 
@@ -563,7 +559,6 @@ struct LibraryScreen: View {
             photoLibrary: photoLibrary,
             libraryQueries: dependencies.libraryQueries,
             isDeleting: isDeleting,
-            isPreparingShare: isPreparingShare,
             onShare: shareSelected,
             onClose: { withAnimation { stopSelecting() } },
             onDeselect: { toggleSelection(of: $0) },

@@ -1,3 +1,4 @@
+import os
 import Photos
 import ShotDexKit
 import UIKit
@@ -102,6 +103,119 @@ enum PhotoShareSheet {
             heicSentAsJPEG: result.heicSentAsJPEG,
             onClose: onClose
         )
+    }
+
+    /// Shares library photos the way Photos does (FS-02.06 §9, FS-08.06 §5):
+    /// the share sheet opens at once with a lazy item per photo and nothing
+    /// downloaded or written; once a destination asks, the originals come
+    /// down and the copies are written in the centered modal of `downloads`.
+    /// The RAW question, when the share needs it, comes first.
+    @MainActor
+    static func share(
+        assets: [PHAsset],
+        downloads: OriginalDownloadModel?,
+        level: MetadataLevel = .sharingDefault()
+    ) async {
+        var sources = assets.map(ShareSource.init(asset:))
+        let full = ShareBatchPlan(sources: sources, level: level)
+        var rawChoice = RAWChoice.skip
+        if full.asksAboutRAW {
+            rawChoice = await askAboutRAW(full)
+        }
+        // Skip leaves the RAW files out before the sheet opens, so it never
+        // offers what will not come (a share of only RAW opens nothing).
+        if level != .all, rawChoice == .skip { sources.removeAll { $0.kind == .raw } }
+        guard !sources.isEmpty else { return }
+        let byID = Dictionary(assets.map { ($0.localIdentifier, $0) }, uniquingKeysWith: { first, _ in first })
+        var originals: [String: OriginalItem] = [:]
+        for source in sources where source.kind != .video {
+            if let asset = byID[source.id] { originals[source.id] = OriginalItem(asset: asset) }
+        }
+        let fetcher = downloads?.fetcher ?? PhotoKitOriginalFetcher()
+        let reader = PhotoKitShareReader(allowsNetworkAccess: true)
+        let batch = downloads?.makeShare(
+            sources: sources, originals: originals, level: level, rawChoice: rawChoice, reader: reader
+        ) ?? LazyShareBatch(
+            sources: sources, originals: originals, level: level, rawChoice: rawChoice,
+            fetcher: fetcher, reader: reader
+        )
+        var plan = ShareBatchPlan(sources: sources, level: level)
+        plan.rawSharedAsIsCount = rawChoice == .shareRAWWithLocation && level != .all ? plan.rawCount : 0
+        plan.heicAsJPEGCount = sources.filter { source in
+            source.kind == .photo && source.uniformType.map { MetadataRewriter.convertsToJPEG($0, at: level) } == true
+        }.count
+        let first = sources[0]
+        let image = await localThumbnail(for: byID[first.id], isPhoto: first.kind != .video)
+        let imageFile = image?.jpegData(compressionQuality: 0.8).flatMap { data -> URL? in
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent(ShareExportPipeline.prefix + "header-" + UUID().uuidString + ".jpg")
+            return (try? data.write(to: url)) == nil ? nil : url
+        }
+        let header = ShareHeader(
+            title: headerTitle(plan: plan, firstName: first.filename, count: sources.count),
+            note: headerNote(plan: plan),
+            imageFile: imageFile
+        )
+        let providers = batch.providers(header: plan.photoCount + plan.rawCount > 0 ? header : nil)
+        let rows = plan.rows.map(ShareLevelRow.init(level:))
+        let activity = present(items: providers, activities: rows) { chosen in
+            batch.cancel()
+            batch.removeFiles()
+            if let imageFile { try? FileManager.default.removeItem(at: imageFile) }
+            downloads?.end(batch)
+            guard let chosen,
+                  let again = MetadataLevel.allCases.first(where: { ShareLevelRow.activityType(for: $0) == chosen })
+            else { return }
+            // A level row: the same share again at that level, still lazy.
+            Task { @MainActor in
+                await waitForDismissal()
+                await share(assets: assets, downloads: downloads, level: again)
+            }
+        }
+        batch.onCancel = { [weak activity] in activity?.dismiss(animated: true) }
+    }
+
+    /// The header's first line: the photo's name and the level for one
+    /// item, the level alone for several.
+    static func headerTitle(plan: ShareBatchPlan, firstName: String, count: Int) -> String {
+        let name = (firstName as NSString).deletingPathExtension
+        return count == 1 ? "\(name) · \(plan.subtitle.text)" : plan.subtitle.text
+    }
+
+    /// The header's second line: what keeps its metadata, and HEIC as JPEG.
+    static func headerNote(plan: ShareBatchPlan) -> String? {
+        let keeps: String? = switch plan.keepsNote {
+        case .videos: String(localized: "Videos keep their metadata")
+        case .raw: plan.level == .noLocation
+            ? String(localized: "RAW files keep their location")
+            : String(localized: "RAW files keep their metadata")
+        case .videosAndRAW: String(localized: "Videos and RAW files keep their metadata")
+        case nil: nil
+        }
+        let converted = plan.notesHEICAsJPEG ? String(localized: "HEIC sent as JPEG") : nil
+        let notes = [keeps, converted].compactMap { $0 }
+        return notes.isEmpty ? nil : notes.joined(separator: " · ")
+    }
+
+    /// A small image already on the device, for the header — never a
+    /// download: the sheet opens before anything comes from iCloud.
+    @MainActor
+    private static func localThumbnail(for asset: PHAsset?, isPhoto: Bool) async -> UIImage? {
+        guard let asset, isPhoto else { return nil }
+        let options = PHImageRequestOptions()
+        options.isNetworkAccessAllowed = false
+        options.deliveryMode = .highQualityFormat
+        options.resizeMode = .fast
+        let once = OSAllocatedUnfairLock(initialState: false)
+        return await withCheckedContinuation { continuation in
+            PHImageManager.default().requestImage(
+                for: asset, targetSize: CGSize(width: 240, height: 240), contentMode: .aspectFill, options: options
+            ) { image, _ in
+                // PhotoKit may call twice; the first answer is enough.
+                guard once.withLock({ let first = !$0; $0 = true; return first }) else { return }
+                continuation.resume(returning: image)
+            }
+        }
     }
 
     /// Asks, once for the whole share, what to do with RAW files whose
@@ -224,12 +338,13 @@ enum PhotoShareSheet {
     /// `onFinished` gets the chosen activity's type — `nil` when the sheet
     /// was dismissed — once the sheet closes.
     @MainActor
+    @discardableResult
     private static func present(
         items: [Any],
         activities: [UIActivity],
         onFinished: @escaping @MainActor (UIActivity.ActivityType?) -> Void
-    ) {
-        guard !items.isEmpty, let presenter = topPresenter() else { onFinished(nil); return }
+    ) -> UIActivityViewController? {
+        guard !items.isEmpty, let presenter = topPresenter() else { onFinished(nil); return nil }
         let activity = UIActivityViewController(activityItems: items, applicationActivities: activities)
         // UIKit calls this on the main thread.
         activity.completionWithItemsHandler = { type, completed, _, _ in
@@ -237,6 +352,7 @@ enum PhotoShareSheet {
         }
         anchor(activity, in: presenter)
         presenter.present(activity, animated: true)
+        return activity
     }
 
     /// On iPad the sheet is a popover and needs an anchor, or UIKit traps.

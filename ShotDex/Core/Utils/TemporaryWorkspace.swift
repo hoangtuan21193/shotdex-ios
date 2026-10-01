@@ -28,6 +28,9 @@ enum TemporaryWorkspace {
         thumbnailPrefix,
         serverEditPrefix,
         ShareExportPipeline.prefix,
+        // Originals downloaded from iCloud for a share, a Resize or a
+        // Collage, kept until it is done with them (FS-02.06 §5).
+        OriginalPreparation.prefix,
     ]
 
     /// The upload's one-file-at-a-time copy of an original (FS-15.02 §4).
