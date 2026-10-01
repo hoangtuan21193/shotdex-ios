@@ -1,7 +1,7 @@
 # FS-06.06 — Duplicates
 
 `FS-06.06` · `Features/Duplicates/` · `Domain/Duplicates/` · bảng `perceptual_hash` · `duplicate_groups`
-· test `DuplicateSeriesTests` · cập nhật 2026-09-22
+· test `DuplicateSeriesTests` · cập nhật 2026-10-01
 
 **Một câu:** tìm ảnh trùng và gần trùng bằng dấu vân tay hình ảnh, gom nhóm sẵn vào cache, và **để người
 dùng tự chọn tấm nào phải đi**.
@@ -40,7 +40,7 @@ thì màn báo "No Indexed Photos".
 | **Series** | cùng khoảnh khắc: cách nhau **≤ 30 giây** và lệch **≤ 20 / 64 bit**, tối thiểu **3** ảnh |
 
 Mức đang dùng được nhớ lại (mặc định Similar), và dải chọn dựng từ **danh sách đầy đủ** nên thêm một mức
-không thể quên cập nhật giao diện.
+không thể quên cập nhật giao diện. Dải chọn còn có tab thứ tư **Bursts** (§7b) — không phải một mức trùng.
 
 ## 5. Gom nhóm
 
@@ -77,7 +77,7 @@ bỏ đi: các khung **cố tình khác nhau** — cùng bối cảnh, đổi t�
 
 ## 7. Màn hình
 
-Tier A. Dải chọn Exact / Similar / Series + dòng tóm tắt "N groups · M photos · ~X MB if one is kept per
+Tier A. Dải chọn Exact / Similar / Series / Bursts (§7b) + dòng tóm tắt "N groups · M photos · ~X MB if one is kept per
 group".
 
 - Mỗi nhóm là một **thẻ**: tiêu đề "N Photos" + nút **Compare** (khi ≥ 2 ảnh) + lưới thumbnail, mỗi ô ghi
@@ -93,6 +93,20 @@ group".
   dấu; nút đỏ ở đó chỉ xoá **đúng id của nhóm đang mở**
   ([FS-01.08](../FS-01-library/08-compare.md)).
 
+## 7b. Tab Bursts
+
+Dải chọn là **Exact · Similar · Series · Bursts**. Bursts là lối vào chính của màn chọn khung
+([FS-02.05](../FS-02-photo-detail/05-burst-selection.md)); ⋯ → Select Frames… trong viewer là lối thứ hai.
+
+- Danh sách lấy thẳng từ PhotoKit: **mọi burst** trong thư viện mà app thấy ≥ 2 khung, mới nhất trước. Không
+  dùng dấu vân tay, không cần Rescan.
+- Mỗi hàng: ảnh bìa (khung đại diện) · *"24 frames"* · ngày chụp · *"2 suggested by Photos"* hoặc *"No suggestion"*.
+- Số khung và số gợi ý đếm khi hàng hiện ra, không đếm cả thư viện lúc mở tab ([NF-01](../../04-non-functional-design/NF-01-performance.md) luật 1).
+- Chạm một hàng mở màn chọn khung của burst đó. Xoá xong thì hàng cập nhật tại chỗ; burst còn 1 khung thì biến mất.
+- Dòng tóm tắt là *"N bursts"*; không có Merge, Rescan hay nút đỏ ở tab này. Thư viện không có burst → màn rỗng
+  *"No Bursts"*.
+- Series giữ nguyên: loạt chụp nhanh không phải burst thật vẫn ở Series, xoá qua Compare.
+
 ## 8. Merge và Delete
 
 - **Merge All Groups** (menu ⋯): bản giữ lại là **file lớn nhất**, hoà thì **nhiều pixel hơn** — cả hai đều
@@ -107,4 +121,12 @@ group".
 
 ## 9. Tiêu chí nghiệm thu
 
-**Chưa viết.** Xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ).
+Exact, Similar, Series, Merge và Delete **chưa có AC** — xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ).
+Tab Bursts:
+
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-B1 | thư viện có 3 burst (24, 10, 5 khung), burst 24 khung được Photos gợi ý 2 khung, và 1 loạt Series không phải burst | mở Duplicates, chọn tab Bursts | dải chọn ghi Exact · Similar · Series · Bursts; 3 hàng mới nhất trước, mỗi hàng có bìa, số khung, ngày; hàng 24 khung ghi *2 suggested by Photos*, hai hàng kia *No suggestion*; loạt Series không có trong tab | ⚠️ chưa có — sim chưa có burst |
+| AC-B2 | như AC-B1 | chạm hàng 24 khung | màn chọn khung mở với 24 khung của đúng burst đó | ⚠️ chưa có |
+| AC-B3 | burst 5 khung, giữ 1 khung, xoá 4 | quay lại tab Bursts | hàng của burst đó biến mất; tóm tắt đổi từ *3 bursts* thành *2 bursts* | ⚠️ chưa có |
+| AC-B4 | thư viện không có burst nào | mở tab Bursts | màn rỗng *No Bursts*; không có nút Rescan | ⚠️ chưa có |

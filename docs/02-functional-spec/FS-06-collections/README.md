@@ -16,7 +16,7 @@ dùng tự lưu.
 | 03 | [Memories và dựng phim](03-memories-and-movie-builder.md) | màn danh sách ảnh, bộ dựng memory, nút film |
 | 04 | [People and Pets](04-people-and-pets.md) | pass Vision opt-in — chỉ đếm, không nhận diện |
 | 05 | [Trips](05-trips.md) | định nghĩa "nhà", khoảng hở, gộp chuyến |
-| 06 | [Duplicates](06-duplicates.md) | perceptual hash, ba mức, cache, merge, xoá |
+| 06 | [Duplicates](06-duplicates.md) | perceptual hash, ba mức, cache, merge, xoá, tab Bursts (4 AC) |
 | 07 | [On This Day](07-on-this-day.md) | hero, màn chi tiết, reminder 7 ngày |
 | 08 | [Smart Album](08-smart-albums.md) | model rule, editor, compile SQL, tương thích ngược |
 | 09 | [Menu Filter trong album](09-album-filter-menu.md) | Filter/Sort giống Library ở Album Detail và Smart Album, Advanced trong album |

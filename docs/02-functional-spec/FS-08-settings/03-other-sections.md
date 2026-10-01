@@ -42,8 +42,8 @@ Mật độ lưới **không phải công tắc** — chỉ có một dòng chú
 
 ## 4. Sharing
 
-**Include Location** — mặc định bật; luật ghi lại file khi tắt nằm ở
-[NF-03](../../04-non-functional-design/NF-03-privacy-and-security.md).
+**Metadata When Sharing** — All Metadata · No Location · No Metadata, mặc định All Metadata; thay công tắc
+Include Location. Đặc tả và tiêu chí: [FS-08.06](06-share-metadata-privacy.md).
 
 ## 5. Export
 

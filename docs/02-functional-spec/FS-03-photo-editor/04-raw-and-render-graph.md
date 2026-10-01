@@ -1,6 +1,6 @@
 # FS-03.04 — RAW và render graph
 
-`FS-03.04` · `ShotDexKit/PhotoRenderService.swift` · cập nhật 2026-09-22
+`FS-03.04` · `ShotDexKit/PhotoRenderService.swift` · cập nhật 2026-10-01
 
 **Một câu:** một renderer chung cho preview, lưu, nén và ước lượng — và preview **không bao giờ hạ độ
 phân giải** để chạy cho mượt.
@@ -18,9 +18,9 @@ phân giải** để chạy cho mượt.
 
 ## 2. RAW
 
-- Nhận theo UTI RAW và **chỉ cho sửa khi decode được trên chính thiết bị đó**; không thì báo rõ format
-  không được hỗ trợ.
-- Asset RAW+JPEG đưa picker chọn RAW hay JPEG làm nguồn.
+- Nhận theo UTI RAW và **chỉ cho sửa khi decode được trên chính thiết bị đó**; không thì báo máy nào, làm gì
+  tiếp, và ảnh có dấu ngay từ lưới ([FS-03.04b](04b-unsupported-raw.md)).
+- Asset RAW+JPEG đưa picker chọn RAW hay JPEG làm nguồn; RAW không giải được thì theo FS-03.04b §3.
 - Nguồn RAW mở thêm bốn thứ trong Adjust: **White Balance · Noise Reduction (luminance + color) · RAW
   Sharpening · Lens Correction**. Không phải RAW thì bốn mục này **không hiện**.
 - Bốn thứ đó đi qua decoder RAW; phần còn lại dùng graph chung.
@@ -50,4 +50,5 @@ phân giải** để chạy cho mượt.
 
 ## 4. Tiêu chí nghiệm thu
 
-**Chưa viết.** Xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ).
+**Chưa viết** cho §1–§3. Xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ). RAW chưa đọc được:
+[FS-03.04b §6](04b-unsupported-raw.md).

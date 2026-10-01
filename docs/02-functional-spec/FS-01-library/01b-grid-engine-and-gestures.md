@@ -93,6 +93,8 @@ cùng đổi theo một nguồn.
 - Mặc định `ISO 400 · 85mm · f/1.8`; bật thêm tốc độ, **megapixel**, **dung lượng** trong Settings (hai cái
   sau mặc định tắt) → `ISO 400 · 85mm · f/1.8 · 1/500s · 24.2 MP · 12.4 MB`.
 - **Ẩn khi ô hẹp hơn ~90pt.**
+- Hàng glyph trạng thái (favorite, Live, panorama…, đã lên server) **không ẩn theo bề rộng ô**. Ảnh RAW-only mà
+  iOS trên máy chưa giải được có thêm một glyph ở hàng này ([FS-03.04b §3](../FS-03-photo-editor/04b-unsupported-raw.md)).
 - Thumbnail xin theo bề rộng ô ở **độ phân giải thật của màn**; ô to lên quá 1,4 lần thì xin bản nét hơn và
   **giữ ảnh cũ tới khi bản mới về**.
 

@@ -1,7 +1,7 @@
 # FS-02.04 — Hành động và phụ trợ
 
 `FS-02.04` · `Features/Library/SlideshowScreen.swift` · `LivePhotoPlayerView` · `PanoramaScreen`
-· `VideoTrimScreen` · cập nhật 2026-09-22
+· `VideoTrimScreen` · cập nhật 2026-10-01
 
 **Một câu:** mọi thứ làm được với tấm ảnh đang xem — menu ⋯, và bốn màn phụ.
 
@@ -21,7 +21,8 @@
 | 3 | Hide |
 
 - Video ẩn Copy và Select Text; ảnh Live có thêm **Save as Video**; ảnh panorama có **View Panorama**; video
-  có **Trim**.
+  có **Trim**; ảnh burst mà app thấy ≥ 2 khung có **Select Frames…** ([05](05-burst-selection.md)) — mục duy
+  nhất cho burst, không có mục chỉ-xem-khung riêng.
 - **Show in All Photos** hiện khi ảnh **không** mở từ Library (album, chuyến đi, memory, kết quả tìm): đóng
   viewer, về tab Library, mở lại đúng ảnh đó giữa toàn thư viện — đi chung đường với Handoff.
 - **Resize** (trước gọi là Compress) đã rời thanh đáy vào menu này; màn đích không đổi.

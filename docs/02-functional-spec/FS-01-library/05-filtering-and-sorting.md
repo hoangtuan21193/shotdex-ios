@@ -1,7 +1,7 @@
 # FS-01.05 — Lọc và sắp xếp
 
 `FS-01.05` · `Features/Shared/RuleBuilderSections.swift` · `AdvancedSearchSheet`
-· `Core/Models/FilterCriteria.swift` · `SortOption` · cập nhật 2026-09-22
+· `Core/Models/FilterCriteria.swift` · `SortOption` · cập nhật 2026-10-01
 
 **Một câu:** một bộ dựng điều kiện dùng chung cho Advanced Search và Smart Album, cộng một menu lọc nhanh
 trên toolbar.
@@ -42,10 +42,13 @@ trên toolbar.
 - Trong bộ lọc đơn giản, chọn **cả hai** loại hoặc **không chọn gì** đều nghĩa là không ràng buộc.
 - **Panoramas** là mục duy nhất không chỉ hỏi mặt nạ bit của hệ thống: nó hỏi `mediaSubtypes` **hoặc**
   cột `isPanorama`, vì panorama do ShotDex ghép không mang cờ của hệ thống
-  ([FS-14 §7](../FS-14-panorama/01-screen-and-flow.md)). Mọi kiểu chụp khác vẫn do hệ thống định nghĩa.
+  ([FS-14 §7](../FS-14-panorama/01-screen-and-flow.md)).
+- **Unsupported RAW** là mục thứ hai không do hệ thống định nghĩa: ảnh RAW-only của máy mà iOS trên máy "chưa
+  đọc được", tra trong bảng phán quyết ([FS-03.04b §2, §5](../FS-03-photo-editor/04b-unsupported-raw.md)). Máy
+  "chưa biết" không khớp. Mọi kiểu chụp khác vẫn do hệ thống định nghĩa.
 - **Kiểu chụp** là một menu con trong menu lọc: Screenshots · Live Photos · Portrait · Panoramas · HDR ·
-  Time-lapse · Slo-mo · Cinematic. Là **menu con** chứ không phải tám hàng phẳng, vì tám hàng sẽ chôn mất
-  mục "Advanced Filter…".
+  Time-lapse · Slo-mo · Cinematic · Unsupported RAW. Là **menu con** chứ không phải chín hàng phẳng, vì chín
+  hàng sẽ chôn mất mục "Advanced Filter…".
   - Dữ liệu là bitmask kiểu chụp của hệ thống, nên "một trong các loại này" là một phép hợp của các phép
     kiểm bit trong SQL.
   - Row ghi **trước khi có cột đó** mang giá trị rỗng và **không khớp gì cả**, đúng nghĩa "index chưa biết
@@ -63,6 +66,7 @@ trên toolbar.
 | Khẩu | chính xác · khoảng · nhóm nhanh f/1.0–2.0 · f/2.1–4.0 · f/4.1–8.0 · nhỏ hơn f/8 |
 | Tiêu cự | thật + tương đương Full Frame; chính xác · khoảng · nhóm theo góc nhìn |
 | Khổ cảm biến | Full Frame · APS-H · APS-C · Micro Four Thirds · 1-inch · Compact · Medium Format · Smartphone · Unknown |
+| Tháng chụp | **trong tháng**: một tháng + năm, khớp trọn tháng theo lịch địa phương; chip `Aug 2026`. Bộ lọc đơn giản nhận nó từ câu "tháng bận nhất" của Statistics ([FS-07.02 §2](../FS-07-statistics/02-insights.md)); bộ dựng điều kiện có nó ở trường ngày chụp |
 
 Nhóm góc nhìn (theo tiêu cự tương đương): < 20mm Ultra-wide · 20–34 Wide · 35–69 Standard ·
 70–134 Portrait / Short telephoto · 135–299 Telephoto · ≥ 300 Super telephoto.
@@ -90,4 +94,6 @@ Album Detail và Smart Album ([FS-06.09](../FS-06-collections/09-album-filter-me
 
 ## 7. Tiêu chí nghiệm thu
 
-**Chưa viết.** Xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ).
+**Chưa viết** cho phần cũ — xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ). Hai mục mới có AC ở spec
+sinh ra chúng: *trong tháng* ở [FS-07.03](../FS-07-statistics/03-acceptance-criteria.md) AC-17, AC-18;
+*Unsupported RAW* ở [FS-03.04b](../FS-03-photo-editor/04b-unsupported-raw.md) AC-13.

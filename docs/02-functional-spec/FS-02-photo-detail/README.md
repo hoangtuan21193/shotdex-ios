@@ -13,6 +13,8 @@
 | 02 | [Video](02-video-playback.md) | trạng thái phát, transport, cử chỉ, tua, lưu khung, toàn màn |
 | 03 | [Bảng thông tin](03-info-panel-and-metadata.md) | hai dòng trên chrome, sheet đầy đủ, shutter count, dữ liệu thô |
 | 04 | [Hành động và phụ trợ](04-actions-and-extras.md) | menu ⋯, slideshow, Live Photo, Live Text, panorama, cắt video |
+| 05 | [Chọn khung trong burst](05-burst-selection.md) | chọn khung giữ, xoá phần còn lại, gợi ý khung, PhotoKit cho phép gì |
+| 06 | [Bản gốc trên iCloud](06-icloud-originals.md) | bản gốc có trên máy chưa, tải có %, chuẩn bị bản gốc trước khi sửa hàng loạt/xuất/Resize/Share, không xuất bản xem trước |
 
 ## Quy tắc
 

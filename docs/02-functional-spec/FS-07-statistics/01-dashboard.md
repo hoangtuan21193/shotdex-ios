@@ -1,7 +1,7 @@
-# FS-07 — Statistics
+# FS-07.01 — Dashboard biểu đồ
 
-`FS-07` · tier B · `Features/Statistics/` · `Data/Database/StatisticsQueries.swift` · `ChartStore`
-· bảng `stat_charts` · cập nhật 2026-09-22
+`FS-07.01` · `Features/Statistics/` · `Data/Database/StatisticsQueries.swift` · `ChartStore` · bảng `stat_charts`
+· cập nhật 2026-10-01
 
 **Một câu:** một bảng điều khiển biểu đồ **do người dùng tự dựng** — mỗi thẻ là một đặc tả biểu đồ, có
 khoảng thời gian riêng.
@@ -23,8 +23,8 @@ Loại biểu đồ · **trục X** (nhóm theo) · **trục Y** (đo cái gì) 
 | Thành phần | Giá trị |
 |---|---|
 | Loại | cột ngang · vành khuyên · đường theo thời gian · **một con số** |
-| Trục X | nhóm rời rạc (thân máy, hãng, ống kính, khổ cảm biến, favorite) · nhóm theo dải số (ISO, khẩu, tốc độ, tiêu cự thật, tiêu cự tương đương) · theo thời gian (ngày, tháng, năm) |
-| Trục Y | **số ảnh** (mặc định) + trung bình / trung vị / tổng / nhỏ nhất / lớn nhất trên một trường số |
+| Trục X | nhóm rời rạc (thân máy, hãng, ống kính, **cặp thân máy + ống**, khổ cảm biến, favorite) · nhóm theo dải số (ISO, khẩu, tốc độ, tiêu cự thật, tiêu cự tương đương) · theo thời gian (ngày, tháng, năm) |
+| Trục Y | **số ảnh** (mặc định) + trung bình / trung vị / tổng / nhỏ nhất / lớn nhất trên một trường số + **tỉ lệ chụp chậm hơn 1/tiêu cự tương đương** |
 
 - Mỗi loại biểu đồ **tự khai** trục X và phép đo nào hợp lệ với nó — cùng một khuôn với chỗ khai phép so
   sánh hợp lệ của từng trường điều kiện.
@@ -39,9 +39,19 @@ Loại biểu đồ · **trục X** (nhóm theo) · **trục Y** (đo cái gì) 
 Mỗi biểu đồ là một dòng gồm id, **đặc tả dạng JSON** và vị trí. Mã hoá và giải mã JSON **tự viết** (giống
 smart album) để tránh bẫy lồng kiểu dữ liệu của thư viện database.
 
-Lần cài đầu gieo **hai** biểu đồ: **Top Camera** (cột theo thân máy) và **Total Photos & Videos** (một con
-số). Cả hai sửa và xoá được. Việc gieo chỉ chạy **một lần duy nhất** — bảng người dùng cố ý xoá sạch không
-được tự mọc lại.
+Lần cài đầu gieo **sáu** biểu đồ, theo thứ tự:
+
+| # | Biểu đồ | Loại · trục X · trục Y |
+|---|---|---|
+| 1 | Top Camera | cột ngang · thân máy · số ảnh |
+| 2 | Total Photos & Videos | một con số · — · số ảnh |
+| 3 | Equivalent Focal Length | cột ngang · dải tiêu cự tương đương · số ảnh |
+| 4 | Body + Lens | cột ngang · cặp thân máy + ống · số ảnh |
+| 5 | Slow Shutter | một con số · — · tỉ lệ chụp chậm hơn 1/tiêu cự tương đương |
+| 6 | Photos per Month | đường theo tháng · tách chuỗi theo thân máy, 3 mục đầu · số ảnh |
+
+- **Không biểu đồ nào cố định**: cả sáu sửa và xoá được như biểu đồ người dùng tự dựng.
+- Việc gieo chỉ chạy **một lần duy nhất** — bảng người dùng cố ý xoá sạch không được tự mọc lại.
 
 ## 4. Thẻ và ô soạn
 
@@ -51,7 +61,8 @@ số). Cả hai sửa và xoá được. Việc gieo chỉ chạy **một lần 
 - Kiểu vẽ: cột ngang (nhãn ở trục Y, mỗi hàng ~28pt, bo góc, dải màu) · vành khuyên (lỗ giữa 0,6) · bảng
   màu dùng chung.
 - Chạm một cột, một lát hay một hàng **rời rạc hoặc theo dải** thì mở Library đã lọc sẵn. Biểu đồ **theo
-  thời gian không mở được** — bộ lọc đơn giản không có trường ngày.
+  thời gian không mở được**. Bộ lọc có điều kiện *trong tháng* ([FS-07.02 §2](02-insights.md)), nhưng chạm
+  một điểm trên biểu đồ đường chưa được đặc tả.
 - Nhóm **"Unknown" bị ẩn khỏi biểu đồ**, và thay bằng một dòng chú "N photos without this info".
 - **Ô soạn** soi gương ô soạn smart album: chọn loại · trục X · trục Y · tách chuỗi và N mục đầu · mục
   **Conditions** nhúng **bộ dựng điều kiện dùng chung** · mục **Date Range**. Có **xem trước sống** vẽ bằng
@@ -82,8 +93,5 @@ ngày**.
   sửa, nhân bản và xoá vẫn có trong menu của từng thẻ nên bố cục nhiều cột không mất chức năng nào.
 - **Chừa 48pt dưới thẻ cuối**, cộng thêm chỗ cho thanh chrome tự vẽ ở bản iOS trước 26 — vùng cuộn dừng
   đúng ở tab bar nổi nên không chừa thì thẻ cuối dính vào nó.
+- Thẻ Insights ([FS-07.02](02-insights.md)) đứng **trên** mọi biểu đồ, không bị chia vòng tròn vào cột.
 - Màn rỗng: chưa index → "No Indexed Photos"; chưa có biểu đồ nào → "No Charts".
-
-## 7. Tiêu chí nghiệm thu
-
-**Chưa viết.** Xem [README — Việc còn nợ](../README.md#6-việc-còn-nợ).

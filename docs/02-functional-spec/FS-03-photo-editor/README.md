@@ -15,6 +15,7 @@ render với extension sửa ảnh và các màn khác.
 | 02 | [Film simulation và preset](02-film-simulation-and-presets.md) | 49 look, năm cái được đo, bảng tra màu, My Looks |
 | 03 | [Cử chỉ, so sánh, undo](03-gestures-compare-and-undo.md) | tranh chấp vuốt, mốc identity, History, Reset All |
 | 04 | [RAW và render](04-raw-and-render-graph.md) | vì sao preview không hạ độ phân giải |
+| 04b | [RAW iOS chưa đọc được](04b-unsupported-raw.md) | phán quyết theo máy × bản iOS, dấu trên lưới, câu báo nói máy và việc cần làm, cặp RAW+JPEG |
 | 05 | [Mask cục bộ](05-local-masks.md) | hai tầng UI, bảy loại vùng, guide, overlay đỏ |
 | 05b | [Vẽ mask và zoom](05b-mask-painting-and-zoom.md) | cỡ cọ theo màn hình, trọng tài chạm, zoom 10× |
 | 06 | [Lưu và Live Photo](06-saving-recipe-and-live-photo.md) | recipe gắn vào ảnh, Save Copy vs Save Changes |

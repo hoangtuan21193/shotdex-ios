@@ -1,8 +1,8 @@
 # NF-03 — Quyền riêng tư và bảo mật
 
-`NF-03` · `ShotDex/Features/Support/` · `PrivacyInfo.xcprivacy` · cập nhật 2026-09-24
+`NF-03` · `ShotDex/Features/Support/` · `PrivacyInfo.xcprivacy` · cập nhật 2026-10-01
 
-**Một câu:** cam kết xử lý cục bộ, hai ngoại lệ, và luật gỡ vị trí khi chia sẻ.
+**Một câu:** cam kết xử lý cục bộ, hai ngoại lệ, và luật metadata khi chia sẻ hay xuất.
 
 ## 1. Quy tắc
 
@@ -40,19 +40,30 @@ Danh tính là **khoá chứng thực của bản cài** — gỡ app là mất.
 - Tải ảnh **về** từ server ([FS-17](../02-functional-spec/FS-17-import-from-server/README.md)) chỉ nhận dữ liệu; không
   gửi gì ngoài lệnh đăng nhập và đọc file.
 - SFTP xác minh host key lần đầu và **chặn** khi nó đổi; WebDAV HTTPS làm y hệt với chứng chỉ tự ký. SMB không có cơ chế tương đương — ghi rõ ở FS-15.
-- Upload **không** gỡ vị trí (Include Location là luật của Share sheet): đây là bản lưu trữ của chính người
+- Upload **không** gỡ vị trí (lựa chọn metadata của FS-08.06 là luật của chia sẻ và xuất): đây là bản lưu trữ của chính người
   dùng, gỡ toạ độ là làm hỏng bản gốc.
 
-## 3. Chia sẻ không kèm vị trí
+## 3. Metadata khi chia sẻ và xuất
 
-- **Settings → Sharing → Include Location**, mặc định **bật** (như Photos: toạ độ là một phần hồ sơ của tấm
-  ảnh, và thợ ảnh gửi cho khách thường muốn có nó). Tắt thì toạ độ bị gỡ **trước khi ảnh rời khỏi app**.
+Đặc tả đầy đủ, kèm tiêu chí nghiệm thu: [FS-08.06](../02-functional-spec/FS-08-settings/06-share-metadata-privacy.md).
+
+- **Ba mức cho mỗi lần chia sẻ hay xuất**: All Metadata · No Location · No Metadata. Mặc định nằm ở
+  Settings → Sharing và là **All Metadata** (như Photos: toạ độ là một phần hồ sơ của tấm ảnh, và thợ ảnh gửi cho
+  khách thường muốn có nó).
+- **Một mặc định cho mọi lối ra**: Share, Save Copy, Paste Edits, Resize và kéo sang app khác.
+- **No Metadata giữ Copyright và Artist** — quyền tác giả của người chụp, không phải dấu vết về họ.
+- **Save Changes không bao giờ đổi ngày hay vị trí của asset** — ảnh không rời máy, nên không có lựa chọn nào.
 - Ghi lại file bằng cách **chép ảnh sang file mới kèm bộ thuộc tính đã sửa**, **không** giải mã rồi mã hoá
-  lại: lời hứa của công tắc là bỏ toạ độ mà **không đụng một pixel hay một trường EXIF nào khác**.
+  lại: bỏ toạ độ mà **không đụng một pixel hay một trường EXIF nào khác**.
 - **Muốn xoá một trường thì phải ghi một giá trị rỗng tường minh** — bỏ trống trường đó nghĩa là "giữ nguyên
   của ảnh gốc". Xoá cả nhóm GPS, trường vị trí chủ thể, và mấy trường địa danh của chuẩn báo chí.
-- **Video ngoài phạm vi**: vị trí của clip nằm trong phần mô tả của container, gỡ nó nghĩa là **ghi lại cả
-  file** — một cú chia sẻ không được phép mã hoá lại một clip 4K. Dòng chú của thiết lập nói thẳng điều đó.
+- **Không ghi lại được thì không âm thầm giao đi nguyên bản.** ImageIO không ghi được RAW, nên mẻ có RAW hỏi
+  một lần: Share as JPEG · Share RAW with Location · Skip. Kéo thả không hỏi được, nên RAW kéo ra đi dưới
+  dạng JPEG render ở mức mặc định.
+- Đổi mức cho một lần share bằng hai dòng hành động của app trong share sheet; chạm Share thường dùng mặc định.
+- **Video đi nguyên bản ở mọi mức**: vị trí nằm trong phần mô tả của container, gỡ nó là chép cả clip ra đĩa.
+  Mẻ có video mà mức không phải All Metadata thì app nói *"Videos keep their metadata"* trước khi share.
+- Share extension "Save to ShotDex" lưu nguyên byte: nó nhận ảnh **vào** thư viện, không gì rời máy.
 
 ## 4. Bản khai quyền riêng tư — cả 5 target
 

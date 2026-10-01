@@ -1,7 +1,7 @@
 # FS-06.08 — Smart Album
 
 `FS-06.08` · `Core/Models/SmartAlbumQuery.swift` · `Data/Database/SmartAlbumStore.swift`
-· `Features/Albums/SmartAlbumEditorSheet.swift` · bảng `smart_albums` · cập nhật 2026-09-22
+· `Features/Albums/SmartAlbumEditorSheet.swift` · bảng `smart_albums` · cập nhật 2026-10-01
 
 **Một câu:** một bộ lọc có tên, lưu lại được — **không phải** smart album của hệ thống, vì hệ thống không
 cho app tạo smart album có điều kiện riêng.
@@ -28,7 +28,7 @@ trường, phép so sánh và giá trị. Loại trường quyết định phép
 | **chữ** | hãng máy, thân máy, ống kính, tên file | chứa · không chứa · đúng bằng · khác | so trên **cả bản đã chuẩn hoá lẫn bản gốc**; phép phủ định vẫn khớp cả dòng rỗng → gõ "R6" bắt được "Canon EOS R6" |
 | **chọn** | khổ cảm biến · loại media · định dạng file | là · không là | định dạng gồm JPEG/HEIC/PNG/TIFF/GIF/DNG/RAW, mỗi cái ứng với một tập đuôi file; RAW gộp nhiều đuôi |
 | **số** | ISO · khẩu · tốc độ · tiêu cự | bằng · lớn hơn · nhỏ hơn · trong khoảng | tốc độ nhận cả `1/500` lẫn số thập phân; tiêu cự có công tắc **thật / tương đương Full Frame** |
-| **ngày** | ngày chụp | **đúng ngày** (mặc định) · trong N ngày qua · trước · sau · trong khoảng | "đúng ngày" khớp **trọn ngày theo lịch địa phương** nên đúng cả ngày đổi giờ; "N ngày qua" so với thời điểm hiện tại nên luôn sống |
+| **ngày** | ngày chụp | **đúng ngày** (mặc định) · **trong tháng** · trong N ngày qua · trước · sau · trong khoảng | "đúng ngày" khớp **trọn ngày theo lịch địa phương** nên đúng cả ngày đổi giờ; "trong tháng" khớp trọn một tháng + năm theo lịch địa phương, ô nhập chọn tháng và năm; "N ngày qua" so với thời điểm hiện tại nên luôn sống |
 | **favorite** | favorite | — | một dải chọn Favorite / Not favorite |
 
 **Loại media** chỉ đặt được qua dải All / Photo / Video, **không** có trong menu chọn trường
@@ -72,8 +72,10 @@ chuyển sang điều kiện (chế độ khớp tất cả), để album lưu t
   hơn một điều kiện, và một chip mô tả từng điều kiện), rồi tới lưới. Model của nó soi gương model Library
   nên dùng chung viewer, chế độ chọn, Compare và xoá.
 - Giữ lâu trên tile → menu Edit / Delete.
-- Menu Filter / Sort trên thanh trên, lọc chồng lên điều kiện đã lưu: [FS-06.09](09-album-filter-menu.md).
+- Menu Filter / Sort trên thanh trên, lọc chồng lên điều kiện đã lưu: [FS-06.09](09-album-filter-menu.md). Menu
+  này dùng chung với Library nên có cả mục kiểu chụp **Unsupported RAW** ([FS-01.05 §3](../FS-01-library/05-filtering-and-sorting.md)).
 
 ## 7. Tiêu chí nghiệm thu
 
-**Chưa viết.** Xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ).
+**Chưa viết** cho phần cũ — xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ). Điều kiện *trong tháng*
+có AC ở [FS-07.03](../FS-07-statistics/03-acceptance-criteria.md) AC-18.
