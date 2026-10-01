@@ -1,7 +1,7 @@
 # FS-03.04b — RAW iOS chưa đọc được
 
 `FS-03.04b` · `ShotDexKit/Render/PhotoRenderService.swift` · `Domain/Editing/EditorLoadFailure.swift`
-· `Features/Shared/PhotoGridCollectionView.swift` · cập nhật 2026-10-01 (quyết định của `/plan` đã duyệt)
+· `Features/Shared/PhotoGridCollectionView.swift` · cập nhật 2026-10-01 (quyết định của `/plan` đã duyệt; JPEG → Edit RAW bắt đầu từ bản gốc)
 
 **Một câu:** ảnh RAW mà iOS trên máy chưa giải được thì có dấu ngay trong thư viện, và mọi lối mở nó nói máy nào,
 bản iOS nào, làm gì tiếp — chuyển DNG, chờ iOS, hay sửa JPEG đi kèm.
@@ -73,6 +73,8 @@ RAW; chọn RAW trong menu Source thì lỗi bị nuốt. Mục này thay cả b
   - Cặp đã có bản sửa ShotDex trên RAW mà người dùng chọn **Edit JPEG**: bản sửa mang sang JPEG, bỏ năm thông
     số chỉ có ở nhóm RAW (Temperature, Tint, Sharpness, Luminance Noise, Color Noise của nhóm RAW) — người dùng
     chốt 2026-10-01.
+  - Chiều ngược lại: cặp đã có bản sửa ShotDex trên JPEG mà người dùng chọn **Edit RAW**: editor mở RAW **từ bản
+    gốc**, không mang gì của bản sửa JPEG sang — người dùng chốt 2026-10-01.
   - Menu Source trong editor vẫn có; với máy "chưa đọc được", RAW trong menu đó mờ kèm cùng lý do. Bốn mục RAW
     của Adjust ẩn như mọi nguồn không phải RAW.
 - Lỗi của bộ giải luôn ra **đúng thông báo RAW** kể cả khi ImageIO không đọc nổi thuộc tính file — nguồn là RAW
@@ -126,7 +128,7 @@ iOS 27.0 trong bảng là ví dụ; câu thật lấy phiên bản từ hệ th�
 | AC-13 | 8 ảnh của AC-2, 3 ảnh của AC-12, 5 HEIC; một album chứa 4 ảnh của AC-2 + 2 HEIC | chọn **Unsupported RAW** trong menu con kiểu chụp, ở Library rồi ở album đó | Library còn đúng 8 ảnh của AC-2; album còn đúng 4 | ⚠️ chưa có |
 | AC-14 | Resize 4 ảnh: 2 JPEG + 1 ảnh của AC-2 + 1 cặp RAW+JPEG của máy "chưa đọc được" | chạy Resize | 3 bản mới trong Photos (bản của cặp làm từ JPEG của cặp); danh sách lỗi có 1 dòng mang câu của AC-3; không tạo file từ bản xem trước | ⚠️ chưa có |
 | AC-15 | Collage, chọn 4 ảnh trong đó 1 ảnh của AC-2 | thêm vào collage | hỏi *1 RAW photo can't be read on this iOS* với Convert to JPEG · Skip These 1 · Cancel; Convert → ô đó dùng bản xem trước đúng cỡ nhúng, 0 asset mới trước khi Save; Skip → collage 3 ảnh; Cancel → không thêm ảnh nào | ⚠️ chưa có |
-| AC-16 | cặp RAW+JPEG của máy đọc được | bấm Edit hai lần: lần 1 chọn Edit RAW, chỉnh Exposure +1 và Temperature của nhóm RAW, Save Changes; lần 2 chọn Edit JPEG | lần 1 action sheet có cả hai mục sáng, editor mở RAW; lần 2 action sheet hiện lại, editor mở JPEG có Exposure +1, không có Temperature của nhóm RAW | ⚠️ chưa có |
+| AC-16 | cặp RAW+JPEG của máy đọc được | bấm Edit ba lần: lần 1 chọn Edit RAW, chỉnh Exposure +1 và Temperature của nhóm RAW, Save Changes; lần 2 chọn Edit JPEG, chỉnh Contrast +20, Save Changes; lần 3 chọn Edit RAW | lần 1 action sheet có cả hai mục sáng, editor mở RAW; lần 2 action sheet hiện lại, editor mở JPEG có Exposure +1, không có Temperature của nhóm RAW; lần 3 action sheet hiện lại, editor mở RAW từ bản gốc: Exposure 0, Contrast 0, không mang gì của bản sửa JPEG | ⚠️ chưa có |
 | AC-17 | ảnh của AC-2 mở trong viewer | chạm glyph tam giác ở bảng thông tin | thẻ có tên máy, "iOS 27.0" và câu "You can still view the preview, but you can't edit the RAW."; vùng chạm ≥ 44pt | ⚠️ chưa có |
 | AC-18 | Video Studio, thêm 5 ảnh, 2 ảnh của AC-2 | chọn Skip These 2 | timeline có đúng 3 clip ảnh; không có clip nào từ bản xem trước | ⚠️ chưa có |
 
