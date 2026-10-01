@@ -286,6 +286,16 @@ struct FilterTokenBar: View {
                 ) { $0.mediaSubtypes.remove(subtype) }
             )
         }
+        if let month = criteria.captureMonth {
+            let name = month.abbreviatedName()
+            result.append(
+                FilterToken(
+                    id: "month",
+                    label: name,
+                    removalAccessibilityLabel: "Remove month filter \(name)"
+                ) { $0.captureMonth = nil }
+            )
+        }
         if criteria.favoritesOnly {
             result.append(
                 FilterToken(

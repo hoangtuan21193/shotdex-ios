@@ -307,7 +307,9 @@ enum ChartDimension: String, Codable, CaseIterable, Identifiable, Sendable {
 
     /// A Library `FilterCriteria` that isolates the tapped bucket, for
     /// drill-down. `nil` when the dimension can't be expressed as a filter
-    /// (temporal — `FilterCriteria` has no date field; "Not favorite").
+    /// ("Not favorite"), and for temporal buckets: the filter has a month
+    /// condition now, but tapping a point on a line is not specified
+    /// (FS-07.01 §4).
     func drillCriteria(key: String) -> FilterCriteria? {
         var criteria = FilterCriteria()
         switch self {

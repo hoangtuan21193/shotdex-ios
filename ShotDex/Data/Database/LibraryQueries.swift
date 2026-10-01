@@ -405,6 +405,12 @@ struct LibraryQueries: Sendable {
             conditions.append("isFavorite = 1")
         }
 
+        if let month = criteria.captureMonth {
+            let (sql, bounds) = month.creationDateCondition()
+            conditions.append(sql)
+            values.append(contentsOf: bounds.map { $0 as DatabaseValueConvertible })
+        }
+
         if let text = criteria.searchText, !text.isEmpty {
             let parsed = SearchParser.parse(text)
 

@@ -368,6 +368,12 @@ struct SmartAlbumQuery: Codable, Equatable, Sendable {
             rules.append(SmartAlbumRule(field: .favorite, boolValue: true))
         }
 
+        if let month = criteria.captureMonth {
+            rules.append(SmartAlbumRule(
+                field: .dateTaken, op: .inMonth, number: month.anchorDate().timeIntervalSince1970
+            ))
+        }
+
         return SmartAlbumQuery(matchMode: .all, rules: rules)
     }
 }

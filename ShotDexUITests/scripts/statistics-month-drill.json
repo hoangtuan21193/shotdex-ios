@@ -1,0 +1,100 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Settings"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Re-index Library"
+    },
+    {
+      "action": "wait",
+      "seconds": 25
+    },
+    {
+      "action": "tap",
+      "label": "Done"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Statistics"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "screenshot",
+      "name": "01-month-sentence"
+    },
+    {
+      "action": "dump",
+      "name": "01-month-sentence"
+    },
+    {
+      "action": "tap",
+      "label": "August 2026 was your busiest month: 1,240 photos."
+    },
+    {
+      "action": "wait",
+      "seconds": 5
+    },
+    {
+      "action": "screenshot",
+      "name": "02-library-august"
+    },
+    {
+      "action": "dump",
+      "name": "02-library-august"
+    },
+    {
+      "action": "tap",
+      "label": "Collections"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "tap",
+      "label": "New album or smart album, or customize this tab"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "tap",
+      "label": "New Smart Album"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "screenshot",
+      "name": "03-editor"
+    },
+    {
+      "action": "dump",
+      "name": "03-editor",
+      "text": "all"
+    }
+  ]
+}

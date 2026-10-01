@@ -192,10 +192,13 @@ enum InsightSelector {
         )
     }
 
-    /// The Library filter for one month's photos, or `nil` while the filter
-    /// has no month condition.
+    /// The Library filter for one month's photos: that month, photos only —
+    /// the same rows the sentence counted.
     static func monthFilter(year: Int, month: Int) -> FilterCriteria? {
-        nil
+        var filter = FilterCriteria()
+        filter.captureMonth = CaptureMonth(year: year, month: month)
+        filter.mediaKinds = [.photo]
+        return filter
     }
 
     /// The middle value; with an even count, the mean of the two middle ones.

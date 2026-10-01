@@ -527,4 +527,76 @@ struct StatisticsInsightsTests {
         #expect(hits.first?.section == .display)
         #expect(SettingsSearchIndex.results(for: "statistics").contains { $0.label == .showInsights })
     }
+
+    // MARK: Busiest month (AC-17)
+
+    private func localEpoch(_ year: Int, _ month: Int, _ day: Int, _ hour: Int, _ minute: Int = 0) -> Int {
+        Int(Calendar.current.date(from: DateComponents(year: year, month: month, day: day, hour: hour, minute: minute))!
+            .timeIntervalSince1970)
+    }
+
+    /// AC-17: June 300, July 280, August 1,240, September 320 — no lens, no
+    /// focal length. The month sentence, and a filter whose Library count is
+    /// the sentence's 1,240.
+    @Test func busiestMonthSentenceAndFilterAgree() throws {
+        let database = try AppDatabase.makeEmpty()
+        var rows: [PhotoMetadata] = []
+        for (month, count) in [(6, 300), (7, 280), (8, 1240), (9, 320)] {
+            rows += (0..<count).map {
+                record("\(month)-\($0)", camera: "EOS R6", shutter: 1.0 / 250,
+                       creation: localEpoch(2026, month, 1 + $0 % 28, $0 % 24))
+            }
+        }
+        try save(rows, into: database)
+
+        let inputs = try StatisticsQueries(database: database).insightInputs()
+        let sentences = InsightSelector.select(inputs)
+        #expect(sentences.count == 1)
+        let month = try #require(sentences.first)
+        #expect(month.kind == .busiestMonth(year: 2026, month: 8, count: 1240))
+        #expect(InsightCopy.sentence(month, locale: english) == "August 2026 was your busiest month: 1,240 photos.")
+        let filter = try #require(month.filter)
+        #expect(filter.captureMonth == CaptureMonth(year: 2026, month: 8))
+        #expect(try LibraryQueries(database: database).count(matching: filter) == 1240)
+        #expect(CaptureMonth(year: 2026, month: 8).abbreviatedName(locale: english) == "Aug 2026")
+    }
+
+    /// Q3: every grouping by month is local time. A photo late on the 31st
+    /// and one early on the 1st land in their local months — in the
+    /// sentence's counts, in the Photos per Month chart and in the filter —
+    /// whichever side of UTC this machine is on.
+    @Test func monthGroupingUsesLocalTime() throws {
+        let database = try AppDatabase.makeEmpty()
+        try save([
+            record("lateAugust", camera: "EOS R6", creation: localEpoch(2026, 8, 31, 23, 30)),
+            record("earlySeptember", camera: "EOS R6", creation: localEpoch(2026, 9, 1, 0, 30)),
+        ], into: database)
+
+        let inputs = try StatisticsQueries(database: database).insightInputs()
+        #expect(inputs.monthCounts.sorted { $0.month < $1.month } == [
+            .init(year: 2026, month: 8, count: 1), .init(year: 2026, month: 9, count: 1),
+        ])
+        let chart = ChartSpec(title: "Per month", kind: .line, dimension: .dateMonth)
+        let points = try StatisticsQueries(database: database).chartData(for: chart, scope: .allTime)
+        #expect(points.map(\.label) == ["2026-08", "2026-09"])
+        #expect(points.map(\.value) == [1, 1])
+
+        var august = FilterCriteria()
+        august.captureMonth = CaptureMonth(year: 2026, month: 8)
+        #expect(try LibraryQueries(database: database).count(matching: august) == 1)
+        #expect(august.activeConditionCount == 1 && !august.isEmpty)
+    }
+
+    /// A stored filter with a month keeps it; one with an unreadable month
+    /// loses only that (decode stays lossy).
+    @Test func captureMonthDecodesLossily() throws {
+        var criteria = FilterCriteria()
+        criteria.captureMonth = CaptureMonth(year: 2026, month: 8)
+        criteria.favoritesOnly = true
+        let data = try JSONEncoder().encode(criteria)
+        #expect(try JSONDecoder().decode(FilterCriteria.self, from: data) == criteria)
+        let broken = Data(#"{"favoritesOnly":true,"captureMonth":"August"}"#.utf8)
+        let decoded = try JSONDecoder().decode(FilterCriteria.self, from: broken)
+        #expect(decoded.favoritesOnly && decoded.captureMonth == nil)
+    }
 }

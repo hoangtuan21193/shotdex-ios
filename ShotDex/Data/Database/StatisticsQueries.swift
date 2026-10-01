@@ -240,7 +240,7 @@ struct StatisticsQueries: Sendable {
         ]
         if !scopeSQL.isEmpty { conditions.append(scopeSQL) }
         let sql = """
-            SELECT strftime('%Y-%m', creationDate, 'unixepoch') AS month,
+            SELECT strftime('%Y-%m', creationDate, 'unixepoch', 'localtime') AS month,
                    normalizedCameraModel AS name,
                    COUNT(*) AS count
             FROM photo_metadata
@@ -606,7 +606,7 @@ extension StatisticsQueries {
         let seriesSelect = seriesColumn.map { ", \($0) AS series" } ?? ""
         let seriesGroup = seriesColumn.map { ", \($0)" } ?? ""
         let sql = """
-            SELECT strftime('\(fmt)', creationDate, 'unixepoch') AS period\(seriesSelect),
+            SELECT strftime('\(fmt)', creationDate, 'unixepoch', 'localtime') AS period\(seriesSelect),
                    \(aggExpr) AS value
             FROM photo_metadata
             \(Self.whereSQL(conditions))
