@@ -1,5 +1,6 @@
 import ShotDexKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Export… of an edit made on server photos (FS-17.06 §6): pick one or more
 /// places, say what happens to the original, run, and see what arrived.
@@ -39,8 +40,25 @@ struct ServerExportSheet: View {
             if model.report.shareFiles.isEmpty {
                 onFinished()
             } else {
-                // Last, over this sheet; the run ends when it closes.
-                PhotoShareSheet.present(items: model.report.shareFiles, onFinished: onFinished)
+                // Last, over this sheet; the run ends when it closes. The
+                // renders carry the photo's metadata, so the Share
+                // destination takes them through the share pipeline like any
+                // other share: rewritten at the Settings level, with the
+                // header and the two rows (FS-08.06 AC-22).
+                let files = model.report.shareFiles
+                Task { @MainActor in
+                    let share = await PhotoShareSheet.gather(
+                        sources: files.map { file in
+                            // A video the tool made goes as it is.
+                            let isMovie = UTType(filenameExtension: file.pathExtension)?.conforms(to: .movie) ?? false
+                            return ShareSource(id: file.path, kind: isMovie ? .video : .photo, filename: file.lastPathComponent)
+                        },
+                        reader: LocalFileShareReader(files: Dictionary(uniqueKeysWithValues: files.map { ($0.path, $0) })),
+                        level: .sharingDefault(),
+                        onClose: onFinished
+                    )
+                    PhotoShareSheet.present(share)
+                }
             }
         }
         .alert(replaceTitle, isPresented: $isConfirmingReplace) {
