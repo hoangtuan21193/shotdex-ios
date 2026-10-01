@@ -113,3 +113,24 @@ extension FocusStackOptions.Method {
         }
     }
 }
+
+extension HDRDeghost {
+    var displayName: String {
+        switch self {
+        case .off: String(localized: "Off", comment: "HDR Deghost level: no deghosting")
+        case .low: String(localized: "Low", comment: "HDR Deghost level")
+        case .medium: String(localized: "Medium", comment: "HDR Deghost level")
+        case .high: String(localized: "High", comment: "HDR Deghost level")
+        }
+    }
+
+    /// What the level is for, in the photographer's terms (FS-01.11 §3).
+    var purposeDescription: String {
+        switch self {
+        case .off: String(localized: "Every frame counts everywhere. For a tripod and a still scene.", comment: "HDR: what Deghost Off is for")
+        case .low: String(localized: "Leaves out what moved a lot between frames — people, cars.", comment: "HDR: what Deghost Low is for")
+        case .medium: String(localized: "Also catches leaves and water that moved a little.", comment: "HDR: what Deghost Medium is for")
+        case .high: String(localized: "Catches the slightest movement; dark areas can come out a little noisier.", comment: "HDR: what Deghost High is for")
+        }
+    }
+}

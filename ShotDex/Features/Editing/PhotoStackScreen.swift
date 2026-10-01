@@ -50,6 +50,8 @@ struct PhotoStackScreen: View {
     @State private var liveStroke: [NormalizedPoint] = []
     @State private var serverExportModel: ServerExportModel?
     @State private var isConfirmingDiscard = false
+    /// Save on an HDR merge asks JPEG or HEIC first (FS-01.11 §6).
+    @State private var isChoosingFormat = false
 
     var body: some View {
         ZStack {
@@ -138,13 +140,29 @@ struct PhotoStackScreen: View {
             Spacer()
             Button(presentation.serverExport == nil
                    ? String(localized: "Save")
-                   : String(localized: "Export…", comment: "Combine of server photos: choose where the result goes")) { model.save() }
+                   : String(localized: "Export…", comment: "Combine of server photos: choose where the result goes")) {
+                if model.hdr != nil { isChoosingFormat = true } else { model.save() }
+            }
                 .fontWeight(.semibold)
                 .foregroundStyle(model.canSave ? EditorTheme.accent : EditorTheme.dimText)
                 .disabled(!model.canSave)
         }
         .padding(.horizontal, AppTheme.Spacing.lg)
         .frame(height: AppTheme.Size.minTouch + AppTheme.Spacing.md)
+        // An alert, not a confirmation dialog: iOS 26 draws that as a popover
+        // with its Cancel hidden (REVIEW_QUEUE 2026-09-19).
+        .alert(String(localized: "Save As", comment: "HDR Save: alert title asking for the file format"),
+               isPresented: $isChoosingFormat) {
+            Button("JPEG") { model.save(format: .jpeg) }
+            if model.canSaveHEIC {
+                Button("HEIC") { model.save(format: .heic) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            if !model.canSaveHEIC {
+                Text("This device can't write HEIC, so the photo is saved as JPEG.")
+            }
+        }
     }
 
     private func stage(_ model: PhotoStackModel) -> some View {
@@ -373,6 +391,67 @@ struct PhotoStackScreen: View {
         .frame(minHeight: AppTheme.Size.minTouch)
     }
 
+    // MARK: HDR (FS-01.11 §3)
+
+    static let hdrDescription = String(
+        localized: "Merges a bracketed series into one photo that keeps the highlights and the shadows.",
+        comment: "HDR panel: what the screen does"
+    )
+
+    /// Deghost, and the one Strength slider.
+    @ViewBuilder
+    private func hdrControls(_ model: PhotoStackModel) -> some View {
+        Picker(String(localized: "Deghost", comment: "HDR control: how hard the merge looks for things that moved between frames"),
+               selection: Binding(get: { model.hdrOptions.deghost }, set: { model.hdrOptions.deghost = $0 })) {
+            ForEach(HDRDeghost.allCases) { level in
+                Text(level.displayName).tag(level)
+            }
+        }
+        .pickerStyle(.segmented)
+        .accessibilityLabel(String(localized: "Deghost", comment: "HDR control: how hard the merge looks for things that moved between frames"))
+
+        Text(model.hdrOptions.deghost.purposeDescription)
+            .font(EditorTheme.maskSubtitle)
+            .foregroundStyle(EditorTheme.dimText)
+            .fixedSize(horizontal: false, vertical: true)
+
+        let strength = Int((model.hdrOptions.strength * 100).rounded())
+        EditorValueSlider(
+            label: String(localized: "Strength", comment: "HDR slider: how far the shadows are lifted and the tones compressed"),
+            value: Double(strength),
+            range: 0...100,
+            valueText: "\(strength)",
+            accessibilityName: String(localized: "Strength", comment: "HDR slider: how far the shadows are lifted and the tones compressed"),
+            onBeginDrag: {},
+            onDrag: { value in
+                let next = (value.rounded()) / 100
+                if abs(next - model.hdrOptions.strength) > 0.001 { model.hdrOptions.strength = next }
+            },
+            onReset: { model.hdrOptions.strength = HDROptions.standard.strength }
+        )
+    }
+
+    /// The warnings, or the line about alignment when there are none.
+    @ViewBuilder
+    private func hdrNotes(_ model: PhotoStackModel) -> some View {
+        if model.hdrNotes.isEmpty {
+            Label(
+                "Frames are lined up before merging, so a handheld series still works — a tripod still works better.",
+                systemImage: "info.circle"
+            )
+            .font(EditorTheme.maskSubtitle)
+            .foregroundStyle(EditorTheme.dimText)
+            .fixedSize(horizontal: false, vertical: true)
+        } else {
+            ForEach(model.hdrNotes, id: \.self) { note in
+                Label(note, systemImage: "exclamationmark.triangle")
+                    .font(EditorTheme.maskSubtitle)
+                    .foregroundStyle(EditorTheme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
     private func panel(_ model: PhotoStackModel) -> some View {
         @Bindable var model = model
         return VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
@@ -386,12 +465,14 @@ struct PhotoStackScreen: View {
                 .pickerStyle(.segmented)
             }
 
-            Text(model.mode.purposeDescription)
+            Text(presentation.purpose == .hdr ? Self.hdrDescription : model.mode.purposeDescription)
                 .font(EditorTheme.rowLabel)
                 .foregroundStyle(EditorTheme.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
 
-            if model.mode == .focusStack {
+            if presentation.purpose == .hdr {
+                hdrControls(model)
+            } else if model.mode == .focusStack {
                 if model.isRetouching {
                     retouchControls(model)
                 } else {
@@ -414,7 +495,9 @@ struct PhotoStackScreen: View {
                 }
             }
 
-            if let message = model.excludedFramesMessage {
+            if presentation.purpose == .hdr {
+                hdrNotes(model)
+            } else if let message = model.excludedFramesMessage {
                 Label(message, systemImage: "exclamationmark.triangle")
                     .font(EditorTheme.maskSubtitle)
                     .foregroundStyle(EditorTheme.secondaryText)
