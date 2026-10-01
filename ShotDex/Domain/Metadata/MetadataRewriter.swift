@@ -63,10 +63,20 @@ enum MetadataRewriter {
         }
     }
 
-    /// The source's metadata with every tag `level` removes taken out.
+    /// The metadata the new file gets. No Location: the source's, with the
+    /// place taken out. No Metadata: a new set holding only the keepers —
+    /// measured, a pruned copy of the source keeps the MakerNote (plan task 2).
     private static func metadata(of image: CGImageSource, keeping level: MetadataLevel) throws -> CGImageMetadata {
-        let empty = CGImageMetadataCreateMutable()
-        guard let existing = CGImageSourceCopyMetadataAtIndex(image, 0, nil) else { return empty }
+        let fresh = CGImageMetadataCreateMutable()
+        guard let existing = CGImageSourceCopyMetadataAtIndex(image, 0, nil) else { return fresh }
+        if level == .noMetadata {
+            for path in keptAtNoMetadata {
+                if let tag = CGImageMetadataCopyTagWithPath(existing, nil, path as CFString) {
+                    CGImageMetadataSetTagWithPath(fresh, nil, path as CFString, tag)
+                }
+            }
+            return fresh
+        }
         guard let copy = CGImageMetadataCreateMutableCopy(existing) else { throw Failure.cannotWrite }
         for path in topLevelPaths(of: copy) where removes(path, at: level) {
             CGImageMetadataRemoveTagWithPath(copy, nil, path as CFString)
@@ -74,14 +84,30 @@ enum MetadataRewriter {
         return copy
     }
 
+    /// What No Metadata keeps (spec §3): the orientation, without which the
+    /// photo turns sideways, and the author's Artist and Copyright wherever
+    /// they sit — TIFF, and XMP's `dc:` fields that mirror IPTC By-line and
+    /// Copyright Notice. The colour profile is image data, not metadata, and
+    /// the copy keeps it.
+    static let keptAtNoMetadata: [String] = [
+        "tiff:Orientation", "tiff:Artist", "tiff:Copyright", "dc:creator", "dc:rights",
+    ]
+
+    /// Tags that describe the image's own structure, which ImageIO writes
+    /// into every file whatever it was given. They say nothing about the
+    /// photographer, the camera or the place.
+    static let structural: Set<String> = [
+        "exif:PixelXDimension", "exif:PixelYDimension", "exif:ColorSpace",
+        "tiff:XResolution", "tiff:YResolution", "tiff:ResolutionUnit",
+    ]
+
     /// Whether `level` removes the tag at `path` (`prefix:Name`).
     static func removes(_ path: String, at level: MetadataLevel) -> Bool {
         switch level {
         case .all: false
         case .noLocation: isLocation(path)
-        // No Metadata is not offered by the rewriter yet (plan task 11):
-        // removing everything is the safe answer until it is.
-        case .noMetadata: true
+        case .noMetadata:
+            !keptAtNoMetadata.contains(path) && !structural.contains(path) && !path.hasPrefix("iio:")
         }
     }
 
@@ -127,10 +153,49 @@ enum MetadataRewriter {
             found += iptcLocationKeys.filter { iptc[$0] != nil }.map { "IPTC \($0)" }
         }
         if let metadata = CGImageSourceCopyMetadataAtIndex(image, 0, nil) {
-            found += topLevelPaths(of: metadata).filter { removes($0, at: level) && isLocation($0) }
+            found += topLevelPaths(of: metadata).filter { path in
+                removes(path, at: level) && (level == .noMetadata || isLocation(path))
+            }
         }
-        return found
+        if level == .noMetadata {
+            // The property dictionaries too: a maker note has no XMP mirror.
+            let dictionaries = properties.keys.filter { key in
+                (properties[key] as? [CFString: Any])?.isEmpty == false
+                    && !Self.keptDictionaries.contains(key as String)
+            }
+            found += dictionaries.map { "\($0)" }
+            if let iptc = properties[kCGImagePropertyIPTCDictionary] as? [CFString: Any] {
+                let author: Set<String> = [
+                    kCGImagePropertyIPTCByline as String, kCGImagePropertyIPTCCopyrightNotice as String,
+                ]
+                found += iptc.keys.map { $0 as String }.filter { !author.contains($0) }.map { "IPTC \($0)" }
+            }
+            if let tiff = properties[kCGImagePropertyTIFFDictionary] as? [CFString: Any] {
+                let kept: Set<String> = [
+                    kCGImagePropertyTIFFOrientation as String, kCGImagePropertyTIFFArtist as String,
+                    kCGImagePropertyTIFFCopyright as String, kCGImagePropertyTIFFXResolution as String,
+                    kCGImagePropertyTIFFYResolution as String, kCGImagePropertyTIFFResolutionUnit as String,
+                ]
+                found += tiff.keys.map { $0 as String }.filter { !kept.contains($0) }.map { "TIFF \($0)" }
+            }
+            if let exif = properties[kCGImagePropertyExifDictionary] as? [CFString: Any] {
+                let kept: Set<String> = [
+                    kCGImagePropertyExifPixelXDimension as String, kCGImagePropertyExifPixelYDimension as String,
+                    kCGImagePropertyExifColorSpace as String,
+                ]
+                found += exif.keys.map { $0 as String }.filter { !kept.contains($0) }.map { "EXIF \($0)" }
+            }
+        }
+        return Array(Set(found)).sorted()
     }
+
+    /// Property dictionaries No Metadata may leave in place: the ones it
+    /// checks key by key below, and JFIF/format headers that carry no tags.
+    private static let keptDictionaries: Set<String> = [
+        kCGImagePropertyTIFFDictionary as String, kCGImagePropertyExifDictionary as String,
+        kCGImagePropertyIPTCDictionary as String, kCGImagePropertyJFIFDictionary as String,
+        kCGImagePropertyPNGDictionary as String, kCGImagePropertyHEIFDictionary as String,
+    ]
 
     /// Whether the file carries a location anywhere the rewriter would remove
     /// one from.

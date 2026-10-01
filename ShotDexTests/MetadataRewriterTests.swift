@@ -157,4 +157,50 @@ struct MetadataRewriterTests {
         #expect(tiff[kCGImagePropertyTIFFMake] as? String == MetadataFixture.make)
         #expect(MetadataFixture.pixels(of: shared) == MetadataFixture.pixels(of: original))
     }
+
+    /// AC-2, the file: No Metadata leaves no GPS, camera, exposure, capture
+    /// date or maker note, and keeps the orientation, the colour profile, the
+    /// Artist and the Copyright — and every pixel.
+    @Test func noMetadataJPEG() throws {
+        defer { cleanUp() }
+        let original = try MetadataFixture.write(.jpeg, in: folder)
+        let shared = output().appendingPathExtension("jpg")
+        try MetadataRewriter.rewrite(original, to: shared, level: .noMetadata)
+
+        let props = MetadataFixture.properties(of: shared)
+        #expect(props[kCGImagePropertyGPSDictionary] == nil)
+        #expect(props[kCGImagePropertyMakerAppleDictionary] == nil)
+        let tiff = props[kCGImagePropertyTIFFDictionary] as? [CFString: Any] ?? [:]
+        #expect(tiff[kCGImagePropertyTIFFMake] == nil)
+        #expect(tiff[kCGImagePropertyTIFFModel] == nil)
+        let exif = props[kCGImagePropertyExifDictionary] as? [CFString: Any] ?? [:]
+        #expect(exif[kCGImagePropertyExifISOSpeedRatings] == nil)
+        #expect(exif[kCGImagePropertyExifDateTimeOriginal] == nil)
+        #expect(exif[kCGImagePropertyExifLensModel] == nil)
+        let xmp = MetadataFixture.xmpPaths(of: shared)
+        #expect(!xmp.contains("photoshop:City"))
+        #expect(!xmp.contains("xmp:Rating"))
+        #expect(!xmp.contains { $0.hasPrefix("exif:DateTime") })
+
+        #expect(props[kCGImagePropertyOrientation] as? Int == MetadataFixture.orientation)
+        #expect(MetadataFixture.hasColorProfile(shared))
+        #expect(tiff[kCGImagePropertyTIFFArtist] as? String == MetadataFixture.artist || xmp.contains("dc:creator"))
+        #expect(tiff[kCGImagePropertyTIFFCopyright] as? String == MetadataFixture.copyright || xmp.contains("dc:rights"))
+        #expect(MetadataFixture.pixels(of: shared) == MetadataFixture.pixels(of: original))
+        #expect(MetadataRewriter.leftovers(in: shared, level: .noMetadata).isEmpty)
+    }
+
+    /// Spec §8 (plan task 2): no lossless copy of a HEIC clears its capture
+    /// date, City and Rating, and how to do it is the user's call. Until
+    /// then a HEIC at No Metadata is refused — left out of the share and
+    /// named — never handed over carrying what it promised to remove.
+    @Test func noMetadataHEICIsRefusedUntilDecided() throws {
+        defer { cleanUp() }
+        let original = try MetadataFixture.write(.heic, in: folder)
+        let shared = output().appendingPathExtension("heic")
+        #expect(throws: MetadataRewriter.Failure.self) {
+            try MetadataRewriter.rewrite(original, to: shared, level: .noMetadata)
+        }
+        #expect(!FileManager.default.fileExists(atPath: shared.path))
+    }
 }
