@@ -1,0 +1,230 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 10
+    },
+    {
+      "action": "tap",
+      "label": "Statistics"
+    },
+    {
+      "action": "wait",
+      "seconds": 10
+    },
+    {
+      "action": "screenshot",
+      "name": "01-seeded"
+    },
+    {
+      "action": "dump",
+      "name": "01-seeded"
+    },
+    {
+      "action": "swipe",
+      "direction": "up",
+      "x": 0.5,
+      "y": 0.7
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "02-seeded-middle"
+    },
+    {
+      "action": "dump",
+      "name": "02-seeded-middle"
+    },
+    {
+      "action": "swipe",
+      "direction": "up",
+      "x": 0.5,
+      "y": 0.7
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "03-seeded-end"
+    },
+    {
+      "action": "dump",
+      "name": "03-seeded-end"
+    },
+    {
+      "action": "swipe",
+      "direction": "down",
+      "x": 0.5,
+      "y": 0.4
+    },
+    {
+      "action": "swipe",
+      "direction": "down",
+      "x": 0.5,
+      "y": 0.4
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "scrollTo",
+      "label": "Top Camera options"
+    },
+    {
+      "action": "tap",
+      "label": "Top Camera options"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "tap",
+      "label": "Delete"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "scrollTo",
+      "label": "Total Photos & Videos options"
+    },
+    {
+      "action": "tap",
+      "label": "Total Photos & Videos options"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "tap",
+      "label": "Delete"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "scrollTo",
+      "label": "Equivalent Focal Length options"
+    },
+    {
+      "action": "tap",
+      "label": "Equivalent Focal Length options"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "tap",
+      "label": "Delete"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "scrollTo",
+      "label": "Body + Lens options"
+    },
+    {
+      "action": "tap",
+      "label": "Body + Lens options"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "tap",
+      "label": "Delete"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "scrollTo",
+      "label": "Slow Shutter options"
+    },
+    {
+      "action": "tap",
+      "label": "Slow Shutter options"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "tap",
+      "label": "Delete"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "scrollTo",
+      "label": "Photos per Month options"
+    },
+    {
+      "action": "tap",
+      "label": "Photos per Month options"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "tap",
+      "label": "Delete"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "04-all-deleted"
+    },
+    {
+      "action": "dump",
+      "name": "04-all-deleted"
+    },
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 10
+    },
+    {
+      "action": "tap",
+      "label": "Statistics"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "screenshot",
+      "name": "05-reopened"
+    },
+    {
+      "action": "dump",
+      "name": "05-reopened"
+    }
+  ]
+}

@@ -133,6 +133,22 @@ struct ChartDashboardTests {
         #expect(again.charts.map(\.spec.title) == ["Top Camera", "Total Photos & Videos", "Mine"])
     }
 
+    /// FS-07 AC-15: every seeded chart deletes, and opening the dashboard
+    /// again with the generation remembered seeds nothing back.
+    @Test func deletingEverySeededChartLeavesNone() throws {
+        let database = try AppDatabase.makeEmpty()
+        let store = ChartStore(database: database)
+        let seeded = try store.loadCharts(seededGeneration: 0)
+        #expect(seeded.charts.count == 6)
+
+        for chart in seeded.charts { try store.delete(id: chart.id) }
+        #expect(try store.fetchAllOrdered().isEmpty)
+
+        let reopened = try store.loadCharts(seededGeneration: seeded.seededGeneration)
+        #expect(reopened.charts.isEmpty)
+        #expect(reopened.seededGeneration == seeded.seededGeneration)
+    }
+
     /// The flags an install carries map to the generation it went through.
     @Test func seededGenerationReadsTheFlags() throws {
         let suite = "ChartDashboardTests.\(UUID().uuidString)"
