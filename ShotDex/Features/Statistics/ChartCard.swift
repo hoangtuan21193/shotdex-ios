@@ -5,6 +5,9 @@ import SwiftUI
 /// aperture average reads "f/2.8", a file-size total "1.2 GB", etc.
 enum ChartValueFormatter {
     static func string(_ value: Double, metric: ChartMetric) -> String {
+        if metric.aggregation == .slowShutterShare {
+            return (value / 100).formatted(.percent.precision(.fractionLength(0)))
+        }
         guard metric.aggregation != .count, let field = metric.field else {
             return "\(Int(value.rounded()))"
         }
@@ -131,9 +134,32 @@ struct ChartContentView: View {
         }
         .chartForegroundStyleScale(range: ChartPalette.colors)
         .chartLegend(known.contains { $0.series != nil } ? .visible : .hidden)
+        // Every period labelled overlaps past four or five; label a spread
+        // of them, so ten months read "2025-12 … 2026-09" and not "202…".
+        .chartXAxis {
+            let periods = Self.axisPeriods(known.map(\.label), maxLabels: 4)
+            AxisMarks(values: periods) { value in
+                AxisGridLine()
+                // The end labels hang inwards; centred on the plot's edge
+                // they are cut to "202…".
+                let period = value.as(String.self)
+                AxisValueLabel(anchor: period == periods.first && periods.count > 1
+                    ? .topLeading
+                    : period == periods.last && periods.count > 1 ? .topTrailing : .top)
+            }
+        }
         .frame(height: 200)
         .padding(.vertical, 4)
         .accessibilityLabel("\(spec.title) line chart")
+    }
+
+    /// At most `maxLabels` of the distinct periods, evenly spaced, first and
+    /// last included.
+    static func axisPeriods(_ labels: [String], maxLabels: Int) -> [String] {
+        let periods = Array(Set(labels)).sorted()
+        guard periods.count > maxLabels, maxLabels > 1 else { return periods }
+        let step = Double(periods.count - 1) / Double(maxLabels - 1)
+        return (0..<maxLabels).map { periods[Int((Double($0) * step).rounded())] }
     }
 
     // MARK: Drill helpers (bar / donut rows)
@@ -148,9 +174,12 @@ struct ChartContentView: View {
                             .fill(ChartPalette.colors[index % ChartPalette.colors.count])
                             .frame(width: 10, height: 10)
                     }
+                    // A body + lens pair often starts with the same body twice
+                    // over (a phone's modules); one line would cut both to the
+                    // same "iPhone 13 Pro · iPhone 13 Pro…".
                     Text(datum.label)
                         .foregroundStyle(Color(.label))
-                        .lineLimit(1)
+                        .lineLimit(spec.dimension == .cameraLensPair ? 2 : 1)
                     Spacer()
                     Text(ChartValueFormatter.string(datum.value, metric: spec.metric))
                         .foregroundStyle(.secondary)

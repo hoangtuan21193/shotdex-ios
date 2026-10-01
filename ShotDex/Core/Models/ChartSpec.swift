@@ -67,15 +67,28 @@ struct ChartSpec: Codable, Identifiable, Equatable, Sendable {
         scope = try c.decodeIfPresent(StatsDateScope.self, forKey: .scope) ?? .allTime
     }
 
-    /// Seeded once when the `stat_charts` table is empty, so a fresh install
-    /// opens on a small useful dashboard the user can build on: the most-used
-    /// camera and the total item count (photos + videos).
+    /// The dashboard a fresh install opens on (FS-07.01 §3), in order: the
+    /// questions a photographer asks first — which camera, how many, which
+    /// focal length, which body + lens pair, how much is shot slow, and when.
+    /// None is fixed; every one edits and deletes like a chart the user built.
     static func defaultSpecs() -> [ChartSpec] {
         [
             ChartSpec(title: "Top Camera", kind: .bar, dimension: .cameraBody, topN: 5),
             ChartSpec(title: "Total Photos & Videos", kind: .kpi, dimension: nil, metric: .photoCount),
+            ChartSpec(title: "Equivalent Focal Length", kind: .bar, dimension: .focalEquivalent),
+            ChartSpec(title: "Body + Lens", kind: .bar, dimension: .cameraLensPair, topN: 5),
+            ChartSpec(title: "Slow Shutter", kind: .kpi, dimension: nil, metric: .slowShutterShare),
+            ChartSpec(
+                title: "Photos per Month", kind: .line, dimension: .dateMonth,
+                seriesSplit: .cameraBody, topN: 3
+            ),
         ]
     }
+
+    /// How many of `defaultSpecs()` the first seed generation planted (Top
+    /// Camera, Total Photos & Videos). An install seeded then gets the rest
+    /// appended once — see `ChartStore.loadCharts(seededVersion:)`.
+    static let firstSeedGenerationCount = 2
 }
 
 // MARK: - Chart kind
@@ -131,9 +144,9 @@ enum ChartKind: String, Codable, CaseIterable, Identifiable, Sendable {
     /// for a `.kpi` scalar — per-group median has no cheap SQL form.
     var allowedAggregations: [MetricAggregation] {
         switch self {
-        case .bar, .line: [.count, .average, .sum, .min, .max]
+        case .bar, .line: [.count, .average, .sum, .min, .max, .slowShutterShare]
         case .donut: [.count]
-        case .kpi: [.count, .average, .median, .sum, .min, .max]
+        case .kpi: [.count, .average, .median, .sum, .min, .max, .slowShutterShare]
         }
     }
 }
@@ -158,6 +171,9 @@ enum ChartDimension: String, Codable, CaseIterable, Identifiable, Sendable {
     case lens
     case sensorFormat
     case favorite
+    /// Camera body and lens together — one bucket per (body, lens) pair, so
+    /// each module of a phone is its own pair (FS-07.02 §5).
+    case cameraLensPair
     // Binned numeric
     case iso
     case aperture
@@ -178,6 +194,7 @@ enum ChartDimension: String, Codable, CaseIterable, Identifiable, Sendable {
         case .lens: "Lens"
         case .sensorFormat: "Sensor Format"
         case .favorite: "Favorite"
+        case .cameraLensPair: "Camera + Lens"
         case .iso: "ISO"
         case .aperture: "Aperture"
         case .shutter: "Shutter Speed"
@@ -191,7 +208,7 @@ enum ChartDimension: String, Codable, CaseIterable, Identifiable, Sendable {
 
     var axisKind: ChartAxisKind {
         switch self {
-        case .cameraBody, .cameraBrand, .lens, .sensorFormat, .favorite: .categorical
+        case .cameraBody, .cameraBrand, .lens, .sensorFormat, .favorite, .cameraLensPair: .categorical
         case .iso, .aperture, .shutter, .focalActual, .focalEquivalent: .binned
         case .dateDay, .dateMonth, .dateYear: .temporal
         }
@@ -205,6 +222,7 @@ enum ChartDimension: String, Codable, CaseIterable, Identifiable, Sendable {
         case .lens: "normalizedLensModel"
         case .sensorFormat: "sensorFormat"
         case .favorite: "isFavorite"
+        case .cameraLensPair: "normalizedCameraModel"
         case .iso: "iso"
         case .aperture: "aperture"
         case .shutter: "shutterSpeedSeconds"
@@ -212,6 +230,34 @@ enum ChartDimension: String, Codable, CaseIterable, Identifiable, Sendable {
         case .focalEquivalent: "equivalentFocalLength"
         case .dateDay, .dateMonth, .dateYear: "creationDate"
         }
+    }
+
+    /// The second grouping column of a two-column dimension (the lens of a
+    /// body + lens pair); `nil` for every one-column dimension. Closed switch,
+    /// like `groupColumn`.
+    var secondGroupColumn: String? {
+        switch self {
+        case .cameraLensPair: "normalizedLensModel"
+        default: nil
+        }
+    }
+
+    /// Whether the dimension can split a line chart into series — one
+    /// categorical column only; a pair has no single series key.
+    var splitsSeries: Bool { axisKind == .categorical && secondGroupColumn == nil }
+
+    /// The drill key of a body + lens pair: a JSON array of the two names,
+    /// because a lens name can hold any character a separator could use.
+    static func pairKey(body: String, lens: String) -> String {
+        let data = (try? JSONEncoder().encode([body, lens])) ?? Data()
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    /// The two names inside a `pairKey`, or `nil` if the key is not one.
+    static func pairNames(fromKey key: String) -> (body: String, lens: String)? {
+        guard let names = try? JSONDecoder().decode([String].self, from: Data(key.utf8)),
+              names.count == 2 else { return nil }
+        return (names[0], names[1])
     }
 
     /// Buckets for a `.binned` dimension (nil otherwise). Reuses the Library
@@ -253,6 +299,8 @@ enum ChartDimension: String, Codable, CaseIterable, Identifiable, Sendable {
     func label(forKey key: String) -> String {
         switch self {
         case .favorite: key == "1" ? "Favorite" : "Not favorite"
+        case .cameraLensPair:
+            Self.pairNames(fromKey: key).map { "\($0.body) · \($0.lens)" } ?? key
         default: key
         }
     }
@@ -275,6 +323,10 @@ enum ChartDimension: String, Codable, CaseIterable, Identifiable, Sendable {
         case .favorite:
             guard key == "1" else { return nil }   // can't filter "not favorite"
             criteria.favoritesOnly = true
+        case .cameraLensPair:
+            guard let names = Self.pairNames(fromKey: key) else { return nil }
+            criteria.cameraBodies = [names.body]
+            criteria.lenses = [names.lens]
         case .iso, .aperture, .shutter, .focalActual, .focalEquivalent:
             guard let range = bins?.first(where: { $0.label == key })?.range else { return nil }
             switch self {
@@ -306,8 +358,15 @@ enum MetricAggregation: String, Codable, CaseIterable, Identifiable, Sendable {
     case sum
     case min
     case max
+    /// Percentage of photos shot slower than 1 / equivalent focal length —
+    /// the same rule as the Insights sentence. Takes no field.
+    case slowShutterShare
 
     var id: String { rawValue }
+
+    /// Whether the aggregation runs over a chosen field ("Of" in the editor).
+    /// Counting and the slow-shutter share read fixed columns of their own.
+    var needsField: Bool { self != .count && self != .slowShutterShare }
 
     var displayName: String {
         switch self {
@@ -317,6 +376,7 @@ enum MetricAggregation: String, Codable, CaseIterable, Identifiable, Sendable {
         case .sum: "Total"
         case .min: "Minimum"
         case .max: "Maximum"
+        case .slowShutterShare: "Slower than 1/focal length"
         }
     }
 
@@ -330,8 +390,17 @@ enum MetricAggregation: String, Codable, CaseIterable, Identifiable, Sendable {
         case .min: "MIN(\(columnExpression))"
         case .max: "MAX(\(columnExpression))"
         case .median: "AVG(\(columnExpression))"   // never used for groups
+        case .slowShutterShare: Self.slowShutterShareSQL
         }
     }
+
+    /// Share (0…100) of rows exposed longer than 1 / equivalent focal length.
+    /// Pair it with `slowShutterGuard` so rows missing either input stay out
+    /// of the denominator.
+    static let slowShutterShareSQL =
+        "100.0 * AVG(CASE WHEN shutterSpeedSeconds > 1.0 / equivalentFocalLength THEN 1.0 ELSE 0.0 END)"
+    static let slowShutterGuard =
+        "shutterSpeedSeconds IS NOT NULL AND equivalentFocalLength IS NOT NULL AND equivalentFocalLength > 0"
 }
 
 /// A numeric photo attribute an aggregation can run over. Maps to a
@@ -393,15 +462,18 @@ struct ChartMetric: Codable, Equatable, Sendable {
     }
 
     static let photoCount = ChartMetric(aggregation: .count, field: nil)
+    static let slowShutterShare = ChartMetric(aggregation: .slowShutterShare, field: nil)
 
-    /// Well-formed when count has no field and every other aggregation has one.
+    /// Well-formed when an aggregation that needs a field has one, and one
+    /// that does not (count, slow-shutter share) has none.
     var isValid: Bool {
-        aggregation == .count ? field == nil : field != nil
+        aggregation.needsField ? field != nil : field == nil
     }
 
     var displayName: String {
         switch aggregation {
         case .count: "Photo count"
+        case .slowShutterShare: aggregation.displayName
         default: "\(aggregation.displayName) \(field?.displayName ?? "")"
             .trimmingCharacters(in: .whitespaces)
         }

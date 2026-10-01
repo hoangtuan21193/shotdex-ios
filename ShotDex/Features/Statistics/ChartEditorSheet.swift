@@ -67,7 +67,7 @@ struct ChartEditorSheet: View {
     }
 
     private var metric: ChartMetric {
-        ChartMetric(aggregation: aggregation, field: aggregation == .count ? nil : field)
+        ChartMetric(aggregation: aggregation, field: aggregation.needsField ? field : nil)
     }
 
     /// The spec as currently configured (validated rules only).
@@ -196,7 +196,7 @@ struct ChartEditorSheet: View {
                     Text(aggregation.displayName).tag(aggregation)
                 }
             }
-            if aggregation != .count {
+            if aggregation.needsField {
                 Picker("Of", selection: $field) {
                     ForEach(MetricField.allCases) { field in
                         Text(field.displayName).tag(field)
@@ -212,7 +212,7 @@ struct ChartEditorSheet: View {
         Section {
             Picker("Split into series by", selection: $seriesSplit) {
                 Text("None").tag(ChartDimension?.none)
-                ForEach(ChartDimension.allCases.filter { $0.axisKind == .categorical }) { dimension in
+                ForEach(ChartDimension.allCases.filter(\.splitsSeries)) { dimension in
                     Text(dimension.displayName).tag(ChartDimension?.some(dimension))
                 }
             }

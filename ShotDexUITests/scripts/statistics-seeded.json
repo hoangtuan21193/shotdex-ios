@@ -1,0 +1,111 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "tap",
+      "label": "Statistics"
+    },
+    {
+      "action": "wait",
+      "seconds": 10
+    },
+    {
+      "action": "screenshot",
+      "name": "01-top"
+    },
+    {
+      "action": "dump",
+      "name": "01-top"
+    },
+    {
+      "action": "swipe",
+      "x": 0.5,
+      "y": 0.8,
+      "direction": "up",
+      "distance": 0.55,
+      "seconds": 0.4
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "screenshot",
+      "name": "02-scrolled"
+    },
+    {
+      "action": "swipe",
+      "x": 0.5,
+      "y": 0.8,
+      "direction": "up",
+      "distance": 0.55,
+      "seconds": 0.4
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "screenshot",
+      "name": "03-scrolled"
+    },
+    {
+      "action": "swipe",
+      "x": 0.5,
+      "y": 0.8,
+      "direction": "up",
+      "distance": 0.55,
+      "seconds": 0.4
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "screenshot",
+      "name": "04-scrolled"
+    },
+    {
+      "action": "swipe",
+      "x": 0.5,
+      "y": 0.8,
+      "direction": "up",
+      "distance": 0.55,
+      "seconds": 0.4
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "screenshot",
+      "name": "05-scrolled"
+    },
+    {
+      "action": "swipe",
+      "x": 0.5,
+      "y": 0.8,
+      "direction": "up",
+      "distance": 0.55,
+      "seconds": 0.4
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "screenshot",
+      "name": "06-scrolled"
+    },
+    {
+      "action": "dump",
+      "name": "06-scrolled"
+    }
+  ]
+}

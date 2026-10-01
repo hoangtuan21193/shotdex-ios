@@ -37,20 +37,43 @@ struct ChartStore: Sendable {
         }
     }
 
+    /// The newest seed generation: the six charts of `ChartSpec.defaultSpecs()`.
+    /// Generation 1 planted only the first two of them.
+    static let currentSeedGeneration = 2
+
+    /// The dashboard's charts, seeding what this install has not had yet.
+    /// `seededGeneration` is what the install already went through: 0 never
+    /// seeded (a fresh install → all six), 1 the old two (→ append the four
+    /// it is missing at the end, after whatever the user has now), 2 nothing
+    /// to do — a board the user cleared stays empty. Returns the charts in
+    /// order and the generation to remember.
+    func loadCharts(seededGeneration: Int) throws -> (charts: [StatChart], seededGeneration: Int) {
+        try database.writer.write { db in
+            let defaults = ChartSpec.defaultSpecs()
+            switch seededGeneration {
+            case ..<1:
+                if try StatChart.fetchCount(db) == 0 {
+                    for (index, spec) in defaults.enumerated() {
+                        try StatChart(spec: spec, position: index).insert(db)
+                    }
+                }
+            case 1:
+                let start = (try Int.fetchOne(db, sql: "SELECT MAX(position) FROM stat_charts") ?? -1) + 1
+                for (offset, spec) in defaults.dropFirst(ChartSpec.firstSeedGenerationCount).enumerated() {
+                    try StatChart(spec: spec, position: start + offset).insert(db)
+                }
+            default:
+                break
+            }
+            let charts = try StatChart.order(Column("position")).fetchAll(db)
+            return (charts, max(seededGeneration, Self.currentSeedGeneration))
+        }
+    }
+
     /// Seeds the default dashboard when the table is empty, then returns the
-    /// stored charts in order. Callers gate the *first-run* decision with a
-    /// persisted flag (see `StatisticsModel`) so a board a user deliberately
-    /// cleared isn't re-seeded; the empty-check here is just a double-insert
-    /// guard.
+    /// stored charts in order — `loadCharts(seededGeneration: 0)`.
     @discardableResult
     func seedDefaultsIfEmpty() throws -> [StatChart] {
-        try database.writer.write { db in
-            if try StatChart.fetchCount(db) == 0 {
-                for (index, spec) in ChartSpec.defaultSpecs().enumerated() {
-                    try StatChart(spec: spec, position: index).insert(db)
-                }
-            }
-            return try StatChart.order(Column("position")).fetchAll(db)
-        }
+        try loadCharts(seededGeneration: 0).charts
     }
 }

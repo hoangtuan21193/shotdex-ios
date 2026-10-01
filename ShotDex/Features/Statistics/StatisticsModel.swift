@@ -38,19 +38,18 @@ final class StatisticsModel {
         let statisticsQueries = self.statisticsQueries
         let chartStore = self.chartStore
         let knownCharts = self.charts
-        let seeded = UserDefaults.standard.bool(forKey: SettingsKeys.hasSeededStatCharts)
+        let seededGeneration = Self.seededGeneration(in: .standard)
 
         Task.detached(priority: .userInitiated) { [weak self] in
-            // Resolve the spec list.
+            // Resolve the spec list, seeding what this install has not had.
             var hasSeeded = false
             let charts: [ChartSpec]
             if reloadCharts {
-                if seeded {
-                    charts = ((try? chartStore.fetchAllOrdered()) ?? []).map(\.spec)
+                if let loaded = try? chartStore.loadCharts(seededGeneration: seededGeneration) {
+                    charts = loaded.charts.map(\.spec)
+                    hasSeeded = loaded.seededGeneration > seededGeneration
                 } else {
-                    // First run: seed the defaults, remember we did so.
-                    charts = ((try? chartStore.seedDefaultsIfEmpty()) ?? []).map(\.spec)
-                    hasSeeded = true
+                    charts = []
                 }
             } else {
                 charts = knownCharts
@@ -82,9 +81,21 @@ final class StatisticsModel {
         self.results = results
         self.totalPhotos = total
         self.earliestDate = earliest
-        if hasSeeded { UserDefaults.standard.set(true, forKey: SettingsKeys.hasSeededStatCharts) }
+        if hasSeeded {
+            UserDefaults.standard.set(true, forKey: SettingsKeys.hasSeededStatCharts)
+            UserDefaults.standard.set(true, forKey: SettingsKeys.hasSeededStatChartsV2)
+        }
         self.isLoading = false
         self.hasLoaded = true
+    }
+
+    /// Which seed generation this install has been through (see
+    /// `ChartStore.loadCharts(seededGeneration:)`): the v2 flag means the six,
+    /// the original flag alone the old two, neither a fresh install.
+    nonisolated static func seededGeneration(in defaults: UserDefaults) -> Int {
+        if defaults.bool(forKey: SettingsKeys.hasSeededStatChartsV2) { return 2 }
+        if defaults.bool(forKey: SettingsKeys.hasSeededStatCharts) { return 1 }
+        return 0
     }
 
     // MARK: Editing

@@ -422,6 +422,9 @@ extension StatisticsQueries {
     /// SQL aggregate expression for a metric, plus a NOT-NULL guard (nil for
     /// plain counting). `.median` never reaches here for grouped charts.
     private func metricExpression(_ metric: ChartMetric) -> (expr: String, notNull: String?) {
+        if metric.aggregation == .slowShutterShare {
+            return (MetricAggregation.slowShutterShareSQL, MetricAggregation.slowShutterGuard)
+        }
         guard let field = metric.field, metric.aggregation != .count else {
             return ("COUNT(*)", nil)
         }
@@ -439,29 +442,39 @@ extension StatisticsQueries {
         includeUnknown: Bool
     ) throws -> [ChartDatum] {
         let column = dimension.groupColumn
-        let isCount = metric.field == nil || metric.aggregation == .count
+        // A body + lens pair groups by two columns; every other dimension by one.
+        let columns = [column] + (dimension.secondGroupColumn.map { [$0] } ?? [])
+        let isCount = metric.aggregation == .count
         let (aggExpr, aggNotNull) = metricExpression(metric)
 
         var (conditions, values) = filterAndScope(filter, scope)
         // `favorite` is an integer flag (never NULL / empty); text categoricals
         // exclude NULL/blank so they don't form a spurious "" bucket.
         if dimension != .favorite {
-            conditions.insert("\(column) IS NOT NULL AND \(column) != ''", at: 0)
+            for (index, name) in columns.enumerated() {
+                conditions.insert("\(name) IS NOT NULL AND \(name) != ''", at: index)
+            }
         }
         if let aggNotNull { conditions.append(aggNotNull) }
 
         let limitSQL = topN > 0 ? "LIMIT \(topN)" : ""
+        let secondSelect = dimension.secondGroupColumn.map { ", \($0) AS key2" } ?? ""
+        let groupBy = columns.joined(separator: ", ")
+        // Ties break on the names, so the same data always lists the same order.
         let sql = """
-            SELECT \(column) AS key, \(aggExpr) AS value
+            SELECT \(column) AS key\(secondSelect), \(aggExpr) AS value
             FROM photo_metadata
             \(Self.whereSQL(conditions))
-            GROUP BY \(column)
-            ORDER BY value DESC
+            GROUP BY \(groupBy)
+            ORDER BY value DESC, \(groupBy)
             \(limitSQL)
             """
+        let isPair = dimension.secondGroupColumn != nil
         var data = try database.reader.read { db in
             try Row.fetchAll(db, sql: sql, arguments: StatementArguments(values)).map { row -> ChartDatum in
-                let key = Self.stringKey(row["key"])
+                let key = isPair
+                    ? ChartDimension.pairKey(body: Self.stringKey(row["key"]), lens: Self.stringKey(row["key2"]))
+                    : Self.stringKey(row["key"])
                 let value: Double = row["value"] ?? 0
                 return ChartDatum(
                     label: dimension.label(forKey: key),
@@ -476,7 +489,8 @@ extension StatisticsQueries {
         // counts of a text dimension.
         if includeUnknown, isCount, dimension != .favorite {
             var (unknownConditions, unknownValues) = filterAndScope(filter, scope)
-            unknownConditions.insert("(\(column) IS NULL OR \(column) = '')", at: 0)
+            let missing = columns.map { "\($0) IS NULL OR \($0) = ''" }.joined(separator: " OR ")
+            unknownConditions.insert("(\(missing))", at: 0)
             let unknown = try countRows(conditions: unknownConditions, values: unknownValues)
             if unknown > 0 {
                 data.append(ChartDatum(
@@ -499,14 +513,21 @@ extension StatisticsQueries {
     ) throws -> [ChartDatum] {
         guard let bins = dimension.bins else { return [] }
         let column = dimension.groupColumn
-        let isCount = metric.field == nil || metric.aggregation == .count
+        let isCount = metric.aggregation == .count
+        let isSlowShare = metric.aggregation == .slowShutterShare
 
         var (conditions, values) = filterAndScope(filter, scope)
         conditions.insert("\(column) IS NOT NULL", at: 0)
-        let metricField = isCount ? nil : metric.field
+        let metricField = isCount || isSlowShare ? nil : metric.field
         if let metricField { conditions.append(metricField.notNullClause) }
+        if isSlowShare { conditions.append(MetricAggregation.slowShutterGuard) }
 
-        let metricSelect = metricField.map { ", \($0.columnExpression) AS m" } ?? ""
+        // The slow-shutter share reads 1 or 0 per row; its bucket value is the
+        // mean of those, as a percentage.
+        let metricSelect = isSlowShare
+            ? ", CASE WHEN shutterSpeedSeconds > 1.0 / equivalentFocalLength THEN 1.0 ELSE 0.0 END AS m"
+            : metricField.map { ", \($0.columnExpression) AS m" } ?? ""
+        let readsMetric = isSlowShare || metricField != nil
         let sql = """
             SELECT \(column) AS dim\(metricSelect)
             FROM photo_metadata
@@ -514,7 +535,7 @@ extension StatisticsQueries {
             """
         let pairs: [(dim: Double, m: Double?)] = try database.reader.read { db in
             try Row.fetchAll(db, sql: sql, arguments: StatementArguments(values)).map { row in
-                (dim: row["dim"] ?? 0, m: metricField != nil ? row["m"] : nil)
+                (dim: row["dim"] ?? 0, m: readsMetric ? row["m"] : nil)
             }
         }
 
@@ -542,6 +563,8 @@ extension StatisticsQueries {
         case .median:
             let sorted = values.sorted()
             return sorted[sorted.count / 2]
+        case .slowShutterShare:
+            return 100 * values.reduce(0, +) / Double(values.count)
         }
     }
 
@@ -564,7 +587,7 @@ extension StatisticsQueries {
 
         // Optional split into one series per top-N value of a categorical dim.
         var seriesColumn: String?
-        if let split = seriesSplit, split.axisKind == .categorical {
+        if let split = seriesSplit, split.splitsSeries {
             let keys = try topCategoryKeys(
                 column: split.groupColumn, filter: filter, scope: scope,
                 limit: max(1, topSeries)
@@ -635,8 +658,15 @@ extension StatisticsQueries {
         var (conditions, values) = filterAndScope(filter, scope)
 
         // Count of rows — no field needed.
-        if metric.field == nil || metric.aggregation == .count {
+        if metric.aggregation == .count {
             return Double(try countRows(conditions: conditions, values: values))
+        }
+        if metric.aggregation == .slowShutterShare {
+            conditions.append(MetricAggregation.slowShutterGuard)
+            let sql = "SELECT \(MetricAggregation.slowShutterShareSQL) FROM photo_metadata \(Self.whereSQL(conditions))"
+            return try database.reader.read { db in
+                try Double.fetchOne(db, sql: sql, arguments: StatementArguments(values))
+            }
         }
         guard let field = metric.field else { return nil }
         conditions.append(field.notNullClause)

@@ -63,6 +63,10 @@ enum SettingsKeys {
     /// Set once the Statistics dashboard has seeded its default charts, so a
     /// board a user deliberately cleared isn't re-seeded on next launch.
     static let hasSeededStatCharts = "stats.didSeedCharts"
+    /// Set once the six-chart seed of FS-07.01 §3 has run — on a fresh install
+    /// with the whole set, on an install seeded with the old two by appending
+    /// the other four. Never cleared, so a deleted chart does not grow back.
+    static let hasSeededStatChartsV2 = "stats.didSeedCharts.v2"
 
     /// Daily "On This Day" reminder on/off. Defaults to false — notification
     /// permission is only asked for once the user turns it on.
