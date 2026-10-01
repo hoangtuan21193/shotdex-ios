@@ -52,7 +52,9 @@ xuống:
 - **Khung tham chiếu** là khung có phơi sáng ở giữa (loạt chẵn thì lấy khung sáng hơn trong hai khung giữa). Khử
   bóng ma giữ nội dung của khung này, và EXIF của ảnh ra là EXIF của khung này.
 - **Căn khung:** dùng lại nguyên văn bộ căn của [Focus Stack](10-focus-stack.md) §4 — mỗi khung căn với khung liền kề
-  theo thứ tự phơi sáng, trên bản đã đưa về cùng phơi sáng, mô hình 4 bậc tự do. Spike: bước 3 EV, cầm tay ±30 px,
+  theo thứ tự phơi sáng, trên bản đã đưa về phơi sáng của khung tham chiếu (cháy như nó cháy), mô hình 4 bậc tự do.
+  Hai chuỗi đi **từ khung tham chiếu** ra hai phía, nên một khung lạc ở đâu cũng không cắt chuỗi và ảnh ra giữ khung
+  hình của khung tham chiếu; không khung nào căn được với nó thì khung gần nhất đứng thay (`prepareHDR`). Spike: bước 3 EV, cầm tay ±30 px,
   xoay ±1,5° đều dưới 0,4 px ở 1536px.
 - Khung **không căn được** bị loại, và panel nói ra, như Focus Stack §4. Còn ít hơn 2 khung thì không ghép, và nói lý do.
 - **Các khung không phải một loạt bracket** (phơi sáng lệch nhau dưới 0,5 EV): **vẫn ghép**, và dòng nhắc đổi thành
@@ -114,9 +116,9 @@ Loạt thử là khung ảo có đáp án như spike §1: cảnh 14 EV dựng t�
 |---|---|---|---|---|
 | AC-1 | loạt 5 khung RAW −4…+4 EV, cảnh 14 EV, đứng yên | ghép, deghost Off | sai số radiance ≤ 0,03 stop RMS; ảnh đã tone map ≥ 48 dB so với tone map của cảnh sạch | 🟡 radiance 0,016 stop: `HDRMergeTests.fiveFramesOfAFourteenStopSceneMergeWithinThreeHundredthsOfAStop`; tone map: task 6 |
 | AC-2 | loạt 3 khung −2/0/+2 EV của cảnh 10 EV | ghép | vùng cháy ở EV 0 khôi phục, sai số ≤ 0,05 stop RMS; không còn điểm nào cháy ở ảnh ra | 🟡 vùng cháy 0,011 stop, cả ảnh 0,017: `HDRMergeTests.threeFramesRecoverTheReferencesClippedHighlights`; ảnh ra sau tone map: task 6 |
-| AC-3 | loạt 5 khung chọn theo thứ tự xáo | ghép | cùng kết quả như thứ tự đúng; khung tham chiếu là khung EV 0 | 🟡 thứ tự + tham chiếu: `HDRBracketOrderTests.shuffledSelectionComesBackDarkestFirstWithTheMiddleAsReference`; kết quả ghép: task 4 |
-| AC-4 | loạt 5 khung, bước 3 EV, mỗi khung lệch tới ±30 px và xoay tới ±1,5° | căn | sai số căn ≤ 0,5 px ở 1536px cho mọi khung; không khung nào bị loại | ⚠️ chưa có |
-| AC-5 | loạt có 1 khung ảnh khác cảnh chen vào | ghép | khung đó bị loại; panel ghi *1 of 6 frames couldn't be lined up and were left out.* | ⚠️ chưa có |
+| AC-3 | loạt 5 khung chọn theo thứ tự xáo | ghép | cùng kết quả như thứ tự đúng; khung tham chiếu là khung EV 0 | `HDRBracketOrderTests.shuffledSelectionComesBackDarkestFirstWithTheMiddleAsReference`, `HDRMergeTests.aShuffledSelectionMergesToTheSamePicture` |
+| AC-4 | loạt 5 khung, bước 3 EV, mỗi khung lệch tới ±30 px và xoay tới ±1,5° | căn | sai số căn ≤ 0,5 px ở 1536px cho mọi khung; không khung nào bị loại | `HDRMergeTests.alignsAcrossThreeStops` — 0,08–0,22 px ở 1536 (960 px, −6…+6 EV) |
+| AC-5 | loạt có 1 khung ảnh khác cảnh chen vào | ghép | khung đó bị loại; panel ghi *1 of 6 frames couldn't be lined up and were left out.* | 🟡 loại khung: `HDRMergeTests.leavesOutAFrameFromAnotherScene`; câu trên panel: task 9 |
 | AC-6 | một mảng kết cấu dịch 3 px mỗi khung, khung tham chiếu đọc được ở đó | ghép ở Off / Low / Medium / High | sai số ở vùng động ≥ 0,5 / ≤ 0,25 / ≤ 0,1 / ≤ 0,1 stop | ⚠️ chưa có |
 | AC-7 | loạt đứng yên, không gì di chuyển | ghép ở Medium; rồi High | ≤ 0,5% điểm ảnh tĩnh bị bỏ nhầm ở Medium; ≤ 3% ở High | ⚠️ chưa có |
 | AC-8 | vật sáng di chuyển 70 px/khung trong vùng trời cháy ở EV 0 | ghép ở Medium | chỉ còn **một** bản của vật (lấy từ khung neo), không bóng chồng | ⚠️ chưa có |

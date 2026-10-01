@@ -124,6 +124,45 @@ struct HDRBracketFixture {
         return Series(scene: truth, frames: frames, stops: stops, reference: stops.firstIndex(of: 0) ?? stops.count / 2)
     }
 
+    /// The scene as a frame sees it through `map`: frame point → scene
+    /// point, top-left origin, pixel centres at half-integers. Bilinear,
+    /// edges repeated.
+    func warped(_ scene: [Float], by map: CGAffineTransform) -> [Float] {
+        guard map != .identity else { return scene }
+        var out = [Float](repeating: 0, count: scene.count)
+        for y in 0..<height { for x in 0..<width {
+            let p = CGPoint(x: Double(x) + 0.5, y: Double(y) + 0.5).applying(map)
+            let fx = min(Double(width) - 1, max(0, Double(p.x) - 0.5))
+            let fy = min(Double(height) - 1, max(0, Double(p.y) - 0.5))
+            let x0 = min(width - 2, Int(fx)), y0 = min(height - 2, Int(fy))
+            let tx = Float(fx - Double(x0)), ty = Float(fy - Double(y0))
+            for c in 0..<3 {
+                let a = scene[(y0 * width + x0) * 3 + c], b = scene[(y0 * width + x0 + 1) * 3 + c]
+                let d = scene[((y0 + 1) * width + x0) * 3 + c], e = scene[((y0 + 1) * width + x0 + 1) * 3 + c]
+                out[(y * width + x) * 3 + c] = (a * (1 - tx) + b * tx) * (1 - ty) + (d * (1 - tx) + e * tx) * ty
+            }
+        } }
+        return out
+    }
+
+    /// A handheld series: frame `k` sees the scene through `maps[k]`.
+    func series(stops: [Double], maps: [CGAffineTransform]) -> Series {
+        let truth = scene()
+        let frames = stops.enumerated().map { frame(of: warped(truth, by: maps[$0]), stops: $1, seed: UInt64($0 + 1)) }
+        return Series(scene: truth, frames: frames, stops: stops, reference: stops.firstIndex(of: 0) ?? stops.count / 2)
+    }
+
+    /// A shift of up to `shift` pixels and a turn of up to `degrees` about
+    /// the centre, seeded per frame.
+    func handheldMap(frame: Int, shift: Double, degrees: Double) -> CGAffineTransform {
+        var generator = SplitMix64(seed: seed &* 977 &+ UInt64(frame))
+        func signed() -> Double { Double(generator.next() % 1_000_000) / 500_000 - 1 }
+        let cx = Double(width) / 2, cy = Double(height) / 2
+        return CGAffineTransform(translationX: cx + signed() * shift, y: cy + signed() * shift)
+            .rotated(by: signed() * degrees * .pi / 180)
+            .translatedBy(x: -cx, y: -cy)
+    }
+
     // MARK: Core Image
 
     func image(_ rgb: [Float]) -> CIImage {
