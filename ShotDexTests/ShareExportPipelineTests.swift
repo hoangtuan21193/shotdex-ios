@@ -246,4 +246,49 @@ struct ShareExportPipelineTests {
         #expect(body.contains("PhotoShareSheet.gather("))
         #expect(!body.contains("requestImageDataAndOrientation"))
     }
+
+    /// AC-10: twenty 48 MP photos at No Location — none keeps its GPS, all
+    /// keep the camera, and the peak memory of the gather does not grow with
+    /// the count: twenty cost no more than one, plus at most one file's size.
+    @Test func twentyPhotosPeakIsFlat() async throws {
+        defer { cleanUp() }
+        var options = MetadataFixture.Options()
+        options.width = 8064
+        options.height = 6048
+        options.xmp = false
+        let big = fixtures.appendingPathComponent("A-48mp.jpg")
+        try MetadataFixture.encode(.jpeg, options: options).write(to: big)
+        let fileSize = UInt64(try FileManager.default.attributesOfItem(atPath: big.path)[.size] as? Int ?? 0)
+        let reader = FakeReader(photos: Dictionary(uniqueKeysWithValues: (0..<20).map { ("\($0)", big) }))
+
+        func peak(count: Int) async throws -> (UInt64, ShareExportResult, ShareExportPipeline) {
+            let pipeline = ShareExportPipeline(
+                reader: reader,
+                folder: try ShareExportPipeline.makeFolder(in: shareRoot),
+                level: .noLocation
+            )
+            let sources = (0..<count).map { ShareSource(id: "\($0)", kind: .photo, filename: "IMG_\($0).JPG") }
+            let baseline = FootprintSampler.current()
+            let sampler = FootprintSampler()
+            sampler.start()
+            let result = await pipeline.export(sources)
+            let top = sampler.stop()
+            return (top > baseline ? top - baseline : 0, result, pipeline)
+        }
+
+        _ = await FootprintSampler.waitForQuietProcess()
+        let (one, _, first) = try await peak(count: 1)
+        first.removeFolder()
+        let (twenty, result, pipeline) = try await peak(count: 20)
+        defer { pipeline.removeFolder() }
+
+        #expect(result.files.count == 20)
+        #expect(result.failed.isEmpty)
+        for file in result.files {
+            #expect(MetadataFixture.dictionary(kCGImagePropertyGPSDictionary, of: file) == nil)
+            #expect(MetadataFixture.dictionary(kCGImagePropertyTIFFDictionary, of: file)?[kCGImagePropertyTIFFMake] as? String == "SONY")
+        }
+        print("FOOTPRINT share gather: 1 photo +\(one / 1_048_576) MB, 20 photos +\(twenty / 1_048_576) MB, file \(fileSize / 1_048_576) MB")
+        #expect(twenty <= one + fileSize, "1: \(one) B, 20: \(twenty) B, file: \(fileSize) B")
+    }
 }
