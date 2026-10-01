@@ -162,6 +162,12 @@ struct PhotoDetailScreen: View {
     /// paging reports false to clear stale state; zoom downloads are isolated
     /// by index so their ring never leaks onto the next page.
     @State private var pageDownload: [Int: (progress: Double, downloading: Bool)] = [:]
+    /// What the one offline check found for the page on screen (FS-02.06
+    /// §4): only that page is asked, once per visit, and again when a
+    /// download on it ends. Never stored — the system can offload an
+    /// original again without saying so.
+    @State private var originalAvailability: (id: String, value: OriginalAvailability)?
+    @State private var originalProbeTask: Task<Void, Never>?
 
     /// No-progress window before a download is declared stalled.
     private static let stallWindow: Duration = .seconds(15)
@@ -182,6 +188,7 @@ struct PhotoDetailScreen: View {
             PhotoPager(
                 source: model,
                 photoLibrary: photoLibrary,
+                originalFetcher: dependencies.originalFetcher,
                 currentIndex: $currentIndex,
                 reseatToken: reseatToken,
                 videoBottomInset:
@@ -494,6 +501,7 @@ struct PhotoDetailScreen: View {
         currentMetadata = model.metadata(for: assetId)
         currentAsset = model.asset(for: assetId)
         updateFilename(assetId: assetId)
+        probeOriginal()
         publishHandoffActivity()
     }
 
@@ -521,11 +529,46 @@ struct PhotoDetailScreen: View {
         }
     }
 
+    /// Asks, with the network off, whether the page's original is on the
+    /// device (FS-02.06 AC-1). Reads a header, never downloads: the screen
+    /// sized image is the pages' own business, the original comes only on
+    /// zoom.
+    private func probeOriginal() {
+        originalProbeTask?.cancel()
+        guard let asset = currentAsset, asset.mediaType == .image else {
+            originalAvailability = nil
+            return
+        }
+        let id = asset.localIdentifier
+        if originalAvailability?.id != id { originalAvailability = nil }
+        let item = OriginalItem(
+            id: id,
+            filename: currentFilename ?? "",
+            photo: PixelSize(width: asset.pixelWidth, height: asset.pixelHeight)
+        )
+        let fetcher = dependencies.originalFetcher
+        originalProbeTask = Task { @MainActor in
+            let value = await fetcher.probe(item)
+            guard !Task.isCancelled, currentAsset?.localIdentifier == id else { return }
+            withAnimation(.easeInOut(duration: 0.2)) { originalAvailability = (id, value) }
+        }
+    }
+
+    /// Whether the page on screen has its original only in iCloud.
+    private var isOriginalInCloud: Bool {
+        guard let originalAvailability, originalAvailability.id == currentAsset?.localIdentifier else { return false }
+        return originalAvailability.value == .inCloud
+    }
+
     /// Stores a page's download report and, when it is the visible page,
     /// reflects it in the ring. Keeps only a small window around the current
     /// index so the map can't grow across a large library.
     private func recordDownloadState(index: Int, progress: Double, downloading: Bool) {
+        let wasDownloading = pageDownload[index]?.downloading == true
         pageDownload[index] = (progress, downloading)
+        // A download on the page on screen just ended: ask again, so the
+        // glyph goes once the original is here (AC-2).
+        if index == currentIndex, wasDownloading, !downloading { probeOriginal() }
         pageDownload = pageDownload.filter { abs($0.key - currentIndex) <= 2 }
         if index == currentIndex {
             applyCurrentDownloadState()
@@ -988,6 +1031,17 @@ struct PhotoDetailScreen: View {
                             // glyph, top-right of the info panel.
                             ICloudDownloadRing(progress: downloadProgress)
                                 .transition(.scale.combined(with: .opacity))
+                        } else if isOriginalInCloud {
+                            // The original is in iCloud; what is on screen is
+                            // the device's copy (FS-02.06 AC-1).
+                            Image(systemName: "icloud")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                                .transition(.opacity)
+                                // The panel's own label is not always the one
+                                // read: the children are, so the glyph names
+                                // itself rather than "Icloud".
+                                .accessibilityLabel(String(localized: "Original in iCloud"))
                         }
                     }
                     // Accessibility Dynamic Type can't fit a second line inside
@@ -1034,6 +1088,8 @@ struct PhotoDetailScreen: View {
             parts.append(String(localized: "iCloud download stalled"))
         } else if isDownloading {
             parts.append(String(localized: "Downloading from iCloud"))
+        } else if isOriginalInCloud {
+            parts.append(String(localized: "Original in iCloud", comment: "VoiceOver: the photo's original is only in iCloud"))
         }
         return parts.joined(separator: ", ")
     }
@@ -2065,6 +2121,7 @@ struct PhotoDetailPage: View {
     let source: any PhotoBrowsingSource
     let index: Int
     let loadState: DetailPageLoadState
+    var originalFetcher: (any OriginalFetching)?
     /// Bubbled up by the pager so it can suppress swipe-down-dismiss while
     /// the image is zoomed in.
     var onZoomChange: ((CGFloat) -> Void)?
@@ -2547,6 +2604,25 @@ struct PhotoDetailPage: View {
         // The original supersedes the screen derivative. Cancel it so a late
         // smaller result cannot overwrite the full-resolution image.
         cancelDisplayUpgrade()
+        guard let originalFetcher else { return requestFullResolution(asset) }
+        // PhotoKit's fetcher returns at once and the request below reports
+        // its own progress; a scripted one plays its download first, so the
+        // simulator can show the ring filling (FS-02.06 AC-2).
+        let id = asset.localIdentifier
+        let index = index
+        let report = onDownloadStateChange
+        Task { @MainActor in
+            try? await originalFetcher.scriptedTransfer(for: id) { value in
+                Task { @MainActor in
+                    guard loadState.isActive else { return }
+                    report?(index, value, true)
+                }
+            }
+            requestFullResolution(asset)
+        }
+    }
+
+    private func requestFullResolution(_ asset: PHAsset) {
         fullResRequestId = photoLibrary.requestDetailImage(
             for: asset,
             targetSize: PHImageManagerMaximumSize,
@@ -2636,6 +2712,9 @@ struct PhotoDetailPage: View {
 private struct PhotoPager: UIViewControllerRepresentable {
     let source: any PhotoBrowsingSource
     let photoLibrary: PhotoLibraryService
+    /// Plays a scripted download before the zoom's own request (FS-02.06);
+    /// PhotoKit's returns at once.
+    let originalFetcher: any OriginalFetching
     @Binding var currentIndex: Int
     /// Rebuild trigger: when this changes the current page is re-seated even if
     /// `currentIndex` is unchanged (after an in-viewer deletion shifts content).
@@ -2725,6 +2804,7 @@ private struct PhotoPager: UIViewControllerRepresentable {
                 source: parent.source,
                 index: index,
                 loadState: loadState,
+                originalFetcher: parent.originalFetcher,
                 onZoomChange: { [weak self] scale in
                     self?.currentZoom = scale
                     self?.parent.onZoomChange(scale)

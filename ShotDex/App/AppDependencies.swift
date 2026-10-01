@@ -17,6 +17,10 @@ final class AppDependencies {
     let photoLibrary: PhotoLibraryService
     let photoRenderer: PhotoRenderService
     let photoEditing: PhotoEditingService
+    /// Asks whether a photo's original is on the device, and downloads it
+    /// (FS-02.06). Scripted under the DEBUG launch argument
+    /// `-ShotDexFakeICloud`, because a simulator has no iCloud library.
+    let originalFetcher: any OriginalFetching
     let compressionPresets: CompressionPresetStore
     let signaturePresets: SignaturePresetStore
     let overlayFontRecents: OverlayFontRecentsStore
@@ -149,6 +153,12 @@ final class AppDependencies {
             await photoRenderer.setDepthEstimator(CoreMLDepthEstimator())
         }
         self.photoRenderer = photoRenderer
+        let photoKitFetcher = PhotoKitOriginalFetcher()
+        #if DEBUG
+        self.originalFetcher = FakeOriginalFetcher.fromLaunchArguments(base: photoKitFetcher) ?? photoKitFetcher
+        #else
+        self.originalFetcher = photoKitFetcher
+        #endif
         self.photoEditing = PhotoEditingService(
             renderer: photoRenderer,
             indexNewAsset: { assetID in
