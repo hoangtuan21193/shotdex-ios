@@ -10,7 +10,7 @@ Dữ liệu dựng trên database trong bộ nhớ. "Ảnh" là ảnh tĩnh có 
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | thư viện đã cấp quyền, index xong, 0 dòng | mở Statistics | "No Indexed Photos"; không có thẻ Insights, không có biểu đồ | ⚠️ chưa có |
+| AC-1 | thư viện đã cấp quyền, index xong, 0 dòng | mở Statistics | "No Indexed Photos"; không có thẻ Insights, không có biểu đồ | `ShotDexUITests/scripts/statistics-empty.json` trên sim iPhone 17 26.5 riêng của FS-07 (2026-10-01): quyền đầy đủ, thư viện 0 ảnh → "No Indexed Photos", dump không có biểu đồ nào, không có thẻ Insights |
 | AC-2 | 49 ảnh có tên máy + 200 ảnh chụp màn hình không EXIF + 30 video | tính Insights | 0 câu; thẻ có đúng một dòng "Insights appear once 50 photos have camera info — 49 so far." | ⚠️ chưa có |
 | AC-3 | 1.000 ảnh iPhone 13 Pro: 850 ở 26 mm tương đương (mô-đun chính), 150 ở 77 mm (tele) | tính Insights | câu đầu "85% of your photos are at 26mm equivalent."; bộ lọc đi kèm = tiêu cự tương đương 25,5–26,5 mm | ⚠️ chưa có |
 | AC-4 | X-T5: 300 ảnh 23 mm thật / 35 mm tương đương, 100 ảnh 33 / 50; thêm 100 ảnh 23 mm của một máy chưa biết cảm biến | tính Insights | câu tiêu cự nêu **35mm**, không nêu 23mm; tỉ lệ 75% trên mẫu số 400; dùng biến thể nêu mẫu số vì 400/500 = 80% < 90% | ⚠️ chưa có |
@@ -29,5 +29,5 @@ Dữ liệu dựng trên database trong bộ nhớ. "Ảnh" là ảnh tĩnh có 
 | AC-17 | 2.140 ảnh không ghi ống, không ghi tiêu cự: 06/2026 có 300, 07/2026 280, 08/2026 1.240, 09/2026 320 | mở Statistics, chạm câu tháng bận nhất | câu "August 2026 was your busiest month: 1,240 photos." có mũi tên; sang Library, điều kiện *trong tháng* August 2026 đang bật, lưới đếm 1.240 ảnh | ⚠️ chưa có |
 | AC-18 | dữ liệu AC-17 | tạo smart album có điều kiện *trong tháng* August 2026 | album đếm 1.240 ảnh; đổi sang July 2026 thì 280 | ⚠️ chưa có |
 
-**Chưa chứng minh được:** AC-1…18 — tất cả. Test đã có chỉ chạm phần lân cận: `DatabaseTests.statsAggregates`
+**Chưa chứng minh được:** AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-10, AC-11, AC-12, AC-13, AC-14, AC-15, AC-16, AC-17, AC-18. Test có từ trước chỉ chạm phần lân cận: `DatabaseTests.statsAggregates`
 (tổng hợp và dải tiêu cự tương đương), `ChartDashboardTests.binnedIsoHistogram` (chia dải). Không cái nào khoá câu Insights.

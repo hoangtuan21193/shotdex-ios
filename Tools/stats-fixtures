@@ -1,0 +1,24 @@
+#!/bin/sh
+# FS-07: Tools/stats-fixtures <ac2|ac3|ac10|ac12|ac17> [udid]
+# Writes the acceptance criterion's photos as small plain-colour JPEGs (no
+# faces — a flat fill) with the EXIF the AC describes, and with a udid adds
+# them to that simulator's library. Use a simulator of its own: the photos
+# stay in the library until it is erased.
+# The generator is Swift (Tools/src/stats-fixtures.swift), compiled on first use.
+set -e
+root=$(cd "$(dirname "$0")/.." && pwd)
+src="$root/Tools/src/stats-fixtures.swift"
+bin="$root/build/tools/stats-fixtures"
+if [ ! -x "$bin" ] || [ "$src" -nt "$bin" ]; then
+  mkdir -p "$root/build/tools"
+  swiftc -O "$src" -o "$bin"
+fi
+scenario=$1
+out="$root/build/stats-fixtures/$scenario"
+rm -rf "$out"
+"$bin" "$scenario" "$out"
+if [ -n "${2:-}" ]; then
+  # In batches: one addmedia call per 400 files keeps the argument list short.
+  find "$out" -type f | sort | xargs -n 400 xcrun simctl addmedia "$2"
+  echo "added to $2"
+fi
